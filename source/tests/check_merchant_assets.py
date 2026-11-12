@@ -132,6 +132,11 @@ FACE_LOW = 1.0                # face, hood and gold tooth parts lie above this h
 FACE_OUT_OF_HOOD = 0.04       # the face reaches at least this far forward of the hood opening (0.057)
 NOSE_MIN = 0.2                # nose tip in front of the head joint (0.185)
 GOLD_TOOTH_MIN = 0.024        # gold tooth width (0.020)
+# Keep the readable width without a tall luminous square or oversized eye glints.
+GOLD_TOOTH_MAX_HEIGHT = 0.016
+GOLD_MAX_EMISSIVE = 0.015
+EYE_GLINT_MAX_WIDTH = 0.006
+HAIR_LOCK_MAX_WIDTH = 0.035
 TEXTURE_SIZE = 256
 # Decisions 1053/1070: the look of rework 5 (flat face, smooth cloak, large bright scales, block boots) against variant 1;
 # values of the rework 5 files in brackets
@@ -481,6 +486,18 @@ gold = [p for p in submesh_positions(trees['Merchant'], 'MerchantGold') if p[2] 
 assert gold, 'Merchant.mesh has no gold tooth'
 width = max(p[0] for p in gold) - min(p[0] for p in gold)
 assert width >= GOLD_TOOTH_MIN, 'the gold tooth is too small to read from the game camera (%.3f wide)' % width
+height = max(p[2] for p in gold) - min(p[2] for p in gold)
+assert height <= GOLD_TOOTH_MAX_HEIGHT, 'the gold tooth is a tall square spot (%.3f high)' % height
+gold_light = [float(x) for x in re.search(
+    r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', material_block('MerchantGold'), re.M).groups()]
+assert max(gold_light) <= GOLD_MAX_EMISSIVE, 'the gold tooth glows too brightly: %s' % gold_light
+eye_glints = [piece for piece in mesh_pieces(trees['Merchant'], ('MerchantEye',))
+              if min(p[2] for p in piece) > 1.14]
+assert len(eye_glints) == 2, 'the merchant needs two small eye glints above the grin'
+assert all(max(p[0] for p in piece) - min(p[0] for p in piece) <= EYE_GLINT_MAX_WIDTH
+           for piece in eye_glints), 'the eye glints are oversized'
+assert all(max(p[0] for p in piece) - min(p[0] for p in piece) <= HAIR_LOCK_MAX_WIDTH
+           for piece in mesh_pieces(trees['Merchant'], ('MerchantHair',))), 'the hair forms broad ribbons'
 
 # Not shaggy (decision 863): few short rag strips at the hem
 rags = []

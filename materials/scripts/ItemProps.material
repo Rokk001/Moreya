@@ -330,10 +330,10 @@ material MerchantGold
     {
         pass
         {
-            ambient 0.8500 0.6200 0.1600
-            diffuse 0.8500 0.6200 0.1600 1
-            specular 0.50 0.42 0.20 1 30
-            emissive 0.0500 0.0350 0.0080
+            ambient 0.4200 0.3000 0.1000
+            diffuse 0.4200 0.3000 0.1000 1
+            specular 0.30 0.24 0.10 1 24
+            emissive 0.0120 0.0080 0.0020
         }
     }
 }
