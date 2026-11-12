@@ -50,7 +50,6 @@ class CreaturePanel;
 class GameEntity;
 class ItemBagEntity;
 class MiniMapDrawnFull;
-class MenuModeLoad;
 class SocialWindow;
 class WorkersWindow;
 class ODPacket;
@@ -122,6 +121,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
      * Finalize the selection of tiles or drop a creature when the user releases the mouse button.
      */
     virtual bool mouseReleased  (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
+    //! \brief Cancels world selection, pending hand drops and mouse camera rotation.
+    void cancelMouseInput() override;
 
     //! \brief Handle the keyboard input.
     virtual bool keyPressed     (const OIS::KeyEvent &arg) override;
@@ -428,8 +429,7 @@ protected:
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
     bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
     bool saveGame(const CEGUI::EventArgs& e = {});
-    //! \brief Opens the saved game browser on top of the running game.
-    bool loadGame(const CEGUI::EventArgs& e = {});
+    //! \brief Opens the settings window from the options page.
     bool showSettingsFromOptions(const CEGUI::EventArgs& e = {});
     //! \brief Connects the buttons of the settings navigation window.
     void initializeSettingsNavigation();
@@ -504,7 +504,6 @@ private:
     float mEventMessageFlashTime = 0.0f;
 
     //! \brief The saved game browser shown on top of the game, created on first use.
-    std::unique_ptr<MenuModeLoad> mLoadMenu;
     //! \brief Whether the pending exit confirmation should leave to the desktop
     //! rather than back to the main menu. Set by the button that opened the
     //! confirmation popup.
