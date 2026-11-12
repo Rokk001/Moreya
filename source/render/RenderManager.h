@@ -490,9 +490,11 @@ private:
     Ogre::MaterialPtr getBrighterMaterial(const std::string& materialName);
 
     //! \brief Makes the contour copies of a creature material for every seat colour and their brighter copies,
-    //! and loads them. Called when the first creature with the material appears, normally during the map load,
-    //! so a creature of another seat or the hand over a creature does not make and load a copy during play.
+    //! and loads them during map preparation, with a fallback for materials introduced later.
     void prepareOutlinerMaterials(const std::string& materialName, const GameMap& gameMap);
+
+    //! \brief Loads configured creature meshes, tangents and highlight materials before play begins.
+    void prepareGameCreatureResources(GameMap& gameMap);
 
     //! \brief Loads a material and makes its generated shaders, the two steps the technique resolver takes when
     //! the material is first drawn. Materials with their own programs keep them.

@@ -2011,7 +2011,7 @@ void RenderManager::destroyWorldBorder()
 }
 
 //! \brief Initializes game visuals with a seam-covering ground plane bounded by the map edges and the
-//! rock border outside of them.
+//! rock border outside of them, then prepares resources needed by creatures that appear later.
 void RenderManager::initGameRenderer(GameMap* gameMap)
 {
     OD_ASSERT_TRUE(gameMap);
@@ -2154,6 +2154,7 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     mSmokeMaterial->getTechnique(0)->getPass(0)->getTextureUnitState(1)->setTexture(m_texture);
     Ogre::TexturePtr myPerlinTexture = createPerlinTexture();
     setupFogMaterial(myPerlinTexture);
+    prepareGameCreatureResources(*gameMap);
     prepareGameShaders();
 }
 
@@ -2589,8 +2590,8 @@ void RenderManager::prepareGeneratedShaders(Ogre::Material& material)
 
 //! Prefixes of the materials of the creature badges and emotes, which are shown in overlays.
 static const char* const GAME_OVERLAY_MATERIAL_PREFIXES[] = {"CreatureEmote_", "CreatureOverlay"};
-//! Prefixes of the materials of the creature props and of the sparks, dust and glow of reactions and rooms.
-static const char* const GAME_EFFECT_MATERIAL_PREFIXES[] = {"CreatureProp_", "ReactionParticle", "RoomAmb"};
+//! Prefixes of creature props, reaction and room effects, and the Tavern surfaces loaded on first construction.
+static const char* const GAME_EFFECT_MATERIAL_PREFIXES[] = {"CreatureProp_", "ReactionParticle", "RoomAmb", "Tavern"};
 //! Suffix of the overlay material copies whose shaders prepareGameShaders() makes.
 static const Ogre::String PREPARED_OVERLAY_SUFFIX = "##_PreparedOverlay";
 
@@ -2606,6 +2607,7 @@ static bool hasPrefix(const Ogre::String& name, const char* const (&prefixes)[Co
     return false;
 }
 
+//! \brief Prepares effects, overlays and Tavern surfaces without changing their visible settings.
 void RenderManager::prepareGameShaders()
 {
     if(mShaderGenerator == nullptr)
@@ -2664,7 +2666,7 @@ void RenderManager::prepareGameShaders()
         prepareGeneratedShaders(*copy);
         ++prepared;
     }
-    OD_LOG_INF("Prepared the shaders of " + Helper::toString(prepared) + " game effect materials");
+    OD_LOG_INF("Prepared the shaders of " + Helper::toString(prepared) + " game effect and room materials");
 }
 
 //! Infix of the material copies that carry the hardware skinning stage (see useShaderSkinning()).
@@ -4635,6 +4637,55 @@ static void useSkinnedMetalMaterial(Ogre::Entity* entity)
         if(part->getMaterialName() == "ReflMetal")
             part->setMaterialName("ReflMetalSkinned");
     }
+}
+
+//! \brief Prepares every configured and map-specific creature mesh and its seat variants without drawing it.
+void RenderManager::prepareGameCreatureResources(GameMap& gameMap)
+{
+    if(mShaderGenerator == nullptr)
+        return;
+    std::set<std::string> meshNames;
+    for(const std::pair<const std::string, CreatureDefinition*>& entry : ConfigManager::getSingleton().getCreatureDefinitions())
+        meshNames.insert(entry.second->getMeshName());
+    for(uint32_t i = 0; i < gameMap.numClassDescriptions(); ++i)
+    {
+        const CreatureDefinition* definition = gameMap.getClassDescription(i);
+        if(definition != nullptr)
+            meshNames.insert(definition->getMeshName());
+    }
+    // A transformed creature uses this mesh independently of its class definition.
+    meshNames.insert("Chicken.mesh");
+    std::set<std::string> preparedMaterials;
+    for(const std::string& meshName : meshNames)
+    {
+        if(meshName.empty())
+            continue;
+        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
+        unsigned short src;
+        if(!mesh->suggestTangentVectorBuildParams(src))
+            mesh->buildTangentVectors(src);
+        Ogre::Entity* entity = mSceneManager->createEntity(mesh);
+        // Match rrCreateCreature: the Wyvern's metal part uses its skinned material.
+        useSkinnedMetalMaterial(entity);
+        try
+        {
+            for(const Ogre::SubEntity* part : entity->getSubEntities())
+            {
+                const std::string& materialName = part->getMaterialName();
+                if(!preparedMaterials.insert(materialName).second)
+                    continue;
+                prepareGeneratedShaders(*part->getMaterial());
+                prepareOutlinerMaterials(materialName, gameMap);
+            }
+        }
+        catch(...)
+        {
+            mSceneManager->destroyEntity(entity);
+            throw;
+        }
+        mSceneManager->destroyEntity(entity);
+    }
+    OD_LOG_INF("Prepared creature resources for " + Helper::toString(static_cast<uint32_t>(meshNames.size())) + " meshes");
 }
 
 //! \brief Creates the visible creature and registers it for late contact sampling.
@@ -8387,6 +8438,7 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
     return myBrighter;
 }
 
+//! \brief Loads every seat's contour and hover copy before those variants are first shown.
 void RenderManager::prepareOutlinerMaterials(const std::string& materialName, const GameMap& gameMap)
 {
     for(const Seat* seat : gameMap.getSeats())
