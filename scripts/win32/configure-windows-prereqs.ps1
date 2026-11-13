@@ -6,7 +6,10 @@ $ErrorActionPreference = 'Stop'
 Assert-OgrePrereqProvenance -DependencyRoot $taskDependencyRoot
 . (Join-Path $PSScriptRoot 'Enter-OpenDungeonsPlus.ps1')
 $taskRepo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$taskRoot = $taskDependencyRoot
+# Keep configuration logs local to the worktree so concurrent integrations do not share a log file.
+$taskLogDirectory = Join-Path $taskRepo 'out'
+New-Item -ItemType Directory -Force -Path $taskLogDirectory | Out-Null
+$taskConfigureLog = Join-Path $taskLogDirectory 'opendungeons-configure.log'
 # Recreate CMake's cache so a build directory copied from another checkout can be configured here.
 $taskOptions = @('--fresh', '-S', $taskRepo, '-B', "$taskRepo\build\windows",
     '-G', 'Visual Studio 18 2026', '-A', 'x64', '-DOD_BUILD_TESTING=OFF', '-DBUILD_TESTING=OFF',
@@ -16,8 +19,8 @@ $taskOptions = @('--fresh', '-S', $taskRepo, '-B', "$taskRepo\build\windows",
 if ($taskMpJobs -gt 1) { $taskOptions += "-DBUILD_MP_JOBS=$taskMpJobs" }
 Write-Output 'Checking the original project configuration with the installed prerequisites'
 $ErrorActionPreference = 'Continue'
-& cmake @taskOptions *> "$taskRoot\logs\opendungeons-configure.log"
+& cmake @taskOptions *> $taskConfigureLog
 $ErrorActionPreference = 'Stop'
-if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\opendungeons-configure.log" -Tail 60; throw 'Project configuration failed' }
+if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath $taskConfigureLog -Tail 60; throw 'Project configuration failed' }
 Write-Output 'Original project configuration succeeded'
 & (Join-Path $PSScriptRoot 'prepare-windows-runtime.ps1')
