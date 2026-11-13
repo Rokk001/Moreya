@@ -4,6 +4,7 @@
 #include "render/MenuFlight.h"
 
 #include <chrono>
+#include <cstdint>
 
 //! \brief Collects overlapping pointer, drag and real-minute intervals at one render callback.
 class FrameStatistics
@@ -18,8 +19,8 @@ public:
     void beginDrag();
     //! \brief Finishes a drag at release, even if the pointer has left the pressed window.
     void endDrag();
-    //! \brief Samples once per rendered frame and returns its unsmoothed wall-clock duration.
-    float sampleFrame(bool inGame);
+    //! \brief Samples once per rendered frame and attaches turn/window context to stall diagnostics.
+    float sampleFrame(bool inGame, std::int64_t turn, bool active);
     //! \brief Writes unfinished intervals before the render listener shuts down.
     void finish();
 

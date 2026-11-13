@@ -1,9 +1,118 @@
 #include "render/FrameStatistics.h"
+#include "render/FrameStallTrace.h"
 
 #include "utils/LogManager.h"
 
 #include <iomanip>
 #include <sstream>
+
+//! \brief Separates renderer timing from any work performed by the server thread.
+FrameStallTrace& FrameStallTrace::get()
+{
+    static thread_local FrameStallTrace trace;
+    return trace;
+}
+
+//! \brief Reads the unsmoothed S3 monotonic clock.
+double FrameStallTrace::now()
+{
+    return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+//! \brief Uses stable names; broad engine buckets explicitly retain unresolved inner causes.
+const char* FrameStallTrace::name(Phase phase)
+{
+    static const char* const names[Count] = {
+        "uninstrumented", "statistics-and-diagnostic-log", "frameStarted", "Ogre-render-targets-unresolved",
+        "frameRenderingQueued", "frame-limiter-wait", "CEGUI-time-pulse", "mode-and-input-update",
+        "world-animations", "camera-audio-observers", "socket-dispatch", "client-notifications",
+        "Ogre-present-unresolved", "frameEnded", "event-pump-unresolved", "CEGUI-render",
+        "minimap-update-upload", "creature-create", "game-resource-preparation", "material-preparation",
+        "server-message", "log-write-mutex-and-sinks", "terrain-batch-rebuild"
+    };
+    return names[phase];
+}
+
+//! \brief Charges only the current leaf operation, so nested work is never counted twice.
+void FrameStallTrace::setPhase(Phase phase)
+{
+    const double time = now();
+    if(mFrame != 0)
+        mSeconds[mPhase] += time - mLast;
+    mLast = time;
+    mPhase = phase;
+}
+
+//! \brief Preserves the full preceding interval and records diagnostic I/O in the next interval.
+void FrameStallTrace::beginFrame(double time, bool inGame, std::int64_t turn, bool active)
+{
+    if(mFrame != 0)
+        mSeconds[mPhase] += time - mLast;
+    const double seconds = mFrame == 0 ? 0.0 : time - mStart;
+    std::string report;
+    if(seconds > 0.100)
+    {
+        Phase dominant = Uninstrumented;
+        for(int phase = 1; phase < Count; ++phase)
+        {
+            if(mSeconds[phase] > mSeconds[dominant])
+                dominant = static_cast<Phase>(phase);
+        }
+        std::ostringstream line;
+        line << std::fixed << std::setprecision(2) << "Frame stall: frame=" << mFrame
+            << " inGame=" << mInGame << " turn=" << mTurn << " windowActive=" << mActive
+            << " intervalMs=" << seconds * 1000.0 << " dominantPhase=" << name(dominant)
+            << " exclusiveMs=";
+        for(int phase = 0; phase < Count; ++phase)
+        {
+            if(mSeconds[phase] > 0.0)
+                line << name(static_cast<Phase>(phase)) << ':' << mSeconds[phase] * 1000.0 << ',';
+        }
+        for(int phase = 0; phase < Count; ++phase)
+        {
+            if(mMaxInclusive[phase] > 0.0)
+                line << " operation=" << name(static_cast<Phase>(phase))
+                    << " context=" << mContexts[phase] << " maxInclusiveMs=" << mMaxInclusive[phase] * 1000.0;
+        }
+        // This identifies wall time inside an operation, not CPU time or a proven driver/OS root cause.
+        // Engine/present/event gaps remain explicitly unresolved until finer evidence exists.
+        report = line.str();
+    }
+    // Keep the original boundary: formatting and writing this report belong to the next S3 frame.
+    mSeconds.fill(0.0);
+    mPhase = Statistics;
+    mLast = time;
+    mStart = time;
+    ++mFrame;
+    mInGame = inGame;
+    mTurn = turn;
+    mActive = active;
+    mMaxInclusive.fill(0.0);
+    for(std::string& context : mContexts)
+        context.clear();
+    if(!report.empty())
+        OD_LOG_INF(report);
+}
+
+//! \brief Enters a nested operation without allocating a per-frame event list.
+FrameStallTrace::Scope::Scope(Phase phase, const char* context) :
+    mPrevious(get().mPhase), mPhase(phase), mContext(context), mStart(now()), mFrame(get().mFrame)
+{
+    get().setPhase(phase);
+}
+
+//! \brief Restores parent accounting and retains the slowest completed operation's identity.
+FrameStallTrace::Scope::~Scope()
+{
+    FrameStallTrace& trace = get();
+    const double seconds = now() - mStart;
+    if(mFrame != 0 && mFrame == trace.mFrame && seconds > trace.mMaxInclusive[mPhase])
+    {
+        trace.mMaxInclusive[mPhase] = seconds;
+        trace.mContexts[mPhase] = mContext;
+    }
+    trace.setPhase(mPrevious);
+}
 
 //! \brief Uses a monotonic clock rather than Ogre's smoothed animation delta.
 double FrameStatistics::now()
@@ -88,9 +197,10 @@ void FrameStatistics::finishMovement(Movement& movement, const char* label)
 }
 
 //! \brief Counts every render interval once in each active series, including a frame crossing its end.
-float FrameStatistics::sampleFrame(bool inGame)
+float FrameStatistics::sampleFrame(bool inGame, std::int64_t turn, bool active)
 {
     const double time = now();
+    FrameStallTrace::get().beginFrame(time, inGame, turn, active);
     const float seconds = mPreviousFrame == 0.0 ? 0.0f : static_cast<float>(time - mPreviousFrame);
     mPreviousFrame = time;
     // Input may be delivered before frameStarted (SFML) or after it (OIS). Defer

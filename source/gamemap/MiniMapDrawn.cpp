@@ -21,6 +21,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "render/FrameStallTrace.h"
 #include "gamemap/MiniMapDrawn.h"
 
 #include "entities/Tile.h"
@@ -118,8 +119,10 @@ Ogre::Vector2 MiniMapDrawn::camera_2dPositionFromClick(int xx, int yy)
 }
 
 //! \brief Updates map colours and overlays, uploading pixels only when their bytes or texture state change.
+//! \brief Records frame-stall operation timing without changing the operation.
 void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::MiniMap);
     advanceAnimation(timeSinceLastFrame);
     const unsigned int animationPhase = getAnimationPhase();
     Ogre::Vector3 vv = mCameraManager.getCameraViewTarget();
