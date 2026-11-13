@@ -25,8 +25,8 @@ if ($LASTEXITCODE -ne 0) { Write-Output "configure failed (exit $LASTEXITCODE), 
 $parallel = if ($env:BUILD_PARALLEL) { [int]$env:BUILD_PARALLEL } else { 1 }
 # Force a fresh link even when an integration retry has no changed source files.
 # The load test requires an executable produced after this run's build start.
-$executable = Join-Path $wt 'build\windows\opendungeons-plus.exe'
-if (Test-Path -LiteralPath $executable) { Remove-Item -LiteralPath $executable -ErrorAction Stop }
+$exe = Join-Path $wt 'build\windows\opendungeons-plus.exe'
+if (Test-Path -LiteralPath $exe) { Remove-Item -LiteralPath $exe -Force -ErrorAction Stop }
 # Epoch time right before the build; run-checks.py needs it as --build-start
 $start = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 & $taskCmakeExe --build "$wt\build\windows" --config Release --target opendungeons-plus --parallel $parallel *> "$wt\out\build-$run.log"

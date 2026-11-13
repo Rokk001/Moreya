@@ -37,7 +37,7 @@ def main():
         script.write_text(r'''
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ogre-prereq-provenance.ps1')
-# Simulate the orchestrator environment where Get-FileHash is unavailable.
+# Simulate the orchestrator inheriting a module environment where Get-FileHash is unavailable.
 function Get-FileHash { throw 'Get-FileHash is unavailable' }
 $fixtureRoot = $PSScriptRoot
 $receiptPath = Join-Path $fixtureRoot 'install/share/opendungeons-plus/ogre-prereq.json'
