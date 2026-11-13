@@ -67,7 +67,9 @@ def main():
     parser.add_argument('--executable', type=Path, required=True)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--timeout', type=int, default=180)
+    # Match run-level-test.py's 2 * seconds + 400 wall-clock budget for --seconds 1.
+    # The game watchdog bounds loading/play; normal renderer teardown also needs time.
+    parser.add_argument('--timeout', type=int, default=402)
     args = parser.parse_args()
     executable = args.executable.resolve(strict=True)
     repo = args.repo.resolve(strict=True)

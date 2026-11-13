@@ -96,10 +96,10 @@ rooms_layout = read('gui/WindowTabRooms.layout')
 skill_layout = read('gui/WindowSkillTree.layout')
 button = re.search(r'name="TavernButton" >(.*?)</Window>', rooms_layout, re.S)
 assert button is not None, 'TavernButton missing in WindowTabRooms.layout'
-assert 'OpenDungeonsIcons/TavernButton' in button.group(1) and '"Visible" value="False"' in button.group(1)
+assert 'RoomCentreIconTavern/Icon' in button.group(1) and '"Visible" value="False"' in button.group(1)
 research = re.search(r'name="TavernButton" >(.*?)<Window type="OD/ProgressBar" name="TavernButtonProgressBar"', skill_layout, re.S)
 assert research is not None, 'TavernButton missing in WindowSkillTree.layout'
-assert 'OpenDungeonsIcons/TavernButton' in research.group(1) and 'Room: Tavern' in research.group(1)
+assert 'RoomCentreIconTavern/Icon' in research.group(1) and 'Room: Tavern' in research.group(1)
 beer = re.search(r'name="BeerButton" >(.*?)<Window type="OD/ProgressBar" name="BeerButtonProgressBar"', skill_layout, re.S)
 assert beer is not None, 'BeerButton missing in WindowSkillTree.layout'
 assert 'OpenDungeonsIcons/BeerButton' in beer.group(1) and 'Tavern: Beer' in beer.group(1)
@@ -166,7 +166,10 @@ header = read('source/rooms/RoomTavern.h')
 payer_enum = header[header.index('enum class TavernPayer'):]
 payer_enum = payer_enum[:payer_enum.index('};')]
 assert re.search(r'keeper = 0,', payer_enum) and re.search(r'creature = 1', payer_enum), 'TavernPayer: keeper 0, creature 1'
-assert 'mPayer(TavernPayer::keeper)' in room_cpp, 'the default payer is the keeper'
-assert 'getIsHuman()' in setup and 'mPayer = TavernPayer::creature;' in setup, 'computer keepers let the creatures pay'
+seat_cpp = read('source/game/Seat.cpp')
+assert 'mTavernPayer(TavernPayer::keeper)' in seat_cpp, 'the default payer is the keeper'
+payer_default = extract(seat_cpp, 'TavernPayer Seat::getTavernPayer(')
+assert 'getIsHuman()' in payer_default and 'TavernPayer::creature' in payer_default, 'computer keepers let the creatures pay'
+assert 'setTavernPayer' not in setup, 'building a tavern preserves the keeper setting'
 
 print('tavern room ok')

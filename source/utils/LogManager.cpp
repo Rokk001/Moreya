@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "render/FrameStallTrace.h"
 #include "utils/LogManager.h"
 
 #include <boost/filesystem.hpp>
@@ -68,8 +69,10 @@ std::string LogManager::getFirstCritical()
 }
 
 //! \brief Logs a message to the sinks; guarded by a standard mutex to be thread-safe.
+//! \brief Records render-thread stall timing for this operation.
 void LogManager::logMessage(LogMessageLevel level, const char* filepath, int line, const std::string& message)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::LogWrite, filepath);
     std::lock_guard<std::mutex> locked(mLock);
 
     if(level == LogMessageLevel::CRITICAL)
