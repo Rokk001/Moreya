@@ -29,6 +29,7 @@
 #include "creatureaction/CreatureActionBrewPotion.h"
 #include "rooms/RoomWorkshop.h"
 #include "rooms/RoomCasino.h"
+#include "rooms/FencedRoom.h"
 #include "utils/ConfigManager.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturemood/CreatureMood.h"
@@ -45,6 +46,20 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+
+#include <algorithm>
+
+//! \brief Checks room capacity and requires arena workers to already be inside the fence.
+static bool canStartRoomWork(Creature& creature, Room& room)
+{
+    if(!room.hasOpenCreatureSpot(&creature))
+        return false;
+    if(room.getType() != RoomType::arena)
+        return true;
+
+    const std::vector<Tile*>& interior = static_cast<FencedRoom&>(room).getActualRoomTiles();
+    return std::find(interior.begin(), interior.end(), creature.getPositionTile()) != interior.end();
+}
 
 //! \brief Selects the ordinary room action or its item-box workshop specialization.
 static std::unique_ptr<CreatureAction> createRoomWorkAction(Creature& creature, Room& room, bool forced, bool moodRoom = false)
@@ -163,7 +178,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
                 continue;
 
             // It is the room responsibility to test if the creature is suited for working in it
-            if(room->hasOpenCreatureSpot(&creature))
+            if(canStartRoomWork(creature, *room))
             {
                 creature.pushAction(createRoomWorkAction(creature, *room, forced));
                 return false;
@@ -192,7 +207,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         {
             if((room->getSeat() != creature.getSeat() &&
                 (room != currentRoom || !creature.getSeat()->canOwnedCreatureUseRoomFrom(room->getSeat()))) ||
-               room->getType() != type || room->numCoveredTiles() <= 0 || !room->hasOpenCreatureSpot(&creature))
+               room->getType() != type || room->numCoveredTiles() <= 0 || !canStartRoomWork(creature, *room))
                 continue;
             if(type == RoomType::casino && static_cast<RoomCasino*>(room)->getPayout() == CasinoPayout::money)
                 continue;
