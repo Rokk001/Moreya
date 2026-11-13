@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<GUILayout version="4">
+    <Window type="DefaultWindow" name="WorkshopPage">
+        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+        <Property name="Visible" value="False" />
+        <Window type="OD/StaticText" name="Title">
+            <Property name="Area" value="{{0.03,0},{0.01,0},{0.97,0},{0.09,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Trap production" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
+        </Window>
+        <Window type="OD/Listbox" name="Workshops">
+            <Property name="Area" value="{{0.03,0},{0.12,0},{0.97,0},{0.63,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+        </Window>
+        <Window type="OD/StaticText" name="OrdersLabel">
+            <Property name="Area" value="{{0.03,0},{0.65,0},{0.83,0},{0.72,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Priority" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
+        </Window>
+        <Window type="OD/MultiColumnList" name="Orders">
+            <Property name="Area" value="{{0.03,0},{0.73,0},{0.83,0},{0.97,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <AutoWindow namePath="__auto_listheader__">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{0,0}}" />
+                <Property name="Visible" value="False" />
+            </AutoWindow>
+        </Window>
+        <Window type="OD/Button" name="MoveUp">
+            <Property name="Area" value="{{0.86,0},{0.73,0},{0.97,0},{0.83,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="^" />
+        </Window>
+        <Window type="OD/Button" name="MoveDown">
+            <Property name="Area" value="{{0.86,0},{0.86,0},{0.97,0},{0.96,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="v" />
+        </Window>
+    </Window>
+</GUILayout>
