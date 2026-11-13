@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "render/FrameStallTrace.h"
 #include "network/ODClient.h"
 #include "camera/CullingManager.h"
 #include "entities/Building.h"
@@ -246,8 +247,11 @@ static bool areSavedGameSeatsFixed(const GameMap& gameMap)
 
 //! \brief Dispatches validated server packets to the active game or menu presentation.
 //! \brief Applies a server notification to the current client state.
+//! \brief Records frame-stall operation timing without changing the operation.
 bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceived)
 {
+    const std::string notificationName = ServerNotification::typeString(cmd);
+    FrameStallTrace::Scope trace(FrameStallTrace::Message, notificationName.c_str());
     ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
 
     GameMap* gameMap = frameListener->getClientGameMap();
@@ -255,7 +259,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
     if (!gameMap)
         return false;
 
-    OD_LOG_INF("processMessage type=" + ServerNotification::typeString(cmd));
+    OD_LOG_INF("processMessage type=" + notificationName);
     switch(cmd)
     {
         case ServerNotificationType::loadLevel:

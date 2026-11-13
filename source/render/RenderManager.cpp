@@ -19,6 +19,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "render/FrameStallTrace.h"
 #include "render/RenderManager.h"
 #include "ODApplication.h"
 #include "render/GroundShadowCameraSetup.h"
@@ -2579,8 +2580,10 @@ void RenderManager::prepareMenuShaders()
     OD_LOG_INF("Prepared the shaders of " + Helper::toString(static_cast<uint32_t>(materials.size())) + " menu materials");
 }
 
+//! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::prepareGeneratedShaders(Ogre::Material& material)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, material.getName().c_str());
     const Ogre::String& scheme = Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME;
     material.load();
     if(!mShaderGenerator->createShaderBasedTechnique(material, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme))
@@ -2608,8 +2611,10 @@ static bool hasPrefix(const Ogre::String& name, const char* const (&prefixes)[Co
 }
 
 //! \brief Prepares effects, overlays and Tavern surfaces without changing their visible settings.
+//! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::prepareGameShaders()
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::ResourcePreparation);
     if(mShaderGenerator == nullptr)
         return;
     Ogre::MaterialManager& materialManager = Ogre::MaterialManager::getSingleton();
@@ -4640,8 +4645,10 @@ static void useSkinnedMetalMaterial(Ogre::Entity* entity)
 }
 
 //! \brief Prepares every configured and map-specific creature mesh and its seat variants without drawing it.
+//! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::prepareGameCreatureResources(GameMap& gameMap)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::ResourcePreparation);
     if(mShaderGenerator == nullptr)
         return;
     std::set<std::string> meshNames;
@@ -4689,8 +4696,10 @@ void RenderManager::prepareGameCreatureResources(GameMap& gameMap)
 }
 
 //! \brief Creates the visible creature and registers it for late contact sampling.
+//! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::rrCreateCreature(Creature* curCreature)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::CreatureCreate, curCreature->getName().c_str());
     mDragContactCreatures.insert(curCreature);
     const std::string& meshName = curCreature->getCurrentMeshName();
 
@@ -8346,8 +8355,10 @@ static std::string outlinerMaterialName(const std::string& materialName, const O
     return ss.str();
 }
 
+//! \brief Times material clone preparation with its source material identity.
 Ogre::MaterialPtr RenderManager::getOutlinerMaterial(const std::string& materialName, const Ogre::ColourValue& cc)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
     const std::string outlinerName = outlinerMaterialName(materialName, cc);
     OD_LOG_INF("searching for: " + outlinerName);
     Ogre::MaterialPtr  myOutliner = Ogre::MaterialManager::getSingletonPtr()->getByName(outlinerName,"Graphics");
@@ -8411,8 +8422,10 @@ Ogre::MaterialPtr RenderManager::getOutlinerMaterial(const std::string& material
     return myOutliner;
 }
 
+//! \brief Times material clone preparation with its source material identity.
 Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
     std::stringstream ss("");
     ss << materialName;
     ss << "##_Brighter";
@@ -8439,8 +8452,10 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
 }
 
 //! \brief Loads every seat's contour and hover copy before those variants are first shown.
+//! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::prepareOutlinerMaterials(const std::string& materialName, const GameMap& gameMap)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
     for(const Seat* seat : gameMap.getSeats())
     {
         Ogre::MaterialPtr outliner = getOutlinerMaterial(materialName, seat->getColorValue());
