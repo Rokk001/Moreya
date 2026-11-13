@@ -2,6 +2,22 @@
 # Only install-ogre-prereq.ps1 writes the receipt, after both INSTALL targets succeed.
 Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 
+function Get-OgrePrereqFileHash {
+    # Return the SHA-256 receipt hash without depending on the Get-FileHash module export.
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $taskStream = [System.IO.File]::OpenRead($Path)
+    try {
+        $taskHasher = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            return ([BitConverter]::ToString($taskHasher.ComputeHash($taskStream)) -replace '-', '')
+        } finally {
+            $taskHasher.Dispose()
+        }
+    } finally {
+        $taskStream.Dispose()
+    }
+}
+
 function Get-OgrePrereqPatchHashes {
     # Return the complete patch set required by the pinned Ogre source revision.
     $taskHashes = [ordered]@{}
@@ -9,7 +25,7 @@ function Get-OgrePrereqPatchHashes {
         'ogre14-light-position-cache.patch', 'ogre14-discard-lock-unsynchronized.patch',
         'ogre14-gl3plus-program-shutdown.patch', 'ogre14-gl3plus-exact-uniform-cache.patch',
         'ogre14-tower-trace.patch')) {
-        $taskHashes[$taskName] = (Get-FileHash -LiteralPath (Join-Path "$PSScriptRoot\patches" $taskName) -Algorithm SHA256).Hash
+        $taskHashes[$taskName] = (Get-OgrePrereqFileHash (Join-Path "$PSScriptRoot\patches" $taskName))
     }
     return $taskHashes
 }
@@ -22,7 +38,7 @@ function Get-OgrePrereqBinaryHashes {
         foreach ($taskName in @('OgreBites', 'OgreRTShaderSystem', 'OgreOverlay', 'OgreMain',
             'Plugin_ParticleFX', 'Plugin_OctreeSceneManager', 'Codec_STBI', 'RenderSystem_GL3Plus')) {
             $taskFile = "$taskName$taskSuffix.dll"
-            $taskHashes[$taskFile] = (Get-FileHash -LiteralPath (Join-Path "$DependencyRoot\install\bin" $taskFile) -Algorithm SHA256).Hash
+            $taskHashes[$taskFile] = (Get-OgrePrereqFileHash (Join-Path "$DependencyRoot\install\bin" $taskFile))
         }
     }
     return $taskHashes
