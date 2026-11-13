@@ -30,6 +30,7 @@
 #include "game/TrapProductionData.h"
 #include "entities/ItemInstance.h"
 #include "rooms/RoomAlchemyLab.h"
+#include "rooms/RoomManagerNavigation.h"
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
@@ -50,6 +51,7 @@ class CreaturePanel;
 class GameEntity;
 class ItemBagEntity;
 class MiniMapDrawnFull;
+class MenuModeLoad;
 class SocialWindow;
 class WorkersWindow;
 class ODPacket;
@@ -169,6 +171,25 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     //! \brief Shows/toggles the Dungeonbook (creature list and post feed) and closes it again
     bool toggleSocialWindow(const CEGUI::EventArgs& = {});
+    //! \brief Connects the single management frame and its room row buttons.
+    void initializeRoomManager();
+    //! \brief Synchronizes owned rows, selection, page subscriptions and status dots.
+    void refreshRoomManager();
+    //! \brief Toggles the frame on its first owned room and closes other game windows.
+    bool toggleRoomManager(const CEGUI::EventArgs& = {});
+    //! \brief Selects a shortcut target, optionally closing other windows and toggling it.
+    bool selectRoomManagerType(RoomType type, bool closeOthers = false, bool toggle = true);
+    //! \brief Selects a clicked room row without closing other windows.
+    bool selectRoomManagerRow(const CEGUI::EventArgs&);
+    //! \brief Closes the frame and releases all page subscriptions.
+    bool closeRoomManager(const CEGUI::EventArgs& = {});
+    //! \brief Starts the merchant subscription when its embedded page is selected.
+    void showMerchantPage();
+    //! \brief Navigation state shared by shortcuts, ownership updates and the frame.
+    RoomManagerNavigation mRoomManagerNavigation;
+    //! \brief Page whose controls currently hold active subscriptions.
+    RoomType mRoomManagerPageType = RoomType::nullRoomType;
+
     //! \brief Connects the approved merchant controls to owner-only requests.
     void initializeMerchantWindow();
     //! \brief Opens or closes the merchant stock window and its live subscription.
@@ -183,6 +204,12 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool buyMerchantItem(const CEGUI::EventArgs& = {});
     //! \brief Refreshes selected-row tooltip, price and treasury affordability.
     bool refreshMerchantSelection(const CEGUI::EventArgs& = {});
+    //! \brief Opens the clicked stock item confirmation even when it is unaffordable.
+    bool confirmMerchantItem(const CEGUI::EventArgs&);
+    //! \brief Updates the hovered stock tooltip and keeps it beside the pointer.
+    bool hoverMerchantItem(const CEGUI::EventArgs&);
+    //! \brief Closes the pending purchase without changing stock.
+    bool cancelMerchantItem(const CEGUI::EventArgs& = {});
     //! \brief Reads a complete merchant stock snapshot without adopting a truncated response.
     void receiveMerchantWindow(ODPacket& packet);
     //! \brief Applies the validated margin and mode snapshot from the server.
@@ -429,6 +456,8 @@ protected:
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
     bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
     bool saveGame(const CEGUI::EventArgs& e = {});
+    //! \brief Opens the in-game saved-game browser.
+    bool loadGame(const CEGUI::EventArgs& e = {});
     //! \brief Opens the settings window from the options page.
     bool showSettingsFromOptions(const CEGUI::EventArgs& e = {});
     //! \brief Connects the buttons of the settings navigation window.
@@ -457,6 +486,8 @@ protected:
     virtual bool keyReleasedNormal  (const OIS::KeyEvent &arg);
 
 private:
+    //! \brief Browser retained while it owns input over the running game.
+    std::unique_ptr<MenuModeLoad> mLoadBrowser;
     //! \brief The population panel in the creatures tab
     std::unique_ptr<CreaturePanel> mCreaturePanel;
     std::unique_ptr<SocialWindow> mSocialWindow;
@@ -692,6 +723,7 @@ private:
 
     //! \brief Tile of the casino whose payout window is open and the payout level shown
     //! \brief Own room tile used to validate keeper-wide ghost control requests.
+    bool mUpdatingGhost = false;
     int32_t mGhostRoomX = -1;
     int32_t mGhostRoomY = -1;
     int mCasinoX;
@@ -704,9 +736,10 @@ private:
     std::vector<std::string> mInfirmaryPatientNames;
     //! \brief Latest stock entries and stable indices received from the server.
     std::vector<std::pair<uint32_t, ItemInstance>> mMerchantItems;
-    //! \brief Tracks changed deal history so a live push also triggers the prescribed client refresh.
-    std::string mMerchantHistoryShown;
-    bool mMerchantSnapshotReceived = false;
+    //! \brief Tracks the pending purchase across live stock snapshots.
+    //! \brief Stable pending stock identity; snapshots never substitute another item.
+    uint32_t mMerchantPendingId = 0;
+    bool mMerchantConfirmationOpen = false;
     int32_t mMerchantMarginShown = 10;
     std::string mMerchantModeShown = "fair";
     //! \brief Prevents applying a received slider value from sending a new setting request.

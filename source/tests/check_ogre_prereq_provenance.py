@@ -37,9 +37,12 @@ def main():
         script.write_text(r'''
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ogre-prereq-provenance.ps1')
+# Simulate the orchestrator inheriting a module environment where Get-FileHash is unavailable.
+function Get-FileHash { throw 'Get-FileHash is unavailable' }
 $fixtureRoot = $PSScriptRoot
 $receiptPath = Join-Path $fixtureRoot 'install/share/opendungeons-plus/ogre-prereq.json'
 New-Item -ItemType Directory -Force (Split-Path -Parent $receiptPath) | Out-Null
+if ((Get-OgrePrereqFileHash (Join-Path $fixtureRoot 'install/bin/OgreMain.dll')) -ne '9BD47CE4A9548A39C616E9ED0092F401771F846D9B86D8005AA55A273E61BF35') { throw 'Wrong SHA-256 hash' }
 $receipt = [ordered]@{ schema = 1; commit = 'f906880885f6014ca9b5bd8aaa09b399394d5676'
     patches = (Get-OgrePrereqPatchHashes); binaries = (Get-OgrePrereqBinaryHashes $fixtureRoot) }
 if ($receipt.patches.Count -ne 7 -or $receipt.binaries.Count -ne 16) { throw 'Fixture inventory changed' }

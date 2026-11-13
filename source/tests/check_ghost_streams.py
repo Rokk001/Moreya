@@ -11,7 +11,7 @@ from check_corpse_rules import corpse_fixture
 
 # Build the real codecs around independent identity and storage services.
 def stream_fixture():
-    """Supply observable world services for the unchanged production codecs and restore body."""
+    """Supply world services and unprimed streams for the production codecs and restore body."""
     code = corpse_fixture()
     code = code.replace('struct GameMap{', 'struct RenderedMovableEntity;struct GhostBoxEntity;\nstruct GameMap{GhostBoxEntity* pickupBox=nullptr;', 1)
     code = code.replace('GhostEntity* getEntityFromTypeAndName(GameEntityType,const std::string& name);',
@@ -135,10 +135,11 @@ struct CreatureActionHuntGhost{Creature& mCreature;uint32_t mState=0;std::string
     # A new game and a seat saved before the ghost room both start on the ghost press, the research apparatus
     # (decision 800 replaces the G2 mana still start rule; a locked press works as the mana still)
     assert 'GhostProduct mGhostProduct = GhostProduct::research;' in read('source/game/SeatData.h')
-    seat_import = function(seat,'    if(str == "[GhostBells]")')+function(seat,'    if(str == "[GhostRoom]")')
+    seat_import = (function(seat,'    if(str == "[ResearchRemainder]")') +
+                   function(seat,'    if(str == "[GhostBells]")') + function(seat,'    if(str == "[GhostRoom]")'))
     seat_start = seat.index('    os << "[GhostBells]')
     seat_end = seat.index('    os << "[Merchant]',seat_start)
-    seat_save = seat[seat_start:seat_end]
+    seat_save = function(seat,'    if(mSkillPointsRemainder > 0.0)') + seat[seat_start:seat_end]
     creature = read('source/entities/Creature.cpp')
     corpse_import = ''.join(function(creature,sig) for sig in ['        if(appearanceToken.compare(0, CORPSE_CARRIER_SAVE_LABEL.size()',
         '        if(appearanceToken == "CorpseDeathPending=1")','        if(appearanceToken == "CorpseConsumed=1")',
@@ -155,11 +156,11 @@ namespace Helper{
  //! \brief Reads the original HP string value.
  double toDouble(const std::string& value){return std::stod(value);}}
 const std::string CORPSE_CARRIER_SAVE_LABEL="CorpseCarrier=";const std::string MOOD_DECISION_SAVE_OPEN="[MoodDecision]",MOOD_DECISION_SAVE_CLOSE="[/MoodDecision]",MOOD_COUNTERS_SAVE_OPEN="[MoodCounters]",MOOD_COUNTERS_SAVE_CLOSE="[/MoodCounters]";const double THIRST_STATE_MAX=100;
-//! \brief Runs only the real optional seat blocks with legacy defaults and unrelated-tag preservation.
-struct SeatRecord{double mEctoplasmLevels=0;GhostProduct mGhostProduct=GhostProduct::mana;bool mGhostRevive=true;std::set<std::string> mGhostBellTargets;
- //! \brief Writes both real seat optional blocks at full precision.
- void save(std::ostream& os)const{os<<std::setprecision(17);SEAT_SAVE}
- //! \brief Reads the actual optional blocks in either order.
+//! \brief Runs real research and room blocks with legacy defaults and unrelated-tag preservation.
+struct SeatRecord{double mEctoplasmLevels=0,mSkillPointsRemainder=0;GhostProduct mGhostProduct=GhostProduct::mana;bool mGhostRevive=true;std::set<std::string> mGhostBellTargets;
+ //! \brief Writes real seat blocks using only the precision selected by production code.
+ void save(std::ostream& os)const{SEAT_SAVE}
+ //! \brief Reads actual research and room optional blocks in either order.
  bool load(std::istream& is){std::string str;if(!(is>>str))return false;while(true){SEAT_IMPORT
   if(str=="[GhostRoom]"||str=="[GhostBells]")continue;
   if(str=="[Other]"){if(!(is>>str)||str!="[/Other]"||!(is>>str))return false;continue;}return str=="EndSeat";}}
@@ -192,9 +193,9 @@ struct CorpseRecord{int32_t mNbTurnsPrison=0,mNbTurnsTorture=0;double mCorpseTur
 
 # Exercise complete records, exact fractional counters, legacy boundaries and rejection paths.
 def main():
-    """Check exact codecs, malformed records and pickup restoration against fixed expectations."""
+    """Check exact fractional seat saves, codecs, malformed records and pickup restoration."""
     code = stream_fixture()+r'''
-//! \brief Runs the real serializers with nondefault continuation data and old-save sentinels.
+//! \brief Runs real serializers with exact fractional balances, continuation data and old-save sentinels.
 int main(){
  GameMap map;Seat seat;map.seats.push_back(&seat);for(int y=0;y<8;++y)for(int x=0;x<8;++x){Tile& tile=map.tiles[{x,y}];tile.x=x;tile.y=y;}
  for(GhostState phase:{GhostState::rising,GhostState::floating,GhostState::beamed,GhostState::boxed,GhostState::dissolving}){
@@ -219,6 +220,27 @@ int main(){
  GhostBoxEntity legacyBox;legacyBox.map=&map;std::stringstream oldBox("old 2 3 17.875 0");check(legacyBox.importFromStream(oldBox)&&legacyBox.mAssignedHunter.empty()&&legacyBox.mOpenTurns==17.875,"legacy box without runtime");
  CreatureActionHuntGhost legacyHunt(hunter);std::stringstream oldHunt("2 none none 1 2 1.375 1 inside [/GhostHunt] NEXT");check(legacyHunt.importFromStream(oldHunt)&&legacyHunt.mRestoring&&legacyHunt.mGhosts.size()==1,"old hunter without runtime");oldHunt>>token;check(token=="NEXT","old hunter preserves following tag");
  CreatureActionHuntGhost oldBeam(hunter);std::stringstream oldBeamHunt("3 inside hooks 1 2 4.25 0 [/GhostHunt] NEXT");check(oldBeam.importFromStream(oldBeamHunt)&&oldBeam.mRestoring&&oldBeam.mState==3&&oldBeam.mTarget=="inside","an old save in the beam state still loads");near(oldBeam.mTurns,4.25,"an old beam resumes with its saved clock, so only the remaining beam time runs");
+ // Load legacy progress first, then save with zero/positive research remainder and inherited low precision.
+ // Four fixed balances cover a long fraction, a value near one, a tiny fraction and whole-plus-fraction legacy storage.
+ const char* legacyBalances[]={"0.12345678901234566","0.99999999999999989","1.2345678901234567e-12","8.1234567890123444"};
+ const double expectedBalances[]={0.12345678901234566,0.99999999999999989,1.2345678901234567e-12,8.1234567890123444};
+ for(int balance=0;balance<4;++balance)for(double remainder:{0.0,0.12345678901234566})for(int precision:{6,3})
+ {
+  SeatRecord legacy;std::stringstream oldProgress(std::string("[GhostRoom] ")+legacyBalances[balance]+" 2 0 [/GhostRoom] EndSeat");
+  check(legacy.load(oldProgress)&&legacy.mEctoplasmLevels==expectedBalances[balance],"legacy fractional balance loads exactly");
+  legacy.mSkillPointsRemainder=remainder;
+  for(int cycle=0;cycle<3;++cycle)
+  {
+   std::stringstream saved;saved.precision(precision);legacy.save(saved);
+   check(saved.precision()==precision,"seat fractional writers restore inherited stream precision");
+   check((saved.str().find("[ResearchRemainder]")!=std::string::npos)==(remainder>0),"research remainder presence is independent of room precision");
+   saved<<" EndSeat";SeatRecord restored;
+   check(restored.load(saved)&&restored.mEctoplasmLevels==expectedBalances[balance]&&restored.mSkillPointsRemainder==remainder,
+       "three repeated save/load cycles retain exact double balances with either research remainder");
+   check(restored.mGhostProduct==GhostProduct::crystal&&!restored.mGhostRevive,"fractional save keeps chosen apparatus and revive switch");
+   legacy=restored;
+  }
+ }
  SeatRecord reordered;std::stringstream order("[GhostRoom] 1.125 1 0 [/GhostRoom] [GhostBells] 1 earlier [/GhostBells] EndSeat");check(reordered.load(order)&&reordered.mEctoplasmLevels==1.125&&reordered.mGhostBellTargets.count("earlier"),"seat optional blocks also load in reverse order");
  RoomGhostRoom restoredRoom;restoredRoom.type=RoomType::ghostRoom;restoredRoom.seat=&seat;restoredRoom.name="press";map.rooms.push_back(&restoredRoom);hunter.tile=map.getTile(2,2);
  for(uint32_t phase:{2u,3u,10u,6u}){CreatureActionHuntGhost resumed(hunter);resumed.mState=phase;resumed.mRestoring=true;resumed.equipment=&restoredRoom;resumed.mHookSlot=7;resumed.mHookX=1;resumed.mHookY=2;resumed.mTarget="inside";resumed.mEmptyRoom="press";resumed.mDestination=map.getTile(3,4);resumed.mEmptyAnchor=map.getTile(4,4);resumed.mLoadedPath={Ogre::Vector2(3,3)};resumed.restore();check(resumed.mRegistered&&!resumed.mRestoring&&restoredRoom.restoredSlot==7,"load binds exact reserved hook slot before assignment");check(hunter.animation==(phase==2?"Throw":phase==3?"Beam":phase==10?"Idle":"Walk"),"load restores exact active phase pose (2 box throw, 3 beam pull, 10 box snapping shut, 6 still walking to the cauldron puts the trap in only on arrival, decision 865)");if(phase==10)check(resumed.mBeamTarget.empty(),"a loaded snap shows no beam");if(phase==6)check(restoredRoom.standing==resumed.mDestination&&restoredRoom.anchor==resumed.mEmptyAnchor,"load restores exact occupied cauldron and standing place");}
@@ -267,7 +289,10 @@ int main(){
 # Assemble the original creature/room presentation tails and free-reveal codecs.
 def packet_fixture():
     from check_ghost_rules import PRELUDE
-    code = PRELUDE + read('source/game/WorkerJobs.h') + r'''
+    status = read('source/rooms/RoomManagerStatus.h').replace('#include "rooms/RoomType.h"', '')
+    status_prelude = PRELUDE.replace('enum class RoomType{crypt,ghostRoom,other};',
+        'enum class RoomType{crypt,ghostRoom,other,merchant,tavern,spa,infirmary,alchemyLab,casino,workshop};')
+    code = status_prelude + status + read('source/game/WorkerJobs.h') + r'''
 //! \brief Supplies transparent unchanged base packet and stream prefixes.
 struct RenderedMovableEntity{
  //! \brief Supplies ordinary creation prefix.
@@ -392,7 +417,7 @@ struct CreatureTail{std::vector<CreatureMoodEffect> mMoodEffects={CreatureMoodEf
     write_jobs = function(seat_source, 'void SeatData::writeWorkerJobSettings(').replace('SeatData::', '')
     code += r'''
 //! \brief Keeps the actual owner-only room setting codec tail and its old infirmary prefix.
-struct SeatDataTail{int32_t payer=1,mInfirmaryThreshold=65;bool mInfirmaryHealOn=false,mGhostRevive=false;double mEctoplasmLevels=8.875;GhostProduct mGhostProduct=GhostProduct::crystal;
+struct SeatDataTail{std::array<RoomManagerEntry,8> mRoomManagerEntries=emptyRoomManagerEntries();int32_t payer=1,mInfirmaryThreshold=65;bool mInfirmaryHealOn=false,mGhostRevive=false;double mEctoplasmLevels=8.875;GhostProduct mGhostProduct=GhostProduct::crystal;
  WorkerJobSettings mWorkerJobSettings{{},0,{{0,1,2,3,4,5}},{{0,1,2,3,4,5,6}},0};uint32_t mFreeWorkers=0;std::array<uint32_t,6> mWorkerJobCounts{};
  READ_JOBS
  WRITE_JOBS
@@ -427,7 +452,12 @@ int main(){
  Seat owner,other;CreatureTail first;first.owner=&owner;first.mDragWorkerName="drag-worker";for(bool update:{false,true})for(Seat* viewer:{&owner,&other}){ODPacket packet;if(update)first.update(packet,viewer);else first.full(packet,viewer);CreatureTail second;if(update)second.readUpdate(packet);else second.readFull(packet);check(packet.cursor==packet.tokens.size(),"complete creature tail symmetry");near(second.mGoldCarried,12.25,"gold remains double");near(second.mGoldStolen,4.5,"stolen gold precedes the drag worker field");check(second.mDragWorkerName=="drag-worker","live drag worker identity roundtrips for every viewer and packet kind");check(second.skill==3&&second.items==4,"old skill and item tails retained");near(second.mCorpseTurns,167.875,"corpse counter public exact");near(second.mDecayTurns,22.125,"decay counter public exact");check(second.mGhostBackpack&&second.mGhostBeamTarget=="ghost"&&second.mGhostBoxMode==2&&second.mGhostThrowTarget=="target","all hunter visual fields");near(second.mGhostThrowClientTurns,.375,"loaded throw phase exact");bool own=viewer==&owner;near(second.mInfirmaryMood,own?7.5:0,"existing infirmary owner mask");near(second.mUrge,update&&!own?0:9.125,"existing needs update mask");near(second.mThirst,update&&!own?0:80,"existing thirst update mask");near(second.mSpaMood,own?5.5:0,"lava spa owner mask");near(second.mHangoverTurns,update&&!own?0:3.375,"four thirst and two spa fields precede corpse doubles");near(second.mRelaxTurns,own?6.25:0,"relaxation owner mask");check(second.mMoodEffects.size()==(own?2u:0u),"running mood effects only for the own seat, an empty list for other seats clears the reader");if(own)check(second.mMoodEffects[0].mName=="MakeUnhappy"&&second.mMoodEffects[0].mStrength==-1.5&&second.mMoodEffects[0].mTurnsLeft==200.25&&second.mMoodEffects[1].mName=="Rested"&&second.mMoodEffects[1].mStrength==2.5&&second.mMoodEffects[1].mTurnsLeft==12,"running mood effects keep name, strength and turns left");}
  BuildingObject firstObject,secondObject;ODPacket creation;firstObject.exportToPacket(creation,&owner);secondObject.importFromPacket(creation);check(creation.cursor==creation.tokens.size()&&secondObject.mFurnitureScale.x==.75f&&secondObject.mFurnitureScale.y==1.25f&&secondObject.mItemBagQuality==2&&secondObject.mItemBagSealed,"furniture old footprint and item fields preserved");near(secondObject.mGhostFill,.625,"furniture full fill");near(secondObject.mGhostAlarm,3.125,"furniture full alarm");firstObject.mGhostFill=.875;ODPacket update;firstObject.exportToPacketForUpdate(update,&owner);secondObject.updateFromPacket(update);check(update.cursor==update.tokens.size(),"furniture update symmetry");near(secondObject.mGhostFill,.875,"furniture update fill");
  SpellEyeEvil freeEye;freeEye.mFreeMode=true;freeEye.mFreeRadius=3;freeEye.mFreeTurns=7;std::stringstream stream;freeEye.exportToStream(stream);stream<<" EndSpell";SpellEyeEvil restored;check(restored.importFromStream(stream)&&restored.mFreeMode&&restored.mFreeRadius==3&&restored.mFreeTurns==7&&restored.duration==7,"free eye exact saved radius and remaining duration");std::string next;stream>>next;check(next=="EndSpell","free eye leaves following record");std::stringstream old("NextSpell");SpellEyeEvil ordinary;check(ordinary.importFromStream(old)&&!ordinary.mFreeMode,"old ordinary eye no free-mode research leak");old>>next;check(next=="NextSpell","old ordinary eye preserves next record");ODPacket eye;freeEye.exportToPacket(eye,&owner);SpellEyeEvil eyeClient;eyeClient.importFromPacket(eye);check(eye.cursor==eye.tokens.size()&&eyeClient.mFreeRadius==3&&eyeClient.duration==7,"free eye packet symmetry");
- SeatDataTail seatSource,seatResult;ODPacket seatPacket;seatSource.save(seatPacket);check(seatResult.load(seatPacket)&&seatPacket.cursor==seatPacket.tokens.size(),"owner-only seat settings symmetry");near(seatResult.mEctoplasmLevels,8.875,"owner seat bar exact");check(seatResult.mGhostProduct==GhostProduct::crystal&&!seatResult.mGhostRevive&&seatResult.payer==1&&seatResult.mInfirmaryThreshold==65&&!seatResult.mInfirmaryHealOn,"old infirmary and new ghost seat fields retained");
+ SeatDataTail seatSource,seatResult;seatSource.mRoomManagerEntries[4].count=2;seatSource.mRoomManagerEntries[4].dot=RoomManagerDot::red;ODPacket seatPacket;seatSource.save(seatPacket);check(seatResult.load(seatPacket)&&seatPacket.cursor==seatPacket.tokens.size(),"owner-only seat settings symmetry");near(seatResult.mEctoplasmLevels,8.875,"owner seat bar exact");check(seatResult.mRoomManagerEntries[4].count==2&&seatResult.mRoomManagerEntries[4].dot==RoomManagerDot::red,"room status owner snapshot roundtrip");check(seatResult.mGhostProduct==GhostProduct::crystal&&!seatResult.mGhostRevive&&seatResult.payer==1&&seatResult.mInfirmaryThreshold==65&&!seatResult.mInfirmaryHealOn,"old infirmary and new ghost seat fields retained");
+ // A partial or invalid room status array must leave the previous complete owner snapshot intact.
+ for(uint32_t invalidDot:{4u,99u}){SeatDataTail bad;bad.mRoomManagerEntries[0].count=9;bad.mRoomManagerEntries[7].dot=static_cast<RoomManagerDot>(invalidDot);ODPacket invalid;bad.save(invalid);SeatDataTail result;check(!result.load(invalid)&&result.mRoomManagerEntries[0].count==0,"invalid dot does not partly adopt room snapshot");}
+ {SeatDataTail bad;bad.mRoomManagerEntries[1].dot=RoomManagerDot::green;ODPacket invalid;bad.save(invalid);SeatDataTail result;check(!result.load(invalid),"merchant rejects a dot");}
+ {SeatDataTail bad;bad.mRoomManagerEntries[4].dot=RoomManagerDot::yellow;ODPacket invalid;bad.save(invalid);SeatDataTail result;check(!result.load(invalid),"yellow infirmary dot rejected");}
+ {SeatDataTail bad;ODPacket truncated;bad.save(truncated);truncated.tokens.pop_back();SeatDataTail result;check(!result.load(truncated)&&result.mRoomManagerEntries[4].count==0,"truncated room snapshot rejected atomically");}
  for(uint32_t product:{3u,99u}){ODPacket invalid;invalid<<int32_t(1)<<int32_t(65)<<false<<1.25<<product<<true;SeatDataTail result;check(!result.load(invalid)&&result.mEctoplasmLevels==8.875,"invalid product cannot partially adopt ghost settings");}
  std::cout<<"creature furniture and free-eye tails: ok\n";
 }
