@@ -1,9 +1,21 @@
 # Hash the exact dependency inputs and installed binaries used by the Windows build.
 # Only install-ogre-prereq.ps1 writes the receipt, after both INSTALL targets succeed.
-Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
+function Get-OgrePrereqFileHash {
+    # Compute SHA-256 without depending on the caller's PowerShell module path.
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $taskStream = [System.IO.File]::OpenRead($Path)
+    $taskAlgorithm = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        return [System.BitConverter]::ToString($taskAlgorithm.ComputeHash($taskStream)).Replace('-', '')
+    }
+    finally {
+        $taskAlgorithm.Dispose()
+        $taskStream.Dispose()
+    }
+}
 
 function Get-OgrePrereqFileHash {
-    # Hash a file without depending on the host's Get-FileHash command.
+    # Return the SHA-256 receipt hash without depending on the host's Get-FileHash command.
     param([Parameter(Mandatory = $true)][string]$Path)
     $taskStream = [System.IO.File]::OpenRead($Path)
     try {
