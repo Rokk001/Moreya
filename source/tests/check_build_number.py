@@ -58,9 +58,10 @@ check('starts again at 1' in claude and 'next-build-number.py' in claude, 'CLAUD
 build_script = (repo / 'scripts/win32/integrator-release-build.ps1').read_text()
 check('next-build-number.py' in build_script, 'integrator build script does not call next-build-number.py')
 check('configure-windows-prereqs.ps1" -BuildNumber $buildNumber' in build_script, 'integrator build script does not pass -BuildNumber to the configure script')
-check('--parallel 1' in build_script, 'integrator build script does not build with --parallel 1')
+check('--parallel $(if ($env:BUILD_PARALLEL) { $env:BUILD_PARALLEL } else { 1 })' in build_script,
+      'integrator build script must use configured parallelism with a default of 1')
 check('build-start-$Run.txt' in build_script, 'integrator build script does not record the build start time')
-check('The integrator is the only one that runs a full build' in claude and 'never run a full build' in claude, 'CLAUDE.md lacks the rule that only the integrator builds')
+check('Work on a feature or fix branch never runs a full build' in claude, 'CLAUDE.md lacks the rule against full builds on feature or fix branches')
 check('Kein Release- oder Abschlussbuild' not in claude, 'CLAUDE.md still allows a full build after a release')
 
 for message in failures:

@@ -9,6 +9,8 @@ param(
 # Native stderr must not end the script; only the exit codes decide
 $ErrorActionPreference = 'Continue'
 $wt = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+# Services may have started before the user-level asset source setting was added.
+if (-not $env:ODP_ASSETS_SRC) { $env:ODP_ASSETS_SRC = [Environment]::GetEnvironmentVariable('ODP_ASSETS_SRC', 'User') }
 New-Item -ItemType Directory -Force "$wt\out" | Out-Null
 $run = 'orch-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 Set-Content -Encoding ascii "$wt\out\orch-run.txt" $run
