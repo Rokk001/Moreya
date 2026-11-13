@@ -256,8 +256,8 @@ material MerchantEye
     {
         pass
         {
-            ambient 0.4200 0.3500 0.2400
-            diffuse 0.4200 0.3500 0.2400 1
+            ambient 0.2400 0.2150 0.1800
+            diffuse 0.2400 0.2150 0.1800 1
             specular 0.12 0.12 0.12 1 16
             emissive 0.0000 0.0000 0.0000
         }
@@ -330,10 +330,10 @@ material MerchantGold
     {
         pass
         {
-            ambient 0.4200 0.3000 0.1000
-            diffuse 0.4200 0.3000 0.1000 1
+            ambient 0.2400 0.1600 0.0550
+            diffuse 0.2400 0.1600 0.0550 1
             specular 0.30 0.24 0.10 1 24
-            emissive 0.0120 0.0080 0.0020
+            emissive 0.0060 0.0040 0.0010
         }
     }
 }
