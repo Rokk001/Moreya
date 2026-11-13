@@ -491,7 +491,7 @@ def check_flight_frame_log(root):
     sample = scene.split("void RenderSceneMenu::recordFrameStatistics", 1)[1].split("void RenderSceneMenu::logFlightFrames", 1)[0]
     frame_start = listener.split("bool ODFrameListener::frameStarted", 1)[1].split("void ODFrameListener::renderQueueStarted", 1)[0]
     assert "if(mActive && mFlight.isActive())" in sample and "mFlightFrames.addFrame(seconds);" in sample
-    assert "mFrameStatistics.sampleFrame(inGame)" in frame_start and "mMainScene->recordFrameStatistics(frameSeconds);" in frame_start
+    assert "mFrameStatistics.sampleFrame(inGame, mGameMap->getTurnNumber(), mWindow->isActive())" in frame_start and "mMainScene->recordFrameStatistics(frameSeconds);" in frame_start
     assert frame_start.index("recordFrameStatistics(frameSeconds)") < frame_start.index("currentMode->onFrameStarted(evt)"), "sampling precedes any flight animation or clamp"
     assert scene.count("mFlightFrames.addFrame(") == 1 and "addFrame" not in update.split("void RenderSceneMenu::recordFrameStatistics", 1)[0], "animation updates must not double-count render samples"
     assert 'logFlightFrames("arrived");' in update and update.index('logFlightFrames("arrived");') < update.index("mCurrentPlace = mFlightPlace;"), "each arrival must log with its starting place"

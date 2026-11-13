@@ -21,6 +21,7 @@
  */
 
 #include "render/ODFrameListener.h"
+#include "render/FrameStallTrace.h"
 
 #include "entities/Creature.h"
 #include "entities/Tile.h"
@@ -423,6 +424,7 @@ void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
 //! \brief Advances the interface and world while preserving any active loading presentation.
 bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
 {
+    FrameStallTrace::get().setPhase(FrameStallTrace::FrameQueued);
     CEGUI::MouseCursor& mouseCursor = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor();
     CEGUI::Vector2<float> mousePos = mouseCursor.getDisplayIndependantPosition();
     RenderManager::getSingleton().moveCursor(mousePos.d_x, mousePos.d_y);
@@ -431,18 +433,22 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
         return false;
 
     // Sleep to limit the framerate to the max value
+    FrameStallTrace::get().setPhase(FrameStallTrace::Limiter);
     mFpsLimiter.sleepIfEarly();
     RunLevelTest::recordFrame(evt.timeSinceLastFrame);
     
 
     // A dialog that rose above the tooltip since the last frame must not hide it (owner decision 920)
+    FrameStallTrace::get().setPhase(FrameStallTrace::GuiPulse);
     Gui::keepTooltipInFront();
     CEGUI::System::getSingleton().injectTimePulse(evt.timeSinceLastFrame);
     CEGUI::System::getSingleton().getDefaultGUIContext().injectTimePulse(evt.timeSinceLastFrame);
 
+    FrameStallTrace::get().setPhase(FrameStallTrace::ModeUpdate);
     mModeManager->update(evt);
     applyPendingRenderWindowRecreation();
 
+    FrameStallTrace::get().setPhase(FrameStallTrace::Animations);
     int64_t currentTurn = mGameMap->getTurnNumber();
 
     if(!mExitRequested)
@@ -451,6 +457,7 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
         updateAnimations(evt.timeSinceLastFrame);
     }
 
+    FrameStallTrace::get().setPhase(FrameStallTrace::CameraAudio);
     LoadingScreen::update();
     mCameraManager.updateCameraFrameTime(evt.timeSinceLastFrame);
     mCameraManager.onFrameStarted();
@@ -473,6 +480,7 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
         notifyObservers(ClockTick(currentMinutes,currentSeconds));
     }
     lastSecondFrameRenderingQueued = currentSeconds;
+    FrameStallTrace::get().setPhase(FrameStallTrace::Present);
     if((currentTurn != -1) && (mGameMap->getGamePaused()) && (!mExitRequested))
         return true;
 
@@ -484,21 +492,27 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
         return mContinue;
     }
 
+    FrameStallTrace::get().setPhase(FrameStallTrace::FrameQueued);
     printDebugInfo();
 
+    FrameStallTrace::get().setPhase(FrameStallTrace::SocketMessages);
     mGameMap.get()->processDeletionQueues();
     // Timeout 0: the frame reads every server message that has arrived but never waits for one
     ODClient::getSingleton().processClientSocketMessages(0);
+    FrameStallTrace::get().setPhase(FrameStallTrace::Notifications);
     ODClient::getSingleton().processClientNotifications();
     LoadingScreen::update();
 
 
     
+    FrameStallTrace::get().setPhase(FrameStallTrace::Present);
     return mContinue;
 }
 
+//! \brief Times end-of-frame cleanup separately from presentation and the event pump.
 bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
 {
+    FrameStallTrace::get().setPhase(FrameStallTrace::FrameEnded);
     if(!mModeManager)
         return true;
 
@@ -509,6 +523,7 @@ bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
     mCameraManager.onFrameEnded();
     mRoomAmbience->clearShake();
 
+    FrameStallTrace::get().setPhase(FrameStallTrace::EventPump);
     return true;
 }
 
@@ -523,7 +538,8 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
     const AbstractApplicationMode* sampledMode = mModeManager->getCurrentMode();
     const bool inGame = sampledMode != nullptr &&
         sampledMode->getModeType() == ModeManager::GAME && mGameMap->getTurnNumber() != -1;
-    const float frameSeconds = mFrameStatistics.sampleFrame(inGame);
+    const float frameSeconds = mFrameStatistics.sampleFrame(inGame, mGameMap->getTurnNumber(), mWindow->isActive());
+    FrameStallTrace::get().setPhase(FrameStallTrace::FrameStarted);
     if(mIsMainMenuCreated)
         mMainScene->recordFrameStatistics(frameSeconds);
     if(RunLevelTest::isActive())
@@ -562,6 +578,7 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
         mTemporaryHiddenOverlays.clear();
     }
    
+    FrameStallTrace::get().setPhase(FrameStallTrace::RenderTargets);
     return true;
 }
 
@@ -577,6 +594,7 @@ void ODFrameListener::renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::S
         viewport != nullptr && viewport->getOverlaysEnabled())
     {
         Ogre::Root::getSingleton().getRenderSystem()->clearFrameBuffer(Ogre::FBT_DEPTH);
+        FrameStallTrace::Scope trace(FrameStallTrace::GuiRender);
         CEGUI::System::getSingleton().renderAllGUIContexts();
         // The static menu background must not inherit the last widget's clip.
         Ogre::Root::getSingleton().getRenderSystem()->setScissorTest(false);
