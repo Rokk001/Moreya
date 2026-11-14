@@ -1,15 +1,15 @@
-"""Decisions 1057-1060 and 1070: the pool attendant is massive, hairy and pot-bellied and every act is readable.
+"""Check the restored pool attendant mesh (1186) and retained acts (1057-1060 and 1070).
 
 Reads the shipped models/PoolAttendant.mesh and .skeleton through OgreXMLConverter and the attendant code; no compiler, no
-game. Checks (1) the look after variant 1 of D-7-v2.png: heavy belly, wide shoulders, thick legs, body hair, very little
-blood, towel, whistle, hair and moustache kept; (2) the Sit pose: knees bent and apart (no stiff legs), arms beside the
+game. Checks (1) the exact deployed mesh restored by decision 1186, including towel, whistle, hair and moustache;
+(2) the Sit pose: knees bent and apart (no stiff legs), arms beside the
 belly (no intersection), body not twisted; (3) the clips: Whistle brings the whistle to the mouth, TowelWave holds the
 towel in the hand above the shoulder and waves it, Doze lets him sink sideways, Climb, Walk and Jump move; (4) the code:
 the acts, the whistle only with a bather and at the moment of the blow, the cannonball and its place.
 """
+from hashlib import sha256
 from pathlib import Path
 import math
-import os
 import re
 import subprocess
 import tempfile
@@ -22,13 +22,18 @@ helper_source = (ROOT / 'source/tests/check_spa_owner_863.py').read_text(encodin
 helpers = {'__file__': str(ROOT / 'source/tests/check_spa_owner_863.py')}
 exec(compile(helper_source[:helper_source.index('def check_pose')], 'check_spa_owner_863_helpers', 'exec'), helpers)
 CONVERTER = helpers['CONVERTER']
-vector, rotation, geometry, sample_track, points_for = (helpers[name] for name in
-                                                        ('vector', 'rotation', 'geometry', 'sample_track', 'points_for'))
+vector, rotation, sample_track, points_for = (helpers[name] for name in
+                                            ('vector', 'rotation', 'sample_track', 'points_for'))
 
 
 def read(name):
     return (ROOT / name).read_text(encoding='utf-8')
 
+
+# Decision 1186 restored the deployed mesh and retained the updated skeleton.
+assert sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
+    '6eb7499d2eba2250c3181690820b4e42cb6297e10d4a34deadc9462568ca25d7'
+), 'decision 1186 restores the deployed attendant mesh with its original proportions and materials'
 
 with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
     converted = {}
@@ -43,24 +48,13 @@ mesh, skeleton = converted['PoolAttendant.mesh'], converted['PoolAttendant.skele
 sub_by_material = {}
 for sub in mesh.findall('submeshes/submesh'):
     sub_by_material.setdefault(sub.get('material'), []).append(sub)
-for material in ('SpaSkin', 'SpaSuit', 'SpaHair', 'SpaBodyHair', 'SpaBlood', 'SpaLinen', 'SpaWhistle', 'SpaEyes', 'SpaIron'):
+for material in ('SpaSkin', 'SpaSuit', 'SpaHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes', 'SpaIron'):
     assert material in sub_by_material, 'the attendant needs the material ' + material
 faces = {m: sum(len(s.findall('faces/face')) for s in subs) for m, subs in sub_by_material.items()}
-assert faces['SpaBodyHair'] >= 3000, 'hairy: the chest, the arms and the legs carry thousands of hair tufts'
-assert 10 <= faces['SpaBlood'] <= 150, 'very little blood, sparingly visible (a few small marks)'
 assert faces['SpaLinen'] >= 300 and faces['SpaHair'] >= 1000, 'towel, grey hair and moustache stay'
 
 suit = points_for(mesh, 'SpaSuit')
-skin = points_for(mesh, 'SpaSkin')
-everything = np.concatenate([suit, skin])
 belly = suit[(suit[:, 2] > .42) & (suit[:, 2] < .6)]
-assert np.ptp(belly[:, 0]) > .40, 'massive: the belly is wider than 0.40 (was 0.31)'
-assert belly[:, 1].min() < -.27, 'pot-bellied: the belly reaches 0.27 in front of the spine (was 0.19)'
-assert np.ptp(everything[:, 0]) > .68, 'broad shoulders and arms'
-shoulders = skin[(skin[:, 2] > .66) & (skin[:, 2] < .78)]
-assert np.ptp(shoulders[:, 0]) > .5, 'heavy shoulders'
-thighs = skin[(skin[:, 2] > .3) & (skin[:, 2] < .4) & (skin[:, 0] < -.02)]
-assert np.ptp(thighs[:, 0]) > .18, 'thick thighs'
 whistle = points_for(mesh, 'SpaWhistle')
 assert np.ptp(whistle[:, 0]) > .05 and np.ptp(whistle[:, 2]) > .095, 'whistle must read from the camera'
 
@@ -164,9 +158,10 @@ for key, value in (('SpaAttendantActMinSeconds', '10'), ('SpaAttendantActMaxSeco
                    ('SpaAttendantCannonballMinSeconds', '120'), ('SpaAttendantCannonballMaxSeconds', '180')):
     assert re.search(r'^\s+' + key + r'\s+' + value + r'\s*$', rooms, re.M), key
 materials = read('materials/scripts/Spa.material')
-for material in ('SpaBodyHair', 'SpaBlood'):
+for material in sub_by_material:
     assert re.search(r'^material ' + material + r' ', materials, re.M), material
 credits = read('CREDITS')
-assert 'models/PoolAttendant.mesh' in credits and 'decision 1070' in credits
+assert re.search(r'^models/PoolAttendant\.mesh .*decision 863', credits, re.M)
+assert re.search(r'^models/PoolAttendant\.skeleton .*1057-1060, 1070', credits, re.M)
 
-print('check_spa_owner_1057 ok: massive hairy pot-bellied attendant, bent legs, arms beside the belly, readable acts')
+print('check_spa_owner_1057 ok: restored attendant mesh, bent legs, arms beside the belly, readable acts')
