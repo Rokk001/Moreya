@@ -16,6 +16,7 @@
  */
 
 #include "creatureaction/CreatureActionCarryEntity.h"
+#include "creatureaction/CreatureActionWalkToTile.h"
 
 #include "entities/Building.h"
 #include "entities/Creature.h"
@@ -32,11 +33,13 @@
 #include "rooms/RoomPrison.h"
 #include "rooms/Room.h"
 #include "rooms/RoomMerchant.h"
+#include "rooms/RoomLibrary.h"
 #include "rooms/RoomTreasury.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/MakeUnique.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -148,7 +151,7 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
     mCreature.carryEntity(mEntityToCarry);
 }
 
-//! \brief Releases cargo and confirms or cancels its destination reservation.
+//! \brief Releases cargo, confirming library delivery only after the carry handler completed it.
 CreatureActionCarryEntity::~CreatureActionCarryEntity()
 {
     if(mEntityToCarry != nullptr)
@@ -179,7 +182,11 @@ CreatureActionCarryEntity::~CreatureActionCarryEntity()
     if(mBuildingDest != nullptr)
     {
         mBuildingDest->removeGameEntityListener(this);
-        mBuildingDest->notifyCarryingStateChanged(mExternalDrag && !mDelivered ? nullptr : &mCreature, mEntityToCarry);
+        const bool libraryDelivery = mBuildingDest->getObjectType() == GameEntityType::room &&
+            static_cast<Room*>(mBuildingDest)->getType() == RoomType::library;
+        if(libraryDelivery)
+            static_cast<RoomLibrary*>(mBuildingDest)->releaseInteractionPosition(&mCreature);
+        mBuildingDest->notifyCarryingStateChanged((mExternalDrag || libraryDelivery) && !mDelivered ? nullptr : &mCreature, mEntityToCarry);
     }
 }
 
@@ -191,6 +198,7 @@ void CreatureActionCarryEntity::replaceDestination(Building& oldRoom, Building& 
     newRoom.addGameEntityListener(this);
 }
 
+//! \brief Binds the active transport handler to this action's delivery state.
 std::function<bool()> CreatureActionCarryEntity::action()
 {
     if(mIsDrag)
@@ -202,7 +210,7 @@ std::function<bool()> CreatureActionCarryEntity::action()
         return std::bind(&CreatureActionCarryEntity::handleCarryGold, this);
 
     return std::bind(&CreatureActionCarryEntity::handleCarryEntity,
-        std::ref(mCreature), mEntityToCarry, mTileDest);
+        this, std::ref(mCreature), mEntityToCarry, mTileDest);
 }
 
 //! \brief Returns the gold the creature's own gold room can still take on the tile (0 if the tile is no own gold tile).
@@ -315,7 +323,7 @@ bool CreatureActionCarryEntity::isPulledOverGround(const Creature& carrier, Game
     return !patient.isAlive() || patient.getKoTurnCounter() < 0;
 }
 
-//! \brief Delivers cargo at its tile or the merchant table's existing furniture-aware stand position.
+//! \brief Delivers carried off-map cargo at its tile or shelf approach before recording completion.
 bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest)
 {
     if(tileDest == nullptr)
@@ -341,6 +349,25 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     }
 
     Room* room = tileDest->getCoveringRoom();
+    if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity && room != nullptr &&
+        room->getType() == RoomType::library)
+    {
+        std::vector<Ogre::Vector2> approach;
+        if(room == mBuildingDest && room->getSeat() == creature.getSeat() &&
+            room->hasCarryEntitySpot(entityToCarry) &&
+            static_cast<RoomLibrary*>(room)->getBookshelfApproach(creature, tileDest, approach))
+        {
+            if(!approach.empty())
+            {
+                creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, approach, false, true);
+                creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
+                return false;
+            }
+            mDelivered = true;
+        }
+        creature.popAction();
+        return false;
+    }
     if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity && room != nullptr &&
         room->getType() == RoomType::merchant)
     {
