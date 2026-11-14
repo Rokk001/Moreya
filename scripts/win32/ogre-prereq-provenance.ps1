@@ -15,7 +15,7 @@ function Get-OgrePrereqFileHash {
 }
 
 function Get-OgrePrereqFileHash {
-    # Hash a file without depending on the host's Get-FileHash command.
+    # Return the SHA-256 receipt hash without depending on the host's Get-FileHash command.
     param([Parameter(Mandatory = $true)][string]$Path)
     $taskStream = [System.IO.File]::OpenRead($Path)
     try {
