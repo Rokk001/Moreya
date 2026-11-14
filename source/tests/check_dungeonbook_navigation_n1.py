@@ -89,4 +89,3 @@ for name, digest in expected.items():
         data = data.replace(b'\r\n', b'\n')
     assert hashlib.sha1(('blob %d\0' % len(data)).encode() + data).hexdigest() == digest, name
 print('Dungeonbook navigation wiring and six visual assets: OK')
-
