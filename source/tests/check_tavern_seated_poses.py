@@ -177,14 +177,18 @@ def check_innkeeper():
         subprocess.run([converter, '-q', str(ROOT / 'models' / name), str(out / (name + '.xml'))],
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
     counter, faces, _ = rest.mesh_data(out / 'TavernCounter.mesh.xml')
-    # The top boards: flat faces over the whole width above the underside; the hands and the jug rest on them
-    tops = [float(counter[index, 2].max()) for index, material in faces
-            if material == 'TavernCounterWood' and np.ptp(counter[index, 2]) < 1e-4 and
-            counter[index, 2].min() > 0.5 and np.ptp(counter[index, 0]) > 0.9]
-    assert tops and abs(max(tops) - 0.53) < 0.002 and abs(min(tops) - COUNTER_TOP) < 0.002, ('the counter top moved', tops)
-    assert max(float(counter[index, 1].max()) for index, material in faces if material == 'TavernCounterWood' and
-               np.ptp(counter[index, 2]) < 1e-4 and counter[index, 2].min() > 0.5 and np.ptp(counter[index, 0]) > 0.9) \
-        <= COUNTER_TOP_BACK + 0.007, 'the counter top reaches further back'
+    # The top boards: combine near-horizontal triangles that reach the central opening.
+    # The hands and jug rest on these boards, between the narrow side returns.
+    wood = np.array([counter[index] for index, material in faces if material == 'TavernCounterWood'])
+    normals = np.cross(wood[:, 1] - wood[:, 0], wood[:, 2] - wood[:, 0])
+    tops = (wood[:, :, 2].min(axis=1) > 0.5) & (normals[:, 2] > 0.9 * np.linalg.norm(normals, axis=1)) & \
+        (wood[:, :, 0].min(axis=1) < 0.45) & (wood[:, :, 0].max(axis=1) > -0.45)
+    assert normals[tops, 2].sum() / 2 > 0.20, 'the top boards must cover the counter'
+    points = wood[tops].reshape(-1, 3)
+    assert np.ptp(points[:, 0]) > 0.9, 'the top boards must span the counter width'
+    assert abs(points[:, 2].max() - 0.53) < 0.002 and abs(points[:, 2].min() - COUNTER_TOP) < 0.002, \
+        'the counter top moved'
+    assert points[:, 1].max() <= COUNTER_TOP_BACK + 0.007, 'the counter top reaches further back'
     skeleton = feet.Skel(str(out / 'Innkeeper.skeleton.xml'))
     vertices, _, weights = rest.mesh_data(out / 'Innkeeper.mesh.xml')
     limbs = {skeleton.idx[b] for b in ('UpperArm_R', 'Forearm_R', 'Hand_R', 'UpperArm_L', 'Forearm_L', 'Hand_L', 'Jug')}
