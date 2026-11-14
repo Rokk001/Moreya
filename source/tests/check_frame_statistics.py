@@ -41,7 +41,7 @@ cmake = read("CMakeLists.txt")
 frame = function(listener, "bool ODFrameListener::frameStarted(")
 assert listener.count("mFrameStatistics.sampleFrame(") == 1
 assert "sampleFrame(" not in game and "addFrame(" not in base + workers
-assert frame.index("mFrameStatistics.sampleFrame(inGame)") < frame.index("currentMode->onFrameStarted(evt)")
+assert frame.index("mFrameStatistics.sampleFrame(inGame, mGameMap->getTurnNumber(), mWindow->isActive())") < frame.index("currentMode->onFrameStarted(evt)")
 assert "ModeManager::GAME && mGameMap->getTurnNumber() != -1" in frame
 # Release load crash (access violation 3221225477 in MainMenu and every level): the first mode
 # is created by ModeManager::update() in frameRenderingQueued, after the first frameStarted, so
@@ -56,7 +56,7 @@ assert stats_mode, "frameStarted must take the nullable current mode pointer"
 guard = re.search(r"const bool inGame\s*=\s*%s\s*!=\s*nullptr\s*&&\s*%s->getModeType\(\)\s*==\s*ModeManager::GAME"
                   % (stats_mode.group(1), stats_mode.group(1)), frame)
 assert guard, "the in-game test must check the mode pointer for null before getModeType()"
-assert frame.index(stats_mode.group(0)) < guard.start() < frame.index("mFrameStatistics.sampleFrame(inGame)")
+assert frame.index(stats_mode.group(0)) < guard.start() < frame.index("mFrameStatistics.sampleFrame(inGame, mGameMap->getTurnNumber(), mWindow->isActive())")
 sample = function(stats, "float FrameStatistics::sampleFrame(")
 assert "steady_clock::now()" in function(stats, "double FrameStatistics::now(")
 assert "time - mPreviousFrame" in sample
