@@ -30,6 +30,7 @@ $start = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 Write-Output "build started: $run"
 & $taskCmakeExe --build "$wt\build\windows" --config Release --target opendungeons-plus --parallel $parallel *>&1 | Tee-Object -FilePath "$wt\out\build-$run.log"
 $code = $LASTEXITCODE
+Set-Content -Encoding ascii "$wt\out\build-exit-$run.txt" $code
 if ($code -ne 0) { Write-Output "build failed (exit $code), log out\build-$run.log"; exit $code }
 Write-Output "checks started: $run"
 & python -u -I $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $Base --build-start $start --run $run
