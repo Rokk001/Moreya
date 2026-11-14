@@ -8471,7 +8471,8 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
         OD_LOG_INF("the number of passes is " + Helper::toString(technique->getNumPasses()));
         for(Ogre::Pass* pass : technique->getPasses())
         {
-            // RTSS-generated passes, such as those in the Chicken material, can use different uniforms and omit the custom ambient uniform.
+            // A contour can sit alongside fixed-function or RTSS passes, such as Chicken's base passes.
+            // RTSS-generated passes can use different uniforms and omit the contour's custom ambient uniform.
             if(!pass->hasFragmentProgram())
                 continue;
             Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
