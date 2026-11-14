@@ -10,7 +10,17 @@ $wt = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $run = Get-Content "$wt\out\orch-run.txt" -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $run) { Write-Output 'no Build step of this worktree found (out\orch-run.txt missing)'; exit 1 }
 $n = (Get-Content "$wt\out\build-number-$run.txt" | Select-Object -First 1).Trim()
-& powershell -NoProfile -File $DeployScript -ExeDir "$wt\build\windows"
+# Load Get-FileHash from the child PowerShell installation even if its module search path is incomplete.
+$deployScriptLiteral = $DeployScript.Replace("'", "''")
+$exeDirLiteral = "$wt\build\windows".Replace("'", "''")
+$deployCommand = @"
+Import-Module (Join-Path `$PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
+& '$deployScriptLiteral' -ExeDir '$exeDirLiteral'
+if (`$?) { exit 0 }
+if (`$LASTEXITCODE) { exit `$LASTEXITCODE }
+exit 1
+"@
+& powershell -NoProfile -Command $deployCommand
 if ($LASTEXITCODE -ne 0) { Write-Output "deploy failed (exit $LASTEXITCODE)"; exit 1 }
 # The deployed exe is in build\windows of the main checkout, found through the shared git directory of this worktree
 $common = (& git -C $wt rev-parse --path-format=absolute --git-common-dir).Trim()

@@ -5,7 +5,7 @@
 param(
     [string]$Base = 'origin/integration/all',
     [string]$ReleaseProject = '',
-    [int]$MaxWaitMinutes = 30,
+    [int]$MaxWaitMinutes = 60,
     [string]$Worktree = ''
 )
 if ($Worktree -eq '') { $Worktree = Join-Path $PSScriptRoot '..\..' }
