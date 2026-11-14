@@ -177,14 +177,18 @@ def check_innkeeper():
         subprocess.run([converter, '-q', str(ROOT / 'models' / name), str(out / (name + '.xml'))],
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
     counter, faces, _ = rest.mesh_data(out / 'TavernCounter.mesh.xml')
-    # The top boards: flat faces over the whole width above the underside; the hands and the jug rest on them
-    tops = [float(counter[index, 2].max()) for index, material in faces
-            if material == 'TavernCounterWood' and np.ptp(counter[index, 2]) < 1e-4 and
-            counter[index, 2].min() > 0.5 and np.ptp(counter[index, 0]) > 0.9]
-    assert tops and abs(max(tops) - 0.53) < 0.002 and abs(min(tops) - COUNTER_TOP) < 0.002, ('the counter top moved', tops)
-    assert max(float(counter[index, 1].max()) for index, material in faces if material == 'TavernCounterWood' and
-               np.ptp(counter[index, 2]) < 1e-4 and counter[index, 2].min() > 0.5 and np.ptp(counter[index, 0]) > 0.9) \
-        <= COUNTER_TOP_BACK + 0.007, 'the counter top reaches further back'
+    # Measure the tessellated boards together: the hands and the jug rest on their nearly horizontal faces.
+    # The raised side fittings sit outside the central 0.86 units of the counter.
+    wood = np.array([counter[index] for index, material in faces if material == 'TavernCounterWood'])
+    normals = np.cross(wood[:, 1] - wood[:, 0], wood[:, 2] - wood[:, 0])
+    tops = wood[(wood[:, :, 2].min(axis=1) > 0.5)
+                & (np.abs(normals[:, 2]) > 2 * np.linalg.norm(normals[:, :2], axis=1))
+                & (wood[:, :, 0].min(axis=1) < 0.43) & (wood[:, :, 0].max(axis=1) > -0.43)]
+    assert tops.size and np.ptp(tops[:, :, 0]) > 0.9, 'the top boards span the counter'
+    # The worn relief includes a raised detail at 0.538 above the nominal board height.
+    assert abs(tops[:, :, 2].max() - 0.538) < 0.002 and abs(tops[:, :, 2].min() - COUNTER_TOP) < 0.002, (
+        'the counter top moved', tops[:, :, 2].min(), tops[:, :, 2].max())
+    assert abs(tops[:, :, 1].max() - COUNTER_TOP_BACK) <= 0.007, 'the counter top back edge moved'
     skeleton = feet.Skel(str(out / 'Innkeeper.skeleton.xml'))
     vertices, _, weights = rest.mesh_data(out / 'Innkeeper.mesh.xml')
     limbs = {skeleton.idx[b] for b in ('UpperArm_R', 'Forearm_R', 'Hand_R', 'UpperArm_L', 'Forearm_L', 'Hand_L', 'Jug')}
