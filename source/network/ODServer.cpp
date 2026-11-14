@@ -466,8 +466,11 @@ ODServer::ODServer() :
     ConsoleCommands::addConsoleCommands(mConsoleInterface);
 }
 
+//! \brief Joins the server thread before freeing its map, including during client startup failure.
 ODServer::~ODServer()
 {
+    if(mThread != nullptr)
+        stopServer();
     delete mGameMap;
 }
 

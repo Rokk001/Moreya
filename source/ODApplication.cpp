@@ -162,7 +162,7 @@ bool menuTestElapsed(const std::chrono::steady_clock::time_point& start, int32_t
 }
 }
 
-//! \brief Releases visual owners before RTSS and leaves the primary window alive for Ogre resource teardown.
+//! \brief Releases visual owners before RTSS on normal exit and loading failure, with the primary context intact.
 void ODApplication::startClient()
 {
     ResourceManager& resMgr = ResourceManager::getSingleton();
@@ -295,7 +295,9 @@ void ODApplication::startClient()
     Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
     LoadingScreen::presentStartup(LoadingScreen::startupFraction(3.0f));
 
+    std::exception_ptr clientError;
     // Keep the GL context and shader generator alive until every visual owner is released.
+    try
     {
         MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
         SoundEffectsManager soundEffectsManager;
@@ -410,8 +412,14 @@ void ODApplication::startClient()
         ogreRoot.removeFrameListener(&frameListener);
         frameListener.prepareRenderWindowShutdown();
     }
+    catch(...)
+    {
+        clientError = std::current_exception();
+    }
+#if OGRE_VERSION > 0x10A00
     Ogre::MaterialManager::getSingleton().removeListener(sgListener);
     delete sgListener;
+#endif
     // RenderManager registers CreatureShadowCaster in static arrays of OgreRTShaderSystem.dll. Release
     // those references while Root still owns the material and GPU program managers: left alone, the
     // DLL's exit-time destructors free the material after Root and the process ends with 0xC0000005.
@@ -426,6 +434,8 @@ void ODApplication::startClient()
     Ogre::RTShader::ShaderGenerator::destroy();
     // Ogre's primary window owns the context needed to unload meshes, buffers and textures.
     // Root must release those resources before it destroys the primary window during shutdown.
+    if(clientError)
+        std::rethrow_exception(clientError);
 }
 
 //TODO: find some better places for some of these
