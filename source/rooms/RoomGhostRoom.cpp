@@ -988,8 +988,7 @@ void RoomGhostRoom::notifyCarryingStateChanged(Creature* carrier, GameEntity* ca
     const int32_t target=bag->getItem()->mGhostTarget;
     const GhostProduct kind=target>=0 && target<static_cast<int32_t>(APPARATUS_COUNT)?static_cast<GhostProduct>(target):getChosenApparatus(*getSeat());
     Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];
-    // The carry destructor also reports interrupted deliveries. Leave those items where they fell so workers can
-    // recover them; only an item at this apparatus's stand can be consumed or join its waiting queue.
+    // Interrupted carries also reach this callback. Leave their ectoplasm where it fell for workers to recover.
     if(!isApparatusUnlocked(*getSeat(),kind) || apparatus.tile==nullptr || apparatus.stand==nullptr ||
        tile!=apparatus.stand || carrier->getSeat()!=getSeat()) return;
     // An idle apparatus takes the ectoplasm in at once

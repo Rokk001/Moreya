@@ -2312,5 +2312,3 @@ gui/RoomCentreArtwork/ghost-level-crystal.png  AI-generated with Codex  GPLv3+  
 gui/RoomCentreArtwork/ghost-vessel.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
 gui/RoomCentreArtwork/casino-smiles.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
 gui/RoomCentreArtwork/casino-money.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-
-materials/scripts/GhostHose.vert, materials/scripts/GhostHose.frag, materials/scripts/GhostHoseWire.frag: original procedural hose colour shaders, AI-assisted project code, GPL-3.0-or-later.
