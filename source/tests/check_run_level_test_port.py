@@ -1,11 +1,13 @@
 """The level load test can give the game its own server port, so parallel instances do not collide.
 
-No compiler, no game: run-level-test.py is loaded, subprocess.Popen is replaced by a recorder, and the
-command lines of the menu test and of a level run are checked with and without --port."""
+No compiler, no game: subprocess.Popen records the command lines and process timeouts.
+The CLI supplies an available port for a level unless an explicit port was requested."""
 from pathlib import Path
 import importlib.util
+import socket
 import subprocess
 import sys
+from unittest.mock import patch
 
 root = Path(__file__).resolve().parents[2]
 
@@ -14,6 +16,7 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 commands = []
+timeouts = []
 
 
 class RecordedProcess(object):
@@ -21,6 +24,7 @@ class RecordedProcess(object):
     returncode = 3
 
     def communicate(self, timeout=None):
+        timeouts.append(timeout)
         return '', None
 
 
@@ -44,6 +48,26 @@ assert '--port' not in commands[0] and '--port' not in commands[2], 'no port req
 assert commands[1][-2:] == ['--port', '31301'], commands[1]
 assert commands[3][-2:] == ['--port', '31302'], commands[3]
 assert module.port_arguments(None) == [] and module.port_arguments(5) == ['--port', '5']
+assert timeouts == [402, 402, 402, 402], timeouts
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as occupied:
+    occupied.bind(('0.0.0.0', 0))
+    occupied.listen()
+    assert module.available_server_port() != occupied.getsockname()[1]
+
+arguments = ['run-level-test.py', '--exe', str(root / 'scripts' / 'run-level-test.py'),
+             '--menu-seconds', '0', '--seconds', '1', 'a.level']
+with patch.object(sys, 'argv', arguments), patch.object(module, 'available_server_port', return_value=31303), \
+        patch.object(subprocess, 'Popen', record), patch('builtins.print'):
+    assert module.main() == 1
+    assert commands[-1][-2:] == ['--port', '31303'], commands[-1]
+
+with patch.object(sys, 'argv', arguments + ['--port', '31304']), \
+        patch.object(module, 'available_server_port') as choose_port, \
+        patch.object(subprocess, 'Popen', record), patch('builtins.print'):
+    assert module.main() == 1
+    choose_port.assert_not_called()
+    assert commands[-1][-2:] == ['--port', '31304'], commands[-1]
 
 # The command line option exists and the game knows --port
 assert '--port' in (root / 'scripts' / 'run-level-test.py').read_text(encoding='utf-8')
