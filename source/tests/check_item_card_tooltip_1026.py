@@ -11,7 +11,7 @@ Checked here:
 3. The default tooltip of Gui takes the look while the hovered window has the user string ItemTooltip = 1, and goes
    back to OD/Tooltip otherwise; the coin size follows the scaled by the display font, so it works at every resolution and UI scale.
 4. The Dungeonbook slots (Creature::fillItemSlotWindows, boxes of SocialWindow::refreshInventory) use that tooltip; the
-   merchant keeps describe() for its stock cell tooltips.
+   merchant uses describe() for its stock cell tooltips and shows the hovered cell's text in the stock grid.
 """
 from pathlib import Path
 import re
@@ -81,6 +81,8 @@ assert 'Gui::setPlainTooltip(image, ""' in fill
 assert 'Gui::copyTooltip(slot, slot->getParent());' in block(social, 'void SocialWindow::refreshInventory(', '\n}\n')
 merchant = (repo / 'source/modes/GameModeMerchant.cpp').read_text()
 stock = block(merchant, 'void GameMode::receiveMerchantWindow(')
+hover = block(merchant, 'bool GameMode::hoverMerchantItem(')
 assert 'cell->setTooltipText(items[index].second.describe(mGameMap));' in stock
+assert 'list->setTooltipText(item == nullptr || item->isDisabled() ? "" : item->getTooltipText());' in hover
 
 print('item card tooltip 1026: look, text, tooltip switch and slots checked')

@@ -1,14 +1,14 @@
 """Check the restored pool attendant mesh (1186) and retained acts (1057-1060 and 1070).
 
 Reads the shipped models/PoolAttendant.mesh and .skeleton through OgreXMLConverter and the attendant code; no compiler, no
-game. Checks (1) the exact deployed mesh restored by decision 1186 and its visible props;
+game. Checks (1) the exact deployed mesh restored by decision 1186, including towel, whistle, hair and moustache;
 (2) the Sit pose: knees bent and apart (no stiff legs), arms beside the
 belly (no intersection), body not twisted; (3) the clips: Whistle brings the whistle to the mouth, TowelWave holds the
 towel in the hand above the shoulder and waves it, Doze lets him sink sideways, Climb, Walk and Jump move; (4) the code:
 the acts, the whistle only with a bather and at the moment of the blow, the cannonball and its place.
 """
+from hashlib import sha256
 from pathlib import Path
-import hashlib
 import math
 import re
 import subprocess
@@ -30,6 +30,11 @@ def read(name):
     return (ROOT / name).read_text(encoding='utf-8')
 
 
+# Decision 1186 restored the deployed mesh and retained the updated skeleton.
+assert sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
+    '6eb7499d2eba2250c3181690820b4e42cb6297e10d4a34deadc9462568ca25d7'
+), 'decision 1186 restores the deployed attendant mesh with its original proportions and materials'
+
 with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
     converted = {}
     for name in ('PoolAttendant.mesh', 'PoolAttendant.skeleton'):
@@ -40,9 +45,6 @@ with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
 mesh, skeleton = converted['PoolAttendant.mesh'], converted['PoolAttendant.skeleton']
 
 # ---- 1. The look -----------------------------------------------------------------------------------------------------
-restored_mesh = '6eb7499d2eba2250c3181690820b4e42cb6297e10d4a34deadc9462568ca25d7'
-assert hashlib.sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == restored_mesh, \
-    'decision 1186 restores the deployed attendant mesh with its original proportions and materials'
 sub_by_material = {}
 for sub in mesh.findall('submeshes/submesh'):
     sub_by_material.setdefault(sub.get('material'), []).append(sub)
@@ -155,6 +157,9 @@ rooms = read('config/rooms.cfg')
 for key, value in (('SpaAttendantActMinSeconds', '10'), ('SpaAttendantActMaxSeconds', '20'),
                    ('SpaAttendantCannonballMinSeconds', '120'), ('SpaAttendantCannonballMaxSeconds', '180')):
     assert re.search(r'^\s+' + key + r'\s+' + value + r'\s*$', rooms, re.M), key
+materials = read('materials/scripts/Spa.material')
+for material in sub_by_material:
+    assert re.search(r'^material ' + material + r' ', materials, re.M), material
 credits = read('CREDITS')
 assert re.search(r'^models/PoolAttendant\.mesh .*decision 863', credits, re.M)
 assert re.search(r'^models/PoolAttendant\.skeleton .*1057-1060, 1070', credits, re.M)
