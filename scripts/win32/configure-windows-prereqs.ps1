@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'
 Assert-OgrePrereqProvenance -DependencyRoot $taskDependencyRoot
 . (Join-Path $PSScriptRoot 'Enter-OpenDungeonsPlus.ps1')
 $taskRepo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+# Keep configuration logs local to the worktree so concurrent integrations do not share a log file.
 $taskLogDirectory = Join-Path $taskRepo 'out'
 New-Item -ItemType Directory -Force -Path $taskLogDirectory | Out-Null
 $taskConfigureLog = Join-Path $taskLogDirectory ("opendungeons-configure-{0}.log" -f [guid]::NewGuid().ToString('N'))

@@ -178,7 +178,7 @@ struct CreatureActionCarryEntity : GameEntityListener {
     CreatureActionCarryEntity(Creature& c, GameEntity* e, Tile* t, Building* b) : mCreature(c), mEntityToCarry(e), mTileDest(t), mBuildingDest(b) {}
     static Tile* findNearestGoldTile(Creature& creature, Tile* from);
     bool handleCarryGold();
-    bool handleCarryEntity(Creature&, GameEntity*, Tile*);
+    static bool handleCarryEntity(Creature&, GameEntity*, Tile*);
 };
 Tile* g_walkedTo = nullptr;
 bool CreatureActionCarryEntity::handleCarryEntity(Creature&, GameEntity*, Tile* dest) { g_walkedTo = dest; return true; }

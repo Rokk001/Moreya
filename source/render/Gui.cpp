@@ -25,6 +25,7 @@
 #include "render/RenderManager.h"
 
 #include "ODApplication.h"
+#include "entities/ItemInstance.h"
 #include "sound/SoundEffectsManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
@@ -149,6 +150,12 @@ const char* const TAB_BUTTONS_WINDOW_NAME = "__auto_TabPane__Buttons";
 const char* const CATEGORY_TOOLTIP_FONT = "MedievalSharp-13";
 //! Space between the hand cursor and its tooltip, as a share of the tooltip font height
 const float TOOLTIP_HAND_GAP_FACTOR = 0.25f;
+//! \brief User string of a window whose tooltip is an item card; the value 1 selects the look OD/ItemTooltip
+const char* const ITEM_TOOLTIP_USER_STRING = "ItemTooltip";
+const char* const ITEM_TOOLTIP_LOOK = "OD/ItemTooltip";
+const char* const PLAIN_TOOLTIP_LOOK = "OD/Tooltip";
+//! \brief Font of the values of an item card, whose height sets the size of the gold coin
+const char* const ITEM_TOOLTIP_VALUE_FONT = "MedievalSharp-10";
 //! Set when a sibling of the default tooltip changed its place in the drawing order (owner decision 920). The tooltip
 //! and every shown dialog share the always-on-top layer of the root window (GameMode::raiseShownDialog), and CEGUI
 //! leaves the tooltip where it is while it stays attached between two targets: a dialog that rose later (opened, or
@@ -222,9 +229,39 @@ public:
 };
 const CEGUI::String MiniMapCornerButton::WidgetTypeName("OD/MiniMapCornerBase");
 
-//! \brief Positions and sizes the four integrated plates as fractions of the current minimap.
+//! \brief Compacts the navigation icons in their fixed order whenever a room or sandbox icon is hidden.
+void layoutNavigationButtons(CEGUI::Window* root)
+{
+    if(!root->isChild("RoomManagerButton"))
+        return;
+    const CEGUI::URect first = root->getChild("GoalsButton")->getArea();
+    const CEGUI::UDim side = first.d_max.d_x - first.d_min.d_x;
+    CEGUI::UDim x = first.d_min.d_x;
+    const char* names[] = {"GoalsButton", "ResearchButton", "RoomManagerButton", "SocialButton", "WorkersButton", "SandboxButton"};
+    for(const char* name : names)
+    {
+        CEGUI::Window* button = root->getChild(name);
+        if(!button->isVisible())
+            continue;
+        button->setArea(CEGUI::URect(x, first.d_min.d_y, x + side, first.d_max.d_y));
+        x += side * 1.2f;
+    }
+}
+
+//! \brief Reflows navigation immediately after one of its optional icons changes visibility.
+bool navigationVisibilityChanged(const CEGUI::EventArgs& event)
+{
+    const CEGUI::WindowEventArgs& windowEvent = static_cast<const CEGUI::WindowEventArgs&>(event);
+    CEGUI::Window* root = windowEvent.window->getParent();
+    if(root != nullptr)
+        layoutNavigationButtons(root);
+    return true;
+}
+
+//! \brief Positions the integrated plates and compacts the icons above the current minimap.
 void layoutMiniMapButtons(CEGUI::Window* root)
 {
+    layoutNavigationButtons(root);
     if(!root->isChild("MiniMap"))
         return;
     const CEGUI::URect map = root->getChild("MiniMap")->getArea();
@@ -1521,7 +1558,7 @@ float imagePixelDensity(const CEGUI::String& ceguiName)
         return HUD_SURFACE_IMAGE_PIXEL_DENSITY;
     if(name == "OpenDungeonsIcons/Prohibition")
         return DEFAULT_IMAGE_PIXEL_DENSITY;
-    if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "OpenDungeonsNavigation/"))
+    if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "RoomCentreIcon") || startsWith(name, "OpenDungeonsNavigation/"))
         return ICON_IMAGE_PIXEL_DENSITY;
     return DEFAULT_IMAGE_PIXEL_DENSITY;
 }
@@ -1532,6 +1569,7 @@ bool shouldScaleImage(const CEGUI::String& ceguiName)
     const std::string name(ceguiName.c_str());
     return startsWith(name, "OpenDungeonsSkin/")
         || startsWith(name, "OpenDungeonsIcons/")
+        || startsWith(name, "RoomCentreIcon")
         || startsWith(name, "OpenDungeonsNavigation/")
         || startsWith(name, "GoalStatus/")
         || startsWith(name, "ODMainMenuButton/")
@@ -1581,6 +1619,7 @@ std::string scaleFormattedImageSizes(const CEGUI::String& ceguiText, float scale
 }
 }
 
+//! \brief Loads and registers the GUI sheets, including immediate navigation visibility reflow.
 Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFileName, Ogre::RenderTarget &renderTarget)
   : mUserScale(1.0f),
     mSoundEffectsManager(soundEffectsManager)
@@ -1628,6 +1667,14 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
             const CEGUI::Window* buttons = target == nullptr ? nullptr : target->getParent();
             const bool category = buttons != nullptr && buttons->getName() == TAB_BUTTONS_WINDOW_NAME &&
                 buttons->getParent() != nullptr && buttons->getParent()->getName() == MAIN_TABCONTROL.c_str();
+            const bool itemCard = target != nullptr && target->isUserStringDefined(ITEM_TOOLTIP_USER_STRING) &&
+                target->getUserString(ITEM_TOOLTIP_USER_STRING) == "1";
+            const char* const look = itemCard ? ITEM_TOOLTIP_LOOK : PLAIN_TOOLTIP_LOOK;
+            if(tooltip->getLookNFeel() != look)
+            {
+                tooltip->setLookNFeel(look);
+                tooltip->sizeSelf();
+            }
             const CEGUI::Font* font = category ? &CEGUI::FontManager::getSingleton().get(CATEGORY_TOOLTIP_FONT) : nullptr;
             if(tooltip->getFont(false) != font)
             {
@@ -1702,6 +1749,12 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
 
     for(const std::pair<const guiSheet, CEGUI::Window*>& sheet : mSheets)
         registerWindow(sheet.second);
+    for(const char* name : {"RoomManagerButton", "WorkersButton", "SandboxButton"})
+    {
+        CEGUI::Window* button = mSheets[inGameMenu]->getChild(name);
+        button->subscribeEvent(CEGUI::Window::EventShown, CEGUI::Event::Subscriber(&navigationVisibilityChanged));
+        button->subscribeEvent(CEGUI::Window::EventHidden, CEGUI::Event::Subscriber(&navigationVisibilityChanged));
+    }
     applyScale(renderer.getDisplaySize());
 
     // Set the game version
@@ -1757,6 +1810,28 @@ void Gui::keepTooltipInFront()
     parent->removeChild(tooltip);
     parent->addChild(tooltip);
     sRaisingTooltip = false;
+}
+
+void Gui::setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon)
+{
+    // The coin is as high as the lines of values, at every resolution and UI scale, since the font is auto scaled
+    const int32_t coinSize = static_cast<int32_t>(std::ceil(
+        CEGUI::FontManager::getSingleton().get(ITEM_TOOLTIP_VALUE_FONT).getFontHeight()));
+    window->setTooltipText(item.describeTooltip(map, heldWeapon, coinSize));
+    window->setUserString(ITEM_TOOLTIP_USER_STRING, "1");
+}
+
+void Gui::setPlainTooltip(CEGUI::Window* window, const std::string& text)
+{
+    window->setTooltipText(text);
+    window->setUserString(ITEM_TOOLTIP_USER_STRING, "0");
+}
+
+void Gui::copyTooltip(const CEGUI::Window* from, CEGUI::Window* to)
+{
+    to->setTooltipText(from->getTooltipText());
+    to->setUserString(ITEM_TOOLTIP_USER_STRING, from->isUserStringDefined(ITEM_TOOLTIP_USER_STRING) ?
+        from->getUserString(ITEM_TOOLTIP_USER_STRING) : CEGUI::String("0"));
 }
 
 void Gui::loadGuiSheet(guiSheet newSheet)
@@ -2015,22 +2090,23 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
         if(!label->isVisible())
             continue;
 
-        // The label shares its line with the first link, further links follow below
+        // The label shares its line with the first link, further links follow below. In the narrow Dungeonbook
+        // document it gets its own line so each linked name retains the full row width.
         const float lineHeight = getProfileLinesHeight(label, 1, scale);
-        float linkY = y;
+        float linkY = compact ? y + lineHeight : y;
         for(std::size_t i = 1; (i < PROFILE_LINK_ROW_WINDOWS) && (linkRows[row][i] != nullptr); ++i)
         {
             CEGUI::Window* link = page->getChild(linkRows[row][i]);
             if(!link->isVisible())
                 continue;
 
-            setScaledArea(link, CEGUI::URect(CEGUI::UDim(0, PROFILE_LINK_LEFT), CEGUI::UDim(0, linkY),
+            setScaledArea(link, CEGUI::URect(CEGUI::UDim(0, compact ? PROFILE_SIDE_MARGIN : PROFILE_LINK_LEFT), CEGUI::UDim(0, linkY),
                 CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, linkY + lineHeight)));
             linkY += lineHeight;
         }
         const bool hasLinks = (linkY > y);
         setScaledArea(label, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
-            hasLinks ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN),
+            hasLinks && !compact ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN),
             CEGUI::UDim(0, y + lineHeight)));
         y = std::max(y + lineHeight, linkY) + PROFILE_ROW_GAP;
     }
@@ -2283,7 +2359,7 @@ bool Gui::onWindowDestroyed(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Rescales registered widgets, aligns minimap plates and reflows fitted profile documents.
+//! \brief Rescales registered widgets, aligns minimap plates and reflows fitted profile and values documents.
 void Gui::applyScale(const CEGUI::Sizef& displaySize)
 {
     const float resolutionScale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
@@ -2309,9 +2385,28 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
     {
         CEGUI::ScrollablePane* pane = dynamic_cast<CEGUI::ScrollablePane*>(scaledWindow.first);
-        if(pane == nullptr || !pane->isUserStringDefined(VISIBLE_CONTROL_EXTENT_STRING))
+        if(pane == nullptr)
             continue;
-        limitScrollingToVisibleControls(pane);
+        if(pane->getName() == "ValuesPage" && pane->getParent()->getName() == "SocialWindow")
+        {
+            // Retain the values sheet's original columns and fonts beside the persistent roster. Its document
+            // scrolls inside the fitted page instead of compressing labels, numbers and the four attribute cells.
+            const float documentWidth = 820.0f * scale;
+            const float documentHeight = 500.0f * scale;
+            const CEGUI::ScrolledContainer* content = pane->getContentPane();
+            for(std::size_t i = 0; i < content->getChildCount(); ++i)
+            {
+                CEGUI::Window* child = content->getChildAtIdx(i);
+                const CEGUI::URect& area = mScaledWindows.at(child).area;
+                child->setArea(CEGUI::URect(CEGUI::UDim(0, area.d_min.d_x.d_scale * documentWidth),
+                    CEGUI::UDim(0, area.d_min.d_y.d_scale * documentHeight),
+                    CEGUI::UDim(0, area.d_max.d_x.d_scale * documentWidth),
+                    CEGUI::UDim(0, area.d_max.d_y.d_scale * documentHeight)));
+            }
+            pane->setContentPaneArea(CEGUI::Rectf(0, 0, documentWidth, documentHeight));
+        }
+        if(pane->isUserStringDefined(VISIBLE_CONTROL_EXTENT_STRING))
+            limitScrollingToVisibleControls(pane);
     }
 
     // Reflow the existing profile pages after the fitted frame, fonts and child areas have all been scaled.
