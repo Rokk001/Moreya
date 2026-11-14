@@ -11,7 +11,7 @@ Checked here:
 3. The default tooltip of Gui takes the look while the hovered window has the user string ItemTooltip = 1, and goes
    back to OD/Tooltip otherwise; the coin size follows the scaled by the display font, so it works at every resolution and UI scale.
 4. The Dungeonbook slots (Creature::fillItemSlotWindows, boxes of SocialWindow::refreshInventory) use that tooltip; the
-   merchant keeps describe() for its columns.
+   merchant keeps describe() for the item tooltips in its stock grid.
 """
 from pathlib import Path
 import re
@@ -61,7 +61,7 @@ assert 'QUALITY_COLOURS' in text, 'name and quality in the quality colour'
 assert 'mBonuses' in text and 'mEffects' in text and 'bonusName(bonus.first)' in text and 'getLevelMin(map)' in text
 assert text.count(r'<< "\n"') >= 2, 'one line per value'
 assert 'describeTooltip(const GameMap* map, const Weapon* heldWeapon, int32_t coinSize) const' in header
-# describe() keeps its values for the merchant columns and the context line
+# describe() keeps its values for the merchant tooltips and the context line
 assert 'std::string ItemInstance::describe(' in item
 
 # 3. The tooltip window
@@ -79,6 +79,10 @@ fill = block(creature, 'void Creature::fillItemSlotWindows(', '\n}\n')
 assert 'Gui::setItemTooltip(image, *item, creature->getGameMap(), heldWeapon);' in fill
 assert 'Gui::setPlainTooltip(image, ""' in fill
 assert 'Gui::copyTooltip(slot, slot->getParent());' in block(social, 'void SocialWindow::refreshInventory(', '\n}\n')
-assert 'item.describe(mGameMap)' in (repo / 'source/modes/GameModeMerchant.cpp').read_text()
+merchant = (repo / 'source/modes/GameModeMerchant.cpp').read_text()
+stock = block(merchant, 'void GameMode::receiveMerchantWindow(')
+hover = block(merchant, 'bool GameMode::hoverMerchantItem(')
+assert 'cell->setTooltipText(items[index].second.describe(mGameMap));' in stock
+assert 'list->setTooltipText(item == nullptr || item->isDisabled() ? "" : item->getTooltipText());' in hover
 
 print('item card tooltip 1026: look, text, tooltip switch and slots checked')
