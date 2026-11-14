@@ -292,8 +292,8 @@ void ODApplication::startClient()
     Ogre::MaterialManager::getSingleton().addListener(sgListener);
 #endif
 
-    // Keep the GL context and shader generator alive until every visual owner is released.
     std::exception_ptr clientError;
+    // Keep the GL context and shader generator alive until every visual owner is released.
     try
     {
         LoadingScreen::beginGroupProgress(LoadingScreen::startupFraction(2.0f), LoadingScreen::startupFraction(3.0f));
@@ -417,8 +417,10 @@ void ODApplication::startClient()
     {
         clientError = std::current_exception();
     }
+#if OGRE_VERSION > 0x10A00
     Ogre::MaterialManager::getSingleton().removeListener(sgListener);
     delete sgListener;
+#endif
     // RenderManager registers CreatureShadowCaster in static arrays of OgreRTShaderSystem.dll. Release
     // those references while Root still owns the material and GPU program managers: left alone, the
     // DLL's exit-time destructors free the material after Root and the process ends with 0xC0000005.
