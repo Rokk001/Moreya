@@ -35,6 +35,9 @@ class ODSocketServer
 
         bool isConnected();
 
+        //! \brief Returns the bound TCP port for a local client to connect to.
+        unsigned short getListeningPort() const;
+
         // Data Transimission
         virtual bool createServer(int listeningPort);
         //! \brief Requests the exit, joins the worker thread and releases the sockets. Called by the owner only.
