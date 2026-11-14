@@ -39,6 +39,12 @@ assert re.search(r'if\(!pass->hasFragmentProgram\(\)\)\s+continue;\s+'
                  r'if\(parameters->_findNamedConstantDefinition\("ambient", false\) != nullptr\)\s+'
                  r'parameters->setNamedConstant\("ambient",', brighter)
 
+# A generated Chicken pass may lack an ambient uniform. Preloading its hover variant must keep that pass usable.
+brighter = body('Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)')
+assert brighter.index('if(!pass->hasFragmentProgram())') < brighter.index('pass->getFragmentProgramParameters()')
+assert 'if(parameters->_findNamedConstantDefinition("ambient", false) != nullptr)\n' \
+       '                parameters->setNamedConstant("ambient", Ogre::ColourValue(8.0, 8.0, 8.0));' in brighter
+
 # Tavern floors and furnishings load textures and shaders before their first construction during play.
 prefixes = render.split('GAME_EFFECT_MATERIAL_PREFIXES[] = {', 1)[1].split('}', 1)[0]
 assert '"Tavern"' in prefixes
