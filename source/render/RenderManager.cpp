@@ -8448,7 +8448,7 @@ Ogre::MaterialPtr RenderManager::getOutlinerMaterial(const std::string& material
     return myOutliner;
 }
 
-//! \brief Times material clone preparation with its source material identity.
+//! \brief Prepares a hover variant by brightening the passes that expose an ambient uniform.
 Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)
 {
     FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
@@ -8467,9 +8467,15 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
         OD_LOG_INF(myBrighter->getName());
         OD_LOG_INF("the number of techniques  is " + Helper::toString(myBrighter->getNumTechniques()));
         OD_LOG_INF("the number of passes is " + Helper::toString(myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getNumPasses()));
-        for(int ii =0 ; ii < myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getNumPasses(); ++ii)
+        Ogre::Technique* technique = myBrighter->getTechnique(myBrighter->getNumTechniques() - 1);
+        for(Ogre::Pass* pass : technique->getPasses())
         {
-            myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getPass(ii)->getFragmentProgramParameters()->setNamedConstant("ambient",Ogre::ColourValue(8.0,8.0,8.0));
+            // RTSS materials such as Chicken can have passes without this custom shader uniform.
+            if(!pass->hasFragmentProgram())
+                continue;
+            const Ogre::GpuProgramParametersSharedPtr& params = pass->getFragmentProgramParameters();
+            if(params->_findNamedConstantDefinition("ambient") != nullptr)
+                params->setNamedConstant("ambient", Ogre::ColourValue(8.0, 8.0, 8.0));
             // cv = cv * 8.0;
             // myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getPass(ii)->setAmbient(cv);
         }

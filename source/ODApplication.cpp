@@ -163,6 +163,7 @@ bool menuTestElapsed(const std::chrono::steady_clock::time_point& start, int32_t
 }
 
 //! \brief Releases visual owners before RTSS and leaves the primary window alive for Ogre resource teardown.
+//! Cleans up RTSS in the same order when loading or rendering throws.
 void ODApplication::startClient()
 {
     ResourceManager& resMgr = ResourceManager::getSingleton();
@@ -290,13 +291,15 @@ void ODApplication::startClient()
     OgreBites::SGTechniqueResolverListener* sgListener = new OgreBites::SGTechniqueResolverListener(Ogre::RTShader::ShaderGenerator::getSingletonPtr());
     Ogre::MaterialManager::getSingleton().addListener(sgListener);
 #endif
-    
-    LoadingScreen::beginGroupProgress(LoadingScreen::startupFraction(2.0f), LoadingScreen::startupFraction(3.0f));
-    Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
-    LoadingScreen::presentStartup(LoadingScreen::startupFraction(3.0f));
 
     // Keep the GL context and shader generator alive until every visual owner is released.
+    std::exception_ptr clientError;
+    try
     {
+        LoadingScreen::beginGroupProgress(LoadingScreen::startupFraction(2.0f), LoadingScreen::startupFraction(3.0f));
+        Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
+        LoadingScreen::presentStartup(LoadingScreen::startupFraction(3.0f));
+
         MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
         SoundEffectsManager soundEffectsManager;
         LoadingScreen::presentStartup(LoadingScreen::startupFraction(4.0f));
@@ -410,6 +413,10 @@ void ODApplication::startClient()
         ogreRoot.removeFrameListener(&frameListener);
         frameListener.prepareRenderWindowShutdown();
     }
+    catch(...)
+    {
+        clientError = std::current_exception();
+    }
     Ogre::MaterialManager::getSingleton().removeListener(sgListener);
     delete sgListener;
     // RenderManager registers CreatureShadowCaster in static arrays of OgreRTShaderSystem.dll. Release
@@ -426,6 +433,8 @@ void ODApplication::startClient()
     Ogre::RTShader::ShaderGenerator::destroy();
     // Ogre's primary window owns the context needed to unload meshes, buffers and textures.
     // Root must release those resources before it destroys the primary window during shutdown.
+    if(clientError)
+        std::rethrow_exception(clientError);
 }
 
 //TODO: find some better places for some of these
