@@ -32,6 +32,7 @@ import argparse
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -96,6 +97,15 @@ def find_resource_errors(log_path):
 
 MENU_TEST_NAME = "MainMenu"
 MENU_FRAME_LINE = re.compile(r"^MENUTEST frames=(\d+)")
+# Both processes load graphical resources and release them during normal shutdown.
+STARTUP_AND_SHUTDOWN_SECONDS = 400
+
+
+def available_server_port():
+    """Ask the OS for an available IPv4 TCP port for the game's listener."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("0.0.0.0", 0))
+        return probe.getsockname()[1]
 
 
 def port_arguments(port):
@@ -112,7 +122,7 @@ def run_menu_test(exe, seconds, port=None):
     port of the game (None = game default).
     """
     appdata = tempfile.mkdtemp(prefix="od-menu-test-")
-    limit = 2 * seconds + 120
+    limit = 2 * seconds + STARTUP_AND_SHUTDOWN_SECONDS
     command = [exe, "--menu-test", str(seconds), "--appData", appdata] + port_arguments(port)
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -156,7 +166,7 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
     port selects the server port of the game (None = game default); parallel instances need different ports.
     """
     appdata = tempfile.mkdtemp(prefix="od-run-level-")
-    limit = 2 * seconds + 400
+    limit = 2 * seconds + STARTUP_AND_SHUTDOWN_SECONDS
     command = [exe, "--run-level", level, "--seconds", str(seconds), "--appData", appdata] + port_arguments(port)
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -207,7 +217,7 @@ def main():
                         help="seconds the main menu test shows the menu once per run (0 = skip, default 8)")
     parser.add_argument("--markdown", action="store_true", help="print the results as a markdown paragraph")
     parser.add_argument("--port", type=int, default=None,
-                        help="server port of the game (default: the game default); parallel instances need different ports")
+                        help="server port of the game (default: an available local TCP port)")
     parser.add_argument("--progress-file", help="append one progress line per finished level to this file")
     parser.add_argument("levels", nargs="*", help="level files (default: all levels of Campaign.cfg)")
     args = parser.parse_args()
@@ -227,7 +237,8 @@ def main():
 
     results = []
     for level in levels:
-        passed, text, frame_time = run_level_with_frame_time(exe, level, args.seconds, args.port)
+        port = args.port if args.port is not None else available_server_port()
+        passed, text, frame_time = run_level_with_frame_time(exe, level, args.seconds, port)
         print(text, flush=True)
         if frame_time is not None:
             print("FRAMETIME frames=%d avg_ms=%s" % frame_time, flush=True)
