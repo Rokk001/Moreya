@@ -1,7 +1,8 @@
 """Check the restored pool attendant mesh (1186) and retained acts (1057-1060 and 1070).
 
 Reads the shipped models/PoolAttendant.mesh and .skeleton through OgreXMLConverter and the attendant code; no compiler, no
-game. Checks (1) the exact deployed mesh restored by decision 1186, including towel, whistle, hair and moustache;
+game. Checks (1) the exact deployed mesh restored by decision 1186 and its visible props, including towel, whistle, hair
+and moustache;
 (2) the Sit pose: knees bent and apart (no stiff legs), arms beside the
 belly (no intersection), body not twisted; (3) the clips: Whistle brings the whistle to the mouth, TowelWave holds the
 towel in the hand above the shoulder and waves it, Doze lets him sink sideways, Climb, Walk and Jump move; (4) the code:
