@@ -177,8 +177,7 @@ void ItemBagEntity::notifyEntityCarryOn(Creature* carrier)
 void ItemBagEntity::notifyEntityCarryOff(const Ogre::Vector3& position)
 {
     mResearchBookShelved = false;
-    setPosition(position);
-    addEntityToPositionTile();
+    setPosition(position); addEntityToPositionTile();
 }
 
 //! \brief Reads and registers a bag only after a complete level record was parsed.
