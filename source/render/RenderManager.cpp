@@ -8471,7 +8471,7 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
         OD_LOG_INF("the number of passes is " + Helper::toString(technique->getNumPasses()));
         for(Ogre::Pass* pass : technique->getPasses())
         {
-            // RTSS materials such as Chicken can have generated passes without this custom shader uniform.
+            // RTSS-generated passes, such as those in the Chicken material, can use different uniforms and omit the custom ambient uniform.
             if(!pass->hasFragmentProgram())
                 continue;
             Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
