@@ -8448,7 +8448,8 @@ Ogre::MaterialPtr RenderManager::getOutlinerMaterial(const std::string& material
     return myOutliner;
 }
 
-//! \brief Prepares a hover variant by brightening the passes that expose an ambient uniform.
+//! \brief Prepares a hover material by brightening fragment passes that expose an ambient uniform.
+//! \details Times material clone preparation with its source material identity.
 Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)
 {
     FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
@@ -8466,18 +8467,18 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
         OD_LOG_INF("cloning......");
         OD_LOG_INF(myBrighter->getName());
         OD_LOG_INF("the number of techniques  is " + Helper::toString(myBrighter->getNumTechniques()));
-        OD_LOG_INF("the number of passes is " + Helper::toString(myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getNumPasses()));
         Ogre::Technique* technique = myBrighter->getTechnique(myBrighter->getNumTechniques() - 1);
+        OD_LOG_INF("the number of passes is " + Helper::toString(technique->getNumPasses()));
         for(Ogre::Pass* pass : technique->getPasses())
         {
-            // RTSS materials such as Chicken can have passes without this custom shader uniform.
+            // RTSS materials such as Chicken can have generated passes without this custom shader uniform.
             if(!pass->hasFragmentProgram())
                 continue;
-            const Ogre::GpuProgramParametersSharedPtr& params = pass->getFragmentProgramParameters();
-            if(params->_findNamedConstantDefinition("ambient") != nullptr)
-                params->setNamedConstant("ambient", Ogre::ColourValue(8.0, 8.0, 8.0));
+            Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
+            if(parameters->_findNamedConstantDefinition("ambient", false) != nullptr)
+                parameters->setNamedConstant("ambient", Ogre::ColourValue(8.0, 8.0, 8.0));
             // cv = cv * 8.0;
-            // myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getPass(ii)->setAmbient(cv);
+            // pass->setAmbient(cv);
         }
     }
     return myBrighter;
