@@ -72,7 +72,7 @@ std::function<bool()> CreatureActionGrabEntity::action()
         std::ref(mCreature), std::ref(mEntityToCarry), mForced, mDigGold);
 }
 
-//! \brief Rechecks cargo and selects the actual shelf for research books when starting a transport.
+//! \brief Rechecks cargo, selects the actual shelf for research books, and retains the transport origin.
 bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* entityToCarry, bool forced, bool digGold)
 {
     Tile* myTile = creature.getPositionTile();

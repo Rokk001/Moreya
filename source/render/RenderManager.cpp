@@ -19,6 +19,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "render/FrameStallTrace.h"
 #include "render/RenderManager.h"
 #include "ODApplication.h"
 #include "render/GroundShadowCameraSetup.h"
@@ -76,6 +77,7 @@
 #include <cctype>
 #include <array>
 #include <cmath>
+#include <cstring>
 #include <set>
 #include <vector>
 
@@ -2010,13 +2012,16 @@ void RenderManager::destroyWorldBorder()
 }
 
 //! \brief Initializes game visuals with a seam-covering ground plane bounded by the map edges and the
-//! rock border outside of them.
+//! rock border outside of them, then prepares resources needed by creatures that appear later.
 void RenderManager::initGameRenderer(GameMap* gameMap)
 {
     OD_ASSERT_TRUE(gameMap);
     OD_ASSERT_TRUE(mHandKeeperNode);
     mCreatureTextOverlayDisplayed = false;
     mGameMap = gameMap;
+    // Still behind the loading screen: the light count is fixed for the whole game before any shader of it is
+    // made, so freeing the menu later rebuilds nothing
+    pinWorldShaderLights();
 
     // Cover tile and room seams with continuous earth inside the map footprint.
     // Extending this opaque plane beyond the map would hide the world background.
@@ -2150,6 +2155,8 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     mSmokeMaterial->getTechnique(0)->getPass(0)->getTextureUnitState(1)->setTexture(m_texture);
     Ogre::TexturePtr myPerlinTexture = createPerlinTexture();
     setupFogMaterial(myPerlinTexture);
+    prepareGameCreatureResources(*gameMap);
+    prepareGameShaders();
 }
 
 void RenderManager::setup()
@@ -2492,13 +2499,28 @@ void RenderManager::pinMenuShaderLights()
     mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 }
 
-//! \brief Lets the shaders count the lights again. Does nothing once the shader generator is destroyed,
-//! because the menu is also freed while the game shuts down, after the application destroyed the generator.
+//! \brief The game freed the menu: initGameRenderer() has normally fixed the game's light count already, then
+//! nothing is rebuilt here and the shaders prepared during the map load stay valid.
 void RenderManager::releaseMenuShaderLights()
+{
+    pinWorldShaderLights();
+}
+
+//! \brief Does nothing once the shader generator is destroyed, because the menu is also freed while the game shuts
+//! down, after the application destroyed the generator.
+void RenderManager::pinWorldShaderLights()
 {
     if(Ogre::RTShader::ShaderGenerator::getSingletonPtr() != mShaderGenerator)
         return;
-    mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME)->setLightCountAutoUpdate(true);
+    // No material sets max_lights and none iterates per light, so every pass gets at most this many lights; a
+    // generated shader for more lights only adds slots that Ogre fills with black lights.
+    const Ogre::int32 lightCount = OGRE_MAX_SIMULTANEOUS_LIGHTS;
+    Ogre::RTShader::RenderState* renderState =
+        mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+    if(!renderState->getLightCountAutoUpdate() && renderState->getLightCount() == lightCount)
+        return;
+    renderState->setLightCountAutoUpdate(false);
+    renderState->setLightCount(lightCount);
     mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 }
 
@@ -2556,6 +2578,100 @@ void RenderManager::prepareMenuShaders()
         mShaderGenerator->validateMaterial(scheme, *material);
     }
     OD_LOG_INF("Prepared the shaders of " + Helper::toString(static_cast<uint32_t>(materials.size())) + " menu materials");
+}
+
+//! \brief Records frame-stall operation timing without changing the operation.
+void RenderManager::prepareGeneratedShaders(Ogre::Material& material)
+{
+    FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, material.getName().c_str());
+    const Ogre::String& scheme = Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME;
+    material.load();
+    if(!mShaderGenerator->createShaderBasedTechnique(material, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme))
+        return;
+    mShaderGenerator->validateMaterial(scheme, material);
+}
+
+//! Prefixes of the materials of the creature badges and emotes, which are shown in overlays.
+static const char* const GAME_OVERLAY_MATERIAL_PREFIXES[] = {"CreatureEmote_", "CreatureOverlay"};
+//! Prefixes of creature props, reaction and room effects, and the Tavern surfaces loaded on first construction.
+static const char* const GAME_EFFECT_MATERIAL_PREFIXES[] = {"CreatureProp_", "ReactionParticle", "RoomAmb", "Tavern"};
+//! Suffix of the overlay material copies whose shaders prepareGameShaders() makes.
+static const Ogre::String PREPARED_OVERLAY_SUFFIX = "##_PreparedOverlay";
+
+//! \brief Tells whether a name starts with one of the given prefixes.
+template<size_t Count>
+static bool hasPrefix(const Ogre::String& name, const char* const (&prefixes)[Count])
+{
+    for(const char* prefix : prefixes)
+    {
+        if(name.compare(0, std::strlen(prefix), prefix) == 0)
+            return true;
+    }
+    return false;
+}
+
+//! \brief Prepares effects, overlays and Tavern surfaces without changing their visible settings.
+//! \brief Records frame-stall operation timing without changing the operation.
+void RenderManager::prepareGameShaders()
+{
+    FrameStallTrace::Scope trace(FrameStallTrace::ResourcePreparation);
+    if(mShaderGenerator == nullptr)
+        return;
+    Ogre::MaterialManager& materialManager = Ogre::MaterialManager::getSingleton();
+    std::set<Ogre::String> effectNames;
+    std::set<Ogre::String> overlayNames;
+    Ogre::ResourceManager::ResourceMapIterator resources = materialManager.getResourceIterator();
+    while(resources.hasMoreElements())
+    {
+        const Ogre::String name = resources.getNext()->getName();
+        // Copies made at run time (seat colours, contours, earlier preparations) are left alone
+        if(name.find("##") != Ogre::String::npos || name.find("_[") != Ogre::String::npos)
+            continue;
+        if(hasPrefix(name, GAME_OVERLAY_MATERIAL_PREFIXES))
+            overlayNames.insert(name);
+        else if(hasPrefix(name, GAME_EFFECT_MATERIAL_PREFIXES))
+            effectNames.insert(name);
+    }
+    // The particle systems of spells, traps, rooms and creatures are made from these templates
+    Ogre::ParticleSystemManager::ParticleSystemTemplateIterator templates =
+        Ogre::ParticleSystemManager::getSingleton().getTemplateIterator();
+    while(templates.hasMoreElements())
+    {
+        const Ogre::String name = templates.getNext()->getMaterialName();
+        if(!name.empty())
+            effectNames.insert(name);
+    }
+
+    uint32_t prepared = 0;
+    for(const Ogre::String& name : effectNames)
+    {
+        Ogre::MaterialPtr material = materialManager.getByName(name);
+        if(!material)
+            continue;
+        prepareGeneratedShaders(*material);
+        ++prepared;
+    }
+    // An overlay switches off lighting, shadows and the depth check of its material (OverlayElement::setMaterial)
+    // before the shaders are made. A copy with the same settings makes the same shaders and keeps them alive,
+    // and the material itself stays untouched until an overlay takes it.
+    for(const Ogre::String& name : overlayNames)
+    {
+        Ogre::MaterialPtr material = materialManager.getByName(name);
+        if(!material)
+            continue;
+        const Ogre::String preparedName = name + PREPARED_OVERLAY_SUFFIX;
+        Ogre::MaterialPtr copy = materialManager.getByName(preparedName, material->getGroup());
+        if(!copy)
+        {
+            copy = material->clone(preparedName);
+            copy->setLightingEnabled(false);
+            copy->setReceiveShadows(false);
+            copy->setDepthCheckEnabled(false);
+        }
+        prepareGeneratedShaders(*copy);
+        ++prepared;
+    }
+    OD_LOG_INF("Prepared the shaders of " + Helper::toString(prepared) + " game effect and room materials");
 }
 
 //! Infix of the material copies that carry the hardware skinning stage (see useShaderSkinning()).
@@ -4453,7 +4569,10 @@ static bool dragBonePoint(Ogre::Entity* entity, std::initializer_list<const char
     return false;
 }
 
-//! \brief Keeps an ankle in the animated hand; unknown rigs use their transformed mesh bounds.
+//! \brief Keeps an ankle in the worker's hand; unknown rigs use their transformed mesh bounds.
+//! The hand and the ankle are sampled once per pull and kept in the local space of their nodes (decision 1048): the Drag
+//! clip swings the hand forward and back with every step, and a contact that followed the swing made the pulled body
+//! jump back and forth. The body hangs at a fixed grip, so it only moves with the worker.
 void RenderManager::rrApplyDragContact(Creature& dragged, const Creature& worker)
 {
     const std::string bodyName = dragged.getOgreNamePrefix() + dragged.getName();
@@ -4466,25 +4585,36 @@ void RenderManager::rrApplyDragContact(Creature& dragged, const Creature& worker
     Ogre::SceneNode* workerNode = puller->getParentSceneNode();
     if(bodyNode == nullptr || workerNode == nullptr)
         return;
-    Ogre::Vector3 hand;
-    if(!dragBonePoint(puller, {"Hand.R", "hand_r", "Hand_R", "RightHand", "Weapon_R"}, hand))
+    DragGrip& grip = mDragContactGrips[&dragged];
+    if(!grip.mValid || grip.mWorkerName != worker.getName())
     {
-        const Ogre::AxisAlignedBox& bounds = puller->getBoundingBox();
-        if(bounds.isNull() || bounds.isInfinite())
-            return;
-        hand = workerNode->convertLocalToWorldPosition(bounds.getCenter());
+        Ogre::Vector3 sampledHand;
+        if(!dragBonePoint(puller, {"Hand.R", "hand_r", "Hand_R", "RightHand", "Weapon_R"}, sampledHand))
+        {
+            const Ogre::AxisAlignedBox& bounds = puller->getBoundingBox();
+            if(bounds.isNull() || bounds.isInfinite())
+                return;
+            sampledHand = workerNode->convertLocalToWorldPosition(bounds.getCenter());
+        }
+        Ogre::Vector3 sampledAnkle;
+        if(!dragBonePoint(body, {"Foot.R", "foot_r", "foot.R", "Foot_R", "RightFoot"}, sampledAnkle))
+        {
+            const Ogre::AxisAlignedBox& bounds = body->getBoundingBox();
+            if(bounds.isNull() || bounds.isInfinite())
+                return;
+            // The end of the body's own bounds provides a deterministic contact for legless rigs.
+            const Ogre::Vector3 center = bounds.getCenter();
+            sampledAnkle = bodyNode->convertLocalToWorldPosition(
+                Ogre::Vector3(center.x, bounds.getMinimum().y, center.z));
+        }
+        grip.mWorkerName = worker.getName();
+        grip.mHand = workerNode->convertWorldToLocalPosition(sampledHand);
+        grip.mAnkle = bodyNode->convertWorldToLocalPosition(sampledAnkle);
+        grip.mValid = true;
     }
-    Ogre::Vector3 ankle;
-    if(!dragBonePoint(body, {"Foot.R", "foot_r", "foot.R", "Foot_R", "RightFoot"}, ankle))
-    {
-        const Ogre::AxisAlignedBox& bounds = body->getBoundingBox();
-        if(bounds.isNull() || bounds.isInfinite())
-            return;
-        // The end of the body's own bounds provides a deterministic contact for legless rigs.
-        const Ogre::Vector3 center = bounds.getCenter();
-        ankle = bodyNode->convertLocalToWorldPosition(
-            Ogre::Vector3(center.x, bounds.getMinimum().y, center.z));
-    }
+    grip.mUsed = true;
+    const Ogre::Vector3 hand = workerNode->convertLocalToWorldPosition(grip.mHand);
+    const Ogre::Vector3 ankle = bodyNode->convertLocalToWorldPosition(grip.mAnkle);
     const Ogre::Vector3 contactPosition = bodyNode->_getDerivedPosition() + hand - ankle;
     const Ogre::Vector3 basePosition = bodyNode->getPosition();
     Ogre::SceneNode* parent = bodyNode->getParentSceneNode();
@@ -4503,6 +4633,17 @@ void RenderManager::rrResetDragContacts()
             node->setPosition(contact.second.first);
     }
     mDragContactPositions.clear();
+    // A grip that was not used since the last reset belongs to a pull that ended: the next pull samples a new one
+    for(std::map<Creature*, DragGrip>::iterator grip = mDragContactGrips.begin(); grip != mDragContactGrips.end();)
+    {
+        if(!grip->second.mUsed)
+            grip = mDragContactGrips.erase(grip);
+        else
+        {
+            grip->second.mUsed = false;
+            ++grip;
+        }
+    }
 }
 
 //! \brief Applies contact after every creature has advanced, independent of creation order.
@@ -4528,9 +4669,62 @@ static void useSkinnedMetalMaterial(Ogre::Entity* entity)
     }
 }
 
+//! \brief Prepares every configured and map-specific creature mesh and its seat variants without drawing it.
+//! \brief Records frame-stall operation timing without changing the operation.
+void RenderManager::prepareGameCreatureResources(GameMap& gameMap)
+{
+    FrameStallTrace::Scope trace(FrameStallTrace::ResourcePreparation);
+    if(mShaderGenerator == nullptr)
+        return;
+    std::set<std::string> meshNames;
+    for(const std::pair<const std::string, CreatureDefinition*>& entry : ConfigManager::getSingleton().getCreatureDefinitions())
+        meshNames.insert(entry.second->getMeshName());
+    for(uint32_t i = 0; i < gameMap.numClassDescriptions(); ++i)
+    {
+        const CreatureDefinition* definition = gameMap.getClassDescription(i);
+        if(definition != nullptr)
+            meshNames.insert(definition->getMeshName());
+    }
+    // A transformed creature uses this mesh independently of its class definition.
+    meshNames.insert("Chicken.mesh");
+    std::set<std::string> preparedMaterials;
+    for(const std::string& meshName : meshNames)
+    {
+        if(meshName.empty())
+            continue;
+        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
+        unsigned short src;
+        if(!mesh->suggestTangentVectorBuildParams(src))
+            mesh->buildTangentVectors(src);
+        Ogre::Entity* entity = mSceneManager->createEntity(mesh);
+        // Match rrCreateCreature: the Wyvern's metal part uses its skinned material.
+        useSkinnedMetalMaterial(entity);
+        try
+        {
+            for(const Ogre::SubEntity* part : entity->getSubEntities())
+            {
+                const std::string& materialName = part->getMaterialName();
+                if(!preparedMaterials.insert(materialName).second)
+                    continue;
+                prepareGeneratedShaders(*part->getMaterial());
+                prepareOutlinerMaterials(materialName, gameMap);
+            }
+        }
+        catch(...)
+        {
+            mSceneManager->destroyEntity(entity);
+            throw;
+        }
+        mSceneManager->destroyEntity(entity);
+    }
+    OD_LOG_INF("Prepared creature resources for " + Helper::toString(static_cast<uint32_t>(meshNames.size())) + " meshes");
+}
+
 //! \brief Creates the visible creature and registers it for late contact sampling.
+//! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::rrCreateCreature(Creature* curCreature)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::CreatureCreate, curCreature->getName().c_str());
     mDragContactCreatures.insert(curCreature);
     const std::string& meshName = curCreature->getCurrentMeshName();
 
@@ -4640,6 +4834,7 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
     mDragContactCreatures.erase(curCreature);
     mDragContactPositions.erase(curCreature);
+    mDragContactGrips.erase(curCreature);
     clearCreatureDecay(curCreature);
     removeCreatureTavernProps(curCreature);
     cancelCreatureStep(curCreature);
@@ -8176,6 +8371,133 @@ std::string RenderManager::colourizeMaterial(const std::string& materialName, co
 //! its distance to the camera and the thickness of its parts).
 static const float OutlinerContourPixels = 1.5f;
 
+//! \brief Name of the contour copy of a creature material for a seat colour.
+static std::string outlinerMaterialName(const std::string& materialName, const Ogre::ColourValue& colour)
+{
+    std::stringstream ss("");
+    ss << materialName;
+    ss << "##_Outliner";
+    ss << "_" << colour;
+    return ss.str();
+}
+
+//! \brief Times material clone preparation with its source material identity.
+Ogre::MaterialPtr RenderManager::getOutlinerMaterial(const std::string& materialName, const Ogre::ColourValue& cc)
+{
+    FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
+    const std::string outlinerName = outlinerMaterialName(materialName, cc);
+    OD_LOG_INF("searching for: " + outlinerName);
+    Ogre::MaterialPtr  myOutliner = Ogre::MaterialManager::getSingletonPtr()->getByName(outlinerName,"Graphics");
+    if (!myOutliner)
+    {
+        OD_LOG_INF("couldn't find: " + outlinerName);
+
+        //myOutliner = Ogre::MaterialManager::getSingletonPtr()->create("myOutliner","Graphics");
+        myOutliner= Ogre::MaterialManager::getSingletonPtr()->getByName(materialName, "Graphics")->clone(outlinerName,"Graphics");
+        OD_LOG_INF("cloning......");
+        OD_LOG_INF(myOutliner->getName());
+        OD_LOG_INF("the number of techniques  is " + Helper::toString(myOutliner->getNumTechniques()));
+        Ogre::Pass* myPass1 = myOutliner->getTechnique(myOutliner->getNumTechniques() - 1)->createPass();
+        OD_LOG_INF("the number of passes is " + Helper::toString(myOutliner->getTechnique(myOutliner->getNumTechniques() - 1)->getNumPasses()));
+        // The contour is a thin shell, pushed out along the normals, of which only the back faces are drawn and
+        // which sits slightly behind the model. The model hides the shell, so only the rim around the silhouette
+        // shows and the creature keeps its own colours.
+        myPass1->setCullingMode(Ogre::CULL_ANTICLOCKWISE);
+        myPass1->setLightingEnabled(false);
+        // Ogre depth bias: negative values push AWAY from the camera (positive pulled the shell in front of the model = red fill)
+        myPass1->setDepthBias(-4.0f, -32.0f);
+
+        Ogre::HighLevelGpuProgramManager& mgr =  Ogre::HighLevelGpuProgramManager::getSingleton();
+        Ogre::HighLevelGpuProgramPtr vertex_program;
+
+        if(!mgr.resourceExists("Enlarge","Graphics"))
+        {
+            vertex_program = mgr.createProgram("Enlarge", "Graphics","glsl" ,Ogre::GpuProgramType::GPT_VERTEX_PROGRAM);
+
+            vertex_program->setSourceFile("Enlarge.vert");
+            // The contour follows the hardware skinned creature, so it skins the same way
+            vertex_program->setSkeletalAnimationIncluded(true);
+        }
+        else
+        {
+            vertex_program = mgr.getByName("Enlarge","Graphics");
+        }
+
+        myPass1->setVertexProgram("Enlarge","Graphics");
+
+        myPass1->getVertexProgramParameters()->setNamedConstant("pixelWidth", OutlinerContourPixels);
+        myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewProjectionMatrix", Ogre::GpuProgramParameters::ACT_VIEWPROJ_MATRIX);
+        myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewMatrix", Ogre::GpuProgramParameters::ACT_VIEW_MATRIX);
+        myPass1->getVertexProgramParameters()->setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4);
+        // OGRE 14 keeps the bone matrices in object space; the world matrix moves the skinned contour into the world
+        myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldMatrix", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX);
+        myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewportSize", Ogre::GpuProgramParameters::ACT_VIEWPORT_SIZE);
+
+        Ogre::HighLevelGpuProgramPtr fragment_program;
+        if(!mgr.resourceExists("Custom_color","Graphics"))
+        {
+            fragment_program = mgr.createProgram ("Custom_color", "Graphics","glsl" ,Ogre::GpuProgramType::GPT_FRAGMENT_PROGRAM);
+            fragment_program->setSourceFile("Custom_color.frag");
+        }
+        else
+            fragment_program = mgr.getByName("Custom_color","Graphics");
+        myPass1->setFragmentProgram("Custom_color","Graphics");
+        myPass1->getFragmentProgramParameters()->setNamedConstant("color",cc);
+        myPass1->getFragmentProgramParameters()->setNamedConstant("ambient",cc);
+    }
+    return myOutliner;
+}
+
+//! \brief Prepares a hover material by brightening fragment passes that expose an ambient uniform.
+//! \details Times material clone preparation with its source material identity.
+Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)
+{
+    FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
+    std::stringstream ss("");
+    ss << materialName;
+    ss << "##_Brighter";
+    OD_LOG_INF("searching for: " +  ss.str() );
+    Ogre::MaterialPtr  myBrighter = Ogre::MaterialManager::getSingletonPtr()->getByName(ss.str(),"Graphics");
+    if (!myBrighter)
+    {
+        OD_LOG_INF("couldn't find: " +  ss.str() );
+
+        //myBrighter = Ogre::MaterialManager::getSingletonPtr()->create("myBrighter","Graphics");
+        myBrighter= Ogre::MaterialManager::getSingletonPtr()->getByName(materialName, "Graphics")->clone(ss.str(),"Graphics");
+        OD_LOG_INF("cloning......");
+        OD_LOG_INF(myBrighter->getName());
+        OD_LOG_INF("the number of techniques  is " + Helper::toString(myBrighter->getNumTechniques()));
+        Ogre::Technique* technique = myBrighter->getTechnique(myBrighter->getNumTechniques() - 1);
+        OD_LOG_INF("the number of passes is " + Helper::toString(technique->getNumPasses()));
+        for(Ogre::Pass* pass : technique->getPasses())
+        {
+            // A contour can sit alongside fixed-function or RTSS passes, such as Chicken's base passes.
+            // RTSS-generated passes can use different uniforms and omit the contour's custom ambient uniform.
+            if(!pass->hasFragmentProgram())
+                continue;
+            Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
+            if(parameters->_findNamedConstantDefinition("ambient", false) != nullptr)
+                parameters->setNamedConstant("ambient", Ogre::ColourValue(8.0, 8.0, 8.0));
+            // cv = cv * 8.0;
+            // pass->setAmbient(cv);
+        }
+    }
+    return myBrighter;
+}
+
+//! \brief Loads every seat's contour and hover copy before those variants are first shown.
+//! \brief Records frame-stall operation timing without changing the operation.
+void RenderManager::prepareOutlinerMaterials(const std::string& materialName, const GameMap& gameMap)
+{
+    FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
+    for(const Seat* seat : gameMap.getSeats())
+    {
+        Ogre::MaterialPtr outliner = getOutlinerMaterial(materialName, seat->getColorValue());
+        outliner->load();
+        getBrighterMaterial(outliner->getName())->load();
+    }
+}
+
 void RenderManager::rrAddOutliner(Creature* creature)
 {
     std::string entityName  = creature->getOgreNamePrefix() +  creature->getName();
@@ -8187,84 +8509,19 @@ void RenderManager::rrAddOutliner(Creature* creature)
 
 
     Ogre::Entity* ent = mSceneManager->getEntity(entityName);
-    
+
     for (unsigned int i = 0; i < ent->getNumSubEntities(); ++i)
     {
-
-        std::stringstream ss("");
         Ogre::SubEntity *tempSubEntity = ent->getSubEntity(i);
-        ss << tempSubEntity->getMaterialName();
-        ss << "##_Outliner";
-
-
-
-        Ogre::ColourValue cc = creature->getSeat()->getColorValue();        
-        ss << "_" << cc;
+        Ogre::ColourValue cc = creature->getSeat()->getColorValue();
         std::string materialName = tempSubEntity->getMaterialName();
         if(materialName.find("##_Outliner") != std::string::npos)
             continue;
-        OD_LOG_INF("searching for: " +  ss.str() );
-        Ogre::MaterialPtr  myOutliner = Ogre::MaterialManager::getSingletonPtr()->getByName(ss.str(),"Graphics");
-        if (!myOutliner)
-        {
-            OD_LOG_INF("couldn't find: " +  ss.str() );
-
-            //myOutliner = Ogre::MaterialManager::getSingletonPtr()->create("myOutliner","Graphics");               
-            myOutliner= Ogre::MaterialManager::getSingletonPtr()->getByName(materialName, "Graphics")->clone(ss.str(),"Graphics");
-            OD_LOG_INF("cloning......");
-            OD_LOG_INF(myOutliner->getName());
-            OD_LOG_INF("the number of techniques  is " + Helper::toString(myOutliner->getNumTechniques()));
-            Ogre::Pass* myPass1 = myOutliner->getTechnique(myOutliner->getNumTechniques() - 1)->createPass();
-            OD_LOG_INF("the number of passes is " + Helper::toString(myOutliner->getTechnique(myOutliner->getNumTechniques() - 1)->getNumPasses()));
-            // The contour is a thin shell, pushed out along the normals, of which only the back faces are drawn and
-            // which sits slightly behind the model. The model hides the shell, so only the rim around the silhouette
-            // shows and the creature keeps its own colours.
-            myPass1->setCullingMode(Ogre::CULL_ANTICLOCKWISE);
-            myPass1->setLightingEnabled(false);
-            // Ogre depth bias: negative values push AWAY from the camera (positive pulled the shell in front of the model = red fill)
-            myPass1->setDepthBias(-4.0f, -32.0f);
-        
-            Ogre::HighLevelGpuProgramManager& mgr =  Ogre::HighLevelGpuProgramManager::getSingleton();
-            Ogre::HighLevelGpuProgramPtr vertex_program;
-
-            if(!mgr.resourceExists("Enlarge","Graphics"))
-            {
-                vertex_program = mgr.createProgram("Enlarge", "Graphics","glsl" ,Ogre::GpuProgramType::GPT_VERTEX_PROGRAM);
-
-                vertex_program->setSourceFile("Enlarge.vert");
-                // The contour follows the hardware skinned creature, so it skins the same way
-                vertex_program->setSkeletalAnimationIncluded(true);
-            }
-            else
-            {
-                vertex_program = mgr.getByName("Enlarge","Graphics");
-            }
-
-            myPass1->setVertexProgram("Enlarge","Graphics");
-
-            myPass1->getVertexProgramParameters()->setNamedConstant("pixelWidth", OutlinerContourPixels);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewProjectionMatrix", Ogre::GpuProgramParameters::ACT_VIEWPROJ_MATRIX);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewMatrix", Ogre::GpuProgramParameters::ACT_VIEW_MATRIX);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4);
-            // OGRE 14 keeps the bone matrices in object space; the world matrix moves the skinned contour into the world
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldMatrix", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewportSize", Ogre::GpuProgramParameters::ACT_VIEWPORT_SIZE);
-
-            Ogre::HighLevelGpuProgramPtr fragment_program;
-            if(!mgr.resourceExists("Custom_color","Graphics"))
-            {
-                fragment_program = mgr.createProgram ("Custom_color", "Graphics","glsl" ,Ogre::GpuProgramType::GPT_FRAGMENT_PROGRAM);
-                fragment_program->setSourceFile("Custom_color.frag");                                     
-            }
-            else
-                fragment_program = mgr.getByName("Custom_color","Graphics");
-            myPass1->setFragmentProgram("Custom_color","Graphics");
-            myPass1->getFragmentProgramParameters()->setNamedConstant("color",cc);
-            myPass1->getFragmentProgramParameters()->setNamedConstant("ambient",cc);
-        }
-          
-        tempSubEntity->setMaterial(myOutliner);
-    }  
+        // The first creature with this material makes the copies of every seat, normally during the map load
+        if(!Ogre::MaterialManager::getSingleton().resourceExists(outlinerMaterialName(materialName, cc), "Graphics"))
+            prepareOutlinerMaterials(materialName, *creature->getGameMap());
+        tempSubEntity->setMaterial(getOutlinerMaterial(materialName, cc));
+    }
 }
 
 
@@ -8321,31 +8578,7 @@ void RenderManager::rrIncreaseAmbient(Creature* creature)
         if(materialName.find("##_Brighter") != std::string::npos)
             continue;
         
-        std::stringstream ss("");
-        ss << tempSubEntity->getMaterialName();
-        ss << "##_Brighter";
-        OD_LOG_INF("searching for: " +  ss.str() );
-        Ogre::MaterialPtr  myBrighter = Ogre::MaterialManager::getSingletonPtr()->getByName(ss.str(),"Graphics");
-        if (!myBrighter)
-        {
-            OD_LOG_INF("couldn't find: " +  ss.str() );
-
-            //myBrighter = Ogre::MaterialManager::getSingletonPtr()->create("myBrighter","Graphics");               
-            myBrighter= Ogre::MaterialManager::getSingletonPtr()->getByName(materialName, "Graphics")->clone(ss.str(),"Graphics");
-            OD_LOG_INF("cloning......");
-            OD_LOG_INF(myBrighter->getName());
-            OD_LOG_INF("the number of techniques  is " + Helper::toString(myBrighter->getNumTechniques()));
-            OD_LOG_INF("the number of passes is " + Helper::toString(myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getNumPasses()));
-            for(int ii =0 ; ii < myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getNumPasses(); ++ii)
-            {
-                myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getPass(ii)->getFragmentProgramParameters()->setNamedConstant("ambient",Ogre::ColourValue(8.0,8.0,8.0));
-                // cv = cv * 8.0;
-                // myBrighter->getTechnique(myBrighter->getNumTechniques() - 1)->getPass(ii)->setAmbient(cv);
-            }
-
-
-        }
-          
+        Ogre::MaterialPtr myBrighter = getBrighterMaterial(materialName);
         tempSubEntity->setMaterial(myBrighter);
     } 
     

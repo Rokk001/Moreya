@@ -155,13 +155,25 @@ public:
     //! Otherwise the shader generator follows the number of visible lights, which changes during camera flights.
     void pinMenuShaderLights();
 
-    //! \brief Lets the generated shaders follow the number of scene lights again.
+    //! \brief Hands the generated shaders back to the fixed light count of the game (see pinWorldShaderLights()).
     void releaseMenuShaderLights();
+
+    //! \brief Fixes the light count of the generated shaders in the game and editor at the most lights Ogre gives
+    //! one pass. Ogre never hands a pass more lights, so the shaders light exactly as with the count of the lights
+    //! in view. Following that count instead rebuilt every generated shader in one frame of play whenever more
+    //! lights than ever before came into view. Does nothing when the count is already fixed.
+    void pinWorldShaderLights();
 
     //! \brief Generates and compiles the shaders of every material in the menu scene at once.
     //! The shader generator otherwise builds them in the frame in which an object first comes into view,
     //! which stalls a camera flight. Call it after pinMenuShaderLights(), so the shaders match the fixed light count.
     void prepareMenuShaders();
+
+    //! \brief Loads the materials the game first draws while it runs (creature emotes, badges and props, the
+    //! particles of reactions, rooms and spells) and compiles their generated shaders during the map load.
+    //! Otherwise the frame in which one first appears loads its texture and compiles its shaders.
+    //! Call it after pinWorldShaderLights(), so the shaders match the fixed light count.
+    void prepareGameShaders();
 
     //! \brief Makes the generated shaders of an animated entity skin it on the GPU instead of Ogre skinning it on the CPU.
     //! Every sub entity gets its own copy of its material (one per material and mesh) that carries the RTSS hardware
@@ -469,6 +481,24 @@ private:
 
     //! \brief Destroys the rock border of createWorldBorder with all its entities.
     void destroyWorldBorder();
+
+    //! \brief Returns the copy of a creature material with the contour in a seat colour, made on first use.
+    Ogre::MaterialPtr getOutlinerMaterial(const std::string& materialName, const Ogre::ColourValue& colour);
+
+    //! \brief Returns the brighter copy of a creature material shown while the hand is over the creature,
+    //! made on first use.
+    Ogre::MaterialPtr getBrighterMaterial(const std::string& materialName);
+
+    //! \brief Makes the contour copies of a creature material for every seat colour and their brighter copies,
+    //! and loads them during map preparation, with a fallback for materials introduced later.
+    void prepareOutlinerMaterials(const std::string& materialName, const GameMap& gameMap);
+
+    //! \brief Loads configured creature meshes, tangents and highlight materials before play begins.
+    void prepareGameCreatureResources(GameMap& gameMap);
+
+    //! \brief Loads a material and makes its generated shaders, the two steps the technique resolver takes when
+    //! the material is first drawn. Materials with their own programs keep them.
+    void prepareGeneratedShaders(Ogre::Material& material);
 
     Ogre::InstanceManager* mInstanceManagerCloud;
         
@@ -1147,6 +1177,17 @@ private:
     std::set<Creature*> mDragContactCreatures;
     //! Base and last rendered local positions, used to remove cosmetic contact on release.
     std::map<Creature*, std::pair<Ogre::Vector3, Ogre::Vector3>> mDragContactPositions;
+    //! The fixed grip of a pulled body: hand in the worker node space, ankle in the body node space (decision 1048).
+    struct DragGrip
+    {
+        DragGrip() : mValid(false), mUsed(false) {}
+        bool mValid;
+        bool mUsed;
+        std::string mWorkerName;
+        Ogre::Vector3 mHand;
+        Ogre::Vector3 mAnkle;
+    };
+    std::map<Creature*, DragGrip> mDragContactGrips;
 
 
     Ogre::TexturePtr m_texture;

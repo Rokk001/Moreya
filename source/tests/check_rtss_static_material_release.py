@@ -39,7 +39,9 @@ def check_release(source):
     body = strip_comments(start_client(source))
     root = body.index('Ogre::Root ogreRoot(')
     owners_end = body.index('frameListener.prepareRenderWindowShutdown();')
+    capture = body.index('clientError = std::current_exception();')
     destroy = body.index('Ogre::RTShader::ShaderGenerator::destroy();')
+    rethrow = body.index('std::rethrow_exception(clientError);')
     loop = re.search(r'const Ogre::MaterialPtr (\w+);\s*for\s*\(\s*Ogre::RTShader::SkinningType (\w+)\s*:\s*\{([^}]*)\}\s*\)\s*\{(.*?)\n    \}', body, re.S)
     assert loop, 'release loop missing'
     empty, variable, types, calls = loop.groups()
@@ -50,7 +52,8 @@ def check_release(source):
         assert call.group(1) == variable
         assert [a.strip() for a in call.group(2).split(',')] == [empty] * 4, setter + ' must clear all four slots'
     # After the owner scope (no later entity re-registers the caster), before RTSS and Root are destroyed.
-    assert root < owners_end < loop.start() < destroy
+    assert root < owners_end < capture < loop.start() < destroy < rethrow
+    assert re.search(r'catch\(\.\.\.\)\s*\{\s*clientError = std::current_exception\(\);\s*\}', body)
 
 
 def check_registration_still_needs_release(source):

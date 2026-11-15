@@ -99,10 +99,12 @@ def find_resource_errors(log_path):
 
 MENU_TEST_NAME = "MainMenu"
 MENU_FRAME_LINE = re.compile(r"^MENUTEST frames=(\d+)")
+# Both processes load graphical resources and release them during normal shutdown.
+STARTUP_AND_SHUTDOWN_SECONDS = 400
 
 
 def available_server_port():
-    """Ask the OS for an available IPv4 listener port for this invocation."""
+    """Ask the OS for an available IPv4 TCP listener port for the game in this invocation."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("0.0.0.0", 0))
         return probe.getsockname()[1]
@@ -141,7 +143,7 @@ def run_menu_test(exe, seconds, port=None):
     port of the game (None = game default).
     """
     appdata = tempfile.mkdtemp(prefix="od-menu-test-")
-    limit = 2 * seconds + 120
+    limit = 2 * seconds + STARTUP_AND_SHUTDOWN_SECONDS
     command = [exe, "--menu-test", str(seconds), "--appData", appdata] + port_arguments(port)
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -187,7 +189,7 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
     port selects the server port of the game (None = game default); parallel instances need different ports.
     """
     appdata = tempfile.mkdtemp(prefix="od-run-level-")
-    limit = 2 * seconds + 400
+    limit = 2 * seconds + STARTUP_AND_SHUTDOWN_SECONDS
     command = [exe, "--run-level", level, "--seconds", str(seconds), "--appData", appdata] + port_arguments(port)
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -232,8 +234,10 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
 
 
 def main():
-    """Run menu and level checks using a per-invocation port unless explicitly overridden."""
-    """Parses the command line, runs the requested levels and exits with 0 only if all passed."""
+    """Parse the command line and run the requested menu and level checks; return 0 only if all passed.
+
+    Menu and level checks use a per-invocation port unless explicitly overridden.
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--exe", required=True, help="built game executable")
     parser.add_argument("--seconds", type=int, default=120, help="game time per level (default 120)")

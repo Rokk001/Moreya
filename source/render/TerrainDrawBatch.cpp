@@ -1,3 +1,4 @@
+#include "render/FrameStallTrace.h"
 #include "render/TerrainDrawBatch.h"
 #include "utils/LogManager.h"
 #include <OgreEntity.h>
@@ -322,8 +323,10 @@ void TerrainDrawBatch::remove(const std::string& name)
 }
 
 //! Builds one eligible cell per Ogre frame; waiting cells retain their original draws.
+//! \brief Records render-thread stall timing for this operation.
 void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Camera* camera)
 {
+    FrameStallTrace::Scope trace(FrameStallTrace::TerrainRebuild);
     (void)source;
     const unsigned long frame = Ogre::Root::getSingleton().getNextFrameNumber();
     if(mHasBuildFrame && mLastBuildFrame == frame)

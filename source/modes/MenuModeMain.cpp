@@ -326,6 +326,7 @@ bool MenuModeMain::changeModeAfterFlight(AbstractModeManager::ModeType mode, con
     return changeModeEvent(mode, e);
 }
 
+//! \brief Restarts the pending level and connects the local client to its server's bound port.
 void MenuModeMain::restartPendingLevel()
 {
     const std::string level = ODFrameListener::getSingleton().getPendingRestartLevel();
@@ -353,7 +354,7 @@ void MenuModeMain::restartPendingLevel()
         return;
     }
 
-    int port = ODServer::getSingleton().getNetworkPort();
+    unsigned short port = ODServer::getSingleton().getListeningPort();
     uint32_t timeout = ConfigManager::getSingleton().getClientConnectionTimeout();
     std::string replayFilename = ResourceManager::getSingleton().getReplayDataPath()
         + ResourceManager::getSingleton().buildReplayFilename();
