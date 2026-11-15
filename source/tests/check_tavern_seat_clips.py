@@ -175,8 +175,33 @@ def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, a
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
             assert support[level](body[frame] * level), (
                 name, 'Sit to SitDrink loses actual stool support', frame, level)
-            depth = drink.stool_depth(both[frame] * level)
+            depth = stool_geometry_depth(both[frame] * level)
             assert depth <= MAX_TABLE_DEPTH, (name, 'Sit to SitDrink reaches into furniture', frame, level, depth)
+
+
+# Evaluate the same nine boxes without materializing three-column masks and distance arrays.
+def stool_geometry_depth(points):
+    if (type(points) is not np.ndarray or points.dtype != np.float64 or
+            points.ndim != 2 or points.shape[1] != 3):
+        return drink.stool_depth(points)
+    x, y, z = points[:, 0], drink.STOOL_DISTANCE + points[:, 1], points[:, 2]
+    boxes = [((-0.323, 0.323), (-0.588, 0.588), (0.37, 0.4425))]
+    for side in (1, -1):
+        boxes.append(((-0.193, 0.193), (0.135, 0.521) if side > 0 else (-0.521, -0.135), (0.0, 0.38)))
+        boxes.append(((0.3236, 0.4986) if side > 0 else (-0.4986, -0.3236), (-0.656, 0.656), (0.202, 0.2575)))
+        for end in (1, -1):
+            boxes.append(((side * drink.BENCH_OFFSET - 0.042, side * drink.BENCH_OFFSET + 0.042),
+                          (0.515, 0.588) if end > 0 else (-0.588, -0.515), (0.0, 0.21)))
+    worst = 0.0
+    for (x0, x1), (y0, y1), (z0, z1) in boxes:
+        inside = (x > x0) & (x < x1) & (y > y0) & (y < y1) & (z > z0) & (z < z1)
+        if inside.any():
+            qx, qy, qz = x[inside], y[inside], z[inside]
+            depth = np.minimum(qx - x0, x1 - qx)
+            np.minimum(depth, np.minimum(qy - y0, y1 - qy), out=depth)
+            np.minimum(depth, np.minimum(qz - z0, z1 - qz), out=depth)
+            worst = max(worst, float(depth.max()))
+    return worst
 
 
 # Take the same maximum over every frame and vertex, bounding temporary geometry to 32768 vertices.
@@ -184,7 +209,7 @@ def stool_clip_depth(points):
     if len(points) == 0:
         raise ValueError('max() arg is an empty sequence')
     vertices = points.reshape(-1, 3)
-    return max(drink.stool_depth(vertices[start:start + 32768] * level)
+    return max(stool_geometry_depth(vertices[start:start + 32768] * level)
                for start in range(0, max(1, len(vertices)), 32768)
                for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
 
