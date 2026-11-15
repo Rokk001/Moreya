@@ -20,7 +20,6 @@ import os
 import re
 import subprocess
 import tempfile
-import time
 
 repo = Path(__file__).resolve().parents[2]
 deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
@@ -640,17 +639,12 @@ environment = dict(os.environ)
 environment['PATH'] = str(deps / 'install/bin') + os.pathsep + environment.get('PATH', '')
 
 
+# Run one probe and let the runner rebuild on application-control errors.
 def run(executable, arguments, work):
-    # Windows may block a freshly compiled executable (WinError 4551) for a moment
-    for attempt in range(4):
-        try:
-            subprocess.run([str(work / executable)] + arguments, cwd=work, check=True, env=environment)
-            return
-        except OSError as error:
-            if attempt == 3:
-                raise
-            print('retrying after', error)
-            time.sleep(2)
+    # Windows application control errors must reach the runner without restarting this executable.
+    # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
+    subprocess.run([str(work / executable)] + arguments, cwd=work, check=True, env=environment)
+    return
 
 
 with tempfile.TemporaryDirectory(prefix='odp-heart-burst-') as directory:

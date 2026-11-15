@@ -47,6 +47,7 @@ public:
     std::string mGoals;
 };
 
+//! \brief Network test client with bounded server readiness and local port-release checks.
 class ODClientTest : public ODSocketClient
 {
 public:
@@ -54,7 +55,9 @@ public:
 
     virtual ~ODClientTest();
 
+    //! \brief Connects as soon as the test server is ready, with a bounded startup retry.
     bool connect(const std::string& host, const int port, uint32_t timeout, const std::string& outputReplayFilename) override;
+    //! \brief Disconnects and waits only until the local test server releases its port.
     void disconnect(bool keepReplay) override;
 
     void runFor(int32_t timeInMillis);
@@ -85,6 +88,7 @@ protected:
     bool mContinueLoop;
 
 private:
+    int mLocalServerPort = 0;
     bool mIsActivated;
     bool mIsGameModeStarted;
     std::vector<PlayerInfo> mPlayers;
