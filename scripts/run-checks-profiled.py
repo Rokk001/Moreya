@@ -268,11 +268,12 @@ def execute(runner, arguments, report):
 
 
 # Save reports beside the check output and retain immutable local history shared by worktrees.
+# Forward unknown runner flags exactly; --run must never abbreviate our --runner option.
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument('--runner', type=Path, required=True)
     args, remaining = parser.parse_known_args()
-    original = argparse.ArgumentParser(add_help=False)
+    original = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     original.add_argument('--repo', type=Path, default=Path.cwd())
     original.add_argument('--out', type=Path, required=True)
     original.add_argument('--base', default='origin/integration/all')

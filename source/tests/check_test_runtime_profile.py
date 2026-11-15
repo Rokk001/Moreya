@@ -130,7 +130,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(report['tests'][0]['seconds'], 5)
             self.assertEqual(len(report['tests'][0]['attempts']), 2)
 
-    # Run the command-line wrapper on an isolated Git fixture and retain a red runner's exit code.
+    # Forward the real build's --run argument without abbreviating --runner and retain a red exit code.
     def test_cli_reports_and_exit(self):
         with tempfile.TemporaryDirectory() as temporary:
             repo = Path(temporary)
@@ -144,11 +144,12 @@ class RuntimeTests(unittest.TestCase):
             git('add', 'tracked.txt')
             git('commit', '-qm', 'Fixture')
             runner = repo / 'runner.py'
-            runner.write_text('def run_script(*args): return 3, "failed", 0\ndef main():\n    run_script(".", "check.py", [], 600, {})\n    return 3\n')
+            runner.write_text('import sys\ndef run_script(*args): return 3, "failed", 0\ndef main():\n    assert sys.argv[-4:] == ["--build-start", "123", "--run", "orch-fixture"]\n    run_script(".", "check.py", [], 600, {})\n    return 3\n')
             output = repo / 'checks.txt'
             result = subprocess.run([sys.executable, '-I', str(ROOT / 'scripts/run-checks-profiled.py'),
                                      '--runner', str(runner), '--repo', str(repo), '--base', 'HEAD',
-                                     '--out', str(output)], capture_output=True, text=True, timeout=30)
+                                     '--out', str(output), '--build-start', '123', '--run', 'orch-fixture'],
+                                    capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 3, result.stderr)
             saved = json.loads(output.with_suffix('.timings.json').read_text())
             self.assertEqual(saved['exit_code'], 3)
