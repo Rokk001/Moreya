@@ -60,9 +60,15 @@ def git(repo, *args):
 
 
 def digest(path):
-    """Identify the exact linked executable, including replacement after validation."""
+    """Identify the exact linked executable in bounded chunks on Python 3.10 too."""
+    checksum = hashlib.sha256()
     with Path(path).open('rb') as handle:
-        return hashlib.file_digest(handle, 'sha256').hexdigest()
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            checksum.update(chunk)
+    return checksum.hexdigest()
 
 
 def record_build(repo, run, number, commit):

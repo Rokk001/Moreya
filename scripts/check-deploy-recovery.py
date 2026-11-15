@@ -18,6 +18,23 @@ spec.loader.exec_module(deployment)
 class Recovery(unittest.TestCase):
     """Reject stale builds and exclude a competing plan for the whole operation."""
 
+    def test_digest_vectors(self):
+        """SHA-256 matches fixed empty, short and multi-chunk vectors on Python 3.10."""
+        vectors = [
+            (b'', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            (b'abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
+            (b'a' * 1048577, '4a3f0c0c213adea174f9a3d4c13177315b588bdb2e9c1012d3d0bf0453ca0f6a'),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / 'game.exe'
+            for content, expected in vectors:
+                with self.subTest(size=len(content)):
+                    artifact.write_bytes(content)
+                    self.assertEqual(deployment.digest(artifact), expected)
+            artifact.unlink()
+            with self.assertRaises(FileNotFoundError):
+                deployment.digest(artifact)
+
     def test_bounded_wait_under_shared_lock(self):
         """Zero and expired deadlines prohibit deployment and leave the counter unchanged."""
         from contextlib import contextmanager
