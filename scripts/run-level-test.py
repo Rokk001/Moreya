@@ -300,5 +300,26 @@ def main():
     return 0 if (not failed and menu_passed) else 1
 
 
+
+def locked_main():
+    """Serialize the complete invocation with deploy and other users of this executable."""
+    import importlib.util
+    from pathlib import Path
+    # Explicit loading also supports isolated Python and source-probe imports.
+    if 'odp_deployment' not in sys.modules:
+        spec = importlib.util.spec_from_file_location('odp_deployment', Path(__file__).with_name('odp_deployment.py'))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules['odp_deployment'] = module
+        spec.loader.exec_module(module)
+    lock_parser = argparse.ArgumentParser(add_help=False)
+    lock_parser.add_argument('--exe', dest='executable')
+    lock_args, _ = lock_parser.parse_known_args()
+    if not lock_args.executable:
+        return main()
+    executable = lock_args.executable
+    with sys.modules['odp_deployment'].executable_lock(executable):
+        return main()
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(locked_main())

@@ -14,6 +14,8 @@ if (-not $env:ODP_ASSETS_SRC) { $env:ODP_ASSETS_SRC = [Environment]::GetEnvironm
 New-Item -ItemType Directory -Force "$wt\out" | Out-Null
 $run = 'orch-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 Set-Content -Encoding ascii "$wt\out\orch-run.txt" $run
+$buildCommit = (& git -C $wt rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 # The compiler job count of HaiveQueen (BUILD_JOBS) becomes the /MP job count of the project (BUILD_MP_JOBS, read by windows-paths.ps1)
 if ($env:BUILD_JOBS -and -not $env:BUILD_MP_JOBS) { $env:BUILD_MP_JOBS = $env:BUILD_JOBS }
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
@@ -39,4 +41,8 @@ Write-Output "checks started: $run"
 & python -u -I $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $Base --build-start $start --run $run
 $code = $LASTEXITCODE
 if ($code -ne 0) { Write-Output "checks failed (exit $code), see out\checks-$run.txt" }
+if ($code -eq 0) {
+    & python -I "$wt\scripts\odp_deployment.py" record --repo $wt --run $run --number $n --commit $buildCommit
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
 exit $code
