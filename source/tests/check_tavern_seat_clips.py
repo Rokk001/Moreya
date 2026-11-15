@@ -284,6 +284,19 @@ def bench_clip_depth(points):
     return depth
 
 
+# Both skeleton readers consume elements/attributes, never text/tail; omit whitespace-only data callbacks.
+class SeatXMLBuilder(ET.TreeBuilder):
+    # XMLParser still validates every token before forwarding character data to this builder.
+    def data(self, value):
+        if not value.isspace():
+            super().data(value)
+
+
+# Parse attribute-based skeleton XML only; mixed-content whitespace is intentionally not preserved.
+def parse_seat_xml(text):
+    return ET.fromstring(text, parser=ET.XMLParser(target=SeatXMLBuilder()))
+
+
 # Build both complete rig representations from one fresh conversion and XML parse per skeleton.
 class SeatAssets(drink.TavernAssets):
     # Keep only each small configured body rig beside the existing per-run asset cache.
@@ -307,7 +320,7 @@ class SeatAssets(drink.TavernAssets):
                 skeleton = prepare(feet.Skel, path, clip_names=self.clip_names)
                 body = prepare(seats.rig.Skeleton, path)
             else:
-                root = prepare(ET.fromstring, text)
+                root = prepare(parse_seat_xml, text)
                 skeleton = prepare(feet.Skel, path, clip_names=self.clip_names, xml_root=root)
                 body = prepare(seats.rig.Skeleton, path, xml_source=(text, root))
             configured = prepare(seats.rig.config, name, body)

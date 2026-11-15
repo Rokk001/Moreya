@@ -40,6 +40,37 @@ def fixture():
 
 # Opt-in XML sharing must preserve both full parser validation contracts.
 class PreparationTests(unittest.TestCase):
+    # Skeleton attributes and non-whitespace character data survive; text/tail whitespace is unused.
+    def test_compact_xml_content(self):
+        text = '<skeleton> \n <bone name="a b" value=" -0.0 ">payload &amp; text</bone>\t</skeleton>'
+        root = seat.parse_seat_xml(text)
+        self.assertIsNone(root.text)
+        self.assertIsNone(root[0].tail)
+        self.assertEqual(root[0].attrib, {'name': 'a b', 'value': ' -0.0 '})
+        self.assertEqual(root[0].text, 'payload & text')
+
+    # Compact parsing must retain all fields of both independent parsers, including unused clips.
+    def test_compact_xml_representations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'rig.xml'
+            for text in (fixture(), fixture().replace('x="0"', 'x="-0.0"')):
+                path.write_text(text, encoding='utf-8')
+                root = seat.parse_seat_xml(text)
+                compare(self, seat.feet.Skel(path), seat.feet.Skel(path, xml_root=root))
+                compare(self, seat.seats.rig.Skeleton(path),
+                        seat.seats.rig.Skeleton(path, xml_source=(text, root)))
+
+    # Formatting removal happens after XML tokenization and cannot conceal syntax or entity errors.
+    def test_compact_xml_failures(self):
+        for text in ('<skeleton><bone></skeleton>', '<skeleton>&missing;</skeleton>',
+                     '<skeleton a="1" a="2"/>', '<skeleton>\x00</skeleton>',
+                     '<skeleton/><unexpected/>'):
+            with self.subTest(text=text):
+                with self.assertRaises(ET.ParseError):
+                    ET.fromstring(text)
+                with self.assertRaises(ET.ParseError):
+                    seat.parse_seat_xml(text)
+
     # Unicode parsing must not hide an encoding error caught by the original byte-oriented parser.
     def test_declared_encoding(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -162,7 +193,9 @@ class PreparationTests(unittest.TestCase):
                 self.assertNotEqual(text, fixture())
                 path.write_text(text, encoding='utf-8')
                 for parser, keyword in ((seat.feet.Skel, {'xml_root': ET.fromstring(text)}),
-                                        (seat.seats.rig.Skeleton, {'xml_source': (text, ET.fromstring(text))})):
+                                        (seat.seats.rig.Skeleton, {'xml_source': (text, ET.fromstring(text))}),
+                                        (seat.feet.Skel, {'xml_root': seat.parse_seat_xml(text)}),
+                                        (seat.seats.rig.Skeleton, {'xml_source': (text, seat.parse_seat_xml(text))})):
                     try:
                         expected = parser(path)
                     except Exception as error:
