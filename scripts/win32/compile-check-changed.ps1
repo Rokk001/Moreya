@@ -10,6 +10,13 @@ param(
 )
 if ($Worktree -eq '') { $Worktree = Join-Path $PSScriptRoot '..\..' }
 $wt = (Resolve-Path $Worktree).Path
+# One adapter owns the Check journal; preserve all original parameters in its isolated child.
+if ($env:HQ_CHECK_EVENTS) {
+    $childArgs = @('powershell', '-NoProfile', '-File', $PSCommandPath, '-Base', $Base, '-MaxWaitMinutes', $MaxWaitMinutes, '-Worktree', $wt)
+    if ($ReleaseProject) { $childArgs += @('-ReleaseProject', $ReleaseProject) }
+    & python "$PSScriptRoot\..\hq-check-command.py" --repo $wt --name compile-check -- @childArgs
+    exit $LASTEXITCODE
+}
 # Default project file: the integrator's build folder inside the main checkout, found through the shared git directory of this worktree.
 if ($ReleaseProject -eq '') {
     $commonDir = (& git -C $wt rev-parse --path-format=absolute --git-common-dir).Trim()

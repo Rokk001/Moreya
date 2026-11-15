@@ -254,17 +254,24 @@ def execute(runner, arguments, report):
         return code, output, ignored_seconds
 
     module.run_script = measured
+    previous_defer = os.environ.get('HQ_CHECK_DEFER_RELEASE')
+    os.environ['HQ_CHECK_DEFER_RELEASE'] = '1'
     saved_argv = sys.argv
     sys.argv = [str(runner)] + arguments
     try:
         with LoadMonitor() as monitor:
             code = module.main()
+        report['_hq_session'] = getattr(module, 'LAST_SESSION', None)
         report['load_reasons'] = sorted(monitor.reasons)
         report['comparable'] = not monitor.reasons
         return code
     finally:
         report['tests'] = list(rows.values())
         sys.argv = saved_argv
+        if previous_defer is None:
+            os.environ.pop('HQ_CHECK_DEFER_RELEASE', None)
+        else:
+            os.environ['HQ_CHECK_DEFER_RELEASE'] = previous_defer
 
 
 # Save reports beside the check output and retain immutable local history shared by worktrees.
@@ -283,8 +290,15 @@ def main():
     original.add_argument('--load-test-only', action='store_true')
     original.add_argument('--no-4551-retry', action='store_true')
     settings, _ = original.parse_known_args(remaining)
-    base = git(settings.repo, 'rev-parse', settings.base + '^{commit}')
-    commit = git(settings.repo, 'rev-parse', settings.tip + '^{commit}')
+    comparison_error = False
+    try:
+        base = git(settings.repo, 'rev-parse', settings.base + '^{commit}')
+        commit = git(settings.repo, 'rev-parse', settings.tip + '^{commit}')
+    except subprocess.SubprocessError:
+        # The required runner reports invalid refs and still executes independent checks.
+        base = ''
+        commit = git(settings.repo, 'rev-parse', 'HEAD')
+        comparison_error = True
     history = Path(git(settings.repo, 'rev-parse', '--path-format=absolute', '--git-common-dir')) / 'odp-test-timings'
     report = {'schema': SCHEMA, 'started': datetime.now(timezone.utc).isoformat(),
               'base': base, 'commit': commit, 'profile': execution_profile(
@@ -294,9 +308,12 @@ def main():
     dirty_before = git(settings.repo, 'status', '--porcelain', '--untracked-files=no')
     previous = baseline(history, base, report['profile'])
     code = execute(args.runner, remaining, report)
+    diagnostic_session = report.pop('_hq_session', None)
     if dirty_before or git(settings.repo, 'status', '--porcelain', '--untracked-files=no'):
         report['load_reasons'].append('tracked-worktree-changes')
-    if git(settings.repo, 'rev-parse', settings.tip + '^{commit}') != commit:
+    if comparison_error:
+        report['load_reasons'].append('invalid-comparison-reference')
+    if git(settings.repo, 'rev-parse', 'HEAD') != commit:
         report['load_reasons'].append('tip-changed-during-checks')
     report['comparable'] = not report['load_reasons']
     report['exit_code'] = code
@@ -311,6 +328,10 @@ def main():
         (history / (uuid.uuid4().hex + '.json')).write_text(json.dumps(report) + '\n', encoding='utf-8')
     except OSError as error:
         print('TIMING REPORT ERROR: ' + str(error), file=sys.stderr)
+    # Shared timing history has now been written and every check has returned.
+    if (diagnostic_session is not None and not diagnostic_session.initial_error
+            and not os.environ.get('HQ_CHECK_DEFER_RELEASE') and not diagnostic_session.verify()):
+        sys.modules['hq_check_events'].report('shared_writes_finished')
     return code
 
 

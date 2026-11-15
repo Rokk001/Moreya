@@ -7,6 +7,7 @@ victory message and the campaign map with the next level must appear), not natur
 """
 import argparse
 import ctypes
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -119,6 +120,26 @@ def integration_levels(repo, base_file):
 
 
 # Run selected maps once, retaining logs and real process exit codes.
+def deployment_levels(repo, manifest):
+    """Revalidate selection against the actual deployed data snapshot before starting any game."""
+    spec = importlib.util.spec_from_file_location('deploy_selection', Path(__file__).with_name('deploy-level-selection.py'))
+    selector = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(selector)
+    saved = json.loads(manifest.read_text(encoding='utf-8'))
+    if saved.get('schema') != 1 or saved.get('mode') not in ('selected', 'full'):
+        raise RuntimeError('Invalid deployment selection manifest')
+    if git_output(repo, 'rev-parse', 'HEAD') != saved['tip']:
+        raise RuntimeError('Selected commit differs from actual deployed data')
+    levels = selector.select(repo, saved['base'], saved['tip'], saved['mode'] == 'full')
+    if levels != saved['levels']:
+        raise RuntimeError('Deployment selection changed since preparation')
+    print('Deploy load range: ' + str(saved['base']) + ' -> ' + saved['tip'], flush=True)
+    for name, reason in levels.items():
+        print('SELECT ' + name + ': ' + reason, flush=True)
+    return [repo / name for name in levels]
+
+
+# Run selected maps once, retaining logs and real process exit codes.
 def main():
     """Capture a build range or run selected probes with isolated data, port and acceptance checks."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -128,6 +149,7 @@ def main():
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument('--capture-base', help='Freeze the integration base before the push')
     selection.add_argument('--base-file', type=Path, help='Mossgate plus changed maps in this saved range')
+    selection.add_argument('--deployment-selection', type=Path, help='Verified deployment receipt range and selected maps')
     selection.add_argument('--all-campaign', action='store_true', help='Explicit full campaign test')
     # Match run-level-test.py's 2 * seconds + 400 wall-clock budget for --seconds 1.
     # The game watchdog bounds loading/play; normal renderer teardown also needs time.
@@ -141,7 +163,8 @@ def main():
         parser.error('--executable is required for load probes')
     executable = args.executable.resolve(strict=True)
     campaign = campaign_levels(repo)
-    levels = campaign if args.all_campaign else integration_levels(repo, args.base_file)
+    levels = (deployment_levels(repo, args.deployment_selection) if args.deployment_selection
+              else campaign if args.all_campaign else integration_levels(repo, args.base_file))
     if not levels:
         parser.error('No configured campaign maps found')
     args.output.mkdir(parents=True, exist_ok=True)
