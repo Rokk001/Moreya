@@ -47,34 +47,34 @@ def campaign_levels(repo):
 
 # Refuse to launch probes while another copy of this executable is running.
 def game_is_running(executable):
-    """Check executable identity, allowing isolated games from other worktrees."""
+    """Compare full process paths, retaining the guard when identity cannot be read."""
     if os.name != 'nt':
         raise RuntimeError('Game process detection requires the Windows integration host')
-    name = executable.name.replace("'", "''")
-    query = ("$ErrorActionPreference = 'Stop'; "
-             "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false; "
-             "$games = @(Get-CimInstance Win32_Process | "
-             "Where-Object { $_.Name -eq '" + name + "' } | "
-             "Select-Object ProcessId, ExecutablePath); "
-             "ConvertTo-Json -Compress -InputObject $games")
-    result = subprocess.run(['powershell', '-NoProfile', '-Command', query], stdin=subprocess.DEVNULL,
-                            capture_output=True, timeout=30, check=True)
-    # Avoid tasklist's localized console-codepage messages: CIM emits explicit UTF-8 JSON,
-    # including an empty array when the game is not running.
+    environment = dict(os.environ, ODP_PROBE_IMAGE_NAME=executable.name)
+    command = ("$ErrorActionPreference = 'Stop'; "
+               "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false; "
+               "ConvertTo-Json -Compress -InputObject @(Get-CimInstance Win32_Process | "
+               "Where-Object { $_.Name -eq $env:ODP_PROBE_IMAGE_NAME } | "
+               "Select-Object ProcessId, ExecutablePath)")
+    result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', command],
+                            stdin=subprocess.DEVNULL, capture_output=True,
+                            timeout=30, check=True, env=environment)
+    # Process paths are emitted as UTF-8 rather than localized tasklist console text.
+    # CIM emits explicit JSON, including an empty array when the game is not running.
     processes = json.loads(result.stdout.decode('utf-8-sig'))
     target = os.path.normcase(str(executable.resolve()))
     for process in processes:
         path = process.get('ExecutablePath')
         # An inaccessible executable path is unsafe to assume belongs to a different checkout.
         if not path:
-            raise RuntimeError('Cannot identify running game executable for PID ' + str(process['ProcessId']))
+            raise RuntimeError('Cannot identify running game PID %s' % process.get('ProcessId'))
         if os.path.normcase(str(Path(path).resolve())) == target:
             return True
     return False
 
 
 def available_server_port():
-    """Choose an unused TCP port so other worktree games do not share our listener."""
+    """Choose an available TCP port so other worktree games do not share our listener."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(('0.0.0.0', 0))
         return probe.getsockname()[1]
@@ -120,7 +120,7 @@ def integration_levels(repo, base_file):
 
 # Run selected maps once, retaining logs and real process exit codes.
 def main():
-    """Capture a build range or run explicitly selected probes with isolated data."""
+    """Capture a build range or run selected probes with isolated data, port and acceptance checks."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--executable', type=Path)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
