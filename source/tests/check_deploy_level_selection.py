@@ -238,7 +238,7 @@ class SelectionTests(unittest.TestCase):
             args = json.loads((self.repo / 'scripts/run-campaign-load-tests.args').read_text())
             self.assertEqual(Path(args[args.index('--executable') + 1]),
                              self.repo / 'build/windows/opendungeons-plus.exe')
-            self.assertEqual(Path(args[args.index('--deployment-selection') + 1]), self.repo / 'out/deploy-selection-test.json')
+            self.assertEqual(Path(args[args.index('--base-file') + 1]), self.repo / 'out/load-base-test.json')
             if result:
                 self.assertNotIn('deployed build 17', completed.stdout)
 
