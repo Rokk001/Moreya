@@ -160,8 +160,9 @@ def main():
                                     stdin=subprocess.DEVNULL, capture_output=True,
                                     timeout=args.timeout, env=environment)
             log = (result.stdout + result.stderr).decode('utf-8', errors='replace')
-            success = (r'^PASS .*victory message shown, campaign map shows' if level in campaign
-                       else r'^PASS .*')
+            success = r'^PASS ' + re.escape(level.name) + r' : '
+            if level in campaign:
+                success += r'.*victory message shown, campaign map shows'
             passed = (result.returncode == 0 and re.search(r'GOALS registered=[1-9][0-9]*', log)
                       and re.search(success, log, re.MULTILINE))
             status = 'PASS' if passed else 'FAIL exit=' + str(result.returncode)
