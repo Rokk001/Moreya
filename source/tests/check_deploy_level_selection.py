@@ -193,10 +193,16 @@ class SelectionTests(unittest.TestCase):
         scripts = self.repo / 'scripts/win32'
         scripts.mkdir(parents=True)
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy.ps1', scripts / 'orchestrator-deploy.ps1')
-        # The child shell loads this dependency beside the wrapper; never observe the owner's game.
-        self.write('scripts/win32/wait-game-exit.ps1',
-                   'function Get-Process { param($Name, $ErrorAction) }\n' +
-                   (ROOT / 'scripts/win32/wait-game-exit.ps1').read_text(encoding='utf-8'))
+        # The child shell loads the real wait helper beside the wrapper; isolate it from the owner's processes.
+        wait_helper = (ROOT / 'scripts/win32/wait-game-exit.ps1').read_text(encoding='utf-8')
+        self.write('scripts/win32/wait-game-exit.ps1', wait_helper +
+                   '\n# Observe an idle fixture without inspecting the owner\'s game.\n'
+                   'function Get-Process { param($Name, $ErrorAction)\n'
+                   '    [System.IO.File]::AppendAllText((Join-Path $PSScriptRoot "idle-process-queries.txt"), "$Name`n")\n'
+                   '    return @()\n'
+                   '}\n'
+                   '# Fail if the wrapper attempts to terminate a process.\n'
+                   'function Stop-Process { throw "Fixture must never terminate a process" }\n')
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1', scripts / 'orchestrator-deploy-selected.ps1')
         shutil.copyfile(ROOT / 'scripts/deploy-level-selection.py', scripts.parent / 'deploy-level-selection.py')
         tip = self.git('rev-parse', 'HEAD')
@@ -209,7 +215,9 @@ class SelectionTests(unittest.TestCase):
         self.write('out/build-number-test.txt', '17')
         self.write('deploy-stub.ps1', 'exit 0\n')
         counter = self.repo / 'counter.txt'
+        process_queries = scripts / 'idle-process-queries.txt'
         for result in (7, 0):
+            process_queries.unlink(missing_ok=True)
             counter.write_text('16')
             self.write('scripts/run-campaign-load-tests.py',
                        'import json, sys\nfrom pathlib import Path\n'
@@ -221,6 +229,7 @@ class SelectionTests(unittest.TestCase):
                                        '-GameWaitSeconds', '0'],
                                       capture_output=True, text=True, timeout=30)
             self.assertEqual(completed.returncode, 1 if result else 0, completed.stdout + completed.stderr)
+            self.assertEqual(process_queries.read_text(encoding='utf-8').splitlines(), ['opendungeons-plus'])
             self.assertEqual(counter.read_text().strip(), '16' if result else '17')
             self.assertTrue((self.repo / 'scripts/run-campaign-load-tests.args').is_file(),
                             completed.stdout + completed.stderr)
