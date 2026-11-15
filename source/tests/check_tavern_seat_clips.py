@@ -27,13 +27,14 @@ Calls (from the repository root; needs OgreXMLConverter on the PATH or in OGRE_X
 from pathlib import Path
 import re
 import sys
+import xml.etree.ElementTree as ET
 
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
-from asset_check_timing import prepare, profile_check
+from asset_check_timing import prepare, preparation, profile_check
 import author_tavern_seats as seats
 import check_tavern_drink_834 as drink
 import author_rest_poses as rest
@@ -203,6 +204,38 @@ def bench_clip_depth(points):
     return depth
 
 
+# Build both complete rig representations from one fresh conversion and XML parse per skeleton.
+class SeatAssets(drink.TavernAssets):
+    # Keep only each small configured body rig beside the existing per-run asset cache.
+    def __init__(self, out, clip_names=None):
+        super().__init__(out, clip_names=clip_names)
+        self.body_rigs = {}
+
+    # Cache only after both independent parsers and the body configuration have succeeded.
+    @preparation
+    def skeleton(self, name):
+        if name not in self.skeletons:
+            filename = name + '.skeleton'
+            prepare(export, filename, self.out, return_tree=False)
+            path = str(self.out / (filename + '.xml'))
+            text = prepare(Path(path).read_text, encoding='utf-8')
+            declaration = re.match(r'\ufeff?<\?xml\s[^?]*\?>', text)
+            encoding = (re.search(r'''encoding\s*=\s*(['"])(.*?)\1''', declaration.group(0))
+                        if declaration else None)
+            if encoding and encoding.group(2).lower() != 'utf-8':
+                # Byte and Unicode XML parsers can interpret other declarations differently; retain both paths.
+                skeleton = prepare(feet.Skel, path, clip_names=self.clip_names)
+                body = prepare(seats.rig.Skeleton, path)
+            else:
+                root = prepare(ET.fromstring, text)
+                skeleton = prepare(feet.Skel, path, clip_names=self.clip_names, xml_root=root)
+                body = prepare(seats.rig.Skeleton, path, xml_source=(text, root))
+            configured = prepare(seats.rig.config, name, body)
+            self.body_rigs[name] = configured
+            self.skeletons[name] = skeleton
+        return self.skeletons[name]
+
+
 # Share immutable preparation and measure every original clip sample against the same bounds.
 def check_skeleton(name, mesh_name, assets, stools, mounts):
     """Check native seated geometry in its actual stool or bench frame, including body support."""
@@ -256,7 +289,7 @@ def check_skeleton(name, mesh_name, assets, stools, mounts):
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     points = rest.skin_vertices(skeleton, sit, vertices, weights)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')
-    body_rig = prepare(seats.rig.config, name, prepare(seats.rig.Skeleton, str(out / (name + '.skeleton.xml'))))
+    body_rig = assets.body_rigs[name]
     if on_stool:
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
             assert has_stool_surface_support(points[0] * level, triangles), (name, 'Sit has no actual stool support', level)
@@ -306,7 +339,7 @@ def main():
     assert large == set(seats.LARGE_MODELS), ('large models', sorted(large))
     out = ROOT / 'out' / 'tavern-seat-clips'
     out.mkdir(parents=True, exist_ok=True)
-    assets = drink.TavernAssets(out, clip_names=None)
+    assets = SeatAssets(out, clip_names=None)
     assets.mesh(seats.MUG_MESH)
     stools, mounts = stool_meshes(), drink.read_limb_mounts()
     tested = 0

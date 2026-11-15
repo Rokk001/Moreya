@@ -145,10 +145,11 @@ class Clip(object):
 
 # Read and validate the full rig, optionally retaining only clips used by a caller's checks.
 class Skel(object):
-    # Parse every clip to preserve malformed-data failures; selections only limit retained objects.
-    def __init__(self, path, clip_names=None):
+    # Parse every clip to preserve malformed-data failures; optionally share a freshly parsed XML tree.
+    # Clip selections only limit retained objects, never validation.
+    def __init__(self, path, clip_names=None, *, xml_root=None):
         self.path = path
-        root = ET.parse(path).getroot()
+        root = ET.parse(path).getroot() if xml_root is None else xml_root
         rotations = {}
 
         # Share identical rotation conversion only within this parse; exact XML text preserves signed zero.
