@@ -4,6 +4,7 @@ import importlib.util
 from io import StringIO
 import json
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import tempfile
@@ -152,3 +153,80 @@ def check_mid_campaign_process():
 check_process_identity()
 check_mid_campaign_process()
 print('Campaign load runner: seven process identity/error cases and mid-campaign concurrency verified')
+
+
+def check_process_scope():
+    """Reject the deployed game and unknown paths, but permit a separate worktree game."""
+    executable = ROOT / 'build/windows/opendungeons-plus.exe'
+    other = ROOT / 'other-worktree/build/windows/opendungeons-plus.exe'
+    for paths, expected in (([], False), ([str(other)], False), ([str(executable)], True),
+                            ([str(other), str(executable)], True)):
+        output = json.dumps([{'ExecutablePath': path} for path in paths]).encode('utf-8')
+        with patch.object(runner.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, output)) as run:
+            assert runner.game_is_running(executable) == expected
+        assert run.call_args.args[0][:2] == ['powershell', '-NoProfile']
+        assert run.call_args.kwargs['check'] and run.call_args.kwargs['timeout'] == 30
+    output = json.dumps([{'ProcessId': 789, 'ExecutablePath': None}]).encode('utf-8')
+    with patch.object(runner.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, output)):
+        try:
+            runner.game_is_running(executable)
+        except RuntimeError as error:
+            assert '789' in str(error), 'unreadable identity must identify the blocked process'
+        else:
+            raise AssertionError('An unreadable executable path must block probes')
+    with patch.object(runner.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'powershell')):
+        try:
+            runner.game_is_running(executable)
+        except subprocess.CalledProcessError:
+            pass
+        else:
+            raise AssertionError('Failed process enumeration must block the probes')
+
+
+def check_interleaved_worktree():
+    """Reproduce another worktree appearing between passing probes without aborting deployment."""
+    with tempfile.TemporaryDirectory(prefix='campaign-concurrency-') as temporary:
+        directory = Path(temporary)
+        executable = directory / 'opendungeons-plus.exe'
+        executable.touch()
+        levels = [ROOT / 'levels/campaign/Mossgate.level', ROOT / 'levels/campaign/HollinFen.level']
+        commands = []
+
+        def run(command, **kwargs):
+            """Introduce a different worktree process before the second probe."""
+            if command[0] == 'powershell':
+                paths = [] if not commands else [{'ExecutablePath': str(directory / 'other/opendungeons-plus.exe')}]
+                return subprocess.CompletedProcess(command, 0, json.dumps(paths).encode('utf-8'))
+            commands.append(command)
+            return subprocess.CompletedProcess(command, 0, success, b'')
+
+        with patch.object(sys, 'argv', ['runner', '--executable', str(executable), '--output', str(directory / 'logs')]), \
+                patch.object(runner, 'probe_environment', return_value={}), \
+                patch.object(runner, 'campaign_levels', return_value=levels), \
+                patch.object(runner.subprocess, 'run', side_effect=run), redirect_stdout(StringIO()) as captured:
+            assert runner.main() == 0
+        assert len(commands) == 2
+        assert 'Campaign load probes: total=2 failed=0' in captured.getvalue()
+        for command in commands:
+            assert command[-2] == '--port' and int(command[-1]) > 0
+        with patch.object(sys, 'argv', ['runner', '--executable', str(executable), '--output', str(directory / 'logs')]), \
+                patch.object(runner, 'probe_environment', return_value={}), \
+                patch.object(runner, 'campaign_levels', return_value=levels), \
+                patch.object(runner, 'game_is_running', return_value=True), \
+                patch.object(runner.subprocess, 'run') as launch:
+            try:
+                runner.main()
+            except RuntimeError as error:
+                assert str(error) == 'Close the running game before campaign load probes'
+            else:
+                raise AssertionError('An existing deployed game must still block probes')
+            launch.assert_not_called()
+
+
+check_process_scope()
+check_interleaved_worktree()
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as occupied:
+    occupied.bind(('0.0.0.0', 0))
+    occupied.listen()
+    assert runner.available_server_port() != occupied.getsockname()[1]
+print('Campaign load runner: nine acceptance cases, process scope, interleaved worktrees and occupied-port avoidance verified')

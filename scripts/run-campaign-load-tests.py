@@ -51,7 +51,7 @@ def game_is_running(executable):
         raise RuntimeError('Game process detection requires the Windows integration host')
     environment = dict(os.environ, ODP_PROBE_IMAGE_NAME=executable.name)
     command = ("$ErrorActionPreference = 'Stop'; "
-               "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding; "
+               "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false; "
                "ConvertTo-Json -Compress -InputObject @(Get-CimInstance Win32_Process | "
                "Where-Object { $_.Name -eq $env:ODP_PROBE_IMAGE_NAME } | "
                "Select-Object ProcessId, ExecutablePath)")
@@ -59,18 +59,21 @@ def game_is_running(executable):
                             stdin=subprocess.DEVNULL, capture_output=True,
                             timeout=30, check=True, env=environment)
     # Process paths are emitted as UTF-8 rather than localized tasklist console text.
+    # CIM emits explicit JSON, including an empty array when the game is not running.
     processes = json.loads(result.stdout.decode('utf-8-sig'))
+    target = os.path.normcase(str(executable.resolve()))
     for process in processes:
         path = process.get('ExecutablePath')
+        # An inaccessible executable path is unsafe to assume belongs to a different checkout.
         if not path:
             raise RuntimeError('Cannot identify running game PID %s' % process.get('ProcessId'))
-        if Path(path).resolve() == executable.resolve():
+        if os.path.normcase(str(Path(path).resolve())) == target:
             return True
     return False
 
 
 def available_server_port():
-    """Choose an available TCP port so other worktrees can run their own probes."""
+    """Choose an available TCP port so other worktree games do not share our listener."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(('0.0.0.0', 0))
         return probe.getsockname()[1]
@@ -78,7 +81,7 @@ def available_server_port():
 
 # Run every configured map once, retaining logs and real process exit codes.
 def main():
-    """Run each campaign probe with its own port and retain all acceptance checks."""
+    """Run campaign probes with isolated data, a per-invocation port and all acceptance checks."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--executable', type=Path, required=True)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
@@ -94,6 +97,7 @@ def main():
         parser.error('No configured campaign maps found')
     args.output.mkdir(parents=True, exist_ok=True)
     environment = probe_environment()
+    port = available_server_port()
     failed = 0
     for level in levels:
         if game_is_running(executable):
@@ -101,7 +105,7 @@ def main():
         app_data = args.output.resolve() / level.stem
         app_data.mkdir(parents=True, exist_ok=True)
         command = [str(executable), '--run-level', str(level), '--seconds', '1',
-                   '--appData', str(app_data), '--port', str(available_server_port())]
+                   '--appData', str(app_data), '--port', str(port)]
         try:
             result = subprocess.run(command, cwd=executable.parent,
                                     stdin=subprocess.DEVNULL, capture_output=True,

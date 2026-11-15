@@ -135,6 +135,7 @@ with patch.object(sys, 'argv', arguments + ['--port', '31307']), \
     assert commands[1][1] == commands[2][1] == '--run-level', commands
     assert timeouts == [402, 402, 402], timeouts
 
+# A watchdog expiry must still kill the process and retain the merged port diagnostics.
 # A watchdog timeout still kills each process and emits finished port diagnostics.
 for run, arguments in ((module.run_menu_test, ('game.exe', 1, 31306)),
                        (module.run_level_with_frame_time, ('game.exe', 'a.level', 1, 31306))):
@@ -144,7 +145,8 @@ for run, arguments in ((module.run_menu_test, ('game.exe', 1, 31306)),
             patch.object(subprocess, 'run', return_value=mock.Mock(stdout='')), \
             patch('builtins.print') as output:
         result = run(*arguments)
-    assert not result[0] and 'timeout' in result[1] and '402 s' in result[1], result
+    assert result[0] is False and 'timeout' in result[1], result
+    assert 'killed the game after 402 s' in result[1], result
     process.kill.assert_called_once_with()
     assert process.communicate.call_args_list == [mock.call(timeout=402), mock.call()]
     records = [json.loads(call.args[0][len('LOAD_PROCESS '):])
