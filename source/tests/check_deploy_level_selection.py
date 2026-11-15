@@ -182,12 +182,16 @@ class SelectionTests(unittest.TestCase):
         self.assertNotIn('--all-campaign', deploy)
         self.assertLess(deploy.index('load test with the deployed exe failed'), deploy.index('Set-Content -Encoding ascii $Counter'))
 
-    # Execute the real deployment wrapper with harmless deployment and probe substitutes.
+    # Execute the real wrapper and wait helper with isolated process, deployment and probe substitutes.
     @unittest.skipUnless(shutil.which('powershell'), 'Windows deployment wrapper')
     def test_deploy_wrapper_failure_and_counter(self):
         scripts = self.repo / 'scripts/win32'
         scripts.mkdir(parents=True)
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy.ps1', scripts / 'orchestrator-deploy.ps1')
+        # The child shell loads this dependency beside the wrapper; never observe the owner's game.
+        self.write('scripts/win32/wait-game-exit.ps1',
+                   'function Get-Process { param($Name, $ErrorAction) }\n' +
+                   (ROOT / 'scripts/win32/wait-game-exit.ps1').read_text(encoding='utf-8'))
         self.write('out/orch-run.txt', 'test')
         self.write('out/build-number-test.txt', '17')
         self.write('deploy-stub.ps1', 'exit 0\n')
@@ -200,10 +204,13 @@ class SelectionTests(unittest.TestCase):
                        'sys.exit(%d)\n' % result)
             completed = subprocess.run(['powershell', '-NoProfile', '-File',
                                        str(scripts / 'orchestrator-deploy.ps1'),
-                                       '-Counter', str(counter), '-DeployScript', str(self.repo / 'deploy-stub.ps1')],
+                                       '-Counter', str(counter), '-DeployScript', str(self.repo / 'deploy-stub.ps1'),
+                                       '-GameWaitSeconds', '0'],
                                       capture_output=True, text=True, timeout=30)
             self.assertEqual(completed.returncode, 1 if result else 0, completed.stdout + completed.stderr)
             self.assertEqual(counter.read_text().strip(), '16' if result else '17')
+            self.assertTrue((self.repo / 'scripts/run-campaign-load-tests.args').is_file(),
+                            completed.stdout + completed.stderr)
             args = json.loads((self.repo / 'scripts/run-campaign-load-tests.args').read_text())
             self.assertEqual(Path(args[args.index('--executable') + 1]),
                              self.repo / 'build/windows/opendungeons-plus.exe')
