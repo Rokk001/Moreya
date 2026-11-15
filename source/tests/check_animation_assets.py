@@ -22,12 +22,13 @@ import retime_animation_chunk as retiming
 
 
 # Export an actual tracked game asset through the installed serializer with bounded, closed-input execution.
-def export(name, out):
+# Callers that immediately parse the complete file themselves can omit the redundant tree construction.
+def export(name, out, return_tree=True):
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     target = out / (name + '.xml')
     subprocess.run([converter, '-q', '-log', str(target) + '.log', str(ROOT / 'models' / name), str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
-    return ET.parse(target).getroot()
+    return ET.parse(target).getroot() if return_tree else None
 
 
 # Compare full key transforms, allowing only quaternion sign and serializer rounding differences.

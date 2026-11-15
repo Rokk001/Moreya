@@ -52,6 +52,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+from asset_check_timing import profile_check
 
 TURNS_PER_SECOND = 1.4
 # Decision 863: the creatures on stools and their measured bodies (blocked bench places, front, back, half width)
@@ -545,15 +546,17 @@ def stool_sink(points):
     return int(seat.sum()), int(post.sum())
 
 
+# Reuse fresh conversions and rig parsing within this run, retaining all pose and collision samples.
 def check_models(out):
     """Require actual native stool occupancy and mug clearance in the correct seat frame."""
     from check_animation_assets import export
     import fix_walk_feet as feet
     import author_rest_poses as rest
     import author_tavern_seats as seats
+    from check_tavern_drink_834 import TavernAssets
+    assets = TavernAssets(out, clip_names=None)
     # The stool mesh
-    export('TavernStool.mesh', out)
-    stool = rest.mesh_data(out / 'TavernStool.mesh.xml')[0]
+    stool = assets.mesh('TavernStool.mesh')[0]
     assert abs(float(stool[:, 2].max()) - STOOL_TOP) < 0.002 and abs(float(stool[:, 2].min())) < 0.002
     radius = float(np.hypot(stool[:, 0], stool[:, 1]).max())
     assert STOOL_RADIUS <= radius <= 0.1655, radius
@@ -561,8 +564,7 @@ def check_models(out):
     assert float(np.hypot(top[:, 0], top[:, 1]).max()) >= STOOL_RADIUS - 0.009
     print('stool mesh ok: seat top %.4f, radius %.4f within the bounds 0.1655' % (float(stool[:, 2].max()), radius))
 
-    export('TavernTable.mesh', out)
-    table = rest.mesh_data(out / 'TavernTable.mesh.xml')[0].copy()
+    table = assets.mesh('TavernTable.mesh')[0].copy()
     assert float_constant(read('source/rooms/RoomTavern.cpp'), 'TAVERN_TABLE_SCALE') == 0.84
     table[:, :2] *= 0.84
     top = table[table[:, 2] > 0.38]
@@ -582,10 +584,8 @@ def check_models(out):
         name = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (ROOT / 'models' / mesh).read_bytes())[0].decode('ascii')
         if mesh in EXPECTED_BODIES:
             stool_names.add(name)
-        export(name + '.skeleton', out)
-        export(mesh, out)
-        skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
-        vertices, _, weights = rest.mesh_data(out / (mesh + '.xml'))
+        skeleton = assets.skeleton(name)
+        vertices, _, weights = assets.mesh(mesh)
         posed[mesh] = posed_points(skeleton, vertices, weights, rest)
     bench = [m for m in meshes if m not in EXPECTED_BODIES]
     normal = [m for m in bench if m not in LARGE_BENCH_PLACES]
@@ -597,8 +597,9 @@ def check_models(out):
     along = across = 0.0
     for mesh in bench:
         count = LARGE_BENCH_PLACES.get(mesh, 1)
+        scaled = both_scales(posed[mesh])
         for start in range(0, 5 - count):
-            points = place(both_scales(posed[mesh]), 'bench0', bench_y(start, count))
+            points = place(scaled, 'bench0', bench_y(start, count))
             across = max(across, float(np.abs(points[:, 0]).max()))
             along = max(along, float(np.abs(points[:, 1]).max()))
     assert along <= REACH_ALONG + 1e-6 and REACH_ALONG - along <= MAX_ROUNDING, along
@@ -608,9 +609,10 @@ def check_models(out):
     bench_voxels = {}
     for mesh in bench:
         count = LARGE_BENCH_PLACES.get(mesh, 1)
+        scaled = both_scales(posed[mesh])
         for kind in ('bench0', 'bench1'):
             for start in range(0, 5 - count):
-                bench_voxels[(mesh, kind, start)] = voxels(place(both_scales(posed[mesh]), kind, bench_y(start, count)))
+                bench_voxels[(mesh, kind, start)] = voxels(place(scaled, kind, bench_y(start, count)))
     stool9 = {mesh: voxels(place(both_scales(posed[mesh]), 'stool9', STOOL_DISTANCE)) for mesh in EXPECTED_BODIES}
     for mesh, (blocked, front, back, half) in sorted(EXPECTED_BODIES.items()):
         points = posed[mesh]
@@ -640,8 +642,7 @@ def check_models(out):
         print('bench %-10s keeps the bench: %d points through the seat and %d in the post of a stool' % (mesh, seat_points, post_points))
 
     # The wide mug: in the table top and above the floor
-    export('TavernMug.mesh', out)
-    mug = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
+    mug = assets.mesh('TavernMug.mesh')[0]
     wide = mug.copy()
     wide[:, 1:] *= MUG_GIRTH
     # Decision 901: Weapon_R holds the mug at its middle (TAVERN_MUG_GRIP_SHIFT along the x axis of the bone)
@@ -652,7 +653,7 @@ def check_models(out):
     names = sorted({re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (ROOT / 'models' / m).read_bytes())[0].decode('ascii') for m in meshes})
     worst = 0.0
     for name in names:
-        skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
+        skeleton = assets.skeleton(name)
         if seats.MUG_BONE not in skeleton.idx:
             continue
         for clip in ('SitDrink', 'Drink'):
@@ -670,6 +671,8 @@ def check_models(out):
     print('wide mug ok: at most %.0f %% of it 0.02 deep in the table top in SitDrink, above the floor in Drink' % (100 * worst))
 
 
+# Keep source contracts and every geometry assertion, recording fresh setup separately.
+@profile_check
 def main():
     """Run source contracts, table-frame controls and complete native stool and mug checks."""
     check_stool_code()

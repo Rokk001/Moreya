@@ -10,7 +10,6 @@ import subprocess
 import sys
 from combat_heart_checks import check_heart_configuration, configure_heart_probe
 import tempfile
-import time
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -605,14 +604,9 @@ print('WIRING OK')
 
 
 def run(command, cwd):
-    """Windows may block a freshly compiled fixture (WinError 4551): try up to 4 times."""
-    for attempt in range(4):
-        try:
-            return subprocess.run(command, cwd=cwd, check=True)
-        except OSError as error:
-            print('attempt', attempt + 1, 'blocked:', error)
-            time.sleep(2)
-    raise SystemExit('fixture blocked by application control after 4 attempts')
+    """Run the fixture once; propagate errors so the runner can rebuild a blocked probe."""
+    # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
+    return subprocess.run(command, cwd=cwd, check=True)
 
 
 check_heart_configuration(repo)

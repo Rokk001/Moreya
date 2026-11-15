@@ -237,8 +237,13 @@ class Recovery(unittest.TestCase):
                     events.append('unlock')
 
             def probes():
-                """Assert the counter remains old until successful probes finish."""
+                """Keep saved map selection inside the lock before publishing the counter."""
                 self.assertEqual(counter.read_text(), '41')
+                self.assertEqual(sys.argv, ['campaign-load', '--executable',
+                                           str(repo / 'build/windows/opendungeons-plus.exe'),
+                                           '--repo', str(repo), '--base-file',
+                                           str(repo / 'out/load-base-test.json'),
+                                           '--output', str(repo / 'out/deployed-load-test')])
                 events.append('probe')
                 return 0
 

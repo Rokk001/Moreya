@@ -4,6 +4,8 @@ from pathlib import Path
 from itertools import combinations
 import re
 import sys
+import json
+import time
 
 from PIL import Image
 
@@ -28,6 +30,8 @@ def difference_hash(image):
     return value
 
 
+portrait_started = time.perf_counter()
+decode_seconds = 0.0
 catalogs = sorted(path.stem for path in (ROOT / 'materials/portraits/neutral-bases').glob('*.png')
                   if '.original-' not in path.name)
 if len(catalogs) != 34:
@@ -78,6 +82,7 @@ for catalog in catalogs:
     hashes = []
     for number, filename in rows:
         path = folder / filename
+        decode_started = time.perf_counter()
         try:
             with Image.open(path) as image:
                 image.load()
@@ -88,12 +93,18 @@ for catalog in catalogs:
                 total += 1
         except (OSError, ValueError) as error:
             fail('%s: %s' % (path.relative_to(ROOT), error))
+        finally:
+            decode_seconds += time.perf_counter() - decode_started
     for (first, a), (second, b) in combinations(hashes, 2):
         distance = (a ^ b).bit_count()
         if distance <= 5:
             near_duplicates.setdefault(catalog, []).append("%s/%s:%d" % (first, second, distance))
             fail('%s: near-identical images %s and %s (64-bit dHash distance %d <= 5)'
                  % (catalog, first, second, distance))
+
+portrait_seconds = time.perf_counter() - portrait_started
+print('ODP_TEST_PHASE ' + json.dumps({'name': 'jpeg-decode-and-exact-hash', 'seconds': decode_seconds}))
+print('ODP_TEST_PHASE ' + json.dumps({'name': 'catalog-and-uniqueness', 'seconds': portrait_seconds - decode_seconds}))
 
 keys = set()
 for line_number, line in enumerate((ROOT / 'config/dungeonbook-quirks.cfg').read_text(encoding='utf-8').splitlines(), 1):
@@ -111,6 +122,7 @@ for line_number, line in enumerate((ROOT / 'config/dungeonbook-quirks.cfg').read
 obsolete = ('PortraitManifest', 'AppearanceCompose', 'dungeonbook-base-tints', 'dungeonbook-part-tints',
             'dungeonbook-portrait-framing', 'portraits/variants', 'generated-features', 'generated-helmets',
             'generated-outfits', 'helmet-variants', 'neutral-variants')
+runtime_started = time.perf_counter()
 runtime = [ROOT / 'CMakeLists.txt', *list((ROOT / 'config').glob('*.cfg'))]
 runtime += [path for path in (ROOT / 'source').rglob('*') if path.suffix in ('.cpp', '.h', '.txt')]
 for path in runtime:
@@ -118,6 +130,7 @@ for path in runtime:
     for name in obsolete:
         if name in text:
             fail('%s references removed part system: %s' % (path.relative_to(ROOT), name))
+print('ODP_TEST_PHASE ' + json.dumps({'name': 'runtime-reference-scan', 'seconds': time.perf_counter() - runtime_started}))
 
 for error in errors:
     print('FAIL: ' + error)

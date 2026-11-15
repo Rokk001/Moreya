@@ -111,7 +111,7 @@ def campaign_runner():
 
 
 def deploy(repo, counter, script, game_wait_seconds=1800):
-    """Bound normal-exit waiting under the lock, then deploy a freshly validated target."""
+    """Wait under the lock, deploy a validated target and probe its saved integration range."""
     if not 0 <= game_wait_seconds <= 86400:
         raise ValueError('Game wait seconds must be between 0 and 86400')
     common = Path(git(repo, 'rev-parse', '--path-format=absolute', '--git-common-dir'))
@@ -149,6 +149,7 @@ def deploy(repo, counter, script, game_wait_seconds=1800):
         previous = sys.argv
         try:
             sys.argv = ['campaign-load', '--executable', str(executable), '--repo', str(repo),
+                        '--base-file', str(repo / 'out' / ('load-base-' + run + '.json')),
                         '--output', str(repo / 'out' / ('deployed-load-' + run))]
             if runner.main():
                 raise RuntimeError('Deployed load test failed; counter was not advanced')

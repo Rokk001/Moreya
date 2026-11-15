@@ -10,6 +10,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
+sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+from asset_check_timing import prepare, profile_check
 import author_rest_poses as author
 import fix_walk_feet as feet
 from check_animation_assets import export
@@ -59,6 +61,7 @@ def rest_track_names(skeleton, skeleton_name, weighted):
 
 
 # Verify actual configured mesh coverage, native deforming-track coverage and passive mounts, partial strengths and both return poses.
+@profile_check
 def main():
     source = (ROOT / 'source/render/CreatureReactions.cpp').read_text(encoding='utf-8')
     share = float(re.search(r'ARTICULATED_TRANSITION_SHARE = ([0-9.]+);', source).group(1))
@@ -71,14 +74,14 @@ def main():
     skeletons = {}
     tested = 0
     for mesh_name in meshes:
-        mesh_xml = export(mesh_name, out)
+        mesh_xml = prepare(export, mesh_name, out)
         skeleton_name = mesh_xml.find('skeletonlink').get('name')
         assert (ROOT / 'models' / skeleton_name).is_file(), skeleton_name
         if skeleton_name not in skeletons:
-            export(skeleton_name, out)
-            skeletons[skeleton_name] = feet.Skel(str(out / (skeleton_name + '.xml')))
+            prepare(export, skeleton_name, out, return_tree=False)
+            skeletons[skeleton_name] = prepare(feet.Skel, str(out / (skeleton_name + '.xml')))
         skeleton = skeletons[skeleton_name]
-        vertices, faces, weights = author.mesh_data(out / (mesh_name + '.xml'))
+        vertices, faces, weights = prepare(author.mesh_data, out / (mesh_name + '.xml'))
         original_local = skeleton.locals_at(skeleton.clips['Idle'], np.array([0.0]))
         original = author.skin_vertices(skeleton, original_local, vertices, weights)
         floor = float(original[0, :, 2].min())
