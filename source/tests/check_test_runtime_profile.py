@@ -181,6 +181,50 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn('$code = $LASTEXITCODE', source)
         self.assertTrue(source.rstrip().endswith('exit $code'))
 
+    # Parse the merged script and exercise its check invocation with a saved base and both exit statuses.
+    def test_merged_build_base_and_profiler(self):
+        """Preserve the pinned runner, build diagnostics and success-only build receipt."""
+        build = ROOT / 'scripts/win32/orchestrator-build.ps1'
+        source = build.read_text()
+        invocation = source[source.index('Write-Output "checks started: $run"'):]
+        harness = r'''
+$tokens = $null
+$errors = $null
+[void][System.Management.Automation.Language.Parser]::ParseFile('__BUILD__', [ref]$tokens, [ref]$errors)
+if ($errors.Count) { throw ($errors | Out-String) }
+$wt = 'fixture worktree'
+$scripts = 'fixture bundle\scripts'
+$Checks = 'fixture runner.py'
+$loadBase = '0123456789abcdef0123456789abcdef01234567'
+$buildCommit = '89abcdef0123456789abcdef0123456789abcdef'
+$n = 17
+$statusFile = 'fixture worktree\out\build-status-orch-fixture.json'
+$start = 123
+$run = 'orch-fixture'
+# Capture the native command without building or running the game.
+function python {
+    $args | ConvertTo-Json -Compress
+    $global:LASTEXITCODE = __CODE__
+}
+'''.replace('__BUILD__', str(build).replace("'", "''"))
+        expected = ['-u', '-I', r'fixture bundle\scripts\run-checks-profiled.py',
+                    '--runner', 'fixture runner.py', '--repo', 'fixture worktree',
+                    '--out', r'fixture worktree\out\checks-orch-fixture.txt',
+                    '--base', '0123456789abcdef0123456789abcdef01234567',
+                    '--build-start', 123, '--run', 'orch-fixture',
+                    '--build-status', r'fixture worktree\out\build-status-orch-fixture.json']
+        receipt = ['-I', r'fixture worktree\scripts\odp_deployment.py', 'record',
+                   '--repo', 'fixture worktree', '--run', 'orch-fixture', '--number', 17,
+                   '--commit', '89abcdef0123456789abcdef0123456789abcdef']
+        for code in (0, 7):
+            with self.subTest(code=code):
+                result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command',
+                                         harness.replace('__CODE__', str(code)) + invocation],
+                                        capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+                calls = [json.loads(line) for line in result.stdout.splitlines() if line.startswith('[')]
+                self.assertEqual(calls, [expected, receipt] if code == 0 else [expected])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('odp_deployment', ROOT / 'scripts/odp_deployment.py')
@@ -104,6 +104,9 @@ class Recovery(unittest.TestCase):
                         patch.object(deployment.time, 'monotonic', side_effect=lambda: clock[0]), \
                         patch.object(deployment.time, 'sleep', side_effect=sleep), \
                         patch.object(deployment, 'git', side_effect=git), \
+                        patch.object(deployment, 'deployment_selection', return_value=Mock(
+                            prepare=Mock(return_value={'base': 'b' * 40, 'tip': 'a' * 40, 'levels': {}}),
+                            main=Mock(return_value=0))), \
                         patch.object(deployment, 'validate_build', return_value={
                             'commit': 'a' * 40, 'sha256': 'hash', 'number': '42'}) as validation, \
                         patch.object(deployment, 'digest', return_value='hash'), \
@@ -215,7 +218,7 @@ class Recovery(unittest.TestCase):
                     deployment.record_build(repo, 'test', '42', 'b' * 40)
 
     def test_normal_deploy_order(self):
-        """The lock encloses normal-exit waiting, guarded deploy, probes and counter."""
+        """The lock encloses waiting, selection, guarded deploy, probes, receipt and counter."""
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             (repo / 'out').mkdir()
@@ -241,8 +244,8 @@ class Recovery(unittest.TestCase):
                 self.assertEqual(counter.read_text(), '41')
                 self.assertEqual(sys.argv, ['campaign-load', '--executable',
                                            str(repo / 'build/windows/opendungeons-plus.exe'),
-                                           '--repo', str(repo), '--base-file',
-                                           str(repo / 'out/load-base-test.json'),
+                                           '--repo', str(repo / 'build/current-worktree'), '--deployment-selection',
+                                           str(repo / 'out/deploy-selection-test.json'),
                                            '--output', str(repo / 'out/deployed-load-test')])
                 events.append('probe')
                 return 0
@@ -255,9 +258,26 @@ class Recovery(unittest.TestCase):
                 """Supply a consistent target and data snapshot for the guarded run."""
                 return str(Path(directory) / '.git') if '--git-common-dir' in args else 'a' * 40
 
+            def prepare(*args):
+                """Select maps inside the lock before deployment changes any artifact."""
+                self.assertEqual(events[0], 'lock')
+                self.assertEqual(counter.read_text(), '41')
+                events.append('select')
+                return {'base': 'b' * 40, 'tip': 'a' * 40, 'levels': {}}
+
+            def publish():
+                """Publish success after probes and before the counter while still locked."""
+                self.assertEqual(events[-1], 'probe')
+                self.assertEqual(counter.read_text(), '41')
+                self.assertIn('--record-success', sys.argv)
+                events.append('receipt')
+                return 0
+
             with patch.object(deployment, 'executable_lock', lock), patch.object(deployment, 'campaign_runner', return_value=runner), \
                     patch.object(deployment.time, 'sleep', side_effect=lambda seconds: events.append('wait')), \
                     patch.object(deployment, 'git', side_effect=git), \
+                    patch.object(deployment, 'deployment_selection', return_value=Mock(
+                        prepare=Mock(side_effect=prepare), main=Mock(side_effect=publish))), \
                     patch.object(deployment, 'validate_build', return_value={'commit': 'a' * 40, 'sha256': 'hash', 'number': '42'}), \
                     patch.object(deployment, 'digest', return_value='hash'), \
                     patch.object(deployment.subprocess, 'run', side_effect=lambda *a, **kw: events.append('deploy')):
@@ -268,8 +288,8 @@ class Recovery(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'load test failed'):
                     deployment.deploy(repo, counter, script)
                 self.assertEqual(counter.read_text(), '41')
-            self.assertEqual(events, ['lock', 'process', 'wait', 'process', 'deploy', 'probe', 'unlock',
-                                      'lock', 'process', 'deploy', 'probe', 'unlock'])
+            self.assertEqual(events, ['lock', 'process', 'wait', 'process', 'select', 'deploy', 'probe', 'receipt', 'unlock',
+                                      'lock', 'process', 'select', 'deploy', 'probe', 'unlock'])
 
 
 if __name__ == '__main__':

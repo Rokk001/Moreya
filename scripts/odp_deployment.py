@@ -110,8 +110,16 @@ def campaign_runner():
     return module
 
 
+def deployment_selection():
+    """Reuse the selected entry point's immutable successful-deployment comparison."""
+    spec = importlib.util.spec_from_file_location('odp_selection', Path(__file__).with_name('deploy-level-selection.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def deploy(repo, counter, script, game_wait_seconds=1800):
-    """Wait under the lock, deploy a validated target and probe its saved integration range."""
+    """Deploy a validated target and its successful-deployment selection under one lock."""
     if not 0 <= game_wait_seconds <= 86400:
         raise ValueError('Game wait seconds must be between 0 and 86400')
     common = Path(git(repo, 'rev-parse', '--path-format=absolute', '--git-common-dir'))
@@ -134,11 +142,20 @@ def deploy(repo, counter, script, game_wait_seconds=1800):
         run = (repo / 'out/orch-run.txt').read_text().strip()
         target = git(repo, 'rev-parse', 'origin/integration/all')
         receipt = validate_build(repo, run, target)
+        selection = deployment_selection()
+        success_file = common / 'odp-deploy-success.json'
+        manifest = repo / 'out' / ('deploy-selection-' + run + '.json')
+        scope = selection.prepare(common.parent, receipt['commit'], success_file)
+        print('Deploy comparison: ' + str(scope['base']) + ' -> ' + scope['tip'], flush=True)
+        for name, reason in scope['levels'].items():
+            print('SELECT ' + name + ': ' + reason, flush=True)
+        selection.write_json(manifest, scope)
         if 'ODP_DEPLOY_EXPECTED_COMMIT' not in script.read_text(encoding='utf-8-sig'):
             raise RuntimeError('Deploy script requires the expected-commit guard before retry')
         # Retain the deployment script's process, resource and locked-file guards.
         command = ("Import-Module (Join-Path $PSHOME 'Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop; "
-                   "& '" + str(script).replace("'", "''") + "' -ExeDir '" + str(repo / 'build/windows').replace("'", "''") + "'; "
+                   "& '" + str(script).replace("'", "''") + "' -ExeDir '" + str(repo / 'build/windows').replace("'", "''") +
+                   "' -SelectionFile '" + str(manifest).replace("'", "''") + "'; "
                    "if ($?) { exit 0 }; if ($LASTEXITCODE) { exit $LASTEXITCODE }; exit 1")
         environment = dict(os.environ, ODP_DEPLOY_EXPECTED_COMMIT=receipt['commit'],
                            ODP_DEPLOY_LOCK_OWNER=str(os.getpid()))
@@ -148,11 +165,22 @@ def deploy(repo, counter, script, game_wait_seconds=1800):
             raise RuntimeError('Deployed snapshot/artifact mismatch; counter was not advanced')
         previous = sys.argv
         try:
-            sys.argv = ['campaign-load', '--executable', str(executable), '--repo', str(repo),
-                        '--base-file', str(repo / 'out' / ('load-base-' + run + '.json')),
+            sys.argv = ['campaign-load', '--executable', str(executable),
+                        '--repo', str(common.parent / 'build/current-worktree'),
+                        '--deployment-selection', str(manifest),
                         '--output', str(repo / 'out' / ('deployed-load-' + run))]
             if runner.main():
                 raise RuntimeError('Deployed load test failed; counter was not advanced')
+        finally:
+            sys.argv = previous
+        # The selected wrapper's CLI publishes the same atomic success receipt after its probes.
+        previous = sys.argv
+        try:
+            sys.argv = ['deployment-selection', '--repo', str(common.parent), '--tip', receipt['commit'],
+                        '--receipt', str(success_file), '--output', str(manifest),
+                        '--record-success', '--executable', str(executable)]
+            if selection.main():
+                raise RuntimeError('Could not record successful deployment; counter was not advanced')
         finally:
             sys.argv = previous
         counter.write_text(str(receipt['number']) + '\n', encoding='ascii')
