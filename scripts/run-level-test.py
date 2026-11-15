@@ -104,7 +104,7 @@ STARTUP_AND_SHUTDOWN_SECONDS = 400
 
 
 def available_server_port():
-    """Ask the OS for an available IPv4 listener port for this invocation."""
+    """Ask the OS for an available IPv4 TCP listener port for the game in this invocation."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("0.0.0.0", 0))
         return probe.getsockname()[1]
@@ -234,7 +234,10 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
 
 
 def main():
-    """Run the requested menu and level checks with a per-invocation port; return 0 only if all passed."""
+    """Parse the command line and run the requested menu and level checks; return 0 only if all passed.
+
+    Menu and level checks use a per-invocation port unless explicitly overridden.
+    """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--exe", required=True, help="built game executable")
     parser.add_argument("--seconds", type=int, default=120, help="game time per level (default 120)")
@@ -264,8 +267,7 @@ def main():
 
     results = []
     for level in levels:
-        port = args.port if args.port is not None else available_server_port()
-        passed, text, frame_time = run_level_with_frame_time(exe, level, args.seconds, port)
+        passed, text, frame_time = run_level_with_frame_time(exe, level, args.seconds, args.port)
         print(text, flush=True)
         if frame_time is not None:
             print("FRAMETIME frames=%d avg_ms=%s" % frame_time, flush=True)
