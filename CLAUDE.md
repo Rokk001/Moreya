@@ -48,6 +48,32 @@ These instructions apply to every change made to this repository with an AI assi
 - Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset) are never stored in the Git repository.
 - Asset sources live outside the repository in the folder named by the environment variable ODP_ASSETS_SRC; scripts and checks read them from there, else from <repo>/assets-src. Never create assets-src inside a worktree; save new asset sources directly under ODP_ASSETS_SRC.
 
+## Test performance
+
+- New and changed tests use events or observable conditions for synchronization, stop waiting immediately on success,
+  and have bounded timeouts. Fixed sleeps are not synchronization. Preserve intentional input durations and observation windows.
+- Prefer a controllable test clock for time-dependent logic. Real elapsed time is reserved for behavior that actually
+  requires it. Preserve all assertions, failure cases and test isolation when optimizing.
+- Create only the necessary fixtures, conversions, processes and compiled probes. Reuse preparation within a test run
+  where isolation permits; never reuse stale outputs to claim a passing check.
+- After the first permitted run, the responsible agent reviews the measured runtime before reporting the work complete.
+  If the first permitted run is the regular integration run, review its timing artifacts then; do not start an extra
+  full build to collect measurements. Investigate and remove avoidable waiting and duplicate work.
+- The ODP profiled check wrapper writes `checks-<run>.timings.json` and `checks-<run>.timings.txt` next to the check result.
+  Review the slowest tests and every `REVIEW` entry. Over 30 seconds requires investigation and a reason; over 120 seconds
+  requires separate measurements of setup and test phases. A regression exceeds the comparable base by more than 25 percent
+  and at least 5 seconds. These are investigation thresholds, not automatic test failures or permission to loosen a test.
+- Comparisons require a successful baseline for the exact base commit on the same host, interpreter, runner and settings.
+  Foreign build/game load, unknown load, retries or missing baselines cannot establish a runtime regression. Investigate
+  absolute long runtimes anyway and confirm suspected regressions under comparable conditions; do not infer a speedup
+  or slowdown from an overloaded run. History is local to the shared Git directory and never committed.
+- Tests may emit phase measurements as `ODP_TEST_PHASE {"name":"setup","seconds":1.25}`. Measure with a monotonic clock;
+  do not print invented timings. The wrapper records all attempts, including time spent before a retry.
+- Every new/changed test's result report includes its command, measured runtime, timing-report location, findings,
+  optimization/recheck evidence, and a concrete reason for each remaining long test. Any unreviewed finding remains an
+  open technical item for the responsible agent, not a gameplay question for the owner. Removing assertions, skipping
+  cases, increasing timeouts or falsifying measurements is not a performance fix.
+
 ## Load tests
 - Every integration runs exactly one load test: start the game, load one level and let it
   run briefly. If level files were changed in the integration, only those levels are loaded

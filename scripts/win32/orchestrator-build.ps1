@@ -36,7 +36,7 @@ $code = $LASTEXITCODE
 Set-Content -Encoding ascii "$wt\out\build-exit-$run.txt" $code
 if ($code -ne 0) { Write-Output "build failed (exit $code), log out\build-$run.log"; exit $code }
 Write-Output "checks started: $run"
-& python -u -I $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $Base --build-start $start --run $run
+& python -u -I "$wt\scripts\run-checks-profiled.py" --runner $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $Base --build-start $start --run $run
 $code = $LASTEXITCODE
 if ($code -ne 0) { Write-Output "checks failed (exit $code), see out\checks-$run.txt" }
 exit $code
