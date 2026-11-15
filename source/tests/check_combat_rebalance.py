@@ -2,6 +2,7 @@
 """Check configured combat values, source paths and deterministic combat comparisons without compiling."""
 
 import csv
+import json
 from dataclasses import replace
 import math
 import os
@@ -387,15 +388,18 @@ def check_world_simulation(roster):
 
 
 # Execute the checks as pure Python; production C++ is inspected, never compiled.
+# Report actual setup and simulation phases without altering any case or threshold.
 def main():
+    started = time.perf_counter()
     roster = Roster(ROOT)
-    check_values(roster)
-    check_curves(roster)
-    check_buildings(roster)
-    check_sources()
-    check_other_damage(roster)
-    check_simulation(roster)
-    check_world_simulation(roster)
+    print('ODP_TEST_PHASE ' + json.dumps({'name': 'roster-setup', 'seconds': time.perf_counter() - started}), flush=True)
+    for name, check, args in [('values', check_values, (roster,)), ('curves', check_curves, (roster,)),
+                              ('buildings', check_buildings, (roster,)), ('sources', check_sources, ()),
+                              ('other-damage', check_other_damage, (roster,)), ('simulation', check_simulation, (roster,)),
+                              ('world-simulation', check_world_simulation, (roster,))]:
+        started = time.perf_counter()
+        check(*args)
+        print('ODP_TEST_PHASE ' + json.dumps({'name': name, 'seconds': time.perf_counter() - started}), flush=True)
     print("check_combat_rebalance: ok")
 
 

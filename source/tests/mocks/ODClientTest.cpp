@@ -54,17 +54,26 @@ ODClientTest::~ODClientTest()
     mSeats.clear();
 }
 
+//! \brief Retries server startup within five seconds, stopping immediately on connection.
 bool ODClientTest::connect(const std::string& host, const int port, uint32_t timeout, const std::string& outputReplayFilename)
 {
-    if(!ODSocketClient::connect(host, port, timeout, outputReplayFilename))
+    sf::Clock clock;
+    // Unit tests launch in parallel with the server. Poll readiness within five seconds
+    // rather than always sleeping five seconds before the next connection attempt.
+    while(true)
     {
-        OD_LOG_INF("Couldn't connect to server right away. Sleeping a bit before retry");
-        // Units tests are supposed to be launched in parallel with OD exe. If we fail, we retry after
-        // a small sleep 5 seconds to make sure the server had time to launch
-        sf::sleep(sf::milliseconds(5000));
-        if(!ODSocketClient::connect(host, port, timeout, outputReplayFilename))
+        const int remaining = 5000 - clock.getElapsedTime().asMilliseconds();
+        if(remaining <= 0)
             return false;
+        const uint32_t attemptTimeout = (timeout == 0 || timeout > static_cast<uint32_t>(remaining))
+            ? static_cast<uint32_t>(remaining) : timeout;
+        if(ODSocketClient::connect(host, port, attemptTimeout, outputReplayFilename))
+            break;
+        const int pause = 5000 - clock.getElapsedTime().asMilliseconds();
+        if(pause > 0)
+            sf::sleep(sf::milliseconds(pause < 50 ? pause : 50));
     }
+    mLocalServerPort = (host == "localhost" || host == "127.0.0.1") ? port : 0;
 
     // Send a hello request to start the conversation with the server
     ODPacket packSend;
@@ -75,12 +84,27 @@ bool ODClientTest::connect(const std::string& host, const int port, uint32_t tim
     return true;
 }
 
+//! \brief Preserves shutdown isolation without a fixed delay after an already released port.
 void ODClientTest::disconnect(bool keepReplay)
 {
     ODSocketClient::disconnect(keepReplay);
 
-    // We wait for the server to terminate so that if a server is launched after this one, it doesn't collapse
-    sf::sleep(sf::milliseconds(5000));
+    // Wait for the local server's listening port to be released so the next server cannot collide.
+    if(mLocalServerPort == 0)
+        return;
+    sf::Clock clock;
+    sf::TcpListener listener;
+    while(listener.listen(static_cast<unsigned short>(mLocalServerPort)) != sf::Socket::Status::Done)
+    {
+        if(clock.getElapsedTime().asMilliseconds() >= 5000)
+        {
+            BOOST_ERROR("Test server did not release its listening port within five seconds");
+            return;
+        }
+        sf::sleep(sf::milliseconds(50));
+    }
+    listener.close();
+    mLocalServerPort = 0;
 }
 
 bool ODClientTest::processMessage(ServerNotificationType cmd, ODPacket& packetReceived)

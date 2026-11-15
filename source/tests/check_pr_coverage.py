@@ -38,6 +38,7 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_TARGET = "origin/integration/all"
@@ -131,9 +132,9 @@ def resolve_head(number, branch, commit):
 def diff_added(base, ref):
     """Return (all changed files, {file: set of added stripped lines}) of ref against its merge base with base."""
     merge_base = run(["git", "merge-base", base, ref], "merge base of %s and %s" % (base, ref)).strip()
-    names = run(["git", "diff", "--name-only", merge_base, ref], "file list of %s" % ref)
-    files = set(line for line in names.splitlines() if line)
-    text = run(["git", "diff", "-U0", "--no-color", "--no-ext-diff", merge_base, ref], "diff of %s" % ref)
+    combined = run(["git", "diff", "--raw", "-z", "-p", "-U0", "--no-color", "--no-ext-diff",
+                    merge_base, ref], "diff of %s" % ref)
+    files, text = raw_files_and_patch(combined)
     added = {}
     current = None
     for line in text.splitlines():
@@ -146,6 +147,30 @@ def diff_added(base, ref):
             if stripped:
                 added[current].add(stripped)
     return files, added
+
+
+# Parse the NUL-delimited raw file section before the patch; renames report the destination.
+def raw_files_and_patch(combined):
+    if not combined:
+        return set(), ''
+    raw, separator, patch = combined.partition('\0\0')
+    if not separator:
+        raise CheckError('git diff returned no raw/patch separator')
+    fields = raw.split('\0')
+    files = set()
+    index = 0
+    while index < len(fields):
+        header = fields[index]
+        if not header.startswith(':') or len(header.split()) != 5:
+            raise CheckError('git diff returned an invalid raw file header')
+        status = header.split()[-1]
+        index += 1
+        count = 2 if status.startswith(('R', 'C')) else 1
+        if index + count > len(fields):
+            raise CheckError('git diff returned an incomplete raw file path')
+        files.add(fields[index + count - 1])
+        index += count
+    return files, patch
 
 
 def read_not_upstream_commits():
@@ -214,6 +239,7 @@ def report_count(gaps, run_green):
     return True
 
 
+# Measure source retrieval and diff phases while preserving every coverage and failure decision.
 def main():
     """Parse the arguments, compute the gaps and print them; return the exit code."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -230,9 +256,12 @@ def main():
         # An integration run measures the merged HEAD of its worktree; without --note the remote ref is measured.
         options.target = "HEAD" if options.note else DEFAULT_TARGET
     try:
+        phase_started = time.perf_counter()
         heads = list_open_pr_heads(options.repo, options.author)
+        print('ODP_TEST_PHASE ' + json.dumps({'name': 'pr-list', 'seconds': time.perf_counter() - phase_started}))
         if not heads:
             raise CheckError("no open pull requests found for %s in %s; refusing to report an empty comparison" % (options.author, options.repo))
+        phase_started = time.perf_counter()
         target_files, target_added = diff_added(options.base, options.target)
         target_files -= EXCLUDED_FILES
         target_files = set(f for f in target_files if not f.startswith(EXCLUDED_PREFIXES))
@@ -240,13 +269,16 @@ def main():
             target_added[BLAME_FILTERED_FILE] -= lines_from_commits(options.target, BLAME_FILTERED_FILE, read_not_upstream_commits())
             if not target_added[BLAME_FILTERED_FILE]:
                 target_files.discard(BLAME_FILTERED_FILE)
+        print('ODP_TEST_PHASE ' + json.dumps({'name': 'target-diff-and-blame', 'seconds': time.perf_counter() - phase_started}))
         pr_files = set()
         pr_added = {}
+        phase_started = time.perf_counter()
         for number, branch, commit in heads:
             files, added = diff_added(options.base, resolve_head(number, branch, commit))
             pr_files |= files
             for path, lines in added.items():
                 pr_added.setdefault(path, set()).update(lines)
+        print('ODP_TEST_PHASE ' + json.dumps({'name': 'pr-head-diffs', 'seconds': time.perf_counter() - phase_started}))
     except CheckError as err:
         sys.stderr.write("check_pr_coverage: cannot run: %s\n" % err)
         return 2

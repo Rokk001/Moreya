@@ -1,15 +1,17 @@
 """Integrator-only campaign load/goal-registration probes using an already built game.
 
-Run with --executable <game> --output <worktree output directory> while the game
+Run with --executable <game> --output <worktree output directory> and either
+--base-file <captured integration range> or --all-campaign while the game
 is closed. This exercises the timed win probe (all main goals set as reached, then the win; the
 victory message and the campaign map with the next level must appear), not natural playability.
 """
 import argparse
-import csv
 import ctypes
+import json
 import os
 from pathlib import Path
 import re
+import socket
 import subprocess
 import sys
 
@@ -43,41 +45,108 @@ def campaign_levels(repo):
     return levels
 
 
-# Refuse to launch probes while another copy of this game is running.
+# Refuse to launch probes while another copy of this executable is running.
 def game_is_running(executable):
+    """Check executable identity, allowing isolated games from other worktrees."""
     if os.name != 'nt':
         raise RuntimeError('Game process detection requires the Windows integration host')
-    result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq ' + executable.name,
-                             '/FO', 'CSV', '/NH'], stdin=subprocess.DEVNULL,
+    name = executable.name.replace("'", "''")
+    query = ("$ErrorActionPreference = 'Stop'; "
+             "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false; "
+             "$games = @(Get-CimInstance Win32_Process | "
+             "Where-Object { $_.Name -eq '" + name + "' } | "
+             "Select-Object ProcessId, ExecutablePath); "
+             "ConvertTo-Json -Compress -InputObject $games")
+    result = subprocess.run(['powershell', '-NoProfile', '-Command', query], stdin=subprocess.DEVNULL,
                             capture_output=True, timeout=30, check=True)
-    # tasklist writes console-codepage bytes (e.g. the umlaut of the localized "no tasks"
-    # message when the game is not running); decode UTF-8 first, then the OEM codepage,
-    # never fail on odd bytes.
-    try:
-        output = result.stdout.decode('utf-8')
-    except UnicodeDecodeError:
-        output = result.stdout.decode('oem', errors='replace')
-    return any(row and row[0].casefold() == executable.name.casefold()
-               for row in csv.reader(output.splitlines()))
+    # Avoid tasklist's localized console-codepage messages: CIM emits explicit UTF-8 JSON,
+    # including an empty array when the game is not running.
+    processes = json.loads(result.stdout.decode('utf-8-sig'))
+    target = os.path.normcase(str(executable.resolve()))
+    for process in processes:
+        path = process.get('ExecutablePath')
+        # An inaccessible executable path is unsafe to assume belongs to a different checkout.
+        if not path:
+            raise RuntimeError('Cannot identify running game executable for PID ' + str(process['ProcessId']))
+        if os.path.normcase(str(Path(path).resolve())) == target:
+            return True
+    return False
 
 
-# Run every configured map once, retaining logs and real process exit codes.
+def available_server_port():
+    """Choose an unused TCP port so other worktree games do not share our listener."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(('0.0.0.0', 0))
+        return probe.getsockname()[1]
+
+
+# Resolve Git output strictly; a missing comparison base must never mean no changes.
+def git_output(repo, *arguments):
+    return subprocess.run(['git', '-C', str(repo), *arguments], check=True,
+                          capture_output=True, text=True, encoding='utf-8',
+                          stdin=subprocess.DEVNULL, timeout=30).stdout.strip()
+
+
+# Freeze the pre-push integration reference and the built tip for this build run.
+def capture_base(repo, base, output):
+    baseline = git_output(repo, 'rev-parse', '--verify', base + '^{commit}')
+    tip = git_output(repo, 'rev-parse', 'HEAD')
+    git_output(repo, 'merge-base', '--is-ancestor', baseline, tip)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps({'base': baseline, 'tip': tip}) + '\n', encoding='utf-8')
+
+
+# Select Mossgate and surviving changed maps using only the immutable build range.
+def integration_levels(repo, base_file):
+    saved = json.loads(base_file.read_text(encoding='utf-8'))
+    base, tip = saved.get('base', ''), saved.get('tip', '')
+    if not all(re.fullmatch(r'[0-9a-f]{40,64}', value) for value in (base, tip)):
+        raise RuntimeError('Invalid saved integration commits')
+    if git_output(repo, 'rev-parse', 'HEAD') != tip:
+        raise RuntimeError('Saved integration tip differs from the deployed worktree')
+    git_output(repo, 'merge-base', '--is-ancestor', base, tip)
+    changed = git_output(repo, 'diff', '--name-only', '-z', '--no-renames',
+                         '--diff-filter=AM', base, tip, '--', 'levels')
+    names = ['levels/campaign/Mossgate.level']
+    names.extend(name for name in changed.split('\0')
+                 if name.endswith('.level') and name not in names)
+    levels = [repo / name for name in names]
+    for level in levels:
+        if not level.is_file():
+            raise RuntimeError('Selected level is missing: ' + str(level))
+    print('Integration load range: ' + base + '..' + tip, flush=True)
+    return levels
+
+
+# Run selected maps once, retaining logs and real process exit codes.
 def main():
+    """Capture a build range or run explicitly selected probes with isolated data."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--executable', type=Path, required=True)
+    parser.add_argument('--executable', type=Path)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--output', type=Path, required=True)
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument('--capture-base', help='Freeze the integration base before the push')
+    selection.add_argument('--base-file', type=Path, help='Mossgate plus changed maps in this saved range')
+    selection.add_argument('--all-campaign', action='store_true', help='Explicit full campaign test')
     # Match run-level-test.py's 2 * seconds + 400 wall-clock budget for --seconds 1.
     # The game watchdog bounds loading/play; normal renderer teardown also needs time.
     parser.add_argument('--timeout', type=int, default=402)
     args = parser.parse_args()
-    executable = args.executable.resolve(strict=True)
     repo = args.repo.resolve(strict=True)
-    levels = campaign_levels(repo)
+    if args.capture_base:
+        capture_base(repo, args.capture_base, args.output)
+        return 0
+    if args.executable is None:
+        parser.error('--executable is required for load probes')
+    executable = args.executable.resolve(strict=True)
+    campaign = campaign_levels(repo)
+    levels = campaign if args.all_campaign else integration_levels(repo, args.base_file)
     if not levels:
         parser.error('No configured campaign maps found')
     args.output.mkdir(parents=True, exist_ok=True)
     environment = probe_environment()
+    port = available_server_port()
     failed = 0
     for level in levels:
         if game_is_running(executable):
@@ -85,14 +154,17 @@ def main():
         app_data = args.output.resolve() / level.stem
         app_data.mkdir(parents=True, exist_ok=True)
         command = [str(executable), '--run-level', str(level), '--seconds', '1',
-                   '--appData', str(app_data)]
+                   '--appData', str(app_data), '--port', str(port)]
         try:
             result = subprocess.run(command, cwd=executable.parent,
                                     stdin=subprocess.DEVNULL, capture_output=True,
                                     timeout=args.timeout, env=environment)
             log = (result.stdout + result.stderr).decode('utf-8', errors='replace')
+            success = r'^PASS ' + re.escape(level.name) + r' : '
+            if level in campaign:
+                success += r'.*victory message shown, campaign map shows'
             passed = (result.returncode == 0 and re.search(r'GOALS registered=[1-9][0-9]*', log)
-                      and re.search(r'^PASS .*victory message shown, campaign map shows', log, re.MULTILINE))
+                      and re.search(success, log, re.MULTILINE))
             status = 'PASS' if passed else 'FAIL exit=' + str(result.returncode)
         except subprocess.TimeoutExpired as error:
             log = ((error.stdout or b'') + (error.stderr or b'')).decode('utf-8', errors='replace')
@@ -109,6 +181,6 @@ def main():
 if __name__ == '__main__':
     try:
         sys.exit(main())
-    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
         print(str(error), file=sys.stderr)
         sys.exit(1)

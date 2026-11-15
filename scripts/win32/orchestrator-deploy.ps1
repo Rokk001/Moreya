@@ -31,7 +31,7 @@ if ($LASTEXITCODE -ne 0) { Write-Output "deploy failed (exit $LASTEXITCODE)"; ex
 # The deployed exe is in build\windows of the main checkout, found through the shared git directory of this worktree
 $common = (& git -C $wt rev-parse --path-format=absolute --git-common-dir).Trim()
 $exe = Join-Path (Split-Path -Parent ($common -replace '/', '\')) 'build\windows\opendungeons-plus.exe'
-& python "$wt\scripts\run-campaign-load-tests.py" --executable $exe --output "$wt\out\deployed-load-$run"
+& python "$wt\scripts\run-campaign-load-tests.py" --repo $wt --base-file "$wt\out\load-base-$run.json" --executable $exe --output "$wt\out\deployed-load-$run"
 if ($LASTEXITCODE -ne 0) { Write-Output "load test with the deployed exe failed (exit $LASTEXITCODE)"; exit 1 }
 Set-Content -Encoding ascii $Counter $n
 Write-Output "deployed build $n"

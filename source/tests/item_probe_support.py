@@ -2,6 +2,8 @@
 from pathlib import Path
 import re
 import subprocess
+import json
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -27,16 +29,23 @@ def cpp(name):
     return re.sub(r"^#include[^\n]*\n", "", source(name), flags=re.M)
 
 
-def compile_and_run(name, probe):
+# Report preparation and execution separately; optimization never defines NDEBUG or removes checks.
+def compile_and_run(name, probe, optimize=False):
     """Compile and run a bounded standalone probe only when this check is explicitly executed."""
+    started = time.perf_counter()
     output = ROOT / "out" / name
     output.mkdir(parents=True, exist_ok=True)
     code, executable = output / "probe.cpp", output / "probe.exe"
     code.write_text(probe, encoding="utf-8")
     command = ["cl", "/nologo", "/EHsc", "/std:c++14", "/I" + str(ROOT / "source"), str(code),
                "/Fe:" + str(executable), "/Fo:" + str(output / "probe.obj")]
+    if optimize:
+        command.append('/O2')
     subprocess.run(command, cwd=output, stdin=subprocess.DEVNULL, check=True, timeout=600)
+    print('ODP_TEST_PHASE ' + json.dumps({'name': name + ':compile', 'seconds': time.perf_counter() - started}), flush=True)
+    started = time.perf_counter()
     subprocess.run([str(executable), str(ROOT)], cwd=ROOT, stdin=subprocess.DEVNULL, check=True, timeout=600)
+    print('ODP_TEST_PHASE ' + json.dumps({'name': name + ':execute', 'seconds': time.perf_counter() - started}), flush=True)
 
 
 def catalogue_fixture():
