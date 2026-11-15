@@ -132,7 +132,8 @@ class SelectionTests(unittest.TestCase):
                 '--executable', str(executable), '--output', str(self.repo / 'logs')]
         levels = runner.integration_levels(self.repo, self.saved)
         for code, output, timeout, expected in [(0, success, False, 0), (2, success, False, 1),
-                                               (0, b'', False, 1), (0, success, True, 1)]:
+                                               (0, b'', False, 1), (0, success, True, 1),
+                                               (0, success.replace(b'Mossgate.level', b'Other.level'), False, 1)]:
             with self.subTest(code=code, timeout=timeout, output=output), \
                     patch.object(sys, 'argv', argv), \
                     patch.object(runner, 'integration_levels', return_value=levels), \
@@ -146,6 +147,22 @@ class SelectionTests(unittest.TestCase):
                 self.assertEqual(runner.main(), expected)
                 self.assertEqual(launch.call_count, 1)
                 self.assertEqual(launch.call_args.args[0][0], str(executable))
+
+    # A plain-map probe must not accept a PASS marker for an unrelated map.
+    def test_plain_map_requires_its_own_success_marker(self):
+        executable = self.repo / 'game.exe'
+        executable.touch()
+        level = self.repo / 'levels/skirmish/Other.level'
+        argv = ['runner', '--repo', str(self.repo), '--base-file', str(self.saved),
+                '--executable', str(executable), '--output', str(self.repo / 'logs')]
+        for name, expected in [('Other.level', 0), ('MainMenu', 1)]:
+            output = ('GOALS registered=2\nPASS ' + name + ' : victory\n').encode()
+            with self.subTest(name=name), patch.object(sys, 'argv', argv), \
+                    patch.object(runner, 'integration_levels', return_value=[level]), \
+                    patch.object(runner, 'probe_environment', return_value={}), \
+                    patch.object(runner, 'game_is_running', return_value=False), \
+                    patch.object(runner.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, output, b'')):
+                self.assertEqual(runner.main(), expected)
 
     # Full campaign execution requires an explicit user-selected CLI mode.
     def test_no_implicit_full_campaign(self):
