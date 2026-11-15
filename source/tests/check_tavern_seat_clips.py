@@ -121,6 +121,38 @@ def has_stool_surface_support(points, triangles):
     return False
 
 
+# Keep only a triangle index; every frame must prove support again using its actual geometry.
+class StoolSupportWitness:
+    # Snapshot and validate every index before any successful witness can bypass a full gather.
+    def __init__(self, triangles, vertex_count):
+        self.triangles = np.array(triangles, copy=True)
+        self.vertex_count = vertex_count
+        np.empty((vertex_count, 3))[self.triangles]
+        self.triangles.flags.writeable = False
+        self.witness = None
+
+    # Retest the previous supporting triangle, falling back to every candidate on any miss.
+    def __call__(self, points):
+        triangles = self.triangles
+        if (points.shape != (self.vertex_count, 3) or points.dtype.kind not in 'fiu' or triangles.ndim != 2 or
+                triangles.shape[1] != 3 or triangles.dtype.kind not in 'iu'):
+            return has_stool_surface_support(points, triangles)
+        if self.witness is not None and has_stool_surface_support(points, triangles[self.witness:self.witness + 1]):
+            return True
+        self.witness = None
+        surfaces = points[triangles]
+        low, high = surfaces.min(axis=1), surfaces.max(axis=1)
+        radius = 0.16
+        lower, upper = seats.BENCH_TOP - MAX_REST_GAP, seats.BENCH_TOP + MAX_REST_GAP
+        near = ((low[:, 2] <= upper) & (high[:, 2] >= lower) & (low[:, 0] <= radius) &
+                (high[:, 0] >= -radius) & (low[:, 1] <= radius) & (high[:, 1] >= -radius))
+        for index in np.flatnonzero(near):
+            if has_stool_surface_support(points, triangles[index:index + 1]):
+                self.witness = int(index)
+                return True
+        return False
+
+
 # Reuse only fresh prepared mug data while retaining every transition support and depth assertion.
 def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, assets, mounts):
     """Measure the actual joint blend from sitting to grasping, retaining body support and furniture clearance."""
@@ -136,9 +168,11 @@ def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, a
     mug = drink.Mug(skeleton, name, assets.mesh(seats.MUG_MESH)[0], mounts)
     _, _, mug_points = mug.world(skeleton.fk(local), skeleton)
     both = np.concatenate((body, mug_points), axis=1)
+    support = {level: StoolSupportWitness(triangles, len(vertices))
+               for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH)}
     for frame in range(len(shares)):
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
-            assert has_stool_surface_support(body[frame] * level, triangles), (
+            assert support[level](body[frame] * level), (
                 name, 'Sit to SitDrink loses actual stool support', frame, level)
             depth = drink.stool_depth(both[frame] * level)
             assert depth <= MAX_TABLE_DEPTH, (name, 'Sit to SitDrink reaches into furniture', frame, level, depth)
@@ -152,6 +186,21 @@ def stool_clip_depth(points):
     return max(drink.stool_depth(vertices[start:start + 32768] * level)
                for start in range(0, max(1, len(vertices)), 32768)
                for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
+
+
+# Bound temporary geometry arrays while retaining every frame, vertex, scale and NaN reduction.
+def bench_clip_depth(points):
+    saved = seats.SCENE['size']
+    depth = 0.0
+    try:
+        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
+            seats.SCENE['size'] = level
+            maxima = [seats.frame_depths(points[start:start + 16]).max()
+                      for start in range(0, max(1, len(points)), 16)]
+            depth = max(depth, float(np.maximum.reduce(maxima)) * level)
+    finally:
+        seats.SCENE['size'] = saved
+    return depth
 
 
 # Share immutable preparation and measure every original clip sample against the same bounds.
@@ -189,13 +238,15 @@ def check_skeleton(name, mesh_name, assets, stools, mounts):
                 mug = drink.Mug(skeleton, name, assets.mesh(seats.MUG_MESH)[0], mounts)
                 _, _, mug_points = mug.world(skeleton.fk(locals_fine), skeleton)
                 both = np.concatenate((points, mug_points), axis=1)
+                support = {level: StoolSupportWitness(triangles, len(vertices))
+                           for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH)}
                 for frame in range(len(fine)):
                     for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
-                        assert has_stool_surface_support(points[frame, :len(vertices)] * level, triangles), (
+                        assert support[level](points[frame, :len(vertices)] * level), (
                             name, clip, 'body has no actual stool support', frame, level)
             depth = stool_clip_depth(both)
         else:
-            depth = seats.level_depth(points)
+            depth = bench_clip_depth(points)
         assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the furniture', depth)
     has_mount = seats.MUG_BONE in skeleton.idx
     assert has_mount == (name not in seats.NO_MUG_MOUNT), (name, 'mug mount', has_mount)
