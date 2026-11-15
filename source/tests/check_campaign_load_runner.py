@@ -114,7 +114,7 @@ def check_process_identity():
 
 
 def check_mid_campaign_process():
-    """Keep six explicit campaign probes valid while a foreign worktree starts."""
+    """Keep six explicit campaign probes valid when a foreign worktree starts after probe five."""
     with tempfile.TemporaryDirectory(prefix='campaign-identity-') as temporary:
         directory = Path(temporary)
         executable = directory / 'deployed/opendungeons-plus.exe'
@@ -126,7 +126,7 @@ def check_mid_campaign_process():
         inspections = []
 
         def run(command, **kwargs):
-            """Introduce the unrelated process at the exact original failure boundary."""
+            """Introduce the unrelated process after five probes, returning each map's marker."""
             if command[0] == 'powershell':
                 processes = [] if len(launches) < 5 else [
                     {'ProcessId': 42, 'ExecutablePath': str(other)}]

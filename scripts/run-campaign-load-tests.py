@@ -120,7 +120,7 @@ def integration_levels(repo, base_file):
 
 # Run selected maps once, retaining logs and real process exit codes.
 def main():
-    """Capture a build range or run selected isolated probes with all acceptance checks."""
+    """Capture a build range or run selected probes with isolated data, port and all acceptance checks."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--executable', type=Path)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
