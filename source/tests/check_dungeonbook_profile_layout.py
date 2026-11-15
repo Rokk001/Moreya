@@ -18,6 +18,7 @@ A text line of the 8 point font is about 14 pixels at 800x600, that is 18 design
 4 pixels padding and 4 pixels gap.
 """
 from pathlib import Path
+from functools import lru_cache
 import re
 
 repo = Path(__file__).resolve().parents[2]
@@ -198,12 +199,16 @@ for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'Medieval
                         float(spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0)
 
 
+# Cache exact shaping results for immutable fonts within this check only; keep every layout case.
+@lru_cache(maxsize=None)
 def text_width(font, text):
     """Width of the text in design pixels with the shipped font (fonts scale like the layout)."""
     face, factor = font_files[font]
     return face.getlength(text) * factor
 
 
+# Font metrics are constant within this invocation, independently of the tested viewport.
+@lru_cache(maxsize=None)
 def line_height(font):
     face, factor = font_files[font]
     return sum(face.getmetrics()) * factor

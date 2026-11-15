@@ -33,6 +33,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+from asset_check_timing import prepare, profile_check
 import author_tavern_seats as seats
 import check_tavern_drink_834 as drink
 import author_rest_poses as rest
@@ -120,7 +121,8 @@ def has_stool_surface_support(points, triangles):
     return False
 
 
-def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, out):
+# Reuse only fresh prepared mug data while retaining every transition support and depth assertion.
+def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, assets, mounts):
     """Measure the actual joint blend from sitting to grasping, retaining body support and furniture clearance."""
     first = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     second = skeleton.locals_at(skeleton.clips['SitDrink'], np.zeros(1))
@@ -131,7 +133,7 @@ def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, o
                       seats.slerp(first_q, second_q, shares),
                       first_s + shares[:, None] * (second_s - first_s)))
     body = rest.skin_vertices(skeleton, local, vertices, weights)
-    mug = drink.Mug(skeleton, name, rest.mesh_data(out / (seats.MUG_MESH + '.xml'))[0], drink.read_limb_mounts())
+    mug = drink.Mug(skeleton, name, assets.mesh(seats.MUG_MESH)[0], mounts)
     _, _, mug_points = mug.world(skeleton.fk(local), skeleton)
     both = np.concatenate((body, mug_points), axis=1)
     for frame in range(len(shares)):
@@ -142,16 +144,25 @@ def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, o
             assert depth <= MAX_TABLE_DEPTH, (name, 'Sit to SitDrink reaches into furniture', frame, level, depth)
 
 
-def check_skeleton(name, mesh_name, out):
+# Take the same maximum over every frame and vertex, bounding temporary geometry to 32768 vertices.
+def stool_clip_depth(points):
+    if len(points) == 0:
+        raise ValueError('max() arg is an empty sequence')
+    vertices = points.reshape(-1, 3)
+    return max(drink.stool_depth(vertices[start:start + 32768] * level)
+               for start in range(0, max(1, len(vertices)), 32768)
+               for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
+
+
+# Share immutable preparation and measure every original clip sample against the same bounds.
+def check_skeleton(name, mesh_name, assets, stools, mounts):
     """Check native seated geometry in its actual stool or bench frame, including body support."""
-    export(name + '.skeleton', out)
-    export(mesh_name, out)
-    export(seats.MUG_MESH, out)
+    out = assets.out
     seats.SCENE['whole_bench'] = name in seats.LARGE_MODELS
-    skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
-    vertices, faces, weights = rest.mesh_data(out / (mesh_name + '.xml'))
+    skeleton = assets.skeleton(name)
+    vertices, faces, weights = assets.mesh(mesh_name)
     triangles = np.asarray([triangle for triangle, _ in faces], dtype=int)
-    on_stool = mesh_name in stool_meshes()
+    on_stool = mesh_name in stools
     idle = skeleton.locals_at(skeleton.clips['Idle'], np.zeros(1))
     height = float(np.ptp(rest.skin_vertices(skeleton, idle, vertices, weights)[0, :, 2]))
     for clip in SEAT_CLIPS:
@@ -175,15 +186,14 @@ def check_skeleton(name, mesh_name, out):
             # limb mount counts too while drinking.
             both = points
             if clip == 'SitDrink':
-                mug = drink.Mug(skeleton, name, rest.mesh_data(out / (seats.MUG_MESH + '.xml'))[0], drink.read_limb_mounts())
+                mug = drink.Mug(skeleton, name, assets.mesh(seats.MUG_MESH)[0], mounts)
                 _, _, mug_points = mug.world(skeleton.fk(locals_fine), skeleton)
                 both = np.concatenate((points, mug_points), axis=1)
                 for frame in range(len(fine)):
                     for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
                         assert has_stool_surface_support(points[frame, :len(vertices)] * level, triangles), (
                             name, clip, 'body has no actual stool support', frame, level)
-            depth = max(drink.stool_depth(both[frame] * level) for frame in range(len(fine))
-                        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
+            depth = stool_clip_depth(both)
         else:
             depth = seats.level_depth(points)
         assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the furniture', depth)
@@ -195,11 +205,11 @@ def check_skeleton(name, mesh_name, out):
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     points = rest.skin_vertices(skeleton, sit, vertices, weights)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')
-    body_rig = seats.rig.config(name, seats.rig.Skeleton(str(out / (name + '.skeleton.xml'))))
+    body_rig = prepare(seats.rig.config, name, prepare(seats.rig.Skeleton, str(out / (name + '.skeleton.xml'))))
     if on_stool:
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
             assert has_stool_surface_support(points[0] * level, triangles), (name, 'Sit has no actual stool support', level)
-        check_stool_drink_transition(name, skeleton, vertices, weights, triangles, out)
+        check_stool_drink_transition(name, skeleton, vertices, weights, triangles, assets, mounts)
     elif name in seats.RESTING_MODELS:
         half, near, far = seats.BENCH[:3]
         reach = half if seats.SCENE['whole_bench'] else half + seats.SEAT_SIDE
@@ -229,6 +239,7 @@ def check_weapons_hidden():
 
 
 # Runs the check over all visiting skeletons.
+@profile_check
 def main():
     check_weapons_hidden()
     found = visitors()
@@ -244,9 +255,12 @@ def main():
     assert large == set(seats.LARGE_MODELS), ('large models', sorted(large))
     out = ROOT / 'out' / 'tavern-seat-clips'
     out.mkdir(parents=True, exist_ok=True)
+    assets = drink.TavernAssets(out, clip_names=None)
+    assets.mesh(seats.MUG_MESH)
+    stools, mounts = stool_meshes(), drink.read_limb_mounts()
     tested = 0
     for name, mesh_name in sorted(found.items()):
-        tested += check_skeleton(name, mesh_name, out)
+        tested += check_skeleton(name, mesh_name, assets, stools, mounts)
     assert tested == 210, tested
     print('tavern seat clips ok:', tested, 'clips on', len(found), 'skeletons')
 

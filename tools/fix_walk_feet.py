@@ -143,10 +143,25 @@ class Clip(object):
         self.order = []
 
 
+# Read and validate the full rig, optionally retaining only clips used by a caller's checks.
 class Skel(object):
-    def __init__(self, path):
+    # Parse every clip to preserve malformed-data failures; selections only limit retained objects.
+    def __init__(self, path, clip_names=None):
         self.path = path
         root = ET.parse(path).getroot()
+        rotations = {}
+
+        # Share identical rotation conversion only within this parse; exact XML text preserves signed zero.
+        def rotation_value(element):
+            raw_angle = element.get('angle')
+            angle = float(raw_angle)
+            axis = element.find('axis')
+            raw_axis = tuple(axis.get(coordinate) for coordinate in 'xyz')
+            key = (raw_angle,) + raw_axis
+            if key not in rotations:
+                rotations[key] = aa2q(angle, [float(value) for value in raw_axis])
+            return rotations[key]
+
         self.names = []
         pos = []
         rq = []
@@ -157,8 +172,7 @@ class Skel(object):
             pos.append([float(p.get(c)) for c in 'xyz'])
             ro = b.find('rotation')
             if ro is not None:
-                ax = ro.find('axis')
-                rq.append(aa2q(float(ro.get('angle')), [float(ax.get(c)) for c in 'xyz']))
+                rq.append(rotation_value(ro))
             else:
                 rq.append(np.array([1.0, 0, 0, 0]))
             sc = b.find('scale')
@@ -199,8 +213,7 @@ class Skel(object):
                     T.append([float(tt.get(cc)) for cc in 'xyz'] if tt is not None else [0.0, 0, 0])
                     ro = k.find('rotate')
                     if ro is not None:
-                        ax = ro.find('axis')
-                        Q.append(aa2q(float(ro.get('angle')), [float(ax.get(cc)) for cc in 'xyz']))
+                        Q.append(rotation_value(ro))
                     else:
                         Q.append(np.array([1.0, 0, 0, 0]))
                     sc = k.find('scale')
@@ -211,7 +224,8 @@ class Skel(object):
                         S.append([1.0, 1, 1])
                 c.tracks[t.get('bone')] = Track(ts, T, Q, S, has_scale)
                 c.order.append(t.get('bone'))
-            self.clips[c.name] = c
+            if clip_names is None or c.name in clip_names:
+                self.clips[c.name] = c
 
     def parents_chain(self, name):
         out = []

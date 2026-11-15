@@ -6,7 +6,7 @@ Quality expectations interpolate the approved level-one and level-thirty endpoin
 from item_probe_support import catalogue_fixture, creature_fixture, compile_and_run, function, source
 
 
-# Exercise actual catalogue and creature rules with fixed-seed production fixtures.
+# Exercise all actual catalogue and creature rules with fixed seeds and an optimized probe.
 def main():
     """Exercise production item rules without replacing their algorithms with a Python model."""
     entity_types = source("source/entities/GameEntityType.h")
@@ -195,12 +195,15 @@ int main(int argc,char** argv) { try {
         check(std::abs(potions/100000.0-expected[2])<.01,"actual hero outfit potion flow");
         check(std::abs(armedItems/100000.0-expected[1])<.01,"armed Poor weapon and shield rolls preserve full item flow");
         check(std::abs(armedPotions/100000.0-expected[2])<.01,"armed hero potion flow");
+        // Report every seeded flow count so optimized and unoptimized probes can be compared exactly.
+        std::cout<<"item-flow "<<level<<" "<<qualities[0]<<" "<<qualities[1]<<" "<<qualities[2]<<" "<<qualities[3]
+                 <<" "<<items<<" "<<potions<<" "<<armedItems<<" "<<armedPotions<<"\n";
     }
     std::cout<<"item production rules passed\n";
 } catch(const std::exception& error) { std::cerr<<"FAIL: "<<error.what()<<"\n";return 1; }
 }
 '''
-    compile_and_run("item-rules", catalogue_fixture() + creature_fixture() + affinity_rooms + garden + lab + checks)
+    compile_and_run("item-rules", catalogue_fixture() + creature_fixture() + affinity_rooms + garden + lab + checks, optimize=True)
 
 
 if __name__ == "__main__":
