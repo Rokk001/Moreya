@@ -3,7 +3,6 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
-import time
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -693,22 +692,16 @@ print('WIRING OK (%d assertions): enum value last, hooks in place, client reads 
 
 
 # Compile and exercise an existing production probe with visible compiler diagnostics.
+# Run the compiled fixture once; a WinError 4551 requires a fresh compilation by the runner.
 def run_probe(name, code):
     with tempfile.TemporaryDirectory(prefix='odp-level-statistics-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(code)
         subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True)
-        for attempt in range(4):
-            try:
-                subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
-                return
-            except OSError as error:
-                # Windows may block a freshly compiled fixture (WinError 4551) for a moment
-                if getattr(error, 'winerror', None) != 4551 or attempt == 3:
-                    raise
-                print('%s: WinError 4551, retry %d' % (name, attempt + 1))
-                time.sleep(2)
+        # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
+        subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
+        return
 
 
 run_probe('kills', kills_probe)

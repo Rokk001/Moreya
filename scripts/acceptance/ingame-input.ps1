@@ -18,7 +18,7 @@
     State between calls (process id and appData folder) is kept in a small file, -StateFile.
 
 .PARAMETER Action
-    Start   start -Exe with an isolated --appData (optionally -Level and -Seed for --run-level) and wait -Wait seconds
+    Start   start -Exe with an isolated --appData (optionally -Level and -Seed for --run-level); -Wait bounds readiness waiting
     Key     press and release the virtual key -Vk (e.g. 0x1B for Escape)
     Move    move the game cursor to client position -X,-Y (corner calibration)
     Press   left mouse button press and release at the current cursor position
@@ -43,7 +43,7 @@ param(
     [string]$Level = '',
     [uint32]$Seed = 12345,
     [int]$Seconds = 90,
-    [int]$Wait = 25,
+    [ValidateRange(1, 3600)][int]$Wait = 25,
     [int]$Vk = 0,
     [int]$Notches = 0,
     [string]$Text = '',
@@ -54,6 +54,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'wait-game-state.ps1')
+Add-Type -AssemblyName System.Drawing
 
 Add-Type -Namespace OdInput -Name Native -MemberDefinition @'
 [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
@@ -167,14 +169,15 @@ if($Action -eq 'Start')
 {
     if(-not $Exe) { throw '-Exe is required for Start.' }
     $exePath = (Resolve-Path $Exe).Path
-    $appData = Join-Path $env:TEMP ('od-ingame-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+    $appData = Join-Path $env:TEMP ('od-ingame-' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Force $appData | Out-Null
     $gameArgs = @('--appData', $appData)
     if($Level) { $gameArgs += @('--run-level', $Level, '--seconds', $Seconds, '--seed', $Seed) }
-    $proc = Start-Process $exePath -ArgumentList $gameArgs -WorkingDirectory (Split-Path $exePath) -PassThru
+    $proc = Start-Process $exePath -ArgumentList $gameArgs -WorkingDirectory (Split-Path $exePath) -PassThru `
+        -RedirectStandardOutput (Join-Path $appData 'acceptance-stdout.txt') `
+        -RedirectStandardError (Join-Path $appData 'acceptance-stderr.txt')
     Set-Content $StateFile @($proc.Id, $appData)
-    Start-Sleep $Wait
-    if($proc.HasExited) { throw "The game exited early with code $($proc.ExitCode)." }
+    Wait-GameCondition { Test-GameReady $proc $appData ([bool]$Level) } $Wait 'game readiness' | Out-Null
     "started pid $($proc.Id), appData $appData"
     return
 }
@@ -200,12 +203,16 @@ switch($Action)
     'Print'
     {
         if(-not $OutFile) { throw '-OutFile is required for Print.' }
-        $before = Get-Date
+        $existing = @{}
+        Get-ChildItem -LiteralPath $state.AppData -Recurse -Filter 'ODscreenshot_*.png' |
+            ForEach-Object { $existing[$_.FullName] = $_.LastWriteTimeUtc.Ticks }
+        $before = [datetime]::UtcNow
         Send-Key 0x2C 0x37 1 3
-        Start-Sleep 4
-        $shot = Get-ChildItem $state.AppData -Recurse -Filter 'ODscreenshot_*.png' -ErrorAction SilentlyContinue |
-            Where-Object { $_.LastWriteTime -gt $before.AddSeconds(-1) } | Sort-Object LastWriteTime | Select-Object -Last 1
-        if(-not $shot) { throw 'The game wrote no screenshot.' }
+        $shot = Wait-GameCondition {
+            $state.Process.Refresh()
+            if($state.Process.HasExited) { throw 'The game exited before writing the screenshot.' }
+            Get-NewGameScreenshot $state.AppData $before $existing
+        } 4 'a completed game screenshot'
         New-Item -ItemType Directory -Force (Split-Path -Parent ([System.IO.Path]::GetFullPath($OutFile))) | Out-Null
         Copy-Item $shot.FullName $OutFile -Force
         "screenshot -> $OutFile"
