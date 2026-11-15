@@ -4,13 +4,16 @@
 param(
     [Parameter(Mandatory = $true)][string]$Counter,
     [Parameter(Mandatory = $true)][string]$Base,
-    [Parameter(Mandatory = $true)][string]$Checks
+    [Parameter(Mandatory = $true)][string]$Checks,
+    [string]$Worktree = (Join-Path $PSScriptRoot '..\..')
 )
 # Native stderr must not end the script; only the exit codes decide
 $ErrorActionPreference = 'Continue'
-$wt = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$wt = (Resolve-Path -LiteralPath $Worktree).Path
+# A pinned external entry point runs against the selected plan worktree, never its bundle folder.
+$scripts = Split-Path -Parent $PSScriptRoot
 # The versioned ODP runner owns the journal; the historical -Checks argument remains accepted for existing HQ commands.
-$Checks = Join-Path $wt 'scripts\run-checks.py'
+$Checks = Join-Path $scripts 'run-checks.py'
 New-Item -ItemType Directory -Force "$wt\out" | Out-Null
 $run = 'orch-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 $loadBase = $Base
@@ -26,7 +29,7 @@ try {
 if (-not $env:ODP_ASSETS_SRC) { $env:ODP_ASSETS_SRC = [Environment]::GetEnvironmentVariable('ODP_ASSETS_SRC', 'User') }
 Set-Content -Encoding ascii "$wt\out\orch-run.txt" $run
 # Freeze the integration reference before Push updates origin/integration/all.
-& python "$wt\scripts\run-campaign-load-tests.py" --repo $wt --capture-base $Base --output "$wt\out\load-base-$run.json" 2>&1 | Tee-Object -FilePath $preflightLog
+& python "$scripts\run-campaign-load-tests.py" --repo $wt --capture-base $Base --output "$wt\out\load-base-$run.json" 2>&1 | Tee-Object -FilePath $preflightLog
 if ($LASTEXITCODE -ne 0) { throw 'could not capture integration load-test base' }
 $loadBase = (Get-Content -Raw "$wt\out\load-base-$run.json" | ConvertFrom-Json).base
 # The compiler job count of HaiveQueen (BUILD_JOBS) becomes the /MP job count of the project (BUILD_MP_JOBS, read by windows-paths.ps1)
@@ -37,7 +40,7 @@ if ($LASTEXITCODE -ne 0) { throw "build number failed (exit $LASTEXITCODE)" }
 Set-Content -Encoding ascii "$wt\out\build-number-$run.txt" $n
 $stages['build:preflight'] = @{ exit = 0; log = $preflightLog }
 Write-Output "configure started: $run"
-& powershell -NoProfile -File "$PSScriptRoot\configure-windows-prereqs.ps1" -BuildNumber $n *>&1 | Tee-Object -FilePath "$wt\out\configure-$run.log"
+& powershell -NoProfile -File "$wt\scripts\win32\configure-windows-prereqs.ps1" -BuildNumber $n *>&1 | Tee-Object -FilePath "$wt\out\configure-$run.log"
 $configureCode = $LASTEXITCODE
 $stages['build:configure'] = @{ exit = $configureCode; log = "$wt\out\configure-$run.log" }
 if ($configureCode -ne 0) { throw "configure failed (exit $configureCode)" }
@@ -66,7 +69,7 @@ if ($code -ne 0) { throw "build failed (exit $code)" }
 $statusFile = "$wt\out\build-status-$run.json"
 $stages | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 -LiteralPath $statusFile
 Write-Output "checks started: $run"
-& python -u -I "$wt\scripts\run-checks-profiled.py" --runner $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $loadBase --build-start $start --run $run --build-status $statusFile
+& python -u -I "$scripts\run-checks-profiled.py" --runner $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $loadBase --build-start $start --run $run --build-status $statusFile
 $code = $LASTEXITCODE
 if ($code -ne 0) { Write-Output "checks failed (exit $code), see out\checks-$run.txt" }
 exit $code
