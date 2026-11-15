@@ -80,6 +80,9 @@ def validate_build(repo, run, target):
         receipt = json.loads((repo / 'out' / ('validated-' + run + '.json')).read_text(encoding='utf-8'))
     except (OSError, ValueError) as error:
         raise RuntimeError('Build validation receipt missing or invalid; normal integration revalidation required') from error
+    if not isinstance(receipt, dict) or any(not isinstance(receipt.get(key), str)
+                                          for key in ('commit', 'run', 'number', 'sha256')):
+        raise RuntimeError('Build validation receipt missing or invalid; normal integration revalidation required')
     head = git(repo, 'rev-parse', 'HEAD')
     if receipt['run'] != run or receipt['commit'] != head or target != head:
         raise RuntimeError('Build/commit/target mismatch; normal integration revalidation required')

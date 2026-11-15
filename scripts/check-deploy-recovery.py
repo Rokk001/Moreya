@@ -76,6 +76,9 @@ class Recovery(unittest.TestCase):
             with patch.object(deployment, 'git', side_effect=lambda repo, *args: '' if args[0] == 'status' else 'a' * 40):
                 with self.assertRaisesRegex(RuntimeError, 'normal integration revalidation required'):
                     deployment.validate_build(repo, 'test', 'a' * 40)
+                (repo / 'out/validated-test.json').write_text('{}')
+                with self.assertRaisesRegex(RuntimeError, 'normal integration revalidation required'):
+                    deployment.validate_build(repo, 'test', 'a' * 40)
                 deployment.record_build(repo, 'test', '42', 'a' * 40)
                 self.assertEqual(deployment.validate_build(repo, 'test', 'a' * 40)['number'], '42')
                 with self.assertRaisesRegex(RuntimeError, 'mismatch'):
