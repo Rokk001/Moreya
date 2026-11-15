@@ -19,7 +19,6 @@ import re
 import shutil
 import subprocess
 import tempfile
-import time
 import xml.etree.ElementTree as ElementTree
 
 repo = Path(__file__).resolve().parents[2]
@@ -480,13 +479,6 @@ with tempfile.TemporaryDirectory(prefix='odp-defeat-click-') as directory:
                    cwd=work, check=True)
     environment = dict(os.environ)
     environment['PATH'] = str(deps / 'install/bin') + os.pathsep + environment.get('PATH', '')
-    # Windows may block a freshly compiled executable (WinError 4551) for a moment
-    for attempt in range(4):
-        try:
-            subprocess.run([str(work / 'check.exe')], cwd=work, check=True, env=environment)
-            break
-        except OSError as error:
-            if attempt == 3:
-                raise
-            print('retrying after', error)
-            time.sleep(2)
+    # Windows application control errors must reach the runner without restarting this executable.
+    # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
+    subprocess.run([str(work / 'check.exe')], cwd=work, check=True, env=environment)

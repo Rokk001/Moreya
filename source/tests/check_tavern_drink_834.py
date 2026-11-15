@@ -49,6 +49,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+from asset_check_timing import prepare, profile_check
 
 TURNS_PER_SECOND = 1.4
 BEER_SECONDS = 30
@@ -218,30 +219,32 @@ def check_mug_code():
 class TavernAssets:
     """Export each tracked asset once per run and share its parsed data across the checks."""
 
-    def __init__(self, out):
+    # Keep a cache scoped to one check run; other checks can retain every animation.
+    def __init__(self, out, clip_names=('Drink', 'SitDrink', 'KnockedOut')):
         self.out = out
         self.meshes = {}
         self.skeletons = {}
+        self.clip_names = clip_names
 
+    # Count only fresh conversion and parsing as preparation, not cached lookups.
     def mesh(self, name):
         """Return the geometry and skin weights from this run's conversion."""
         import author_rest_poses as rest
         from check_animation_assets import export
         if name not in self.meshes:
-            export(name, self.out)
-            self.meshes[name] = rest.mesh_data(self.out / (name + '.xml'))
+            prepare(export, name, self.out, return_tree=False)
+            self.meshes[name] = prepare(rest.mesh_data, self.out / (name + '.xml'))
         return self.meshes[name]
 
+    # Convert and fully validate a rig once per run, retaining exactly the caller's requested clips.
     def skeleton(self, name):
         """Retain the rest rig and the three clips measured by these checks."""
         import fix_walk_feet as feet
         from check_animation_assets import export
         if name not in self.skeletons:
             filename = name + '.skeleton'
-            export(filename, self.out)
-            skeleton = feet.Skel(str(self.out / (filename + '.xml')))
-            skeleton.clips = {clip: data for clip, data in skeleton.clips.items()
-                              if clip in ('Drink', 'SitDrink', 'KnockedOut')}
+            prepare(export, filename, self.out, return_tree=False)
+            skeleton = prepare(feet.Skel, str(self.out / (filename + '.xml')), clip_names=self.clip_names)
             self.skeletons[name] = skeleton
         return self.skeletons[name]
 
@@ -926,6 +929,8 @@ class Head(object):
         return np.asarray([Face(points).mouth() for points in rest.skin_vertices(skeleton, local, self.vertices, self.weights)])
 
 
+# Report preparation and execution separately without changing any checked model or sample.
+@profile_check
 def main():
     """Run the source contracts, anatomical anchors and strict serialized-model checks."""
     check_mug_code()

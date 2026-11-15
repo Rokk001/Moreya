@@ -127,12 +127,17 @@ def smooth(u):
 
 # ---------------------------------------------------------------- skeleton
 
+# Retain the complete authoring representation and validation, optionally sharing fresh XML input.
 class Skeleton(object):
-    def __init__(self, path):
+    # Sharing text and its parsed root avoids duplicate I/O without skipping any bone or animation.
+    def __init__(self, path, *, xml_source=None):
         self.path = path
-        with open(path, encoding="utf-8") as f:
-            self.text = f.read()
-        root = ET.fromstring(self.text)
+        if xml_source is None:
+            with open(path, encoding="utf-8") as f:
+                self.text = f.read()
+            root = ET.fromstring(self.text)
+        else:
+            self.text, root = xml_source
         self.order = []
         self.pos = {}
         self.q = {}

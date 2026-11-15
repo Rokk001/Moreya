@@ -396,7 +396,7 @@ def object_bounds(name):
     return tuple(float(x) for x in m.groups())
 
 
-trees = {name: mesh_xml(name) for name in FURNITURE + ('Merchant',)}
+trees = {name: mesh_xml(name) for name in FURNITURE}
 
 # 1. Furniture: only textured materials, no orange flat colours
 for name in FURNITURE:
@@ -416,190 +416,213 @@ table_used = submesh_materials(trees['SalesTable'])
 for mat in TABLE_NEEDS:
     assert mat in table_used, 'SalesTable needs ' + mat
 
-# 3. Figure textures, 4. hood separate, 5. scales readable
-figure_used = submesh_materials(trees['Merchant'])
-for mat in FIGURE_TEXTURED:
-    assert mat in figure_used, 'Merchant.mesh needs ' + mat
-    tex = material_texture(mat)
-    assert tex and texture_exists(tex), mat + ' needs a texture'
-for mat in figure_used:
-    assert material_texture(mat) or mat in FIGURE_FLAT_OK, 'Merchant.mesh uses the untextured material ' + mat
-assert 'ItemBrass' not in figure_used, 'the scales must use MerchantBrass, not the flat ItemBrass'
-assert re.search(r'^\s*emissive\s+0*\.0*[1-9]', material_block('MerchantBrass'), re.M), 'MerchantBrass needs its self-light'
-layers = [material_texture(m) for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
-assert len(set(layers)) == 3, 'robe, over-cloak and hood need three different textures (layered cloak)'
-# Decision 901(4): distinct cloth silhouettes, with a compact hood exposing the face.
-cloth_pts = [submesh_positions(trees['Merchant'], m) for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
-hems = [min(p[2] for p in max(mesh_pieces(trees['Merchant'], (m,)), key=len))
-        for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
-for i, gap in enumerate(LAYER_HEM_SEPARATION):
-    assert hems[i + 1] - hems[i] >= gap, 'merchant cloth layers merge into one long silhouette: %s' % hems
-hood_top = [p for p in cloth_pts[2] if p[2] > 1.10]
-assert max(p[0] for p in hood_top) - min(p[0] for p in hood_top) <= HOOD_MAX_WIDTH, 'hood still reads as a bulky sack'
-assert max(material_diffuse('MerchantEye')) <= 0.45, 'ordinary teeth must stay dimmer than the single gold tooth'
-skeleton_tree = skeleton_xml('Merchant')
-parents = {}
-for bp in skeleton_tree.iter('boneparent'):
-    parents[bp.get('bone')] = bp.get('parent')
-assert parents.get('Scales') in SCALES_PARENTS, \
-    'the scales must hang at the belt: Scales hangs from %s, not from the pelvis' % parents.get('Scales')
+# Retain the earlier model's appearance contract for the original asset layout.
+def check_legacy_figure():
+    trees['Merchant'] = mesh_xml('Merchant')
+    # 3. Figure textures, 4. hood separate, 5. scales readable
+    figure_used = submesh_materials(trees['Merchant'])
+    for mat in FIGURE_TEXTURED:
+        assert mat in figure_used, 'Merchant.mesh needs ' + mat
+        tex = material_texture(mat)
+        assert tex and texture_exists(tex), mat + ' needs a texture'
+    for mat in figure_used:
+        assert material_texture(mat) or mat in FIGURE_FLAT_OK, 'Merchant.mesh uses the untextured material ' + mat
+    assert 'ItemBrass' not in figure_used, 'the scales must use MerchantBrass, not the flat ItemBrass'
+    assert re.search(r'^\s*emissive\s+0*\.0*[1-9]', material_block('MerchantBrass'), re.M), 'MerchantBrass needs its self-light'
+    layers = [material_texture(m) for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
+    assert len(set(layers)) == 3, 'robe, over-cloak and hood need three different textures (layered cloak)'
+    # Decision 901(4): distinct cloth silhouettes, with a compact hood exposing the face.
+    cloth_pts = [submesh_positions(trees['Merchant'], m) for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
+    hems = [min(p[2] for p in max(mesh_pieces(trees['Merchant'], (m,)), key=len))
+            for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
+    for i, gap in enumerate(LAYER_HEM_SEPARATION):
+        assert hems[i + 1] - hems[i] >= gap, 'merchant cloth layers merge into one long silhouette: %s' % hems
+    hood_top = [p for p in cloth_pts[2] if p[2] > 1.10]
+    assert max(p[0] for p in hood_top) - min(p[0] for p in hood_top) <= HOOD_MAX_WIDTH, 'hood still reads as a bulky sack'
+    assert max(material_diffuse('MerchantEye')) <= 0.45, 'ordinary teeth must stay dimmer than the single gold tooth'
+    skeleton_tree = skeleton_xml('Merchant')
+    parents = {}
+    for bp in skeleton_tree.iter('boneparent'):
+        parents[bp.get('bone')] = bp.get('parent')
+    assert parents.get('Scales') in SCALES_PARENTS, \
+        'the scales must hang at the belt: Scales hangs from %s, not from the pelvis' % parents.get('Scales')
 
 
-# Bind position of a bone in model space (positions are relative to the parent; every merchant bone has the identity
-# as rest rotation, which is asserted)
-def bind_position(name):
-    bones = {b.get('name'): b for b in skeleton_tree.iter('bone')}
-    out = [0.0, 0.0, 0.0]
-    while name:
-        b = bones[name]
-        p = b.find('position')
-        r = b.find('rotation')
-        assert r is None or abs(float(r.get('angle'))) < 1e-4, 'bone %s has a rest rotation' % name
-        out = [out[0] + float(p.get('x')), out[1] + float(p.get('y')), out[2] + float(p.get('z'))]
-        name = parents.get(name)
-    return out
+    # Bind position of a bone in model space (positions are relative to the parent; every merchant bone has the identity
+    # as rest rotation, which is asserted)
+    def bind_position(name):
+        bones = {b.get('name'): b for b in skeleton_tree.iter('bone')}
+        out = [0.0, 0.0, 0.0]
+        while name:
+            b = bones[name]
+            p = b.find('position')
+            r = b.find('rotation')
+            assert r is None or abs(float(r.get('angle'))) < 1e-4, 'bone %s has a rest rotation' % name
+            out = [out[0] + float(p.get('x')), out[1] + float(p.get('y')), out[2] + float(p.get('z'))]
+            name = parents.get(name)
+        return out
 
 
-scales_at = bind_position('Scales')
-pelvis_at = bind_position('Pelvis')
-assert BELT_LOW <= scales_at[2] <= BELT_HIGH, 'the scales hook is not at belt height (%.2f)' % scales_at[2]
-assert scales_at[0] > pelvis_at[0] + 0.05, 'the scales must hang on his left hip (+x of the pelvis), x %.2f' % scales_at[0]
-assert scales_at[1] < pelvis_at[1] - 0.15, 'the scales must hang in front of the body, y %.2f' % scales_at[1]
-assert bind_position('Hand_R')[2] - scales_at[2] > 0.2, 'the scales hang at the hands, not at the belt'
+    scales_at = bind_position('Scales')
+    pelvis_at = bind_position('Pelvis')
+    assert BELT_LOW <= scales_at[2] <= BELT_HIGH, 'the scales hook is not at belt height (%.2f)' % scales_at[2]
+    assert scales_at[0] > pelvis_at[0] + 0.05, 'the scales must hang on his left hip (+x of the pelvis), x %.2f' % scales_at[0]
+    assert scales_at[1] < pelvis_at[1] - 0.15, 'the scales must hang in front of the body, y %.2f' % scales_at[1]
+    assert bind_position('Hand_R')[2] - scales_at[2] > 0.2, 'the scales hang at the hands, not at the belt'
 
-# Belt with buckle and pouch at belt height
-for mat, least in BELT_MATERIALS.items():
-    at_belt = [p for p in submesh_positions(trees['Merchant'], mat) if BELT_LOW <= p[2] <= BELT_HIGH]
-    assert len(at_belt) >= least, 'Merchant.mesh has too little %s at belt height (belt, pouch, buckle): %d vertices' % (
-        mat, len(at_belt))
+    # Belt with buckle and pouch at belt height
+    for mat, least in BELT_MATERIALS.items():
+        at_belt = [p for p in submesh_positions(trees['Merchant'], mat) if BELT_LOW <= p[2] <= BELT_HIGH]
+        assert len(at_belt) >= least, 'Merchant.mesh has too little %s at belt height (belt, pouch, buckle): %d vertices' % (
+            mat, len(at_belt))
 
-# Readable face from the game camera: out of the hood, long nose, large gold tooth (front is -Y)
-face = [p for p in submesh_positions(trees['Merchant'], 'MerchantHide') if p[2] > FACE_LOW]
-assert face, 'Merchant.mesh has no face'
-hood_front = min(p[1] for p in submesh_positions(trees['Merchant'], 'MerchantHood') if p[2] > FACE_LOW)
-face_front = min(p[1] for p in face)
-assert face_front < hood_front - FACE_OUT_OF_HOOD, \
-    'the face sits deep in the hood (face front %.3f, hood front %.3f)' % (face_front, hood_front)
-nose = bind_position('Head')[1] - face_front
-assert nose >= NOSE_MIN, 'the nose is too short to read from the game camera (%.3f in front of the head joint)' % nose
-gold = [p for p in submesh_positions(trees['Merchant'], 'MerchantGold') if p[2] > FACE_LOW]
-assert gold, 'Merchant.mesh has no gold tooth'
-width = max(p[0] for p in gold) - min(p[0] for p in gold)
-assert width >= GOLD_TOOTH_MIN, 'the gold tooth is too small to read from the game camera (%.3f wide)' % width
-height = max(p[2] for p in gold) - min(p[2] for p in gold)
-assert height <= GOLD_TOOTH_MAX_HEIGHT, 'the gold tooth is a tall square spot (%.3f high)' % height
-gold_light = [float(x) for x in re.search(
-    r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', material_block('MerchantGold'), re.M).groups()]
-assert max(gold_light) <= GOLD_MAX_EMISSIVE, 'the gold tooth glows too brightly: %s' % gold_light
-eye_glints = [piece for piece in mesh_pieces(trees['Merchant'], ('MerchantEye',))
-              if min(p[2] for p in piece) > 1.14]
-assert len(eye_glints) == 2, 'the merchant needs two small eye glints above the grin'
-assert all(max(p[0] for p in piece) - min(p[0] for p in piece) <= EYE_GLINT_MAX_WIDTH
-           for piece in eye_glints), 'the eye glints are oversized'
-assert all(max(p[0] for p in piece) - min(p[0] for p in piece) <= HAIR_LOCK_MAX_WIDTH
-           for piece in mesh_pieces(trees['Merchant'], ('MerchantHair',))), 'the hair forms broad ribbons'
+    # Readable face from the game camera: out of the hood, long nose, large gold tooth (front is -Y)
+    face = [p for p in submesh_positions(trees['Merchant'], 'MerchantHide') if p[2] > FACE_LOW]
+    assert face, 'Merchant.mesh has no face'
+    hood_front = min(p[1] for p in submesh_positions(trees['Merchant'], 'MerchantHood') if p[2] > FACE_LOW)
+    face_front = min(p[1] for p in face)
+    assert face_front < hood_front - FACE_OUT_OF_HOOD, \
+        'the face sits deep in the hood (face front %.3f, hood front %.3f)' % (face_front, hood_front)
+    nose = bind_position('Head')[1] - face_front
+    assert nose >= NOSE_MIN, 'the nose is too short to read from the game camera (%.3f in front of the head joint)' % nose
+    gold = [p for p in submesh_positions(trees['Merchant'], 'MerchantGold') if p[2] > FACE_LOW]
+    assert gold, 'Merchant.mesh has no gold tooth'
+    width = max(p[0] for p in gold) - min(p[0] for p in gold)
+    assert width >= GOLD_TOOTH_MIN, 'the gold tooth is too small to read from the game camera (%.3f wide)' % width
+    height = max(p[2] for p in gold) - min(p[2] for p in gold)
+    assert height <= GOLD_TOOTH_MAX_HEIGHT, 'the gold tooth is a tall square spot (%.3f high)' % height
+    gold_light = [float(x) for x in re.search(
+        r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', material_block('MerchantGold'), re.M).groups()]
+    assert max(gold_light) <= GOLD_MAX_EMISSIVE, 'the gold tooth glows too brightly: %s' % gold_light
+    eye_glints = [piece for piece in mesh_pieces(trees['Merchant'], ('MerchantEye',))
+                  if min(p[2] for p in piece) > 1.14]
+    assert len(eye_glints) == 2, 'the merchant needs two small eye glints above the grin'
+    assert all(max(p[0] for p in piece) - min(p[0] for p in piece) <= EYE_GLINT_MAX_WIDTH
+               for piece in eye_glints), 'the eye glints are oversized'
+    assert all(max(p[0] for p in piece) - min(p[0] for p in piece) <= HAIR_LOCK_MAX_WIDTH
+               for piece in mesh_pieces(trees['Merchant'], ('MerchantHair',))), 'the hair forms broad ribbons'
 
-# Not shaggy (decision 863): few short rag strips at the hem
-rags = []
-for piece in mesh_pieces(trees['Merchant'], RAG_MATERIALS):
-    xs = [p[0] for p in piece]
-    ys = [p[1] for p in piece]
-    zs = [p[2] for p in piece]
-    if max(zs) < RAG_MAX_TOP and max(max(xs) - min(xs), max(ys) - min(ys)) < RAG_MAX_WIDTH and max(zs) - min(zs) > RAG_MIN_LENGTH:
-        rags.append(max(zs) - min(zs))
-assert len(rags) <= RAG_MAX_COUNT, 'the robe is shaggy: %d rag strips at the hem (at most %d)' % (len(rags), RAG_MAX_COUNT)
-assert not rags or max(rags) <= RAG_MAX_LENGTH, 'a rag strip is %.2f long (at most %.2f)' % (max(rags), RAG_MAX_LENGTH)
+    # Not shaggy (decision 863): few short rag strips at the hem
+    rags = []
+    for piece in mesh_pieces(trees['Merchant'], RAG_MATERIALS):
+        xs = [p[0] for p in piece]
+        ys = [p[1] for p in piece]
+        zs = [p[2] for p in piece]
+        if max(zs) < RAG_MAX_TOP and max(max(xs) - min(xs), max(ys) - min(ys)) < RAG_MAX_WIDTH and max(zs) - min(zs) > RAG_MIN_LENGTH:
+            rags.append(max(zs) - min(zs))
+    assert len(rags) <= RAG_MAX_COUNT, 'the robe is shaggy: %d rag strips at the hem (at most %d)' % (len(rags), RAG_MAX_COUNT)
+    assert not rags or max(rags) <= RAG_MAX_LENGTH, 'a rag strip is %.2f long (at most %.2f)' % (max(rags), RAG_MAX_LENGTH)
 
-# 5b. Look of decisions 1053/1070 (the owner's in-game screenshot showed a flat brown face with two slits and a yellow
-# spot, a smooth lumpy cloak, large bright yellow scales and brown block boots; D-6-v2 variant 1 shows a gaunt wrinkled old
-# man with long grey hair, bony hands, a layered torn robe, small dark brass scales and worn boots)
-merchant_tree = trees['Merchant']
-head_pts = [p for p in submesh_positions(merchant_tree, 'MerchantHide') if p[2] > FACE_LOW]
-assert len(head_pts) >= FACE_MIN_VERTICES, 'the face is too coarse for wrinkles and hollow cheeks (%d vertices)' % len(head_pts)
-hair_pts = submesh_positions(merchant_tree, 'MerchantHair')
-assert len(hair_pts) >= HAIR_MIN_VERTICES, 'the merchant needs long grey hair (%d hair vertices)' % len(hair_pts)
-assert max(p[2] for p in hair_pts) > FACE_LOW and min(p[2] for p in hair_pts) < HAIR_LOW, \
-    'the grey hair must hang from the hood down to the chest (z %.2f to %.2f)' % (min(p[2] for p in hair_pts), max(p[2] for p in hair_pts))
-skin_value, skin_red, skin_green, skin_blue, skin_std = png_stats('materials/textures/MerchantHide.png')
-assert skin_std >= SKIN_MIN_STD, 'MerchantHide.png has no wrinkles, sockets and brows (luminance deviation %.1f, needs %d)' % (skin_std, SKIN_MIN_STD)
-assert png_stats('materials/textures/MerchantHair.png')[4] >= HAIR_MIN_STD, 'MerchantHair.png is a flat grey without strands'
-brass_pts = [p for p in submesh_positions(merchant_tree, 'MerchantBrass') if p[2] < BELT_LOW + 0.1]
-scales_width = max(p[0] for p in brass_pts) - min(p[0] for p in brass_pts)
-assert scales_width <= SCALES_MAX_WIDTH, 'the scales are too large (%.3f wide, at most %.2f)' % (scales_width, SCALES_MAX_WIDTH)
-brass_value = png_mean_luminance('materials/textures/MerchantBrass.png')
-assert brass_value <= BRASS_MAX_LUMINANCE, 'the brass is bright yellow, not dark brass (mean %.0f, at most %d)' % (brass_value, BRASS_MAX_LUMINANCE)
-brass_light = [float(x) for x in re.search(r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', material_block('MerchantBrass'), re.M).groups()]
-assert max(brass_light) <= BRASS_MAX_EMISSIVE, 'the brass glows too much for dark brass (%s)' % brass_light
-panels = [piece for piece in mesh_pieces(merchant_tree, RAG_MATERIALS)
-          if max(p[2] for p in piece) > RAG_MAX_TOP and max(p[2] for p in piece) < BELT_HIGH and
-          max(p[0] for p in piece) - min(p[0] for p in piece) >= RAG_MAX_WIDTH and
-          max(p[2] for p in piece) - min(p[2] for p in piece) >= PANEL_MIN_HEIGHT]
-assert len(panels) >= PANEL_MIN_COUNT, 'the robe needs layered torn cloth panels from the belt (%d found)' % len(panels)
-assert len(submesh_positions(merchant_tree, 'MerchantRobe')) >= CLOTH_MIN_VERTICES, 'the robe is a smooth lump without pleats'
-boot_pts = [p for p in submesh_positions(merchant_tree, 'MerchantLeather') if p[2] < BOOT_TOP]
-assert len(boot_pts) >= BOOT_MIN_VERTICES, 'the boots are brown blocks (%d vertices, needs %d)' % (len(boot_pts), BOOT_MIN_VERTICES)
-assert len([p for p in submesh_positions(merchant_tree, 'MerchantDark') if p[2] < SOLE_TOP]) >= SOLE_MIN_VERTICES, \
-    'the boots need dark soles'
+    # 5b. Look of decisions 1053/1070 (the owner's in-game screenshot showed a flat brown face with two slits and a yellow
+    # spot, a smooth lumpy cloak, large bright yellow scales and brown block boots; D-6-v2 variant 1 shows a gaunt wrinkled old
+    # man with long grey hair, bony hands, a layered torn robe, small dark brass scales and worn boots)
+    merchant_tree = trees['Merchant']
+    head_pts = [p for p in submesh_positions(merchant_tree, 'MerchantHide') if p[2] > FACE_LOW]
+    assert len(head_pts) >= FACE_MIN_VERTICES, 'the face is too coarse for wrinkles and hollow cheeks (%d vertices)' % len(head_pts)
+    hair_pts = submesh_positions(merchant_tree, 'MerchantHair')
+    assert len(hair_pts) >= HAIR_MIN_VERTICES, 'the merchant needs long grey hair (%d hair vertices)' % len(hair_pts)
+    assert max(p[2] for p in hair_pts) > FACE_LOW and min(p[2] for p in hair_pts) < HAIR_LOW, \
+        'the grey hair must hang from the hood down to the chest (z %.2f to %.2f)' % (min(p[2] for p in hair_pts), max(p[2] for p in hair_pts))
+    skin_value, skin_red, skin_green, skin_blue, skin_std = png_stats('materials/textures/MerchantHide.png')
+    assert skin_std >= SKIN_MIN_STD, 'MerchantHide.png has no wrinkles, sockets and brows (luminance deviation %.1f, needs %d)' % (skin_std, SKIN_MIN_STD)
+    assert png_stats('materials/textures/MerchantHair.png')[4] >= HAIR_MIN_STD, 'MerchantHair.png is a flat grey without strands'
+    brass_pts = [p for p in submesh_positions(merchant_tree, 'MerchantBrass') if p[2] < BELT_LOW + 0.1]
+    scales_width = max(p[0] for p in brass_pts) - min(p[0] for p in brass_pts)
+    assert scales_width <= SCALES_MAX_WIDTH, 'the scales are too large (%.3f wide, at most %.2f)' % (scales_width, SCALES_MAX_WIDTH)
+    brass_value = png_mean_luminance('materials/textures/MerchantBrass.png')
+    assert brass_value <= BRASS_MAX_LUMINANCE, 'the brass is bright yellow, not dark brass (mean %.0f, at most %d)' % (brass_value, BRASS_MAX_LUMINANCE)
+    brass_light = [float(x) for x in re.search(r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', material_block('MerchantBrass'), re.M).groups()]
+    assert max(brass_light) <= BRASS_MAX_EMISSIVE, 'the brass glows too much for dark brass (%s)' % brass_light
+    panels = [piece for piece in mesh_pieces(merchant_tree, RAG_MATERIALS)
+              if max(p[2] for p in piece) > RAG_MAX_TOP and max(p[2] for p in piece) < BELT_HIGH and
+              max(p[0] for p in piece) - min(p[0] for p in piece) >= RAG_MAX_WIDTH and
+              max(p[2] for p in piece) - min(p[2] for p in piece) >= PANEL_MIN_HEIGHT]
+    assert len(panels) >= PANEL_MIN_COUNT, 'the robe needs layered torn cloth panels from the belt (%d found)' % len(panels)
+    assert len(submesh_positions(merchant_tree, 'MerchantRobe')) >= CLOTH_MIN_VERTICES, 'the robe is a smooth lump without pleats'
+    boot_pts = [p for p in submesh_positions(merchant_tree, 'MerchantLeather') if p[2] < BOOT_TOP]
+    assert len(boot_pts) >= BOOT_MIN_VERTICES, 'the boots are brown blocks (%d vertices, needs %d)' % (len(boot_pts), BOOT_MIN_VERTICES)
+    assert len([p for p in submesh_positions(merchant_tree, 'MerchantDark') if p[2] < SOLE_TOP]) >= SOLE_MIN_VERTICES, \
+        'the boots need dark soles'
 
-# 6. Beside the table, not in it and not hidden behind it
-t_min_x, t_min_y, t_max_x, t_max_y = object_bounds('SalesTable')
-low = [p for p in positions(trees['Merchant']) if p[2] < TABLE_TOP]
-assert low, 'Merchant.mesh has no vertices'
-inside = [p for p in low if t_min_x < p[0] < t_max_x and t_min_y < p[1] < t_max_y]
-assert not inside, 'the merchant stands inside the sales table (%d vertices below the top)' % len(inside)
-cx = sum(p[0] for p in low) / len(low)
-cy = sum(p[1] for p in low) / len(low)
-assert cx > t_max_x and cy < t_min_y,     'the merchant must stand at the front corner beside the table, in view of the room camera (centre %.2f %.2f)' % (cx, cy)
+    # 6. Beside the table, not in it and not hidden behind it
+    t_min_x, t_min_y, t_max_x, t_max_y = object_bounds('SalesTable')
+    low = [p for p in positions(trees['Merchant']) if p[2] < TABLE_TOP]
+    assert low, 'Merchant.mesh has no vertices'
+    inside = [p for p in low if t_min_x < p[0] < t_max_x and t_min_y < p[1] < t_max_y]
+    assert not inside, 'the merchant stands inside the sales table (%d vertices below the top)' % len(inside)
+    cx = sum(p[0] for p in low) / len(low)
+    cy = sum(p[1] for p in low) / len(low)
+    assert cx > t_max_x and cy < t_min_y,     'the merchant must stand at the front corner beside the table, in view of the room camera (centre %.2f %.2f)' % (cx, cy)
 
-# 7. Skeleton and clips
-assert b'Merchant.skeleton' in (root / 'models' / 'Merchant.mesh').read_bytes(), 'Merchant.mesh must link Merchant.skeleton'
-skeleton = (root / 'models' / 'Merchant.skeleton').read_bytes()
-for clip in MERCHANT_CLIPS:
-    assert (clip + '\n').encode('ascii') in skeleton, 'Merchant.skeleton has no clip ' + clip
+    # 7. Skeleton and clips
+    assert b'Merchant.skeleton' in (root / 'models' / 'Merchant.mesh').read_bytes(), 'Merchant.mesh must link Merchant.skeleton'
+    skeleton = (root / 'models' / 'Merchant.skeleton').read_bytes()
+    for clip in MERCHANT_CLIPS:
+        assert (clip + '\n').encode('ascii') in skeleton, 'Merchant.skeleton has no clip ' + clip
 
-# 8. Textures and credits
-credits = read('CREDITS')
-patterns = []
-for line in credits.splitlines():
-    first = re.split(r'\s{2,}|\t', line.strip())[0]
-    if first:
-        patterns.append(first)
-for tex in NEW_TEXTURES:
-    path = 'materials/textures/' + tex + '.png'
-    assert png_size(path) == (TEXTURE_SIZE, TEXTURE_SIZE), path + ' size'
-    assert any(fnmatch.fnmatchcase(path, p) for p in patterns), 'CREDITS has no row for ' + path
-for path in ('models/Merchant.mesh', 'models/Merchant.skeleton', 'models/SalesTable.mesh', 'models/MerchantShelf.mesh'):
-    assert any(fnmatch.fnmatchcase(path, p) for p in patterns), 'CREDITS has no row for ' + path
+    # 8. Textures and credits
+    credits = read('CREDITS')
+    patterns = []
+    for line in credits.splitlines():
+        first = re.split(r'\s{2,}|\t', line.strip())[0]
+        if first:
+            patterns.append(first)
+    for tex in NEW_TEXTURES:
+        path = 'materials/textures/' + tex + '.png'
+        assert png_size(path) == (TEXTURE_SIZE, TEXTURE_SIZE), path + ' size'
+        assert any(fnmatch.fnmatchcase(path, p) for p in patterns), 'CREDITS has no row for ' + path
+    for path in ('models/Merchant.mesh', 'models/Merchant.skeleton', 'models/SalesTable.mesh', 'models/MerchantShelf.mesh'):
+        assert any(fnmatch.fnmatchcase(path, p) for p in patterns), 'CREDITS has no row for ' + path
 
-# 10. Bright enough for the room light, no light beige cloth; robe, over-cloak and hood dark brown (decision 836)
-for mat, (low_value, high_value) in CLOTH_LUMINANCE.items():
-    path = 'materials/textures/' + mat + '.png'
-    assert material_texture(mat) == mat + '.png' and texture_exists(mat + '.png'), mat + ' must use its own texture'
-    value, red, green, blue, std = png_stats(path)
-    assert value >= low_value, '%s.png is near black in the room light (mean %.0f, needs %d)' % (mat, value, low_value)
-    assert value <= high_value, '%s.png reads beige in the room light (mean %.0f, at most %d)' % (mat, value, high_value)
-    assert red >= CLOTH_MIN_RED_OVER_GREEN * green, '%s.png is not brown (red %.0f, green %.0f)' % (mat, red, green)
-    assert blue <= CLOTH_BLUE_OVER_GREEN[1] * green, '%s.png reads pink or grey (blue %.0f, green %.0f)' % (mat, blue, green)
-    assert blue >= CLOTH_BLUE_OVER_GREEN[0] * green, \
-        '%s.png turns khaki-olive under the yellow room light (blue %.0f, green %.0f)' % (mat, blue, green)
-    assert std / value >= CLOTH_MIN_RELATIVE_STD, '%s.png is a smooth cloth without folds and wear (relative contrast %.2f)' % (mat, std / value)
-    olive, block_std = png_analyse(path)[5:]
-    hue = hue_saturation(red * FRONT_LIGHT[0], green * FRONT_LIGHT[1], blue * FRONT_LIGHT[2])[0]
-    assert hue <= CLOTH_MAX_LIT_HUE, '%s.png reads ochre-olive under the front light (hue %.0f, at most %.0f)' % (
-        mat, hue, CLOTH_MAX_LIT_HUE)
-    assert olive <= CLOTH_MAX_OLIVE_SHARE, '%s.png has %.0f %% yellow-olive pixels under the front light' % (mat, 100 * olive)
-    assert block_std <= CLOTH_MAX_BLOCK_STD, \
-        '%s.png has large camouflage blotches (block contrast %.1f, at most %.1f)' % (mat, block_std, CLOTH_MAX_BLOCK_STD)
-skin = png_mean_luminance('materials/textures/MerchantHide.png')
-assert SKIN_LUMINANCE[0] <= skin <= SKIN_LUMINANCE[1], \
-    'MerchantHide.png is no weathered tan skin (mean %.0f, needs %d-%d; lighter reads as a white blob)' % ((skin,) + SKIN_LUMINANCE)
-hood_value = png_mean_luminance('materials/textures/MerchantHood.png')
-assert skin >= SKIN_OVER_HOOD * hood_value, 'the face does not stand out of the hood (skin %.0f, hood %.0f)' % (skin, hood_value)
-for tex, low_value in MIN_LUMINANCE.items():
-    value = png_mean_luminance('materials/textures/' + tex + '.png')
-    assert value >= low_value, '%s.png is too dark for the room light (mean %.0f, needs %d)' % (tex, value, low_value)
-value = png_mean_luminance('materials/textures/MerchantTableCloth.png')
-assert value <= MAX_CLOTH_LUMINANCE, 'MerchantTableCloth.png is a light beige cloth (mean %.0f, at most %d)' % (value, MAX_CLOTH_LUMINANCE)
+    # 10. Bright enough for the room light, no light beige cloth; robe, over-cloak and hood dark brown (decision 836)
+    for mat, (low_value, high_value) in CLOTH_LUMINANCE.items():
+        path = 'materials/textures/' + mat + '.png'
+        assert material_texture(mat) == mat + '.png' and texture_exists(mat + '.png'), mat + ' must use its own texture'
+        value, red, green, blue, std = png_stats(path)
+        assert value >= low_value, '%s.png is near black in the room light (mean %.0f, needs %d)' % (mat, value, low_value)
+        assert value <= high_value, '%s.png reads beige in the room light (mean %.0f, at most %d)' % (mat, value, high_value)
+        assert red >= CLOTH_MIN_RED_OVER_GREEN * green, '%s.png is not brown (red %.0f, green %.0f)' % (mat, red, green)
+        assert blue <= CLOTH_BLUE_OVER_GREEN[1] * green, '%s.png reads pink or grey (blue %.0f, green %.0f)' % (mat, blue, green)
+        assert blue >= CLOTH_BLUE_OVER_GREEN[0] * green, \
+            '%s.png turns khaki-olive under the yellow room light (blue %.0f, green %.0f)' % (mat, blue, green)
+        assert std / value >= CLOTH_MIN_RELATIVE_STD, '%s.png is a smooth cloth without folds and wear (relative contrast %.2f)' % (mat, std / value)
+        olive, block_std = png_analyse(path)[5:]
+        hue = hue_saturation(red * FRONT_LIGHT[0], green * FRONT_LIGHT[1], blue * FRONT_LIGHT[2])[0]
+        assert hue <= CLOTH_MAX_LIT_HUE, '%s.png reads ochre-olive under the front light (hue %.0f, at most %.0f)' % (
+            mat, hue, CLOTH_MAX_LIT_HUE)
+        assert olive <= CLOTH_MAX_OLIVE_SHARE, '%s.png has %.0f %% yellow-olive pixels under the front light' % (mat, 100 * olive)
+        assert block_std <= CLOTH_MAX_BLOCK_STD, \
+            '%s.png has large camouflage blotches (block contrast %.1f, at most %.1f)' % (mat, block_std, CLOTH_MAX_BLOCK_STD)
+    skin = png_mean_luminance('materials/textures/MerchantHide.png')
+    assert SKIN_LUMINANCE[0] <= skin <= SKIN_LUMINANCE[1], \
+        'MerchantHide.png is no weathered tan skin (mean %.0f, needs %d-%d; lighter reads as a white blob)' % ((skin,) + SKIN_LUMINANCE)
+    hood_value = png_mean_luminance('materials/textures/MerchantHood.png')
+    assert skin >= SKIN_OVER_HOOD * hood_value, 'the face does not stand out of the hood (skin %.0f, hood %.0f)' % (skin, hood_value)
+    for tex, low_value in MIN_LUMINANCE.items():
+        value = png_mean_luminance('materials/textures/' + tex + '.png')
+        assert value >= low_value, '%s.png is too dark for the room light (mean %.0f, needs %d)' % (tex, value, low_value)
+    value = png_mean_luminance('materials/textures/MerchantTableCloth.png')
+    assert value <= MAX_CLOTH_LUMINANCE, 'MerchantTableCloth.png is a light beige cloth (mean %.0f, at most %d)' % (value, MAX_CLOTH_LUMINANCE)
+
+# The owner-approved replacement has a new atlas layout and exact native asset fixtures.
+# Its streaming contract checks all geometry, bindings, clips and baked textures; furniture keeps its existing checks.
+if b'MerchantApproved' in (root / 'models/Merchant.mesh').read_bytes():
+    from merchant_approved_asset_contract import verify_approved_merchant
+    verify_approved_merchant(root)
+    credits = read('CREDITS')
+    patterns = [re.split(r'\s{2,}|\t', line.strip())[0] for line in credits.splitlines() if line.strip()]
+    for texture in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares'):
+        path = 'materials/textures/' + texture + '.png'
+        assert png_size(path) == (TEXTURE_SIZE, TEXTURE_SIZE), path
+        assert any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns), path
+    for name in FURNITURE:
+        path = 'models/' + name + '.mesh'
+        assert any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns), path
+    for texture in ('MerchantTableWood', 'MerchantWares'):
+        assert png_mean_luminance('materials/textures/' + texture + '.png') >= MIN_LUMINANCE[texture], texture
+    assert png_mean_luminance('materials/textures/MerchantTableCloth.png') <= MAX_CLOTH_LUMINANCE
+else:
+    check_legacy_figure()
 
 # 9. Furniture bounds equal RoomObjectBounds.h
 for name in FURNITURE:

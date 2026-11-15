@@ -153,10 +153,14 @@ def check_rotation():
 
 
 # 4. The innkeeper at its counter
-COUNTER_TOP = 0.527
-COUNTER_TOP_UNDERSIDE = 0.47
-COUNTER_FRONT = -0.335
-COUNTER_TOP_BACK = -0.06
+# Fixed measurements of the approved replacement; collision tolerances stay unchanged.
+COUNTER_TOP = 0.412
+COUNTER_TOP_UNDERSIDE = 0.391
+COUNTER_FRONT = -0.28814
+COUNTER_TOP_BACK = 0.054536
+COUNTER_TOP_BAND_MIN = 0.4
+COUNTER_SURFACE_MIN = 0.409300
+COUNTER_SURFACE_MAX = 0.412484
 COUNTER_HALF_WIDTH = 0.514
 MAX_BODY_OVER_TOP = 0.01
 MAX_FORWARD_HEAD = 0.5
@@ -164,6 +168,7 @@ MIN_IDLE_HEAD_BACK = 5.0
 MAX_TOP_DEPTH = 0.003
 
 
+# Check the approved counter surface and retain the animation collision and head-angle limits.
 def check_innkeeper():
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     if shutil.which(converter) is None and not Path(converter).is_file():
@@ -178,26 +183,26 @@ def check_innkeeper():
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
     counter, faces, _ = rest.mesh_data(out / 'TavernCounter.mesh.xml')
     # The top boards: combine near-horizontal triangles that reach the central opening.
-    # The hands and jug rest on these boards, between the narrow side returns.
+    # The hands and any held jug rest on the approved full-width boards.
     wood = np.array([counter[index] for index, material in faces if material == 'TavernCounterWood'])
     normals = np.cross(wood[:, 1] - wood[:, 0], wood[:, 2] - wood[:, 0])
-    tops = (wood[:, :, 2].min(axis=1) > 0.5) & (normals[:, 2] > 0.9 * np.linalg.norm(normals, axis=1)) & \
+    tops = (wood[:, :, 2].min(axis=1) > COUNTER_TOP_BAND_MIN) & (normals[:, 2] > 0.9 * np.linalg.norm(normals, axis=1)) & \
         (wood[:, :, 0].min(axis=1) < 0.45) & (wood[:, :, 0].max(axis=1) > -0.45)
     assert normals[tops, 2].sum() / 2 > 0.20, 'the top boards must cover the counter'
     points = wood[tops].reshape(-1, 3)
     assert np.ptp(points[:, 0]) > 0.9, 'the top boards must span the counter width'
-    assert abs(points[:, 2].max() - 0.53) < 0.002 and abs(points[:, 2].min() - COUNTER_TOP) < 0.002, \
+    assert abs(points[:, 2].max() - COUNTER_SURFACE_MAX) < 0.002 and abs(points[:, 2].min() - COUNTER_SURFACE_MIN) < 0.002, \
         'the counter top moved'
     assert points[:, 1].max() <= COUNTER_TOP_BACK + 0.007, 'the counter top reaches further back'
 
     # Include the worn relief when measuring the full tessellated surface that supports the hands and jug.
-    # The raised side fittings sit outside the central 0.86 units of the counter.
-    surface = wood[(wood[:, :, 2].min(axis=1) > 0.5)
+    # The side fittings sit outside the central 0.86 units of the counter.
+    surface = wood[(wood[:, :, 2].min(axis=1) > COUNTER_TOP_BAND_MIN)
                    & (np.abs(normals[:, 2]) > 2 * np.linalg.norm(normals[:, :2], axis=1))
                    & (wood[:, :, 0].min(axis=1) < 0.43) & (wood[:, :, 0].max(axis=1) > -0.43)]
     assert surface.size and np.ptp(surface[:, :, 0]) > 0.9, 'the top boards span the counter'
-    # The worn relief includes a raised detail at 0.538 above the nominal board height.
-    assert abs(surface[:, :, 2].max() - 0.538) < 0.002 and abs(surface[:, :, 2].min() - COUNTER_TOP) < 0.002, (
+    # The worn relief and rounded edges span the measured approved surface band.
+    assert abs(surface[:, :, 2].max() - COUNTER_SURFACE_MAX) < 0.002 and abs(surface[:, :, 2].min() - COUNTER_SURFACE_MIN) < 0.002, (
         'the counter top moved', surface[:, :, 2].min(), surface[:, :, 2].max())
     assert abs(surface[:, :, 1].max() - COUNTER_TOP_BACK) <= 0.007, 'the counter top back edge moved'
     skeleton = feet.Skel(str(out / 'Innkeeper.skeleton.xml'))
@@ -213,18 +218,23 @@ def check_innkeeper():
         assert forward.max() <= MAX_FORWARD_HEAD, (clip, 'the head hangs forward over the counter', forward.max())
         if clip == 'Idle':
             assert forward.max() <= -MIN_IDLE_HEAD_BACK, ('the innkeeper looks down onto the counter', forward.max())
-        points = rest.skin_vertices(skeleton, local, vertices, weights)
-        x, y, z = points[:, :, 0], points[:, :, 1], points[:, :, 2]
-        inside = (z > COUNTER_TOP_UNDERSIDE) & (z < COUNTER_TOP) & (y > COUNTER_FRONT) & (y < COUNTER_TOP_BACK) & \
-            (np.abs(x) < COUNTER_HALF_WIDTH)
-        depth = np.where(inside, np.minimum.reduce([z - COUNTER_TOP_UNDERSIDE, COUNTER_TOP - z, COUNTER_TOP_BACK - y,
-                                                    y - COUNTER_FRONT]), 0.0)
-        assert depth.max() <= MAX_TOP_DEPTH, (clip, 'a hand or the jug reaches into the counter top', float(depth.max()))
-        low = body[None, :] & (z < 0.56)
-        front = float(y[low].min())
-        assert front >= COUNTER_TOP_BACK - MAX_BODY_OVER_TOP, (clip, 'the body lies on the counter top', front)
+        # Preserve all 97 samples while bounding memory for the detailed replacement mesh.
+        front = math.inf
+        inside_count = 0
+        for sample_times in np.array_split(times, 13):
+            points = rest.skin_vertices(skeleton, skeleton.locals_at(played, sample_times), vertices, weights)
+            x, y, z = points[:, :, 0], points[:, :, 1], points[:, :, 2]
+            inside = (z > COUNTER_TOP_UNDERSIDE) & (z < COUNTER_TOP) & (y > COUNTER_FRONT) & (y < COUNTER_TOP_BACK) & \
+                (np.abs(x) < COUNTER_HALF_WIDTH)
+            depth = np.where(inside, np.minimum.reduce([z - COUNTER_TOP_UNDERSIDE, COUNTER_TOP - z, COUNTER_TOP_BACK - y,
+                                                        y - COUNTER_FRONT]), 0.0)
+            assert depth.max() <= MAX_TOP_DEPTH, (clip, 'a hand or the jug reaches into the counter top', float(depth.max()))
+            low = body[None, :] & (z < COUNTER_TOP + 0.033)
+            front = min(front, float(y[low].min()))
+            assert front >= COUNTER_TOP_BACK - MAX_BODY_OVER_TOP, (clip, 'the body lies on the counter top', front)
+            inside_count = max(inside_count, int(inside.sum(axis=1).max()))
         print('innkeeper %-5s ok: head at most %5.1f degrees forward, %d points in the top, body front at y %.3f'
-              % (clip, forward.max(), int(inside.sum(axis=1).max()), front))
+              % (clip, forward.max(), inside_count, front))
 
 
 def main():

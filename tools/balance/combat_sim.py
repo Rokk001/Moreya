@@ -216,19 +216,36 @@ def blow(roster, attacker, target, rng):
     return low + rng.random() * (high - low)
 
 
+# Prepare matchup constants once; only hit points and clocks change during these fights.
+def prepare_blow(roster, attacker, target):
+    return hit_chance(attacker, target), roster.avoidance_chance(target, attacker.melee), damage_bounds(attacker, target)
+
+
+# Consume exactly the reference blow's conditional random draws in the same order.
+def prepared_blow(profile, rng):
+    hit, avoidance, (low, high) = profile
+    if rng.random() * 100 >= hit:
+        return 0
+    if rng.random() * 100 < avoidance:
+        return 0
+    return low + rng.random() * (high - low)
+
+
 # Repeat the reference duel scheduler; only a surviving defender answers. The next attack turn keeps the fraction
 # of the cooldown: max(previous, turn - 1) + cooldown.
+# Reuse matchup constants without changing the scheduler or random sequence.
 def duel(roster, first, second, fights, rng):
     wins = 0
+    first_blow, second_blow = prepare_blow(roster, first, second), prepare_blow(roster, second, first)
     for _ in range(fights):
         a, b = replace(first), replace(second)
         next_a = next_b = 0
         for turn in range(1, DUEL_LIMIT + 1):
             if turn >= next_a:
-                b.hp -= blow(roster, a, b, rng)
+                b.hp -= prepared_blow(first_blow, rng)
                 next_a = max(next_a, turn - 1) + a.cooldown
             if b.hp > 0 and turn >= next_b:
-                a.hp -= blow(roster, b, a, rng)
+                a.hp -= prepared_blow(second_blow, rng)
                 next_b = max(next_b, turn - 1) + b.cooldown
             if a.hp <= 0 or b.hp <= 0:
                 break
@@ -237,17 +254,19 @@ def duel(roster, first, second, fights, rng):
 
 
 # Same scheduler as duel, but returns the mean turn at which a fight ends instead of the win share.
+# Reuse matchup constants without changing any simulated turn.
 def duel_turns(roster, first, second, fights, rng):
     total = 0
+    first_blow, second_blow = prepare_blow(roster, first, second), prepare_blow(roster, second, first)
     for _ in range(fights):
         a, b = replace(first), replace(second)
         next_a = next_b = 0
         for turn in range(1, DUEL_LIMIT + 1):
             if turn >= next_a:
-                b.hp -= blow(roster, a, b, rng)
+                b.hp -= prepared_blow(first_blow, rng)
                 next_a = max(next_a, turn - 1) + a.cooldown
             if b.hp > 0 and turn >= next_b:
-                a.hp -= blow(roster, b, a, rng)
+                a.hp -= prepared_blow(second_blow, rng)
                 next_b = max(next_b, turn - 1) + b.cooldown
             if a.hp <= 0 or b.hp <= 0:
                 break
@@ -256,8 +275,10 @@ def duel_turns(roster, first, second, fights, rng):
 
 
 # Repeat the reference group scheduler, including simultaneous reply ordering.
+# All opponents are copies with identical attack and defense statistics.
 def fight_group(roster, first, opponent, count, fights, rng):
     wins = 0
+    first_blow, second_blow = prepare_blow(roster, first, opponent), prepare_blow(roster, opponent, first)
     for _ in range(fights):
         a = replace(first)
         opponents = [replace(opponent) for _ in range(count)]
@@ -265,11 +286,11 @@ def fight_group(roster, first, opponent, count, fights, rng):
         clocks = [0] * count
         for turn in range(1, GROUP_LIMIT + 1):
             if turn >= next_a:
-                opponents[0].hp -= blow(roster, a, opponents[0], rng)
+                opponents[0].hp -= prepared_blow(first_blow, rng)
                 next_a = max(next_a, turn - 1) + a.cooldown
             for i, b in enumerate(opponents):
                 if turn >= clocks[i]:
-                    a.hp -= blow(roster, b, a, rng)
+                    a.hp -= prepared_blow(second_blow, rng)
                     clocks[i] = max(clocks[i], turn - 1) + b.cooldown
             survivors = [i for i, b in enumerate(opponents) if b.hp > 0]
             opponents = [opponents[i] for i in survivors]
@@ -724,13 +745,36 @@ def skill_blow(roster, attacker, target, target_extras, rng, crit_multiplier):
     return (low + rng.random() * (high - low)) * target_extras["enemy_dmgk"]
 
 
+# Precompute both critical outcomes with the reference arithmetic and summation order.
+def prepare_skill_blow(roster, attacker, target, target_extras, crit_multiplier):
+    ranges = tuple((sum(max(value * factor - defense, 0) for value, defense in zip(attacker.minimum, target.defense)),
+                    sum(max(value * factor - defense, 0) for value, defense in zip(attacker.maximum, target.defense)))
+                   for factor in (1.0, crit_multiplier))
+    return (hit_chance(attacker, target), roster.avoidance_chance(target, attacker.melee) + target_extras["avoid"],
+            attacker.crit, ranges, target_extras["enemy_dmgk"])
+
+
+# Keep miss, avoidance, critical and damage draws identical to the reference skill blow.
+def prepared_skill_blow(profile, rng):
+    hit, avoidance, crit, ranges, damage_factor = profile
+    if rng.random() * 100 >= hit:
+        return 0
+    if rng.random() * 100 < avoidance:
+        return 0
+    low, high = ranges[rng.random() * 100 < crit]
+    return (low + rng.random() * (high - low)) * damage_factor
+
+
 # Fight one creature (unit and extras) against count copies of another; returns the win share and the mean turns.
 # Skill extras act every turn; the copies all attack, the first copy is the target; stuns skip a blow.
+# Prepare invariant matchup calculations once while preserving every state transition and draw.
 def skill_fight(roster, crit_multiplier, first, second, count, fights, rng, limit=GROUP_LIMIT):
     wins = 0
     turns = []
     a_extras = first[1]
     b_extras = second[1]
+    first_blow = prepare_skill_blow(roster, first[0], second[0], b_extras, crit_multiplier)
+    second_blow = prepare_skill_blow(roster, second[0], first[0], a_extras, crit_multiplier)
     for _ in range(fights):
         a = replace(first[0])
         full_a = a.hp
@@ -749,12 +793,12 @@ def skill_fight(roster, crit_multiplier, first, second, count, fights, rng, limi
                 cast_hits(b_extras, [a])
             if turn >= next_a:
                 if rng.random() >= b_extras["enemy_turnloss"]:
-                    opponents[0].hp -= skill_blow(roster, a, opponents[0], b_extras, rng, crit_multiplier)
+                    opponents[0].hp -= prepared_skill_blow(first_blow, rng)
                 next_a = max(next_a, turn - 1) + a.cooldown
             for i, b in enumerate(opponents):
                 if b.hp > 0 and turn >= clocks[i]:
                     if rng.random() >= a_extras["enemy_turnloss"]:
-                        a.hp -= skill_blow(roster, b, a, a_extras, rng, crit_multiplier)
+                        a.hp -= prepared_skill_blow(second_blow, rng)
                     clocks[i] = max(clocks[i], turn - 1) + b.cooldown
             survivors = [i for i, b in enumerate(opponents) if b.hp > 0]
             opponents = [opponents[i] for i in survivors]

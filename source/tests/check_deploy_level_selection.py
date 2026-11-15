@@ -188,6 +188,11 @@ class SelectionTests(unittest.TestCase):
         scripts = self.repo / 'scripts/win32'
         scripts.mkdir(parents=True)
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy.ps1', scripts / 'orchestrator-deploy.ps1')
+        # Keep the real wait helper while isolating this selection test from the owner's processes.
+        wait_helper = (ROOT / 'scripts/win32/wait-game-exit.ps1').read_text()
+        self.write('scripts/win32/wait-game-exit.ps1', wait_helper +
+                   '\n# Observe an idle fixture without inspecting real processes.\n'
+                   'function Get-Process { param($Name, $ErrorAction) return @() }\n')
         self.write('out/orch-run.txt', 'test')
         self.write('out/build-number-test.txt', '17')
         self.write('deploy-stub.ps1', 'exit 0\n')
