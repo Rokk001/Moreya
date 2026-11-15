@@ -115,13 +115,15 @@ class Recovery(unittest.TestCase):
                 return 0
 
             from types import SimpleNamespace
-            runner = SimpleNamespace(game_is_running=lambda exe: events.append('process') or False, main=probes)
+            running = iter([True, False, False])
+            runner = SimpleNamespace(game_is_running=lambda exe: events.append('process') or next(running), main=probes)
 
             def git(repo, *args):
                 """Supply a consistent target and data snapshot for the guarded run."""
                 return str(Path(directory) / '.git') if '--git-common-dir' in args else 'a' * 40
 
             with patch.object(deployment, 'executable_lock', lock), patch.object(deployment, 'campaign_runner', return_value=runner), \
+                    patch.object(deployment.time, 'sleep', side_effect=lambda seconds: events.append('wait')), \
                     patch.object(deployment, 'git', side_effect=git), \
                     patch.object(deployment, 'validate_build', return_value={'commit': 'a' * 40, 'sha256': 'hash', 'number': '42'}), \
                     patch.object(deployment, 'digest', return_value='hash'), \
@@ -133,7 +135,8 @@ class Recovery(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'load test failed'):
                     deployment.deploy(repo, counter, script)
                 self.assertEqual(counter.read_text(), '41')
-            self.assertEqual(events, ['lock', 'process', 'deploy', 'probe', 'unlock'] * 2)
+            self.assertEqual(events, ['lock', 'process', 'wait', 'process', 'deploy', 'probe', 'unlock',
+                                      'lock', 'process', 'deploy', 'probe', 'unlock'])
 
 
 if __name__ == '__main__':
