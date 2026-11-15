@@ -123,14 +123,14 @@ def git(repo, *args):
 
 
 # Compare only the same host, interpreter, runner and execution settings.
-def execution_profile(runner, timeout):
+def execution_profile(runner, timeout, runner_mode):
     return {'host': platform.node(), 'platform': platform.platform(),
             'cpu': platform.processor(), 'cpus': os.cpu_count(),
             'python': sys.version, 'executable': sys.executable,
             'runner_sha256': hashlib.sha256(runner.read_bytes()).hexdigest(),
-            'timeout': timeout,
+            'timeout': timeout, 'runner_mode': runner_mode,
             'settings': {key: os.environ.get(key, '') for key in
-                         ('BUILD_PARALLEL', 'BUILD_JOBS', 'BUILD_DEPS_ROOT', 'OD_DEPS_ROOT',
+                         ('BUILD_PARALLEL', 'BUILD_JOBS', 'BUILD_MP_JOBS', 'BUILD_DEPS_ROOT', 'OD_DEPS_ROOT', 'OD_VS_PATH',
                           'ODP_ASSETS_SRC', 'BUILD_MIN_FREE_RAM_GB')}}
 
 
@@ -165,7 +165,12 @@ def baseline(history, base, profile):
             if not isinstance(saved, dict) or not isinstance(saved.get('tests'), list):
                 continue
             if not isinstance(saved.get('started'), str) or any(
-                    not isinstance(row, dict) or not {'test', 'arguments', 'seconds', 'attempts', 'exit_code'} <= row.keys()
+                    not isinstance(row, dict) or not isinstance(row.get('test'), str)
+                    or not isinstance(row.get('arguments'), list)
+                    or not isinstance(row.get('seconds'), (int, float))
+                    or isinstance(row.get('seconds'), bool) or not math.isfinite(row['seconds'])
+                    or row['seconds'] < 0 or not isinstance(row.get('attempts'), list)
+                    or not row['attempts'] or 'exit_code' not in row
                     for row in saved['tests']):
                 continue
             if (saved.get('schema') == SCHEMA and saved.get('commit') == base
@@ -273,12 +278,18 @@ def main():
     original.add_argument('--base', default='origin/integration/all')
     original.add_argument('--tip', default='HEAD')
     original.add_argument('--timeout', type=int, default=600)
+    original.add_argument('--only', nargs='*', default=[])
+    original.add_argument('--load-test-only', action='store_true')
+    original.add_argument('--no-4551-retry', action='store_true')
     settings, _ = original.parse_known_args(remaining)
     base = git(settings.repo, 'rev-parse', settings.base + '^{commit}')
     commit = git(settings.repo, 'rev-parse', settings.tip + '^{commit}')
     history = Path(git(settings.repo, 'rev-parse', '--path-format=absolute', '--git-common-dir')) / 'odp-test-timings'
     report = {'schema': SCHEMA, 'started': datetime.now(timezone.utc).isoformat(),
-              'base': base, 'commit': commit, 'profile': execution_profile(args.runner, settings.timeout)}
+              'base': base, 'commit': commit, 'profile': execution_profile(
+                  args.runner, settings.timeout, {'only': settings.only,
+                  'load_test_only': settings.load_test_only,
+                  'no_4551_retry': settings.no_4551_retry})}
     dirty_before = git(settings.repo, 'status', '--porcelain', '--untracked-files=no')
     previous = baseline(history, base, report['profile'])
     code = execute(args.runner, remaining, report)

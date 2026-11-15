@@ -87,6 +87,24 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(profile.baseline(history, 'base', {'host': 'one'}), good)
             self.assertIsNone(profile.baseline(history, 'missing', {'host': 'one'}))
 
+    # Reject structurally invalid history and distinguish actual build and runner settings.
+    def test_invalid_history_and_settings(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            history = Path(temporary)
+            bad = {'schema': 1, 'commit': 'base', 'profile': {}, 'exit_code': 0,
+                   'comparable': True, 'started': '2026', 'tests': [row(1)]}
+            bad['tests'][0]['seconds'] = 'invalid'
+            (history / 'bad.json').write_text(json.dumps(bad))
+            self.assertIsNone(profile.baseline(history, 'base', {}))
+            runner = history / 'runner.py'
+            runner.write_text('pass')
+            with patch.dict('os.environ', {'BUILD_MP_JOBS': '2', 'OD_VS_PATH': 'one'}):
+                first = profile.execution_profile(runner, 600, {'only': []})
+            with patch.dict('os.environ', {'BUILD_MP_JOBS': '3', 'OD_VS_PATH': 'one'}):
+                second = profile.execution_profile(runner, 600, {'only': []})
+            self.assertNotEqual(first, second)
+            self.assertNotEqual(first, profile.execution_profile(runner, 600, {'only': ['check.py']}))
+
     # Exercise actual imported runner calls and deterministic timing for both attempts.
     def test_runner_forwarding_and_retries(self):
         source = '''import sys
