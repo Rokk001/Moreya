@@ -92,9 +92,19 @@ material TavernCloth
             specular 0.05 0.05 0.05 1 12.5
             texture_unit
             {
-                texture TavernCloth.png
+                texture TavernClothApprovedColor.png
                 tex_address_mode wrap
                 filtering trilinear
+            }
+            // Tangent-space detail baked from the approved Blender surface.
+            texture_unit
+            {
+                texture TavernClothApprovedNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
@@ -112,9 +122,19 @@ material TavernHood
             specular 0.05 0.05 0.05 1 12.5
             texture_unit
             {
-                texture TavernHood.png
+                texture TavernHoodApprovedColor.png
                 tex_address_mode wrap
                 filtering trilinear
+            }
+            // Tangent-space detail baked from the approved Blender surface.
+            texture_unit
+            {
+                texture TavernHoodApprovedNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
@@ -132,9 +152,19 @@ material TavernSkin
             specular 0.05 0.05 0.05 1 12.5
             texture_unit
             {
-                texture TavernSkin.png
+                texture TavernSkinApprovedColor.png
                 tex_address_mode wrap
                 filtering trilinear
+            }
+            // Tangent-space detail baked from the approved Blender surface.
+            texture_unit
+            {
+                texture TavernSkinApprovedNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
@@ -172,9 +202,19 @@ material TavernSign
             specular 0.05 0.05 0.05 1 12.5
             texture_unit
             {
-                texture TavernSign.png
+                texture TavernSignApprovedColor.png
                 tex_address_mode wrap
                 filtering trilinear
+            }
+            // Tangent-space detail baked from the approved Blender surface.
+            texture_unit
+            {
+                texture TavernSignApprovedNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
@@ -195,9 +235,19 @@ material TavernCounterWood
             specular 0.08 0.07 0.06 1 16
             texture_unit
             {
-                texture TavernCounterWood.png
+                texture TavernCounterWoodApprovedColor.png
                 tex_address_mode wrap
                 filtering trilinear
+            }
+            // Tangent-space detail baked from the approved Blender surface.
+            texture_unit
+            {
+                texture TavernCounterWoodApprovedNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
@@ -218,9 +268,19 @@ material TavernRail
             emissive 0.08 0.06 0.025 1
             texture_unit
             {
-                texture TavernRail.png
+                texture TavernRailApprovedColor.png
                 tex_address_mode wrap
                 filtering trilinear
+            }
+            // Tangent-space detail baked from the approved Blender surface.
+            texture_unit
+            {
+                texture TavernRailApprovedNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
