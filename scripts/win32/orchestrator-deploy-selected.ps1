@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Counter,
     [Parameter(Mandatory = $true)][string]$DeployScript,
     [string]$Worktree = (Get-Location).Path,
+    [ValidateRange(0, 86400)][int]$GameWaitSeconds = 1800,
     [switch]$FullCampaign,
     [switch]$SelectionOnly
 )
@@ -28,6 +29,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Deployment selection failed; no deployment or 
 if ($SelectionOnly) { exit 0 }
 & git -C $wt merge-base --is-ancestor $tip origin/integration/all
 if ($LASTEXITCODE -ne 0) { throw 'Outgoing worktree commit is not contained in integration/all' }
+# Preserve the bounded game-close wait in worktrees that already provide that deployment feature.
+$waitHelper = Join-Path $wt 'scripts\win32\wait-game-exit.ps1'
+if (Test-Path -LiteralPath $waitHelper) {
+    . $waitHelper
+    Wait-GameExit -TimeoutSeconds $GameWaitSeconds
+}
 # The shared deployment script rejects every legacy caller without this verified selection manifest.
 & powershell -NoProfile -File $DeployScript -ExeDir "$wt\build\windows" -SelectionFile $manifest
 if ($LASTEXITCODE -ne 0) { throw "Deploy failed (exit $LASTEXITCODE)" }

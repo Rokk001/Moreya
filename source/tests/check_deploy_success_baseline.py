@@ -161,6 +161,23 @@ class DeployedSelectionTests(unittest.TestCase):
                     self.assertEqual(saved['data_commit'], self.base)
                     self.assertEqual(saved['status'], 'success')
                     self.assertEqual(len(saved['exe_sha256']), 64)
+        # An existing game-close helper must run before deployment and retain its failure status.
+        receipt.write_bytes(original)
+        counter.write_text('16')
+        self.write('scripts/win32/wait-game-exit.ps1',
+                   'function Wait-GameExit { param($TimeoutSeconds)\n'
+                   'if ($TimeoutSeconds -ne 0) {throw "Wrong wait budget"}\n'
+                   'throw "Fixture game remains open"\n}\n')
+        self.write('deploy.ps1', 'throw "Deployment must not start before game closes"\n')
+        result = subprocess.run(['powershell', '-NoProfile', '-File', str(wrapper),
+                                 '-Worktree', str(self.repo), '-Counter', str(counter),
+                                 '-DeployScript', str(self.repo / 'deploy.ps1'), '-GameWaitSeconds', '0'],
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('Fixture game remains open', result.stderr)
+        self.assertNotIn('Deployment must not start', result.stderr)
+        self.assertEqual(counter.read_text(), '16')
+        self.assertEqual(receipt.read_bytes(), original)
 
 
 if __name__ == '__main__':
