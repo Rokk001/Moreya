@@ -177,18 +177,29 @@ def check_innkeeper():
         subprocess.run([converter, '-q', str(ROOT / 'models' / name), str(out / (name + '.xml'))],
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
     counter, faces, _ = rest.mesh_data(out / 'TavernCounter.mesh.xml')
-    # Measure the tessellated boards together: the hands and the jug rest on their nearly horizontal faces.
-    # The raised side fittings sit outside the central 0.86 units of the counter.
+    # The top boards: combine near-horizontal triangles that reach the central opening.
+    # The hands and jug rest on these boards, between the narrow side returns.
     wood = np.array([counter[index] for index, material in faces if material == 'TavernCounterWood'])
     normals = np.cross(wood[:, 1] - wood[:, 0], wood[:, 2] - wood[:, 0])
-    tops = wood[(wood[:, :, 2].min(axis=1) > 0.5)
-                & (np.abs(normals[:, 2]) > 2 * np.linalg.norm(normals[:, :2], axis=1))
-                & (wood[:, :, 0].min(axis=1) < 0.43) & (wood[:, :, 0].max(axis=1) > -0.43)]
-    assert tops.size and np.ptp(tops[:, :, 0]) > 0.9, 'the top boards span the counter'
+    tops = (wood[:, :, 2].min(axis=1) > 0.5) & (normals[:, 2] > 0.9 * np.linalg.norm(normals, axis=1)) & \
+        (wood[:, :, 0].min(axis=1) < 0.45) & (wood[:, :, 0].max(axis=1) > -0.45)
+    assert normals[tops, 2].sum() / 2 > 0.20, 'the top boards must cover the counter'
+    points = wood[tops].reshape(-1, 3)
+    assert np.ptp(points[:, 0]) > 0.9, 'the top boards must span the counter width'
+    assert abs(points[:, 2].max() - 0.53) < 0.002 and abs(points[:, 2].min() - COUNTER_TOP) < 0.002, \
+        'the counter top moved'
+    assert points[:, 1].max() <= COUNTER_TOP_BACK + 0.007, 'the counter top reaches further back'
+
+    # Include the worn relief when measuring the full tessellated surface that supports the hands and jug.
+    # The raised side fittings sit outside the central 0.86 units of the counter.
+    surface = wood[(wood[:, :, 2].min(axis=1) > 0.5)
+                   & (np.abs(normals[:, 2]) > 2 * np.linalg.norm(normals[:, :2], axis=1))
+                   & (wood[:, :, 0].min(axis=1) < 0.43) & (wood[:, :, 0].max(axis=1) > -0.43)]
+    assert surface.size and np.ptp(surface[:, :, 0]) > 0.9, 'the top boards span the counter'
     # The worn relief includes a raised detail at 0.538 above the nominal board height.
-    assert abs(tops[:, :, 2].max() - 0.538) < 0.002 and abs(tops[:, :, 2].min() - COUNTER_TOP) < 0.002, (
-        'the counter top moved', tops[:, :, 2].min(), tops[:, :, 2].max())
-    assert abs(tops[:, :, 1].max() - COUNTER_TOP_BACK) <= 0.007, 'the counter top back edge moved'
+    assert abs(surface[:, :, 2].max() - 0.538) < 0.002 and abs(surface[:, :, 2].min() - COUNTER_TOP) < 0.002, (
+        'the counter top moved', surface[:, :, 2].min(), surface[:, :, 2].max())
+    assert abs(surface[:, :, 1].max() - COUNTER_TOP_BACK) <= 0.007, 'the counter top back edge moved'
     skeleton = feet.Skel(str(out / 'Innkeeper.skeleton.xml'))
     vertices, _, weights = rest.mesh_data(out / 'Innkeeper.mesh.xml')
     limbs = {skeleton.idx[b] for b in ('UpperArm_R', 'Forearm_R', 'Hand_R', 'UpperArm_L', 'Forearm_L', 'Hand_L', 'Jug')}

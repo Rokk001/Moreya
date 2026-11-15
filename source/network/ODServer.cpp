@@ -466,13 +466,17 @@ ODServer::ODServer() :
     ConsoleCommands::addConsoleCommands(mConsoleInterface);
 }
 
+//! \brief Joins the server thread before freeing its map, including during client startup failure.
 ODServer::~ODServer()
 {
+    if(mThread != nullptr)
+        stopServer();
     delete mGameMap;
 }
 
 //! \brief Shows the loading picture while synchronously reading the level and starting the server.
 //! \brief Restores campaign save context before configuring players and their campaign effects.
+//! Load tests without an explicit port listen on an OS-assigned port.
 bool ODServer::startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer,
     bool relationships)
 {
@@ -550,8 +554,10 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         }
     }
 
-    // Set up the socket to listen on the specified port
+    // Listen on the specified port, or let the OS choose one at bind time for load tests without an override.
     int32_t port = getNetworkPort();
+    if(RunLevelTest::isActive() && ResourceManager::getSingleton().getForcedNetworkPort() == -1)
+        port = sf::Socket::AnyPort;
     if (!createServer(port))
     {
         mServerMode = ServerMode::ModeNone;

@@ -14,6 +14,11 @@ from unittest import mock
 
 root = Path(__file__).resolve().parents[2]
 
+# The merge must retain one port selector rather than silently shadowing a duplicate.
+runner_tree = ast.parse((root / 'scripts' / 'run-level-test.py').read_text(encoding='utf-8'))
+assert sum(isinstance(node, ast.FunctionDef) and node.name == 'available_server_port'
+           for node in runner_tree.body) == 1, 'expected exactly one available_server_port definition'
+
 spec = importlib.util.spec_from_file_location('run_level_test', str(root / 'scripts' / 'run-level-test.py'))
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)

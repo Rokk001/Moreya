@@ -11,7 +11,7 @@ Checked here:
 3. The default tooltip of Gui takes the look while the hovered window has the user string ItemTooltip = 1, and goes
    back to OD/Tooltip otherwise; the coin size follows the scaled by the display font, so it works at every resolution and UI scale.
 4. The Dungeonbook slots (Creature::fillItemSlotWindows, boxes of SocialWindow::refreshInventory) use that tooltip; the
-   merchant keeps describe() for the item tooltips in its stock grid.
+   merchant uses describe() for its stock cell tooltips and shows the hovered cell's text in the stock grid.
 """
 from pathlib import Path
 import re
@@ -61,7 +61,7 @@ assert 'QUALITY_COLOURS' in text, 'name and quality in the quality colour'
 assert 'mBonuses' in text and 'mEffects' in text and 'bonusName(bonus.first)' in text and 'getLevelMin(map)' in text
 assert text.count(r'<< "\n"') >= 2, 'one line per value'
 assert 'describeTooltip(const GameMap* map, const Weapon* heldWeapon, int32_t coinSize) const' in header
-# describe() keeps its values for the merchant tooltips and the context line
+# describe() keeps its values for the merchant stock cell tooltips and the context line
 assert 'std::string ItemInstance::describe(' in item
 
 # 3. The tooltip window

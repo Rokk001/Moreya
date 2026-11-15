@@ -46,7 +46,7 @@ bool ODSocketServer::createServer(int listeningPort)
     if (status != sf::Socket::Status::Done)
     {
         OD_LOG_ERR("Could not listen to server port status="
-            + Helper::toString(static_cast<int>(status)));
+            + Helper::toString(static_cast<int>(status)) + " port=" + Helper::toString(listeningPort));
         return false;
     }
 
@@ -56,6 +56,12 @@ bool ODSocketServer::createServer(int listeningPort)
     mThread = new std::thread(&ODSocketServer::serverThread, this);
 
     return true;
+}
+
+//! \brief Returns the actual TCP port, including one assigned by the OS.
+unsigned short ODSocketServer::getListeningPort() const
+{
+    return mSockListener.getLocalPort();
 }
 
 bool ODSocketServer::isConnected()

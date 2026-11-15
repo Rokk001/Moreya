@@ -8449,7 +8449,7 @@ Ogre::MaterialPtr RenderManager::getOutlinerMaterial(const std::string& material
 }
 
 //! \brief Prepares a hover material by brightening fragment passes that expose an ambient uniform.
-//! \brief Times material clone preparation with its source material identity.
+//! \details Times material clone preparation with its source material identity.
 Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)
 {
     FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
@@ -8471,7 +8471,8 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
         OD_LOG_INF("the number of passes is " + Helper::toString(technique->getNumPasses()));
         for(Ogre::Pass* pass : technique->getPasses())
         {
-            // Generated passes can have different uniforms, as with the Chicken material.
+            // A contour can sit alongside fixed-function or RTSS passes, such as Chicken's base passes.
+            // Generated passes can lack the custom ambient uniform used by the contour.
             if(!pass->hasFragmentProgram())
                 continue;
             Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();

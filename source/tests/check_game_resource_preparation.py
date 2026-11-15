@@ -1,5 +1,6 @@
 """Guard loading-screen preparation of late creature and Tavern resources without launching or compiling the game."""
 from pathlib import Path
+import re
 
 repo = Path(__file__).resolve().parents[2]
 render = (repo / 'source/render/RenderManager.cpp').read_text(encoding='utf-8')
@@ -31,6 +32,12 @@ assert prepare.count('mSceneManager->destroyEntity(entity);') == 2
 assert render.count('prepareGameCreatureResources(*gameMap);') == 1
 seats = body('void RenderManager::prepareOutlinerMaterials(const std::string& materialName, const GameMap& gameMap)')
 assert 'gameMap.getSeats()' in seats and 'getBrighterMaterial(outliner->getName())->load();' in seats
+brighter = body('Ogre::MaterialPtr RenderManager::getBrighterMaterial(')
+# Chicken has RTSS base passes and a custom contour pass. Only passes exposing ambient can be brightened.
+assert re.search(r'if\(!pass->hasFragmentProgram\(\)\)\s+continue;\s+'
+                 r'Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters\(\);\s+'
+                 r'if\(parameters->_findNamedConstantDefinition\("ambient", false\) != nullptr\)\s+'
+                 r'parameters->setNamedConstant\("ambient",', brighter)
 
 # A generated Chicken pass may lack an ambient uniform. Preloading its hover variant must keep that pass usable.
 brighter = body('Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)')
