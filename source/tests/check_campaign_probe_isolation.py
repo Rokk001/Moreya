@@ -77,7 +77,7 @@ def verify_isolation():
                       + ' : victory message shown, campaign map shows the next level\n').encode('utf-8')
             return subprocess.CompletedProcess(command, 0, output, b'')
 
-        arguments = ['campaign-probes', '--executable', str(executable), '--output', str(directory / 'logs')]
+        arguments = ['campaign-probes', '--all-campaign', '--executable', str(executable), '--output', str(directory / 'logs')]
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as occupied:
             occupied.bind(('0.0.0.0', 0))
             occupied.listen()

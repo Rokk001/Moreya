@@ -14,6 +14,10 @@ if (-not $env:ODP_ASSETS_SRC) { $env:ODP_ASSETS_SRC = [Environment]::GetEnvironm
 New-Item -ItemType Directory -Force "$wt\out" | Out-Null
 $run = 'orch-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 Set-Content -Encoding ascii "$wt\out\orch-run.txt" $run
+# Freeze the integration reference before Push updates origin/integration/all.
+& python "$wt\scripts\run-campaign-load-tests.py" --repo $wt --capture-base $Base --output "$wt\out\load-base-$run.json"
+if ($LASTEXITCODE -ne 0) { Write-Output 'could not capture integration load-test base'; exit $LASTEXITCODE }
+$loadBase = (Get-Content -Raw "$wt\out\load-base-$run.json" | ConvertFrom-Json).base
 # The compiler job count of HaiveQueen (BUILD_JOBS) becomes the /MP job count of the project (BUILD_MP_JOBS, read by windows-paths.ps1)
 if ($env:BUILD_JOBS -and -not $env:BUILD_MP_JOBS) { $env:BUILD_MP_JOBS = $env:BUILD_JOBS }
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
@@ -36,7 +40,7 @@ $code = $LASTEXITCODE
 Set-Content -Encoding ascii "$wt\out\build-exit-$run.txt" $code
 if ($code -ne 0) { Write-Output "build failed (exit $code), log out\build-$run.log"; exit $code }
 Write-Output "checks started: $run"
-& python -u -I $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $Base --build-start $start --run $run
+& python -u -I $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $loadBase --build-start $start --run $run
 $code = $LASTEXITCODE
 if ($code -ne 0) { Write-Output "checks failed (exit $code), see out\checks-$run.txt" }
 exit $code
