@@ -5,11 +5,12 @@ is closed. This exercises the timed win probe (all main goals set as reached, th
 victory message and the campaign map with the next level must appear), not natural playability.
 """
 import argparse
-import csv
 import ctypes
+import json
 import os
 from pathlib import Path
 import re
+import socket
 import subprocess
 import sys
 
@@ -45,24 +46,36 @@ def campaign_levels(repo):
 
 # Refuse to launch probes while another copy of this game is running.
 def game_is_running(executable):
+    """Guard this executable's resources without rejecting isolated worktree tests."""
     if os.name != 'nt':
         raise RuntimeError('Game process detection requires the Windows integration host')
-    result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq ' + executable.name,
-                             '/FO', 'CSV', '/NH'], stdin=subprocess.DEVNULL,
+    name = executable.name.replace("'", "''")
+    command = ("[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding; "
+               "$games = @(Get-CimInstance Win32_Process -Filter \"Name='" + name + "'\" "
+               "-ErrorAction Stop | Select-Object ExecutablePath); "
+               "ConvertTo-Json -Compress -InputObject $games")
+    result = subprocess.run(['powershell', '-NoProfile', '-Command', command], stdin=subprocess.DEVNULL,
                             capture_output=True, timeout=30, check=True)
-    # tasklist writes console-codepage bytes (e.g. the umlaut of the localized "no tasks"
-    # message when the game is not running); decode UTF-8 first, then the OEM codepage,
-    # never fail on odd bytes.
-    try:
-        output = result.stdout.decode('utf-8')
-    except UnicodeDecodeError:
-        output = result.stdout.decode('oem', errors='replace')
-    return any(row and row[0].casefold() == executable.name.casefold()
-               for row in csv.reader(output.splitlines()))
+    # Avoid tasklist's localized console-codepage messages: CIM emits explicit UTF-8 JSON,
+    # including an empty array when the game is not running.
+    games = json.loads(result.stdout.decode('utf-8-sig'))
+    target = os.path.normcase(str(executable.resolve()))
+    # An inaccessible executable path is unsafe to assume belongs to a different checkout.
+    return any(not game['ExecutablePath'] or
+               os.path.normcase(str(Path(game['ExecutablePath']).resolve())) == target
+               for game in games)
+
+
+def available_server_port():
+    """Select an available listener port so other worktree probes can run independently."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(('0.0.0.0', 0))
+        return probe.getsockname()[1]
 
 
 # Run every configured map once, retaining logs and real process exit codes.
 def main():
+    """Run each campaign probe with isolated data and port, retaining strict acceptance."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--executable', type=Path, required=True)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[1])
@@ -85,7 +98,7 @@ def main():
         app_data = args.output.resolve() / level.stem
         app_data.mkdir(parents=True, exist_ok=True)
         command = [str(executable), '--run-level', str(level), '--seconds', '1',
-                   '--appData', str(app_data)]
+                   '--appData', str(app_data), '--port', str(available_server_port())]
         try:
             result = subprocess.run(command, cwd=executable.parent,
                                     stdin=subprocess.DEVNULL, capture_output=True,
