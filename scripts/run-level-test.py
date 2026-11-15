@@ -104,7 +104,7 @@ STARTUP_AND_SHUTDOWN_SECONDS = 400
 
 
 def available_server_port():
-    """Ask the OS for an available IPv4 TCP port for the game's listener."""
+    """Ask the OS for an available IPv4 TCP port for the game's listener in this invocation."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("0.0.0.0", 0))
         return probe.getsockname()[1]
@@ -234,7 +234,7 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
 
 
 def main():
-    """Parse the command line and run the requested levels, exiting with 0 only if all passed.
+    """Parse the command line and run the requested menu and level checks; return 0 only if all passed.
 
     Menu and level checks use a per-invocation port unless explicitly overridden.
     """

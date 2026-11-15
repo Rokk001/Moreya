@@ -8472,7 +8472,7 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
         for(Ogre::Pass* pass : technique->getPasses())
         {
             // A contour can sit alongside fixed-function or RTSS passes, such as Chicken's base passes.
-            // Generated passes can have different uniforms.
+            // Generated passes can lack the custom ambient uniform used by the contour.
             if(!pass->hasFragmentProgram())
                 continue;
             Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();

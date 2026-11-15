@@ -26,6 +26,8 @@ def check_shutdown(source):
                 break
     assert closing is not None
     owners = source[opening:closing]
+    # Resource loading can throw before visual owners exist and must still reach RTSS cleanup.
+    assert owners.index('Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();') < owners.index('RenderManager renderManager(')
     for declaration in ('RenderManager renderManager(', 'Gui gui(', 'TextRenderer textRenderer;', 'ODFrameListener frameListener('):
         assert declaration in owners
     assert owners.index('client.disconnect();') < owners.index('server.stopServer();')
@@ -60,6 +62,7 @@ assert 'tmpViewport->setOverlaysEnabled(false);' in renderer
 assert 'mRenderManager->mRenderTarget->update();' in listener
 # Independent regressions must be rejected rather than merely checking function existence.
 mutations = [
+    (check_shutdown, application.replace('        Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();', '', 1).replace('    std::exception_ptr clientError;', '    Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();\n    std::exception_ptr clientError;', 1)),
     (check_shutdown, application.replace('    Ogre::RTShader::ShaderGenerator::destroy();', '', 1).replace('    frameListener.prepareRenderWindowShutdown();', '    Ogre::RTShader::ShaderGenerator::destroy();\n    frameListener.prepareRenderWindowShutdown();', 1)),
     (check_shutdown, application.replace('    frameListener.prepareRenderWindowShutdown();', '    ogreRoot.destroyRenderTarget(renderWindow);\n    frameListener.prepareRenderWindowShutdown();', 1)),
     (check_shutdown, application.replace('    Ogre::RTShader::ShaderGenerator::destroy();', '    Ogre::RTShader::ShaderGenerator::destroy();\n    ogreRoot.destroyRenderTarget(renderWindow);', 1)),
@@ -74,4 +77,4 @@ for check, mutated in mutations:
     except (AssertionError, ValueError):
         continue
     raise AssertionError('unsafe lifetime or GUI mutation was accepted')
-print('ok: visual owners released before RTSS; primary context retained for Root; scene-only views skip GUI; seven mutations rejected')
+print('ok: resource loading and visual owners protected before RTSS cleanup; primary context retained for Root; scene-only views skip GUI; eight mutations rejected')

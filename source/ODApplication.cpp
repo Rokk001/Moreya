@@ -162,7 +162,8 @@ bool menuTestElapsed(const std::chrono::steady_clock::time_point& start, int32_t
 }
 }
 
-//! \brief Releases visual owners before RTSS on normal exit and loading failure, with the primary context intact.
+//! \brief Releases visual owners before RTSS and leaves the primary window alive for Ogre resource teardown.
+//! Cleans up RTSS in the same order when loading or rendering throws.
 void ODApplication::startClient()
 {
     ResourceManager& resMgr = ResourceManager::getSingleton();
@@ -290,15 +291,15 @@ void ODApplication::startClient()
     OgreBites::SGTechniqueResolverListener* sgListener = new OgreBites::SGTechniqueResolverListener(Ogre::RTShader::ShaderGenerator::getSingletonPtr());
     Ogre::MaterialManager::getSingleton().addListener(sgListener);
 #endif
-    
-    LoadingScreen::beginGroupProgress(LoadingScreen::startupFraction(2.0f), LoadingScreen::startupFraction(3.0f));
-    Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
-    LoadingScreen::presentStartup(LoadingScreen::startupFraction(3.0f));
 
     std::exception_ptr clientError;
     // Keep the GL context and shader generator alive until every visual owner is released.
     try
     {
+        LoadingScreen::beginGroupProgress(LoadingScreen::startupFraction(2.0f), LoadingScreen::startupFraction(3.0f));
+        Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
+        LoadingScreen::presentStartup(LoadingScreen::startupFraction(3.0f));
+
         MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
         SoundEffectsManager soundEffectsManager;
         LoadingScreen::presentStartup(LoadingScreen::startupFraction(4.0f));
