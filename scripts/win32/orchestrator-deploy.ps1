@@ -5,28 +5,10 @@ param(
     [Parameter(Mandatory = $true)][string]$Counter,
     [Parameter(Mandatory = $true)][string]$DeployScript
 )
-$ErrorActionPreference = 'Continue'
+# Native errors and real child exit codes determine the outcome, never log text.
+$ErrorActionPreference = 'Stop'
 $wt = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$run = Get-Content "$wt\out\orch-run.txt" -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $run) { Write-Output 'no Build step of this worktree found (out\orch-run.txt missing)'; exit 1 }
-$n = (Get-Content "$wt\out\build-number-$run.txt" | Select-Object -First 1).Trim()
-# Load Get-FileHash from the child PowerShell installation even if its module search path is incomplete.
-$deployScriptLiteral = $DeployScript.Replace("'", "''")
-$exeDirLiteral = "$wt\build\windows".Replace("'", "''")
-$deployCommand = @"
-Import-Module (Join-Path `$PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
-& '$deployScriptLiteral' -ExeDir '$exeDirLiteral'
-if (`$?) { exit 0 }
-if (`$LASTEXITCODE) { exit `$LASTEXITCODE }
-exit 1
-"@
-& powershell -NoProfile -Command $deployCommand
-if ($LASTEXITCODE -ne 0) { Write-Output "deploy failed (exit $LASTEXITCODE)"; exit 1 }
-# The deployed exe is in build\windows of the main checkout, found through the shared git directory of this worktree
-$common = (& git -C $wt rev-parse --path-format=absolute --git-common-dir).Trim()
-$exe = Join-Path (Split-Path -Parent ($common -replace '/', '\')) 'build\windows\opendungeons-plus.exe'
-& python "$wt\scripts\run-campaign-load-tests.py" --repo $wt --base-file "$wt\out\load-base-$run.json" --executable $exe --output "$wt\out\deployed-load-$run"
-if ($LASTEXITCODE -ne 0) { Write-Output "load test with the deployed exe failed (exit $LASTEXITCODE)"; exit 1 }
-Set-Content -Encoding ascii $Counter $n
-Write-Output "deployed build $n"
-exit 0
+# The selected entry point loads the child PowerShell utility module through DeployScript,
+# resolves the deployed EXE through the shared Git directory and advances the build counter only after passing probes.
+& powershell -NoProfile -File "$PSScriptRoot\orchestrator-deploy-selected.ps1" -Counter $Counter -DeployScript $DeployScript -Worktree $wt
+exit $LASTEXITCODE

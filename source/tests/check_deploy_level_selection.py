@@ -171,16 +171,21 @@ class SelectionTests(unittest.TestCase):
                 runner.main()
         self.assertEqual(error.exception.code, 2)
 
-    # Bind both orchestration steps to the same per-run immutable range.
+    # Keep build checks on their captured range and route deployment through the successful-deploy selector.
     def test_orchestrator_wiring(self):
         build = (ROOT / 'scripts/win32/orchestrator-build.ps1').read_text()
         deploy = (ROOT / 'scripts/win32/orchestrator-deploy.ps1').read_text()
         self.assertIn('--capture-base $Base --output "$wt\\out\\load-base-$run.json"', build)
         self.assertLess(build.index('--capture-base'), build.index('configure started'))
         self.assertIn('--base $loadBase', build)
-        self.assertIn('--base-file "$wt\\out\\load-base-$run.json" --executable $exe', deploy)
+        self.assertIn('orchestrator-deploy-selected.ps1', deploy)
+        self.assertIn('-Worktree $wt', deploy)
         self.assertNotIn('--all-campaign', deploy)
-        self.assertLess(deploy.index('load test with the deployed exe failed'), deploy.index('Set-Content -Encoding ascii $Counter'))
+        self.assertNotIn('-FullCampaign', deploy)
+        deploy = (ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1').read_text()
+        self.assertIn('--deployment-selection $manifest --executable $exe', deploy)
+        self.assertIn("if ($FullCampaign) { $selectionArgs += '--all-campaign' }", deploy)
+        self.assertLess(deploy.index('Load test with the deployed exe failed'), deploy.index('Set-Content -Encoding ascii -LiteralPath $Counter'))
 
     # Execute the real deployment wrapper with harmless deployment and probe substitutes.
     @unittest.skipUnless(shutil.which('powershell'), 'Windows deployment wrapper')
@@ -188,6 +193,14 @@ class SelectionTests(unittest.TestCase):
         scripts = self.repo / 'scripts/win32'
         scripts.mkdir(parents=True)
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy.ps1', scripts / 'orchestrator-deploy.ps1')
+        shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1', scripts / 'orchestrator-deploy-selected.ps1')
+        shutil.copyfile(ROOT / 'scripts/deploy-level-selection.py', scripts.parent / 'deploy-level-selection.py')
+        tip = self.git('rev-parse', 'HEAD')
+        self.git('fetch', '.', 'HEAD:refs/remotes/origin/integration/all')
+        self.git('worktree', 'add', '--detach', str(self.repo / 'build/current-worktree'), tip)
+        self.write('build/windows/opendungeons-plus.exe', 'fixture executable')
+        self.write('.git/odp-deploy-success.json', json.dumps({'schema': 1, 'status': 'success',
+                   'data_commit': tip, 'evidence': 'verified fixture deploy'}))
         self.write('out/orch-run.txt', 'test')
         self.write('out/build-number-test.txt', '17')
         self.write('deploy-stub.ps1', 'exit 0\n')
@@ -207,7 +220,7 @@ class SelectionTests(unittest.TestCase):
             args = json.loads((self.repo / 'scripts/run-campaign-load-tests.args').read_text())
             self.assertEqual(Path(args[args.index('--executable') + 1]),
                              self.repo / 'build/windows/opendungeons-plus.exe')
-            self.assertEqual(Path(args[args.index('--base-file') + 1]), self.repo / 'out/load-base-test.json')
+            self.assertEqual(Path(args[args.index('--deployment-selection') + 1]), self.repo / 'out/deploy-selection-test.json')
             if result:
                 self.assertNotIn('deployed build 17', completed.stdout)
 
