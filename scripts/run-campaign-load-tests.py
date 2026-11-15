@@ -58,10 +58,13 @@ def game_is_running(executable):
              "ConvertTo-Json -Compress -InputObject $games")
     result = subprocess.run(['powershell', '-NoProfile', '-Command', query], stdin=subprocess.DEVNULL,
                             capture_output=True, timeout=30, check=True)
+    # Avoid tasklist's localized console-codepage messages: CIM emits explicit UTF-8 JSON,
+    # including an empty array when the game is not running.
     processes = json.loads(result.stdout.decode('utf-8-sig'))
     target = os.path.normcase(str(executable.resolve()))
     for process in processes:
         path = process.get('ExecutablePath')
+        # An inaccessible executable path is unsafe to assume belongs to a different checkout.
         if not path:
             raise RuntimeError('Cannot identify running game executable for PID ' + str(process['ProcessId']))
         if os.path.normcase(str(Path(path).resolve())) == target:

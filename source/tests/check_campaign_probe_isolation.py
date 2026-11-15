@@ -1,4 +1,5 @@
 """Regress Deploy interruption by another worktree while retaining campaign acceptance checks."""
+import ast
 from contextlib import redirect_stdout
 import importlib.util
 from io import StringIO
@@ -13,6 +14,12 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
+# Both parents added these helpers; conflict resolution must retain exactly one of each.
+tree = ast.parse((ROOT / 'scripts/run-campaign-load-tests.py').read_text(encoding='utf-8'))
+for name in ('game_is_running', 'available_server_port', 'main'):
+    assert sum(isinstance(node, ast.FunctionDef) and node.name == name
+               for node in tree.body) == 1, 'merged runner must define ' + name + ' exactly once'
+
 spec = importlib.util.spec_from_file_location('campaign_probe_isolation', ROOT / 'scripts/run-campaign-load-tests.py')
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
