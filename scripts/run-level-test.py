@@ -104,7 +104,7 @@ STARTUP_AND_SHUTDOWN_SECONDS = 400
 
 
 def available_server_port():
-    """Ask the OS for an available IPv4 TCP port for the game's listener in this invocation."""
+    """Ask the OS for an available IPv4 TCP listener port for the game in this invocation."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("0.0.0.0", 0))
         return probe.getsockname()[1]
