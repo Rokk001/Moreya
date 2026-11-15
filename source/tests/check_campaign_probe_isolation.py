@@ -37,8 +37,8 @@ def process_result(records):
     return subprocess.CompletedProcess([], 0, json.dumps(records).encode('utf-8'), b'')
 
 
-def verify_isolation():
-    """A foreign game appearing after two passes must allow the third isolated probe."""
+def verify_isolation(selection_mode):
+    """Keep probe isolation in explicit campaign and saved integration-range modes."""
     with tempfile.TemporaryDirectory(prefix='campaign-isolation-') as temporary:
         directory = Path(temporary)
         executable = directory / 'deployed' / 'opendungeons-plus.exe'
@@ -84,15 +84,23 @@ def verify_isolation():
                       + ' : victory message shown, campaign map shows the next level\n').encode('utf-8')
             return subprocess.CompletedProcess(command, 0, output, b'')
 
-        arguments = ['campaign-probes', '--executable', str(executable), '--output', str(directory / 'logs')]
+        base_file = directory / 'range.json'
+        selection = ['--all-campaign'] if selection_mode == 'campaign' else ['--base-file', str(base_file)]
+        campaign = levels if selection_mode == 'campaign' else levels + [directory / 'Unselected.level']
+        arguments = ['campaign-probes', *selection, '--executable', str(executable), '--output', str(directory / 'logs')]
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as occupied:
             occupied.bind(('0.0.0.0', 0))
             occupied.listen()
             with mock.patch.object(runner.subprocess, 'run', side_effect=run), \
-                    mock.patch.object(runner, 'campaign_levels', return_value=levels), \
+                    mock.patch.object(runner, 'campaign_levels', return_value=campaign), \
+                    mock.patch.object(runner, 'integration_levels', return_value=levels) as select_levels, \
                     mock.patch.object(runner, 'probe_environment', return_value={}), \
                     mock.patch.object(sys, 'argv', arguments), redirect_stdout(StringIO()) as output:
                 assert runner.main() == 0
+            if selection_mode == 'campaign':
+                select_levels.assert_not_called()
+            else:
+                select_levels.assert_called_once_with(ROOT.resolve(), base_file)
             assert len(commands) == len(queries) == 3
             ports = [int(command[command.index('--port') + 1]) for command in commands]
             assert len(set(ports)) == 1
@@ -105,6 +113,7 @@ def verify_isolation():
             assert len(list((directory / 'logs').glob('*.log'))) == 3
 
 
-verify_isolation()
+verify_isolation('integration')
+verify_isolation('campaign')
 runpy.run_path(str(ROOT / 'source/tests/check_campaign_load_runner.py'), run_name='__main__')
-print('Campaign probe isolation: executable identity, fail-closed detection, three probes and available port verified')
+print('Campaign probe isolation: campaign and saved-range selection, executable identity, fail-closed detection and available port verified')

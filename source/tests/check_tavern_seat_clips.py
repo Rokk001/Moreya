@@ -27,12 +27,14 @@ Calls (from the repository root; needs OgreXMLConverter on the PATH or in OGRE_X
 from pathlib import Path
 import re
 import sys
+import xml.etree.ElementTree as ET
 
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+from asset_check_timing import prepare, preparation, profile_check
 import author_tavern_seats as seats
 import check_tavern_drink_834 as drink
 import author_rest_poses as rest
@@ -120,7 +122,95 @@ def has_stool_surface_support(points, triangles):
     return False
 
 
-def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, out):
+# Keep only a triangle index; every frame must prove support again using its actual geometry.
+class StoolSupportWitness:
+    # Snapshot and validate every index before any successful witness can bypass a full gather.
+    def __init__(self, triangles, vertex_count):
+        self.triangles = np.array(triangles, copy=True)
+        self.vertex_count = vertex_count
+        np.empty((vertex_count, 3))[self.triangles]
+        self.triangles.flags.writeable = False
+        self.witness = None
+
+    # Retest the previous supporting triangle, falling back to every candidate on any miss.
+    def __call__(self, points):
+        triangles = self.triangles
+        if (points.shape != (self.vertex_count, 3) or points.dtype.kind not in 'fiu' or triangles.ndim != 2 or
+                triangles.shape[1] != 3 or triangles.dtype.kind not in 'iu'):
+            return has_stool_surface_support(points, triangles)
+        if self.witness is not None and has_stool_surface_support(points, triangles[self.witness:self.witness + 1]):
+            return True
+        self.witness = None
+        surfaces = points[triangles]
+        low, high = surfaces.min(axis=1), surfaces.max(axis=1)
+        radius = 0.16
+        lower, upper = seats.BENCH_TOP - MAX_REST_GAP, seats.BENCH_TOP + MAX_REST_GAP
+        near = ((low[:, 2] <= upper) & (high[:, 2] >= lower) & (low[:, 0] <= radius) &
+                (high[:, 0] >= -radius) & (low[:, 1] <= radius) & (high[:, 1] >= -radius))
+        for index in np.flatnonzero(near):
+            if has_stool_surface_support(points, triangles[index:index + 1]):
+                self.witness = int(index)
+                return True
+        return False
+
+
+# Accumulate vertex-major blocks in the original bone order, then return the original frame-major layout.
+def seat_skin_vertices(skeleton, local, vertices, weights):
+    if (type(skeleton) is not feet.Skel or type(vertices) is not np.ndarray or
+            vertices.dtype != np.float64 or vertices.ndim != 2 or vertices.shape[1] != 3 or
+            type(local) not in (list, tuple) or len(local) != len(skeleton.names) or not local):
+        return rest.skin_vertices(skeleton, local, vertices, weights)
+    if not all(type(item) in (list, tuple) and len(item) == 3 and
+               all(type(value) is np.ndarray and value.dtype == np.float64 and value.ndim == 2
+                   for value in item) for item in local):
+        return rest.skin_vertices(skeleton, local, vertices, weights)
+    count = local[0][0].shape[0]
+    if count <= 2 or not all(value.shape == (count, width)
+                             for item in local for value, width in zip(item, (3, 4, 3))):
+        return rest.skin_vertices(skeleton, local, vertices, weights)
+    bind_local = [(skeleton.rest_pos[index][None], skeleton.rest_q[index][None], skeleton.rest_s[index][None])
+                  for index in range(len(skeleton.names))]
+    bind = skeleton.fk(bind_local)
+    pose = skeleton.fk(local)
+    result = np.zeros((len(vertices), count, 3))
+    influences = [[] for name in skeleton.names]
+    for index, assignments in enumerate(weights):
+        for bone, weight in assignments or [(skeleton.topo[0], 1.0)]:
+            influences[bone].append((index, weight))
+    for bone, assignments in enumerate(influences):
+        if not assignments:
+            continue
+        indices = np.array([index for index, weight in assignments])
+        amounts = np.array([weight for index, weight in assignments])
+        bind_position, bind_rotation, bind_scale = bind[bone]
+        position, rotation, scale = pose[bone]
+        points = (vertices[indices] - bind_position[0]) @ bind_rotation[0] / bind_scale[0]
+        step = min(count, max(1, 32768 // len(indices)))
+        reuse = all(type(value) is np.ndarray and value.dtype == np.float64
+                    for value in (rotation, scale, points, position, amounts))
+        if reuse:
+            scaled = np.empty((step, len(indices), 3))
+            moved = np.empty((len(indices), step, 3))
+        for start in range(0, count, step):
+            end = min(count, start + step)
+            if reuse:
+                # Fill every scratch entry anew; preserve multiply, contraction, translation and weight order.
+                current = moved[:, :end - start]
+                np.multiply(scale[start:end, None], points[None], out=scaled[:end - start])
+                np.einsum('nij,nvj->vni', rotation[start:end], scaled[:end - start], out=current)
+                np.add(current, position[None, start:end], out=current)
+                np.multiply(current, amounts[:, None, None], out=current)
+                result[indices, start:end] += current
+            else:
+                # Other promoted dtypes retain the original intermediate precision and casting behavior.
+                current = (np.einsum('nij,nvj->vni', rotation[start:end], scale[start:end, None] * points[None])
+                           + position[None, start:end])
+                result[indices, start:end] += current * amounts[:, None, None]
+    return result.transpose(1, 0, 2).copy()
+
+
+# Reuse only fresh prepared mug data while retaining every transition support and depth assertion.
+def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, assets, mounts):
     """Measure the actual joint blend from sitting to grasping, retaining body support and furniture clearance."""
     first = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     second = skeleton.locals_at(skeleton.clips['SitDrink'], np.zeros(1))
@@ -130,37 +220,133 @@ def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, o
         local.append((first_p + shares[:, None] * (second_p - first_p),
                       seats.slerp(first_q, second_q, shares),
                       first_s + shares[:, None] * (second_s - first_s)))
-    body = rest.skin_vertices(skeleton, local, vertices, weights)
-    mug = drink.Mug(skeleton, name, rest.mesh_data(out / (seats.MUG_MESH + '.xml'))[0], drink.read_limb_mounts())
+    body = seat_skin_vertices(skeleton, local, vertices, weights)
+    mug = drink.Mug(skeleton, name, assets.mesh(seats.MUG_MESH)[0], mounts)
     _, _, mug_points = mug.world(skeleton.fk(local), skeleton)
     both = np.concatenate((body, mug_points), axis=1)
+    support = {level: StoolSupportWitness(triangles, len(vertices))
+               for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH)}
     for frame in range(len(shares)):
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
-            assert has_stool_surface_support(body[frame] * level, triangles), (
+            assert support[level](body[frame] * level), (
                 name, 'Sit to SitDrink loses actual stool support', frame, level)
-            depth = drink.stool_depth(both[frame] * level)
+            depth = stool_geometry_depth(both[frame] * level)
             assert depth <= MAX_TABLE_DEPTH, (name, 'Sit to SitDrink reaches into furniture', frame, level, depth)
 
 
-def check_skeleton(name, mesh_name, out):
+# Evaluate the same nine boxes without materializing three-column masks and distance arrays.
+def stool_geometry_depth(points):
+    if (type(points) is not np.ndarray or points.dtype != np.float64 or
+            points.ndim != 2 or points.shape[1] != 3):
+        return drink.stool_depth(points)
+    x, y, z = points[:, 0], drink.STOOL_DISTANCE + points[:, 1], points[:, 2]
+    boxes = [((-0.323, 0.323), (-0.588, 0.588), (0.37, 0.4425))]
+    for side in (1, -1):
+        boxes.append(((-0.193, 0.193), (0.135, 0.521) if side > 0 else (-0.521, -0.135), (0.0, 0.38)))
+        boxes.append(((0.3236, 0.4986) if side > 0 else (-0.4986, -0.3236), (-0.656, 0.656), (0.202, 0.2575)))
+        for end in (1, -1):
+            boxes.append(((side * drink.BENCH_OFFSET - 0.042, side * drink.BENCH_OFFSET + 0.042),
+                          (0.515, 0.588) if end > 0 else (-0.588, -0.515), (0.0, 0.21)))
+    worst = 0.0
+    for (x0, x1), (y0, y1), (z0, z1) in boxes:
+        inside = (x > x0) & (x < x1) & (y > y0) & (y < y1) & (z > z0) & (z < z1)
+        if inside.any():
+            qx, qy, qz = x[inside], y[inside], z[inside]
+            depth = np.minimum(qx - x0, x1 - qx)
+            np.minimum(depth, np.minimum(qy - y0, y1 - qy), out=depth)
+            np.minimum(depth, np.minimum(qz - z0, z1 - qz), out=depth)
+            worst = max(worst, float(depth.max()))
+    return worst
+
+
+# Take the same maximum over every frame and vertex, bounding temporary geometry to 32768 vertices.
+def stool_clip_depth(points):
+    if len(points) == 0:
+        raise ValueError('max() arg is an empty sequence')
+    vertices = points.reshape(-1, 3)
+    return max(stool_geometry_depth(vertices[start:start + 32768] * level)
+               for start in range(0, max(1, len(vertices)), 32768)
+               for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
+
+
+# Bound temporary geometry arrays while retaining every frame, vertex, scale and NaN reduction.
+def bench_clip_depth(points):
+    saved = seats.SCENE['size']
+    depth = 0.0
+    try:
+        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
+            seats.SCENE['size'] = level
+            maxima = [seats.frame_depths(points[start:start + 16]).max()
+                      for start in range(0, max(1, len(points)), 16)]
+            depth = max(depth, float(np.maximum.reduce(maxima)) * level)
+    finally:
+        seats.SCENE['size'] = saved
+    return depth
+
+
+# Both skeleton readers consume elements/attributes, never text/tail; omit whitespace-only data callbacks.
+class SeatXMLBuilder(ET.TreeBuilder):
+    # XMLParser still validates every token before forwarding character data to this builder.
+    def data(self, value):
+        if not value.isspace():
+            super().data(value)
+
+
+# Parse attribute-based skeleton XML only; mixed-content whitespace is intentionally not preserved.
+def parse_seat_xml(text):
+    return ET.fromstring(text, parser=ET.XMLParser(target=SeatXMLBuilder()))
+
+
+# Build both complete rig representations from one fresh conversion and XML parse per skeleton.
+class SeatAssets(drink.TavernAssets):
+    # Keep only each small configured body rig beside the existing per-run asset cache.
+    def __init__(self, out, clip_names=None):
+        super().__init__(out, clip_names=clip_names)
+        self.body_rigs = {}
+
+    # Cache only after both independent parsers and the body configuration have succeeded.
+    @preparation
+    def skeleton(self, name):
+        if name not in self.skeletons:
+            filename = name + '.skeleton'
+            prepare(export, filename, self.out, return_tree=False)
+            path = str(self.out / (filename + '.xml'))
+            text = prepare(Path(path).read_text, encoding='utf-8')
+            declaration = re.match(r'\ufeff?<\?xml\s[^?]*\?>', text)
+            encoding = (re.search(r'''encoding\s*=\s*(['"])(.*?)\1''', declaration.group(0))
+                        if declaration else None)
+            if encoding and encoding.group(2).lower() != 'utf-8':
+                # Byte and Unicode XML parsers can interpret other declarations differently; retain both paths.
+                skeleton = prepare(feet.Skel, path, clip_names=self.clip_names)
+                body = prepare(seats.rig.Skeleton, path)
+            else:
+                root = prepare(parse_seat_xml, text)
+                skeleton = prepare(feet.Skel, path, clip_names=self.clip_names, xml_root=root)
+                body = prepare(seats.rig.Skeleton, path, xml_source=(text, root))
+            configured = prepare(seats.rig.config, name, body)
+            self.body_rigs[name] = configured
+            self.skeletons[name] = skeleton
+        return self.skeletons[name]
+
+
+# Share immutable preparation and measure every original clip sample against the same bounds.
+def check_skeleton(name, mesh_name, assets, stools, mounts):
     """Check native seated geometry in its actual stool or bench frame, including body support."""
-    export(name + '.skeleton', out)
-    export(mesh_name, out)
-    export(seats.MUG_MESH, out)
+    out = assets.out
     seats.SCENE['whole_bench'] = name in seats.LARGE_MODELS
-    skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
-    vertices, faces, weights = rest.mesh_data(out / (mesh_name + '.xml'))
+    skeleton = assets.skeleton(name)
+    vertices, faces, weights = assets.mesh(mesh_name)
     triangles = np.asarray([triangle for triangle, _ in faces], dtype=int)
-    on_stool = mesh_name in stool_meshes()
+    on_stool = mesh_name in stools
     idle = skeleton.locals_at(skeleton.clips['Idle'], np.zeros(1))
-    height = float(np.ptp(rest.skin_vertices(skeleton, idle, vertices, weights)[0, :, 2]))
+    height = float(np.ptp(seat_skin_vertices(skeleton, idle, vertices, weights)[0, :, 2]))
     for clip in SEAT_CLIPS:
         assert clip in skeleton.clips, (name, 'misses', clip)
         played = skeleton.clips[clip]
         assert played.length > 0.0, (name, clip)
         assert played.tracks and set(played.tracks) <= set(skeleton.names), (name, clip, 'needs tracks of its own bones')
         ends = skeleton.locals_at(played, np.array([0.0, played.length]))
-        points = rest.skin_vertices(skeleton, ends, vertices, weights)
+        points = seat_skin_vertices(skeleton, ends, vertices, weights)
         seam = float(np.abs(points[0] - points[1]).max() / height)
         assert seam < MAX_SEAM, (name, clip, 'first and last frame differ', seam)
         fine = np.linspace(0.0, played.length, TABLE_SAMPLES)
@@ -169,23 +355,24 @@ def check_skeleton(name, mesh_name, out):
             if skeleton.parent[index] < 0:
                 assert np.abs(locals_fine[index][2] / idle[index][2][0] - 1.0).max() < MAX_ROOT_SCALE, (name, clip, 'a root is scaled', skeleton.names[index])
         clip_vertices, clip_weights = (seats.with_mug(skeleton, vertices, weights, out / (mesh_name + '.xml')) if clip == 'SitDrink' else (vertices, weights))
-        points = rest.skin_vertices(skeleton, locals_fine, clip_vertices, clip_weights)
+        points = seat_skin_vertices(skeleton, locals_fine, clip_vertices, clip_weights)
         if on_stool:
             # Decision 901: every clip of a stool guest uses the table-end geometry (decision 863); the mug of a
             # limb mount counts too while drinking.
             both = points
             if clip == 'SitDrink':
-                mug = drink.Mug(skeleton, name, rest.mesh_data(out / (seats.MUG_MESH + '.xml'))[0], drink.read_limb_mounts())
+                mug = drink.Mug(skeleton, name, assets.mesh(seats.MUG_MESH)[0], mounts)
                 _, _, mug_points = mug.world(skeleton.fk(locals_fine), skeleton)
                 both = np.concatenate((points, mug_points), axis=1)
+                support = {level: StoolSupportWitness(triangles, len(vertices))
+                           for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH)}
                 for frame in range(len(fine)):
                     for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
-                        assert has_stool_surface_support(points[frame, :len(vertices)] * level, triangles), (
+                        assert support[level](points[frame, :len(vertices)] * level), (
                             name, clip, 'body has no actual stool support', frame, level)
-            depth = max(drink.stool_depth(both[frame] * level) for frame in range(len(fine))
-                        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
+            depth = stool_clip_depth(both)
         else:
-            depth = seats.level_depth(points)
+            depth = bench_clip_depth(points)
         assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the furniture', depth)
     has_mount = seats.MUG_BONE in skeleton.idx
     assert has_mount == (name not in seats.NO_MUG_MOUNT), (name, 'mug mount', has_mount)
@@ -193,13 +380,13 @@ def check_skeleton(name, mesh_name, out):
     # body (Kreatur and Scarab included, which had their own limb drink here) is checked by check_tavern_drink_834.py
     assert abs(skeleton.clips['SitDrink'].length - drink.CYCLE) < 1e-6, (name, 'SitDrink is not the sip of 5 s')
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
-    points = rest.skin_vertices(skeleton, sit, vertices, weights)
+    points = seat_skin_vertices(skeleton, sit, vertices, weights)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')
-    body_rig = seats.rig.config(name, seats.rig.Skeleton(str(out / (name + '.skeleton.xml'))))
+    body_rig = assets.body_rigs[name]
     if on_stool:
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
             assert has_stool_surface_support(points[0] * level, triangles), (name, 'Sit has no actual stool support', level)
-        check_stool_drink_transition(name, skeleton, vertices, weights, triangles, out)
+        check_stool_drink_transition(name, skeleton, vertices, weights, triangles, assets, mounts)
     elif name in seats.RESTING_MODELS:
         half, near, far = seats.BENCH[:3]
         reach = half if seats.SCENE['whole_bench'] else half + seats.SEAT_SIDE
@@ -229,6 +416,7 @@ def check_weapons_hidden():
 
 
 # Runs the check over all visiting skeletons.
+@profile_check
 def main():
     check_weapons_hidden()
     found = visitors()
@@ -244,9 +432,12 @@ def main():
     assert large == set(seats.LARGE_MODELS), ('large models', sorted(large))
     out = ROOT / 'out' / 'tavern-seat-clips'
     out.mkdir(parents=True, exist_ok=True)
+    assets = SeatAssets(out, clip_names=None)
+    assets.mesh(seats.MUG_MESH)
+    stools, mounts = stool_meshes(), drink.read_limb_mounts()
     tested = 0
     for name, mesh_name in sorted(found.items()):
-        tested += check_skeleton(name, mesh_name, out)
+        tested += check_skeleton(name, mesh_name, assets, stools, mounts)
     assert tested == 210, tested
     print('tavern seat clips ok:', tested, 'clips on', len(found), 'skeletons')
 

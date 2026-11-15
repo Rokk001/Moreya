@@ -9,7 +9,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import time
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -291,24 +290,19 @@ probe = (probe.replace('REFERENCE', config_value('RoomConvertClaimRate'))
          .replace('TPS', turns_per_second))
 
 
+# Run the compiled fixture once; a WinError 4551 requires a fresh compilation by the runner.
 def run_probe(code):
     with tempfile.TemporaryDirectory(prefix='odp-room-capture-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(code)
         subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
-        for attempt in range(4):
-            try:
-                result = subprocess.run([str(work / 'check.exe')], cwd=work, capture_output=True, text=True)
-                sys.stdout.write(result.stdout)
-                if result.returncode != 0:
-                    failures.append('probe failed')
-                return
-            except OSError as error:
-                # Windows may block a freshly compiled fixture (WinError 4551) for a moment
-                if getattr(error, 'winerror', None) != 4551 or attempt == 3:
-                    raise
-                time.sleep(2)
+        # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
+        result = subprocess.run([str(work / 'check.exe')], cwd=work, capture_output=True, text=True)
+        sys.stdout.write(result.stdout)
+        if result.returncode != 0:
+            failures.append('probe failed')
+        return
 
 
 run_probe(probe)

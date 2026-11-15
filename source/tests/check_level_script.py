@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -97,17 +96,11 @@ with tempfile.TemporaryDirectory() as tmp:
         line = prefix + 'cl ' + flags + ' ' + ' '.join('"%s"' % s for s in sources)
         subprocess.run(line, shell=True, check=True)
 
-    # Windows application control sometimes blocks a freshly built program (WinError 4551),
-    # which goes away when the start is repeated
+    # Windows application control may block a freshly built program (WinError 4551);
+    # the runner repeats the complete check, including compilation, instead of the same executable.
     # test_region_level reads the region test level when this variable is set
     environment = dict(os.environ)
     environment['OD_TEST_LEVEL_FILE'] = str(repo / 'levels/skirmish/TestRegionScripting.level')
-    for attempt in range(8):
-        try:
-            result = subprocess.run([str(exe)], env=environment)
-            break
-        except OSError:
-            if attempt == 7:
-                raise
-            time.sleep(2)
+    # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
+    result = subprocess.run([str(exe)], env=environment)
     sys.exit(result.returncode)

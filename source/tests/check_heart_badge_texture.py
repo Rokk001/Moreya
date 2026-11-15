@@ -20,7 +20,6 @@ import shutil
 import re
 import subprocess
 import tempfile
-import time
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--loading-screens', action='store_true', help='Also render the production loading material at both requested ratios')
@@ -871,21 +870,14 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
                    cwd=work, check=True, stdin=subprocess.DEVNULL, timeout=120)
     environment = dict(os.environ)
     environment['PATH'] = str(deps / 'install/bin') + os.pathsep + environment.get('PATH', '')
-    # Windows may block a freshly compiled executable (WinError 4551) for a moment
-    for attempt in range(4):
-        try:
-            command = [str(work / 'check.exe'), (deps / 'install').as_posix(), repo.as_posix()]
-            if args.loading_screens:
-                command.append(args.loading_output.resolve().as_posix())
-            if args.menu_scene:
-                command.append(args.menu_output.resolve().as_posix())
-            subprocess.run(command, cwd=work, check=True, env=environment, stdin=subprocess.DEVNULL, timeout=180)
-            break
-        except OSError as error:
-            if attempt == 3:
-                raise
-            print('retrying after', error)
-            time.sleep(2)
+    # Windows application control errors must reach the runner without restarting this executable.
+    # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
+    command = [str(work / 'check.exe'), (deps / 'install').as_posix(), repo.as_posix()]
+    if args.loading_screens:
+        command.append(args.loading_output.resolve().as_posix())
+    if args.menu_scene:
+        command.append(args.menu_output.resolve().as_posix())
+    subprocess.run(command, cwd=work, check=True, env=environment, stdin=subprocess.DEVNULL, timeout=180)
 
 if args.loading_screens:
     destination = repo / 'build/reference-audit'

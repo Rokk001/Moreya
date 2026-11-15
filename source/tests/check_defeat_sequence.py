@@ -7,7 +7,6 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
-import time
 
 repo = Path(__file__).resolve().parents[2]
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
@@ -463,13 +462,6 @@ with tempfile.TemporaryDirectory(prefix='odp-defeat-sequence-') as directory:
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
                    cwd=work, check=True)
-    # Windows may block a freshly compiled executable (WinError 4551) for a moment
-    for attempt in range(4):
-        try:
-            subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
-            break
-        except OSError as error:
-            if attempt == 3:
-                raise
-            print('retrying after', error)
-            time.sleep(2)
+    # Windows application control errors must reach the runner without restarting this executable.
+    # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
+    subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

@@ -42,7 +42,7 @@ def exercise(output, code=0, timeout=False, requested_timeout=None):
         runner.probe_environment = lambda: {}
         runner.campaign_levels = lambda repo: [ROOT / 'levels/campaign/Mossgate.level']
         runner.subprocess.run = run
-        sys.argv = ['campaign-load-runner', '--executable', str(executable), '--output', str(logs)]
+        sys.argv = ['campaign-load-runner', '--all-campaign', '--executable', str(executable), '--output', str(logs)]
         if requested_timeout is not None:
             sys.argv += ['--timeout', str(requested_timeout)]
         try:
@@ -114,7 +114,7 @@ def check_process_identity():
 
 
 def check_mid_campaign_process():
-    """Reproduce another worktree starting after five successful campaign probes."""
+    """Reproduce another worktree starting after five explicitly selected campaign probes."""
     with tempfile.TemporaryDirectory(prefix='campaign-identity-') as temporary:
         directory = Path(temporary)
         executable = directory / 'deployed/opendungeons-plus.exe'
@@ -126,16 +126,17 @@ def check_mid_campaign_process():
         inspections = []
 
         def run(command, **kwargs):
-            """Introduce the unrelated process at the exact original failure boundary."""
+            """Introduce the unrelated process after five probes, returning each map's marker."""
             if command[0] == 'powershell':
                 processes = [] if len(launches) < 5 else [
                     {'ProcessId': 42, 'ExecutablePath': str(other)}]
                 inspections.append(processes)
                 return subprocess.CompletedProcess(command, 0, json.dumps(processes).encode('utf-8'), b'')
             launches.append(command)
-            return subprocess.CompletedProcess(command, 0, success, b'')
+            output = success.replace(b'Mossgate.level', Path(command[2]).name.encode('utf-8'))
+            return subprocess.CompletedProcess(command, 0, output, b'')
 
-        arguments = ['campaign-load-runner', '--executable', str(executable),
+        arguments = ['campaign-load-runner', '--all-campaign', '--executable', str(executable),
                      '--output', str(directory / 'logs')]
         with patch.object(runner.subprocess, 'run', side_effect=run), \
                 patch.object(runner, 'probe_environment', return_value={}), \
@@ -198,9 +199,10 @@ def check_interleaved_worktree():
                 paths = [] if not commands else [{'ExecutablePath': str(directory / 'other/opendungeons-plus.exe')}]
                 return subprocess.CompletedProcess(command, 0, json.dumps(paths).encode('utf-8'))
             commands.append(command)
-            return subprocess.CompletedProcess(command, 0, success, b'')
+            output = success.replace(b'Mossgate.level', Path(command[2]).name.encode('utf-8'))
+            return subprocess.CompletedProcess(command, 0, output, b'')
 
-        with patch.object(sys, 'argv', ['runner', '--executable', str(executable), '--output', str(directory / 'logs')]), \
+        with patch.object(sys, 'argv', ['runner', '--all-campaign', '--executable', str(executable), '--output', str(directory / 'logs')]), \
                 patch.object(runner, 'probe_environment', return_value={}), \
                 patch.object(runner, 'campaign_levels', return_value=levels), \
                 patch.object(runner.subprocess, 'run', side_effect=run), redirect_stdout(StringIO()) as captured:
@@ -209,7 +211,7 @@ def check_interleaved_worktree():
         assert 'Campaign load probes: total=2 failed=0' in captured.getvalue()
         for command in commands:
             assert command[-2] == '--port' and int(command[-1]) > 0
-        with patch.object(sys, 'argv', ['runner', '--executable', str(executable), '--output', str(directory / 'logs')]), \
+        with patch.object(sys, 'argv', ['runner', '--all-campaign', '--executable', str(executable), '--output', str(directory / 'logs')]), \
                 patch.object(runner, 'probe_environment', return_value={}), \
                 patch.object(runner, 'campaign_levels', return_value=levels), \
                 patch.object(runner, 'game_is_running', return_value=True), \

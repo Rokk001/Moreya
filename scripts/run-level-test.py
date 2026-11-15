@@ -38,6 +38,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -233,6 +234,7 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
             frame_time)
 
 
+# Measure menu and level phases without shortening either observation interval.
 def main():
     """Parse the command line and run the requested menu and level checks; return 0 only if all passed.
 
@@ -262,12 +264,17 @@ def main():
     menu_passed = True
     menu_text = ""
     if args.menu_seconds > 0:
+        started = time.perf_counter()
         menu_passed, menu_text = run_menu_test(exe, args.menu_seconds, args.port)
+        print('ODP_TEST_PHASE ' + json.dumps({'name': 'menu', 'seconds': time.perf_counter() - started}), flush=True)
         print(menu_text, flush=True)
 
     results = []
     for level in levels:
+        started = time.perf_counter()
         passed, text, frame_time = run_level_with_frame_time(exe, level, args.seconds, args.port)
+        print('ODP_TEST_PHASE ' + json.dumps({'name': 'level:' + os.path.basename(level),
+                                            'seconds': time.perf_counter() - started}), flush=True)
         print(text, flush=True)
         if frame_time is not None:
             print("FRAMETIME frames=%d avg_ms=%s" % frame_time, flush=True)

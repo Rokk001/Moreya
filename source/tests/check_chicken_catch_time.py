@@ -8,9 +8,11 @@ flight limits from ChickenFlight.h, hop reach / spread / wander values from room
 creatures.cfg, turns per second from ODApplication.cpp. A text check keeps the simulated logic tied to the code.
 Pure Python, compiles nothing."""
 import math
+import json
 import random
 import re
 import subprocess
+import time
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
@@ -146,7 +148,9 @@ def dist(a, b):
     return math.hypot(a[0] - b[0], a[1] - b[1])
 
 
+# Keep immutable room geometry and deterministic placement together for this simulation run.
 class Room:
+    # Keep geometry and placement results local to this simulation's room instance.
     def __init__(self, name, tiles, coops):
         self.name = name
         self.tiles = set(tiles)
@@ -155,6 +159,20 @@ class Room:
         self.boxes = [(x + COOP[0] - OBSTACLE_MARGIN, y + COOP[2] - OBSTACLE_MARGIN, x + COOP[1] + OBSTACLE_MARGIN, y + COOP[3] + OBSTACLE_MARGIN)
                       for (x, y) in coops]
         self.bare = [(x + COOP[0], y + COOP[2], x + COOP[1], y + COOP[3]) for (x, y) in coops]
+        self.initial_positions = {}
+
+    # Placement depends only on this room and seed, never on the chase logic, speed or kind.
+    def starting_positions(self, seed):
+        if seed not in self.initial_positions:
+            start_rng = random.Random('start-%s-%s' % (self.name, seed))
+            chicken_pos = None
+            while chicken_pos is None:
+                chicken_pos = self.pick_free_point(start_rng)
+            # the creature starts far from the chicken: the farthest of a few random free points, at most 3.5 tiles away
+            candidates = [p for p in (self.pick_free_point(start_rng) for _ in range(40)) if p is not None]
+            creature_pos = max(candidates, key=lambda p: min(dist(p, chicken_pos), 3.5) + start_rng.random() * 0.5)
+            self.initial_positions[seed] = chicken_pos, creature_pos
+        return self.initial_positions[seed]
 
     def in_room(self, p):
         return (int(math.floor(p[0] + 0.5)), int(math.floor(p[1] + 0.5))) in self.tiles
@@ -310,15 +328,10 @@ def tile_of(p):
     return (int(math.floor(p[0] + 0.5)), int(math.floor(p[1] + 0.5)))
 
 
+# Simulate every original turn and draw, reusing only immutable initial placement.
 def run(room, logic, creature_speed, hen, seed):
-    start_rng = random.Random('start-%s-%s' % (room.name, seed))
     rng = random.Random('run-%s-%s-%s-%s' % (room.name, creature_speed, hen, seed))
-    chicken_pos = None
-    while chicken_pos is None:
-        chicken_pos = room.pick_free_point(start_rng)
-    # the creature starts far from the chicken: the farthest of a few random free points, at most 3.5 tiles away
-    candidates = [p for p in (room.pick_free_point(start_rng) for _ in range(40)) if p is not None]
-    creature_pos = max(candidates, key=lambda p: min(dist(p, chicken_pos), 3.5) + start_rng.random() * 0.5)
+    chicken_pos, creature_pos = room.starting_positions(seed)
 
     chicken = Mover(chicken_pos, CHICKEN_SPEED)
     creature = Mover(creature_pos, creature_speed)
@@ -386,12 +399,15 @@ def percentile(values, q):
 
 
 results = {}
+simulation_started = time.perf_counter()
 for room in make_rooms():
     for hen in (False, True):
         for speed in CREATURE_SPEEDS:
             for logic in ('old', 'new'):
                 times = [run(room, logic, speed, hen, seed) for seed in range(RUNS)]
                 results[(room.name, hen, speed, logic)] = times
+
+print('ODP_TEST_PHASE ' + json.dumps({'name': 'all-chase-cases', 'seconds': time.perf_counter() - simulation_started}), flush=True)
 
 print('speeds: chicken %.2f, creatures %s, turns per second %.1f, runs per case %d' % (CHICKEN_SPEED, CREATURE_SPEEDS, TPS, RUNS))
 print('%-16s %-6s %5s | %-17s | %-17s' % ('room', 'kind', 'speed', 'old mean / p95', 'new mean / p95'))
