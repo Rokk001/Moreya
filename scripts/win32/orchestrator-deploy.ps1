@@ -7,7 +7,8 @@ param(
     [Parameter(Mandatory = $true)][string]$DeployScript,
     [ValidateRange(0, 86400)][int]$GameWaitSeconds = 1800
 )
-$ErrorActionPreference = 'Continue'
+# Native errors and real child exit codes determine the outcome, never log text.
+$ErrorActionPreference = 'Stop'
 $wt = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 # One shared OS lock covers the normal deploy, deployed probes and counter update.
 # The helper loads Get-FileHash from the child PowerShell installation even if its module search path is incomplete.

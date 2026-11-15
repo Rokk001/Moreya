@@ -196,6 +196,14 @@ class SelectionTests(unittest.TestCase):
         scripts = self.repo / 'scripts/win32'
         scripts.mkdir(parents=True)
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy.ps1', scripts / 'orchestrator-deploy.ps1')
+        shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1', scripts / 'orchestrator-deploy-selected.ps1')
+        shutil.copyfile(ROOT / 'scripts/deploy-level-selection.py', scripts.parent / 'deploy-level-selection.py')
+        tip = self.git('rev-parse', 'HEAD')
+        self.git('fetch', '.', 'HEAD:refs/remotes/origin/integration/all')
+        self.git('worktree', 'add', '--detach', str(self.repo / 'build/current-worktree'), tip)
+        self.write('build/windows/opendungeons-plus.exe', 'fixture executable')
+        self.write('.git/odp-deploy-success.json', json.dumps({'schema': 1, 'status': 'success',
+                   'data_commit': tip, 'evidence': 'verified fixture deploy'}))
         self.write('out/orch-run.txt', 'test')
         self.write('out/build-number-test.txt', '17')
         self.write('deploy-stub.ps1', '# ODP_DEPLOY_EXPECTED_COMMIT\nexit 0\n')
@@ -230,7 +238,7 @@ class SelectionTests(unittest.TestCase):
             args = json.loads((self.repo / 'scripts/run-campaign-load-tests.args').read_text())
             self.assertEqual(Path(args[args.index('--executable') + 1]),
                              self.repo / 'build/windows/opendungeons-plus.exe')
-            self.assertEqual(Path(args[args.index('--base-file') + 1]), self.repo / 'out/load-base-test.json')
+            self.assertEqual(Path(args[args.index('--deployment-selection') + 1]), self.repo / 'out/deploy-selection-test.json')
             if result:
                 self.assertNotIn('deployed build 17', completed.stdout)
 
