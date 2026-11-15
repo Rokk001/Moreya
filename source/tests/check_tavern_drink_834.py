@@ -41,6 +41,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -214,21 +215,49 @@ def check_mug_code():
     print('mug code ok: Weapon_R first, then %d limb mounts, attached before the clip fallback' % len(mug_mounts(render)))
 
 
+class TavernAssets:
+    """Export each tracked asset once per run and share its parsed data across the checks."""
+
+    def __init__(self, out):
+        self.out = out
+        self.meshes = {}
+        self.skeletons = {}
+
+    def mesh(self, name):
+        """Return the geometry and skin weights from this run's conversion."""
+        import author_rest_poses as rest
+        from check_animation_assets import export
+        if name not in self.meshes:
+            export(name, self.out)
+            self.meshes[name] = rest.mesh_data(self.out / (name + '.xml'))
+        return self.meshes[name]
+
+    def skeleton(self, name):
+        """Retain the rest rig and the three clips measured by these checks."""
+        import fix_walk_feet as feet
+        from check_animation_assets import export
+        if name not in self.skeletons:
+            filename = name + '.skeleton'
+            export(filename, self.out)
+            skeleton = feet.Skel(str(self.out / (filename + '.xml')))
+            skeleton.clips = {clip: data for clip, data in skeleton.clips.items()
+                              if clip in ('Drink', 'SitDrink', 'KnockedOut')}
+            self.skeletons[name] = skeleton
+        return self.skeletons[name]
+
+
 # 1b. The mug in the hand: the models
-def check_mug_models(out):
-    from check_animation_assets import export
-    import fix_walk_feet as feet
+def check_mug_models(assets):
+    """Check attachment, placement, size and loop closure for the visiting rigs."""
     import author_rest_poses as rest
     render = read('source/render/RenderManager.cpp')
     mounts = mug_mounts(render)
     used = set()
     skeletons = sorted({skeleton_of(mesh): mesh for mesh in visiting_meshes()}.items())
-    export('TavernMug.mesh', out)
-    mug = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
+    mug = assets.mesh('TavernMug.mesh')[0]
     assert abs(float(np.ptp(mug[:, 0])) - MUG_HEIGHT) < 0.005, 'the mug changed its height'
     for name, mesh in skeletons:
-        export(name + '.skeleton', out)
-        skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
+        skeleton = assets.skeleton(name)
         if 'Weapon_R' in skeleton.idx:
             continue
         # The lookup of findTavernMugLimbMount: the entry of the skeleton, else the first entry whose bone it has
@@ -238,8 +267,7 @@ def check_mug_models(out):
         mount = own[0] if own else candidates[0]
         assert mount[0] == name + '.skeleton', (name, 'takes the mount of', mount[0])
         used.add(mount[0])
-        export(mesh, out)
-        vertices, _, weights = rest.mesh_data(out / (mesh + '.xml'))
+        vertices, _, weights = assets.mesh(mesh)
         bone = skeleton.idx[mount[1]]
         rest_world = skeleton.fk([(skeleton.rest_pos[i][None], skeleton.rest_q[i][None], skeleton.rest_s[i][None])
                                   for i in range(len(skeleton.names))])[bone]
@@ -270,9 +298,8 @@ def check_mug_models(out):
     assert used == {m[0] for m in mounts}, ('limb mounts nobody uses', {m[0] for m in mounts} - used)
     # The drink clip loops for the whole 30 seconds without a jump
     for name, mesh in skeletons:
-        skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
-        export(mesh, out)
-        vertices, _, weights = rest.mesh_data(out / (mesh + '.xml'))
+        skeleton = assets.skeleton(name)
+        vertices, _, weights = assets.mesh(mesh)
         played = skeleton.clips['Drink']
         assert played.length < BEER_SECONDS, (name, 'Drink is longer than a beer')
         points = rest.skin_vertices(skeleton, skeleton.locals_at(played, np.array([0.0, played.length])), vertices, weights)
@@ -282,10 +309,8 @@ def check_mug_models(out):
 
 
 # 1c. Check every creature's complete calm sip, without support, reach or lift exemptions.
-def check_drink_cycle(out):
+def check_drink_cycle(assets):
     """Require complete supported sips with continuous contact at each creature's anatomical mouth."""
-    from check_animation_assets import export
-    import fix_walk_feet as feet
     import author_rest_poses as rest
     import author_tavern_seats as seats
     drink = sys.modules[__name__]
@@ -295,18 +320,14 @@ def check_drink_cycle(out):
         assert float(rooms['ClipSeconds' + clip]) == SIP_SECONDS, clip
     sips = [round(float(tavern[key]) / TURNS_PER_SECOND / SIP_SECONDS, 6) for key in ('WaterDrinkTurns', 'BeerDrinkTurns')]
     assert sips == [2.0, 6.0], sips
-    export('TavernMug.mesh', out)
-    check_physical_mug_geometry(out / 'TavernMug.mesh.xml')
-    mug_points = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
+    mug_points = assets.mesh('TavernMug.mesh')[0]
     mounts = drink.read_limb_mounts()
     times = np.linspace(0.0, SIP_SECONDS, CYCLE_SAMPLES)
     step = times[1] - times[0]
     worst = {'speed': 0.0, 'face': 0.0, 'mouth': 0.0}
     for name, mesh in sorted({skeleton_of(m): m for m in visiting_meshes()}.items()):
-        export(name + '.skeleton', out)
-        export(mesh, out)
-        skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
-        vertices, _, weights = rest.mesh_data(out / (mesh + '.xml'))
+        skeleton = assets.skeleton(name)
+        vertices, _, weights = assets.mesh(mesh)
         mug = drink.Mug(skeleton, name, mug_points, mounts)
         limb = drink.limb_of(skeleton, name, mug)
         for clip in ('Drink', 'SitDrink'):
@@ -478,9 +499,8 @@ def check_lying_code():
     print('lying code ok: guests get off the bench first, no lying clip at a table, the loser falls away from it')
 
 
-def check_lying_models(out):
-    from check_animation_assets import export
-    import fix_walk_feet as feet
+def check_lying_models(assets):
+    """Check the measured floor bounds against the knockout animations."""
     import author_rest_poses as rest
     import author_tavern_seats as seats
     bodies, default = lying_bodies(read('source/rooms/RoomTavern.cpp'))
@@ -490,10 +510,8 @@ def check_lying_models(out):
         if name in seats.LARGE_MODELS:
             continue
         assert mesh in bodies, (mesh, 'has no lying body')
-        export(name + '.skeleton', out)
-        export(mesh, out)
-        skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
-        vertices, _, weights = rest.mesh_data(out / (mesh + '.xml'))
+        skeleton = assets.skeleton(name)
+        vertices, _, weights = assets.mesh(mesh)
         played = skeleton.clips['KnockedOut']
         points = rest.skin_vertices(skeleton, skeleton.locals_at(played, np.linspace(0.0, played.length, 33)), vertices, weights)
         behind_min, behind_max, half = bodies[mesh]
@@ -532,12 +550,11 @@ def point_to_triangle_distance(point, triangle):
     return closest
 
 
-def check_physical_mug_geometry(mesh_path):
+def check_physical_mug_geometry(assets):
     """Require the material-defined bowl, foam and actual wooden contact edges to match the attachment contract."""
-    import author_rest_poses as rest
     drink = sys.modules[__name__]
     assert drink.MUG_FOOT == 0.009 and drink.MUG_RIM == -0.171, 'mug contact coordinates changed'
-    vertices, faces, _ = rest.mesh_data(mesh_path)
+    vertices, faces, _ = assets.mesh('TavernMug.mesh')
     expected_triangles = {'TavernWood': 1868, 'TavernIron': 768, 'TavernFoam': 3744}
     assert len(vertices) == 8412, ('mug vertices', len(vertices))
     materials = {material: [] for material in expected_triangles}
@@ -582,24 +599,21 @@ def check_physical_mug_geometry(mesh_path):
 
 
 # A head turn must transport the same mouth opening rather than select a new global-front surface point.
-def check_mouth_anchors(out):
+def check_mouth_anchors(assets):
     """Check fixed anatomical centres and their movement under a rigid turn and translation of each actual rig."""
-    from check_animation_assets import export
     import fix_walk_feet as feet
     import author_rest_poses as rest
     drink = sys.modules[__name__]
     assert set(drink.MOUTHS) == set(EXPECTED_MOUTHS)
     meshes = {skeleton_of(mesh): mesh for mesh in visiting_meshes()}
-    export('TavernMug.mesh', out)
-    mug_points = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
+    mug_points = assets.mesh('TavernMug.mesh')[0]
+    mounts = drink.read_limb_mounts()
     turn = drink.rotation_matrix(np.array([0.0, 0.0, 1.0]), math.pi / 2.0)
     shift = np.array([0.2, 0.1, 0.3])
     for name, expected in EXPECTED_MOUTHS.items():
-        export(name + '.skeleton', out)
-        export(meshes[name], out)
-        skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
-        vertices, _, weights = rest.mesh_data(out / (meshes[name] + '.xml'))
-        mug = drink.Mug(skeleton, name, mug_points, drink.read_limb_mounts())
+        skeleton = assets.skeleton(name)
+        vertices, _, weights = assets.mesh(meshes[name])
+        mug = drink.Mug(skeleton, name, mug_points, mounts)
         bind = skeleton.locals_at(feet.Clip('bind', 1.0), np.zeros(1))
         head = drink.Head(skeleton, name, vertices, weights, drink.limb_of(skeleton, name, mug), bind)
         assert np.allclose(head.mouths(skeleton, bind)[0], expected, atol=1e-5, rtol=0.0), name
@@ -806,23 +820,24 @@ class Face(object):
 
     def __init__(self, points, mouth=None):
         """Build collision cells and optionally carry the skinned anatomical mouth point."""
-        self.cells = {}
-        for x, y, z in points:
-            key = (int(math.floor(x / FACE_CELL)), int(math.floor(z / FACE_CELL)))
-            front, back = self.cells.get(key, (y, y))
-            self.cells[key] = (min(front, y), max(back, y))
+        cells = np.floor(points[:, (0, 2)] / FACE_CELL).astype(np.intp)
+        self.cell_origin = cells.min(axis=0) if len(cells) else np.zeros(2, dtype=np.intp)
+        cells -= self.cell_origin
+        shape = tuple(cells.max(axis=0, initial=-1) + 1)
+        self.front = np.full(shape, np.inf)
+        self.back = np.full(shape, -np.inf)
+        np.minimum.at(self.front, tuple(cells.T), points[:, 1])
+        np.maximum.at(self.back, tuple(cells.T), points[:, 1])
         self.points = points
         self.material_mouth = mouth
 
     def inside(self, points):
         """Share of the points that lie in the head."""
-        count = 0
-        for x, y, z in points:
-            key = (int(math.floor(x / FACE_CELL)), int(math.floor(z / FACE_CELL)))
-            if key in self.cells:
-                front, back = self.cells[key]
-                if front + FACE_DEPTH < y < back:
-                    count += 1
+        cells = np.floor(points[:, (0, 2)] / FACE_CELL).astype(np.intp) - self.cell_origin
+        valid = np.all((0 <= cells) & (cells < self.front.shape), axis=1)
+        indices = tuple(cells[valid].T)
+        depth = points[valid, 1]
+        count = np.count_nonzero((self.front[indices] + FACE_DEPTH < depth) & (depth < self.back[indices]))
         return count / max(1, len(points))
 
     def mouth(self):
@@ -923,13 +938,13 @@ def main():
     else:
         out = ROOT / 'out' / 'tavern-drink-834'
         out.mkdir(parents=True, exist_ok=True)
-        from check_animation_assets import export
-        export('TavernMug.mesh', out)
-        check_physical_mug_geometry(out / 'TavernMug.mesh.xml')
-        check_mug_models(out)
-        check_mouth_anchors(out)
-        check_drink_cycle(out)
-        check_lying_models(out)
+        with tempfile.TemporaryDirectory(dir=out) as folder:
+            assets = TavernAssets(Path(folder))
+            check_physical_mug_geometry(assets)
+            check_mug_models(assets)
+            check_mouth_anchors(assets)
+            check_drink_cycle(assets)
+            check_lying_models(assets)
     print('tavern drink 834 ok')
 
 

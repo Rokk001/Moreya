@@ -6,6 +6,7 @@ from pathlib import Path
 import importlib.util
 import subprocess
 import sys
+from unittest import mock
 
 root = Path(__file__).resolve().parents[2]
 
@@ -29,6 +30,8 @@ def record(command, **kwargs):
     return RecordedProcess()
 
 
+netstat = mock.patch.object(subprocess, 'run', return_value=mock.Mock(stdout=''))
+netstat.start()
 original = subprocess.Popen
 subprocess.Popen = record
 try:
@@ -38,6 +41,7 @@ try:
     module.run_level_with_frame_time('game.exe', 'a.level', 1, 31302)
 finally:
     subprocess.Popen = original
+    netstat.stop()
 
 assert len(commands) == 4, commands
 assert '--port' not in commands[0] and '--port' not in commands[2], 'no port requested, none may be passed'
