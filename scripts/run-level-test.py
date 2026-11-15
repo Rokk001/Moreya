@@ -29,6 +29,8 @@ Usage:
 """
 
 import argparse
+import json
+from datetime import datetime, timezone
 import os
 import re
 import shutil
@@ -102,7 +104,7 @@ STARTUP_AND_SHUTDOWN_SECONDS = 400
 
 
 def available_server_port():
-    """Ask the OS for an available IPv4 TCP port for the game's listener."""
+    """Ask the OS for an available IPv4 listener port for this invocation."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("0.0.0.0", 0))
         return probe.getsockname()[1]
@@ -111,6 +113,25 @@ def available_server_port():
 def port_arguments(port):
     """Returns the game arguments that select the server port; empty if no port is requested (game default)."""
     return [] if port is None else ["--port", str(port)]
+
+
+def process_diagnostic(process, command, port, code=None, finished=False):
+    """Keep process identity and the actual port override beside load-test output."""
+    record = {'pid': getattr(process, 'pid', None), 'argv': command, 'port': port,
+              'event': 'finished' if finished else 'started'}
+    record['ended_at' if finished else 'started_at'] = datetime.now(timezone.utc).isoformat()
+    if finished:
+        record['exit_code'] = code
+        if code != 0 and os.name == 'nt' and port is not None:
+            try:
+                listeners = subprocess.run(['netstat', '-ano', '-p', 'tcp'], capture_output=True,
+                                           text=True, timeout=5, check=False)
+                record['port_listeners'] = '\n'.join(
+                    line.strip() for line in listeners.stdout.splitlines()
+                    if len(line.split()) >= 4 and line.split()[1].endswith(':' + str(port)))
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                record['port_listeners_error'] = str(exc)
+    print('LOAD_PROCESS ' + json.dumps(record), flush=True)
 
 
 def run_menu_test(exe, seconds, port=None):
@@ -127,6 +148,7 @@ def run_menu_test(exe, seconds, port=None):
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                universal_newlines=True)
+    process_diagnostic(process, command, port)
     try:
         output, _ = process.communicate(timeout=limit)
         code = process.returncode
@@ -134,6 +156,7 @@ def run_menu_test(exe, seconds, port=None):
         process.kill()
         output, _ = process.communicate()
         code = None
+    process_diagnostic(process, command, port, code, finished=True)
     shutil.rmtree(appdata, ignore_errors=True)
 
     frames = 0
@@ -171,6 +194,7 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                universal_newlines=True)
+    process_diagnostic(process, command, port)
     try:
         output, _ = process.communicate(timeout=limit)
         code = process.returncode
@@ -179,6 +203,7 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
         output, _ = process.communicate()
         code = None
 
+    process_diagnostic(process, command, port, code, finished=True)
     frame_time = parse_frame_time(output)
     resource_errors = find_resource_errors(os.path.join(os.path.dirname(os.path.abspath(exe)), "Ogre.log"))
     line = ""
@@ -209,7 +234,7 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
 
 
 def main():
-    """Parses the command line, runs the requested levels and exits with 0 only if all passed."""
+    """Run the requested menu and level checks with a per-invocation port; return 0 only if all passed."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--exe", required=True, help="built game executable")
     parser.add_argument("--seconds", type=int, default=120, help="game time per level (default 120)")
@@ -217,10 +242,12 @@ def main():
                         help="seconds the main menu test shows the menu once per run (0 = skip, default 8)")
     parser.add_argument("--markdown", action="store_true", help="print the results as a markdown paragraph")
     parser.add_argument("--port", type=int, default=None,
-                        help="server port of the game (default: an available local TCP port)")
+                        help="server port of the game (default: an available local TCP port); explicit ports must be unique")
     parser.add_argument("--progress-file", help="append one progress line per finished level to this file")
     parser.add_argument("levels", nargs="*", help="level files (default: all levels of Campaign.cfg)")
     args = parser.parse_args()
+    if args.port is None:
+        args.port = available_server_port()
 
     exe = os.path.abspath(args.exe)
     if not os.path.exists(exe):
