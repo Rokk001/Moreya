@@ -17,8 +17,6 @@ $receipt = Join-Path $common 'odp-deploy-success.json'
 $tip = (& git -C $wt rev-parse --verify 'HEAD^{commit}').Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve outgoing integration commit' }
 # The selected data belongs to the built worktree, not a remote ref that another push can advance.
-& git -C $wt merge-base --is-ancestor $tip origin/integration/all
-if ($LASTEXITCODE -ne 0) { throw 'Outgoing worktree commit is not contained in integration/all' }
 $run = (Get-Content -LiteralPath "$wt\out\orch-run.txt" | Select-Object -First 1).Trim()
 $n = (Get-Content -LiteralPath "$wt\out\build-number-$run.txt" | Select-Object -First 1).Trim()
 if ($n -notmatch '^\d+$' -or $run -notmatch '^[\w-]+$') { throw 'Invalid build metadata' }
@@ -28,6 +26,8 @@ if ($FullCampaign) { $selectionArgs += '--all-campaign' }
 & python "$scripts\deploy-level-selection.py" @selectionArgs
 if ($LASTEXITCODE -ne 0) { throw 'Deployment selection failed; no deployment or map test was started' }
 if ($SelectionOnly) { exit 0 }
+& git -C $wt merge-base --is-ancestor $tip origin/integration/all
+if ($LASTEXITCODE -ne 0) { throw 'Outgoing worktree commit is not contained in integration/all' }
 # The shared deployment script rejects every legacy caller without this verified selection manifest.
 & powershell -NoProfile -File $DeployScript -ExeDir "$wt\build\windows" -SelectionFile $manifest
 if ($LASTEXITCODE -ne 0) { throw "Deploy failed (exit $LASTEXITCODE)" }
