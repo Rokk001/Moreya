@@ -18,6 +18,114 @@ spec.loader.exec_module(deployment)
 class Recovery(unittest.TestCase):
     """Reject stale builds and exclude a competing plan for the whole operation."""
 
+    def test_bounded_wait_under_shared_lock(self):
+        """Zero and expired deadlines prohibit deployment and leave the counter unchanged."""
+        from contextlib import contextmanager
+        from types import SimpleNamespace
+        cases = [(0, 0, False, [], 1), (0, 100, True, [], 1),
+                 (2, 2, False, [1, 1], 3), (2, 100, True, [1, 1], 3)]
+        for bound, busy_queries, fails, expected_sleeps, expected_queries in cases:
+            with self.subTest(bound=bound, busy_queries=busy_queries), tempfile.TemporaryDirectory() as directory:
+                repo = Path(directory)
+                (repo / 'out').mkdir()
+                (repo / 'out/orch-run.txt').write_text('test')
+                script = repo / 'deploy.ps1'
+                script.write_text('ODP_DEPLOY_EXPECTED_COMMIT')
+                counter = repo / 'counter'
+                counter.write_text('41')
+                clock = [0]
+                queries = []
+                sleeps = []
+                events = []
+                actual_lock = deployment.executable_lock
+
+                def assert_locked():
+                    """Verify the actual OS lock is owned during wait and deployment stages."""
+                    self.assertTrue(deployment._locks.held)
+
+                @contextmanager
+                def lock(executable):
+                    """Time spent acquiring the shared lock must not consume the game wait."""
+                    with actual_lock(executable):
+                        clock[0] += 100
+                        events.append('lock')
+                        try:
+                            yield
+                        finally:
+                            events.append('unlock')
+
+                def running(executable):
+                    """Provide fixed game observations while asserting shared lock ownership."""
+                    assert_locked()
+                    queries.append(executable)
+                    return len(queries) <= busy_queries
+
+                def sleep(seconds):
+                    """Advance the deadline deterministically without touching any process."""
+                    assert_locked()
+                    sleeps.append(seconds)
+                    clock[0] += seconds
+
+                def git(repo, *args):
+                    """Record freshness queries to prove a timeout never starts deployment."""
+                    if '--git-common-dir' in args:
+                        return str(Path(directory) / '.git')
+                    assert_locked()
+                    events.append('git')
+                    return 'a' * 40
+
+                def deploy_child(*args, **kwargs):
+                    """Check the expected-commit guard survives the merged wait flow."""
+                    assert_locked()
+                    self.assertEqual(counter.read_text(), '41')
+                    self.assertEqual(kwargs['env']['ODP_DEPLOY_EXPECTED_COMMIT'], 'a' * 40)
+                    events.append('deploy')
+
+                runner = SimpleNamespace(game_is_running=running, main=lambda: events.append('probe') or 0)
+                with patch.object(deployment, 'executable_lock', lock), \
+                        patch.object(deployment, 'campaign_runner', return_value=runner), \
+                        patch.object(deployment.time, 'monotonic', side_effect=lambda: clock[0]), \
+                        patch.object(deployment.time, 'sleep', side_effect=sleep), \
+                        patch.object(deployment, 'git', side_effect=git), \
+                        patch.object(deployment, 'validate_build', return_value={
+                            'commit': 'a' * 40, 'sha256': 'hash', 'number': '42'}) as validation, \
+                        patch.object(deployment, 'digest', return_value='hash'), \
+                        patch.object(deployment.subprocess, 'run', side_effect=deploy_child) as child:
+                    if fails:
+                        with self.assertRaisesRegex(RuntimeError, 'deployment was not started'):
+                            deployment.deploy(repo, counter, script, bound)
+                        child.assert_not_called()
+                        validation.assert_not_called()
+                        self.assertEqual(events, ['lock', 'unlock'])
+                        self.assertEqual(counter.read_text(), '41')
+                    else:
+                        deployment.deploy(repo, counter, script, bound)
+                        self.assertEqual(child.call_count, 1)
+                        self.assertEqual(counter.read_text().strip(), '42')
+                        self.assertLess(events.index('deploy'), events.index('probe'))
+                    self.assertEqual(sleeps, expected_sleeps)
+                    self.assertEqual(len(queries), expected_queries)
+                self.assertFalse(deployment._locks.held)
+
+    def test_wait_cli_forwarding(self):
+        """The CLI forwards zero and custom bounds and rejects out-of-range deadlines."""
+        for bound in ('0', '23'):
+            with patch.object(sys, 'argv', ['deploy', 'deploy', '--repo', '.',
+                                           '--game-wait-seconds', bound]), \
+                    patch.object(deployment, 'deploy') as run:
+                deployment.main()
+                run.assert_called_once_with(Path('.'), None, None, int(bound))
+        from contextlib import redirect_stderr
+        from io import StringIO
+        for bound in ('-1', '86401'):
+            with patch.object(sys, 'argv', ['deploy', 'deploy', '--repo', '.',
+                                           '--game-wait-seconds', bound]), \
+                    patch.object(deployment, 'deploy') as run, redirect_stderr(StringIO()):
+                with self.assertRaises(SystemExit) as error:
+                    deployment.main()
+                self.assertEqual(error.exception.code, 2)
+                run.assert_not_called()
+
     def test_cross_plan_exclusion(self):
         """A separate process cannot enter until the deploy/load/counter owner exits."""
         with tempfile.TemporaryDirectory() as directory:

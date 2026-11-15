@@ -2,8 +2,8 @@
 from contextlib import redirect_stdout
 import importlib.util
 from io import StringIO
-from pathlib import Path
 import json
+from pathlib import Path
 import socket
 import subprocess
 import sys
@@ -34,10 +34,10 @@ def exercise(output, code=0, timeout=False, requested_timeout=None):
         executable.touch()
         logs = directory / 'logs'
         original_run = runner.subprocess.run
-        original_argv = sys.argv
-        original_running = runner.game_is_running
+        original_guard = runner.game_is_running
         original_environment = runner.probe_environment
         original_levels = runner.campaign_levels
+        original_argv = sys.argv
         runner.game_is_running = lambda executable: False
         runner.probe_environment = lambda: {}
         runner.campaign_levels = lambda repo: [ROOT / 'levels/campaign/Mossgate.level']
@@ -50,7 +50,7 @@ def exercise(output, code=0, timeout=False, requested_timeout=None):
                 result = runner.main()
         finally:
             runner.subprocess.run = original_run
-            runner.game_is_running = original_running
+            runner.game_is_running = original_guard
             runner.probe_environment = original_environment
             runner.campaign_levels = original_levels
             sys.argv = original_argv
@@ -58,8 +58,9 @@ def exercise(output, code=0, timeout=False, requested_timeout=None):
     assert len(commands) == 1
     command, options = commands[0]
     assert command[1:5] == ['--run-level', str(ROOT / 'levels/campaign/Mossgate.level'), '--seconds', '1']
-    assert command[-2] == '--port' and 0 < int(command[-1]) <= 65535
     assert options['timeout'] == (402 if requested_timeout is None else requested_timeout)
+    assert command[-2] == '--port'
+    assert 0 < int(command[-1]) <= 65535
     assert log == output.decode('utf-8')
     return result, captured.getvalue()
 
@@ -74,6 +75,84 @@ assert exercise(success.replace(b'registered=2', b'registered=0'))[0] == 1
 assert exercise(b'GOALS registered=2\n')[0] == 1
 assert exercise(success.replace(b'victory message shown, campaign map shows', b'loaded'))[0] == 1
 assert exercise(b'FAIL Mossgate.level : load error\n', code=2)[0] == 1
+print('Campaign load runner: bounded deadline and nine acceptance/failure cases verified')
+
+
+def check_process_identity():
+    """Keep the deployed-executable guard without rejecting independent worktrees."""
+    executable = ROOT / 'build/windows/opendungeons-plus.exe'
+    other = ROOT / 'other-worktree/build/windows/opendungeons-plus.exe'
+    cases = [([], False),
+             ([{'ProcessId': 42, 'ExecutablePath': str(other)}], False),
+             ([{'ProcessId': 43, 'ExecutablePath': str(executable).upper()}], True),
+             ([{'ProcessId': 42, 'ExecutablePath': str(other)},
+               {'ProcessId': 43, 'ExecutablePath': str(executable)}], True)]
+    for processes, expected in cases:
+        completed = subprocess.CompletedProcess([], 0, json.dumps(processes).encode('utf-8'), b'')
+        with patch.object(runner.subprocess, 'run', return_value=completed) as query:
+            assert runner.game_is_running(executable) == expected
+        assert query.call_args.kwargs['check'] is True
+        assert query.call_args.kwargs['timeout'] == 30
+        assert query.call_args.kwargs['env']['ODP_PROBE_IMAGE_NAME'] == executable.name
+    unknown = subprocess.CompletedProcess([], 0, b'[{"ProcessId":44,"ExecutablePath":null}]', b'')
+    with patch.object(runner.subprocess, 'run', return_value=unknown):
+        try:
+            runner.game_is_running(executable)
+        except RuntimeError as error:
+            assert 'PID 44' in str(error)
+        else:
+            raise AssertionError('Unreadable process identity must block probes')
+    for error in [subprocess.CalledProcessError(1, 'powershell'),
+                  subprocess.TimeoutExpired('powershell', 30)]:
+        with patch.object(runner.subprocess, 'run', side_effect=error):
+            try:
+                runner.game_is_running(executable)
+            except type(error):
+                pass
+            else:
+                raise AssertionError('Process inspection failure must block probes')
+
+
+def check_mid_campaign_process():
+    """Reproduce another worktree starting after five successful campaign probes."""
+    with tempfile.TemporaryDirectory(prefix='campaign-identity-') as temporary:
+        directory = Path(temporary)
+        executable = directory / 'deployed/opendungeons-plus.exe'
+        executable.parent.mkdir()
+        executable.touch()
+        other = directory / 'other-worktree/opendungeons-plus.exe'
+        levels = [directory / ('probe%d.level' % index) for index in range(6)]
+        launches = []
+        inspections = []
+
+        def run(command, **kwargs):
+            """Introduce the unrelated process at the exact original failure boundary."""
+            if command[0] == 'powershell':
+                processes = [] if len(launches) < 5 else [
+                    {'ProcessId': 42, 'ExecutablePath': str(other)}]
+                inspections.append(processes)
+                return subprocess.CompletedProcess(command, 0, json.dumps(processes).encode('utf-8'), b'')
+            launches.append(command)
+            return subprocess.CompletedProcess(command, 0, success, b'')
+
+        arguments = ['campaign-load-runner', '--executable', str(executable),
+                     '--output', str(directory / 'logs')]
+        with patch.object(runner.subprocess, 'run', side_effect=run), \
+                patch.object(runner, 'probe_environment', return_value={}), \
+                patch.object(runner, 'campaign_levels', return_value=levels), \
+                patch.object(sys, 'argv', arguments), redirect_stdout(StringIO()) as captured:
+            assert runner.main() == 0
+        assert len(launches) == 6
+        assert len(inspections) == 6 and inspections[-1][0]['ProcessId'] == 42
+        assert 'total=6 failed=0' in captured.getvalue()
+        for command in launches:
+            assert command[-2] == '--port' and 0 < int(command[-1]) <= 65535
+        assert len(list((directory / 'logs').glob('*.log'))) == 6
+
+
+check_process_identity()
+check_mid_campaign_process()
+print('Campaign load runner: seven process identity/error cases and mid-campaign concurrency verified')
 
 
 def check_process_scope():
@@ -81,12 +160,20 @@ def check_process_scope():
     executable = ROOT / 'build/windows/opendungeons-plus.exe'
     other = ROOT / 'other-worktree/build/windows/opendungeons-plus.exe'
     for paths, expected in (([], False), ([str(other)], False), ([str(executable)], True),
-                            ([str(other), str(executable)], True), ([None], True)):
+                            ([str(other), str(executable)], True)):
         output = json.dumps([{'ExecutablePath': path} for path in paths]).encode('utf-8')
         with patch.object(runner.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, output)) as run:
             assert runner.game_is_running(executable) == expected
         assert run.call_args.args[0][:2] == ['powershell', '-NoProfile']
         assert run.call_args.kwargs['check'] and run.call_args.kwargs['timeout'] == 30
+    output = json.dumps([{'ProcessId': 789, 'ExecutablePath': None}]).encode('utf-8')
+    with patch.object(runner.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, output)):
+        try:
+            runner.game_is_running(executable)
+        except RuntimeError as error:
+            assert '789' in str(error), 'unreadable identity must identify the blocked process'
+        else:
+            raise AssertionError('An unreadable executable path must block probes')
     with patch.object(runner.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'powershell')):
         try:
             runner.game_is_running(executable)

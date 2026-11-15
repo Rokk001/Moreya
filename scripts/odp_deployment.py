@@ -104,15 +104,26 @@ def campaign_runner():
     return module
 
 
-def deploy(repo, counter, script):
-    """Wait for normal game exit and deploy only a freshly validated integration target."""
+def deploy(repo, counter, script, game_wait_seconds=1800):
+    """Bound normal-exit waiting under the lock, then deploy a freshly validated target."""
+    if not 0 <= game_wait_seconds <= 86400:
+        raise ValueError('Game wait seconds must be between 0 and 86400')
     common = Path(git(repo, 'rev-parse', '--path-format=absolute', '--git-common-dir'))
     executable = common.parent / 'build/windows/opendungeons-plus.exe'
     runner = campaign_runner()
     with executable_lock(executable):
+        deadline = time.monotonic() + game_wait_seconds
+        announced = False
         while runner.game_is_running(executable):
-            print('Waiting for the deployed game to exit normally under the shared lock', flush=True)
-            time.sleep(5)
+            if not announced:
+                print('Waiting up to %s seconds for the deployed game to exit normally under the shared lock; '
+                      'no process will be stopped' % game_wait_seconds, flush=True)
+                announced = True
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError('Game is still running after %s seconds; deployment was not started. '
+                                   'Close the game and retry.' % game_wait_seconds)
+            time.sleep(min(1, remaining))
         git(repo, 'fetch', 'origin', 'integration/all')
         run = (repo / 'out/orch-run.txt').read_text().strip()
         target = git(repo, 'rev-parse', 'origin/integration/all')
@@ -151,11 +162,13 @@ def main():
     parser.add_argument('--commit')
     parser.add_argument('--counter', type=Path)
     parser.add_argument('--deploy-script', type=Path)
+    parser.add_argument('--game-wait-seconds', type=int, default=1800, choices=range(86401),
+                        metavar='0..86400')
     args = parser.parse_args()
     if args.action == 'record':
         record_build(args.repo, args.run, args.number, args.commit)
     else:
-        deploy(args.repo, args.counter, args.deploy_script)
+        deploy(args.repo, args.counter, args.deploy_script, args.game_wait_seconds)
 
 
 if __name__ == '__main__':
