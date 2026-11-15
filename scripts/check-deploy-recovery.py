@@ -74,7 +74,7 @@ class Recovery(unittest.TestCase):
             exe.write_bytes(b'validated')
             (repo / 'out/build-number-test.txt').write_text('42')
             with patch.object(deployment, 'git', side_effect=lambda repo, *args: '' if args[0] == 'status' else 'a' * 40):
-                with self.assertRaises(FileNotFoundError):
+                with self.assertRaisesRegex(RuntimeError, 'normal integration revalidation required'):
                     deployment.validate_build(repo, 'test', 'a' * 40)
                 deployment.record_build(repo, 'test', '42', 'a' * 40)
                 self.assertEqual(deployment.validate_build(repo, 'test', 'a' * 40)['number'], '42')

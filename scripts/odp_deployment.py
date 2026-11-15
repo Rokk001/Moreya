@@ -76,17 +76,20 @@ def record_build(repo, run, number, commit):
 
 def validate_build(repo, run, target):
     """Require fresh validation of this commit and exact target, never infer old provenance."""
-    receipt = json.loads((repo / 'out' / ('validated-' + run + '.json')).read_text(encoding='utf-8'))
+    try:
+        receipt = json.loads((repo / 'out' / ('validated-' + run + '.json')).read_text(encoding='utf-8'))
+    except (OSError, ValueError) as error:
+        raise RuntimeError('Build validation receipt missing or invalid; normal integration revalidation required') from error
     head = git(repo, 'rev-parse', 'HEAD')
     if receipt['run'] != run or receipt['commit'] != head or target != head:
         raise RuntimeError('Build/commit/target mismatch; normal integration revalidation required')
     if git(repo, 'status', '--porcelain', '--untracked-files=no'):
-        raise RuntimeError('Tracked changes invalidate the validated build')
+        raise RuntimeError('Tracked changes invalidate the validated build; normal integration revalidation required')
     if receipt['sha256'] != digest(repo / 'build/windows/opendungeons-plus.exe'):
-        raise RuntimeError('Build artifact changed since validation')
+        raise RuntimeError('Build artifact changed since validation; normal integration revalidation required')
     number = (repo / 'out' / ('build-number-' + run + '.txt')).read_text().strip()
     if str(receipt['number']) != number:
-        raise RuntimeError('Build number changed since validation')
+        raise RuntimeError('Build number changed since validation; normal integration revalidation required')
     return receipt
 
 
