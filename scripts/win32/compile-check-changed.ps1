@@ -79,15 +79,20 @@ function Get-ReleaseCompilerArgs {
     return $result
 }
 
-# Wait while a full build runs, then require 2 GB free RAM
+# Wait while a full build runs or less than 2 GB RAM is free, sharing one deadline.
 $deadline = (Get-Date).AddMinutes($MaxWaitMinutes)
-while ((Get-FullBuildCount) -gt 0) {
-    if ((Get-Date) -gt $deadline) { Write-CheckLog "WAIT_TIMEOUT: a full build still runs"; exit 4 }
-    Write-CheckLog 'waiting: a full build is running'
+while ($true) {
+    if ((Get-FullBuildCount) -gt 0) {
+        if ((Get-Date) -ge $deadline) { Write-CheckLog 'WAIT_TIMEOUT: a full build still runs'; exit 4 }
+        Write-CheckLog 'waiting: a full build is running'
+    } else {
+        $free = [math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024)
+        if ($free -ge 2048) { break }
+        if ((Get-Date) -ge $deadline) { Write-CheckLog "WAIT_TIMEOUT: RAM too low: $free MB"; exit 3 }
+        Write-CheckLog "waiting: RAM too low: $free MB"
+    }
     Start-Sleep -Seconds 30
 }
-$free = [math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024)
-if ($free -lt 2048) { Write-CheckLog "RAM too low: $free MB"; exit 3 }
 
 $files = @(& git -C $wt diff --name-only --diff-filter=AM "$Base...HEAD" -- source | Where-Object { $_ -like '*.cpp' })
 $rsp = "$outDir\args.rsp"
