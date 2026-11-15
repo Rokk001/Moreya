@@ -1,0 +1,9 @@
+# Apply these ODP project footprints with the versioned protocol-aware entry points.
+# Shared full-build ownership is retained during diagnosis; ODP never runs two full builds.
+[integrationStepResources]
+Merge = []
+Check = ["odp:full-build", "odp:shared-build-output", "odp:game-instances", "odp:load-ports", "odp:check-cache"]
+Build = ["odp:full-build", "odp:shared-build-output", "odp:game-instances", "odp:load-ports", "odp:check-cache"]
+Push = []
+Deploy = ["odp:full-build", "odp:shared-build-output", "odp:game-instances", "odp:load-ports", "odp:check-cache"]
+Release = ["odp:shared-build-output"]

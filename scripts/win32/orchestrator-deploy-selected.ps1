@@ -10,6 +10,13 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $wt = (Resolve-Path -LiteralPath $Worktree).Path
+# Delivery remains a failing command after any partial copy or failed post-copy probe.
+if ($env:HQ_CHECK_EVENTS -and -not $SelectionOnly) {
+    $childArgs = @('powershell', '-NoProfile', '-File', $PSCommandPath, '-Counter', $Counter, '-DeployScript', $DeployScript, '-Worktree', $wt, '-GameWaitSeconds', $GameWaitSeconds)
+    if ($FullCampaign) { $childArgs += '-FullCampaign' }
+    & python "$PSScriptRoot\..\hq-check-command.py" --repo $wt --name deploy-delivery -- @childArgs
+    exit $LASTEXITCODE
+}
 $scripts = Split-Path -Parent $PSScriptRoot
 $common = (& git -C $wt rev-parse --path-format=absolute --git-common-dir).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve shared deployment state' }
