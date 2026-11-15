@@ -119,7 +119,8 @@ def check_interleaved_worktree():
                 paths = [] if not commands else [{'ExecutablePath': str(directory / 'other/opendungeons-plus.exe')}]
                 return subprocess.CompletedProcess(command, 0, json.dumps(paths).encode('utf-8'))
             commands.append(command)
-            return subprocess.CompletedProcess(command, 0, success, b'')
+            output = success.replace(b'Mossgate.level', Path(command[2]).name.encode('utf-8'))
+            return subprocess.CompletedProcess(command, 0, output, b'')
 
         with patch.object(sys, 'argv', ['runner', '--all-campaign', '--executable', str(executable), '--output', str(directory / 'logs')]), \
                 patch.object(runner, 'probe_environment', return_value={}), \
