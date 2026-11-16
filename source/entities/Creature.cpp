@@ -13062,6 +13062,7 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
                 hose.position(core+normal*thickness);
                 hose.normal(normal);
                 hose.colour(shadeGhostHose(look.mWires[wire],normal,look.mGlow));
+                hose.textureCoord(0.0f,share);
             }
         }
         for(size_t ring=0;ring<GHOST_HOSE_RINGS;++ring)
