@@ -183,6 +183,7 @@ class RuntimeTests(unittest.TestCase):
 
     # Exercise the pinned script directory, saved base and build status with both exit statuses.
     def test_merged_build_base_and_profiler(self):
+        """Preserve pinned profiling, success-only receipts and either command's failure status."""
         build = ROOT / 'scripts/win32/orchestrator-build.ps1'
         source = build.read_text()
         invocation = source[source.index('Write-Output "checks started: $run"'):]
@@ -193,15 +194,17 @@ $errors = $null
 if ($errors.Count) { throw ($errors | Out-String) }
 $wt = 'fixture worktree'
 $scripts = 'fixture pinned scripts'
-$statusFile = 'fixture worktree\out\build-status-orch-fixture.json'
 $Checks = 'fixture runner.py'
 $loadBase = '0123456789abcdef0123456789abcdef01234567'
+$buildCommit = '89abcdef0123456789abcdef0123456789abcdef'
+$n = 17
+$statusFile = 'fixture worktree\out\build-status-orch-fixture.json'
 $start = 123
 $run = 'orch-fixture'
 # Capture the native command without building or running the game.
 function python {
     $args | ConvertTo-Json -Compress
-    $global:LASTEXITCODE = __CODE__
+    $global:LASTEXITCODE = if ($args -contains 'record') { __RECEIPT_CODE__ } else { __CODE__ }
 }
 '''.replace('__BUILD__', str(build).replace("'", "''"))
         expected = ['-u', '-I', r'fixture pinned scripts\run-checks-profiled.py',
@@ -210,14 +213,18 @@ function python {
                     '--base', '0123456789abcdef0123456789abcdef01234567',
                     '--build-start', 123, '--run', 'orch-fixture',
                     '--build-status', r'fixture worktree\out\build-status-orch-fixture.json']
-        for code in (0, 7):
-            with self.subTest(code=code):
+        receipt = ['-I', r'fixture worktree\scripts\odp_deployment.py', 'record',
+                   '--repo', 'fixture worktree', '--run', 'orch-fixture', '--number', 17,
+                   '--commit', '89abcdef0123456789abcdef0123456789abcdef']
+        for code, receipt_code, expected_exit in ((0, 0, 0), (7, 0, 7), (0, 9, 9)):
+            with self.subTest(code=code, receipt_code=receipt_code):
+                script = harness.replace('__CODE__', str(code)).replace('__RECEIPT_CODE__', str(receipt_code))
                 result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command',
-                                         harness.replace('__CODE__', str(code)) + invocation],
+                                         script + invocation],
                                         capture_output=True, text=True, timeout=15)
-                self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+                self.assertEqual(result.returncode, expected_exit, result.stdout + result.stderr)
                 calls = [json.loads(line) for line in result.stdout.splitlines() if line.startswith('[')]
-                self.assertEqual(calls, [expected])
+                self.assertEqual(calls, [expected, receipt] if code == 0 else [expected])
 
 
 if __name__ == '__main__':

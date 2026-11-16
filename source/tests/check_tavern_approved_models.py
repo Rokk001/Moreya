@@ -28,6 +28,16 @@ ATLASES = {'TavernSkin': 2048, 'TavernHood': 2048, 'TavernCloth': 2048,
            'TavernCounterWood': 2048, 'TavernRail': 1024, 'TavernSign': 512}
 CLIPS = {'Idle': 4.0, 'Pour': 2.0, 'Cheer': 2.0}
 
+# Keep the navigation footprint synchronized when the approved counter mesh is replaced.
+catalog = (ROOT / 'source/gamemap/RoomObjectBounds.h').read_text(encoding='utf-8')
+counter_row = re.search(r'\{"TavernCounter",\s*([^}]+)\}', catalog)
+assert counter_row, 'TavernCounter navigation bounds missing'
+counter_bounds = tuple(float(value.strip().removesuffix('f')) for value in counter_row[1].split(','))
+counter_min, counter_max = MESHES['TavernCounter'][2:4]
+assert len(counter_bounds) == 4 and all(abs(actual - expected) <= 0.00002 for actual, expected in
+                                       zip(counter_bounds, (*counter_min[:2], *counter_max[:2]))), \
+    ('TavernCounter navigation bounds differ from the approved mesh', counter_bounds)
+
 
 # Deserialize the actual game file with a bounded native converter invocation.
 def deserialize(name, directory):
