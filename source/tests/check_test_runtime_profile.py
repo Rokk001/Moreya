@@ -181,7 +181,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn('$code = $LASTEXITCODE', source)
         self.assertTrue(source.rstrip().endswith('exit $code'))
 
-    # Exercise the pinned script directory, saved base and build status with both exit statuses.
+    # Parse the merged script and exercise pinned profiler/status paths, saved base, receipts and both commands' exit statuses.
     def test_merged_build_base_and_profiler(self):
         """Preserve pinned profiling, success-only receipts and either command's failure status."""
         build = ROOT / 'scripts/win32/orchestrator-build.ps1'
@@ -193,12 +193,12 @@ $errors = $null
 [void][System.Management.Automation.Language.Parser]::ParseFile('__BUILD__', [ref]$tokens, [ref]$errors)
 if ($errors.Count) { throw ($errors | Out-String) }
 $wt = 'fixture worktree'
-$scripts = 'fixture pinned scripts'
+$scripts = 'fixture pinned bundle\scripts'
 $Checks = 'fixture runner.py'
+$statusFile = 'fixture status directory\build-status-orch-fixture.json'
 $loadBase = '0123456789abcdef0123456789abcdef01234567'
 $buildCommit = '89abcdef0123456789abcdef0123456789abcdef'
 $n = 17
-$statusFile = 'fixture worktree\out\build-status-orch-fixture.json'
 $start = 123
 $run = 'orch-fixture'
 # Capture the native command without building or running the game.
@@ -207,12 +207,12 @@ function python {
     $global:LASTEXITCODE = if ($args -contains 'record') { __RECEIPT_CODE__ } else { __CODE__ }
 }
 '''.replace('__BUILD__', str(build).replace("'", "''"))
-        expected = ['-u', '-I', r'fixture pinned scripts\run-checks-profiled.py',
+        expected = ['-u', '-I', r'fixture pinned bundle\scripts\run-checks-profiled.py',
                     '--runner', 'fixture runner.py', '--repo', 'fixture worktree',
                     '--out', r'fixture worktree\out\checks-orch-fixture.txt',
                     '--base', '0123456789abcdef0123456789abcdef01234567',
                     '--build-start', 123, '--run', 'orch-fixture',
-                    '--build-status', r'fixture worktree\out\build-status-orch-fixture.json']
+                    '--build-status', r'fixture status directory\build-status-orch-fixture.json']
         receipt = ['-I', r'fixture worktree\scripts\odp_deployment.py', 'record',
                    '--repo', 'fixture worktree', '--run', 'orch-fixture', '--number', 17,
                    '--commit', '89abcdef0123456789abcdef0123456789abcdef']

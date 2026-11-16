@@ -152,10 +152,10 @@ class RunnerTests(unittest.TestCase):
 
 # Run the real PowerShell Build controller with fixture configure/compiler commands only.
 class BuildControllerTests(unittest.TestCase):
-    # Failed configure/build still produce a complete suite and all independent check results.
+    # Failed configure/build still produce a complete suite with isolated deployment dependencies and all independent check results.
     @unittest.skipUnless(shutil.which('powershell'),'Windows Build controller')
     def test_failed_build_drains_checks(self):
-        """Require real base capture before testing configure/build failure draining."""
+        """Require real base capture with complete isolated dependencies, preserve build failures, and drain independent checks."""
         for configure_code,build_code in ((13,125),(0,17)):
             with self.subTest(configure=configure_code), tempfile.TemporaryDirectory() as temporary:
                 repo=Path(temporary)
