@@ -197,6 +197,7 @@ void RoomGhostRoom::createCauldronObjects()
     }
 }
 
+//! \brief Finds free floor nearest the source; cauldrons discharge toward their front outlet below the glass.
 Tile* RoomGhostRoom::findDropTile(const Tile& origin, double offset) const
 {
     Tile* best=nullptr;double distance=std::numeric_limits<double>::max();
@@ -210,7 +211,9 @@ Tile* RoomGhostRoom::findDropTile(const Tile& origin, double offset) const
         for(const Apparatus& apparatus : mApparatuses)
             if(apparatus.tile==tile) underCauldron=true;
         if(underCauldron) continue;
-        const double dx=tile->getX()-(origin.getX()+offset),dy=tile->getY()-(origin.getY()+offset);
+        // Cauldrons use offset 0.5 for their two-tile centre; the outlet lip is another 0.94 toward +y.
+        const double outlet=offset==0.5?0.94:0.0;
+        const double dx=tile->getX()-(origin.getX()+offset),dy=tile->getY()-(origin.getY()+offset+outlet);
         const double squared=dx*dx+dy*dy;
         if(best==nullptr || squared<distance || (squared==distance && tileOrder(tile,best))) { best=tile;distance=squared; }
     }
@@ -499,6 +502,7 @@ void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
     produceEctoplasm(*cauldron);
 }
 
+//! \brief Places each completed ectoplasm beside the outlet of the cauldron that received the ghost.
 void RoomGhostRoom::produceEctoplasm(Tile& cauldron)
 {
     Seat* seat=getSeat();
