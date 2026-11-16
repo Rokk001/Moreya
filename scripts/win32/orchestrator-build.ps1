@@ -29,6 +29,8 @@ try {
 # Services may have started before the user-level asset source setting was added.
 if (-not $env:ODP_ASSETS_SRC) { $env:ODP_ASSETS_SRC = [Environment]::GetEnvironmentVariable('ODP_ASSETS_SRC', 'User') }
 Set-Content -Encoding ascii "$wt\out\orch-run.txt" $run
+$buildCommit = (& git -C $wt rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 # Freeze the integration reference before Push updates origin/integration/all.
 & python "$scripts\run-campaign-load-tests.py" --repo $wt --capture-base $Base --output "$wt\out\load-base-$run.json" 2>&1 | Tee-Object -FilePath $preflightLog
 if ($LASTEXITCODE -ne 0) { throw 'could not capture integration load-test base' }
@@ -73,4 +75,8 @@ Write-Output "checks started: $run"
 & python -u -I "$scripts\run-checks-profiled.py" --runner $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $loadBase --build-start $start --run $run --build-status $statusFile
 $code = $LASTEXITCODE
 if ($code -ne 0) { Write-Output "checks failed (exit $code), see out\checks-$run.txt" }
+if ($code -eq 0) {
+    & python -I "$wt\scripts\odp_deployment.py" record --repo $wt --run $run --number $n --commit $buildCommit
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
 exit $code

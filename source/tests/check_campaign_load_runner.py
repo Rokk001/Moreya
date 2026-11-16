@@ -114,7 +114,7 @@ def check_process_identity():
 
 
 def check_mid_campaign_process():
-    """Reproduce another worktree starting after five explicitly selected campaign probes."""
+    """Keep six explicit campaign probes valid when a foreign worktree starts after probe five."""
     with tempfile.TemporaryDirectory(prefix='campaign-identity-') as temporary:
         directory = Path(temporary)
         executable = directory / 'deployed/opendungeons-plus.exe'

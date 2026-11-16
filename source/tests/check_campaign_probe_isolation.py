@@ -16,7 +16,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[2]
 # Both parents added these helpers; conflict resolution must retain exactly one of each.
 tree = ast.parse((ROOT / 'scripts/run-campaign-load-tests.py').read_text(encoding='utf-8'))
-for name in ('game_is_running', 'available_server_port', 'main'):
+for name in ('game_is_running', 'available_server_port', 'main', 'locked_main'):
     assert sum(isinstance(node, ast.FunctionDef) and node.name == name
                for node in tree.body) == 1, 'merged runner must define ' + name + ' exactly once'
 
@@ -109,6 +109,9 @@ def verify_isolation(selection_mode):
                 selected.bind(('0.0.0.0', ports[0]))
             assert [command[2] for command in commands] == [str(level) for level in levels]
             assert len({command[command.index('--appData') + 1] for command in commands}) == 3
+            assert [Path(command[command.index('--appData') + 1]) for command in commands] == [
+                directory / 'logs' / level.stem for level in levels]
+            assert all((directory / 'logs' / level.stem).is_dir() for level in levels)
             assert 'Campaign load probes: total=3 failed=0' in output.getvalue()
             assert len(list((directory / 'logs').glob('*.log'))) == 3
 

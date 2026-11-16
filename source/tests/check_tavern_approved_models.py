@@ -126,9 +126,21 @@ def check_atlases():
             assert relative in credits, filename
 
 
-# Exercise the native assets and retain all three existing innkeeper animation contracts.
+# Keep navigation at the approved counter's measured footprint after model replacements.
+def check_counter_navigation_bounds():
+    catalog = (ROOT / 'source/gamemap/RoomObjectBounds.h').read_text()
+    row = re.search(r'\{"TavernCounter",\s*([^}]+)\}', catalog)
+    assert row, 'TavernCounter missing from navigation catalog'
+    actual = tuple(float(value.strip().removesuffix('f')) for value in row[1].split(','))
+    minimum, maximum = MESHES['TavernCounter'][2:4]
+    assert actual == (minimum[0], minimum[1], maximum[0], maximum[1]), \
+        ('TavernCounter navigation must match the approved mesh', actual)
+
+
+# Exercise the native assets, navigation footprint and existing innkeeper animation contracts.
 def main():
     check_atlases()
+    check_counter_navigation_bounds()
     with tempfile.TemporaryDirectory(prefix='tavern-assets-') as temporary:
         directory = Path(temporary)
         for name in MESHES:

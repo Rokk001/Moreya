@@ -86,7 +86,7 @@ static const MeshBounds meshBounds[] = {
     {"SpiderBed", -.35f, -.435f, .35f, .435f, .59f},
     {"StillShelf", -.435f, -.185f, .435f, .215f},
     {"StoneCoffin", -.425477f, -.693722f, .425477f, .693722f, .767922f},
-    {"TavernCounter", -.52f, -.338f, .52f, .054958571f},
+    {"TavernCounter", -.52f, -.338f, .520001f, .0549586f},
     {"TavernKeg", -.2504f, -.371773f, .2504f, .2504f},
     {"TavernStool", -.1655f, -.1655f, .1655f, .1655f},
     {"TavernTable", -.595f, -.78f, .595f, .78f},

@@ -171,25 +171,30 @@ class SelectionTests(unittest.TestCase):
                 runner.main()
         self.assertEqual(error.exception.code, 2)
 
-    # Keep build checks on their captured range and route deployment through the successful-deploy selector.
+    # Bind profiled Build and locked Deploy to the same immutable integration range.
     def test_orchestrator_wiring(self):
+        """Keep build receipts, profiling and saved map selection through the merge."""
         build = (ROOT / 'scripts/win32/orchestrator-build.ps1').read_text()
         deploy = (ROOT / 'scripts/win32/orchestrator-deploy.ps1').read_text()
+        helper = (ROOT / 'scripts/odp_deployment.py').read_text()
         self.assertIn('--capture-base $Base --output "$wt\\out\\load-base-$run.json"', build)
         self.assertLess(build.index('--capture-base'), build.index('configure started'))
         self.assertIn('--base $loadBase', build)
-        self.assertIn('orchestrator-deploy-selected.ps1', deploy)
-        self.assertIn('-Worktree $wt', deploy)
-        self.assertNotIn('--all-campaign', deploy)
-        self.assertNotIn('-FullCampaign', deploy)
-        deploy = (ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1').read_text()
-        self.assertIn('--deployment-selection $manifest --executable $exe', deploy)
-        self.assertIn("if ($FullCampaign) { $selectionArgs += '--all-campaign' }", deploy)
-        self.assertLess(deploy.index('Load test with the deployed exe failed'), deploy.index('Set-Content -Encoding ascii -LiteralPath $Counter'))
+        self.assertIn('run-checks-profiled.py" --runner $Checks', build)
+        self.assertIn('$buildCommit = (& git -C $wt rev-parse HEAD).Trim()', build)
+        self.assertIn('record --repo $wt --run $run --number $n --commit $buildCommit', build)
+        self.assertLess(build.index('run-checks-profiled.py'), build.index('odp_deployment.py" record'))
+        self.assertIn('odp_deployment.py" deploy', deploy)
+        self.assertIn('--deployment-selection', helper)
+        self.assertIn('selection.prepare(common.parent', helper)
+        self.assertIn('-SelectionFile', helper)
+        self.assertNotIn('--all-campaign', deploy + helper)
+        self.assertLess(helper.index('if runner.main():'), helper.index('counter.write_text'))
 
     # Execute the real wrapper and wait helper with isolated process, deployment and probe substitutes.
     @unittest.skipUnless(shutil.which('powershell'), 'Windows deployment wrapper')
     def test_deploy_wrapper_failure_and_counter(self):
+        """Retain receipt safety and isolated wait-helper coverage through locked deployment."""
         scripts = self.repo / 'scripts/win32'
         scripts.mkdir(parents=True)
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy.ps1', scripts / 'orchestrator-deploy.ps1')
@@ -213,16 +218,42 @@ class SelectionTests(unittest.TestCase):
                    'data_commit': tip, 'evidence': 'verified fixture deploy'}))
         self.write('out/orch-run.txt', 'test')
         self.write('out/build-number-test.txt', '17')
-        self.write('deploy-stub.ps1', 'exit 0\n')
+        self.write('deploy-stub.ps1',
+                   'param($ExeDir, $SelectionFile)\n'
+                   'if (-not $env:ODP_DEPLOY_EXPECTED_COMMIT) {exit 8}\n'
+                   'if (-not (Test-Path -LiteralPath $SelectionFile)) {exit 9}\nexit 0\n')
+        self.write('scripts/odp_deployment.py',
+                   'import importlib.util\nfrom pathlib import Path\nfrom unittest.mock import patch\n'
+                   'spec = importlib.util.spec_from_file_location("real_deployment", %r)\n'
+                   'helper = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(helper)\n'
+                   'spec = importlib.util.spec_from_file_location("probe_stub", Path(__file__).with_name("run-campaign-load-tests.py"))\n'
+                   'runner = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(runner)\n'
+                   'def git(repo, *args):\n'
+                   '    return str(repo / ".git") if "--git-common-dir" in args else %r\n'
+                   'with patch.object(helper, "git", side_effect=git), \\\n'
+                   '     patch.object(helper, "campaign_runner", return_value=runner), \\\n'
+                   '     patch.object(helper, "validate_build", return_value={"commit": %r, "sha256": "hash", "number": "17"}), \\\n'
+                   '     patch.object(helper, "digest", return_value="hash"):\n'
+                   '    helper.main()\n' % (str(ROOT / 'scripts/odp_deployment.py'), tip, tip))
         counter = self.repo / 'counter.txt'
+        success_file = self.repo / '.git/odp-deploy-success.json'
+        original_receipt = success_file.read_bytes()
         process_queries = scripts / 'idle-process-queries.txt'
         for result in (7, 0):
             process_queries.unlink(missing_ok=True)
             counter.write_text('16')
             self.write('scripts/run-campaign-load-tests.py',
-                       'import json, sys\nfrom pathlib import Path\n'
-                       'Path(__file__).with_suffix(".args").write_text(json.dumps(sys.argv[1:]))\n'
-                       'sys.exit(%d)\n' % result)
+                       'import json, subprocess, sys\nfrom pathlib import Path\n'
+                       '# Exercise the real wait helper through the locked runner process probe.\n'
+                       'def game_is_running(executable):\n'
+                       '    """Check the isolated idle fixture without inspecting owner processes."""\n'
+                       '    helper = Path(__file__).parent / "win32/wait-game-exit.ps1"\n'
+                       '    command = ". \'" + str(helper).replace("\'", "\'\'") + "\'; Wait-GameExit -TimeoutSeconds 0"\n'
+                       '    subprocess.run(["powershell", "-NoProfile", "-Command", command], check=True, timeout=10)\n'
+                       '    return False\n'
+                       'def main():\n'
+                       '    Path(__file__).with_suffix(".args").write_text(json.dumps(sys.argv[1:]))\n'
+                       '    return %d\n' % result)
             completed = subprocess.run(['powershell', '-NoProfile', '-File',
                                        str(scripts / 'orchestrator-deploy.ps1'),
                                        '-Counter', str(counter), '-DeployScript', str(self.repo / 'deploy-stub.ps1'),
@@ -236,9 +267,35 @@ class SelectionTests(unittest.TestCase):
             args = json.loads((self.repo / 'scripts/run-campaign-load-tests.args').read_text())
             self.assertEqual(Path(args[args.index('--executable') + 1]),
                              self.repo / 'build/windows/opendungeons-plus.exe')
+            self.assertEqual(Path(args[args.index('--repo') + 1]), self.repo / 'build/current-worktree')
             self.assertEqual(Path(args[args.index('--deployment-selection') + 1]), self.repo / 'out/deploy-selection-test.json')
+            manifest = json.loads((self.repo / 'out/deploy-selection-test.json').read_text())
+            self.assertEqual((manifest['base'], manifest['tip']), (tip, tip))
+            self.assertEqual(list(manifest['levels']), ['levels/campaign/Mossgate.level'])
             if result:
                 self.assertNotIn('deployed build 17', completed.stdout)
+                self.assertEqual(success_file.read_bytes(), original_receipt)
+            else:
+                saved = json.loads(success_file.read_text())
+                self.assertEqual(saved['data_commit'], tip)
+                self.assertEqual(saved['status'], 'success')
+                self.assertEqual(len(saved['exe_sha256']), 64)
+
+        # A missing comparison baseline must fail before deployment or another probe.
+        success_file.unlink()
+        counter.write_text('16')
+        probe_args = self.repo / 'scripts/run-campaign-load-tests.args'
+        probe_args.unlink()
+        self.write('deploy-stub.ps1', '# ODP_DEPLOY_EXPECTED_COMMIT\nthrow "Must not deploy without baseline"\n')
+        completed = subprocess.run(['powershell', '-NoProfile', '-File',
+                                   str(scripts / 'orchestrator-deploy.ps1'),
+                                   '-Counter', str(counter), '-DeployScript', str(self.repo / 'deploy-stub.ps1')],
+                                  capture_output=True, text=True, timeout=30)
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn('No verified last successful deploy baseline', completed.stderr)
+        self.assertNotIn('Must not deploy without baseline', completed.stderr)
+        self.assertFalse(probe_args.exists())
+        self.assertEqual(counter.read_text(), '16')
 
 
 if __name__ == '__main__':
