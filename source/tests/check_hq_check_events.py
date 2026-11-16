@@ -155,13 +155,13 @@ class BuildControllerTests(unittest.TestCase):
     # Failed configure/build still produce a complete suite with isolated deployment dependencies and all independent check results.
     @unittest.skipUnless(shutil.which('powershell'),'Windows Build controller')
     def test_failed_build_drains_checks(self):
-        """Preserve build failures and drain independent checks using the complete script fixture."""
+        """Require real base capture with complete isolated dependencies, preserve build failures, and drain independent checks."""
         for configure_code,build_code in ((13,125),(0,17)):
             with self.subTest(configure=configure_code), tempfile.TemporaryDirectory() as temporary:
                 repo=Path(temporary)
                 for name in ['scripts/run-checks.py','scripts/run-checks-profiled.py','scripts/hq_check_events.py',
-                             'scripts/owned_process.py','scripts/run-campaign-load-tests.py','scripts/deploy-level-selection.py',
-                             'scripts/odp_deployment.py',
+                             'scripts/owned_process.py','scripts/odp_deployment.py',
+                             'scripts/run-campaign-load-tests.py','scripts/deploy-level-selection.py',
                              'scripts/win32/orchestrator-build.ps1']:
                     target=repo/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,target)
                 # This fixture supplies an empty compiler environment and never invokes a real compiler.
@@ -189,6 +189,11 @@ class BuildControllerTests(unittest.TestCase):
                 rows=[json.loads(line) for line in journal.read_text().splitlines()]
                 final={r['check']:r for r in rows if r['event']=='result' and r['final']}
                 self.assertEqual(set(final),set(rows[0]['checks']))
+                self.assertEqual(final['build:preflight']['exit'],0,
+                                 Path(final['build:preflight']['output_path']).read_text())
+                captured=list((repo/'out').glob('load-base-*.json'))
+                self.assertEqual(len(captured),1)
+                self.assertEqual(json.loads(captured[0].read_text()),{'base':head,'tip':head})
                 self.assertEqual(final['build:configure']['exit'],configure_code)
                 self.assertEqual(final['build:release']['exit'],build_code)
                 self.assertEqual(final['scripts/check-first.py']['exit'],9)
