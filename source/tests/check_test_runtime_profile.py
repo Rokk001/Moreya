@@ -181,7 +181,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn('$code = $LASTEXITCODE', source)
         self.assertTrue(source.rstrip().endswith('exit $code'))
 
-    # Parse the merged script and exercise its check invocation with a saved base and both exit statuses.
+    # Parse the merged script and exercise its pinned profiler/status invocation with a saved base and both exit statuses.
     def test_merged_build_base_and_profiler(self):
         build = ROOT / 'scripts/win32/orchestrator-build.ps1'
         source = build.read_text()
@@ -192,7 +192,9 @@ $errors = $null
 [void][System.Management.Automation.Language.Parser]::ParseFile('__BUILD__', [ref]$tokens, [ref]$errors)
 if ($errors.Count) { throw ($errors | Out-String) }
 $wt = 'fixture worktree'
+$scripts = 'fixture pinned bundle\scripts'
 $Checks = 'fixture runner.py'
+$statusFile = 'fixture status directory\build-status-orch-fixture.json'
 $loadBase = '0123456789abcdef0123456789abcdef01234567'
 $start = 123
 $run = 'orch-fixture'
@@ -202,11 +204,12 @@ function python {
     $global:LASTEXITCODE = __CODE__
 }
 '''.replace('__BUILD__', str(build).replace("'", "''"))
-        expected = ['-u', '-I', r'fixture worktree\scripts\run-checks-profiled.py',
+        expected = ['-u', '-I', r'fixture pinned bundle\scripts\run-checks-profiled.py',
                     '--runner', 'fixture runner.py', '--repo', 'fixture worktree',
                     '--out', r'fixture worktree\out\checks-orch-fixture.txt',
                     '--base', '0123456789abcdef0123456789abcdef01234567',
-                    '--build-start', 123, '--run', 'orch-fixture']
+                    '--build-start', 123, '--run', 'orch-fixture',
+                    '--build-status', r'fixture status directory\build-status-orch-fixture.json']
         for code in (0, 7):
             with self.subTest(code=code):
                 result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command',
