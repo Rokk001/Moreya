@@ -170,12 +170,18 @@ static void buildGhostCauldronOutlet(Ogre::ManualObject& outlet)
     }
     outlet.end();
     // A wet green tongue at the bottom of the opening identifies the ectoplasm output even while idle.
+    // Continue below the lip so the output is visible from above instead of hiding entirely inside the bore.
     outlet.begin("GhostCauldronEctoplasm",Ogre::RenderOperation::OT_TRIANGLE_LIST);
     outlet.position(-0.08f,0.65f,0.22f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.1f,0.1f);
     outlet.position(0.08f,0.65f,0.22f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.9f,0.1f);
     outlet.position(-0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.1f,0.9f);
     outlet.position(0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.9f,0.9f);
-    outlet.triangle(0,1,2);outlet.triangle(1,3,2);outlet.end();
+    outlet.triangle(0,1,2);outlet.triangle(1,3,2);
+    outlet.position(-0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.1f,0.9f);
+    outlet.position(0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.9f,0.9f);
+    outlet.position(-0.04f,0.99f,0.04f);outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.3f,1.0f);
+    outlet.position(0.04f,0.99f,0.04f);outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.7f,1.0f);
+    outlet.triangle(4,5,6);outlet.triangle(5,7,6);outlet.end();
 }
 
 //! \brief Builds the furniture, the cauldron's fill and output spout, and a decorative bag's shared quality materials.

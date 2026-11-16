@@ -2351,4 +2351,4 @@ materials/textures/MerchantHideApprovedNormal.png    AI-generated with Codex; ma
 materials/textures/MerchantGoldApprovedColor.png    AI-generated with Codex; material source as noted    GPLv3+    Original baked Color atlas, 2026-11-15. Original spatial material authored in Blender for this project.
 materials/textures/MerchantGoldApprovedNormal.png    AI-generated with Codex; material source as noted    GPLv3+    Original baked Normal atlas, 2026-11-15. Original spatial material authored in Blender for this project.
 
-source/entities/BuildingObject.cpp (buildGhostCauldronOutlet): original procedural brass cauldron outlet with open bore and green liquid, AI-assisted project geometry, GPL-3.0-or-later; owner decision 1250.
+source/entities/BuildingObject.cpp (buildGhostCauldronOutlet): original procedural brass cauldron outlet with open bore and green liquid descending visibly below the lip, AI-assisted project geometry, GPL-3.0-or-later; owner decision 1250.

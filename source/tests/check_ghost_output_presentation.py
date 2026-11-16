@@ -23,6 +23,8 @@ def shaders():
         assert "vertex_program_ref GhostHoseVertex" in block, (name, "missing colour vertex shader")
         assert "fragment_program_ref " + fragment in block, (name, "missing colour fragment shader")
         assert "lighting off" in block
+        assert "scheme ShaderGeneratorDefaultScheme" in block, (name, "game viewport must select authored colours directly")
+    assert "mViewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);" in rules.read("source/render/RenderManager.cpp")
     for program, filename in (("GhostHoseVertex", "GhostHose.vert"), ("GhostHoseFragment", "GhostHose.frag"),
                               ("GhostHoseWireFragment", "GhostHoseWire.frag")):
         assert re.search(r"(?:vertex|fragment)_program " + program + r" glsl\s*\{\s*source " + re.escape(filename), material)
@@ -111,14 +113,14 @@ struct RoomGhostRoom {
 int main(){
  Ogre::ManualObject outlet;buildGhostCauldronOutlet(outlet);
  check(outlet.sections.size()==3,"three outlet surfaces");
- const size_t vertices[]={150,50,4},indices[]={720,144,6};
+ const size_t vertices[]={150,50,8},indices[]={720,144,12};
  const char* materials[]={"GhostBrass","GhostIron","GhostCauldronEctoplasm"};
  for(size_t s=0;s<3;++s){
   const Ogre::ManualObject::Section& section=outlet.sections[s];
   check(section.material==materials[s],"brass casing, dark bore, wet liquid");
   check(section.vertices.size()==vertices[s]&&section.indices.size()==indices[s],"fixed complete geometry");
   for(const Ogre::ManualObject::Vertex& v:section.vertices){
-   check(std::abs(v.p.x)<=.201f&&v.p.y>=.479f&&v.p.y<=.971f&&v.p.z>=.079f&&v.p.z<=.481f,"outlet under the glass in the cauldron footprint");
+   check(std::abs(v.p.x)<=.201f&&v.p.y>=.479f&&v.p.y<=.991f&&v.p.z>=.039f&&v.p.z<=.481f,"outlet under the glass in the cauldron footprint");
   }
   for(size_t i=0;i<section.indices.size();i+=3){
    const Ogre::ManualObject::Vertex& a=section.vertices.at(section.indices[i]);
@@ -134,6 +136,10 @@ int main(){
     check(v->p.x*v->p.x+(v->p.z-.28f)*(v->p.z-.28f)>=.00999f,"lip leaves the bore open");
   }
  }
+ const Ogre::ManualObject::Section& liquid=outlet.sections[2];
+ check(liquid.vertices[6].p.y==.99f&&liquid.vertices[7].p.y==.99f&&
+       liquid.vertices[6].p.z==.04f&&liquid.vertices[7].p.z==.04f,
+       "green discharge extends outside and below the brass lip");
  Tile anchor{0,0},back{0,-1},front{0,2},frontRight{1,2},side{-1,1},inside{0,1};
  RoomGhostRoom room;room.mCauldrons.push_back({&anchor});
  room.mCoveredTiles={&back,&front,&frontRight,&side,&inside};

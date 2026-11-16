@@ -192,6 +192,8 @@ material GhostHose
     receive_shadows off
     technique
     {
+        // The game viewport selects this scheme; keep the authored colour programs on that exact path.
+        scheme ShaderGeneratorDefaultScheme
         pass
         {
             cull_hardware none
@@ -217,6 +219,7 @@ material GhostHoseWire
     receive_shadows off
     technique
     {
+        scheme ShaderGeneratorDefaultScheme
         pass
         {
             cull_hardware none
