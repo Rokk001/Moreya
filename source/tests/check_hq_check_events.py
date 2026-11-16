@@ -180,9 +180,10 @@ class BuildControllerTests(unittest.TestCase):
                 head=events.git(repo,'rev-parse','HEAD');journal=repo/'events.jsonl'
                 env={**os.environ,'HQ_CHECK_EVENTS':str(journal),'HQ_CHECK_RUN':'fixture-build','HQ_CHECK_COMMIT':head}
                 result=subprocess.run(['powershell','-NoProfile','-File',str(repo/'scripts/win32/orchestrator-build.ps1'),
-                                       '-Counter',str(repo/'counter.txt'),'-Base',head,'-Checks','unused-legacy-runner'],
+                                       '-Counter',str(repo/'counter.txt'),'-Base',head,'-Checks','unused-legacy-runner','-Worktree',str(repo)],
                                       cwd=repo,env=env,capture_output=True,text=True,timeout=30)
                 self.assertEqual(result.returncode,1,result.stdout+result.stderr)
+                self.assertTrue(journal.is_file(),result.stdout+result.stderr)
                 rows=[json.loads(line) for line in journal.read_text().splitlines()]
                 final={r['check']:r for r in rows if r['event']=='result' and r['final']}
                 self.assertEqual(set(final),set(rows[0]['checks']))
