@@ -5,10 +5,11 @@ param(
     [Parameter(Mandatory = $true)][string]$Counter,
     [Parameter(Mandatory = $true)][string]$Base,
     [Parameter(Mandatory = $true)][string]$Checks,
-    [string]$Worktree = (Join-Path $PSScriptRoot '..\..')
+    [string]$Worktree = ''
 )
 # Native stderr must not end the script; only the exit codes decide
 $ErrorActionPreference = 'Continue'
+if (-not $Worktree) { $Worktree = Join-Path $PSScriptRoot '..\..' }
 $wt = (Resolve-Path -LiteralPath $Worktree).Path
 # A pinned external entry point runs against the selected plan worktree, never its bundle folder.
 $scripts = Split-Path -Parent $PSScriptRoot
@@ -18,7 +19,7 @@ New-Item -ItemType Directory -Force "$wt\out" | Out-Null
 $run = 'orch-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 $loadBase = $Base
 $preflightLog = "$wt\out\preflight-$run.log"
-$start = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$start = 0
 $stages = [ordered]@{
     'build:preflight' = @{ exit = 125; kind = 'prerequisite'; output = 'Build preflight did not complete' }
     'build:configure' = @{ exit = 125; kind = 'prerequisite'; output = 'Configure not executed because preflight failed' }

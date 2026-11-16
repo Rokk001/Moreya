@@ -5,9 +5,9 @@ import tempfile
 
 root = Path(__file__).resolve().parents[2]
 helper = root / 'scripts/win32/wait-game-exit.ps1'
-deploy = (root / 'scripts/win32/orchestrator-deploy.ps1').read_text(encoding='utf-8')
-assert deploy.index('Wait-GameExit -TimeoutSeconds $GameWaitSeconds') < deploy.index("& '$deployScriptLiteral'")
-assert 'catch { Write-Error `$_; exit 1 }' in deploy
+deploy = (root / 'scripts/win32/orchestrator-deploy-selected.ps1').read_text(encoding='utf-8')
+assert deploy.index('Wait-GameExit -TimeoutSeconds $GameWaitSeconds') < deploy.index('& powershell -NoProfile -File $DeployScript')
+assert "$ErrorActionPreference = 'Stop'" in deploy
 assert '[int]$GameWaitSeconds = 1800' in deploy
 
 harness = r'''
@@ -67,22 +67,24 @@ print(result.stdout, end='')
 assert result.returncode == 0, result.stderr
 
 # Execute the actual child deployment command against a harmless deployment stub.
-command_assignment = deploy[deploy.index('$deployCommand = @"'):deploy.index('& powershell -NoProfile -Command $deployCommand')]
+command_assignment = deploy[deploy.index('$waitHelper ='):deploy.index('$data = Join-Path $repo')]
 with tempfile.TemporaryDirectory(prefix='deploy-wait-') as temporary:
     folder = Path(temporary)
     stub = folder / 'deploy.ps1'
     marker = folder / 'deployed.txt'
-    stub.write_text("param($ExeDir)\nSet-Content -LiteralPath '"
+    stub.write_text("param($ExeDir, $SelectionFile)\nSet-Content -LiteralPath '"
                     + str(marker).replace("'", "''") + "' -Value 'deployed'\n", encoding='utf-8')
     for busy_queries, expected_code in [(2, 0), (100, 1)]:
         marker.unlink(missing_ok=True)
-        setup = "$deployScriptLiteral = '" + str(stub).replace("'", "''") + "'\n"
+        (folder / 'scripts/win32').mkdir(parents=True, exist_ok=True)
+        (folder / 'scripts/win32/wait-game-exit.ps1').write_text(helper.read_text(), encoding='utf-8')
+        setup = "$ErrorActionPreference = 'Stop'\n$DeployScript = '" + str(stub).replace("'", "''") + "'\n"
         setup += "$waitScriptLiteral = '" + str(helper).replace("'", "''") + "'\n"
-        setup += "$exeDirLiteral = 'unused'\n$GameWaitSeconds = " + ('30' if expected_code == 0 else '0') + "\n"
+        setup += "$wt = '" + str(folder).replace("'", "''") + "'\n$manifest = 'fixture'\n$GameWaitSeconds = " + ('30' if expected_code == 0 else '0') + "\n"
         setup += "$script:queries = 0\nfunction Get-Process { $script:queries++; if ($script:queries -le " + str(busy_queries) + ") { 'running' } }\n"
         setup += "function Start-Sleep {}\nfunction Stop-Process { throw 'Must never stop a process' }\n"
         result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command',
-                                 setup + command_assignment + '& ([scriptblock]::Create($deployCommand))'],
+                                 setup + command_assignment],
                                 capture_output=True, text=True, timeout=15)
         assert result.returncode == expected_code, result.stdout + result.stderr
         assert marker.exists() == (expected_code == 0), 'Deployment must run only after the game exits'
