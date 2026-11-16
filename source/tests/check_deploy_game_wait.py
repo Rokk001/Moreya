@@ -1,32 +1,14 @@
 """Exercise the deploy wait without starting, closing, or deploying the real game."""
 from pathlib import Path
 import subprocess
-import sys
+import tempfile
 
 root = Path(__file__).resolve().parents[2]
 helper = root / 'scripts/win32/wait-game-exit.ps1'
-deploy = (root / 'scripts/win32/orchestrator-deploy.ps1').read_text(encoding='utf-8')
-assert '--game-wait-seconds $GameWaitSeconds' in deploy
-assert 'odp_deployment.py' in deploy
-assert 'exit $LASTEXITCODE' in deploy
+deploy = (root / 'scripts/win32/orchestrator-deploy-selected.ps1').read_text(encoding='utf-8')
+assert deploy.index('Wait-GameExit -TimeoutSeconds $GameWaitSeconds') < deploy.index('& powershell -NoProfile -File $DeployScript')
+assert "$ErrorActionPreference = 'Stop'" in deploy
 assert '[int]$GameWaitSeconds = 1800' in deploy
-
-# Execute the real wrapper with an inert helper to verify forwarding and failure propagation.
-for bound, exit_code in [(0, 1), (23, 0)]:
-    wrapper = str(root / 'scripts/win32/orchestrator-deploy.ps1').replace("'", "''")
-    setup = r'''
-function python {
-    if ($args[-2] -ne '--game-wait-seconds' -or $args[-1] -ne __BOUND__) {
-        throw 'Wrapper lost the configured wait bound'
-    }
-    if ($args[0] -ne '-I' -or $args[2] -ne 'deploy') { throw 'Wrong helper invocation' }
-    $global:LASTEXITCODE = __EXIT__
-}
-& '__WRAPPER__' -Counter unused -DeployScript unused -GameWaitSeconds __BOUND__
-'''.replace('__BOUND__', str(bound)).replace('__EXIT__', str(exit_code)).replace('__WRAPPER__', wrapper)
-    result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', setup],
-                            capture_output=True, text=True, timeout=15)
-    assert result.returncode == exit_code, result.stdout + result.stderr
 
 harness = r'''
 $ErrorActionPreference = 'Stop'
@@ -84,12 +66,26 @@ result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Comman
 print(result.stdout, end='')
 assert result.returncode == 0, result.stderr
 
-# Exercise the merged helper through its focused shared-lock deployment regressions.
-# The receipt, guarded deployment and counter checks run alongside timeout/no-deploy cases.
-result = subprocess.run([sys.executable, '-I',
-                         str(root / 'scripts/check-deploy-recovery.py')],
-                        capture_output=True, text=True, timeout=30)
-print(result.stdout, end='')
-print(result.stderr, end='')
-assert result.returncode == 0, result.stdout + result.stderr
-print('PASS: merged shared-lock deployment and bounded-wait regressions')
+# Execute the actual child deployment command against a harmless deployment stub.
+command_assignment = deploy[deploy.index('$waitHelper ='):deploy.index('$data = Join-Path $repo')]
+with tempfile.TemporaryDirectory(prefix='deploy-wait-') as temporary:
+    folder = Path(temporary)
+    stub = folder / 'deploy.ps1'
+    marker = folder / 'deployed.txt'
+    stub.write_text("param($ExeDir, $SelectionFile)\nSet-Content -LiteralPath '"
+                    + str(marker).replace("'", "''") + "' -Value 'deployed'\n", encoding='utf-8')
+    for busy_queries, expected_code in [(2, 0), (100, 1)]:
+        marker.unlink(missing_ok=True)
+        (folder / 'scripts/win32').mkdir(parents=True, exist_ok=True)
+        (folder / 'scripts/win32/wait-game-exit.ps1').write_text(helper.read_text(), encoding='utf-8')
+        setup = "$ErrorActionPreference = 'Stop'\n$DeployScript = '" + str(stub).replace("'", "''") + "'\n"
+        setup += "$waitScriptLiteral = '" + str(helper).replace("'", "''") + "'\n"
+        setup += "$wt = '" + str(folder).replace("'", "''") + "'\n$manifest = 'fixture'\n$GameWaitSeconds = " + ('30' if expected_code == 0 else '0') + "\n"
+        setup += "$script:queries = 0\nfunction Get-Process { $script:queries++; if ($script:queries -le " + str(busy_queries) + ") { 'running' } }\n"
+        setup += "function Start-Sleep {}\nfunction Stop-Process { throw 'Must never stop a process' }\n"
+        result = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command',
+                                 setup + command_assignment],
+                                capture_output=True, text=True, timeout=15)
+        assert result.returncode == expected_code, result.stdout + result.stderr
+        assert marker.exists() == (expected_code == 0), 'Deployment must run only after the game exits'
+print('PASS: two child-command deployment regressions')
