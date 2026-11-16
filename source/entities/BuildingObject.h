@@ -31,6 +31,7 @@ class Room;
 class GameMap;
 class Tile;
 class ODPacket;
+namespace Ogre { class ManualObject; }
 
 //! \brief Renders room furniture and decorative goods with their transmitted appearance.
 class BuildingObject: public RenderedMovableEntity
@@ -86,6 +87,8 @@ private:
     double mGhostFill = -1.0;
     double mGhostAlarm = 0.0;
     Ogre::SceneNode* mGhostFillNode = nullptr;
+    //! \brief Permanent client outlet below the cauldron glass, independent of the changing fill level.
+    Ogre::ManualObject* mGhostOutlet = nullptr;
     //! \brief Client only: the red and green alarm lamps beside a ghost room bell.
     Ogre::SceneNode* mGhostLampNode = nullptr;
     //! \brief Client only: the textured hunter backpack with its holstered capture cannon hanging on a full wall hook.

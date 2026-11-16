@@ -147,10 +147,10 @@ private:
     void layoutCauldrons();
     //! \brief Recreates furniture for the current cauldron layout.
     void createCauldronObjects();
-    //! \brief Returns the floor tile nearest to a cauldron or apparatus where an item falls, or nullptr if none is free.
+    //! \brief Returns free floor nearest the cauldron outlet or apparatus, or nullptr if none is free.
     //! Tiles under cauldrons and apparatuses are never used.
     //! \param origin Anchor tile of the cauldron or tile of the apparatus.
-    //! \param offset 0.5 for a 2x2 cauldron anchor (its centre), 0 for an apparatus tile.
+    //! \param offset 0.5 for a 2x2 cauldron anchor (centre plus front outlet), 0 for an apparatus tile.
     Tile* findDropTile(const Tile& origin, double offset) const;
     //! \brief Turns every complete ectoplasm of the keeper value into an item next to the cauldron.
     void produceEctoplasm(Tile& cauldron);

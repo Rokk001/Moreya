@@ -26,6 +26,7 @@
 #include "game/Seat.h"
 #include "ODApplication.h"
 #include <OgreSubEntity.h>
+#include <OgreManualObject.h>
 #include "gamemap/GameMap.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -36,6 +37,7 @@
 #include "utils/LogManager.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 BuildingObject::BuildingObject(GameMap* gameMap, Building& building, const std::string& meshName, Tile* targetTile,
@@ -119,7 +121,70 @@ void BuildingObject::addParticleEffect(const std::string& effectScript, uint32_t
     mEntityParticleEffects.push_back(effect);
 }
 
-//! \brief Builds the furniture and applies a decorative bag's shared quality materials.
+//! \brief Builds a hollow brass outlet below the inspection glass, with a dark bore and visible green liquid.
+static void buildGhostCauldronOutlet(Ogre::ManualObject& outlet)
+{
+    const size_t sides=24;
+    const float stations[]={0.48f,0.56f,0.59f,0.89f,0.94f};
+    const float radii[]={0.20f,0.20f,0.14f,0.14f,0.18f};
+    outlet.begin("GhostBrass",Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    for(size_t ring=0;ring<5;++ring)
+        for(size_t side=0;side<=sides;++side)
+        {
+            const float angle=Ogre::Math::TWO_PI*static_cast<float>(side)/static_cast<float>(sides);
+            const Ogre::Vector3 normal(std::cos(angle),0.0f,std::sin(angle));
+            outlet.position(normal.x*radii[ring],stations[ring],0.28f+normal.z*radii[ring]);
+            outlet.normal(normal);outlet.textureCoord(static_cast<float>(side)/sides,stations[ring]);
+        }
+    for(size_t ring=0;ring<4;++ring)
+        for(size_t side=0;side<sides;++side)
+        {
+            const Ogre::uint32 a=static_cast<Ogre::uint32>(ring*(sides+1)+side),b=a+1,c=a+sides+1,d=c+1;
+            outlet.triangle(a,c,b);outlet.triangle(b,c,d);
+        }
+    // The annular end face leaves the bore open, rather than capping the spout with solid metal.
+    for(size_t side=0;side<=sides;++side)
+    {
+        const float angle=Ogre::Math::TWO_PI*static_cast<float>(side)/static_cast<float>(sides);
+        outlet.position(0.10f*std::cos(angle),0.94f,0.28f+0.10f*std::sin(angle));
+        outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.0f,0.0f);
+    }
+    for(size_t side=0;side<sides;++side)
+    {
+        const Ogre::uint32 a=static_cast<Ogre::uint32>(4*(sides+1)+side),b=a+1,c=a+sides+1,d=c+1;
+        outlet.triangle(a,c,b);outlet.triangle(b,c,d);
+    }
+    outlet.end();
+    outlet.begin("GhostIron",Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    for(size_t ring=0;ring<2;++ring)
+        for(size_t side=0;side<=sides;++side)
+        {
+            const float angle=Ogre::Math::TWO_PI*static_cast<float>(side)/static_cast<float>(sides);
+            outlet.position(0.10f*std::cos(angle),ring==0?0.60f:0.94f,0.28f+0.10f*std::sin(angle));
+            outlet.normal(-std::cos(angle),0.0f,-std::sin(angle));outlet.textureCoord(0.0f,0.0f);
+        }
+    for(size_t side=0;side<sides;++side)
+    {
+        const Ogre::uint32 a=static_cast<Ogre::uint32>(side),b=a+1,c=a+sides+1,d=c+1;
+        outlet.triangle(a,b,c);outlet.triangle(b,d,c);
+    }
+    outlet.end();
+    // A wet green tongue at the bottom of the opening identifies the ectoplasm output even while idle.
+    // Continue below the lip so the output is visible from above instead of hiding entirely inside the bore.
+    outlet.begin("GhostCauldronEctoplasm",Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    outlet.position(-0.08f,0.65f,0.22f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.1f,0.1f);
+    outlet.position(0.08f,0.65f,0.22f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.9f,0.1f);
+    outlet.position(-0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.1f,0.9f);
+    outlet.position(0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.9f,0.9f);
+    outlet.triangle(0,1,2);outlet.triangle(1,3,2);
+    outlet.position(-0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.1f,0.9f);
+    outlet.position(0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.9f,0.9f);
+    outlet.position(-0.04f,0.99f,0.04f);outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.3f,1.0f);
+    outlet.position(0.04f,0.99f,0.04f);outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.7f,1.0f);
+    outlet.triangle(4,5,6);outlet.triangle(5,7,6);outlet.end();
+}
+
+//! \brief Builds the furniture, the cauldron's fill and output spout, and a decorative bag's shared quality materials.
 void BuildingObject::createMeshLocal(NodeType type)
 {
     RenderedMovableEntity::createMeshLocal(type);
@@ -131,6 +196,11 @@ void BuildingObject::createMeshLocal(NodeType type)
         mGhostFillNode=getEntityNode()->createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.0f,0.74f,0.40f));
         mGhostFillNode->attachObject(fill);
         mGhostFillNode->setScale(1.0f,1.0f,static_cast<float>(std::max(0.0,mGhostFill)));
+        Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+        mGhostOutlet=scene->createManualObject(getName()+"_GhostOutlet");
+        mGhostOutlet->setQueryFlags(0);mGhostOutlet->setCastShadows(true);
+        buildGhostCauldronOutlet(*mGhostOutlet);
+        getEntityNode()->attachObject(mGhostOutlet);
     }
     if(!getIsOnServerMap() && getMeshName()=="GhostHook" && getEntityNode()!=nullptr)
     {
@@ -265,8 +335,14 @@ void BuildingObject::update(Ogre::Real seconds)
     }
     mGhostLampNode->setVisible(flash);
 }
+//! \brief Releases cauldron and hook attachments before destroying their furniture node.
 void BuildingObject::destroyMeshLocal(NodeType type)
 {
+    if(mGhostOutlet!=nullptr)
+    {
+        mGhostOutlet->detachFromParent();
+        RenderManager::getSingleton().getSceneManager()->destroyManualObject(mGhostOutlet);mGhostOutlet=nullptr;
+    }
     if(mGhostFillNode!=nullptr)
     {
         Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
