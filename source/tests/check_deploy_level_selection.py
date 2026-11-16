@@ -191,18 +191,23 @@ class SelectionTests(unittest.TestCase):
         self.assertNotIn('--all-campaign', deploy + helper)
         self.assertLess(helper.index('if runner.main():'), helper.index('counter.write_text'))
 
-    # Execute the real deployment wrapper with harmless deployment and probe substitutes.
+    # Execute the real wrapper and wait helper with isolated process, deployment and probe substitutes.
     @unittest.skipUnless(shutil.which('powershell'), 'Windows deployment wrapper')
     def test_deploy_wrapper_failure_and_counter(self):
-        """Keep locked provenance and successful-deploy selection together after merging."""
+        """Retain receipt safety and isolated wait-helper coverage through locked deployment."""
         scripts = self.repo / 'scripts/win32'
         scripts.mkdir(parents=True)
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy.ps1', scripts / 'orchestrator-deploy.ps1')
-        # Keep the real wait helper while isolating this selection test from the owner's processes.
-        wait_helper = (ROOT / 'scripts/win32/wait-game-exit.ps1').read_text()
+        # The child shell loads the real wait helper beside the wrapper; isolate it from the owner's processes.
+        wait_helper = (ROOT / 'scripts/win32/wait-game-exit.ps1').read_text(encoding='utf-8')
         self.write('scripts/win32/wait-game-exit.ps1', wait_helper +
-                   '\n# Observe an idle fixture without inspecting real processes.\n'
-                   'function Get-Process { param($Name, $ErrorAction) return @() }\n')
+                   '\n# Observe an idle fixture without inspecting the owner\'s game.\n'
+                   'function Get-Process { param($Name, $ErrorAction)\n'
+                   '    [System.IO.File]::AppendAllText((Join-Path $PSScriptRoot "idle-process-queries.txt"), "$Name`n")\n'
+                   '    return @()\n'
+                   '}\n'
+                   '# Fail if the wrapper attempts to terminate a process.\n'
+                   'function Stop-Process { throw "Fixture must never terminate a process" }\n')
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1', scripts / 'orchestrator-deploy-selected.ps1')
         shutil.copyfile(ROOT / 'scripts/deploy-level-selection.py', scripts.parent / 'deploy-level-selection.py')
         tip = self.git('rev-parse', 'HEAD')
@@ -233,20 +238,32 @@ class SelectionTests(unittest.TestCase):
         counter = self.repo / 'counter.txt'
         success_file = self.repo / '.git/odp-deploy-success.json'
         original_receipt = success_file.read_bytes()
+        process_queries = scripts / 'idle-process-queries.txt'
         for result in (7, 0):
+            process_queries.unlink(missing_ok=True)
             counter.write_text('16')
             self.write('scripts/run-campaign-load-tests.py',
-                       'import json, sys\nfrom pathlib import Path\n'
-                       'def game_is_running(executable):\n    return False\n'
+                       'import json, subprocess, sys\nfrom pathlib import Path\n'
+                       '# Exercise the real wait helper through the locked runner process probe.\n'
+                       'def game_is_running(executable):\n'
+                       '    """Check the isolated idle fixture without inspecting owner processes."""\n'
+                       '    helper = Path(__file__).parent / "win32/wait-game-exit.ps1"\n'
+                       '    command = ". \'" + str(helper).replace("\'", "\'\'") + "\'; Wait-GameExit -TimeoutSeconds 0"\n'
+                       '    subprocess.run(["powershell", "-NoProfile", "-Command", command], check=True, timeout=10)\n'
+                       '    return False\n'
                        'def main():\n'
                        '    Path(__file__).with_suffix(".args").write_text(json.dumps(sys.argv[1:]))\n'
                        '    return %d\n' % result)
             completed = subprocess.run(['powershell', '-NoProfile', '-File',
                                        str(scripts / 'orchestrator-deploy.ps1'),
-                                       '-Counter', str(counter), '-DeployScript', str(self.repo / 'deploy-stub.ps1')],
+                                       '-Counter', str(counter), '-DeployScript', str(self.repo / 'deploy-stub.ps1'),
+                                       '-GameWaitSeconds', '0'],
                                       capture_output=True, text=True, timeout=30)
             self.assertEqual(completed.returncode, 1 if result else 0, completed.stdout + completed.stderr)
+            self.assertEqual(process_queries.read_text(encoding='utf-8').splitlines(), ['opendungeons-plus'])
             self.assertEqual(counter.read_text().strip(), '16' if result else '17')
+            self.assertTrue((self.repo / 'scripts/run-campaign-load-tests.args').is_file(),
+                            completed.stdout + completed.stderr)
             args = json.loads((self.repo / 'scripts/run-campaign-load-tests.args').read_text())
             self.assertEqual(Path(args[args.index('--executable') + 1]),
                              self.repo / 'build/windows/opendungeons-plus.exe')
