@@ -120,6 +120,10 @@ public:
 
     Player(GameMap* gameMap, int32_t id);
 
+    //! \brief Squared tile distance below which two events of the same type count as the same place (the fight-marker
+    //! distance of the event notifications).
+    static int getMinDistEventSquared();
+
     inline int32_t getId() const
     { return mId; }
 

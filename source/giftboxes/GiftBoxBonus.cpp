@@ -348,7 +348,8 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
             std::vector<Creature*> creatures = gameMap->getCreatures();
             for(Creature* creature : creatures)
             {
-                if(!creature->isAlive() || creature->getSeat()->isAlliedSeat(seat))
+                // Owner answer 110: a creature held in a keeper's hand is not on the map and is no target
+                if(!creature->isAlive() || !creature->getIsOnMap() || creature->getSeat()->isAlliedSeat(seat))
                     continue;
 
                 Tile* pos = creature->getPositionTile();

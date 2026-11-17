@@ -85,6 +85,8 @@ void bindRows(KeeperAI& ai);
 //! hurt own creature, and casts it at a target chosen with the focus fire of the level.
 //! Only the creatures of the current fight count: the fighting own fighters and enemies in sight linked to the tile of
 //! the last Fight event of the session whose decisions run now; without such an enemy nothing is cast.
+//! The complex mistake picks a random castable spell and wastes it on the valid target where it helps least; without
+//! such a target nothing is cast.
 //! \param ai The keeper AI that casts.
 //! \param enemyGround True while the casting group stands on ground not claimed for the AI's seat (an assault): then only
 //! Inferno and Tremor are offered.

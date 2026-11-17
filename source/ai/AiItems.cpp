@@ -7,22 +7,77 @@
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
+#include "rooms/Room.h"
 #include "rooms/RoomArena.h"
 #include "rooms/RoomMerchant.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 
 #include <algorithm>
+#include <map>
+#include <utility>
 #include <vector>
+
+namespace
+{
+//! \brief The held gift per seat id: recipient creature name and bag name (row H04, owner answers 92 and 94).
+std::map<int, std::pair<std::string, std::string>> heldGifts;
+}
 
 namespace ITEMS
 {
+//! \brief Whether the recipient can take a bought gift now (owner answers 92 and 94).
+bool canHandOver(KeeperAI& ai, Creature* recipient)
+{
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    if(recipient == nullptr || !recipient->isAlive() || !recipient->getIsOnMap() || recipient->getSeat() != seat)
+        return false;
+    Tile* tile = recipient->getPositionTile();
+    if(tile == nullptr || !tile->isClaimedForSeat(seat))
+        return false;
+    // Owner answer 92: the shared drop path gives the bag to the first creature on the tile, so wait until it stands alone
+    for(GameEntity* entity : tile->getEntitiesInTile())
+        if(entity != recipient && entity->getObjectType() == GameEntityType::creature && entity->getSeat() == seat)
+            return false;
+    // Owner answer 94: during an arena fight the gift stays in the hand until the fight is over
+    Room* room = tile->getCoveringRoom();
+    return room == nullptr || room->getType() != RoomType::arena || !static_cast<RoomArena*>(room)->hasRunningFight();
+}
+
+//! \brief Records the held gift of this keeper for a later hand-over.
+void holdGift(KeeperAI& ai, const std::string& recipient, const std::string& bag)
+{
+    heldGifts[ai.getControlledPlayer().getSeat()->getId()] = std::make_pair(recipient, bag);
+}
+
+//! \brief Schedules the hand-over of a held gift once possible, or forgets it when the bag or recipient is gone.
+void retryGift(KeeperAI& ai)
+{
+    Player& player = ai.getControlledPlayer();
+    std::map<int, std::pair<std::string, std::string>>::iterator it = heldGifts.find(player.getSeat()->getId());
+    if(it == heldGifts.end())
+        return;
+    Creature* recipient = ai.getGameMap().getCreature(it->second.first);
+    const bool inHand = player.getHandIndex(GameEntityType::itemBagEntity, it->second.second) < player.numObjectsInHand();
+    if(!inHand || recipient == nullptr || !recipient->isAlive())
+    {
+        heldGifts.erase(it);
+        return;
+    }
+    if(!canHandOver(ai, recipient))
+        return;
+    const std::pair<std::string, std::string> gift = it->second;
+    heldGifts.erase(it);
+    ACTS::giveGift(ai, gift.first, gift.second);
+}
+
 //! \brief Records catalogue rows without a keeper command.
 void classNRows(KeeperAI&)
 {

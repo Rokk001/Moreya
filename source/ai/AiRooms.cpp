@@ -208,6 +208,52 @@ double roomDistance(Tile* a, Tile* b)
     return x * x + y * y;
 }
 
+//! \brief Returns the tiles of the first [RoomPlan] entry of a room type, or 0 when the plan has none.
+uint32_t planTiles(RoomType type)
+{
+    const std::vector<std::pair<RoomType, uint32_t>> plan = KeeperAI::getRoomPlan();
+    for(const std::pair<RoomType, uint32_t>& entry : plan)
+        if(entry.first == type)
+            return entry.second;
+    return 0;
+}
+
+//! \brief Searches the own dormitories with the game's bed search for a place for this creature's bed.
+bool hasBedPlace(const std::vector<Room*>& dormitories, Creature* creature)
+{
+    for(Room* room : dormitories)
+        if(static_cast<RoomDormitory*>(room)->getLocationForBed(creature) != nullptr)
+            return true;
+    return false;
+}
+
+//! \brief Tests the bed capacity with the game's bed search (decision D336): it is exhausted when an own fighter
+//! without a bed finds no place in any own dormitory or, while `BedsSpare` asks for a reserve bed, when no place is
+//! left for one more bed of the largest bed size among the own fighters.
+bool bedsExhausted(KeeperAI& ai)
+{
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    const std::vector<Room*> dormitories = ai.getGameMap().getRoomsByTypeAndSeat(RoomType::dormitory, seat);
+    Creature* largest = nullptr;
+    int largestArea = 0;
+    for(Creature* creature : ai.getGameMap().getCreaturesBySeat(seat))
+    {
+        if(!creature->isAlive() || creature->getDefinition()->isWorker())
+            continue;
+        if(creature->getDefinition()->getBedDim1() <= 0 || creature->getDefinition()->getBedDim2() <= 0)
+            continue;
+        const int area = creature->getDefinition()->getBedDim1() * creature->getDefinition()->getBedDim2();
+        if(area > largestArea)
+        {
+            largest = creature;
+            largestArea = area;
+        }
+        if(creature->getHomeTile() == nullptr && !hasBedPlace(dormitories, creature))
+            return true;
+    }
+    return largest != nullptr && roomKey("BedsSpare") >= 1.0 && !hasBedPlace(dormitories, largest);
+}
+
 //! \brief Restores this keeper's pending placement and first-room decisions after Mind import.
 void restoreRooms(KeeperAI& ai)
 {
@@ -221,10 +267,10 @@ void restoreRooms(KeeperAI& ai)
             continue;
         if(line.tokens[0] == "B02" && line.tokens[1] == "firstRoomSmall")
             state.dormitoryFirst = Helper::toInt(line.tokens[2]) != 0 ?
-                static_cast<int>(roomKey("MistakeTilesDormitory")) : static_cast<int>(roomKey("DormitoryExtensionTiles"));
+                static_cast<int>(roomKey("MistakeTilesDormitory")) : static_cast<int>(planTiles(RoomType::dormitory));
         if(line.tokens[0] == "B03" && line.tokens[1] == "firstRoomSmall")
             state.hatcheryFirst = Helper::toInt(line.tokens[2]) != 0 ?
-                static_cast<int>(roomKey("MistakeTilesHatchery")) : static_cast<int>(roomKey("HatcheryExtensionMaxTiles"));
+                static_cast<int>(roomKey("MistakeTilesHatchery")) : static_cast<int>(planTiles(RoomType::hatchery));
         if(line.tokens[0] == "B02" && line.tokens[1] == "population")
             state.bedPopulation = Helper::toInt(line.tokens[2]);
         if((line.tokens[0] == "B02" || line.tokens[0] == "B03") && line.tokens[1] == "extensionUntil")
@@ -477,19 +523,17 @@ void ROOMS::buildNext(KeeperAI& ai)
     }
 }
 
-//! \brief Adds beds ahead of arrival, retrying a missed extension at its no-bed symptom.
+//! \brief Adds beds ahead of arrival, retrying a missed extension at its no-bed symptom. The shortage is the game's
+//! bed search finding no place (decision D336), not a count of the beds already placed.
 void ROOMS::bedWatch(KeeperAI& ai)
 {
     // AI row B02
     // AI row D02
     restoreRooms(ai);
     Seat* seat = ai.getControlledPlayer().getSeat();
-    uint32_t beds = 0;
-    for(Room* room : ai.getGameMap().getRoomsByTypeAndSeat(RoomType::dormitory, seat))
-        beds += static_cast<RoomDormitory*>(room)->getNbBeds();
     if(roomTiles(ai, RoomType::dormitory) == 0)
         return;
-    if(seat->getNumCreaturesFighters() < beds - std::min<double>(beds, roomKey("BedsSpare")))
+    if(!bedsExhausted(ai))
         return;
     State& state = ai.getRoomsState();
     const int population = seat->getNumCreaturesFighters();
@@ -539,12 +583,12 @@ void ROOMS::toiletWatch(KeeperAI& ai)
         buildNext(ai);
 }
 
-//! \brief Returns a lost room to the strict-order rebuild process.
+//! \brief Returns a lost room to the strict-order rebuild process. B22 draws no mistake of its own (decision D335,
+//! as simulated); the build pass keeps the draws of its own rows.
 void ROOMS::rebuildLost(KeeperAI& ai)
 {
     // AI row B22
-    if(!ai.getMind().slip("B22"))
-        buildNext(ai);
+    buildNext(ai);
 }
 
 //! \brief Places the water or lava tiles of a known useful shortcut through the normal build action.
@@ -701,7 +745,8 @@ void ROOMS::bind(KeeperAI& ai)
     mind.onLook("B17", roomKey("LookPeriod600") / roomKey("ReferenceScanPeriod"), std::bind(ghostProduct, std::ref(ai)));
     mind.onLook("B24", roomKey("LookPeriod600") / roomKey("ReferenceScanPeriod"), std::bind(auditSettings, std::ref(ai)));
     mind.onEvent("B02", {AiEventType::CreatureArrived, AiEventType::NoBed}, std::bind(needRoomEvent, std::ref(ai), RoomType::dormitory, std::placeholders::_1));
-    mind.onEvent("B03", {AiEventType::FirstPortalArrival, AiEventType::NoFood},
+    // D03 adds the arrival of every creature (AI-SPEC 3.6, 3.2 item 5) to the first portal arrival of B03.
+    mind.onEvent("B03", {AiEventType::FirstPortalArrival, AiEventType::CreatureArrived, AiEventType::NoFood},
         std::bind(needRoomEvent, std::ref(ai), RoomType::hatchery, std::placeholders::_1));
     mind.onPoll("B03", AiEventType::NoFood, std::bind(pendingHatchery, std::ref(ai)));
     mind.onEvent("B09", {AiEventType::CreatureMood}, std::bind(roomMoodEvent, std::ref(ai), auditCasino, std::placeholders::_1));

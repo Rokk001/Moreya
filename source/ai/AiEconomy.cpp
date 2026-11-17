@@ -72,13 +72,17 @@ Tile* castTile(KeeperAI& ai)
 }
 
 //! \brief Casts a worker when the shared summon conditions are met.
-void summonWorker(KeeperAI& ai)
+//! \param surplus True for the mana-cap spend of row A07: only the worker limit and the price are
+//! tested, not the mana factor and the income of row A03.
+void summonWorker(KeeperAI& ai, bool surplus)
 {
     Player& player = ai.getControlledPlayer();
     Seat* seat = player.getSeat();
     double price = SpellSummonWorker::getNextWorkerPriceForPlayer(&ai.getGameMap(), &player);
-    if(seat->getNumCreaturesWorkers() < key("SummonWorkersMax") && seat->getMana() > key("SummonManaFactor") * price &&
-        seat->getManaIncomePerSecond() > key("SummonIncomeMin") && SkillManager::isSpellAvailable(SpellType::summonWorker, seat) &&
+    bool wanted = surplus ? seat->getMana() >= price :
+        seat->getMana() > key("SummonManaFactor") * price && seat->getManaIncomePerSecond() > key("SummonIncomeMin");
+    if(seat->getNumCreaturesWorkers() < key("SummonWorkersMax") && wanted &&
+        SkillManager::isSpellAvailable(SpellType::summonWorker, seat) &&
         player.getSpellCooldownTurns(SpellType::summonWorker) == 0 && castTile(ai) != nullptr)
         ACTS::castSpell(ai, SpellType::summonWorker, castTile(ai));
 }
@@ -403,7 +407,7 @@ void ECON::summonWatch(KeeperAI& ai)
     // AI row E01
     if(ai.getMind().slip("A03"))
         return;
-    summonWorker(ai);
+    summonWorker(ai, false);
 }
 
 //! \brief Applies the one saved reserve draw to every purchase without drawing again.
@@ -493,7 +497,8 @@ void ECON::manaCapWatch(KeeperAI& ai)
         ACTS::castSpell(ai, SpellType::creatureHeal, hurt);
         return;
     }
-    summonWorker(ai);
+    // Step (3) of the mana-cap spend: the A03 cast while workers < SummonWorkersMax.
+    summonWorker(ai, true);
 }
 
 //! \brief Sells only specified redundant rooms or distant traps unless the sale mistake occurs.

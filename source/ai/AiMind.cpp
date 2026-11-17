@@ -101,6 +101,20 @@ AiMath::ReactionKind reactionKind(AiEventType type)
     return AiMath::ReactionKind::alert;
 }
 
+//! \brief Returns a row's own reaction kind where the row table (specification 3.6) differs from the event's shared kind:
+//! owner answers 107 (CreatureMood: D07 and D09 symptom), 108 (NoBed, NoFood: D06 alert) and decision 354 (FightOver:
+//! J08 and G01 alert, F12 keeps the shared symptom delay).
+AiMath::ReactionKind rowKind(AiEventType type, const std::string& rowId, AiMath::ReactionKind shared)
+{
+    if(type == AiEventType::CreatureMood && (rowId == "D07" || rowId == "D09"))
+        return AiMath::ReactionKind::symptom;
+    if((type == AiEventType::NoBed || type == AiEventType::NoFood) && rowId == "D06")
+        return AiMath::ReactionKind::alert;
+    if(type == AiEventType::FightOver && (rowId == "J08" || rowId == "G01"))
+        return AiMath::ReactionKind::alert;
+    return shared;
+}
+
 //! \brief Returns the serialized name of a reaction kind.
 std::string kindName(AiMath::ReactionKind kind)
 {
@@ -238,7 +252,8 @@ void Mind::onSave(const std::function<void(std::vector<AiMath::AiStateLine>&)>& 
     mSaveHandlers.push_back(handler);
 }
 
-//! \brief Queues one event and draws its shared reaction delay exactly once.
+//! \brief Queues one event and draws its shared reaction delay exactly once, plus one delay per row kind that differs
+//! from the shared one (rowKind).
 void Mind::enqueue(const AiEvent& event)
 {
     // AI row I06
@@ -283,6 +298,26 @@ void Mind::enqueue(const AiEvent& event)
     reaction.noticed = false;
     reaction.rowId = "-";
     mEvents.push_back(reaction);
+    // Rows with their own kind (rowKind) share one delay of that kind per event; the shared reaction skips them.
+    std::map<AiMath::ReactionKind, double> rowDue;
+    for(const std::pair<const std::string, EventHandler>& entry : mEventHandlers)
+    {
+        if(std::find(entry.second.types.begin(), entry.second.types.end(), event.type) == entry.second.types.end())
+            continue;
+        const AiMath::ReactionKind own = rowKind(event.type, entry.first, kind);
+        if(own == kind)
+            continue;
+        if(rowDue.find(own) == rowDue.end())
+            rowDue[own] = mNow + AiMath::reactionDelay(own, delayParams(), uniformDraw);
+        Reaction copy = reaction;
+        copy.kind = own;
+        copy.due = rowDue[own];
+        if(event.type != AiEventType::Fight)
+            copy.time = copy.due;
+        copy.fightStart = copy.time;
+        copy.rowId = entry.first;
+        mEvents.push_back(copy);
+    }
 }
 
 //! \brief Updates the last fight time without changing the original start of a pending reaction.
@@ -480,7 +515,9 @@ void Mind::doTurn(double timeSinceLastTurn)
         TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
         for(const std::pair<const std::string, EventHandler>& entry : mEventHandlers)
         {
-            if((reaction.rowId == "-" || reaction.rowId == entry.first) &&
+            // A shared reaction serves the rows of its own kind; a per-row reaction serves only its row (rowKind).
+            if((reaction.rowId == "-" ? rowKind(event.type, entry.first, reaction.kind) == reaction.kind
+                                      : reaction.rowId == entry.first) &&
                 std::find(entry.second.types.begin(), entry.second.types.end(), event.type) != entry.second.types.end())
                 entry.second.perform(event);
         }

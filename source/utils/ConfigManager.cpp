@@ -142,6 +142,7 @@ static const char* const AI_CONFIG_DEFAULTS[][2] = {
     {"SlapMistakeInterval3", "120"},
     {"SlapMistakeInterval4", "180"},
     {"SlapMistakeInterval5", "300"},
+    {"SlapMistakeMaxClicks", "60"},
     {"MinerShareEarly", "0.6"},
     {"MinerShareLate", "0.35"},
     {"MinerShareSwitchMinute", "10"},

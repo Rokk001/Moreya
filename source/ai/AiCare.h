@@ -23,6 +23,8 @@ struct SlapState
     double interval = 0.0;
     double nextSlap = 0.0;
     double nextCheck = 0.0;
+    //! \brief Slap clicks still allowed in the running episode (SlapMistakeMaxClicks at its start, owner answer 88).
+    int slapsLeft = 0;
 };
 //! \brief Owns one keeper's care callbacks and persistent decisions for the shared mind.
 class Controller
@@ -63,8 +65,10 @@ private:
     double mNextControl;
     bool mLoaded;
 };
-//! \brief Checks the production-slap mistake at a creature-list look and stops own brawls.
+//! \brief Stops own brawls at the creature-list look.
 void slapWatch(KeeperAI& ai, SlapState& state);
+//! \brief Checks the production-slap mistake when its own timer is due; called during the mind's regular poll.
+void slapCheck(KeeperAI& ai, SlapState& state);
 //! \brief Advances an active slap episode without a second mistake draw; called during the mind's regular poll.
 void slapEpisodeStep(KeeperAI& ai, SlapState& state);
 //! \brief Possesses the strongest defender at a heart or treasury fight, or the weakest on a mistake.
