@@ -53,6 +53,7 @@ public:
     static const std::string VERSION;
     static const std::string VERSIONSTRING;
     static const std::string POINTER_INFO_STRING;
+    //! \brief Welcome line with the version shown by the debug text box; printable characters only.
     static std::string MOTD;
 
 private:

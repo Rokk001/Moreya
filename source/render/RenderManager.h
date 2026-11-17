@@ -486,7 +486,7 @@ private:
     Ogre::MaterialPtr getOutlinerMaterial(const std::string& materialName, const Ogre::ColourValue& colour);
 
     //! \brief Returns the brighter copy of a creature material shown while the hand is over the creature,
-    //! made on first use.
+    //! made on first use. Only the seat-colour contour is brightened; the body keeps its normal colours.
     Ogre::MaterialPtr getBrighterMaterial(const std::string& materialName);
 
     //! \brief Makes the contour copies of a creature material for every seat colour and their brighter copies,

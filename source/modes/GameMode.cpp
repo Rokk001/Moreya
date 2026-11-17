@@ -215,11 +215,34 @@ const float MESSAGE_TAB_DESIGN_WIDTH = 32.0f;
 const float MESSAGE_TAB_DESIGN_SPACING = 36.0f;
 //! Speed at which a new message tab slides in, in queue heights per second.
 const float MESSAGE_TAB_SLIDE_SPEED = 12.5f;
-//! Unread message tabs blink: one period in seconds, shown highlighted in its second half.
-const float MESSAGE_FLASH_PERIOD = 0.5f;
-const float MESSAGE_FLASH_HIGHLIGHT_START = 0.25f;
-const std::string MESSAGE_UNREAD_IMAGE = "OpenDungeonsIcons/NavigationMessages";
-const std::string MESSAGE_READ_IMAGE = "OpenDungeonsIcons/NavigationMessagesRead";
+//! Unread message tabs glow calmly: the warm frame glow swells and fades once per period in seconds, between
+//! the lowest and highest opacity. Read tabs show no glow. Every tab keeps one picture, so the "i" never moves.
+const float MESSAGE_GLOW_PERIOD = 2.4f;
+const float MESSAGE_GLOW_MIN_ALPHA = 0.30f;
+const float MESSAGE_GLOW_MAX_ALPHA = 0.75f;
+//! RGB part (hex) of the glow colour of unread message tabs, the warm gold of the selected room button.
+const std::string MESSAGE_GLOW_RGB = "FFD060";
+//! The glow colour of a read message tab: fully transparent.
+const std::string MESSAGE_NO_GLOW = "00FFFFFF";
+//! The one picture of every message tab, read or unread.
+const std::string MESSAGE_TAB_IMAGE = "OpenDungeonsIcons/NavigationMessagesRead";
+
+//! \brief Returns the glow colour (CEGUI ARGB hex) of a message tab.
+//! \param read True once the message was read; a read tab has no glow.
+//! \param glowTime Time within the glow period in seconds.
+//! The opacity of an unread tab follows a smooth cosine wave between MESSAGE_GLOW_MIN_ALPHA and
+//! MESSAGE_GLOW_MAX_ALPHA, without jumps.
+static std::string messageTabGlowColour(bool read, float glowTime)
+{
+    if(read)
+        return MESSAGE_NO_GLOW;
+    const float wave = 0.5f - 0.5f * std::cos(glowTime / MESSAGE_GLOW_PERIOD * 2.0f * 3.14159265f);
+    const float alpha = MESSAGE_GLOW_MIN_ALPHA + (MESSAGE_GLOW_MAX_ALPHA - MESSAGE_GLOW_MIN_ALPHA) * wave;
+    const int alphaByte = std::max(0, std::min(255, static_cast<int>(alpha * 255.0f + 0.5f)));
+    std::stringstream colour;
+    colour << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << alphaByte << MESSAGE_GLOW_RGB;
+    return colour.str();
+}
 
 // The hand feedback is laid out for an action icon of this unscaled width; all offsets
 // below are in pixels at that size and scale with the icon.
@@ -3941,7 +3964,7 @@ void GameMode::receiveEventShortNotice(EventMessage* event)
     mEventMessages.emplace_back(event);
     CEGUI::Window* tab = CEGUI::WindowManager::getSingleton().createWindow("OD/GameTabButton");
     tab->setProperty("NavigationFrame", "True");
-    tab->setProperty("NormalImage", MESSAGE_UNREAD_IMAGE);
+    tab->setProperty("NormalImage", MESSAGE_TAB_IMAGE);
     tab->setTooltipText("Message");
     tab->setUserString(Gui::USER_STRING_CONTEXT_HELP, "Message: left-click to read, right-click to dismiss");
     tab->setRiseOnClickEnabled(false);
@@ -4092,7 +4115,8 @@ void GameMode::updateEventMessageIndicator(float elapsed)
     const float entry = (width - queue->getChild("Receiver")->getPixelSize().d_width) / height;
     const float tabWidth = MESSAGE_TAB_DESIGN_WIDTH / MESSAGE_QUEUE_DESIGN_HEIGHT;
     const float spacing = MESSAGE_TAB_DESIGN_SPACING / MESSAGE_QUEUE_DESIGN_HEIGHT;
-    mEventMessageFlashTime = std::fmod(mEventMessageFlashTime + std::max(0.0f, elapsed), MESSAGE_FLASH_PERIOD);
+    mEventMessageFlashTime = std::fmod(mEventMessageFlashTime + std::max(0.0f, elapsed), MESSAGE_GLOW_PERIOD);
+    const std::string unreadGlow = messageTabGlowColour(false, mEventMessageFlashTime);
     float precedingPosition = -spacing;
     for(size_t i = 0; i < mMessageTabs.size(); ++i)
     {
@@ -4111,8 +4135,12 @@ void GameMode::updateEventMessageIndicator(float elapsed)
         precedingPosition = tab.position;
         tab.window->setArea(CEGUI::UDim(0, tab.position * height), CEGUI::UDim(0, 0),
             CEGUI::UDim(0, tabWidth * height), CEGUI::UDim(1, 0));
-        const bool highlighted = !tab.read && mEventMessageFlashTime >= MESSAGE_FLASH_HIGHLIGHT_START;
-        tab.window->setProperty("NormalImage", highlighted ? MESSAGE_UNREAD_IMAGE : MESSAGE_READ_IMAGE);
+        // The picture stays the same for read and unread tabs; only the glow over the frame changes.
+        if(tab.window->getProperty("NormalImage") != MESSAGE_TAB_IMAGE)
+            tab.window->setProperty("NormalImage", MESSAGE_TAB_IMAGE);
+        const std::string glow = tab.read ? MESSAGE_NO_GLOW : unreadGlow;
+        if(tab.window->getProperty("SelectionColour") != glow)
+            tab.window->setProperty("SelectionColour", glow);
         tab.window->show();
     }
 }

@@ -8448,8 +8448,10 @@ Ogre::MaterialPtr RenderManager::getOutlinerMaterial(const std::string& material
     return myOutliner;
 }
 
-//! \brief Prepares a hover material by brightening fragment passes that expose an ambient uniform.
-//! \details Times material clone preparation with its source material identity.
+//! \brief Prepares a hover material by brightening only the seat-colour contour pass of a creature material.
+//! \details The passes that draw the creature body keep their ambient factor, so a creature under the cursor
+//! keeps its normal colours and is never filled white. Times material clone preparation with its source
+//! material identity.
 Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)
 {
     FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
@@ -8474,6 +8476,10 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
             // A contour can sit alongside fixed-function or RTSS passes, such as Chicken's base passes.
             // RTSS-generated passes can use different uniforms and omit the contour's custom ambient uniform.
             if(!pass->hasFragmentProgram())
+                continue;
+            // Only the contour pass of getOutlinerMaterial() is brightened. The body passes (Creature.frag) multiply
+            // the scene ambient light by their ambient uniform; raising it filled the whole creature white.
+            if(pass->getFragmentProgramName() != "Custom_color")
                 continue;
             Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
             if(parameters->_findNamedConstantDefinition("ambient", false) != nullptr)

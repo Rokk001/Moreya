@@ -514,7 +514,8 @@ private:
     bool onEventMessageTabClicked(const CEGUI::EventArgs& arg);
     bool onEventCloseClicked(const CEGUI::EventArgs& arg);
     bool onEventDismissClicked(const CEGUI::EventArgs& arg);
-    //! \brief Slides the message tabs into place, hides those that do not fit and blinks the unread ones.
+    //! \brief Slides the message tabs into place, hides those that do not fit and lets the unread ones
+    //! glow calmly while every tab keeps the same picture.
     //! \param elapsed Time since the last call in seconds.
     void updateEventMessageIndicator(float elapsed);
     //! \brief A pending event message and the tab that presents it in the message queue.
@@ -531,7 +532,7 @@ private:
     std::vector<MessageTab> mMessageTabs;
     //! \brief The message shown in the message window, or nullptr.
     EventMessage* mSelectedEventMessage = nullptr;
-    //! \brief Time within the blink period of the unread message tabs, in seconds.
+    //! \brief Time within the glow period of the unread message tabs, in seconds.
     float mEventMessageFlashTime = 0.0f;
 
     //! \brief The saved game browser shown on top of the game, created on first use.

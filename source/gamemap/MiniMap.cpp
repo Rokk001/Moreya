@@ -316,8 +316,14 @@ static const float MANA_WELL_COLOUR_BLUE = 0.78f;
 MiniMap::TileColour MiniMap::colourFromTile(Tile& tile, Seat& playerSeat, unsigned int phase)
 {
     TileColour result;
+    // A tile the player has never seen is drawn as solid earth whatever lies underneath, like the game
+    // view draws it, so the minimap reveals nothing hidden and never shows the backing through it.
     if(!tile.getEverVisible())
+    {
+        result.colour = DIRT_COLOUR;
+        result.priority = 1;
         return result;
+    }
 
     const TileVisual visual = tile.getTileVisual();
     Seat* owner = tile.getSeat();

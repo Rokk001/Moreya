@@ -11,9 +11,12 @@ material RoomAmbSwirl
             depth_write off
             diffuse vertexcolour
 
+            // The sprite fades out round inside its square (tools/gen_room_ambience_art.py); clamping keeps the
+            // filter from pulling colour from the opposite edge, so no edge of the turning square ever shows.
             texture_unit
             {
                 texture RoomAmbSwirl.png
+                tex_address_mode clamp
             }
         }
     }

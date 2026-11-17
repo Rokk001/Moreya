@@ -447,5 +447,6 @@ const std::string ODApplication::VERSION = OD_VERSION;
 const std::string ODApplication::VERSION = "0.7.4";
 #endif
 const std::string ODApplication::VERSIONSTRING = "OpenDungeons_Version:" + VERSION;
-std::string ODApplication::MOTD = "Welcome to Moreya\tVersion:  " + VERSION;
+// The overlay font has no glyph for a tab, which showed as a box; spaces separate the two parts.
+std::string ODApplication::MOTD = "Welcome to Moreya   Version:  " + VERSION;
 const std::string ODApplication::POINTER_INFO_STRING = "pointerInfo";
