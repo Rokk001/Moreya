@@ -2,6 +2,9 @@
 
 Runs the production outlet builder and drop selector in a small C++ probe. Shader
 bindings, colour flow, resource discovery and attachment lifetime are checked too.
+The probe records the resource group of every outlet section and the texture
+coordinates of every vertex: each section is looked up in the Graphics group and
+every triangle covers texture area, so no part of the outlet is drawn white or flat.
 No game build, window or screenshot is needed.
 """
 from pathlib import Path
@@ -83,14 +86,14 @@ struct Math {static constexpr float TWO_PI=6.283185307179586f;};
 struct RenderOperation {enum {OT_TRIANGLE_LIST};};
 //! \brief Captures actual vertex and index emissions without replacing the geometry builder.
 struct ManualObject {
- struct Vertex {Vector3 p,n;};
- struct Section {std::string material;std::vector<Vertex> vertices;std::vector<uint32> indices;};
+ struct Vertex {Vector3 p,n;float u=-1.0f,v=-1.0f;};
+ struct Section {std::string material,group;std::vector<Vertex> vertices;std::vector<uint32> indices;};
  std::vector<Section> sections;
- void begin(const std::string& material,int){sections.push_back({material,{},{}});}
+ void begin(const std::string& material,int,const std::string& group="General"){sections.push_back({material,group,{},{}});}
  void position(float x,float y,float z){sections.back().vertices.push_back({Vector3(x,y,z),Vector3()});}
  void normal(const Vector3& n){sections.back().vertices.back().n=n;}
  void normal(float x,float y,float z){normal(Vector3(x,y,z));}
- void textureCoord(float,float){}
+ void textureCoord(float u,float v){sections.back().vertices.back().u=u;sections.back().vertices.back().v=v;}
  void triangle(uint32 a,uint32 b,uint32 c){std::vector<uint32>& i=sections.back().indices;i.insert(i.end(),{a,b,c});}
  void end(){}
 };
@@ -118,6 +121,7 @@ int main(){
  for(size_t s=0;s<3;++s){
   const Ogre::ManualObject::Section& section=outlet.sections[s];
   check(section.material==materials[s],"brass casing, dark bore, wet liquid");
+  check(section.group=="Graphics","outlet material is looked up in the group that loads Ghost.material");
   check(section.vertices.size()==vertices[s]&&section.indices.size()==indices[s],"fixed complete geometry");
   for(const Ogre::ManualObject::Vertex& v:section.vertices){
    check(std::abs(v.p.x)<=.201f&&v.p.y>=.479f&&v.p.y<=.991f&&v.p.z>=.039f&&v.p.z<=.481f,"outlet under the glass in the cauldron footprint");
@@ -130,6 +134,9 @@ int main(){
    float vx=c.p.x-a.p.x,vy=c.p.y-a.p.y,vz=c.p.z-a.p.z;
    float nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
    check(nx*nx+ny*ny+nz*nz>1e-12f,"no degenerate triangles");
+   check(a.u>=0.0f&&b.u>=0.0f&&c.u>=0.0f,"every outlet vertex has texture coordinates");
+   const float uvArea=(b.u-a.u)*(c.v-a.v)-(c.u-a.u)*(b.v-a.v);
+   check(std::abs(uvArea)>1e-6f,"every outlet triangle covers texture area, no flat untextured face");
    if(s==0&&i>=576)check(ny>0,"lip faces out of the open bore");
    else check(nx*a.n.x+ny*a.n.y+nz*a.n.z>0,"visible face winding matches its normal");
    if(s==0&&i>=576)for(const Ogre::ManualObject::Vertex* v:{&a,&b,&c})

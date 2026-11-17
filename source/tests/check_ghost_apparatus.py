@@ -274,7 +274,8 @@ def saving():
     has(body(instance, "void ItemInstance::exportToPacket("), "item packet", "<< std::string(\"GhostItem\") << static_cast<uint32_t>(mGhostItem) << mGhostTarget;")
     has(body(instance, "bool ItemInstance::importFromPacket("), "item packet read", "if(ghost >> marker && marker == \"GhostItem\")")
     seat = read("source/game/Seat.cpp")
-    assert "os << \"[GhostRoom] \" << mEctoplasmLevels << ' ' << static_cast<uint32_t>(mGhostProduct)" in seat, "chosen apparatus saved"
+    assert ('os << "[GhostRoom] " << std::setprecision(std::numeric_limits<double>::max_digits10)\n'
+            "       << mEctoplasmLevels << ' ' << static_cast<uint32_t>(mGhostProduct)") in seat, "chosen apparatus and exact progress saved"
     # Decision 800 replaces the G2 start rule: a new game starts on the ghost press (research points); while it is locked
     # the effective choice is the mana still, and the stored choice is kept so the press takes over once unlocked
     assert "GhostProduct mGhostProduct = GhostProduct::research;" in read("source/game/SeatData.h"), "new game starts on the ghost press"
