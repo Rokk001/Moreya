@@ -247,6 +247,9 @@ public:
     //! \brief Releases movable visuals and any attached cauldron fire.
     void rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
+    //! \brief Shows the body of a creature with the given opacity (1 = solid). Used for the half transparent look of a
+    //! creature made invisible by the Invisibility spell, which only its own keeper and his allies see.
+    void rrSetCreatureOpacity(Creature* creature, float opacity);
     //! \brief Aligns a pulled body with the current animated worker hand, with safe rig fallbacks.
     void rrApplyDragContact(Creature& dragged, const Creature& worker);
     //! \brief Samples contacts after all world movements and animations.

@@ -2073,6 +2073,52 @@ particle_system SpellCreatureInferno
     }
 }
 
+// ---------------------------------------------------------------- Plague
+// The sickly green look of a creature sick with the plague: slow green fumes rise from the body while it is sick
+// (Creature::PLAGUE_SCRIPT, renewed by the server until the infirmary cures the creature)
+particle_system SpellCreaturePlague
+{
+    material        RoomAmbSmoke
+    point_rendering false
+    particle_width  0.22
+    particle_height 0.22
+    cull_each       false
+    quota           14
+    billboard_type  point
+
+    emitter Box
+    {
+        angle               20
+        colour_range_start  0.35 0.75 0.1 0
+        colour_range_end    0.55 0.9 0.2 0
+        emission_rate       8
+        time_to_live        1.6
+        direction           0 0 1
+        velocity_min        0.15
+        velocity_max        0.4
+        position            0 0 0.3
+        width               0.45
+        height              0.45
+        depth               0.7
+    }
+
+    affector LinearForce
+    {
+        force_vector        0 0 0.2
+        force_application   add
+    }
+
+    affector ColourInterpolator
+    {
+        time0               0
+        colour0             0.35 0.75 0.1 0
+        time1               0.3
+        colour1             0.4 0.8 0.15 0.6
+        time2               1
+        colour2             0.3 0.6 0.1 0
+    }
+}
+
 // ---------------------------------------------------------------- Possession
 // A dark flash on the creature
 particle_system SpFxPossessFlash

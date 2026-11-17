@@ -323,6 +323,10 @@ public:
 
     static bool sortForMapSave(Trap* t1, Trap* t2);
 
+    //! \brief True for a creature hidden by the Invisibility spell: the traps that aim at one creature (cannon, lightning)
+    //! never choose it; the traps that hit everything on their tiles still hit it.
+    static bool isHiddenBySpell(GameEntity* entity);
+
     static bool importTrapFromStream(Trap& trap, std::istream& is);
 
     //! \brief Triggered when the trap is activated

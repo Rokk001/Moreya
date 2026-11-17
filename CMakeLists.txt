@@ -293,6 +293,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionSearchSpa.cpp
     ${SRC}/creatureaction/CreatureActionSearchEntityToCarry.cpp
     ${SRC}/creatureaction/CreatureActionSearchFood.cpp
+    ${SRC}/creatureaction/CreatureActionSearchInfirmary.cpp
     ${SRC}/creatureaction/CreatureActionSearchGroundTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSearchJob.cpp
     ${SRC}/creatureaction/CreatureActionSearchTileToDig.cpp
@@ -329,6 +330,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectHexenHen.cpp
     ${SRC}/creatureeffect/CreatureEffectFrozen.cpp
     ${SRC}/creatureeffect/CreatureEffectInvisible.cpp
+    ${SRC}/creatureeffect/CreatureEffectSpellInvisible.cpp
     ${SRC}/creatureeffect/CreatureEffectBurn.cpp
     ${SRC}/creatureeffect/CreatureEffectTemporary.cpp
     ${SRC}/creatureeffect/CreatureEffectAreaDamage.cpp
@@ -654,6 +656,12 @@ set(OD_SOURCEFILES
     ${SRC}/spells/SpellManager.cpp
     ${SRC}/spells/SpellSummonChampion.cpp
     ${SRC}/spells/SpellSummonWorker.cpp
+    ${SRC}/spells/SpellCurse.cpp
+    ${SRC}/spells/SpellBlessing.cpp
+    ${SRC}/spells/SpellInvisibility.cpp
+    ${SRC}/spells/SpellPlague.cpp
+    ${SRC}/spells/SpellBreakWall.cpp
+    ${SRC}/spells/SpellRevealEnemy.cpp
     ${SRC}/spells/SpellType.cpp
 
     ${SRC}/traps/Trap.cpp

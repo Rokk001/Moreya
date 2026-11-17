@@ -142,6 +142,7 @@ void SpellDefector::checkSpellCast(GameMap* gameMap, const InputManager& inputMa
 }
 
 //! \brief Casts the spell; the time follows the defector research.
+//! A creature hidden by the Invisibility spell is no target.
 bool SpellDefector::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -172,6 +173,13 @@ bool SpellDefector::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
     {
         // This can happen if the creature was alive on client side but is not since we received the message
         OD_LOG_WRN("creatureName=" + creatureName);
+        return false;
+    }
+
+    // The Invisibility spell hides the creature from the spells of its enemies
+    if(creature->isSpellInvisible())
+    {
+        OD_LOG_WRN("Creature=" + creatureName + " is hidden by the Invisibility spell");
         return false;
     }
 

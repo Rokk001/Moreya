@@ -13,7 +13,8 @@ assert 'arrangeEditorActionButtons(editorSheet->second)' in source
 assert '(buttons.size() + 1) / 2' in source
 assert '(width - 8.0f) / static_cast<float>(columns) - 4.0f' in source
 assert '(height - 12.0f) / 2.0f' in source
-for page, expected in [('Rooms', 27), ('Traps', 18), ('Spells', 18)]:
+# The spells tab holds the 18 spells of before and the six spells of the spells review
+for page, expected in [('Rooms', 27), ('Traps', 18), ('Spells', 24)]:
     node = ET.parse(root / ('gui/WindowTab' + page + '.layout')).getroot().find('Window')
     buttons = [child for child in node.findall('Window') if child.get('type') == 'OD/GameTabButton']
     assert len(buttons) == expected

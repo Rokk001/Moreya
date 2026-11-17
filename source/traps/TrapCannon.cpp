@@ -35,6 +35,7 @@
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
 
+#include <algorithm>
 #include <iostream>
 
 const std::string TrapCannonName = "Cannon";
@@ -140,11 +141,14 @@ TrapCannon::TrapCannon(GameMap* gameMap) :
     setMeshName("");
 }
 
-//! \brief Fires a cannonball at an enemy; the damage follows the cannon research.
+//! \brief Fires a cannonball at an enemy; the damage follows the cannon research. The cannon aims, so it never aims
+//! at a creature hidden by the Invisibility spell.
 bool TrapCannon::shoot(Tile* tile)
 {
     std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), mRange);
     std::vector<GameEntity*> enemyObjects = getGameMap()->getVisibleCreatures(visibleTiles, getSeat(), true);
+    enemyObjects.erase(std::remove_if(enemyObjects.begin(), enemyObjects.end(), &Trap::isHiddenBySpell),
+        enemyObjects.end());
 
     if(enemyObjects.empty())
         return false;

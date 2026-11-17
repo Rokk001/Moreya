@@ -2319,12 +2319,14 @@ void Gui::arrangeTrapButtons(CEGUI::Window* traps)
         "FireburstTrapButton", "FreezeTrapButton", "WatchBannerTrapButton", "TriggerTrapButton"});
 }
 
+//! \brief Fits the available spell buttons, the six spells of the spells review included, in two rows like the rooms.
 void Gui::arrangeSpellButtons(CEGUI::Window* spells)
 {
     arrangeActionButtons(spells, {"SummonWorkerButton", "CallToWarButton", "CreatureHealButton",
         "CreatureExplosionButton", "CreatureHasteButton", "CreatureDefenseButton", "CreatureSlowButton",
         "CreatureStrengthButton", "CreatureWeakButton", "SpellEyeEvilButton", "CreateGoldButton",
         "LightningButton", "TremorButton", "DefectorButton", "HexenHenButton", "InfernoButton", "PossessButton",
+        "CurseButton", "BlessingButton", "InvisibilityButton", "PlagueButton", "BreakWallButton", "RevealEnemyButton",
         "SummonChampionButton"});
 }
 

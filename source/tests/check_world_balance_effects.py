@@ -96,23 +96,30 @@ EXPECTED = [
     ("spellDefector", "Duration", "mul", "1.0", "1.1731", "1.3370"),
     ("spellHexenHen", "Duration", "mul", "1.0", "1.1731", "1.3370"),
     ("spellCreateGold", "Gold", "mul", "1.0", "1.25", "1.5"),
+    # The research effects of the six spells of the spells review
+    ("spellCurse", "MoodLoss", "mul", "1.0", "1.25", "1.5"),
+    ("spellBlessing", "MoodGain", "mul", "1.0", "1.25", "1.5"),
+    ("spellInvisibility", "Duration", "mul", "1.0", "1.5", "2.0"),
+    ("spellPlague", "Damage", "mul", "1.0", "2.0", "4.0"),
+    ("spellBreakWall", "Price", "mul", "1.0", "0.9", "0.8"),
+    ("spellRevealEnemy", "Duration", "mul", "1.0", "1.5", "2.0"),
     ("roomPrison", "BetrayChance", "add", "0", "0.00033175355450236967", "0.0065727699530516446"),
     ("roomPrison", "MoodLoss", "mul", "1.0", "1.1", "1.2"),
     ("roomTrainingHall", "LevelCap", "mul", "1.0", "1.5", "2.0"),
 ]
-assert len(EXPECTED) == 76, "the effect table has 76 lines (rows with several skill types count once per skill type)"
+assert len(EXPECTED) == 82, "the effect table has 82 lines (rows with several skill types count once per skill type)"
 
 # --- skills.cfg: the [ResearchEffects] block -------------------------------------------------------------------------
 skills_cfg = read("config/skills.cfg")
 block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
 lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
-assert len(lines) == 76, "one line per effect: %d" % len(lines)
+assert len(lines) == 82, "one line per effect: %d" % len(lines)
 for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
     assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
 assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
 skill_names = set(re.findall(r"^\s+([A-Za-z]+)\t\d+\s*$", skills_cfg[:skills_cfg.index("\n[/Skills]\n")], re.M))
-assert len(skill_names) == 65
-assert {line[0] for line in lines} <= skill_names, "every line names one of the 65 skills"
+assert len(skill_names) == 71
+assert {line[0] for line in lines} <= skill_names, "every line names one of the 71 skills"
 header = skills_cfg[:skills_cfg.index("\n[Skills]\n")]
 assert "[ResearchEffects]" in header and "mul" in header and "add" in header and "dev" in header, "the modes are documented"
 for effect in sorted({line[1] for line in lines}):
@@ -265,7 +272,7 @@ texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "
          "HealPerTurn": "Healing per turn", "Speed": "Speed", "Bonus": "Defense bonus", "Factor": "Factor",
          "Lifetime": "Duration", "ManaPerSecond": "Mana per second", "Gold": "Gold",
          "PortalCooldown": "Portal cooldown", "RelaxTime": "Relaxation time", "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort",
-         "MoodLoss": "Prisoner mood loss", "BetrayChance": "Betrayal chance"}
+         "MoodLoss": "Prisoner mood loss", "BetrayChance": "Betrayal chance", "MoodGain": "Mood gain over time"}
 assert set(texts) == effect_names, "the plan names a text for every effect"
 for effect, text in texts.items():
     text_key = ('"' + effect + '"') if effect in {"GrowTime", "BrewTime", "CrackTime"} else ("ResearchEffect::" + effect)
@@ -275,6 +282,9 @@ for sentence in ("More creatures in your dungeon.", "Your dungeon heart has more
     assert '"%s"' % sentence in manager, sentence
 description = manager[manager.index("std::string SkillManager::getResearchDescription("):manager.index("void SkillManager::buildRandomPendingSkillsForSeat(")]
 assert 'getResearchEffectText(line.first) + ": " + value' in description, "every line prints <effect text>: <value at that level>"
+# The Curse spell shares the effect name MoodLoss with the prison and names its own line
+assert '(type == SkillType::spellCurse) && (line.first == ResearchEffect::MoodLoss)' in description
+assert '"Mood loss over time: " + value' in description
 assert "getResearchValue(type, level," in description, "the tooltip uses the same call as the game"
 # every effect line has a base value for the tooltip
 bases = manager[manager.index("static const ResearchBase RESEARCH_BASES[]"):manager.index("//! \\brief Reads the base value")]

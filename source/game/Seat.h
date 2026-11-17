@@ -591,8 +591,13 @@ private:
     std::map<Tile*,TileStateNotified> mTilesStates;
     std::map<Tile*,TileStateNotified> mDraggableTilesStates;    
 
-    //! \brief Tiles revealed by an outside source (like a tortured creature) with the number of turns left.
+    //! \brief Tiles revealed by an outside source (like a tortured creature or the Reveal Enemy spell) with the number
+    //! of turns left. Saved in the [RevealedTiles] block, so a running reveal goes on after loading.
     std::vector<std::pair<Tile*, uint32_t> > mRevealedTiles;
+
+    //! \brief The revealed tiles of a loaded game (x, y and turns left); the tiles are looked up when the seat starts
+    //! (initSeat), after the map is loaded.
+    std::vector<std::pair<std::pair<int, int>, uint32_t> > mRevealedTilesLoaded;
 
     //! \brief The notified state of the tile, whether it belongs to the game map or to the
     //! draggable container, or nullptr if it belongs to neither. Never inserts anything:

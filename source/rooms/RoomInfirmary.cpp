@@ -332,6 +332,32 @@ bool RoomInfirmary::canAdmitWounded(Creature& creature)
         findCot(creature,true)!=noCot && canPayAdmission(creature,true);
 }
 
+//! \brief A sick creature of this keeper (no worker, no champion, no prisoner) is admitted whatever its HP when a cot
+//! of its size is free and the fee can be paid as for a carried patient.
+bool RoomInfirmary::canAdmitSick(Creature& creature)
+{
+    return creature.getSeat()==getSeat() && !getSeat()->isRogueSeat() && getSeat()->getFaction()!="Hero" &&
+        creature.isAlive() && creature.isPlagueSick() && !creature.getDefinition()->isWorker() &&
+        !creature.getDefinition()->isChampion() && !creature.isInContainment() && findCot(creature,false)!=noCot &&
+        canPayAdmission(creature,false);
+}
+
+//! \brief Returns the tile of the free cot the sick creature would be admitted to, or nullptr.
+Tile* RoomInfirmary::getSickCotTile(Creature& creature)
+{
+    const size_t id=findCot(creature,false);
+    if(id==noCot) return nullptr;
+    const CotInfo& cot=mCots.at(id);
+    return getGameMap()->getTile(cot.x,cot.y);
+}
+
+//! \brief Admits a sick creature that walked in by itself, with the fee of a carried patient.
+bool RoomInfirmary::admitSick(Creature& creature)
+{
+    if(!canAdmitSick(creature)) return false;
+    return admit(findCot(creature,false),creature,false);
+}
+
 Tile* RoomInfirmary::askSpotForCarriedEntity(GameEntity* entity)
 {
     if(entity==nullptr || entity->getObjectType()!=GameEntityType::creature) return nullptr;
@@ -370,7 +396,7 @@ void RoomInfirmary::cancelReservation(Creature& carrier)
     }
 }
 
-//! \brief Charges once, places an eligible patient on its cot and plays admission audio.
+//! \brief Charges once, places an eligible patient on its cot, plays admission audio and cures the plague.
 bool RoomInfirmary::admit(size_t id, Creature& creature, bool manual)
 {
     double paid=0.0; int payer=0;
@@ -389,6 +415,8 @@ bool RoomInfirmary::admit(size_t id, Creature& creature, bool manual)
     if(creature.getPositionTile()!=nullptr) creature.getPositionTile()->addDirt(
         ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryDirtPerTreatment"));
     if(creature.getPositionTile()!=nullptr) fireRoomSound(*creature.getPositionTile(), "Infirmary/Admit");
+    // The admission to a cot cures the plague; the creature is then a normal patient
+    creature.curePlague();
     return true;
 }
 

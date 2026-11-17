@@ -179,6 +179,18 @@ std::string toString(SkillType type)
             return "trapMasterTools";
         case SkillType::spellSunthornCultivation:
             return "spellSunthornCultivation";
+        case SkillType::spellCurse:
+            return "spellCurse";
+        case SkillType::spellBlessing:
+            return "spellBlessing";
+        case SkillType::spellInvisibility:
+            return "spellInvisibility";
+        case SkillType::spellPlague:
+            return "spellPlague";
+        case SkillType::spellBreakWall:
+            return "spellBreakWall";
+        case SkillType::spellRevealEnemy:
+            return "spellRevealEnemy";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
@@ -324,6 +336,18 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "Master Tools";
         case SkillType::spellSunthornCultivation:
             return "Sunthorn Cultivation";
+        case SkillType::spellCurse:
+            return "The 'Curse' Spell";
+        case SkillType::spellBlessing:
+            return "The 'Blessing' Spell";
+        case SkillType::spellInvisibility:
+            return "The 'Invisibility' Spell";
+        case SkillType::spellPlague:
+            return "The 'Plague' Spell";
+        case SkillType::spellBreakWall:
+            return "The 'Break Wall' Spell";
+        case SkillType::spellRevealEnemy:
+            return "The 'Reveal Enemy' Spell";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }

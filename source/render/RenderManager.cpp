@@ -4550,6 +4550,19 @@ void RenderManager::rrUpdateEntityOpacity(RenderedMovableEntity* entity)
     }
 }
 
+//! \brief Shows the body of a creature with the given opacity (1 = solid), see the declaration.
+void RenderManager::rrSetCreatureOpacity(Creature* creature, float opacity)
+{
+    const std::string entStr = creature->getOgreNamePrefix() + creature->getName();
+    if(!mSceneManager->hasEntity(entStr))
+    {
+        OD_LOG_INF("Creature opacity: Couldn't find entity: " + entStr);
+        return;
+    }
+
+    setEntityOpacity(mSceneManager->getEntity(entStr), opacity);
+}
+
 //! \brief Samples the first supported animated contact bone in world coordinates.
 static bool dragBonePoint(Ogre::Entity* entity, std::initializer_list<const char*> names,
     Ogre::Vector3& point)
