@@ -71,12 +71,10 @@ const int MAX_ZOOM_LEVEL = 2;
 const Ogre::Real ANIMATION_CYCLE_SECONDS = 2.0f;
 const Ogre::Real ANIMATION_PHASES_PER_SECOND = 2.0f;
 
-//! Colour of solid dirt, also used for unowned claimed tiles.
-const Ogre::ColourValue DIRT_COLOUR(0.36f, 0.18f, 0.05f);
-
-//! Colour of dug-out earth ground (also gold, gem and rock ground): the dark brown of the earth, lighter than
-//! solid dirt so that floor and wall stay apart, but never grey or sandy like stone.
-const Ogre::ColourValue EARTH_GROUND_COLOUR(0.47f, 0.27f, 0.10f);
+//! The colours of solid dirt and earth ground are in MiniMapColours.h and the other terrain colours in
+//! MiniMapColours.cpp, shared with the skirmish level preview.
+using MiniMapColours::DIRT_COLOUR;
+using MiniMapColours::EARTH_GROUND_COLOUR;
 
 //! \brief Minimap image that clips the map to a circle when requested and draws the camera
 //! area outline and the direction to the dungeon heart above its stone backing and map.
@@ -308,11 +306,11 @@ void MiniMap::updateMapOverlay(CEGUI::Window* window, GameMap& map,
     window->invalidate();
 }
 
-//! \brief Minimap colour channels (0 to 1) of a mana well ground tile (blue).
-static const float MANA_WELL_COLOUR_RED = 0.18f;
-static const float MANA_WELL_COLOUR_GREEN = 0.37f;
-static const float MANA_WELL_COLOUR_BLUE = 0.78f;
+//! Minimap colour channels (0 to 1) of a mana well ground tile (blue): MANA_WELL_COLOUR_RED, MANA_WELL_COLOUR_GREEN
+//! and MANA_WELL_COLOUR_BLUE are in MiniMapColours.cpp with the other terrain colours.
 
+//! Computes the colour of a tile as seen by the owner of playerSeat: the terrain colour shared with the skirmish
+//! level preview (MiniMapColours::terrainColour), then dig marks, creatures and items above it.
 MiniMap::TileColour MiniMap::colourFromTile(Tile& tile, Seat& playerSeat, unsigned int phase)
 {
     TileColour result;
@@ -321,70 +319,10 @@ MiniMap::TileColour MiniMap::colourFromTile(Tile& tile, Seat& playerSeat, unsign
 
     const TileVisual visual = tile.getTileVisual();
     Seat* owner = tile.getSeat();
-    // The mana well ground is appended after the room visuals but is not a room
-    const bool room = visual >= TileVisual::dungeonTempleRoom && visual < TileVisual::countTileVisual &&
-        visual != TileVisual::manaWellGround;
-    result.priority = 1;
-    if(room || visual == TileVisual::claimedGround || visual == TileVisual::claimedFull)
-    {
-        result.priority = 3;
-        if(room && (owner == nullptr || owner->isRogueSeat()))
-        {
-            const Ogre::ColourValue colours[] = {Ogre::ColourValue::Red, Ogre::ColourValue::Green,
-                Ogre::ColourValue::Blue, Ogre::ColourValue(1.0f, 1.0f, 0.0f)};
-            result.colour = colours[phase % 4];
-            result.animated = true;
-        }
-        else
-        {
-            result.colour = owner == nullptr ? DIRT_COLOUR : owner->getColorValue();
-            if(visual == TileVisual::dungeonTempleRoom)
-                result.colour = result.colour * 0.65f + Ogre::ColourValue::White * 0.35f;
-            else if(visual == TileVisual::claimedFull)
-                result.colour = result.colour * 0.45f;
-        }
-    }
-    else
-    {
-        switch(visual)
-        {
-            case TileVisual::dirtGround:
-            case TileVisual::goldGround:
-            case TileVisual::gemGround:
-            case TileVisual::rockGround:
-                result.colour = EARTH_GROUND_COLOUR;
-                break;
-            case TileVisual::dirtFull:
-                result.colour = DIRT_COLOUR;
-                break;
-            case TileVisual::rockFull:
-                result.colour = Ogre::ColourValue(0.20f, 0.10f, 0.04f);
-                break;
-            case TileVisual::goldFull:
-                result.colour = Ogre::ColourValue(1.0f, 0.90f, 0.0f);
-                result.priority = 4;
-                break;
-            case TileVisual::gemFull:
-                result.colour = Ogre::ColourValue(0.63f, 0.0f, 0.82f);
-                result.priority = 4;
-                break;
-            case TileVisual::waterGround:
-                result.colour = Ogre::ColourValue(0.13f, 0.21f, 0.48f);
-                result.priority = 2;
-                break;
-            case TileVisual::lavaGround:
-                result.colour = Ogre::ColourValue(0.72f, 0.30f, 0.15f);
-                result.priority = 2;
-                break;
-            case TileVisual::manaWellGround:
-                result.colour = Ogre::ColourValue(MANA_WELL_COLOUR_RED, MANA_WELL_COLOUR_GREEN,
-                    MANA_WELL_COLOUR_BLUE);
-                result.priority = 2;
-                break;
-            default:
-                break;
-        }
-    }
+    // The mana well ground is appended after the room visuals but is not a room; MiniMapColours::terrainColour
+    // tells rooms, claimed tiles and the terrain apart
+    result = MiniMapColours::terrainColour(visual, owner != nullptr, (owner != nullptr) && owner->isRogueSeat(),
+        owner == nullptr ? Ogre::ColourValue::Black : owner->getColorValue(), phase);
     if(tile.getMarkedForDigging(playerSeat.getPlayer()))
     {
         result.colour = Ogre::ColourValue(0.0f, 1.0f, 1.0f);
