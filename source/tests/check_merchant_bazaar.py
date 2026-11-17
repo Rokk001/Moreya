@@ -1,6 +1,9 @@
 """Merchant room as a bazaar (INGAME-QS-10 K21, EQUIPMENT-POTIONS-PLAN 15.3 and 6.1). Owner finding of 2026-11-17: the room
 looked like a mix of a slaughterhouse and a library: dark red blotches on the floor planks and on a grey table cloth, a
 skull on the table, books and skulls on the shelves; cloth strips, carpets, lanterns and spice sacks were missing.
+Owner finding of 2026-11-17 on the first bazaar (A2): "viel zu sauber, grell und farbenfroh". The bazaar elements stay, in
+the dark dungeon look of the style guide: dull dyes close to brown-grey, grime, dim warm lanterns. The dye families below
+are therefore recognised by hue and HSV saturation (dull dyes), no longer by a strong channel spread.
 
 One check per point, on the shipped files (meshes through OgreXMLConverter, textures sampled at the mesh UVs):
   floor carpets      MerchantFloor.png shows worn planks with carpet remnants: 8 to 45 % of the pixels are dyed carpet,
@@ -22,6 +25,22 @@ One check per point, on the shipped files (meshes through OgreXMLConverter, text
   no skull           the furniture shows no bone-coloured surface (pale yellowed white, as the skulls) larger than
                      0.01 m2
                      and no flat material other than the dark iron
+  dark dungeon look  (style guide, anchor A = claimed floor RGB 56,48,36, luminance 49.0; luminance Y = 0.299 R + 0.587 G
+                     + 0.114 B, saturation = mean HSV saturation of the texels)
+                     floor texture: mean Y 36.8-56.4 (room floors 0.75-1.15 A), mean saturation 0.10-0.45 (room
+                     floors up to 0.40, wood up to 0.45), 99.9 % of the texels with no channel above 170 (no near-white)
+                     object textures (table and shelf wood, table cloth, wares atlas): mean Y 49.0-98.0 (objects at least
+                     A, at most 2.0 A), mean saturation at most 0.45 (no surface class above 0.45, wood at most 0.45)
+                     lantern glass (a glow accent): mean Y at most 78.4 (1.6 A), every pane warm (hue of the pane mean
+                     0-60 or 290-360 degrees, no green or blue glass), emissive at most 0.5 and warm (red >= green >=
+                     blue); A2 had bright red/amber/green/blue glass with a white emissive 0.75
+  empty table top    (owner 2026-11-17 on A2b: "Tische sollen leer sein, da kommen später die Items drauf") no vertex of
+                     SalesTable stands on the cloth top (0.713 to 1.0) inside |x|, |y| <= 0.30; only the goods the game places
+                     at 0.712 stand there (A2b's first version had four spice bowls on the top)
+  shelf wood         dark weathered wood, not light orange crates: MerchantTableWood mean luminance 49.0-53.9 (A to
+                     1.1 A); the shelf is an open frame of at least 15 separate wood pieces (uprights, rails, back planks,
+                     shelf planks) and has no closed crate side (a wood piece thinner than 0.07 in x, deeper than 0.2 and
+                     taller than 1.0)
 
 Call (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
   python source/tests/check_merchant_bazaar.py
@@ -58,32 +77,36 @@ def material_texture(name):
     return m.group(1) if m else None
 
 
-# Least spread between the strongest and the weakest channel of a dyed colour (0..255); the worn brown planks stay below
-DYE_CHROMA = 85
-# Least spread of the other dyes (the deep indigo of the carpets has about 60)
-DYE_CHROMA_DARK = 45
+# Dull dyes (style guide: muted, close to brown-grey): least HSV saturation of a dyed pixel per family, and the least
+# channel spread (0..255) below which a pixel is grey, soot or dust. The weathered planks and the brown wood are orange-brown
+# (hue 15-34 degrees) and never count as a dye.
+DYE_MIN_SPREAD = 12
+DYE_MIN_SAT = {'red': 0.30, 'ochre': 0.40, 'green': 0.20, 'blue': 0.18, 'purple': 0.18}
 
 
-def family(rgb, chroma=DYE_CHROMA):
-    """Dye family of a strongly coloured pixel: red, ochre (orange-yellow), green, blue, purple; None for plain wood,
-    linen, stone or dark lines."""
+def family(rgb):
+    """Dye family of a dyed pixel: red (madder), ochre, green, blue (indigo), purple (plum); None for wood, linen, stone,
+    grime, soot, dust or dark lines."""
     spread = max(rgb) - min(rgb)
-    if spread < DYE_CHROMA_DARK:
+    if spread < DYE_MIN_SPREAD:
         return None
-    h, l, s = colorsys.rgb_to_hls(*[c / 255.0 for c in rgb])
-    # orange-brown hues need the full spread: the worn planks are a dull orange-brown
-    if 18 <= h * 360 < 65 and spread < chroma:
-        return None
+    h, s, v = colorsys.rgb_to_hsv(*[c / 255.0 for c in rgb])
     deg = h * 360
-    if deg < 18 or deg >= 330:
-        return 'red'
-    if deg < 65:
-        return 'ochre'
-    if deg < 170:
-        return 'green'
-    if deg < 260:
-        return 'blue'
-    return 'purple'
+    if deg < 15 or deg >= 335:
+        f = 'red'
+    elif deg < 34:
+        return None
+    elif deg < 60:
+        f = 'ochre'
+    elif deg < 170:
+        f = 'green'
+    elif deg < 190:
+        return None
+    elif deg < 265:
+        f = 'blue'
+    else:
+        f = 'purple'
+    return f if s >= DYE_MIN_SAT[f] else None
 
 
 def texture_families(img, threshold):
@@ -296,6 +319,13 @@ def cloth_height(x, y):
     return best
 
 
+# Empty table top: nothing stands on the cloth over the top up to 1.0 (the corner lantern pole stands at the rim, outside
+# 0.30; its lantern hangs above 1.1)
+on_top = [p for tris in table.values() for t in tris for p, _ in t
+          if abs(p[0]) <= 0.30 and abs(p[1]) <= 0.30 and 0.713 < p[2] < 1.0]
+if on_top:
+    fails.append('empty table top: %d vertices of decoration stand on the table top above the cloth' % len(on_top))
+
 for turned in (False, True):
     def in_strip(p):
         x, y = (p[1], p[0]) if turned else (p[0], p[1])
@@ -364,6 +394,77 @@ for name, furniture in (('SalesTable', table), ('MerchantShelf', shelf)):
     print('%s bone-white area %.4f m2 of %.3f' % (name, bone, total))
     if bone > BONE_MAX_AREA:
         fails.append('no skull: %.4f m2 of %s is bone-white (a skull or bone, at most %.3f)' % (bone, name, BONE_MAX_AREA))
+
+# Dark dungeon look (style guide ranges, see the header)
+ANCHOR_Y = 0.299 * 56 + 0.587 * 48 + 0.114 * 36
+FLOOR_Y = (0.75 * ANCHOR_Y, 1.15 * ANCHOR_Y)
+FLOOR_SAT = (0.10, 0.45)
+FLOOR_MAX_CHANNEL = 170
+OBJECT_Y = (1.0 * ANCHOR_Y, 2.0 * ANCHOR_Y)
+OBJECT_MAX_SAT = 0.45
+GLOW_MAX_Y = 1.6 * ANCHOR_Y
+EMISSIVE_MAX = 0.5
+
+
+def texel_stats(img):
+    """Mean luminance, mean HSV saturation and the 99.9 % percentile of the strongest channel of a texture."""
+    px = list(img.convert('RGB').get_flattened_data())
+    lum = sum(0.299 * r + 0.587 * g + 0.114 * b for r, g, b in px) / len(px)
+    sat = sum((max(p) - min(p)) / float(max(p)) if max(p) else 0.0 for p in px) / len(px)
+    top = sorted(max(p) for p in px)[int(0.999 * (len(px) - 1))]
+    return lum, sat, top
+
+
+lum, sat, top = texel_stats(floor)
+print('MerchantFloor.png Y %.1f sat %.2f channel p99.9 %d' % (lum, sat, top))
+if not FLOOR_Y[0] <= lum <= FLOOR_Y[1]:
+    fails.append('dark look: floor mean luminance %.1f outside %.1f-%.1f' % (lum, FLOOR_Y[0], FLOOR_Y[1]))
+if not FLOOR_SAT[0] <= sat <= FLOOR_SAT[1]:
+    fails.append('dark look: floor mean saturation %.2f outside %.2f-%.2f' % (sat, FLOOR_SAT[0], FLOOR_SAT[1]))
+if top > FLOOR_MAX_CHANNEL:
+    fails.append('dark look: floor has near-white or glaring texels (channel %d above %d)' % (top, FLOOR_MAX_CHANNEL))
+for material in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares'):
+    tex = material_texture(material)
+    lum, sat, _ = texel_stats(Image.open(TEXTURES / tex))
+    print('%s Y %.1f sat %.2f' % (tex, lum, sat))
+    if not OBJECT_Y[0] <= lum <= OBJECT_Y[1]:
+        fails.append('dark look: %s mean luminance %.1f outside %.1f-%.1f' % (tex, lum, OBJECT_Y[0], OBJECT_Y[1]))
+    if sat > OBJECT_MAX_SAT:
+        fails.append('dark look: %s mean saturation %.2f above %.2f (garish colours)' % (tex, sat, OBJECT_MAX_SAT))
+glass = Image.open(TEXTURES / material_texture('MerchantLantern')).convert('RGB')
+lum, sat, _ = texel_stats(glass)
+print('%s Y %.1f sat %.2f' % (material_texture('MerchantLantern'), lum, sat))
+if lum > GLOW_MAX_Y:
+    fails.append('dark look: lantern glass mean luminance %.1f above %.1f (glow accent at most 1.6 A)' % (lum, GLOW_MAX_Y))
+half = glass.width // 2
+for cy in range(2):
+    for cx in range(2):
+        pane = list(glass.crop((cx * half, cy * half, (cx + 1) * half, (cy + 1) * half)).get_flattened_data())
+        mean = [sum(p[i] for p in pane) / float(len(pane)) for i in range(3)]
+        deg = colorsys.rgb_to_hsv(*[c / 255.0 for c in mean])[0] * 360
+        if 60 < deg < 290:
+            fails.append('dark look: lantern pane %d,%d is green or blue glass (hue %.0f)' % (cx, cy, deg))
+if emissive:
+    em = [float(x) for x in emissive.groups()]
+    if max(em) > EMISSIVE_MAX or not em[0] >= em[1] >= em[2]:
+        fails.append('dark look: lantern emissive %s is not a dim warm glow (at most %.1f, red >= green >= blue)' % (em, EMISSIVE_MAX))
+
+# Shelf wood: dark weathered, open frame of separate boards
+SHELF_WOOD_Y = (1.0 * ANCHOR_Y, 1.1 * ANCHOR_Y)
+SHELF_MIN_PIECES = 15
+lum, sat, _ = texel_stats(Image.open(TEXTURES / material_texture('MerchantTableWood')))
+if not SHELF_WOOD_Y[0] <= lum <= SHELF_WOOD_Y[1]:
+    fails.append('shelf wood: MerchantTableWood mean luminance %.1f outside %.1f-%.1f (dark weathered wood)'
+                 % (lum, SHELF_WOOD_Y[0], SHELF_WOOD_Y[1]))
+wood_pieces = pieces(shelf.get('MerchantTableWood', []))
+print('MerchantShelf wood pieces %d' % len(wood_pieces))
+if len(wood_pieces) < SHELF_MIN_PIECES:
+    fails.append('shelf wood: only %d separate wood pieces (at least %d: uprights, rails, back planks, shelf planks)'
+                 % (len(wood_pieces), SHELF_MIN_PIECES))
+for piece in wood_pieces:
+    ext = [max(k[i] for k in piece) - min(k[i] for k in piece) for i in range(3)]
+    if ext[0] < 0.07 and ext[1] > 0.2 and ext[2] > 1.0:
+        fails.append('shelf wood: closed crate side %.2f x %.2f x %.2f' % tuple(ext))
 
 print('ODP_TEST_PHASE {"name": "bazaar checks", "seconds": %.3f}' % (time.monotonic() - START))
 if fails:

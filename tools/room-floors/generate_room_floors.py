@@ -2205,30 +2205,40 @@ ROOMS = {
 # merchant (bazaar, EQUIPMENT-POTIONS-PLAN 15.3): worn wooden planks with remnants of woven carpets. INGAME-QS-10 K21: the
 # remnants of the first version were shapeless dark red blotches that read as blood on the planks; they are now cut
 # pieces of patterned carpet (border band with lozenges, inner line, medallion, small diamonds, fringes, frayed and worn
-# through edges) in several dyes, so nothing on the floor reads as a stain.
-BAZAAR_PLANK = np.array([0.33, 0.225, 0.14])
-BAZAAR_JOINT = np.array([0.07, 0.05, 0.035])
-# (field, border, motif, line) dyes of the carpet pieces: madder red with cream, indigo with ochre (ochre with teal unused)
+# through edges) in several dyes, so nothing on the floor reads as a stain. Owner finding 2026-11-17 on that version
+# ("viel zu sauber, grell und farbenfroh"): the planks are dark weathered grey-brown, the dyes are dull and faded close to
+# brown-grey, the carpets carry sewn patches, and grime, soot, dust and dark (not red) stains lie over everything, inside
+# the room floor ranges of the style guide. Owner finding on that version: the remnants were barely visible in the game
+# light; the planks are darker and the remnants lighter (a clear value step), still dull and dirty.
+BAZAAR_PLANK = np.array([0.19, 0.152, 0.125])
+BAZAAR_JOINT = np.array([0.055, 0.045, 0.037])
+# (field, border, motif, line) dyes of the carpet pieces: dull madder with indigo, dull indigo with madder (ochre unused)
 BAZAAR_RUGS = (
-    (np.array([0.50, 0.13, 0.08]), np.array([0.14, 0.15, 0.30]), np.array([0.80, 0.68, 0.45]), np.array([0.85, 0.62, 0.22])),
-    (np.array([0.13, 0.16, 0.36]), np.array([0.52, 0.15, 0.09]), np.array([0.86, 0.62, 0.20]), np.array([0.80, 0.70, 0.48])),
-    (np.array([0.62, 0.43, 0.14]), np.array([0.10, 0.30, 0.30]), np.array([0.50, 0.12, 0.08]), np.array([0.82, 0.72, 0.50])),
+    (np.array([0.50, 0.28, 0.23]), np.array([0.29, 0.30, 0.41]), np.array([0.58, 0.47, 0.30]), np.array([0.55, 0.45, 0.30])),
+    (np.array([0.30, 0.31, 0.43]), np.array([0.50, 0.29, 0.24]), np.array([0.58, 0.47, 0.29]), np.array([0.52, 0.46, 0.37])),
+    (np.array([0.56, 0.45, 0.27]), np.array([0.30, 0.32, 0.38]), np.array([0.50, 0.28, 0.23]), np.array([0.52, 0.46, 0.37])),
 )
+# Faded dye, grime, soot and dust of the merchant floor
+BAZAAR_FADED = np.array([0.42, 0.37, 0.31])
+BAZAAR_GRIME = np.array([0.12, 0.10, 0.085])
+BAZAAR_DUST = np.array([0.30, 0.28, 0.25])
 # Carpet pieces of the tile: centre x, centre y, half length, half width (px), rotation (radians), dye index. They wrap
 # around the tile border like the planks.
 BAZAAR_PIECES = ((150.0, 140.0, 118.0, 74.0, 0.10, 0), (380.0, 370.0, 100.0, 64.0, -0.16, 1))
+# Sewn-on patches of another carpet: centre u, v in the piece (px), half size u, v, dye index of the patch field
+BAZAAR_PATCHES = (((-52.0, 20.0, 20.0, 15.0, 2),), ((40.0, -18.0, 17.0, 13.0, 0),))
 
 
 def merchant_field():
-    """Paint worn bazaar planks with cut remnants of patterned woven carpets."""
+    """Paint dark weathered bazaar planks with dirty, faded and patched remnants of patterned woven carpets."""
     ids, joints, count = row_layout(2101, 7, 110, 260, 1.3, 2102)
     rng = np.random.RandomState(2103)
     grain = fbm(2104, 3.0, 90.0, 3)
-    shade = rng.uniform(0.78, 1.10, count)[ids]
+    shade = rng.uniform(0.80, 1.08, count)[ids]
     col = BAZAAR_PLANK[None, None, :] * shade[..., None]
     col = col * (1.0 + 0.12 * grain[..., None])
     scuff = smoothstep(0.6, 1.8, fbm(2107, 10.0, 10.0, 3))
-    col = mix(col, col * 1.18 + 0.03, scuff * 0.5)
+    col = mix(col, col * 1.10 + 0.015, scuff * 0.5)
     bevel = smoothstep(1.0, 5.0, joints)
     col = mix(col, BAZAAR_JOINT, 1.0 - bevel)
     hgt = bevel + 0.10 * grain
@@ -2265,15 +2275,29 @@ def merchant_field():
         rug = mix(rug, line, (in_band & (lozenge <= 2.5)) * 0.9)
         rug = mix(rug, line, ((edge > band) & (edge < band + 3.5)) * 1.0)
         # faded, rubbed dye and the woven texture
-        faded = smoothstep(0.2, 1.6, wear) * 0.35
-        rug = mix(rug, np.array([0.42, 0.33, 0.24]), faded) * weave[..., None]
+        # sewn-on patches of another dye with a dark stitch line
+        for (pu, pv, hu, hv, pdye) in BAZAAR_PATCHES[index]:
+            pe = np.minimum(hu - np.abs(u - pu), hv - np.abs(v - pv))
+            rug = mix(rug, BAZAAR_RUGS[pdye][0] * 0.95, (pe > 0) * 1.0)
+            rug = mix(rug, BAZAAR_GRIME, ((pe > 0) & (pe < 1.6) & (((u + v) % 5.0) < 2.5)) * 1.0)
+        faded = smoothstep(-0.2, 1.4, wear) * 0.45
+        rug = mix(rug, BAZAAR_FADED, faded) * weave[..., None]
         col = mix(col, rug, inside)
         hgt = hgt + 0.35 * inside + 0.04 * weave * inside
         # cream fringes at the two short ends
         tassel = (np.abs(u) > half_long - 1.0) & (np.abs(u) < half_long + 9.0 + 3.0 * fray) & (np.abs(v) < half_wide - 4.0)
         strand = ((v % 4.0) < 2.0) * tassel * (1.0 - holes)
-        col = mix(col, np.array([0.70, 0.62, 0.48]), strand * 0.9)
+        col = mix(col, np.array([0.36, 0.32, 0.26]), strand * 0.9)
         hgt = hgt + 0.15 * strand
+    # grime in broad patches, soot, grey dust and dark spilled stains over planks and carpets
+    grime = smoothstep(0.9, 1.7, fbm(2120, 5.0, 5.0, 3))
+    col = mix(col, BAZAAR_GRIME, grime * 0.45)
+    dust = smoothstep(1.0, 1.7, fbm(2121, 3.0, 3.0, 2))
+    col = mix(col, BAZAAR_DUST, dust * 0.25)
+    spill = fbm(2122, 7.0, 7.0, 3)
+    col = mix(col, col * 0.55, smoothstep(1.35, 1.5, spill) * 0.8)
+    col = col * (0.94 + 0.08 * fbm(2123, 60.0, 60.0, 2)[..., None])
+    hgt = hgt - 0.05 * grime
     return col, hgt
 
 
