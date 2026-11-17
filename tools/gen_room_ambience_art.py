@@ -201,7 +201,27 @@ def sprite_swirl(path):
             draw.line((points[i], points[i + 1]), fill=(255, 255, 255, alpha), width=width)
     image = image.filter(ImageFilter.GaussianBlur(4))
     radial(image, (255, 255, 255, 200), 44, 1.5)
-    finish(image, path)
+    finish_round(image, path)
+
+
+def finish_round(image, path, inner=0.72, outer=0.94):
+    """Scales down like finish() and makes the sprite round for additive blending.
+
+    The swirl turns on a square billboard drawn with scene_blend add, which ignores alpha. Every
+    pixel is faded to black and transparent between the inner and outer fraction of the half size, so
+    nothing of the square, its edges or its corners ever adds light, at any rotation. Inside the inner
+    circle the sprite keeps its colours.
+    """
+    small = image.resize((SIZE, SIZE), Image.LANCZOS)
+    pixels = small.load()
+    half = SIZE / 2.0
+    for y in range(SIZE):
+        for x in range(SIZE):
+            d = math.hypot(x + 0.5 - half, y + 0.5 - half) / half
+            fade = min(1.0, max(0.0, (outer - d) / (outer - inner)))
+            fade = fade * fade * (3.0 - 2.0 * fade)
+            pixels[x, y] = tuple(int(round(channel * fade)) for channel in pixels[x, y])
+    small.save(path)
 
 
 SPRITES = {

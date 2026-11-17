@@ -69,7 +69,8 @@ protected:
     //! MiniMapColours.h, where the skirmish level preview shares it.
     typedef MiniMapTileColour TileColour;
     //! \brief Computes the colour of a tile as seen by the owner of playerSeat. The phase is
-    //! the current animation phase, see getAnimationPhase().
+    //! the current animation phase, see getAnimationPhase(). A tile the player has never seen
+    //! gets the solid earth colour whatever its terrain, so the minimap matches the game view.
     static TileColour colourFromTile(Tile& tile, Seat& playerSeat, unsigned int phase);
     //! \brief Updates the camera area outline and the direction towards the dungeon heart
     //! drawn above the minimap image of the given window.

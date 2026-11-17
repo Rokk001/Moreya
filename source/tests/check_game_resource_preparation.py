@@ -33,8 +33,10 @@ assert render.count('prepareGameCreatureResources(*gameMap);') == 1
 seats = body('void RenderManager::prepareOutlinerMaterials(const std::string& materialName, const GameMap& gameMap)')
 assert 'gameMap.getSeats()' in seats and 'getBrighterMaterial(outliner->getName())->load();' in seats
 brighter = body('Ogre::MaterialPtr RenderManager::getBrighterMaterial(')
-# Chicken has RTSS base passes and a custom contour pass. Only passes exposing ambient can be brightened.
-assert re.search(r'if\(!pass->hasFragmentProgram\(\)\)\s+continue;\s+'
+# Chicken has RTSS base passes and a custom contour pass. Only passes exposing ambient can be brightened, and of
+# those only the contour pass (Custom_color): the body passes keep their colours on hover.
+assert re.search(r'if\(!pass->hasFragmentProgram\(\)\)\s+continue;\s+(?://[^\n]*\s+)*'
+                 r'if\(pass->getFragmentProgramName\(\) != "Custom_color"\)\s+continue;\s+'
                  r'Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters\(\);\s+'
                  r'if\(parameters->_findNamedConstantDefinition\("ambient", false\) != nullptr\)\s+'
                  r'parameters->setNamedConstant\("ambient",', brighter)
