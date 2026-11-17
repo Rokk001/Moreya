@@ -50,7 +50,7 @@ DIRT = {
     'DirtCleanedMoodStage3': '50', 'DirtPileRadius': '2', 'DirtOutputStage2': '0.75', 'DirtOutputStage3': '0.5',
     'UrgeSeek': '80', 'UrgeOnTheWay': '75', 'UrgeRelieve': '100', 'UrgePerChicken': '5.962', 'UrgePerDrink': '15',
     'ToiletUseTurns': '4', 'ToiletWaitRadius': '1', 'ToiletReserveFactor': '3',
-    'CleanRoomFromStage': '2', 'CleanRateFactor': '1',
+    'CleanTileFromStage': '1', 'CleanRateFactor': '1',
     'CleaningMaxTurnsPerTile': '20',
     'CombatDirtPerHit': '1.7723', 'TrailDirtPerTile': '0.1611',
     'CreatureDirtPerFightWon': '5', 'CreatureDirtPerKo': '25', 'CreatureDirtDecayPerTurn': '0.1',

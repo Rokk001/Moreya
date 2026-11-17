@@ -178,6 +178,15 @@ const Ogre::Real CREATURE_TURN_INTERRUPT_TOLERANCE = 0.02f;
 const Ogre::Real CHICKEN_FEATHER_EFFECT_DURATION = 2.6f;
 //! Height above the corpse position at which its fly swarm hovers
 const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
+//! Mesh of the twig broom a worker holds in its right hand while it sweeps (Clean clip, INGAME-QS-10 K26). Its grip
+//! for the right hand is the origin, the handle runs along +z to the twigs, like every hand tool on the weapon mount
+const std::string CLEANING_BROOM_MESH = "CleaningBroom.mesh";
+//! Prefix of the name of the broom entity of a worker
+const std::string CLEANING_BROOM_PREFIX = "CleaningBroom_";
+//! The broom (1 mesh unit long) is this share of the height of the worker's mesh, the length the Clean clips of the
+//! worker skeletons were authored for: the left hand reaches the handle 0.25 units above the right one and the twig
+//! tips (0.70 units below the right hand) touch the floor; checked by source/tests/check_cleaning_broom_k26.py
+const Ogre::Real CLEANING_BROOM_HEIGHT_SHARE = 0.88f;
 //! Mesh of the mug a guest of a tavern holds in its right hand while it drinks
 const std::string TAVERN_MUG_MESH = "TavernMug.mesh";
 //! Prefix of the name of the mug entity of a creature
@@ -4872,6 +4881,7 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
     mDragContactGrips.erase(curCreature);
     clearCreatureDecay(curCreature);
     removeCreatureTavernProps(curCreature);
+    removeCreatureCleaningBroom(curCreature);
     cancelCreatureStep(curCreature);
     removeTreasuryThiefSack(curCreature);
     cancelCreatureSleepAnimation(curCreature);
@@ -5393,6 +5403,7 @@ void RenderManager::rrPickUpEntity(GameEntity* curEntity, Player* localPlayer)
     {
         clearCreatureDecay(static_cast<Creature*>(curEntity));
         removeCreatureTavernProps(static_cast<Creature*>(curEntity));
+        removeCreatureCleaningBroom(static_cast<Creature*>(curEntity));
         cancelCreatureStep(static_cast<Creature*>(curEntity));
         cancelCreatureFeedingAnimation(static_cast<Creature*>(curEntity));
         cancelCreatureSleepAnimation(static_cast<Creature*>(curEntity));
@@ -6018,6 +6029,15 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     if((dropCreature != nullptr) &&
        (EntityAnimation::hidesWeapons(anim) != ((previousState != nullptr) && EntityAnimation::hidesWeapons(previousState->getAnimationName()))))
         CreatureCombatReactions::showWeaponsForClip(dropCreature);
+
+    // A worker that sweeps (the clip it really plays, a skeleton without Clean wipes with Claim) holds the broom and puts
+    // its own tool away; the next clip gives the tool back (INGAME-QS-10 K26)
+    if((dropCreature != nullptr) &&
+       (EntityAnimation::holdsBroom(anim) != ((previousState != nullptr) && EntityAnimation::holdsBroom(previousState->getAnimationName()))))
+    {
+        updateCreatureCleaningBroom(dropCreature);
+        CreatureCombatReactions::showWeaponsForClip(dropCreature);
+    }
 
     // Sitting down and getting up blend the body from the one pose into the other; the old clip holds still meanwhile
     if((dropCreature != nullptr) && (previousState != nullptr) && (previousState != animState) && !freezeOnLastFrame &&
@@ -8726,6 +8746,63 @@ void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carrie
     // The carrier that still walks changes back to the plain walk clip
     if(carrier->getAnimationStateName() == EntityAnimation::walk_anim)
         rrSetObjectAnimationState(carrier, EntityAnimation::walk_anim, true);
+}
+
+//! \brief Removes the cleaning broom from the hand of a worker, if it has one.
+void RenderManager::removeCreatureCleaningBroom(Creature* creature)
+{
+    const std::string broomName = CLEANING_BROOM_PREFIX + creature->getName();
+    if(!mSceneManager->hasEntity(broomName))
+        return;
+
+    Ogre::Entity* broomEntity = mSceneManager->getEntity(broomName);
+    broomEntity->detachFromParent();
+    mSceneManager->destroyEntity(broomEntity);
+}
+
+//! \brief Puts the cleaning broom into the right hand of a worker while it plays the sweeping clip
+//! (EntityAnimation::holdsBroom) and its own tool away: the pickaxe a worker without a weapon carries
+//! (rrCreateWorkerTool) is hidden here, the weapon models by CreatureCombatReactions::showWeaponsForClip, and the
+//! kobold's pick, part of its model, by its Clean clip (Pick bone scaled to nothing). Any other clip takes the broom
+//! away and shows the pickaxe again. The broom sits on the weapon mount of the right hand, sized to the worker's mesh
+//! (CLEANING_BROOM_HEIGHT_SHARE); a rig bone does not scale it, the creature's level growth does (INGAME-QS-10 K26).
+void RenderManager::updateCreatureCleaningBroom(Creature* creature)
+{
+    const Ogre::AnimationState* animState = creature->getAnimationState();
+    const bool sweeping = (animState != nullptr) && EntityAnimation::holdsBroom(animState->getAnimationName());
+    const std::string toolName = WORKER_TOOL_PREFIX + creature->getName();
+    if(mSceneManager->hasEntity(toolName))
+        mSceneManager->getEntity(toolName)->setVisible(!sweeping);
+
+    if(!sweeping)
+    {
+        removeCreatureCleaningBroom(creature);
+        return;
+    }
+
+    const std::string broomName = CLEANING_BROOM_PREFIX + creature->getName();
+    const std::string objectName = creature->getOgreNamePrefix() + creature->getName();
+    if(mSceneManager->hasEntity(broomName) || !mSceneManager->hasEntity(objectName))
+        return;
+
+    Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
+    Ogre::Skeleton* skeleton = objectEntity->getSkeleton();
+    if((skeleton == nullptr) || !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(CLEANING_BROOM_MESH))
+        return;
+
+    WeaponMount mount;
+    if(!getWeaponMount(skeleton, "R", CLEANING_BROOM_MESH, mount))
+    {
+        OD_LOG_WRN("No hand bone for the cleaning broom of creature=" + creature->getName() + ", skeleton=" + skeleton->getName());
+        return;
+    }
+
+    Ogre::Entity* broomEntity = mSceneManager->createEntity(broomName, CLEANING_BROOM_MESH);
+    broomEntity->setQueryFlags(0);
+    const Ogre::Real scale = CLEANING_BROOM_HEIGHT_SHARE * objectEntity->getMesh()->getBounds().getSize().z;
+    Ogre::TagPoint* grip = objectEntity->attachObjectToBone(mount.mBoneName, broomEntity, mount.mRotation, mount.mOffset);
+    grip->setInheritScale(false);
+    grip->setScale(scale, scale, scale);
 }
 
 //! \brief Removes the mug from the hand of a creature, if it has one.

@@ -27,6 +27,7 @@
 #include "game/WorkerTargets.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
+#include "gamemap/TileDirtSync.h"
 #include "rooms/Room.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -95,6 +96,13 @@ bool CreatureActionSearchDirtToClean::isPileCleanable(const Tile& tile)
     return room->isCleanableByWorkers();
 }
 
+//! \brief The drawn dirt stage of the tile against CleanTileFromStage (1: every visible stain is cleaned).
+bool CreatureActionSearchDirtToClean::isFloorDirtToClean(const Tile& tile)
+{
+    return TileDirtSync::stageForValue(tile.getDirt()) >=
+        static_cast<int32_t>(ConfigManager::getSingleton().getDirtConfigDouble("CleanTileFromStage"));
+}
+
 //! \brief Orders tiles with the most dirt first.
 static bool isDirtier(const Tile* first, const Tile* second)
 {
@@ -150,14 +158,15 @@ static int32_t getRoomRank(const Room* room)
     return ROOM_RANK_OTHER;
 }
 
-//! \brief Finds the dirtiest tile of a room that has dirt and can be reached by the worker.
+//! \brief Finds the dirtiest tile of a room whose dirt is to be cleaned (isFloorDirtToClean) and that the worker can
+//! reach.
 //! \return The tile, nullptr if the room has no such tile.
 static Tile* findDirtiestReachableTile(Creature& creature, Tile* myTile, Room* room)
 {
     std::vector<Tile*> dirtyTiles;
     for(Tile* tile : room->getCoveredTiles())
     {
-        if(tile->getDirt() > 0.0 && activeCleaners(creature, tile, nullptr) == 0 &&
+        if(CreatureActionSearchDirtToClean::isFloorDirtToClean(*tile) && activeCleaners(creature, tile, nullptr) == 0 &&
            DirtPileEntity::getEntityOnTile(tile, DirtPileKind::pile) == nullptr &&
            DirtPileEntity::getEntityOnTile(tile, DirtPileKind::vomit) == nullptr &&
            DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones) == nullptr)
@@ -214,13 +223,12 @@ static Tile* findRoomTile(Creature& creature, Tile* myTile)
     return bestTile;
 }
 
-//! \brief Finds the nearest reachable tile of the worker's seat outside rooms that has a blood stain or is as dirty
-//! as the third dirt stage.
+//! \brief Finds the nearest reachable tile of the worker's seat outside rooms that has a blood stain or floor dirt to
+//! be cleaned (isFloorDirtToClean: every visible stain).
 //! \return The tile, nullptr if there is none.
 static Tile* findCorridorTile(Creature& creature, Tile* myTile)
 {
     GameMap* gameMap = creature.getGameMap();
-    double filthyDirt = ConfigManager::getSingleton().getDirtConfigDouble("DirtStage3At");
     Tile* bestTile = nullptr;
     float bestDist = 0.0f;
     for(int32_t xx = 0; xx < gameMap->getMapSizeX(); ++xx)
@@ -232,7 +240,7 @@ static Tile* findCorridorTile(Creature& creature, Tile* myTile)
                 continue;
 
             bool hasBlood = (DirtPileEntity::getEntityOnTile(tile, DirtPileKind::blood) != nullptr);
-            if(!hasBlood && (tile->getDirt() < filthyDirt))
+            if(!hasBlood && !CreatureActionSearchDirtToClean::isFloorDirtToClean(*tile))
                 continue;
             if(!isCleanTarget(creature, tile, WorkerTargetKind::corridor) || activeCleaners(creature, tile, nullptr) != 0)
                 continue;

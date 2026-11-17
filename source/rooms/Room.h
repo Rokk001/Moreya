@@ -98,8 +98,8 @@ public:
     //! room type exists in the build; the toilet is cleaned before the other rooms.
     bool isToiletRoom() const;
 
-    //! \brief Tells whether workers should clean this room now: the room is cleanable and its dirt stage is at
-    //! least CleanRoomFromStage.
+    //! \brief Tells whether workers should clean this room now: the room is cleanable and one of its tiles has floor
+    //! dirt to be cleaned (CreatureActionSearchDirtToClean::isFloorDirtToClean, from CleanTileFromStage on).
     bool needsCleaning();
 
     //! \brief Server side. Adds the dirt of one use of a room to a tile: the value of the rooms.cfg key times the DirtFactor

@@ -114,7 +114,8 @@ void collectClaim(WorkerTargetLists& targets, Seat& seat, Tile& tile, const std:
     }
 }
 
-//! \brief Adds pile and dirty corridor targets without excluding occupied tiles.
+//! \brief Adds pile and dirty corridor targets without excluding occupied tiles. A corridor tile is a target with a
+//! blood stain or with floor dirt to be cleaned (every visible stain, CreatureActionSearchDirtToClean::isFloorDirtToClean).
 void collectCleaningTile(WorkerTargetLists& targets, Seat& seat, Tile& tile, const std::vector<Creature*>& workers)
 {
     if(tile.getSeat() != &seat)
@@ -125,7 +126,7 @@ void collectCleaningTile(WorkerTargetLists& targets, Seat& seat, Tile& tile, con
                       CreatureActionSearchDirtToClean::isPileCleanable(tile);
     const bool corridor = tile.getCoveringRoom() == nullptr &&
         (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::blood) != nullptr ||
-         tile.getDirt() >= ConfigManager::getSingleton().getDirtConfigDouble("DirtStage3At"));
+         CreatureActionSearchDirtToClean::isFloorDirtToClean(tile));
     if((!pile && !corridor) || !reachable(workers, tile))
         return;
     if(pile)
@@ -137,7 +138,8 @@ void collectCleaningTile(WorkerTargetLists& targets, Seat& seat, Tile& tile, con
 
 namespace
 {
-//! \brief Adds the configured number of cleaning places for each dirty reachable room.
+//! \brief Adds the configured number of cleaning places for each dirty reachable room; the room's target tile is a
+//! reachable tile with floor dirt to be cleaned (CreatureActionSearchDirtToClean::isFloorDirtToClean).
 void collectRooms(WorkerTargetLists& targets, Seat& seat, const std::vector<Creature*>& workers)
 {
     const uint32_t tilesPerCleaner = ConfigManager::getSingleton().getWorkerCleanTilesPerCleaner();
@@ -147,7 +149,7 @@ void collectRooms(WorkerTargetLists& targets, Seat& seat, const std::vector<Crea
             continue;
         Tile* dirtyTile = nullptr;
         for(Tile* tile : room->getCoveredTiles())
-            if(tile->getDirt() > 0.0 && reachable(workers, *tile))
+            if(CreatureActionSearchDirtToClean::isFloorDirtToClean(*tile) && reachable(workers, *tile))
             {
                 dirtyTile = tile;
                 break;

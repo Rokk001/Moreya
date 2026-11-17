@@ -20,6 +20,7 @@
 #include "ai/KeeperAI.h"
 #include "rooms/Room.h"
 
+#include "creatureaction/CreatureActionSearchDirtToClean.h"
 #include "creatureaction/CreatureActionSearchJob.h"
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
@@ -438,13 +439,20 @@ bool Room::isToiletRoom() const
     return RoomManager::getRoomNameFromRoomType(getType()) == TOILET_ROOM_NAME;
 }
 
-//! \brief The dirt stage of a room workers clean decides.
+//! \brief The dirt of the tiles of a room workers clean decides: one tile with floor dirt to be cleaned
+//! (CreatureActionSearchDirtToClean::isFloorDirtToClean, every visible stain) is enough, whatever the room's stage.
 bool Room::needsCleaning()
 {
     if(!isCleanableByWorkers())
         return false;
 
-    return getDirtStage() >= static_cast<uint32_t>(ConfigManager::getSingleton().getDirtConfigDouble("CleanRoomFromStage"));
+    for(Tile* tile : mCoveredTiles)
+    {
+        if(CreatureActionSearchDirtToClean::isFloorDirtToClean(*tile))
+            return true;
+    }
+
+    return false;
 }
 
 //! \brief Skips the line "CleanOrder 0|1" that older saves and levels have after the prison and torture data.

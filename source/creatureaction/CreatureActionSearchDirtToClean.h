@@ -49,6 +49,13 @@ public:
     //! \param tile The tile of the pile.
     //! \return True if the pile may be cleaned.
     static bool isPileCleanable(const Tile& tile);
+
+    //! \brief Tells whether the floor dirt of a tile is to be cleaned: its dirt stage (TileDirtSync::stageForValue, the
+    //! stage the clients draw) is at least CleanTileFromStage of global.cfg [Dirt]; with 1 every visible stain counts.
+    //! Used for room and corridor tiles by the search, the keeper's target lists and Room::needsCleaning, so all agree.
+    //! \param tile The tile to look at.
+    //! \return True if workers clean the floor of the tile.
+    static bool isFloorDirtToClean(const Tile& tile);
 };
 
 #endif // CREATUREACTIONSEARCHDIRTTOCLEAN_H
