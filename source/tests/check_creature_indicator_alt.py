@@ -83,7 +83,10 @@ struct CreatureOverlayStatus {
  void hideEmote();
  void updateHealth(){}void updateProgress(float){}void updateStatus(float){mMovableTextOverlay->displayOverlay(1,-1);}
  void displayHealthOverlay(float);void update(float);
+ //! \brief Hides every indicator while the local player possesses a creature.
+ static bool sAllSuppressed;
 };
+bool CreatureOverlayStatus::sAllSuppressed=false;
 STATUS_METHODS
 struct RenderManager { bool mCreatureTextOverlayDisplayed=false;void rrSetCreaturesTextOverlay(GameMap&,bool);
  static RenderManager* instance;static RenderManager& getSingleton(){return *instance;} };
@@ -99,7 +102,7 @@ namespace sf { struct Keyboard {
 struct Keyboard { OIS::Keyboard backend;OIS::Keyboard* mKeyboard=&backend;bool isModifierDown(OIS::Keyboard::Modifier); };
 KEYBOARD_METHOD
 struct GameMode { GameMap* mGameMap;bool mCreatureIndicatorsVisible=VISIBILITY_DEFAULT;
- bool mIndicatorLeftAltDown=false,mIndicatorRightAltDown=false;
+ bool mIndicatorLeftAltDown=false,mIndicatorRightAltDown=false;bool mPossessionViewActive=false;
  void updateCreatureIndicatorAlt(OIS::KeyCode,bool); };
 TOGGLE_METHOD
 int main(){int checks=0,failures=0;const auto check=[&](bool value,const char* why){++checks;if(!value){++failures;std::cerr<<why<<'\n';}};
@@ -155,6 +158,19 @@ int main(){int checks=0,failures=0;const auto check=[&](bool value,const char* w
  mode.updateCreatureIndicatorAlt(OIS::KC_LMENU,false);
  mode.updateCreatureIndicatorAlt(OIS::KC_LMENU,true);
  check(!mode.mCreatureIndicatorsVisible,"missed-release recovery permits next press");
+ // While possessing no indicator shows, whatever asks for it; an Alt toggle is kept and shown when the possession ends.
+ mode.updateCreatureIndicatorAlt(OIS::KC_LMENU,false);
+ renderer.rrSetCreaturesTextOverlay(map,true);overlay.update(0);check(display.visible,"held request shows the indicators");
+ CreatureOverlayStatus::sAllSuppressed=true;overlay.update(0);check(!display.visible,"no indicator while possessing");
+ overlay.displayHealthOverlay(.5f);overlay.update(.1f);check(!display.visible,"a hover shows no indicator while possessing");
+ mode.mPossessionViewActive=true;const bool shownBefore=renderer.mCreatureTextOverlayDisplayed;
+ mode.updateCreatureIndicatorAlt(OIS::KC_LMENU,true);mode.updateCreatureIndicatorAlt(OIS::KC_LMENU,false);
+ check(mode.mCreatureIndicatorsVisible&&renderer.mCreatureTextOverlayDisplayed==shownBefore,
+  "Alt while possessing keeps its toggle without changing the indicators");
+ CreatureOverlayStatus::sAllSuppressed=false;mode.mPossessionViewActive=false;
+ renderer.rrSetCreaturesTextOverlay(map,mode.mCreatureIndicatorsVisible);overlay.update(0);
+ check(display.visible==mode.mCreatureIndicatorsVisible,"the kept toggle is shown when the possession ends");
+ renderer.rrSetCreaturesTextOverlay(map,false);mode.mCreatureIndicatorsVisible=false;overlay.update(0);
  // Reaction emotes follow game time while the temporary hover request keeps real time.
  overlay.mEmoteCreated=true;overlay.mEmoteRemaining=2.0f;display.displayOverlay(2,-1);
  map.speed=0.5;overlay.displayHealthOverlay(.5f);overlay.update(1.0f);

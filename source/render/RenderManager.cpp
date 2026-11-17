@@ -8847,6 +8847,18 @@ void RenderManager::rrTemporaryDisplayCreaturesTextOverlay(Creature* creature, O
     creature->getOverlayStatus()->displayHealthOverlay(timeToDisplay);
 }
 
+//! \brief Shows or hides the main entity of the creature; the objects attached to its bones follow it.
+void RenderManager::rrSetCreatureModelVisible(Creature& creature, bool visible)
+{
+    const std::string entityName = creature.getOgreNamePrefix() + creature.getName();
+    if(!mSceneManager->hasEntity(entityName))
+        return;
+
+    Ogre::Entity* entity = mSceneManager->getEntity(entityName);
+    if(entity->getVisible() != visible)
+        entity->setVisible(visible);
+}
+
 void RenderManager::rrToggleHandSelectorVisibility()
 {
     rrCancelIdleHandAnimation();

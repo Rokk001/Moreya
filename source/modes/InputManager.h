@@ -91,6 +91,10 @@ public:
     //! \brief Recreates the input devices if the mouse or keyboard capture setting changed.
     //! Must not be called from an input callback.
     void refreshSettings();
+    //! \brief Keeps the mouse inside the game window while the local player possesses a creature, whatever the
+    //! capture setting says, until called again with false. Applied by the next refreshSettings; on Windows the
+    //! pointer is also put back to the middle of the window after each move, so that the mouse only turns the view.
+    void setPossessionMouseLock(bool locked);
     //! \brief Moves the input devices to another render window. Returns false (and keeps the old window)
     //! if the devices could not be created for the new one.
     bool setRenderWindow(Ogre::RenderWindow* renderWindow);
@@ -129,6 +133,10 @@ public:
     bool mMouseGrab;
     //! \brief Whether the input devices were created with keyboard capture
     bool mKeyboardGrab;
+    //! \brief See setPossessionMouseLock()
+    bool mPossessionMouseLock = false;
+    //! \brief Whether the input devices were created with the possession lock
+    bool mAppliedPossessionMouseLock = false;
     //! \brief Creates the mouse and keyboard for mRenderWindow
     void createInputDevices(bool mouseGrab, bool keyboardGrab);
     //! \brief Destroys the mouse and keyboard; safe to call when they do not exist
@@ -164,6 +172,8 @@ public:
     void updateCursorGrab(bool grab);
     //! \brief Moves the Windows pointer to the given game pointer position (clamped)
     void moveSystemPointer(int x, int y);
+    //! \brief Puts the Windows pointer back to the middle of the window while a possession locks the mouse
+    void centrePointer();
     bool mWasForeground;
     bool mCursorHidden;
     bool mCursorClipped;

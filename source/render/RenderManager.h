@@ -431,6 +431,10 @@ public:
     //! \brief Toggles the creatures text overlay
     void rrTemporaryDisplayCreaturesTextOverlay(Creature* creature, Ogre::Real timeToDisplay);
 
+    //! \brief Shows or hides the model of the given creature, with what is attached to its bones. Used on the client
+    //! for the creature the local player possesses: the view is in its eyes, so its own model is hidden.
+    void rrSetCreatureModelVisible(Creature& creature, bool visible);
+
     //! \brief Returns the name of a copy of the given material that is tinted with the given colour.
     //! The copy is created on the first request and reused afterwards.
     std::string rrBuildTintedMaterial(const std::string& materialNameBase,

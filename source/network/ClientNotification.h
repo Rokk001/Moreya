@@ -101,9 +101,11 @@ enum class ClientNotificationType
     askPossessMove,
     //! Possession: the player wants to leave the possessed creature
     askPossessExit,
-    //! Possession: left click attack, the direction the creature looks at (Vector2)
+    //! Possession: left click attack (or the work of a worker with no enemy in front of it), sent again while the
+    //! button is held, the direction the creature looks at (Vector2)
     askPossessAttack,
-    //! Possession: use the creature skill of the given slot (uint32_t, 0 to 3) in the given direction (Vector2)
+    //! Possession: use the creature skill of the given slot (uint32_t, 0 to 19: keys 1-9, 0 then Shift+1 to Shift+0)
+    //! in the given direction (Vector2)
     askPossessSkill,
     //! Editor: change or list the region markers of the level script:
     //! + int32_t operation (an EditorRegionOperation), string name, 4 int32_t (corners, set only).

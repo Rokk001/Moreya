@@ -279,7 +279,6 @@
             </Window>
             <LayoutImport type="DefaultWindow" filename="WindowTabRooms.layout" name="RoomsImport" />
             <LayoutImport type="DefaultWindow" filename="WindowTabTraps.layout" name="TrapImport" />
-            <LayoutImport type="DefaultWindow" filename="WindowTabSpells.layout" name="SpellImport" />
             <LayoutImport type="DefaultWindow" filename="WindowTabCreatures.layout" name="CreaturesImport" />
             <Window type="DefaultWindow" name="Lights" >
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />

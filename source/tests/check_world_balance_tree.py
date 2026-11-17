@@ -211,7 +211,8 @@ for title in ("Dominion", "Heart Fortitude", "Heart Mending", "Mana Flow"):
 assert 'skill->getGuiPath().empty() ? "" :' in manager
 assert "skill->getGuiPath().empty() || hoveredWindow->getName()" in manager
 editor = read("source/modes/EditorMode.cpp")
-assert "if(!castButtonName.empty())" in editor
+# the editor has no spells tab: it also skips a cast button its sheet does not have
+assert "if(!castButtonName.empty() && guiSheet->isChild(castButtonName))" in editor
 game = read("source/modes/GameMode.cpp")
 assert game.count("if(!castButtonName.empty())") >= 6
 
