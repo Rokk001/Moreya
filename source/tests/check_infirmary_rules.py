@@ -293,6 +293,11 @@ struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=10
  Creature* dragWorker=nullptr;double dragDirtFactor=0;int dragStarts=0;
  //! \brief Records production transport restarts without changing health or knockout timing.
  void notifyDragStart(Creature& worker,double factor){dragWorker=&worker;dragDirtFactor=factor;++dragStarts;}
+ bool plagueSick=false;int plagueCures=0;
+ //! \brief Reports whether the patient has the plague for the actual admission.
+ bool isPlagueSick()const{return plagueSick;}
+ //! \brief Records the plague cure of the actual admission.
+ void curePlague(){if(plagueSick){plagueSick=false;++plagueCures;}}
  double counter=-73;int glows=0,popped=0,sleeps=0;std::string name="patient";Tile* home=nullptr;Tile* tile=nullptr;
  Tile* resumedCarryTarget=nullptr;double resumedCarryCounter=0;bool resumedCarryIsDrag=false,forcedCarry=false;
  //! \brief Reports a hand-drop transport so the real room writer can omit it.

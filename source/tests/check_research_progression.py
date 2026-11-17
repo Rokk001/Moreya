@@ -169,8 +169,13 @@ struct ODServer {
 GIFTBOXENUM
 PLEASUREROOMENUMS
 enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
+//! \brief Supplies the tile position the extracted save of the running reveals writes.
+struct Tile { int x=0,y=0; int getX()const{return x;} int getY()const{return y;} };
 //! \brief Supplies seat storage for actual research and optional shared-room save methods.
 struct Seat {
+    //! \brief The running reveals the extracted save and load handle (none in these cases).
+    std::vector<std::pair<Tile*, uint32_t> > mRevealedTiles;
+    std::vector<std::pair<std::pair<int, int>, uint32_t> > mRevealedTilesLoaded;
     GameMap world;GameMap* mGameMap=&world;Player player;
     TavernPayer mTavernPayer=TavernPayer::keeper;SpaPayer mSpaPayer=SpaPayer::keeper;
     CasinoPayout mCasinoPayout=CasinoPayout::smiles;
@@ -264,7 +269,7 @@ int main(int argc,char** argv){try {
     std::vector<SkillType> all;
     for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
         if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
-    check(all.size()==65,"all 65 research entries");
+    check(all.size()==71,"all 71 research entries (65 and the 6 new spells)");
     check(ConfigManager::getSingleton().freeLevelOne.size()==6,"six free level one entries in skills.cfg");
     const std::vector<std::pair<SkillType,int> > none;
     // The research tree: tabs, tiers and parents of the production constructor
@@ -272,7 +277,7 @@ int main(int argc,char** argv){try {
     check(SkillManager::getSkillTab(SkillType::trapDoorWooden)==SkillTab::traps&&SkillManager::getSkillTab(SkillType::keeperHeartMending)==SkillTab::traps,"Heart Mending stands in the Traps tab");
     check(SkillManager::getSkillTab(SkillType::spellSummonWorker)==SkillTab::spells&&SkillManager::getSkillTab(SkillType::keeperManaFlow)==SkillTab::spells,"Mana Flow stands in the Spells tab");
     {std::vector<SkillType> rooms,traps,spells;SkillManager::listTabSkills(SkillTab::rooms,rooms);SkillManager::listTabSkills(SkillTab::traps,traps);SkillManager::listTabSkills(SkillTab::spells,spells);
-     check(rooms.size()==25&&traps.size()==21&&spells.size()==19,"25 + 21 + 19 entries in the three tabs");}
+     check(rooms.size()==25&&traps.size()==21&&spells.size()==25,"25 + 21 + 25 entries in the three tabs");}
     {const Skill* mending=SkillManager::getSkill(SkillType::keeperHeartMending);
      check(mending->getDependencies().size()==1&&mending->getDependencies()[0]->getType()==SkillType::keeperHeartFortitude,"Heart Mending needs only Heart Fortitude");
      const Skill* banner=SkillManager::getSkill(SkillType::trapWatchBanner);
