@@ -1,8 +1,8 @@
 """Check what the minimap draws for earth and for tiles the player has never seen.
 
-The production MiniMap::colourFromTile, the production TileColour struct, the production minimap colour constants and
-the production TileVisual list are compiled into a small probe with stand-ins for Tile, Seat and the entities. The
-probe asks the production function for the colour of:
+The production MiniMap::colourFromTile, the shared production terrain colours (MiniMapColours.h/.cpp: the TileColour
+struct, the colour constants and terrainColour) and the production TileVisual list are compiled into a small probe
+with stand-ins for Tile, Seat and the entities. The probe asks the production function for the colour of:
 - a seen solid earth tile and a seen earth floor tile: both brown and opaque;
 - an unseen tile of every terrain and room visual (gold, rock, gem, water, lava, mana well, every room), also when the
   tile has an owner, an enemy creature on it or a pickable entity: always the same brown as seen solid earth, and
@@ -36,21 +36,23 @@ def block(source, signature):
 
 
 minimap_cpp = read('source/gamemap/MiniMap.cpp')
-minimap_h = read('source/gamemap/MiniMap.h')
 tile_h = read('source/entities/Tile.h')
 
+
+def without_preprocessor(text):
+    """Drops the include and guard lines of a production file; the probe supplies what they bring in."""
+    return '\n'.join(line for line in text.splitlines() if not line.lstrip().startswith('#'))
+
+
 production_function = block(minimap_cpp, 'MiniMap::TileColour MiniMap::colourFromTile(')
-tile_colour_struct = block(minimap_h, 'struct TileColour') + ';'
 tile_visual_enum = block(tile_h, 'enum class TileVisual') + ';'
-constants = []
-for name in ('DIRT_COLOUR', 'EARTH_GROUND_COLOUR'):
-    match = re.search(r'^const Ogre::ColourValue ' + name + r'\([^)]*\);', minimap_cpp, re.M)
-    assert match, name
-    constants.append(match.group(0))
-for name in ('MANA_WELL_COLOUR_RED', 'MANA_WELL_COLOUR_GREEN', 'MANA_WELL_COLOUR_BLUE'):
-    match = re.search(r'^static const float ' + name + r' = [\d.]+f;', minimap_cpp, re.M)
-    assert match, name
-    constants.append(match.group(0))
+# The shared terrain colours (constants, TileColour struct and terrainColour) used by colourFromTile, unchanged.
+colours_h = without_preprocessor(read('source/gamemap/MiniMapColours.h'))
+colours_cpp = without_preprocessor(read('source/gamemap/MiniMapColours.cpp'))
+assert 'struct MiniMapTileColour' in colours_h and 'MiniMapColours::terrainColour(' in colours_cpp
+usings = re.findall(r'^using MiniMapColours::\w+;$', minimap_cpp, re.M)
+assert 'using MiniMapColours::DIRT_COLOUR;' in usings, usings
+assert 'typedef MiniMapTileColour TileColour;' in read('source/gamemap/MiniMap.h')
 
 visual_names = re.findall(r'^\s*(\w+)(?:\s*=\s*\d+)?,?\s*$', tile_visual_enum[tile_visual_enum.index('{') + 1:], re.M)
 assert visual_names[-1] == 'countTileVisual', visual_names
@@ -203,9 +205,10 @@ int main()
 
 def main():
     """Compiles and runs the probe of the production minimap colour function."""
-    source = (PREAMBLE + tile_visual_enum + '\n' + TILE_STUB + '    ' + tile_colour_struct + '\n'
+    source = (PREAMBLE + tile_visual_enum + '\n' + colours_h + '\n' + colours_cpp + '\n' + TILE_STUB
+              + '    typedef MiniMapTileColour TileColour;\n'
               '    static TileColour colourFromTile(Tile& tile, Seat& playerSeat, unsigned int phase);\n};\n\n'
-              + '\n'.join(constants) + '\n\n' + production_function + '\n' + MAIN)
+              + '\n'.join(usings) + '\n\n' + production_function + '\n' + MAIN)
     vcvars = Path('C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Auxiliary/Build/vcvars64.bat')
     with tempfile.TemporaryDirectory() as directory:
         directory = Path(directory)
