@@ -631,7 +631,7 @@ void ResourceManager::buildCommandOptions(boost::program_options::options_descri
         ("seconds", boost::program_options::value<int32_t>(), "Debug: game time in seconds for --run-level (default 120)")
         ("seed", boost::program_options::value<uint32_t>(), "Debug: seed of the random generator for --run-level (not 0); also writes the game state to run-level-state.txt")
         ("menu-test", boost::program_options::value<int32_t>(), "Debug: shows the main menu scene for the given number of seconds, prints a MENUTEST line and exits")
-        ("scenario", boost::program_options::value<std::string>(), "Debug: scenario set up by --run-level on the first turn (ignored-enemies: writes the combat state of fighters near enemies to run-level-scenario.txt)")
+        ("scenario", boost::program_options::value<std::string>(), "Debug: scenario set up by --run-level on the first turn (ignored-enemies: writes the combat state of fighters near enemies to run-level-scenario.txt; return-to-menu / editor-return-to-menu: plays the level as a game / opens it in the editor, leaves to the main menu after --seconds and passes after the menu frames)")
     ;
 }
 

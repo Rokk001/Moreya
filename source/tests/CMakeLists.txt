@@ -210,6 +210,22 @@ add_boost_test(00-WallTorches
         ${SRC}/rooms/WallTorches.h
         ${SRC}/rooms/WallTorches.cpp)
 
+add_boost_test(00-LevelPreview
+        SOURCES
+        test_LevelPreview.cpp
+        ${SRC}/gamemap/LevelPreview.h
+        ${SRC}/gamemap/LevelPreview.cpp
+        ${SRC}/gamemap/MiniMapColours.h
+        ${SRC}/gamemap/MiniMapColours.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE})
+if(DEFINED 00-LevelPreview_TARGET_NAME)
+    target_compile_definitions(${00-LevelPreview_TARGET_NAME} PRIVATE
+        OD_LEVELS_DIR="${CMAKE_SOURCE_DIR}/levels")
+endif()
+
 add_boost_test(aa-LaunchGame
         ${SERVER_LAUNCHER_AA}
         SOURCES

@@ -2281,23 +2281,23 @@ models/Wyvern.skeleton    AI-generated modification with Codex    GPLv3+ for add
 models/lich.skeleton    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Complete calm five-second standing and table-supported seated cup cycles, retaining native rig and unrelated clips. 2026-11-09.
 
 materials/textures/menu/MenuCrowFeather.png, materials/textures/menu/MenuCrowFeatherNormal.png OD Team GPLv3+ Original AI-generated feather albedo and tangent-space normal map created with the built-in image generator for the menu crow; fine charcoal-black barbs and central rachis, no external source.
-gui/RoomCentreIcons/alchemy-lab.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/arena.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/casino.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/crypt.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/dormitory.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/ghost-room.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/guard-room.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/hatchery.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/herb-garden.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/infirmary.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/library.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/merchant.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/prayer-temple.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/prison.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/spa.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/stone-bridge.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
-gui/RoomCentreIcons/tavern.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/alchemy-lab.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/arena.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/casino.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/crypt.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/dormitory.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/ghost-room.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/guard-room.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/hatchery.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/herb-garden.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/infirmary.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/library.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/merchant.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/prayer-temple.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/prison.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/spa.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/stone-bridge.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
+gui/RoomCentreIcons/tavern.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17)
 gui/RoomCentreIcons/temple.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
 gui/RoomCentreIcons/toilet.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
 gui/RoomCentreIcons/torture-chamber.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
@@ -2358,3 +2358,7 @@ materials/textures/MerchantGoldApprovedColor.png    AI-generated with Codex; mat
 materials/textures/MerchantGoldApprovedNormal.png    AI-generated with Codex; material source as noted    GPLv3+    Original baked Normal atlas, 2026-11-15. Original spatial material authored in Blender for this project.
 
 source/entities/BuildingObject.cpp (buildGhostCauldronOutlet): original procedural brass cauldron outlet with open bore and green liquid descending visibly below the lip, AI-assisted project geometry, GPL-3.0-or-later; owner decision 1250.
+gui/NavigationRoomManager.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17): Room Manager HUD icon, parchment floor plan with two tinted rooms and a brass divider; 1024 px source fitted to 256 px
+gui/NavigationRoomManager.imageset  OpenDungeonsPlus project (written with an AI assistant)  GPLv3+  Imageset for gui/NavigationRoomManager.png
+gui/NavigationDungeonbook.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17): Dungeonbook HUD icon, open green-bound book with creature sketches and a quill; 1024 px source fitted to 256 px
+gui/NavigationDungeonbook.imageset  OpenDungeonsPlus project (written with an AI assistant)  GPLv3+  Imageset for gui/NavigationDungeonbook.png

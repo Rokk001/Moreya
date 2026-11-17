@@ -3,7 +3,11 @@ from pathlib import Path
 import re
 
 root = Path(__file__).resolve().parents[2]
-source = (root / 'source/gamemap/MiniMap.cpp').read_text(encoding='utf-8')
+# The terrain colours are shared by the minimaps and the skirmish map preview: constants in MiniMapColours.h,
+# the colour of each tile look in MiniMapColours.cpp; MiniMap.cpp draws with them
+minimap = (root / 'source/gamemap/MiniMap.cpp').read_text(encoding='utf-8')
+source = ((root / 'source/gamemap/MiniMapColours.h').read_text(encoding='utf-8') +
+          (root / 'source/gamemap/MiniMapColours.cpp').read_text(encoding='utf-8'))
 
 
 def colour(name):
@@ -22,5 +26,9 @@ ground = source[source.index('case TileVisual::dirtGround:'):source.index('case 
 for visual in ('dirtGround', 'goldGround', 'gemGround', 'rockGround'):
     assert 'case TileVisual::' + visual + ':' in ground
 assert 'result.colour = EARTH_GROUND_COLOUR;' in ground
-assert '0.82f, 0.70f, 0.50f' not in source
+assert '0.82f, 0.70f, 0.50f' not in source and '0.82f, 0.70f, 0.50f' not in minimap
+# The minimap takes the colour of a seen tile from the shared terrain colours
+tile_colour = minimap[minimap.index('MiniMap::TileColour MiniMap::colourFromTile('):]
+tile_colour = tile_colour[:tile_colour.index('\n}\n')]
+assert 'result = MiniMapColours::terrainColour(visual,' in tile_colour
 print('minimap earth colour passes the checks')

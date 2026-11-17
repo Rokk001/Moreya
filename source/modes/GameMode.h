@@ -103,6 +103,9 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     virtual ~GameMode();
 
+    //! \brief Leaves the game exactly as the Yes button of the quit dialog does (used by the return-to-menu test run).
+    void quitToMenu();
+
     /*! \brief Process the mouse movement event.
      *
      * The function uses ground targeting for room construction and surface targeting
@@ -214,8 +217,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void receiveMerchantWindow(ODPacket& packet);
     //! \brief Applies the validated margin and mode snapshot from the server.
     void setMerchantSettingsShown(int32_t margin, const std::string& mode);
-    //! \brief Shows the Dungeonbook above the other windows with the creature selected, used by the
-    //! creature card (the card stays open)
+    //! \brief Shows the Dungeonbook above the other windows with the creature selected, on its first creature
+    //! page. Every way that shows a creature's information ends here (see openDungeonbookOnCreature).
     void showSocialWindow(const std::string& selectedCreature);
     //! \brief Sandbox panel: shows or hides the window
     bool toggleSandboxWindow(const CEGUI::EventArgs& = {});
@@ -268,7 +271,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool toggleInfirmaryHealing(const CEGUI::EventArgs& = {});
     //! \brief Snaps the discharge slider to ten-percent steps and sends its setting.
     bool changeInfirmaryThreshold(const CEGUI::EventArgs& = {});
-    //! \brief Opens the same stats window as a middle click for the selected patient.
+    //! \brief Opens the Dungeonbook on the selected patient, as a middle click on the patient does.
     bool selectInfirmaryPatient(const CEGUI::EventArgs& = {});
     //! \brief Applies authoritative settings and optionally patient rows from the server.
     void receiveInfirmaryWindow(ODPacket& packet, bool patients);
@@ -603,14 +606,23 @@ private:
     MouseMoveEvent mPreviousMousePosition;
 
     //! \brief Pointer movement in pixels since the middle button was pressed. A middle click that moved
-    //! is a camera rotation and must not open a stats window.
+    //! is a camera rotation and must not open the Dungeonbook.
     float mMiddleDragDistance;
     //! \brief Pointer position in pixels where the middle button went down
     float mMiddlePressX;
     float mMiddlePressY;
 
-    //! \brief Opens the stats window of the entity under the pointer (or the tile debug window if enabled)
-    void openStatsWindowUnderPointer(const OIS::MouseEvent& arg);
+    //! \brief Opens the Dungeonbook on the creature under the pointer (or the tile debug window if enabled).
+    //! Only creatures the Dungeonbook lists are picked (see getDungeonbookCreature).
+    void openDungeonbookUnderPointer(const OIS::MouseEvent& arg);
+
+    //! \brief The entity as a creature the Dungeonbook can show: a living creature of the local keeper or of an
+    //! allied keeper (the roster of the book, ODServer notifyDungeonbookRoster). Null for any other entity.
+    Creature* getDungeonbookCreature(GameEntity* entity) const;
+
+    //! \brief Opens the Dungeonbook on the page of the creature. The middle click, the query action and the
+    //! patient list of the infirmary all open a creature's information through this function.
+    void openDungeonbookOnCreature(Creature* creature);
 
     //! \brief Set the help window (quite long) text.
     //! \brief Lists the game controls and their keyboard shortcuts.
@@ -811,12 +823,12 @@ private:
     //! While it is on, the next click shows information about the pointed entity instead of
     //! selecting tiles. Does nothing when not connected or while the game is paused.
     bool toggleQuery(const CEGUI::EventArgs& e);
-    //! \brief Returns the entity on the given tile that can show a stats window and is nearest to
-    //! the keeper hand position, or nullptr if there is none (or the tile is null).
-    //! Used by the query mode and by the middle mouse button.
-    GameEntity* getQueryTarget(Tile* tile) const;
-    //! \brief Handles the query mode in checkInputCommand(): shows the name of the entity under the
-    //! pointer and, once the click is validated, opens its stats window.
+    //! \brief Returns the creature on the given tile that the Dungeonbook can show (getDungeonbookCreature) and
+    //! that is nearest to the keeper hand position, or nullptr if there is none (or the tile is null).
+    //! Used by the query mode.
+    Creature* getQueryTarget(Tile* tile) const;
+    //! \brief Handles the query mode in checkInputCommand(): shows the name of the creature under the
+    //! pointer and, once the click is validated, opens the Dungeonbook on it.
     void handlePlayerActionQuery();
     bool toggleSell(const CEGUI::EventArgs& e);
     //! \brief Shows what selling the room or trap on the hovered tile gives, and sells it on validation.

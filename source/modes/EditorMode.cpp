@@ -726,6 +726,7 @@ void EditorMode::handleMouseWheel(const OIS::MouseEvent& arg)
     }
 }
 
+//! \brief Starts the editor's tile and entity actions; the middle button only hides the tile marker.
 bool EditorMode::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
     CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(
@@ -792,39 +793,8 @@ bool EditorMode::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 
     if (id == OIS::MB_Middle)
     {
+        // The editor has no Dungeonbook and the old creature window is gone, so the middle button opens nothing
         mTileMarker.isVisible = false;
-        // See if the mouse is over any entity that might display a stats window
-        std::vector<GameEntity*> entities;
-        tileClicked->fillWithEntities(entities, SelectionEntityWanted::any, mGameMap->getLocalPlayer());
-        // We search the closest creature alive
-        GameEntity* closestEntity = nullptr;
-        double closestDist = 0;
-        for(GameEntity* entity : entities)
-        {
-            if(!entity->canDisplayStatsWindow(mGameMap->getLocalPlayer()->getSeat()))
-                continue;
-
-            const Ogre::Vector3& entityPos = entity->getPosition();
-            double dist = Pathfinding::squaredDistance(entityPos.x, keeperHandPos.x, entityPos.y, keeperHandPos.y);
-            if(closestEntity == nullptr)
-            {
-                closestDist = dist;
-                closestEntity = entity;
-                continue;
-            }
-
-            if(dist >= closestDist)
-                continue;
-
-            closestDist = dist;
-            closestEntity = entity;
-        }
-
-        if(closestEntity == nullptr)
-            return true;
-
-        closestEntity->createStatsWindow();
-
         return true;
     }
 
@@ -2315,12 +2285,10 @@ bool EditorMode::loadLevelFromFile(const std::string& fileName)
 {
     // Ogre::MaterialManager::getSingletonPtr()->unload("LiftedGold");    
     RenderManager::removeLiftedGoldMaterials();
-    Ogre::TextureManager::getSingletonPtr()->remove("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    // The frame loop keeps drawing the depth pre-pass target until it is taken out: removing only its camera
+    // left a viewport on a destroyed camera (initGameRenderer makes a new target for the loaded level)
+    RenderManager::getSingleton().destroySmokeRenderTarget();
 
-
-    ODFrameListener::getSingleton().getCameraManager()->destroyCamera("RenderToTexture");
-    ODFrameListener::getSingleton().getCameraManager()->destroyCameraNode("RenderToTexture");    
-    
     mMainCullingManager->stopTileCulling(mCameraTilesIntersections);
     // eliminating the race condition
     MiniMap* mm;

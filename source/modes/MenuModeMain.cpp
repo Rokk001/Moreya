@@ -327,6 +327,7 @@ bool MenuModeMain::changeModeAfterFlight(AbstractModeManager::ModeType mode, con
 }
 
 //! \brief Restarts the pending level and connects the local client to its server's bound port.
+//! The editor return-to-menu test run opens the level in the editor instead, as the editor load menu does.
 void MenuModeMain::restartPendingLevel()
 {
     const std::string level = ODFrameListener::getSingleton().getPendingRestartLevel();
@@ -341,12 +342,14 @@ void MenuModeMain::restartPendingLevel()
         ODFrameListener::getSingleton().getClientGameMap()->setLocalPlayerNick(configNickname);
 
     // The level load test plays a campaign level as part of the campaign, like the campaign menu does
-    if(RunLevelTest::isActive())
+    const bool editor = RunLevelTest::startsEditor();
+    if(RunLevelTest::isActive() && !editor)
         RunLevelTest::prepareCampaignLevel();
 
-    // In single player mode, we act as a server
+    // In single player mode (and in the editor), we act as a server
     const std::string& nickname = ODFrameListener::getSingleton().getClientGameMap()->getLocalPlayerNick();
-    if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeGameSinglePlayer, false))
+    const ServerMode serverMode = editor ? ServerMode::ModeEditor : ServerMode::ModeGameSinglePlayer;
+    if(!ODServer::getSingleton().startServer(nickname, level, serverMode, false))
     {
         OD_LOG_ERR("Could not restart the level " + level);
         if(RunLevelTest::isActive())

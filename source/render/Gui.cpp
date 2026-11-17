@@ -1917,15 +1917,6 @@ CEGUI::Window* Gui::createInfoWindow(const std::string& name)
     return window;
 }
 
-CEGUI::Window* Gui::createCreatureProfileWindow(const std::string& name)
-{
-    CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
-    CEGUI::Window* window = wmgr.loadLayoutFromFile("WindowCreatureProfile.layout");
-    window->setName(name);
-    registerWindowHierarchy(window);
-    return window;
-}
-
 CEGUI::Window* Gui::createCreatureProfilePage(CEGUI::Window* holder)
 {
     CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
@@ -2114,7 +2105,7 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     for(std::size_t i = 0; i < 4; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsAfter[i]), y, scale);
 
-    // The Dungeonbook's existing recent-posts widget shares the document; it stays hidden on the creature card.
+    // The Dungeonbook's existing recent-posts widget shares the document; the book hides it (compact page).
     y = layoutProfileTextRow(page->getChild("OwnPostsText"), y, scale);
 
     // Remember the fresh unscrolled areas of the header and every flowing row after each reflow.
@@ -2604,6 +2595,7 @@ const std::string Gui::SKM_BUTTON_BACK = "LevelWindowFrame/BackButton";
 const std::string Gui::SKM_LIST_LEVEL_TYPES = "LevelWindowFrame/LevelTypeSelect";
 const std::string Gui::SKM_LIST_LEVELS = "LevelWindowFrame/LevelSelect";
 const std::string Gui::SKM_CHECK_RELATIONSHIPS = "LevelWindowFrame/RelationshipsCheckbox";
+const std::string Gui::SKM_MAP_PREVIEW = "LevelWindowFrame/MapPreview";
 
 const std::string Gui::MPM_TEXT_LOADING = "LoadingText";
 const std::string Gui::MPM_BUTTON_SERVER = "LevelWindowFrame/ServerButton";

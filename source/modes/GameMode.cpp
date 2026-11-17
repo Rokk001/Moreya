@@ -1286,7 +1286,39 @@ void GameMode::sendPendingHandDropRequest(bool dropAllCreatures)
     mModeManager->getInputManager().mCommandState = previousState;
 }
 
-void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
+//! \brief The entity as a creature of the Dungeonbook roster, else null.
+Creature* GameMode::getDungeonbookCreature(GameEntity* entity) const
+{
+    if((entity == nullptr) || (entity->getObjectType() != GameEntityType::creature))
+        return nullptr;
+
+    Player* player = mGameMap->getLocalPlayer();
+    if((player == nullptr) || (player->getSeat() == nullptr))
+        return nullptr;
+
+    // The same creatures the roster of the book holds: living creatures of the own or an allied keeper
+    Creature* creature = static_cast<Creature*>(entity);
+    const Seat* owner = creature->getSeat();
+    if((owner == nullptr) || (owner->getPlayer() == nullptr) || !player->getSeat()->isAlliedSeat(owner))
+        return nullptr;
+
+    if(!creature->isAlive())
+        return nullptr;
+
+    return creature;
+}
+
+//! \brief Opens the Dungeonbook on the page of the creature; does nothing for null.
+void GameMode::openDungeonbookOnCreature(Creature* creature)
+{
+    if(creature == nullptr)
+        return;
+
+    showSocialWindow(creature->getName());
+}
+
+//! \brief Opens the Dungeonbook on the book creature nearest to the pointer ray, or the tile debug window.
+void GameMode::openDungeonbookUnderPointer(const OIS::MouseEvent& arg)
 {
     InputManager& inputManager = mModeManager->getInputManager();
 
@@ -1318,7 +1350,7 @@ void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
             tiles.push_back(tile);
     }
 
-    GameEntity* closestEntity = nullptr;
+    Creature* closestCreature = nullptr;
     float closestDist = MIDDLE_CLICK_PICK_RADIUS;
     for(Tile* tile : tiles)
     {
@@ -1326,23 +1358,24 @@ void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
         tile->fillWithEntities(entities, SelectionEntityWanted::any, mGameMap->getLocalPlayer());
         for(GameEntity* entity : entities)
         {
-            if(!entity->canDisplayStatsWindow(mGameMap->getLocalPlayer()->getSeat()))
+            Creature* creature = getDungeonbookCreature(entity);
+            if(creature == nullptr)
                 continue;
 
-            Ogre::Vector3 body = entity->getPosition();
+            Ogre::Vector3 body = creature->getPosition();
             body.z += MIDDLE_CLICK_BODY_HEIGHT;
             const float dist = ray.getDirection().crossProduct(body - ray.getOrigin()).length();
             if(dist >= closestDist)
                 continue;
 
             closestDist = dist;
-            closestEntity = entity;
+            closestCreature = creature;
         }
     }
 
-    if(closestEntity != nullptr)
+    if(closestCreature != nullptr)
     {
-        closestEntity->createStatsWindow();
+        openDungeonbookOnCreature(closestCreature);
         return;
     }
 
@@ -1466,7 +1499,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         return true;
     }
 
-    // The stats window opens when the middle button is released without the pointer having moved,
+    // The Dungeonbook opens when the middle button is released without the pointer having moved,
     // so that rotating the camera over creatures does not open windows (see mouseReleased)
     if (id == OIS::MB_Middle)
         return true;
@@ -1647,15 +1680,15 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 
     if(id == OIS::MB_Middle)
     {
-        // A middle click that did not move is a request for the stats window. mMMouseDown is only set when
-        // the press was on the map, so a press on a GUI window never gets here as a click
+        // A middle click that did not move opens the Dungeonbook on the creature under the pointer. mMMouseDown is
+        // only set when the press was on the map, so a press on a GUI window never gets here as a click
         float maxDrag = MIDDLE_CLICK_MAX_DRAG * std::max(1.0f, static_cast<float>(arg.state.height) / MIDDLE_CLICK_REFERENCE_DISPLAY_HEIGHT);
         bool isClick = inputManager.mMMouseDown && (mMiddleDragDistance <= maxDrag);
         inputManager.mMMouseDown = false;
         ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);
         ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateY, 0.0);
         if(isClick && isConnected() && (mGameMap->getLocalPlayer() != nullptr))
-            openStatsWindowUnderPointer(arg);
+            openDungeonbookUnderPointer(arg);
     }
 
     // Right mouse button up
@@ -2682,6 +2715,12 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Runs the quit dialog's Yes handler, so the test run takes the player's own way out of the game.
+void GameMode::quitToMenu()
+{
+    onClickYesQuitMenu(CEGUI::EventArgs());
+}
+
 bool GameMode::showObjectivesWindow(const CEGUI::EventArgs&)
 {
     closeAllTopWindows();
@@ -2809,7 +2848,7 @@ bool GameMode::changeInfirmaryThreshold(const CEGUI::EventArgs& args)
     return true;
 }
 
-//! \brief Opens the selected patient's existing stats window.
+//! \brief Opens the Dungeonbook on the selected patient.
 bool GameMode::selectInfirmaryPatient(const CEGUI::EventArgs&)
 {
     CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/PatientList"));
@@ -2817,8 +2856,7 @@ bool GameMode::selectInfirmaryPatient(const CEGUI::EventArgs&)
     if(item == nullptr || item->getID() >= mInfirmaryPatientNames.size())
         return true;
     Creature* creature = mGameMap->getCreature(mInfirmaryPatientNames[item->getID()]);
-    if(creature != nullptr)
-        creature->createStatsWindow();
+    openDungeonbookOnCreature(getDungeonbookCreature(creature));
     return true;
 }
 
@@ -5602,7 +5640,8 @@ void GameMode::handlePlayerActionSell()
         displayText(Ogre::ColourValue::Red, "Select a room, trap or door owned by you to sell.");
 }
 
-GameEntity* GameMode::getQueryTarget(Tile* tile) const
+//! \brief The creature of the Dungeonbook roster on the tile nearest to the keeper hand, else null.
+Creature* GameMode::getQueryTarget(Tile* tile) const
 {
     if(tile == nullptr)
         return nullptr;
@@ -5611,37 +5650,39 @@ GameEntity* GameMode::getQueryTarget(Tile* tile) const
     Player* player = mGameMap->getLocalPlayer();
     std::vector<GameEntity*> entities;
     tile->fillWithEntities(entities, SelectionEntityWanted::any, player);
-    GameEntity* closest = nullptr;
+    Creature* closest = nullptr;
     double distance = 0.0;
     for(GameEntity* entity : entities)
     {
-        if(!entity->canDisplayStatsWindow(player->getSeat()))
+        Creature* creature = getDungeonbookCreature(entity);
+        if(creature == nullptr)
             continue;
-        const Ogre::Vector3& position = entity->getPosition();
+        const Ogre::Vector3& position = creature->getPosition();
         const double candidate = Pathfinding::squaredDistance(position.x, inputManager.mKeeperHandPos.x,
             position.y, inputManager.mKeeperHandPos.y);
         if(closest == nullptr || candidate < distance)
         {
-            closest = entity;
+            closest = creature;
             distance = candidate;
         }
     }
     return closest;
 }
 
+//! \brief Shows the name of the pointed book creature and opens the Dungeonbook on it when the click is validated.
 void GameMode::handlePlayerActionQuery()
 {
     const InputManager& inputManager = mModeManager->getInputManager();
-    GameEntity* entity = getQueryTarget(mGameMap->getTile(inputManager.mXPos, inputManager.mYPos));
-    if(entity == nullptr)
+    Creature* creature = getQueryTarget(mGameMap->getTile(inputManager.mXPos, inputManager.mYPos));
+    if(creature == nullptr)
     {
-        displayText(Ogre::ColourValue::Red, "Point at a creature to view its information.");
+        displayText(Ogre::ColourValue::Red, "Point at your own or an allied creature to view its information.");
         return;
     }
 
-    displayText(Ogre::ColourValue::White, entity->getName());
+    displayText(Ogre::ColourValue::White, creature->getName());
     if(inputManager.mCommandState == InputCommandState::validated)
-        entity->createStatsWindow();
+        openDungeonbookOnCreature(creature);
 }
 
 //! \brief Restores the original context text bounds after an item hover ends.
