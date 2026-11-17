@@ -13,8 +13,8 @@ faces need different coordinates:
   hair, whistle and cord (SpaIron -> SpaIronWorn): the same per vertex along its normal, so the thin strands keep their
   vertex count;
 - life ring (SpaLifebuoyRed, SpaLifebuoyWhite): u around the ring, v around the tube;
-- attendant: the towel part lying on the shoulder top stays there as a folded corner and is cut loose from the hanging
-  part (shared vertices doubled), so the hanging part goes into the hand in TowelWave without stretching.
+- attendant: the towel part lying on the shoulder top is bound to the Towel bone, so the whole towel goes into the hand
+  in TowelWave in one piece (owner decision 2026-11-17).
 
 Deterministic, original work of the project, licence GPLv3+. Needs numpy.
 
@@ -44,8 +44,6 @@ ATTENDANT = {
 RING_GROUP = ('SpaLifebuoyRed', 'SpaLifebuoyWhite')
 # index of the Towel bone in models/PoolAttendant.skeleton (TowelTip is the next one)
 TOWEL_BONE = 18
-# index of the Chest bone in models/PoolAttendant.skeleton
-CHEST_BONE = 3
 
 
 def read_mesh(path):
@@ -234,38 +232,20 @@ def apply(mesh, table):
     mesh['positions'], mesh['normals'], mesh['uvs'] = np.array(new_pos), np.array(new_nor), np.array(new_uv)
 
 
-def split_towel(mesh, towel_bone):
-    """Let the towel go into the hand without stretching: the part lying on the shoulder top (bound to the shoulder or
-    chest) stays there as a folded corner bound to the chest, every towel face touching it stays with it, and the
-    vertices it shares with the hanging part are doubled so the hanging part rides on the towel bones alone."""
+def bind_towel(mesh, towel_bone):
+    """Let the whole towel go into the hand in one piece (owner decision 2026-11-17, no cut and no hole): every towel
+    vertex that hangs on no towel bone (the part lying on the shoulder top, bound to the shoulder or chest) is bound to
+    the Towel bone."""
     towel_bones = {towel_bone, towel_bone + 1}
     changed = 0
-    for sub in mesh['submeshes']:
-        if sub[0] != 'SpaLinen':
+    for name, faces in mesh['submeshes']:
+        if name != 'SpaLinen':
             continue
-        faces = sub[1]
-
-        def on_towel(vi):
-            """Whether a vertex hangs on the towel bones alone."""
-            return sum(w for b, w in mesh['assignments'].get(int(vi), []) if b in towel_bones) > 0.99
-        shoulder_faces = np.array([not all(on_towel(v) for v in face) for face in faces])
-        # the corner lies still on the chest, so a raised arm does not pull it apart
-        for vi in np.unique(faces[shoulder_faces]):
-            if not on_towel(vi):
-                mesh['assignments'][int(vi)] = [(CHEST_BONE, 1.0)]
-        doubled = {}
-        for f in np.where(shoulder_faces)[0]:
-            for c in range(3):
-                vi = int(faces[f, c])
-                if on_towel(vi):
-                    if vi not in doubled:
-                        doubled[vi] = len(mesh['positions'])
-                        mesh['positions'] = np.vstack([mesh['positions'], mesh['positions'][vi]])
-                        mesh['normals'] = np.vstack([mesh['normals'], mesh['normals'][vi]])
-                        mesh['uvs'] = np.vstack([mesh['uvs'], mesh['uvs'][vi]])
-                        mesh['assignments'][doubled[vi]] = [(CHEST_BONE, 1.0)]
-                        changed += 1
-                    faces[f, c] = doubled[vi]
+        for vi in np.unique(faces):
+            weights = mesh['assignments'].get(int(vi), [])
+            if sum(w for b, w in weights if b in towel_bones) < 0.99:
+                mesh['assignments'][int(vi)] = [(towel_bone, 1.0)]
+                changed += 1
     return changed
 
 
@@ -310,7 +290,7 @@ def main():
     kind, source, target = sys.argv[1:4]
     mesh = read_mesh(source)
     if kind == 'attendant':
-        print('towel vertices doubled for the shoulder corner:', split_towel(mesh, TOWEL_BONE))
+        print('towel vertices bound to the Towel bone:', bind_towel(mesh, TOWEL_BONE))
         apply(mesh, ATTENDANT)
     else:
         apply(mesh, CHAIR)

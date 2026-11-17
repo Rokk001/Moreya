@@ -8,7 +8,8 @@ material scripts and the textures; no compiler, no game. Checks
     2026-11-17: head after the attendant in the game, body hair with volume, real whistle, shaded skin, muted ring);
 (2) mesh and skeleton fit each other: every elbow and knee joint lies in the middle of its limb (the mesh restored on
     2026-11-13 sat 7 cm beside the joints of the skeleton);
-(3) the towel goes into the hand in TowelWave and no towel face stretches;
+(3) the whole towel goes into the hand in TowelWave as one closed piece (owner decision 2026-11-17: no hole) and no towel
+    face stretches;
 (4) TowelWave: the towel is in the hand above the shoulder, the hand goes round a loop on a smooth path, the towel and
     its free end turn smoothly from key to key and the end trails the towel;
 (5) Whistle: the hand fetches the whistle and raises it to the lips on a round arc (the elbow swings up and the path
@@ -42,7 +43,7 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import spa_attendant_render as render  # noqa: E402
 
-TRIANGLES, VERTICES = 32983, 33832  # this export (owner budget 20000-35000)
+TRIANGLES, VERTICES = 32983, 33771  # this export (owner budget 20000-35000)
 RENDER_MAX_MEAN_DIFFERENCE = 8.5  # export: game 6.1, front 7.1 (with the body hair)
 RENDER_MAX_MEAN_DIFFERENCE_BARE = 4.5  # export: game 3.1, front 3.7 (without the body hair)
 RENDER_MIN_SILHOUETTE_OVERLAP = 0.96  # export: game 0.979, front 0.974 (with the body hair)
@@ -516,9 +517,29 @@ for i in range(2, 49, 2):
             ratio = np.linalg.norm(moved[e[0]] - moved[e[1]]) / seated_length[e]
             assert ratio < 1.5, 'TowelWave: a towel face stretches %.1f times at %.2f s' % (ratio, i * KEY)
 held_pose = towel[held[len(held) // 2]]
-lifted = [v for v in np.unique(linen) if np.linalg.norm(skinned(held_pose, v) - grip(held_pose)) < .4]
-assert len(lifted) > .7 * len(np.unique(linen)), 'TowelWave: most of the towel is in his hand (%d of %d vertices)' % (
+lifted = [v for v in np.unique(linen) if np.linalg.norm(skinned(held_pose, v) - grip(held_pose)) < .5]
+assert len(lifted) == len(np.unique(linen)), 'TowelWave: the whole towel is in his hand (%d of %d vertices)' % (
     len(lifted), len(np.unique(linen)))
+# owner decision 2026-11-17 (no hole in the waved towel): the towel is one closed piece, nothing is cut loose or doubled
+for v in np.unique(linen):
+    assert weights[v].get('Towel', 0) + weights[v].get('TowelTip', 0) > .99, 'every towel vertex rides on the towel bones'
+towel_parent = {}
+
+
+def towel_root(v):
+    """Union-find root of a towel vertex."""
+    while towel_parent.setdefault(v, v) != v:
+        towel_parent[v] = towel_parent[towel_parent[v]]
+        v = towel_parent[v]
+    return v
+
+
+for f in linen:
+    for v in f[1:]:
+        towel_parent[towel_root(int(v))] = towel_root(int(f[0]))
+assert len({towel_root(int(v)) for v in np.unique(linen)}) == 1, 'the towel is one piece'
+towel_spots = {tuple(np.round(positions[v], 6)) for v in np.unique(linen)}
+assert len(towel_spots) == len(np.unique(linen)), 'no towel vertex is doubled along a cut'
 assert np.linalg.norm(sit0['Towel'][:3, 3] - grip(sit0)) > .25, 'the towel lies on the shoulder at rest'
 
 # ---- 5. Whistle --------------------------------------------------------------------------------------------------------------
