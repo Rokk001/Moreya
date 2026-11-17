@@ -4,10 +4,11 @@ Static check, no game needed. Two things are verified.
 
 1. Order. The rows of the profile page flow from top to bottom (Gui::layoutCreatureProfilePage). The remarks of
    the picture come after status and latest post, so those two keep the position they have without remarks.
-2. Overflow. The creature card has a fixed height and the Dungeonbook pane is limited too. If the rows are
+2. Overflow. The Dungeonbook pane that holds the page is limited (the old creature card that also showed the page
+   is removed; a click on a creature opens the Dungeonbook). If the rows are
    higher than the page, the page scrolls: the page layout holds a scrollbar that is shown only then, and
    layoutCreatureProfilePage moves all rows with it (so nothing is cut off without a way to reach it).
-   The card stays 640 design pixels high and the content scrolls (decision of the owner): the check does not
+   The content scrolls (decision of the owner): the check does not
    demand that the typical content fits without scrolling, it demands that ALL rows are reachable by scrolling,
    at 640x480, 1024x768, 1920x1200 and 7680x4320, each with the user scale 80 % and 120 %.
 
@@ -60,20 +61,38 @@ header_rows = ('Portrait', 'NameText', 'HandleText', 'AgeText', 'RelationText', 
 for name in header_rows:
     assert 'name="%s"' % name in page, name  # moved with the scroll as well (all children but the scrollbar)
 
-layout = (repo / 'gui/WindowCreatureProfile.layout').read_text()
-m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
-card_width, card_height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
-# The page uses 88 percent of the shared frame client, excluding title and borders.
+assert not (repo / 'gui/WindowCreatureProfile.layout').exists(), 'the old creature card is removed, the book shows the page'
+# The page fills the holder (SocialHolder) of the profile page of the book: a fraction of the frame client, excluding
+# title and borders. The book is shrunk to the screen as a whole (Gui::getWindowFitFactor), so the viewport of the page
+# in design pixels depends on the fit factor of the book on each screen.
 import xml.etree.ElementTree as ET
-card = ET.fromstring(layout).find('Window')
-holder = card.find("Window[@name='ProfilePage']/Property[@name='Area']").get('value')
-assert holder == '{{0.0,0},{0.0,0},{1.0,0},{0.88,0}}'
+book_layout = (repo / 'gui/WindowSocial.layout').read_text()
+m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', book_layout)
+book_width, book_height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
+book_profile = ET.fromstring(book_layout).find('Window').find("Window[@name='ProfilePage']")
+
+
+def area_fractions(element):
+    value = element.find("Property[@name='Area']").get('value')
+    dims = [(float(a), float(b)) for a, b in re.findall(r'\{(-?[0-9.]+),(-?[0-9.]+)\}', value)]
+    assert all(offset == 0 for _, offset in dims), element.get('name') + ' scales with its parent'
+    return [d[0] for d in dims]
+
+
+profile_box = area_fractions(book_profile)
+holder_box = area_fractions(book_profile.find("Window[@name='SocialHolder']"))
+holder_height_fraction = (holder_box[3] - holder_box[1]) * (profile_box[3] - profile_box[1])
 skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
 border = float(skin.find("Image[@name='WindowTopEdge']").get('height')) / 4
-side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4
 title_height = 18 * 10 / 8 + 12
-page_height = (card_height - title_height - 2 * border) * 0.88
-text_width = card_width - 2 * side - 48
+
+
+def book_page_height(fit):
+    # Design pixels of the page viewport in the book shrunk by the fit factor
+    return (book_height * fit - title_height - 2 * border) * holder_height_fraction
+
+
+page_height = book_page_height(1.0)
 assert 'PROFILE_RIGHT_MARGIN = 32.0f' in gui
 
 LINE, PAD, GAP, TOP = 18.0, 4.0, 4.0, 132.0
@@ -107,7 +126,6 @@ typical = content(2, 1, 1, 2, 2, 2, 3)
 worst = content(3, 2, 2, 2, 3, 3, 1 + 2 * lines_of(64, dungeonbook_width))
 without_quirks = content(2, 1, 1, 2, 2, 2, 0)
 assert typical[0] == without_quirks[0], 'the remarks moved status or latest post'
-assert card_height == 640, ('the card keeps its height of 640 design pixels, the content scrolls', card_height)
 
 scroll_step = float(re.search(r'PROFILE_SCROLL_STEP = ([0-9.]+)f', gui)[1])
 overflow_tolerance = float(re.search(r'PROFILE_OVERFLOW_TOLERANCE = ([0-9.]+)f', gui)[1])
@@ -137,16 +155,19 @@ report = []
 for width, height in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for user in (0.8, 1.2):
         scale = min(width / design_width, height / design_height) * user
-        # the card must be on the screen, otherwise its end could not be reached at all
-        assert card_height * scale <= height + 1e-6 and card_width * scale <= width + 1e-6, ('the card is larger than the screen', width, height, user)
-        page_px = page_height * scale
+        # the book must be on the screen (shrunk to it), otherwise the end of the page could not be reached at all
+        fit = min(1.0, width / (book_width * scale), height / (book_height * scale))
+        assert book_height * fit * scale <= height + 1e-6 and book_width * fit * scale <= width + 1e-6, ('the book is larger than the screen', width, height, user)
+        viewport = book_page_height(fit)
+        assert tallest_row <= viewport, ('a single row is higher than the book page', width, height, user)
+        page_px = viewport * scale
         for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
-            maximum, wheel_steps = reachable_rows(remarks_bottom, page_height)
-            overflow = remarks_bottom > page_height + overflow_tolerance
+            maximum, wheel_steps = reachable_rows(remarks_bottom, viewport)
+            overflow = remarks_bottom > viewport + overflow_tolerance
             # without overflow the bar is hidden and nothing moves; with overflow the bar is shown and reaches the end
             assert overflow or maximum <= overflow_tolerance, (name, remarks_bottom)
             # the last row ends exactly at the page bottom at the end of the range, the first row starts at the top
-            assert abs((remarks_bottom - maximum) - min(remarks_bottom, page_height)) < 1e-6 or not overflow
+            assert abs((remarks_bottom - maximum) - min(remarks_bottom, viewport)) < 1e-6 or not overflow
             report.append('%dx%d user %d%% %s: page %.0f px, content %.0f px, %s' % (
                 width, height, round(user * 100), name, page_px, remarks_bottom * scale,
                 ('scrolls %.0f px in %d wheel steps, all rows reachable' % (maximum * scale, wheel_steps)) if overflow else 'fits'))
@@ -155,7 +176,7 @@ for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
     for user in (0.5, 1.0, 2.0):
         scale = min(width / 1024.0, height / 768.0) * user
         font_scale = min(width / (800.0 / user), height / (600.0 / user))
-        # screen pixels of one line (14 pixels at 800x600) and of the card page, back in design pixels
+        # screen pixels of one line (14 pixels at 800x600) and of the book page, back in design pixels
         line_design = 14.0 * font_scale / scale
         assert abs(line_design - 17.92) < 0.01, ('the line height depends on the resolution', line_design)
         page_px = page_height * scale
@@ -529,7 +550,7 @@ for fragment in ('creature->mEquipment[slot]', 'creature->mPotionSlots[slot - 6]
                  'slotType->setVisible(item == nullptr)', 'slot - 6 >= creature->mPotionSlots.size()',
                  'image->getChild("Lock")->setVisible(locked)', '"PotionSlotLevel2"', '"PotionSlotLevel3"'):
     assert fragment in fill, fragment
-assert 'fillItemSlotWindows(this, slotWindows, false)' in creature_text, 'the creature card keeps its slots'
+assert 'fillItemSlotWindows(this, slotWindows, false)' in creature_text, 'the shared profile page keeps its slots'
 for handler in ('onBackClicked', 'onPreviousClicked', 'onNextClicked', 'onNavClicked', 'onFilterClicked', 'onListRowClicked',
                 'onListWheel', 'onFeedWheel', 'onListScrolled', 'onFeedScrolled', 'onLinkClicked'):
     assert 'bool SocialWindow::%s' % handler in social and '&SocialWindow::%s' % handler in social, handler
@@ -761,7 +782,7 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             if ratio > tightest.get(page, (0.0, ''))[0]:
                 tightest[page] = (ratio, name)
         # The compact profile puts the label above its one-line links, which use the full row width.
-        # The noncompact creature card retains PROFILE_LINK_LEFT beside its label.
+        # The noncompact full page (the old creature card is removed) retains PROFILE_LINK_LEFT beside its label.
         assert 'float linkY = compact ? y + lineHeight : y;' in gui
         assert 'compact ? PROFILE_SIDE_MARGIN : PROFILE_LINK_LEFT' in gui
         holder = boxes['ProfilePage/SocialHolder'][0]

@@ -1491,15 +1491,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         {
             std::string name;
             std::string infos;
+            // The old creature window that asked for these statistics is gone (the Dungeonbook shows a creature's
+            // values from its roster), so a server that still sends them is read and ignored
             OD_ASSERT_TRUE(packetReceived >> name >> infos);
-            Creature* creature = gameMap->getCreature(name);
-            if(creature == nullptr)
-            {
-                OD_LOG_ERR("name=" + name);
-                break;
-            }
-
-            creature->updateStatsWindow(infos);
             break;
         }
 

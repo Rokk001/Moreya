@@ -7,7 +7,8 @@ pixels of text) had a 48 pixel box right up to the bar. The page measured here:
 1. The Dungeonbook profile page (gui/WindowSocial.layout): portrait, info text, name, keeper line, the holder of the
    shared profile page, the column rule and the posts column do not overlap (texts that replace each other aside).
 2. The shared profile page (gui/WindowCreatureProfilePage.layout, flowed by Gui::layoutCreatureProfilePage) in the
-   holder of the book (compact, the rows start at the top) and on the creature card: the bar row is one label line
+   holder of the book (compact, the rows start at the top; the book is the only window that shows the page since the
+   old creature card was removed): the bar row is one label line
    high, its bars sit inside it, the labels hold their text and end before their bars, the experience bar ends before
    the scrollbar, and the handle line (word wrapped, the widest handle the names can give) starts PROFILE_BAR_ROW_GAP
    below the bar row. Every pair of these windows is free of overlap.
@@ -120,7 +121,7 @@ def overlap(a, b):
 def flow(page_w, scale, compact):
     """The rectangles (design pixels of the page) of the bar row and the first rows, as layoutCreatureProfilePage
     places them. scale only matters through the line heights, which are the same in design pixels at every size."""
-    y = ROW_GAP if compact else FLOW_TOP + LINE + PAD + ROW_GAP  # the card has the attributes line above the bars
+    y = ROW_GAP if compact else FLOW_TOP + LINE + PAD + ROW_GAP  # the full page has the attributes line above the bars
     rects = {}
     row_h = max(BAR_ROW_MIN, LINE + PAD)
     bar_top = (row_h - BAR_H) / 2.0
@@ -173,15 +174,14 @@ holder = book_boxes['SocialHolder']
 assert book_boxes['KeeperText'][3] <= holder[1] and book_boxes['NameText'][3] <= book_boxes['KeeperText'][1]
 assert book_boxes['Portrait'][2] <= holder[0] and book_boxes['ColumnRule'][2] <= holder[0]
 
-# 2. The shared page in the book (compact) and on the card, on every screen and UI scale
+# 2. The shared page in the book (compact), on every screen and UI scale. The old creature card that showed the full
+# page is gone: a click on a creature opens the Dungeonbook (check_creature_click_dungeonbook.py).
 skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
 side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4.0
 book_images = ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot()
 FRAME_PX = max(float(book_images.find("Image[@name='BookFrame%s']" % n).get(d))
                for n, d in (('Left', 'width'), ('Right', 'width'), ('Bottom', 'height')))
-card_layout = (repo / 'gui/WindowCreatureProfile.layout').read_text()
-card = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', card_layout)
-card_w, card_h = int(card[3]) - int(card[1]), int(card[4]) - int(card[2])
+assert not (repo / 'gui/WindowCreatureProfile.layout').exists(), 'the old creature card layout is removed'
 design = re.search(r'LAYOUT_DESIGN_WIDTH = ([0-9.]+)f', gui), re.search(r'LAYOUT_DESIGN_HEIGHT = ([0-9.]+)f', gui)
 design_w, design_h = float(design[0][1]), float(design[1][1])
 SCREENS = ((640, 480), (800, 600), (1024, 768), (1280, 720), (1366, 768), (1920, 1080), (1920, 1200), (2560, 1440),
@@ -195,9 +195,7 @@ for screen_w, screen_h in SCREENS:
         book_fit = min(1.0, screen_w / (book_w * scale), screen_h / (book_h * scale))
         frame = FRAME_PX * min(screen_w / 3840.0, screen_h / 2160.0) / scale
         book_page_w = (book_w * book_fit - 2 * frame) * (page_box[2] - page_box[0]) * (holder[2] - holder[0])
-        card_fit = min(1.0, screen_w / (card_w * scale), screen_h / (card_h * scale))
-        card_page_w = card_w * card_fit - 2 * side
-        for owner, page_w, compact in (('Dungeonbook', book_page_w, True), ('card', card_page_w, False)):
+        for owner, page_w, compact in (('Dungeonbook', book_page_w, True),):
             rects, bar_row_bottom = flow(page_w, scale, compact)
             for label, bar in (('HealthLabel', 'HealthBar'), ('ExperienceLabel', 'ExperienceBar')):
                 l, b = rects[label], rects[bar]
@@ -224,6 +222,6 @@ for screen_w, screen_h in SCREENS:
                 assert not overlap(rects[name], rects['ProfileScrollbar']), (owner, name, 'under the scrollbar')
 
 print('profile overlap ok: bar row %.1f design px (labels one line of %.1f), gap %.0f to the handle line, smallest gap '
-      '%.1f screen px; narrowest bar %.0f (book) / %.0f (card) design px; %d window pairs at %d screens x 41 UI scales'
-      % (max(BAR_ROW_MIN, LINE + PAD), LINE, BAR_GAP, smallest_gap, narrowest['Dungeonbook'], narrowest['card'],
+      '%.1f screen px; narrowest bar %.0f (book) design px; %d window pairs at %d screens x 41 UI scales'
+      % (max(BAR_ROW_MIN, LINE + PAD), LINE, BAR_GAP, smallest_gap, narrowest['Dungeonbook'],
          checked, len(SCREENS)))
