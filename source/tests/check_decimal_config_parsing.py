@@ -85,6 +85,9 @@ for path, token in (("source/spells/Spell.h", "double mNbTurns;"), ("source/spel
 lightning = read("source", "spells", "SpellLightning.cpp")
 if "getSpellConfigDouble(\"LightningStunTurns\")" not in lightning or "getTurnsStunDropped" in lightning:
     problems.append("SpellLightning must stun for LightningStunTurns")
+# Nothing is rounded: the stun takes the configured double as it is (no ceil, floor, round or integer cast)
+if not re.search(r"->stun\(\s*ConfigManager::getSingleton\(\)\.getSpellConfigDouble\(\"LightningStunTurns\"\)\s*\);", lightning):
+    problems.append("SpellLightning must stun for the unrounded LightningStunTurns")
 
 # Portal and trap values really carry decimals in the shipped config
 rooms = read("config", "rooms.cfg")

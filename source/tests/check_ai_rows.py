@@ -267,6 +267,20 @@ place = body(traps, "TRAP::placeTrap")
 assert "RoomType::treasury" in place and "nearestEntrance(entrances, treasuries" not in place, "F07 treasury door"
 assert re.search(r'slip\("F08"\)\s*\?\s*farHalfEntrance\(entrances, heart\)\s*:\s*nearestEntrance\(entrances, heart, false\)', place), "F08 far half"
 assert re.search(r"effectReach\(target->getType\(\)\)", code_only((repo / traps).read_text(encoding="utf-8"))), "F11 effect reach"
+# F02 mistake, F04, F09 (coordinator 2026-11-17): a tile outside the door is never own ground, so no trap spot lies on the
+# outer part of an entrance line; gas and the spike mistake take the first free own tile behind the door, the alarm the
+# farthest free own tile up to AlarmDistanceTiles behind it.
+assert not re.search(r"lineTile\(gameMap, entrance, (?:-|slipped\s*\?\s*-)", place), "trap spot outside the door"
+assert re.search(r'int first = slipped \? 1 : spikeFirst \+ index;', place), "F02 mistake behind the door"
+gas_branch = place.split('slip("F04")', 1)[1].split("buildOne(", 1)[0]
+assert re.search(r"for\(int k = 1; \(spot == nullptr\) && \(k <= lineEnd\); \+\+k\)\s*\{\s*Tile\* tile = lineTile\(gameMap, entrance, k\);", gas_branch), "F04 gas behind the door"
+alarm = place.split('if(SkillManager::isTrapAvailable(TrapType::alarm, seat))', 1)[1].split('slip("F09")', 1)[0]
+assert re.search(r'for\(int k = static_cast<int>\(aiKey\("AlarmDistanceTiles"\)\); k >= 1; --k\)', alarm), "F09 farthest own tile"
+assert re.search(r"lineTile\(gameMap, entrance, k\)", alarm), "F09 on the entrance line"
+# A basic tile without a free spot never stalls the plan: the special traps of F05-F11 are reached after it.
+basic = place.split("if(trapTiles < want)", 1)[1].split("Tile* heart = heartTile(ai);", 1)[0]
+assert re.search(r"if\(spot != nullptr\)\s*return buildOne\(ai, kind, spot\);\s*\}\s*$", basic.rstrip()), "basic mix falls through"
+assert not re.search(r"isTrapAvailable\(kind, seat\)\)\s*return false;", basic), "unresearched basic kind stalls the plan"
 assert re.search(r"TrapDoor::canDoorBeOnTile\(&gameMap, tunnel\)", body(traps, "TRAP::findEntrances")), "F15 own tunnel entrance"
 # I01, K01 (decision 353): the target is the nearest known enemy tile, never a wild seat and never an unseen heart.
 knowledge = code_only((repo / ai / "AiKnowledge.cpp").read_text(encoding="utf-8"))

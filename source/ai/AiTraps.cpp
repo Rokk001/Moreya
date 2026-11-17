@@ -582,7 +582,8 @@ void TRAP::trapLook(KeeperAI& ai)
     placeTrap(ai, trapTiles, want, entrances);
 }
 
-//! \brief Plans one basic or special trap at an eligible entrance.
+//! \brief Plans one basic or special trap at an eligible entrance; a basic tile without a free own spot leaves the look
+//! to the special traps (F05-F11).
 bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<Entrance>& entrances)
 {
     // AI row F02
@@ -600,26 +601,28 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         int nth = static_cast<int>(aiKey("GasEveryNthTile"));
         bool gas = ((trapTiles % nth) == (nth - 1)) && SkillManager::isTrapAvailable(TrapType::gas, seat);
         TrapType kind = gas ? TrapType::gas : ((trapTiles % 2) ? TrapType::cannon : TrapType::spike);
-        if(!SkillManager::isTrapAvailable(kind, seat))
-            return false;
-
         const Entrance& entrance = entrances[trapTiles % entrances.size()];
         int index = trapTiles / static_cast<int>(entrances.size());
         Tile* spot = nullptr;
-        if(kind == TrapType::spike)
+        int spikeFirst = static_cast<int>(aiKey("SpikeBehindDoorMinTiles"));
+        int lineEnd = static_cast<int>(aiKey("CannonMaxDoorDistance"));
+        // A kind not researched yet gets no basic tile at this look; the special traps below may still be built
+        bool available = SkillManager::isTrapAvailable(kind, seat);
+        if(available && (kind == TrapType::spike))
         {
-            // Behind the door, where it fires when the door is open; the mistake builds it in front of the door
+            // Behind the door, where it fires when the door is open. The mistake builds it "in front": only the own tiles
+            // count as trap spots, so that is the first free own tile right behind the door, before the spike stretch
             bool slipped = ai.getMind().slip("F02");
-            int first = static_cast<int>(aiKey("SpikeBehindDoorMinTiles")) + index;
+            int first = slipped ? 1 : spikeFirst + index;
             int last = static_cast<int>(aiKey("SpikeBehindDoorMaxTiles"));
             for(int k = first; (spot == nullptr) && (k <= last); ++k)
             {
-                Tile* tile = lineTile(gameMap, entrance, slipped ? -(k - first + 1) : k);
+                Tile* tile = lineTile(gameMap, entrance, k);
                 if(trapSpotFree(tile, seat))
                     spot = tile;
             }
         }
-        else if(kind == TrapType::cannon)
+        else if(available && (kind == TrapType::cannon))
         {
             // Within reach of the door with mana for its shots; the mistake does not keep the mana
             bool slipped = ai.getMind().slip("F03");
@@ -627,27 +630,31 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
             if(!slipped && (seat->getMana() < manaNeeded))
                 return false;
 
-            for(int k = 1 + index; (spot == nullptr) && (k <= static_cast<int>(aiKey("CannonMaxDoorDistance"))); ++k)
+            for(int k = 1 + index; (spot == nullptr) && (k <= lineEnd); ++k)
             {
                 Tile* tile = lineTile(gameMap, entrance, k);
                 if(trapSpotFree(tile, seat))
                     spot = tile;
             }
         }
-        else
+        else if(available)
         {
-            // In front of the door; the mistake does not build it
+            // "In front of the door": the tiles outside are never own ground, so the gas guards the door from the first
+            // free own tile right behind it, before the spike stretch (further in when those are taken); the mistake
+            // does not build it
             if(ai.getMind().slip("F04"))
                 return false;
 
-            for(int k = 1 + index; (spot == nullptr) && (k <= static_cast<int>(aiKey("CannonMaxDoorDistance"))); ++k)
+            for(int k = 1; (spot == nullptr) && (k <= lineEnd); ++k)
             {
-                Tile* tile = lineTile(gameMap, entrance, -k);
+                Tile* tile = lineTile(gameMap, entrance, k);
                 if(trapSpotFree(tile, seat))
                     spot = tile;
             }
         }
-        return buildOne(ai, kind, spot);
+        // A basic tile without a free spot does not stall the plan: the special traps of F05-F11 come next
+        if(spot != nullptr)
+            return buildOne(ai, kind, spot);
     }
 
     // Then the special traps, one per look
@@ -776,9 +783,20 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         bool drawn = false;
         for(const TRAP::Entrance& entrance : entrances)
         {
-            Tile* tile = lineTile(gameMap, entrance, -static_cast<int>(aiKey("AlarmDistanceTiles")));
-            Trap* current = (tile == nullptr) ? nullptr : trapAt(ai, tile);
-            if(((current != nullptr) && (current->getType() == TrapType::alarm)) || !trapSpotFree(tile, seat))
+            // The tiles outside are never own ground, so the alarm stands on the farthest free own tile of the entrance
+            // line, at most AlarmDistanceTiles behind the door; an entrance with an alarm on its line has one
+            Tile* tile = nullptr;
+            bool hasAlarm = false;
+            for(int k = static_cast<int>(aiKey("AlarmDistanceTiles")); k >= 1; --k)
+            {
+                Tile* lineSpot = lineTile(gameMap, entrance, k);
+                Trap* current = (lineSpot == nullptr) ? nullptr : trapAt(ai, lineSpot);
+                if((current != nullptr) && (current->getType() == TrapType::alarm))
+                    hasAlarm = true;
+                else if((tile == nullptr) && trapSpotFree(lineSpot, seat))
+                    tile = lineSpot;
+            }
+            if(hasAlarm || (tile == nullptr))
                 continue;
 
             if(!drawn)
