@@ -48,6 +48,7 @@
     <Imageset filename="NavigationRoomManager.imageset" name="NavigationRoomManager" />
     <Imageset filename="NavigationDungeonbook.imageset" name="NavigationDungeonbook" />
     <Imageset filename="ChampionCrown.imageset" name="ChampionCrown" />
+    <Imageset filename="CreatureSkillIcons.imageset" name="CreatureSkillIcons" />
     <Imageset filename="GoalStatus.imageset" name="GoalStatus" />
     <Imageset filename="ODLogo.imageset" name="ODLogo" />
     <Imageset filename="ODMainMenuLogo.imageset" name="ODMainMenuLogo" />

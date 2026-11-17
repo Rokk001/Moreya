@@ -102,6 +102,13 @@ private:
     bool onNextClicked(const CEGUI::EventArgs& e);
     //! \brief A friend or foe name in the profile: shows the inventory of that creature.
     bool onLinkClicked(const CEGUI::EventArgs& e);
+    //! \brief The skill tree button of the profile: opens the skill tree window of the selected creature.
+    bool onSkillTreeClicked(const CEGUI::EventArgs& e);
+    //! \brief The close button of the skill tree window hides it.
+    bool onSkillTreeCloseClicked(const CEGUI::EventArgs& e);
+    //! \brief Fills the skill tree window with the tree of the creature it shows; hides the window when the creature
+    //! is no longer known or has no tree. Only shows the tree, nothing in it can be clicked to spend a point.
+    void refreshSkillTree();
     //! \brief The scrollbars of the list and of the feeds move the shown rows.
     bool onListScrolled(const CEGUI::EventArgs& e);
     bool onFeedScrolled(const CEGUI::EventArgs& e);
@@ -169,6 +176,10 @@ private:
     uint32_t mShownProfilePostVersion;
     //! Seconds since the creature page was last refreshed
     float mSinceProfileRefresh;
+    //! The skill tree window (gui/WindowCreatureSkillTree.layout), opened from the profile
+    CEGUI::Window* mSkillTreeWindow;
+    //! Name of the creature the skill tree window shows
+    std::string mSkillTreeCreature;
 };
 
 #endif // SOCIALWINDOW_H

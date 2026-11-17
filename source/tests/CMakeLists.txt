@@ -171,6 +171,21 @@ add_boost_test(00-LevelScript
         ${SRC}/gamemap/LevelScript.h
         ${SRC}/gamemap/LevelScript.cpp)
 
+add_boost_test(00-CreatureSkillTreeView
+        SOURCES
+        test_CreatureSkillTreeView.cpp
+        ${SRC}/creatureskill/CreatureSkillTreeView.h
+        ${SRC}/creatureskill/CreatureSkillTreeView.cpp
+        ${SRC}/creatureskill/CreatureSkillTree.cpp
+        ${SRC}/tests/mocks/ConfigManagerSingleton.cpp
+        ${SRC}/utils/LogManager.cpp
+        ${SRC}/utils/LogSinkConsole.cpp
+        LIBRARIES
+        ${SFML_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        ${OGRE_LIBRARIES})
+
 add_boost_test(00-Campaign
         SOURCES
         test_Campaign.cpp

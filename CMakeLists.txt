@@ -368,6 +368,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureskill/CreatureSkillSlow.cpp
     ${SRC}/creatureskill/CreatureSkillStrike.cpp
     ${SRC}/creatureskill/CreatureSkillTree.cpp
+    ${SRC}/creatureskill/CreatureSkillTreeView.cpp
     ${SRC}/creatureskill/CreatureSkillFreeze.cpp
     ${SRC}/creatureskill/CreatureSkillDrain.cpp
     ${SRC}/creatureskill/CreatureSkillInvisible.cpp

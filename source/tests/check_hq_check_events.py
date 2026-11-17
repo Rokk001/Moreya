@@ -180,7 +180,10 @@ class BuildControllerTests(unittest.TestCase):
                 subprocess.run(['git','-C',str(repo),'add','.'],check=True)
                 subprocess.run(['git','-C',str(repo),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','fixture'],check=True)
                 head=events.git(repo,'rev-parse','HEAD');journal=repo/'events.jsonl'
-                env={**os.environ,'HQ_CHECK_EVENTS':str(journal),'HQ_CHECK_RUN':'fixture-build','HQ_CHECK_COMMIT':head}
+                # The fixture controller is the outermost journal writer: journal settings of whatever runs this check
+                # (HQ_CHECK_* and the HQ_CHECK_DEFER_RELEASE of a profiled outer run) must not reach it, or it would
+                # leave the release marker to a writer that does not exist.
+                env={**events.child_environment(os.environ),'HQ_CHECK_EVENTS':str(journal),'HQ_CHECK_RUN':'fixture-build','HQ_CHECK_COMMIT':head}
                 result=subprocess.run(['powershell','-NoProfile','-File',str(repo/'scripts/win32/orchestrator-build.ps1'),
                                        '-Counter',str(repo/'counter.txt'),'-Base',head,'-Checks','unused-legacy-runner','-Worktree',str(repo)],
                                       cwd=repo,env=env,capture_output=True,text=True,timeout=30)
