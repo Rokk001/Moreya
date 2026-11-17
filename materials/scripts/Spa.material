@@ -89,9 +89,42 @@ material SpaIron : RTSS/PerPixel_SinglePass
         }
     }
 }
+// Weathered wood of the pool attendant's chair; every beam carries its own grain along its length (K22)
+material SpaChairWood : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.62 0.52 0.42 1
+            specular 0 0 0 0 1
+            texture_unit
+            {
+                texture SpaChairWood.png
+            }
+        }
+    }
+}
+// Worn dark iron with scratches and rust spots: chair fittings, ring peg and the attendant's whistle cord (K22)
+material SpaIronWorn : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.3 0.28 0.26 1
+            specular 0.15 0.15 0.15 1 24
+            texture_unit
+            {
+                texture SpaMetalWorn.png
+            }
+        }
+    }
+}
 
 // The red and the off-white bands of the lifebuoy at the attendant's chair (decision 837, variant 1 of the design:
-// a worn red and white life ring); bold bands and a little sheen remain readable from the room camera
+// a worn red and white life ring); muted bands for the dark room (A3 owner findings 2026-11-17); the painted
+// canvas texture (cracks, chips, grime) is tinted by each band's colour (K22)
 material SpaLifebuoyRed : RTSS/PerPixel_SinglePass
 {
     technique
@@ -99,9 +132,13 @@ material SpaLifebuoyRed : RTSS/PerPixel_SinglePass
         pass
         {
             ambient 1 1 1 1
-            diffuse 0.85 0.12 0.07 1
-            emissive 0.12 0.012 0.006
+            diffuse 0.4 0.11 0.08 1
+            emissive 0.015 0.003 0.002
             specular 0.12 0.1 0.1 1 16
+            texture_unit
+            {
+                texture SpaLifebuoy.png
+            }
         }
     }
 }
@@ -113,9 +150,13 @@ material SpaLifebuoyWhite : RTSS/PerPixel_SinglePass
         pass
         {
             ambient 1 1 1 1
-            diffuse 0.95 0.9 0.78 1
-            emissive 0.14 0.13 0.1
+            diffuse 0.46 0.43 0.37 1
+            emissive 0.015 0.014 0.011
             specular 0.12 0.12 0.11 1 16
+            texture_unit
+            {
+                texture SpaLifebuoy.png
+            }
         }
     }
 }
@@ -131,6 +172,24 @@ material SpaSkin : RTSS/PerPixel_SinglePass
             texture_unit
             {
                 texture SpaAttendantSkin.png
+            }
+        }
+    }
+}
+// Face and scalp skin of the pool attendant: baked shading (folds, eye sockets, ruddy nose, cheeks and ears, stubble on
+// the jaw, frown lines) in its own texture (A3 owner findings 2026-11-17)
+material SpaAttendantFace : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 1 1 1 1
+            specular 0.06 0.05 0.05 1 12
+            texture_unit
+            {
+                texture SpaAttendantFace.png
+                tex_address_mode wrap clamp
             }
         }
     }
@@ -168,14 +227,19 @@ material SpaLinen : RTSS/PerPixel_SinglePass
     }
 }
 
+// Grey curly scalp hair and big moustache of the pool attendant; the strand texture gives the locks their streaks (K22)
 material SpaHair : RTSS/PerPixel_SinglePass
 {
     technique
     {
         pass
         {
-            diffuse 0.2 0.19 0.18 1
+            diffuse 0.36 0.35 0.33 1
             specular 0 0 0 0 1
+            texture_unit
+            {
+                texture SpaAttendantHair.png
+            }
         }
     }
 }
@@ -187,8 +251,12 @@ material SpaBodyHair : RTSS/PerPixel_SinglePass
     {
         pass
         {
-            diffuse 0.1 0.075 0.055 1
+            diffuse 0.13 0.1 0.08 1
             specular 0 0 0 0 1
+            texture_unit
+            {
+                texture SpaAttendantHair.png
+            }
         }
     }
 }
@@ -206,15 +274,20 @@ material SpaBlood : RTSS/PerPixel_SinglePass
     }
 }
 
+// Small silver whistle of the pool attendant: worn metal with a strong, tight highlight (A3 owner findings 2026-11-17)
 material SpaWhistle : RTSS/PerPixel_SinglePass
 {
     technique
     {
         pass
         {
-            diffuse 0.95 0.84 0.5 1
-            emissive 0.18 0.14 0.055
-            specular 0.5 0.5 0.5 1 40
+            diffuse 0.5 0.52 0.55 1
+            emissive 0.05 0.05 0.045
+            specular 0.95 0.95 0.95 1 60
+            texture_unit
+            {
+                texture SpaMetalWorn.png
+            }
         }
     }
 }
@@ -246,6 +319,19 @@ material SpaLavaGlow
             {
                 colour_op_ex source1 src_manual src_current 1.0 0.15 0.015
             }
+        }
+    }
+}
+
+// Muted warm sclera for the pool attendant's narrow living eyes.
+material SpaAttendantSclera : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.22 0.20 0.16 1
+            specular 0 0 0 0 1
         }
     }
 }
