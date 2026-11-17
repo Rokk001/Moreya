@@ -3916,9 +3916,11 @@ void GameMode::setOptionsPage(bool endGame)
     }
     Gui& gui = mModeManager->getGui();
     const CEGUI::Sizef display = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
-    const float height = std::min(0.95f, (84.0f + 46.0f * entries.size()) * gui.getLayoutScale() / display.d_height);
-    gui.setScaledArea(options, CEGUI::URect(CEGUI::UDim(0.5f, -160), CEGUI::UDim(0.5f - height / 2.0f, 0),
-        CEGUI::UDim(0.5f, 160), CEGUI::UDim(0.5f + height / 2.0f, 0)));
+    // The window frame of the menu sheet takes 50 design pixels more height (title on the top rail, wider bottom
+    // rail) and 16 more on each side than the old thin frame, so the entries keep the room they had.
+    const float height = std::min(0.95f, (134.0f + 46.0f * entries.size()) * gui.getLayoutScale() / display.d_height);
+    gui.setScaledArea(options, CEGUI::URect(CEGUI::UDim(0.5f, -176), CEGUI::UDim(0.5f - height / 2.0f, 0),
+        CEGUI::UDim(0.5f, 176), CEGUI::UDim(0.5f + height / 2.0f, 0)));
     const float step = 0.78f / entries.size();
     for(size_t i = 0; i < entries.size(); ++i)
     {

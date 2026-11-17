@@ -6,9 +6,12 @@ with the shipped font file (Pillow), not estimated from its length.
 
 Model, read from the shipped files: layout scale s = min(w/1024, h/768) * user scale, shrunk by the fit factor of the
 Room Manager frame (Gui::getWindowFitFactor, the frame never gets larger than the screen); fonts scale with
-min(w/800, h/600) * user scale and are not fitted (Gui::updateResourceScaling); the frame borders are the
-DungeonbookIcons images at their native 3840x2160 automatic scaling; the title bar is the line spacing of the title font plus
-12 pixels (OD/FrameWindow). For 12 screens (including the extreme aspect ratios 640x4320 and 7680x480) and 5 user scales
+min(w/800, h/600) * user scale and are not fitted (Gui::updateResourceScaling); the frame is the window frame of the
+chosen menu sheet (OD/SheetWindow): its rails are the ODMenuTemplate images scaled with the layout scale at the sheet
+pixel density of Gui.cpp (before: the DungeonbookIcons images at their native 3840x2160 automatic scaling), and the
+title bar starts at three quarters of the top rail and is the line spacing of the title font plus its padding
+(OD/SheetWindow; before: the title font line plus 12 pixels of OD/FrameWindow). For 12 screens (including the extreme
+aspect ratios 640x4320 and 7680x480) and 5 user scales
 (60 cases) it asserts the outcome on the screen:
 - the frame lies inside the screen and every control inside its parent;
 - no two clickable controls cover one another;
@@ -121,23 +124,31 @@ def frame_contract():
     frame = props(manager)
     (fx0, fox0), (fy0, foy0), (fx1, fox1), (fy1, foy1) = udims(frame['Area'])
     assert (fx0, fy0, fx1, fy1) == (.5, .5, .5, .5), 'a centred frame of fixed design size'
-    images = ET.parse(REPO / 'gui/DungeonbookIcons.imageset').getroot()
-    assert (images.get('autoScaled'), images.get('nativeHorzRes'), images.get('nativeVertRes')) == ('min', '3840', '2160')
+    assert manager.get('type') == 'OD/SheetWindow', 'the Room Manager uses the window frame of the menu sheet'
+    images = ET.parse(REPO / 'gui/ODMenuTemplate.imageset').getroot()
     sizes = {i.get('name'): (float(i.get('width')), float(i.get('height'))) for i in images.findall('Image')}
-    border = {key: sizes[frame[key + 'Image'].split('/')[1]] for key in ('FrameLeft', 'FrameRight', 'FrameBottom')}
     looks = read('gui/OD.looknfeel')
-    look = looks[looks.index('<WidgetLook name="OD/FrameWindow">'):]
+    look = looks[looks.index('<WidgetLook name="OD/SheetWindow">'):]
     look = look[:look.index('</WidgetLook>')]
-    title_padding = float(re.search(r'<FontDim widget="__auto_titlebar__" padding="(\d+)" type="LineSpacing" />', look).group(1))
+    for key in ('FrameLeft', 'FrameRight', 'FrameBottom', 'FrameTop'):
+        assert 'ImageDim name="ODMenuTemplate/%s"' % key in look, key + ' is not a rail of the sheet frame'
+    border = {key: sizes[key] for key in ('FrameLeft', 'FrameRight', 'FrameBottom', 'FrameTop')}
+    title_match = re.search(r'<FontDim font="([\w-]+)" padding="(\d+)" type="LineSpacing" />', look)
+    title_font, title_padding = title_match.group(1), float(title_match.group(2))
+    assert re.search(r'name="TitlebarFont" targetProperty="Font"', look)
+    assert 'initialValue="%s" name="TitlebarFont"' % title_font in look, 'the title font is the font of the title height'
+    assert 'TitlebarFont' not in frame, 'the title font of the sheet title is fixed'
     pages = {n.get('name'): n for n in manager.iter('Window')}['Pages']
     checkbox = ET.parse(REPO / 'gui/ODSkin.imageset').getroot().find("Image[@name='CheckboxNormal']")
     gui = read('source/render/Gui.cpp')
     skin_density = float(re.search(r'SKIN_IMAGE_PIXEL_DENSITY = ([\d.]+)f;', gui).group(1))
+    sheet_density = float(re.search(r'MENU_SHEET_IMAGE_PIXEL_DENSITY = ([\d.]+)f;', gui).group(1))
+    assert 'startsWith(name, "ODMenuTemplate/")' in gui, 'the sheet frame scales with the layout'
     for fragment in ('const float scale = layoutScale * getWindowFitFactor(window);', 'FONT_DESIGN_WIDTH / mUserScale',
                      'setAutoScaled(CEGUI::ASM_Min);', 'return startsWith(name, "OpenDungeonsSkin/")'):
         assert fragment in gui, fragment
-    return {'width': fox1 - fox0, 'height': foy1 - foy0, 'border': border, 'title_font': frame['TitlebarFont'],
-            'title_padding': title_padding, 'pages': props(pages)['Area'],
+    return {'width': fox1 - fox0, 'height': foy1 - foy0, 'border': border, 'title_font': title_font,
+            'title_padding': title_padding, 'sheet_density': sheet_density, 'pages': props(pages)['Area'],
             'checkbox_inset': float(checkbox.get('width')) / skin_density}
 
 
@@ -189,14 +200,15 @@ def check():
         fit = min(1.0, width / (contract['width'] * raw), height / (contract['height'] * raw))
         scale = raw * fit
         font_scale = min(width / 800.0, height / 600.0) * user
-        image_scale = min(width / 3840.0, height / 2160.0)
+        image_scale = raw / contract['sheet_density']
         frame = ((width - contract['width'] * scale) / 2, (height - contract['height'] * scale) / 2,
                  (width + contract['width'] * scale) / 2, (height + contract['height'] * scale) / 2)
         case = (width, height, user)
         assert inside(frame, (0, 0, width, height)), (case, 'frame inside the screen')
         left = frame[0] + contract['border']['FrameLeft'][0] * image_scale
         right = frame[2] - contract['border']['FrameRight'][0] * image_scale
-        top = frame[1] + title.height(font_scale) + contract['title_padding']
+        top = (frame[1] + 0.75 * contract['border']['FrameTop'][1] * image_scale + title.height(font_scale)
+               + contract['title_padding'])
         bottom = frame[3] - contract['border']['FrameBottom'][1] * image_scale
         assert left < right and top < bottom, (case, 'client area')
         page = rectangle(contract['pages'], left, top, right - left, bottom - top, scale)

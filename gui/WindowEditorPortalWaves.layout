@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/MenuFrameWindow" name="EditorPortalWavesWindow" >
-        <Property name="Area" value="{{0.5,-310},{0.5,-262},{0.5,310},{0.5,262}}" />
+    <Window type="OD/SheetWindow" name="EditorPortalWavesWindow" >
+        <Property name="Area" value="{{0.5,-310},{0.5,-272},{0.5,310},{0.5,272}}" />
         <Property name="Text" value="Wave portal" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/StaticText" name="TurnsLabel" >

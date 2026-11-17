@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="ObjectivesWindow" >
-        <Property name="Area" value="{{0.5,-300},{0.5,-220},{0.5,300},{0.5,220}}" />
+    <Window type="OD/SheetWindow" name="ObjectivesWindow" >
+        <Property name="Area" value="{{0.5,-316},{0.5,-245},{0.5,316},{0.5,245}}" />
         <Property name="Text" value="Goals" />
 
         <Window type="OD/StaticText" name="ObjectivesText" >

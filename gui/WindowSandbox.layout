@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="SandboxWindow" >
-        <Property name="Area" value="{{0,20},{0,60},{0,280},{0,630}}" />
+    <Window type="OD/SheetWindow" name="SandboxWindow" >
+        <Property name="Area" value="{{0,20},{0,60},{0,312},{0,680}}" />
         <Property name="Text" value="Sandbox" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/StaticText" name="ScoreText" >

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="SettingsWindow" >
-        <Property name="Area" value="{{0.5,-400},{0.5,-250},{0.5,400},{0.5,250}}" />
+    <Window type="OD/SheetWindow" name="SettingsWindow" >
+        <Property name="Area" value="{{0.5,-416},{0.5,-275},{0.5,416},{0.5,275}}" />
         <Property name="Text" value="Settings" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />

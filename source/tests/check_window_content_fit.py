@@ -259,7 +259,7 @@ def client_rect(node, rect, screen, user, s):
         # Window frame of the chosen menu sheet (OD.looknfeel OD/SheetWindow): frame edges, the title on the top rail
         top = image_size('ODMenuTemplate/FrameTop', screen, user)[1]
         if node.props.get('TitlebarEnabled', 'True') == 'True':
-            top = 0.75 * top + text_size(node.props.get('TitlebarFont', 'MedievalSharp-13'), 'Ag', screen, user)[1] + 8.0
+            top = 0.75 * top + text_size(node.props.get('TitlebarFont', 'MedievalSharp-13'), 'Ag', screen, user)[1] + 4.0
         return (x0 + image_size('ODMenuTemplate/FrameLeft', screen, user)[0], y0 + top,
                 x1 - image_size('ODMenuTemplate/FrameRight', screen, user)[0],
                 y1 - image_size('ODMenuTemplate/FrameBottom', screen, user)[1])

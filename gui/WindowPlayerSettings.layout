@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="PlayerSettingsWindow" >
-        <Property name="Area" value="{{0.5,-305},{0.5,-209},{0.5,305},{0.5,209}}" />
+    <Window type="OD/SheetWindow" name="PlayerSettingsWindow" >
+        <Property name="Area" value="{{0.5,-321},{0.5,-234},{0.5,321},{0.5,234}}" />
         <Property name="Text" value="Player settings" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Property name="Visible" value="False" />

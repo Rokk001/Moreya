@@ -14,10 +14,13 @@ post kind also had only one small HUD icon instead of a picture of what happened
 2. The scenes are in gui/DungeonbookIcons.png as 2:1 pictures, painted (not empty, not flat) and all different.
 3. The feed pictures (start page and feed of one creature) and the six profile post pictures fill their frame with
    the scene, cropped like the concept: Picture/Clip/Image, AspectMode Expand, AspectRatio 2, clipped by the frame.
-4. The book has an ornate iron frame (riveted, rusty edges) and the large centred title "Dungeonbook" of the concepts.
-5. No other window changes: the frame and title images, the caption formatting and the titlebar height of the shared
-   looks OD/FrameWindow and OD/GameTitlebar come from properties whose defaults are exactly what the looks drew before,
-   and only WindowSocial.layout sets them.
+4. The book had an ornate iron frame (riveted, rusty edges) and the large centred title "Dungeonbook" of the concepts.
+   Since every in-game window uses the window frame of the chosen menu sheet, the book has that frame (OD/SheetWindow:
+   iron rails of the sheet, scaled with the UI) and its centred glowing title "Dungeonbook"; no property of the ornate
+   frame is left on it.
+5. No other window changes through the book: the frame and title images, the caption formatting and the titlebar
+   height of the shared looks OD/FrameWindow and OD/GameTitlebar come from properties whose defaults are exactly what
+   the looks drew before, and no layout sets them any more (the Room Manager dropped its copy of the book frame too).
 """
 from pathlib import Path
 import re
@@ -126,43 +129,41 @@ assert 'setImage(picture->getChild("Clip/Image"), findPostPicture(post));' in so
 assert 'setImage(thumb->getChild("Clip/Image"), findPostPicture(*it));' in social
 print('3. %d post pictures fill their frame (Clip, Expand 2:1, centred)' % len(frames))
 
-# 4. Ornate iron frame and large centred title of the concepts, only for the book
+# 4. The window frame of the chosen menu sheet with its centred title, as every in-game window (the ornate iron frame
+# and the 20 point title of the concepts are replaced)
 FRAME_PARTS = ('TopLeft', 'TopRight', 'BottomLeft', 'BottomRight', 'Top', 'Left', 'Right', 'Bottom')
-TITLE_PARTS = ('TopLeft', 'TopRight', 'Top', 'Left', 'Right')
 root = props(book)
 assert root['Text'] == 'Dungeonbook'
+assert book.get('type') == 'OD/SheetWindow', 'the book uses the window frame of the menu sheet'
 for part in FRAME_PARTS:
-    assert root['Frame%sImage' % part] == 'DungeonbookIcons/BookFrame' + part, part
-    assert 'BookFrame' + part in images, part
-titlebar_window = book.find("AutoWindow[@namePath='__auto_titlebar__']")
-assert titlebar_window is not None, 'the title band of the book is set through its titlebar'
-title = props(titlebar_window)
-for part in TITLE_PARTS:
-    assert title['Title%sImage' % part] == 'DungeonbookIcons/BookFrame' + part, part
-assert title['TitleRuleImage'] == 'DungeonbookIcons/BookTitleRule' and 'BookTitleRule' in images
-assert title['CaptionHorzFormatting'] == 'CentreAligned' and title['CaptionCentred'] == 'True', 'centred title'
-scheme = (repo / 'gui/ODSkin.scheme').read_text(encoding='utf-8')
-assert root['TitlebarFont'] == 'MedievalSharp-20' and 'name="MedievalSharp-20"' in scheme, 'large title font'
-assert layout_text.index('name="TitlebarFont"') < layout_text.index('name="Area"'), \
-    'the title font is set before the area, so the first layout already has the tall title band'
-T = images['BookFrameLeft'][2]
-assert images['BookFrameRight'][2] == T and images['BookFrameTop'][3] == T and images['BookFrameBottom'][3] == T
-assert images['BookFrameLeft'][3] >= 128 and images['BookFrameTop'][2] >= 128, 'edges tile along the window'
-for corner in ('TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'):
-    x, y, w, h = images['BookFrame' + corner]
-    assert w == h and w >= T, corner
-assert (imageset.get('autoScaled'), imageset.get('nativeHorzRes'), imageset.get('nativeVertRes')) == \
-    ('min', '3840', '2160'), 'the frame scales with the display like the shared frame (3840x2160)'
-assert T * min(1920 / 3840.0, 1200 / 2160.0) >= 16, 'the iron frame is visible at 1920x1200 (at least 16 px)'
-x, y, w, h = images['BookFrameTop']
-band = np.asarray(atlas.crop((x, y, x + w, y + h)), np.float32)[..., :3]
-luma = band @ np.array([0.299, 0.587, 0.114])
-rusty = (band[..., 0] > band[..., 1] + 25) & (band[..., 0] > 80)
-assert luma.mean() < 80, 'dark iron'
-assert rusty[:3].mean() > 0.5 and rusty.mean() > 0.08, 'rusty edges'
-bright = luma > luma.mean() + 30   # decision 830 e: matte black iron, no shiny highlights, rivets stay visible
-assert bright.any() and luma.max() < 110, 'rivets and bevel stay visible but matte'
-print('4. ornate iron frame (%d px edges at 2160, riveted, rusty) and centred 20 pt title on the book only' % T)
+    assert 'Frame%sImage' % part not in root, part + ' of the ornate frame is still set'
+assert 'TitlebarFont' not in root, 'the title uses the font of the sheet title'
+assert book.find("AutoWindow[@namePath='__auto_titlebar__']") is None, 'the title band of the ornate frame is still set'
+sheet_skin = ET.parse(repo / 'gui/OD.looknfeel').getroot()
+sheet_look = sheet_skin.find("WidgetLook[@name='OD/SheetWindow']")
+assert sheet_look.find("Child[@nameSuffix='__auto_titlebar__']").get('type') == 'OD/SheetTitlebar'
+sheet_title = sheet_skin.find("WidgetLook[@name='OD/SheetTitlebar']")
+assert sheet_title.find(".//ImagerySection[@name='caption']/TextComponent/HorzFormat").get('type') == 'CentreAligned', \
+    'centred title'
+drawn = [component.find('Image').get('name') for component in
+         sheet_look.find("ImagerySection[@name='sheet_frame']").findall('ImageryComponent')]
+for part in FRAME_PARTS:
+    assert 'ODMenuTemplate/Frame' + part in drawn, part + ' of the sheet frame is not drawn'
+sheet_set = ET.parse(repo / 'gui/ODMenuTemplate.imageset').getroot()
+sheet_images = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height'))
+                for i in sheet_set.findall('Image')}
+T = sheet_images['FrameLeft'][2]
+assert sheet_images['FrameRight'][2] == T and sheet_images['FrameTop'][3] == sheet_images['FrameBottom'][3]
+# the sheet frame scales with the layout (1.5625 sheet pixels per design pixel, Gui.cpp) and is visible at 1920x1200
+assert T / 1.5625 * min(1920 / 1024.0, 1200 / 768.0) >= 16, 'the iron frame is visible at 1920x1200 (at least 16 px)'
+sheet_atlas = Image.open(repo / 'gui' / sheet_set.get('imagefile')).convert('RGBA')
+x, y, w, h = sheet_images['FrameTop']
+band = np.asarray(sheet_atlas.crop((x, y, x + w, y + h)), np.float32)
+solid = band[..., 3] > 200
+luma = band[..., :3] @ np.array([0.299, 0.587, 0.114])
+assert solid.mean() > 0.4 and luma[solid].mean() < 110, 'dark iron rail'
+assert luma[solid].std() > 8, 'the rail is painted, not flat'
+print('4. window frame of the menu sheet (%d px rails at 1920x1200, painted dark iron), centred title on the book' % T)
 
 # 5. Every other window keeps its frame and title
 skin = ET.parse(repo / 'gui/OD.looknfeel').getroot()
@@ -216,17 +217,15 @@ room_manager_overrides = {
     'CaptionHorzFormatting': 'CentreAligned',
     'CaptionCentred': 'True',
 }
+# The Room Manager had a copy of these overrides of the book; both now use the frame of the menu sheet and no layout
+# sets a property of the old frame or title band any more.
 room_manager = ET.parse(repo / 'gui/WindowRoomManager.layout').getroot()
 room_manager_properties = {node.get('name'): node.get('value') for node in room_manager.iter('Property')}
-assert {name: room_manager_properties.get(name) for name in room_manager_overrides} == room_manager_overrides, \
-    'Room Manager keeps its intentional Dungeonbook frame and title overrides'
+assert room_manager.find('Window').get('type') == 'OD/SheetWindow', 'the Room Manager uses the frame of the menu sheet'
+assert not set(room_manager_overrides) & set(room_manager_properties), 'Room Manager still sets the ornate frame'
 for other in sorted((repo / 'gui').glob('*.layout')):
-    if other.name == 'WindowSocial.layout':
-        continue
     text = other.read_text(encoding='utf-8', errors='replace')
     for name in new_props:
-        if other.name == 'WindowRoomManager.layout' and name in room_manager_overrides:
-            continue
         assert 'name="%s"' % name not in text, (other.name, 'sets', name)
 
 

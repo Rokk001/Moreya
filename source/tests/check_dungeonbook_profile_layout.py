@@ -82,14 +82,18 @@ def area_fractions(element):
 profile_box = area_fractions(book_profile)
 holder_box = area_fractions(book_profile.find("Window[@name='SocialHolder']"))
 holder_height_fraction = (holder_box[3] - holder_box[1]) * (profile_box[3] - profile_box[1])
-skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
-border = float(skin.find("Image[@name='WindowTopEdge']").get('height')) / 4
-title_height = 18 * 10 / 8 + 12
+# The book uses the window frame of the chosen menu sheet (OD/SheetWindow): its top and bottom rails are 44 sheet pixels
+# (1.5625 sheet pixels per design pixel); the title (one 13 point line of 18 * 13 / 8 design pixels plus 4) sits on the
+# top rail from three quarters of its height. Before, the generic title (10 point line plus 12) and a quarter of the
+# skin window edge on both sides were taken off.
+sheet = ET.parse(repo / 'gui/ODMenuTemplate.imageset').getroot()
+rail = float(sheet.find("Image[@name='FrameBottom']").get('height')) / 1.5625
+title_height = 0.75 * float(sheet.find("Image[@name='FrameTop']").get('height')) / 1.5625 + 18 * 13 / 8 + 4
 
 
 def book_page_height(fit):
     # Design pixels of the page viewport in the book shrunk by the fit factor
-    return (book_height * fit - title_height - 2 * border) * holder_height_fraction
+    return (book_height * fit - title_height - rail) * holder_height_fraction
 
 
 page_height = book_page_height(1.0)
@@ -203,8 +207,11 @@ social_layout = (repo / 'gui/WindowSocial.layout').read_text()
 book = ET.fromstring(social_layout).find('Window')
 size = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', social_layout)
 book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])
-# 880x644 since the ornate frame and the 20 point title of decision 710 (860x620 before): the pages keep their room
-assert (book_w, book_h) == (880, 644), (book_w, book_h)
+# 880x644 since the ornate frame and the 20 point title of decision 710 (860x620 before): the pages keep their room;
+# 860x648 in the window frame of the menu sheet that every window uses: the highest window the HUD leaves room for,
+# narrow enough that at 640x480 it is shrunk only to the screen height, so the pages keep the room for their texts
+assert (book_w, book_h) == (860, 648), (book_w, book_h)
+assert book.get('type') == 'OD/SheetWindow', 'the Dungeonbook uses the window frame of the menu sheet'
 assert not (repo / 'gui/WindowDungeonbookProfile.layout').exists(), 'the old profile page with its buttons is gone'
 for old in ('Attributes', 'Social profile', 'Statistics', 'Back', 'Show: all creatures', 'Posts of: everyone'):
     assert 'name="Text" value="%s"' % old not in social_layout, 'old button ' + old
@@ -214,7 +221,7 @@ for old in ('FilterButton', 'FeedTab', 'ProfileTab', 'FeedModeButton', 'Creature
 assert 'type="OD/Listbox"' not in social_layout
 
 font_files = {}
-for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-20'):
+for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-13', 'MedievalSharp-20'):
     spec = ET.parse(repo / 'gui/fonts' / (name + '.font')).getroot()
     font_files[name] = (ImageFont.truetype(str(repo / 'gui/fonts' / spec.get('filename')), 1024),
                         float(spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0)
@@ -236,13 +243,16 @@ def line_height(font):
 
 
 CLIENT_W, CLIENT_H = 828.0, 560.0
-# The book has its own ornate iron frame (DungeonbookIcons/BookFrame*, imageset auto scaled 'min' from 3840x2160):
-# its side and bottom edges are FRAME_PX image pixels, scaled with the display only (not with the UI scale)
-book_images = ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot()
-assert (book_images.get('autoScaled'), book_images.get('nativeHorzRes'), book_images.get('nativeVertRes')) == ('min', '3840', '2160')
-FRAME_PX = max(float(book_images.find("Image[@name='BookFrame%s']" % n).get(d))
-               for n, d in (('Left', 'width'), ('Right', 'width'), ('Bottom', 'height')))
-assert book.find("Property[@name='FrameLeftImage']").get('value') == 'DungeonbookIcons/BookFrameLeft'
+# The book had its own ornate iron frame (DungeonbookIcons/BookFrame*, scaled with the display only). It now has the
+# window frame of the chosen menu sheet (OD/SheetWindow, ODMenuTemplate imageset scaled with the layout scale by
+# Gui.cpp at 1.5625 sheet pixels per design pixel): its side and bottom rails are FRAME_SIDE / FRAME_BOTTOM design
+# pixels at every screen and UI scale, and no property of the old frame is left on the window.
+menu_sheet = ET.parse(repo / 'gui/ODMenuTemplate.imageset').getroot()
+assert 'MENU_SHEET_IMAGE_PIXEL_DENSITY = 1.5625f' in gui
+FRAME_SIDE = max(float(menu_sheet.find("Image[@name='Frame%s']" % n).get('width')) for n in ('Left', 'Right')) / 1.5625
+FRAME_BOTTOM = float(menu_sheet.find("Image[@name='FrameBottom']").get('height')) / 1.5625
+FRAME_TOP = float(menu_sheet.find("Image[@name='FrameTop']").get('height')) / 1.5625
+assert book.find("Property[@name='FrameLeftImage']") is None and book.find("Property[@name='TitlebarFont']") is None
 
 
 def collect_boxes(element, box, path, out):
@@ -571,8 +581,10 @@ assert 'compact ? PROFILE_ROW_GAP' in body
 # Sizes. Fonts and layout scale by the same factor from the display and the UI scale (the line heights in design
 # pixels do not depend on the resolution); Gui::getWindowFitFactor shrinks a window larger than the screen together
 # with its children but not the fonts, so the texts are compared with the shrunk boxes.
-assert book.find("Property[@name='TitlebarFont']").get('value') == 'MedievalSharp-20'
-TITLE_LINE = line_height('MedievalSharp-20')
+# The title is the sheet title (OD/SheetTitlebar): one line of the 13 point title font of OD/SheetWindow.
+sheet_look = ET.parse(repo / 'gui/OD.looknfeel').getroot().find("WidgetLook[@name='OD/SheetWindow']")
+assert sheet_look.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-13'
+TITLE_LINE = line_height('MedievalSharp-13')
 need = {}
 
 
@@ -738,10 +750,10 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
         fit = min(1.0, screen_w / (book_w * scale), screen_h / (book_h * scale))
         win_w, win_h = book_w * fit, book_h * fit  # design pixels after the fit, fonts unchanged
         assert win_w * scale <= screen_w + 1e-6 and win_h * scale <= screen_h + 1e-6, 'the book is larger than the screen'
-        # the title bar is one line of the title font plus 12 screen pixels; the frame takes its edges
-        frame = FRAME_PX * min(screen_w / 3840.0, screen_h / 2160.0) / scale
-        client_w = win_w - 2 * frame
-        client_h = win_h - (TITLE_LINE + 12.0 / scale) - frame
+        # the title bar is one line of the title font plus 4 screen pixels on the top rail from three quarters of its
+        # height; the side and bottom rails of the sheet frame take their edges (scaled like the layout, not fitted)
+        client_w = win_w - 2 * FRAME_SIDE
+        client_h = win_h - (0.75 * FRAME_TOP + TITLE_LINE + 4.0 / scale) - FRAME_BOTTOM
         tightest = {}
         for name, (font, lines, texts, pad_w, pad_h, wrap) in need.items():
             box = boxes[name][0]

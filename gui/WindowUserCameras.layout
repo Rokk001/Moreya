@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
-    <Window type="OD/FrameWindow" name="UserCamerasWindow">
-        <Property name="Area" value="{{0.5,-240},{0,32},{0.5,240},{0,292}}" />
+    <Window type="OD/SheetWindow" name="UserCamerasWindow">
+        <Property name="Area" value="{{0.5,-256},{0,32},{0.5,256},{0,342}}" />
         <Property name="Text" value="Define user cameras" />
         <Property name="Visible" value="False" />
         <Property name="SizingEnabled" value="False" />

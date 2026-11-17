@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="SkillTreeWindow" >
-        <Property name="Area" value="{{0.5,-380},{0.5,-350},{0.5,380},{0.5,350}}" />
+    <Window type="OD/SheetWindow" name="SkillTreeWindow" >
+        <Property name="Area" value="{{0.5,-396},{0.5,-375},{0.5,396},{0.5,375}}" />
         <Property name="Text" value="Skill Tree" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/StaticImage" name="Skills" >

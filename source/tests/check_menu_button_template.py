@@ -334,7 +334,7 @@ def client(node, rect, screen, user, s):
     if node.type == 'OD/SheetWindow':
         top = sheet_image('FrameTop', screen, user)[1]
         if node.props.get('TitlebarEnabled', 'True') == 'True':
-            top = 0.75 * top + line_height(node.props.get('TitlebarFont', 'MedievalSharp-13'), screen, user) + 8.0
+            top = 0.75 * top + line_height(node.props.get('TitlebarFont', 'MedievalSharp-13'), screen, user) + 4.0
         return (x0 + sheet_image('FrameLeft', screen, user)[0], y0 + top,
                 x1 - sheet_image('FrameRight', screen, user)[0], y1 - sheet_image('FrameBottom', screen, user)[1])
     if node.type == 'OD/FrameWindow':

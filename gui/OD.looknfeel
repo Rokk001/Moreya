@@ -8149,7 +8149,7 @@
                 <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /></Dim>
                 <Dim type="TopEdge"><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /><AbsoluteDim value="0.75" /></OperatorDim></Dim>
                 <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim></Dim>
-                <Dim type="Height"><FontDim font="MedievalSharp-13" padding="8" type="LineSpacing" /></Dim>
+                <Dim type="Height"><FontDim font="MedievalSharp-13" padding="4" type="LineSpacing" /></Dim>
             </Area>
             <Property name="AlwaysOnTop" value="False" />
             <Property name="WantsMultiClickEvents" value="False" />
@@ -9089,7 +9089,8 @@
             </FrameComponent></ImagerySection>
     </WidgetLook>
 
-    <!-- Message panel of the game: the forged window frame with rivets and one even stone inset, without a title bar. -->
+    <!-- Message panel of the game: the window frame of the chosen menu sheet (OD/SheetWindow), without a title bar.
+         It used the forged window frame with rivets and one even stone inset before. -->
     <WidgetLook name="OD/EventPanel" inherits="OD/StaticText">
         <NamedArea name="WithFrameTextRenderArea">
             <Area>
@@ -9128,8 +9129,10 @@
                 <HorzFormat type="Tiled" />
             </FrameComponent>
         </ImagerySection>
-        <StateImagery name="EnabledFrame"><Layer><Section section="forged_frame" /></Layer></StateImagery>
-        <StateImagery name="DisabledFrame"><Layer><Section section="forged_frame_disabled"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+        <!-- The panel is a message dialog: it draws the window frame of the chosen menu sheet like every other window
+             as well; the forged frame sections above are kept for reference only. -->
+        <StateImagery name="EnabledFrame"><Layer><Section look="OD/SheetWindow" section="sheet_frame" /></Layer></StateImagery>
+        <StateImagery name="DisabledFrame"><Layer><Section look="OD/SheetWindow" section="sheet_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
         <StateImagery name="WithFrameEnabledBackground" />
         <StateImagery name="WithFrameDisabledBackground" />
             <ImagerySection name="forged_frame_disabled">

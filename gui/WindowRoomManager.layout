@@ -1,29 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
-    <Window type="OD/FrameWindow" name="RoomManagerWindow">
-        <Property name="TitlebarFont" value="MedievalSharp-20" />
-        <Property name="FrameTopLeftImage" value="DungeonbookIcons/BookFrameTopLeft" />
-        <Property name="FrameTopRightImage" value="DungeonbookIcons/BookFrameTopRight" />
-        <Property name="FrameBottomLeftImage" value="DungeonbookIcons/BookFrameBottomLeft" />
-        <Property name="FrameBottomRightImage" value="DungeonbookIcons/BookFrameBottomRight" />
-        <Property name="FrameTopImage" value="DungeonbookIcons/BookFrameTop" />
-        <Property name="FrameLeftImage" value="DungeonbookIcons/BookFrameLeft" />
-        <Property name="FrameRightImage" value="DungeonbookIcons/BookFrameRight" />
-        <Property name="FrameBottomImage" value="DungeonbookIcons/BookFrameBottom" />
-        <Property name="Area" value="{{0.5,-440},{0.5,-355},{0.5,440},{0.5,355}}" />
+    <Window type="OD/SheetWindow" name="RoomManagerWindow">
+        <Property name="Area" value="{{0.5,-449},{0.5,-365},{0.5,449},{0.5,365}}" />
         <Property name="Text" value="Room Manager" />
         <Property name="SizingEnabled" value="False" />
         <Property name="Visible" value="False" />
-        <AutoWindow namePath="__auto_titlebar__">
-            <Property name="TitleTopLeftImage" value="DungeonbookIcons/BookFrameTopLeft" />
-            <Property name="TitleTopRightImage" value="DungeonbookIcons/BookFrameTopRight" />
-            <Property name="TitleTopImage" value="DungeonbookIcons/BookFrameTop" />
-            <Property name="TitleLeftImage" value="DungeonbookIcons/BookFrameLeft" />
-            <Property name="TitleRightImage" value="DungeonbookIcons/BookFrameRight" />
-            <Property name="TitleRuleImage" value="DungeonbookIcons/BookTitleRule" />
-            <Property name="CaptionHorzFormatting" value="CentreAligned" />
-            <Property name="CaptionCentred" value="True" />
-        </AutoWindow>
         <Window type="OD/StaticText" name="RoomsLabel">
             <Property name="Area" value="{{0.0145,0},{0,0},{0.34,0},{0,42}}" />
             <Property name="Font" value="MedievalSharp-10" />
