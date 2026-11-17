@@ -170,6 +170,9 @@ const TrapKindInfo TRAP_KINDS[6] = {
 //! \brief The trap set of a seat around a tile: the tiles within CannonMaxDoorDistance of the center, per kind, with
 //! the remaining shots of each tile and the hit damage times the research Damage effect of the AI's own seat (the
 //! enemy research cannot be seen, so it is assumed like the own).
+//! For a revealed enemy set the exact remaining shots are not known (owner decision D358): a tile the seat last saw
+//! exhausted has none, any other tile the configured shots of its kind; the exhausted state is the last one the seat
+//! saw (owner decision D357).
 //! \param revealedFor When not nullptr, only tiles this seat has seen count and ready is false when all are exhausted.
 //! \param ready Receives false when every counted tile is exhausted.
 std::vector<AiMath::TrapKindSet> trapSet(Env& env, Seat* owner, Tile* center, Seat* revealedFor, bool& ready)
@@ -211,9 +214,17 @@ std::vector<AiMath::TrapKindSet> trapSet(Env& env, Seat* owner, Tile* center, Se
                 damage += SkillManager::getResearchValue(env.player.getSeat(), kind.skill, 0.5 * (minDamage + maxDamage),
                                                          ResearchEffect::Damage);
                 ++counted;
-                if(trap->isTileExhausted(tile))
+                if(revealedFor == nullptr)
+                {
+                    if(trap->isTileExhausted(tile))
+                        ++exhausted;
+                    shots += trap->getTileShotsLeft(tile);
+                }
+                else if(seenTrapExhausted(env.state, revealedFor, trap, tile))
                     ++exhausted;
-                shots += trap->getTileShotsLeft(tile);
+                else
+                    shots += ConfigManager::getSingleton().getTrapConfigDoubleOrDefault(
+                        std::string(kind.prefix) + "NbShootsBeforeDeactivation", 1.0);
             }
         }
         if(entry.tiles == 0)
@@ -404,21 +415,33 @@ double powerOf(const std::vector<Creature*>& creatures)
     return hp * dps;
 }
 
-//! \brief The id of the enemy seat the war aims at: the first non-allied seat that has a dungeon temple.
+//! \brief The enemy seat the war aims at: the seat the AI believes owns the nearest known enemy tile (owner decision
+//! D353); nullptr while no enemy tile is known (the AI then keeps exploring). Never the first seat with a temple the
+//! AI has not seen.
 Seat* enemySeat(Env& env)
 {
-    Seat* own = env.player.getSeat();
-    for(Seat* seat : env.gameMap.getSeats())
-    {
-        if((seat == own) || seat->isAlliedSeat(own))
-            continue;
-        if(!env.gameMap.getRoomsByTypeAndSeat(RoomType::dungeonTemple, seat).empty())
-            return seat;
-    }
-    return nullptr;
+    AiKnowledge knowledge(env.gameMap, env.player.getSeat());
+    int ownerSeatId = -1;
+    if(knowledge.nearestKnownEnemyTile(env.state.sighting, ownerSeatId) == nullptr)
+        return nullptr;
+    return env.gameMap.getSeatById(ownerSeatId);
+}
+
+//! \brief True when the AI knows the tile as a room tile of the given visual owned by the enemy: the last seen state of
+//! the tile with fog of war, the tile itself without it.
+bool knownEnemyRoomTile(Env& env, AiKnowledge& knowledge, Tile* tile, TileVisual visual, Seat* enemy)
+{
+    if((tile == nullptr) || (enemy == nullptr) || !knowledge.isKnown(tile))
+        return false;
+    if(!env.gameMap.getIsFOWActivated())
+        return (tile->getTileVisual() == visual) && (tile->getSeat() == enemy);
+    const TileStateNotified* state = env.player.getSeat()->getKnownTileState(tile);
+    return (state != nullptr) && (state->mTileVisual == visual) && (state->mSeatIdOwner == enemy->getId());
 }
 
 //! \brief The tile of a known enemy room of the type nearest to the breakthrough tile, or nullptr when none is known.
+//! A treasury is chosen by its known block (owner decision D345): the largest known block when largest is set, the
+//! smallest when smallest is set.
 Tile* knownRoomTile(Env& env, AiKnowledge& knowledge, Seat* enemy, RoomType type, bool smallest, bool largest)
 {
     Tile* from = env.state.breakthrough;
@@ -437,17 +460,12 @@ Tile* knownRoomTile(Env& env, AiKnowledge& knowledge, Seat* enemy, RoomType type
             return nullptr;
         Tile* best = nullptr;
         double bestDistance = 0.0;
-        Seat* seat = env.player.getSeat();
         for(int x = 0; x < env.gameMap.getMapSizeX(); ++x)
         {
             for(int y = 0; y < env.gameMap.getMapSizeY(); ++y)
             {
                 Tile* tile = env.gameMap.getTile(x, y);
-                const TileStateNotified* state = seat->getKnownTileState(tile);
-                const bool fogOff = !env.gameMap.getIsFOWActivated();
-                const bool matches = fogOff ? tile->getTileVisual() == visual && tile->getSeat() == enemy :
-                    state != nullptr && state->mTileVisual == visual && state->mSeatIdOwner == enemy->getId();
-                if(!matches)
+                if(!knownEnemyRoomTile(env, knowledge, tile, visual, enemy))
                     continue;
                 const double distance = from == nullptr ? 0.0 :
                     std::pow(tile->getX() - from->getX(), 2) + std::pow(tile->getY() - from->getY(), 2);
@@ -460,34 +478,64 @@ Tile* knownRoomTile(Env& env, AiKnowledge& knowledge, Seat* enemy, RoomType type
         }
         return best;
     }
-    Room* chosen = nullptr;
-    for(Room* room : env.gameMap.getRoomsByTypeAndSeat(type, enemy))
+    // Treasury blocks (owner decision D345): only the last seen, edge-connected treasury tiles with the enemy as their
+    // known owner form a block; a hidden connection between two seen parts is not known, so they are two blocks
+    if(enemy == nullptr)
+        return nullptr;
+    std::vector<Tile*> treasuryTiles;
+    for(int x = 0; x < env.gameMap.getMapSizeX(); ++x)
     {
-        bool known = false;
-        for(Tile* tile : room->getCoveredTiles())
+        for(int y = 0; y < env.gameMap.getMapSizeY(); ++y)
         {
-            if(knowledge.isKnown(tile))
+            Tile* tile = env.gameMap.getTile(x, y);
+            if(knownEnemyRoomTile(env, knowledge, tile, TileVisual::treasuryRoom, enemy))
+                treasuryTiles.push_back(tile);
+        }
+    }
+    std::vector<std::vector<Tile*>> blocks;
+    std::set<Tile*> assigned;
+    for(Tile* seed : treasuryTiles)
+    {
+        if(assigned.count(seed) != 0)
+            continue;
+        std::vector<Tile*> block;
+        std::vector<Tile*> open(1, seed);
+        assigned.insert(seed);
+        while(!open.empty())
+        {
+            Tile* tile = open.back();
+            open.pop_back();
+            block.push_back(tile);
+            for(Tile* neighbour : tile->getAllNeighbors())
             {
-                known = true;
-                break;
+                if((neighbour == nullptr) || (assigned.count(neighbour) != 0))
+                    continue;
+                if((neighbour->getX() != tile->getX()) && (neighbour->getY() != tile->getY()))
+                    continue;
+                if(!knownEnemyRoomTile(env, knowledge, neighbour, TileVisual::treasuryRoom, enemy))
+                    continue;
+                assigned.insert(neighbour);
+                open.push_back(neighbour);
             }
         }
-        if(!known)
-            continue;
+        blocks.push_back(block);
+    }
+
+    const std::vector<Tile*>* chosen = nullptr;
+    for(const std::vector<Tile*>& block : blocks)
+    {
         if((chosen == nullptr) ||
-           (smallest && (room->numCoveredTiles() < chosen->numCoveredTiles())) ||
-           (largest && (room->numCoveredTiles() > chosen->numCoveredTiles())))
-            chosen = room;
+           (smallest && (block.size() < chosen->size())) ||
+           (largest && (block.size() > chosen->size())))
+            chosen = &block;
     }
     if(chosen == nullptr)
         return nullptr;
 
     Tile* best = nullptr;
     double bestDistance = 0.0;
-    for(Tile* tile : chosen->getCoveredTiles())
+    for(Tile* tile : *chosen)
     {
-        if(!knowledge.isKnown(tile))
-            continue;
         double distance = (from == nullptr) ? 0.0 :
             std::pow(tile->getX() - from->getX(), 2) + std::pow(tile->getY() - from->getY(), 2);
         if((best == nullptr) || (distance < bestDistance))
@@ -499,21 +547,38 @@ Tile* knownRoomTile(Env& env, AiKnowledge& knowledge, Seat* enemy, RoomType type
     return best;
 }
 
+//! \brief The enemy heart tile when the AI knows it, else nullptr.
+Tile* knownHeartTile(Env& env, AiKnowledge& knowledge, Seat* enemy)
+{
+    if(enemy == nullptr)
+        return nullptr;
+    std::vector<Room*> temples = env.gameMap.getRoomsByTypeAndSeat(RoomType::dungeonTemple, enemy);
+    if(temples.empty())
+        return nullptr;
+    Tile* heart = static_cast<RoomDungeonTemple*>(temples.front())->getHeartTile();
+    return knowledge.isKnown(heart) ? heart : nullptr;
+}
+
 //! \brief The target tile of the group for the heart: the enemy heart when known, else the nearest known enemy tile.
 Tile* heartTarget(Env& env, AiKnowledge& knowledge, Seat* enemy)
 {
-    if(enemy != nullptr)
-    {
-        std::vector<Room*> temples = env.gameMap.getRoomsByTypeAndSeat(RoomType::dungeonTemple, enemy);
-        if(!temples.empty())
-        {
-            Tile* heart = static_cast<RoomDungeonTemple*>(temples.front())->getHeartTile();
-            if(knowledge.isKnown(heart))
-                return heart;
-        }
-    }
+    Tile* heart = knownHeartTile(env, knowledge, enemy);
+    if(heart != nullptr)
+        return heart;
     return knowledge.nearestKnownEnemyTile(env.state.sighting);
 }
+}
+
+bool seenTrapExhausted(WarState& state, Seat* seat, Trap* trap, Tile* tile)
+{
+    if((seat == nullptr) || (trap == nullptr) || (tile == nullptr))
+        return false;
+    // Only a tile in the seat's current vision shows its state; out of sight the last seen state stays
+    const std::vector<Seat*>& viewers = tile->getSeatsWithVision();
+    if(std::find(viewers.begin(), viewers.end(), seat) != viewers.end())
+        state.enemyTrapSeenExhausted[tile] = trap->isTileExhausted(tile);
+    std::map<Tile*, bool>::const_iterator it = state.enemyTrapSeenExhausted.find(tile);
+    return (it != state.enemyTrapSeenExhausted.end()) && it->second;
 }
 
 //! \brief Plans tunnel digging using the current game time and known enemy positions.
@@ -685,13 +750,17 @@ void planAttack(Env& env, bool bypassRest)
         usedSet = trapSet(env, enemy, st.breakthrough, seat, usedReady);
     double doorSeconds = 8.0;
     double trapPotential = AiMath::trapPotential(usedSet, doorSeconds, 1.0, k);
+    double ownTrapPotential = AiMath::trapPotential(ownSet, doorSeconds, 1.0, k);
     knowledge.scout(env.ai, env.mind, env.settings, st.sighting, env.now, heartTarget(env, knowledge, enemy), trapPotential,
                     usedReady, !ownContact);
 
-    // Estimate (row I04)
+    // Estimate (row I04); without a sighting the estimate assumes the own trap set, also after an own contact (1.3)
     double ownIncome = seat->getManaIncomePerSecond();
     EnemyEstimate estimate = knowledge.estimateEnemy(env.settings, st.sighting, (enemy == nullptr) ? -1 : enemy->getId(), env.now,
-                                                     hpAll, dpsAll, seat->getMana(), trapPotential, ownIncome);
+                                                     hpAll, dpsAll, seat->getMana(), ownTrapPotential, ownIncome);
+    // Both trap calls of adv use the set of the estimate (own set or revealed enemy set; duel.py:609-610)
+    const std::vector<AiMath::TrapKindSet>& estimateSet = estimate.ownTraps ? ownSet : usedSet;
+    const double estimateSetPotential = estimate.ownTraps ? ownTrapPotential : trapPotential;
 
     AiMath::AdvantageInput in;
     in.hpAll = hpAll;
@@ -703,9 +772,9 @@ void planAttack(Env& env, bool bypassRest)
     in.myMana = seat->getMana();
     in.enemySpells = spellOptions(env, false);
     in.enemyMana = estimate.mana;
-    in.trapSet = usedSet;
+    in.trapSet = estimateSet;
     in.trapReady = 1.0;
-    in.trapFactor = (trapPotential > 0.0) ? estimate.trap / trapPotential : 1.0;
+    in.trapFactor = (estimate.trap > 0.0) ? estimate.trap / std::max(1.0, estimateSetPotential) : 1.0;
     in.estimateReady = estimate.ready ? 1.0 : 0.0;
     in.enemyHp = estimate.hp;
     in.enemyDps = estimate.dps;
@@ -804,7 +873,9 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
                                        firstTreasury && (type == RoomType::treasury));
             if(type == RoomType::treasury)
                 firstTreasury = false;
-            if(tile != nullptr)
+            // A block the AI does not know is skipped: with one known treasury block the second treasury entry finds
+            // the same block again
+            if((tile != nullptr) && (std::find(g.targets.begin(), g.targets.end(), tile) == g.targets.end()))
                 g.targets.push_back(tile);
         }
         if(g.targets.empty() && (heart != nullptr))
@@ -870,9 +941,9 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
     st.tactic = tactic;
     st.contactTime = -1.0;
     st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
-    // The chosen and dropped groups are announced to the rows that react to the launch (H03 hostile specials)
-    env.mind.enqueue({AiEventType::Launch, groups.front().dropTile, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
-                      0.0, env.now});
+    // The chosen and dropped groups are announced to the rows that react to the launch (H03 hostile specials) by the
+    // one Launch event that launchDropsDone raises after the last drop; a second Launch here, before the drops, would
+    // start Strength, the last banner and the champion while the groups still wait in the hand queue
 }
 
 void launchDropsDone(Env& env)
@@ -937,10 +1008,11 @@ void assaultStep(Env& env)
         }
         allFinished = false;
 
-        // The heart became known while the main group's banner stands elsewhere
+        // The heart became known while the main group's banner stands elsewhere; a nearer enemy tile known later does
+        // not move the banner (1.7a item 2), only the heart does
         if(!g.raid && (g.targetIndex == 0))
         {
-            Tile* heart = heartTarget(env, knowledge, enemy);
+            Tile* heart = knownHeartTile(env, knowledge, enemy);
             if((heart != nullptr) && (g.bannerTile != heart))
             {
                 if(g.bannerTile != nullptr)
@@ -987,9 +1059,10 @@ void assaultStep(Env& env)
         return;
     }
 
-    // Contact: the first attacker on a tile not claimed for the own seat
+    // Contact: the first Fight event on a tile not claimed for the own seat while attackers stand there (a fight at
+    // home is not the contact of the assault)
     std::vector<Creature*> out = attackers(env);
-    if((st.contactTime < 0.0) && (st.lastFight > env.now - key("FightOverSeconds")) && !out.empty())
+    if((st.contactTime < 0.0) && (st.lastAbroadFight > env.now - key("FightOverSeconds")) && !out.empty())
     {
         st.contactTime = env.now;
         st.contacted = true;
@@ -1010,15 +1083,13 @@ void assaultStep(Env& env)
         return;
     st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
 
-    // Retreat test: a complex mistake keeps the assault going
+    // Retreat test: a complex mistake keeps the assault going. The defenders are the enemy fighters in the seat's
+    // vision (1.8), whichever enemy seat they belong to
     std::vector<Creature*> defenders;
-    for(Creature* creature : env.gameMap.getCreaturesBySeat(enemy))
+    for(Creature* creature : knowledge.visibleEnemyFighters())
     {
-        if(isFreeFighter(creature) && creature->getIsOnMap() && (creature->getPositionTile() != nullptr))
-        {
-            if(seat->hasVisionOnTile(creature->getPositionTile()))
-                defenders.push_back(creature);
-        }
+        if(isFreeFighter(creature))
+            defenders.push_back(creature);
     }
     // With no attacker left the assault ends without a draw
     if(out.empty())
@@ -1260,11 +1331,8 @@ void restAfterFight(Env& env)
     // temple; the rule mistake leaves them where they are (one draw per FightOver)
     WarState& st = env.state;
     st.defenceRallying = false;
-    if(st.defenceBanner != nullptr)
-    {
-        ACTS::removeBanner(env.ai, st.defenceBanner);
-        st.defenceBanner = nullptr;
-    }
+    // The defence banner is not renewed and not removed: it ends with its lifetime (1.9)
+    st.defenceBanner = nullptr;
     if(env.mind.slip("J08"))
         return;
 
@@ -1385,6 +1453,9 @@ void onEvent(Env& env, const AiEvent& event)
     {
         case AiEventType::Fight:
             st.lastFight = event.time;
+            // A fight on a tile not claimed for the own seat is the contact of an own assault (1.7 item 4)
+            if((event.tile != nullptr) && !event.tile->isClaimedForSeat(env.player.getSeat()))
+                st.lastAbroadFight = event.time;
             st.fightOverRaised = false;
             defend(env, event);
             break;
@@ -1480,7 +1551,8 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
         return ((line.tokens[0] == "I05") && (line.tokens[1] == "exploreMarked")) ||
-               ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile") || (line.tokens[1] == "contacted"))) ||
+               ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile") || (line.tokens[1] == "contacted") ||
+                                              (line.tokens[1] == "trapSeen"))) ||
                ((line.tokens[0] == "K07") && (line.tokens[1] == "retreatCheck")) ||
                ((line.tokens[0] == "K10") && ((line.tokens[1] == "returning") || (line.tokens[1] == "returnPending"))) ||
                ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
@@ -1530,6 +1602,13 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     c.push_back("contacted");
     c.push_back(st.contacted ? "1" : "0");
     addLine(lines, "draw", c);
+    // The last seen state of each revealed enemy trap tile: "x:y:exhausted"
+    for(const std::pair<Tile* const, bool>& seen : st.enemyTrapSeenExhausted)
+    {
+        if(seen.first == nullptr)
+            continue;
+        addLine(lines, "draw", {"I04", "trapSeen", tileX(seen.first) + ":" + tileY(seen.first) + ":" + (seen.second ? "1" : "0")});
+    }
 
     for(size_t i = 0; i < st.groups.size(); ++i)
     {
@@ -1728,6 +1807,13 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "contacted"))
         {
             st.contacted = (k[2] == "1");
+        }
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "trapSeen"))
+        {
+            std::vector<std::string> parts = splitToken(k[2], 3);
+            Tile* tile = (parts.size() == 3) ? tileAt(env.gameMap, parts[0], parts[1]) : nullptr;
+            if(tile != nullptr)
+                st.enemyTrapSeenExhausted[tile] = (parts[2] == "1");
         }
         else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "recordTile"))
         {

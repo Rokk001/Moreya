@@ -330,7 +330,15 @@ void perform(KeeperAI& ai, const std::string& target)
         Tile* tile = fighter == nullptr ? nullptr : fighter->getPositionTile();
         if(fighter == nullptr || !fighter->isAlive() || !fighter->getIsOnMap() || fighter->getSeat() != seat || tile == nullptr) return;
         const unsigned int index = player.getHandIndex(GameEntityType::itemBagEntity, decode(name));
-        if(index < player.numObjectsInHand() && player.isDropHandPossible(tile, index)) player.dropHand(tile, index);
+        if(index >= player.numObjectsInHand()) return;
+        // Owner answers 92 and 94: while another own creature shares the tile or an arena fight runs there, the gift stays
+        // in the hand and the hand-over is tried again at a later poll (ITEMS::retryGift)
+        if(!ITEMS::canHandOver(ai, fighter))
+        {
+            ITEMS::holdGift(ai, decode(recipient), decode(name));
+            return;
+        }
+        if(player.isDropHandPossible(tile, index)) player.dropHand(tile, index);
         return;
     }
     if(action == "drop" || action == "banner")
@@ -612,4 +620,9 @@ void ACTS::merchantBuy(KeeperAI& ai, ODPacket& packet, Creature* creature, bool 
     std::ostringstream args;
     args << "merchant " << index << ' ' << encode(creature->getName()) << ' ' << mistaken;
     schedule(ai, "setting", args.str());
+}
+//! \brief Schedules the hand-over of a held gift through the same drop path as right after the purchase.
+void ACTS::giveGift(KeeperAI& ai, const std::string& recipient, const std::string& bag)
+{
+    schedule(ai, "drop", "dropItem " + encode(recipient) + ' ' + encode(bag));
 }

@@ -22,6 +22,7 @@
 #include "ai/AiMind.h"
 #include "ai/AiSettings.h"
 
+#include <map>
 #include <string>
 #include <set>
 #include <vector>
@@ -30,7 +31,9 @@ class Creature;
 class GameMap;
 class KeeperAI;
 class Player;
+class Seat;
 class Tile;
+class Trap;
 
 //! \brief The war part of the keeper AI: digging the tunnel, planning and running assaults, defending.
 namespace WAR
@@ -84,6 +87,12 @@ struct WarState
     bool defenceRallying = false;
     Tile* defenceBanner = nullptr;
     double lastFight = -1.0e18;
+    //! \brief Game seconds of the last Fight event on a tile not claimed for the own seat (the contact of an own
+    //! assault, 1.7 item 4).
+    double lastAbroadFight = -1.0e18;
+    //! \brief The last state of each revealed enemy trap tile that the seat saw: true when it was exhausted
+    //! (owner decision D357: changes out of sight are not known).
+    std::map<Tile*, bool> enemyTrapSeenExhausted;
     bool fightOverRaised = true;
     bool enemyOut = false;
     bool enemyTrapsEmpty = false;
@@ -159,6 +168,16 @@ void restAfterFight(Env& env);
 
 //! \brief Carries one hurt creature to its bed, or to an own infirmary when it has no bed (row J08 as the mood remedy of D07).
 void restWounded(Env& env, Creature* creature);
+
+//! \brief Whether a revealed enemy trap tile is exhausted as far as the seat knows (owner decision D357): the state is
+//! taken over only while the seat has vision on the tile, otherwise the last state it saw is kept (a tile never seen in
+//! vision since it was revealed counts as armed).
+//! \param state The war state that keeps the last seen states.
+//! \param seat The AI's seat.
+//! \param trap The enemy trap that covers the tile.
+//! \param tile The revealed trap tile.
+//! \return True when the last seen state of the tile is exhausted.
+bool seenTrapExhausted(WarState& state, Seat* seat, Trap* trap, Tile* tile);
 
 //! \brief Appends the war and sighting lines of the saved AI state (the lines of the war and sighting tags).
 void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines);

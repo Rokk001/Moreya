@@ -165,11 +165,9 @@ SkillType chooseResearch(KeeperAI& ai)
         return SkillType::nullSkillType;
 
     // The shared Mind caches a row per callback; research requires a fresh C01 draw for each pick.
-    const ConfigManager::AiRowClass* row = cfg.getAiRowClass("C01");
-    const double mistake = row == nullptr ? 0.0 : AiMath::mistakeProbability(
-        cfg.getAiConfigDouble("MistakeBaseRule"), row->mMultiplier, ai.getSettings().mistakeMultiplier,
-        cfg.getAiConfigDouble("MistakeMin"), cfg.getAiConfigDouble("MistakeMax"));
-    if(Random::Double(0.0, 1.0) < mistake)
+    // refire starts that fresh draw, and slip reads the class and multiplier of C01 from [RowClasses].
+    ai.getMind().refire("C01");
+    if(ai.getMind().slip("C01"))
         return candidates[Random::Uint(0, static_cast<unsigned int>(candidates.size()) - 1)];
 
     const std::function<bool(SkillType, SkillType)> order = [&seat](SkillType left, SkillType right)

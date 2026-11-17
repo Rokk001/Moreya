@@ -80,6 +80,12 @@ const float NOT_ENOUGH_GOLD_TIME_COUNT = 10.0f;
 //! \brief The number of seconds the local player will not be told again that a creature has died
 const float CREATURE_KILLED_TIME_COUNT = 15.0f;
 
+//! \brief Returns MIN_DIST_EVENT_SQUARED for the keeper AI's fight-place test (owner answer 80).
+int Player::getMinDistEventSquared()
+{
+    return MIN_DIST_EVENT_SQUARED;
+}
+
 Player::Player(GameMap* gameMap, int32_t id) :
     mId(id),
     mGameMap(gameMap),
