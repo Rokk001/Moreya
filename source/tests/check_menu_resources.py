@@ -460,6 +460,8 @@ def check_menu_entries(root):
                "MultiplayerServerHostButton": ("Host via IP", "BUTTON_MULTIPLAYER_HOST", "MENU_MULTIPLAYER_SERVER"),
                "MultiplayerServerJoinButton": ("Join via IP", "BUTTON_MULTIPLAYER_JOIN", "MENU_MULTIPLAYER_CLIENT")}
     multiplayer = buttons("WindowMultiplayerSubMenu.layout")
+    # The way back is a menu template button too (INGAME-QS-10 K15); it is no action of the multiplayer column.
+    assert multiplayer.pop("BackButton", None) == "Back", "multiplayer menu needs its Back button"
     assert multiplayer == {name: action[0] for name, action in actions.items()}, "multiplayer menu must show its four actions once: " + str(multiplayer)
     for name, (_, constant, mode) in actions.items():
         assert f'{constant} = "{name}"' in source and f"multiplayerWin->getChild({constant}),\n                           AbstractModeManager::ModeType::{mode}" in source, name + " must keep its network path"
@@ -471,6 +473,11 @@ def check_menu_entries(root):
                 continue
             area = next(prop.get("value") for prop in window.findall("Property") if prop.get("name") == "Area")
             numbers = [float(value) for value in re.findall(r"-?[0-9.]+", area)]
+            if window.get("name") == "BackButton":
+                # anchored to the bottom right corner of the screen, outside the centred column
+                assert numbers[2] == 1 and numbers[6] == 1, layout + " Back button left the bottom corner"
+                continue
+            assert numbers[2] == 0.5 and numbers[6] == 0.5, layout + " entry " + window.get("name") + " is not in the centred column"
             rows.append((numbers[3], numbers[7]))
         rows.sort()
         assert all(first[1] <= second[0] for first, second in zip(rows, rows[1:])), layout + " has overlapping rows"

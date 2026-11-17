@@ -12,7 +12,15 @@ assert len(layout.findall('.//Window[@name="KindFilter"]')) == 1
 assert 'name="Sort" value="False"' in (ROOT / "gui/MenuLoad.layout").read_text()
 assert 'visibleLoadEntries(collectLoadEntries()' in load
 assert 'openingLoadKind(collectLoadEntries())' in load
-assert 'filter->setItemSelectState(newestKind, true)' in load
+# The filter is the row of four template buttons of the chosen load screen sheet, one radio group (INGAME-QS-10 K14).
+filters = layout.findall('.//Window[@name="KindFilter"]/Window')
+assert [w.get('type') for w in filters] == ['OD/MenuFilterButton'] * 4
+assert [w.get('name') for w in filters] == ['FilterCampaign', 'FilterSkirmish', 'FilterSandbox', 'FilterReplays']
+for w in filters:
+    props = {p.get('name'): p.get('value') for p in w.findall('Property')}
+    assert props['Text'] == w.get('name')[len('Filter'):] and props['GroupID'] == '1', w.get('name')
+assert 'getFilterButton(sheet, newestKind)->setSelected(true)' in load
+assert '"LevelWindowFrame/KindFilter/Filter") + LOAD_FILTER_NAMES[kind]' in load
 assert 'if(levelSelectList->getSelectedCount() == 0)' in load
 assert 'loadConfirmAction(' in load and 'ODClient::getSingleton().replay(level)' in load
 delete_body = load[load.index('bool MenuModeLoad::deleteSelectedButtonPressed'):load.index('bool MenuModeLoad::updateDescription')]

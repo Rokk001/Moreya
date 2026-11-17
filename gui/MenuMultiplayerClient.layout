@@ -40,13 +40,10 @@
                 <Property name="Text" value="Join Game" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
-            <Window type="OD/MenuSymbolButton" name="BackButton" >
-                <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
-                <Property name="Text" value="" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="TooltipText" value="Back" />
+            <Window type="OD/MenuTextButton" name="BackButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{1,-366},{1,-70},{1,-196},{1,-16}}" />
+                <Property name="Text" value="Back" />
             </Window>
             <Window type="OD/StaticText" name="IpText" >
                 <Property name="Area" value="{{0.55,0},{0.5,28},{0.92,0},{0.5,58}}" />
@@ -69,8 +66,8 @@
                 <Property name="Area" value="{{0.11,0},{0.5,64},{0.47,0},{0.5,104}}" />
             </Window>
             <Window type="OD/MenuTextButton" name="ClientButton" >
-                <Property name="Font" value="MedievalSharp-12" />
-                <Property name="Area" value="{{0.11,0},{1,-88},{0.43,0},{1,-48}}" />
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{0.11,0},{1,-70},{0.11,240},{1,-16}}" />
                 <Property name="Text" value="Join Game" />
             </Window>
         </Window>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Imageset name="ODMenuTemplate" imagefile="ODMenuTemplate.png" nativeHorzRes="1920" nativeVertRes="1200" autoScaled="false" version="2">
+    <Image name="NormalLeftCap" xPos="0" yPos="0" width="62" height="120" />
+    <Image name="NormalLeftFill" xPos="62" yPos="0" width="111" height="120" />
+    <Image name="NormalCentre" xPos="173" yPos="0" width="56" height="120" />
+    <Image name="NormalRightFill" xPos="229" yPos="0" width="109" height="120" />
+    <Image name="NormalRightCap" xPos="338" yPos="0" width="62" height="120" />
+    <Image name="HoverLeftCap" xPos="0" yPos="122" width="62" height="120" />
+    <Image name="HoverLeftFill" xPos="62" yPos="122" width="111" height="120" />
+    <Image name="HoverCentre" xPos="173" yPos="122" width="56" height="120" />
+    <Image name="HoverRightFill" xPos="229" yPos="122" width="109" height="120" />
+    <Image name="HoverRightCap" xPos="338" yPos="122" width="62" height="120" />
+    <Image name="PushedLeftCap" xPos="0" yPos="244" width="62" height="120" />
+    <Image name="PushedLeftFill" xPos="62" yPos="244" width="111" height="120" />
+    <Image name="PushedCentre" xPos="173" yPos="244" width="56" height="120" />
+    <Image name="PushedRightFill" xPos="229" yPos="244" width="109" height="120" />
+    <Image name="PushedRightCap" xPos="338" yPos="244" width="62" height="120" />
+    <Image name="DisabledLeftCap" xPos="0" yPos="366" width="62" height="120" />
+    <Image name="DisabledLeftFill" xPos="62" yPos="366" width="111" height="120" />
+    <Image name="DisabledCentre" xPos="173" yPos="366" width="56" height="120" />
+    <Image name="DisabledRightFill" xPos="229" yPos="366" width="109" height="120" />
+    <Image name="DisabledRightCap" xPos="338" yPos="366" width="62" height="120" />
+    <Image name="LoadRowSelected" xPos="0" yPos="490" width="520" height="40" />
+    <Image name="CompactNormalLeftCap" xPos="0" yPos="780" width="26" height="76" />
+    <Image name="CompactNormalFill" xPos="26" yPos="780" width="127" height="76" />
+    <Image name="CompactNormalRightCap" xPos="153" yPos="780" width="26" height="76" />
+    <Image name="CompactHoverLeftCap" xPos="0" yPos="860" width="26" height="76" />
+    <Image name="CompactHoverFill" xPos="26" yPos="860" width="145" height="76" />
+    <Image name="CompactHoverRightCap" xPos="171" yPos="860" width="26" height="76" />
+    <Image name="CompactPushedLeftCap" xPos="0" yPos="940" width="26" height="76" />
+    <Image name="CompactPushedFill" xPos="26" yPos="940" width="134" height="76" />
+    <Image name="CompactPushedRightCap" xPos="160" yPos="940" width="26" height="76" />
+    <Image name="CompactDisabledLeftCap" xPos="0" yPos="1020" width="26" height="76" />
+    <Image name="CompactDisabledFill" xPos="26" yPos="1020" width="127" height="76" />
+    <Image name="CompactDisabledRightCap" xPos="153" yPos="1020" width="26" height="76" />
+    <Image name="LoadPanel" xPos="524" yPos="0" width="662" height="775" />
+</Imageset>

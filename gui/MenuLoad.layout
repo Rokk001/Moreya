@@ -5,11 +5,11 @@
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Window type="OD/StaticText" name="LoadingText" >
-            <Property name="Area" value="{{0.11,0},{1,-125},{0.92,0},{1,-98}}" />
+            <Property name="Area" value="{{0.05,0},{1,-140},{1,-470},{1,-40}}" />
             <Property name="Text" value="Loading..." />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
-            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
@@ -27,6 +27,9 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
+        <!-- The load screen of the chosen menu sheet: one framed panel on the right with the four filter entries, the list
+             and Delete, Back and Confirm. The panel picture paints the frame, the list inset and the empty plank rows; the
+             controls sit at the places the sheet shows them (offsets measured from the panel, 424x496 design pixels). -->
         <Window type="OD/MenuSelectionWindow" name="LevelWindowFrame" >
             <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
             <Property name="Text" value="Please choose a saved game..." />
@@ -34,51 +37,70 @@
             <Property name="SizingEnabled" value="False" />
             <Property name="DragMovingEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
-            <Window type="OD/MenuTitle" name="PageTitle">
-                <Property name="Font" value="MedievalSharp-20" />
-                <Property name="Area" value="{{0.1,0},{0.5,-60},{0.9,0},{0.5,0}}" />
-                <Property name="Text" value="Load Game" />
+            <Window type="OD/StaticImage" name="LoadPanel" >
+                <Property name="Area" value="{{1,-448},{0.5,-203},{1,-24},{0.5,293}}" />
+                <Property name="Image" value="ODMenuTemplate/LoadPanel" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
-            <Window type="OD/Combobox" name="KindFilter" >
-                <Property name="Area" value="{{0.11,0},{0.5,-8},{0.40,0},{0.5,150}}" />
-                <Property name="ReadOnly" value="True" />
+            <Window type="DefaultWindow" name="KindFilter" >
+                <Property name="Area" value="{{1,-427.5},{0.5,-157.6},{1,-40},{0.5,-114}}" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Window type="OD/MenuFilterButton" name="FilterCampaign" >
+                    <Property name="Area" value="{{0,0},{0,0},{0.246,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="Text" value="Campaign" />
+                    <Property name="GroupID" value="1" />
+                </Window>
+                <Window type="OD/MenuFilterButton" name="FilterSkirmish" >
+                    <Property name="Area" value="{{0.2513,0},{0,0},{0.4973,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="Text" value="Skirmish" />
+                    <Property name="GroupID" value="1" />
+                </Window>
+                <Window type="OD/MenuFilterButton" name="FilterSandbox" >
+                    <Property name="Area" value="{{0.5027,0},{0,0},{0.7487,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="Text" value="Sandbox" />
+                    <Property name="GroupID" value="1" />
+                </Window>
+                <Window type="OD/MenuFilterButton" name="FilterReplays" >
+                    <Property name="Area" value="{{0.754,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="Text" value="Replays" />
+                    <Property name="GroupID" value="1" />
+                </Window>
             </Window>
-            <Window type="OD/MenuListbox" name="SaveGameSelect" >
-                <Property name="Area" value="{{0.11,0},{0.5,28},{0.70,0},{1,-132}}" />
+            <Window type="OD/LoadListbox" name="SaveGameSelect" >
+                <Property name="Area" value="{{1,-416},{0.5,-92.9},{1,-50.9},{0.5,172}}" />
                 <Property name="ForceVertScrollbar" value="False" />
                 <Property name="Sort" value="False" />
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
                 <Property name="LookNFeel" value="OD/MenuDescription" />
                 <Property name="VertScrollbar" value="True" />
-                <Property name="Area" value="{{0.73,0},{0.5,28},{0.92,0},{1,-132}}" />
+                <Property name="Area" value="{{1,-708},{0.5,-92.9},{1,-468},{0.5,172}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
-            <Window type="OD/MenuSymbolButton" name="BackButton" >
-                <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
-                <Property name="Text" value="" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="TooltipText" value="Back" />
-            </Window>
-            <Window type="OD/MenuTextButton" name="DeleteButton" >
-                <Property name="Area" value="{{0.11,0},{1,-80},{0.65,0},{1,-40}}" />
-                <Property name="Text" value="Delete selected" />
+            <Window type="OD/MenuCompactButton" name="DeleteButton" >
+                <Property name="Area" value="{{1,-424.3},{0.5,198.3},{1,-305.2},{0.5,246.9}}" />
+                <Property name="Text" value="Delete" />
                 <Property name="Font" value="MedievalSharp-12" />
             </Window>
-            <Window type="OD/MenuSymbolButton" name="LaunchButton" >
-                <Property name="Area" value="{{1,-92.8},{1,-92.8},{1,-16},{1,-16}}" />
-                <Property name="Text" value="" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="PushedImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="TooltipText" value="Confirm selection" />
+            <Window type="OD/MenuCompactButton" name="BackButton" >
+                <Property name="Area" value="{{1,-294.9},{0.5,198.3},{1,-180.3},{0.5,246.9}}" />
+                <Property name="Text" value="Back" />
+                <Property name="Font" value="MedievalSharp-12" />
+            </Window>
+            <Window type="OD/MenuCompactButton" name="LaunchButton" >
+                <Property name="Area" value="{{1,-170},{0.5,198.3},{1,-43.9},{0.5,246.9}}" />
+                <Property name="Text" value="Confirm" />
+                <Property name="Font" value="MedievalSharp-12" />
             </Window>
         </Window>
     </Window>
