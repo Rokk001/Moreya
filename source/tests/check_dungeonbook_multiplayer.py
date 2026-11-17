@@ -139,9 +139,13 @@ window = read('source/render/SocialWindow.cpp')
 assert 'askDungeonbookRoster, true' in window and 'askDungeonbookRoster, false' in window
 assert 'getDungeonbookRoster()' in window and '"Keeper: " + entry.keeper' in window
 # Roster rendering must not require a visible map entity: every page works with the roster entry alone, a creature
-# known on this side only adds its relationships, its mood level and its items
+# known on this side only adds its relationships, its mood level, its items and its skill tree window
 assert 'getCreature(selected->name)' not in window
-assert window.count('mGameMap.getCreature(') == 4, 'every use of a map entity in the book is one of the four below'
+assert window.count('mGameMap.getCreature(') == 5, 'every use of a map entity in the book is one of the five below'
+# The skill tree window reads the ranks of a known creature and hides itself when the creature is not known
+assert 'Creature* creature = mSkillTreeCreature.empty() ? nullptr : mGameMap.getCreature(mSkillTreeCreature);' in window
+assert 'const CreatureSkillTree::TypeInfo type = (creature == nullptr) ? CreatureSkillTree::TypeInfo() :' in window
+assert 'mSkillTreeCreature.clear();\n        mSkillTreeWindow->hide();\n        return;' in window
 assert 'const CreatureMoodLevel level = creature == nullptr ? CreatureMoodLevel::Unknown' in window
 assert 'holder->setVisible(creature != nullptr);' in window and 'fallback->setVisible(creature == nullptr);' in window
 assert 'Creature::fillItemSlotWindows(creature, slots, true)' in window and 'if(creature == nullptr)' in window
