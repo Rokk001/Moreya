@@ -6,7 +6,7 @@ Checks against the sources of this branch:
 - Esc is the only way out of the creature; the right mouse button no longer leaves it
 - while possessing F5 (quick save) and F10 (options menu with saving) do nothing, and the client and the server refuse
   a save of a possessing player
-- the own view: the root windows but the chat, the keeper hand, the pointer and the indicators over the creatures are
+- the own view: all root windows (the chat included), the keeper hand, the pointer and the indicators over the creatures are
   hidden, the own model of the creature too; a crosshair sits in the middle of the window; the mouse is kept in the
   window; everything comes back when the possession ends
 """
@@ -106,10 +106,10 @@ check(normal.index("handlePossessionKey(arg.key, true)") < normal.index("case OI
       and normal.index("handlePossessionKey(arg.key, true)") < normal.index("case OIS::KC_F10:")
       and normal.index("handlePossessionKey(arg.key, true)") < normal.index("if(arg.key == OIS::KC_M)"),
       "the possession keys must come before F5, F10 and the map")
-passed = handle[handle.index("case OIS::KC_RETURN:"):]
+passed = handle[handle.index("case OIS::KC_F11:"):]
 passed = passed[:passed.index("return false;")]
-check(set(re.findall(r"OIS::KC_(\w+)", passed)) == {"RETURN", "NUMPADENTER", "F11", "F12", "GRAVE"},
-      "only chat, console and debug keys may pass while possessing")
+check(set(re.findall(r"OIS::KC_(\w+)", passed)) == {"F11", "F12", "GRAVE"},
+      "only console and debug keys may pass while possessing (the chat is hidden)")
 check(handle.rstrip().endswith("return true;\n}"), "every other key must do nothing while possessing")
 save = function(game, "bool GameMode::saveGame(const CEGUI::EventArgs& /*e*/)")
 check("if(isLocalPlayerPossessing())" in save, "the client must not save while possessing")
@@ -139,8 +139,8 @@ for needle, message in (("getMouseCursor().setVisible(false);", "the pointer"),
 refresh = function(game, "void GameMode::refreshPossessionView()")
 check("mRootWindow->getChildAtIdx(index)" in refresh and "child->hide();" in refresh,
       "the root windows (game bar, minimap, keeper windows) must be hidden")
-check("child->getName() == POSSESSION_KEPT_WINDOW" in refresh and 'POSSESSION_KEPT_WINDOW = "GameChatWindow"' in game,
-      "only the chat stays visible")
+check("POSSESSION_KEPT_WINDOW" not in game and "GameChatWindow" not in refresh,
+      "no keeper window stays visible while possessing, the chat included")
 check("rrSetCreatureModelVisible(*creature, false);" in refresh, "the own model must be hidden")
 check("moveText(POSSESSION_CROSSHAIR_TEXT" in refresh, "the crosshair must stay in the middle of the window")
 leave = function(game, "void GameMode::leavePossessionView()")

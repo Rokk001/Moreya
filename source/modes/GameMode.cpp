@@ -279,8 +279,6 @@ const std::string POSSESSION_CROSSHAIR_TEXT = "PossessionCrosshair";
 const std::string POSSESSION_CROSSHAIR_SYMBOL = "+";
 const float POSSESSION_CROSSHAIR_HEIGHT_SHARE = 0.04f;
 const float POSSESSION_CROSSHAIR_MIN_HEIGHT = 16.0f;
-//! \brief The root windows that stay visible while possessing: the chat (messages of other players) only
-const std::string POSSESSION_KEPT_WINDOW = "GameChatWindow";
 //! \brief Squared length below which the possession movement direction counts as "not moving"
 const float POSSESSION_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
 //! \brief Dot product of the old and the new movement direction below which the direction counts as changed
@@ -5366,7 +5364,8 @@ bool GameMode::isLocalPlayerPossessing()
 }
 
 //! \brief Keys while possessing: WASD and the arrows walk, Esc is the only way out, 1-9 and 0 (with Shift the next
-//! ten) use the skills, chat, console and debug information work as usual and every other key does nothing.
+//! ten) use the skills, the console and debug information work as usual and every other key does nothing (the chat is
+//! hidden with the rest of the keeper's screen, so Enter does not open it).
 bool GameMode::handlePossessionKey(OIS::KeyCode key, bool pressed)
 {
     switch (key)
@@ -5398,9 +5397,7 @@ bool GameMode::handlePossessionKey(OIS::KeyCode key, bool pressed)
             sendPossessionExit();
         return true;
 
-    // Chatting, the console and the debug information work as usual
-    case OIS::KC_RETURN:
-    case OIS::KC_NUMPADENTER:
+    // The console and the debug information work as usual
     case OIS::KC_F11:
     case OIS::KC_F12:
     case OIS::KC_GRAVE:
@@ -5595,7 +5592,8 @@ void GameMode::refreshPossessionView()
     for (size_t index = 0; index < mRootWindow->getChildCount(); ++index)
     {
         CEGUI::Window* child = mRootWindow->getChildAtIdx(index);
-        if (!child->isVisible() || (child->getName() == POSSESSION_KEPT_WINDOW))
+        // Nothing of the keeper's screen stays, the chat included: the player is only the creature
+        if (!child->isVisible())
             continue;
 
         // The defeat sequence has its own windows, they are never hidden
