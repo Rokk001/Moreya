@@ -96,7 +96,7 @@ material SpaChairWood : RTSS/PerPixel_SinglePass
     {
         pass
         {
-            diffuse 0.9 0.86 0.8 1
+            diffuse 0.62 0.52 0.42 1
             specular 0 0 0 0 1
             texture_unit
             {
