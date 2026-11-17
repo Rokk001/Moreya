@@ -634,14 +634,18 @@ void SocialWindow::hide()
         ODClient::getSingleton().queueClientNotification(ClientNotificationType::askDungeonbookRoster, false);
         social::PostLog::getSingleton().clearDungeonbookRoster();
     }
-    mSkillTreeWindow->hide();
     mWindow->hide();
 }
 
 void SocialWindow::update(float elapsed)
 {
     if(!mWindow->isVisible())
+    {
+        // The skill tree window belongs to the book and closes with it
+        if(mSkillTreeWindow->isVisible())
+            mSkillTreeWindow->hide();
         return;
+    }
 
     mSinceRefreshCheck += elapsed;
     mSinceFeedRebuild += elapsed;
