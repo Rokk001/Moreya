@@ -739,7 +739,6 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mWishNextTurn            (0),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
-    mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
     mDirtKoThisFight         (false),
     mFoughtSinceFightEnd     (false),
@@ -903,7 +902,6 @@ Creature::Creature(GameMap* gameMap) :
     mWishNextTurn            (0),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
-    mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
     mDirtKoThisFight         (false),
     mFoughtSinceFightEnd     (false),
@@ -1031,7 +1029,6 @@ void Creature::destroyMeshLocal(NodeType nt)
     if(getIsOnServerMap())
         return;
 
-    destroyStatsWindow();
     RenderManager::getSingleton().rrDestroyCreature(this);
 }
 
@@ -6399,136 +6396,6 @@ uint32_t Creature::numCoveredTiles() const
         return 0;
 
     return 1;
-}
-
-bool Creature::CloseStatsWindow(const CEGUI::EventArgs& /*e*/)
-{
-    destroyStatsWindow();
-    return true;
-}
-
-void Creature::createStatsWindow()
-{
-    if (mStatsWindow != nullptr)
-        return;
-
-    ClientNotification *clientNotification = new ClientNotification(
-        ClientNotificationType::askCreatureInfos);
-    std::string name = getName();
-    clientNotification->mPacket << name << true;
-    ODClient::getSingleton().queueClientNotification(clientNotification);
-
-    CEGUI::Window* rootWindow = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();
-
-    Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
-    mStatsWindow = gui.createCreatureProfileWindow(std::string("CreatureStatsWindows_") + getName());
-    gui.createCreatureProfilePage(mStatsWindow->getChild("ProfilePage"));
-
-    // We want to close the window when the cross is clicked
-    mStatsWindow->subscribeEvent(CEGUI::FrameWindow::EventCloseClicked,
-        CEGUI::Event::Subscriber(&Creature::CloseStatsWindow, this));
-    mStatsWindow->getChild("ProfileTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber(&Creature::ProfileTabClicked, this));
-    mStatsWindow->getChild("StatsTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber(&Creature::StatsTabClicked, this));
-    mStatsWindow->getChild("BookTab")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber(&Creature::BookTabClicked, this));
-    const char* const linkNames[] = {"FriendLink0", "FriendLink1", "FoeLink"};
-    for(const char* linkName : linkNames)
-    {
-        mStatsWindow->getChild(std::string("ProfilePage/Content/") + linkName)->subscribeEvent(
-            CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&Creature::ProfileLinkClicked, this));
-    }
-
-    rootWindow->addChild(mStatsWindow);
-    mStatsWindow->show();
-
-    showStatsPage(false);
-    updateStatsWindow("Loading...");
-}
-
-void Creature::destroyStatsWindow()
-{
-    if (mStatsWindow != nullptr)
-    {
-        ClientNotification *clientNotification = new ClientNotification(
-            ClientNotificationType::askCreatureInfos);
-        std::string name = getName();
-        clientNotification->mPacket << name << false;
-        ODClient::getSingleton().queueClientNotification(clientNotification);
-
-        mStatsWindow->destroy();
-        mStatsWindow = nullptr;
-    }
-}
-
-void Creature::updateStatsWindow(const std::string& txt)
-{
-    if (mStatsWindow == nullptr)
-        return;
-
-    CEGUI::Window* textWindow = mStatsWindow->getChild("StatsText");
-    textWindow->setText(txt);
-    // The server refreshes the statistics while the card is open, so the profile page follows
-    refreshProfilePage();
-}
-
-bool Creature::ProfileTabClicked(const CEGUI::EventArgs& /*e*/)
-{
-    showStatsPage(false);
-    return true;
-}
-
-bool Creature::StatsTabClicked(const CEGUI::EventArgs& /*e*/)
-{
-    showStatsPage(true);
-    return true;
-}
-
-bool Creature::BookTabClicked(const CEGUI::EventArgs& /*e*/)
-{
-    GameMode* gameMode = dynamic_cast<GameMode*>(ODFrameListener::getSingleton().getModeManager()->getCurrentMode());
-    if(gameMode != nullptr)
-        gameMode->showSocialWindow(getName());
-    return true;
-}
-
-bool Creature::ProfileLinkClicked(const CEGUI::EventArgs& e)
-{
-    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
-    if(!args.window->isUserStringDefined("Creature"))
-        return true;
-
-    GameMode* gameMode = dynamic_cast<GameMode*>(ODFrameListener::getSingleton().getModeManager()->getCurrentMode());
-    if(gameMode != nullptr)
-        gameMode->showSocialWindow(std::string(args.window->getUserString("Creature").c_str()));
-    return true;
-}
-
-void Creature::showStatsPage(bool stats)
-{
-    if (mStatsWindow == nullptr)
-        return;
-
-    mStatsWindow->getChild("ProfilePage")->setVisible(!stats);
-    mStatsWindow->getChild("StatsText")->setVisible(stats);
-    // The active tab stays enabled and is shown in gold between brackets
-    SocialWindow::setTabState(mStatsWindow->getChild("ProfileTab"), "Profile", !stats);
-    SocialWindow::setTabState(mStatsWindow->getChild("StatsTab"), "Stats", stats);
-}
-
-void Creature::refreshProfilePage()
-{
-    if (mStatsWindow == nullptr)
-        return;
-
-    const CreatureDefinition* definition = getDefinition();
-    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-    const social::CreatureProfile& profile = cache.getProfile(getName(), definition->getClassName(), definition->isWorker());
-    std::string classDisplayName = social::SocialGenerator::displayClassName(cache.getData(), definition->getClassName());
-    mStatsWindow->setText(profile.getFullName() + " (" + classDisplayName + ")");
-
-    fillProfilePage(mStatsWindow->getChild("ProfilePage/Content"));
 }
 
 std::string Creature::getGender() const

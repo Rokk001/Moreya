@@ -241,10 +241,8 @@ class GameEntity
     //! \brief Get the type of this object
     virtual GameEntityType getObjectType() const = 0;
 
-    //! \brief Called when the stat windows is displayed
-    virtual bool canDisplayStatsWindow(Seat* seat)
-    { return false; }
-
+    //! \brief Opens the debug information window of the entity (only the tile has one). A creature's
+    //! information is shown in the Dungeonbook (GameMode::openDungeonbookOnCreature).
     virtual void createStatsWindow()
     {}
 

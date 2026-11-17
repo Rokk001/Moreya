@@ -163,15 +163,21 @@ for section_name in ('withtitle_frame', 'withtitle_frame_disabled'):
     parts = {image.get('component') for image in section.findall('Image') + section.findall('ImageProperty')}
     assert {'LeftEdge', 'RightEdge', 'BottomEdge'} <= parts, section_name + ' lost its side or bottom edge'
     assert not parts & {'TopEdge', 'TopLeftCorner', 'TopRightCorner'}, section_name + ' draws a second top frame'
-profile = ET.parse(repo / 'gui/WindowCreatureProfile.layout').getroot().find('Window')
-tab_top = min(udims(profile.find("Window[@name='%s']/Property[@name='Area']" % name).get('value'))[1][0]
-              for name in ('ProfileTab', 'StatsTab', 'BookTab'))
-for name in ('ProfilePage', 'StatsText'):
-    content = profile.find("Window[@name='%s']" % name)
-    assert content.find("Property[@name='NonClient']").get('value') == 'False', name
+# The old creature window is gone (a creature's information opens in the Dungeonbook); the Dungeonbook is the framed
+# window whose contents are checked against the shared client rectangle: its start page begins at the looknfeel client
+# origin and its creature pages end above the navigation bar at the bottom.
+assert not (repo / 'gui/WindowCreatureProfile.layout').exists(), 'the old creature window layout is removed'
+book_frame = ET.parse(repo / 'gui/WindowSocial.layout').getroot().find('Window')
+nav_top = udims(book_frame.find("Window[@name='NavBar']/Property[@name='Area']").get('value'))[1][0]
+for name in ('HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'):
+    content = book_frame.find("Window[@name='%s']" % name)
+    non_client = content.find("Property[@name='NonClient']")
+    assert non_client is None or non_client.get('value') == 'False', name
     area = udims(content.find("Property[@name='Area']").get('value'))
-    assert area[1] == (0, 0), name + ' must start at the looknfeel client origin'
-    assert area[3][0] < tab_top and area[3][1] == 0, name + ' must end above the tabs'
+    if name == 'HomePage':
+        assert area[0] == (0, 0) and area[1] == (0, 0), name + ' must start at the looknfeel client origin'
+    else:
+        assert area[3][0] <= nav_top and area[3][1] == 0, name + ' must end above the navigation bar'
 close = frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
 for dimension in ('Width', 'Height'):
     node = close.find("Dim[@type='%s']/WidgetDim" % dimension)

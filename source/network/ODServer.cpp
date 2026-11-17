@@ -133,7 +133,7 @@ namespace
             const uint32_t moodBits = creature->getOverlayMoodValue();
             const bool unhappy = (moodBits & (CreatureMoodValues::Hungry | CreatureMoodValues::Tired)) != 0 ||
                 static_cast<int32_t>(creature->getMoodValue()) >= static_cast<int32_t>(CreatureMoodLevel::Upset);
-            // Keep the game values but omit the creature card's developer-only debug section.
+            // Keep the game values but omit the developer-only debug section of the statistics text.
             std::string stats = creature->getStatsText(owner);
             const std::string debugTitle = "[font='MedievalSharp-10'][colour='FFF2C860']\nDebugging information";
             const std::string::size_type debug = stats.find(debugTitle);
