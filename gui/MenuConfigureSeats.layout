@@ -4,6 +4,11 @@
     <Window type="DefaultWindow" name="Root" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
+        <!-- Iron border of the chosen menu sheet around the whole screen. -->
+        <Window type="OD/ScreenBorder" name="ScreenBorder" >
+            <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
         <Window type="OD/StaticText" name="LoadingText" >
             <Property name="Area" value="{{0.5,-301},{0.5,240},{0.5,299},{0.5,266}}" />
             <Property name="Text" value="Loading..." />
@@ -20,8 +25,8 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/MenuFrameWindow" name="ListPlayers" >
-            <Property name="Area" value="{{0.5,-500},{0.5,-210},{0.5,500},{0.5,270}}" />
+        <Window type="OD/SheetWindow" name="ListPlayers" >
+            <Property name="Area" value="{{0.5,-500},{0.5,-240},{0.5,500},{0.5,240}}" />
             <Property name="Text" value="Please configure players..." />
             <Property name="MinSize" value="{{0,630},{0,480}}" />
             <Property name="AlwaysOnTop" value="True" />
@@ -78,8 +83,8 @@
                 <Property name="Text" value="Start Game" />
             </Window>
         </Window>
-        <Window type="OD/MenuFrameWindow" name="GameSettingsWindow" >
-            <Property name="Area" value="{{0.5,-334},{0.5,-230},{0.5,334},{0.5,300}}" />
+        <Window type="OD/SheetWindow" name="GameSettingsWindow" >
+            <Property name="Area" value="{{0.5,-334},{0.5,-290},{0.5,334},{0.5,290}}" />
             <Property name="Text" value="Game settings" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="SizingEnabled" value="False" />

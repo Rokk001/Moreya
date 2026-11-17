@@ -34,4 +34,34 @@
     <Image name="CompactDisabledFill" xPos="26" yPos="1020" width="127" height="76" />
     <Image name="CompactDisabledRightCap" xPos="153" yPos="1020" width="26" height="76" />
     <Image name="LoadPanel" xPos="524" yPos="0" width="662" height="775" />
+    <Image name="FrameTopLeft" xPos="524" yPos="0" width="72" height="80" />
+    <Image name="FrameTopRight" xPos="1114" yPos="0" width="72" height="80" />
+    <Image name="FrameBottomLeft" xPos="524" yPos="695" width="72" height="80" />
+    <Image name="FrameBottomRight" xPos="1114" yPos="695" width="72" height="80" />
+    <Image name="FrameTop" xPos="596" yPos="0" width="224" height="44" />
+    <Image name="FrameBottom" xPos="596" yPos="731" width="224" height="44" />
+    <Image name="FrameLeft" xPos="524" yPos="80" width="32" height="615" />
+    <Image name="FrameRight" xPos="1154" yPos="80" width="32" height="615" />
+    <Image name="FrameTopKnob" xPos="824" yPos="0" width="56" height="44" />
+    <Image name="FrameBottomKnob" xPos="824" yPos="731" width="56" height="44" />
+    <Image name="InsetTopLeft" xPos="557" yPos="159" width="24" height="26" />
+    <Image name="InsetTopRight" xPos="1130" yPos="159" width="24" height="26" />
+    <Image name="InsetBottomLeft" xPos="557" yPos="580" width="24" height="26" />
+    <Image name="InsetBottomRight" xPos="1130" yPos="580" width="24" height="26" />
+    <Image name="InsetTop" xPos="581" yPos="159" width="549" height="26" />
+    <Image name="InsetBottom" xPos="581" yPos="580" width="549" height="26" />
+    <Image name="InsetLeft" xPos="557" yPos="185" width="24" height="395" />
+    <Image name="InsetRight" xPos="1130" yPos="185" width="24" height="395" />
+    <Image name="InsetPlanks" xPos="581" yPos="241" width="549" height="320" />
+    <Image name="FrameInterior" xPos="1190" yPos="800" width="256" height="256" />
+    <Image name="BorderTopLeft" xPos="1190" yPos="0" width="110" height="110" />
+    <Image name="BorderTopRight" xPos="1302" yPos="0" width="110" height="110" />
+    <Image name="BorderBottomLeft" xPos="1414" yPos="0" width="110" height="110" />
+    <Image name="BorderBottomRight" xPos="1526" yPos="0" width="110" height="110" />
+    <Image name="BorderTop" xPos="1190" yPos="112" width="300" height="24" />
+    <Image name="BorderBottom" xPos="1190" yPos="138" width="300" height="24" />
+    <Image name="BorderLeft" xPos="1492" yPos="138" width="24" height="300" />
+    <Image name="BorderRight" xPos="1518" yPos="138" width="24" height="300" />
+    <Image name="BorderTopPendant" xPos="1544" yPos="138" width="70" height="52" />
+    <Image name="BorderBottomPendant" xPos="1616" yPos="138" width="70" height="58" />
 </Imageset>

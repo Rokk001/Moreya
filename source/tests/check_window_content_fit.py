@@ -67,7 +67,8 @@ assert 'OpenDungeonsSkin/' in SCALED_PREFIXES and len(SCALED_PREFIXES) >= 5, SCA
 DENSITY = {'OpenDungeonsSkin/': float(re.search(r'SKIN_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
            'ODHudSurface/': float(re.search(r'HUD_SURFACE_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
            'OpenDungeonsIcons/': float(re.search(r'ICON_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
-           'OpenDungeonsNavigation/': float(re.search(r'ICON_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1])}
+           'OpenDungeonsNavigation/': float(re.search(r'ICON_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
+           'ODMenuTemplate/': float(re.search(r'MENU_SHEET_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1])}
 
 
 def udims(value):
@@ -195,10 +196,10 @@ covered = covered_layouts(sheets, set())
 assert covered == set(layouts), ('layouts not checked', sorted(set(layouts) - covered))
 
 # ---------------------------------------------------------------------------------------------------- geometry
-FRAME_TYPES = ('OD/FrameWindow', 'OD/MenuFrameWindow', 'OD/MenuSelectionWindow')
+FRAME_TYPES = ('OD/FrameWindow', 'OD/MenuFrameWindow', 'OD/MenuSelectionWindow', 'OD/SheetWindow')
 SCROLL_TYPES = ('OD/ScrollablePane', 'OD/MenuScrollablePane')
 # widgets whose rows are filled by the code and scrolled by their own scrollbar
-LIST_TYPES = ('OD/Listbox', 'OD/MenuListbox', 'OD/LoadListbox', 'OD/MultiColumnList', 'OD/MenuMultiColumnList', 'OD/Combobox',
+LIST_TYPES = ('OD/Listbox', 'OD/MenuListbox', 'OD/LoadListbox', 'OD/SheetListbox', 'OD/MultiColumnList', 'OD/MenuMultiColumnList', 'OD/Combobox',
               'OD/PopupMenu', 'OD/Menubar', 'OD/MultiLineEditbox')
 
 
@@ -254,6 +255,14 @@ def client_rect(node, rect, screen, user, s):
         return (x0 + image_size(images['FrameLeftImage'], screen, user)[0], y0 + title_height(node, screen, user),
                 x1 - image_size(images['FrameRightImage'], screen, user)[0],
                 y1 - image_size(images['FrameBottomImage'], screen, user)[1])
+    if node.type == 'OD/SheetWindow':
+        # Window frame of the chosen menu sheet (OD.looknfeel OD/SheetWindow): frame edges, the title on the top rail
+        top = image_size('ODMenuTemplate/FrameTop', screen, user)[1]
+        if node.props.get('TitlebarEnabled', 'True') == 'True':
+            top = 0.75 * top + text_size(node.props.get('TitlebarFont', 'MedievalSharp-13'), 'Ag', screen, user)[1] + 8.0
+        return (x0 + image_size('ODMenuTemplate/FrameLeft', screen, user)[0], y0 + top,
+                x1 - image_size('ODMenuTemplate/FrameRight', screen, user)[0],
+                y1 - image_size('ODMenuTemplate/FrameBottom', screen, user)[1])
     if node.type in ('OD/MenuFrameWindow', 'OD/MenuSelectionWindow'):
         return (x0 + image_size('OpenDungeonsSkin/WindowLeftEdge', screen, user)[0], y0 + title_height(node, screen, user),
                 x1 - image_size('OpenDungeonsSkin/WindowRightEdge', screen, user)[0],
@@ -287,7 +296,7 @@ def child_rect(node, parent_client, s):
 
 
 # ---------------------------------------------------------------------------------------------------- text
-TEXT_TYPES = {'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPanel', 'OD/MenuDescription',
+TEXT_TYPES = {'OD/SheetStaticText', 'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPanel', 'OD/MenuDescription',
               'OD/Button', 'OD/MainMenuButton', 'OD/InvisibleButton', 'OD/MenuTextButton', 'OD/Checkbox',
               'OD/RadioButton', 'OD/IconButton', 'OD/ImageButton', 'OD/ResearchButton', 'OD/TabButton',
               'OD/MenuItem', 'OD/MenuSymbolButton', 'OD/GameTabButton', 'OD/MiniMapCornerButton',
@@ -295,7 +304,7 @@ TEXT_TYPES = {'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPa
 # Caption area of the menu template buttons in fractions of the button height: cap width, top rail, bottom rail.
 MENU_TEMPLATE_CAPTION = {'OD/MenuTextButton': (0.516667, 0.183333, 0.816667),
                          'OD/MenuCompactButton': (0.25, 0.21, 0.79), 'OD/MenuFilterButton': (0.25, 0.21, 0.79)}
-STATIC_LIKE = {'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPanel', 'OD/MenuDescription'}
+STATIC_LIKE = {'OD/SheetStaticText', 'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPanel', 'OD/MenuDescription'}
 
 
 def strip_markup(text):
@@ -306,6 +315,12 @@ def strip_markup(text):
 def text_area(node, rect, screen, user, s):
     """The rectangle the look draws the caption in (TextComponent / WithFrameTextRenderArea of OD.looknfeel)."""
     x0, y0, x1, y1 = rect
+    if node.type == 'OD/SheetStaticText' and node.props.get('FrameEnabled', 'True') == 'True':
+        # text inside the rails of the sheet frame (OD/SheetStaticText WithFrameTextRenderArea)
+        return (x0 + image_size('ODMenuTemplate/FrameLeft', screen, user)[0] + 4.0,
+                y0 + image_size('ODMenuTemplate/FrameTop', screen, user)[1] + 2.0,
+                x1 - image_size('ODMenuTemplate/FrameRight', screen, user)[0] - 4.0,
+                y1 - image_size('ODMenuTemplate/FrameBottom', screen, user)[1] - 2.0)
     if node.type in STATIC_LIKE:
         if node.props.get('FrameEnabled', 'True') == 'True':
             left = image_size('OpenDungeonsSkin/StaticLeft', screen, user)[0]

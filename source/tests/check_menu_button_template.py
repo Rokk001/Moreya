@@ -331,10 +331,38 @@ def client(node, rect, screen, user, s):
         edge = layout_scale / 4.0
         return (x0 + skin['WindowLeftEdge'][0] * edge, y0 + line_height('MedievalSharp-10', screen, user) + 12.0,
                 x1 - skin['WindowRightEdge'][0] * edge, y1 - skin['WindowBottomEdge'][1] * edge)
+    if node.type == 'OD/SheetWindow':
+        top = sheet_image('FrameTop', screen, user)[1]
+        if node.props.get('TitlebarEnabled', 'True') == 'True':
+            top = 0.75 * top + line_height(node.props.get('TitlebarFont', 'MedievalSharp-13'), screen, user) + 8.0
+        return (x0 + sheet_image('FrameLeft', screen, user)[0], y0 + top,
+                x1 - sheet_image('FrameRight', screen, user)[0], y1 - sheet_image('FrameBottom', screen, user)[1])
     if node.type == 'OD/FrameWindow':
         return (x0 + game_window['FrameLeft'][0], y0 + line_height('MedievalSharp-10', screen, user) + 12.0,
                 x1 - game_window['FrameRight'][0], y1 - game_window['FrameBottom'][1])
     return rect
+
+
+def sheet_image(name, screen, user):
+    """Screen size of an ODMenuTemplate image: the game scales the sheet pictures by the layout scale at the sheet's
+    density (Gui.cpp MENU_SHEET_IMAGE_PIXEL_DENSITY)."""
+    layout_scale = min(screen[0] / DESIGN_W, screen[1] / DESIGN_H) * user
+    return pieces[name][2] / SHEET_DENSITY * layout_scale, pieces[name][3] / SHEET_DENSITY * layout_scale
+
+
+def plate(node, rect):
+    """The visible plate of a template button: the knobs of the full template stand above and below the plate and may
+    reach over the neighbouring button, as on the sheet."""
+    if node.type != 'OD/MenuTextButton':
+        return rect
+    height = rect[3] - rect[1]
+    return rect[0], rect[1] + 8.5 / 120.0 * height, rect[2], rect[3] - 7.5 / 120.0 * height
+
+
+def inside(inner, outer):
+    """Whether a rectangle lies inside another one (renderer rounding allowed)."""
+    return inner[0] >= outer[0] - TOLERANCE and inner[1] >= outer[1] - TOLERANCE and inner[2] <= outer[2] + TOLERANCE \
+        and inner[3] <= outer[3] + TOLERANCE
 
 
 def collect(node, parent_client, screen, user, fit, out):
@@ -360,6 +388,69 @@ def collect(node, parent_client, screen, user, fit, out):
 def overlaps(a, b):
     """Whether two rectangles share more than the renderer rounding."""
     return min(a[2], b[2]) - max(a[0], b[0]) > TOLERANCE and min(a[3], b[3]) - max(a[1], b[1]) > TOLERANCE
+
+
+SHEET_DENSITY = float(re.search(r'MENU_SHEET_IMAGE_PIXEL_DENSITY = ([0-9.]+)f',
+                                 (repo / 'source/render/Gui.cpp').read_text(encoding='utf-8'))[1])
+assert SHEET_DENSITY == 1.5625, 'the sheet is painted for 1920x1200: 1.5625 sheet pixels per design pixel'
+FRAME_TYPES = ('OD/SheetWindow', 'OD/SheetPanel', 'OD/SheetStaticText')
+MAIN_BUTTONS = ('StartCampaignButton', 'StartSkirmishButton', 'MultiplayerModeButton', 'LoadGameButton', 'MapEditorButton',
+                'SettingsButton', 'QuitButton')
+# Main menu column of the chosen sheet in sheet pixels (1920x1200), measured once on the sheet: plates 708 to 1075 wide,
+# 77 high, tops 383, 471, 557, 643, 730, 815, 906; the button area adds the knobs of the template (8.5 and 7.5 of 120).
+SHEET_COLUMN_WIDTH = 371.0
+SHEET_COLUMN_HEIGHT = 88.8
+SHEET_COLUMN_TOPS = (376.7, 464.7, 550.7, 636.7, 723.7, 808.7, 899.7)
+# The whole column stands 13.75 sheet pixels (8.8 design pixels) higher than on the sheet, so that its last entry stays
+# inside the window 480 design pixels high that check_menu_resources.py requires of the main menu.
+SHEET_COLUMN_SHIFT = -13.75
+# The windows of the menu screens (K34), counted once on this branch: 17 framed windows; the settings window gets its
+# frame and centred place from SettingsWindow.cpp (checked below).
+MENU_WINDOWS = {'MenuMain.layout': (), 'WindowCampaignSubMenu.layout': ('WindowPanel',),
+                'WindowSkirmishSubMenu.layout': ('WindowPanel',), 'WindowMultiplayerSubMenu.layout': ('WindowPanel',),
+                'WindowEditorSubMenu.layout': ('WindowPanel',), 'WindowSettingsSubMenu.layout': ('WindowPanel',),
+                'MenuCampaign.layout': ('BriefingPanel',), 'MenuSkirmish.layout': ('WindowPanel',),
+                'MenuMultiplayerServer.layout': ('WindowPanel',), 'MenuMultiplayerClient.layout': ('WindowPanel',),
+                'MenuMasterServerJoin.layout': ('WindowPanel',), 'MenuLoad.layout': ('LoadPanel',),
+                'MenuReplay.layout': ('WindowPanel',), 'MenuConfigureSeats.layout': ('ListPlayers', 'GameSettingsWindow'),
+                'MenuEditorLoad.layout': ('WindowPanel',), 'MenuEditorNew.layout': ('LevelWindowFrame',),
+                'WindowSettings.layout': (), 'WindowApplyChanges.layout': ('ConfirmRestart',)}
+assert sum(len(v) for v in MENU_WINDOWS.values()) == 17
+# Controls that belong to a window drawn by a frame panel beside them; the description of a save is shown below the
+# load screen panel because the sheet's panel has no place for it.
+WINDOW_CONTENT = CONTROLS + ('OD/MenuTitle', 'OD/StaticText', 'OD/StaticImage', 'DefaultWindow')
+BELOW_THE_WINDOW = {('MenuLoad.layout', 'MapDescriptionText')}
+# Gate entrance of the 3D menu scene: centre of the front opening of MenuGate.mesh in mesh coordinates, measured once
+# from the mesh vertices (OgreXMLConverter): the opening runs from x -4.434 to 4.359 at the front face (y -3.0) between
+# 0.5 and 3 above the ground; its centre x is -0.0375. The column centre may be at most 2 screen pixels beside it.
+ENTRANCE_LOCAL = (-0.0375, -3.0, 1.75)
+ENTRANCE_TOLERANCE = 2.0
+scene_cfg = (repo / 'config/mainmenuscene.cfg').read_text(encoding='utf-8')
+camera_code = (repo / 'source/camera/CameraManager.cpp').read_text(encoding='utf-8')
+OVERVIEW_POSE = [float(v) for v in re.search(r'(?m)^Pose overview ([-\d. ]+)$', scene_cfg)[1].split()]
+GATE_POSITION = [float(v) for v in re.search(r'(?m)^AddEntity Gate MenuGate\.mesh ([-\d. ]+)$', scene_cfg)[1].split()]
+MENU_FOV_Y = float(re.search(r'MAIN_MENU_DEFAULT_FOV_Y_DEGREES = ([\d.]+)f', camera_code)[1])
+reference = re.search(r'MAIN_MENU_REFERENCE_ASPECT_RATIO = ([\d.]+)f / ([\d.]+)f', camera_code)
+MENU_REFERENCE_ASPECT = float(reference[1]) / float(reference[2])
+
+
+def entrance_screen_x(screen):
+    """Screen x of the gate entrance seen from the overview pose (CameraManager::setViewportSize projection, pose
+    rotation X then Y then Z as RenderSceneMenu applies it; an Ogre camera looks down -Z)."""
+    import math
+    position = np.array(OVERVIEW_POSE[:3])
+    rx, ry, rz = [math.radians(v) for v in OVERVIEW_POSE[3:6]]
+    x_rot = np.array([[1, 0, 0], [0, math.cos(rx), -math.sin(rx)], [0, math.sin(rx), math.cos(rx)]])
+    y_rot = np.array([[math.cos(ry), 0, math.sin(ry)], [0, 1, 0], [-math.sin(ry), 0, math.cos(ry)]])
+    z_rot = np.array([[math.cos(rz), -math.sin(rz), 0], [math.sin(rz), math.cos(rz), 0], [0, 0, 1]])
+    rotation = x_rot @ y_rot @ z_rot
+    point = np.array(GATE_POSITION) + np.array(ENTRANCE_LOCAL)
+    local = rotation.T @ (point - position)
+    assert local[2] < 0, 'the gate is behind the overview camera'
+    aspect = screen[0] / float(screen[1])
+    half_fov_y = math.atan(math.tan(math.radians(MENU_FOV_Y) / 2.0) * max(1.0, MENU_REFERENCE_ASPECT / aspect))
+    ndc = (local[0] / -local[2]) / (math.tan(half_fov_y) * aspect)
+    return screen[0] / 2.0 * (1.0 + ndc)
 
 
 checked = 0
@@ -398,18 +489,135 @@ for layout in MENU_LAYOUTS:
                     if other.type in ('OD/Combobox',):
                         other_rect = (other_rect[0], other_rect[1], other_rect[2],
                                       min(other_rect[3], other_rect[1] + 1.5 * line_height(other.font(), screen, user)))
-                    assert not overlaps(rect, other_rect), '%s overlaps %s' % (where, other.name)
+                    if other.type in TEMPLATE_TYPES:
+                        other_rect = plate(other, other_rect)
+                    assert not overlaps(plate(node, rect), other_rect), '%s overlaps %s' % (where, other.name)
+            rects = {}
+            for node, rect in placed:
+                rects.setdefault(node.name, (node, rect))
+            # K34: every menu window is drawn in the window frame of the sheet and centred on the screen; the controls
+            # placed beside its frame panel lie inside the frame.
+            for name in MENU_WINDOWS[layout]:
+                node, rect = rects[name]
+                where = '%s %s at %dx%d %d%%' % (layout, name, screen[0], screen[1], round(user * 100))
+                assert node.type in FRAME_TYPES or node.props.get('Image') == 'ODMenuTemplate/LoadPanel', \
+                    where + ' is not in the window frame of the chosen sheet'
+                assert abs((rect[0] + rect[2]) / 2.0 - screen[0] / 2.0) <= 1.0 and \
+                    abs((rect[1] + rect[3]) / 2.0 - screen[1] / 2.0) <= 1.0 + 0.06 * screen[1], where + ' is not centred'
+                assert inside(rect, (0, 0, screen[0], screen[1])), where + ' leaves the screen'
+                if node.type in ('OD/SheetWindow', 'OD/SheetStaticText'):
+                    continue  # its controls are its children, laid out in its client area
+                interior = (rect[0] + sheet_image('FrameLeft', screen, user)[0] * 0.5,
+                            rect[1] + sheet_image('FrameTop', screen, user)[1] * 0.5,
+                            rect[2] - sheet_image('FrameRight', screen, user)[0] * 0.5,
+                            rect[3] - sheet_image('FrameBottom', screen, user)[1] * 0.5)
+                for other, other_rect in placed:
+                    if other.parent is not node.parent or other is node or other.type not in WINDOW_CONTENT \
+                            or (layout, other.name) in BELOW_THE_WINDOW:
+                        continue
+                    if other.type == 'OD/Combobox':
+                        other_rect = other_rect[:3] + (min(other_rect[3], other_rect[1] + 1.5 * line_height(other.font(), screen, user)),)
+                    assert inside(plate(other, other_rect), interior), '%s: %s leaves the window frame' % (where, other.name)
             if layout == 'MenuLoad.layout':
-                rects = {node.name: rect for node, rect in placed}
-                panel = rects['LoadPanel']
-                for name in ('FilterCampaign', 'FilterSkirmish', 'FilterSandbox', 'FilterReplays', 'SaveGameSelect',
-                             'DeleteButton', 'BackButton', 'LaunchButton'):
-                    r = rects[name]
-                    assert r[0] >= panel[0] - TOLERANCE and r[2] <= panel[2] + TOLERANCE and r[1] >= panel[1] - TOLERANCE \
-                        and r[3] <= panel[3] + TOLERANCE, name + ' leaves the load screen panel'
-                    # place on the sheet: the panel picture is the sheet panel scaled evenly
-                    w, h = pieces['LoadPanel'][2:]
-                    assert abs((panel[2] - panel[0]) / (panel[3] - panel[1]) - w / float(h)) < 0.01, 'load panel distorted'
-                assert not overlaps(rects['MapDescriptionText'], panel), 'description covers the load screen panel'
+                panel = rects['LoadPanel'][1]
+                # the load screen panel sits in the middle of the screen at every size and UI scale
+                assert abs((panel[0] + panel[2]) / 2.0 - screen[0] / 2.0) <= 1.0 and \
+                    abs((panel[1] + panel[3]) / 2.0 - screen[1] / 2.0) <= 1.0, \
+                    'load screen not centred at %dx%d %d%%' % (screen[0], screen[1], round(user * 100))
+                for name in ('KindFilter', 'SaveGameSelect', 'DeleteButton', 'BackButton', 'LaunchButton'):
+                    assert inside(rects[name][1], panel), name + ' leaves the load screen panel'
+                w, h = pieces['LoadPanel'][2:]
+                assert abs((panel[2] - panel[0]) / (panel[3] - panel[1]) - w / float(h)) < 0.01, 'load panel distorted'
+                assert not overlaps(rects['MapDescriptionText'][1], panel), 'description covers the load screen panel'
+            if layout == 'MenuMain.layout':
+                # The column stands exactly over the gate entrance of the 3D menu scene at the overview camera pose.
+                entrance = entrance_screen_x(screen)
+                for name in MAIN_BUTTONS:
+                    x0, y0, x1, y1 = rects[name][1]
+                    assert abs((x0 + x1) / 2.0 - entrance) <= ENTRANCE_TOLERANCE, \
+                        '%s is %.1f pixels beside the gate entrance at %dx%d %d%%' % (
+                            name, (x0 + x1) / 2.0 - entrance, screen[0], screen[1], round(user * 100))
+            if layout == 'MenuMain.layout' and screen == (1920, 1200):
+                # The column of the chosen sheet: at 1920x1200 the buttons have the sheet's size and rows (the horizontal place is
+                # the gate entrance, checked above), scaled
+                # around the screen centre by the UI scale.
+                for index, name in enumerate(MAIN_BUTTONS):
+                    x0, y0, x1, y1 = rects[name][1]
+                    assert abs((x1 - x0) / user - SHEET_COLUMN_WIDTH) <= 2.0, name + ' width differs from the sheet'
+                    assert abs((y1 - y0) / user - SHEET_COLUMN_HEIGHT) <= 2.0, name + ' height differs from the sheet'
+                    assert abs(600.0 + (y0 - 600.0) / user - SHEET_COLUMN_TOPS[index] - SHEET_COLUMN_SHIFT) <= 3.0, name + ' row differs from the sheet'
+
+# K34: no main menu button is visible while a menu window is open, and Back shows the main menu again.
+gui_code = (repo / 'source/render/Gui.cpp').read_text(encoding='utf-8')
+for layout in MENU_LAYOUTS:
+    if layout == 'MenuMain.layout' or layout.endswith('SubMenu.layout') or layout in ('WindowSettings.layout',
+                                                                                     'WindowApplyChanges.layout'):
+        continue
+    names = {w.get('name') for w in ET.parse(gui / layout).getroot().iter('Window')}
+    # a window of its own sheet: the main menu sheet with its buttons is replaced while it is shown
+    assert not names & set(MAIN_BUTTONS), layout + ' shows main menu buttons'
+    assert re.search(r'mSheets\[\w+\] = +wmgr->loadLayoutFromFile\("%s"\)' % re.escape(layout), gui_code), layout + ' is no sheet'
+main_code = (repo / 'source/modes/MenuModeMain.cpp').read_text(encoding='utf-8').replace('\r\n', '\n')
+
+
+def body(code, signature):
+    """Body of a function of a source file."""
+    return code.split(signature, 1)[1].split('\n}', 1)[0]
+
+
+show_sub = body(main_code, 'void MenuModeMain::showSubMenu')
+assert 'setVisible(other == name)' in show_sub and 'showMainMenuButtons(false);' in show_sub, 'a sub menu window must hide the main menu'
+assert 'showMainMenuButtons(true)' not in body(main_code, 'bool MenuModeMain::openSettingsPage'), 'settings keep the main menu hidden'
+back = body(main_code, 'bool MenuModeMain::goBack')
+assert 'window->hide();' in back and 'showMainMenuButtons(true);' in back and 'mOverviewPending' in back, 'Back must restore the main menu'
+assert 'mOverviewPending = false;\n        showMainMenuButtons(true);' in body(main_code, 'void MenuModeMain::onFrameStarted'), \
+    'the main menu returns after the flight back'
+load_mode = (repo / 'source/modes/MenuModeLoad.cpp').read_text(encoding='utf-8')
+assert 'loadGuiSheet(Gui::guiSheet::loadSavedGameMenu)' in load_mode and 'return goBack();' in load_mode, \
+    'the load screen must replace the main menu sheet and go back to it'
+settings_code = (repo / 'source/modes/SettingsWindow.cpp').read_text(encoding='utf-8')
+menu_branch = settings_code.split('if(menuPages)', 1)[1].split('else if(gamePage)', 1)[0]
+assert 'setLookNFeel("OD/SheetWindow")' in menu_branch and 'CEGUI::UDim(0.5f, -MENU_WINDOW_HALF_HEIGHT)' in menu_branch \
+    and 'CEGUI::UDim(0.5f, MENU_WINDOW_HALF_HEIGHT)' in menu_branch, 'the settings window of the main menu must be a centred sheet window'
+
+# The window frame pieces are the load screen frame of the sheet, the border pieces the sheet's screen border.
+px, py = PANEL_ON_SHEET
+lx, ly = pieces['LoadPanel'][:2]
+for name in ('FrameTopLeft', 'FrameTopRight', 'FrameBottomLeft', 'FrameBottomRight', 'FrameTop', 'FrameBottom', 'FrameLeft',
+             'FrameRight', 'FrameTopKnob', 'FrameBottomKnob'):
+    x, y, w, h = pieces[name]
+    part = atlas[y:y + h, x:x + w]
+    painted = sheet[py + y - ly:py + y - ly + h, px + x - lx:px + x - lx + w]
+    solid = part[..., 3] == 255
+    # leave out the wood the tool wove in where the sheet paints the filter buttons and the three buttons
+    for x0, y0, x1, y1 in ((1250, 352, 1862, 426), (1255, 900, 1858, 1010)):
+        rows = slice(max(0, y0 - (py + y - ly)), max(0, y1 - (py + y - ly)))
+        columns = slice(max(0, x0 - (px + x - lx)), max(0, x1 - (px + x - lx)))
+        solid[rows, columns] = False
+    assert solid.sum() > 0.4 * w * h and np.abs(part[..., :3] - painted)[solid].mean() < 0.5, name + ' is not the sheet frame'
+for name, (sx, sy) in {'BorderTopLeft': (0, 0), 'BorderTopRight': (1810, 0), 'BorderBottomLeft': (0, 1090),
+                       'BorderBottomRight': (1810, 1090), 'BorderTopPendant': (925, 0), 'BorderBottomPendant': (925, 1142)}.items():
+    x, y, w, h = pieces[name]
+    part = atlas[y:y + h, x:x + w]
+    solid = part[..., 3] == 255
+    assert solid.sum() > 0.15 * w * h and np.abs(part[..., :3] - sheet[sy:sy + h, sx:sx + w])[solid].mean() < 0.5, \
+        name + ' is not the sheet border'
+x, y, w, h = pieces['FrameInterior']
+tile = atlas[y:y + h, x:x + w, :3]
+assert np.abs(tile[0] - tile[-1]).mean() < 25 and np.abs(tile[:, 0] - tile[:, -1]).mean() < 25, 'interior tile shows seams'
+assert tile.std() > 8, 'interior wood has no painted detail'
+for look in ('OD/SheetPanel', 'OD/SheetStaticText'):
+    for state in looks[look].findall('StateImagery'):
+        if state.get('name') in ('Enabled', 'EnabledFrame'):
+            drawn = {i.get('name') for sec in state.iter('Section') for i in find_section(sec.get('look', look), sec.get('section')).iter('Image')}
+            assert {'ODMenuTemplate/FrameTopLeft', 'ODMenuTemplate/FrameInterior', 'ODMenuTemplate/FrameTopKnob'} <= drawn, look
+for state in looks['OD/SheetWindow'].findall('StateImagery'):
+    drawn = {i.get('name') for sec in state.iter('Section') for i in find_section('OD/SheetWindow', sec.get('section')).iter('Image')}
+    assert {'ODMenuTemplate/FrameTopLeft', 'ODMenuTemplate/FrameBottomRight', 'ODMenuTemplate/FrameInterior'} <= drawn, state.get('name')
+for layout in MENU_LAYOUTS:
+    if layout.startswith('Menu'):
+        assert any(w.get('type') == 'OD/ScreenBorder' for w in ET.parse(gui / layout).getroot().iter('Window')), \
+            layout + ' lacks the screen border of the sheet'
 print('MENU BUTTON TEMPLATE OK: 4 states and the compact form match the chosen sheet; %d menu screens; '
-      '%d button placements at 3 screens x 2 UI scales' % (len(MENU_LAYOUTS), checked))
+      '%d button placements at 3 screens x 2 UI scales; %d menu windows framed and centred; main menu column as on the sheet'
+      % (len(MENU_LAYOUTS), checked, sum(len(v) for v in MENU_WINDOWS.values())))

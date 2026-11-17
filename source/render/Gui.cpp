@@ -71,6 +71,9 @@ static const float SKIN_IMAGE_PIXEL_DENSITY = 4.0f;
 static const float HUD_SURFACE_IMAGE_PIXEL_DENSITY = 2.0f;
 static const float ICON_IMAGE_PIXEL_DENSITY = 2.0f;
 static const float DEFAULT_IMAGE_PIXEL_DENSITY = 1.0f;
+//! The menu template and window frame are cut from the chosen 1920x1200 menu sheet: 1920 / 1024 design pixels would
+//! stretch them on wide screens, so the sheet's layout scale min(1920 / 1024, 1200 / 768) = 1.5625 is their density.
+static const float MENU_SHEET_IMAGE_PIXEL_DENSITY = 1.5625f;
 
 //! Painted navigation atlas coordinates, in doubled source pixels; existing layout sizes stay unchanged.
 static const char* const PAINTED_NAVIGATION_ATLAS = "ODNavigation.png";
@@ -1556,6 +1559,8 @@ float imagePixelDensity(const CEGUI::String& ceguiName)
         return SKIN_IMAGE_PIXEL_DENSITY;
     if(startsWith(name, "ODHudSurface/"))
         return HUD_SURFACE_IMAGE_PIXEL_DENSITY;
+    if(startsWith(name, "ODMenuTemplate/"))
+        return MENU_SHEET_IMAGE_PIXEL_DENSITY;
     if(name == "OpenDungeonsIcons/Prohibition")
         return DEFAULT_IMAGE_PIXEL_DENSITY;
     if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "RoomCentreIcon") || startsWith(name, "OpenDungeonsNavigation/"))
@@ -1568,6 +1573,7 @@ bool shouldScaleImage(const CEGUI::String& ceguiName)
 {
     const std::string name(ceguiName.c_str());
     return startsWith(name, "OpenDungeonsSkin/")
+        || startsWith(name, "ODMenuTemplate/")
         || startsWith(name, "OpenDungeonsIcons/")
         || startsWith(name, "RoomCentreIcon")
         || startsWith(name, "OpenDungeonsNavigation/")
