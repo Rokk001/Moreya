@@ -564,7 +564,7 @@ Casino.mesh                            Yohann Ferreira (upstream import)GPLv3+  
 CasinoPokerTable.*, CasinoWallBeer.*   Danimal                 CC-BY-SA 3.0            http://opengameart.org/users/danimal
 Cultist.skeleton, DarkElf.*, Elf.*     Danimal                 CC-BY-SA 3.0            First commit 2015/2016
 DungeonHeartObject{Healthy,Damaged,Critical}.mesh/.skeleton  Mario                   GPLv3+                  Built from assets-src/ by tools/heart-on-temple (heart model redesign); made with Blender, AI-assisted (Claude Code)
-FenceCorner.mesh, FenceStraight.mesh   Tomasz Luchowski        GPLv3+                  Added 2023 (first commit)
+FenceCorner.mesh, FenceStraight.mesh   AI-generated with Claude Code  GPLv3+            Rebuilt 2026-11-17 (the 2023 picket fence by Tomasz Luchowski replaced): coarse prison bars of thick forged iron with two straps, built by script in Blender, source PrisonCage_A5.blend kept outside Git
 FogOfWarCloud2.mesh, FogOfWarDirt.mesh Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 Rocklava.mesh                          Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 Room.mesh, TortureGround.mesh          hwoarangmy              CC-BY-SA 3.0            Added 2015 (first commit)
@@ -2366,3 +2366,6 @@ gui/NavigationRoomManager.png  AI-generated with Codex  GPLv3+  Painted for this
 gui/NavigationRoomManager.imageset  OpenDungeonsPlus project (written with an AI assistant)  GPLv3+  Imageset for gui/NavigationRoomManager.png
 gui/NavigationDungeonbook.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17): Dungeonbook HUD icon, open green-bound book with creature sketches and a quill; 1024 px source fitted to 256 px
 gui/NavigationDungeonbook.imageset  OpenDungeonsPlus project (written with an AI assistant)  GPLv3+  Imageset for gui/NavigationDungeonbook.png
+models/PrisonDoor.mesh    AI-generated with Claude Code    GPLv3+    Original barred iron cage door for the prison gate tile (posts, lintel, barred leaf with straps, hinges and lock box), built by script in Blender, source PrisonCage_A5.blend kept outside Git, 2026-11-17
+models/PrisonDoor.skeleton    AI-generated with Claude Code    GPLv3+    Own skeleton of PrisonDoor.mesh: bone Leaf on the hinge axis, clip Open (the leaf swings into the cell and falls shut), written by script, 2026-11-17
+materials/textures/PrisonIron.png    AI-generated with Claude Code    GPLv3+    Original procedurally painted tileable dark forged iron (forging streaks, hammer dents, pits, small rust flecks) for the prison bars and door, 512 pixels, 2026-11-17

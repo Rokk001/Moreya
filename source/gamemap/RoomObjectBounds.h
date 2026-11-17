@@ -46,8 +46,8 @@ static const MeshBounds meshBounds[] = {
     {"DungeonHeartObjectCritical", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"DungeonHeartObjectDamaged", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"DungeonHeartObjectHealthy", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
-    {"FenceCorner", -.502486f, -.500121f, .521221f, .514487f},
-    {"FenceStraight", -.493929f, -.492016f, .516277f, -.462466f},
+    {"FenceCorner", -.52f, -.52f, .52f, .52f},
+    {"FenceStraight", -.52f, -.510148f, .52f, -.44942f},
     {"GhostBell", -.3f, -.17f, .3f, .17f, .9000001f},
     {"GhostCauldron", -1.0f, -1.0f, 1.0f, 1.0f, 1.14f},
     {"GhostCauldronFill", -.2f, -.025f, .2f, .025f, .6f},
@@ -74,6 +74,7 @@ static const MeshBounds meshBounds[] = {
     {"MushroomLamp", -.29f, -.29f, .29f, .29f},
     {"OrcBed", -.533745f, -.997136f, .529433f, .987434f, .560469f},
     {"Podium", -.193612f, -.148315f, .193891f, .148315f},
+    {"PrisonDoor", -.52f, -.52f, .52f, -.42f},
     {"PortalObject", -1.66302f, -1.66302f, 1.66302f, 1.66302f},
     {"RangerBed", -.53459f, -.777014f, .534418f, .775852f, .805918f},
     {"Roulette", -.292486f, -.296162f, .292326f, .296652f},
@@ -151,7 +152,7 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
     const std::string name(bounds.name);
     if(name.compare(0, 12, "InfirmaryCot") == 0)
         return {1.0f, 1.0f};
-    if(name == "FenceCorner" || name == "FenceStraight" ||
+    if(name == "FenceCorner" || name == "FenceStraight" || name == "PrisonDoor" ||
        name == "PortalObject" || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
        name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
