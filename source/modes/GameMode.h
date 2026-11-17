@@ -103,6 +103,9 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     virtual ~GameMode();
 
+    //! \brief Leaves the game exactly as the Yes button of the quit dialog does (used by the return-to-menu test run).
+    void quitToMenu();
+
     /*! \brief Process the mouse movement event.
      *
      * The function uses ground targeting for room construction and surface targeting

@@ -2715,6 +2715,12 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Runs the quit dialog's Yes handler, so the test run takes the player's own way out of the game.
+void GameMode::quitToMenu()
+{
+    onClickYesQuitMenu(CEGUI::EventArgs());
+}
+
 bool GameMode::showObjectivesWindow(const CEGUI::EventArgs&)
 {
     closeAllTopWindows();

@@ -2285,12 +2285,10 @@ bool EditorMode::loadLevelFromFile(const std::string& fileName)
 {
     // Ogre::MaterialManager::getSingletonPtr()->unload("LiftedGold");    
     RenderManager::removeLiftedGoldMaterials();
-    Ogre::TextureManager::getSingletonPtr()->remove("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    // The frame loop keeps drawing the depth pre-pass target until it is taken out: removing only its camera
+    // left a viewport on a destroyed camera (initGameRenderer makes a new target for the loaded level)
+    RenderManager::getSingleton().destroySmokeRenderTarget();
 
-
-    ODFrameListener::getSingleton().getCameraManager()->destroyCamera("RenderToTexture");
-    ODFrameListener::getSingleton().getCameraManager()->destroyCameraNode("RenderToTexture");    
-    
     mMainCullingManager->stopTileCulling(mCameraTilesIntersections);
     // eliminating the race condition
     MiniMap* mm;
