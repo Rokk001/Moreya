@@ -33,6 +33,8 @@
 #include "ODApplication.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <utility>
 #include <vector>
 
 const std::string PoolAttendantEntity::MESH_NAME = "PoolAttendant";
@@ -96,6 +98,7 @@ PoolAttendantEntity::PoolAttendantEntity(GameMap* gameMap, const std::string& ro
     mWhistleSounded(false),
     mActTurnsLeft(0.0),
     mCannonballTurnsLeft(0.0),
+    mOuting(PoolAttendantOuting::none),
     mHasPlace(false),
     mPlaceX(0),
     mPlaceY(0),
@@ -103,7 +106,8 @@ PoolAttendantEntity::PoolAttendantEntity(GameMap* gameMap, const std::string& ro
     mJumpTo(Ogre::Vector3::ZERO),
     mJumpTurns(0),
     mJumpTurnsLeft(0),
-    mJumpElapsed(0.0f)
+    mJumpElapsed(0.0f),
+    mRimLift(0.0f)
 {
     // The figure starts sitting; a client that sees it later is told this state with the entity
     mPrevAnimationState = PoolAttendantPose::sit;
@@ -119,6 +123,7 @@ PoolAttendantEntity::PoolAttendantEntity(GameMap* gameMap) :
     mWhistleSounded(false),
     mActTurnsLeft(0.0),
     mCannonballTurnsLeft(0.0),
+    mOuting(PoolAttendantOuting::none),
     mHasPlace(false),
     mPlaceX(0),
     mPlaceY(0),
@@ -126,7 +131,8 @@ PoolAttendantEntity::PoolAttendantEntity(GameMap* gameMap) :
     mJumpTo(Ogre::Vector3::ZERO),
     mJumpTurns(0),
     mJumpTurnsLeft(0),
-    mJumpElapsed(0.0f)
+    mJumpElapsed(0.0f),
+    mRimLift(0.0f)
 {
     setMeshName(MESH_NAME);
 }
@@ -288,7 +294,18 @@ void PoolAttendantEntity::doUpkeep()
         case PoolAttendantState::walkingBack:
             upkeepWalkBack();
             break;
+        case PoolAttendantState::walkingRound:
+            upkeepWalkRound();
+            break;
     }
+}
+
+void PoolAttendantEntity::setState(PoolAttendantState state)
+{
+    mState = state;
+    // One line per phase, so that an outing can be followed in the game log (K30 measurement procedure)
+    OD_LOG_INF("PoolAttendant " + getName() + " phase=" + PoolAttendantStateNames::toString(state) + " outing=" +
+        PoolAttendantOutings::toString(mOuting) + " turn=" + Helper::toString(getGameMap()->getTurnNumber()));
 }
 
 void PoolAttendantEntity::upkeepSitting()
@@ -296,8 +313,8 @@ void PoolAttendantEntity::upkeepSitting()
     mActTurnsLeft -= 1.0;
     mCannonballTurnsLeft -= 1.0;
 
-    // A jump that is due waits for a free place in the pool and tries again in every turn
-    if((mCannonballTurnsLeft <= 0.0) && startCannonball())
+    // An outing that is due waits until one is possible and tries again in every turn
+    if((mCannonballTurnsLeft <= 0.0) && startOuting())
         return;
 
     if(mActTurnsLeft <= 0.0)
@@ -313,17 +330,17 @@ void PoolAttendantEntity::startAct()
     std::string clip;
     if(act == ACT_TOWEL)
     {
-        mState = PoolAttendantState::towelWaving;
+        setState(PoolAttendantState::towelWaving);
         clip = PoolAttendantPose::towelWave;
     }
     else if(act == ACT_DOZE)
     {
-        mState = PoolAttendantState::dozing;
+        setState(PoolAttendantState::dozing);
         clip = PoolAttendantPose::doze;
     }
     else
     {
-        mState = PoolAttendantState::whistling;
+        setState(PoolAttendantState::whistling);
         clip = PoolAttendantPose::whistle;
         mWhistleSounded = false;
     }
@@ -335,6 +352,10 @@ void PoolAttendantEntity::startAct()
 void PoolAttendantEntity::upkeepAct()
 {
     mTurnsLeft -= 1.0;
+    // The pause until the next outing goes on while he plays an act on the chair, so that he gets up every
+    // SpaAttendantCannonballMinSeconds to SpaAttendantCannonballMaxSeconds seconds (the B1 run of the deployed build
+    // measured 202 s, because the acts held the pause); an outing that falls due in an act starts when the act is over
+    mCannonballTurnsLeft -= 1.0;
     // The whistle blows when the hand has lifted it to the mouth (decision 1057)
     if((mState == PoolAttendantState::whistling) && !mWhistleSounded &&
        (getClipTurns() - mTurnsLeft >= WHISTLE_BLOW_SECONDS * ODApplication::turnsPerSecond))
@@ -346,12 +367,12 @@ void PoolAttendantEntity::upkeepAct()
         return;
 
     // The act is over: back to sitting, the next act is counted from now
-    mState = PoolAttendantState::sitting;
+    setState(PoolAttendantState::sitting);
     mActTurnsLeft = rollActTurns();
     setAnimationState(PoolAttendantPose::sit, true, Ogre::Vector3::ZERO, false);
 }
 
-bool PoolAttendantEntity::startCannonball()
+bool PoolAttendantEntity::reserveCannonballPlace()
 {
     if(mRoom->getSpringboardTile() == nullptr)
         return false;
@@ -364,13 +385,34 @@ bool PoolAttendantEntity::startCannonball()
     mHasPlace = true;
     mPlaceX = x;
     mPlaceY = y;
+    return true;
+}
+
+bool PoolAttendantEntity::startOuting()
+{
+    // Either the jump or the round, chosen at random among the ones the room allows now; never both in one outing
+    std::vector<std::pair<int32_t, int32_t> > round;
+    const bool canWalkRound = mRoom->getAttendantRound(round);
+    int32_t placeX = 0;
+    int32_t placeY = 0;
+    const bool canJump = (mRoom->getSpringboardTile() != nullptr) && mRoom->findAttendantPlace(placeX, placeY);
+    mOuting = PoolAttendantOutings::choose(Random::Double(0.0, 1.0), canJump, canWalkRound);
+    if(mOuting == PoolAttendantOuting::none)
+        return false;
+
+    if((mOuting == PoolAttendantOuting::cannonball) && !reserveCannonballPlace())
+    {
+        mOuting = PoolAttendantOuting::none;
+        return false;
+    }
+
     startClimb(true);
     return true;
 }
 
 void PoolAttendantEntity::startClimb(bool down)
 {
-    mState = down ? PoolAttendantState::climbingDown : PoolAttendantState::climbingUp;
+    setState(down ? PoolAttendantState::climbingDown : PoolAttendantState::climbingUp);
     mTurnsLeft = getClipTurns();
     setAnimationState(PoolAttendantPose::climb, true, TOWARDS_CHAIR, false);
 }
@@ -394,10 +436,12 @@ void PoolAttendantEntity::upkeepClimb()
     if(mTurnsLeft > 0.0)
         return;
 
-    if(down)
-        startWalkToBoard();
-    else
+    if(!down)
         sitDown();
+    else if(mOuting == PoolAttendantOuting::round)
+        startWalkRound(false);
+    else
+        startWalkToBoard();
 }
 
 void PoolAttendantEntity::startWalkToBoard()
@@ -409,7 +453,7 @@ void PoolAttendantEntity::startWalkToBoard()
         return;
     }
 
-    mState = PoolAttendantState::walkingToBoard;
+    setState(PoolAttendantState::walkingToBoard);
     // Around the pool on the rim, never over the mud (decision 837); he leaves the foot of the ladder sideways behind
     // the chair
     std::vector<Ogre::Vector2> path;
@@ -455,7 +499,7 @@ void PoolAttendantEntity::startJump()
     mJumpTurns = turns;
     mJumpTurnsLeft = turns;
     mJumpElapsed = 0.0f;
-    mState = PoolAttendantState::jumping;
+    setState(PoolAttendantState::jumping);
     clearDestinations(EntityAnimation::jump_anim, false, false);
     sendJumpNotification();
 }
@@ -487,7 +531,7 @@ void PoolAttendantEntity::land()
 
 void PoolAttendantEntity::startWalkBack()
 {
-    mState = PoolAttendantState::walkingBack;
+    setState(PoolAttendantState::walkingBack);
     // Out of the mud by the fewest pool tiles, then around the pool on the rim to the back of the chair (decision 837)
     const Ogre::Vector3 foot = getLadderFootPosition();
     std::vector<Ogre::Vector2> path;
@@ -528,11 +572,59 @@ void PoolAttendantEntity::upkeepWalkBack()
     startClimb(false);
 }
 
+void PoolAttendantEntity::startWalkRound(bool resume)
+{
+    std::vector<std::pair<int32_t, int32_t> > round;
+    if(!mRoom->getAttendantRound(round) || round.empty())
+    {
+        abortToChair();
+        return;
+    }
+
+    setState(PoolAttendantState::walkingRound);
+    // From the foot of the ladder behind the chair to its left side, on the rim around the pool to its right side and
+    // behind the chair back to the ladder (decision 837: nobody walks over the pool or through the chair)
+    const Ogre::Vector3 foot = getLadderFootPosition();
+    const Ogre::Real chairX = static_cast<Ogre::Real>(mChairTile->getX());
+    const Ogre::Real behindChair = static_cast<Ogre::Real>(BEHIND_CHAIR_SIDE);
+    std::vector<Ogre::Vector2> path;
+    path.push_back(Ogre::Vector2(chairX - behindChair, foot.y));
+    for(const std::pair<int32_t, int32_t>& tile : round)
+        path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(tile.first), static_cast<Ogre::Real>(tile.second)));
+    path.push_back(Ogre::Vector2(chairX + behindChair, foot.y));
+    path.push_back(Ogre::Vector2(foot.x, foot.y));
+
+    // A loaded round goes on from the point of the round nearest to where he stands
+    if(resume)
+    {
+        const Ogre::Vector3 position = getPosition();
+        const Ogre::Vector2 here(position.x, position.y);
+        std::size_t nearest = 0;
+        for(std::size_t i = 1; i < path.size(); ++i)
+        {
+            if(path[i].squaredDistance(here) < path[nearest].squaredDistance(here))
+                nearest = i;
+        }
+        path.erase(path.begin(), path.begin() + static_cast<std::ptrdiff_t>(nearest));
+    }
+    setWalkPath(EntityAnimation::walk_anim, PoolAttendantPose::climb, true, false, path, false);
+}
+
+void PoolAttendantEntity::upkeepWalkRound()
+{
+    if(isMoving())
+        return;
+
+    startClimb(false);
+}
+
 void PoolAttendantEntity::sitDown()
 {
     mJumpTurnsLeft = 0;
     mHasPlace = false;
-    mState = PoolAttendantState::sitting;
+    // Back on the chair he sits the full pause until the next outing, so two outings never follow each other
+    mOuting = PoolAttendantOuting::none;
+    setState(PoolAttendantState::sitting);
     mActTurnsLeft = rollActTurns();
     mCannonballTurnsLeft = rollCannonballTurns();
     clearDestinations(PoolAttendantPose::sit, true, false);
@@ -556,6 +648,8 @@ Ogre::Vector3 PoolAttendantEntity::jumpPosition(const Ogre::Vector3& from, const
 
 void PoolAttendantEntity::startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to, uint32_t turns, Ogre::Real elapsed)
 {
+    // The arc sets the whole height; no lift over the rim is left on it
+    mRimLift = 0.0f;
     mJumpFrom = from;
     mJumpTo = to;
     mJumpTurns = std::max<uint32_t>(1, turns);
@@ -571,8 +665,29 @@ void PoolAttendantEntity::startJumpFromServer(const Ogre::Vector3& from, const O
 void PoolAttendantEntity::update(Ogre::Real timeSinceLastFrame)
 {
     RenderedMovableEntity::update(timeSinceLastFrame);
-    if(getIsOnServerMap() || (mJumpTurnsLeft == 0))
+    if(getIsOnServerMap())
         return;
+
+    if(mJumpTurnsLeft == 0)
+    {
+        // Where his walk crosses the rim of the pool he steps over it (decision 902(3)); everywhere else he walks on
+        // the floor
+        Ogre::Real lift = 0.0f;
+        if(isMoving())
+        {
+            double edgeDistance = 0.0;
+            bool onPool = false;
+            lift = static_cast<Ogre::Real>(RoomSpa::getRimStepLift(getGameMap(), getPosition(), edgeDistance, onPool));
+        }
+        if(lift != mRimLift)
+        {
+            Ogre::Vector3 position = getPosition();
+            position.z += lift - mRimLift;
+            mRimLift = lift;
+            RenderedMovableEntity::setPosition(position);
+        }
+        return;
+    }
 
     mJumpElapsed = std::min(static_cast<Ogre::Real>(mJumpTurns), mJumpElapsed +
         static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
@@ -644,7 +759,7 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
                 setAnimationTime(save.mClipTime);
             break;
         case PoolAttendantState::whistling:
-            mState = save.mState;
+            setState(save.mState);
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::whistle, false, Ogre::Vector3::ZERO, false);
             // A blow that was heard before saving is not heard again
@@ -653,13 +768,13 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
             break;
         case PoolAttendantState::towelWaving:
-            mState = save.mState;
+            setState(save.mState);
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::towelWave, false, Ogre::Vector3::ZERO, false);
             setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
             break;
         case PoolAttendantState::dozing:
-            mState = save.mState;
+            setState(save.mState);
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::doze, false, Ogre::Vector3::ZERO, false);
             setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
@@ -667,14 +782,12 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
         case PoolAttendantState::climbingDown:
         case PoolAttendantState::climbingUp:
         {
-            // A climb without its place in the pool is only the way back up
+            // A climb down that holds a place in the pool is the start of a jump, one without a place the start of a
+            // round (only the jump holds a place)
             const bool down = (save.mState == PoolAttendantState::climbingDown);
-            if(down && !mHasPlace)
-            {
-                abortToChair();
-                break;
-            }
-            mState = save.mState;
+            if(down)
+                mOuting = mHasPlace ? PoolAttendantOuting::cannonball : PoolAttendantOuting::round;
+            setState(save.mState);
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::climb, true, TOWARDS_CHAIR, false);
             // The clip goes on at the time that was reached, it does not start again
@@ -689,6 +802,7 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
                 abortToChair();
                 break;
             }
+            mOuting = PoolAttendantOuting::cannonball;
             moveTo(savedPosition);
             startWalkToBoard();
             // The walk clip goes on at the time that was reached
@@ -705,6 +819,7 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             }
 
             // The arc is worked out again from the springboard and the place; the jump goes on at the saved turn
+            mOuting = PoolAttendantOuting::cannonball;
             startJump();
             const uint32_t turnsLeft = static_cast<uint32_t>(std::max(0.0, save.mTurnsLeft));
             if((mState == PoolAttendantState::jumping) && (turnsLeft > 0) && (turnsLeft < mJumpTurns))
@@ -717,10 +832,20 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             break;
         }
         case PoolAttendantState::walkingBack:
+            mOuting = PoolAttendantOuting::cannonball;
             moveTo(savedPosition);
             startWalkBack();
             // The walk clip goes on at the time that was reached
             if(save.mHasClipTime)
+                setAnimationTime(save.mClipTime);
+            break;
+        case PoolAttendantState::walkingRound:
+            // The round goes on from the point nearest to where he was saved
+            mOuting = PoolAttendantOuting::round;
+            moveTo(savedPosition);
+            startWalkRound(true);
+            // The walk clip goes on at the time that was reached
+            if(save.mHasClipTime && (mState == PoolAttendantState::walkingRound))
                 setAnimationTime(save.mClipTime);
             break;
     }

@@ -75,6 +75,12 @@ const uint32_t SPA_STEAM_TURNS = 5040;
 const int32_t SPA_SPLASH_TURNS = 1;
 //! \brief Sound family of the splash of a landing.
 const std::string SOUND_SPLASH = "Rooms/Spa/Splash";
+//! \brief Clip of a bather that wades through the mud (built by the renderer from the Walk and Bathe clips).
+const std::string SPA_WADE_CLIP = "SpaWade";
+//! \brief Clip of a bather that steps over the rim into the pool (built by the renderer, decision 902(3)).
+const std::string SPA_STEP_IN_CLIP = "SpaStepIn";
+//! \brief Clip of a bather that climbs over the rim out of the pool (built by the renderer, decision 902(3)).
+const std::string SPA_STEP_OUT_CLIP = "SpaStepOut";
 //! \brief Angles (degrees) that turn the rim piece onto the side +y, -x, -y and +x of its pool tile. The SpaPoolRim mesh
 //! lies on the -y edge of its tile (meshBounds -0.575 to -0.425), and the engine turns counter-clockwise: 0 keeps it on
 //! -y, 90 puts it on +x, 180 on +y, 270 on -x. The old values (+y 0, -x 90, -y 180, +x 270) put every rim piece on the
@@ -336,7 +342,9 @@ void RoomSpa::setPayer(SpaPayer payer)
 RoomSpa::RoomSpa(GameMap* gameMap) :
     Room(gameMap),
     mAttendant(nullptr),
-    mPendingAttendant()
+    mPendingAttendant(),
+    mDroppedCreature(nullptr),
+    mDropBlock()
 {
     setMeshName("Room");
 }
@@ -390,6 +398,44 @@ bool RoomSpa::getAttendantWalk(const std::pair<int32_t, int32_t>& from, const st
 {
     const SpaTileSet covered = getCoveredSet();
     return SpaLayout::rimWalk(covered, SpaLayout::poolTiles(covered), from, to, path);
+}
+
+bool RoomSpa::getAttendantRound(std::vector<std::pair<int32_t, int32_t> >& path) const
+{
+    path.clear();
+    const SpaTileSet covered = getCoveredSet();
+    const SpaTileSet pool = SpaLayout::poolTiles(covered);
+    std::pair<int32_t, int32_t> chair;
+    if(!SpaLayout::chairTile(pool, chair))
+        return false;
+
+    return SpaLayout::attendantRound(covered, pool, chair, path);
+}
+
+double RoomSpa::getRimStepLift(GameMap* gameMap, const Ogre::Vector3& position, double& edgeDistance, bool& onPool)
+{
+    edgeDistance = SpaLayout::HALF_TILE;
+    onPool = false;
+    if(gameMap == nullptr)
+        return 0.0;
+
+    const int32_t x = Helper::round(position.x);
+    const int32_t y = Helper::round(position.y);
+    Tile* tile = gameMap->getTile(x, y);
+    if((tile == nullptr) || (tile->getCoveringRoom() == nullptr) || (tile->getCoveringRoom()->getType() != RoomType::spa))
+        return 0.0;
+
+    // The neighbours in the order of SpaLayout::rimStepLift: -y, +x, +y, -x
+    static const int32_t SIDE_DX[] = { 0, 1, 0, -1 };
+    static const int32_t SIDE_DY[] = { -1, 0, 1, 0 };
+    static const int32_t NB_SIDES = 4;
+    onPool = isPoolTile(tile);
+    bool poolSide[NB_SIDES];
+    for(int32_t side = 0; side < NB_SIDES; ++side)
+        poolSide[side] = isPoolTile(gameMap->getTile(x + SIDE_DX[side], y + SIDE_DY[side]));
+
+    return SpaLayout::rimStepLift(static_cast<double>(position.x) - static_cast<double>(x),
+        static_cast<double>(position.y) - static_cast<double>(y), onPool, poolSide, edgeDistance);
 }
 
 SpaTileSet RoomSpa::getTakenSet() const
@@ -518,15 +564,41 @@ Tile* RoomSpa::getArrivalTile(const Creature& creature)
     return best;
 }
 
-//! \brief A keeper drop into mud requests a complete normally priced visit after the drop stun.
+//! \brief A keeper drop on the mud or on the rim requests a complete normally priced bath at the free place nearest to
+//! the drop after the drop stun, whatever the mood, a pleasure buff or the lock of the spa (Mario 2026-11-17, answer to
+//! Q7). Without a free place of its size the creature leaves as from every other room.
 void RoomSpa::creatureDropped(Creature& creature)
 {
-    if(isPoolTile(creature.getPositionTile()) && canAccept(creature))
+    Tile* tile = creature.getPositionTile();
+    SpaBlock block;
+    if((tile != nullptr) && canAcceptDrop(creature, *tile, block))
     {
+        // The use of the room reserves the place in addCreatureUsingRoom, which runs while the action is created
+        mDroppedCreature = &creature;
+        mDropBlock = block;
         creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *this, true));
+        mDroppedCreature = nullptr;
         return;
     }
     Room::creatureDropped(creature);
+}
+
+//! \brief Admits a dropped creature like canAccept, but without the pleasure buff and the lock of the spa, and finds the
+//! free place nearest to the drop.
+bool RoomSpa::canAcceptDrop(const Creature& creature, const Tile& tile, SpaBlock& block) const
+{
+    if((getSeat() == nullptr) || (creature.getSeat() != getSeat()) || (creature.getDefinition() == nullptr))
+        return false;
+
+    if(creature.getDefinition()->isWorker() || (getCoveredTileAt(std::make_pair(tile.getX(), tile.getY())) == nullptr))
+        return false;
+
+    // A running pleasure buff or the lock of the spa does not keep a dropped creature out (answer to Q7)
+    if(!SpaLayout::findDropBlock(getPoolSet(), getTakenSet(), creature.getDefinition()->getBedDim1(),
+        creature.getDefinition()->getBedDim2(), std::make_pair(tile.getX(), tile.getY()), block))
+        return false;
+
+    return canPay(creature);
 }
 
 //! \brief A bath already assigned to this room survives routine needs and mood recovery.
@@ -554,6 +626,11 @@ bool RoomSpa::addCreatureUsingRoom(Creature* creature)
         bather.mJump = pending->second.mJump;
         fromSave = true;
     }
+    else if((creature == mDroppedCreature) && SpaLayout::isBlockFree(getPoolSet(), getTakenSet(), mDropBlock))
+    {
+        // A creature the keeper dropped bathes at the place nearest to the drop
+        bather.mBlock = mDropBlock;
+    }
     else if(!SpaLayout::findFreeBlock(getPoolSet(), getTakenSet(), creature->getDefinition()->getBedDim1(),
         creature->getDefinition()->getBedDim2(), bather.mBlock))
     {
@@ -569,10 +646,12 @@ bool RoomSpa::addCreatureUsingRoom(Creature* creature)
     }
     else
     {
-        // One bath in SpaCannonballChance starts with a jump from the springboard, when it can be reached
+        // One bath in SpaCannonballChance starts with a jump from the springboard, when it can be reached; a creature
+        // dropped on the rim steps into the pool from where it landed
         Tile* springboard = getSpringboardTile();
         Tile* creatureTile = creature->getPositionTile();
-        if(!isPoolTile(creatureTile) && (springboard != nullptr) && (creatureTile != nullptr) &&
+        if((creature != mDroppedCreature) && !isPoolTile(creatureTile) && (springboard != nullptr) &&
+           (creatureTile != nullptr) &&
            (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getRoomConfigDouble("SpaCannonballChance")) &&
            getGameMap()->pathExists(creature, creatureTile, springboard))
         {
@@ -808,7 +887,9 @@ bool RoomSpa::useRoom(Creature& creature, bool forced)
     }
 }
 
-//! \brief Traverses checked room tiles at the normal walking speed, never teleporting through a wall.
+//! \brief Traverses checked room tiles at the normal walking speed, never teleporting through a wall, and splits the way
+//! into legs on the rim, in the mud and over the rim, so that the bather steps into and out of the pool (decision
+//! 902(3)).
 bool RoomSpa::walkBather(Creature& creature, Tile* target, const Ogre::Vector3& endpoint)
 {
     if(creature.isMoving())
@@ -822,28 +903,43 @@ bool RoomSpa::walkBather(Creature& creature, Tile* target, const Ogre::Vector3& 
         if(creature.canGoThroughTile(tile) && ((tile != getChairTile() && tile != getSpringboardTile()) || tile == here))
             passable.insert(std::make_pair(tile->getX(), tile->getY()));
     }
+    const SpaTileSet pool = getPoolSet();
     std::vector<std::pair<int32_t, int32_t> > steps;
-    if(!SpaLayout::rimWalk(passable, getPoolSet(), std::make_pair(here->getX(), here->getY()),
-        std::make_pair(target->getX(), target->getY()), steps))
+    if(!SpaLayout::rimWalk(passable, pool, std::make_pair(here->getX(), here->getY()),
+        std::make_pair(target->getX(), target->getY()), steps, SpaLayout::RIM_CROSSING_COST))
         return false;
+
+    // The next leg stays on the rim or in the mud, or is the one step over the rim
+    SpaLayout::BathLeg leg = SpaLayout::BathLeg::rim;
+    const std::size_t legSteps = SpaLayout::nextBathLeg(pool, std::make_pair(here->getX(), here->getY()), steps, leg);
     std::vector<Ogre::Vector2> path;
-    const bool wading = !steps.empty() ? isPoolPosition(steps.front().first, steps.front().second) : isPoolTile(here);
     // Starting at the tile centre prevents a diagonal from a hand drop cutting a solid corner.
     path.push_back(Ogre::Vector2(here->getX(), here->getY()));
-    bool reachedTarget = true;
-    for(const std::pair<int32_t, int32_t>& step : steps)
-    {
-        if(isPoolPosition(step.first, step.second) != wading)
-        {
-            reachedTarget = false;
-            break;
-        }
-        path.push_back(Ogre::Vector2(step.first, step.second));
-    }
-    if(reachedTarget)
+    for(std::size_t i = 0; i < legSteps; ++i)
+        path.push_back(Ogre::Vector2(steps[i].first, steps[i].second));
+    // The leg that reaches the target ends at the endpoint; the other legs end in the middle of their last tile
+    if(legSteps == steps.size())
         path.push_back(Ogre::Vector2(endpoint.x, endpoint.y));
-    creature.setWalkPath(wading ? "SpaWade" : EntityAnimation::walk_anim, EntityAnimation::idle_anim,
-        true, false, path, false, true);
+
+    // The step clips lift the bather over the rim and let it sink into the mud behind it (see Creature::update)
+    std::string walkClip = EntityAnimation::walk_anim;
+    std::string endClip = EntityAnimation::idle_anim;
+    switch(leg)
+    {
+        case SpaLayout::BathLeg::wade:
+            walkClip = SPA_WADE_CLIP;
+            break;
+        case SpaLayout::BathLeg::stepIn:
+            walkClip = SPA_STEP_IN_CLIP;
+            endClip = SPA_WADE_CLIP;
+            break;
+        case SpaLayout::BathLeg::stepOut:
+            walkClip = SPA_STEP_OUT_CLIP;
+            break;
+        case SpaLayout::BathLeg::rim:
+            break;
+    }
+    creature.setWalkPath(walkClip, endClip, true, false, path, false, true);
     creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
     return true;
 }

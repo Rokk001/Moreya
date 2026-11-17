@@ -1658,7 +1658,11 @@ std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string
     return name;
 }
 
-//! \brief Builds seated spa transitions from each creature's existing bath pose without changing shared assets.
+//! \brief Builds seated spa transitions from each creature's existing bath pose without changing shared assets, and the
+//! walking spa clips: SpaWade (walking half sunk in the mud), SpaStepIn (one walk cycle over the rim that sinks into the
+//! mud from the rim edge on) and SpaStepOut (one walk cycle that rises out of the mud up to the rim edge). The step clips
+//! are put at the point of the step by Creature::updateSpaStepLift, which also lifts the bather over the rim (decision
+//! 902(3)).
 void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
 {
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
@@ -1668,7 +1672,9 @@ void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
     {
         const Ogre::Animation* idle = skeleton->getAnimation(EntityAnimation::idle_anim);
         const Ogre::Animation* bath = skeleton->getAnimation(EntityAnimation::bathe_anim);
-        const bool wading = name == "SpaWade";
+        const bool stepIn = name == "SpaStepIn";
+        const bool stepOut = name == "SpaStepOut";
+        const bool wading = (name == "SpaWade") || stepIn || stepOut;
         const Ogre::Animation* walking = skeleton->getAnimation(EntityAnimation::walk_anim);
         const Ogre::Real duration = wading ? walking->getLength() : 1.0f;
         Ogre::Animation* transition = skeleton->createAnimation(name, duration);
@@ -1694,6 +1700,20 @@ void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
                     Ogre::Vector3 sink = Ogre::Vector3::ZERO;
                     if(skeleton->getBone(bone)->getParent() == nullptr)
                         sink.z = std::min(0.0f, (seated.getTranslate().z - standing.getTranslate().z) * 0.5f);
+                    // Over the rim the bather sinks into the mud behind the rim edge (half way) and rises out of it
+                    // before the edge
+                    Ogre::Real depth = 1.0f;
+                    if(stepIn)
+                    {
+                        const Ogre::Real behindEdge = std::max(0.0f, progress * 2.0f - 1.0f);
+                        depth = behindEdge * behindEdge * (3.0f - 2.0f * behindEdge);
+                    }
+                    else if(stepOut)
+                    {
+                        const Ogre::Real beforeEdge = std::min(1.0f, progress * 2.0f);
+                        depth = 1.0f - beforeEdge * beforeEdge * (3.0f - 2.0f * beforeEdge);
+                    }
+                    sink *= depth;
                     frame->setTranslate(step.getTranslate() + sink);
                     frame->setScale(step.getScale());
                     frame->setRotation(step.getRotation());
@@ -5674,7 +5694,8 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         return;
 
     std::string anim = poseAnimation;
-    if((animation == "SpaSit") || (animation == "SpaStand") || (animation == "SpaWade"))
+    if((animation == "SpaSit") || (animation == "SpaStand") || (animation == "SpaWade") ||
+       (animation == "SpaStepIn") || (animation == "SpaStepOut"))
         prepareSpaAnimation(objectEntity, animation);
     if(curAnimatedObject->getObjectType() == GameEntityType::chickenEntity)
     {

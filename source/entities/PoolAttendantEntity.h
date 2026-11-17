@@ -145,10 +145,11 @@ public:
     static PoolAttendantEntity* getPoolAttendantEntityFromPacket(GameMap* gameMap, ODPacket& is);
 
 private:
-    //! \brief Server side. Counts down while the attendant sits; starts a jump or an act when one is due.
+    //! \brief Server side. Counts down while the attendant sits; starts an outing or an act when one is due.
     void upkeepSitting();
 
-    //! \brief Server side. Counts down a short act and sits the attendant down again when it is over.
+    //! \brief Server side. Counts down a short act and the pause until the next outing, and sits the attendant down
+    //! again when the act is over.
     void upkeepAct();
 
     //! \brief Server side. Moves the attendant along the ladder while he climbs down or up.
@@ -163,12 +164,30 @@ private:
     //! \brief Server side. Starts the climb up when the attendant is back at the foot of the ladder.
     void upkeepWalkBack();
 
+    //! \brief Server side. Starts the climb up when the attendant has walked his round and is back at the foot of the
+    //! ladder.
+    void upkeepWalkRound();
+
+    //! \brief Server side. The pause on the chair is over: chooses at random one outing of those the room allows now
+    //! (the jump or the round, never both, Mario 2026-11-17, answer to Q8) and lets him climb down for it.
+    //! \return False when no outing can start now; he tries again in the next turn.
+    bool startOuting();
+
+    //! \brief Server side. Lets the attendant walk his round: from the foot of the ladder behind the chair to one side,
+    //! on the rim around the pool (see SpaLayout::attendantRound), behind the chair on the other side back to the ladder.
+    //! \param resume True for a loaded round: he goes on from the point of the round nearest to where he stands.
+    void startWalkRound(bool resume);
+
+    //! \brief Server side. Sets what the attendant does and writes the change to the log, so that every phase of an
+    //! outing can be followed in a game log (K30 measurement procedure, INGAME-QS-10 B1).
+    //! \param state The new state.
+    void setState(PoolAttendantState state);
     //! \brief Server side. Starts a random act (the whistle only while somebody bathes).
     void startAct();
 
-    //! \brief Server side. Starts the jump from the springboard when the spa has a springboard and a free place.
-    //! \return False when it cannot start now.
-    bool startCannonball();
+    //! \brief Server side. Reserves a free pool tile for the jump from the springboard.
+    //! \return False when the spa has no springboard or no free pool tile now.
+    bool reserveCannonballPlace();
 
     //! \brief Server side. Lets the attendant walk to the springboard.
     void startWalkToBoard();
@@ -186,7 +205,8 @@ private:
     //! \param down True to climb down, false to climb up.
     void startClimb(bool down);
 
-    //! \brief Server side. Sits the attendant down on the chair and counts the next act and jump.
+    //! \brief Server side. Sits the attendant down on the chair and counts the next act and the full pause until the
+    //! next outing.
     void sitDown();
 
     //! \brief Server side. Sets the position of the attendant on the ladder.
@@ -223,7 +243,7 @@ private:
     //! \brief Gives the turns until the next act (a random time between the configured limits).
     double rollActTurns() const;
 
-    //! \brief Gives the turns until the next jump (a random time between the configured limits).
+    //! \brief Gives the turns until the next outing (a random time between the configured limits of the jump).
     double rollCannonballTurns() const;
 
     //! \brief Stops a jump or a walk that cannot go on (no room, no springboard, the pool changed) and sits the
@@ -242,8 +262,10 @@ private:
     bool mWhistleSounded;
     //! \brief Turns until the next act while the attendant sits (server side).
     double mActTurnsLeft;
-    //! \brief Turns until the next jump from the springboard (server side).
+    //! \brief Turns until the next outing, the jump or the round (server side).
     double mCannonballTurnsLeft;
+    //! \brief The outing the attendant is on (server side); a loaded attendant has it back from his state and place.
+    PoolAttendantOuting mOuting;
     //! \brief True while the attendant holds a pool tile for his jump (server side).
     bool mHasPlace;
     //! \brief The x of the pool tile he holds.
@@ -260,6 +282,8 @@ private:
     uint32_t mJumpTurnsLeft;
     //! \brief Turns of the running jump that have passed, fractions on a client (not saved).
     Ogre::Real mJumpElapsed;
+    //! \brief Client side. The height the attendant is lifted by to step over the rim of the pool (not saved).
+    Ogre::Real mRimLift;
 };
 
 #endif // POOLATTENDANTENTITY_H

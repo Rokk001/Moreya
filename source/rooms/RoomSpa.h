@@ -183,8 +183,18 @@ public:
     //! \brief Returns a reachable dry rim tile; ordinary navigation approaches it through open terrain.
     Tile* getArrivalTile(const Creature& creature) override;
 
-    //! \brief Assigns a dropped guest a normal paid bath, irrespective of its mood.
+    //! \brief A creature the keeper drops into the spa, on the mud or on the rim, takes a full, normally paid bath at the
+    //! free place nearest to the drop, whatever its mood, a pleasure buff or the lock of the spa; without a free place of
+    //! its size it leaves as from every other room (Mario 2026-11-17, answer to Q7).
     void creatureDropped(Creature& creature) override;
+
+    //! \brief True when a creature the keeper dropped on the tile can bathe here: it belongs to the seat of the room, is no
+    //! worker, the tile is a tile of the room, a free bath place of its bed size exists and the payer can pay the price.
+    //! A pleasure buff and the lock of the spa do not count for a drop (Mario 2026-11-17, answer to Q7).
+    //! \param creature The dropped creature.
+    //! \param tile The tile it was dropped on.
+    //! \param block Set to its bath place (see SpaLayout::findDropBlock).
+    bool canAcceptDrop(const Creature& creature, const Tile& tile, SpaBlock& block) const;
 
     //! \brief Keeps an assigned bath and its exit intact when routine needs or mood change.
     bool keepGuestUntilItLeft(Creature& creature) override;
@@ -294,6 +304,20 @@ public:
     bool getAttendantWalk(const std::pair<int32_t, int32_t>& from, const std::pair<int32_t, int32_t>& to,
         std::vector<std::pair<int32_t, int32_t> >& path) const;
 
+    //! \brief The round of the pool attendant on the rim around the pool, from one side of the chair to the other. See
+    //! SpaLayout::attendantRound.
+    //! \param path Set to the tiles of the round in walking order.
+    //! \return False when the room has no chair or the rim does not lead around the pool.
+    bool getAttendantRound(std::vector<std::pair<int32_t, int32_t> >& path) const;
+
+    //! \brief How high a walker at the position is lifted to step over the rim of a spa pool instead of walking through
+    //! it (see SpaLayout::rimStepLift); 0 away from the rim and outside a spa (decision 902(3)).
+    //! \param gameMap The map (server or client).
+    //! \param position The position of the walker.
+    //! \param edgeDistance Set to the distance of the walker from the nearest rim edge of its tile.
+    //! \param onPool Set to true when the walker stands on a pool tile.
+    static double getRimStepLift(GameMap* gameMap, const Ogre::Vector3& position, double& edgeDistance, bool& onPool);
+
     //! \brief Shows the splash of a landing on a pool tile (mud splash effect and sound) for the keepers that see it.
     //! \param x The x of the pool tile.
     //! \param y The y of the pool tile.
@@ -360,7 +384,13 @@ private:
     //! \return True when the bather's action ended.
     bool walkToPlace(Creature& creature, RoomSpaBather& bather);
 
-    //! \brief Walks cardinal terrain-checked room steps, preferring the rim to wading through mud.
+    //! \brief Walks the next leg of the way of a bather over cardinal terrain-checked room steps, preferring the rim to
+    //! wading through mud: a leg on the rim, a leg in the mud, or one step over the rim into or out of the pool (see
+    //! SpaLayout::nextBathLeg). It never walks or wades through the rim (decision 902(3)).
+    //! \param creature The bather.
+    //! \param target The tile the way leads to.
+    //! \param endpoint The point on the target the way ends at.
+    //! \return False when the room does not connect the bather with the target.
     bool walkBather(Creature& creature, Tile* target, const Ogre::Vector3& endpoint);
 
     //! \brief Starts a paid 3-5 second settling transition before counting seated bath time.
@@ -446,6 +476,11 @@ private:
     PoolAttendantEntity* mAttendant;
     //! \brief The attendant read from a saved room until the first update spawns it.
     RoomSpaPendingAttendant mPendingAttendant;
+    //! \brief The creature the keeper is dropping into the spa while its bath place is reserved (server side, only during
+    //! creatureDropped), nullptr otherwise.
+    const Creature* mDroppedCreature;
+    //! \brief The bath place of mDroppedCreature, nearest to the drop.
+    SpaBlock mDropBlock;
 };
 
 #endif // ROOMSPA_H
