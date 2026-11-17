@@ -14,49 +14,120 @@
             <Property name="VertFormatting" value="CentreAligned" />
             <Property name="TextColours" value="FFF2C860" />
         </Window>
-        <Window type="OD/StaticImage" name="Beer">
-            <Property name="Area" value="{{0.36,0},{0.13,0},{0.64,0},{0.48,0}}" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Image" value="OpenDungeonsIcons/BeerButton" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="FrameColours" value="FFF2C860" />
-        </Window>
-        <Window type="OD/StaticImage" name="BeerLock">
-            <Property name="Area" value="{{0.52,0},{0.35,0},{0.64,0},{0.48,0}}" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Image" value="DungeonbookIcons/Lock" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="FrameColours" value="FFF2C860" />
-        </Window>
-        <Window type="OD/StaticText" name="BeerText">
-            <Property name="Area" value="{{0.32,0},{0.49,0},{0.68,0},{0.57,0}}" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="MousePassThroughEnabled" value="True" />
+        <Window type="OD/StaticText" name="BeerSlot">
+            <Property name="Area" value="{{0.21,0},{0.14,0},{0.45,0},{0.3488,0}}" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="FrameColours" value="FF9C7A3C" />
+            <Property name="BackgroundColours" value="FF16130F" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="" />
-            <Property name="HorzFormatting" value="CentreAligned" />
-            <Property name="VertFormatting" value="CentreAligned" />
             <Property name="TextColours" value="FFF2C860" />
+            <Window type="OD/StaticImage" name="Beer">
+                <Property name="Area" value="{{0.08,0},{0.08,0},{0.92,0},{0.92,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Image" value="RoomArtworkTavernBeer/Image" />
+                <Property name="AspectMode" value="Shrink" />
+            </Window>
+            <Window type="OD/StaticImage" name="BeerLock">
+                <Property name="Area" value="{{0.55,0},{0.55,0},{0.97,0},{0.97,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Image" value="DungeonbookIcons/Lock" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="Visible" value="False" />
+            </Window>
+            <Window type="OD/StaticImage" name="BeerServed">
+                <Property name="Area" value="{{0.6,0},{0.6,0},{0.96,0},{0.96,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Image" value="OpenDungeonsSkin/CheckboxNormal" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="Visible" value="False" />
+                <Window type="OD/StaticImage" name="Mark">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Image" value="OpenDungeonsSkin/CheckboxMark" />
+                    <Property name="AspectMode" value="Shrink" />
+                </Window>
+            </Window>
         </Window>
-        <Window type="OD/StaticImage" name="Keeper">
-            <Property name="Area" value="{{0.1,0},{0.64,0},{0.25,0},{0.8,0}}" />
+        <Window type="OD/StaticText" name="WaterSlot">
+            <Property name="Area" value="{{0.55,0},{0.14,0},{0.79,0},{0.3488,0}}" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="FrameColours" value="FF9C7A3C" />
+            <Property name="BackgroundColours" value="FF16130F" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="" />
+            <Property name="TextColours" value="FFF2C860" />
+            <Window type="OD/StaticImage" name="Water">
+                <Property name="Area" value="{{0.08,0},{0.08,0},{0.92,0},{0.92,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Image" value="RoomArtworkTavernWater/Image" />
+                <Property name="AspectMode" value="Shrink" />
+            </Window>
+            <Window type="OD/StaticImage" name="WaterServed">
+                <Property name="Area" value="{{0.6,0},{0.6,0},{0.96,0},{0.96,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Image" value="OpenDungeonsSkin/CheckboxNormal" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="Visible" value="False" />
+                <Window type="OD/StaticImage" name="Mark">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Image" value="OpenDungeonsSkin/CheckboxMark" />
+                    <Property name="AspectMode" value="Shrink" />
+                </Window>
+            </Window>
+        </Window>
+        <Window type="OD/StaticImage" name="PayerLine">
+            <Property name="Area" value="{{0.265,0},{0.616,0},{0.735,0},{0.624,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Image" value="RoomArtworkConnectorLine/Image" />
+            <Property name="ImageColours" value="FF9C7A3C" />
+        </Window>
+        <Window type="OD/StaticImage" name="KeeperRing">
+            <Property name="Area" value="{{0.075,0},{0.5373,0},{0.265,0},{0.7026,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Image" value="RoomArtworkPayerRing/Image" />
+            <Property name="AspectMode" value="Shrink" />
+            <Property name="ImageColours" value="FFFFFFFF" />
+        </Window>
+        <Window type="OD/StaticImage" name="Keeper">
+            <Property name="Area" value="{{0.1111,0},{0.5688,0},{0.2289,0},{0.6712,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Image" value="OpenDungeonsIcons/SeatIcon" />
             <Property name="AspectMode" value="Shrink" />
-            <Property name="FrameColours" value="FFF2C860" />
+        </Window>
+        <Window type="OD/StaticImage" name="KeeperCoin">
+            <Property name="Area" value="{{0.2023,0},{0.6481,0},{0.265,0},{0.7026,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Image" value="OpenDungeonsIcons/GoldCoin" />
+            <Property name="AspectMode" value="Shrink" />
         </Window>
         <Window type="OD/StaticText" name="KeeperLabel">
-            <Property name="Area" value="{{0.03,0},{0.8,0},{0.32,0},{0.88,0}}" />
+            <Property name="Area" value="{{0.05,0},{0.7107,0},{0.29,0},{0.7707,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
@@ -66,18 +137,33 @@
             <Property name="VertFormatting" value="CentreAligned" />
             <Property name="TextColours" value="FFF2C860" />
         </Window>
-        <Window type="OD/StaticImage" name="Creature">
-            <Property name="Area" value="{{0.75,0},{0.64,0},{0.9,0},{0.8,0}}" />
+        <Window type="OD/StaticImage" name="CreatureRing">
+            <Property name="Area" value="{{0.735,0},{0.5373,0},{0.925,0},{0.7026,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Image" value="RoomArtworkPayerRing/Image" />
+            <Property name="AspectMode" value="Shrink" />
+            <Property name="ImageColours" value="FFFFFFFF" />
+        </Window>
+        <Window type="OD/StaticImage" name="Creature">
+            <Property name="Area" value="{{0.7711,0},{0.5688,0},{0.8889,0},{0.6712,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Image" value="OpenDungeonsIcons/CreaturesIcon" />
             <Property name="AspectMode" value="Shrink" />
-            <Property name="FrameColours" value="FFF2C860" />
+        </Window>
+        <Window type="OD/StaticImage" name="CreatureCoin">
+            <Property name="Area" value="{{0.8623,0},{0.6481,0},{0.925,0},{0.7026,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Image" value="OpenDungeonsIcons/GoldCoin" />
+            <Property name="AspectMode" value="Shrink" />
         </Window>
         <Window type="OD/StaticText" name="CreatureLabel">
-            <Property name="Area" value="{{0.68,0},{0.8,0},{0.97,0},{0.88,0}}" />
+            <Property name="Area" value="{{0.71,0},{0.7107,0},{0.95,0},{0.7707,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
@@ -88,9 +174,16 @@
             <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Button" name="PayerButton">
-            <Property name="Area" value="{{0.35,0},{0.68,0},{0.65,0},{0.79,0}}" />
+            <Property name="Area" value="{{0.42,0},{0.585,0},{0.58,0},{0.655,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="&lt;&gt;" />
+            <Property name="Text" value="" />
+            <Window type="OD/StaticImage" name="Arrows">
+                <Property name="Area" value="{{0.18,0},{0.12,0},{0.82,0},{0.88,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Image" value="RoomArtworkPayerSwitch/Image" />
+            </Window>
         </Window>
     </Window>
 </GUILayout>

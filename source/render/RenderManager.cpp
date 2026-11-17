@@ -78,6 +78,7 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <set>
 #include <vector>
 
@@ -178,6 +179,15 @@ const Ogre::Real CREATURE_TURN_INTERRUPT_TOLERANCE = 0.02f;
 const Ogre::Real CHICKEN_FEATHER_EFFECT_DURATION = 2.6f;
 //! Height above the corpse position at which its fly swarm hovers
 const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
+//! Mesh of the twig broom a worker holds in its right hand while it sweeps (Clean clip, INGAME-QS-10 K26). Its grip
+//! for the right hand is the origin, the handle runs along +z to the twigs, like every hand tool on the weapon mount
+const std::string CLEANING_BROOM_MESH = "CleaningBroom.mesh";
+//! Prefix of the name of the broom entity of a worker
+const std::string CLEANING_BROOM_PREFIX = "CleaningBroom_";
+//! The broom (1 mesh unit long) is this share of the height of the worker's mesh, the length the Clean clips of the
+//! worker skeletons were authored for: the left hand reaches the handle 0.25 units above the right one and the twig
+//! tips (0.70 units below the right hand) touch the floor; checked by source/tests/check_cleaning_broom_k26.py
+const Ogre::Real CLEANING_BROOM_HEIGHT_SHARE = 0.88f;
 //! Mesh of the mug a guest of a tavern holds in its right hand while it drinks
 const std::string TAVERN_MUG_MESH = "TavernMug.mesh";
 //! Prefix of the name of the mug entity of a creature
@@ -1649,7 +1659,11 @@ std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string
     return name;
 }
 
-//! \brief Builds seated spa transitions from each creature's existing bath pose without changing shared assets.
+//! \brief Builds seated spa transitions from each creature's existing bath pose without changing shared assets, and the
+//! walking spa clips: SpaWade (walking half sunk in the mud), SpaStepIn (one walk cycle over the rim that sinks into the
+//! mud from the rim edge on) and SpaStepOut (one walk cycle that rises out of the mud up to the rim edge). The step clips
+//! are put at the point of the step by Creature::updateSpaStepLift, which also lifts the bather over the rim (decision
+//! 902(3)).
 void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
 {
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
@@ -1659,7 +1673,9 @@ void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
     {
         const Ogre::Animation* idle = skeleton->getAnimation(EntityAnimation::idle_anim);
         const Ogre::Animation* bath = skeleton->getAnimation(EntityAnimation::bathe_anim);
-        const bool wading = name == "SpaWade";
+        const bool stepIn = name == "SpaStepIn";
+        const bool stepOut = name == "SpaStepOut";
+        const bool wading = (name == "SpaWade") || stepIn || stepOut;
         const Ogre::Animation* walking = skeleton->getAnimation(EntityAnimation::walk_anim);
         const Ogre::Real duration = wading ? walking->getLength() : 1.0f;
         Ogre::Animation* transition = skeleton->createAnimation(name, duration);
@@ -1685,6 +1701,20 @@ void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
                     Ogre::Vector3 sink = Ogre::Vector3::ZERO;
                     if(skeleton->getBone(bone)->getParent() == nullptr)
                         sink.z = std::min(0.0f, (seated.getTranslate().z - standing.getTranslate().z) * 0.5f);
+                    // Over the rim the bather sinks into the mud behind the rim edge (half way) and rises out of it
+                    // before the edge
+                    Ogre::Real depth = 1.0f;
+                    if(stepIn)
+                    {
+                        const Ogre::Real behindEdge = std::max(0.0f, progress * 2.0f - 1.0f);
+                        depth = behindEdge * behindEdge * (3.0f - 2.0f * behindEdge);
+                    }
+                    else if(stepOut)
+                    {
+                        const Ogre::Real beforeEdge = std::min(1.0f, progress * 2.0f);
+                        depth = 1.0f - beforeEdge * beforeEdge * (3.0f - 2.0f * beforeEdge);
+                    }
+                    sink *= depth;
                     frame->setTranslate(step.getTranslate() + sink);
                     frame->setScale(step.getScale());
                     frame->setRotation(step.getRotation());
@@ -2013,6 +2043,7 @@ void RenderManager::destroyWorldBorder()
 
 //! \brief Initializes game visuals with a seam-covering ground plane bounded by the map edges and the
 //! rock border outside of them, then prepares resources needed by creatures that appear later.
+//! The depth pre-pass render target is always made new, after releasing any one left over.
 void RenderManager::initGameRenderer(GameMap* gameMap)
 {
     OD_ASSERT_TRUE(gameMap);
@@ -2113,6 +2144,9 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     // disable the scissors test, so we can generate to as large textures as one wish
     Ogre::Root::getSingleton().getRenderSystem()->setScissorTest(false);
     
+    // A target left over from a game that was not stopped would keep a viewport on the camera replaced below
+    destroySmokeRenderTarget();
+
     // Create the RTT texture
     m_texture = Ogre::TextureManager::getSingleton().createManual("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, Ogre::TEX_TYPE_2D,Ogre::uint(ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getViewport()->getActualWidth()), Ogre::uint(ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getViewport()->getActualHeight()), 0, Ogre::PF_FLOAT32_RGBA, Ogre::TU_RENDERTARGET, 0);
 
@@ -2156,6 +2190,7 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     Ogre::TexturePtr myPerlinTexture = createPerlinTexture();
     setupFogMaterial(myPerlinTexture);
     prepareGameCreatureResources(*gameMap);
+    prepareGameObjectResources();
     prepareGameShaders();
 }
 
@@ -2332,14 +2367,56 @@ void RenderManager::stopGameRenderer(GameMap* gameMap)
         mHandLight = nullptr;
     }
     removeLiftedGoldMaterials();
-    removeIfExists<Ogre::TextureManager>("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-    if(ODFrameListener::getSingleton().getCameraManager()->hasCamera("RenderToTexture"))
-        ODFrameListener::getSingleton().getCameraManager()->destroyCamera("RenderToTexture");
-    if(ODFrameListener::getSingleton().getCameraManager()->hasCameraNode("RenderToTexture"))
-        ODFrameListener::getSingleton().getCameraManager()->destroyCameraNode("RenderToTexture");
+    // The frame loop must stop drawing the depth pre-pass target before its camera goes
+    destroySmokeRenderTarget();
     removeIfExists<Ogre::TextureManager>("PerlinNoiseTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME );
     removeIfExists<Ogre::TextureManager>("freshPerlinTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME );
     
+}
+
+//! \brief Removes the viewport and listener of the depth pre-pass target and clears mRenderTarget, so that
+//! ODFrameListener::frameStarted no longer updates it, and only then destroys the camera, its node and the texture.
+void RenderManager::destroySmokeRenderTarget()
+{
+    if(mRenderTarget != nullptr)
+    {
+        mRenderTarget->removeListener(this);
+        mRenderTarget->removeAllViewports();
+        mRenderTarget = nullptr;
+    }
+    m_texture.reset();
+    removeIfExists<Ogre::TextureManager>("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    CameraManager* cameraManager = ODFrameListener::getSingleton().getCameraManager();
+    if(cameraManager->hasCamera("RenderToTexture"))
+        cameraManager->destroyCamera("RenderToTexture");
+    if(cameraManager->hasCameraNode("RenderToTexture"))
+        cameraManager->destroyCameraNode("RenderToTexture");
+}
+
+//! \brief Looks up the camera of every viewport of mRenderTarget among the live cameras of the scene manager by
+//! pointer; a camera that is not found was destroyed while the target still shows it.
+bool RenderManager::hasRenderTargetWithDestroyedCamera() const
+{
+    if(mRenderTarget == nullptr)
+        return false;
+
+    const Ogre::SceneManager::CameraList& cameras = mSceneManager->getCameras();
+    for(unsigned short index = 0; index < mRenderTarget->getNumViewports(); ++index)
+    {
+        const Ogre::Camera* camera = mRenderTarget->getViewport(index)->getCamera();
+        bool live = false;
+        for(Ogre::SceneManager::CameraList::const_iterator it = cameras.begin(); it != cameras.end(); ++it)
+        {
+            if(it->second == camera)
+            {
+                live = true;
+                break;
+            }
+        }
+        if(!live)
+            return true;
+    }
+    return false;
 }
 
 void RenderManager::triggerCompositor(const std::string& compositorName)
@@ -4224,10 +4301,6 @@ void RenderManager::rrAttachEntity(GameEntity* entity)
     parentNode->addChild(entityNode);
 }
 
-//! Offset in tiles of the figure in Merchant.mesh from the origin of the mesh (the front corner of the sales table, STAND 0.64, -0.76)
-static const Ogre::Real MERCHANT_RIG_OFFSET_X = 0.64f;
-static const Ogre::Real MERCHANT_RIG_OFFSET_Y = -0.76f;
-
 //! \brief Builds movable visuals with explicit decorative scales and the existing furniture defaults.
 //! \brief Creates an object mesh, including untouchable translucent ghost shapes.
 void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* renderedMovableEntity, NodeType nt)
@@ -4354,17 +4427,11 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
 
         ent = mSceneManager->createEntity(tempString, meshPtr);
-        if(meshName == "Merchant")
-        {
-            // The Merchant mesh is modelled standing at the front corner of a sales table, MERCHANT_RIG_OFFSET from its
-            // origin. The offset turns with the node and put him into walls and shelves; the figure hangs on a child
-            // node that cancels it, so the figure stands at the tile centre the server walks (decision 901)
-            Ogre::SceneNode* figure = node->createChildSceneNode(tempString + "_figure");
-            figure->setPosition(-MERCHANT_RIG_OFFSET_X, -MERCHANT_RIG_OFFSET_Y, 0.0f);
-            figure->attachObject(ent);
-        }
-        else
-            node->attachObject(ent);
+        // The Merchant mesh is modelled standing on its own origin (owner finding of 2026-11-17), so like every other figure it hangs
+        // directly on the node and stands at the tile centre the server walks (decision 901). Before, the figure stood at
+        // the front corner of a sales table, 0.64, -0.76 tiles from its origin; that offset turned with the node and put
+        // him into walls and shelves, and a child node had to cancel it.
+        node->attachObject(ent);
         if(renderedMovableEntity->getObjectType() == GameEntityType::ghostEntity)
         {
             ent->setMaterialName("GhostGlow");
@@ -4453,6 +4520,7 @@ void RenderManager::rrFinishBuildingObjectReplacement(RenderedMovableEntity* ent
     mTreasuryBatch.rebuildForPile(entity->getName());
 }
 
+//! \brief Destroys the entity, its attached decor and particles and the scene node of a rendered movable entity.
 void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt)
 {
     std::string tempString = curRenderedMovableEntity->getOgreNamePrefix()
@@ -4476,8 +4544,6 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
         ent->detachFromParent();
         mSceneManager->destroyEntity(ent);
     }
-    if(mSceneManager->hasSceneNode(tempString + "_figure"))
-        mSceneManager->destroySceneNode(tempString + "_figure");
     // The sack shown while a worker carries gold
     if(mSceneManager->hasEntity(tempString + "_sack"))
     {
@@ -4733,6 +4799,88 @@ void RenderManager::prepareGameCreatureResources(GameMap& gameMap)
     OD_LOG_INF("Prepared creature resources for " + Helper::toString(static_cast<uint32_t>(meshNames.size())) + " meshes");
 }
 
+//! The list of the object meshes prepared during the map load, in the config folder.
+static const std::string PREPARED_OBJECTS_FILE = "preparedobjects.cfg";
+
+//! \brief Reads the mesh file names of config/preparedobjects.cfg ('#' starts a comment), in file order.
+static std::vector<std::string> readPreparedObjectMeshes()
+{
+    std::vector<std::string> meshNames;
+    std::ifstream file((ResourceManager::getSingleton().getConfigPath() + PREPARED_OBJECTS_FILE).c_str());
+    if(!file.is_open())
+    {
+        OD_LOG_WRN("Cannot read " + PREPARED_OBJECTS_FILE + ": objects load when they first appear");
+        return meshNames;
+    }
+    std::string line;
+    while(std::getline(file, line))
+    {
+        const std::string::size_type comment = line.find('#');
+        if(comment != std::string::npos)
+            line.erase(comment);
+        std::istringstream words(line);
+        std::string meshName;
+        if(words >> meshName)
+            meshNames.push_back(meshName);
+    }
+    return meshNames;
+}
+
+//! \brief Prepares each listed object mesh the way rrCreateRenderedMovableEntity uses it, without drawing it.
+//! A mesh that cannot be prepared is reported and left to load when it first appears, as before.
+//! \brief Records frame-stall operation timing without changing the operation.
+void RenderManager::prepareGameObjectResources()
+{
+    FrameStallTrace::Scope trace(FrameStallTrace::ResourcePreparation);
+    if(mShaderGenerator == nullptr)
+        return;
+    const std::vector<std::string> objectMeshes = readPreparedObjectMeshes();
+    std::set<std::string> preparedMaterials;
+    uint32_t prepared = 0;
+    for(const std::string& objectFile : objectMeshes)
+    {
+        if(!Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics", objectFile))
+        {
+            OD_LOG_WRN("Listed object mesh not found: " + objectFile);
+            continue;
+        }
+        Ogre::Entity* entity = nullptr;
+        try
+        {
+            Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(objectFile, "Graphics");
+            // The same tangents rrCreateRenderedMovableEntity builds, so the object's later entity finds them ready
+            unsigned short src;
+            try
+            {
+                if(!mesh->suggestTangentVectorBuildParams(src))
+                    mesh->buildTangentVectors(src);
+            }
+            catch(const Ogre::ItemIdentityException&)
+            {
+                OD_LOG_INF("No texture coordinates to build tangents from for mesh " + objectFile);
+            }
+            entity = mSceneManager->createEntity(mesh);
+            // The skinning material copies the real object gets, then the shaders of the materials it draws with
+            useShaderSkinning(entity);
+            for(const Ogre::SubEntity* part : entity->getSubEntities())
+            {
+                if(!preparedMaterials.insert(part->getMaterialName()).second)
+                    continue;
+                prepareGeneratedShaders(*part->getMaterial());
+            }
+            ++prepared;
+        }
+        catch(const Ogre::Exception& exception)
+        {
+            OD_LOG_WRN("Cannot prepare object mesh " + objectFile + ": " + exception.getDescription());
+        }
+        if(entity != nullptr)
+            mSceneManager->destroyEntity(entity);
+    }
+    OD_LOG_INF("Prepared object resources for " + Helper::toString(prepared) + " of "
+        + Helper::toString(static_cast<uint32_t>(objectMeshes.size())) + " listed meshes");
+}
+
 //! \brief Creates the visible creature and registers it for late contact sampling.
 //! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::rrCreateCreature(Creature* curCreature)
@@ -4850,6 +4998,7 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
     mDragContactGrips.erase(curCreature);
     clearCreatureDecay(curCreature);
     removeCreatureTavernProps(curCreature);
+    removeCreatureCleaningBroom(curCreature);
     cancelCreatureStep(curCreature);
     removeTreasuryThiefSack(curCreature);
     cancelCreatureSleepAnimation(curCreature);
@@ -5371,6 +5520,7 @@ void RenderManager::rrPickUpEntity(GameEntity* curEntity, Player* localPlayer)
     {
         clearCreatureDecay(static_cast<Creature*>(curEntity));
         removeCreatureTavernProps(static_cast<Creature*>(curEntity));
+        removeCreatureCleaningBroom(static_cast<Creature*>(curEntity));
         cancelCreatureStep(static_cast<Creature*>(curEntity));
         cancelCreatureFeedingAnimation(static_cast<Creature*>(curEntity));
         cancelCreatureSleepAnimation(static_cast<Creature*>(curEntity));
@@ -5641,7 +5791,8 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         return;
 
     std::string anim = poseAnimation;
-    if((animation == "SpaSit") || (animation == "SpaStand") || (animation == "SpaWade"))
+    if((animation == "SpaSit") || (animation == "SpaStand") || (animation == "SpaWade") ||
+       (animation == "SpaStepIn") || (animation == "SpaStepOut"))
         prepareSpaAnimation(objectEntity, animation);
     if(curAnimatedObject->getObjectType() == GameEntityType::chickenEntity)
     {
@@ -5668,6 +5819,9 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         cancelCreatureSeatBlend(dropCreature);
         clearCreatureDecay(dropCreature);
         updateCreatureTavernProps(dropCreature, anim);
+        // Sitting down on a toilet seat (Relieve) or getting up from it changes the height the creature is drawn at
+        if((animation == EntityAnimation::relieve_anim) || (mSteppingCreatures.count(dropCreature) != 0))
+            updateCreatureStep(dropCreature);
     }
     // The sniffing of a creature has no clip of its own: it stands (idle clip), the reaction shows the sniffing
     if((anim == EntityAnimation::sniff_anim) && (dropCreature != nullptr))
@@ -5996,6 +6150,15 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     if((dropCreature != nullptr) &&
        (EntityAnimation::hidesWeapons(anim) != ((previousState != nullptr) && EntityAnimation::hidesWeapons(previousState->getAnimationName()))))
         CreatureCombatReactions::showWeaponsForClip(dropCreature);
+
+    // A worker that sweeps (the clip it really plays, a skeleton without Clean wipes with Claim) holds the broom and puts
+    // its own tool away; the next clip gives the tool back (INGAME-QS-10 K26)
+    if((dropCreature != nullptr) &&
+       (EntityAnimation::holdsBroom(anim) != ((previousState != nullptr) && EntityAnimation::holdsBroom(previousState->getAnimationName()))))
+    {
+        updateCreatureCleaningBroom(dropCreature);
+        CreatureCombatReactions::showWeaponsForClip(dropCreature);
+    }
 
     // Sitting down and getting up blend the body from the one pose into the other; the old clip holds still meanwhile
     if((dropCreature != nullptr) && (previousState != nullptr) && (previousState != animState) && !freezeOnLastFrame &&
@@ -6944,6 +7107,28 @@ void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& positi
         updateCreatureStep(static_cast<Creature*>(entity));
 }
 
+//! \brief Height a creature is drawn higher because it sits on a toilet seat: the seat top while it plays the Relieve
+//! clip, stands still and stands on the footprint of a seat; 0 otherwise (also while it walks onto or off the seat).
+static float toiletSeatLift(Creature* creature)
+{
+    if(!creature->isAlive() || creature->isMoving() ||
+       (creature->getAnimationStateName() != EntityAnimation::relieve_anim))
+        return 0.0f;
+
+    const Ogre::Vector3 position = creature->getPosition();
+    for(RenderedMovableEntity* candidate : creature->getGameMap()->getRenderedMovableEntities())
+    {
+        if((candidate->getObjectType() != GameEntityType::buildingObject) ||
+           (candidate->getMeshName() != RoomObjectPath::TOILET_SEAT_MESH))
+            continue;
+
+        if(RoomObjectPath::onToiletSeat(position.x, position.y, candidate->getPosition().x, candidate->getPosition().y,
+            static_cast<float>(candidate->getRotationAngle())))
+            return RoomObjectPath::toiletSeatTop;
+    }
+    return 0.0f;
+}
+
 void RenderManager::updateCreatureStep(Creature* creature)
 {
     Ogre::SceneNode* node = creature->getEntityNode();
@@ -6959,7 +7144,10 @@ void RenderManager::updateCreatureStep(Creature* creature)
     const float goldHeight = TreasuryCreatureRules::liftOnGold(
         TreasuryGoldMesh::surfaceHeight(position.x, position.y, goldLevel), position.z);
     const float pourRise = getTreasuryPourRise(creature);
-    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0 && goldHeight <= 0.0f && pourRise <= 0.0f)
+    // A creature that uses a toilet seat sits on top of the stone seat instead of inside it
+    const float seatLift = toiletSeatLift(creature);
+    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0 && goldHeight <= 0.0f && pourRise <= 0.0f &&
+       seatLift <= 0.0f)
         return;
     const Ogre::Vector2 point(position.x, position.y);
     const Ogre::Vector2 direction(creature->getWalkDirection().x, creature->getWalkDirection().y);
@@ -6998,6 +7186,7 @@ void RenderManager::updateCreatureStep(Creature* creature)
             break;
         }
     }
+    lift = std::max(lift, seatLift);
     lift += goldHeight + pourRise;
     node->setPosition(position + Ogre::Vector3(0, 0, lift));
     if(creature->isMoving())
@@ -8461,8 +8650,10 @@ Ogre::MaterialPtr RenderManager::getOutlinerMaterial(const std::string& material
     return myOutliner;
 }
 
-//! \brief Prepares a hover material by brightening fragment passes that expose an ambient uniform.
-//! \details Times material clone preparation with its source material identity.
+//! \brief Prepares a hover material by brightening only the seat-colour contour pass of a creature material.
+//! \details The passes that draw the creature body keep their ambient factor, so a creature under the cursor
+//! keeps its normal colours and is never filled white. Times material clone preparation with its source
+//! material identity.
 Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& materialName)
 {
     FrameStallTrace::Scope trace(FrameStallTrace::MaterialPreparation, materialName.c_str());
@@ -8487,6 +8678,10 @@ Ogre::MaterialPtr RenderManager::getBrighterMaterial(const std::string& material
             // A contour can sit alongside fixed-function or RTSS passes, such as Chicken's base passes.
             // RTSS-generated passes can use different uniforms and omit the contour's custom ambient uniform.
             if(!pass->hasFragmentProgram())
+                continue;
+            // Only the contour pass of getOutlinerMaterial() is brightened. The body passes (Creature.frag) multiply
+            // the scene ambient light by their ambient uniform; raising it filled the whole creature white.
+            if(pass->getFragmentProgramName() != "Custom_color")
                 continue;
             Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
             if(parameters->_findNamedConstantDefinition("ambient", false) != nullptr)
@@ -8698,6 +8893,63 @@ void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carrie
     // The carrier that still walks changes back to the plain walk clip
     if(carrier->getAnimationStateName() == EntityAnimation::walk_anim)
         rrSetObjectAnimationState(carrier, EntityAnimation::walk_anim, true);
+}
+
+//! \brief Removes the cleaning broom from the hand of a worker, if it has one.
+void RenderManager::removeCreatureCleaningBroom(Creature* creature)
+{
+    const std::string broomName = CLEANING_BROOM_PREFIX + creature->getName();
+    if(!mSceneManager->hasEntity(broomName))
+        return;
+
+    Ogre::Entity* broomEntity = mSceneManager->getEntity(broomName);
+    broomEntity->detachFromParent();
+    mSceneManager->destroyEntity(broomEntity);
+}
+
+//! \brief Puts the cleaning broom into the right hand of a worker while it plays the sweeping clip
+//! (EntityAnimation::holdsBroom) and its own tool away: the pickaxe a worker without a weapon carries
+//! (rrCreateWorkerTool) is hidden here, the weapon models by CreatureCombatReactions::showWeaponsForClip, and the
+//! kobold's pick, part of its model, by its Clean clip (Pick bone scaled to nothing). Any other clip takes the broom
+//! away and shows the pickaxe again. The broom sits on the weapon mount of the right hand, sized to the worker's mesh
+//! (CLEANING_BROOM_HEIGHT_SHARE); a rig bone does not scale it, the creature's level growth does (INGAME-QS-10 K26).
+void RenderManager::updateCreatureCleaningBroom(Creature* creature)
+{
+    const Ogre::AnimationState* animState = creature->getAnimationState();
+    const bool sweeping = (animState != nullptr) && EntityAnimation::holdsBroom(animState->getAnimationName());
+    const std::string toolName = WORKER_TOOL_PREFIX + creature->getName();
+    if(mSceneManager->hasEntity(toolName))
+        mSceneManager->getEntity(toolName)->setVisible(!sweeping);
+
+    if(!sweeping)
+    {
+        removeCreatureCleaningBroom(creature);
+        return;
+    }
+
+    const std::string broomName = CLEANING_BROOM_PREFIX + creature->getName();
+    const std::string objectName = creature->getOgreNamePrefix() + creature->getName();
+    if(mSceneManager->hasEntity(broomName) || !mSceneManager->hasEntity(objectName))
+        return;
+
+    Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
+    Ogre::Skeleton* skeleton = objectEntity->getSkeleton();
+    if((skeleton == nullptr) || !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(CLEANING_BROOM_MESH))
+        return;
+
+    WeaponMount mount;
+    if(!getWeaponMount(skeleton, "R", CLEANING_BROOM_MESH, mount))
+    {
+        OD_LOG_WRN("No hand bone for the cleaning broom of creature=" + creature->getName() + ", skeleton=" + skeleton->getName());
+        return;
+    }
+
+    Ogre::Entity* broomEntity = mSceneManager->createEntity(broomName, CLEANING_BROOM_MESH);
+    broomEntity->setQueryFlags(0);
+    const Ogre::Real scale = CLEANING_BROOM_HEIGHT_SHARE * objectEntity->getMesh()->getBounds().getSize().z;
+    Ogre::TagPoint* grip = objectEntity->attachObjectToBone(mount.mBoneName, broomEntity, mount.mRotation, mount.mOffset);
+    grip->setInheritScale(false);
+    grip->setScale(scale, scale, scale);
 }
 
 //! \brief Removes the mug from the hand of a creature, if it has one.

@@ -57,7 +57,11 @@ styles = []
 
 
 def collect_styles(window, path=''):
-    """Pin all 787 existing image, font, background and frame properties, excluding replaced filter buttons."""
+    """Pin all 772 existing image, font, background and frame properties, excluding replaced filter buttons.
+
+    787 before the window got the frame of the menu sheet: the 15 properties of the ornate book frame and its title
+    band (TitlebarFont, Frame*Image, Title*Image on the window and its title bar) are gone, every page style is kept.
+    """
     path += '/' + window.get('name', '')
     if window.get('name', '').startswith('Filter'):
         return
@@ -71,9 +75,9 @@ def collect_styles(window, path=''):
 
 
 collect_styles(book)
-assert len(styles) == 787
+assert len(styles) == 772
 assert hashlib.sha256(json.dumps(styles, separators=(',', ':')).encode()).hexdigest() == \
-    '60c427f4f709f480401739064ffd3cd5adaf99f815446e4ae8c63cfd11a228f9'
+    '6a1b6219062e1f3b1f692a273689256c3c0d1f581a0a8fc4363c31802bbbf004'
 
 expected = {
     'DungeonbookIcons.png': '1f8c0171d312b6a7c432eb9640cd754089ace73f',

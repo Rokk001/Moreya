@@ -206,7 +206,8 @@ void AiEvents::pollWar()
                 const double dy = tile->getY() - war.breakthrough->getY();
                 if(dx * dx + dy * dy > radius * radius || !trap->isTileVisibleForSeat(tile, seat)) continue;
                 found = true;
-                if(!trap->isTileExhausted(tile)) empty = false;
+                // Owner decision D357: only the state the seat last saw counts (row K08)
+                if(!WAR::seenTrapExhausted(war, seat, trap, tile)) empty = false;
             }
         }
     }

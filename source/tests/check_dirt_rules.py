@@ -630,7 +630,7 @@ static void checkUrgeAndCreatureDirt()
     Seat seat; CreatureDefinition definition; definition.dirtFactor = 1.5;
     Tile* tile = map.getTile(2, 2);
     Creature creature(&seat, &definition, &map, tile);
-    // Urge: +UrgePerChicken per chicken; UrgeSeek is reached after ceil(UrgeSeek / UrgePerChicken) = 14 chickens, UrgeRelieve after 17, clamped at 100
+    // Urge: +UrgePerChicken per chicken; UrgeSeek is reached after ceil(UrgeSeek / UrgePerChicken) = 4 chickens, UrgeRelieve after 5, clamped at 100
     const double perChicken = ConfigManager::getSingleton().getDirtConfigDouble("UrgePerChicken");
     const double seek = ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek");
     const double relieve = ConfigManager::getSingleton().getDirtConfigDouble("UrgeRelieve");

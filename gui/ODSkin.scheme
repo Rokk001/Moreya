@@ -12,6 +12,12 @@
     <Imageset filename="RoomArtworkGhostLevelCrystal.imageset" name="RoomArtworkGhostLevelCrystal" />
     <Imageset filename="RoomArtworkCasinoSmiles.imageset" name="RoomArtworkCasinoSmiles" />
     <Imageset filename="RoomArtworkCasinoMoney.imageset" name="RoomArtworkCasinoMoney" />
+    <Imageset filename="RoomArtworkTavernBeer.imageset" name="RoomArtworkTavernBeer" />
+    <Imageset filename="RoomArtworkTavernWater.imageset" name="RoomArtworkTavernWater" />
+    <Imageset filename="RoomArtworkPayerRing.imageset" name="RoomArtworkPayerRing" />
+    <Imageset filename="RoomArtworkPayerSwitch.imageset" name="RoomArtworkPayerSwitch" />
+    <Imageset filename="RoomArtworkInfirmaryHeart.imageset" name="RoomArtworkInfirmaryHeart" />
+    <Imageset filename="RoomArtworkConnectorLine.imageset" name="RoomArtworkConnectorLine" />
     <Imageset filename="RoomCentreIconAlchemyLab.imageset" name="RoomCentreIconAlchemyLab" />
     <Imageset filename="RoomCentreIconArena.imageset" name="RoomCentreIconArena" />
     <Imageset filename="RoomCentreIconCasino.imageset" name="RoomCentreIconCasino" />
@@ -39,6 +45,8 @@
     <Imageset filename="Items.imageset" name="ItemImages" />
     <Imageset filename="SlotTypes.imageset" name="SlotTypes" />
     <Imageset filename="ODNavigation.imageset" name="OpenDungeonsNavigation" />
+    <Imageset filename="NavigationRoomManager.imageset" name="NavigationRoomManager" />
+    <Imageset filename="NavigationDungeonbook.imageset" name="NavigationDungeonbook" />
     <Imageset filename="ChampionCrown.imageset" name="ChampionCrown" />
     <Imageset filename="CreatureSkillIcons.imageset" name="CreatureSkillIcons" />
     <Imageset filename="GoalStatus.imageset" name="GoalStatus" />
@@ -47,6 +55,7 @@
     <Imageset filename="ODBackgrounds.imageset" name="ODBackgrounds" />
     <Imageset filename="ODHudSurface.imageset" name="ODHudSurface" />
     <Imageset filename="ODMainMenuButtons.imageset" name="ODMainMenuButtons" />
+    <Imageset filename="ODMenuTemplate.imageset" name="ODMenuTemplate" />
     <Imageset filename="ODMainMenuBackground.imageset" name="ODMainMenuBackground" />
     <Imageset filename="ODAdvertisment.imageset" name="ODAdvertisment" />    
     <Font filename="LiberationSans-10.font" name="LiberationSans-10" />
@@ -113,6 +122,15 @@
     <FalagardMapping lookNFeel="OD/MenuScrollbar" renderer="Core/Scrollbar" targetType="CEGUI/Scrollbar" windowType="OD/MenuScrollbar" />
     <Font filename="MedievalSharp-20.font" name="MedievalSharp-20" />
     <FalagardMapping lookNFeel="OD/MenuTextButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuTextButton" />
+    <FalagardMapping lookNFeel="OD/MenuCompactButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuCompactButton" />
+    <FalagardMapping lookNFeel="OD/MenuFilterButton" renderer="Core/ToggleButton" targetType="CEGUI/RadioButton" windowType="OD/MenuFilterButton" />
+    <FalagardMapping lookNFeel="OD/LoadListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/LoadListbox" />
+    <FalagardMapping lookNFeel="OD/SheetWindow" renderer="Core/FrameWindow" targetType="CEGUI/FrameWindow" windowType="OD/SheetWindow" />
+    <FalagardMapping lookNFeel="OD/SheetTitlebar" renderer="Core/Titlebar" targetType="CEGUI/Titlebar" windowType="OD/SheetTitlebar" />
+    <FalagardMapping lookNFeel="OD/SheetPanel" renderer="Core/Default" targetType="DefaultWindow" windowType="OD/SheetPanel" />
+    <FalagardMapping lookNFeel="OD/SheetStaticText" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/SheetStaticText" />
+    <FalagardMapping lookNFeel="OD/SheetListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/SheetListbox" />
+    <FalagardMapping lookNFeel="OD/ScreenBorder" renderer="Core/Default" targetType="DefaultWindow" windowType="OD/ScreenBorder" />
     <FalagardMapping lookNFeel="OD/MenuTitle" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/MenuTitle" />
     <FalagardMapping lookNFeel="OD/MenuScrollablePane" renderer="Core/ScrollablePane" targetType="CEGUI/ScrollablePane" windowType="OD/MenuScrollablePane" />
     <FalagardMapping lookNFeel="OD/MenuListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/MenuListbox" />

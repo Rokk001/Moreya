@@ -4,8 +4,8 @@
      the tier 4 skill on top, then one column per path (three group paths, the family path) with
      tier 3, 2 and 1 from top to bottom. Each skill is an icon button with a rank bar and a rank text. -->
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="CreatureSkillTreeWindow" >
-        <Property name="Area" value="{{0.5,-300},{0.5,-260},{0.5,300},{0.5,260}}" />
+    <Window type="OD/SheetWindow" name="CreatureSkillTreeWindow" >
+        <Property name="Area" value="{{0.5,-300},{0.5,-290},{0.5,300},{0.5,290}}" />
         <Property name="Text" value="Skill Tree" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />

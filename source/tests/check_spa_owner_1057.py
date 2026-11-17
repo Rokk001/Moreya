@@ -1,8 +1,8 @@
-"""Check the restored pool attendant mesh (1186) and retained acts (1057-1060 and 1070).
+"""Check the hairy pool attendant mesh (1057-1060 and 1070, restored by K22) and its acts.
 
 Reads the shipped models/PoolAttendant.mesh and .skeleton through OgreXMLConverter and the attendant code; no compiler, no
-game. Checks (1) the exact deployed mesh restored by decision 1186 and its visible props, including towel, whistle, hair
-and moustache;
+game. Checks (1) the exact hairy mesh that K22 restored with its fitting skeleton (it replaces the mesh decision 1186 had
+put back) and its visible props, including towel, whistle, hair, body hair and moustache;
 (2) the Sit pose: knees bent and apart (no stiff legs), arms beside the
 belly (no intersection), body not twisted; (3) the clips: Whistle brings the whistle to the mouth, TowelWave holds the
 towel in the hand above the shoulder and waves it, Doze lets him sink sideways, Climb, Walk and Jump move; (4) the code:
@@ -31,10 +31,12 @@ def read(name):
     return (ROOT / name).read_text(encoding='utf-8')
 
 
-# Decision 1186 restored the deployed mesh and retained the updated skeleton.
+# K22 restored the hairy mesh of decisions 1057-1060 and 1070 that fits the skeleton (decision 1186 had put back the older
+# mesh, whose joints sat beside the joints of this skeleton) and, after the owner findings of 2026-11-17, carries the head of
+# the attendant in the game today, volume body hair and a small whistle; check_spa_attendant_k22.py checks fit and look.
 assert sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
-    '6eb7499d2eba2250c3181690820b4e42cb6297e10d4a34deadc9462568ca25d7'
-), 'decision 1186 restores the deployed attendant mesh with its original proportions and materials'
+    '6b22bbb1da5fdb1292d38e37141b543a94f175dc04cecfaffb5e14de672c4403'
+), 'K22 restores the hairy attendant mesh that fits its skeleton'
 
 with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
     converted = {}
@@ -49,10 +51,11 @@ mesh, skeleton = converted['PoolAttendant.mesh'], converted['PoolAttendant.skele
 sub_by_material = {}
 for sub in mesh.findall('submeshes/submesh'):
     sub_by_material.setdefault(sub.get('material'), []).append(sub)
-for material in ('SpaSkin', 'SpaSuit', 'SpaHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes', 'SpaIron'):
+for material in ('SpaSkin', 'SpaSuit', 'SpaHair', 'SpaBodyHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes', 'SpaIronWorn'):
     assert material in sub_by_material, 'the attendant needs the material ' + material
 faces = {m: sum(len(s.findall('faces/face')) for s in subs) for m, subs in sub_by_material.items()}
-assert faces['SpaLinen'] >= 300 and faces['SpaHair'] >= 1000, 'towel, grey hair and moustache stay'
+assert faces['SpaLinen'] >= 300 and faces['SpaHair'] >= 1000, 'towel, hair and moustache stay'
+assert faces['SpaBodyHair'] >= 10000, 'full body hair'
 
 suit = points_for(mesh, 'SpaSuit')
 belly = suit[(suit[:, 2] > .42) & (suit[:, 2] < .6)]
@@ -110,14 +113,36 @@ for seconds in (0, .5, 1.0, 1.5):
     assert abs(sit['UpperArm_R'][2] - sit['UpperArm_L'][2]) < .03 and abs(sit['UpperArm_R'][1] - sit['UpperArm_L'][1]) < .03, \
         'shoulders not twisted against the hips'
 
-sit0, _ = pose('Sit', 0)
+sit0, sit0_matrices = pose('Sit', 0)
+
+
+def bind_matrix(name):
+    """World matrix of a bone in the bind pose."""
+    local = np.eye(4)
+    local[:3, :3] = rotation(bones[name].find('rotation'))
+    local[:3, 3] = vector(bones[name].find('position'))
+    return bind_matrix(parents[name]) @ local if name in parents else local
+
+
+# owner finding 3 (2026-11-17): the WhistleHang joint is the ring at the end of the cord; the whistle itself (the centre of
+# its vertices) is carried by that bone
+whistle_centre = np.append(points_for(mesh, 'SpaWhistle').mean(axis=0), 1)
+whistle_bind_inverse = np.linalg.inv(bind_matrix('WhistleHang'))
+
+
+def whistle_at(matrices):
+    """Centre of the whistle in a pose."""
+    return (matrices['WhistleHang'] @ whistle_bind_inverse @ whistle_centre)[:3]
+
+
 for seconds in (.9, 1.05):
     whistle, whistle_matrices = pose('Whistle', seconds)
     head = whistle['Head']
-    mouth_distance = np.linalg.norm(whistle['WhistleHang'] - (head + np.array([0, -.13, .05])))
+    mouth_distance = np.linalg.norm(whistle_at(whistle_matrices) - (head + np.array([0, -.13, .05])))
     assert mouth_distance < .12, 'Whistle: the whistle is at the mouth (%.3f)' % mouth_distance
-    assert np.linalg.norm(whistle['Hand_R'] - whistle['WhistleHang']) < .14, 'Whistle: the whistle is in the hand'
-assert np.linalg.norm(sit0['WhistleHang'] - (sit0['Head'] + np.array([0, -.13, .05]))) > .2, 'the whistle hangs on his chest at rest'
+    assert np.linalg.norm(whistle['Hand_R'] - whistle_at(whistle_matrices)) < .14, 'Whistle: the whistle is in the hand'
+assert np.linalg.norm(whistle_at(sit0_matrices) - (sit0['Head'] + np.array([0, -.13, .05]))) > .2, \
+    'the whistle hangs on his chest at rest'
 
 towel0, _ = pose('TowelWave', .75)
 towel1, _ = pose('TowelWave', .95)
@@ -165,4 +190,4 @@ credits = read('CREDITS')
 assert re.search(r'^models/PoolAttendant\.mesh .*decision 863', credits, re.M)
 assert re.search(r'^models/PoolAttendant\.skeleton .*1057-1060, 1070', credits, re.M)
 
-print('check_spa_owner_1057 ok: restored attendant mesh, bent legs, arms beside the belly, readable acts')
+print('check_spa_owner_1057 ok: hairy attendant mesh, bent legs, arms beside the belly, readable acts')

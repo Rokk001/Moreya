@@ -1,31 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
-    <Window type="OD/FrameWindow" name="SocialWindow">
-        <!-- The ornate iron frame and the large centred title of the concepts (book-variant-2.png,
-             book-switch-variant-1.png); only this window, every other window keeps the shared frame -->
-        <Property name="TitlebarFont" value="MedievalSharp-20" />
-        <Property name="FrameTopLeftImage" value="DungeonbookIcons/BookFrameTopLeft" />
-        <Property name="FrameTopRightImage" value="DungeonbookIcons/BookFrameTopRight" />
-        <Property name="FrameBottomLeftImage" value="DungeonbookIcons/BookFrameBottomLeft" />
-        <Property name="FrameBottomRightImage" value="DungeonbookIcons/BookFrameBottomRight" />
-        <Property name="FrameTopImage" value="DungeonbookIcons/BookFrameTop" />
-        <Property name="FrameLeftImage" value="DungeonbookIcons/BookFrameLeft" />
-        <Property name="FrameRightImage" value="DungeonbookIcons/BookFrameRight" />
-        <Property name="FrameBottomImage" value="DungeonbookIcons/BookFrameBottom" />
-        <Property name="Area" value="{{0.5,-440},{0.5,-322},{0.5,440},{0.5,322}}" />
+    <Window type="OD/SheetWindow" name="SocialWindow">
+        <!-- The pages keep the layout of the concepts (book-variant-2.png, book-switch-variant-1.png); the window
+             frame and the title are the frame of the chosen menu sheet that every window uses,
+             no longer the ornate iron frame with the large title. The window is 860x648 design pixels (880x644 in the
+             ornate frame): as high as the HUD leaves room for at 1024x768 and narrow enough that it is shrunk only
+             to the screen height at 640x480, so every text of the pages keeps its room. -->
+        <Property name="Area" value="{{0.5,-430},{0.5,-324},{0.5,430},{0.5,324}}" />
         <Property name="Text" value="Dungeonbook" />
         <Property name="SizingEnabled" value="False" />
         <Property name="Visible" value="False" />
-        <AutoWindow namePath="__auto_titlebar__">
-            <Property name="TitleTopLeftImage" value="DungeonbookIcons/BookFrameTopLeft" />
-            <Property name="TitleTopRightImage" value="DungeonbookIcons/BookFrameTopRight" />
-            <Property name="TitleTopImage" value="DungeonbookIcons/BookFrameTop" />
-            <Property name="TitleLeftImage" value="DungeonbookIcons/BookFrameLeft" />
-            <Property name="TitleRightImage" value="DungeonbookIcons/BookFrameRight" />
-            <Property name="TitleRuleImage" value="DungeonbookIcons/BookTitleRule" />
-            <Property name="CaptionHorzFormatting" value="CentreAligned" />
-            <Property name="CaptionCentred" value="True" />
-        </AutoWindow>
         <Window type="DefaultWindow" name="HomePage">
             <Property name="RiseOnClickEnabled" value="False" />
             <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9143,0}}" />

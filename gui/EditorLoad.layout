@@ -11,8 +11,8 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/MenuFrameWindow" name="LevelWindowFrame" >
-            <Property name="Area" value="{{0.5,-300},{0.5,-275},{0.5,300},{0.5,275}}" />
+        <Window type="OD/SheetWindow" name="LevelWindowFrame" >
+            <Property name="Area" value="{{0.5,-300},{0.5,-285},{0.5,300},{0.5,285}}" />
             <Property name="Text" value="Please choose a Level..." />
             <Property name="MaxSize" value="{{0,800},{0,600}}" />
             <Property name="MinSize" value="{{0,400},{0,300}}" />
@@ -22,7 +22,7 @@
                 <Property name="Area" value="{{0,20},{0,35},{1.0,-25},{0,70}}" />
             </Window>
             
-            <Window type="OD/Listbox" name="LevelSelect" >
+            <Window type="OD/SheetListbox" name="LevelSelect" >
                 <Property name="Area" value="{{0,15},{0,65},{0.5,-20},{0.7,0}}" />
                 <Property name="ForceVertScrollbar" value="True" />
                 <Property name="Sort" value="True" />
@@ -35,12 +35,14 @@
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
-            <Window type="OD/MainMenuButton" name="BackButton" >
-                <Property name="Area" value="{{0.5,-199},{0.75,0},{0.5,-35},{0.75,80}}" />
+            <Window type="OD/MenuTextButton" name="BackButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{0.5,-199},{0.75,0},{0.5,-35},{0.75,54}}" />
                 <Property name="Text" value="Back" />
             </Window>
-            <Window type="OD/MainMenuButton" name="LoadButton" >
-                <Property name="Area" value="{{0.5,12},{0.75,0},{0.5,176},{0.75,80}}" />
+            <Window type="OD/MenuTextButton" name="LoadButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{0.5,12},{0.75,0},{0.5,176},{0.75,54}}" />
                 <Property name="Text" value="Load" />
             </Window>
             <Window type="OD/Checkbox" name="OnlyLevel" >

@@ -88,9 +88,16 @@ public:
     bool isKnown(Tile* tile) const;
 
     //! \brief The known tile with the smallest straight-line distance from the own heart tile that is owned by a
-    //! non-allied seat or on which an enemy creature of a record was seen.
+    //! non-allied seat or on which an enemy creature of a record was seen; the rogue seat of the wild creatures is
+    //! not an enemy keeper and is skipped.
     //! \return nullptr when no enemy tile is known.
     Tile* nearestKnownEnemyTile(const SightingState& sighting) const;
+
+    //! \brief The nearest known enemy tile as above, and the id of the seat the AI believes owns it (the remembered
+    //! owner of the tile, or the seat of the creature record); the war aims at this seat (owner decision D353).
+    //! \param ownerSeatId Receives the owner's seat id, -1 when no enemy tile is known.
+    //! \return nullptr when no enemy tile is known.
+    Tile* nearestKnownEnemyTile(const SightingState& sighting, int& ownerSeatId) const;
 
     //! \brief Plans the tunnel to the target and marks it for digging: draws one detour, or takes the longer of two on
     //! an I02 mistake, builds the polyline start - waypoint - target of length (1 + detour) x distance and marks it in at most
@@ -125,6 +132,8 @@ public:
 
     //! \brief Marks the exploration tunnels (row I05): ExploreTunnelsPerDirection tunnels for each of the four map
     //! directions from the own heart, once; a known seam on the way gets Leveltilesdig rings; later calls mark nothing.
+    //! A tunnel ends before the first known water, lava, gem or mana-well tile, known undiggable full tile or known
+    //! full tile of another seat; open tiles are passed.
     //! \param marked In/out: true once the tunnels are marked.
     //! \return true when tunnels were marked by this call.
     bool exploreTunnels(KeeperAI& ai, Mind& mind, bool& marked) const;

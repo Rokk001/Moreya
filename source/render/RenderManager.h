@@ -126,7 +126,18 @@ public:
     
     //! \brief Initialize the renderer when a new game (Game or Editor) is launched
     void initGameRenderer(GameMap* gameMap);
+    //! \brief Releases the visuals of the running game; afterwards no game render target is drawn any more.
     void stopGameRenderer(GameMap*);
+
+    //! \brief Takes the depth pre-pass render target ("smokeTexture") out of the frame loop, then destroys its
+    //! camera "RenderToTexture", the camera node and the texture. Safe to call when none of them exists.
+    //! The viewport is removed before its camera: a viewport left on a destroyed camera is drawn with freed
+    //! memory by the next frame (crash in SceneManager::findLightsAffectingFrustum on the return to the menu).
+    void destroySmokeRenderTarget();
+
+    //! \brief True if the render target the frame loop updates has a viewport whose camera is not a live camera
+    //! of the scene manager. Compares pointers only, so it never touches a destroyed camera.
+    bool hasRenderTargetWithDestroyedCamera() const;
 
     //! \brief starts the compositor compositorName.
     void triggerCompositor(const std::string& compositorName);
@@ -493,7 +504,7 @@ private:
     Ogre::MaterialPtr getOutlinerMaterial(const std::string& materialName, const Ogre::ColourValue& colour);
 
     //! \brief Returns the brighter copy of a creature material shown while the hand is over the creature,
-    //! made on first use.
+    //! made on first use. Only the seat-colour contour is brightened; the body keeps its normal colours.
     Ogre::MaterialPtr getBrighterMaterial(const std::string& materialName);
 
     //! \brief Makes the contour copies of a creature material for every seat colour and their brighter copies,
@@ -502,6 +513,12 @@ private:
 
     //! \brief Loads configured creature meshes, tangents and highlight materials before play begins.
     void prepareGameCreatureResources(GameMap& gameMap);
+
+    //! \brief Loads the meshes, tangents, skinning materials and shaders of every object listed in
+    //! config/preparedobjects.cfg (room furniture and staff, traps, eggs, dirt, item bags, missiles, equipment and the
+    //! other objects created during play) during the map load. Loading one in the frame it first appeared stalled
+    //! that frame (first Tavern: 203 ms in the server message plus 107-161 ms of first draws; first egg 116 ms).
+    void prepareGameObjectResources();
 
     //! \brief Loads a material and makes its generated shaders, the two steps the technique resolver takes when
     //! the material is first drawn. Materials with their own programs keep them.
@@ -1172,6 +1189,11 @@ private:
     void clearCreatureDecay(Creature* creature);
     //! Removes the mug of a drinking guest and the birds over a knocked-out guest of a tavern, if the creature has them
     void removeCreatureTavernProps(Creature* creature);
+    //! Removes the cleaning broom from the hand of a worker, if it has one
+    void removeCreatureCleaningBroom(Creature* creature);
+    //! Gives a worker that plays the sweeping clip the cleaning broom in its right hand and puts its own tool away; any
+    //! other clip takes the broom away and gives the tool back (INGAME-QS-10 K26)
+    void updateCreatureCleaningBroom(Creature* creature);
     //! Removes only the mug of a guest of a tavern, if the creature has one (the end of a seat blend out of a drink clip)
     void removeCreatureTavernMug(Creature* creature);
     //! Gives the creature the props of the clip it plays (mug in the right hand for Drink, circling birds for

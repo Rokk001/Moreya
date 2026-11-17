@@ -4,6 +4,11 @@
     <Window type="DefaultWindow" name="Root" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
+        <!-- Iron border of the chosen menu sheet around the whole screen. -->
+        <Window type="OD/ScreenBorder" name="ScreenBorder" >
+            <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
             <Property name="Visible" value="False" />
             <Property name="Area" value="{{0.5,-166.5},{0,32},{0.5,166.5},{0,143}}" />
@@ -14,7 +19,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="VersionText" >
-            <Property name="Area" value="{{0,0},{1,-24},{0,100},{1,0}}" />
+            <Property name="Area" value="{{0,28},{1,-50},{0,228},{1,-28}}" />
             <Property name="Text" value="Undefined" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
@@ -22,38 +27,38 @@
         </Window>
 
         <Window type="OD/MenuTextButton" name="StartCampaignButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,-76},{0.5,160},{0.5,-40}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.499224,-118.8},{0.5,-151.7},{0.499224,118.8},{0.5,-94.8}}" />
             <Property name="Text" value="Campaign" />
         </Window>
         <Window type="OD/MenuTextButton" name="StartSkirmishButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,-40},{0.5,160},{0.5,-4}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.499224,-118.8},{0.5,-95.4},{0.499224,118.8},{0.5,-38.5}}" />
             <Property name="Text" value="Skirmish" />
         </Window>
         <Window type="OD/MenuTextButton" name="MultiplayerModeButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,-4},{0.5,160},{0.5,32}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.499224,-118.8},{0.5,-40.3},{0.499224,118.8},{0.5,16.6}}" />
             <Property name="Text" value="Multiplayer" />
         </Window>
         <Window type="OD/MenuTextButton" name="LoadGameButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,32},{0.5,160},{0.5,68}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.499224,-118.8},{0.5,14.7},{0.499224,118.8},{0.5,71.6}}" />
             <Property name="Text" value="Load Game" />
         </Window>
         <Window type="OD/MenuTextButton" name="MapEditorButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,68},{0.5,160},{0.5,104}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.499224,-118.8},{0.5,70.4},{0.499224,118.8},{0.5,127.3}}" />
             <Property name="Text" value="Map Editor" />
         </Window>
         <Window type="OD/MenuTextButton" name="SettingsButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,104},{0.5,160},{0.5,140}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.499224,-118.8},{0.5,124.8},{0.499224,118.8},{0.5,181.7}}" />
             <Property name="Text" value="Settings" />
         </Window>
         <Window type="OD/MenuTextButton" name="QuitButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,160},{0.5,160},{0.5,196}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.499224,-118.8},{0.5,183},{0.499224,118.8},{0.5,239.9}}" />
             <Property name="Text" value="Quit" />
         </Window>
         <LayoutImport type="DefaultWindow" filename="WindowCampaignSubMenu.layout" name="CampaignSubMenuMenuImport" />

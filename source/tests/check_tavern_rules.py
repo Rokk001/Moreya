@@ -5,7 +5,7 @@ What is run (the function bodies are taken from the source files, not copied by 
   Creature::increaseThirst / setThirst / drinkTaken / increaseUrge / setDrunk / setHangoverTurns / addTavernMood /
   isStaggering / getHangoverWorkFactor / sleepStarted / sleepEnded / upkeepTavernState
                       thirst growth and the clamp at 100, rogue creatures and types without thirst (no hunger, no thirst),
-                      the notice at 100, a drink sets thirst 0 and raises the urge (beer 15, water 5), beer adds 25
+                      the notice at 100, a drink sets thirst 0 and raises the urge (beer 15, water 15), beer adds 25
                       drunkenness (cap 100) and water none, decay 0.5 per turn, stagger at 50, the vomit mark is reset
                       below 75, a hangover of 252 turns after a sleep that started above 50 (not shortened, mood -16.67 once,
                       half work), the tavern mood as a one-time value on the stored mood (no timer; the carried old-save value
@@ -691,12 +691,12 @@ static void checkThirst()
     Seat plain; Creature other("O", &thirsty, &plain, 1); other.setThirst(100.0); other.increaseThirst(1.0);
     expectNear(other.mThirst, 100.0, "no keeper, no notice, no crash");
 
-    // A drink sets the thirst to 0 and raises the urge: beer 15 and water 5
+    // A drink sets the thirst to 0 and raises the urge: beer 15 and water 15
     Creature d("D", &thirsty, &seat, 1); d.setThirst(95.0);
     d.drinkTaken(DrinkKind::water);
-    expectNear(d.mThirst, 0.0, "water quenches"); expectNear(d.mUrge, 5.0, "water urge 5"); expectNear(d.mDrunk, 0.0, "water adds no drunkenness");
+    expectNear(d.mThirst, 0.0, "water quenches"); expectNear(d.mUrge, 15.0, "water urge 15"); expectNear(d.mDrunk, 0.0, "water adds no drunkenness");
     d.setThirst(95.0); d.drinkTaken(DrinkKind::beer);
-    expectNear(d.mThirst, 0.0, "beer quenches"); expectNear(d.mUrge, 20.0, "beer urge 15 on top"); expectNear(d.mDrunk, 25.0, "beer adds 25 drunkenness");
+    expectNear(d.mThirst, 0.0, "beer quenches"); expectNear(d.mUrge, 30.0, "beer urge 15 on top"); expectNear(d.mDrunk, 25.0, "beer adds 25 drunkenness");
     for(int i = 0; i < 6; ++i) d.drinkTaken(DrinkKind::beer);
     expectNear(d.mDrunk, 100.0, "drunkenness is capped at 100");
 

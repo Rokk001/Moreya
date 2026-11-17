@@ -75,10 +75,11 @@ bool ODClientTest::connect(const std::string& host, const int port, uint32_t tim
     }
     mLocalServerPort = (host == "localhost" || host == "127.0.0.1") ? port : 0;
 
-    // Send a hello request to start the conversation with the server
+    // Send a hello request to start the conversation with the server; like the game client it names the
+    // network record schema, which the server checks together with the version
     ODPacket packSend;
     packSend << ClientNotificationType::hello
-        << std::string("OpenDungeons V ") + OD_VERSION_STR;
+        << std::string("OpenDungeons V ") + OD_VERSION_STR + NetworkProtocol::WIRE_SCHEMA_SUFFIX;
     send(packSend);
 
     return true;
@@ -107,6 +108,7 @@ void ODClientTest::disconnect(bool keepReplay)
     mLocalServerPort = 0;
 }
 
+//! \brief Reads the server messages the tests rely on, in the record layout the game client reads.
 bool ODClientTest::processMessage(ServerNotificationType cmd, ODPacket& packetReceived)
 {
     OD_LOG_INF("ServerNotificationType=" + ServerNotification::typeString(cmd));
@@ -140,6 +142,11 @@ bool ODClientTest::processMessage(ServerNotificationType cmd, ODPacket& packetRe
 
             BOOST_CHECK(packetReceived >> str);
             OD_LOG_INF("level tileset=" + (str.empty() ? "default" : str));
+
+            // The server sends the sandbox flag of the level before the seats, like the game client reads it
+            bool isSandbox;
+            BOOST_CHECK(packetReceived >> isSandbox);
+            OD_LOG_INF("level sandbox=" + std::string(isSandbox ? "yes" : "no"));
 
             uint32_t nb;
             // We read the seats

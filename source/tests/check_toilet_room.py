@@ -44,8 +44,9 @@ assert 'class RoomToiletFactory : public RoomFactory' in room_cpp and 'RoomRegis
 cmake = read('CMakeLists.txt')
 for name in ('rooms/RoomToilet.cpp', 'creatureaction/CreatureActionSearchToilet.cpp', 'creatureaction/CreatureActionUseToilet.cpp'):
     assert '${SRC}/' + name in cmake, name + ' missing in CMakeLists.txt'
-# Every covered tile gets a seat object (one per tile, removed with the tile)
-assert 'ToiletSeat' in room_cpp
+# The room places seat objects (rows along the edge with a lane, see check_toilet_k25.py; removed with the tile)
+assert 'RoomObjectPath::TOILET_SEAT_MESH' in room_cpp
+assert 'static const std::string TOILET_SEAT_MESH = "ToiletSeat";' in read('source/gamemap/RoomObjectBounds.h')
 
 # 3. TileVisual: the published toilet visual stays before the appended equipment visuals, the tavern visual follows them
 # 3. TileVisual: published toilet and equipment visuals stay before the appended infirmary visual.

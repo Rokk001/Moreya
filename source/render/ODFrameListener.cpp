@@ -31,7 +31,9 @@
 #include "gamemap/GameMap.h"
 #include "gamemap/DraggableTileContainer.h"
 #include "modes/AbstractApplicationMode.h"
+#include "modes/EditorMode.h"
 #include "modes/GameEditorModeConsole.h"
+#include "modes/GameMode.h"
 #include "modes/ModeManager.h"
 #include "network/ODServer.h"
 #include "network/ODClient.h"
@@ -528,6 +530,9 @@ bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
 }
 
 //! \brief Samples real frame intervals once, independently of pause and repeated mode updates.
+//! A return-to-menu test run is stepped before the game's render target is updated.
+//! Frames drawn while the loading picture of a map load still covers the game count as load, not as game frames;
+//! each sampled frame also lets the loading picture end once the map has settled (LoadingScreen::onFrame).
 bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
 {
     // The mode manager is gone once the window has been closed (windowClosed)
@@ -537,13 +542,17 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
     // first frameStarted, so the current mode is null here on the first rendered frame.
     const AbstractApplicationMode* sampledMode = mModeManager->getCurrentMode();
     const bool inGame = sampledMode != nullptr &&
-        sampledMode->getModeType() == ModeManager::GAME && mGameMap->getTurnNumber() != -1;
+        sampledMode->getModeType() == ModeManager::GAME && mGameMap->getTurnNumber() != -1 &&
+        !LoadingScreen::isShown();
     const float frameSeconds = mFrameStatistics.sampleFrame(inGame, mGameMap->getTurnNumber(), mWindow->isActive());
     FrameStallTrace::get().setPhase(FrameStallTrace::FrameStarted);
+    LoadingScreen::onFrame(frameSeconds, mGameMap->getTurnNumber(), mGameMap->getGamePaused());
     if(mIsMainMenuCreated)
         mMainScene->recordFrameStatistics(frameSeconds);
     if(RunLevelTest::isActive())
         RunLevelTest::onFrame(evt.timeSinceLastFrame);
+    if(RunLevelTest::isReturnToMenuRun())
+        stepReturnToMenuTest(evt.timeSinceLastFrame);
     AbstractApplicationMode* currentMode = mModeManager->getCurrentMode();
     if(currentMode)
         currentMode->onFrameStarted(evt);
@@ -580,6 +589,34 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
    
     FrameStallTrace::get().setPhase(FrameStallTrace::RenderTargets);
     return true;
+}
+
+//! \brief Hands the current mode and the state of the game's render target to the return-to-menu run, then leaves
+//! the game or editor through the Yes handler of its quit dialog, or asks for the main menu from another menu.
+void ODFrameListener::stepReturnToMenuTest(Ogre::Real seconds)
+{
+    AbstractApplicationMode* mode = mModeManager->getCurrentMode();
+    const ModeManager::ModeType type = (mode != nullptr) ? mode->getModeType() : ModeManager::NONE;
+    const bool inPlayedMode = (type == ModeManager::GAME) || (type == ModeManager::EDITOR);
+    const bool inMainMenu = type == ModeManager::MENU_MAIN;
+    const bool renderTargetsValid = (mRenderManager == nullptr) || !mRenderManager->hasRenderTargetWithDestroyedCamera();
+    const RunLevelTest::ReturnStep step = RunLevelTest::onReturnToMenuFrame(static_cast<double>(seconds),
+        inPlayedMode, inMainMenu, renderTargetsValid);
+    if(step == RunLevelTest::returnStepLeave)
+    {
+        GameMode* gameMode = dynamic_cast<GameMode*>(mode);
+        EditorMode* editorMode = dynamic_cast<EditorMode*>(mode);
+        if(gameMode != nullptr)
+            gameMode->quitToMenu();
+        else if(editorMode != nullptr)
+            editorMode->onClickYesQuitMenu();
+        else
+            RunLevelTest::fail(RunLevelTest::codeRunError, "run error: the played mode to leave is neither game nor editor");
+    }
+    else if(step == RunLevelTest::returnStepMainMenu)
+    {
+        mModeManager->requestMode(ModeManager::MENU_MAIN);
+    }
 }
 
 //! \brief Draws the interface only in overlay-enabled views, leaving scene-only texture views untouched.

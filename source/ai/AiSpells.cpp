@@ -419,18 +419,22 @@ Creature* focusTarget(KeeperAI& ai, const std::vector<Creature*>& list)
     return anyOf(list);
 }
 
-//! \brief Returns how many of the creatures stand within the radius of the Tremor spell around the creature.
-int creaturesAround(const std::vector<Creature*>& list, const Creature* center)
+//! \brief Returns how many of the creatures stand within the radius of an area spell around the tile (the circle the
+//! spell itself tests).
+//! \param centerTile The tile the area spell would be cast on.
+//! \param radius The radius of the spell in tiles.
+int creaturesAround(const std::vector<Creature*>& list, const Tile* centerTile, double radius)
 {
-    int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("TremorRadiusTiles"));
-    Tile* centerTile = center->getPositionTile();
     int count = 0;
     for(Creature* creature : list)
     {
         Tile* tile = creature->getPositionTile();
+        if(tile == nullptr)
+            continue;
+
         int dx = tile->getX() - centerTile->getX();
         int dy = tile->getY() - centerTile->getY();
-        if((dx * dx + dy * dy) <= (radius * radius))
+        if(static_cast<double>(dx * dx + dy * dy) <= (radius * radius))
             ++count;
     }
     return count;
@@ -514,6 +518,81 @@ Tile* tileNextToHeart(KeeperAI& ai)
         }
     }
     return nullptr;
+}
+
+//! \brief The tile of a wasted area spell (the E19 mistake): a tile of the own land, next to the heart or under an own
+//! fighter, on which the spell reaches no enemy the AI sees, so the mana is paid without effect.
+//! \param type Inferno or Tremor.
+//! \return The tile, or nullptr when every such tile has an enemy in reach (then nothing is cast).
+Tile* wastedAreaTile(KeeperAI& ai, SpellType type)
+{
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    const char* radiusKey = (type == SpellType::inferno) ? "InfernoRadiusTiles" : "TremorRadiusTiles";
+    double radius = ConfigManager::getSingleton().getSpellConfigDouble(radiusKey);
+    std::vector<Tile*> candidates;
+    Tile* heartSide = tileNextToHeart(ai);
+    if(heartSide != nullptr)
+        candidates.push_back(heartSide);
+    for(Creature* creature : ownFighters(ai))
+    {
+        if(onOwnGround(creature, seat))
+            candidates.push_back(creature->getPositionTile());
+    }
+
+    // Every enemy creature in sight counts, workers included, since the area spells hurt them too
+    std::vector<Creature*> enemies;
+    for(Creature* creature : ai.getGameMap().getCreatures())
+    {
+        Seat* creatureSeat = creature->getSeat();
+        Tile* position = creature->getPositionTile();
+        if(!creature->isAlive() || (creatureSeat == nullptr) || seat->isAlliedSeat(creatureSeat) || (position == nullptr) ||
+           !seat->hasVisionOnTile(position))
+        {
+            continue;
+        }
+        enemies.push_back(creature);
+    }
+    for(Tile* tile : candidates)
+    {
+        if(!tile->isFullTile() && (creaturesAround(enemies, tile, radius) == 0))
+            return tile;
+    }
+    return nullptr;
+}
+
+//! \brief The target of a wasted single-target spell (the E19 mistake): the valid target on which the spell helps least.
+//! Heal goes to the own hurt creature on own claimed ground with the highest HP share; Lightning and Explosion go to the
+//! enemy of the fight on own claimed ground with the highest HP share (most HP when equal), where the damage is wasted.
+//! \param type The spell of the mistake.
+//! \param enemies The enemies of the fight that stand on ground claimed for the AI.
+//! \return The target, or nullptr when the spell has no valid target (then nothing is cast).
+Creature* wastedCreatureTarget(KeeperAI& ai, SpellType type, const std::vector<Creature*>& enemies)
+{
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    std::vector<Creature*> valid;
+    if(type == SpellType::creatureHeal)
+    {
+        for(Creature* creature : ownFighters(ai))
+        {
+            if(onOwnGround(creature, seat) && creature->isHurt())
+                valid.push_back(creature);
+        }
+    }
+    else
+    {
+        valid = enemies;
+    }
+
+    Creature* best = nullptr;
+    for(Creature* creature : valid)
+    {
+        if((best == nullptr) || (hpShare(creature) > hpShare(best)) ||
+           ((hpShare(creature) == hpShare(best)) && (creature->getHP() > best->getHP())))
+        {
+            best = creature;
+        }
+    }
+    return best;
 }
 
 //! \brief Writes a number with full double precision for a draw line.
@@ -1056,15 +1135,7 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         const SpellOption* best = nullptr;
         for(const SpellOption& option : damage)
         {
-            // Tremor only against intruders standing together
-            if(option.mType == SpellType::tremor)
-            {
-                bool together = false;
-                for(Creature* creature : allEnemies)
-                    together = together || (creaturesAround(allEnemies, creature) >= static_cast<int>(aiKey("TremorMinTargets")));
-                if(!together)
-                    continue;
-            }
+            // Tremor is chosen by its damage per mana like the others; it needs no minimum group of intruders
             // Lightning and Explosion need a target on claimed ground
             if((option.mType != SpellType::inferno) && (option.mType != SpellType::tremor) && enemies.empty())
                 continue;
@@ -1085,10 +1156,35 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
     }
 
     double handEnd = now;
-    // The target: a wasted cast goes to an own creature, which no attack spell of the AI harms
-    if(chosen == SpellType::creatureHeal)
+    // The target: a wasted cast of the mistake goes to the valid target where the spell helps least (an area spell on
+    // own ground without an enemy in reach, a heal on the least hurt creature, a single-target spell on the healthiest
+    // enemy); without such a target nothing is cast
+    if(slipped)
     {
-        Creature* target = slipped ? anyOf(ownFighters(ai)) : weakest(hurt);
+        if((chosen == SpellType::inferno) || (chosen == SpellType::tremor))
+        {
+            Tile* tile = wastedAreaTile(ai, chosen);
+            if(tile == nullptr)
+            {
+                nextCast = now + aiKey("CastRecheckSeconds");
+                return false;
+            }
+            handEnd = ACTS::castSpell(ai, chosen, tile);
+        }
+        else
+        {
+            Creature* target = wastedCreatureTarget(ai, chosen, enemies);
+            if(target == nullptr)
+            {
+                nextCast = now + aiKey("CastRecheckSeconds");
+                return false;
+            }
+            handEnd = ACTS::castSpell(ai, chosen, target);
+        }
+    }
+    else if(chosen == SpellType::creatureHeal)
+    {
+        Creature* target = weakest(hurt);
         if(target == nullptr)
         {
             nextCast = now + aiKey("CastRecheckSeconds");
@@ -1100,23 +1196,15 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
     {
         std::vector<Creature*>& pool = (chosen == SpellType::inferno || chosen == SpellType::tremor) ? allEnemies : enemies;
         Creature* target = nullptr;
-        if(slipped)
-        {
-            target = anyOf(ownFighters(ai));
-        }
-        else if(chosen == SpellType::inferno)
+        if(chosen == SpellType::inferno)
         {
             // Focus on the lowest-HP intruder, or choose randomly, as for the other damage spells.
             target = focusTarget(ai, pool);
         }
         else if(chosen == SpellType::tremor)
         {
-            // Choose only a target with enough nearby intruders, then apply the normal focus decision.
-            std::vector<Creature*> grouped;
-            for(Creature* creature : pool)
-                if(creaturesAround(pool, creature) >= static_cast<int>(aiKey("TremorMinTargets")))
-                    grouped.push_back(creature);
-            target = focusTarget(ai, grouped);
+            // The normal focus decision; Tremor needs no minimum group of nearby intruders.
+            target = focusTarget(ai, pool);
         }
         else
         {

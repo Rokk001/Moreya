@@ -71,6 +71,9 @@ static const float SKIN_IMAGE_PIXEL_DENSITY = 4.0f;
 static const float HUD_SURFACE_IMAGE_PIXEL_DENSITY = 2.0f;
 static const float ICON_IMAGE_PIXEL_DENSITY = 2.0f;
 static const float DEFAULT_IMAGE_PIXEL_DENSITY = 1.0f;
+//! The menu template and window frame are cut from the chosen 1920x1200 menu sheet: 1920 / 1024 design pixels would
+//! stretch them on wide screens, so the sheet's layout scale min(1920 / 1024, 1200 / 768) = 1.5625 is their density.
+static const float MENU_SHEET_IMAGE_PIXEL_DENSITY = 1.5625f;
 
 //! Painted navigation atlas coordinates, in doubled source pixels; existing layout sizes stay unchanged.
 static const char* const PAINTED_NAVIGATION_ATLAS = "ODNavigation.png";
@@ -1556,6 +1559,8 @@ float imagePixelDensity(const CEGUI::String& ceguiName)
         return SKIN_IMAGE_PIXEL_DENSITY;
     if(startsWith(name, "ODHudSurface/"))
         return HUD_SURFACE_IMAGE_PIXEL_DENSITY;
+    if(startsWith(name, "ODMenuTemplate/"))
+        return MENU_SHEET_IMAGE_PIXEL_DENSITY;
     if(name == "OpenDungeonsIcons/Prohibition")
         return DEFAULT_IMAGE_PIXEL_DENSITY;
     if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "RoomCentreIcon") || startsWith(name, "OpenDungeonsNavigation/"))
@@ -1568,6 +1573,7 @@ bool shouldScaleImage(const CEGUI::String& ceguiName)
 {
     const std::string name(ceguiName.c_str());
     return startsWith(name, "OpenDungeonsSkin/")
+        || startsWith(name, "ODMenuTemplate/")
         || startsWith(name, "OpenDungeonsIcons/")
         || startsWith(name, "RoomCentreIcon")
         || startsWith(name, "OpenDungeonsNavigation/")
@@ -1622,6 +1628,8 @@ std::string scaleFormattedImageSizes(const CEGUI::String& ceguiText, float scale
 //! \brief Loads and registers the GUI sheets, including immediate navigation visibility reflow.
 Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFileName, Ogre::RenderTarget &renderTarget)
   : mUserScale(1.0f),
+    mFontScaledDisplaySize(0.0f, 0.0f),
+    mFontsScaled(false),
     mSoundEffectsManager(soundEffectsManager)
 {
     OD_LOG_INF("*** Initializing CEGUI ***");
@@ -1917,15 +1925,6 @@ CEGUI::Window* Gui::createInfoWindow(const std::string& name)
     return window;
 }
 
-CEGUI::Window* Gui::createCreatureProfileWindow(const std::string& name)
-{
-    CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
-    CEGUI::Window* window = wmgr.loadLayoutFromFile("WindowCreatureProfile.layout");
-    window->setName(name);
-    registerWindowHierarchy(window);
-    return window;
-}
-
 CEGUI::Window* Gui::createCreatureProfilePage(CEGUI::Window* holder)
 {
     CEGUI::WindowManager& wmgr = CEGUI::WindowManager::getSingleton();
@@ -2131,7 +2130,7 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     for(std::size_t i = 0; i < 4; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsAfter[i]), y, scale);
 
-    // The Dungeonbook's existing recent-posts widget shares the document; it stays hidden on the creature card.
+    // The Dungeonbook's existing recent-posts widget shares the document; the book hides it (compact page).
     y = layoutProfileTextRow(page->getChild("OwnPostsText"), y, scale);
 
     // Remember the fresh unscrolled areas of the header and every flowing row after each reflow.
@@ -2515,15 +2514,26 @@ void Gui::applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data,
 }
 
 //! \brief Scales fonts and images for the display while preserving high-resolution atlas design sizes.
+//! Every window registration (each menu screen, each in-game window) calls this. Rescaling a font throws away all its
+//! rendered glyphs and makes every window that uses it reformat its text, which took several hundred ms per call, so
+//! a font is only changed when its scaling differs from the wanted one, and the fonts are only notified when the
+//! display size changed or a font was changed. The result for the fonts is the same as rescaling them every time.
 void Gui::updateResourceScaling(const CEGUI::Sizef& displaySize)
 {
     const CEGUI::Sizef fontNativeResolution(FONT_DESIGN_WIDTH / mUserScale,
         FONT_DESIGN_HEIGHT / mUserScale);
+    bool fontsChanged = !mFontsScaled || mFontScaledDisplaySize != displaySize;
     CEGUI::FontManager::FontIterator font = CEGUI::FontManager::getSingleton().getIterator();
     while(!font.isAtEnd())
     {
-        font.getCurrentValue()->setNativeResolution(fontNativeResolution);
-        font.getCurrentValue()->setAutoScaled(CEGUI::ASM_Min);
+        CEGUI::Font* currentFont = font.getCurrentValue();
+        if(currentFont->getNativeResolution() != fontNativeResolution ||
+           currentFont->getAutoScaled() != CEGUI::ASM_Min)
+        {
+            currentFont->setNativeResolution(fontNativeResolution);
+            currentFont->setAutoScaled(CEGUI::ASM_Min);
+            fontsChanged = true;
+        }
         ++font;
     }
 
@@ -2546,7 +2556,10 @@ void Gui::updateResourceScaling(const CEGUI::Sizef& displaySize)
         ++image;
     }
 
-    CEGUI::FontManager::getSingleton().notifyDisplaySizeChanged(displaySize);
+    if(fontsChanged)
+        CEGUI::FontManager::getSingleton().notifyDisplaySizeChanged(displaySize);
+    mFontsScaled = true;
+    mFontScaledDisplaySize = displaySize;
     CEGUI::ImageManager::getSingleton().notifyDisplaySizeChanged(displaySize);
 }
 
@@ -2624,6 +2637,7 @@ const std::string Gui::SKM_BUTTON_BACK = "LevelWindowFrame/BackButton";
 const std::string Gui::SKM_LIST_LEVEL_TYPES = "LevelWindowFrame/LevelTypeSelect";
 const std::string Gui::SKM_LIST_LEVELS = "LevelWindowFrame/LevelSelect";
 const std::string Gui::SKM_CHECK_RELATIONSHIPS = "LevelWindowFrame/RelationshipsCheckbox";
+const std::string Gui::SKM_MAP_PREVIEW = "LevelWindowFrame/MapPreview";
 
 const std::string Gui::MPM_TEXT_LOADING = "LoadingText";
 const std::string Gui::MPM_BUTTON_SERVER = "LevelWindowFrame/ServerButton";

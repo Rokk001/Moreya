@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
-    <Window type="OD/FrameWindow" name="MapWindow">
+    <Window type="OD/SheetWindow" name="MapWindow">
         <Property name="Area" value="{{0.02,0},{0.02,0},{0.98,0},{0.98,0}}" />
         <Property name="Text" value="Map (M)" />
         <Property name="Visible" value="False" />

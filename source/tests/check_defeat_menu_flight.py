@@ -241,7 +241,8 @@ for window in layout.iter('Window'):
 assert used and all(name in images for name in used), [name for name in used if name not in images]
 assert 'ODHudSurface/Stone' in used and 'OpenDungeonsIcons/CheckIcon' in used
 types = {window.get('name'): window.get('type') for window in layout.iter('Window')}
-assert types['Background'] == 'OD/StaticImage' and types['Panel'] == 'OD/StaticImage'
+# the panel is a message window in the frame of the menu sheet like every in-game window
+assert types['Background'] == 'OD/StaticImage' and types['Panel'] == 'OD/SheetPanel'
 scheme = (gui / 'ODSkin.scheme').read_text()
 assert 'windowType="OD/StaticImage"' in scheme and 'ODHudSurface.imageset' in scheme
 for needed in ('Panel/Title', 'Panel/PlayerName', 'Panel/Outcome', 'Panel/Elapsed', 'Panel/StatisticsArea', 'Panel/ConfirmButton'):

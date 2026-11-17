@@ -57,6 +57,8 @@ void setResearch(KeeperAI& ai, const std::vector<SkillType>& skills);
 void useSpecial(KeeperAI& ai, GiftBoxType type);
 //! \brief Schedules a merchant purchase for the selected fighter.
 void merchantBuy(KeeperAI& ai, ODPacket& packet, Creature* creature, bool mistaken);
+//! \brief Schedules handing a held gift bag to its recipient (one drop click, row H04).
+void giveGift(KeeperAI& ai, const std::string& recipient, const std::string& bag);
 }
 
 #endif // AIACTIONS_H

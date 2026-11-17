@@ -143,9 +143,10 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
             int oo = mCamera_2dPosition.x + static_cast<int>(((mm - mCamera_2dPosition.x) * mCosRotation - (nn - mCamera_2dPosition.y) * mSinRotation) * getZoomScale());
             int pp = mCamera_2dPosition.y + static_cast<int>(((mm - mCamera_2dPosition.x) * mSinRotation + (nn - mCamera_2dPosition.y) * mCosRotation) * getZoomScale());
 
-            /* The texture now uses all four RGBA channels. Unknown circular-map grains
-             * keep their black RGB but use transparent alpha over the shared stone backing;
-             * revealed colours, including the black creature blink, remain opaque.
+            /* The texture now uses all four RGBA channels. Grains outside the map keep
+             * their black RGB but use transparent alpha over the shared stone backing on the
+             * circular map; every map tile, also one never seen (drawn as solid earth), and
+             * the black creature blink remain opaque.
              */
             Tile* tile = mGameMap.getTile(oo, pp);
             if(tile == nullptr)

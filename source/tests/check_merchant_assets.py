@@ -20,7 +20,8 @@ One check per fault
   furniture textures   SalesTable and MerchantShelf use only materials with a texture (the flat ItemWood, ItemWoodLight,
                        MerchantClothTrim and the herb and bag colours turned bright orange under the warm room light);
                        the only flat material left is the dark iron of nails and lantern (diffuse below 0.25)
-  table look           the table uses its plank atlas MerchantTableWood and the stained cloth MerchantTableCloth
+  table look           the table uses its plank atlas MerchantTableWood and its cloth MerchantTableCloth (since INGAME-QS-10
+                       K21 a woven bazaar cloth; check_merchant_bazaar.py checks the bazaar look of table and shelf)
   figure textures      the merchant's robe, hood, skin, leather and brass are textured; only small face parts
                        (MerchantDark, MerchantEye, MerchantGold, MerchantHair) are flat
   layered cloak        robe, over-cloak (MerchantCloak) and hood cape (MerchantHood) use three different textures
@@ -31,9 +32,11 @@ One check per fault
                        MerchantBrass vertices 0.5 to 0.72 above the feet)
   readable face        the face (MerchantHide vertices above the shoulders) reaches forward of the hood, the nose
                        reaches at least 0.12 in front of the head joint, and the gold tooth is at least 15 mm wide
-  beside the table     the game puts the merchant on the centre of a sales table: below the table top no vertex of the
-                       figure (bind pose) lies inside the table footprint (RoomObjectBounds.h), and the figure stands
-                       at the front corner (towards the room camera, -Y) beside the table, so the whole figure is seen
+  own node position    Owner finding of 2026-11-17: the figure stands on its own origin, the node position the server walks
+                       (decision 901 had the game cancel a stand offset of 0.64, -0.76 on a child node; the replaced
+                       model of 2026-11-15 put the root bone about 1 m beside the node): the root bone binds at the
+                       origin, the centre of the figure below the table top lies within 0.04 of the origin, and below
+                       the table top no vertex reaches out of his own tile into a neighbouring table or shelf
   bright enough        the furniture, leather and skin textures have a minimum mean luminance for the room light
                        (build 41 leather 39, table wood 26 failed), the table cloth is no light beige cloth
   dark brown cloth     robe, over-cloak and hood stay in a dark brown luminance range (build 41 robe 49 near black,
@@ -82,12 +85,12 @@ FIGURE_TEXTURED = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantHid
 FIGURE_FLAT_OK = ('MerchantDark', 'MerchantEye', 'MerchantGold')
 MERCHANT_CLIPS = ('Idle', 'Walk', 'CountGold', 'RubHands')
 NEW_TEXTURES = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantBrass', 'MerchantHair', 'MerchantTableWood', 'MerchantTableCloth',
-                'MerchantWares')
+                'MerchantWares', 'MerchantLantern')
 # Minimum mean luminance (0..255) per texture for the room light (decision 710); build 41 values in brackets
 MIN_LUMINANCE = {'MerchantLeather': 60,    # (39)
                  'MerchantTableWood': 50,  # (26)
                  'MerchantWares': 60}      # (50)
-# The table cloth stays a dark stained linen, not the light beige cloth of build 41 (73)
+# The table cloth stays a dark cloth (since INGAME-QS-10 K21 woven madder red), not the light beige cloth of build 41 (73)
 MAX_CLOTH_LUMINANCE = 70
 # Dark brown cloth (decision 836): mean luminance range, hue and contrast; build 41 / build 48 values in brackets
 # Decision 901(4): build 53 still read light brown. Fixed targets for the darker revision
@@ -157,6 +160,9 @@ SOLE_TOP = 0.04
 SOLE_MIN_VERTICES = 100       # dark soles (none)
 # Height of the sales table top (cloth) the figure must stay behind
 TABLE_TOP = 0.71
+# Owner finding of 2026-11-17: the figure stands on its own node position (tile centre); his lower body stays inside his own tile
+FIGURE_CENTRE_TOLERANCE = 0.04
+HALF_TILE = 0.5
 BOUNDS_TOLERANCE = 1e-3
 
 
@@ -307,13 +313,20 @@ def submesh_materials(tree):
     return [s.get('material') for s in tree.iter('submesh')]
 
 
+# Positions of one geometry element, read once per run: the checks ask for the same shared geometry many times.
+_GEOMETRY_POSITIONS = {}
+
+
 def geometry_positions(geometry):
+    if id(geometry) in _GEOMETRY_POSITIONS and _GEOMETRY_POSITIONS[id(geometry)][0] is geometry:
+        return _GEOMETRY_POSITIONS[id(geometry)][1]
     out = []
     for vb in geometry.iter('vertexbuffer'):
         for v in vb.iter('vertex'):
             p = v.find('position')
             if p is not None:
                 out.append((float(p.get('x')), float(p.get('y')), float(p.get('z'))))
+    _GEOMETRY_POSITIONS[id(geometry)] = (geometry, out)
     return out
 
 
@@ -416,7 +429,7 @@ table_used = submesh_materials(trees['SalesTable'])
 for mat in TABLE_NEEDS:
     assert mat in table_used, 'SalesTable needs ' + mat
 
-# Retain the earlier model's appearance contract for the original asset layout.
+# Retain the appearance contract of the variant-1 figure (D-6-v2 variant 1) and its own texture layout.
 def check_legacy_figure():
     trees['Merchant'] = mesh_xml('Merchant')
     # 3. Figure textures, 4. hood separate, 5. scales readable
@@ -544,15 +557,16 @@ def check_legacy_figure():
     assert len([p for p in submesh_positions(merchant_tree, 'MerchantDark') if p[2] < SOLE_TOP]) >= SOLE_MIN_VERTICES, \
         'the boots need dark soles'
 
-    # 6. Beside the table, not in it and not hidden behind it
-    t_min_x, t_min_y, t_max_x, t_max_y = object_bounds('SalesTable')
+    # 6. On his own node position (owner finding of 2026-11-17): the stand tile centre the server walks, never beside or inside the next tile
+    root_at = bind_position('Root')
+    assert abs(root_at[0]) <= FIGURE_CENTRE_TOLERANCE and abs(root_at[1]) <= FIGURE_CENTRE_TOLERANCE,         'the root bone binds beside the node (%.2f %.2f)' % (root_at[0], root_at[1])
     low = [p for p in positions(trees['Merchant']) if p[2] < TABLE_TOP]
     assert low, 'Merchant.mesh has no vertices'
-    inside = [p for p in low if t_min_x < p[0] < t_max_x and t_min_y < p[1] < t_max_y]
-    assert not inside, 'the merchant stands inside the sales table (%d vertices below the top)' % len(inside)
     cx = sum(p[0] for p in low) / len(low)
     cy = sum(p[1] for p in low) / len(low)
-    assert cx > t_max_x and cy < t_min_y,     'the merchant must stand at the front corner beside the table, in view of the room camera (centre %.2f %.2f)' % (cx, cy)
+    assert abs(cx) <= FIGURE_CENTRE_TOLERANCE and abs(cy) <= FIGURE_CENTRE_TOLERANCE,         'the merchant does not stand on his own node position (centre %.2f %.2f)' % (cx, cy)
+    outside = [p for p in low if max(abs(p[0]), abs(p[1])) >= HALF_TILE]
+    assert not outside, 'the merchant reaches into the neighbouring tile (%d vertices below the table top)' % len(outside)
 
     # 7. Skeleton and clips
     assert b'Merchant.skeleton' in (root / 'models' / 'Merchant.mesh').read_bytes(), 'Merchant.mesh must link Merchant.skeleton'
@@ -604,25 +618,29 @@ def check_legacy_figure():
     value = png_mean_luminance('materials/textures/MerchantTableCloth.png')
     assert value <= MAX_CLOTH_LUMINANCE, 'MerchantTableCloth.png is a light beige cloth (mean %.0f, at most %d)' % (value, MAX_CLOTH_LUMINANCE)
 
-# The owner-approved replacement has a new atlas layout and exact native asset fixtures.
-# Its streaming contract checks all geometry, bindings, clips and baked textures; furniture keeps its existing checks.
+# Owner finding of 2026-11-17 on A1 ("der neue sieht schlechter aus als der alte"): the merchant of 2026-11-15 (MerchantApproved
+# atlases) stays and is reworked after K20 (INGAME-QS-10 A1b). Its atlas layout differs from the variant-1 figure, so its
+# look is pinned by the byte-exact atlases and its geometry, skinning, own node position and motions by the exact native
+# contract (fixed counts, hashes, clips, arm swing, clasped hands, visible coin, opaque hands). The look contract above
+# belongs to the variant-1 texture layout and runs only for a figure with that layout; the native contract always runs.
 if b'MerchantApproved' in (root / 'models/Merchant.mesh').read_bytes():
-    from merchant_approved_asset_contract import verify_approved_merchant
-    verify_approved_merchant(root)
     credits = read('CREDITS')
     patterns = [re.split(r'\s{2,}|\t', line.strip())[0] for line in credits.splitlines() if line.strip()]
-    for texture in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares'):
+    for texture in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares', 'MerchantLantern'):
         path = 'materials/textures/' + texture + '.png'
-        assert png_size(path) == (TEXTURE_SIZE, TEXTURE_SIZE), path
-        assert any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns), path
-    for name in FURNITURE:
-        path = 'models/' + name + '.mesh'
-        assert any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns), path
+        assert png_size(path) == (TEXTURE_SIZE, TEXTURE_SIZE), path + ' size'
+        assert any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns), 'CREDITS has no row for ' + path
+    for path in ('models/Merchant.mesh', 'models/Merchant.skeleton', 'models/SalesTable.mesh', 'models/MerchantShelf.mesh'):
+        assert any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns), 'CREDITS has no row for ' + path
     for texture in ('MerchantTableWood', 'MerchantWares'):
-        assert png_mean_luminance('materials/textures/' + texture + '.png') >= MIN_LUMINANCE[texture], texture
-    assert png_mean_luminance('materials/textures/MerchantTableCloth.png') <= MAX_CLOTH_LUMINANCE
+        value = png_mean_luminance('materials/textures/' + texture + '.png')
+        assert value >= MIN_LUMINANCE[texture], '%s.png is too dark for the room light (mean %.0f)' % (texture, value)
+    value = png_mean_luminance('materials/textures/MerchantTableCloth.png')
+    assert value <= MAX_CLOTH_LUMINANCE, 'MerchantTableCloth.png is a light beige cloth (mean %.0f)' % value
 else:
     check_legacy_figure()
+from merchant_approved_asset_contract import verify_merchant_contract
+verify_merchant_contract(root, work)
 
 # 9. Furniture bounds equal RoomObjectBounds.h
 for name in FURNITURE:

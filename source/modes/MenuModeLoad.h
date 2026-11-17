@@ -44,6 +44,8 @@ public:
     bool isOpenInGame() const { return mInGame && mOpen; }
 
 private:
+    //! \brief Rebuilds the list when a filter entry of the load screen becomes the chosen one.
+    bool filterChanged(const CEGUI::EventArgs& e);
     //! \brief Rebuilds the visible list for the selected filter.
     bool updateFilesList(const CEGUI::EventArgs& = {});
     //! \brief Starts a local server with the given saved game and connects to it.

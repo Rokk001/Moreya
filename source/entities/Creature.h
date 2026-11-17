@@ -248,26 +248,16 @@ public:
     //! \brief Restores the base visual state and the exact saved corpse decay progress.
     void restoreEntityState() override;
 
-    bool canDisplayStatsWindow(Seat* seat) override
-    { return true; }
-    void createStatsWindow() override;
-    void destroyStatsWindow();
-    bool CloseStatsWindow(const CEGUI::EventArgs& /*e*/);
-    void updateStatsWindow(const std::string& txt);
-    bool ProfileTabClicked(const CEGUI::EventArgs& /*e*/);
-    bool StatsTabClicked(const CEGUI::EventArgs& /*e*/);
-    bool BookTabClicked(const CEGUI::EventArgs& /*e*/);
-    //! \brief A friend or foe name of the card was clicked: opens the Dungeonbook with that creature.
-    bool ProfileLinkClicked(const CEGUI::EventArgs& e);
     //! \brief Fills a profile page (gui/WindowCreatureProfilePage.layout) with the social profile of the
-    //! creature. Used by the creature card and by the Dungeonbook. The names in the friends and foe rows are
+    //! creature. Used by the Dungeonbook, the only window that shows a creature's information (a click on a
+    //! creature opens the Dungeonbook on it, see GameMode::openDungeonbookOnCreature). The names in the friends and foe rows are
     //! buttons (FriendLink0, FriendLink1, FoeLink) carrying the creature name in the user string "Creature"; the
     //! caller decides what a click does. Shows transmitted slots and permanent spawn hands with frames and tooltips.
     //! Returns the bottom edge of the page content in design pixels.
     float fillProfilePage(CEGUI::Window* page);
     //! \brief Fills 13 item slot windows (right hand, left hand, head, armour, boots, ring, three potions, four
     //! inventory slots; each with the children "SlotType" and "QualityFrame") with the item picture, quality frame and
-    //! tooltip, or with the painted slot-type symbol when the slot is empty. Used by the creature card and by the
+    //! tooltip, or with the painted slot-type symbol when the slot is empty. Used by the shared profile page and by the
     //! Dungeonbook inventory page. A null creature (items not known) shows every slot empty. With showLocks every slot
     //! window also has a child "Lock": a potion slot the creature has not unlocked by its level is greyed out and shows it.
     static void fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks);
@@ -1313,6 +1303,12 @@ public:
     //! every frame), so the clip does not start again in the middle of the arc.
     void showJumpClipPhase();
 
+    //! \brief Client side, every frame: while a bather walks its leg over the rim of a spa pool (clips SpaStepIn and
+    //! SpaStepOut, see RoomSpa::walkBather) it is lifted over the rim and its step clip shows the point of the step it has
+    //! reached, so that it sinks into the mud behind the rim or rises out of it (decision 902(3)). Off such a leg the
+    //! lift is taken away again.
+    void updateSpaStepLift();
+
     //! \brief Hook for a later bathing room: the creature is clean again (creature dirt 0).
     void washed();
 
@@ -2213,16 +2209,10 @@ private:
     //! Weapon that will be dropped when the creature dies
     std::string     mWeaponDropDeath;
 
-    //! \brief Shows the stats page (true) or the profile page (false) of the creature card.
-    void showStatsPage(bool stats);
-    //! \brief Fills the profile page of the creature card.
-    void refreshProfilePage();
-
     //! \brief True if the creature belongs to the local player and the feed is running.
     bool isSocialFeedSource() const;
     void fillSocialSnapshot(social::CreatureSnapshot& snapshot) const;
 
-    CEGUI::Window*  mStatsWindow;
     int32_t         mNbTurnsWithoutBattle;
 
     //! \brief Runtime only (not saved): true when this creature was knocked out in the current fight, so the fight end adds no extra creature dirt
@@ -2282,6 +2272,9 @@ private:
     //! Contact history is unnecessary: the renderer samples the current animated skeletons.
     //! \brief Runtime only (not saved): turns of the running jump that have passed (fractions on a client).
     Ogre::Real      mJumpElapsed;
+    //! \brief Runtime only, client side (not saved): the height the creature is lifted by to step over the rim of a spa
+    //! pool (see updateSpaStepLift).
+    Ogre::Real      mSpaStepLift;
 
     //! \brief Every tiles within the creature sight radius, used for common actions.
     std::vector<Tile*>              mTilesWithinSightRadius;

@@ -40,7 +40,7 @@ def props(window):
 
 layout_root = ET.fromstring(read('gui/WindowWorkers.layout'))
 window = layout_root.find('Window')
-assert window is not None and window.get('name') == 'WorkersWindow' and window.get('type') == 'OD/FrameWindow'
+assert window is not None and window.get('name') == 'WorkersWindow' and window.get('type') == 'OD/SheetWindow'
 assert props(window)['Text'] == 'Workers', 'the window title is "Workers"'
 assert props(window)['Visible'] == 'False', 'the window starts closed'
 
@@ -295,8 +295,11 @@ from PIL import ImageFont
 
 FONT_FILE = str(repo / 'gui/fonts/SourceSerif4-Semibold.ttf')
 FONT_DESIGN_W, FONT_DESIGN_H = 800.0, 600.0
-# Frame of the window in layout pixels at the design size: left, top, right, bottom (measured in the game)
-FRAME = (34.0, 32.0, 34.0, 36.0)
+# Frame of the window in layout pixels at the design size: left, top, right, bottom (measured in the game as
+# 34, 32, 34, 36 with the old frame). The window now has the frame of the chosen menu sheet (OD/SheetWindow): side
+# and bottom rails of 32 and 44 sheet pixels at 1.5625 sheet pixels per layout pixel, the title on the top rail from
+# three quarters of its 44 sheet pixels plus one 13 point line and 4 pixels (52.5 layout pixels at 1920x1200).
+FRAME = (32 / 1.5625, 52.5, 32 / 1.5625, 44 / 1.5625)
 _fonts = {}
 
 

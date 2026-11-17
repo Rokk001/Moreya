@@ -38,6 +38,12 @@ workers clean as a side job. All numbers are keys of `config/global.cfg` (block 
   relieves itself where it stands (in a treasury, the heart room or a temple it steps out first) and
   leaves a pile with the look of its type. A pile sets its tile to full dirt and stays until a
   worker cleans it.
+- The seats of a toilet room stand in rows along its edge: every edge tile that is not a corner gets a
+  seat with its back to the outside, the middle stays free as a walking lane (rooms one or two tiles
+  wide and 2 x 2 rooms get a seat on every second tile). The seats are solid; the user walks to a point
+  in front of its seat, steps onto it, sits there in the `Relieve` clip for a random time between
+  `ToiletUseSecondsMin` and `ToiletUseSecondsMax` (drawn for every use) and steps off to the front
+  again. Relieving itself on the floor takes `ToiletUseTurns` turns.
 
 ## Effects
 
@@ -68,6 +74,6 @@ workers clean as a side job. All numbers are keys of `config/global.cfg` (block 
   after the gift boxes; the `CleanOrder <0|1>` line that prison and torture rooms once had after their data is read and ignored (nothing writes it any more). Files without them load.
 - `python tools/balance/dirt_values.py --check` recomputes the per-room keys and holds the config to
   them. The checks are `check_dirt_values.py`, `check_dirt_rules.py`, `check_dirt_streams.py`,
-  `check_dirt_assets.py` and `check_toilet_room.py` in `source/tests`.
+  `check_dirt_assets.py`, `check_toilet_room.py` and `check_toilet_k25.py` in `source/tests`.
 - `levels/skirmish/TestCleaning.level` is a small test map with a toilet room, a dirty workshop and
   library, piles, a blood stain, a prison, six workers and eight fighters.

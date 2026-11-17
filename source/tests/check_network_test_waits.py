@@ -50,6 +50,8 @@ struct TcpListener {
 struct ODPacket { template<class T> ODPacket& operator<<(const T&) { return *this; } };
 enum class ClientNotificationType {hello};
 static const std::string OD_VERSION_STR="test";
+//! \brief Supplies the network record schema suffix that the hello names.
+namespace NetworkProtocol { static const std::string WIRE_SCHEMA_SUFFIX=" / wire-test"; }
 //! \brief Simulates server connection readiness.
 struct ODSocketClient {
     //! \brief Rejects unbounded attempts and returns configured readiness.

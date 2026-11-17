@@ -7678,8 +7678,15 @@
         <StateImagery name="PushedOff"><Layer><Section section="label"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
         <StateImagery name="Disabled"><Layer><Section section="label"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
     </WidgetLook>
+    <!-- Menu button: the button template of the chosen menu sheet (weathered timber with aged iron bindings) in its four
+         states normal, hovered, pressed and disabled. Caps and knobs keep the proportions of the template at every
+         button width (their widths follow the button height); the caption sits on the planks between the caps. The glow
+         section stays for the menu titles. -->
     <WidgetLook name="OD/MenuTextButton" inherits="OD/InvisibleButton">
-        <Property name="NormalTextColour" value="FFD8C9A4" />
+        <Property name="NormalTextColour" value="FFF9DAB0" />
+        <Property name="HoverTextColour" value="FFFEE4B6" />
+        <Property name="PushedTextColour" value="FFFCE4B7" />
+        <Property name="DisabledTextColour" value="FF8A8580" />
         <ImagerySection name="glow">
             <TextComponent>
                 <Area>
@@ -7858,18 +7865,953 @@
                 <HorzFormat type="CentreAligned" />
             </TextComponent>
         </ImagerySection>
-        <StateImagery name="Hover">
-            <Layer>
-                <Section section="glow"><Colours topLeft="FFFFAC00" topRight="FFFFAC00" bottomLeft="FFFFAC00" bottomRight="FFFFAC00" /></Section>
-                <Section section="label"><ColourProperty name="HoverTextColour" /></Section>
-            </Layer>
-        </StateImagery>
-        <StateImagery name="Pushed">
-            <Layer>
-                <Section section="glow"><Colours topLeft="FFFFAC00" topRight="FFFFAC00" bottomLeft="FFFFAC00" bottomRight="FFFFAC00" /></Section>
-                <Section section="label"><ColourProperty name="PushedTextColour" /></Section>
-            </Layer>
-        </StateImagery>
+        <ImagerySection name="plate_normal">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/NormalLeftCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/NormalLeftFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.466667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/NormalCentre" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Add"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/NormalRightFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/NormalRightCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="plate_hover">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/HoverLeftCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/HoverLeftFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.466667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/HoverCentre" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Add"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/HoverRightFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/HoverRightCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="plate_pushed">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/PushedLeftCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/PushedLeftFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.466667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/PushedCentre" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Add"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/PushedRightFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/PushedRightCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="plate_disabled">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/DisabledLeftCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/DisabledLeftFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.466667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/DisabledCentre" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Add"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.233333" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/DisabledRightFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/DisabledRightCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="caption_shadow">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Add"><UnifiedDim scale="0.516667" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Add"><UnifiedDim scale="0.183333" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Add"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Add"><UnifiedDim scale="0.816667" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                </Area>
+                <Colours topLeft="C0000000" topRight="C0000000" bottomLeft="C0000000" bottomRight="C0000000" />
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <ImagerySection name="caption">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.183333" type="Height" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="0.816667" type="Height" /></Dim>
+                </Area>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Normal"><Layer><Section section="plate_normal" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section section="plate_hover" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section section="plate_pushed" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="PushedTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="PushedOff"><Layer><Section section="plate_normal" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="plate_disabled" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Window frame of the chosen menu sheet (the load screen frame: iron rails, corner brackets, knobs and the
+         empty panel wood), for every menu window and reusable for the in-game windows: use window type
+         OD/SheetWindow for a frame window, OD/SheetPanel for a plain container, OD/SheetStaticText for a framed
+         static text, OD/SheetListbox for a list in the inset of the sheet. Sizes follow the UI scale through the
+         scaled ODMenuTemplate imageset (Gui.cpp). -->
+    <WidgetLook name="OD/SheetWindow">
+        <PropertyLinkDefinition initialValue="FFE9841C" name="CaptionColour" targetProperty="CaptionColour" widget="__auto_titlebar__" />
+        <PropertyLinkDefinition initialValue="MedievalSharp-13" name="TitlebarFont" targetProperty="Font" widget="__auto_titlebar__" />
+        <NamedArea name="ClientWithTitleWithFrame">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="ClientWithTitleNoFrame">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="ClientNoTitleWithFrame">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="ClientNoTitleNoFrame">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <Child nameSuffix="__auto_titlebar__" type="OD/SheetTitlebar">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /><AbsoluteDim value="0.75" /></OperatorDim></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim></Dim>
+                <Dim type="Height"><FontDim font="MedievalSharp-13" padding="4" type="LineSpacing" /></Dim>
+            </Area>
+            <Property name="AlwaysOnTop" value="False" />
+            <Property name="WantsMultiClickEvents" value="False" />
+            <Property name="NonClient" value="true" />
+        </Child>
+        <Child nameSuffix="__auto_closebutton__" type="OD/SystemButton">
+            <Area>
+                <Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim><WidgetDim dimension="Height" widget="__auto_titlebar__" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><WidgetDim dimension="TopEdge" widget="__auto_titlebar__" /></Dim>
+                <Dim type="Width"><WidgetDim dimension="Height" widget="__auto_titlebar__" /></Dim>
+                <Dim type="Height"><WidgetDim dimension="Height" widget="__auto_titlebar__" /></Dim>
+            </Area>
+            <Property name="NonClient" value="true" />
+            <Property name="AlwaysOnTop" value="True" />
+            <Property name="NormalImage" value="OpenDungeonsSkin/CloseButtonNormal" />
+            <Property name="HoverImage" value="OpenDungeonsSkin/CloseButtonHover" />
+            <Property name="PushedImage" value="OpenDungeonsSkin/CloseButtonPressed" />
+        </Child>
+        <ImagerySection name="sheet_frame">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /><AbsoluteDim value="0.5" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /><AbsoluteDim value="0.5" /></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameInterior" />
+                <VertFormat type="Tiled" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/FrameTopLeft" dimension="Width" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameTopRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameTop" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/FrameBottomLeft" dimension="Width" /></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameBottomRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameBottom" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/FrameTopLeft" dimension="Height" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottomLeft" dimension="Height" /></OperatorDim></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/FrameTopRight" dimension="Height" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottomRight" dimension="Height" /></OperatorDim></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/FrameTopLeft" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/FrameTopLeft" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameTopLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameTopRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/FrameTopRight" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/FrameTopRight" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameTopRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottomLeft" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/FrameBottomLeft" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/FrameBottomLeft" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameBottomLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameBottomRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottomRight" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/FrameBottomRight" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/FrameBottomRight" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameBottomRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/FrameTopKnob" dimension="Width" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/FrameTopKnob" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/FrameTopKnob" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameTopKnob" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/FrameBottomKnob" dimension="Width" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottomKnob" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/FrameBottomKnob" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/FrameBottomKnob" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/FrameBottomKnob" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <StateImagery name="ActiveWithTitleWithFrame"><Layer><Section section="sheet_frame"></Section></Layer></StateImagery>
+        <StateImagery name="ActiveWithTitleNoFrame"><Layer><Section section="sheet_frame"></Section></Layer></StateImagery>
+        <StateImagery name="ActiveNoTitleWithFrame"><Layer><Section section="sheet_frame"></Section></Layer></StateImagery>
+        <StateImagery name="ActiveNoTitleNoFrame"><Layer><Section section="sheet_frame"></Section></Layer></StateImagery>
+        <StateImagery name="InactiveWithTitleWithFrame"><Layer><Section section="sheet_frame"></Section></Layer></StateImagery>
+        <StateImagery name="InactiveWithTitleNoFrame"><Layer><Section section="sheet_frame"></Section></Layer></StateImagery>
+        <StateImagery name="InactiveNoTitleWithFrame"><Layer><Section section="sheet_frame"></Section></Layer></StateImagery>
+        <StateImagery name="InactiveNoTitleNoFrame"><Layer><Section section="sheet_frame"></Section></Layer></StateImagery>
+        <StateImagery name="DisabledWithTitleWithFrame"><Layer><Section section="sheet_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+        <StateImagery name="DisabledWithTitleNoFrame"><Layer><Section section="sheet_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+        <StateImagery name="DisabledNoTitleWithFrame"><Layer><Section section="sheet_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+        <StateImagery name="DisabledNoTitleNoFrame"><Layer><Section section="sheet_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Title of a sheet window: the glowing caption of the menu titles on the top rail of the frame, no bar. -->
+    <WidgetLook name="OD/SheetTitlebar">
+        <PropertyDefinition initialValue="FFE9841C" name="CaptionColour" redrawOnWrite="true" />
+        <ImagerySection name="caption">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <ColourProperty name="CaptionColour" />
+                <VertFormat type="CentreAligned" />
+                <HorzFormat type="CentreAligned" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Active"><Layer><Section look="OD/MenuTextButton" section="glow"><Colours topLeft="FFC62A06" topRight="FFC62A06" bottomLeft="FFC62A06" bottomRight="FFC62A06" /></Section><Section section="caption" /></Layer></StateImagery>
+        <StateImagery name="Inactive"><Layer><Section look="OD/MenuTextButton" section="glow"><Colours topLeft="FFC62A06" topRight="FFC62A06" bottomLeft="FFC62A06" bottomRight="FFC62A06" /></Section><Section section="caption" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="caption"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Plain container in the window frame of the chosen menu sheet (see OD/SheetWindow). -->
+    <WidgetLook name="OD/SheetPanel">
+        <StateImagery name="Enabled"><Layer><Section look="OD/SheetWindow" section="sheet_frame" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section look="OD/SheetWindow" section="sheet_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Static text in the window frame of the chosen menu sheet (see OD/SheetWindow); the text keeps inside the rails. -->
+    <WidgetLook name="OD/SheetStaticText" inherits="OD/StaticText">
+        <NamedArea name="WithFrameTextRenderArea">
+            <Area>
+                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /><AbsoluteDim value="4" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /><AbsoluteDim value="2" /></OperatorDim></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim><AbsoluteDim value="4" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim><AbsoluteDim value="2" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="WithFrameTextRenderAreaHScroll">
+            <Area>
+                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /><AbsoluteDim value="4" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /><AbsoluteDim value="2" /></OperatorDim></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim><AbsoluteDim value="4" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim><AbsoluteDim value="2" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="WithFrameTextRenderAreaVScroll">
+            <Area>
+                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /><AbsoluteDim value="4" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /><AbsoluteDim value="2" /></OperatorDim></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim><AbsoluteDim value="4" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim><AbsoluteDim value="2" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="WithFrameTextRenderAreaHVScroll">
+            <Area>
+                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim name="ODMenuTemplate/FrameLeft" dimension="Width" /><AbsoluteDim value="4" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim name="ODMenuTemplate/FrameTop" dimension="Height" /><AbsoluteDim value="2" /></OperatorDim></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/FrameRight" dimension="Width" /></OperatorDim><AbsoluteDim value="4" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/FrameBottom" dimension="Height" /></OperatorDim><AbsoluteDim value="2" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <StateImagery name="EnabledFrame"><Layer><Section look="OD/SheetWindow" section="sheet_frame" /></Layer></StateImagery>
+        <StateImagery name="DisabledFrame"><Layer><Section look="OD/SheetWindow" section="sheet_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+        <StateImagery name="WithFrameEnabledBackground" />
+        <StateImagery name="WithFrameDisabledBackground" />
+    </WidgetLook>
+    <!-- List in the inset of the chosen menu sheet: iron inset frame and plank rows (see OD/SheetWindow). -->
+    <WidgetLook name="OD/SheetListbox" inherits="OD/MenuListbox">
+        <NamedArea name="ItemRenderingArea">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/InsetLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/InsetTop" dimension="Height" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetRight" dimension="Width" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottom" dimension="Height" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="ItemRenderingAreaHScroll">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/InsetLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/InsetTop" dimension="Height" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetRight" dimension="Width" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottom" dimension="Height" /></OperatorDim><WidgetDim dimension="Height" widget="__auto_hscrollbar__" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="ItemRenderingAreaVScroll">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/InsetLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/InsetTop" dimension="Height" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetRight" dimension="Width" /></OperatorDim><WidgetDim dimension="Width" widget="__auto_vscrollbar__" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottom" dimension="Height" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="ItemRenderingAreaHVScroll">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/InsetLeft" dimension="Width" /></Dim>
+                <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/InsetTop" dimension="Height" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetRight" dimension="Width" /></OperatorDim><WidgetDim dimension="Width" widget="__auto_vscrollbar__" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottom" dimension="Height" /></OperatorDim><WidgetDim dimension="Height" widget="__auto_hscrollbar__" /></OperatorDim></Dim>
+            </Area>
+        </NamedArea>
+        <ImagerySection name="inset">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/InsetLeft" dimension="Width" /><AbsoluteDim value="0.5" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/InsetTop" dimension="Height" /><AbsoluteDim value="0.5" /></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/InsetRight" dimension="Width" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/InsetBottom" dimension="Height" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetPlanks" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/InsetTopLeft" dimension="Width" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetTopRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/InsetTop" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetTop" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/InsetBottomLeft" dimension="Width" /></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottom" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetBottomRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/InsetBottom" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetBottom" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/InsetTopLeft" dimension="Height" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/InsetLeft" dimension="Width" /></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottomLeft" dimension="Height" /></OperatorDim></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/InsetTopRight" dimension="Height" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/InsetRight" dimension="Width" /></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottomRight" dimension="Height" /></OperatorDim></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/InsetTopLeft" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/InsetTopLeft" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetTopLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetTopRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/InsetTopRight" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/InsetTopRight" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetTopRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottomLeft" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/InsetBottomLeft" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/InsetBottomLeft" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetBottomLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/InsetBottomRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/InsetBottomRight" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/InsetBottomRight" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/InsetBottomRight" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/InsetBottomRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <StateImagery name="Enabled"><Layer><Section section="inset" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="inset"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Iron border of the chosen menu sheet around the whole screen of the menus; the screen inside stays free. -->
+    <WidgetLook name="OD/ScreenBorder">
+        <ImagerySection name="border">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/BorderTopLeft" dimension="Width" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/BorderTopRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/BorderTop" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderTop" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim name="ODMenuTemplate/BorderBottomLeft" dimension="Width" /></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/BorderBottom" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/BorderBottomRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/BorderBottom" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderBottom" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/BorderTopLeft" dimension="Height" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/BorderLeft" dimension="Width" /></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/BorderBottomLeft" dimension="Height" /></OperatorDim></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/BorderRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><ImageDim name="ODMenuTemplate/BorderTopRight" dimension="Height" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/BorderRight" dimension="Width" /></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/BorderBottomRight" dimension="Height" /></OperatorDim></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/BorderTopLeft" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/BorderTopLeft" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderTopLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/BorderTopRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/BorderTopRight" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/BorderTopRight" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderTopRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/BorderBottomLeft" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/BorderBottomLeft" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/BorderBottomLeft" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderBottomLeft" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImageDim name="ODMenuTemplate/BorderBottomRight" dimension="Width" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/BorderBottomRight" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/BorderBottomRight" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/BorderBottomRight" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderBottomRight" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/BorderTopPendant" dimension="Width" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/BorderTopPendant" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/BorderTopPendant" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderTopPendant" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><OperatorDim op="Multiply"><ImageDim name="ODMenuTemplate/BorderBottomPendant" dimension="Width" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImageDim name="ODMenuTemplate/BorderBottomPendant" dimension="Height" /></OperatorDim></Dim>
+                    <Dim type="Width"><ImageDim name="ODMenuTemplate/BorderBottomPendant" dimension="Width" /></Dim>
+                    <Dim type="Height"><ImageDim name="ODMenuTemplate/BorderBottomPendant" dimension="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/BorderBottomPendant" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <StateImagery name="Enabled"><Layer><Section section="border" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="border" /></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Compact form of the menu button template that the chosen sheet paints inside the load screen: slim caps, no
+         knobs, the same four states (normal, hovered, pressed, disabled). -->
+    <WidgetLook name="OD/MenuCompactButton">
+        <Property name="WantsMultiClickEvents" value="False" />
+        <PropertyDefinition initialValue="FFF9DAB0" name="NormalTextColour" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="FFFEE4B6" name="HoverTextColour" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="FFFCE4B7" name="PushedTextColour" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="FF8A8580" name="DisabledTextColour" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="CentreAligned" name="VertLabelFormatting" />
+        <PropertyDefinition initialValue="CentreAligned" name="HorzLabelFormatting" />
+        <ImagerySection name="plate_normal">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactNormalLeftCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.342105" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactNormalFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.342105" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactNormalRightCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="plate_hover">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactHoverLeftCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.342105" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactHoverFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.342105" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactHoverRightCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="plate_pushed">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactPushedLeftCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.342105" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactPushedFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.342105" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactPushedRightCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="plate_disabled">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactDisabledLeftCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.342105" type="Height" /></OperatorDim></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactDisabledFill" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.342105" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.342105" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="ODMenuTemplate/CompactDisabledRightCap" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="caption_shadow">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Add"><UnifiedDim scale="0.25" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Add"><UnifiedDim scale="0.21" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Add"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.25" type="Height" /></OperatorDim><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Add"><UnifiedDim scale="0.79" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                </Area>
+                <Colours topLeft="C0000000" topRight="C0000000" bottomLeft="C0000000" bottomRight="C0000000" />
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <ImagerySection name="caption">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.25" type="Height" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.21" type="Height" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.25" type="Height" /></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="0.79" type="Height" /></Dim>
+                </Area>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Normal"><Layer><Section section="plate_normal" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section section="plate_hover" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section section="plate_pushed" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="PushedTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="PushedOff"><Layer><Section section="plate_normal" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="plate_disabled" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Filter entry of the load screen: a compact template button that keeps the glowing hovered plate while it is
+         the chosen entry, as the chosen sheet shows the selected filter. -->
+    <WidgetLook name="OD/MenuFilterButton">
+        <Property name="WantsMultiClickEvents" value="False" />
+        <PropertyDefinition initialValue="FFF9DAB0" name="NormalTextColour" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="FFFEE4B6" name="HoverTextColour" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="FFFCE4B7" name="PushedTextColour" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="FF8A8580" name="DisabledTextColour" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="CentreAligned" name="VertLabelFormatting" />
+        <PropertyDefinition initialValue="CentreAligned" name="HorzLabelFormatting" />
+        <StateImagery name="Normal"><Layer><Section look="OD/MenuCompactButton" section="plate_normal" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section look="OD/MenuCompactButton" section="plate_hover" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section look="OD/MenuCompactButton" section="plate_pushed" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="PushedTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="PushedOff"><Layer><Section look="OD/MenuCompactButton" section="plate_normal" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section look="OD/MenuCompactButton" section="plate_disabled" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="SelectedNormal"><Layer><Section look="OD/MenuCompactButton" section="plate_hover" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="SelectedHover"><Layer><Section look="OD/MenuCompactButton" section="plate_hover" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="SelectedPushed"><Layer><Section look="OD/MenuCompactButton" section="plate_pushed" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="PushedTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="SelectedPushedOff"><Layer><Section look="OD/MenuCompactButton" section="plate_hover" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="SelectedDisabled"><Layer><Section look="OD/MenuCompactButton" section="plate_disabled" /><Section look="OD/MenuCompactButton" section="caption_shadow" /><Section look="OD/MenuCompactButton" section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- List of the load screen: the panel image paints the inset frame and the plank rows, the list draws only its
+         entries. -->
+    <WidgetLook name="OD/LoadListbox" inherits="OD/MenuListbox">
+        <NamedArea name="ItemRenderingArea"><Area>
+            <Dim type="LeftEdge"><AbsoluteDim value="6" /></Dim>
+            <Dim type="TopEdge"><AbsoluteDim value="4" /></Dim>
+            <Dim type="RightEdge"><UnifiedDim scale="1" offset="-4" type="RightEdge" /></Dim>
+            <Dim type="BottomEdge"><UnifiedDim scale="1" offset="-4" type="BottomEdge" /></Dim>
+        </Area></NamedArea>
+        <NamedArea name="ItemRenderingAreaHScroll"><Area>
+            <Dim type="LeftEdge"><AbsoluteDim value="6" /></Dim>
+            <Dim type="TopEdge"><AbsoluteDim value="4" /></Dim>
+            <Dim type="RightEdge"><UnifiedDim scale="1" offset="-4" type="RightEdge" /></Dim>
+            <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" offset="-4" type="BottomEdge" /><WidgetDim dimension="Height" widget="__auto_hscrollbar__" /></OperatorDim></Dim>
+        </Area></NamedArea>
+        <NamedArea name="ItemRenderingAreaVScroll"><Area>
+            <Dim type="LeftEdge"><AbsoluteDim value="6" /></Dim>
+            <Dim type="TopEdge"><AbsoluteDim value="4" /></Dim>
+            <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" offset="-4" type="RightEdge" /><WidgetDim dimension="Width" widget="__auto_vscrollbar__" /></OperatorDim></Dim>
+            <Dim type="BottomEdge"><UnifiedDim scale="1" offset="-4" type="BottomEdge" /></Dim>
+        </Area></NamedArea>
+        <NamedArea name="ItemRenderingAreaHVScroll"><Area>
+            <Dim type="LeftEdge"><AbsoluteDim value="6" /></Dim>
+            <Dim type="TopEdge"><AbsoluteDim value="4" /></Dim>
+            <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" offset="-4" type="RightEdge" /><WidgetDim dimension="Width" widget="__auto_vscrollbar__" /></OperatorDim></Dim>
+            <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" offset="-4" type="BottomEdge" /><WidgetDim dimension="Height" widget="__auto_hscrollbar__" /></OperatorDim></Dim>
+        </Area></NamedArea>
+        <StateImagery name="Enabled" />
+        <StateImagery name="Disabled" />
     </WidgetLook>
     <WidgetLook name="OD/MenuTitle" inherits="OD/StaticText">
         <Property name="FrameEnabled" value="False" />
@@ -8147,7 +9089,8 @@
             </FrameComponent></ImagerySection>
     </WidgetLook>
 
-    <!-- Message panel of the game: the forged window frame with rivets and one even stone inset, without a title bar. -->
+    <!-- Message panel of the game: the window frame of the chosen menu sheet (OD/SheetWindow), without a title bar.
+         It used the forged window frame with rivets and one even stone inset before. -->
     <WidgetLook name="OD/EventPanel" inherits="OD/StaticText">
         <NamedArea name="WithFrameTextRenderArea">
             <Area>
@@ -8186,8 +9129,10 @@
                 <HorzFormat type="Tiled" />
             </FrameComponent>
         </ImagerySection>
-        <StateImagery name="EnabledFrame"><Layer><Section section="forged_frame" /></Layer></StateImagery>
-        <StateImagery name="DisabledFrame"><Layer><Section section="forged_frame_disabled"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
+        <!-- The panel is a message dialog: it draws the window frame of the chosen menu sheet like every other window
+             as well; the forged frame sections above are kept for reference only. -->
+        <StateImagery name="EnabledFrame"><Layer><Section look="OD/SheetWindow" section="sheet_frame" /></Layer></StateImagery>
+        <StateImagery name="DisabledFrame"><Layer><Section look="OD/SheetWindow" section="sheet_frame"><Colours topLeft="FF7F7F7F" topRight="FF7F7F7F" bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" /></Section></Layer></StateImagery>
         <StateImagery name="WithFrameEnabledBackground" />
         <StateImagery name="WithFrameDisabledBackground" />
             <ImagerySection name="forged_frame_disabled">

@@ -319,7 +319,7 @@
         </Window>
         <Window type="OD/GameTabButton" name="RoomManagerButton">
             <Property name="Area" value="{{0,100},{1,-224},{0,140},{1,-184}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/NavigationRooms" />
+            <Property name="NormalImage" value="NavigationRoomManager/Icon" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Room Manager" />
@@ -337,7 +337,7 @@
         </Window>
         <Window type="OD/GameTabButton" name="SocialButton">
             <Property name="Area" value="{{0,148},{1,-224},{0,188},{1,-184}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CreaturesIcon" />
+            <Property name="NormalImage" value="NavigationDungeonbook/Icon" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Dungeonbook" />

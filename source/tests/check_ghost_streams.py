@@ -11,8 +11,8 @@ from check_corpse_rules import corpse_fixture
 
 # Build the real codecs around independent identity and storage services.
 def stream_fixture():
-    """Supply observable world services for the unchanged production codecs and restore body."""
-    code = corpse_fixture()
+    """Supply world services and unprimed streams for the production codecs and restore body."""
+    code = '#include <iomanip>\n#include <limits>\n' + corpse_fixture()
     code = code.replace('struct GameMap{', 'struct RenderedMovableEntity;struct GhostBoxEntity;\nstruct GameMap{GhostBoxEntity* pickupBox=nullptr;', 1)
     code = code.replace('GhostEntity* getEntityFromTypeAndName(GameEntityType,const std::string& name);',
         'RenderedMovableEntity* getEntityFromTypeAndName(GameEntityType,const std::string& name);', 1)
@@ -157,8 +157,8 @@ namespace Helper{
 const std::string CORPSE_CARRIER_SAVE_LABEL="CorpseCarrier=";const std::string MOOD_DECISION_SAVE_OPEN="[MoodDecision]",MOOD_DECISION_SAVE_CLOSE="[/MoodDecision]",MOOD_COUNTERS_SAVE_OPEN="[MoodCounters]",MOOD_COUNTERS_SAVE_CLOSE="[/MoodCounters]";const double THIRST_STATE_MAX=100;
 //! \brief Runs only the real optional seat blocks with legacy defaults and unrelated-tag preservation.
 struct SeatRecord{double mEctoplasmLevels=0;GhostProduct mGhostProduct=GhostProduct::mana;bool mGhostRevive=true;std::set<std::string> mGhostBellTargets;
- //! \brief Writes both real seat optional blocks at full precision.
- void save(std::ostream& os)const{os<<std::setprecision(17);SEAT_SAVE}
+ //! \brief Writes real seat blocks using only the precision selected by production code.
+ void save(std::ostream& os)const{SEAT_SAVE}
  //! \brief Reads the actual optional blocks in either order.
  bool load(std::istream& is){std::string str;if(!(is>>str))return false;while(true){SEAT_IMPORT
   if(str=="[GhostRoom]"||str=="[GhostBells]")continue;
@@ -192,7 +192,7 @@ struct CorpseRecord{int32_t mNbTurnsPrison=0,mNbTurnsTorture=0;double mCorpseTur
 
 # Exercise complete records, exact fractional counters, legacy boundaries and rejection paths.
 def main():
-    """Check exact codecs, malformed records and pickup restoration against fixed expectations."""
+    """Check exact fractional seat saves, codecs, malformed records and pickup restoration."""
     code = stream_fixture()+r'''
 //! \brief Runs the real serializers with nondefault continuation data and old-save sentinels.
 int main(){
@@ -219,6 +219,26 @@ int main(){
  GhostBoxEntity legacyBox;legacyBox.map=&map;std::stringstream oldBox("old 2 3 17.875 0");check(legacyBox.importFromStream(oldBox)&&legacyBox.mAssignedHunter.empty()&&legacyBox.mOpenTurns==17.875,"legacy box without runtime");
  CreatureActionHuntGhost legacyHunt(hunter);std::stringstream oldHunt("2 none none 1 2 1.375 1 inside [/GhostHunt] NEXT");check(legacyHunt.importFromStream(oldHunt)&&legacyHunt.mRestoring&&legacyHunt.mGhosts.size()==1,"old hunter without runtime");oldHunt>>token;check(token=="NEXT","old hunter preserves following tag");
  CreatureActionHuntGhost oldBeam(hunter);std::stringstream oldBeamHunt("3 inside hooks 1 2 4.25 0 [/GhostHunt] NEXT");check(oldBeam.importFromStream(oldBeamHunt)&&oldBeam.mRestoring&&oldBeam.mState==3&&oldBeam.mTarget=="inside","an old save in the beam state still loads");near(oldBeam.mTurns,4.25,"an old beam resumes with its saved clock, so only the remaining beam time runs");
+ // Load legacy progress first, then save with the inherited low precision of the save file stream (6 is the stream
+ // default, 3 a lower one). Four fixed balances cover a long fraction, a value near one, a tiny fraction and
+ // whole-plus-fraction storage; each goes through three save/load cycles (8 cases, 24 round trips).
+ const char* legacyBalances[]={"0.12345678901234566","0.99999999999999989","1.2345678901234567e-12","8.1234567890123444"};
+ const double expectedBalances[]={0.12345678901234566,0.99999999999999989,1.2345678901234567e-12,8.1234567890123444};
+ for(int balance=0;balance<4;++balance)for(int precision:{6,3})
+ {
+  SeatRecord legacy;std::stringstream oldProgress(std::string("[GhostRoom] ")+legacyBalances[balance]+" 2 0 [/GhostRoom] EndSeat");
+  check(legacy.load(oldProgress)&&legacy.mEctoplasmLevels==expectedBalances[balance],"legacy fractional balance loads exactly");
+  for(int cycle=0;cycle<3;++cycle)
+  {
+   std::stringstream saved;saved.precision(precision);legacy.save(saved);
+   check(saved.precision()==precision,"the ghost room writer gives back the inherited stream precision");
+   saved<<" EndSeat";SeatRecord restored;
+   check(restored.load(saved)&&restored.mEctoplasmLevels==expectedBalances[balance],
+       "three repeated save/load cycles retain the exact ectoplasm levels");
+   check(restored.mGhostProduct==GhostProduct::crystal&&!restored.mGhostRevive,"fractional save keeps chosen apparatus and revive switch");
+   legacy=restored;
+  }
+ }
  SeatRecord reordered;std::stringstream order("[GhostRoom] 1.125 1 0 [/GhostRoom] [GhostBells] 1 earlier [/GhostBells] EndSeat");check(reordered.load(order)&&reordered.mEctoplasmLevels==1.125&&reordered.mGhostBellTargets.count("earlier"),"seat optional blocks also load in reverse order");
  RoomGhostRoom restoredRoom;restoredRoom.type=RoomType::ghostRoom;restoredRoom.seat=&seat;restoredRoom.name="press";map.rooms.push_back(&restoredRoom);hunter.tile=map.getTile(2,2);
  for(uint32_t phase:{2u,3u,10u,6u}){CreatureActionHuntGhost resumed(hunter);resumed.mState=phase;resumed.mRestoring=true;resumed.equipment=&restoredRoom;resumed.mHookSlot=7;resumed.mHookX=1;resumed.mHookY=2;resumed.mTarget="inside";resumed.mEmptyRoom="press";resumed.mDestination=map.getTile(3,4);resumed.mEmptyAnchor=map.getTile(4,4);resumed.mLoadedPath={Ogre::Vector2(3,3)};resumed.restore();check(resumed.mRegistered&&!resumed.mRestoring&&restoredRoom.restoredSlot==7,"load binds exact reserved hook slot before assignment");check(hunter.animation==(phase==2?"Throw":phase==3?"Beam":phase==10?"Idle":"Walk"),"load restores exact active phase pose (2 box throw, 3 beam pull, 10 box snapping shut, 6 still walking to the cauldron puts the trap in only on arrival, decision 865)");if(phase==10)check(resumed.mBeamTarget.empty(),"a loaded snap shows no beam");if(phase==6)check(restoredRoom.standing==resumed.mDestination&&restoredRoom.anchor==resumed.mEmptyAnchor,"load restores exact occupied cauldron and standing place");}

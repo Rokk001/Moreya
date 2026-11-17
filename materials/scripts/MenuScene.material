@@ -183,6 +183,74 @@ material MenuMountain
     }
 }
 
+// The wasteland outside the walls (MenuOuterGround) is dark ash and broken rock in single lit passes: it covers much
+// of the screen in the flights, so it avoids the per-light normal-mapped stone passes. Next to the walls it is about
+// as bright as the courtyard paving in the flight fill (FlightAmbient); it darkens in two steps outwards.
+material MenuWasteGroundNear
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 1.05 0.92 0.80 1
+            diffuse 0.55 0.50 0.45 1
+            specular 0 0 0 1 1
+            emissive 0.012 0.008 0.006
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
+material MenuWasteGround
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 0.70 0.63 0.56 1
+            diffuse 0.38 0.35 0.32 1
+            specular 0 0 0 1 1
+            emissive 0.006 0.004 0.003
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
+material MenuWasteGroundFar
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 0.42 0.40 0.38 1
+            diffuse 0.25 0.24 0.23 1
+            specular 0 0 0 1 1
+            emissive 0 0 0
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
+// Rocks and the stumps of the outer wall on the wasteland: textured stone in one lit pass.
+material MenuWasteRock
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 0.90 0.86 0.80 1
+            diffuse 0.60 0.57 0.53 1
+            specular 0 0 0 1 1
+            emissive 0.006 0.004 0.003
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
 material MenuCloud
 {
     receive_shadows off
@@ -601,11 +669,18 @@ material MenuWeb
     } }
 }
 
-// Crow plumage uses fine charcoal barbs and a subdued sheen under the existing rim light.
+// Crow plumage: warm black-brown feathers with fine barbs and a dull bronze sheen on the margins under the existing rim
+// light. The feather atlas holds three ragged feathers and one soft head plumelet; alpha rejection cuts the split vanes and
+// frayed tips out of each feather card.
 material MenuCrowBlack : RTSS/NormalMapping_MultiPass
 {
     technique { pass lighting {
-        texture_unit decalmap { texture MenuCrowFeather.png gamma }
+        alpha_rejection greater 128
+        texture_unit decalmap
+        {
+            texture MenuCrowFeather.png gamma
+            tex_address_mode clamp
+        }
         texture_unit
         {
             texture MenuCrowFeatherNormal.png
@@ -614,17 +689,29 @@ material MenuCrowBlack : RTSS/NormalMapping_MultiPass
         }
         ambient 0.85 0.85 0.85 1
         diffuse 0.85 0.85 0.85 1
-        specular 0.025 0.027 0.030 1 12
+        specular 0.030 0.026 0.022 1 14
     } }
 }
 
-// The menu crow's beak, legs and talons: dark grey horn with a dull sheen.
+// The menu crow's legs and talons: dark grey scaled horn with a dull sheen.
 material MenuCrowBeak
 {
     technique { pass lighting {
-        ambient 0.035 0.036 0.038 1
-        diffuse 0.035 0.036 0.038 1
+        ambient 1 1 1 1
+        diffuse 1 1 1 1
         specular 0.055 0.055 0.055 1 24
+        texture_unit { texture MenuCrowHorn.png gamma }
+    } }
+}
+
+// The menu crow's heavy bill: smooth dark horn with a fine lengthwise grain and a restrained sheen.
+material MenuCrowBill
+{
+    technique { pass lighting {
+        ambient 1 1 1 1
+        diffuse 1 1 1 1
+        specular 0.07 0.07 0.07 1 28
+        texture_unit { texture MenuCrowBill.png gamma }
     } }
 }
 

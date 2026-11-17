@@ -48,9 +48,11 @@ DIRT = {
     'DirtVisibleFrom': '10', 'DirtStage2At': '33.3333', 'DirtStage3At': '66.6667', 'DirtMoodFallPerTurnStage2': '-0.0298',
     'DirtMoodFallPerTurnStage3': '-0.0595', 'DirtPileMoodFallPerTurn': '-0.0298', 'DirtCleanedMoodStage2': '25',
     'DirtCleanedMoodStage3': '50', 'DirtPileRadius': '2', 'DirtOutputStage2': '0.75', 'DirtOutputStage3': '0.5',
-    'UrgeSeek': '80', 'UrgeOnTheWay': '75', 'UrgeRelieve': '100', 'UrgePerChicken': '5.962', 'UrgePerDrink': '15',
-    'ToiletUseTurns': '4', 'ToiletWaitRadius': '1', 'ToiletReserveFactor': '3',
-    'CleanRoomFromStage': '2', 'CleanRateFactor': '1',
+    'UrgeSeek': '80', 'UrgeOnTheWay': '75', 'UrgeRelieve': '100', 'UrgePerChicken': '20', 'UrgePerDrink': '15',
+    # INGAME-QS-10 K25: a seat use lasts a random 10 to 30 s; UrgePerChicken is the value of the toilet plan again
+    'ToiletUseTurns': '4', 'ToiletUseSecondsMin': '10', 'ToiletUseSecondsMax': '30', 'ToiletWaitRadius': '1',
+    'ToiletReserveFactor': '3',
+    'CleanTileFromStage': '1', 'CleanRateFactor': '1',
     'CleaningMaxTurnsPerTile': '20',
     'CombatDirtPerHit': '1.7723', 'TrailDirtPerTile': '0.1611',
     'CreatureDirtPerFightWon': '5', 'CreatureDirtPerKo': '25', 'CreatureDirtDecayPerTurn': '0.1',
@@ -101,7 +103,8 @@ assert_documented(rooms_cfg, 'ToiletCostPerTile', 'rooms.cfg')
 assert dirt['CombatDirtPerHit'] == room_values['ArenaDirtPerHit']
 assert dirt['TrailDirtPerTile'] == room_values['DormitoryDirtPerSleepTurn']
 
-# 4. Per type: UrgeGrowth/Turn = 0.2 x HungerGrowth/Turn, Cleanliness and DirtFactor of the table
+# 4. Per type: UrgeGrowth/Turn = HungerGrowth/Turn (INGAME-QS-10 K25 restores the rule of the toilet plan), Cleanliness
+#    and DirtFactor of the table
 FACTORS = {}
 for names, cleanliness, dirt_factor in [
         ('Rat Roach Spider Slime CaveHornet Scarab', '0.25', '1.75'),
@@ -125,7 +128,8 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
         continue
     assert name in FACTORS, 'creature type without a dirt row: ' + name
     seen.add(name)
-    assert abs(float(fields.get('UrgeGrowth/Turn')) - 0.2 * float(fields['HungerGrowth/Turn'])) < 1e-9,         name + ': UrgeGrowth/Turn must be 0.2 x HungerGrowth/Turn'
+    assert abs(float(fields.get('UrgeGrowth/Turn')) - float(fields['HungerGrowth/Turn'])) < 1e-9, \
+        name + ': UrgeGrowth/Turn must equal HungerGrowth/Turn'
     assert (fields.get('Cleanliness'), fields.get('DirtFactor')) == FACTORS[name], \
         name + ': Cleanliness / DirtFactor ' + str((fields.get('Cleanliness'), fields.get('DirtFactor'))) + ' differ from the table'
 assert seen == set(FACTORS), 'types missing in creatures.cfg: ' + ', '.join(sorted(set(FACTORS) - seen))

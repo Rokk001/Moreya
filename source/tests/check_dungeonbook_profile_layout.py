@@ -4,10 +4,11 @@ Static check, no game needed. Two things are verified.
 
 1. Order. The rows of the profile page flow from top to bottom (Gui::layoutCreatureProfilePage). The remarks of
    the picture come after status and latest post, so those two keep the position they have without remarks.
-2. Overflow. The creature card has a fixed height and the Dungeonbook pane is limited too. If the rows are
+2. Overflow. The Dungeonbook pane that holds the page is limited (the old creature card that also showed the page
+   is removed; a click on a creature opens the Dungeonbook). If the rows are
    higher than the page, the page scrolls: the page layout holds a scrollbar that is shown only then, and
    layoutCreatureProfilePage moves all rows with it (so nothing is cut off without a way to reach it).
-   The card stays 640 design pixels high and the content scrolls (decision of the owner): the check does not
+   The content scrolls (decision of the owner): the check does not
    demand that the typical content fits without scrolling, it demands that ALL rows are reachable by scrolling,
    at 640x480, 1024x768, 1920x1200 and 7680x4320, each with the user scale 80 % and 120 %.
 
@@ -60,20 +61,42 @@ header_rows = ('Portrait', 'NameText', 'HandleText', 'AgeText', 'RelationText', 
 for name in header_rows:
     assert 'name="%s"' % name in page, name  # moved with the scroll as well (all children but the scrollbar)
 
-layout = (repo / 'gui/WindowCreatureProfile.layout').read_text()
-m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
-card_width, card_height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
-# The page uses 88 percent of the shared frame client, excluding title and borders.
+assert not (repo / 'gui/WindowCreatureProfile.layout').exists(), 'the old creature card is removed, the book shows the page'
+# The page fills the holder (SocialHolder) of the profile page of the book: a fraction of the frame client, excluding
+# title and borders. The book is shrunk to the screen as a whole (Gui::getWindowFitFactor), so the viewport of the page
+# in design pixels depends on the fit factor of the book on each screen.
 import xml.etree.ElementTree as ET
-card = ET.fromstring(layout).find('Window')
-holder = card.find("Window[@name='ProfilePage']/Property[@name='Area']").get('value')
-assert holder == '{{0.0,0},{0.0,0},{1.0,0},{0.88,0}}'
-skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
-border = float(skin.find("Image[@name='WindowTopEdge']").get('height')) / 4
-side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4
-title_height = 18 * 10 / 8 + 12
-page_height = (card_height - title_height - 2 * border) * 0.88
-text_width = card_width - 2 * side - 48
+book_layout = (repo / 'gui/WindowSocial.layout').read_text()
+m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', book_layout)
+book_width, book_height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
+book_profile = ET.fromstring(book_layout).find('Window').find("Window[@name='ProfilePage']")
+
+
+def area_fractions(element):
+    value = element.find("Property[@name='Area']").get('value')
+    dims = [(float(a), float(b)) for a, b in re.findall(r'\{(-?[0-9.]+),(-?[0-9.]+)\}', value)]
+    assert all(offset == 0 for _, offset in dims), element.get('name') + ' scales with its parent'
+    return [d[0] for d in dims]
+
+
+profile_box = area_fractions(book_profile)
+holder_box = area_fractions(book_profile.find("Window[@name='SocialHolder']"))
+holder_height_fraction = (holder_box[3] - holder_box[1]) * (profile_box[3] - profile_box[1])
+# The book uses the window frame of the chosen menu sheet (OD/SheetWindow): its top and bottom rails are 44 sheet pixels
+# (1.5625 sheet pixels per design pixel); the title (one 13 point line of 18 * 13 / 8 design pixels plus 4) sits on the
+# top rail from three quarters of its height. Before, the generic title (10 point line plus 12) and a quarter of the
+# skin window edge on both sides were taken off.
+sheet = ET.parse(repo / 'gui/ODMenuTemplate.imageset').getroot()
+rail = float(sheet.find("Image[@name='FrameBottom']").get('height')) / 1.5625
+title_height = 0.75 * float(sheet.find("Image[@name='FrameTop']").get('height')) / 1.5625 + 18 * 13 / 8 + 4
+
+
+def book_page_height(fit):
+    # Design pixels of the page viewport in the book shrunk by the fit factor
+    return (book_height * fit - title_height - rail) * holder_height_fraction
+
+
+page_height = book_page_height(1.0)
 assert 'PROFILE_RIGHT_MARGIN = 32.0f' in gui
 
 LINE, PAD, GAP, TOP = 18.0, 4.0, 4.0, 132.0
@@ -107,7 +130,6 @@ typical = content(2, 1, 1, 2, 2, 2, 3)
 worst = content(3, 2, 2, 2, 3, 3, 1 + 2 * lines_of(64, dungeonbook_width))
 without_quirks = content(2, 1, 1, 2, 2, 2, 0)
 assert typical[0] == without_quirks[0], 'the remarks moved status or latest post'
-assert card_height == 640, ('the card keeps its height of 640 design pixels, the content scrolls', card_height)
 
 scroll_step = float(re.search(r'PROFILE_SCROLL_STEP = ([0-9.]+)f', gui)[1])
 overflow_tolerance = float(re.search(r'PROFILE_OVERFLOW_TOLERANCE = ([0-9.]+)f', gui)[1])
@@ -137,16 +159,19 @@ report = []
 for width, height in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for user in (0.8, 1.2):
         scale = min(width / design_width, height / design_height) * user
-        # the card must be on the screen, otherwise its end could not be reached at all
-        assert card_height * scale <= height + 1e-6 and card_width * scale <= width + 1e-6, ('the card is larger than the screen', width, height, user)
-        page_px = page_height * scale
+        # the book must be on the screen (shrunk to it), otherwise the end of the page could not be reached at all
+        fit = min(1.0, width / (book_width * scale), height / (book_height * scale))
+        assert book_height * fit * scale <= height + 1e-6 and book_width * fit * scale <= width + 1e-6, ('the book is larger than the screen', width, height, user)
+        viewport = book_page_height(fit)
+        assert tallest_row <= viewport, ('a single row is higher than the book page', width, height, user)
+        page_px = viewport * scale
         for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
-            maximum, wheel_steps = reachable_rows(remarks_bottom, page_height)
-            overflow = remarks_bottom > page_height + overflow_tolerance
+            maximum, wheel_steps = reachable_rows(remarks_bottom, viewport)
+            overflow = remarks_bottom > viewport + overflow_tolerance
             # without overflow the bar is hidden and nothing moves; with overflow the bar is shown and reaches the end
             assert overflow or maximum <= overflow_tolerance, (name, remarks_bottom)
             # the last row ends exactly at the page bottom at the end of the range, the first row starts at the top
-            assert abs((remarks_bottom - maximum) - min(remarks_bottom, page_height)) < 1e-6 or not overflow
+            assert abs((remarks_bottom - maximum) - min(remarks_bottom, viewport)) < 1e-6 or not overflow
             report.append('%dx%d user %d%% %s: page %.0f px, content %.0f px, %s' % (
                 width, height, round(user * 100), name, page_px, remarks_bottom * scale,
                 ('scrolls %.0f px in %d wheel steps, all rows reachable' % (maximum * scale, wheel_steps)) if overflow else 'fits'))
@@ -155,7 +180,7 @@ for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
     for user in (0.5, 1.0, 2.0):
         scale = min(width / 1024.0, height / 768.0) * user
         font_scale = min(width / (800.0 / user), height / (600.0 / user))
-        # screen pixels of one line (14 pixels at 800x600) and of the card page, back in design pixels
+        # screen pixels of one line (14 pixels at 800x600) and of the book page, back in design pixels
         line_design = 14.0 * font_scale / scale
         assert abs(line_design - 17.92) < 0.01, ('the line height depends on the resolution', line_design)
         page_px = page_height * scale
@@ -182,8 +207,11 @@ social_layout = (repo / 'gui/WindowSocial.layout').read_text()
 book = ET.fromstring(social_layout).find('Window')
 size = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', social_layout)
 book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])
-# 880x644 since the ornate frame and the 20 point title of decision 710 (860x620 before): the pages keep their room
-assert (book_w, book_h) == (880, 644), (book_w, book_h)
+# 880x644 since the ornate frame and the 20 point title of decision 710 (860x620 before): the pages keep their room;
+# 860x648 in the window frame of the menu sheet that every window uses: the highest window the HUD leaves room for,
+# narrow enough that at 640x480 it is shrunk only to the screen height, so the pages keep the room for their texts
+assert (book_w, book_h) == (860, 648), (book_w, book_h)
+assert book.get('type') == 'OD/SheetWindow', 'the Dungeonbook uses the window frame of the menu sheet'
 assert not (repo / 'gui/WindowDungeonbookProfile.layout').exists(), 'the old profile page with its buttons is gone'
 for old in ('Attributes', 'Social profile', 'Statistics', 'Back', 'Show: all creatures', 'Posts of: everyone'):
     assert 'name="Text" value="%s"' % old not in social_layout, 'old button ' + old
@@ -193,7 +221,7 @@ for old in ('FilterButton', 'FeedTab', 'ProfileTab', 'FeedModeButton', 'Creature
 assert 'type="OD/Listbox"' not in social_layout
 
 font_files = {}
-for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-20'):
+for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-13', 'MedievalSharp-20'):
     spec = ET.parse(repo / 'gui/fonts' / (name + '.font')).getroot()
     font_files[name] = (ImageFont.truetype(str(repo / 'gui/fonts' / spec.get('filename')), 1024),
                         float(spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0)
@@ -215,13 +243,16 @@ def line_height(font):
 
 
 CLIENT_W, CLIENT_H = 828.0, 560.0
-# The book has its own ornate iron frame (DungeonbookIcons/BookFrame*, imageset auto scaled 'min' from 3840x2160):
-# its side and bottom edges are FRAME_PX image pixels, scaled with the display only (not with the UI scale)
-book_images = ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot()
-assert (book_images.get('autoScaled'), book_images.get('nativeHorzRes'), book_images.get('nativeVertRes')) == ('min', '3840', '2160')
-FRAME_PX = max(float(book_images.find("Image[@name='BookFrame%s']" % n).get(d))
-               for n, d in (('Left', 'width'), ('Right', 'width'), ('Bottom', 'height')))
-assert book.find("Property[@name='FrameLeftImage']").get('value') == 'DungeonbookIcons/BookFrameLeft'
+# The book had its own ornate iron frame (DungeonbookIcons/BookFrame*, scaled with the display only). It now has the
+# window frame of the chosen menu sheet (OD/SheetWindow, ODMenuTemplate imageset scaled with the layout scale by
+# Gui.cpp at 1.5625 sheet pixels per design pixel): its side and bottom rails are FRAME_SIDE / FRAME_BOTTOM design
+# pixels at every screen and UI scale, and no property of the old frame is left on the window.
+menu_sheet = ET.parse(repo / 'gui/ODMenuTemplate.imageset').getroot()
+assert 'MENU_SHEET_IMAGE_PIXEL_DENSITY = 1.5625f' in gui
+FRAME_SIDE = max(float(menu_sheet.find("Image[@name='Frame%s']" % n).get('width')) for n in ('Left', 'Right')) / 1.5625
+FRAME_BOTTOM = float(menu_sheet.find("Image[@name='FrameBottom']").get('height')) / 1.5625
+FRAME_TOP = float(menu_sheet.find("Image[@name='FrameTop']").get('height')) / 1.5625
+assert book.find("Property[@name='FrameLeftImage']") is None and book.find("Property[@name='TitlebarFont']") is None
 
 
 def collect_boxes(element, box, path, out):
@@ -529,7 +560,7 @@ for fragment in ('creature->mEquipment[slot]', 'creature->mPotionSlots[slot - 6]
                  'slotType->setVisible(item == nullptr)', 'slot - 6 >= creature->mPotionSlots.size()',
                  'image->getChild("Lock")->setVisible(locked)', '"PotionSlotLevel2"', '"PotionSlotLevel3"'):
     assert fragment in fill, fragment
-assert 'fillItemSlotWindows(this, slotWindows, false)' in creature_text, 'the creature card keeps its slots'
+assert 'fillItemSlotWindows(this, slotWindows, false)' in creature_text, 'the shared profile page keeps its slots'
 for handler in ('onBackClicked', 'onPreviousClicked', 'onNextClicked', 'onNavClicked', 'onFilterClicked', 'onListRowClicked',
                 'onListWheel', 'onFeedWheel', 'onListScrolled', 'onFeedScrolled', 'onLinkClicked'):
     assert 'bool SocialWindow::%s' % handler in social and '&SocialWindow::%s' % handler in social, handler
@@ -550,8 +581,10 @@ assert 'compact ? PROFILE_ROW_GAP' in body
 # Sizes. Fonts and layout scale by the same factor from the display and the UI scale (the line heights in design
 # pixels do not depend on the resolution); Gui::getWindowFitFactor shrinks a window larger than the screen together
 # with its children but not the fonts, so the texts are compared with the shrunk boxes.
-assert book.find("Property[@name='TitlebarFont']").get('value') == 'MedievalSharp-20'
-TITLE_LINE = line_height('MedievalSharp-20')
+# The title is the sheet title (OD/SheetTitlebar): one line of the 13 point title font of OD/SheetWindow.
+sheet_look = ET.parse(repo / 'gui/OD.looknfeel').getroot().find("WidgetLook[@name='OD/SheetWindow']")
+assert sheet_look.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-13'
+TITLE_LINE = line_height('MedievalSharp-13')
 need = {}
 
 
@@ -717,10 +750,10 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
         fit = min(1.0, screen_w / (book_w * scale), screen_h / (book_h * scale))
         win_w, win_h = book_w * fit, book_h * fit  # design pixels after the fit, fonts unchanged
         assert win_w * scale <= screen_w + 1e-6 and win_h * scale <= screen_h + 1e-6, 'the book is larger than the screen'
-        # the title bar is one line of the title font plus 12 screen pixels; the frame takes its edges
-        frame = FRAME_PX * min(screen_w / 3840.0, screen_h / 2160.0) / scale
-        client_w = win_w - 2 * frame
-        client_h = win_h - (TITLE_LINE + 12.0 / scale) - frame
+        # the title bar is one line of the title font plus 4 screen pixels on the top rail from three quarters of its
+        # height; the side and bottom rails of the sheet frame take their edges (scaled like the layout, not fitted)
+        client_w = win_w - 2 * FRAME_SIDE
+        client_h = win_h - (0.75 * FRAME_TOP + TITLE_LINE + 4.0 / scale) - FRAME_BOTTOM
         tightest = {}
         for name, (font, lines, texts, pad_w, pad_h, wrap) in need.items():
             box = boxes[name][0]
@@ -761,7 +794,7 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             if ratio > tightest.get(page, (0.0, ''))[0]:
                 tightest[page] = (ratio, name)
         # The compact profile puts the label above its one-line links, which use the full row width.
-        # The noncompact creature card retains PROFILE_LINK_LEFT beside its label.
+        # The noncompact full page (the old creature card is removed) retains PROFILE_LINK_LEFT beside its label.
         assert 'float linkY = compact ? y + lineHeight : y;' in gui
         assert 'compact ? PROFILE_SIDE_MARGIN : PROFILE_LINK_LEFT' in gui
         holder = boxes['ProfilePage/SocialHolder'][0]

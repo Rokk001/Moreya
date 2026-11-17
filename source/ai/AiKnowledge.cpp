@@ -113,6 +113,14 @@ bool AiKnowledge::isKnown(Tile* tile) const
 //! \brief Finds the nearest enemy tile using remembered ownership and sightings.
 Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
 {
+    int ownerSeatId = -1;
+    return nearestKnownEnemyTile(sighting, ownerSeatId);
+}
+
+//! \brief Finds the nearest enemy tile using remembered ownership and sightings, and the seat the AI believes owns it.
+Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting, int& ownerSeatId) const
+{
+    ownerSeatId = -1;
     Tile* heart = ownHeartTile(mGameMap, mSeat);
     if(heart == nullptr)
         return nullptr;
@@ -132,7 +140,8 @@ Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
             const TileStateNotified* state = mSeat->getKnownTileState(tile);
             Seat* owner = mGameMap.getIsFOWActivated() ?
                 (state == nullptr ? nullptr : mGameMap.getSeatById(state->mSeatIdOwner)) : tile->getSeat();
-            if((owner == nullptr) || owner->isAlliedSeat(mSeat))
+            // The rogue seat (wild creatures) is no enemy keeper to dig toward or to attack
+            if((owner == nullptr) || owner->isAlliedSeat(mSeat) || owner->isRogueSeat())
                 continue;
 
             double dx = tile->getX() - heart->getX();
@@ -142,6 +151,7 @@ Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
             {
                 best = tile;
                 bestDistance = distance;
+                ownerSeatId = owner->getId();
             }
         }
     }
@@ -149,6 +159,9 @@ Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
     // Tiles on which the seat saw an enemy creature
     for(const std::pair<const int, SeatSighting>& seatEntry : sighting.seats)
     {
+        Seat* recordSeat = mGameMap.getSeatById(seatEntry.first);
+        if((recordSeat == nullptr) || recordSeat->isRogueSeat())
+            continue;
         for(const std::pair<const std::string, EnemyRecord>& record : seatEntry.second.records)
         {
             Tile* tile = record.second.tile;
@@ -162,6 +175,7 @@ Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
             {
                 best = tile;
                 bestDistance = distance;
+                ownerSeatId = seatEntry.first;
             }
         }
     }
@@ -399,11 +413,18 @@ bool AiKnowledge::exploreTunnels(KeeperAI& ai, Mind& mind, bool& marked) const
             while(tile != nullptr)
             {
                 bool known = isKnown(tile);
-                // Ends before a known tile that cannot be dug or that another seat owns
-                if(known && (tile->getFullness() > 0.0) && !tile->isDiggable(mSeat))
-                    break;
-                if(known && (tile->getSeat() != nullptr) && (tile->getSeat() != mSeat))
-                    break;
+                // Ends before a known water, lava, gem or mana-well tile (a gem tile is never dug away), a known full
+                // tile that cannot be dug (rock) and a known full tile claimed by another seat; open tiles are passed
+                if(known)
+                {
+                    const TileType type = tile->getType();
+                    if((type == TileType::water) || (type == TileType::lava) || (type == TileType::gem) ||
+                       (type == TileType::manaWell))
+                        break;
+                    if((tile->getFullness() > 0.0) &&
+                       (!tile->isDiggable(mSeat) || ((tile->getSeat() != nullptr) && (tile->getSeat() != mSeat))))
+                        break;
+                }
                 if(!known || (tile->getFullness() > 0.0))
                     tunnel.push_back(tile);
                 if(known && (tile->getType() == TileType::gold) && (tile->getFullness() > 0.0))

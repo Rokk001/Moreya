@@ -12,8 +12,13 @@ renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 scale_block = renderer.split('    if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)', 1)[1].split('    Ogre::Entity* ent = nullptr;', 1)[0]
 names = set(re.findall(r'\{"([^"]+)"', catalog))
 required = set()
+# Mesh names that rooms pass as a named constant of the catalog (for example RoomObjectPath::TOILET_SEAT_MESH)
+mesh_constants = dict(re.findall(r'static const std::string (\w+) = "([^"]+)";', catalog))
 for path in (repo / 'source/rooms').glob('*.cpp'):
     required.update(re.findall(r'new (?:BuildingObject|PersistentObject)\(getGameMap\(\), \*this, "([^"]+)"', path.read_text()))
+    for constant in re.findall(r'new (?:BuildingObject|PersistentObject)\(\w+(?:\(\))?, \*this, RoomObjectPath::(\w+)', path.read_text()):
+        required.add(mesh_constants[constant])
+assert 'ToiletSeat' in required, 'the toilet seats of RoomToilet must be found as room furniture'
 required.update(re.findall(r'^\s*BedMeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M))
 bed_dimensions = set()
 for creature in (repo / 'config/creatures.cfg').read_text().split('[Creature]')[1:]:
@@ -115,7 +120,7 @@ int main(int argc,char** argv){try{
    ++failures;std::cout<<"FAIL creature-specific bed angle\n";
   }
  }
- for(const char* name:{"FenceCorner","FenceStraight","PortalObject","DungeonHeartObjectHealthy","DungeonHeartObjectDamaged","DungeonHeartObjectCritical","Bookcase","Podium","SalesTable","MerchantShelf","Cauldron","HerbBed","StillShelf","WaterTrough","MushroomLamp","ItemBag"})
+ for(const char* name:{"FenceCorner","FenceStraight","PrisonDoor","PortalObject","DungeonHeartObjectHealthy","DungeonHeartObjectDamaged","DungeonHeartObjectCritical","Bookcase","Podium","SalesTable","MerchantShelf","Cauldron","HerbBed","StillShelf","WaterTrough","MushroomLamp","ItemBag","ToiletSeat"})
   for(const RoomObjectPath::MeshBounds& row:RoomObjectPath::meshBounds)if(std::string(row.name)==name){
    const RoomObjectPath::FurnitureScale scale=RoomObjectPath::furnitureScale(row);
    ++checks;if(scale.x!=1||scale.y!=1){++failures;std::cout<<"FAIL unchanged object "<<name<<'\n';}

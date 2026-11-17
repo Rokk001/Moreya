@@ -101,6 +101,8 @@ private:
     void deleteFenceMeshes();
     void putFenceMeshes();
     BuildingObject* createFencingMesh(FencingDirection hd, Tile*  tt);
+    //! \brief Creates the cage door (PrisonDoor) on the gate tile, facing the neighbouring cell tile.
+    BuildingObject* createGateMesh(Tile* tt, bool cellSouth, bool cellNorth, bool cellWest);
     void addFencingObject(Tile* targetTile, BuildingObject* obj, GameMap* gameMap = nullptr);
     
 

@@ -483,6 +483,90 @@ material MerchantWares
     }
 }
 
+// Bazaar look of the merchant room (INGAME-QS-10 K21): carpets, spice sacks, cloth strips and coloured lanterns, cells of the wares atlas;
+// dirty, faded and muted in the dark dungeon look since the owner finding of 2026-11-17
+material MerchantCarpet
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.03 0.03 0.03 1 8
+            texture_unit
+            {
+                texture MerchantWares.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantSack
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.03 0.03 0.03 1 8
+            texture_unit
+            {
+                texture MerchantWares.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantClothStrip
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.04 0.04 0.04 1 8
+            texture_unit
+            {
+                texture MerchantWares.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// A2b (owner finding 2026-11-17, too bright and colourful): smoky panes with a dim warm glow
+material MerchantLantern
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0.46 0.38 0.27
+            texture_unit
+            {
+                texture MerchantLantern.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
 material Bloodroot
 {
     technique

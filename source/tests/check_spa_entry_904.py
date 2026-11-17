@@ -34,15 +34,23 @@ assert 'isPoolTile(tile)' in arrival and 'creature.canGoThroughTile(tile)' in ar
 assert 'getGameMap()->path(start, tile, &creature, creature.getSeat())' in arrival
 assert 'spa->getArrivalTile(creature)' in read('source/creatureaction/CreatureActionSearchSpa.cpp')
 walk = body(spa, 'bool RoomSpa::walkBather(')
-for contract in ('creature.canGoThroughTile(tile)', 'SpaLayout::rimWalk(passable, getPoolSet()',
-                 'isPoolPosition(step.first, step.second) != wading', 'if(reachedTarget)',
+# Rewritten on fix/ingame-qs-10-b1 (K28): the walk is split into legs on the rim, in the mud and one step over the rim
+# (SpaLayout::nextBathLeg, outcome checked by check_spa_behaviour_b1); the leg that reaches the target ends at the endpoint
+for contract in ('creature.canGoThroughTile(tile)', 'SpaLayout::rimWalk(passable, pool,',
+                 'SpaLayout::nextBathLeg(pool, std::make_pair(here->getX(), here->getY()), steps, leg)',
+                 'if(legSteps == steps.size())', 'SPA_STEP_IN_CLIP', 'SPA_STEP_OUT_CLIP',
                  'path, false, true', 'CreatureActionWalkToTile'):
     assert contract in walk, contract
 assert 'setPosition' not in walk and 'startJump' not in walk
 assert 'setPosition' not in body(spa, 'bool RoomSpa::walkToPlace('), 'entry never teleports'
+# Rewritten on fix/ingame-qs-10-b1 (K29, answer to Q7): a drop on the mud or the rim bathes at the place nearest to the
+# drop, without the pleasure buff and the lock of the spa, paid as usual
 drop = body(spa, 'void RoomSpa::creatureDropped(')
-assert 'isPoolTile(creature.getPositionTile()) && canAccept(creature)' in drop
+assert 'canAcceptDrop(creature, *tile, block)' in drop
 assert 'CreatureActionUseRoom>(creature, *this, true)' in drop and 'wantsSpaBath' not in drop
+accept_drop = body(spa, 'bool RoomSpa::canAcceptDrop(')
+assert 'SpaLayout::findDropBlock(' in accept_drop and 'canPay(creature)' in accept_drop
+assert 'canUsePleasureRoom' not in accept_drop and 'isWorker()' in accept_drop
 assert 'mSpaBathing ||' in body(creature, 'bool Creature::needInterrupt(')
 assert 'findBatherOf(&creature) != mBathers.end()' in body(spa, 'bool RoomSpa::keepGuestUntilItLeft(')
 assert 'SpaBatherState::reserved) && it->mCreature->isKo()' in body(spa, 'void RoomSpa::abortDisturbedBathers(')

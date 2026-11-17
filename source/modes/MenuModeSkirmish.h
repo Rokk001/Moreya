@@ -35,9 +35,16 @@ public:
     bool launchSelectedButtonPressed(const CEGUI::EventArgs&);
     bool updateDescription(const CEGUI::EventArgs& e = {});
 
+    //! \brief Shows the map of the selected level as a minimap picture in the free area above the level list,
+    //! or hides the picture when no level is selected or the level cannot be read. Called whenever the selection
+    //! of the level list changes.
+    bool updateMapPreview(const CEGUI::EventArgs& e = {});
+
 private:
     std::vector<std::string> mFilesList;
     std::vector<std::string> mDescriptionList;
+    //! \brief The level file whose map the preview shows (empty when the preview is hidden).
+    std::string mPreviewFile;
 
     //! \brief Update the level list according to the level type chosen.
     bool updateFilesList(const CEGUI::EventArgs& e = {});

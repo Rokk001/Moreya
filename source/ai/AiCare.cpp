@@ -18,6 +18,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
+#include "gamemap/Pathfinding.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "utils/Random.h"
@@ -222,16 +223,20 @@ void CARE::Controller::load()
             else if(tokens[0] == "D04" && tokens[1] == "interval") mSlap.interval = value;
             else if(tokens[0] == "D04" && tokens[1] == "nextSlap") mSlap.nextSlap = now + value;
             else if(tokens[0] == "D04" && tokens[1] == "nextCheck") mSlap.nextCheck = now + value;
+            else if(tokens[0] == "D04" && tokens[1] == "slapsLeft") mSlap.slapsLeft = static_cast<int>(value);
         }
     }
 }
 
-//! \brief Advances existing episodes at the shared poll rate without drawing another reaction or mistake.
+//! \brief Runs the production-slap check when its own timer is due and advances existing episodes at the shared
+//! poll rate without drawing another reaction or mistake.
 bool CARE::Controller::poll()
 {
     load();
+    slapCheck(mAi, mSlap);
     slapEpisodeStep(mAi, mSlap);
     possessionStep(mAi, mNextControl);
+    ITEMS::retryGift(mAi);
     return false;
 }
 
@@ -339,6 +344,7 @@ void CARE::Controller::save(std::vector<AiMath::AiStateLine>& lines)
     lines.push_back({"draw", {"D04", "interval", careNumber(mSlap.interval)}});
     lines.push_back({"draw", {"D04", "nextSlap", careNumber(mSlap.nextSlap - now)}});
     lines.push_back({"draw", {"D04", "nextCheck", careNumber(mSlap.nextCheck - now)}});
+    lines.push_back({"draw", {"D04", "slapsLeft", careNumber(mSlap.slapsLeft)}});
     lines.push_back({"draw", {"D05", "nextControl", careNumber(mNextControl - now)}});
     for(const std::string& prisoner : mPrison.triedPrisoners)
         lines.push_back({"draw", {"G02", "tried", prisoner}});
@@ -348,8 +354,8 @@ void CARE::Controller::save(std::vector<AiMath::AiStateLine>& lines)
         lines.push_back({"draw", {"G02", "pending", prisoner}});
 }
 
-//! \brief Starts a finite mistake episode using the same interval and symptom-delay distribution as the care model.
-void CARE::slapWatch(KeeperAI& ai, SlapState& state)
+//! \brief Stops own brawls at the creature-list look; the production-slap mistake has its own check timer (slapCheck).
+void CARE::slapWatch(KeeperAI& ai, SlapState&)
 {
     // AI row D04
     const double now = ai.getMind().now();
@@ -357,6 +363,13 @@ void CARE::slapWatch(KeeperAI& ai, SlapState& state)
         if(creature->isBrawling())
             ai.getMind().exec("slap", 1, now, "D04", nullptr, creature->getName(),
                 std::bind(stopBrawl, std::ref(ai), static_cast<Tile*>(nullptr), creature->getName()));
+}
+
+//! \brief Starts a finite mistake episode using the same interval and symptom-delay distribution as the care model;
+//! the check runs exactly when its timer is due (care model: next check = one creature-list look interval + pause).
+void CARE::slapCheck(KeeperAI& ai, SlapState& state)
+{
+    const double now = ai.getMind().now();
     if(now < state.nextCheck)
         return;
     ConfigManager& config = ConfigManager::getSingleton();
@@ -368,24 +381,34 @@ void CARE::slapWatch(KeeperAI& ai, SlapState& state)
     // The pause is added to one more creature-list look interval, as in the care model.
     state.nextCheck = now + AiMath::lookInterval(config.getAiConfigDouble("LookFactorPlan"), params, uniform) +
         config.getAiConfigDouble("SlapMistakePauseSeconds");
-    if(now < state.episodeUntil || ownCreatures(ai).empty() || !ai.getMind().slip("D04"))
+    // The care model's creature list holds the fighters only; workers are a separate count there.
+    if(now < state.episodeUntil || ownFighters(ai).empty() || !ai.getMind().slip("D04"))
         return;
     const double delay = AiMath::reactionDelay(AiMath::ReactionKind::symptom, params, uniform);
     state.interval = config.getAiConfigDouble("SlapMistakeInterval" + std::to_string(Random::Int(1, 5)));
     state.episodeUntil = now + config.getAiConfigDouble("SlapMistakeDelayFactor") * delay +
         config.getAiConfigDouble("SlapMistakeBaseSeconds");
     state.nextSlap = now + state.interval;
+    // Owner answer 88: the care model's click cap of one episode
+    state.slapsLeft = static_cast<int>(config.getAiConfigDouble("SlapMistakeMaxClicks"));
 }
 
-//! \brief Applies one due round of a production mistake through the common legality and hand wrappers.
+//! \brief Applies one due round of a production mistake through the common legality and hand wrappers, at most
+//! SlapMistakeMaxClicks slaps per episode.
 void CARE::slapEpisodeStep(KeeperAI& ai, SlapState& state)
 {
     const double now = ai.getMind().now();
     if(now >= state.episodeUntil || now < state.nextSlap || state.interval <= 0.0)
         return;
     state.nextSlap = now + state.interval;
-    for(Creature* creature : ownCreatures(ai))
+    // The care model slaps its creature list, which holds the fighters only (no workers, no champions).
+    for(Creature* creature : ownFighters(ai))
+    {
+        if(state.slapsLeft <= 0)
+            break;
         ACTS::slap(ai, creature);
+        --state.slapsLeft;
+    }
 }
 
 //! \brief Selects a defender only for a fight threatening the heart or treasury; D05 and E12 share one decision,
@@ -415,7 +438,10 @@ void CARE::possessDefender(KeeperAI& ai, const AiEvent& event)
         {
             Tile* tile = fighter->getPositionTile();
             Room* current = tile == nullptr ? nullptr : tile->getCoveringRoom();
-            if(fighter->isActionInList(CreatureActionType::fight) ||
+            // Owner answer 80: only fighters in the affected room or within the fight-marker distance of the event take part
+            const bool nearFight = event.tile != nullptr && tile != nullptr &&
+                Pathfinding::squaredDistanceTile(*tile, *event.tile) < Player::getMinDistEventSquared();
+            if(nearFight ||
                (current != nullptr && (current == room ||
                 (event.type == AiEventType::HeartCritical && current->getType() == RoomType::dungeonTemple))))
             {
@@ -540,7 +566,8 @@ void CARE::levelWatch(KeeperAI& ai)
             if(capped && hall->hasOpenCreatureSpot(creature))
                 capped = false;
         Room* destination = capped ? availableRoom(ai, creature, RoomType::arena) : nullptr;
-        if(destination == nullptr && idle(*creature))
+        // Owner answer 82: only a creature with an empty action list is without work; busy or job-searching ones stay.
+        if(destination == nullptr && creature->getActions().empty())
         {
             destination = availableRoom(ai, creature, RoomType::casino);
             if(destination == nullptr)

@@ -1,6 +1,7 @@
 #ifndef ROOMMERCHANT_H
 #define ROOMMERCHANT_H
 
+#include "rooms/MerchantWallTable.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "entities/ItemInstance.h"
@@ -85,10 +86,14 @@ public:
     bool importFromStream(std::istream& stream) override;
     //! \brief Returns the first crystal table or an ordinary table with researched capacity.
     Tile* getFreeTable(const ItemInstance* item = nullptr) const;
-    //! \brief Returns the current sales table tiles for the merchant's room-only wandering.
-    const std::vector<Tile*>& getSalesTables() const { return mCentralActiveSpotTiles; }
-    //! \brief True when a table or a wall shelf stands on the tile: the merchant never stands or walks there (decision 901).
+    //! \brief Returns the current sales table tiles for the merchant's room-only wandering: the 3x3 centre tables first,
+    //! then the wall-side table.
+    std::vector<Tile*> getSalesTables() const;
+    //! \brief True when a table (centre or wall-side) or a wall shelf stands on the tile: the merchant never stands or
+    //! walks there (decision 901).
     bool isFurnitureTile(const Tile* tile) const;
+    //! \brief Lays out tables and shelves, then keeps at least two sales tables from 3x3 upward (INGAME-QS-10 K21).
+    void updateActiveSpots(GameMap* gameMap = nullptr) override;
     //! \brief Returns a free tile of this room next to the stop (a table or shelf tile) where the merchant can stand, or null.
     Tile* getStandTileBeside(const Tile* stop) const;
     //! \brief Returns the tiles of the wall shelves, which the merchant also visits to arrange goods.
@@ -165,6 +170,15 @@ private:
     void ensureMerchant();
     //! \brief Drops every remaining good from a table as a sealed bag.
     void releaseTableGoods(Tile* tile);
+    //! \brief True when the tile is one of the 3x3 centre tables.
+    bool isCentreTable(const Tile* tile) const;
+    //! \brief Returns what the tile at x, y is for the choice of the wall-side table.
+    MerchantCell cellForWallTable(int x, int y) const;
+    //! \brief Keeps a valid wall-side table, removes one that lost its place and adds one while the room shows fewer
+    //! than two sales tables.
+    void updateWallTables();
+    //! \brief Creates the sales table object on a wall-side tile with its back to the wall.
+    void createWallTable(Tile* tile, float angle);
     //! \brief Updates reservations according to fair or profit mode.
     void reserveGoods();
     //! \brief Records and announces a deal, retaining exactly the last twenty entries.

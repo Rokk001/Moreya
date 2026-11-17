@@ -74,20 +74,16 @@ static bool requiresWindowRecreation(const std::string& optionName)
         && optionName != OPTION_DEBUG_LAYER;
 }
 
-// Layout of the settings window when it is shown as a page of the main menu (pixels).
+// Layout of the settings window when it is shown as a page of the main menu (pixels): a window in the frame of the
+// chosen menu sheet, centred on the screen (INGAME-QS-10 K34).
 static const float MENU_WINDOW_HALF_WIDTH = 400.0f;
-static const float MENU_WINDOW_TOP_OFFSET = 60.0f;
-static const float MENU_WINDOW_BOTTOM_MARGIN = 16.0f;
+static const float MENU_WINDOW_HALF_HEIGHT = 290.0f;
 static const float MENU_TABS_MARGIN = 10.0f;
 static const float MENU_TABS_TOP = 72.0f;
 static const float MENU_TITLE_HEIGHT = 60.0f;
 
-// Layout of the settings window when it is shown inside the game (pixels).
-static const float GAME_WINDOW_TOP = 64.0f;
-static const float GAME_WINDOW_BOTTOM_MARGIN = 192.0f;
-static const float GAME_PAGE_MARGIN = 8.0f;
-static const float GAME_TABS_TOP = 64.0f;
-static const float GAME_TITLE_BOTTOM = 48.0f;
+// Layout of the settings window when it is shown inside the game (pixels): the same centred window in the frame of
+// the chosen menu sheet as in the main menu, with the tab buttons of the pages under its title.
 static const float GAME_MUSIC_CONTROL_LEFT = 32.0f;
 static const float GAME_MUSIC_CONTROL_RIGHT_MARGIN = 48.0f;
 static const float GAME_MUSIC_TEXT_TOP = 40.0f;
@@ -110,6 +106,8 @@ static std::string getPageTitle(const std::string& tabName)
     return "Game Options";
 }
 
+//! \brief Loads the settings window into the given root: as a centred window in the frame of the chosen menu sheet for
+//! the main menu pages and, with its page tabs, in a running game, or with its layout look (the same frame) otherwise.
 SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPages, bool gamePage):
     mSettingsWindow(nullptr),
     mApplyWindow(nullptr),
@@ -133,10 +131,13 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
     mSettingsWindow->hide();
     if(menuPages)
     {
-        mSettingsWindow->setLookNFeel("OD/MenuPageWindow");
+        mSettingsWindow->setLookNFeel("OD/SheetWindow");
+        CEGUI::FrameWindow* frame = static_cast<CEGUI::FrameWindow*>(mSettingsWindow);
+        frame->setTitleBarEnabled(false);
+        frame->setCloseButtonEnabled(false);
         mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -MENU_WINDOW_HALF_WIDTH),
-            CEGUI::UDim(0.5f, -MENU_WINDOW_TOP_OFFSET), CEGUI::UDim(0.5f, MENU_WINDOW_HALF_WIDTH),
-            CEGUI::UDim(1, -MENU_WINDOW_BOTTOM_MARGIN)));
+            CEGUI::UDim(0.5f, -MENU_WINDOW_HALF_HEIGHT), CEGUI::UDim(0.5f, MENU_WINDOW_HALF_WIDTH),
+            CEGUI::UDim(0.5f, MENU_WINDOW_HALF_HEIGHT)));
         CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
         tabs->setTabHeight(CEGUI::UDim(0, 0));
         tabs->setArea(CEGUI::URect(CEGUI::UDim(0, MENU_TABS_MARGIN), CEGUI::UDim(0, MENU_TABS_TOP),
@@ -153,19 +154,21 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
     }
     else if(gamePage)
     {
-        mSettingsWindow->setLookNFeel("OD/GameSettingsWindow");
-        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, GAME_WINDOW_TOP),
-            CEGUI::UDim(1, 0), CEGUI::UDim(1, -GAME_WINDOW_BOTTOM_MARGIN)));
+        mSettingsWindow->setLookNFeel("OD/SheetWindow");
+        CEGUI::FrameWindow* frame = static_cast<CEGUI::FrameWindow*>(mSettingsWindow);
+        frame->setTitleBarEnabled(false);
+        frame->setCloseButtonEnabled(false);
+        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -MENU_WINDOW_HALF_WIDTH),
+            CEGUI::UDim(0.5f, -MENU_WINDOW_HALF_HEIGHT), CEGUI::UDim(0.5f, MENU_WINDOW_HALF_WIDTH),
+            CEGUI::UDim(0.5f, MENU_WINDOW_HALF_HEIGHT)));
         CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
-        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_TABS_TOP),
-            CEGUI::UDim(1, -GAME_PAGE_MARGIN), CEGUI::UDim(1, -PAGE_TABS_BOTTOM_MARGIN)));
+        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, MENU_TABS_MARGIN), CEGUI::UDim(0, MENU_TABS_TOP),
+            CEGUI::UDim(1, -MENU_TABS_MARGIN), CEGUI::UDim(1, -PAGE_TABS_BOTTOM_MARGIN)));
         tabs->getChild("__auto_TabPane__")->setLookNFeel("OD/MenuPageContent");
-        CEGUI::Window* title = wmgr->createWindow("OD/StaticText", "PageTitle");
+        CEGUI::Window* title = wmgr->createWindow("OD/MenuTitle", "PageTitle");
         title->setFont("MedievalSharp-20");
-        title->setProperty("FrameEnabled", "False");
-        title->setProperty("BackgroundEnabled", "False");
-        title->setArea(CEGUI::URect(CEGUI::UDim(0, GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_PAGE_MARGIN),
-            CEGUI::UDim(1, -GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_TITLE_BOTTOM)));
+        title->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
+            CEGUI::UDim(1, 0), CEGUI::UDim(0, MENU_TITLE_HEIGHT)));
         title->setMousePassThroughEnabled(true);
         mSettingsWindow->addChild(title);
         addEventConnection(tabs->subscribeEvent(CEGUI::TabControl::EventSelectionChanged,

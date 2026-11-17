@@ -46,8 +46,8 @@ static const MeshBounds meshBounds[] = {
     {"DungeonHeartObjectCritical", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"DungeonHeartObjectDamaged", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"DungeonHeartObjectHealthy", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
-    {"FenceCorner", -.502486f, -.500121f, .521221f, .514487f},
-    {"FenceStraight", -.493929f, -.492016f, .516277f, -.462466f},
+    {"FenceCorner", -.52f, -.52f, .52f, .52f},
+    {"FenceStraight", -.52f, -.510148f, .52f, -.44942f},
     {"GhostBell", -.3f, -.17f, .3f, .17f, .9000001f},
     {"GhostCauldron", -1.0f, -1.0f, 1.0f, 1.0f, 1.14f},
     {"GhostCauldronFill", -.2f, -.025f, .2f, .025f, .6f},
@@ -74,6 +74,7 @@ static const MeshBounds meshBounds[] = {
     {"MushroomLamp", -.29f, -.29f, .29f, .29f},
     {"OrcBed", -.533745f, -.997136f, .529433f, .987434f, .560469f},
     {"Podium", -.193612f, -.148315f, .193891f, .148315f},
+    {"PrisonDoor", -.52f, -.52f, .52f, -.42f},
     {"PortalObject", -1.66302f, -1.66302f, 1.66302f, 1.66302f},
     {"RangerBed", -.53459f, -.777014f, .534418f, .775852f, .805918f},
     {"Roulette", -.292486f, -.296162f, .292326f, .296652f},
@@ -91,6 +92,7 @@ static const MeshBounds meshBounds[] = {
     {"TavernStool", -.1655f, -.1655f, .1655f, .1655f},
     {"TavernTable", -.595f, -.78f, .595f, .78f},
     {"TentacleBed", -.448981f, -.476366f, .461978f, .436628f, .276672f},
+    {"ToiletSeat", -.23f, -.06f, .23f, .4633968f},
     {"TortureObject", -.7007f, -.606824f, .7007f, .606824f},
     {"TrainingDummy1", -.248242f, -.128432f, .248296f, .330221f},
     {"TrainingDummy2", -.455f, -.170625f, .455f, .4095f},
@@ -126,6 +128,34 @@ inline bool isWalkableSpaMesh(const std::string& name)
     return name == SPA_POOL_MESH || name == SPA_RIM_MESH;
 }
 
+//! Name of the seat of a toilet room (see RoomToilet.cpp). It has to match the entry of meshBounds. The seat is solid:
+//! only its user steps onto it (RoomToilet walks the user there on a checked straight line).
+static const std::string TOILET_SEAT_MESH = "ToiletSeat";
+//! Height of the stone top of the toilet seat; a creature that uses the seat is drawn this much higher.
+constexpr float toiletSeatTop = 0.18f;
+//! Where on the seat its user is placed: mesh coordinate y (the back of the seat, at the wall, is at +y). The hole lies
+//! just behind it, so the feet of the user stand on the stone in front of and beside the hole.
+constexpr float toiletSeatPlaceY = 0.17f;
+
+//! \brief True when the point (world x, y) lies on the top of a toilet seat placed at seatX, seatY with the given angle
+//! (degrees), i.e. inside its measured footprint.
+inline bool onToiletSeat(float pointX, float pointY, float seatX, float seatY, float angleDegrees)
+{
+    const float angle = angleDegrees * degreesToRadians;
+    const float dx = pointX - seatX;
+    const float dy = pointY - seatY;
+    // Back into the mesh coordinates of the seat (rotation by -angle)
+    const float localX = dx * std::cos(angle) + dy * std::sin(angle);
+    const float localY = -dx * std::sin(angle) + dy * std::cos(angle);
+    for(const MeshBounds& bounds : meshBounds)
+    {
+        if(TOILET_SEAT_MESH != bounds.name)
+            continue;
+        return localX >= bounds.minX && localX <= bounds.maxX && localY >= bounds.minY && localY <= bounds.maxY;
+    }
+    return false;
+}
+
 // Narrow the visible furniture and its navigation bounds together. Leave Z
 // unchanged so authored working heights and bed support surfaces stay valid.
 // Large beds keep their existing multi-tile allocation; this is not a capacity
@@ -151,14 +181,15 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
     const std::string name(bounds.name);
     if(name.compare(0, 12, "InfirmaryCot") == 0)
         return {1.0f, 1.0f};
-    if(name == "FenceCorner" || name == "FenceStraight" ||
+    if(name == "FenceCorner" || name == "FenceStraight" || name == "PrisonDoor" ||
        name == "PortalObject" || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
        name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
        name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron" || name == "ManaStill" || name == "GhostPress" ||
        name == "SoulForge" ||
        name == "SpaChair" || name == "SpaMudPool" || name == "SpaPoolRim" || name == "SpaSpringboard" ||
-       name == "TavernCounter" || name == "TavernKeg" || name == "TavernStool" || name == "TavernTable")
+       name == "TavernCounter" || name == "TavernKeg" || name == "TavernStool" || name == "TavernTable" ||
+       name == TOILET_SEAT_MESH)
         return {1.0f, 1.0f};
     // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
     // diagonal, not just their unrotated width, so rotation retains the margin.

@@ -1,6 +1,6 @@
 """Check the Dungeonbook (social browser): window layout, HUD button, hotkey, event hooks and limits.
 
-The window is a fixed size OD/FrameWindow imported into the game layout (so it is registered for UI
+The window is a fixed size OD/SheetWindow (the frame of the menu sheet) imported into the game layout (so it is registered for UI
 scaling like the other windows), it closes with its cross and with Escape (closeTopWindow), the
 hotkey B is used only once, and the posts come only from client side events that are guarded so they
 cost nothing while the feed is not running.
@@ -23,7 +23,7 @@ def read(path):
 
 
 layout = read('gui/WindowSocial.layout')
-check('name="SocialWindow"' in layout and 'type="OD/FrameWindow"' in layout, 'frame window')
+check('name="SocialWindow"' in layout and 'type="OD/SheetWindow"' in layout, 'frame window of the menu sheet')
 check('<Property name="SizingEnabled" value="False" />' in layout, 'the window must not be resizable')
 m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
 check(m is not None, 'a fixed size centred area is expected')
@@ -81,8 +81,13 @@ button = hud[hud.index('name="SocialButton"'):]
 button = button[:button.index('</Window>')]
 check('{{0,148},{1,-224},{0,188},{1,-184}}' in button, 'button is not in the free slot')
 check('ContextHelp' in button and 'TooltipText' in button, 'tooltip and context help')
-icon = re.search(r'NormalImage" value="OpenDungeonsIcons/(\w+)"', button)
-check(icon is not None and 'name="%s"' % icon[1] in read('gui/ODIcons.imageset'), 'button icon must exist')
+# The button shows the Dungeonbook icon of its own imageset (INGAME-QS-10 K12b); the imageset is registered in the
+# scheme and defines the image the button names.
+icon = re.search(r'NormalImage" value="(\w+)/(\w+)"', button)
+check(icon is not None and icon[1] == 'NavigationDungeonbook', 'button uses the Dungeonbook icon')
+check('<Imageset filename="NavigationDungeonbook.imageset" name="NavigationDungeonbook" />' in read('gui/ODSkin.scheme'),
+      'Dungeonbook imageset registered')
+check('name="%s"' % icon[2] in read('gui/NavigationDungeonbook.imageset'), 'button icon must exist')
 
 gamemode = read('source/modes/GameMode.cpp')
 check(gamemode.count('case OIS::KC_B:') == 1, 'one B case in GameMode')

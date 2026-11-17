@@ -22,7 +22,8 @@
 #include <string>
 
 //! \brief What the pool attendant of a lava spa is doing. The attendant sits on his chair and every few seconds plays
-//! a short act; now and then he climbs down, walks to the springboard, jumps into the pool, walks back and climbs up.
+//! a short act; now and then he climbs down for one outing, either to the springboard, a jump into the pool and the walk
+//! back, or a round on the rim around the pool, and climbs up again (Mario 2026-11-17, answer to Q8).
 enum class PoolAttendantState : uint32_t
 {
     //! Sitting on the chair (loop); the next act or jump is counted down.
@@ -42,8 +43,60 @@ enum class PoolAttendantState : uint32_t
     //! Walking from the pool back to the chair.
     walkingBack = 7,
     //! Climbing up the ladder of the chair.
-    climbingUp = 8
+    climbingUp = 8,
+    //! Walking a round on the rim around the pool, from one side of the chair to the other.
+    walkingRound = 9
 };
+
+//! \brief The outing of the pool attendant when he gets up from his chair: one of them, never both (Mario 2026-11-17,
+//! answer to Q8).
+enum class PoolAttendantOuting : uint32_t
+{
+    //! He stays on his chair.
+    none = 0,
+    //! Down the ladder, to the springboard, a jump into the mud, back to the chair.
+    cannonball = 1,
+    //! Down the ladder, a round on the rim around the pool, back to the chair.
+    round = 2
+};
+
+namespace PoolAttendantOutings
+{
+    //! \brief Share of the outings that are a jump when both are possible; the other ones are a round.
+    const double CANNONBALL_SHARE = 0.5;
+
+    //! \brief Chooses the outing of the attendant when his pause on the chair is over: at random one of the outings that
+    //! are possible, the only possible one when the other is not, none when neither is.
+    //! \param roll A random number from 0 to 1.
+    //! \param canJump True when the room has a springboard and a free pool tile for the jump.
+    //! \param canWalkRound True when the rim leads around the pool from one side of the chair to the other.
+    inline PoolAttendantOuting choose(double roll, bool canJump, bool canWalkRound)
+    {
+        if(canJump && canWalkRound)
+            return (roll < CANNONBALL_SHARE) ? PoolAttendantOuting::cannonball : PoolAttendantOuting::round;
+        if(canJump)
+            return PoolAttendantOuting::cannonball;
+        if(canWalkRound)
+            return PoolAttendantOuting::round;
+        return PoolAttendantOuting::none;
+    }
+
+    //! \brief The name of an outing in the log.
+    //! \param outing The outing.
+    inline std::string toString(PoolAttendantOuting outing)
+    {
+        switch(outing)
+        {
+            case PoolAttendantOuting::cannonball:
+                return "cannonball";
+            case PoolAttendantOuting::round:
+                return "round";
+            case PoolAttendantOuting::none:
+                break;
+        }
+        return "none";
+    }
+}
 
 //! \brief Everything that is saved of a pool attendant in the room stream. The values that follow from the state (the
 //! height while climbing, the start and end of a jump) are worked out again when the attendant is restored.
@@ -114,6 +167,8 @@ namespace PoolAttendantStateNames
                 return "back";
             case PoolAttendantState::climbingUp:
                 return "climbUp";
+            case PoolAttendantState::walkingRound:
+                return "round";
         }
         return "sit";
     }
@@ -127,7 +182,8 @@ namespace PoolAttendantStateNames
         static const PoolAttendantState ALL_STATES[] = {
             PoolAttendantState::sitting, PoolAttendantState::whistling, PoolAttendantState::towelWaving,
             PoolAttendantState::dozing, PoolAttendantState::climbingDown, PoolAttendantState::walkingToBoard,
-            PoolAttendantState::jumping, PoolAttendantState::walkingBack, PoolAttendantState::climbingUp };
+            PoolAttendantState::jumping, PoolAttendantState::walkingBack, PoolAttendantState::climbingUp,
+            PoolAttendantState::walkingRound };
         for(PoolAttendantState candidate : ALL_STATES)
         {
             if(toString(candidate) == token)

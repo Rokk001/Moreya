@@ -40,8 +40,8 @@ void PlayerSelection::setCurrentAction(SelectedAction action)
     mNewRoomType = RoomType::nullRoomType;
     mNewSpellType = SpellType::nullSpellType;
     InputManager& mInputManager = InputManager::getSingleton();
-    mInputManager.mCreatureTypeForOutliner = action == SelectedAction::queryEntity ?
-        SelectionEntityWanted::creatureAliveOrDead : SelectionEntityWanted::creatureAliveAllied;
+    // The query outlines the creatures it can open in the Dungeonbook: living ones of the own and allied keepers
+    mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::creatureAliveAllied;
     if(action == SelectedAction::sellBuilding)
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::none;
 }

@@ -1558,37 +1558,46 @@ def torture_field():
     return col, hgt
 
 
-INFIRMARY_SLAB = np.array([0.246, 0.214, 0.190])
+INFIRMARY_SLAB = np.array([0.140, 0.152, 0.176])
 
 
-# Paint the prescribed periodic infirmary flagstones, stains and straw.
+# Paint the infirmary floor: rough, dark, cold-grey dungeon flagstones of mixed size with chipped joints, pits, cracks,
+# old brown stains and a few straw wisps (INGAME-QS-10 K23). Every layer is periodic.
 def infirmary_field():
-    """Worn flagstones with old stains and straw wisps (the torture slab layout with own seeds, without drain
-    grooves and grates; straw as the prison). Every layer is periodic."""
-    pid, dist, count = row_layout(1801, 6, 90, 190, 4.0, 1802)
+    """Rough dark dungeon flagstones (wrapping row layout with warped joints), each slab with its own tone, chipped
+    edges, pits and hairline cracks; old stains and straw wisps. Every layer is periodic."""
+    pid, dist, count = row_layout(1801, 7, 70, 170, 6.0, 1802)
     rng = np.random.RandomState(1803)
-    tone = rng.uniform(0.92, 1.08, count)[pid]
+    tone = rng.uniform(0.78, 1.18, count)[pid]
+    hue = rng.uniform(-0.025, 0.025, count)[pid]
     mottle = fbm(1804, 14.0, 14.0, 3)
     grit = fbm(1805, 170.0, 170.0, 2)
+    rough = fbm(1809, 40.0, 40.0, 3)
     col = INFIRMARY_SLAB[None, None, :] * tone[..., None]
-    col = col * (1.0 + 0.10 * mottle + 0.07 * grit)[..., None]
-    hgt = 0.5 * mottle + 0.4 * grit
-    # worn centres: slightly lighter and flatter where feet pass
-    worn = smoothstep(0.2, 1.2, fbm(1806, 10.0, 10.0, 3))
-    col = col * (1.0 + 0.06 * worn)[..., None]
-    hgt = hgt * (1.0 - 0.3 * worn)
+    col = col * (1.0 + np.stack([hue, 0.0 * hue, -hue], -1))
+    col = col * (1.0 + 0.16 * mottle + 0.12 * grit + 0.10 * rough)[..., None]
+    hgt = 0.5 * mottle + 0.5 * grit + 0.6 * rough
+    # pits and chips: small dark hollows
+    pits = smoothstep(1.3, 1.9, fbm(1810, 60.0, 60.0, 2))
+    col = col * (1.0 - 0.45 * pits)[..., None]
+    hgt = hgt - 1.2 * pits
+    # hairline cracks across the slabs
+    crack = smoothstep(0.06, 0.0, np.abs(fbm(1811, 6.0, 6.0, 3))) * smoothstep(0.2, 0.8, fbm(1812, 4.0, 4.0, 2))
+    col = mix(col, np.array([0.040, 0.038, 0.038])[None, None, :], crack * 0.8)
+    hgt = hgt - 1.0 * crack
     # old brown stains
-    stain = smoothstep(1.1, 1.6, fbm(1807, 14.0, 14.0, 3))
-    col = mix(col, np.array([0.150, 0.090, 0.060])[None, None, :] * (0.85 + 0.3 * grit[..., None]), stain * 0.5)
-    # dark joints with a bevel
-    t = smoothstep(0.8, 3.2, dist)
-    col = mix(np.broadcast_to(np.array([0.050, 0.046, 0.044]), col.shape), col, t)
-    hgt = hgt * 0.7 + 2.6 * smoothstep(0.8, 5.0, dist)
-    # straw wisps
+    stain = smoothstep(1.0, 1.6, fbm(1807, 14.0, 14.0, 3))
+    col = mix(col, np.array([0.110, 0.082, 0.062])[None, None, :] * (0.85 + 0.3 * grit[..., None]), stain * 0.55)
+    # dark, chipped joints: their width varies with noise
+    edge = 1.2 + 2.2 * smoothstep(0.3, 1.4, fbm(1813, 18.0, 18.0, 2))
+    t = smoothstep(edge * 0.6, edge + 2.4, dist)
+    col = mix(np.broadcast_to(np.array([0.030, 0.029, 0.030]), col.shape), col, t)
+    hgt = hgt * 0.7 + 2.8 * smoothstep(0.8, 5.5, dist)
+    # a few straw wisps
     sp = Sprites(wrap=True)
-    draw_straws(sp, straw_segments(1808, 40, (0, 0, N, N), (20, 38)), (0.50, 0.40, 0.20))
+    draw_straws(sp, straw_segments(1808, 18, (0, 0, N, N), (20, 38)), (0.30, 0.25, 0.14))
     sc, sa, _ = sp.result()
-    col = mix(col, sc, sa * 0.92)
+    col = mix(col, sc, sa * 0.85)
     return col, hgt
 
 
@@ -2202,24 +2211,102 @@ ROOMS = {
 }
 
 
+# merchant (bazaar, EQUIPMENT-POTIONS-PLAN 15.3): worn wooden planks with remnants of woven carpets. INGAME-QS-10 K21: the
+# remnants of the first version were shapeless dark red blotches that read as blood on the planks; they are now cut
+# pieces of patterned carpet (border band with lozenges, inner line, medallion, small diamonds, fringes, frayed and worn
+# through edges) in several dyes, so nothing on the floor reads as a stain. Owner finding 2026-11-17 on that version
+# ("viel zu sauber, grell und farbenfroh"): the planks are dark weathered grey-brown, the dyes are dull and faded close to
+# brown-grey, the carpets carry sewn patches, and grime, soot, dust and dark (not red) stains lie over everything, inside
+# the room floor ranges of the style guide. Owner finding on that version: the remnants were barely visible in the game
+# light; the planks are darker and the remnants lighter (a clear value step), still dull and dirty.
+BAZAAR_PLANK = np.array([0.19, 0.152, 0.125])
+BAZAAR_JOINT = np.array([0.055, 0.045, 0.037])
+# (field, border, motif, line) dyes of the carpet pieces: dull madder with indigo, dull indigo with madder (ochre unused)
+BAZAAR_RUGS = (
+    (np.array([0.50, 0.28, 0.23]), np.array([0.29, 0.30, 0.41]), np.array([0.58, 0.47, 0.30]), np.array([0.55, 0.45, 0.30])),
+    (np.array([0.30, 0.31, 0.43]), np.array([0.50, 0.29, 0.24]), np.array([0.58, 0.47, 0.29]), np.array([0.52, 0.46, 0.37])),
+    (np.array([0.56, 0.45, 0.27]), np.array([0.30, 0.32, 0.38]), np.array([0.50, 0.28, 0.23]), np.array([0.52, 0.46, 0.37])),
+)
+# Faded dye, grime, soot and dust of the merchant floor
+BAZAAR_FADED = np.array([0.42, 0.37, 0.31])
+BAZAAR_GRIME = np.array([0.12, 0.10, 0.085])
+BAZAAR_DUST = np.array([0.30, 0.28, 0.25])
+# Carpet pieces of the tile: centre x, centre y, half length, half width (px), rotation (radians), dye index. They wrap
+# around the tile border like the planks.
+BAZAAR_PIECES = ((150.0, 140.0, 118.0, 74.0, 0.10, 0), (380.0, 370.0, 100.0, 64.0, -0.16, 1))
+# Sewn-on patches of another carpet: centre u, v in the piece (px), half size u, v, dye index of the patch field
+BAZAAR_PATCHES = (((-52.0, 20.0, 20.0, 15.0, 2),), ((40.0, -18.0, 17.0, 13.0, 0),))
+
+
 def merchant_field():
-    """Paint worn bazaar planks with scattered remnants of a red woven carpet."""
+    """Paint dark weathered bazaar planks with dirty, faded and patched remnants of patterned woven carpets."""
     ids, joints, count = row_layout(2101, 7, 110, 260, 1.3, 2102)
     rng = np.random.RandomState(2103)
     grain = fbm(2104, 3.0, 90.0, 3)
-    shade = rng.uniform(0.72, 1.08, count)[ids]
-    col = np.array([0.27, 0.18, 0.11])[None, None, :] * shade[..., None]
-    col = col * (1.0 + 0.10 * grain[..., None])
+    shade = rng.uniform(0.80, 1.08, count)[ids]
+    col = BAZAAR_PLANK[None, None, :] * shade[..., None]
+    col = col * (1.0 + 0.12 * grain[..., None])
+    scuff = smoothstep(0.6, 1.8, fbm(2107, 10.0, 10.0, 3))
+    col = mix(col, col * 1.10 + 0.015, scuff * 0.5)
     bevel = smoothstep(1.0, 5.0, joints)
-    col = mix(col, np.array([0.06, 0.045, 0.035]), 1.0 - bevel)
+    col = mix(col, BAZAAR_JOINT, 1.0 - bevel)
     hgt = bevel + 0.10 * grain
-    remnant = smoothstep(0.35, 0.70, fbm(2105, 4.0, 4.0, 2))
-    weave = 0.85 + 0.15 * np.sin(_XX * np.pi / 2.0) * np.sin(_YY * np.pi / 2.0)
-    carpet = np.array([0.28, 0.055, 0.055])[None, None, :] * weave[..., None]
-    faded = smoothstep(0.3, 1.3, fbm(2106, 16.0, 16.0, 2))
-    carpet = mix(carpet, np.array([0.25, 0.18, 0.12]), faded * 0.65)
-    col = mix(col, carpet, remnant)
-    hgt = hgt + 0.45 * remnant + 0.05 * weave
+    fray = fbm(2105, 40.0, 40.0, 2)
+    wear = fbm(2106, 9.0, 9.0, 3)
+    weave = 0.88 + 0.12 * np.sin(_XX * np.pi / 2.0) * np.sin(_YY * np.pi / 2.0)
+    for index, (cx, cy, half_long, half_wide, angle, dye) in enumerate(BAZAAR_PIECES):
+        field, border, motif, line = BAZAAR_RUGS[dye]
+        dx = (_XX - cx + N / 2.0) % N - N / 2.0
+        dy = (_YY - cy + N / 2.0) % N - N / 2.0
+        u = dx * math.cos(angle) + dy * math.sin(angle)
+        v = -dx * math.sin(angle) + dy * math.cos(angle)
+        # frayed outline, worn-through holes inside where the planks show
+        edge = np.minimum(half_long - np.abs(u), half_wide - np.abs(v))
+        holes = smoothstep(1.45, 1.8, wear + 0.25 * fbm(2110 + index, 20.0, 20.0, 2))
+        inside = smoothstep(0.0, 1.5, edge + 1.6 * fray) * (1.0 - holes)
+        band = 18.0
+        rug = np.broadcast_to(field, (N, N, 3)).copy()
+        # small diamonds on the field and a large lozenge medallion in the middle
+        cell = 22.0
+        du = np.abs((u % cell) - cell / 2.0)
+        dv = np.abs((v % cell) - cell / 2.0)
+        rug = mix(rug, motif, (du + dv < 4.0) * 0.85)
+        medal = np.abs(u) / (half_long * 0.55) + np.abs(v) / (half_wide * 0.55)
+        rug = mix(rug, border, ((medal < 1.0) & (medal > 0.78)) * 1.0)
+        rug = mix(rug, motif, (medal < 0.45) * 0.9)
+        rug = mix(rug, line, ((medal < 0.25) & (medal > 0.15)) * 1.0)
+        # border band with a chain of lozenges and a thin line inside it
+        along = np.where(half_long - np.abs(u) < half_wide - np.abs(v), v, u)
+        lozenge = np.abs((along % 18.0) - 9.0) + np.abs(edge - band / 2.0)
+        in_band = edge < band
+        rug = np.where(in_band[..., None], border, rug)
+        rug = mix(rug, motif, (in_band & (lozenge < 5.5) & (lozenge > 2.5)) * 0.9)
+        rug = mix(rug, line, (in_band & (lozenge <= 2.5)) * 0.9)
+        rug = mix(rug, line, ((edge > band) & (edge < band + 3.5)) * 1.0)
+        # faded, rubbed dye and the woven texture
+        # sewn-on patches of another dye with a dark stitch line
+        for (pu, pv, hu, hv, pdye) in BAZAAR_PATCHES[index]:
+            pe = np.minimum(hu - np.abs(u - pu), hv - np.abs(v - pv))
+            rug = mix(rug, BAZAAR_RUGS[pdye][0] * 0.95, (pe > 0) * 1.0)
+            rug = mix(rug, BAZAAR_GRIME, ((pe > 0) & (pe < 1.6) & (((u + v) % 5.0) < 2.5)) * 1.0)
+        faded = smoothstep(-0.2, 1.4, wear) * 0.45
+        rug = mix(rug, BAZAAR_FADED, faded) * weave[..., None]
+        col = mix(col, rug, inside)
+        hgt = hgt + 0.35 * inside + 0.04 * weave * inside
+        # cream fringes at the two short ends
+        tassel = (np.abs(u) > half_long - 1.0) & (np.abs(u) < half_long + 9.0 + 3.0 * fray) & (np.abs(v) < half_wide - 4.0)
+        strand = ((v % 4.0) < 2.0) * tassel * (1.0 - holes)
+        col = mix(col, np.array([0.36, 0.32, 0.26]), strand * 0.9)
+        hgt = hgt + 0.15 * strand
+    # grime in broad patches, soot, grey dust and dark spilled stains over planks and carpets
+    grime = smoothstep(0.9, 1.7, fbm(2120, 5.0, 5.0, 3))
+    col = mix(col, BAZAAR_GRIME, grime * 0.45)
+    dust = smoothstep(1.0, 1.7, fbm(2121, 3.0, 3.0, 2))
+    col = mix(col, BAZAAR_DUST, dust * 0.25)
+    spill = fbm(2122, 7.0, 7.0, 3)
+    col = mix(col, col * 0.55, smoothstep(1.35, 1.5, spill) * 0.8)
+    col = col * (0.94 + 0.08 * fbm(2123, 60.0, 60.0, 2)[..., None])
+    hgt = hgt - 0.05 * grime
     return col, hgt
 
 

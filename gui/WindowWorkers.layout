@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
-    <Window type="OD/FrameWindow" name="WorkersWindow">
-        <Property name="Area" value="{{0.25,-166.4},{0.25,-108.8},{0.75,166.4},{0.75,108.8}}" />
+    <Window type="OD/SheetWindow" name="WorkersWindow">
+        <Property name="Area" value="{{0.25,-154},{0.25,-124},{0.75,154},{0.75,124}}" />
         <Property name="Text" value="Workers" />
         <Property name="CaptionColour" value="00FFFFFF" />
         <Property name="SizingEnabled" value="False" />

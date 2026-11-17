@@ -388,6 +388,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
     ${SRC}/rooms/RoomInfirmaryShaman.cpp
+    ${SRC}/rooms/InfirmaryShamanWalk.h
     ${SRC}/entities/InfirmaryShamanEntity.cpp
     ${SRC}/entities/GhostBoxEntity.cpp
     ${SRC}/entities/GhostEntity.cpp
@@ -459,9 +460,11 @@ set(OD_SOURCEFILES
     ${SRC}/gamemap/GameMap.cpp
     ${SRC}/gamemap/LevelScript.cpp
     ${SRC}/gamemap/LevelScriptRunner.cpp
+    ${SRC}/gamemap/LevelPreview.cpp
     ${SRC}/gamemap/RoomObjectNavigation.cpp
     ${SRC}/gamemap/MapHandler.cpp
     ${SRC}/gamemap/MiniMap.cpp
+    ${SRC}/gamemap/MiniMapColours.cpp
     ${SRC}/gamemap/MiniMapDrawn.cpp
     ${SRC}/gamemap/MiniMapDrawnFull.cpp
     ${SRC}/gamemap/SandboxMode.cpp
@@ -599,6 +602,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomBridgeWooden.cpp
     ${SRC}/rooms/RoomCasino.cpp
     ${SRC}/rooms/RoomMerchant.cpp
+    ${SRC}/rooms/MerchantWallTable.h
     ${SRC}/rooms/RoomHerbGarden.cpp
     ${SRC}/rooms/RoomAlchemyLab.cpp
     ${SRC}/rooms/RoomCrypt.cpp

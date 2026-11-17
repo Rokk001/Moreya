@@ -149,7 +149,14 @@ def check_pose(mesh, skeleton):
     assignments = {}
     for item in mesh.findall('boneassignments/vertexboneassignment'):
         assignments.setdefault(int(item.get('vertexindex')), []).append((names[int(item.get('boneindex'))], float(item.get('weight'))))
-    shoulders = [i for i, p in enumerate(vertices) if .16 < abs(p[0]) < .24 and .66 < p[2] < .76]
+    # Owner decision 2026-11-17 ("mach das Loch weg"): the whole towel goes into the hand in TowelWave, so the towel lying on
+    # the shoulder rides on the towel bones and is left out of the shoulder skin sample; it must follow nothing else.
+    towel = {int(face.get(axis)) for sub in mesh.findall('submeshes/submesh') if sub.get('material') == 'SpaLinen'
+             for face in sub.findall('faces/face') for axis in ('v1', 'v2', 'v3')}
+    for index in towel:
+        assert all(name in ('Towel', 'TowelTip') for name, weight in assignments[index] if weight > 1e-6), \
+            'the towel follows only the towel bones'
+    shoulders = [i for i, p in enumerate(vertices) if .16 < abs(p[0]) < .24 and .66 < p[2] < .76 and i not in towel]
     assert len(shoulders) > 100, 'the real shoulder skin must be sampled'
     for index in shoulders:
         side = '_R' if vertices[index][0] < 0 else '_L'

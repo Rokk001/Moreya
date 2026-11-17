@@ -1760,7 +1760,8 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
-//! \brief Saves seat state, tile knowledge, shared room settings, announced creature classes and running reveals.
+//! \brief Saves seat state, tile knowledge, shared room settings, announced creature classes and running reveals; the
+//! ectoplasm levels of the ghost room are written at round-trip precision without changing the stream precision.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1887,8 +1888,13 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     os << "[GhostBells] " << mGhostBellTargets.size();
     for(const std::string& name : mGhostBellTargets) os << ' ' << name;
     os << " [/GhostBells]\n";
-    os << "[GhostRoom] " << mEctoplasmLevels << ' ' << static_cast<uint32_t>(mGhostProduct)
+    // The ectoplasm levels are fractional; they are written at round-trip precision so a save keeps them exactly, and the
+    // precision of the stream is given back for the records that follow.
+    const std::streamsize ghostPrecision = os.precision();
+    os << "[GhostRoom] " << std::setprecision(std::numeric_limits<double>::max_digits10)
+       << mEctoplasmLevels << ' ' << static_cast<uint32_t>(mGhostProduct)
        << ' ' << mGhostRevive << " [/GhostRoom]\n";
+    os.precision(ghostPrecision);
 
     os << "[Merchant]\t" << mMerchantMargin << '\t' << mMerchantMode << '\t' << mLabMode << "\t[/Merchant]\n";
     os << "[MerchantBalance] " << mMerchantGoldRemainder << " [/MerchantBalance]\n";

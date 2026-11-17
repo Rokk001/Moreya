@@ -129,11 +129,8 @@ public:
     //! WindowStats.layout, registered for scaling. The caller adds it to the root window.
     CEGUI::Window* createInfoWindow(const std::string& name);
 
-    //! \brief Creates the fixed size creature profile window from WindowCreatureProfile.layout,
-    //! registered for scaling. The caller adds it to the root window.
-    CEGUI::Window* createCreatureProfileWindow(const std::string& name);
     //! \brief Loads the profile page (portrait, texts, bars) as the child "Content" of the given holder window.
-    //! The page is shared by the creature card and the Dungeonbook, see Creature::fillProfilePage.
+    //! The Dungeonbook shows it on its profile page, see Creature::fillProfilePage.
     CEGUI::Window* createCreatureProfilePage(CEGUI::Window* holder);
     //! \brief Places equipment beside the portrait, attributes below, then social rows and posts, each as
     //! high as its wrapped text, leaving no gap between short rows. Returns the bottom edge of the
@@ -226,6 +223,8 @@ public:
     static const std::string SKM_LIST_LEVEL_TYPES;
     static const std::string SKM_LIST_LEVELS;
     static const std::string SKM_CHECK_RELATIONSHIPS;
+    //! \brief The picture of the map of the selected level in the skirmish level selection
+    static const std::string SKM_MAP_PREVIEW;
     static const std::string MPM_TEXT_LOADING;
     static const std::string MPM_BUTTON_SERVER;
     static const std::string MPM_BUTTON_CLIENT;
@@ -288,6 +287,12 @@ private:
     //! \brief UI scale chosen by the user (1.0 = 100%), on top of the scale derived from the display size.
     float mUserScale;
 
+    //! \brief Display size the fonts were last rescaled for; a font rescale rebuilds every glyph and reformats
+    //! every text, so it only runs when this size or a font's own scaling changes (see updateResourceScaling).
+    CEGUI::Sizef mFontScaledDisplaySize;
+    //! \brief True once the fonts have been rescaled for mFontScaledDisplaySize.
+    bool mFontsScaled;
+
     //! \brief Keeps the display size change subscription alive; disconnected in the destructor.
     CEGUI::Event::ScopedConnection mDisplaySizeChangedConnection;
     //! \brief Keeps the window destroyed subscription alive; disconnected in the destructor.
@@ -320,7 +325,8 @@ private:
     //! \param layoutScale Scale from display size and user scale, before the fit to the screen.
     void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float layoutScale);
 
-    //! \brief Sets resource native resolutions from user scale while preserving atlas design sizes.
+    //! \brief Sets resource native resolutions from user scale while preserving atlas design sizes. Fonts are
+    //! only rescaled when the display size or a font's scaling settings changed since the last call.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
 };
 

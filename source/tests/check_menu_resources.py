@@ -460,6 +460,8 @@ def check_menu_entries(root):
                "MultiplayerServerHostButton": ("Host via IP", "BUTTON_MULTIPLAYER_HOST", "MENU_MULTIPLAYER_SERVER"),
                "MultiplayerServerJoinButton": ("Join via IP", "BUTTON_MULTIPLAYER_JOIN", "MENU_MULTIPLAYER_CLIENT")}
     multiplayer = buttons("WindowMultiplayerSubMenu.layout")
+    # The way back is a menu template button too (INGAME-QS-10 K15); it is no action of the multiplayer column.
+    assert multiplayer.pop("BackButton", None) == "Back", "multiplayer menu needs its Back button"
     assert multiplayer == {name: action[0] for name, action in actions.items()}, "multiplayer menu must show its four actions once: " + str(multiplayer)
     for name, (_, constant, mode) in actions.items():
         assert f'{constant} = "{name}"' in source and f"multiplayerWin->getChild({constant}),\n                           AbstractModeManager::ModeType::{mode}" in source, name + " must keep its network path"
@@ -471,9 +473,19 @@ def check_menu_entries(root):
                 continue
             area = next(prop.get("value") for prop in window.findall("Property") if prop.get("name") == "Area")
             numbers = [float(value) for value in re.findall(r"-?[0-9.]+", area)]
-            rows.append((numbers[3], numbers[7]))
+            assert numbers[2] == 0.5 and numbers[6] == 0.5, layout + " entry " + window.get("name") + " is not in the centred column"
+            if window.get("name") == "BackButton":
+                back = (numbers[3], numbers[7])
+                continue
+            # the visible plate of the menu template: its knobs (8.5 and 7.5 of 120) may reach over the next entry,
+            # as the chosen sheet paints the column (INGAME-QS-10 K34)
+            height = numbers[7] - numbers[3]
+            rows.append((numbers[3] + 8.5 / 120.0 * height, numbers[7] - 7.5 / 120.0 * height))
         rows.sort()
         assert all(first[1] <= second[0] for first, second in zip(rows, rows[1:])), layout + " has overlapping rows"
+        if layout != "MenuMain.layout":
+            assert back[0] >= rows[-1][1], layout + " Back must stand below the entries of its window"
+            rows.append(back)
         assert all(0 <= 240 + top and 240 + bottom <= 480 for top, bottom in rows), layout + " does not fit a window 480 pixels high"
     main_menu = buttons("MenuMain.layout")
     assert list(main_menu.values()).count("Multiplayer") == 1 and main_menu.get("LoadGameButton") == "Load Game", "main menu needs one Multiplayer and one Load Game entry"

@@ -601,6 +601,7 @@ void RoomPrison::deleteFenceMeshes()
 }
 
 
+//! \brief Puts a bar piece on every fence tile and the cage door on the gate tile.
 void RoomPrison::putFenceMeshes()
 {
     std::vector<std::pair<int,int>> mFenceCoords;
@@ -614,6 +615,8 @@ void RoomPrison::putFenceMeshes()
     {
         mActualTilesCoords.push_back(std::make_pair(tt->getX(),tt->getY()));
     }    
+    // Prisoners are delivered on the gate tile, so the cage door stands there
+    Tile* gateTile = getGateTile();
     for (Tile* tt: mFenceTiles)
     {
         int xx = tt->getX();
@@ -631,7 +634,10 @@ void RoomPrison::putFenceMeshes()
         std::vector<std::pair<int, int>>::iterator actualSouth = std::find(mActualTilesCoords.begin(), mActualTilesCoords.end(), south);
         std::vector<std::pair<int, int>>::iterator actualNorth = std::find(mActualTilesCoords.begin(), mActualTilesCoords.end(), north);        
         BuildingObject* ro = nullptr;        
-        if(fenceEast != mFenceCoords.end() && fenceWest !=mFenceCoords.end())
+        if(tt == gateTile)
+            ro = createGateMesh(tt, actualSouth != mActualTilesCoords.end(), actualNorth != mActualTilesCoords.end(),
+                actualWest != mActualTilesCoords.end());
+        else if(fenceEast != mFenceCoords.end() && fenceWest !=mFenceCoords.end())
             if(actualSouth!=mActualTilesCoords.end())
                 ro = createFencingMesh( FencingDirection::EW, tt);
             else
@@ -663,6 +669,20 @@ void RoomPrison::putFenceMeshes()
         }
     }
 
+}
+
+//! \brief Creates the cage door on the gate tile. It stands in the line of the bars on the side of the cell tile, turned
+//! like the straight bar piece that would stand there (cell to the south 0, north 180, west 270, east 90 degrees).
+BuildingObject* RoomPrison::createGateMesh(Tile* tt, bool cellSouth, bool cellNorth, bool cellWest)
+{
+    double rotation = 90.0;
+    if(cellSouth)
+        rotation = 0.0;
+    else if(cellNorth)
+        rotation = 180.0;
+    else if(cellWest)
+        rotation = 270.0;
+    return new BuildingObject(getGameMap(), *this, "PrisonDoor", *tt, rotation, false);
 }
 
 BuildingObject* RoomPrison::createFencingMesh(FencingDirection hd, Tile*  tt)
