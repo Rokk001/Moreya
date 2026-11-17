@@ -15,119 +15,162 @@
             <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticImage" name="Vessel">
-            <Property name="Area" value="{{0.04,0},{0.12,0},{0.47,0},{0.79,0}}" />
+            <Property name="Area" value="{{0.03,0},{0.11,0},{0.5,0},{0.66,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
             <Property name="Image" value="RoomArtworkGhostVessel/Image" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="FrameColours" value="FFF2C860" />
-        </Window>
-        <Window type="OD/ProgressBar" name="EctoplasmProgress">
-            <Property name="Area" value="{{0.07,0},{0.8,0},{0.44,0},{0.84,0}}" />
-            <Property name="Font" value="MedievalSharp-10" />
+            <Window type="OD/StaticImage" name="Empty">
+                <Property name="Area" value="{{0.165,0},{0.223,0},{0.895,0},{0.815,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Image" value="RoomArtworkConnectorLine/Image" />
+                <Property name="ImageColours" value="D0080A08" />
+            </Window>
         </Window>
         <Window type="OD/StaticText" name="GhostBarText">
-            <Property name="Area" value="{{0.05,0},{0.85,0},{0.46,0},{0.92,0}}" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Area" value="{{0.12,0},{0.67,0},{0.41,0},{0.735,0}}" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="True" />
             <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="0 / 10" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
             <Property name="TextColours" value="FFF2C860" />
+            <Property name="FrameColours" value="FF8A6A34" />
+            <Property name="BackgroundColours" value="C0141210" />
         </Window>
-        <Window type="OD/StaticText" name="Path0">
-            <Property name="Area" value="{{0.45,0},{0.2,0},{0.67,0},{0.26,0}}" />
+        <Window type="OD/StaticImage" name="Stem">
+            <Property name="Area" value="{{0.5,0},{0.446,0},{0.585,0},{0.454,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="---" />
-            <Property name="HorzFormatting" value="CentreAligned" />
-            <Property name="VertFormatting" value="CentreAligned" />
-            <Property name="TextColours" value="FFF2C860" />
+            <Property name="Image" value="RoomArtworkConnectorLine/Image" />
+            <Property name="ImageColours" value="FF6E6A5E" />
+        </Window>
+        <Window type="OD/StaticImage" name="TrunkUp">
+            <Property name="Area" value="{{0.585,0},{0.201,0},{0.594,0},{0.454,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Image" value="RoomArtworkConnectorLine/Image" />
+            <Property name="ImageColours" value="FF6E6A5E" />
+        </Window>
+        <Window type="OD/StaticImage" name="TrunkDown">
+            <Property name="Area" value="{{0.585,0},{0.446,0},{0.594,0},{0.699,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Image" value="RoomArtworkConnectorLine/Image" />
+            <Property name="ImageColours" value="FF6E6A5E" />
+        </Window>
+        <Window type="OD/StaticImage" name="Path0">
+            <Property name="Area" value="{{0.594,0},{0.201,0},{0.68,0},{0.209,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Image" value="RoomArtworkConnectorLine/Image" />
+            <Property name="ImageColours" value="FF6E6A5E" />
+        </Window>
+        <Window type="OD/StaticImage" name="Path1">
+            <Property name="Area" value="{{0.594,0},{0.446,0},{0.68,0},{0.454,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Image" value="RoomArtworkConnectorLine/Image" />
+            <Property name="ImageColours" value="FF6E6A5E" />
+        </Window>
+        <Window type="OD/StaticImage" name="Path2">
+            <Property name="Area" value="{{0.594,0},{0.691,0},{0.68,0},{0.699,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Image" value="RoomArtworkConnectorLine/Image" />
+            <Property name="ImageColours" value="FF6E6A5E" />
         </Window>
         <Window type="OD/Button" name="GhostProductButton">
-            <Property name="Area" value="{{0.65,0},{0.13,0},{0.88,0},{0.30000000000000004,0}}" />
+            <Property name="Area" value="{{0.68,0},{0.12,0},{0.92,0},{0.29,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="" />
             <Property name="ID" value="1" />
+            <Window type="OD/StaticText" name="Selected">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="True" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="FrameColours" value="FFFFE08A" />
+                <Property name="BackgroundColours" value="40FFD060" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="TextColours" value="FFF2C860" />
+                <Property name="Visible" value="False" />
+            </Window>
             <Window type="OD/StaticImage" name="Image">
                 <Property name="Area" value="{{0.1,0},{0.05,0},{0.9,0},{0.95,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MousePassThroughEnabled" value="True" />
-                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="RoomArtworkGhostManaCrystal/Image" />
                 <Property name="AspectMode" value="Shrink" />
-                <Property name="FrameColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Lock">
                 <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MousePassThroughEnabled" value="True" />
-                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="DungeonbookIcons/Lock" />
                 <Property name="AspectMode" value="Shrink" />
                 <Property name="Visible" value="False" />
-                <Property name="FrameColours" value="FFF2C860" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Ratio0">
-            <Property name="Area" value="{{0.65,0},{0.30000000000000004,0},{0.88,0},{0.36,0}}" />
+            <Property name="Area" value="{{0.68,0},{0.29,0},{0.92,0},{0.345,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="1 : 1" />
-            <Property name="HorzFormatting" value="CentreAligned" />
-            <Property name="VertFormatting" value="CentreAligned" />
-            <Property name="TextColours" value="FFF2C860" />
-        </Window>
-        <Window type="OD/StaticText" name="Path1">
-            <Property name="Area" value="{{0.45,0},{0.44,0},{0.67,0},{0.5,0}}" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="---" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
             <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Button" name="Product1">
-            <Property name="Area" value="{{0.65,0},{0.37,0},{0.88,0},{0.54,0}}" />
+            <Property name="Area" value="{{0.68,0},{0.365,0},{0.92,0},{0.535,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="" />
             <Property name="ID" value="0" />
+            <Window type="OD/StaticText" name="Selected">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="True" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="FrameColours" value="FFFFE08A" />
+                <Property name="BackgroundColours" value="40FFD060" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="TextColours" value="FFF2C860" />
+                <Property name="Visible" value="False" />
+            </Window>
             <Window type="OD/StaticImage" name="Image">
                 <Property name="Area" value="{{0.1,0},{0.05,0},{0.9,0},{0.95,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MousePassThroughEnabled" value="True" />
-                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="RoomArtworkGhostResearchBook/Image" />
                 <Property name="AspectMode" value="Shrink" />
-                <Property name="FrameColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Lock">
                 <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MousePassThroughEnabled" value="True" />
-                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="DungeonbookIcons/Lock" />
                 <Property name="AspectMode" value="Shrink" />
                 <Property name="Visible" value="False" />
-                <Property name="FrameColours" value="FFF2C860" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Ratio1">
-            <Property name="Area" value="{{0.65,0},{0.54,0},{0.88,0},{0.6,0}}" />
+            <Property name="Area" value="{{0.68,0},{0.535,0},{0.92,0},{0.59,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
@@ -137,46 +180,42 @@
             <Property name="VertFormatting" value="CentreAligned" />
             <Property name="TextColours" value="FFF2C860" />
         </Window>
-        <Window type="OD/StaticText" name="Path2">
-            <Property name="Area" value="{{0.45,0},{0.6799999999999999,0},{0.67,0},{0.74,0}}" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="---" />
-            <Property name="HorzFormatting" value="CentreAligned" />
-            <Property name="VertFormatting" value="CentreAligned" />
-            <Property name="TextColours" value="FFF2C860" />
-        </Window>
         <Window type="OD/Button" name="Product2">
-            <Property name="Area" value="{{0.65,0},{0.61,0},{0.88,0},{0.78,0}}" />
+            <Property name="Area" value="{{0.68,0},{0.61,0},{0.92,0},{0.78,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="" />
             <Property name="ID" value="2" />
+            <Window type="OD/StaticText" name="Selected">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="True" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="FrameColours" value="FFFFE08A" />
+                <Property name="BackgroundColours" value="40FFD060" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="TextColours" value="FFF2C860" />
+                <Property name="Visible" value="False" />
+            </Window>
             <Window type="OD/StaticImage" name="Image">
                 <Property name="Area" value="{{0.1,0},{0.05,0},{0.9,0},{0.95,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MousePassThroughEnabled" value="True" />
-                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="RoomArtworkGhostLevelCrystal/Image" />
                 <Property name="AspectMode" value="Shrink" />
-                <Property name="FrameColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Lock">
                 <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MousePassThroughEnabled" value="True" />
-                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="DungeonbookIcons/Lock" />
                 <Property name="AspectMode" value="Shrink" />
                 <Property name="Visible" value="False" />
-                <Property name="FrameColours" value="FFF2C860" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Ratio2">
-            <Property name="Area" value="{{0.65,0},{0.78,0},{0.88,0},{0.84,0}}" />
+            <Property name="Area" value="{{0.68,0},{0.78,0},{0.92,0},{0.835,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
@@ -187,7 +226,7 @@
             <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Checkbox" name="GhostReviveButton">
-            <Property name="Area" value="{{0.04,0},{0.93,0},{0.48,0},{0.995,0}}" />
+            <Property name="Area" value="{{0.03,0},{0.76,0},{0.5,0},{0.83,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="Revive own" />
         </Window>

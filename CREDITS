@@ -2327,6 +2327,12 @@ materials/textures/tavern/TavernSignApprovedNormal.png    AI-generated with Code
 gui/RoomCentreArtwork/ghost-vessel.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
 gui/RoomCentreArtwork/casino-smiles.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
 gui/RoomCentreArtwork/casino-money.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreArtwork/tavern-beer-mug.png  AI-generated with Codex  GPLv3+  Cut from the chosen tavern room window mockup, tick box area cleared with a Python script (2026-11-17, placeholder until repainted)
+gui/RoomCentreArtwork/tavern-water-mug.png  AI-generated with Codex  GPLv3+  The tavern beer mug above with the beer turned into water by a Python script (2026-11-17, placeholder until repainted)
+gui/RoomCentreArtwork/infirmary-heart.png  AI-generated with Codex  GPLv3+  Cut from the chosen infirmary room window mockup, background made transparent with a Python script (2026-11-17, placeholder until repainted)
+gui/RoomCentreArtwork/payer-ring.png  Original project artwork  GPLv3+  Drawn with a Python script after the payer medallions of the chosen room window mockups (2026-11-17, placeholder until repainted)
+gui/RoomCentreArtwork/payer-switch.png  Original project artwork  GPLv3+  Drawn with a Python script after the payer switch of the chosen room window mockups (2026-11-17, placeholder until repainted)
+gui/RoomCentreArtwork/connector-line.png  Original project artwork  GPLv3+  Plain white square drawn with a Python script, tinted by the pages for connector lines (2026-11-17)
 
 models/Merchant.mesh    AI-generated with Codex    GPLv3+    Newly authored merchant model accepted by the owner, with geometric face and hands, layered clothing, boots and belt scales; Blender MCP, 2026-11-15.
 models/Merchant.skeleton    AI-generated with Codex    GPLv3+    Rig fitted to the accepted merchant; Idle, Walk, CountGold and RubHands retain their existing names and durations, 2026-11-15.
