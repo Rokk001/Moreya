@@ -34,6 +34,13 @@ One check per point, on the shipped files (meshes through OgreXMLConverter, text
                      lantern glass (a glow accent): mean Y at most 78.4 (1.6 A), every pane warm (hue of the pane mean
                      0-60 or 290-360 degrees, no green or blue glass), emissive at most 0.5 and warm (red >= green >=
                      blue); A2 had bright red/amber/green/blue glass with a white emissive 0.75
+  empty table top    (owner 2026-11-17 on A2b: "Tische sollen leer sein, da kommen später die Items drauf") no vertex of
+                     SalesTable stands on the cloth top (0.713 to 1.0) inside |x|, |y| <= 0.30; only the goods the game places
+                     at 0.712 stand there (A2b's first version had four spice bowls on the top)
+  shelf wood         dark weathered wood, not light orange crates: MerchantTableWood mean luminance 49.0-53.9 (A to
+                     1.1 A); the shelf is an open frame of at least 15 separate wood pieces (uprights, rails, back planks,
+                     shelf planks) and has no closed crate side (a wood piece thinner than 0.07 in x, deeper than 0.2 and
+                     taller than 1.0)
 
 Call (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
   python source/tests/check_merchant_bazaar.py
@@ -312,6 +319,13 @@ def cloth_height(x, y):
     return best
 
 
+# Empty table top: nothing stands on the cloth over the top up to 1.0 (the corner lantern pole stands at the rim, outside
+# 0.30; its lantern hangs above 1.1)
+on_top = [p for tris in table.values() for t in tris for p, _ in t
+          if abs(p[0]) <= 0.30 and abs(p[1]) <= 0.30 and 0.713 < p[2] < 1.0]
+if on_top:
+    fails.append('empty table top: %d vertices of decoration stand on the table top above the cloth' % len(on_top))
+
 for turned in (False, True):
     def in_strip(p):
         x, y = (p[1], p[0]) if turned else (p[0], p[1])
@@ -434,6 +448,23 @@ if emissive:
     em = [float(x) for x in emissive.groups()]
     if max(em) > EMISSIVE_MAX or not em[0] >= em[1] >= em[2]:
         fails.append('dark look: lantern emissive %s is not a dim warm glow (at most %.1f, red >= green >= blue)' % (em, EMISSIVE_MAX))
+
+# Shelf wood: dark weathered, open frame of separate boards
+SHELF_WOOD_Y = (1.0 * ANCHOR_Y, 1.1 * ANCHOR_Y)
+SHELF_MIN_PIECES = 15
+lum, sat, _ = texel_stats(Image.open(TEXTURES / material_texture('MerchantTableWood')))
+if not SHELF_WOOD_Y[0] <= lum <= SHELF_WOOD_Y[1]:
+    fails.append('shelf wood: MerchantTableWood mean luminance %.1f outside %.1f-%.1f (dark weathered wood)'
+                 % (lum, SHELF_WOOD_Y[0], SHELF_WOOD_Y[1]))
+wood_pieces = pieces(shelf.get('MerchantTableWood', []))
+print('MerchantShelf wood pieces %d' % len(wood_pieces))
+if len(wood_pieces) < SHELF_MIN_PIECES:
+    fails.append('shelf wood: only %d separate wood pieces (at least %d: uprights, rails, back planks, shelf planks)'
+                 % (len(wood_pieces), SHELF_MIN_PIECES))
+for piece in wood_pieces:
+    ext = [max(k[i] for k in piece) - min(k[i] for k in piece) for i in range(3)]
+    if ext[0] < 0.07 and ext[1] > 0.2 and ext[2] > 1.0:
+        fails.append('shelf wood: closed crate side %.2f x %.2f x %.2f' % tuple(ext))
 
 print('ODP_TEST_PHASE {"name": "bazaar checks", "seconds": %.3f}' % (time.monotonic() - START))
 if fails:

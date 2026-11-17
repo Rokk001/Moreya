@@ -2208,17 +2208,18 @@ ROOMS = {
 # through edges) in several dyes, so nothing on the floor reads as a stain. Owner finding 2026-11-17 on that version
 # ("viel zu sauber, grell und farbenfroh"): the planks are dark weathered grey-brown, the dyes are dull and faded close to
 # brown-grey, the carpets carry sewn patches, and grime, soot, dust and dark (not red) stains lie over everything, inside
-# the room floor ranges of the style guide.
-BAZAAR_PLANK = np.array([0.245, 0.195, 0.16])
+# the room floor ranges of the style guide. Owner finding on that version: the remnants were barely visible in the game
+# light; the planks are darker and the remnants lighter (a clear value step), still dull and dirty.
+BAZAAR_PLANK = np.array([0.19, 0.152, 0.125])
 BAZAAR_JOINT = np.array([0.055, 0.045, 0.037])
 # (field, border, motif, line) dyes of the carpet pieces: dull madder with indigo, dull indigo with madder (ochre unused)
 BAZAAR_RUGS = (
-    (np.array([0.34, 0.17, 0.14]), np.array([0.19, 0.20, 0.27]), np.array([0.42, 0.34, 0.20]), np.array([0.40, 0.31, 0.18])),
-    (np.array([0.19, 0.20, 0.28]), np.array([0.34, 0.18, 0.15]), np.array([0.43, 0.34, 0.19]), np.array([0.38, 0.33, 0.26])),
-    (np.array([0.42, 0.33, 0.18]), np.array([0.20, 0.22, 0.26]), np.array([0.34, 0.17, 0.14]), np.array([0.38, 0.33, 0.26])),
+    (np.array([0.50, 0.28, 0.23]), np.array([0.29, 0.30, 0.41]), np.array([0.58, 0.47, 0.30]), np.array([0.55, 0.45, 0.30])),
+    (np.array([0.30, 0.31, 0.43]), np.array([0.50, 0.29, 0.24]), np.array([0.58, 0.47, 0.29]), np.array([0.52, 0.46, 0.37])),
+    (np.array([0.56, 0.45, 0.27]), np.array([0.30, 0.32, 0.38]), np.array([0.50, 0.28, 0.23]), np.array([0.52, 0.46, 0.37])),
 )
 # Faded dye, grime, soot and dust of the merchant floor
-BAZAAR_FADED = np.array([0.27, 0.23, 0.19])
+BAZAAR_FADED = np.array([0.42, 0.37, 0.31])
 BAZAAR_GRIME = np.array([0.12, 0.10, 0.085])
 BAZAAR_DUST = np.array([0.30, 0.28, 0.25])
 # Carpet pieces of the tile: centre x, centre y, half length, half width (px), rotation (radians), dye index. They wrap
@@ -2279,7 +2280,7 @@ def merchant_field():
             pe = np.minimum(hu - np.abs(u - pu), hv - np.abs(v - pv))
             rug = mix(rug, BAZAAR_RUGS[pdye][0] * 0.95, (pe > 0) * 1.0)
             rug = mix(rug, BAZAAR_GRIME, ((pe > 0) & (pe < 1.6) & (((u + v) % 5.0) < 2.5)) * 1.0)
-        faded = smoothstep(-0.2, 1.4, wear) * 0.55
+        faded = smoothstep(-0.2, 1.4, wear) * 0.45
         rug = mix(rug, BAZAAR_FADED, faded) * weave[..., None]
         col = mix(col, rug, inside)
         hgt = hgt + 0.35 * inside + 0.04 * weave * inside
