@@ -1221,6 +1221,11 @@ void Creature::exportToStream(std::ostream& os) const
     if(mGoldStolen > 0.0)
         os << "\t[Stolen] " << mGoldStolen << " [/Stolen]";
 
+    // Optional champion block: the turns since the champion was summoned, so its free period goes on after a load
+    // instead of starting again. Missing in old saves and for every other creature.
+    if(mChampionTurns > 0)
+        os << "\t[Champion] " << mChampionTurns << " [/Champion]";
+
     // Optional needs block (urge and creature dirt), last; missing in old saves and when both are 0
     if((mUrge > 0.0) || (mCreatureDirt > 0.0))
         os << "\t" << NEEDS_SAVE_OPEN << " " << mUrge << " " << mCreatureDirt << " " << NEEDS_SAVE_CLOSE;
@@ -1514,6 +1519,14 @@ bool Creature::importFromStream(std::istream& is)
             if(!(is >> stolenLoaded >> stolenClose) || (stolenClose != "[/Stolen]") || !std::isfinite(stolenLoaded))
                 return false;
             setGoldStolen(stolenLoaded);
+            continue;
+        }
+
+        if(appearanceToken == "[Champion]")
+        {
+            std::string championClose;
+            if(!(is >> mChampionTurns >> championClose) || (championClose != "[/Champion]"))
+                return false;
             continue;
         }
 

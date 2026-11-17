@@ -2127,7 +2127,8 @@ private:
     bool            mManaFromSave;
     //! \brief Server side: the mana ring step (0 .. MANA_RING_STEPS) the clients were last told about
     uint32_t        mManaRingStepNotified;
-    //! \brief Server side. Turns since the champion was summoned (see handleChampionUpkeep), not saved
+    //! \brief Server side. Turns since the champion was summoned (see handleChampionUpkeep); saved in the optional
+    //! [Champion] block of the creature line so the free period goes on after a load
     uint32_t        mChampionTurns;
     int             mJobCooldown;
     //! Total duration of the current job pause, used only by the existing progress ring.

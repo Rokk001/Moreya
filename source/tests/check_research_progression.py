@@ -419,7 +419,7 @@ int main(int argc,char** argv){try {
         {T::keeperHeartFortitude,"HeartHP",10000,16980,24740,60000},{T::keeperHeartMending,"HeartHeal",2.5,4.245,6.185,15},{T::keeperManaFlow,"HeartMana",30,33,36,39},
         {T::spellSummonWorker,"Price",1400,1400,1260,1120},{T::spellCreatureHeal,"HealPerTurn",10.25,46.125,108.9575,193.315},
         {T::spellCreatureHaste,"Speed",1.5,1.5,1.65,1.8},{T::spellEyeEvil,"Duration",10,10,15,20},{T::spellEyeEvil,"Radius",3,3,4,5},
-        {T::spellCreatureDefense,"Bonus",5,20.8,44.55,79.2},{T::spellCreatureStrength,"Factor",1.1,1.1,1.15,1.2},{T::spellCreatureWeak,"Factor",.9,.9,.85,.8},
+        {T::spellCreatureDefense,"Bonus",5,20.8,44.55,79.2},{T::spellCreatureStrength,"Factor",1.1,1.1,1.15,1.2},{T::spellCreatureWeak,"Factor",.75,.75,.625,.5},
         {T::spellCreatureSlow,"Factor",.5,.5,.45,.4},{T::spellCallToWar,"Lifetime",50,50,65,80},
         {T::spellCreatureExplosion,"Damage",14,63,148.82,264.04},{T::spellPossess,"ManaPerSecond",40,40,32,26.68},
         {T::spellDefector,"Duration",35,35,41.0585,46.795},{T::spellCreateGold,"Gold",1000,1000,1250,1500}};
