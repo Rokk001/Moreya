@@ -1,10 +1,12 @@
 """Owner decision 901 (1): the merchant walked to a wall, vanished there and showed up elsewhere. No compiler, no game.
 
 Causes found by reading
-  rig offset      Merchant.mesh is modelled at the front corner of a sales table, (+0.64, -0.76) from its origin (STAND in
+  rig offset      Merchant.mesh was modelled at the front corner of a sales table, (+0.64, -0.76) from its origin (STAND in
                   the asset notes). The node turns with the figure and the server walks the origin over the tile centres of
-                  tables and shelves, so the figure appeared up to 0.76 tiles inside the wall below the shelf. The mesh and
-                  textures stay untouched: RenderManager hangs the entity on a child node that cancels the offset.
+                  tables and shelves, so the figure appeared up to 0.76 tiles inside the wall below the shelf. RenderManager
+                  then hung the entity on a child node that cancelled the offset. Owner finding of 2026-11-17: the merchant mesh now
+                  stands on its own origin (check_merchant_assets.py checks the mesh), so the entity hangs directly on its
+                  node and no offset or child node may remain that would push the figure off the node again.
   furniture route the route led over the tile centres of the tables and the wall shelves (solid furniture), his tile was
                   taken as the stop; now he walks over free floor tiles only and stands beside the stop
   teleport        the fallback setPosition went to the central (table) tile; now to a free tile beside the first table
@@ -24,15 +26,15 @@ ent = text("source/entities/MerchantEntity.cpp")
 room = text("source/rooms/RoomMerchant.cpp")
 room_h = text("source/rooms/RoomMerchant.h")
 
-# rig offset cancelled by a child node, same numbers as the asset notes, mesh untouched
-if not re.search(r"MERCHANT_RIG_OFFSET_X = 0\.64f", render) or not re.search(r"MERCHANT_RIG_OFFSET_Y = -0\.76f", render):
-    fails.append("rig offset: the offset constants 0.64, -0.76 are missing in RenderManager.cpp")
+# rig offset (owner finding of 2026-11-17): the mesh stands on its own origin, so the entity hangs directly on its node, without any offset
 create = render.split("void RenderManager::rrCreateRenderedMovableEntity")[1].split("renderedMovableEntity->setParentSceneNode")[0]
-if not re.search(r'meshName == "Merchant".{0,700}createChildSceneNode.{0,200}setPosition\(-MERCHANT_RIG_OFFSET_X, -MERCHANT_RIG_OFFSET_Y', create, re.S):
-    fails.append("rig offset: the Merchant figure is not hung on a child node that cancels the offset")
+if "MERCHANT_RIG_OFFSET" in render or re.search(r'meshName == "Merchant"', create):
+    fails.append("rig offset: RenderManager still treats the Merchant figure apart (offset or child node)")
+if not re.search(r"ent = mSceneManager->createEntity\(tempString, meshPtr\);\s*(//[^\n]*\n\s*)*node->attachObject\(ent\);", create):
+    fails.append("rig offset: the figure entity is not attached directly to its node")
 destroy = render.split("void RenderManager::rrDestroyRenderedMovableEntity")[1].split("destroySceneNode(node)")[0]
-if "detachFromParent()" not in destroy or '"_figure"' not in destroy:
-    fails.append("rig offset: the figure node is not destroyed with the entity")
+if "detachFromParent()" not in destroy:
+    fails.append("rig offset: the figure entity is not detached when it is destroyed")
 
 # free tiles only
 if "isFurnitureTile(next)" not in ent or "isFullTile()" not in ent:

@@ -1,38 +1,64 @@
-"""Native geometry, animation and texture contract for the accepted merchant replacement."""
-from array import array
+"""Native geometry, skeleton and motion contract of the variant-1 merchant (owner finding of 2026-11-17).
+
+The model of 2026-11-15 that this file pinned before (MerchantApproved atlases, 495863 triangles) replaced the chosen
+variant 1 of D-6-v2 without a decision; the owner finding of 2026-11-17 brings the variant-1 figure back. This contract pins the delivered files
+with fixed values counted once from the reviewed export and checks what the owner saw in the game, on the clips the
+game plays (Idle, Walk, CountGold, RubHands), evaluated like Ogre does from the native skeleton:
+  walk stiff        "die Arme komplett steif": in Walk each hand swings at least 0.2 forward and back, against the leg
+                    of its side, the elbow bends and straightens, the chest turns and both feet stride
+  clasped hands     in Idle the hands stay clasped in front of the chest the whole clip
+  coin              the coin hangs in the right hand: hidden (scale at most 0.05) in Idle, Walk and RubHands, shown in
+                    the whole of CountGold, where it comes up to the mouth; the coin stack is shown in CountGold
+  rubbing hands     in RubHands the hands stay together and rub (their height difference changes by at least 0.04)
+  see-through hands "dann werden seine Haende transparent": the hands use an opaque material without normal map,
+                    blending, alpha rejection or disabled depth writing (the replaced model lit its rotated hands
+                    through a tangent-space normal map that GPU skinning does not turn)
+  own node          the root bone binds at the origin, so the figure stands on its own node position
+"""
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
 import re
-import struct
 import subprocess
 import tempfile
 import time
 import xml.etree.ElementTree as ET
 
-# Filled once from the reviewed native serializer output, never derived from assets during a test.
-VERTICES = 416263
-TRIANGLES = 495863
-MINIMUM = (0.247596, -1.01321, 0.00864)
-MAXIMUM = (1.03241, -0.516051, 1.30284)
-HASHES = {'models/Merchant.mesh': '806dba09bc80a11e6202ed436a0df3354711188e156791ce1deeae9b87873808', 'models/Merchant.skeleton': 'fedfad77afb1eb86a3925d7ac276a6e41c4a855924e7e57af843b2454da69444', 'materials/textures/MerchantBrassApprovedColor.png': '13e0088f101ba4207e80a63c091ed4bbb236abb751ca4b5dae95a32f30add3bb', 'materials/textures/MerchantBrassApprovedNormal.png': 'f559243be3489daa2d323ee85f3329346dc1f4c416d77087b02c3ea3a6a4309a', 'materials/textures/MerchantCloakApprovedColor.png': '95fbbdb204beaeef31ac5d3e8f227548a5f09739585271c34231b980351d2ebf', 'materials/textures/MerchantCloakApprovedNormal.png': '116205b04f27035ec83ac4d1d0821a367ae532643ed9714304c1c6375c820205', 'materials/textures/MerchantDetailsApprovedColor.png': '05c66a1f06fc1a083f46ea46b4756f245ccc58df61bc262a244d9410dceacdf9', 'materials/textures/MerchantDetailsApprovedNormal.png': 'ca7533d30a23ba2613f963f0976fdcdc5b3a7b0d49772d16062eedb4b2cbeef0', 'materials/textures/MerchantGoldApprovedColor.png': '89f19664b2cf1e7783cbc7a35f7933fa6763ba4aeac073698cf4bd29eaa17e73', 'materials/textures/MerchantGoldApprovedNormal.png': '51b606bd56088b165f734de7d6f6c1fbf174ebf9b091dcafafea9a6eec3d4d6a', 'materials/textures/MerchantHairApprovedColor.png': '8a7f782dc060c358d00484ee76a555dd33213e556a378d75534000da647ee643', 'materials/textures/MerchantHairApprovedNormal.png': '1019976e0f4208990906e5a03f82024fa7424830e41bd6fd43b3e5f9a72291c9', 'materials/textures/MerchantHideApprovedColor.png': '4b42b80dce02d37b9cb0a4b4d39d66c880d78928adfaecf7ab0cf64cfa3165a7', 'materials/textures/MerchantHideApprovedNormal.png': 'cf6f6fe2ae5cd4ac4c2345227dbcd24a319f19e0ff6514cc601f6c38df3c40ee', 'materials/textures/MerchantHoodApprovedColor.png': 'f6d2d351a5b46a1e897af0bf8a88f129a420aab5e371bf08f28c575a6205d878', 'materials/textures/MerchantHoodApprovedNormal.png': '0fa11e685e19c55fc06616a68ce7faf57bdecbc6e81fcea594dc79c155bc9c69', 'materials/textures/MerchantLeatherApprovedColor.png': '06c119d122c8a11ae27c018e7b6ced96d82a99df2289d10c6215c550c0a6c5a7', 'materials/textures/MerchantLeatherApprovedNormal.png': 'db04e79d17f179b1b0bdfbf013ef45b41f18a5dddb2dd821e9e6d9f70cee6221', 'materials/textures/MerchantLinenApprovedColor.png': '044fab840b1b3963d5b24e84f687c1991f8dc4f4d1b4ed68e7c98168a6de7e29', 'materials/textures/MerchantLinenApprovedNormal.png': 'fb4dbccfba52bebc3022ebf60b6ff268562a6036a0ed5ab2dc2c9e7929c5baa5', 'materials/textures/MerchantRobeApprovedColor.png': '3458d9e9b198be35dc7569294cd0b5329081135509f86023309c862895a2edab', 'materials/textures/MerchantRobeApprovedNormal.png': '6b9f50ddf5605e3753704b9ae9e65f1828229b6351c3483899eb7ba7ef7cffe8'}
-ATLASES = {'Robe': 2048, 'Cloak': 2048, 'Linen': 2048, 'Leather': 2048,
-           'Brass': 1024, 'Details': 1024, 'Hair': 1024, 'Hood': 2048,
-           'Hide': 2048, 'Gold': 1024}
-CLIPS = {'Idle': 4.0, 'Walk': 0.6, 'CountGold': 3.2, 'RubHands': 2.0}
-BONES = ('Root', 'Pelvis', 'Spine', 'Chest', 'Head', 'UpperArm_R', 'Forearm_R', 'Hand_R',
-         'UpperArm_L', 'Forearm_L', 'Hand_L', 'Thigh_R', 'Shin_R', 'Foot_R',
-         'Thigh_L', 'Shin_L', 'Foot_L', 'Scales', 'Coins', 'Coin')
-# The native serializer removes identity tracks and redundant keys; pin its exact reviewed result.
-TRACKS = tuple(name for name in BONES if name not in ('Root', 'Spine', 'Coins', 'Coin'))
-KEY_COUNTS = {
-    'CountGold': (4, 4, 70, 78, 78, 78, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
-    'Idle': (17, 71, 83, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
-    'RubHands': (4, 4, 49, 49, 49, 49, 49, 49, 49, 4, 4, 4, 4, 4, 4, 4),
-    'Walk': (25, 4, 4, 25, 4, 4, 25, 4, 4, 25, 16, 25, 25, 16, 25, 25),
+# Filled once from the reviewed export of 2026-11-17, never derived from the assets during a test.
+VERTICES = 95715
+TRIANGLES = 118736
+MINIMUM = (-0.271832, -0.339525, -0.00154968)
+MAXIMUM = (0.261704, 0.363393, 1.27304)
+HASHES = {
+    'models/Merchant.mesh': 'bb9c1f5bc2bcf806b983c6aa71367b10e846d2871bed8769a8ab2a02ab12258f',
+    'models/Merchant.skeleton': 'bf351b9ab3003fb342bbee1e1b40be01d5913947ab1341597114dc15524c3025',
+    'materials/textures/MerchantHair.png': 'd20b0458cec8bc9ebdb9598ad3a03c4af582263558eed20d7f689d3f8d3342e6',
 }
+MATERIALS = {'MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantHide', 'MerchantDark', 'MerchantEye',
+             'MerchantGold', 'MerchantHair', 'MerchantBrass', 'MerchantLeather'}
+CLIPS = {'Idle': 4.0, 'Walk': 0.6, 'CountGold': 3.2, 'RubHands': 2.0}
+BONES = ('Root', 'Pelvis', 'Spine', 'Chest', 'Head', 'UpperArm_R', 'Forearm_R', 'Hand_R', 'UpperArm_L', 'Forearm_L',
+         'Hand_L', 'Thigh_R', 'Shin_R', 'Foot_R', 'Thigh_L', 'Shin_L', 'Foot_L', 'Scales', 'Coins', 'Coin')
+PARENTS = {'Coin': 'Hand_R', 'Coins': 'Hand_L', 'Scales': 'Pelvis'}
+# Least vertices bound to the coin and the coin stack, so they have something to show
+COIN_VERTICES = {'Coin': 60, 'Coins': 300}
+SAMPLES = 48
+WALK_MIN_HAND_SWING = 0.2         # forward and back travel of each hand in Walk
+WALK_MIN_ELBOW = 0.15             # change of the elbow angle in Walk (radians)
+WALK_MIN_CHEST_TURN = 0.1         # change of the chest rotation in Walk (radians)
+WALK_MIN_FOOT_STRIDE = 0.15       # forward and back travel of each foot in Walk
+CLASP_MAX_DISTANCE = 0.14         # hands together (bind pose 0.11 apart, clasped)
+CLASP_MIN_HEIGHT = 0.78           # in front of the chest, not hanging
+CLASP_MAX_FRONT = -0.2            # in front of the body (front is -Y)
+HIDDEN_SCALE = 0.05
+SHOWN_SCALE = 0.99
+COIN_MOUTH_DISTANCE = 0.25        # coin comes this close to the head joint ...
+COIN_MOUTH_HEIGHT = 0.95          # ... at mouth height
+RUB_MIN_SLIDE = 0.04
+ROOT_MAX_OFFSET = 0.01
+OPAQUE_FORBIDDEN = ('normal_map', 'scene_blend', 'alpha_rejection', 'depth_write off', 'transparent_sorting')
 
 
 # Deserialize a native delivered asset once with bounded execution and retain its real exit status.
@@ -46,136 +72,250 @@ def deserialize(root, filename, directory):
     return output
 
 
-# Keep approved visual content byte-exact while checking the shader and texture contracts independently.
-def check_surfaces(root):
-    assert len(HASHES) == 22, 'The approved source fixture is incomplete'
+# Keep the delivered files byte-exact against the reviewed export.
+def check_files(root):
     for relative, wanted in HASHES.items():
-        with (root / relative).open('rb') as stream:
-            digest = hashlib.sha256()
-            for block in iter(lambda: stream.read(1024 * 1024), b''):
-                digest.update(block)
-            actual = digest.hexdigest()
-        assert actual == wanted, ('Approved merchant asset changed', relative)
-    script = (root / 'materials/scripts/MerchantApproved.material').read_text(encoding='utf-8')
-    credits = (root / 'CREDITS').read_text(encoding='utf-8')
-    for family, size in ATLASES.items():
-        block = re.search(r'^material MerchantApproved' + family + r'\s*\n\{.*?^}', script, re.M | re.S)
-        assert block and 'normal_map tangent_space' in block.group(), family
-        for kind in ('Color', 'Normal'):
-            name = 'Merchant' + family + 'Approved' + kind + '.png'
-            assert 'texture ' + name in block.group(), name
-            relative = 'materials/textures/' + name
-            with (root / relative).open('rb') as stream:
-                header = stream.read(33)
-            assert header[:8] == b'\x89PNG\r\n\x1a\n', name
-            assert struct.unpack('>II', header[16:24]) == (size, size), name
-            assert relative in credits, name
-    for source in ('Fabric062', 'Fabric066', 'Leather014'):
-        assert 'https://ambientcg.com/view?id=' + source in credits, source
+        digest = hashlib.sha256((root / relative).read_bytes()).hexdigest()
+        assert digest == wanted, ('Merchant asset changed', relative)
 
 
-# Stream the detailed mesh to keep validation memory bounded while checking every vertex and triangle.
+# The hands must not be lit through a normal map nor blended (see-through hands, owner finding of 2026-11-17).
+def check_opaque_hands(root, hand_materials):
+    text = ''.join(p.read_text(encoding='utf-8', errors='replace')
+                   for p in (root / 'materials' / 'scripts').glob('*.material'))
+    for name in hand_materials:
+        block = re.search(r'^material ' + re.escape(name) + r'\s*\n\{.*?^}', text, re.M | re.S)
+        assert block, name
+        for word in OPAQUE_FORBIDDEN:
+            assert word not in block.group(), (name, word)
+
+
+# Stream the mesh: counts, bounds, materials, complete skinning and the materials and bones of hands and coins.
 def check_mesh(path):
-    totals = array('f', [0.0]) * VERTICES
-    influences = array('B', [0]) * VERTICES
-    counts = dict(position=0, normal=0, tangent=0, texcoord=0, face=0)
+    totals = {}
+    influences = {}
+    bone_vertices = {}
+    vertex_material = {}
+    counts = dict(position=0, face=0)
     minimum = [math.inf] * 3
     maximum = [-math.inf] * 3
     materials = set()
+    material = None
     skeleton = None
-    stack = []
     with path.open('rb') as stream:
         for event, element in ET.iterparse(stream, events=('start', 'end')):
             tag = element.tag
             if event == 'start':
-                stack.append(element)
                 if tag == 'sharedgeometry':
                     assert int(element.get('vertexcount')) == VERTICES
                 elif tag == 'submesh':
-                    materials.add(element.get('material'))
+                    material = element.get('material')
+                    materials.add(material)
                 continue
-            if tag in ('position', 'normal', 'tangent'):
+            if tag == 'position':
                 value = [float(element.get(axis)) for axis in 'xyz']
-                assert all(math.isfinite(v) for v in value), tag
-                if tag == 'position':
-                    minimum = [min(a, b) for a, b in zip(minimum, value)]
-                    maximum = [max(a, b) for a, b in zip(maximum, value)]
-                else:
-                    assert abs(math.sqrt(sum(v*v for v in value)) - 1.0) < .005, tag
-                    if tag == 'tangent':
-                        assert abs(abs(float(element.get('w'))) - 1.0) < .001
-            elif tag == 'texcoord':
-                assert all(-.0001 <= float(element.get(axis)) <= 1.0001 for axis in ('u', 'v'))
+                assert all(math.isfinite(v) for v in value)
+                minimum = [min(a, b) for a, b in zip(minimum, value)]
+                maximum = [max(a, b) for a, b in zip(maximum, value)]
+                counts['position'] += 1
             elif tag == 'face':
-                assert all(0 <= int(element.get(axis)) < VERTICES for axis in ('v1', 'v2', 'v3'))
+                for axis in ('v1', 'v2', 'v3'):
+                    index = int(element.get(axis))
+                    assert 0 <= index < VERTICES
+                    vertex_material[index] = material
+                counts['face'] += 1
             elif tag == 'vertexboneassignment':
-                index = int(element.get('vertexindex')); bone = int(element.get('boneindex'))
+                index = int(element.get('vertexindex'))
+                bone = int(element.get('boneindex'))
                 weight = float(element.get('weight'))
-                assert 0 <= index < VERTICES and 0 <= bone < 20
+                assert 0 <= index < VERTICES and 0 <= bone < len(BONES)
                 assert math.isfinite(weight) and 0 < weight <= 1
-                totals[index] += weight; influences[index] += 1
+                totals[index] = totals.get(index, 0.0) + weight
+                influences[index] = influences.get(index, 0) + 1
+                if weight > 0.5:
+                    bone_vertices.setdefault(BONES[bone], []).append(index)
             elif tag == 'skeletonlink':
                 skeleton = element.get('name')
-            if tag in counts:
-                counts[tag] += 1
             element.clear()
-            stack.pop()
-            if stack:
-                stack[-1].remove(element)
-    assert counts == dict(position=VERTICES, normal=VERTICES, tangent=VERTICES,
-                          texcoord=VERTICES, face=TRIANGLES), counts
-    assert materials == {'MerchantApproved' + name for name in ATLASES}, materials
-    assert all(abs(a-b) < .00002 for a, b in zip(minimum, MINIMUM)), minimum
-    assert all(abs(a-b) < .00002 for a, b in zip(maximum, MAXIMUM)), maximum
+    assert counts == dict(position=VERTICES, face=TRIANGLES), counts
+    assert materials == MATERIALS, materials
+    assert all(abs(a - b) < .00002 for a, b in zip(minimum, MINIMUM)), minimum
+    assert all(abs(a - b) < .00002 for a, b in zip(maximum, MAXIMUM)), maximum
     assert skeleton == 'Merchant.skeleton'
-    assert all(abs(v-1) < .001 for v in totals), 'Every vertex must remain bound'
-    assert all(1 <= v <= 4 for v in influences), 'Unsupported skin influence count'
+    assert len(totals) == VERTICES and all(abs(v - 1) < .001 for v in totals.values()), 'Every vertex must remain bound'
+    assert all(1 <= v <= 4 for v in influences.values()), 'Unsupported skin influence count'
+    for bone, least in COIN_VERTICES.items():
+        coin = bone_vertices.get(bone, [])
+        assert len(coin) >= least, (bone, len(coin))
+        assert {vertex_material.get(i) for i in coin} == {'MerchantGold'}, bone
+    return {vertex_material[i] for side in ('Hand_R', 'Hand_L') for i in bone_vertices[side]}
 
 
-# Preserve all game-driven clips, fitted joint hierarchy, finite poses and closed animation loops.
+# Quaternion product (w, x, y, z).
+def qmul(a, b):
+    w1, x1, y1, z1 = a
+    w2, x2, y2, z2 = b
+    return (w1*w2 - x1*x2 - y1*y2 - z1*z2, w1*x2 + x1*w2 + y1*z2 - z1*y2,
+            w1*y2 - x1*z2 + y1*w2 + z1*x2, w1*z2 + x1*y2 - y1*x2 + z1*w2)
+
+
+# Rotates vector v by the unit quaternion q.
+def qrot(q, v):
+    return qmul(qmul(q, (0.0,) + tuple(v)), (q[0], -q[1], -q[2], -q[3]))[1:]
+
+
+# Angle between two orientations (radians).
+def qangle(a, b):
+    dot = abs(sum(x * y for x, y in zip(a, b)))
+    return 2.0 * math.acos(min(1.0, dot))
+
+
+# Unit quaternion of an Ogre angle-axis element.
+def axis_angle(element):
+    angle = float(element.get('angle'))
+    axis = element.find('axis')
+    v = [float(axis.get(k)) for k in 'xyz']
+    n = math.sqrt(sum(c * c for c in v)) or 1.0
+    s = math.sin(angle / 2)
+    return (math.cos(angle / 2), v[0] / n * s, v[1] / n * s, v[2] / n * s)
+
+
+# Ogre keyframe sampling: linear translation and scale, shortest-path normalised rotation blend.
+def sample(keys, time_point):
+    for k0, k1 in zip(keys, keys[1:]):
+        if k0[0] <= time_point <= k1[0]:
+            s = (time_point - k0[0]) / (k1[0] - k0[0]) if k1[0] > k0[0] else 0.0
+            q0, q1 = k0[2], k1[2]
+            if sum(a * b for a, b in zip(q0, q1)) < 0:
+                q1 = tuple(-c for c in q1)
+            q = tuple(a + (b - a) * s for a, b in zip(q0, q1))
+            n = math.sqrt(sum(c * c for c in q))
+            return (tuple(a + (b - a) * s for a, b in zip(k0[1], k1[1])), tuple(c / n for c in q),
+                    tuple(a + (b - a) * s for a, b in zip(k0[3], k1[3])))
+    return keys[-1][1], keys[-1][2], keys[-1][3]
+
+
+# World head position, orientation and mean scale of every bone in one clip at one time.
+def pose(bones, parents, tracks, time_point):
+    world = {}
+    for name, position, rotation in bones:
+        if name in tracks:
+            translate, rotate, scale = sample(tracks[name], time_point)
+        else:
+            translate, rotate, scale = (0, 0, 0), (1, 0, 0, 0), (1, 1, 1)
+        local = tuple(a + b for a, b in zip(position, translate))
+        orientation = qmul(rotation, rotate)
+        size = sum(scale) / 3.0
+        parent = parents.get(name)
+        if parent is None:
+            world[name] = (local, orientation, size)
+        else:
+            p, q, s = world[parent]
+            world[name] = (tuple(a + b for a, b in zip(p, qrot(q, tuple(c * s for c in local)))), qmul(q, orientation),
+                           s * size)
+    return world
+
+
+# Largest minus smallest value.
+def spread(values):
+    return max(values) - min(values)
+
+
+# Euclidean distance of two points.
+def distance(a, b):
+    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
+
+
+# Joint hierarchy, bind of the root, closed loops and the motions the owner asked for.
 def check_skeleton(path):
     tree = ET.parse(path).getroot()
-    bones = tree.findall('./bones/bone')
-    assert tuple(b.get('name') for b in bones) == BONES
+    bones = []
+    for bone in tree.findall('./bones/bone'):
+        p = bone.find('position')
+        bones.append((bone.get('name'), tuple(float(p.get(k)) for k in 'xyz'), axis_angle(bone.find('rotation'))))
+    assert tuple(b[0] for b in bones) == BONES, tuple(b[0] for b in bones)
     parents = {p.get('bone'): p.get('parent') for p in tree.findall('./bonehierarchy/boneparent')}
-    assert parents['Scales'] == 'Pelvis', 'Balance scales must remain at the belt'
-    root = bones[0].find('position')
-    assert abs(float(root.get('x'))-.64) < .00001
-    assert abs(float(root.get('y'))+.76) < .00001
-    clips = tree.findall('./animations/animation')
-    assert {c.get('name'): float(c.get('length')) for c in clips} == CLIPS
-    for clip in clips:
-        tracks = clip.findall('./tracks/track')
-        assert tuple(t.get('bone') for t in tracks) == TRACKS
-        for track, expected_keys in zip(tracks, KEY_COUNTS[clip.get('name')]):
-            keys = track.findall('./keyframes/keyframe')
-            assert len(keys) == expected_keys, (clip.get('name'), track.get('bone'))
-            times = [float(k.get('time')) for k in keys]
-            assert times[0] == 0 and abs(times[-1]-float(clip.get('length'))) < .00001
-            assert all(a < b for a, b in zip(times, times[1:]))
-            for key in keys:
-                for element in key.iter():
-                    assert all(math.isfinite(float(v)) for v in element.attrib.values())
-            for tag, attributes in (('translate', 'xyz'), ('scale', 'xyz')):
-                first = keys[0].find(tag); last = keys[-1].find(tag)
-                identity = 1.0 if tag == 'scale' else 0.0
-                first_values = [float(first.get(axis)) if first is not None else identity for axis in attributes]
-                last_values = [float(last.get(axis)) if last is not None else identity for axis in attributes]
-                assert all(abs(a-b) < .0001 for a, b in zip(first_values, last_values))
-            assert abs(float(keys[0].find('rotate').get('angle')) - float(keys[-1].find('rotate').get('angle'))) < .0001
+    for bone, parent in PARENTS.items():
+        assert parents.get(bone) == parent, (bone, parents.get(bone))
+    assert all(abs(c) <= ROOT_MAX_OFFSET for c in bones[0][1][:2]), ('root beside the node', bones[0][1])
+    clips = {}
+    for clip in tree.findall('./animations/animation'):
+        tracks = {}
+        for track in clip.findall('./tracks/track'):
+            keys = []
+            for key in track.findall('./keyframes/keyframe'):
+                translate = key.find('translate')
+                scale = key.find('scale')
+                keys.append((float(key.get('time')),
+                             tuple(float(translate.get(c)) for c in 'xyz') if translate is not None else (0.0, 0.0, 0.0),
+                             axis_angle(key.find('rotate')),
+                             tuple(float(scale.get(c)) for c in 'xyz') if scale is not None else (1.0, 1.0, 1.0)))
+            times = [k[0] for k in keys]
+            assert all(a < b for a, b in zip(times, times[1:])), track.get('bone')
+            assert all(math.isfinite(v) for k in keys for part in k[1:] for v in part)
+            tracks[track.get('bone')] = keys
+        clips[clip.get('name')] = (float(clip.get('length')), tracks)
+    assert {name: value[0] for name, value in clips.items()} == CLIPS, {name: value[0] for name, value in clips.items()}
+    poses = {}
+    for name, (length, tracks) in clips.items():
+        poses[name] = [pose(bones, parents, tracks, length * i / SAMPLES) for i in range(SAMPLES + 1)]
+        first, last = poses[name][0], poses[name][-1]
+        for bone in BONES:
+            assert distance(first[bone][0], last[bone][0]) < .002, ('loop not closed', name, bone)
+            assert abs(first[bone][2] - last[bone][2]) < .002, ('loop not closed', name, bone)
+
+    walk = poses['Walk']
+    for side in ('R', 'L'):
+        hand_y = [w['Hand_' + side][0][1] for w in walk]
+        foot_y = [w['Foot_' + side][0][1] for w in walk]
+        assert spread(hand_y) >= WALK_MIN_HAND_SWING, ('stiff arm in Walk', side, spread(hand_y))
+        assert spread(foot_y) >= WALK_MIN_FOOT_STRIDE, ('no stride in Walk', side, spread(foot_y))
+        mean_hand = sum(hand_y) / len(hand_y)
+        mean_foot = sum(foot_y) / len(foot_y)
+        together = sum((h - mean_hand) * (f - mean_foot) for h, f in zip(hand_y, foot_y))
+        assert together < 0, ('the arm swings with the leg of its side, not against it', side)
+        elbow = [qangle(w['UpperArm_' + side][1], w['Forearm_' + side][1]) for w in walk]
+        assert spread(elbow) >= WALK_MIN_ELBOW, ('stiff elbow in Walk', side, spread(elbow))
+    chest = [qangle(walk[0]['Chest'][1], w['Chest'][1]) for w in walk]
+    assert max(chest) >= WALK_MIN_CHEST_TURN, ('stiff upper body in Walk', max(chest))
+
+    for w in poses['Idle']:
+        assert distance(w['Hand_R'][0], w['Hand_L'][0]) <= CLASP_MAX_DISTANCE, 'hands not clasped in Idle'
+        for side in ('Hand_R', 'Hand_L'):
+            assert w[side][0][2] >= CLASP_MIN_HEIGHT and w[side][0][1] <= CLASP_MAX_FRONT, ('hands not at the chest', side)
+    for name in ('Idle', 'Walk', 'RubHands'):
+        for w in poses[name]:
+            assert w['Coin'][2] <= HIDDEN_SCALE and w['Coins'][2] <= HIDDEN_SCALE, ('coin shown in', name)
+    near_mouth = False
+    for w in poses['CountGold']:
+        assert w['Coin'][2] >= SHOWN_SCALE and w['Coins'][2] >= SHOWN_SCALE, 'coin hidden in CountGold'
+        if distance(w['Coin'][0], w['Head'][0]) <= COIN_MOUTH_DISTANCE and w['Coin'][0][2] >= COIN_MOUTH_HEIGHT:
+            near_mouth = True
+    assert near_mouth, 'the coin never comes up to the mouth in CountGold'
+    slide = []
+    for w in poses['RubHands']:
+        assert distance(w['Hand_R'][0], w['Hand_L'][0]) <= CLASP_MAX_DISTANCE, 'hands apart in RubHands'
+        slide.append(w['Hand_R'][0][2] - w['Hand_L'][0][2])
+    assert spread(slide) >= RUB_MIN_SLIDE, ('hands do not rub', spread(slide))
 
 
-# Verify the current accepted replacement without loading its large XML into a second in-memory tree.
-def verify_approved_merchant(root):
+# Verify the delivered merchant without loading its large XML into a second in-memory tree. converted names a directory
+# where this run already deserialized Merchant.mesh and Merchant.skeleton (after the hash check of this run), so the
+# converter does not run twice; without it the files are deserialized here.
+def verify_merchant_contract(root, converted=None):
     root = Path(root)
     started = time.perf_counter()
-    check_surfaces(root)
-    with tempfile.TemporaryDirectory(prefix='approved-merchant-') as temporary:
+    check_files(root)
+    with tempfile.TemporaryDirectory(prefix='merchant-') as temporary:
         directory = Path(temporary)
-        mesh = deserialize(root, 'Merchant.mesh', directory)
-        skeleton = deserialize(root, 'Merchant.skeleton', directory)
+        if converted is not None and (Path(converted) / 'Merchant.mesh.xml').is_file() and                 (Path(converted) / 'Merchant.skeleton.xml').is_file():
+            mesh = Path(converted) / 'Merchant.mesh.xml'
+            skeleton = Path(converted) / 'Merchant.skeleton.xml'
+        else:
+            mesh = deserialize(root, 'Merchant.mesh', directory)
+            skeleton = deserialize(root, 'Merchant.skeleton', directory)
         prepared = time.perf_counter()
-        print('ODP_TEST_PHASE ' + json.dumps({'name': 'setup', 'seconds': prepared-started}))
-        check_mesh(mesh)
+        print('ODP_TEST_PHASE ' + json.dumps({'name': 'setup', 'seconds': prepared - started}))
+        check_opaque_hands(root, check_mesh(mesh))
         check_skeleton(skeleton)
-        print('ODP_TEST_PHASE ' + json.dumps({'name': 'native asset validation', 'seconds': time.perf_counter()-prepared}))
+        print('ODP_TEST_PHASE ' + json.dumps({'name': 'native asset validation', 'seconds': time.perf_counter() - prepared}))
