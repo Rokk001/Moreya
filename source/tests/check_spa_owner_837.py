@@ -132,7 +132,7 @@ assert keep.index('const float height = getPosition().z;') < keep.index('Rendere
     < keep.index('setEntityHeight(height);'), 'the attendant must keep the height he was given when he enters a tile'
 seat_height = float(re.search(r'const double CHAIR_SEAT_HEIGHT = ([0-9.]+);', attendant_cpp).group(1))
 chair, chair_bounds = read_mesh(root / 'models/SpaChair.mesh')
-wood = [q for material, points in chair if material == 'SpaWood' for q in points]
+wood = [q for material, points in chair if material == 'SpaChairWood' for q in points]  # K22: the chair's own textured wood
 seat_top = max(q[2] for q in wood if q[2] < 1.2)  # the seat plate is the highest part below the armrests (1.28)
 assert abs(seat_top - seat_height) < 0.01, 'CHAIR_SEAT_HEIGHT %.3f must be the top of the seat plate %.3f' % (seat_height, seat_top)
 # The chair: backrest (and the ladder under it) on -y, the seat front on +y; it stands at y - 1 of the pool with angle 0,
@@ -151,7 +151,7 @@ stone = [q for material, points in springboard if material == 'SpaStone' for q i
 assert span(board, 1)[1] > 0.45 and span(stone, 1)[1] < 0.0, 'the board of SpaSpringboard reaches out on +y (180: over the pool)'
 # The lifebuoy of variant 1 hangs on the +x side of the chair, outside the frame and below the seat
 ring = [q for material, points in chair if material.startswith('SpaLifebuoy') for q in points]
-assert {m for m, _ in chair} >= {'SpaLifebuoyRed', 'SpaLifebuoyWhite', 'SpaWood', 'SpaIron'}
+assert {m for m, _ in chair} >= {'SpaLifebuoyRed', 'SpaLifebuoyWhite', 'SpaChairWood', 'SpaIronWorn'}
 assert span(ring, 0)[0] > 0.258 and span(ring, 2)[1] < seat_top - 0.1, 'the lifebuoy hangs beside the frame, below the seat'
 for material in ('SpaLifebuoyRed', 'SpaLifebuoyWhite'):
     assert re.search(r'^material ' + material + r' : RTSS/PerPixel_SinglePass', spa_material, re.M), material

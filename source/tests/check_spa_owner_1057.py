@@ -1,8 +1,8 @@
-"""Check the restored pool attendant mesh (1186) and retained acts (1057-1060 and 1070).
+"""Check the hairy pool attendant mesh (1057-1060 and 1070, restored by K22) and its acts.
 
 Reads the shipped models/PoolAttendant.mesh and .skeleton through OgreXMLConverter and the attendant code; no compiler, no
-game. Checks (1) the exact deployed mesh restored by decision 1186 and its visible props, including towel, whistle, hair
-and moustache;
+game. Checks (1) the exact hairy mesh that K22 restored with its fitting skeleton (it replaces the mesh decision 1186 had
+put back) and its visible props, including towel, whistle, hair, body hair and moustache;
 (2) the Sit pose: knees bent and apart (no stiff legs), arms beside the
 belly (no intersection), body not twisted; (3) the clips: Whistle brings the whistle to the mouth, TowelWave holds the
 towel in the hand above the shoulder and waves it, Doze lets him sink sideways, Climb, Walk and Jump move; (4) the code:
@@ -31,10 +31,11 @@ def read(name):
     return (ROOT / name).read_text(encoding='utf-8')
 
 
-# Decision 1186 restored the deployed mesh and retained the updated skeleton.
+# K22 restored the hairy mesh of decisions 1057-1060 and 1070 that fits the skeleton (decision 1186 had put back the older
+# mesh, whose joints sat beside the joints of this skeleton); check_spa_attendant_k22.py checks the fit and the look.
 assert sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
-    '6eb7499d2eba2250c3181690820b4e42cb6297e10d4a34deadc9462568ca25d7'
-), 'decision 1186 restores the deployed attendant mesh with its original proportions and materials'
+    '82d35ec2048c102cfcfb1b85fdf940105941ced1bdb34e9e803aab2bc27a2ee7'
+), 'K22 restores the hairy attendant mesh that fits its skeleton'
 
 with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
     converted = {}
@@ -49,10 +50,11 @@ mesh, skeleton = converted['PoolAttendant.mesh'], converted['PoolAttendant.skele
 sub_by_material = {}
 for sub in mesh.findall('submeshes/submesh'):
     sub_by_material.setdefault(sub.get('material'), []).append(sub)
-for material in ('SpaSkin', 'SpaSuit', 'SpaHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes', 'SpaIron'):
+for material in ('SpaSkin', 'SpaSuit', 'SpaHair', 'SpaBodyHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes', 'SpaIronWorn'):
     assert material in sub_by_material, 'the attendant needs the material ' + material
 faces = {m: sum(len(s.findall('faces/face')) for s in subs) for m, subs in sub_by_material.items()}
-assert faces['SpaLinen'] >= 300 and faces['SpaHair'] >= 1000, 'towel, grey hair and moustache stay'
+assert faces['SpaLinen'] >= 300 and faces['SpaHair'] >= 1000, 'towel, hair and moustache stay'
+assert faces['SpaBodyHair'] >= 10000, 'full body hair'
 
 suit = points_for(mesh, 'SpaSuit')
 belly = suit[(suit[:, 2] > .42) & (suit[:, 2] < .6)]
@@ -165,4 +167,4 @@ credits = read('CREDITS')
 assert re.search(r'^models/PoolAttendant\.mesh .*decision 863', credits, re.M)
 assert re.search(r'^models/PoolAttendant\.skeleton .*1057-1060, 1070', credits, re.M)
 
-print('check_spa_owner_1057 ok: restored attendant mesh, bent legs, arms beside the belly, readable acts')
+print('check_spa_owner_1057 ok: hairy attendant mesh, bent legs, arms beside the belly, readable acts')
