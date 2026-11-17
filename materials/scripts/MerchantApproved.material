@@ -1,0 +1,379 @@
+// Approved merchant Robe surface, baked from the editable Blender material.
+material MerchantApprovedRobe
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantRobeApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantRobeApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Cloak surface, baked from the editable Blender material.
+material MerchantApprovedCloak
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantCloakApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantCloakApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Linen surface, baked from the editable Blender material.
+material MerchantApprovedLinen
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantLinenApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantLinenApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Leather surface, baked from the editable Blender material.
+material MerchantApprovedLeather
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantLeatherApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantLeatherApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Brass surface, baked from the editable Blender material.
+material MerchantApprovedBrass
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.28 0.23 0.15 1 24
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantBrassApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantBrassApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Details surface, baked from the editable Blender material.
+material MerchantApprovedDetails
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantDetailsApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantDetailsApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Hair surface, baked from the editable Blender material.
+material MerchantApprovedHair
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantHairApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantHairApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Hood surface, baked from the editable Blender material.
+material MerchantApprovedHood
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantHoodApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantHoodApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Hide surface, baked from the editable Blender material.
+material MerchantApprovedHide
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.12 0.10 0.09 1 18
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantHideApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantHideApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Approved merchant Gold surface, baked from the editable Blender material.
+material MerchantApprovedGold
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.55 0.38 0.16 1 32
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantGoldApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+            texture_unit
+            {
+                texture MerchantGoldApprovedNormal.png
+                tex_address_mode clamp
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+// Opaque hand variant of MerchantApprovedHide for the skin of the hands (INGAME-QS-10 K20): the same colour
+// atlas without the tangent-space normal map, which GPU skinning does not turn with the hand, so a turned hand
+// was lit as if seen through.
+material MerchantApprovedHideHand
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.12 0.10 0.09 1 18
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantHideApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+// Opaque hand variant of MerchantApprovedDetails for the nails of the hands (INGAME-QS-10 K20): the same colour
+// atlas without the tangent-space normal map, which GPU skinning does not turn with the hand, so a turned hand
+// was lit as if seen through.
+material MerchantApprovedDetailsHand
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.06 0.06 0.06 1 12
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantDetailsApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+// Opaque hand variant of MerchantApprovedGold for the rings and the coin of the hands (INGAME-QS-10 K20): the same colour
+// atlas without the tangent-space normal map, which GPU skinning does not turn with the hand, so a turned hand
+// was lit as if seen through.
+material MerchantApprovedGoldHand
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.55 0.38 0.16 1 32
+            emissive 0 0 0
+            texture_unit
+            {
+                texture MerchantGoldApprovedColor.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}

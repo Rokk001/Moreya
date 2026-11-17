@@ -618,10 +618,27 @@ def check_legacy_figure():
     value = png_mean_luminance('materials/textures/MerchantTableCloth.png')
     assert value <= MAX_CLOTH_LUMINANCE, 'MerchantTableCloth.png is a light beige cloth (mean %.0f, at most %d)' % (value, MAX_CLOTH_LUMINANCE)
 
-# Owner finding of 2026-11-17: the model of 2026-11-15 (MerchantApproved atlases) replaced the chosen variant 1 without a decision and
-# is gone again; the variant-1 figure is checked by its look contract above and by the exact native asset and motion
-# contract (fixed counts, hashes, clips, arm swing, clasped hands, visible coin).
-check_legacy_figure()
+# Owner finding of 2026-11-17 on A1 ("der neue sieht schlechter aus als der alte"): the merchant of 2026-11-15 (MerchantApproved
+# atlases) stays and is reworked after K20 (INGAME-QS-10 A1b). Its atlas layout differs from the variant-1 figure, so its
+# look is pinned by the byte-exact atlases and its geometry, skinning, own node position and motions by the exact native
+# contract (fixed counts, hashes, clips, arm swing, clasped hands, visible coin, opaque hands). The look contract above
+# belongs to the variant-1 texture layout and runs only for a figure with that layout; the native contract always runs.
+if b'MerchantApproved' in (root / 'models/Merchant.mesh').read_bytes():
+    credits = read('CREDITS')
+    patterns = [re.split(r'\s{2,}|\t', line.strip())[0] for line in credits.splitlines() if line.strip()]
+    for texture in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares', 'MerchantLantern'):
+        path = 'materials/textures/' + texture + '.png'
+        assert png_size(path) == (TEXTURE_SIZE, TEXTURE_SIZE), path + ' size'
+        assert any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns), 'CREDITS has no row for ' + path
+    for path in ('models/Merchant.mesh', 'models/Merchant.skeleton', 'models/SalesTable.mesh', 'models/MerchantShelf.mesh'):
+        assert any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns), 'CREDITS has no row for ' + path
+    for texture in ('MerchantTableWood', 'MerchantWares'):
+        value = png_mean_luminance('materials/textures/' + texture + '.png')
+        assert value >= MIN_LUMINANCE[texture], '%s.png is too dark for the room light (mean %.0f)' % (texture, value)
+    value = png_mean_luminance('materials/textures/MerchantTableCloth.png')
+    assert value <= MAX_CLOTH_LUMINANCE, 'MerchantTableCloth.png is a light beige cloth (mean %.0f)' % value
+else:
+    check_legacy_figure()
 from merchant_approved_asset_contract import verify_merchant_contract
 verify_merchant_contract(root, work)
 

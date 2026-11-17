@@ -1,19 +1,24 @@
-"""Native geometry, skeleton and motion contract of the variant-1 merchant (owner finding of 2026-11-17).
+"""Native geometry, texture, skeleton and motion contract of the merchant (INGAME-QS-10 K20, package A1b).
 
-The model of 2026-11-15 that this file pinned before (MerchantApproved atlases, 495863 triangles) replaced the chosen
-variant 1 of D-6-v2 without a decision; the owner finding of 2026-11-17 brings the variant-1 figure back. This contract pins the delivered files
-with fixed values counted once from the reviewed export and checks what the owner saw in the game, on the clips the
-game plays (Idle, Walk, CountGold, RubHands), evaluated like Ogre does from the native skeleton:
+Owner finding of 2026-11-17: the variant-1 figure brought back by A1 looked worse than the merchant of 2026-11-15 that is
+in the game; the owner wants that merchant kept and only reworked. So the delivered merchant is the model of 2026-11-15
+(MerchantApproved atlases, look unchanged: the 20 atlases stay byte-exact) with the changes K20 names. This contract pins
+the delivered files with fixed values counted once from the reviewed export and checks what the owner saw in the game, on
+the clips the game plays (Idle, Walk, CountGold, RubHands), evaluated like Ogre does from the native skeleton:
   walk stiff        "die Arme komplett steif": in Walk each hand swings at least 0.2 forward and back, against the leg
-                    of its side, the elbow bends and straightens, the chest turns and both feet stride
+                    of its side, the elbow bends and straightens, the chest turns and both feet stride; the legs are
+                    skinned to the thighs (before, no vertex hung on a thigh and the trousers stayed on the pelvis)
   clasped hands     in Idle the hands stay clasped in front of the chest the whole clip
-  coin              the coin hangs in the right hand: hidden (scale at most 0.05) in Idle, Walk and RubHands, shown in
-                    the whole of CountGold, where it comes up to the mouth; the coin stack is shown in CountGold
+  coin              no coin was seen: the coin hangs in the right hand and the coin stack in the left hand, both with
+                    gold geometry (before, no vertex hung on the coin bones); hidden (scale at most 0.05) in Idle, Walk and
+                    RubHands, shown in the whole of CountGold, where the coin comes up to the mouth
   rubbing hands     in RubHands the hands stay together and rub (their height difference changes by at least 0.04)
-  see-through hands "dann werden seine Haende transparent": the hands use an opaque material without normal map,
-                    blending, alpha rejection or disabled depth writing (the replaced model lit its rotated hands
-                    through a tangent-space normal map that GPU skinning does not turn)
-  own node          the root bone binds at the origin, so the figure stands on its own node position
+  see-through hands "dann werden seine Haende transparent": every face of the hands uses an opaque hand material without
+                    normal map, blending, alpha rejection or disabled depth writing (the tangent-space normal map is lit
+                    wrong once GPU skinning turns the hand), and wrist and elbow are blended between their bones so the
+                    skin does not open at a hard seam when the joint bends
+  own node          the root bone binds at the origin, the figure below the table top is centred on the origin within
+                    0.04 and stays inside its own tile
 """
 import hashlib
 import json
@@ -21,36 +26,69 @@ import math
 import os
 from pathlib import Path
 import re
+import struct
 import subprocess
 import tempfile
 import time
 import xml.etree.ElementTree as ET
 
-# Filled once from the reviewed export of 2026-11-17, never derived from the assets during a test.
-VERTICES = 95715
-TRIANGLES = 118736
-MINIMUM = (-0.271832, -0.339525, -0.00154968)
-MAXIMUM = (0.261704, 0.363393, 1.27304)
+# Filled once from the reviewed export of 2026-11-17 (A1b), never derived from the assets during a test.
+VERTICES = 416951
+TRIANGLES = 496519
+MINIMUM = (-0.392404, -0.25321, 0.00864)
+MAXIMUM = (0.39241, 0.243949, 1.30284)
 HASHES = {
-    'models/Merchant.mesh': 'bb9c1f5bc2bcf806b983c6aa71367b10e846d2871bed8769a8ab2a02ab12258f',
-    'models/Merchant.skeleton': 'bf351b9ab3003fb342bbee1e1b40be01d5913947ab1341597114dc15524c3025',
-    'materials/textures/MerchantHair.png': 'd20b0458cec8bc9ebdb9598ad3a03c4af582263558eed20d7f689d3f8d3342e6',
+    'models/Merchant.mesh': '7995c151863319c3dd4bdfd7312298dfbc8370718aabcbbb3e0f91939ff9798b',
+    'models/Merchant.skeleton': '890b21631dda994d39411e5e0bdd8d84412ec6fdb1108fb4a4ecf7dc56561b55',
+    # The look of the merchant of 2026-11-15: the baked atlases stay byte-exact
+    'materials/textures/MerchantBrassApprovedColor.png': '13e0088f101ba4207e80a63c091ed4bbb236abb751ca4b5dae95a32f30add3bb',
+    'materials/textures/MerchantBrassApprovedNormal.png': 'f559243be3489daa2d323ee85f3329346dc1f4c416d77087b02c3ea3a6a4309a',
+    'materials/textures/MerchantCloakApprovedColor.png': '95fbbdb204beaeef31ac5d3e8f227548a5f09739585271c34231b980351d2ebf',
+    'materials/textures/MerchantCloakApprovedNormal.png': '116205b04f27035ec83ac4d1d0821a367ae532643ed9714304c1c6375c820205',
+    'materials/textures/MerchantDetailsApprovedColor.png': '05c66a1f06fc1a083f46ea46b4756f245ccc58df61bc262a244d9410dceacdf9',
+    'materials/textures/MerchantDetailsApprovedNormal.png': 'ca7533d30a23ba2613f963f0976fdcdc5b3a7b0d49772d16062eedb4b2cbeef0',
+    'materials/textures/MerchantGoldApprovedColor.png': '89f19664b2cf1e7783cbc7a35f7933fa6763ba4aeac073698cf4bd29eaa17e73',
+    'materials/textures/MerchantGoldApprovedNormal.png': '51b606bd56088b165f734de7d6f6c1fbf174ebf9b091dcafafea9a6eec3d4d6a',
+    'materials/textures/MerchantHairApprovedColor.png': '8a7f782dc060c358d00484ee76a555dd33213e556a378d75534000da647ee643',
+    'materials/textures/MerchantHairApprovedNormal.png': '1019976e0f4208990906e5a03f82024fa7424830e41bd6fd43b3e5f9a72291c9',
+    'materials/textures/MerchantHideApprovedColor.png': '4b42b80dce02d37b9cb0a4b4d39d66c880d78928adfaecf7ab0cf64cfa3165a7',
+    'materials/textures/MerchantHideApprovedNormal.png': 'cf6f6fe2ae5cd4ac4c2345227dbcd24a319f19e0ff6514cc601f6c38df3c40ee',
+    'materials/textures/MerchantHoodApprovedColor.png': 'f6d2d351a5b46a1e897af0bf8a88f129a420aab5e371bf08f28c575a6205d878',
+    'materials/textures/MerchantHoodApprovedNormal.png': '0fa11e685e19c55fc06616a68ce7faf57bdecbc6e81fcea594dc79c155bc9c69',
+    'materials/textures/MerchantLeatherApprovedColor.png': '06c119d122c8a11ae27c018e7b6ced96d82a99df2289d10c6215c550c0a6c5a7',
+    'materials/textures/MerchantLeatherApprovedNormal.png': 'db04e79d17f179b1b0bdfbf013ef45b41f18a5dddb2dd821e9e6d9f70cee6221',
+    'materials/textures/MerchantLinenApprovedColor.png': '044fab840b1b3963d5b24e84f687c1991f8dc4f4d1b4ed68e7c98168a6de7e29',
+    'materials/textures/MerchantLinenApprovedNormal.png': 'fb4dbccfba52bebc3022ebf60b6ff268562a6036a0ed5ab2dc2c9e7929c5baa5',
+    'materials/textures/MerchantRobeApprovedColor.png': '3458d9e9b198be35dc7569294cd0b5329081135509f86023309c862895a2edab',
+    'materials/textures/MerchantRobeApprovedNormal.png': '6b9f50ddf5605e3753704b9ae9e65f1828229b6351c3483899eb7ba7ef7cffe8',
 }
-MATERIALS = {'MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantHide', 'MerchantDark', 'MerchantEye',
-             'MerchantGold', 'MerchantHair', 'MerchantBrass', 'MerchantLeather'}
+ATLASES = {'Robe': 2048, 'Cloak': 2048, 'Linen': 2048, 'Leather': 2048,
+           'Brass': 1024, 'Details': 1024, 'Hair': 1024, 'Hood': 2048,
+           'Hide': 2048, 'Gold': 1024}
+# Opaque hand variants: the colour atlas of their family without the normal map
+HAND_FAMILIES = ('Hide', 'Details', 'Gold')
+MATERIALS = {'MerchantApproved' + name for name in ATLASES} | {'MerchantApproved' + name + 'Hand' for name in HAND_FAMILIES}
 CLIPS = {'Idle': 4.0, 'Walk': 0.6, 'CountGold': 3.2, 'RubHands': 2.0}
 BONES = ('Root', 'Pelvis', 'Spine', 'Chest', 'Head', 'UpperArm_R', 'Forearm_R', 'Hand_R', 'UpperArm_L', 'Forearm_L',
          'Hand_L', 'Thigh_R', 'Shin_R', 'Foot_R', 'Thigh_L', 'Shin_L', 'Foot_L', 'Scales', 'Coins', 'Coin')
+B = {name: index for index, name in enumerate(BONES)}
 PARENTS = {'Coin': 'Hand_R', 'Coins': 'Hand_L', 'Scales': 'Pelvis'}
-# Least vertices bound to the coin and the coin stack, so they have something to show
+# Least vertices bound to the coin and the coin stack, so they have something to show (export: 100 and 588)
 COIN_VERTICES = {'Coin': 60, 'Coins': 300}
+COIN_MATERIAL = 'MerchantApprovedGoldHand'
+# Least vertices bound to each thigh (export: 10214 and 8671; before: none)
+THIGH_MIN_VERTICES = 8000
+# Least vertices blended between forearm and hand and between upper arm and forearm on each side (export: about 1000;
+# before: none, hard seams)
+JOINT_BLEND_MIN_VERTICES = 800
+JOINT_BLEND_WEIGHT = 0.1
 SAMPLES = 48
 WALK_MIN_HAND_SWING = 0.2         # forward and back travel of each hand in Walk
 WALK_MIN_ELBOW = 0.15             # change of the elbow angle in Walk (radians)
 WALK_MIN_CHEST_TURN = 0.1         # change of the chest rotation in Walk (radians)
 WALK_MIN_FOOT_STRIDE = 0.15       # forward and back travel of each foot in Walk
-CLASP_MAX_DISTANCE = 0.14         # hands together (bind pose 0.11 apart, clasped)
-CLASP_MIN_HEIGHT = 0.78           # in front of the chest, not hanging
+CLASP_MAX_DISTANCE = 0.14         # hands together
+CLASP_MIN_HEIGHT = 0.78           # in front of the chest, not hanging (bind pose: wrists at 0.63)
 CLASP_MAX_FRONT = -0.2            # in front of the body (front is -Y)
 HIDDEN_SCALE = 0.05
 SHOWN_SCALE = 0.99
@@ -58,6 +96,9 @@ COIN_MOUTH_DISTANCE = 0.25        # coin comes this close to the head joint ...
 COIN_MOUTH_HEIGHT = 0.95          # ... at mouth height
 RUB_MIN_SLIDE = 0.04
 ROOT_MAX_OFFSET = 0.01
+TABLE_TOP = 0.71                  # the figure below the table top ...
+FIGURE_CENTRE_TOLERANCE = 0.04    # ... is centred on the node ...
+HALF_TILE = 0.5                   # ... and stays inside its own tile
 OPAQUE_FORBIDDEN = ('normal_map', 'scene_blend', 'alpha_rejection', 'depth_write off', 'transparent_sorting')
 
 
@@ -72,34 +113,67 @@ def deserialize(root, filename, directory):
     return output
 
 
-# Keep the delivered files byte-exact against the reviewed export.
+# Keep the delivered files byte-exact against the reviewed export, the atlases against the look of 2026-11-15.
 def check_files(root):
     for relative, wanted in HASHES.items():
-        digest = hashlib.sha256((root / relative).read_bytes()).hexdigest()
-        assert digest == wanted, ('Merchant asset changed', relative)
+        with (root / relative).open('rb') as stream:
+            digest = hashlib.sha256()
+            for block in iter(lambda: stream.read(1024 * 1024), b''):
+                digest.update(block)
+        assert digest.hexdigest() == wanted, ('Merchant asset changed', relative)
+
+
+# The material block of one material in a material script text.
+def material_block(script, name):
+    block = re.search(r'^material ' + re.escape(name) + r'\s*\n\{.*?^}', script, re.M | re.S)
+    assert block, name
+    return block.group()
+
+
+# Atlases with their normal maps on the body, opaque hand variants on the colour atlas, sizes and credits of every atlas.
+def check_surfaces(root):
+    script = (root / 'materials/scripts/MerchantApproved.material').read_text(encoding='utf-8')
+    credits = (root / 'CREDITS').read_text(encoding='utf-8')
+    for family, size in ATLASES.items():
+        block = material_block(script, 'MerchantApproved' + family)
+        assert 'normal_map tangent_space' in block, family
+        for kind in ('Color', 'Normal'):
+            name = 'Merchant' + family + 'Approved' + kind + '.png'
+            assert 'texture ' + name in block, name
+            relative = 'materials/textures/' + name
+            with (root / relative).open('rb') as stream:
+                header = stream.read(33)
+            assert header[:8] == b'\x89PNG\r\n\x1a\n', name
+            assert struct.unpack('>II', header[16:24]) == (size, size), name
+            assert relative in credits, name
+    for family in HAND_FAMILIES:
+        block = material_block(script, 'MerchantApproved' + family + 'Hand')
+        assert 'texture Merchant' + family + 'ApprovedColor.png' in block, family
+    for source in ('Fabric062', 'Fabric066', 'Leather014'):
+        assert 'https://ambientcg.com/view?id=' + source in credits, source
 
 
 # The hands must not be lit through a normal map nor blended (see-through hands, owner finding of 2026-11-17).
 def check_opaque_hands(root, hand_materials):
     text = ''.join(p.read_text(encoding='utf-8', errors='replace')
                    for p in (root / 'materials' / 'scripts').glob('*.material'))
+    assert hand_materials, 'no hand faces found'
     for name in hand_materials:
-        block = re.search(r'^material ' + re.escape(name) + r'\s*\n\{.*?^}', text, re.M | re.S)
-        assert block, name
+        block = material_block(text, name)
         for word in OPAQUE_FORBIDDEN:
-            assert word not in block.group(), (name, word)
+            assert word not in block, (name, word)
 
 
-# Stream the mesh: counts, bounds, materials, complete skinning and the materials and bones of hands and coins.
+# Stream the mesh: counts, bounds, node position, materials, complete skinning, legs, joints, hands and coins. Returns
+# the materials of every face that touches a vertex bound mainly to a hand.
 def check_mesh(path):
-    totals = {}
-    influences = {}
-    bone_vertices = {}
-    vertex_material = {}
+    weights = {}
     counts = dict(position=0, face=0)
     minimum = [math.inf] * 3
     maximum = [-math.inf] * 3
-    materials = set()
+    low = [0.0, 0.0, 0]
+    outside = 0
+    faces = {}
     material = None
     skeleton = None
     with path.open('rb') as stream:
@@ -110,19 +184,24 @@ def check_mesh(path):
                     assert int(element.get('vertexcount')) == VERTICES
                 elif tag == 'submesh':
                     material = element.get('material')
-                    materials.add(material)
+                    faces.setdefault(material, [])
                 continue
             if tag == 'position':
                 value = [float(element.get(axis)) for axis in 'xyz']
                 assert all(math.isfinite(v) for v in value)
                 minimum = [min(a, b) for a, b in zip(minimum, value)]
                 maximum = [max(a, b) for a, b in zip(maximum, value)]
+                if value[2] < TABLE_TOP:
+                    low[0] += value[0]
+                    low[1] += value[1]
+                    low[2] += 1
+                    if max(abs(value[0]), abs(value[1])) >= HALF_TILE:
+                        outside += 1
                 counts['position'] += 1
             elif tag == 'face':
-                for axis in ('v1', 'v2', 'v3'):
-                    index = int(element.get(axis))
-                    assert 0 <= index < VERTICES
-                    vertex_material[index] = material
+                triangle = tuple(int(element.get(axis)) for axis in ('v1', 'v2', 'v3'))
+                assert all(0 <= index < VERTICES for index in triangle)
+                faces[material].append(triangle)
                 counts['face'] += 1
             elif tag == 'vertexboneassignment':
                 index = int(element.get('vertexindex'))
@@ -130,25 +209,45 @@ def check_mesh(path):
                 weight = float(element.get('weight'))
                 assert 0 <= index < VERTICES and 0 <= bone < len(BONES)
                 assert math.isfinite(weight) and 0 < weight <= 1
-                totals[index] = totals.get(index, 0.0) + weight
-                influences[index] = influences.get(index, 0) + 1
-                if weight > 0.5:
-                    bone_vertices.setdefault(BONES[bone], []).append(index)
+                weights.setdefault(index, {})[bone] = weight
             elif tag == 'skeletonlink':
                 skeleton = element.get('name')
             element.clear()
     assert counts == dict(position=VERTICES, face=TRIANGLES), counts
-    assert materials == MATERIALS, materials
+    assert set(faces) == MATERIALS, set(faces)
     assert all(abs(a - b) < .00002 for a, b in zip(minimum, MINIMUM)), minimum
     assert all(abs(a - b) < .00002 for a, b in zip(maximum, MAXIMUM)), maximum
     assert skeleton == 'Merchant.skeleton'
-    assert len(totals) == VERTICES and all(abs(v - 1) < .001 for v in totals.values()), 'Every vertex must remain bound'
-    assert all(1 <= v <= 4 for v in influences.values()), 'Unsupported skin influence count'
+    assert low[2] and abs(low[0] / low[2]) <= FIGURE_CENTRE_TOLERANCE and abs(low[1] / low[2]) <= FIGURE_CENTRE_TOLERANCE, \
+        ('the merchant does not stand on his own node position', low[0] / max(low[2], 1), low[1] / max(low[2], 1))
+    assert outside == 0, ('the merchant reaches into the neighbouring tile', outside)
+    assert len(weights) == VERTICES, 'Every vertex must remain bound'
+    assert all(abs(sum(w.values()) - 1) < .001 for w in weights.values()), 'Every vertex must remain fully bound'
+    assert all(1 <= len(w) <= 4 for w in weights.values()), 'Unsupported skin influence count'
+
+    # Vertices bound mainly to one bone.
+    def strong(bone):
+        return [i for i, w in weights.items() if w.get(B[bone], 0.0) > 0.5]
+
+    # Number of vertices blended between two bones.
+    def blended(first, second):
+        return sum(1 for w in weights.values()
+                   if w.get(B[first], 0.0) > JOINT_BLEND_WEIGHT and w.get(B[second], 0.0) > JOINT_BLEND_WEIGHT)
+    for side in ('R', 'L'):
+        assert len(strong('Thigh_' + side)) >= THIGH_MIN_VERTICES, ('the legs do not follow the thigh', side)
+        assert blended('Forearm_' + side, 'Hand_' + side) >= JOINT_BLEND_MIN_VERTICES, ('hard seam at the wrist', side)
+        assert blended('UpperArm_' + side, 'Forearm_' + side) >= JOINT_BLEND_MIN_VERTICES, ('hard seam at the elbow', side)
+    vertex_materials = {}
+    for name, triangles in faces.items():
+        for triangle in triangles:
+            for index in triangle:
+                vertex_materials.setdefault(index, set()).add(name)
     for bone, least in COIN_VERTICES.items():
-        coin = bone_vertices.get(bone, [])
+        coin = strong(bone)
         assert len(coin) >= least, (bone, len(coin))
-        assert {vertex_material.get(i) for i in coin} == {'MerchantGold'}, bone
-    return {vertex_material[i] for side in ('Hand_R', 'Hand_L') for i in bone_vertices[side]}
+        assert set().union(*(vertex_materials.get(i, set()) for i in coin)) == {COIN_MATERIAL}, bone
+    hands = set(strong('Hand_R')) | set(strong('Hand_L'))
+    return {name for name, triangles in faces.items() if any(index in hands for t in triangles for index in t)}
 
 
 # Quaternion product (w, x, y, z).
@@ -299,16 +398,18 @@ def check_skeleton(path):
     assert spread(slide) >= RUB_MIN_SLIDE, ('hands do not rub', spread(slide))
 
 
-# Verify the delivered merchant without loading its large XML into a second in-memory tree. converted names a directory
+# Verify the delivered merchant without loading its large XML into an in-memory tree. converted names a directory
 # where this run already deserialized Merchant.mesh and Merchant.skeleton (after the hash check of this run), so the
 # converter does not run twice; without it the files are deserialized here.
 def verify_merchant_contract(root, converted=None):
     root = Path(root)
     started = time.perf_counter()
     check_files(root)
+    check_surfaces(root)
     with tempfile.TemporaryDirectory(prefix='merchant-') as temporary:
         directory = Path(temporary)
-        if converted is not None and (Path(converted) / 'Merchant.mesh.xml').is_file() and                 (Path(converted) / 'Merchant.skeleton.xml').is_file():
+        if converted is not None and (Path(converted) / 'Merchant.mesh.xml').is_file() and \
+                (Path(converted) / 'Merchant.skeleton.xml').is_file():
             mesh = Path(converted) / 'Merchant.mesh.xml'
             skeleton = Path(converted) / 'Merchant.skeleton.xml'
         else:
