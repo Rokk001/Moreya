@@ -8,11 +8,18 @@ the clips the game plays (Idle, Walk, CountGold, RubHands), evaluated like Ogre 
   walk stiff        "die Arme komplett steif": in Walk each hand swings at least 0.2 forward and back, against the leg
                     of its side, the elbow bends and straightens, the chest turns and both feet stride; the legs are
                     skinned to the thighs (before, no vertex hung on a thigh and the trousers stayed on the pelvis)
-  clasped hands     in Idle the hands stay clasped in front of the chest the whole clip
+  rubbing hands     owner finding on A1b: hunched and greedy, in Idle and RubHands the hands stay together in front of the
+                    belly the whole clip (not a prayer pose at the chest)
+  sleeves           owner finding on A1b ("die Arme sollten in den Aermeln der Jacke sein"): every sleeve and shoulder cape
+                    vertex bound to an arm stays within SLEEVE_MAX_DISTANCE of the arm bones of its side, in the bind pose
+                    and in every sampled pose of every clip (skinned like the game does), so no sleeve stands off the arm
+  dark brown cloth  owner finding on A1b ("dunkelbraun", decisions 862/863): the hood and cloak atlases are a dark brown,
+                    not the mottled olive: red at least 1.35 x green, blue 0.82-0.95 x green, mean hue under the yellow
+                    front light at most 28 degrees, at most 10 % yellow-olive pixels, no large blotches
   coin              no coin was seen: the coin hangs in the right hand and the coin stack in the left hand, both with
                     gold geometry (before, no vertex hung on the coin bones); hidden (scale at most 0.05) in Idle, Walk and
                     RubHands, shown in the whole of CountGold, where the coin comes up to the mouth
-  rubbing hands     in RubHands the hands stay together and rub (their height difference changes by at least 0.04)
+                    in RubHands they rub (their height difference changes by at least 0.04)
   see-through hands "dann werden seine Haende transparent": every face of the hands uses an opaque hand material without
                     normal map, blending, alpha rejection or disabled depth writing (the tangent-space normal map is lit
                     wrong once GPU skinning turns the hand), and wrist and elbow are blended between their bones so the
@@ -32,18 +39,21 @@ import tempfile
 import time
 import xml.etree.ElementTree as ET
 
-# Filled once from the reviewed export of 2026-11-17 (A1b), never derived from the assets during a test.
+import numpy as np
+from PIL import Image
+
+# Filled once from the reviewed export of 2026-11-17 (A1b rework), never derived from the assets during a test.
 VERTICES = 416951
 TRIANGLES = 496519
-MINIMUM = (-0.392404, -0.25321, 0.00864)
-MAXIMUM = (0.39241, 0.243949, 1.30284)
+MINIMUM = (-0.311939, -0.25321, 0.00864)
+MAXIMUM = (0.312656, 0.243949, 1.30284)
 HASHES = {
-    'models/Merchant.mesh': '7995c151863319c3dd4bdfd7312298dfbc8370718aabcbbb3e0f91939ff9798b',
-    'models/Merchant.skeleton': '890b21631dda994d39411e5e0bdd8d84412ec6fdb1108fb4a4ecf7dc56561b55',
-    # The look of the merchant of 2026-11-15: the baked atlases stay byte-exact
+    'models/Merchant.mesh': '4690509c258968290e81bc96873ab49559725dc678ddaa29d7d5ee26b3368303',
+    'models/Merchant.skeleton': '90dd8c3da6bbab8f838b3aae379c093e7dfa8a893352b0b77d42639d373a88fa',
+    # The look of the merchant of 2026-11-15: the baked atlases stay byte-exact, hood and cloak colour recoloured dark brown
     'materials/textures/MerchantBrassApprovedColor.png': '13e0088f101ba4207e80a63c091ed4bbb236abb751ca4b5dae95a32f30add3bb',
     'materials/textures/MerchantBrassApprovedNormal.png': 'f559243be3489daa2d323ee85f3329346dc1f4c416d77087b02c3ea3a6a4309a',
-    'materials/textures/MerchantCloakApprovedColor.png': '95fbbdb204beaeef31ac5d3e8f227548a5f09739585271c34231b980351d2ebf',
+    'materials/textures/MerchantCloakApprovedColor.png': '87a5418e3ad0b4a9cb4721b9d1bd5acd680143ddd8b516dbfa69142ade971524',
     'materials/textures/MerchantCloakApprovedNormal.png': '116205b04f27035ec83ac4d1d0821a367ae532643ed9714304c1c6375c820205',
     'materials/textures/MerchantDetailsApprovedColor.png': '05c66a1f06fc1a083f46ea46b4756f245ccc58df61bc262a244d9410dceacdf9',
     'materials/textures/MerchantDetailsApprovedNormal.png': 'ca7533d30a23ba2613f963f0976fdcdc5b3a7b0d49772d16062eedb4b2cbeef0',
@@ -53,7 +63,7 @@ HASHES = {
     'materials/textures/MerchantHairApprovedNormal.png': '1019976e0f4208990906e5a03f82024fa7424830e41bd6fd43b3e5f9a72291c9',
     'materials/textures/MerchantHideApprovedColor.png': '4b42b80dce02d37b9cb0a4b4d39d66c880d78928adfaecf7ab0cf64cfa3165a7',
     'materials/textures/MerchantHideApprovedNormal.png': 'cf6f6fe2ae5cd4ac4c2345227dbcd24a319f19e0ff6514cc601f6c38df3c40ee',
-    'materials/textures/MerchantHoodApprovedColor.png': 'f6d2d351a5b46a1e897af0bf8a88f129a420aab5e371bf08f28c575a6205d878',
+    'materials/textures/MerchantHoodApprovedColor.png': '75b0d50fc8cfdd0241bc6fed8cb7998810a55a77bb29a8f9a8db72178c19a89e',
     'materials/textures/MerchantHoodApprovedNormal.png': '0fa11e685e19c55fc06616a68ce7faf57bdecbc6e81fcea594dc79c155bc9c69',
     'materials/textures/MerchantLeatherApprovedColor.png': '06c119d122c8a11ae27c018e7b6ced96d82a99df2289d10c6215c550c0a6c5a7',
     'materials/textures/MerchantLeatherApprovedNormal.png': 'db04e79d17f179b1b0bdfbf013ef45b41f18a5dddb2dd821e9e6d9f70cee6221',
@@ -88,8 +98,26 @@ WALK_MIN_ELBOW = 0.15             # change of the elbow angle in Walk (radians)
 WALK_MIN_CHEST_TURN = 0.1         # change of the chest rotation in Walk (radians)
 WALK_MIN_FOOT_STRIDE = 0.15       # forward and back travel of each foot in Walk
 CLASP_MAX_DISTANCE = 0.14         # hands together
-CLASP_MIN_HEIGHT = 0.78           # in front of the chest, not hanging (bind pose: wrists at 0.63)
-CLASP_MAX_FRONT = -0.2            # in front of the body (front is -Y)
+BELLY_HEIGHT = (0.62, 0.85)       # wrists in front of the belly, not hanging (bind pose: wrists at 0.60) nor at the chest
+CLASP_MAX_FRONT = -0.17           # in front of the body (front is -Y)
+# Sleeves and shoulder cape: cloth vertices bound mainly to the arm bones of one side
+SLEEVE_MATERIALS = ('MerchantApprovedCloak', 'MerchantApprovedLinen', 'MerchantApprovedHood', 'MerchantApprovedRobe')
+SLEEVE_MIN_VERTICES = 15000
+SLEEVE_MIN_ARM_WEIGHT = 0.75     # sleeve cloth: bound at least this much to the arm (cape cloth in between is shared)
+SLEEVE_MAX_DISTANCE = 0.11        # from the shoulder-elbow-wrist-hand bones (export: 0.109, rejected A1b: 0.176)
+SLEEVE_MAX_P99 = 0.09             # 99 % of the sleeve cloth (export: 0.082, rejected A1b: up to 0.105)
+SLEEVE_SAMPLES = 12               # sampled poses per clip for the sleeve check
+# Dark brown hood and cloak (decisions 836/862/863), measured on the 2048 atlases in 8 x 8 blocks
+BROWN_ATLASES = ('materials/textures/MerchantHoodApprovedColor.png', 'materials/textures/MerchantCloakApprovedColor.png')
+BROWN_MIN_RED_OVER_GREEN = 1.35
+BROWN_BLUE_OVER_GREEN = (0.82, 0.95)
+FRONT_LIGHT = (1.0, 0.94, 0.64)
+BROWN_MAX_LIT_HUE = 28.0
+OLIVE_HUE = (35.0, 90.0)
+OLIVE_MIN_SATURATION = 0.15
+BROWN_MAX_OLIVE_SHARE = 0.10
+BROWN_MAX_BLOCK_STD = 7.0
+BROWN_LUMINANCE = (30.0, 50.0)    # dark brown (mottled olive of 2026-11-15: 40 / 43 at r/g 1.22, 80 % olive pixels)
 HIDDEN_SCALE = 0.05
 SHOWN_SCALE = 0.99
 COIN_MOUTH_DISTANCE = 0.25        # coin comes this close to the head joint ...
@@ -153,6 +181,33 @@ def check_surfaces(root):
         assert 'https://ambientcg.com/view?id=' + source in credits, source
 
 
+# Hood and cloak atlases are a dark brown, not the mottled olive (decisions 862/863, owner finding on A1b).
+def check_brown_cloth(root):
+    for relative in BROWN_ATLASES:
+        rgb = np.asarray(Image.open(root / relative).convert('RGB'), dtype=np.float64)
+        mean = rgb.reshape(-1, 3).mean(0)
+        luminance = rgb @ np.array([0.299, 0.587, 0.114])
+        assert BROWN_LUMINANCE[0] <= luminance.mean() <= BROWN_LUMINANCE[1], (relative, luminance.mean())
+        assert mean[0] >= BROWN_MIN_RED_OVER_GREEN * mean[1], (relative, 'not brown', mean)
+        assert BROWN_BLUE_OVER_GREEN[0] * mean[1] <= mean[2] <= BROWN_BLUE_OVER_GREEN[1] * mean[1], (relative, mean)
+        lit = rgb * np.array(FRONT_LIGHT)
+        lm = mean * np.array(FRONT_LIGHT)
+        hue = 60.0 * (lm[1] - lm[2]) / (lm[0] - lm[2])
+        assert lm[0] >= lm[1] >= lm[2] and hue <= BROWN_MAX_LIT_HUE, (relative, 'olive under the front light', hue)
+        hi, lo = lit.max(-1), lit.min(-1)
+        span = hi - lo
+        safe = np.where(span > 0, span, 1.0)
+        r, g, b = lit[..., 0], lit[..., 1], lit[..., 2]
+        h = np.where(hi == r, (60.0 * (g - b) / safe) % 360.0,
+                     np.where(hi == g, 60.0 * ((b - r) / safe + 2), 60.0 * ((r - g) / safe + 4)))
+        s = np.where(hi + lo <= 255, span / np.maximum(hi + lo, 1e-9), span / np.maximum(510.0 - hi - lo, 1e-9))
+        olive = ((span > 0) & (h >= OLIVE_HUE[0]) & (h <= OLIVE_HUE[1]) & (s >= OLIVE_MIN_SATURATION)).mean()
+        assert olive <= BROWN_MAX_OLIVE_SHARE, (relative, 'yellow-olive pixels', olive)
+        n = luminance.shape[0] // 8
+        blocks = luminance[:8 * n, :8 * n].reshape(8, n, 8, n).mean((1, 3))
+        assert blocks.std() <= BROWN_MAX_BLOCK_STD, (relative, 'large camouflage blotches', blocks.std())
+
+
 # The hands must not be lit through a normal map nor blended (see-through hands, owner finding of 2026-11-17).
 def check_opaque_hands(root, hand_materials):
     text = ''.join(p.read_text(encoding='utf-8', errors='replace')
@@ -174,6 +229,7 @@ def check_mesh(path):
     low = [0.0, 0.0, 0]
     outside = 0
     faces = {}
+    positions = []
     material = None
     skeleton = None
     with path.open('rb') as stream:
@@ -197,6 +253,7 @@ def check_mesh(path):
                     low[2] += 1
                     if max(abs(value[0]), abs(value[1])) >= HALF_TILE:
                         outside += 1
+                positions.append(value)
                 counts['position'] += 1
             elif tag == 'face':
                 triangle = tuple(int(element.get(axis)) for axis in ('v1', 'v2', 'v3'))
@@ -247,7 +304,20 @@ def check_mesh(path):
         assert len(coin) >= least, (bone, len(coin))
         assert set().union(*(vertex_materials.get(i, set()) for i in coin)) == {COIN_MATERIAL}, bone
     hands = set(strong('Hand_R')) | set(strong('Hand_L'))
-    return {name for name, triangles in faces.items() if any(index in hands for t in triangles for index in t)}
+    hand_materials = {name for name, triangles in faces.items() if any(index in hands for t in triangles for index in t)}
+    # Sleeve and cape cloth bound mainly to the arm bones of one side, with its bind position and skin weights
+    sleeves = {}
+    for side in ('R', 'L'):
+        arm = [B['UpperArm_' + side], B['Forearm_' + side], B['Hand_' + side]]
+        chosen = [i for i, w in weights.items() if sum(w.get(b, 0.0) for b in arm) > SLEEVE_MIN_ARM_WEIGHT and
+                  vertex_materials.get(i, set()) & set(SLEEVE_MATERIALS)]
+        assert len(chosen) >= SLEEVE_MIN_VERTICES, ('too few sleeve vertices', side, len(chosen))
+        matrix = np.zeros((len(chosen), len(BONES)))
+        for row, i in enumerate(chosen):
+            for bone, weight in weights[i].items():
+                matrix[row, bone] = weight
+        sleeves[side] = (np.array([positions[i] for i in chosen]), matrix)
+    return hand_materials, sleeves
 
 
 # Quaternion product (w, x, y, z).
@@ -326,7 +396,7 @@ def distance(a, b):
 
 
 # Joint hierarchy, bind of the root, closed loops and the motions the owner asked for.
-def check_skeleton(path):
+def check_skeleton(path, sleeves=None):
     tree = ET.parse(path).getroot()
     bones = []
     for bone in tree.findall('./bones/bone'):
@@ -378,10 +448,12 @@ def check_skeleton(path):
     chest = [qangle(walk[0]['Chest'][1], w['Chest'][1]) for w in walk]
     assert max(chest) >= WALK_MIN_CHEST_TURN, ('stiff upper body in Walk', max(chest))
 
-    for w in poses['Idle']:
-        assert distance(w['Hand_R'][0], w['Hand_L'][0]) <= CLASP_MAX_DISTANCE, 'hands not clasped in Idle'
-        for side in ('Hand_R', 'Hand_L'):
-            assert w[side][0][2] >= CLASP_MIN_HEIGHT and w[side][0][1] <= CLASP_MAX_FRONT, ('hands not at the chest', side)
+    for name in ('Idle', 'RubHands'):
+        for w in poses[name]:
+            assert distance(w['Hand_R'][0], w['Hand_L'][0]) <= CLASP_MAX_DISTANCE, ('hands not together', name)
+            for side in ('Hand_R', 'Hand_L'):
+                assert BELLY_HEIGHT[0] <= w[side][0][2] <= BELLY_HEIGHT[1] and w[side][0][1] <= CLASP_MAX_FRONT, \
+                    ('hands not in front of the belly', name, side, w[side][0])
     for name in ('Idle', 'Walk', 'RubHands'):
         for w in poses[name]:
             assert w['Coin'][2] <= HIDDEN_SCALE and w['Coins'][2] <= HIDDEN_SCALE, ('coin shown in', name)
@@ -396,6 +468,44 @@ def check_skeleton(path):
         assert distance(w['Hand_R'][0], w['Hand_L'][0]) <= CLASP_MAX_DISTANCE, 'hands apart in RubHands'
         slide.append(w['Hand_R'][0][2] - w['Hand_L'][0][2])
     assert spread(slide) >= RUB_MIN_SLIDE, ('hands do not rub', spread(slide))
+    if sleeves is not None:
+        rest = pose(bones, parents, {}, 0.0)
+        bind = {name: np.array(rest[name][0]) for name in BONES}
+        samples = [rest] + [pose(bones, parents, tracks, length * i / SLEEVE_SAMPLES)
+                            for length, tracks in clips.values() for i in range(SLEEVE_SAMPLES)]
+        for side, (points, matrix) in sleeves.items():
+            for world in samples:
+                check_sleeve(points, matrix, bind, world, side)
+
+
+# Rotation matrix of a unit quaternion (w, x, y, z).
+def rotation_matrix(q):
+    w, x, y, z = q
+    return np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+                     [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+                     [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]])
+
+
+# Distance of every point to the segment a-b.
+def segment_distance(points, a, b):
+    ab = b - a
+    t = np.clip(((points - a) @ ab) / max(float(ab @ ab), 1e-12), 0.0, 1.0)
+    return np.linalg.norm(points - (a + t[:, None] * ab), axis=1)
+
+
+# Skins the sleeve vertices like Ogre (linear blend, every bind rotation is the identity) and checks that every one stays
+# close to the shoulder-elbow-wrist-hand bones of its side.
+def check_sleeve(points, matrix, bind, world, side):
+    skinned = np.zeros_like(points)
+    for bone in np.nonzero(matrix.any(0))[0]:
+        name = BONES[bone]
+        moved = (points - bind[name]) * world[name][2]
+        skinned += matrix[:, bone:bone + 1] * (moved @ rotation_matrix(world[name][1]).T + np.array(world[name][0]))
+    joints = [np.array(world[name][0]) for name in ('UpperArm_' + side, 'Forearm_' + side, 'Hand_' + side)]
+    joints.append(joints[2] + rotation_matrix(world['Hand_' + side][1]) @ np.array([0.0, 0.0, -0.14]))
+    near = np.min([segment_distance(skinned, a, b) for a, b in zip(joints, joints[1:])], axis=0)
+    assert near.max() <= SLEEVE_MAX_DISTANCE, ('a sleeve stands off the arm', side, float(near.max()))
+    assert np.percentile(near, 99) <= SLEEVE_MAX_P99, ('the sleeves stand off the arm', side, float(np.percentile(near, 99)))
 
 
 # Verify the delivered merchant without loading its large XML into an in-memory tree. converted names a directory
@@ -406,6 +516,7 @@ def verify_merchant_contract(root, converted=None):
     started = time.perf_counter()
     check_files(root)
     check_surfaces(root)
+    check_brown_cloth(root)
     with tempfile.TemporaryDirectory(prefix='merchant-') as temporary:
         directory = Path(temporary)
         if converted is not None and (Path(converted) / 'Merchant.mesh.xml').is_file() and \
@@ -417,6 +528,7 @@ def verify_merchant_contract(root, converted=None):
             skeleton = deserialize(root, 'Merchant.skeleton', directory)
         prepared = time.perf_counter()
         print('ODP_TEST_PHASE ' + json.dumps({'name': 'setup', 'seconds': prepared - started}))
-        check_opaque_hands(root, check_mesh(mesh))
-        check_skeleton(skeleton)
+        hand_materials, sleeves = check_mesh(mesh)
+        check_opaque_hands(root, hand_materials)
+        check_skeleton(skeleton, sleeves)
         print('ODP_TEST_PHASE ' + json.dumps({'name': 'native asset validation', 'seconds': time.perf_counter() - prepared}))
