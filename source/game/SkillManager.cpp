@@ -310,8 +310,13 @@ public:
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
 
+    //! \brief Connects the spell's cast button of the game bar; the level editor has no spells tab, so there is
+    //! nothing to connect there.
     void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const override
     {
+        if(!rootWindow->isChild(getGuiPath() + mButtonName))
+            return;
+
         mode->addEventConnection(
             rootWindow->getChild(getGuiPath() + mButtonName)->subscribeEvent(
               CEGUI::PushButton::EventClicked,
