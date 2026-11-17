@@ -2352,3 +2352,5 @@ materials/textures/MerchantGoldApprovedColor.png    AI-generated with Codex; mat
 materials/textures/MerchantGoldApprovedNormal.png    AI-generated with Codex; material source as noted    GPLv3+    Original baked Normal atlas, 2026-11-15. Original spatial material authored in Blender for this project.
 
 source/entities/BuildingObject.cpp (buildGhostCauldronOutlet): original procedural brass cauldron outlet with open bore and green liquid descending visibly below the lip, AI-assisted project geometry, GPL-3.0-or-later; owner decision 1250.
+gui/CreatureSkillIcons.png    Mario    GPLv3+    Placeholder icons of the creature skills, drawn from simple shapes by tools/gen_skill_placeholder_icons.py (script generated, original work) on the iron frame of gui/ODIcons.png (LightningButton) and the basalt of gui/ODHudSurface.png (both AI-generated with Codex for this project); replaced later by painted icons under the same image names, 2026-11-17
+gui/CreatureSkillIcons.imageset    Mario    GPLv3+    Written by tools/gen_skill_placeholder_icons.py, one image per skill id of config/creatureSkills.cfg, 2026-11-17
