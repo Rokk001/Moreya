@@ -10,7 +10,8 @@ repo = Path(__file__).resolve().parents[2]
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 step_max = re.search(r'^\s*BedStepMaxHeight\s+(\S+)', (repo / 'config/global.cfg').read_text(), re.M)[1]
-methods = renderer.split('void RenderManager::updateCreatureStep(', 1)[1].split('\nvoid RenderManager::rrMoveMapLightFlicker(', 1)[0]
+# The production text from the toilet seat lift helper (called by updateCreatureStep) up to the next renderer method.
+methods = renderer.split('static float toiletSeatLift(', 1)[1].split('\nvoid RenderManager::rrMoveMapLightFlicker(', 1)[0]
 probe = r'''
 #include <Ogre.h>
 #include <RTShaderSystem/OgreShaderGenerator.h>
@@ -21,6 +22,7 @@ probe = r'''
 #include <iostream>
 struct ConfigManager {static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}double getBedStepMaxHeight()const{return STEP_MAX;}};
 enum class GameEntityType {buildingObject,creature};
+namespace EntityAnimation {static const std::string relieve_anim="Relieve";}
 struct RenderedMovableEntity {
  Ogre::SceneNode* node;std::string mesh="GoblinBed";Ogre::Vector3 pos;float angle=0;
  GameEntityType getObjectType(){return GameEntityType::buildingObject;}
@@ -31,7 +33,8 @@ struct BuildingObject:RenderedMovableEntity {Ogre::Vector2 scale;auto getFurnitu
 struct GameMap {std::vector<RenderedMovableEntity*> objects;const auto& getRenderedMovableEntities(){return objects;}};
 struct Creature {
  Ogre::SceneNode* node;GameMap* map;std::string mesh="Kobold.mesh";int level=30;
- Ogre::Vector3 pos{2,5,0},direction{1,0,0};bool moving=true,onMap=true;
+ Ogre::Vector3 pos{2,5,0},direction{1,0,0};bool moving=true,onMap=true;std::string animation="Walk";
+ const std::string& getAnimationStateName(){return animation;}
  Ogre::SceneNode* getEntityNode(){return node;}bool getIsOnMap(){return onMap;}bool isAlive(){return true;}bool isMoving(){return moving;}
  auto* getGameMap(){return map;}const auto& getPosition(){return pos;}const auto& getWalkDirection(){return direction;}
  const auto& getMeshName(){return mesh;}int getLevel(){return level;}double getLevelScale()const{return 1.0+.10*(level-1)/29.0;}
@@ -41,7 +44,7 @@ struct RenderManager {
  std::set<Creature*> mSteppingCreatures;
  void updateCreatureStep(Creature*);void treasuryCreatureStep(Creature*,const Ogre::Vector3&,float,int){}void cancelTreasuryPour(Creature*){}float getTreasuryPourRise(Creature*) const{return 0;}void cancelCreatureStep(Creature* = nullptr);
 };
-void RenderManager::updateCreatureStep(METHODS
+static float toiletSeatLift(METHODS
 void renderPreview(const std::string& repo,const std::string& prefix){
  Ogre::Root root("","","low-step-preview.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
