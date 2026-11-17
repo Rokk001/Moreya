@@ -363,7 +363,7 @@ assert texture.is_file() and texture.stat().st_size > 1000, 'the hose texture ex
 assert any('materials/textures/GhostPackRubber.png' in row and 'rubber' in row for row in read('CREDITS').splitlines()), 'credited texture'
 shape = body(creature_source, 'static void shapeGhostHose(')
 has(creature_source, 'fixed vertex count', 'static const size_t GHOST_HOSE_RINGS=128;', 'static const size_t GHOST_HOSE_SIDES=8;')
-has(shape, 'a tube along a cubic curve with sag, rebuilt in place', 'hose.begin("GhostHose",Ogre::RenderOperation::OT_TRIANGLE_LIST);',
+has(shape, 'a tube along a cubic curve with sag, rebuilt in place', 'hose.begin("GhostHose",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");',
     'else hose.beginUpdate(0);', 'hose.textureCoord(', 'hose.normal(normal);', 'const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);',
     'return port*(u*u*u)+control1*(3.0f*u*u*t)+control2*(3.0f*u*t*t)+rear*(t*t*t);',
     'hose.position(centre+normal*ribRadius);', 'hose.colour(shadeGhostHose(look.mHose,normal,look.mGlow));', 'hose.end();')
@@ -448,7 +448,7 @@ has(clear, 'fittings and child nodes released with the hose', 'scene->destroyEnt
 # Mario: the plain hose looks boring; bright red, blue, green wires must run from the back to the front, to the cannon.
 has(creature_source, 'six-sided wires', 'static const size_t GHOST_HOSE_WIRE_SIDES=6;')
 has(shape, 'a second section of wires on the same curve, rebuilt in place every frame',
-    'if(hose.getNumSections()<2) hose.begin("GhostHoseWire",Ogre::RenderOperation::OT_TRIANGLE_LIST);',
+    'if(hose.getNumSections()<2) hose.begin("GhostHoseWire",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");',
     'else hose.beginUpdate(1);',
     'const Ogre::Real speedPort=3.0f*(control1-port).length(),speedRear=3.0f*(rear-control2).length();',
     'const Ogre::Real first=speedPort>1.0e-6f?std::min(0.25f,look.mEndInset*radius/speedPort):0.0f;',
