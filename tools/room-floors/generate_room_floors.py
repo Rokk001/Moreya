@@ -1558,37 +1558,46 @@ def torture_field():
     return col, hgt
 
 
-INFIRMARY_SLAB = np.array([0.246, 0.214, 0.190])
+INFIRMARY_SLAB = np.array([0.140, 0.152, 0.176])
 
 
-# Paint the prescribed periodic infirmary flagstones, stains and straw.
+# Paint the infirmary floor: rough, dark, cold-grey dungeon flagstones of mixed size with chipped joints, pits, cracks,
+# old brown stains and a few straw wisps (INGAME-QS-10 K23). Every layer is periodic.
 def infirmary_field():
-    """Worn flagstones with old stains and straw wisps (the torture slab layout with own seeds, without drain
-    grooves and grates; straw as the prison). Every layer is periodic."""
-    pid, dist, count = row_layout(1801, 6, 90, 190, 4.0, 1802)
+    """Rough dark dungeon flagstones (wrapping row layout with warped joints), each slab with its own tone, chipped
+    edges, pits and hairline cracks; old stains and straw wisps. Every layer is periodic."""
+    pid, dist, count = row_layout(1801, 7, 70, 170, 6.0, 1802)
     rng = np.random.RandomState(1803)
-    tone = rng.uniform(0.92, 1.08, count)[pid]
+    tone = rng.uniform(0.78, 1.18, count)[pid]
+    hue = rng.uniform(-0.025, 0.025, count)[pid]
     mottle = fbm(1804, 14.0, 14.0, 3)
     grit = fbm(1805, 170.0, 170.0, 2)
+    rough = fbm(1809, 40.0, 40.0, 3)
     col = INFIRMARY_SLAB[None, None, :] * tone[..., None]
-    col = col * (1.0 + 0.10 * mottle + 0.07 * grit)[..., None]
-    hgt = 0.5 * mottle + 0.4 * grit
-    # worn centres: slightly lighter and flatter where feet pass
-    worn = smoothstep(0.2, 1.2, fbm(1806, 10.0, 10.0, 3))
-    col = col * (1.0 + 0.06 * worn)[..., None]
-    hgt = hgt * (1.0 - 0.3 * worn)
+    col = col * (1.0 + np.stack([hue, 0.0 * hue, -hue], -1))
+    col = col * (1.0 + 0.16 * mottle + 0.12 * grit + 0.10 * rough)[..., None]
+    hgt = 0.5 * mottle + 0.5 * grit + 0.6 * rough
+    # pits and chips: small dark hollows
+    pits = smoothstep(1.3, 1.9, fbm(1810, 60.0, 60.0, 2))
+    col = col * (1.0 - 0.45 * pits)[..., None]
+    hgt = hgt - 1.2 * pits
+    # hairline cracks across the slabs
+    crack = smoothstep(0.06, 0.0, np.abs(fbm(1811, 6.0, 6.0, 3))) * smoothstep(0.2, 0.8, fbm(1812, 4.0, 4.0, 2))
+    col = mix(col, np.array([0.040, 0.038, 0.038])[None, None, :], crack * 0.8)
+    hgt = hgt - 1.0 * crack
     # old brown stains
-    stain = smoothstep(1.1, 1.6, fbm(1807, 14.0, 14.0, 3))
-    col = mix(col, np.array([0.150, 0.090, 0.060])[None, None, :] * (0.85 + 0.3 * grit[..., None]), stain * 0.5)
-    # dark joints with a bevel
-    t = smoothstep(0.8, 3.2, dist)
-    col = mix(np.broadcast_to(np.array([0.050, 0.046, 0.044]), col.shape), col, t)
-    hgt = hgt * 0.7 + 2.6 * smoothstep(0.8, 5.0, dist)
-    # straw wisps
+    stain = smoothstep(1.0, 1.6, fbm(1807, 14.0, 14.0, 3))
+    col = mix(col, np.array([0.110, 0.082, 0.062])[None, None, :] * (0.85 + 0.3 * grit[..., None]), stain * 0.55)
+    # dark, chipped joints: their width varies with noise
+    edge = 1.2 + 2.2 * smoothstep(0.3, 1.4, fbm(1813, 18.0, 18.0, 2))
+    t = smoothstep(edge * 0.6, edge + 2.4, dist)
+    col = mix(np.broadcast_to(np.array([0.030, 0.029, 0.030]), col.shape), col, t)
+    hgt = hgt * 0.7 + 2.8 * smoothstep(0.8, 5.5, dist)
+    # a few straw wisps
     sp = Sprites(wrap=True)
-    draw_straws(sp, straw_segments(1808, 40, (0, 0, N, N), (20, 38)), (0.50, 0.40, 0.20))
+    draw_straws(sp, straw_segments(1808, 18, (0, 0, N, N), (20, 38)), (0.30, 0.25, 0.14))
     sc, sa, _ = sp.result()
-    col = mix(col, sc, sa * 0.92)
+    col = mix(col, sc, sa * 0.85)
     return col, hgt
 
 

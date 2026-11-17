@@ -8,6 +8,13 @@ Outcome checks on the shipped files (OgreXMLConverter converts the binary meshes
               brighter than channel 200 (p99.5), mean luminance <= 125.
   mapping     every submesh of the seven furniture meshes and of the shaman maps at least 300 texels per tile onto its
               surface (texture size x sqrt(UV area / surface area)); today's meshes used 38-177 texels of a 256 texture.
+  floor       InfirmaryFloor.png is rough dark dungeon stone in the room-floor range of STYLE-GUIDE.md: the room shader
+              (Room.frag) shows lighting x texel, so the in-game colour is estimated as texel mean x the per-channel
+              factors measured once from the owner's screenshot ODscreenshot_2026-11-17_090817_12 over today's texture
+              (3.22, 2.41, 1.38); against the claimed floor of that screenshot (A = Y 102, sat 0.55) the estimate must
+              lie at 0.75-1.15 x A and no more saturated than A; the texture itself is neutral to cold stone
+              (sat <= 0.25), rough (luminance std >= 9) with dark joints (3-20 % of the texels below Y 15). Today's
+              floor is estimated at 1.34 x A, sat 0.67 (the flat orange floor of the screenshot).
   furniture   footprints unchanged (the measured bounds rows of RoomObjectBounds.h, +-0.005), the cots keep wood, straw
               and a grey wool blanket, the blanket is draped (its top varies by >= 25 mm; today 16 mm) and hangs over the side rails
               (at the sides >= 30 mm below the top of the rails);
@@ -123,6 +130,26 @@ for material, texture in sorted(texture_of.items()):
         fail('%s shows no surface detail (std %.1f, edge %.2f)' % (texture, std, edge_abs))
     if sat > 0.56 or channel > 200 or y > 125:
         fail('%s is outside the dark dungeon look (sat %.2f, p99.5 channel %d, Y %.0f)' % (texture, sat, channel, y))
+
+FLOOR_FACTORS = (3.22, 2.41, 1.38)
+CLAIMED_Y, CLAIMED_SAT = 102.0, 0.55
+floor = Image.open(ASSETS / 'materials/textures/InfirmaryFloor.png').convert('RGB')
+floor_mean = ImageStat.Stat(floor).mean
+game = [min(255.0, floor_mean[i] * FLOOR_FACTORS[i]) for i in range(3)]
+game_y = 0.299 * game[0] + 0.587 * game[1] + 0.114 * game[2]
+game_sat = colorsys.rgb_to_hsv(*[g / 255.0 for g in game])[1]
+floor_sat = colorsys.rgb_to_hsv(*[m / 255.0 for m in floor_mean])[1]
+floor_lum = floor.convert('L')
+floor_std = ImageStat.Stat(floor_lum).stddev[0]
+joints = sum(floor_lum.histogram()[:15]) / float(floor.size[0] * floor.size[1])
+print('InfirmaryFloor.png mean %s sat %.2f std %.1f joints %.3f; in game about Y %.0f (%.2f x A) sat %.2f'
+      % ([round(m) for m in floor_mean], floor_sat, floor_std, joints, game_y, game_y / CLAIMED_Y, game_sat))
+if not 0.75 * CLAIMED_Y <= game_y <= 1.15 * CLAIMED_Y:
+    fail('infirmary floor in game about %.2f x the claimed floor (room floors 0.75-1.15)' % (game_y / CLAIMED_Y))
+if game_sat > CLAIMED_SAT:
+    fail('infirmary floor in game more saturated (%.2f) than the claimed floor (%.2f): orange' % (game_sat, CLAIMED_SAT))
+if floor_sat > 0.25 or floor_std < 9.0 or not 0.03 <= joints <= 0.20:
+    fail('infirmary floor is no rough dark stone (sat %.2f, std %.1f, dark joints %.3f)' % (floor_sat, floor_std, joints))
 
 bounds = (ROOT / 'source/gamemap/RoomObjectBounds.h').read_text(encoding='utf-8')
 for name in FURNITURE:
