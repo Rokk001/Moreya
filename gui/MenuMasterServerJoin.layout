@@ -4,12 +4,17 @@
     <Window type="DefaultWindow" name="Root" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
+        <!-- Iron border of the chosen menu sheet around the whole screen. -->
+        <Window type="OD/ScreenBorder" name="ScreenBorder" >
+            <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
         <Window type="OD/StaticText" name="LoadingText" >
-            <Property name="Area" value="{{0.11,0},{1,-125},{0.92,0},{1,-98}}" />
+            <Property name="Area" value="{{0.5,-396},{0.5,214},{0.5,30},{0.5,268}}" />
             <Property name="Text" value="Loading..." />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
-            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
@@ -21,7 +26,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="VersionText" >
-            <Property name="Area" value="{{0.5,200},{0,171},{0.5,300},{0,191}}" />
+            <Property name="Area" value="{{0,28},{1,-50},{0,228},{1,-28}}" />
             <Property name="Text" value="undefined" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
@@ -34,18 +39,23 @@
             <Property name="SizingEnabled" value="False" />
             <Property name="DragMovingEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
+            <!-- Window frame of the chosen menu sheet behind the controls of this window (K34). -->
+            <Window type="OD/SheetPanel" name="WindowPanel" >
+                <Property name="Area" value="{{0.5,-420},{0.5,-290},{0.5,420},{0.5,290}}" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
             <Window type="OD/MenuTitle" name="PageTitle">
                 <Property name="Font" value="MedievalSharp-20" />
-                <Property name="Area" value="{{0.1,0},{0.5,-60},{0.9,0},{0.5,0}}" />
+                <Property name="Area" value="{{0.5,-390},{0.5,-275},{0.5,390},{0.5,-215}}" />
                 <Property name="Text" value="Join Game" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/MenuMultiColumnList" name="LevelSelect" >
-                <Property name="Area" value="{{0.11,0},{0.5,28},{0.60,0},{1,-132}}" />
+                <Property name="Area" value="{{0.5,-396},{0.5,-226},{0.5,40},{0.5,206}}" />
                 <Property name="ForceVertScrollbar" value="False" />
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
-                <Property name="Area" value="{{0.65,0},{0.5,120},{0.92,0},{1,-132}}" />
+                <Property name="Area" value="{{0.5,60},{0.5,-146},{0.5,396},{0.5,206}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
@@ -54,23 +64,23 @@
             </Window>
             <Window type="OD/MenuTextButton" name="ClientButton" >
                 <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.11,0},{1,-70},{0.11,240},{1,-16}}" />
+                <Property name="Area" value="{{0.5,228},{0.5,214},{0.5,396},{0.5,268}}" />
                 <Property name="Text" value="Join Game" />
             </Window>
             <Window type="OD/MenuTextButton" name="BackButton" >
                 <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{1,-366},{1,-70},{1,-196},{1,-16}}" />
+                <Property name="Area" value="{{0.5,50},{0.5,214},{0.5,218},{0.5,268}}" />
                 <Property name="Text" value="Back" />
             </Window>
             <Window type="OD/StaticText" name="NickText" >
-                <Property name="Area" value="{{0.65,0},{0.5,28},{0.92,0},{0.5,58}}" />
+                <Property name="Area" value="{{0.5,60},{0.5,-226},{0.5,396},{0.5,-200}}" />
                 <Property name="Text" value="Nickname:" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Editbox" name="NickEdit" >
-                <Property name="Area" value="{{0.65,0},{0.5,64},{0.92,0},{0.5,104}}" />
+                <Property name="Area" value="{{0.5,60},{0.5,-196},{0.5,396},{0.5,-160}}" />
             </Window>
         </Window>
     </Window>

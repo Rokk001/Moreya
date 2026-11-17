@@ -124,6 +124,12 @@
     <FalagardMapping lookNFeel="OD/MenuCompactButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuCompactButton" />
     <FalagardMapping lookNFeel="OD/MenuFilterButton" renderer="Core/ToggleButton" targetType="CEGUI/RadioButton" windowType="OD/MenuFilterButton" />
     <FalagardMapping lookNFeel="OD/LoadListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/LoadListbox" />
+    <FalagardMapping lookNFeel="OD/SheetWindow" renderer="Core/FrameWindow" targetType="CEGUI/FrameWindow" windowType="OD/SheetWindow" />
+    <FalagardMapping lookNFeel="OD/SheetTitlebar" renderer="Core/Titlebar" targetType="CEGUI/Titlebar" windowType="OD/SheetTitlebar" />
+    <FalagardMapping lookNFeel="OD/SheetPanel" renderer="Core/Default" targetType="DefaultWindow" windowType="OD/SheetPanel" />
+    <FalagardMapping lookNFeel="OD/SheetStaticText" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/SheetStaticText" />
+    <FalagardMapping lookNFeel="OD/SheetListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/SheetListbox" />
+    <FalagardMapping lookNFeel="OD/ScreenBorder" renderer="Core/Default" targetType="DefaultWindow" windowType="OD/ScreenBorder" />
     <FalagardMapping lookNFeel="OD/MenuTitle" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/MenuTitle" />
     <FalagardMapping lookNFeel="OD/MenuScrollablePane" renderer="Core/ScrollablePane" targetType="CEGUI/ScrollablePane" windowType="OD/MenuScrollablePane" />
     <FalagardMapping lookNFeel="OD/MenuListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/MenuListbox" />

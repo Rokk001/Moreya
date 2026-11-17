@@ -4,6 +4,11 @@
     <Window type="DefaultWindow" name="Root" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
+        <!-- Iron border of the chosen menu sheet around the whole screen. -->
+        <Window type="OD/ScreenBorder" name="ScreenBorder" >
+            <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
             <Property name="Visible" value="False" />
             <Property name="Area" value="{{0.5,-320},{0,52},{0.5,320},{0,191}}" />
@@ -42,7 +47,7 @@
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="TextColours" value="FF3A0A0A" />
             </Window>
-            <Window type="OD/StaticText" name="BriefingPanel" >
+            <Window type="OD/SheetStaticText" name="BriefingPanel" >
                 <Property name="Area" value="{{0.5,-336},{0.5,-352},{0.5,336},{0.5,352}}" />
                 <Property name="Visible" value="False" />
                 <Property name="AlwaysOnTop" value="True" />
@@ -86,19 +91,19 @@
                     <Property name="Font" value="MedievalSharp-13" />
                 </Window>
             </Window>
-            <Window type="OD/StaticText" name="ControlBackdrop" >
-                <Property name="Area" value="{{0.37,0},{1,-88},{0.63,0},{1,-8}}" />
+            <Window type="OD/SheetStaticText" name="ControlBackdrop" >
+                <Property name="Area" value="{{0.37,0},{1,-136},{0.63,0},{1,-6}}" />
                 <Property name="MousePassThroughEnabled" value="True" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
             </Window>
             <Window type="OD/MenuTextButton" name="DifficultyButton" >
-                <Property name="Area" value="{{0.39,0},{1,-84},{0.61,0},{1,-48}}" />
+                <Property name="Area" value="{{0.39,0},{1,-106},{0.61,0},{1,-72}}" />
                 <Property name="Text" value="Difficulty" />
                 <Property name="Font" value="MedievalSharp-8" />
             </Window>
             <Window type="OD/Checkbox" name="RelationshipsCheckbox" >
-                <Property name="Area" value="{{0.375,0},{1,-46},{0.625,0},{1,-12}}" />
+                <Property name="Area" value="{{0.375,0},{1,-70},{0.625,0},{1,-40}}" />
                 <Property name="Text" value="Creature relationships" />
                 <Property name="TooltipText" value="Creatures of the same keeper form friendships and rivalries" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />

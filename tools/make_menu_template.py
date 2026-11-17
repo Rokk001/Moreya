@@ -12,7 +12,10 @@ gui/ODMenuTemplate.imageset:
   its own filter buttons, list rows and buttons over it);
 * the compact form of the template that the sheet paints for the filter and command buttons of the load screen, in the
   same four states, split into left cap, fill and right cap;
-* the highlighted list row of the sheet for the selected entry.
+* the highlighted list row of the sheet for the selected entry;
+* the window frame of the load screen (corners, edges, knobs) and its list inset as named parts of the panel, a seamless
+  interior wood tile woven from the empty panel wood, and the iron border the sheet draws around the whole screen.
+  The imageset is scaled by the game like the sheet (Gui.cpp: 1920x1200 sheet pixels = 1.5625 per design pixel).
 
 Usage: python tools/make_menu_template.py [path of variant-2.png]
 """
@@ -70,7 +73,30 @@ COMPACT_CAP = 26
 COMPACT_CHAMFER = 7.0
 COMPACT_PLANK_ROWS = (18, 58)
 
-ATLAS_SIZE = (1188, 1100)
+# Window frame of the load screen, reused by every menu window (OD/SheetWindow, OD/SheetPanel): pieces of the panel
+# picture in panel coordinates (x0, y0, x1, y1). The top and bottom edges are the rail left of the knob, stretched.
+FRAME_PIECES = (("FrameTopLeft", (0, 0, 72, 80)), ("FrameTopRight", (590, 0, 662, 80)),
+                ("FrameBottomLeft", (0, 695, 72, 775)), ("FrameBottomRight", (590, 695, 662, 775)),
+                ("FrameTop", (72, 0, 296, 44)), ("FrameBottom", (72, 731, 296, 775)),
+                ("FrameLeft", (0, 80, 32, 695)), ("FrameRight", (630, 80, 662, 695)),
+                ("FrameTopKnob", (300, 0, 356, 44)), ("FrameBottomKnob", (300, 731, 356, 775)))
+# List inset of the load screen (OD/SheetListbox): its frame and its plank rows, in panel coordinates.
+INSET_PIECES = (("InsetTopLeft", (33, 159, 57, 185)), ("InsetTopRight", (606, 159, 630, 185)),
+                ("InsetBottomLeft", (33, 580, 57, 606)), ("InsetBottomRight", (606, 580, 630, 606)),
+                ("InsetTop", (57, 159, 606, 185)), ("InsetBottom", (57, 580, 606, 606)),
+                ("InsetLeft", (33, 185, 57, 580)), ("InsetRight", (606, 185, 630, 580)),
+                ("InsetPlanks", (57, 241, 606, 561)))
+# Empty panel wood the window interior is woven from (sheet coordinates, left and right of the centre ornament).
+INTERIOR_SOURCES = ((1262, 320, 1520, 350), (1590, 320, 1848, 350))
+INTERIOR_SIZE = 256
+INTERIOR_STRIP = 24
+# Iron border around the whole screen of the sheet (main menu and load screen): bands, corner brackets and pendants.
+BORDER_BAND = 22
+BORDER_CORNER = 110
+BORDER_PENDANT = (925, 995)
+ATLAS_SIZE = (1700, 1100)
+BORDER_AT = (1190, 0)
+INTERIOR_AT = (1190, 800)
 STATE_PITCH = 122
 SELECTED_AT = (0, 490)
 PANEL_AT = (524, 0)
@@ -283,6 +309,67 @@ def caption_mask_box(state_image, box):
     return mask
 
 
+def interior_tile(sheet):
+    """A seamless square of the empty panel wood: strips of the clean panel band stacked with varying offsets and mirror
+    flips, their joins feathered, wrapped round both ways so the window interior can be tiled."""
+    size, strip = INTERIOR_SIZE, INTERIOR_STRIP
+    rng = np.random.RandomState(7)
+    sources = [sheet[y0:y1, x0:x1] for x0, y0, x1, y1 in INTERIOR_SOURCES]
+    feather = 6
+    rows = []
+    count = size // strip + 2
+    for index in range(count):
+        source = sources[index % len(sources)]
+        offset = rng.randint(0, source.shape[1] - 1)
+        band = np.roll(source, -offset, axis=1)
+        band = np.concatenate([band, band[:, ::-1]], 1)[:strip + feather, :size]
+        if rng.rand() < 0.5:
+            band = band[:, ::-1]
+        rows.append(band)
+    out = np.zeros((count * strip + feather, size, 3), np.float32)
+    weight = np.zeros((count * strip + feather, 1, 1), np.float32)
+    ramp = np.ones((strip + feather, 1, 1), np.float32)
+    ramp[:feather, 0, 0] = np.linspace(0.0, 1.0, feather + 2)[1:-1]
+    ramp[-feather:, 0, 0] = np.linspace(1.0, 0.0, feather + 2)[1:-1]
+    for index, band in enumerate(rows):
+        out[index * strip:index * strip + strip + feather] += band * ramp
+        weight[index * strip:index * strip + strip + feather] += ramp
+    out = out / np.maximum(weight, 1e-3)
+    tile = out[feather:feather + size]
+    # wrap: blend the last rows into the first ones and the right columns into the left ones
+    blend = 16
+    t = np.linspace(0.0, 1.0, blend)[:, None, None]
+    tile[:blend] = tile[:blend] * t + out[feather + size:feather + size + blend][:blend] * (1.0 - t) \
+        if out.shape[0] >= feather + size + blend else tile[:blend]
+    tile[:, :blend] = tile[:, :blend] * t.transpose(1, 0, 2) + tile[:, size - blend:][:, ::-1] * (1.0 - t.transpose(1, 0, 2))
+    # even out the light and calm the detail so the repeats do not show as stripes
+    light = np.stack([box_blur(tile[..., c], 40) for c in range(3)], -1)
+    tile = light.mean(axis=(0, 1)) + 0.7 * (tile - light)
+    return np.dstack([tile, np.full((size, size), 255.0, np.float32)])
+
+
+def screen_border(sheet):
+    """The iron border of the sheet around the whole screen: corners, edge segments and the two pendants, with the
+    screen inside cut free."""
+    height, width = sheet.shape[:2]
+    band, corner = BORDER_BAND, BORDER_CORNER
+    bracket = [(0, 0), (corner, 0), (corner, 18), (46, 21), (31, 31), (21, 46), (18, corner), (0, corner)]
+    alpha = outline_alpha((width, height), [
+        [(0, 0), (width, 0), (width, 18), (0, 18)], [(0, height - 18), (width, height - 18), (width, height), (0, height)],
+        [(0, 0), (band, 0), (band, height), (0, height)], [(width - band, 0), (width, 0), (width, height), (width - band, height)],
+        bracket, [(width - x, y) for x, y in bracket], [(x, height - y) for x, y in bracket],
+        [(width - x, height - y) for x, y in bracket],
+        [(BORDER_PENDANT[0], 16), (BORDER_PENDANT[1], 16), (960, 49)],
+        [(BORDER_PENDANT[0], height - 16), (BORDER_PENDANT[1], height - 16), (960, height - 56)]], supersample=2)
+    full = np.dstack([sheet.astype(np.float32), alpha])
+    x0, x1 = BORDER_PENDANT
+    return {"BorderTopLeft": full[:corner, :corner], "BorderTopRight": full[:corner, width - corner:],
+            "BorderBottomLeft": full[height - corner:, :corner], "BorderBottomRight": full[height - corner:, width - corner:],
+            "BorderTop": full[:24, 400:700], "BorderBottom": full[height - 24:, 400:700],
+            "BorderLeft": full[400:700, :24], "BorderRight": full[400:700, width - 24:],
+            "BorderTopPendant": full[:52, x0:x1], "BorderBottomPendant": full[height - 58:, x0:x1]}
+
+
 def to_bytes(array):
     """Float RGBA to 8 bit."""
     return np.clip(np.round(array), 0, 255).astype(np.uint8)
@@ -315,6 +402,22 @@ def main():
     panel = load_panel(sheet)
     atlas[PANEL_AT[1]:PANEL_AT[1] + PANEL_SIZE[1], PANEL_AT[0]:PANEL_AT[0] + PANEL_SIZE[0]] = panel
     images.append(("LoadPanel", PANEL_AT[0], PANEL_AT[1], PANEL_SIZE[0], PANEL_SIZE[1]))
+    # The window frame and the list inset are parts of the panel picture.
+    for name, (x0, y0, x1, y1) in FRAME_PIECES + INSET_PIECES:
+        images.append((name, PANEL_AT[0] + x0, PANEL_AT[1] + y0, x1 - x0, y1 - y0))
+    tile = interior_tile(sheet)
+    atlas[INTERIOR_AT[1]:INTERIOR_AT[1] + INTERIOR_SIZE, INTERIOR_AT[0]:INTERIOR_AT[0] + INTERIOR_SIZE] = tile
+    images.append(("FrameInterior", INTERIOR_AT[0], INTERIOR_AT[1], INTERIOR_SIZE, INTERIOR_SIZE))
+    x, y, row_height = BORDER_AT[0], BORDER_AT[1], 0
+    for name, piece in screen_border(sheet).items():
+        height, width = piece.shape[:2]
+        if x + width > ATLAS_SIZE[0]:
+            x, y, row_height = BORDER_AT[0], y + row_height + 2, 0
+        atlas[y:y + height, x:x + width] = piece
+        images.append((name, x, y, width, height))
+        x += width + 2
+        row_height = max(row_height, height)
+    assert y + row_height <= INTERIOR_AT[1], "screen border pieces overlap the interior tile"
     Image.fromarray(to_bytes(atlas), "RGBA").save(OUT_PNG, optimize=True)
 
     root = ET.Element("Imageset", {"name": "ODMenuTemplate", "imagefile": OUT_PNG.name, "nativeHorzRes": "1920",

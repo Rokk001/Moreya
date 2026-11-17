@@ -161,13 +161,20 @@ if preview_window is not None:
     check(props.get("AspectMode") == "Shrink", "the preview must keep the shape of the map inside its area")
     check(props.get("HorizontalAlignment") == "Centre", "the preview must be centred in the free area")
     check(props.get("MousePassThroughEnabled") == "True", "the preview must not take the clicks of the page")
-    others = [children[n] for n in children if n not in ("MapPreview",)]
+    # The window frame of the page (INGAME-QS-10 K34) is the backdrop of the preview, not a control it may cover: the
+    # preview has to lie inside it instead.
+    frames = [children[n] for n in children if children[n].get("type") == "OD/SheetPanel"]
+    others = [children[n] for n in children if n not in ("MapPreview",) and children[n] not in frames]
     others += [page[n] for n in ("VersionText", "LoadingText") if n in page]
     for width, height in ((640, 480), (800, 600), (1024, 768), (1920, 1080), (3840, 2160), (7680, 4320)):
         left, top, right, bottom = rectangle(preview_window, width, height)
         check(0 <= left and right <= width and 0 <= top and bottom <= height,
               "the preview area leaves the %dx%d screen" % (width, height))
         check(bottom - top >= 120, "the preview is lower than 120 pixels at %dx%d" % (width, height))
+        for frame_window in frames:
+            f_left, f_top, f_right, f_bottom = rectangle(frame_window, width, height)
+            check(f_left <= left and right <= f_right and f_top <= top and bottom <= f_bottom,
+                  "the preview leaves the page window at %dx%d" % (width, height))
         for other in others:
             if properties(other).get("Visible") == "False":
                 continue
