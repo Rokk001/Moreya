@@ -456,9 +456,11 @@ set(OD_SOURCEFILES
     ${SRC}/gamemap/GameMap.cpp
     ${SRC}/gamemap/LevelScript.cpp
     ${SRC}/gamemap/LevelScriptRunner.cpp
+    ${SRC}/gamemap/LevelPreview.cpp
     ${SRC}/gamemap/RoomObjectNavigation.cpp
     ${SRC}/gamemap/MapHandler.cpp
     ${SRC}/gamemap/MiniMap.cpp
+    ${SRC}/gamemap/MiniMapColours.cpp
     ${SRC}/gamemap/MiniMapDrawn.cpp
     ${SRC}/gamemap/MiniMapDrawnFull.cpp
     ${SRC}/gamemap/SandboxMode.cpp

@@ -223,6 +223,8 @@ public:
     static const std::string SKM_LIST_LEVEL_TYPES;
     static const std::string SKM_LIST_LEVELS;
     static const std::string SKM_CHECK_RELATIONSHIPS;
+    //! \brief The picture of the map of the selected level in the skirmish level selection
+    static const std::string SKM_MAP_PREVIEW;
     static const std::string MPM_TEXT_LOADING;
     static const std::string MPM_BUTTON_SERVER;
     static const std::string MPM_BUTTON_CLIENT;

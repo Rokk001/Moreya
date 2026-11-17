@@ -2595,6 +2595,7 @@ const std::string Gui::SKM_BUTTON_BACK = "LevelWindowFrame/BackButton";
 const std::string Gui::SKM_LIST_LEVEL_TYPES = "LevelWindowFrame/LevelTypeSelect";
 const std::string Gui::SKM_LIST_LEVELS = "LevelWindowFrame/LevelSelect";
 const std::string Gui::SKM_CHECK_RELATIONSHIPS = "LevelWindowFrame/RelationshipsCheckbox";
+const std::string Gui::SKM_MAP_PREVIEW = "LevelWindowFrame/MapPreview";
 
 const std::string Gui::MPM_TEXT_LOADING = "LoadingText";
 const std::string Gui::MPM_BUTTON_SERVER = "LevelWindowFrame/ServerButton";

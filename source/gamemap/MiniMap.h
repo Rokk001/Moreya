@@ -21,6 +21,8 @@
 #include <OgrePrerequisites.h>
 #include <OgreColourValue.h>
 
+#include "gamemap/MiniMapColours.h"
+
 namespace CEGUI
 {
 class BasicImage;
@@ -63,15 +65,9 @@ public:
     // Returns the list of all possible minimap types
     static const std::vector<std::string>& getMiniMapTypes();
 protected:
-    //! \brief The colour a tile is drawn with on the map.
-    struct TileColour
-    {
-        Ogre::ColourValue colour = Ogre::ColourValue::Black;
-        //! Tiles with a higher priority win when several tiles share one map pixel.
-        unsigned int priority = 0;
-        //! True if the colour changes with the animation phase.
-        bool animated = false;
-    };
+    //! \brief The colour a tile is drawn with on the map. The structure and the comments of its members are in
+    //! MiniMapColours.h, where the skirmish level preview shares it.
+    typedef MiniMapTileColour TileColour;
     //! \brief Computes the colour of a tile as seen by the owner of playerSeat. The phase is
     //! the current animation phase, see getAnimationPhase().
     static TileColour colourFromTile(Tile& tile, Seat& playerSeat, unsigned int phase);
