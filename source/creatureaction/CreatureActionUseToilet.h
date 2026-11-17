@@ -20,14 +20,18 @@
 
 #include "creatureaction/CreatureAction.h"
 
+#include <OgreVector2.h>
+
 #include <cstdint>
 
 class Room;
 class RoomToilet;
 class Tile;
 
-//! \brief A creature relieves itself. With a seat tile it reserves that seat of a toilet room, walks to it, squats
-//! there for ToiletUseTurns turns and leaves the room a little dirtier. Without a seat tile (nullptr) it relieves
+//! \brief A creature relieves itself. With a seat tile it reserves that seat of a toilet room, walks to a point in
+//! front of it, steps straight onto it, sits there in the Relieve clip for a random time between ToiletUseSecondsMin
+//! and ToiletUseSecondsMax (drawn anew for every use), leaves the room a little dirtier and steps off to the point in
+//! front of the seat again. Without a seat tile (nullptr) it relieves
 //! itself where it stands and leaves a pile on the floor; in a treasury, the dungeon heart room or a temple it
 //! first steps out of the room. Either way the urge is 0 afterwards. A fight on top of this action interrupts it:
 //! the seat is given back at once (see interrupt) and the urge stays.
@@ -53,7 +57,8 @@ public:
     std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
 
     //! \brief Called when another action (a fight) takes over: gives the seat back at once and starts the use again
-    //! when the creature gets control back. The urge stays. Does not touch a seat reserved by somebody else.
+    //! when the creature gets control back. The urge stays. Does not touch a seat reserved by somebody else. A use that
+    //! is already over (the creature steps off the seat) is not started again.
     void interrupt();
 
     //! \brief True for the rooms where a creature must not relieve itself (treasury, dungeon heart room, temple).
@@ -63,10 +68,14 @@ private:
     //! \brief The steps of the action.
     enum class Phase
     {
-        //! Walking to the seat, or (on the floor) getting out of an exempt room.
+        //! Walking to the point in front of the seat, or (on the floor) getting out of an exempt room.
         approach,
-        //! Squatting.
-        squat
+        //! Stepping from the point in front of the seat onto the seat.
+        mount,
+        //! Squatting (on the seat or on the floor).
+        squat,
+        //! Stepping off the seat after the use.
+        leave
     };
 
     //! \brief One turn of the action.
@@ -75,6 +84,10 @@ private:
 
     //! \brief One turn of the use of a toilet seat.
     bool handleSeat(Tile* myTile);
+
+    //! \brief Sends the creature to a point in front of the seat and from there straight onto it.
+    //! \return False when the seat cannot be reached without walking through furniture.
+    bool walkOntoSeat(RoomToilet& room);
 
     //! \brief One turn of relieving itself on the floor.
     bool handleFloor(Tile* myTile);
@@ -89,8 +102,9 @@ private:
     //! \brief Returns the toilet room of the seat tile, nullptr if the tile is no longer part of a toilet room.
     RoomToilet* getSeatRoom() const;
 
-    //! \brief Starts the squat: the animation and the countdown of ToiletUseTurns turns.
-    void startSquat();
+    //! \brief Starts the squat: the animation (facing the given direction, if any) and the countdown, a random time
+    //! between ToiletUseSecondsMin and ToiletUseSecondsMax on a seat, ToiletUseTurns turns on the floor.
+    void startSquat(bool onSeat, const Ogre::Vector2& facing);
 
     //! \brief Finds the nearest reachable tile that is not in an exempt room (nullptr if there is none).
     Tile* findTileOutsideExemptRoom() const;
@@ -107,6 +121,8 @@ private:
     bool mLeaveTried;
     //! \brief True when the seat could not be reserved.
     bool mSeatLost;
+    //! \brief The point in front of the seat the creature came from; it steps off the seat back to it.
+    Ogre::Vector2 mStagingPoint;
 };
 
 #endif // CREATUREACTIONUSETOILET_H

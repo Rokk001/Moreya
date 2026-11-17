@@ -23,11 +23,16 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectBounds.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "rooms/RoomManager.h"
+#include "rooms/ToiletLayout.h"
 #include "utils/ConfigManager.h"
+#include "utils/Helper.h"
 #include "utils/LogManager.h"
 
 #include <algorithm>
+#include <cmath>
 
 const std::string RoomToiletName = "Toilet";
 const std::string RoomToiletNameDisplay = "Toilet room";
@@ -36,13 +41,10 @@ const TileVisual RoomToilet::mRoomVisual = TileVisual::toiletRoom;
 
 namespace
 {
-//! \brief Mesh name of the seat that stands on every tile of a toilet room.
-const std::string TOILET_SEAT_MESH = "ToiletSeat";
-//! \brief Seat angles (degrees) for a back to the wall at +y, -y, -x and +x (same convention as the wall furniture of the library).
-const double SEAT_ANGLE_WALL_TOP = 0.0;
-const double SEAT_ANGLE_WALL_BOTTOM = 180.0;
-const double SEAT_ANGLE_WALL_LEFT = 90.0;
-const double SEAT_ANGLE_WALL_RIGHT = 270.0;
+//! \brief Distance (tiles) kept between the front of a seat and the staging point, beyond the walking radius.
+const float STAGING_MARGIN = 0.05f;
+//! \brief Distance (tiles) in front of the seat tried when the full one is blocked.
+const float STAGING_SHORT = 0.3f;
 
 //! \brief Builds, prices and loads toilet rooms; registered for RoomType::toilet.
 class RoomToiletFactory : public RoomFactory
@@ -158,7 +160,7 @@ int64_t RoomToilet::getReservationEndTurn() const
 
 bool RoomToilet::isTileFree(const Tile* tile, const Creature* user) const
 {
-    if(tile->getCoveringRoom() != this)
+    if((tile->getCoveringRoom() != this) || !hasSeatOn(tile))
         return false;
 
     std::map<const Tile*, Reservation>::const_iterator it = mReserved.find(tile);
@@ -194,9 +196,9 @@ void RoomToilet::releaseTile(const Tile* tile, const Creature* user)
 
 bool RoomToilet::hasOpenCreatureSpot(Creature* c)
 {
-    for(Tile* tile : mCoveredTiles)
+    for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
     {
-        if(isTileFree(tile, c))
+        if(isTileFree(entry.first, c))
             return true;
     }
 
@@ -211,30 +213,77 @@ bool RoomToilet::canBeUsedBy(const Creature& creature) const
     return getGameMap()->numRoomsByTypeAndSeat(RoomType::toilet, creature.getSeat()) == 0;
 }
 
-double RoomToilet::getSeatAngle(const Tile* tile) const
+bool RoomToilet::hasSeatOn(const Tile* tile) const
 {
-    GameMap* gameMap = getGameMap();
-    const int x = tile->getX();
-    const int y = tile->getY();
+    for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
+    {
+        if(entry.first == tile)
+            return true;
+    }
+    return false;
+}
 
-    Tile* top = gameMap->getTile(x, y + 1);
-    if((top == nullptr) || (top->getCoveringRoom() != this))
-        return SEAT_ANGLE_WALL_TOP;
+bool RoomToilet::getSeatPlace(const Tile* tile, Ogre::Vector2& place, Ogre::Vector2& facing) const
+{
+    for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
+    {
+        if(entry.first != tile)
+            continue;
 
-    Tile* bottom = gameMap->getTile(x, y - 1);
-    if((bottom == nullptr) || (bottom->getCoveringRoom() != this))
-        return SEAT_ANGLE_WALL_BOTTOM;
+        const float angle = static_cast<float>(entry.second->getRotationAngle()) * RoomObjectPath::degreesToRadians;
+        const float cosine = std::cos(angle);
+        const float sine = std::sin(angle);
+        // The seat mesh has its back at +y: the user sits at (0, toiletSeatPlaceY) and faces -y, turned by the angle
+        const Ogre::Vector2 centre(entry.second->getPosition().x, entry.second->getPosition().y);
+        place = centre + Ogre::Vector2(-sine * RoomObjectPath::toiletSeatPlaceY, cosine * RoomObjectPath::toiletSeatPlaceY);
+        facing = Ogre::Vector2(sine, -cosine);
+        return true;
+    }
+    return false;
+}
 
-    Tile* left = gameMap->getTile(x - 1, y);
-    if((left == nullptr) || (left->getCoveringRoom() != this))
-        return SEAT_ANGLE_WALL_LEFT;
+std::vector<Ogre::Vector2> RoomToilet::getSeatStagingPoints(Creature& creature, const Tile* tile) const
+{
+    std::vector<Ogre::Vector2> points;
+    Ogre::Vector2 place;
+    Ogre::Vector2 facing;
+    if(!getSeatPlace(tile, place, facing))
+        return points;
 
-    Tile* right = gameMap->getTile(x + 1, y);
-    if((right == nullptr) || (right->getCoveringRoom() != this))
-        return SEAT_ANGLE_WALL_RIGHT;
+    const BuildingObject* seat = nullptr;
+    for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
+    {
+        if(entry.first == tile)
+            seat = entry.second;
+    }
+    // The seat itself is the piece the user steps onto; every other piece of furniture stays an obstacle
+    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::bodyObstacles(creature, seat);
+    // The front of the seat lies at mesh y minY, that is toiletSeatPlaceY - minY in front of the place
+    float front = RoomObjectPath::toiletSeatPlaceY;
+    for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
+    {
+        if(RoomObjectPath::TOILET_SEAT_MESH == bounds.name)
+            front -= bounds.minY;
+    }
+    const Ogre::Vector2 side(-facing.y, facing.x);
+    const Ogre::Vector2 directions[] = { facing, (facing + side * 0.5f).normalisedCopy(), (facing - side * 0.5f).normalisedCopy() };
+    const float distances[] = { front + RoomObjectNavigation::clearance(creature) + STAGING_MARGIN, front + STAGING_SHORT };
+    for(float distance : distances)
+    {
+        for(const Ogre::Vector2& direction : directions)
+        {
+            const Ogre::Vector2 staging = place + direction * distance;
+            Tile* stagingTile = getGameMap()->getTile(Helper::round(staging.x), Helper::round(staging.y));
+            if((stagingTile == nullptr) || stagingTile->isFullTile() || !creature.canGoThroughTile(stagingTile))
+                continue;
 
-    // A tile in the middle of the room: all four neighbours are part of it
-    return SEAT_ANGLE_WALL_TOP;
+            if(!RoomObjectPath::clearPoint(obstacles, staging) || !RoomObjectPath::clearSegment(obstacles, staging, place))
+                continue;
+
+            points.push_back(staging);
+        }
+    }
+    return points;
 }
 
 void RoomToilet::updateActiveSpots(GameMap* gameMap)
@@ -248,11 +297,20 @@ void RoomToilet::updateActiveSpots(GameMap* gameMap)
     if(gameMap == nullptr)
         gameMap = getGameMap();
 
-    // Seats of tiles the room no longer covers go away together with their reservation
+    // The seats the layout of the room asks for: rows along the edge, a free lane in the middle
+    std::vector<ToiletLayout::Coord> coords;
+    for(Tile* tile : mCoveredTiles)
+        coords.push_back(ToiletLayout::Coord(tile->getX(), tile->getY()));
+    std::map<ToiletLayout::Coord, double> wanted;
+    ToiletLayout::chooseSeats(coords, wanted);
+
+    // Seats that are not wanted any more (lost tile, lane tile, other angle) go away together with their reservation
     std::vector<Tile*> seatsToRemove;
     for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
     {
-        if(std::find(mCoveredTiles.begin(), mCoveredTiles.end(), entry.first) == mCoveredTiles.end())
+        std::map<ToiletLayout::Coord, double>::const_iterator it =
+            wanted.find(ToiletLayout::Coord(entry.first->getX(), entry.first->getY()));
+        if((it == wanted.end()) || (std::abs(it->second - entry.second->getRotationAngle()) > 0.5))
             seatsToRemove.push_back(entry.first);
     }
     for(Tile* tile : seatsToRemove)
@@ -260,19 +318,20 @@ void RoomToilet::updateActiveSpots(GameMap* gameMap)
 
     for(std::map<const Tile*, Reservation>::iterator it = mReserved.begin(); it != mReserved.end();)
     {
-        if(it->first->getCoveringRoom() != this)
+        if((it->first->getCoveringRoom() != this) || !hasSeatOn(it->first))
             it = mReserved.erase(it);
         else
             ++it;
     }
 
-    // Every covered tile gets a seat
+    // Every wanted seat that is missing is placed
     for(Tile* tile : mCoveredTiles)
     {
-        if(mBuildingObjects.find(tile) != mBuildingObjects.end())
+        std::map<ToiletLayout::Coord, double>::const_iterator it = wanted.find(ToiletLayout::Coord(tile->getX(), tile->getY()));
+        if((it == wanted.end()) || (mBuildingObjects.find(tile) != mBuildingObjects.end()))
             continue;
 
-        BuildingObject* seat = new BuildingObject(gameMap, *this, TOILET_SEAT_MESH, *tile, getSeatAngle(tile), false);
+        BuildingObject* seat = new BuildingObject(gameMap, *this, RoomObjectPath::TOILET_SEAT_MESH, *tile, it->second, false);
         addBuildingObject(tile, seat, gameMap);
         seat->createMesh();
     }
@@ -290,9 +349,14 @@ Tile* RoomToilet::findFreeToiletTile(Creature& creature)
     std::vector<Tile*> freeTiles;
     for(RoomToilet* room : rooms)
     {
-        for(Tile* tile : room->mCoveredTiles)
+        for(const std::pair<Tile* const, BuildingObject*>& entry : room->mBuildingObjects)
         {
+            Tile* tile = entry.first;
             if(!room->isTileFree(tile, &creature))
+                continue;
+
+            // A seat the creature cannot step onto without touching other furniture is no seat for it
+            if(room->getSeatStagingPoints(creature, tile).empty())
                 continue;
 
             if(!creature.getGameMap()->pathExists(&creature, myTile, tile))
@@ -316,7 +380,7 @@ bool RoomToilet::hasToiletRoomFor(const Creature& creature)
     collectToiletRooms(creature, rooms);
     for(RoomToilet* room : rooms)
     {
-        if(room->numCoveredTiles() > 0)
+        if(!room->mBuildingObjects.empty())
             return true;
     }
 
