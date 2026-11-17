@@ -37,7 +37,8 @@ namespace EntityAnimation
     static const std::string dig_anim = "Dig";
     static const std::string attack_anim = "Attack1";
     static const std::string claim_anim = "Claim";
-    //! A worker wipes dirt off a floor tile; a skeleton without this clip plays the claim clip
+    //! A worker sweeps the dirt off a floor tile with the cleaning broom (INGAME-QS-10 K26); a skeleton without this
+    //! clip plays the claim clip
     static const std::string clean_anim = "Clean";
     static const std::string walk_anim = "Walk";
     //! Clip of a creature that walks with something in its arms (clients only, chosen where the Walk clip is
@@ -114,6 +115,12 @@ namespace EntityAnimation
     inline bool hidesWeapons(const std::string& clip)
     {
         return isSeatClip(clip) || (clip == drink_anim);
+    }
+    //! \brief True for the clip in which a worker sweeps with the cleaning broom in its right hand (Clean, INGAME-QS-10
+    //! K26): the client shows the broom and puts the worker's own tool away while it plays.
+    inline bool holdsBroom(const std::string& clip)
+    {
+        return clip == clean_anim;
     }
     //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
     static const std::string scared_anim = "Scared";

@@ -313,16 +313,19 @@ bool playsSeatClip(const Creature* creature)
     return (animState != nullptr) && EntityAnimation::hidesWeapons(animState->getAnimationName());
 }
 
-//! \brief Shows or hides the models of both weapons of the creature
+//! \brief Shows or hides the models of both weapons of the creature. While a worker sweeps with the cleaning broom
+//! (EntityAnimation::holdsBroom) its tool stays put away, whatever the sheathing asks for (INGAME-QS-10 K26).
 void setWeaponsVisible(const Creature* creature, bool visible)
 {
+    const Ogre::AnimationState* animState = creature->getAnimationState();
+    const bool sweeping = (animState != nullptr) && EntityAnimation::holdsBroom(animState->getAnimationName());
     Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
     const char* hands[2] = {"L", "R"};
     for(uint32_t i = 0; i < 2; ++i)
     {
         std::string entityName = weaponEntityName(creature, hands[i]);
         if(sceneManager->hasEntity(entityName))
-            sceneManager->getEntity(entityName)->setVisible(visible);
+            sceneManager->getEntity(entityName)->setVisible(visible && !sweeping);
     }
 }
 

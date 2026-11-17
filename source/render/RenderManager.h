@@ -1176,6 +1176,11 @@ private:
     void clearCreatureDecay(Creature* creature);
     //! Removes the mug of a drinking guest and the birds over a knocked-out guest of a tavern, if the creature has them
     void removeCreatureTavernProps(Creature* creature);
+    //! Removes the cleaning broom from the hand of a worker, if it has one
+    void removeCreatureCleaningBroom(Creature* creature);
+    //! Gives a worker that plays the sweeping clip the cleaning broom in its right hand and puts its own tool away; any
+    //! other clip takes the broom away and gives the tool back (INGAME-QS-10 K26)
+    void updateCreatureCleaningBroom(Creature* creature);
     //! Removes only the mug of a guest of a tavern, if the creature has one (the end of a seat blend out of a drink clip)
     void removeCreatureTavernMug(Creature* creature);
     //! Gives the creature the props of the clip it plays (mug in the right hand for Drink, circling birds for

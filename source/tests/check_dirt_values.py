@@ -52,7 +52,7 @@ DIRT = {
     # INGAME-QS-10 K25: a seat use lasts a random 10 to 30 s; UrgePerChicken is the value of the toilet plan again
     'ToiletUseTurns': '4', 'ToiletUseSecondsMin': '10', 'ToiletUseSecondsMax': '30', 'ToiletWaitRadius': '1',
     'ToiletReserveFactor': '3',
-    'CleanRoomFromStage': '2', 'CleanRateFactor': '1',
+    'CleanTileFromStage': '1', 'CleanRateFactor': '1',
     'CleaningMaxTurnsPerTile': '20',
     'CombatDirtPerHit': '1.7723', 'TrailDirtPerTile': '0.1611',
     'CreatureDirtPerFightWon': '5', 'CreatureDirtPerKo': '25', 'CreatureDirtDecayPerTurn': '0.1',
