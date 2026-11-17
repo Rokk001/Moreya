@@ -118,6 +118,8 @@ MiniMapCamera::MiniMapCamera(CEGUI::Window* miniMapWindow) :
         
 }
 
+//! \brief Releases the minimap target, camera and textures; the target's viewport goes before its camera, so the
+//! texture, which the GUI may still hold, never keeps a viewport on a destroyed camera.
 MiniMapCamera::~MiniMapCamera()
 {
     delete mCullingManager;
@@ -125,6 +127,7 @@ MiniMapCamera::~MiniMapCamera()
     mMiniMapWindow->setProperty("Image", "");
     Ogre::RenderTarget* rt = mMiniMapOgreTexture->getBuffer()->getRenderTarget();
     rt->removeAllListeners();
+    rt->removeAllViewports();
     Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
     sceneManager->destroyCamera(mMiniMapCam);
     sceneManager->destroySceneNode(mMiniMapCamNode);

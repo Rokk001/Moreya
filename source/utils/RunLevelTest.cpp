@@ -124,6 +124,29 @@ namespace
     //! Output file of the scenario in the user data folder
     const std::string SCENARIO_FILE = "run-level-scenario.txt";
 
+    //! Scenarios that leave the played level to the main menu, as a game or in the editor
+    const std::string SCENARIO_RETURN_TO_MENU = "return-to-menu";
+    const std::string SCENARIO_EDITOR_RETURN_TO_MENU = "editor-return-to-menu";
+    //! Frames the menu has to start after leaving the game: the main menu before the run passes, another menu (the
+    //! campaign map) before the main menu is requested. 120 frames are about 2 s at 60 fps.
+    const uint32_t RETURN_MENU_FRAMES = 120;
+
+    //! Phases of a return-to-menu run, render thread only
+    enum ReturnPhase
+    {
+        returnPhaseLoading,
+        returnPhasePlaying,
+        returnPhaseLeaving,
+        returnPhaseMenu
+    };
+    ReturnPhase sReturnPhase = returnPhaseLoading;
+    //! Real seconds the played mode has run
+    double sReturnPlayedSeconds = 0.0;
+    //! Frames started in the main menu and in other menus after leaving the played mode
+    uint32_t sReturnMainMenuFrames = 0;
+    uint32_t sReturnOtherMenuFrames = 0;
+    bool sReturnMainMenuRequested = false;
+
     std::string sScenario;
     //! Server thread only: target each creature chose in its fight action during the current turn
     std::map<std::string, std::string> sFightTargets;
@@ -462,6 +485,7 @@ void RunLevelTest::recordFrame(float seconds)
 }
 
 //! \brief Checks loading, registered goals and the existing timed victory probe on server turns.
+//! A return-to-menu run only checks for logged errors here; the client ends it (onReturnToMenuFrame).
 void RunLevelTest::onServerTurn(GameMap& gameMap)
 {
     if(sFinished.load())
@@ -498,6 +522,10 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
                 + Helper::toString(turn));
         return;
     }
+
+    // The editor has no played seat, and neither scenario fires the win
+    if(isReturnToMenuRun())
+        return;
 
     Seat* humanSeat = nullptr;
     for(Player* player : gameMap.getPlayers())
@@ -690,6 +718,95 @@ void RunLevelTest::onFightTarget(const Creature& creature, const GameEntity& tar
         return;
 
     sFightTargets[creature.getName()] = target.getName() + (attackNow ? ":attack" : ":approach");
+}
+
+//! \brief True for both return-to-menu scenarios.
+bool RunLevelTest::isReturnToMenuRun()
+{
+    return sActive.load() && ((sScenario == SCENARIO_RETURN_TO_MENU) || (sScenario == SCENARIO_EDITOR_RETURN_TO_MENU));
+}
+
+//! \brief True if the level is opened in the editor.
+bool RunLevelTest::startsEditor()
+{
+    return sActive.load() && (sScenario == SCENARIO_EDITOR_RETURN_TO_MENU);
+}
+
+//! \brief Steps a return-to-menu run: waits for the played mode, lets it run, asks to leave it, then checks every
+//! menu frame for render targets on destroyed cameras and passes after the main menu started its frames.
+RunLevelTest::ReturnStep RunLevelTest::onReturnToMenuFrame(double seconds, bool inPlayedMode, bool inMainMenu,
+    bool renderTargetsValid)
+{
+    if(!isReturnToMenuRun() || sFinished.load())
+        return returnStepNone;
+
+    switch(sReturnPhase)
+    {
+        case returnPhaseLoading:
+        {
+            if(!inPlayedMode)
+                return returnStepNone;
+
+            // The editor may run no server turn that would mark the start
+            sGameStarted = true;
+            sReturnPhase = returnPhasePlaying;
+            return returnStepNone;
+        }
+        case returnPhasePlaying:
+        {
+            if(!inPlayedMode)
+            {
+                fail(codeRunError, "run error: the played mode ended before the test left it");
+                return returnStepNone;
+            }
+            sReturnPlayedSeconds += seconds;
+            if(sReturnPlayedSeconds < static_cast<double>(sSeconds))
+                return returnStepNone;
+
+            std::cout << "RETURN leaving " << (startsEditor() ? "the editor" : "the game") << " after "
+                << sReturnPlayedSeconds << " s" << std::endl;
+            sReturnPhase = returnPhaseLeaving;
+            return returnStepLeave;
+        }
+        case returnPhaseLeaving:
+        {
+            // The mode changes in a later frame
+            if(inPlayedMode)
+                return returnStepNone;
+
+            sReturnPhase = returnPhaseMenu;
+            break;
+        }
+        case returnPhaseMenu:
+            break;
+    }
+
+    if(!renderTargetsValid)
+    {
+        fail(codeRunError, "run error: after leaving the played mode the frame loop still updates a render target "
+            "whose viewport shows a destroyed camera");
+        return returnStepNone;
+    }
+
+    if(inMainMenu)
+    {
+        ++sReturnMainMenuFrames;
+        if(sReturnMainMenuFrames >= RETURN_MENU_FRAMES)
+        {
+            emitResult(codePass, "PASS " + sLevelName + " : " + (startsEditor() ? "editor" : "game")
+                + " left to the main menu, " + Helper::toString(sReturnMainMenuFrames) + " main menu frames and "
+                + Helper::toString(sReturnOtherMenuFrames) + " other menu frames without a destroyed camera");
+        }
+        return returnStepNone;
+    }
+
+    ++sReturnOtherMenuFrames;
+    if(!sReturnMainMenuRequested && (sReturnOtherMenuFrames >= RETURN_MENU_FRAMES))
+    {
+        sReturnMainMenuRequested = true;
+        return returnStepMainMenu;
+    }
+    return returnStepNone;
 }
 
 //! \brief Counts the client recovery display updates that show a clock, separately for workers and fighters.

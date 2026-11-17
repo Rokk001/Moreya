@@ -50,12 +50,21 @@ public:
         codeTimeout = 5
     };
 
+    //! What the client has to do after a frame of a return-to-menu run (see onReturnToMenuFrame)
+    enum ReturnStep
+    {
+        returnStepNone = 0,
+        returnStepLeave = 1,
+        returnStepMainMenu = 2
+    };
+
     //! \brief Activates the test mode and starts the watchdog.
     //! If seed is not 0, the random generator is set to it when the first turn runs and the game
     //! state at the end of the run is written to run-level-state.txt (for seeded comparisons).
     //! If scenario is not empty, that scenario is set up on the first turn (command line: --scenario <name>).
     //! The scenario "ignored-enemies" places four fighters of the human seat near the creature PostWatch1 and
     //! writes, after every turn, the combat state of every fighter near an enemy to run-level-scenario.txt.
+    //! The scenarios "return-to-menu" and "editor-return-to-menu" are described at isReturnToMenuRun.
     static void configure(const std::string& levelFile, int32_t seconds, uint32_t seed = 0,
         const std::string& scenario = std::string());
 
@@ -114,6 +123,26 @@ public:
     //! \param attackNow true if the creature attacks from where it stands, false if it walks towards the target.
     //! Only recorded while a scenario runs; the next scenario line of the creature shows it.
     static void onFightTarget(const Creature& creature, const GameEntity& target, bool attackNow);
+
+    //! \brief True for the scenarios "return-to-menu" (the level is played as a game) and "editor-return-to-menu"
+    //! (the level is opened in the editor). They leave the game or editor to the main menu after --seconds of real
+    //! time instead of firing the win, and pass once the main menu has drawn its frames without a fault.
+    static bool isReturnToMenuRun();
+
+    //! \brief True if the scenario opens the level in the editor ("editor-return-to-menu").
+    static bool startsEditor();
+
+    //! \brief Called by the render thread at the start of every frame of a return-to-menu run, before the game's
+    //! render targets are updated.
+    //! \param seconds real time since the last frame.
+    //! \param inPlayedMode true while the game or the editor mode is active.
+    //! \param inMainMenu true while the main menu mode is active.
+    //! \param renderTargetsValid false if a render target the frame loop updates shows a destroyed camera.
+    //! \return returnStepLeave once the played mode has run --seconds (the caller leaves it like the Yes button of
+    //! its quit dialog); returnStepMainMenu once another menu (the campaign map) has started its frames; otherwise
+    //! returnStepNone. After leaving, every frame must have valid render targets, and the run passes once the main
+    //! menu has started its fixed number of frames.
+    static ReturnStep onReturnToMenuFrame(double seconds, bool inPlayedMode, bool inMainMenu, bool renderTargetsValid);
 
     //! \brief Called by the client for every update of a creature's recovery display with the atlas frame it
     //! shows (0 means no clock). The frames that show a clock are counted separately for workers and fighters
