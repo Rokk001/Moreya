@@ -40,6 +40,7 @@
     <Imageset filename="SlotTypes.imageset" name="SlotTypes" />
     <Imageset filename="ODNavigation.imageset" name="OpenDungeonsNavigation" />
     <Imageset filename="ChampionCrown.imageset" name="ChampionCrown" />
+    <Imageset filename="CreatureSkillIcons.imageset" name="CreatureSkillIcons" />
     <Imageset filename="GoalStatus.imageset" name="GoalStatus" />
     <Imageset filename="ODLogo.imageset" name="ODLogo" />
     <Imageset filename="ODMainMenuLogo.imageset" name="ODMainMenuLogo" />
