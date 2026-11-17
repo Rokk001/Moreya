@@ -420,6 +420,39 @@ assert sum(len(v) for v in MENU_WINDOWS.values()) == 17
 # load screen panel because the sheet's panel has no place for it.
 WINDOW_CONTENT = CONTROLS + ('OD/MenuTitle', 'OD/StaticText', 'OD/StaticImage', 'DefaultWindow')
 BELOW_THE_WINDOW = {('MenuLoad.layout', 'MapDescriptionText')}
+# Gate entrance of the 3D menu scene: centre of the front opening of MenuGate.mesh in mesh coordinates, measured once
+# from the mesh vertices (OgreXMLConverter): the opening runs from x -4.434 to 4.359 at the front face (y -3.0) between
+# 0.5 and 3 above the ground; its centre x is -0.0375. The column centre may be at most 2 screen pixels beside it.
+ENTRANCE_LOCAL = (-0.0375, -3.0, 1.75)
+ENTRANCE_TOLERANCE = 2.0
+scene_cfg = (repo / 'config/mainmenuscene.cfg').read_text(encoding='utf-8')
+camera_code = (repo / 'source/camera/CameraManager.cpp').read_text(encoding='utf-8')
+OVERVIEW_POSE = [float(v) for v in re.search(r'(?m)^Pose overview ([-\d. ]+)$', scene_cfg)[1].split()]
+GATE_POSITION = [float(v) for v in re.search(r'(?m)^AddEntity Gate MenuGate\.mesh ([-\d. ]+)$', scene_cfg)[1].split()]
+MENU_FOV_Y = float(re.search(r'MAIN_MENU_DEFAULT_FOV_Y_DEGREES = ([\d.]+)f', camera_code)[1])
+reference = re.search(r'MAIN_MENU_REFERENCE_ASPECT_RATIO = ([\d.]+)f / ([\d.]+)f', camera_code)
+MENU_REFERENCE_ASPECT = float(reference[1]) / float(reference[2])
+
+
+def entrance_screen_x(screen):
+    """Screen x of the gate entrance seen from the overview pose (CameraManager::setViewportSize projection, pose
+    rotation X then Y then Z as RenderSceneMenu applies it; an Ogre camera looks down -Z)."""
+    import math
+    position = np.array(OVERVIEW_POSE[:3])
+    rx, ry, rz = [math.radians(v) for v in OVERVIEW_POSE[3:6]]
+    x_rot = np.array([[1, 0, 0], [0, math.cos(rx), -math.sin(rx)], [0, math.sin(rx), math.cos(rx)]])
+    y_rot = np.array([[math.cos(ry), 0, math.sin(ry)], [0, 1, 0], [-math.sin(ry), 0, math.cos(ry)]])
+    z_rot = np.array([[math.cos(rz), -math.sin(rz), 0], [math.sin(rz), math.cos(rz), 0], [0, 0, 1]])
+    rotation = x_rot @ y_rot @ z_rot
+    point = np.array(GATE_POSITION) + np.array(ENTRANCE_LOCAL)
+    local = rotation.T @ (point - position)
+    assert local[2] < 0, 'the gate is behind the overview camera'
+    aspect = screen[0] / float(screen[1])
+    half_fov_y = math.atan(math.tan(math.radians(MENU_FOV_Y) / 2.0) * max(1.0, MENU_REFERENCE_ASPECT / aspect))
+    ndc = (local[0] / -local[2]) / (math.tan(half_fov_y) * aspect)
+    return screen[0] / 2.0 * (1.0 + ndc)
+
+
 checked = 0
 for layout in MENU_LAYOUTS:
     roots = [Node(w, None, layout) for w in ET.parse(gui / layout).getroot().findall('Window')]
@@ -496,12 +529,20 @@ for layout in MENU_LAYOUTS:
                 w, h = pieces['LoadPanel'][2:]
                 assert abs((panel[2] - panel[0]) / (panel[3] - panel[1]) - w / float(h)) < 0.01, 'load panel distorted'
                 assert not overlaps(rects['MapDescriptionText'][1], panel), 'description covers the load screen panel'
+            if layout == 'MenuMain.layout':
+                # The column stands exactly over the gate entrance of the 3D menu scene at the overview camera pose.
+                entrance = entrance_screen_x(screen)
+                for name in MAIN_BUTTONS:
+                    x0, y0, x1, y1 = rects[name][1]
+                    assert abs((x0 + x1) / 2.0 - entrance) <= ENTRANCE_TOLERANCE, \
+                        '%s is %.1f pixels beside the gate entrance at %dx%d %d%%' % (
+                            name, (x0 + x1) / 2.0 - entrance, screen[0], screen[1], round(user * 100))
             if layout == 'MenuMain.layout' and screen == (1920, 1200):
-                # The column of the chosen sheet: at 1920x1200 the buttons stand where the sheet paints them, scaled
+                # The column of the chosen sheet: at 1920x1200 the buttons have the sheet's size and rows (the horizontal place is
+                # the gate entrance, checked above), scaled
                 # around the screen centre by the UI scale.
                 for index, name in enumerate(MAIN_BUTTONS):
                     x0, y0, x1, y1 = rects[name][1]
-                    assert abs((x0 + x1) / 2.0 - 960.0) <= 1.0, name + ' not under the title'
                     assert abs((x1 - x0) / user - SHEET_COLUMN_WIDTH) <= 2.0, name + ' width differs from the sheet'
                     assert abs((y1 - y0) / user - SHEET_COLUMN_HEIGHT) <= 2.0, name + ' height differs from the sheet'
                     assert abs(600.0 + (y0 - 600.0) / user - SHEET_COLUMN_TOPS[index] - SHEET_COLUMN_SHIFT) <= 3.0, name + ' row differs from the sheet'

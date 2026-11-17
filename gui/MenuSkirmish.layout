@@ -4,17 +4,12 @@
     <Window type="DefaultWindow" name="Root" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-        <!-- Iron border of the chosen menu sheet around the whole screen. -->
-        <Window type="OD/ScreenBorder" name="ScreenBorder" >
-            <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
-        </Window>
         <Window type="OD/StaticText" name="LoadingText" >
-            <Property name="Area" value="{{0.5,-396},{0.5,214},{0.5,30},{0.5,268}}" />
+            <Property name="Area" value="{{0.11,0},{1,-125},{0.92,0},{1,-98}}" />
             <Property name="Text" value="Loading..." />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
-            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+            <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
@@ -26,7 +21,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="VersionText" >
-            <Property name="Area" value="{{0,28},{1,-50},{0,228},{1,-28}}" />
+            <Property name="Area" value="{{0,8},{1,-24},{0,108},{1,-4}}" />
             <Property name="Text" value="undefined" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
@@ -39,19 +34,14 @@
             <Property name="SizingEnabled" value="False" />
             <Property name="DragMovingEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
-            <!-- Window frame of the chosen menu sheet behind the controls of this window (K34). -->
-            <Window type="OD/SheetPanel" name="WindowPanel" >
-                <Property name="Area" value="{{0.5,-420},{0.5,-290},{0.5,420},{0.5,290}}" />
-                <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
             <Window type="OD/MenuTitle" name="PageTitle">
                 <Property name="Font" value="MedievalSharp-20" />
-                <Property name="Area" value="{{0.5,-390},{0.5,-275},{0.5,390},{0.5,-215}}" />
+                <Property name="Area" value="{{0.1,0},{0.5,-60},{0.9,0},{0.5,0}}" />
                 <Property name="Text" value="Skirmish" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/StaticImage" name="MapPreview" >
-                <Property name="Area" value="{{0.5,-40},{0.5,-184},{0.5,300},{0.5,50}}" />
+                <Property name="Area" value="{{0,0},{0,12},{1,0},{0.5,-64}}" />
                 <Property name="AspectMode" value="Shrink" />
                 <Property name="AspectRatio" value="1" />
                 <Property name="HorizontalAlignment" value="Centre" />
@@ -61,23 +51,23 @@
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/Combobox" name="LevelTypeSelect" >
-                <Property name="Area" value="{{0.5,-396},{0.5,-226},{0.5,-110},{0.5,-106}}" />
+                <Property name="Area" value="{{0.11,0},{0.5,16},{0.55,0},{0.5,140}}" />
                 <Property name="ReadOnly" value="True" />
             </Window>
             <Window type="OD/Checkbox" name="RelationshipsCheckbox" >
-                <Property name="Area" value="{{0.5,-96},{0.5,-226},{0.5,240},{0.5,-200}}" />
+                <Property name="Area" value="{{0.56,0},{0.5,16},{0.92,0},{0.5,40}}" />
                 <Property name="Text" value="Creature relationships" />
                 <Property name="TooltipText" value="Creatures of the same keeper form friendships and rivalries" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Selected" value="True" />
             </Window>
-            <Window type="OD/SheetListbox" name="LevelSelect" >
-                <Property name="Area" value="{{0.5,-396},{0.5,-184},{0.5,-60},{0.5,206}}" />
+            <Window type="OD/MenuListbox" name="LevelSelect" >
+                <Property name="Area" value="{{0.11,0},{0.5,72},{0.70,0},{1,-132}}" />
                 <Property name="ForceVertScrollbar" value="False" />
                 <Property name="Sort" value="True" />
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
-                <Property name="Area" value="{{0.5,-40},{0.5,60},{0.5,396},{0.5,206}}" />
+                <Property name="Area" value="{{0.73,0},{0.5,44},{0.92,0},{1,-132}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
@@ -86,12 +76,12 @@
             </Window>
             <Window type="OD/MenuTextButton" name="BackButton" >
                 <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.5,50},{0.5,214},{0.5,218},{0.5,268}}" />
+                <Property name="Area" value="{{1,-366},{1,-70},{1,-196},{1,-16}}" />
                 <Property name="Text" value="Back" />
             </Window>
             <Window type="OD/MenuTextButton" name="LaunchGameButton" >
                 <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.5,228},{0.5,214},{0.5,396},{0.5,268}}" />
+                <Property name="Area" value="{{1,-186},{1,-70},{1,-16},{1,-16}}" />
                 <Property name="Text" value="Confirm" />
             </Window>
         </Window>
