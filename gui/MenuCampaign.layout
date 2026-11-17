@@ -76,14 +76,14 @@
                     <Property name="VertFormatting" value="TopAligned" />
                 </Window>
                 <Window type="OD/MenuTextButton" name="BriefingStartButton" >
-                    <Property name="Area" value="{{0,16},{1,-56},{0.5,-8},{1,-16}}" />
+                    <Property name="Area" value="{{0,16},{1,-70},{0.5,-8},{1,-16}}" />
                     <Property name="Text" value="Start" />
-                    <Property name="Font" value="MedievalSharp-12" />
+                    <Property name="Font" value="MedievalSharp-13" />
                 </Window>
                 <Window type="OD/MenuTextButton" name="BriefingCloseButton" >
-                    <Property name="Area" value="{{0.5,8},{1,-56},{1,-16},{1,-16}}" />
+                    <Property name="Area" value="{{0.5,8},{1,-70},{1,-16},{1,-16}}" />
                     <Property name="Text" value="Close" />
-                    <Property name="Font" value="MedievalSharp-12" />
+                    <Property name="Font" value="MedievalSharp-13" />
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="ControlBackdrop" >
@@ -104,13 +104,10 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Selected" value="True" />
             </Window>
-            <Window type="OD/MenuSymbolButton" name="BackButton" >
-                <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
-                <Property name="Text" value="" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="TooltipText" value="Back" />
+            <Window type="OD/MenuTextButton" name="BackButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{1,-186},{1,-70},{1,-16},{1,-16}}" />
+                <Property name="Text" value="Back" />
             </Window>
         </Window>
     </Window>

@@ -198,7 +198,7 @@ assert covered == set(layouts), ('layouts not checked', sorted(set(layouts) - co
 FRAME_TYPES = ('OD/FrameWindow', 'OD/MenuFrameWindow', 'OD/MenuSelectionWindow')
 SCROLL_TYPES = ('OD/ScrollablePane', 'OD/MenuScrollablePane')
 # widgets whose rows are filled by the code and scrolled by their own scrollbar
-LIST_TYPES = ('OD/Listbox', 'OD/MenuListbox', 'OD/MultiColumnList', 'OD/MenuMultiColumnList', 'OD/Combobox',
+LIST_TYPES = ('OD/Listbox', 'OD/MenuListbox', 'OD/LoadListbox', 'OD/MultiColumnList', 'OD/MenuMultiColumnList', 'OD/Combobox',
               'OD/PopupMenu', 'OD/Menubar', 'OD/MultiLineEditbox')
 
 
@@ -290,7 +290,11 @@ def child_rect(node, parent_client, s):
 TEXT_TYPES = {'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPanel', 'OD/MenuDescription',
               'OD/Button', 'OD/MainMenuButton', 'OD/InvisibleButton', 'OD/MenuTextButton', 'OD/Checkbox',
               'OD/RadioButton', 'OD/IconButton', 'OD/ImageButton', 'OD/ResearchButton', 'OD/TabButton',
-              'OD/MenuItem', 'OD/MenuSymbolButton', 'OD/GameTabButton', 'OD/MiniMapCornerButton'}
+              'OD/MenuItem', 'OD/MenuSymbolButton', 'OD/GameTabButton', 'OD/MiniMapCornerButton',
+              'OD/MenuCompactButton', 'OD/MenuFilterButton'}
+# Caption area of the menu template buttons in fractions of the button height: cap width, top rail, bottom rail.
+MENU_TEMPLATE_CAPTION = {'OD/MenuTextButton': (0.516667, 0.183333, 0.816667),
+                         'OD/MenuCompactButton': (0.25, 0.21, 0.79), 'OD/MenuFilterButton': (0.25, 0.21, 0.79)}
 STATIC_LIKE = {'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPanel', 'OD/MenuDescription'}
 
 
@@ -315,6 +319,12 @@ def text_area(node, rect, screen, user, s):
         return x0 + image_size(name, screen, user)[0] + 3.0, y0, x1, y1
     if node.type == 'OD/IconButton':
         return x0 + 1.1 * (y1 - y0), y0, x1, y1
+    if node.type in MENU_TEMPLATE_CAPTION:
+        # Menu template buttons (OD.looknfeel caption section): the caption sits on the planks between the two caps,
+        # whose width follows the button height, and between the top and bottom rails.
+        cap, top, bottom = MENU_TEMPLATE_CAPTION[node.type]
+        height = y1 - y0
+        return x0 + cap * height, y0 + top * height, x1 - cap * height, y0 + bottom * height
     if node.type == 'OD/ImageButton' or node.type == 'OD/ResearchButton':
         return x0 + 5.0, y0, x0 + 5.0 + 0.9 * (x1 - x0), y1
     return rect

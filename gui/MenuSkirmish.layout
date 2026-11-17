@@ -74,21 +74,15 @@
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
-            <Window type="OD/MenuSymbolButton" name="BackButton" >
-                <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
-                <Property name="Text" value="" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="TooltipText" value="Back" />
+            <Window type="OD/MenuTextButton" name="BackButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{1,-366},{1,-70},{1,-196},{1,-16}}" />
+                <Property name="Text" value="Back" />
             </Window>
-            <Window type="OD/MenuSymbolButton" name="LaunchGameButton" >
-                <Property name="Area" value="{{1,-92.8},{1,-92.8},{1,-16},{1,-16}}" />
-                <Property name="Text" value="" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="PushedImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="TooltipText" value="Confirm selection" />
+            <Window type="OD/MenuTextButton" name="LaunchGameButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{1,-186},{1,-70},{1,-16},{1,-16}}" />
+                <Property name="Text" value="Confirm" />
             </Window>
         </Window>
     </Window>

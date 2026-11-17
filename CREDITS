@@ -50,6 +50,8 @@ ODMainMenuBackground.imageset          Bertram                 GPLv3+
 ODMainMenuBackground.png               Vagner                  CC-BY-SA 3.0            http://opengameart.org/content/mammon-angel-of-darkness
 ODMainMenuButtons.imageset             Bertram                 GPLv3+
 ODMainMenuButtons.png                  Mario                   GPLv3+                  Drawn from scratch by tools/generate_forged_skin.py (procedural, no source pixels)
+ODMenuTemplate.png                     AI-generated with Codex  GPLv3+                  Menu button template (four states), its compact form and the load screen panel, cut by tools/make_menu_template.py from the painted menu sheet assets-src/ingame-qs-9/d1/variant-2.png (Codex, 2026-11-09, original work)
+ODMenuTemplate.imageset                Mario                   GPLv3+                  Written by tools/make_menu_template.py
 ODMainMenuLogo.imageset                Mario                   GPLv3+
 ODMainMenuLogo.png                     AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
 ODSkin.imageset                        OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk

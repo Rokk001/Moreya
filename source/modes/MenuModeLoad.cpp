@@ -42,6 +42,31 @@
 
 const std::string SAVEGAME_EXTENSION = ".level";
 
+//! \brief Captions of the four filter entries of the load screen, in the order of the load kinds (LoadGameFilter.h).
+static const char* LOAD_FILTER_NAMES[] = {"Campaign", "Skirmish", "Sandbox", "Replays"};
+//! \brief Number of filter entries of the load screen.
+static const size_t LOAD_FILTER_COUNT = 4;
+//! \brief Radio group shared by the four filter entries.
+static const CEGUI::ulong LOAD_FILTER_GROUP = 1;
+
+//! \brief Returns the filter entry of the given load kind on the load screen sheet.
+static CEGUI::RadioButton* getFilterButton(CEGUI::Window* sheet, size_t kind)
+{
+    return static_cast<CEGUI::RadioButton*>(
+        sheet->getChild(std::string("LevelWindowFrame/KindFilter/Filter") + LOAD_FILTER_NAMES[kind]));
+}
+
+//! \brief Returns the load kind of the chosen filter entry, or -1 while no entry is chosen.
+static int getSelectedLoadKind(CEGUI::Window* sheet)
+{
+    for(size_t kind = 0; kind < LOAD_FILTER_COUNT; ++kind)
+    {
+        if(getFilterButton(sheet, kind)->isSelected())
+            return static_cast<int>(kind);
+    }
+    return -1;
+}
+
 //! \brief Collects every loadable saved game (not multiplayer) and replay with its kind.
 static std::vector<LoadEntry> collectLoadEntries()
 {
@@ -70,17 +95,15 @@ MenuModeLoad::MenuModeLoad(ModeManager *modeManager, bool inGame, const std::str
     mSavedGame(savedGame)
 {
     CEGUI::Window* window = modeManager->getGui().getGuiSheet(Gui::guiSheet::loadSavedGameMenu);
-    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(window->getChild("LevelWindowFrame/KindFilter"));
-    filter->resetList();
-    const char* names[] = {"Campaign", "Skirmish", "Sandbox", "Replays"};
-    for(size_t i = 0; i < 4; ++i)
+    // The four filter entries are template buttons in one radio group; choosing one rebuilds the list.
+    for(size_t kind = 0; kind < LOAD_FILTER_COUNT; ++kind)
     {
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(names[i]);
-        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
-        filter->addItem(item);
+        CEGUI::RadioButton* filter = getFilterButton(window, kind);
+        filter->setText(LOAD_FILTER_NAMES[kind]);
+        filter->setGroupID(LOAD_FILTER_GROUP);
+        addEventConnection(filter->subscribeEvent(CEGUI::ToggleButton::EventSelectStateChanged,
+            CEGUI::Event::Subscriber(&MenuModeLoad::filterChanged, this)));
     }
-    addEventConnection(filter->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
-        CEGUI::Event::Subscriber(&MenuModeLoad::updateFilesList, this)));
     addEventConnection(
         window->getChild("LevelWindowFrame/BackButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
@@ -180,10 +203,8 @@ void MenuModeLoad::activate()
         }
     }
 
-    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(sheet->getChild("LevelWindowFrame/KindFilter"));
     size_t newestKind = static_cast<size_t>(openingLoadKind(collectLoadEntries()));
-    filter->setItemSelectState(newestKind, true);
-    filter->setText(filter->getListboxItemFromIndex(newestKind)->getText());
+    getFilterButton(sheet, newestKind)->setSelected(true);
     updateFilesList();
     if(!mSavedGame.empty())
     {
@@ -203,26 +224,35 @@ void MenuModeLoad::activate()
 
 }
 
+//! \brief Rebuilds the list when a filter entry becomes the chosen one (the entry that loses the choice is ignored).
+bool MenuModeLoad::filterChanged(const CEGUI::EventArgs& e)
+{
+    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
+    if(!static_cast<CEGUI::RadioButton*>(args.window)->isSelected())
+        return true;
+    return updateFilesList();
+}
+
 //! \brief Shows only the selected kind, ordered by modification time, newest first.
 bool MenuModeLoad::updateFilesList(const CEGUI::EventArgs&)
 {
     CEGUI::Window* sheet = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu);
-    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(sheet->getChild("LevelWindowFrame/KindFilter"));
-    if(!filter->getSelectedItem())
+    int kind = getSelectedLoadKind(sheet);
+    if(kind < 0)
         return true;
-    size_t kind = filter->getItemIndex(filter->getSelectedItem());
     CEGUI::Listbox* list = static_cast<CEGUI::Listbox*>(sheet->getChild("LevelWindowFrame/SaveGameSelect"));
     list->resetList();
     mFilesList.clear();
     sheet->getChild("LevelWindowFrame/MapDescriptionText")->setText("");
     sheet->getChild("LoadingText")->hide();
-    for(const LoadEntry& entry : visibleLoadEntries(collectLoadEntries(), static_cast<int>(kind)))
+    for(const LoadEntry& entry : visibleLoadEntries(collectLoadEntries(), kind))
         mFilesList.push_back(entry.mPath);
     for(size_t i = 0; i < mFilesList.size(); ++i)
     {
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(boost::filesystem::path(mFilesList[i]).filename().string());
         item->setID(static_cast<uint32_t>(i));
-        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+        // The chosen entry shows the highlighted plank row of the chosen menu sheet.
+        item->setSelectionBrushImage("ODMenuTemplate/LoadRowSelected");
         list->addItem(item);
     }
     return true;
@@ -246,8 +276,7 @@ bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(id >= mFilesList.size())
         return true;
     const std::string level = mFilesList[id];
-    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LevelWindowFrame/KindFilter"));
-    if(loadConfirmAction(static_cast<int>(filter->getItemIndex(filter->getSelectedItem())), true) == 2)
+    if(loadConfirmAction(getSelectedLoadKind(getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)), true) == 2)
     {
         std::string description;
         std::string error;
@@ -369,8 +398,7 @@ bool MenuModeLoad::updateDescription(const CEGUI::EventArgs&)
 
     std::string filename = mFilesList[id];
 
-    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LevelWindowFrame/KindFilter"));
-    if(filter->getItemIndex(filter->getSelectedItem()) == 3)
+    if(getSelectedLoadKind(getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)) == 3)
     {
         std::string description;
         std::string error;

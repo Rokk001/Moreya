@@ -14,13 +14,13 @@
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/MenuTextButton" name="NewCampaignButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,32},{0.5,160},{0.5,68}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,-140},{0.5,10},{0.5,140},{0.5,64}}" />
             <Property name="Text" value="New Campaign" />
         </Window>
         <Window type="OD/MenuTextButton" name="ContinueCampaignButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,68},{0.5,160},{0.5,104}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,-140},{0.5,65},{0.5,140},{0.5,119}}" />
             <Property name="Text" value="Continue Campaign" />
         </Window>
         <Window type="OD/StaticText" name="NewCampaignConfirmText" >
@@ -32,20 +32,16 @@
             <Property name="HorzFormatting" value="WordWrapCentreAligned" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/MenuSymbolButton" name="NewCampaignConfirmButton" >
-            <Property name="Area" value="{{1,-92.8},{1,-92.8},{1,-16},{1,-16}}" />
+        <Window type="OD/MenuTextButton" name="NewCampaignConfirmButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Text" value="Confirm" />
+            <Property name="Area" value="{{1,-186},{1,-70},{1,-16},{1,-16}}" />
             <Property name="Visible" value="False" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
-            <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />
-            <Property name="PushedImage" value="OpenDungeonsIcons/CheckIcon" />
-            <Property name="TooltipText" value="Begin a new campaign" />
         </Window>
-        <Window type="OD/MenuSymbolButton" name="BackButton" >
-            <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="TooltipText" value="Back" />
+        <Window type="OD/MenuTextButton" name="BackButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Text" value="Back" />
+            <Property name="Area" value="{{1,-366},{1,-70},{1,-196},{1,-16}}" />
         </Window>
     </Window>
 </GUILayout>

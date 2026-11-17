@@ -1,0 +1,415 @@
+"""Check the menu button template and the load screen of the chosen menu sheet (INGAME-QS-10 K14, K15, T-M1, G6).
+
+The chosen sheet is variant 2 of the menu concepts ("weathered timber with aged iron bindings"), kept with the asset sources
+at <ODP_ASSETS_SRC>/ingame-qs-9/d1/variant-2.png. Static check, no game and no compiler needed. It checks the outcome:
+
+1. Pixels. The four template states in gui/ODMenuTemplate.png are the states painted on the sheet (normal, hovered,
+   pressed, disabled), pixel for pixel outside the caption; the painted caption "Campaign" is gone from every state; the
+   pointer hand painted over the hovered state is replaced by the template's own mirrored end; the states differ as on
+   the sheet (hovered rim brighter, pressed planks redder, disabled without colour). The same holds for the compact
+   form the sheet paints inside the load screen, and the load screen panel keeps the sheet's frame while its painted
+   buttons, highlighted row and scrollbar are removed.
+2. Looks. Every state of the menu button looks (OD.looknfeel) draws exactly the five (compact: three) pieces of its own
+   template state, and the caps and knobs keep the proportions of the template pieces at every button size.
+3. Screens. Every button of every menu screen (main menu, its sub menus, skirmish, multiplayer, settings, load, configure
+   seats, campaign, editor) is a template button; the expected numbers were counted once on this branch.
+4. Sizes. At 640x480, 1920x1200 and 7680x4320 (8K), each with the UI scale 80 % and 120 %, every template button lies on
+   the screen, is never narrower than its caps and knobs, shows its caption on the planks without cutting it, and
+   overlaps no other control; the load screen controls lie on the panel at the places of the sheet.
+"""
+from pathlib import Path
+import re
+import sys
+import xml.etree.ElementTree as ET
+
+import numpy as np
+from PIL import Image, ImageFont
+
+repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import assets_src_dir  # noqa: E402
+
+gui = repo / 'gui'
+SHEET = assets_src_dir(repo) / 'ingame-qs-9/d1/variant-2.png'
+assert SHEET.is_file(), 'chosen menu sheet missing: %s' % SHEET
+sheet = np.asarray(Image.open(SHEET).convert('RGB')).astype(np.int32)
+assert sheet.shape == (1200, 1920, 3), sheet.shape
+atlas = np.asarray(Image.open(gui / 'ODMenuTemplate.png').convert('RGBA')).astype(np.int32)
+imageset = ET.parse(gui / 'ODMenuTemplate.imageset').getroot()
+assert imageset.get('name') == 'ODMenuTemplate' and imageset.get('imagefile') == 'ODMenuTemplate.png'
+pieces = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height')) for i in imageset.findall('Image')}
+
+# ------------------------------------------------------------------------------------------------ 1. pixels
+# Places of the template states on the sheet (top left corner of the 400x120 state; measured once on the sheet).
+STATE_ON_SHEET = {'Normal': (56, 380), 'Hover': (57, 524), 'Pushed': (58, 670), 'Disabled': (57, 818)}
+CAPTION = (108, 34, 296, 88)          # painted caption inside a state
+HAND_COLUMNS = 300                    # the pointer hand covers the hovered state from here to the right
+STATES = ('Normal', 'Hover', 'Pushed', 'Disabled')
+FULL_PIECES = ('LeftCap', 'LeftFill', 'Centre', 'RightFill', 'RightCap')
+
+
+def assemble(names):
+    """The atlas pieces side by side, as the look draws them at the template's own size."""
+    parts = []
+    for name in names:
+        x, y, w, h = pieces[name]
+        parts.append(atlas[y:y + h, x:x + w])
+    heights = {p.shape[0] for p in parts}
+    assert len(heights) == 1, names
+    return np.concatenate(parts, 1)
+
+
+def letters(image, grey):
+    """Pixels in the colour of the painted captions: warm bone letters, or light grey letters of the disabled state."""
+    red, green, blue = image[..., 0], image[..., 1], image[..., 2]
+    if grey:
+        return (image[..., :3].mean(axis=2) > 88) & ((red - blue) < 40)
+    return (red > 150) & (green > 120) & (blue > 85)
+
+
+def saturation(image):
+    """Mean difference between the strongest and the weakest colour channel (0 for grey)."""
+    rgb = image[..., :3].astype(np.float64)
+    return float((rgb.max(axis=2) - rgb.min(axis=2)).mean())
+
+
+full = {}
+for state in STATES:
+    image = assemble([state + piece for piece in FULL_PIECES])
+    assert image.shape == (120, 400, 4), (state, image.shape)
+    full[state] = image
+    sx, sy = STATE_ON_SHEET[state]
+    painted = sheet[sy:sy + 120, sx:sx + 400]
+    solid = image[..., 3] == 255
+    keep = solid.copy()
+    keep[CAPTION[1]:CAPTION[3], CAPTION[0]:CAPTION[2]] = False
+    if state == 'Hover':
+        keep[:, HAND_COLUMNS - 10:] = False
+    difference = np.abs(image[..., :3] - painted)[keep].mean()
+    assert keep.sum() > 15000 and difference < 0.5, '%s state is not the painted template (%.2f)' % (state, difference)
+    x0, y0, x1, y1 = CAPTION
+    before = letters(painted[y0:y1, x0:x1], state == 'Disabled').sum()
+    after = letters(image[y0:y1, x0:x1], state == 'Disabled').sum()
+    assert before > 1000 and after == 0, '%s state still shows the painted caption (%d of %d pixels)' % (state, after, before)
+    # outline: transparent outside the cut corners and the knobs, solid on the planks and the knobs
+    assert image[0, 0, 3] == 0 and image[119, 399, 3] == 0 and image[5, 100, 3] == 0, state + ' outline not cut free'
+    assert image[60, 200, 3] == 255 and image[4, 201, 3] > 128 and image[116, 201, 3] > 128, state + ' plate or knob missing'
+# The hand: the hovered right end is the mirrored left end of the hovered state and no longer the painted hand.
+hover = full['Hover'][:, :, :3]
+mirror = hover[:, ::-1]
+right = slice(HAND_COLUMNS + 14, 398)
+sx, sy = STATE_ON_SHEET['Hover']
+hand_area = (slice(70, 118), slice(312, 372))
+assert np.abs(hover[:, right] - mirror[:, right]).mean() < 0.5, 'hovered right end is not the template end'
+assert np.abs(sheet[sy:sy + 120, sx:sx + 400][hand_area] - hover[hand_area]).mean() > 20, 'pointer hand still painted'
+# The states differ as on the sheet.
+rim = np.zeros((120, 400), bool)
+rim[8:22, 30:370] = True
+rim[99:113, 30:370] = True
+planks = (slice(26, 96), slice(70, 330))
+assert full['Hover'][..., :3][rim].mean() > full['Normal'][..., :3][rim].mean() + 15, 'hovered rim does not glow'
+redness = {s: float((full[s][planks][..., 0] - full[s][planks][..., 2]).mean()) for s in STATES}
+assert redness['Pushed'] > redness['Normal'] + 15, 'pressed planks are not ember lit'
+assert saturation(full['Disabled']) < 0.6 * saturation(full['Normal']), 'disabled state keeps its colour'
+
+# Compact form (load screen): normal = "Back", hovered = "Confirm", pressed = "Delete" of the sheet, 4 pixel margin.
+COMPACT_ON_SHEET = {'Normal': (1461, 910), 'Hover': (1656, 910), 'Pushed': (1259, 910)}
+compact = {}
+for state in STATES:
+    image = assemble(['Compact' + state + piece for piece in ('LeftCap', 'Fill', 'RightCap')])
+    compact[state] = image
+    height, width = image.shape[:2]
+    assert height == 76 and image[0, 0, 3] == 0 and image[38, width // 2, 3] == 255, state + ' compact outline'
+    cap = pieces['Compact' + state + 'LeftCap'][2]
+    if state in COMPACT_ON_SHEET:
+        sx, sy = COMPACT_ON_SHEET[state]
+        painted = sheet[sy:sy + height, sx:sx + width]
+        caps = np.zeros((height, width), bool)
+        caps[:, :cap] = caps[:, width - cap:] = True
+        caps &= image[..., 3] == 255
+        assert np.abs(image[..., :3] - painted)[caps].mean() < 0.5, state + ' compact caps are not the painted ones'
+        inner = (slice(18, 58), slice(cap, width - cap))
+        assert letters(painted[inner], False).sum() > 200 and letters(image[inner], False).sum() == 0, \
+            state + ' compact state still shows its painted caption'
+assert compact['Hover'][..., :3][compact['Hover'][..., 3] == 255].mean() > \
+    compact['Normal'][..., :3][compact['Normal'][..., 3] == 255].mean() + 10, 'compact hovered state does not glow'
+assert saturation(compact['Disabled']) < 0.6 * saturation(compact['Normal']), 'compact disabled state keeps its colour'
+
+# Load screen panel: frame as on the sheet, painted controls removed.
+PANEL_ON_SHEET = (1222, 283)
+x, y, w, h = pieces['LoadPanel']
+panel = atlas[y:y + h, x:x + w]
+px, py = PANEL_ON_SHEET
+painted_panel = sheet[py:py + h, px:px + w]
+frame = np.zeros((h, w), bool)
+frame[:40, :] = frame[-40:, :] = frame[:, :30] = frame[:, -30:] = True
+frame &= panel[..., 3] == 255
+assert frame.sum() > 50000 and np.abs(panel[..., :3] - painted_panel)[frame].mean() < 0.5, 'load screen frame is not the sheet'
+for name, (x0, y0, x1, y1) in {'filter buttons': (1250, 352, 1862, 426), 'buttons': (1255, 900, 1858, 1010)}.items():
+    region = (slice(y0 - py, y1 - py), slice(x0 - px, x1 - px))
+    assert letters(painted_panel[region], False).sum() > 1000 and letters(panel[region], False).sum() == 0, \
+        'load screen panel still shows the painted ' + name
+row = (slice(484 - py, 524 - py), slice(1272 - px, 1792 - px))
+assert panel[row][..., 0].mean() < painted_panel[row][..., 0].mean() - 30, 'highlighted list row still painted'
+x, y, w, h = pieces['LoadRowSelected']
+assert np.abs(atlas[y:y + h, x:x + w, :3] - sheet[484:524, 1272:1792]).mean() < 0.5, 'selected row is not the sheet row'
+
+# ------------------------------------------------------------------------------------------------ 2. looks
+look_text = (gui / 'OD.looknfeel').read_text(encoding='utf-8')
+looks = {wl.get('name'): wl for wl in ET.fromstring(look_text).findall('WidgetLook')}
+
+
+def find_section(look, name):
+    """An imagery section of a look or of the looks it inherits from."""
+    while look is not None:
+        for section in looks[look].findall('ImagerySection'):
+            if section.get('name') == name:
+                return section
+        look = looks[look].get('inherits')
+    raise AssertionError('section %s not found' % name)
+
+
+def state_images(look, state):
+    """Images drawn by one state imagery of a look."""
+    imagery = [s for s in looks[look].findall('StateImagery') if s.get('name') == state]
+    assert len(imagery) == 1, (look, state)
+    images = []
+    for section in imagery[0].iter('Section'):
+        for image in find_section(section.get('look', look), section.get('section')).iter('Image'):
+            images.append(image.get('name'))
+    return images
+
+
+def unified(component, dim_type):
+    """The scale of the plain UnifiedDim of a component area dimension (a width that follows the height)."""
+    dim = [d for d in component.find('Area').findall('Dim') if d.get('type') == dim_type][0]
+    unified_dim = dim.find('UnifiedDim')
+    return float(unified_dim.get('scale')), unified_dim.get('type')
+
+
+EXPECTED_STATES = {'Normal': 'Normal', 'Hover': 'Hover', 'Pushed': 'Pushed', 'PushedOff': 'Normal', 'Disabled': 'Disabled'}
+for look, prefix, names in (('OD/MenuTextButton', '', FULL_PIECES), ('OD/MenuCompactButton', 'Compact', ('LeftCap', 'Fill', 'RightCap'))):
+    for state, template_state in EXPECTED_STATES.items():
+        expected = sorted('ODMenuTemplate/' + prefix + template_state + n for n in names)
+        assert sorted(state_images(look, state)) == expected, (look, state, state_images(look, state))
+    # Caps and knobs keep the template proportions: their width follows the height by the ratio of the atlas pieces.
+    for section in ('plate_normal', 'plate_hover', 'plate_pushed', 'plate_disabled'):
+        for component in find_section(look, section).findall('ImageryComponent'):
+            image = component.find('Image').get('name').split('/', 1)[1]
+            x, y, w, h = pieces[image]
+            if image.endswith('Cap') or image.endswith('Centre'):
+                scale, base = unified(component, 'Width')
+                assert base == 'Height' and abs(scale - w / float(h)) < 1e-4, (look, image, scale, w / float(h))
+for state, template_state in EXPECTED_STATES.items():
+    for prefix, chosen in (('', template_state), ('Selected', 'Disabled' if state == 'Disabled' else
+                                                  'Pushed' if state == 'Pushed' else 'Hover')):
+        expected = sorted('ODMenuTemplate/Compact' + chosen + n for n in ('LeftCap', 'Fill', 'RightCap'))
+        assert sorted(state_images('OD/MenuFilterButton', prefix + state)) == expected, ('filter', prefix + state)
+scheme = (gui / 'ODSkin.scheme').read_text(encoding='utf-8')
+for window_type, target in (('OD/MenuTextButton', 'CEGUI/PushButton'), ('OD/MenuCompactButton', 'CEGUI/PushButton'),
+                            ('OD/MenuFilterButton', 'CEGUI/RadioButton'), ('OD/LoadListbox', 'CEGUI/Listbox')):
+    assert re.search(r'lookNFeel="%s" renderer="[^"]+" targetType="%s" windowType="%s"' % (window_type, target, window_type),
+                     scheme), window_type
+assert '<Imageset filename="ODMenuTemplate.imageset" name="ODMenuTemplate" />' in scheme
+load_code = (repo / 'source/modes/MenuModeLoad.cpp').read_text(encoding='utf-8')
+assert load_code.count('setSelectionBrushImage("ODMenuTemplate/LoadRowSelected")') == 1, 'chosen save not shown as the sheet row'
+
+# ------------------------------------------------------------------------------------------------ 3. screens
+TEMPLATE_TYPES = ('OD/MenuTextButton', 'OD/MenuCompactButton', 'OD/MenuFilterButton')
+MENU_LAYOUTS = ('MenuMain.layout', 'WindowCampaignSubMenu.layout', 'WindowSkirmishSubMenu.layout',
+                'WindowMultiplayerSubMenu.layout', 'WindowEditorSubMenu.layout', 'WindowSettingsSubMenu.layout',
+                'MenuCampaign.layout', 'MenuSkirmish.layout', 'MenuMultiplayerServer.layout', 'MenuMultiplayerClient.layout',
+                'MenuMasterServerJoin.layout', 'MenuLoad.layout', 'MenuReplay.layout', 'MenuConfigureSeats.layout',
+                'MenuEditorLoad.layout', 'MenuEditorNew.layout', 'WindowSettings.layout', 'WindowApplyChanges.layout')
+# Template buttons per screen, counted once on this branch.
+EXPECTED_BUTTONS = {'MenuMain.layout': 7, 'WindowCampaignSubMenu.layout': 4, 'WindowSkirmishSubMenu.layout': 3,
+                    'WindowMultiplayerSubMenu.layout': 5, 'WindowEditorSubMenu.layout': 3, 'WindowSettingsSubMenu.layout': 5,
+                    'MenuCampaign.layout': 4, 'MenuSkirmish.layout': 2, 'MenuMultiplayerServer.layout': 2,
+                    'MenuMultiplayerClient.layout': 2, 'MenuMasterServerJoin.layout': 2, 'MenuLoad.layout': 7,
+                    'MenuReplay.layout': 3, 'MenuConfigureSeats.layout': 4, 'MenuEditorLoad.layout': 2,
+                    'MenuEditorNew.layout': 2, 'WindowSettings.layout': 2, 'WindowApplyChanges.layout': 2}
+button_targets = set(re.findall(r'targetType="CEGUI/(?:PushButton|RadioButton)" windowType="([^"]+)"', scheme)) | {'OD/IconButton'}
+for layout in MENU_LAYOUTS:
+    windows = list(ET.parse(gui / layout).getroot().iter('Window'))
+    buttons = [w for w in windows if w.get('type') in button_targets]
+    other = [w.get('name') for w in buttons if w.get('type') not in TEMPLATE_TYPES]
+    assert not other, '%s: buttons without the menu template: %s' % (layout, other)
+    assert len(buttons) == EXPECTED_BUTTONS[layout], (layout, len(buttons))
+
+# ------------------------------------------------------------------------------------------------ 4. sizes
+DESIGN_W, DESIGN_H = 1024.0, 768.0
+FONT_W, FONT_H = 800.0, 600.0
+SCREENS = ((640, 480), (1920, 1200), (7680, 4320))
+USER_SCALES = (0.8, 1.2)
+TOLERANCE = 0.75
+CAPTION_AREA = {'OD/MenuTextButton': (0.516667, 0.183333, 0.816667), 'OD/MenuCompactButton': (0.25, 0.21, 0.79),
+                'OD/MenuFilterButton': (0.25, 0.21, 0.79)}
+# Narrowest button that still shows both caps and (full template) the knobs undistorted, in button heights.
+MIN_WIDTH = {'OD/MenuTextButton': (pieces['NormalLeftCap'][2] + pieces['NormalCentre'][2] + pieces['NormalRightCap'][2]) / 120.0,
+             'OD/MenuCompactButton': 2 * 26 / 76.0, 'OD/MenuFilterButton': 2 * 26 / 76.0}
+CONTROLS = TEMPLATE_TYPES + ('OD/Editbox', 'OD/Combobox', 'OD/Checkbox', 'OD/MenuListbox', 'OD/LoadListbox',
+                             'OD/MenuMultiColumnList', 'OD/MultiLineEditbox', 'OD/Spinner', 'OD/TabControl')
+fonts = {}
+for font_file in (gui / 'fonts').glob('*.font'):
+    spec = ET.parse(font_file).getroot()
+    fonts[spec.get('name')] = (ImageFont.truetype(str(gui / 'fonts' / spec.get('filename')), 1024),
+                               float(spec.get('size')) * (96.0 / 72.0) / 1024.0)
+skin_set = ET.parse(gui / 'ODSkin.imageset').getroot()
+skin = {i.get('name'): (float(i.get('width')), float(i.get('height'))) for i in skin_set.findall('Image')}
+game_set = ET.parse(gui / 'ODGameWindow.imageset').getroot()
+game_window = {i.get('name'): (float(i.get('width')), float(i.get('height'))) for i in game_set.findall('Image')}
+
+
+def udims(value):
+    """The (scale, offset) pairs of a CEGUI area value like {{0.5,-120},{0.5,10},...}."""
+    return [(float(a), float(b)) for a, b in re.findall(r'\{(-?[\d.]+),(-?[\d.]+)\}', value)]
+
+
+class Node:
+    """One window of a layout with its properties and children (imported layouts included)."""
+
+    def __init__(self, element, parent, layout):
+        self.parent, self.layout = parent, layout
+        self.type, self.name = element.get('type'), element.get('name')
+        self.props = {p.get('name'): p.get('value') for p in element.findall('Property')}
+        self.children = []
+        for child in element:
+            if child.tag == 'Window':
+                self.children.append(Node(child, self, layout))
+            elif child.tag == 'LayoutImport':
+                for imported in ET.parse(gui / child.get('filename')).getroot().findall('Window'):
+                    self.children.append(Node(imported, self, child.get('filename')))
+
+    def font(self):
+        """Font of the window, inherited from the parents as CEGUI does."""
+        node = self
+        while node is not None:
+            if 'Font' in node.props:
+                return node.props['Font']
+            node = node.parent
+        return 'LiberationSans-10'
+
+    def visible(self):
+        """Whether the layout shows the window from the start."""
+        return self.props.get('Visible') != 'False'
+
+
+def is_fill(node):
+    """Whether the window fills its parent."""
+    return udims(node.props.get('Area', '')) == [(0, 0), (0, 0), (1, 0), (1, 0)]
+
+
+def screen_sized(node):
+    """Gui::isScreenSizedContainer: no parent, or a window that fills a screen sized parent."""
+    return node is None or (is_fill(node) and screen_sized(node.parent))
+
+
+def fit_factor(node, screen, scale):
+    """Gui::getWindowFitFactor: shrink factor that keeps a top window on the screen."""
+    value = udims(node.props.get('Area', ''))
+    factor = 1.0
+    off_w, off_h = (value[2][1] - value[0][1]) * scale, (value[3][1] - value[1][1]) * scale
+    rel_w, rel_h = value[2][0] - value[0][0], value[3][0] - value[1][0]
+    if off_w > 0 and rel_w < 1.0:
+        factor = min(factor, (1.0 - rel_w) * screen[0] / off_w)
+    if off_h > 0 and rel_h < 1.0:
+        factor = min(factor, (1.0 - rel_h) * screen[1] / off_h)
+    return factor
+
+
+def line_height(font, screen, user):
+    """Line height of a font in screen pixels (fonts scale with 800x600 design and the UI scale)."""
+    face, factor = fonts[font]
+    return sum(face.getmetrics()) * factor * min(screen[0] / (FONT_W / user), screen[1] / (FONT_H / user))
+
+
+def client(node, rect, screen, user, s):
+    """Children area: the window without its frame and title (frame windows of OD.looknfeel), else the window."""
+    x0, y0, x1, y1 = rect
+    layout_scale = min(screen[0] / DESIGN_W, screen[1] / DESIGN_H) * user
+    if node.type == 'OD/MenuFrameWindow':
+        edge = layout_scale / 4.0
+        return (x0 + skin['WindowLeftEdge'][0] * edge, y0 + line_height('MedievalSharp-10', screen, user) + 12.0,
+                x1 - skin['WindowRightEdge'][0] * edge, y1 - skin['WindowBottomEdge'][1] * edge)
+    if node.type == 'OD/FrameWindow':
+        return (x0 + game_window['FrameLeft'][0], y0 + line_height('MedievalSharp-10', screen, user) + 12.0,
+                x1 - game_window['FrameRight'][0], y1 - game_window['FrameBottom'][1])
+    return rect
+
+
+def collect(node, parent_client, screen, user, fit, out):
+    """Pixel rectangles of a window and its children (formulas of Gui::applyScale) appended to out."""
+    if 'Area' not in node.props:
+        return
+    layout_scale = min(screen[0] / DESIGN_W, screen[1] / DESIGN_H) * user
+    if not screen_sized(node) and screen_sized(node.parent):
+        fit = fit_factor(node, screen, layout_scale)
+    s = layout_scale * fit
+    value = udims(node.props['Area'])
+    px0, py0, px1, py1 = parent_client
+    rect = (px0 + value[0][0] * (px1 - px0) + value[0][1] * s, py0 + value[1][0] * (py1 - py0) + value[1][1] * s,
+            px0 + value[2][0] * (px1 - px0) + value[2][1] * s, py0 + value[3][0] * (py1 - py0) + value[3][1] * s)
+    out.append((node, rect))
+    if node.type in ('OD/TabControl',):
+        return
+    # Hidden windows (sub menus, dialogs, the briefing) are shown by the code later and are measured as well.
+    for child in node.children:
+        collect(child, client(node, rect, screen, user, s), screen, user, fit, out)
+
+
+def overlaps(a, b):
+    """Whether two rectangles share more than the renderer rounding."""
+    return min(a[2], b[2]) - max(a[0], b[0]) > TOLERANCE and min(a[3], b[3]) - max(a[1], b[1]) > TOLERANCE
+
+
+checked = 0
+for layout in MENU_LAYOUTS:
+    roots = [Node(w, None, layout) for w in ET.parse(gui / layout).getroot().findall('Window')]
+    for screen in SCREENS:
+        for user in USER_SCALES:
+            placed = []
+            for root in roots:
+                collect(root, (0.0, 0.0, float(screen[0]), float(screen[1])), screen, user, 1.0, placed)
+            for node, rect in placed:
+                if node.type not in TEMPLATE_TYPES:
+                    continue
+                checked += 1
+                where = '%s %s at %dx%d %d%%' % (layout, node.name, screen[0], screen[1], round(user * 100))
+                x0, y0, x1, y1 = rect
+                width, height = x1 - x0, y1 - y0
+                assert x0 >= -TOLERANCE and y0 >= -TOLERANCE and x1 <= screen[0] + TOLERANCE and y1 <= screen[1] + TOLERANCE, \
+                    where + ' leaves the screen'
+                assert width >= MIN_WIDTH[node.type] * height - TOLERANCE, where + ' is narrower than its caps and knobs'
+                cap, top, bottom = CAPTION_AREA[node.type]
+                caption = node.props.get('Text', '')
+                if caption:
+                    face, factor = fonts[node.font()]
+                    font_scale = factor * min(screen[0] / (FONT_W / user), screen[1] / (FONT_H / user))
+                    left, ink_top, right, ink_bottom = face.getbbox(caption, anchor='lm')
+                    assert face.getlength(caption) * font_scale <= width - 2 * cap * height + TOLERANCE, \
+                        where + ' caption wider than the planks'
+                    assert (ink_bottom - ink_top) * font_scale <= (bottom - top) * height + TOLERANCE, \
+                        where + ' caption higher than the planks'
+                for other, other_rect in placed:
+                    if other is node or other.type not in CONTROLS or other.parent is not node.parent:
+                        continue
+                    if other.visible() != node.visible():
+                        continue  # the code shows one of the two instead of the other
+                    if other.type in ('OD/Combobox',):
+                        other_rect = (other_rect[0], other_rect[1], other_rect[2],
+                                      min(other_rect[3], other_rect[1] + 1.5 * line_height(other.font(), screen, user)))
+                    assert not overlaps(rect, other_rect), '%s overlaps %s' % (where, other.name)
+            if layout == 'MenuLoad.layout':
+                rects = {node.name: rect for node, rect in placed}
+                panel = rects['LoadPanel']
+                for name in ('FilterCampaign', 'FilterSkirmish', 'FilterSandbox', 'FilterReplays', 'SaveGameSelect',
+                             'DeleteButton', 'BackButton', 'LaunchButton'):
+                    r = rects[name]
+                    assert r[0] >= panel[0] - TOLERANCE and r[2] <= panel[2] + TOLERANCE and r[1] >= panel[1] - TOLERANCE \
+                        and r[3] <= panel[3] + TOLERANCE, name + ' leaves the load screen panel'
+                    # place on the sheet: the panel picture is the sheet panel scaled evenly
+                    w, h = pieces['LoadPanel'][2:]
+                    assert abs((panel[2] - panel[0]) / (panel[3] - panel[1]) - w / float(h)) < 0.01, 'load panel distorted'
+                assert not overlaps(rects['MapDescriptionText'], panel), 'description covers the load screen panel'
+print('MENU BUTTON TEMPLATE OK: 4 states and the compact form match the chosen sheet; %d menu screens; '
+      '%d button placements at 3 screens x 2 UI scales' % (len(MENU_LAYOUTS), checked))

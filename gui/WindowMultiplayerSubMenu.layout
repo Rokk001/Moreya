@@ -14,31 +14,29 @@
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/MenuTextButton" name="MasterServerHostButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,32},{0.5,160},{0.5,68}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,-140},{0.5,10},{0.5,140},{0.5,64}}" />
             <Property name="Text" value="Host Online" />
         </Window>
         <Window type="OD/MenuTextButton" name="MasterServerJoinButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,68},{0.5,160},{0.5,104}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,-140},{0.5,65},{0.5,140},{0.5,119}}" />
             <Property name="Text" value="Join Online" />
         </Window>
         <Window type="OD/MenuTextButton" name="MultiplayerServerHostButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,104},{0.5,160},{0.5,140}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,-140},{0.5,120},{0.5,140},{0.5,174}}" />
             <Property name="Text" value="Host via IP" />
         </Window>
         <Window type="OD/MenuTextButton" name="MultiplayerServerJoinButton" >
-            <Property name="Font" value="MedievalSharp-12" />
-            <Property name="Area" value="{{0.5,-160},{0.5,140},{0.5,160},{0.5,176}}" />
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,-140},{0.5,175},{0.5,140},{0.5,229}}" />
             <Property name="Text" value="Join via IP" />
         </Window>
-        <Window type="OD/MenuSymbolButton" name="BackButton" >
-            <Property name="Area" value="{{1,-176},{1,-92.8},{1,-99.2},{1,-16}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="TooltipText" value="Back" />
+        <Window type="OD/MenuTextButton" name="BackButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Text" value="Back" />
+            <Property name="Area" value="{{1,-366},{1,-70},{1,-196},{1,-16}}" />
         </Window>
     </Window>
 </GUILayout>
