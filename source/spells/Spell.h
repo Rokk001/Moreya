@@ -64,6 +64,7 @@ public:
     //! \brief Tells the clients that see the tile to show the cosmetic effect of the given name
     //! (see config/roomAmbienceSpells.cfg) and, if soundFamily is not empty, to play the sound of
     //! the family "Spells/<soundFamily>". Reports enemy casts to AI seats with vision when the caster is given.
+    //! An empty effect name sends no look, only the sound and the report to the AI seats.
     static void fireSpellEffect(Tile& tile, const std::string& effectName, const std::string& soundFamily,
         GameMap* gameMap = nullptr, const Seat* caster = nullptr);
 
@@ -91,6 +92,11 @@ protected:
     virtual void exportHeadersToPacket(ODPacket& os) const override;
 
     static std::string formatCastSpell(SpellType type, uint32_t price);
+
+    //! \brief Server side. True if the seat sees the tile now: the tile lists it among the seats with vision.
+    //! \param tile The tile of the target.
+    //! \param seat The seat of the caster.
+    static bool isTileSeenBy(Tile& tile, const Seat* seat);
 
 private:
     //! \brief Number of turns the spell should be displayed before automatic deletion.

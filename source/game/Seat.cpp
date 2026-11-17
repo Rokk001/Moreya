@@ -576,7 +576,7 @@ bool Seat::hasVisionOnTile(Tile* tile)
     return true;
 }
 
-//! \brief Initializes a seat and restores cooldowns and its saved tile knowledge.
+//! \brief Initializes a seat and restores cooldowns, running reveals and its saved tile knowledge.
 void Seat::initSeat()
 {
     if(getPlayer() == nullptr)
@@ -585,6 +585,20 @@ void Seat::initSeat()
     for(const std::pair<SpellType, uint32_t>& entry : mSpellCooldownsLoaded)
         getPlayer()->setSpellCooldownTurns(entry.first, entry.second);
     mSpellCooldownsLoaded.clear();
+
+    // A running reveal (Reveal Enemy, a tortured creature) goes on with the turns it had left
+    for(const std::pair<std::pair<int, int>, uint32_t>& entry : mRevealedTilesLoaded)
+    {
+        Tile* tile = mGameMap->getTile(entry.first.first, entry.first.second);
+        if((tile == nullptr) || (entry.second == 0))
+        {
+            OD_LOG_WRN("Ignored revealed tile x=" + Helper::toString(entry.first.first) + ", y=" +
+                Helper::toString(entry.first.second) + " of seat id=" + Helper::toString(mId));
+            continue;
+        }
+        mRevealedTiles.push_back(std::pair<Tile*, uint32_t>(tile, entry.second));
+    }
+    mRevealedTilesLoaded.clear();
 
     ConfigManager& config = ConfigManager::getSingleton();
 
@@ -1207,7 +1221,7 @@ Seat* Seat::createRogueSeat(GameMap* gameMap)
 }
 
 
-//! \brief Loads seat state, including tile knowledge, arrival history and shared room settings.
+//! \brief Loads seat state, including tile knowledge, arrival history, shared room settings and running reveals.
 bool Seat::importSeatFromStream(std::istream& is)
 {
     std::string str;
@@ -1352,8 +1366,27 @@ bool Seat::importSeatFromStream(std::istream& is)
     while(str == "[ResearchProgress]" || str == "[HadLibrary]" || str == "[StoredSpecials]" ||
         str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
         str == "[SpellCooldowns]" || str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]" ||
-        str == "[ResearchRemainder]" || str == "[WorkerJobs]" || str == "[PleasureRoomSettings]")
+        str == "[ResearchRemainder]" || str == "[WorkerJobs]" || str == "[PleasureRoomSettings]" || str == "[RevealedTiles]")
     {
+    if(str == "[RevealedTiles]")
+    {
+        // Saved by Seat::exportSeatToStream: the number of entries, then x, y and the turns left of each
+        size_t count = 0;
+        if(!(is >> count))
+            return false;
+        while(count-- > 0)
+        {
+            int x = 0;
+            int y = 0;
+            uint32_t turns = 0;
+            if(!(is >> x >> y >> turns))
+                return false;
+            mRevealedTilesLoaded.push_back(std::make_pair(std::make_pair(x, y), turns));
+        }
+        if(!(is >> str) || (str != "[/RevealedTiles]") || !(is >> str))
+            return false;
+        continue;
+    }
     if(str == "[PleasureRoomSettings]")
     {
         uint32_t tavern = 0;
@@ -1727,7 +1760,7 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
-//! \brief Saves seat state, tile knowledge, shared room settings and announced creature classes.
+//! \brief Saves seat state, tile knowledge, shared room settings, announced creature classes and running reveals.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1870,6 +1903,15 @@ bool Seat::exportSeatToStream(std::ostream& os) const
             if(turns > 0) cooldowns.push_back(std::make_pair(SpellManager::getSpellNameFromSpellType(type), turns));
         }
         SaveFormat::writeSpellCooldowns(os, cooldowns);
+
+        // The running reveals (Reveal Enemy, a tortured creature) with the turns they have left
+        if(!mRevealedTiles.empty())
+        {
+            os << "[RevealedTiles]\n" << mRevealedTiles.size() << "\n";
+            for(const std::pair<Tile*, uint32_t>& revealed : mRevealedTiles)
+                os << revealed.first->getX() << "\t" << revealed.first->getY() << "\t" << revealed.second << "\n";
+            os << "[/RevealedTiles]\n";
+        }
     }
 
     os << "[SkillNotAllowed]" << std::endl;

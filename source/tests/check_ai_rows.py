@@ -125,6 +125,13 @@ ANCHORS = {
     "L04": ("source/ai/AiActions.cpp", "ACTS::buildRoom"),
     "E20": ("source/ai/AiSpells.cpp", "SPELL::castChampion"),
     "H04": ("source/ai/AiItems.cpp", "ITEMS::buyForStrongest"),
+    # The six spells of the spells review, each decision with its own row
+    "E21": ("source/ai/AiSpells.cpp", "SPELL::castCurse"),
+    "E22": ("source/ai/AiSpells.cpp", "SPELL::castBlessing"),
+    "E23": ("source/ai/AiSpells.cpp", "SPELL::castInvisibility"),
+    "E24": ("source/ai/AiSpells.cpp", "SPELL::castPlague"),
+    "E25": ("source/ai/AiSpells.cpp", "SPELL::castBreakWall"),
+    "E26": ("source/ai/AiSpells.cpp", "SPELL::castRevealEnemy"),
 }
 
 # Return a function body, tracking nested braces.

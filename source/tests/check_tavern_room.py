@@ -60,7 +60,8 @@ tile_cpp = read('source/entities/Tile.cpp')
 assert tile_cpp.count('case TileVisual::tavernRoom:') >= 4, 'tavernRoom is missing in the Tile switches'
 assert 'return "tavernRoom";' in tile_cpp
 skills = enum_names(read('source/game/SkillType.h'), 'enum class SkillType')
-assert skills[-6:] == ['roomTavern', 'tavernBeer', 'roomInfirmary', 'roomGhostRoom', 'roomSpa', 'countSkill'], skills[-6:]
+# The six keeper spells of the spells review are appended after the lava spa, so the tavern values stay
+assert skills[-12:] == ['roomTavern', 'tavernBeer', 'roomInfirmary', 'roomGhostRoom', 'roomSpa', 'spellCurse', 'spellBlessing', 'spellInvisibility', 'spellPlague', 'spellBreakWall', 'spellRevealEnemy', 'countSkill'], skills[-12:]
 skill_type_cpp = read('source/game/SkillType.cpp')
 for name in ('roomTavern', 'tavernBeer'):
     assert 'case SkillType::' + name + ':' in skill_type_cpp and '"' + name + '"' in skill_type_cpp, name + ' in SkillType.cpp'
@@ -122,7 +123,8 @@ assert ('createSkill(mSkills, SkillType::tavernBeer, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomTavern') == 1 and registered.count('tavernBeer') == 1
-assert len(registered) == 65, 'the research tree has 65 entries, found ' + str(len(registered))
+# 65 entries and the six spells of the spells review
+assert len(registered) == 71, 'the research tree has 71 entries, found ' + str(len(registered))
 assert registered.index('roomCasino') < registered.index('tavernBeer'), 'Beer follows the casino in the tier II row'
 assert 'KEEPER_TITLE_BEER = "Beer"' in manager and 'Your taverns serve beer.' in manager
 assert 'ResearchEffect::PortalCooldown' in manager or '"PortalCooldown"' in manager

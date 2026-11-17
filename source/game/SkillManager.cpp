@@ -17,6 +17,7 @@
 
 #include "game/SkillManager.h"
 
+#include "game/Player.h"
 #include "game/Skill.h"
 #include "game/Seat.h"
 #include "game/SkillType.h"
@@ -299,19 +300,40 @@ public:
             case SpellType::inferno: key = "InfernoPrice"; break;
             case SpellType::possess: key = "PossessPrice"; break;
             case SpellType::summonChampion: key = "SummonChampionPrice"; break;
+            case SpellType::curse: key = "CursePrice"; break;
+            case SpellType::blessing: key = "BlessingPrice"; break;
+            case SpellType::invisibility: key = "InvisibilityPrice"; break;
+            case SpellType::plague: key = "PlaguePrice"; break;
+            case SpellType::breakWall: key = "BreakWallPrice"; break;
+            case SpellType::revealEnemy: key = "RevealEnemyPrice"; break;
             default: return "";
         }
         const std::string unit = (mSpellType == SpellType::callToWar || mSpellType == SpellType::eyeEvil ||
             mSpellType == SpellType::createGold || mSpellType == SpellType::lightning ||
             mSpellType == SpellType::tremor || mSpellType == SpellType::defector ||
             mSpellType == SpellType::hexenHen || mSpellType == SpellType::inferno ||
-            mSpellType == SpellType::possess || mSpellType == SpellType::summonChampion) ?
+            mSpellType == SpellType::possess || mSpellType == SpellType::summonChampion ||
+            mSpellType == SpellType::curse || mSpellType == SpellType::blessing ||
+            mSpellType == SpellType::invisibility || mSpellType == SpellType::plague ||
+            mSpellType == SpellType::breakWall || mSpellType == SpellType::revealEnemy) ?
             " mana" : " mana per creature";
+        // The Break Wall price follows its research (the price the local keeper pays now)
+        if((mSpellType == SpellType::breakWall) && (gameMap != nullptr) && (gameMap->getLocalPlayer() != nullptr))
+        {
+            return Helper::toString(static_cast<int32_t>(std::lround(SkillManager::getResearchValue(
+                gameMap->getLocalPlayer()->getSeat(), SkillType::spellBreakWall,
+                ConfigManager::getSingleton().getSpellConfigDouble(key), ResearchEffect::Price)))) + unit;
+        }
         return Helper::toString(ConfigManager::getSingleton().getSpellConfigInt32(key)) + unit;
     }
 
+    //! \brief Connects the spell's cast button of the game bar; the level editor has no spells tab, so there is
+    //! nothing to connect there.
     void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const override
     {
+        if(!rootWindow->isChild(getGuiPath() + mButtonName))
+            return;
+
         mode->addEventConnection(
             rootWindow->getChild(getGuiPath() + mButtonName)->subscribeEvent(
               CEGUI::PushButton::EventClicked,
@@ -689,6 +711,9 @@ SkillManager::SkillManager() :
     skill = createSkill(mSkills, SkillType::spellCreatureDefense, std::vector<SkillType>{SkillType::spellCreatureHeal});
     def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureDefenseButton", skill, 2, SpellType::creatureDefense);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellBlessing, std::vector<SkillType>{SkillType::spellCreatureHeal});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "BlessingButton", skill, 2, SpellType::blessing);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::spellCreatureStrength, std::vector<SkillType>{SkillType::spellCreatureHaste});
     def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureStrengthButton", skill, 2, SpellType::creatureStrength);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
@@ -701,8 +726,17 @@ SkillManager::SkillManager() :
     skill = createSkill(mSkills, SkillType::spellLightning, std::vector<SkillType>{SkillType::spellEyeEvil});
     def = new SkillDefSpell(TREE_PREFIX_SPELLS, "LightningButton", skill, 2, SpellType::lightning);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellBreakWall, std::vector<SkillType>{SkillType::spellEyeEvil});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "BreakWallButton", skill, 2, SpellType::breakWall);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
     // Spells tab, tier III
+    skill = createSkill(mSkills, SkillType::spellInvisibility, std::vector<SkillType>{SkillType::spellCreatureHaste});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "InvisibilityButton", skill, 3, SpellType::invisibility);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellCurse, std::vector<SkillType>{SkillType::spellCreatureSlow});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CurseButton", skill, 3, SpellType::curse);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::spellCreatureWeak, std::vector<SkillType>{SkillType::spellCreatureSlow});
     def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureWeakButton", skill, 3, SpellType::creatureWeak);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
@@ -717,6 +751,9 @@ SkillManager::SkillManager() :
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
     // Spells tab, tier IV
+    skill = createSkill(mSkills, SkillType::spellPlague, std::vector<SkillType>{SkillType::spellCreatureWeak});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "PlagueButton", skill, 4, SpellType::plague);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::spellTremor, std::vector<SkillType>{SkillType::spellCreatureExplosion});
     def = new SkillDefSpell(TREE_PREFIX_SPELLS, "TremorButton", skill, 4, SpellType::tremor);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
@@ -728,6 +765,9 @@ SkillManager::SkillManager() :
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::spellHexenHen, std::vector<SkillType>{SkillType::spellCreatureWeak});
     def = new SkillDefSpell(TREE_PREFIX_SPELLS, "HexenHenButton", skill, 4, SpellType::hexenHen);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellRevealEnemy, std::vector<SkillType>{SkillType::spellEyeEvil});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "RevealEnemyButton", skill, 4, SpellType::revealEnemy);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::keeperManaFlow, std::vector<SkillType>{SkillType::roomTemple});
     def = new SkillDefKeeper(TREE_PREFIX_SPELLS, "ManaFlowButton", skill, 4);
@@ -1053,7 +1093,13 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::spellPossess, "ManaPerSecond", ResearchBaseSource::factor, "", ""},
     {SkillType::spellDefector, "Duration", ResearchBaseSource::spells, "DefectorNbTurns", ""},
     {SkillType::spellHexenHen, "Duration", ResearchBaseSource::spells, "HexenHenNbTurns", ""},
-    {SkillType::spellCreateGold, "Gold", ResearchBaseSource::spells, "CreateGoldValue", ""}
+    {SkillType::spellCreateGold, "Gold", ResearchBaseSource::spells, "CreateGoldValue", ""},
+    {SkillType::spellCurse, "MoodLoss", ResearchBaseSource::spells, "CurseMoodFall", ""},
+    {SkillType::spellBlessing, "MoodGain", ResearchBaseSource::spells, "BlessingMoodRise", ""},
+    {SkillType::spellInvisibility, "Duration", ResearchBaseSource::spells, "InvisibilityTurns", ""},
+    {SkillType::spellPlague, "Damage", ResearchBaseSource::spells, "PlagueDamagePerTurn", ""},
+    {SkillType::spellBreakWall, "Price", ResearchBaseSource::spells, "BreakWallPrice", ""},
+    {SkillType::spellRevealEnemy, "Duration", ResearchBaseSource::spells, "RevealEnemyTurns", ""}
 };
 
 //! \brief Reads the base value a config key of the given source holds
@@ -1132,6 +1178,7 @@ static std::string getResearchEffectText(const std::string& effect)
         texts[ResearchEffect::RelaxTime] = "Relaxation time";
         texts[ResearchEffect::MoodLoss] = "Prisoner mood loss";
         texts[ResearchEffect::BetrayChance] = "Betrayal chance";
+        texts[ResearchEffect::MoodGain] = "Mood gain over time";
         texts["GrowTime"] = "Growth time";
         texts["BrewTime"] = "Brewing time";
         texts["CrackTime"] = "Cracking effort";
@@ -1213,7 +1260,11 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
 
         if(!description.empty())
             description += "\n";
-        description += getResearchEffectText(line.first) + ": " + value;
+        // The Curse spell shares the effect name MoodLoss with the prison, but it takes the mood of any creature
+        if((type == SkillType::spellCurse) && (line.first == ResearchEffect::MoodLoss))
+            description += "Mood loss over time: " + value;
+        else
+            description += getResearchEffectText(line.first) + ": " + value;
     }
 
     // The champion is not researched and has no effect line: it keeps its text

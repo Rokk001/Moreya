@@ -53,6 +53,7 @@
 #include "network/ODClient.h"
 #include "network/ODServer.h"
 #include "network/ServerMode.h"
+#include "render/CreatureOverlayStatus.h"
 #include "render/CreatureReactions.h"
 #include "render/Gui.h"
 #include "render/CreaturePanel.h"
@@ -266,11 +267,18 @@ const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed
 const std::string DEFEAT_SECOND_SUBTITLE = "That's it for today. Until next time.";
 const std::string DEFEAT_DEBRIEFING_ELAPSED = "Time elapsed: ";
 
-//! \brief Skill slots sent to the server when the possession keys 1 to 4 are pressed
-const uint32_t POSSESSION_SKILL_SLOT_FIRST = 0;
-const uint32_t POSSESSION_SKILL_SLOT_SECOND = 1;
-const uint32_t POSSESSION_SKILL_SLOT_THIRD = 2;
-const uint32_t POSSESSION_SKILL_SLOT_FOURTH = 3;
+//! \brief Number of possession skill keys in one row: 1 to 9 and 0 give the skill slots 0 to 9, the same keys with
+//! Shift held the slots 10 to 19 (the skills other than the basic attack, in the skill order of the creature)
+const uint32_t POSSESSION_SKILL_KEYS_PER_ROW = 10;
+//! \brief The possession skill keys in slot order
+const OIS::KeyCode POSSESSION_SKILL_KEYS[POSSESSION_SKILL_KEYS_PER_ROW] = {OIS::KC_1, OIS::KC_2, OIS::KC_3, OIS::KC_4,
+    OIS::KC_5, OIS::KC_6, OIS::KC_7, OIS::KC_8, OIS::KC_9, OIS::KC_0};
+//! \brief The crosshair in the middle of the screen while possessing: its text box, its symbol and its height as a
+//! share of the window height (never smaller than POSSESSION_CROSSHAIR_MIN_HEIGHT pixels)
+const std::string POSSESSION_CROSSHAIR_TEXT = "PossessionCrosshair";
+const std::string POSSESSION_CROSSHAIR_SYMBOL = "+";
+const float POSSESSION_CROSSHAIR_HEIGHT_SHARE = 0.04f;
+const float POSSESSION_CROSSHAIR_MIN_HEIGHT = 16.0f;
 //! \brief Squared length below which the possession movement direction counts as "not moving"
 const float POSSESSION_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
 //! \brief Dot product of the old and the new movement direction below which the direction counts as changed
@@ -279,6 +287,30 @@ const float POSSESSION_DIRECTION_CHANGE_DOT = 0.99f;
 const float POSSESSION_MOVE_RESEND_SECONDS = 0.5f;
 //! \brief Minimum seconds between two sent changes of the movement direction
 const float POSSESSION_MOVE_MIN_SEND_SECONDS = 0.1f;
+
+//! \brief Returns the possession skill slot of a key: 1 to 9 and 0 give the slots 0 to 9, with Shift held 10 to 19.
+//! Returns -1 for a key that is no skill key.
+//! \param key The key pressed or released.
+//! \param shift Whether Shift is held.
+static int32_t getPossessionSkillSlot(OIS::KeyCode key, bool shift)
+{
+    for(uint32_t index = 0; index < POSSESSION_SKILL_KEYS_PER_ROW; ++index)
+    {
+        if(POSSESSION_SKILL_KEYS[index] != key)
+            continue;
+
+        return static_cast<int32_t>(shift ? (index + POSSESSION_SKILL_KEYS_PER_ROW) : index);
+    }
+    return -1;
+}
+
+//! \brief Time between two left button requests while the button is held during a possession: one game turn, the
+//! server does at most one work step per turn.
+static std::chrono::steady_clock::duration getPossessionAttackRepeat()
+{
+    return std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        std::chrono::duration<double>(1.0 / ODApplication::turnsPerSecond));
+}
 
 //! Returns the autoscroll strength for one screen axis: 0 away from the border, growing linearly
 //! to 1 on the outermost pixel. minimumEdge selects the left/top border instead of the right/bottom one.
@@ -884,8 +916,11 @@ GameMode::GameMode(ModeManager *modeManager):
     // The filters, the creature list, the arrows and the navigation bar of the book are connected by the book itself
 }
 
+//! \brief Ends the possession view, then releases the windows, pictures and states that belong to this game.
 GameMode::~GameMode()
 {
+    // The interface, the mouse and the crosshair are given back if the game ends while possessing
+    leavePossessionView();
     // The feed and the profiles belong to this game only
     social::PostLog::getSingleton().stop();
     social::SocialProfileCache::getSingleton().clear();
@@ -1354,7 +1389,7 @@ void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
     }
 }
 
-//! \brief Starts a world action only when its pointer target is valid.
+//! \brief Starts a world action only when its pointer target is valid; while possessing only the left button acts.
 bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
     resetIdleHand();
@@ -1370,6 +1405,20 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 
     if (!isConnected())
         return true;
+
+    // While the player controls a creature, the left button attacks (or makes a worker work) for as long as it is
+    // held. The right button does not leave the creature: only Esc does
+    if (isLocalPlayerPossessing())
+    {
+        if (id == OIS::MB_Left)
+        {
+            sendPossessionAttack();
+            mPossessAttackHeld = true;
+            mPossessAttackNextSend = std::chrono::steady_clock::now() + getPossessionAttackRepeat();
+        }
+
+        return true;
+    }
 
     inputManager.mMouseDownOnCEGUIWindow = isMouseDownOnCEGUIWindow();
     if(mFullMap)
@@ -1388,17 +1437,6 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
             log = false;
             OD_LOG_ERR("LOCAL PLAYER DOES NOT EXIST!!");
         }
-        return true;
-    }
-
-    // While the player controls a creature, the right button makes him leave it
-    if (isLocalPlayerPossessing())
-    {
-        if (id == OIS::MB_Right)
-            sendPossessionExit();
-        else if (id == OIS::MB_Left)
-            sendPossessionAttack();
-
         return true;
     }
 
@@ -1619,6 +1657,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 void GameMode::cancelMouseInput()
 {
     mPendingHandDrop = false;
+    mPossessAttackHeld = false;
     mMiddleDragDistance = 0.0f;
     AbstractApplicationMode::cancelMouseInput();
     ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);
@@ -1628,7 +1667,8 @@ void GameMode::cancelMouseInput()
     unselectAllTiles();
 }
 
-//! \brief Completes a world action using the current action-specific pointer target.
+//! \brief Completes a world action using the current action-specific pointer target; while possessing the release of
+//! the left button ends the held attack.
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
     resetIdleHand();
@@ -1670,9 +1710,14 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
         return true;
     }
 
-    // While the player controls a creature, the left button is used for its attack only
+    // While the player controls a creature, the left button is used for its attack only; releasing it stops the
+    // repeated requests
     if (isLocalPlayerPossessing())
+    {
+        if (id == OIS::MB_Left)
+            mPossessAttackHeld = false;
         return true;
+    }
 
     if (id != OIS::MB_Left)
         return true;
@@ -1742,17 +1787,23 @@ bool GameMode::keyPressed(const OIS::KeyEvent& arg)
             return getConsole()->keyPressed(arg);
         case InputModeNormal:
         default:
-            if(arg.key == OIS::KC_ESCAPE && guiHandledKey)
+            // While possessing, Esc always leaves the creature (the keeper windows are hidden)
+            if(arg.key == OIS::KC_ESCAPE && guiHandledKey && !isLocalPlayerPossessing())
                 return true;
             return keyPressedNormal(arg);
     }
 }
 
 //! \brief Handles normal game shortcuts, including the infirmary window, and camera controls.
-//! \brief Handles normal gameplay shortcuts while preserving the separate full-map key state.
+//! \brief Handles normal gameplay shortcuts while preserving the separate full-map key state. While possessing the
+//! possession keys come first (handlePossessionKey).
 bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
 {
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
+
+    // While possessing, the keys steer the creature; the map, the keeper windows and saving are not reachable
+    if (isLocalPlayerPossessing() && handlePossessionKey(arg.key, true))
+        return true;
 
     if(arg.key == OIS::KC_M)
     {
@@ -1769,9 +1820,6 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
             closeMap();
         return true;
     }
-
-    if (isLocalPlayerPossessing() && handlePossessionKey(arg.key, true))
-        return true;
 
     switch (arg.key)
     {
@@ -1799,6 +1847,7 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
             frameListener.getCameraManager()->loadUserView(arg.key - OIS::KC_F4);
         break;
 
+    // F5 and F10 never get here while possessing (handlePossessionKey takes them)
     case OIS::KC_F5:
         saveGame();
         break;
@@ -2404,6 +2453,8 @@ bool GameMode::storeUserCamera(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Alt toggles the indicators over the creatures. While possessing the toggle is kept and shown when the
+//! possession ends.
 void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
 {
     if(key != OIS::KC_LMENU && key != OIS::KC_RMENU)
@@ -2413,8 +2464,9 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
     if(pressed && !wasDown)
     {
         mCreatureIndicatorsVisible = !mCreatureIndicatorsVisible;
-        RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap,
-            mCreatureIndicatorsVisible);
+        if(!mPossessionViewActive)
+            RenderManager::getSingleton().rrSetCreaturesTextOverlay(*mGameMap,
+                mCreatureIndicatorsVisible);
     }
 }
 
@@ -3798,9 +3850,14 @@ bool GameMode::hideOptionsWindow(const CEGUI::EventArgs& /*e*/)
     return true;
 }
 
+//! \brief Opens or closes the options window; it does not open while the player possesses a creature.
 bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
 {
     if(CEGUI::System::getSingleton().getDefaultGUIContext().getModalWindow() != nullptr)
+        return true;
+
+    // The options menu (with saving) is not reachable while possessing
+    if(isLocalPlayerPossessing())
         return true;
 
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
@@ -3913,11 +3970,15 @@ bool GameMode::loadGame(const CEGUI::EventArgs&)
     return true;
 }
 
-//! \brief Saves only local single-player or loaded games.
+//! \brief Saves only local single-player or loaded games, and never while the player possesses a creature.
 bool GameMode::saveGame(const CEGUI::EventArgs& /*e*/)
 {
     if(!ODServer::getSingleton().isConnected() ||
        ODServer::getSingleton().getServerMode() == ServerMode::ModeGameMultiPlayer)
+        return true;
+
+    // No saving while possessing
+    if(isLocalPlayerPossessing())
         return true;
 
     // Saving is available only when the local server is not a multiplayer server.
@@ -4932,9 +4993,17 @@ void GameMode::setHighlightedCreature(Creature* creature)
         creature->maxAmbient();
 }
 
-//! \brief Refreshes action feedback and the eligible pointer target without executing an action.
+//! \brief Refreshes action feedback and the eligible pointer target without executing an action; while possessing it
+//! keeps the possession view instead.
 void GameMode::refreshActionFeedback(float elapsed)
 {
+    // While possessing there is no keeper hand, pointer or action feedback: the possession view is kept instead
+    if(mPossessionViewActive)
+    {
+        refreshPossessionView();
+        return;
+    }
+
     if(mIsSkillWindowOpen)
     {
         CEGUI::Window* tree = mRootWindow->getChild("SkillTreeWindow");
@@ -5053,7 +5122,8 @@ void GameMode::refreshActionFeedback(float elapsed)
     RenderManager::getSingleton().rrSetHandGrabbing(mWorkersWindow != nullptr && mWorkersWindow->isDragging());
     RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging, building);
     // The hand is the mouse cursor: whatever hid it (key, window, pick-up), it comes back at once. Only the defeat
-    // sequence hides it on purpose, and it gives the hand back itself.
+    // sequence and the possession view hide it on purpose, and they give the hand back themselves (this frame
+    // update does not get here while the possession view is shown).
     if(!mDefeatSequence.isStarted() && !RenderManager::getSingleton().isKeeperHandVisible())
         RenderManager::getSingleton().rrToggleHandSelectorVisibility();
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(!mDefeatSequence.isStarted());
@@ -5293,6 +5363,9 @@ bool GameMode::isLocalPlayerPossessing()
     return player->isPossessing();
 }
 
+//! \brief Keys while possessing: WASD and the arrows walk, Esc is the only way out, 1-9 and 0 (with Shift the next
+//! ten) use the skills, the console and debug information work as usual and every other key does nothing (the chat is
+//! hidden with the rest of the keeper's screen, so Enter does not open it).
 bool GameMode::handlePossessionKey(OIS::KeyCode key, bool pressed)
 {
     switch (key)
@@ -5317,60 +5390,55 @@ bool GameMode::handlePossessionKey(OIS::KeyCode key, bool pressed)
         mPossessKeyRight = pressed;
         return true;
 
-    // The exit key. It is the same as the right mouse button. An open window is closed first
+    // The exit key, the only way out of the creature (the right mouse button does not leave it). The keeper
+    // windows are hidden while possessing, so there is no window to close first
     case OIS::KC_ESCAPE:
-        if (pressed && !closeTopWindow())
+        if (pressed)
             sendPossessionExit();
         return true;
 
-    // The creature skills (other than its attack, which is on the left mouse button)
-    case OIS::KC_1:
-        if (pressed)
-            sendPossessionSkill(POSSESSION_SKILL_SLOT_FIRST);
-        return true;
-
-    case OIS::KC_2:
-        if (pressed)
-            sendPossessionSkill(POSSESSION_SKILL_SLOT_SECOND);
-        return true;
-
-    case OIS::KC_3:
-        if (pressed)
-            sendPossessionSkill(POSSESSION_SKILL_SLOT_THIRD);
-        return true;
-
-    case OIS::KC_4:
-        if (pressed)
-            sendPossessionSkill(POSSESSION_SKILL_SLOT_FOURTH);
-        return true;
-
-    // These keys move the RTS camera, which is not used while possessing
-    case OIS::KC_Q:
-    case OIS::KC_E:
-    case OIS::KC_HOME:
-    case OIS::KC_END:
-    case OIS::KC_PGUP:
-    case OIS::KC_PGDOWN:
-    case OIS::KC_T:
-    case OIS::KC_V:
-    case OIS::KC_SPACE:
-    case OIS::KC_5:
-    case OIS::KC_6:
-    case OIS::KC_7:
-    case OIS::KC_8:
-    case OIS::KC_9:
-    case OIS::KC_0:
-        return true;
+    // The console and the debug information work as usual
+    case OIS::KC_F11:
+    case OIS::KC_F12:
+    case OIS::KC_GRAVE:
+        return false;
 
     default:
-        return false;
+        break;
     }
+
+    // The creature skills (other than its attack, which is on the left mouse button): 1 to 9 and 0 for the first ten,
+    // Shift and the same keys for the next ten
+    const int32_t slot = getPossessionSkillSlot(key, getKeyboard()->isModifierDown(OIS::Keyboard::Shift));
+    if (slot >= 0)
+    {
+        if (pressed)
+            sendPossessionSkill(static_cast<uint32_t>(slot));
+        return true;
+    }
+
+    // Every other key does nothing while possessing: F5 (quick save) and F10 (options menu with saving), the keys
+    // that open keeper windows or the map and the keys of the RTS camera
+    return true;
 }
 
+//! \brief Each frame while possessing: repeats the left button request while it is held and sends the walk
+//! direction when it changed.
 void GameMode::updatePossessionInput(float timeSinceLastFrame)
 {
     if (!isLocalPlayerPossessing())
         return;
+
+    // A held left button keeps attacking or working, one request per turn
+    if (mPossessAttackHeld)
+    {
+        std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+        if (now >= mPossessAttackNextSend)
+        {
+            sendPossessionAttack();
+            mPossessAttackNextSend = now + getPossessionAttackRepeat();
+        }
+    }
 
     // The movement keys are relative to where the player looks
     Ogre::Real yaw = ODFrameListener::getSingleton().getCameraManager()->getPossessionYaw();
@@ -5438,6 +5506,7 @@ void GameMode::sendPossessionExit()
     ODClient::getSingleton().queueClientNotification(ClientNotificationType::askPossessExit);
 }
 
+//! \brief The local player now possesses a creature: the selection is dropped and the possession view starts.
 void GameMode::notifyPossessionStarted()
 {
     notifyPossessionEnded();
@@ -5446,8 +5515,13 @@ void GameMode::notifyPossessionStarted()
     mPlayerSelection.setCurrentAction(SelectedAction::none);
     unselectAllTiles();
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+
+    // The own view of the creature: no keeper interface, a crosshair, the mouse kept in the window
+    enterPossessionView();
 }
 
+//! \brief The local player no longer possesses a creature: the possession input is reset and the keeper interface
+//! comes back as it was.
 void GameMode::notifyPossessionEnded()
 {
     mPossessKeyForward = false;
@@ -5456,6 +5530,137 @@ void GameMode::notifyPossessionEnded()
     mPossessKeyRight = false;
     mPossessLastDirection = Ogre::Vector2::ZERO;
     mPossessTimeSinceSent = 0.0f;
+    mPossessAttackHeld = false;
+    leavePossessionView();
+}
+
+//! \brief Hides the keeper interface for the possession: every root window (the chat included), the keeper hand, the
+//! pointer and the indicators over the creatures; locks the mouse in the window and shows the crosshair. The own
+//! model of the creature is hidden by refreshPossessionView.
+void GameMode::enterPossessionView()
+{
+    if (mPossessionViewActive)
+        return;
+
+    Player* player = mGameMap->getLocalPlayer();
+    if ((player == nullptr) || !player->isPossessing())
+        return;
+
+    mPossessionViewActive = true;
+    mPossessionViewCreatureName = player->getPossessedCreatureName();
+    mPossessionHiddenWindows.clear();
+    if (mFullMap)
+        closeMap();
+
+    // Nothing the keeper was doing with the mouse goes on
+    InputManager& inputManager = mModeManager->getInputManager();
+    inputManager.mLMouseDown = false;
+    inputManager.mRMouseDown = false;
+    inputManager.mMMouseDown = false;
+    mPendingHandDrop = false;
+    if (inputManager.mHighlightedCreature != nullptr)
+    {
+        inputManager.mHighlightedCreature->normalizeAmbient();
+        inputManager.mHighlightedCreature = nullptr;
+    }
+
+    // The keeper hand and the pointer
+    CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
+    RenderManager& renderManager = RenderManager::getSingleton();
+    if (renderManager.isKeeperHandVisible())
+        renderManager.rrToggleHandSelectorVisibility();
+
+    // The indicators over the creatures, also those a hit or a hover would show for a moment
+    CreatureOverlayStatus::setAllSuppressed(true);
+    renderManager.rrSetCreaturesTextOverlay(*mGameMap, false);
+
+    // The mouse only turns the view and stays in the window
+    inputManager.setPossessionMouseLock(true);
+
+    TextRenderer::getSingleton().addTextBox(POSSESSION_CROSSHAIR_TEXT, POSSESSION_CROSSHAIR_SYMBOL, 0.0f, 0.0f,
+        POSSESSION_CROSSHAIR_MIN_HEIGHT, POSSESSION_CROSSHAIR_MIN_HEIGHT, Ogre::ColourValue::White);
+    refreshPossessionView();
+}
+
+//! \brief Each frame of the possession view: keeps every root window hidden, the chat included (also the ones a message
+//! opens), the pointer and the own model of the creature hidden and the crosshair in the middle of the window.
+void GameMode::refreshPossessionView()
+{
+    if (!mPossessionViewActive)
+        return;
+
+    for (size_t index = 0; index < mRootWindow->getChildCount(); ++index)
+    {
+        CEGUI::Window* child = mRootWindow->getChildAtIdx(index);
+        // Nothing of the keeper's screen stays, the chat included: the player is only the creature
+        if (!child->isVisible())
+            continue;
+
+        // The defeat sequence has its own windows, they are never hidden
+        if ((child == mDefeatTint) || (child == mDefeatFade) || (child == mDefeatSubtitle) ||
+            (child == mDefeatCameraMarker) || (child == mDefeatDebriefing))
+            continue;
+
+        child->hide();
+        if (std::find(mPossessionHiddenWindows.begin(), mPossessionHiddenWindows.end(), child) ==
+            mPossessionHiddenWindows.end())
+            mPossessionHiddenWindows.push_back(child);
+    }
+
+    CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
+    TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+
+    // The view is in the eyes of the creature, its own model is not shown
+    Creature* creature = mGameMap->getCreature(mPossessionViewCreatureName);
+    if (creature != nullptr)
+        RenderManager::getSingleton().rrSetCreatureModelVisible(*creature, false);
+
+    // The crosshair follows the size of the window, from 640x480 to 8K
+    Ogre::RenderWindow* window = ODFrameListener::getSingleton().getRenderWindow();
+    const float width = static_cast<float>(window->getWidth());
+    const float height = static_cast<float>(window->getHeight());
+    const float crosshairHeight = std::max(POSSESSION_CROSSHAIR_MIN_HEIGHT, height * POSSESSION_CROSSHAIR_HEIGHT_SHARE);
+    TextRenderer& textRenderer = TextRenderer::getSingleton();
+    textRenderer.setCharacterHeight(POSSESSION_CROSSHAIR_TEXT, crosshairHeight);
+    // A character of the font is about half as wide as it is high
+    textRenderer.moveText(POSSESSION_CROSSHAIR_TEXT, (width - crosshairHeight * 0.5f) * 0.5f,
+        (height - crosshairHeight) * 0.5f);
+}
+
+//! \brief Ends the possession view: the hidden root windows, the keeper hand, the pointer, the indicators over the
+//! creatures and the own model of the creature come back as they were, the mouse is freed, the crosshair removed.
+void GameMode::leavePossessionView()
+{
+    if (!mPossessionViewActive)
+        return;
+
+    mPossessionViewActive = false;
+    // A window destroyed meanwhile is no child any more and is skipped
+    for (CEGUI::Window* window : mPossessionHiddenWindows)
+    {
+        if (mRootWindow->isChild(window))
+            window->show();
+    }
+    mPossessionHiddenWindows.clear();
+
+    Creature* creature = mGameMap->getCreature(mPossessionViewCreatureName);
+    if (creature != nullptr)
+        RenderManager::getSingleton().rrSetCreatureModelVisible(*creature, true);
+    mPossessionViewCreatureName.clear();
+
+    TextRenderer::getSingleton().removeTextBox(POSSESSION_CROSSHAIR_TEXT);
+    mModeManager->getInputManager().setPossessionMouseLock(false);
+
+    CreatureOverlayStatus::setAllSuppressed(false);
+    RenderManager& renderManager = RenderManager::getSingleton();
+    renderManager.rrSetCreaturesTextOverlay(*mGameMap, mCreatureIndicatorsVisible);
+    // The defeat sequence hides the hand and the pointer itself
+    if (!mDefeatSequence.isStarted())
+    {
+        if (!renderManager.isKeeperHandVisible())
+            renderManager.rrToggleHandSelectorVisibility();
+        CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
+    }
 }
 
 //! \brief Re-evaluates the selected action and its contextual item or terrain information.

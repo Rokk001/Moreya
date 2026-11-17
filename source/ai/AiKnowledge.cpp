@@ -228,7 +228,7 @@ bool AiKnowledge::planRoute(KeeperAI& ai, const AiSettings& settings, Tile* star
     return true;
 }
 
-//! \brief Returns enemy fighters currently visible on the map.
+//! \brief Returns enemy fighters currently visible on the map; a creature hidden by the Invisibility spell is not seen.
 std::vector<Creature*> AiKnowledge::visibleEnemyFighters() const
 {
     std::vector<Creature*> seen;
@@ -239,7 +239,8 @@ std::vector<Creature*> AiKnowledge::visibleEnemyFighters() const
 
         for(Creature* creature : mGameMap.getCreaturesBySeat(seat))
         {
-            if(creature->getDefinition()->isWorker() || !creature->isAlive() || !creature->getIsOnMap())
+            if(creature->getDefinition()->isWorker() || !creature->isAlive() || !creature->getIsOnMap() ||
+               creature->isSpellInvisible())
                 continue;
 
             Tile* tile = creature->getPositionTile();

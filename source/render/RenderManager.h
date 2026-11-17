@@ -247,6 +247,9 @@ public:
     //! \brief Releases movable visuals and any attached cauldron fire.
     void rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
+    //! \brief Shows the body of a creature with the given opacity (1 = solid). Used for the half transparent look of a
+    //! creature made invisible by the Invisibility spell, which only its own keeper and his allies see.
+    void rrSetCreatureOpacity(Creature* creature, float opacity);
     //! \brief Aligns a pulled body with the current animated worker hand, with safe rig fallbacks.
     void rrApplyDragContact(Creature& dragged, const Creature& worker);
     //! \brief Samples contacts after all world movements and animations.
@@ -427,6 +430,10 @@ public:
 
     //! \brief Toggles the creatures text overlay
     void rrTemporaryDisplayCreaturesTextOverlay(Creature* creature, Ogre::Real timeToDisplay);
+
+    //! \brief Shows or hides the model of the given creature, with what is attached to its bones. Used on the client
+    //! for the creature the local player possesses: the view is in its eyes, so its own model is hidden.
+    void rrSetCreatureModelVisible(Creature& creature, bool visible);
 
     //! \brief Returns the name of a copy of the given material that is tinted with the given colour.
     //! The copy is created on the first request and reused afterwards.

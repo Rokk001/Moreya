@@ -44,6 +44,13 @@ enum class SpellType
     inferno,
     possess,
     summonChampion,
+    // The six keeper spells of the spells review, appended so that the values of the older spells stay
+    curse,
+    blessing,
+    invisibility,
+    plague,
+    breakWall,
+    revealEnemy,
     nbSpells     // Must be the last in this enum
 };
 

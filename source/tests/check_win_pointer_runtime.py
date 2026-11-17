@@ -152,7 +152,7 @@ struct InputManager: OIS::MouseListener
     Keyboard keyboard; Keyboard* mKeyboard = &keyboard;
     Window window; Window* mRenderWindow = &window;
     AbstractApplicationMode mode; AbstractApplicationMode* mCurrentAMode = &mode;
-    bool mWasForeground = true, mMouseGrab = false, mHasPendingPosition = false;
+    bool mWasForeground = true, mMouseGrab = false, mHasPendingPosition = false, mPossessionMouseLock = false;
     int mPendingX = 0, mPendingY = 0, mLastPointerX = 0, mLastPointerY = 0;
     void* mHookedWindow = nullptr;
     void* mOldWindowProc = nullptr;
@@ -163,6 +163,8 @@ struct InputManager: OIS::MouseListener
     bool readSystemPointer(int& x, int& y, bool& inside) { x=sampleX; y=sampleY; inside=sampleInside; return true; }
     void moveSystemPointer(int x, int y) { sampleX=x; sampleY=y; }
     void updateCursorGrab(bool) {}
+    // The possession lock is off in this probe: the pointer is never put back to the middle
+    void centrePointer() {}
     void applyPointerToState(int x, int y);
     void dispatchPointerEvents();
     void cancelPointerInput();
