@@ -259,7 +259,8 @@ hud = ET.parse(ROOT / 'gui/ModeGame.layout').getroot()
 windows = {node.get('name'): node for node in hud.iter('Window')}
 button = windows['RoomManagerButton']
 assert props(button)['TooltipText'] == 'Room Manager'
-assert props(button)['NormalImage'] == 'OpenDungeonsIcons/NavigationRooms'
+# The HUD button shows its own Room Manager icon, not the Rooms tab icon (INGAME-QS-10 K12b).
+assert props(button)['NormalImage'] == 'NavigationRoomManager/Icon'
 assert props(button)['Visible'] == 'False'
 assert unicode_glyph(ROOT / 'gui/fonts/SourceSerif4-Semibold.ttf', 0x2022) == 508, 'tracked dot glyph'
 assert props(button.find("Window[@name='Dot']"))['Text'] == '\u2022', 'HUD uses the covered circular bullet'
