@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 
-<Window type="OD/MenuFrameWindow" name="LevelWindowFrame" >
-            <Property name="Area" value="{{0.5,-230},{0.5,-180},{0.5,230},{0.5,180}}" />
+<Window type="OD/SheetWindow" name="LevelWindowFrame" >
+            <Property name="Area" value="{{0.5,-250},{0.5,-215},{0.5,250},{0.5,215}}" />
             <Property name="Text" value="Please set your level main properties..." />
             <Property name="SizingEnabled" value="False" />
             <Property name="AlwaysOnTop" value="True" />
@@ -69,14 +69,14 @@
                 <Property name="Font" value="LiberationSans-10" />
                 <Property name="Text" value="" />
             </Window>
-            <Window type="OD/IconButton" name="BackButton" >
-                <Property name="Area" value="{{0.5,-150},{1.0,-50},{0.5,-50},{1.0,-20}}" />
+            <Window type="OD/MenuTextButton" name="BackButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{0.5,-222},{1,-62},{0.5,-8},{1,-8}}" />
                 <Property name="Text" value="Back" />
-                <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
             </Window>
-            <Window type="OD/IconButton" name="LaunchNewLevel" >
-                <Property name="Area" value="{{0.5,-30},{1.0,-50},{0.5,120},{1.0,-20}}" />
+            <Window type="OD/MenuTextButton" name="LaunchNewLevel" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{0.5,8},{1,-62},{0.5,222},{1,-8}}" />
                 <Property name="Text" value="Create Level" />
-                <Property name="IconImage" value="OpenDungeonsIcons/CheckIcon" />
             </Window>
         </Window>

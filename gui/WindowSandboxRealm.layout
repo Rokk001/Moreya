@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="SandboxRealmWindow" >
-        <Property name="Area" value="{{0.5,-230},{0.5,-110},{0.5,230},{0.5,120}}" />
+    <Window type="OD/SheetWindow" name="SandboxRealmWindow" >
+        <Property name="Area" value="{{0.5,-246},{0.5,-145},{0.5,246},{0.5,155}}" />
         <Property name="Text" value="Realm complete" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />
@@ -13,13 +13,15 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
-        <Window type="OD/Button" name="NextRealmButton" >
-            <Property name="Area" value="{{0.25,-90},{0,140},{0.25,90},{0,170}}" />
+        <Window type="OD/MenuTextButton" name="NextRealmButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.25,-95},{0,140},{0.25,95},{0,194}}" />
             <Property name="Text" value="Next realm" />
             <Property name="TooltipText" value="Leave this realm and start the next one." />
         </Window>
-        <Window type="OD/Button" name="StayButton" >
-            <Property name="Area" value="{{0.75,-90},{0,140},{0.75,90},{0,170}}" />
+        <Window type="OD/MenuTextButton" name="StayButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.75,-95},{0,140},{0.75,95},{0,194}}" />
             <Property name="Text" value="Stay here" />
             <Property name="TooltipText" value="Keep building in this realm." />
         </Window>

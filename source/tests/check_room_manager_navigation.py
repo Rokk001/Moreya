@@ -91,10 +91,12 @@ def check_page_bounds(manager):
             fit = min(1, screen_w / (width * layout_scale), screen_h / (height * layout_scale))
             scale = layout_scale * fit
             font_scale = min(screen_w / 800, screen_h / 600) * user
-            # Dungeonbook frame side and bottom images are 36 design pixels;
-            # its title uses 20pt font line spacing plus 12 design pixels padding.
-            client_w = (width - 72) * scale
-            client_h = height * scale - (20 * 4 / 3 * 1.35 * font_scale + 12 * scale) - 36 * scale
+            # Window frame of the menu sheet (OD/SheetWindow): side rails 32 and top/bottom rails 44 sheet pixels at
+            # 1.5625 sheet pixels per design pixel, scaled with the layout scale; the title is one 13 point line plus
+            # 4 pixels on the top rail from three quarters of its height.
+            rail_side, rail_top = 32 / 1.5625 * layout_scale, 44 / 1.5625 * layout_scale
+            client_w = width * scale - 2 * rail_side
+            client_h = height * scale - (0.75 * rail_top + 13 * 4 / 3 * 1.35 * font_scale + 4) - rail_top
             page_w = (page_area[4] - page_area[0]) * client_w + (page_area[5] - page_area[1]) * scale
             page_h = (page_area[6] - page_area[2]) * client_h + (page_area[7] - page_area[3]) * scale
             for kind in ('Ghost', 'Merchant', 'Tavern', 'Spa', 'Infirmary', 'Alchemy', 'Casino', 'Workshop'):
@@ -239,7 +241,7 @@ if '--runtime-only' in sys.argv:
 
 # The GUI contracts below bind the tested state to actual input handlers and layouts.
 layout = ET.parse(ROOT / 'gui/WindowRoomManager.layout').getroot().find('Window')
-assert layout.get('name') == 'RoomManagerWindow' and layout.get('type') == 'OD/FrameWindow'
+assert layout.get('name') == 'RoomManagerWindow' and layout.get('type') == 'OD/SheetWindow'
 assert props(layout)['Text'] == 'Room Manager'
 assert props(layout)['Visible'] == 'False'
 check_page_bounds(layout)

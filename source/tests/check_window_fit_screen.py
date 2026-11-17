@@ -103,7 +103,8 @@ assert windows, 'no windows found in the layouts'
 quit_window = ET.parse(repo / 'gui' / 'WindowQuit.layout').getroot().find('Window')
 quit_properties = {p.get('name'): p.get('value') for p in quit_window.findall('Property')}
 quit_area = udims(quit_properties['Area'])
-assert quit_window.get('type') == 'OD/FrameWindow'
+# every in-game window uses the window frame of the chosen menu sheet (check_ingame_window_frame.py)
+assert quit_window.get('type') == 'OD/SheetWindow'
 assert float(quit_properties['Alpha']) == 1.0, 'quit confirmation must be opaque'
 assert len(quit_area) == 4
 assert all(abs(quit_area[axis][0] + quit_area[axis + 2][0] - 1.0) < 0.00001
@@ -163,6 +164,27 @@ for section_name in ('withtitle_frame', 'withtitle_frame_disabled'):
     parts = {image.get('component') for image in section.findall('Image') + section.findall('ImageProperty')}
     assert {'LeftEdge', 'RightEdge', 'BottomEdge'} <= parts, section_name + ' lost its side or bottom edge'
     assert not parts & {'TopEdge', 'TopLeftCorner', 'TopRightCorner'}, section_name + ' draws a second top frame'
+# The window frame of the chosen menu sheet that every in-game window uses now follows the same rules: one title font,
+# contents directly below the title, which sits on the single top rail (no second top rail below it), side and bottom
+# rails drawn, and a close button as high and wide as the title.
+sheet_frame = skin.find("WidgetLook[@name='OD/SheetWindow']")
+assert sheet_frame.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-13'
+sheet_client = sheet_frame.find("NamedArea[@name='ClientWithTitleWithFrame']/Area")
+assert len(sheet_client.findall('Dim')) == 4, 'sheet frame contents need a clipped inner rectangle'
+sheet_top = sheet_client.find("Dim[@type='TopEdge']")
+assert len(sheet_top) == 1 and sheet_top[0].tag == 'WidgetDim' and sheet_top[0].get('widget') == '__auto_titlebar__', \
+    'sheet frame contents must start directly below the title bar'
+rails = [component.find('Image').get('name') for component in
+         sheet_frame.find("ImagerySection[@name='sheet_frame']").findall('ImageryComponent')]
+assert {'ODMenuTemplate/FrameLeft', 'ODMenuTemplate/FrameRight', 'ODMenuTemplate/FrameBottom'} <= set(rails), \
+    'the sheet frame lost its side or bottom rail'
+assert rails.count('ODMenuTemplate/FrameTop') == 1, 'the sheet frame draws a second top rail'
+title_top = sheet_frame.find("Child[@nameSuffix='__auto_titlebar__']/Area/Dim[@type='TopEdge']")
+assert title_top.find('OperatorDim/ImageDim').get('name') == 'ODMenuTemplate/FrameTop', 'the title sits on the top rail'
+sheet_close = sheet_frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
+for dimension in ('Width', 'Height'):
+    node = sheet_close.find("Dim[@type='%s']/WidgetDim" % dimension)
+    assert node is not None and node.get('widget') == '__auto_titlebar__' and node.get('dimension') == 'Height'
 # The old creature window is gone (a creature's information opens in the Dungeonbook); the Dungeonbook is the framed
 # window whose contents are checked against the shared client rectangle: its start page begins at the looknfeel client
 # origin and its creature pages end above the navigation bar at the bottom.
@@ -216,7 +238,8 @@ print('shared title, close button, list insets, event field and single goals ent
 # The options page fits its two existing button groups into a screen-limited window.
 options_layout = ET.parse(repo / 'gui/WindowGameOptions.layout').getroot().find('Window')
 assert window_extent(options_layout)[1] == (0.95, 0.0)
-assert 'const float height = std::min(0.95f, (84.0f + 46.0f * entries.size())' in game_text
+# 84 design pixels of frame and margins before, 50 more for the title rail and bottom rail of the sheet frame
+assert 'const float height = std::min(0.95f, (134.0f + 46.0f * entries.size())' in game_text
 assert 'const float step = 0.78f / entries.size()' in game_text
 for count in (5, 11):
     step = 0.78 / count

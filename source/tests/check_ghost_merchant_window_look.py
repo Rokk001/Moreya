@@ -10,10 +10,13 @@ from check_room_manager_pages import props, windows, fit_page
 ROOT=Path(__file__).resolve().parents[2]
 manager=ET.parse(ROOT/'gui/WindowRoomManager.layout').getroot().find('Window')
 book=ET.parse(ROOT/'gui/WindowSocial.layout').getroot().find('Window')
-for key,value in props(book).items():
-    if (key.startswith('Frame') and key.endswith('Image')) or key=='TitlebarFont':
-        assert props(manager)[key]==value,'shared Dungeonbook '+key
-assert props(manager.find('AutoWindow'))==props(book.find('AutoWindow')),'shared Dungeonbook title band'
+# The Room Manager and the Dungeonbook share their frame: the window frame of the menu sheet that every in-game window
+# uses (it was the ornate book frame copied into both layouts), with no frame or title band property of their own.
+assert manager.get('type')==book.get('type')=='OD/SheetWindow','shared frame of the menu sheet'
+for window in (manager,book):
+    for key in props(window):
+        assert not ((key.startswith('Frame') and key.endswith('Image')) or key=='TitlebarFont'),'own frame '+key
+    assert window.find('AutoWindow') is None,'own title band'
 for name in ('Ghost','Merchant'):
     root=ET.parse(ROOT/('gui/RoomManager'+name+'Page.layout')).getroot().find('Window')
     assert root.get('type')=='DefaultWindow' and root.find('AutoWindow') is None

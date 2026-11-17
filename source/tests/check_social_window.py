@@ -1,6 +1,6 @@
 """Check the Dungeonbook (social browser): window layout, HUD button, hotkey, event hooks and limits.
 
-The window is a fixed size OD/FrameWindow imported into the game layout (so it is registered for UI
+The window is a fixed size OD/SheetWindow (the frame of the menu sheet) imported into the game layout (so it is registered for UI
 scaling like the other windows), it closes with its cross and with Escape (closeTopWindow), the
 hotkey B is used only once, and the posts come only from client side events that are guarded so they
 cost nothing while the feed is not running.
@@ -23,7 +23,7 @@ def read(path):
 
 
 layout = read('gui/WindowSocial.layout')
-check('name="SocialWindow"' in layout and 'type="OD/FrameWindow"' in layout, 'frame window')
+check('name="SocialWindow"' in layout and 'type="OD/SheetWindow"' in layout, 'frame window of the menu sheet')
 check('<Property name="SizingEnabled" value="False" />' in layout, 'the window must not be resizable')
 m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
 check(m is not None, 'a fixed size centred area is expected')

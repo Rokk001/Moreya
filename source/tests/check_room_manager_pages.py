@@ -24,6 +24,12 @@ RESOLUTIONS = ((640, 480), (800, 600), (1024, 768), (1280, 720), (1366, 768), (1
                (2560, 1440), (3440, 1440), (3840, 2160), (7680, 4320))
 SCALES = (.8, .9, 1., 1.1, 1.2)
 EXPECTED_SCREEN_CASES = 440
+# Room Manager window in design pixels: 880x710 inside the ornate frame before, 898x730 in the window frame of the menu
+# sheet so that the client area keeps its size at 1920x1200 (counted once on this branch).
+WINDOW_W, WINDOW_H = 898, 730
+# Rails of the sheet frame in design pixels: ODMenuTemplate FrameLeft/FrameRight 32, FrameTop/FrameBottom 44 sheet
+# pixels at 1.5625 sheet pixels per design pixel.
+SHEET_RAIL_SIDE, SHEET_RAIL_TOP, SHEET_RAIL_BOTTOM = 32 / 1.5625, 44 / 1.5625, 44 / 1.5625
 PAYER = ('PayerLine', 'KeeperRing', 'Keeper', 'KeeperCoin', 'KeeperLabel',
          'CreatureRing', 'Creature', 'CreatureCoin', 'CreatureLabel')
 REQUIRED = {
@@ -144,13 +150,17 @@ def fit_page(name, page, manager):
     for width, height in RESOLUTIONS:
         for user in SCALES:
             raw = min(width / 1024., height / 768.) * user
-            scale = raw * min(1., width / (880 * raw), height / (710 * raw))
+            scale = raw * min(1., width / (WINDOW_W * raw), height / (WINDOW_H * raw))
             font_scale = min(width / 800., height / 600.) * user
-            title = 20 * 4 / 3 * 1.35 * font_scale + 12 * scale
-            fw, fh = 808 * scale, 710 * scale - title - 36 * scale
+            # Window frame of the chosen menu sheet (OD/SheetWindow): side rails, the title (one 13 point line and 4
+            # pixels) on the top rail from three quarters of its height, bottom rail; the rails follow the layout scale
+            # (not the fit factor), as the scaled ODMenuTemplate images do.
+            title = 0.75 * SHEET_RAIL_TOP * raw + 13 * 4 / 3 * 1.35 * font_scale + 4
+            fw = WINDOW_W * scale - 2 * SHEET_RAIL_SIDE * raw
+            fh = WINDOW_H * scale - title - SHEET_RAIL_BOTTOM * raw
             bounds = area(props(manager['Pages'])['Area'], fw, fh, scale)
             pw, ph = bounds[2] - bounds[0], bounds[3] - bounds[1]
-            assert 880 * scale <= width + .5 and 710 * scale <= height + .5
+            assert WINDOW_W * scale <= width + .5 and WINDOW_H * scale <= height + .5
             sizes = {'': (pw, ph)}
             for path, node in page.items():
                 parent = path.rpartition('/')[0]
@@ -262,7 +272,9 @@ def check_payer(page, name, helper, switch='PayerButton'):
 def main():
     """Assert the fixed per-page contract, the state rules and production event/request routing."""
     manager = ET.parse(ROOT / 'gui/WindowRoomManager.layout').getroot().find('Window')
-    assert props(manager)['Area'] == '{{0.5,-440},{0.5,-355},{0.5,440},{0.5,355}}', 'fixed frame design dimensions'
+    assert manager.get('type') == 'OD/SheetWindow', 'the Room Manager uses the window frame of the menu sheet'
+    assert props(manager)['Area'] == '{{0.5,-%g},{0.5,-%g},{0.5,%g},{0.5,%g}}' % (
+        WINDOW_W / 2, WINDOW_H / 2, WINDOW_W / 2, WINDOW_H / 2), 'fixed frame design dimensions'
     manager_windows = windows(manager)
     scheme = ET.parse(ROOT / 'gui/ODSkin.scheme').getroot()
     images = {}

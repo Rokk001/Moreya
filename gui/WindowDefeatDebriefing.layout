@@ -14,16 +14,10 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="RiseOnClickEnabled" value="False" />
         </Window>
-        <Window type="OD/StaticImage" name="Panel" >
-            <Property name="Area" value="{{0.5,-320},{0.5,-240},{0.5,320},{0.5,240}}" />
-            <Property name="Image" value="ODHudSurface/Stone" />
-            <Property name="ImageColours" value="FF807A72" />
-            <Property name="HorzFormatting" value="Tiled" />
-            <Property name="VertFormatting" value="Tiled" />
-            <Property name="FrameEnabled" value="True" />
-            <Property name="BackgroundEnabled" value="False" />
+        <Window type="OD/SheetPanel" name="Panel" >
+            <Property name="Area" value="{{0.5,-336},{0.5,-262},{0.5,336},{0.5,262}}" />
             <Window type="OD/StaticText" name="Title" >
-                <Property name="Area" value="{{0,20},{0,14},{1,-20},{0,54}}" />
+                <Property name="Area" value="{{0,36},{0,36},{1,-36},{0,76}}" />
                 <Property name="Text" value="Mission debriefing" />
                 <Property name="Font" value="MedievalSharp-20" />
                 <Property name="FrameEnabled" value="False" />
@@ -32,7 +26,7 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="PlayerName" >
-                <Property name="Area" value="{{0,20},{0,58},{1,-20},{0,88}}" />
+                <Property name="Area" value="{{0,36},{0,80},{1,-36},{0,110}}" />
                 <Property name="Text" value="" />
                 <Property name="Font" value="MedievalSharp-12" />
                 <Property name="FrameEnabled" value="False" />
@@ -41,7 +35,7 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="Outcome" >
-                <Property name="Area" value="{{0,40},{0,100},{1,-40},{0,126}}" />
+                <Property name="Area" value="{{0,56},{0,122},{1,-56},{0,148}}" />
                 <Property name="Text" value="" />
                 <Property name="Font" value="MedievalSharp-12" />
                 <Property name="FrameEnabled" value="False" />
@@ -50,7 +44,7 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="Elapsed" >
-                <Property name="Area" value="{{0,40},{0,130},{1,-40},{0,156}}" />
+                <Property name="Area" value="{{0,56},{0,152},{1,-56},{0,178}}" />
                 <Property name="Text" value="" />
                 <Property name="Font" value="MedievalSharp-12" />
                 <Property name="FrameEnabled" value="False" />
@@ -61,10 +55,10 @@
             <Window type="OD/MenuScrollablePane" name="StatisticsArea" >
                 <Property name="Visible" value="False" />
                 <Property name="ContentPaneAutoSized" value="False" />
-                <Property name="Area" value="{{0,40},{0,168},{1,-40},{1,-100}}" />
+                <Property name="Area" value="{{0,56},{0,190},{1,-56},{1,-122}}" />
             </Window>
             <Window type="OD/MenuSymbolButton" name="ConfirmButton" >
-                <Property name="Area" value="{{1,-92.8},{1,-92.8},{1,-16},{1,-16}}" />
+                <Property name="Area" value="{{1,-108.8},{1,-114.8},{1,-32},{1,-38}}" />
                 <Property name="Text" value="" />
                 <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
                 <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />

@@ -11,8 +11,8 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/MenuFrameWindow" name="LevelWindowFrame" >
-            <Property name="Area" value="{{0.5,-290},{0.5,-200},{0.5,290},{0.5,315}}" />
+        <Window type="OD/SheetWindow" name="LevelWindowFrame" >
+            <Property name="Area" value="{{0.5,-290},{0.5,-267},{0.5,290},{0.5,268}}" />
             <Property name="Text" value="Please choose a Level..." />
             <Property name="MaxSize" value="{{0,1000},{0,1000}}" />
             <Property name="MinSize" value="{{0,800},{0,600}}" />
@@ -24,13 +24,14 @@
             <Window type="OD/Editbox" name="FileName" >
                 <Property name="Area" value="{{0,20},{0,80},{1.0,-25},{0,115}}" />
             </Window>            
-            <Window type="OD/Listbox" name="LevelSelect" >
+            <Window type="OD/SheetListbox" name="LevelSelect" >
                 <Property name="Area" value="{{0,15},{0,120},{1,-20},{0.75,0}}" />
                 <Property name="ForceVertScrollbar" value="True" />
                 <Property name="Sort" value="True" />
             </Window>
-            <Window type="OD/MainMenuButton" name="BackButton" >
-                <Property name="Area" value="{{0.5,-199},{0.75,0},{0.5,-35},{0.75,80}}" />
+            <Window type="OD/MenuTextButton" name="BackButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{0.5,-199},{0.75,0},{0.5,-35},{0.75,54}}" />
                 <Property name="Text" value="Back" />
             </Window>
             <Window type="OD/Checkbox" name="OnlyLevel" >
@@ -40,8 +41,9 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Selected" value="True" />
             </Window>
-            <Window type="OD/MainMenuButton" name="SaveButton" >
-                <Property name="Area" value="{{0.5,12},{0.75,0},{0.5,176},{0.75,80}}" />
+            <Window type="OD/MenuTextButton" name="SaveButton" >
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="Area" value="{{0.5,12},{0.75,0},{0.5,176},{0.75,54}}" />
                 <Property name="Text" value="Save" />
             </Window>
             <Window type="OD/Checkbox" name="HiddenFiles" >

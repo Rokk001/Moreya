@@ -10,7 +10,7 @@ import re
 
 repo = Path(__file__).resolve().parents[2]
 layout = (repo / 'gui/WindowStats.layout').read_text()
-assert 'name="StatsWindow"' in layout and 'type="OD/FrameWindow"' in layout
+assert 'name="StatsWindow"' in layout and 'type="OD/SheetWindow"' in layout, 'the window frame of the menu sheet'
 assert '<Property name="SizingEnabled" value="False" />' in layout, 'the window must not be resizable'
 m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
 assert m, 'a fixed size centred area is expected'
