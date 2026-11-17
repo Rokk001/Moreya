@@ -784,7 +784,7 @@ private:
     //! \brief Sends the possession exit request to the server (key Esc only)
     void sendPossessionExit();
 
-    //! \brief Starts the own view of the possession: hides the keeper interface (root windows but the chat, keeper
+    //! \brief Starts the own view of the possession: hides the keeper interface (all root windows with the chat, keeper
     //! hand, pointer, creature indicators), locks the mouse in the window and shows the crosshair
     void enterPossessionView();
 

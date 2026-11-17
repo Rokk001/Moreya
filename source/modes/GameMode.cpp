@@ -5534,7 +5534,7 @@ void GameMode::notifyPossessionEnded()
     leavePossessionView();
 }
 
-//! \brief Hides the keeper interface for the possession: every root window except the chat, the keeper hand, the
+//! \brief Hides the keeper interface for the possession: every root window (the chat included), the keeper hand, the
 //! pointer and the indicators over the creatures; locks the mouse in the window and shows the crosshair. The own
 //! model of the creature is hidden by refreshPossessionView.
 void GameMode::enterPossessionView()
@@ -5582,7 +5582,7 @@ void GameMode::enterPossessionView()
     refreshPossessionView();
 }
 
-//! \brief Each frame of the possession view: keeps every root window but the chat hidden (also the ones a message
+//! \brief Each frame of the possession view: keeps every root window hidden, the chat included (also the ones a message
 //! opens), the pointer and the own model of the creature hidden and the crosshair in the middle of the window.
 void GameMode::refreshPossessionView()
 {

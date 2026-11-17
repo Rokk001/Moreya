@@ -11791,6 +11791,14 @@ void Creature::upkeepPlague()
         return;
     }
 
+    // A sick creature on a cot of an infirmary is in its care: it is cured there, as on its admission (also when it
+    // caught the plague while lying on the cot)
+    if(isActionInList(CreatureActionType::infirmaryRest))
+    {
+        curePlague();
+        return;
+    }
+
     Tile* myTile = getPositionTile();
     if(myTile == nullptr)
         return;
@@ -11822,17 +11830,13 @@ void Creature::upkeepPlague()
         }
     }
 
-    // The infection: every creature within PlagueInfectRadius tiles (own, allied and enemy alike) may catch it. A
-    // patient on a cot is in the care of the infirmary and does not catch it
+    // The infection: every creature within PlagueInfectRadius tiles (own, allied and enemy alike) may catch it
     const int32_t radius = static_cast<int32_t>(config.getSpellConfigUInt32("PlagueInfectRadius"));
     const double chance = config.getSpellConfigDouble("PlagueInfectChancePerTurn");
     std::vector<Creature*> creatures = getGameMap()->getCreatures();
     for(Creature* creature : creatures)
     {
         if((creature == this) || creature->isPlagueSick() || !creature->canCatchPlague() || !creature->getIsOnMap())
-            continue;
-
-        if(creature->isActionInList(CreatureActionType::infirmaryRest))
             continue;
 
         Tile* tile = creature->getPositionTile();
@@ -11846,11 +11850,8 @@ void Creature::upkeepPlague()
             creature->catchPlague(mPlagueSeatId);
     }
 
-    // The damage: a knocked out creature takes none, so the workers can carry it to the infirmary. A death by the
-    // plague is a normal death
-    if(mKoTurnCounter != 0)
-        return;
-
+    // The damage, every turn until the creature is cured or dies (also while it is knocked out). A death by the plague is
+    // a normal death
     const Seat* plagueSeat = getGameMap()->getSeatById(mPlagueSeatId);
     const double damage = SkillManager::getResearchValue(plagueSeat, SkillType::spellPlague,
         config.getSpellConfigDouble("PlagueDamagePerTurn"), ResearchEffect::Damage);

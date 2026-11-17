@@ -256,7 +256,10 @@ need("Random::Double(0.0, 1.0) < chance" in infection and "creature->catchPlague
      "every creature in the radius is infected with the chance per turn")
 need("!creature->canCatchPlague()" in infection, "workers and the champion are not infected")
 damage = upkeep[upkeep.index("// The damage"):]
-need("if(mKoTurnCounter != 0)\n        return;" in damage, "a knocked out sick creature takes no plague damage (it is carried in)")
+need("mKoTurnCounter" not in damage, "the plague damage runs every turn until cured or dead, also while knocked out")
+need("infirmaryRest" not in infection, "the infection reaches every creature in the radius, a patient on a cot included")
+need("if(isActionInList(CreatureActionType::infirmaryRest))\n    {\n        curePlague();\n        return;\n    }" in upkeep,
+     "a sick creature on a cot is cured there, as on its admission")
 need('config.getSpellConfigDouble("PlagueDamagePerTurn"), ResearchEffect::Damage)' in damage and
      "takeDamage(nullptr, damage, 0.0, 0.0, 0.0, myTile, false);" in damage, "PlagueDamagePerTurn every turn, normal death")
 need(upkeep.index("// The damage") > upkeep.index("// The infection"), "the infection runs before the damage")
