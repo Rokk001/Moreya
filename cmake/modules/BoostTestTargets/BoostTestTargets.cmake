@@ -58,7 +58,17 @@ if(Boost_FOUND)
 	endif()
 	if(Boost_UNIT_TEST_FRAMEWORK_LIBRARY)
 		set(_boosttesttargets_libs "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}")
-		if(Boost_USE_STATIC_LIBS)
+		# Boost's own CMake package picks the static library on Windows when
+		# Boost_USE_STATIC_LIBS is not set; the header must match the library
+		# that was actually found, or the test links against missing dllimports.
+		set(_boosttesttargets_static "${Boost_USE_STATIC_LIBS}")
+		if(TARGET Boost::unit_test_framework)
+			get_target_property(_boosttesttargets_type Boost::unit_test_framework TYPE)
+			if("${_boosttesttargets_type}" STREQUAL "STATIC_LIBRARY")
+				set(_boosttesttargets_static ON)
+			endif()
+		endif()
+		if(_boosttesttargets_static)
 			set(_boostConfig "BoostTestTargetsStatic.h")
 		else()
 			# Also on Apple: the "included" fallback compiles the whole

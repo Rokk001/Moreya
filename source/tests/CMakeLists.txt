@@ -1,5 +1,11 @@
 include(BoostTestTargets)
 
+# SFML 3 is found through its CMake package, which only provides imported targets;
+# the tests name the network and system libraries through SFML_LIBRARIES.
+if(NOT SFML_LIBRARIES)
+    set(SFML_LIBRARIES SFML::System SFML::Network)
+endif()
+
 # The aa-*/ab-* tests are integration tests: each test binary is a game client
 # that expects a headless game server listening on localhost:32222 and hosting
 # the multiplayer level named after the two-letter test prefix
@@ -88,6 +94,8 @@ add_boost_test(00-Goal
         SOURCES
         test_Goal.cpp
         ${SRC}/goals/Goal.cpp
+        ${SRC}/utils/Helper.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         LIBRARIES
@@ -101,6 +109,8 @@ add_boost_test(00-CreatureRelationships
         test_CreatureRelationships.cpp
         ${SRC}/game/CreatureRelationships.h
         ${SRC}/game/CreatureRelationships.cpp
+        ${SRC}/utils/Helper.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         LIBRARIES
@@ -157,6 +167,8 @@ add_boost_test(00-RelationshipHooks
         ${SRC}/network/ODPacket.h
         ${SRC}/network/ODPacket.cpp
         ${SRC}/network/RelationshipPacket.h
+        ${SRC}/utils/Helper.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         LIBRARIES
@@ -178,6 +190,8 @@ add_boost_test(00-CreatureSkillTreeView
         ${SRC}/creatureskill/CreatureSkillTreeView.cpp
         ${SRC}/creatureskill/CreatureSkillTree.cpp
         ${SRC}/tests/mocks/ConfigManagerSingleton.cpp
+        ${SRC}/utils/Helper.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         LIBRARIES
@@ -217,7 +231,10 @@ add_boost_test(00-HatcheryCycle
         ${SRC}/rooms/HatcheryCycle.cpp
         ${SRC}/rooms/HatcheryNestField.h
         ${SRC}/rooms/HatcheryRooster.h
-        ${SRC}/rooms/HatcheryRooster.cpp)
+        ${SRC}/rooms/HatcheryRooster.cpp
+        ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES})
 
 add_boost_test(00-WallTorches
         SOURCES
@@ -245,6 +262,7 @@ add_boost_test(aa-LaunchGame
         ${SERVER_LAUNCHER_AA}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
+        ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
@@ -254,6 +272,8 @@ add_boost_test(aa-LaunchGame
         ${SRC}/network/ServerMode.cpp
         ${SRC}/network/ServerNotification.cpp
         ${SRC}/utils/Helper.cpp
+        ${SRC}/utils/NameAliases.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         test_LaunchGame.cpp
@@ -267,6 +287,7 @@ add_boost_test(aa-TestCreatures
         ${SERVER_LAUNCHER_AA}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
+        ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
@@ -276,6 +297,8 @@ add_boost_test(aa-TestCreatures
         ${SRC}/network/ServerMode.cpp
         ${SRC}/network/ServerNotification.cpp
         ${SRC}/utils/Helper.cpp
+        ${SRC}/utils/NameAliases.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         test_Creatures.cpp
@@ -289,6 +312,7 @@ add_boost_test(aa-TestRooms
         ${SERVER_LAUNCHER_AA}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
+        ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
@@ -299,6 +323,8 @@ add_boost_test(aa-TestRooms
         ${SRC}/network/ServerNotification.cpp
         ${SRC}/rooms/RoomType.cpp
         ${SRC}/utils/Helper.cpp
+        ${SRC}/utils/NameAliases.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         test_Rooms.cpp
@@ -312,6 +338,7 @@ add_boost_test(aa-TestRoomSplit
         ${SERVER_LAUNCHER_AA}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
+        ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
@@ -322,6 +349,8 @@ add_boost_test(aa-TestRoomSplit
         ${SRC}/network/ServerNotification.cpp
         ${SRC}/rooms/RoomType.cpp
         ${SRC}/utils/Helper.cpp
+        ${SRC}/utils/NameAliases.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         test_RoomSplit.cpp
@@ -335,6 +364,7 @@ add_boost_test(ab-TestTraps
         ${SERVER_LAUNCHER_AB}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
+        ${SRC}/tests/mocks/ConfigManagerRoomDefaults.cpp
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
@@ -345,6 +375,8 @@ add_boost_test(ab-TestTraps
         ${SRC}/network/ServerNotification.cpp
         ${SRC}/rooms/RoomType.cpp
         ${SRC}/utils/Helper.cpp
+        ${SRC}/utils/NameAliases.cpp
+        ${SRC}/render/FrameStatistics.cpp
         ${SRC}/utils/LogManager.cpp
         ${SRC}/utils/LogSinkConsole.cpp
         test_Traps.cpp
