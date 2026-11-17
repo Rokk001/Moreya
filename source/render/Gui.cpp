@@ -1628,6 +1628,8 @@ std::string scaleFormattedImageSizes(const CEGUI::String& ceguiText, float scale
 //! \brief Loads and registers the GUI sheets, including immediate navigation visibility reflow.
 Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFileName, Ogre::RenderTarget &renderTarget)
   : mUserScale(1.0f),
+    mFontScaledDisplaySize(0.0f, 0.0f),
+    mFontsScaled(false),
     mSoundEffectsManager(soundEffectsManager)
 {
     OD_LOG_INF("*** Initializing CEGUI ***");
@@ -2492,15 +2494,26 @@ void Gui::applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data,
 }
 
 //! \brief Scales fonts and images for the display while preserving high-resolution atlas design sizes.
+//! Every window registration (each menu screen, each in-game window) calls this. Rescaling a font throws away all its
+//! rendered glyphs and makes every window that uses it reformat its text, which took several hundred ms per call, so
+//! a font is only changed when its scaling differs from the wanted one, and the fonts are only notified when the
+//! display size changed or a font was changed. The result for the fonts is the same as rescaling them every time.
 void Gui::updateResourceScaling(const CEGUI::Sizef& displaySize)
 {
     const CEGUI::Sizef fontNativeResolution(FONT_DESIGN_WIDTH / mUserScale,
         FONT_DESIGN_HEIGHT / mUserScale);
+    bool fontsChanged = !mFontsScaled || mFontScaledDisplaySize != displaySize;
     CEGUI::FontManager::FontIterator font = CEGUI::FontManager::getSingleton().getIterator();
     while(!font.isAtEnd())
     {
-        font.getCurrentValue()->setNativeResolution(fontNativeResolution);
-        font.getCurrentValue()->setAutoScaled(CEGUI::ASM_Min);
+        CEGUI::Font* currentFont = font.getCurrentValue();
+        if(currentFont->getNativeResolution() != fontNativeResolution ||
+           currentFont->getAutoScaled() != CEGUI::ASM_Min)
+        {
+            currentFont->setNativeResolution(fontNativeResolution);
+            currentFont->setAutoScaled(CEGUI::ASM_Min);
+            fontsChanged = true;
+        }
         ++font;
     }
 
@@ -2523,7 +2536,10 @@ void Gui::updateResourceScaling(const CEGUI::Sizef& displaySize)
         ++image;
     }
 
-    CEGUI::FontManager::getSingleton().notifyDisplaySizeChanged(displaySize);
+    if(fontsChanged)
+        CEGUI::FontManager::getSingleton().notifyDisplaySizeChanged(displaySize);
+    mFontsScaled = true;
+    mFontScaledDisplaySize = displaySize;
     CEGUI::ImageManager::getSingleton().notifyDisplaySizeChanged(displaySize);
 }
 

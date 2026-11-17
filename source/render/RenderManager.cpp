@@ -2189,6 +2189,7 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     Ogre::TexturePtr myPerlinTexture = createPerlinTexture();
     setupFogMaterial(myPerlinTexture);
     prepareGameCreatureResources(*gameMap);
+    prepareRoomStaffResources();
     prepareGameShaders();
 }
 
@@ -4782,6 +4783,58 @@ void RenderManager::prepareGameCreatureResources(GameMap& gameMap)
         mSceneManager->destroyEntity(entity);
     }
     OD_LOG_INF("Prepared creature resources for " + Helper::toString(static_cast<uint32_t>(meshNames.size())) + " meshes");
+}
+
+//! The meshes of the room staff figures (InnkeeperEntity, MerchantEntity, PoolAttendantEntity, InfirmaryShamanEntity).
+static const char* const ROOM_STAFF_MESHES[] = {"Innkeeper", "Merchant", "PoolAttendant", "InfirmaryShaman"};
+
+//! \brief Prepares each room staff mesh the way rrCreateRenderedMovableEntity uses it, without drawing it.
+//! \brief Records frame-stall operation timing without changing the operation.
+void RenderManager::prepareRoomStaffResources()
+{
+    FrameStallTrace::Scope trace(FrameStallTrace::ResourcePreparation);
+    if(mShaderGenerator == nullptr)
+        return;
+    uint32_t prepared = 0;
+    for(const char* staffFigure : ROOM_STAFF_MESHES)
+    {
+        const std::string meshName = std::string(staffFigure) + ".mesh";
+        if(!Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics", meshName))
+            continue;
+        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
+        // The same tangents rrCreateRenderedMovableEntity builds, so the figure's later entity finds them ready
+        unsigned short src;
+        try
+        {
+            if(!mesh->suggestTangentVectorBuildParams(src))
+                mesh->buildTangentVectors(src);
+        }
+        catch(const Ogre::ItemIdentityException&)
+        {
+            OD_LOG_INF("No texture coordinates to build tangents from for mesh " + std::string(staffFigure));
+        }
+        Ogre::Entity* entity = mSceneManager->createEntity(mesh);
+        try
+        {
+            // The skinning material copies the real figure gets, then the shaders of the materials it draws with
+            useShaderSkinning(entity);
+            std::set<std::string> preparedMaterials;
+            for(const Ogre::SubEntity* part : entity->getSubEntities())
+            {
+                if(!preparedMaterials.insert(part->getMaterialName()).second)
+                    continue;
+                prepareGeneratedShaders(*part->getMaterial());
+            }
+        }
+        catch(...)
+        {
+            mSceneManager->destroyEntity(entity);
+            throw;
+        }
+        mSceneManager->destroyEntity(entity);
+        ++prepared;
+    }
+    OD_LOG_INF("Prepared room staff resources for " + Helper::toString(prepared) + " meshes");
 }
 
 //! \brief Creates the visible creature and registers it for late contact sampling.
