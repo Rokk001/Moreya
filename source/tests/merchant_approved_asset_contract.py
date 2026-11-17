@@ -24,7 +24,14 @@ the clips the game plays (Idle, Walk, CountGold, RubHands), evaluated like Ogre 
                     normal map, blending, alpha rejection or disabled depth writing (the tangent-space normal map is lit
                     wrong once GPU skinning turns the hand), and wrist and elbow are blended between their bones so the
                     skin does not open at a hard seam when the joint bends
-  own node          the root bone binds at the origin, the figure below the table top is centred on the origin within
+  hands in sleeves  second owner finding on A1b ("Haende schweben neben den Aermeln"): in the bind pose and 12 poses of every
+                    clip the wrist (first 3 cm of the hand skin) lies within CUFF_MAX_GAP of the centre of the cuff opening
+                    (last 3 cm of the forearm sleeve), and no hand vertex is farther than HAND_MAX_DISTANCE from the forearm
+                    and hand bones
+  triangle budget   owner decision of 2026-11-17: about 33k triangles instead of 497k; the cloth keeps only its outer shell
+                    (drawn from both sides), and a small software render of the bind pose from the game camera and from
+                    the front differs from the reviewed render before the reduction by at most RENDER_MAX_MEAN_DIFFERENCE
+  own node          the root bone binds at the origin, the bounding box of the figure below the table top is centred on the origin within
                     0.04 and stays inside its own tile
 """
 import hashlib
@@ -38,17 +45,19 @@ import subprocess
 import tempfile
 import time
 import xml.etree.ElementTree as ET
+import base64
+import zlib
 
 import numpy as np
 from PIL import Image
 
 # Filled once from the reviewed export of 2026-11-17 (A1b rework), never derived from the assets during a test.
-VERTICES = 416951
-TRIANGLES = 496519
-MINIMUM = (-0.311939, -0.25321, 0.00864)
-MAXIMUM = (0.312656, 0.243949, 1.30284)
+VERTICES = 47741
+TRIANGLES = 32601
+MINIMUM = (-0.318828, -0.253266, 0.00864491)
+MAXIMUM = (0.318643, 0.243533, 1.3038)
 HASHES = {
-    'models/Merchant.mesh': '4690509c258968290e81bc96873ab49559725dc678ddaa29d7d5ee26b3368303',
+    'models/Merchant.mesh': '9727c328e5eb948557b25633f21905d4f746a6f6af1c8bcd52d1e1c76f7dad29',
     'models/Merchant.skeleton': '90dd8c3da6bbab8f838b3aae379c093e7dfa8a893352b0b77d42639d373a88fa',
     # The look of the merchant of 2026-11-15: the baked atlases stay byte-exact, hood and cloak colour recoloured dark brown
     'materials/textures/MerchantBrassApprovedColor.png': '13e0088f101ba4207e80a63c091ed4bbb236abb751ca4b5dae95a32f30add3bb',
@@ -75,6 +84,8 @@ HASHES = {
 ATLASES = {'Robe': 2048, 'Cloak': 2048, 'Linen': 2048, 'Leather': 2048,
            'Brass': 1024, 'Details': 1024, 'Hair': 1024, 'Hood': 2048,
            'Hide': 2048, 'Gold': 1024}
+# Cloth reduced to its outer shell (triangle budget): drawn from both sides
+SINGLE_SHELL = ('Robe', 'Cloak', 'Hood')
 # Opaque hand variants: the colour atlas of their family without the normal map
 HAND_FAMILIES = ('Hide', 'Details', 'Gold')
 MATERIALS = {'MerchantApproved' + name for name in ATLASES} | {'MerchantApproved' + name + 'Hand' for name in HAND_FAMILIES}
@@ -86,11 +97,11 @@ PARENTS = {'Coin': 'Hand_R', 'Coins': 'Hand_L', 'Scales': 'Pelvis'}
 # Least vertices bound to the coin and the coin stack, so they have something to show (export: 100 and 588)
 COIN_VERTICES = {'Coin': 60, 'Coins': 300}
 COIN_MATERIAL = 'MerchantApprovedGoldHand'
-# Least vertices bound to each thigh (export: 10214 and 8671; before: none)
-THIGH_MIN_VERTICES = 8000
-# Least vertices blended between forearm and hand and between upper arm and forearm on each side (export: about 1000;
+# Least vertices bound to each thigh (export: 1057 and 959; before: none)
+THIGH_MIN_VERTICES = 900
+# Least vertices blended between forearm and hand and between upper arm and forearm on each side (export: 310 to 425;
 # before: none, hard seams)
-JOINT_BLEND_MIN_VERTICES = 800
+JOINT_BLEND_MIN_VERTICES = 250
 JOINT_BLEND_WEIGHT = 0.1
 SAMPLES = 48
 WALK_MIN_HAND_SWING = 0.2         # forward and back travel of each hand in Walk
@@ -102,11 +113,201 @@ BELLY_HEIGHT = (0.62, 0.85)       # wrists in front of the belly, not hanging (b
 CLASP_MAX_FRONT = -0.17           # in front of the body (front is -Y)
 # Sleeves and shoulder cape: cloth vertices bound mainly to the arm bones of one side
 SLEEVE_MATERIALS = ('MerchantApprovedCloak', 'MerchantApprovedLinen', 'MerchantApprovedHood', 'MerchantApprovedRobe')
-SLEEVE_MIN_VERTICES = 15000
+SLEEVE_MIN_VERTICES = 1500
 SLEEVE_MIN_ARM_WEIGHT = 0.75     # sleeve cloth: bound at least this much to the arm (cape cloth in between is shared)
-SLEEVE_MAX_DISTANCE = 0.11        # from the shoulder-elbow-wrist-hand bones (export: 0.109, rejected A1b: 0.176)
-SLEEVE_MAX_P99 = 0.09             # 99 % of the sleeve cloth (export: 0.082, rejected A1b: up to 0.105)
-SLEEVE_SAMPLES = 12               # sampled poses per clip for the sleeve check
+SLEEVE_MAX_DISTANCE = 0.13        # from the shoulder-elbow-wrist-hand bones (export: 0.124, rejected A1b: 0.176)
+SLEEVE_MAX_P99 = 0.11             # 99 % of the sleeve cloth (export: 0.105; the single outer cloth shell)
+SLEEVE_SAMPLES = 12               # sampled poses per clip for the sleeve and hand checks
+# Hands at the end of the sleeves (owner finding on A1b: "Haende schweben neben den Aermeln")
+HAND_SKIN_MATERIAL = 'MerchantApprovedHideHand'
+HAND_MIN_VERTICES = 100
+CUFF_DEPTH = 0.03                 # cuff opening = last 3 cm of the forearm sleeve, wrist = first 3 cm of the hand
+CUFF_MAX_GAP = 0.095              # cuff centre to wrist centre (export: 0.088; floating hands of the rejected rework: 0.115)
+HAND_TIP = np.array((0.043, 0.0, -0.134))  # finger tips of the right hand from its wrist joint in the bind pose
+HAND_MAX_DISTANCE = 0.075         # hand skin from the forearm and hand bones (export: 0.068)
+# Render comparison against the merchant before the triangle reduction (bind pose, flat atlas colour, two-sided light)
+RENDER_PIXEL = 0.0125
+RENDER_HALF_WIDTH = 0.45
+RENDER_LIGHT = (-0.4, -0.6, 0.7)
+RENDER_AMBIENT = 0.35
+VIEWS = {'game': ((0.0, math.sin(math.radians(25)), -math.cos(math.radians(25))),
+                  (0.0, math.cos(math.radians(25)), math.sin(math.radians(25))), -0.35, 0.85),
+         'front': ((0.0, 1.0, 0.0), (0.0, 0.0, 1.0), 0.0, 1.35)}
+RENDER_MAX_MEAN_DIFFERENCE = 4.0  # export: game 2.0, front 2.9
+RENDER_MIN_SILHOUETTE_OVERLAP = 0.97  # export: game 0.986, front 0.984
+RENDER_REFERENCE = {  # zlib + base64 of the uint8 render of the merchant before the reduction (reviewed 2026-11-17)
+    'game': ((96, 72, 3), (
+        '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'
+    )),
+    'front': ((108, 72, 3), (
+        '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'
+    )),
+}
 # Dark brown hood and cloak (decisions 836/862/863), measured on the 2048 atlases in 8 x 8 blocks
 BROWN_ATLASES = ('materials/textures/MerchantHoodApprovedColor.png', 'materials/textures/MerchantCloakApprovedColor.png')
 BROWN_MIN_RED_OVER_GREEN = 1.35
@@ -174,6 +375,9 @@ def check_surfaces(root):
             assert header[:8] == b'\x89PNG\r\n\x1a\n', name
             assert struct.unpack('>II', header[16:24]) == (size, size), name
             assert relative in credits, name
+    for family in SINGLE_SHELL:
+        block = material_block(script, 'MerchantApproved' + family)
+        assert 'cull_hardware none' in block and 'cull_software none' in block, ('single cloth shell drawn one-sided', family)
     for family in HAND_FAMILIES:
         block = material_block(script, 'MerchantApproved' + family + 'Hand')
         assert 'texture Merchant' + family + 'ApprovedColor.png' in block, family
@@ -226,10 +430,11 @@ def check_mesh(path):
     counts = dict(position=0, face=0)
     minimum = [math.inf] * 3
     maximum = [-math.inf] * 3
-    low = [0.0, 0.0, 0]
+    low = [math.inf, math.inf, -math.inf, -math.inf]
     outside = 0
     faces = {}
     positions = []
+    uvs = []
     material = None
     skeleton = None
     with path.open('rb') as stream:
@@ -248,13 +453,13 @@ def check_mesh(path):
                 minimum = [min(a, b) for a, b in zip(minimum, value)]
                 maximum = [max(a, b) for a, b in zip(maximum, value)]
                 if value[2] < TABLE_TOP:
-                    low[0] += value[0]
-                    low[1] += value[1]
-                    low[2] += 1
+                    low = [min(low[0], value[0]), min(low[1], value[1]), max(low[2], value[0]), max(low[3], value[1])]
                     if max(abs(value[0]), abs(value[1])) >= HALF_TILE:
                         outside += 1
                 positions.append(value)
                 counts['position'] += 1
+            elif tag == 'texcoord':
+                uvs.append((float(element.get('u')), float(element.get('v'))))
             elif tag == 'face':
                 triangle = tuple(int(element.get(axis)) for axis in ('v1', 'v2', 'v3'))
                 assert all(0 <= index < VERTICES for index in triangle)
@@ -275,8 +480,10 @@ def check_mesh(path):
     assert all(abs(a - b) < .00002 for a, b in zip(minimum, MINIMUM)), minimum
     assert all(abs(a - b) < .00002 for a, b in zip(maximum, MAXIMUM)), maximum
     assert skeleton == 'Merchant.skeleton'
-    assert low[2] and abs(low[0] / low[2]) <= FIGURE_CENTRE_TOLERANCE and abs(low[1] / low[2]) <= FIGURE_CENTRE_TOLERANCE, \
-        ('the merchant does not stand on his own node position', low[0] / max(low[2], 1), low[1] / max(low[2], 1))
+    # centre of the bounding box of the figure below the table top (a vertex average would follow the mesh density)
+    centre = ((low[0] + low[2]) / 2, (low[1] + low[3]) / 2)
+    assert abs(centre[0]) <= FIGURE_CENTRE_TOLERANCE and abs(centre[1]) <= FIGURE_CENTRE_TOLERANCE, \
+        ('the merchant does not stand on his own node position', centre)
     assert outside == 0, ('the merchant reaches into the neighbouring tile', outside)
     assert len(weights) == VERTICES, 'Every vertex must remain bound'
     assert all(abs(sum(w.values()) - 1) < .001 for w in weights.values()), 'Every vertex must remain fully bound'
@@ -305,19 +512,33 @@ def check_mesh(path):
         assert set().union(*(vertex_materials.get(i, set()) for i in coin)) == {COIN_MATERIAL}, bone
     hands = set(strong('Hand_R')) | set(strong('Hand_L'))
     hand_materials = {name for name, triangles in faces.items() if any(index in hands for t in triangles for index in t)}
-    # Sleeve and cape cloth bound mainly to the arm bones of one side, with its bind position and skin weights
-    sleeves = {}
+    matrix = np.zeros((VERTICES, len(BONES)))
+    for i, w in weights.items():
+        for bone, weight in w.items():
+            matrix[i, bone] = weight
+    points = np.array(positions)
+    cloth = np.zeros(VERTICES, bool)
+    skin = np.zeros(VERTICES, bool)
+    for name, triangles in faces.items():
+        flat = np.array(triangles, dtype=np.int64).ravel()
+        if name in SLEEVE_MATERIALS:
+            cloth[flat] = True
+        if name == HAND_SKIN_MATERIAL:
+            skin[flat] = True
+    groups = {}
     for side in ('R', 'L'):
         arm = [B['UpperArm_' + side], B['Forearm_' + side], B['Hand_' + side]]
-        chosen = [i for i, w in weights.items() if sum(w.get(b, 0.0) for b in arm) > SLEEVE_MIN_ARM_WEIGHT and
-                  vertex_materials.get(i, set()) & set(SLEEVE_MATERIALS)]
-        assert len(chosen) >= SLEEVE_MIN_VERTICES, ('too few sleeve vertices', side, len(chosen))
-        matrix = np.zeros((len(chosen), len(BONES)))
-        for row, i in enumerate(chosen):
-            for bone, weight in weights[i].items():
-                matrix[row, bone] = weight
-        sleeves[side] = (np.array([positions[i] for i in chosen]), matrix)
-    return hand_materials, sleeves
+        # sleeve and cape cloth bound mainly to the arm bones of one side
+        sleeve = np.nonzero(cloth & (matrix[:, arm].sum(1) > SLEEVE_MIN_ARM_WEIGHT))[0]
+        assert len(sleeve) >= SLEEVE_MIN_VERTICES, ('too few sleeve vertices', side, len(sleeve))
+        groups['sleeve_' + side] = sleeve
+        # the hand skin and the cloth of the forearm sleeve
+        hand = np.nonzero(skin & (matrix[:, B['Hand_' + side]] > 0.5))[0]
+        fore = np.nonzero(cloth & (matrix[:, B['Forearm_' + side]] > 0.5))[0]
+        assert len(hand) >= HAND_MIN_VERTICES and len(fore) >= HAND_MIN_VERTICES, ('hand or forearm sleeve missing', side)
+        groups['hand_' + side] = hand
+        groups['forearm_cloth_' + side] = fore
+    return hand_materials, dict(points=points, uvs=np.array(uvs), faces=faces, matrix=matrix, groups=groups)
 
 
 # Quaternion product (w, x, y, z).
@@ -396,7 +617,7 @@ def distance(a, b):
 
 
 # Joint hierarchy, bind of the root, closed loops and the motions the owner asked for.
-def check_skeleton(path, sleeves=None):
+def check_skeleton(path, mesh=None):
     tree = ET.parse(path).getroot()
     bones = []
     for bone in tree.findall('./bones/bone'):
@@ -468,14 +689,50 @@ def check_skeleton(path, sleeves=None):
         assert distance(w['Hand_R'][0], w['Hand_L'][0]) <= CLASP_MAX_DISTANCE, 'hands apart in RubHands'
         slide.append(w['Hand_R'][0][2] - w['Hand_L'][0][2])
     assert spread(slide) >= RUB_MIN_SLIDE, ('hands do not rub', spread(slide))
-    if sleeves is not None:
+    if mesh is not None:
         rest = pose(bones, parents, {}, 0.0)
         bind = {name: np.array(rest[name][0]) for name in BONES}
         samples = [rest] + [pose(bones, parents, tracks, length * i / SLEEVE_SAMPLES)
                             for length, tracks in clips.values() for i in range(SLEEVE_SAMPLES)]
-        for side, (points, matrix) in sleeves.items():
+        groups = mesh['groups']
+        for side in ('R', 'L'):
+            sleeve = groups['sleeve_' + side]
+            hand = groups['hand_' + side]
+            fore = groups['forearm_cloth_' + side]
+            # cuff opening and wrist in the bind pose: the last CUFF_DEPTH of the forearm sleeve and the first
+            # CUFF_DEPTH of the hand skin along the forearm bone
+            axis = bind['Hand_' + side] - bind['Forearm_' + side]
+            axis /= np.linalg.norm(axis)
+            along = (mesh['points'][fore] - bind['Forearm_' + side]) @ axis
+            cuff = fore[along >= along.max() - CUFF_DEPTH]
+            along = (mesh['points'][hand] - bind['Forearm_' + side]) @ axis
+            wrist = hand[along <= along.min() + CUFF_DEPTH]
             for world in samples:
-                check_sleeve(points, matrix, bind, world, side)
+                check_sleeve(skin_points(mesh, sleeve, bind, world), world, side)
+                gap = np.linalg.norm(skin_points(mesh, cuff, bind, world).mean(0) - skin_points(mesh, wrist, bind, world).mean(0))
+                assert gap <= CUFF_MAX_GAP, ('the hand is not in its sleeve cuff', side, float(gap))
+                joints = [np.array(world[name][0]) for name in ('Forearm_' + side, 'Hand_' + side)]
+                joints.append(joints[1] + rotation_matrix(world['Hand_' + side][1]) @ hand_tip(side))
+                near = np.min([segment_distance(skin_points(mesh, hand, bind, world), a, b)
+                               for a, b in zip(joints, joints[1:])], axis=0)
+                assert near.max() <= HAND_MAX_DISTANCE, ('a hand floats beside its forearm', side, float(near.max()))
+
+
+# Finger tips from the wrist joint of one side in the bind pose (the left hand mirrors the right one).
+def hand_tip(side):
+    return HAND_TIP * np.array([1.0 if side == 'R' else -1.0, 1.0, 1.0])
+
+
+# Skins the given vertices like Ogre (linear blend, every bind rotation is the identity).
+def skin_points(mesh, indices, bind, world):
+    points = mesh['points'][indices]
+    matrix = mesh['matrix'][indices]
+    skinned = np.zeros_like(points)
+    for bone in np.nonzero(matrix.any(0))[0]:
+        name = BONES[bone]
+        moved = (points - bind[name]) * world[name][2]
+        skinned += matrix[:, bone:bone + 1] * (moved @ rotation_matrix(world[name][1]).T + np.array(world[name][0]))
+    return skinned
 
 
 # Rotation matrix of a unit quaternion (w, x, y, z).
@@ -493,19 +750,87 @@ def segment_distance(points, a, b):
     return np.linalg.norm(points - (a + t[:, None] * ab), axis=1)
 
 
-# Skins the sleeve vertices like Ogre (linear blend, every bind rotation is the identity) and checks that every one stays
-# close to the shoulder-elbow-wrist-hand bones of its side.
-def check_sleeve(points, matrix, bind, world, side):
-    skinned = np.zeros_like(points)
-    for bone in np.nonzero(matrix.any(0))[0]:
-        name = BONES[bone]
-        moved = (points - bind[name]) * world[name][2]
-        skinned += matrix[:, bone:bone + 1] * (moved @ rotation_matrix(world[name][1]).T + np.array(world[name][0]))
+# Every sleeve and cape vertex stays close to the shoulder-elbow-wrist-hand bones of its side.
+def check_sleeve(skinned, world, side):
     joints = [np.array(world[name][0]) for name in ('UpperArm_' + side, 'Forearm_' + side, 'Hand_' + side)]
-    joints.append(joints[2] + rotation_matrix(world['Hand_' + side][1]) @ np.array([0.0, 0.0, -0.14]))
+    joints.append(joints[2] + rotation_matrix(world['Hand_' + side][1]) @ hand_tip(side))
     near = np.min([segment_distance(skinned, a, b) for a, b in zip(joints, joints[1:])], axis=0)
     assert near.max() <= SLEEVE_MAX_DISTANCE, ('a sleeve stands off the arm', side, float(near.max()))
     assert np.percentile(near, 99) <= SLEEVE_MAX_P99, ('the sleeves stand off the arm', side, float(np.percentile(near, 99)))
+
+
+# Colour of every triangle: its material's colour atlas at the triangle's UV centre (Ogre v runs downwards).
+def triangle_colours(root, mesh):
+    script = (root / 'materials/scripts/MerchantApproved.material').read_text(encoding='utf-8')
+    colours, triangles = [], []
+    for name in sorted(mesh['faces']):
+        texture = re.search(r'texture\s+(\S+Color\.png)', material_block(script, name)).group(1)
+        image = np.asarray(Image.open(root / 'materials' / 'textures' / texture).convert('RGB'), dtype=np.float64)
+        tri = np.array(mesh['faces'][name], dtype=np.int64)
+        uv = mesh['uvs'][tri].mean(1)
+        h, w = image.shape[:2]
+        colours.append(image[np.clip((uv[:, 1] * h).astype(int), 0, h - 1), np.clip((uv[:, 0] * w).astype(int), 0, w - 1)])
+        triangles.append(tri)
+    return np.concatenate(triangles), np.concatenate(colours)
+
+
+# Small depth-buffered orthographic render of the bind pose: flat colour of the atlas times a two-sided Lambert light.
+def render_view(points, triangles, colours, view):
+    forward, up, low, high = VIEWS[view]
+    forward = np.array(forward) / np.linalg.norm(forward)
+    up = np.array(up) / np.linalg.norm(up)
+    right = np.cross(forward, up)
+    width = int(round(2 * RENDER_HALF_WIDTH / RENDER_PIXEL))
+    height = int(round((high - low) / RENDER_PIXEL))
+    sx = (points @ right + RENDER_HALF_WIDTH) / RENDER_PIXEL
+    sy = (high - points @ up) / RENDER_PIXEL
+    depth_of = points @ forward
+    light = np.array(RENDER_LIGHT) / np.linalg.norm(RENDER_LIGHT)
+    image = np.zeros((height, width, 3))
+    depth = np.full((height, width), np.inf)
+    a, b, c = points[triangles[:, 0]], points[triangles[:, 1]], points[triangles[:, 2]]
+    normal = np.cross(b - a, c - a)
+    normal /= np.maximum(np.linalg.norm(normal, axis=1), 1e-12)[:, None]
+    shade = RENDER_AMBIENT + (1 - RENDER_AMBIENT) * np.abs(normal @ light)
+    for k, (i, j, l) in enumerate(triangles):
+        xs = (sx[i], sx[j], sx[l])
+        ys = (sy[i], sy[j], sy[l])
+        x0, x1 = max(int(math.floor(min(xs))), 0), min(int(math.ceil(max(xs))), width - 1)
+        y0, y1 = max(int(math.floor(min(ys))), 0), min(int(math.ceil(max(ys))), height - 1)
+        if x0 > x1 or y0 > y1:
+            continue
+        gx, gy = np.meshgrid(np.arange(x0, x1 + 1) + 0.5, np.arange(y0, y1 + 1) + 0.5)
+        area = (xs[1] - xs[0]) * (ys[2] - ys[0]) - (xs[2] - xs[0]) * (ys[1] - ys[0])
+        if abs(area) < 1e-12:
+            continue
+        w1 = ((gx - xs[0]) * (ys[2] - ys[0]) - (xs[2] - xs[0]) * (gy - ys[0])) / area
+        w2 = ((xs[1] - xs[0]) * (gy - ys[0]) - (gx - xs[0]) * (ys[1] - ys[0])) / area
+        w0 = 1 - w1 - w2
+        inside = (w0 >= 0) & (w1 >= 0) & (w2 >= 0)
+        if not inside.any():
+            continue
+        z = w0 * depth_of[i] + w1 * depth_of[j] + w2 * depth_of[l]
+        block = depth[y0:y1 + 1, x0:x1 + 1]
+        nearer = inside & (z < block)
+        block[nearer] = z[nearer]
+        image[y0:y1 + 1, x0:x1 + 1][nearer] = colours[k] * shade[k]
+    return np.clip(image, 0, 255).astype(np.uint8)
+
+
+# Render comparison (owner decision on the triangle budget): the reduced merchant seen from the game camera and from the
+# front differs from the reviewed render of the merchant before the reduction by at most RENDER_MAX_MEAN_DIFFERENCE
+# (mean absolute difference per channel, 0..255) and covers the same silhouette (intersection over union).
+def check_render(root, mesh):
+    triangles, colours = triangle_colours(root, mesh)
+    for view, (shape, encoded) in RENDER_REFERENCE.items():
+        reference = np.frombuffer(zlib.decompress(base64.b64decode(encoded)), dtype=np.uint8).reshape(shape)
+        image = render_view(mesh['points'], triangles, colours, view)
+        assert image.shape == reference.shape, (view, image.shape)
+        difference = np.abs(image.astype(np.float64) - reference).mean()
+        assert difference <= RENDER_MAX_MEAN_DIFFERENCE, ('the reduced merchant looks different', view, difference)
+        a, b = image.any(-1), reference.any(-1)
+        overlap = (a & b).sum() / max((a | b).sum(), 1)
+        assert overlap >= RENDER_MIN_SILHOUETTE_OVERLAP, ('the reduced merchant has another silhouette', view, overlap)
 
 
 # Verify the delivered merchant without loading its large XML into an in-memory tree. converted names a directory
@@ -528,7 +853,8 @@ def verify_merchant_contract(root, converted=None):
             skeleton = deserialize(root, 'Merchant.skeleton', directory)
         prepared = time.perf_counter()
         print('ODP_TEST_PHASE ' + json.dumps({'name': 'setup', 'seconds': prepared - started}))
-        hand_materials, sleeves = check_mesh(mesh)
+        hand_materials, data = check_mesh(mesh)
         check_opaque_hands(root, hand_materials)
-        check_skeleton(skeleton, sleeves)
+        check_skeleton(skeleton, data)
+        check_render(root, data)
         print('ODP_TEST_PHASE ' + json.dumps({'name': 'native asset validation', 'seconds': time.perf_counter() - prepared}))

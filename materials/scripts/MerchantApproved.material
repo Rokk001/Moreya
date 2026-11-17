@@ -6,6 +6,9 @@ material MerchantApprovedRobe
     {
         pass
         {
+            // single cloth shell since the triangle reduction: drawn from both sides
+            cull_hardware none
+            cull_software none
             ambient 0.8 0.8 0.8 1
             diffuse 1 1 1 1
             specular 0.06 0.06 0.06 1 12
@@ -37,6 +40,9 @@ material MerchantApprovedCloak
     {
         pass
         {
+            // single cloth shell since the triangle reduction: drawn from both sides
+            cull_hardware none
+            cull_software none
             ambient 0.8 0.8 0.8 1
             diffuse 1 1 1 1
             specular 0.06 0.06 0.06 1 12
@@ -223,6 +229,9 @@ material MerchantApprovedHood
     {
         pass
         {
+            // single cloth shell since the triangle reduction: drawn from both sides
+            cull_hardware none
+            cull_software none
             ambient 0.8 0.8 0.8 1
             diffuse 1 1 1 1
             specular 0.06 0.06 0.06 1 12
