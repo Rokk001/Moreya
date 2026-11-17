@@ -219,6 +219,14 @@ static const double DEFAULT_HATED_COMPANY_RADIUS = 5.0;
 static const int POSSESSION_GROUP_MAX_SQUARED_DISTANCE = 9;
 //! \brief Distance in tiles below which a target is too close for the aim direction check of a possession skill
 static const Ogre::Real POSSESSION_AIM_MIN_DISTANCE = 0.5;
+//! \brief Save block of the running possession of an AI keeper: seat of the keeper, turns, follow group
+static const std::string POSSESSION_SAVE_OPEN = "[Possession]";
+static const std::string POSSESSION_SAVE_CLOSE = "[/Possession]";
+//! \brief Save block of a creature that follows the possessed creature of an AI keeper: name of the leader
+static const std::string POSSESSION_GROUP_SAVE_OPEN = "[PossessionGroup]";
+static const std::string POSSESSION_GROUP_SAVE_CLOSE = "[/PossessionGroup]";
+//! \brief Largest number of follow group members read from a save
+static const uint32_t POSSESSION_SAVE_MAX_GROUP = 1000;
 
 // Target selection by combat class: the distance to an enemy support creature is multiplied by this
 // factor for blitzers and flankers, so they prefer it over closer enemies
@@ -1132,7 +1140,7 @@ void Creature::restoreEntityState()
         getAnimationState()->setTimePosition(static_cast<Ogre::Real>(mDecayTurns));
 }
 
-//! \brief Describes the legacy creature fields and optional trailing appearance, skill and item data.
+//! \brief Describes the legacy creature fields and optional trailing appearance, skill, item and possession data.
 std::string Creature::getCreatureStreamFormat()
 {
     std::string format = MovableGameEntity::getMovableGameEntityStreamFormat();
@@ -1146,12 +1154,15 @@ std::string Creature::getCreatureStreamFormat()
             "\t[Spa spaMood relaxTurns mudTilesLeft /Spa]"
             "\t[Ko koTurnCounter arenaKnockOut /Ko]"
             "\t[Captivity prisonMood tortureMood prisonBrokenTurns tortureBrokenTurns /Captivity]"
-            "\t[Corpse corpseTurns decayTurns /Corpse]";
+            "\t[Corpse corpseTurns decayTurns /Corpse]"
+            "\t[Possession keeperSeatId possessionTurns nbFollowers N*followerName /Possession]"
+            "\t[PossessionGroup leaderName /PossessionGroup]";
 
     return format;
 }
 
-//! \brief Writes the creature, its optional skill state and its trailing tagged item block.
+//! \brief Writes the creature, its optional skill state and its trailing tagged item block, and the running
+//! possession of an AI keeper with its follow group.
 void Creature::exportToStream(std::ostream& os) const
 {
     const std::streamsize precision = os.precision();
@@ -1327,10 +1338,27 @@ void Creature::exportToStream(std::ostream& os) const
             static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
     if(mDefinition->isWorker())
         os << "\t[WorkerJob] " << static_cast<uint32_t>(mWorkerJob) << ' ' << (mWorkerJobFixed ? 1 : 0) << " [/WorkerJob]";
+    // The running possession of an AI keeper: the seat of the keeper, the turns it has lasted (free period and drain
+    // follow from them) and the follow group. A human keeper cannot save while possessing. Missing in old saves.
+    if((mPossessor != nullptr) && !mPossessor->getIsHuman() && (mPossessor->getSeat() != nullptr))
+    {
+        os << "\t" << POSSESSION_SAVE_OPEN << " " << mPossessor->getSeat()->getId() << " " << mPossessionTurns << " "
+           << mGroupMemberNames.size();
+        for(const std::string& memberName : mGroupMemberNames)
+            os << " " << memberName;
+        os << " " << POSSESSION_SAVE_CLOSE;
+    }
+    // A creature of the follow group of a creature an AI keeper possesses. Missing in old saves.
+    if(!mGroupLeaderName.empty())
+    {
+        Creature* leader = getGameMap()->getCreature(mGroupLeaderName);
+        if((leader != nullptr) && (leader->mPossessor != nullptr) && !leader->mPossessor->getIsHuman())
+            os << "\t" << POSSESSION_GROUP_SAVE_OPEN << " " << mGroupLeaderName << " " << POSSESSION_GROUP_SAVE_CLOSE;
+    }
     os.precision(precision);
 }
 
-//! \brief Reads legacy creature data with optional appearance, mana, skill state and item data.
+//! \brief Reads legacy creature data with optional appearance, mana, skill state, item and possession data.
 bool Creature::importFromStream(std::istream& is)
 {
     // Beware: A generic class name might be used here so we shouldn't use mDefinition
@@ -1427,6 +1455,40 @@ bool Creature::importFromStream(std::istream& is)
                (fixed && job == static_cast<uint32_t>(WorkerJob::none)) || close != "[/WorkerJob]") return false;
             mWorkerJob = static_cast<WorkerJob>(job);
             mWorkerJobFixed = fixed != 0;
+            continue;
+        }
+        if(appearanceToken == POSSESSION_SAVE_OPEN)
+        {
+            // The possessor is a player, who is known only when the game starts: restoreSavedPossession binds it
+            int32_t possessorSeatId = -1;
+            uint32_t possessionTurns = 0;
+            uint32_t nbMembers = 0;
+            if(!(is >> possessorSeatId >> possessionTurns >> nbMembers) || (possessorSeatId < 0) ||
+               (nbMembers > POSSESSION_SAVE_MAX_GROUP))
+                return false;
+            std::vector<std::string> memberNames;
+            for(uint32_t ii = 0; ii < nbMembers; ++ii)
+            {
+                std::string memberName;
+                if(!(is >> memberName))
+                    return false;
+                memberNames.push_back(memberName);
+            }
+            std::string close;
+            if(!(is >> close) || (close != POSSESSION_SAVE_CLOSE))
+                return false;
+            mSavedPossessorSeatId = possessorSeatId;
+            mPossessionTurns = possessionTurns;
+            mGroupMemberNames = memberNames;
+            continue;
+        }
+        if(appearanceToken == POSSESSION_GROUP_SAVE_OPEN)
+        {
+            std::string leaderName;
+            std::string close;
+            if(!(is >> leaderName >> close) || (close != POSSESSION_GROUP_SAVE_CLOSE))
+                return false;
+            mGroupLeaderName = leaderName;
             continue;
         }
         if(appearanceToken.compare(0, CORPSE_CARRIER_SAVE_LABEL.size(), CORPSE_CARRIER_SAVE_LABEL) == 0)
@@ -3502,6 +3564,8 @@ void Creature::doUpkeep()
     // action runs and the movement comes from the player input
     if(isPossessed())
     {
+        // No skill fires by itself while possessed: the support skills below and the fights are skipped, every
+        // skill is used by its key (possessedUseSkill) and the attack by the left mouse button (possessedAttack)
         if(mActions.empty() || (mActions.back()->getType() != CreatureActionType::possessed))
             pushAction(Utils::make_unique<CreatureActionPossessed>(*this));
 
@@ -12226,6 +12290,55 @@ void Creature::startPossession(Player& player)
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Puts back the saved possession of an AI keeper after loading: the turns and the follow group were read with
+//! the creature, the keeper is bound here because players are only known when the game starts.
+void Creature::restoreSavedPossession()
+{
+    if(!getIsOnServerMap() || (mSavedPossessorSeatId < 0))
+        return;
+
+    const int32_t seatId = mSavedPossessorSeatId;
+    mSavedPossessorSeatId = -1;
+    Seat* seat = getGameMap()->getSeatById(seatId);
+    Player* player = (seat == nullptr) ? nullptr : seat->getPlayer();
+    if((player == nullptr) || player->getIsHuman() || player->isPossessing() || (seat != getSeat()) ||
+       !isAlive() || isKo() || !getIsOnMap() || isInPrison() || isPossessed())
+    {
+        OD_LOG_WRN("The saved possession of " + getName() + " by seat " + Helper::toString(seatId)
+            + " cannot go on and is dropped");
+        for(const std::string& memberName : mGroupMemberNames)
+        {
+            Creature* member = getGameMap()->getCreature(memberName);
+            if((member != nullptr) && (member->mGroupLeaderName == getName()))
+                member->leavePossessionGroup();
+        }
+        mGroupMemberNames.clear();
+        mPossessionTurns = 0;
+        return;
+    }
+
+    mPossessor = player;
+    player->setPossessedCreatureName(getName());
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    pushAction(Utils::make_unique<CreatureActionPossessed>(*this));
+    // The aura is no saved effect: it is started again and lasts until the possession ends
+    addParticleEffect(POSSESSION_AURA_SCRIPT, -1);
+    mNeedFireRefresh = true;
+
+    // Only the creatures that still follow this leader stay in the group
+    std::vector<std::string> memberNames;
+    for(const std::string& memberName : mGroupMemberNames)
+    {
+        Creature* member = getGameMap()->getCreature(memberName);
+        if((member != nullptr) && (member->mGroupLeaderName == getName()))
+            memberNames.push_back(memberName);
+    }
+    mGroupMemberNames = memberNames;
+    OD_LOG_INF("Restored the possession of " + getName() + " by seat " + Helper::toString(seatId) + " after "
+        + Helper::toString(mPossessionTurns) + " turns with " + Helper::toString(mGroupMemberNames.size())
+        + " followers");
+}
+
 bool Creature::handleChampionUpkeep()
 {
     ++mChampionTurns;
@@ -12654,6 +12767,8 @@ bool Creature::possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkill
     return (entityAttack != nullptr);
 }
 
+//! \brief The left mouse button of a possessed creature: the attack on the enemy in front of it as in a normal fight,
+//! or, for a worker with no enemy it can attack in front of it, one work step (dig or claim).
 void Creature::possessedAttack(const Ogre::Vector2& aim)
 {
     if(!isPossessed() || !getIsOnMap() || !isAlive() || isKo() || isFrozen())
@@ -12664,17 +12779,23 @@ void Creature::possessedAttack(const Ogre::Vector2& aim)
     GameEntity* bestEntity = nullptr;
     Tile* bestTile = nullptr;
     double bestRange = 0.0;
+    // Whether an enemy the creature can attack stands in front of it, even if no attack is ready yet
+    bool enemyInFront = false;
     for(CreatureSkillData& skillData : mSkillData)
     {
         if(!isPossessedBasicAttack(*skillData.mSkill))
             continue;
 
-        if(!isPossessedSkillReady(*this, skillData))
+        if(!skillData.mSkill->canBeUsedBy(this))
             continue;
 
         GameEntity* entity = nullptr;
         Tile* tile = nullptr;
         if(!possessedFindTarget(aim, skillData, entity, tile))
+            continue;
+
+        enemyInFront = true;
+        if(!isPossessedSkillReady(*this, skillData))
             continue;
 
         double range = skillData.mSkill->getRangeMax(this, entity);
@@ -12687,10 +12808,229 @@ void Creature::possessedAttack(const Ogre::Vector2& aim)
         bestRange = range;
     }
 
-    if(bestSkill == nullptr)
+    if(bestSkill != nullptr)
+    {
+        useAttack(*bestSkill, *bestEntity, *bestTile, false, true);
+        return;
+    }
+
+    // With an enemy in front of it the creature waits for its attack; without one a worker works
+    if(enemyInFront)
         return;
 
-    useAttack(*bestSkill, *bestEntity, *bestTile, false, true);
+    possessedWork(aim);
+}
+
+namespace
+{
+//! \brief Smallest cosine between the view direction of a possessed worker and the direction of a neighbour tile
+//! for that tile to count as the tile in front of the worker (45 degrees to each side).
+const Ogre::Real POSSESSION_WORK_FRONT_MIN_COS = 0.7f;
+
+//! \brief Returns the neighbour tile of the given tile that lies the most in the given view direction (unit
+//! vector), nullptr if none lies within 45 degrees of it.
+//! \param myTile The tile the possessed worker stands on.
+//! \param aimDir The normalised view direction of the worker on the ground plane.
+Tile* getPossessedTileInFront(Tile& myTile, const Ogre::Vector2& aimDir)
+{
+    Tile* tileFront = nullptr;
+    Ogre::Real bestCos = POSSESSION_WORK_FRONT_MIN_COS;
+    for(Tile* tile : myTile.getAllNeighbors())
+    {
+        Ogre::Vector2 direction(static_cast<Ogre::Real>(tile->getX() - myTile.getX()),
+            static_cast<Ogre::Real>(tile->getY() - myTile.getY()));
+        if(direction.squaredLength() <= 0.0f)
+            continue;
+
+        direction.normalise();
+        Ogre::Real cosAngle = direction.dotProduct(aimDir);
+        if(cosAngle < bestCos)
+            continue;
+
+        bestCos = cosAngle;
+        tileFront = tile;
+    }
+    return tileFront;
+}
+}
+
+//! \brief One work step of a possessed worker in the order of the possession rules: dig the tile in front if it can
+//! be dug (marked or not), else claim the wall in front when standing on own claimed ground, else claim the floor.
+bool Creature::possessedWork(const Ogre::Vector2& aim)
+{
+    if(!mDefinition->isWorker())
+        return false;
+
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    // One work step per turn, as a worker of the keeper does
+    const int64_t turn = getGameMap()->getTurnNumber();
+    if(turn == mPossessionWorkTurn)
+        return false;
+
+    Tile* tileFront = nullptr;
+    if(aim.squaredLength() >= POSSESSION_MIN_AIM_SQUARED_LENGTH)
+    {
+        Ogre::Vector2 aimDir = aim;
+        aimDir.normalise();
+        tileFront = getPossessedTileInFront(*myTile, aimDir);
+    }
+
+    if((tileFront != nullptr) && tileFront->isFullTile())
+    {
+        Ogre::Vector3 walkDirection(static_cast<Ogre::Real>(tileFront->getX()) - mPosition.x,
+            static_cast<Ogre::Real>(tileFront->getY()) - mPosition.y, 0.0f);
+        walkDirection.normalise();
+
+        // The worker digs what it faces, without the tile having to be marked
+        if((getDigRate() > 0.0) && tileFront->isDiggable(getSeat()))
+        {
+            setAnimationState(EntityAnimation::dig_anim, false, walkDirection);
+            if(possessedDigStep(*tileFront) <= 0.0)
+                return false;
+
+            mPossessionWorkTurn = turn;
+            // The worker carries no more than its normal capacity: gold above it falls to the floor
+            dropExcessGold();
+            if(tileFront->getFullness() > 0.0)
+                recordWorkerStepRecovery();
+            return true;
+        }
+
+        // The wall in front is claimed when the worker stands on its own claimed ground
+        if((getClaimRate() > 0.0) && myTile->isClaimedForSeat(getSeat()) && tileFront->isWallClaimable(getSeat()))
+        {
+            setAnimationState(EntityAnimation::claim_anim, false, walkDirection);
+            tileFront->claimForSeat(getSeat(), getClaimRate());
+            receiveExp(CreatureActionClaimGroundTile::getClaimExperience(*this));
+            recordWorkerStepRecovery();
+            mPossessionWorkTurn = turn;
+            return true;
+        }
+    }
+
+    // Otherwise the floor under the worker is claimed
+    if((getClaimRate() > 0.0) && myTile->isGroundClaimable(getSeat()))
+    {
+        setAnimationState(EntityAnimation::claim_anim, false);
+        myTile->claimForSeat(getSeat(), getClaimRate());
+        receiveExp(CreatureActionClaimGroundTile::getClaimExperience(*this));
+        recordWorkerStepRecovery();
+        mPossessionWorkTurn = turn;
+        return true;
+    }
+
+    return false;
+}
+
+//! \brief One dig step of a possessed worker with the rate, critical roll, gold and experience of the dig action.
+double Creature::possessedDigStep(Tile& tileDig)
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    // One critical roll per dig step, as in the dig action
+    const bool critical = rollCritical();
+    const double criticalFactor = critical ? config.getCritDamageMultiplier() : 1.0;
+    const double digFactor = getDigFactor();
+    const TileType tileType = tileDig.getType();
+    double amountDug = 0.0;
+    if(tileType == TileType::gold)
+        amountDug = tileDig.digOutGold(digFactor * criticalFactor);
+    else
+        amountDug = tileDig.digOut(getDigRate() * digFactor * criticalFactor);
+
+    if(amountDug <= 0.0)
+        return amountDug;
+
+    const Ogre::Vector3 tilePosition(static_cast<Ogre::Real>(tileDig.getX()),
+        static_cast<Ogre::Real>(tileDig.getY()), 0.0f);
+    if(tileType == TileType::gold)
+    {
+        CosmeticEvent stroke(CosmeticEventType::digStroke);
+        stroke.mSubject = getName();
+        stroke.mValue = static_cast<int32_t>(tileType);
+        stroke.mPosition = tilePosition;
+        fireCosmeticEvent(stroke, false);
+    }
+
+    if(critical)
+        fireCriticalOnStructure("dig", tilePosition);
+
+    receiveExp(config.getDigXpFactor() * getDigRate() / config.getWorkXpRateDivisor());
+
+    // The gold of a gold or gem wall goes to the carried gold, the statistics and the level script
+    double gold = 0.0;
+    if(tileType == TileType::gold)
+        gold = amountDug;
+    else if(tileType == TileType::gem)
+        gold = config.getGemGoldPerDigStep() * digFactor * criticalFactor;
+
+    if(gold > 0.0)
+    {
+        int32_t wholeGold = addGoldCarriedFraction(gold);
+        getSeat()->addGoldMined(wholeGold);
+        getGameMap()->getLevelScript().observeGoldMined(getSeat()->getId(), tileDig.getX(), tileDig.getY(), wholeGold);
+        if((tileType == TileType::gold) && (tileDig.getFullness() <= 0.0))
+            ++getSeat()->getStatistics().mGoldTilesMined;
+
+        receiveExp(config.getGoldDigXpFactor() * getDigRate() / config.getWorkXpRateDivisor());
+    }
+
+    if(tileDig.getFullness() <= 0.0)
+    {
+        CosmeticEvent event(CosmeticEventType::digFinished);
+        event.mSubject = getName();
+        event.mValue = static_cast<int32_t>(tileType);
+        event.mPosition = tilePosition;
+        fireCosmeticEvent(event, false);
+        receiveExp(config.getTileDugXp());
+    }
+
+    fireCreatureSound(CreatureSound::Dig);
+    return amountDug;
+}
+
+//! \brief Stores the gold a possessed worker carries on an own treasury or heart ring tile with room, then picks up
+//! the gold lying on its tile up to its normal capacity.
+void Creature::possessedHandleGold()
+{
+    if(!isPossessed() || !mDefinition->isWorker() || !getIsOnMap() || !isAlive() || isKo())
+        return;
+
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return;
+
+    // Stored as gold lying on such a tile is stored: the room takes what it has room for
+    Room* room = myTile->getCoveringRoom();
+    if((mGoldCarried > 0.0) && (room != nullptr) && (room->getSeat() == getSeat()))
+    {
+        double deposited = room->depositGold(mGoldCarried, myTile);
+        if(deposited > 0.0)
+            addGoldCarried(-deposited);
+    }
+
+    // Gold lying on the tile is picked up as long as the worker has room for it
+    const double capacity = static_cast<double>(getGoldCapacity());
+    if(mGoldCarried >= capacity)
+        return;
+
+    // The tile entities are copied: taking gold never removes a pile at once, but keeps the loop safe
+    std::vector<GameEntity*> entities = myTile->getEntitiesInTile();
+    for(GameEntity* entity : entities)
+    {
+        if(mGoldCarried >= capacity)
+            break;
+
+        if((entity->getObjectType() != GameEntityType::treasuryObject) || !entity->getIsOnMap())
+            continue;
+
+        TreasuryObject* pile = static_cast<TreasuryObject*>(entity);
+        double taken = pile->stealGold(*this, capacity - mGoldCarried);
+        if(taken > 0.0)
+            addGoldCarried(taken);
+    }
 }
 
 void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)

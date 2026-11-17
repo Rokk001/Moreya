@@ -45,6 +45,7 @@ public:
 
     //! \brief Ends the possession when nobody controls the creature any more, when it cannot be controlled or
     //! when the player has no mana left to pay for it. The creature itself is moved by the possessing player.
+    //! A possessed worker stores and picks up gold each turn (Creature::possessedHandleGold).
     static bool handlePossessed(Creature& creature);
 };
 
