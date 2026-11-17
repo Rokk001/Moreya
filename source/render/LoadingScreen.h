@@ -3,6 +3,8 @@
 
 #include <OgreResourceGroupManager.h>
 
+#include <cstdint>
+
 namespace CEGUI { class Window; }
 namespace Ogre { class RenderWindow; class OverlaySystem; }
 
@@ -41,6 +43,13 @@ public:
     void continueLoading();
     //! \brief Restores the normal background and the existing interface after a load.
     static void finish();
+    //! \brief Ends a map load once the opened game or editor has settled (see LoadingSettle) instead of at once, so the
+    //! first-use work of the new map is done behind the picture. waitForTurn is true for a game, false for the editor.
+    static void finishAfterSettling(bool waitForTurn);
+    //! \brief Takes each sampled frame; ends the picture when finishAfterSettling() waits and the map has settled.
+    static void onFrame(double seconds, int64_t turn, bool paused);
+    //! \brief True while the loading picture of a map load covers the game window.
+    static bool isShown();
     //! \brief Sets the real load progress (0 to 1, never decreasing) and redraws so that the ring visibly grows.
     static void setProgress(float fraction);
     //! \brief Lets the resource groups initialized next fill the ring from one progress value to another.

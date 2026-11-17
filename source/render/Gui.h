@@ -285,6 +285,12 @@ private:
     //! \brief UI scale chosen by the user (1.0 = 100%), on top of the scale derived from the display size.
     float mUserScale;
 
+    //! \brief Display size the fonts were last rescaled for; a font rescale rebuilds every glyph and reformats
+    //! every text, so it only runs when this size or a font's own scaling changes (see updateResourceScaling).
+    CEGUI::Sizef mFontScaledDisplaySize;
+    //! \brief True once the fonts have been rescaled for mFontScaledDisplaySize.
+    bool mFontsScaled;
+
     //! \brief Keeps the display size change subscription alive; disconnected in the destructor.
     CEGUI::Event::ScopedConnection mDisplaySizeChangedConnection;
     //! \brief Keeps the window destroyed subscription alive; disconnected in the destructor.
@@ -317,7 +323,8 @@ private:
     //! \param layoutScale Scale from display size and user scale, before the fit to the screen.
     void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float layoutScale);
 
-    //! \brief Sets resource native resolutions from user scale while preserving atlas design sizes.
+    //! \brief Sets resource native resolutions from user scale while preserving atlas design sizes. Fonts are
+    //! only rescaled when the display size or a font's scaling settings changed since the last call.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
 };
 

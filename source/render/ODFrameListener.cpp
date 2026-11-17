@@ -531,6 +531,8 @@ bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
 
 //! \brief Samples real frame intervals once, independently of pause and repeated mode updates.
 //! A return-to-menu test run is stepped before the game's render target is updated.
+//! Frames drawn while the loading picture of a map load still covers the game count as load, not as game frames;
+//! each sampled frame also lets the loading picture end once the map has settled (LoadingScreen::onFrame).
 bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
 {
     // The mode manager is gone once the window has been closed (windowClosed)
@@ -540,9 +542,11 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
     // first frameStarted, so the current mode is null here on the first rendered frame.
     const AbstractApplicationMode* sampledMode = mModeManager->getCurrentMode();
     const bool inGame = sampledMode != nullptr &&
-        sampledMode->getModeType() == ModeManager::GAME && mGameMap->getTurnNumber() != -1;
+        sampledMode->getModeType() == ModeManager::GAME && mGameMap->getTurnNumber() != -1 &&
+        !LoadingScreen::isShown();
     const float frameSeconds = mFrameStatistics.sampleFrame(inGame, mGameMap->getTurnNumber(), mWindow->isActive());
     FrameStallTrace::get().setPhase(FrameStallTrace::FrameStarted);
+    LoadingScreen::onFrame(frameSeconds, mGameMap->getTurnNumber(), mGameMap->getGamePaused());
     if(mIsMainMenuCreated)
         mMainScene->recordFrameStatistics(frameSeconds);
     if(RunLevelTest::isActive())
