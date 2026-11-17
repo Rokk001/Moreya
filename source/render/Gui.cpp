@@ -1974,8 +1974,11 @@ const std::size_t PROFILE_LINK_ROWS = 2;
 const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
 //! Tolerance (design pixels) before the rows count as higher than the page
 const float PROFILE_OVERFLOW_TOLERANCE = 0.5f;
+//! Size of a button row of the profile page, the skill tree button (design pixels)
+const float PROFILE_BUTTON_WIDTH = 140.0f;
+const float PROFILE_BUTTON_HEIGHT = 26.0f;
 //! Names of the rows that flow from top to bottom and so change their position when the texts change
-const char* const PROFILE_FLOW_ROWS[] = {"Portrait", "NameText", "AttributesText", "EquipmentText", "EquipmentRow", "HandleText", "AgeText", "RelationText", "FromText", "JobText", "HealthLabel", "HealthBar", "ExperienceLabel", "ExperienceBar", "PathText", "SkillsText", "BioText", "LikesText",
+const char* const PROFILE_FLOW_ROWS[] = {"Portrait", "NameText", "AttributesText", "EquipmentText", "EquipmentRow", "HandleText", "AgeText", "RelationText", "FromText", "JobText", "HealthLabel", "HealthBar", "ExperienceLabel", "ExperienceBar", "SkillTreeButton", "PathText", "SkillsText", "BioText", "LikesText",
     "DislikesText", "RelationsText", "FriendsLabel", "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "EffectsText", "LatestText", "QuirksText", "OwnPostsText"};
 const std::size_t PROFILE_FLOW_ROW_COUNT = sizeof(PROFILE_FLOW_ROWS) / sizeof(PROFILE_FLOW_ROWS[0]);
 
@@ -2014,6 +2017,18 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
     setScaledArea(window, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
         CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, y + height)));
     return y + height + PROFILE_ROW_GAP;
+}
+
+//! \brief Places a button row of the profile page at the given height (design pixels) when it is visible.
+//! \return The height below the row, unchanged when the button is hidden.
+float Gui::layoutProfileButtonRow(CEGUI::Window* button, float y)
+{
+    if(!button->isVisible())
+        return y;
+
+    setScaledArea(button, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
+        CEGUI::UDim(0, PROFILE_SIDE_MARGIN + PROFILE_BUTTON_WIDTH), CEGUI::UDim(0, y + PROFILE_BUTTON_HEIGHT)));
+    return y + PROFILE_BUTTON_HEIGHT + PROFILE_ROW_GAP;
 }
 
 //! \brief Fits equipment beside the portrait, attributes below, and social rows in the existing scroll document.
@@ -2081,6 +2096,8 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     const char* const textRowsAfter[] = {"StatusText", "EffectsText", "LatestText", "QuirksText"};
     const char* const linkRows[PROFILE_LINK_ROWS][PROFILE_LINK_ROW_WINDOWS] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
 
+    // The skill tree button of the Dungeonbook profile stands right above the "Path:" and "Skills:" lines
+    y = layoutProfileButtonRow(page->getChild("SkillTreeButton"), y);
     for(std::size_t i = 0; i < 6; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);
 

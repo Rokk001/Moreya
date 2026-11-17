@@ -254,6 +254,8 @@ private:
     void arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const char*> names);
     //! \brief Places one text row of the profile page at y (design pixels) as high as its text, returns the y of the next row.
     float layoutProfileTextRow(CEGUI::Window* window, float y, float scale);
+    //! \brief Places a button row of the profile page at y (design pixels) when it is visible, returns the y of the next row.
+    float layoutProfileButtonRow(CEGUI::Window* button, float y);
     //! \brief Moves all children of the profile page (except the scrollbar) from their unscrolled areas up by offset.
     void applyProfileScroll(CEGUI::Window* page, float offset);
     //! \brief The scrollbar of a profile page was moved.

@@ -18,6 +18,7 @@
 #include "render/SocialWindow.h"
 
 #include "creaturemood/CreatureMood.h"
+#include "creatureskill/CreatureSkillTreeView.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/CreatureMoodValues.h"
@@ -36,6 +37,7 @@
 #include "social/PostLog.h"
 #include "social/SocialGenerator.h"
 #include "social/SocialProfileCache.h"
+#include "utils/ConfigManager.h"
 #include "ODApplication.h"
 
 #include <CEGUI/Font.h>
@@ -44,7 +46,9 @@
 #include <CEGUI/InputEvent.h>
 #include <CEGUI/PropertyHelper.h>
 #include <CEGUI/widgets/Combobox.h>
+#include <CEGUI/widgets/FrameWindow.h>
 #include <CEGUI/widgets/ListboxTextItem.h>
+#include <CEGUI/widgets/ProgressBar.h>
 #include <CEGUI/widgets/PushButton.h>
 #include <CEGUI/widgets/Scrollbar.h>
 #include <CEGUI/Window.h>
@@ -483,7 +487,8 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mSinceRefreshCheck(0.0f),
     mSinceFeedRebuild(0.0f),
     mShownProfilePostVersion(0),
-    mSinceProfileRefresh(0.0f)
+    mSinceProfileRefresh(0.0f),
+    mSkillTreeWindow(rootWindow->getChild("CreatureSkillTreeWindow"))
 {
     CEGUI::Window* home = mWindow->getChild("HomePage");
     CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(home->getChild("Filter"));
@@ -534,6 +539,8 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
             connect(link, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this));
         }
     }
+    connect(mSkillTreeWindow, CEGUI::FrameWindow::EventCloseClicked,
+        CEGUI::Event::Subscriber(&SocialWindow::onSkillTreeCloseClicked, this));
 }
 
 //! \brief Disconnects the controls and destroys the page created for this game.
@@ -627,6 +634,7 @@ void SocialWindow::hide()
         ODClient::getSingleton().queueClientNotification(ClientNotificationType::askDungeonbookRoster, false);
         social::PostLog::getSingleton().clearDungeonbookRoster();
     }
+    mSkillTreeWindow->hide();
     mWindow->hide();
 }
 
@@ -642,6 +650,9 @@ void SocialWindow::update(float elapsed)
         return;
 
     mSinceRefreshCheck = 0.0f;
+    // The open skill tree follows the creature (new ranks at a level-up, a reset)
+    if(mSkillTreeWindow->isVisible())
+        refreshSkillTree();
     social::PostLog& log = social::PostLog::getSingleton();
     if(log.getRosterVersion() != mShownRosterVersion)
         rebuildCreatureList();
@@ -742,6 +753,121 @@ bool SocialWindow::onLinkClicked(const CEGUI::EventArgs& e)
     if(args.window->isUserStringDefined("Creature"))
         selectCreature(std::string(args.window->getUserString("Creature").c_str()), Page::Inventory);
     return true;
+}
+
+//! \brief Opens the skill tree window of the creature selected in the book.
+bool SocialWindow::onSkillTreeClicked(const CEGUI::EventArgs& /*e*/)
+{
+    if(mSelectedCreature.empty())
+        return true;
+
+    mSkillTreeCreature = mSelectedCreature;
+    refreshSkillTree();
+    if(!mSkillTreeCreature.empty())
+    {
+        mSkillTreeWindow->show();
+        mSkillTreeWindow->activate();
+    }
+    return true;
+}
+
+//! \brief Hides the skill tree window.
+bool SocialWindow::onSkillTreeCloseClicked(const CEGUI::EventArgs& /*e*/)
+{
+    mSkillTreeWindow->hide();
+    return true;
+}
+
+namespace
+{
+//! Colour of the title and the frame of the path the creature's template puts its points into, and of the others
+const char* const SKILL_TREE_HIGHLIGHT_TEXT = "tl:FFFFC94A tr:FFFFC94A bl:FFFFC94A br:FFFFC94A";
+const char* const SKILL_TREE_NORMAL_TEXT = "tl:FFE7E0D0 tr:FFE7E0D0 bl:FFE7E0D0 br:FFE7E0D0";
+const char* const SKILL_TREE_HIGHLIGHT_FRAME = "FFFFC94A";
+const char* const SKILL_TREE_NORMAL_FRAME = "00FFFFFF";
+
+//! \brief Shows one skill of the tree in its icon button, rank bar and rank text: the icon from the imageset
+//! CreatureSkillIcons, dark while the skill is not unlocked (like a research button that is not researched), the
+//! tooltip lines and the frame colour of a highlighted path.
+//! \param tree The window holding the skill's windows.
+//! \param name The name of the skill's icon button; the bar and the rank text are named <name>Bar and <name>Rank.
+void showSkillTreeNode(CEGUI::Window* tree, const std::string& name, const CreatureSkillTree::ViewNode& node,
+    bool highlighted)
+{
+    CEGUI::Window* button = tree->getChild(name);
+    CEGUI::ProgressBar* bar = static_cast<CEGUI::ProgressBar*>(tree->getChild(name + "Bar"));
+    CEGUI::Window* rank = tree->getChild(name + "Rank");
+    const std::string image = "CreatureSkillIcons/" + node.mId;
+    const bool shown = !node.mId.empty() && CEGUI::ImageManager::getSingleton().isDefined(image);
+    button->setVisible(shown);
+    bar->setVisible(shown);
+    rank->setVisible(shown);
+    if(!shown)
+        return;
+
+    button->setProperty("ButtonImage", image);
+    button->setProperty("ButtonImageColour", node.mUnlocked ? "FFFFFFFF" : "FF555555");
+    button->setProperty("ResearchTileImage", node.mRank > 0 ? "OpenDungeonsSkin/ResearchTileLearned" :
+        "OpenDungeonsSkin/ResearchTileLocked");
+    button->setProperty("ResearchLevelColour", highlighted ? SKILL_TREE_HIGHLIGHT_FRAME : SKILL_TREE_NORMAL_FRAME);
+    std::string tooltip;
+    for(std::size_t i = 0; i < node.mTooltip.size(); ++i)
+        tooltip += (i == 0 ? "" : "\n") + node.mTooltip[i];
+    button->setTooltipText(escapeMarkup(tooltip));
+    bar->setProgress(node.mMaxRank == 0 ? 0.0f : static_cast<float>(node.mRank) / static_cast<float>(node.mMaxRank));
+    rank->setText(node.mBarText);
+}
+}
+
+void SocialWindow::refreshSkillTree()
+{
+    Creature* creature = mSkillTreeCreature.empty() ? nullptr : mGameMap.getCreature(mSkillTreeCreature);
+    const CreatureSkillTree::TypeInfo type = (creature == nullptr) ? CreatureSkillTree::TypeInfo() :
+        creature->getSkillTypeInfo();
+    if(type.mGroup.empty())
+    {
+        mSkillTreeCreature.clear();
+        mSkillTreeWindow->hide();
+        return;
+    }
+
+    const ConfigManager& config = ConfigManager::getSingleton();
+    CreatureSkillTree::ViewRules rules;
+    rules.mMaxRank = config.getSkillRanksPerSkill();
+    rules.mTier2UnlockRanks = static_cast<uint32_t>(config.getSkillTier2UnlockRanks());
+    rules.mTier3UnlockRanks = static_cast<uint32_t>(config.getSkillTier3UnlockRanks());
+    rules.mTier4MinSpent = static_cast<uint32_t>(config.getSkillTier4MinSpent());
+    const CreatureSkillTree::TreeView view = CreatureSkillTree::buildTreeView(config.getCreatureSkillTree(), type,
+        creature->getSkillBuild(), rules);
+
+    const social::DungeonbookEntry* entry = findEntry(mSkillTreeCreature);
+    std::string windowTitle = mSkillTreeCreature;
+    if(entry != nullptr)
+        windowTitle = social::SocialProfileCache::getSingleton().getProfile(entry->name, entry->className,
+            entry->worker).getFullName();
+    mSkillTreeWindow->setText("Skill Tree: " + escapeMarkup(windowTitle));
+
+    CEGUI::Window* tree = mSkillTreeWindow->getChild("Tree");
+    const std::size_t COLUMNS = 4;
+    for(std::size_t column = 0; column < COLUMNS; ++column)
+    {
+        const std::string prefix = "Column" + std::to_string(column);
+        CEGUI::Window* title = tree->getChild(prefix + "Title");
+        const bool hasColumn = column < view.mColumns.size();
+        title->setVisible(hasColumn);
+        title->setText(hasColumn ? escapeMarkup(view.mColumns[column].mPath) : std::string());
+        title->setProperty("TextColours", (hasColumn && view.mColumns[column].mHighlighted) ?
+            SKILL_TREE_HIGHLIGHT_TEXT : SKILL_TREE_NORMAL_TEXT);
+        for(uint32_t tier = 1; tier <= CreatureSkillTree::MAX_TIER; ++tier)
+        {
+            const CreatureSkillTree::ViewNode empty;
+            const CreatureSkillTree::ViewNode& node = (hasColumn && tier <= view.mColumns[column].mTiers.size()) ?
+                view.mColumns[column].mTiers[tier - 1] : empty;
+            showSkillTreeNode(tree, prefix + "Tier" + std::to_string(tier), node,
+                hasColumn && view.mColumns[column].mHighlighted);
+        }
+    }
+    showSkillTreeNode(tree, "TierFour", view.mHasTierFour ? view.mTierFour : CreatureSkillTree::ViewNode(), false);
 }
 
 bool SocialWindow::onListScrolled(const CEGUI::EventArgs& /*e*/)
@@ -1195,7 +1321,11 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
                 connect(mProfilePage->getChild(linkName), CEGUI::PushButton::EventClicked,
                     CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this));
             }
+            connect(mProfilePage->getChild("SkillTreeButton"), CEGUI::PushButton::EventClicked,
+                CEGUI::Event::Subscriber(&SocialWindow::onSkillTreeClicked, this));
         }
+        // Only the Dungeonbook profile shows the skill tree button, and only for a type with a skill tree
+        mProfilePage->getChild("SkillTreeButton")->setVisible(!creature->getSkillTypeInfo().mGroup.empty());
         // A newly selected creature opens on its first rows, while timed refreshes keep the scroll position.
         if(!mProfilePage->isUserStringDefined("ProfileCreature") ||
             mProfilePage->getUserString("ProfileCreature") != mSelectedCreature)
