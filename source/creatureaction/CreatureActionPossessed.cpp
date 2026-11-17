@@ -36,7 +36,8 @@ std::function<bool()> CreatureActionPossessed::action()
         std::ref(mCreature));
 }
 
-//! \brief Keeps a possession going; after the free seconds the mana drain follows the possess research.
+//! \brief Keeps a possession going; a possessed worker handles its gold each turn; after the free seconds the mana
+//! drain follows the possess research.
 bool CreatureActionPossessed::handlePossessed(Creature& creature)
 {
     if(!creature.isPossessed())
@@ -53,6 +54,9 @@ bool CreatureActionPossessed::handlePossessed(Creature& creature)
         creature.endPossession();
         return false;
     }
+
+    // A possessed worker stores the gold it carries and picks up the gold it walks over
+    creature.possessedHandleGold();
 
     // The cast price covers the first seconds. After that the player pays each turn the share of
     // the drain per second of the creature type. The possession ends when the mana cannot pay

@@ -2256,10 +2256,11 @@ void Gui::setUserScalePercent(float scalePercent)
     applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
 }
 
-//! \brief Fits every editor construction button into two rows on its tab page.
+//! \brief Fits every editor construction button into two rows on its tab page (rooms and traps; the editor has no
+//! spells tab).
 void Gui::arrangeEditorActionButtons(CEGUI::Window* editorSheet)
 {
-    const char* pages[] = {"MainTabControl/Rooms", "MainTabControl/Traps", "MainTabControl/Spells"};
+    const char* pages[] = {"MainTabControl/Rooms", "MainTabControl/Traps"};
     const float scale = getLayoutScale();
     if(scale <= 0.0f)
         return;
@@ -2317,12 +2318,14 @@ void Gui::arrangeTrapButtons(CEGUI::Window* traps)
         "FireburstTrapButton", "FreezeTrapButton", "WatchBannerTrapButton", "TriggerTrapButton"});
 }
 
+//! \brief Fits the available spell buttons, the six spells of the spells review included, in two rows like the rooms.
 void Gui::arrangeSpellButtons(CEGUI::Window* spells)
 {
     arrangeActionButtons(spells, {"SummonWorkerButton", "CallToWarButton", "CreatureHealButton",
         "CreatureExplosionButton", "CreatureHasteButton", "CreatureDefenseButton", "CreatureSlowButton",
         "CreatureStrengthButton", "CreatureWeakButton", "SpellEyeEvilButton", "CreateGoldButton",
         "LightningButton", "TremorButton", "DefectorButton", "HexenHenButton", "InfernoButton", "PossessButton",
+        "CurseButton", "BlessingButton", "InvisibilityButton", "PlagueButton", "BreakWallButton", "RevealEnemyButton",
         "SummonChampionButton"});
 }
 

@@ -85,6 +85,8 @@ struct AbstractApplicationMode
 struct GameMode : AbstractApplicationMode
 {
     bool mPendingHandDrop = true;
+    // A held left button of a possession is a held gesture as well
+    bool mPossessAttackHeld = true;
     float mMiddleDragDistance = 12.0f;
     Selection mPlayerSelection;
     int selectedTiles = 8, clears = 0;
@@ -120,7 +122,7 @@ int main()
     GameMode game;
     game.cancelMouseInput();
     checkShared(game);
-    assert(!game.mPendingHandDrop && game.mMiddleDragDistance == 0.0f);
+    assert(!game.mPendingHandDrop && !game.mPossessAttackHeld && game.mMiddleDragDistance == 0.0f);
     assert(game.mPlayerSelection.action == SelectedAction::none);
     assert(game.selectedTiles == 0 && game.clears == 1);
     ODFrameListener& listener = ODFrameListener::getSingleton();

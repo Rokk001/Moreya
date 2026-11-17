@@ -108,7 +108,8 @@ skills = enum_names(skill_type, 'enum class SkillType')
 assert skills.index('roomToilet') == 55 and skills[-1] == 'countSkill', skills
 assert skills[55:65] == ['roomToilet', 'roomMerchant', 'roomHerbGarden', 'roomAlchemyLab',
                          'trapFineTools', 'trapMasterTools', 'spellSunthornCultivation', 'roomTavern', 'tavernBeer', 'roomInfirmary']
-assert skills[-4:] == ['roomInfirmary', 'roomGhostRoom', 'roomSpa', 'countSkill'], skills[-5:]
+# The six keeper spells of the spells review are appended after the lava spa
+assert skills[-10:] == ['roomInfirmary', 'roomGhostRoom', 'roomSpa', 'spellCurse', 'spellBlessing', 'spellInvisibility', 'spellPlague', 'spellBreakWall', 'spellRevealEnemy', 'countSkill'], skills[-11:]
 assert 'case SkillType::roomToilet:' in read('source/game/SkillType.cpp') and '"roomToilet"' in read('source/game/SkillType.cpp')
 manager = read('source/game/SkillManager.cpp')
 assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{SkillType::roomDormitory});\n'
@@ -116,7 +117,8 @@ assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomToilet') == 1
-assert len(registered) == 65, 'the combined research tree has 65 entries, found ' + str(len(registered))
+# 65 entries and the six spells of the spells review
+assert len(registered) == 71, 'the combined research tree has 71 entries, found ' + str(len(registered))
 skills_cfg = read('config/skills.cfg')
 assert re.search(r'^    roomToilet\t250\s*$', skills_cfg, re.M), 'roomToilet costs 250 (tier II)'
 # No research effect line for the toilet

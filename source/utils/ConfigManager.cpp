@@ -226,6 +226,9 @@ static const char* const AI_CONFIG_DEFAULTS[][2] = {
     {"ReloadRetrySeconds", "30"},
     {"PoorDefenceShuffleChance", "0.5"},
     {"ChampionExtraSeconds", "30"},
+    {"PlagueMinEnemies", "3"},
+    {"PlagueEnemyRadius", "2"},
+    {"PlagueOwnClearRadius", "3"},
     {"GroupShareMain", "0.55"},
     {"GroupShareRaid", "0.3"},
     {"GroupShareSingle", "0.7"},
@@ -422,6 +425,12 @@ static const char* const AI_ROW_CLASS_DEFAULTS[][3] = {
     {"L04", "routine", "0"},
     {"E20", "rule", "1"},
     {"H04", "rule", "1"},
+    {"E21", "complex", "1"},
+    {"E22", "complex", "1"},
+    {"E23", "complex", "1"},
+    {"E24", "complex", "1"},
+    {"E25", "complex", "1"},
+    {"E26", "complex", "1"},
 };
 
 //! \brief The field of a keeper AI level that a key of the [KeeperAILevels] section of ai.cfg sets.

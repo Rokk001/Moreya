@@ -393,7 +393,8 @@ void perform(KeeperAI& ai, const std::string& target)
         { failedEye(); return; }
         const bool tileTarget = spell == SpellType::summonWorker || spell == SpellType::callToWar
             || spell == SpellType::eyeEvil || spell == SpellType::createGold || spell == SpellType::inferno
-            || spell == SpellType::tremor || spell == SpellType::summonChampion;
+            || spell == SpellType::tremor || spell == SpellType::summonChampion || spell == SpellType::breakWall
+            || spell == SpellType::revealEnemy;
         if(tileTarget != (name == "-")) { failedEye(); return; }
         ODPacket packet;
         if(name != "-")

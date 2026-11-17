@@ -51,7 +51,14 @@ public:
     //! \brief Updates interface overlays in real time and reaction icon lifetimes in game time.
     void update(Ogre::Real timeSincelastFrame);
     MovableTextOverlay* getMovableTextOverlay(){ return mMovableTextOverlay; }
+
+    //! \brief Hides the indicators over all creatures (health, level, status, recovery, emote) whatever asks for
+    //! them, until called again with false. Used while the local player possesses a creature.
+    static void setAllSuppressed(bool suppressed);
 private:
+    //! \brief See setAllSuppressed()
+    static bool sAllSuppressed;
+
     
     void updateHealth();
     void updateStatus(Ogre::Real timeSincelastFrame);

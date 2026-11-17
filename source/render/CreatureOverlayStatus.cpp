@@ -440,7 +440,16 @@ void CreatureOverlayStatus::update(Ogre::Real timeSincelastFrame)
     mMovableTextOverlay->update(timeSincelastFrame);
     // Health, level and need symbols share the same request lifetime, including
     // temporary editor hover; hidden or dead creatures never show the overlay.
+    // While the local player possesses a creature no indicator is shown at all.
     const uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];
-    mMovableTextOverlay->setVisible(mCreature->getIsOnMap() && mCreature->isAlive() &&
+    mMovableTextOverlay->setVisible(!sAllSuppressed && mCreature->getIsOnMap() && mCreature->isAlive() &&
         mMovableTextOverlay->isDisplayed(healthId));
+}
+
+bool CreatureOverlayStatus::sAllSuppressed = false;
+
+//! \brief Hides or allows again the indicators over all creatures, whatever asks for them.
+void CreatureOverlayStatus::setAllSuppressed(bool suppressed)
+{
+    sAllSuppressed = suppressed;
 }

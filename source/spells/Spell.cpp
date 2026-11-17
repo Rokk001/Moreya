@@ -234,6 +234,13 @@ std::string Spell::formatCastSpell(SpellType type, uint32_t price)
     return "Cast " + SpellManager::getSpellReadableName(type) + " [" + Helper::toString(price)+ " Mana]";
 }
 
+//! \brief True if the seat is among the seats with vision on the tile.
+bool Spell::isTileSeenBy(Tile& tile, const Seat* seat)
+{
+    const std::vector<Seat*>& seats = tile.getSeatsWithVision();
+    return std::find(seats.begin(), seats.end(), seat) != seats.end();
+}
+
 void Spell::fireSpellSound(Tile& tile, const std::string& soundFamily)
 {
     std::string sound = "Spells/" + soundFamily;
@@ -254,7 +261,8 @@ void Spell::fireSpellSound(Tile& tile, const std::string& soundFamily)
 const std::string Spell::SPELL_EFFECT_PREFIX = "SpellFx/";
 const std::string Spell::HAND_CAST_EFFECT_NAME = "HandCast";
 
-//! \brief Shows a spell effect to humans and reports visible enemy keeper casts to AI seats.
+//! \brief Shows a spell effect to humans and reports visible enemy keeper casts to AI seats. An empty effect name
+//! plays only the sound (a spell without a cast look of its own) and still reports the cast to the AI seats.
 void Spell::fireSpellEffect(Tile& tile, const std::string& effectName, const std::string& soundFamily,
     GameMap* gameMap, const Seat* caster)
 {
@@ -278,6 +286,9 @@ void Spell::fireSpellEffect(Tile& tile, const std::string& effectName, const std
             }
             continue;
         }
+
+        if(effectName.empty())
+            continue;
 
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::playSpatialSound, seat->getPlayer());

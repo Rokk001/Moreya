@@ -46,6 +46,7 @@ void PlayerSelection::setCurrentAction(SelectedAction action)
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::none;
 }
 
+//! \brief Selects the spell to cast and the creatures the outliner marks for it (the six new spells included).
 void PlayerSelection::setNewSpellType(SpellType newSpellType)
 
 {
@@ -63,6 +64,8 @@ void PlayerSelection::setNewSpellType(SpellType newSpellType)
     case SpellType::tremor:
     case SpellType::inferno:
     case SpellType::summonChampion:
+    case SpellType::breakWall:
+    case SpellType::revealEnemy:
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::none;
         break;
     case SpellType::creatureWeak:
@@ -70,6 +73,8 @@ void PlayerSelection::setNewSpellType(SpellType newSpellType)
     case SpellType::lightning:
     case SpellType::defector:
     case SpellType::hexenHen:
+    case SpellType::curse:
+    case SpellType::plague:
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::creatureAliveEnemy;
         break;
     case SpellType::creatureStrength:
@@ -81,6 +86,8 @@ void PlayerSelection::setNewSpellType(SpellType newSpellType)
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::creatureAliveOwnedHurt;
         break;
     case SpellType::possess:
+    case SpellType::blessing:
+    case SpellType::invisibility:
         mInputManager.mCreatureTypeForOutliner = SelectionEntityWanted::creatureAliveOwned;
         break;
 

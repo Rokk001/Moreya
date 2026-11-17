@@ -923,6 +923,13 @@ void Trap::claimForSeat(Seat* seat, Tile* tile, double danceRate)
     tile->claimTile(seat);
 }
 
+//! \brief True when the entity is a creature that the Invisibility spell hides from its enemies.
+bool Trap::isHiddenBySpell(GameEntity* entity)
+{
+    return (entity != nullptr) && (entity->getObjectType() == GameEntityType::creature) &&
+        static_cast<Creature*>(entity)->isSpellInvisible();
+}
+
 bool Trap::sortForMapSave(Trap* t1, Trap* t2)
 {
     // We sort room by seat id then meshName

@@ -214,6 +214,9 @@ public:
     //! The script of the aura of a possessed creature, which ends with the possession
     static const std::string POSSESSION_AURA_SCRIPT;
 
+    //! The script of the sickly green look of a creature sick with the plague, which ends with the cure
+    static const std::string PLAGUE_SCRIPT;
+
     //! \brief Defaults of the dormitory settings for carrying and pulling hurt creatures to their bed. They are used
     //! when the key is missing in the room config (the name of each key is the one without the _DEFAULT suffix).
     //! Number of turns a pulled creature may take to slide into its bed (DormitoryWoundedDragLayTurns)
@@ -1693,9 +1696,38 @@ public:
     //! can neither move nor fight
     bool isFrozen() const;
 
-    //! \brief Returns true (server side) if the creature is made invisible by the Invisible skill.
-    //! Enemy creatures do not target an invisible creature
+    //! \brief Returns true (server side) if the creature is made invisible by the Invisible skill or the Invisibility
+    //! spell. Enemy creatures do not target an invisible creature
     bool isInvisible() const;
+
+    //! \brief Returns true if the creature is made invisible by the Invisibility spell: on the server side from the
+    //! running effect, on the client side from the state the server sent. Its enemies do not see it (the server does
+    //! not send it to them) and their creatures, aiming traps and spells cannot target it; tile traps still hit it.
+    bool isSpellInvisible() const;
+
+    //! \brief Server side. Ends the Invisibility spell on the creature; called when it starts an attack or uses a
+    //! skill against an enemy. The Invisible skill (Shadow Veil) is not touched.
+    void endSpellInvisibility();
+
+    //! \brief Only the seats allied to the creature get it while the Invisibility spell hides it; every seat that
+    //! sees the tile gets it otherwise (see GameEntity::notifySeatsWithVision).
+    void notifySeatsWithVision(const std::vector<Seat*>& seats, NodeType nt = NodeType::MTILES_NODE) override;
+
+    //! \brief True (server side) while the creature is sick with the plague of the Plague spell.
+    inline bool isPlagueSick() const
+    { return mPlagueSick; }
+
+    //! \brief True if the creature can get sick with the plague: a living creature that is no worker (workers are
+    //! magic beings) and no champion (it cannot be hurt).
+    bool canCatchPlague() const;
+
+    //! \brief Server side. Makes the creature sick with the plague when it can catch it and is not sick yet.
+    //! \param sourceSeatId The id of the seat that cast the plague (its research sets the damage), -1 when unknown.
+    //! \return true when the creature got sick by this call.
+    bool catchPlague(int32_t sourceSeatId);
+
+    //! \brief Server side. Cures the plague (the creature was admitted to an infirmary cot) and ends its green look.
+    void curePlague();
 
     //! \brief Name of the mesh to display (the chicken mesh while the creature is a chicken)
     const std::string& getCurrentMeshName() const;
@@ -1976,8 +2008,19 @@ public:
 
     //! Called on server side. The left mouse button attack of the possessed creature: it uses
     //! its melee or ranged attack on the enemy in front of it (aim is the view direction on
-    //! the ground plane). Same range, damage and cooldown as in a normal fight.
+    //! the ground plane). Same range, damage and cooldown as in a normal fight. A possessed
+    //! worker with no enemy it can attack in front of it works instead (see possessedWork).
     void possessedAttack(const Ogre::Vector2& aim);
+
+    //! \brief Called on server side once per turn of a possession. A possessed worker stores the gold it carries
+    //! when it stands on an own treasury or heart ring tile with room, then picks up the gold lying on its tile up
+    //! to its normal gold capacity.
+    void possessedHandleGold();
+
+    //! \brief Called on server side when a saved game has been loaded (GameMap::createAllEntities). Puts back the
+    //! possession of an AI keeper that was running when the game was saved: possessor, turns, aura and follow
+    //! group. A saved possession whose keeper is no AI any more is dropped.
+    void restoreSavedPossession();
 
     //! \brief Reports recovery for successful possessed self-casts as well as targeted attacks.
     //! Called on server side. Uses the creature skill (other than melee and ranged attack) of
@@ -2123,7 +2166,8 @@ private:
     bool            mManaFromSave;
     //! \brief Server side: the mana ring step (0 .. MANA_RING_STEPS) the clients were last told about
     uint32_t        mManaRingStepNotified;
-    //! \brief Server side. Turns since the champion was summoned (see handleChampionUpkeep), not saved
+    //! \brief Server side. Turns since the champion was summoned (see handleChampionUpkeep); saved in the optional
+    //! [Champion] block of the creature line so the free period goes on after a load
     uint32_t        mChampionTurns;
     int             mJobCooldown;
     //! Total duration of the current job pause, used only by the existing progress ring.
@@ -2552,6 +2596,31 @@ private:
     //! \brief Used on client side. True if the mesh currently displayed is the chicken one
     bool                            mHexenHenMeshShown;
 
+    //! \brief Used on server side. True while the creature is sick with the plague (saved in the [Plague] block)
+    bool                            mPlagueSick = false;
+
+    //! \brief Used on server side. The seat that cast the plague the creature carries (-1 when unknown); its research
+    //! of the Plague spell sets the damage, and the creatures it infects carry the same seat
+    int32_t                         mPlagueSeatId = -1;
+
+    //! \brief Used on client side. True if the server told us that the Invisibility spell hides the creature
+    bool                            mSpellInvisible = false;
+
+    //! \brief Used on client side. True if the body is currently shown half transparent for the Invisibility spell
+    bool                            mSpellInvisibleShown = false;
+
+    //! \brief Server side. The turn of a sick creature: the plague damage, the infection of the creatures around it
+    //! and the green look. Prisoners and heroes stay sick; a knocked out creature takes no plague damage.
+    void upkeepPlague();
+
+    //! \brief Server side. A sick creature of a keeper that is not fighting walks to the nearest own infirmary with a
+    //! free cot it can be admitted to (CreatureActionSearchInfirmary).
+    void handlePlagueWalk();
+
+    //! \brief Client side. Shows the body half transparent while the server reports the Invisibility spell, solid
+    //! otherwise. Only the own keeper and his allies get the creature at all while it is invisible.
+    void updateSpellInvisibleLook();
+
     //! \brief Skills the creature can use
     std::vector<CreatureSkillData> mSkillData;
     //! \brief Whether an enemy was in attack range on the previous potion decision.
@@ -2630,6 +2699,22 @@ private:
 
     //! \brief Used on server side. The name of the possessed creature this creature follows, empty if none
     std::string                     mGroupLeaderName;
+
+    //! \brief Used on server side. The turn of the last work step of a possessed worker (one step per turn at most)
+    int64_t                         mPossessionWorkTurn = -1;
+
+    //! \brief Used on server side while a saved game is loaded. The seat of the AI keeper whose possession of this
+    //! creature was saved, -1 if none. Read by restoreSavedPossession.
+    int32_t                         mSavedPossessorSeatId = -1;
+
+    //! \brief Used on server side by the possession. A possessed worker digs the tile in front of it if it can be
+    //! dug, else claims the wall in front of it when it stands on its own claimed ground, else claims the floor
+    //! under it. One work step per turn at most. Returns true if the worker did a work step.
+    bool possessedWork(const Ogre::Vector2& aim);
+
+    //! \brief Used on server side by the possession. One dig step of a possessed worker on the given wall, with the
+    //! same rate, critical roll, gold and experience as a dig step of the dig action. Returns the amount dug.
+    double possessedDigStep(Tile& tileDig);
 
     //! \brief Used on server side by the possession. Picks the nearby fighting creatures of the
     //! possessor and makes them follow this creature

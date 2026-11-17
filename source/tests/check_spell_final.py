@@ -90,7 +90,22 @@ casts = ("SummonWorkerCast", "CallToWarCast", "HealCast", "ExplosionCast", "Hast
          "StrengthCast", "WeakCast", "EyeEvilCast", "GoldCast", "LightningCast", "TremorCast", "DefectorCast",
          "HexenHenCast", "InfernoCast", "PossessCast", "ChampionCast")
 if len(casts) != 18:
-    problems.append("expected 18 spells")
+    problems.append("expected 18 spells with an own cast sound")
+# The six spells of the spells review reuse existing recordings (no new sound file): spell source, effect name, family
+REVIEW_SOUNDS = (("SpellCurse.cpp", "Weak", "Curse"), ("SpellBlessing.cpp", "Strength", "Boost"),
+                 ("SpellInvisibility.cpp", "", "Dark"), ("SpellPlague.cpp", "", "Curse"),
+                 ("SpellBreakWall.cpp", "Tremor", "TremorImpact"), ("SpellRevealEnemy.cpp", "", "EyeEvilCast"))
+if len(casts) + len(REVIEW_SOUNDS) != 24:
+    problems.append("expected 24 spells")
+for source, effect, family in REVIEW_SOUNDS:
+    path = os.path.join(ROOT, "sounds", "Spatial", "Spells", family, "Fx%s01.ogg" % family)
+    if not os.path.exists(path) or os.path.getsize(path) < 1000:
+        problems.append("sound %s of %s is missing or too small" % (family, source))
+    if ("sounds/Spatial/Spells/%s/Fx%s01.ogg" % (family, family)) not in credits:
+        problems.append("CREDITS has no entry for sound %s of %s" % (family, source))
+    if ('fireSpellEffect(' not in read("source", "spells", source) or
+            ('"%s", "%s", gameMap, player->getSeat())' % (effect, family)) not in read("source", "spells", source)):
+        problems.append("%s does not play %s with the effect %s" % (source, family, effect or "(none)"))
 others = ("ExplosionImpact", "LightningImpact", "TremorImpact", "InfernoImpact", "GoldImpact", "HealImpact",
           "HasteImpact", "PossessEnd", "DefectorEnd", "HexenHenEnd")
 for family in casts + others:

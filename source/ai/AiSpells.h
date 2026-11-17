@@ -24,6 +24,7 @@
 
 class Creature;
 class KeeperAI;
+class Seat;
 class Tile;
 
 //! \brief The spell decisions of the keeper AI. Every cast goes through the ACTS wrappers, so the AI casts
@@ -78,7 +79,8 @@ struct State
 //! the end of a session (the late Defense of E05), Launch (E20), HeartCritical (E20) and the saved draw lines.
 //! Rows E04 and E07 are cast by the war rows that own the decision to scout and to rally (castEye, castCallToWar,
 //! drawLaunchGathering); Strength (E06) and the march Haste (E03) are reserved by the launch between the drops of the
-//! main group and its banner (castStrength, castHaste).
+//! main group and its banner (castStrength, castHaste). Rows E21 to E25 (Curse, Blessing, Invisibility, Plague, Break
+//! Wall) run on their own look (spellLook); row E26 (Reveal Enemy) is cast by the attack plan (castRevealEnemy).
 void bindRows(KeeperAI& ai);
 
 //! \brief One pass of the in-fight casting loop: picks the spell with the best damage per mana, or a heal for a
@@ -155,6 +157,42 @@ bool castDefector(KeeperAI& ai);
 //! fight action chooses now (the same choice as CreatureActionFight::handleFight) is an own room.
 //! \return true when the spell was cast.
 bool castHexenHen(KeeperAI& ai);
+
+//! \brief Casts Curse on the visible enemy creature of the highest level that is not cursed yet (row E21). The
+//! mistake curses a random visible enemy.
+//! \return true when the spell was cast.
+bool castCurse(KeeperAI& ai);
+
+//! \brief Casts Blessing on an own creature that is Upset or worse and not blessed yet, the one in the worst mood
+//! first (row E22). The mistake blesses a random own creature that is not upset.
+//! \return true when the spell was cast.
+bool castBlessing(KeeperAI& ai);
+
+//! \brief Casts Invisibility on an own creature that flees with low HP (below HealBelow of its max HP), the weakest
+//! first (row E23). The mistake hides a random own fighter that does not flee.
+//! \return true when the spell was cast.
+bool castInvisibility(KeeperAI& ai);
+
+//! \brief Casts Plague on a visible enemy that has at least PlagueMinEnemies other enemy creatures within
+//! PlagueEnemyRadius tiles and no own creature within PlagueOwnClearRadius tiles (row E24). The mistake infects a random
+//! visible enemy.
+//! \return true when the spell was cast.
+bool castPlague(KeeperAI& ai);
+
+//! \brief Casts Break Wall on the enemy wall tile that blocks the dig path of the tunnel towards the enemy the AI
+//! attacks (row E25): a visible enemy claimed wall next to ground the workers reach from the own heart, the one
+//! nearest to the tunnel target; the wall is then marked for digging. The mistake casts nothing.
+//! \return true when the spell was cast.
+bool castBreakWall(KeeperAI& ai);
+
+//! \brief Casts Reveal Enemy once before an attack on a keeper whose heart the AI has not seen (row E26), on a
+//! visible tile claimed by that keeper. The mistake casts nothing and the AI attacks blind.
+//! \param enemy The keeper the attack is planned against.
+//! \return true when the spell was cast.
+bool castRevealEnemy(KeeperAI& ai, Seat* enemy);
+
+//! \brief The look of the spell rows E21 to E25, every LookFactorScan of the scan period.
+void spellLook(KeeperAI& ai);
 
 //! \brief Casts Summon Champion at the start of an assault or when the heart is attacked.
 //! \param tile A claimed tile next to the heart (defence) or the drop tile of the main group (assault).

@@ -41,16 +41,17 @@ void checkSize(float width, float height, float user)
     tab->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(1, -133 * scale), CEGUI::UDim(1, -200 * scale), CEGUI::UDim(1, 0)));
     tab->setTabHeight(CEGUI::UDim(0, 35 * scale));
     tab->setTabTextPadding(CEGUI::UDim(0, 20 * scale));
-    const char* names[] = {"Tiles", "Rooms", "Traps", "Spells", "Creatures", "Lights", "Boxes"};
-    for(size_t i = 0; i < 7; ++i)
+    // The editor has no spells tab (it never cast anything there)
+    const char* names[] = {"Tiles", "Rooms", "Traps", "Creatures", "Lights", "Boxes"};
+    for(size_t i = 0; i < 6; ++i)
     {
         CEGUI::Window* page = tab->getChild(names[i]);
         page->setText(scaleFormattedImageSizes(page->getText(), scale));
     }
     CEGUI::Window* pane = tab->getChild("__auto_TabPane__Buttons");
     float previous = pane->getUnclippedOuterRect().get().left();
-    const float iconWidths[] = {28, 40, 40, 40, 40, 32, 28};
-    for(size_t i = 0; i < 7; ++i)
+    const float iconWidths[] = {28, 40, 40, 40, 32, 28};
+    for(size_t i = 0; i < 6; ++i)
     {
         CEGUI::Window* button = pane->getChildAtIdx(i);
         CEGUI::Rectf rect = button->getUnclippedOuterRect().get();

@@ -681,7 +681,8 @@ void exploreLook(Env& env)
     knowledge.exploreTunnels(env.ai, env.mind, st.exploreMarked);
 }
 
-//! \brief Plans an attack, optionally bypassing the post-assault rest for one second-wave attempt.
+//! \brief Plans an attack, optionally bypassing the post-assault rest for one second-wave attempt. Before the launch,
+//! Reveal Enemy is cast once on a keeper whose heart the AI has not seen (row E26).
 void planAttack(Env& env, bool bypassRest)
 {
     // AI row K01: eligibility and the ready list
@@ -784,6 +785,9 @@ void planAttack(Env& env, bool bypassRest)
     int tactic = env.mind.drawTactic(env.settings.tacticPriors, scores, env.settings.tacticTemperature);
     if(tactic < 0)
         return;
+
+    // Row E26: once before the attack, Reveal Enemy shows the keeper whose heart the AI has not seen
+    SPELL::castRevealEnemy(env.ai, enemy);
 
     launch(env, tactic, ready, estimate);
 }

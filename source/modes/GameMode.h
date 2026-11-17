@@ -790,11 +790,36 @@ private:
     //! \brief Sends the possession attack request (left mouse button) to the server
     void sendPossessionAttack();
 
-    //! \brief Sends the request to use the creature skill of the given slot (keys 1 to 4)
+    //! \brief Sends the request to use the creature skill of the given slot (keys 1 to 9 and 0 for the slots 0 to 9,
+    //! Shift and the same keys for the slots 10 to 19)
     void sendPossessionSkill(uint32_t slot);
 
-    //! \brief Sends the possession exit request to the server
+    //! \brief Sends the possession exit request to the server (key Esc only)
     void sendPossessionExit();
+
+    //! \brief Starts the own view of the possession: hides the keeper interface (all root windows with the chat, keeper
+    //! hand, pointer, creature indicators), locks the mouse in the window and shows the crosshair
+    void enterPossessionView();
+
+    //! \brief Called each frame of the possession view: keeps the interface, the pointer and the own model of the
+    //! possessed creature hidden and the crosshair in the middle of the window
+    void refreshPossessionView();
+
+    //! \brief Ends the own view of the possession: everything hidden by it comes back as it was
+    void leavePossessionView();
+
+    //! \brief Whether the possession view is shown
+    bool mPossessionViewActive = false;
+
+    //! \brief The creature whose own model the possession view hides
+    std::string mPossessionViewCreatureName;
+
+    //! \brief The root windows the possession view hid, shown again when it ends
+    std::vector<CEGUI::Window*> mPossessionHiddenWindows;
+
+    //! \brief Whether the left mouse button is held while possessing, and when its request is sent again
+    bool mPossessAttackHeld = false;
+    std::chrono::steady_clock::time_point mPossessAttackNextSend;
 
     //! \brief The movement keys held down while possessing
     bool mPossessKeyForward = false;

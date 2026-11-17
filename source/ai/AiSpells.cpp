@@ -18,8 +18,10 @@
 #include "ai/AiSpells.h"
 
 #include "ai/AiActions.h"
+#include "ai/AiKnowledge.h"
 #include "ai/AiMind.h"
 #include "ai/AiSettings.h"
+#include "ai/AiWar.h"
 #include "ai/KeeperAI.h"
 
 #include "creatureaction/CreatureAction.h"
@@ -38,7 +40,14 @@
 #include "gamemap/GameMap.h"
 #include "ODApplication.h"
 #include "rooms/Room.h"
+#include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomType.h"
+#include "spells/SpellBlessing.h"
+#include "spells/SpellBreakWall.h"
+#include "spells/SpellCurse.h"
+#include "spells/SpellInvisibility.h"
+#include "spells/SpellPlague.h"
+#include "spells/SpellRevealEnemy.h"
 #include "spells/SpellSummonChampion.h"
 #include "spells/SpellType.h"
 #include "utils/ConfigManager.h"
@@ -63,7 +72,7 @@ struct SpellOption
     double mEfficiency;
 };
 
-//! \brief Returns the key of the price of a spell in the spell configuration.
+//! \brief Returns the key of the price of a spell in the spell configuration (the six spells of the review included).
 const char* priceKey(SpellType type)
 {
     switch(type)
@@ -83,6 +92,12 @@ const char* priceKey(SpellType type)
         case SpellType::hexenHen: return "HexenHenPrice";
         case SpellType::inferno: return "InfernoPrice";
         case SpellType::summonChampion: return "SummonChampionPrice";
+        case SpellType::curse: return "CursePrice";
+        case SpellType::blessing: return "BlessingPrice";
+        case SpellType::invisibility: return "InvisibilityPrice";
+        case SpellType::plague: return "PlaguePrice";
+        case SpellType::breakWall: return "BreakWallPrice";
+        case SpellType::revealEnemy: return "RevealEnemyPrice";
         default: return "";
     }
 }
@@ -135,14 +150,15 @@ bool onOwnGround(const Creature* creature, const Seat* seat)
     return (tile != nullptr) && tile->isClaimedForSeat(seat);
 }
 
-//! \brief Returns the enemy fighters the AI sees now (the tile of the creature is in the vision of the AI's seat).
+//! \brief Returns the enemy fighters the AI sees now (the tile of the creature is in the vision of the AI's seat). A
+//! creature hidden by the Invisibility spell is not seen.
 std::vector<Creature*> visibleEnemies(KeeperAI& ai)
 {
     Seat* seat = ai.getControlledPlayer().getSeat();
     std::vector<Creature*> enemies;
     for(Creature* creature : ai.getGameMap().getCreatures())
     {
-        if(!creature->isAlive() || creature->getDefinition()->isWorker())
+        if(!creature->isAlive() || creature->getDefinition()->isWorker() || creature->isSpellInvisible())
             continue;
 
         Seat* creatureSeat = creature->getSeat();
@@ -462,6 +478,28 @@ bool isHeartTile(const Tile* tile, const Seat* seat)
 
     Room* room = tile->getCoveringRoom();
     return (room != nullptr) && (room->getType() == RoomType::dungeonTemple) && (room->getSeat() == seat);
+}
+
+//! \brief Tells whether a running mood effect of the given name (a curse, a blessing) is on the creature.
+bool hasMoodEffect(const Creature* creature, const std::string& name)
+{
+    for(const CreatureMoodEffect& effect : creature->getMoodEffects())
+    {
+        if((effect.mName == name) && (effect.mTurnsLeft > 0.0))
+            return true;
+    }
+    return false;
+}
+
+//! \brief Tells whether the two creatures stand within the given number of tiles of each other (in both directions).
+bool withinTiles(const Creature* a, const Creature* b, int tiles)
+{
+    Tile* tileA = a->getPositionTile();
+    Tile* tileB = b->getPositionTile();
+    if((tileA == nullptr) || (tileB == nullptr))
+        return false;
+
+    return (std::abs(tileA->getX() - tileB->getX()) <= tiles) && (std::abs(tileA->getY() - tileB->getY()) <= tiles);
 }
 
 //! \brief Returns a claimed, not full tile of the own land next to the own heart, or nullptr.
@@ -962,6 +1000,7 @@ SPELL::State::State() :
 {
 }
 
+//! \brief Binds the fight sessions, the champion reactions, the saved draw lines and the look of rows E21 to E25.
 void SPELL::bindRows(KeeperAI& ai)
 {
     Mind& mind = ai.getMind();
@@ -983,6 +1022,9 @@ void SPELL::bindRows(KeeperAI& ai)
     championEvents.push_back(AiEventType::HeartCritical);
     mind.onEvent("E20", championEvents, champion);
     mind.onPoll("E19", AiEventType::Fight, session);
+    // The six spells of the review: Curse, Blessing, Invisibility, Plague and Break Wall on their own look; Reveal
+    // Enemy (E26) is cast by the attack plan
+    mind.onLook("E21", aiKey("LookFactorScan"), std::bind(&SPELL::spellLook, std::ref(ai)));
     mind.onSave(save);
 }
 
@@ -1489,6 +1531,283 @@ bool SPELL::castHexenHen(KeeperAI& ai)
 
     castOnTileOf(ai, SpellType::hexenHen, target);
     return true;
+}
+
+//! \brief Curses the visible enemy of the highest level that is not cursed yet.
+bool SPELL::castCurse(KeeperAI& ai)
+{
+    // AI row E21
+    if(!canCast(ai, SpellType::curse, "SpellManaReserve"))
+        return false;
+
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    std::vector<Creature*> candidates;
+    for(Creature* creature : visibleEnemies(ai))
+    {
+        if(SpellCurse::isValidTarget(*creature, seat) && !hasMoodEffect(creature, SpellCurse::MOOD_EFFECT_NAME))
+            candidates.push_back(creature);
+    }
+    if(candidates.empty())
+        return false;
+
+    Creature* target = nullptr;
+    if(ai.getMind().slip("E21"))
+        target = anyOf(candidates);
+    else
+    {
+        for(Creature* creature : candidates)
+        {
+            if((target == nullptr) || (creature->getLevel() > target->getLevel()))
+                target = creature;
+        }
+    }
+    if(target == nullptr)
+        return false;
+
+    ACTS::castSpell(ai, SpellType::curse, target);
+    return true;
+}
+
+//! \brief Blesses the own creature in the worst mood that is Upset or worse and not blessed yet.
+bool SPELL::castBlessing(KeeperAI& ai)
+{
+    // AI row E22
+    if(!canCast(ai, SpellType::blessing, "SpellManaReserve"))
+        return false;
+
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    const bool slipped = ai.getMind().slip("E22");
+    std::vector<Creature*> candidates;
+    for(Creature* creature : ai.getGameMap().getCreaturesBySeat(seat))
+    {
+        if(!SpellBlessing::isValidTarget(*creature, seat) || hasMoodEffect(creature, SpellBlessing::MOOD_EFFECT_NAME))
+            continue;
+
+        CreatureMoodLevel mood = creature->getMoodValue();
+        bool upset = (mood != CreatureMoodLevel::Unknown) &&
+                     (static_cast<int>(mood) >= static_cast<int>(CreatureMoodLevel::Upset));
+        // The mistake: a creature that is not upset
+        if(slipped != upset)
+            candidates.push_back(creature);
+    }
+    if(candidates.empty())
+        return false;
+
+    Creature* target = nullptr;
+    if(slipped)
+        target = anyOf(candidates);
+    else
+    {
+        for(Creature* creature : candidates)
+        {
+            if((target == nullptr) ||
+               (static_cast<int>(creature->getMoodValue()) > static_cast<int>(target->getMoodValue())))
+                target = creature;
+        }
+    }
+    if(target == nullptr)
+        return false;
+
+    ACTS::castSpell(ai, SpellType::blessing, target);
+    return true;
+}
+
+//! \brief Hides the weakest own creature that flees with low HP.
+bool SPELL::castInvisibility(KeeperAI& ai)
+{
+    // AI row E23
+    if(!canCast(ai, SpellType::invisibility, "SpellManaReserve"))
+        return false;
+
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    const bool slipped = ai.getMind().slip("E23");
+    std::vector<Creature*> candidates;
+    for(Creature* creature : ownFighters(ai))
+    {
+        if(!SpellInvisibility::isValidTarget(*creature, seat) || creature->isSpellInvisible())
+            continue;
+
+        bool fleesHurt = creature->isActionInList(CreatureActionType::flee) && (hpShare(creature) < aiKey("HealBelow"));
+        // The mistake: a fighter that does not flee
+        if(slipped ? !creature->isActionInList(CreatureActionType::flee) : fleesHurt)
+            candidates.push_back(creature);
+    }
+    Creature* target = slipped ? anyOf(candidates) : weakest(candidates);
+    if(target == nullptr)
+        return false;
+
+    ACTS::castSpell(ai, SpellType::invisibility, target);
+    return true;
+}
+
+//! \brief Infects a visible enemy standing among other enemies and far from the own creatures.
+bool SPELL::castPlague(KeeperAI& ai)
+{
+    // AI row E24
+    if(!canCast(ai, SpellType::plague, "SpellManaReserve"))
+        return false;
+
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    const int enemyRadius = static_cast<int>(aiKey("PlagueEnemyRadius"));
+    const int ownRadius = static_cast<int>(aiKey("PlagueOwnClearRadius"));
+    const int minEnemies = static_cast<int>(aiKey("PlagueMinEnemies"));
+    std::vector<Creature*> enemies = visibleEnemies(ai);
+    std::vector<Creature*> valid;
+    for(Creature* creature : enemies)
+    {
+        if(SpellPlague::isValidTarget(*creature, seat))
+            valid.push_back(creature);
+    }
+    if(valid.empty())
+        return false;
+
+    Creature* target = nullptr;
+    if(ai.getMind().slip("E24"))
+        target = anyOf(valid);
+    else
+    {
+        std::vector<Creature*> own = ai.getGameMap().getCreaturesBySeat(seat);
+        for(Creature* creature : valid)
+        {
+            int others = 0;
+            for(Creature* other : enemies)
+            {
+                if((other != creature) && withinTiles(creature, other, enemyRadius))
+                    ++others;
+            }
+            if(others < minEnemies)
+                continue;
+
+            bool ownNear = false;
+            for(Creature* mate : own)
+                ownNear = ownNear || (mate->isAlive() && mate->getIsOnMap() && withinTiles(creature, mate, ownRadius));
+            if(ownNear)
+                continue;
+
+            target = creature;
+            break;
+        }
+    }
+    if(target == nullptr)
+        return false;
+
+    ACTS::castSpell(ai, SpellType::plague, target);
+    return true;
+}
+
+//! \brief Breaks the enemy wall that blocks the tunnel towards the attacked enemy and marks it for digging.
+bool SPELL::castBreakWall(KeeperAI& ai)
+{
+    // AI row E25
+    WAR::WarState& war = ai.getWarState();
+    if((war.tunnel != WAR::WarState::tunnelDigging) || (war.tunnelTarget == nullptr))
+        return false;
+
+    if(!canCast(ai, SpellType::breakWall, "SpellManaReserve"))
+        return false;
+
+    GameMap& map = ai.getGameMap();
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    Creature* worker = map.getWorkerForPathFinding(seat);
+    Tile* heart = nullptr;
+    for(Room* room : map.getRoomsByTypeAndSeat(RoomType::dungeonTemple, seat))
+    {
+        heart = static_cast<RoomDungeonTemple*>(room)->getHeartTile();
+        if(heart != nullptr)
+            break;
+    }
+    if((worker == nullptr) || (heart == nullptr))
+        return false;
+
+    // The blocking wall: a visible enemy claimed wall next to ground the workers reach from the heart, the one nearest
+    // to the tunnel target
+    Tile* wall = nullptr;
+    int wallDistance = 0;
+    for(int x = 0; x < map.getMapSizeX(); ++x)
+    {
+        for(int y = 0; y < map.getMapSizeY(); ++y)
+        {
+            Tile* tile = map.getTile(x, y);
+            if((tile == nullptr) || !SpellBreakWall::isValidWall(*tile, seat))
+                continue;
+
+            const std::vector<Seat*>& seeing = tile->getSeatsWithVision();
+            if(std::find(seeing.begin(), seeing.end(), seat) == seeing.end())
+                continue;
+
+            const int dx = x - war.tunnelTarget->getX();
+            const int dy = y - war.tunnelTarget->getY();
+            const int distance = dx * dx + dy * dy;
+            if((wall != nullptr) && (distance >= wallDistance))
+                continue;
+
+            bool reached = false;
+            for(Tile* neighbor : tile->getAllNeighbors())
+                reached = reached || (!neighbor->isFullTile() && map.pathExists(worker, heart, neighbor));
+            if(!reached)
+                continue;
+
+            wall = tile;
+            wallDistance = distance;
+        }
+    }
+    if(wall == nullptr)
+        return false;
+
+    // The mistake: the AI does not think of the spell and its workers stand before the wall
+    if(ai.getMind().slip("E25"))
+        return false;
+
+    ACTS::castSpell(ai, SpellType::breakWall, wall);
+    std::vector<Tile*> dig(1, wall);
+    ACTS::markDig(ai, dig, true);
+    return true;
+}
+
+//! \brief Reveals the claimed tiles of the attacked keeper when its heart was never seen.
+bool SPELL::castRevealEnemy(KeeperAI& ai, Seat* enemy)
+{
+    // AI row E26
+    if((enemy == nullptr) || !canCast(ai, SpellType::revealEnemy, "SpellManaReserve"))
+        return false;
+
+    GameMap& map = ai.getGameMap();
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    Tile* enemyHeart = nullptr;
+    for(Room* room : map.getRoomsByTypeAndSeat(RoomType::dungeonTemple, enemy))
+    {
+        enemyHeart = static_cast<RoomDungeonTemple*>(room)->getHeartTile();
+        if(enemyHeart != nullptr)
+            break;
+    }
+    AiKnowledge knowledge(map, seat);
+    if((enemyHeart == nullptr) || knowledge.isKnown(enemyHeart))
+        return false;
+
+    // The mistake: the AI attacks blind
+    if(ai.getMind().slip("E26"))
+        return false;
+
+    for(Tile* tile : SpellRevealEnemy::getClaimedTiles(&map, enemy))
+    {
+        const std::vector<Seat*>& seeing = tile->getSeatsWithVision();
+        if(std::find(seeing.begin(), seeing.end(), seat) == seeing.end())
+            continue;
+
+        ACTS::castSpell(ai, SpellType::revealEnemy, tile);
+        return true;
+    }
+    return false;
+}
+
+//! \brief Runs the decisions of rows E21 to E25 at each look.
+void SPELL::spellLook(KeeperAI& ai)
+{
+    castCurse(ai);
+    castBlessing(ai);
+    castInvisibility(ai);
+    castPlague(ai);
+    castBreakWall(ai);
 }
 
 //! \brief Decides whether to summon a champion at the heart, on launch, or in a trivial fight.
