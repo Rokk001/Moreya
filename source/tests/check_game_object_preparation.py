@@ -11,14 +11,17 @@ Now RenderManager::prepareGameObjectResources loads every mesh listed in config/
    extractor of check_asset_references.py (source/rooms, entities, traps, spells, render, modes, gamemap, utils and
    config/roomAmbience*.cfg, creatureSkills.cfg, equipments.cfg; menu meshes and the creature meshes of creatures.cfg,
    which prepareGameCreatureResources prepares, excluded) are all listed, every listed mesh exists in models/, no mesh is
-   listed twice, and the list has exactly 183 meshes. A new object mesh in the code without a list entry fails here.
+   listed twice, and the list has exactly 221 meshes (183 objects of the code and configs, 38 dirt piles of the
+   creature classes, DirtPileEntity::PILE_MESH_PREFIX). A new object mesh in the code without a list entry fails here.
 2. Wiring (no compiler): initGameRenderer prepares the objects after the creatures and before the game shaders; the
    preparation does the steps of rrCreateRenderedMovableEntity, never attaches its temporary entity, destroys it, and
    reports a mesh it cannot prepare instead of stopping the map load.
-3. Parsing (compiled probe of the production readPreparedObjectMeshes): the game reads exactly the 183 names from the
+3. Rejected stalls of build 61 (no compiler): BloodStain and GoblinBed, the first objects of the two rejected
+   minutes, are listed, and the contour/hover copies made in those minutes are prepared for every creature and seat.
+4. Parsing (compiled probe of the production readPreparedObjectMeshes): the game reads exactly the 221 names from the
    real file, in file order, comments ignored.
 
-Fixed values of this branch: 183 listed meshes. Part 3 compiles with cl, so it runs in the compile phase of the
+Fixed values of this branch: 221 listed meshes. Part 4 compiles with cl, so it runs in the compile phase of the
 integration only (--no-probe skips it).
 """
 from pathlib import Path
@@ -29,7 +32,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-LISTED = 183
+LISTED = 221
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
@@ -70,9 +73,13 @@ def referenced():
     refs = (references.data_references(ROOT) | references.cpp_references(ROOT, assets)
             | references.finite_name_references(ROOT))
     creatures = set(re.findall(r'^\s*MeshName\s+(\S+)', read('config/creatures.cfg'), re.M))
+    pile_prefix = re.search(r'PILE_MESH_PREFIX = "([^"]+)";', read('source/entities/DirtPileEntity.cpp')).group(1)
     names = set()
     for ref in refs:
         if ref.kind == 'mesh' and (ref.path.startswith(OBJECT_SOURCES) or ref.path.startswith(OBJECT_CONFIGS)):
+            names.add(ref.name)
+        # The dirt pile of a creature class (DirtPileEntity::PILE_MESH_PREFIX + class name) is an object, too.
+        if ref.kind == 'mesh' and ref.name.startswith(pile_prefix):
             names.add(ref.name)
     return {name for name in names
             if (ROOT / 'models' / name).is_file() and not name.startswith('Menu') and name not in creatures}
@@ -89,6 +96,25 @@ def coverage():
     assert not missing, 'object meshes not prepared: %s' % missing
     for figure in ('ChickenEgg.mesh', 'Innkeeper.mesh', 'TavernCounter.mesh', 'SmallSpider.mesh', 'GoldstackLv1.mesh'):
         assert figure in names, figure
+
+
+def rejected_stalls(render_manager):
+    """The first-use work of the two stalls the owner rejected in build 61 (367.97 ms in the minute to 18:44:39,
+    780.06 ms in the minute to 18:45:39 of 2026-11-11) is done during the map load: the first BloodStain and the first
+    GoblinBed of that session are listed objects, and the contour and hover copies created then (Kobold green, Roach
+    red, "couldn't find ... cloning") are made for every configured creature and every seat before play."""
+    names = listed()
+    for figure in ('BloodStain.mesh', 'GoblinBed.mesh'):
+        assert figure in names, figure
+    creatures = block(render_manager, 'void RenderManager::prepareGameCreatureResources(')
+    assert 'ConfigManager::getSingleton().getCreatureDefinitions()' in creatures
+    assert 'prepareOutlinerMaterials(materialName, gameMap);' in creatures
+    outliner = block(render_manager, 'void RenderManager::prepareOutlinerMaterials(')
+    assert 'for(const Seat* seat : gameMap.getSeats())' in outliner
+    assert 'getOutlinerMaterial(materialName, seat->getColorValue());' in outliner
+    assert 'getBrighterMaterial(outliner->getName())->load();' in outliner
+    init = block(render_manager, 'void RenderManager::initGameRenderer(')
+    assert init.index('prepareGameCreatureResources(*gameMap);') < init.index('prepareGameObjectResources();')
 
 
 def wiring(render_manager):
@@ -174,6 +200,7 @@ def main():
     render_manager = read('source/render/RenderManager.cpp')
     coverage()
     wiring(render_manager)
+    rejected_stalls(render_manager)
     print('game object preparation: %d meshes listed, all object meshes covered, wiring ok' % LISTED)
     if '--no-probe' in sys.argv:
         return
