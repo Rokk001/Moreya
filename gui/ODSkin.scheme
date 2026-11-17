@@ -12,6 +12,12 @@
     <Imageset filename="RoomArtworkGhostLevelCrystal.imageset" name="RoomArtworkGhostLevelCrystal" />
     <Imageset filename="RoomArtworkCasinoSmiles.imageset" name="RoomArtworkCasinoSmiles" />
     <Imageset filename="RoomArtworkCasinoMoney.imageset" name="RoomArtworkCasinoMoney" />
+    <Imageset filename="RoomArtworkTavernBeer.imageset" name="RoomArtworkTavernBeer" />
+    <Imageset filename="RoomArtworkTavernWater.imageset" name="RoomArtworkTavernWater" />
+    <Imageset filename="RoomArtworkPayerRing.imageset" name="RoomArtworkPayerRing" />
+    <Imageset filename="RoomArtworkPayerSwitch.imageset" name="RoomArtworkPayerSwitch" />
+    <Imageset filename="RoomArtworkInfirmaryHeart.imageset" name="RoomArtworkInfirmaryHeart" />
+    <Imageset filename="RoomArtworkConnectorLine.imageset" name="RoomArtworkConnectorLine" />
     <Imageset filename="RoomCentreIconAlchemyLab.imageset" name="RoomCentreIconAlchemyLab" />
     <Imageset filename="RoomCentreIconArena.imageset" name="RoomCentreIconArena" />
     <Imageset filename="RoomCentreIconCasino.imageset" name="RoomCentreIconCasino" />

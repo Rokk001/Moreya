@@ -198,7 +198,8 @@ void GameMode::setMerchantSettingsShown(int32_t margin, const std::string& mode)
     mMerchantUpdating = false;
 }
 
-//! \brief Accepts only a complete stock snapshot and renders item images, frames and full tooltips.
+//! \brief Accepts only a complete stock snapshot and renders item images, frames and full tooltips; an empty stock
+//! shows the scales with "0".
 void GameMode::receiveMerchantWindow(ODPacket& packet)
 {
     int32_t margin = 0;
@@ -241,6 +242,9 @@ void GameMode::receiveMerchantWindow(ODPacket& packet)
         }
         list->setItem(cell, static_cast<uint32_t>(index % 6), static_cast<uint32_t>(index / 6));
     }
+    // The empty state of the chosen mockup: the scales with "0" over the empty slots.
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/EmptyScales")->setVisible(items.empty());
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/EmptyCount")->setVisible(items.empty());
     refreshMerchantSelection();
 }
 

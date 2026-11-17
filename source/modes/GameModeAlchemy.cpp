@@ -65,7 +65,8 @@ bool GameMode::cycleLabMode(const CEGUI::EventArgs&)
     return true;
 }
 
-//! \brief Adopts the validated server setting and displays its approved label.
+//! \brief Adopts the validated server setting and displays its label with the potions the mode brews, as the "Auto"
+//! button of the chosen alchemy lab mockup.
 void GameMode::setLabModeShown(int32_t mode)
 {
     if(mode < 0 || mode > 2)
@@ -73,8 +74,13 @@ void GameMode::setLabModeShown(int32_t mode)
     Player* player = mGameMap->getLocalPlayer();
     if(player != nullptr && player->getSeat() != nullptr)
         player->getSeat()->setLabMode(mode);
-    static const char* const labels[] = {"Automatic", "Healing/mana", "Combat potions"};
-    mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/ModeButton")->setText(labels[mode]);
+    static const char* const labels[] = {"Auto", "Healing/mana", "Combat potions"};
+    // Healing, mana and combat potion pictures: automatic brews all three kinds.
+    static const bool potions[3][3] = {{true, true, true}, {true, true, false}, {false, false, true}};
+    CEGUI::Window* button = mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/ModeButton");
+    button->getChild("Label")->setText(labels[mode]);
+    for(int32_t index = 0; index < 3; ++index)
+        button->getChild("Potion" + Helper::toString(index))->setVisible(potions[mode][index]);
 }
 
 //! \brief Replaces cauldron rows and herb totals with one coherent owner-seat snapshot.
