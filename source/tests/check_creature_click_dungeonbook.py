@@ -2,7 +2,7 @@
 
 Requirement K19: the middle click on a creature, the query action and the patient list of the infirmary open the
 Dungeonbook on the page of that creature; the old creature window (Creature::createStatsWindow,
-gui/WindowCreatureProfile.layout) is removed; the right button keeps its functions (leave possession, cancel the current
+gui/WindowCreatureProfile.layout) is removed; the right button keeps its functions (cancel the current
 action, drop what the hand holds, slap the creature under the pointer when the hand is empty).
 
 Two parts:
@@ -114,7 +114,13 @@ assert 'creatureAliveOrDead' not in set_action and 'SelectionEntityWanted::creat
 # 1c. The right button keeps its functions and never opens the Dungeonbook
 pressed = function(game, 'bool GameMode::mousePressed(')
 possession = block_after(pressed, 'if (isLocalPlayerPossessing())')
-assert re.search(r'if \(id == OIS::MB_Right\)\s*sendPossessionExit\(\);', possession), 'right button leaves possession'
+# Possession (owner decision of the possession rework): only Esc leaves the creature, the right button does nothing
+assert 'sendPossessionExit' not in possession, 'the right button does not leave possession'
+key_pressed = function(game, 'bool GameMode::keyPressedNormal(')
+assert 'isLocalPlayerPossessing() && handlePossessionKey(arg.key, true)' in key_pressed, 'possession keys come first'
+possession_key = function(game, 'bool GameMode::handlePossessionKey(')
+assert re.search(r'case OIS::KC_ESCAPE:\s*if \(pressed\)\s*sendPossessionExit\(\);\s*return true;', possession_key), \
+    'Esc leaves possession'
 cancel = block_after(pressed, 'if(id == OIS::MB_Right && mPlayerSelection.getCurrentAction() != SelectedAction::none)')
 assert 'mPlayerSelection.setCurrentAction(SelectedAction::none);' in cancel, 'right button cancels the current action'
 right = block_after(pressed, '    if (id == OIS::MB_Right)\n    {')
@@ -128,7 +134,7 @@ for name, block in (('possession', possession), ('cancel', cancel), ('right pres
 # The middle press returns before the right-button branch, so the two never mix
 assert pressed.index('if (id == OIS::MB_Middle)\n        return true;') < pressed.index('    if (id == OIS::MB_Right)\n    {')
 print('source contracts ok: old window removed; middle click, query and patient list open the Dungeonbook; '
-      'right button keeps leave possession, cancel, drop and slap')
+      'Esc leaves possession; right button keeps cancel, drop and slap')
 
 if '--source-only' in sys.argv:
     print('runtime probe skipped (--source-only)')
