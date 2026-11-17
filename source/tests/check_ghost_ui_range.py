@@ -12,10 +12,11 @@ DungeonbookIcons images at their native 3840x2160 automatic scaling; the title b
 (60 cases) it asserts the outcome on the screen:
 - the frame lies inside the screen and every control inside its parent;
 - no two clickable controls cover one another;
-- every caption the production code can show (static texts, every ectoplasm progress text "x.y / z.w" the refresh
-  writes for all research levels, the crystal ratio from rooms.cfg) fits on one line inside its control, and no
-  caption's drawn text box covers a clickable control or another caption.
-Fixed values counted once on this branch: 21 windows on the page, 4 clickable controls, 9 captions, 60 cases.
+- every caption the production code can show (static texts, every vessel plaque text "x / z" the refresh writes for
+  all research levels, the crystal ratio from rooms.cfg) fits on one line inside its control, and no caption's drawn
+  text box covers a clickable control or another caption.
+Fixed values counted once on this branch (after the U1 rebuild of the page after its chosen mockup: connector lines,
+vessel cover, chosen-product frames): 27 windows on the page, 4 clickable controls, 6 captions, 60 cases.
 """
 from itertools import combinations, product
 from pathlib import Path
@@ -28,10 +29,10 @@ REPO = Path(__file__).resolve().parents[2]
 SCREENS = ((640, 480), (640, 4320), (800, 600), (1024, 768), (1280, 720), (1366, 768), (1920, 1080), (2560, 1440),
            (3440, 1440), (3840, 2160), (7680, 480), (7680, 4320))
 SCALES = (.8, .9, 1., 1.1, 1.2)
-PAGE_WINDOWS = 21
+PAGE_WINDOWS = 27
 CLICKABLE = ('OD/Button', 'OD/Checkbox')
 CLICKABLE_COUNT = 4
-CAPTION_COUNT = 9
+CAPTION_COUNT = 6
 
 
 def read(path):
@@ -145,16 +146,21 @@ def captions():
     game = read('source/modes/GameMode.cpp')
     refresh = game[game.index('void GameMode::refreshGhostRoomWindow()'):]
     refresh = refresh[:refresh.index('\n}\n')]
-    assert 'text << std::fixed << std::setprecision(1) << progress << " / " << perEctoplasm;' in refresh
-    assert 'GhostPage/GhostBarText")->setText(text.str());' in refresh
+    # Whole levels on the plaque; a fractional target keeps one decimal.
+    assert 'text << static_cast<int64_t>(std::floor(progress + 1e-9)) << " / ";' in refresh
+    assert 'if(std::fabs(perEctoplasm - std::floor(perEctoplasm + 0.5)) < 1e-9)' in refresh
+    assert 'text << static_cast<int64_t>(std::floor(perEctoplasm + 0.5));' in refresh
+    assert 'text << std::fixed << std::setprecision(1) << perEctoplasm;' in refresh
+    assert 'page->getChild("GhostBarText")->setText(text.str());' in refresh
     assert 'const double progress = perEctoplasm > 0.0 ? std::fmod(seat->getEctoplasmLevels(), perEctoplasm) : 0.0;' in refresh
     base = float(re.search(r'^GhostLevelsPerEctoplasm\s+([\d.]+)', read('config/rooms.cfg'), re.M).group(1))
     research = re.search(r'^\s*roomGhostRoom\s+EctoplasmLevels\s+mul\s+([\d.\s]+)$', read('config/skills.cfg'), re.M)
     texts = {'GhostBarText': []}
     for factor in research.group(1).split():
         per = base * float(factor)
-        tenths = int(round(per * 10))
-        texts['GhostBarText'] += ['%.1f / %.1f' % (k / 10.0, per) for k in range(tenths)]
+        whole = abs(per - int(per + 0.5)) < 1e-9
+        target = '%d' % int(per + 0.5) if whole else '%.1f' % per
+        texts['GhostBarText'] += ['%d / %s' % (k, target) for k in range(int(per + 1e-9) + 1)]
     crystal = float(re.search(r'^GhostEctoplasmPerCrystal\s+([\d.]+)', read('config/rooms.cfg'), re.M).group(1))
     assert 'Helper::toString(config.getRoomConfigDouble("GhostEctoplasmPerCrystal")) + " : 1"' in refresh
     texts['Ratio2'] = ['%.6g : 1' % crystal]
