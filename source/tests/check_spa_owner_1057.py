@@ -35,7 +35,7 @@ def read(name):
 # mesh, whose joints sat beside the joints of this skeleton) and, after the owner findings of 2026-11-17, carries the head of
 # the attendant in the game today, volume body hair and a small whistle; check_spa_attendant_k22.py checks fit and look.
 assert sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
-    '5e99f2634ec3605fc201b45b275b43976e76b56e6878b2b5092a7833b65abfb4'
+    '6b22bbb1da5fdb1292d38e37141b543a94f175dc04cecfaffb5e14de672c4403'
 ), 'K22 restores the hairy attendant mesh that fits its skeleton'
 
 with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
