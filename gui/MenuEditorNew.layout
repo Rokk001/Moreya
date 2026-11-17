@@ -2,11 +2,16 @@
 
 <GUILayout version="4" >
     <Window type="OD/StaticImage" name="Background" >
-        <Property name="Area" value="{{0,0},{0,0},{1,2},{1,0}}" />
+        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="Image" value="ODMainMenuBackground/MainMenuBackground" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Property name="FrameEnabled" value="False" />
         <Property name="BackgroundEnabled" value="False" />
+        <!-- Iron border of the chosen menu sheet around the whole screen. -->
+        <Window type="OD/ScreenBorder" name="ScreenBorder" >
+            <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
         <Window type="OD/StaticText" name="LoadingText" >
             <Property name="Area" value="{{0.5,-301},{0.5,240},{0.5,299},{0.5,280}}" />
             <Property name="Text" value="Loading..." />
@@ -30,8 +35,8 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/MenuFrameWindow" name="LevelWindowFrame" >
-            <Property name="Area" value="{{0.5,-262},{0.5,-210},{0.5,262},{0.5,210}}" />
+        <Window type="OD/SheetWindow" name="LevelWindowFrame" >
+            <Property name="Area" value="{{0.5,-262},{0.5,-240},{0.5,262},{0.5,240}}" />
             <Property name="Text" value="Please set your level main properties..." />
             <Property name="SizingEnabled" value="False" />
             <Property name="AlwaysOnTop" value="True" />
