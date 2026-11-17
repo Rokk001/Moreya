@@ -35,7 +35,7 @@ def read(name):
 # mesh, whose joints sat beside the joints of this skeleton) and, after the owner findings of 2026-11-17, carries the head of
 # the attendant in the game today, volume body hair and a small whistle; check_spa_attendant_k22.py checks fit and look.
 assert sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
-    '3a642c93220de398894bcf03523a4a56bcca378b99b2734108a51b1acaa69962'
+    '38ee86e0d2a93201c3b58cce4fbe7118efdb6eca60a479b732147409ae310e97'
 ), 'K22 restores the hairy attendant mesh that fits its skeleton'
 
 with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
@@ -113,14 +113,36 @@ for seconds in (0, .5, 1.0, 1.5):
     assert abs(sit['UpperArm_R'][2] - sit['UpperArm_L'][2]) < .03 and abs(sit['UpperArm_R'][1] - sit['UpperArm_L'][1]) < .03, \
         'shoulders not twisted against the hips'
 
-sit0, _ = pose('Sit', 0)
+sit0, sit0_matrices = pose('Sit', 0)
+
+
+def bind_matrix(name):
+    """World matrix of a bone in the bind pose."""
+    local = np.eye(4)
+    local[:3, :3] = rotation(bones[name].find('rotation'))
+    local[:3, 3] = vector(bones[name].find('position'))
+    return bind_matrix(parents[name]) @ local if name in parents else local
+
+
+# owner finding 3 (2026-11-17): the WhistleHang joint is the ring at the end of the cord; the whistle itself (the centre of
+# its vertices) is carried by that bone
+whistle_centre = np.append(points_for(mesh, 'SpaWhistle').mean(axis=0), 1)
+whistle_bind_inverse = np.linalg.inv(bind_matrix('WhistleHang'))
+
+
+def whistle_at(matrices):
+    """Centre of the whistle in a pose."""
+    return (matrices['WhistleHang'] @ whistle_bind_inverse @ whistle_centre)[:3]
+
+
 for seconds in (.9, 1.05):
     whistle, whistle_matrices = pose('Whistle', seconds)
     head = whistle['Head']
-    mouth_distance = np.linalg.norm(whistle['WhistleHang'] - (head + np.array([0, -.13, .05])))
+    mouth_distance = np.linalg.norm(whistle_at(whistle_matrices) - (head + np.array([0, -.13, .05])))
     assert mouth_distance < .12, 'Whistle: the whistle is at the mouth (%.3f)' % mouth_distance
-    assert np.linalg.norm(whistle['Hand_R'] - whistle['WhistleHang']) < .14, 'Whistle: the whistle is in the hand'
-assert np.linalg.norm(sit0['WhistleHang'] - (sit0['Head'] + np.array([0, -.13, .05]))) > .2, 'the whistle hangs on his chest at rest'
+    assert np.linalg.norm(whistle['Hand_R'] - whistle_at(whistle_matrices)) < .14, 'Whistle: the whistle is in the hand'
+assert np.linalg.norm(whistle_at(sit0_matrices) - (sit0['Head'] + np.array([0, -.13, .05]))) > .2, \
+    'the whistle hangs on his chest at rest'
 
 towel0, _ = pose('TowelWave', .75)
 towel1, _ = pose('TowelWave', .95)
