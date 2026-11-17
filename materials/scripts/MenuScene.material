@@ -183,6 +183,74 @@ material MenuMountain
     }
 }
 
+// The wasteland outside the walls (MenuOuterGround) is dark ash and broken rock in single lit passes: it covers much
+// of the screen in the flights, so it avoids the per-light normal-mapped stone passes. Next to the walls it is about
+// as bright as the courtyard paving in the flight fill (FlightAmbient); it darkens in two steps outwards.
+material MenuWasteGroundNear
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 1.05 0.92 0.80 1
+            diffuse 0.55 0.50 0.45 1
+            specular 0 0 0 1 1
+            emissive 0.012 0.008 0.006
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
+material MenuWasteGround
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 0.70 0.63 0.56 1
+            diffuse 0.38 0.35 0.32 1
+            specular 0 0 0 1 1
+            emissive 0.006 0.004 0.003
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
+material MenuWasteGroundFar
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 0.42 0.40 0.38 1
+            diffuse 0.25 0.24 0.23 1
+            specular 0 0 0 1 1
+            emissive 0 0 0
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
+// Rocks and the stumps of the outer wall on the wasteland: textured stone in one lit pass.
+material MenuWasteRock
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 0.90 0.86 0.80 1
+            diffuse 0.60 0.57 0.53 1
+            specular 0 0 0 1 1
+            emissive 0.006 0.004 0.003
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
 material MenuCloud
 {
     receive_shadows off
