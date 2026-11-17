@@ -1,15 +1,18 @@
-"""Build the wasteland around the menu fortress: ground, rubble and a ring of crags that closes the horizon.
+"""Build the ground around and inside the menu fortress: paving, wasteland, rubble, ruins and a ring of crags.
 
-The menu scene had no ground outside the courtyard, so camera poses and flights that look past the walls saw
-the lower half of the sky dome (clouds and the warm horizon haze) where ground belongs. This model is one
-entity at the origin (config/mainmenuscene.cfg, AddEntity OuterGround). It lies below the courtyard paving and
-the buildings, undulates outside the fortress footprint and rises to fractured crags inside the sky dome, high
-enough that no view ray below the horizon of any menu camera passes over them.
+The menu scene had no ground outside the courtyard, so camera poses and flights that look past the walls saw the
+lower half of the sky dome (clouds and the warm horizon haze) where ground belongs. This model is one entity at the
+origin (config/mainmenuscene.cfg, AddEntity OuterGround):
+- paving like the courtyard (MenuWetStone) over the whole fortress footprint outside the courtyard: inner bailey,
+  the strips beside the courtyard and under the side and back walls (MenuFortressLeft/Right/Rear);
+- outside the footprint a wasteland whose ground material steps from the paving brightness near the walls to dark
+  far out, with glowing ember veins, larger rocks and remains of an outer wall;
+- a ring of fractured crags with spires inside the sky dome, high enough that no view ray below the horizon of any
+  menu camera passes over it, and dark against the warm haze above the horizon.
 
 The geometry core (build_geometry) is plain Python, so source/tests can use it without Blender. Run in Blender:
     blender --background --python menu_outer_ground.py -- <repo> <private output folder>
-It saves MenuOuterGround.blend and MenuOuterGround.mesh.xml into the private folder (convert the XML with
-OgreXMLConverter into models/MenuOuterGround.mesh).
+It saves MenuOuterGround.blend and MenuOuterGround.mesh.xml into the private folder.
 """
 import math
 import random
@@ -18,14 +21,16 @@ from pathlib import Path
 
 #: Centre of the sky dome of MenuBackdrop (ellipsoid radii 190, 190, 115); the ground rings share it.
 CENTRE = (0.0, 45.0)
-#: Ground level under the courtyard paving, the walls and the buildings (paving tops start at -0.27).
-FOOTPRINT_LEVEL = -0.42
-#: Fortress footprint (x min, x max, y min, y max) that stays at FOOTPRINT_LEVEL; the terrain starts outside it.
-FOOTPRINT = (-31.0, 31.0, -33.0, 32.0)
+#: Ground level under the courtyard and the paving: below the courtyard's bedding blocks (bottom -0.79).
+FOOTPRINT_LEVEL = -0.9
+#: Fortress footprint (x min, x max, y min, y max), paved outside the courtyard; the wasteland starts outside it.
+FOOTPRINT = (-36.0, 36.0, -32.0, 58.5)
+#: Courtyard paving of MenuCourtyard (x min, x max, y min, y max); no new paving there.
+COURTYARD = (-26.0, 27.6, -29.9, 19.8)
 #: Distance over which the terrain rises from the footprint level to its full relief.
 FOOTPRINT_BLEND = 14.0
 #: Radii of the ground rings around CENTRE; the crag ring starts at RIM_FOOT.
-GROUND_RADII = (0, 4, 9, 15, 22, 30, 39, 49, 60, 72, 85, 99, 113, 126, 137)
+GROUND_RADII = (0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84, 90, 96, 103, 111, 120, 129, 138)
 RIM_FOOT = 146.0
 RIM_CREST = 163.0
 RIM_BACK = 171.0
@@ -35,8 +40,12 @@ SEGMENTS = 144
 RIM_MIN_HEIGHT = 24.0
 #: World size of one texture repeat on the ground and on the crags.
 TEXTURE_METRES = 4.5
-GROUND_MATERIAL = "MenuWasteGround"
+PAVING_MATERIAL = "MenuWetStone"
+#: Wasteland ground from near the walls to far out: brightness steps down with the distance to the footprint.
+GROUND_BANDS = ((0.0, "MenuWasteGroundNear"), (22.0, "MenuWasteGround"), (60.0, "MenuWasteGroundFar"))
+ROCK_MATERIAL = "MenuWasteRock"
 CRAG_MATERIAL = "MenuMountain"
+VEIN_MATERIAL = "MenuEmberCrack"
 
 
 def _hash(ix, iy, seed):
@@ -86,7 +95,7 @@ def ground_height(x, y):
     blend = min(1.0, distance / FOOTPRINT_BLEND)
     blend = blend * blend * (3 - 2 * blend)
     relief = 1.4 * fbm(x * 0.045, y * 0.045, 3) + 0.5 * fbm(x * 0.17, y * 0.17, 7)
-    # Broad swells grow with the distance; near the fortress the ground stays low beside the flights.
+    # Broad swells grow with the distance; near the fortress the ground stays low beside the walls.
     swell = min(1.0, distance / 60.0) * 3.0 * (0.5 + 0.5 * fbm(x * 0.012, y * 0.012, 11))
     return FOOTPRINT_LEVEL + blend * (relief + swell + 0.6)
 
@@ -98,31 +107,85 @@ def crest_height(angle):
     return RIM_MIN_HEIGHT + 7.0 * broad + 6.0 * jagged
 
 
-def _uv_ground(x, y):
-    """Returns the planar texture coordinates of a ground point."""
-    return (x / TEXTURE_METRES, y / TEXTURE_METRES)
+def ground_material(x, y, rng):
+    """Returns the wasteland material for a point; band edges are dithered over six metres."""
+    distance = footprint_distance(x, y) + rng.uniform(-3.0, 3.0)
+    name = GROUND_BANDS[0][1]
+    for start, material in GROUND_BANDS:
+        if distance >= start:
+            name = material
+    return name
+
+
+class Geometry:
+    """Collects triangles with one material and one (u, v) per corner."""
+
+    def __init__(self):
+        """Starts an empty triangle list."""
+        self.vertices = []
+        self.faces = []
+        self.materials = []
+        self.uvs = []
+
+    def vertex(self, point):
+        """Adds a vertex and returns its index."""
+        self.vertices.append(tuple(point))
+        return len(self.vertices) - 1
+
+    def triangle(self, corners, material, uv_scale=TEXTURE_METRES, projection="top"):
+        """Adds a triangle (vertex indices, counter-clockwise seen from its front) with planar texture coordinates."""
+        self.faces.append(tuple(corners))
+        self.materials.append(material)
+        points = [self.vertices[i] for i in corners]
+        if projection == "top":
+            self.uvs.append(tuple((p[0] / uv_scale, p[1] / uv_scale) for p in points))
+        else:
+            self.uvs.append(tuple(((p[0] + p[1]) / uv_scale, p[2] / uv_scale) for p in points))
+
+    def block(self, centre, size, turn, material, uv_scale=2.5):
+        """Adds a closed box turned about z with its six faces outward."""
+        cx, cy, cz = centre
+        hx, hy, hz = size[0] / 2, size[1] / 2, size[2] / 2
+        cos_t, sin_t = math.cos(turn), math.sin(turn)
+        corners = []
+        for z in (cz - hz, cz + hz):
+            for x, y in ((-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy)):
+                corners.append(self.vertex((cx + x * cos_t - y * sin_t, cy + x * sin_t + y * cos_t, z)))
+        quads = ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7))
+        for quad in quads:
+            a, b, c, d = (corners[i] for i in quad)
+            projection = "top" if quad in ((0, 3, 2, 1), (4, 5, 6, 7)) else "side"
+            self.triangle((a, b, c), material, uv_scale, projection)
+            self.triangle((a, c, d), material, uv_scale, projection)
 
 
 def build_geometry(seed=5):
-    """Returns (vertices, faces, face materials, face texture coordinates) of the wasteland.
+    """Returns (vertices, faces, face materials, face texture coordinates) of the ground.
 
     Faces are triangles (vertex index triples, counter-clockwise seen from outside); texture coordinates are
-    one (u, v) triple per face corner so the crag faces can use their own projection.
+    one (u, v) triple per face corner.
     """
     rng = random.Random(seed)
-    vertices = []
-    faces = []
-    materials = []
-    uvs = []
+    geometry = Geometry()
+    _add_rings(rng, geometry)
+    _add_paving(rng, geometry)
+    _add_veins(rng, geometry)
+    _add_ruins(rng, geometry)
+    _add_rubble(rng, geometry)
+    _add_spires(rng, geometry)
+    return geometry.vertices, geometry.faces, geometry.materials, geometry.uvs
+
+
+def _add_rings(rng, geometry):
+    """Adds the polar ground rings and the crag ring (foot, flank, fractured crest, back)."""
     rings = []
-    # Ground rings, then the crag foot, crest and back; the crest is fractured radially and in height.
     radii = list(GROUND_RADII) + [RIM_FOOT, (RIM_FOOT + RIM_CREST) * 0.5, RIM_CREST, RIM_BACK]
-    for ring, radius in enumerate(radii):
+    for radius in radii:
         row = []
         for segment in range(SEGMENTS if radius > 0 else 1):
             angle = 2 * math.pi * segment / SEGMENTS
             jitter = 0.0 if radius == 0 else rng.uniform(-0.18, 0.18) * (2 * math.pi / SEGMENTS)
-            r = radius + (rng.uniform(-2.5, 2.5) if 0 < radius < RIM_FOOT else 0.0)
+            r = radius + (rng.uniform(-1.8, 1.8) if 0 < radius < RIM_FOOT else 0.0)
             if radius == RIM_CREST:
                 r += rng.uniform(-3.0, 3.0)
             x = CENTRE[0] + r * math.cos(angle + jitter)
@@ -137,111 +200,193 @@ def build_geometry(seed=5):
                 z = crest_height(angle) * rng.uniform(0.94, 1.06)
             else:
                 z = crest_height(angle) * 0.55
-            row.append(len(vertices))
-            vertices.append((x, y, z))
+            row.append(geometry.vertex((x, y, z)))
         rings.append(row)
     for ring in range(len(rings) - 1):
         inner, outer = rings[ring], rings[ring + 1]
         crag = radii[ring] >= RIM_FOOT
-        material = CRAG_MATERIAL if crag else GROUND_MATERIAL
         for segment in range(SEGMENTS):
             following = (segment + 1) % SEGMENTS
-            quads = []
             if len(inner) == 1:
-                quads.append((inner[0], outer[segment], outer[following]))
+                triangles = [(inner[0], outer[segment], outer[following])]
             else:
                 a, b, c, d = inner[segment], outer[segment], outer[following], inner[following]
                 # Alternate the diagonal so the ridges do not line up into radial streaks.
-                if (segment + ring) % 2:
-                    quads.extend(((a, b, c), (a, c, d)))
-                else:
-                    quads.extend(((a, b, d), (b, c, d)))
-            for triangle in quads:
-                faces.append(triangle)
-                materials.append(material)
+                triangles = [(a, b, c), (a, c, d)] if (segment + ring) % 2 else [(a, b, d), (b, c, d)]
+            for triangle in triangles:
                 if crag:
-                    uvs.append(tuple(((vertices[i][0] + vertices[i][1]) / TEXTURE_METRES, vertices[i][2] / TEXTURE_METRES)
-                                     for i in triangle))
+                    geometry.triangle(triangle, CRAG_MATERIAL, projection="side")
                 else:
-                    uvs.append(tuple(_uv_ground(vertices[i][0], vertices[i][1]) for i in triangle))
-    _add_rubble(rng, vertices, faces, materials, uvs)
-    return vertices, faces, materials, uvs
+                    centre = [sum(geometry.vertices[i][k] for i in triangle) / 3 for k in range(2)]
+                    geometry.triangle(triangle, ground_material(centre[0], centre[1], rng))
 
 
-#: Areas the rubble keeps clear: buildings, the courtyard and the flight corridors (x min, x max, y min, y max).
-RUBBLE_CLEAR = (
-    (-27.0, 28.0, -31.0, 20.5),     # courtyard paving and everything on it
-    (-31.0, 31.0, 3.5, 11.0),       # walls, towers and the side cave front
-    (-7.5, 7.5, 13.5, 31.0),        # campaign hall, table and gate beast
-    (-29.0, -11.0, 20.0, 26.0),     # gathering arches and the arcade
-    (16.5, 27.5, 5.0, 30.5),        # green tower and side cave
-)
+def _paved(x, y):
+    """Returns True when a point of the footprint gets new paving (outside the courtyard of MenuCourtyard)."""
+    inside = FOOTPRINT[0] <= x <= FOOTPRINT[1] and FOOTPRINT[2] <= y <= FOOTPRINT[3]
+    courtyard = COURTYARD[0] < x < COURTYARD[1] and COURTYARD[2] < y < COURTYARD[3]
+    return inside and not courtyard
 
 
-def _clear(x, y, radius):
-    """Returns True when a rubble rock of the radius at (x, y) keeps every RUBBLE_CLEAR area free."""
-    return not any(x0 - radius < x < x1 + radius and y0 - radius < y < y1 + radius for x0, x1, y0, y1 in RUBBLE_CLEAR)
+def _add_paving(rng, geometry):
+    """Adds wet flagstones like the courtyard over the footprint outside the courtyard: worn, tilted, some missing."""
+    rows = int((FOOTPRINT[3] - FOOTPRINT[2]) / 1.75)
+    for row in range(rows):
+        y = FOOTPRINT[2] + 0.9 + row * 1.75
+        columns = int((FOOTPRINT[1] - FOOTPRINT[0]) / 1.85)
+        for column in range(columns):
+            x = FOOTPRINT[0] + 0.95 + column * 1.85 + (0.9 if row % 2 else 0.0) + rng.uniform(-0.12, 0.12)
+            if not _paved(x, y) or x > FOOTPRINT[1] - 0.9:
+                continue
+            if rng.random() < 0.07:
+                continue
+            top = -0.03 + rng.uniform(-0.09, 0.05)
+            size = (1.66 + rng.uniform(-0.2, 0.05), 1.58 + rng.uniform(-0.2, 0.05), top + 0.55)
+            geometry.block((x, y, top - size[2] / 2), size, rng.uniform(-0.05, 0.05), PAVING_MATERIAL, 3.3)
 
 
-def _add_rubble(rng, vertices, faces, materials, uvs):
-    """Adds fractured boulders and toppled wall blocks that rest on the ground around the fortress."""
+def _add_veins(rng, geometry):
+    """Adds thin glowing ember veins on the wasteland near the fortress, following the ground."""
+    for vein in range(26):
+        angle = rng.uniform(0, 2 * math.pi)
+        distance = rng.uniform(55, 95)
+        x = CENTRE[0] + distance * math.cos(angle)
+        y = CENTRE[1] + distance * math.sin(angle) * 0.85
+        if footprint_distance(x, y) < 3.0:
+            continue
+        heading = rng.uniform(0, 2 * math.pi)
+        for step in range(rng.randint(5, 10)):
+            heading += rng.uniform(-0.6, 0.6)
+            length = rng.uniform(1.2, 2.6)
+            nx, ny = x + length * math.cos(heading), y + length * math.sin(heading)
+            if footprint_distance(nx, ny) < 2.0:
+                break
+            width = rng.uniform(0.05, 0.13)
+            ox, oy = -math.sin(heading) * width, math.cos(heading) * width
+            quad = [geometry.vertex((px, py, ground_height(px, py) + 0.04))
+                    for px, py in ((x - ox, y - oy), (nx - ox, ny - oy), (nx + ox, ny + oy), (x + ox, y + oy))]
+            geometry.triangle((quad[0], quad[1], quad[2]), VEIN_MATERIAL)
+            geometry.triangle((quad[0], quad[2], quad[3]), VEIN_MATERIAL)
+            x, y = nx, ny
+
+
+def _add_ruins(rng, geometry):
+    """Adds the stumps of a fallen outer wall: short rows of squared blocks one to three courses high."""
     placed = 0
     attempts = 0
-    # Dense rubble where the poses look past the walls, sparser larger rocks further out.
-    while placed < 150 and attempts < 6000:
+    while placed < 22 and attempts < 600:
         attempts += 1
-        near = placed < 115
         angle = rng.uniform(0, 2 * math.pi)
-        distance = rng.uniform(60, 125)
-        x = rng.uniform(-62, 62) if near else CENTRE[0] + distance * math.cos(angle)
-        y = rng.uniform(-48, 72) if near else CENTRE[1] + distance * math.sin(angle)
-        size = rng.uniform(0.35, 1.5) if near else rng.uniform(2.0, 5.5)
-        if not _clear(x, y, size * 1.4):
+        distance = rng.uniform(50, 100)
+        x = CENTRE[0] + distance * math.cos(angle)
+        y = CENTRE[1] + distance * math.sin(angle)
+        if footprint_distance(x, y) < 6.0:
             continue
-        if math.hypot(x - CENTRE[0], y - CENTRE[1]) > RIM_FOOT - size * 2:
-            continue
-        _boulder(rng, vertices, faces, materials, uvs, x, y, size, block=placed % 5 == 0)
+        turn = angle + math.pi / 2 + rng.uniform(-0.25, 0.25)
+        length = rng.randint(3, 6)
+        for index in range(length):
+            courses = rng.randint(1, 3) if index not in (0, length - 1) else 1
+            for course in range(courses):
+                along = (index - length / 2) * 1.35
+                bx = x + along * math.cos(turn)
+                by = y + along * math.sin(turn)
+                base = ground_height(bx, by) - 0.25
+                geometry.block((bx + rng.uniform(-0.08, 0.08), by + rng.uniform(-0.08, 0.08), base + 0.45 + course * 0.88),
+                               (1.28, 1.6, 0.9), turn + rng.uniform(-0.06, 0.06), ROCK_MATERIAL)
         placed += 1
 
 
-def _boulder(rng, vertices, faces, materials, uvs, x, y, size, block):
-    """Adds one closed fractured rock (or a squared fallen wall block) sunk into the ground."""
-    sides = 6 if block else 7
+def _add_rubble(rng, geometry):
+    """Adds fractured boulders and toppled blocks on the wasteland, dense near the walls and larger further out."""
+    placed = 0
+    attempts = 0
+    while placed < 200 and attempts < 12000:
+        attempts += 1
+        near = placed < 160
+        if placed < 80:
+            # Close to the walls: a band up to 25 beyond the footprint.
+            x = rng.uniform(FOOTPRINT[0] - 25, FOOTPRINT[1] + 25)
+            y = rng.uniform(FOOTPRINT[2] - 25, FOOTPRINT[3] + 25)
+            if footprint_distance(x, y) > 25:
+                continue
+        else:
+            angle = rng.uniform(0, 2 * math.pi)
+            distance = rng.uniform(40, 100) if near else rng.uniform(95, 130)
+            x = CENTRE[0] + distance * math.cos(angle)
+            y = CENTRE[1] + distance * math.sin(angle)
+        size = rng.uniform(0.6, 2.4) if near else rng.uniform(2.5, 6.0)
+        if footprint_distance(x, y) < size * 1.5 + 1.0:
+            continue
+        if math.hypot(x - CENTRE[0], y - CENTRE[1]) > RIM_FOOT - size * 2:
+            continue
+        _boulder(rng, geometry, x, y, size, block=placed % 5 == 0)
+        placed += 1
+
+
+def _boulder(rng, geometry, x, y, size, block):
+    """Adds one closed fractured rock (or a squared fallen block) sunk into the ground."""
+    if block:
+        geometry.block((x, y, ground_height(x, y) + size * 0.2), (size * 1.3, size * 0.9, size * 0.8),
+                       rng.uniform(0, math.pi), ROCK_MATERIAL)
+        return
+    sides = 7
     base = ground_height(x, y) - 0.25 * size
-    rows = ((0.0, 1.0), (0.45, 1.08), (0.85, 0.72), (1.0, 0.35)) if not block else ((0.0, 1.0), (0.9, 0.98), (1.0, 0.86))
-    height = size * (rng.uniform(0.6, 1.0) if not block else rng.uniform(0.5, 0.7))
+    rows = ((0.0, 1.0), (0.45, 1.08), (0.85, 0.72), (1.0, 0.35))
+    height = size * rng.uniform(0.6, 1.0)
     stretch = rng.uniform(0.7, 1.3)
     turn = rng.uniform(0, math.pi)
-    first = len(vertices)
+    first = len(geometry.vertices)
     for level, spread in rows:
         for side in range(sides):
             angle = turn + 2 * math.pi * side / sides
-            radius = size * spread * (rng.uniform(0.78, 1.18) if not block else 1.0)
-            vx = radius * math.cos(angle) * stretch
-            vy = radius * math.sin(angle) / stretch
-            vertices.append((x + vx, y + vy, base + height * level + rng.uniform(-0.08, 0.08) * size))
-    top = len(vertices)
-    vertices.append((x + rng.uniform(-0.2, 0.2) * size, y + rng.uniform(-0.2, 0.2) * size, base + height * 1.05))
+            radius = size * spread * rng.uniform(0.78, 1.18)
+            geometry.vertex((x + radius * math.cos(angle) * stretch, y + radius * math.sin(angle) / stretch,
+                             base + height * level + rng.uniform(-0.08, 0.08) * size))
+    top = geometry.vertex((x + rng.uniform(-0.2, 0.2) * size, y + rng.uniform(-0.2, 0.2) * size, base + height * 1.05))
     for row in range(len(rows) - 1):
         for side in range(sides):
             a = first + row * sides + side
             b = first + row * sides + (side + 1) % sides
             c = first + (row + 1) * sides + (side + 1) % sides
             d = first + (row + 1) * sides + side
-            for triangle in ((a, b, c), (a, c, d)):
-                faces.append(triangle)
+            geometry.triangle((a, b, c), ROCK_MATERIAL, 2.5, "side")
+            geometry.triangle((a, c, d), ROCK_MATERIAL, 2.5, "side")
+    last = first + (len(rows) - 1) * sides
     for side in range(sides):
-        faces.append((first + (len(rows) - 1) * sides + side, first + (len(rows) - 1) * sides + (side + 1) % sides, top))
+        geometry.triangle((last + side, last + (side + 1) % sides, top), ROCK_MATERIAL, 2.5, "side")
     for side in range(1, sides - 1):
-        faces.append((first, first + side + 1, first + side))
-    count = (len(rows) - 1) * sides * 2 + sides + sides - 2
-    for triangle in faces[-count:]:
-        materials.append(CRAG_MATERIAL)
-        uvs.append(tuple(((vertices[i][0] - vertices[i][1]) / 2.5, vertices[i][2] / 2.5) for i in triangle))
+        geometry.triangle((first, first + side + 1, first + side), ROCK_MATERIAL, 2.5, "side")
+
+
+def _add_spires(rng, geometry):
+    """Adds leaning rock spires on the crag crest so the ring reads as a jagged silhouette against the sky."""
+    for index in range(46):
+        angle = 2 * math.pi * (index + rng.uniform(-0.3, 0.3)) / 46
+        radius = RIM_CREST + rng.uniform(-4.0, 2.0)
+        x = CENTRE[0] + radius * math.cos(angle)
+        y = CENTRE[1] + radius * math.sin(angle)
+        base = crest_height(angle) * 0.8
+        height = rng.uniform(7.0, 15.0)
+        width = rng.uniform(2.0, 4.2)
+        lean = (rng.uniform(-2.0, 2.0), rng.uniform(-2.0, 2.0))
+        sides = 5
+        first = len(geometry.vertices)
+        for level, spread in ((0.0, 1.0), (0.55, 0.6)):
+            for side in range(sides):
+                a = 2 * math.pi * side / sides + rng.uniform(-0.25, 0.25)
+                geometry.vertex((x + width * spread * math.cos(a) + lean[0] * level, y + width * spread * math.sin(a) + lean[1] * level,
+                                 base + height * level))
+        top = geometry.vertex((x + lean[0], y + lean[1], base + height))
+        for side in range(sides):
+            a, b = first + side, first + (side + 1) % sides
+            c, d = first + sides + (side + 1) % sides, first + sides + side
+            geometry.triangle((a, b, c), CRAG_MATERIAL, projection="side")
+            geometry.triangle((a, c, d), CRAG_MATERIAL, projection="side")
+            geometry.triangle((d, c, top), CRAG_MATERIAL, projection="side")
 
 
 def main():
-    """Builds the Blender source and the Ogre XML of the wasteland (run inside Blender in background mode)."""
+    """Builds the Blender source and the Ogre XML of the ground (run inside Blender in background mode)."""
     import bpy
     arguments = sys.argv[sys.argv.index("--") + 1:]
     repo, private = Path(arguments[0]), Path(arguments[1])
@@ -254,7 +399,7 @@ def main():
     vertices, faces, face_materials, face_uvs = build_geometry()
     mesh = bpy.data.meshes.new("MenuOuterGround")
     mesh.from_pydata(vertices, [], faces)
-    names = [GROUND_MATERIAL, CRAG_MATERIAL]
+    names = list(dict.fromkeys(face_materials))
     material_text = (repo / "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
     images = {}
     for name in names:
@@ -262,19 +407,17 @@ def main():
         configure_material(material, material_values(material_text, name), repo, images)
         mesh.materials.append(material)
     layer = mesh.uv_layers.new(name="UVMap")
+    smooth = set(name for _, name in GROUND_BANDS)
     for polygon, material, corners in zip(mesh.polygons, face_materials, face_uvs):
         polygon.material_index = names.index(material)
-        polygon.use_smooth = material == GROUND_MATERIAL
+        polygon.use_smooth = material in smooth
         for loop, uv in zip(polygon.loop_indices, corners):
             layer.data[loop].uv = uv
-    mesh.validate()
     obj = bpy.data.objects.new("MenuOuterGround", mesh)
     bpy.context.scene.collection.objects.link(obj)
     obj["menu_source_family"] = "MenuBackdrop"
-    blend = private / "MenuOuterGround.blend"
-    xml = private / "MenuOuterGround.mesh.xml"
-    bpy.ops.wm.save_as_mainfile(filepath=str(blend))
-    stats = exporter.export_mesh_xml(obj, None, str(xml), None, smooth=False)
+    bpy.ops.wm.save_as_mainfile(filepath=str(private / "MenuOuterGround.blend"))
+    stats = exporter.export_mesh_xml(obj, None, str(private / "MenuOuterGround.mesh.xml"), None, smooth=False)
     print("OUTER_GROUND_DONE", len(vertices), len(faces), stats, flush=True)
 
 
