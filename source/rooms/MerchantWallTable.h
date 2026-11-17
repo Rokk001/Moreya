@@ -53,13 +53,14 @@ inline float angleTowardWall(const std::function<MerchantCell(int, int)>& cellAt
     return 0.0f;
 }
 
-//! \brief Counts the groups of free floor tiles that touch each other side by side, leaving out one tile.
+//! \brief Counts the groups of free floor tiles that touch each other side by side; when skip is set, the tile at
+//! skipX, skipY is left out (as if the table stood on it).
 inline unsigned int floorGroups(const std::vector<std::pair<int, int>>& roomTiles,
-    const std::function<MerchantCell(int, int)>& cellAt, int skipX, int skipY)
+    const std::function<MerchantCell(int, int)>& cellAt, bool skip, int skipX, int skipY)
 {
     std::vector<std::pair<int, int>> floors;
     for(const std::pair<int, int>& tile : roomTiles)
-        if(cellAt(tile.first, tile.second) == MerchantCell::floor && (tile.first != skipX || tile.second != skipY))
+        if(cellAt(tile.first, tile.second) == MerchantCell::floor && (!skip || tile.first != skipX || tile.second != skipY))
             floors.push_back(tile);
     std::vector<bool> seen(floors.size(), false);
     unsigned int groups = 0;
