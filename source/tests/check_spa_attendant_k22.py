@@ -3,8 +3,9 @@ textured.
 
 Reads models/PoolAttendant.mesh, models/PoolAttendant.skeleton and models/SpaChair.mesh through OgreXMLConverter, the
 material scripts and the textures; no compiler, no game. Checks
-(1) the look: the massive, hairy, pot-bellied man (body hair on arms, legs and chest, scalp hair and moustache, a belly
-    far in front of the chest);
+(1) the look: the massive, hairy, pot-bellied man (body hair strands standing off the skin on arms, legs and chest, a
+    full head of curly hair and a big moustache, a belly far in front of the chest), a shaded face (owner findings of
+    2026-11-17: head after the attendant in the game, body hair with volume, real whistle, shaded skin, muted ring);
 (2) mesh and skeleton fit each other: every elbow and knee joint lies in the middle of its limb (the mesh restored on
     2026-11-13 sat 7 cm beside the joints of the skeleton);
 (3) the towel goes into the hand in TowelWave and no towel face stretches;
@@ -14,7 +15,8 @@ material scripts and the textures; no compiler, no game. Checks
     bows out of the straight line), the whistle stays at the lips while the game plays the sound, the arm turns
     smoothly;
 (6) every surface of the chair, the life ring and the attendant's hair, whistle and cord shows texture detail: the
-    texture of its material, sampled at its texture coordinates, varies;
+    texture of its material, sampled at its texture coordinates, varies; the face texture carries shading; the life ring
+    is muted for the dark room; the whistle is a small whistle: a round barrel and a flat mouthpiece;
 (7) the clips the code plays, two seconds each.
 """
 from pathlib import Path
@@ -71,9 +73,14 @@ def verts(material):
 
 
 # ---- 1. The look: massive, hairy, pot-bellied ---------------------------------------------------------------------------
-for material in ('SpaSkin', 'SpaSuit', 'SpaHair', 'SpaBodyHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes', 'SpaBlood'):
+for material in ('SpaSkin', 'SpaAttendantFace', 'SpaSuit', 'SpaHair', 'SpaBodyHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes',
+                 'SpaBlood'):
     assert material in faces_by_material, 'the attendant needs the material ' + material
-assert len(faces_by_material['SpaHair']) >= 20000, 'full scalp hair and moustache'
+face_points = positions[verts('SpaAttendantFace')]
+hair_points = positions[verts('SpaHair')]
+scalp = hair_points[hair_points[:, 2] > np.percentile(face_points[:, 2], 60)]
+assert np.ptp(scalp[:, 0]) > .2 and np.ptp(scalp[:, 1]) > .18, 'a full head of hair, not a receding scalp'
+assert hair_points[:, 2].max() > face_points[:, 2].max() + .01, 'the curls stand on top of the head'
 assert len(faces_by_material['SpaBodyHair']) >= 10000, 'full body hair'
 hair_bones = {}
 for v in verts('SpaBodyHair'):
@@ -82,6 +89,24 @@ for v in verts('SpaBodyHair'):
 for part in ('UpperArm_R', 'UpperArm_L', 'Thigh_R', 'Thigh_L', 'Shin_R', 'Shin_L', 'Chest'):
     assert hair_bones.get(part, 0) >= 300, 'body hair on ' + part
 assert 0 < len(faces_by_material['SpaBlood']) <= 200, 'a very little blood'
+skin_cells = {}
+for v in verts('SpaSkin'):
+    skin_cells.setdefault(tuple(np.floor(positions[v] / .02).astype(int)), []).append(positions[v])
+skin_cells = {k: np.array(v) for k, v in skin_cells.items()}
+
+
+def off_skin(p):
+    """Distance of a point to the nearest skin vertex (within 4 cm)."""
+    key = np.floor(p / .02).astype(int)
+    near = [skin_cells[k] for k in ((key[0] + a, key[1] + b, key[2] + c) for a in (-1, 0, 1) for b in (-1, 0, 1)
+                                    for c in (-1, 0, 1)) if k in skin_cells]
+    return min(np.min(np.linalg.norm(c - p, axis=1)) for c in near) if near else 1.0
+
+
+body_hair = positions[verts('SpaBodyHair')]
+sample = body_hair[np.linspace(0, len(body_hair) - 1, 3000).astype(int)]
+standing = np.mean([off_skin(p) > .006 for p in sample])
+assert standing > .2, 'the body hair has volume: strands stand off the skin (%.2f of the hair points)' % standing
 suit = positions[verts('SpaSuit')]
 belly = suit[(suit[:, 2] > .45) & (suit[:, 2] < .6)]
 chest = suit[(suit[:, 2] > .7) & (suit[:, 2] < .8)]
@@ -245,10 +270,13 @@ assert len(lifted) > .7 * len(np.unique(linen)), 'TowelWave: most of the towel i
 assert np.linalg.norm(sit0['Towel'][:3, 3] - grip(sit0)) > .25, 'the towel lies on the shoulder at rest'
 
 # ---- 5. Whistle --------------------------------------------------------------------------------------------------------------
-head = [v for v in verts('SpaSkin') if weights[v].get('Head', 0) > .5 and abs(positions[v][0]) < .012]
+head = [v for v in verts('SpaAttendantFace') if weights[v].get('Head', 0) > .5 and abs(positions[v][0]) < .012]
 nose = min(head, key=lambda v: positions[v][1])
 under = [v for v in head if positions[nose][2] - .06 < positions[v][2] < positions[nose][2] - .025]
 lips = positions[min(under, key=lambda v: positions[v][1])]
+moustache = hair_points[(hair_points[:, 1] < lips[1] + .01) & (np.abs(hair_points[:, 2] - lips[2]) < .04)]
+assert len(moustache) > 200 and np.ptp(moustache[:, 0]) > .12, 'a big moustache over the lips (%.3f wide)' % (
+    np.ptp(moustache[:, 0]) if len(moustache) else 0)
 whistle = series('Whistle')
 blow = float(re.search(r'const double WHISTLE_BLOW_SECONDS = ([0-9.]+);', read('source/entities/PoolAttendantEntity.cpp')).group(1))
 for i in range(49):
@@ -260,10 +288,15 @@ for i in range(49):
         assert np.linalg.norm(p['WhistleHang'][:3, 3] - grip(p)) < .08, 'Whistle: the whistle is in his hand'
 rest_mouth = (sit0['Head'] @ np.linalg.inv(BIND['Head']) @ np.append(lips, 1))[:3]
 assert np.linalg.norm(sit0['WhistleHang'][:3, 3] - rest_mouth) > .2, 'the whistle hangs on his chest at rest'
-# the way up: from the last key the whistle still hangs on the chest until it is at the lips
+# the way up: from the moment the hand grasps the whistle on his chest until it is at the lips
 arrived = next(i for i in range(49) if np.linalg.norm(
     whistle[i]['WhistleHang'][:3, 3] - (whistle[i]['Head'] @ np.linalg.inv(BIND['Head']) @ np.append(lips, 1))[:3]) < .035)
-fetched = max(i for i in range(arrived) if np.linalg.norm(whistle[i]['WhistleHang'][:3, 3] - whistle[0]['WhistleHang'][:3, 3]) < .01)
+grips = [grip(p) for p in whistle]
+at_chest = [i for i in range(1, arrived) if np.linalg.norm(whistle[i]['WhistleHang'][:3, 3] - grips[i]) < .08 and
+            np.linalg.norm(whistle[i - 1]['WhistleHang'][:3, 3] - whistle[0]['WhistleHang'][:3, 3]) < .01]
+assert at_chest, 'Whistle: the hand takes the whistle from his chest'
+# the hand grasps where it stands still at the whistle
+fetched = min(at_chest, key=lambda i: np.linalg.norm(grips[i + 1] - grips[i - 1]))
 assert np.linalg.norm(whistle[fetched]['WhistleHang'][:3, 3] - grip(whistle[fetched])) < .08, 'Whistle: the hand takes the whistle'
 path = np.array([grip(whistle[i]) for i in range(fetched, arrived + 1)])
 chord = path[-1] - path[0]
@@ -315,12 +348,43 @@ def shown_detail(root, material):
 chair_materials = {sub.get('material') for sub in chair.findall('submeshes/submesh')}
 assert chair_materials == {'SpaChairWood', 'SpaIronWorn', 'SpaLifebuoyRed', 'SpaLifebuoyWhite'}, chair_materials
 for root, material in [(chair, m) for m in sorted(chair_materials)] + \
-        [(mesh, m) for m in ('SpaHair', 'SpaBodyHair', 'SpaWhistle', 'SpaIronWorn', 'SpaSkin', 'SpaSuit', 'SpaLinen')]:
+        [(mesh, m) for m in ('SpaHair', 'SpaBodyHair', 'SpaWhistle', 'SpaIronWorn', 'SpaSkin', 'SpaSuit', 'SpaLinen',
+                             'SpaAttendantFace')]:
     spread, distinct = shown_detail(root, material)
     assert spread > .03 and distinct > .3, '%s shows no texture detail (spread %.3f, distinct %.2f)' % (material, spread,
                                                                                                          distinct)
+# the whistle: a round barrel across (x) below the mouthpiece, a flat mouthpiece up to the joint at its tip
+joint = BIND['WhistleHang'][:3, 3]
+whistle_points = positions[verts('SpaWhistle')] - joint
+barrel = whistle_points[whistle_points[:, 2] < -.06]
+centre = np.array([np.median(barrel[:, 1]), (barrel[:, 2].max() + barrel[:, 2].min()) / 2])
+radius = np.hypot(barrel[:, 1] - centre[0], barrel[:, 2] - centre[1])
+rim = radius[radius > .5 * radius.max()]
+assert np.ptp(barrel[:, 0]) > .04 and .012 < np.median(rim) < .03 and np.std(rim) < .005, 'the whistle has a round barrel'
+mouthpiece = whistle_points[(whistle_points[:, 2] > -.045)]
+assert np.ptp(mouthpiece[:, 0]) < .03 and np.ptp(mouthpiece[:, 1]) < .016 and mouthpiece[:, 2].max() > -.005, \
+    'the whistle has a flat mouthpiece that ends at the lips'
+# the face is shaded: its texture, sampled at its texture coordinates, has dark folds and a ruddy nose
+face_image = np.asarray(Image.open(ROOT / 'materials/textures' / re.search(
+    r'^material SpaAttendantFace\b[^\n]*\n\{.*?texture\s+(\S+)', materials, re.M | re.S).group(1)).convert('RGB'), float) / 255
+fh, fw, _ = face_image.shape
+face_uv = uvs[verts('SpaAttendantFace')]
+texels = face_image[np.clip((face_uv[:, 1] * fh).astype(int), 0, fh - 1), (face_uv[:, 0] * fw).astype(int) % fw]
+luma = texels @ np.array([.299, .587, .114])
+assert np.std(luma) > .04 and np.percentile(luma, 10) < .8 * np.median(luma), 'the face has skin shading, not one flat tone'
+nose_uv = uvs[nose]
+nose_rgb = face_image[int(nose_uv[1] * fh), int(nose_uv[0] * fw) % fw]
+assert nose_rgb[0] - nose_rgb[1] > np.median(texels[:, 0] - texels[:, 1]) + .03, 'the nose is ruddier than the face'
+# the life ring is muted for the dark room: worn paint, no glow, no bright white
+for material in ('SpaLifebuoyRed', 'SpaLifebuoyWhite'):
+    block = re.search(r'^material ' + material + r'\b[^\n]*\n\{.*?^\}', materials, re.M | re.S).group(0)
+    diffuse = np.array([float(x) for x in re.search(r'diffuse ([\d.]+) ([\d.]+) ([\d.]+)', block).groups()])
+    emissive = np.array([float(x) for x in re.search(r'emissive ([\d.]+) ([\d.]+) ([\d.]+)', block).groups()])
+    shown = texture_of(material).mean() * diffuse + emissive
+    assert shown @ np.array([.299, .587, .114]) < .5 and emissive.max() <= .05, material + ' is too bright for the dark room'
+    assert diffuse.max() - diffuse.min() < .5, material + ' is too saturated for the dark room'
 credits = read('CREDITS')
-for texture in ('SpaChairWood.png', 'SpaLifebuoy.png', 'SpaMetalWorn.png', 'SpaAttendantHair.png'):
+for texture in ('SpaChairWood.png', 'SpaLifebuoy.png', 'SpaMetalWorn.png', 'SpaAttendantHair.png', 'SpaAttendantFace.png'):
     assert re.search(r'^materials/textures/' + re.escape(texture) + r' AI-generated', credits, re.M), texture
 
 print('check_spa_attendant_k22 ok: hairy attendant on a fitting rig, round whistle arc, swinging towel, textured chair, '

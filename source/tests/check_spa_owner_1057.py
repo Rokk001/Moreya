@@ -32,9 +32,10 @@ def read(name):
 
 
 # K22 restored the hairy mesh of decisions 1057-1060 and 1070 that fits the skeleton (decision 1186 had put back the older
-# mesh, whose joints sat beside the joints of this skeleton); check_spa_attendant_k22.py checks the fit and the look.
+# mesh, whose joints sat beside the joints of this skeleton) and, after the owner findings of 2026-11-17, carries the head of
+# the attendant in the game today, volume body hair and a small whistle; check_spa_attendant_k22.py checks fit and look.
 assert sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
-    '82d35ec2048c102cfcfb1b85fdf940105941ced1bdb34e9e803aab2bc27a2ee7'
+    '1d968c14f134e5827e0f8a4144fd493e1cf9d43f753e6d5aa05fbb4a6db4d0c2'
 ), 'K22 restores the hairy attendant mesh that fits its skeleton'
 
 with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
