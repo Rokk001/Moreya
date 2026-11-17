@@ -2352,3 +2352,7 @@ materials/textures/MerchantGoldApprovedColor.png    AI-generated with Codex; mat
 materials/textures/MerchantGoldApprovedNormal.png    AI-generated with Codex; material source as noted    GPLv3+    Original baked Normal atlas, 2026-11-15. Original spatial material authored in Blender for this project.
 
 source/entities/BuildingObject.cpp (buildGhostCauldronOutlet): original procedural brass cauldron outlet with open bore and green liquid descending visibly below the lip, AI-assisted project geometry, GPL-3.0-or-later; owner decision 1250.
+gui/NavigationRoomManager.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17): Room Manager HUD icon, parchment floor plan with two tinted rooms and a brass divider; 1024 px source fitted to 256 px
+gui/NavigationRoomManager.imageset  OpenDungeonsPlus project (written with an AI assistant)  GPLv3+  Imageset for gui/NavigationRoomManager.png
+gui/NavigationDungeonbook.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-17): Dungeonbook HUD icon, open green-bound book with creature sketches and a quill; 1024 px source fitted to 256 px
+gui/NavigationDungeonbook.imageset  OpenDungeonsPlus project (written with an AI assistant)  GPLv3+  Imageset for gui/NavigationDungeonbook.png
