@@ -38,6 +38,10 @@
 
 #if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
 #include <windows.h>
+#include <cstdlib>
+
+//! \brief Pixels the pointer may be away from the middle of the window before a possession puts it back there
+static const int POSSESSION_POINTER_CENTRE_TOLERANCE = 2;
 #endif
 
 //! \brief Creates input devices and initialises absolute pointer tracking for the render window.
@@ -184,12 +188,13 @@ void InputManager::destroyInputDevices()
     mKeyboard.reset();
 }
 
-//! \brief Applies capture settings after cancelling gestures owned by the old devices.
+//! \brief Applies capture settings after cancelling gestures owned by the old devices. While a possession locks the
+//! mouse, the mouse is captured whatever the setting says.
 void InputManager::refreshSettings()
 {
     // Called before capturing input, never from inside an OIS callback.
     ConfigManager& config = ConfigManager::getSingleton();
-    const bool mouseGrab = config.getInputValue(Config::MOUSE_GRAB, "No", false) == "Yes";
+    const bool mouseGrab = mPossessionMouseLock || (config.getInputValue(Config::MOUSE_GRAB, "No", false) == "Yes");
     const bool keyboardGrab = config.getInputValue(Config::KEYBOARD_GRAB, "No", false) == "Yes";
     if(mouseGrab == mMouseGrab && keyboardGrab == mKeyboardGrab)
         return;
@@ -203,17 +208,32 @@ void InputManager::refreshSettings()
     try
     {
         createInputDevices(mouseGrab, keyboardGrab);
+        mAppliedPossessionMouseLock = mPossessionMouseLock;
     }
     catch(const std::exception& error)
     {
         OD_LOG_ERR("Could not apply input capture settings: " + std::string(error.what()));
         destroyInputDevices();
-        config.setInputValue(Config::MOUSE_GRAB, previousMouseGrab ? "Yes" : "No");
+        // A capture applied by the possession lock is not the setting of the player and is not written back
+        if(!mAppliedPossessionMouseLock)
+            config.setInputValue(Config::MOUSE_GRAB, previousMouseGrab ? "Yes" : "No");
         config.setInputValue(Config::KEYBOARD_GRAB, previousKeyboardGrab ? "Yes" : "No");
         config.saveUserConfig();
+        // The lock is given up rather than tried again at every frame
+        if(mPossessionMouseLock != mAppliedPossessionMouseLock)
+        {
+            OD_LOG_WRN("The mouse cannot be kept in the window for the possession");
+            mPossessionMouseLock = mAppliedPossessionMouseLock;
+        }
         createInputDevices(previousMouseGrab, previousKeyboardGrab);
     }
     mLMouseDown = mRMouseDown = mMMouseDown = false;
+}
+
+//! \brief Locks or frees the mouse for a possession; applied by the next refreshSettings.
+void InputManager::setPossessionMouseLock(bool locked)
+{
+    mPossessionMouseLock = locked;
 }
 
 //! \brief Rebinds input to a render window without retaining gestures from the old window.
@@ -339,7 +359,8 @@ void InputManager::handleSFMLEvent(const sf::Event& evt)
 #endif
 }
 
-//! \brief Captures input and delivers Windows pointer messages in arrival order.
+//! \brief Captures input and delivers Windows pointer messages in arrival order; keeps the pointer in the middle of
+//! the window while a possession locks the mouse.
 void InputManager::capturePointer()
 {
 #if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
@@ -430,6 +451,11 @@ void InputManager::capturePointer()
         if(mCurrentAMode != nullptr)
             mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
     }
+
+    // While a possession locks the mouse, it only turns the view: the pointer goes back to the middle of the window,
+    // so that it never stops at the border of the window
+    if(mPossessionMouseLock && mMouseGrab)
+        centrePointer();
 
 #else
     if(mMouse != nullptr)
@@ -640,6 +666,32 @@ void InputManager::moveSystemPointer(int x, int y)
     point.y = PointerMapping::clampToSize(PointerMapping::scaleCoordinate(y, gameHeight, clientHeight), clientHeight);
     if(ClientToScreen(window, &point))
         SetCursorPos(point.x, point.y);
+}
+
+//! \brief Moves the Windows pointer back to the middle of the game window when it left it by more than a few pixels,
+//! and takes the place it reached as the last pointer position, so that the next move is measured from there.
+void InputManager::centrePointer()
+{
+    const int centreX = static_cast<int>(mRenderWindow->getWidth()) / 2;
+    const int centreY = static_cast<int>(mRenderWindow->getHeight()) / 2;
+    if((std::abs(mLastPointerX - centreX) <= POSSESSION_POINTER_CENTRE_TOLERANCE) &&
+       (std::abs(mLastPointerY - centreY) <= POSSESSION_POINTER_CENTRE_TOLERANCE))
+        return;
+
+    moveSystemPointer(centreX, centreY);
+    // The place is read back: the game and the window pixels may round differently, and a pointer that is not where
+    // it is believed to be would turn the view by itself
+    int x = centreX;
+    int y = centreY;
+    bool inside = true;
+    if(!readSystemPointer(x, y, inside))
+    {
+        x = centreX;
+        y = centreY;
+    }
+    mLastPointerX = x;
+    mLastPointerY = y;
+    applyPointerToState(x, y);
 }
 
 void InputManager::updateCursorGrab(bool grab)

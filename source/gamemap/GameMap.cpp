@@ -1306,7 +1306,8 @@ void GameMap::applyPendingRelationshipStates()
     }
 }
 
-//! \brief Creates loaded entities and restores closed boxes before room-owned action continuation.
+//! \brief Creates loaded entities and restores closed boxes before room-owned action continuation, and on the server
+//! the saved possessions of AI keepers.
 void GameMap::createAllEntities()
 {
     mTileSet = ConfigManager::getSingleton().getTileSet(mTileSetName);
@@ -1421,6 +1422,10 @@ void GameMap::createAllEntities()
     {
         for(Creature* creature : mCreatures) creature->restoreGhostHuntLayout();
         for(Creature* creature : mCreatures) creature->restoreGhostHunt();
+        // A possession an AI keeper was running when the game was saved goes on, before the first upkeep in which
+        // the follow group would leave a leader that is not possessed yet
+        for(Creature* creature : mCreatures)
+            creature->restoreSavedPossession();
     }
 
     for (Trap* trap : mTraps)

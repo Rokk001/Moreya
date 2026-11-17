@@ -142,7 +142,8 @@ public:
     void setProperPositions();
 
     //! \brief Creates meshes for all the tiles, creatures, rooms, traps and lights stored in this GameMap.
-    //! On the server it also applies the pending relationship states once the creature definitions are set up.
+    //! On the server it also applies the pending relationship states once the creature definitions are set up, and
+    //! continues the possessions AI keepers were running when the game was saved.
     void createAllEntities();
 
     //! \brief Keeps the relationship states read from a saved game until createAllEntities applies them.

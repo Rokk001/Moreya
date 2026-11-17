@@ -1199,7 +1199,8 @@ bool refuseIfDefeated(Player* player)
 }
 
 //! \brief Validates and handles requests received from a connected player.
-//! \brief Processes one client notification, including Dungeonbook subscriptions.
+//! \brief Processes one client notification, including Dungeonbook subscriptions. A player who possesses a creature
+//! cannot save the game.
 bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 {
     if (!clientSocket)
@@ -2464,6 +2465,10 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             Player* player = clientSocket->getPlayer();
             // Only the player allowed to configure the game can save games
             if(mPlayerConfig != player)
+                break;
+
+            // A player who possesses a creature cannot save the game (F5 and the options menu do nothing then)
+            if(player->isPossessing())
                 break;
 
             // We only allow to save game if launching in client+server mode

@@ -1980,8 +1980,19 @@ public:
 
     //! Called on server side. The left mouse button attack of the possessed creature: it uses
     //! its melee or ranged attack on the enemy in front of it (aim is the view direction on
-    //! the ground plane). Same range, damage and cooldown as in a normal fight.
+    //! the ground plane). Same range, damage and cooldown as in a normal fight. A possessed
+    //! worker with no enemy it can attack in front of it works instead (see possessedWork).
     void possessedAttack(const Ogre::Vector2& aim);
+
+    //! \brief Called on server side once per turn of a possession. A possessed worker stores the gold it carries
+    //! when it stands on an own treasury or heart ring tile with room, then picks up the gold lying on its tile up
+    //! to its normal gold capacity.
+    void possessedHandleGold();
+
+    //! \brief Called on server side when a saved game has been loaded (GameMap::createAllEntities). Puts back the
+    //! possession of an AI keeper that was running when the game was saved: possessor, turns, aura and follow
+    //! group. A saved possession whose keeper is no AI any more is dropped.
+    void restoreSavedPossession();
 
     //! \brief Reports recovery for successful possessed self-casts as well as targeted attacks.
     //! Called on server side. Uses the creature skill (other than melee and ranged attack) of
@@ -2637,6 +2648,22 @@ private:
 
     //! \brief Used on server side. The name of the possessed creature this creature follows, empty if none
     std::string                     mGroupLeaderName;
+
+    //! \brief Used on server side. The turn of the last work step of a possessed worker (one step per turn at most)
+    int64_t                         mPossessionWorkTurn = -1;
+
+    //! \brief Used on server side while a saved game is loaded. The seat of the AI keeper whose possession of this
+    //! creature was saved, -1 if none. Read by restoreSavedPossession.
+    int32_t                         mSavedPossessorSeatId = -1;
+
+    //! \brief Used on server side by the possession. A possessed worker digs the tile in front of it if it can be
+    //! dug, else claims the wall in front of it when it stands on its own claimed ground, else claims the floor
+    //! under it. One work step per turn at most. Returns true if the worker did a work step.
+    bool possessedWork(const Ogre::Vector2& aim);
+
+    //! \brief Used on server side by the possession. One dig step of a possessed worker on the given wall, with the
+    //! same rate, critical roll, gold and experience as a dig step of the dig action. Returns the amount dug.
+    double possessedDigStep(Tile& tileDig);
 
     //! \brief Used on server side by the possession. Picks the nearby fighting creatures of the
     //! possessor and makes them follow this creature
