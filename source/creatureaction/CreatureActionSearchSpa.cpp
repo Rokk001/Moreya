@@ -36,7 +36,8 @@ std::function<bool()> CreatureActionSearchSpa::action() // allowed-lambda: signa
     return std::bind(&CreatureActionSearchSpa::handleSearchSpa, std::ref(mCreature));
 }
 
-//! \brief Looks for the nearest spa of the seat that can take the creature and hands the creature over to it.
+//! \brief Looks for the nearest spa of the seat that can take the creature and whose rim it can reach, and hands the
+//! creature over to it.
 bool CreatureActionSearchSpa::handleSearchSpa(Creature& creature)
 {
     Tile* myTile = creature.getPositionTile();
@@ -66,10 +67,12 @@ bool CreatureActionSearchSpa::handleSearchSpa(Creature& creature)
         if(!static_cast<RoomSpa*>(spa)->canAccept(creature))
             continue;
 
+        // A spa whose rim the creature cannot reach through the open side of the room is no spa for it: it is never
+        // entered through a wall (decision 902(2)), and this is no error (it stopped the B1 run of the deployed build)
         Tile* tile = spa->getArrivalTile(creature);
         if(tile == nullptr)
         {
-            OD_LOG_ERR("creature=" + creature.getName() + ", spa=" + spa->getName());
+            OD_LOG_INF("creature=" + creature.getName() + " cannot reach the rim of spa=" + spa->getName());
             continue;
         }
 

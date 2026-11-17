@@ -1300,6 +1300,12 @@ public:
     //! every frame), so the clip does not start again in the middle of the arc.
     void showJumpClipPhase();
 
+    //! \brief Client side, every frame: while a bather walks its leg over the rim of a spa pool (clips SpaStepIn and
+    //! SpaStepOut, see RoomSpa::walkBather) it is lifted over the rim and its step clip shows the point of the step it has
+    //! reached, so that it sinks into the mud behind the rim or rises out of it (decision 902(3)). Off such a leg the
+    //! lift is taken away again.
+    void updateSpaStepLift();
+
     //! \brief Hook for a later bathing room: the creature is clean again (creature dirt 0).
     void washed();
 
@@ -2222,6 +2228,9 @@ private:
     //! Contact history is unnecessary: the renderer samples the current animated skeletons.
     //! \brief Runtime only (not saved): turns of the running jump that have passed (fractions on a client).
     Ogre::Real      mJumpElapsed;
+    //! \brief Runtime only, client side (not saved): the height the creature is lifted by to step over the rim of a spa
+    //! pool (see updateSpaStepLift).
+    Ogre::Real      mSpaStepLift;
 
     //! \brief Every tiles within the creature sight radius, used for common actions.
     std::vector<Tile*>              mTilesWithinSightRadius;

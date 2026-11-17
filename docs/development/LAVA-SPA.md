@@ -35,6 +35,12 @@ documented in the header of the file) and `config/skills.cfg` (`roomSpa`, the ef
   spa, the other pleasure rooms stay open to it unless it has the buff, which closes all of them) and the points and
   experience it earns in the library, workshop and training hall and in the arena are multiplied by `SpaRelaxWorkFactor`
   (1.0567). Nothing in combat changes. The hangover ends at once and the creature writes the post "relaxed".
+- A bather walks into the room through its open side to a reachable rim tile, never through a wall. It walks on the
+  rim, steps over the stone rim into the pool and sinks into the mud, wades to its place, and climbs over the rim out of
+  the pool again; nobody walks or wades through the rim or over the mud surface.
+- A creature the keeper drops into the spa, on the mud or on the rim, always takes a full bath at the free place nearest to
+  the drop, whatever its mood, a pleasure buff or the lock of the spa, and pays as usual (a drop on the rim steps into the
+  pool). Without a free place of its size it leaves as from every other room.
 - The bath does not clean the creature. A creature that leaves the pool leaves mud on the next `SpaMudTrailTiles` (3) tiles
   it enters outside the pool, `SpaDirtPerBath` in total (times its dirt factor), so the tiles around the pool get dirtier.
 - A bath that is broken off (fight, flight, knock-out, pick-up by the hand, room removed or taken over, tile sold) keeps the
@@ -46,8 +52,10 @@ documented in the header of the file) and `config/skills.cfg` (`roomSpa`, the ef
 A pool attendant sits on the chair for fun and has no effect on the game. Every `SpaAttendantActMinSeconds` to
 `SpaAttendantActMaxSeconds` seconds he whistles at a bather (only while someone bathes), waves his towel or dozes off and
 nearly falls from the chair. Every `SpaAttendantCannonballMinSeconds` to `SpaAttendantCannonballMaxSeconds` seconds he
-climbs down, walks to the springboard and jumps into a free pool place himself. He is not a creature, belongs to the
-keeper of the room and changes owner with it.
+climbs down for one outing, chosen at random: either he walks to the springboard and jumps into a free pool place himself,
+or he walks a round on the rim around the pool; never both in one outing. After an outing he sits on his chair for the
+full pause again. Every phase is written to the game log as a line `PoolAttendant <name> phase=<phase> outing=<outing>
+turn=<turn>`. He is not a creature, belongs to the keeper of the room and changes owner with it.
 
 ## Research, window and Dungeonbook
 

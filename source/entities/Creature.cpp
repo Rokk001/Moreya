@@ -255,6 +255,10 @@ const uint32_t APPEARANCE_RETRY_TURNS = 200;
 const int64_t BED_STATUS_REPEAT_TURNS = 200;
 //! Length in seconds of the Jump clip of the creature skeletons
 const double JUMP_CLIP_SECONDS = 1.4;
+//! Clip of a bather that steps over the rim into a spa pool (built by the renderer, see RoomSpa::walkBather)
+const std::string SPA_STEP_IN_CLIP = "SpaStepIn";
+//! Clip of a bather that climbs over the rim out of a spa pool (built by the renderer, see RoomSpa::walkBather)
+const std::string SPA_STEP_OUT_CLIP = "SpaStepOut";
 
 //! \brief Server side registry of the whole-image catalogs used to assign the Dungeonbook appearance.
 //! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
@@ -764,6 +768,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mJumpTurns               (0),
     mJumpTurnsLeft           (0),
     mJumpElapsed             (0.0f),
+    mSpaStepLift             (0.0f),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -927,6 +932,7 @@ Creature::Creature(GameMap* gameMap) :
     mJumpTurns               (0),
     mJumpTurnsLeft           (0),
     mJumpElapsed             (0.0f),
+    mSpaStepLift             (0.0f),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -2778,6 +2784,10 @@ void Creature::update(Ogre::Real timeSinceLastFrame)
                 mJumpTurnsLeft = 0;
         }
     }
+
+    // A bather steps over the rim of a spa pool instead of walking through it (decision 902(3))
+    if(!getIsOnServerMap())
+        updateSpaStepLift();
 
     // Animated drag contact is applied by the renderer after all creatures have moved.
 
@@ -10184,6 +10194,8 @@ void Creature::continueJump()
 //! \brief Takes over the arc that the server told and shows the Jump clip.
 void Creature::startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to, uint32_t turns, Ogre::Real elapsed)
 {
+    // The arc sets the whole height; no lift over the rim is left on it
+    mSpaStepLift = 0.0f;
     mJumpFrom = from;
     mJumpTo = to;
     mJumpTurns = std::max<uint32_t>(1, turns);
@@ -10192,6 +10204,43 @@ void Creature::startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector
     setAnimationState(EntityAnimation::jump_anim, false, Ogre::Vector3::ZERO, false);
     setPosition(jumpPosition(from, to, elapsed / static_cast<Ogre::Real>(mJumpTurns)));
     showJumpClipPhase();
+}
+
+//! \brief Lifts a bather on its leg over the rim by the height SpaLayout::rimStepLift gives for where it stands and
+//! shows its step clip at the point of the step, worked out from the same place (the clip sinks it into the mud behind
+//! the rim on the way in and lets it rise on the way out). Off such a leg, in the air or in the hand the lift goes.
+void Creature::updateSpaStepLift()
+{
+    // A creature in the hand gets its position from the drop
+    if(!getIsOnMap())
+    {
+        mSpaStepLift = 0.0f;
+        return;
+    }
+
+    const std::string& clip = getAnimationStateName();
+    const bool stepIn = (clip == SPA_STEP_IN_CLIP);
+    const bool stepping = (mJumpTurnsLeft == 0) && (stepIn || (clip == SPA_STEP_OUT_CLIP));
+    Ogre::Real lift = 0.0f;
+    if(stepping)
+    {
+        double edgeDistance = 0.0;
+        bool onPool = false;
+        lift = static_cast<Ogre::Real>(RoomSpa::getRimStepLift(getGameMap(), getPosition(), edgeDistance, onPool));
+        // On the way in the pool is the side it steps onto, on the way out the rim
+        if((getAnimationState() != nullptr) && (getAnimationState()->getAnimationName() == clip))
+        {
+            const double progress = SpaLayout::rimStepProgress(edgeDistance, onPool == stepIn);
+            getAnimationState()->setTimePosition(getAnimationState()->getLength() * static_cast<Ogre::Real>(progress));
+        }
+    }
+    if(lift == mSpaStepLift)
+        return;
+
+    Ogre::Vector3 position = getPosition();
+    position.z += lift - mSpaStepLift;
+    mSpaStepLift = lift;
+    setPosition(position);
 }
 
 //! \brief Puts the Jump clip at the phase of the arc, so a jump that is already running when the client learns of it
