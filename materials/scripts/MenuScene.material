@@ -183,6 +183,24 @@ material MenuMountain
     }
 }
 
+// The wasteland outside the walls (MenuOuterGround) is dark ash and broken rock in one lit pass: it covers much of
+// the screen in the flights, so it keeps to a single pass instead of the per-light normal-mapped stone passes.
+material MenuWasteGround
+{
+    technique
+    {
+        pass
+        {
+            lighting on
+            ambient 0.50 0.47 0.44 1
+            diffuse 0.30 0.28 0.27 1
+            specular 0 0 0 1 1
+            emissive 0 0 0
+            texture_unit { texture MenuFortressStone.png gamma }
+        }
+    }
+}
+
 material MenuCloud
 {
     receive_shadows off
