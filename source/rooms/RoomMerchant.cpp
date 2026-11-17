@@ -213,14 +213,113 @@ RoomMerchant* RoomMerchant::getForSeat(GameMap& map, const Seat* seat)
     return nullptr;
 }
 
-//! \brief True when a sales table or a wall shelf stands on the tile.
+//! \brief True when a sales table (centre or wall-side) or a wall shelf stands on the tile.
 bool RoomMerchant::isFurnitureTile(const Tile* tile) const
 {
-    if(std::find(mCentralActiveSpotTiles.begin(), mCentralActiveSpotTiles.end(), tile) != mCentralActiveSpotTiles.end())
+    if(isCentreTable(tile))
         return true;
     for(const Tile* shelf : getShelfTiles())
         if(shelf == tile) return true;
-    return false;
+    std::map<Tile*, TileData*>::const_iterator found = mTileData.find(const_cast<Tile*>(tile));
+    return found != mTileData.end() && static_cast<const RoomMerchantTileData*>(found->second)->mTable;
+}
+
+//! \brief True when the tile is one of the 3x3 centre tables.
+bool RoomMerchant::isCentreTable(const Tile* tile) const
+{
+    return std::find(mCentralActiveSpotTiles.begin(), mCentralActiveSpotTiles.end(), tile) != mCentralActiveSpotTiles.end();
+}
+
+//! \brief Lists the centre tables first, then every wall-side table of the room.
+std::vector<Tile*> RoomMerchant::getSalesTables() const
+{
+    std::vector<Tile*> tables(mCentralActiveSpotTiles);
+    for(Tile* tile : mCoveredTiles)
+    {
+        std::map<Tile*, TileData*>::const_iterator found = mTileData.find(tile);
+        if(found != mTileData.end() && static_cast<const RoomMerchantTileData*>(found->second)->mTable && !isCentreTable(tile))
+            tables.push_back(tile);
+    }
+    return tables;
+}
+
+//! \brief Runs the ordinary layout of centre tables and wall shelves, then places the wall-side table on the server
+//! (the clients receive the table object like every other room object).
+void RoomMerchant::updateActiveSpots(GameMap* gameMap)
+{
+    Room::updateActiveSpots(gameMap);
+    if(!getIsOnServerMap())
+        return;
+    updateWallTables();
+}
+
+//! \brief Classifies a tile for MerchantWallTable: a full tile or the map edge is a wall, a tile of this room is free
+//! floor unless a table, a shelf or another object stands on it, everything else is an opening of the room.
+MerchantCell RoomMerchant::cellForWallTable(int x, int y) const
+{
+    Tile* tile = getGameMap()->getTile(x, y);
+    if(tile == nullptr || tile->isFullTile())
+        return MerchantCell::wall;
+    if(tile->getCoveringRoom() != this)
+        return MerchantCell::outside;
+    std::map<Tile*, BuildingObject*>::const_iterator object = mBuildingObjects.find(tile);
+    if(isFurnitureTile(tile) || (object != mBuildingObjects.end() && object->second != nullptr))
+        return MerchantCell::furniture;
+    return MerchantCell::floor;
+}
+
+//! \brief Owner answer to Q2 of INGAME-QS-10: a merchant room shows at least two sales tables from 3x3 upward; the
+//! second one stands on a free wall-side tile. A wall-side table keeps its tile and its goods while the room has a centre
+//! table and no shelf takes the tile (also when a neighbouring wall is dug out later); otherwise its goods fall as sealed
+//! bags like those of any table that disappears.
+void RoomMerchant::updateWallTables()
+{
+    const std::function<MerchantCell(int, int)> cellAt =
+        std::bind(&RoomMerchant::cellForWallTable, this, std::placeholders::_1, std::placeholders::_2);
+    unsigned int wallTables = 0;
+    for(Tile* tile : mCoveredTiles)
+    {
+        RoomMerchantTileData* data = static_cast<RoomMerchantTileData*>(mTileData.at(tile));
+        if(!data->mTable || isCentreTable(tile))
+            continue;
+        bool shelf = false;
+        for(const Tile* shelfTile : getShelfTiles())
+            if(shelfTile == tile) shelf = true;
+        if(mCentralActiveSpotTiles.empty() || shelf)
+        {
+            releaseTableGoods(tile);
+            data->mTable = false;
+            if(!shelf)
+                removeBuildingObject(tile);
+            continue;
+        }
+        ++wallTables;
+        // A loaded or handed-over wall table whose object is not on the map yet
+        if(getBuildingObjectFromTile(tile) == nullptr)
+            createWallTable(tile, MerchantWallTable::angleTowardWall(cellAt, tile->getX(), tile->getY()));
+    }
+    if(mCentralActiveSpotTiles.empty() ||
+       mCentralActiveSpotTiles.size() + wallTables >= MerchantWallTable::MIN_SALES_TABLES)
+        return;
+    std::vector<std::pair<int, int>> roomTiles;
+    for(Tile* tile : mCoveredTiles)
+        roomTiles.push_back(std::make_pair(tile->getX(), tile->getY()));
+    MerchantWallTableChoice choice;
+    if(!MerchantWallTable::choose(roomTiles, cellAt, choice))
+        return;
+    Tile* tile = getGameMap()->getTile(choice.mX, choice.mY);
+    if(tile != nullptr)
+        createWallTable(tile, choice.mAngle);
+}
+
+//! \brief Marks the tile as a sales table and adds its table object with the back to the wall.
+void RoomMerchant::createWallTable(Tile* tile, float angle)
+{
+    static_cast<RoomMerchantTileData*>(mTileData.at(tile))->mTable = true;
+    mGoodsChanged = true;
+    BuildingObject* table = new BuildingObject(getGameMap(), *this, "SalesTable", *tile, angle, false);
+    addBuildingObject(tile, table);
+    table->createMesh();
 }
 
 //! \brief The merchant figure is drawn at the tile centre (RenderManager cancels the rig offset of the mesh), so he
@@ -265,6 +364,13 @@ BuildingObject* RoomMerchant::notifyActiveSpotCreated(ActiveSpotPlace place, Til
 {
     const bool centre = place == activeSpotCenter;
     RoomMerchantTileData* data = static_cast<RoomMerchantTileData*>(mTileData.at(tile));
+    // A wall-side table on a tile the new layout needs gives way: a centre table takes over its goods, a shelf lets them
+    // fall as sealed bags
+    if(getBuildingObjectFromTile(tile) != nullptr)
+        removeBuildingObject(tile);
+    if(!centre && data->mTable)
+        releaseTableGoods(tile);
+    if(!centre) data->mTable = false;
     if(centre) data->mTable = true;
     mGoodsChanged = true;
     // Wall shelves stand with the back to the wall and the open side into the room (same convention as the other rooms)

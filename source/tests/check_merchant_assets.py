@@ -20,7 +20,8 @@ One check per fault
   furniture textures   SalesTable and MerchantShelf use only materials with a texture (the flat ItemWood, ItemWoodLight,
                        MerchantClothTrim and the herb and bag colours turned bright orange under the warm room light);
                        the only flat material left is the dark iron of nails and lantern (diffuse below 0.25)
-  table look           the table uses its plank atlas MerchantTableWood and the stained cloth MerchantTableCloth
+  table look           the table uses its plank atlas MerchantTableWood and its cloth MerchantTableCloth (since INGAME-QS-10
+                       K21 a woven bazaar cloth; check_merchant_bazaar.py checks the bazaar look of table and shelf)
   figure textures      the merchant's robe, hood, skin, leather and brass are textured; only small face parts
                        (MerchantDark, MerchantEye, MerchantGold, MerchantHair) are flat
   layered cloak        robe, over-cloak (MerchantCloak) and hood cape (MerchantHood) use three different textures
@@ -84,12 +85,12 @@ FIGURE_TEXTURED = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantHid
 FIGURE_FLAT_OK = ('MerchantDark', 'MerchantEye', 'MerchantGold')
 MERCHANT_CLIPS = ('Idle', 'Walk', 'CountGold', 'RubHands')
 NEW_TEXTURES = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantBrass', 'MerchantHair', 'MerchantTableWood', 'MerchantTableCloth',
-                'MerchantWares')
+                'MerchantWares', 'MerchantLantern')
 # Minimum mean luminance (0..255) per texture for the room light (decision 710); build 41 values in brackets
 MIN_LUMINANCE = {'MerchantLeather': 60,    # (39)
                  'MerchantTableWood': 50,  # (26)
                  'MerchantWares': 60}      # (50)
-# The table cloth stays a dark stained linen, not the light beige cloth of build 41 (73)
+# The table cloth stays a dark cloth (since INGAME-QS-10 K21 woven madder red), not the light beige cloth of build 41 (73)
 MAX_CLOTH_LUMINANCE = 70
 # Dark brown cloth (decision 836): mean luminance range, hue and contrast; build 41 / build 48 values in brackets
 # Decision 901(4): build 53 still read light brown. Fixed targets for the darker revision
