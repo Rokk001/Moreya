@@ -36,6 +36,12 @@ MIN_DETAIL_RMS = 5.0
 MAX_EQUAL_NEIGHBOURS = 0.25
 # Sizes an upscaled control copy is reduced to before it is enlarged again; the detail check must reject every copy.
 CONTROL_SIZES = (48, 64, 96, 128)
+# Room icons that are still the old upscaled files, kept as placeholders until their Codex painting replaces them
+# (INGAME-QS-10 K13, "Placeholders while Codex is limited"). They report PLACEHOLDER instead of failing, and the check
+# fails as soon as one of them passes the detail measurement, so a repainted icon must be removed from this list.
+PLACEHOLDER_ICONS = (
+    'temple', 'toilet', 'torture-chamber', 'training-hall', 'treasury', 'wooden-bridge', 'workshop',
+)
 
 
 def check_asset(relative, size, credits):
@@ -89,16 +95,24 @@ def detail_failure(picture):
 
 
 def check_icon_detail(relative):
-    """Require full painted detail in a room icon and prove that the measure rejects upscaled copies of it."""
+    """Prove that the detail measure rejects upscaled copies of a room icon, then require full painted detail in it.
+
+    A listed placeholder icon must still fail the measure; it is reported as PLACEHOLDER and returns without failing.
+    """
     with Image.open(ROOT / relative) as picture:
         picture = picture.convert('RGB')
-    failure = detail_failure(picture)
-    assert failure is None, relative + ': ' + str(failure)
     for size in CONTROL_SIZES:
         small = picture.resize((size, size), Image.LANCZOS)
         for method in (Image.NEAREST, Image.BILINEAR, Image.BICUBIC, Image.LANCZOS):
             control = small.resize(picture.size, method)
             assert detail_failure(control) is not None,                 '%s: detail measure accepts a copy upscaled from %dx%d' % (relative, size, size)
+    failure = detail_failure(picture)
+    name = Path(relative).stem
+    if name in PLACEHOLDER_ICONS:
+        assert failure is not None, relative + ': listed as placeholder but has full detail; remove it from PLACEHOLDER_ICONS'
+        print('PLACEHOLDER pending Codex %s: %s' % (relative, failure))
+        return
+    assert failure is None, relative + ': ' + str(failure)
     print('PASS detail %s rms=%.2f equal=%.3f' % (relative, fine_detail_rms(picture), equal_neighbour_share(picture)))
 
 
@@ -108,6 +122,7 @@ def main():
     inventory = [('gui/RoomCentreIcons/' + name + '.png', (256, 256)) for name in ICONS]
     inventory.extend(('gui/RoomCentreArtwork/' + name, size) for name, size in ARTWORK)
     assert len(inventory) == EXPECTED_ASSETS, 'complete fixed artwork inventory'
+    assert set(PLACEHOLDER_ICONS) <= set(ICONS), 'every placeholder is a room icon'
     failed = 0
     for relative, size in inventory:
         try:
@@ -118,7 +133,7 @@ def main():
         except (AssertionError, OSError) as error:
             print('FAIL ' + str(error))
             failed += 1
-    print('DONE total=%d red=%d' % (EXPECTED_ASSETS, failed))
+    print('DONE total=%d red=%d placeholders=%d' % (EXPECTED_ASSETS, failed, len(PLACEHOLDER_ICONS)))
     return 1 if failed else 0
 
 
