@@ -427,7 +427,7 @@ def check_opaque_hands(root, hand_materials):
 # the materials of every face that touches a vertex bound mainly to a hand.
 def check_mesh(path):
     weights = {}
-    counts = dict(position=0, face=0)
+    counts = dict(position=0, normal=0, tangent=0, texcoord=0, face=0)
     minimum = [math.inf] * 3
     maximum = [-math.inf] * 3
     low = [math.inf, math.inf, -math.inf, -math.inf]
@@ -458,8 +458,20 @@ def check_mesh(path):
                         outside += 1
                 positions.append(value)
                 counts['position'] += 1
+            elif tag in ('normal', 'tangent'):
+                # unit normals and tangents with a handedness of +-1 for the lighting and the normal maps
+                value = [float(element.get(axis)) for axis in 'xyz']
+                assert all(math.isfinite(v) for v in value), tag
+                assert abs(math.sqrt(sum(v * v for v in value)) - 1.0) < .005, (tag, value)
+                if tag == 'tangent':
+                    assert abs(abs(float(element.get('w'))) - 1.0) < .001, ('tangent handedness', element.get('w'))
+                counts[tag] += 1
             elif tag == 'texcoord':
-                uvs.append((float(element.get('u')), float(element.get('v'))))
+                uv = (float(element.get('u')), float(element.get('v')))
+                # every texture coordinate inside the atlas (the atlases use clamp addressing)
+                assert all(-.0001 <= value <= 1.0001 for value in uv), ('texture coordinate outside the atlas', uv)
+                uvs.append(uv)
+                counts['texcoord'] += 1
             elif tag == 'face':
                 triangle = tuple(int(element.get(axis)) for axis in ('v1', 'v2', 'v3'))
                 assert all(0 <= index < VERTICES for index in triangle)
@@ -475,7 +487,7 @@ def check_mesh(path):
             elif tag == 'skeletonlink':
                 skeleton = element.get('name')
             element.clear()
-    assert counts == dict(position=VERTICES, face=TRIANGLES), counts
+    assert counts == dict(position=VERTICES, normal=VERTICES, tangent=VERTICES, texcoord=VERTICES, face=TRIANGLES), counts
     assert set(faces) == MATERIALS, set(faces)
     assert all(abs(a - b) < .00002 for a, b in zip(minimum, MINIMUM)), minimum
     assert all(abs(a - b) < .00002 for a, b in zip(maximum, MAXIMUM)), maximum
