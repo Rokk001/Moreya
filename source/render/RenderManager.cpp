@@ -5690,6 +5690,9 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         cancelCreatureSeatBlend(dropCreature);
         clearCreatureDecay(dropCreature);
         updateCreatureTavernProps(dropCreature, anim);
+        // Sitting down on a toilet seat (Relieve) or getting up from it changes the height the creature is drawn at
+        if((animation == EntityAnimation::relieve_anim) || (mSteppingCreatures.count(dropCreature) != 0))
+            updateCreatureStep(dropCreature);
     }
     // The sniffing of a creature has no clip of its own: it stands (idle clip), the reaction shows the sniffing
     if((anim == EntityAnimation::sniff_anim) && (dropCreature != nullptr))
@@ -6966,6 +6969,28 @@ void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& positi
         updateCreatureStep(static_cast<Creature*>(entity));
 }
 
+//! \brief Height a creature is drawn higher because it sits on a toilet seat: the seat top while it plays the Relieve
+//! clip, stands still and stands on the footprint of a seat; 0 otherwise (also while it walks onto or off the seat).
+static float toiletSeatLift(Creature* creature)
+{
+    if(!creature->isAlive() || creature->isMoving() ||
+       (creature->getAnimationStateName() != EntityAnimation::relieve_anim))
+        return 0.0f;
+
+    const Ogre::Vector3 position = creature->getPosition();
+    for(RenderedMovableEntity* candidate : creature->getGameMap()->getRenderedMovableEntities())
+    {
+        if((candidate->getObjectType() != GameEntityType::buildingObject) ||
+           (candidate->getMeshName() != RoomObjectPath::TOILET_SEAT_MESH))
+            continue;
+
+        if(RoomObjectPath::onToiletSeat(position.x, position.y, candidate->getPosition().x, candidate->getPosition().y,
+            static_cast<float>(candidate->getRotationAngle())))
+            return RoomObjectPath::toiletSeatTop;
+    }
+    return 0.0f;
+}
+
 void RenderManager::updateCreatureStep(Creature* creature)
 {
     Ogre::SceneNode* node = creature->getEntityNode();
@@ -6981,7 +7006,10 @@ void RenderManager::updateCreatureStep(Creature* creature)
     const float goldHeight = TreasuryCreatureRules::liftOnGold(
         TreasuryGoldMesh::surfaceHeight(position.x, position.y, goldLevel), position.z);
     const float pourRise = getTreasuryPourRise(creature);
-    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0 && goldHeight <= 0.0f && pourRise <= 0.0f)
+    // A creature that uses a toilet seat sits on top of the stone seat instead of inside it
+    const float seatLift = toiletSeatLift(creature);
+    if(!creature->isMoving() && mSteppingCreatures.count(creature) == 0 && goldHeight <= 0.0f && pourRise <= 0.0f &&
+       seatLift <= 0.0f)
         return;
     const Ogre::Vector2 point(position.x, position.y);
     const Ogre::Vector2 direction(creature->getWalkDirection().x, creature->getWalkDirection().y);
@@ -7020,6 +7048,7 @@ void RenderManager::updateCreatureStep(Creature* creature)
             break;
         }
     }
+    lift = std::max(lift, seatLift);
     lift += goldHeight + pourRise;
     node->setPosition(position + Ogre::Vector3(0, 0, lift));
     if(creature->isMoving())

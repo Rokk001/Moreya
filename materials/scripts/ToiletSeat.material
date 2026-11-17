@@ -1,4 +1,4 @@
-// Toilet seat: stone seat (left half of the UV space) and wooden lid (right half)
+// Toilet seat: one atlas, stone on the left half of the UV space, wooden lid, iron and the hole on the right half
 material ToiletSeat
 {
     receive_shadows on
@@ -14,7 +14,7 @@ material ToiletSeat
             texture_unit
             {
                 texture ToiletSeat.png
-                tex_address_mode wrap
+                tex_address_mode clamp
                 filtering trilinear
             }
         }

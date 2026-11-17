@@ -21,6 +21,8 @@
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 
+#include <OgreVector2.h>
+
 #include <cstdint>
 #include <map>
 #include <vector>
@@ -29,9 +31,10 @@ class Creature;
 class Tile;
 enum class TileVisual;
 
-//! \brief A room with one toilet seat on every tile. A creature that has to relieve itself reserves a free
-//! seat, uses it for a few turns and leaves the room a little dirtier. The creatures do not work in this room:
-//! they are sent here by their urge (see CreatureActionSearchToilet and CreatureActionUseToilet).
+//! \brief A room with toilet seats in rows along its edge and a free walking lane in the middle (ToiletLayout). A
+//! creature that has to relieve itself reserves a free seat, steps onto it, uses it for a random time and leaves the
+//! room a little dirtier. The seats are solid furniture: only the user of a seat steps onto it. The creatures do not
+//! work in this room: they are sent here by their urge (see CreatureActionSearchToilet and CreatureActionUseToilet).
 class RoomToilet: public Room
 {
 public:
@@ -45,12 +48,13 @@ public:
     //! \brief True when at least one seat of the room is free for the creature.
     bool hasOpenCreatureSpot(Creature* c) override;
 
-    //! \brief Makes sure every covered tile has a toilet seat and removes the seats of tiles the room lost.
-    //! Reservations of tiles that are no longer part of the room are dropped.
+    //! \brief Places the seats the layout of the room asks for (ToiletLayout::chooseSeats) and removes every other seat,
+    //! also the seats whose angle changed because the room grew or shrank. Reservations of tiles that no longer carry
+    //! a seat are dropped.
     void updateActiveSpots(GameMap* gameMap = nullptr) override;
 
-    //! \brief True when the seat on the tile is not reserved by another creature (a reservation also ends after
-    //! ToiletUseTurns times ToiletReserveFactor turns without being renewed).
+    //! \brief True when the tile carries a seat of this room that is not reserved by another creature (a reservation
+    //! also ends after ToiletUseTurns times ToiletReserveFactor turns without being renewed).
     //! \param tile The tile of the seat.
     //! \param user The creature that wants the seat; its own reservation does not count.
     bool isTileFree(const Tile* tile, const Creature* user) const;
@@ -66,7 +70,20 @@ public:
     //! seat has no toilet room at all (then any toilet room will do).
     bool canBeUsedBy(const Creature& creature) const;
 
-    //! \brief Finds the toilet seat nearest by path that the creature may use and that is free.
+    //! \brief True when the tile carries a seat of this room.
+    bool hasSeatOn(const Tile* tile) const;
+
+    //! \brief The place where the user of the seat on the tile sits (world x, y; the seat top is
+    //! RoomObjectPath::toiletSeatTop higher) and the direction it faces (away from the wall).
+    //! \return False when the tile carries no seat of this room.
+    bool getSeatPlace(const Tile* tile, Ogre::Vector2& place, Ogre::Vector2& facing) const;
+
+    //! \brief The points in front of the seat on the tile from where the creature steps straight onto the seat
+    //! without touching other furniture, the farther (full clearance) ones first. Empty when there is none.
+    std::vector<Ogre::Vector2> getSeatStagingPoints(Creature& creature, const Tile* tile) const;
+
+    //! \brief Finds the toilet seat nearest by path that the creature may use, that is free and that the creature can
+    //! step onto from a point in front of it without touching other furniture.
     //! \return The tile of the seat, nullptr if there is none or none can be reached.
     static Tile* findFreeToiletTile(Creature& creature);
 
@@ -99,9 +116,6 @@ private:
 
     //! \brief Returns the turn on which a reservation made now ends.
     int64_t getReservationEndTurn() const;
-
-    //! \brief The angle (degrees) of the seat on the tile so that its back is at the nearest wall.
-    double getSeatAngle(const Tile* tile) const;
 
     //! \brief The reservations by tile.
     std::map<const Tile*, Reservation> mReserved;
