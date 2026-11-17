@@ -385,6 +385,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
     ${SRC}/rooms/RoomInfirmaryShaman.cpp
+    ${SRC}/rooms/InfirmaryShamanWalk.h
     ${SRC}/entities/InfirmaryShamanEntity.cpp
     ${SRC}/entities/GhostBoxEntity.cpp
     ${SRC}/entities/GhostEntity.cpp

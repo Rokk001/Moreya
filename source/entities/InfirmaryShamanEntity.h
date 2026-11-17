@@ -39,7 +39,7 @@ public:
 private:
     //! \brief Converts the configured random second interval into turns without rounding.
     static double interval(const std::string& minimumKey, const std::string& maximumKey);
-    //! \brief Walks over connected room tiles to a cot, passing through patients.
+    //! \brief Walks beside a cot or to the instrument table around all room furniture, never through a cot.
     bool walkToCot(RoomInfirmary& room);
     //! \brief Notifies visible human clients after a room association or owner changes.
     void notifyRoomChanged();

@@ -9,15 +9,16 @@
 #include "game/Seat.h"
 #include "game/Player.h"
 #include "rooms/RoomInfirmary.h"
+#include "rooms/InfirmaryShamanWalk.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "rooms/RoomType.h"
 #include "ODApplication.h"
 #include "utils/ConfigManager.h"
+#include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
-#include <algorithm>
-#include <deque>
-#include <map>
+#include <set>
 #include <vector>
 
 //! \brief Creates an original room figure with independent walking and pose timers.
@@ -51,42 +52,31 @@ double InfirmaryShamanEntity::interval(const std::string& minimumKey, const std:
         * ODApplication::turnsPerSecond;
 }
 
-//! \brief Finds a connected floor path entirely within the owning room.
+//! \brief Walks to a free standing point beside a cot or at the instrument table on a route that goes around every
+//! piece of room furniture and stays on the floor of the owning room (INGAME-QS-10 K23: never through a cot).
 bool InfirmaryShamanEntity::walkToCot(RoomInfirmary& room)
 {
     const std::vector<Tile*> destinations = room.getShamanWalkTargets();
-    Tile* start = getPositionTile();
-    if(destinations.empty() || start == nullptr)
+    if(destinations.empty() || getPositionTile() == nullptr)
         return false;
     Tile* destination = destinations[Random::Uint(0, static_cast<uint32_t>(destinations.size() - 1))];
-    std::deque<Tile*> pending;
-    std::map<Tile*, Tile*> previous;
-    pending.push_back(start);
-    previous[start] = nullptr;
-    while(!pending.empty() && previous.find(destination) == previous.end())
+    std::set<InfirmaryShamanWalk::Cell> floor;
+    for(uint32_t i = 0; i < room.numCoveredTiles(); ++i)
     {
-        Tile* tile = pending.front();
-        pending.pop_front();
-        const int dx[] = {-1, 1, 0, 0};
-        const int dy[] = {0, 0, -1, 1};
-        for(size_t i = 0; i < sizeof(dx) / sizeof(dx[0]); ++i)
-        {
-            Tile* next = getGameMap()->getTile(tile->getX() + dx[i], tile->getY() + dy[i]);
-            if(next == nullptr || next->isFullTile() || next->getCoveringRoom() != &room
-                || previous.find(next) != previous.end())
-                continue;
-            previous[next] = tile;
-            pending.push_back(next);
-        }
+        Tile* tile = room.getCoveredTile(i);
+        floor.insert(InfirmaryShamanWalk::Cell(tile->getX(), tile->getY()));
     }
-    if(previous.find(destination) == previous.end())
-        return false;
+    const std::vector<RoomObjectPath::Obstacle> furniture =
+        RoomObjectNavigation::collect(*getGameMap(), InfirmaryShamanWalk::WALKING_RADIUS);
+    const Ogre::Vector2 start(getPosition().x, getPosition().y);
     std::vector<Ogre::Vector2> path;
-    for(Tile* tile = destination; tile != start; tile = previous[tile])
-        path.push_back(Ogre::Vector2(tile->getX(), tile->getY()));
-    std::reverse(path.begin(), path.end());
-    if(path.empty())
+    if(!InfirmaryShamanWalk::plan(start, InfirmaryShamanWalk::Cell(destination->getX(), destination->getY()), floor,
+        furniture, path))
+    {
+        OD_LOG_INF("Infirmary shaman of " + mRoomName + " finds no free route to tile "
+            + Helper::toString(destination->getX()) + "," + Helper::toString(destination->getY()));
         return false;
+    }
     setWalkPath("Walk", "Idle", true, true, path, false, true);
     return true;
 }
@@ -131,8 +121,7 @@ void InfirmaryShamanEntity::doUpkeep()
         return;
     if(mPoseTurns <= 0.0)
     {
-        const std::vector<Tile*> patients = room.getPatientPositions();
-        if(std::find(patients.begin(), patients.end(), getPositionTile()) != patients.end())
+        if(getPositionTile() != nullptr && room.isBesidePatient(*getPositionTile()))
         {
             static const char* const poses[] = {
                 "Chant", "RattleShake", "HerbSniff", "PotionTaste", "TripOverBucket", "Dance"};
