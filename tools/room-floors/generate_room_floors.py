@@ -2202,24 +2202,78 @@ ROOMS = {
 }
 
 
+# merchant (bazaar, EQUIPMENT-POTIONS-PLAN 15.3): worn wooden planks with remnants of woven carpets. INGAME-QS-10 K21: the
+# remnants of the first version were shapeless dark red blotches that read as blood on the planks; they are now cut
+# pieces of patterned carpet (border band with lozenges, inner line, medallion, small diamonds, fringes, frayed and worn
+# through edges) in several dyes, so nothing on the floor reads as a stain.
+BAZAAR_PLANK = np.array([0.33, 0.225, 0.14])
+BAZAAR_JOINT = np.array([0.07, 0.05, 0.035])
+# (field, border, motif, line) dyes of the carpet pieces: madder red with cream, indigo with ochre (ochre with teal unused)
+BAZAAR_RUGS = (
+    (np.array([0.50, 0.13, 0.08]), np.array([0.14, 0.15, 0.30]), np.array([0.80, 0.68, 0.45]), np.array([0.85, 0.62, 0.22])),
+    (np.array([0.13, 0.16, 0.36]), np.array([0.52, 0.15, 0.09]), np.array([0.86, 0.62, 0.20]), np.array([0.80, 0.70, 0.48])),
+    (np.array([0.62, 0.43, 0.14]), np.array([0.10, 0.30, 0.30]), np.array([0.50, 0.12, 0.08]), np.array([0.82, 0.72, 0.50])),
+)
+# Carpet pieces of the tile: centre x, centre y, half length, half width (px), rotation (radians), dye index. They wrap
+# around the tile border like the planks.
+BAZAAR_PIECES = ((150.0, 140.0, 118.0, 74.0, 0.10, 0), (380.0, 370.0, 100.0, 64.0, -0.16, 1))
+
+
 def merchant_field():
-    """Paint worn bazaar planks with scattered remnants of a red woven carpet."""
+    """Paint worn bazaar planks with cut remnants of patterned woven carpets."""
     ids, joints, count = row_layout(2101, 7, 110, 260, 1.3, 2102)
     rng = np.random.RandomState(2103)
     grain = fbm(2104, 3.0, 90.0, 3)
-    shade = rng.uniform(0.72, 1.08, count)[ids]
-    col = np.array([0.27, 0.18, 0.11])[None, None, :] * shade[..., None]
-    col = col * (1.0 + 0.10 * grain[..., None])
+    shade = rng.uniform(0.78, 1.10, count)[ids]
+    col = BAZAAR_PLANK[None, None, :] * shade[..., None]
+    col = col * (1.0 + 0.12 * grain[..., None])
+    scuff = smoothstep(0.6, 1.8, fbm(2107, 10.0, 10.0, 3))
+    col = mix(col, col * 1.18 + 0.03, scuff * 0.5)
     bevel = smoothstep(1.0, 5.0, joints)
-    col = mix(col, np.array([0.06, 0.045, 0.035]), 1.0 - bevel)
+    col = mix(col, BAZAAR_JOINT, 1.0 - bevel)
     hgt = bevel + 0.10 * grain
-    remnant = smoothstep(0.35, 0.70, fbm(2105, 4.0, 4.0, 2))
-    weave = 0.85 + 0.15 * np.sin(_XX * np.pi / 2.0) * np.sin(_YY * np.pi / 2.0)
-    carpet = np.array([0.28, 0.055, 0.055])[None, None, :] * weave[..., None]
-    faded = smoothstep(0.3, 1.3, fbm(2106, 16.0, 16.0, 2))
-    carpet = mix(carpet, np.array([0.25, 0.18, 0.12]), faded * 0.65)
-    col = mix(col, carpet, remnant)
-    hgt = hgt + 0.45 * remnant + 0.05 * weave
+    fray = fbm(2105, 40.0, 40.0, 2)
+    wear = fbm(2106, 9.0, 9.0, 3)
+    weave = 0.88 + 0.12 * np.sin(_XX * np.pi / 2.0) * np.sin(_YY * np.pi / 2.0)
+    for index, (cx, cy, half_long, half_wide, angle, dye) in enumerate(BAZAAR_PIECES):
+        field, border, motif, line = BAZAAR_RUGS[dye]
+        dx = (_XX - cx + N / 2.0) % N - N / 2.0
+        dy = (_YY - cy + N / 2.0) % N - N / 2.0
+        u = dx * math.cos(angle) + dy * math.sin(angle)
+        v = -dx * math.sin(angle) + dy * math.cos(angle)
+        # frayed outline, worn-through holes inside where the planks show
+        edge = np.minimum(half_long - np.abs(u), half_wide - np.abs(v))
+        holes = smoothstep(1.45, 1.8, wear + 0.25 * fbm(2110 + index, 20.0, 20.0, 2))
+        inside = smoothstep(0.0, 1.5, edge + 1.6 * fray) * (1.0 - holes)
+        band = 18.0
+        rug = np.broadcast_to(field, (N, N, 3)).copy()
+        # small diamonds on the field and a large lozenge medallion in the middle
+        cell = 22.0
+        du = np.abs((u % cell) - cell / 2.0)
+        dv = np.abs((v % cell) - cell / 2.0)
+        rug = mix(rug, motif, (du + dv < 4.0) * 0.85)
+        medal = np.abs(u) / (half_long * 0.55) + np.abs(v) / (half_wide * 0.55)
+        rug = mix(rug, border, ((medal < 1.0) & (medal > 0.78)) * 1.0)
+        rug = mix(rug, motif, (medal < 0.45) * 0.9)
+        rug = mix(rug, line, ((medal < 0.25) & (medal > 0.15)) * 1.0)
+        # border band with a chain of lozenges and a thin line inside it
+        along = np.where(half_long - np.abs(u) < half_wide - np.abs(v), v, u)
+        lozenge = np.abs((along % 18.0) - 9.0) + np.abs(edge - band / 2.0)
+        in_band = edge < band
+        rug = np.where(in_band[..., None], border, rug)
+        rug = mix(rug, motif, (in_band & (lozenge < 5.5) & (lozenge > 2.5)) * 0.9)
+        rug = mix(rug, line, (in_band & (lozenge <= 2.5)) * 0.9)
+        rug = mix(rug, line, ((edge > band) & (edge < band + 3.5)) * 1.0)
+        # faded, rubbed dye and the woven texture
+        faded = smoothstep(0.2, 1.6, wear) * 0.35
+        rug = mix(rug, np.array([0.42, 0.33, 0.24]), faded) * weave[..., None]
+        col = mix(col, rug, inside)
+        hgt = hgt + 0.35 * inside + 0.04 * weave * inside
+        # cream fringes at the two short ends
+        tassel = (np.abs(u) > half_long - 1.0) & (np.abs(u) < half_long + 9.0 + 3.0 * fray) & (np.abs(v) < half_wide - 4.0)
+        strand = ((v % 4.0) < 2.0) * tassel * (1.0 - holes)
+        col = mix(col, np.array([0.70, 0.62, 0.48]), strand * 0.9)
+        hgt = hgt + 0.15 * strand
     return col, hgt
 
 

@@ -483,6 +483,88 @@ material MerchantWares
     }
 }
 
+// Bazaar look of the merchant room (INGAME-QS-10 K21): carpets, spice sacks, cloth strips and coloured lanterns, cells of the wares atlas
+material MerchantCarpet
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.03 0.03 0.03 1 8
+            texture_unit
+            {
+                texture MerchantWares.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantSack
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.03 0.03 0.03 1 8
+            texture_unit
+            {
+                texture MerchantWares.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantClothStrip
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.04 0.04 0.04 1 8
+            texture_unit
+            {
+                texture MerchantWares.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantLantern
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.20 0.20 0.20 1 24
+            emissive 0.75 0.75 0.75
+            texture_unit
+            {
+                texture MerchantLantern.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
 material Bloodroot
 {
     technique

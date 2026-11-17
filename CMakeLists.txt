@@ -598,6 +598,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomBridgeWooden.cpp
     ${SRC}/rooms/RoomCasino.cpp
     ${SRC}/rooms/RoomMerchant.cpp
+    ${SRC}/rooms/MerchantWallTable.h
     ${SRC}/rooms/RoomHerbGarden.cpp
     ${SRC}/rooms/RoomAlchemyLab.cpp
     ${SRC}/rooms/RoomCrypt.cpp
