@@ -1,5 +1,5 @@
 """Wiring check (X1 rework, decision 664 d): the loading screen of a map load lasts until the game or editor mode is
-open, so the configure-map dialog is not shown again after the loading screen (no compiler needed)."""
+open (and since INGAME-QS-10 P1 until the opened map has settled), so the configure-map dialog is not shown again after the loading screen (no compiler needed)."""
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
@@ -18,8 +18,10 @@ assert 'loading.continueLoading();' in game and 'loading.continueLoading();' in 
 modes = read('source/modes/ModeManager.cpp')
 assert '#include "render/LoadingScreen.h"' in modes
 change = modes.split('void ModeManager::checkModeChange()')[1].split('void ModeManager::update')[0]
-# ends after the new mode object exists and before it opens (no frame is drawn in between), and also when the mode is
-# already the requested one
-assert change.count('LoadingScreen::finish();') == 2
-assert change.index('LoadingScreen::finish();', change.index('case GAME:')) < change.index('mCurrentApplicationMode->activate();')
+# is released after the new mode object exists and before it opens (no frame is drawn in between), and also when the
+# mode is already the requested one; since INGAME-QS-10 P1 the picture then stays until the opened map has settled
+# (LoadingScreen::finishAfterSettling, game waits for its first turn, the editor does not), never ends earlier
+assert 'LoadingScreen::finish();' not in change
+assert change.count('LoadingScreen::finishAfterSettling(mRequestedMode == GAME);') == 2
+assert change.index('LoadingScreen::finishAfterSettling(', change.index('case GAME:')) < change.index('mCurrentApplicationMode->activate();')
 print('ok')

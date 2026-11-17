@@ -176,9 +176,10 @@ void ModeManager::checkModeChange()
     {
         if (mCurrentApplicationMode->getModeType() == mRequestedMode)
         {
-            // The map load kept its loading screen for this mode change: it ends here, nothing else would end it
+            // The map load kept its loading screen for this mode change: it ends from here, nothing else would end
+            // it. It stays until the map has settled, so the first-use work of the map is not seen as frame stalls.
             if(mRequestedMode == GAME || mRequestedMode == EDITOR)
-                LoadingScreen::finish();
+                LoadingScreen::finishAfterSettling(mRequestedMode == GAME);
             return;
         }
 
@@ -249,10 +250,12 @@ void ModeManager::checkModeChange()
         break;
     }
 
-    // The loading screen of a map load ends here, after the old menu is gone and just before the game or editor mode
-    // opens and before any frame is drawn: no frame shows the previous menu (the "Please configure map" dialog)
+    // The loading screen of a map load is released here, after the old menu is gone and just before the game or editor
+    // mode opens and before any frame is drawn: no frame shows the previous menu (the "Please configure map" dialog).
+    // The picture itself stays until the opened map has settled (first game turn processed, then quick frames), so
+    // the tile creation, first textures and shaders of the new map are done behind it (LoadingSettle).
     if(mRequestedMode == GAME || mRequestedMode == EDITOR)
-        LoadingScreen::finish();
+        LoadingScreen::finishAfterSettling(mRequestedMode == GAME);
 
     const bool campaignArrival = mRequestedMode == MENU_CAMPAIGN &&
         (previousMode == GAME || previousMode == EDITOR);

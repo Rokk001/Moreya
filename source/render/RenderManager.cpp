@@ -78,6 +78,7 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <set>
 #include <vector>
 
@@ -2189,7 +2190,7 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     Ogre::TexturePtr myPerlinTexture = createPerlinTexture();
     setupFogMaterial(myPerlinTexture);
     prepareGameCreatureResources(*gameMap);
-    prepareRoomStaffResources();
+    prepareGameObjectResources();
     prepareGameShaders();
 }
 
@@ -4785,56 +4786,86 @@ void RenderManager::prepareGameCreatureResources(GameMap& gameMap)
     OD_LOG_INF("Prepared creature resources for " + Helper::toString(static_cast<uint32_t>(meshNames.size())) + " meshes");
 }
 
-//! The meshes of the room staff figures (InnkeeperEntity, MerchantEntity, PoolAttendantEntity, InfirmaryShamanEntity).
-static const char* const ROOM_STAFF_MESHES[] = {"Innkeeper", "Merchant", "PoolAttendant", "InfirmaryShaman"};
+//! The list of the object meshes prepared during the map load, in the config folder.
+static const std::string PREPARED_OBJECTS_FILE = "preparedobjects.cfg";
 
-//! \brief Prepares each room staff mesh the way rrCreateRenderedMovableEntity uses it, without drawing it.
+//! \brief Reads the mesh file names of config/preparedobjects.cfg ('#' starts a comment), in file order.
+static std::vector<std::string> readPreparedObjectMeshes()
+{
+    std::vector<std::string> meshNames;
+    std::ifstream file((ResourceManager::getSingleton().getConfigPath() + PREPARED_OBJECTS_FILE).c_str());
+    if(!file.is_open())
+    {
+        OD_LOG_WRN("Cannot read " + PREPARED_OBJECTS_FILE + ": objects load when they first appear");
+        return meshNames;
+    }
+    std::string line;
+    while(std::getline(file, line))
+    {
+        const std::string::size_type comment = line.find('#');
+        if(comment != std::string::npos)
+            line.erase(comment);
+        std::istringstream words(line);
+        std::string meshName;
+        if(words >> meshName)
+            meshNames.push_back(meshName);
+    }
+    return meshNames;
+}
+
+//! \brief Prepares each listed object mesh the way rrCreateRenderedMovableEntity uses it, without drawing it.
+//! A mesh that cannot be prepared is reported and left to load when it first appears, as before.
 //! \brief Records frame-stall operation timing without changing the operation.
-void RenderManager::prepareRoomStaffResources()
+void RenderManager::prepareGameObjectResources()
 {
     FrameStallTrace::Scope trace(FrameStallTrace::ResourcePreparation);
     if(mShaderGenerator == nullptr)
         return;
+    const std::vector<std::string> objectMeshes = readPreparedObjectMeshes();
+    std::set<std::string> preparedMaterials;
     uint32_t prepared = 0;
-    for(const char* staffFigure : ROOM_STAFF_MESHES)
+    for(const std::string& objectFile : objectMeshes)
     {
-        const std::string meshName = std::string(staffFigure) + ".mesh";
-        if(!Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics", meshName))
+        if(!Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics", objectFile))
+        {
+            OD_LOG_WRN("Listed object mesh not found: " + objectFile);
             continue;
-        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
-        // The same tangents rrCreateRenderedMovableEntity builds, so the figure's later entity finds them ready
-        unsigned short src;
+        }
+        Ogre::Entity* entity = nullptr;
         try
         {
-            if(!mesh->suggestTangentVectorBuildParams(src))
-                mesh->buildTangentVectors(src);
-        }
-        catch(const Ogre::ItemIdentityException&)
-        {
-            OD_LOG_INF("No texture coordinates to build tangents from for mesh " + std::string(staffFigure));
-        }
-        Ogre::Entity* entity = mSceneManager->createEntity(mesh);
-        try
-        {
-            // The skinning material copies the real figure gets, then the shaders of the materials it draws with
+            Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(objectFile, "Graphics");
+            // The same tangents rrCreateRenderedMovableEntity builds, so the object's later entity finds them ready
+            unsigned short src;
+            try
+            {
+                if(!mesh->suggestTangentVectorBuildParams(src))
+                    mesh->buildTangentVectors(src);
+            }
+            catch(const Ogre::ItemIdentityException&)
+            {
+                OD_LOG_INF("No texture coordinates to build tangents from for mesh " + objectFile);
+            }
+            entity = mSceneManager->createEntity(mesh);
+            // The skinning material copies the real object gets, then the shaders of the materials it draws with
             useShaderSkinning(entity);
-            std::set<std::string> preparedMaterials;
             for(const Ogre::SubEntity* part : entity->getSubEntities())
             {
                 if(!preparedMaterials.insert(part->getMaterialName()).second)
                     continue;
                 prepareGeneratedShaders(*part->getMaterial());
             }
+            ++prepared;
         }
-        catch(...)
+        catch(const Ogre::Exception& exception)
         {
-            mSceneManager->destroyEntity(entity);
-            throw;
+            OD_LOG_WRN("Cannot prepare object mesh " + objectFile + ": " + exception.getDescription());
         }
-        mSceneManager->destroyEntity(entity);
-        ++prepared;
+        if(entity != nullptr)
+            mSceneManager->destroyEntity(entity);
     }
-    OD_LOG_INF("Prepared room staff resources for " + Helper::toString(prepared) + " meshes");
+    OD_LOG_INF("Prepared object resources for " + Helper::toString(prepared) + " of "
+        + Helper::toString(static_cast<uint32_t>(objectMeshes.size())) + " listed meshes");
 }
 
 //! \brief Creates the visible creature and registers it for late contact sampling.

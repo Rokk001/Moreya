@@ -1,4 +1,5 @@
 #include "render/LoadingScreen.h"
+#include "render/LoadingSettle.h"
 
 #include "ODApplication.h"
 #include "render/ODFrameListener.h"
@@ -655,9 +656,38 @@ void LoadingScreen::continueLoading()
     mContinueLoading = true;
 }
 
+//! The map load waiting for the opened game or editor to settle before its picture ends.
+static LoadingSettle mapLoadSettle;
+
+//! \brief Lets the picture of a map load stay until the opened mode has settled; ends at once when none is shown.
+void LoadingScreen::finishAfterSettling(bool waitForTurn)
+{
+    if(loadingRectangle == nullptr || startupScene != nullptr)
+    {
+        finish();
+        return;
+    }
+    mapLoadSettle.start(waitForTurn);
+}
+
+//! \brief Ends the waiting map load picture on the frame LoadingSettle chooses.
+void LoadingScreen::onFrame(double seconds, int64_t turn, bool paused)
+{
+    if(mapLoadSettle.frame(seconds, turn, paused))
+        finish();
+}
+
+//! \brief True while a map load picture (not the startup picture) covers the window.
+bool LoadingScreen::isShown()
+{
+    return loadingRectangle != nullptr && startupScene == nullptr;
+}
+
 //! \brief Releases startup resources or restores the game/menu material, rectangle and interface after loading.
+//! Any wait for the map to settle ends with it.
 void LoadingScreen::finish()
 {
+    mapLoadSettle.stop();
     if(loadingRectangle == nullptr && startupScene == nullptr)
         return;
     restoreLoadingInterface();

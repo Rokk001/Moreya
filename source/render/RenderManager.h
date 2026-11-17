@@ -507,11 +507,11 @@ private:
     //! \brief Loads configured creature meshes, tangents and highlight materials before play begins.
     void prepareGameCreatureResources(GameMap& gameMap);
 
-    //! \brief Loads the meshes, tangents, skinning materials and shaders of the room staff figures (innkeeper,
-    //! merchant, pool attendant, infirmary shaman) during the map load. They first appear when their room is built
-    //! during play, and loading them in that frame stalled it (first Tavern: 203 ms in the server message plus
-    //! 107-161 ms of first draws).
-    void prepareRoomStaffResources();
+    //! \brief Loads the meshes, tangents, skinning materials and shaders of every object listed in
+    //! config/preparedobjects.cfg (room furniture and staff, traps, eggs, dirt, item bags, missiles, equipment and the
+    //! other objects created during play) during the map load. Loading one in the frame it first appeared stalled
+    //! that frame (first Tavern: 203 ms in the server message plus 107-161 ms of first draws; first egg 116 ms).
+    void prepareGameObjectResources();
 
     //! \brief Loads a material and makes its generated shaders, the two steps the technique resolver takes when
     //! the material is first drawn. Materials with their own programs keep them.

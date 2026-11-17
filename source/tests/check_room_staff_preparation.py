@@ -5,14 +5,15 @@ client message "addEntity" took 203 ms and the next two frames 161 ms and 107 ms
 the Innkeeper mesh (18 MB, about 249k triangles at that time), built its tangents, made its skinning materials and
 compiled their shaders. The merchant, the pool attendant and the infirmary shaman appear the same way with their room.
 
-The check reads the production sources and the models and requires:
-- RenderManager::initGameRenderer calls prepareRoomStaffResources() during the map load, after the creature
+The staff figures are prepared with all other objects by RenderManager::prepareGameObjectResources from
+config/preparedobjects.cfg (whole mechanism: check_game_object_preparation.py). This check requires for the staff:
+- the mesh each of the four staff entity classes creates (read from their constructors) is listed in
+  config/preparedobjects.cfg and exists in models/;
+- RenderManager::initGameRenderer calls prepareGameObjectResources() during the map load, after the creature
   preparation and before the game shaders, so it runs behind the loading screen;
-- the prepared mesh list is exactly the meshes the four staff entity classes create (read from their constructors),
-  and every one of them exists in models/;
-- prepareRoomStaffResources does every step rrCreateRenderedMovableEntity does for such a figure on first appearance
-  (mesh load in group Graphics, tangents with the same fallback, useShaderSkinning on an entity of the mesh, generated
-  shaders of each material) and destroys its temporary entity on success and on an exception, so nothing is drawn.
+- the preparation does every step rrCreateRenderedMovableEntity does for such a figure on first appearance (mesh load
+  in group Graphics, tangents with the same fallback, useShaderSkinning on an entity of the mesh, generated shaders of
+  each material) and destroys its temporary entity, so nothing is drawn.
 
 Fixed values of this branch: 4 staff meshes (Innkeeper, Merchant, PoolAttendant, InfirmaryShaman). The check compiles
 nothing and starts no game.
@@ -53,54 +54,59 @@ def staff_meshes():
     return names
 
 
-def check(render_manager):
-    """Asserts the preparation contract on the given RenderManager.cpp text."""
-    init = block(render_manager, 'void RenderManager::initGameRenderer(')
-    assert init.count('prepareRoomStaffResources();') == 1
-    assert (init.index('prepareGameCreatureResources(*gameMap);') < init.index('prepareRoomStaffResources();')
-            < init.index('prepareGameShaders();'))
+def listed(text):
+    """Returns the mesh names of a preparedobjects.cfg text, comments removed."""
+    names = []
+    for line in text.splitlines():
+        words = line.split('#', 1)[0].split()
+        if words:
+            names.append(words[0])
+    return names
 
-    listed = re.search(r'ROOM_STAFF_MESHES\[\] = \{([^}]*)\};', render_manager).group(1)
-    listed = re.findall(r'"(\w+)"', listed)
+
+def check(render_manager, objects):
+    """Asserts the staff part of the preparation on the given RenderManager.cpp and preparedobjects.cfg texts."""
     expected = staff_meshes()
     assert len(expected) == 4, expected
-    assert sorted(listed) == sorted(expected), (listed, expected)
-    for name in listed:
+    names = listed(objects)
+    for name in expected:
+        assert name + '.mesh' in names, name
         assert (ROOT / 'models' / (name + '.mesh')).is_file(), name
 
-    prepare = block(render_manager, 'void RenderManager::prepareRoomStaffResources(')
+    init = block(render_manager, 'void RenderManager::initGameRenderer(')
+    assert init.count('prepareGameObjectResources();') == 1
+    assert (init.index('prepareGameCreatureResources(*gameMap);') < init.index('prepareGameObjectResources();')
+            < init.index('prepareGameShaders();'))
+
+    prepare = block(render_manager, 'void RenderManager::prepareGameObjectResources(')
     create = block(render_manager, 'void RenderManager::rrCreateRenderedMovableEntity(')
     assert 'Ogre::MeshManager::getSingleton().load(meshName + ".mesh","Graphics")' in create
-    assert 'Ogre::MeshManager::getSingleton().load(meshName, "Graphics");' in prepare
-    assert 'std::string(staffFigure) + ".mesh"' in prepare
+    assert 'Ogre::MeshManager::getSingleton().load(objectFile, "Graphics");' in prepare
     for step in ('suggestTangentVectorBuildParams(src)', 'buildTangentVectors(src);',
                  'catch(const Ogre::ItemIdentityException&)'):
         assert step in create and step in prepare, step
     assert 'useShaderSkinning(ent);' in create
     order = [prepare.index(step) for step in ('MeshManager::getSingleton().load(', 'buildTangentVectors(src);',
                                                'mSceneManager->createEntity(mesh);', 'useShaderSkinning(entity);',
-                                               'prepareGeneratedShaders(*part->getMaterial());')]
+                                               'prepareGeneratedShaders(*part->getMaterial());',
+                                               'mSceneManager->destroyEntity(entity);')]
     assert order == sorted(order), order
-    # The temporary entity is destroyed on success and when a step throws; it is never attached to a node.
-    assert prepare.count('mSceneManager->destroyEntity(entity);') == 2
-    assert 'catch(...)' in prepare and 'throw;' in prepare
     assert 'attachObject' not in prepare
-    assert 'FrameStallTrace::Scope trace(FrameStallTrace::ResourcePreparation);' in prepare
 
 
-def mutations(render_manager):
+def mutations(render_manager, objects):
     """Each wrong preparation must be rejected by the contract."""
     wrong = [
-        render_manager.replace('    prepareRoomStaffResources();\n', '', 1),
-        render_manager.replace('"Innkeeper", ', '', 1),
-        render_manager.replace('            useShaderSkinning(entity);\n', '', 1),
-        render_manager.replace('        mSceneManager->destroyEntity(entity);\n        ++prepared;',
-                               '        ++prepared;', 1),
+        (render_manager.replace('    prepareGameObjectResources();\n', '', 1), objects),
+        (render_manager, objects.replace('Innkeeper.mesh\n', '', 1)),
+        (render_manager.replace('            useShaderSkinning(entity);\n', '', 1), objects),
+        (render_manager.replace('        if(entity != nullptr)\n            mSceneManager->destroyEntity(entity);\n', '', 1),
+         objects),
     ]
-    for index, text in enumerate(wrong):
-        assert text != render_manager, index
+    for index, (source, config) in enumerate(wrong):
+        assert (source, config) != (render_manager, objects), index
         try:
-            check(text)
+            check(source, config)
         except (AssertionError, AttributeError, ValueError):
             continue
         raise AssertionError('mutation %d was not rejected' % index)
@@ -109,8 +115,9 @@ def mutations(render_manager):
 def main():
     """Runs the contract on the production source and the rejected mutations."""
     render_manager = read('source/render/RenderManager.cpp')
-    check(render_manager)
-    mutations(render_manager)
+    objects = read('config/preparedobjects.cfg')
+    check(render_manager, objects)
+    mutations(render_manager, objects)
     print('room staff preparation passes the checks (4 meshes)')
 
 
