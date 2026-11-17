@@ -67,6 +67,17 @@ public:
     //! \brief Reports whether a living creature of this seat could be admitted here; no knockout needed.
     //! \param creature The wounded creature.
     bool canAdmitWounded(Creature& creature);
+    //! \brief Reports whether a creature of this seat sick with the plague that walks in by itself would be admitted
+    //! here now, whatever its HP (a free cot of its size and a payer who can pay the fee as for a carried patient).
+    //! \param creature The sick creature.
+    bool canAdmitSick(Creature& creature);
+    //! \brief The tile of the free cot a sick creature walks to, or nullptr.
+    //! \param creature The sick creature.
+    Tile* getSickCotTile(Creature& creature);
+    //! \brief Admits a sick creature that walked in by itself; the admission cures it.
+    //! \param creature The sick creature.
+    //! \return true when it was admitted.
+    bool admitSick(Creature& creature);
     //! \brief Finds or reserves the fitting cot for a carried creature.
     Tile* askSpotForCarriedEntity(GameEntity* entity) override;
     //! \brief Reserves a cot or reuses this worker's existing carry reservation.
@@ -129,7 +140,7 @@ private:
     void layoutCots();
     //! \brief Creates the room object for a cot.
     void createCotObject(size_t id);
-    //! \brief Places the patient and starts its rest action after payment.
+    //! \brief Places the patient and starts its rest action after payment; the admission cures the plague.
     bool admit(size_t id, Creature& creature, bool manual);
     //! \brief Returns the first free matching cot, allowing manual drops to take reservations.
     size_t findCot(const Creature& creature, bool manual) const;

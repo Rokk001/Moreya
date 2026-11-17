@@ -116,6 +116,14 @@ enum class SkillType
     roomGhostRoom,
     roomSpa,
 
+    // Added later, appended so that existing saves stay valid: the six keeper spells of the spells review
+    spellCurse,
+    spellBlessing,
+    spellInvisibility,
+    spellPlague,
+    spellBreakWall,
+    spellRevealEnemy,
+
     // This should be the last
     countSkill
 };

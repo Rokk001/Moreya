@@ -50,6 +50,7 @@
 #include "creatureaction/CreatureActionSearchSpa.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
+#include "creatureaction/CreatureActionSearchInfirmary.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
 #include "creatureaction/CreatureActionSearchJob.h"
 #include "creatureaction/CreatureActionSearchToilet.h"
@@ -70,6 +71,7 @@
 #include "creatureeffect/CreatureEffectDigTile.h"
 #include "creatureeffect/CreatureEffectManager.h"
 #include "creatureeffect/CreatureEffectSlap.h"
+#include "creatureeffect/CreatureEffectSpellInvisible.h"
 #include "creaturemood/CreatureMood.h"
 #include "creaturemood/CreatureMoodManager.h"
 #include "creaturemood/CreatureMoodOutOfWork.h"
@@ -444,6 +446,14 @@ static uint32_t manaRingStep(double mana, double maxMana)
     return static_cast<uint32_t>(share * static_cast<double>(Creature::MANA_RING_STEPS));
 }
 const std::string Creature::POSSESSION_AURA_SCRIPT = "SpellCreaturePossess";
+const std::string Creature::PLAGUE_SCRIPT = "SpellCreaturePlague";
+
+//! \brief Opacity of the body of a creature hidden by the Invisibility spell, as its own keeper and his allies see it
+static const float SPELL_INVISIBLE_OPACITY = 0.5f;
+
+//! \brief Turns the green look of a sick creature lasts on the clients without a refresh. The server renews it while
+//! the creature is sick, so it fades on its own from a body that was knocked out or died
+static const int32_t PLAGUE_LOOK_TURNS = 14;
 const double Creature::WOUNDED_DRAG_LAY_TURNS_DEFAULT = 12.0;
 const double Creature::WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT = 6.0;
 const double Creature::WOUNDED_CARRY_MAX_TURNS_DEFAULT = 400.0;
@@ -1008,6 +1018,7 @@ Creature::~Creature()
         inputManager->mHighlightedCreature = nullptr;
 }
 
+//! \brief Creates the body of the creature on the client, half transparent while the Invisibility spell hides it.
 void Creature::createMeshLocal(NodeType nt)
 {
     MovableGameEntity::createMeshLocal(nt);
@@ -1015,6 +1026,9 @@ void Creature::createMeshLocal(NodeType nt)
     {
         mHexenHenMeshShown = isHexenHen();
         RenderManager::getSingleton().rrCreateCreature(this);
+        // A creature hidden by the Invisibility spell is shown half transparent to its keeper and his allies
+        mSpellInvisibleShown = false;
+        updateSpellInvisibleLook();
 
         // By default, we set the creature in idle state
         RenderManager::getSingleton().rrSetObjectAnimationState(this, EntityAnimation::idle_anim, true);
@@ -1151,7 +1165,8 @@ std::string Creature::getCreatureStreamFormat()
     return format;
 }
 
-//! \brief Writes the creature, its optional skill state and its trailing tagged item block.
+//! \brief Writes the creature, its optional skill state and its trailing tagged item block; the optional [Plague]
+//! block of a sick creature closes the line.
 void Creature::exportToStream(std::ostream& os) const
 {
     const std::streamsize precision = os.precision();
@@ -1322,10 +1337,15 @@ void Creature::exportToStream(std::ostream& os) const
             static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
     if(mDefinition->isWorker())
         os << "\t[WorkerJob] " << static_cast<uint32_t>(mWorkerJob) << ' ' << (mWorkerJobFixed ? 1 : 0) << " [/WorkerJob]";
+    // Optional plague block: the creature is sick, with the seat whose research sets the damage. Missing in old saves
+    // and for a creature that is not sick
+    if(mPlagueSick)
+        os << "\t[Plague] " << mPlagueSeatId << " [/Plague]";
     os.precision(precision);
 }
 
-//! \brief Reads legacy creature data with optional appearance, mana, skill state and item data.
+//! \brief Reads legacy creature data with optional appearance, mana, skill state and item data, and the optional
+//! [Plague] block of a sick creature.
 bool Creature::importFromStream(std::istream& is)
 {
     // Beware: A generic class name might be used here so we shouldn't use mDefinition
@@ -1412,6 +1432,16 @@ bool Creature::importFromStream(std::istream& is)
                 return false;
             mNbTurnsPrison = prisonTurns;
             mNbTurnsTorture = tortureTurns;
+            continue;
+        }
+        if(appearanceToken == "[Plague]")
+        {
+            int32_t plagueSeatId = -1;
+            std::string close;
+            if(!(is >> plagueSeatId >> close) || close != "[/Plague]")
+                return false;
+            mPlagueSick = true;
+            mPlagueSeatId = plagueSeatId;
             continue;
         }
         if(appearanceToken == "[WorkerJob]")
@@ -2496,7 +2526,8 @@ Creature* Creature::getCreatureFromPacket(GameMap* gameMap, ODPacket& is)
     return creature;
 }
 
-//! \brief Writes full creature data with private item slots masked for foreign seats.
+//! \brief Writes full creature data with private item slots masked for foreign seats; the Invisibility spell
+//! state follows the chicken state.
 void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
 {
     MovableGameEntity::exportToPacket(os, seat);
@@ -2548,6 +2579,8 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
         os << "none";
 
     os << isHexenHen();
+    // The Invisibility spell (only the own keeper and his allies get the creature while it runs)
+    os << isSpellInvisible();
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
@@ -2582,7 +2615,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mDragWorkerName;
 }
 
-//! \brief Reads full creature data, including the trailing rolled item slots.
+//! \brief Reads full creature data, including the trailing rolled item slots and the Invisibility spell state.
 void Creature::importFromPacket(ODPacket& is)
 {
     MovableGameEntity::importFromPacket(is);
@@ -2634,6 +2667,7 @@ void Creature::importFromPacket(ODPacket& is)
     }
 
     OD_ASSERT_TRUE(is >> mIsHexenHen);
+    OD_ASSERT_TRUE(is >> mSpellInvisible);
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
@@ -2913,7 +2947,8 @@ void Creature::dropCarriedEquipment()
 }
 
 //! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
-//! Spaces authoritative standing bodies and interrupts activities for urgent needs.
+//! Spaces authoritative standing bodies and interrupts activities for urgent needs. Runs the plague of a sick
+//! creature and sends it to a free infirmary cot.
 void Creature::doUpkeep()
 {
     upkeepGhostHunt();
@@ -3086,6 +3121,10 @@ void Creature::doUpkeep()
     // Off-map living creatures stay idle; delivered bodies still advance their own corpse phases.
     if(!getIsOnMap() && isAlive())
         return;
+
+    // The plague of a sick creature: damage, infection of the creatures around it and its look (also for a prisoner, a
+    // hero or a knocked out creature)
+    upkeepPlague();
 
     // The champion costs mana and leaves when the owner cannot pay it
     if(isAlive() && getDefinition()->isChampion() && handleChampionUpkeep())
@@ -3597,8 +3636,10 @@ void Creature::doUpkeep()
             mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek"))))
             servingNeed = true;
     }
+    // A sick creature on its way to the infirmary is not stopped by its needs
     if(!mActions.empty() && !isActionInList(CreatureActionType::searchToilet) &&
-       !isActionInList(CreatureActionType::useToilet) && needInterrupt(servingNeed))
+       !isActionInList(CreatureActionType::useToilet) && !isActionInList(CreatureActionType::searchInfirmary) &&
+       needInterrupt(servingNeed))
     {
         bool foodAvailable = false;
         bool drinkAvailable = false;
@@ -3623,6 +3664,9 @@ void Creature::doUpkeep()
         else
             pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
     }
+
+    // A sick creature walks to an infirmary with a free cot when it is not fighting
+    handlePlagueWalk();
 
     // The loopback variable allows creatures to begin processing a new
     // action immediately after some other action happens.
@@ -3685,9 +3729,12 @@ void Creature::decidePrioritaryAction()
     }
 }
 
+//! \brief Sends the creature to the heart defence while it is on; a patient and a sick creature on its way to the
+//! infirmary stay where they are.
 void Creature::handleHeartDefence()
 {
-    if(isActionInList(CreatureActionType::infirmaryRest) ||
+    // A patient and a sick creature on its way to a cot of the infirmary stay there
+    if(isActionInList(CreatureActionType::infirmaryRest) || isActionInList(CreatureActionType::searchInfirmary) ||
         (isActionInList(CreatureActionType::sleep) && getHP() * 100.0 < getMaxHp() *
             ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent")))
         return;
@@ -5636,7 +5683,8 @@ void Creature::checkLevelUp()
     mExp = 0.0;
 }
 
-//! \brief Writes changing creature data with public hands and owner-only private item slots.
+//! \brief Writes changing creature data with public hands and owner-only private item slots; the Invisibility
+//! spell state follows the chicken state.
 void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat) 
 {
     MovableGameEntity::exportToPacketForUpdate(os, seat);
@@ -5670,6 +5718,8 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
 
     os << seatPrisonId;
     os << isHexenHen();
+    // The Invisibility spell (only the own keeper and his allies get the creature while it runs)
+    os << isSpellInvisible();
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
@@ -5772,7 +5822,7 @@ void Creature::importSpaStateFromPacket(ODPacket& is)
 }
 
 //! \brief Reads the changing creature data sent by the server, the skill state last, and refreshes equipment
-//! presentation.
+//! presentation and the half transparent look of the Invisibility spell.
 void Creature::updateFromPacket(ODPacket& is)
 {
     // What changed in this update can become a post of the feed. The state is only copied
@@ -5850,6 +5900,7 @@ void Creature::updateFromPacket(ODPacket& is)
 
     OD_ASSERT_TRUE(is >> mIsHexenHen);
     updateHexenHenMesh();
+    OD_ASSERT_TRUE(is >> mSpellInvisible);
 
     importMoodFromPacket(is);
     importActivityFromPacket(is);
@@ -5872,6 +5923,8 @@ void Creature::updateFromPacket(ODPacket& is)
     clampGoldStolen();
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
+    // The body is half transparent while the Invisibility spell hides the creature from its enemies
+    updateSpellInvisibleLook();
 
     if(postSource)
     {
@@ -7988,9 +8041,14 @@ double Creature::getRawDamagePerSecond() const
         * ODApplication::turnsPerSecond;
 }
 
+//! \brief Uses an attack skill on the target. An attack on an enemy ends the Invisibility spell of the attacker.
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit)
 {
+    // The Invisibility spell lasts until the creature attacks an enemy or uses a skill against one
+    if((entityAttack.getSeat() != nullptr) && !entityAttack.getSeat()->isAlliedSeat(getSeat()))
+        endSpellInvisibility();
+
     // Keep ranged skills visually distinct, including shots at adjacent targets.
     const Ogre::Vector3& pos = getPosition();
     const Ogre::Vector3 target = entityAttack.getObjectType() == GameEntityType::creature ?
@@ -11498,6 +11556,8 @@ bool Creature::isFrozen() const
     return false;
 }
 
+//! \brief True (server side) while the Invisible skill or the Invisibility spell hides the creature from enemy
+//! creatures.
 bool Creature::isInvisible() const
 {
     if(!getIsOnServerMap())
@@ -11509,7 +11569,8 @@ bool Creature::isInvisible() const
             continue;
 
         const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
-        if((creatureEffect->mEffect->getEffectName() == "Invisible") &&
+        if(((creatureEffect->mEffect->getEffectName() == "Invisible") ||
+            (creatureEffect->mEffect->getEffectName() == CreatureEffectSpellInvisible::EFFECT_NAME)) &&
            (creatureEffect->mEffect->getNbTurnsEffect() > 0))
         {
             return true;
@@ -11517,6 +11578,241 @@ bool Creature::isInvisible() const
     }
 
     return false;
+}
+
+//! \brief True while the Invisibility spell hides the creature (server: running effect; client: state of the server).
+bool Creature::isSpellInvisible() const
+{
+    if(!getIsOnServerMap())
+        return mSpellInvisible;
+
+    for(const EntityParticleEffect* effect : mEntityParticleEffects)
+    {
+        if(effect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* creatureEffect = static_cast<const CreatureParticleEffect*>(effect);
+        if((creatureEffect->mEffect->getEffectName() == CreatureEffectSpellInvisible::EFFECT_NAME) &&
+           (creatureEffect->mEffect->getNbTurnsEffect() > 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+//! \brief Server side. Ends every running Invisibility spell effect of the creature; the Invisible skill stays.
+void Creature::endSpellInvisibility()
+{
+    if(!getIsOnServerMap())
+        return;
+
+    bool ended = false;
+    for(EntityParticleEffect* entityEffect : mEntityParticleEffects)
+    {
+        if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        CreatureParticleEffect* effect = static_cast<CreatureParticleEffect*>(entityEffect);
+        if((effect->mEffect->getEffectName() != CreatureEffectSpellInvisible::EFFECT_NAME) ||
+           (effect->mEffect->getNbTurnsEffect() <= 0.0))
+        {
+            continue;
+        }
+
+        effect->mEffect->mNbTurnsEffect = 0.0;
+        effect->mNbTurnsEffect = 0;
+        ended = true;
+    }
+
+    if(ended)
+    {
+        OD_LOG_INF("Invisibility spell ended on creature=" + getName());
+        mNeedFireRefresh = true;
+    }
+}
+
+//! \brief Sends the creature only to the seats allied to it while the Invisibility spell hides it.
+void Creature::notifySeatsWithVision(const std::vector<Seat*>& seats, NodeType nt)
+{
+    if(!getIsOnServerMap() || !isSpellInvisible())
+    {
+        MovableGameEntity::notifySeatsWithVision(seats, nt);
+        return;
+    }
+
+    std::vector<Seat*> allies;
+    for(Seat* seat : seats)
+    {
+        if(seat->isAlliedSeat(getSeat()))
+            allies.push_back(seat);
+    }
+    MovableGameEntity::notifySeatsWithVision(allies, nt);
+}
+
+//! \brief Client side. Shows the body half transparent while the Invisibility spell hides the creature.
+void Creature::updateSpellInvisibleLook()
+{
+    if(getIsOnServerMap() || !isMeshExisting())
+        return;
+
+    if(mSpellInvisibleShown == mSpellInvisible)
+        return;
+
+    mSpellInvisibleShown = mSpellInvisible;
+    RenderManager::getSingleton().rrSetCreatureOpacity(this, mSpellInvisible ? SPELL_INVISIBLE_OPACITY : 1.0f);
+}
+
+//! \brief Workers (magic beings) and the champion (it cannot be hurt) never get sick; a dead creature neither.
+bool Creature::canCatchPlague() const
+{
+    return isAlive() && !mDefinition->isWorker() && !mDefinition->isChampion();
+}
+
+//! \brief Server side. The creature gets sick when it can catch the plague and is not sick yet.
+bool Creature::catchPlague(int32_t sourceSeatId)
+{
+    if(!getIsOnServerMap() || mPlagueSick || !canCatchPlague())
+        return false;
+
+    OD_LOG_INF("Creature=" + getName() + " caught the plague");
+    mPlagueSick = true;
+    mPlagueSeatId = sourceSeatId;
+    mNeedFireRefresh = true;
+    return true;
+}
+
+//! \brief Server side. Cures the plague and ends the green look at once on the clients that see the creature.
+void Creature::curePlague()
+{
+    if(!mPlagueSick)
+        return;
+
+    OD_LOG_INF("Creature=" + getName() + " was cured of the plague");
+    mPlagueSick = false;
+    mPlagueSeatId = -1;
+    // The look is permanent on a client until it gets the ended effect, which the next turn deletes on the server:
+    // the clients are told at once, while the ended effect is still there
+    if(endParticleEffectsByScript(PLAGUE_SCRIPT) > 0)
+    {
+        mNeedFireRefresh = true;
+        fireCreatureRefreshIfNeeded();
+    }
+}
+
+//! \brief Server side. Damage, infection and look of a sick creature for one turn.
+void Creature::upkeepPlague()
+{
+    if(!mPlagueSick || !getIsOnServerMap() || !isAlive())
+        return;
+
+    // A creature that cannot be sick (a worker, the champion) does not keep the state
+    if(!canCatchPlague())
+    {
+        mPlagueSick = false;
+        mPlagueSeatId = -1;
+        return;
+    }
+
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return;
+
+    const ConfigManager& config = ConfigManager::getSingleton();
+
+    // The green look. It is renewed while the creature stands; a knock out removes every look of the creature, so the
+    // look comes back when it gets up
+    if(mKoTurnCounter == 0)
+    {
+        EntityParticleEffect* look = nullptr;
+        for(EntityParticleEffect* effect : mEntityParticleEffects)
+        {
+            if((effect->getEntityParticleEffectType() == EntityParticleEffectType::basic) &&
+               (effect->mScript == PLAGUE_SCRIPT) && (effect->mNbTurnsEffect > 0))
+            {
+                look = effect;
+            }
+        }
+        if(look == nullptr)
+        {
+            addParticleEffect(PLAGUE_SCRIPT, PLAGUE_LOOK_TURNS);
+            mNeedFireRefresh = true;
+        }
+        else if(look->mNbTurnsEffect <= PLAGUE_LOOK_TURNS / 2)
+        {
+            look->mNbTurnsEffect = PLAGUE_LOOK_TURNS;
+            mNeedFireRefresh = true;
+        }
+    }
+
+    // The infection: every creature within PlagueInfectRadius tiles (own, allied and enemy alike) may catch it. A
+    // patient on a cot is in the care of the infirmary and does not catch it
+    const int32_t radius = static_cast<int32_t>(config.getSpellConfigUInt32("PlagueInfectRadius"));
+    const double chance = config.getSpellConfigDouble("PlagueInfectChancePerTurn");
+    std::vector<Creature*> creatures = getGameMap()->getCreatures();
+    for(Creature* creature : creatures)
+    {
+        if((creature == this) || creature->isPlagueSick() || !creature->canCatchPlague() || !creature->getIsOnMap())
+            continue;
+
+        if(creature->isActionInList(CreatureActionType::infirmaryRest))
+            continue;
+
+        Tile* tile = creature->getPositionTile();
+        if(tile == nullptr)
+            continue;
+
+        if((std::abs(tile->getX() - myTile->getX()) > radius) || (std::abs(tile->getY() - myTile->getY()) > radius))
+            continue;
+
+        if(Random::Double(0.0, 1.0) < chance)
+            creature->catchPlague(mPlagueSeatId);
+    }
+
+    // The damage: a knocked out creature takes none, so the workers can carry it to the infirmary. A death by the
+    // plague is a normal death
+    if(mKoTurnCounter != 0)
+        return;
+
+    const Seat* plagueSeat = getGameMap()->getSeatById(mPlagueSeatId);
+    const double damage = SkillManager::getResearchValue(plagueSeat, SkillType::spellPlague,
+        config.getSpellConfigDouble("PlagueDamagePerTurn"), ResearchEffect::Damage);
+    takeDamage(nullptr, damage, 0.0, 0.0, 0.0, myTile, false);
+}
+
+//! \brief Server side. Sends a sick creature of a keeper to the nearest own infirmary with a free cot, unless it is
+//! fighting, held, carried, possessed, a prisoner, a chicken, leaving or rampaging.
+void Creature::handlePlagueWalk()
+{
+    if(!mPlagueSick || !getIsOnServerMap() || !isAlive() || isKo() || mIsInHand || mIsBeingDragged || isPossessed() ||
+       isInContainment() || isHexenHen() || !canCatchPlague())
+    {
+        return;
+    }
+
+    if(isActionInList(CreatureActionType::searchInfirmary) || isActionInList(CreatureActionType::infirmaryRest))
+        return;
+
+    // It does not walk there while it is fighting
+    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
+       isActionInList(CreatureActionType::flee))
+    {
+        return;
+    }
+
+    if(isActionInList(CreatureActionType::leaveDungeon) || isActionInList(CreatureActionType::rampage) ||
+       isActionInList(CreatureActionType::carryEntity))
+    {
+        return;
+    }
+
+    if(CreatureActionSearchInfirmary::findInfirmaryTile(*this) == nullptr)
+        return;
+
+    stopWalking();
+    clearActionQueue();
+    pushAction(Utils::make_unique<CreatureActionSearchInfirmary>(*this));
 }
 
 const std::string& Creature::getCurrentMeshName() const
@@ -11528,6 +11824,7 @@ const std::string& Creature::getCurrentMeshName() const
     return getDefinition()->getMeshName();
 }
 
+//! \brief Client side. Swaps the body for the chicken and back; the new body keeps the look of the Invisibility spell.
 void Creature::updateHexenHenMesh()
 {
     if(getIsOnServerMap() || !isMeshExisting() || !getIsOnMap())
@@ -11541,6 +11838,9 @@ void Creature::updateHexenHenMesh()
     RenderManager::getSingleton().rrChangeCreatureMesh(this);
     createMeshWeapons();
     RenderManager::getSingleton().rrScaleCreature(*this);
+    // The new body gets the half transparent look of the Invisibility spell again
+    mSpellInvisibleShown = false;
+    updateSpellInvisibleLook();
 }
 
 void Creature::handleHexenHenUpkeep()
@@ -12565,6 +12865,8 @@ bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& sk
 }
 }
 
+//! \brief Finds the enemy in front of a possessed creature for the skill; a creature hidden by the Invisibility spell is
+//! no target.
 bool Creature::possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkillData& skillData,
     GameEntity*& entityAttack, Tile*& tileAttack)
 {
@@ -12591,6 +12893,10 @@ bool Creature::possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkill
         {
             Creature* enemy = static_cast<Creature*>(entity);
             if(!enemy->isAlive())
+                continue;
+
+            // A creature hidden by the Invisibility spell cannot be targeted by its enemies
+            if(enemy->isSpellInvisible())
                 continue;
 
             // Workers attack workers only

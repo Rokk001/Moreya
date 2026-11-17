@@ -214,6 +214,9 @@ public:
     //! The script of the aura of a possessed creature, which ends with the possession
     static const std::string POSSESSION_AURA_SCRIPT;
 
+    //! The script of the sickly green look of a creature sick with the plague, which ends with the cure
+    static const std::string PLAGUE_SCRIPT;
+
     //! \brief Defaults of the dormitory settings for carrying and pulling hurt creatures to their bed. They are used
     //! when the key is missing in the room config (the name of each key is the one without the _DEFAULT suffix).
     //! Number of turns a pulled creature may take to slide into its bed (DormitoryWoundedDragLayTurns)
@@ -1697,9 +1700,38 @@ public:
     //! can neither move nor fight
     bool isFrozen() const;
 
-    //! \brief Returns true (server side) if the creature is made invisible by the Invisible skill.
-    //! Enemy creatures do not target an invisible creature
+    //! \brief Returns true (server side) if the creature is made invisible by the Invisible skill or the Invisibility
+    //! spell. Enemy creatures do not target an invisible creature
     bool isInvisible() const;
+
+    //! \brief Returns true if the creature is made invisible by the Invisibility spell: on the server side from the
+    //! running effect, on the client side from the state the server sent. Its enemies do not see it (the server does
+    //! not send it to them) and their creatures, aiming traps and spells cannot target it; tile traps still hit it.
+    bool isSpellInvisible() const;
+
+    //! \brief Server side. Ends the Invisibility spell on the creature; called when it starts an attack or uses a
+    //! skill against an enemy. The Invisible skill (Shadow Veil) is not touched.
+    void endSpellInvisibility();
+
+    //! \brief Only the seats allied to the creature get it while the Invisibility spell hides it; every seat that
+    //! sees the tile gets it otherwise (see GameEntity::notifySeatsWithVision).
+    void notifySeatsWithVision(const std::vector<Seat*>& seats, NodeType nt = NodeType::MTILES_NODE) override;
+
+    //! \brief True (server side) while the creature is sick with the plague of the Plague spell.
+    inline bool isPlagueSick() const
+    { return mPlagueSick; }
+
+    //! \brief True if the creature can get sick with the plague: a living creature that is no worker (workers are
+    //! magic beings) and no champion (it cannot be hurt).
+    bool canCatchPlague() const;
+
+    //! \brief Server side. Makes the creature sick with the plague when it can catch it and is not sick yet.
+    //! \param sourceSeatId The id of the seat that cast the plague (its research sets the damage), -1 when unknown.
+    //! \return true when the creature got sick by this call.
+    bool catchPlague(int32_t sourceSeatId);
+
+    //! \brief Server side. Cures the plague (the creature was admitted to an infirmary cot) and ends its green look.
+    void curePlague();
 
     //! \brief Name of the mesh to display (the chicken mesh while the creature is a chicken)
     const std::string& getCurrentMeshName() const;
@@ -2558,6 +2590,31 @@ private:
 
     //! \brief Used on client side. True if the mesh currently displayed is the chicken one
     bool                            mHexenHenMeshShown;
+
+    //! \brief Used on server side. True while the creature is sick with the plague (saved in the [Plague] block)
+    bool                            mPlagueSick = false;
+
+    //! \brief Used on server side. The seat that cast the plague the creature carries (-1 when unknown); its research
+    //! of the Plague spell sets the damage, and the creatures it infects carry the same seat
+    int32_t                         mPlagueSeatId = -1;
+
+    //! \brief Used on client side. True if the server told us that the Invisibility spell hides the creature
+    bool                            mSpellInvisible = false;
+
+    //! \brief Used on client side. True if the body is currently shown half transparent for the Invisibility spell
+    bool                            mSpellInvisibleShown = false;
+
+    //! \brief Server side. The turn of a sick creature: the plague damage, the infection of the creatures around it
+    //! and the green look. Prisoners and heroes stay sick; a knocked out creature takes no plague damage.
+    void upkeepPlague();
+
+    //! \brief Server side. A sick creature of a keeper that is not fighting walks to the nearest own infirmary with a
+    //! free cot it can be admitted to (CreatureActionSearchInfirmary).
+    void handlePlagueWalk();
+
+    //! \brief Client side. Shows the body half transparent while the server reports the Invisibility spell, solid
+    //! otherwise. Only the own keeper and his allies get the creature at all while it is invisible.
+    void updateSpellInvisibleLook();
 
     //! \brief Skills the creature can use
     std::vector<CreatureSkillData> mSkillData;

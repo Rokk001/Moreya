@@ -30,7 +30,7 @@ bool CreatureAction::isRoomWorkAction(CreatureActionType actionType)
         actionType == CreatureActionType::harvestHerbs || actionType == CreatureActionType::brewPotion;
 }
 
-//! \brief Returns the diagnostic name of existing and appended item/room actions.
+//! \brief Returns the diagnostic name of existing and appended item/room actions and of the walk to the infirmary.
 std::string CreatureAction::toString(CreatureActionType actionType)
 {
     switch (actionType)
@@ -147,6 +147,8 @@ std::string CreatureAction::toString(CreatureActionType actionType)
         return "searchSpa";
     case CreatureActionType::rampage:
         return "rampage";
+    case CreatureActionType::searchInfirmary:
+        return "searchInfirmary";
 
     default:
         assert(false);

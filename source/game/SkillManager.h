@@ -106,8 +106,10 @@ namespace ResearchEffect
     static const std::string Gold = "Gold";
     static const std::string PortalCooldown = "PortalCooldown";
     static const std::string RelaxTime = "RelaxTime";
-    //! Factor on the mood a prisoner loses per second in the prison.
+    //! Factor on the mood a prisoner loses per second in the prison, and on the mood the Curse spell takes.
     static const std::string MoodLoss = "MoodLoss";
+    //! Factor on the mood the Blessing spell gives.
+    static const std::string MoodGain = "MoodGain";
     //! Chance per second that a prisoner whose mood is broken betrays an enemy room.
     static const std::string BetrayChance = "BetrayChance";
     //! \brief Scales the configured herb growth time.

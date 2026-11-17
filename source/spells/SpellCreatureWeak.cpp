@@ -129,6 +129,7 @@ void SpellCreatureWeak::checkSpellCast(GameMap* gameMap, const InputManager& inp
 }
 
 //! \brief Casts the spell; the strength factor follows the weak research.
+//! A creature hidden by the Invisibility spell is no target.
 bool SpellCreatureWeak::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -159,6 +160,13 @@ bool SpellCreatureWeak::castSpell(GameMap* gameMap, Player* player, ODPacket& pa
     {
         // This can happen if the creature was alive on client side but is not since we received the message
         OD_LOG_WRN("creatureName=" + creatureName);
+        return false;
+    }
+
+    // The Invisibility spell hides the creature from the spells of its enemies
+    if(creature->isSpellInvisible())
+    {
+        OD_LOG_WRN("Creature=" + creatureName + " is hidden by the Invisibility spell");
         return false;
     }
 

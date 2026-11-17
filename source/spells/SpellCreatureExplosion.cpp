@@ -145,6 +145,7 @@ void SpellCreatureExplosion::checkSpellCast(GameMap* gameMap, const InputManager
 }
 
 //! \brief Casts the spell; the damage follows the creature explosion research.
+//! A creature hidden by the Invisibility spell is no target.
 bool SpellCreatureExplosion::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     uint32_t nbCreatures;
@@ -181,6 +182,13 @@ bool SpellCreatureExplosion::castSpell(GameMap* gameMap, Player* player, ODPacke
         {
             // This can happen if the creature was alive on client side but is not since we received the message
             OD_LOG_WRN("creatureName=" + creatureName);
+            continue;
+        }
+
+        // The Invisibility spell hides the creature from the spells of its enemies
+        if(creature->isSpellInvisible())
+        {
+            OD_LOG_WRN("Creature=" + creatureName + " is hidden by the Invisibility spell");
             continue;
         }
 

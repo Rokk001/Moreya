@@ -30,6 +30,8 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
+#include <algorithm>
+
 const std::string TrapLightningName = "Lightning";
 const std::string TrapLightningNameDisplay = "Lightning trap";
 const TrapType TrapLightning::mTrapType = TrapType::lightning;
@@ -132,11 +134,14 @@ TrapLightning::TrapLightning(GameMap* gameMap) :
     setMeshName("");
 }
 
-//! \brief Strikes one enemy in range; the damage follows the lightning trap research.
+//! \brief Strikes one enemy in range; the damage follows the lightning trap research. The trap aims, so it never
+//! strikes a creature hidden by the Invisibility spell.
 bool TrapLightning::shoot(Tile* tile)
 {
     std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(mRange));
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(visibleTiles, getSeat(), true);
+    enemyCreatures.erase(std::remove_if(enemyCreatures.begin(), enemyCreatures.end(), &Trap::isHiddenBySpell),
+        enemyCreatures.end());
     if(enemyCreatures.empty())
         return false;
 

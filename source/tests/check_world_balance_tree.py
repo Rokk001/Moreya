@@ -68,18 +68,24 @@ EXPECTED = [
     ("Spells", 1, "spellCreatureHaste", "CreatureHasteButton", ["roomLibrary"]),
     ("Spells", 1, "spellEyeEvil", "SpellEyeEvilButton", ["roomLibrary"]),
     ("Spells", 2, "spellCreatureDefense", "CreatureDefenseButton", ["spellCreatureHeal"]),
+    ("Spells", 2, "spellBlessing", "BlessingButton", ["spellCreatureHeal"]),
     ("Spells", 2, "spellCreatureStrength", "CreatureStrengthButton", ["spellCreatureHaste"]),
     ("Spells", 2, "spellCallToWar", "CallToWarButton", ["spellCreatureHaste"]),
     ("Spells", 2, "spellCreatureSlow", "CreatureSlowButton", ["spellEyeEvil"]),
     ("Spells", 2, "spellLightning", "LightningButton", ["spellEyeEvil"]),
+    ("Spells", 2, "spellBreakWall", "BreakWallButton", ["spellEyeEvil"]),
+    ("Spells", 3, "spellInvisibility", "InvisibilityButton", ["spellCreatureHaste"]),
+    ("Spells", 3, "spellCurse", "CurseButton", ["spellCreatureSlow"]),
     ("Spells", 3, "spellCreatureWeak", "CreatureWeakButton", ["spellCreatureSlow"]),
     ("Spells", 3, "spellCreatureExplosion", "CreatureExplosionButton", ["spellLightning"]),
     ("Spells", 3, "spellPossess", "PossessButton", ["spellEyeEvil"]),
     ("Spells", 3, "spellCreateGold", "CreateGoldButton", ["roomTreasury"]),
+    ("Spells", 4, "spellPlague", "PlagueButton", ["spellCreatureWeak"]),
     ("Spells", 4, "spellTremor", "TremorButton", ["spellCreatureExplosion"]),
     ("Spells", 4, "spellInferno", "InfernoButton", ["spellCreatureExplosion"]),
     ("Spells", 4, "spellDefector", "DefectorButton", ["spellPossess"]),
     ("Spells", 4, "spellHexenHen", "HexenHenButton", ["spellCreatureWeak"]),
+    ("Spells", 4, "spellRevealEnemy", "RevealEnemyButton", ["spellEyeEvil"]),
     ("Spells", 4, "keeperManaFlow", "ManaFlowButton", ["roomTemple"]),
     ("Spells", 3, "spellSunthornCultivation", "SunthornButton", ["roomAlchemyLab"]),
 ]
@@ -88,7 +94,8 @@ FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary"
 TAB_TOTALS = {tab: sum((0 if name in FREE_LEVEL_ONE else TIER_COST[tier]) + 6 * TIER_COST[tier]
     for entry_tab, tier, name, button, parents in EXPECTED if entry_tab == tab)
     for tab in ("Rooms", "Traps", "Spells")}
-assert TAB_TOTALS == {"Rooms": 81400, "Traps": 82250, "Spells": 84950}
+# The six spells of the spells review add 2 x 250, 2 x 600 and 2 x 1500 points for level 1, times 7 for all levels
+assert TAB_TOTALS == {"Rooms": 81400, "Traps": 82250, "Spells": 117850}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),
@@ -98,7 +105,9 @@ KEEPERS = {
     "tavernBeer": ("BeerButton", "Tavern: Beer", "Rooms"),
 }
 
-assert len(EXPECTED) == 65, "the tree has 65 entries"
+assert len(EXPECTED) == 71, "the tree has 71 entries"
+# The rows of the spells tab: tier I 4, tiers II to IV 7 each (the six spells of the spells review included)
+assert [sum(1 for entry in EXPECTED if entry[0] == "Spells" and entry[1] == tier) for tier in (1, 2, 3, 4)] == [4, 7, 7, 7]
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree
