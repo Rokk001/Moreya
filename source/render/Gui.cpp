@@ -2257,10 +2257,11 @@ void Gui::setUserScalePercent(float scalePercent)
     applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
 }
 
-//! \brief Fits every editor construction button into two rows on its tab page.
+//! \brief Fits every editor construction button into two rows on its tab page (rooms and traps; the editor has no
+//! spells tab).
 void Gui::arrangeEditorActionButtons(CEGUI::Window* editorSheet)
 {
-    const char* pages[] = {"MainTabControl/Rooms", "MainTabControl/Traps", "MainTabControl/Spells"};
+    const char* pages[] = {"MainTabControl/Rooms", "MainTabControl/Traps"};
     const float scale = getLayoutScale();
     if(scale <= 0.0f)
         return;

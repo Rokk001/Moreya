@@ -2712,8 +2712,9 @@ void EditorMode::refreshGuiSkill()
     SkillManager::listAllSkills([&](const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
     {
-        // A keeper skill has no cast button (its name is empty)
-        if(!castButtonName.empty())
+        // A keeper skill has no cast button (its name is empty), and the editor has no spells tab, so the spells'
+        // cast buttons are not in its sheet
+        if(!castButtonName.empty() && guiSheet->isChild(castButtonName))
             guiSheet->getChild(castButtonName)->show();
     });
 
