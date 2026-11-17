@@ -68,7 +68,8 @@ def layout_button():
     p = props(button)
     assert button.get("type") == "OD/GameTabButton"
     assert p["TooltipText"] == "Room Manager"
-    assert p["NormalImage"] == "OpenDungeonsIcons/NavigationRooms"
+    # Own painted Room Manager icon (INGAME-QS-10 K12b); the Rooms tab keeps NavigationRooms.
+    assert p["NormalImage"] == "NavigationRoomManager/Icon"
     assert p["Visible"] == "False"
     assert p["NavigationFrame"] == "True" and p["AlwaysOnTop"] == "True"
     assert "Text" not in p

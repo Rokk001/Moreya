@@ -246,6 +246,9 @@ public:
     
     RenderManager*       mRenderManager;        
 private:
+    //! \brief Steps the return-to-menu test run (RunLevelTest::onReturnToMenuFrame) at the start of a frame and
+    //! leaves the game or editor, or asks for the main menu, when the run says so.
+    void stepReturnToMenuTest(Ogre::Real seconds);
 
     int32_t lastSecondFrameRenderingQueued;
 

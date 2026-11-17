@@ -126,7 +126,18 @@ public:
     
     //! \brief Initialize the renderer when a new game (Game or Editor) is launched
     void initGameRenderer(GameMap* gameMap);
+    //! \brief Releases the visuals of the running game; afterwards no game render target is drawn any more.
     void stopGameRenderer(GameMap*);
+
+    //! \brief Takes the depth pre-pass render target ("smokeTexture") out of the frame loop, then destroys its
+    //! camera "RenderToTexture", the camera node and the texture. Safe to call when none of them exists.
+    //! The viewport is removed before its camera: a viewport left on a destroyed camera is drawn with freed
+    //! memory by the next frame (crash in SceneManager::findLightsAffectingFrustum on the return to the menu).
+    void destroySmokeRenderTarget();
+
+    //! \brief True if the render target the frame loop updates has a viewport whose camera is not a live camera
+    //! of the scene manager. Compares pointers only, so it never touches a destroyed camera.
+    bool hasRenderTargetWithDestroyedCamera() const;
 
     //! \brief starts the compositor compositorName.
     void triggerCompositor(const std::string& compositorName);

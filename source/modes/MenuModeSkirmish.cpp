@@ -31,6 +31,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/ResourceManager.h"
 #include "game/SandboxProgress.h"
+#include "gamemap/LevelPreview.h"
 
 #include <CEGUI/CEGUI.h>
 #include "boost/filesystem.hpp"
@@ -44,10 +45,20 @@ bool MenuModeSkirmish::sStartWithSandboxLevels = false;
 //! \brief The index of the level type listing the sandbox levels
 static const size_t LEVEL_TYPE_SANDBOX = 4;
 
+//! \brief The CEGUI texture and image that hold the map preview of the selected level
+static const std::string MAP_PREVIEW_TEXTURE = "SkirmishMapPreviewTexture";
+static const std::string MAP_PREVIEW_IMAGE = "SkirmishMapPreviewImage";
+
 //! \brief Orders two level files by their file name, whatever the folder
 static bool compareLevelFileNames(const std::string& first, const std::string& second)
 {
     return boost::filesystem::path(first).filename().string() < boost::filesystem::path(second).filename().string();
+}
+
+//! \brief The colour of a seat colour id as the game draws the seats (config/global.cfg, [SeatColors])
+static Ogre::ColourValue seatColourFromConfig(const std::string& colourId)
+{
+    return ConfigManager::getSingleton().getColorFromId(colourId);
 }
 
 MenuModeSkirmish::MenuModeSkirmish(ModeManager* modeManager):
@@ -96,6 +107,13 @@ MenuModeSkirmish::MenuModeSkirmish(ModeManager* modeManager):
         window->getChild(Gui::SKM_LIST_LEVELS)->subscribeEvent(
             CEGUI::Listbox::EventMouseClick,
             CEGUI::Event::Subscriber(&MenuModeSkirmish::updateDescription, this)
+        )
+    );
+    // Every change of the selected level, by mouse or keyboard, shows the map of the newly selected level
+    addEventConnection(
+        window->getChild(Gui::SKM_LIST_LEVELS)->subscribeEvent(
+            CEGUI::Listbox::EventSelectionChanged,
+            CEGUI::Event::Subscriber(&MenuModeSkirmish::updateMapPreview, this)
         )
     );
     addEventConnection(
@@ -258,6 +276,8 @@ bool MenuModeSkirmish::updateFilesList(const CEGUI::EventArgs&)
     }
 
     updateDescription();
+    // The new list has no selection yet, so the preview of the previous list is hidden
+    updateMapPreview();
     return true;
 }
 
@@ -325,5 +345,61 @@ bool MenuModeSkirmish::updateDescription(const CEGUI::EventArgs&)
     std::string description = mDescriptionList[id];
     descTxt->setText(reinterpret_cast<const CEGUI::utf8*>(description.c_str()));
 
+    return true;
+}
+
+//! \brief Draws the map of the selected level file in the minimap colours into the preview window, or hides the
+//! window when no level is selected or its tiles cannot be read.
+bool MenuModeSkirmish::updateMapPreview(const CEGUI::EventArgs&)
+{
+    CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::skirmishMenu);
+    CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>(mainWin->getChild(Gui::SKM_LIST_LEVELS));
+    CEGUI::Window* previewWindow = mainWin->getChild(Gui::SKM_MAP_PREVIEW);
+
+    std::string fileName;
+    CEGUI::ListboxItem* selItem = levelSelectList->getFirstSelectedItem();
+    if((selItem != nullptr) && (selItem->getID() < mFilesList.size()))
+        fileName = mFilesList[selItem->getID()];
+
+    // The same level stays shown as it is
+    if((fileName == mPreviewFile) && (previewWindow->isVisible() == !fileName.empty()))
+        return true;
+
+    mPreviewFile.clear();
+    LevelPreview preview;
+    if(fileName.empty() || !preview.loadFromFile(fileName))
+    {
+        if(!fileName.empty())
+            OD_LOG_WRN("No map preview, the tiles of the level could not be read: " + fileName);
+        previewWindow->hide();
+        return true;
+    }
+
+    uint32_t width = 0;
+    uint32_t height = 0;
+    preview.getPictureSize(width, height);
+    std::vector<uint8_t> pixels;
+    LevelPreview::SeatColourFunction seatColour = seatColourFromConfig;
+    preview.drawPicture(width, height, seatColour, pixels);
+
+    // One texture and one image are reused for every level; loading new pixels also sets the new size
+    CEGUI::Renderer* renderer = CEGUI::System::getSingleton().getRenderer();
+    CEGUI::Texture& texture = renderer->isTextureDefined(MAP_PREVIEW_TEXTURE) ?
+        renderer->getTexture(MAP_PREVIEW_TEXTURE) : renderer->createTexture(MAP_PREVIEW_TEXTURE);
+    texture.loadFromMemory(pixels.data(), CEGUI::Sizef(static_cast<float>(width), static_cast<float>(height)),
+        CEGUI::Texture::PF_RGBA);
+
+    CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+    CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.isDefined(MAP_PREVIEW_IMAGE) ?
+        images.get(MAP_PREVIEW_IMAGE) : images.create("BasicImage", MAP_PREVIEW_IMAGE));
+    image.setTexture(&texture);
+    image.setArea(CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)));
+
+    // The window keeps the shape of the map inside the free area
+    previewWindow->setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
+    previewWindow->setProperty("Image", MAP_PREVIEW_IMAGE);
+    previewWindow->show();
+    previewWindow->invalidate();
+    mPreviewFile = fileName;
     return true;
 }

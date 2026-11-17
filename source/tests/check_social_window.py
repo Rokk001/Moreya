@@ -81,8 +81,13 @@ button = hud[hud.index('name="SocialButton"'):]
 button = button[:button.index('</Window>')]
 check('{{0,148},{1,-224},{0,188},{1,-184}}' in button, 'button is not in the free slot')
 check('ContextHelp' in button and 'TooltipText' in button, 'tooltip and context help')
-icon = re.search(r'NormalImage" value="OpenDungeonsIcons/(\w+)"', button)
-check(icon is not None and 'name="%s"' % icon[1] in read('gui/ODIcons.imageset'), 'button icon must exist')
+# The button shows the Dungeonbook icon of its own imageset (INGAME-QS-10 K12b); the imageset is registered in the
+# scheme and defines the image the button names.
+icon = re.search(r'NormalImage" value="(\w+)/(\w+)"', button)
+check(icon is not None and icon[1] == 'NavigationDungeonbook', 'button uses the Dungeonbook icon')
+check('<Imageset filename="NavigationDungeonbook.imageset" name="NavigationDungeonbook" />' in read('gui/ODSkin.scheme'),
+      'Dungeonbook imageset registered')
+check('name="%s"' % icon[2] in read('gui/NavigationDungeonbook.imageset'), 'button icon must exist')
 
 gamemode = read('source/modes/GameMode.cpp')
 check(gamemode.count('case OIS::KC_B:') == 1, 'one B case in GameMode')

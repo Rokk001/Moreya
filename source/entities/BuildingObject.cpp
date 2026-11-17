@@ -121,13 +121,15 @@ void BuildingObject::addParticleEffect(const std::string& effectScript, uint32_t
     mEntityParticleEffects.push_back(effect);
 }
 
-//! \brief Builds a hollow brass outlet below the inspection glass, with a dark bore and visible green liquid.
+//! \brief Builds a hollow brass outlet below the inspection glass, with a dark bore and visible green liquid. Every part
+//! uses the cauldron's own brass, iron and ectoplasm materials from the Graphics resource group (Ogre's default group
+//! does not hold them and would draw the outlet white) and unrolls its texture over the surface, so no face is flat.
 static void buildGhostCauldronOutlet(Ogre::ManualObject& outlet)
 {
     const size_t sides=24;
     const float stations[]={0.48f,0.56f,0.59f,0.89f,0.94f};
     const float radii[]={0.20f,0.20f,0.14f,0.14f,0.18f};
-    outlet.begin("GhostBrass",Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    outlet.begin("GhostBrass",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");
     for(size_t ring=0;ring<5;++ring)
         for(size_t side=0;side<=sides;++side)
         {
@@ -142,12 +144,13 @@ static void buildGhostCauldronOutlet(Ogre::ManualObject& outlet)
             const Ogre::uint32 a=static_cast<Ogre::uint32>(ring*(sides+1)+side),b=a+1,c=a+sides+1,d=c+1;
             outlet.triangle(a,c,b);outlet.triangle(b,c,d);
         }
-    // The annular end face leaves the bore open, rather than capping the spout with solid metal.
+    // The annular end face leaves the bore open, rather than capping the spout with solid metal. Its inner edge continues
+    // the brass texture by the width of the face (0.18 - 0.10).
     for(size_t side=0;side<=sides;++side)
     {
         const float angle=Ogre::Math::TWO_PI*static_cast<float>(side)/static_cast<float>(sides);
         outlet.position(0.10f*std::cos(angle),0.94f,0.28f+0.10f*std::sin(angle));
-        outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(0.0f,0.0f);
+        outlet.normal(Ogre::Vector3::UNIT_Y);outlet.textureCoord(static_cast<float>(side)/sides,0.94f+0.08f);
     }
     for(size_t side=0;side<sides;++side)
     {
@@ -155,13 +158,14 @@ static void buildGhostCauldronOutlet(Ogre::ManualObject& outlet)
         outlet.triangle(a,c,b);outlet.triangle(b,c,d);
     }
     outlet.end();
-    outlet.begin("GhostIron",Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    outlet.begin("GhostIron",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");
     for(size_t ring=0;ring<2;++ring)
         for(size_t side=0;side<=sides;++side)
         {
             const float angle=Ogre::Math::TWO_PI*static_cast<float>(side)/static_cast<float>(sides);
             outlet.position(0.10f*std::cos(angle),ring==0?0.60f:0.94f,0.28f+0.10f*std::sin(angle));
-            outlet.normal(-std::cos(angle),0.0f,-std::sin(angle));outlet.textureCoord(0.0f,0.0f);
+            outlet.normal(-std::cos(angle),0.0f,-std::sin(angle));
+            outlet.textureCoord(static_cast<float>(side)/sides,ring==0?0.60f:0.94f);
         }
     for(size_t side=0;side<sides;++side)
     {
@@ -171,7 +175,7 @@ static void buildGhostCauldronOutlet(Ogre::ManualObject& outlet)
     outlet.end();
     // A wet green tongue at the bottom of the opening identifies the ectoplasm output even while idle.
     // Continue below the lip so the output is visible from above instead of hiding entirely inside the bore.
-    outlet.begin("GhostCauldronEctoplasm",Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    outlet.begin("GhostCauldronEctoplasm",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");
     outlet.position(-0.08f,0.65f,0.22f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.1f,0.1f);
     outlet.position(0.08f,0.65f,0.22f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.9f,0.1f);
     outlet.position(-0.08f,0.97f,0.20f);outlet.normal(Ogre::Vector3::UNIT_Z);outlet.textureCoord(0.1f,0.9f);

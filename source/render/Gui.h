@@ -129,11 +129,8 @@ public:
     //! WindowStats.layout, registered for scaling. The caller adds it to the root window.
     CEGUI::Window* createInfoWindow(const std::string& name);
 
-    //! \brief Creates the fixed size creature profile window from WindowCreatureProfile.layout,
-    //! registered for scaling. The caller adds it to the root window.
-    CEGUI::Window* createCreatureProfileWindow(const std::string& name);
     //! \brief Loads the profile page (portrait, texts, bars) as the child "Content" of the given holder window.
-    //! The page is shared by the creature card and the Dungeonbook, see Creature::fillProfilePage.
+    //! The Dungeonbook shows it on its profile page, see Creature::fillProfilePage.
     CEGUI::Window* createCreatureProfilePage(CEGUI::Window* holder);
     //! \brief Places equipment beside the portrait, attributes below, then social rows and posts, each as
     //! high as its wrapped text, leaving no gap between short rows. Returns the bottom edge of the
@@ -226,6 +223,8 @@ public:
     static const std::string SKM_LIST_LEVEL_TYPES;
     static const std::string SKM_LIST_LEVELS;
     static const std::string SKM_CHECK_RELATIONSHIPS;
+    //! \brief The picture of the map of the selected level in the skirmish level selection
+    static const std::string SKM_MAP_PREVIEW;
     static const std::string MPM_TEXT_LOADING;
     static const std::string MPM_BUTTON_SERVER;
     static const std::string MPM_BUTTON_CLIENT;

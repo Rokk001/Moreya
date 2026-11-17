@@ -296,7 +296,11 @@ for visual in ('merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'infirmaryRoo
     assert 'tileSeatId = getId();' in exported[visual], visual
 
 # The minimap flashes a room only while its owner is unknown (the colours of an unowned room)
+# The minimap takes the room colour from MiniMapColours::terrainColour, shared with the skirmish map preview, and
+# passes whether the tile has an owner and whether that owner is the rogue seat
 minimap = strip_comments(read('source/gamemap/MiniMap.cpp'))
 colour = body(minimap, 'MiniMap::TileColour MiniMap::colourFromTile(')
-assert 'if(room && (owner == nullptr || owner->isRogueSeat()))' in colour and 'result.animated = true;' in colour
+assert 'MiniMapColours::terrainColour(visual, owner != nullptr, (owner != nullptr) && owner->isRogueSeat(),' in colour
+terrain = body(strip_comments(read('source/gamemap/MiniMapColours.cpp')), 'MiniMapTileColour MiniMapColours::terrainColour(')
+assert 'if(room && (!hasOwner || rogueOwner))' in terrain and 'result.animated = true;' in terrain
 print('owner findings 991 ok')

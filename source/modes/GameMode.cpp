@@ -1309,7 +1309,39 @@ void GameMode::sendPendingHandDropRequest(bool dropAllCreatures)
     mModeManager->getInputManager().mCommandState = previousState;
 }
 
-void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
+//! \brief The entity as a creature of the Dungeonbook roster, else null.
+Creature* GameMode::getDungeonbookCreature(GameEntity* entity) const
+{
+    if((entity == nullptr) || (entity->getObjectType() != GameEntityType::creature))
+        return nullptr;
+
+    Player* player = mGameMap->getLocalPlayer();
+    if((player == nullptr) || (player->getSeat() == nullptr))
+        return nullptr;
+
+    // The same creatures the roster of the book holds: living creatures of the own or an allied keeper
+    Creature* creature = static_cast<Creature*>(entity);
+    const Seat* owner = creature->getSeat();
+    if((owner == nullptr) || (owner->getPlayer() == nullptr) || !player->getSeat()->isAlliedSeat(owner))
+        return nullptr;
+
+    if(!creature->isAlive())
+        return nullptr;
+
+    return creature;
+}
+
+//! \brief Opens the Dungeonbook on the page of the creature; does nothing for null.
+void GameMode::openDungeonbookOnCreature(Creature* creature)
+{
+    if(creature == nullptr)
+        return;
+
+    showSocialWindow(creature->getName());
+}
+
+//! \brief Opens the Dungeonbook on the book creature nearest to the pointer ray, or the tile debug window.
+void GameMode::openDungeonbookUnderPointer(const OIS::MouseEvent& arg)
 {
     InputManager& inputManager = mModeManager->getInputManager();
 
@@ -1341,7 +1373,7 @@ void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
             tiles.push_back(tile);
     }
 
-    GameEntity* closestEntity = nullptr;
+    Creature* closestCreature = nullptr;
     float closestDist = MIDDLE_CLICK_PICK_RADIUS;
     for(Tile* tile : tiles)
     {
@@ -1349,23 +1381,24 @@ void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
         tile->fillWithEntities(entities, SelectionEntityWanted::any, mGameMap->getLocalPlayer());
         for(GameEntity* entity : entities)
         {
-            if(!entity->canDisplayStatsWindow(mGameMap->getLocalPlayer()->getSeat()))
+            Creature* creature = getDungeonbookCreature(entity);
+            if(creature == nullptr)
                 continue;
 
-            Ogre::Vector3 body = entity->getPosition();
+            Ogre::Vector3 body = creature->getPosition();
             body.z += MIDDLE_CLICK_BODY_HEIGHT;
             const float dist = ray.getDirection().crossProduct(body - ray.getOrigin()).length();
             if(dist >= closestDist)
                 continue;
 
             closestDist = dist;
-            closestEntity = entity;
+            closestCreature = creature;
         }
     }
 
-    if(closestEntity != nullptr)
+    if(closestCreature != nullptr)
     {
-        closestEntity->createStatsWindow();
+        openDungeonbookOnCreature(closestCreature);
         return;
     }
 
@@ -1489,7 +1522,7 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         return true;
     }
 
-    // The stats window opens when the middle button is released without the pointer having moved,
+    // The Dungeonbook opens when the middle button is released without the pointer having moved,
     // so that rotating the camera over creatures does not open windows (see mouseReleased)
     if (id == OIS::MB_Middle)
         return true;
@@ -1670,15 +1703,15 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 
     if(id == OIS::MB_Middle)
     {
-        // A middle click that did not move is a request for the stats window. mMMouseDown is only set when
-        // the press was on the map, so a press on a GUI window never gets here as a click
+        // A middle click that did not move opens the Dungeonbook on the creature under the pointer. mMMouseDown is
+        // only set when the press was on the map, so a press on a GUI window never gets here as a click
         float maxDrag = MIDDLE_CLICK_MAX_DRAG * std::max(1.0f, static_cast<float>(arg.state.height) / MIDDLE_CLICK_REFERENCE_DISPLAY_HEIGHT);
         bool isClick = inputManager.mMMouseDown && (mMiddleDragDistance <= maxDrag);
         inputManager.mMMouseDown = false;
         ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);
         ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateY, 0.0);
         if(isClick && isConnected() && (mGameMap->getLocalPlayer() != nullptr))
-            openStatsWindowUnderPointer(arg);
+            openDungeonbookUnderPointer(arg);
     }
 
     // Right mouse button up
@@ -2705,6 +2738,12 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Runs the quit dialog's Yes handler, so the test run takes the player's own way out of the game.
+void GameMode::quitToMenu()
+{
+    onClickYesQuitMenu(CEGUI::EventArgs());
+}
+
 bool GameMode::showObjectivesWindow(const CEGUI::EventArgs&)
 {
     closeAllTopWindows();
@@ -2832,7 +2871,7 @@ bool GameMode::changeInfirmaryThreshold(const CEGUI::EventArgs& args)
     return true;
 }
 
-//! \brief Opens the selected patient's existing stats window.
+//! \brief Opens the Dungeonbook on the selected patient.
 bool GameMode::selectInfirmaryPatient(const CEGUI::EventArgs&)
 {
     CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/PatientList"));
@@ -2840,12 +2879,11 @@ bool GameMode::selectInfirmaryPatient(const CEGUI::EventArgs&)
     if(item == nullptr || item->getID() >= mInfirmaryPatientNames.size())
         return true;
     Creature* creature = mGameMap->getCreature(mInfirmaryPatientNames[item->getID()]);
-    if(creature != nullptr)
-        creature->createStatsWindow();
+    openDungeonbookOnCreature(getDungeonbookCreature(creature));
     return true;
 }
 
-//! \brief Applies the server's settings and rebuilds the open patient table.
+//! \brief Applies the server's settings and rebuilds the open patient table with portrait, health bar and remaining time.
 void GameMode::receiveInfirmaryWindow(ODPacket& packet, bool patients)
 {
     OD_ASSERT_TRUE(packet >> mInfirmaryPayer >> mInfirmaryThreshold >> mInfirmaryHealOn);
@@ -2881,8 +2919,10 @@ void GameMode::receiveInfirmaryWindow(ODPacket& packet, bool patients)
         const float fraction = maxHp <= 0.0 ? 0.0f : static_cast<float>(hp / maxHp);
         const std::string seconds = remaining < 0.0 ? "-" : Helper::toString(static_cast<uint32_t>(std::ceil(remaining))) + " s";
         list->addRow();
-        RoomManagerListItem* item = new RoomManagerListItem(Helper::toString(static_cast<int32_t>(fraction * 100)) + " %   " + seconds,
+        // As in the chosen mockup: portrait, health bar with the percentage, hourglass and remaining time at the right.
+        RoomManagerListItem* item = new RoomManagerListItem(Helper::toString(static_cast<int32_t>(fraction * 100)) + " %",
             row, images, fraction, false, 0xFFB33030);
+        item->setSuffix(roomManagerImage("OpenDungeonsIcons/HourglassIcon"), seconds);
         item->setTooltipText(profile.getFullName());
         list->setItem(item, 0, row);
     }
@@ -2922,7 +2962,7 @@ bool GameMode::cycleCasinoPayout(const CEGUI::EventArgs& args)
     return true;
 }
 
-//! \brief Displays the validated keeper payout on the casino page.
+//! \brief Displays the validated keeper payout on the casino page: the chosen picture gets the bright gold frame.
 void GameMode::setCasinoPayoutShown(int tileX, int tileY, uint32_t level)
 {
     if((tileX != mCasinoX) || (tileY != mCasinoY))
@@ -2935,6 +2975,9 @@ void GameMode::setCasinoPayoutShown(int tileX, int tileY, uint32_t level)
     mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/CasinoPayoutButton")->setProperty("NormalTextColour", level == static_cast<uint32_t>(CasinoPayout::smiles) ? "FFF2C860" : "FF808080");
     mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/CasinoPayoutButton/Image")->setProperty("FrameEnabled", level == static_cast<uint32_t>(CasinoPayout::smiles) ? "True" : "False");
     mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/MoneyButton/Image")->setProperty("FrameEnabled", level == static_cast<uint32_t>(CasinoPayout::money) ? "True" : "False");
+    // The bright gold frame and glow of the chosen mockup mark only the chosen picture.
+    mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/CasinoPayoutButton/Selected")->setVisible(level == static_cast<uint32_t>(CasinoPayout::smiles));
+    mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/MoneyButton/Selected")->setVisible(level == static_cast<uint32_t>(CasinoPayout::money));
 
 }
 
@@ -2974,15 +3017,25 @@ bool GameMode::cycleTavernPayer(const CEGUI::EventArgs&)
     return true;
 }
 
-//! \brief Shows the answer of the server about the tavern the window is open for: payer and beer.
+//! \brief Shows the answer of the server about the tavern the window is open for: payer and the drink served now. Beer is
+//! served once it is researched, water while it is not; the served drink has the tick, a locked beer the lock.
 void GameMode::setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool beerResearched, double beerPrice, bool hasMinimumBlock)
 {
     if((tileX != mTavernX) || (tileY != mTavernY))
         return;
 
-    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/BeerText")->setText(beerResearched ? Helper::toString(static_cast<int32_t>(beerPrice + 0.5)) : "Locked");
-    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/BeerLock")->setVisible(!beerResearched);
-    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/Beer")->setAlpha(beerResearched ? 1.0f : 0.4f);
+    CEGUI::Window* page = mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage");
+    page->getChild("BeerSlot/BeerLock")->setVisible(!beerResearched);
+    page->getChild("BeerSlot/Beer")->setAlpha(beerResearched ? 1.0f : 0.4f);
+    page->getChild("BeerSlot/Beer")->setProperty("ImageColours", beerResearched ? "FFFFFFFF" : "FF707070");
+    page->getChild("BeerSlot/BeerServed")->setVisible(beerResearched);
+    page->getChild("WaterSlot/WaterServed")->setVisible(!beerResearched);
+    page->getChild("BeerSlot")->setProperty("FrameColours", beerResearched ? "FFFFE08A" : "FF6E5530");
+    page->getChild("WaterSlot")->setProperty("FrameColours", beerResearched ? "FF6E5530" : "FFFFE08A");
+    page->getChild("WaterSlot/Water")->setAlpha(beerResearched ? 0.55f : 1.0f);
+    page->getChild("BeerSlot")->setTooltipText(beerResearched ?
+        "Beer: " + Helper::toString(static_cast<int32_t>(beerPrice + 0.5)) + " gold" : std::string("Beer: locked"));
+    page->getChild("WaterSlot")->setTooltipText("Water");
     setTavernPayerShown(tileX, tileY, payer);
 }
 
@@ -3321,7 +3374,8 @@ bool GameMode::moveTrapProductionOrder(bool earlier)
     return true;
 }
 
-//! \brief Updates the refresh trap production queue controls in the Room Manager.
+//! \brief Updates the refresh trap production queue controls in the Room Manager: framed workshop rows with pictures
+//! and bar, priority tiles with the number above the trap.
 void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
 {
     CEGUI::MultiColumnList* orders = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders"));
@@ -3347,9 +3401,10 @@ void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
         const TrapProductionOrder& order = data.orders[index];
         if(index % 4 == 0) orders->addRow();
         std::vector<const CEGUI::Image*> pictures(1, roomManagerTrapImage(order.type));
-        RoomManagerListItem* item = new RoomManagerListItem(Helper::toString(index + 1) + "   " +
-            Helper::toString(order.needed), static_cast<uint32_t>(index), pictures, -1.0f, true);
-        item->setTooltipText(TrapManager::getTrapReadableName(order.type));
+        // The tile shows only its priority number above the trap; the missing count stays in the tooltip.
+        RoomManagerListItem* item = new RoomManagerListItem(Helper::toString(index + 1),
+            static_cast<uint32_t>(index), pictures, -1.0f, true);
+        item->setTooltipText(TrapManager::getTrapReadableName(order.type) + " (" + Helper::toString(order.needed) + ")");
         orders->setItem(item, static_cast<uint32_t>(index % 4), static_cast<uint32_t>(index / 4));
         if(order.name == selectedName) orders->setItemSelectState(item, true);
     }
@@ -3360,12 +3415,12 @@ void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
         pictures.push_back(roomManagerImage("OpenDungeonsIcons/WorkshopButton"));
         pictures.push_back(roomManagerTrapImage(workshop.type));
         const float progress = workshop.required > 0 ? static_cast<float>(workshop.points) / workshop.required : 0.0f;
-        RoomManagerListItem* item = new RoomManagerListItem(workshop.type == TrapType::nullTrapType ? "Idle" :
-            Helper::toString(workshop.points) + " / " + Helper::toString(workshop.required), 0, pictures, progress);
-        item->setTooltipText(workshop.name);
+        // Workshop and trap pictures with the bar only, as in the chosen mockup; the values stay in the tooltip.
+        RoomManagerListItem* item = new RoomManagerListItem("", 0, pictures, progress);
+        item->setTooltipText(workshop.name + (workshop.type == TrapType::nullTrapType ? std::string(": Idle") :
+            ": " + Helper::toString(workshop.points) + " / " + Helper::toString(workshop.required)));
         workshops->addItem(item);
     }
-    mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/OrdersLabel")->setText("Priority");
     mProductionRequestPending = false;
     updateTrapProductionButtons();
 }
@@ -5613,7 +5668,8 @@ void GameMode::handlePlayerActionSell()
         displayText(Ogre::ColourValue::Red, "Select a room, trap or door owned by you to sell.");
 }
 
-GameEntity* GameMode::getQueryTarget(Tile* tile) const
+//! \brief The creature of the Dungeonbook roster on the tile nearest to the keeper hand, else null.
+Creature* GameMode::getQueryTarget(Tile* tile) const
 {
     if(tile == nullptr)
         return nullptr;
@@ -5622,37 +5678,39 @@ GameEntity* GameMode::getQueryTarget(Tile* tile) const
     Player* player = mGameMap->getLocalPlayer();
     std::vector<GameEntity*> entities;
     tile->fillWithEntities(entities, SelectionEntityWanted::any, player);
-    GameEntity* closest = nullptr;
+    Creature* closest = nullptr;
     double distance = 0.0;
     for(GameEntity* entity : entities)
     {
-        if(!entity->canDisplayStatsWindow(player->getSeat()))
+        Creature* creature = getDungeonbookCreature(entity);
+        if(creature == nullptr)
             continue;
-        const Ogre::Vector3& position = entity->getPosition();
+        const Ogre::Vector3& position = creature->getPosition();
         const double candidate = Pathfinding::squaredDistance(position.x, inputManager.mKeeperHandPos.x,
             position.y, inputManager.mKeeperHandPos.y);
         if(closest == nullptr || candidate < distance)
         {
-            closest = entity;
+            closest = creature;
             distance = candidate;
         }
     }
     return closest;
 }
 
+//! \brief Shows the name of the pointed book creature and opens the Dungeonbook on it when the click is validated.
 void GameMode::handlePlayerActionQuery()
 {
     const InputManager& inputManager = mModeManager->getInputManager();
-    GameEntity* entity = getQueryTarget(mGameMap->getTile(inputManager.mXPos, inputManager.mYPos));
-    if(entity == nullptr)
+    Creature* creature = getQueryTarget(mGameMap->getTile(inputManager.mXPos, inputManager.mYPos));
+    if(creature == nullptr)
     {
-        displayText(Ogre::ColourValue::Red, "Point at a creature to view its information.");
+        displayText(Ogre::ColourValue::Red, "Point at your own or an allied creature to view its information.");
         return;
     }
 
-    displayText(Ogre::ColourValue::White, entity->getName());
+    displayText(Ogre::ColourValue::White, creature->getName());
     if(inputManager.mCommandState == InputCommandState::validated)
-        entity->createStatsWindow();
+        openDungeonbookOnCreature(creature);
 }
 
 //! \brief Restores the original context text bounds after an item hover ends.
@@ -6142,7 +6200,9 @@ void GameMode::setGhostRoomSettingsShown(int32_t x, int32_t y, uint32_t product,
     refreshGhostRoomWindow();
 }
 
-//! \brief Follows the private seat update and closes a sold or lost room's controls.
+//! \brief Follows the private seat update and closes a sold or lost room's controls. Draws the page as the chosen
+//! mockup: the vessel fills with the progress to the next ectoplasm, the plaque shows whole levels ("7 / 10"), the path
+//! from the vessel to the chosen product is green and the chosen product has the bright gold frame.
 void GameMode::refreshGhostRoomWindow()
 {
     Player* player = mGameMap->getLocalPlayer();
@@ -6156,28 +6216,52 @@ void GameMode::refreshGhostRoomWindow()
     mGhostRoomX = tile->getX();
     mGhostRoomY = tile->getY();
     Seat* seat = player->getSeat();
+    CEGUI::Window* page = mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage");
     // Only the progress to the next ectoplasm: every full one is already an item next to its cauldron
     const double perEctoplasm = RoomGhostRoom::getLevelsPerEctoplasm(*seat);
     const double progress = perEctoplasm > 0.0 ? std::fmod(seat->getEctoplasmLevels(), perEctoplasm) : 0.0;
+    // Whole levels as in the mockup; a fractional target keeps one decimal so it is never rounded away.
     std::ostringstream text;
-    text << std::fixed << std::setprecision(1) << progress << " / " << perEctoplasm;
-    mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/GhostBarText")->setText(text.str());
-    static_cast<CEGUI::ProgressBar*>(mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/EctoplasmProgress"))->setProgress(
-        perEctoplasm > 0.0 ? static_cast<float>(progress / perEctoplasm) : 0.0f);
+    text << static_cast<int64_t>(std::floor(progress + 1e-9)) << " / ";
+    if(std::fabs(perEctoplasm - std::floor(perEctoplasm + 0.5)) < 1e-9)
+        text << static_cast<int64_t>(std::floor(perEctoplasm + 0.5));
+    else
+        text << std::fixed << std::setprecision(1) << perEctoplasm;
+    page->getChild("GhostBarText")->setText(text.str());
+    const float fraction = perEctoplasm > 0.0 ?
+        std::max(0.0f, std::min(1.0f, static_cast<float>(progress / perEctoplasm))) : 0.0f;
+    // The dark cover hides the part of the glass that is not filled yet; it shrinks from the top as ectoplasm rises.
+    const float glassTop = 0.223f;
+    const float glassBottom = 0.815f;
+    CEGUI::Window* empty = page->getChild("Vessel/Empty");
+    empty->setArea(CEGUI::URect(CEGUI::UDim(0.165f, 0.0f), CEGUI::UDim(glassTop, 0.0f), CEGUI::UDim(0.895f, 0.0f),
+        CEGUI::UDim(glassTop + (glassBottom - glassTop) * (1.0f - fraction), 0.0f)));
+    empty->setVisible(fraction < 1.0f);
     // A locked choice is shown grey; the validated effective choice remains the mana still.
     const GhostProduct chosen = RoomGhostRoom::getChosenApparatus(*seat);
     const char* const names[] = {"GhostProductButton", "Product1", "Product2"};
     const GhostProduct kinds[] = {GhostProduct::mana, GhostProduct::research, GhostProduct::crystal};
+    const char* const activePath = "FF62E06A";
+    const char* const idlePath = "FF6E6A5E";
+    uint32_t chosenIndex = 0;
     for(uint32_t index = 0; index < 3; ++index)
     {
         const bool unlocked = RoomGhostRoom::isApparatusUnlocked(*seat, kinds[index]);
-        CEGUI::Window* button = mRootWindow->getChild(std::string("RoomManagerWindow/Pages/GhostPage/") + names[index]);
+        CEGUI::Window* button = page->getChild(names[index]);
         button->setEnabled(unlocked);
         button->getChild("Lock")->setVisible(!unlocked);
         button->getChild("Image")->setAlpha(unlocked ? 1.0f : 0.35f);
         button->getChild("Image")->setProperty("ImageColours", unlocked ? "FFFFFFFF" : "FF707070");
-        button->getChild("Image")->setProperty("FrameEnabled", chosen == kinds[index] ? "True" : "False");
+        button->getChild("Selected")->setVisible(chosen == kinds[index]);
+        if(chosen == kinds[index])
+            chosenIndex = index;
     }
+    // Stem from the vessel, trunk halves and one branch per product: the way to the chosen product is green.
+    page->getChild("Stem")->setProperty("ImageColours", activePath);
+    page->getChild("TrunkUp")->setProperty("ImageColours", chosenIndex == 0 ? activePath : idlePath);
+    page->getChild("TrunkDown")->setProperty("ImageColours", chosenIndex == 2 ? activePath : idlePath);
+    for(uint32_t index = 0; index < 3; ++index)
+        page->getChild("Path" + Helper::toString(index))->setProperty("ImageColours", index == chosenIndex ? activePath : idlePath);
     mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/Ratio2")->setText(
         Helper::toString(config.getRoomConfigDouble("GhostEctoplasmPerCrystal")) + " : 1");
     mUpdatingGhost = true;

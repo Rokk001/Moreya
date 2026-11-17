@@ -2013,6 +2013,7 @@ void RenderManager::destroyWorldBorder()
 
 //! \brief Initializes game visuals with a seam-covering ground plane bounded by the map edges and the
 //! rock border outside of them, then prepares resources needed by creatures that appear later.
+//! The depth pre-pass render target is always made new, after releasing any one left over.
 void RenderManager::initGameRenderer(GameMap* gameMap)
 {
     OD_ASSERT_TRUE(gameMap);
@@ -2113,6 +2114,9 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     // disable the scissors test, so we can generate to as large textures as one wish
     Ogre::Root::getSingleton().getRenderSystem()->setScissorTest(false);
     
+    // A target left over from a game that was not stopped would keep a viewport on the camera replaced below
+    destroySmokeRenderTarget();
+
     // Create the RTT texture
     m_texture = Ogre::TextureManager::getSingleton().createManual("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, Ogre::TEX_TYPE_2D,Ogre::uint(ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getViewport()->getActualWidth()), Ogre::uint(ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getViewport()->getActualHeight()), 0, Ogre::PF_FLOAT32_RGBA, Ogre::TU_RENDERTARGET, 0);
 
@@ -2332,14 +2336,56 @@ void RenderManager::stopGameRenderer(GameMap* gameMap)
         mHandLight = nullptr;
     }
     removeLiftedGoldMaterials();
-    removeIfExists<Ogre::TextureManager>("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-    if(ODFrameListener::getSingleton().getCameraManager()->hasCamera("RenderToTexture"))
-        ODFrameListener::getSingleton().getCameraManager()->destroyCamera("RenderToTexture");
-    if(ODFrameListener::getSingleton().getCameraManager()->hasCameraNode("RenderToTexture"))
-        ODFrameListener::getSingleton().getCameraManager()->destroyCameraNode("RenderToTexture");
+    // The frame loop must stop drawing the depth pre-pass target before its camera goes
+    destroySmokeRenderTarget();
     removeIfExists<Ogre::TextureManager>("PerlinNoiseTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME );
     removeIfExists<Ogre::TextureManager>("freshPerlinTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME );
     
+}
+
+//! \brief Removes the viewport and listener of the depth pre-pass target and clears mRenderTarget, so that
+//! ODFrameListener::frameStarted no longer updates it, and only then destroys the camera, its node and the texture.
+void RenderManager::destroySmokeRenderTarget()
+{
+    if(mRenderTarget != nullptr)
+    {
+        mRenderTarget->removeListener(this);
+        mRenderTarget->removeAllViewports();
+        mRenderTarget = nullptr;
+    }
+    m_texture.reset();
+    removeIfExists<Ogre::TextureManager>("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    CameraManager* cameraManager = ODFrameListener::getSingleton().getCameraManager();
+    if(cameraManager->hasCamera("RenderToTexture"))
+        cameraManager->destroyCamera("RenderToTexture");
+    if(cameraManager->hasCameraNode("RenderToTexture"))
+        cameraManager->destroyCameraNode("RenderToTexture");
+}
+
+//! \brief Looks up the camera of every viewport of mRenderTarget among the live cameras of the scene manager by
+//! pointer; a camera that is not found was destroyed while the target still shows it.
+bool RenderManager::hasRenderTargetWithDestroyedCamera() const
+{
+    if(mRenderTarget == nullptr)
+        return false;
+
+    const Ogre::SceneManager::CameraList& cameras = mSceneManager->getCameras();
+    for(unsigned short index = 0; index < mRenderTarget->getNumViewports(); ++index)
+    {
+        const Ogre::Camera* camera = mRenderTarget->getViewport(index)->getCamera();
+        bool live = false;
+        for(Ogre::SceneManager::CameraList::const_iterator it = cameras.begin(); it != cameras.end(); ++it)
+        {
+            if(it->second == camera)
+            {
+                live = true;
+                break;
+            }
+        }
+        if(!live)
+            return true;
+    }
+    return false;
 }
 
 void RenderManager::triggerCompositor(const std::string& compositorName)

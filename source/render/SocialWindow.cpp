@@ -1203,7 +1203,7 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
             static_cast<CEGUI::Scrollbar*>(mProfilePage->getChild("ProfileScrollbar"))->setScrollPosition(0);
             mProfilePage->setUserString("ProfileCreature", mSelectedCreature);
         }
-        // The same code fills the creature card
+        // The creature fills the shared profile page itself (Creature::fillProfilePage)
         creature->fillProfilePage(mProfilePage);
     }
     else

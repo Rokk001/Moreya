@@ -1,8 +1,9 @@
-"""Check the creature profile card (gui/WindowCreatureProfile.layout) opened by a middle click.
+"""Check the shared creature profile page (gui/WindowCreatureProfilePage.layout) and that the old creature card is gone.
 
-The window is fixed size, created from the layout (registered for UI scaling), keeps the old stats
-text on its own page in the small body font and still tells the server to start and stop sending
-the statistics.
+The old creature card (gui/WindowCreatureProfile.layout, Creature::createStatsWindow) opened by a middle click is
+removed: a middle click on a creature opens the Dungeonbook on it (check_creature_click_dungeonbook.py). The profile
+page the card shared with the Dungeonbook stays: created from its layout (registered for UI scaling), filled by
+Creature::fillProfilePage, flowed by Gui::layoutCreatureProfilePage and fully reachable in the book on every screen.
 """
 from pathlib import Path
 import re
@@ -11,53 +12,41 @@ from PIL import ImageFont
 
 repo = Path(__file__).resolve().parents[2]
 gui = (repo / 'source/render/Gui.cpp').read_text()
-layout = (repo / 'gui/WindowCreatureProfile.layout').read_text()
-# the page with portrait, texts and bars is shared with the Dungeonbook
+# The old creature card and its stats page are gone; the page with portrait, texts and bars is shown by the Dungeonbook
+assert not (repo / 'gui/WindowCreatureProfile.layout').exists(), 'the old creature card layout is removed'
+assert 'WindowCreatureProfile.layout' not in gui and 'createCreatureProfileWindow' not in gui, 'the card is still created'
 page = (repo / 'gui/WindowCreatureProfilePage.layout').read_text()
-assert 'name="CreatureProfileWindow"' in layout and 'type="OD/FrameWindow"' in layout
-assert '<Property name="SizingEnabled" value="False" />' in layout, 'the window must not be resizable'
-m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
-assert m, 'a fixed size centred area is expected'
-width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
-assert width >= 480 and height >= 440, (width, height)
-for name in ('ProfilePage', 'StatsText', 'ProfileTab', 'StatsTab', 'BookTab'):
-    assert 'name="%s"' % name in layout, name
 for name in ('ProfilePage', 'Portrait', 'HealthBar', 'ExperienceBar', 'BioText', 'FriendsLabel', 'FriendLink0', 'FriendLink1', 'FoeLabel',
              'FoeLink', 'StatusText', 'LatestText'):
     assert 'name="%s"' % name in page, name
-stats = layout[layout.index('name="StatsText"'):]
-stats = stats[:stats.index('</Window>')]
-for prop in ('Font" value="MedievalSharp-8', 'VertFormatting" value="TopAligned',
-             'HorzFormatting" value="WordWrapLeftAligned'):
-    assert prop in stats, prop
-assert 'name="VertScrollbar" value="True"' in stats, 'statistics must remain scrollable'
 assert 'type="OD/VerticalScrollbar" name="ProfileScrollbar"' in page, 'the shared profile must scroll'
 assert 'name="ClippedByParent" value="True"' in page, 'the profile must clip at its viewport'
 
-body = gui[gui.index('Gui::createCreatureProfileWindow'):]
+body = gui[gui.index('CEGUI::Window* Gui::createCreatureProfilePage('):]
 body = body[:body.index('\n}\n')]
-assert 'WindowCreatureProfile.layout' in body and 'registerWindowHierarchy(window)' in body
+assert 'WindowCreatureProfilePage.layout' in body and 'registerWindowHierarchy(page)' in body
 
 creature = (repo / 'source/entities/Creature.cpp').read_text()
-assert 'createCreatureProfileWindow(' in creature
+creature_header = (repo / 'source/entities/Creature.h').read_text()
+# No creature window of its own: no stats window, no tabs, no server statistics subscription from the creature
+for gone in ('createStatsWindow', 'destroyStatsWindow', 'updateStatsWindow', 'mStatsWindow', 'ProfileTabClicked',
+             'StatsTabClicked', 'BookTabClicked', 'showStatsPage', 'refreshProfilePage', 'createCreatureProfileWindow',
+             'ClientNotificationType::askCreatureInfos', 'canDisplayStatsWindow'):
+    assert gone not in creature and gone not in creature_header, gone + ' of the old creature card is still there'
 slot_types = ET.parse(repo / 'gui/SlotTypes.imageset').getroot()
 assert {image.attrib['name'] for image in slot_types.findall('Image')} == {'Head', 'Hand', 'Armour', 'Boots', 'Ring', 'Potion', 'Bag'}
 assert page.count('name="SlotType"') == 13
 assert 'slotType->setVisible(item == nullptr)' in creature
 assert '"Hand", "Hand", "Head", "Armour", "Boots", "Ring"' in creature
 assert '"Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"' in creature
-assert 'CEGUI::UDim(0, 380)' not in creature, 'the card sets an own size'
-assert creature.count('ClientNotificationType::askCreatureInfos') >= 2, 'server info start/stop is missing'
-for handler in ('ProfileTabClicked', 'StatsTabClicked'):
-    assert 'Creature::' + handler in creature, handler
-assert 'EventCloseClicked' in creature
+assert 'CEGUI::UDim(0, 380)' not in creature, 'the page sets an own size'
 assert 'social/SocialProfileCache.h' in creature
-# one function fills the page for the card and for the Dungeonbook
+# one function fills the page; the Dungeonbook creates the page in its holder and fills it
 assert 'float Creature::fillProfilePage(CEGUI::Window* page)' in creature
-assert 'fillProfilePage(mStatsWindow->getChild("ProfilePage/Content"))' in creature
-assert 'createCreatureProfilePage(mStatsWindow->getChild("ProfilePage"))' in creature
 assert 'WindowCreatureProfilePage.layout' in gui and 'setName("Content")' in gui
-assert 'fillProfilePage(mProfilePage)' in (repo / 'source/render/SocialWindow.cpp').read_text()
+social_cpp = (repo / 'source/render/SocialWindow.cpp').read_text()
+assert 'fillProfilePage(mProfilePage)' in social_cpp
+assert 'createCreatureProfilePage(' in social_cpp, 'the book creates the shared page'
 
 # The initial viewport reserves the portrait, equipment and attributes; social metadata follows.
 for name in ('HealthLabel', 'ExperienceLabel', 'RelationText', 'FoeLabel'):
@@ -182,71 +171,28 @@ bar_row = max(bar_row_min, line_height + 4) + bar_row_gap
 for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for percent in range(80, 121):
         scale = min(screen_width / 1024.0, screen_height / 768.0) * percent / 100.0
-        for owner, outer_width, outer_height, fraction, reserve in (
-                ('card', width, height, .88, 0.0),
-                ('Dungeonbook', social_width, social_height, holder_height_fraction, 0.0)):
-            fit = min(1.0, screen_width / (outer_width * scale), screen_height / (outer_height * scale))
-            viewport = (outer_height * fit - title - border) * fraction - reserve
-            page_width = (outer_width * fit - 2 * side) * (holder_width_fraction if owner == 'Dungeonbook' else 1.0)
-            if owner == 'Dungeonbook':
-                # Compact page: health and experience bars first, then the social rows, all reachable by scrolling
-                assert page_width - 48 >= 200, ('the social rows of the book are too narrow', page_width)
-                core_bottom = 4 + bar_row
-                assert core_bottom <= viewport
-                rows_bottom = core_bottom
-                for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
-                    top = rows_bottom + 4
-                    rows_bottom = top + lines * line_height + 4
-                    assert lines * line_height + 8 <= viewport, 'a single row is higher than the book viewport'
-                    maximum = max(0.0, rows_bottom - viewport)
-                    offset = min(top, maximum)
-                    assert top - offset >= 0 and rows_bottom - offset <= viewport + 1e-6
-                continue
-            equipment_width = page_width - 148.0 - 32.0
-            image_edge = max(1.0, min(equipment_width / 4.0, viewport * 0.2 / 5.0))
-            columns = (2.5, 0.5, 1.5, 1.5, 1.5, 2.5, 0.5, 1.5, 2.5, 0.0, 1.0, 2.0, 3.0)
-            rows = (1, 1, 0, 1, 2, 2, 3, 3, 3, 4, 4, 4, 4)
-            slot_bounds = []
-            for slot in range(13):
-                left, top = 148.0 + columns[slot] * image_edge, 34.0 + rows[slot] * image_edge
-                right, bottom = left + image_edge, top + image_edge
-                assert left >= 148.0 > 136.0 and top >= 34.0 > 26.0, 'slots overlap the portrait or headline'
-                assert right <= page_width - 32.0 + 1e-6
-                assert bottom <= viewport, 'all slots must open without scrolling'
-                for previous_left, previous_top, previous_right, previous_bottom in slot_bounds:
-                    assert right <= previous_left + 1e-6 or left >= previous_right - 1e-6 or bottom <= previous_top + 1e-6 or top >= previous_bottom - 1e-6, 'equipment slots overlap'
-                slot_bounds.append((left, top, right, bottom))
-            assert len(slot_bounds) == 13
-            equipment_bottom = max(bounds[3] for bounds in slot_bounds)
-            attribute_top = max(132.0, equipment_bottom + 4)
-            attribute_bottom = attribute_top + sum(wrapped_lines(line, page_width - 48) for line in attribute_lines) * line_height + 4
-            core_bottom = attribute_bottom + 4 + bar_row
-            assert core_bottom <= viewport, (owner, screen_width, screen_height, percent, core_bottom, viewport)
-            assert 124 <= attribute_top and 26 <= 34, 'portrait/header overlaps the following essential rows'
-            assert equipment_bottom + 4 <= attribute_top, 'attributes overlap the equipment header'
-            # Overflowed social rows are clipped to this viewport and reachable through the full scroll range.
-            rows_bottom = core_bottom
-            for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
-                top = rows_bottom + 4
-                rows_bottom = top + lines * line_height + 4
-                maximum = max(0.0, rows_bottom - viewport)
-                offset = min(top, maximum)
-                assert top - offset >= 0 and rows_bottom - offset <= viewport + 1e-6
-            # The final widget can contain all five long posts; every line is reachable even when the widget is taller than the viewport.
-            posts_top = rows_bottom + 4
-            document_bottom = posts_top + 50 * line_height + 4
-            maximum = document_bottom - viewport
-            for line in range(50):
-                line_top = posts_top + line * line_height
-                offset = min(line_top, maximum)
-                assert line_top - offset >= 0 and line_top + line_height - offset <= viewport + 1e-6
-            assert abs(document_bottom - maximum - viewport) < 1e-6
-assert 'setDisabled(' not in creature[creature.index('void Creature::showStatsPage'):creature.index('void Creature::refreshProfilePage')],     'the active tab must not be shown disabled'
+        # The book is the only window that shows the page: compact, health and experience bars first, then the social
+        # rows, all reachable by scrolling
+        fit = min(1.0, screen_width / (social_width * scale), screen_height / (social_height * scale))
+        viewport = (social_height * fit - title - border) * holder_height_fraction
+        page_width = (social_width * fit - 2 * side) * holder_width_fraction
+        assert page_width - 48 >= 200, ('the social rows of the book are too narrow', page_width)
+        core_bottom = 4 + bar_row
+        assert core_bottom <= viewport
+        rows_bottom = core_bottom
+        for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
+            top = rows_bottom + 4
+            rows_bottom = top + lines * line_height + 4
+            assert lines * line_height + 8 <= viewport, 'a single row is higher than the book viewport'
+            maximum = max(0.0, rows_bottom - viewport)
+            offset = min(top, maximum)
+            assert top - offset >= 0 and rows_bottom - offset <= viewport + 1e-6
 assert 'Unspecified' not in (repo / 'source/social/SocialGenerator.cpp').read_text()
 assert '"@" + getName()' not in creature, 'the handle must not be the internal name'
 assert 'setText(getName() + " (" + getDefinition()->getClassName() + ")")' not in creature
 game = (repo / 'source/modes/GameMode.cpp').read_text()
-pick = game[game.index('void GameMode::openStatsWindowUnderPointer'):game.index('bool GameMode::mousePressed')]
+pick = game[game.index('void GameMode::openDungeonbookUnderPointer'):game.index('bool GameMode::mousePressed')]
 assert 'findWorldPositionFromMouse' not in pick, 'the middle click must pick along the pointer ray'
+assert 'openDungeonbookOnCreature(closestCreature)' in pick, 'the middle click opens the Dungeonbook on the creature'
 assert 'getCameraToViewportRay' in pick
 print('ok')
