@@ -1323,6 +1323,7 @@ tools/blender-assets/armament_preview.py                  OD Team  GPLv3+  Own w
 models/Troll.skeleton                                    OD Team  GPLv3+  Own work: fitted right-hand weapon rest position and rotation, converted with OgreXMLConverter; existing data keeps its existing licence; original native animation keys retained byte for byte
 
 materials/textures/loading/loading_*.jpg    OD Team    GPLv3+    Twenty-five original painted loading illustrations, AI-generated for this project with the built-in image generation tool; no external stock image source.
+materials/textures/loading/loading_ring*.png    AI-generated with Codex    GPLv3+    Loading ring fill and empty track cut out of an original painted loading screen made for this project (2026-11-02, source crop assets-src/gui/loading/loading-ring-painted.png); band widened and quarters turned by tools/make_loading_ring.py
 =======================================================
 == Original fortress menu scene ==
 =======================================================

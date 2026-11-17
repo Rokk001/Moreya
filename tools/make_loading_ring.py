@@ -1,97 +1,169 @@
 #!/usr/bin/env python3
-"""Draw the thorned iron ring of the loading indicator as 256x256 RGBA PNGs: the empty track and the ember fill."""
-import math
-import struct
+"""Cut the thorned iron ring of the loading indicator out of its painted source as 256x256 RGBA PNGs.
+
+The ring is not drawn by this script. The painted ring (asset source gui/loading/loading-ring-painted.png below
+ODP_ASSETS_SRC, a 160x160 crop of the chosen painted loading screen) shows the dark iron ring with eight thorns;
+the quarter from the top thorn clockwise to the right thorn glows as embers, the other three quarters are plain iron.
+The ring repeats every 90 degrees (long thorns at 0, 90, 180 and 270 degrees, short ones between), so:
+- loading_ring_empty.png, the empty track, is the plain iron quarter between the left and the top thorn, cut out
+  and turned four times round the centre;
+- loading_ring.png, the fill drawn clockwise by the loading progress, is the glowing quarter between the top and the
+  right thorn, cut out and turned four times.
+The quarters meet in a short cross-fade, so no seam shows. The alpha is cut from the painted pixels: the dark
+background (wall, inner hole) becomes transparent, iron, thorns and the ember glow stay.
+
+The painted band is thin next to its thorns. It is widened radially around its centre to BAND_INNER..BAND_OUTER
+(24 of 256 px): the painted band is stretched over that width, and the thorns, which lie on the band, are taken
+from the unstretched painting so they keep their painted shape.
+
+Usage: python tools/make_loading_ring.py [output folder]
+Needs Pillow and numpy.
+"""
 import sys
-import zlib
 from pathlib import Path
 
+import numpy as np
+from PIL import Image
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from assets_src import assets_src_dir  # noqa: E402
+
+SOURCE = "gui/loading/loading-ring-painted.png"
 SIZE = 256
-CENTER = SIZE / 2.0
 SAMPLES = 3
-BAND_INNER = 74.0
+# Centre of the painted ring in the source crop, in pixel index coordinates (x, y).
+SOURCE_CENTRE = (80.2, 78.1)
+# Distance of the tip of a long thorn from the centre in the source, and where it lands in the texture.
+SOURCE_THORN_TIP = 67.0
+TEXTURE_THORN_TIP = 124.0
+# Nothing beyond this source radius belongs to the ring (the painted text above it starts further out).
+SOURCE_CUT_RADIUS = 68.0
+# The iron band of the painted ring, source radii; its core is always opaque.
+SOURCE_INNER_EDGE = 44.5
+SOURCE_OUTER_EDGE = 52.5
+# The widened band in the texture, radii in pixels of the 256 px texture (24 px wide, centred on the painted band).
+BAND_INNER = 78.0
 BAND_OUTER = 102.0
-EMBER_INNER = 80.0
-EMBER_OUTER = 97.0
+# Painted background luminance (0 to 255) is transparent below the first value and opaque above the second.
+ALPHA_LUMINANCE = (36.0, 58.0)
+# Unstretched painted pixels at least this opaque inside the widened band but outside the painted band are thorn.
+THORN_ALPHA = 0.08
+# Headings of the eight thorns (degrees clockwise from the top) and the half width of the wedge each thorn may cover.
+THORN_HEADINGS = [45.0 * index for index in range(8)]
+THORN_HALF_WEDGE = 14.0
+# First angle (degrees clockwise from the top) of the quarter cut for the empty track and for the glowing fill.
+EMPTY_QUARTER_START = 247.5
+FILL_QUARTER_START = 0.0
+# Width in degrees of the cross-fade where two turned quarters meet.
+SEAM_DEGREES = 6.0
+
+PAINTING = None
 
 
-# Return premultiplied RGBA for one sample point; with ember the channel is filled all the way round.
+def sample(image, x, y):
+    """Bilinear sample of an HxWxC float array at index coordinates; outside the crop is black."""
+    height, width = image.shape[:2]
+    x0 = np.floor(x).astype(int)
+    y0 = np.floor(y).astype(int)
+    fx = (x - x0)[..., None]
+    fy = (y - y0)[..., None]
+    result = 0.0
+    for dy, wy in ((0, 1.0 - fy), (1, fy)):
+        for dx, wx in ((0, 1.0 - fx), (1, fx)):
+            inside = ((x0 + dx >= 0) & (x0 + dx < width) & (y0 + dy >= 0) & (y0 + dy < height))[..., None]
+            xi = np.clip(x0 + dx, 0, width - 1)
+            yi = np.clip(y0 + dy, 0, height - 1)
+            result = result + PAINTING[yi, xi] * wx * wy * inside
+    return result
+
+
+def painted(radius, heading):
+    """RGB of the painted ring at a source radius and a heading in degrees clockwise from the top."""
+    angle = np.radians(heading)
+    x = SOURCE_CENTRE[0] + radius * np.sin(angle)
+    y = SOURCE_CENTRE[1] - radius * np.cos(angle)
+    return sample(PAINTING, x, y)
+
+
+def quarter(radius, heading, start):
+    """RGB of the quarter starting at start, turned so that it covers the heading, with a cross-fade at its end."""
+    offset = np.mod(heading - start, 90.0)
+    colour = painted(radius, start + offset)
+    # Near the end of the quarter, fade into the painted pixels just before its start: the next turned copy
+    # begins there, so both sides of the seam show the same painted pixels.
+    blend = np.clip((offset - (90.0 - SEAM_DEGREES)) / SEAM_DEGREES, 0.0, 1.0)
+    blend = (blend * blend * (3.0 - 2.0 * blend))[..., None]
+    before = painted(radius, start + offset - 90.0)
+    return colour * (1.0 - blend) + before * blend
+
+
+def cut_out(colour, radius):
+    """Alpha of painted pixels at source radii: background transparent, painted band core always opaque."""
+    luminance = colour.mean(axis=-1)
+    alpha = np.clip((luminance - ALPHA_LUMINANCE[0]) / (ALPHA_LUMINANCE[1] - ALPHA_LUMINANCE[0]), 0.0, 1.0)
+    core = (radius >= SOURCE_INNER_EDGE + 1.0) & (radius <= SOURCE_OUTER_EDGE - 1.0)
+    alpha = np.where(core, 1.0, alpha)
+    return alpha * np.clip(SOURCE_CUT_RADIUS - radius, 0.0, 1.0)
+
+
 def shade(x, y, ember):
-    dx = x - CENTER
-    dy = y - CENTER
-    radius = math.hypot(dx, dy)
-    heading = math.atan2(dx, -dy)
-    red = green = blue = alpha = 0.0
-    # Soft glow around the ember channel, the same strength everywhere.
-    if ember:
-        glow = math.exp(-((radius - 88.0) / 16.0) ** 2) * 0.55
-        red, green, blue, alpha = 1.0 * glow, 0.38 * glow, 0.04 * glow, glow
-    # Thorns: long on the four main directions with a flared base, short on the diagonals.
-    for index in range(8):
-        phi = math.radians(index * 45.0)
-        length = 126.0 if index % 2 == 0 else 112.0
-        base = 12.0 if index % 2 == 0 else 8.0
-        delta = heading - phi
-        radial = radius * math.cos(delta)
-        lateral = radius * math.sin(delta)
-        if 84.0 <= radial <= length and abs(lateral) <= base * (length - radial) / (length - 84.0):
-            shade_value = 0.22 + 0.20 * (1.0 - abs(lateral) / base)
-            red, green, blue, alpha = shade_value * 0.95, shade_value * 0.88, shade_value * 0.82, 1.0
-    # Thick dark iron band, darker at both edges.
-    if BAND_INNER <= radius <= BAND_OUTER:
-        edge = min(radius - BAND_INNER, BAND_OUTER - radius) / 8.0
-        metal = 0.10 + 0.14 * min(1.0, edge * 1.4)
-        red, green, blue, alpha = metal * 1.0, metal * 0.92, metal * 0.85, 1.0
-        # Continuous ember channel inside the band: no angle dependence, so no gap and no colour step.
-        if ember and EMBER_INNER <= radius <= EMBER_OUTER:
-            core = 1.0 - abs(radius - 88.0) / 9.0
-            grain = 0.5 + 0.5 * math.sin(math.degrees(heading) * 0.9) * math.sin(radius * 1.7)
-            hot = min(1.0, core ** 1.5 * (0.85 + 0.15 * grain))
-            red = 0.90 + 0.10 * hot
-            green = 0.25 + 0.55 * hot
-            blue = 0.03 + 0.25 * hot * hot
-            alpha = 1.0
-    return red, green, blue, alpha
+    """RGB and alpha of the ring at texture points (arrays of x, y); ember selects the glowing fill."""
+    start = FILL_QUARTER_START if ember else EMPTY_QUARTER_START
+    dx = x - SIZE / 2.0
+    dy = y - SIZE / 2.0
+    texture_radius = np.hypot(dx, dy)
+    heading = np.degrees(np.arctan2(dx, -dy))
+    scale = SOURCE_THORN_TIP / TEXTURE_THORN_TIP
+    # Unstretched painting: thorns and everything outside the widened band.
+    plain_radius = texture_radius * scale
+    plain = quarter(plain_radius, heading, start)
+    plain_alpha = cut_out(plain, plain_radius)
+    # Stretched band: the widened band shows the painted band from its inner to its outer edge.
+    centre = (BAND_INNER + BAND_OUTER) / 2.0
+    stretch = (BAND_OUTER - BAND_INNER) / ((SOURCE_OUTER_EDGE - SOURCE_INNER_EDGE) / scale)
+    band_radius = (SOURCE_INNER_EDGE + SOURCE_OUTER_EDGE) / 2.0 + (texture_radius - centre) * scale / stretch
+    band = quarter(band_radius, heading, start)
+    band_alpha = cut_out(band, band_radius)
+    # The whole widened band is solid iron (or embers), with a soft edge of one pixel.
+    edge = np.minimum(texture_radius - BAND_INNER, BAND_OUTER - texture_radius)
+    band_alpha = np.maximum(band_alpha, np.clip(edge + 0.5, 0.0, 1.0))
+    in_band = (texture_radius >= BAND_INNER) & (texture_radius <= BAND_OUTER)
+    # Inside the widened band but outside the painted band, a thorn of the painting stays on top of the band.
+    near_thorn = np.zeros(heading.shape, dtype=bool)
+    for thorn in THORN_HEADINGS:
+        near_thorn |= np.abs(np.mod(heading - thorn + 180.0, 360.0) - 180.0) <= THORN_HALF_WEDGE
+    outside_painted_band = (plain_radius < SOURCE_INNER_EDGE - 1.0) | (plain_radius > SOURCE_OUTER_EDGE + 1.0)
+    thorn = near_thorn & outside_painted_band & (plain_alpha > THORN_ALPHA)
+    # A thorn lies over the band with its own painted alpha, so the band stays closed below its soft edges.
+    cover = np.where(thorn, plain_alpha, 0.0)
+    colour = np.where(in_band[..., None], plain * cover[..., None] + band * (1.0 - cover[..., None]), plain)
+    alpha = np.where(in_band, cover + band_alpha * (1.0 - cover), plain_alpha)
+    return colour, alpha
 
 
-# Average SAMPLES x SAMPLES samples per pixel and write straight (non-premultiplied) RGBA.
 def render(ember):
-    rows = []
-    for py in range(SIZE):
-        row = bytearray([0])
-        for px in range(SIZE):
-            sums = [0.0, 0.0, 0.0, 0.0]
-            for sy in range(SAMPLES):
-                for sx in range(SAMPLES):
-                    values = shade(px + (sx + 0.5) / SAMPLES, py + (sy + 0.5) / SAMPLES, ember)
-                    for k in range(4):
-                        sums[k] += values[k]
-            count = float(SAMPLES * SAMPLES)
-            alpha = sums[3] / count
-            if alpha <= 0.0:
-                row += bytes([0, 0, 0, 0])
-                continue
-            # Colour of covered samples: sums hold colour already weighted by their own alpha only for glow.
-            colour = [min(1.0, sums[k] / count / alpha) for k in range(3)]
-            row += bytes([int(c * 255 + 0.5) for c in colour] + [int(min(1.0, alpha) * 255 + 0.5)])
-        rows.append(bytes(row))
-    return b"".join(rows)
+    """Renders one 256x256 RGBA texture with SAMPLES x SAMPLES samples per pixel."""
+    total = np.zeros((SIZE, SIZE, 4))
+    ys, xs = np.mgrid[0:SIZE, 0:SIZE].astype(float)
+    for sy in range(SAMPLES):
+        for sx in range(SAMPLES):
+            colour, alpha = shade(xs + (sx + 0.5) / SAMPLES, ys + (sy + 0.5) / SAMPLES, ember)
+            total[..., :3] += colour * alpha[..., None]
+            total[..., 3] += alpha
+    alpha = total[..., 3] / float(SAMPLES * SAMPLES)
+    colour = np.where(alpha[..., None] > 0.0, total[..., :3] / np.maximum(total[..., 3:4], 1e-6), 0.0)
+    rgba = np.concatenate([colour, alpha[..., None] * 255.0], axis=2)
+    return Image.fromarray(np.clip(np.round(rgba), 0, 255).astype(np.uint8), "RGBA")
 
 
-# Encode a PNG chunk.
-def chunk(kind, data):
-    body = kind + data
-    return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
-
-
-# Write the ember fill and the empty track next to the loading screens unless a folder is given.
 def main():
-    root = Path(__file__).resolve().parents[1]
-    folder = Path(sys.argv[1]) if len(sys.argv) > 1 else root / "materials/textures/loading"
+    """Writes the glowing fill and the empty iron track next to the loading screens unless a folder is given."""
+    global PAINTING
+    folder = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "materials/textures/loading"
+    PAINTING = np.asarray(Image.open(assets_src_dir(ROOT) / SOURCE).convert("RGB"), dtype=float)
     for name, ember in (("loading_ring.png", True), ("loading_ring_empty.png", False)):
-        png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", SIZE, SIZE, 8, 6, 0, 0, 0))
-        png += chunk(b"IDAT", zlib.compress(render(ember), 9)) + chunk(b"IEND", b"")
-        (folder / name).write_bytes(png)
+        render(ember).save(folder / name)
 
 
 if __name__ == "__main__":
