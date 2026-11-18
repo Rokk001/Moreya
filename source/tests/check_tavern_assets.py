@@ -24,9 +24,10 @@ What is checked
               texel at about OBJECT_LIGHT x its value and a floor texel at about FLOOR_LIGHT x (both measured once on
               Mario's screenshot ODscreenshot_2026-11-18_165308_9 over the build 0.7.3.77 textures). Owner decision of
               2026-11-18 ("Mitte"): clearly brighter than build 77, clearly darker than the floor; the accepted result
-              shows wood at 0.63, counter 0.58, stone 0.55, hood 0.43 of the floor (stone, hood and counter top one
-              step darker and browner, then the innkeeper's parts coloured in Blender after D-5-v2 variant 1: dark
-              brown robe, grey-green skin, light linen apron; owner decisions of the same day; HOOD_SHARE). Iron,
+              shows wood at 0.63, counter 0.58, stone 0.55, skin 0.52, hood 0.36 of the floor (stone, hood and counter
+              top one step darker and browner, then the innkeeper's parts coloured in Blender after D-5-v2 variant 1:
+              almost black-brown robe, dark grey skin with a hint of green, stained linen apron; owner decisions of the
+              same day; FIGURE_SHARES). Iron,
               brass, the rail, the sign and the
               foam are accents and need at least ACCENT_SHARE of the floor; the barkeeper's used texels have the floors
               BARKEEPER_FLOORS; every surface shows detail (luminance spread), is not garish (mean saturation, brightest
@@ -336,12 +337,14 @@ FLOOR_LIGHT = 1.93
 FLOOR_TEXTURE = 'Tavern1111.png'   # the floor of a tavern tile inside the room
 BRIGHT_SHARE = 1.45                # not brighter than this share of the floor (the apron is the lightest surface)
 MAIN_SHARE = 0.52                  # wood, stone, counter, skin, cloth (accepted result 0.55-0.92; build 77 0.31-0.69)
-HOOD_SHARE = 0.40                  # the dark brown hood and robe (accepted 0.43; build 77 0.33)
+# The barkeeper's dark hide and almost black-brown robe as in D-5-v2 variant 1 (accepted skin 0.52, hood 0.36;
+# build 77 skin 0.41, hood 0.33)
+FIGURE_SHARES = {'TavernSkin': 0.47, 'TavernHood': 0.34}
 ACCENT_SHARE = 0.45                # iron, brass, rail, sign and foam are accents, never plain black (iron 0.51)
 ACCENTS = {'TavernIron', 'TavernBrass', 'TavernRail', 'TavernSign', 'TavernFoam'}
-# Floors of the texels the barkeeper's surfaces use (accepted result: skin 65, hood 41, cloth 74 - light apron and
-# towel beside dark straps and boots; build 77: 39, 31, 66)
-BARKEEPER_FLOORS = {'TavernSkin': 60, 'TavernHood': 38, 'TavernCloth': 70}
+# Floors of the texels the barkeeper's surfaces use (accepted result: skin 50, hood 34, cloth 60 - stained apron and
+# towel beside dark straps and boots; build 77: 39, 31, 66, where the skin, robe and apron were one brown)
+BARKEEPER_FLOORS = {'TavernSkin': 45, 'TavernHood': 32, 'TavernCloth': 55}
 MIN_SPREAD = 0.08                  # luminance standard deviation / mean of a surface: visible grain, folds, wear
 ACCENT_SPREAD = 0.05               # the same for the small accents (the smooth patina of the sign: 0.07)
 MAX_SATURATION = {'TavernStone': 0.25, 'TavernIron': 0.25}
@@ -414,7 +417,7 @@ with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
             saturation = np.where(top > 0, (top - texels.min(1)) / np.maximum(top, 1e-6), 0.0).mean()
             shown = luma.mean() * OBJECT_LIGHT
             where = '%s %s (%s)' % (model, material, textures[0])
-            low = ACCENT_SHARE if material in ACCENTS else (HOOD_SHARE if material == 'TavernHood' else MAIN_SHARE)
+            low = ACCENT_SHARE if material in ACCENTS else FIGURE_SHARES.get(material, MAIN_SHARE)
             assert shown >= low * floor_shown, '%s shows %.0f in the game light, darker than %.2f x the tavern floor (%.0f)' % (
                 where, shown, low, floor_shown)
             # the foam of the mug is light by nature; every other surface stays below BRIGHT_SHARE of the floor
