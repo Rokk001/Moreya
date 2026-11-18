@@ -50,6 +50,7 @@ bool Weapon::update(Weapon* weapon, std::stringstream& defFile)
     // Parameters that should not be overriden if a Creature definition is extended. They will be set after
     // the class is copied if there is a base class
     std::string name = weapon->mName;
+    std::string displayName = weapon->mDisplayName;
     std::string baseDefinition;
     while (defFile.good())
     {
@@ -65,6 +66,16 @@ bool Weapon::update(Weapon* weapon, std::stringstream& defFile)
         if (nextParam == "Name")
         {
             defFile >> name;
+            continue;
+        }
+
+        // The name the player reads, the rest of the line (it may contain spaces)
+        if (nextParam == "DisplayName")
+        {
+            std::getline(defFile, displayName);
+            const std::string::size_type first = displayName.find_first_not_of(" \t");
+            const std::string::size_type last = displayName.find_last_not_of(" \t");
+            displayName = first == std::string::npos ? std::string() : displayName.substr(first, last - first + 1);
             continue;
         }
 
@@ -268,9 +279,42 @@ bool Weapon::update(Weapon* weapon, std::stringstream& defFile)
     }
 
     weapon->mName = name;
+    weapon->mDisplayName = displayName;
     weapon->mBaseDefinition = baseDefinition;
 
     return true;
+}
+
+//! \brief Splits an internal equipment name into words ("KoboldPick" -> "Kobold Pick").
+std::string Weapon::makeReadableName(const std::string& name)
+{
+    std::string result;
+    for(std::size_t i = 0; i < name.size(); ++i)
+    {
+        const unsigned char c = static_cast<unsigned char>(name[i]);
+        if(i > 0 && std::isupper(c) != 0)
+        {
+            const unsigned char previous = static_cast<unsigned char>(name[i - 1]);
+            if(std::islower(previous) != 0 || std::isdigit(previous) != 0)
+                result += ' ';
+        }
+        result += name[i];
+    }
+    return result;
+}
+
+//! \brief The configured display name of the equipment, also for a copy received from the server without one.
+std::string Weapon::getDisplayName() const
+{
+    if(!mDisplayName.empty())
+        return mDisplayName;
+
+    const Weapon* configured = ConfigManager::getSingletonPtr() == nullptr ? nullptr :
+        ConfigManager::getSingleton().getWeapon(mName);
+    if(configured != nullptr && !configured->mDisplayName.empty())
+        return configured->mDisplayName;
+
+    return makeReadableName(mName);
 }
 
 //! \brief Writes equipment differences, preserving type and occupied hands.
@@ -286,6 +330,8 @@ void Weapon::writeWeaponDiff(const Weapon* def1, const Weapon* def2, std::ofstre
         OD_ASSERT_TRUE_MSG(def1 != nullptr, "BaseDefinition=" + def2->mBaseDefinition);
         file << "    BaseDefinition\t" << def2->mBaseDefinition << std::endl;
     }
+    if(!def2->mDisplayName.empty() && (def1 == nullptr || def1->mDisplayName != def2->mDisplayName))
+        file << "    DisplayName\t" << def2->mDisplayName << std::endl;
     file << "    [Stats]" << std::endl;
 
     if(def1 == nullptr || (def1->mMeshName.compare(def2->mMeshName) != 0))

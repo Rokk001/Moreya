@@ -92,6 +92,14 @@ public:
     inline const std::string& getName() const
     { return mName; }
 
+    //! \brief The name the player reads (optional DisplayName field of the equipment file). A weapon without one, or a
+    //! copy received from the server, takes the display name of the configured equipment of the same name; without
+    //! that the internal name is split into words ("KoboldPick" -> "Kobold Pick"). Never the bare internal name.
+    std::string getDisplayName() const;
+
+    //! \brief Splits an internal equipment name into words before every capital that follows a small letter or digit.
+    static std::string makeReadableName(const std::string& name);
+
     inline const std::string& getMeshName() const
     { return mMeshName; }
 
@@ -166,6 +174,8 @@ public:
 
 private:
     std::string     mName;
+    //! \brief Name shown to the player (optional DisplayName field), empty if the equipment file gives none
+    std::string     mDisplayName;
     //! \brief the Weapon name this class extends. Can be empty if no class extended
     std::string     mBaseDefinition;
     std::string     mMeshName;

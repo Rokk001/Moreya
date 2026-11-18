@@ -1,194 +1,18 @@
-"""Check that the profile remarks (QuirksText) never move the status and the latest post and that every row can be reached.
+"""Measure every page of the Dungeonbook (gui/WindowSocial.layout) with the shipped font at 640x480 to 8K.
 
-Static check, no game needed. Two things are verified.
-
-1. Order. The rows of the profile page flow from top to bottom (Gui::layoutCreatureProfilePage). The remarks of
-   the picture come after status and latest post, so those two keep the position they have without remarks.
-2. Overflow. The Dungeonbook pane that holds the page is limited (the old creature card that also showed the page
-   is removed; a click on a creature opens the Dungeonbook). If the rows are
-   higher than the page, the page scrolls: the page layout holds a scrollbar that is shown only then, and
-   layoutCreatureProfilePage moves all rows with it (so nothing is cut off without a way to reach it).
-   The content scrolls (decision of the owner): the check does not
-   demand that the typical content fits without scrolling, it demands that ALL rows are reachable by scrolling,
-   at 640x480, 1024x768, 1920x1200 and 7680x4320, each with the user scale 80 % and 120 %.
-
-The height model: fonts and layout are scaled by the same factor, both from the display size and the user
-scale (the font is autoscaled from 800x600, the layout from 1024x768, the same ratio), so the heights in design
-pixels do not depend on the resolution. This is computed per resolution and per user scale below to show it.
-A text line of the 8 point font is about 14 pixels at 800x600, that is 18 design pixels; a row is its lines plus
-4 pixels padding and 4 pixels gap.
+Static check, no game needed. The parts about the shared creature profile page (order of its rows, its scrollbar and
+its reach in the book) were removed with that page (owner decision 2026-11-18); the book shows its own profile as
+book-variant-2 (plan INGAME-QS-11 K1), measured below and by check_dungeonbook_pages_b1.py.
 """
 from pathlib import Path
 from functools import lru_cache
 import re
+import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
 gui = (repo / 'source/render/Gui.cpp').read_text()
-body = gui[gui.index('float Gui::layoutCreatureProfilePage'):]
-body = body[:body.index('\nvoid Gui::applyProfileScroll')]
-
-# 1. order
-before = re.search(r'textRowsBefore\[\] = \{([^}]*)\}', body)[1]
-after = re.search(r'textRowsAfter\[\] = \{([^}]*)\}', body)[1]
-assert 'QuirksText' not in before, 'the remarks must not come before status and latest post'
-rows = [r.strip(' "') for r in after.split(',')]
-assert rows == ['StatusText', 'EffectsText', 'LatestText', 'QuirksText'], rows
-# The loop bounds must match the lengths of the two row lists
-before_rows = [r for r in before.split(',') if r.strip()]
-assert 'i < ' + str(len(before_rows)) + ';' in body and 'i < 4;' in body, 'row counts do not match the row lists'
-
-# 2. scrolling machinery
-page = (repo / 'gui/WindowCreatureProfilePage.layout').read_text()
-page_layout_text = page
-assert 'type="OD/VerticalScrollbar" name="ProfileScrollbar"' in page, 'the page needs its scrollbar'
-bar = page[page.index('name="ProfileScrollbar"'):]
-bar = bar[:bar.index('</Window>')]
-assert 'name="Visible" value="False"' in bar, 'the scrollbar must be hidden until the content overflows'
-assert 'bool overflow = (y > viewport' in body, 'the overflow test is missing'
-assert 'bar->setVisible(overflow)' in body, 'the scrollbar must be shown only on overflow'
-assert 'setDocumentSize(y)' in body and 'setPageSize(viewport)' in body, 'the scrollbar range is missing'
-assert 'applyProfileScroll(page, offset)' in body, 'the rows must follow the scroll position'
-assert 'return overflow ? viewport : y;' in body, 'the caller must get the page height on overflow'
-assert 'Gui::onProfileScrolled' in gui and 'EventScrollPositionChanged' in gui, 'the scrollbar is not connected'
-assert 'mProfileBaseAreas.erase' in gui, 'the unscrolled areas must be released with the window'
-assert 'EventMouseWheel' in gui and 'Gui::onProfileWheel' in gui, 'the mouse wheel does not scroll the profile'
-assert 'setMouseInputPropagationEnabled(true)' in gui, 'the rows must pass the mouse wheel on to the page'
-wheel = gui[gui.index('bool Gui::onProfileWheel'):]
-wheel = wheel[:wheel.index('\n}\n')]
-assert 'isVisible()' in wheel, 'the wheel must only scroll while the scrollbar is shown'
-header_rows = ('Portrait', 'NameText', 'HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText', 'HealthLabel',
-               'HealthBar', 'ExperienceLabel', 'ExperienceBar')
-for name in header_rows:
-    assert 'name="%s"' % name in page, name  # moved with the scroll as well (all children but the scrollbar)
-
-assert not (repo / 'gui/WindowCreatureProfile.layout').exists(), 'the old creature card is removed, the book shows the page'
-# The page fills the holder (SocialHolder) of the profile page of the book: a fraction of the frame client, excluding
-# title and borders. The book is shrunk to the screen as a whole (Gui::getWindowFitFactor), so the viewport of the page
-# in design pixels depends on the fit factor of the book on each screen.
-import xml.etree.ElementTree as ET
-book_layout = (repo / 'gui/WindowSocial.layout').read_text()
-m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', book_layout)
-book_width, book_height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
-book_profile = ET.fromstring(book_layout).find('Window').find("Window[@name='ProfilePage']")
-
-
-def area_fractions(element):
-    value = element.find("Property[@name='Area']").get('value')
-    dims = [(float(a), float(b)) for a, b in re.findall(r'\{(-?[0-9.]+),(-?[0-9.]+)\}', value)]
-    assert all(offset == 0 for _, offset in dims), element.get('name') + ' scales with its parent'
-    return [d[0] for d in dims]
-
-
-profile_box = area_fractions(book_profile)
-holder_box = area_fractions(book_profile.find("Window[@name='SocialHolder']"))
-holder_height_fraction = (holder_box[3] - holder_box[1]) * (profile_box[3] - profile_box[1])
-# The book uses the window frame of the chosen menu sheet (OD/SheetWindow): its top and bottom rails are 44 sheet pixels
-# (1.5625 sheet pixels per design pixel); the title (one 13 point line of 18 * 13 / 8 design pixels plus 4) sits on the
-# top rail from three quarters of its height. Before, the generic title (10 point line plus 12) and a quarter of the
-# skin window edge on both sides were taken off.
-sheet = ET.parse(repo / 'gui/ODMenuTemplate.imageset').getroot()
-rail = float(sheet.find("Image[@name='FrameBottom']").get('height')) / 1.5625
-title_height = 0.75 * float(sheet.find("Image[@name='FrameTop']").get('height')) / 1.5625 + 18 * 13 / 8 + 4
-
-
-def book_page_height(fit):
-    # Design pixels of the page viewport in the book shrunk by the fit factor
-    return (book_height * fit - title_height - rail) * holder_height_fraction
-
-
-page_height = book_page_height(1.0)
-assert 'PROFILE_RIGHT_MARGIN = 32.0f' in gui
-
-LINE, PAD, GAP, TOP = 18.0, 4.0, 4.0, 132.0
-# Attributes, health/XP, five personal rows, then path and skills precede the bio.
-ATTRIBUTE_ROWS = 9
-CHAR = 8.2  # design pixels of an average character of the font
-
-
-def row(lines):
-    return lines * LINE + PAD + GAP
-
-
-def lines_of(chars, width):
-    return max(1, -(-int(chars * CHAR) // int(width)))
-
-
-def content(bio, likes, dislikes, friends, status, latest, quirks):
-    """Returns (bottom of the latest post, bottom of the remarks) in design pixels."""
-    y = TOP + ATTRIBUTE_ROWS * row(1) + row(bio) + row(likes) + row(dislikes)
-    y += max(LINE + PAD, friends * (LINE + PAD)) + GAP  # friends label and one button per friend
-    y += row(1) - GAP + GAP  # foe row
-    y += row(status)
-    latest_bottom = y + row(latest) - GAP
-    return latest_bottom, latest_bottom + GAP + (row(quirks) - GAP if quirks else 0)
-
-
-# typical: bio 2 lines, likes and dislikes 1 line, two friends, status and latest 2 lines, remarks heading plus
-# two one line remarks; worst case: everything at its longest, remarks wrap to two lines each (Dungeonbook width)
-dungeonbook_width = 404
-typical = content(2, 1, 1, 2, 2, 2, 3)
-worst = content(3, 2, 2, 2, 3, 3, 1 + 2 * lines_of(64, dungeonbook_width))
-without_quirks = content(2, 1, 1, 2, 2, 2, 0)
-assert typical[0] == without_quirks[0], 'the remarks moved status or latest post'
-
-scroll_step = float(re.search(r'PROFILE_SCROLL_STEP = ([0-9.]+)f', gui)[1])
-overflow_tolerance = float(re.search(r'PROFILE_OVERFLOW_TOLERANCE = ([0-9.]+)f', gui)[1])
-design_width = float(re.search(r'LAYOUT_DESIGN_WIDTH = ([0-9.]+)f', gui)[1])
-design_height = float(re.search(r'LAYOUT_DESIGN_HEIGHT = ([0-9.]+)f', gui)[1])
-assert scroll_step > 0.0, 'the wheel and the arrows need a step'
-# the scrollbar range is document - page, and the offset is clamped to it, so the last pixel of the content ends at the
-# bottom of the page when the scrollbar is at its end
-assert 'std::min(scrollbar->getScrollPosition(), y - viewport)' in body, 'the offset must reach the end of the content'
-assert 'setDocumentSize(y)' in body and 'setPageSize(viewport)' in body
-
-
-def reachable_rows(content_bottom, viewport):
-    """All rows are reachable when the largest scroll offset brings the bottom of the content to the page bottom.
-
-    Returns (maximum scroll offset, number of wheel steps to reach it)."""
-    maximum = max(0.0, content_bottom - viewport)
-    assert maximum + viewport >= content_bottom - 1e-9, 'the end of the content is not reachable'
-    return maximum, -(-int(maximum * 1000) // int(scroll_step * 1000))
-
-
-# the tallest single row (a status or remark of three or more lines) must fit the page, so it can be shown whole
-tallest_row = max(row(1 + 2 * lines_of(64, dungeonbook_width)), row(3), row(4))
-assert tallest_row <= page_height, 'a single row is higher than the page and cannot be shown whole'
-
-report = []
-for width, height in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
-    for user in (0.8, 1.2):
-        scale = min(width / design_width, height / design_height) * user
-        # the book must be on the screen (shrunk to it), otherwise the end of the page could not be reached at all
-        fit = min(1.0, width / (book_width * scale), height / (book_height * scale))
-        assert book_height * fit * scale <= height + 1e-6 and book_width * fit * scale <= width + 1e-6, ('the book is larger than the screen', width, height, user)
-        viewport = book_page_height(fit)
-        assert tallest_row <= viewport, ('a single row is higher than the book page', width, height, user)
-        page_px = viewport * scale
-        for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
-            maximum, wheel_steps = reachable_rows(remarks_bottom, viewport)
-            overflow = remarks_bottom > viewport + overflow_tolerance
-            # without overflow the bar is hidden and nothing moves; with overflow the bar is shown and reaches the end
-            assert overflow or maximum <= overflow_tolerance, (name, remarks_bottom)
-            # the last row ends exactly at the page bottom at the end of the range, the first row starts at the top
-            assert abs((remarks_bottom - maximum) - min(remarks_bottom, viewport)) < 1e-6 or not overflow
-            report.append('%dx%d user %d%% %s: page %.0f px, content %.0f px, %s' % (
-                width, height, round(user * 100), name, page_px, remarks_bottom * scale,
-                ('scrolls %.0f px in %d wheel steps, all rows reachable' % (maximum * scale, wheel_steps)) if overflow else 'fits'))
-
-for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
-    for user in (0.5, 1.0, 2.0):
-        scale = min(width / 1024.0, height / 768.0) * user
-        font_scale = min(width / (800.0 / user), height / (600.0 / user))
-        # screen pixels of one line (14 pixels at 800x600) and of the book page, back in design pixels
-        line_design = 14.0 * font_scale / scale
-        assert abs(line_design - 17.92) < 0.01, ('the line height depends on the resolution', line_design)
-        page_px = page_height * scale
-        for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
-            need = remarks_bottom * scale
-            reachable_rows(remarks_bottom, page_height)
-        # the status keeps its place whatever the resolution: its top does not depend on the remarks
-        assert typical[0] == without_quirks[0]
+assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists(), 'the shared profile page was deleted'
+assert 'layoutCreatureProfilePage' not in gui and 'ProfileScrollbar' not in gui
 
 # Dungeonbook (gui/WindowSocial.layout), owner decisions 635, 636, 647 and 648: a start page with the creature list
 # (portrait, name, level, mood, filters All / Workers / Fighters / Unhappy) and the feed of all creatures, and the four
@@ -221,7 +45,7 @@ for old in ('FilterButton', 'FeedTab', 'ProfileTab', 'FeedModeButton', 'Creature
 assert 'type="OD/Listbox"' not in social_layout
 
 font_files = {}
-for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-13', 'MedievalSharp-20'):
+for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-12', 'MedievalSharp-13', 'MedievalSharp-20'):
     spec = ET.parse(repo / 'gui/fonts' / (name + '.font')).getroot()
     font_files[name] = (ImageFont.truetype(str(repo / 'gui/fonts' / spec.get('filename')), 1024),
                         float(spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0)
@@ -258,6 +82,8 @@ assert book.find("Property[@name='FrameLeftImage']") is None and book.find("Prop
 def collect_boxes(element, box, path, out):
     """Absolute boxes of all windows below element, as fractions of the frame client."""
     for child in element.findall('Window'):
+        if child.find("Property[@name='NonClient']") is not None:
+            continue  # the back arrow in the title bar (checked below), not in the client
         value = child.find("Property[@name='Area']").get('value')
         dims = [(float(a), float(b)) for a, b in re.findall(r'\{(-?[0-9.]+),(-?[0-9.]+)\}', value)]
         assert len(dims) == 4 and all(offset == 0 for _, offset in dims), child.get('name') + ' scales with its client'
@@ -291,16 +117,19 @@ def visible_default(name):
 
 assert visible_default('HomePage') and not any(visible_default(p) for p in pages[1:]), 'the book opens on the start page'
 assert not visible_default('Header'), 'the start page has no head with arrows'
-# Navigation: four buttons in the bottom bar, the arrows in the head, the filters in the head of the start page
+# Navigation: five buttons in the bottom bar, the last opens the skill tree (plan INGAME-QS-11 K4); the arrows in the
+# head "< Name >" below the title; the back arrow in the title bar (K3); the filters in the head of the start page
 nav = [n for n in boxes if n.startswith('NavBar/Nav') and n.count('/') == 1 and n != 'NavBar/NavRule']
-assert nav == ['NavBar/NavFeed', 'NavBar/NavProfile', 'NavBar/NavValues', 'NavBar/NavInventory'], nav
+assert nav == ['NavBar/NavFeed', 'NavBar/NavProfile', 'NavBar/NavValues', 'NavBar/NavInventory', 'NavBar/NavSkills'], nav
 assert [boxes[n + '/Label'][1].find("Property[@name='Text']").get('value') for n in nav] == [
-    'Feed', 'Profile', 'Values', 'Inventory']
-for arrow in ('BackButton', 'PrevButton', 'NextButton'):
+    'Feed', 'Profile', 'Values', 'Inventory', 'Skills']
+for arrow in ('PrevButton', 'NextButton'):
     assert 'Header/' + arrow in boxes
+assert 'Header/BackButton' not in boxes, 'the back arrow moved from the head to the title bar'
+back_arrow = book.find("Window[@name='BackButton']")
+assert back_arrow is not None and back_arrow.find("Property[@name='NonClient']").get('value') == 'True'
 prev_box, name_box, next_box = (boxes['Header/' + n][0] for n in ('PrevButton', 'NameText', 'NextButton'))
 assert prev_box[2] <= name_box[0] and name_box[2] <= next_box[0], 'the arrows sit around the name'
-assert boxes['Header/BackButton'][0][2] <= prev_box[0], 'the back arrow sits left in the head'
 filters = ['HomePage/Filter']
 assert boxes[filters[0]][1].get('type') == 'OD/Combobox'
 assert boxes['HomePage/CreaturesLabel'][0][2] <= boxes[filters[0]][0][0]
@@ -308,7 +137,8 @@ assert boxes[filters[0]][0][1] < boxes['HomePage/ListRows'][0][1]
 buttons = [n for n, (b, e) in boxes.items() if e.get('type') in ('OD/Button', 'OD/InvisibleButton')]
 for n in buttons:
     allowed = n.startswith('NavBar/') or n.startswith('Header/') or n in filters or (
-        n.startswith('HomePage/ListRows/Row') and n.endswith('/Button')) or n.endswith('/ProfileLink')
+        n.startswith('HomePage/ListRows/Row') and n.endswith('/Button')) or (
+        n.startswith('HomePage/FeedRows/') and n.endswith('/ProfileLink'))
     assert allowed, n + ' is a button in mid-page'
 # Rows of the list and of the feeds, scrolled by their scrollbars, no overlap
 list_rows = sorted(n for n in boxes if re.fullmatch(r'HomePage/ListRows/Row\d', n))
@@ -511,7 +341,7 @@ for name in ATTRIBUTES:
     assert cell['BackgroundEnabled'] == 'True' and 'Text' not in cell, name
 assert not any(re.fullmatch(r'ValuesPage/(Strength|Dexterity|Life|Mana)\w+', n) for n in boxes), 'one window per attribute'
 # The Equipment, Path and Skills tiles show symbol and title (book-variant-2); their whole text is in the tooltip and
-# in the path and skills rows of the profile page, which word wrap and scroll (first part of this check)
+# path and skills are rows of the profile page (plan INGAME-QS-11 K1)
 assert 'entry.equipment, entry.path, entry.skills' in social and 'fitTextToWindow' not in social
 tiles = function_of(social, 'void SocialWindow::refreshValues(')
 for fragment in ('const std::string tooltip = std::string(tiles[i]) + ": " + value;',
@@ -522,35 +352,38 @@ for name in ('Equipment', 'Path', 'Skills'):
     assert 'ValuesPage/%sValue' % name not in boxes, name + ' tile shows a shortened text'
     tile = boxes['ValuesPage/%sTile' % name][1].find("Property[@name='MousePassThroughEnabled']")
     assert tile is not None and tile.get('value') == 'False', name + ' tile must show its tooltip'
-shared_page = (repo / 'gui/WindowCreatureProfilePage.layout').read_text()
-assert 'name="PathText"' in shared_page and 'name="SkillsText"' in shared_page
-for row in ('PathText', 'SkillsText'):
-    assert re.search(r'name="%s"\s*>(?:(?!</Window>).)*WordWrapLeftAligned' % row, shared_page, re.S), row + ' word wraps'
-assert re.search(r'textRows(?:Before|After)\[\] = \{[^}]*"SkillsText"', body), 'the skills row flows and scrolls'
-assert 'page->getChild("PathText")->setText("Path: " + getSkillPathText());' in creature_cpp
-assert 'page->getChild("SkillsText")->setText("Skills: " + getSkillListText());' in creature_cpp
-# Out of sight the fallback profile holds equipment, path and skills in full and scrolls when it is longer
-fallback = social[social.index('// Out of sight the profile'):social.index('// The posts of the creature')]
-assert '"\\nEquipment: " + entry.equipment + "\\nPath: " + entry.path + "\\nSkills: " + entry.skills' in fallback
-assert 'fallback->setText(escapeMarkup(text));' in fallback
-social_text = boxes['ProfilePage/SocialText'][1]
-assert social_text.find("Property[@name='VertScrollbar']").get('value') == 'True', 'the fallback profile scrolls'
-assert social_text.find("Property[@name='HorzFormatting']").get('value').startswith('WordWrap')
-# No text of the book ends in "..." (decision 732): no shortening helper, no dots, the whole text is set
-for gone in ('elideToWidth', 'setElidedText', 'fitTextToWindow', 'isTileTextFitting', '"..."', "'...'", '+ "..'):
+# The profile of book-variant-2 (plan INGAME-QS-11 K1): path and skills are rows of the book's own profile page,
+# filled from the roster (or from the creature known here)
+profile_fill_book = function_of(social, 'void SocialWindow::refreshProfile(')
+for fragment in ('std::string path = entry.path;', 'std::string skills = entry.skills;',
+                 'path = creature->getSkillPathText();', 'skills = creature->getSkillListText();',
+                 'setFittedText(page->getChild("SkillsValue"), skills.empty() ? std::string("-") : skills, true, "");'):
+    assert fragment in profile_fill_book, fragment
+for name in ('SocialHolder', 'SocialText', 'InfoText', 'KeeperText'):
+    assert 'ProfilePage/' + name not in boxes, name + ' is not on the profile of book-variant-2'
+# Decision 732: the start page, the feeds, the head and the values show their whole texts. Plan INGAME-QS-11 K1: a
+# text of the profile page that is longer than its place is shortened with "..." and shown whole in its tooltip; that
+# is the only shortening of the book (setFittedText and the name line of refreshProfile)
+for gone in ('elideToWidth', 'setElidedText', 'fitTextToWindow', 'isTileTextFitting', "'...'"):
     assert gone not in social, gone + ' shortens a text of the Dungeonbook'
+dots = [m.start() for m in re.finditer(re.escape('"..."'), social)
+        if not social[social.rindex('\n', 0, m.start()) + 1:m.start()].lstrip().startswith('//')]
+concatenated = [m.start() for m in re.finditer(re.escape('+ "..'), social)]
+assert all(fitted_range_start < d for d in concatenated for fitted_range_start in (social.index('void setFittedText('),)) \
+    and set(concatenated) <= set(d - 2 for d in dots), 'dots are only added by the shortening of the profile'
+fitted_range = (social.index('void setFittedText('), social.index('//! \\brief Returns the value after "label: "'))
+profile_range = (social.index('void SocialWindow::refreshProfile('), social.index('void SocialWindow::refreshValues('))
+assert dots and all(fitted_range[0] < d < fitted_range[1] or profile_range[0] < d < profile_range[1] for d in dots), \
+    'only the profile shortens its texts'
 assert 'void setFullText(CEGUI::Window* window, const std::string& text)' in social
 assert 'window->setText(escapeMarkup(text));' in function_of(social, 'void setFullText(')
 for call in ('setFullText(home->getChild("CreaturesLabel"), label.str());',
              'setFullText(row->getChild("Name"), profile.getFullName());',
              'setFullText(header->getChild("NameText"), profile.getFullName());',
-             'setFullText(page->getChild("NameText"), profile.getFullName());',
-             'setFullText(page->getChild("KeeperText"), "Keeper: " + entry.keeper);',
+             'setFullText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));',
              'head->setText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR',
              'textWindow->setText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text));'):
     assert call in social, call
-profile_fill = function_of(creature_cpp, 'float Creature::fillProfilePage(CEGUI::Window* page)')
-assert '"..."' not in profile_fill and 'std::string("nothing to say")' in profile_fill, 'the profile status ends in "..."'
 assert 'Creature::fillItemSlotWindows(creature, slots, true)' in social
 creature_text = (repo / 'source/entities/Creature.cpp').read_text()
 fill = creature_text[creature_text.index('void Creature::fillItemSlotWindows('):]
@@ -560,7 +393,7 @@ for fragment in ('creature->mEquipment[slot]', 'creature->mPotionSlots[slot - 6]
                  'slotType->setVisible(item == nullptr)', 'slot - 6 >= creature->mPotionSlots.size()',
                  'image->getChild("Lock")->setVisible(locked)', '"PotionSlotLevel2"', '"PotionSlotLevel3"'):
     assert fragment in fill, fragment
-assert 'fillItemSlotWindows(this, slotWindows, false)' in creature_text, 'the shared profile page keeps its slots'
+assert 'fillItemSlotWindows(this, slotWindows, false)' not in creature_text, 'the shared profile page is deleted'
 for handler in ('onBackClicked', 'onPreviousClicked', 'onNextClicked', 'onNavClicked', 'onFilterClicked', 'onListRowClicked',
                 'onListWheel', 'onFeedWheel', 'onListScrolled', 'onFeedScrolled', 'onLinkClicked'):
     assert 'bool SocialWindow::%s' % handler in social and '&SocialWindow::%s' % handler in social, handler
@@ -570,13 +403,7 @@ assert '% count' in step and 'mListedCreatures' in step, 'previous and next wrap
 assert 'row->getChild("Highlight")->setVisible(entry->name == mSelectedCreature)' in social
 assert 'describeMood(*entry, mood, icon)' in social
 assert 'MAX_FEED_ROWS = 25' in social and 'MAX_OWN_POSTS = 6' in social
-assert 'creature->fillProfilePage(mProfilePage)' in social
-compact = social[social.index('const char* const hidden[]'):]
-compact = compact[:compact.index('};')]
-for name in ('"Portrait"', '"NameText"', '"AttributesText"', '"EquipmentText"', '"EquipmentRow"', '"OwnPostsText"'):
-    assert name in compact, 'the shared profile page in the book hides ' + name
-assert 'const bool compact = !page->getChild("Portrait")->isVisible();' in body
-assert 'compact ? PROFILE_ROW_GAP' in body
+assert 'fillProfilePage(' not in social and 'fillProfilePage(' not in creature_text, 'the shared profile page is deleted'
 
 # Sizes. Fonts and layout scale by the same factor from the display and the UI scale (the line heights in design
 # pixels do not depend on the resolution); Gui::getWindowFitFactor shrinks a window larger than the screen together
@@ -667,9 +494,6 @@ for template in templates:
 # The age of a post (formatAge) and the level or crown (about two letters wide) after the name in the feed head
 AGES = ('just now', '59 sec ago', '59 min ago', '2147483 h ago')
 HEADS = [n + '   ' + level + age for n in WIDEST_NAMES_8 for level in ('', 'Lv. 30 - ', 'WW - ') for age in AGES]
-LINK_LEFT = float(re.search(r'PROFILE_LINK_LEFT = ([0-9.]+)f', gui)[1])
-for link in ('FriendLink0', 'FriendLink1', 'FoeLink'):
-    assert re.search(r'name="%s"\s*>\s*<Property name="Area" value="\{\{0\.0,%d\},' % (link, LINK_LEFT), page_layout_text), link
 NICK = 'W' * 20  # the nick of a keeper has at most 20 characters (MenuModeMultiplayerServer)
 assert 'nickCeguiStr.length() > 20' in (repo / 'source/modes/MenuModeMultiplayerServer.cpp').read_text()
 
@@ -682,21 +506,42 @@ for row in list_rows:
     require(row + '/Name', 'MedievalSharp-8', lines=2, texts=WIDEST_NAMES_8, wrap=True)
     require(row + '/Level', 'MedievalSharp-8', texts=('Lv. 30',))
     require(row + '/Mood', 'MedievalSharp-8', texts=('Furious', 'Content', 'Neutral', 'Unhappy', 'Hungry'), wrap=True)
+    # the keeper the creature serves (INGAME-QS-7 U-2): a usual nick on one line; a longer one is shortened by the code
+    require(row + '/Keeper', 'MedievalSharp-8', texts=('Player 1', 'Player 4', 'Keeper'))
 for page in ('HomePage', 'FeedPage'):
     for i in range(3):
         require('%s/FeedRows/Row%d/Head' % (page, i), 'MedievalSharp-8', texts=HEADS, wrap=True)
         require('%s/FeedRows/Row%d/Text' % (page, i), 'MedievalSharp-8', lines=2, texts=WORST_POSTS, wrap=True)
     require(page + '/FeedEmpty', 'MedievalSharp-8', lines=2)
 require('FeedPage/FeedTitle', 'MedievalSharp-10', texts=('Feed',))
-require('Header/NameText', 'MedievalSharp-10', texts=WIDEST_NAMES_10, wrap=True)
+WIDEST_NAMES_12 = widest(full_names, 'MedievalSharp-12') + sorted(full_names, key=len)[-1:]
+require('Header/NameText', 'MedievalSharp-12', texts=WIDEST_NAMES_12)
 for n in nav:
     require(n + '/Label', 'MedievalSharp-10', texts=(boxes[n + '/Label'][1].find("Property[@name='Text']").get('value'),))
-require('ProfilePage/NameText', 'MedievalSharp-10', texts=WIDEST_NAMES_10, wrap=True)
-require('ProfilePage/KeeperText', 'MedievalSharp-8', texts=('Keeper: ' + NICK, 'Keeper: Player 1'), wrap=True)
-require('ProfilePage/InfoText', 'MedievalSharp-8', lines=4, texts=('Mood: Furious', 'Level 30'))
+# The profile of book-variant-2: the widest name in the large font with the longest handle on one line, the labels of
+# the table, and the longest values of the rows (they would be shortened with "..." by the code, K1, but fit)
+handles = ['@' + max((g for group in name_groups for g in group['given']), key=len).lower() + '99']
+require('ProfilePage/NameText', 'MedievalSharp-12', texts=WIDEST_NAMES_12, pad_w=0.0)
+for label in ('Age', 'Gender', 'Relationship', 'Origin', 'Job', 'Path', 'Skills'):
+    require('ProfilePage/%sLabel' % label, 'MedievalSharp-8', texts=(label + ':',))
+age_jokes = [c for line in (repo / 'config/social-names.cfg').read_text().split('\n')
+             for c in line.split('\t')[1:] if line.startswith('AgeJoke') and c]
+relations = [line.split('\t')[-1] for line in (repo / 'config/social-texts.cfg').read_text().split('\n')
+             if line.startswith('Relation\t')]
+require('ProfilePage/AgeValue', 'MedievalSharp-8', texts=tuple(age_jokes) + ('30',))
+require('ProfilePage/GenderValue', 'MedievalSharp-8', texts=('Female', 'Male', '-'))
+require('ProfilePage/RelationshipValue', 'MedievalSharp-8', texts=tuple(relations) + (
+    'In a relationship', 'Sworn enemies', "It's complicated", 'Single'))
+require('ProfilePage/OriginValue', 'MedievalSharp-8', texts=tuple(widest([h for g in name_groups for h in g['home']])))
+require('ProfilePage/JobValue', 'MedievalSharp-8', texts=tuple(widest(pools['job'])))
+require('ProfilePage/SkillsValue', 'MedievalSharp-8', lines=3, wrap=True)
+require('ProfilePage/QuoteText', 'MedievalSharp-8', lines=4, wrap=True)
+# the social lines of the creature (owner decision 2026-11-18), each shortened to its box with its hover text
+require('ProfilePage/StatusText', 'MedievalSharp-8', lines=2, wrap=True)
+for line in ('LikesText', 'DislikesText', 'FriendsText', 'FoeText', 'EffectLine0', 'EffectLine1', 'EffectLine2'):
+    require('ProfilePage/' + line, 'MedievalSharp-8', texts=('Buff: Relaxed (9:59)', 'Foe: none', 'Friends: none yet'))
+require('ProfilePage/RemarksText', 'MedievalSharp-8', lines=2, wrap=True)
 require('ProfilePage/PostsTitle', 'MedievalSharp-10', texts=('Posts (200)',))
-# The narrow profile viewport scrolls the full shared document.
-require('ProfilePage/SocialHolder', 'MedievalSharp-8', lines=4)
 require('ProfilePage/PostsEmpty', 'MedievalSharp-8', lines=2, texts=('Nothing posted yet.',))
 # Values: rounded numbers (two decimals at most, every magnitude); a pair "a / b" wraps after the slash
 pairs = tuple(a + ' / ' + b for a in WORST_NUMBERS[-3:] for b in WORST_NUMBERS[-3:])
@@ -717,33 +562,23 @@ require('ValuesPage/DefenseValues', 'MedievalSharp-8', lines=3, texts=WORST_NUMB
 for name in ('Equipment', 'Path', 'Skills'):
     require('ValuesPage/%sTitle' % name, 'MedievalSharp-8', texts=(name,), pad_w=2.0)
 for i, label in enumerate(labels):
-    require('InventoryPage/SlotBox%d/Label' % i, 'MedievalSharp-6', texts=(label,), pad_w=2.0)
+    require('InventoryPage/SlotBox%d/Label' % i, 'MedievalSharp-8', texts=(label,), pad_w=2.0)
 require('InventoryPage/PotionsLabel', 'MedievalSharp-8', texts=('Potions',))
 require('InventoryPage/InventoryLabel', 'MedievalSharp-8', texts=('Inventory',))
-require('InventoryPage/HintText', 'MedievalSharp-8', lines=4)
+require('InventoryPage/HintText', 'MedievalSharp-8', lines=2, wrap=True, texts=(
+    'This creature is out of sight; its items are not known here.',
+    'Only the hands of a creature of another keeper can be seen.'))
 for name in need:
     assert name in boxes, name
 
 state_lines = []
 wrapped_lines = {}
 narrowest_link = 1e9
-# The original sheet keeps its columns in a scrollable document beside the persistent roster. Pin the production
-# dimensions independently; all existing full-text samples and font/size requirements below still apply.
+# The values sheet is a page like the others (plan INGAME-QS-11 K2): no scrolled document, every cell on the page
 values_page = boxes['ValuesPage'][1]
-assert values_page.get('type') == 'OD/ScrollablePane'
-assert values_page.find("Property[@name='ContentPaneAutoSized']").get('value') == 'False'
-assert boxes['ValuesPage'][0][1] >= boxes['Header'][0][3], 'scroll viewport starts below the header'
-assert 'const float documentWidth = 820.0f * scale;' in gui
-assert 'const float documentHeight = 500.0f * scale;' in gui
-assert 'const CEGUI::URect& area = mScaledWindows.at(child).area;' in gui
-for edge in ('d_min.d_x', 'd_max.d_x'):
-    assert 'area.' + edge + '.d_scale * documentWidth' in gui
-for edge in ('d_min.d_y', 'd_max.d_y'):
-    assert 'area.' + edge + '.d_scale * documentHeight' in gui
-assert 'pane->setContentPaneArea(CEGUI::Rectf(0, 0, documentWidth, documentHeight));' in gui
-VALUES_WIDTH, VALUES_HEIGHT = 820.0, 500.0
-values_box = boxes['ValuesPage'][0]
-values_w, values_h = values_box[2] - values_box[0], values_box[3] - values_box[1]
+assert values_page.get('type') == 'DefaultWindow', 'the values page does not scroll'
+assert boxes['ValuesPage'][0][1] >= boxes['Header'][0][3], 'the values page starts below the head'
+assert 'documentWidth' not in gui and '"ValuesPage"' not in gui, 'no scroll document for the values page'
 for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for user in (0.8, 1.2):
         scale = min(screen_w / 1024.0, screen_h / 768.0) * user
@@ -759,21 +594,6 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             box = boxes[name][0]
             width = (box[2] - box[0]) * client_w
             height = (box[3] - box[1]) * client_h
-            if name.startswith('ValuesPage/'):
-                width = (box[2] - box[0]) / values_w * VALUES_WIDTH
-                height = (box[3] - box[1]) / values_h * VALUES_HEIGHT
-                # Both stock scrollbars are 12 screen pixels. Every complete text cell must be reachable at
-                # some valid scroll position, with neither the frame nor the persistent roster covering it.
-                viewport_w = values_w * client_w - 12.0 / scale
-                viewport_h = values_h * client_h - 12.0 / scale
-                left = (box[0] - values_box[0]) / values_w * VALUES_WIDTH
-                top = (box[1] - values_box[1]) / values_h * VALUES_HEIGHT
-                for start, length, viewport, document in ((left, width, viewport_w, VALUES_WIDTH),
-                                                          (top, height, viewport_h, VALUES_HEIGHT)):
-                    assert length <= viewport + 1e-6, ('cell exceeds viewport', name, screen_w, screen_h, user)
-                    offset = min(start, max(0.0, document - viewport))
-                    assert offset <= start + 1e-6 and start + length <= offset + viewport + 1e-6, \
-                        ('cell unreachable by scrolling', name, screen_w, screen_h, user)
             if wrap:
                 # every text in full: all its wrapped lines in the height, its widest word in the width
                 wrapped = [wrap_lines(font, t, width - pad_w) for t in texts]
@@ -793,14 +613,6 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             ratio = max(wanted_h / height, wanted_w / width)
             if ratio > tightest.get(page, (0.0, ''))[0]:
                 tightest[page] = (ratio, name)
-        # The compact profile puts the label above its one-line links, which use the full row width.
-        # The noncompact full page (the old creature card is removed) retains PROFILE_LINK_LEFT beside its label.
-        assert 'float linkY = compact ? y + lineHeight : y;' in gui
-        assert 'compact ? PROFILE_SIDE_MARGIN : PROFILE_LINK_LEFT' in gui
-        holder = boxes['ProfilePage/SocialHolder'][0]
-        link_width = (holder[2] - holder[0]) * client_w - 16.0 - 32.0
-        assert link_width >= max(text_width('MedievalSharp-8', n) for n in WIDEST_NAMES_8) + 2.0,             ('a friend name is wider than its link', screen_w, screen_h, user, round(link_width, 1))
-        narrowest_link = min(narrowest_link, link_width)
         # the slot pictures stay squares of at least 24 screen pixels, the portraits at least 40
         for i in range(13):
             slot = boxes['InventoryPage/SlotBox%d/Slot%d' % (i, i)][0]
@@ -808,8 +620,8 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             assert edge >= 12.0, ('slot too small', screen_w, screen_h, user, edge)
         # the one attribute row: each cell in screen pixels and the room its widest and highest text takes
         cell = boxes['ValuesPage/Strength'][0]
-        cell_w = (cell[2] - cell[0]) / values_w * VALUES_WIDTH
-        cell_h = (cell[3] - cell[1]) / values_h * VALUES_HEIGHT
+        cell_w = (cell[2] - cell[0]) * client_w
+        cell_h = (cell[3] - cell[1]) * client_h
         attribute_w = max(text_width('MedievalSharp-8', part) + 6.0 for name in ATTRIBUTES
                           for t in ATTRIBUTE_TEXTS[name] for part in t.split('\n'))
         state_lines.append('%dx%d UI %d%%: attribute row 4 cells of %dx%d px, widest line %.0f%% of the width, '
@@ -827,9 +639,8 @@ print('Dungeonbook pages verified: start page, head with back/previous/next arro
 for line in state_lines:
     print('  ' + line)
 print('Full texts (decision 732), most wrapped lines at any size: list name %d, feed head %d, post text %d (%d posts), '
-      'head name %d, profile name %d, keeper %d, value %d; widest value %s; narrowest friend link %.0f of %.0f design px' % (
+      'value %d; widest value %s; head and profile name on one line (widest %.0f design px)' % (
           wrapped_lines['HomePage/ListRows/Row0/Name'], wrapped_lines['HomePage/FeedRows/Row0/Head'],
-          wrapped_lines['HomePage/FeedRows/Row0/Text'], len(WORST_POSTS), wrapped_lines['Header/NameText'],
-          wrapped_lines['ProfilePage/NameText'], wrapped_lines['ProfilePage/KeeperText'],
-          wrapped_lines['ValuesPage/HitPointsValue'], WORST_NUMBERS[-1], narrowest_link,
-          max(text_width('MedievalSharp-8', n) for n in WIDEST_NAMES_8)))
+          wrapped_lines['HomePage/FeedRows/Row0/Text'], len(WORST_POSTS),
+          wrapped_lines['ValuesPage/HitPointsValue'], WORST_NUMBERS[-1],
+          max(text_width('MedievalSharp-12', n) for n in WIDEST_NAMES_12)))

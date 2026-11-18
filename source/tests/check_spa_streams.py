@@ -73,10 +73,11 @@ assert creature_cpp.count('importSpaStateFromPacket(is);') == 2, 'full and updat
 for text in (extract(creature_cpp, 'void Creature::importFromPacket('), extract(creature_cpp, 'void Creature::updateFromPacket(')):
     assert re.search(r'importThirstStateFromPacket\(is\);\s*importSpaStateFromPacket\(is\);', text)
     assert 'importMoodEffectsFromPacket(is);\n    OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);' in text, 'the running mood effects are read after the spa fields'
-# The effect line of the creature page (relaxation, hangover) is bound to the own seat, not to the allies
-profile_page = extract(creature_cpp, 'float Creature::fillProfilePage(')
+# The effect line of the creature page (relaxation, hangover) is bound to the own seat, not to the allies (the
+# Dungeonbook profile, Creature::getProfileSocialInfo)
+profile_page = extract(creature_cpp, 'Creature::ProfileSocialInfo Creature::getProfileSocialInfo(')
 assert 'const bool isOwn = (localSeat != nullptr) && (getSeat() == localSeat);' in profile_page
-assert 'effectsText->setVisible(isOwn && !effects.empty());' in profile_page
+assert 'if(isOwn)' in profile_page and 'getProfileEffectsText(mRelaxTurns, mHangoverTurns, mMoodEffects,' in profile_page
 # The restored acts and climbs go on at the reached turn of their clip instead of starting it again
 attendant_restore = extract(read('source/entities/PoolAttendantEntity.cpp'), 'void PoolAttendantEntity::restoreFromSave(')
 assert attendant_restore.count('setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);') == 4

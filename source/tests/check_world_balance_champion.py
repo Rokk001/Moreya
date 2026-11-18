@@ -121,7 +121,8 @@ assert status.rstrip().endswith('displayOverlay(crownId, 0);\n}'), "the crown is
 definition = read("source/entities/CreatureDefinition.h")
 assert "CHAMPION_CROWN_MARKUP = \"[image-size='w:16 h:16'][image='ChampionCrown/Crown']\"" in definition
 creature = read("source/entities/Creature.cpp")
-assert 'handle += " - " + CHAMPION_CROWN_MARKUP;' in creature
+# The handle line with the crown belonged to the shared profile page, deleted by the owner on 2026-11-18
+assert 'handle += " - " + CHAMPION_CROWN_MARKUP;' not in creature
 assert 'tempSS << "Level: " << CHAMPION_CROWN_MARKUP' in creature
 social = read("source/render/SocialWindow.cpp")
 # The Dungeonbook list and feed: the crown stands in the level place, the whole name is escaped on its own and word
@@ -130,6 +131,7 @@ assert 'row->getChild("Level")->setText(entry->champion ? CHAMPION_CROWN_MARKUP 
 assert 'setFullText(row->getChild("Name"), profile.getFullName())' in social
 assert "window->setText(escapeMarkup(text));" in social and "elideToWidth" not in social
 assert "entry->champion ? std::string(CHAMPION_CROWN_MARKUP)" in social
-assert 'std::string("Champion ") + CHAMPION_CROWN_MARKUP' in social
+# The profile of book-variant-2 has no level row (plan INGAME-QS-11 K1); the crown stays in the list and the feeds
+assert social.count('CHAMPION_CROWN_MARKUP') >= 2
 
 print("world balance champion checks passed")

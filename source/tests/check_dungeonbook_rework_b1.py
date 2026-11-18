@@ -8,7 +8,8 @@ page) in G:/Moreya-Internal/medien/ingame-qs-8/m1/.
 2. Profile: portrait left, data in the middle, posts right. The portrait lies over nothing: the build 37 portrait
    used HorizontalAlignment Centre, a window alignment in CEGUI, so it was centred in the page and covered the name,
    the health and XP bars and the handle. The boxes below are computed WITH the CEGUI alignment rules.
-   The left column holds only the portrait and the info text.
+   The left column holds only the portrait; the posts are the right column of 2 x 3 pictures (book-variant-2, plan
+   INGAME-QS-11 K1).
 3. Inventory: no slot (Left Hand and Armour included) touches the portrait.
 4. Feed: every post row of both feeds has a picture: the painted scene of its post kind (DungeonbookIcons/Post*,
    decision 710; check_dungeonbook_post_pictures.py checks the scenes), the portrait only for an unknown kind. Names,
@@ -94,41 +95,45 @@ assert clip[1].get('type') == 'DefaultWindow' and image.get('ClippedByParent', '
     'the picture is clipped by the frame, nothing of it reaches the text'
 assert image['AspectMode'] == 'Expand' and image['AspectRatio'] == '1', 'square portrait, filled like the concept'
 assert 'page->getChild("Portrait/Clip/Image")' in social
-middle = ('NameText', 'KeeperText', 'SocialHolder', 'SocialText')
-right = ['PostsTitle']
-bottom = ['PostsEmpty'] + ['PostThumb%d' % i for i in range(6)]
-for name in middle + tuple(right + bottom):
-    assert not overlaps(portrait[0], boxes['ProfilePage/' + name][0]), ('the portrait lies over', name)
+middle = ('NameText', 'AgeLabel', 'AgeValue', 'GenderValue', 'RelationshipValue', 'OriginValue', 'JobValue',
+          'PathValue', 'SkillsLabel', 'SkillsValue', 'QuoteText')
+right = ['PostsTitle'] + ['PostThumb%d' % i for i in range(6)] + ['PostsEmpty']
 for name in middle + tuple(right):
+    assert not overlaps(portrait[0], boxes['ProfilePage/' + name][0]), ('the portrait lies over', name)
     assert boxes['ProfilePage/' + name][0][0] >= portrait[0][2] - 1e-9, name + ' is right of the portrait'
-for name in middle:
-    assert boxes['ProfilePage/' + name][0][2] >= boxes['ProfilePage/ColumnRule'][0][2] - 1e-9, name + ' in the middle'
+for name in middle[1:]:
+    assert boxes['ProfilePage/' + name][0][2] <= boxes['ProfilePage/ColumnRule'][0][0] + 1e-9, name + ' in the middle'
 for name in right:
     assert boxes['ProfilePage/' + name][0][0] >= boxes['ProfilePage/ColumnRule'][0][2] - 1e-9, name + ' right'
-# The health and XP bars and the handle are rows of the shared page inside SocialHolder: they stay clear as well
-assert 'mProfilePage = gui.createCreatureProfilePage(holder)' in social
-# The left column holds only the portrait and the info text (class, level, mood); nothing else is drawn there
+# The book fills its own rows; no shared page with bars and links sits in it any more
+assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists() and 'SocialHolder' not in layout_text
+# The left column holds the portrait and below it the social lines of the creature (owner decision 2026-11-18:
+# likes, dislikes, friends, foe, buffs and debuffs, the remarks of the picture); nothing lies over the portrait
 left_column = [n for n in boxes if n.startswith('ProfilePage/') and n.count('/') == 1
-               and boxes[n][0][0] < portrait[0][2] - 1e-9 and n.split('/')[1] not in bottom]
-assert sorted(left_column) == ['ProfilePage/InfoText', 'ProfilePage/Portrait'], left_column
-assert boxes['ProfilePage/InfoText'][0][1] >= portrait[0][3] - 1e-9, 'the info text sits below the portrait'
-# Six original pictures share one bottom row, leaving height for the eight-line social row above them.
+               and boxes[n][0][0] < portrait[0][2] - 1e-9]
+social_lines = ['ProfilePage/' + n for n in ('LikesText', 'DislikesText', 'FriendsText', 'FoeText', 'EffectLine0',
+                                              'EffectLine1', 'EffectLine2', 'RemarksText')]
+assert sorted(left_column) == sorted(['ProfilePage/Portrait'] + social_lines), left_column
+for name in social_lines:
+    assert boxes[name][0][1] >= portrait[0][3] - 1e-9, name + ' lies below the portrait'
+# Six pictures of the newest posts as two columns of three rows below "Posts"
 thumbs = [boxes['ProfilePage/PostThumb%d' % i][0] for i in range(6)]
 for i, a in enumerate(thumbs):
     assert framed('ProfilePage/PostThumb%d' % i) and 'ProfilePage/PostThumb%d/Clip/Image' % i in boxes
     for b in thumbs[i + 1:]:
         assert not overlaps(a, b), 'post pictures overlap'
-assert all(abs(thumbs[0][1] - t[1]) < 1e-9 and abs(thumbs[0][3] - t[3]) < 1e-9 for t in thumbs)
-assert all(a[2] <= b[0] for a, b in zip(thumbs, thumbs[1:])), 'six pictures from left to right'
-for name in bottom:
-    assert boxes['ProfilePage/' + name][0][1] >= max(boxes['ProfilePage/' + above][0][3]
-        for above in ('Portrait', 'InfoText', 'SocialHolder', 'SocialText', 'PostsTitle', 'ColumnRule')), name
+    assert a[1] >= boxes['ProfilePage/PostsTitle'][0][3] - 1e-9, 'the pictures are below "Posts"'
+for row in range(3):
+    left, right_thumb = thumbs[2 * row], thumbs[2 * row + 1]
+    assert abs(left[1] - right_thumb[1]) < 1e-9 and left[2] <= right_thumb[0], 'two pictures side by side'
+    if row:
+        assert thumbs[2 * row - 2][3] <= left[1], 'three rows from top to bottom'
 assert 'MAX_OWN_POSTS = 6' in social
 posts = social[social.index('// The posts of the creature'):social.index('//! \\brief Fills the values sheet')]
 for fragment in ('findPostPicture(*it)', 'thumb->setTooltipText(text', '->setVisible(false)', '"PostsEmpty"',
                  '"Posts (" + std::to_string(count) + ")"'):
     assert fragment in posts, fragment
-print('2. profile: portrait left without window centring, social data right, six post pictures in the bottom row')
+print('2. profile: portrait left without window centring, social data in the middle, 2 x 3 post pictures right')
 
 # 3. Inventory: the slots stay right of the portrait
 inv = boxes['InventoryPage/Portrait']

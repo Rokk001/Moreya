@@ -82,10 +82,11 @@ for name in ('source/render/DungeonbookQuirks.cpp',
 quirks = read('source/render/DungeonbookQuirks.cpp')
 assert 'stableHash(' in quirks
 
-# The profile asks for the picture on every fill and sets it right away
-fill = body(creature, 'float Creature::fillProfilePage(CEGUI::Window* page)')
-assert 'getCreatureAppearanceImage(getName(), mAppearance)' in fill
-assert 'appearanceImage' in fill
+# The book asks for the picture of the appearance on every fill of a page and sets it right away (the shared profile
+# page that did the same was deleted, owner decision 2026-11-18)
+portrait = body(read('source/render/SocialWindow.cpp'), 'const CEGUI::Image* SocialWindow::findPortrait(')
+assert 'getCircularCreatureAppearanceImage(creatureName, appearance)' in portrait
+assert 'getCreatureAppearanceImage(creatureName, appearance)' in portrait
 
 # The tests that give the runtime part are part of the build
 tests = read('source/tests/CMakeLists.txt')
@@ -137,17 +138,24 @@ assert 'if(!(packetReceived >>' in client_case, 'incomplete snapshots must not r
 assert 'if(sock->getDungeonbookRosterOpen())' in server
 window = read('source/render/SocialWindow.cpp')
 assert 'askDungeonbookRoster, true' in window and 'askDungeonbookRoster, false' in window
-assert 'getDungeonbookRoster()' in window and '"Keeper: " + entry.keeper' in window
+# The keeper of a listed creature comes from the roster (the tooltip of its row; the profile of book-variant-2 has no
+# keeper row, plan INGAME-QS-11 K1)
+assert 'getDungeonbookRoster()' in window and '"), keeper " + entry->keeper' in window
 # Roster rendering must not require a visible map entity: every page works with the roster entry alone, a creature
 # known on this side only adds its relationships, its mood level, its items and its skill tree window
 assert 'getCreature(selected->name)' not in window
-assert window.count('mGameMap.getCreature(') == 5, 'every use of a map entity in the book is one of the five below'
-# The skill tree window reads the ranks of a known creature and hides itself when the creature is not known
+assert window.count('mGameMap.getCreature(') == 6, 'every use of a map entity in the book is one of the six below'
+# The skill tree window reads the ranks of a known creature and hides itself when the creature is not known; the
+# Skills button of the bar can only be used for a known creature with a skill tree
 assert 'Creature* creature = mSkillTreeCreature.empty() ? nullptr : mGameMap.getCreature(mSkillTreeCreature);' in window
+assert 'Creature* creature = mSelectedCreature.empty() ? nullptr : mGameMap.getCreature(mSelectedCreature);' in window
+assert 'return creature != nullptr && !creature->getSkillTypeInfo().mGroup.empty();' in window
 assert 'const CreatureSkillTree::TypeInfo type = (creature == nullptr) ? CreatureSkillTree::TypeInfo() :' in window
 assert 'mSkillTreeCreature.clear();\n        mSkillTreeWindow->hide();\n        return;' in window
 assert 'const CreatureMoodLevel level = creature == nullptr ? CreatureMoodLevel::Unknown' in window
-assert 'holder->setVisible(creature != nullptr);' in window and 'fallback->setVisible(creature == nullptr);' in window
+# The profile takes the real relationship of a known creature and the one of its social profile otherwise
+assert ('const std::string relationship = creature != nullptr ? creature->getProfileRelationshipText() : '
+        'profile.mRelationship;') in window
 assert 'Creature::fillItemSlotWindows(creature, slots, true)' in window and 'if(creature == nullptr)' in window
 assert 'if(creature != nullptr)\n            token = CreatureAppearanceLogic::toToken' in window
 print('allied Dungeonbook snapshot field order and subscription wiring ok')

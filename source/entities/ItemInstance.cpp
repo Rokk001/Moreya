@@ -1,6 +1,7 @@
 #include "entities/ItemInstance.h"
 
 #include "entities/ItemEffects.h"
+#include "entities/ItemValueLines.h"
 #include "entities/PotionDefinition.h"
 #include "entities/Weapon.h"
 #include "gamemap/GameMap.h"
@@ -50,6 +51,24 @@ std::string itemNumber(double value)
     else
         stream << std::fixed << std::setprecision(1) << value;
     return stream.str();
+}
+
+//! \brief The named value lines of a held weapon or shield (damage as min-max, no line for a value of 0).
+std::vector<std::string> describeWeaponValueLines(const Weapon& weapon)
+{
+    ItemWeaponValues values;
+    values.mPhysicalDamageMin = weapon.getPhysicalDamageMin();
+    values.mPhysicalDamage = weapon.getPhysicalDamage();
+    values.mMagicalDamageMin = weapon.getMagicalDamageMin();
+    values.mMagicalDamage = weapon.getMagicalDamage();
+    values.mElementDamageMin = weapon.getElementDamageMin();
+    values.mElementDamage = weapon.getElementDamage();
+    values.mPhysicalDefense = weapon.getPhysicalDefense();
+    values.mMagicalDefense = weapon.getMagicalDefense();
+    values.mElementDefense = weapon.getElementDefense();
+    values.mAttackRating = weapon.getAttackRating();
+    values.mDefenseRating = weapon.getDefenseRating();
+    return ItemValueLines::describeWeapon(values);
 }
 
 //! \brief Returns the readable text of each configured bonus kind.
@@ -272,7 +291,7 @@ double ItemInstance::getBonus(const std::string& kind) const { return sumValues(
 //! \brief Returns this instance's contribution to one effect.
 double ItemInstance::getEffect(const std::string& id) const { return sumValues(mEffects, id); }
 
-//! \brief Resolves catalogue display names and the equipment name of Poor spawn weapons.
+//! \brief Resolves catalogue display names and the display name of the equipment of Poor spawn weapons.
 std::string ItemInstance::getDisplayName(const GameMap* map) const
 {
     if(mSoulCrystal) return "Soul crystal";
@@ -288,7 +307,12 @@ std::string ItemInstance::getDisplayName(const GameMap* map) const
     if(definition != nullptr)
         return definition->getQuality(mQuality).mDisplay;
     const Weapon* weapon = ConfigManager::getSingleton().getWeapon(mDefinitionId);
-    return mQuality == Quality::poor && weapon != nullptr ? weapon->getName() : std::string();
+    return mQuality == Quality::poor && weapon != nullptr ? weapon->getDisplayName() : std::string();
+}
+
+const std::string& ItemInstance::getQualityColour(Quality quality)
+{
+    return QUALITY_COLOURS.at(static_cast<size_t>(quality));
 }
 
 //! \brief Resolves the base price and adds per-bonus pricing for the rolled instance.
@@ -361,25 +385,19 @@ std::string ItemInstance::getImageName(const Weapon* heldWeapon) const
 }
 
 //! \brief Builds the shared tooltip; spawn fallbacks show the actual held weapon's base values without rolling an item.
+//! Every value line names what it is and a value of 0 is left out (plan INGAME-QS-11 K6).
 std::string ItemInstance::describe(const GameMap* map, const Weapon* heldWeapon) const
 {
     std::string text = "[colour='" + QUALITY_COLOURS.at(static_cast<size_t>(mQuality)) + "']" +
-        (heldWeapon == nullptr ? getDisplayName(map) : heldWeapon->getName())
+        (heldWeapon == nullptr ? getDisplayName(map) : heldWeapon->getDisplayName())
         + "[colour='FFFFFFFF']";
     if(heldWeapon != nullptr)
     {
         std::ostringstream values;
         values << "\nQuality: " << qualityName(mQuality)
-            << "\nType: " << heldWeapon->getWeaponType() << "\nHands: " << heldWeapon->getHands()
-            << "\nBase damage (physical/magical/elemental): "
-            << heldWeapon->getPhysicalDamageMin() << "-" << heldWeapon->getPhysicalDamage() << " / "
-            << heldWeapon->getMagicalDamageMin() << "-" << heldWeapon->getMagicalDamage() << " / "
-            << heldWeapon->getElementDamageMin() << "-" << heldWeapon->getElementDamage()
-            << "\nBase defense (physical/magical/elemental): "
-            << heldWeapon->getPhysicalDefense() << " / " << heldWeapon->getMagicalDefense() << " / "
-            << heldWeapon->getElementDefense()
-            << "\nAttack rating: " << heldWeapon->getAttackRating()
-            << "\nDefense rating: " << heldWeapon->getDefenseRating();
+            << "\nType: " << heldWeapon->getWeaponType() << "\nHands: " << heldWeapon->getHands();
+        for(const std::string& line : describeWeaponValueLines(*heldWeapon))
+            values << "\n" << line;
         text += values.str();
     }
     for(const std::pair<std::string, double>& bonus : mBonuses)
@@ -395,28 +413,22 @@ std::string ItemInstance::describe(const GameMap* map, const Weapon* heldWeapon)
 
 //! \brief Builds the item card tooltip (owner decision 1026, finding 5): large name and quality in the quality colour,
 //! the price after a gold coin, a short left-aligned list of the values and the level in grey. The values are those of
-//! describe(); only their layout and the labels of a held weapon are shorter.
+//! describe(); the window draws the thick frame in the quality colour (Gui::setItemTooltip).
 std::string ItemInstance::describeTooltip(const GameMap* map, const Weapon* heldWeapon, int32_t coinSize) const
 {
     const std::string quality = "[colour='" + QUALITY_COLOURS.at(static_cast<size_t>(mQuality)) + "']";
     const std::string size = std::to_string(std::max<int32_t>(coinSize, 1));
     std::ostringstream text;
-    text << "[font='MedievalSharp-13']" << quality << (heldWeapon == nullptr ? getDisplayName(map) : heldWeapon->getName())
+    text << "[font='MedievalSharp-13']" << quality
+        << (heldWeapon == nullptr ? getDisplayName(map) : heldWeapon->getDisplayName())
         << "\n[font='MedievalSharp-10']" << quality << qualityName(mQuality)
         << "     [colour='FFF2C860'][image-size='w:" << size << " h:" << size << "'][image='OpenDungeonsIcons/GoldCoin'] "
         << itemNumber(getPrice(map)) << "[colour='FFE8DCC0']";
     if(heldWeapon != nullptr)
     {
-        text << "\nType: " << heldWeapon->getWeaponType() << "\nHands: " << heldWeapon->getHands()
-            << "\nDamage: "
-            << heldWeapon->getPhysicalDamageMin() << "-" << heldWeapon->getPhysicalDamage() << " / "
-            << heldWeapon->getMagicalDamageMin() << "-" << heldWeapon->getMagicalDamage() << " / "
-            << heldWeapon->getElementDamageMin() << "-" << heldWeapon->getElementDamage()
-            << "\nDefense: "
-            << heldWeapon->getPhysicalDefense() << " / " << heldWeapon->getMagicalDefense() << " / "
-            << heldWeapon->getElementDefense()
-            << "\nAttack rating: " << heldWeapon->getAttackRating()
-            << "\nDefense rating: " << heldWeapon->getDefenseRating();
+        text << "\nType: " << heldWeapon->getWeaponType() << "\nHands: " << heldWeapon->getHands();
+        for(const std::string& line : describeWeaponValueLines(*heldWeapon))
+            text << "\n" << line;
     }
     for(const std::pair<std::string, double>& bonus : mBonuses)
     {

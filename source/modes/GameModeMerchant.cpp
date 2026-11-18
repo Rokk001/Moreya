@@ -9,6 +9,7 @@
 #include "network/ClientNotification.h"
 #include "network/ODClient.h"
 #include "network/ODPacket.h"
+#include "render/Gui.h"
 #include "rooms/RoomType.h"
 #include "social/SocialProfileCache.h"
 #include "social/SocialGenerator.h"
@@ -36,7 +37,9 @@ static const float ICON_DESIGN_SIZE = 76.0f;
 static const float STOCK_DESIGN_WIDTH = 485.12f;
 static const float MARGIN_STEP = 5.0f;
 //! \brief Locates a stock cell using the same clipped area, scroll offsets and header widths as CEGUI.
-CEGUI::ListboxItem* merchantItemAtPointer(CEGUI::MultiColumnList* list, const CEGUI::Vector2f& position)
+//! \param cellArea When not null, receives the box of the found cell on the screen.
+CEGUI::ListboxItem* merchantItemAtPointer(CEGUI::MultiColumnList* list, const CEGUI::Vector2f& position,
+    CEGUI::Rectf* cellArea = nullptr)
 {
     const CEGUI::Vector2f point = CEGUI::CoordConverter::screenToWindow(*list, position);
     const CEGUI::Rectf area = list->getListRenderArea();
@@ -53,7 +56,13 @@ CEGUI::ListboxItem* merchantItemAtPointer(CEGUI::MultiColumnList* list, const CE
             {
                 const float width = CEGUI::CoordConverter::asAbsolute(list->getColumnHeaderWidth(column), list->getListHeader()->getPixelSize().d_width);
                 if(point.d_x >= left && point.d_x < left + width)
+                {
+                    // The cell in window coordinates moved by the offset of the window on the screen
+                    if(cellArea != nullptr)
+                        *cellArea = CEGUI::Rectf(left + position.d_x - point.d_x, top + position.d_y - point.d_y,
+                            left + width + position.d_x - point.d_x, top + height + position.d_y - point.d_y);
                     return list->getItemAtGridReference(CEGUI::MCLGridRef(row, column));
+                }
                 left += width;
             }
         }
@@ -68,7 +77,10 @@ class MerchantImageItem : public CEGUI::ListboxTextItem
 public:
     //! \brief Retains image names while the existing list owns the item and its tooltip.
     MerchantImageItem(const ItemInstance& item, uint32_t index) : CEGUI::ListboxTextItem("", index),
-        mImage(index == 0 ? "" : "ItemImages/" + item.getImageName()), mFrame("OpenDungeonsIcons/ItemFrame" + qualityName(item.mQuality)) {}
+        mImage(index == 0 ? "" : "ItemImages/" + item.getImageName()), mFrame("OpenDungeonsIcons/ItemFrame" + qualityName(item.mQuality)),
+        mQualityColour(ItemInstance::getQualityColour(item.mQuality)) {}
+    //! \brief The colour of the item's quality, for the frame of its item card tooltip.
+    const std::string& getQualityColour() const { return mQualityColour; }
     //! \brief Fits the 76-design-pixel slot height to the registered window's actual scale.
     CEGUI::Sizef getPixelSize() const override
     {
@@ -93,6 +105,8 @@ private:
     std::string mImage;
     //! \brief Existing shared quality frame drawn over the item.
     std::string mFrame;
+    //! \brief Colour of the item's quality (ARGB hex).
+    std::string mQualityColour;
 };
 
 // History remains a transport field; the page displays only stock and settings.
@@ -233,7 +247,8 @@ void GameMode::receiveMerchantWindow(ODPacket& packet)
         if(index < items.size())
         {
             cell = new MerchantImageItem(items[index].second, items[index].first);
-            cell->setTooltipText(items[index].second.describe(mGameMap));
+            // The item card of every item tooltip of the game (plan INGAME-QS-11 K6)
+            cell->setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr));
         }
         else
         {
@@ -285,13 +300,22 @@ bool GameMode::confirmMerchantItem(const CEGUI::EventArgs& args)
     return true;
 }
 
-//! \brief Shows only the hovered good's full item description, anchored at the pointer.
+//! \brief Shows only the hovered good's item card, right of and below the pointer and never over its cell.
 bool GameMode::hoverMerchantItem(const CEGUI::EventArgs& args)
 {
     const CEGUI::MouseEventArgs& event = static_cast<const CEGUI::MouseEventArgs&>(args);
     CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(event.window);
-    CEGUI::ListboxItem* item = merchantItemAtPointer(list, event.position);
-    list->setTooltipText(item == nullptr || item->isDisabled() ? "" : item->getTooltipText());
+    CEGUI::Rectf cell;
+    CEGUI::ListboxItem* item = merchantItemAtPointer(list, event.position, &cell);
+    if(item == nullptr || item->isDisabled())
+        Gui::setPlainTooltip(list, "");
+    else
+    {
+        list->setTooltipText(item->getTooltipText());
+        std::ostringstream area;
+        area << cell.left() << " " << cell.top() << " " << cell.right() << " " << cell.bottom();
+        Gui::markItemTooltip(list, static_cast<const MerchantImageItem*>(item)->getQualityColour(), area.str());
+    }
     if(list->getTooltip() != nullptr) list->getTooltip()->positionSelf();
     return true;
 }

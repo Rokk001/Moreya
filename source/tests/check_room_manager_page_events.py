@@ -62,6 +62,8 @@ template<class T> std::string toString(const T& value) { std::ostringstream stre
 namespace CEGUI {
 struct EventArgs { virtual ~EventArgs() {} };
 struct Vector2f { float d_x,d_y;Vector2f(float x=0,float y=0):d_x(x),d_y(y){} };
+struct Rectf { float l=0,t=0,r=0,b=0;Rectf(){}Rectf(float a,float c,float d,float e):l(a),t(c),r(d),b(e){}
+    float left()const{return l;}float top()const{return t;}float right()const{return r;}float bottom()const{return b;} };
 class Window;
 struct WindowEventArgs : EventArgs { Window* window;explicit WindowEventArgs(Window* w):window(w){} };
 enum {LeftButton=0,RightButton=1};
@@ -72,6 +74,8 @@ struct ListboxItem {
     explicit ListboxItem(unsigned value=0):id(value),disabled(false){}
     unsigned getID()const{return id;}bool isDisabled()const{return disabled;}
     const std::string& getTooltipText()const{return tooltip;}
+    //! The colour of the quality of the stock item of the cell (MerchantImageItem in production).
+    std::string getQualityColour()const{return "FF3E7BFF";}
 };
 class Window {
 public:
@@ -96,7 +100,15 @@ public:
 };
 typedef Window MultiColumnList;typedef Window Slider;typedef Window ToggleButton;
 }
-CEGUI::ListboxItem* merchantItemAtPointer(CEGUI::MultiColumnList* list,const CEGUI::Vector2f&){return list->pointerItem;}
+CEGUI::ListboxItem* merchantItemAtPointer(CEGUI::MultiColumnList* list,const CEGUI::Vector2f&,CEGUI::Rectf* cell=nullptr){
+    if(cell!=nullptr)*cell=CEGUI::Rectf(10,20,86,96);return list->pointerItem;}
+typedef CEGUI::ListboxItem MerchantImageItem;
+//! Records the item card marks of the production tooltip service (Gui::markItemTooltip, Gui::setPlainTooltip).
+struct Gui {
+    static void setPlainTooltip(CEGUI::Window* window,const std::string& text){window->setTooltipText(text);window->properties["ItemTooltip"]="0";}
+    static void markItemTooltip(CEGUI::Window* window,const std::string& colour,const std::string& area){
+        window->properties["ItemTooltip"]="1";window->properties["ItemTooltipColour"]=colour;window->properties["ItemTooltipArea"]=area;}
+};
 enum class GhostProduct:unsigned {research=0,mana=1,crystal=2};
 enum class TavernPayer:unsigned {keeper=0,creature=1};
 enum class SpaPayer:unsigned {keeper=0,creature=1};
@@ -184,7 +196,11 @@ int main(){try {
     game.refreshMerchantSelection();expect(!confirmation->visible,"vanished good cancels instead of substituting");
     stock->pointerItem=&empty;game.confirmMerchantItem(click);expect(!confirmation->visible,"empty slot cannot confirm");
     stock->pointerItem=&first;game.hoverMerchantItem(click);expect(stock->tooltip=="Item bonuses" && stock->tip.positions==1,"hover tooltip follows pointer");
+    // The item card of the hovered cell: its quality colour and its box, so the card never covers it (INGAME-QS-11 K6, K11)
+    expect(stock->properties["ItemTooltip"]=="1" && stock->properties["ItemTooltipColour"]=="FF3E7BFF" &&
+        stock->properties["ItemTooltipArea"]=="10 20 86 96","hover marks the item card with quality and cell");
     stock->pointerItem=&empty;game.hoverMerchantItem(click);expect(stock->tooltip.empty(),"empty slot clears tooltip");
+    expect(stock->properties["ItemTooltip"]=="0","an empty slot has no item card");
     game.setMerchantSettingsShown(20,"fair");expect(!root.getChild("RoomManagerWindow/Pages/MerchantPage/MarginSlider")->visible,"fair hides margin");
     game.setMerchantSettingsShown(25,"profit");expect(root.getChild("RoomManagerWindow/Pages/MerchantPage/MarginLabel")->visible,"profit shows margin");
     CEGUI::Window* profit=root.getChild("RoomManagerWindow/Pages/MerchantPage/ProfitButton");CEGUI::WindowEventArgs profitClick(profit);

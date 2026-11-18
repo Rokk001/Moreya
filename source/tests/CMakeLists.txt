@@ -66,6 +66,16 @@ add_boost_test(00-WheelAccumulator
         test_WheelAccumulator.cpp
         ${SRC}/modes/WheelAccumulator.h)
 
+add_boost_test(00-ItemTooltipPlacement
+        SOURCES
+        test_ItemTooltipPlacement.cpp
+        ${SRC}/render/ItemTooltipPlacement.h)
+
+add_boost_test(00-ItemValueLines
+        SOURCES
+        test_ItemValueLines.cpp
+        ${SRC}/entities/ItemValueLines.h)
+
 add_boost_test(00-PostLog
         SOURCES
         test_PostLog.cpp

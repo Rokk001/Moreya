@@ -31,9 +31,9 @@ width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
 check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
 check('name="Visible" value="False"' in layout, 'hidden by default')
 for name in ('HomePage', 'CreaturesLabel', 'Filter', 'ListRows',
-             'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'SocialHolder', 'PostThumb0', 'ValuesPage',
+             'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'QuoteText', 'PostThumb0', 'ValuesPage',
              'InventoryPage', 'Header', 'BackButton', 'PrevButton', 'NextButton', 'NavBar', 'NavFeed', 'NavProfile',
-             'NavValues', 'NavInventory'):
+             'NavValues', 'NavInventory', 'NavSkills'):
     check('name="%s"' % name in layout, name)
 check('OpenProfileButton' not in layout, 'the profile opens in the book, not in a window')
 # The start page has the list on the left and the feed of all creatures on the right, inside the shared frame client.
@@ -68,11 +68,13 @@ check(filter_window.find("Property[@name='ReadOnly']").get('value') == 'True', '
 check(area('CreaturesLabel')[2] == area('Filter')[0], 'dropdown sits beside the roster heading')
 check(not any('name="Filter%s"' % name in layout for name in ('All', 'Workers', 'Fighters', 'Unhappy')),
       'old filter buttons are replaced')
-nav_areas = [area(n) for n in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory')]
+nav_areas = [area(n) for n in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills')]
 check(all(abs((a[2] - a[0]) - (nav_areas[0][2] - nav_areas[0][0])) < 1e-6 for a in nav_areas), 'equal navigation widths')
 check(area('NavBar')[1] >= max(area(p)[3] for p in pages[1:5]) - 1e-6,
       'the navigation bar sits below the selected creature pages')
-check(area('NavBar')[0] >= area('ListPanel')[2], 'navigation leaves the persistent roster visible')
+# The pages of one creature replace the start page (plan INGAME-QS-11 K3): the bar spans the whole client width
+check(area('NavBar')[0] <= area('ListPanel')[0] + 0.01 and area('NavBar')[2] >= area('FeedPanel')[2] - 0.01,
+      'the navigation bar of one creature spans the width of the book')
 check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')
 
 hud = read('gui/ModeGame.layout')
@@ -108,7 +110,7 @@ check('mSocialWindow->update(' in frame and 'PostLog' not in frame, 'the feed is
 
 window = read('source/render/SocialWindow.cpp')
 server = read('source/network/ODServer.cpp')
-check('seat->isAlliedSeat(owner)' in server and 'keeper->getNick()' in server and '"Keeper: " + entry.keeper' in window,
+check('seat->isAlliedSeat(owner)' in server and 'keeper->getNick()' in server and '"), keeper " + entry->keeper' in window,
       'the server sends allied creatures with their keeper name')
 check('row->getChild("Button")->setTooltipText(' in window and 'entry->keeper' in window,
       'full name, class and keeper remain available when the name is elided')
@@ -133,8 +135,9 @@ for source in ('mGameMap.getSeats()', 'isAlliedSeat(seat)', 'mGameMap.getCreatur
                'entry.appearance = CreatureAppearanceLogic::toToken(creature->getAppearance())'):
     check(source in roster_body, 'local list uses the recorded allied creature data: ' + source)
 profile_body = window[window.index('void SocialWindow::refreshProfile('):window.index('void SocialWindow::refreshValues(')]
-check('creature->fillProfilePage(mProfilePage)' in profile_body and 'if(creature != nullptr)' in profile_body,
-      'a creature known here shows the existing social profile')
+check('creature != nullptr ? creature->getProfileRelationshipText() : profile.mRelationship' in profile_body and
+      'if(path.empty() && creature != nullptr)' in profile_body,
+      'a creature known here shows its real relationship and its own path and skills')
 check('getStatsText(' not in window, 'the book does not invent server-only statistics')
 values_body = window[window.index('void SocialWindow::refreshValues('):window.index('void SocialWindow::refreshInventory(')]
 check('const bool known = !useLocalCreatureRoster();' in values_body and 'known ?' in values_body,
@@ -142,8 +145,8 @@ check('const bool known = !useLocalCreatureRoster();' in values_body and 'known 
 check('Known creatures (' in roster_body and 'detailed server statistics are unavailable' in roster_body,
       'local roster is identified as incomplete')
 destructor = window[window.index('SocialWindow::~SocialWindow()'):window.index('void SocialWindow::setTabState')]
-check('connection->disconnect()' in destructor and 'windows.destroyWindow(mProfilePage)' in destructor,
-      'the dynamic page and all subscriptions are released')
+check('connection->disconnect()' in destructor and 'mProfilePage' not in window,
+      'all subscriptions are released; the book creates no page of its own any more')
 check('mLinkConnections.push_back(window->subscribeEvent(event, subscriber))' in window,
       'every control subscription of the book is kept for the release')
 client = read('source/network/ODClient.cpp')
@@ -168,18 +171,26 @@ for handler in ('onNavClicked', 'onBackClicked', 'onPreviousClicked', 'onNextCli
                 'onListRowClicked'):
     check('SocialWindow::' + handler in window and '&SocialWindow::' + handler in window, handler)
 check('SocialWindow::onLinkClicked' in window and '&SocialWindow::onLinkClicked' in window,
-      'the names in the friends and foe rows select a creature')
-page = read('gui/WindowCreatureProfilePage.layout')
-check('name="OwnPostsText"' in page and '"OwnPostsText"' in window,
-      'the recent posts of the shared page give way to the posts column of the book')
+      'the posts of the start page select a creature')
+# The shared creature profile page with its friend and foe links was deleted (owner decision 2026-11-18)
+check(not (repo / 'gui/WindowCreatureProfilePage.layout').exists() and '"OwnPostsText"' not in window,
+      'the shared profile page is gone; the posts column of the book shows the recent posts')
 check('MAX_OWN_POSTS = 6' in window and '(rows < MAX_OWN_POSTS)' in window,
       'the six recent posts remain available as pictures (book-variant-2)')
-for name in ('FriendLink0', 'FriendLink1', 'FoeLink'):
-    check('type="OD/InvisibleButton" name="%s"' % name in page, name + ' is a borderless button')
 check('LinkButton' not in layout + window + gamemode, 'the friend and foe buttons below the profile are gone')
+# Decision 732 for the list, the feeds and the head; only the profile page shortens a text that is longer than its
+# place with "..." (plan INGAME-QS-11 K1, setFittedText and the name line of refreshProfile)
+profile_start = window.index('void SocialWindow::refreshProfile(')
+fitted_start = window.index('void setFittedText(')
+code_dots = [m.start() for m in re.finditer(re.escape('"..."'), window)
+             if not window[window.rindex(chr(10), 0, m.start()) + 1:m.start()].lstrip().startswith('//')]
 check('getHorzScrollbar' not in window and 'elideToWidth' not in window and 'fitTextToWindow' not in window
-      and '"..."' not in window, 'long names are not shortened (decision 732) and need no horizontal scrollbar')
-for name in ('CreaturesLabel', 'Name', 'Head', 'Text', 'NameText', 'KeeperText'):
+      and all(fitted_start < d < window.index('std::string findStatisticsValue(') or
+              profile_start < d < window.index('void SocialWindow::refreshValues(') for d in code_dots),
+      'long names of the list, the feeds and the head are not shortened (decision 732), no horizontal scrollbar')
+check('setFullText(header->getChild("NameText"), profile.getFullName());' in window,
+      'the head shows the whole name (it holds the widest one, check_dungeonbook_profile_layout.py)')
+for name in ('CreaturesLabel', 'Name', 'Head', 'Text'):
     windows = social_root.findall(".//Window[@name='%s']" % name)
     check(windows, name)
     for part in windows:
@@ -190,8 +201,8 @@ check('EventMouseDoubleClick' not in window, 'no double click window')
 selection = window[window.index('bool SocialWindow::onListRowClicked'):]
 selection = selection[:selection.index('\n}\n')]
 check('Page::Inventory' in selection, 'selecting a creature opens its inventory')
-check('fillProfilePage(mProfilePage)' in window and 'createCreatureProfilePage(holder)' in window,
-      'the profile uses the shared fill function')
+check('fillProfilePage(' not in window and 'createCreatureProfilePage(' not in window,
+      'the profile of the book fills its own rows (book-variant-2), not the scrolling shared page')
 tabs = window[window.index('void SocialWindow::setTabState'):window.index('bool SocialWindow::isVisible')]
 check('setDisabled(' not in tabs and 'setEnabled(' not in tabs, 'the active tab stays enabled')
 check('log.getVersion() != mShownProfilePostVersion' in window, 'the profile redraws only when needed')

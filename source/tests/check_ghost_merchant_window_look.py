@@ -35,7 +35,7 @@ for name in ('Ghost','Merchant'):
 merchant=(ROOT/'source/modes/GameModeMerchant.cpp').read_text()
 assert 'std::max<std::size_t>(18, ((items.size() + 5) / 6) * 6)' in merchant,'eighteen empty slots, six columns'
 assert 'cell->setDisabled(true)' in merchant,'empty slots are not goods'
-assert 'cell->setTooltipText(items[index].second.describe(mGameMap))' in merchant,'full item tooltip'
+assert 'cell->setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr))' in merchant,'full item card tooltip'
 assert 'positionSelf()' in merchant,'tooltip at the pointer'
 assert 'refreshMerchantSelection();' in merchant,'treasury enabled state refreshed'
 shared=(ROOT/'source/modes/GameModeRoomManager.cpp').read_text()

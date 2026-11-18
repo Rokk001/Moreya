@@ -58,6 +58,8 @@ struct Window {
     void setVisible(bool value) { visible = value; }
     //! Records whether a navigation button can be used.
     void setEnabled(bool value) { enabled = value; }
+    //! Keeps the colours of the skills button outside this handler probe.
+    void setProperty(const std::string&, const std::string&) {}
     //! Opens the fixture window.
     void show() { visible = true; }
     //! Closes the fixture window.
@@ -108,6 +110,11 @@ struct ODClient {
 bool useLocalCreatureRoster() { return true; }
 const char* const FILTER_LABELS[] = {"All", "Workers", "Fighters", "Unhappy"};
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
+const char* const NAV_SKILLS_BUTTON = "NavSkills";
+const char* const NAV_ICON_ENABLED = "enabled";
+const char* const NAV_ICON_DISABLED = "disabled";
+const char* const TAB_COLOUR_INACTIVE = "inactive";
+const char* const TAB_COLOUR_DISABLED = "disabled";
 //! Replaces painting only; page and button visibility run through production showPage.
 void setNavState(CEGUI::Window*, bool) {}
 //! Hosts unchanged production handlers with explicit roster and painting service boundaries.
@@ -125,6 +132,8 @@ struct SocialWindow {
     bool onLinkClicked(const CEGUI::EventArgs&); bool onBackClicked(const CEGUI::EventArgs&);
     bool onNavClicked(const CEGUI::EventArgs&);
     void selectCreature(const std::string&, Page); void showPage(Page);
+    //! The worker of the fixture has a skill tree, the fighter has none (plan INGAME-QS-11 K4).
+    bool selectedCreatureHasSkillTree() const { return mSelectedCreature == "worker"; }
     //! Applies the production filter predicates to a stable two-creature roster fixture.
     void rebuildCreatureList() {
         const social::DungeonbookEntry entries[] = {{"worker", true, false}, {"fighter", false, true}};
@@ -154,9 +163,13 @@ int main() {
     CEGUI::Scrollbar scroll;
     const char* names[] = {"HomePage", "FeedPage", "ProfilePage", "ValuesPage", "InventoryPage", "NavBar", "Header",
         "HomePage/FeedPanel", "HomePage/FeedTitle", "HomePage/FeedTitleRule", "HomePage/FeedRows",
-        "HomePage/FeedScroll", "HomePage/FeedEmpty", "NavBar/NavFeed", "NavBar/NavProfile", "NavBar/NavValues", "NavBar/NavInventory"};
-    CEGUI::Window windows[17];
-    for(std::size_t i = 0; i < 17; ++i) root.children[names[i]] = &windows[i];
+        "HomePage/FeedScroll", "HomePage/FeedEmpty", "NavBar/NavFeed", "NavBar/NavProfile", "NavBar/NavValues", "NavBar/NavInventory",
+        "NavBar/NavSkills", "BackButton"};
+    CEGUI::Window windows[19];
+    for(std::size_t i = 0; i < 19; ++i) root.children[names[i]] = &windows[i];
+    CEGUI::Window skillsIcon, skillsLabel;
+    windows[17].children["Icon"] = &skillsIcon;
+    windows[17].children["Label"] = &skillsLabel;
     root.children["HomePage/Filter"] = &filter;
     root.children["HomePage/ListScroll"] = &scroll;
     SocialWindow book;
@@ -164,6 +177,7 @@ int main() {
     book.show();
     assert(book.mPage == SocialWindow::Page::Home && root.getChild("HomePage")->visible);
     assert(root.getChild("HomePage/FeedRows")->visible && !root.getChild("NavBar")->visible);
+    assert(!root.getChild("BackButton")->visible);
     CEGUI::Window row;
     row.strings["Row"] = "0";
     CEGUI::WindowEventArgs event;
@@ -171,7 +185,8 @@ int main() {
     for(unsigned choice = 0; choice < 4; ++choice) {
         book.onListRowClicked(event);
         assert(book.mPage == SocialWindow::Page::Inventory && book.mSelectedCreature == "worker");
-        assert(root.getChild("HomePage")->visible && root.getChild("NavBar")->visible);
+        assert(!root.getChild("HomePage")->visible && root.getChild("NavBar")->visible);
+        assert(root.getChild("BackButton")->visible && root.getChild("NavBar/NavSkills")->enabled);
         assert(!root.getChild("HomePage/FeedRows")->visible);
         filter.item.id = choice;
         book.onFilterClicked(event);
@@ -180,11 +195,14 @@ int main() {
         assert(book.mSelectedCreature.empty() && book.mPage == SocialWindow::Page::Home);
         assert(root.getChild("HomePage")->visible && root.getChild("HomePage/FeedRows")->visible);
         assert(!root.getChild("NavBar")->visible && !root.getChild("Header")->visible);
+        assert(!root.getChild("BackButton")->visible);
         book.hide(); book.show();
         assert(book.mFilter == SocialWindow::CreatureFilter::All && filter.item.id == 0 && filter.text == "All");
     }
     book.showCreature("fighter");
     assert(book.mPage == SocialWindow::Page::Inventory && book.mSelectedCreature == "fighter");
+    // A creature without a skill tree shows the skills button disabled
+    assert(!root.getChild("NavBar/NavSkills")->enabled && !root.getChild("HomePage")->visible);
     row.strings["Creature"] = "worker";
     book.onLinkClicked(event);
     assert(book.mPage == SocialWindow::Page::Inventory && book.mSelectedCreature == "worker");
@@ -197,7 +215,7 @@ int main() {
     for(unsigned tab = 1; tab <= 4; ++tab) {
         row.strings["Page"] = std::to_string(tab);
         book.onNavClicked(event);
-        assert(static_cast<unsigned>(book.mPage) == tab && root.getChild("HomePage")->visible);
+        assert(static_cast<unsigned>(book.mPage) == tab && !root.getChild("HomePage")->visible);
         assert(root.getChild("NavBar")->visible);
     }
     book.onBackClicked(event);
