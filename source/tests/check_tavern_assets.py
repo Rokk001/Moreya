@@ -18,9 +18,25 @@ What is checked
   seat clips  Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped once in each of the 30 skeletons
               of the types that visit the tavern (their poses are measured by check_tavern_seat_clips.py)
   credits     every file above has a CREDITS row, every changed skeleton has a row for its new clips
+  game light  (INGAME-QS-11 K8, "alles nur noch schwarz") every texture the materials of the six tavern models use, sampled
+              where the models' surfaces map onto it (OgreXMLConverter converts the meshes), shows in the game at least
+              MAIN_SHARE x the tavern floor and not brighter than BRIGHT_SHARE x the floor: the game shows an object
+              texel at about OBJECT_LIGHT x its value and a floor texel at about FLOOR_LIGHT x (both measured once on
+              Mario's screenshot ODscreenshot_2026-11-18_165308_9 over the build 0.7.3.77 textures). Owner decision of
+              2026-11-18 ("Mitte"): clearly brighter than build 77, clearly darker than the floor; the accepted result
+              shows wood at 0.63, counter 0.58, stone 0.55, skin 0.52, hood 0.36 of the floor (stone, hood and counter
+              top one step darker and browner, then the innkeeper's parts coloured in Blender after D-5-v2 variant 1:
+              almost black-brown robe, dark grey skin with a hint of green, stained linen apron; owner decisions of the
+              same day; FIGURE_SHARES). Iron,
+              brass, the rail, the sign and the
+              foam are accents and need at least ACCENT_SHARE of the floor; the barkeeper's used texels have the floors
+              BARKEEPER_FLOORS; every surface shows detail (luminance spread), is not garish (mean saturation, brightest
+              texels) and wood, stone, iron and the approved atlases have a normal map. Build 0.7.3.77 fails: counter
+              planks 33 against a floor of 105 (0.31).
 
 Calls (from the repository root):
-  python source/tests/check_tavern_assets.py            plain file checks, no compiler, no game
+  python source/tests/check_tavern_assets.py            file checks, no compiler, no game; the game light section
+                                                         needs OGRE_XML_CONVERTER (full path of OgreXMLConverter.exe)
 """
 from pathlib import Path
 import fnmatch
@@ -42,8 +58,10 @@ SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitD
 VISITING_SKELETONS = 30
 # The clips of the innkeeper figure
 INNKEEPER_CLIPS = ['Idle', 'Pour', 'Cheer']
-# Size of the object textures, of the painted icon sources and of the bird atlas
+# Size of the object textures, of the painted icon sources and of the bird atlas; wood, iron and stone were repainted
+# larger for INGAME-QS-11 K8 (the table maps its whole stone top onto one texture)
 OBJECT_TEXTURE_SIZE = 128
+OBJECT_TEXTURE_SIZES = {'TavernWood': 512, 'TavernIron': 512, 'TavernStone': 1024}
 ICON_SOURCE_SIZE = 256
 BIRD_ATLAS_SIZE = 2048
 # Format of the tavern sounds
@@ -142,8 +160,8 @@ for name, source in MODELS.items():
     mesh = root / 'models' / (name + '.mesh')
     assert mesh.is_file() and mesh.stat().st_size > 0, 'models/' + name + '.mesh missing'
     assert resolve(root, source).is_file(), source + ' missing'
-mesh_material_names = {'TavernCounter': ('TavernCounterWood', 'TavernRail', 'TavernSign'), 'TavernKeg': ('TavernWood', 'TavernIron', 'TavernBrass'),
-                       'TavernTable': ('TavernStone', 'TavernWood'), 'TavernMug': ('TavernWood', 'TavernFoam'),
+mesh_material_names = {'TavernCounter': ('TavernCounterWood', 'TavernRail', 'TavernSign'), 'TavernKeg': ('TavernKegWood', 'TavernIron', 'TavernBrass'),
+                       'TavernTable': ('TavernStone', 'TavernTableWood'), 'TavernMug': ('TavernWood', 'TavernFoam'),
                        'Innkeeper': ('TavernCloth', 'TavernHood', 'TavernSkin'), 'Vomit': ('TavernVomit',)}
 for name, used in mesh_material_names.items():
     data = (root / 'models' / (name + '.mesh')).read_bytes()
@@ -176,10 +194,16 @@ emissive = re.search(r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', rail.grou
 assert emissive and max(float(x) for x in emissive.groups()) <= 0.12, 'TavernRail self-light at most 0.12 (a stronger glow reads as a yellow edge)'
 
 # 2. Materials and textures
+# The table and the keg have their own wood baked onto their UV layouts (INGAME-QS-11 K8)
+for name in ('TavernTableWood', 'TavernKegWood'):
+    assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
+    for suffix in ('', 'Normal'):
+        assert png_size('materials/textures/tavern/' + name + suffix + '.png') == (1024, 1024), name + suffix + ' texture size'
 for name in ('TavernWood', 'TavernBrass', 'TavernStone', 'TavernIron', 'TavernCloth', 'TavernHood', 'TavernSkin', 'TavernFoam',
              'TavernSign', 'TavernVomit', 'TavernCounterWood', 'TavernRail'):
     assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
-    assert png_size('materials/textures/tavern/' + name + '.png') == (OBJECT_TEXTURE_SIZE, OBJECT_TEXTURE_SIZE), name + ' texture size'
+    size = OBJECT_TEXTURE_SIZES.get(name, OBJECT_TEXTURE_SIZE)
+    assert png_size('materials/textures/tavern/' + name + '.png') == (size, size), name + ' texture size'
 for name in ('TavernFloor', 'TavernWall'):
     assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
     for suffix in ('', 'Normal'):
@@ -274,7 +298,10 @@ files += ['materials/scripts/TavernObjects.material', 'materials/scripts/TavernF
           'materials/textures/tavern/TavernWall.png', 'materials/textures/tavern/TavernWallNormal.png']
 files += ['materials/textures/tavern/' + name + '.png' for name in ('TavernWood', 'TavernBrass', 'TavernStone', 'TavernIron', 'TavernCloth',
                                                                       'TavernHood', 'TavernSkin', 'TavernFoam', 'TavernSign', 'TavernVomit',
-                                                                      'TavernCounterWood', 'TavernRail')]
+                                                                      'TavernCounterWood', 'TavernRail', 'TavernTableWood', 'TavernKegWood',
+                                                                      'TavernWoodNormal', 'TavernIronNormal', 'TavernStoneNormal',
+                                                                      'TavernTableWoodNormal', 'TavernKegWoodNormal')]
+files += ['models/TavernStool.mesh']
 files += ['sounds/Rooms/Tavern/Pour.ogg', 'sounds/Rooms/Tavern/Murmur.ogg', 'sounds/Rooms/Tavern/Clink.ogg',
           'sounds/Creatures/Default/Slap.ogg', 'sounds/Creatures/Default/Cheer.ogg',
           'sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg', 'sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg']
@@ -292,5 +319,128 @@ for sound in ('Pour', 'Murmur', 'Clink', 'Slap', 'Cheer'):
     assert row, 'CREDITS has no row for ' + sound + '.ogg'
     for line in row:
         assert 'https://freesound.org/' in line and 'CC0' in line, sound + ' row needs a source address and CC0: ' + line[:80]
+
+
+# 8. Game light (INGAME-QS-11 K8): every texture of the tavern models' materials, sampled where the surfaces map onto it
+import numpy as np  # noqa: E402
+import os  # noqa: E402
+import tempfile  # noqa: E402
+import time  # noqa: E402
+import xml.etree.ElementTree as ET  # noqa: E402
+from PIL import Image  # noqa: E402
+
+# How the game shows a texel, measured once on ODscreenshot_2026-11-18_165308_9 over the build 0.7.3.77 textures:
+# objects (table top 53 -> 59, counter planks 30 -> 33, apron, hood, stool and bench) about 1.10 x, the tavern floor
+# (Room.frag with room light, gain and the cursor light; texel 54 -> 104) about 1.93 x
+OBJECT_LIGHT = 1.10
+FLOOR_LIGHT = 1.93
+FLOOR_TEXTURE = 'Tavern1111.png'   # the floor of a tavern tile inside the room
+BRIGHT_SHARE = 1.45                # not brighter than this share of the floor (the apron is the lightest surface)
+MAIN_SHARE = 0.52                  # wood, stone, counter, skin, cloth (accepted result 0.55-0.92; build 77 0.31-0.69)
+# The barkeeper's dark hide and almost black-brown robe as in D-5-v2 variant 1 (accepted skin 0.52, hood 0.36;
+# build 77 skin 0.41, hood 0.33)
+FIGURE_SHARES = {'TavernSkin': 0.47, 'TavernHood': 0.34}
+ACCENT_SHARE = 0.45                # iron, brass, rail, sign and foam are accents, never plain black (iron 0.51)
+ACCENTS = {'TavernIron', 'TavernBrass', 'TavernRail', 'TavernSign', 'TavernFoam'}
+# Floors of the texels the barkeeper's surfaces use (accepted result: skin 50, hood 34, cloth 60 - stained apron and
+# towel beside dark straps and boots; build 77: 39, 31, 66, where the skin, robe and apron were one brown)
+BARKEEPER_FLOORS = {'TavernSkin': 45, 'TavernHood': 32, 'TavernCloth': 55}
+MIN_SPREAD = 0.08                  # luminance standard deviation / mean of a surface: visible grain, folds, wear
+ACCENT_SPREAD = 0.05               # the same for the small accents (the smooth patina of the sign: 0.07)
+MAX_SATURATION = {'TavernStone': 0.25, 'TavernIron': 0.25}
+DEFAULT_MAX_SATURATION = 0.58      # wood, cloth, hide: worn and muted (build 77 counter planks: 0.75)
+MAX_CHANNEL = 235                  # p99.5 of the brightest channel: no white or glaring texels
+NORMAL_MAPPED = ('TavernWood', 'TavernIron', 'TavernStone', 'TavernTableWood', 'TavernKegWood', 'TavernCounterWood',
+                 'TavernHood', 'TavernSkin', 'TavernCloth')
+LIGHT_MODELS = ('TavernCounter', 'Innkeeper', 'TavernKeg', 'TavernTable', 'TavernStool', 'TavernMug')
+SAMPLES = 40000
+LUMA = np.array([0.299, 0.587, 0.114])
+
+
+# Returns the texture names of a material (colour first, then the normal map) from the material scripts.
+def material_textures(name):
+    block = re.search(r'^material ' + name + r'\b.*?^}', materials, re.M | re.S)
+    assert block, 'material ' + name + ' missing'
+    return re.findall(r'^\s*texture\s+(\S+)', block.group(0), re.M)
+
+
+# Returns positions, uvs and {material: faces} of a binary mesh, converted to XML by OgreXMLConverter.
+def mesh_geometry(name, work):
+    converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
+    source = Path(work) / (name + '.mesh')
+    source.write_bytes((root / 'models' / (name + '.mesh')).read_bytes())
+    target = Path(work) / (name + '.mesh.xml')
+    subprocess.run([converter, '-q', str(source), str(target)], check=True, capture_output=True)
+    tree = ET.parse(str(target)).getroot()
+    positions, uvs = [], []
+    for buffer in tree.find('sharedgeometry').findall('vertexbuffer'):
+        for vertex in buffer.findall('vertex'):
+            position = vertex.find('position')
+            if position is not None:
+                positions.append([float(position.get(k)) for k in 'xyz'])
+            uv = vertex.find('texcoord')
+            if uv is not None:
+                uvs.append([float(uv.get('u')), float(uv.get('v'))])
+    faces = {}
+    for sub in tree.find('submeshes').findall('submesh'):
+        rows = [[int(f.get(k)) for k in ('v1', 'v2', 'v3')] for f in sub.find('faces').findall('face')]
+        faces.setdefault(sub.get('material'), []).extend(rows)
+    return np.array(positions), np.array(uvs), {m: np.array(f) for m, f in faces.items()}
+
+
+# Returns the texels a surface shows: SAMPLES points spread evenly over the area of its faces (seeded, nearest texel).
+def surface_texels(positions, uvs, faces, texture):
+    a, b, c = positions[faces[:, 0]], positions[faces[:, 1]], positions[faces[:, 2]]
+    area = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
+    rng = np.random.default_rng(1)
+    pick = rng.choice(len(faces), SAMPLES, p=area / area.sum())
+    r1, r2 = np.sqrt(rng.random(SAMPLES)), rng.random(SAMPLES)
+    w = np.stack([1 - r1, r1 * (1 - r2), r1 * r2], 1)
+    uv = uvs[faces[pick, 0]] * w[:, :1] + uvs[faces[pick, 1]] * w[:, 1:2] + uvs[faces[pick, 2]] * w[:, 2:]
+    image = np.asarray(Image.open(str(root / 'materials' / 'textures' / 'tavern' / texture)).convert('RGB')).astype(float)
+    height, width = image.shape[:2]
+    return image[(np.mod(uv[:, 1], 1.0) * height).astype(int) % height, (np.mod(uv[:, 0], 1.0) * width).astype(int) % width]
+
+
+light_start = time.monotonic()
+floor_texels = np.asarray(Image.open(str(root / 'materials' / 'textures' / 'tavern' / FLOOR_TEXTURE)).convert('RGB')).astype(float)
+floor_shown = (floor_texels @ LUMA).mean() * FLOOR_LIGHT
+seen = {}
+with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
+    for model in LIGHT_MODELS:
+        positions, uvs, faces = mesh_geometry(model, work)
+        for material, rows in faces.items():
+            textures = material_textures(material)
+            texels = surface_texels(positions, uvs, rows, textures[0])
+            luma = texels @ LUMA
+            top = texels.max(1)
+            saturation = np.where(top > 0, (top - texels.min(1)) / np.maximum(top, 1e-6), 0.0).mean()
+            shown = luma.mean() * OBJECT_LIGHT
+            where = '%s %s (%s)' % (model, material, textures[0])
+            low = ACCENT_SHARE if material in ACCENTS else FIGURE_SHARES.get(material, MAIN_SHARE)
+            assert shown >= low * floor_shown, '%s shows %.0f in the game light, darker than %.2f x the tavern floor (%.0f)' % (
+                where, shown, low, floor_shown)
+            # the foam of the mug is light by nature; every other surface stays below BRIGHT_SHARE of the floor
+            assert material == 'TavernFoam' or shown <= BRIGHT_SHARE * floor_shown,'%s shows %.0f, brighter than %.2f x the tavern floor (%.0f): too bright' % (
+                where, shown, BRIGHT_SHARE, floor_shown)
+            spread = ACCENT_SPREAD if material in ACCENTS else MIN_SPREAD
+            assert luma.std() >= spread * luma.mean(), '%s shows no surface detail (spread %.2f, needs %.2f)' % (
+                where, luma.std() / luma.mean(), spread)
+            if material not in ACCENTS:
+                limit = MAX_SATURATION.get(material, DEFAULT_MAX_SATURATION)
+                assert saturation <= limit, '%s is garish (mean saturation %.2f, at most %.2f)' % (where, saturation, limit)
+                assert np.percentile(top, 99.5) <= MAX_CHANNEL, '%s has glaring texels (p99.5 %.0f, at most %d)' % (
+                    where, np.percentile(top, 99.5), MAX_CHANNEL)
+            if material in BARKEEPER_FLOORS:
+                assert luma.mean() >= BARKEEPER_FLOORS[material], '%s used texels are too dark (mean %.0f, needs %d)' % (
+                    where, luma.mean(), BARKEEPER_FLOORS[material])
+            if material in NORMAL_MAPPED:
+                assert len(textures) >= 2 and (root / 'materials' / 'textures' / 'tavern' / textures[1]).is_file(), where + ' needs its normal map'
+            seen[material] = shown
+for material in ('TavernCounterWood', 'TavernRail', 'TavernSign', 'TavernSkin', 'TavernHood', 'TavernCloth', 'TavernTableWood',
+                 'TavernKegWood', 'TavernWood', 'TavernStone', 'TavernIron', 'TavernBrass', 'TavernFoam'):
+    assert material in seen, 'no tavern model uses ' + material
+print('ODP_TEST_PHASE {"name":"game-light","seconds":%.2f}' % (time.monotonic() - light_start))
+print('tavern game light: floor %.0f, ' % floor_shown + ', '.join('%s %.0f' % kv for kv in sorted(seen.items())))
 
 print('tavern assets ok')

@@ -176,11 +176,16 @@ constexpr float treasuryPileDiagonal = 0.4f;
 // Returns how much the mesh is narrowed so that it fits the footprint of its kind.
 //! \brief Keeps cots at their authored footprint and narrows other furniture as required.
 //! \brief Matches renderer and navigation scales while preserving authored equipment-room furniture sizes.
+//! The tavern counter is narrowed across to exactly its own tile, so it never reaches off the room (INGAME-QS-11 K9).
 inline FurnitureScale furnitureScale(const MeshBounds& bounds)
 {
     const std::string name(bounds.name);
     if(name.compare(0, 12, "InfirmaryCot") == 0)
         return {1.0f, 1.0f};
+    // The counter mesh is 1.04 tiles wide (x -0.52 to 0.52); narrowed to 1.0 it ends at the edges of its tile, and its
+    // depth stays as authored
+    if(name == "TavernCounter")
+        return {1.0f / (bounds.maxX - bounds.minX), 1.0f};
     if(name == "FenceCorner" || name == "FenceStraight" || name == "PrisonDoor" ||
        name == "PortalObject" || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
@@ -188,7 +193,7 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
        name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron" || name == "ManaStill" || name == "GhostPress" ||
        name == "SoulForge" ||
        name == "SpaChair" || name == "SpaMudPool" || name == "SpaPoolRim" || name == "SpaSpringboard" ||
-       name == "TavernCounter" || name == "TavernKeg" || name == "TavernStool" || name == "TavernTable" ||
+       name == "TavernKeg" || name == "TavernStool" || name == "TavernTable" ||
        name == TOILET_SEAT_MESH)
         return {1.0f, 1.0f};
     // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
