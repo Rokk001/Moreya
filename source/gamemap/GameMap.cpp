@@ -69,6 +69,7 @@
 #include "rooms/RoomTreasury.h"
 #include "rooms/RoomType.h"
 #include "rooms/WallTorchConfig.h"
+#include "gamemap/WallCorners.h"
 #include "spells/Spell.h"
 #include "sound/SoundEffectsManager.h"
 #include "traps/Trap.h"
@@ -1307,7 +1308,7 @@ void GameMap::applyPendingRelationshipStates()
 }
 
 //! \brief Creates loaded entities and restores closed boxes before room-owned action continuation, and on the server
-//! the saved possessions of AI keepers.
+//! the saved possessions of AI keepers. The server first reinforces the wall corners the loaded map shows.
 void GameMap::createAllEntities()
 {
     mTileSet = ConfigManager::getSingleton().getTileSet(mTileSetName);
@@ -1315,6 +1316,10 @@ void GameMap::createAllEntities()
     
     if(isServerGameMap())
     {
+        // The wall corners the loaded map already shows are reinforced before the rooms look for their active
+        // spots, which may lie on such walls
+        reinforceWallCornersOnLoad();
+
         // Set positions and update active spots
         for (RenderedMovableEntity* rendered : mRenderedMovableEntities)
         {
@@ -1661,6 +1666,81 @@ void GameMap::sendRelationshipTiers(Seat* seat)
         writeRelationshipTier(serverNotification->mPacket, tier.mCreatureA, tier.mCreatureB,
             tier.mNewTier, true);
         ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
+namespace
+{
+//! \brief Lets the wall corner rule read the tiles of the server game map
+class GameMapWallCorners : public WallCornerMap
+{
+public:
+    //! \brief Reads the tiles of the given map
+    explicit GameMapWallCorners(const GameMap& gameMap) :
+        mGameMap(gameMap)
+    {}
+
+    //! \brief Returns what the rule needs to know about the tile (x, y): whether it is solid, whether it is an
+    //! earth wall nobody has reinforced, and the keeper who owns it completely
+    WallCornerTileInfo getTileInfo(int32_t x, int32_t y) const override
+    {
+        Tile* tile = mGameMap.getTile(x, y);
+        if(tile == nullptr)
+            return WallCornerTileInfo();
+
+        // Only an earth (dirt) wall can be reinforced; rock, gold, lava and water never become corners
+        bool claimed = tile->isClaimed() && (tile->getSeat() != nullptr);
+        int32_t claimSeatId = claimed ? tile->getSeat()->getId() : -1;
+        return WallCorners::makeTileInfo(tile->getFullness() > 0.0, tile->getType() == TileType::dirt, claimSeatId);
+    }
+
+private:
+    const GameMap& mGameMap;
+};
+} // namespace
+
+//! \brief Reinforces the earth wall corners of the seat that the claim of the tile completes, without letting them
+//! look for further corners
+void GameMap::reinforceWallCornersAfterClaim(Tile* tile, Seat* seat)
+{
+    if(!isServerGameMap() || isInEditorMode() || (tile == nullptr) || (seat == nullptr))
+        return;
+
+    GameMapWallCorners map(*this);
+    std::vector<WallCorner> corners;
+    WallCorners::findCornersAfterClaim(map, tile->getX(), tile->getY(), seat->getId(), corners);
+    for(const WallCorner& corner : corners)
+    {
+        Tile* cornerTile = getTile(corner.mX, corner.mY);
+        if(cornerTile == nullptr)
+            continue;
+
+        OD_LOG_INF(serverStr() + "Wall corner " + Tile::displayAsString(cornerTile)
+            + " reinforced for seat=" + Seat::displayAsString(seat));
+        cornerTile->claimTile(seat, false);
+    }
+}
+
+//! \brief Reinforces the earth wall corners the loaded map already shows, all found before the first one is
+//! reinforced
+void GameMap::reinforceWallCornersOnLoad()
+{
+    if(!isServerGameMap() || isInEditorMode())
+        return;
+
+    GameMapWallCorners map(*this);
+    std::vector<WallCorner> corners;
+    WallCorners::findCornersOnLoad(map, getMapSizeX(), getMapSizeY(), corners);
+    for(const WallCorner& corner : corners)
+    {
+        Tile* cornerTile = getTile(corner.mX, corner.mY);
+        Seat* seat = getSeatById(corner.mSeatId);
+        if((cornerTile == nullptr) || (seat == nullptr))
+            continue;
+
+        OD_LOG_INF(serverStr() + "Wall corner " + Tile::displayAsString(cornerTile)
+            + " reinforced on load for seat=" + Seat::displayAsString(seat));
+        cornerTile->claimTile(seat, false);
     }
 }
 
