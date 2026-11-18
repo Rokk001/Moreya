@@ -310,7 +310,7 @@ std::string ItemInstance::getDisplayName(const GameMap* map) const
     return mQuality == Quality::poor && weapon != nullptr ? weapon->getDisplayName() : std::string();
 }
 
-//! rief Looks the frame colour of the quality up in the colour table
+//! \brief Looks the frame colour of the quality up in the colour table
 const std::string& ItemInstance::getQualityColour(Quality quality)
 {
     return QUALITY_COLOURS.at(static_cast<size_t>(quality));
