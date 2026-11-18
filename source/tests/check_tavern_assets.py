@@ -24,7 +24,8 @@ What is checked
               texel at about OBJECT_LIGHT x its value and a floor texel at about FLOOR_LIGHT x (both measured once on
               Mario's screenshot ODscreenshot_2026-11-18_165308_9 over the build 0.7.3.77 textures). Owner decision of
               2026-11-18 ("Mitte"): clearly brighter than build 77, clearly darker than the floor; the accepted result
-              shows wood and counter at 0.63, stone 0.65, hood 0.57 of the floor. Iron, brass, the rail, the sign and the
+              shows wood at 0.63, counter 0.58, stone 0.55, hood 0.50 of the floor (stone, hood and counter top one
+              step darker and browner, owner decision of the same day; HOOD_SHARE). Iron, brass, the rail, the sign and the
               foam are accents and need at least ACCENT_SHARE of the floor; the barkeeper's used texels have the floors
               BARKEEPER_FLOORS; every surface shows detail (luminance spread), is not garish (mean saturation, brightest
               texels) and wood, stone, iron and the approved atlases have a normal map. Build 0.7.3.77 fails: counter
@@ -332,11 +333,12 @@ OBJECT_LIGHT = 1.10
 FLOOR_LIGHT = 1.93
 FLOOR_TEXTURE = 'Tavern1111.png'   # the floor of a tavern tile inside the room
 BRIGHT_SHARE = 1.45                # not brighter than this share of the floor (the apron is the lightest surface)
-MAIN_SHARE = 0.52                  # wood, stone, counter, hood, skin, cloth (accepted result 0.57-0.92; build 77 0.31-0.69)
+MAIN_SHARE = 0.52                  # wood, stone, counter, skin, cloth (accepted result 0.55-0.92; build 77 0.31-0.69)
+HOOD_SHARE = 0.46                  # the brown hood, one step darker (accepted 0.50; build 77 0.33)
 ACCENT_SHARE = 0.45                # iron, brass, rail, sign and foam are accents, never plain black (iron 0.51)
 ACCENTS = {'TavernIron', 'TavernBrass', 'TavernRail', 'TavernSign', 'TavernFoam'}
-# Floors of the texels the barkeeper's surfaces use (accepted result: skin 66, hood 54, cloth 88; build 77: 39, 31, 66)
-BARKEEPER_FLOORS = {'TavernSkin': 60, 'TavernHood': 50, 'TavernCloth': 80}
+# Floors of the texels the barkeeper's surfaces use (accepted result: skin 66, hood 48, cloth 88; build 77: 39, 31, 66)
+BARKEEPER_FLOORS = {'TavernSkin': 60, 'TavernHood': 44, 'TavernCloth': 80}
 MIN_SPREAD = 0.08                  # luminance standard deviation / mean of a surface: visible grain, folds, wear
 ACCENT_SPREAD = 0.05               # the same for the small accents (the smooth patina of the sign: 0.07)
 MAX_SATURATION = {'TavernStone': 0.25, 'TavernIron': 0.25}
@@ -409,7 +411,7 @@ with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
             saturation = np.where(top > 0, (top - texels.min(1)) / np.maximum(top, 1e-6), 0.0).mean()
             shown = luma.mean() * OBJECT_LIGHT
             where = '%s %s (%s)' % (model, material, textures[0])
-            low = ACCENT_SHARE if material in ACCENTS else MAIN_SHARE
+            low = ACCENT_SHARE if material in ACCENTS else (HOOD_SHARE if material == 'TavernHood' else MAIN_SHARE)
             assert shown >= low * floor_shown, '%s shows %.0f in the game light, darker than %.2f x the tavern floor (%.0f)' % (
                 where, shown, low, floor_shown)
             # the foam of the mug is light by nature; every other surface stays below BRIGHT_SHARE of the floor
