@@ -443,7 +443,10 @@ public:
     { return mNeighbors; }
 
     void claimForSeat(Seat* seat, double nDanceRate);
-    void claimTile(Seat* seat);
+    //! \brief Makes the tile owned completely by the seat (a reinforced wall or a claimed floor). On the server the
+    //! earth wall corners this claim completes are then reinforced for the seat too (GameMap::
+    //! reinforceWallCornersAfterClaim), unless applyWallCornerRule is false, as for such a corner itself.
+    void claimTile(Seat* seat, bool applyWallCornerRule = true);
     //! \brief Makes the tile be sent again to every seat that sees it
     void setDirtyForAllSeats();
     void unclaimTile();

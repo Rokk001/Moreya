@@ -143,7 +143,8 @@ public:
 
     //! \brief Creates meshes for all the tiles, creatures, rooms, traps and lights stored in this GameMap.
     //! On the server it also applies the pending relationship states once the creature definitions are set up, and
-    //! continues the possessions AI keepers were running when the game was saved.
+    //! continues the possessions AI keepers were running when the game was saved. Before that the server reinforces
+    //! the earth wall corners the loaded map already shows (reinforceWallCornersOnLoad).
     void createAllEntities();
 
     //! \brief Keeps the relationship states read from a saved game until createAllEntities applies them.
@@ -232,6 +233,15 @@ public:
     //! torches are computed again on the next turn.
     void markWallTorchesDirty()
     { mWallTorchesDirty = true; }
+
+    //! \brief Server side. Reinforces for the seat every earth wall corner that the claim of the tile completes
+    //! (see WallCorners): the corner belongs to the seat at once, without a worker. A corner reinforced here does
+    //! not look for further corners itself. Nothing happens in the editor.
+    void reinforceWallCornersAfterClaim(Tile* tile, Seat* seat);
+
+    //! \brief Server side. Reinforces every earth wall corner that the loaded level or saved game already shows
+    //! (see WallCorners), each for the keeper who owns its two walls. Nothing happens in the editor.
+    void reinforceWallCornersOnLoad();
 
     //! \brief Server side, once per turn. Computes the torches again if needed and sends the changes
     //! (the whole list the first time) to each human player: only torches on tiles the player has seen.

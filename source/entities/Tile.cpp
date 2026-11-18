@@ -1868,7 +1868,9 @@ void Tile::claimForSeat(Seat* seat, double nDanceRate)
     }
 }
 
-void Tile::claimTile(Seat* seat)
+//! \brief Claims the tile for the seat and, on the server, reinforces the earth wall corners the claim completes
+//! unless applyWallCornerRule is false
+void Tile::claimTile(Seat* seat, bool applyWallCornerRule)
 {
     // Claim the tile.
     OD_LOG_INF(getGameMap()->serverStr() + "Tile=" + displayAsString(this)
@@ -1911,6 +1913,11 @@ void Tile::claimTile(Seat* seat)
     }
 
     fireTileStateChanged();
+
+    // A wall corner of the seat is reinforced with the second of its walls or with the floor at its corner. The
+    // corner itself is claimed without this rule, so the rule never spreads from it.
+    if(applyWallCornerRule && getIsOnServerMap())
+        getGameMap()->reinforceWallCornersAfterClaim(this, seat);
 }
 
 void Tile::unclaimTile()

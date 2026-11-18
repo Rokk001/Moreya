@@ -472,6 +472,7 @@ set(OD_SOURCEFILES
     ${SRC}/gamemap/TileContainer.cpp
     ${SRC}/gamemap/TileDirtSync.cpp
     ${SRC}/gamemap/TileSet.cpp
+    ${SRC}/gamemap/WallCorners.cpp
 
     ${SRC}/giftboxes/GiftBoxBonus.cpp
     ${SRC}/giftboxes/GiftBoxSkill.cpp

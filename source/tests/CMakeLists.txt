@@ -242,6 +242,12 @@ add_boost_test(00-WallTorches
         ${SRC}/rooms/WallTorches.h
         ${SRC}/rooms/WallTorches.cpp)
 
+add_boost_test(00-WallCorners
+        SOURCES
+        test_WallCorners.cpp
+        ${SRC}/gamemap/WallCorners.h
+        ${SRC}/gamemap/WallCorners.cpp)
+
 add_boost_test(00-LevelPreview
         SOURCES
         test_LevelPreview.cpp
