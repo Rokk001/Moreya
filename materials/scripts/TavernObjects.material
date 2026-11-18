@@ -1,5 +1,6 @@
 // Original textured wood, metal, stone and figure surfaces for the tavern room.
 
+// Worn grey-brown oak, tileable, grain along v: stool and mug (INGAME-QS-11 K8, readable in the tavern light).
 material TavernWood
 {
     receive_shadows on
@@ -15,6 +16,79 @@ material TavernWood
                 texture TavernWood.png
                 tex_address_mode wrap
                 filtering trilinear
+            }
+            // Tangent-space relief from the height of the same painting.
+            texture_unit
+            {
+                texture TavernWoodNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+
+// Worn oak of the table, its benches and its pedestal kegs, baked onto the table UV layout: grain along each board and stave,
+// knots, cracks, rubbed edges and grime near the floor (INGAME-QS-11 K8).
+material TavernTableWood
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernTableWood.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+            // Tangent-space relief from the height of the same painting.
+            texture_unit
+            {
+                texture TavernTableWoodNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+        }
+    }
+}
+
+// Worn oak staves and lids of the wall keg, baked onto the keg UV layout (INGAME-QS-11 K8).
+material TavernKegWood
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernKegWood.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+            // Tangent-space relief from the height of the same painting.
+            texture_unit
+            {
+                texture TavernKegWoodNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
@@ -40,6 +114,7 @@ material TavernBrass
     }
 }
 
+// Mottled grey stone of the table top, baked onto its UV layout, with pits, a crack and beer rings (INGAME-QS-11 K8).
 material TavernStone
 {
     receive_shadows on
@@ -56,10 +131,21 @@ material TavernStone
                 tex_address_mode wrap
                 filtering trilinear
             }
+            // Tangent-space relief from the height of the same painting.
+            texture_unit
+            {
+                texture TavernStoneNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
         }
     }
 }
 
+// Dark forged iron with hammer mottle and small rust flecks, tileable, for every iron band (INGAME-QS-11 K8).
 material TavernIron
 {
     receive_shadows on
@@ -75,6 +161,16 @@ material TavernIron
                 texture TavernIron.png
                 tex_address_mode wrap
                 filtering trilinear
+            }
+            // Tangent-space relief from the height of the same painting.
+            texture_unit
+            {
+                texture TavernIronNormal.png
+                filtering trilinear
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
