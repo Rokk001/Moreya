@@ -172,13 +172,11 @@ for handler in ('onNavClicked', 'onBackClicked', 'onPreviousClicked', 'onNextCli
     check('SocialWindow::' + handler in window and '&SocialWindow::' + handler in window, handler)
 check('SocialWindow::onLinkClicked' in window and '&SocialWindow::onLinkClicked' in window,
       'the posts of the start page select a creature')
-page = read('gui/WindowCreatureProfilePage.layout')
-check('name="OwnPostsText"' in page and '"OwnPostsText"' not in window,
-      'the book does not show the shared page; its posts column shows the recent posts')
+# The shared creature profile page with its friend and foe links was deleted (owner decision 2026-11-18)
+check(not (repo / 'gui/WindowCreatureProfilePage.layout').exists() and '"OwnPostsText"' not in window,
+      'the shared profile page is gone; the posts column of the book shows the recent posts')
 check('MAX_OWN_POSTS = 6' in window and '(rows < MAX_OWN_POSTS)' in window,
       'the six recent posts remain available as pictures (book-variant-2)')
-for name in ('FriendLink0', 'FriendLink1', 'FoeLink'):
-    check('type="OD/InvisibleButton" name="%s"' % name in page, name + ' is a borderless button')
 check('LinkButton' not in layout + window + gamemode, 'the friend and foe buttons below the profile are gone')
 # Decision 732 for the list, the feeds and the head; only the profile page shortens a text that is longer than its
 # place with "..." (plan INGAME-QS-11 K1, setFittedText and the name line of refreshProfile)
@@ -233,7 +231,7 @@ for pattern in ('network/ODServer*', 'network/ServerNotification*', 'network/Ser
             check('social/' not in read(str(path.relative_to(repo))), '%s includes the social code' % path.name)
 
 cache = read('source/social/SocialProfileCache.cpp')
-check('findFriendsAndFoe' in cache and 'getRosterVersion' in creature, 'friends cached per roster version')
+check('findFriendsAndFoe' not in cache, 'the friends cache of the deleted profile page is gone')
 for path in ('source/render/SocialWindow.cpp', 'source/render/SocialWindow.h', 'source/social/PostLog.cpp',
              'source/social/PostLog.h', 'source/social/CreaturePosts.cpp', 'source/social/CreaturePosts.h'):
     text = read(path)

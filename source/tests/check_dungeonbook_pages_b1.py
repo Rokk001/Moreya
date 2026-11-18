@@ -321,7 +321,7 @@ for page_name in ('ProfilePage', 'ValuesPage', 'InventoryPage'):
 feed = book.child('FeedPage')
 for node in feed.walk():
     check(node.type not in BUTTON_TYPES, node.path + ': no button on the feed of one creature (K4)')
-check('SkillTreeButton' not in (gui_dir / 'WindowCreatureProfilePage.layout').read_text(encoding='utf-8'),
+check(not any('SkillTreeButton' in path.read_text(encoding='utf-8') for path in gui_dir.glob('*.layout')),
       'the skill tree button of the profile page is removed (K4)')
 
 tightest = {}

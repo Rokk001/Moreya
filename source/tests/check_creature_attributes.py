@@ -744,7 +744,7 @@ def check_part_g():
     visuals = text('source/render/CreatureWeaponVisuals.cpp')
     event_h = text('source/network/CosmeticEvent.h')
     gui = text('source/render/Gui.cpp')
-    layout = text('gui/WindowCreatureProfilePage.layout')
+    social = text('source/render/SocialWindow.cpp')
     reactions = text('config/creatureReactions.cfg')
     credits = text('CREDITS')
 
@@ -831,42 +831,12 @@ def check_part_g():
     for name in ('getSkillPathText', 'getSkillListText', 'getAttributeSummaryText', 'getEquipmentText'):
         assert 'std::string ' + name + '() const;' in creature_h
 
-    # ---- 11 the Dungeonbook profile: four lines below "Job:" in the order of the plan
-    profile = function(creature, 'float Creature::fillProfilePage(')
-    lines = ['setText("Job: " + profile.mJob)', 'getChild("AttributesText")->setText(getAttributeSummaryText())',
-             'getChild("EquipmentText")->setText("Equipment: " + getEquipmentText())',
-             'getChild("PathText")->setText("Path: " + getSkillPathText())',
-             'getChild("SkillsText")->setText("Skills: " + getSkillListText())', 'getChild("BioText")']
-    positions = [profile.index(line) for line in lines]
-    assert positions == sorted(positions), 'profile lines order'
-    windows = {}
-    for match in re.finditer(r'<Window type="OD/StaticText" name="(\w+)" >(.*?)</Window>', layout, re.S):
-        windows[match[1]] = match[2]
-    job = windows['JobText']
-    for name in ('AttributesText', 'EquipmentText', 'PathText', 'SkillsText'):
-        block = windows[name]
-        # The profile rows reserve the existing scrollbar gutter at the right edge.
-        assert 'value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}"' in block, name
-        for key in ('FrameEnabled', 'BackgroundEnabled', 'Font', 'VertFormatting', 'HorzFormatting'):
-            assert re.search(r'name="' + key + r'" value="([^"]*)"', block)[1] == ('WordWrapLeftAligned' if key == 'HorzFormatting' else re.search(
-                r'name="' + key + r'" value="([^"]*)"', job)[1]), name + ' ' + key
-    names = re.findall(r'<Window type="OD/\w+" name="(\w+)"', layout)
-    assert names.index('AttributesText') < names.index('EquipmentText') and names.index('PathText') < names.index('SkillsText')
-    children = [window.attrib['name'] for window in ET.fromstring(layout).find('Window').findall('Window')]
-    assert children[children.index('AttributesText'):children.index('EquipmentText') + 1] == ['AttributesText', 'EquipmentRow', 'EquipmentText']
-    assert 'name="FrameEnabled" value="False"' in windows['AttributesText'] and 'MedievalSharp-8' in windows['AttributesText']
-    flow = gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):]
-    flow = flow[:flow.index('};')]
-    assert flow.index('"AttributesText", "EquipmentText", "EquipmentRow"') > 0
-    for name in ('PathText', 'SkillsText', 'BioText'):
-        assert '"' + name + '"' in flow
-    layout_function = function(gui, 'float Gui::layoutCreatureProfilePage(')
-    assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
-    assert layout_function.index('page->getChild("EquipmentRow")') < layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
-    assert 'slot < 13' in layout_function and 'columns[slot] * edge' in layout_function and 'rows[slot] * edge' in layout_function
-    assert ('const char* const textRowsBefore[] = {"PathText", "SkillsText", "BioText", "LikesText",\n'
-            '        "DislikesText", "RelationsText"};') in layout_function
-    assert 'for(std::size_t i = 0; i < 6; ++i)\n        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);' in layout_function
+    # ---- 11 the Dungeonbook profile (book-variant-2, plan INGAME-QS-11 K1): path and skills are rows of the book's
+    # own profile, from the roster or from the creature known here; the shared profile page was deleted
+    profile = function(social, 'void SocialWindow::refreshProfile(')
+    for fragment in ('path = creature->getSkillPathText();', 'skills = creature->getSkillListText();',
+                     '"OriginValue", "JobValue",', '"PathValue"', 'page->getChild("SkillsValue")'):
+        assert fragment in profile, fragment
 
 
 

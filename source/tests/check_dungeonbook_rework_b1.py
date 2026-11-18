@@ -106,7 +106,7 @@ for name in middle[1:]:
 for name in right:
     assert boxes['ProfilePage/' + name][0][0] >= boxes['ProfilePage/ColumnRule'][0][2] - 1e-9, name + ' right'
 # The book fills its own rows; no shared page with bars and links sits in it any more
-assert 'createCreatureProfilePage(' not in social and 'SocialHolder' not in layout_text
+assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists() and 'SocialHolder' not in layout_text
 # The left column holds only the portrait; nothing else is drawn there
 left_column = [n for n in boxes if n.startswith('ProfilePage/') and n.count('/') == 1
                and boxes[n][0][0] < portrait[0][2] - 1e-9]

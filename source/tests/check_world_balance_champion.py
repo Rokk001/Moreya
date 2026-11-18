@@ -121,7 +121,8 @@ assert status.rstrip().endswith('displayOverlay(crownId, 0);\n}'), "the crown is
 definition = read("source/entities/CreatureDefinition.h")
 assert "CHAMPION_CROWN_MARKUP = \"[image-size='w:16 h:16'][image='ChampionCrown/Crown']\"" in definition
 creature = read("source/entities/Creature.cpp")
-assert 'handle += " - " + CHAMPION_CROWN_MARKUP;' in creature
+# The handle line with the crown belonged to the shared profile page, deleted by the owner on 2026-11-18
+assert 'handle += " - " + CHAMPION_CROWN_MARKUP;' not in creature
 assert 'tempSS << "Level: " << CHAMPION_CROWN_MARKUP' in creature
 social = read("source/render/SocialWindow.cpp")
 # The Dungeonbook list and feed: the crown stands in the level place, the whole name is escaped on its own and word

@@ -36,7 +36,10 @@ for mesh, regions in portraits.items():
         assert 0 <= region['sat'][0] <= region['sat'][1] <= 1 and 0 <= region['val'][0] <= region['val'][1] <= 1, where
 
 creature = (repo / 'source/entities/Creature.cpp').read_text()
-assert 'getCreatureProfilePortraitImage(getName(), definition->getMeshName(), profile.mGender)' in creature
+# The Dungeonbook falls back to the round tinted portrait (the shared profile page that used the square one was deleted,
+# owner decision 2026-11-18)
+assert 'getCircularCreatureProfilePortraitImage(creatureName, definition->getMeshName(), profile.mGender)' in (
+    repo / 'source/render/SocialWindow.cpp').read_text()
 assert 'clearCreatureProfilePortraits();' in (repo / 'source/modes/GameMode.cpp').read_text()
 assert 'render/PortraitTint.cpp' in (repo / 'CMakeLists.txt').read_text()
 print('portrait tints ok: %d meshes' % len(portraits))

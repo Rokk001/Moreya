@@ -82,10 +82,11 @@ for name in ('source/render/DungeonbookQuirks.cpp',
 quirks = read('source/render/DungeonbookQuirks.cpp')
 assert 'stableHash(' in quirks
 
-# The profile asks for the picture on every fill and sets it right away
-fill = body(creature, 'float Creature::fillProfilePage(CEGUI::Window* page)')
-assert 'getCreatureAppearanceImage(getName(), mAppearance)' in fill
-assert 'appearanceImage' in fill
+# The book asks for the picture of the appearance on every fill of a page and sets it right away (the shared profile
+# page that did the same was deleted, owner decision 2026-11-18)
+portrait = body(read('source/render/SocialWindow.cpp'), 'const CEGUI::Image* SocialWindow::findPortrait(')
+assert 'getCircularCreatureAppearanceImage(creatureName, appearance)' in portrait
+assert 'getCreatureAppearanceImage(creatureName, appearance)' in portrait
 
 # The tests that give the runtime part are part of the build
 tests = read('source/tests/CMakeLists.txt')

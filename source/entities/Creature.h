@@ -249,17 +249,9 @@ public:
     //! \brief Restores the base visual state and the exact saved corpse decay progress.
     void restoreEntityState() override;
 
-    //! \brief Fills a profile page (gui/WindowCreatureProfilePage.layout) with the social profile of the
-    //! creature. Used by the Dungeonbook, the only window that shows a creature's information (a click on a
-    //! creature opens the Dungeonbook on it, see GameMode::openDungeonbookOnCreature). The names in the friends and foe rows are
-    //! buttons (FriendLink0, FriendLink1, FoeLink) carrying the creature name in the user string "Creature"; the
-    //! caller decides what a click does. Shows transmitted slots and permanent spawn hands with frames and tooltips.
-    //! Returns the bottom edge of the page content in design pixels.
-    float fillProfilePage(CEGUI::Window* page);
     //! \brief Fills 13 item slot windows (right hand, left hand, head, armour, boots, ring, three potions, four
     //! inventory slots; each with the children "SlotType" and "QualityFrame") with the item picture, quality frame and
-    //! tooltip, or with the painted slot-type symbol when the slot is empty. Used by the shared profile page and by the
-    //! Dungeonbook inventory page. A null creature (items not known) shows every slot empty. With showLocks every slot
+    //! tooltip, or with the painted slot-type symbol when the slot is empty. Used by the Dungeonbook inventory page. A null creature (items not known) shows every slot empty. With showLocks every slot
     //! window also has a child "Lock": a potion slot the creature has not unlocked by its level is greyed out and shows it.
     static void fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks);
 
@@ -291,7 +283,7 @@ public:
     std::string getRelationshipTooltip();
     //! brief Client side. The relationship row of the Dungeonbook profile: for a creature of the local player or its
     //! allies with the relationship option on, its real status ("Single", "In a relationship" ...), otherwise the
-    //! relationship of its social profile. The shared profile page (fillProfilePage) shows the same text.
+    //! relationship of its social profile.
     std::string getProfileRelationshipText();
     //! brief The made-up handle of a social profile ("Mold the Damp" -> "@mold47"), never the internal creature name.
     static std::string getProfileHandle(const social::CreatureProfile& profile);

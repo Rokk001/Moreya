@@ -138,14 +138,6 @@ public:
     //! WindowStats.layout, registered for scaling. The caller adds it to the root window.
     CEGUI::Window* createInfoWindow(const std::string& name);
 
-    //! \brief Loads the profile page (portrait, texts, bars) as the child "Content" of the given holder window.
-    //! The Dungeonbook shows it on its profile page, see Creature::fillProfilePage.
-    CEGUI::Window* createCreatureProfilePage(CEGUI::Window* holder);
-    //! \brief Places equipment beside the portrait, attributes below, then social rows and posts, each as
-    //! high as its wrapped text, leaving no gap between short rows. Returns the bottom edge of the
-    //! last visible row in design pixels, relative to the page. If the rows are higher than the page, the page
-    //! scrolls (scrollbar at its right edge, shown only then) and the height of the page is returned.
-    float layoutCreatureProfilePage(CEGUI::Window* page);
     //! \brief Sets the area of a registered window given in design pixels (the scale is applied here).
     void setScaledArea(CEGUI::Window* window, const CEGUI::URect& designArea);
     //! \brief Factor from design pixels to screen pixels (display size and user scale).
@@ -260,14 +252,6 @@ private:
     //! \brief Places the visible buttons with the given names in the panel, in one row of large buttons if
     //! they fit and otherwise in two rows of small ones, and applies the UI scale to them.
     void arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const char*> names);
-    //! \brief Places one text row of the profile page at y (design pixels) as high as its text, returns the y of the next row.
-    float layoutProfileTextRow(CEGUI::Window* window, float y, float scale);
-    //! \brief Moves all children of the profile page (except the scrollbar) from their unscrolled areas up by offset.
-    void applyProfileScroll(CEGUI::Window* page, float offset);
-    //! \brief The scrollbar of a profile page was moved.
-    bool onProfileScrolled(const CEGUI::EventArgs& e);
-    //! \brief The mouse wheel turned over the profile page or one of its rows: scrolls the page if it scrolls.
-    bool onProfileWheel(const CEGUI::EventArgs& e);
     //! \brief Layout values of a window as loaded, used to re-apply the UI scale from the original values.
     struct WindowScaleData
     {
@@ -288,8 +272,6 @@ private:
     std::map<guiSheet, CEGUI::Window*> mSheets;
     //! \brief The windows that take part in UI scaling, with their original layout values.
     std::map<CEGUI::Window*, WindowScaleData> mScaledWindows;
-    //! \brief The unscrolled design areas of the children of the profile pages, see layoutCreatureProfilePage.
-    std::map<CEGUI::Window*, CEGUI::URect> mProfileBaseAreas;
 
     //! \brief UI scale chosen by the user (1.0 = 100%), on top of the scale derived from the display size.
     float mUserScale;

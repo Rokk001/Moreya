@@ -169,9 +169,9 @@ if 'filename="WindowCreatureSkillTree.layout"' not in read('gui/ModeGame.layout'
 
 # Plan INGAME-QS-11 K4: the skill tree opens from the fifth button "Skills" of the navigation bar of the book, no page
 # holds a skill tree button any more
-profile = read('gui/WindowCreatureProfilePage.layout')
-if 'SkillTreeButton' in profile:
-    errors.append('gui/WindowCreatureProfilePage.layout: the profile page still holds the SkillTreeButton')
+for layout_path in sorted((repo / 'gui').glob('*.layout')):
+    if 'SkillTreeButton' in layout_path.read_text(encoding='utf-8', errors='replace'):
+        errors.append('gui/%s: a page holds a SkillTreeButton' % layout_path.name)
 book = read('gui/WindowSocial.layout')
 nav = re.search(r'<Window type="DefaultWindow" name="NavBar">(.*?)\n        </Window>', book, re.S)
 nav_buttons = re.findall(r'<Window type="OD/Button" name="(Nav[A-Za-z]+)">', nav.group(1)) if nav else []

@@ -10,7 +10,8 @@ the name showed nothing. Checked here:
    around the picture, and no later window of the page, the header or the navigation bar lies over a slot box.
 2. refreshInventory copies the tooltip of every picture to its box right after fillItemSlotWindows, so the whole box
    shows the item values (or the lock text of a locked potion slot) and an empty slot shows nothing.
-3. fillItemSlotWindows still sets the item tooltip (Gui::setItemTooltip) on the picture, and the creature card keeps its own slots and call.
+3. fillItemSlotWindows still sets the item tooltip (Gui::setItemTooltip) on the picture and leaves the parents of the
+   slots alone (the shared profile page with its own slots was deleted, owner decision 2026-11-18).
 """
 from pathlib import Path
 import re
@@ -20,7 +21,6 @@ repo = Path(__file__).resolve().parents[2]
 book = ET.fromstring((repo / 'gui/WindowSocial.layout').read_text()).find('Window')
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
 creature = (repo / 'source/entities/Creature.cpp').read_text()
-card = ET.fromstring((repo / 'gui/WindowCreatureProfilePage.layout').read_text())
 
 SLOTS = 13
 
@@ -92,18 +92,11 @@ assert copy in inventory and inventory.index(copy) > fill_at, 'the slot boxes ta
 assert re.search(r'for\(CEGUI::Window\* slot : slots\)\s*\n\s*' + re.escape(copy), inventory), 'every slot box'
 assert '"SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)' in inventory, 'the picture is a child of its box'
 
-# 3. The shared fill and the creature card stay as they are
+# 3. The shared fill
 fill = function_of(creature, 'void Creature::fillItemSlotWindows(')
 assert 'Gui::setItemTooltip(image, *item, creature->getGameMap(), heldWeapon);' in fill
 assert 'Gui::setPlainTooltip(image, "Potion slot locked: it opens at level "' in fill
-assert 'getParent()' not in fill, 'the shared fill does not touch the parents of the card slots'
-assert 'fillItemSlotWindows(this, slotWindows, false);' in creature, 'the creature card keeps its slots'
-row = [w for w in card.iter('Window') if w.get('name') == 'EquipmentRow']
-assert len(row) == 1
-for i in range(SLOTS):
-    slot = child(row[0], 'Slot%d' % i)
-    assert not passes(slot), 'card Slot%d keeps its tooltip' % i
-    for overlay in slot.findall('Window'):
-        assert passes(overlay), 'card Slot%d/%s' % (i, overlay.get('name'))
+assert 'getParent()' not in fill, 'the shared fill does not touch the parents of the slots'
+assert 'fillItemSlotWindows(this, slotWindows, false);' not in creature, 'the shared profile page is deleted'
 
-print('dungeonbook inventory tooltips: %d slot boxes show the item tooltip of their picture, card unchanged' % SLOTS)
+print('dungeonbook inventory tooltips: %d slot boxes show the item tooltip of their picture' % SLOTS)
