@@ -868,6 +868,7 @@
         <!-- The pages of one creature fill the client below the head and above the navigation bar; the creature list is hidden while they are shown (book-switch-variant-1). They hold no button and no scrollbar except the scrollbar of the feed of the chosen picture; their content is measured by check_dungeonbook_pages_b1.py. -->
         <!-- The pages of one creature fill the client below the head and above the navigation bar; the creature list is hidden while they are shown (book-switch-variant-1). They hold no button and no scrollbar except the scrollbar of the feed of the chosen picture; their content is measured by check_dungeonbook_pages_b1.py. -->
         <!-- The pages of one creature fill the client below the head and above the navigation bar; the creature list is hidden while they are shown (book-switch-variant-1). They hold no button and no scrollbar except the scrollbar of the feed of the chosen picture; their content is measured by check_dungeonbook_pages_b1.py. -->
+        <!-- The pages of one creature fill the client below the head and above the navigation bar; the creature list is hidden while they are shown (book-switch-variant-1). They hold no button and no scrollbar except the scrollbar of the feed of the chosen picture; their content is measured by check_dungeonbook_pages_b1.py. -->
         <Window type="DefaultWindow" name="FeedPage">
             <Property name="Area" value="{{0.012,0},{0.085,0},{0.988,0},{0.885,0}}" />
             <Property name="Visible" value="False" />
@@ -880,11 +881,11 @@
                 <Property name="VertFormatting" value="CentreAligned" />
                 <Property name="Text" value="Feed" />
             </Window>
-            <Window type="OD/StaticText" name="FeedTitleRule">
-                <Property name="Area" value="{{0.0152,0},{0.0722,0},{0.9848,0},{0.0756,0}}" />
+            <Window type="OD/StaticImage" name="FeedTitleRule">
+                <Property name="Area" value="{{0.0152,0},{0.0705,0},{0.9848,0},{0.0773,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="DungeonbookIcons/BookTitleRule" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="DefaultWindow" name="FeedRows">
@@ -1121,11 +1122,11 @@
                 <Property name="HorzFormatting" value="LeftAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
-            <Window type="OD/StaticText" name="NameRule">
-                <Property name="Area" value="{{0.297,0},{0.0948,0},{0.9898,0},{0.0982,0}}" />
+            <Window type="OD/StaticImage" name="NameRule">
+                <Property name="Area" value="{{0.297,0},{0.0931,0},{0.9898,0},{0.0999,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="DungeonbookIcons/BookTitleRule" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/StaticText" name="AgeLabel">
@@ -1230,11 +1231,11 @@
                 <Property name="HorzFormatting" value="LeftAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
-            <Window type="OD/StaticText" name="TableRule">
-                <Property name="Area" value="{{0.297,0},{0.456,0},{0.6802,0},{0.4594,0}}" />
+            <Window type="OD/StaticImage" name="TableRule">
+                <Property name="Area" value="{{0.297,0},{0.4543,0},{0.6802,0},{0.4611,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="DungeonbookIcons/BookTitleRule" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/StaticText" name="SkillsLabel">
@@ -1254,11 +1255,11 @@
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                 <Property name="VertFormatting" value="TopAligned" />
             </Window>
-            <Window type="OD/StaticText" name="SkillsRule">
-                <Property name="Area" value="{{0.297,0},{0.6862,0},{0.6802,0},{0.6896,0}}" />
+            <Window type="OD/StaticImage" name="SkillsRule">
+                <Property name="Area" value="{{0.297,0},{0.6845,0},{0.6802,0},{0.6913,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="DungeonbookIcons/BookTitleRule" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/StaticText" name="QuoteText">
@@ -1269,11 +1270,11 @@
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
-            <Window type="OD/StaticText" name="ColumnRule">
-                <Property name="Area" value="{{0.6929,0},{0.1174,0},{0.6948,0},{0.991,0}}" />
+            <Window type="OD/StaticImage" name="ColumnRule">
+                <Property name="Area" value="{{0.6919,0},{0.1174,0},{0.6957,0},{0.991,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="DungeonbookIcons/BookFrameLeft" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/StaticText" name="PostsTitle">
@@ -1427,8 +1428,9 @@
             <Property name="Visible" value="False" />
             <Window type="OD/StaticText" name="StatsPanel">
                 <Property name="Area" value="{{0.0102,0},{0.009,0},{0.4188,0},{0.8939,0}}" />
-                <Property name="FrameEnabled" value="False" />
+                <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
+                <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
@@ -1643,8 +1645,9 @@
             </Window>
             <Window type="OD/StaticText" name="CombatPanel">
                 <Property name="Area" value="{{0.4365,0},{0.5011,0},{0.9898,0},{0.6591,0}}" />
-                <Property name="FrameEnabled" value="False" />
+                <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
+                <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
@@ -1673,8 +1676,9 @@
             </Window>
             <Window type="OD/StaticText" name="DefensePanel">
                 <Property name="Area" value="{{0.4365,0},{0.6772,0},{0.9898,0},{0.8352,0}}" />
-                <Property name="FrameEnabled" value="False" />
+                <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
+                <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
@@ -1703,8 +1707,9 @@
             </Window>
             <Window type="OD/StaticText" name="EquipmentTile">
                 <Property name="Area" value="{{0.4365,0},{0.8533,0},{0.6142,0},{0.991,0}}" />
-                <Property name="FrameEnabled" value="False" />
+                <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
+                <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="MousePassThroughEnabled" value="False" />
             </Window>
@@ -1725,8 +1730,9 @@
             </Window>
             <Window type="OD/StaticText" name="PathTile">
                 <Property name="Area" value="{{0.6244,0},{0.8533,0},{0.802,0},{0.991,0}}" />
-                <Property name="FrameEnabled" value="False" />
+                <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
+                <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="MousePassThroughEnabled" value="False" />
             </Window>
@@ -1747,8 +1753,9 @@
             </Window>
             <Window type="OD/StaticText" name="SkillsTile">
                 <Property name="Area" value="{{0.8122,0},{0.8533,0},{0.9898,0},{0.991,0}}" />
-                <Property name="FrameEnabled" value="False" />
+                <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
+                <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="MousePassThroughEnabled" value="False" />
             </Window>
@@ -2336,7 +2343,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PotionsLabel">
-                <Property name="Area" value="{{0.5584,0},{0.5102,0},{0.731,0},{0.5598,0}}" />
+                <Property name="Area" value="{{0.5584,0},{0.5102,0},{0.731,0},{0.5576,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -2344,15 +2351,15 @@
                 <Property name="VertFormatting" value="CentreAligned" />
                 <Property name="Text" value="Potions" />
             </Window>
-            <Window type="OD/StaticText" name="PotionsRule">
-                <Property name="Area" value="{{0.3617,0},{0.5621,0},{0.9277,0},{0.5655,0}}" />
+            <Window type="OD/StaticImage" name="PotionsRule">
+                <Property name="Area" value="{{0.3617,0},{0.5604,0},{0.9277,0},{0.5672,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="DungeonbookIcons/BookTitleRule" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/StaticText" name="InventoryLabel">
-                <Property name="Area" value="{{0.5584,0},{0.7381,0},{0.731,0},{0.7878,0}}" />
+                <Property name="Area" value="{{0.5584,0},{0.7381,0},{0.731,0},{0.7856,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -2360,11 +2367,11 @@
                 <Property name="VertFormatting" value="CentreAligned" />
                 <Property name="Text" value="Inventory" />
             </Window>
-            <Window type="OD/StaticText" name="InventoryRule">
-                <Property name="Area" value="{{0.3617,0},{0.7901,0},{0.9277,0},{0.7935,0}}" />
+            <Window type="OD/StaticImage" name="InventoryRule">
+                <Property name="Area" value="{{0.3617,0},{0.7884,0},{0.9277,0},{0.7951,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="DungeonbookIcons/BookTitleRule" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
         </Window>
@@ -2411,11 +2418,11 @@
             <Property name="Visible" value="False" />
             <Property name="Area" value="{{0.012,0},{0.895,0},{0.988,0},{0.995,0}}" />
             <Property name="AlwaysOnTop" value="True" />
-            <Window type="OD/StaticText" name="NavRule">
-                <Property name="Area" value="{{0,0},{0,0},{1,0},{0.03,0}}" />
+            <Window type="OD/StaticImage" name="NavRule">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{0.06,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="True" />
-                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Image" value="DungeonbookIcons/BookTitleRule" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/Button" name="NavFeed">

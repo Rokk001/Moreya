@@ -451,6 +451,19 @@ check('MAX_OWN_POSTS = 6' in social_cpp and 'page->getChild("PostThumb" + std::t
 for gone in ('SocialHolder', 'SocialText', 'InfoText', 'KeeperText', 'HealthBar', 'LikesText', 'DislikesText'):
     check(gone not in [n.name for n in profile.walk()], 'the profile of book-variant-2 has no ' + gone)
 
+# Painted surfaces (owner 2026-11-18, the book must look like book-variant-2): every rule of the pages is the painted
+# iron rule of the book, no flat bar; the values panels and tiles have the rust frame of the slot boxes
+for page_name in CREATURE_PAGES + ('NavBar',):
+    for node in book.child(page_name).walk():
+        if node.name.endswith('Rule') or node.name in ('Rule1', 'Rule2'):
+            check(node.type == 'OD/StaticImage' and node.props.get('Image') in (
+                'DungeonbookIcons/BookTitleRule', 'DungeonbookIcons/BookFrameLeft', 'OpenDungeonsGameWindow/TitleRule'),
+                node.path + ' is a painted rule')
+for name in ('StatsPanel', 'CombatPanel', 'DefensePanel', 'EquipmentTile', 'PathTile', 'SkillsTile'):
+    props = book.child('ValuesPage').child(name).props
+    check(props.get('FrameEnabled') == 'True' and props.get('FrameColours') == 'tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C',
+          'ValuesPage/%s has the rust frame' % name)
+
 # 4. the navigation bar
 nav = book.child('NavBar')
 buttons = [c for c in nav.children if c.type == 'OD/Button']

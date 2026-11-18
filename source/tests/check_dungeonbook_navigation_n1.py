@@ -62,7 +62,7 @@ styles = []
 
 
 def collect_styles(window, path=''):
-    """Pin all 844 existing image, font, background and frame properties, excluding replaced filter buttons.
+    """Pin all 850 existing image, font, background and frame properties, excluding replaced filter buttons.
 
     787 before the window got the frame of the menu sheet: the 15 properties of the ornate book frame and its title
     band (TitlebarFont, Frame*Image, Title*Image on the window and its title bar) are gone, every page style is kept.
@@ -70,7 +70,9 @@ def collect_styles(window, path=''):
     holder, info and keeper texts of the profile, the MedievalSharp-6 slot names, the back arrow of the head) and 78
     came (the rows, rules and post frames of the profile, the MedievalSharp-8 slot names, the MedievalSharp-12 name of
     the head, the back arrow in the title bar and the Skills button of the navigation bar), 21 more for the keeper
-    mark of the seven list entries (INGAME-QS-7 U-2, Font and no background or frame).
+    mark of the seven list entries (INGAME-QS-7 U-2, Font and no background or frame), 6 more when the flat rule bars
+    became the painted iron rule of the book (BookTitleRule, BookFrameLeft) and the values panels and tiles got the
+    rust frame.
     """
     path += '/' + window.get('name', '')
     if window.get('name', '').startswith('Filter'):
@@ -85,9 +87,9 @@ def collect_styles(window, path=''):
 
 
 collect_styles(book)
-assert len(styles) == 844
+assert len(styles) == 850
 assert hashlib.sha256(json.dumps(styles, separators=(',', ':')).encode()).hexdigest() == \
-    '05c5cbe16ec58139eeae035c4c6805e941b8ee1f8d9c12c458450539f68797ff'
+    'b36dfa095f25a9235adc7866d1a2d8cf44f90859678e74d23a499a30969431c2'
 
 expected = {
     'DungeonbookIcons.png': '1f8c0171d312b6a7c432eb9640cd754089ace73f',
