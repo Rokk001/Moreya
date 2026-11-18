@@ -23,6 +23,7 @@
 #include <CEGUI/Window.h>
 
 
+#include <functional>
 #include <vector>
 #include <string>
 
@@ -58,7 +59,22 @@ public:
     //! \brief Called when pushing the cancel button on the settings window.
     bool onCancelSettings(const CEGUI::EventArgs& e = {});
 
+    //! \brief Shows the setting "KO enemy creatures instead of killing" of the local keeper's seat on the Game page
+    //! (only in a running game; the menu and the editor do not call it, so the check box stays hidden there).
+    //! \param current Returns the setting of the seat; the check box shows it whenever the window is opened.
+    //! \param apply Called with the check box state when the settings are applied.
+    void setKoCreaturesSetting(const std::function<bool()>& current, const std::function<void(bool)>& apply);
+
+    //! \brief Shows the current KO setting of the seat in the check box (when the setting is shown).
+    void syncKoCreaturesSetting();
+
 private:
+    //! \brief Returns the KO setting of the local keeper's seat; empty outside a running game.
+    std::function<bool()> mKoCreaturesCurrent;
+
+    //! \brief Sends the KO setting chosen in the check box to the server; empty outside a running game.
+    std::function<void(bool)> mKoCreaturesApply;
+
     //! \brief Vector of cegui event bindings to be cleared on exiting the mode
     std::vector<CEGUI::Event::Connection> mEventConnections;
 

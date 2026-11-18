@@ -33,7 +33,9 @@ page = function(game, "void GameMode::setOptionsPage(")
 save = function(game, "bool GameMode::saveGame(")
 assert "isConnected() &&" in page and "!= ServerMode::ModeGameMultiPlayer" in page
 assert 'options->getChild("LoadGameButton")->setVisible(!endGame && canSave)' in page
-assert 'entries.erase(entries.begin() + 2, entries.begin() + 4)' in page
+# Save Game and Load Game are the first two entries of the options page (INGAME-QS-11 K7)
+assert 'std::vector<const char*>{"SaveGameButton", "LoadGameButton",' in page
+assert 'entries.erase(entries.begin(), entries.begin() + 2)' in page
 open_browser = function(game, 'bool GameMode::loadGame(')
 assert '!ODServer::getSingleton().isConnected() ||' in open_browser and 'ModeGameMultiPlayer' in open_browser
 assert 'new MenuModeLoad(mModeManager, true)' in open_browser and 'mLoadBrowser->activate()' in open_browser

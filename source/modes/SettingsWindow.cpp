@@ -401,6 +401,7 @@ void SettingsWindow::initConfig()
         mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/BloodEffectsCheckbox"));
     bloodEffectsCheckbox->setSelected(
         config.getGameValue(Config::BLOOD_EFFECTS, "Yes", false) == "Yes");
+    syncKoCreaturesSetting();
     CEGUI::Combobox* roomAmbience = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/RoomAmbience"));
     roomAmbience->resetList();
@@ -680,6 +681,13 @@ bool SettingsWindow::saveConfig()
         mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/BloodEffectsCheckbox"));
     config.setGameValue(Config::BLOOD_EFFECTS,
         bloodEffectsCheckbox->isSelected() ? "Yes" : "No");
+    // The KO setting belongs to the keeper's seat: it is sent to the server, not stored in the config
+    if(mKoCreaturesApply)
+    {
+        CEGUI::ToggleButton* koCreaturesCheckbox = static_cast<CEGUI::ToggleButton*>(
+            mRootWindow->getChild("SettingsWindow/MainTabControl/Game/GameSP/KOCreatureCheckbox"));
+        mKoCreaturesApply(koCreaturesCheckbox->isSelected());
+    }
     CEGUI::Combobox* roomAmbience = static_cast<CEGUI::Combobox*>(
             mRootWindow->getChild("SettingsWindow/MainTabControl/Audio/AudioSP/RoomAmbience"));
     CEGUI::ListboxItem* roomAmbienceItem = roomAmbience->getSelectedItem();
@@ -872,6 +880,31 @@ void SettingsWindow::hide()
         mApplyWindow->setModalState(false);
         mApplyWindow->hide();
     }
+}
+
+//! \brief Shows the KO setting of the keeper's seat on the Game page and keeps the functions that read and send it.
+void SettingsWindow::setKoCreaturesSetting(const std::function<bool()>& current,
+    const std::function<void(bool)>& apply)
+{
+    mKoCreaturesCurrent = current;
+    mKoCreaturesApply = apply;
+    if(mSettingsWindow == nullptr)
+        return;
+    mSettingsWindow->getChild("MainTabControl/Game/GameSP/KOCreatureCheckbox")->setVisible(
+        mKoCreaturesCurrent && mKoCreaturesApply);
+    syncKoCreaturesSetting();
+    // The pane of the Game page scrolls over its visible controls only, so it is measured again
+    mGui.registerWindowHierarchy(mSettingsWindow);
+}
+
+//! \brief Sets the KO check box to the setting of the keeper's seat.
+void SettingsWindow::syncKoCreaturesSetting()
+{
+    if(mSettingsWindow == nullptr || !mKoCreaturesCurrent)
+        return;
+    CEGUI::ToggleButton* koCreaturesCheckbox = static_cast<CEGUI::ToggleButton*>(
+        mSettingsWindow->getChild("MainTabControl/Game/GameSP/KOCreatureCheckbox"));
+    koCreaturesCheckbox->setSelected(mKoCreaturesCurrent());
 }
 
 bool SettingsWindow::onCancelSettings(const CEGUI::EventArgs&)

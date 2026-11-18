@@ -300,10 +300,13 @@ TEXT_TYPES = {'OD/SheetStaticText', 'OD/StaticText', 'OD/MenuTitle', 'OD/Resourc
               'OD/Button', 'OD/MainMenuButton', 'OD/InvisibleButton', 'OD/MenuTextButton', 'OD/Checkbox',
               'OD/RadioButton', 'OD/IconButton', 'OD/ImageButton', 'OD/ResearchButton', 'OD/TabButton',
               'OD/MenuItem', 'OD/MenuSymbolButton', 'OD/GameTabButton', 'OD/MiniMapCornerButton',
-              'OD/MenuCompactButton', 'OD/MenuFilterButton'}
+              'OD/MenuCompactButton', 'OD/MenuFilterButton', 'OD/MenuIconTextButton'}
 # Caption area of the menu template buttons in fractions of the button height: cap width, top rail, bottom rail.
 MENU_TEMPLATE_CAPTION = {'OD/MenuTextButton': (0.516667, 0.183333, 0.816667),
                          'OD/MenuCompactButton': (0.25, 0.21, 0.79), 'OD/MenuFilterButton': (0.25, 0.21, 0.79)}
+# Menu template button with a symbol (OD.looknfeel OD/MenuIconTextButton): the caption starts right of the symbol on the
+# planks. Left edge, right cap, top rail, bottom rail in fractions of the button height.
+MENU_SYMBOL_CAPTION = {'OD/MenuIconTextButton': (1.216667, 0.516667, 0.183333, 0.816667)}
 STATIC_LIKE = {'OD/SheetStaticText', 'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPanel', 'OD/MenuDescription'}
 
 
@@ -340,6 +343,10 @@ def text_area(node, rect, screen, user, s):
         cap, top, bottom = MENU_TEMPLATE_CAPTION[node.type]
         height = y1 - y0
         return x0 + cap * height, y0 + top * height, x1 - cap * height, y0 + bottom * height
+    if node.type in MENU_SYMBOL_CAPTION:
+        left, cap, top, bottom = MENU_SYMBOL_CAPTION[node.type]
+        height = y1 - y0
+        return x0 + left * height, y0 + top * height, x1 - cap * height, y0 + bottom * height
     if node.type == 'OD/ImageButton' or node.type == 'OD/ResearchButton':
         return x0 + 5.0, y0, x0 + 5.0 + 0.9 * (x1 - x0), y1
     return rect

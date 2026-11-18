@@ -165,8 +165,6 @@ public:
     static const std::string ROOT;
     static const std::string DISPLAY_GOLD;
     static const std::string DISPLAY_MANA;
-    static const std::string DISPLAY_TERRITORY;
-    static const std::string DISPLAY_CREATURES;
     static const std::string MINIMAP;
     static const std::string OBJECTIVE_TEXT;
     static const std::string MAIN_TABCONTROL;

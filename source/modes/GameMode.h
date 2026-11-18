@@ -335,11 +335,13 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \param bathPrice The gold one bath costs.
     void setSpaWindowShown(int tileX, int tileY, uint32_t payer, double bathPrice);
 
-    bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
-    bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
-    bool cancelPlayerSettings(const CEGUI::EventArgs& = {});
-    bool applyPlayerSettings(const CEGUI::EventArgs& = {});
-    //! \brief Synchronize settings displayed in the menu with settings in the seat
+    //! \brief Whether the local keeper's seat knocks out defeated enemy creatures instead of killing them.
+    bool isLocalKoCreaturesEnabled() const;
+    //! \brief Asks the server to set the KO setting of the local keeper's seat (settings window, Apply).
+    //! \param enabled True to knock out defeated enemy creatures instead of killing them.
+    void requestKoCreaturesSetting(bool enabled);
+    //! \brief Synchronize settings displayed in the menu with settings in the seat (the KO setting of the
+    //! settings window)
     void syncPlayerSettings();
 
     //! \brief Shows/hides/toggles the Skill window
@@ -456,8 +458,6 @@ protected:
     bool showRestartLevelFromOptions(const CEGUI::EventArgs& e = {});
     //! \brief Asks for confirmation before the application is closed.
     bool showExitApplicationFromOptions(const CEGUI::EventArgs& e = {});
-    bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
-    bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
     bool saveGame(const CEGUI::EventArgs& e = {});
     //! \brief Opens the in-game saved-game browser.
     bool loadGame(const CEGUI::EventArgs& e = {});
@@ -601,9 +601,6 @@ private:
     SkillType mCurrentSkillType;
     float mCurrentSkillProgress;
 
-    //! \brief Seats playing the game
-    std::vector<int> mSeatIds;
-
     MouseMoveEvent mPreviousMousePosition;
 
     //! \brief Pointer movement in pixels since the middle button was pressed. A middle click that moved
@@ -686,7 +683,6 @@ private:
 
     //! \brief Closes every open GUI layer, topmost first.
     void closeAllTopWindows();
-    bool showTrapProductionQueue(const CEGUI::EventArgs& = {});
     bool closeTrapProductionQueue(const CEGUI::EventArgs& = {});
     //! \brief Enables the move buttons according to the selected order.
     bool updateTrapProductionButtons(const CEGUI::EventArgs& = {});
@@ -881,9 +877,6 @@ private:
     //! Type (as GameEntityType) and name of the first held entity when the drop started.
     int32_t mPendingHandDropEntityType = 0;
     std::string mPendingHandDropEntityName;
-
-    //! \brief Builds the player settings window
-    void buildPlayerSettingsWindow();
 
     //! \brief Tracks the Alt keys and toggles the creature indicators on each new Alt press.
     //! Key repeats and overlapping left/right Alt presses count as one held interval.

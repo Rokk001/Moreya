@@ -292,7 +292,10 @@ for kind, path, handler in (('infirmary', 'source/modes/GameMode.cpp', 'toggleIn
                              ('alchemyLab', 'source/modes/GameModeAlchemy.cpp', 'toggleAlchemyLabWindow')):
     shortcut = body(read(path), 'bool GameMode::' + handler + '(')
     assert 'selectRoomManagerType(RoomType::' + kind in shortcut and 'closeAllTopWindows' not in shortcut
-assert 'selectRoomManagerType(RoomType::workshop, true' in body(game, 'bool GameMode::showTrapProductionQueue(')
+# The workshop production page is reached from the game bar (Room Manager button, workshop row), no longer from the
+# options menu (INGAME-QS-11 K7): the workshop row requests the production queue.
+assert 'case RoomType::workshop: requestTrapProductionQueue(); break;' in body(nav, 'void GameMode::refreshRoomManager(')
+assert 'showTrapProductionQueue' not in game + read('source/modes/GameMode.h'), 'the options entry Production is gone'
 assert 'closeAllTopWindows()' in body(nav, 'bool GameMode::toggleRoomManager(')
 shortcut = body(nav, 'bool GameMode::selectRoomManagerType(')
 assert shortcut.index('!mRoomManagerNavigation.owned(type)') < shortcut.index('closeAllTopWindows()'), 'unowned options target leaves other windows open'
@@ -304,7 +307,8 @@ assert 'row->setVisible(counts[index] > 0)' in refresh, 'only owned types appear
 assert 'mRoomManagerNavigation.updateOwned(counts)' in refresh and 'closeRoomManager()' in refresh
 assert 'RoomManagerButton' in body(nav, 'void GameMode::initializeRoomManager(')
 assert '&GameMode::toggleRoomManager' in body(nav, 'void GameMode::initializeRoomManager(')
-assert '&GameMode::showTrapProductionQueue' in game and 'GameOptionsWindow/ProductionButton' in game
+options = ET.parse(ROOT / 'gui/WindowGameOptions.layout').getroot()
+assert options.find(".//Window[@name='ProductionButton']") is None and 'GameOptionsWindow/ProductionButton' not in game
 assert 'initializeRoomManager();' in game and 'refreshRoomManager();' in body(game, 'void GameMode::onFrameStarted(')
 print('Room Manager navigation source contracts passed')
 if '--source-only' not in sys.argv:

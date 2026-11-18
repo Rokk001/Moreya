@@ -2606,8 +2606,6 @@ bool Gui::playButtonClickSound(const CEGUI::EventArgs&)
 const std::string Gui::INFO_WINDOW_TEXT = "TextDisplay";
 const std::string Gui::DISPLAY_GOLD = "HorizontalPipe/GoldDisplay";
 const std::string Gui::DISPLAY_MANA = "HorizontalPipe/ManaDisplay";
-const std::string Gui::DISPLAY_TERRITORY = "PlayerSettingsWindow/TerritoryDisplay";
-const std::string Gui::DISPLAY_CREATURES = "PlayerSettingsWindow/CreaturesDisplay";
 const std::string Gui::MINIMAP = "MiniMap";
 const std::string Gui::OBJECTIVE_TEXT = "ObjectivesWindow/ObjectivesText";
 const std::string Gui::MAIN_TABCONTROL = "MainTabControl";
