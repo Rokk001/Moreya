@@ -4,11 +4,12 @@ Static check, no game needed. The owner saw the Health bar run into the handle l
 the bar row was 20 design pixels high with a 4 pixel gap above the handle line, and the "Health" label (42 design
 pixels of text) had a 48 pixel box right up to the bar. The page measured here:
 
-1. The Dungeonbook profile page (gui/WindowSocial.layout): portrait, info text, name, keeper line, the holder of the
-   shared profile page, the column rule and the posts column do not overlap (texts that replace each other aside).
+1. The Dungeonbook profile page (gui/WindowSocial.layout, book-variant-2 since plan INGAME-QS-11 K1): portrait, name
+   and handle line, the labels and values of the table, the skills, the quote, the rules, the column rule and the posts
+   column do not overlap (texts that replace each other aside); the portrait and the table are left of the posts.
 2. The shared profile page (gui/WindowCreatureProfilePage.layout, flowed by Gui::layoutCreatureProfilePage) in the
-   holder of the book (compact, the rows start at the top; the book is the only window that shows the page since the
-   old creature card was removed): the bar row is one label line
+   viewport it had in the book last (compact, the rows start at the top; the book shows its own profile since plan
+   INGAME-QS-11, the old creature card was removed before): the bar row is one label line
    high, its bars sit inside it, the labels hold their text and end before their bars, the experience bar ends before
    the scrollbar, and the handle line (word wrapped, the widest handle the names can give) starts PROFILE_BAR_ROW_GAP
    below the bar row. Every pair of these windows is free of overlap.
@@ -161,18 +162,20 @@ def fractions(element):
 
 page_box = fractions(profile)
 book_boxes = {w.get('name'): fractions(w) for w in profile.findall('Window')}
-# Windows that are shown instead of each other: the fallback text instead of the holder, "Nothing posted yet."
-# instead of the post pictures
-alternatives = {frozenset(('SocialHolder', 'SocialText'))} | {
-    frozenset(('PostsEmpty', 'PostThumb%d' % i)) for i in range(6)}
+# Windows that are shown instead of each other: "Nothing posted yet." instead of the post pictures
+alternatives = {frozenset(('PostsEmpty', 'PostThumb%d' % i)) for i in range(6)}
 names = sorted(book_boxes)
 for i, a in enumerate(names):
     for b in names[i + 1:]:
         if frozenset((a, b)) not in alternatives:
             assert not overlap(book_boxes[a], book_boxes[b]), ('the profile page of the book overlaps', a, b)
-holder = book_boxes['SocialHolder']
-assert book_boxes['KeeperText'][3] <= holder[1] and book_boxes['NameText'][3] <= book_boxes['KeeperText'][1]
-assert book_boxes['Portrait'][2] <= holder[0] and book_boxes['ColumnRule'][2] <= holder[0]
+assert 'SocialHolder' not in book_boxes and 'KeeperText' not in book_boxes, 'the book profile is book-variant-2'
+assert book_boxes['NameText'][3] <= book_boxes['AgeLabel'][1], 'the name line is above the table'
+assert book_boxes['Portrait'][2] <= book_boxes['NameText'][0] and book_boxes['Portrait'][2] <= book_boxes['AgeLabel'][0]
+assert book_boxes['AgeValue'][2] <= book_boxes['ColumnRule'][0] <= book_boxes['PostThumb0'][0], 'the posts are right'
+# The viewport of the shared page in the book last: the holder 0.43..0.99 of the profile page 0.372..0.9952
+page_box = (0.372, 0.0859, 0.9952, 0.86)
+holder = (0.43, 0.33, 0.99, 0.735)
 
 # 2. The shared page in the book (compact), on every screen and UI scale. The old creature card that showed the full
 # page is gone: a click on a creature opens the Dungeonbook (check_creature_click_dungeonbook.py).

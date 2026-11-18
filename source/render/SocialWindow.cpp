@@ -41,6 +41,7 @@
 #include "ODApplication.h"
 
 #include <CEGUI/Font.h>
+#include <CEGUI/FontManager.h>
 #include <CEGUI/Image.h>
 #include <CEGUI/ImageManager.h>
 #include <CEGUI/InputEvent.h>
@@ -85,6 +86,8 @@ const double SECONDS_PER_HOUR = 3600.0;
 //! Colours of the caption of the active and of the inactive tab (ARGB)
 const char* const TAB_COLOUR_ACTIVE = "FFF2C860";
 const char* const TAB_COLOUR_INACTIVE = "FFF0E2C0";
+//! Colour of the caption of a button that cannot be used (the disabled text colour of OD/Button)
+const char* const TAB_COLOUR_DISABLED = "FF8C7B62";
 
 const char* const FEED_NAME_COLOUR = "[colour='FFF2C860']";
 const char* const FEED_TIME_COLOUR = "[colour='FFB8AC90']";
@@ -93,6 +96,23 @@ const char* const FEED_TEXT_COLOUR = "[colour='FFE8DCC0']";
 //! Labels of the filter choices and names of the navigation buttons, in their displayed order
 const char* const FILTER_LABELS[] = {"All", "Workers", "Fighters", "Unhappy"};
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
+//! The fifth button of the navigation bar, after the four pages: it opens the skill tree window (plan INGAME-QS-11 K4)
+const char* const NAV_SKILLS_BUTTON = "NavSkills";
+//! Colours of the symbol of the skills button while it can be used and while the creature has no skill tree
+const char* const NAV_ICON_ENABLED = "tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF";
+const char* const NAV_ICON_DISABLED = "tl:FF606060 tr:FF606060 bl:FF606060 br:FF606060";
+//! Fonts of the name and of the handle of the profile line, as in gui/WindowSocial.layout ProfilePage/NameText
+const char* const PROFILE_NAME_FONT = "MedievalSharp-12";
+const char* const PROFILE_HANDLE_FONT = "MedievalSharp-8";
+//! Spaces between the name and the handle of the profile line
+const char* const PROFILE_HANDLE_GAP = "   ";
+//! The head "< Name >" in fractions of its width (gui/WindowSocial.layout Header): the middle of the name, the largest
+//! half width of the name box (the box of the layout), the space added on each side of the name and the space between
+//! the name box and an arrow. With the largest name box the arrows stand where the layout puts them.
+const float HEADER_CENTRE = 0.5f;
+const float HEADER_NAME_HALF_WIDTH = 0.2335f;
+const float HEADER_NAME_PADDING = 0.01f;
+const float HEADER_ARROW_GAP = 0.0076f;
 //! Digits between two thousands commas of a value ("42,600", book-variant-2)
 const std::string::size_type THOUSANDS_GROUP = 3;
 //! Characters of one value line in the attribute cells (Strength, Dexterity, Life, Mana side by side in one row,
@@ -303,6 +323,99 @@ void setFullText(CEGUI::Window* window, const std::string& text)
     window->setText(escapeMarkup(text));
 }
 
+//! \brief The length of the longest start of the UTF-8 text that is at most the given number of bytes long and does
+//! not end inside a character.
+std::string::size_type utf8Prefix(const std::string& text, std::string::size_type bytes)
+{
+    std::string::size_type end = std::min(bytes, text.size());
+    while(end > 0 && end < text.size() && (static_cast<unsigned char>(text[end]) & 0xC0) == 0x80)
+        --end;
+    return end;
+}
+
+//! \brief Lines of the text when it wraps at spaces to the given width in the given font, as CEGUI word wrap does: a
+//! word that is wider than the line stays on a line of its own. Line breaks of the text start a new line.
+std::size_t countWrappedTextLines(const CEGUI::Font& font, const std::string& text, float width)
+{
+    std::size_t lines = 0;
+    std::string::size_type start = 0;
+    while(true)
+    {
+        const std::string::size_type end = text.find('\n', start);
+        const std::string paragraph = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+        std::string current;
+        std::istringstream words(paragraph);
+        std::string word;
+        ++lines;
+        while(words >> word)
+        {
+            const std::string trial = current.empty() ? word : current + " " + word;
+            if(!current.empty() && font.getTextExtent(trial) > width)
+            {
+                ++lines;
+                current = word;
+            }
+            else
+                current = trial;
+        }
+        if(end == std::string::npos)
+            return lines;
+        start = end + 1;
+    }
+}
+
+//! \brief True when the plain text fits the box of the window in its font: on one line, or, for a wrapped window,
+//! on as many lines as the window is high and with no word wider than the window.
+bool textFitsWindow(const CEGUI::Window* window, const std::string& text, bool wrapped)
+{
+    const CEGUI::Font* font = window->getFont();
+    if(font == nullptr)
+        return true;
+
+    const CEGUI::Sizef size = window->getPixelSize();
+    if(!wrapped)
+        return text.find('\n') == std::string::npos && font->getTextExtent(text) <= size.d_width;
+
+    std::istringstream words(text);
+    std::string word;
+    while(words >> word)
+    {
+        if(font->getTextExtent(word) > size.d_width)
+            return false;
+    }
+    const std::size_t lines = std::max<std::size_t>(1, static_cast<std::size_t>(size.d_height / font->getLineSpacing()));
+    return countWrappedTextLines(*font, text, size.d_width) <= lines;
+}
+
+//! \brief Shows the plain text in the window so that it fits its box (book-variant-2, plan INGAME-QS-11 K1): a text
+//! that is longer than its place is cut at the end and gets "...", and its tooltip shows the whole text. A text that
+//! fits gets the given tooltip. One line, or with wrapped as many lines as the window is high.
+void setFittedText(CEGUI::Window* window, const std::string& text, bool wrapped, const std::string& tooltip)
+{
+    const std::string flat = wrapped ? text : text.substr(0, text.find('\n'));
+    if(textFitsWindow(window, flat, wrapped))
+    {
+        window->setText(escapeMarkup(flat));
+        window->setTooltipText(escapeMarkup(tooltip));
+        return;
+    }
+
+    std::string::size_type length = flat.size();
+    std::string shortened = "...";
+    while(length > 0)
+    {
+        length = utf8Prefix(flat, length - 1);
+        std::string start = flat.substr(0, length);
+        while(!start.empty() && start[start.size() - 1] == ' ')
+            start.erase(start.size() - 1);
+        shortened = start + "...";
+        if(textFitsWindow(window, shortened, wrapped))
+            break;
+    }
+    window->setText(escapeMarkup(shortened));
+    window->setTooltipText(escapeMarkup(text));
+}
+
 //! \brief Returns the value after "label: " of the first line of the statistics text that starts with the label,
 //! without colour and font markup tags. The result is empty if the line does not exist.
 std::string findStatisticsValue(const std::string& stats, const std::string& label)
@@ -481,7 +594,6 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mFilter(CreatureFilter::All),
     mPage(Page::Home),
     mUpdatingRows(false),
-    mProfilePage(nullptr),
     mShownRosterVersion(0),
     mShownPostVersion(0),
     mSinceRefreshCheck(0.0f),
@@ -507,13 +619,17 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         nav->setUserString("Page", std::to_string(i + 1));
         connect(nav, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onNavClicked, this));
     }
+    // The fifth button of the bar opens the skill tree window of the creature; it is no page of the book
+    connect(mWindow->getChild(std::string("NavBar/") + NAV_SKILLS_BUTTON), CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber(&SocialWindow::onSkillTreeClicked, this));
     for(std::size_t i = 0; i < LIST_ROWS; ++i)
     {
         CEGUI::Window* button = home->getChild("ListRows/Row" + std::to_string(i) + "/Button");
         button->setUserString("Row", std::to_string(i));
         connect(button, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onListRowClicked, this));
     }
-    connect(mWindow->getChild("Header/BackButton"), CEGUI::PushButton::EventClicked,
+    // The back arrow sits in the title bar of the book (book-switch-variant-1)
+    connect(mWindow->getChild("BackButton"), CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&SocialWindow::onBackClicked, this));
     connect(mWindow->getChild("Header/PrevButton"), CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&SocialWindow::onPreviousClicked, this));
@@ -533,7 +649,9 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         connect(page->getChild("FeedRows"), CEGUI::Window::EventMouseWheel,
             CEGUI::Event::Subscriber(&SocialWindow::onFeedWheel, this));
         propagateMouseInput(page->getChild("FeedRows"));
-        for(std::size_t i = 0; i < FEED_ROWS; ++i)
+        // The feed of one creature holds no button (plan INGAME-QS-11 K4); only the rows of the start page open
+        // the creature of a post
+        for(std::size_t i = 0; (i < FEED_ROWS) && (std::string(feedPage) == "HomePage"); ++i)
         {
             CEGUI::Window* link = page->getChild("FeedRows/Row" + std::to_string(i) + "/ProfileLink");
             connect(link, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this));
@@ -543,14 +661,11 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         CEGUI::Event::Subscriber(&SocialWindow::onSkillTreeCloseClicked, this));
 }
 
-//! \brief Disconnects the controls and destroys the page created for this game.
+//! \brief Disconnects the controls of the book.
 SocialWindow::~SocialWindow()
 {
     for(CEGUI::Event::Connection& connection : mLinkConnections)
         connection->disconnect();
-    CEGUI::WindowManager& windows = CEGUI::WindowManager::getSingleton();
-    if(mProfilePage != nullptr)
-        windows.destroyWindow(mProfilePage);
 }
 
 void SocialWindow::connect(CEGUI::Window* window, const CEGUI::String& event, const CEGUI::Event::Subscriber& subscriber)
@@ -759,10 +874,16 @@ bool SocialWindow::onLinkClicked(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Opens the skill tree window of the creature selected in the book.
+bool SocialWindow::selectedCreatureHasSkillTree() const
+{
+    Creature* creature = mSelectedCreature.empty() ? nullptr : mGameMap.getCreature(mSelectedCreature);
+    return creature != nullptr && !creature->getSkillTypeInfo().mGroup.empty();
+}
+
+//! \brief Opens the skill tree window of the creature selected in the book (Skills button of the navigation bar).
 bool SocialWindow::onSkillTreeClicked(const CEGUI::EventArgs& /*e*/)
 {
-    if(mSelectedCreature.empty())
+    if(mSelectedCreature.empty() || !selectedCreatureHasSkillTree())
         return true;
 
     mSkillTreeCreature = mSelectedCreature;
@@ -955,7 +1076,8 @@ void SocialWindow::showPage(Page page)
     mPage = page;
     const char* const pageNames[] = {"HomePage", "FeedPage", "ProfilePage", "ValuesPage", "InventoryPage"};
     const Page pages[] = {Page::Home, Page::Feed, Page::Profile, Page::Values, Page::Inventory};
-    mWindow->getChild("HomePage")->setVisible(true);
+    // One creature's pages replace the start page: the creature list is not shown beside them (book-switch-variant-1)
+    mWindow->getChild("HomePage")->setVisible(page == Page::Home);
     for(std::size_t i = 1; i < 5; ++i)
     {
         mWindow->getChild(pageNames[i])->setVisible(pages[i] == page);
@@ -967,6 +1089,13 @@ void SocialWindow::showPage(Page page)
         mWindow->getChild(std::string("HomePage/") + child)->setVisible(page == Page::Home);
     mWindow->getChild("NavBar")->setVisible(page != Page::Home);
     mWindow->getChild("Header")->setVisible(page != Page::Home);
+    mWindow->getChild("BackButton")->setVisible(page != Page::Home);
+    // The skills button is shown greyed out for a creature without a skill tree
+    CEGUI::Window* skills = mWindow->getChild(std::string("NavBar/") + NAV_SKILLS_BUTTON);
+    const bool hasSkillTree = selectedCreatureHasSkillTree();
+    skills->setEnabled(hasSkillTree);
+    skills->getChild("Icon")->setProperty("ImageColours", hasSkillTree ? NAV_ICON_ENABLED : NAV_ICON_DISABLED);
+    skills->getChild("Label")->setProperty("TextColours", hasSkillTree ? TAB_COLOUR_INACTIVE : TAB_COLOUR_DISABLED);
     // The start page is the feed of all creatures, so its feed button is the active one there
     const Page navPages[] = {Page::Feed, Page::Profile, Page::Values, Page::Inventory};
     for(std::size_t i = 0; i < 4; ++i)
@@ -1224,8 +1353,12 @@ void SocialWindow::rebuildFeed()
             continue;
 
         const social::Post& post = *posts[index];
-        row->getChild("ProfileLink")->setUserString("Creature", post.mCreature);
-        row->getChild("ProfileLink")->setEnabled(findEntry(post.mCreature) != nullptr);
+        // Only the posts of the start page open their creature; the feed of one creature holds no button
+        if(all)
+        {
+            row->getChild("ProfileLink")->setUserString("Creature", post.mCreature);
+            row->getChild("ProfileLink")->setEnabled(findEntry(post.mCreature) != nullptr);
+        }
         const social::CreatureProfile& profile = cache.getProfile(post.mCreature, post.mClassName, post.mIsWorker);
         const std::string text = renderPostText(post, profile);
         setImage(row->getChild("Portrait"), findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false));
@@ -1272,98 +1405,94 @@ void SocialWindow::refreshPage()
         refreshInventory(*entry);
 }
 
+//! \brief Fills the head "< Name >" (book-switch-variant-1): the whole name between the two arrows, which stand right
+//! beside the name (HEADER_ARROW_GAP), never outside the room the layout gives them.
 void SocialWindow::refreshHeader(const social::DungeonbookEntry& entry)
 {
     social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
     const social::CreatureProfile& profile = cache.getProfile(entry.name, entry.className, entry.worker);
     CEGUI::Window* header = mWindow->getChild("Header");
+    // "< Name >": the place between the arrows holds the widest name of config/social-names.cfg on one line
     setFullText(header->getChild("NameText"), profile.getFullName());
+    CEGUI::Window* nameText = header->getChild("NameText");
+    const float headerWidth = header->getPixelSize().d_width;
+    const CEGUI::Font* font = nameText->getFont();
+    if(headerWidth > 0.0f && font != nullptr)
+    {
+        // The name box shrinks to the name (at most to the room of the layout, HEADER_NAME_HALF_WIDTH on each side of
+        // the middle) and the arrows stand right beside it
+        const float nameHalf = std::min(HEADER_NAME_HALF_WIDTH,
+            font->getTextExtent(profile.getFullName()) / headerWidth / 2.0f + HEADER_NAME_PADDING);
+        Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
+        CEGUI::URect nameArea = nameText->getArea();
+        nameArea.d_min.d_x = CEGUI::UDim(HEADER_CENTRE - nameHalf, 0.0f);
+        nameArea.d_max.d_x = CEGUI::UDim(HEADER_CENTRE + nameHalf, 0.0f);
+        gui.setScaledArea(nameText, nameArea);
+        const char* const arrows[] = {"PrevButton", "NextButton"};
+        for(std::size_t i = 0; i < 2; ++i)
+        {
+            CEGUI::Window* arrow = header->getChild(arrows[i]);
+            CEGUI::URect area = arrow->getArea();
+            const float width = area.d_max.d_x.d_scale - area.d_min.d_x.d_scale;
+            const float inner = (i == 0) ? HEADER_CENTRE - nameHalf - HEADER_ARROW_GAP :
+                HEADER_CENTRE + nameHalf + HEADER_ARROW_GAP;
+            area.d_min.d_x = CEGUI::UDim((i == 0) ? inner - width : inner, 0.0f);
+            area.d_max.d_x = CEGUI::UDim((i == 0) ? inner : inner + width, 0.0f);
+            gui.setScaledArea(arrow, area);
+        }
+    }
     // The arrows switch through the list as it is filtered; with a single creature there is nothing to switch to
     const bool canSwitch = mListedCreatures.size() > 1;
     header->getChild("PrevButton")->setEnabled(canSwitch);
     header->getChild("NextButton")->setEnabled(canSwitch);
 }
 
-//! \brief Fills the profile page: portrait, name, keeper, class and mood, the social rows and the recent posts.
+//! \brief Fills the profile page as book-variant-2: the portrait, name and handle on one line, the rows Age, Gender,
+//! Relationship, Origin, Job and Path, the skills, the quote in quotation marks and the pictures of the newest posts.
+//! Every text is shortened to its box with "..." and shown whole in its tooltip (plan INGAME-QS-11 K1).
 void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
 {
     CEGUI::Window* page = mWindow->getChild("ProfilePage");
     social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
     const social::CreatureProfile& profile = cache.getProfile(entry.name, entry.className, entry.worker);
     setImage(page->getChild("Portrait/Clip/Image"), findPortrait(entry.name, entry.className, entry.worker, false));
-    setFullText(page->getChild("NameText"), profile.getFullName());
-    setFullText(page->getChild("KeeperText"), "Keeper: " + entry.keeper);
-    std::string mood;
-    std::string icon;
-    describeMood(entry, mood, icon);
-    page->getChild("InfoText")->setText(escapeMarkup(social::SocialGenerator::displayClassName(cache.getData(),
-        entry.className)) + " - " + (entry.worker ? "Worker" : "Fighter") + "\n" +
-        (entry.champion ? std::string("Champion ") + CHAMPION_CROWN_MARKUP : "Level " + std::to_string(entry.level)) +
-        "\nMood: " + mood);
 
-    // With the creature known here the shared social profile shows the real relationships, friends and status
+    // Name in the large font and the handle in the small one on the same line; a name that does not fit together with
+    // its handle is shortened, the handle always stays whole
+    CEGUI::Window* nameText = page->getChild("NameText");
+    const std::string handle = Creature::getProfileHandle(profile);
+    const std::string fullName = profile.getFullName();
+    CEGUI::FontManager& fonts = CEGUI::FontManager::getSingleton();
+    const CEGUI::Font& nameFont = fonts.get(PROFILE_NAME_FONT);
+    const CEGUI::Font& handleFont = fonts.get(PROFILE_HANDLE_FONT);
+    const float room = nameText->getPixelSize().d_width -
+        handleFont.getTextExtent(std::string(PROFILE_HANDLE_GAP) + handle);
+    std::string shownName = fullName;
+    while(!shownName.empty() && nameFont.getTextExtent(shownName == fullName ? shownName : shownName + "...") > room)
+        shownName = shownName.substr(0, utf8Prefix(shownName, shownName.size() - 1));
+    if(shownName != fullName)
+        shownName += "...";
+    nameText->setText(std::string("[font='") + PROFILE_NAME_FONT + "']" + escapeMarkup(shownName) + "[font='" +
+        PROFILE_HANDLE_FONT + "']" + PROFILE_HANDLE_GAP + escapeMarkup(handle));
+    nameText->setTooltipText(shownName == fullName ? std::string() : escapeMarkup(fullName + " " + handle));
+
+    // The relationship comes from the real relationships while the creature is known here, else from its profile; path
+    // and skills come from the roster, or from the creature itself while the roster has none
     Creature* creature = mGameMap.getCreature(entry.name);
-    CEGUI::Window* holder = page->getChild("SocialHolder");
-    CEGUI::Window* fallback = page->getChild("SocialText");
-    holder->setVisible(creature != nullptr);
-    fallback->setVisible(creature == nullptr);
-    if(creature != nullptr)
-    {
-        if(mProfilePage == nullptr)
-        {
-            Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
-            mProfilePage = gui.createCreatureProfilePage(holder);
-            // Portrait, name and items have their own places in the book, the shared page shows the social rows only
-            const char* const hidden[] = {"Portrait", "NameText", "AttributesText", "EquipmentText", "EquipmentRow",
-                "OwnPostsText"};
-            for(const char* name : hidden)
-                mProfilePage->getChild(name)->setVisible(false);
-            // The names in the friends and foe rows select that creature
-            const char* const linkNames[] = {"FriendLink0", "FriendLink1", "FoeLink"};
-            for(const char* linkName : linkNames)
-            {
-                connect(mProfilePage->getChild(linkName), CEGUI::PushButton::EventClicked,
-                    CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this));
-            }
-            connect(mProfilePage->getChild("SkillTreeButton"), CEGUI::PushButton::EventClicked,
-                CEGUI::Event::Subscriber(&SocialWindow::onSkillTreeClicked, this));
-        }
-        // Only the Dungeonbook profile shows the skill tree button, and only for a type with a skill tree
-        mProfilePage->getChild("SkillTreeButton")->setVisible(!creature->getSkillTypeInfo().mGroup.empty());
-        // A newly selected creature opens on its first rows, while timed refreshes keep the scroll position.
-        if(!mProfilePage->isUserStringDefined("ProfileCreature") ||
-            mProfilePage->getUserString("ProfileCreature") != mSelectedCreature)
-        {
-            static_cast<CEGUI::Scrollbar*>(mProfilePage->getChild("ProfileScrollbar"))->setScrollPosition(0);
-            mProfilePage->setUserString("ProfileCreature", mSelectedCreature);
-        }
-        // The creature fills the shared profile page itself (Creature::fillProfilePage)
-        creature->fillProfilePage(mProfilePage);
-    }
-    else
-    {
-        // Out of sight the profile still comes from the name, with the hands, path and skills of the roster. The text
-        // word wraps in full; when it is longer than the column, the column scrolls (VertScrollbar in the layout).
-        std::vector<std::string> likes;
-        std::vector<std::string> dislikes;
-        for(std::size_t i = 0; i < 2; ++i)
-        {
-            if(!profile.mLikes[i].empty())
-                likes.push_back(profile.mLikes[i]);
-            if(!profile.mDislikes[i].empty())
-                dislikes.push_back(profile.mDislikes[i]);
-        }
-        std::string text = "Age: " + profile.mAgeText + (profile.mGender.empty() ? "" : " - " + profile.mGender) +
-            "\nRelationship: " + profile.mRelationship + "\nFrom: " + profile.mHometown + "\nJob: " + profile.mJob +
-            "\nEquipment: " + entry.equipment + "\nPath: " + entry.path + "\nSkills: " + entry.skills + "\nLikes: ";
-        for(std::size_t i = 0; i < likes.size(); ++i)
-            text += (i > 0 ? ", " : "") + likes[i];
-        text += "\nDislikes: ";
-        for(std::size_t i = 0; i < dislikes.size(); ++i)
-            text += (i > 0 ? ", " : "") + dislikes[i];
-        text += "\n\n\"" + profile.mBio + "\"";
-        fallback->setText(escapeMarkup(text));
-    }
+    const std::string relationship = creature != nullptr ? creature->getProfileRelationshipText() : profile.mRelationship;
+    std::string path = entry.path;
+    std::string skills = entry.skills;
+    if(path.empty() && creature != nullptr)
+        path = creature->getSkillPathText();
+    if(skills.empty() && creature != nullptr)
+        skills = creature->getSkillListText();
+    const char* const rowWindows[] = {"AgeValue", "GenderValue", "RelationshipValue", "OriginValue", "JobValue",
+        "PathValue"};
+    const std::string values[] = {profile.mAgeText, profile.mGender, relationship, profile.mHometown, profile.mJob, path};
+    for(std::size_t i = 0; i < 6; ++i)
+        setFittedText(page->getChild(rowWindows[i]), values[i].empty() ? std::string("-") : values[i], false, "");
+    setFittedText(page->getChild("SkillsValue"), skills.empty() ? std::string("-") : skills, true, "");
+    setFittedText(page->getChild("QuoteText"), "\"" + profile.mBio + "\"", true, "");
 
     // The posts of the creature: their number and the pictures of the newest ones, the text in the tooltip
     social::PostLog& log = social::PostLog::getSingleton();
@@ -1416,11 +1545,12 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
     {
         const std::string value = known ? findStatisticsValue(entry.stats, line.label) : std::string();
         CEGUI::Window* valueWindow = page->getChild(std::string(line.window) + "Value");
-        setFullText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));
         // The item names of the potion and inventory slots and the meaning of the skill points stay readable
         std::string tooltip = value;
         if(std::string(line.window) == "SkillPoints" && !value.empty())
             tooltip = "Skill points earned / spent: " + value;
+        // The whole value, word wrapped after a " / " (the column holds the widest value on two lines)
+        setFullText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));
         valueWindow->setTooltipText(tooltip);
         page->getChild(std::string(line.window) + "Label")->setTooltipText(tooltip);
     }
@@ -1453,8 +1583,8 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
     page->getChild("CombatValues")->setText(combat.str());
     page->getChild("DefenseValues")->setText(defense.str());
 
-    // The tiles show symbol and title as in book-variant-2; their whole text is shown on the profile page (path and
-    // skills rows, which word wrap and scroll) and the hands on the inventory page. The tooltip repeats it.
+    // The tiles are display tiles with symbol and title as in book-variant-2, no buttons; path and skills are rows of
+    // the profile page and the hands are on the inventory page. The tooltip shows the whole text.
     const char* const tiles[] = {"Equipment", "Path", "Skills"};
     const std::string tileValues[] = {entry.equipment, entry.path, entry.skills};
     for(std::size_t i = 0; i < 3; ++i)

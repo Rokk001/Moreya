@@ -22,6 +22,7 @@
 
 #include "render/Gui.h"
 #include "game/HeartHealthRing.h"
+#include "render/ItemTooltipPlacement.h"
 #include "render/RenderManager.h"
 
 #include "ODApplication.h"
@@ -159,6 +160,17 @@ const char* const ITEM_TOOLTIP_LOOK = "OD/ItemTooltip";
 const char* const PLAIN_TOOLTIP_LOOK = "OD/Tooltip";
 //! \brief Font of the values of an item card, whose height sets the size of the gold coin
 const char* const ITEM_TOOLTIP_VALUE_FONT = "MedievalSharp-10";
+//! \brief User strings of a window with an item card: the colour of the item's quality (ARGB hex) for the frame of the
+//! tooltip, and the item's box on the screen ("left top right bottom" in pixels, empty: the whole window)
+const char* const ITEM_TOOLTIP_COLOUR_USER_STRING = "ItemTooltipColour";
+const char* const ITEM_TOOLTIP_AREA_USER_STRING = "ItemTooltipArea";
+//! \brief The plain white square the frame of the item card is drawn with (OD.looknfeel OD/ItemTooltip), tinted in the
+//! colour of the quality. Its pixel size at the density of the OpenDungeonsIcons images (ICON_IMAGE_PIXEL_DENSITY)
+//! makes the frame ITEM_TOOLTIP_FRAME_PIXELS / 2 = 8 design pixels thick at every resolution and UI scale (plan
+//! INGAME-QS-11 K6: thicker than the inner border of the window frame, 9 pixels of ODMenuTemplate/FrameLeft, 5.8 design
+//! pixels).
+const char* const ITEM_TOOLTIP_FRAME_IMAGE = "OpenDungeonsIcons/ItemTooltipFrame";
+const int ITEM_TOOLTIP_FRAME_PIXELS = 16;
 //! Set when a sibling of the default tooltip changed its place in the drawing order (owner decision 920). The tooltip
 //! and every shown dialog share the always-on-top layer of the root window (GameMode::raiseShownDialog), and CEGUI
 //! leaves the tooltip where it is while it stays attached between two targets: a dialog that rose later (opened, or
@@ -208,6 +220,62 @@ void createHandFeedbackImage()
         "BasicImage", "OpenDungeonsIcons/Prohibition"));
     image.setTexture(&texture);
     image.setArea(CEGUI::Rectf(0, 0, size, size));
+}
+
+//! \brief Creates the plain white square of the frame of the item card (ITEM_TOOLTIP_FRAME_IMAGE). Project artwork made
+//! in code, no file. It has to exist before the scheme loads OD.looknfeel, whose frame refers to it by name.
+void createItemTooltipFrameImage()
+{
+    const int size = ITEM_TOOLTIP_FRAME_PIXELS;
+    std::vector<unsigned char> pixels(size * size * 4, 255);
+    CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->createTexture("ItemTooltipFrame");
+    texture.loadFromMemory(pixels.data(), CEGUI::Sizef(size, size), CEGUI::Texture::PF_RGBA);
+    CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(CEGUI::ImageManager::getSingleton().create(
+        "BasicImage", ITEM_TOOLTIP_FRAME_IMAGE));
+    image.setTexture(&texture);
+    image.setArea(CEGUI::Rectf(0, 0, size, size));
+}
+
+//! \brief The box of the item a tooltip describes: the box stored in the user string ITEM_TOOLTIP_AREA_USER_STRING of
+//! the window (a cell of a list), else the whole window (a slot). A picture inside a slot box that shows the same item
+//! card (Gui::copyTooltip, the Dungeonbook inventory) stands for the whole box, so the card leaves the box free.
+ItemTooltipPlacement::Box getItemTooltipItemBox(const CEGUI::Window* target)
+{
+    const CEGUI::Window* parent = target->getParent();
+    if(parent != nullptr && parent->isUserStringDefined(ITEM_TOOLTIP_USER_STRING) &&
+       parent->getUserString(ITEM_TOOLTIP_USER_STRING) == "1" && parent->getTooltipText() == target->getTooltipText())
+        target = parent;
+    if(target->isUserStringDefined(ITEM_TOOLTIP_AREA_USER_STRING))
+    {
+        std::istringstream parser(target->getUserString(ITEM_TOOLTIP_AREA_USER_STRING).c_str());
+        float left = 0.0f;
+        float top = 0.0f;
+        float right = 0.0f;
+        float bottom = 0.0f;
+        if(parser >> left >> top >> right >> bottom)
+            return ItemTooltipPlacement::Box(left, top, right, bottom);
+    }
+    const CEGUI::Rectf area = target->getUnclippedOuterRect().get();
+    return ItemTooltipPlacement::Box(area.left(), area.top(), area.right(), area.bottom());
+}
+
+//! \brief Gives the item card the frame in the colour of its quality and puts it right of and below the hand cursor,
+//! never left of the cursor and never over the item (ItemTooltipPlacement, plan INGAME-QS-11 K6 and K11).
+void placeItemTooltip(CEGUI::Tooltip* tooltip, const CEGUI::Window* target, const CEGUI::Rectf& hand,
+    const CEGUI::Vector2f& cursor, const CEGUI::Sizef& screen, float gap)
+{
+    const std::string colour = target->isUserStringDefined(ITEM_TOOLTIP_COLOUR_USER_STRING) ?
+        std::string(target->getUserString(ITEM_TOOLTIP_COLOUR_USER_STRING).c_str()) : std::string("FF8A8A8A");
+    const std::string frame = "tl:" + colour + " tr:" + colour + " bl:" + colour + " br:" + colour;
+    if(tooltip->getProperty("QualityFrameColour") != frame)
+        tooltip->setProperty("QualityFrameColour", frame);
+
+    const CEGUI::Rectf bounds = tooltip->getUnclippedOuterRect().get();
+    const ItemTooltipPlacement::Box box = ItemTooltipPlacement::place(cursor.d_x, cursor.d_y,
+        ItemTooltipPlacement::Box(hand.left(), hand.top(), hand.right(), hand.bottom()), getItemTooltipItemBox(target),
+        bounds.getWidth(), bounds.getHeight(), screen.d_width, screen.d_height, gap);
+    if(box.mLeft != bounds.left() || box.mTop != bounds.top())
+        tooltip->setPosition(CEGUI::UVector2(CEGUI::UDim(0, box.mLeft), CEGUI::UDim(0, box.mTop)));
 }
 
 //! \brief Hits the round integrated plate without intercepting the surrounding minimap.
@@ -1643,6 +1711,8 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
                           reinterpret_cast<const CEGUI::utf8*>(ceguiLogFileName.c_str()));
     OD_LOG_INF("CEGUI::System created");
 
+    // The frame of the item card in OD.looknfeel refers to this image, so it is made before the scheme is loaded
+    createItemTooltipFrameImage();
     CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");
     OD_LOG_INF("CEGUI::SchemeManager created");
     createHandFeedbackImage();
@@ -1701,6 +1771,12 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
                     area.right * screen.d_width, area.bottom * screen.d_height);
             }
             const float gap = tooltip->getFont()->getFontHeight() * TOOLTIP_HAND_GAP_FACTOR;
+            // An item card goes right of and below the hand and never over its item (plan INGAME-QS-11 K11)
+            if(itemCard)
+            {
+                placeItemTooltip(tooltip, target, hand, cursor, screen, gap);
+                return true;
+            }
             float x = hand.right() + gap;
             float y = cursor.d_y - bounds.getHeight() * 0.5f;
             if(x + bounds.getWidth() > screen.d_width)
@@ -1822,11 +1898,23 @@ void Gui::keepTooltipInFront()
 
 void Gui::setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon)
 {
+    window->setTooltipText(describeItemTooltip(item, map, heldWeapon));
+    markItemTooltip(window, ItemInstance::getQualityColour(item.mQuality), std::string());
+}
+
+std::string Gui::describeItemTooltip(const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon)
+{
     // The coin is as high as the lines of values, at every resolution and UI scale, since the font is auto scaled
     const int32_t coinSize = static_cast<int32_t>(std::ceil(
         CEGUI::FontManager::getSingleton().get(ITEM_TOOLTIP_VALUE_FONT).getFontHeight()));
-    window->setTooltipText(item.describeTooltip(map, heldWeapon, coinSize));
+    return item.describeTooltip(map, heldWeapon, coinSize);
+}
+
+void Gui::markItemTooltip(CEGUI::Window* window, const std::string& qualityColour, const std::string& itemArea)
+{
     window->setUserString(ITEM_TOOLTIP_USER_STRING, "1");
+    window->setUserString(ITEM_TOOLTIP_COLOUR_USER_STRING, qualityColour);
+    window->setUserString(ITEM_TOOLTIP_AREA_USER_STRING, itemArea);
 }
 
 void Gui::setPlainTooltip(CEGUI::Window* window, const std::string& text)
@@ -1840,6 +1928,10 @@ void Gui::copyTooltip(const CEGUI::Window* from, CEGUI::Window* to)
     to->setTooltipText(from->getTooltipText());
     to->setUserString(ITEM_TOOLTIP_USER_STRING, from->isUserStringDefined(ITEM_TOOLTIP_USER_STRING) ?
         from->getUserString(ITEM_TOOLTIP_USER_STRING) : CEGUI::String("0"));
+    // The frame colour goes along; the box of the item is the window that shows the tooltip
+    to->setUserString(ITEM_TOOLTIP_COLOUR_USER_STRING, from->isUserStringDefined(ITEM_TOOLTIP_COLOUR_USER_STRING) ?
+        from->getUserString(ITEM_TOOLTIP_COLOUR_USER_STRING) : CEGUI::String());
+    to->setUserString(ITEM_TOOLTIP_AREA_USER_STRING, CEGUI::String());
 }
 
 void Gui::loadGuiSheet(guiSheet newSheet)
@@ -1973,11 +2065,8 @@ const std::size_t PROFILE_LINK_ROWS = 2;
 const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
 //! Tolerance (design pixels) before the rows count as higher than the page
 const float PROFILE_OVERFLOW_TOLERANCE = 0.5f;
-//! Size of a button row of the profile page, the skill tree button (design pixels)
-const float PROFILE_BUTTON_WIDTH = 140.0f;
-const float PROFILE_BUTTON_HEIGHT = 26.0f;
 //! Names of the rows that flow from top to bottom and so change their position when the texts change
-const char* const PROFILE_FLOW_ROWS[] = {"Portrait", "NameText", "AttributesText", "EquipmentText", "EquipmentRow", "HandleText", "AgeText", "RelationText", "FromText", "JobText", "HealthLabel", "HealthBar", "ExperienceLabel", "ExperienceBar", "SkillTreeButton", "PathText", "SkillsText", "BioText", "LikesText",
+const char* const PROFILE_FLOW_ROWS[] = {"Portrait", "NameText", "AttributesText", "EquipmentText", "EquipmentRow", "HandleText", "AgeText", "RelationText", "FromText", "JobText", "HealthLabel", "HealthBar", "ExperienceLabel", "ExperienceBar", "PathText", "SkillsText", "BioText", "LikesText",
     "DislikesText", "RelationsText", "FriendsLabel", "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "EffectsText", "LatestText", "QuirksText", "OwnPostsText"};
 const std::size_t PROFILE_FLOW_ROW_COUNT = sizeof(PROFILE_FLOW_ROWS) / sizeof(PROFILE_FLOW_ROWS[0]);
 
@@ -2016,18 +2105,6 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
     setScaledArea(window, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
         CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, y + height)));
     return y + height + PROFILE_ROW_GAP;
-}
-
-//! \brief Places a button row of the profile page at the given height (design pixels) when it is visible.
-//! \return The height below the row, unchanged when the button is hidden.
-float Gui::layoutProfileButtonRow(CEGUI::Window* button, float y)
-{
-    if(!button->isVisible())
-        return y;
-
-    setScaledArea(button, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
-        CEGUI::UDim(0, PROFILE_SIDE_MARGIN + PROFILE_BUTTON_WIDTH), CEGUI::UDim(0, y + PROFILE_BUTTON_HEIGHT)));
-    return y + PROFILE_BUTTON_HEIGHT + PROFILE_ROW_GAP;
 }
 
 //! \brief Fits equipment beside the portrait, attributes below, and social rows in the existing scroll document.
@@ -2095,8 +2172,6 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     const char* const textRowsAfter[] = {"StatusText", "EffectsText", "LatestText", "QuirksText"};
     const char* const linkRows[PROFILE_LINK_ROWS][PROFILE_LINK_ROW_WINDOWS] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
 
-    // The skill tree button of the Dungeonbook profile stands right above the "Path:" and "Skills:" lines
-    y = layoutProfileButtonRow(page->getChild("SkillTreeButton"), y);
     for(std::size_t i = 0; i < 6; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);
 
@@ -2378,7 +2453,7 @@ bool Gui::onWindowDestroyed(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Rescales registered widgets, aligns minimap plates and reflows fitted profile and values documents.
+//! \brief Rescales registered widgets, aligns minimap plates and reflows the fitted profile pages.
 void Gui::applyScale(const CEGUI::Sizef& displaySize)
 {
     const float resolutionScale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
@@ -2406,24 +2481,8 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
         CEGUI::ScrollablePane* pane = dynamic_cast<CEGUI::ScrollablePane*>(scaledWindow.first);
         if(pane == nullptr)
             continue;
-        if(pane->getName() == "ValuesPage" && pane->getParent()->getName() == "SocialWindow")
-        {
-            // Retain the values sheet's original columns and fonts beside the persistent roster. Its document
-            // scrolls inside the fitted page instead of compressing labels, numbers and the four attribute cells.
-            const float documentWidth = 820.0f * scale;
-            const float documentHeight = 500.0f * scale;
-            const CEGUI::ScrolledContainer* content = pane->getContentPane();
-            for(std::size_t i = 0; i < content->getChildCount(); ++i)
-            {
-                CEGUI::Window* child = content->getChildAtIdx(i);
-                const CEGUI::URect& area = mScaledWindows.at(child).area;
-                child->setArea(CEGUI::URect(CEGUI::UDim(0, area.d_min.d_x.d_scale * documentWidth),
-                    CEGUI::UDim(0, area.d_min.d_y.d_scale * documentHeight),
-                    CEGUI::UDim(0, area.d_max.d_x.d_scale * documentWidth),
-                    CEGUI::UDim(0, area.d_max.d_y.d_scale * documentHeight)));
-            }
-            pane->setContentPaneArea(CEGUI::Rectf(0, 0, documentWidth, documentHeight));
-        }
+        // The values page of the Dungeonbook is no scroll document any more: it lays out its columns on its own
+        // visible area like the other pages of the book (plan INGAME-QS-11 K2)
         if(pane->isUserStringDefined(VISIBLE_CONTROL_EXTENT_STRING))
             limitScrollingToVisibleControls(pane);
     }

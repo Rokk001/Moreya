@@ -41,12 +41,14 @@ assert '"Hand", "Hand", "Head", "Armour", "Boots", "Ring"' in creature
 assert '"Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"' in creature
 assert 'CEGUI::UDim(0, 380)' not in creature, 'the page sets an own size'
 assert 'social/SocialProfileCache.h' in creature
-# one function fills the page; the Dungeonbook creates the page in its holder and fills it
+# one function fills the page. The Dungeonbook no longer shows it: its profile page has its own rows as book-variant-2
+# (plan INGAME-QS-11 K1, measured at every resolution by check_dungeonbook_pages_b1.py), so the scrolling shared page
+# is not in the book
 assert 'float Creature::fillProfilePage(CEGUI::Window* page)' in creature
 assert 'WindowCreatureProfilePage.layout' in gui and 'setName("Content")' in gui
 social_cpp = (repo / 'source/render/SocialWindow.cpp').read_text()
-assert 'fillProfilePage(mProfilePage)' in social_cpp
-assert 'createCreatureProfilePage(' in social_cpp, 'the book creates the shared page'
+assert 'fillProfilePage(' not in social_cpp, 'the book must not fill the scrolling shared page'
+assert 'createCreatureProfilePage(' not in social_cpp, 'the book must not create the scrolling shared page'
 
 # The initial viewport reserves the portrait, equipment and attributes; social metadata follows.
 for name in ('HealthLabel', 'ExperienceLabel', 'RelationText', 'FoeLabel'):
@@ -136,28 +138,17 @@ social_width = int(social_size[3]) - int(social_size[1])
 social_height = int(social_size[4]) - int(social_size[2])
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
 assert 'OwnPostsText' in page and 'OwnPostsText' not in social_layout
-# The book shows the shared page without portrait, name, attributes and item slots (they have their own places in the
-# book) and lists the recent posts in its own column; the rows of the compact page start at the top.
-hidden = social[social.index('const char* const hidden[]'):]
-hidden = hidden[:hidden.index('};')]
-for name in ('Portrait', 'NameText', 'AttributesText', 'EquipmentText', 'EquipmentRow', 'OwnPostsText'):
-    assert '"%s"' % name in hidden, name
+# The book lists the recent posts of the creature as pictures in its own column; it has no holder for the shared page
 assert 'page->getChild("PostThumb" + std::to_string(rows))' in social and '(rows < MAX_OWN_POSTS)' in social
-assert social.index('const char* const hidden[]') < social.index('creature->fillProfilePage(mProfilePage)')
 assert 'const bool compact = !page->getChild("Portrait")->isVisible();' in profile_layout
 assert 'float y = compact ? PROFILE_ROW_GAP : std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);' in profile_layout
 import xml.etree.ElementTree as ElementTree
 social_root = ElementTree.fromstring(social_layout).find('Window')
 profile_page = social_root.find("Window[@name='ProfilePage']")
-holder_area = [float(v) for v in re.findall(r'\{(-?[0-9.]+),0\}', profile_page.find(
-    "Window[@name='SocialHolder']/Property[@name='Area']").get('value'))]
-page_area = [float(v) for v in re.findall(r'\{(-?[0-9.]+),0\}', profile_page.find("Property[@name='Area']").get('value'))]
-holder_width_fraction = holder_area[2] - holder_area[0]
-holder_height_fraction = (holder_area[3] - holder_area[1]) * (page_area[3] - page_area[1])
+assert profile_page.find("Window[@name='SocialHolder']") is None, 'the book profile holds no shared page'
+assert profile_page.find(".//Window[@type='OD/VerticalScrollbar']") is None, 'the book profile has no scrollbar'
 assert 'y = layoutProfileTextRow(page->getChild("OwnPostsText"), y, scale)' in profile_layout
 assert profile_layout.index('page->getChild("OwnPostsText")') > profile_layout.index('textRowsAfter[i]')
-assert 'mProfilePage->setUserString("ProfileCreature", mSelectedCreature)' in social
-assert 'setScrollPosition(0)' in social, 'a newly selected creature must open on the essential information'
 scale_body = gui[gui.index('void Gui::applyScale('):gui.index('bool Gui::isScreenSizedContainer')]
 assert 'layoutCreatureProfilePage(page)' in scale_body, 'profiles must reflow after UI or resolution changes'
 assert scale_body.index('updateResourceScaling(displaySize)') < scale_body.index('layoutCreatureProfilePage(page)')
@@ -168,25 +159,11 @@ bar_row_gap = float(re.search(r'PROFILE_BAR_ROW_GAP = ([0-9.]+)f;', gui)[1])
 assert 'y += barRowHeight + PROFILE_BAR_ROW_GAP;' in profile_layout and 'y += 24.0f;' not in profile_layout
 bar_row = max(bar_row_min, line_height + 4) + bar_row_gap
 
-for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
-    for percent in range(80, 121):
-        scale = min(screen_width / 1024.0, screen_height / 768.0) * percent / 100.0
-        # The book is the only window that shows the page: compact, health and experience bars first, then the social
-        # rows, all reachable by scrolling
-        fit = min(1.0, screen_width / (social_width * scale), screen_height / (social_height * scale))
-        viewport = (social_height * fit - title - border) * holder_height_fraction
-        page_width = (social_width * fit - 2 * side) * holder_width_fraction
-        assert page_width - 48 >= 200, ('the social rows of the book are too narrow', page_width)
-        core_bottom = 4 + bar_row
-        assert core_bottom <= viewport
-        rows_bottom = core_bottom
-        for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
-            top = rows_bottom + 4
-            rows_bottom = top + lines * line_height + 4
-            assert lines * line_height + 8 <= viewport, 'a single row is higher than the book viewport'
-            maximum = max(0.0, rows_bottom - viewport)
-            offset = min(top, maximum)
-            assert top - offset >= 0 and rows_bottom - offset <= viewport + 1e-6
+# The shared page scrolls inside any viewport of its rows: every single row fits a viewport of the lowest book height
+# it had (the rows below are reached by its scrollbar)
+for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
+    assert lines * line_height + 8 <= social_height * 0.4, 'a single row is higher than a viewport of the page'
+assert bar_row <= social_height * 0.4
 assert 'Unspecified' not in (repo / 'source/social/SocialGenerator.cpp').read_text()
 assert '"@" + getName()' not in creature, 'the handle must not be the internal name'
 assert 'setText(getName() + " (" + getDefinition()->getClassName() + ")")' not in creature

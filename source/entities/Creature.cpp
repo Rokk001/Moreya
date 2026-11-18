@@ -6899,6 +6899,32 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     return gui.layoutCreatureProfilePage(page);
 }
 
+//! \brief The relationship row of the Dungeonbook profile, the same rule as the relationship row of fillProfilePage.
+std::string Creature::getProfileRelationshipText()
+{
+    const CreatureDefinition* definition = getDefinition();
+    const social::CreatureProfile& profile = social::SocialProfileCache::getSingleton().getProfile(getName(),
+        definition->getClassName(), definition->isWorker());
+    Seat* localSeat = nullptr;
+    if(getGameMap()->getLocalPlayer() != nullptr)
+        localSeat = getGameMap()->getLocalPlayer()->getSeat();
+    const bool isAllied = (localSeat != nullptr) &&
+        (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
+    if(!isAllied || !getGameMap()->isRelationshipsEnabled() || (getGameMap()->getCreatureRelationships() == nullptr))
+        return profile.mRelationship;
+
+    ProfileRelations relations;
+    collectProfileRelations(getGameMap(), *getGameMap()->getCreatureRelationships(), getName(), relations);
+    return social::CreaturePosts::getRelationshipStatus(relations.mHasPartner, !relations.mClose.empty(),
+        relations.mHasHated, relations.mHasNemesis);
+}
+
+//! \brief Gives the Dungeonbook the handle of the profile card without the internal creature name.
+std::string Creature::getProfileHandle(const social::CreatureProfile& profile)
+{
+    return makeProfileHandle(profile);
+}
+
 std::string Creature::getRelationshipTooltip()
 {
     GameMap* gameMap = getGameMap();

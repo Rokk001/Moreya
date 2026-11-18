@@ -1,17 +1,20 @@
 """Static check: the tooltips of the Dungeonbook inventory slots look like the item tooltip of the merchant mockup
-W-1-merchant.png variant 3 (owner decision 1026, finding 5): dark box with a violet border, item name large and the
-quality in the quality colour, the price after a gold coin, the bonuses as a short left-aligned list. No game and no
-compiler needed.
+W-1-merchant.png variant 3 (owner decision 1026, finding 5): dark box, item name large and the quality in the quality
+colour, the price after a gold coin, the bonuses as a short left-aligned list. Plan INGAME-QS-11 K6: the border is a
+thick frame in the colour of the item's quality (it was violet for every item), and every item tooltip of the game uses
+the card, the merchant stock included. No game and no compiler needed.
 
 Checked here:
-1. gui/OD.looknfeel has the look OD/ItemTooltip with a dark background, a violet border, left aligned top aligned text
+1. gui/OD.looknfeel has the look OD/ItemTooltip with a dark background, a frame of the plain square Gui creates on all
+   edges and corners in the colour of the property QualityFrameColour, left aligned top aligned text inside the frame
    and the named area TextArea, and the XML is well formed.
 2. ItemInstance::describeTooltip writes name (large font) and quality in the quality colour, the price after the gold
    coin image, one line per bonus and effect with the values of describe(), and the level.
 3. The default tooltip of Gui takes the look while the hovered window has the user string ItemTooltip = 1, and goes
    back to OD/Tooltip otherwise; the coin size follows the scaled by the display font, so it works at every resolution and UI scale.
 4. The Dungeonbook slots (Creature::fillItemSlotWindows, boxes of SocialWindow::refreshInventory) use that tooltip; the
-   merchant uses describe() for its stock cell tooltips and shows the hovered cell's text in the stock grid.
+   merchant gives its stock cells the card text and marks the stock grid with the quality and the box of the hovered
+   cell, so the card is never drawn over it.
 """
 from pathlib import Path
 import re
@@ -39,15 +42,20 @@ widget = block(look, '<WidgetLook name="OD/ItemTooltip">', '</WidgetLook>')
 assert '<NamedArea name="TextArea">' in widget
 assert re.search(r'name="background".*?Colours[^>]*topLeft="F[0-9A-F]10', widget, re.S) or 'F2100C18' in widget, 'dark box'
 border = block(widget, '<ImagerySection name="border">', '</ImagerySection>')
-assert 'FFB070FF' in border and border.count('<Image ') == 8, 'violet border on all edges and corners'
+frame_image = re.search(r'ITEM_TOOLTIP_FRAME_IMAGE = "([^"]+)";', gui)[1]
+assert border.count('<Image ') == 8 and border.count('name="%s"' % frame_image) == 8, 'frame on all edges and corners'
+assert '<ColourRectProperty name="QualityFrameColour" />' in border and 'FFB070FF' not in border, 'quality colour'
+assert 'type="ColourRect" name="QualityFrameColour"' in widget
+assert widget.count('ImageDim dimension="Width" name="%s"' % frame_image) == 4, 'the text stays inside the frame'
 label = block(widget, '<ImagerySection name="label">', '</ImagerySection>')
 assert '<HorzFormat type="LeftAligned" />' in label and '<VertFormat type="TopAligned" />' in label, 'left aligned list'
 assert 'CentreAligned' not in widget
 assert widget.count('<StateImagery') == 2, 'Enabled and Disabled'
-# the look only uses images that exist
+# the look only uses images that exist: the skin images of the imageset and the frame square Gui creates before it loads
 imageset = (repo / 'gui/ODSkin.imageset').read_text()
 for name in set(re.findall(r'name="OpenDungeonsSkin/(Tooltip[A-Za-z]+)"', widget)):
     assert 'name="%s"' % name in imageset, name
+assert gui.index('createItemTooltipFrameImage();') < gui.index('createFromFile("ODSkin.scheme")')
 
 # 2. The text
 text = block(item, 'std::string ItemInstance::describeTooltip(')
@@ -70,8 +78,12 @@ assert 'const char* const PLAIN_TOOLTIP_LOOK = "OD/Tooltip";' in gui
 moved = block(gui, 'context.setDefaultTooltipType("OD/Tooltip");', 'return true;')
 assert 'getUserString(ITEM_TOOLTIP_USER_STRING) == "1"' in moved
 assert 'tooltip->setLookNFeel(look);' in moved and 'tooltip->sizeSelf();' in moved
-assert 'getFontHeight()' in block(gui, 'void Gui::setItemTooltip(', '\n}\n'), 'coin as high as the scaled by the display line'
+assert 'describeItemTooltip(item, map, heldWeapon)' in block(gui, 'void Gui::setItemTooltip(', '\n}\n')
+assert 'getFontHeight()' in block(gui, 'std::string Gui::describeItemTooltip(', '\n}\n'), \
+    'coin as high as the scaled by the display line'
 assert 'setUserString(ITEM_TOOLTIP_USER_STRING, "1")' in gui
+assert 'window->setUserString(ITEM_TOOLTIP_COLOUR_USER_STRING, qualityColour);' in gui
+assert 'tooltip->setProperty("QualityFrameColour", frame);' in gui
 assert 'static void setItemTooltip(' in (repo / 'source/render/Gui.h').read_text()
 
 # 4. The slots
@@ -82,7 +94,8 @@ assert 'Gui::copyTooltip(slot, slot->getParent());' in block(social, 'void Socia
 merchant = (repo / 'source/modes/GameModeMerchant.cpp').read_text()
 stock = block(merchant, 'void GameMode::receiveMerchantWindow(')
 hover = block(merchant, 'bool GameMode::hoverMerchantItem(')
-assert 'cell->setTooltipText(items[index].second.describe(mGameMap));' in stock
-assert 'list->setTooltipText(item == nullptr || item->isDisabled() ? "" : item->getTooltipText());' in hover
+assert 'cell->setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr));' in stock
+assert 'list->setTooltipText(item->getTooltipText());' in hover and 'Gui::setPlainTooltip(list, "");' in hover
+assert 'Gui::markItemTooltip(list, static_cast<const MerchantImageItem*>(item)->getQualityColour(), area.str());' in hover
 
 print('item card tooltip 1026: look, text, tooltip switch and slots checked')

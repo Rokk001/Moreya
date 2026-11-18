@@ -25,14 +25,17 @@ assert 'Page::Inventory' in body('bool SocialWindow::onListRowClicked(')
 assert 'Page::Inventory' in body('bool SocialWindow::onLinkClicked(')
 assert 'mSelectedCreature.clear()' in body('bool SocialWindow::onFilterClicked(')
 assert 'showPage(Page::Home)' in body('bool SocialWindow::onFilterClicked(')
-assert 'setVisible(true)' in body('void SocialWindow::showPage(')
+# The pages of one creature replace the start page; the creature list is hidden while they are shown (plan
+# INGAME-QS-11 K3, book-switch-variant-1)
+assert 'mWindow->getChild("HomePage")->setVisible(page == Page::Home);' in body('void SocialWindow::showPage(')
 assert 'setVisible(page != Page::Home)' in body('void SocialWindow::showPage(')
 assert 'if(!all && (it->mCreature != mSelectedCreature))' in body('void SocialWindow::rebuildFeed()')
-for name in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory'):
+for name in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills'):
     assert book.find("Window[@name='NavBar']/Window[@name='%s']" % name) is not None
-for page in ('HomePage', 'FeedPage'):
-    for row in range(3):
-        assert book.find("Window[@name='%s']/Window[@name='FeedRows']/Window[@name='Row%d']/Window[@name='ProfileLink']" % (page, row)) is not None
+# A post of the start page opens its creature; the feed of one creature holds no button (plan INGAME-QS-11 K4)
+for row in range(3):
+    assert book.find("Window[@name='HomePage']/Window[@name='FeedRows']/Window[@name='Row%d']/Window[@name='ProfileLink']" % row) is not None
+    assert book.find("Window[@name='FeedPage']/Window[@name='FeedRows']/Window[@name='Row%d']/Window[@name='ProfileLink']" % row) is None
 
 
 def rectangle(window):
@@ -44,23 +47,29 @@ def rectangle(window):
 label = rectangle(home.find("Window[@name='CreaturesLabel']"))
 dropdown = rectangle(home.find("Window[@name='Filter']"))
 assert label[2] == dropdown[0] and label[1] <= dropdown[1] < label[3]
-list_right = rectangle(home.find("Window[@name='ListPanel']"))[2]
+list_left = rectangle(home.find("Window[@name='ListPanel']"))[0]
+feed_right = rectangle(home.find("Window[@name='FeedPanel']"))[2]
 nav = book.find("Window[@name='NavBar']")
 assert nav.find("Property[@name='Visible']").get('value') == 'False'
 nav_box = rectangle(nav)
 for name in ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'):
     page_box = rectangle(book.find("Window[@name='%s']" % name))
-    assert list_right <= page_box[0] and page_box[3] <= nav_box[1]
+    # The page of one creature takes the whole width the list and the feed of the start page share
+    assert page_box[0] <= list_left + 0.01 and page_box[2] >= feed_right - 0.01 and page_box[3] <= nav_box[1]
     assert (page_box[0], page_box[2]) == (nav_box[0], nav_box[2])
 
 styles = []
 
 
 def collect_styles(window, path=''):
-    """Pin all 772 existing image, font, background and frame properties, excluding replaced filter buttons.
+    """Pin all 823 existing image, font, background and frame properties, excluding replaced filter buttons.
 
     787 before the window got the frame of the menu sheet: the 15 properties of the ornate book frame and its title
     band (TitlebarFont, Frame*Image, Title*Image on the window and its title bar) are gone, every page style is kept.
+    772 before plan INGAME-QS-11 B1 built the pages of one creature as book-variant-2: 27 properties went (the social
+    holder, info and keeper texts of the profile, the MedievalSharp-6 slot names, the back arrow of the head) and 78
+    came (the rows, rules and post frames of the profile, the MedievalSharp-8 slot names, the MedievalSharp-12 name of
+    the head, the back arrow in the title bar and the Skills button of the navigation bar).
     """
     path += '/' + window.get('name', '')
     if window.get('name', '').startswith('Filter'):
@@ -75,9 +84,9 @@ def collect_styles(window, path=''):
 
 
 collect_styles(book)
-assert len(styles) == 772
+assert len(styles) == 823
 assert hashlib.sha256(json.dumps(styles, separators=(',', ':')).encode()).hexdigest() == \
-    '6a1b6219062e1f3b1f692a273689256c3c0d1f581a0a8fc4363c31802bbbf004'
+    'f6e115c92106eef2163d2ed0f3545cdff3739cc197f5b057c547dfe09c5ae537'
 
 expected = {
     'DungeonbookIcons.png': '1f8c0171d312b6a7c432eb9640cd754089ace73f',

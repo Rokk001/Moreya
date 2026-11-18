@@ -130,6 +130,7 @@ assert 'row->getChild("Level")->setText(entry->champion ? CHAMPION_CROWN_MARKUP 
 assert 'setFullText(row->getChild("Name"), profile.getFullName())' in social
 assert "window->setText(escapeMarkup(text));" in social and "elideToWidth" not in social
 assert "entry->champion ? std::string(CHAMPION_CROWN_MARKUP)" in social
-assert 'std::string("Champion ") + CHAMPION_CROWN_MARKUP' in social
+# The profile of book-variant-2 has no level row (plan INGAME-QS-11 K1); the crown stays in the list and the feeds
+assert social.count('CHAMPION_CROWN_MARKUP') >= 2
 
 print("world balance champion checks passed")

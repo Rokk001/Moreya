@@ -120,9 +120,18 @@ def check_equipment(equipment):
         for field in ('PhysicalDamage', 'PhysicalDamageMin', 'MagicalDamage', 'MagicalDamageMin',
                       'ElementDamage', 'ElementDamageMin', 'PhysicalDefense', 'MagicalDefense', 'ElementDefense'):
             assert float(equipment[name][field]) == 0, (name, field)
+    # The copies differ from their originals only in Name, MeshName and the name the player reads (DisplayName,
+    # plan INGAME-QS-11 K6), which every equipment has
     for name, original in (('BasicAxeOrc', 'BasicAxe'), ('BasicHammerDwarf2', 'BasicHammer'), ('StaffLich', 'Staff')):
         expected = dict(equipment[original], Name=name, MeshName=name + '.mesh')
-        assert equipment[name] == expected, (name, equipment[name], expected)
+        expected.pop('DisplayName', None)
+        copy = dict(equipment[name])
+        copy.pop('DisplayName', None)
+        assert copy == expected, (name, copy, expected)
+    display_names = re.findall(r'^\[Equipment\]\s*\n\s+Name\s+\S+\s*\n\s+DisplayName\s+\S',
+                               read('config/equipments.cfg'), re.M)
+    assert len(display_names) == len(equipment), ('every equipment has a DisplayName', len(display_names),
+                                                  len(equipment))
 
 
 # Check all requested assignments and reject any occupied second hand beside a two-handed item.

@@ -5,8 +5,9 @@ The test file is compiled with creatureskill/CreatureSkillTreeView.cpp and Creat
 stand-in for the Boost.Test macros it uses and for the configuration and log singletons (like
 check_level_script.py and check_creature_skill_trees.py), and run on config/creatureSkills.cfg. The wiring checks
 read the layouts and the sources: the window layout holds the tier 4 node and 4 columns of 3 tiers, it is imported by
-ModeGame.layout, only the Dungeonbook (SocialWindow) shows and connects the profile's skill tree button, and clicking
-a skill spends nothing.
+ModeGame.layout, only the Dungeonbook (SocialWindow) connects it, through the fifth button Skills of its navigation
+bar (plan INGAME-QS-11 K4, disabled for a creature without a skill tree; no page holds a skill tree button), and
+clicking a skill spends nothing.
 
 Expected: 5 test cases, 0 failures; 13 skill buttons in gui/WindowCreatureSkillTree.layout.
 
@@ -166,22 +167,33 @@ for column in range(4):
 if 'filename="WindowCreatureSkillTree.layout"' not in read('gui/ModeGame.layout'):
     errors.append('gui/ModeGame.layout does not import WindowCreatureSkillTree.layout')
 
+# Plan INGAME-QS-11 K4: the skill tree opens from the fifth button "Skills" of the navigation bar of the book, no page
+# holds a skill tree button any more
 profile = read('gui/WindowCreatureProfilePage.layout')
-button = re.search(r'name="SkillTreeButton" >(.*?)</Window>', profile, re.S)
-if button is None or '<Property name="Visible" value="False" />' not in button.group(1):
-    errors.append('gui/WindowCreatureProfilePage.layout: SkillTreeButton missing or not hidden by default')
+if 'SkillTreeButton' in profile:
+    errors.append('gui/WindowCreatureProfilePage.layout: the profile page still holds the SkillTreeButton')
+book = read('gui/WindowSocial.layout')
+nav = re.search(r'<Window type="DefaultWindow" name="NavBar">(.*?)\n        </Window>', book, re.S)
+nav_buttons = re.findall(r'<Window type="OD/Button" name="(Nav[A-Za-z]+)">', nav.group(1)) if nav else []
+if nav_buttons != ['NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills']:
+    errors.append('gui/WindowSocial.layout: the navigation bar must hold Feed, Profile, Values, Inventory, Skills: %s'
+                  % nav_buttons)
 
 social = read('source/render/SocialWindow.cpp')
-for needle in ('getChild("SkillTreeButton")->setVisible(', '&SocialWindow::onSkillTreeClicked',
+for needle in ('NAV_SKILLS_BUTTON = "NavSkills"', 'NAV_SKILLS_BUTTON), CEGUI::PushButton::EventClicked,',
+               '&SocialWindow::onSkillTreeClicked', 'skills->setEnabled(hasSkillTree);',
                '&SocialWindow::onSkillTreeCloseClicked', 'buildTreeView('):
     if needle not in social:
         errors.append('source/render/SocialWindow.cpp: %s missing' % needle)
-# Only the Dungeonbook shows the button: no other source mentions it
+# The button needs a creature with a skill tree; without one it is shown disabled
+has_tree = social[social.index('bool SocialWindow::selectedCreatureHasSkillTree() const'):]
+if '!creature->getSkillTypeInfo().mGroup.empty()' not in has_tree[:has_tree.index('\n}\n')]:
+    errors.append('source/render/SocialWindow.cpp: the Skills button does not ask for the skill tree of the creature')
+# No source uses a skill tree button of a page any more
 for path in (repo / 'source').rglob('*.cpp'):
     rel = path.relative_to(repo).as_posix()
-    if rel != 'source/render/SocialWindow.cpp' and rel != 'source/render/Gui.cpp' and \
-            'SkillTreeButton' in path.read_text(encoding='utf-8', errors='replace'):
-        errors.append('%s uses SkillTreeButton; only the Dungeonbook profile shows it' % rel)
+    if 'SkillTreeButton' in path.read_text(encoding='utf-8', errors='replace'):
+        errors.append('%s uses SkillTreeButton; the skill tree opens from the navigation bar only' % rel)
 # View only: the skill buttons of the window have no click handler
 if re.search(r'Column\d?.*Tier.*EventClicked|TierFour.*EventClicked', social):
     errors.append('source/render/SocialWindow.cpp: a skill of the tree reacts to a click')
@@ -190,4 +202,4 @@ for error in errors:
     print('FAIL: ' + error)
 if errors:
     sys.exit(1)
-print('OK: %d test cases, %d skill buttons, window wired to the Dungeonbook profile' % (EXPECTED_CASES, EXPECTED_BUTTONS))
+print('OK: %d test cases, %d skill buttons, window wired to the Skills button of the Dungeonbook' % (EXPECTED_CASES, EXPECTED_BUTTONS))

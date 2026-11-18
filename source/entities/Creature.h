@@ -78,6 +78,7 @@ class Window;
 namespace social
 {
 enum class PostCategory : uint8_t;
+struct CreatureProfile;
 struct CreatureSnapshot;
 }
 
@@ -288,6 +289,12 @@ public:
     //! local player or its allies, e.g. "Closest: Name (friend) - Against: Name (nemesis)". Empty if the
     //! option is off, the creature belongs to somebody else or it has no relationships.
     std::string getRelationshipTooltip();
+    //! brief Client side. The relationship row of the Dungeonbook profile: for a creature of the local player or its
+    //! allies with the relationship option on, its real status ("Single", "In a relationship" ...), otherwise the
+    //! relationship of its social profile. The shared profile page (fillProfilePage) shows the same text.
+    std::string getProfileRelationshipText();
+    //! brief The made-up handle of a social profile ("Mold the Damp" -> "@mold47"), never the internal creature name.
+    static std::string getProfileHandle(const social::CreatureProfile& profile);
 
     //! \brief Get the level of the object
     inline unsigned int getLevel() const

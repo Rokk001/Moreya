@@ -426,8 +426,9 @@ def main():
         assert '&GameMode::' + callback in merchant, callback + ' event disconnected'
     assert 'mMerchantPendingId' in merchant and 'getGold() >= price' in merchant
     assert 'mode == "profit"' in merchant and 'setVisible(mode == "profit")' in merchant
-    assert 'setTooltipText(items[index].second.describe(mGameMap))' in merchant
-    assert 'positionSelf()' in merchant and 'merchantItemAtPointer(list, event.position)' in merchant
+    # The full item card of every item tooltip (plan INGAME-QS-11 K6) with the box of the hovered cell (K11)
+    assert 'setTooltipText(Gui::describeItemTooltip(items[index].second, mGameMap, nullptr))' in merchant
+    assert 'positionSelf()' in merchant and 'merchantItemAtPointer(list, event.position, &cell)' in merchant
     assert 'historyText(' not in merchant and '/HistoryText' not in merchant
     assert 'setSelected(seat->getGhostRevive())' in game and 'mUpdatingGhost = true' in game
     assert 'isApparatusUnlocked(*seat, nextKind)' in game and 'setEnabled(unlocked)' in game

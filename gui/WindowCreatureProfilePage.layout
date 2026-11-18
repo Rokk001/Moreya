@@ -269,12 +269,6 @@
             <Property name="VertFormatting" value="TopAligned" />
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
-        <!-- Opens the skill tree of the creature, above the "Path:" line; only the Dungeonbook profile shows it (SocialWindow) -->
-        <Window type="OD/Button" name="SkillTreeButton" >
-            <Property name="Area" value="{{0.0,16},{0.0,174},{0.0,156},{0.0,200}}" />
-            <Property name="Text" value="Skill Tree" />
-            <Property name="Visible" value="False" />
-        </Window>
         <Window type="OD/StaticText" name="PathText" >
             <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}" />
             <Property name="FrameEnabled" value="False" />

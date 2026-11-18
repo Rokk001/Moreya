@@ -95,9 +95,18 @@ public:
     static void keepTooltipInFront();
 
     //! \brief Gives the window the tooltip of an item in the look of the merchant mockup (owner decision 1026, finding 5):
-    //! dark box with a violet border, the name large and the quality in colour, the price after a gold coin and the
-    //! values as a short left-aligned list. The default tooltip takes that look while it shows this window.
+    //! dark box with a thick frame in the colour of the item's quality (plan INGAME-QS-11 K6), the name large and the
+    //! quality in colour, the price after a gold coin and the values as a short left-aligned list. The default tooltip
+    //! takes that look while it shows this window and goes right of and below the hand, never over the window (K11).
     static void setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon);
+
+    //! \brief The text of the item card of setItemTooltip, with the gold coin as high as a line of its values.
+    static std::string describeItemTooltip(const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon);
+
+    //! \brief Marks the window as showing an item card: the look OD/ItemTooltip with its frame in the quality colour
+    //! (ARGB hex, ItemInstance::getQualityColour). itemArea is the box of the item on the screen as "left top right
+    //! bottom" in pixels (a cell of a list); empty means the whole window is the item. The tooltip never covers it.
+    static void markItemTooltip(CEGUI::Window* window, const std::string& qualityColour, const std::string& itemArea);
 
     //! \brief Gives the window a plain text tooltip in the normal look, or none when the text is empty.
     static void setPlainTooltip(CEGUI::Window* window, const std::string& text);
@@ -253,8 +262,6 @@ private:
     void arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const char*> names);
     //! \brief Places one text row of the profile page at y (design pixels) as high as its text, returns the y of the next row.
     float layoutProfileTextRow(CEGUI::Window* window, float y, float scale);
-    //! \brief Places a button row of the profile page at y (design pixels) when it is visible, returns the y of the next row.
-    float layoutProfileButtonRow(CEGUI::Window* button, float y);
     //! \brief Moves all children of the profile page (except the scrollbar) from their unscrolled areas up by offset.
     void applyProfileScroll(CEGUI::Window* page, float offset);
     //! \brief The scrollbar of a profile page was moved.
