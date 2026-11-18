@@ -116,10 +116,6 @@
 #include <string>
 #include <functional>
 
-const std::string TEXT_SEAT_ID_PREFIX = "TextSeat";
-const std::string TEXT_SEAT_PLAYER_NICKNAME_PREFIX = "TextSeatPlayerNick";
-const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
-
 //! Width of the screen border that scrolls the camera, as a fraction of the screen size
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 //! Seconds between two refreshes of the open trap production window.
@@ -543,9 +539,8 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(&GameMode::clickHeartBadge, this)));
     addEventConnection(mRootWindow->getChild("ResearchButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleSkillWindow, this)));
+    // The workshop production page is opened from the game bar: Room Manager button, workshop row.
     initializeRoomManager();
-    addEventConnection(mRootWindow->getChild("GameOptionsWindow/ProductionButton")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::showTrapProductionQueue, this)));
 
     addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders")->subscribeEvent(
         CEGUI::MultiColumnList::EventSelectionChanged, CEGUI::Event::Subscriber(&GameMode::updateTrapProductionButtons, this)));
@@ -561,8 +556,7 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(&GameMode::clickMap, this)));
     addEventConnection(mRootWindow->getChild("MapWindow/MapImage")->subscribeEvent(
         CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(&GameMode::clickMap, this)));
-    addEventConnection(mRootWindow->getChild("GameOptionsWindow/UserCamerasButton")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::showUserCameras, this)));
+    // The user cameras are defined from the settings navigation window (initializeSettingsNavigation).
     addEventConnection(mRootWindow->getChild("UserCamerasWindow")->subscribeEvent(
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::closeUserCameras, this)));
     for(unsigned int slot = 0; slot < 3; ++slot)
@@ -727,31 +721,10 @@ GameMode::GameMode(ModeManager *modeManager):
         )
     );
 
-    //Player settings window
-    addEventConnection(
-        guiSheet->getChild("GameOptionsWindow/PlayerSettingsButton")->subscribeEvent(
-            CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber(&GameMode::togglePlayerSettingsWindow, this)
-        )
-    );
-    addEventConnection(
-        guiSheet->getChild("PlayerSettingsWindow")->subscribeEvent(
-            CEGUI::FrameWindow::EventCloseClicked,
-            CEGUI::Event::Subscriber(&GameMode::cancelPlayerSettings, this)
-        )
-    );
-    addEventConnection(
-        guiSheet->getChild("PlayerSettingsWindow/CancelButton")->subscribeEvent(
-            CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber(&GameMode::cancelPlayerSettings, this)
-        )
-    );
-    addEventConnection(
-        guiSheet->getChild("PlayerSettingsWindow/ApplyButton")->subscribeEvent(
-            CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber(&GameMode::applyPlayerSettings, this)
-        )
-    );
+    //Player settings: the player information window is gone; its setting "KO enemy creatures instead of killing"
+    //is on the Game page of the settings window, which shows the seat value and sends a change on Apply.
+    mSettings.setKoCreaturesSetting(std::bind(&GameMode::isLocalKoCreaturesEnabled, this),
+        std::bind(&GameMode::requestKoCreaturesSetting, this, std::placeholders::_1));
 
     // The skill tree window
     addEventConnection(
@@ -804,18 +777,7 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::showOptionsWindow, this)));
     addEventConnection(guiSheet->getChild("GameOptionsWindow/ContinueButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::hideOptionsWindow, this)));
-    addEventConnection(
-        guiSheet->getChild("GameOptionsWindow/ObjectivesButton")->subscribeEvent(
-            CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber(&GameMode::showObjectivesFromOptions, this)
-        )
-    );
-    addEventConnection(
-        guiSheet->getChild("GameOptionsWindow/SkillButton")->subscribeEvent(
-            CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber(&GameMode::showSkillFromOptions, this)
-        )
-    );
+    // Objectives and the skill tree are opened from the game bar (GoalsButton, ResearchButton).
     addEventConnection(guiSheet->getChild("GameOptionsWindow/LoadGameButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::loadGame, this)));
 
@@ -976,28 +938,6 @@ GameMode::~GameMode()
                 Gui::EXIT_CONFIRMATION_POPUP)->getChild("SaveReplayCheckbox"));
 
     mKeepReplayAtDisconnect = checkBox->isSelected();
-
-    CEGUI::Window* settingsWin = mRootWindow->getChild("PlayerSettingsWindow/Seats/SeatsSP");
-    CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
-    for(int seatId : mSeatIds)
-    {
-        CEGUI::Window* tmpWin;
-        std::string name;
-        name = TEXT_SEAT_ID_PREFIX + Helper::toString(seatId);
-        tmpWin = settingsWin->getChild(name);
-        settingsWin->removeChild(tmpWin);
-        winMgr.destroyWindow(tmpWin);
-
-        name = TEXT_SEAT_PLAYER_NICKNAME_PREFIX + Helper::toString(seatId);
-        tmpWin = settingsWin->getChild(name);
-        settingsWin->removeChild(tmpWin);
-        winMgr.destroyWindow(tmpWin);
-
-        name = TEXT_SEAT_TEAM_ID_PREFIX + Helper::toString(seatId);
-        tmpWin = settingsWin->getChild(name);
-        settingsWin->removeChild(tmpWin);
-        winMgr.destroyWindow(tmpWin);
-    }
 }
 
 //! \brief Activates the game interface with its room control windows initially hidden.
@@ -1021,8 +961,6 @@ void GameMode::activate()
     // We free the menu scene as it is not required anymore
     ODFrameListener::getSingleton().freeMainMenuScene();
 
-    buildPlayerSettingsWindow();
-
     // Hides the exit pop-up and certain buttons only used by the editor.
     CEGUI::Window* guiSheet = mRootWindow;
     guiSheet->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
@@ -1037,7 +975,6 @@ void GameMode::activate()
     guiSheet->getChild("RoomManagerWindow/Pages/TavernPage")->hide();
     guiSheet->getChild("RoomManagerWindow/Pages/SpaPage")->hide();
     hideMerchantWindow();
-    guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
     guiSheet->getChild("RoomManagerWindow/Pages/WorkshopPage")->hide();
     mSocialWindow->hide();
@@ -2072,19 +2009,10 @@ void GameMode::refreshMainUI()
     Seat* mySeat = mGameMap->getLocalPlayer()->getSeat();
     CEGUI::Window* guiSheet = mRootWindow;
 
-    //! \brief Updates common info on screen.
-    CEGUI::Window* widget = guiSheet->getChild(Gui::DISPLAY_TERRITORY);
+    //! \brief Updates common info on screen (the territory and creature counts of the former player information
+    //! window are no longer shown).
+    CEGUI::Window* widget = guiSheet->getChild(Gui::DISPLAY_GOLD);
     std::stringstream tempSS("");
-    tempSS << mySeat->getNumClaimedTiles();
-    widget->setText(tempSS.str());
-
-    widget = guiSheet->getChild(Gui::DISPLAY_CREATURES);
-    tempSS.str("");
-    tempSS << mySeat->getNumCreaturesFighters() << "/" << mySeat->getNumCreaturesFightersMax();
-    widget->setText(tempSS.str());
-
-    widget = guiSheet->getChild(Gui::DISPLAY_GOLD);
-    tempSS.str("");
     tempSS << mySeat->getGold();
     widget->setText(tempSS.str());
     tempSS << "/" << mySeat->getGoldMax();
@@ -3296,57 +3224,33 @@ bool GameMode::onSandboxStay(const CEGUI::EventArgs&)
     return true;
 }
 
-bool GameMode::showPlayerSettingsWindow(const CEGUI::EventArgs&)
+//! \brief Whether the local keeper's seat knocks out defeated enemy creatures instead of killing them.
+bool GameMode::isLocalKoCreaturesEnabled() const
 {
-    closeAllTopWindows();
-    mRootWindow->getChild("GameOptionsWindow")->hide();
-    // Before showing the player settings, we reset to the values in the seat. That's
-    // because only the server can change them and the values in the Seat are the
-    // ones that should be shown
-    syncPlayerSettings();
-    mRootWindow->getChild("PlayerSettingsWindow")->show();
-    return true;
+    Player* localPlayer = (mGameMap == nullptr) ? nullptr : mGameMap->getLocalPlayer();
+    if(localPlayer == nullptr || localPlayer->getSeat() == nullptr)
+        return true;
+    return localPlayer->getSeat()->getKoCreatures();
 }
 
-bool GameMode::togglePlayerSettingsWindow(const CEGUI::EventArgs& e)
+//! \brief Asks the server to set the KO setting of the local keeper's seat when it differs from the seat value
+//! (the settings window calls it on Apply).
+void GameMode::requestKoCreaturesSetting(bool enabled)
 {
-    CEGUI::Window* playerSettings = mRootWindow->getChild("PlayerSettingsWindow");
-
-    if (playerSettings->isVisible())
-        cancelPlayerSettings(e);
-    else
-        showPlayerSettingsWindow(e);
-    return true;
-}
-
-bool GameMode::cancelPlayerSettings(const CEGUI::EventArgs&)
-{
-    mRootWindow->getChild("PlayerSettingsWindow")->hide();
-    return true;
-}
-
-bool GameMode::applyPlayerSettings(const CEGUI::EventArgs&)
-{
-    mRootWindow->getChild("PlayerSettingsWindow")->hide();
+    if(!ODClient::getSingleton().isConnected() || enabled == isLocalKoCreaturesEnabled())
+        return;
     ClientNotification* clientNotification = new ClientNotification(
         ClientNotificationType::askSetPlayerSettings);
-
-    CEGUI::ToggleButton* cbKoCreatures = static_cast<CEGUI::ToggleButton*>(
-        mRootWindow->getChild("PlayerSettingsWindow/KOCreatureCheckbox"));
-    bool enabled = cbKoCreatures->isSelected();
     clientNotification->mPacket << enabled;
-
     ODClient::getSingleton().queueClientNotification(clientNotification);
-
-    return true;
 }
 
+//! \brief Shows the KO setting of the local keeper's seat in the settings window.
 void GameMode::syncPlayerSettings()
 {
-    Seat* localPlayerSeat = mGameMap->getLocalPlayer()->getSeat();
-    CEGUI::ToggleButton* cbKoCreatures = static_cast<CEGUI::ToggleButton*>(
-        mRootWindow->getChild("PlayerSettingsWindow/KOCreatureCheckbox"));
-    cbKoCreatures->setSelected(localPlayerSeat->getKoCreatures());
+    // We reset to the values in the seat. That's because only the server can change them and the values in the Seat
+    // are the ones that should be shown
+    mSettings.syncKoCreaturesSetting();
 }
 
 bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
@@ -3370,12 +3274,6 @@ void GameMode::closeAllTopWindows()
     while(closeTopWindow())
     {
     }
-}
-
-//! \brief Toggles the workshop row from options and closes the other game windows.
-bool GameMode::showTrapProductionQueue(const CEGUI::EventArgs&)
-{
-    return selectRoomManagerType(RoomType::workshop, true);
 }
 
 //! \brief Hides the workshop page in the shared management frame.
@@ -3948,11 +3846,12 @@ bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
 }
 
 //! \brief Switches the options page and fits its visible entries inside the window.
+//! The options page holds only the game options (Save Game, Load Game, Settings, Help, End Game, Continue Game);
+//! Objectives, Skill and Production are opened from the game bar (INGAME-QS-11 K7).
 void GameMode::setOptionsPage(bool endGame)
 {
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
-    for(const char* name : {"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
-        "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton", "ProductionButton"})
+    for(const char* name : {"SaveGameButton", "LoadGameButton", "SettingsButton", "HelpButton", "EndGameButton"})
         options->getChild(name)->setVisible(!endGame);
     for(const char* name : {"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton"})
         options->getChild(name)->setVisible(endGame);
@@ -3960,22 +3859,22 @@ void GameMode::setOptionsPage(bool endGame)
 
     std::vector<const char*> entries = endGame ?
         std::vector<const char*>{"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton", "ContinueButton"} :
-        std::vector<const char*>{"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
-            "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton",
-            "ProductionButton", "ContinueButton"};
+        std::vector<const char*>{"SaveGameButton", "LoadGameButton", "SettingsButton", "HelpButton",
+            "EndGameButton", "ContinueButton"};
     const bool canSave = ODServer::getSingleton().isConnected() &&
         ODServer::getSingleton().getServerMode() != ServerMode::ModeGameMultiPlayer;
     options->getChild("SaveGameButton")->setVisible(!endGame && canSave);
     options->getChild("LoadGameButton")->setVisible(!endGame && canSave);
     if(!endGame && !canSave)
     {
-        entries.erase(entries.begin() + 2, entries.begin() + 4);
+        entries.erase(entries.begin(), entries.begin() + 2);
     }
     Gui& gui = mModeManager->getGui();
     const CEGUI::Sizef display = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
-    // The window frame of the menu sheet takes 50 design pixels more height (title on the top rail, wider bottom
-    // rail) and 16 more on each side than the old thin frame, so the entries keep the room they had.
-    const float height = std::min(0.95f, (134.0f + 46.0f * entries.size()) * gui.getLayoutScale() / display.d_height);
+    // The window frame of the menu sheet takes 134 design pixels of height (title on the top rail, wider bottom
+    // rail, margins); every entry gets a row of 66 design pixels, so the menu template buttons have the height and
+    // spacing of the main menu buttons and the window height follows the number of entries.
+    const float height = std::min(0.95f, (134.0f + 66.0f * entries.size()) * gui.getLayoutScale() / display.d_height);
     gui.setScaledArea(options, CEGUI::URect(CEGUI::UDim(0.5f, -176), CEGUI::UDim(0.5f - height / 2.0f, 0),
         CEGUI::UDim(0.5f, 176), CEGUI::UDim(0.5f + height / 2.0f, 0)));
     const float step = 0.78f / entries.size();
@@ -3983,7 +3882,7 @@ void GameMode::setOptionsPage(bool endGame)
     {
         const float top = 0.12f + step * i;
         gui.setScaledArea(options->getChild(entries[i]), CEGUI::URect(CEGUI::UDim(0, 24), CEGUI::UDim(top, 0),
-            CEGUI::UDim(1, -24), CEGUI::UDim(top + step * 38.0f / 46.0f, 0)));
+            CEGUI::UDim(1, -24), CEGUI::UDim(top + step * 58.0f / 66.0f, 0)));
     }
 }
 
@@ -4023,18 +3922,6 @@ bool GameMode::showExitApplicationFromOptions(const CEGUI::EventArgs& /*e*/)
     mRestartLevel = false;
     popupExit(!mGameMap->getGamePaused());
     return true;
-}
-
-bool GameMode::showObjectivesFromOptions(const CEGUI::EventArgs& e)
-{
-    mRootWindow->getChild("GameOptionsWindow")->hide();
-    return showObjectivesWindow(e);
-}
-
-bool GameMode::showSkillFromOptions(const CEGUI::EventArgs& e)
-{
-    mRootWindow->getChild("GameOptionsWindow")->hide();
-    return toggleSkillWindow(e);
 }
 
 //! \brief Opens the saved-game browser over a local single-player game.
@@ -6249,59 +6136,6 @@ void GameMode::endSkillTree(bool apply)
     mSkillCurrentCompletion.resetValue();
     mIsSkillWindowOpen = false;
     refreshGuiSkill(true);
-}
-
-void GameMode::buildPlayerSettingsWindow()
-{
-    if(!mSeatIds.empty())
-        return;
-
-    CEGUI::Window* tmpWin = mRootWindow->getChild("PlayerSettingsWindow/Seats/SeatsSP");
-    CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
-    float offset = 15;
-    for(Seat* seat : mGameMap->getSeats())
-    {
-        if(seat->isRogueSeat())
-            continue;
-
-        Player* player = seat->getPlayer();
-        if(player == nullptr)
-            continue;
-
-        CEGUI::DefaultWindow* tmpElt;
-        std::string name;
-        Ogre::ColourValue seatColor = seat->getColorValue();
-        seatColor.a = 1.0f; // Restore the color opacity
-
-        name = TEXT_SEAT_ID_PREFIX + Helper::toString(seat->getId());
-        tmpElt = static_cast<CEGUI::DefaultWindow*>(winMgr.createWindow("OD/StaticText", name));
-        tmpWin->addChild(tmpElt);
-        tmpElt->setArea(CEGUI::UDim(0,20), CEGUI::UDim(0, offset), CEGUI::UDim(0.2,-20), CEGUI::UDim(0,offset));
-        tmpElt->setText("[colour='" + Helper::getCEGUIColorFromOgreColourValue(seatColor) + "']" + Helper::toString(seat->getId()));
-        tmpElt->setProperty("FrameEnabled", "False");
-        tmpElt->setProperty("BackgroundEnabled", "False");
-
-        name = TEXT_SEAT_PLAYER_NICKNAME_PREFIX + Helper::toString(seat->getId());
-        tmpElt = static_cast<CEGUI::DefaultWindow*>(winMgr.createWindow("OD/StaticText", name));
-        tmpWin->addChild(tmpElt);
-        tmpElt->setArea(CEGUI::UDim(0.2,20), CEGUI::UDim(0, offset), CEGUI::UDim(0.6,-20), CEGUI::UDim(0,offset));
-        tmpElt->setText("[colour='" + Helper::getCEGUIColorFromOgreColourValue(seatColor) + "']" + player->getNick());
-        tmpElt->setProperty("FrameEnabled", "False");
-        tmpElt->setProperty("BackgroundEnabled", "False");
-
-        name = TEXT_SEAT_TEAM_ID_PREFIX + Helper::toString(seat->getId());
-        tmpElt = static_cast<CEGUI::DefaultWindow*>(winMgr.createWindow("OD/StaticText", name));
-        tmpWin->addChild(tmpElt);
-        tmpElt->setArea(CEGUI::UDim(0.8,20), CEGUI::UDim(0, offset), CEGUI::UDim(0.2,-20), CEGUI::UDim(0,offset));
-        tmpElt->setText("[colour='" + Helper::getCEGUIColorFromOgreColourValue(seatColor) + "']" + Helper::toString(seat->getTeamId()));
-        tmpElt->setProperty("FrameEnabled", "False");
-        tmpElt->setProperty("BackgroundEnabled", "False");
-
-        mSeatIds.push_back(seat->getId());
-        offset += 15;
-    }
-
-    getModeManager().getGui().registerWindowHierarchy(tmpWin);
 }
 
 //! \brief Returns a tile of one of the local keeper's ghost rooms; clients know them by the tile visual the server sends.

@@ -48,8 +48,9 @@ def imports(layout, seen):
 INGAME = imports('ModeGame.layout', set()) | imports('ModeEditor.layout', set()) | set(CODE_LOADED)
 # The build bar tabs, the room manager pages and the chat line are parts of windows or of the HUD, not windows; they
 # are measured with their windows below; the creature page is a page of the Dungeonbook. Counted once on this
-# branch: 45 layouts (the creature skill tree window of integration/all included).
-assert len(INGAME) == 45, (len(INGAME), sorted(INGAME))
+# branch: 44 layouts (the creature skill tree window of integration/all included; the player information window
+# left the game with INGAME-QS-11 K7, its KO setting is on the Game page of the settings window).
+assert len(INGAME) == 44, (len(INGAME), sorted(INGAME))
 
 # ------------------------------------------------------------------------------------------------ looks
 skin = ET.parse(gui / 'OD.looknfeel').getroot()
@@ -142,9 +143,10 @@ for layout in sorted(INGAME):
         elif kind in ('OD/SheetPanel', 'OD/EventPanel'):
             panels.append((layout, window.get('name')))
             check_sheet_frame(look, PANEL_STATES, (layout, window.get('name')))
-# Counted once on this branch: 26 frame windows (the quit confirmation is imported by the game and by the editor and
-# counted once per layout file) and 3 panels (the message panels of game and editor, the debriefing panel).
-assert len(frame_windows) == 26, (len(frame_windows), frame_windows)
+# Counted once on this branch: 25 frame windows (the quit confirmation is imported by the game and by the editor and
+# counted once per layout file; the player information window is gone) and 3 panels (the message panels of game and
+# editor, the debriefing panel).
+assert len(frame_windows) == 25, (len(frame_windows), frame_windows)
 assert sorted(panels) == [('WindowDefeatDebriefing.layout', 'Panel'), ('WindowEvent.layout', 'GameEventText'),
                           ('WindowGameEvent.layout', 'GameEventText')], panels
 # The windows the owner named are among them.

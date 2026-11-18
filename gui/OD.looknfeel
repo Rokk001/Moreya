@@ -8104,6 +8104,55 @@
         <StateImagery name="PushedOff"><Layer><Section section="plate_normal" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
         <StateImagery name="Disabled"><Layer><Section section="plate_disabled" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
     </WidgetLook>
+    <!-- Menu button with a symbol: the menu button template above (same plates, caps, knobs and hover in all four
+         states) with the symbol of the entry (IconImage) on the planks at the left of the caption. The symbol is drawn
+         in every state; the caption is centred on the planks right of the symbol (in-game options menu, INGAME-QS-11
+         K7). -->
+    <WidgetLook name="OD/MenuIconTextButton" inherits="OD/MenuTextButton">
+        <PropertyDefinition initialValue="" name="IconImage" redrawOnWrite="true" />
+        <ImagerySection name="symbol">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.183333" type="Height" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.633334" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="0.633334" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="IconImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="caption_shadow">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Add"><UnifiedDim scale="1.216667" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Add"><UnifiedDim scale="0.183333" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Add"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Add"><UnifiedDim scale="0.816667" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                </Area>
+                <Colours topLeft="C0000000" topRight="C0000000" bottomLeft="C0000000" bottomRight="C0000000" />
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <ImagerySection name="caption">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="1.216667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.183333" type="Height" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="0.816667" type="Height" /></Dim>
+                </Area>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Normal"><Layer><Section look="OD/MenuTextButton" section="plate_normal" /><Section section="symbol" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section look="OD/MenuTextButton" section="plate_hover" /><Section section="symbol"><Colours topLeft="FFFFEBC0" topRight="FFFFEBC0" bottomLeft="FFFFEBC0" bottomRight="FFFFEBC0" /></Section><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section look="OD/MenuTextButton" section="plate_pushed" /><Section section="symbol"><Colours topLeft="FFDDDDDD" topRight="FFDDDDDD" bottomLeft="FFDDDDDD" bottomRight="FFDDDDDD" /></Section><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="PushedTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="PushedOff"><Layer><Section look="OD/MenuTextButton" section="plate_normal" /><Section section="symbol" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section look="OD/MenuTextButton" section="plate_disabled" /><Section section="symbol"><Colours topLeft="FF777777" topRight="FF777777" bottomLeft="FF777777" bottomRight="FF777777" /></Section><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
+    </WidgetLook>
     <!-- Window frame of the chosen menu sheet (the load screen frame: iron rails, corner brackets, knobs and the
          empty panel wood), for every menu window and reusable for the in-game windows: use window type
          OD/SheetWindow for a frame window, OD/SheetPanel for a plain container, OD/SheetStaticText for a framed
