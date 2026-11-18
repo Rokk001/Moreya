@@ -535,7 +535,12 @@ require('ProfilePage/RelationshipValue', 'MedievalSharp-8', texts=tuple(relation
 require('ProfilePage/OriginValue', 'MedievalSharp-8', texts=tuple(widest([h for g in name_groups for h in g['home']])))
 require('ProfilePage/JobValue', 'MedievalSharp-8', texts=tuple(widest(pools['job'])))
 require('ProfilePage/SkillsValue', 'MedievalSharp-8', lines=3, wrap=True)
-require('ProfilePage/QuoteText', 'MedievalSharp-8', lines=6, wrap=True)
+require('ProfilePage/QuoteText', 'MedievalSharp-8', lines=4, wrap=True)
+# the social lines of the creature (owner decision 2026-11-18), each shortened to its box with its hover text
+require('ProfilePage/StatusText', 'MedievalSharp-8', lines=2, wrap=True)
+for line in ('LikesText', 'DislikesText', 'FriendsText', 'FoeText', 'EffectLine0', 'EffectLine1', 'EffectLine2'):
+    require('ProfilePage/' + line, 'MedievalSharp-8', texts=('Buff: Relaxed (9:59)', 'Foe: none', 'Friends: none yet'))
+require('ProfilePage/RemarksText', 'MedievalSharp-8', lines=2, wrap=True)
 require('ProfilePage/PostsTitle', 'MedievalSharp-10', texts=('Posts (200)',))
 require('ProfilePage/PostsEmpty', 'MedievalSharp-8', lines=2, texts=('Nothing posted yet.',))
 # Values: rounded numbers (two decimals at most, every magnitude); a pair "a / b" wraps after the slash

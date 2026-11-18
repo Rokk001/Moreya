@@ -477,9 +477,86 @@ const double Creature::PERCENT_FACTOR = 100.0;
 
 namespace
 {
+//! \brief Friends are the creatures of the seat with an affinity above this value
+const uint32_t PROFILE_FRIEND_MIN_AFFINITY = 600;
+//! \brief The foe is the creature with an affinity below this value
+const uint32_t PROFILE_FOE_MAX_AFFINITY = 150;
+const uint32_t PROFILE_MAX_FRIENDS = 2;
 //! \brief The handle of the card gets a number from PROFILE_HANDLE_MIN_NUMBER to PROFILE_HANDLE_MIN_NUMBER + PROFILE_HANDLE_NUMBER_COUNT - 1
 const int PROFILE_HANDLE_MIN_NUMBER = 10;
 const int PROFILE_HANDLE_NUMBER_COUNT = 90;
+//! \brief Number of likes and of dislikes in a profile
+const std::size_t PROFILE_LIST_SIZE = 2;
+
+typedef std::pair<uint32_t, std::string> ProfileAffinity;
+
+bool isHigherAffinity(const ProfileAffinity& a, const ProfileAffinity& b)
+{
+    if(a.first != b.first)
+        return a.first > b.first;
+
+    return a.second < b.second;
+}
+
+//! \brief Picks the friends and the foe of a creature among the creatures of a seat (see
+//! SocialGenerator::affinity). Only computed when the creature card is refreshed.
+void findFriendsAndFoe(const std::string& name, const std::vector<Creature*>& mates,
+    std::vector<std::string>& friends, std::string& foe)
+{
+    std::vector<ProfileAffinity> affinities;
+    for(Creature* mate : mates)
+    {
+        if(mate->getName() == name)
+            continue;
+
+        affinities.push_back(ProfileAffinity(social::SocialGenerator::affinity(name, mate->getName()), mate->getName()));
+    }
+    std::sort(affinities.begin(), affinities.end(), isHigherAffinity);
+
+    for(const ProfileAffinity& affinity : affinities)
+    {
+        if((affinity.first <= PROFILE_FRIEND_MIN_AFFINITY) || (friends.size() >= PROFILE_MAX_FRIENDS))
+            break;
+
+        friends.push_back(affinity.second);
+    }
+    if(!affinities.empty() && (affinities.back().first < PROFILE_FOE_MAX_AFFINITY))
+        foe = affinities.back().second;
+}
+
+//! \brief State name used to look up the mood line of the creature (see social-texts.cfg)
+std::string getProfileMoodState(uint32_t moodBits, CreatureMoodLevel moodLevel)
+{
+    if((moodBits & CreatureMoodValues::KoTemp) != 0)
+        return "KoTemp";
+    if((moodBits & CreatureMoodValues::InJail) != 0)
+        return "InJail";
+    if((moodBits & CreatureMoodValues::LeaveDungeon) != 0)
+        return "LeaveDungeon";
+    if((moodBits & CreatureMoodValues::GetFee) != 0)
+        return "GetFee";
+    if((moodBits & CreatureMoodValues::Hungry) != 0)
+        return "Hungry";
+    if((moodBits & CreatureMoodValues::Tired) != 0)
+        return "Tired";
+
+    switch(moodLevel)
+    {
+        case CreatureMoodLevel::Happy:
+            return "Happy";
+        case CreatureMoodLevel::Neutral:
+            return "Neutral";
+        case CreatureMoodLevel::Upset:
+            return "Upset";
+        case CreatureMoodLevel::Angry:
+            return "Angry";
+        case CreatureMoodLevel::Furious:
+            return "Furious";
+        default:
+            return "Unknown";
+    }
+}
+
 //! \brief A made-up handle derived from the profile name ("Mold the Damp" -> "@mold47"), so that the internal
 //! creature name never shows on the card
 std::string makeProfileHandle(const social::CreatureProfile& profile)
@@ -6451,6 +6528,122 @@ std::string Creature::getGender() const
     return social::SocialProfileCache::getCreatureGender(getName(), getDefinition()->getClassName());
 }
 
+//! \brief Seconds of one minute, for the time in the effect lines of the Dungeonbook page.
+static const uint32_t PROFILE_SECONDS_PER_MINUTE = 60;
+
+//! \brief The name of a mood effect for the effect line: the capital letters inside the name start a new word.
+//! \param name The name of the effect without spaces (for example "MakeUnhappy").
+//! \return The name with spaces (for example "Make Unhappy").
+static std::string getMoodEffectDisplayName(const std::string& name)
+{
+    std::string display;
+    for(std::string::size_type ii = 0; ii < name.size(); ++ii)
+    {
+        if((ii > 0) && std::isupper(static_cast<unsigned char>(name[ii])) &&
+           !std::isupper(static_cast<unsigned char>(name[ii - 1])))
+            display += ' ';
+
+        display += name[ii];
+    }
+    return display;
+}
+
+//! \brief The time of an effect line as minutes:seconds (turns divided by the turns per second, seconds rounded down).
+//! \param turns The turns that are left.
+static std::string getProfileEffectTime(double turns)
+{
+    const uint32_t totalSeconds = static_cast<uint32_t>(std::floor(turns / ODApplication::turnsPerSecond));
+    const uint32_t seconds = totalSeconds % PROFILE_SECONDS_PER_MINUTE;
+    return Helper::toString(totalSeconds / PROFILE_SECONDS_PER_MINUTE) + ":" + (seconds < 10 ? "0" : "") +
+        Helper::toString(seconds);
+}
+
+//! \brief The explaining hover text of one effect line (owner decision 2026-11-18: every buff and debuff says what it
+//! is and what it does): the kind, what changes while it runs and the time that is left.
+//! \param buff True for a buff, false for a debuff.
+//! \param name The name of the effect as shown.
+//! \param what What the effect does, one sentence.
+//! \param turns The turns that are left.
+static std::string getProfileEffectTooltip(bool buff, const std::string& name, const std::string& what, double turns)
+{
+    return std::string(buff ? "Buff" : "Debuff") + " " + name + ": " + what + " Time left: " +
+        getProfileEffectTime(turns) + ".";
+}
+
+//! \brief What a factor on the room points and the experience means, as a percentage ("works at 105.67 % ...").
+static std::string getProfileWorkFactorText(double factor)
+{
+    return "it earns " + Creature::formatRoundedNumber(factor * Creature::PERCENT_FACTOR) +
+        " % of the usual room points and experience while it lasts.";
+}
+
+//! \brief The lines of the active buffs and debuffs of a creature for the Dungeonbook page, buffs first: the buff
+//! Relaxed while the relaxation lasts, the buffs and debuffs of the mood effects (a pleasure buff, Make Unhappy) and the
+//! debuff Hangover while the hangover lasts. Each line shows the time that is left as minutes:seconds (turns divided by
+//! the turns per second, seconds rounded down).
+//! \param relaxTurns The turns the relaxation lasts, 0 or less for none.
+//! \param hangoverTurns The turns the hangover lasts, 0 or less for none.
+//! \param moodEffects The running mood effects.
+//! \param relaxWorkFactor The factor on room points and experience while relaxed (Creature::getRelaxWorkFactor).
+//! \param hangoverWorkFactor The factor on room points and experience during a hangover (getHangoverWorkFactor).
+//! \param tooltips Receives one explaining hover text per line, in the order of the lines.
+//! \return The lines separated by a line break, empty when no effect is active.
+static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns,
+    const std::vector<CreatureMoodEffect>& moodEffects, double relaxWorkFactor, double hangoverWorkFactor,
+    std::vector<std::string>& tooltips)
+{
+    std::vector<std::string> buffs;
+    std::vector<std::string> debuffs;
+    std::vector<std::string> buffTips;
+    std::vector<std::string> debuffTips;
+
+    // The buff Relaxed of a spa visit is a mood effect that runs as long as the relaxation; it is listed once
+    bool relaxedEffect = false;
+    for(const CreatureMoodEffect& effect : moodEffects)
+        relaxedEffect = relaxedEffect || ((effect.mTurnsLeft > 0.0) && (effect.mName == "Relaxed"));
+
+    if((relaxTurns > 0.0) && !relaxedEffect)
+    {
+        buffs.push_back("Buff: Relaxed (" + getProfileEffectTime(relaxTurns) + ")");
+        buffTips.push_back(getProfileEffectTooltip(true, "Relaxed", "after the lava spa " +
+            getProfileWorkFactorText(relaxWorkFactor), relaxTurns));
+    }
+
+    for(const CreatureMoodEffect& effect : moodEffects)
+    {
+        if(effect.mTurnsLeft <= 0.0)
+            continue;
+
+        const bool isBuff = (effect.mStrength >= 0.0);
+        const std::string name = getMoodEffectDisplayName(effect.mName);
+        (isBuff ? buffs : debuffs).push_back(std::string(isBuff ? "Buff: " : "Debuff: ") +
+            name + " (" + getProfileEffectTime(effect.mTurnsLeft) + ")");
+        // The mood the effect adds or takes every turn, and for the relaxation of the spa its factor on the work
+        std::string what = std::string(isBuff ? "raises" : "lowers") + " the mood of the creature by " +
+            Creature::formatRoundedNumber(std::fabs(effect.mStrength)) + " every turn";
+        what += (effect.mName == "Relaxed") ? "; " + getProfileWorkFactorText(relaxWorkFactor) : ".";
+        (isBuff ? buffTips : debuffTips).push_back(getProfileEffectTooltip(isBuff, name, what, effect.mTurnsLeft));
+    }
+
+    if(hangoverTurns > 0.0)
+    {
+        debuffs.push_back("Debuff: Hangover (" + getProfileEffectTime(hangoverTurns) + ")");
+        debuffTips.push_back(getProfileEffectTooltip(false, "Hangover", "after too much drink at the tavern " +
+            getProfileWorkFactorText(hangoverWorkFactor), hangoverTurns));
+    }
+
+    std::string effects;
+    for(const std::string& line : buffs)
+        effects += (effects.empty() ? "" : "\n") + line;
+
+    for(const std::string& line : debuffs)
+        effects += (effects.empty() ? "" : "\n") + line;
+
+    tooltips = buffTips;
+    tooltips.insert(tooltips.end(), debuffTips.begin(), debuffTips.end());
+    return effects;
+}
+
 //! Colour of the placeholder and the slot symbol of an empty Dungeonbook slot: grey at 40 % opacity, clearly dimmed
 //! against the full colour item picture of a filled slot (owner decision 918)
 static const char* const EMPTY_ITEM_SLOT_COLOURS = "tl:66A0A0A0 tr:66A0A0A0 bl:66A0A0A0 br:66A0A0A0";
@@ -6528,6 +6721,100 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
             Gui::setPlainTooltip(image, "Potion slot locked: it opens at level " + Helper::toString(level));
         }
     }
+}
+
+//! \brief Collects the social lines of the Dungeonbook profile with the data the shared profile page showed: likes and
+//! dislikes of the profile, for the local player and its allies the friends and the foe (the real relationships with
+//! the relationship option on, else the ones derived from the names, cached per roster version), the status line and,
+//! for the own seat only, the running buffs and debuffs with an explaining text each; the remarks that match the parts
+//! of the composed picture, only while the creature has one.
+Creature::ProfileSocialInfo Creature::getProfileSocialInfo()
+{
+    ProfileSocialInfo info;
+    const CreatureDefinition* definition = getDefinition();
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    const social::CreatureProfile& profile = cache.getProfile(getName(), definition->getClassName(), definition->isWorker());
+    for(std::size_t i = 0; i < PROFILE_LIST_SIZE; ++i)
+    {
+        if(!profile.mLikes[i].empty())
+            info.mLikes.push_back(profile.mLikes[i]);
+        if(!profile.mDislikes[i].empty())
+            info.mDislikes.push_back(profile.mDislikes[i]);
+    }
+
+    // Remarks that match the parts of the picture, only for the composed picture
+    if(getCreatureAppearanceImage(getName(), mAppearance) != nullptr)
+        info.mRemarks = DungeonbookQuirkLogic::formatRemarks(getCreatureAppearanceRemarks(getName(), mAppearance));
+
+    // Mood, friends and the like are only known for creatures of the local player and its allies
+    Seat* localSeat = nullptr;
+    if(getGameMap()->getLocalPlayer() != nullptr)
+        localSeat = getGameMap()->getLocalPlayer()->getSeat();
+    info.mAllied = (localSeat != nullptr) &&
+        (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
+    // The relaxation and hangover effects are only shown for the creatures of the own seat
+    const bool isOwn = (localSeat != nullptr) && (getSeat() == localSeat);
+    if(isOwn)
+    {
+        const std::string effects = getProfileEffectsText(mRelaxTurns, mHangoverTurns, mMoodEffects,
+            getRelaxWorkFactor(), getHangoverWorkFactor(), info.mEffectTooltips);
+        std::string::size_type start = 0;
+        while(!effects.empty() && start <= effects.size())
+        {
+            const std::string::size_type end = effects.find('\n', start);
+            info.mEffects.push_back(effects.substr(start, end == std::string::npos ? std::string::npos : end - start));
+            if(end == std::string::npos)
+                break;
+            start = end + 1;
+        }
+    }
+    if(!info.mAllied)
+        return info;
+
+    // With the relationship option the real friends and the worst enemy replace the ones derived from the names
+    const bool showRelations = getGameMap()->isRelationshipsEnabled() && (getGameMap()->getCreatureRelationships() != nullptr);
+    if(showRelations)
+    {
+        ProfileRelations relations;
+        collectProfileRelations(getGameMap(), *getGameMap()->getCreatureRelationships(), getName(), relations);
+        for(const std::string& close : relations.mClose)
+            info.mFriends.push_back(relations.mTierText[close]);
+        if(!relations.mAgainst.empty())
+            info.mFoe = relations.mTierText[relations.mAgainst[0]];
+    }
+    else
+    {
+        // The friends only change when a creature is added, removed or changes seat, so they are
+        // computed again only when the roster version of the post log changed
+        uint32_t rosterVersion = social::PostLog::getSingleton().getRosterVersion();
+        const social::SocialProfileCache::FriendsAndFoe* cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
+        if(cachedFriends == nullptr)
+        {
+            social::SocialProfileCache::FriendsAndFoe computed;
+            computed.mRosterVersion = rosterVersion;
+            findFriendsAndFoe(getName(), getGameMap()->getCreaturesBySeat(localSeat), computed.mFriends, computed.mFoe);
+            cache.storeFriendsAndFoe(getName(), computed);
+            cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
+        }
+        for(std::size_t i = 0; (cachedFriends != nullptr) && (i < cachedFriends->mFriends.size()) &&
+            (info.mFriends.size() < PROFILE_MAX_FRIENDS); ++i)
+        {
+            const std::string friendName = getProfileNameOfCreature(getGameMap(), cachedFriends->mFriends[i]);
+            if(!friendName.empty())
+                info.mFriends.push_back(friendName);
+        }
+        if((cachedFriends != nullptr) && !cachedFriends->mFoe.empty())
+            info.mFoe = getProfileNameOfCreature(getGameMap(), cachedFriends->mFoe);
+    }
+
+    std::string moodLine = social::SocialGenerator::moodLine(cache.getData(),
+        getName(), definition->getClassName(), definition->isWorker(),
+        getProfileMoodState(getOverlayMoodValue(), mMoodValue));
+    std::string status = "Status";
+    if(mMoodValue != CreatureMoodLevel::Unknown)
+        status += " (" + getProfileMoodState(0, mMoodValue) + ")";
+    info.mStatus = status + ": " + (moodLine.empty() ? std::string("nothing to say") : moodLine);
+    return info;
 }
 
 //! \brief The relationship row of the Dungeonbook profile: the real status of a creature of the local player or

@@ -27,7 +27,13 @@
 #include <string>
 #include <vector>
 
+class Creature;
 class GameMap;
+
+namespace social
+{
+struct CreatureProfile;
+}
 
 namespace CEGUI
 {
@@ -137,6 +143,10 @@ private:
     void refreshPage();
     void refreshHeader(const social::DungeonbookEntry& entry);
     void refreshProfile(const social::DungeonbookEntry& entry);
+    //! brief Fills the social lines of the profile page (owner decision 2026-11-18): likes, dislikes, friends, foe,
+    //! the status, the buffs and debuffs and the remarks of the picture, each with a hover text that says what it is.
+    //! A null creature (out of sight) shows only the likes and dislikes of its profile.
+    void refreshProfileSocialLines(CEGUI::Window* page, const social::CreatureProfile& profile, Creature* creature);
     void refreshValues(const social::DungeonbookEntry& entry);
     void refreshInventory(const social::DungeonbookEntry& entry);
     //! \brief The roster entry of the creature, null if it is not in the roster.

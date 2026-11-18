@@ -231,7 +231,7 @@ for pattern in ('network/ODServer*', 'network/ServerNotification*', 'network/Ser
             check('social/' not in read(str(path.relative_to(repo))), '%s includes the social code' % path.name)
 
 cache = read('source/social/SocialProfileCache.cpp')
-check('findFriendsAndFoe' not in cache, 'the friends cache of the deleted profile page is gone')
+check('findFriendsAndFoe' in cache and 'getRosterVersion' in creature, 'friends cached per roster version')
 for path in ('source/render/SocialWindow.cpp', 'source/render/SocialWindow.h', 'source/social/PostLog.cpp',
              'source/social/PostLog.h', 'source/social/CreaturePosts.cpp', 'source/social/CreaturePosts.h'):
     text = read(path)

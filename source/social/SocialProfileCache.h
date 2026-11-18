@@ -36,6 +36,19 @@ namespace social
 class SocialProfileCache
 {
 public:
+    //! \brief Friends and foe of a creature, valid for one version of the roster of the local player
+    struct FriendsAndFoe
+    {
+        FriendsAndFoe() :
+            mRosterVersion(0)
+        {
+        }
+
+        uint32_t mRosterVersion;
+        std::vector<std::string> mFriends;
+        std::string mFoe;
+    };
+
     static SocialProfileCache& getSingleton();
 
     //! \brief Gender of a creature ("Female", "Male" or empty), identical to the profile gender. Usable
@@ -49,7 +62,13 @@ public:
     //! \brief The loaded social data (loaded on the first call).
     const SocialData& getData();
 
-    //! \brief Forgets the profiles, called when the game is left. The loaded data stays.
+    //! \brief The cached friends and foe of the creature, or nullptr if there is none or it was
+    //! computed for another roster version (see PostLog::getRosterVersion).
+    const FriendsAndFoe* findFriendsAndFoe(const std::string& creatureName, uint32_t rosterVersion) const;
+
+    void storeFriendsAndFoe(const std::string& creatureName, const FriendsAndFoe& friendsAndFoe);
+
+    //! \brief Forgets the profiles and friends, called when the game is left. The loaded data stays.
     void clear();
 
 private:
@@ -63,6 +82,8 @@ private:
     std::map<std::string, CreatureProfile> mProfiles;
     //! Full names handed out so far, kept unique between the cached profiles
     std::set<std::string> mUsedNames;
+    //! Friends and foe by creature name
+    std::map<std::string, FriendsAndFoe> mFriends;
     //! Classes without a name group that were already logged
     std::set<std::string> mLoggedUnmappedClasses;
 };

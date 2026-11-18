@@ -586,7 +586,8 @@ for member in ("double          mPleasureVisitGain;", "int32_t         mPleasure
                "std::vector<CreatureMoodEffect> mMoodEffects;"):
     check(0 <= creature_h.index(member) < actions, member + " must be declared before the actions")
 
-# The profile line of the buff Relaxed belonged to the shared profile page, deleted by the owner on 2026-11-18
-check("getProfileEffectsText" not in creature_cpp, "the effect lines of the deleted profile page are gone")
+# ---- profile line: the buff Relaxed is listed once -----------------------------------------------------------------------
+effects = extract(creature_cpp, "static std::string getProfileEffectsText(")
+check("relaxedEffect" in effects and "(relaxTurns > 0.0) && !relaxedEffect" in effects, "Relaxed is not listed twice")
 
 print("pleasure rooms ok")

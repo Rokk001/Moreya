@@ -107,10 +107,15 @@ for name in right:
     assert boxes['ProfilePage/' + name][0][0] >= boxes['ProfilePage/ColumnRule'][0][2] - 1e-9, name + ' right'
 # The book fills its own rows; no shared page with bars and links sits in it any more
 assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists() and 'SocialHolder' not in layout_text
-# The left column holds only the portrait; nothing else is drawn there
+# The left column holds the portrait and below it the social lines of the creature (owner decision 2026-11-18:
+# likes, dislikes, friends, foe, buffs and debuffs, the remarks of the picture); nothing lies over the portrait
 left_column = [n for n in boxes if n.startswith('ProfilePage/') and n.count('/') == 1
                and boxes[n][0][0] < portrait[0][2] - 1e-9]
-assert sorted(left_column) == ['ProfilePage/Portrait'], left_column
+social_lines = ['ProfilePage/' + n for n in ('LikesText', 'DislikesText', 'FriendsText', 'FoeText', 'EffectLine0',
+                                              'EffectLine1', 'EffectLine2', 'RemarksText')]
+assert sorted(left_column) == sorted(['ProfilePage/Portrait'] + social_lines), left_column
+for name in social_lines:
+    assert boxes[name][0][1] >= portrait[0][3] - 1e-9, name + ' lies below the portrait'
 # Six pictures of the newest posts as two columns of three rows below "Posts"
 thumbs = [boxes['ProfilePage/PostThumb%d' % i][0] for i in range(6)]
 for i, a in enumerate(thumbs):

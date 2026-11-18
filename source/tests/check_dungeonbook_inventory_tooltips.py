@@ -89,7 +89,10 @@ inventory = function_of(social, 'void SocialWindow::refreshInventory(')
 fill_at = inventory.index('Creature::fillItemSlotWindows(creature, slots, true);')
 copy = 'Gui::copyTooltip(slot, slot->getParent());'
 assert copy in inventory and inventory.index(copy) > fill_at, 'the slot boxes take the tooltip after the slots are filled'
-assert re.search(r'for\(CEGUI::Window\* slot : slots\)\s*\n\s*' + re.escape(copy), inventory), 'every slot box'
+# every slot box, after an empty slot got its own name as hover text (no picture of the book without interaction)
+assert re.search(r'for\(CEGUI::Window\* slot : slots\)\s*\n\s*\{\s*\n\s*if\(slot->getTooltipText\(\)\.empty\(\)\)\s*\n'
+                 r'[^\n]*Gui::setPlainTooltip\(slot, [^\n]*": empty"\);\s*\n\s*' + re.escape(copy) + r'\s*\n\s*\}', inventory), \
+    'every slot box'
 assert '"SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)' in inventory, 'the picture is a child of its box'
 
 # 3. The shared fill

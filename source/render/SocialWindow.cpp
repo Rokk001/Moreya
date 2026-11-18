@@ -104,6 +104,8 @@ const char* const NAV_ICON_DISABLED = "tl:FF606060 tr:FF606060 bl:FF606060 br:FF
 //! Fonts of the name and of the handle of the profile line, as in gui/WindowSocial.layout ProfilePage/NameText
 const char* const PROFILE_NAME_FONT = "MedievalSharp-12";
 const char* const PROFILE_HANDLE_FONT = "MedievalSharp-8";
+//! Lines of the buffs and debuffs on the profile page (ProfilePage/EffectLine0..2)
+const std::size_t PROFILE_EFFECT_LINES = 3;
 //! Spaces between the name and the handle of the profile line
 const char* const PROFILE_HANDLE_GAP = "   ";
 //! The head "< Name >" in fractions of its width (gui/WindowSocial.layout Header): the middle of the name, the largest
@@ -388,8 +390,8 @@ bool textFitsWindow(const CEGUI::Window* window, const std::string& text, bool w
 }
 
 //! \brief Shows the plain text in the window so that it fits its box (book-variant-2, plan INGAME-QS-11 K1): a text
-//! that is longer than its place is cut at the end and gets "...", and its tooltip shows the whole text. A text that
-//! fits gets the given tooltip. One line, or with wrapped as many lines as the window is high.
+//! that is longer than its place is cut at the end and gets "...", and its tooltip shows the whole text followed by the
+//! given tooltip. A text that fits gets the given tooltip. One line, or with wrapped as many lines as the window is high.
 void setFittedText(CEGUI::Window* window, const std::string& text, bool wrapped, const std::string& tooltip)
 {
     const std::string flat = wrapped ? text : text.substr(0, text.find('\n'));
@@ -413,7 +415,17 @@ void setFittedText(CEGUI::Window* window, const std::string& text, bool wrapped,
             break;
     }
     window->setText(escapeMarkup(shortened));
-    window->setTooltipText(escapeMarkup(text));
+    // The whole text, then the explaining text of the window when it has one
+    window->setTooltipText(escapeMarkup(tooltip.empty() ? text : text + "\n" + tooltip));
+}
+
+//! \brief Joins the entries of a social line with commas ("Shiny rocks, Warm puddles").
+std::string joinSocialList(const std::vector<std::string>& values)
+{
+    std::string result;
+    for(const std::string& value : values)
+        result += (result.empty() ? "" : ", ") + value;
+    return result;
 }
 
 //! \brief Returns the value after "label: " of the first line of the statistics text that starts with the label,
@@ -1365,6 +1377,8 @@ void SocialWindow::rebuildFeed()
         const social::CreatureProfile& profile = cache.getProfile(post.mCreature, post.mClassName, post.mIsWorker);
         const std::string text = renderPostText(post, profile);
         setImage(row->getChild("Portrait"), findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false));
+        // The portrait of the post says whose it is (no picture of the book without a hover text)
+        row->getChild("Portrait")->setTooltipText(escapeMarkup(profile.getFullName()));
         // Name, then the level of a listed creature (the crown for the champion) and the age of the post
         const social::DungeonbookEntry* entry = findEntry(post.mCreature);
         std::string level;
@@ -1496,6 +1510,10 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
         setFittedText(page->getChild(rowWindows[i]), values[i].empty() ? std::string("-") : values[i], false, "");
     setFittedText(page->getChild("SkillsValue"), skills.empty() ? std::string("-") : skills, true, "");
     setFittedText(page->getChild("QuoteText"), "\"" + profile.mBio + "\"", true, "");
+    refreshProfileSocialLines(page, profile, creature);
+    // The portrait explains who it shows (no picture of the book without a hover text)
+    page->getChild("Portrait")->setTooltipText(escapeMarkup(profile.getFullName() + ", " +
+        social::SocialGenerator::displayClassName(cache.getData(), entry.className)));
 
     // The posts of the creature: their number and the pictures of the newest ones, the text in the tooltip
     social::PostLog& log = social::PostLog::getSingleton();
@@ -1530,6 +1548,78 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
     empty->setText(std::string(FEED_TEXT_COLOUR) + "Nothing posted yet.");
 }
 
+void SocialWindow::refreshProfileSocialLines(CEGUI::Window* page, const social::CreatureProfile& profile,
+    Creature* creature)
+{
+    // A creature known here gives everything (Creature::getProfileSocialInfo); out of sight only its profile is known
+    Creature::ProfileSocialInfo info;
+    if(creature != nullptr)
+        info = creature->getProfileSocialInfo();
+    else
+    {
+        for(std::size_t i = 0; i < 2; ++i)
+        {
+            if(!profile.mLikes[i].empty())
+                info.mLikes.push_back(profile.mLikes[i]);
+            if(!profile.mDislikes[i].empty())
+                info.mDislikes.push_back(profile.mDislikes[i]);
+        }
+    }
+
+    const std::string likes = info.mLikes.empty() ? std::string("nothing in particular") : joinSocialList(info.mLikes);
+    const std::string dislikes = info.mDislikes.empty() ? std::string("nothing in particular") :
+        joinSocialList(info.mDislikes);
+    setFittedText(page->getChild("LikesText"), "Likes: " + likes, false,
+        "Likes: " + likes + ". What this creature enjoys, from its social profile.");
+    setFittedText(page->getChild("DislikesText"), "Dislikes: " + dislikes, false,
+        "Dislikes: " + dislikes + ". What this creature cannot stand, from its social profile.");
+
+    // Friends, foe and status are only known for the creatures of the local player and its allies
+    CEGUI::Window* friends = page->getChild("FriendsText");
+    CEGUI::Window* foe = page->getChild("FoeText");
+    CEGUI::Window* status = page->getChild("StatusText");
+    friends->setVisible(info.mAllied);
+    foe->setVisible(info.mAllied);
+    status->setVisible(info.mAllied);
+    if(info.mAllied)
+    {
+        const std::string friendNames = info.mFriends.empty() ? std::string("none yet") : joinSocialList(info.mFriends);
+        setFittedText(friends, "Friends: " + friendNames, false, "Friends: " + friendNames +
+            ". The creatures of your side this one gets along with best.");
+        const std::string foeName = info.mFoe.empty() ? std::string("none") : info.mFoe;
+        setFittedText(foe, "Foe: " + foeName, false, "Foe: " + foeName +
+            ". The creature of your side this one gets along with worst.");
+        setFittedText(status, info.mStatus, true, info.mStatus + "\nWhat the creature says about its mood right now.");
+    }
+
+    // The running buffs and debuffs of an own creature, one line each with the text that explains it; more than the
+    // lines of the page are counted on the last line, whose hover text explains all of them
+    for(std::size_t i = 0; i < PROFILE_EFFECT_LINES; ++i)
+    {
+        CEGUI::Window* line = page->getChild("EffectLine" + std::to_string(i));
+        const bool shown = i < info.mEffects.size();
+        line->setVisible(shown);
+        if(!shown)
+            continue;
+
+        const bool lastOfMany = (i + 1 == PROFILE_EFFECT_LINES) && (info.mEffects.size() > PROFILE_EFFECT_LINES);
+        if(!lastOfMany)
+        {
+            setFittedText(line, info.mEffects[i], false, i < info.mEffectTooltips.size() ? info.mEffectTooltips[i] : "");
+            continue;
+        }
+        std::string tooltip;
+        for(std::size_t k = i; k < info.mEffectTooltips.size(); ++k)
+            tooltip += (tooltip.empty() ? "" : "\n") + info.mEffectTooltips[k];
+        setFittedText(line, std::to_string(info.mEffects.size() - i) + " more buffs and debuffs", false, tooltip);
+    }
+
+    CEGUI::Window* remarks = page->getChild("RemarksText");
+    remarks->setVisible(!info.mRemarks.empty());
+    if(!info.mRemarks.empty())
+        setFittedText(remarks, info.mRemarks, true, "Remarks that match the picture of this creature.");
+}
+
 //! \brief Fills the values sheet: the statistics column, the portrait ring, the attributes, the combat and defense
 //! blocks and the equipment, path and skills tiles. Without server values (replays, older peers) they show "-".
 void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
@@ -1537,6 +1627,9 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
     CEGUI::Window* page = mWindow->getChild("ValuesPage");
     const bool known = !useLocalCreatureRoster();
     setImage(page->getChild("Portrait/Image"), findPortrait(entry.name, entry.className, entry.worker, true));
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    page->getChild("Portrait")->setTooltipText(escapeMarkup(cache.getProfile(entry.name, entry.className,
+        entry.worker).getFullName() + ", level " + std::to_string(entry.level)));
 
     // The column of the former statistics page: window, label in the statistics text, how the value is shown
     struct StatisticsLine { const char* window; const char* label; bool slots; };
@@ -1605,6 +1698,8 @@ void SocialWindow::refreshInventory(const social::DungeonbookEntry& entry)
 {
     CEGUI::Window* page = mWindow->getChild("InventoryPage");
     setImage(page->getChild("Portrait/Clip/Image"), findPortrait(entry.name, entry.className, entry.worker, false));
+    page->getChild("Portrait")->setTooltipText(escapeMarkup(social::SocialProfileCache::getSingleton().getProfile(
+        entry.name, entry.className, entry.worker).getFullName()));
     std::vector<CEGUI::Window*> slots;
     for(std::size_t slot = 0; slot < ITEM_SLOTS; ++slot)
         slots.push_back(page->getChild("SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)));
@@ -1613,8 +1708,13 @@ void SocialWindow::refreshInventory(const social::DungeonbookEntry& entry)
     // The framed box with its name is the slot the player sees, but the item picture with the tooltip covers only its
     // middle and the name passes the mouse to the box (decision 863, finding 3). The box repeats the tooltip of its
     // picture (item values, or the lock text), so hovering anywhere on a filled slot shows the item as on the card.
+    // An empty slot names itself (no picture of the book without a hover text)
     for(CEGUI::Window* slot : slots)
+    {
+        if(slot->getTooltipText().empty())
+            Gui::setPlainTooltip(slot, std::string(slot->getParent()->getChild("Label")->getText().c_str()) + ": empty");
         Gui::copyTooltip(slot, slot->getParent());
+    }
 
     std::string hint;
     if(creature == nullptr)

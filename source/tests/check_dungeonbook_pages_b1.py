@@ -293,17 +293,74 @@ DYNAMIC = {
 for key in ('Experience', 'HitPoints', 'Gold', 'SightRadius', 'Potions', 'Inventory', 'DamagePerSecond', 'SkillPoints'):
     DYNAMIC['ValuesPage/%sValue' % key] = NUMBERS + PAIRS + ['-', '4 / 4']
 # Windows whose text SocialWindow shortens to the box (setFittedText); they need room for at least one line
+SOCIAL_LINES = ('LikesText', 'DislikesText', 'FriendsText', 'FoeText', 'StatusText', 'EffectLine0', 'EffectLine1',
+                'EffectLine2', 'RemarksText')
 FITTED = ('AgeValue', 'GenderValue', 'RelationshipValue', 'OriginValue', 'JobValue', 'PathValue', 'SkillsValue',
-          'QuoteText')
+          'QuoteText') + SOCIAL_LINES
 for name in FITTED:
-    check('"%s"' % name in social_cpp, 'SocialWindow fills ProfilePage/%s' % name)
+    check(('"%s"' % name in social_cpp) or name.startswith('EffectLine'), 'SocialWindow fills ProfilePage/%s' % name)
 check(social_cpp.count('setFittedText(page->getChild(rowWindows[i])') == 1 and
       'setFittedText(page->getChild("SkillsValue")' in social_cpp and
       'setFittedText(page->getChild("QuoteText")' in social_cpp, 'the profile texts are shortened to their boxes')
 fitted_body = social_cpp[social_cpp.index('void setFittedText('):]
 fitted_body = fitted_body[:fitted_body.index('\n}\n')]
-check('shortened = start + "...";' in fitted_body and 'window->setTooltipText(escapeMarkup(text));' in fitted_body,
-      'a shortened text ends in "..." and its tooltip shows it whole')
+check('shortened = start + "...";' in fitted_body and
+      'window->setTooltipText(escapeMarkup(tooltip.empty() ? text : text + "\\n" + tooltip));' in fitted_body,
+      'a shortened text ends in "..." and its tooltip shows it whole with its explanation')
+
+# The social lines of the profile (owner decision 2026-11-18): the data of the former shared page, each with a hover
+# text that says what the line is, a buff or debuff with what it does and the time left
+social_lines = social_cpp[social_cpp.index('void SocialWindow::refreshProfileSocialLines('):]
+social_lines = social_lines[:social_lines.index('\n}\n')]
+for fragment in ('info = creature->getProfileSocialInfo();', '". What this creature enjoys, from its social profile."',
+                 '". What this creature cannot stand, from its social profile."',
+                 '". The creatures of your side this one gets along with best."',
+                 '". The creature of your side this one gets along with worst."',
+                 '"\\nWhat the creature says about its mood right now."',
+                 'info.mEffectTooltips[i]', '"Remarks that match the picture of this creature."'):
+    check(fragment in social_lines, 'refreshProfileSocialLines: ' + fragment)
+creature_cpp = (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
+effects_fn = creature_cpp[creature_cpp.index('static std::string getProfileEffectsText('):]
+effects_fn = effects_fn[:effects_fn.index('\n}\n')]
+check(effects_fn.count('.push_back(getProfileEffectTooltip(') == 3, 'every buff and debuff line gets its own explanation')
+tooltip_fn = creature_cpp[creature_cpp.index('static std::string getProfileEffectTooltip('):]
+tooltip_fn = tooltip_fn[:tooltip_fn.index('\n}\n')]
+check('" Time left: "' in tooltip_fn and 'getProfileEffectTime(turns)' in tooltip_fn, 'the explanation names the time left')
+info_fn = creature_cpp[creature_cpp.index('Creature::ProfileSocialInfo Creature::getProfileSocialInfo('):]
+info_fn = info_fn[:info_fn.index('\n}\n')]
+for fragment in ('info.mLikes.push_back(profile.mLikes[i]);', 'DungeonbookQuirkLogic::formatRemarks(',
+                 'collectProfileRelations(', 'cache.findFriendsAndFoe(getName(), rosterVersion)',
+                 'social::SocialGenerator::moodLine(', 'getProfileEffectsText(mRelaxTurns, mHangoverTurns, mMoodEffects,'):
+    check(fragment in info_fn, 'getProfileSocialInfo: ' + fragment)
+
+# No picture or icon of the book without interaction (owner decision 2026-11-18): every picture window, or the first
+# window above it that takes the mouse, has a hover text in the layout or one the code sets
+CREATURE_PAGES = ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage')
+# a picture without a hover text of its own shows the one of its parent (CEGUI InheritsTooltipText)
+CODE_TIPS = {'ProfilePage/Portrait': 'page->getChild("Portrait")->setTooltipText(',
+             'ValuesPage/Portrait': 'page->getChild("Portrait")->setTooltipText(',
+             'ValuesPage/Portrait/Image': 'page->getChild("Portrait")->setTooltipText(',
+             'InventoryPage/Portrait': 'page->getChild("Portrait")->setTooltipText(',
+             'FeedPage/FeedRows/Row0/Portrait': 'row->getChild("Portrait")->setTooltipText(',
+             'FeedPage/FeedRows/Row0/Picture': 'picture->setTooltipText(text);',
+             'ProfilePage/PostThumb0': 'thumb->setTooltipText(text + "  (" + formatAge(turnNow - it->mTurn) + ")");'}
+for page_name in CREATURE_PAGES + ('NavBar', 'Header'):
+    for node in book.child(page_name).walk():
+        if node.type != 'OD/StaticImage' or 'Rule' in node.name:
+            continue
+        owner = node
+        while owner.props.get('MousePassThroughEnabled') == 'True' or owner.type == 'DefaultWindow' and owner.name == 'Clip':
+            owner = owner.parent
+        key = owner.path.replace('Row1', 'Row0').replace('Row2', 'Row0')
+        key = 'ProfilePage/PostThumb0' if key.startswith('ProfilePage/PostThumb') else key
+        coded = key in CODE_TIPS and CODE_TIPS[key] in social_cpp
+        slot = key.startswith('InventoryPage/SlotBox')  # item card, lock text or "<slot>: empty" (refreshInventory)
+        tiles = key.endswith('Icon') and key.split('/')[-1][:-4] in ('Equipment', 'Path', 'Skills') and \
+            'page->getChild(std::string(tiles[i]) + "Icon")->setTooltipText(tooltip);' in social_cpp
+        check(owner.props.get('TooltipText') or coded or slot or tiles,
+              '%s has no hover text (%s takes the mouse)' % (node.path, owner.path))
+check('Gui::setPlainTooltip(slot, std::string(slot->getParent()->getChild("Label")->getText().c_str()) + ": empty");'
+      in social_cpp, 'an empty slot names itself')
 
 # ------------------------------------------------------------------------------------------------ 1. to 3. pages
 CREATURE_PAGES = ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage')
@@ -448,7 +505,7 @@ check([round(t[1], 3) for t in thumbs] == [grid_rows[0], grid_rows[0], grid_rows
                                             grid_rows[2]], 'the newest posts fill the grid row by row')
 check('MAX_OWN_POSTS = 6' in social_cpp and 'page->getChild("PostThumb" + std::to_string(rows))' in social_cpp,
       'the six newest posts are shown')
-for gone in ('SocialHolder', 'SocialText', 'InfoText', 'KeeperText', 'HealthBar', 'LikesText', 'DislikesText'):
+for gone in ('SocialHolder', 'SocialText', 'InfoText', 'KeeperText', 'HealthBar'):
     check(gone not in [n.name for n in profile.walk()], 'the profile of book-variant-2 has no ' + gone)
 
 # Painted surfaces (owner 2026-11-18, the book must look like book-variant-2): every rule of the pages is the painted

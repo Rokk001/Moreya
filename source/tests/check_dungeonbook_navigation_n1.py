@@ -62,7 +62,7 @@ styles = []
 
 
 def collect_styles(window, path=''):
-    """Pin all 850 existing image, font, background and frame properties, excluding replaced filter buttons.
+    """Pin all 877 existing image, font, background and frame properties, excluding replaced filter buttons.
 
     787 before the window got the frame of the menu sheet: the 15 properties of the ornate book frame and its title
     band (TitlebarFont, Frame*Image, Title*Image on the window and its title bar) are gone, every page style is kept.
@@ -72,7 +72,8 @@ def collect_styles(window, path=''):
     the head, the back arrow in the title bar and the Skills button of the navigation bar), 21 more for the keeper
     mark of the seven list entries (INGAME-QS-7 U-2, Font and no background or frame), 6 more when the flat rule bars
     became the painted iron rule of the book (BookTitleRule, BookFrameLeft) and the values panels and tiles got the
-    rust frame.
+    rust frame, 27 more for the nine social lines of the profile (owner decision 2026-11-18: likes, dislikes,
+    friends, foe, status, three buff and debuff lines, remarks; Font, no background or frame).
     """
     path += '/' + window.get('name', '')
     if window.get('name', '').startswith('Filter'):
@@ -87,9 +88,9 @@ def collect_styles(window, path=''):
 
 
 collect_styles(book)
-assert len(styles) == 850
+assert len(styles) == 877
 assert hashlib.sha256(json.dumps(styles, separators=(',', ':')).encode()).hexdigest() == \
-    'b36dfa095f25a9235adc7866d1a2d8cf44f90859678e74d23a499a30969431c2'
+    '5339f5b2640405b50e49a9cb120f8fa9df750db5e3f66af0a252c1a99fc686f0'
 
 expected = {
     'DungeonbookIcons.png': '1f8c0171d312b6a7c432eb9640cd754089ace73f',

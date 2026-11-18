@@ -249,6 +249,32 @@ public:
     //! \brief Restores the base visual state and the exact saved corpse decay progress.
     void restoreEntityState() override;
 
+    //! \brief The social lines of the Dungeonbook profile under the quote and under the portrait (owner decision
+    //! 2026-11-18: they stay in the book). Lists are empty and texts empty when nothing is known.
+    struct ProfileSocialInfo
+    {
+        //! \brief Nothing known yet.
+        ProfileSocialInfo() : mAllied(false) {}
+
+        //! \brief Likes and dislikes of the social profile
+        std::vector<std::string> mLikes;
+        std::vector<std::string> mDislikes;
+        //! \brief Friends (with the tier of the relationship when the relationship option is on) and the foe
+        std::vector<std::string> mFriends;
+        std::string mFoe;
+        //! \brief "Status (Happy): <mood line>", empty for a creature of another keeper
+        std::string mStatus;
+        //! \brief The running buffs and debuffs ("Buff: Relaxed (1:23)") of an own creature, and per line the text
+        //! that explains it
+        std::vector<std::string> mEffects;
+        std::vector<std::string> mEffectTooltips;
+        //! \brief The remarks that match the parts of the composed picture, empty without one
+        std::string mRemarks;
+        //! \brief True for a creature of the local player or its allies (friends, foe and status are known)
+        bool mAllied;
+    };
+    //! \brief Client side. The social lines of the Dungeonbook profile, the data the shared profile page showed before.
+    ProfileSocialInfo getProfileSocialInfo();
     //! \brief Fills 13 item slot windows (right hand, left hand, head, armour, boots, ring, three potions, four
     //! inventory slots; each with the children "SlotType" and "QualityFrame") with the item picture, quality frame and
     //! tooltip, or with the painted slot-type symbol when the slot is empty. Used by the Dungeonbook inventory page. A null creature (items not known) shows every slot empty. With showLocks every slot
