@@ -696,6 +696,8 @@ for row in list_rows:
     require(row + '/Name', 'MedievalSharp-8', lines=2, texts=WIDEST_NAMES_8, wrap=True)
     require(row + '/Level', 'MedievalSharp-8', texts=('Lv. 30',))
     require(row + '/Mood', 'MedievalSharp-8', texts=('Furious', 'Content', 'Neutral', 'Unhappy', 'Hungry'), wrap=True)
+    # the keeper the creature serves (INGAME-QS-7 U-2): a usual nick on one line; a longer one is shortened by the code
+    require(row + '/Keeper', 'MedievalSharp-8', texts=('Player 1', 'Player 4', 'Keeper'))
 for page in ('HomePage', 'FeedPage'):
     for i in range(3):
         require('%s/FeedRows/Row%d/Head' % (page, i), 'MedievalSharp-8', texts=HEADS, wrap=True)

@@ -1310,6 +1310,9 @@ void SocialWindow::refreshListRows()
         describeMood(*entry, mood, icon);
         row->getChild("MoodIcon")->setProperty("Image", icon);
         setFullText(row->getChild("Mood"), mood);
+        // The keeper the creature serves (INGAME-QS-7 U-2): a nick longer than its place is shortened, the tooltip of
+        // the row names it whole
+        setFittedText(row->getChild("Keeper"), entry->keeper, false, "");
         row->getChild("Button")->setTooltipText(profile.getFullName() + " (" +
             social::SocialGenerator::displayClassName(cache.getData(), entry->className) + "), keeper " + entry->keeper);
     }

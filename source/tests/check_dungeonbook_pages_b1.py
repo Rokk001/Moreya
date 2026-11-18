@@ -373,6 +373,43 @@ for screen in SCREENS:
             check(3 * line_height('MedievalSharp-8', screen, user) <= cell[3] - cell[1] + TOLERANCE and
                   text_width('MedievalSharp-8', '-987,654,321,', screen, user) <= cell[2] - cell[0],
                   case + ': attribute cell ' + name)
+        # The round portrait of the values page as CEGUI draws it: the ring (Frame) and the picture (Image) are shrunk
+        # to squares (AspectMode Shrink, ratio 1) and centred in their parents (alignment Centre: the area position is
+        # an offset from the middle). The ring is centred above the four attribute cells.
+        outer = boxes['ValuesPage/Portrait']
+        drawn = {}
+        for part in ('Frame', 'Image'):
+            node = book.child('ValuesPage').child('Portrait').child(part)
+            area = udims(node.props['Area'])
+            ow, oh = outer[2] - outer[0], outer[3] - outer[1]
+            w, h = (area[2][0] - area[0][0]) * ow, (area[3][0] - area[1][0]) * oh
+            check(node.props.get('AspectMode') == 'Shrink' and node.props.get('AspectRatio', '1') == '1',
+                  'the %s of the values portrait keeps a square' % part)
+            check(node.props.get('HorizontalAlignment') == 'Centre' and node.props.get('VerticalAlignment') == 'Centre',
+                  'the %s of the values portrait is centred' % part)
+            side = min(w, h)
+            x0 = outer[0] + (ow - side) / 2.0 + area[0][0] * ow
+            y0 = outer[1] + (oh - side) / 2.0 + area[1][0] * oh
+            drawn[part] = (x0, y0, x0 + side, y0 + side)
+        ring, picture = drawn['Frame'], drawn['Image']
+        cells = [boxes['ValuesPage/' + n] for n in ('Strength', 'Dexterity', 'Life', 'Mana')]
+        row_centre = (cells[0][0] + cells[-1][2]) / 2.0
+        check(abs((ring[0] + ring[2]) / 2.0 - row_centre) <= 1.0, case + ': the ring is centred above the attributes')
+        check(abs((picture[0] + picture[2]) / 2.0 - (ring[0] + ring[2]) / 2.0) <= 1.0 and
+              abs((picture[1] + picture[3]) / 2.0 - (ring[1] + ring[3]) / 2.0) <= 1.0 and inside(picture, ring),
+              case + ': the picture sits in the middle of the ring')
+        check(inside(ring, outer) and ring[3] <= cells[0][1] + TOLERANCE, case + ': the ring is above the attributes')
+        table.setdefault('ValuesPage/Portrait (ring drawn)', {})[case] = (ring, boxes['ValuesPage'])
+        table.setdefault('ValuesPage/Portrait (picture drawn)', {})[case] = (picture, boxes['ValuesPage'])
+        # The keeper mark of every list entry (INGAME-QS-7 U-2): beside level and mood, a usual nick on one line
+        for row in range(7):
+            base = 'HomePage/ListRows/Row%d/' % row
+            keeper, mood, entry_box = boxes[base + 'Keeper'], boxes[base + 'Mood'], boxes[base.rstrip('/')]
+            check(inside(keeper, entry_box) and keeper[0] >= mood[2] - TOLERANCE, case + ': keeper mark of ' + base)
+            for nick in ('Player 1', 'Player 4', 'Keeper'):
+                check(text_width('MedievalSharp-8', nick, screen, user) <= keeper[2] - keeper[0] and
+                      line_height('MedievalSharp-8', screen, user) <= keeper[3] - keeper[1] + TOLERANCE,
+                      '%s: the keeper "%s" fits the list entry' % (case, nick))
         # 5. the back arrow in the title bar, left of the title, clear of the close button
         back = boxes.get('BackButton', (0.0, 0.0, 0.0, 0.0))
         check('BackButton' in boxes, case + ': the back arrow is a window of the book')
@@ -429,8 +466,14 @@ for needle in ('NAV_SKILLS_BUTTON = "NavSkills"', 'skills->setEnabled(hasSkillTr
                'if(mSelectedCreature.empty() || !selectedCreatureHasSkillTree())'):
     check(needle in social_cpp, 'SocialWindow: ' + needle.split('\n')[0])
 
+# The keeper mark of the list (INGAME-QS-7 U-2) is filled from the roster entry, the row tooltip names it whole
+rows_fill = social_cpp[social_cpp.index('void SocialWindow::refreshListRows()'):]
+rows_fill = rows_fill[:rows_fill.index('\n}\n')]
+check('setFittedText(row->getChild("Keeper"), entry->keeper, false, "");' in rows_fill and
+      '"), keeper " + entry->keeper' in rows_fill, 'every list entry marks the keeper of its creature')
+
 # 5. the single-creature view
-show = social_cpp[social_cpp.index('void SocialWindow::showPage(Page page)'):]
+show =social_cpp[social_cpp.index('void SocialWindow::showPage(Page page)'):]
 show = show[:show.index('\n}\n')]
 for needle in ('mWindow->getChild("HomePage")->setVisible(page == Page::Home);',
                'mWindow->getChild("BackButton")->setVisible(page != Page::Home);',

@@ -74,7 +74,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Level">
-                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.4706,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.42,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -83,18 +83,30 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticImage" name="MoodIcon">
-                        <Property name="Area" value="{{0.4853,0},{0.645,0},{0.5588,0},{0.945,0}}" />
+                        <Property name="Area" value="{{0.425,0},{0.645,0},{0.495,0},{0.945,0}}" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Mood">
-                        <Property name="Area" value="{{0.5735,0},{0.62,0},{0.9853,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.5,0},{0.62,0},{0.74,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                         <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
+                    <!-- The keeper the creature serves (own and allied creatures, INGAME-QS-7 U-2); the profile of
+                         book-variant-2 has no keeper row, so the list entry carries the mark -->
+                    <Window type="OD/StaticText" name="Keeper">
+                        <Property name="Area" value="{{0.75,0},{0.62,0},{0.985,0},{0.97,0}}" />
+                        <Property name="Font" value="MedievalSharp-8" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="HorzFormatting" value="RightAligned" />
+                        <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="TextColours" value="tl:FFB8AC90 tr:FFB8AC90 bl:FFB8AC90 br:FFB8AC90" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Separator">
@@ -145,7 +157,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Level">
-                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.4706,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.42,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -154,18 +166,30 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticImage" name="MoodIcon">
-                        <Property name="Area" value="{{0.4853,0},{0.645,0},{0.5588,0},{0.945,0}}" />
+                        <Property name="Area" value="{{0.425,0},{0.645,0},{0.495,0},{0.945,0}}" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Mood">
-                        <Property name="Area" value="{{0.5735,0},{0.62,0},{0.9853,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.5,0},{0.62,0},{0.74,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                         <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
+                    <!-- The keeper the creature serves (own and allied creatures, INGAME-QS-7 U-2); the profile of
+                         book-variant-2 has no keeper row, so the list entry carries the mark -->
+                    <Window type="OD/StaticText" name="Keeper">
+                        <Property name="Area" value="{{0.75,0},{0.62,0},{0.985,0},{0.97,0}}" />
+                        <Property name="Font" value="MedievalSharp-8" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="HorzFormatting" value="RightAligned" />
+                        <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="TextColours" value="tl:FFB8AC90 tr:FFB8AC90 bl:FFB8AC90 br:FFB8AC90" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Separator">
@@ -216,7 +240,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Level">
-                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.4706,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.42,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -225,18 +249,30 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticImage" name="MoodIcon">
-                        <Property name="Area" value="{{0.4853,0},{0.645,0},{0.5588,0},{0.945,0}}" />
+                        <Property name="Area" value="{{0.425,0},{0.645,0},{0.495,0},{0.945,0}}" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Mood">
-                        <Property name="Area" value="{{0.5735,0},{0.62,0},{0.9853,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.5,0},{0.62,0},{0.74,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                         <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
+                    <!-- The keeper the creature serves (own and allied creatures, INGAME-QS-7 U-2); the profile of
+                         book-variant-2 has no keeper row, so the list entry carries the mark -->
+                    <Window type="OD/StaticText" name="Keeper">
+                        <Property name="Area" value="{{0.75,0},{0.62,0},{0.985,0},{0.97,0}}" />
+                        <Property name="Font" value="MedievalSharp-8" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="HorzFormatting" value="RightAligned" />
+                        <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="TextColours" value="tl:FFB8AC90 tr:FFB8AC90 bl:FFB8AC90 br:FFB8AC90" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Separator">
@@ -287,7 +323,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Level">
-                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.4706,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.42,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -296,18 +332,30 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticImage" name="MoodIcon">
-                        <Property name="Area" value="{{0.4853,0},{0.645,0},{0.5588,0},{0.945,0}}" />
+                        <Property name="Area" value="{{0.425,0},{0.645,0},{0.495,0},{0.945,0}}" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Mood">
-                        <Property name="Area" value="{{0.5735,0},{0.62,0},{0.9853,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.5,0},{0.62,0},{0.74,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                         <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
+                    <!-- The keeper the creature serves (own and allied creatures, INGAME-QS-7 U-2); the profile of
+                         book-variant-2 has no keeper row, so the list entry carries the mark -->
+                    <Window type="OD/StaticText" name="Keeper">
+                        <Property name="Area" value="{{0.75,0},{0.62,0},{0.985,0},{0.97,0}}" />
+                        <Property name="Font" value="MedievalSharp-8" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="HorzFormatting" value="RightAligned" />
+                        <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="TextColours" value="tl:FFB8AC90 tr:FFB8AC90 bl:FFB8AC90 br:FFB8AC90" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Separator">
@@ -358,7 +406,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Level">
-                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.4706,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.42,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -367,18 +415,30 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticImage" name="MoodIcon">
-                        <Property name="Area" value="{{0.4853,0},{0.645,0},{0.5588,0},{0.945,0}}" />
+                        <Property name="Area" value="{{0.425,0},{0.645,0},{0.495,0},{0.945,0}}" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Mood">
-                        <Property name="Area" value="{{0.5735,0},{0.62,0},{0.9853,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.5,0},{0.62,0},{0.74,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                         <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
+                    <!-- The keeper the creature serves (own and allied creatures, INGAME-QS-7 U-2); the profile of
+                         book-variant-2 has no keeper row, so the list entry carries the mark -->
+                    <Window type="OD/StaticText" name="Keeper">
+                        <Property name="Area" value="{{0.75,0},{0.62,0},{0.985,0},{0.97,0}}" />
+                        <Property name="Font" value="MedievalSharp-8" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="HorzFormatting" value="RightAligned" />
+                        <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="TextColours" value="tl:FFB8AC90 tr:FFB8AC90 bl:FFB8AC90 br:FFB8AC90" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Separator">
@@ -429,7 +489,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Level">
-                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.4706,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.42,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -438,18 +498,30 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticImage" name="MoodIcon">
-                        <Property name="Area" value="{{0.4853,0},{0.645,0},{0.5588,0},{0.945,0}}" />
+                        <Property name="Area" value="{{0.425,0},{0.645,0},{0.495,0},{0.945,0}}" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Mood">
-                        <Property name="Area" value="{{0.5735,0},{0.62,0},{0.9853,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.5,0},{0.62,0},{0.74,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                         <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
+                    <!-- The keeper the creature serves (own and allied creatures, INGAME-QS-7 U-2); the profile of
+                         book-variant-2 has no keeper row, so the list entry carries the mark -->
+                    <Window type="OD/StaticText" name="Keeper">
+                        <Property name="Area" value="{{0.75,0},{0.62,0},{0.985,0},{0.97,0}}" />
+                        <Property name="Font" value="MedievalSharp-8" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="HorzFormatting" value="RightAligned" />
+                        <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="TextColours" value="tl:FFB8AC90 tr:FFB8AC90 bl:FFB8AC90 br:FFB8AC90" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Separator">
@@ -500,7 +572,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Level">
-                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.4706,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.62,0},{0.42,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -509,18 +581,30 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticImage" name="MoodIcon">
-                        <Property name="Area" value="{{0.4853,0},{0.645,0},{0.5588,0},{0.945,0}}" />
+                        <Property name="Area" value="{{0.425,0},{0.645,0},{0.495,0},{0.945,0}}" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Mood">
-                        <Property name="Area" value="{{0.5735,0},{0.62,0},{0.9853,0},{0.97,0}}" />
+                        <Property name="Area" value="{{0.5,0},{0.62,0},{0.74,0},{0.97,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                         <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
+                    <!-- The keeper the creature serves (own and allied creatures, INGAME-QS-7 U-2); the profile of
+                         book-variant-2 has no keeper row, so the list entry carries the mark -->
+                    <Window type="OD/StaticText" name="Keeper">
+                        <Property name="Area" value="{{0.75,0},{0.62,0},{0.985,0},{0.97,0}}" />
+                        <Property name="Font" value="MedievalSharp-8" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="HorzFormatting" value="RightAligned" />
+                        <Property name="VertFormatting" value="CentreAligned" />
+                        <Property name="TextColours" value="tl:FFB8AC90 tr:FFB8AC90 bl:FFB8AC90 br:FFB8AC90" />
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Separator">
