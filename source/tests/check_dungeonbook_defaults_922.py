@@ -55,7 +55,8 @@ double toDouble(const std::string& value) { return std::stod(value); }
 uint32_t toUInt32(const std::string& value) { return static_cast<uint32_t>(std::stoul(value)); }
 }
 '''
-    for signature in ("Weapon* Weapon::load(", "bool Weapon::update(", "std::string Weapon::getWeaponType("):
+    for signature in ("Weapon* Weapon::load(", "bool Weapon::update(", "std::string Weapon::getWeaponType(",
+                      "std::string Weapon::makeReadableName(", "std::string Weapon::getDisplayName() const"):
         probe += "\n" + function(source("source/entities/Weapon.cpp"), signature)
     probe += r'''
 //! \brief Checks real parser data, exact-equipment pictures, precision, quality and authoritative overrides.
@@ -72,7 +73,10 @@ int main(int argc, char** argv) {
     check(actual!=nullptr,"sword exists");
     const std::string tooltip=sword.describe(&map,actual);
     check(tooltip.find("Quality: Poor")!=std::string::npos,"explicit Poor quality");
-    check(tooltip.find("0.14-0.2 / 0-0 / 0-0")!=std::string::npos,"base values retain sub-unit precision");
+    // Every value line names its value, a value of 0 has no line (plan INGAME-QS-11 K6)
+    check(tooltip.find("Physical damage: 0.14-0.2")!=std::string::npos,"base values retain sub-unit precision");
+    check(tooltip.find("Magical damage")==std::string::npos&&tooltip.find(" / ")==std::string::npos,"no line of 0 values");
+    check(tooltip.find("Rusty Sword")!=std::string::npos&&tooltip.find("RustySword")==std::string::npos,"display name");
     check(sword.getImageName(actual)=="BLK_A_Sword_base","exact-equipment picture before type fallback");
     std::stringstream tuned("Name RustySword [Stats] MeshName Longsword.mesh WeaponType axe Hands 2 PhysicalDamageMin 0.375 PhysicalDamage 0.625 [/Stats] [/Equipment]");
     std::unique_ptr<Weapon> overrideWeapon(Weapon::load(tuned));
@@ -88,7 +92,9 @@ int main(int argc, char** argv) {
         probe += '\n    { ItemInstance item; item.mDefinitionId="' + name + '"; const Weapon* weapon=ConfigManager::getSingleton().getWeapon(item.mDefinitionId);\n'
         probe += '      check(weapon!=nullptr,"default exists"); const std::string image=item.getImageName(weapon);\n'
         probe += '      check(cleanFile(std::string(argv[1])+"/gui/Items.imageset").find("name=\\\""+image+"\\\"")!=std::string::npos,"default picture in atlas");\n'
-        probe += '      check(item.describe(&map,weapon).find(item.mDefinitionId)!=std::string::npos,"actual default name"); }\n'
+        # The tooltip names the actual default by its display name, never by the internal name (plan INGAME-QS-11 K6)
+        probe += '      check(item.describe(&map,weapon).find(weapon->getDisplayName())!=std::string::npos,"actual default name");\n'
+        probe += '      check(weapon->getDisplayName()!=item.mDefinitionId || item.mDefinitionId.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ",1)==std::string::npos,"display name, not the internal name"); }\n'
     probe += '\n    std::cout<<"decision 922 production probe passed\\n";\n}\n'
     if "--source-only" in sys.argv:
         output = ROOT / "out/dungeonbook-defaults-922/probe.cpp"

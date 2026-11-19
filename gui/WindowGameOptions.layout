@@ -1,92 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
+    <!-- In-game options menu (F10): game options only, every entry a menu template button with its symbol. The code
+         (GameMode::setOptionsPage) sizes the window to its visible entries; the areas below are those of the six
+         entries of the options page and of the five entries of the End Game page. -->
     <Window type="OD/SheetWindow" name="GameOptionsWindow" >
-        <Property name="Area" value="{{0.5,-176},{0.025,0},{0.5,176},{0.975,0}}" />
+        <Property name="Area" value="{{0.5,-176},{0.5,-265},{0.5,176},{0.5,265}}" />
         <Property name="Text" value="Options" />
         <Property name="SizingEnabled" value="False" />
-        <Window type="OD/IconButton" name="ObjectivesButton" >
-            <Property name="Area" value="{{0,24},{0.1200,0},{1,-24},{0.1786,0}}" />
-            <Property name="IconImage" value="OpenDungeonsIcons/ObjectivesIcon" />
-            <Property name="Text" value="Objectives" />
-            <Property name="TooltipText" value="View the current game objectives." />
-        </Window>
-        <Window type="OD/IconButton" name="SkillButton" >
-            <Property name="Area" value="{{0,24},{0.1909,0},{1,-24},{0.2495,0}}" />
-            <Property name="IconImage" value="OpenDungeonsIcons/SkillIcon" />
-            <Property name="Text" value="Skill" />
-        </Window>
-        <Window type="OD/IconButton" name="SaveGameButton" >
-            <Property name="Area" value="{{0,24},{0.2618,0},{1,-24},{0.3204,0}}" />
+        <Window type="OD/MenuIconTextButton" name="SaveGameButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.1200,0},{1,-24},{0.2342,0}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/SaveIcon" />
             <Property name="Text" value="Save Game" />
         </Window>
-        <Window type="OD/IconButton" name="LoadGameButton" >
-            <Property name="Area" value="{{0,24},{0.3327,0},{1,-24},{0.3913,0}}" />
+        <Window type="OD/MenuIconTextButton" name="LoadGameButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.2500,0},{1,-24},{0.3642,0}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/LoadIcon" />
             <Property name="Text" value="Load Game" />
         </Window>
-        <Window type="OD/IconButton" name="SettingsButton" >
-            <Property name="Area" value="{{0,24},{0.4036,0},{1,-24},{0.4622,0}}" />
+        <Window type="OD/MenuIconTextButton" name="SettingsButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.3800,0},{1,-24},{0.4942,0}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/OptionsIcon" />
             <Property name="Text" value="Settings" />
             <Property name="Disabled" value="False" />
             <Property name="TooltipText" value="Open the game settings window." />
         </Window>
-        <Window type="OD/IconButton" name="EndGameButton" >
-            <Property name="Area" value="{{0,24},{0.4745,0},{1,-24},{0.5331,0}}" />
+        <Window type="OD/MenuIconTextButton" name="HelpButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.5100,0},{1,-24},{0.6242,0}}" />
+            <Property name="IconImage" value="OpenDungeonsIcons/HelpIcon" />
+            <Property name="Text" value="Help" />
+        </Window>
+        <Window type="OD/MenuIconTextButton" name="EndGameButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.6400,0},{1,-24},{0.7542,0}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="Text" value="End Game" />
         </Window>
-        <Window type="OD/IconButton" name="QuitGameButton" >
-            <Property name="Area" value="{{0,24},{0.1909,0},{1,-24},{0.2495,0}}" />
+        <Window type="OD/MenuIconTextButton" name="QuitGameButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.1200,0},{1,-24},{0.2571,0}}" />
             <Property name="Visible" value="False" />
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="Text" value="Quit to Menu" />
             <Property name="TooltipText" value="Leave this game and return to the main menu..." />
         </Window>
-        <Window type="OD/IconButton" name="ExitGameButton" >
-            <Property name="Area" value="{{0,24},{0.2618,0},{1,-24},{0.3204,0}}" />
+        <Window type="OD/MenuIconTextButton" name="ExitGameButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.2760,0},{1,-24},{0.4131,0}}" />
             <Property name="Visible" value="False" />
             <Property name="IconImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="Text" value="Exit to System" />
             <Property name="TooltipText" value="Leave this game and exit to the desktop..." />
         </Window>
-        <Window type="OD/IconButton" name="RestartLevelButton" >
-            <Property name="Area" value="{{0,24},{0.3327,0},{1,-24},{0.3913,0}}" />
+        <Window type="OD/MenuIconTextButton" name="RestartLevelButton" >
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.4320,0},{1,-24},{0.5691,0}}" />
             <Property name="Visible" value="False" />
             <Property name="IconImage" value="OpenDungeonsIcons/LoadIcon" />
             <Property name="Text" value="Restart Level" />
             <Property name="TooltipText" value="Restart this level from the beginning (single player only)." />
         </Window>
-        <Window type="OD/IconButton" name="HelpButton" >
-            <Property name="Area" value="{{0,24},{0.5455,0},{1,-24},{0.6040,0}}" />
-            <Property name="IconImage" value="OpenDungeonsIcons/HelpIcon" />
-            <Property name="Text" value="Help" />
-        </Window>
-        <Window type="OD/IconButton" name="PlayerSettingsButton" >
-            <Property name="Area" value="{{0,24},{0.6164,0},{1,-24},{0.6749,0}}" />
-            <Property name="IconImage" value="OpenDungeonsIcons/SeatIcon" />
-            <Property name="Text" value="Player information" />
-        </Window>
-        <Window type="OD/IconButton" name="UserCamerasButton">
-            <Property name="Area" value="{{0,24},{0.6873,0},{1,-24},{0.7458,0}}" />
-            <Property name="IconImage" value="OpenDungeonsIcons/CameraIcon" />
-            <Property name="Text" value="Define user cameras" />
-        </Window>
-        <Window type="OD/Button" name="BackButton">
-            <Property name="Area" value="{{0,24},{0.6873,0},{1,-24},{0.7458,0}}" />
+        <Window type="OD/MenuIconTextButton" name="BackButton">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.5880,0},{1,-24},{0.7251,0}}" />
+            <Property name="IconImage" value="OpenDungeonsIcons/MenuReturn" />
             <Property name="Text" value="Back" />
             <Property name="Visible" value="False" />
         </Window>
-        <Window type="OD/IconButton" name="ProductionButton">
-            <Property name="Area" value="{{0,24},{0.7582,0},{1,-24},{0.8168,0}}" />
-            <Property name="IconImage" value="OpenDungeonsIcons/HammerAnvilIcon" />
-            <Property name="Text" value="Production" />
-            <Property name="TooltipText" value="View workshop progress and change trap order priority." />
-        </Window>
-        <Window type="OD/IconButton" name="ContinueButton">
-            <Property name="Area" value="{{0,24},{0.8291,0},{1,-24},{0.8877,0}}" />
+        <Window type="OD/MenuIconTextButton" name="ContinueButton">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,24},{0.7700,0},{1,-24},{0.8842,0}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/PlayIcon" />
             <Property name="Text" value="Continue Game" />
         </Window>

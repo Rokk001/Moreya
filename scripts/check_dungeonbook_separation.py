@@ -3,9 +3,9 @@
 
 Two rules:
 
-1. The Dungeonbook (profile page, creature card, social window) shows the whole portrait of the
-   appearance. The preview portraits with costume may be used there only as the fallback, that is
-   inside the else branch of the "no whole portrait" test in Creature::fillProfilePage.
+1. The Dungeonbook (gui/WindowSocial.layout, SocialWindow) shows the whole portrait of the appearance.
+   Only without one SocialWindow::findPortrait falls back to the round tinted profile portrait; the
+   preview portraits of the creature bar are never used in the book.
 2. The creature bar (CreaturePanel, hand icons) and the preview portrait code never use the folders
    with whole portraits or neutral bases nor any code of the whole portrait.
 
@@ -50,35 +50,25 @@ def fail(message):
 
 
 # ---------------------------------------------------------------- rule 1: the Dungeonbook
+# The book asks for the whole portrait of the appearance first (SocialWindow::findPortrait); only without one it falls
+# back to the round tinted profile portrait. The shared profile page that did the same in Creature::fillProfilePage was
+# deleted (owner decision 2026-11-18).
 creature = read(SOURCE / 'entities/Creature.cpp')
-fill = body(creature, 'float Creature::fillProfilePage(CEGUI::Window* page)')
-if fill is None:
-    fail('Creature::fillProfilePage not found')
+if 'Creature::fillProfilePage' in creature:
+    fail('Creature::fillProfilePage is back; the shared profile page was deleted')
+social = read(SOURCE / 'render/SocialWindow.cpp')
+portrait = body(social, 'const CEGUI::Image* SocialWindow::findPortrait(')
+if portrait is None:
+    fail('SocialWindow::findPortrait not found')
 else:
-    ask = fill.find('getCreatureAppearanceImage(')
-    if ask < 0:
-        fail('fillProfilePage does not ask for the whole portrait (getCreatureAppearanceImage)')
-    for name in PREVIEW_CALLS:
-        for match in re.finditer(re.escape(name) + r'\(', fill):
-            if name != 'getCreatureProfilePortraitImage':
-                fail('fillProfilePage uses %s, only the profile portrait fallback is allowed' % name)
-                continue
-            before = fill[:match.start()]
-            # The call has to sit in the else branch that follows the test on the whole portrait
-            else_pos = before.rfind('else')
-            test_pos = before.rfind('if(appearanceImage != nullptr)')
-            if ask < 0 or test_pos < 0 or else_pos < test_pos or fill.find('{', else_pos) > match.start():
-                fail('getCreatureProfilePortraitImage is used outside the fallback branch of fillProfilePage')
-            elif before[else_pos:].count('{') < 1:
-                fail('the fallback branch of fillProfilePage has no block')
-    if 'getCreatureProfilePortraitImage(' not in fill:
-        fail('the fallback to getCreatureProfilePortraitImage is missing in fillProfilePage')
-    # Remarks only together with the whole portrait
-    remarks = fill.find('getCreatureAppearanceRemarks(')
-    if remarks >= 0:
-        guard = fill.rfind('if(appearanceImage != nullptr)', 0, remarks)
-        if guard < 0:
-            fail('the remarks are not limited to the whole portrait')
+    whole = portrait.find('getCircularCreatureAppearanceImage(creatureName, appearance)')
+    square = portrait.find('getCreatureAppearanceImage(creatureName, appearance)')
+    returned = portrait.find('if(image != nullptr)\n        return image;')
+    fallback = portrait.find('getCircularCreatureProfilePortraitImage(')
+    if whole < 0 or square < 0:
+        fail('findPortrait does not ask for the whole portrait')
+    elif returned < 0 or not (max(whole, square) < returned < fallback):
+        fail('findPortrait uses the tinted profile portrait before the whole portrait')
 
 # The other Dungeonbook code never reaches for the preview portraits
 for name in ('render/SocialWindow.cpp', 'render/SocialWindow.h'):

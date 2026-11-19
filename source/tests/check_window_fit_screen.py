@@ -237,13 +237,16 @@ print('shared title, close button, list insets, event field and single goals ent
 
 # The options page fits its two existing button groups into a screen-limited window.
 options_layout = ET.parse(repo / 'gui/WindowGameOptions.layout').getroot().find('Window')
-assert window_extent(options_layout)[1] == (0.95, 0.0)
-# 84 design pixels of frame and margins before, 50 more for the title rail and bottom rail of the sheet frame
-assert 'const float height = std::min(0.95f, (134.0f + 46.0f * entries.size())' in game_text
+# The layout holds the window of the six entries of the options page: 134 + 6 x 66 = 530 design pixels (INGAME-QS-11 K7)
+assert window_extent(options_layout)[1] == (0.0, 530.0)
+# 134 design pixels of frame, title rail, bottom rail and margins, a row of 66 design pixels per menu template button,
+# limited to 95 % of the screen height
+assert 'const float height = std::min(0.95f, (134.0f + 66.0f * entries.size())' in game_text
 assert 'const float step = 0.78f / entries.size()' in game_text
-for count in (5, 11):
+# options page with and without saving (6 and 4 entries), End Game page (5 entries)
+for count in (4, 5, 6):
     step = 0.78 / count
-    assert 0.12 + (count - 1) * step + step * 38 / 46 < 0.9
+    assert 0.12 + (count - 1) * step + step * 58 / 66 < 0.9
 
 # The Dungeonbook (start page and the four pages of one creature) is laid out with relative areas only inside its
 # fixed window, so it follows the fitted window at every screen size and UI scale; its values sheet has no scrollbar and

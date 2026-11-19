@@ -22,18 +22,9 @@ assert 'image.setArea(getProfilePortraitArea(size.d_width, size.d_height))' in f
 assert 'getTintedPortraitNames().insert(name)' in fallback
 assert 'renderer.createTexture' not in fallback, 'fallback crop must share the panel texture'
 
-page = ET.parse(root / 'gui/WindowCreatureProfilePage.layout').getroot()
-frame = page.find(".//Window[@name='Portrait']")
-props = {p.attrib['name']: p.attrib['value'] for p in frame.findall('Property')}
-assert props['Area'] == '{{0.0,16},{0.0,4},{0.0,136},{0.0,124}}', 'existing frame/card geometry must remain'
-view = frame.find("Window[@name='Image']")
-props = {p.attrib['name']: p.attrib['value'] for p in view.findall('Property')}
-assert props['Area'] == '{{0,2},{0,2},{1,-2},{1,-2}}'
-assert props['AspectMode'] == 'Shrink' and props['AspectRatio'] == '1'
-assert props['HorizontalAlignment'] == props['VerticalAlignment'] == 'Centre'
-assert props['FrameEnabled'] == props['BackgroundEnabled'] == 'False'
-creature = (root / 'source/entities/Creature.cpp').read_text()
-assert creature.count('page->getChild("Portrait/Image")->setProperty("Image"') == 2
+# The shared profile page and its square portrait frame were deleted (owner decision 2026-11-18); the book's
+# portraits are checked by check_dungeonbook_rework_b1.py and check_dungeonbook_pages_b1.py
+assert not (root / 'gui/WindowCreatureProfilePage.layout').exists()
 
 # Positive uniform fit: the old full 1:2 stretch would make these scales unequal.
 for width, height in [(887,1774), (221,443), (512,1024), (256,256), (443,221)]:

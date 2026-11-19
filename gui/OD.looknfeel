@@ -5043,24 +5043,28 @@
         </ImagerySection>
     </WidgetLook>
 
-    <!-- Tooltip of an item (owner decision 1026, finding 5, merchant mockup W-1 variant 3): dark box with a violet
-         border and left-aligned text; the item name, quality and price carry their own colours and fonts in the text.
-         Gui switches the default tooltip to this look while it shows a window marked with the user string ItemTooltip. -->
+    <!-- Tooltip of an item (owner decision 1026, finding 5, merchant mockup W-1 variant 3): dark box with
+         left-aligned text; the item name, quality and price carry their own colours and fonts in the text.
+         Gui switches the default tooltip to this look while it shows a window marked with the user string ItemTooltip.
+         Plan INGAME-QS-11 K6: the frame is thick and drawn in the colour of the item's quality (Poor grey, Common white,
+         Rare blue, Epic purple), which Gui sets in the property QualityFrameColour; the frame image is a plain white
+         square that Gui creates (OpenDungeonsIcons/ItemTooltipFrame, 8 design pixels thick). -->
     <WidgetLook name="OD/ItemTooltip">
+        <PropertyDefinition redrawOnWrite="true" initialValue="tl:FF8A8A8A tr:FF8A8A8A bl:FF8A8A8A br:FF8A8A8A" type="ColourRect" name="QualityFrameColour"/>
         <NamedArea name="TextArea">
             <Area>
-                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/TooltipLeftEdge" /><AbsoluteDim value="8" /></OperatorDim></Dim>
-                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsSkin/TooltipTopEdge" /><AbsoluteDim value="8" /></OperatorDim></Dim>
+                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsIcons/ItemTooltipFrame" /><AbsoluteDim value="8" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsIcons/ItemTooltipFrame" /><AbsoluteDim value="8" /></OperatorDim></Dim>
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="RightEdge" />
-                        <OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/TooltipRightEdge" /><AbsoluteDim value="8" /></OperatorDim>
+                        <OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsIcons/ItemTooltipFrame" /><AbsoluteDim value="8" /></OperatorDim>
                     </OperatorDim>
                 </Dim>
                 <Dim type="BottomEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="BottomEdge" />
-                        <OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsSkin/TooltipBottomEdge" /><AbsoluteDim value="8" /></OperatorDim>
+                        <OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsIcons/ItemTooltipFrame" /><AbsoluteDim value="8" /></OperatorDim>
                     </OperatorDim>
                 </Dim>
             </Area>
@@ -5085,32 +5089,32 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-                <Image component="TopLeftCorner" name="OpenDungeonsSkin/TooltipTopLeft" />
-                <Image component="TopRightCorner" name="OpenDungeonsSkin/TooltipTopRight" />
-                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/TooltipBottomLeft" />
-                <Image component="BottomRightCorner" name="OpenDungeonsSkin/TooltipBottomRight" />
-                <Image component="LeftEdge" name="OpenDungeonsSkin/TooltipLeftEdge" />
-                <Image component="RightEdge" name="OpenDungeonsSkin/TooltipRightEdge" />
-                <Image component="TopEdge" name="OpenDungeonsSkin/TooltipTopEdge" />
-                <Image component="BottomEdge" name="OpenDungeonsSkin/TooltipBottomEdge" />
-                <Colours topLeft="FFB070FF" topRight="FFB070FF" bottomLeft="FFB070FF" bottomRight="FFB070FF" />
+                <Image component="TopLeftCorner" name="OpenDungeonsIcons/ItemTooltipFrame" />
+                <Image component="TopRightCorner" name="OpenDungeonsIcons/ItemTooltipFrame" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsIcons/ItemTooltipFrame" />
+                <Image component="BottomRightCorner" name="OpenDungeonsIcons/ItemTooltipFrame" />
+                <Image component="LeftEdge" name="OpenDungeonsIcons/ItemTooltipFrame" />
+                <Image component="RightEdge" name="OpenDungeonsIcons/ItemTooltipFrame" />
+                <Image component="TopEdge" name="OpenDungeonsIcons/ItemTooltipFrame" />
+                <Image component="BottomEdge" name="OpenDungeonsIcons/ItemTooltipFrame" />
+                <ColourRectProperty name="QualityFrameColour" />
             </FrameComponent>
         </ImagerySection>
         <ImagerySection name="label">
             <TextComponent>
             <Area>
-                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/TooltipLeftEdge" /><AbsoluteDim value="8" /></OperatorDim></Dim>
-                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsSkin/TooltipTopEdge" /><AbsoluteDim value="8" /></OperatorDim></Dim>
+                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsIcons/ItemTooltipFrame" /><AbsoluteDim value="8" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsIcons/ItemTooltipFrame" /><AbsoluteDim value="8" /></OperatorDim></Dim>
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="RightEdge" />
-                        <OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/TooltipRightEdge" /><AbsoluteDim value="8" /></OperatorDim>
+                        <OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsIcons/ItemTooltipFrame" /><AbsoluteDim value="8" /></OperatorDim>
                     </OperatorDim>
                 </Dim>
                 <Dim type="BottomEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="BottomEdge" />
-                        <OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsSkin/TooltipBottomEdge" /><AbsoluteDim value="8" /></OperatorDim>
+                        <OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsIcons/ItemTooltipFrame" /><AbsoluteDim value="8" /></OperatorDim>
                     </OperatorDim>
                 </Dim>
             </Area>
@@ -8103,6 +8107,55 @@
         <StateImagery name="Pushed"><Layer><Section section="plate_pushed" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="PushedTextColour" /></Section></Layer></StateImagery>
         <StateImagery name="PushedOff"><Layer><Section section="plate_normal" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
         <StateImagery name="Disabled"><Layer><Section section="plate_disabled" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Menu button with a symbol: the menu button template above (same plates, caps, knobs and hover in all four
+         states) with the symbol of the entry (IconImage) on the planks at the left of the caption. The symbol is drawn
+         in every state; the caption is centred on the planks right of the symbol (in-game options menu, INGAME-QS-11
+         K7). -->
+    <WidgetLook name="OD/MenuIconTextButton" inherits="OD/MenuTextButton">
+        <PropertyDefinition initialValue="" name="IconImage" redrawOnWrite="true" />
+        <ImagerySection name="symbol">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="0.516667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.183333" type="Height" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.633334" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="0.633334" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="IconImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="caption_shadow">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Add"><UnifiedDim scale="1.216667" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Add"><UnifiedDim scale="0.183333" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Add"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><OperatorDim op="Add"><UnifiedDim scale="0.816667" type="Height" /><OperatorDim op="Multiply"><FontDim type="LineSpacing" /><AbsoluteDim value="0.060" /></OperatorDim></OperatorDim></Dim>
+                </Area>
+                <Colours topLeft="C0000000" topRight="C0000000" bottomLeft="C0000000" bottomRight="C0000000" />
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <ImagerySection name="caption">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><UnifiedDim scale="1.216667" type="Height" /></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.183333" type="Height" /></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><UnifiedDim scale="0.516667" type="Height" /></OperatorDim></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="0.816667" type="Height" /></Dim>
+                </Area>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Normal"><Layer><Section look="OD/MenuTextButton" section="plate_normal" /><Section section="symbol" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section look="OD/MenuTextButton" section="plate_hover" /><Section section="symbol"><Colours topLeft="FFFFEBC0" topRight="FFFFEBC0" bottomLeft="FFFFEBC0" bottomRight="FFFFEBC0" /></Section><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="HoverTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section look="OD/MenuTextButton" section="plate_pushed" /><Section section="symbol"><Colours topLeft="FFDDDDDD" topRight="FFDDDDDD" bottomLeft="FFDDDDDD" bottomRight="FFDDDDDD" /></Section><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="PushedTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="PushedOff"><Layer><Section look="OD/MenuTextButton" section="plate_normal" /><Section section="symbol" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section look="OD/MenuTextButton" section="plate_disabled" /><Section section="symbol"><Colours topLeft="FF777777" topRight="FF777777" bottomLeft="FF777777" bottomRight="FF777777" /></Section><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
     </WidgetLook>
     <!-- Window frame of the chosen menu sheet (the load screen frame: iron rails, corner brackets, knobs and the
          empty panel wood), for every menu window and reusable for the in-game windows: use window type

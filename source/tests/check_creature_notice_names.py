@@ -54,8 +54,9 @@ assert "packetReceived >> creatureName >> className >> worker" in notice
 assert "SocialProfileCache::getSingleton().getProfile(" in notice
 assert "creatureName, className, worker).getFullName() + evtMsg" in notice
 assert "getCreature(" not in notice, "notice must still resolve after the client entity disappears"
-# The creature card resolves its title with the same cache key and arguments
-assert "cache.getProfile(getName(), definition->getClassName(), definition->isWorker())" in creature
+# The Dungeonbook resolves the names with the same cache key and arguments (the creature card and the shared profile
+# page that did it before were deleted, owner decision 2026-11-18)
+assert "cache.getProfile(entry.name, entry.className, entry.worker)" in read("source/render/SocialWindow.cpp")
 # No new notification value: the enum order checks stay untouched
 assert "creatureNotice" not in read("source/network/ServerNotification.h")
 

@@ -148,7 +148,9 @@ int main(int argc,char** argv) { try {
     ConfigManager::getSingleton().weapons[shield.name]=&shield;
     std::unique_ptr<ItemInstance> poorSword=ItemDrops::poorWeapon(sword),poorShield=ItemDrops::poorWeapon(shield);
     check(poorSword->mDefinitionId==sword.name&&poorShield->mDefinitionId==shield.name,"Poor bags retain equipment identity");
-    check(poorSword->getDisplayName(&map)==sword.name&&poorShield->getDisplayName(&map)==shield.name,"Poor spawn equipment names");
+    // The name the player reads of the equipment, never its internal name (plan INGAME-QS-11 K6)
+    check(poorSword->getDisplayName(&map)==sword.getDisplayName()&&poorShield->getDisplayName(&map)==shield.getDisplayName()
+        &&poorSword->getDisplayName(&map)!=sword.name&&poorShield->getDisplayName(&map)!=shield.name,"Poor spawn equipment names");
     check(poorSword->getPrice(&map)==20&&poorShield->getPrice(&map)==20,"Poor spawn equipment price");
     for(const ItemInstance* poor:{poorSword.get(),poorShield.get()}) {
         const std::string image=poor->getImageName(); check(image.size()>5&&image.substr(image.size()-5)=="_base","Poor weapon uses base image");

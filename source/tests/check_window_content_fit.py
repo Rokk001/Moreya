@@ -243,13 +243,10 @@ def title_height(node, screen, user):
 def client_rect(node, rect, screen, user, s):
     """The rectangle the children of the node are laid out in (looknfeel NamedArea, CEGUI Window::getChildContentArea)."""
     x0, y0, x1, y1 = rect
-    if node.type == 'OD/ScrollablePane' and node.path.endswith('/SocialWindow/ValuesPage'):
-        # Gui::applyScale places these original columns in an 820x500 design-pixel scroll document.
-        # Measure their captions in that document; check_dungeonbook_profile_layout also checks scroll reachability.
-        assert 'const float documentWidth = 820.0f * scale;' in gui_cpp
-        assert 'const float documentHeight = 500.0f * scale;' in gui_cpp
-        document_scale = min(screen[0] / DESIGN_W, screen[1] / DESIGN_H) * user
-        return x0, y0, x0 + 820.0 * document_scale, y0 + 500.0 * document_scale
+    if node.path.endswith('/SocialWindow/ValuesPage'):
+        # Plan INGAME-QS-11 K2: the values sheet is a plain page like the other pages of the book, no scroll document
+        # (it was an 820x500 design-pixel document); its content is measured in the page itself
+        assert node.type == 'DefaultWindow' and 'documentWidth' not in gui_cpp, 'the values page must not scroll'
     if node.type in ('OD/FrameWindow',):
         images = frame_images(node)
         return (x0 + image_size(images['FrameLeftImage'], screen, user)[0], y0 + title_height(node, screen, user),
@@ -300,10 +297,13 @@ TEXT_TYPES = {'OD/SheetStaticText', 'OD/StaticText', 'OD/MenuTitle', 'OD/Resourc
               'OD/Button', 'OD/MainMenuButton', 'OD/InvisibleButton', 'OD/MenuTextButton', 'OD/Checkbox',
               'OD/RadioButton', 'OD/IconButton', 'OD/ImageButton', 'OD/ResearchButton', 'OD/TabButton',
               'OD/MenuItem', 'OD/MenuSymbolButton', 'OD/GameTabButton', 'OD/MiniMapCornerButton',
-              'OD/MenuCompactButton', 'OD/MenuFilterButton'}
+              'OD/MenuCompactButton', 'OD/MenuFilterButton', 'OD/MenuIconTextButton'}
 # Caption area of the menu template buttons in fractions of the button height: cap width, top rail, bottom rail.
 MENU_TEMPLATE_CAPTION = {'OD/MenuTextButton': (0.516667, 0.183333, 0.816667),
                          'OD/MenuCompactButton': (0.25, 0.21, 0.79), 'OD/MenuFilterButton': (0.25, 0.21, 0.79)}
+# Menu template button with a symbol (OD.looknfeel OD/MenuIconTextButton): the caption starts right of the symbol on the
+# planks. Left edge, right cap, top rail, bottom rail in fractions of the button height.
+MENU_SYMBOL_CAPTION = {'OD/MenuIconTextButton': (1.216667, 0.516667, 0.183333, 0.816667)}
 STATIC_LIKE = {'OD/SheetStaticText', 'OD/StaticText', 'OD/MenuTitle', 'OD/ResourceDisplay', 'OD/EventPanel', 'OD/MenuDescription'}
 
 
@@ -340,6 +340,10 @@ def text_area(node, rect, screen, user, s):
         cap, top, bottom = MENU_TEMPLATE_CAPTION[node.type]
         height = y1 - y0
         return x0 + cap * height, y0 + top * height, x1 - cap * height, y0 + bottom * height
+    if node.type in MENU_SYMBOL_CAPTION:
+        left, cap, top, bottom = MENU_SYMBOL_CAPTION[node.type]
+        height = y1 - y0
+        return x0 + left * height, y0 + top * height, x1 - cap * height, y0 + bottom * height
     if node.type == 'OD/ImageButton' or node.type == 'OD/ResearchButton':
         return x0 + 5.0, y0, x0 + 5.0 + 0.9 * (x1 - x0), y1
     return rect

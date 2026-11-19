@@ -53,6 +53,7 @@ def catalogue_fixture():
     fixture = r'''
 #include "entities/ItemDefinition.h"
 #include "entities/ItemInstance.h"
+#include "entities/ItemValueLines.h"
 #include "entities/PotionDefinition.h"
 #include "rooms/RoomType.h"
 static const uint32_t MAX_LEVEL = 30;
@@ -93,6 +94,20 @@ struct Weapon {
     std::string name="BasicAxeOrc", type="axe"; uint32_t hands=2;
     //! \brief Returns the fixture spawn equipment id.
     const std::string& getName() const { return name; }
+    //! \brief Returns the name the player reads of the fixture equipment: the id split into words, as
+    //! Weapon::makeReadableName does for equipment without a DisplayName.
+    std::string getDisplayName() const
+    {
+        std::string text;
+        for(std::size_t i = 0; i < name.size(); ++i)
+        {
+            if(i > 0 && std::isupper(static_cast<unsigned char>(name[i])) &&
+               (std::islower(static_cast<unsigned char>(name[i - 1])) || std::isdigit(static_cast<unsigned char>(name[i - 1]))))
+                text += ' ';
+            text += name[i];
+        }
+        return text;
+    }
     //! \brief Returns its actual weapon-class fixture value.
     const std::string& getWeaponType() const { return type; }
     //! \brief Returns how many hands this spawn weapon occupies.
@@ -144,6 +159,8 @@ struct ConfigManager {
     CreatureSkillTree::SkillTreeConfig tree;
     //! \brief Returns the single isolated configuration fixture.
     static ConfigManager& getSingleton() { static ConfigManager cfg; return cfg; }
+    //! \brief The fixture configuration always exists (Weapon::getDisplayName asks for it).
+    static ConfigManager* getSingletonPtr() { return &getSingleton(); }
     //! \brief Looks up a parsed item line.
     const ItemDefinition* getItem(const std::string& id) const { std::map<std::string,std::unique_ptr<ItemDefinition>>::const_iterator i=items.find(id); return i==items.end()?nullptr:i->second.get(); }
     //! \brief Looks up a parsed potion definition.

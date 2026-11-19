@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
+    <!-- Settings opened from the in-game options menu: the settings pages, the user cameras and the way back, all
+         menu template buttons like the entries of the options menu (INGAME-QS-11 K7). -->
     <Window type="OD/SheetWindow" name="SettingsNavigationWindow">
         <Property name="Area" value="{{0.5,-400},{0.5,-290},{0.5,400},{0.5,290}}" />
         <Property name="Text" value="Game Options" />
@@ -7,50 +9,44 @@
         <Property name="AlwaysOnTop" value="True" />
         <Property name="SizingEnabled" value="False" />
         <Property name="DragMovingEnabled" value="False" />
-        <Window type="OD/InvisibleButton" name="Video">
-            <Property name="LookNFeel" value="OD/GameNavigationButton" />
-            <Property name="Area" value="{{0,8},{0.125,0},{0.5,-8},{0.125,40}}" />
+        <Window type="OD/MenuTextButton" name="Video">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,8},{0.125,0},{0.5,-8},{0.125,56}}" />
             <Property name="Text" value="Graphics Options" />
         </Window>
-        <Window type="OD/InvisibleButton" name="Audio">
-            <Property name="LookNFeel" value="OD/GameNavigationButton" />
-            <Property name="Area" value="{{0.5,8},{0.125,0},{1,-8},{0.125,40}}" />
+        <Window type="OD/MenuTextButton" name="Audio">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,8},{0.125,0},{1,-8},{0.125,56}}" />
             <Property name="Text" value="Sound Options" />
         </Window>
-        <Window type="OD/InvisibleButton" name="Input">
-            <Property name="LookNFeel" value="OD/GameNavigationButton" />
-            <Property name="Area" value="{{0,8},{0.375,0},{0.5,-8},{0.375,40}}" />
+        <Window type="OD/MenuTextButton" name="Input">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,8},{0.375,0},{0.5,-8},{0.375,56}}" />
             <Property name="Text" value="Control Options" />
         </Window>
-        <Window type="OD/InvisibleButton" name="Cameras">
-            <Property name="LookNFeel" value="OD/GameNavigationButton" />
-            <Property name="Area" value="{{0.5,8},{0.375,0},{1,-8},{0.375,40}}" />
+        <Window type="OD/MenuIconTextButton" name="Cameras">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,8},{0.375,0},{1,-8},{0.375,56}}" />
+            <Property name="IconImage" value="OpenDungeonsIcons/CameraIcon" />
             <Property name="Text" value="Define User Cameras" />
         </Window>
-        <Window type="OD/InvisibleButton" name="Game">
-            <Property name="LookNFeel" value="OD/GameNavigationButton" />
-            <Property name="Area" value="{{0,8},{0.625,0},{0.5,-8},{0.625,40}}" />
+        <Window type="OD/MenuTextButton" name="Game">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,8},{0.625,0},{0.5,-8},{0.625,56}}" />
             <Property name="Text" value="Game Settings" />
+            <Property name="TooltipText" value="Nickname, minimap, light, effects and the KO setting of your keeper." />
         </Window>
-        <Window type="OD/InvisibleButton" name="Continue">
-            <Property name="LookNFeel" value="OD/GameNavigationFooter" />
-            <Property name="Area" value="{{0,8},{0.859375,0},{0.5,-8},{0.859375,40}}" />
+        <Window type="OD/MenuIconTextButton" name="Continue">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0,8},{1,-64},{0.5,-8},{1,-8}}" />
+            <Property name="IconImage" value="OpenDungeonsIcons/CheckIcon" />
             <Property name="Text" value="Continue Game" />
-            <Window type="OD/StaticImage" name="Symbol">
-                <Property name="Area" value="{{0,0},{0,2},{0,36},{0,38}}" />
-                <Property name="Image" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
         </Window>
-        <Window type="OD/InvisibleButton" name="Back">
-            <Property name="LookNFeel" value="OD/GameNavigationFooter" />
-            <Property name="Area" value="{{0.5,8},{0.859375,0},{1,-8},{0.859375,40}}" />
+        <Window type="OD/MenuIconTextButton" name="Back">
+            <Property name="Font" value="MedievalSharp-13" />
+            <Property name="Area" value="{{0.5,8},{1,-64},{1,-8},{1,-8}}" />
+            <Property name="IconImage" value="OpenDungeonsIcons/MenuReturn" />
             <Property name="Text" value="Back" />
-            <Window type="OD/StaticImage" name="Symbol">
-                <Property name="Area" value="{{0,0},{0,2},{0,36},{0,38}}" />
-                <Property name="Image" value="OpenDungeonsIcons/MenuReturn" />
-                <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
         </Window>
     </Window>
 </GUILayout>

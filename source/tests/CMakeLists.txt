@@ -66,6 +66,16 @@ add_boost_test(00-WheelAccumulator
         test_WheelAccumulator.cpp
         ${SRC}/modes/WheelAccumulator.h)
 
+add_boost_test(00-ItemTooltipPlacement
+        SOURCES
+        test_ItemTooltipPlacement.cpp
+        ${SRC}/render/ItemTooltipPlacement.h)
+
+add_boost_test(00-ItemValueLines
+        SOURCES
+        test_ItemValueLines.cpp
+        ${SRC}/entities/ItemValueLines.h)
+
 add_boost_test(00-PostLog
         SOURCES
         test_PostLog.cpp
@@ -241,6 +251,12 @@ add_boost_test(00-WallTorches
         test_WallTorches.cpp
         ${SRC}/rooms/WallTorches.h
         ${SRC}/rooms/WallTorches.cpp)
+
+add_boost_test(00-WallCorners
+        SOURCES
+        test_WallCorners.cpp
+        ${SRC}/gamemap/WallCorners.h
+        ${SRC}/gamemap/WallCorners.cpp)
 
 add_boost_test(00-LevelPreview
         SOURCES
