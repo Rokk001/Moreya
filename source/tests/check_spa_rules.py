@@ -105,7 +105,13 @@ for path in ('source/rooms/RoomLibrary.cpp', 'source/rooms/RoomWorkshop.cpp', 's
     assert 'creature.getHangoverWorkFactor() * creature.getRelaxWorkFactor()' in read(path), path
 assert 'getHangoverWorkFactor() * getRelaxWorkFactor()' in creature_cpp
 every_use = ''.join(read(str(p.relative_to(root))) for p in (root / 'source').rglob('*.cpp') if 'tests' not in p.parts)
-assert every_use.count('getRelaxWorkFactor()') == 5, 'one definition and four uses (library, workshop, training hall, arena)'
+assert every_use.count('getRelaxWorkFactor()') == 6, 'one definition, four work uses (library, workshop, training hall, arena) and the profile hover text'
+# The sixth call only feeds the "Relaxed" hover text of the Dungeonbook profile; it changes no work output
+profile_info = extract(creature_cpp, 'Creature::getProfileSocialInfo(')
+assert profile_info.count('getRelaxWorkFactor()') == 1, 'the profile reads the relaxation factor once'
+assert re.search(r'getProfileEffectsText\([^;]*getRelaxWorkFactor\(\)', profile_info), 'the profile passes the factor only into the effects text'
+for forbidden in ('receiveExp', 'addResearchPoints', 'mResearchPoints', 'addMana', 'mMana'):
+    assert forbidden not in profile_info, 'the profile text must not change ' + forbidden
 # No combat value is touched: the relaxation is not used in the fight code
 for path in ('source/entities/Creature.cpp',):
     for name in ('Creature::getAttackRating', 'Creature::getPhysicalDefense', 'Creature::getMagicalDefense', 'Creature::computeAttack'):
