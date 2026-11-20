@@ -396,9 +396,42 @@ def parse_overrides(items):
     return overrides
 
 
+def sweep(exe, work, params, overrides, axis, values, seeds, seconds, jobs, report):
+    """Runs one variant per value of the axis (a level parameter or a 'Section.Key' of global.cfg) and writes one
+    summary line per value to the report list."""
+    for value in values:
+        variant_params = dict(params)
+        variant_overrides = dict(overrides)
+        if "." in axis:
+            variant_overrides[axis] = value
+        else:
+            variant_params[axis] = value
+        started = time.monotonic()
+        results = run_batch(exe, work, variant_params, variant_overrides, seeds, seconds, jobs=jobs, quiet=True)
+        summary = summarize(results)
+        line = {"axis": axis, "value": value, "params": variant_params, "overrides": variant_overrides,
+                "seeds": "%d-%d" % (seeds[0], seeds[-1]), "summary": summary,
+                "batchWall": round(time.monotonic() - started, 1)}
+        report.append(line)
+        print(json.dumps({"axis": axis, "value": value, "size": variant_params["size"],
+                          "groups": variant_params["groups"], "hero": variant_params["hero_level"],
+                          "keeper": "%dx%d" % (variant_params["keeper_count"], variant_params["keeper_level"]),
+                          "won": summary.get("defeated"), "esc": summary.get("escaped"),
+                          "heart": summary.get("heartlost"), "tout": summary.get("timeout"),
+                          "p2": summary.get("phase2"), "idleMax": summary.get("longestIdle"),
+                          "quick": summary.get("quickShare"), "kLoss": summary.get("keeperLossShare"),
+                          "part": summary.get("participation"), "coh": summary.get("cohesion"),
+                          "kRet": summary.get("keeperRetreats"), "groups": summary.get("groupsFormed"),
+                          "gold": summary.get("goldLost"), "contact": summary.get("contact"),
+                          "flee": summary.get("fleeSeconds"), "wall": summary.get("wall")}), flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["run"])
+    parser.add_argument("command", choices=["run", "sweep"])
+    parser.add_argument("--axis", help="sweep: level parameter or Section.Key of global.cfg")
+    parser.add_argument("--values", help="sweep: comma-separated values of the axis")
+    parser.add_argument("--report", type=Path, help="sweep: JSON lines file the summaries are appended to")
     parser.add_argument("--exe", required=True, type=Path)
     parser.add_argument("--work", required=True, type=Path)
     parser.add_argument("--seeds", default="1-8")
@@ -411,6 +444,18 @@ def main():
                             type=(str if isinstance(value, str) else float if value is None else type(value)))
     args = parser.parse_args()
     params = {name: getattr(args, name) for name in default_params()}
+    if args.command == "sweep":
+        values = [float(value) if re.match(r"^-?[0-9.]+$", value) else value for value in args.values.split(",")]
+        values = [int(value) if isinstance(value, float) and value.is_integer() and "." not in args.axis
+                  else value for value in values]
+        report = []
+        sweep(args.exe.resolve(), args.work.resolve(), params, parse_overrides(args.set), args.axis, values,
+              parse_seeds(args.seeds), args.seconds, args.jobs, report)
+        if args.report:
+            with args.report.open("a", encoding="utf-8") as handle:
+                for line in report:
+                    handle.write(json.dumps(line) + "\n")
+        return 0
     results = run_batch(args.exe.resolve(), args.work.resolve(), params, parse_overrides(args.set),
                         parse_seeds(args.seeds), args.seconds, args.keeper_ai, args.jobs)
     print(json.dumps(summarize(results), indent=1))
