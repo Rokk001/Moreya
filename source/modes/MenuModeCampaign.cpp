@@ -64,6 +64,8 @@ const std::string CMP_BUTTON_DIFFICULTY = "CampaignWindowFrame/DifficultyButton"
 const std::string CMP_CHECK_RELATIONSHIPS = "CampaignWindowFrame/RelationshipsCheckbox";
 const std::string CMP_BUTTON_BACK = "CampaignWindowFrame/BackButton";
 const std::string CMP_MAP = "CampaignWindowFrame/CampaignMap";
+//! Backdrop behind the difficulty, relationships and back controls
+const std::string CMP_CONTROL_BACKDROP = "CampaignWindowFrame/ControlBackdrop";
 const std::string CMP_BRIEFING = "CampaignWindowFrame/BriefingPanel";
 const std::string CMP_BRIEFING_TEXT = "CampaignWindowFrame/BriefingPanel/BriefingText";
 static const std::string CMP_BRIEFING_IMAGE = "CampaignWindowFrame/BriefingPanel/BriefingImage";
@@ -306,7 +308,8 @@ MenuModeCampaign::MenuModeCampaign(ModeManager* modeManager):
     mHoverWindow(nullptr),
     mTooltip(nullptr),
     mBriefingLevel(0),
-    mDebriefingScale(0.0f)
+    mDebriefingScale(0.0f),
+    mCampaignEnd(false)
 {
     CEGUI::Window* window = modeManager->getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
 
@@ -412,9 +415,17 @@ void MenuModeCampaign::activate()
 
     // Debriefing of the level that was played last
     mResultText.clear();
+    mCampaignEnd = false;
     size_t playedLevel = campaign.getPlayedLevel();
     bool playedLevelWon = false;
-    if(playedLevel < campaign.getNumLevels())
+    // A win that leaves every guild defeated ends the campaign: the end message and then the main menu, no map
+    if(campaign.isPlayedLevelCampaignEnd())
+    {
+        OD_LOG_INF("Campaign menu shows the campaign end message after level " + Helper::toString(playedLevel));
+        mCampaignEnd = true;
+        mResultText = Campaign::CAMPAIGN_END_MESSAGE;
+    }
+    else if(playedLevel < campaign.getNumLevels())
     {
         const CampaignLevel& level = campaign.getLevel(playedLevel);
         playedLevelWon = campaign.getPlayedLevelWon();
@@ -425,8 +436,6 @@ void MenuModeCampaign::activate()
             {
                 mResultText += "You have cleared the hidden chamber.";
             }
-            else if(campaign.isFinished())
-                mResultText += "You have completed the campaign.";
             else
                 mResultText += "The next level is unlocked.";
 
@@ -445,6 +454,17 @@ void MenuModeCampaign::activate()
 
     clearMap();
     hideBriefing();
+    if(mCampaignEnd)
+    {
+        // The message is shown once without the map; the next opening of the campaign shows the map again
+        campaign.clearPlayedLevel();
+        setMapVisible(false);
+        showDebriefing();
+        if(RunLevelTest::isActive())
+            RunLevelTest::onCampaignMapShown(true);
+        return;
+    }
+    setMapVisible(true);
     if(campaign.getNumLevels() == 0)
         return;
 
@@ -1083,6 +1103,17 @@ void MenuModeCampaign::hideBriefing()
     mBriefingLevel = Campaign::getSingleton().getNumLevels();
 }
 
+//! \brief Shows or hides the map of Moreya with its controls; the campaign end message is shown without them.
+void MenuModeCampaign::setMapVisible(bool visible)
+{
+    CEGUI::Window* sheet = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
+    sheet->getChild(CMP_MAP)->setVisible(visible);
+    sheet->getChild(CMP_CONTROL_BACKDROP)->setVisible(visible);
+    sheet->getChild(CMP_BUTTON_DIFFICULTY)->setVisible(visible);
+    sheet->getChild(CMP_CHECK_RELATIONSHIPS)->setVisible(visible);
+    sheet->getChild(CMP_BUTTON_BACK)->setVisible(visible);
+}
+
 bool MenuModeCampaign::briefingStartPressed(const CEGUI::EventArgs&)
 {
     size_t level = mBriefingLevel;
@@ -1091,9 +1122,12 @@ bool MenuModeCampaign::briefingStartPressed(const CEGUI::EventArgs&)
     return true;
 }
 
-bool MenuModeCampaign::briefingClosePressed(const CEGUI::EventArgs&)
+//! \brief Closes the briefing; closing the campaign end message leaves for the main menu.
+bool MenuModeCampaign::briefingClosePressed(const CEGUI::EventArgs& e)
 {
     hideBriefing();
+    if(mCampaignEnd)
+        return backButtonPressed(e);
     return true;
 }
 
@@ -1148,8 +1182,10 @@ void MenuModeCampaign::startLevel(size_t index)
     }
 }
 
+//! \brief Leaves the campaign for the main menu; the campaign end message is closed with it.
 bool MenuModeCampaign::backButtonPressed(const CEGUI::EventArgs&)
 {
+    mCampaignEnd = false;
     Campaign::getSingleton().stopCampaign();
     getModeManager().requestMode(AbstractModeManager::MENU_MAIN);
     return true;

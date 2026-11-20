@@ -38,7 +38,8 @@ class Image;
 //! defeated level or a found bonus cave) opens its briefing on a click. In front of the gate stands the guild that
 //! raids the current level with its banner, the portrait of its leader, the raid size and its origin. A tooltip
 //! names the cave under the mouse, the wings show how many of their levels are defeated and a panel shows the
-//! progress of the campaign.
+//! progress of the campaign. After a win that leaves every guild defeated the map is not shown: the campaign end
+//! message appears and closing it shows the main menu; opening the campaign again shows the map for replays.
 class MenuModeCampaign: public AbstractApplicationMode
 {
 public:
@@ -74,6 +75,8 @@ private:
     //! Screen dimensions and GUI scale used by the last debriefing fit.
     CEGUI::Vector2f mDebriefingScreen;
     float mDebriefingScale;
+    //! True while the campaign end message is shown in place of the map; closing it shows the main menu
+    bool mCampaignEnd;
 
     //! \brief Reads the map description once. Returns false if it cannot be read or is invalid.
     bool loadWorld();
@@ -116,6 +119,8 @@ private:
     void setBriefingPreviewVisible(bool visible);
     //! \brief Closes the briefing or debriefing panel
     void hideBriefing();
+    //! \brief Shows or hides the map of Moreya and the controls below it
+    void setMapVisible(bool visible);
     //! \brief Starts the server and the client for a campaign level
     void startLevel(size_t index);
 
@@ -127,8 +132,8 @@ private:
     bool mapClicked(const CEGUI::EventArgs& e);
     //! \brief Starts the level of the open briefing
     bool briefingStartPressed(const CEGUI::EventArgs&);
-    //! \brief Closes the briefing without starting the level
-    bool briefingClosePressed(const CEGUI::EventArgs&);
+    //! \brief Closes the briefing without starting the level; closing the campaign end message shows the main menu
+    bool briefingClosePressed(const CEGUI::EventArgs& e);
     //! \brief Chooses the next difficulty while no level is completed
     bool difficultyButtonPressed(const CEGUI::EventArgs&);
     //! \brief Shows the difficulty of the campaign on its button

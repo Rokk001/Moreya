@@ -117,6 +117,8 @@ Campaign::Campaign():
 {
 }
 
+const std::string Campaign::CAMPAIGN_END_MESSAGE = "Moreya stands. The campaign is complete.";
+
 Campaign& Campaign::getSingleton()
 {
     static Campaign campaign;
@@ -242,8 +244,8 @@ bool Campaign::importDefinition(std::istream& is)
 }
 
 //! \brief Reads campaign progress (levels by file, shards, unlocked items), finished difficulties and the
-//! difficulty. A file without the Version line was written for the former level list: its level lines and
-//! its kept creature are ignored, its difficulty and finished set are kept.
+//! difficulty. A file without the Version line was written for the former campaign: only its difficulty is
+//! kept; its level lines, finished difficulties and kept creature are dropped, so the player starts fresh.
 bool Campaign::importProgress(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
@@ -280,6 +282,11 @@ bool Campaign::importProgress(std::istream& is)
                 mDifficulty = difficulty;
             continue;
         }
+        // The level lines and finished difficulties of a file for the former campaign are old progress:
+        // they name other levels and are dropped, only the difficulty above stays
+        if(!versioned)
+            continue;
+
         if(keyword == "Finished")
         {
             std::string name;
@@ -293,10 +300,6 @@ bool Campaign::importProgress(std::istream& is)
             }
             continue;
         }
-        // The level lines of a file for the former level list name other levels
-        if(!versioned)
-            continue;
-
         if(keyword == "Unlocked")
         {
             CampaignUnlockedItem item;
@@ -828,6 +831,13 @@ void Campaign::clearPlayedLevel()
     mPlayedLevel = mLevels.size();
     mPlayedLevelWon = false;
     mLevelSummary.clear();
+}
+
+//! \brief A won level ends the campaign when no story level is left undefeated afterwards.
+bool Campaign::isPlayedLevelCampaignEnd() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return (mPlayedLevel < mLevels.size()) && mPlayedLevelWon && (getCurrentLevelNoLock() == mLevels.size());
 }
 
 void Campaign::setLevelSummary(const std::string& summary)

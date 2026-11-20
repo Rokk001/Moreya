@@ -654,7 +654,7 @@ void RunLevelTest::onCampaignMapShown(bool levelWon)
     if(campaign.isFinished())
     {
         emitResult(codePass, "PASS " + sLevelName + " : " + sWinDescription
-            + ", victory message shown, campaign map shows the campaign as completed");
+            + ", victory message shown, campaign end message shown in place of the map");
         return;
     }
     const size_t nextLevel = campaign.getCurrentLevel();

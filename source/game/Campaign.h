@@ -138,8 +138,9 @@ struct CampaignSave
 //!   Unlocked <bonusLevelFile> <Quality> <itemId>   one line per unlocked item
 //!   Difficulty <n>   (index of the AI level for the whole campaign, 0 = easy)
 //!   Finished <difficulty name> [...]
-//! A progress file without the Version line belongs to the former level list: only its
-//! Difficulty and Finished lines are read; its level lines and kept creature are ignored.
+//! A progress file without the Version line belongs to the former campaign: only its
+//! Difficulty line is read; its level lines, finished difficulties and kept creature are dropped,
+//! so every player starts the campaign of Moreya fresh with the difficulty chosen before.
 //! A story level is unlocked when all story levels before it are completed; a bonus
 //! level is unlocked when it was discovered. The current
 //! level is the first story level that is not completed yet. Every level starts fresh:
@@ -157,7 +158,7 @@ public:
     //! \brief Reads the campaign settings and the level sequence. Returns false if no level was found.
     bool importDefinition(std::istream& is);
     //! \brief Reads the saved progress. Unknown level files are ignored; a file without a Version line keeps
-    //! only its difficulty and finished set.
+    //! only its difficulty.
     bool importProgress(std::istream& is);
     //! \brief Writes the progress (version 2: levels, shards, unlocked items, difficulty) in the format
     //! importProgress reads
@@ -250,6 +251,12 @@ public:
     bool getPlayedLevelWon() const;
     //! \brief Clears the "last played" result once the menu has shown it.
     void clearPlayedLevel();
+    //! \brief True if the level played last was won and every story level is defeated now: the campaign ends with
+    //! the end message and the main menu instead of the campaign map. Holds for every such win, replays included.
+    bool isPlayedLevelCampaignEnd() const;
+
+    //! \brief Message shown in place of the campaign map after a win that leaves every story level defeated
+    static const std::string CAMPAIGN_END_MESSAGE;
 
     //! \brief The statistics of the level that was just won, as text lines. Set by the client when the
     //! server sends them at the victory, shown by the campaign menu. Empty if there are none.
