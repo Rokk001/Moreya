@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Tinmoor
-Description	Miners guard their tin seams, and a warden sits behind two watch posts.
+Description	Bleeding Seam in the Blood Mines: mine the seams and clear both watch posts while the Deep Picks come through the Moreya gate in two groups of five, one after the other.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

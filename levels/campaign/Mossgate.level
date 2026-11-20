@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Mossgate
-Description	A sleepy border village behind one lazy watch post.
+Description	The Forgotten Pit, the hidden chamber of the Rotting Cellars: mine a little gold, claim the meadow and clear the watch post. No raid comes here; the first win unlocks three items for the merchant.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

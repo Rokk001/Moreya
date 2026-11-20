@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	The Skittle Cavern
-Description	A cavern of four long lanes where standing guards are knocked down by boulders.
+Description	The Skull Lanes, the hidden chamber of the Weeping Crypts: open the four lanes and bowl down ten guards before time runs out. No raid comes here; the first win unlocks three items for the merchant.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]

@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	The Boulder Course
-Description	A hidden course of winding galleries where stone balls must be slapped into their cups.
+Description	The Rolling Tomb, the hidden chamber of the Black Catacombs: slap four stone balls into their cups within the time and the slaps you have. No raid comes here; the first win unlocks three items for the merchant.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
