@@ -14,7 +14,8 @@ import zlib
 
 from PIL import Image
 
-EXPECTED_LEVELS = 31
+# 18 story levels and 6 bonus levels in 6 wings
+EXPECTED_LEVELS = 24
 PREVIEW_WIDTH = 640
 PREVIEW_HEIGHT = 360
 MAX_PREVIEW_BYTES = 400 * 1024
@@ -252,10 +253,11 @@ def check_repository(root):
     failures = []
     levels = read_levels((root / "levels/campaign/Campaign.cfg").read_text(encoding="utf-8"))
     if len(levels) != EXPECTED_LEVELS:
-        failures.append("campaign must contain 31 levels")
+        failures.append("campaign must contain %d levels" % EXPECTED_LEVELS)
     art = (root / "gui/campaign").resolve()
     for index, fields in enumerate(levels, 1):
-        province = fields.get("Province", "level " + str(index))
+        # Levels carry no province any more: a level is named by its file, its image specification by the preview
+        province = fields.get("File", "level " + str(index))
         preview = fields.get("Preview", "")
         if not preview:
             failures.append(province + ": missing Preview")
@@ -267,7 +269,7 @@ def check_repository(root):
             failures.append(province + ": missing image " + preview)
         else:
             failures.extend(province + ": " + error for error in png_errors(image.read_bytes()))
-        if not (root / "materials/campaign-previews" / (province + ".md")).is_file():
+        if not (root / "materials/campaign-previews" / (Path(preview).stem + ".md")).is_file():
             failures.append(province + ": missing image specification")
     layout = ET.fromstring((root / "gui/MenuCampaign.layout").read_text(encoding="utf-8"))
     if not any(window.get("name") == "BriefingImage" and window.get("type") == "OD/StaticImage"

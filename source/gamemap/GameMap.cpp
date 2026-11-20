@@ -65,6 +65,7 @@
 #include "rooms/Room.h"
 #include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomMerchant.h"
 #include "rooms/RoomPortal.h"
 #include "rooms/RoomTreasury.h"
 #include "rooms/RoomType.h"
@@ -117,6 +118,30 @@ using namespace std;
 
 namespace
 {
+//! \brief Draws the index of an item a campaign bonus level unlocks with the server random generator.
+//! \param count Number of candidates, at least 1.
+uint32_t drawCampaignUnlock(uint32_t count)
+{
+    return static_cast<uint32_t>(Random::Uint(0, count - 1));
+}
+
+//! \brief Collects the item lines of the catalogue per quality name (Common, Rare, Epic) that a campaign
+//! bonus level can unlock.
+std::map<std::string, std::vector<std::string> > campaignUnlockCandidates(const GameMap& gameMap)
+{
+    std::map<std::string, std::vector<std::string> > candidates;
+    const Quality qualities[] = { Quality::common, Quality::rare, Quality::epic };
+    for(const ItemDefinition* definition : gameMap.getItemDefinitions())
+    {
+        for(Quality quality : qualities)
+        {
+            if(definition->getQuality(quality).mAvailable)
+                candidates[qualityName(quality)].push_back(definition->getId());
+        }
+    }
+    return candidates;
+}
+
 //! \brief The tile part of the mana income is capped: this many claimed tiles count at most
 //! (global.cfg ManaIncomeTilesCap).
 double manaIncomeTilesCap()
@@ -624,7 +649,8 @@ const ItemDefinition* GameMap::getItemDefinition(const std::string& id) const
     return nullptr;
 }
 
-//! \brief Releases network-owned definitions and clears all ephemeral item registration state.
+//! \brief Releases network-owned definitions and clears all ephemeral item registration state, the campaign
+//! items waiting for the merchant included.
 void GameMap::clearItemDefinitions()
 {
     if(!isServerGameMap())
@@ -636,6 +662,114 @@ void GameMap::clearItemDefinitions()
     mEpicRegistry.clear();
     mNextEpicSerial = 1;
     mItemAuraGivers.clear();
+    mCampaignMerchantGoods.clear();
+}
+
+//! \brief Queues an unlocked campaign item for the merchant of the seat; each queued item is sold once per map.
+void GameMap::addCampaignMerchantGood(int seatId, Quality quality, const std::string& itemId)
+{
+    CampaignMerchantGood good;
+    good.mSeatId = seatId;
+    good.mQuality = quality;
+    good.mItemId = itemId;
+    mCampaignMerchantGoods.push_back(good);
+}
+
+//! \brief Creates the waiting unlocked items of the room's seat on its free tables, rolling their bonuses now.
+void GameMap::stockCampaignMerchantGoods(RoomMerchant& room)
+{
+    if(!isServerGameMap() || mCampaignMerchantGoods.empty())
+        return;
+
+    Seat* seat = room.getSeat();
+    if(seat == nullptr)
+        return;
+
+    std::vector<CampaignMerchantGood>::iterator it = mCampaignMerchantGoods.begin();
+    while(it != mCampaignMerchantGoods.end())
+    {
+        if(it->mSeatId != seat->getId())
+        {
+            ++it;
+            continue;
+        }
+
+        const ItemDefinition* definition = getItemDefinition(it->mItemId);
+        if((definition == nullptr) || !definition->getQuality(it->mQuality).mAvailable)
+        {
+            OD_LOG_WRN("Campaign item unknown in the catalogue, not sold: item=" + it->mItemId + ", quality="
+                + qualityName(it->mQuality));
+            it = mCampaignMerchantGoods.erase(it);
+            continue;
+        }
+
+        // An Epic exists once per map: it waits while another instance of its line is in the map
+        if((it->mQuality == Quality::epic) && isEpicRegistered(it->mItemId))
+        {
+            ++it;
+            continue;
+        }
+
+        Tile* table = room.getFreeTable();
+        if(table == nullptr)
+            return;
+
+        std::unique_ptr<ItemInstance> item = ItemInstance::create(*definition, it->mQuality);
+        if(item.get() == nullptr)
+        {
+            OD_LOG_WRN("Campaign item could not be created, not sold: item=" + it->mItemId);
+            it = mCampaignMerchantGoods.erase(it);
+            continue;
+        }
+
+        if(it->mQuality == Quality::epic)
+        {
+            item->mEpicSerial = allocateEpicSerial();
+            registerEpic(*item);
+        }
+
+        if(!room.addGoods(item, table))
+        {
+            if(item.get() != nullptr)
+                unregisterEpic(*item);
+            return;
+        }
+
+        OD_LOG_INF("Campaign item put up for sale: item=" + it->mItemId + ", quality=" + qualityName(it->mQuality)
+            + ", seat=" + Helper::toString(seat->getId()));
+        it = mCampaignMerchantGoods.erase(it);
+    }
+}
+
+//! \brief Reads "CampaignMerchant\t<seatId> <Quality> <itemId>" of a saved game.
+bool GameMap::importCampaignMerchantInfoLine(const std::string& line)
+{
+    const std::string prefix = "CampaignMerchant\t";
+    if(line.compare(0, prefix.size(), prefix) != 0)
+        return false;
+
+    std::istringstream input(line.substr(prefix.size()));
+    int seatId = 0;
+    std::string qualityText;
+    std::string itemId;
+    std::string trailing;
+    Quality quality = Quality::poor;
+    if(!(input >> seatId >> qualityText >> itemId) || (input >> trailing) || !parseQuality(qualityText, quality)
+        || (quality == Quality::poor))
+    {
+        OD_LOG_WRN("Ignored invalid campaign merchant line: " + line);
+        return true;
+    }
+
+    addCampaignMerchantGood(seatId, quality, itemId);
+    return true;
+}
+
+//! \brief Writes the campaign items still waiting for a merchant table so that a loaded game sells each once.
+void GameMap::exportCampaignMerchantInfo(std::ostream& os) const
+{
+    for(const CampaignMerchantGood& good : mCampaignMerchantGoods)
+        os << "CampaignMerchant\t" << good.mSeatId << " " << qualityName(good.mQuality) << " " << good.mItemId << "\n";
 }
 
 //! \brief Selects uniformly among matching free lines, registers each Epic and logs its unique serial.
@@ -3450,8 +3584,9 @@ void GameMap::addWinningSeat(Seat *s, bool objectivesUpdated)
         // The numbers of the level at the moment of the victory (the campaign menu shows them)
         player->sendLevelStatistics(true);
 
-        // In a campaign, the progress is saved and the player is told how to go on
-        if(Campaign::getSingleton().onLevelWon())
+        // In a campaign, the progress is saved and the player is told how to go on. The first completion
+        // of a bonus level unlocks items drawn from the catalogue for the merchant of later levels.
+        if(Campaign::getSingleton().onLevelWon(campaignUnlockCandidates(*this), &drawCampaignUnlock))
         {
             ServerNotification* campaignNotification = new ServerNotification(
                 ServerNotificationType::campaignVictory, player);

@@ -35,9 +35,11 @@ game = read("source/modes/GameMode.cpp")
 game_map = read("source/gamemap/GameMap.cpp")
 
 # The record is optional, versioned and available to the load-screen classifier.
-for field in ("mPresent", "mValid", "mLevelFile", "mDifficulty", "mHeartstoneComplete",
-              "mKeptClass", "mKeptLevel"):
+for field in ("mPresent", "mValid", "mLevelFile", "mDifficulty", "mChampionAvailable"):
     assert field in header, field
+# The kept creature of the former campaign is gone: every level starts fresh
+for field in ("mKeptClass", "mKeptLevel", "mKeptPendingClass", "mKeptPendingLevel", "mHeartstoneComplete"):
+    assert field not in header, field
 assert "CampaignSave mCampaignSave" in handler_header
 info = body(handler, "bool getMapInfo(")
 assert "mCampaignSave.importInfoLine(nextParam)" in info
@@ -50,8 +52,12 @@ save_block = body(writer[save_start:], "if(isGameSave)")
 assert "getSaveState()" in save_block and "exportInfo(levelFile)" in save_block
 assert writer.index("getSaveState()") < writer.index('levelFile << "[/Info]"')
 snapshot = body(campaign, "CampaignSave Campaign::getSaveState(")
-for field in ("mActive", "mLevels", "mPlayedLevel", "mKeptPendingClass", "mKeptPendingLevel"):
+for field in ("mActive", "mLevels", "mPlayedLevel", "mChampionAvailable"):
     assert field in snapshot, field
+# Campaign items that still wait for a merchant table are saved and loaded with the game
+assert "gameMap.exportCampaignMerchantInfo(levelFile)" in save_block
+reader = body(handler, "bool readGameMapFromFile(")
+assert "gameMap.importCampaignMerchantInfoLine(nextParam)" in reader
 
 # Eligibility and startup share a single filename/progress rule; both legacy and
 # recorded saves go through it, before seat setup can choose campaign effects.
@@ -70,29 +76,33 @@ assert start.index("if((mode == ServerMode::ModeGameLoaded) && Campaign::getSing
 assert "loadCampaignProgress()" in load
 assert "bool loadCampaignProgress(" in handler and "loadCampaignProgress()" in handler_header
 
-# A loaded creature already exists in the entity snapshot, so startup never
-# consumes current campaign carry-over or creates a second copy on this path.
-spawn = server.index("LevelScriptRunner::spawnKeptMinion(*gameMap)")
-assert "mServerMode != ServerMode::ModeGameLoaded" in server[spawn - 200:spawn]
-assert "isLevelHeartstoneComplete()" in server
-assert "const bool championAvailable = Campaign::getSingleton().isLevelHeartstoneComplete();" in server
+# No creature comes along from the last level any more; the unlocked items are queued for the merchant only
+# at a fresh start, because a loaded game brings its waiting items in its Info block.
+assert "spawnKeptMinion" not in server
+queue = server.index("unlockedItems = Campaign::getSingleton().getUnlockedItems();")
+assert "if(mServerMode != ServerMode::ModeGameLoaded)" in server[queue - 120:queue]
+assert "gameMap->addCampaignMerchantGood(seat->getId(), quality, unlocked.mItemId);" in server
+assert "isLevelChampionAvailable()" in server
+assert "const bool championAvailable = Campaign::getSingleton().isLevelChampionAvailable();" in server
 assert "SkillType::spellSummonChampion, championAvailable, championAvailable" in server
-champion = body(campaign, "bool Campaign::isLevelHeartstoneComplete(")
-assert "mActive && mLoadedCampaignSave" in champion and "return mSavedHeartstoneComplete" in champion
-assert "return isHeartstoneComplete()" in champion
+champion = body(campaign, "bool Campaign::isLevelChampionAvailableNoLock(")
+assert "if(mLoadedCampaignSave)" in champion and "return mSavedChampionAvailable" in champion
+assert "return isChampionAvailableNoLock(mPlayedLevel)" in champion
 
 # Victory still follows the established campaign path, including its message,
 # progress write and menu return. Defeat and ordinary quit use the same active flag.
-won = body(campaign, "bool Campaign::onLevelWon(")
+won = body(campaign, "bool Campaign::completePlayedLevel(")
 assert "mCompleted[mPlayedLevel] = true" in won
 assert "mPlayedLevelWon = true" in won and "saveProgress()" in won
-assert "mKeptPendingClass" in won and "mKeptPendingLevel" in won
-assert "!mKeptPendingClass.empty() || mRestoredLevel" in won
-assert "mRestoredLevel = mActive" in restore
-assert "mRestoredLevel = false" in body(campaign, "void Campaign::startLevel(")
+assert "bool firstBonusCompletion = played.mBonus && !mCompleted[mPlayedLevel];" in won
+assert won.index("firstBonusCompletion = ") < won.index("mCompleted[mPlayedLevel] = true")
+assert "mKeptPendingClass" not in won and "mRestoredLevel" not in won
+assert "mSavedChampionAvailable = mLoadedCampaignSave && saved.mChampionAvailable" in restore
+assert "mLoadedCampaignSave = false" in body(campaign, "void Campaign::startLevel(")
 assert "mDifficulty =" not in won, "loaded victory must preserve menu difficulty"
+assert "completePlayedLevel(nullptr, nullptr)" in body(campaign, "bool Campaign::onLevelWon()")
 victory = body(game_map, "void GameMap::addWinningSeat(")
-assert victory.index("onLevelWon()") < victory.index("ServerNotificationType::campaignVictory")
+assert victory.index("onLevelWon(campaignUnlockCandidates(*this), &drawCampaignUnlock)") < victory.index("ServerNotificationType::campaignVictory")
 victory_ui = body(game, "void GameMode::showCampaignVictory(")
 assert "Campaign::getSingleton().isActive()" in victory_ui
 assert "MENU_CAMPAIGN" in body(game, "bool GameMode::onClickCampaignVictoryConfirm(")
@@ -110,6 +120,8 @@ for expectation in ("all record fields round trip", "recorded file wins over sav
                     "victory completes the played level and unlocks the next",
                     "finished difficulty is recorded hard and unlocks Hell",
                     "current complete Heartstone cannot override save without champion",
+                    "version 1 record of an older save loads without its kept creature",
+                    "champion only from the champion wing with all shards",
                     "recorded locked level loads without active campaign state",
                     "removed recorded level cannot fall back to a matching old filename",
                     "old save of unlocked campaign file is classified as campaign",
@@ -117,9 +129,8 @@ for expectation in ("all record fields round trip", "recorded file wins over sav
                     "skirmish save remains ordinary and gets no campaign record",
                     "old campaign save takes current progress difficulty",
                     "old saves use Heartstone and difficulty of current progress",
-                    "winning recorded save with no chosen creature clears unrelated progress carry-over",
-                    "winning legacy save carries no creature from unrelated current progress",
+                    "progress of the former level list keeps only difficulty and finished set",
                     "campaign list reorder restores by file, never old index"):
     assert expectation in probe, expectation
-print("campaign save record, load effects, carry-over guard and campaign exit wiring: PASS")
+print("campaign save record, load effects, merchant items, no carry-over and campaign exit wiring: PASS")
 print("Runtime campaign save probe is present; execution is deferred to FINAL")

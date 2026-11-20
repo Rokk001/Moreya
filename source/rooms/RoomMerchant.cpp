@@ -837,11 +837,13 @@ bool RoomMerchant::importFromStream(std::istream& stream)
     return true;
 }
 
-//! \brief Updates the unique figure, reservations and visible stock after room upkeep.
+//! \brief Updates the unique figure, the campaign items unlocked by bonus levels, reservations and visible stock
+//! after room upkeep.
 void RoomMerchant::doUpkeep()
 {
     Room::doUpkeep();
     ensureMerchant();
+    getGameMap()->stockCampaignMerchantGoods(*this);
     reserveGoods();
     if(mGoodsChanged || mDisplayedCapacity != tableCapacity(getSeat()))
     {

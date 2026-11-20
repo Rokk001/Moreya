@@ -1305,25 +1305,12 @@ void changeRoomOwner(GameMap& gameMap, const LevelScriptAction& action)
     room->claimForSeat(seat, tile, 1.0e9);
 }
 
-//! The strongest fighter of the seat comes along to the next level of the campaign (when this level is won)
+//! \brief The former kept minion action: every campaign level starts fresh, so no creature comes along to the next
+//! level any more. The action stays readable for older level files and saved games and does nothing.
 void keepMinion(GameMap& gameMap, int32_t seatId)
 {
-    Seat* seat = gameMap.getSeatById(seatId);
-    if(seat == nullptr)
-        return;
-
-    Creature* best = nullptr;
-    std::vector<Creature*> creatures = gameMap.getCreaturesBySeat(seat);
-    for(Creature* creature : creatures)
-    {
-        if(!creature->isAlive() || creature->getDefinition()->isWorker())
-            continue;
-
-        if((best == nullptr) || (creature->getLevel() > best->getLevel()))
-            best = creature;
-    }
-    if(best != nullptr)
-        Campaign::getSingleton().setKeptMinion(best->getDefinition()->getClassName(), best->getLevel());
+    OD_LOG_INF("Level script: keepminion has no effect, every campaign level starts fresh, seat="
+        + Helper::toString(seatId) + ", turn=" + Helper::toString(gameMap.getTurnNumber()));
 }
 
 //! \brief The creature with that name leaves the map (the remove action). Nothing happens if there is none on the map.
@@ -1338,7 +1325,7 @@ void removeCreature(GameMap& gameMap, const std::string& name)
     creature->deleteYourself();
 }
 
-//! \brief Executes actions, mission door locks and identified goal updates without objective notices; stone attachment requires a living carrier.
+//! \brief Executes actions, mission door locks, campaign shards and identified goal updates without objective notices; stone attachment requires a living carrier.
 void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action,
     const std::string& sourceTrigger, int64_t sourceAction)
 {
@@ -1496,6 +1483,13 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
 
             break;
         }
+        case LevelScriptActionType::findShard:
+        {
+            if(Campaign::getSingleton().findShard())
+                sendMessage(gameMap, -1, "You have found a shard of the Heartstone.");
+
+            break;
+        }
     }
 }
 
@@ -1512,40 +1506,6 @@ void LevelScriptRunner::dropCarriedStone(Creature& creature)
 
     createStone(gameMap, tile->getX(), tile->getY());
     script.removeStoneCarrier(creature.getName());
-}
-
-void LevelScriptRunner::spawnKeptMinion(GameMap& gameMap)
-{
-    if(!Campaign::getSingleton().isActive())
-        return;
-
-    for(Seat* seat : gameMap.getSeats())
-    {
-        if(seat->isRogueSeat() || (seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
-            continue;
-
-        for(Room* room : gameMap.getRoomsByType(RoomType::dungeonTemple))
-        {
-            Tile* tile = room->getCentralTile();
-            if((room->getSeat() != seat) || (tile == nullptr))
-                continue;
-
-            std::string className;
-            uint32_t level = 0;
-            if(!Campaign::getSingleton().takeKeptMinion(className, level))
-                return;
-
-            LevelScriptAction action;
-            action.mType = LevelScriptActionType::spawn;
-            action.mSeatId = seat->getId();
-            action.mX = tile->getX();
-            action.mY = tile->getY();
-            action.mCreatures.push_back(std::make_pair(className, level));
-            action.mCreatureNames.push_back(std::string());
-            spawnCreatures(gameMap, action);
-            return;
-        }
-    }
 }
 
 //! \brief Runs existing triggers in order and passes stable source identities to presentation observers.

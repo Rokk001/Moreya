@@ -99,7 +99,7 @@ assert 'ServerNotificationType::levelStatistics' in send and 'levelWon' in send
 assert 'sendLevelStatistics(false)' in function(player, 'void Player::notifyDefeat(')
 won = function(gamemap, 'void GameMap::addWinningSeat(')
 assert 'player->sendLevelStatistics(true)' in won
-assert won.index('sendLevelStatistics(true)') < won.index('Campaign::getSingleton().onLevelWon()')
+assert won.index('sendLevelStatistics(true)') < won.index('Campaign::getSingleton().onLevelWon(')
 levels_handler = client[client.index('case ServerNotificationType::levelStatistics:'):]
 levels_handler = levels_handler[:levels_handler.index('break;')]
 assert 'Campaign::getSingleton().setLevelSummary(' in levels_handler and 'debriefingSeatSummary(' in levels_handler
@@ -153,12 +153,20 @@ assert 'key == "FreePossession"' in script_cpp and 'os << "FreePossession' in sc
 assert 'isFreePossession()' in read('source/creatureaction/CreatureActionPossessed.cpp')
 assert 'script.setFreePossession(true)' in runner
 
-# kept minion: the strongest fighter is chosen by the keepminion action, saved with the campaign progress and
-# given out when the next level of the campaign starts
+# kept minion: every campaign level starts fresh, so the keepminion action is still read and written for older
+# files but chooses no creature, nothing is saved with the campaign progress and nothing is given out when the
+# next level of the campaign starts
 campaign = read('source/game/Campaign.cpp')
-assert 'case LevelScriptActionType::keepMinion:' in runner and 'setKeptMinion(' in runner
+campaign_header = read('source/game/Campaign.h')
+assert 'case LevelScriptActionType::keepMinion:' in runner and 'setKeptMinion(' not in runner
 assert 'type == "keepminion"' in script_cpp and 'os << "keepminion' in script_cpp
-assert 'takeKeptMinion(' in runner and 'KeptMinion' in campaign
-assert 'LevelScriptRunner::spawnKeptMinion(*gameMap);' in read('source/network/ODServer.cpp')
+assert 'takeKeptMinion(' not in runner and 'KeptMinion' not in campaign and 'KeptMinion' not in campaign_header
+assert 'spawnKeptMinion' not in read('source/network/ODServer.cpp') and 'spawnKeptMinion' not in runner
+keep = function(runner, 'void keepMinion(')
+assert 'getCreaturesBySeat' not in keep and 'has no effect' in keep
+
+# Heartstone shard: the shard action is read, written and records the shard of the played level
+assert 'if(type == "shard")' in script_cpp and 'os << "shard";' in script_cpp
+assert 'case LevelScriptActionType::findShard:' in runner and 'Campaign::getSingleton().findShard()' in runner
 
 print('level script final wiring: ok')

@@ -95,17 +95,20 @@ assert 'case LevelScriptActionType::golfBall:' in runner
 assert 'slapFrom(' in read('source/entities/MissileBoulder.h')
 assert 'type == "golfball"' in script and 'isBoulderHole(' in script
 
-# Kept minion: the strongest fighter comes along to the next level of the campaign (script action keepminion)
+# Kept minion: no fighter comes along to the next level any more (every campaign level starts fresh); the script
+# action keepminion is still read and written for older files and has no effect
 campaign = read('source/game/Campaign.cpp')
-assert 'case LevelScriptActionType::keepMinion:' in runner and 'setKeptMinion(' in runner
+assert 'case LevelScriptActionType::keepMinion:' in runner and 'setKeptMinion(' not in runner
 assert 'type == "keepminion"' in script and 'os << "keepminion' in script
-assert 'takeKeptMinion(' in runner and 'KeptMinion' in campaign
+assert 'takeKeptMinion(' not in runner and 'KeptMinion' not in campaign
 
-# The campaign pieces are called Heartstone pieces
-assert 'isLevelHeartstoneComplete()' in read('source/network/ODServer.cpp')
+# The campaign pieces are called Heartstone shards: found by the script action shard in their story level, they
+# give Summon champion from the champion wing on
+assert 'isLevelChampionAvailable()' in read('source/network/ODServer.cpp')
 assert 'SkillType::spellSummonChampion, championAvailable, championAvailable' in read('source/network/ODServer.cpp')
-assert 'return mSavedHeartstoneComplete;' in campaign and 'return isHeartstoneComplete();' in campaign
+assert 'return mSavedChampionAvailable;' in campaign and 'return isChampionAvailableNoLock(mPlayedLevel);' in campaign
 assert 'getHeartstonePieces()' in read('source/modes/MenuModeCampaign.cpp')
+assert 'case LevelScriptActionType::findShard:' in runner and 'type == "shard"' in script
 
 # Failed spawns and named corpses cannot receive a newly attached transport stone.
 attach = runner.split('case LevelScriptActionType::stoneAttach:', 1)[1].split('case LevelScriptActionType::alliance:', 1)[0]

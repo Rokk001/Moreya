@@ -1,8 +1,9 @@
-"""Static checks of the two campaign branches (T09A/T09B and T18A/T18B).
+"""Static checks that the campaign has no branches any more (formerly T09A/T09B and T18A/T18B).
 
-One sister is enough to open the levels after them, the other stays playable and
-both count in the progress of the world map. Run from any directory. It does not
-start a game.
+The campaign is one straight sequence of 18 story levels in 6 wings: every story level
+needs all story levels before it, no level is an optional sister of another, and the
+former branch maps Mirewatch and Dunmarrow are no longer listed. Run from any directory.
+It does not start a game.
 """
 from pathlib import Path
 import json
@@ -11,6 +12,7 @@ import sys
 
 root = Path(__file__).resolve().parents[2]
 campaign_cpp = (root / "source/game/Campaign.cpp").read_text(encoding="utf-8")
+campaign_h = (root / "source/game/Campaign.h").read_text(encoding="utf-8")
 mode = (root / "source/modes/MenuModeCampaign.cpp").read_text(encoding="utf-8")
 definition = (root / "levels/campaign/Campaign.cfg").read_text(encoding="utf-8").replace("\r", "")
 world = json.loads((root / "gui/campaign/campaign-world.json").read_text(encoding="utf-8"))
@@ -18,6 +20,7 @@ failures = []
 
 
 def check(condition, message):
+    """Collects a failure message when the condition does not hold."""
     if not condition:
         failures.append(message)
 
@@ -26,34 +29,34 @@ entries = []
 for block in definition.split("[Level]")[1:]:
     fields = dict(re.findall(r"^(\w+)=(.*)$", block, re.M))
     entries.append(fields)
-provinces = [f.get("Province", "") for f in entries]
-ids = [p["id"] for p in world["provinces"]]
+files = [f.get("File", "") for f in entries]
 
-# Both sisters name each other, follow each other and are not bonus sites
-for first, second in (("T09A", "T09B"), ("T18A", "T18B")):
-    check(first in provinces and second in provinces, first + "/" + second + " missing in the definition")
-    if first not in provinces or second not in provinces:
-        continue
-    a, b = provinces.index(first), provinces.index(second)
-    check(b == a + 1, first + " and " + second + " must follow each other")
-    check(entries[a].get("Branch") == second and entries[b].get("Branch") == first,
-          first + " and " + second + " must name each other")
-    check("Bonus" not in entries[a] and "Bonus" not in entries[b], first + "/" + second + " must not be bonus levels")
-    check(first in ids and second in ids, first + "/" + second + " must be on the world map")
+# No level names a branch sister or a province any more
+check(not any("Branch" in f for f in entries), "no level may have a Branch setting")
+check(not any("Province" in f for f in entries), "no level may have a Province setting")
+check(not re.search(r"^Branch=", definition, re.M), "Campaign.cfg must not have Branch settings")
+# Both maps of each former branch pair: one is a story level, the other is dropped
+for kept, dropped in (("campaign/Saltmere.level", "campaign/Dunmarrow.level"),
+                      ("campaign/Goldspire.level", "campaign/Mirewatch.level")):
+    check(kept in files, kept + " must stay a story level")
+    check(dropped not in files, dropped + " must be dropped from the campaign")
+    if kept in files:
+        check("Bonus" not in entries[files.index(kept)], kept + " must not be a bonus level")
 
-# Only the four branch levels have a Branch setting
-check(sorted(f.get("Province") for f in entries if "Branch" in f) == ["T09A", "T09B", "T18A", "T18B"],
-      "unexpected Branch settings")
-
-# The loader reads Branch and lets one sister open the later levels without blocking the other
-check('key == "Branch"' in campaign_cpp, "the reader must know Branch")
+# The loader no longer reads Branch and the progression has no sister rule
+check('key == "Branch"' not in campaign_cpp, "the reader must not know Branch any more")
+check("findBranchSisterNoLock" not in campaign_cpp and "findBranchSisterNoLock" not in campaign_h,
+      "the branch sister lookup must be gone")
+check("mBranch" not in campaign_cpp and "mBranch" not in campaign_h, "levels must not carry a branch sister")
 unlocked = campaign_cpp[campaign_cpp.index("bool Campaign::isUnlockedNoLock"):campaign_cpp.index("bool Campaign::isUnlocked(")]
-check("findBranchSisterNoLock(i)" in unlocked and "(i == ownSister)" in unlocked,
-      "one sister must be enough and a sister must not block the other")
+check("if(mCompleted[i] || mLevels[i].mBonus)" in unlocked and "ownSister" not in unlocked,
+      "every story level before a story level must be completed")
 current = campaign_cpp[campaign_cpp.index("size_t Campaign::getCurrentLevelNoLock"):campaign_cpp.index("size_t Campaign::getCurrentLevel()")]
-check("findBranchSisterNoLock(i)" in current, "the open sister must not be the current level once the other is done")
+check("if(!mCompleted[i] && !mLevels[i].mBonus)" in current and "sister" not in current,
+      "the current level must be the first story level not completed")
 
-# The map progress counts every conquered main level against all provinces (26: both sisters count)
+# The old world map is still drawn by the campaign menu until the map of Moreya replaces it
+ids = [p["id"] for p in world["provinces"]]
 check(len(ids) == 26, "the world map must list 26 provinces")
 check("!campaign.getLevel(i).mBonus && campaign.isCompleted(i)" in mode, "progress must count each completed main level")
 check("provinces.size()" in mode, "progress total must be the number of provinces")
