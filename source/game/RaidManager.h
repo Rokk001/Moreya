@@ -200,7 +200,9 @@ private:
     //! \brief Starts the flight of the leaders whose groups have fallen and ends it at the gate.
     void updateLeaders();
 
-    //! \brief The leader reached the gate: he leaves the map with what he carries and the level is lost.
+    //! \brief The leader reached the gate: he leaves the map with what he carries and the level is lost. Only a leader
+    //! leaves through the gate so far; when other members are to leave too, they get a state like RaidLeaderState in
+    //! RaidGroupData, isStanding counts them as fallen and isStateMet as defeated, and their gold is lost with them.
     void escape(RaidGroupData& group, Creature& leader);
 
     //! \brief True while a raid member stands: alive on the map, not imprisoned and not won over by a keeper.
