@@ -1217,7 +1217,7 @@ Name	mainVictory
 Mode	once
 Cond	objective	1	skittlecavern-main-heart	reached
 Cond	objective	1	skittlecavern-main-trial	reached
-Action	message	1	The last guard has fallen and the lanes lie quiet. The heart gives you a shard.
+Action	message	1	The last guard has fallen and the lanes lie quiet.
 Action	win	1
 [/Trigger]
 [/Triggers]

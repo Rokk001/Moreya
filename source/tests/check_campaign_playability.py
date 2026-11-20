@@ -58,7 +58,7 @@ BRIEFING_MATCH = {
     "Ebonrook": {2: "no: mining and feeding are not winning conditions", 3: "no: enemy elimination is checked; the named route is not an independent goal"},
     "Wraithwood": {3: "yes: ProtectDungeonTemple and KillAllEnemies include both rival temples"},
     "Kingsfall": {2: "no: prince elimination is checked; crossing the watched spans is not independent", 3: "no: collectWin checks all champions and twelve creatures, but courtTaken also wins without all three champions and neither checks their location at the heart"},
-    "SwarmNight": {3: "yes: dawn at 780 seconds with ProtectDungeonTemple", 4: "yes: dawn invokes keepminion before win; no Heartstone reward is granted"},
+    "SwarmNight": {3: "yes: dawn at 780 seconds with ProtectDungeonTemple", 4: "no: nothing is carried to the next level any more (keepminion removed); no Heartstone shard is granted"},
     "HollowmarkCitadel": {3: "yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes", 4: "yes: actual Castellan death inside ThroneHall and all548original throne floor fields currently owned"},
 }
 # Only existing triggers that actually satisfy each objective may change its state.
@@ -66,7 +66,7 @@ BRIEFING_MATCH = {
 # Main-goal observers now enforce these formerly unchecked Mossgate briefing duties.
 BRIEFING_MATCH["Mossgate"] = {
     3: "yes: mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles",
-    4: "yes: mainWatch requires both watchmen and actual reinforcements; mainVillage requires Marsh and all enemies including the portal"
+    4: "no: mainWatch requires both watchmen and actual reinforcements; the reeve no longer stands in the bonus chamber, chamberCleared wins after the three main goals"
 }
 
 BRIEFING_MATCH["Brackenford"] = {3: "yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked", 4: "yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles"}
@@ -142,7 +142,7 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
  'Kingsfall': [('collectWin',), ('courtTaken', 'collectWin'), ('goalArmyAtHeart',)],
  'Lanternhill': [('rivalHeartDown',), ('goalRingGroundPathOpened',), ('goalHeartSafe3BeforeRivalHeartDown',)],
  'Mirewatch': [('watcherSlain',), None, ('goalNineTowerRoomsClaimed',), ('scoutTowerC',), ('watcherSlain',)],
- 'Mossgate': [('reeveFalls',), ('firstGold',), ('meadowOurs',), ('goalWatchPostCleared',), ('reeveFalls',)],
+ 'Mossgate': [None, ('firstGold',), ('meadowOurs',), ('goalWatchPostCleared',), None],
  'Ravensledge': [('captainDown',),
                  ('shelfHeld',),
                  ('shelfHeld',),
@@ -172,6 +172,9 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('goalHeartSafe3BeforeHuntersGoneGoal',)],
  'Wraithwood': [('bothFallGoal',), ('bothFallGoal',), ('goalHeartSafe3BeforeBothFallGoal',)]}
 HINT_IDS = frozenset(['bellwick-o02', 'ebonrook-o03', 'goldspire-o02', 'mirewatch-o02', 'silverdeep-o03', 'thornreach-o02'])
+# Objective IDs removed with the reeve of the bonus chamber Mossgate; they must stay undeclared and
+# keep their numbers free so that the remaining IDs keep their saved states.
+REMOVED_OBJECTIVE_IDS = frozenset(['mossgate-o01', 'mossgate-o05'])
 # All mapped alternatives have explicit approved completion criteria.
 OBJECTIVE_COVERAGE_PENDING = {}
 
@@ -431,9 +434,7 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a
  'Mirewatch/watcherSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Mossgate/firstGold': '4bb67357526e67e6cebc76c5f68d3724d44496fa4fa0af3b661369e6a7822232',
  'Mossgate/goalWatchPostCleared': '43dd83a2b12c44e8787c1d4915efd8d681e068d24c09d2f6481c7997d2ada8eb',
- 'Mossgate/hallOpened': '835d13b12817b58bb8a9342ce8e44ecc3fbc12ad6845c34392fefbf960ef93fc',
  'Mossgate/meadowOurs': 'dc24a3c61e63b2361437ecff16031829c4603c9cf3914b514de872c70ddb52e2',
- 'Mossgate/reeveFalls': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Ravensledge/captainDown': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Ravensledge/goalInnerKeepEntered': '457a1424f47049320d2f987087e3ab9988b1f0b77713ad34334d036446c9556d',
  'Ravensledge/shelfHeld': 'f3b5f12fb09cd6590ec8fe5d13f74cd7956b27e0a3bb9524b0a49ad2782cbef1',
@@ -1272,7 +1273,7 @@ def objective_errors(text, level_name):
             continue
         identity = re.fullmatch(re.escape(level_name.lower()) + r"-o(\d{2})", key[1])
         index = int(identity[1]) if identity else 0
-        if index < 1 or key[1] in HINT_IDS:
+        if index < 1 or key[1] in HINT_IDS | REMOVED_OBJECTIVE_IDS:
             errors.append("objective ID differs from fixed inventory: " + key[1])
         completions = {trigger for trigger, state in states.get(key, []) if state == "reached"}
         if not completions:
@@ -1284,7 +1285,7 @@ def objective_errors(text, level_name):
             errors.append("objective partially covered: " + key[1] + ": " + OBJECTIVE_COVERAGE_PENDING[key[1]])
     for index in range(1, len(OBJECTIVE_TRIGGERS.get(level_name, ())) + 1):
         identity = level_name.lower() + "-o%02d" % index
-        if identity not in HINT_IDS and not any(key[1] == identity for key in declarations):
+        if identity not in HINT_IDS | REMOVED_OBJECTIVE_IDS and not any(key[1] == identity for key in declarations):
             errors.append("required stable objective ID is missing: " + identity)
     errors.extend(grouped_goal_errors(text, level_name))
     return errors
@@ -1379,15 +1380,19 @@ def self_test(root):
     original = (root / "levels/campaign/Mossgate.level").read_text(encoding="utf-8")
     level = parse_level(original)
     assert level["tiles"][1, 1] == (1, 100.0, None), "sparse defaults must be full dirt"
-    assert not any("ReeveMarsh" in error for error in check_level(level)), "Mossgate reeve must be reachable"
-    for target in ((7, 5), (31, 30)):
+    # The bonus chamber wins by script; the reachability of enemies is exercised with an added KillAllEnemies goal.
+    assert ("KillAllEnemies", "NULL") not in level["goals"], "the Mossgate chamber must not win by eliminating all enemies"
+    level["goals"].append(("KillAllEnemies", "NULL"))
+    assert not any("PostWatch1" in error for error in check_level(level)), "Mossgate watchman must be reachable"
+    for target in ((6, 12), (31, 30)):
         bad = parse_level(original)
+        bad["goals"].append(("KillAllEnemies", "NULL"))
         for tile in neighbours(target):
             bad["tiles"][tile] = (3, 100.0, None)
         if target == (31, 30):
             bad["rooms"].append((4, "SealedPortal", 2, [target]))
         errors = check_level(bad)
-        expected = "ReeveMarsh" if target == (7, 5) else "SealedPortal"
+        expected = "PostWatch1" if target == (6, 12) else "SealedPortal"
         assert any(expected in error and "blocking frontier" in error for error in errors), expected
     bad = parse_level(original)
     bad["scripts"].append((1, ["Cond", "goal", "1", "MissingGoal"]))
@@ -1432,7 +1437,7 @@ def self_test(root):
         ("mainobjectiveid\t1\tmossgate-main-watch", "optionalobjectiveid\t1\tmossgate-main-watch", "group classification"),
         ("Mode\trepeat\t0\nCond\tmined", "Mode\tonce\nCond\tmined", "main reevaluation"),
         ("Cond\tclaimed\t1\tMeadow\t18", "Cond\tclaimed\t1\tMeadow\t1", "exact meadow count"),
-        ("Cond\tgoalmet\t1\tKillAllEnemies", "Cond\ttime\t1", "remaining enemies and portal"),
+        ("Cond\tobjective\t1\tmossgate-main-watch\treached", "Cond\ttime\t1", "victory after the watch post"),
         ("mossgate-extra-gallery\treached", "mossgate-missing-gallery\treached", "optional completion")
     ):
         assert old in original, message
@@ -1449,6 +1454,9 @@ def self_test(root):
     assert any("undeclared objective" in error for error in objective_errors(unknown_status, "Mossgate"))
     wrong_spawn = original.replace("spawncleared\tpostStirs\t1", "spawncleared\tpostStirs\t0")
     assert any("actual original spawn" in error for error in objective_errors(wrong_spawn, "Mossgate"))
+    # Removed objective IDs of the reeve must stay undeclared.
+    revived = original.replace("Action\tobjectiveid\t1\tmossgate-o02\t", "Action\tobjectiveid\t1\tmossgate-o01\tKill the reeve.\nAction\tobjectiveid\t1\tmossgate-o02\t", 1)
+    assert any("fixed inventory: mossgate-o01" in error for error in objective_errors(revived, "Mossgate"))
     for name, old, new in (
         ("BoulderCourse", "Action\tslaplimit\t80", "Action\tslaplimit\t81"),
         ("BoulderCourse", "Action\ttimelimit\t600", "Action\ttimelimit\t601"),

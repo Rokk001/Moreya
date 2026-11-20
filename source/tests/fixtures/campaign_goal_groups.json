@@ -34,17 +34,6 @@
         ],
         "mode": "repeat\t0"
       },
-      "mossgate-main-village": {
-        "kind": "mainobjectiveid",
-        "text": "Defeat Marsh, his guards and their portal.",
-        "seat": "1",
-        "completion": "mainVillage",
-        "conditions": [
-          "Cond\tevent\tReeveMarsh\tkilled",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
-        ],
-        "mode": "repeat\t0"
-      },
       "mossgate-extra-gallery": {
         "kind": "optionalobjectiveid",
         "text": "Explore the side gallery.",
@@ -68,6 +57,18 @@
             "failed"
           ]
         ]
+      },
+      "chamberCleared": {
+        "conditions": [
+          "Cond\tobjective\t1\tmossgate-main-heart\treached",
+          "Cond\tobjective\t1\tmossgate-main-meadow\treached",
+          "Cond\tobjective\t1\tmossgate-main-watch\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe watch post is silent and the meadow is yours. The forgotten pit belongs to you.",
+          "Action\twin\t1"
+        ]
       }
     },
     "route": [
@@ -75,7 +76,7 @@
       "Claim 18 tiles of Meadow (14,18)-(27,26).",
       "Enter Yard (3,11)-(13,20), defeat both named watchmen and the actual postStirs reinforcements.",
       "Explore Gallery (10,6)-(24,12) with a living own creature before ending the level.",
-      "Defeat ReeveMarsh and remaining enemy creatures; destroy or take the enemy portal at (31,30). Preserve the own heart."
+      "Preserve the own heart; chamberCleared wins once the heart, meadow and watch-post goals are reached. The reeve no longer stands in the chamber."
     ],
     "runtime_limit": "Static routes and source conditions are not combat balance or an executed game playthrough.",
     "reachability": {
@@ -101,7 +102,6 @@
       },
       "minimum_mineable_gold": 60,
       "named_creatures": [
-        "ReeveMarsh",
         "PostWatch1",
         "PostWatch2"
       ]
@@ -2448,7 +2448,7 @@
         "Action\tsetflag\tflock3\t1"
       ],
       "galleryClear": [
-        "Action\tmessage\t1\tNot a wing is left over the lava. The gallery is yours and the heart has given you a shard.",
+        "Action\tmessage\t1\tNot a wing is left over the lava. The gallery is yours.",
         "Action\tobjectivestate\t1\tcrowshotgallery-o01\treached",
         "Action\twin\t1"
       ]
@@ -2622,7 +2622,7 @@
       "Possess a level3 starting LizardMan and land at least one real positive projectile hit. All 18 fixed targets must die from own creature projectiles; a hit or lethal knockout alone never counts as death. Other own shooters may assist with projectile kills. Melee, traps, spells cast by the keeper, conversion or environmental deaths do not substitute.",
       "First kill Crow1..4. secondFlock starts after time10 and the first flock is gone, spawning Raven1..6. thirdFlock requires flock2 cleared and spawns Rook1..6 plus Wyverns Rook7/8. Every actual spawn action must have its observed instances dead.",
       "The level3 LizardMan has MissileLaunch range7 and level minimum1. Every target coordinate has a reachable initially open dry shooting position within that range; exact points are in the fixture. This is a necessary spatial check, not a 420-second combat proof.",
-      "For the optional goal keep Shooter1..5 alive through the main completion. A real death permanently fails survival; knockout alone does not. Wrong target deaths fail the shot challenge explicitly, and the original timeout still ends the level. Victory narration is guarded by the same shot requirements so it cannot announce a shard for an invalid clear."
+      "For the optional goal keep Shooter1..5 alive through the main completion. A real death permanently fails survival; knockout alone does not. Wrong target deaths fail the shot challenge explicitly, and the original timeout still ends the level. Victory narration is guarded by the same shot requirements so it cannot announce victory for an invalid clear."
     ],
     "runtime_limit": "Actual aiming, target movement, damage/cadence, the 420-second route and save/load still require integrator/Mario runtime verification; no playthrough claimed."
   },
@@ -6528,7 +6528,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe last guard has fallen and the lanes lie quiet. The heart gives you a shard.",
+          "Action\tmessage\t1\tThe last guard has fallen and the lanes lie quiet.",
           "Action\twin\t1"
         ]
       }
@@ -6811,7 +6811,7 @@
     "runtime_limit": "Static script and death-source evidence only; actual boulder trajectories, hit limits, guard damage, opening routes, combat and save/load need integrator/Mario runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tThe last guard has fallen and the lanes lie quiet. The heart gives you a shard."
+      "action": "Action\tmessage\t1\tThe last guard has fallen and the lanes lie quiet."
     }
   },
   "Stormhaven": {

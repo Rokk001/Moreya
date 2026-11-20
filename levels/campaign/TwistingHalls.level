@@ -3236,7 +3236,7 @@ Action	terrain	50	6	50	6	path
 Name	hallReached
 Mode	once
 Cond	region	1	ExitHall
-Action	message	1	The exit hall is yours, and the heart gives you a shard for the way you walked.
+Action	message	1	The exit hall is yours.
 Action	objectivestate	1	twistinghalls-o01	reached
 Action	win	1
 [/Trigger]

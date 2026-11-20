@@ -1049,7 +1049,7 @@ Cond	spawncleared	thirdFlock	5
 Cond	spawncleared	thirdFlock	6
 Cond	spawncleared	thirdFlock	7
 Cond	spawncleared	thirdFlock	8
-Action	message	1	Not a wing is left over the lava. The gallery is yours and the heart has given you a shard.
+Action	message	1	Not a wing is left over the lava. The gallery is yours.
 Action	objectivestate	1	crowshotgallery-o01	reached
 Action	win	1
 [/Trigger]

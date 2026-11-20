@@ -1471,7 +1471,7 @@ Cond	boulder	CupA	>=	1
 Cond	boulder	CupB	>=	1
 Cond	boulder	CupC	>=	1
 Cond	boulder	CupD	>=	1
-Action	message	1	All four boulders lie in their cups. The old course is cleared and the heart answers with a shard.
+Action	message	1	All four boulders lie in their cups. The old course is cleared.
 Action	objectivestate	1	bouldercourse-o01	reached
 Action	win	1
 [/Trigger]
