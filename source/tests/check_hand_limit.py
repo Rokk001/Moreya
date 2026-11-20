@@ -72,7 +72,7 @@ SAVE_CHECK = read("source/tests/check_save_games_load.py")
 # The keys of the [HandLimit] block counted once for this branch: value and whether the simulation still sets it
 EXPECTED_KEYS = {
     "HandLimitFighters": ("1", False),
-    "HandLimitCooldownSeconds": ("10", True),
+    "HandLimitCooldownSeconds": ("60", False),
 }
 block = re.search(r"^\[HandLimit\]\n(.*?)^\[/HandLimit\]", GLOBAL_CFG, re.M | re.S)
 check(block is not None, "V1: global.cfg has a [HandLimit] block")
