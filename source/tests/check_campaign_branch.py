@@ -55,11 +55,17 @@ current = campaign_cpp[campaign_cpp.index("size_t Campaign::getCurrentLevelNoLoc
 check("if(!mCompleted[i] && !mLevels[i].mBonus)" in current and "sister" not in current,
       "the current level must be the first story level not completed")
 
-# The old world map is still drawn by the campaign menu until the map of Moreya replaces it
-ids = [p["id"] for p in world["provinces"]]
-check(len(ids) == 26, "the world map must list 26 provinces")
-check("!campaign.getLevel(i).mBonus && campaign.isCompleted(i)" in mode, "progress must count each completed main level")
-check("provinces.size()" in mode, "progress total must be the number of provinces")
+# The map of Moreya has replaced the old world map: one straight line of 18 level caves in 6 wings, the story levels
+# of the definition in their order, and its progress counts each defeated story level of the 18
+story = [level["file"] for wing in world["wings"] for level in wing["levels"]]
+check("provinces" not in world, "the world map must not list provinces any more")
+check(len(story) == 18, "the map of Moreya must list 18 level caves")
+check(story == [f for f, entry in zip(files, entries) if f and "Bonus" not in entry],
+      "the level caves must follow the story levels of Campaign.cfg without a branch")
+check("mCaveStates[i] == CampaignCaveState::defeated" in mode and "++levelsDefeated;" in mode,
+      "progress must count each defeated story level")
+check("++levelTotal;" in mode and "levelsDefeated * PERCENT_FULL / levelTotal" in mode,
+      "progress total must be the number of level caves")
 
 if failures:
     print("\n".join(failures))

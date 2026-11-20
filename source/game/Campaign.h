@@ -176,6 +176,9 @@ public:
     //! \brief Index of the level on the province or bonus site with that id,
     //! or getNumLevels() if there is none. The definition sets no province any more.
     size_t findLevelByProvince(const std::string& province) const;
+    //! \brief Index of the level with that file (relative to the "levels" directory), or getNumLevels() if there
+    //! is none. The campaign map finds the level of each of its caves with it.
+    size_t findLevelByFile(const std::string& file) const;
     //! \brief True if the level was won
     bool isCompleted(size_t index) const;
     //! \brief True if the level can be played: its story levels before it are done, or the bonus level was found
