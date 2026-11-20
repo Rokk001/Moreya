@@ -484,7 +484,7 @@ Possible route (static, not a playthrough):
 - Possess a level3 starting LizardMan and land at least one real positive projectile hit. All 18 fixed targets must die from own creature projectiles; a hit or lethal knockout alone never counts as death. Other own shooters may assist with projectile kills. Melee, traps, spells cast by the keeper, conversion or environmental deaths do not substitute.
 - First kill Crow1..4. secondFlock starts after time10 and the first flock is gone, spawning Raven1..6. thirdFlock requires flock2 cleared and spawns Rook1..6 plus Wyverns Rook7/8. Every actual spawn action must have its observed instances dead.
 - The level3 LizardMan has MissileLaunch range7 and level minimum1. Every target coordinate has a reachable initially open dry shooting position within that range; exact points are in the fixture. This is a necessary spatial check, not a 420-second combat proof.
-- For the optional goal keep Shooter1..5 alive through the main completion. A real death permanently fails survival; knockout alone does not. Wrong target deaths fail the shot challenge explicitly, and the original timeout still ends the level. Victory narration is guarded by the same shot requirements so it cannot announce a shard for an invalid clear.
+- For the optional goal keep Shooter1..5 alive through the main completion. A real death permanently fails survival; knockout alone does not. Wrong target deaths fail the shot challenge explicitly, and the original timeout still ends the level. Victory narration is guarded by the same shot requirements so it cannot announce victory for an invalid clear.
 
 Actual aiming, target movement, damage/cadence, the 420-second route and save/load still require integrator/Mario runtime verification; no playthrough claimed.
 
@@ -1084,14 +1084,11 @@ File: `levels/campaign/Mossgate.level`.
 
 | Source | Exact requirement | Match |
 | --- | --- | --- |
-| [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 764 | `Action	objectiveid	1	mossgate-o01	Kill Tobin Marsh in the village hall.` | yes |
-| Script line 765 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
-| Script line 772 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
-| Script line 782 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
-| Script line 800 | `Action	objectiveid	1	mossgate-o05	Enter the hall and kill Tobin Marsh.` | yes |
-| Script line 832 | `Action	win	1` | yes |
+| Script line 761 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
+| Script line 768 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
+| Script line 778 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
+| Script line 861 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1100,7 +1097,6 @@ File: `levels/campaign/Mossgate.level`.
 | main | `mossgate-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `mossgate-main-meadow`: Mine 60 gold and claim the meadow. | `mainMeadow`: Cond	mined	1	>=	60; Cond	claimed	1	Meadow	18 |
 | main | `mossgate-main-watch`: Clear the watch post and reinforcements. | `mainWatch`: Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1 |
-| main | `mossgate-main-village`: Defeat Marsh, his guards and their portal. | `mainVillage`: Cond	event	ReeveMarsh	killed; Cond	goalmet	1	KillAllEnemies |
 | optional | `mossgate-extra-gallery`: Explore the side gallery. | `extraGallery`: Cond	region	1	Gallery |
 
 Possible route (static, not a playthrough):
@@ -1108,23 +1104,20 @@ Possible route (static, not a playthrough):
 - Claim 18 tiles of Meadow (14,18)-(27,26).
 - Enter Yard (3,11)-(13,20), defeat both named watchmen and the actual postStirs reinforcements.
 - Explore Gallery (10,6)-(24,12) with a living own creature before ending the level.
-- Defeat ReeveMarsh and remaining enemy creatures; destroy or take the enemy portal at (31,30). Preserve the own heart.
+- Preserve the own heart; chamberCleared wins once the heart, meadow and watch-post goals are reached. The reeve no longer stands in the chamber.
 
 Static routes and source conditions are not combat balance or an executed game playthrough.
 
 | Trigger `firstGold` | `Action	objectivestate	1	mossgate-o02	reached`; conditions: `Cond	mined	1	>=	60` | yes |
 | Trigger `meadowOurs` | `Action	objectivestate	1	mossgate-o03	reached`; conditions: `Cond	claimed	1	Meadow	18` | yes |
 | Trigger `goalWatchPostCleared` | `Action	objectivestate	1	mossgate-o04	reached`; conditions: `Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1` | yes |
-| Trigger `reeveFalls` | `Action	objectivestate	1	mossgate-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Trigger `reeveFalls` | `Action	objectivestate	1	mossgate-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	mossgate-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainMeadow` | `Action	objectivestate	1	mossgate-main-meadow	reached`; conditions: `Cond	mined	1	>=	60; Cond	claimed	1	Meadow	18` | yes |
 | Trigger `mainWatch` | `Action	objectivestate	1	mossgate-main-watch	reached`; conditions: `Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1` | yes |
-| Trigger `mainVillage` | `Action	objectivestate	1	mossgate-main-village	reached`; conditions: `Cond	event	ReeveMarsh	killed; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `extraGallery` | `Action	objectivestate	1	mossgate-extra-gallery	reached`; conditions: `Cond	region	1	Gallery` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	mossgate-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Briefing | Mine the soft walls and claim the meadow cave. | yes: mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles |
-| Briefing | Break the watch post and slay the reeve in his hall. | yes: mainWatch requires both watchmen and actual reinforcements; mainVillage requires Marsh and all enemies including the portal |
+| Briefing | Break the watch post and slay the reeve in his hall. | no: mainWatch requires both watchmen and actual reinforcements; the reeve no longer stands in the bonus chamber, chamberCleared wins after the three main goals |
 
 ## Ravensledge
 
@@ -1373,7 +1366,7 @@ File: `levels/campaign/SwarmNight.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 1564 | `Action	objectiveid	1	swarmnight-o01	Survive the swarm for 13 minutes.` | yes |
 | Script line 1565 | `Action	objectiveid	1	swarmnight-o02	Protect your heart.` | yes |
-| Script line 1680 | `Action	win	1` | yes |
+| Script line 1679 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1404,7 +1397,7 @@ The existing trap/ball/possession route and survival challenge still require run
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	swarmnight-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
 | Briefing | Keep your heart standing for thirteen minutes. | yes: dawn at 780 seconds with ProtectDungeonTemple |
-| Briefing | Your strongest surviving fighter can follow you onward toward Aurel's stand; this trial grants no Heartstone fragment. | yes: dawn invokes keepminion before win; no Heartstone reward is granted |
+| Briefing | Your strongest surviving fighter can follow you onward toward Aurel's stand; this trial grants no Heartstone fragment. | no: nothing is carried to the next level any more (keepminion removed); no Heartstone shard is granted |
 
 ## Thornreach
 
