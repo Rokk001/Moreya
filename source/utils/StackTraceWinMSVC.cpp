@@ -97,14 +97,16 @@ LONG WINAPI StackTracePrintPrivateData::exceptionFilter(LPEXCEPTION_POINTERS inf
         return 0;
 
     int depth = 128;
-    IMAGEHLP_LINE line = { 0 };
+    // The 64 bit walk: the 32 bit structures and IMAGE_FILE_MACHINE_I386 found no frame in a 64 bit build, so a crash
+    // left an empty crash file
+    IMAGEHLP_LINE64 line = { 0 };
 
     PCONTEXT context = info->ContextRecord;
 
     char procname[MAX_PATH];
     GetModuleFileNameA(nullptr, procname, sizeof procname);
 
-	STACKFRAME frame;
+    STACKFRAME64 frame;
     memset(&frame,0,sizeof(frame));
 
     frame.AddrPC.Offset = context->Rip;
@@ -117,7 +119,7 @@ LONG WINAPI StackTracePrintPrivateData::exceptionFilter(LPEXCEPTION_POINTERS inf
     HANDLE process = GetCurrentProcess();
     HANDLE thread = GetCurrentThread();
 
-    char symbol_buffer[sizeof(IMAGEHLP_SYMBOL) + 255];
+    char symbol_buffer[sizeof(IMAGEHLP_SYMBOL64) + 255];
     DWORD symbolOffset = 0;
 
     line.SizeOfStruct = sizeof line;
@@ -127,8 +129,8 @@ LONG WINAPI StackTracePrintPrivateData::exceptionFilter(LPEXCEPTION_POINTERS inf
     std::string processName;
     char processNameRaw[MAX_PATH];
 
-    while(StackWalk(IMAGE_FILE_MACHINE_I386, process, thread, &frame, context,
-        0, SymFunctionTableAccess, SymGetModuleBase, 0))
+    while(StackWalk64(IMAGE_FILE_MACHINE_AMD64, process, thread, &frame, context,
+        0, SymFunctionTableAccess64, SymGetModuleBase64, 0))
     {
         --depth;
         if (depth < 0)
@@ -143,18 +145,18 @@ LONG WINAPI StackTracePrintPrivateData::exceptionFilter(LPEXCEPTION_POINTERS inf
             continue;
         }
 
-        IMAGEHLP_SYMBOL *symbol = reinterpret_cast<IMAGEHLP_SYMBOL*>(symbol_buffer);
+        IMAGEHLP_SYMBOL64 *symbol = reinterpret_cast<IMAGEHLP_SYMBOL64*>(symbol_buffer);
         symbol->SizeOfStruct = (sizeof *symbol) + 255;
         symbol->MaxNameLength = 254;
 
-        DWORD moduleBase = SymGetModuleBase(process, frame.AddrPC.Offset);
+        DWORD64 moduleBase = SymGetModuleBase64(process, frame.AddrPC.Offset);
         if ((moduleBase != 0) && GetModuleFileNameA(reinterpret_cast<HINSTANCE>(moduleBase), processNameRaw, MAX_PATH))
             processName = processNameRaw;
         else
             processName = "[unknown module]";
 
-        PDWORD64 dummy = 0;
-        if (SymGetSymFromAddr(process, frame.AddrPC.Offset, dummy, symbol))
+        DWORD64 displacement = 0;
+        if (SymGetSymFromAddr64(process, frame.AddrPC.Offset, &displacement, symbol))
             symbolFile = symbol->Name;
         else
             symbolFile = "[unknown function]";
@@ -163,7 +165,7 @@ LONG WINAPI StackTracePrintPrivateData::exceptionFilter(LPEXCEPTION_POINTERS inf
         UnDecorateSymbolName(symbol->Name, &und_name[0], 1024, UNDNAME_COMPLETE);
         symbolFunction = std::string(&und_name[0], strlen(&und_name[0]));
 
-        if (!SymGetLineFromAddr(process, frame.AddrPC.Offset, &symbolOffset, &line))
+        if (!SymGetLineFromAddr64(process, frame.AddrPC.Offset, &symbolOffset, &line))
         {
             line.FileName = "[unknown file]";
             line.LineNumber = 0;
