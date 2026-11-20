@@ -64,9 +64,9 @@ File: `levels/campaign/Bellwick.level`.
 | Script line 3925 | `Action	objectiveid	1	bellwick-o01	Destroy the keeper's heart in the north undercroft.` | yes |
 | Advisory hint line 3926 | `Action	hint	1	Hold the nave against the faithful.` | not an objective; no state required |
 | Script line 3936 | `Action	objectiveid	1	bellwick-o04	Reach the transept through the nave.` | yes |
-| Script line 3997 | `Action	win	1` | yes |
-| Script line 4002 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4110 | `Action	win	1` | yes |
+| Script line 3998 | `Action	win	1` | yes |
+| Script line 4003 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4111 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -112,8 +112,6 @@ Static source and potential route evidence only; actual digging/movement, combat
 | Objective mapping | required underlying trigger conditions differ: faithful8 | no: requires design decision |
 | Objective mapping | required underlying trigger conditions differ: faithful9 | no: requires design decision |
 | Objective mapping | original trial limit was changed: tolling | no: requires design decision |
-| Objective mapping | original trial limit was changed: cryptRow | no: requires design decision |
-| Objective mapping | original trial limit was changed: cryptRow | no: requires design decision |
 | Objective mapping | original trial limit was changed: faithful1 | no: requires design decision |
 | Objective mapping | original trial limit was changed: faithful1 | no: requires design decision |
 | Objective mapping | original trial limit was changed: faithful2 | no: requires design decision |
@@ -665,8 +663,8 @@ File: `levels/campaign/Goldspire.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Advisory hint line 3173 | `Action	hint	1	Mine gold and build an army.` | not an objective; no state required |
 | Script line 3174 | `Action	objectiveid	1	goldspire-o03	Take the low town below the spire.` | yes |
-| Script line 3202 | `Action	objectiveid	1	goldspire-o04	Enter the outer ring after the south gate opens.` | yes |
-| Script line 3460 | `Action	win	1` | yes |
+| Script line 3203 | `Action	objectiveid	1	goldspire-o04	Enter the outer ring after the south gate opens.` | yes |
+| Script line 3461 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -726,7 +724,6 @@ Static route/bank/footprint/source evidence only; actual gate/link movement, cap
 | Objective mapping | required underlying trigger conditions differ: treasurerHurt | no: requires design decision |
 | Objective mapping | required underlying trigger conditions differ: keyDropped | no: requires design decision |
 | Objective mapping | original trial limit was changed: rising | no: requires design decision |
-| Objective mapping | original trial limit was changed: firstCoin | no: requires design decision |
 | Objective mapping | original trial limit was changed: coreSeen | no: requires design decision |
 | Objective mapping | original trial limit was changed: coreSeen | no: requires design decision |
 | Objective mapping | original trial limit was changed: column1 | no: requires design decision |

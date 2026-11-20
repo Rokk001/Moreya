@@ -3947,7 +3947,8 @@ Action	reveal	1	WestCloister
 Name	cryptRow
 Mode	once
 Cond	region	1	CryptRow
-Action	message	1	Old bones lie in the cells. Whoever holds the crypt holds the way north.
+Action	message	1	Old bones in the cells will rise for whoever holds the crypt. Your gifts have come.
+Action	spawn	1	14	70	1	Orc:3	Goblin:3	Spider:3
 [/Trigger]
 [Trigger]
 Name	transept

@@ -3182,6 +3182,7 @@ Action	message	1	The first coin is in the vault and your portal draws creatures 
 Action	portal	1	on
 Action	setflag	portalOn	1
 Action	gold	1	400
+Action	spawn	1	21	73	1	Orc:2	Goblin:2
 [/Trigger]
 [Trigger]
 Name	roadWalked
