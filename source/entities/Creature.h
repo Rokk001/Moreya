@@ -318,6 +318,10 @@ public:
     inline unsigned int getLevel() const
     { return mLevel; }
 
+    //! \brief Experience gathered towards the next level (the group leader rule compares it on equal level)
+    inline double getExp() const
+    { return mExp; }
+
     //! \brief Shown size of the creature relative to its base size: 1 at level 1, growing linearly with the level to
     //! 1 + CreatureLevelGrowthMax (global.cfg) at the highest level
     double getLevelScale() const;
@@ -736,6 +740,12 @@ public:
     CreatureSkillTree::TypeInfo getSkillTypeInfo() const;
     //! \brief Counts one eaten chicken for the skill reset (server side).
     void registerChickenEaten();
+    //! \brief Server side. The creature follows the named template of its skill group for good (the fixed template of
+    //! a raid member): a started build spends all its points again after that template, a build that is not started
+    //! yet follows it from its first point. The reset window cannot change a fixed template.
+    //! \param templateName The name of a template of the creature's skill group.
+    //! \return false when the creature has no skill group or the group has no template of that name.
+    bool setFixedSkillTemplate(const std::string& templateName);
     //! \brief Returns the heal amount of 100 percent of a heal skill: the MinHP times the damage multiplier of the
     //! Mana attribute level.
     double getHealBase() const;
@@ -2766,6 +2776,12 @@ private:
     //! the heart while it is damaged. A runner that is already fighting or fleeing keeps doing so.
     //! \brief Sends healthy available defenders to the heart without moving resting patients.
     void handleHeartDefence();
+
+    //! \brief A sub-function called by doUpkeep() on the server. A member of a combat group whose group retreats
+    //! drops what it does (its fight too) and walks to the gathering tile; a member that keeps the formation drops
+    //! its job and keeps its place behind the leader. Fleeing, the heart defence and the infirmary keep their
+    //! priority, a fight is not interrupted by the formation. Does nothing for a creature in no group.
+    void handleCombatGroup();
 
     //! \brief A sub-function called by doTurn()
     //! This functions will handle the creature idle action logic. A standing order of the level
