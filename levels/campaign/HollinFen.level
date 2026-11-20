@@ -3487,7 +3487,7 @@ Region	Chapel	56	64	76	73
 Name	reedCall
 Mode	once
 Cond	time	3
-Action	message	1	Hollin Fen is a bog of holly thickets, master, and its convent has more soldiers than nuns. Sister Agathe Hollin keeps every door shut and sends out patrols without rest.
+Action	message	1	The Bone Chapel sits in a bog of holly thickets, master, behind an old convent with more soldiers than nuns. Agathe Hollin is bringing the Order of the White Thorn from Hollin Fen, with more healers than you will like.
 Action	objectiveid	1	hollinfen-o02	Defend your heart.
 [/Trigger]
 [Trigger]
@@ -3521,7 +3521,7 @@ Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.
 Name	wardEntered
 Mode	once
 Cond	region	1	Ward
-Action	message	1	Every bell in the convent is tolling. Sister Agathe has called out her whole guard.
+Action	message	1	Every bell in the convent is tolling. The convent has called out its whole guard.
 Action	spawn	3	56	56	1	Knight:3	Knight:2	Elf:2	Monk:2	Adventurer:2
 Action	reveal	1	Chapel
 Action	objectivestate	1	hollinfen-o03	reached
@@ -3600,7 +3600,7 @@ Cond	objective	1	hollinfen-main-home	reached
 Cond	objective	1	hollinfen-main-gate	reached
 Cond	objective	1	hollinfen-main-raid	reached
 Cond	raid	defeated
-Action	message	1	The Order's raid lies in the bog and its bells are silent. Hollin Fen is yours.
+Action	message	1	The Order's raid lies in the bog and its bells are silent. The Bone Chapel is yours.
 Action	win	1
 [/Trigger]
 

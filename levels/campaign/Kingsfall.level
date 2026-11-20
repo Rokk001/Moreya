@@ -3989,7 +3989,7 @@ Region	CacheGate	85	19	91	21
 Name	hunt
 Mode	once
 Cond	time	3
-Action	message	1	Kingsfall, master, where Prince Aurel hunts and where he has made his stand. His champions are Falconer Edda, Huntsman Brann and Squire Wick, and a keeper who wants the crown must take them alive.
+Action	message	1	The Hall of Skulls, master, and Prince Aurel is coming for it himself with the Sun Court of Kingsfall. His champions Falconer Edda, Huntsman Brann and Squire Wick came ahead to hunt here, and a keeper who wants to hurt a prince takes them alive.
 Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.
 Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.
 [/Trigger]
@@ -4005,7 +4005,7 @@ Action	reveal	1	Ravine
 Name	meadows
 Mode	once
 Cond	region	1	SouthMeadows
-Action	message	1	The south meadows. The prince lets his hunting parties range here.
+Action	message	1	The south meadows. The prince's hunting parties range here.
 Action	spawn	3	48	55	1	Knight:4	Elf:4	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
@@ -4043,14 +4043,14 @@ Action	reveal	1	Keep
 Name	cacheSeen
 Mode	once
 Cond	region	1	Cache
-Action	message	1	The prince hid his hunting purse here. It will pay for a larger prison.
+Action	message	1	The prince's hunters hid his hunting purse here. It will pay for a larger prison.
 Action	gold	1	2000
 [/Trigger]
 [Trigger]
 Name	keepSeen
 Mode	once
 Cond	region	1	Keep
-Action	message	1	The keep of the prince. The last of his guard stands between you and the court.
+Action	message	1	The keep the champions hold for the prince. The last of their guard stands in it.
 Action	spawn	3	50	19	1	Knight:5	Knight:5	Elf:5	Monk:5	Dwarf2:4
 [/Trigger]
 [Trigger]
@@ -4106,7 +4106,7 @@ Action	addflag	champions	1
 Name	centreWell
 Mode	once
 Cond	slabs	1	Centre	claimed	>=	25
-Action	message	1	The royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a Ziv.
+Action	message	1	The royal glade is yours, and a spring of mana has opened where the hunters used to rest. Claim it with a Ziv.
 Action	terrain	49	35	49	35	manawell
 [/Trigger]
 [Trigger]
@@ -4238,7 +4238,7 @@ Cond	objective	1	kingsfall-main-champions	reached
 Cond	objective	1	kingsfall-main-army	reached
 Cond	objective	1	kingsfall-main-raid	reached
 Cond	raid	defeated
-Action	message	1	The prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours.
+Action	message	1	The prince is beaten and his champions are in your hands. The Sun Court has set, and the Hall of Skulls is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]

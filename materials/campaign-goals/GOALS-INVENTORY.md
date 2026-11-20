@@ -42,7 +42,8 @@ Static geometry and source conditions are not a combat or timing playthrough; th
 | Trigger `mainRaid` | `Action	objectivestate	1	ashcombe-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraRuins` | `Action	objectivestate	1	ashcombe-extra-ruins	reached`; conditions: `Cond	region	1	RuinYard` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	ashcombe-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Briefing | Cross the ashes and kill her before she escapes, whether in the hold or on the south road. | no: actual northward Basin crossing and own-heart protection are checked; Ashby leads the raid, mainRaid requires the defeated raid and only her flight to the gate loses, the hold and south road escape is removed |
+| Briefing | Until the gate opens, protect your heart and cross the ash basin. | yes: own-heart protection and the actual northward Basin crossing |
+| Briefing | Then break both groups and catch Liesl Ashby before she runs back through the gate; she is quick when it matters. | yes: mainRaid requires both defeated raid groups, the leader LieslAshby with the second; only her flight to the gate loses, the hold and south road escape is removed |
 Mario decided: kill Ashby before she escapes, regardless of location. Actual death and no fired escape trigger are required; departure and a hold visit are not prerequisites or substitutes.
 
 ## Bellwick
@@ -87,7 +88,9 @@ Static source and potential route evidence only; actual digging/movement, combat
 | Trigger `mainKeeper` | `Action	objectivestate	1	bellwick-main-keeper	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	bellwick-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraScriptorium` | `Action	objectivestate	1	bellwick-extra-scriptorium	reached`; conditions: `Cond	region	1	Scriptorium` | yes |
-| Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | no: own heart protected, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes; holding against the faithful until the gates unseal is no longer checked, the faithful waves are removed |
+| Briefing | Until the gate opens, protect your heart, pass through the nave to the transept and destroy the undercroft heart with all enemy forces. | yes: own heart protected, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes |
+| Briefing | A stone hides in a chamber of the abbey; let a Ziv carry it home and a hidden hall opens. | yes: entering StoneChamber creates the bell-stone; only its actual delivery to the heart reveals BoulderCourse |
+| Briefing | Then break the group and catch Lorens Bell before he reaches the gate. | yes: mainRaid requires the defeated raid with its leader LorensBell; the leader's escape through the gate loses the level by itself |
 
 ## Bonus1
 
@@ -187,7 +190,7 @@ The existing trap/ball/possession route and survival challenge still require run
 | Trigger `extraSurvivorLost3` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker3	killed` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	bouldercourse-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	bouldercourse-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
-| Briefing | Roll every ball into its cup before the shift bell; this optional trial rewards one of four Heartstone fragments. | yes: courseDone checks all four cups; the timeout trigger limits the trial |
+| Briefing | Protect your heart and sink all four boulders into their cups within 600 seconds and 80 slaps. | yes: mainHeart protects the heart and mainTrial requires courseDone with all four cups; the 600-second time limit and the 80-slap limit end the trial |
 
 ## Brackenford
 
@@ -239,8 +242,9 @@ Static footprint/resource/order checks are not an executed playthrough or a comb
 | Trigger `raidDefeated` | `Action	objectivestate	1	brackenford-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	brackenford-extra-gold	reached`; conditions: `Cond	mined	1	>=	500` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	brackenford-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Briefing | Build beds and a hatchery, claim the grove and gather your creatures. | no: mainHome checks two beds and a hatchery coop and mainGrove 22 claimed Grove tiles; gathering creatures is no longer checked (the rally before Brack is dropped) |
-| Briefing | Cross the ford and kill the warden in her keep. | no: mainFord checks the actual ford route and guards and mainKeep all 64 original Keep floor tiles; the warden no longer stands in her keep, mainRaid requires the defeated raid with its leader ElsaBrack |
+| Briefing | Until the gate opens, keep your heart, two beds and a hatchery, claim the grove, cross the ford, clear the landing and claim the keep. | yes: mainHome checks the protected heart, two beds and a hatchery coop; mainGrove 22 claimed Grove tiles; mainFord the actual ford route, both ford guards and the landing reinforcements; mainKeep all 64 original Keep floor tiles |
+| Briefing | A stone lies hidden in the cellars; let a Ziv carry it home and a forgotten pit may open. | yes: entering Cellar creates the cellar-stone; only its actual delivery to the heart reveals Mossgate |
+| Briefing | Then break the raid and catch Elsa Brack before she runs back through the gate. | yes: mainRaid requires the defeated raid with its leader ElsaBrack; the leader's escape through the gate loses the level by itself |
 
 ## Campaign1
 
@@ -400,8 +404,9 @@ Static seam/wave-source/bank/bridge-action evidence only; real mining, battle, g
 | Trigger `mainRival` | `Action	objectivestate	1	cinderhollow-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	cinderhollow-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraCave` | `Action	objectivestate	1	cinderhollow-extra-cave	reached`; conditions: `Cond	region	1	SouthCave` | yes |
-| Briefing | Mine the seams and defend your heart until dawn. | no: mainSeams exhausts both original finite seams and mainHeart protects the heart; holding until dawn and the three waves are removed, the raid replaces them |
-| Briefing | Then cross the lava bridge and destroy the rival heart. | yes: real northward causeway crossing after the lavaBridge causeway, rival temple destroyed and remaining enemies defeated |
+| Briefing | Until the gate opens, protect your heart, empty both starting gold seams, cross the lava bridge to the crater and destroy the rival heart with all enemy forces. | yes: mainHeart protects the heart; mainSeams exhausts both original finite seams; real northward causeway crossing after the lavaBridge causeway, rival temple destroyed and remaining enemies defeated |
+| Briefing | A stone lies in an ash pocket; let a Ziv carry it home and a hidden hall opens. | yes: entering AshPocket creates the ash-stone; only its actual delivery to the heart reveals SwarmNight |
+| Briefing | Then break both groups and catch Pell Ashgrove before the gate. | yes: mainRaid requires both defeated raid groups, the leader PellAshgrove with the second; the leader's escape through the gate loses the level by itself |
 Mario's explicit criterion for cinderhollow-o02: fully mine all 16 original finite gold fields x5..6/y55..58 and x30..33/y72..73. The approved objective text requires complete depletion of both finite veins; no deadline or first-wave failure applies.
 
 ## Coldwell
@@ -447,8 +452,9 @@ Static footprint/resource/order checks are not an executed playthrough or a comb
 | Trigger `raidDefeated` | `Action	objectivestate	1	coldwell-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	coldwell-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	coldwell-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Briefing | Take the old well plaza and mine the gold beneath it to raise your army. | yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold |
-| Briefing | Break the north gate and slay Cole in his hall. | no: mainGate requires the north door gone; Cole no longer stands in his hall, mainRaid requires the defeated raid with its leader HugoCole |
+| Briefing | Until the gate opens, protect your heart, claim the well plaza, mine the 600 gold beneath it and break the keep's north gate. | yes: mainHeart protects the heart; mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold; mainGate requires the north door gone |
+| Briefing | A shard of the Heartstone is hidden down here; let a Ziv carry it home. | yes: entering Larder creates the larder-shard; only its actual delivery to the heart counts a Heartstone shard |
+| Briefing | Then break the raid and catch Hugo Cole before he slips back through the gate. | yes: mainRaid requires the defeated raid with its leader HugoCole; the leader's escape through the gate loses the level by itself |
 
 ## CrowshotGallery
 
@@ -508,7 +514,7 @@ Actual aiming, target movement, damage/cadence, the 420-second route and save/lo
 | Trigger `extraSurvivorLost4` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter4	killed` | yes |
 | Trigger `extraSurvivorLost5` | `Action	objectivestate	1	crowshotgallery-extra-survivors	failed`; conditions: `Cond	event	Shooter5	killed` | yes |
 | Trigger `missedPossession` | `Action	objectivestate	1	crowshotgallery-main-trial	failed`; conditions: `Cond	flag	flock3	1; Cond	creatures	2	<=	0; Cond	event	Seat1	possessedshot	==	0; Cond	shotkilled	1	Crow1; Cond	shotkilled	1	Crow2; Cond	shotkilled	1	Crow3; Cond	shotkilled	1	Crow4; Cond	shotkilled	1	Raven1; Cond	shotkilled	1	Raven2; Cond	shotkilled	1	Raven3; Cond	shotkilled	1	Raven4; Cond	shotkilled	1	Raven5; Cond	shotkilled	1	Raven6; Cond	shotkilled	1	Rook1; Cond	shotkilled	1	Rook2; Cond	shotkilled	1	Rook3; Cond	shotkilled	1	Rook4; Cond	shotkilled	1	Rook5; Cond	shotkilled	1	Rook6; Cond	shotkilled	1	Rook7; Cond	shotkilled	1	Rook8` | yes |
-| Briefing | Possess a shooter and destroy every hornet before time expires to earn this optional trial's Heartstone fragment. | yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline |
+| Briefing | Protect your heart, possess one of your shooters and bring down all three flocks before time runs out. | yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline |
 
 ## Dunmarrow
 
@@ -648,8 +654,8 @@ Static route/bank/footprint/source evidence only; actual gate/link movement, cap
 | Trigger `mainWarden` | `Action	objectivestate	1	goldspire-main-vault	reached`; conditions: `Cond	trigger	pennVaultOpened` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	goldspire-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraWing` | `Action	objectivestate	1	goldspire-extra-wing	reached`; conditions: `Cond	region	1	WestWing` | yes |
-| Briefing | With Zivs and a thin purse, build before challenging the garrison below its rings. | yes: actual two-fighter buildup and own-heart protection |
-| Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | no: all144open LowTown floor fields outside the Moreya gate room owned; actual south-gate crossing then outer-ring entry and both real sealed links; the treasurer no longer stands in the core, mainRaid requires the defeated raid with its leader AlaricPenn |
+| Briefing | Until the gate opens, raise two fighters, protect your heart, capture the low town, pass the south gate, the outer ring and both sealed links, and unlock the vault. | yes: actual two-fighter buildup and own-heart protection; all144open LowTown floor fields outside the Moreya gate room owned; actual south-gate crossing then outer-ring entry and both real sealed links; the opened vault (pennVaultOpened) |
+| Briefing | Then break the group and catch Alaric Penn before he reaches the gate. | yes: mainRaid requires the defeated raid with its leader AlaricPenn; the leader's escape through the gate loses the level by itself |
 
 ## Greywater
 
@@ -695,8 +701,9 @@ Static source/resource route only; real siege combat, crossing movement, pursuit
 | Trigger `mainRaid` | `Action	objectivestate	1	greywater-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `raidDefeated` | `Action	objectivestate	1	greywater-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	greywater-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
-| Briefing | Mine first and protect your heart, for those heroes may turn on you. | yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege |
-| Briefing | Kill Gray in his river hall before Aurel's hopes become our burial. | no: Gray no longer stands in his river hall; mainRaid requires the defeated raid with its leader CorwinGray |
+| Briefing | Until the gate opens, protect your heart, mine 600 gold, then cross the river and attack the heroes besieging the other keeper. | yes: mainHeart protects the heart; mainGold checks 600 actual mining gold; mainSiege requires a real river crossing and own creature damage to seat3 in Siege |
+| Briefing | Another shard of the Heartstone is hidden in these galleries; let a Ziv carry it home. | yes: entering ChainVault creates the gallery-shard; only its actual delivery to the heart counts a Heartstone shard |
+| Briefing | Then break both groups and catch Corwin Gray before he reaches the gate. | yes: mainRaid requires both defeated raid groups, the leader CorwinGray with the second; the leader's escape through the gate loses the level by itself |
 
 ## Highcairn
 
@@ -743,8 +750,8 @@ Static floor source, own-heart destination and exact-item completion checked. Ac
 | Trigger `mainRaid` | `Action	objectivestate	1	highcairn-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `raidDefeated` | `Action	objectivestate	1	highcairn-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraCaldera` | `Action	objectivestate	1	highcairn-extra-caldera	reached`; conditions: `Cond	region	1	Caldera` | yes |
-| Briefing | Build from your Zivs, guard your heart and ascend toward her mountain hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
-| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | no: Hilde no longer stands in her hold, mainRaid requires the defeated raid with its leader HildeCairn; the hidden cairn hall holds no stone any more |
+| Briefing | Until the gate opens, build a bed and a hatchery, protect your heart, climb the four terraces in order, defeat the watch captain and open the hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
+| Briefing | Then break both raids and catch Hilde Cairn before she reaches the gate. | yes: mainRaid requires both defeated raids, the leader HildeCairn with the second; the leader's escape through the gate loses the level by itself |
 
 ## HollinFen
 
@@ -785,8 +792,8 @@ Static floor source, own-heart destination and exact-item completion checked. Ac
 | Trigger `mainGate` | `Action	objectivestate	1	hollinfen-main-gate	reached`; conditions: `Cond	claimed	1	Causeway	40; Cond	trapgone	DoorWooden1` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	hollinfen-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraFen` | `Action	objectivestate	1	hollinfen-extra-fen	reached`; conditions: `Cond	claimed	1	Fen	120; Cond	slabs	1	ManaSpring	manawell	>=	1` | yes |
-| Briefing | Build your dungeon, hold your heart and break the convent ward to kill her in the chapel. | no: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; Hollin no longer stands in the chapel, mainRaid requires the defeated raid with its leader AgatheHollin |
-| Briefing | A pale stone behind a bricked hollow may reveal an optional trial if carried home. | no: the bricked hollow and its stone are removed; HollinFen reveals no bonus level |
+| Briefing | Until the gate opens, build nine beds and a hatchery, protect your heart, claim 40 causeway tiles and break the convent's west gate. | yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate |
+| Briefing | Then break the raid and catch Agathe Hollin before she reaches the gate. | yes: mainRaid requires the defeated raid with its leader AgatheHollin; the leader's escape through the gate loses the level by itself |
 
 ## HollowmarkCitadel
 
@@ -796,7 +803,7 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 5779 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
-| Script line 5780 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.` | yes |
+| Script line 5780 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the raid.` | yes |
 | Script line 6199 | `Action	win	1` | yes |
 
 ### Main and optional goals
@@ -828,8 +835,8 @@ Static conditions only; full movement, claiming, combat, treasury payout and sav
 | Trigger `mainThrone` | `Action	objectivestate	1	hollowmark-main-throne	reached`; conditions: `Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	hollowmark-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraTower` | `Action	objectivestate	1	hollowmark-extra-tower	reached`; conditions: `Cond	region	1	WestTower3` | yes |
-| Briefing | Hold against the garrison, open the upper gates by the towers or their keys, and use the treasuries to sustain the assault. | yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes |
-| Briefing | Kill Castellan and claim the throne we promised at the beginning. | no: all548original throne floor fields currently owned; Castellan no longer sits in ThroneHall, mainRaid requires both defeated raids with their leaders SabineRook and Castellan |
+| Briefing | Until the gate opens, protect your heart and take the royal treasuries, cross the three courts by their towers or gate keys and claim the throne hall. | yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes; all548original throne floor fields currently owned |
+| Briefing | Then break both raids and catch both leaders before either of them reaches the gate. | yes: mainRaid requires both defeated raids with their leaders SabineRook and HighKingCastellan; the escape of either leader through the gate loses the level by itself |
 
 ## Ironbridge
 
@@ -885,8 +892,8 @@ Only static source, exact room footprints, bank connectivity and resource feasib
 | Trigger `mainHold` | `Action	objectivestate	1	ironbridge-main-hold	reached`; conditions: `Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	1` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	ironbridge-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraCoal` | `Action	objectivestate	1	ironbridge-extra-coal	reached`; conditions: `Cond	region	1	CoalStore` | yes |
-| Briefing | Build your strength and take the guarded stone bridges one by one. | yes: supply for six starting fighters, actual three-rift crossings in order with all seven alternate bridges, and ownership of the exact Smithy/OreDock rooms |
-| Briefing | Destroy the rival heart in the north-east and deny Castellan this defence. | yes: an actual fortress entrance breached, rival temple gone, all remaining enemy forces and the raid with its leader GarethFenn defeated |
+| Briefing | Until the gate opens, build six beds and a hatchery, protect your heart, cross the three rifts in order, claim the north smithy and the ore dock, then breach the hold and destroy its heart and enemy forces. | yes: six actual beds, a hatchery coop and own-heart protection, actual three-rift crossings in order with all seven alternate bridges, ownership of the exact Smithy/OreDock rooms, an actual fortress entrance breached, rival temple gone and all remaining enemy forces |
+| Briefing | Then break both raids and catch Gareth Fenn before he reaches the gate. | yes: mainRaid requires both defeated raids, the leader GarethFenn with the second; the leader's escape through the gate loses the level by itself |
 
 ## Kingsfall
 
@@ -930,8 +937,8 @@ Static script/bridge/path/recruitment-source evidence only; actual capture/conve
 | Trigger `mainArmy` | `Action	objectivestate	1	kingsfall-main-army	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	kingsfall-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	kingsfall-extra-gold	reached`; conditions: `Cond	mined	1	>=	4000` | yes |
-| Briefing | Cross the watched lava spans and defeat Aurel and his court. | no: real lava-span crossing; Aurel no longer holds court here, mainRaid requires the defeated raid with its leader PrinceAurel |
-| Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | yes: actual living captivity OR conversion of all three champions and 12 own living creatures currently on the own-heart tiles |
+| Briefing | Until the gate opens, protect your heart, cross a guarded lava bridge, capture or convert all three champions alive and gather twelve creatures at your heart. | yes: real lava-span crossing with own-heart protection; actual living captivity OR conversion of all three champions and 12 own living creatures currently on the own-heart tiles |
+| Briefing | Then break the raid and catch the prince before he runs back through the gate. | yes: mainRaid requires the defeated raid with its leader PrinceAurel; the leader's escape through the gate loses the level by itself |
 
 ## Lanternhill
 
@@ -981,9 +988,9 @@ Static floor source, own-heart destination and exact-item completion checked. Ac
 | Trigger `mainRaid` | `Action	objectivestate	1	lanternhill-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `mainStone` | `Action	objectivestate	1	lanternhill-main-stone	reached`; conditions: `Cond	trigger	lanternStoneHome` | yes |
 | Trigger `extraLamp` | `Action	objectivestate	1	lanternhill-extra-lamp	reached`; conditions: `Cond	region	1	LampRoom` | yes |
-| Briefing | Mine the seams, dig through the ring road's earth plugs and withstand the kingdom's patrols. | yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed |
-| Briefing | Destroy the northern rival heart beneath Ines Vale's lamps. | yes: actual northern rival heart destroyed and all remaining enemies; mainRaid also requires the defeated raid with its leader InesVale |
-| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | yes: voluntary discovery activates delivery of the actual floor stone by a worker, which reveals SkittleCavern |
+| Briefing | Until the gate opens, mine 700 gold, protect your heart, open the ring road, claim the crypt and the library, and destroy the northern rival heart with all enemy forces. | yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road, all original crypt/library room fields claimed, actual northern rival heart destroyed and all remaining enemies |
+| Briefing | A pale stone hides somewhere in the hill; let a Ziv carry it home and a hidden hall opens. | yes: voluntary discovery activates delivery of the actual floor stone by a worker, which reveals SkittleCavern |
+| Briefing | Then break the group and catch Ines Vale before she reaches the gate. | yes: mainRaid requires the defeated raid with its leader InesVale; the leader's escape through the gate loses the level by itself |
 lanternhill-o02 requires an actual current dry worker path from (13,57) to (40,22), including legal alternative digging routes; no fixed plug subset is required.
 
 ## Mirewatch
@@ -1083,8 +1090,7 @@ Static routes and source conditions are not combat balance or an executed game p
 | Trigger `mainWatch` | `Action	objectivestate	1	mossgate-main-watch	reached`; conditions: `Cond	event	PostWatch1	killed; Cond	event	PostWatch2	killed; Cond	spawncleared	postStirs	1` | yes |
 | Trigger `extraGallery` | `Action	objectivestate	1	mossgate-extra-gallery	reached`; conditions: `Cond	region	1	Gallery` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	mossgate-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Briefing | Mine the soft walls and claim the meadow cave. | yes: mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles |
-| Briefing | Break the watch post and slay the reeve in his hall. | no: mainWatch requires both watchmen and actual reinforcements; the reeve no longer stands in the bonus chamber, chamberCleared wins after the three main goals |
+| Briefing | Protect your heart, mine 60 gold and claim the meadow, then clear the watch post and its reinforcements. | yes: mainHeart protects the heart, mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles and mainWatch both watchmen and the actual reinforcements; chamberCleared wins after the three main goals |
 
 ## Ravensledge
 
@@ -1129,8 +1135,8 @@ Static route and exact source wiring only; real combat, bridge movement and save
 | Trigger `raidDefeated` | `Action	objectivestate	1	ravensledge-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraEast` | `Action	objectivestate	1	ravensledge-extra-east	reached`; conditions: `Cond	region	1	EastGate` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	ravensledge-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Briefing | Secure your bridgeheads and climb shelf by shelf. | yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate |
-| Briefing | Slay him in the highest keep and send Castellan another answer. | no: OsricVane no longer stands in the highest keep; mainRaid requires the defeated raid with its leader RolfScarrow |
+| Briefing | Until the gate opens, protect your heart, cross the lower bridge, claim 80 shelf tiles, then cross the upper bridge and break the inner gate. | yes: mainHeart protects the heart; mainShelf requires the actual lower crossing plus 80 Shelf tiles; mainGate the actual upper crossing and the inner gate gone |
+| Briefing | Then break the raid and catch Rolf Scarrow before he gets back to the gate; hunters hate being the prey. | yes: mainRaid requires the defeated raid with its leader RolfScarrow; the leader's escape through the gate loses the level by itself |
 
 ## Saltmere
 
@@ -1175,9 +1181,9 @@ Static source/resource route and exact outer-gate traversal only; combat, timing
 | Trigger `mainPort` | `Action	objectivestate	1	saltmere-main-port	reached`; conditions: `Cond	flag	highFlatVisited	1; Cond	trigger	lagoonReached; Cond	flag	southFlatVisited	1; Cond	trapgone	DoorWooden1; Cond	trapgone	DoorWooden2; Cond	flag	portCrossed	1` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	saltmere-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	saltmere-extra-gold	reached`; conditions: `Cond	mined	1	>=	1600` | yes |
-| Briefing | Mine the salt walls and cross the white flats and green lagoons to his southern harbour. | yes: 800 actual mining gold; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing |
-| Briefing | Protect your heart while the heroes threaten the sleeping keeper nearby as well. | yes: own-heart protection |
-| Briefing | Kill Seward and answer Aurel's boast that no route reaches the inner realm. | no: Seward no longer stands in the port hall; mainRaid requires the defeated raid with its leader BramSeward |
+| Briefing | Until the gate opens, protect your heart, mine 800 gold, cross the flats and lagoons and breach both port gates. | yes: own-heart protection; 800 actual mining gold; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing |
+| Briefing | The third shard of the Heartstone is hidden here; let a Ziv carry it home. | yes: entering ShardHollow creates the heartstone-shard; only its actual delivery to the heart counts a Heartstone shard |
+| Briefing | Then break the group and catch Bram Seward before he reaches the gate. | yes: mainRaid requires the defeated raid with its leader BramSeward; the leader's escape through the gate loses the level by itself |
 
 ## Silverdeep
 
@@ -1271,7 +1277,7 @@ Static script and death-source evidence only; actual boulder trajectories, hit l
 | Trigger `mainHeart` | `Action	objectivestate	1	skittlecavern-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainTrial` | `Action	objectivestate	1	skittlecavern-main-trial	reached`; conditions: `Cond	trigger	laneCleared` | yes |
 | Trigger `extraSurvivors` | `Action	objectivestate	1	skittlecavern-extra-survivors	reached`; conditions: `Cond	objective	1	skittlecavern-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0; Cond	alive	DefaultWorker4; Cond	event	DefaultWorker4	killed	==	0` | yes |
-| Briefing | Roll the boulders through every guard before time expires to earn this optional trial's Heartstone fragment. | yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit |
+| Briefing | Protect your heart, open all four lanes and bowl down all ten guards with the boulders within 540 seconds. | yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit |
 
 ## Stormhaven
 
@@ -1359,8 +1365,7 @@ The existing trap/ball/possession route and survival challenge still require run
 | Trigger `extraSurvivorLost3` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	event	DefaultWorker3	killed` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	swarmnight-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	swarmnight-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
-| Briefing | Keep your heart standing for thirteen minutes. | yes: dawn at 780 seconds with ProtectDungeonTemple |
-| Briefing | Your strongest surviving fighter can follow you onward toward Aurel's stand; this trial grants no Heartstone fragment. | no: nothing is carried to the next level any more (keepminion removed); no Heartstone shard is granted |
+| Briefing | Protect your heart and survive until dawn, thirteen minutes from now. | yes: dawn at 780 seconds with ProtectDungeonTemple |
 
 ## Thornreach
 
@@ -1417,7 +1422,7 @@ File: `levels/campaign/Tinmoor.level`.
 | Script line 1795 | `Action	objectiveid	1	tinmoor-o01	Defeat the raid and its leader.` | yes |
 | Script line 1796 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
 | Script line 1804 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
-| Script line 1822 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
+| Script line 1822 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post.` | yes |
 | Script line 1879 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
 | Script line 1957 | `Action	win	1` | yes |
 
@@ -1451,8 +1456,9 @@ Static floor source, own-heart destination and exact-item completion checked. Ac
 | Trigger `raidDefeated` | `Action	objectivestate	1	tinmoor-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	tinmoor-extra-gold	reached`; conditions: `Cond	mined	1	>=	1500` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	tinmoor-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | no: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; Tay no longer stands in the upper chamber, mainRaid requires the defeated raid with its leader MerrinTay |
-| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone reveals CrowshotGallery |
+| Briefing | Until the gate opens, protect your heart, mine 900 gold, scout the seams through a possessed creature and clear both watch posts with their reinforcements. | yes: mainHeart protects the heart; mainSeams requires 900 actual mining gold and possessed scouting; mainPosts tracks both exact posts with their watchmen and reinforcements |
+| Briefing | A sealed vault may hold a stone; let a Ziv carry it home and a hidden hall opens. | yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone reveals CrowshotGallery |
+| Briefing | Then break both groups and catch Merrin Tay before she runs for the gate. | yes: mainRaid requires both defeated raid groups, the leader MerrinTay with the second; the leader's escape through the gate loses the level by itself |
 
 ## TwistingHalls
 
@@ -1490,7 +1496,7 @@ The existing trap/ball/possession route and survival challenge still require run
 | Trigger `extraSurvivorLost4` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	event	Walker4	killed` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	twistinghalls-main-trial	failed`; conditions: `Cond	defeated	1` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	twistinghalls-extra-survivors	failed`; conditions: `Cond	defeated	1` | yes |
-| Briefing | Possess your own creature and reach the north-east exit before time runs out to earn this optional trial's Heartstone fragment. | yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active |
+| Briefing | Protect your heart, possess a creature of your own and reach the north-east exit before time runs out. | yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active |
 
 ## VarnsCrossing
 
@@ -1501,7 +1507,7 @@ File: `levels/campaign/VarnsCrossing.level`.
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 4516 | `Action	objectiveid	1	varnscrossing-o01	Defeat both rival keepers.` | yes |
-| Script line 4517 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against heroes.` | yes |
+| Script line 4517 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against the raid.` | yes |
 | Script line 4518 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
 | Script line 4613 | `Cond	goal	1	KillAllEnemies` | yes |
 | Script line 4642 | `Action	win	1` | yes |
@@ -1538,7 +1544,9 @@ Static resource/footprint evidence only; claim takeover, bed/coop use, combat, s
 | Trigger `mainRivals` | `Action	objectivestate	1	varnscrossing-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	varnscrossing-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	varnscrossing-extra-gold	reached`; conditions: `Cond	mined	1	>=	5000` | yes |
-| Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes; mainRaid also requires the defeated raid with its leader MarshalVarn |
+| Briefing | Until the gate opens, claim your quarter, build a bed and a hatchery, guard your heart, capture and hold the lava-ringed fortress and destroy both rival hearts with all enemy forces. | yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes |
+| Briefing | A stone hides in a chamber of the pit; let a Ziv carry it home and a hidden hall opens. | yes: entering StoneChamber creates the ember-stone; only its actual delivery to the heart reveals TwistingHalls |
+| Briefing | Then break both groups and catch Marshal Varn before he reaches the gate. | yes: mainRaid requires both defeated raid groups, the leader MarshalVarn with the second; the leader's escape through the gate loses the level by itself |
 
 ## Wolfscar
 
@@ -1597,7 +1605,7 @@ File: `levels/campaign/Wraithwood.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 4865 | `Action	objectiveid	1	wraithwood-o01	Destroy the rival heart in the north-west.` | yes |
 | Script line 4866 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
-| Script line 4867 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
+| Script line 4867 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the raid.` | yes |
 | Script line 4928 | `Cond	goal	1	KillAllEnemies` | yes |
 | Script line 4950 | `Action	win	1` | yes |
 | Script line 4955 | `Cond	goal	1	KillAllEnemies` | yes |
@@ -1634,4 +1642,5 @@ Static heart-seat/location and region evidence only; actual heart destruction, c
 | Trigger `mainForces` | `Action	objectivestate	1	wraithwood-main-forces	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	wraithwood-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGrove` | `Action	objectivestate	1	wraithwood-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
-| Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately; mainRaid also requires the defeated raid with its leader ElowenAsh |
+| Briefing | Until the gate opens, protect your heart, destroy the northwestern and the northeastern rival hearts and defeat all remaining enemy forces. | yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately |
+| Briefing | Then break both groups and catch Elowen Ash before she reaches the gate. | yes: mainRaid requires both defeated raid groups, the leader ElowenAsh with the second; the leader's escape through the gate loses the level by itself |

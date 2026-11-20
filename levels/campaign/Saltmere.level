@@ -3188,7 +3188,7 @@ Region	ShardHollow	2	46	5	49
 Name	tide
 Mode	once
 Cond	time	3
-Action	message	1	Saltmere is a string of salt flats and lagoons, master, and at the bottom of the map sits the port where Admiral Bram Seward keeps his fleet. You start with a dungeon but no coin.
+Action	message	1	The Tomb of Whispers is a string of salt flats and lagoons, master, with an old port at its bottom. Bram Seward is bringing the Salt Wolves of Saltmere, and you start with a dungeon but no coin.
 Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.
 Action	objectiveid	1	saltmere-o03	Protect your heart.
 Action	portal	0	off
@@ -3227,7 +3227,7 @@ Action	spawn	3	50	70	1	Adventurer:2	Dwarf1:2	Elf:2
 Name	flatHeld
 Mode	once
 Cond	claimed	1	SouthFlat	50
-Action	message	1	The south flat is yours and the port gates are in range. Seward knows it, and both gate tunnels grind open.
+Action	message	1	The south flat is yours and the port gates are in range. The port knows it, and both gate tunnels grind open.
 Action	reveal	1	Port
 Action	terrain	40	78	41	78	path
 Action	terrain	48	78	49	78	path
@@ -3241,7 +3241,7 @@ Action	objectivestate	1	saltmere-o04	reached
 Name	portEntered
 Mode	once
 Cond	region	1	Port
-Action	message	1	Horns sound over the water. Seward has called every deckhand ashore.
+Action	message	1	Horns sound over the water. The port has called every deckhand ashore.
 Action	spawn	3	40	84	1	Knight:3	Knight:2	Dwarf2:2	Monk:2	Adventurer:2
 [/Trigger]
 [Trigger]
@@ -3377,7 +3377,7 @@ Cond	objective	1	saltmere-main-gold	reached
 Cond	objective	1	saltmere-main-port	reached
 Cond	objective	1	saltmere-main-raid	reached
 Cond	raid	defeated
-Action	message	1	The raid lies broken on the salt flats and its leader with it. Saltmere is yours.
+Action	message	1	The raid lies broken on the salt flats and its leader with it. The Tomb of Whispers is yours.
 Action	win	1
 [/Trigger]
 

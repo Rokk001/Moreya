@@ -4861,10 +4861,10 @@ Region	PortalCave	74	78	92	92
 Name	mist
 Mode	once
 Cond	time	3
-Action	message	1	Master, Wraithwood is a forest of grey trunks and drifting fog. Two rival keepers hold the northern corners of the wood, and behind the Moreya gate the Ash Coven of Elowen Ash is gathering.
+Action	message	1	Master, the Throne of Ash is a forest of grey trunks and drifting fog. Two rival keepers hold its northern corners, and behind the Moreya gate Elowen Ash is gathering the Ash Coven of Wraithwood in two groups.
 Action	objectiveid	1	wraithwood-o01	Destroy the rival heart in the north-west.
 Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.
-Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.
+Action	objectiveid	1	wraithwood-o03	Defend your heart against the raid.
 [/Trigger]
 [Trigger]
 Name	westGlade
@@ -4890,7 +4890,7 @@ Action	reveal	1	PortalCave
 Name	middle
 Mode	once
 Cond	region	1	MiddleGlade
-Action	message	1	The middle glade. The witch and the keeper watch it from both sides, and what one of them sees the other hears.
+Action	message	1	The middle glade. The two rival keepers watch it from both sides, and what one of them sees the other hears.
 Action	reveal	1	NorthGlade
 Action	reveal	1	EastGlade
 [/Trigger]
@@ -4912,7 +4912,7 @@ Action	spawn	2	71	15	1	Troll:5	Orc:5	Orc:5	Goblin:5
 Name	bond
 Mode	once
 Cond	time	900
-Action	message	1	The witch-warden and the rival keeper have sent one pack to each other. Whichever heart you strike, the other will answer.
+Action	message	1	The two rival keepers have sent one pack to each other. Whichever heart you strike, the other will answer.
 Action	spawn	2	28	15	1	Orc:5	Troll:5	Goblin:5
 Action	spawn	3	71	15	1	DarkElf:5	Cultist:5	Spider:5
 [/Trigger]
@@ -5033,7 +5033,7 @@ Cond	objective	1	wraithwood-main-rival	reached
 Cond	objective	1	wraithwood-main-forces	reached
 Cond	objective	1	wraithwood-main-raid	reached
 Cond	raid	defeated
-Action	message	1	Both rival keepers are dead, the Ash Coven is broken and the fog lifts from Wraithwood. The wood is yours.
+Action	message	1	Both rival keepers are dead, the Ash Coven is broken and the fog lifts from the Throne of Ash. The wood is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]

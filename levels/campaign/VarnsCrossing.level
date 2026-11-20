@@ -4512,9 +4512,9 @@ Region	StoneChamber	2	72	5	75
 Name	arrival
 Mode	once
 Cond	time	3
-Action	message	1	Master, Varn holds the crossing of the two great roads, and two keepers have come to take it before you. The heroes of the kingdom will not stop marching while any of you stands.
+Action	message	1	Master, the Ember Pit is the crossing of two great roads, and two keepers have come to take it before you. Marshal Varn is marching the Black Legion of Varn's Crossing down after all of you, in two groups.
 Action	objectiveid	1	varnscrossing-o01	Defeat both rival keepers.
-Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against heroes.
+Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against the raid.
 Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.
 Action	portal	1	off
 [/Trigger]
@@ -4541,7 +4541,7 @@ Action	reveal	1	Vault
 Name	vaultSeen
 Mode	once
 Cond	region	1	Vault
-Action	message	1	The marshal paid his scouts from this vault. Take it.
+Action	message	1	Someone paid scouts from this vault long ago. Take it.
 Action	gold	1	1500
 [/Trigger]
 [Trigger]
@@ -4581,7 +4581,7 @@ Action	reveal	1	EastRoad
 Name	keepEntered
 Mode	once
 Cond	region	1	Keep
-Action	message	1	You stand inside the fortress. The marshal left his strongbox behind.
+Action	message	1	You stand inside the fortress. An old strongbox has been left behind.
 Action	gold	1	2000
 Action	spawn	4	45	27	1	Knight:5	Knight:5	Elf:5	Monk:4	Dwarf2:4
 [/Trigger]
@@ -4597,7 +4597,7 @@ Action	spawn	3	68	50	1	Orc:5	Troll:5	Cultist:5
 Name	mined1
 Mode	once
 Cond	mined	1	>=	4000
-Action	message	1	The great seams are paying. Spend it before the next column arrives.
+Action	message	1	The great seams are paying. Spend it before the Legion arrives.
 Action	gold	1	800
 [/Trigger]
 [Trigger]
@@ -4778,7 +4778,7 @@ Cond	objective	1	varnscrossing-main-keep	reached
 Cond	objective	1	varnscrossing-main-rivals	reached
 Cond	objective	1	varnscrossing-main-raid	reached
 Cond	raid	defeated
-Action	message	1	Both keepers lie dead, the Black Legion is broken and the great roads are quiet. Varn has lost his crossing.
+Action	message	1	Both keepers lie dead, the Black Legion is broken and the great roads are quiet. The Ember Pit is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]

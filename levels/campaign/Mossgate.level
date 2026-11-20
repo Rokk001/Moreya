@@ -782,7 +782,7 @@ Action	objectivestate	1	mossgate-o03	reached
 Name	postStirs
 Mode	once
 Cond	region	1	Yard
-Action	message	1	The watchmen have seen you. One of them is running to wake the reeve.
+Action	message	1	The watchmen have seen you. One of them is running for help.
 Action	spawn	3	11	14	1	Adventurer:1	Adventurer:1
 Action	setflag	yardAlarm	1
 [/Trigger]
@@ -790,14 +790,14 @@ Action	setflag	yardAlarm	1
 Name	firstRelief
 Mode	once
 Cond	time	540
-Action	message	1	Riders from the next farm are coming down the road. There are only a few.
+Action	message	1	More watchmen are coming down the cave road. There are only a few.
 Action	spawn	3	12	10	1	Adventurer:1	Adventurer:1
 [/Trigger]
 [Trigger]
 Name	secondRelief
 Mode	once
 Cond	time	1100
-Action	message	1	The reeve has sent word to the hills. Another band is on its way.
+Action	message	1	The watch has sent word deeper in. Another band is on its way.
 Action	spawn	3	20	11	1	Adventurer:1	Adventurer:1	Monk:1
 [/Trigger]
 [Trigger]

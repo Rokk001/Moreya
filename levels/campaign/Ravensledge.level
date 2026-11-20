@@ -2249,7 +2249,7 @@ Region	EastGate	44	16	52	24
 Name	firstCall
 Mode	once
 Cond	time	3
-Action	message	1	The Ravensledge fort sits on three cliff shelves, my lord, and the chasms between them have only a few crossings. Captain Osric Vane keeps archers on every ledge.
+Action	message	1	The Rat Warren sits on three cliff shelves, my lord, and the chasms between them have only a few crossings. Archers watch every ledge, and the Grey Fang of Wolfscar are sharpening their arrows for the same crossings.
 Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.
 Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.
 [/Trigger]
@@ -2282,7 +2282,7 @@ Action	objectivestate	1	ravensledge-o03	reached
 Name	yardEntered
 Mode	once
 Cond	region	1	Yard
-Action	message	1	The yard bell is ringing. Vane has sent his sentries down to meet you.
+Action	message	1	The yard bell is ringing. The keep has sent its sentries down to meet you.
 Action	spawn	3	30	15	1	Knight:2	Elf:2	Adventurer:2	Monk:2
 Action	reveal	1	Keep
 Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.

@@ -1,101 +1,70 @@
 # Campaign story outline
 
-Status: approved by the project owner on 2026-10-14, with Castellan and Aurel recurring from the first provinces; story texts and preview generation may proceed.
+Status: rebuilt for the raid campaign of Moreya: 6 wings of 3 story levels and one bonus chamber per wing. It replaces the
+province outline from Mossgate to Castellan's throne. The texts in `levels/campaign/Campaign.cfg` and the scripted
+messages of the 24 level files follow this outline.
 
 ## Red thread
 
-Master, your first claim beneath Mossgate is the opening move in a campaign to take High King Castellan's throne at Hollowmark Citadel.
-The same adviser calls you Master or my lord while Castellan sends decrees and Aurel answers your first victories with contempt, then threats, then increasingly desperate defiance.
-Short narrated scenes of royal messengers, councils and reactions connect each fallen warden to guarded crossings, fleeing commanders, rival hearts and finally the royal court, without placing either royal in an earlier map.
-Hidden stones carried home from Tinmoor, Hollin Fen, Lanternhill and Highcairn reveal optional trials whose rewards restore the Heartstone and unlock Summon Champion when complete.
-The Heartstone is a parallel source of strength, never a prerequisite invented for the main campaign, and neither alternative province route is treated as a second conquest.
-After Varn's Crossing, an optional night of siege can send your strongest surviving fighter onward, while Silverdeep and Wraithwood strip away the last rival powers before Kingsfall.
-Prince Aurel's defeat and the capture or conversion of his three champions bring the struggle to Castellan's three courts, where the king's death fulfils the promise made at Mossgate.
+Moreya is the world beneath the surface, and the keeper runs his piece of it like a business that never asked for
+customers with swords. Up in Hollowmark, High King Castellan has declared that Moreya's treasure belongs to the crown, and
+the guilds of the kingdom take turns to come and fetch it. Each story level is one raid: a guild with its leader, its raid
+size and its origin comes through the Moreya gate after a countdown, while the keeper first builds, digs and clears his
+level. The adviser (the same voice as before, calling the keeper Master or my lord) announces every guild, counts what it
+leaves behind and keeps a dry sense of humour about it.
 
-## Confirmed source decisions
+The guilds grow with every wing, from one group of five to two raids of forty. Prince Aurel laughs at the first failures,
+then stops laughing, then makes promises, and finally comes down himself with the Sun Court (wing 5, level 3). When the
+prince is beaten, the High King runs out of guilds and leads the Crown Eternal himself: Sabine Rook leads its first raid,
+Castellan the second (wing 6, level 3). His fall ends the war; the surface has run out of kings, and business in Moreya can
+go back to normal.
 
-The project owner confirmed that four Heartstone fragments, The Swarm Night's fighter carry-over reward and The Skittle Cavern's actually trigger-spawned guards match the current gameplay and are correct for this outline. The Skittle Cavern preview may therefore depict its spawned guards alongside a placed worker; no fifth fragment, changed reward or invented warden body is introduced.
+Each raid leader flees for the gate when his group falls; the keeper has to catch him before he gets out. Defeated raids
+leave gold and equipment behind, which the debriefings list with some pleasure.
 
-## Approval gate
+The Heartstone has three shards, hidden in level 2 of wings 1 to 3 (Drowned Larder, Chain Gallery, Tomb of Whispers). With
+all three, Summon Champion is available in every level from wing 4 on. Level 1 of every wing hides a stone that opens the
+wing's bonus chamber. A bonus chamber has no raid and no shard: its old task is the whole level, and its first completion
+adds one Epic, one Rare and one Common item, chosen by chance, to the merchant's wares in every later level. Every level
+starts fresh; nothing is carried from one level to the next.
 
-The project owner approved this outline with one binding condition: High King Castellan and Prince Aurel recur from the first levels through messengers, threats, reactions to victories and short briefing/debriefing scenes, increasing the tension toward their final confrontations. These are narration only; goals, triggers, level files and gameplay remain unchanged.
+## Tone
+
+Ironic and dark, not grim. The keeper is sympathetic: a host whose guests keep arriving armed. There is no reputation value;
+word of the keeper travels only in the narration. The diggers of Moreya are Zivs (singular Ziv) in every text.
 
 ## Chapters in campaign order
 
-Previous and next are narrative links, not new unlock conditions; bonus trials are optional detours, and province chapters work when those detours are skipped. Alternative sisters share the same predecessor and successor. Configured wardens without a placed body remain provincial figures rather than invented combat targets.
-
-| Province | Chapter idea | Previous link | Next link |
-| --- | --- | --- | --- |
-| T01 | Mossgate: announce the goal of Castellan's throne; mine the soft walls, claim the meadow and slay Reeve Tobin Marsh in his hall. A royal messenger carries Castellan's command to crush the new heart; Aurel laughs at the village alarm, then hears of the reeve's death. | Opening: one heart against a kingdom. | Brackenford turns the first foothold into an advance across the ford. |
-| T02 | Brackenford: build beds and food, gather creatures in the fern grove and cross to Warden Elsa Brack's keep. Aurel promises Elsa Brack that the ford will bury the intruder; Castellan demands an account when it falls. | Mossgate proved the keeper can break a watch post. | Coldwell demands gold and a stronger assault against a closed keep. |
-| T03 | Coldwell: seize the well plaza, mine its hidden gold and kill Warden Hugo Cole beyond the north gate. Castellan orders Cole to shut the north gate; Aurel's promise of a swift end meets another empty report. | The ford is won, but village victories alone cannot reach the throne. | Tinmoor brings guarded shafts and the first hidden trial discovery. |
-| T04 | Tinmoor: mine the seams, break two watch posts and kill Warden Merrin Tay; a vault stone may be carried home to reveal a hidden hall. Aurel urges Tay to choke the mine roads; Castellan begins counting fallen wardens instead of dismissing the threat. | Coldwell's gold showed what mining can buy. | Optional Boulder Course tests precision; the main advance continues to Ravensledge either way. |
-| B01 | The Boulder Course: the hall associated with Foreman Bram Tull offers four boulders and four cups before the shift bell, rewarding a Heartstone shard. The adviser contrasts the optional old trial with Aurel's reliance on royal strength, without promising a resource transfer. | Optional discovery from Tinmoor's vault stone. | Return to the main advance toward Ravensledge without making the shard mandatory. |
-| T05 | Ravensledge: Captain Osric Vane's archers hold three cliff shelves; secure bridgeheads and reach his highest keep. Aurel's message boasts that the ledges cannot fall; Castellan receives news that even their height has failed. | Tinmoor's shafts give way to exposed crossings, with or without its trial. | Ashcombe changes a deliberate climb into a pursuit. |
-| T06 | Ashcombe: cross the ash basin and stop Warden Liesl Ashby before her escape; her hold and the escape road are both valid places to catch her. Castellan demands Ashby's survival and Aurel calls her flight prudence; the pursuit denies the court its escape story. | Vane's fixed defence has fallen; Ashby will not wait in hers. | Greywater introduces a river trade route and another keeper under siege. |
-| T07 | Greywater: mine from an empty purse, protect your heart and kill Warden Corwin Gray in his river hall while the heroes besiege another keeper. Castellan's warning reaches Gray's river hall; Aurel expects besieging heroes to turn the tide. | Ashcombe's flight is stopped, but the realm can threaten more than one dungeon. | Hollin Fen turns that pressure into relentless convent patrols. |
-| T08 | Hollin Fen: withstand Sister Agathe Hollin's patrols, break the convent ward and kill her in the chapel; a hidden pale stone can reveal another trial. Aurel praises Agathe's unending patrols; Castellan's demand for good news meets another silent chapel. | Greywater showed the danger of heroes changing targets. | Optional Crowshot Gallery, then either Saltmere or Dunmarrow; neither route depends on the trial. |
-| B02 | The Crowshot Gallery: Gallery Keeper Wren's gallery overlooks lava; possess a shooter and destroy every hornet before the hourglass empties for a shard. The adviser recalls Aurel's threats while offering an optional test of aim away from the main advance. | Optional discovery from Hollin Fen. | Rejoin the choice between Saltmere and Dunmarrow. |
-| T09A | Saltmere: take the southern harbour and kill Admiral Bram Seward, while protecting your own heart and accounting for a sleeping keeper nearby. Castellan orders Seward to hold the sea door; Aurel vows that no route will reach the inner kingdom. | From Hollin Fen, with an optional gallery detour, choose this coastal route. | The chosen outer route is secured; Ironbridge is next without mentioning Dunmarrow's outcome. |
-| T09B | Dunmarrow: use the old tunnels and kill Warden Ysolde Dunn before she escapes through the old shaft. Castellan orders Dunn to preserve herself; Aurel vows that no route will reach the inner kingdom. | From Hollin Fen, with an optional gallery detour, choose this inland route. | The chosen outer route is secured; Ironbridge is next without mentioning Saltmere's outcome. |
-| T10 | Ironbridge: Warden Gareth Fenn's forges arm the realm; cross three molten rifts and destroy the rival heart in the north-east hold. Aurel demands weapons from Fenn after the chosen outer route falls; Castellan loses another source of defence. | Either outer route brings the keeper to the kingdom's forges. | Wolfscar shows rivals combining their strength against the advance. |
-| T11 | Wolfscar: Huntmaster Rolf Scarrow's province contains four hunting keepers; cross the ravines and destroy every rival heart. Castellan counts on the hunting keepers' hatred of the intruder; Aurel has fewer allies left to name. | One rival at Ironbridge becomes four hostile packs. | Lanternhill presents another heart defended by the kingdom's patrols. |
-| T12 | Lanternhill: dig through the ring road and destroy the northern rival heart under Lamplighter Ines Vale's lamps; a pale stone may reveal the halls below. Aurel swears the northern lamps will be a warning; Castellan hears they now light the keeper's road. | Wolfscar's hunters are gone, but the inner provinces still resist. | Optional Twisting Halls, then Cinderhollow's organised siege either way. |
-| B03 | The Twisting Halls: Lamp Warden Oswin's trapped halls test a possessed creature's route to the north-east exit before the lamps fail, awarding a shard. The adviser contrasts Aurel's threats with the optional maze's quiet test of nerve, without assuming earlier shards were won. | Optional discovery below Lanternhill. | Rejoin the advance to Cinderhollow without asserting that the trial was completed. |
-| T13 | Cinderhollow: survive Pell Ashgrove's three hero waves until dawn, then cross the lava bridge and destroy the rival heart. Aurel promises Castellan a victory before dawn; the failed siege turns his confidence into anger. | Lanternhill's patrols grow into a coordinated assault. | Thornreach demands an offensive through a maze of competing dungeons. |
-| T14 | Thornreach: Warden Cassia Thorne's hedge maze connects four rival keepers; hold the centre and destroy them all. Castellan trusts Thornreach's competing hearts to entangle the intruder; Aurel watches that barrier collapse. | Cinderhollow proved the heart can withstand a siege. | Bellwick adds an undead keeper and an abbey's armed faithful. |
-| T15 | Bellwick: hold the nave against Abbot Lorens Bell's faithful, wait for the north gates to unseal and destroy the undead heart in the undercroft. Castellan asks Bell's faithful to stop the march; Aurel's court hears the bells fall silent. | Thornreach's rival hearts are gone; another power hides under the abbey. | Highcairn moves the advance from crypts to the mountain terraces. |
-| T16 | Highcairn: climb four terraces, protect your heart and kill Warden Hilde Cairn; carry the cairn spirit's pale stone home if the hidden cairn is found. Aurel boasts that Cairn's terraces will end the climb; Castellan must look past another fallen hold. | Bellwick's bells fall silent beneath the graves of Highcairn. | Optional Skittle Cavern, then Stormhaven's harbour rivals either way. |
-| B04 | The Skittle Cavern: Cairnkeeper Hald's four lanes reveal ten standing guards when opened; roll boulders through them before time expires for a shard. The adviser sets the optional test against Castellan's reliance on guards; four earned shards can complete the Heartstone, never a main-route prerequisite. | Optional discovery from Highcairn's cairn spirit. | Return to Stormhaven; a completed Heartstone may help, but is not required. |
-| T17 | Stormhaven: cross the inlet's stone spans and destroy the four rival hearts sharing Captain Ivo Strand's harbour. Castellan tells Strand the harbour must hold; Aurel finds no refuge in the rival keepers' quarrel. | Highcairn is won, with or without its trial; the advance reaches another contested coast. | Choose Mirewatch or Goldspire as the next barrier to the inner realm. |
-| T18A | Mirewatch: build from workers, take the marsh towers and open the approaches to kill Watcher Mora Fenwick. Aurel calls Fenwick's beacons the court's warning line; Castellan loses the chosen inner barrier. | From Stormhaven, choose the beacon-lined marsh route. | The chosen inner barrier falls; Ebonrook follows without asserting Goldspire was conquered. |
-| T18B | Goldspire: build from workers and a thin purse, take the low town and the rings, and kill Treasurer Alaric Penn in the core. Castellan orders Penn to defend the realm's coin; Aurel loses the chosen inner barrier. | From Stormhaven, choose the tax spire route. | The chosen inner barrier falls; Ebonrook follows without asserting Mirewatch was conquered. |
-| T19 | Ebonrook: feed a large army without starting gold, cross the north bridges and break the sealed approaches to kill Warden Sabine Rook. Castellan urges Rook to bury the army in the roots; Aurel begins preparing his own stand. | Either inner route brings the advance into the black wood. | Varn's Crossing concentrates the remaining armies on the great roads. |
-| T20 | Varn's Crossing: claim your quarter, hold the lava-ringed fortress against heroes and destroy both rival hearts under Marshal Varn's watch. Aurel insists Varn's roads will halt the advance; Castellan hears the roads now lead toward his capital. | Ebonrook's hidden resistance falls; the great roads remain contested. | The victory reveals optional Swarm Night; Silverdeep is next on the main route. |
-| B05 | The Swarm Night: withstand Night Reeve Sable's rival keeper and scripted swarms for thirteen minutes; the strongest fighter can follow onward, with no shard promised. The adviser measures this optional night against Aurel's approaching stand; only its existing strongest-fighter reward persists. | Optional challenge revealed by victory at Varn's Crossing. | Rejoin Silverdeep, where the fighter reward can accompany the advance if earned. |
-| T21 | Silverdeep: mine from an empty purse, bridge the three lakes and destroy all three rival hearts in Warden Dorian Silt's mines. Castellan demands that the mines deny the intruder another road; Aurel gathers his court as the rivals fall. | From Varn's Crossing, possibly after Swarm Night, the remaining rivals contest the richest seams. | Wraithwood concentrates the last opposition in an allied pair of hearts. |
-| T22 | Wraithwood: defend against the hero portal while destroying Witch-Warden Elowen Ash's heart and her allied rival's heart at opposite corners. Aurel's final threat arrives from Kingsfall while Castellan waits behind the capital's courts. | Silverdeep's rivals are broken; the fog hides another alliance. | Kingsfall brings the keeper face to face with Prince Aurel's court. |
-| T23 | Kingsfall: defeat Prince Aurel, capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and sustain an army of at least twelve creatures. The prince who mocked Mossgate now makes his own stand; his defeat leaves Castellan to answer alone. | Wraithwood's two hearts fall; the royal hunting grounds are the penultimate stand. | Hollowmark Citadel is the final confrontation, without inventing cross-level transfer of the three champions. |
-| T24 | Hollowmark Citadel: advance through three courts, open sealed upper gates through the existing tower or key routes, use treasury gold and kill High King Castellan. Castellan's final proclamation confronts the keeper who survived every earlier threat; his death resolves the promise at Mossgate. | Kingsfall has broken the prince's court; the campaign's opening promise is now within reach. | End: the throne is empty and the kingdom belongs to the keeper. |
+| Wing / level | Title (map) | Raid: guild, leader, size, origin | Chapter | What the raid leaves |
+| --- | --- | --- | --- | --- |
+| 1/1 | Mold Pit (Brackenford) | The Mud Fists, Elsa Brack, one group of five, Brackenford | The first guests: a brawling village guild that settles everything with its fists. The keeper builds beds and a hatchery, claims the grove, crosses the ford and claims the keep; a stone in the cellars opens the Forgotten Pit. | Purses, boots and dented helmets; Aurel calls it a village brawl. |
+| 1/2 | Drowned Larder (Coldwell) | The Iron Latch, Hugo Cole, one group of five, Coldwell | Coldwell tries its luck after the Mud Fists send no word home. Well plaza, the gold beneath it and the keep's north gate; the first Heartstone shard. | Coin, chain shirts and keys to doors that are no longer theirs; Aurel sends for Wolfscar. |
+| 1/3 | Rat Warren (Ravensledge) | The Grey Fang, Rolf Scarrow, one raid of ten, Wolfscar | The hunters of Wolfscar stop laughing and come to shoot from a safe distance. Bridges and cliff shelves up to the inner gate. | Arrows, bows and hunting wages; the Rotting Cellars are the keeper's. |
+| 1/bonus | The Forgotten Pit (Mossgate) | no raid | A forgotten chamber with an old watch post: protect the heart, mine 60 gold and claim the meadow, clear the watch post and its reinforcements. | Item unlock at the merchant on the first completion. |
+| 2/1 | Bleeding Seam (Tinmoor) | The Deep Picks, Merrin Tay, two groups of five, Tinmoor | The miners of Tinmoor know every shaft. Seams, possessed scouting and two watch posts; a stone in a sealed vault opens the Gallery of Crows. | Picks, helmets and the coin they hoped to carry home. |
+| 2/2 | Chain Gallery (Greywater) | The Drowned Oath, Corwin Gray, two groups of five, Greywater | A river guild swears to carry the keeper's gold upstream. Gold, the river crossing and the heroes besieging another keeper; the second shard. | Iron, pay and river water; Castellan's council asks why the guilds keep failing. |
+| 2/3 | Slag Pit (Highcairn) | The Stone Crown, Hilde Cairn, two raids of ten, Highcairn | The mountain guild climbs down where others fell. Four terraces, the watch captain and the hold. | Shields, bows and the mountain folk's savings; Aurel starts making promises. |
+| 2/bonus | The Gallery of Crows (CrowshotGallery) | no raid | An old shooting gallery above lava: possess a shooter and bring down all three flocks of hornets before time runs out. | Item unlock at the merchant on the first completion. |
+| 3/1 | Ossuary (Lanternhill) | The Pale Flame, Ines Vale, one group of ten, Lanternhill | A lamplighters' guild brings its own light into a crypt that never goes dark. Ring road, crypt and library, the northern rival heart; a pale stone opens the Skull Lanes. | Lamps, oil, shields and wages. |
+| 3/2 | Tomb of Whispers (Saltmere) | The Salt Wolves, Bram Seward, one group of ten, Saltmere | The harbour guild smells treasure among salt flats and lagoons. Gold, the flats and both port gates; the third shard. | Cutlasses, coats and harbour coin; Castellan orders the Order to march. |
+| 3/3 | Bone Chapel (HollinFen) | The Order of the White Thorn, Agathe Hollin, one raid of twenty-five, Hollin Fen | The Order comes to cleanse the chapel, with more healers than the keeper likes. Beds, a hatchery, the causeway and the convent's west gate. | Holy water, white robes and the alms box; the Weeping Crypts are the keeper's. |
+| 3/bonus | The Skull Lanes (SkittleCavern) | no raid | Four boulder lanes with stone-faced guards: open the lanes and bowl down all ten guards within 540 seconds. | Item unlock at the merchant on the first completion. |
+| 4/1 | Rack Hall (Cinderhollow) | The Ember Ram, Pell Ashgrove, two groups of ten, Cinderhollow | A stubborn guild of shields means to knock with its head. Both gold seams, the lava bridge and the rival heart in the crater; an ash stone opens the Swarming Dark. Summon Champion is available with all three shards. | Battered shields, a ram's head banner and coin. |
+| 4/2 | Iron Maw (Ashcombe) | The Burnt Wheel, Liesl Ashby, two groups of ten, Ashcombe | A leader with a talent for leaving in a hurry. The ash basin; the escape now belongs to the raid. | Armour, axes and travel money. |
+| 4/3 | Torment Cells (Ironbridge) | The Anvil Host, Gareth Fenn, two raids of twenty-five, Ironbridge | The forge guild sends its heaviest iron. Beds and a hatchery, three rifts in order, the smithy and the ore dock, the rival hold. | Plate, shields and a forge master's purse; Aurel announces that he will see to it himself. |
+| 4/bonus | The Swarming Dark (SwarmNight) | no raid | A rival keeper's swarms all night long: protect the heart and survive until dawn (13 minutes). | Item unlock at the merchant on the first completion. |
+| 5/1 | Charnel Stair (Bellwick) | The Silent Bell, Lorens Bell, one group of twenty-five, Bellwick | A loud guild of monks for a quiet name, above an undead keeper in the undercroft. Nave to transept and the undercroft heart; a stone in the abbey opens the Rolling Tomb. | Robes, prayer beads, staves and the collection box. |
+| 5/2 | Corpse Gate (Goldspire) | The Gilded Hand, Alaric Penn, one group of twenty-five, Goldspire | The tax guild wants to audit the keeper's treasury. Two fighters, the low town, the south gate, the rings and both sealed links, the vault. | Gold rings, fine armour and Penn's ledger; the prince is coming down himself. |
+| 5/3 | Hall of Skulls (Kingsfall) | The Sun Court, Prince Aurel, one raid of forty, Kingsfall | The prince who laughed at every guild comes himself. His champions Edda, Brann and Wick came ahead to hunt and stay on the map; the keeper takes them alive and gathers his army at the heart. | Gilded armour, royal bows and the prince's purse; the High King calls for his crown. |
+| 5/bonus | The Rolling Tomb (BoulderCourse) | no raid | An old crew's boulder course: sink all four boulders into their cups within 600 seconds and 80 slaps. | Item unlock at the merchant on the first completion. |
+| 6/1 | Ember Pit (VarnsCrossing) | The Black Legion, Marshal Varn, two groups of twenty-five, Varn's Crossing | The heaviest guests come to the crossing of two great roads, where two rival keepers fight for the fortress. Quarter, fortress and both rival hearts; a stone opens the Twisting Abyss. | Black shields, the marshal's standard and the Legion's pay chest. |
+| 6/2 | Throne of Ash (Wraithwood) | The Ash Coven, Elowen Ash, two groups of twenty-five, Wraithwood | The coven answers the High King's call with shields and casters, in a fogbound wood between two rival keepers. Both rival hearts and all remaining enemies. | Staffs, charms and a coven purse; Castellan puts on his crown. |
+| 6/3 | Heart of Moreya (HollowmarkCitadel) | The Crown Eternal, Sabine Rook (first raid) and High King Castellan (second raid), two raids of forty, Hollowmark Citadel | The king's raid: three walled courts, the royal treasuries and the throne hall; both leaders must fall before either reaches the gate. | Royal armour, the banners of Hollowmark, the king's treasury and the crown; Moreya is the keeper's. |
+| 6/bonus | The Twisting Abyss (TwistingHalls) | no raid | Trapped halls twisting like a knot: possess a creature and reach the north-east exit before time runs out. | Item unlock at the merchant on the first completion. |
 
 ## Source guardrails
 
-All 31 referenced level files were read for objectives, victory triggers and scripted messages alongside the campaign configuration. The adviser and the throne objective are the approved connecting narration; wardens, rewards, level objectives and unlock conditions remain those of the current source. No claim is made that named wardens with no placed body must be killed. No bonus trial is made compulsory. No resources or creatures are promised to persist between levels except The Swarm Night's existing fighter reward. Ashcombe's escape road, Dunmarrow's escape shaft, Kingsfall's champions and Hollowmark's gate routes follow the actual level triggers rather than simplifying them into conflicting objectives.
-
-## Preview chapter moments
-
-Only the inventory-selected actual creatures are illustrated; early royal scenes are narrated, not illustrated as new royal bodies. Each image shows its own briefing moment.
-
-| Province | Scene |
-| --- | --- |
-| T01 | Reeve Tobin Marsh and an actual Adventurer watchman at the mossy village watch-post hall; a worker emerging from the meadow cave. |
-| T02 | Elsa Brack and the actual village Monk guarding the keep across the shallow ford, with a worker among fern-covered banks. |
-| T03 | Hugo Cole beyond the shut north gate; a worker at the old well plaza and exposed gold. |
-| T04 | Merrin Tay above two watch posts in tin-lit mine galleries; the actual Dwarf1 seam hand and a worker at a gold seam. |
-| B01 | A worker beside a stone boulder and its cup in the old mine crew's four-lane course. |
-| T05 | Osric Vane and an actual Elf ledge archer on the cliff shelves; a worker below narrow stone bridgeheads over deep chasms. |
-| T06 | Liesl Ashby at her smoky northern hold with wagons preparing to flee; a worker in the ash basin. |
-| T07 | Corwin Gray in his river hall and the actual rival Orc across the underground water, with a worker nearby. |
-| T08 | Agathe Hollin in a barred convent chapel above holly thickets and bog; a worker at the ward gate. |
-| B02 | The actual LizardMan and Cultist shooters aiming at a CaveHornet above lava islets in the old shooting gallery. |
-| T09A | Bram Seward in the southern harbour hall overlooking white salt flats and green lagoons; the actual SleeperOrc and a worker nearby. |
-| T09B | Ysolde Dunn preparing her wagons above old barrow tunnels beneath wind-carved dunes; a worker in the tunnels. |
-| T10 | The actual ForgeLord1 Orc and worker at guarded stone bridges over three molten rifts and distant forges. |
-| T11 | The actual Pack2_1 Orc hunter with a worker in the ravine-cut forest, the wolf den behind them. |
-| T12 | The actual LampKeeper1 Troll and worker near an earth-blocked ring road, northern hall glowing above. |
-| B03 | The actual Troll and DarkElf walkers at twisting lamp-lit trap halls leading toward a distant exit. |
-| T13 | The actual Emberkeep1 Troll defender and worker across an ash crater's lava bridge before dawn. |
-| T14 | The actual Briar2_1 Orc and worker at the middle clearing of the dark hedge maze. |
-| T15 | An actual undercroft Lich and worker below the abbey nave, crypt doors and cold bells above. |
-| T16 | Hilde Cairn in her mountain hold above four grave terraces and a lava seam; a worker on the climb. |
-| B04 | One actual spawned Adventurer guard standing in an opened boulder lane with a worker and rolling stone. |
-| T17 | An actual Harbourfolk Orc and worker at stone spans over a black harbour inlet under storm clouds. |
-| T18A | Mora Fenwick at a marsh beacon tower behind sealed approaches; a worker on a black-water causeway. |
-| T18B | Alaric Penn at his coin table in the spire core, concentric fortification rings below; a worker at the low town. |
-| T19 | Sabine Rook among black south-west roots; a worker beside the river's northern bridge. |
-| T20 | An actual Crossguard Orc and worker at the lava-ringed fortress where great roads meet. |
-| B05 | An actual rival worker and defending Cultist beside opposing dungeon halls in a tense night siege. |
-| T21 | Dorian Silt with a worker in rich silver seams beside three deep lakes and wooden spans. |
-| T22 | An actual Ashen DarkElf and worker among grey trunks and fog with two rival halls on distant rims. |
-| T23 | Prince Aurel, Falconer Edda and Huntsman Brann at royal hunting lodges beside watched lava spans. |
-| T24 | High King Castellan on the throne beyond three walled courts and lava trenches; a worker at the lower gate. |
+Guilds, leaders, raid sizes and origins follow the campaign structure; level titles are the dungeon and bonus cave names.
+Goals are those of the rebuilt level files; the texts do not change them. Removed wardens, the old hero waves and their
+deadlines, the escape wagon, the kept minion and Heartstone pieces in bonus levels are not mentioned. The texts state no
+countdown length and no hero count beyond the raid size. No resources or creatures persist between levels.

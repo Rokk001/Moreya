@@ -3169,7 +3169,7 @@ Region	Ledge	34	3	60	10
 Name	rising
 Mode	once
 Cond	time	3
-Action	message	1	Goldspire stands over the plateau like a coin on its edge, master. Treasurer Alaric Penn counts the kingdom's tax in its core and soldiers pour out of its gates day and night.
+Action	message	1	The Corpse Gate stands over the plateau like a coin on its edge, master, and soldiers pour out of its old spire day and night. Alaric Penn is bringing the Gilded Hand of Goldspire to count what you have.
 Action	hint	1	Mine gold and build an army.
 Action	objectiveid	1	goldspire-o03	Take the low town below the spire.
 Action	portal	1	off
@@ -3188,7 +3188,7 @@ Action	spawn	1	21	73	1	Orc:2	Goblin:2
 Name	roadWalked
 Mode	once
 Cond	region	1	Road
-Action	message	1	The road to the spire. The treasurer has spies on the low town, so move quickly.
+Action	message	1	The road to the spire. The spire has spies on the low town, so move quickly.
 Action	reveal	1	LowTown
 Action	reveal	1	Yard
 [/Trigger]
@@ -3259,21 +3259,21 @@ Action	spawn	3	66	23	1	Knight:4	Elf:3	Monk:3	Dwarf2:3
 Name	coreSeen
 Mode	once
 Cond	region	1	Core
-Action	message	1	The core of the spire. The vault captain keeps the key at the treasurer's table, and his guards are rising.
+Action	message	1	The core of the spire. The vault captain keeps the key at the old counting table, and his guards are rising.
 [/Trigger]
 [Trigger]
 Name	alertFollowup
 Mode	once
 Cond	flag	treasurerAlert	1
 Cond	kills	1	>=	20
-Action	message	1	The treasurer is paying his soldiers with the tax. The vaults are thinner now.
+Action	message	1	The spire is paying its soldiers from the vaults. The vaults are thinner now.
 Action	gold	1	800
 [/Trigger]
 [Trigger]
 Name	lowGold
 Mode	once
 Cond	mined	1	>=	2500
-Action	message	1	The plateau has paid for your army. Do not let the waves outpace you.
+Action	message	1	The plateau has paid for your army. Do not let the garrison outpace you.
 [/Trigger]
 [Trigger]
 Name	southGateOpens
@@ -3458,7 +3458,7 @@ Cond	objective	1	goldspire-main-route	reached
 Cond	objective	1	goldspire-main-vault	reached
 Cond	objective	1	goldspire-main-raid	reached
 Cond	raid	defeated
-Action	message	1	Alaric Penn lies dead on his own coin and his vault stands open. Goldspire is yours.
+Action	message	1	Alaric Penn lies on the coin he came to take, and the vault stands open. The Corpse Gate is yours.
 Action	win	1
 [/Trigger]
 [Trigger]

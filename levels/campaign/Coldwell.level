@@ -1492,7 +1492,7 @@ Region	Larder	52	21	53	22
 Name	firstFrost
 Mode	once
 Cond	time	3
-Action	message	1	Master, Coldwell drinks from one old well, and the springs say something lies beneath it. The warden keeps his keep shut tight.
+Action	message	1	Master, the Drowned Larder drinks from one old well, and the springs say something lies beneath it. Hugo Cole is bringing the Iron Latch of Coldwell, and the old keep down here is shut tight.
 Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.
 Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.
 [/Trigger]
@@ -1523,7 +1523,7 @@ Action	objectiveid	1	coldwell-o04	Break the keep's north gate.
 Name	townHeld
 Mode	once
 Cond	claimed	1	Plaza	45
-Action	message	1	The plaza is claimed. His watch is thin now.
+Action	message	1	The plaza is claimed. The watch of the keep is thin now.
 Action	reveal	1	EastRoad
 Action	setflag	townHeld	1
 [/Trigger]

@@ -3031,7 +3031,7 @@ Region	ChainVault	52	55	53	56
 Name	lowTide
 Mode	once
 Cond	time	3
-Action	message	1	Greywater lies on an underground river, master, and its warden trades with dwarves and sells iron to anyone with coin. You have no coin, so dig for it first.
+Action	message	1	The Chain Gallery lies on an underground river, master, and the Drowned Oath of Greywater will come down to it in two groups. You have no coin, so dig for it first.
 Action	objectiveid	1	greywater-o01	Defeat the raid and its leader.
 Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.
 Action	objectiveid	1	greywater-o03	Protect your heart.
@@ -3056,7 +3056,7 @@ Action	message	1	The quarry is yours. Prisoners can be put to better use than id
 Name	southBankReached
 Mode	once
 Cond	region	1	SouthLanding
-Action	message	1	Across the water another keeper holds a dungeon of his own, and the Greywater heroes are laying siege to it. If he falls, they will turn on you.
+Action	message	1	Across the water another keeper holds a dungeon of his own, and a band of heroes is laying siege to it. If he falls, they will turn on you.
 Action	reveal	1	Siege
 Action	reveal	1	RivalHeart
 Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.
@@ -3085,7 +3085,7 @@ Action	generate	1	Spider:1
 Name	wharfSeen
 Mode	once
 Cond	region	1	Wharf
-Action	message	1	The river hall is just ahead. Gray has called his dwarf guards from the cellars.
+Action	message	1	The river hall is just ahead. Its dwarf guards are coming up from the cellars.
 Action	spawn	3	44	14	1	Dwarf2:2	Dwarf2:2	Knight:2	Monk:2
 [/Trigger]
 [Trigger]
