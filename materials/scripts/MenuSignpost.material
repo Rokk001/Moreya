@@ -1,0 +1,48 @@
+// Start screen signpost (models/MenuSignpost.mesh, tools/blender-assets/moreya_raid_models.py).
+// MenuSignpostBoard is the front face of the arrow board: its texture spans the whole board outline (u from the back
+// end to the arrow tip, v from the lower to the upper edge); the lettering area is u 0 to 0.875.
+import RTSS/NormalMapping_MultiPass from "RTShaderSystem.material"
+
+material MenuSignpostWood : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap { texture MenuSignpostWood.png gamma }
+            texture_unit
+            {
+                texture MenuSignpostWoodNormal.png
+                tex_address_mode wrap
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 0.90 0.88 0.86 1
+            diffuse 0.90 0.88 0.86 1
+            specular 0.03 0.03 0.03 1 10
+        }
+    }
+}
+
+material MenuSignpostBoard : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap
+            {
+                texture MenuSignpostBoard.png gamma
+                tex_address_mode clamp
+            }
+            texture_unit
+            {
+                texture MenuSignpostBoardNormal.png
+                tex_address_mode clamp
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 0.90 0.88 0.86 1
+            diffuse 0.90 0.88 0.86 1
+            specular 0.03 0.03 0.03 1 10
+        }
+    }
+}
