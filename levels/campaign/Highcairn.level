@@ -115,7 +115,6 @@ mana	0
 
 [Goals]
 # goalName	arguments
-KillAllEnemies	NULL
 ProtectDungeonTemple	NULL
 [/Goals]
 
@@ -405,9 +404,10 @@ ProtectDungeonTemple	NULL
 11	41	1	0
 11	42	1	0
 11	46	6	100
-11	55	1	100
-11	56	1	100
-11	57	1	100
+11	54	1	0
+11	55	1	0
+11	56	1	0
+11	57	1	0
 11	58	1	0	1
 11	59	1	0	1
 11	60	1	0	1
@@ -437,9 +437,10 @@ ProtectDungeonTemple	NULL
 12	40	1	0
 12	41	1	0
 12	42	1	0
-12	55	1	100
-12	56	1	100
-12	57	1	100
+12	54	1	0
+12	55	1	0
+12	56	1	0
+12	57	1	0
 12	58	1	0	1
 12	59	1	0	1
 12	60	1	0	1
@@ -472,9 +473,10 @@ ProtectDungeonTemple	NULL
 13	40	1	0
 13	41	1	0
 13	42	1	0
-13	55	1	100
-13	56	1	100
-13	57	1	100
+13	54	1	0
+13	55	1	0
+13	56	1	0
+13	57	1	0
 13	58	1	0	1
 13	59	1	0	1
 13	60	1	0	1
@@ -511,9 +513,9 @@ ProtectDungeonTemple	NULL
 14	51	1	100
 14	52	1	100
 14	53	1	100
-14	54	1	100
-14	55	1	100
-14	56	1	100
+14	54	1	0
+14	55	1	0
+14	56	1	0
 14	57	1	100
 14	58	1	0	1
 14	59	1	0	1
@@ -545,9 +547,9 @@ ProtectDungeonTemple	NULL
 15	51	1	100
 15	52	1	100
 15	53	1	100
-15	54	1	100
-15	55	1	100
-15	56	1	100
+15	54	1	0
+15	55	1	0
+15	56	1	0
 15	57	1	100
 15	58	1	0
 15	59	1	0
@@ -579,9 +581,9 @@ ProtectDungeonTemple	NULL
 16	51	1	100
 16	52	1	100
 16	53	1	100
-16	54	1	100
-16	55	1	100
-16	56	1	100
+16	54	1	0
+16	55	1	0
+16	56	1	0
 16	57	1	100
 16	58	1	0
 16	59	1	0
@@ -612,9 +614,9 @@ ProtectDungeonTemple	NULL
 17	51	1	100
 17	52	1	100
 17	53	1	100
-17	54	1	100
-17	55	1	100
-17	56	1	100
+17	54	1	0
+17	55	1	0
+17	56	1	0
 17	57	1	100
 17	58	1	0
 17	59	1	0
@@ -646,9 +648,9 @@ ProtectDungeonTemple	NULL
 18	51	1	100
 18	52	1	100
 18	53	1	100
-18	54	1	100
-18	55	1	100
-18	56	1	100
+18	54	1	0
+18	55	1	0
+18	56	1	0
 18	57	1	100
 18	58	1	0
 18	59	1	0
@@ -679,9 +681,9 @@ ProtectDungeonTemple	NULL
 19	51	3	100
 19	52	3	100
 19	53	1	100
-19	54	1	100
-19	55	1	100
-19	56	1	100
+19	54	1	0
+19	55	1	0
+19	56	1	0
 19	57	1	0
 19	58	1	0
 19	59	1	0
@@ -711,8 +713,8 @@ ProtectDungeonTemple	NULL
 20	51	3	100
 20	52	3	100
 20	53	1	100
-20	54	1	100
-20	55	1	100
+20	54	1	0
+20	55	1	0
 20	56	1	0
 20	57	1	0
 20	59	1	0
@@ -743,8 +745,8 @@ ProtectDungeonTemple	NULL
 21	51	3	100
 21	52	3	100
 21	53	1	100
-21	54	1	100
-21	55	1	100
+21	54	1	0
+21	55	1	0
 21	56	1	0
 21	59	1	0
 21	60	1	0
@@ -780,7 +782,7 @@ ProtectDungeonTemple	NULL
 22	51	1	100
 22	52	1	100
 22	53	1	100
-22	54	1	100
+22	54	1	0
 22	55	1	0
 22	56	1	0
 22	67	3	100
@@ -811,9 +813,10 @@ ProtectDungeonTemple	NULL
 23	50	1	100
 23	51	1	100
 23	52	1	100
-23	53	1	100
+23	53	1	0
 23	54	1	0
 23	55	1	0
+23	56	1	0
 23	66	2	100	-1	50
 23	67	3	100
 24	0	3	100
@@ -844,8 +847,10 @@ ProtectDungeonTemple	NULL
 24	50	1	100
 24	51	1	100
 24	52	1	100
-24	53	1	100
+24	53	1	0
 24	54	1	0
+24	55	1	0
+24	56	1	0
 24	67	3	100
 25	0	3	100
 25	6	1	0
@@ -876,8 +881,10 @@ ProtectDungeonTemple	NULL
 25	50	1	100
 25	51	1	100
 25	52	1	100
-25	53	1	100
+25	53	1	0
 25	54	1	0
+25	55	1	0
+25	56	1	0
 25	62	2	100	-1	50
 25	63	2	100	-1	50
 25	64	2	100	-1	50
@@ -915,8 +922,9 @@ ProtectDungeonTemple	NULL
 26	50	1	100
 26	51	1	100
 26	52	1	100
-26	53	1	100
+26	53	1	0
 26	54	1	0
+26	55	1	0
 26	64	2	100	-1	50
 26	67	3	100
 27	0	3	100
@@ -950,8 +958,9 @@ ProtectDungeonTemple	NULL
 27	50	1	100
 27	51	3	100
 27	52	1	100
-27	53	1	100
+27	53	1	0
 27	54	1	0
+27	55	1	0
 27	67	3	100
 28	0	3	100
 28	5	1	0
@@ -989,6 +998,7 @@ ProtectDungeonTemple	NULL
 28	52	3	100
 28	53	1	0
 28	54	1	0
+28	55	1	0
 28	67	3	100
 29	0	3	100
 29	4	1	0
@@ -1026,6 +1036,7 @@ ProtectDungeonTemple	NULL
 29	52	1	0
 29	53	1	0
 29	54	1	0
+29	55	1	0
 29	67	3	100
 30	0	3	100
 30	4	1	0
@@ -1064,6 +1075,7 @@ ProtectDungeonTemple	NULL
 30	52	1	0
 30	53	1	0
 30	54	1	0
+30	55	1	0
 30	67	3	100
 31	0	3	100
 31	4	1	0
@@ -1096,12 +1108,13 @@ ProtectDungeonTemple	NULL
 31	41	1	0
 31	42	1	0
 31	48	1	0
-31	49	1	100
-31	50	1	100
+31	49	1	0
+31	50	1	0
 31	51	1	0
 31	52	1	0
 31	53	1	0
 31	54	1	0
+31	55	1	0
 31	67	3	100
 32	0	3	100
 32	4	1	0	2
@@ -1135,8 +1148,8 @@ ProtectDungeonTemple	NULL
 32	42	1	0
 32	48	1	0
 32	49	1	0
-32	50	1	100
-32	51	1	100
+32	50	1	0
+32	51	1	0
 32	52	1	0
 32	53	1	0
 32	54	1	0
@@ -1173,7 +1186,7 @@ ProtectDungeonTemple	NULL
 33	49	1	0
 33	50	1	0
 33	51	1	100
-33	52	1	100
+33	52	1	0
 33	53	1	0
 33	54	1	0
 33	63	2	100	-1	50
@@ -2290,9 +2303,9 @@ ProtectDungeonTemple	NULL
 61	41	1	0
 61	42	1	0
 61	43	1	0
-61	44	1	0
-61	45	1	0
-61	46	1	0
+61	44	1	0	2
+61	45	1	0	2
+61	46	1	0	2
 61	47	1	0
 61	48	1	0
 61	49	1	0
@@ -2338,9 +2351,9 @@ ProtectDungeonTemple	NULL
 62	41	1	0
 62	42	1	0
 62	43	1	0
-62	44	1	0
-62	45	1	0
-62	46	1	0
+62	44	1	0	2
+62	45	1	0	2
+62	46	1	0	2
 62	47	1	0
 62	48	1	0
 62	49	1	0
@@ -2371,9 +2384,9 @@ ProtectDungeonTemple	NULL
 63	30	1	0
 63	42	1	0
 63	43	1	0
-63	44	1	0
-63	45	1	0
-63	46	1	0
+63	44	1	0	2
+63	45	1	0	2
+63	46	1	0	2
 63	47	1	0
 63	48	1	0
 63	49	1	0
@@ -2680,6 +2693,21 @@ ProtectDungeonTemple	NULL
 63	26
 63	27
 [/Room]
+[Room]
+10	MoreyaGate1	2	9
+61	44
+61	45
+61	46
+62	44
+62	45
+62	46
+63	44
+63	45
+63	46
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -2771,7 +2799,6 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker1	Kobold.mesh	10	58	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker2	Kobold.mesh	15	61	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	12	63	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	HildeCairn	Knight.mesh	32	8	0	Knight	6	0	max	100	0	0	none	none	nullSkillType	none	0
 2	CairnGuard1	Knight.mesh	37	9	0	Knight	4	0	max	100	0	0	none	none	nullSkillType	none	0
 2	CairnGuard2	Knight.mesh	36	8	0	Knight	4	0	max	100	0	0	none	none	nullSkillType	none	0
 2	CairnGuard3	Monk.mesh	32	5	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2839,9 +2866,9 @@ Name	ascent
 Mode	once
 Cond	time	3
 Action	message	1	Highcairn is a mountain of old graves, master, and Warden Hilde Cairn has made her hold at the top of it. Four terraces and three switchbacks lie between you and her.
-Action	objectiveid	1	highcairn-o01	Kill Hilde Cairn in the mountain hold.
+Action	objectiveid	1	highcairn-o01	Defeat the raid and its leader.
 Action	objectiveid	1	highcairn-o02	Climb the terraces in order.
-Action	objectiveid	1	highcairn-o03	Defend your heart against the patrols.
+Action	objectiveid	1	highcairn-o03	Defend your heart.
 [/Trigger]
 [Trigger]
 Name	firstSeams
@@ -2889,121 +2916,11 @@ Action	message	1	The last terrace. The hold lies behind a stopped passage. The w
 Action	reveal	1	Hold
 Action	reveal	1	Basin
 Action	spawn	3	36	14	1	Knight:3	Dwarf2:3	Monk:3	Elf:3
-Action	objectiveid	1	highcairn-o04	Enter the hold and kill Hilde Cairn.
 [/Trigger]
 [Trigger]
-Name	cairnStone
+Name	goalHeartSafe3BeforeRaidDefeated
 Mode	once
-Cond	time	3
-Action	stonecreate	5	21	cairn-stone	1	12	60
-[/Trigger]
-[Trigger]
-Name	sealedFound
-Mode	once
-Cond	region	1	CairnHall
-Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
-Action	spawn	1	5	22	1	Spider:3@CairnBearer
-Action	setflag	bearerOut	1
-Action	objectiveid	1	highcairn-o05	Bring the stone to your heart.
-[/Trigger]
-[Trigger]
-Name	stoneHome
-Mode	once
-Cond	deliveredstone	cairn-stone
-Cond	flag	stoneDone	0
-Action	message	1	The pale stone has reached your heart and a hidden land has opened.
-Action	setflag	stoneDone	1
-Action	discover	campaign/SkittleCavern.level
-Action	objectivestate	1	highcairn-o05	reached
-[/Trigger]
-[Trigger]
-Name	bearerLost
-Mode	once
-Cond	flag	bearerOut	1
-Cond	flag	stoneDone	0
-Cond	alive	CairnBearer	0
-Cond	event	CairnBearer2	created	==	0
-Action	message	1	Another spirit rises. Send a Ziv for the stone.
-Action	spawn	1	5	22	1	Spider:3@CairnBearer2
-[/Trigger]
-[Trigger]
-Name	stoneHome2
-Mode	once
-Cond	deliveredstone	cairn-stone
-Cond	flag	stoneDone	0
-Action	message	1	The pale stone has reached your heart and a hidden land has opened.
-Action	setflag	stoneDone	1
-Action	discover	campaign/SkittleCavern.level
-Action	objectivestate	1	highcairn-o05	reached
-[/Trigger]
-[Trigger]
-Name	patrol1
-Mode	once
-Cond	time	240
-Action	message	1	A patrol of the cairn guard is coming down the mountain.
-Action	spawn	3	62	21	1	Adventurer:2	Dwarf1:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	patrol2
-Mode	once
-Cond	time	520
-Action	message	1	Guards are crossing the second terrace.
-Action	spawn	3	62	45	1	Knight:2	Monk:2	Adventurer:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	patrol3
-Mode	once
-Cond	time	850
-Action	message	1	A heavy squad is marching from the third switchback.
-Action	spawn	3	62	21	1	Knight:2	Knight:2	Dwarf2:2	Monk:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	patrol4
-Mode	once
-Cond	time	1200
-Action	message	1	The cairn guard has found a way to your foot cave.
-Action	spawn	3	62	45	1	Knight:3	Elf:2	Adventurer:3	Monk:2	Dwarf2:2
-[/Trigger]
-[Trigger]
-Name	patrol5
-Mode	once
-Cond	time	1600
-Action	message	1	Hilde Cairn is sending her second line.
-Action	spawn	3	62	21	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	patrol6
-Mode	once
-Cond	time	2050
-Action	message	1	Another column, and this one has banners.
-Action	spawn	3	62	45	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	patrol7
-Mode	once
-Cond	time	2550
-Action	message	1	The mountain is emptying its barracks.
-Action	spawn	3	62	21	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	patrol8
-Mode	once
-Cond	time	3100
-Action	message	1	The warden has called every spear on the mountain.
-Action	spawn	3	62	45	1	Knight:4	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	patrol9
-Mode	once
-Cond	time	3700
-Action	message	1	The last of the cairn guard marches down.
-Action	spawn	3	62	21	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	goalHeartSafe3BeforeWardenSlain
-Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
+Cond	raid	defeated
 Cond	goalmet	1	ProtectDungeonTemple
 Action	objectivestate	1	highcairn-o03	reached
 [/Trigger]
@@ -3050,15 +2967,6 @@ Cond	flag	holdOpen	1
 Action	objectivestate	1	highcairn-o06	reached
 [/Trigger]
 [Trigger]
-Name	wardenSlain
-Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
-Action	objectivestate	1	highcairn-o01	reached
-Action	objectivestate	1	highcairn-o04	reached
-Action	win	1
-[/Trigger]
-[Trigger]
 Name	holdKey
 Mode	once
 Cond	event	TerraceWatch8	killed
@@ -3094,28 +3002,14 @@ Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the h
 
 
 [Trigger]
-Name	carrierRecovery
-Mode	repeat	0
-Cond	trigger	bearerLost
-Cond	flag	stoneDone	0
-Cond	event	CairnBearer2	created	==	0
-Action	spawn	1	5	22	1	Spider:3@CairnBearer2
-[/Trigger]
-[Trigger]
 Name	mainGoalList
 Mode	once
 Cond	time	0
 Action	mainobjectiveid	1	highcairn-main-home	Build a bed and coop; protect your heart.
 Action	mainobjectiveid	1	highcairn-main-terraces	Climb the four terraces in order.
 Action	mainobjectiveid	1	highcairn-main-captain	Defeat the watch captain and open the hold.
-Action	mainobjectiveid	1	highcairn-main-warden	Defeat Hilde Cairn in her hold and all enemy forces.
+Action	mainobjectiveid	1	highcairn-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	highcairn-extra-caldera	Explore the southern caldera.
-[/Trigger]
-[Trigger]
-Name	mainStoneList
-Mode	once
-Cond	trigger	sealedFound
-Action	conditionalobjectiveid	1	highcairn-main-stone	If found, bring the stone home.
 [/Trigger]
 [Trigger]
 Name	mainHeartLost
@@ -3145,17 +3039,16 @@ Cond	flag	holdOpen	1
 Action	objectivestate	1	highcairn-main-captain	reached
 [/Trigger]
 [Trigger]
-Name	mainWarden
+Name	mainRaid
 Mode	repeat	0
-Cond	killedin	HildeCairn	Hold
-Cond	goalmet	1	KillAllEnemies
-Action	objectivestate	1	highcairn-main-warden	reached
+Cond	raid	defeated
+Action	objectivestate	1	highcairn-main-raid	reached
 [/Trigger]
 [Trigger]
-Name	mainStone
-Mode	repeat	0
-Cond	flag	stoneDone	1
-Action	objectivestate	1	highcairn-main-stone	reached
+Name	raidDefeated
+Mode	once
+Cond	raid	defeated
+Action	objectivestate	1	highcairn-o01	reached
 [/Trigger]
 [Trigger]
 Name	extraCaldera
@@ -3164,30 +3057,46 @@ Cond	region	1	Caldera
 Action	objectivestate	1	highcairn-extra-caldera	reached
 [/Trigger]
 [Trigger]
-Name	victoryWithoutStone
-Mode	once
-Cond	objective	1	highcairn-main-home	reached
-Cond	objective	1	highcairn-main-terraces	reached
-Cond	objective	1	highcairn-main-captain	reached
-Cond	objective	1	highcairn-main-warden	reached
-Cond	flag	bearerOut	0
-Action	setflag	victoryStoneReady	1
-[/Trigger]
-[Trigger]
-Name	victoryWithStone
-Mode	once
-Cond	flag	stoneDone	1
-Action	setflag	victoryStoneReady	1
-[/Trigger]
-[Trigger]
 Name	mainVictory
 Mode	once
 Cond	objective	1	highcairn-main-home	reached
 Cond	objective	1	highcairn-main-terraces	reached
 Cond	objective	1	highcairn-main-captain	reached
-Cond	objective	1	highcairn-main-warden	reached
-Cond	flag	victoryStoneReady	1
+Cond	objective	1	highcairn-main-raid	reached
 Action	message	1	Warden Hilde Cairn lies dead among her own stones. Highcairn is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	62	45	270
+Seats	2	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	-
+Member	1	Knight	3	-	Guardian
+Member	1	Knight	3	-	Guardian
+Member	1	Dwarf2	3	-	Guardian
+Member	1	Monk	3	-	Guardian
+Member	1	Elf	3	-	Marksman
+Member	1	Elf	3	-	Hunter
+Member	1	Elf	3	-	Skirmisher
+Member	1	Dwarf1	3	-	Berserker
+Member	1	Adventurer	3	-	Shade
+Member	1	Monk	3	-	Warlord
+Group	2	HildeCairn
+Member	2	Knight	6	HildeCairn	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Elf	4	-	Marksman
+Member	2	Elf	4	-	Hunter
+Member	2	Elf	4	-	Marksman
+Member	2	Dwarf1	4	-	Berserker
+Member	2	Adventurer	4	-	Dancer
+[/Raid]
