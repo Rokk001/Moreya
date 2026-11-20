@@ -1425,10 +1425,10 @@ void doTurn(Env& env)
         p.rho = env.settings.rho;
         p.pi = env.settings.pi;
         p.scanPeriod = env.settings.scanPeriod;
-        p.symptomScanFactor = key("LookFactorSymptom");
+        p.symptomScanFactor = key("SymptomScanFactor");
         p.periodicMinDelay = key("PeriodicMinDelay");
-        p.latencyMean = key("LatencyMean");
-        p.latencySd = key("LatencySd");
+        p.latencyMean = key("ActionLatencyMean");
+        p.latencySd = key("ActionLatencySd");
         AiMath::Uniform01 u = uniform01;
         st.nextPlan = env.now + AiMath::lookInterval(key("LookFactorPlan"), p, u);
         planDig(env);

@@ -26,6 +26,7 @@
 #include "game/RaidManager.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
 #include "network/ODServer.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
@@ -42,6 +43,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <vector>
 
 namespace
@@ -186,6 +188,71 @@ double treasuryGold(GameMap& gameMap, Seat* seat)
     return gold;
 }
 
+//! \brief The phase-1 main goals of the attacked keeper: the ids of the level script's main objectives of his seat
+//! (Action mainobjectiveid) except the raid goal (id ending in "-raid"), read from the level file.
+std::vector<std::string> sPhase1Goals;
+
+//! \brief Reads the phase-1 main goals of the seat from the trigger lines of the level file.
+void readPhase1Goals(const std::string& levelFile, int32_t seatId)
+{
+    sPhase1Goals.clear();
+    std::ifstream level(levelFile.c_str());
+    std::string line;
+    const std::string raidSuffix = "-raid";
+    while(std::getline(level, line))
+    {
+        std::istringstream fields(line);
+        std::string word;
+        std::string type;
+        int32_t goalSeat = -1;
+        std::string id;
+        if(!(fields >> word >> type >> goalSeat >> id) || (word != "Action") || (type != "mainobjectiveid"))
+            continue;
+        if((goalSeat != seatId) && (goalSeat != -1))
+            continue;
+        if((id.size() >= raidSuffix.size())
+            && (id.compare(id.size() - raidSuffix.size(), raidSuffix.size(), raidSuffix) == 0))
+            continue;
+        if(std::find(sPhase1Goals.begin(), sPhase1Goals.end(), id) == sPhase1Goals.end())
+            sPhase1Goals.push_back(id);
+    }
+}
+
+//! \brief The number of phase-1 main goals of the seat that are reached now.
+uint32_t phase1Reached(const GameMap& gameMap, int32_t seatId)
+{
+    uint32_t reached = 0;
+    for(const std::string& id : sPhase1Goals)
+    {
+        if(gameMap.getLevelScript().getObjectiveState(seatId, id) == LevelScriptObjectiveState::reached)
+            ++reached;
+    }
+    return reached;
+}
+
+//! \brief Counts the ground tiles claimed by the seat and the tiles covered by its rooms.
+void countTiles(GameMap& gameMap, Seat* seat, uint32_t& claimed, uint32_t& roomTiles)
+{
+    claimed = 0;
+    roomTiles = 0;
+    if(seat == nullptr)
+        return;
+    for(int32_t x = 0; x < gameMap.getMapSizeX(); ++x)
+    {
+        for(int32_t y = 0; y < gameMap.getMapSizeY(); ++y)
+        {
+            Tile* tile = gameMap.getTile(x, y);
+            if((tile != nullptr) && tile->isClaimedForSeat(seat))
+                ++claimed;
+        }
+    }
+    for(Room* room : gameMap.getRooms())
+    {
+        if(room->getSeat() == seat)
+            roomTiles += static_cast<uint32_t>(room->getCoveredTiles().size());
+    }
+}
+
 //! \brief The hit points of the dungeon heart tiles of the seat.
 double heartHp(GameMap& gameMap, Seat* seat)
 {
@@ -245,10 +312,12 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
         return sExitCode;
     }
 
+    readPhase1Goals(levelFile, attackedSeatId);
+
     // The seed again right before the first turn, so that loading does not change what the turns draw
     Random::setSeed(usedSeed);
     out << "# level=" << levelFile << " seed=" << usedSeed << " keeperAi=" << (keeperAi ? 1 : 0)
-        << " turnsPerSecond=" << ODApplication::turnsPerSecond << "\n";
+        << " turnsPerSecond=" << ODApplication::turnsPerSecond << " phase1Goals=" << sPhase1Goals.size() << "\n";
     writeHeader(out);
 
     const double turnSeconds = 1.0 / ODApplication::turnsPerSecond;
@@ -320,7 +389,9 @@ int RaidSimulation::getExitCode()
 //! the raid and of the keeper, the highest id a combat group got so far (how many groups were formed), the summed
 //! distance of the raid and keeper group members to their formation places and the spread of the standing raid (mean
 //! distance of its members to their centre), the gold stored in the keeper's treasuries alone and the gold the raid
-//! took so far from treasuries and from dungeon hearts (what a member's carried gold grew by while it stood there).
+//! took so far from treasuries and from dungeon hearts (what a member's carried gold grew by while it stood there), the
+//! phase-1 main goals of the keeper reached now and their number (see readPhase1Goals), the ground tiles he claimed, the
+//! tiles of his rooms and the gold he mined so far.
 void RaidSimulation::writeHeader(std::ostream& os)
 {
     os << "turn\tseconds\tgateOpen\tarrived"
@@ -328,7 +399,8 @@ void RaidSimulation::writeHeader(std::ostream& os)
         << "\tkeeperAlive\tkeeperHp\tkeeperMaxHp\tkeeperFighting\tkeeperInPlace\tkeeperWithPlace\tkeeperCarried"
         << "\tleadersFleeing\tleadersEscaped\tkeeperGroups\tkeeperGroupMembers\tkeeperRetreating\traidRetreating"
         << "\tminDistance\tkeeperGold\theartHp\tkeeperLost\traidFleeing\tkeeperFleeing\tmaxGroupId"
-        << "\traidPlaceDistance\tkeeperPlaceDistance\traidSpread\ttreasuryGold\tplunderedTreasury\tplunderedHeart\n";
+        << "\traidPlaceDistance\tkeeperPlaceDistance\traidSpread\ttreasuryGold\tplunderedTreasury\tplunderedHeart"
+        << "\tphase1Reached\tphase1Total\tclaimedTiles\troomTiles\tgoldMined\n";
 }
 
 //! \brief Counts both sides from the creatures of the map, the raid groups and the combat groups.
@@ -436,5 +508,11 @@ void RaidSimulation::writeTurn(std::ostream& os, GameMap& gameMap, int32_t attac
         << "\t" << (keeperLost ? 1 : 0) << "\t" << raidSide.mFleeing << "\t" << keeperSide.mFleeing
         << "\t" << maxGroupId << "\t" << raidSide.mPlaceDistance << "\t" << keeperSide.mPlaceDistance
         << "\t" << spread(raidStanding) << "\t" << ((keeperSeat == nullptr) ? 0.0 : treasuryGold(gameMap, keeperSeat))
-        << "\t" << sPlunderedTreasury << "\t" << sPlunderedHeart << "\n";
+        << "\t" << sPlunderedTreasury << "\t" << sPlunderedHeart;
+
+    uint32_t claimed = 0;
+    uint32_t roomTiles = 0;
+    countTiles(gameMap, keeperSeat, claimed, roomTiles);
+    os << "\t" << phase1Reached(gameMap, attackedSeatId) << "\t" << sPhase1Goals.size() << "\t" << claimed
+        << "\t" << roomTiles << "\t" << ((keeperSeat == nullptr) ? 0 : keeperSeat->getGoldMined()) << "\n";
 }

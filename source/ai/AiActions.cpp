@@ -351,6 +351,10 @@ void perform(KeeperAI& ai, const std::string& target)
         if(action == "drop")
         {
             const unsigned int index = name == "-" ? 0 : player.getHandIndex(GameEntityType::creature, decode(name));
+            // A failed pickup (or a hand emptied meanwhile) leaves nothing to drop: the hand is not asked then,
+            // since asking it for a missing object is an error
+            if(index >= player.numObjectsInHand())
+                return;
             if(player.isDropHandPossible(tile, index))
             {
                 player.dropHand(tile, index);
