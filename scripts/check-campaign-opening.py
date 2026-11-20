@@ -16,10 +16,11 @@ For every level the state at the START of the game is checked (no trigger has fi
    above 0. The classes of a creature are its class (DefaultWorker: the WorkerClass of its
    seat's faction in config/factions.cfg), of a spawn the classes it spawns, of a temple the
    WorkerClass of the owner's faction, of a portal that and the faction's SpawnPool, of a
-   wave portal those plus the classes of its waves and of its raid members; a class or faction that the configs do
-   not know passes both. Solid rock never counts as passable. A tile that is rock at the
-   start and opened later by a trigger therefore separates, as it should. Spawns of
-   triggers that fire later in the game are game events and are covered by rule 3. The shortest path that may also cross solid dirt,
+   wave portal those plus the classes of its waves and of its raid members; a class or
+   faction that the configs do not know passes both. Solid rock never counts as passable.
+   A tile that is rock at the start and opened later by a trigger therefore separates, as
+   it should. Spawns of triggers that fire later in the game are game events and are
+   covered by rule 3. The shortest path that may also cross solid dirt,
    gold and gem tiles is only reported (shortest_dig_path) and has no threshold. Levels
    outside the campaign (skirmish, realms) are exempt from this part.
    Exception: the Moreya gate of a story level in gate mode is no enemy source at the start,
