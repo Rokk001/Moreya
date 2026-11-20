@@ -71,9 +71,9 @@ std::string GiftBoxBonus::getDisplayName(GiftBoxType type)
         case GiftBoxType::weakenWalls:
             return "Weaken Walls";
         case GiftBoxType::stunWorkers:
-            return "Stun Workers";
+            return "Stun Zivs";
         case GiftBoxType::receiveWorkers:
-            return "Receive Workers";
+            return "Receive Zivs";
         case GiftBoxType::makeHappy:
             return "Make Happy";
         case GiftBoxType::makeUnhappy:
@@ -105,9 +105,9 @@ std::string GiftBoxBonus::getDescription(GiftBoxType type)
         case GiftBoxType::weakenWalls:
             return "Turns the reinforced walls of the enemy back to earth.";
         case GiftBoxType::stunWorkers:
-            return "Stuns all enemy workers for a few seconds.";
+            return "Stuns all enemy Zivs for a few seconds.";
         case GiftBoxType::receiveWorkers:
-            return "Gives you free workers.";
+            return "Gives you free Zivs.";
         case GiftBoxType::makeHappy:
             return "Sets the mood of all your creatures to the maximum.";
         case GiftBoxType::makeUnhappy:

@@ -6170,7 +6170,7 @@ Action	setflag	upperEast	1
 Name	courtWell
 Mode	once
 Cond	slabs	1	GateCourt	claimed	>=	40
-Action	message	1	The gate court is yours and a spring of mana has opened in its west yard. Claim it with a worker.
+Action	message	1	The gate court is yours and a spring of mana has opened in its west yard. Claim it with a Ziv.
 Action	terrain	42	74	42	74	manawell
 [/Trigger]
 [Trigger]

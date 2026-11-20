@@ -3164,7 +3164,7 @@ Mode	repeat	60
 Cond	flag	lanternStone	1
 Cond	timer	lanternSpawn	>=	5
 Cond	alive	LampBearer	0
-Action	message	1	Another spider emerges. Send a worker for the stone.
+Action	message	1	Another spider emerges. Send a Ziv for the stone.
 Action	spawn	1	70	9	1	Spider:1@LampBearer
 [/Trigger]
 [Trigger]

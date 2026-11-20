@@ -1688,7 +1688,7 @@
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
-                <Property name="TooltipText" value="Strength raises the melee damage and the gold a worker can carry, its equipment included." />
+                <Property name="TooltipText" value="Strength raises the melee damage and the gold a Ziv can carry, its equipment included." />
             </Window>
             <Window type="OD/StaticText" name="Dexterity">
                 <Property name="Area" value="{{0.5768,0},{0.3521,0},{0.7094,0},{0.4831,0}}" />

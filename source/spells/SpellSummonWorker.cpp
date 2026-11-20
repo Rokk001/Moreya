@@ -38,7 +38,7 @@
 #include <algorithm>
 
 const std::string SpellSummonWorkerName = "summonWorker";
-const std::string SpellSummonWorkerNameDisplay = "Summon worker";
+const std::string SpellSummonWorkerNameDisplay = "Summon Ziv";
 const std::string SpellSummonWorkerCooldownKey = "SummonWorkerCooldown";
 const SpellType SpellSummonWorker::mSpellType = SpellType::summonWorker;
 //! Turns the arrival look stays on a worker that was just summoned
@@ -117,7 +117,7 @@ void SpellSummonWorker::checkSpellCast(GameMap* gameMap, const InputManager& inp
     if(targets.empty())
     {
         inputCommand.unselectAllTiles();
-        inputCommand.displayText(Ogre::ColourValue::Red, "Summon workers on your claimed ground.");
+        inputCommand.displayText(Ogre::ColourValue::Red, "Summon Zivs on your claimed ground.");
         return;
     }
 

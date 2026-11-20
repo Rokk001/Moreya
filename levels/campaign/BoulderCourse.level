@@ -1481,7 +1481,7 @@ Mode	once
 Cond	time	0
 Action	mainobjectiveid	1	bouldercourse-main-heart	Protect your heart.
 Action	mainobjectiveid	1	bouldercourse-main-trial	Sink all 4 boulders within 600s and 80 slaps.
-Action	optionalobjectiveid	1	bouldercourse-extra-survivors	Keep all 3 starting workers alive.
+Action	optionalobjectiveid	1	bouldercourse-extra-survivors	Keep all 3 starting Zivs alive.
 [/Trigger]
 [Trigger]
 Name	mainHeart

@@ -17,7 +17,7 @@
         <Window type="OD/GameTabButton" name="SummonWorkerButton" >
             <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/SummonWorkerButton" />
-            <Property name="TooltipText" value="Summon a worker" />
+            <Property name="TooltipText" value="Summon a Ziv" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="SummonWorkerButtonProgressBar" >

@@ -94,7 +94,7 @@ const char* const FEED_TIME_COLOUR = "[colour='FFB8AC90']";
 const char* const FEED_TEXT_COLOUR = "[colour='FFE8DCC0']";
 
 //! Labels of the filter choices and names of the navigation buttons, in their displayed order
-const char* const FILTER_LABELS[] = {"All", "Workers", "Fighters", "Unhappy"};
+const char* const FILTER_LABELS[] = {"All", "Zivs", "Fighters", "Unhappy"};
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
 //! The fifth button of the navigation bar, after the four pages: it opens the skill tree window (plan INGAME-QS-11 K4)
 const char* const NAV_SKILLS_BUTTON = "NavSkills";

@@ -2319,7 +2319,7 @@ Action	gold	1	400
 Name	antechamberWell
 Mode	once
 Cond	slabs	1	Antechamber	claimed	>=	15
-Action	message	1	The antechamber is claimed and a spring of mana has opened in its middle. Claim it with a worker.
+Action	message	1	The antechamber is claimed and a spring of mana has opened in its middle. Claim it with a Ziv.
 Action	terrain	24	22	24	22	manawell
 [/Trigger]
 [/Triggers]

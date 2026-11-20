@@ -1077,7 +1077,7 @@ Mode	once
 Cond	time	0
 Action	mainobjectiveid	1	skittlecavern-main-heart	Protect your heart.
 Action	mainobjectiveid	1	skittlecavern-main-trial	Open all 4 lanes; bowl down 10 guards within 540s.
-Action	optionalobjectiveid	1	skittlecavern-extra-survivors	Keep all 4 starting workers alive.
+Action	optionalobjectiveid	1	skittlecavern-extra-survivors	Keep all 4 starting Zivs alive.
 [/Trigger]
 [Trigger]
 Name	mainHeartLost

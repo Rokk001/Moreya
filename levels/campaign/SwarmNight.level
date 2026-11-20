@@ -1560,7 +1560,7 @@ Region	MiddleRoad	14	12	26	38
 Name	nightFalls
 Mode	once
 Cond	time	3
-Action	message	1	The rival keeper has sworn to bury your heart under his workers, and the night is long. Hold your dungeon until the first light.
+Action	message	1	The rival keeper has sworn to bury your heart under his Zivs, and the night is long. Hold your dungeon until the first light.
 Action	objectiveid	1	swarmnight-o01	Survive the swarm for 13 minutes.
 Action	objectiveid	1	swarmnight-o02	Protect your heart.
 [/Trigger]
@@ -1686,7 +1686,7 @@ Mode	once
 Cond	time	0
 Action	mainobjectiveid	1	swarmnight-main-heart	Protect your heart.
 Action	mainobjectiveid	1	swarmnight-main-trial	Survive until dawn (13 minutes).
-Action	optionalobjectiveid	1	swarmnight-extra-survivors	Keep all 3 starting workers alive.
+Action	optionalobjectiveid	1	swarmnight-extra-survivors	Keep all 3 starting Zivs alive.
 [/Trigger]
 [Trigger]
 Name	mainHeart
