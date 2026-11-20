@@ -248,7 +248,11 @@ enum class ServerNotificationType
     //! \brief Current owner worker settings, returned even if a requested change is refused.
     workerSettings,
     //! \brief Complete current roster and profile statistics of allied creatures.
-    dungeonbookRoster
+    dungeonbookRoster,
+    //! \brief Seconds left of the hand cooldown of a campaign level (HL2), sent to the human keeper when it starts,
+    //! when a pickup is refused and when a saved game is loaded: + double seconds.
+    //! Appended after dungeonbookRoster so that no existing numeric value changes.
+    setHandCooldown
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

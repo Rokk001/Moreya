@@ -361,8 +361,12 @@ def read_seat(s, save):
     t = s.need("seat block")
     while t in ("[ResearchProgress]", "[HadLibrary]", "[StoredSpecials]", "[AnnouncedCreatureClasses]", "[Infirmary]",
                 "[SpellCooldowns]", "[Merchant]", "[MerchantBalance]", "[GhostRoom]", "[GhostBells]",
-                "[ResearchRemainder]", "[WorkerJobs]", "[PleasureRoomSettings]"):
-        if t == "[PleasureRoomSettings]":
+                "[ResearchRemainder]", "[WorkerJobs]", "[PleasureRoomSettings]", "[HandCooldown]"):
+        if t == "[HandCooldown]":
+            cooldown = s.number("hand cooldown")
+            if cooldown < 0.0 or s.need("[/HandCooldown]") != "[/HandCooldown]":
+                fail("seat %d: hand cooldown block invalid" % seat_id)
+        elif t == "[PleasureRoomSettings]":
             values = [s.integer("pleasure room setting") for _ in range(3)]
             if any(value not in (0, 1) for value in values):
                 fail("seat %d: invalid pleasure room setting" % seat_id)

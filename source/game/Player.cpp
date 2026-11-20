@@ -27,7 +27,9 @@
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
 #include "entities/ItemBagEntity.h"
+#include "game/Campaign.h"
 #include "game/CreatureMerchantAI.h"
+#include "game/HandLimitRules.h"
 #include "game/SkillManager.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -105,7 +107,8 @@ Player::Player(GameMap* gameMap, int32_t id) :
     mDefeatHeartTileX(-1),
     mDefeatHeartTileY(-1),
     mSpellsCooldown(std::vector<PlayerSpellData>(static_cast<uint32_t>(SpellType::nbSpells), PlayerSpellData(0, 0.0f))),
-    mWorkersActions(std::vector<uint32_t>(static_cast<uint32_t>(CreatureActionType::nb), 0))
+    mWorkersActions(std::vector<uint32_t>(static_cast<uint32_t>(CreatureActionType::nb), 0)),
+    mHandCooldownSeconds(0.0)
 {
 }
 
@@ -128,6 +131,103 @@ unsigned int Player::numCreaturesInHand(const Seat* seat) const
 unsigned int Player::numObjectsInHand() const
 {
     return mObjectsInHand.size();
+}
+
+//! \brief True when the entity counts against the hand limit of a campaign level: a creature that is neither a Ziv
+//! (worker) nor a prisoner (see HandLimitRules::isFightingCreature).
+static bool isHandLimitedEntity(const GameEntity* entity)
+{
+    if((entity == nullptr) || (entity->getObjectType() != GameEntityType::creature))
+        return false;
+
+    const Creature* creature = static_cast<const Creature*>(entity);
+    const CreatureDefinition* definition = creature->getDefinition();
+    const bool isWorker = (definition != nullptr) && definition->isWorker();
+    return HandLimitRules::isFightingCreature(true, isWorker, creature->getSeatPrison() != nullptr);
+}
+
+//! \brief Counts the held creatures that count against the hand limit (not Zivs, not prisoners).
+unsigned int Player::numFightingCreaturesInHand() const
+{
+    unsigned int count = 0;
+    for(GameEntity* entity : mObjectsInHand)
+    {
+        if(isHandLimitedEntity(entity))
+            ++count;
+    }
+    return count;
+}
+
+//! \brief The hand limit applies on the server while a campaign level (story or bonus level) is played; skirmish and
+//! multiplayer games never start a campaign level.
+bool Player::isHandLimitActive() const
+{
+    if((mGameMap == nullptr) || !mGameMap->isServerGameMap() || mGameMap->isInEditorMode())
+        return false;
+
+    return Campaign::getSingleton().isActive();
+}
+
+//! \brief Asks HandLimitRules::mayPickUp with the hand, the cooldown and the [HandLimit] keys of global.cfg.
+bool Player::isHandLimitPickupAllowed(const GameEntity* entity) const
+{
+    const bool limitActive = isHandLimitActive();
+    if(!limitActive)
+        return true;
+
+    const double maxFighters = ConfigManager::getSingleton().getHandLimitConfigDouble("HandLimitFighters");
+    const uint32_t maxFightersCount = (maxFighters < 1.0) ? 1 : static_cast<uint32_t>(maxFighters);
+    return HandLimitRules::mayPickUp(limitActive, isHandLimitedEntity(entity), numFightingCreaturesInHand(),
+        maxFightersCount, mHandCooldownSeconds);
+}
+
+//! \brief Sets the hand cooldown; a negative or not finite value means no cooldown. On the server a human keeper's
+//! client is told the new value, so that it shows it at the hand (HL2).
+void Player::setHandCooldownSeconds(double seconds)
+{
+    if(!std::isfinite(seconds) || (seconds < 0.0))
+        seconds = 0.0;
+
+    mHandCooldownSeconds = seconds;
+    notifyHandCooldown();
+}
+
+//! \brief Lets the given game seconds pass for the hand cooldown (server upkeep and client turn).
+void Player::advanceHandCooldown(double seconds)
+{
+    mHandCooldownSeconds = HandLimitRules::advanceCooldown(mHandCooldownSeconds, seconds);
+}
+
+//! \brief Sends the seconds left of the hand cooldown to the client of a human keeper (server side only).
+void Player::notifyHandCooldown()
+{
+    if((mGameMap == nullptr) || !mGameMap->isServerGameMap() || !getIsHuman())
+        return;
+
+    ServerNotification* serverNotification = new ServerNotification(ServerNotificationType::setHandCooldown, this);
+    serverNotification->mPacket << mHandCooldownSeconds;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+//! \brief Tells a human keeper why the pickup of a fighting creature was refused and resends the cooldown, so that
+//! the hand shows the right time (HL2). Server side only; computer keepers get nothing.
+void Player::notifyHandLimitRefusal(const GameEntity* entity)
+{
+    if((mGameMap == nullptr) || !mGameMap->isServerGameMap() || !getIsHuman())
+        return;
+
+    const double maxFighters = ConfigManager::getSingleton().getHandLimitConfigDouble("HandLimitFighters");
+    const uint32_t maxFightersCount = (maxFighters < 1.0) ? 1 : static_cast<uint32_t>(maxFighters);
+    const HandLimitRules::Refusal reason = HandLimitRules::refusal(isHandLimitActive(), isHandLimitedEntity(entity),
+        numFightingCreaturesInHand(), maxFightersCount, mHandCooldownSeconds);
+    const std::string message = HandLimitRules::refusalMessage(reason, mHandCooldownSeconds);
+    if(message.empty())
+        return;
+
+    ServerNotification* serverNotification = new ServerNotification(ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << message << EventShortNoticeType::genericGameInfo;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+    notifyHandCooldown();
 }
 
 void Player::addEntityToHand(GameEntity *entity)
@@ -309,11 +409,22 @@ void Player::restoreObjectsInHand(const std::vector<GameEntity*>& entities)
     }
 }
 
+//! \brief Puts the entity into the hand; on the server the hand limit of a campaign level (HL1) can refuse a
+//! fighting creature, for human and computer keepers alike.
 void Player::pickUpEntity(GameEntity *entity)
 {
     if(!entity->tryPickup(getSeat()))
     {
         OD_LOG_ERR("player seatId" + Helper::toString(getSeat()->getId()) + " couldn't pickup entity=" + entity->getName());
+        return;
+    }
+
+    // Hand limit of a campaign level: one fighting creature at once and a cooldown after a drop (Zivs are free)
+    if(mGameMap->isServerGameMap() && !isHandLimitPickupAllowed(entity))
+    {
+        OD_LOG_INF("player seatId=" + Helper::toString(getSeat()->getId()) + " cannot pick up " + entity->getName()
+            + ": hand limit of the campaign level");
+        notifyHandLimitRefusal(entity);
         return;
     }
 
@@ -375,6 +486,7 @@ bool Player::isDropHandPossible(Tile *t, unsigned int index)
 }
 
 //! \brief Drops a held entity, notifies its placement, then offers an item gift so clients first receive a valid bag.
+//! On the server a dropped fighting creature in a campaign level starts the hand cooldown (HL1).
 void Player::dropHand(Tile *t, unsigned int index)
 {
     // Add the creature to the map
@@ -395,6 +507,12 @@ void Player::dropHand(Tile *t, unsigned int index)
         // half of its summoning price is paid back
         if(redemWorkerInHeart(entity, t))
             return;
+
+        // Hand limit of a campaign level: a dropped fighting creature starts the cooldown before the next one
+        const double handCooldown = HandLimitRules::cooldownAfterDrop(isHandLimitActive(), isHandLimitedEntity(entity),
+            mHandCooldownSeconds, ConfigManager::getSingleton().getHandLimitConfigDouble("HandLimitCooldownSeconds"));
+        if(handCooldown != mHandCooldownSeconds)
+            setHandCooldownSeconds(handCooldown);
 
         if(entity->getObjectType() == GameEntityType::treasuryObject)
             static_cast<TreasuryObject*>(entity)->setDropSeat(getSeat());
@@ -1165,10 +1283,13 @@ void Player::markTilesForDigging(bool marked, const std::vector<Tile*>& tiles, b
     }
 }
 
-//! \brief Updates cooldowns and shared keeper notice throttles.
+//! \brief Updates cooldowns (spells and the hand cooldown of a campaign level) and shared keeper notice throttles.
 void Player::upkeepPlayer(double timeSinceLastUpkeep)
 {
     decreaseSpellCooldowns();
+
+    // The hand cooldown after the drop of a fighting creature in a campaign level (HL1)
+    advanceHandCooldown(timeSinceLastUpkeep);
 
     // Shared stuff for human and AI players
 

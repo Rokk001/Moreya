@@ -868,6 +868,12 @@ private:
     void updateSelectedTiles();
     //! \brief Scale of the hand feedback (action icon, pointer text, held portraits) relative to its design size.
     float getHandFeedbackScale() const;
+    //! \brief Shows the seconds left of the hand cooldown of a campaign level next to the hand (HL2), scaled with the
+    //! hand feedback and kept inside the screen; empty while no cooldown runs.
+    //! \param pointerX Horizontal position of the pointer in pixels.
+    //! \param pointerY Vertical position of the pointer in pixels.
+    //! \param scale Scale of the hand feedback (getHandFeedbackScale).
+    void refreshHandCooldownText(float pointerX, float pointerY, float scale);
     //! \brief Highlights the given creature and restores the previously highlighted one.
     void setHighlightedCreature(Creature* creature);
 

@@ -710,6 +710,9 @@ public:
     //! \brief Returns the words of a key of the [Raid] block of global.cfg (the classes of the large raid members);
     //! logs an error and returns an empty list when the key is unknown.
     std::vector<std::string> getRaidConfigWords(const std::string& param) const;
+    //! \brief Returns the value of a key of the [HandLimit] block of global.cfg (fighting creatures in the hand and the
+    //! cooldown after a drop in a campaign level); logs an error and returns 0 when the key is unknown.
+    double getHandLimitConfigDouble(const std::string& param) const;
     //! \brief Same as getRoomConfigString but returns defaultValue instead of logging an error when the
     //! parameter is not in the configuration file (or has no value).
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
@@ -913,6 +916,8 @@ private:
     bool loadGlobalGroupCombatConfig(std::stringstream& configFile);
     //! \brief Reads the [Raid] block of global.cfg into mRaidConfig.
     bool loadGlobalRaidConfig(std::stringstream& configFile);
+    //! \brief Reads the [HandLimit] block of global.cfg into mHandLimitConfig.
+    bool loadGlobalHandLimitConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
     //! \brief Loads equipment definitions and their numeric balance settings.
     bool loadEquipements(const std::string& fileName);
@@ -1193,6 +1198,8 @@ private:
     std::map<std::string, double> mRaidConfig;
     //! \brief The keys of the [Raid] block of global.cfg with the text of their value (word lists)
     std::map<std::string, std::string> mRaidConfigWords;
+    //! \brief The keys of the [HandLimit] block of global.cfg
+    std::map<std::string, double> mHandLimitConfig;
     std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;

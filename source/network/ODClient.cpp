@@ -2268,6 +2268,14 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             getPlayer()->setSpellCooldownTurns(spellType, cooldown);
             break;
         }
+        case ServerNotificationType::setHandCooldown:
+        {
+            // The hand cooldown of a campaign level, shown at the hand (HL2)
+            double seconds = 0.0;
+            OD_ASSERT_TRUE(packetReceived >> seconds);
+            getPlayer()->setHandCooldownSeconds(seconds);
+            break;
+        }
         case ServerNotificationType::setPlayerSettings:
         {
             bool koCreatures;

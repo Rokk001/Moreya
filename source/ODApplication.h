@@ -53,6 +53,8 @@ public:
     static const std::string VERSION;
     static const std::string VERSIONSTRING;
     static const std::string POINTER_INFO_STRING;
+    //! \brief Text box at the hand that shows the hand cooldown of a campaign level (HL2).
+    static const std::string HAND_COOLDOWN_STRING;
     //! \brief Welcome line with the version shown by the debug text box; printable characters only.
     static std::string MOTD;
 

@@ -599,6 +599,10 @@ private:
     //! (initSeat), after the map is loaded.
     std::vector<std::pair<std::pair<int, int>, uint32_t> > mRevealedTilesLoaded;
 
+    //! \brief The seconds left of the hand cooldown of a campaign level in a loaded game ([HandCooldown] block, 0 when
+    //! the save has none); given to the player when the seat starts (initSeat).
+    double mHandCooldownLoaded = 0.0;
+
     //! \brief The notified state of the tile, whether it belongs to the game map or to the
     //! draggable container, or nullptr if it belongs to neither. Never inserts anything:
     //! both maps are filled once, when their container is sized, and a tile missing from
