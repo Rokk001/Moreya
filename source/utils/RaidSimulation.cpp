@@ -152,6 +152,31 @@ double storedGold(GameMap& gameMap, Seat* seat)
     return gold;
 }
 
+//! \brief Gold each raid member carried after the last turn, to see what it took this turn.
+std::map<std::string, double> sCarried;
+//! \brief Gold the raid took so far from treasuries and from dungeon hearts.
+double sPlunderedTreasury = 0.0;
+double sPlunderedHeart = 0.0;
+
+//! \brief Adds what a raid member took this turn to the plunder of the room type it stands in.
+void notePlunder(Creature& creature)
+{
+    const double carried = creature.getGoldCarried();
+    std::map<std::string, double>::iterator it = sCarried.find(creature.getName());
+    const double before = (it == sCarried.end()) ? 0.0 : it->second;
+    sCarried[creature.getName()] = carried;
+    if(carried <= before)
+        return;
+
+    Room* room = creature.getPositionTile()->getCoveringRoom();
+    if(room == nullptr)
+        return;
+    if(room->getType() == RoomType::treasury)
+        sPlunderedTreasury += carried - before;
+    else if(room->getType() == RoomType::dungeonTemple)
+        sPlunderedHeart += carried - before;
+}
+
 //! \brief The gold stored in the treasuries of the seat (without the dungeon heart).
 double treasuryGold(GameMap& gameMap, Seat* seat)
 {
@@ -294,7 +319,8 @@ int RaidSimulation::getExitCode()
 //! both), the gold stored by the keeper, the hit points of his dungeon heart, 1 once he lost, the fleeing creatures of
 //! the raid and of the keeper, the highest id a combat group got so far (how many groups were formed), the summed
 //! distance of the raid and keeper group members to their formation places and the spread of the standing raid (mean
-//! distance of its members to their centre) and the gold stored in the keeper's treasuries alone.
+//! distance of its members to their centre), the gold stored in the keeper's treasuries alone and the gold the raid
+//! took so far from treasuries and from dungeon hearts (what a member's carried gold grew by while it stood there).
 void RaidSimulation::writeHeader(std::ostream& os)
 {
     os << "turn\tseconds\tgateOpen\tarrived"
@@ -302,7 +328,7 @@ void RaidSimulation::writeHeader(std::ostream& os)
         << "\tkeeperAlive\tkeeperHp\tkeeperMaxHp\tkeeperFighting\tkeeperInPlace\tkeeperWithPlace\tkeeperCarried"
         << "\tleadersFleeing\tleadersEscaped\tkeeperGroups\tkeeperGroupMembers\tkeeperRetreating\traidRetreating"
         << "\tminDistance\tkeeperGold\theartHp\tkeeperLost\traidFleeing\tkeeperFleeing\tmaxGroupId"
-        << "\traidPlaceDistance\tkeeperPlaceDistance\traidSpread\ttreasuryGold\n";
+        << "\traidPlaceDistance\tkeeperPlaceDistance\traidSpread\ttreasuryGold\tplunderedTreasury\tplunderedHeart\n";
 }
 
 //! \brief Counts both sides from the creatures of the map, the raid groups and the combat groups.
@@ -335,6 +361,7 @@ void RaidSimulation::writeTurn(std::ostream& os, GameMap& gameMap, int32_t attac
 
             addToSide(raidSide, *creature, groups);
             raidStanding.push_back(creature);
+            notePlunder(*creature);
         }
     }
 
@@ -409,5 +436,5 @@ void RaidSimulation::writeTurn(std::ostream& os, GameMap& gameMap, int32_t attac
         << "\t" << (keeperLost ? 1 : 0) << "\t" << raidSide.mFleeing << "\t" << keeperSide.mFleeing
         << "\t" << maxGroupId << "\t" << raidSide.mPlaceDistance << "\t" << keeperSide.mPlaceDistance
         << "\t" << spread(raidStanding) << "\t" << ((keeperSeat == nullptr) ? 0.0 : treasuryGold(gameMap, keeperSeat))
-        << "\n";
+        << "\t" << sPlunderedTreasury << "\t" << sPlunderedHeart << "\n";
 }

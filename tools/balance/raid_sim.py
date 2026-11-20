@@ -350,6 +350,10 @@ def measures(rows, result):
         out["treasuryTakenShare"] = out["treasuryTaken"] / treasury_start if treasury_start else None
         out["treasuryHit"] = 1.0 if out["treasuryTaken"] > 0 else 0.0
         out["treasuryLeft"] = rows[-1]["treasuryGold"]
+    if "plunderedTreasury" in rows[0]:
+        out["plunderTreasury"] = rows[-1]["plunderedTreasury"]
+        out["plunderHeart"] = rows[-1]["plunderedHeart"]
+        out["treasuryPlundered"] = 1.0 if out["plunderTreasury"] > 0 else 0.0
     out["fleeSeconds"] = sum(step for row in phase2 if row.get("raidFleeing", 0) > 0)
     out["heartLostShare"] = 1.0 - (phase2[-1]["heartHp"] / rows[0]["heartHp"]) if rows[0]["heartHp"] else None
     return out
@@ -420,7 +424,8 @@ def summarize(results):
                  "quickShare", "meanFight", "keeperLossShare", "raidLeft", "keeperLeft", "keeperRetreats",
                  "raidRetreats", "groupsFormed", "fleeAt", "goldLost", "raidGoldPeak", "cohesion", "participation",
                  "heartLostShare", "fleeSeconds", "placeDistance", "marchSpread", "decision", "quick", "fled",
-                 "mainFight", "treasuryTaken", "treasuryTakenShare", "treasuryHit", "treasuryLeft", "wall"):
+                 "mainFight", "treasuryTaken", "treasuryTakenShare", "treasuryHit", "treasuryLeft", "plunderTreasury",
+                 "plunderHeart", "treasuryPlundered", "wall"):
         values = [m[name] for m in good if m.get(name) is not None]
         summary[name] = round(statistics.mean(values), 3) if values else None
     return summary
