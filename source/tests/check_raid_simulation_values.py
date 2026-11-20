@@ -57,10 +57,15 @@ LEVELS = {
     "Bellwick": ("3600", "-", "-", levels(5, 24, 6, 1), 1),
     "Goldspire": ("3600", "-", "-", levels(6, 24, 8, 1), 1),
     "Kingsfall": ("3600", "-", "-", levels(5, 39, 8, 1), 1),
-    "VarnsCrossing": ("3600", "180", "-", levels(7, 49, 9, 1), 3),
+    # VarnsCrossing: 1 healer per group, measured again in FINAL (R3C gave all 3 to the second group)
+    "VarnsCrossing": ("3600", "180", "-", levels(7, 49, 9, 1), 2),
     "Wraithwood": ("3600", "90", "-", levels(4, 49, 6, 1), 6),
     "HollowmarkCitadel": ("3600", "180", "-", levels(6, 78, 8, 1, 10, 1), 6),
 }
+
+
+# RA11 levels whose guild needs healers: every raid group of them has at least one healer (rule of R3C.2)
+HEALER_EVERY_GROUP = ("Bellwick", "Goldspire", "Kingsfall", "VarnsCrossing", "HollowmarkCitadel")
 
 
 def check(condition, message):
@@ -112,6 +117,11 @@ def main():
         check(sorted(int(row[3]) for row in members) == levels, name + ": member levels (SIM1)")
         check(sum(1 for row in members if row[2] == "Wizard" and row[5] == "Healer") == healers,
               name + ": healers (RA11)")
+        if name in HEALER_EVERY_GROUP:
+            groups = sorted(set(row[1] for row in rows if row[0] == "Group"))
+            without = [group for group in groups
+                       if not any(row[1] == group and row[2] == "Wizard" and row[5] == "Healer" for row in members)]
+            check(not without, name + ": every raid group has a healer (RA11), not groups %s" % without)
     check(len(LEVELS) == 18, "SIM1: the values of all 18 story levels are fixed here")
     print('ODP_TEST_PHASE {"name":"check","seconds":%.3f}' % (time.perf_counter() - START))
     for failure in FAILURES:
