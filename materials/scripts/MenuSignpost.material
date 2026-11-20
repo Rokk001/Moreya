@@ -1,6 +1,8 @@
 // Start screen signpost (models/MenuSignpost.mesh, tools/blender-assets/moreya_raid_models.py).
 // MenuSignpostBoard is the front face of the arrow board: its texture spans the whole board outline (u from the back
 // end to the arrow tip, v from the lower to the upper edge); the lettering area is u 0 to 0.875.
+// The board shows the subtitle "Lords of the Deep" carved and painted into a lettered copy of the plain planks
+// (tools/gen_menu_signpost_lettering.py writes MenuSignpostBoardLettered*.png from MenuSignpostBoard*.png).
 import RTSS/NormalMapping_MultiPass from "RTShaderSystem.material"
 
 material MenuSignpostWood : RTSS/NormalMapping_MultiPass
@@ -31,12 +33,12 @@ material MenuSignpostBoard : RTSS/NormalMapping_MultiPass
         {
             texture_unit decalmap
             {
-                texture MenuSignpostBoard.png gamma
+                texture MenuSignpostBoardLettered.png gamma
                 tex_address_mode clamp
             }
             texture_unit
             {
-                texture MenuSignpostBoardNormal.png
+                texture MenuSignpostBoardLetteredNormal.png
                 tex_address_mode clamp
                 rtshader_system { normal_map tangent_space }
             }

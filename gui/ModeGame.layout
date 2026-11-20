@@ -348,9 +348,9 @@
             <Property name="NormalImage" value="OpenDungeonsIcons/WorkersButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Workers (J)" />
+            <Property name="TooltipText" value="Zivs (J)" />
             <UserString name="AllowEdgeScrolling" value="true" />
-            <UserString name="ContextHelp" value="Workers: fixed workers per job, free workers, priority and carry order (J)" />
+            <UserString name="ContextHelp" value="Zivs: fixed Zivs per job, free Zivs, priority and carry order (J)" />
         </Window>
         <Window type="OD/GameTabButton" name="SandboxButton">
             <Property name="Area" value="{{0,244},{1,-224},{0,284},{1,-184}}" />

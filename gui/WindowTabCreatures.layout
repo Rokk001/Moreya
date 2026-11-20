@@ -13,7 +13,7 @@
         <Window type="OD/GameTabButton" name="WorkerButton" >
             <Property name="Area" value="{{1,-42},{0,6},{1,-6},{0,42}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WorkerButton" />
-            <Property name="TooltipText" value="Add a worker in hand if available" />
+            <Property name="TooltipText" value="Add a Ziv in hand if available" />
             <Property name="InheritsAlpha" value="False" />
                         <Window type="OD/StaticText" name="Count" >
                     <Property name="Area" value="{{0,2},{1,-17},{1,-2},{1,-1}}" />

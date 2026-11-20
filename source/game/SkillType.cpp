@@ -249,7 +249,7 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
         case SkillType::spellCallToWar:
             return "The 'Call to War' Spell";
         case SkillType::spellSummonWorker:
-            return "The 'Summon Worker' Spell";
+            return "The 'Summon Ziv' Spell";
         case SkillType::spellCreatureHeal:
             return "The 'Heal' Spell";
         case SkillType::spellCreatureDefense:

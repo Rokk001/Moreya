@@ -884,7 +884,7 @@ GameMode::GameMode(ModeManager *modeManager):
     SkillManager::connectSkills(this, mRootWindow);
 
     syncTabButtonTooltips(Gui::MAIN_TABCONTROL);
-    for(const std::pair<std::string, const char*>& entry : {std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Workers"),
+    for(const std::pair<std::string, const char*>& entry : {std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs"),
                             std::make_pair(Gui::BUTTON_CREATURE_FIGHTER, "Fighters")})
     {
         CEGUI::Window* button = mRootWindow->getChild(entry.first);
@@ -4357,7 +4357,7 @@ void GameMode::setHelpWindowText()
         << "  - M opens the map: left-click to move there, right-click or M to close; V cycles views." << std::endl
         << "  - B opens the Dungeonbook: creature profiles and the posts of your minions." << std::endl
         << "  - I opens the infirmary window: payer, discharge health, healing switch, patients." << std::endl
-        << "  - J or the workers icon above the minimap opens the workers window: fixed workers per job, free workers, priority and carry order." << std::endl
+        << "  - J or the Zivs icon above the minimap opens the Zivs window: fixed Zivs per job, free Zivs, priority and carry order." << std::endl
         << "  - K opens the merchant: stock, purchases and trading settings." << std::endl
         << "  - L opens the alchemy lab overview." << std::endl
         << "  - Minimap +/-: left-click to zoom in, right-click to zoom out." << std::endl << std::endl;
@@ -4370,11 +4370,11 @@ void GameMode::setHelpWindowText()
     txt << formatTitleOn << "Basic workflow" << formatTitleOff << std::endl
         << "As an overlord of the underworld, your evil plan is to build a strong dungeon and to crush your neighbours."
         << "To do so, you need to deploy your shadow arts to their full extent:" << std::endl
-        << "  - Summon workers to do the dirty job: dirt digging and gold mining. Workers will also claim ground "
-        << "and wall tiles for your glory when they have nothing better to do. You can order workers around by marking "
+        << "  - Summon Zivs to do the dirty job: dirt digging and gold mining. Zivs will also claim ground "
+        << "and wall tiles for your glory when they have nothing better to do. You can order Zivs around by marking "
         << "dirt and gold tiles for digging and mining." << std::endl
         << "  - Build rooms on claimed tiles. Building rooms costs gold, so make sure to have at least one treasury tile "
-        << "in place (thanks to your evil tricks, the first tile is free!) so that your workers can store the gold they mine." << std::endl
+        << "in place (thanks to your evil tricks, the first tile is free!) so that your Zivs can store the gold they mine." << std::endl
         << "Be sure to build a dormitory and a hatchery to fulfill your creatures' lowest needs, and a library to skill "
         << "new buildings, spells and traps. Varied buildings, wealth and great dungeons will attract more powerful creatures." << std::endl
         << "  - Use the Skill Manager in Options to set the priority for the various skills that can be uncovered at the library."
@@ -4383,10 +4383,10 @@ void GameMode::setHelpWindowText()
         << "  - Use spells to macro-manage your creatures more efficiently." << std::endl << std::endl;
     txt << formatTitleOn << "Tips and tricks" << formatTitleOff << std::endl
         << "You can left-click on one of your creatures to pick it up and right click somewhere else to put it back. "
-        << "Very useful to help a creature in battle or force a worker to do a specific task..." << std::endl
-        << "Note that you can place workers on any of your claimed tiles and unclaimed dirt tiles, "
+        << "Very useful to help a creature in battle or force a Ziv to do a specific task..." << std::endl
+        << "Note that you can place Zivs on any of your claimed tiles and unclaimed dirt tiles, "
         << "but you can only place fighters on allied claimed tiles and nothing at all on enemy claimed tiles." << std::endl
-        << "Your workers will fortify walls, turning them into your color. Those cannot be broken by enemies until no more "
+        << "Your Zivs will fortify walls, turning them into your color. Those cannot be broken by enemies until no more "
         << "claimed tiles around are of your color." << std::endl;
     txt << std::endl << std::endl << "Be evil, be cunning, your opponents will do the same... and have fun! ;)" << std::endl;
     textWindow->setText(reinterpret_cast<const CEGUI::utf8*>(txt.str().c_str()));

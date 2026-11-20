@@ -760,7 +760,7 @@ Region	Gallery	10	6	24	12
 Name	dayBreak
 Mode	once
 Cond	time	2
-Action	message	1	Master, the rock around your heart is soft. Send the workers into the walls and bring out the gold.
+Action	message	1	Master, the rock around your heart is soft. Send the Zivs into the walls and bring out the gold.
 Action	objectiveid	1	mossgate-o01	Kill Tobin Marsh in the village hall.
 Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.
 [/Trigger]

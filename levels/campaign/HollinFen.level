@@ -3484,7 +3484,7 @@ Mode	repeat	60
 Cond	flag	hollowStone	1
 Cond	timer	hollowSpawn	>=	5
 Cond	alive	HollowBearer	0
-Action	message	1	Another goblin emerges. Send a worker for the stone.
+Action	message	1	Another goblin emerges. Send a Ziv for the stone.
 Action	spawn	1	6	54	1	Goblin:1@HollowBearer
 [/Trigger]
 [Trigger]

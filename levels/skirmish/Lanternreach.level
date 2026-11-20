@@ -2752,7 +2752,7 @@ Action	gold	1	300
 Name	libraryWell
 Mode	once
 Cond	slabs	1	Library	claimed	>=	20
-Action	message	1	The library floor is yours, and a spring of mana has risen between the shelves. Claim it with a worker.
+Action	message	1	The library floor is yours, and a spring of mana has risen between the shelves. Claim it with a Ziv.
 Action	terrain	17	14	17	14	manawell
 [/Trigger]
 [/Triggers]

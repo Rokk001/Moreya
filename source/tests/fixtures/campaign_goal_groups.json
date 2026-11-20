@@ -132,7 +132,7 @@
       "bouldercourse-extra-survivors": {
         "kind": "optionalobjectiveid",
         "seat": "1",
-        "text": "Keep all 3 starting workers alive.",
+        "text": "Keep all 3 starting Zivs alive.",
         "completion": "extraSurvivors",
         "conditions": [
           "Cond\tobjective\t1\tbouldercourse-main-trial\treached",
@@ -400,7 +400,7 @@
       "swarmnight-extra-survivors": {
         "kind": "optionalobjectiveid",
         "seat": "1",
-        "text": "Keep all 3 starting workers alive.",
+        "text": "Keep all 3 starting Zivs alive.",
         "completion": "extraSurvivors",
         "conditions": [
           "Cond\tobjective\t1\tswarmnight-main-trial\treached",
@@ -1781,7 +1781,7 @@
         "Action\tdiscover\tcampaign/CrowshotGallery.level"
       ],
       "hollowStoneLost": [
-        "Action\tmessage\t1\tAnother goblin emerges. Send a worker for the stone.",
+        "Action\tmessage\t1\tAnother goblin emerges. Send a Ziv for the stone.",
         "Action\tspawn\t1\t6\t54\t1\tGoblin:1@HollowBearer"
       ]
     },
@@ -4819,7 +4819,7 @@
         "Action\tdiscover\tcampaign/TwistingHalls.level"
       ],
       "lanternStoneLost": [
-        "Action\tmessage\t1\tAnother spider emerges. Send a worker for the stone.",
+        "Action\tmessage\t1\tAnother spider emerges. Send a Ziv for the stone.",
         "Action\tspawn\t1\t70\t9\t1\tSpider:1@LampBearer"
       ]
     },
@@ -6017,7 +6017,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tAnother spirit rises. Send a worker for the stone.",
+          "Action\tmessage\t1\tAnother spirit rises. Send a Ziv for the stone.",
           "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2"
         ],
         "mode": "once"
@@ -6131,7 +6131,7 @@
         "Action\tobjectivestate\t1\thighcairn-o05\treached"
       ],
       "bearerLost": [
-        "Action\tmessage\t1\tAnother spirit rises. Send a worker for the stone.",
+        "Action\tmessage\t1\tAnother spirit rises. Send a Ziv for the stone.",
         "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2"
       ],
       "sealedFound": [
@@ -6297,7 +6297,7 @@
       "skittlecavern-extra-survivors": {
         "kind": "optionalobjectiveid",
         "seat": "1",
-        "text": "Keep all 4 starting workers alive.",
+        "text": "Keep all 4 starting Zivs alive.",
         "completion": "extraSurvivors",
         "conditions": [
           "Cond\tobjective\t1\tskittlecavern-main-trial\treached",
@@ -10930,7 +10930,7 @@
         "Action\tobjectivestate\t1\twraithwood-o03\tfailed"
       ],
       "gladeWell": [
-        "Action\tmessage\t1\tThe west glade is yours, master, and the fog over its middle has thinned to a spring of mana. Claim it with a worker.",
+        "Action\tmessage\t1\tThe west glade is yours, master, and the fog over its middle has thinned to a spring of mana. Claim it with a Ziv.",
         "Action\tterrain\t17\t52\t17\t52\tmanawell"
       ]
     },
@@ -11394,7 +11394,7 @@
         "Action\tspawn\t3\t48\t14\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
       ],
       "centreWell": [
-        "Action\tmessage\t1\tThe royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a worker.",
+        "Action\tmessage\t1\tThe royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a Ziv.",
         "Action\tterrain\t49\t35\t49\t35\tmanawell"
       ],
       "cacheKey": [
@@ -12315,7 +12315,7 @@
         "Action\tsetflag\tupperEast\t1"
       ],
       "courtWell": [
-        "Action\tmessage\t1\tThe gate court is yours and a spring of mana has opened in its west yard. Claim it with a worker.",
+        "Action\tmessage\t1\tThe gate court is yours and a spring of mana has opened in its west yard. Claim it with a Ziv.",
         "Action\tterrain\t42\t74\t42\t74\tmanawell"
       ],
       "gateKeys": [

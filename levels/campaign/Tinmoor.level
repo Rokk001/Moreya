@@ -1768,7 +1768,7 @@ Mode	repeat	60
 Cond	flag	vaultStone	1
 Cond	timer	vaultSpawn	>=	5
 Cond	alive	VaultBearer	0
-Action	message	1	Another goblin emerges. Send a worker for the stone.
+Action	message	1	Another goblin emerges. Send a Ziv for the stone.
 Action	spawn	1	66	50	1	Goblin:1@VaultBearer
 [/Trigger]
 [Trigger]

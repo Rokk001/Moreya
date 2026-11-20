@@ -499,7 +499,7 @@ assert 'nickCeguiStr.length() > 20' in (repo / 'source/modes/MenuModeMultiplayer
 
 require('HomePage/CreaturesLabel', 'MedievalSharp-10', texts=('Known creatures (999 of 999)',), wrap=True)
 # The combo area includes its popup; its edit box holds one choice at a time.
-for text in ('All', 'Workers', 'Fighters', 'Unhappy'):
+for text in ('All', 'Zivs', 'Fighters', 'Unhappy'):
     require('HomePage/Filter', 'MedievalSharp-8', texts=(text,), pad_w=28.0, pad_h=6.0)
 require('HomePage/FeedTitle', 'MedievalSharp-10', texts=('All-Creature Feed',))
 for row in list_rows:

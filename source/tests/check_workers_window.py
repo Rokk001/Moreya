@@ -41,7 +41,7 @@ def props(window):
 layout_root = ET.fromstring(read('gui/WindowWorkers.layout'))
 window = layout_root.find('Window')
 assert window is not None and window.get('name') == 'WorkersWindow' and window.get('type') == 'OD/SheetWindow'
-assert props(window)['Text'] == 'Workers', 'the window title is "Workers"'
+assert props(window)['Text'] == 'Zivs', 'the window title is "Zivs"'
 assert props(window)['Visible'] == 'False', 'the window starts closed'
 
 
@@ -71,7 +71,7 @@ for entry in range(7):
     frame = child(window, 'Carry%d' % entry)
     for part in ('Frame', 'Number', 'Picture', 'Name'):
         child(frame, part)
-texts = {'FreeLabel': 'Free workers', 'PriorityLabel': 'Priority order', 'DragHint': 'Drag to reorder',
+texts = {'FreeLabel': 'Free Zivs', 'PriorityLabel': 'Priority order', 'DragHint': 'Drag to reorder',
          'CarryTitle': 'Carry order', 'GoldLabel': 'Gold first (for digging)'}
 for name, text in texts.items():
     assert props(child(window, name))['Text'] == text, name
@@ -160,7 +160,7 @@ for node in hud.iter('Window'):
 assert button is not None, 'HUD button WorkersButton is missing'
 assert button.get('type') == 'OD/GameTabButton', 'the HUD button is an icon button like the others'
 button_props = props(button)
-assert button_props['TooltipText'] == 'Workers (J)'
+assert button_props['TooltipText'] == 'Zivs (J)'
 assert button_props['NormalImage'] == 'OpenDungeonsIcons/WorkersButton'
 assert 'HoverImage' not in button_props and 'PushedImage' not in button_props and 'Text' not in button_props,     'the icon button draws no text and no old hud pictures'
 assert button_props.get('NavigationFrame') == 'True' and button_props.get('AlwaysOnTop') == 'True'
@@ -188,7 +188,7 @@ for path in sorted((repo / 'source').rglob('*.cpp')):
         continue
     assert 'KC_J' not in path.read_text(encoding='utf-8', errors='replace'), 'key J is used elsewhere: ' + str(path)
 assert game.count('OIS::KC_J') == 1
-assert ('"  - J or the workers icon above the minimap opens the workers window: fixed workers per job, free workers, priority and carry order."' in game)
+assert ('"  - J or the Zivs icon above the minimap opens the Zivs window: fixed Zivs per job, free Zivs, priority and carry order."' in game)
 assert 'guiSheet->getChild("WorkersButton")->hide();' in game and 'mWorkersWindow->hide();' in game
 assert 'mWorkersWindow->update();' in game
 assert 'mWorkersWindow.reset(new WorkersWindow(mRootWindow, *mGameMap));' in game
@@ -594,7 +594,7 @@ for mode in ('ModeAutomatic', 'ModePriority'):
     target('hand symbol of ' + mode, (56, 54), painted(child(child(window, mode), 'Hand'), mode_rect, 'WorkerHandInactive'))
 target('title plaque', (305, 100), painted(child(window, 'TitlePlaque'), client, 'WorkersTitlePlaque'))
 assert props(child(window, 'TitlePlaque'))['Image'].endswith('WorkersTitlePlaque') and 'WorkersTitlePlaque' in atlas
-assert props(child(window, 'TitleText'))['Text'] == 'Workers', 'the title stands on the plaque'
+assert props(child(window, 'TitleText'))['Text'] == 'Zivs', 'the title stands on the plaque'
 plaque = child_rect(child(window, 'TitlePlaque'), client, scale)
 assert abs(plaque[0] + plaque[2] / 2 - (client[0] + client[2] / 2)) < 2, 'the plaque is centred on the window'
 # The arrows, the gold pile and the hands do not run into their neighbours

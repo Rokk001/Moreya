@@ -1,0 +1,359 @@
+#!/usr/bin/env python3
+"""Check the start screen subtitle signpost, the removed title crest and the Ziv name of the worker (no compile).
+
+Start screen (config/mainmenuscene.cfg, overview pose of the menu camera):
+- the signpost MenuSignpost.mesh stands once in the scene, on the courtyard ground left of the gate, so that its board
+  (pointing along +X) points towards the gate; MenuTitleCrest.mesh is no longer placed, its mesh file stays;
+- the board material shows the lettered board texture; the lettering lies inside the lettering area of the board
+  (clear of the iron straps and the arrow tip) and the planks outside it are the plain planks;
+- seen from the overview pose the lettering is at least MIN_LETTER_PIXELS high at 1920x1080, lies on the screen and
+  left of the menu button column for every supported window aspect, and no scenery hides it.
+
+Ziv name: no player-facing text calls the worker "Worker"/"Workers" (layouts, C++ string literals that are not log or
+assert messages, player-facing config texts, level and campaign texts); the identifiers stay as they are.
+"""
+import os
+import math
+import re
+import sys
+import time
+
+import numpy as np
+from PIL import Image
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import check_menu_sky_below_horizon as scene  # noqa: E402  (numpy mesh reader of the menu scene check)
+
+#: Placement of the signpost, chosen once on this branch (left front of the courtyard, foot on the paving, its board
+#: between the replay camera flight and the left brazier).
+SIGNPOST_LINE = "AddEntity Signpost MenuSignpost.mesh -10.8 -11.1 -0.05"
+#: Board of MenuSignpost.mesh in mesh units (tools/blender-assets/moreya_raid_models.py): back end, tip, lower and
+#: upper edge and the front face.
+BOARD_BACK, BOARD_TIP, BOARD_BOTTOM, BOARD_TOP, BOARD_FRONT_Y = -0.5, 3.5, 3.7, 4.7, -0.36
+#: Lettering box of tools/gen_menu_signpost_lettering.py and the painted letters measured once in its output
+#: (u from the back end, v from the upper edge).
+LETTER_BOX = (0.215, 0.17, 0.86, 0.83)
+LETTERS = (0.221, 0.371, 0.856, 0.627)
+LETTER_TOLERANCE = 0.004
+#: The planks left of u 0.19 (iron straps) and right of u 0.875 (arrow tip) stay the plain planks.
+PLAIN_LEFT, PLAIN_RIGHT = 0.19, 0.875
+#: Smallest height of the lettering at 1920x1080 seen from the overview pose (measured 19.2 pixels).
+MIN_LETTER_PIXELS = 18.0
+#: The menu button column of MenuMain.layout never reaches further left than 0.36 of the window width (640x480 at
+#: UI scale 120 %, measured once); the lettering ends left of this share.
+BUTTON_COLUMN_LEFT_SHARE = 0.35
+#: Window aspects from 5:4 to 32:9.
+ASPECTS = ((1280, 1024), (640, 480), (1920, 1200), (1920, 1080), (2560, 1080), (5120, 1440))
+#: CameraManager::setViewportSize: vertical field of view at the 16:9 reference aspect.
+MENU_FOV_Y_DEGREES = 45.0
+MENU_REFERENCE_ASPECT = 16.0 / 9.0
+
+
+def read(relative):
+    """Returns a repository text file."""
+    with open(os.path.join(ROOT, relative), encoding="utf-8", errors="replace") as handle:
+        return handle.read()
+
+
+def scene_lines():
+    """Returns the non-comment command lines of the menu scene."""
+    return [line.strip() for line in read("config/mainmenuscene.cfg").splitlines()
+            if line.strip() and not line.strip().startswith("#")]
+
+
+def overview_camera():
+    """Returns the position and rotation matrix of the overview pose (rotation X then Y then Z)."""
+    pose = [line.split() for line in scene_lines() if line.startswith("Pose overview ")][0]
+    position = np.array([float(value) for value in pose[2:5]])
+    rx, ry, rz = [math.radians(float(value)) for value in pose[5:8]]
+    x_rot = np.array([[1, 0, 0], [0, math.cos(rx), -math.sin(rx)], [0, math.sin(rx), math.cos(rx)]])
+    y_rot = np.array([[math.cos(ry), 0, math.sin(ry)], [0, 1, 0], [-math.sin(ry), 0, math.cos(ry)]])
+    z_rot = np.array([[math.cos(rz), -math.sin(rz), 0], [math.sin(rz), math.cos(rz), 0], [0, 0, 1]])
+    return position, x_rot @ y_rot @ z_rot
+
+
+def project(point, camera, screen):
+    """Screen pixel (x, y) of a world point with the menu projection of CameraManager::setViewportSize."""
+    position, rotation = camera
+    local = rotation.T @ (np.asarray(point, dtype=float) - position)
+    assert local[2] < 0, "the point is behind the overview camera"
+    aspect = screen[0] / float(screen[1])
+    half_fov_y = math.atan(math.tan(math.radians(MENU_FOV_Y_DEGREES) / 2.0) * max(1.0, MENU_REFERENCE_ASPECT / aspect))
+    ndc_x = (local[0] / -local[2]) / (math.tan(half_fov_y) * aspect)
+    ndc_y = (local[1] / -local[2]) / math.tan(half_fov_y)
+    return screen[0] / 2.0 * (1.0 + ndc_x), screen[1] / 2.0 * (1.0 - ndc_y)
+
+
+def board_point(origin, u, v):
+    """World point of the board front at texture coordinates u (back end to tip) and v (upper to lower edge)."""
+    return origin + np.array([BOARD_BACK + u * (BOARD_TIP - BOARD_BACK), BOARD_FRONT_Y,
+                              BOARD_TOP - v * (BOARD_TOP - BOARD_BOTTOM)])
+
+
+def ray_hits(origin, direction, a, b, c):
+    """Distances along the ray to the triangles (a, b, c) it hits (inf where it misses; Moller-Trumbore)."""
+    e1 = b - a
+    e2 = c - a
+    p = np.cross(direction, e2)
+    det = np.einsum("ij,ij->i", e1, p)
+    usable = np.abs(det) > 1e-12
+    inverse = np.where(usable, 1.0 / np.where(usable, det, 1.0), 0.0)
+    s = origin - a
+    u = np.einsum("ij,ij->i", s, p) * inverse
+    q = np.cross(s, e1)
+    v = (q @ direction) * inverse
+    t = np.einsum("ij,ij->i", e2, q) * inverse
+    hit = usable & (u >= 0) & (v >= 0) & (u + v <= 1) & (t > 0)
+    return np.where(hit, t, np.inf)
+
+
+def check_scene(failures):
+    """Signpost placed once on the ground left of the gate, crest gone, lettering readable from the overview pose."""
+    lines = scene_lines()
+    entities = [line.split() for line in lines if line.startswith("AddEntity ")]
+    signposts = [words for words in entities if words[2] == "MenuSignpost.mesh"]
+    if [" ".join(words) for words in signposts] != [SIGNPOST_LINE]:
+        failures.append("the scene places the signpost once as '%s': %s" % (SIGNPOST_LINE, signposts))
+        return
+    if any(words[2] == "MenuTitleCrest.mesh" for words in entities):
+        failures.append("the green title crest MenuTitleCrest.mesh is still placed in the menu scene")
+    if not os.path.isfile(os.path.join(ROOT, "models", "MenuTitleCrest.mesh")):
+        failures.append("models/MenuTitleCrest.mesh must stay in the repository")
+    origin = np.array([float(value) for value in signposts[0][3:6]])
+    gate = [words for words in entities if words[1] == "Gate"][0]
+    if not origin[0] < float(gate[3]):
+        failures.append("the board points along +X, so the signpost must stand left of the gate")
+
+    # Material: the board shows the lettered copy of the plain planks.
+    material = read("materials/scripts/MenuSignpost.material")
+    board = material.split("material MenuSignpostBoard", 1)[1]
+    for texture in ("MenuSignpostBoardLettered.png", "MenuSignpostBoardLetteredNormal.png"):
+        if texture not in board:
+            failures.append("MenuSignpostBoard does not use " + texture)
+    folder = os.path.join(ROOT, "materials", "textures", "menu")
+    lettered = np.asarray(Image.open(os.path.join(folder, "MenuSignpostBoardLettered.png")).convert("RGB"), dtype=float)
+    plain = np.asarray(Image.open(os.path.join(folder, "MenuSignpostBoard.png")).convert("RGB"), dtype=float)
+    if lettered.shape != plain.shape:
+        failures.append("the lettered board texture has another size than the plain board")
+        return
+    height, width = plain.shape[:2]
+    left, right = int(PLAIN_LEFT * width), int(math.ceil(PLAIN_RIGHT * width))
+    if not (np.array_equal(lettered[:, :left], plain[:, :left]) and np.array_equal(lettered[:, right:], plain[:, right:])):
+        failures.append("the straps and the arrow tip of the lettered board differ from the plain planks")
+    paint = lettered.mean(axis=2) > 120.0
+    rows, columns = np.nonzero(paint)
+    if len(rows) == 0:
+        failures.append("the lettered board shows no painted letters")
+        return
+    box = (columns.min() / float(width), rows.min() / float(height), columns.max() / float(width), rows.max() / float(height))
+    if box[0] < LETTER_BOX[0] or box[1] < LETTER_BOX[1] or box[2] > LETTER_BOX[2] or box[3] > LETTER_BOX[3]:
+        failures.append("the letters leave the lettering box: %s" % (box,))
+    if any(abs(measured - expected) > LETTER_TOLERANCE for measured, expected in zip(box, LETTERS)):
+        failures.append("the letters cover u %.3f..%.3f, v %.3f..%.3f instead of %s" % (box[0], box[2], box[1], box[3], LETTERS))
+
+    # Size and place of the lettering on the screen.
+    camera = overview_camera()
+    corners = [board_point(origin, u, v) for u in (LETTERS[0], LETTERS[2]) for v in (LETTERS[1], LETTERS[3])]
+    top = project(board_point(origin, LETTERS[0], LETTERS[1]), camera, (1920, 1080))
+    bottom = project(board_point(origin, LETTERS[0], LETTERS[3]), camera, (1920, 1080))
+    if bottom[1] - top[1] < MIN_LETTER_PIXELS:
+        failures.append("the lettering is %.1f pixels high at 1920x1080, less than %.0f" % (bottom[1] - top[1], MIN_LETTER_PIXELS))
+    for screen in ASPECTS:
+        points = [project(corner, camera, screen) for corner in corners]
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        if min(xs) < 0 or min(ys) < 0 or max(ys) > screen[1]:
+            failures.append("the lettering leaves the %dx%d window" % screen)
+        if max(xs) > BUTTON_COLUMN_LEFT_SHARE * screen[0]:
+            failures.append("the lettering reaches under the menu buttons at %dx%d" % screen)
+
+    # Nothing of the scenery stands between the overview camera and the lettering.
+    flags = scene.material_flags(read("materials/scripts/MenuScene.material"))
+    see_through = set(scene.SKY_MATERIALS) | {name for name, (blended, _) in flags.items() if blended}
+    triangles = []
+    meshes = {}
+    for words in entities:
+        if words[2] == "MenuSignpost.mesh":
+            continue
+        if words[2] not in meshes:
+            meshes[words[2]] = scene.load_mesh(os.path.join(ROOT, "models", words[2]))
+        vertices, faces, materials = meshes[words[2]]
+        if len(faces) == 0:
+            continue
+        solid = np.array([material not in see_through for material in materials])
+        triangles.append(vertices[faces[solid]] + np.array([float(value) for value in words[3:6]]))
+    triangles = np.concatenate(triangles)
+    position = camera[0]
+    # Only triangles in front of the board and inside the cone towards it can hide the lettering.
+    target = board_point(origin, 0.5 * (LETTERS[0] + LETTERS[2]), 0.5 * (LETTERS[1] + LETTERS[3]))
+    axis = (target - position) / np.linalg.norm(target - position)
+    reach = np.linalg.norm(target - position)
+    radius = 0.5 * (LETTERS[2] - LETTERS[0]) * (BOARD_TIP - BOARD_BACK) + 0.5
+    centres = triangles.mean(axis=1)
+    sizes = np.linalg.norm(triangles - centres[:, None, :], axis=2).max(axis=1)
+    along = (centres - position) @ axis
+    across = np.linalg.norm((centres - position) - along[:, None] * axis, axis=1)
+    near = (along > -sizes) & (along < reach + sizes) & (across < radius * np.clip(along / reach, 0.0, 1.0) + sizes)
+    a, b, c = triangles[near, 0], triangles[near, 1], triangles[near, 2]
+    hidden = 0
+    samples = 0
+    for u in np.linspace(LETTERS[0], LETTERS[2], 9):
+        for v in np.linspace(LETTERS[1], LETTERS[3], 3):
+            point = board_point(origin, u, v)
+            direction = point - position
+            distance = np.linalg.norm(direction)
+            samples += 1
+            if ray_hits(position, direction / distance, a, b, c).min() < distance - 0.05:
+                hidden += 1
+    if hidden:
+        failures.append("scenery hides %d of %d sample points of the lettering from the overview pose" % (hidden, samples))
+
+
+#: C++ string literals with the word worker that are identifiers or file paths, never shown to the player (counted
+#: once on this branch): the config/network job name, the temple recipe result, the social text scope, the reaction
+#: resource folder and the level test report.
+SOURCE_IDENTIFIERS = {
+    ("source/entities/CreatureDefinition.cpp", '"Worker"'): 2,
+    ("source/rooms/RoomTemple.cpp", '"Workers"'): 1,
+    ("source/social/SocialGenerator.cpp", '"worker"'): 2,
+    ("source/render/WorkerExtras.cpp", '"Creatures/Worker/"'): 1,
+    ("source/utils/RunLevelTest.cpp", '" workers="'): 1,
+}
+#: Player-facing config text that waits for the owner's decision (hero dwarf worker class name, R9 report).
+PENDING_OWNER_DECISION = {("config/social-texts.cfg", "ClassName\tDwarfWorker\tDwarf Worker")}
+#: Config keys whose value names the worker as an identifier or a resource path.
+CONFIG_IDENTIFIER_KEYS = ("Group", "SkillGroup", "CreatureJob", "SoundFamilyDie")
+WORD = re.compile(r"\bworkers?\b", re.I)
+LITERAL = re.compile(r'"(?:[^"\\\n]|\\.)*"')
+
+
+def check_ziv_names(failures):
+    """No player-facing Worker/Workers; the Ziv names are shown and the identifiers stay."""
+    # Layouts: texts, tooltips and context help.
+    gui = os.path.join(ROOT, "gui")
+    for name in sorted(os.listdir(gui)):
+        if not name.endswith(".layout"):
+            continue
+        for number, line in enumerate(read("gui/" + name).splitlines(), 1):
+            match = re.search(r'<(?:Property|UserString) name="(Text|TooltipText|ContextHelp|Tooltip)" value="([^"]*)"', line)
+            if match and WORD.search(match.group(2)):
+                failures.append("gui/%s:%d shows '%s'" % (name, number, match.group(2)))
+
+    # C++ string literals outside log and assert messages.
+    found = {}
+    for folder, _, files in os.walk(os.path.join(ROOT, "source")):
+        relative_folder = os.path.relpath(folder, ROOT).replace("\\", "/")
+        if relative_folder.startswith("source/tests"):
+            continue
+        for name in files:
+            if not name.endswith((".cpp", ".h")):
+                continue
+            relative = relative_folder + "/" + name
+            for number, line in enumerate(read(relative).splitlines(), 1):
+                if line.lstrip().startswith(("#include", "//")) or re.search(r"\bOD_(LOG_\w+|ASSERT\w*)\(", line):
+                    continue
+                for literal in LITERAL.findall(line):
+                    if WORD.search(literal):
+                        found[(relative, literal)] = found.get((relative, literal), 0) + 1
+    for key, count in sorted(found.items()):
+        if SOURCE_IDENTIFIERS.get(key) != count:
+            failures.append("%s: player-facing string %s (%d times)" % (key[0], key[1], count))
+    for key, count in SOURCE_IDENTIFIERS.items():
+        if found.get(key) != count:
+            failures.append("%s: identifier %s expected %d times, found %d" % (key[0], key[1], count, found.get(key, 0)))
+
+    # Config files: player-facing social texts and no other worker word outside identifiers and comments.
+    config = os.path.join(ROOT, "config")
+    for name in sorted(os.listdir(config)):
+        if not name.endswith(".cfg"):
+            continue
+        relative = "config/" + name
+        for number, line in enumerate(read(relative).splitlines(), 1):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or (relative, stripped) in PENDING_OWNER_DECISION:
+                continue
+            fields = stripped.split()
+            if name == "social-texts.cfg":
+                parts = stripped.split("\t")
+                if len(parts) >= 3 and WORD.search("\t".join(parts[2:])):
+                    failures.append("%s:%d shows '%s'" % (relative, number, "\t".join(parts[2:])))
+                continue
+            if fields[0] in CONFIG_IDENTIFIER_KEYS or fields[0].startswith("TempleRecipe"):
+                continue
+            if WORD.search(stripped):
+                failures.append("%s:%d names the worker: %s" % (relative, number, stripped))
+    pending = read("config/social-texts.cfg").splitlines()
+    for path, text in PENDING_OWNER_DECISION:
+        if text not in pending:
+            failures.append("%s: the pending line '%s' changed; update PENDING_OWNER_DECISION" % (path, text))
+
+    # Levels and the campaign: messages, objectives, descriptions, briefings.
+    levels = os.path.join(ROOT, "levels")
+    for folder, _, files in os.walk(levels):
+        for name in sorted(files):
+            if not name.endswith((".level", ".cfg")):
+                continue
+            relative = os.path.relpath(os.path.join(folder, name), ROOT).replace("\\", "/")
+            for number, line in enumerate(read(relative).splitlines(), 1):
+                stripped = line.strip()
+                if stripped.startswith(("#", "//")):
+                    continue
+                if WORD.search(stripped):
+                    failures.append("%s:%d names the worker: %s" % (relative, number, stripped[:120]))
+
+    # The Ziv names are shown where the worker names were.
+    shown = {
+        "gui/ModeGame.layout": ('value="Zivs (J)"', 'value="Zivs: fixed Zivs per job, free Zivs, priority and carry order (J)"'),
+        "gui/WindowWorkers.layout": ('<Property name="Text" value="Zivs" />', '<Property name="Text" value="Free Zivs" />'),
+        "gui/WindowSkillTree.layout": ('value="Spell: Summon Ziv"',),
+        "source/game/SkillType.cpp": ('"The \'Summon Ziv\' Spell"',),
+        "source/spells/SpellSummonWorker.cpp": ('SpellSummonWorkerNameDisplay = "Summon Ziv";', '"Summon Zivs on your claimed ground."'),
+        "source/giftboxes/GiftBoxBonus.cpp": ('"Stun Zivs"', '"Receive Zivs"'),
+        "source/render/SocialWindow.cpp": ('{"All", "Zivs", "Fighters", "Unhappy"}',),
+        "source/render/CreaturePanel.cpp": ('count->setTooltipText("Zivs");',),
+        "source/modes/GameMode.cpp": ('std::make_pair(Gui::BUTTON_CREATURE_WORKER, "Zivs")',),
+        "source/game/Player.cpp": ('"You redeemed your Ziv into "', '"You have no Ziv to fulfill your dark wishes."'),
+        "source/gamemap/GameMap.cpp": ('"Your Zivs vanished because the mana ran out"',),
+        "source/spells/SpellPlague.cpp": ('"Zivs and champions never get sick."',),
+    }
+    for path, texts in shown.items():
+        text = read(path)
+        for expected in texts:
+            if expected not in text:
+                failures.append("%s does not show %s" % (path, expected))
+
+    # Identifiers of saves, network, config and scripts stay unchanged.
+    kept = {
+        "source/entities/CreatureDefinition.cpp": ('if (s.compare("Worker") == 0)', 'return "Worker";'),
+        "source/spells/SpellSummonWorker.cpp": ('SpellSummonWorkerName = "summonWorker";',),
+        "source/game/SkillType.cpp": ('"spellSummonWorker"',),
+        "config/creatures.cfg": ("CreatureJob\tWorker",),
+        "config/factions.cfg": ("WorkerClass\tKobold",),
+    }
+    for path, texts in kept.items():
+        text = read(path)
+        for expected in texts:
+            if expected not in text:
+                failures.append("%s lost the identifier %s" % (path, expected))
+
+
+def main():
+    """Runs both parts and reports every failure."""
+    started = time.monotonic()
+    failures = []
+    check_scene(failures)
+    scene_seconds = time.monotonic() - started
+    check_ziv_names(failures)
+    print('ODP_TEST_PHASE {"name":"scene","seconds":%.2f}' % scene_seconds)
+    print('ODP_TEST_PHASE {"name":"names","seconds":%.2f}' % (time.monotonic() - started - scene_seconds))
+    for failure in failures:
+        print("FAIL " + failure)
+    if failures:
+        return 1
+    print("OK: signpost with the subtitle placed and readable, title crest removed, Ziv names shown, identifiers kept")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

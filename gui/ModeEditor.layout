@@ -346,13 +346,13 @@
                 <Window type="OD/GameTabButton" name="StunWorkersBoxButton" >
                     <Property name="Area" value="{{0,328},{0,8},{0,368},{0,48}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/CreatureSlowButton" />
-                    <Property name="TooltipText" value="Adds a box stunning the enemy workers" />
+                    <Property name="TooltipText" value="Adds a box stunning the enemy Zivs" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="ReceiveWorkersBoxButton" >
                     <Property name="Area" value="{{0,372},{0,8},{0,412},{0,48}}" />
                     <Property name="NormalImage" value="OpenDungeonsIcons/SummonWorkerButton" />
-                    <Property name="TooltipText" value="Adds a box giving free workers" />
+                    <Property name="TooltipText" value="Adds a box giving free Zivs" />
                     <Property name="InheritsAlpha" value="False" />
                 </Window>
                 <Window type="OD/GameTabButton" name="MakeHappyBoxButton" >
