@@ -1416,7 +1416,8 @@ def inventory(root):
 def self_test(root):
     original = (root / "levels/campaign/Mossgate.level").read_text(encoding="utf-8")
     level = parse_level(original)
-    assert level["tiles"][1, 1] == (1, 100.0, None), "sparse defaults must be full dirt"
+    # Tile 1,1 is a gold seam since the gold density pass; 1,7 is the first tile the level file does not list
+    assert level["tiles"][1, 7] == (1, 100.0, None), "sparse defaults must be full dirt"
     # The bonus chamber wins by script; the reachability of enemies is exercised with an added KillAllEnemies goal.
     assert ("KillAllEnemies", "NULL") not in level["goals"], "the Mossgate chamber must not win by eliminating all enemies"
     level["goals"].append(("KillAllEnemies", "NULL"))
@@ -1480,7 +1481,8 @@ def self_test(root):
         assert old in original, message
         assert objective_errors(original.replace(old, new), "Mossgate"), message
     assert "insufficient actual mineable gold for grouped goal" in grouped_goal_errors(
-        re.sub(r"^([0-9]+\s+[0-9]+)\s+2\s+", r"\1\t1\t", original, flags=re.M), "Mossgate")
+        # Every gold tile becomes dirt; its density column (gold density pass) goes with it, dirt has none
+        re.sub(r"^([0-9]+\s+[0-9]+)\s+2\s+(\S+\s+\S+)(?:[ \t]+\S+)?[ \t]*$", r"\1\t1\t\2", original, flags=re.M), "Mossgate")
     missing_state = re.sub(r"^Action\tobjectivestate\t1\tmossgate-o02\treached\r?\n", "", original, flags=re.M)
     assert any("no completing trigger: mossgate-o02" in error for error in objective_errors(missing_state, "Mossgate"))
     altered = original.replace("Cond\tmined\t1\t>=\t60", "Cond\tmined\t1\t>=\t1")
@@ -1599,7 +1601,7 @@ def self_test(root):
         ("Cond\tevent\tSeat1\tpossessedshot", "Cond\ttime\t0"),
         ("Cond\tspawncleared\tthirdFlock\t8", "Cond\tspawncleared\tthirdFlock\t7"),
         ("Action\ttimelimit\t420", "Action\ttimelimit\t421"),
-        ("1\tShooter1\tLizardman.mesh\t15\t28\t0\tLizardMan\t3", "1\tShooter1\tLizardman.mesh\t15\t28\t0\tLizardMan\t1"),
+        ("1\tShooter1\tLizardman.mesh\t15\t23\t0\tLizardMan\t3", "1\tShooter1\tLizardman.mesh\t15\t23\t0\tLizardMan\t1"),
         ("Cond\tevent\tShooter5\tkilled\t==\t0", "Cond\tevent\tShooter5\tincapacitated\t==\t0")
     ):
         assert old in crowshot
