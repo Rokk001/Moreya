@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Paint the start screen subtitle "Lords of the Deep" onto a copy of the signpost board texture.
+
+The board of models/MenuSignpost.mesh carries the material MenuSignpostBoard; its texture spans the whole board
+outline (u 0..1 from the back end to the arrow tip, v 0..1 from the upper to the lower edge in image rows) and the
+rectangular lettering area is u 0..0.875 (tools/blender-assets/moreya_raid_models.py writes the plain planks).
+This script reads the plain board colour and normal map and writes lettered copies next to them:
+
+    materials/textures/menu/MenuSignpostBoardLettered.png        letters carved into the planks and painted bone white
+    materials/textures/menu/MenuSignpostBoardLetteredNormal.png  the plain normal map with the carved grooves added
+
+The letters keep clear of the two iron straps at the back end (u up to about 0.2) and of the arrow tip; their font is
+gui/fonts/MedievalSharp-Bold.ttf, the menu font. The result is deterministic (fixed random seed).
+
+Run from anywhere: python tools/gen_menu_signpost_lettering.py [<repo>]
+"""
+import sys
+from pathlib import Path
+
+import numpy
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+#: The subtitle of the game.
+TEXT = "Lords of the Deep"
+#: Lettering box in texture fractions: from the right edge of the inner iron strap to the shoulder nails, and inside
+#: the worn borders of the board.
+BOX_LEFT, BOX_RIGHT = 0.215, 0.86
+BOX_TOP, BOX_BOTTOM = 0.17, 0.83
+#: Supersampling factor of the letter mask.
+SUPERSAMPLE = 4
+#: Paint colour (sRGB, like the board texture) and its weathering.
+PAINT = numpy.array((0.84, 0.75, 0.56))
+#: Groove depth relative to the plank grain of the plain normal map and the width of the carved bevel in pixels.
+GROOVE_DEPTH = 6.0
+BEVEL_PIXELS = 3.0
+
+
+def load_rgb(path):
+    """Returns an image as a float array (rows from top to bottom, values 0..1)."""
+    return numpy.asarray(Image.open(path).convert("RGB"), dtype=numpy.float64) / 255.0
+
+
+def save_rgb(path, rgb):
+    """Writes a float RGB array (values 0..1) as an 8-bit PNG."""
+    Image.fromarray((numpy.clip(rgb, 0.0, 1.0) * 255.0 + 0.5).astype(numpy.uint8), "RGB").save(path, optimize=True)
+
+
+def letter_mask(font_path, width, height):
+    """Returns the antialiased coverage (0..1) of the subtitle, as large as fits into the lettering box."""
+    box_width = (BOX_RIGHT - BOX_LEFT) * width * SUPERSAMPLE
+    box_height = (BOX_BOTTOM - BOX_TOP) * height * SUPERSAMPLE
+    size = int(box_height)
+    while True:
+        font = ImageFont.truetype(str(font_path), size)
+        left, top, right, bottom = font.getbbox(TEXT)
+        if right - left <= box_width and bottom - top <= box_height:
+            break
+        size -= 2
+    canvas = Image.new("L", (width * SUPERSAMPLE, height * SUPERSAMPLE), 0)
+    centre_x = (BOX_LEFT + BOX_RIGHT) * 0.5 * width * SUPERSAMPLE
+    centre_y = (BOX_TOP + BOX_BOTTOM) * 0.5 * height * SUPERSAMPLE
+    ImageDraw.Draw(canvas).text((centre_x - (left + right) * 0.5, centre_y - (top + bottom) * 0.5), TEXT, fill=255,
+                                font=font)
+    canvas = canvas.resize((width, height), Image.LANCZOS)
+    return numpy.asarray(canvas, dtype=numpy.float64) / 255.0
+
+
+def blurred(mask, radius):
+    """Returns a Gaussian blurred copy of a 0..1 mask."""
+    image = Image.fromarray((numpy.clip(mask, 0.0, 1.0) * 255.0).astype(numpy.uint8), "L")
+    return numpy.asarray(image.filter(ImageFilter.GaussianBlur(radius)), dtype=numpy.float64) / 255.0
+
+
+def smooth_noise(rng, height, width, cells):
+    """Returns smooth value noise in 0..1 made by upscaling a coarse random grid."""
+    coarse = Image.fromarray((rng.random((max(2, height * cells // width), cells)) * 255.0).astype(numpy.uint8), "L")
+    return numpy.asarray(coarse.resize((width, height), Image.BICUBIC), dtype=numpy.float64) / 255.0
+
+
+def lettered_board(colour, normal, mask, rng):
+    """Carves and paints the letter mask into the board colour and normal map and returns both."""
+    height, width = mask.shape
+    # Weathered paint: a few small flakes leave wood showing in the grooves without breaking the letter shapes.
+    wear = 0.6 * smooth_noise(rng, height, width, 64) + 0.4 * smooth_noise(rng, height, width, 512)
+    paint_cover = mask * (0.25 + 0.75 * numpy.clip((wear - 0.1) / 0.15, 0.0, 1.0))
+    shade = 0.82 + 0.18 * smooth_noise(rng, height, width, 256)
+    paint = PAINT[None, None, :] * shade[:, :, None]
+    # The groove is darker than the planks; a soot rim around each letter keeps it readable from afar.
+    rim = numpy.clip(blurred(mask, 4.0) * 1.6 - mask, 0.0, 1.0)
+    result = colour * (1.0 - 0.55 * rim)[:, :, None]
+    result = result * (1.0 - 0.35 * mask)[:, :, None]
+    result = result + (paint - result) * paint_cover[:, :, None]
+    # Carved groove: a bevelled depression whose slope is added to the tangent-space normal of the planks.
+    depth = -blurred(mask, BEVEL_PIXELS) * GROOVE_DEPTH / BEVEL_PIXELS
+    du = (numpy.roll(depth, -1, axis=1) - numpy.roll(depth, 1, axis=1)) * 0.5
+    dv = (numpy.roll(depth, 1, axis=0) - numpy.roll(depth, -1, axis=0)) * 0.5
+    plain = normal * 2.0 - 1.0
+    slope_u = plain[:, :, 0] / numpy.maximum(plain[:, :, 2], 1e-3) - du
+    slope_v = plain[:, :, 1] / numpy.maximum(plain[:, :, 2], 1e-3) - dv
+    carved = numpy.dstack((slope_u, slope_v, numpy.ones_like(slope_u)))
+    carved /= numpy.linalg.norm(carved, axis=2, keepdims=True)
+    return result, carved * 0.5 + 0.5
+
+
+def main():
+    """Writes the lettered board texture and normal map of the start screen signpost."""
+    repo = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]
+    folder = repo / "materials/textures/menu"
+    colour = load_rgb(folder / "MenuSignpostBoard.png")
+    normal = load_rgb(folder / "MenuSignpostBoardNormal.png")
+    height, width = colour.shape[:2]
+    mask = letter_mask(repo / "gui/fonts/MedievalSharp-Bold.ttf", width, height)
+    rng = numpy.random.default_rng(4711)
+    lettered, carved = lettered_board(colour, normal, mask, rng)
+    save_rgb(folder / "MenuSignpostBoardLettered.png", lettered)
+    save_rgb(folder / "MenuSignpostBoardLetteredNormal.png", carved)
+    columns = numpy.nonzero(mask.max(axis=0) > 0.5)[0]
+    rows = numpy.nonzero(mask.max(axis=1) > 0.5)[0]
+    print("lettering u %.3f..%.3f, v %.3f..%.3f" % (columns[0] / width, columns[-1] / width, rows[0] / height,
+                                                    rows[-1] / height))
+
+
+if __name__ == "__main__":
+    main()

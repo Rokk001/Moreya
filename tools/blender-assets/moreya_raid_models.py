@@ -20,6 +20,8 @@ Run in Blender (5.x):
 It writes <name>.blend, <name>.mesh.xml and preview PNGs into the private folder, converts the meshes with
 OgreXMLConverter (BUILD_DEPS_ROOT, else %USERPROFILE%/build-deps) into <repo>/models and writes the signpost wood
 textures into <repo>/materials/textures/menu. Progress goes to <private>/moreya_raid_models.log.
+After the signpost textures are rewritten, run tools/gen_menu_signpost_lettering.py again: the menu shows the
+lettered copy of the board (MenuSignpostBoardLettered*.png) that it makes from the plain planks.
 """
 import math
 import os
