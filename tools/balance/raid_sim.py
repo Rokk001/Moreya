@@ -35,9 +35,10 @@ REPO = Path(__file__).resolve().parents[2]
 TEMPLATE = REPO / "levels" / "skirmish" / "TestRaid.level"
 TURNS_PER_SECOND = 1.4
 
-# The keeper's fighters of the keeper faction's spawn pool (config/factions.cfg) in pool order, without the scouts
-# (CaveHornet, Goblin) and the worker: the reference keeper force cycles through them.
-KEEPER_POOL = ["Spider", "Rat", "Roach", "Cultist", "LavaSpawn", "LizardMan", "DarkElf", "Orc", "PitDemon", "Troll"]
+# The keeper's fighters of the keeper faction's spawn pool (config/factions.cfg), without the scouts (CaveHornet,
+# Goblin) and the worker: the reference keeper force cycles through them. The tiers of the pool are interleaved (tier
+# 1, 2, 3, 4, then again), so that a small force has every tier as well and only a force of ten or more has every class.
+KEEPER_POOL = ["Spider", "Roach", "LavaSpawn", "Orc", "Rat", "Cultist", "LizardMan", "PitDemon", "DarkElf", "Troll"]
 
 # Raid members per role: class and fixed skill template (the role follows from the template, rules G3).
 ROLE_MEMBER = {
@@ -121,7 +122,8 @@ def make_level(params, folder):
     if params.get("treasury_offset") is not None:
         text = move_treasury(text, int(params["treasury_offset"]))
 
-    key = hashlib.sha1(json.dumps(params, sort_keys=True).encode()).hexdigest()[:12]
+    # Named after its content, so that a changed generator never reuses an older level file
+    key = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
     path = folder / ("sim-%s.level" % key)
     if not path.exists():
         path.write_text(text, encoding="utf-8", newline="\n")
@@ -381,8 +383,8 @@ def run_batch(exe, work, params, overrides, seeds, seconds=900, keeper_ai=False,
     exe_stamp = str(int(exe.stat().st_mtime))
     todo, results = [], []
     for seed in seeds:
-        key = hashlib.sha1(json.dumps([params, sorted(overrides.items()), seed, seconds, keeper_ai, exe_stamp],
-                                      sort_keys=True).encode()).hexdigest()
+        key = hashlib.sha1(json.dumps([params, sorted(overrides.items()), seed, seconds, keeper_ai, exe_stamp,
+                                       level.name], sort_keys=True).encode()).hexdigest()
         if key in cache:
             results.append(cache[key])
         else:
