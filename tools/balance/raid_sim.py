@@ -118,6 +118,8 @@ def make_level(params, folder):
     text = re.sub(r"^\[Triggers\]$.*?^\[/Triggers\]$\n?", "", text, flags=re.S | re.M)
     if params.get("treasury_gold") is not None:
         text = add_treasury_gold(text, params["treasury_gold"])
+    if params.get("treasury_offset") is not None:
+        text = move_treasury(text, int(params["treasury_offset"]))
 
     key = hashlib.sha1(json.dumps(params, sort_keys=True).encode()).hexdigest()[:12]
     path = folder / ("sim-%s.level" % key)
@@ -129,6 +131,16 @@ def make_level(params, folder):
 def add_treasury_gold(text, gold):
     """Gives the keeper's seat the gold to store (the level start puts the seat's gold into its treasuries)."""
     return re.sub(r"(seatId\t1\n(?:.*\n)*?gold\t)\d+", lambda match: match.group(1) + str(int(gold)), text, count=1)
+
+
+def move_treasury(text, offset):
+    """Moves the 3x3 treasury (centre 19,19 on the straight way from the gate to the heart) sideways: its centre goes
+    to (19 + offset, 19 - offset), so that its nearest tile lies offset-1 tiles (largest of the x and y distance) off
+    the diagonal way the raid takes."""
+    centre_x, centre_y = 19 + offset, 19 - offset
+    tiles = ["%d\t%d" % (centre_x + dx, centre_y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
+    return re.sub(r"(3\tTreasury1\t1\t9\n)(?:\d+\t\d+\n){9}", lambda match: match.group(1) + "\n".join(tiles) + "\n",
+                  text, count=1)
 
 
 def fmt(value):
@@ -237,6 +249,7 @@ def read_turns(path):
 # two fights; a fight that decides within QUICK_FIGHT seconds counts as quickly decided.
 FIGHT_GAP = 5.0
 QUICK_FIGHT = 10.0
+QUICK_DECISION = 60.0
 
 
 def measures(rows, result):
@@ -312,6 +325,17 @@ def measures(rows, result):
     joined = [row["keeperGroupMembers"] / row["keeperAlive"] for row, fight in zip(phase2, fighting)
               if fight and row["keeperAlive"] > 0]
     out["participation"] = statistics.mean(joined) if joined else None
+    out["placeDistance"] = (statistics.mean(row["raidPlaceDistance"] / row["raidWithPlace"] for row in march)
+                            if march and "raidPlaceDistance" in march[0] else None)
+    marching = [row for row, fight in zip(phase2, fighting) if not fight and row["raidAlive"] > 1]
+    out["marchSpread"] = (statistics.mean(row["raidSpread"] for row in marching)
+                          if marching and "raidSpread" in marching[0] else None)
+    # From the first contact to the end of the run (a fight that decides the raid within QUICK_DECISION seconds of
+    # the first contact counts as decided quickly)
+    out["decision"] = None if contact is None else phase2[-1]["seconds"] - (arrival + out["contact"])
+    out["quick"] = None if out["decision"] is None or out["result"] == "timeout" else (
+        1.0 if out["decision"] < QUICK_DECISION else 0.0)
+    out["fled"] = 0.0 if out["fleeAt"] is None else 1.0
     out["fleeSeconds"] = sum(step for row in phase2 if row.get("raidFleeing", 0) > 0)
     out["heartLostShare"] = 1.0 - (phase2[-1]["heartHp"] / rows[0]["heartHp"]) if rows[0]["heartHp"] else None
     return out
@@ -320,7 +344,7 @@ def measures(rows, result):
 def default_params():
     """The parameters of a level variant before the command line changes them."""
     return {"size": 10, "groups": 1, "hero_level": 4, "composition": "all", "keeper_count": 10, "keeper_level": 4,
-            "countdown": 10, "interval": 90, "escape": None, "treasury_gold": None}
+            "countdown": 10, "interval": 90, "escape": None, "treasury_gold": None, "treasury_offset": None}
 
 
 def run_batch(exe, work, params, overrides, seeds, seconds=900, keeper_ai=False, jobs=6, quiet=False):
@@ -381,7 +405,8 @@ def summarize(results):
     for name in ("phase2", "contact", "fightSeconds", "idleSeconds", "longestIdle", "fights", "decidedFights",
                  "quickShare", "meanFight", "keeperLossShare", "raidLeft", "keeperLeft", "keeperRetreats",
                  "raidRetreats", "groupsFormed", "fleeAt", "goldLost", "raidGoldPeak", "cohesion", "participation",
-                 "heartLostShare", "fleeSeconds", "wall"):
+                 "heartLostShare", "fleeSeconds", "placeDistance", "marchSpread", "decision", "quick", "fled",
+                 "wall"):
         values = [m[name] for m in good if m.get(name) is not None]
         summary[name] = round(statistics.mean(values), 3) if values else None
     return summary

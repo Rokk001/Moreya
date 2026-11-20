@@ -63,6 +63,7 @@ struct SideState
         mFleeing(0),
         mInPlace(0),
         mWithPlace(0),
+        mPlaceDistance(0.0),
         mGold(0.0)
     {}
     //! \brief Standing creatures (alive, on the map, not knocked out).
@@ -77,6 +78,8 @@ struct SideState
     //! \brief Group members standing at their formation place, and group members that have one.
     uint32_t mInPlace;
     uint32_t mWithPlace;
+    //! \brief Sum of the distances in tiles of the group members that have a formation place to that place.
+    double mPlaceDistance;
     //! \brief Gold the standing creatures carry.
     double mGold;
 };
@@ -106,6 +109,34 @@ void addToSide(SideState& side, Creature& creature, const CombatGroupManager& gr
     ++side.mWithPlace;
     if(groups.isAtFormationPlace(creature, *place))
         ++side.mInPlace;
+
+    Tile* tile = creature.getPositionTile();
+    side.mPlaceDistance += static_cast<double>(std::max(std::abs(tile->getX() - place->getX()),
+        std::abs(tile->getY() - place->getY())));
+}
+
+//! \brief The mean distance in tiles (largest of the x and y distance) of the creatures to their centre.
+double spread(const std::vector<Creature*>& creatures)
+{
+    if(creatures.empty())
+        return 0.0;
+
+    double centreX = 0.0;
+    double centreY = 0.0;
+    for(Creature* creature : creatures)
+    {
+        centreX += static_cast<double>(creature->getPositionTile()->getX());
+        centreY += static_cast<double>(creature->getPositionTile()->getY());
+    }
+    centreX /= static_cast<double>(creatures.size());
+    centreY /= static_cast<double>(creatures.size());
+    double sum = 0.0;
+    for(Creature* creature : creatures)
+    {
+        sum += std::max(std::abs(static_cast<double>(creature->getPositionTile()->getX()) - centreX),
+            std::abs(static_cast<double>(creature->getPositionTile()->getY()) - centreY));
+    }
+    return sum / static_cast<double>(creatures.size());
 }
 
 //! \brief The gold stored in the treasuries and the dungeon heart of the seat.
@@ -252,14 +283,17 @@ int RaidSimulation::getExitCode()
 //! carried gold; then raid leaders fleeing and escaped, keeper groups, standing keeper group members, retreating keeper and raid
 //! groups, the smallest distance in tiles between a standing raid member and a standing keeper fighter (-1 without
 //! both), the gold stored by the keeper, the hit points of his dungeon heart, 1 once he lost, the fleeing creatures of
-//! the raid and of the keeper and the highest id a combat group got so far (how many groups were formed).
+//! the raid and of the keeper, the highest id a combat group got so far (how many groups were formed), the summed
+//! distance of the raid and keeper group members to their formation places and the spread of the standing raid (mean
+//! distance of its members to their centre).
 void RaidSimulation::writeHeader(std::ostream& os)
 {
     os << "turn\tseconds\tgateOpen\tarrived"
         << "\traidAlive\traidHp\traidMaxHp\traidFighting\traidInPlace\traidWithPlace\traidGold"
         << "\tkeeperAlive\tkeeperHp\tkeeperMaxHp\tkeeperFighting\tkeeperInPlace\tkeeperWithPlace\tkeeperCarried"
         << "\tleadersFleeing\tleadersEscaped\tkeeperGroups\tkeeperGroupMembers\tkeeperRetreating\traidRetreating"
-        << "\tminDistance\tkeeperGold\theartHp\tkeeperLost\traidFleeing\tkeeperFleeing\tmaxGroupId\n";
+        << "\tminDistance\tkeeperGold\theartHp\tkeeperLost\traidFleeing\tkeeperFleeing\tmaxGroupId"
+        << "\traidPlaceDistance\tkeeperPlaceDistance\traidSpread\n";
 }
 
 //! \brief Counts both sides from the creatures of the map, the raid groups and the combat groups.
@@ -364,5 +398,6 @@ void RaidSimulation::writeTurn(std::ostream& os, GameMap& gameMap, int32_t attac
         << "\t" << ((keeperSeat == nullptr) ? 0.0 : storedGold(gameMap, keeperSeat))
         << "\t" << ((keeperSeat == nullptr) ? 0.0 : heartHp(gameMap, keeperSeat))
         << "\t" << (keeperLost ? 1 : 0) << "\t" << raidSide.mFleeing << "\t" << keeperSide.mFleeing
-        << "\t" << maxGroupId << "\n";
+        << "\t" << maxGroupId << "\t" << raidSide.mPlaceDistance << "\t" << keeperSide.mPlaceDistance
+        << "\t" << spread(raidStanding) << "\n";
 }
