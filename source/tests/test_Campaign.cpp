@@ -416,8 +416,8 @@ BOOST_AUTO_TEST_CASE(test_difficulty_is_saved)
     BOOST_CHECK_EQUAL(campaign.getDifficulty(), Campaign::getDefaultDifficulty());
 }
 
-//! \brief The warden and difficulty keys of the definition file are read; the province keys of the former world
-//! map are ignored, so no level is found by a province
+//! \brief The warden key of the definition file is read; the Difficulty key and the province keys of the former
+//! campaign file are ignored, so no level is found by a province
 BOOST_AUTO_TEST_CASE(test_province_keys)
 {
     Campaign& campaign = Campaign::getSingleton();

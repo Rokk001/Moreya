@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Non-compiling check of the simulated raid values (raid plan R3C, V1, SIM1, RA2, RA11, HL1).
 
-No config key of [GroupCombat], [Raid] and [HandLimit] in config/global.cfg is marked PLACEHOLDER except the keys of
-PENDING_KEYS, whose value waits for an owner decision because the simulation measured no effect of them, no story level
+No config key of [GroupCombat], [Raid] and [HandLimit] in config/global.cfg is marked PLACEHOLDER and their
+documentation does not name a placeholder at all (every value is final: simulated or decided by the owner), no story level
 keeps a PLACEHOLDER line in its [Raid] section, every key of those blocks that the simulation sets has the fixed value of
 the third simulation pass, every story level sets its countdown inside 1800-3600 game seconds, and the countdown,
 interval and escape share of every story level, the member levels of its raid and the number of its healers (Wizards
@@ -20,10 +20,6 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 START = time.perf_counter()
 FAILURES = []
-
-# Keys that may stay marked PLACEHOLDER: the third simulation pass measured no effect of their value (owner decision
-# pending); every other key must be set
-PENDING_KEYS = ()
 
 # Keys set by the simulation and their values after R3C
 CONFIG = {
@@ -98,9 +94,9 @@ def main():
     cfg = read("config/global.cfg")
     for name, expected in sorted(CONFIG.items()):
         documentation, values = block(cfg, name)
-        marked = [key for key in re.findall(r"(?m)^#\s+(\w+)\s.*PLACEHOLDER:", documentation)
-                  if key not in PENDING_KEYS]
+        marked = re.findall(r"(?m)^#\s+(\w+)\s.*PLACEHOLDER:", documentation)
         check(not marked, "V1: [%s] keys still marked PLACEHOLDER: %s" % (name, marked))
+        check("PLACEHOLDER" not in documentation, "V1: the documentation of [%s] still names a placeholder" % name)
         for key, value in sorted(expected.items()):
             check(values.get(key) == value, "SIM1: [%s] %s must be %s, is %s" % (name, key, value, values.get(key)))
     for name, (countdown, interval, escape, levels, healers) in sorted(LEVELS.items()):
