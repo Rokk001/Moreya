@@ -21,6 +21,7 @@
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "game/CombatGroupManager.h"
+#include "game/RaidManager.h"
 #include "gamemap/GameMap.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
@@ -35,7 +36,8 @@ std::function<bool()> CreatureActionGroupFollow::action()
     return std::bind(&CreatureActionGroupFollow::handleGroupFollow, std::ref(mCreature));
 }
 
-//! \brief Keeps the place of the formation computed by the group manager at its last update.
+//! \brief Keeps the place of the formation computed by the group manager at its last update. A raid member first
+//! loots an item a fallen keeper creature dropped that it sees (RA12), then returns to its place.
 bool CreatureActionGroupFollow::handleGroupFollow(Creature& creature)
 {
     CombatGroupManager& groups = creature.getGameMap()->getCombatGroups();
@@ -47,6 +49,9 @@ bool CreatureActionGroupFollow::handleGroupFollow(Creature& creature)
 
     if(creature.isMoving())
         return false; // still walking to the place; check again next turn
+
+    if(creature.getGameMap()->getRaid().doLoot(creature))
+        return false; // took an item or walks to one; the place is kept again afterwards
 
     Tile* place = groups.getFormationTile(creature);
     if(place == nullptr)

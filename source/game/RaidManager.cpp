@@ -17,8 +17,12 @@
 
 #include "game/RaidManager.h"
 
+#include "creatureaction/CreatureAction.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/GameEntityType.h"
+#include "entities/ItemBagEntity.h"
+#include "entities/ItemInstance.h"
 #include "entities/Tile.h"
 #include "game/Campaign.h"
 #include "game/CombatGroupManager.h"
@@ -42,6 +46,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <istream>
+#include <memory>
 #include <ostream>
 #include <sstream>
 
@@ -124,7 +129,8 @@ RaidManager::RaidManager(GameMap& gameMap) :
 {
 }
 
-//! \brief Forgets the level data, the running state and the transient state.
+//! \brief Forgets the level data, the running state (followers, escaped members and loot included) and the transient
+//! state.
 void RaidManager::clear()
 {
     mHasGate = false;
@@ -141,6 +147,7 @@ void RaidManager::clear()
     mSchedule = RaidRules::Schedule();
     mLost = false;
     mPlundered.clear();
+    mLoot.clear();
     mGateShown = false;
     mBonusLogged = false;
 }
@@ -163,7 +170,8 @@ double RaidManager::escapeShare() const
     return (mEscapeShare >= 0.0) ? mEscapeShare : raidConfig("RaidLeaderEscapeShare");
 }
 
-//! \brief Runs the raid for one turn: gate, countdown, arrivals, plundering and the leaders.
+//! \brief Runs the raid for one turn: gate, countdown, arrivals, loot bags, plundering and the leaders with their
+//! followers.
 void RaidManager::update()
 {
     if(!mHasGate || !mGameMap.isServerGameMap())
@@ -194,6 +202,7 @@ void RaidManager::update()
     if(!mLost)
         advanceSchedule(1.0 / ODApplication::turnsPerSecond);
 
+    forgetMissingLoot();
     plunder();
     updateLeaders();
 }
@@ -274,12 +283,17 @@ bool RaidManager::isGateClosed() const
     return !mSchedule.mGateOpen;
 }
 
-//! \brief Looks for a fleeing leader with that name.
+//! \brief Looks for a fleeing leader with that name, or a follower of a leader who fled that did not escape yet.
 bool RaidManager::isEscaping(const std::string& creatureName) const
 {
     for(const RaidGroupData& group : mGroups)
     {
         if((group.mLeaderState == RaidLeaderState::fleeing) && (group.mLeaderSpawned == creatureName))
+            return true;
+
+        if((std::find(group.mFollowers.begin(), group.mFollowers.end(), creatureName) != group.mFollowers.end()) &&
+           (std::find(group.mEscapedMembers.begin(), group.mEscapedMembers.end(), creatureName) ==
+            group.mEscapedMembers.end()))
             return true;
     }
     return false;
@@ -296,8 +310,9 @@ const RaidGroupData* RaidManager::findGroupOfSpawned(const std::string& creature
     return nullptr;
 }
 
-//! \brief A fleeing leader runs to the gate; the leader of a group turns aside to a treasury on the way that he did
-//! not plunder yet, else walks to the dungeon heart of the attacked keeper as the killplayer order does.
+//! \brief A fleeing leader and his followers run to the gate; the leader of a group loots a dropped item he sees,
+//! turns aside to a treasury on the way that he did not plunder yet, else walks to the dungeon heart of the attacked
+//! keeper as the killplayer order does.
 bool RaidManager::doCreatureOrder(Creature& creature)
 {
     if(!mHasGate || !creature.getIsOnServerMap())
@@ -313,7 +328,7 @@ bool RaidManager::doCreatureOrder(Creature& creature)
 
     if(isEscaping(name))
     {
-        // The flight ends at the gate (update); until then the leader runs there and does nothing else
+        // The flight ends at the gate (update); until then the leader and his followers run there and do nothing else
         if(isAtGate(creature))
             return true;
 
@@ -326,7 +341,7 @@ bool RaidManager::doCreatureOrder(Creature& creature)
             gateTiles.push_back(gateTile);
 
         if(!LevelScriptRunner::walkToNearestTile(creature, gateTiles))
-            OD_LOG_WRN("Raid leader " + name + " finds no way to the gate");
+            OD_LOG_WRN("Fleeing raid member " + name + " finds no way to the gate");
 
         return true;
     }
@@ -334,6 +349,10 @@ bool RaidManager::doCreatureOrder(Creature& creature)
     // The members keep their place in the formation of their raid group; its leader leads them
     if(mGameMap.getCombatGroups().shouldKeepFormation(creature))
         return false;
+
+    // RA12: the leader loots the items fallen keeper creatures dropped, as his members do in the formation
+    if(doLoot(creature))
+        return true;
 
     if(mTargetSeatId < 0)
         return false;
@@ -527,8 +546,10 @@ std::vector<Room*> RaidManager::plunderableRooms() const
     return rooms;
 }
 
-//! \brief Each standing member in a plunderable room takes RaidPlunderGoldPerMember from it once; the gold leaves the
-//! keeper at once and the member carries it (a killed member drops it, as every creature drops the gold it carries).
+//! \brief Each standing member in a plunderable room takes what it can still carry (carryCapacity, RA7); the gold
+//! leaves the keeper at once and the member carries it (a fallen member drops it, as every creature drops the gold it
+//! carries; a member escaping through the gate takes it along). The rooms a member entered are remembered for the
+//! detour of the leader and the first plunder of a room is told to the keeper.
 void RaidManager::plunder()
 {
     if(mGroups.empty())
@@ -538,7 +559,6 @@ void RaidManager::plunder()
     if(rooms.empty())
         return;
 
-    const double perMember = raidConfig("RaidPlunderGoldPerMember");
     for(const RaidGroupData& group : mGroups)
     {
         for(const std::string& name : group.mSpawned)
@@ -555,10 +575,6 @@ void RaidManager::plunder()
             if((room == nullptr) || (std::find(rooms.begin(), rooms.end(), room) == rooms.end()))
                 continue;
 
-            const std::pair<std::string, std::string> key(name, room->getName());
-            if(mPlundered.count(key) > 0)
-                continue;
-
             bool firstInRoom = true;
             for(const std::pair<std::string, std::string>& done : mPlundered)
             {
@@ -569,8 +585,15 @@ void RaidManager::plunder()
                 }
             }
 
-            mPlundered.insert(key);
-            const double taken = room->withdrawGold(RaidRules::plunderAmount(room->getTotalGoldStored(), perMember));
+            // The room counts as visited also when the member can carry nothing more, so that the leader does not
+            // turn aside to it again
+            mPlundered.insert(std::make_pair(name, room->getName()));
+            const double amount = RaidRules::plunderAmount(room->getTotalGoldStored(), creature->getGoldCarried(),
+                carryCapacity(*creature));
+            if(amount <= 0.0)
+                continue;
+
+            const double taken = room->withdrawGold(amount);
             if(taken <= 0.0)
                 continue;
 
@@ -589,6 +612,19 @@ void RaidManager::updateLeaders()
     const double share = escapeShare();
     for(RaidGroupData& group : mGroups)
     {
+        // RA8 / FQ 10: a follower that reached the gate escapes through it, also when its leader has fallen or
+        // escaped before it
+        const std::vector<std::string> followers = group.mFollowers;
+        for(const std::string& follower : followers)
+        {
+            if(!isEscaping(follower) || !isStanding(follower))
+                continue;
+
+            Creature* member = mGameMap.getCreature(follower);
+            if(isAtGate(*member))
+                escapeMember(group, *member);
+        }
+
         if(!group.mArrived || group.mLeaderSpawned.empty())
             continue;
 
@@ -621,16 +657,165 @@ void RaidManager::updateLeaders()
         if(!RaidRules::leaderShouldFlee(others, fallen, share))
             continue;
 
-        // The leader leaves his group and runs to the gate; the members go on fighting under the next leader
+        // The leader leaves his group and runs to the gate; the members still standing follow him there at his speed
+        // (FQ 10 c), so the raid group breaks up
         group.mLeaderState = RaidLeaderState::fleeing;
-        mGameMap.getCombatGroups().setRaidMemberDetached(group.mLeaderSpawned, true);
-        leader->setMoveSpeedModifier(LevelScriptRunner::getRunSpeedFactor());
-        leader->stopWalking();
-        leader->clearActionQueue();
+        std::vector<std::string> fleeing(1, group.mLeaderSpawned);
+        for(const std::string& member : group.mSpawned)
+        {
+            if((member == group.mLeaderSpawned) || !isStanding(member))
+                continue;
+
+            group.mFollowers.push_back(member);
+            fleeing.push_back(member);
+        }
+        for(const std::string& name : fleeing)
+        {
+            Creature* creature = mGameMap.getCreature(name);
+            mGameMap.getCombatGroups().setRaidMemberDetached(name, true);
+            creature->setMoveSpeedModifier(LevelScriptRunner::getRunSpeedFactor());
+            creature->stopWalking();
+            creature->clearActionQueue();
+        }
         OD_LOG_INF("Raid leader " + group.mLeaderSpawned + " flees to the gate, fallen "
-            + Helper::toString(fallen) + " of " + Helper::toString(others));
+            + Helper::toString(fallen) + " of " + Helper::toString(others) + ", followers "
+            + Helper::toString(static_cast<uint32_t>(group.mFollowers.size())));
         tellKeepers(group.mLeaderSpawned + " flees to the Moreya gate! Catch him before he escapes.");
     }
+}
+
+//! \brief The follower leaves the map through the gate with its gold and items; it counts as defeated (isStanding no
+//! longer finds it) and does not lose the level.
+void RaidManager::escapeMember(RaidGroupData& group, Creature& member)
+{
+    const std::string name = member.getName();
+    group.mEscapedMembers.push_back(name);
+    mGameMap.getCombatGroups().setRaidMemberDetached(name, false);
+    OD_LOG_INF("Raid member " + name + " followed its leader through the gate with "
+        + Helper::toString(member.getGoldCarried()) + " gold");
+    member.clearDestinations(EntityAnimation::idle_anim, true, true);
+    member.removeFromGameMap();
+    member.deleteYourself();
+}
+
+//! \brief Drops the names of loot bags that are no longer on the map.
+void RaidManager::forgetMissingLoot()
+{
+    std::set<std::string>::iterator it = mLoot.begin();
+    while(it != mLoot.end())
+    {
+        RenderedMovableEntity* entity = mGameMap.getRenderedMovableEntity(*it);
+        if((entity == nullptr) || !entity->getIsOnMap() || (entity->getObjectType() != GameEntityType::itemBagEntity))
+            it = mLoot.erase(it);
+        else
+            ++it;
+    }
+}
+
+//! \brief Remembers the bag when a keeper's creature dropped it at its death on the server map of a raid level.
+void RaidManager::registerFallenDrop(const Creature& fallen, const ItemBagEntity& bag)
+{
+    if(!mHasGate || !mGameMap.isServerGameMap() || !CombatGroupManager::isKeeperSeat(fallen.getSeat()))
+        return;
+
+    mLoot.insert(bag.getName());
+}
+
+//! \brief Takes a loot bag on the creature's tile, else walks to the nearest reachable loot bag it sees.
+bool RaidManager::doLoot(Creature& creature)
+{
+    if(!mHasGate || mLoot.empty() || !creature.getIsOnServerMap() || (creature.getSeat() == nullptr))
+        return false;
+
+    const std::string& name = creature.getName();
+    if((findGroupOfSpawned(name) == nullptr) || !isStanding(name) || isEscaping(name) || creature.isKo() ||
+       creature.isActionInList(CreatureActionType::fight))
+        return false;
+
+    // Exactly like the creatures: an item goes into a free inventory slot
+    bool freeSlot = false;
+    for(const std::unique_ptr<ItemInstance>& item : creature.getInventory())
+    {
+        if(item.get() == nullptr)
+            freeSlot = true;
+    }
+    if(!freeSlot)
+        return false;
+
+    Tile* myTile = creature.getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    ItemBagEntity* bagHere = nullptr;
+    std::vector<Tile*> lootTiles;
+    for(Tile* tile : creature.getVisibleTiles())
+    {
+        for(GameEntity* entity : tile->getEntitiesInTile())
+        {
+            if((entity->getObjectType() != GameEntityType::itemBagEntity) || (mLoot.count(entity->getName()) == 0))
+                continue;
+
+            ItemBagEntity* bag = static_cast<ItemBagEntity*>(entity);
+            const ItemInstance* item = bag->getItem();
+            if((item == nullptr) || item->mMerchantGoods || (item->mGhostItem != GhostItem::none) ||
+               bag->getCarryLock(creature))
+                continue;
+
+            if((bag->getSeat() != nullptr) && creature.getSeat()->isAlliedSeat(bag->getSeat()))
+                continue;
+
+            if(tile == myTile)
+            {
+                bagHere = bag;
+                break;
+            }
+
+            if(mGameMap.pathExists(&creature, myTile, tile))
+                lootTiles.push_back(tile);
+        }
+        if(bagHere != nullptr)
+            break;
+    }
+
+    if(bagHere != nullptr)
+    {
+        const std::string bagName = bagHere->getName();
+        std::unique_ptr<ItemInstance> item = bagHere->takeItem();
+        mLoot.erase(bagName);
+        bagHere->removeFromGameMap();
+        bagHere->deleteYourself();
+        if(item.get() == nullptr)
+            return false;
+
+        OD_LOG_INF("Raid member " + name + " loots the item bag " + bagName);
+        creature.acceptItem(std::move(item));
+        return true;
+    }
+
+    if(lootTiles.empty())
+        return false;
+
+    return LevelScriptRunner::walkToNearestTile(creature, lootTiles);
+}
+
+//! \brief The central tile of the gate.
+Tile* RaidManager::getGateTile() const
+{
+    if(!mHasGate)
+        return nullptr;
+
+    return mGameMap.getTile(mGateX, mGateY);
+}
+
+//! \brief RaidRules::carryCapacity with the size of the member's class and the config values.
+double RaidManager::carryCapacity(const Creature& creature)
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    const std::string className = (creature.getDefinition() != nullptr) ? creature.getDefinition()->getClassName()
+        : std::string();
+    const bool large = RaidRules::isLargeMember(className, config.getRaidConfigWords("RaidLargeMemberClasses"));
+    return RaidRules::carryCapacity(large, config.getRoomConfigDouble("TreasuryGoldPerTile"),
+        raidConfig("RaidCarryTilesSmall"), raidConfig("RaidCarryTilesLarge"));
 }
 
 //! \brief The leader leaves the map through the gate with the gold he carries; the attacked keeper loses the level.
@@ -660,14 +845,15 @@ void RaidManager::escape(RaidGroupData& group, Creature& leader)
     }
 }
 
-//! \brief Alive, on the map, not imprisoned and not won over by a keeper.
+//! \brief Alive (an unconscious member too, Q20.12), on the map or held in a keeper's hand, not imprisoned and not won
+//! over by a keeper. An escaped member is no longer on the map and has fallen.
 bool RaidManager::isStanding(const std::string& creatureName) const
 {
     Creature* creature = mGameMap.getCreature(creatureName);
     if(creature == nullptr)
         return false;
 
-    return creature->isAlive() && creature->getIsOnMap() && !creature->isInPrison() &&
+    return creature->isAlive() && (creature->getIsOnMap() || creature->isInHand()) && !creature->isInPrison() &&
         (creature->getSeat() != nullptr) && !CombatGroupManager::isKeeperSeat(creature->getSeat());
 }
 
@@ -740,7 +926,8 @@ std::string RaidManager::getStreamFormat()
     return "Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | "
         "EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|- | "
         "State Started GateOpen NextGroup SecondsToNext Lost | Arrived RaidGroupId LeaderName|- LeaderState NbMembers "
-        "Member... | Plundered CreatureName RoomName";
+        "Member... | Plundered CreatureName RoomName | Follower RaidGroupId CreatureName | Escaped RaidGroupId "
+        "CreatureName | Loot ItemBagName";
 }
 
 //! \brief Writes the level data and, in a saved game, the running state of the raid.
@@ -785,6 +972,15 @@ void RaidManager::exportToStream(std::ostream& os, bool isGameSave) const
         }
         for(const std::pair<std::string, std::string>& done : mPlundered)
             os << "Plundered\t" << done.first << "\t" << done.second << "\n";
+        for(const RaidGroupData& group : mGroups)
+        {
+            for(const std::string& follower : group.mFollowers)
+                os << "Follower\t" << group.mRaidGroupId << "\t" << follower << "\n";
+            for(const std::string& escaped : group.mEscapedMembers)
+                os << "Escaped\t" << group.mRaidGroupId << "\t" << escaped << "\n";
+        }
+        for(const std::string& bag : mLoot)
+            os << "Loot\t" << bag << "\n";
     }
 
     os << "[/Raid]\n";
@@ -792,7 +988,8 @@ void RaidManager::exportToStream(std::ostream& os, bool isGameSave) const
 }
 
 //! \brief Reads the lines written by exportToStream; an unknown or broken line refuses the section. The groups come in
-//! the order of their Group lines; a fleeing leader leaves his combat group again.
+//! the order of their Group lines; a fleeing leader and the followers that did not escape yet leave their combat group
+//! again. A saved game without Follower, Escaped and Loot lines (written before them) loads as before.
 bool RaidManager::importFromStream(std::istream& is)
 {
     std::string token;
@@ -810,6 +1007,13 @@ bool RaidManager::importFromStream(std::istream& is)
             {
                 if(group.mLeaderState == RaidLeaderState::fleeing)
                     mGameMap.getCombatGroups().setRaidMemberDetached(group.mLeaderSpawned, true);
+
+                for(const std::string& follower : group.mFollowers)
+                {
+                    if(std::find(group.mEscapedMembers.begin(), group.mEscapedMembers.end(), follower) ==
+                       group.mEscapedMembers.end())
+                        mGameMap.getCombatGroups().setRaidMemberDetached(follower, true);
+                }
             }
             return true;
         }
@@ -964,6 +1168,45 @@ bool RaidManager::importFromStream(std::istream& is)
                 return false;
             }
             mPlundered.insert(std::make_pair(name, room));
+            continue;
+        }
+
+        if((token == "Follower") || (token == "Escaped"))
+        {
+            uint32_t raidGroupId = 0;
+            std::string name;
+            if(!(line >> raidGroupId >> name))
+            {
+                OD_LOG_ERR("Invalid " + token + " line=" + rest);
+                return false;
+            }
+            RaidGroupData* group = nullptr;
+            for(RaidGroupData& candidate : mGroups)
+            {
+                if(candidate.mRaidGroupId == raidGroupId)
+                    group = &candidate;
+            }
+            if(group == nullptr)
+            {
+                OD_LOG_ERR(token + " line of a raid group without Group line=" + rest);
+                return false;
+            }
+            if(token == "Follower")
+                group->mFollowers.push_back(name);
+            else
+                group->mEscapedMembers.push_back(name);
+            continue;
+        }
+
+        if(token == "Loot")
+        {
+            std::string bag;
+            if(!(line >> bag))
+            {
+                OD_LOG_ERR("Invalid Loot line=" + rest);
+                return false;
+            }
+            mLoot.insert(bag);
             continue;
         }
 

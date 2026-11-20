@@ -3785,8 +3785,9 @@ void Creature::doUpkeep()
     }
 }
 
-//! \brief Runs the behaviours (fight, flight, ...) of the creature. A raid leader who flees to the Moreya gate runs
-//! there and starts neither a fight nor another flight.
+//! \brief Runs the behaviours (fight, flight, ...) of the creature. A raid leader who flees to the Moreya gate, and a
+//! member that follows him, runs there and starts neither a fight nor another flight. A member of a combat group skips
+//! the individual flight rules (G10).
 void Creature::decidePrioritaryAction()
 {
     if(getIsOnServerMap() && getGameMap()->getRaid().isEscaping(getName()))
@@ -3798,8 +3799,13 @@ void Creature::decidePrioritaryAction()
         return;
     if(patient && getVisibleEnemyObjects().empty())
         return;
+    const bool mayFlee = mayFleeOnItsOwn();
     for(const CreatureBehaviour* behaviour : getDefinition()->getCreatureBehaviours())
     {
+        // G10: inside a combat group only the group retreat and the flight with the raid leader apply
+        if(!mayFlee && (behaviour->getName() == CreatureBehaviourFleeWhenWeak::mNameCreatureBehaviourFleeWhenWeak ||
+            behaviour->getName() == CreatureBehaviourFleeWhenOutmatched::mNameCreatureBehaviourFleeWhenOutmatched))
+            continue;
         // A patient may answer visible enemies using its configured combat policy, but cannot leave treatment for a job.
         if(patient && behaviour->getName() != CreatureBehaviourAttackEnemy::mNameCreatureBehaviourAttackEnemy &&
             behaviour->getName() != CreatureBehaviourFleeWhenWeak::mNameCreatureBehaviourFleeWhenWeak &&
@@ -12238,6 +12244,15 @@ void Creature::flee()
     pushAction(Utils::make_unique<CreatureActionFlee>(*this));
 }
 
+//! \brief A creature in a combat group does not flee on its own (G10); everywhere else the flight rules apply.
+bool Creature::mayFleeOnItsOwn() const
+{
+    if(!getIsOnServerMap())
+        return true;
+
+    return !getGameMap()->getCombatGroups().isGroupMember(getName());
+}
+
 //! \brief Starts fear flight, optionally playing the ghost flinch before moving.
 void Creature::fleeFromTile(Tile* fearTile, double nbTurns, bool scaredPose)
 {
@@ -12831,8 +12846,9 @@ void Creature::formPossessionGroup()
 }
 
 //! \brief Puts a member of a combat group into the retreat of its group or into its place in the formation (see the
-//! header). The checks run in this order: retreat (only fleeing, the heart defence and the infirmary keep their
-//! priority), then the formation (a fight and a need that is being served come first).
+//! header). The checks run in this order: a flight of its own ends (G10), then the retreat (only a flight from fear,
+//! the heart defence and the infirmary keep their priority), then the formation (a fight and a need that is being
+//! served come first).
 void Creature::handleCombatGroup()
 {
     if(!getIsOnServerMap())
@@ -12842,7 +12858,22 @@ void Creature::handleCombatGroup()
     if(!groups.isGroupMember(getName()))
         return;
 
-    // A fleeing creature, a runner of the heart defence and a patient stay with what they do
+    // G10: a member does not flee on its own; a flight it started before it joined the group ends here. A flight from
+    // fear (a trap or a ghost) is not its own decision and goes on
+    bool ownFlight = false;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+    {
+        if((action->getType() == CreatureActionType::flee) &&
+           !static_cast<const CreatureActionFlee*>(action.get())->isFearFlight())
+            ownFlight = true;
+    }
+    if(ownFlight)
+    {
+        stopWalking();
+        clearActionQueue();
+    }
+
+    // A creature fleeing from fear, a runner of the heart defence and a patient stay with what they do
     const bool tooWeakToRise = isActionInList(CreatureActionType::sleep) && (getHP() * 100.0 < getMaxHp() *
         ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent"));
     if(isActionInList(CreatureActionType::flee) || isActionInList(CreatureActionType::goDefendHeart) ||
@@ -12876,8 +12907,8 @@ void Creature::handleCombatGroup()
     pushAction(Utils::make_unique<CreatureActionGroupFollow>(*this));
 }
 
-//! \brief A fleeing raid leader drops a fight, a flight or his place in a group, so that his raid order (see
-//! RaidManager::doCreatureOrder) lets him run to the gate.
+//! \brief A fleeing raid leader, and a member that follows him, drops a fight, a flight or its place in a group, so
+//! that its raid order (see RaidManager::doCreatureOrder) lets it run to the gate.
 void Creature::handleRaidEscape()
 {
     if(!getIsOnServerMap())

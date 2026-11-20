@@ -19,10 +19,12 @@
 #define RAIDRULES_H
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 //! \brief The decisions of the raid: the countdown until the next raid group comes through the Moreya gate, the early
-//! opening of the gate, the flight of a raid leader, the defeat of the whole raid and the gold one raid member takes
-//! from a treasury. The engine side (RaidManager) collects the facts of the game and applies the results. This file
+//! opening of the gate, the flight of a raid leader, the defeat of the whole raid, the gold a raid member can carry and
+//! the gold it takes from a treasury. The engine side (RaidManager) collects the facts of the game and applies the results. This file
 //! only depends on the standard library so that its rules can be checked on their own.
 namespace RaidRules
 {
@@ -90,9 +92,25 @@ bool leaderShouldFlee(uint32_t others, uint32_t fallen, double escapeShare);
 //! \param leaderEscaped True when a leader escaped through the gate.
 bool isRaidDefeated(bool allGroupsArrived, uint32_t spawned, uint32_t standing, bool leaderEscaped);
 
-//! \brief The gold one raid member takes from one treasury: perMember, at most what the treasury holds, never less
-//! than 0.
-double plunderAmount(double stored, double perMember);
+//! \brief True when the creature class is one of the large raid member classes (they carry more gold).
+//! \param className The class of the raid member.
+//! \param largeClasses The classes of the large raid members (config RaidLargeMemberClasses).
+bool isLargeMember(const std::string& className, const std::vector<std::string>& largeClasses);
+
+//! \brief The gold a raid member can carry: the gold of smallTiles treasury tiles for a small member, of largeTiles
+//! treasury tiles for a large one; never less than 0.
+//! \param large True for a large raid member.
+//! \param goldPerTile The gold one treasury tile stores (config TreasuryGoldPerTile).
+//! \param smallTiles Treasury tiles a small member carries (config RaidCarryTilesSmall).
+//! \param largeTiles Treasury tiles a large member carries (config RaidCarryTilesLarge).
+double carryCapacity(bool large, double goldPerTile, double smallTiles, double largeTiles);
+
+//! \brief The gold one raid member takes from a treasury it stands in: what it can still carry, at most what the
+//! treasury holds, never less than 0. Looted items do not count against the gold.
+//! \param stored The gold the treasury holds.
+//! \param carried The gold the member already carries.
+//! \param capacity The gold the member can carry (carryCapacity).
+double plunderAmount(double stored, double carried, double capacity);
 }
 
 #endif // RAIDRULES_H

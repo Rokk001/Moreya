@@ -22,6 +22,7 @@
 #include "entities/GameEntity.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "game/RaidManager.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
@@ -773,7 +774,11 @@ void CombatGroupManager::updateGroup(CombatGroup& group, const std::map<std::str
     {
         int32_t retreatX = 0;
         int32_t retreatY = 0;
-        if(findRetreatTile(group, *leader, groupX, groupY, enemyX, enemyY, retreatX, retreatY))
+        // A raid group retreats towards the Moreya gate (Q20.3); a keeper group behind a door or to an own room
+        const bool found = (group.mIsRaid && mGameMap.getRaid().hasRaid()) ?
+            findRaidRetreatTile(*leader, retreatX, retreatY) :
+            findRetreatTile(group, *leader, groupX, groupY, enemyX, enemyY, retreatX, retreatY);
+        if(found)
         {
             group.mRetreating = true;
             group.mRetreatX = retreatX;
@@ -963,6 +968,24 @@ bool CombatGroupManager::findRetreatTile(const CombatGroup& group, Creature& lea
     }
 
     return false;
+}
+
+//! \brief The gathering tile of a raid group's retreat: the gate tile, or a tile next to it that is no wall; only
+//! when the leader can reach it.
+bool CombatGroupManager::findRaidRetreatTile(Creature& leader, int32_t& x, int32_t& y) const
+{
+    Tile* leaderTile = leader.getPositionTile();
+    Tile* gateTile = mGameMap.getRaid().getGateTile();
+    if((leaderTile == nullptr) || (gateTile == nullptr))
+        return false;
+
+    Tile* gathering = findStandingTile(static_cast<double>(gateTile->getX()), static_cast<double>(gateTile->getY()));
+    if((gathering == nullptr) || !mGameMap.pathExists(&leader, leaderTile, gathering))
+        return false;
+
+    x = gathering->getX();
+    y = gathering->getY();
+    return true;
 }
 
 //! \brief The tile under the position when it is no wall, else a neighbour that is no wall.

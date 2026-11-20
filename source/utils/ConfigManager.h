@@ -707,6 +707,9 @@ public:
     //! \brief Returns the value of a key of the [Raid] block of global.cfg (countdown, interval between the raid groups,
     //! escape share of a raid leader, plundering, gate); logs an error and returns 0 when the key is unknown.
     double getRaidConfigDouble(const std::string& param) const;
+    //! \brief Returns the words of a key of the [Raid] block of global.cfg (the classes of the large raid members);
+    //! logs an error and returns an empty list when the key is unknown.
+    std::vector<std::string> getRaidConfigWords(const std::string& param) const;
     //! \brief Returns the value of a key of the [HandLimit] block of global.cfg (fighting creatures in the hand and the
     //! cooldown after a drop in a campaign level); logs an error and returns 0 when the key is unknown.
     double getHandLimitConfigDouble(const std::string& param) const;
@@ -1193,6 +1196,8 @@ private:
     std::map<std::string, std::string> mGroupCombatConfig;
     //! \brief The keys of the [Raid] block of global.cfg
     std::map<std::string, double> mRaidConfig;
+    //! \brief The keys of the [Raid] block of global.cfg with the text of their value (word lists)
+    std::map<std::string, std::string> mRaidConfigWords;
     //! \brief The keys of the [HandLimit] block of global.cfg
     std::map<std::string, double> mHandLimitConfig;
     std::map<std::string, std::string> mRelationshipsConfig;

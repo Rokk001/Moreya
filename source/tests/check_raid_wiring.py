@@ -73,7 +73,9 @@ EXPECTED_KEYS = {
     "RaidCountdownSeconds": ("3600", False),
     "RaidWaveIntervalSeconds": ("90", False),
     "RaidLeaderEscapeShare": ("0.25", False),
-    "RaidPlunderGoldPerMember": ("200", True),
+    "RaidCarryTilesSmall": ("1", False),
+    "RaidCarryTilesLarge": ("2", False),
+    "RaidLargeMemberClasses": ("NatureMonster Defender Scarab", False),
     "RaidPlunderDetourTiles": ("6", True),
     "RaidGateArrivalTiles": ("1", False),
     "RaidGatePortcullisSink": ("2.2", False),
@@ -92,7 +94,7 @@ for key, (_, placeholder) in EXPECTED_KEYS.items():
     check(len(lines) == 1, "V1: one documentation line for " + key)
     if lines:
         check((PLACEHOLDER in lines[0]) == placeholder, "V1: placeholder mark of " + key)
-read_keys = set(re.findall(r'raidConfig\("(\w+)"\)', MANAGER))
+read_keys = set(re.findall(r'raidConfig\("(\w+)"\)', MANAGER)) | set(re.findall(r'getRaidConfigWords\("(\w+)"\)', MANAGER))
 check(read_keys == set(EXPECTED_KEYS), "V1: the code reads exactly the configured keys " + repr(sorted(read_keys)))
 # No fixed number in the code of the manager: only 0, 1, -1 (no value) and 17 (digits of a saved double)
 CODE_ONLY = re.sub(r'"[^"\n]*"', '""', re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", MANAGER, flags=re.S)))
@@ -155,7 +157,8 @@ for writer, reader in (('os << "Gate\\t" << mGateX << "\\t" << mGateY << "\\t" <
 check(export.index('"Member\\t"') < export.index("if(isGameSave)") < export.index('"State\\t"'),
       "C3: the raid is level data, the running state is written in saved games")
 check("os.precision(17)" in export, "C3: the numbers are saved with all their digits")
-check("setRaidMemberDetached(group.mLeaderSpawned, true);" in load, "C3: a fleeing leader leaves his group again")
+check("setRaidMemberDetached(group.mLeaderSpawned, true);" in load and "setRaidMemberDetached(follower, true);" in load,
+      "C3: a fleeing leader and his followers leave their group again")
 writer = function(MAP_HANDLER, "bool writeGameMapToFile(")
 check(writer.index("getCombatGroups().exportToStream(levelFile, isGameSave)") <
       writer.index("getRaid().exportToStream(levelFile, isGameSave)") < writer.rindex("if (!levelFile.good())"),

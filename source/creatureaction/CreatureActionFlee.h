@@ -49,6 +49,10 @@ public:
     CreatureActionType getType() const override
     { return CreatureActionType::flee; }
 
+    //! \brief True for a flight from a fear tile (a trap or a ghost), false for a flight the creature chose itself
+    inline bool isFearFlight() const
+    { return mFearTile != nullptr; }
+
     //! \brief Returns the function that makes the creature run away, from the fear tile if there is one
     std::function<bool()> action() override;
 
