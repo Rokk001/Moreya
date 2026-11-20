@@ -75,6 +75,8 @@ enum class CreatureActionType
     searchSpa, // (fighters only) Looks for a lava spa with a free bath place and lets that room handle the bath
     rampage, // (fighters only) A rampaging creature walks to a room tile of its keeper and stays on it while it hits the tile
     searchInfirmary, // (fighters only) A creature sick with the plague walks to a free cot of an own infirmary and is admitted
+    groupFollow, // (fighters only) A member of a combat group keeps its place in the formation behind its leader
+    groupRetreat, // (fighters only) A member of a retreating combat group walks to the gathering tile of the retreat
     nb // Must be the last value of this enum
 };
 

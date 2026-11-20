@@ -282,7 +282,7 @@ namespace Utils{
 template<class T,class... A>std::unique_ptr<T> make_unique(A&&... a){return std::unique_ptr<T>(new T(std::forward<A>(a)...));}}
 namespace EntityAnimation{const char* sleep_anim="sleep";const char* die_anim="die";const char* idle_anim="idle";}
 //! \brief Identifies the action states used by the actual attack behaviour.
-enum class CreatureActionType{fight,flee,sleep,infirmaryRest};
+enum class CreatureActionType{fight,flee,sleep,infirmaryRest,groupRetreat};
 //! \brief Supplies the mood states handled by the actual attack behaviour.
 enum class CreatureMoodLevel{Happy,Angry,Furious};
 namespace Random{

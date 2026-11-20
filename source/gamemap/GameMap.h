@@ -30,6 +30,7 @@
 #include <memory>
 
 class LevelScript;
+class CombatGroupManager;
 
 #ifdef __MINGW32__
 #ifndef mode_t
@@ -479,6 +480,12 @@ public:
     LevelScript& getLevelScript();
     //! \brief Read-only access to the triggers and actions of the level, for code that does not change the script
     const LevelScript& getLevelScript() const;
+
+    //! \brief The combat groups of the raid and of the keepers' creatures that form against it, with the raid
+    //! registry ([CombatGroups] section of the level file). Only the server updates them.
+    CombatGroupManager& getCombatGroups();
+    //! \brief Read-only access to the combat groups.
+    const CombatGroupManager& getCombatGroups() const;
 
     //! \brief Withdraws the complete gold amount, including fractional admissions, or refuses it.
     bool withdrawFromTreasuries(double gold, Seat* seat);
@@ -1047,6 +1054,9 @@ private:
 
     //! \brief Level triggers and their state (flags, triggers already fired)
     std::unique_ptr<LevelScript> mLevelScript;
+
+    //! \brief Combat groups and raid registry
+    std::unique_ptr<CombatGroupManager> mCombatGroups;
 
     //! \brief Tells whether the map color flood filling is enabled.
     bool mFloodFillEnabled;

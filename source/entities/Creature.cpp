@@ -40,6 +40,8 @@
 #include "creatureaction/CreatureActionGoCallToWar.h"
 #include "creatureaction/CreatureActionGoDefendHeart.h"
 #include "creatureaction/CreatureActionGrabEntity.h"
+#include "creatureaction/CreatureActionGroupFollow.h"
+#include "creatureaction/CreatureActionGroupRetreat.h"
 #include "creatureaction/CreatureActionLeaveDungeon.h"
 #include "creatureaction/CreatureActionParkToTile.h"
 #include "creatureaction/CreatureActionRampage.h"
@@ -98,6 +100,7 @@
 
 
 
+#include "game/CombatGroupManager.h"
 #include "game/CreatureAppearance.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
@@ -3015,7 +3018,7 @@ void Creature::dropCarriedEquipment()
 
 //! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
 //! Spaces authoritative standing bodies and interrupts activities for urgent needs. Runs the plague of a sick
-//! creature and sends it to a free infirmary cot.
+//! creature and sends it to a free infirmary cot. A member of a combat group follows its group.
 void Creature::doUpkeep()
 {
     upkeepGhostHunt();
@@ -3666,6 +3669,7 @@ void Creature::doUpkeep()
 
     decidePrioritaryAction();
     handleHeartDefence();
+    handleCombatGroup();
     handleUrge();
 
     // Keep combat in its current attack tile; free waiting creatures may use adjacent floor space.
@@ -5185,6 +5189,57 @@ void Creature::updateSkillPoints()
     }
 }
 
+//! \brief Gives the creature the named template of its skill group: a build that is not started keeps the template
+//! for its first point, a started build spends all its points again after it (like a reset of the skills).
+bool Creature::setFixedSkillTemplate(const std::string& templateName)
+{
+    if(!getIsOnServerMap() || mDefinition == nullptr)
+        return false;
+
+    const std::string group = skillTextOrEmpty(mDefinition->getSkillGroup());
+    if(group.empty())
+        return false;
+
+    ConfigManager& config = ConfigManager::getSingleton();
+    const CreatureSkillTree::SkillTreeConfig& tree = config.getCreatureSkillTree();
+    const std::vector<const CreatureSkillTree::TemplateDef*> templates = tree.getTemplates(group);
+    int32_t templateIndex = -1;
+    for(size_t i = 0; i < templates.size(); ++i)
+    {
+        if(templates[i]->mName == templateName)
+        {
+            templateIndex = static_cast<int32_t>(i);
+            break;
+        }
+    }
+    if(templateIndex < 0)
+        return false;
+
+    if(mSkillBuild.mTemplate == templateIndex)
+        return true;
+
+    if(mSkillBuild.mSeed == 0)
+    {
+        // The build starts later (initSkillBuild) and spends its points after this template
+        mSkillBuild.mTemplate = templateIndex;
+        return true;
+    }
+
+    CreatureSkillTree::resetBuild(tree, getSkillTypeInfo(), mSkillBuild, templateIndex, mLevel,
+        config.getSkillPointFirstLevel(), config.getSkillTemplateDeviationPercent(), config.getSkillRanksPerSkill());
+    mSkillBuild.mRespecWindow = 0.0;
+    mTreeSkillsDirty = true;
+    mNeedFireRefresh = true;
+
+    // The passives of the new ranks change the maximum hit points
+    const double previousMaxHP = mMaxHP;
+    buildStats();
+    if(mHp > 0.0 && previousMaxHP > 0.0)
+        mHp = std::min(mMaxHP, mHp * mMaxHP / previousMaxHP);
+
+    return true;
+}
+
 //! \brief Counts one eaten chicken; the configured number of chickens opens the reset window of the skills.
 void Creature::registerChickenEaten()
 {
@@ -5198,7 +5253,8 @@ void Creature::registerChickenEaten()
 
 //! \brief Lets the reset window run. While it is open, a creature whose template has at least three followers among the
 //! own creatures of its group, while another template of the group has none, switches to that template and spends all
-//! its points again. Then rebuilds the active skills when the ranks changed.
+//! its points again. A raid member with a fixed template never switches. Then rebuilds the active skills when the ranks
+//! changed.
 void Creature::upkeepSkillTree()
 {
     if(!getIsOnServerMap() || mDefinition == nullptr)
@@ -5207,7 +5263,8 @@ void Creature::upkeepSkillTree()
     if(mSkillBuild.mRespecWindow > 0.0)
     {
         CreatureSkillTree::tickRespecWindow(mSkillBuild, 1.0 / ODApplication::turnsPerSecond);
-        if(mSkillBuild.mRespecWindow > 0.0 && mSkillBuild.mTemplate >= 0)
+        if(mSkillBuild.mRespecWindow > 0.0 && mSkillBuild.mTemplate >= 0 &&
+           !getGameMap()->getCombatGroups().hasFixedSkillTemplate(getName()))
         {
             std::vector<uint32_t> followers;
             countTemplateFollowers(followers);
@@ -7632,6 +7689,8 @@ static void addHitDirt(Tile* tile)
         tile->addDirt(ConfigManager::getSingleton().getDirtConfigDouble("CombatDirtPerHit"));
 }
 
+//! \brief Deals the damage of an attack after the defenses and counts the fight, the knockout and the death. On the
+//! server a hit of an enemy creature gives a combat group member the aggro of that creature when it is a tank.
 double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko)
 {
@@ -7803,6 +7862,10 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
 
     if(!getIsOnServerMap())
         return damageDone;
+
+    // A member of a combat group that an enemy tank hits attacks that tank (aggro); nothing without groups
+    if(wasAlive && (creatureAttacking != nullptr))
+        getGameMap()->getCombatGroups().notifyAttacked(*this, *creatureAttacking);
 
     Player* player = getGameMap()->getPlayerBySeat(getSeat());
     if (player == nullptr)
@@ -11939,12 +12002,14 @@ bool Creature::isHungry() const
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
 }
 
-//! \brief Detects urgent needs unless fighting, fleeing, bathing, held, knocked out, imprisoned or leaving.
+//! \brief Detects urgent needs unless fighting, fleeing, retreating with its combat group, bathing, held, knocked out,
+//! imprisoned or leaving.
 bool Creature::needInterrupt(bool servingNeed) const
 {
+    // A member of a retreating combat group reaches the gathering tile first
     if(mSpaBathing || mIsInHand || isKo() || isInPrison() || isActionInList(CreatureActionType::leaveDungeon) ||
        isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
-       isActionInList(CreatureActionType::flee))
+       isActionInList(CreatureActionType::flee) || isActionInList(CreatureActionType::groupRetreat))
         return false;
     if(mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek") &&
        !hasActionBeenTried(CreatureActionType::searchToilet) && RoomToilet::hasToiletRoomFor(*this))
@@ -12750,6 +12815,52 @@ void Creature::formPossessionGroup()
         candidate.second->joinPossessionGroup(getName());
         mGroupMemberNames.push_back(candidate.second->getName());
     }
+}
+
+//! \brief Puts a member of a combat group into the retreat of its group or into its place in the formation (see the
+//! header). The checks run in this order: retreat (only fleeing, the heart defence and the infirmary keep their
+//! priority), then the formation (a fight and a need that is being served come first).
+void Creature::handleCombatGroup()
+{
+    if(!getIsOnServerMap())
+        return;
+
+    CombatGroupManager& groups = getGameMap()->getCombatGroups();
+    if(!groups.isGroupMember(getName()))
+        return;
+
+    // A fleeing creature, a runner of the heart defence and a patient stay with what they do
+    const bool tooWeakToRise = isActionInList(CreatureActionType::sleep) && (getHP() * 100.0 < getMaxHp() *
+        ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent"));
+    if(isActionInList(CreatureActionType::flee) || isActionInList(CreatureActionType::goDefendHeart) ||
+       isActionInList(CreatureActionType::infirmaryRest) || isActionInList(CreatureActionType::searchInfirmary) ||
+       tooWeakToRise)
+        return;
+
+    // The leader ordered the retreat: the member stops fighting and walks to the gathering tile
+    if(groups.isRetreating(*this))
+    {
+        if(isActionInList(CreatureActionType::groupRetreat))
+            return;
+
+        stopWalking();
+        clearActionQueue();
+        pushAction(Utils::make_unique<CreatureActionGroupRetreat>(*this));
+        return;
+    }
+
+    if(!groups.shouldKeepFormation(*this) || isActionInList(CreatureActionType::groupFollow))
+        return;
+
+    // A fight goes on, and a need that is being served is served first
+    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::searchFood) ||
+       isActionInList(CreatureActionType::eatChicken) || isActionInList(CreatureActionType::searchDrink) ||
+       isActionInList(CreatureActionType::searchToilet) || isActionInList(CreatureActionType::useToilet))
+        return;
+
+    stopWalking();
+    clearActionQueue();
+    pushAction(Utils::make_unique<CreatureActionGroupFollow>(*this));
 }
 
 void Creature::joinPossessionGroup(const std::string& leaderName)

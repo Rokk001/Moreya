@@ -653,7 +653,7 @@ bool parseObjectiveState(const std::string& text, LevelScriptObjectiveState& sta
 }
 
 //! \brief Parses actions including mission door locks and the campaign shard, retaining legacy objective text and
-//! ID/state variants.
+//! ID/state variants, and the raid registry actions raidmember and raidleader.
 bool parseAction(const std::string& line, const std::vector<std::string>& t, LevelScriptAction& action)
 {
     // t[0] is "Action"
@@ -965,6 +965,31 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
 
         return true;
     }
+    if(type == "raidmember")
+    {
+        action.mType = LevelScriptActionType::raidMember;
+        int32_t raidGroupId = 0;
+        if((t.size() < 5) || !parseInt32(t[2], raidGroupId) || (raidGroupId <= 0))
+            return false;
+
+        action.mNumber = raidGroupId;
+        action.mText = (t[3] == "-") ? std::string() : t[3];
+        for(std::size_t i = 4; i < t.size(); ++i)
+            action.mCreatureNames.push_back(t[i]);
+
+        return true;
+    }
+    if(type == "raidleader")
+    {
+        action.mType = LevelScriptActionType::raidLeader;
+        int32_t raidGroupId = 0;
+        if((t.size() != 4) || !parseInt32(t[2], raidGroupId) || (raidGroupId <= 0))
+            return false;
+
+        action.mNumber = raidGroupId;
+        action.mText = t[3];
+        return true;
+    }
     if(type == "roomowner")
     {
         action.mType = LevelScriptActionType::roomOwner;
@@ -1232,7 +1257,7 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
 }
 
 //! \brief Serializes mission door locks, the campaign shard, goal classification and actions with legacy objective
-//! compatibility.
+//! compatibility, and the raid registry actions.
 void writeAction(std::ostream& os, const LevelScriptAction& a)
 {
     os << "Action\t";
@@ -1376,6 +1401,14 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::slapLimit:
             os << "slaplimit\t" << a.mNumber;
+            break;
+        case LevelScriptActionType::raidMember:
+            os << "raidmember\t" << a.mNumber << "\t" << (a.mText.empty() ? std::string("-") : a.mText);
+            for(const std::string& name : a.mCreatureNames)
+                os << "\t" << name;
+            break;
+        case LevelScriptActionType::raidLeader:
+            os << "raidleader\t" << a.mNumber << "\t" << a.mText;
             break;
     }
     os << "\n";

@@ -22,6 +22,7 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "game/CombatGroupManager.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "utils/Helper.h"
@@ -51,6 +52,8 @@ std::function<bool()> CreatureActionFight::action()
         std::ref(mCreature), mEntityAttack, mKoOpponent, mNotifyPlayerIfHit);
 }
 
+//! \brief One turn of a fight: attacks the given entity, or else the target of the creature's combat group, or else
+//! the best of the enemies it sees (creatures first), walking towards it when it is out of reach.
 bool CreatureActionFight::handleFight(Creature& creature, GameEntity* entityAttack, bool koOpponent, bool notifyPlayerIfHit)
 {
     static const std::vector<Tile*> emptyTiles;
@@ -128,6 +131,24 @@ bool CreatureActionFight::handleFight(Creature& creature, GameEntity* entityAtta
 
                     enemySecondaryTargets.push_back(entity);
                 }
+            }
+        }
+
+        // A member of a combat group attacks the enemy tank of its aggro, else the shared target of its leader, as
+        // long as it can attack that creature; otherwise it chooses among the enemies it sees as above
+        GameEntity* groupTarget = creature.getGameMap()->getCombatGroups().getFightTarget(creature);
+        if(groupTarget != nullptr)
+        {
+            std::vector<GameEntity*> groupTargets;
+            groupTargets.push_back(groupTarget);
+            GameEntity* entityGroup = nullptr;
+            Tile* tileGroup = nullptr;
+            Tile* positionGroup = nullptr;
+            CreatureSkillData* skillGroup = nullptr;
+            if(creature.searchBestTargetInList(groupTargets, emptyTiles, entityGroup, tileGroup, positionGroup, skillGroup))
+            {
+                enemyPrioritaryTargets = groupTargets;
+                enemySecondaryTargets.clear();
             }
         }
     }

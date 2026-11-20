@@ -149,6 +149,10 @@ std::string CreatureAction::toString(CreatureActionType actionType)
         return "rampage";
     case CreatureActionType::searchInfirmary:
         return "searchInfirmary";
+    case CreatureActionType::groupFollow:
+        return "groupFollow";
+    case CreatureActionType::groupRetreat:
+        return "groupRetreat";
 
     default:
         assert(false);
