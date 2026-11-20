@@ -482,41 +482,233 @@ BOOST_AUTO_TEST_CASE(test_branch_levels)
     BOOST_CHECK(campaign.isFinished());
 }
 
-//! \brief The world map description and the id map give the province under a map pixel
+//! \brief Writes a map of Moreya in the format of gui/campaign/campaign-world.json: wingCount wings with levelCount
+//! story caves each (files campaign/W<wing>L<level>.level, the last of wing 6 with two raids and two leaders) and a
+//! bonus cave (campaign/W<wing>B.level). Cave n of a wing is at x = 100 * wing + 20 * n, y = 50, 10 pixels wide; the
+//! bonus cave at y = 80. Without guilds the story caves have no guild entry.
+static std::string moreyaMap(uint32_t wingCount, uint32_t levelCount, bool withGuilds)
+{
+    std::ostringstream os;
+    os << "{\"version\":2,\"size\":[800,200],\"base\":\"moreya/map.png\","
+        "\"icons\":{\"locked\":\"l.png\",\"current\":\"c.png\",\"defeated\":\"d.png\",\"bonus_found\":\"bf.png\","
+        "\"bonus_cleared\":\"bc.png\",\"wing_defeated\":\"w.png\",\"hover\":\"h.png\"},"
+        "\"title_cartouche\":[1,2,3,4],\"progress_panel\":[5,6,7,8],"
+        "\"guild_panel\":{\"area\":[1,1,9,9],\"banner\":[1,1,2,4],\"portrait\":[3,1,2,2],\"name\":[5,1,4,1],"
+        "\"details\":[5,2,4,3]},\"wings\":[";
+    for(uint32_t wing = 1; wing <= wingCount; ++wing)
+    {
+        if(wing > 1)
+            os << ",";
+        os << "{\"wing\":" << wing << ",\"name\":\"Wing " << wing << "\",\"area\":[" << 100 * wing
+            << ",0,90,100],\"label\":[" << 100 * wing << ",0,90,10],\"seal\":[" << 100 * wing + 80
+            << ",5],\"seal_size\":8,\"levels\":[";
+        for(uint32_t level = 1; level <= levelCount; ++level)
+        {
+            if(level > 1)
+                os << ",";
+            bool kingsRaid = (wing == 6) && (level == 3);
+            os << "{\"file\":\"campaign/W" << wing << "L" << level << ".level\",\"pos\":[" << 100 * wing + 20 * level
+                << ",50],\"size\":10,\"label\":[" << 100 * wing + 20 * level - 5 << ",60,10,5]";
+            if(withGuilds)
+            {
+                os << ",\"guild\":{\"name\":\"Guild " << wing << level << "\",\"leader\":\"Leader " << wing << level
+                    << "\"," << (kingsRaid ? "\"first_leader\":\"First Leader\"," : "")
+                    << "\"origin\":\"Origin " << wing << level << "\",\"groups\":" << ((wing % 2 == 0) ? 2 : 1)
+                    << ",\"size\":" << 5 * wing << ",\"kind\":\"" << ((level == 3) ? "raid" : "group")
+                    << "\",\"banner\":\"banners/b" << wing << level << ".png\",\"portrait\":\"portraits/p" << wing
+                    << level << ".png\"}";
+            }
+            os << "}";
+        }
+        os << "],\"bonus\":{\"file\":\"campaign/W" << wing << "B.level\",\"pos\":[" << 100 * wing + 20
+            << ",80],\"size\":10,\"label\":[" << 100 * wing + 30 << ",75,20,10]}}";
+    }
+    os << "]}";
+    return os.str();
+}
+
+//! \brief Campaign definition with the levels of moreyaMap: per wing 3 story levels, then its bonus level.
+static std::string moreyaCampaign()
+{
+    std::ostringstream os;
+    for(uint32_t wing = 1; wing <= 6; ++wing)
+    {
+        for(uint32_t level = 1; level <= 3; ++level)
+            os << "[Level]\nFile=campaign/W" << wing << "L" << level << ".level\nWing=" << wing << "\nTitle=Level "
+                << wing << level << "\n";
+        os << "[Level]\nFile=campaign/W" << wing << "B.level\nWing=" << wing << "\nBonus=1\nTitle=Bonus " << wing
+            << "\n";
+    }
+    return os.str();
+}
+
+//! \brief The map of Moreya is read with its 6 wings, 18 story caves with their guilds and 6 bonus caves; a map with
+//! another number of wings or caves, or a story cave without guild, is rejected
 BOOST_AUTO_TEST_CASE(test_world_map)
 {
     CampaignWorld world;
-    std::istringstream is(
-        "{\"version\":1,\"size\":[4,2],\"provinces\":["
-        "{\"id\":\"T01\",\"name\":\"One\",\"mask_rgb\":[10,20,30],\"layer_origin\":[1,2],\"lift_origin\":[0,1],"
-        "\"layers\":{\"locked\":\"l.png\",\"available\":\"a.png\",\"conquered\":\"c.png\",\"lift\":\"f.png\"}},"
-        "{\"id\":\"T02\",\"name\":\"Two\",\"mask_rgb\":[40,50,60],\"layer_origin\":[3,4],\"lift_origin\":[2,3],"
-        "\"layers\":{\"locked\":\"l.png\",\"available\":\"a.png\",\"conquered\":\"c.png\",\"lift\":\"f.png\"}}],"
-        "\"sites\":[{\"id\":\"B01\",\"name\":\"Cave\",\"host\":\"T01\",\"pos\":[5,6],"
-        "\"icons\":{\"hidden\":\"h.png\",\"found\":\"f.png\",\"done\":\"d.png\"}}],"
-        "\"progress_panel\":[1,2,3,4],\"title_cartouche\":[5,6,7,8]}");
+    std::istringstream is(moreyaMap(6, 3, true));
     BOOST_REQUIRE(world.importDefinition(is));
-    BOOST_CHECK_EQUAL(world.getProvinces().size(), 2u);
-    BOOST_CHECK_EQUAL(world.getWidth(), 4);
-    BOOST_CHECK_EQUAL(world.getProvinces()[1].mLayerY, 4);
-    BOOST_CHECK_EQUAL(world.getSites()[0].mX, 5);
-    BOOST_CHECK_EQUAL(world.getProgressPanel().mHeight, 4);
-    BOOST_CHECK_EQUAL(world.findProvince("T02"), 1u);
-    BOOST_CHECK_EQUAL(world.findProvince("T99"), 2u);
+    BOOST_CHECK_EQUAL(world.getWidth(), 800);
+    BOOST_CHECK_EQUAL(world.getHeight(), 200);
+    BOOST_CHECK_EQUAL(world.getBaseImage(), "moreya/map.png");
+    BOOST_REQUIRE_EQUAL(world.getWings().size(), 6u);
+    BOOST_REQUIRE_EQUAL(world.getCaves().size(), 24u);
+    BOOST_CHECK_EQUAL(world.getWings()[5].mNumber, 6u);
+    BOOST_CHECK_EQUAL(world.getWings()[5].mName, "Wing 6");
+    BOOST_CHECK_EQUAL(world.getWings()[0].mSealX, 180);
+    BOOST_CHECK_EQUAL(world.getIcons().mBonusCleared, "bc.png");
+    BOOST_CHECK_EQUAL(world.getGuildPanel().mDetails.mHeight, 3);
+    BOOST_CHECK_EQUAL(world.getProgressPanel().mHeight, 8);
+    BOOST_CHECK_EQUAL(world.getTitleCartouche().mX, 1);
 
-    // Id map 4x2: pixel 0 is province one, pixel 5 province two, the rest is outside of all provinces
-    std::vector<uint8_t> rgb(4 * 2 * 3, 0);
-    rgb[0] = 10; rgb[1] = 20; rgb[2] = 30;
-    rgb[15] = 40; rgb[16] = 50; rgb[17] = 60;
-    world.setIdMap(4, 2, rgb);
-    BOOST_CHECK_EQUAL(world.getProvinceAt(0, 0), 0u);
-    BOOST_CHECK_EQUAL(world.getProvinceAt(1, 1), 1u);
-    BOOST_CHECK_EQUAL(world.getProvinceAt(2, 0), 2u);
-    BOOST_CHECK_EQUAL(world.getProvinceAt(-1, 0), 2u);
-    BOOST_CHECK_EQUAL(world.getProvinceAt(4, 0), 2u);
+    // Per wing its 3 story caves, then its bonus cave
+    uint32_t storyCaves = 0;
+    uint32_t bonusCaves = 0;
+    for(size_t i = 0; i < world.getCaves().size(); ++i)
+    {
+        const CampaignWorldCave& cave = world.getCaves()[i];
+        BOOST_CHECK_EQUAL(cave.mWing, static_cast<uint32_t>(i / 4 + 1));
+        BOOST_CHECK_EQUAL(cave.mBonus, (i % 4) == 3);
+        if(cave.mBonus)
+        {
+            ++bonusCaves;
+            BOOST_CHECK(cave.mGuild.mName.empty());
+        }
+        else
+        {
+            ++storyCaves;
+            BOOST_CHECK(!cave.mGuild.mName.empty());
+        }
+    }
+    BOOST_CHECK_EQUAL(storyCaves, 18u);
+    BOOST_CHECK_EQUAL(bonusCaves, 6u);
+    BOOST_CHECK_EQUAL(world.findCave("campaign/W2L3.level"), 6u);
+    BOOST_CHECK_EQUAL(world.findCave("campaign/W6B.level"), 23u);
+    BOOST_CHECK_EQUAL(world.findCave("campaign/Unknown.level"), 24u);
 
+    // The guild of a level: banner, portrait, leader, origin and raid size
+    const CampaignWorldGuild& guild = world.getCaves()[world.findCave("campaign/W2L3.level")].mGuild;
+    BOOST_CHECK_EQUAL(guild.mName, "Guild 23");
+    BOOST_CHECK_EQUAL(guild.mLeader, "Leader 23");
+    BOOST_CHECK(guild.mFirstLeader.empty());
+    BOOST_CHECK_EQUAL(guild.mOrigin, "Origin 23");
+    BOOST_CHECK_EQUAL(guild.mGroups, 2u);
+    BOOST_CHECK_EQUAL(guild.mSize, 10u);
+    BOOST_CHECK(guild.mRaid);
+    BOOST_CHECK_EQUAL(guild.mBanner, "banners/b23.png");
+    BOOST_CHECK_EQUAL(guild.mPortrait, "portraits/p23.png");
+    BOOST_CHECK_EQUAL(CampaignWorld::getRaidSizeText(guild), "two raids of 10");
+    BOOST_CHECK_EQUAL(CampaignWorld::getGuildDetailsText(guild),
+        "Leader: Leader 23\nRaid size: two raids of 10\nOrigin: Origin 23");
+    const CampaignWorldGuild& group = world.getCaves()[world.findCave("campaign/W1L1.level")].mGuild;
+    BOOST_CHECK_EQUAL(CampaignWorld::getRaidSizeText(group), "one group of 5");
+    const CampaignWorldGuild& kingsRaid = world.getCaves()[world.findCave("campaign/W6L3.level")].mGuild;
+    BOOST_CHECK_EQUAL(kingsRaid.mFirstLeader, "First Leader");
+    BOOST_CHECK_EQUAL(CampaignWorld::getGuildDetailsText(kingsRaid),
+        "Leaders: First Leader and Leader 63\nRaid size: two raids of 30\nOrigin: Origin 63");
+
+    // Another number of wings or story caves, a missing guild or a broken file are rejected and leave the map empty
+    std::istringstream fiveWings(moreyaMap(5, 3, true));
+    BOOST_CHECK(!world.importDefinition(fiveWings));
+    BOOST_CHECK(world.getCaves().empty());
+    BOOST_CHECK(world.getWings().empty());
+    std::istringstream sevenWings(moreyaMap(7, 3, true));
+    BOOST_CHECK(!world.importDefinition(sevenWings));
+    std::istringstream twoLevels(moreyaMap(6, 2, true));
+    BOOST_CHECK(!world.importDefinition(twoLevels));
+    std::istringstream fourLevels(moreyaMap(6, 4, true));
+    BOOST_CHECK(!world.importDefinition(fourLevels));
+    std::istringstream noGuilds(moreyaMap(6, 3, false));
+    BOOST_CHECK(!world.importDefinition(noGuilds));
     std::istringstream broken("{\"size\":[4,2]}");
     BOOST_CHECK(!world.importDefinition(broken));
+}
+
+//! \brief The caves of the map show the progress: the current level is marked, defeated levels stay playable, the
+//! levels after the current one are locked, a bonus cave is hidden until its stone was found, then found and
+//! cleared, and a wing counts its defeated levels; only visible caves can be hit with the mouse
+BOOST_AUTO_TEST_CASE(test_world_map_progress)
+{
+    CampaignWorld world;
+    std::istringstream map(moreyaMap(6, 3, true));
+    BOOST_REQUIRE(world.importDefinition(map));
+    Campaign& campaign = Campaign::getSingleton();
+    std::istringstream definition(moreyaCampaign());
+    BOOST_REQUIRE(campaign.importDefinition(definition));
+    campaign.setProgressPath("");
+    campaign.resetProgress();
+    campaign.stopCampaign();
+    BOOST_REQUIRE_EQUAL(campaign.getNumLevels(), 24u);
+
+    // A new campaign: the first cave is the current one, the other story caves are locked, the bonus caves hidden
+    size_t level = 0;
+    BOOST_CHECK(world.getCaveState(campaign, 0, level) == CampaignCaveState::current);
+    BOOST_CHECK_EQUAL(level, 0u);
+    BOOST_CHECK(world.getCaveState(campaign, 1, level) == CampaignCaveState::locked);
+    BOOST_CHECK(world.getCaveState(campaign, 3, level) == CampaignCaveState::hidden);
+    BOOST_CHECK_EQUAL(level, 3u);
+    BOOST_CHECK(world.getCaveState(campaign, 23, level) == CampaignCaveState::hidden);
+    BOOST_CHECK(world.getCaveState(campaign, 24, level) == CampaignCaveState::hidden);
+    BOOST_CHECK_EQUAL(level, 24u);
+    BOOST_CHECK_EQUAL(world.findCurrentCave(campaign), 0u);
+    BOOST_CHECK_EQUAL(world.getDefeatedInWing(campaign, 1), 0u);
+
+    // The stone of wing 1 is found in its first level, then that level is won
+    campaign.startLevel(0);
+    BOOST_CHECK(campaign.discoverBonusLevel("campaign/W1B.level"));
+    BOOST_CHECK(campaign.onLevelWon());
+    BOOST_CHECK(world.getCaveState(campaign, 0, level) == CampaignCaveState::defeated);
+    BOOST_CHECK(world.getCaveState(campaign, 1, level) == CampaignCaveState::current);
+    BOOST_CHECK(world.getCaveState(campaign, 2, level) == CampaignCaveState::locked);
+    BOOST_CHECK(world.getCaveState(campaign, 3, level) == CampaignCaveState::bonusFound);
+    BOOST_CHECK(world.getCaveState(campaign, 7, level) == CampaignCaveState::hidden);
+    BOOST_CHECK_EQUAL(world.findCurrentCave(campaign), 1u);
+    BOOST_CHECK_EQUAL(world.getDefeatedInWing(campaign, 1), 1u);
+    // A defeated level can be played again
+    BOOST_CHECK(campaign.isUnlocked(0));
+
+    // The bonus cave is cleared; it does not count for the wing and does not move the current level
+    campaign.startLevel(3);
+    BOOST_CHECK(campaign.onLevelWon());
+    BOOST_CHECK(world.getCaveState(campaign, 3, level) == CampaignCaveState::bonusCleared);
+    BOOST_CHECK_EQUAL(world.findCurrentCave(campaign), 1u);
+    BOOST_CHECK_EQUAL(world.getDefeatedInWing(campaign, 1), 1u);
+
+    // The whole wing is defeated, the first cave of wing 2 is the current one
+    campaign.startLevel(1);
+    BOOST_CHECK(campaign.onLevelWon());
+    campaign.startLevel(2);
+    BOOST_CHECK(campaign.onLevelWon());
+    BOOST_CHECK_EQUAL(world.getDefeatedInWing(campaign, 1), 3u);
+    BOOST_CHECK_EQUAL(world.getDefeatedInWing(campaign, 2), 0u);
+    BOOST_CHECK_EQUAL(world.findCurrentCave(campaign), 4u);
+    BOOST_CHECK(world.getCaveState(campaign, 4, level) == CampaignCaveState::current);
+
+    // Hit test with the states: a visible cave is hit within its marker, a hidden bonus cave never
+    std::vector<CampaignCaveState> states;
+    for(size_t i = 0; i < world.getCaves().size(); ++i)
+        states.push_back(world.getCaveState(campaign, i, level));
+    BOOST_CHECK_EQUAL(world.getCaveAt(120.0f, 50.0f, states), 0u);
+    BOOST_CHECK_EQUAL(world.getCaveAt(124.0f, 53.0f, states), 0u);
+    BOOST_CHECK_EQUAL(world.getCaveAt(127.0f, 50.0f, states), 24u);
+    BOOST_CHECK_EQUAL(world.getCaveAt(120.0f, 80.0f, states), 3u);
+    BOOST_CHECK_EQUAL(world.getCaveAt(220.0f, 80.0f, states), 24u);
+    BOOST_CHECK_EQUAL(world.getCaveAt(260.0f, 50.0f, states), 6u);
+
+    // Every story level won: no current cave and no guild in front of the gate
+    for(size_t i = 4; i < campaign.getNumLevels(); ++i)
+    {
+        if(campaign.getLevel(i).mBonus)
+            continue;
+        campaign.startLevel(i);
+        BOOST_CHECK(campaign.onLevelWon());
+    }
+    BOOST_CHECK(campaign.isFinished());
+    BOOST_CHECK_EQUAL(world.findCurrentCave(campaign), 24u);
+    for(uint32_t wing = 1; wing <= 6; ++wing)
+        BOOST_CHECK_EQUAL(world.getDefeatedInWing(campaign, wing), 3u);
+    campaign.stopCampaign();
 }
 
 //! \brief Every level starts fresh: no creature comes along any more. A kept creature of an older progress file is

@@ -412,6 +412,13 @@ size_t Campaign::findLevelByProvince(const std::string& province) const
     return mLevels.size();
 }
 
+//! \brief Finds a level by its file name for callers that do not hold the mutex.
+size_t Campaign::findLevelByFile(const std::string& file) const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return findLevelByFileNoLock(file);
+}
+
 bool Campaign::isCompleted(size_t index) const
 {
     std::lock_guard<std::mutex> lock(mMutex);

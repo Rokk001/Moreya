@@ -21,11 +21,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
-#include <map>
 #include <string>
 #include <vector>
 
-//! \brief A rectangle in pixels of the world map image.
+class Campaign;
+
+//! \brief A rectangle in pixels of the campaign map image.
 struct CampaignWorldRect
 {
     //! \brief Creates an empty rectangle at the origin
@@ -40,75 +41,169 @@ struct CampaignWorldRect
     int mHeight;
 };
 
-//! \brief One province of the world map: how to find it in the id map and
-//! which image layers show it.
-struct CampaignWorldProvince
+//! \brief The guild that raids a story level of Moreya: shown in front of the gate while the level is the
+//! current one, and in the tooltip of its cave.
+struct CampaignWorldGuild
 {
-    //! \brief Creates a province without a mask colour and without layers
-    CampaignWorldProvince():
-        mMaskRed(0), mMaskGreen(0), mMaskBlue(0), mLayerX(0), mLayerY(0), mLiftX(0), mLiftY(0)
+    //! \brief Creates a guild without name that sends one group of no member
+    CampaignWorldGuild():
+        mGroups(0), mSize(0), mRaid(false)
     {
     }
 
-    std::string mId;
+    //! Name of the guild, shown with its banner
     std::string mName;
-    uint8_t mMaskRed;
-    uint8_t mMaskGreen;
-    uint8_t mMaskBlue;
-    //! Layer image file names, relative to the campaign art directory
-    std::string mLayerLocked;
-    std::string mLayerAvailable;
-    std::string mLayerConquered;
-    std::string mLayerLift;
-    //! Where the state layers and the lift layer are drawn in map pixels
-    int mLayerX;
-    int mLayerY;
-    int mLiftX;
-    int mLiftY;
+    //! The named leader of the raid (with the last group or raid of a level with two)
+    std::string mLeader;
+    //! Leader of the first raid when the two raids of a level have different leaders; empty otherwise
+    std::string mFirstLeader;
+    //! Origin of the guild, shown with its banner
+    std::string mOrigin;
+    //! Number of groups or raids (1 or 2)
+    uint32_t mGroups;
+    //! Number of members of each group or raid
+    uint32_t mSize;
+    //! True for raids, false for groups
+    bool mRaid;
+    //! Banner image, relative to the campaign art directory
+    std::string mBanner;
+    //! Leader portrait image, relative to the campaign art directory
+    std::string mPortrait;
 };
 
-//! \brief A bonus site marker of the world map. The position is the centre of the icons.
-struct CampaignWorldSite
+//! \brief One cave of the campaign map: a story level (with the guild that raids it) or the bonus cave of a wing.
+struct CampaignWorldCave
 {
-    //! \brief Creates a bonus site at the origin
-    CampaignWorldSite():
-        mX(0), mY(0)
+    //! \brief Creates a story cave of no wing at the origin
+    CampaignWorldCave():
+        mWing(0), mBonus(false), mX(0), mY(0), mSize(0)
     {
     }
 
-    std::string mId;
-    std::string mName;
-    std::string mHost;
+    //! Level file as in the campaign definition, relative to the "levels" directory
+    std::string mFile;
+    //! Wing (1 to 6) the cave belongs to
+    uint32_t mWing;
+    //! True for the bonus cave of the wing
+    bool mBonus;
+    //! Centre of the cave marker in map pixels
     int mX;
     int mY;
-    std::string mIconHidden;
-    std::string mIconFound;
-    std::string mIconDone;
+    //! Width and height of the cave marker in map pixels
+    int mSize;
+    //! Where the name of the level is written in map pixels; empty for a bonus cave, whose name is in its tooltip
+    CampaignWorldRect mLabel;
+    //! The guild that raids the level; empty for a bonus cave
+    CampaignWorldGuild mGuild;
 };
 
-//! \brief The layout of the campaign world map (gui/campaign/campaign-world.json)
-//! plus the id map used to find the province under a map pixel.
+//! \brief One wing of Moreya on the campaign map: its name, its place and where its progress is shown.
+struct CampaignWorldWing
+{
+    //! \brief Creates a wing without number and name
+    CampaignWorldWing():
+        mNumber(0), mSealX(0), mSealY(0), mSealSize(0)
+    {
+    }
+
+    //! Number of the wing, 1 to 6
+    uint32_t mNumber;
+    //! Name of the wing
+    std::string mName;
+    //! Area of the wing on the map in map pixels
+    CampaignWorldRect mArea;
+    //! Where the wing name and its progress are written
+    CampaignWorldRect mLabel;
+    //! Centre of the seal shown once all story levels of the wing are defeated
+    int mSealX;
+    int mSealY;
+    //! Width and height of the seal in map pixels
+    int mSealSize;
+};
+
+//! \brief Where the guild of the current level stands in front of the gate, in map pixels.
+struct CampaignWorldGuildPanel
+{
+    //! The whole panel
+    CampaignWorldRect mArea;
+    //! The banner of the guild
+    CampaignWorldRect mBanner;
+    //! The portrait of the leader
+    CampaignWorldRect mPortrait;
+    //! The name of the guild
+    CampaignWorldRect mName;
+    //! Leader, raid size and origin
+    CampaignWorldRect mDetails;
+};
+
+//! \brief Images of the cave markers in their states, relative to the campaign art directory.
+struct CampaignWorldIcons
+{
+    std::string mLocked;
+    std::string mCurrent;
+    std::string mDefeated;
+    std::string mBonusFound;
+    std::string mBonusCleared;
+    std::string mWingDefeated;
+    std::string mHover;
+};
+
+//! \brief State of a cave on the campaign map.
+enum class CampaignCaveState
+{
+    //! A bonus cave whose hidden stone was not found yet: not on the map
+    hidden,
+    //! A story level that is not reached yet
+    locked,
+    //! The story level the keeper defends now
+    current,
+    //! A story level that was won; it can be played again
+    defeated,
+    //! A bonus cave that was found and not cleared yet
+    bonusFound,
+    //! A bonus cave that was cleared; it can be played again
+    bonusCleared
+};
+
+//! \brief The campaign map of Moreya (gui/campaign/campaign-world.json): 6 wings with 3 story level caves and one
+//! bonus cave each, the gate with the guild of the current level in front of it, the title and the progress panel.
+//! There are no surface regions on the map any more.
 class CampaignWorld
 {
 public:
-    //! \brief Creates an empty world: no provinces and no id map
+    //! Number of wings the map must have
+    static const uint32_t NUM_WINGS = 6;
+    //! Number of story level caves of every wing
+    static const uint32_t STORY_CAVES_PER_WING = 3;
+
+    //! \brief Creates an empty map: no wing and no cave
     CampaignWorld();
 
-    //! \brief Reads the JSON description. Returns false if it is invalid or has no province.
+    //! \brief Reads the JSON description. Returns false if it is invalid or does not have exactly 6 wings in
+    //! order, each with 3 story caves with a guild and one bonus cave.
     bool importDefinition(std::istream& is);
 
-    //! \brief Width of the world map image in pixels
+    //! \brief Width of the map image in pixels
     int getWidth() const
     { return mWidth; }
-    //! \brief Height of the world map image in pixels
+    //! \brief Height of the map image in pixels
     int getHeight() const
     { return mHeight; }
-    //! \brief The provinces of the map
-    const std::vector<CampaignWorldProvince>& getProvinces() const
-    { return mProvinces; }
-    //! \brief The bonus sites of the map
-    const std::vector<CampaignWorldSite>& getSites() const
-    { return mSites; }
+    //! \brief The map image, relative to the campaign art directory
+    const std::string& getBaseImage() const
+    { return mBaseImage; }
+    //! \brief The wings in the order 1 to 6
+    const std::vector<CampaignWorldWing>& getWings() const
+    { return mWings; }
+    //! \brief The caves: per wing its 3 story caves, then its bonus cave
+    const std::vector<CampaignWorldCave>& getCaves() const
+    { return mCaves; }
+    //! \brief Images of the cave markers
+    const CampaignWorldIcons& getIcons() const
+    { return mIcons; }
+    //! \brief Where the guild of the current level is shown in front of the gate
+    const CampaignWorldGuildPanel& getGuildPanel() const
+    { return mGuildPanel; }
     //! \brief Where the progress panel is drawn in map pixels
     const CampaignWorldRect& getProgressPanel() const
     { return mProgressPanel; }
@@ -116,25 +211,39 @@ public:
     const CampaignWorldRect& getTitleCartouche() const
     { return mTitleCartouche; }
 
-    //! \brief Index of the province with that id, or the number of provinces if none.
-    size_t findProvince(const std::string& id) const;
+    //! \brief Index of the cave of that level file, or the number of caves if none.
+    size_t findCave(const std::string& file) const;
+    //! \brief Index of the cave whose marker is at the map pixel, or the number of caves if there is none.
+    //! Hidden bonus caves are not on the map, so the caller passes the states of the caves (one per cave).
+    size_t getCaveAt(float x, float y, const std::vector<CampaignCaveState>& states) const;
 
-    //! \brief Sets the id map: width x height pixels of 3 bytes (red, green, blue).
-    void setIdMap(int width, int height, const std::vector<uint8_t>& rgb);
-    //! \brief Index of the province at the map pixel, or the number of provinces if there is none.
-    size_t getProvinceAt(int x, int y) const;
+    //! \brief State of the cave with the campaign's progress. level is set to the campaign level of the cave, or
+    //! to the number of levels if the campaign has no level with its file (such a cave is locked or hidden).
+    CampaignCaveState getCaveState(const Campaign& campaign, size_t cave, size_t& level) const;
+    //! \brief Number of story caves of the wing whose level was won
+    uint32_t getDefeatedInWing(const Campaign& campaign, uint32_t wing) const;
+    //! \brief Index of the cave of the current story level, or the number of caves when the campaign is finished
+    //! or its current level has no cave.
+    size_t findCurrentCave(const Campaign& campaign) const;
+
+    //! \brief The raid size as shown to the player, e.g. "one group of 5" or "two raids of 40"
+    static std::string getRaidSizeText(const CampaignWorldGuild& guild);
+    //! \brief The lines shown under the guild name: leader (or both leaders), raid size and origin
+    static std::string getGuildDetailsText(const CampaignWorldGuild& guild);
 
 private:
     int mWidth;
     int mHeight;
-    std::vector<CampaignWorldProvince> mProvinces;
-    std::vector<CampaignWorldSite> mSites;
+    std::string mBaseImage;
+    std::vector<CampaignWorldWing> mWings;
+    std::vector<CampaignWorldCave> mCaves;
+    CampaignWorldIcons mIcons;
+    CampaignWorldGuildPanel mGuildPanel;
     CampaignWorldRect mProgressPanel;
     CampaignWorldRect mTitleCartouche;
-    std::map<uint32_t, size_t> mProvinceByMask;
-    int mIdMapWidth;
-    int mIdMapHeight;
-    std::vector<uint8_t> mIdMap;
+
+    //! \brief Forgets everything read before
+    void clear();
 };
 
 #endif // CAMPAIGNWORLD_H
