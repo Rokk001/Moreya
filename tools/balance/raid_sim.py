@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Raid simulation runner: plays the raid test level headless with the real game and the real config.
+"""Raid simulation runner: plays the raid test level or a campaign level headless with the real game and config.
 
 The game binary has a headless raid simulation mode (--raid-sim, source/utils/RaidSimulation.h): it loads a level with
 a [Raid] section on a server without window, network or client, runs the real game turns as fast as it can with a
 fixed random seed and writes one line per turn (raid and keeper state). This script
   - builds level variants from levels/skirmish/TestRaid.level (raid size, groups, hero level and composition, keeper
     force, countdown, interval, escape share), written to the work folder only,
+  - or, with --level <map>, from a story level of levels/campaign (its countdown, interval and escape share, and with
+    --member-level a raid composition after the guild's role emphasis, see campaign_members()); the rest of the level
+    (map, script, phase-1 enemies) stays as it is,
   - builds a data folder per config variant: links to the game data of the build folder and a copy of config/ in which
     the given [GroupCombat] and [Raid] keys of global.cfg are replaced,
   - runs the seeds in parallel, reads the turn lines and computes the measures of a run (see measures()),
@@ -15,7 +18,10 @@ fixed random seed and writes one line per turn (raid and keeper state). This scr
 Usage (from the repository root, after building the game, e.g. in build/r3):
   python tools/balance/raid_sim.py run --exe build/r3/Release/opendungeons-plus.exe --work out/raid-sim \
       --size 10 --hero-level 4 --keeper-count 10 --keeper-level 4 --seeds 1-8 --set GroupCombat.GroupFormingDistance=8
-  python tools/balance/raid_sim.py experiment <name> --exe ... --work ...   (the experiments of the R3 report)
+  python tools/balance/raid_sim.py run --exe build/r3b/opendungeons-plus.exe --work out/raid-sim/w --level Brackenford \
+      --keeper-ai --countdown 100000 --seconds 2400 --seeds 1-8     (phase 1 of a story level played by the keeper AI)
+  python tools/balance/raid_sim.py sweep --exe ... --work ... --level Tinmoor --keeper-ai --countdown 600 \
+      --member-level 3 --leader-offset 2 --share 0.6 --axis member_level --values 2,3,4 --report out/raid-sim/x.jsonl
 """
 
 import argparse
@@ -59,6 +65,52 @@ COMPOSITIONS = {
     "healers": ["tank", "healer", "melee", "healer", "ranged", "healer", "tank", "caster"],
 }
 
+# Role emphasis of the guild of every story level (guild table of the raid plan): the primary roles, the secondary
+# roles ("tank with ranged") and the tank classes of the guild (heavy tanks: no Monks; many Monks: mostly Monks).
+# Roles follow from the fixed skill templates by the rules G3 (Guardian: tank, Healer: healer, other archer and caster
+# templates: ranged or caster, every other template: melee).
+GUILDS = {
+    "Brackenford": (("melee",), (), "tank"),
+    "Coldwell": (("melee",), ("tank",), "tank"),
+    "Ravensledge": (("ranged",), (), "tank"),
+    "Tinmoor": (("tank",), (), "tank"),
+    "Greywater": (("tank",), (), "tank"),
+    "Highcairn": (("tank",), ("ranged",), "tank"),
+    "Lanternhill": (("tank",), ("ranged",), "tank"),
+    "Saltmere": (("tank",), (), "tank"),
+    "HollinFen": (("healer",), (), "tank"),
+    "Cinderhollow": (("tank",), (), "tank"),
+    "Ashcombe": (("tank",), (), "tank"),
+    "Ironbridge": (("tank",), (), "heavy"),
+    "Bellwick": (("tank",), (), "monks"),
+    "Goldspire": (("tank",), ("ranged",), "tank"),
+    "Kingsfall": (("tank",), ("ranged",), "tank"),
+    "VarnsCrossing": (("tank",), (), "tank"),
+    "Wraithwood": (("tank",), ("caster",), "tank"),
+    "HollowmarkCitadel": (("tank",), (), "tank"),
+}
+
+# Class and fixed template of the members of a role, taken in turn (the hero classes of the guild table: Knight, Dwarf
+# and Monk tanks, Adventurer melee, Elf ranged, Wizard caster and healer).
+ROLE_CLASSES = {
+    "tank": [("Knight", "Guardian"), ("Dwarf2", "Guardian"), ("Monk", "Guardian")],
+    "heavy": [("Knight", "Guardian"), ("Dwarf2", "Guardian")],
+    "monks": [("Monk", "Guardian"), ("Monk", "Guardian"), ("Knight", "Guardian")],
+    "melee": [("Adventurer", "Shade"), ("Dwarf1", "Berserker"), ("Adventurer", "Dancer"), ("Knight", "Warlord")],
+    "ranged": [("Elf", "Marksman"), ("Elf", "Hunter"), ("Elf", "Skirmisher")],
+    "healer": [("Wizard", "Healer")],
+    "caster": [("Wizard", "Destroyer"), ("Wizard", "Hexer")],
+}
+
+# Order in which the members that are neither primary nor secondary are spread over the other roles
+OTHER_ROLES = ["melee", "ranged", "healer", "caster", "tank"]
+
+# Role of a fixed template (rules G3, config/creatureSkills.cfg and [GroupCombat] of global.cfg)
+TEMPLATE_ROLES = {"Guardian": "tank", "Protector": "tank", "Healer": "healer", "Marksman": "ranged",
+                  "Hunter": "ranged", "Skirmisher": "ranged", "Destroyer": "caster", "Hexer": "caster"}
+
+CAMPAIGN = REPO / "levels" / "campaign"
+
 GATE = (33, 33)
 # Free dirt tiles near the keeper's heart (5..9) where the keeper force starts, row by row
 KEEPER_AREA = [(x, y) for y in range(11, 21) for x in range(11, 18)]
@@ -88,8 +140,98 @@ def raid_members(size, hero_level, composition, group_id, leader_name):
     return lines
 
 
+def role_counts(size, primary, secondary, share):
+    """Members per role of a group of the size: the primary roles get the share of it (rounded), the secondary roles
+    half of the rest (rounded), the other members are spread over the remaining roles in the order OTHER_ROLES."""
+    counts = {role: 0 for role in ("tank", "melee", "ranged", "healer", "caster")}
+    main = int(round(share * size))
+    for index in range(main):
+        counts[primary[index % len(primary)]] += 1
+    rest = size - main
+    second = int(round(rest / 2.0)) if secondary else 0
+    for index in range(second):
+        counts[secondary[index % len(secondary)]] += 1
+    others = [role for role in OTHER_ROLES if role not in primary and role not in secondary]
+    for index in range(rest - second):
+        counts[others[index % len(others)]] += 1
+    return counts
+
+
+def raid_groups(text):
+    """The groups of the [Raid] section of a level: [(group id, leader name or None, [member fields])]."""
+    block = re.search(r"^\[Raid\]$(.*?)^\[/Raid\]$", text, re.S | re.M).group(1)
+    groups = []
+    for line in block.splitlines():
+        fields = line.split("#")[0].split()
+        if fields and fields[0] == "Group":
+            groups.append((int(fields[1]), None if fields[2] == "-" else fields[2], []))
+        elif fields and fields[0] == "Member":
+            for group in groups:
+                if group[0] == int(fields[1]):
+                    group[2].append(fields)
+    return groups
+
+
+def campaign_members(level_name, text, member_level, leader_offset, share):
+    """Member lines of the raid of a story level after its guild's role emphasis: every group keeps its size and its
+    named leader (class and template as the level has them, level member_level + leader_offset); the other members are
+    member_level and get their roles from role_counts() over the whole group (the leader counted in his role), their
+    classes and templates in turn from ROLE_CLASSES."""
+    primary, secondary, tanks = GUILDS[level_name]
+    lines = []
+    for group_id, leader, members in raid_groups(text):
+        counts = role_counts(len(members), primary, secondary, share)
+        if leader is not None:
+            fields = next(member for member in members if member[4] == leader)
+            lines.append("Member\t%d\t%s\t%d\t%s\t%s" % (group_id, fields[2], member_level + leader_offset, leader,
+                                                         fields[5]))
+            role = TEMPLATE_ROLES.get(fields[5], "melee")
+            if counts[role] > 0:
+                counts[role] -= 1
+            else:
+                largest = max(counts, key=lambda name: counts[name])
+                counts[largest] -= 1
+        for role in ("tank", "melee", "ranged", "caster", "healer"):
+            cycle = ROLE_CLASSES[tanks if role == "tank" else role]
+            for index in range(counts[role]):
+                class_name, template = cycle[index % len(cycle)]
+                lines.append("Member\t%d\t%s\t%d\t-\t%s" % (group_id, class_name, member_level, template))
+    return lines
+
+
+def make_campaign_level(params, folder):
+    """Writes the variant of a story level (countdown, interval, escape share, composition) and returns its path."""
+    text = (CAMPAIGN / ("%s.level" % params["level"])).read_text(encoding="utf-8")
+    block = re.search(r"^\[Raid\]$.*?^\[/Raid\]$", text, re.S | re.M)
+    raid = block.group(0)
+    for key, value in (("Countdown", params["countdown"]), ("Interval", params.get("interval_level")),
+                       ("EscapeShare", params["escape"])):
+        if value is not None:
+            raid = re.sub(r"(?m)^%s\t.*$" % key, "%s\t%s" % (key, fmt(value)), raid, count=1)
+    if params.get("member_level") is not None:
+        members = campaign_members(params["level"], text, int(params["member_level"]), int(params["leader_offset"]),
+                                   float(params["share"]))
+        kept = [line for line in raid.split("\n") if not line.startswith("Member\t")]
+        groups = [line for line in kept if line.startswith("Group\t")]
+        out = [line for line in kept if not line.startswith("Group\t") and line != "[/Raid]"]
+        for group in groups:
+            group_id = group.split("\t")[1]
+            out.append(group)
+            out.extend(line for line in members if line.split("\t")[1] == group_id)
+        out.append("[/Raid]")
+        raid = "\n".join(out)
+    text = text[:block.start()] + raid + text[block.end():]
+    key = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
+    path = folder / ("%s-%s.level" % (params["level"], key))
+    if not path.exists():
+        path.write_text(text, encoding="utf-8", newline="\n")
+    return path
+
+
 def make_level(params, folder):
     """Writes the level variant of the parameters and returns its path."""
+    if params.get("level"):
+        return make_campaign_level(params, folder)
     text = TEMPLATE.read_text(encoding="utf-8")
     groups = params["groups"]
     raid = ["[Raid]", "Gate\t%d\t%d\t0" % GATE, "Seats\t2\t1",
@@ -225,6 +367,12 @@ def run_one(exe, data, level, seed, seconds, keeper_ai, out_file):
         code, output = done.returncode, done.stdout + done.stderr
     except subprocess.TimeoutExpired as error:
         code, output = -9, "timeout: " + str(error)
+    if code != 0:
+        # The error lines of the game log tell why a run failed
+        for log in app_data.rglob("opendungeons.log"):
+            errors = [line for line in log.read_text(encoding="utf-8", errors="replace").splitlines()
+                      if "ERROR" in line or "CRITICAL" in line]
+            output += "\n" + "\n".join(errors[:20])
     shutil.rmtree(app_data, ignore_errors=True)
     return code, time.monotonic() - start, output
 
@@ -361,10 +509,35 @@ def measures(rows, result):
     return out
 
 
+def phase1_measures(rows, out):
+    """Phase 1 of a story level: when the keeper had reached all phase-1 main goals of the level (all main goals but
+    the raid goal) for the first time, the most of them he reached, and his build-up (fighters, claimed tiles, room
+    tiles, mined gold) at the raid's arrival or at the end of the run."""
+    if not rows or "phase1Total" not in rows[0]:
+        return out
+    total = rows[0]["phase1Total"]
+    out["phase1Total"] = total
+    out["phase1Max"] = max(row["phase1Reached"] for row in rows)
+    out["phase1Done"] = next((row["seconds"] for row in rows if total > 0 and row["phase1Reached"] >= total), None)
+    goals = {}
+    for row in rows:
+        reached = int(row["phase1Reached"])
+        for count in range(1, reached + 1):
+            goals.setdefault(count, row["seconds"])
+    out["phase1Steps"] = [goals.get(count) for count in range(1, int(total) + 1)]
+    at = next((row for row in rows if row["arrived"] >= 1), rows[-1])
+    out["fightersAtArrival"] = at["keeperAlive"]
+    out["claimedAtArrival"] = at["claimedTiles"]
+    out["roomTilesAtArrival"] = at["roomTiles"]
+    out["minedAtArrival"] = at["goldMined"]
+    return out
+
+
 def default_params():
     """The parameters of a level variant before the command line changes them."""
     return {"size": 10, "groups": 1, "hero_level": 4, "composition": "all", "keeper_count": 10, "keeper_level": 4,
-            "countdown": 10, "interval": 90, "escape": None, "treasury_gold": None, "treasury_offset": None}
+            "countdown": 10, "interval": 90, "escape": None, "treasury_gold": None, "treasury_offset": None,
+            "level": None, "interval_level": None, "member_level": None, "leader_offset": None, "share": None}
 
 
 def run_batch(exe, work, params, overrides, seeds, seconds=900, keeper_ai=False, jobs=6, quiet=False):
@@ -402,7 +575,7 @@ def run_batch(exe, work, params, overrides, seeds, seconds=900, keeper_ai=False,
                      "keeperAi": keeper_ai, "code": code, "wall": round(wall, 2)}
             if code == 0 and out_file.exists():
                 rows, result = read_turns(out_file)
-                entry["m"] = measures(rows, result)
+                entry["m"] = phase1_measures(rows, measures(rows, result))
             else:
                 entry["error"] = output[-2000:]
             with cache_file.open("a", encoding="utf-8") as handle:
@@ -427,7 +600,8 @@ def summarize(results):
                  "raidRetreats", "groupsFormed", "fleeAt", "goldLost", "raidGoldPeak", "cohesion", "participation",
                  "heartLostShare", "fleeSeconds", "placeDistance", "marchSpread", "decision", "quick", "fled",
                  "mainFight", "treasuryTaken", "treasuryTakenShare", "treasuryHit", "treasuryLeft", "plunderTreasury",
-                 "plunderHeart", "treasuryPlundered", "wall"):
+                 "plunderHeart", "treasuryPlundered", "wall", "phase1Max", "phase1Done", "fightersAtArrival",
+                 "claimedAtArrival", "roomTilesAtArrival", "minedAtArrival"):
         values = [m[name] for m in good if m.get(name) is not None]
         summary[name] = round(statistics.mean(values), 3) if values else None
     return summary
@@ -442,7 +616,7 @@ def parse_overrides(items):
     return overrides
 
 
-def sweep(exe, work, params, overrides, axis, values, seeds, seconds, jobs, report):
+def sweep(exe, work, params, overrides, axis, values, seeds, seconds, jobs, report, keeper_ai=False):
     """Runs one variant per value of the axis (a level parameter or a 'Section.Key' of global.cfg) and writes one
     summary line per value to the report list."""
     for value in values:
@@ -453,7 +627,8 @@ def sweep(exe, work, params, overrides, axis, values, seeds, seconds, jobs, repo
         else:
             variant_params[axis] = value
         started = time.monotonic()
-        results = run_batch(exe, work, variant_params, variant_overrides, seeds, seconds, jobs=jobs, quiet=True)
+        results = run_batch(exe, work, variant_params, variant_overrides, seeds, seconds, keeper_ai, jobs=jobs,
+                            quiet=True)
         summary = summarize(results)
         line = {"axis": axis, "value": value, "params": variant_params, "overrides": variant_overrides,
                 "seeds": "%d-%d" % (seeds[0], seeds[-1]), "summary": summary,
@@ -487,7 +662,8 @@ def main():
     parser.add_argument("--set", action="append", help="Section.Key=Value of global.cfg")
     for name, value in default_params().items():
         parser.add_argument("--" + name.replace("_", "-"), default=value,
-                            type=(str if isinstance(value, str) else float if value is None else type(value)))
+                            type=(str if isinstance(value, str) or name == "level"
+                                  else float if value is None else type(value)))
     args = parser.parse_args()
     params = {name: getattr(args, name) for name in default_params()}
     if args.command == "sweep":
@@ -496,7 +672,7 @@ def main():
                   else value for value in values]
         report = []
         sweep(args.exe.resolve(), args.work.resolve(), params, parse_overrides(args.set), args.axis, values,
-              parse_seeds(args.seeds), args.seconds, args.jobs, report)
+              parse_seeds(args.seeds), args.seconds, args.jobs, report, args.keeper_ai)
         if args.report:
             with args.report.open("a", encoding="utf-8") as handle:
                 for line in report:
