@@ -704,6 +704,9 @@ public:
     //! \brief Returns the words of a key of the [GroupCombat] block of global.cfg (the path and skill group lists of
     //! the role rules); logs an error and returns an empty list when the key is unknown.
     std::vector<std::string> getGroupCombatConfigWords(const std::string& param) const;
+    //! \brief Returns the value of a key of the [Raid] block of global.cfg (countdown, interval between the raid groups,
+    //! escape share of a raid leader, plundering, gate); logs an error and returns 0 when the key is unknown.
+    double getRaidConfigDouble(const std::string& param) const;
     //! \brief Same as getRoomConfigString but returns defaultValue instead of logging an error when the
     //! parameter is not in the configuration file (or has no value).
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
@@ -905,6 +908,8 @@ private:
     bool loadGlobalRampageConfig(std::stringstream& configFile);
     //! \brief Reads the [GroupCombat] block of global.cfg into mGroupCombatConfig: one key and the rest of its line.
     bool loadGlobalGroupCombatConfig(std::stringstream& configFile);
+    //! \brief Reads the [Raid] block of global.cfg into mRaidConfig.
+    bool loadGlobalRaidConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
     //! \brief Loads equipment definitions and their numeric balance settings.
     bool loadEquipements(const std::string& fileName);
@@ -1181,6 +1186,8 @@ private:
     std::map<std::string, double> mRampageConfig;
     //! \brief The keys of the [GroupCombat] block of global.cfg with the text of their value
     std::map<std::string, std::string> mGroupCombatConfig;
+    //! \brief The keys of the [Raid] block of global.cfg
+    std::map<std::string, double> mRaidConfig;
     std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;

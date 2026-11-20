@@ -30,6 +30,7 @@
 #include "entities/Tile.h"
 #include "game/Campaign.h"
 #include "game/CombatGroupManager.h"
+#include "game/RaidManager.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillType.h"
@@ -206,7 +207,8 @@ bool areGroundPointsConnected(GameMap& gameMap, const LevelScriptCondition& cond
     return false;
 }
 
-//! \brief Evaluates gameplay conditions, living captivity and read-only objective presentation predicates.
+//! \brief Evaluates gameplay conditions, living captivity and read-only objective presentation predicates, and the
+//! state of the raid.
 //! \param gameMap The server game map.
 //! \param script The level script (flags, timers, regions).
 //! \param cond The condition to test.
@@ -563,6 +565,8 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             return script.wasRegionAttacked(cond.mSeatId, static_cast<int32_t>(cond.mNumber), cond.mName);
         case LevelScriptConditionType::crossedRegion:
             return script.wasRegionCrossed(cond.mSeatId, cond.mName, cond.mName2, cond.mAfterTrigger);
+        case LevelScriptConditionType::raidState:
+            return gameMap.getRaid().isStateMet(cond.mName, static_cast<uint32_t>(cond.mNumber));
         case LevelScriptConditionType::deliveredStone:
             for(RenderedMovableEntity* entity : gameMap.getRenderedMovableEntities())
             {
@@ -1327,7 +1331,8 @@ void removeCreature(GameMap& gameMap, const std::string& name)
 }
 
 //! \brief Executes actions, mission door locks, campaign shards and identified goal updates without objective notices; stone attachment requires a living carrier.
-//! The raid registry actions register the named creatures and the leader of a raid group.
+//! The raid registry actions register the named creatures and the leader of a raid group. raidopen opens the Moreya
+//! gate early and raidcountdown sets the time until the next raid group.
 void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action,
     const std::string& sourceTrigger, int64_t sourceAction)
 {
@@ -1502,6 +1507,12 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
 
             break;
         }
+        case LevelScriptActionType::raidOpen:
+            gameMap.getRaid().openGateEarly(-1);
+            break;
+        case LevelScriptActionType::raidCountdown:
+            gameMap.getRaid().setSecondsToNextGroup(static_cast<double>(action.mNumber));
+            break;
     }
 }
 
@@ -1789,4 +1800,55 @@ bool LevelScriptRunner::doCreatureOrder(Creature& creature)
     }
 
     return false;
+}
+
+//! \brief The factor of the speed action run (RUN_SPEED_FACTOR).
+double LevelScriptRunner::getRunSpeedFactor()
+{
+    return RUN_SPEED_FACTOR;
+}
+
+//! \brief Walks to the nearest reachable tile of the list (the same walk as the orders of the level script).
+bool LevelScriptRunner::walkToNearestTile(Creature& creature, const std::vector<Tile*>& tiles)
+{
+    if(tiles.empty() || (creature.getGameMap() == nullptr))
+        return false;
+
+    Tile* myTile = creature.getPositionTile();
+    if(myTile == nullptr)
+        return false;
+
+    return walkToNearest(creature, myTile, tiles);
+}
+
+//! \brief The killplayer rule: near a tile of the seat's dungeon heart the creature stays, else it walks to the
+//! nearest one.
+bool LevelScriptRunner::walkToDungeonHeart(Creature& creature, int32_t seatId)
+{
+    GameMap* gameMap = creature.getGameMap();
+    if(gameMap == nullptr)
+        return false;
+
+    Tile* myTile = creature.getPositionTile();
+    Seat* targetSeat = gameMap->getSeatById(seatId);
+    if((myTile == nullptr) || (targetSeat == nullptr))
+        return false;
+
+    std::vector<Tile*> tiles;
+    for(Room* room : gameMap->getRoomsByTypeAndSeat(RoomType::dungeonTemple, targetSeat))
+    {
+        for(Tile* tile : room->getCoveredTiles())
+            tiles.push_back(tile);
+    }
+    if(tiles.empty())
+        return false;
+
+    // Near the heart the creature stays and fights what comes
+    for(Tile* tile : tiles)
+    {
+        if(isNear(myTile, tile, NEAR_HEART_DISTANCE))
+            return true;
+    }
+
+    return walkToNearest(creature, myTile, tiles);
 }

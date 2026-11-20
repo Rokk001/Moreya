@@ -135,7 +135,7 @@ CombatGroupManager::CombatGroupManager(GameMap& gameMap) :
 {
 }
 
-//! \brief Forgets the raid registry, the groups, the aggro and the transient state.
+//! \brief Forgets the raid registry, the groups, the aggro, the detached raid members and the transient state.
 void CombatGroupManager::clear()
 {
     mRaidMembers.clear();
@@ -147,6 +147,7 @@ void CombatGroupManager::clear()
     mPlaces.clear();
     mAggroTargets.clear();
     mTemplateFailures.clear();
+    mDetachedRaidMembers.clear();
 }
 
 //! \brief Adds or changes the entry of a raid member; a raid group id of 0 is refused.
@@ -182,6 +183,21 @@ void CombatGroupManager::setRaidLeader(uint32_t raidGroupId, const std::string& 
         mRaidLeaders[raidGroupId] = leaderName;
 
     OD_LOG_INF("Raid leader of raid group " + std::to_string(raidGroupId) + " is " + nameOrDash(leaderName));
+}
+
+//! \brief Adds the raid member to the detached members or removes it from them.
+void CombatGroupManager::setRaidMemberDetached(const std::string& creatureName, bool detached)
+{
+    if(detached)
+        mDetachedRaidMembers.insert(creatureName);
+    else
+        mDetachedRaidMembers.erase(creatureName);
+}
+
+//! \brief Looks the creature up in the detached raid members.
+bool CombatGroupManager::isRaidMemberDetached(const std::string& creatureName) const
+{
+    return mDetachedRaidMembers.count(creatureName) > 0;
 }
 
 //! \brief Looks the creature up in the raid registry.
@@ -552,7 +568,7 @@ void CombatGroupManager::removeEndedGroups(const std::map<std::string, Creature*
     }
 }
 
-//! \brief Runs the group rules once per turn (see the header).
+//! \brief Runs the group rules once per turn (see the header). A detached raid member is left out of its raid group.
 void CombatGroupManager::update()
 {
     if(isEmpty())
@@ -597,7 +613,8 @@ void CombatGroupManager::update()
             continue;
         }
 
-        if(isActiveRaidMember(*creature))
+        // A detached member (a raid leader fleeing to the gate) no longer takes part in its raid group
+        if(isActiveRaidMember(*creature) && !isRaidMemberDetached(it->first))
             raid[it->second.mRaidGroupId].push_back(creature);
     }
     for(const std::string& name : wonOver)

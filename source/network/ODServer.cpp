@@ -41,6 +41,7 @@
 #include "game/HeartHealthRing.h"
 #include "giftboxes/GiftBoxBonus.h"
 #include "game/Player.h"
+#include "game/RaidManager.h"
 #include "game/CreaturePanelData.h"
 #include "game/TrapProductionData.h"
 #include "game/Skill.h"
@@ -1198,7 +1199,8 @@ bool refuseIfDefeated(Player* player)
 }
 }
 
-//! \brief Validates and handles requests received from a connected player.
+//! \brief Validates and handles requests received from a connected player, the early opening of the raid gate
+//! included.
 //! \brief Processes one client notification, including Dungeonbook subscriptions. A player who possesses a creature
 //! cannot save the game.
 bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
@@ -2430,6 +2432,16 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             clientSocket->setDungeonbookRosterOpen(open);
             if(open)
                 notifyDungeonbookRoster(gameMap, clientSocket->getPlayer());
+            break;
+        }
+
+        case ClientNotificationType::askOpenRaidGate:
+        {
+            // Only the attacked keeper may open the gate early (RaidManager checks the seat)
+            if(mServerState != ServerState::StateGame || clientSocket->getPlayer() == nullptr ||
+               clientSocket->getPlayer()->getSeat() == nullptr)
+                break;
+            gameMap->getRaid().openGateEarly(clientSocket->getPlayer()->getSeat()->getId());
             break;
         }
 

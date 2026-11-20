@@ -41,6 +41,7 @@
 #include "entities/ItemInstance.h"
 #include "game/Campaign.h"
 #include "game/CombatGroupManager.h"
+#include "game/RaidManager.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -329,7 +330,7 @@ struct AstarOpenItemOrder
 };
 
 
-//! \brief Creates an empty map of the server or of a client with its level script and its combat groups.
+//! \brief Creates an empty map of the server or of a client with its level script, its combat groups and its raid.
 GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         TileContainer(isServerGameMap ? 15 : 0),
         everVisitedFlagPool(nullptr),
@@ -345,6 +346,10 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mTimeLimitSentSeconds(-1),
         mWaveCountdownSentSeconds(-1),
         mWaveCountdownToSend(-1),
+        mRaidCountdownSentSeconds(-1),
+        mRaidCountdownToSend(-1),
+        mRaidGateClosedSent(0),
+        mRaidGateClosedToSend(0),
         mWallTorchesDirty(true),
         mWallTorchesVersion(0),
         mLocalPlayer(nullptr),
@@ -367,6 +372,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
 {
     mLevelScript.reset(new LevelScript());
     mCombatGroups.reset(new CombatGroupManager(*this));
+    mRaid.reset(new RaidManager(*this));
     resetUniqueNumbers();
 }
 
@@ -397,6 +403,18 @@ const CombatGroupManager& GameMap::getCombatGroups() const
     return *mCombatGroups;
 }
 
+//! \brief Returns the raid of the map.
+RaidManager& GameMap::getRaid()
+{
+    return *mRaid;
+}
+
+//! \brief Returns the raid of the map, read only.
+const RaidManager& GameMap::getRaid() const
+{
+    return *mRaid;
+}
+
 std::string GameMap::serverStr()
 {
     if (mIsServerGameMap)
@@ -414,13 +432,15 @@ bool GameMap::isInEditorMode() const
 }
 
 //! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations. The combat groups
-//! start empty and take the raid registry and groups of the loaded file.
+//! start empty and take the raid registry and groups of the loaded file, and so does the raid.
 bool GameMap::loadLevel(const std::string& levelFilepath)
 {
     // Relationship states of an earlier load that were never applied are dropped
     mPendingRelationshipStates.clear();
     // The raid registry and the combat groups come from the level (or saved game) that is loaded now
     mCombatGroups->clear();
+    // The raid comes from the level (or saved game) that is loaded now
+    mRaid->clear();
 
     // We reset the creature definitions
     clearClasses();
@@ -505,7 +525,7 @@ void GameMap::setAllFullnessAndNeighbors()
     }
 }
 
-//! \brief Clears map entities, definitions and ephemeral item ownership state, and the combat groups.
+//! \brief Clears map entities, definitions and ephemeral item ownership state, the combat groups and the raid.
 void GameMap::clearAll()
 {
     if(mNodeType == NodeType::MTILES_NODE)
@@ -530,6 +550,7 @@ void GameMap::clearAll()
         clearGoalsForAllSeats();
         mLevelScript->clear();
         mCombatGroups->clear();
+        mRaid->clear();
         clearSeats();
         mLocalPlayer = nullptr;
         clearPlayers();
@@ -552,6 +573,10 @@ void GameMap::clearAll()
         mTimeLimitSentSeconds = -1;
         mWaveCountdownSentSeconds = -1;
         mWaveCountdownToSend = -1;
+        mRaidCountdownSentSeconds = -1;
+        mRaidCountdownToSend = -1;
+        mRaidGateClosedSent = 0;
+        mRaidGateClosedToSend = 0;
         mWallTorches.clear();
         mWallTorchesDirty = true;
         ++mWallTorchesVersion;
@@ -2108,8 +2133,8 @@ void GameMap::doPlayerAITurn(double timeSinceLastTurn)
     mAiManager.doTurn(timeSinceLastTurn);
 }
 
-//! \brief Updates upkeep, including payday notices for human and AI keepers. On the server the combat groups are
-//! decided before the creatures act.
+//! \brief Updates upkeep, including payday notices for human and AI keepers. On the server the raid and then the
+//! combat groups are decided before the creatures act.
 unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
 {
     Tile *tempTile;
@@ -2283,6 +2308,10 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
             refreshWorkerTargets(*seat);
             WorkerAllocation::refreshFixed(*seat);
         }
+
+        // The raid runs its countdown and lets its groups come before the combat groups are decided (nothing without
+        // a raid)
+        mRaid->update();
 
         // The combat groups are decided with this turn's vision, before the creatures act (nothing without a raid)
         mCombatGroups->update();
@@ -4788,13 +4817,18 @@ void GameMap::setScriptWaveCountdown(int64_t seconds)
     mLevelScript->setWaveCountdownSeconds(elapsedSeconds + seconds);
 }
 
+//! \brief Sends the time limit, the wave countdown and the raid countdown with the state of the gate to every human
+//! player when one of them changed.
 void GameMap::sendTimeLimit(int32_t remainingSeconds)
 {
-    if((remainingSeconds == mTimeLimitSentSeconds) && (mWaveCountdownToSend == mWaveCountdownSentSeconds))
+    if((remainingSeconds == mTimeLimitSentSeconds) && (mWaveCountdownToSend == mWaveCountdownSentSeconds) &&
+       (mRaidCountdownToSend == mRaidCountdownSentSeconds) && (mRaidGateClosedToSend == mRaidGateClosedSent))
         return;
 
     mTimeLimitSentSeconds = remainingSeconds;
     mWaveCountdownSentSeconds = mWaveCountdownToSend;
+    mRaidCountdownSentSeconds = mRaidCountdownToSend;
+    mRaidGateClosedSent = mRaidGateClosedToSend;
     for(Player* player : getPlayers())
     {
         if(!player->getIsHuman())
@@ -4804,11 +4838,14 @@ void GameMap::sendTimeLimit(int32_t remainingSeconds)
             ServerNotificationType::timeLimit, player);
         serverNotification->mPacket << remainingSeconds;
         serverNotification->mPacket << mWaveCountdownToSend;
+        serverNotification->mPacket << mRaidCountdownToSend;
+        serverNotification->mPacket << mRaidGateClosedToSend;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
 
-//! \brief Applies existing deadlines without turning a completed grouped campaign into a later defeat.
+//! \brief Applies existing deadlines without turning a completed grouped campaign into a later defeat. The countdown
+//! of the raid is sent with them.
 void GameMap::checkGameDuration()
 {
     // The wave countdown of the script is shown beside the other displays, whatever else runs;
@@ -4821,6 +4858,11 @@ void GameMap::checkGameDuration()
             - static_cast<double>(mTurnNumber) / ODApplication::turnsPerSecond;
     }
     mWaveCountdownToSend = (waveCountdownLeft > 0.0) ? static_cast<int32_t>(std::ceil(waveCountdownLeft)) : -1;
+
+    // The countdown of the raid (to the first group while the gate is closed, then to the next group) is sent the
+    // same way
+    mRaidCountdownToSend = mRaid->getCountdownToShow();
+    mRaidGateClosedToSend = mRaid->isGateClosed() ? 1 : 0;
 
     // The limit of a script action wins over the game duration of the game settings.
     // Both count game time, not real time, so the game speed does not change them.

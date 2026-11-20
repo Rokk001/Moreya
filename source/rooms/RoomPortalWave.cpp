@@ -116,6 +116,7 @@ static const double CLAIMED_VALUE_PER_TILE = 1.0;
 //! About 30 seconds at 1.4 turns per second
 static const int64_t HEROES_COMING_COOLDOWN_TURNS = 42;
 
+//! \brief Creates a hero portal without waves that is no Moreya gate.
 RoomPortalWave::RoomPortalWave(GameMap* gameMap) :
         Room(gameMap),
         mSpawnCountdown(0),
@@ -127,7 +128,12 @@ RoomPortalWave::RoomPortalWave(GameMap* gameMap) :
         mTargetDungeon(nullptr),
         mIsFirstUpkeep(true),
         mStrategy(RoomPortalWaveStrategy::closestDungeon),
-        mRangeTilesAttack(-1)
+        mRangeTilesAttack(-1),
+        mIsMoreyaGate(false),
+        mGateRotation(0.0),
+        mGateOpen(false),
+        mPortcullisSink(0.0),
+        mPortcullisObject(nullptr)
 {
    setMeshName("");
 }
@@ -213,15 +219,28 @@ void RoomPortalWave::updateActiveSpots(GameMap* gameMap)
     }
 }
 
+//! \brief Recreates the central model: the portal, or the Moreya gate with its portcullis when the room is a gate.
 void RoomPortalWave::updatePortalPosition()
 {
     // Delete all previous rooms meshes and recreate a central one.
     removeAllBuildingObjects();
     mPortalObject = nullptr;
+    mPortcullisObject = nullptr;
 
     Tile* centralTile = getCentralTile();
     if (centralTile == nullptr)
         return;
+
+    if(mIsMoreyaGate)
+    {
+        // The gate stands on the central tile; its portcullis is a separate model at the same place, kept under
+        // another tile of the room, so that it can sink into the floor when the gate opens
+        mPortalObject = new PersistentObject(getGameMap(), *this, "MoreyaGate",
+            centralTile, static_cast<Ogre::Real>(mGateRotation), false, 1.0f, "", true);
+        addBuildingObject(centralTile, mPortalObject);
+        setMoreyaGateOpen(mGateOpen, mPortcullisSink);
+        return;
+    }
 
     // The hero portal reuses the portal model until it gets a model of its own
     mPortalObject = new PersistentObject(getGameMap(), *this, "PortalObject",
@@ -229,18 +248,69 @@ void RoomPortalWave::updatePortalPosition()
     addBuildingObject(centralTile, mPortalObject);
 }
 
+//! \brief Makes the room the Moreya gate and shows the gate model instead of the portal.
+void RoomPortalWave::setMoreyaGate(double rotationDegrees, bool open, double portcullisSink)
+{
+    mIsMoreyaGate = true;
+    mGateRotation = rotationDegrees;
+    mGateOpen = open;
+    mPortcullisSink = portcullisSink;
+    OD_LOG_INF("RoomPortalWave=" + getName() + " is the Moreya gate, open=" + Helper::toString(open ? 1 : 0));
+    updatePortalPosition();
+}
+
+//! \brief Puts the portcullis model at the floor (closed) or portcullisSink below it (open).
+void RoomPortalWave::setMoreyaGateOpen(bool open, double portcullisSink)
+{
+    if(!mIsMoreyaGate)
+        return;
+
+    mGateOpen = open;
+    mPortcullisSink = portcullisSink;
+    Tile* centralTile = getCentralTile();
+    Tile* keyTile = getPortcullisKeyTile();
+    if((centralTile == nullptr) || (keyTile == nullptr))
+        return;
+
+    const Ogre::Real height = open ? static_cast<Ogre::Real>(-portcullisSink) : static_cast<Ogre::Real>(0.0);
+    BuildingObject* portcullis = new BuildingObject(getGameMap(), *this, "MoreyaGatePortcullis", keyTile,
+        static_cast<Ogre::Real>(centralTile->getX()), static_cast<Ogre::Real>(centralTile->getY()), height,
+        static_cast<Ogre::Real>(mGateRotation), false, 1.0f);
+    replaceBuildingObject(keyTile, portcullis);
+    mPortcullisObject = portcullis;
+}
+
+//! \brief The first covered tile that is not the central one.
+Tile* RoomPortalWave::getPortcullisKeyTile()
+{
+    Tile* centralTile = getCentralTile();
+    for(Tile* tile : getCoveredTiles())
+    {
+        if(tile != centralTile)
+            return tile;
+    }
+    return nullptr;
+}
+
+//! \brief Forgets the models with the meshes of the room.
 void RoomPortalWave::destroyMeshLocal(NodeType nt)
 {
     Room::destroyMeshLocal();
     mPortalObject = nullptr;
+    mPortcullisObject = nullptr;
 }
 
+//! \brief Room upkeep, then the waves of the portal; the Moreya gate of a raid has no waves of its own.
 void RoomPortalWave::doUpkeep()
 {
     // Call the super class Room::doUpkeep() function to do any generic upkeep common to all rooms.
     Room::doUpkeep();
 
     if (mCoveredTiles.empty())
+        return;
+
+    // The raid comes through the Moreya gate (RaidManager); the gate itself spawns, digs and attacks nothing
+    if(mIsMoreyaGate)
         return;
 
     if(mIsFirstUpkeep)
