@@ -1017,7 +1017,8 @@ def hall():
     return b.finish()
 
 
-# Build the campaign table with a separate plane for the existing map image.
+# Build the campaign table with a separate plane for the map image of Moreya (material MenuCampaignMap,
+# texture MenuCampaignMap.png, a copy of gui/campaign/moreya/moreya_map.png).
 def table():
     b=MeshBuilder("MenuMapTable")
     b.box((0,0,1.55),(4.4,3.2,0.24),"MenuAgedWood")
