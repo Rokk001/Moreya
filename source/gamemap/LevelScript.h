@@ -163,9 +163,10 @@
 //!   Action  golfball <seatId> <x> <y>         # a boulder lies on the tile; the seat rolls it by slapping it. A region named by a "boulder" condition is a hole: the ball stops in it
 //!   Action  stonecreate <x> <y>                 # a portal stone lies on the tile
 //!   Action  stoneattach <creatureName>          # the creature carries a portal stone; it drops where the creature dies
-//!   Action  keepminion <seatId>              # campaign: the strongest fighter of the seat comes along to the next level if this level is won (it starts at the dungeon temple)
+//!   Action  keepminion <seatId>              # former campaign kept minion: still read for older files, it has no effect (every campaign level starts fresh)
 //!   Action  terrain <x1> <y1> <x2> <y2> bridge <seatId>   # also: a wooden bridge of the seat over lava or water
-//!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg)
+//!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg); counts only in the first story level of the bonus level's wing
+//!   Action  shard                             # campaign: the Heartstone shard of the level that is played is found (counts only in a level with Shard=1 in Campaign.cfg, once)
 //!   Action  raidmember <raidGroupId> <template|-> <name> [<name> ...]   # the creatures (names or party tags of a hero seat) belong to the raid group (1 or more); a raid group is always a combat group (a member won over by a keeper leaves the raid). With a template name (e.g. Guardian) they follow that skill template for good, with - they choose their template themselves
 //!   Action  raidleader <raidGroupId> <creatureName>   # the creature is the named leader of the raid group and leads it as long as he lives
 //!           # The same registry can be written in the [CombatGroups] section of the level file: RaidGroup <raidGroupId> <leaderName> and RaidMember <creatureName> <raidGroupId> <template|->
@@ -176,6 +177,7 @@
 //! Story recipes made of the items above (no extra vocabulary needed):
 //!   escape / intercepted: Cond reached <name> region <exit> (escaped), Cond event <name> killed (intercepted), Cond alive <name> 0
 //!   portal stone brought home: Action stoneattach <name>, then Cond reached <name> heart <seatId>, then Action discover <levelFile>
+//!   Heartstone shard brought home: Action stoneattach <name> (or stonecreate), then Cond reached <name> heart <seatId>, then Action shard
 //!   open or close a passage: Action terrain <x1> <y1> <x2> <y2> path | rock | water | lava (a single tile: both corners equal)
 //!   win by destroying a heart: Cond defeated <seatId>, then Action win -1
 //!   change sides: Action alliance <seatA> <seatB> make | break (takes effect at once for the AI and for fights)
@@ -327,7 +329,8 @@ enum class LevelScriptActionType
     hint,
     keyDoor,
     raidMember,
-    raidLeader
+    raidLeader,
+    findShard
 };
 
 //! \brief One condition of a trigger. The fields that are used depend on the type.

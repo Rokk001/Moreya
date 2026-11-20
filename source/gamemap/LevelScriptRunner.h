@@ -33,9 +33,6 @@ namespace LevelScriptRunner
     //! called when the creature has nothing to do. Returns true if the order takes the turn of the
     //! creature, false if the creature may do what it does without an order.
     bool doCreatureOrder(Creature& creature);
-    //! \brief Campaign: the creature that the kept minion special of the last level won brought along
-    //! comes to the dungeon temple of the first human keeper. Called once when the game starts.
-    void spawnKeptMinion(GameMap& gameMap);
 
     //! \brief Leaves a carried portal stone on the creature's current tile before pickup; server side only.
     void dropCarriedStone(Creature& creature);

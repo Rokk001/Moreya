@@ -324,6 +324,9 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         }
         if(gameMap.getSandboxMode().importInfoLine(nextParam))
             continue;
+        // Campaign items unlocked by bonus levels that wait for a merchant table in a saved game
+        if(gameMap.importCampaignMerchantInfoLine(nextParam))
+            continue;
     }
 
     levelFile >> nextParam;
@@ -1169,6 +1172,7 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     if(isGameSave)
     {
         Campaign::getSingleton().getSaveState().exportInfo(levelFile);
+        gameMap.exportCampaignMerchantInfo(levelFile);
         levelFile << "Relationships\t" << (gameMap.isRelationshipsEnabled() ? "On" : "Off") << std::endl;
         // A saved game goes on from its current turn when it is loaded again. Levels written
         // by the editor have to start from the beginning, so they carry no turn.

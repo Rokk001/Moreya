@@ -652,8 +652,8 @@ bool parseObjectiveState(const std::string& text, LevelScriptObjectiveState& sta
     return true;
 }
 
-//! \brief Parses actions including mission door locks, retaining legacy objective text and ID/state variants, and the
-//! raid registry actions raidmember and raidleader.
+//! \brief Parses actions including mission door locks and the campaign shard, retaining legacy objective text and
+//! ID/state variants, and the raid registry actions raidmember and raidleader.
 bool parseAction(const std::string& line, const std::vector<std::string>& t, LevelScriptAction& action)
 {
     // t[0] is "Action"
@@ -1019,6 +1019,11 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mText = t[2];
         return true;
     }
+    if(type == "shard")
+    {
+        action.mType = LevelScriptActionType::findShard;
+        return t.size() == 2;
+    }
     return false;
 }
 
@@ -1251,8 +1256,8 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
     os << "\n";
 }
 
-//! \brief Serializes mission door locks, goal classification and actions with legacy objective compatibility, and the
-//! raid registry actions.
+//! \brief Serializes mission door locks, the campaign shard, goal classification and actions with legacy objective
+//! compatibility, and the raid registry actions.
 void writeAction(std::ostream& os, const LevelScriptAction& a)
 {
     os << "Action\t";
@@ -1376,6 +1381,9 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::discoverLevel:
             os << "discover\t" << a.mText;
+            break;
+        case LevelScriptActionType::findShard:
+            os << "shard";
             break;
         case LevelScriptActionType::creatureOrder:
             os << "order\t" << a.mText << "\t" << a.mSeatId << "\t";

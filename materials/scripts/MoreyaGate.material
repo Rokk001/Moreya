@@ -1,0 +1,15 @@
+// In-game Moreya gate (models/MoreyaGate.mesh, models/MoreyaGatePortcullis.mesh, tools/blender-assets/moreya_raid_models.py).
+// The gate keeps the start screen gate's own surfaces (MenuScene.material); only the dark passage behind its arch is new.
+
+material MoreyaGateDepth
+{
+    technique
+    {
+        pass
+        {
+            ambient 0 0 0 1
+            diffuse 0 0 0 1
+            emissive 0.004 0.022 0.008
+        }
+    }
+}
