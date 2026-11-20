@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Highcairn
-Description	Switchback terraces climb a mountain of old cairns to the hold where a warden waits.
+Description	Slag Pit in the Blood Mines: climb the four terraces in order, beat the watch captain and open the hold before the Stone Crown send two raids of ten through the Moreya gate.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -781,7 +781,7 @@ ProtectDungeonTemple	NULL
 22	50	1	100
 22	51	1	100
 22	52	1	100
-22	53	1	100
+22	53	1	0
 22	54	1	0
 22	55	1	0
 22	56	1	0
@@ -984,13 +984,13 @@ ProtectDungeonTemple	NULL
 28	28	1	0
 28	29	1	0
 28	30	1	0
-28	36	1	0
-28	37	1	0
-28	38	1	0
-28	39	1	0
-28	40	1	0
-28	41	1	0
-28	42	1	0
+28	36	1	100
+28	37	1	100
+28	38	1	100
+28	39	1	100
+28	40	1	100
+28	41	1	100
+28	42	1	100
 28	48	1	0
 28	49	1	0
 28	50	3	100
@@ -1029,9 +1029,14 @@ ProtectDungeonTemple	NULL
 29	40	1	0
 29	41	1	0
 29	42	1	0
-29	48	1	100
+29	43	1	0
+29	44	1	0
+29	45	1	0
+29	46	1	0
+29	47	1	0
+29	48	1	0
 29	49	1	0
-29	50	1	100
+29	50	1	0
 29	51	3	100
 29	52	1	0
 29	53	1	0
@@ -1068,8 +1073,13 @@ ProtectDungeonTemple	NULL
 30	40	1	0
 30	41	1	0
 30	42	1	0
-30	48	1	100
-30	49	1	100
+30	43	1	0
+30	44	1	0
+30	45	1	0
+30	46	1	0
+30	47	1	0
+30	48	1	0
+30	49	1	0
 30	50	1	0
 30	51	1	0
 30	52	1	0
@@ -1107,6 +1117,11 @@ ProtectDungeonTemple	NULL
 31	40	1	0
 31	41	1	0
 31	42	1	0
+31	43	1	0
+31	44	1	0
+31	45	1	0
+31	46	1	0
+31	47	1	0
 31	48	1	0
 31	49	1	0
 31	50	1	0
@@ -1146,9 +1161,9 @@ ProtectDungeonTemple	NULL
 32	40	1	0
 32	41	1	0
 32	42	1	0
-32	48	1	0
-32	49	1	0
-32	50	1	0
+32	48	1	100
+32	49	1	100
+32	50	1	100
 32	51	1	0
 32	52	1	0
 32	53	1	0
@@ -1788,10 +1803,10 @@ ProtectDungeonTemple	NULL
 49	36	1	0
 49	37	1	0
 49	38	1	0
-49	39	1	0
-49	40	1	0
-49	41	1	0
-49	42	1	0
+49	39	1	100
+49	40	1	100
+49	41	1	100
+49	42	1	100
 49	48	1	0
 49	49	1	0
 49	50	1	0
@@ -1824,7 +1839,7 @@ ProtectDungeonTemple	NULL
 50	36	1	0
 50	37	1	0
 50	38	1	0
-50	39	1	0
+50	39	1	100
 50	40	1	0
 50	41	1	0
 50	42	1	0
@@ -1859,10 +1874,11 @@ ProtectDungeonTemple	NULL
 51	28	1	0
 51	29	1	0
 51	30	1	0
+51	35	1	0
 51	36	1	0
 51	37	1	0
 51	38	1	0
-51	39	1	0
+51	39	1	100
 51	40	1	0
 51	41	1	0
 51	42	1	0
@@ -1897,10 +1913,11 @@ ProtectDungeonTemple	NULL
 52	28	1	0
 52	29	1	0
 52	30	1	0
+52	35	1	0
 52	36	1	0
 52	37	1	0
 52	38	1	0
-52	39	1	0
+52	39	1	100
 52	40	1	0
 52	41	1	0
 52	42	1	0
@@ -1936,6 +1953,7 @@ ProtectDungeonTemple	NULL
 53	28	1	0
 53	29	1	0
 53	30	1	0
+53	35	1	0
 53	36	1	0
 53	37	1	0
 53	38	3	100
@@ -1949,7 +1967,7 @@ ProtectDungeonTemple	NULL
 53	51	1	0
 53	52	1	0
 53	53	1	0
-53	54	1	0
+53	54	1	100
 53	59	1	0
 53	60	1	0
 53	61	5	0
@@ -1975,6 +1993,7 @@ ProtectDungeonTemple	NULL
 54	28	1	0
 54	29	1	0
 54	30	1	0
+54	35	1	0
 54	36	1	0
 54	37	3	100
 54	38	3	100
@@ -1987,8 +2006,8 @@ ProtectDungeonTemple	NULL
 54	50	1	0
 54	51	1	0
 54	52	1	0
-54	53	1	0
-54	54	1	0
+54	53	1	100
+54	54	1	100
 54	59	1	0
 54	60	1	0
 54	61	5	0
@@ -2014,19 +2033,20 @@ ProtectDungeonTemple	NULL
 55	28	1	0
 55	29	1	0
 55	30	1	0
+55	35	1	0
 55	36	1	0
 55	37	1	0
 55	38	3	100
 55	39	1	0
-55	40	1	0
-55	41	1	0
-55	42	1	0
-55	48	1	0
+55	40	1	100
+55	41	1	100
+55	42	1	100
+55	48	1	100
 55	49	1	0
 55	50	3	100
 55	51	1	0
-55	52	1	0
-55	53	1	0
+55	52	1	100
+55	53	1	100
 55	54	1	0
 55	59	1	0
 55	60	1	0
@@ -2055,6 +2075,7 @@ ProtectDungeonTemple	NULL
 56	28	1	0
 56	29	1	0
 56	30	1	0
+56	35	1	0
 56	36	1	0
 56	37	1	0
 56	38	1	0
@@ -2103,6 +2124,7 @@ ProtectDungeonTemple	NULL
 57	40	1	0
 57	41	1	0
 57	42	1	0
+57	43	1	0
 57	48	1	0
 57	49	1	0
 57	50	3	100

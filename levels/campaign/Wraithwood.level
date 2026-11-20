@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Wraithwood
-Description	A fog-bound forest where a witch-warden and a rival keeper hold two hearts, while the heroes of the kingdom pour in through a portal in the south-east.
+Description	Throne of Ash in the Abyssal Heart: destroy the two rival hearts in the fog while the Ash Coven come through the Moreya gate in two groups of twenty-five, their casters well hidden behind the shields.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -808,7 +808,7 @@ ProtectDungeonTemple	NULL
 15	82	1	0	1
 15	83	1	0	1
 15	84	1	0	1
-15	85	1	100
+15	85	1	0
 15	86	1	100
 15	87	1	100
 15	88	1	100
@@ -880,8 +880,8 @@ ProtectDungeonTemple	NULL
 16	82	1	0	1
 16	83	1	0	1
 16	84	1	0	1
-16	85	1	100
-16	86	1	100
+16	85	1	0
+16	86	1	0
 16	87	1	100
 16	88	1	100
 16	95	3	100
@@ -942,7 +942,7 @@ ProtectDungeonTemple	NULL
 17	80	1	0
 17	81	1	0
 17	82	1	100
-17	83	1	100
+17	83	1	0
 17	84	1	0
 17	85	1	0
 17	86	1	0
@@ -998,7 +998,7 @@ ProtectDungeonTemple	NULL
 18	80	1	0
 18	81	1	0
 18	82	1	100
-18	83	1	100
+18	83	1	0
 18	84	1	0
 18	85	1	0
 18	86	1	0
@@ -1055,7 +1055,7 @@ ProtectDungeonTemple	NULL
 19	81	1	0
 19	82	1	100
 19	83	1	100
-19	84	1	0
+19	84	3	100
 19	85	1	0
 19	86	1	0
 19	87	1	0
@@ -2434,7 +2434,7 @@ ProtectDungeonTemple	NULL
 50	21	1	0
 50	22	1	0
 50	23	1	0
-50	24	1	0
+50	24	1	100
 50	25	1	0
 50	26	1	0
 50	27	1	0
@@ -3346,6 +3346,7 @@ ProtectDungeonTemple	NULL
 74	61	1	0
 74	62	1	0
 74	63	1	0
+74	83	1	0
 74	84	1	0
 74	85	1	0
 74	86	1	0

@@ -105,7 +105,8 @@ public:
 
     //! \brief Called by the client when the campaign map was built after a level.
     //! \param levelWon true if the map shows the played level as won. The run passes only if the victory
-    //! message was shown before and the map offers an unlocked next level (or the campaign is completed).
+    //! message was shown before and the map offers an unlocked next level, or, after a win that completes the
+    //! campaign, the campaign end message is shown in place of the map.
     static void onCampaignMapShown(bool levelWon);
 
     //! \brief Called by the render loop after every frame. Once the game runs, it appends one line per

@@ -179,8 +179,9 @@ int main()
     std::ostringstream former;
     campaign.exportProgress(former);
     check(!campaign.hasProgress() && !campaign.isDiscovered(3) && campaign.getDifficulty() == easy &&
-        campaign.isHellUnlocked() && former.str().find("KeptMinion") == std::string::npos,
-        "progress of the former level list keeps only difficulty and finished set");
+        !campaign.isHellUnlocked() && former.str().find("KeptMinion") == std::string::npos &&
+        former.str().find("Finished\n") != std::string::npos,
+        "progress of the former campaign keeps only the difficulty");
 
     campaign.stopCampaign();
     std::istringstream reordered(

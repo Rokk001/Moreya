@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Bellwick
-Description	Beneath a ringing abbey, crypts and cloisters hide an undead keeper while the faithful march to the bells.
+Description	Charnel Stair in the Black Catacombs: pass through the nave to the transept and destroy the undercroft heart while twenty-five of the Silent Bell come through the Moreya gate.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -912,8 +912,8 @@ ProtectDungeonTemple	NULL
 18	79	1	0
 18	80	1	0
 18	81	1	0
-18	82	1	0
-18	83	1	0
+18	82	1	100
+18	83	1	100
 18	84	1	0
 18	91	1	0
 18	94	1	100
@@ -949,8 +949,8 @@ ProtectDungeonTemple	NULL
 19	71	1	0
 19	79	1	0
 19	80	1	0
-19	81	1	0
-19	82	1	0
+19	81	1	100
+19	82	1	100
 19	83	1	0
 19	91	1	0
 19	94	1	100
@@ -1148,7 +1148,7 @@ ProtectDungeonTemple	NULL
 23	40	1	0
 23	41	1	0
 23	42	1	0
-23	43	1	0
+23	43	1	100
 23	44	1	0
 23	45	1	0
 23	46	1	0
@@ -1229,16 +1229,16 @@ ProtectDungeonTemple	NULL
 24	31	1	0	3
 24	32	1	0
 24	33	1	0
-24	34	1	0
-24	35	1	0
-24	36	1	0
-24	37	1	0
-24	38	1	0
-24	39	1	0
-24	40	1	0
-24	41	1	0
-24	42	1	0
-24	43	1	0
+24	34	1	100
+24	35	1	100
+24	36	1	100
+24	37	1	100
+24	38	1	100
+24	39	1	100
+24	40	1	100
+24	41	1	100
+24	42	1	100
+24	43	1	100
 24	44	1	0
 24	45	1	0
 24	46	1	0
@@ -1510,7 +1510,7 @@ ProtectDungeonTemple	NULL
 26	104	1	0
 26	105	1	0
 26	106	1	0
-26	107	1	100
+26	107	1	0
 26	108	1	100
 26	109	1	100
 26	110	1	0	1
@@ -1580,7 +1580,7 @@ ProtectDungeonTemple	NULL
 27	69	1	0
 27	70	1	0
 27	71	1	0
-27	72	1	0
+27	72	1	100
 27	73	1	0
 27	74	4	0
 27	75	1	0
@@ -1682,8 +1682,8 @@ ProtectDungeonTemple	NULL
 28	69	1	0
 28	70	3	100
 28	71	1	0
-28	72	1	0
-28	73	1	0
+28	72	1	100
+28	73	1	100
 28	74	1	0
 28	75	1	0
 28	76	1	0
@@ -1691,7 +1691,7 @@ ProtectDungeonTemple	NULL
 28	78	1	0
 28	79	1	0
 28	80	3	100
-28	81	1	100
+28	81	1	0
 28	82	1	0
 28	83	1	0
 28	84	1	0
@@ -1788,8 +1788,8 @@ ProtectDungeonTemple	NULL
 29	100	1	0
 29	101	1	0
 29	102	1	0
-29	103	1	0
-29	104	1	0
+29	103	3	100
+29	104	3	100
 29	105	1	0
 29	106	1	0
 29	107	1	0
@@ -1921,7 +1921,7 @@ ProtectDungeonTemple	NULL
 31	82	1	0
 31	83	1	0
 31	84	1	0
-31	85	1	0
+31	85	1	100
 31	91	1	0
 31	92	1	0
 31	93	1	0
@@ -1991,9 +1991,9 @@ ProtectDungeonTemple	NULL
 32	80	1	0
 32	81	1	0
 32	82	1	0
-32	83	1	0
-32	84	1	0
-32	85	1	0
+32	83	1	100
+32	84	1	100
+32	85	1	100
 32	91	1	0
 32	92	1	0
 32	93	1	100
@@ -2299,8 +2299,8 @@ ProtectDungeonTemple	NULL
 38	14	1	0
 38	15	1	0
 38	16	1	0
-38	41	1	0
-38	42	1	0
+38	41	1	100
+38	42	1	100
 38	43	1	0
 38	60	1	0
 38	61	1	0
@@ -2341,8 +2341,8 @@ ProtectDungeonTemple	NULL
 39	15	1	0
 39	16	1	0
 39	41	1	0
-39	42	1	0
-39	43	1	0
+39	42	1	100
+39	43	1	100
 39	60	1	0
 39	61	1	0
 39	62	1	0
@@ -2744,9 +2744,9 @@ ProtectDungeonTemple	NULL
 47	47	1	0
 47	48	1	0
 47	60	1	0
-47	61	1	0
+47	61	1	100
 47	62	1	0
-47	63	1	0
+47	63	1	100
 47	64	1	0
 47	79	1	0
 47	80	1	0
@@ -2810,11 +2810,11 @@ ProtectDungeonTemple	NULL
 48	56	1	0
 48	57	1	0
 48	58	1	0
-48	60	1	0
-48	61	1	0
+48	60	1	100
+48	61	1	100
 48	62	1	0
-48	63	1	0
-48	64	1	0
+48	63	1	100
+48	64	1	100
 48	79	1	0
 48	80	1	0
 48	81	1	0

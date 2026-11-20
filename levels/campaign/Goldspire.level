@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Goldspire
-Description	A treasury tower of nested rings stands over a bare plateau, and its treasurer counts coin while soldiers pour out.
+Description	Corpse Gate in the Black Catacombs: raise two fighters, capture the low town, pass the outer ring and unlock the vault while twenty-five of the Gilded Hand come through the Moreya gate.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -681,7 +681,7 @@ ProtectDungeonTemple	NULL
 20	41	1	0
 20	70	1	100
 20	71	1	100
-20	72	1	0
+20	72	3	100
 20	73	1	0
 20	74	1	0
 20	75	1	0
@@ -734,7 +734,7 @@ ProtectDungeonTemple	NULL
 23	39	1	0
 23	71	1	100
 23	72	1	0
-23	73	1	0
+23	73	3	100
 23	74	1	0
 23	75	1	0
 23	76	1	0

@@ -10,7 +10,8 @@ Start screen (config/mainmenuscene.cfg, overview pose of the menu camera):
   left of the menu button column for every supported window aspect, and no scenery hides it.
 
 Ziv name: no player-facing text calls the worker "Worker"/"Workers" (layouts, C++ string literals that are not log or
-assert messages, player-facing config texts, level and campaign texts); the identifiers stay as they are.
+assert messages, player-facing config texts, level and campaign texts); the identifiers stay as they are. Exception by
+the owner's decision: the display name "Dwarf Worker" of the hero class DwarfWorker stays (one exact config line).
 """
 import os
 import math
@@ -220,8 +221,10 @@ SOURCE_IDENTIFIERS = {
     ("source/render/WorkerExtras.cpp", '"Creatures/Worker/"'): 1,
     ("source/utils/RunLevelTest.cpp", '" workers="'): 1,
 }
-#: Player-facing config text that waits for the owner's decision (hero dwarf worker class name, R9 report).
-PENDING_OWNER_DECISION = {("config/social-texts.cfg", "ClassName\tDwarfWorker\tDwarf Worker")}
+#: Player-facing config text that keeps the word by the owner's decision: the display name "Dwarf Worker" of the hero
+#: class DwarfWorker stays (it names a hero class, not the keeper's Ziv). Only this exact line is excepted, and it must
+#: stay exactly once; every other text is checked as strictly as before.
+DECIDED_EXCEPTIONS = {("config/social-texts.cfg", "ClassName\tDwarfWorker\tDwarf Worker")}
 #: Config keys whose value names the worker as an identifier or a resource path.
 CONFIG_IDENTIFIER_KEYS = ("Group", "SkillGroup", "CreatureJob", "SoundFamilyDie")
 WORD = re.compile(r"\bworkers?\b", re.I)
@@ -271,7 +274,7 @@ def check_ziv_names(failures):
         relative = "config/" + name
         for number, line in enumerate(read(relative).splitlines(), 1):
             stripped = line.strip()
-            if not stripped or stripped.startswith("#") or (relative, stripped) in PENDING_OWNER_DECISION:
+            if not stripped or stripped.startswith("#") or (relative, stripped) in DECIDED_EXCEPTIONS:
                 continue
             fields = stripped.split()
             if name == "social-texts.cfg":
@@ -283,10 +286,10 @@ def check_ziv_names(failures):
                 continue
             if WORD.search(stripped):
                 failures.append("%s:%d names the worker: %s" % (relative, number, stripped))
-    pending = read("config/social-texts.cfg").splitlines()
-    for path, text in PENDING_OWNER_DECISION:
-        if text not in pending:
-            failures.append("%s: the pending line '%s' changed; update PENDING_OWNER_DECISION" % (path, text))
+    for path, text in DECIDED_EXCEPTIONS:
+        count = [line.strip() for line in read(path).splitlines()].count(text)
+        if count != 1:
+            failures.append("%s: the decided line '%s' is there %d times, expected once" % (path, text, count))
 
     # Levels and the campaign: messages, objectives, descriptions, briefings.
     levels = os.path.join(ROOT, "levels")

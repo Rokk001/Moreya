@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Varn's Crossing
-Description	A fortress at the meeting of two great roads, ringed with lava, held by a marshal and fought over by two rival keepers.
+Description	Ember Pit in the Abyssal Heart: claim your quarter, hold the lava-ringed fortress and destroy both rival hearts while the Black Legion come through the Moreya gate in two groups of twenty-five.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -545,7 +545,7 @@ ProtectDungeonTemple	NULL
 11	61	1	0
 11	62	1	0
 11	63	1	0
-11	64	1	100
+11	64	1	0
 11	65	1	100
 11	70	1	0	1
 11	71	1	0	1
@@ -637,9 +637,14 @@ ProtectDungeonTemple	NULL
 13	26	1	0
 13	27	1	0
 13	28	1	0
+13	38	1	0
+13	39	1	0
 13	40	1	0
+13	41	1	0
+13	42	1	0
 13	43	1	0
 13	44	1	0
+13	45	1	0
 13	46	1	0
 13	47	1	0
 13	48	1	0
@@ -700,7 +705,10 @@ ProtectDungeonTemple	NULL
 14	26	1	0
 14	27	1	0
 14	28	1	0
+14	34	1	0
+14	35	1	0
 14	36	1	0
+14	37	1	0
 14	38	1	0
 14	39	1	0
 14	40	1	0
@@ -713,7 +721,7 @@ ProtectDungeonTemple	NULL
 14	47	1	0
 14	48	1	0
 14	49	1	0
-14	50	1	0
+14	50	1	100
 14	53	1	0
 14	54	1	0
 14	55	1	0
@@ -767,7 +775,10 @@ ProtectDungeonTemple	NULL
 15	26	1	0
 15	27	1	0
 15	28	1	0
+15	31	1	0
+15	32	1	0
 15	33	1	0
+15	34	1	0
 15	35	1	0
 15	36	1	0
 15	37	1	0
@@ -777,11 +788,13 @@ ProtectDungeonTemple	NULL
 15	41	1	0
 15	42	1	0
 15	43	1	0
+15	44	1	0
+15	45	1	0
 15	46	1	0
 15	47	1	0
 15	48	1	0
-15	49	1	0
-15	50	1	0
+15	49	1	100
+15	50	1	100
 15	58	1	0
 15	59	1	0
 15	60	1	0
@@ -798,7 +811,7 @@ ProtectDungeonTemple	NULL
 15	71	1	0
 15	72	1	0
 15	73	1	0
-15	74	1	0
+15	74	3	100
 15	75	1	0
 15	76	1	0
 15	77	1	0
@@ -832,6 +845,7 @@ ProtectDungeonTemple	NULL
 16	27	1	0
 16	28	1	0
 16	29	1	0
+16	30	1	0
 16	31	1	0
 16	32	1	0
 16	33	1	0
@@ -841,11 +855,12 @@ ProtectDungeonTemple	NULL
 16	37	1	0
 16	38	1	0
 16	39	1	0
+16	40	1	0
 16	44	1	0
-16	46	1	0
-16	47	1	0
-16	48	1	0
-16	49	1	0
+16	46	1	100
+16	47	1	100
+16	48	1	100
+16	49	1	100
 16	50	1	0
 16	59	1	0
 16	60	1	0
@@ -895,6 +910,7 @@ ProtectDungeonTemple	NULL
 17	33	1	0
 17	34	1	0
 17	35	1	0
+17	36	1	0
 17	46	1	0
 17	47	1	0
 17	48	1	0
@@ -943,6 +959,7 @@ ProtectDungeonTemple	NULL
 18	30	1	0
 18	31	1	0
 18	32	1	0
+18	33	1	0
 18	46	1	0
 18	47	1	0
 18	48	1	0
@@ -1313,6 +1330,7 @@ ProtectDungeonTemple	NULL
 27	85	1	100
 27	95	3	100
 28	0	3	100
+28	18	1	0
 28	19	1	0
 28	20	1	0
 28	21	1	0
@@ -1337,6 +1355,7 @@ ProtectDungeonTemple	NULL
 28	85	1	100
 28	95	3	100
 29	0	3	100
+29	18	1	0
 29	19	1	0
 29	20	1	0
 29	32	1	0
@@ -1365,6 +1384,7 @@ ProtectDungeonTemple	NULL
 30	1	2	100	-1	150
 30	3	2	100	-1	150
 30	4	2	100	-1	150
+30	18	1	0
 30	19	1	0
 30	20	1	0
 30	30	1	0
@@ -1397,6 +1417,7 @@ ProtectDungeonTemple	NULL
 31	0	3	100
 31	1	2	100	-1	150
 31	4	2	100	-1	150
+31	18	1	0
 31	19	1	0
 31	20	1	0
 31	21	1	0
@@ -1467,6 +1488,7 @@ ProtectDungeonTemple	NULL
 32	95	3	100
 33	0	3	100
 33	1	2	100	-1	150
+33	17	1	0
 33	18	1	0
 33	19	1	0
 33	20	2	100	-1	150
@@ -1503,6 +1525,7 @@ ProtectDungeonTemple	NULL
 33	95	3	100
 34	0	3	100
 34	1	2	100	-1	150
+34	17	1	0
 34	18	1	0
 34	19	1	0
 34	20	1	0
@@ -1542,6 +1565,7 @@ ProtectDungeonTemple	NULL
 35	17	1	0
 35	18	1	0
 35	19	1	0
+35	20	1	0
 35	39	1	0
 35	40	1	0
 35	41	1	0
@@ -1570,6 +1594,7 @@ ProtectDungeonTemple	NULL
 35	95	3	100
 36	0	3	100
 36	1	2	100	-1	150
+36	16	1	0
 36	17	1	0
 36	18	1	0
 36	19	2	100	-1	150
@@ -1667,8 +1692,10 @@ ProtectDungeonTemple	NULL
 38	86	1	0
 38	95	3	100
 39	0	3	100
+39	15	1	0
 39	16	1	0
 39	17	1	0
+39	18	1	0
 39	36	1	0
 39	37	1	0
 39	38	5	0
@@ -1700,6 +1727,7 @@ ProtectDungeonTemple	NULL
 39	95	3	100
 40	0	3	100
 40	1	2	100	-1	150
+40	15	1	0
 40	16	1	0
 40	17	1	0
 40	18	1	0
@@ -1736,8 +1764,10 @@ ProtectDungeonTemple	NULL
 40	86	1	0
 40	95	3	100
 41	0	3	100
+41	15	1	0
 41	16	1	0
 41	17	1	0
+41	18	1	0
 41	35	1	0
 41	36	5	0
 41	37	5	0
@@ -1771,6 +1801,7 @@ ProtectDungeonTemple	NULL
 42	0	3	100
 42	15	1	0
 42	16	1	0
+42	17	1	0
 42	34	1	0
 42	35	1	0
 42	36	5	0
@@ -1804,6 +1835,7 @@ ProtectDungeonTemple	NULL
 42	87	1	0
 42	95	3	100
 43	0	3	100
+43	14	1	0
 43	15	1	0
 43	16	1	0
 43	17	1	0
@@ -1853,7 +1885,7 @@ ProtectDungeonTemple	NULL
 44	15	1	0
 44	16	1	0
 44	17	1	0
-44	18	1	0
+44	18	1	100
 44	19	1	0
 44	20	1	0
 44	21	1	0
@@ -1941,7 +1973,7 @@ ProtectDungeonTemple	NULL
 45	15	1	0
 45	16	1	0
 45	17	1	0
-45	18	1	0
+45	18	1	100
 45	19	1	0
 45	20	1	0
 45	21	1	0
@@ -2031,7 +2063,7 @@ ProtectDungeonTemple	NULL
 46	15	1	0
 46	16	1	0
 46	17	1	0
-46	18	1	0
+46	18	1	100
 46	19	1	0
 46	20	1	0
 46	21	1	0
@@ -2120,8 +2152,8 @@ ProtectDungeonTemple	NULL
 47	14	1	0
 47	15	1	0
 47	16	1	0
-47	17	1	0
-47	18	1	0
+47	17	1	100
+47	18	1	100
 47	19	1	0
 47	20	1	0
 47	21	1	0
@@ -2210,8 +2242,8 @@ ProtectDungeonTemple	NULL
 48	13	1	0
 48	14	1	0
 48	15	1	0
-48	16	1	0
-48	17	1	0
+48	16	1	100
+48	17	1	100
 48	18	1	0
 48	19	1	0
 48	20	1	0

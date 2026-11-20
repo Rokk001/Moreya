@@ -13,6 +13,13 @@ For every level the state at the START of the game is checked (no trigger has fi
    therefore separates, as it should. The shortest path that may also cross solid dirt,
    gold and gem tiles is only reported (shortest_dig_path) and has no threshold. Levels
    outside the campaign (skirmish, realms) are exempt from this part.
+   Exception: the Moreya gate of a story level in gate mode is no enemy source at the start,
+   because nothing comes through it before its countdown ends. Gate mode means: the level
+   has a [Raid] section, the wave portal room of its raid seat contains the Gate tile of
+   that section, the room has no waves of its own, and the raid comes only after a
+   countdown (Countdown above 0 seconds, or "-" with RaidCountdownSeconds of
+   config/global.cfg above 0). Every other wave portal, portal, temple and creature
+   counts as before; the gate is named in the output (gate_mode=x,y).
 
 2. Open areas between the rooms of the human seat. Within OPEN_RADIUS tiles of the temple
    and within the bounding box of all rooms of the human seat, a square of at least
@@ -104,6 +111,8 @@ class Level(object):
         self.creature_info = []  # (name, line number), parallel to creatures
         self.traps = []          # (name, seatId, x, y, line number)
         self.spawns = []         # (trigger name, seatId, x, y, line number)
+        self.room_waves = []     # number of [Wave] blocks of each room, parallel to rooms
+        self.raid = None         # the [Raid] section: {"gate": (x, y), "seat": id, "countdown": text}
 
 
 def to_int(text):
@@ -130,7 +139,15 @@ def parse_level(path):
         if stripped == "":
             continue
         if stripped.startswith("["):
-            if stripped == "[Seat]":
+            if section == "Rooms" and stripped == "[Wave]" and level.room_waves:
+                # a wave of the wave portal room read last
+                level.room_waves[-1] += 1
+            elif stripped == "[Raid]":
+                level.raid = {}
+                section = "Raid"
+            elif stripped == "[/Raid]":
+                section = ""
+            elif stripped == "[Seat]":
                 seat = {}
                 section = "Seat"
             elif stripped == "[/Seat]":
@@ -190,6 +207,7 @@ def parse_level(path):
                 if section == "Rooms":
                     level.rooms.append((to_int(fields[0]), to_int(fields[2]), tiles))
                     level.room_lines.append((fields[1], entry_line))
+                    level.room_waves.append(0)
                 else:
                     for pos in tiles:
                         level.traps.append((fields[1], to_int(fields[2]), pos[0], pos[1],
@@ -214,6 +232,17 @@ def parse_level(path):
                 y = to_int(fields[4])
                 if seat_value is not None and x is not None and y is not None:
                     level.spawns.append((trigger_name, seat_value, x, y, index))
+        elif section == "Raid":
+            fields = stripped.split()
+            if fields[0] == "Gate" and len(fields) >= 3:
+                x = to_int(fields[1])
+                y = to_int(fields[2])
+                if x is not None and y is not None:
+                    level.raid["gate"] = (x, y)
+            elif fields[0] == "Seats" and len(fields) >= 2:
+                level.raid["seat"] = to_int(fields[1])
+            elif fields[0] == "Countdown" and len(fields) >= 2:
+                level.raid["countdown"] = fields[1]
     if level.width <= 0 or level.height <= 0:
         return None
     # A tile that is not listed is full, diggable dirt in the game (new maps start as dirt
@@ -297,9 +326,53 @@ def heart_tiles(level, seat_id):
     return tiles
 
 
-def enemy_sources(level, seat_id):
-    """Return the tiles where enemies of the seat start: other teams' temples and portals."""
+def default_raid_countdown(root):
+    """Return RaidCountdownSeconds of config/global.cfg below root, or None if it is not set."""
+    path = os.path.join(root, "config", "global.cfg")
+    if not os.path.isfile(path):
+        return None
+    with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            fields = line.split("#", 1)[0].split()
+            if len(fields) >= 2 and fields[0] == "RaidCountdownSeconds":
+                try:
+                    return float(fields[1])
+                except ValueError:
+                    return None
+    return None
+
+
+def gate_mode_room(level, raid_default):
+    """Return the index of the room that is the Moreya gate in gate mode, or None.
+
+    Gate mode: the [Raid] section names the gate tile and the raid seat, the wave portal
+    room of that seat contains the tile, the room has no waves of its own and the raid
+    comes only after a countdown (Countdown above 0, or "-" with raid_default above 0)."""
+    raid = level.raid
+    if raid is None or "gate" not in raid or raid.get("seat") is None:
+        return None
+    countdown = raid.get("countdown")
+    if countdown == "-":
+        seconds = raid_default
+    else:
+        try:
+            seconds = float(countdown) if countdown is not None else None
+        except ValueError:
+            seconds = None
+    if seconds is None or seconds <= 0:
+        return None
+    for number, (room_type, owner, tiles) in enumerate(level.rooms):
+        if room_type == ROOM_PORTAL_WAVE and owner == raid["seat"] and raid["gate"] in tiles \
+                and level.room_waves[number] == 0:
+            return number
+    return None
+
+
+def enemy_sources(level, seat_id, raid_default=None):
+    """Return the tiles where enemies of the seat start: other teams' temples, portals,
+    wave portals and creatures. The Moreya gate in gate mode is no source at the start."""
     team = level.seats[seat_id].get("teamId")
+    gate = gate_mode_room(level, raid_default)
     sources = []
     for other_id, seat in level.seats.items():
         if other_id == seat_id or seat.get("teamId") == team:
@@ -307,7 +380,9 @@ def enemy_sources(level, seat_id):
         for room_type, owner, tiles in level.rooms:
             if owner == other_id and room_type in (ROOM_TEMPLE, ROOM_PORTAL) and tiles:
                 sources.append(("seat %d room type %d" % (other_id, room_type), tiles[0]))
-    for room_type, owner, tiles in level.rooms:
+    for number, (room_type, owner, tiles) in enumerate(level.rooms):
+        if number == gate:
+            continue
         if room_type == ROOM_PORTAL_WAVE and tiles:
             owner_team = level.seats.get(owner, {}).get("teamId")
             if owner_team != team:
@@ -319,8 +394,9 @@ def enemy_sources(level, seat_id):
     return sources
 
 
-def check_enemy_distance(level, seat_id):
-    """Check how close enemies are to the seat's heart; return (reasons, shortest distance)."""
+def check_enemy_distance(level, seat_id, raid_default=None):
+    """Check how close enemies are to the seat's heart; return (reasons, shortest distance).
+    raid_default is RaidCountdownSeconds for a level whose raid countdown is "-"."""
     walkable, passable, _ = build_grids(level)
     hearts = heart_tiles(level, seat_id)
     walk = bfs(hearts, walkable, level.width, level.height)
@@ -328,7 +404,7 @@ def check_enemy_distance(level, seat_id):
     reasons = []
     shortest = None
     connected = []
-    for name, pos in enemy_sources(level, seat_id):
+    for name, pos in enemy_sources(level, seat_id, raid_default):
         if pos in walk:
             connected.append((walk[pos], name))
         d = dig.get(pos)
@@ -549,8 +625,11 @@ def summarize_safe_zone(found, full):
     return reasons
 
 
-def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False):
-    """Returns (status, reasons, numbers, violations)."""
+def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False, raid_default=None):
+    """Returns (status, reasons, numbers, violations). raid_default is RaidCountdownSeconds
+    for a raid countdown "-" (None: read from config/global.cfg of the repository)."""
+    if raid_default is None:
+        raid_default = default_raid_countdown(repo_root())
     level = parse_level(path)
     if level is None:
         return "SKIP", ["no tiles"], "", []
@@ -562,13 +641,16 @@ def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False):
     shortest = None
     numbers = ""
     if seat_id is not None and heart_tiles(level, seat_id):
+        gate_text = ""
         if campaign_index is not None:
-            found, shortest = check_enemy_distance(level, seat_id)
+            found, shortest = check_enemy_distance(level, seat_id, raid_default)
             reasons.extend(found)
+            if gate_mode_room(level, raid_default) is not None:
+                gate_text = "gate_mode=%d,%d " % level.raid["gate"]
         found, size, corner = check_open_areas(level, seat_id)
         reasons.extend(found)
-        numbers = "shortest_dig_path=%s largest_open=%dx%d@%d,%d " % (
-            "none" if shortest is None else shortest, size, size, corner[0], corner[1])
+        numbers = "shortest_dig_path=%s largest_open=%dx%d@%d,%d %s" % (
+            "none" if shortest is None else shortest, size, size, corner[0], corner[1], gate_text)
     violations = []
     portal_texts = []
     for other in safe_seats:
@@ -663,9 +745,15 @@ def run(files, root, use_allowlist, order, radius=SAFE_RADIUS, full=False):
 
 # --- Self test ---------------------------------------------------------------------------
 def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None, spawn_x=None,
-                    trap_x=None, rock_wall_x=None, neutral_x=None, omit_dirt=False):
-    """40x20 map, rock border, human temple around (heart_x, 10), enemy at enemy_x.
-    omit_dirt leaves the full dirt tiles out of the file (the game fills them as dirt)."""
+                    trap_x=None, rock_wall_x=None, neutral_x=None, omit_dirt=False,
+                    gate_x=None, gate_waves=0, gate_countdown="1800", gate_raid=True,
+                    gate_tile_x=None, walker_x=None):
+    """80x20 map, rock border, human temple around (heart_x, 10), enemy at enemy_x.
+    omit_dirt leaves the full dirt tiles out of the file (the game fills them as dirt).
+    gate_x puts a 3x3 wave portal room of seat 2 at gate_x..gate_x+2, joined to the temple
+    by an open corridor on row 10, with gate_waves waves; gate_raid adds a [Raid] section
+    whose Gate tile is (gate_tile_x or the room centre, 10) and whose Countdown is
+    gate_countdown. walker_x puts another creature of seat 2 on that corridor."""
     width, height = 80, 20
     lines = ["OpenDungeons_Version:0.7.1", "", "[Seats]"]
     for seat_id, team, player, x in ((1, 1, "Human", heart_x), (2, 2, "Inactive", enemy_x)):
@@ -692,6 +780,12 @@ def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None,
     if portal_x is not None:
         portal = [(portal_x + i, y) for i in range(3) for y in range(9, 12)]
         open_tiles.update(portal)
+    gate = []
+    if gate_x is not None:
+        gate = [(gate_x + i, y) for i in range(3) for y in range(9, 12)]
+        open_tiles.update(gate)
+        for x in range(gate_x + 3, heart_x - 2):
+            open_tiles.add((x, 10))
     for y in range(height):
         for x in range(width):
             if rock_wall_x is not None and x == rock_wall_x:
@@ -713,6 +807,14 @@ def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None,
         lines += ["[/Room]", "[Room]", "4\tPortal1\t1\t%d" % len(portal)]
         for pos in portal:
             lines.append("%d\t%d" % pos)
+    if gate:
+        lines += ["[/Room]", "[Room]", "10\tMoreyaGate1\t2\t%d" % len(gate)]
+        for pos in gate:
+            lines.append("%d\t%d" % pos)
+        lines += ["9\t100000\t0\t0\t-", "[Waves]"]
+        for _ in range(gate_waves):
+            lines += ["[Wave]", "[/Wave]"]
+        lines.append("[/Waves]")
     lines += ["[/Room]", "[/Rooms]", "", "[Traps]"]
     if trap_x is not None:
         lines += ["1\tCannon1\t2\t1", "%d\t10\t1" % trap_x]
@@ -721,11 +823,19 @@ def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None,
     if neutral_x is not None:
         lines.append("0\tRogue1\tKnight.mesh\t%d\t10\t0\tKnight\t1\t0\tmax\t100\t0\t0"
                      % neutral_x)
+    if walker_x is not None:
+        lines.append("2\tHero2\tKnight.mesh\t%d\t10\t0\tKnight\t1\t0\tmax\t100\t0\t0"
+                     % walker_x)
     lines += ["[/Creatures]", "", "[Triggers]"]
     if spawn_x is not None:
         lines += ["[Trigger]", "Name\tambush", "Mode\tonce", "Cond\ttime\t5",
                   "Action\tspawn\t2\t%d\t10\t1\tKnight:1" % spawn_x, "[/Trigger]"]
     lines += ["[/Triggers]", ""]
+    if gate and gate_raid:
+        lines += ["[Raid]", "# Gate X Y RotationDegrees",
+                  "Gate\t%d\t10\t0" % (gate_x + 1 if gate_tile_x is None else gate_tile_x),
+                  "Seats\t2\t1", "Countdown\t%s" % gate_countdown, "Interval\t-",
+                  "Group\t1\t-", "Member\t1\tKnight\t1\t-\t-", "[/Raid]", ""]
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines))
 
@@ -791,6 +901,37 @@ def self_test():
             ok = False
         status, reasons, _, _ = check_level(sparse_spawn, 5)
         if not any("enemy spawn" in r for r in reasons):
+            ok = False
+        # The Moreya gate in gate mode is no enemy source at the start; anything else that
+        # walks to the heart still is: a gate with waves, a raid without countdown, a wave
+        # portal without [Raid] section or apart from its Gate tile, a creature on the path.
+        gate_cases = [("gate_ok", {}, 600.0, "PASS"),
+                      ("gate_default", {"gate_countdown": "-"}, 600.0, "PASS"),
+                      ("gate_default_zero", {"gate_countdown": "-"}, 0.0, "FAIL"),
+                      ("gate_waves", {"gate_waves": 1}, 600.0, "FAIL"),
+                      ("gate_now", {"gate_countdown": "0"}, 600.0, "FAIL"),
+                      ("gate_no_raid", {"gate_raid": False}, 600.0, "FAIL"),
+                      ("gate_other_tile", {"gate_tile_x": 50}, 600.0, "FAIL"),
+                      ("gate_walker", {"walker_x": 40}, 600.0, "FAIL")]
+        for name, options, raid_default, expected in gate_cases:
+            path = os.path.join(directory, name + ".level")
+            synthetic_level(path, 70, 4, 1, False, gate_x=30, **options)
+            status, reasons, numbers, _ = check_level(path, 5, raid_default=raid_default)
+            print("%s (expected %s) %s | %s | %s" % (status, expected, name, numbers,
+                                                       "; ".join(reasons)))
+            if status != expected:
+                ok = False
+            if expected == "FAIL" and not any("walk to the heart" in r for r in reasons):
+                ok = False
+            if expected == "PASS" and "gate_mode=31,10" not in numbers:
+                ok = False
+        status, reasons, _, _ = check_level(os.path.join(directory, "gate_walker.level"), 5,
+                                            raid_default=600.0)
+        if not any("creature of seat 2 at 40,10" in r for r in reasons):
+            ok = False
+        status, reasons, _, _ = check_level(os.path.join(directory, "gate_waves.level"), 5,
+                                            raid_default=600.0)
+        if not any("wave portal of seat 2" in r for r in reasons):
             ok = False
         print("self-test %s" % ("passed" if ok else "FAILED"))
         return 0 if ok else 1

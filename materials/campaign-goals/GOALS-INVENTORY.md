@@ -15,8 +15,8 @@ File: `levels/campaign/Ashcombe.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3440 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin.` | yes |
-| Script line 3554 | `Action	win	1` | yes |
+| Script line 3460 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin.` | yes |
+| Script line 3574 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -358,16 +358,16 @@ File: `levels/campaign/Cinderhollow.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5148 | `Action	objectiveid	1	cinderhollow-o01	Defeat the rival keeper.` | yes |
-| Script line 5149 | `Action	objectiveid	1	cinderhollow-o02	Empty both starting gold seams: west and south.` | yes |
-| Script line 5150 | `Action	objectiveid	1	cinderhollow-o04	Cross the lava bridge to the crater.` | yes |
-| Script line 5204 | `Action	objectiveid	1	cinderhollow-o05	Destroy the heart in the north-east crater.` | yes |
-| Script line 5218 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5275 | `Action	win	1` | yes |
-| Script line 5280 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5161 | `Action	objectiveid	1	cinderhollow-o01	Defeat the rival keeper.` | yes |
+| Script line 5162 | `Action	objectiveid	1	cinderhollow-o02	Empty both starting gold seams: west and south.` | yes |
+| Script line 5163 | `Action	objectiveid	1	cinderhollow-o04	Cross the lava bridge to the crater.` | yes |
+| Script line 5217 | `Action	objectiveid	1	cinderhollow-o05	Destroy the heart in the north-east crater.` | yes |
+| Script line 5231 | `Cond	goal	1	KillAllEnemies` | yes |
 | Script line 5288 | `Action	win	1` | yes |
-| Script line 5308 | `Action	win	1` | yes |
-| Script line 5399 | `Action	win	1` | yes |
+| Script line 5293 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5301 | `Action	win	1` | yes |
+| Script line 5321 | `Action	win	1` | yes |
+| Script line 5412 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -416,11 +416,11 @@ File: `levels/campaign/Coldwell.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1496 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
-| Script line 1497 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
-| Script line 1505 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
-| Script line 1520 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
-| Script line 1635 | `Action	win	1` | yes |
+| Script line 1502 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
+| Script line 1503 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
+| Script line 1511 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
+| Script line 1526 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
+| Script line 1641 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -664,11 +664,11 @@ File: `levels/campaign/Greywater.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3035 | `Action	objectiveid	1	greywater-o01	Defeat the raid and its leader.` | yes |
-| Script line 3036 | `Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.` | yes |
-| Script line 3037 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
-| Script line 3062 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
-| Script line 3223 | `Action	win	1` | yes |
+| Script line 3037 | `Action	objectiveid	1	greywater-o01	Defeat the raid and its leader.` | yes |
+| Script line 3038 | `Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.` | yes |
+| Script line 3039 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
+| Script line 3064 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
+| Script line 3225 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -712,11 +712,11 @@ File: `levels/campaign/Highcairn.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2869 | `Action	objectiveid	1	highcairn-o01	Defeat the raid and its leader.` | yes |
-| Script line 2870 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
-| Script line 2871 | `Action	objectiveid	1	highcairn-o03	Defend your heart.` | yes |
-| Script line 2998 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
-| Script line 3068 | `Action	win	1` | yes |
+| Script line 2891 | `Action	objectiveid	1	highcairn-o01	Defeat the raid and its leader.` | yes |
+| Script line 2892 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
+| Script line 2893 | `Action	objectiveid	1	highcairn-o03	Defend your heart.` | yes |
+| Script line 3020 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
+| Script line 3090 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -761,9 +761,9 @@ File: `levels/campaign/HollinFen.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3491 | `Action	objectiveid	1	hollinfen-o02	Defend your heart.` | yes |
-| Script line 3518 | `Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.` | yes |
-| Script line 3604 | `Action	win	1` | yes |
+| Script line 3492 | `Action	objectiveid	1	hollinfen-o02	Defend your heart.` | yes |
+| Script line 3519 | `Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.` | yes |
+| Script line 3605 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -802,9 +802,9 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5779 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
-| Script line 5780 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the raid.` | yes |
-| Script line 6199 | `Action	win	1` | yes |
+| Script line 5813 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
+| Script line 5814 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the raid.` | yes |
+| Script line 6233 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -846,13 +846,13 @@ File: `levels/campaign/Ironbridge.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4338 | `Action	objectiveid	1	ironbridge-o01	Destroy the heart in the north-east hold.` | yes |
-| Script line 4339 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
-| Script line 4356 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
-| Script line 4377 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
-| Script line 4593 | `Action	win	1` | yes |
-| Script line 4599 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4620 | `Action	win	1` | yes |
+| Script line 4343 | `Action	objectiveid	1	ironbridge-o01	Destroy the heart in the north-east hold.` | yes |
+| Script line 4344 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
+| Script line 4361 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
+| Script line 4382 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
+| Script line 4598 | `Action	win	1` | yes |
+| Script line 4604 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4625 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -902,9 +902,9 @@ File: `levels/campaign/Kingsfall.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3993 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
-| Script line 3994 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
-| Script line 4242 | `Action	win	1` | yes |
+| Script line 4002 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
+| Script line 4003 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
+| Script line 4251 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -948,14 +948,14 @@ File: `levels/campaign/Lanternhill.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3133 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
-| Script line 3134 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
-| Script line 3135 | `Action	objectiveid	1	lanternhill-o03	Defend your heart.` | yes |
-| Script line 3223 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3243 | `Action	win	1` | yes |
-| Script line 3248 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3255 | `Action	win	1` | yes |
-| Script line 3346 | `Action	win	1` | yes |
+| Script line 3194 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
+| Script line 3195 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
+| Script line 3196 | `Action	objectiveid	1	lanternhill-o03	Defend your heart.` | yes |
+| Script line 3284 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3304 | `Action	win	1` | yes |
+| Script line 3309 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3316 | `Action	win	1` | yes |
+| Script line 3407 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1099,12 +1099,12 @@ File: `levels/campaign/Ravensledge.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2253 | `Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.` | yes |
-| Script line 2254 | `Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.` | yes |
-| Script line 2269 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
-| Script line 2277 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
-| Script line 2288 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
-| Script line 2396 | `Action	win	1` | yes |
+| Script line 2271 | `Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.` | yes |
+| Script line 2272 | `Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.` | yes |
+| Script line 2287 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
+| Script line 2295 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
+| Script line 2306 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
+| Script line 2414 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1146,10 +1146,10 @@ File: `levels/campaign/Saltmere.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3192 | `Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.` | yes |
-| Script line 3193 | `Action	objectiveid	1	saltmere-o03	Protect your heart.` | yes |
-| Script line 3236 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
-| Script line 3381 | `Action	win	1` | yes |
+| Script line 3196 | `Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.` | yes |
+| Script line 3197 | `Action	objectiveid	1	saltmere-o03	Protect your heart.` | yes |
+| Script line 3240 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
+| Script line 3385 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1419,12 +1419,12 @@ File: `levels/campaign/Tinmoor.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1795 | `Action	objectiveid	1	tinmoor-o01	Defeat the raid and its leader.` | yes |
-| Script line 1796 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
-| Script line 1804 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
-| Script line 1822 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post.` | yes |
-| Script line 1879 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
-| Script line 1957 | `Action	win	1` | yes |
+| Script line 1800 | `Action	objectiveid	1	tinmoor-o01	Defeat the raid and its leader.` | yes |
+| Script line 1801 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
+| Script line 1809 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
+| Script line 1827 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post.` | yes |
+| Script line 1884 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+| Script line 1962 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1506,13 +1506,13 @@ File: `levels/campaign/VarnsCrossing.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4516 | `Action	objectiveid	1	varnscrossing-o01	Defeat both rival keepers.` | yes |
-| Script line 4517 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against the raid.` | yes |
-| Script line 4518 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
-| Script line 4613 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4642 | `Action	win	1` | yes |
-| Script line 4647 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4782 | `Action	win	1` | yes |
+| Script line 4548 | `Action	objectiveid	1	varnscrossing-o01	Defeat both rival keepers.` | yes |
+| Script line 4549 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against the raid.` | yes |
+| Script line 4550 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
+| Script line 4645 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4674 | `Action	win	1` | yes |
+| Script line 4679 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4814 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1603,13 +1603,13 @@ File: `levels/campaign/Wraithwood.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4865 | `Action	objectiveid	1	wraithwood-o01	Destroy the rival heart in the north-west.` | yes |
-| Script line 4866 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
-| Script line 4867 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the raid.` | yes |
-| Script line 4928 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4950 | `Action	win	1` | yes |
-| Script line 4955 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5037 | `Action	win	1` | yes |
+| Script line 4866 | `Action	objectiveid	1	wraithwood-o01	Destroy the rival heart in the north-west.` | yes |
+| Script line 4867 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
+| Script line 4868 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the raid.` | yes |
+| Script line 4929 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4951 | `Action	win	1` | yes |
+| Script line 4956 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5038 | `Action	win	1` | yes |
 
 ### Main and optional goals
 

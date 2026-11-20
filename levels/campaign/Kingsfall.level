@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Kingsfall
-Description	Royal hunting grounds cut by a winding lava ravine, where a prince holds court with three champions you must take alive.
+Description	Hall of Skulls in the Black Catacombs: cross a guarded lava bridge, take three courtiers alive and gather twelve creatures at your heart before the Sun Court come through the Moreya gate with a raid of forty.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -720,11 +720,11 @@ ProtectDungeonTemple	NULL
 18	24	1	0
 18	25	1	0
 18	26	1	0
-18	27	1	0
-18	28	1	0
-18	29	1	0
-18	30	1	0
-18	31	1	0
+18	27	1	100
+18	28	1	100
+18	29	1	100
+18	30	1	100
+18	31	1	100
 18	32	1	0
 18	42	1	0
 18	46	1	0
@@ -801,7 +801,7 @@ ProtectDungeonTemple	NULL
 20	23	1	0
 20	24	1	0
 20	25	1	0
-20	26	1	0
+20	26	1	100
 20	27	1	0
 20	28	1	0	3
 20	29	1	0	3
@@ -834,11 +834,12 @@ ProtectDungeonTemple	NULL
 21	23	1	0
 21	24	1	0
 21	25	1	0
-21	26	1	0
+21	26	1	100
 21	27	1	0
 21	28	1	0	3
 21	29	1	0	3
 21	30	1	0	3
+21	31	1	0
 21	49	5	0
 21	50	5	0
 21	51	5	0
@@ -866,11 +867,12 @@ ProtectDungeonTemple	NULL
 22	23	1	0
 22	24	1	0
 22	25	1	0
-22	26	1	0
+22	26	1	100
 22	27	1	0
 22	28	1	0	3
 22	29	1	0	3
 22	30	1	0	3
+22	31	1	0
 22	49	5	0
 22	50	5	0
 22	51	5	0
@@ -895,7 +897,7 @@ ProtectDungeonTemple	NULL
 23	23	1	0
 23	24	1	0
 23	25	1	0
-23	26	1	0
+23	26	1	100
 23	27	1	0
 23	28	1	0
 23	29	1	0
@@ -984,6 +986,7 @@ ProtectDungeonTemple	NULL
 26	31	1	0
 26	32	1	0
 26	33	1	0
+26	34	1	0
 26	48	5	0
 26	49	5	0
 26	50	5	0
@@ -1051,6 +1054,7 @@ ProtectDungeonTemple	NULL
 29	32	1	0
 29	33	1	0
 29	34	1	0
+29	35	1	0
 29	46	5	0
 29	47	5	0
 29	48	5	0
@@ -1155,6 +1159,7 @@ ProtectDungeonTemple	NULL
 33	33	1	0
 33	34	1	0
 33	35	1	0
+33	36	1	0
 33	45	5	0
 33	46	5	0
 33	47	5	0
@@ -1398,6 +1403,7 @@ ProtectDungeonTemple	NULL
 40	34	1	0
 40	35	1	0
 40	36	1	0
+40	37	1	0
 40	42	5	0
 40	43	5	0
 40	44	5	0
@@ -1434,6 +1440,7 @@ ProtectDungeonTemple	NULL
 41	34	1	0
 41	35	1	0
 41	36	1	0
+41	37	1	0
 41	41	5	0
 41	42	5	0
 41	43	5	0
@@ -1467,12 +1474,13 @@ ProtectDungeonTemple	NULL
 42	20	1	0
 42	21	1	0
 42	22	1	0
-42	32	1	0
+42	32	1	100
 42	33	1	0
 42	34	1	0
 42	35	1	0
 42	36	1	0
 42	37	1	0
+42	38	1	0
 42	41	5	0
 42	42	5	0
 42	43	5	0
@@ -1511,13 +1519,14 @@ ProtectDungeonTemple	NULL
 43	20	1	0
 43	21	1	0
 43	22	1	0
-43	32	1	0
-43	33	1	0
-43	34	1	0
+43	32	1	100
+43	33	1	100
+43	34	1	100
 43	35	1	0
 43	36	1	0
 43	37	1	0
 43	38	1	0
+43	39	1	0
 43	41	5	0
 43	42	5	0
 43	43	5	0
@@ -1560,7 +1569,7 @@ ProtectDungeonTemple	NULL
 44	22	1	0
 44	32	1	0
 44	33	1	0
-44	34	1	0
+44	34	1	100
 44	35	1	0
 44	36	1	0
 44	37	1	0
@@ -1609,8 +1618,8 @@ ProtectDungeonTemple	NULL
 45	22	1	0
 45	32	1	0
 45	33	1	0
-45	34	1	0
-45	35	1	0
+45	34	1	100
+45	35	1	100
 45	36	1	0
 45	37	1	0
 45	38	1	0
@@ -1663,8 +1672,8 @@ ProtectDungeonTemple	NULL
 46	32	1	0
 46	33	1	0
 46	34	1	0
-46	35	1	0
-46	36	1	0
+46	35	1	100
+46	36	1	100
 46	37	1	0
 46	38	1	0
 46	39	1	0
@@ -1727,7 +1736,7 @@ ProtectDungeonTemple	NULL
 47	33	1	0
 47	34	1	0
 47	35	1	0
-47	36	1	0
+47	36	1	100
 47	37	1	0
 47	38	1	0
 47	39	5	0
@@ -1791,9 +1800,9 @@ ProtectDungeonTemple	NULL
 48	33	1	0
 48	34	1	0
 48	35	1	0
-48	36	1	0
-48	37	1	0
-48	38	1	0
+48	36	1	100
+48	37	1	100
+48	38	1	100
 48	39	5	0
 48	40	5	0
 48	41	5	0
@@ -1868,7 +1877,7 @@ ProtectDungeonTemple	NULL
 49	35	1	0
 49	36	1	0
 49	37	1	0
-49	38	1	0
+49	38	1	100
 49	39	5	0
 49	40	1	0
 49	41	5	0
@@ -1940,7 +1949,7 @@ ProtectDungeonTemple	NULL
 50	34	1	0
 50	35	1	0
 50	36	1	0
-50	37	1	0
+50	37	1	100
 50	38	1	0
 50	39	5	0
 50	40	5	0
@@ -1965,7 +1974,7 @@ ProtectDungeonTemple	NULL
 50	59	1	0
 50	60	1	0
 50	61	1	0
-50	62	1	100
+50	62	1	0
 50	63	1	100
 50	64	1	100
 50	65	1	100
@@ -1977,7 +1986,7 @@ ProtectDungeonTemple	NULL
 50	72	3	100
 50	73	3	100
 50	74	3	100
-50	75	1	100
+50	75	1	0
 50	76	1	0	1
 50	77	1	0	1
 50	78	1	0	1
@@ -2012,8 +2021,8 @@ ProtectDungeonTemple	NULL
 51	34	1	0
 51	35	1	0
 51	36	1	0
-51	37	1	0
-51	38	1	0
+51	37	1	100
+51	38	1	100
 51	39	5	0
 51	40	5	0
 51	41	5	0
@@ -2213,7 +2222,7 @@ ProtectDungeonTemple	NULL
 54	67	1	0
 54	68	1	0
 54	69	1	0
-54	70	1	0
+54	70	3	100
 54	71	1	0
 54	72	1	0
 54	73	1	0
@@ -3932,7 +3941,7 @@ ProtectDungeonTemple	NULL
 3	Courtier6	Elf.mesh	17	21	0	Elf	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Courtier7	Knight.mesh	85	25	0	Knight	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Courtier8	Monk.mesh	79	21	0	Monk	4	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Courtier9	Elf.mesh	44	36	0	Elf	4	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Courtier9	Elf.mesh	44	33	0	Elf	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Courtier10	Knight.mesh	49	35	0	Knight	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Courtier11	Dwarf2.mesh	47	21	0	Dwarf2	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Courtier12	Adventurer.mesh	43	14	0	Adventurer	4	0	max	100	0	0	none	none	nullSkillType	none	0

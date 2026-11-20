@@ -129,7 +129,7 @@ for expectation in ("all record fields round trip", "recorded file wins over sav
                     "skirmish save remains ordinary and gets no campaign record",
                     "old campaign save takes current progress difficulty",
                     "old saves use Heartstone and difficulty of current progress",
-                    "progress of the former level list keeps only difficulty and finished set",
+                    "progress of the former campaign keeps only the difficulty",
                     "campaign list reorder restores by file, never old index"):
     assert expectation in probe, expectation
 print("campaign save record, load effects, merchant items, no carry-over and campaign exit wiring: PASS")
