@@ -205,32 +205,34 @@ File: `levels/campaign/Brackenford.level`.
 
 | Source | Exact requirement | Match |
 | --- | --- | --- |
-| [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1386 | `Action	objectiveid	1	brackenford-o01	Kill Elsa Brack and take her keep.` | yes |
-| Script line 1387 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
-| Script line 1394 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
-| Script line 1403 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
-| Script line 1413 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
-| Script line 1487 | `Action	objectiveid	1	brackenford-o06	Enter the keep and kill Elsa Brack.` | yes |
-| Script line 1511 | `Action	win	1` | yes |
+| Script line 1458 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
+| Script line 1459 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
+| Script line 1466 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
+| Script line 1475 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
+| Script line 1484 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
+| Script line 1557 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
+| Script line 1632 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
 | Group | Goal | Current completion conditions |
 | --- | --- | --- |
 | main | `brackenford-main-home`: Keep your heart, 2 beds and a hatchery. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1 |
-| main | `brackenford-main-grove`: Claim the grove; rally 2 fighters before attacking Brack. | `mainGrove`: Cond	claimed	1	Grove	22; Cond	flag	groveAssembled	1 |
+| main | `brackenford-main-grove`: Claim the grove. | `mainGrove`: Cond	claimed	1	Grove	22 |
 | main | `brackenford-main-ford`: Cross the ford; clear the landing. | `mainFord`: Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1 |
-| main | `brackenford-main-keep`: Defeat Brack, foes and portals; claim the keep. | `mainKeep`: Cond	event	ElsaBrack	killed; Cond	goalmet	1	KillAllEnemies; Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12 |
+| main | `brackenford-main-keep`: Claim the keep. | `mainKeep`: Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12 |
+| main | `brackenford-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `brackenford-extra-gold`: Mine 500 gold. | `extraGold`: Cond	mined	1	>=	500 |
 
 Possible route (static, not a playthrough):
 - Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.
-- Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.
+- Claim at least 22 Grove tiles; the keeper gets no creatures from the grove.
 - Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.
 - Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.
-- Defeat ElsaBrack and all remaining enemies, claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.
+- Claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.
+- Defeat the raid of the Mud Fists and its leader ElsaBrack, who come through the Moreya gate at (38,12).
+- After optional discovery of the hidden Cellar (3,24)-(4,25), a worker carries cellar-stone from (3, 24) to the own heart at (9, 38); its delivery reveals the bonus level Mossgate.
 
 Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.
 
@@ -238,16 +240,17 @@ Static footprint/resource/order checks are not an executed playthrough or a comb
 | Trigger `larderReady` | `Action	objectivestate	1	brackenford-o03	reached`; conditions: `Cond	room	1	Hatchery	1` | yes |
 | Trigger `groveClaimed` | `Action	objectivestate	1	brackenford-o04	reached`; conditions: `Cond	claimed	1	Grove	22` | yes |
 | Trigger `goalLandingCleared` | `Action	objectivestate	1	brackenford-o05	reached`; conditions: `Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1` | yes |
-| Trigger `wardenGone` | `Action	objectivestate	1	brackenford-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Trigger `wardenGone` | `Action	objectivestate	1	brackenford-o06	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `mainHome` | `Action	objectivestate	1	brackenford-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1` | yes |
-| Trigger `mainGrove` | `Action	objectivestate	1	brackenford-main-grove	reached`; conditions: `Cond	claimed	1	Grove	22; Cond	flag	groveAssembled	1` | yes |
+| Trigger `mainGrove` | `Action	objectivestate	1	brackenford-main-grove	reached`; conditions: `Cond	claimed	1	Grove	22` | yes |
 | Trigger `mainFord` | `Action	objectivestate	1	brackenford-main-ford	reached`; conditions: `Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1` | yes |
-| Trigger `mainKeep` | `Action	objectivestate	1	brackenford-main-keep	reached`; conditions: `Cond	event	ElsaBrack	killed; Cond	goalmet	1	KillAllEnemies; Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12` | yes |
+| Trigger `mainKeep` | `Action	objectivestate	1	brackenford-main-keep	reached`; conditions: `Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12` | yes |
+| Trigger `mainKeep` | `Action	objectivestate	1	brackenford-o06	reached`; conditions: `Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	brackenford-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
+| Trigger `raidDefeated` | `Action	objectivestate	1	brackenford-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	brackenford-extra-gold	reached`; conditions: `Cond	mined	1	>=	500` | yes |
-| Trigger `groveAssemblyMissed` | `Action	objectivestate	1	brackenford-main-grove	failed`; conditions: `Cond	flag	groveAssembled	0; Cond	event	ElsaBrack	attacked` | yes |
-| Trigger `groveAssemblyMissedDeath` | `Action	objectivestate	1	brackenford-main-grove	failed`; conditions: `Cond	flag	groveAssembled	0; Cond	event	ElsaBrack	killed` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	brackenford-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Objective mapping | objective completion differs from reviewed trigger mapping: brackenford-o01 | no: requires design decision |
+| Objective mapping | objective completion differs from reviewed trigger mapping: brackenford-o06 | no: requires design decision |
 | Briefing | Build beds and a hatchery, claim the grove and gather your creatures. | yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked |
 | Briefing | Cross the ford and kill the warden in her keep. | yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles |
 
@@ -421,13 +424,12 @@ File: `levels/campaign/Coldwell.level`.
 
 | Source | Exact requirement | Match |
 | --- | --- | --- |
-| [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1392 | `Action	objectiveid	1	coldwell-o01	Kill Hugo Cole in the keep hall.` | yes |
-| Script line 1393 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
-| Script line 1401 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
-| Script line 1416 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
-| Script line 1464 | `Action	win	1` | yes |
+| Script line 1496 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
+| Script line 1497 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
+| Script line 1505 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
+| Script line 1520 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
+| Script line 1613 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -436,7 +438,7 @@ File: `levels/campaign/Coldwell.level`.
 | main | `coldwell-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `coldwell-main-plaza`: Claim the well plaza; mine 600 gold beneath it. | `mainPlaza`: Cond	minedregion	1	Undercroft	>=	600; Cond	groundclaimed	1	26	20	32	20; Cond	groundclaimed	1	26	21	32	21; Cond	groundclaimed	1	26	22	32	22; Cond	groundclaimed	1	26	23	35	23; Cond	groundclaimed	1	29	24	35	24; Cond	groundclaimed	1	19	25	24	25; Cond	groundclaimed	1	30	25	36	25; Cond	groundclaimed	1	17	26	17	26; Cond	groundclaimed	1	19	26	24	26; Cond	groundclaimed	1	30	26	36	26; Cond	groundclaimed	1	17	27	24	27; Cond	groundclaimed	1	30	27	36	27; Cond	groundclaimed	1	18	28	25	28; Cond	groundclaimed	1	29	28	36	28; Cond	groundclaimed	1	18	29	35	29; Cond	groundclaimed	1	19	30	20	30; Cond	groundclaimed	1	22	30	33	30; Cond	groundclaimed	1	23	31	32	31; Cond	groundclaimed	1	22	32	30	32; Cond	groundclaimed	1	35	32	36	32 |
 | main | `coldwell-main-gate`: Break the keep's north gate. | `mainGate`: Cond	trapgone	DoorWooden2 |
-| main | `coldwell-main-warden`: Defeat Hugo Cole and all enemy forces. | `mainWarden`: Cond	event	HugoCole	killed; Cond	goalmet	1	KillAllEnemies |
+| main | `coldwell-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `coldwell-extra-gold`: Mine 1200 gold. | `extraGold`: Cond	mined	1	>=	1200 |
 
 Possible route (static, not a playthrough):
@@ -444,20 +446,22 @@ Possible route (static, not a playthrough):
 - Mine 600 actual credited gold from Undercroft (21,34)-(33,42); it contains 23500 finite gold. Gifts and starting gold do not count.
 - Mine at least 1200 actual gold overall for the optional task; at least 36000 finite gold is potentially reachable.
 - Destroy DoorWooden2 at (48,32), the northern entrance immediately above Court; a mere Court visit does not count.
-- Defeat HugoCole at the keep and all remaining enemy creatures while preserving the own heart.
+- Defeat the raid of the Iron Latch and its leader HugoCole, who come through the Moreya gate at (48,30), while preserving the own heart.
+- After optional discovery of the hidden Larder (52,21)-(53,22), a worker carries larder-shard from (52, 21) to the own heart at (10, 9); its delivery finds the Heartstone shard of this level.
 
 Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.
 
 | Trigger `plazaReached` | `Action	objectivestate	1	coldwell-o02	reached`; conditions: `Cond	region	1	Plaza` | yes |
 | Trigger `goalUndercroft600` | `Action	objectivestate	1	coldwell-o03	reached`; conditions: `Cond	minedregion	1	Undercroft	>=	600` | yes |
 | Trigger `courtBreached` | `Action	objectivestate	1	coldwell-o04	reached`; conditions: `Cond	region	1	Court` | yes |
-| Trigger `wardenSlain` | `Action	objectivestate	1	coldwell-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	coldwell-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainPlaza` | `Action	objectivestate	1	coldwell-main-plaza	reached`; conditions: `Cond	minedregion	1	Undercroft	>=	600; Cond	groundclaimed	1	26	20	32	20; Cond	groundclaimed	1	26	21	32	21; Cond	groundclaimed	1	26	22	32	22; Cond	groundclaimed	1	26	23	35	23; Cond	groundclaimed	1	29	24	35	24; Cond	groundclaimed	1	19	25	24	25; Cond	groundclaimed	1	30	25	36	25; Cond	groundclaimed	1	17	26	17	26; Cond	groundclaimed	1	19	26	24	26; Cond	groundclaimed	1	30	26	36	26; Cond	groundclaimed	1	17	27	24	27; Cond	groundclaimed	1	30	27	36	27; Cond	groundclaimed	1	18	28	25	28; Cond	groundclaimed	1	29	28	36	28; Cond	groundclaimed	1	18	29	35	29; Cond	groundclaimed	1	19	30	20	30; Cond	groundclaimed	1	22	30	33	30; Cond	groundclaimed	1	23	31	32	31; Cond	groundclaimed	1	22	32	30	32; Cond	groundclaimed	1	35	32	36	32` | yes |
 | Trigger `mainGate` | `Action	objectivestate	1	coldwell-main-gate	reached`; conditions: `Cond	trapgone	DoorWooden2` | yes |
-| Trigger `mainWarden` | `Action	objectivestate	1	coldwell-main-warden	reached`; conditions: `Cond	event	HugoCole	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	coldwell-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
+| Trigger `raidDefeated` | `Action	objectivestate	1	coldwell-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	coldwell-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	coldwell-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Objective mapping | objective completion differs from reviewed trigger mapping: coldwell-o01 | no: requires design decision |
 | Briefing | Take the old well plaza and mine the gold beneath it to raise your army. | yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold |
 | Briefing | Break the north gate and slay Cole in his hall. | yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces |
 
@@ -672,13 +676,12 @@ File: `levels/campaign/Greywater.level`.
 
 | Source | Exact requirement | Match |
 | --- | --- | --- |
-| [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2957 | `Action	objectiveid	1	greywater-o01	Kill Corwin Gray in the northern river hall.` | yes |
-| Script line 2958 | `Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.` | yes |
-| Script line 2959 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
-| Script line 2984 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
-| Script line 3070 | `Action	win	1` | yes |
+| Script line 3035 | `Action	objectiveid	1	greywater-o01	Defeat the raid and its leader.` | yes |
+| Script line 3036 | `Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.` | yes |
+| Script line 3037 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
+| Script line 3061 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
+| Script line 3204 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -687,29 +690,32 @@ File: `levels/campaign/Greywater.level`.
 | main | `greywater-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `greywater-main-gold`: Mine 600 gold. | `mainGold`: Cond	mined	1	>=	600 |
 | main | `greywater-main-siege`: Cross the river; attack the besiegers. | `mainSiege`: Cond	flag	riverCrossed	1; Cond	attackedregion	1	3	Siege |
-| main | `greywater-main-warden`: Defeat Corwin Gray and all enemy forces. | `mainWarden`: Cond	event	CorwinGray	killed; Cond	goalmet	1	KillAllEnemies |
+| main | `greywater-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `greywater-extra-gold`: Mine 1200 gold. | `extraGold`: Cond	mined	1	>=	1200 |
 
 Possible route (static, not a playthrough):
-- Mine 600 actual gold from the zero-gold start. Existing firstCoin spawns Goblin/Goblin/Spider at (15,74). Reachable finite gold totals 58000; the optional total is 1200, including the main 600.
+- Mine 600 actual gold from the zero-gold start; the keeper gets no creatures from it. Reachable finite gold totals 58000; the optional total is 1200, including the main 600.
 - Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.
 - Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.
-- Before final victory, mine 1200 total gold for the optional goal. Defeat CorwinGray (46,10), remaining enemy forces including the rival keeper, and claim/remove neutral Portal1 (7..9,49..51). Existing reinforcements and original sluice control/timeout remain unchanged.
+- Before final victory, mine 1200 total gold for the optional goal. Defeat both raid groups of the Drowned Oath with their leader CorwinGray, who come through the Moreya gate at (38,24), and claim/remove neutral Portal1 (7..9,49..51). The rival keeper stays a phase-1 enemy; original sluice control/timeout remain unchanged.
 - The sluice-key drops at its owner's actual death position; a worker must carry that physical key to (40, 18) for sluiceKeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.
+- After optional discovery of the hidden ChainVault (52,55)-(53,56), a worker carries gallery-shard from (52, 55) to the own heart at (9, 76); its delivery finds the Heartstone shard of this level.
 
 Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification.
 
 | Trigger `firstCoin` | `Action	objectivestate	1	greywater-o02	reached`; conditions: `Cond	mined	1	>=	600` | yes |
 | Trigger `siegeSeen` | `Action	objectivestate	1	greywater-o04	reached`; conditions: `Cond	region	1	Siege` | yes |
-| Trigger `goalHeartSafe3BeforeWardenFalls` | `Action	objectivestate	1	greywater-o03	reached`; conditions: `Cond	event	CorwinGray	killed; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `goalHeartSafe3BeforeRaidDefeated` | `Action	objectivestate	1	greywater-o03	reached`; conditions: `Cond	raid	defeated; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	greywater-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
-| Trigger `wardenFalls` | `Action	objectivestate	1	greywater-o01	reached`; conditions: `Cond	event	CorwinGray	killed` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	greywater-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	greywater-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainGold` | `Action	objectivestate	1	greywater-main-gold	reached`; conditions: `Cond	mined	1	>=	600` | yes |
 | Trigger `mainSiege` | `Action	objectivestate	1	greywater-main-siege	reached`; conditions: `Cond	flag	riverCrossed	1; Cond	attackedregion	1	3	Siege` | yes |
-| Trigger `mainWarden` | `Action	objectivestate	1	greywater-main-warden	reached`; conditions: `Cond	event	CorwinGray	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	greywater-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
+| Trigger `raidDefeated` | `Action	objectivestate	1	greywater-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	greywater-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
+| Objective mapping | objective completion differs from reviewed trigger mapping: greywater-o01 | no: requires design decision |
+| Objective mapping | objective completion differs from reviewed trigger mapping: greywater-o03 | no: requires design decision |
 | Briefing | Mine first and protect your heart, for those heroes may turn on you. | yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege |
 | Briefing | Kill Gray in his river hall before Aurel's hopes become our burial. | yes: mainWarden requires Gray killed and all remaining enemy forces/portals |
 
@@ -719,16 +725,12 @@ File: `levels/campaign/Highcairn.level`.
 
 | Source | Exact requirement | Match |
 | --- | --- | --- |
-| [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2842 | `Action	objectiveid	1	highcairn-o01	Kill Hilde Cairn in the mountain hold.` | yes |
-| Script line 2843 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
-| Script line 2844 | `Action	objectiveid	1	highcairn-o03	Defend your heart against the patrols.` | yes |
-| Script line 2892 | `Action	objectiveid	1	highcairn-o04	Enter the hold and kill Hilde Cairn.` | yes |
-| Script line 2907 | `Action	objectiveid	1	highcairn-o05	Bring the stone to your heart.` | yes |
-| Script line 3059 | `Action	win	1` | yes |
-| Script line 3090 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
-| Script line 3191 | `Action	win	1` | yes |
+| Script line 2869 | `Action	objectiveid	1	highcairn-o01	Defeat the raid and its leader.` | yes |
+| Script line 2870 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
+| Script line 2871 | `Action	objectiveid	1	highcairn-o03	Defend your heart.` | yes |
+| Script line 2998 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
+| Script line 3067 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -737,36 +739,35 @@ File: `levels/campaign/Highcairn.level`.
 | main | `highcairn-main-home`: Build a bed and coop; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1 |
 | main | `highcairn-main-terraces`: Climb the four terraces in order. | `mainTerraces`: Cond	flag	goalTerrace4	1 |
 | main | `highcairn-main-captain`: Defeat the watch captain and open the hold. | `mainCaptain`: Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1 |
-| main | `highcairn-main-warden`: Defeat Hilde Cairn in her hold and all enemy forces. | `mainWarden`: Cond	killedin	HildeCairn	Hold; Cond	goalmet	1	KillAllEnemies |
-| main | `highcairn-main-stone`: If found, bring the stone home. | `mainStone`: Cond	flag	stoneDone	1 |
+| main | `highcairn-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `highcairn-extra-caldera`: Explore the southern caldera. | `extraCaldera`: Cond	region	1	Caldera |
 
 Possible route (static, not a playthrough):
 - Start with three workers and1500gold. Build a bed on free reachable ground(18,59),92gold; create a3x3hatchery at(17..19,56..58),990gold. Total1082below1500. All fields potentially reachable, unoccupied, dry or removable dirt; room skills unlocked. No invented initial fighter population.
 - Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.
 - Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.
-- Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.
-- After optional discovery, a worker collects cairn-stone from (5, 21) beside CairnBearer and visibly carries the same item to the own heart at (12, 60). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
-- Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty.
+- Defeat both raid groups of the Stone Crown with their leader HildeCairn, who come through the Moreya gate at (62,45); current own-heart protection is required. The hold garrison stays a phase-1 enemy.
+- Highcairn is the third level of its wing and reveals no bonus level; the sealed cairn holds no stone any more.
+- Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals.
 - The hold-key drops at its owner's actual death position; a worker must carry that physical key to (30, 11) for holdSealBreaks to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.
 
 Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
-| Trigger `stoneHome` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	deliveredstone	cairn-stone; Cond	flag	stoneDone	0` | yes |
-| Trigger `stoneHome2` | `Action	objectivestate	1	highcairn-o05	reached`; conditions: `Cond	deliveredstone	cairn-stone; Cond	flag	stoneDone	0` | yes |
-| Trigger `goalHeartSafe3BeforeWardenSlain` | `Action	objectivestate	1	highcairn-o03	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `goalHeartSafe3BeforeRaidDefeated` | `Action	objectivestate	1	highcairn-o03	reached`; conditions: `Cond	raid	defeated; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalTerrace4` | `Action	objectivestate	1	highcairn-o02	reached`; conditions: `Cond	region	1	Terrace4; Cond	flag	goalTerrace3	1` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	highcairn-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
 | Trigger `goalCaptainKilled` | `Action	objectivestate	1	highcairn-o06	reached`; conditions: `Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1` | yes |
-| Trigger `wardenSlain` | `Action	objectivestate	1	highcairn-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Trigger `wardenSlain` | `Action	objectivestate	1	highcairn-o04	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	highcairn-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHome` | `Action	objectivestate	1	highcairn-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1` | yes |
 | Trigger `mainTerraces` | `Action	objectivestate	1	highcairn-main-terraces	reached`; conditions: `Cond	flag	goalTerrace4	1` | yes |
 | Trigger `mainCaptain` | `Action	objectivestate	1	highcairn-main-captain	reached`; conditions: `Cond	event	TerraceWatch8	killed; Cond	flag	holdOpen	1` | yes |
-| Trigger `mainWarden` | `Action	objectivestate	1	highcairn-main-warden	reached`; conditions: `Cond	killedin	HildeCairn	Hold; Cond	goalmet	1	KillAllEnemies` | yes |
-| Trigger `mainStone` | `Action	objectivestate	1	highcairn-main-stone	reached`; conditions: `Cond	flag	stoneDone	1` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	highcairn-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
+| Trigger `raidDefeated` | `Action	objectivestate	1	highcairn-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraCaldera` | `Action	objectivestate	1	highcairn-extra-caldera	reached`; conditions: `Cond	region	1	Caldera` | yes |
+| Objective mapping | objective completion differs from reviewed trigger mapping: highcairn-o01 | no: requires design decision |
+| Objective mapping | objective completion differs from reviewed trigger mapping: highcairn-o03 | no: requires design decision |
+| Objective mapping | required stable objective ID is missing: highcairn-o04 | no: requires design decision |
+| Objective mapping | required stable objective ID is missing: highcairn-o05 | no: requires design decision |
 | Briefing | Build from your Zivs, guard your heart and ascend toward her mountain hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
 | Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with floor pickup, visible worker transport and same-item recovery; runtime remains unverified |
 
@@ -1132,14 +1133,13 @@ File: `levels/campaign/Ravensledge.level`.
 
 | Source | Exact requirement | Match |
 | --- | --- | --- |
-| [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2190 | `Action	objectiveid	1	ravensledge-o01	Kill Osric Vane in the highest keep.` | yes |
-| Script line 2191 | `Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.` | yes |
-| Script line 2206 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
-| Script line 2214 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
-| Script line 2225 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
-| Script line 2269 | `Action	win	1` | yes |
+| Script line 2253 | `Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.` | yes |
+| Script line 2254 | `Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.` | yes |
+| Script line 2269 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
+| Script line 2277 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
+| Script line 2288 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
+| Script line 2374 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1148,14 +1148,14 @@ File: `levels/campaign/Ravensledge.level`.
 | main | `ravensledge-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `ravensledge-main-shelf`: Cross the lower bridge; claim 80 shelf tiles. | `mainShelf`: Cond	flag	lowerCrossed	1; Cond	claimed	1	Shelf	80 |
 | main | `ravensledge-main-gate`: Cross the upper bridge; break the inner gate. | `mainGate`: Cond	flag	upperCrossed	1; Cond	trapgone	DoorWooden1 |
-| main | `ravensledge-main-captain`: Defeat Osric Vane and all enemy forces. | `mainCaptain`: Cond	event	OsricVane	killed; Cond	goalmet	1	KillAllEnemies |
+| main | `ravensledge-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `ravensledge-extra-east`: Explore the east supply entrance. | `extraEast`: Cond	region	1	EastGate |
 
 Possible route (static, not a playthrough):
 - Preserve the heart. Walk one living own creature north across either lower bridge: (11..13,43..46) or (36,43..46). A diggable bypass exists and is not a bridge crossing.
 - Claim 80 Shelf tiles in (3,30)-(56,42); 689 potentially reachable dry/diggable fields are available. After shelfHeld, walk north across either upper bridge: (23..25,26..28) or (50,26..28). Crossing before the shelf is held does not count.
 - Destroy the actual inner keep gate DoorWooden1 at (30,11). Before the final victory, optionally explore EastGate (44,16)-(52,24), with 22 initially open reachable tiles.
-- Defeat OsricVane at (30,6), all remaining hostile creatures and the neutral portal at (29,52). Original reinforcements, triggers and geometry remain unchanged.
+- Defeat the raid of the Grey Fang and its leader RolfScarrow, who come through the Moreya gate at (12,40). The phase-1 posts, triggers and bridges remain unchanged.
 
 Static route and exact source wiring only; real combat, bridge movement and save/load still require integrator/Mario runtime verification.
 
@@ -1163,13 +1163,14 @@ Static route and exact source wiring only; real combat, bridge movement and save
 | Trigger `shelfHeld` | `Action	objectivestate	1	ravensledge-o03	reached`; conditions: `Cond	claimed	1	Shelf	80` | yes |
 | Trigger `yardEntered` | `Action	objectivestate	1	ravensledge-o04	reached`; conditions: `Cond	region	1	Yard` | yes |
 | Trigger `goalInnerKeepEntered` | `Action	objectivestate	1	ravensledge-o05	reached`; conditions: `Cond	trapgone	DoorWooden1` | yes |
-| Trigger `captainDown` | `Action	objectivestate	1	ravensledge-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	ravensledge-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainShelf` | `Action	objectivestate	1	ravensledge-main-shelf	reached`; conditions: `Cond	flag	lowerCrossed	1; Cond	claimed	1	Shelf	80` | yes |
 | Trigger `mainGate` | `Action	objectivestate	1	ravensledge-main-gate	reached`; conditions: `Cond	flag	upperCrossed	1; Cond	trapgone	DoorWooden1` | yes |
-| Trigger `mainCaptain` | `Action	objectivestate	1	ravensledge-main-captain	reached`; conditions: `Cond	event	OsricVane	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	ravensledge-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
+| Trigger `raidDefeated` | `Action	objectivestate	1	ravensledge-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraEast` | `Action	objectivestate	1	ravensledge-extra-east	reached`; conditions: `Cond	region	1	EastGate` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	ravensledge-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Objective mapping | objective completion differs from reviewed trigger mapping: ravensledge-o01 | no: requires design decision |
 | Briefing | Secure your bridgeheads and climb shelf by shelf. | yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate |
 | Briefing | Slay him in the highest keep and send Castellan another answer. | yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals |
 
@@ -1457,14 +1458,13 @@ File: `levels/campaign/Tinmoor.level`.
 
 | Source | Exact requirement | Match |
 | --- | --- | --- |
-| [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1710 | `Action	objectiveid	1	tinmoor-o01	Kill Merrin Tay at the top of the mine.` | yes |
-| Script line 1711 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
-| Script line 1719 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
-| Script line 1737 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
-| Script line 1818 | `Action	win	1` | yes |
-| Script line 1824 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+| Script line 1795 | `Action	objectiveid	1	tinmoor-o01	Defeat the raid and its leader.` | yes |
+| Script line 1796 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
+| Script line 1804 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
+| Script line 1822 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
+| Script line 1867 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+| Script line 1923 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1473,31 +1473,30 @@ File: `levels/campaign/Tinmoor.level`.
 | main | `tinmoor-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `tinmoor-main-seams`: Mine 900 gold; scout the seams in possession. | `mainSeams`: Cond	mined	1	>=	900; Cond	trigger	scoutSeams |
 | main | `tinmoor-main-posts`: Clear both watch posts and reinforcements. | `mainPosts`: Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1; Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1 |
-| main | `tinmoor-main-warden`: Defeat Merrin Tay, all foes and portals. | `mainWarden`: Cond	event	MerrinTay	killed; Cond	goalmet	1	KillAllEnemies |
-| main | `tinmoor-main-stone`: If found, bring the vault stone home. | `mainStone`: Cond	trigger	vaultFound; Cond	trigger	vaultStoneHome |
+| main | `tinmoor-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `tinmoor-extra-gold`: Mine 1500 gold. | `extraGold`: Cond	mined	1	>=	1500 |
 
 Possible route (static, not a playthrough):
 - Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.
 - Possession comes from the level's own research list (spellPossess is pending and the library is available); no script grants it. Possess an own living creature and enter Seams (14,8)-(50,34).
 - Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.
-- After optional discovery, a worker collects vault-stone from (65, 50) beside VaultBearer and visibly carries the same item to the own heart at (9, 46). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
-- Claim or remove the neutral portal at (22,36), defeat MerrinTay and the remaining enemy forces while preserving the heart. If the vault is never found, stone transport is not required.
+- After optional discovery, a worker collects vault-stone from (65, 50) and visibly carries the same item to the own heart at (9, 46); its delivery reveals the bonus level CrowshotGallery. Picking up the worker or losing it leaves the same item on the current floor for another worker.
+- Claim or remove the neutral portal at (22,36) and defeat both raid groups of the Deep Picks with their leader MerrinTay, who come through the Moreya gate at (24,12), while preserving the heart. Stone transport is never required.
 
 Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
 | Trigger `seamsFilled` | `Action	objectivestate	1	tinmoor-o02	reached`; conditions: `Cond	mined	1	>=	900` | yes |
 | Trigger `goalPostACleared` | `Action	objectivestate	1	tinmoor-o03	reached`; conditions: `Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1` | yes |
 | Trigger `goalPostBCleared` | `Action	objectivestate	1	tinmoor-o04	reached`; conditions: `Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1` | yes |
-| Trigger `wardenDown` | `Action	objectivestate	1	tinmoor-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `scoutSeams` | `Action	objectivestate	1	tinmoor-o05	reached`; conditions: `Cond	possessed	1	Seams` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	tinmoor-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainSeams` | `Action	objectivestate	1	tinmoor-main-seams	reached`; conditions: `Cond	mined	1	>=	900; Cond	trigger	scoutSeams` | yes |
 | Trigger `mainPosts` | `Action	objectivestate	1	tinmoor-main-posts	reached`; conditions: `Cond	event	PostAWatch1	killed; Cond	event	PostAWatch2	killed; Cond	spawncleared	postAEntered	1; Cond	event	PostBWatch1	killed; Cond	event	PostBWatch2	killed; Cond	spawncleared	postBEntered	1` | yes |
-| Trigger `mainWarden` | `Action	objectivestate	1	tinmoor-main-warden	reached`; conditions: `Cond	event	MerrinTay	killed; Cond	goalmet	1	KillAllEnemies` | yes |
-| Trigger `mainStone` | `Action	objectivestate	1	tinmoor-main-stone	reached`; conditions: `Cond	trigger	vaultFound; Cond	trigger	vaultStoneHome` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	tinmoor-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
+| Trigger `raidDefeated` | `Action	objectivestate	1	tinmoor-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	tinmoor-extra-gold	reached`; conditions: `Cond	mined	1	>=	1500` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	tinmoor-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
+| Objective mapping | objective completion differs from reviewed trigger mapping: tinmoor-o01 | no: requires design decision |
 | Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals |
 | Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone activates completion before victory |
 

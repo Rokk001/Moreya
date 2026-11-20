@@ -512,11 +512,10 @@
       "brackenford-main-grove": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Claim the grove; rally 2 fighters before attacking Brack.",
+        "text": "Claim the grove.",
         "completion": "mainGrove",
         "conditions": [
-          "Cond\tclaimed\t1\tGrove\t22",
-          "Cond\tflag\tgroveAssembled\t1"
+          "Cond\tclaimed\t1\tGrove\t22"
         ],
         "mode": "repeat\t0"
       },
@@ -536,11 +535,9 @@
       "brackenford-main-keep": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Brack, foes and portals; claim the keep.",
+        "text": "Claim the keep.",
         "completion": "mainKeep",
         "conditions": [
-          "Cond\tevent\tElsaBrack\tkilled",
-          "Cond\tgoalmet\t1\tKillAllEnemies",
           "Cond\tgroundclaimed\t1\t44\t5\t48\t5",
           "Cond\tgroundclaimed\t1\t43\t6\t50\t6",
           "Cond\tgroundclaimed\t1\t43\t7\t52\t7",
@@ -549,6 +546,16 @@
           "Cond\tgroundclaimed\t1\t43\t10\t51\t10",
           "Cond\tgroundclaimed\t1\t41\t11\t48\t11",
           "Cond\tgroundclaimed\t1\t41\t12\t44\t12"
+        ],
+        "mode": "repeat\t0"
+      },
+      "brackenford-main-raid": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
+        "conditions": [
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -564,44 +571,6 @@
       }
     },
     "extra_status_triggers": {
-      "groveAssembly": {
-        "conditions": [
-          "Cond\tclaimed\t1\tGrove\t22",
-          "Cond\tregion\t1\tGrove\t>=\t2\t@fighters",
-          "Cond\tevent\tElsaBrack\tattacked\t==\t0",
-          "Cond\tevent\tElsaBrack\tkilled\t==\t0"
-        ],
-        "states": [],
-        "actions": [
-          "Action\tsetflag\tgroveAssembled\t1"
-        ]
-      },
-      "groveAssemblyMissed": {
-        "conditions": [
-          "Cond\tflag\tgroveAssembled\t0",
-          "Cond\tevent\tElsaBrack\tattacked"
-        ],
-        "states": [
-          [
-            "1",
-            "brackenford-main-grove",
-            "failed"
-          ]
-        ]
-      },
-      "groveAssemblyMissedDeath": {
-        "conditions": [
-          "Cond\tflag\tgroveAssembled\t0",
-          "Cond\tevent\tElsaBrack\tkilled"
-        ],
-        "states": [
-          [
-            "1",
-            "brackenford-main-grove",
-            "failed"
-          ]
-        ]
-      },
       "mainHeartLost": {
         "conditions": [
           "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
@@ -618,7 +587,6 @@
     "reachability": {
       "minimum_mineable_gold": 500,
       "named_creatures": [
-        "ElsaBrack",
         "FordGuard1",
         "FordGuard2"
       ],
@@ -682,14 +650,27 @@
             ]
           ]
         }
-      ]
+      ],
+      "regions": {
+        "Cellar": {
+          "bounds": [
+            3,
+            24,
+            4,
+            25
+          ],
+          "minimum_open_tiles": 4
+        }
+      }
     },
     "route": [
       "Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.",
-      "Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.",
+      "Claim at least 22 Grove tiles; the keeper gets no creatures from the grove.",
       "Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.",
       "Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.",
-      "Defeat ElsaBrack and all remaining enemies, claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required."
+      "Claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.",
+      "Defeat the raid of the Mud Fists and its leader ElsaBrack, who come through the Moreya gate at (38,12).",
+      "After optional discovery of the hidden Cellar (3,24)-(4,25), a worker carries cellar-stone from (3, 24) to the own heart at (9, 38); its delivery reveals the bonus level Mossgate."
     ],
     "runtime_limit": "Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.",
     "setup": {
@@ -725,7 +706,21 @@
     },
     "preserved_actions": {
       "groveClaimed": [
-        "Action\tspawn\t1\t12\t28\t-1\tGoblin:2\tGoblin:2"
+        "Action\tmessage\t1\tThe grove is yours. The ford lies east of it."
+      ],
+      "cellarStoneHome": [
+        "Action\tdiscover\tcampaign/Mossgate.level"
+      ]
+    },
+    "preserved_conditions": {
+      "cellarFound": [
+        "Cond\tregion\t1\tCellar"
+      ],
+      "cellarStoneHome": [
+        "Cond\tdeliveredstone\tcellar-stone"
+      ],
+      "raidDefeated": [
+        "Cond\traid\tdefeated"
       ]
     }
   },
@@ -781,14 +776,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "coldwell-main-warden": {
+      "coldwell-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Hugo Cole and all enemy forces.",
-        "completion": "mainWarden",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tevent\tHugoCole\tkilled",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -820,7 +814,6 @@
     "reachability": {
       "minimum_mineable_gold": 1200,
       "named_creatures": [
-        "HugoCole",
         "WellWatch1",
         "WellWatch2",
         "KeepGuard1",
@@ -981,6 +974,17 @@
             ]
           ]
         }
+      },
+      "regions": {
+        "Larder": {
+          "bounds": [
+            52,
+            21,
+            53,
+            22
+          ],
+          "minimum_open_tiles": 4
+        }
       }
     },
     "route": [
@@ -988,9 +992,26 @@
       "Mine 600 actual credited gold from Undercroft (21,34)-(33,42); it contains 23500 finite gold. Gifts and starting gold do not count.",
       "Mine at least 1200 actual gold overall for the optional task; at least 36000 finite gold is potentially reachable.",
       "Destroy DoorWooden2 at (48,32), the northern entrance immediately above Court; a mere Court visit does not count.",
-      "Defeat HugoCole at the keep and all remaining enemy creatures while preserving the own heart."
+      "Defeat the raid of the Iron Latch and its leader HugoCole, who come through the Moreya gate at (48,30), while preserving the own heart.",
+      "After optional discovery of the hidden Larder (52,21)-(53,22), a worker carries larder-shard from (52, 21) to the own heart at (10, 9); its delivery finds the Heartstone shard of this level."
     ],
-    "runtime_limit": "Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee."
+    "runtime_limit": "Static footprint/resource/order checks are not an executed playthrough or a combat-balance guarantee.",
+    "preserved_actions": {
+      "larderShardHome": [
+        "Action\tshard"
+      ]
+    },
+    "preserved_conditions": {
+      "larderFound": [
+        "Cond\tregion\t1\tLarder"
+      ],
+      "larderShardHome": [
+        "Cond\tdeliveredstone\tlarder-shard"
+      ],
+      "raidDefeated": [
+        "Cond\traid\tdefeated"
+      ]
+    }
   },
   "Tinmoor": {
     "goals": {
@@ -1030,25 +1051,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "tinmoor-main-warden": {
+      "tinmoor-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Merrin Tay, all foes and portals.",
-        "completion": "mainWarden",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tevent\tMerrinTay\tkilled",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
-        ],
-        "mode": "repeat\t0"
-      },
-      "tinmoor-main-stone": {
-        "kind": "conditionalobjectiveid",
-        "seat": "1",
-        "text": "If found, bring the vault stone home.",
-        "completion": "mainStone",
-        "conditions": [
-          "Cond\ttrigger\tvaultFound",
-          "Cond\ttrigger\tvaultStoneHome"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -1064,15 +1073,6 @@
       }
     },
     "extra_status_triggers": {
-      "mainStoneList": {
-        "conditions": [
-          "Cond\ttrigger\tvaultFound"
-        ],
-        "states": [],
-        "actions": [
-          "Action\tconditionalobjectiveid\t1\ttinmoor-main-stone\tIf found, bring the vault stone home."
-        ]
-      },
       "mainHeartLost": {
         "conditions": [
           "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
@@ -1089,22 +1089,15 @@
     "preserved_actions": {
       "vaultFound": [
         "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart.",
-        "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer",
-        "Action\tstonecreate\t65\t50\tvault-stone\t1\t9\t46",
-        "Action\tsetflag\tvaultStone\t1",
-        "Action\ttimer\tvaultSpawn\t0"
-      ],
-      "vaultStoneLost": [
-        "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer"
+        "Action\tstonecreate\t65\t50\tvault-stone\t1\t9\t46"
       ],
       "vaultStoneHome": [
-        "Action\tdiscover\tcampaign/BoulderCourse.level"
+        "Action\tdiscover\tcampaign/CrowshotGallery.level"
       ]
     },
     "reachability": {
       "minimum_mineable_gold": 1500,
       "named_creatures": [
-        "MerrinTay",
         "PostAWatch1",
         "PostAWatch2",
         "PostBWatch1",
@@ -1129,33 +1122,14 @@
           ],
           "minimum_open_tiles": 1
         }
-      },
-      "mission_pickups": {
-        "vault-stone": {
-          "source": [
-            65,
-            50
-          ],
-          "friendly": "VaultBearer",
-          "friendly_spawn": [
-            66,
-            50
-          ],
-          "destination": [
-            9,
-            46
-          ],
-          "seat": 1,
-          "discovery": "vaultFound"
-        }
       }
     },
     "route": [
       "Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.",
       "Possession comes from the level's own research list (spellPossess is pending and the library is available); no script grants it. Possess an own living creature and enter Seams (14,8)-(50,34).",
       "Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.",
-      "After optional discovery, a worker collects vault-stone from (65, 50) beside VaultBearer and visibly carries the same item to the own heart at (9, 46). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.",
-      "Claim or remove the neutral portal at (22,36), defeat MerrinTay and the remaining enemy forces while preserving the heart. If the vault is never found, stone transport is not required."
+      "After optional discovery, a worker collects vault-stone from (65, 50) and visibly carries the same item to the own heart at (9, 46); its delivery reveals the bonus level CrowshotGallery. Picking up the worker or losing it leaves the same item on the current floor for another worker.",
+      "Claim or remove the neutral portal at (22,36) and defeat both raid groups of the Deep Picks with their leader MerrinTay, who come through the Moreya gate at (24,12), while preserving the heart. Stone transport is never required."
     ],
     "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
     "preserved_conditions": {
@@ -1168,10 +1142,8 @@
       "vaultStoneHome": [
         "Cond\tdeliveredstone\tvault-stone"
       ],
-      "vaultStoneLost": [
-        "Cond\tflag\tvaultStone\t1",
-        "Cond\ttimer\tvaultSpawn\t>=\t5",
-        "Cond\talive\tVaultBearer\t0"
+      "raidDefeated": [
+        "Cond\traid\tdefeated"
       ]
     }
   },
@@ -1209,14 +1181,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "ravensledge-main-captain": {
+      "ravensledge-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Osric Vane and all enemy forces.",
-        "completion": "mainCaptain",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tevent\tOsricVane\tkilled",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -1287,6 +1258,9 @@
       ],
       "goalInnerKeepEntered": [
         "Cond\ttrapgone\tDoorWooden1"
+      ],
+      "raidDefeated": [
+        "Cond\traid\tdefeated"
       ]
     },
     "reachability": {
@@ -1346,9 +1320,7 @@
           "minimum_potential_tiles": 3
         }
       },
-      "named_creatures": [
-        "OsricVane"
-      ],
+      "named_creatures": [],
       "required_traps": {
         "DoorWooden1": {
           "type": 4,
@@ -1404,7 +1376,7 @@
       "Preserve the heart. Walk one living own creature north across either lower bridge: (11..13,43..46) or (36,43..46). A diggable bypass exists and is not a bridge crossing.",
       "Claim 80 Shelf tiles in (3,30)-(56,42); 689 potentially reachable dry/diggable fields are available. After shelfHeld, walk north across either upper bridge: (23..25,26..28) or (50,26..28). Crossing before the shelf is held does not count.",
       "Destroy the actual inner keep gate DoorWooden1 at (30,11). Before the final victory, optionally explore EastGate (44,16)-(52,24), with 22 initially open reachable tiles.",
-      "Defeat OsricVane at (30,6), all remaining hostile creatures and the neutral portal at (29,52). Original reinforcements, triggers and geometry remain unchanged."
+      "Defeat the raid of the Grey Fang and its leader RolfScarrow, who come through the Moreya gate at (12,40). The phase-1 posts, triggers and bridges remain unchanged."
     ],
     "runtime_limit": "Static route and exact source wiring only; real combat, bridge movement and save/load still require integrator/Mario runtime verification."
   },
@@ -1441,14 +1413,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "greywater-main-warden": {
+      "greywater-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Corwin Gray and all enemy forces.",
-        "completion": "mainWarden",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tevent\tCorwinGray\tkilled",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -1516,12 +1487,24 @@
         "Cond\ttime\t5",
         "Cond\tdeliveredstone\tsluice-key",
         "Cond\tflag\tsluiceOpen\t0"
+      ],
+      "vaultFound": [
+        "Cond\tregion\t1\tChainVault"
+      ],
+      "galleryShardHome": [
+        "Cond\tdeliveredstone\tgallery-shard"
+      ],
+      "raidDefeated": [
+        "Cond\traid\tdefeated"
+      ],
+      "goalHeartSafe3BeforeRaidDefeated": [
+        "Cond\traid\tdefeated",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple"
       ]
     },
     "preserved_actions": {
       "firstCoin": [
-        "Action\tmessage\t1\tThat is a start. Two goblins heard the clink and want to join you. A bridge crossing is open south of the dungeon.",
-        "Action\tspawn\t1\t15\t74\t1\tGoblin:1\tGoblin:1\tSpider:1",
+        "Action\tmessage\t1\tThat is a start. A bridge crossing is open south of the dungeon.",
         "Action\treveal\t1\tSouthLanding",
         "Action\tobjectivestate\t1\tgreywater-o02\treached"
       ],
@@ -1531,13 +1514,11 @@
         "Action\tobjectivestate\t1\tgreywater-o04\treached"
       ],
       "midBankHeld": [
-        "Action\tmessage\t1\tThe middle bank is held. Heavier creatures are ready to serve, and the sluice gate on the east bank grinds open.",
-        "Action\tspawn\t1\t16\t75\t1\tOrc:2\tGoblin:2",
+        "Action\tmessage\t1\tThe middle bank is held, and the sluice gate on the east bank grinds open.",
         "Action\treveal\t1\tNorthBank",
         "Action\tterrain\t38\t17\t42\t17\tpath",
         "Action\tsetflag\tsluiceOpen\t1",
-        "Action\tportal\t0\ton",
-        "Action\tgenerate\t1\tSpider:1"
+        "Action\tportal\t0\ton"
       ],
       "sluiceTimeout": [
         "Action\tmessage\t1\tThe river hall has lifted its sluice gate on the east bank. The way north is open.",
@@ -1553,12 +1534,14 @@
       ],
       "sluiceKey": [
         "Action\tstonedrop\tSluiceWarden\tsluice-key\t1\t40\t18"
+      ],
+      "galleryShardHome": [
+        "Action\tshard"
       ]
     },
     "reachability": {
       "minimum_mineable_gold": 1200,
       "named_creatures": [
-        "CorwinGray",
         "SiegeHand1",
         "SiegeHand2",
         "SiegeHand3"
@@ -1590,6 +1573,15 @@
             46
           ],
           "minimum_potential_tiles": 5
+        },
+        "ChainVault": {
+          "bounds": [
+            52,
+            55,
+            53,
+            56
+          ],
+          "minimum_open_tiles": 4
         }
       },
       "crossing_bridges": {
@@ -1655,11 +1647,12 @@
       }
     },
     "route": [
-      "Mine 600 actual gold from the zero-gold start. Existing firstCoin spawns Goblin/Goblin/Spider at (15,74). Reachable finite gold totals 58000; the optional total is 1200, including the main 600.",
+      "Mine 600 actual gold from the zero-gold start; the keeper gets no creatures from it. Reachable finite gold totals 58000; the optional total is 1200, including the main 600.",
       "Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.",
       "Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.",
-      "Before final victory, mine 1200 total gold for the optional goal. Defeat CorwinGray (46,10), remaining enemy forces including the rival keeper, and claim/remove neutral Portal1 (7..9,49..51). Existing reinforcements and original sluice control/timeout remain unchanged.",
-      "The sluice-key drops at its owner's actual death position; a worker must carry that physical key to (40, 18) for sluiceKeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged."
+      "Before final victory, mine 1200 total gold for the optional goal. Defeat both raid groups of the Drowned Oath with their leader CorwinGray, who come through the Moreya gate at (38,24), and claim/remove neutral Portal1 (7..9,49..51). The rival keeper stays a phase-1 enemy; original sluice control/timeout remain unchanged.",
+      "The sluice-key drops at its owner's actual death position; a worker must carry that physical key to (40, 18) for sluiceKeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.",
+      "After optional discovery of the hidden ChainVault (52,55)-(53,56), a worker carries gallery-shard from (52, 55) to the own heart at (9, 76); its delivery finds the Heartstone shard of this level."
     ],
     "runtime_limit": "Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification."
   },
@@ -5918,24 +5911,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "highcairn-main-warden": {
+      "highcairn-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Hilde Cairn in her hold and all enemy forces.",
-        "completion": "mainWarden",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tkilledin\tHildeCairn\tHold",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
-        ],
-        "mode": "repeat\t0"
-      },
-      "highcairn-main-stone": {
-        "kind": "conditionalobjectiveid",
-        "seat": "1",
-        "text": "If found, bring the stone home.",
-        "completion": "mainStone",
-        "conditions": [
-          "Cond\tflag\tstoneDone\t1"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -5951,15 +5933,6 @@
       }
     },
     "extra_status_triggers": {
-      "mainStoneList": {
-        "conditions": [
-          "Cond\ttrigger\tsealedFound"
-        ],
-        "states": [],
-        "actions": [
-          "Action\tconditionalobjectiveid\t1\thighcairn-main-stone\tIf found, bring the stone home."
-        ]
-      },
       "mainHeartLost": {
         "conditions": [
           "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
@@ -5972,67 +5945,18 @@
           ]
         ]
       },
-      "victoryWithoutStone": {
-        "conditions": [
-          "Cond\tobjective\t1\thighcairn-main-home\treached",
-          "Cond\tobjective\t1\thighcairn-main-terraces\treached",
-          "Cond\tobjective\t1\thighcairn-main-captain\treached",
-          "Cond\tobjective\t1\thighcairn-main-warden\treached",
-          "Cond\tflag\tbearerOut\t0"
-        ],
-        "states": [],
-        "actions": [
-          "Action\tsetflag\tvictoryStoneReady\t1"
-        ]
-      },
-      "victoryWithStone": {
-        "conditions": [
-          "Cond\tflag\tstoneDone\t1"
-        ],
-        "states": [],
-        "actions": [
-          "Action\tsetflag\tvictoryStoneReady\t1"
-        ]
-      },
       "mainVictory": {
         "conditions": [
           "Cond\tobjective\t1\thighcairn-main-home\treached",
           "Cond\tobjective\t1\thighcairn-main-terraces\treached",
           "Cond\tobjective\t1\thighcairn-main-captain\treached",
-          "Cond\tobjective\t1\thighcairn-main-warden\treached",
-          "Cond\tflag\tvictoryStoneReady\t1"
+          "Cond\tobjective\t1\thighcairn-main-raid\treached"
         ],
         "states": [],
         "actions": [
           "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours.",
           "Action\twin\t1"
         ]
-      },
-      "bearerLost": {
-        "conditions": [
-          "Cond\tflag\tbearerOut\t1",
-          "Cond\tflag\tstoneDone\t0",
-          "Cond\talive\tCairnBearer\t0",
-          "Cond\tevent\tCairnBearer2\tcreated\t==\t0"
-        ],
-        "states": [],
-        "actions": [
-          "Action\tmessage\t1\tAnother spirit rises. Send a Ziv for the stone.",
-          "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2"
-        ],
-        "mode": "once"
-      },
-      "carrierRecovery": {
-        "conditions": [
-          "Cond\ttrigger\tbearerLost",
-          "Cond\tflag\tstoneDone\t0",
-          "Cond\tevent\tCairnBearer2\tcreated\t==\t0"
-        ],
-        "states": [],
-        "actions": [
-          "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2"
-        ],
-        "mode": "repeat\t0"
       }
     },
     "preserved_conditions": {
@@ -6064,31 +5988,18 @@
         "Cond\tevent\tTerraceWatch8\tkilled",
         "Cond\tflag\tholdOpen\t1"
       ],
-      "stoneHome": [
-        "Cond\tdeliveredstone\tcairn-stone",
-        "Cond\tflag\tstoneDone\t0"
-      ],
-      "stoneHome2": [
-        "Cond\tdeliveredstone\tcairn-stone",
-        "Cond\tflag\tstoneDone\t0"
-      ],
-      "bearerLost": [
-        "Cond\tflag\tbearerOut\t1",
-        "Cond\tflag\tstoneDone\t0",
-        "Cond\talive\tCairnBearer\t0",
-        "Cond\tevent\tCairnBearer2\tcreated\t==\t0"
-      ],
-      "sealedFound": [
-        "Cond\tregion\t1\tCairnHall"
-      ],
       "firstSeams": [
         "Cond\tmined\t1\t>=\t400"
       ],
       "holdKey": [
         "Cond\tevent\tTerraceWatch8\tkilled"
       ],
-      "cairnStone": [
-        "Cond\ttime\t3"
+      "raidDefeated": [
+        "Cond\traid\tdefeated"
+      ],
+      "goalHeartSafe3BeforeRaidDefeated": [
+        "Cond\traid\tdefeated",
+        "Cond\tgoalmet\t1\tProtectDungeonTemple"
       ]
     },
     "preserved_actions": {
@@ -6118,41 +6029,15 @@
       "goalCaptainKilled": [
         "Action\tobjectivestate\t1\thighcairn-o06\treached"
       ],
-      "stoneHome": [
-        "Action\tmessage\t1\tThe pale stone has reached your heart and a hidden land has opened.",
-        "Action\tsetflag\tstoneDone\t1",
-        "Action\tdiscover\tcampaign/SkittleCavern.level",
-        "Action\tobjectivestate\t1\thighcairn-o05\treached"
-      ],
-      "stoneHome2": [
-        "Action\tmessage\t1\tThe pale stone has reached your heart and a hidden land has opened.",
-        "Action\tsetflag\tstoneDone\t1",
-        "Action\tdiscover\tcampaign/SkittleCavern.level",
-        "Action\tobjectivestate\t1\thighcairn-o05\treached"
-      ],
-      "bearerLost": [
-        "Action\tmessage\t1\tAnother spirit rises. Send a Ziv for the stone.",
-        "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer2"
-      ],
-      "sealedFound": [
-        "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart.",
-        "Action\tspawn\t1\t5\t22\t1\tSpider:3@CairnBearer",
-        "Action\tsetflag\tbearerOut\t1",
-        "Action\tobjectiveid\t1\thighcairn-o05\tBring the stone to your heart."
-      ],
       "firstSeams": [
         "Action\tmessage\t1\tThe first seams are open. Gold buys you more than rooms: build a bridge and a door or two."
       ],
       "holdKey": [
         "Action\tstonedrop\tTerraceWatch8\thold-key\t1\t30\t11"
-      ],
-      "cairnStone": [
-        "Action\tstonecreate\t5\t21\tcairn-stone\t1\t12\t60"
       ]
     },
     "reachability": {
       "named_creatures": [
-        "HildeCairn",
         "TerraceWatch8"
       ],
       "regions": {
@@ -6209,35 +6094,6 @@
             11
           ],
           "minimum_open_tiles": 1
-        },
-        "CairnHall": {
-          "bounds": [
-            3,
-            18,
-            8,
-            24
-          ],
-          "minimum_open_tiles": 1
-        }
-      },
-      "mission_pickups": {
-        "cairn-stone": {
-          "source": [
-            5,
-            21
-          ],
-          "friendly": "CairnBearer",
-          "friendly_spawn": [
-            5,
-            22
-          ],
-          "destination": [
-            12,
-            60
-          ],
-          "seat": 1,
-          "discovery": "sealedFound",
-          "creation": "cairnStone"
         }
       },
       "mission_deliveries": {
@@ -6261,9 +6117,9 @@
       "Start with three workers and1500gold. Build a bed on free reachable ground(18,59),92gold; create a3x3hatchery at(17..19,56..58),990gold. Total1082below1500. All fields potentially reachable, unoccupied, dry or removable dirt; room skills unlocked. No invented initial fighter population.",
       "Retain existing goalTerrace1..4 ordered flags: each terrace requires its predecessor, with the original regions and no changed terrain or patrol schedule.",
       "Captain TerraceWatch8 must actually die and holdOpen must be1. Original2700second opening remains, and the captain can still be killed afterwards.",
-      "Kill HildeCairn in the original Hold, as the original objective explicitly requires; then clear remaining enemy forces/portals. Current own-heart protection is required.",
-      "After optional discovery, a worker collects cairn-stone from (5, 21) beside CairnBearer and visibly carries the same item to the own heart at (12, 60). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.",
-      "Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals and any activated stone duty.",
+      "Defeat both raid groups of the Stone Crown with their leader HildeCairn, who come through the Moreya gate at (62,45); current own-heart protection is required. The hold garrison stays a phase-1 enemy.",
+      "Highcairn is the third level of its wing and reveals no bonus level; the sealed cairn holds no stone any more.",
+      "Optionally visit the southern Caldera,71reachable open dry fields. Unchanged victory narration occurs once after current main goals.",
       "The hold-key drops at its owner's actual death position; a worker must carry that physical key to (30, 11) for holdSealBreaks to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged."
     ],
     "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
