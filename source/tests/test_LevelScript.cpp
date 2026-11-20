@@ -1871,8 +1871,8 @@ BOOST_AUTO_TEST_CASE(remaining_key_door_reward_and_victory_round_trip)
     }
 }
 
-//! \brief The keepminion action that lets the strongest fighter of a seat come along to the next campaign level
-//! is read and written, and refused without a seat
+//! \brief The keepminion action of older files (it no longer lets a fighter come along: every campaign level starts
+//! fresh) is still read and written, and refused without a seat
 BOOST_AUTO_TEST_CASE(test_keep_minion_action)
 {
     static const std::string text =
@@ -1903,5 +1903,40 @@ BOOST_AUTO_TEST_CASE(test_keep_minion_action)
 
     LevelScript invalid;
     std::istringstream isBad("[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tkeepminion\n[/Trigger]\n[/Triggers]\n");
+    BOOST_CHECK(!invalid.importFromStream(isBad));
+}
+
+//! \brief The campaign shard action (the Heartstone shard of the played level is found) is read and written
+//! without arguments, and refused with one
+BOOST_AUTO_TEST_CASE(test_shard_action)
+{
+    static const std::string text =
+        "[Trigger]\n"
+        "Name\tshardHome\n"
+        "Mode\tonce\n"
+        "Cond\ttime\t60\n"
+        "Action\tshard\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    const LevelScriptTrigger& trigger = script.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 1u);
+    BOOST_CHECK(trigger.mActions[0].mType == LevelScriptActionType::findShard);
+
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    BOOST_CHECK(written.find("Action\tshard\n") != std::string::npos);
+    LevelScript again;
+    std::istringstream is2(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is2));
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK_EQUAL(os2.str(), written);
+
+    LevelScript invalid;
+    std::istringstream isBad("[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tshard\t1\n[/Trigger]\n[/Triggers]\n");
     BOOST_CHECK(!invalid.importFromStream(isBad));
 }

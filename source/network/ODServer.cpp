@@ -1900,16 +1900,29 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // The Game Settings page can change what each seat may build, cast or research
             gameMap->applySkirmishSkillStates();
 
-            // The complete campaign Heartstone gives the keepers the Summon champion spell
+            // The complete campaign Heartstone gives the keepers the Summon champion spell in the levels
+            // with Champion=1 in Campaign.cfg, every level from wing 4 on (a saved game keeps the availability it was saved with).
+            // The items unlocked by bonus levels are put up for sale once at the merchant of a freshly
+            // started level; a saved game brings its waiting items in its Info block.
             if(Campaign::getSingleton().isActive())
             {
-                const bool championAvailable = Campaign::getSingleton().isLevelHeartstoneComplete();
+                const bool championAvailable = Campaign::getSingleton().isLevelChampionAvailable();
+                std::vector<CampaignUnlockedItem> unlockedItems;
+                if(mServerMode != ServerMode::ModeGameLoaded)
+                    unlockedItems = Campaign::getSingleton().getUnlockedItems();
                 for(Seat* seat : gameMap->getSeats())
                 {
                     if(seat->isRogueSeat() || (seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
                         continue;
 
                     seat->setSkillAvailability(SkillType::spellSummonChampion, championAvailable, championAvailable);
+                    for(const CampaignUnlockedItem& unlocked : unlockedItems)
+                    {
+                        Quality quality = Quality::poor;
+                        if(!parseQuality(unlocked.mQuality, quality) || (quality == Quality::poor))
+                            continue;
+                        gameMap->addCampaignMerchantGood(seat->getId(), quality, unlocked.mItemId);
+                    }
                 }
             }
 
@@ -1919,10 +1932,8 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 seat->initSeat();
             }
 
-            // A creature that the last campaign level brought along comes to the dungeon
-            // In a saved game it is already on the map; the progress creature belongs to a fresh start.
-            if(mServerMode != ServerMode::ModeGameLoaded)
-                LevelScriptRunner::spawnKeptMinion(*gameMap);
+            // Every campaign level starts fresh: no creature, gold or merchant stock comes along from the
+            // last level won.
 
             mSeatsConfigured = true;
             gameMap->notifySeatsConfigured();

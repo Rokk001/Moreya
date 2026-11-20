@@ -38,6 +38,7 @@ class LevelScript;
 #endif //mingw32
 
 #include <cstdint>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <random>
@@ -66,9 +67,22 @@ enum class Quality : int32_t;
 class CreatureMood;
 class RenderedMovableEntity;
 class Room;
+class RoomMerchant;
 class Spell;
 class TileSet;
 class TileSetValue;
+
+//! \brief One item a campaign bonus level unlocked that still waits for a free table at the merchant of its seat.
+//! Each one is put up for sale once per map.
+struct CampaignMerchantGood
+{
+    //! \brief Seat whose merchant sells the item
+    int mSeatId;
+    //! \brief Quality the item is created in
+    Quality mQuality;
+    //! \brief Id of the item line in config/items.cfg
+    std::string mItemId;
+};
 
 
 enum class GameEntityType;
@@ -315,7 +329,8 @@ public:
     const ItemDefinition* getItemDefinition(const std::string& id) const;
     //! \brief Returns all item definitions in their catalogue order.
     const std::vector<const ItemDefinition*>& getItemDefinitions() const { return mItemDefinitions; }
-    //! \brief Releases client definitions and resets the map-wide Epic registry.
+    //! \brief Releases client definitions and resets the map-wide Epic registry and the campaign items waiting for
+    //! the merchant.
     void clearItemDefinitions();
     //! \brief Rolls a matching item, excluding registered Epics and falling back to Rare when exhausted.
     std::unique_ptr<ItemInstance> rollItem(Quality quality, const std::string& slot = std::string(),
@@ -328,6 +343,18 @@ public:
     uint32_t allocateEpicSerial() { return mNextEpicSerial++; }
     //! \brief Returns whether an Epic of an item line already exists anywhere in the map.
     bool isEpicRegistered(const std::string& id) const { return mEpicRegistry.count(id) != 0; }
+    //! \brief Campaign: an item unlocked by a bonus level is put up for sale once at the merchant of the seat in
+    //! this map, as soon as the seat's merchant has a free table.
+    void addCampaignMerchantGood(int seatId, Quality quality, const std::string& itemId);
+    //! \brief Campaign: moves the unlocked items that wait for the seat of the room onto its free tables. An Epic
+    //! waits while another instance of its line exists in the map. Server side only, called by the room upkeep.
+    void stockCampaignMerchantGoods(RoomMerchant& room);
+    //! \brief The unlocked campaign items that still wait for a merchant table
+    const std::vector<CampaignMerchantGood>& getCampaignMerchantGoods() const { return mCampaignMerchantGoods; }
+    //! \brief Reads one "CampaignMerchant" line of a saved game's Info block. Returns false if the line is another one.
+    bool importCampaignMerchantInfoLine(const std::string& line);
+    //! \brief Writes one "CampaignMerchant" Info line per waiting item (nothing when none waits).
+    void exportCampaignMerchantInfo(std::ostream& os) const;
     //! \brief Caches living aura givers by seat at the beginning of a turn.
     void updateItemAuraGivers();
     //! \brief Returns a nearby same-seat aura sum for GuardWall or Rally.
@@ -1001,6 +1028,8 @@ private:
     std::vector<const ItemDefinition*> mItemDefinitions;
     std::set<std::string> mEpicRegistry;
     uint32_t mNextEpicSerial = 1;
+    //! \brief Campaign items unlocked by bonus levels that wait for a merchant table (saved in the Info block)
+    std::vector<CampaignMerchantGood> mCampaignMerchantGoods;
     std::map<const Seat*, std::vector<Creature*>> mItemAuraGivers;
 
 

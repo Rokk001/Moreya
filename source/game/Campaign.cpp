@@ -32,6 +32,9 @@ namespace
 const int LEVEL_DIFFICULTY_MIN = 1;
 const int LEVEL_DIFFICULTY_MAX = 5;
 
+//! Version of the progress file written by exportProgress
+const uint32_t PROGRESS_VERSION = 2;
+
 //! Removes the white space at both ends of a text
 std::string trim(const std::string& text)
 {
@@ -43,15 +46,32 @@ std::string trim(const std::string& text)
     size_t last = text.find_last_not_of(whitespace);
     return text.substr(first, last - first + 1);
 }
+
+//! \brief True for an item quality a bonus level may unlock, spelled as in config/items.cfg
+bool isUnlockQuality(const std::string& quality)
+{
+    return (quality == "Common") || (quality == "Rare") || (quality == "Epic");
+}
+
+//! \brief Reads a non negative whole number; false for any other text
+bool parseWholeNumber(const std::string& text, uint32_t& value)
+{
+    if(text.empty() || (text.find_first_not_of("0123456789") != std::string::npos) || (text.size() > 9))
+        return false;
+
+    value = static_cast<uint32_t>(std::atoi(text.c_str()));
+    return true;
+}
 } // namespace
 
 //! \brief Initializes metadata without claiming campaign membership.
 CampaignSave::CampaignSave():
-    mPresent(false), mValid(false), mDifficulty(0), mHeartstoneComplete(false), mKeptLevel(0)
+    mPresent(false), mValid(false), mDifficulty(0), mChampionAvailable(false)
 {
 }
 
 //! \brief Parses one versioned save record without interpreting missing records as malformed.
+//! Version 1 (older saves) also names the creature of the former kept minion; it is read and ignored.
 bool CampaignSave::importInfoLine(const std::string& line)
 {
     const std::string prefix = "Campaign\t";
@@ -61,14 +81,19 @@ bool CampaignSave::importInfoLine(const std::string& line)
     mPresent = true;
     std::istringstream input(line.substr(prefix.size()));
     uint32_t version = 0;
-    uint32_t heartstone = 0;
+    uint32_t champion = 0;
     std::string trailing;
-    mValid = static_cast<bool>(input >> version >> mLevelFile >> mDifficulty >> heartstone >> mKeptClass >> mKeptLevel)
-        && (version == 1) && (mDifficulty < static_cast<uint32_t>(KeeperAIType::nbAI))
-        && (heartstone <= 1) && !(input >> trailing);
-    mHeartstoneComplete = (heartstone == 1);
-    if(mKeptClass == "-")
-        mKeptClass.clear();
+    bool fields = static_cast<bool>(input >> version >> mLevelFile >> mDifficulty >> champion);
+    if(fields && (version == 1))
+    {
+        std::string keptClass;
+        uint32_t keptLevel = 0;
+        fields = static_cast<bool>(input >> keptClass >> keptLevel);
+    }
+    mValid = fields && ((version == 1) || (version == 2))
+        && (mDifficulty < static_cast<uint32_t>(KeeperAIType::nbAI))
+        && (champion <= 1) && !(input >> trailing);
+    mChampionAvailable = (champion == 1);
     return true;
 }
 
@@ -77,8 +102,7 @@ void CampaignSave::exportInfo(std::ostream& os) const
 {
     if(!mPresent || !mValid)
         return;
-    os << "Campaign\t1 " << mLevelFile << " " << mDifficulty << " " << (mHeartstoneComplete ? 1 : 0)
-        << " " << (mKeptClass.empty() ? "-" : mKeptClass) << " " << mKeptLevel << "\n";
+    os << "Campaign\t2 " << mLevelFile << " " << mDifficulty << " " << (mChampionAvailable ? 1 : 0) << "\n";
 }
 
 //! \brief Creates campaign progress and inactive level context.
@@ -88,11 +112,8 @@ Campaign::Campaign():
     mPlayedLevelWon(false),
     mDifficulty(getDefaultDifficulty()),
     mLevelDifficulty(getDefaultDifficulty()),
-    mRestoredLevel(false),
     mLoadedCampaignSave(false),
-    mSavedHeartstoneComplete(false),
-    mKeptPendingLevel(0),
-    mKeptLevel(0)
+    mSavedChampionAvailable(false)
 {
 }
 
@@ -118,14 +139,16 @@ std::string Campaign::unescapeText(const std::string& text)
     return result;
 }
 
-//! \brief Reads campaign levels, including their optional briefing images.
-//! The level list is read; when no campaign level is running, no level counts as played afterwards.
+//! \brief Reads the campaign levels, including their optional briefing images, wings, shards, Summon champion
+//! and item unlocks. The level list is read; when no campaign level is running, no level counts as played
+//! afterwards. Province, Branch and Heartstone keys of the former campaign are ignored.
 bool Campaign::importDefinition(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
     mLevels.clear();
     mCompleted.clear();
     mDiscovered.clear();
+    mShardFound.clear();
 
     CampaignLevel level;
     bool inLevel = false;
@@ -152,6 +175,7 @@ bool Campaign::importDefinition(std::istream& is)
 
         std::string key = trim(line.substr(0, pos));
         std::string value = trim(line.substr(pos + 1));
+
         if(key == "File")
             level.mFile = value;
         else if(key == "Title")
@@ -164,12 +188,27 @@ bool Campaign::importDefinition(std::istream& is)
             level.mPreview = value;
         else if(key == "Bonus")
             level.mBonus = (value == "1");
-        else if(key == "Heartstone")
-            level.mHeartstone = (value != "0");
-        else if(key == "Province")
-            level.mProvince = value;
-        else if(key == "Branch")
-            level.mBranch = value;
+        else if(key == "Shard")
+            level.mShard = (value == "1");
+        else if(key == "Champion")
+            level.mChampion = (value == "1");
+        else if(key == "Unlock")
+        {
+            level.mUnlockQualities.clear();
+            std::istringstream qualities(value);
+            std::string quality;
+            while(qualities >> quality)
+            {
+                if(isUnlockQuality(quality))
+                    level.mUnlockQualities.push_back(quality);
+            }
+        }
+        else if(key == "Wing")
+        {
+            uint32_t wing = 0;
+            if(parseWholeNumber(value, wing))
+                level.mWing = wing;
+        }
         else if(key == "Warden")
             level.mWarden = value;
         else if(key == "Difficulty")
@@ -180,8 +219,18 @@ bool Campaign::importDefinition(std::istream& is)
     if(inLevel && !level.mFile.empty())
         mLevels.push_back(level);
 
+    // Bonus levels carry no shard and only bonus levels unlock items, whatever the file says
+    for(CampaignLevel& entry : mLevels)
+    {
+        if(entry.mBonus)
+            entry.mShard = false;
+        else
+            entry.mUnlockQualities.clear();
+    }
+
     mCompleted.assign(mLevels.size(), false);
     mDiscovered.assign(mLevels.size(), false);
+    mShardFound.assign(mLevels.size(), false);
     // No level was played yet. The initial value 0 would name the first level as played and make the
     // campaign menu show a lost-level message when the list was empty while the campaign was stopped.
     if(!mActive)
@@ -192,21 +241,36 @@ bool Campaign::importDefinition(std::istream& is)
     return !mLevels.empty();
 }
 
-//! \brief Reads campaign progress, finished difficulties and retained creatures.
+//! \brief Reads campaign progress (levels by file, shards, unlocked items), finished difficulties and the
+//! difficulty. A file without the Version line was written for the former level list: its level lines and
+//! its kept creature are ignored, its difficulty and finished set are kept.
 bool Campaign::importProgress(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
     mCompleted.assign(mLevels.size(), false);
     mDiscovered.assign(mLevels.size(), false);
+    mShardFound.assign(mLevels.size(), false);
+    mUnlockedItems.clear();
     mDifficulty = getDefaultDifficulty();
     mFinishedDifficulties.clear();
-    mKeptClass.clear();
-    mKeptLevel = 0;
 
+    std::vector<std::string> lines;
     std::string line;
+    bool versioned = false;
     while(std::getline(is, line))
     {
-        std::istringstream ss(trim(line));
+        line = trim(line);
+        std::istringstream ss(line);
+        std::string keyword;
+        uint32_t version = 0;
+        if((ss >> keyword) && (keyword == "Version") && (ss >> version) && (version == PROGRESS_VERSION))
+            versioned = true;
+        lines.push_back(line);
+    }
+
+    for(const std::string& entry : lines)
+    {
+        std::istringstream ss(entry);
         std::string keyword;
         ss >> keyword;
         if(keyword == "Difficulty")
@@ -229,57 +293,76 @@ bool Campaign::importProgress(std::istream& is)
             }
             continue;
         }
-        if(keyword == "KeptMinion")
+        // The level lines of a file for the former level list name other levels
+        if(!versioned)
+            continue;
+
+        if(keyword == "Unlocked")
         {
-            std::string className;
-            uint32_t level;
-            if((ss >> className >> level) && !className.empty())
+            CampaignUnlockedItem item;
+            std::string trailing;
+            if((ss >> item.mBonusFile >> item.mQuality >> item.mItemId) && !(ss >> trailing)
+                && isUnlockQuality(item.mQuality) && !isItemUnlockedNoLock(item.mQuality, item.mItemId))
             {
-                mKeptClass = className;
-                mKeptLevel = level;
+                mUnlockedItems.push_back(item);
             }
             continue;
         }
-        if((keyword != "Completed") && (keyword != "Discovered"))
+        if((keyword != "Completed") && (keyword != "Discovered") && (keyword != "Shards"))
             continue;
 
-        std::vector<bool>& target = (keyword == "Completed") ? mCompleted : mDiscovered;
-        size_t index;
-        while(ss >> index)
+        std::string file;
+        while(ss >> file)
         {
-            if(index < target.size())
-                target[index] = true;
+            size_t index = findLevelByFileNoLock(file);
+            if(index >= mLevels.size())
+                continue;
+            if(keyword == "Completed")
+                mCompleted[index] = true;
+            else if((keyword == "Discovered") && mLevels[index].mBonus)
+                mDiscovered[index] = true;
+            else if((keyword == "Shards") && mLevels[index].mShard)
+                mShardFound[index] = true;
         }
     }
     return true;
 }
 
-//! \brief Writes campaign progress and completed difficulties.
+//! \brief Writes campaign progress (version 2: levels by file, shards, unlocked items) and completed
+//! difficulties.
 void Campaign::exportProgress(std::ostream& os) const
 {
     std::lock_guard<std::mutex> lock(mMutex);
     os << "# Campaign progress. Do not edit while the game is running.\n";
+    os << "Version " << PROGRESS_VERSION << "\n";
     os << "Completed";
     for(size_t i = 0; i < mCompleted.size(); ++i)
     {
         if(mCompleted[i])
-            os << " " << i;
+            os << " " << mLevels[i].mFile;
     }
     os << "\n";
     os << "Discovered";
     for(size_t i = 0; i < mDiscovered.size(); ++i)
     {
         if(mDiscovered[i])
-            os << " " << i;
+            os << " " << mLevels[i].mFile;
     }
     os << "\n";
+    os << "Shards";
+    for(size_t i = 0; i < mShardFound.size(); ++i)
+    {
+        if(mShardFound[i])
+            os << " " << mLevels[i].mFile;
+    }
+    os << "\n";
+    for(const CampaignUnlockedItem& item : mUnlockedItems)
+        os << "Unlocked " << item.mBonusFile << " " << item.mQuality << " " << item.mItemId << "\n";
     os << "Difficulty " << mDifficulty << "\n";
     os << "Finished";
     for(std::set<std::string>::const_iterator it = mFinishedDifficulties.begin(); it != mFinishedDifficulties.end(); ++it)
         os << " " << *it;
     os << "\n";
-    if(!mKeptClass.empty())
-        os << "KeptMinion " << mKeptClass << " " << mKeptLevel << "\n";
 }
 
 void Campaign::setProgressPath(const std::string& path)
@@ -335,31 +418,35 @@ bool Campaign::isCompleted(size_t index) const
     return (index < mCompleted.size()) && mCompleted[index];
 }
 
-size_t Campaign::findBranchSisterNoLock(size_t index) const
+//! \brief Finds a level by its file name, as written in the progress file and level scripts.
+size_t Campaign::findLevelByFileNoLock(const std::string& file) const
 {
-    const std::string& branch = mLevels[index].mBranch;
-    if(branch.empty())
-        return mLevels.size();
     for(size_t i = 0; i < mLevels.size(); ++i)
     {
-        if((i != index) && (mLevels[i].mProvince == branch))
+        if(mLevels[i].mFile == file)
             return i;
     }
     return mLevels.size();
 }
 
+//! \brief Finds the first story level of a wing, the level that hides the stone of the wing's bonus level.
+size_t Campaign::findFirstStoryLevelOfWingNoLock(uint32_t wing) const
+{
+    for(size_t i = 0; i < mLevels.size(); ++i)
+    {
+        if(!mLevels[i].mBonus && (mLevels[i].mWing == wing))
+            return i;
+    }
+    return mLevels.size();
+}
+
+//! \brief The first story level that is not completed; bonus levels never block the sequence.
 size_t Campaign::getCurrentLevelNoLock() const
 {
     for(size_t i = 0; i < mCompleted.size(); ++i)
     {
         if(!mCompleted[i] && !mLevels[i].mBonus)
-        {
-            // The open sister of a finished branch is optional
-            size_t sister = findBranchSisterNoLock(i);
-            if((sister < mCompleted.size()) && mCompleted[sister])
-                continue;
             return i;
-        }
     }
     return mCompleted.size();
 }
@@ -370,6 +457,8 @@ size_t Campaign::getCurrentLevel() const
     return getCurrentLevelNoLock();
 }
 
+//! \brief A story level is unlocked when every story level before it is completed, a bonus level when it
+//! was discovered (or completed before).
 bool Campaign::isUnlockedNoLock(size_t index) const
 {
     if(index >= mLevels.size())
@@ -378,15 +467,10 @@ bool Campaign::isUnlockedNoLock(size_t index) const
     if(mLevels[index].mBonus)
         return mDiscovered[index] || mCompleted[index];
 
-    // All main levels before the level must be completed. Of two branch
-    // sisters one is enough, and a sister never blocks the other one.
-    size_t ownSister = findBranchSisterNoLock(index);
+    // All story levels before the level must be completed.
     for(size_t i = 0; i < index; ++i)
     {
-        if(mCompleted[i] || mLevels[i].mBonus || (i == ownSister))
-            continue;
-        size_t sister = findBranchSisterNoLock(i);
-        if((sister < mCompleted.size()) && mCompleted[sister])
+        if(mCompleted[i] || mLevels[i].mBonus)
             continue;
         return false;
     }
@@ -399,18 +483,22 @@ bool Campaign::isUnlocked(size_t index) const
     return isUnlockedNoLock(index);
 }
 
+//! \brief Records a bonus level found by the hidden stone; only the first story level of the bonus
+//! level's wing can find it.
 bool Campaign::discoverBonusLevel(const std::string& file)
 {
     {
         std::lock_guard<std::mutex> lock(mMutex);
-        if(!mActive)
+        if(!mActive || (mPlayedLevel >= mLevels.size()))
             return false;
 
-        size_t index = 0;
-        while((index < mLevels.size()) && (mLevels[index].mFile != file))
-            ++index;
-
+        size_t index = findLevelByFileNoLock(file);
         if((index >= mLevels.size()) || !mLevels[index].mBonus || mDiscovered[index])
+            return false;
+
+        // The hidden stone of a bonus level lies in the first story level of its wing
+        uint32_t wing = mLevels[index].mWing;
+        if((wing != 0) && (findFirstStoryLevelOfWingNoLock(wing) != mPlayedLevel))
             return false;
 
         mDiscovered[index] = true;
@@ -425,34 +513,118 @@ bool Campaign::isDiscovered(size_t index) const
     return (index < mDiscovered.size()) && mDiscovered[index];
 }
 
+//! \brief Records the shard of the played level once; levels without a shard and bonus levels find none.
+bool Campaign::findShard()
+{
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        if(!mActive || (mPlayedLevel >= mLevels.size()))
+            return false;
+
+        if(!mLevels[mPlayedLevel].mShard || mShardFound[mPlayedLevel])
+            return false;
+
+        mShardFound[mPlayedLevel] = true;
+    }
+    saveProgress();
+    return true;
+}
+
+//! \brief True if the shard of that level was found.
+bool Campaign::isShardFound(size_t index) const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return (index < mShardFound.size()) && mShardFound[index];
+}
+
+//! \brief Counts the found shards while the caller holds the mutex.
+size_t Campaign::getHeartstonePiecesNoLock() const
+{
+    size_t count = 0;
+    for(size_t i = 0; i < mLevels.size(); ++i)
+    {
+        if(mLevels[i].mShard && mShardFound[i])
+            ++count;
+    }
+    return count;
+}
+
+//! \brief Counts the levels with a shard while the caller holds the mutex.
+size_t Campaign::getHeartstoneTotalNoLock() const
+{
+    size_t count = 0;
+    for(size_t i = 0; i < mLevels.size(); ++i)
+    {
+        if(mLevels[i].mShard)
+            ++count;
+    }
+    return count;
+}
+
+//! \brief Number of found Heartstone shards.
 size_t Campaign::getHeartstonePieces() const
 {
     std::lock_guard<std::mutex> lock(mMutex);
-    size_t count = 0;
-    for(size_t i = 0; i < mLevels.size(); ++i)
-    {
-        if(mLevels[i].mBonus && mLevels[i].mHeartstone && mDiscovered[i])
-            ++count;
-    }
-    return count;
+    return getHeartstonePiecesNoLock();
 }
 
+//! \brief Number of Heartstone shards of the campaign.
 size_t Campaign::getHeartstoneTotal() const
 {
     std::lock_guard<std::mutex> lock(mMutex);
-    size_t count = 0;
-    for(size_t i = 0; i < mLevels.size(); ++i)
-    {
-        if(mLevels[i].mBonus && mLevels[i].mHeartstone)
-            ++count;
-    }
-    return count;
+    return getHeartstoneTotalNoLock();
 }
 
+//! \brief True if the campaign has shards and every one was found.
 bool Campaign::isHeartstoneComplete() const
 {
-    size_t total = getHeartstoneTotal();
-    return (total > 0) && (getHeartstonePieces() == total);
+    std::lock_guard<std::mutex> lock(mMutex);
+    size_t total = getHeartstoneTotalNoLock();
+    return (total > 0) && (getHeartstonePiecesNoLock() == total);
+}
+
+//! \brief Summon champion needs every shard and a level with Champion=1.
+bool Campaign::isChampionAvailableNoLock(size_t index) const
+{
+    if(index >= mLevels.size())
+        return false;
+
+    size_t total = getHeartstoneTotalNoLock();
+    if((total == 0) || (getHeartstonePiecesNoLock() != total))
+        return false;
+
+    return mLevels[index].mChampion;
+}
+
+bool Campaign::isChampionAvailable(size_t index) const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return isChampionAvailableNoLock(index);
+}
+
+//! \brief True while a campaign bonus level is played.
+bool Campaign::isPlayedLevelBonus() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mActive && (mPlayedLevel < mLevels.size()) && mLevels[mPlayedLevel].mBonus;
+}
+
+//! \brief The items unlocked by bonus levels so far.
+std::vector<CampaignUnlockedItem> Campaign::getUnlockedItems() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mUnlockedItems;
+}
+
+//! \brief True if the item line is unlocked at that quality.
+bool Campaign::isItemUnlockedNoLock(const std::string& quality, const std::string& itemId) const
+{
+    for(const CampaignUnlockedItem& item : mUnlockedItems)
+    {
+        if((item.mQuality == quality) && (item.mItemId == itemId))
+            return true;
+    }
+    return false;
 }
 
 bool Campaign::isFinished() const
@@ -472,29 +644,6 @@ bool Campaign::hasProgress() const
     return false;
 }
 
-void Campaign::setKeptMinion(const std::string& className, uint32_t level)
-{
-    std::lock_guard<std::mutex> lock(mMutex);
-    mKeptPendingClass = className;
-    mKeptPendingLevel = level;
-}
-
-bool Campaign::takeKeptMinion(std::string& className, uint32_t& level)
-{
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        if(mKeptClass.empty())
-            return false;
-
-        className = mKeptClass;
-        level = mKeptLevel;
-        mKeptClass.clear();
-        mKeptLevel = 0;
-    }
-    saveProgress();
-    return true;
-}
-
 //! \brief Returns whether Hard has been completed.
 bool Campaign::isHellUnlocked() const
 {
@@ -502,17 +651,18 @@ bool Campaign::isHellUnlocked() const
     return mFinishedDifficulties.count("hard") != 0;
 }
 
+//! \brief Forgets levels, shards and unlocked items of the campaign; the finished difficulties stay.
 void Campaign::resetProgress()
 {
     {
         std::lock_guard<std::mutex> lock(mMutex);
         mCompleted.assign(mLevels.size(), false);
         mDiscovered.assign(mLevels.size(), false);
+        mShardFound.assign(mLevels.size(), false);
+        mUnlockedItems.clear();
         mPlayedLevel = mLevels.size();
         mPlayedLevelWon = false;
         mDifficulty = getDefaultDifficulty();
-        mKeptClass.clear();
-        mKeptLevel = 0;
     }
     saveProgress();
 }
@@ -530,33 +680,35 @@ uint32_t Campaign::getLevelDifficulty() const
     return mActive ? mLevelDifficulty : mDifficulty;
 }
 
-//! \brief Uses the saved Heartstone state for recorded saves and live progress for other starts.
-bool Campaign::isLevelHeartstoneComplete() const
+//! \brief Uses the saved champion state for recorded saves and live progress of the played level otherwise.
+bool Campaign::isLevelChampionAvailableNoLock() const
 {
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        if(mActive && mLoadedCampaignSave)
-            return mSavedHeartstoneComplete;
-    }
-    return isHeartstoneComplete();
+    if(!mActive)
+        return false;
+    if(mLoadedCampaignSave)
+        return mSavedChampionAvailable;
+    return isChampionAvailableNoLock(mPlayedLevel);
 }
 
-//! \brief Captures only running campaign games; the already spawned creature remains in the map.
+//! \brief Uses the saved champion state for recorded saves and live progress for other starts.
+bool Campaign::isLevelChampionAvailable() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return isLevelChampionAvailableNoLock();
+}
+
+//! \brief Captures only running campaign games.
 CampaignSave Campaign::getSaveState() const
 {
     CampaignSave saved;
-    {
-        std::lock_guard<std::mutex> lock(mMutex);
-        if(!mActive || (mPlayedLevel >= mLevels.size()))
-            return saved;
-        saved.mPresent = true;
-        saved.mValid = true;
-        saved.mLevelFile = mLevels[mPlayedLevel].mFile;
-        saved.mDifficulty = mLevelDifficulty;
-        saved.mKeptClass = mKeptPendingClass;
-        saved.mKeptLevel = mKeptPendingLevel;
-    }
-    saved.mHeartstoneComplete = isLevelHeartstoneComplete();
+    std::lock_guard<std::mutex> lock(mMutex);
+    if(!mActive || (mPlayedLevel >= mLevels.size()))
+        return saved;
+    saved.mPresent = true;
+    saved.mValid = true;
+    saved.mLevelFile = mLevels[mPlayedLevel].mFile;
+    saved.mDifficulty = mLevelDifficulty;
+    saved.mChampionAvailable = isLevelChampionAvailableNoLock();
     return saved;
 }
 
@@ -598,14 +750,11 @@ bool Campaign::restoreSavedLevel(const CampaignSave& saved, const std::string& s
     std::lock_guard<std::mutex> lock(mMutex);
     mPlayedLevel = findSavedLevelNoLock(saved, saveFilename);
     mActive = (mPlayedLevel < mLevels.size());
-    mRestoredLevel = mActive;
     mPlayedLevelWon = false;
     mLevelSummary.clear();
     mLoadedCampaignSave = mActive && saved.mPresent;
     mLevelDifficulty = mLoadedCampaignSave ? saved.mDifficulty : mDifficulty;
-    mSavedHeartstoneComplete = mLoadedCampaignSave && saved.mHeartstoneComplete;
-    mKeptPendingClass = mLoadedCampaignSave ? saved.mKeptClass : std::string();
-    mKeptPendingLevel = mLoadedCampaignSave ? saved.mKeptLevel : 0;
+    mSavedChampionAvailable = mLoadedCampaignSave && saved.mChampionAvailable;
     return mActive;
 }
 
@@ -632,13 +781,11 @@ void Campaign::startLevel(size_t index)
     std::lock_guard<std::mutex> lock(mMutex);
     mActive = true;
     mLevelDifficulty = mDifficulty;
-    mRestoredLevel = false;
     mLoadedCampaignSave = false;
+    mSavedChampionAvailable = false;
     mPlayedLevel = index;
     mPlayedLevelWon = false;
     mLevelSummary.clear();
-    mKeptPendingClass.clear();
-    mKeptPendingLevel = 0;
 }
 
 void Campaign::stopCampaign()
@@ -690,26 +837,68 @@ std::string Campaign::getLevelSummary() const
     return mLevelSummary;
 }
 
-//! \brief Records the won level and any completed campaign difficulty.
-bool Campaign::onLevelWon()
+//! \brief Records the won level, any completed campaign difficulty and, for the first completion of a
+//! bonus level, one unlocked item per Unlock quality of the level.
+bool Campaign::completePlayedLevel(const std::map<std::string, std::vector<std::string> >* candidates,
+    CampaignDraw draw)
 {
     {
         std::lock_guard<std::mutex> lock(mMutex);
         if(!mActive || (mPlayedLevel >= mLevels.size()))
             return false;
 
+        const CampaignLevel& played = mLevels[mPlayedLevel];
+        // Only the first completion of a bonus level unlocks items; a replay unlocks nothing more
+        bool firstBonusCompletion = played.mBonus && !mCompleted[mPlayedLevel];
         mCompleted[mPlayedLevel] = true;
+        if(firstBonusCompletion && (candidates != nullptr) && (draw != nullptr))
+        {
+            for(const std::string& quality : played.mUnlockQualities)
+            {
+                std::map<std::string, std::vector<std::string> >::const_iterator found = candidates->find(quality);
+                if(found == candidates->end())
+                    continue;
+
+                std::vector<std::string> available;
+                for(const std::string& itemId : found->second)
+                {
+                    if(!itemId.empty() && !isItemUnlockedNoLock(quality, itemId)
+                        && (std::find(available.begin(), available.end(), itemId) == available.end()))
+                    {
+                        available.push_back(itemId);
+                    }
+                }
+                if(available.empty())
+                    continue;
+
+                uint32_t pick = draw(static_cast<uint32_t>(available.size()));
+                if(pick >= available.size())
+                    pick = static_cast<uint32_t>(available.size() - 1);
+
+                CampaignUnlockedItem item;
+                item.mBonusFile = played.mFile;
+                item.mQuality = quality;
+                item.mItemId = available[pick];
+                mUnlockedItems.push_back(item);
+            }
+        }
         if(getCurrentLevelNoLock() == mLevels.size())
             mFinishedDifficulties.insert(KeeperAITypes::nameOf(static_cast<KeeperAIType>(mLevelDifficulty)));
         mPlayedLevelWon = true;
-        if(!mKeptPendingClass.empty() || mRestoredLevel)
-        {
-            mKeptClass = mKeptPendingClass;
-            mKeptLevel = mKeptPendingLevel;
-            mKeptPendingClass.clear();
-            mKeptPendingLevel = 0;
-        }
     }
     saveProgress();
     return true;
+}
+
+//! \brief Records the won level and any completed campaign difficulty; it unlocks no item.
+bool Campaign::onLevelWon()
+{
+    return completePlayedLevel(nullptr, nullptr);
+}
+
+//! \brief Records the won level and any completed campaign difficulty; the first completion of a bonus level
+//! unlocks its items from the candidates.
+bool Campaign::onLevelWon(const std::map<std::string, std::vector<std::string> >& candidates, CampaignDraw draw)
+{
+    return completePlayedLevel(&candidates, draw);
 }
