@@ -496,6 +496,7 @@ const float SKILL_BADGE_WIDTH_PADDING = 8.0f;
 //! \brief Connects game controls, room windows and both entry points to the existing objectives window.
 //! \brief Connects game controls, including the scroll button for the existing objectives window.
 //! \brief Connects game controls, objectives scrolling and stored specials excluding item boxes.
+//! \brief Connects the button of the raid countdown that opens the Moreya gate early.
 GameMode::GameMode(ModeManager *modeManager):
     GameEditorModeBase(modeManager, ModeManager::GAME, modeManager->getGui().getGuiSheet(Gui::guiSheet::inGameMenu)),
     mDigSetBool(false),
@@ -700,6 +701,13 @@ GameMode::GameMode(ModeManager *modeManager):
         guiSheet->getChild("SandboxWindow/ContinualInvasionButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&GameMode::startSandboxContinualInvasion, this)
+        )
+    );
+    // The button of the raid countdown opens the Moreya gate early
+    addEventConnection(
+        guiSheet->getChild("RaidPanel/OpenGateButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::openRaidGate, this)
         )
     );
     addEventConnection(
@@ -2455,7 +2463,7 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
 }
 
 //! \brief Updates the game HUD and the availability of keeper controls each frame.
-//! \brief Refreshes frame controls and the availability of room-specific panels.
+//! \brief Refreshes frame controls and the availability of room-specific panels, and the countdown of the raid.
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
     refreshRoomManager();
@@ -2575,6 +2583,9 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
         waveCountdownDisplay->setText("Next wave in " + formatDebriefingTime(waveCountdownReceived));
         waveCountdownDisplay->show();
     }
+
+    // The countdown of the raid and the button that opens the Moreya gate early
+    updateRaidPanel();
 
     updateSandboxStatus();
 
@@ -3131,6 +3142,52 @@ bool GameMode::startSandboxSingleInvasion(const CEGUI::EventArgs&)
 bool GameMode::startSandboxContinualInvasion(const CEGUI::EventArgs&)
 {
     ODClient::getSingleton().queueClientNotification(ClientNotificationType::askSandboxInvasion, true);
+    return true;
+}
+
+//! \brief Shows the countdown the server sent: "Raid in mm:ss" with the button that opens the gate while the gate is
+//! closed, "Next group in mm:ss" afterwards; hides the panel when no raid group waits.
+void GameMode::updateRaidPanel()
+{
+    CEGUI::Window* panel = mRootWindow->getChild("RaidPanel");
+    const int32_t seconds = ODClient::getSingleton().getRaidCountdownSeconds();
+    const bool gateClosed = ODClient::getSingleton().isRaidGateClosed();
+    if(seconds < 0)
+    {
+        if(mRaidCountdownShown >= 0)
+        {
+            panel->hide();
+            mRaidCountdownShown = -1;
+        }
+        return;
+    }
+
+    if((seconds == mRaidCountdownShown) && (gateClosed == mRaidGateClosedShown))
+        return;
+
+    mRaidCountdownShown = seconds;
+    mRaidGateClosedShown = gateClosed;
+    CEGUI::Window* countdown = panel->getChild("Countdown");
+    CEGUI::Window* button = panel->getChild("OpenGateButton");
+    if(gateClosed)
+    {
+        countdown->setText("Raid in " + formatDebriefingTime(seconds));
+        countdown->setTooltipText("Time left until the raid comes through the Moreya gate");
+        button->show();
+    }
+    else
+    {
+        countdown->setText("Next group in " + formatDebriefingTime(seconds));
+        countdown->setTooltipText("Time left until the next raid group comes through the Moreya gate");
+        button->hide();
+    }
+    panel->show();
+}
+
+//! \brief Asks the server to open the Moreya gate now: the raid comes at once.
+bool GameMode::openRaidGate(const CEGUI::EventArgs&)
+{
+    ODClient::getSingleton().queueClientNotification(ClientNotificationType::askOpenRaidGate);
     return true;
 }
 

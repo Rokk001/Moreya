@@ -18,8 +18,12 @@
 #ifndef LEVELSCRIPTRUNNER_H
 #define LEVELSCRIPTRUNNER_H
 
+#include <cstdint>
+#include <vector>
+
 class Creature;
 class GameMap;
+class Tile;
 
 namespace LevelScriptRunner
 {
@@ -36,6 +40,20 @@ namespace LevelScriptRunner
 
     //! \brief Leaves a carried portal stone on the creature's current tile before pickup; server side only.
     void dropCarriedStone(Creature& creature);
+
+    //! \brief The factor by which a running creature moves faster than a walking one (action speed run). The raid
+    //! leader who flees to the gate runs with it.
+    double getRunSpeedFactor();
+
+    //! \brief Server side. The creature walks to the nearest of the tiles it can reach.
+    //! \return False when none of them can be reached.
+    bool walkToNearestTile(Creature& creature, const std::vector<Tile*>& tiles);
+
+    //! \brief Server side. The rule of the killplayer order: the creature walks to the dungeon heart of the seat and
+    //! stays near it to fight what comes. The raid attacks the heart this way.
+    //! \return True when this takes the turn of the creature (it walks there or stays near the heart), false when the
+    //! seat has no heart or no way leads there.
+    bool walkToDungeonHeart(Creature& creature, int32_t seatId);
 }
 
 #endif // LEVELSCRIPTRUNNER_H

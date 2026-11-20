@@ -101,6 +101,7 @@
 
 
 #include "game/CombatGroupManager.h"
+#include "game/RaidManager.h"
 #include "game/CreatureAppearance.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
@@ -3018,7 +3019,8 @@ void Creature::dropCarriedEquipment()
 
 //! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
 //! Spaces authoritative standing bodies and interrupts activities for urgent needs. Runs the plague of a sick
-//! creature and sends it to a free infirmary cot. A member of a combat group follows its group.
+//! creature and sends it to a free infirmary cot. A member of a combat group follows its group, a fleeing raid leader
+//! runs to the gate.
 void Creature::doUpkeep()
 {
     upkeepGhostHunt();
@@ -3670,6 +3672,7 @@ void Creature::doUpkeep()
     decidePrioritaryAction();
     handleHeartDefence();
     handleCombatGroup();
+    handleRaidEscape();
     handleUrge();
 
     // Keep combat in its current attack tile; free waiting creatures may use adjacent floor space.
@@ -3782,8 +3785,13 @@ void Creature::doUpkeep()
     }
 }
 
+//! \brief Runs the behaviours (fight, flight, ...) of the creature. A raid leader who flees to the Moreya gate runs
+//! there and starts neither a fight nor another flight.
 void Creature::decidePrioritaryAction()
 {
+    if(getIsOnServerMap() && getGameMap()->getRaid().isEscaping(getName()))
+        return;
+
     const bool patient = isActionInList(CreatureActionType::infirmaryRest);
     const bool tooWeakToRise = getHP() * 100.0 < getMaxHp() * ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent");
     if((patient || isActionInList(CreatureActionType::sleep)) && tooWeakToRise)
@@ -3830,7 +3838,8 @@ void Creature::handleHeartDefence()
     pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this));
 }
 
-//! \brief Serves idle needs before choosing equipment, trade and other actions.
+//! \brief Serves idle needs before choosing equipment, trade and other actions. The raid order of a raid member comes
+//! before the orders of the level script.
 bool Creature::handleIdleAction()
 {
     setAnimationState(EntityAnimation::idle_anim);
@@ -3896,6 +3905,10 @@ bool Creature::handleIdleAction()
                 break;
         }
     }
+    // A raid member follows the raid: its leader leads it to the attacked dungeon, a fleeing leader runs to the gate
+    if(getGameMap()->getRaid().doCreatureOrder(*this))
+        return false;
+
     // A standing order of the level script (go to a point, attack a dungeon, wait, ...) comes first
     if(LevelScriptRunner::doCreatureOrder(*this))
         return false;
@@ -12861,6 +12874,24 @@ void Creature::handleCombatGroup()
     stopWalking();
     clearActionQueue();
     pushAction(Utils::make_unique<CreatureActionGroupFollow>(*this));
+}
+
+//! \brief A fleeing raid leader drops a fight, a flight or his place in a group, so that his raid order (see
+//! RaidManager::doCreatureOrder) lets him run to the gate.
+void Creature::handleRaidEscape()
+{
+    if(!getIsOnServerMap())
+        return;
+
+    if(!getGameMap()->getRaid().isEscaping(getName()))
+        return;
+
+    if(!isActionInList(CreatureActionType::fight) && !isActionInList(CreatureActionType::flee) &&
+       !isActionInList(CreatureActionType::groupFollow) && !isActionInList(CreatureActionType::groupRetreat))
+        return;
+
+    stopWalking();
+    clearActionQueue();
 }
 
 void Creature::joinPossessionGroup(const std::string& leaderName)

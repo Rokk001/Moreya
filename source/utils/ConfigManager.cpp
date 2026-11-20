@@ -767,7 +767,8 @@ ConfigManager::~ConfigManager()
     recentlyUsedLevels.clear();
 }
 
-//! \brief Reads global settings and the numeric item-system rule sections, and the optional group combat block.
+//! \brief Reads global settings and the numeric item-system rule sections, and the optional group combat and raid
+//! blocks.
 bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 {
     std::stringstream configFile;
@@ -862,6 +863,15 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 
             continue;
         }
+
+        if(nextParam == "[Raid]")
+        {
+            // The raid block is optional: without it every raid key reads as 0
+            if(!loadGlobalRaidConfig(configFile))
+                break;
+
+            continue;
+        }
     }
 
     if(paramsOk != 0x07)
@@ -950,6 +960,29 @@ double ConfigManager::getRampageConfigDouble(const std::string& param) const
     if(it == mRampageConfig.end())
     {
         OD_LOG_ERR("Unknown rampage parameter param=" + param);
+        return 0.0;
+    }
+
+    return it->second;
+}
+
+//! \brief Reads the [Raid] block of global.cfg: one "key value" pair per line up to [/Raid].
+bool ConfigManager::loadGlobalRaidConfig(std::stringstream& configFile)
+{
+    if(readGlobalNumberBlock(configFile, "[/Raid]", mRaidConfig))
+        return true;
+
+    OD_LOG_ERR("Missing [/Raid] in global.cfg");
+    return false;
+}
+
+//! \brief Returns the value of a [Raid] key of global.cfg, 0 (and an error in the log) when the key is unknown.
+double ConfigManager::getRaidConfigDouble(const std::string& param) const
+{
+    std::map<std::string, double>::const_iterator it = mRaidConfig.find(param);
+    if(it == mRaidConfig.end())
+    {
+        OD_LOG_ERR("Unknown raid parameter param=" + param);
         return 0.0;
     }
 

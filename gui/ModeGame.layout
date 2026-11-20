@@ -435,6 +435,33 @@
             <UserString name="ContextHelp" value="Minimap: left-click to zoom in, right-click to zoom out; M opens the map" />
             <UserString name="MiniMapArea" value="{{0.696614583,0},{0.696614583,0},{0.946614583,0},{0.946614583,0}}" />
         </Window>
+        <!-- The countdown of the raid and the button that opens the Moreya gate early (shown only in a level with a raid) -->
+        <Window type="DefaultWindow" name="RaidPanel" >
+            <UserString name="AllowEdgeScrolling" value="true" />
+            <Property name="Area" value="{{1,-308},{0,52},{1,-8},{0,96}}" />
+            <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Visible" value="False" />
+            <Window type="OD/StaticText" name="Countdown" >
+                <Property name="Area" value="{{0,0},{0,0},{1,-112},{1,0}}" />
+                <Property name="Text" value="" />
+                <Property name="Font" value="MedievalSharp-13" />
+                <Property name="TextColours" value="FFF6CB62" />
+                <Property name="TooltipText" value="Time left until the raid comes through the Moreya gate" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="FrameEnabled" value="True" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            </Window>
+            <Window type="OD/Button" name="OpenGateButton" >
+                <Property name="Area" value="{{1,-108},{0,4},{1,0},{1,-4}}" />
+                <Property name="Text" value="Open gate" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="TooltipText" value="Open the Moreya gate now: the raid comes at once" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            </Window>
+        </Window>
         <LayoutImport type="DefaultWindow" filename="WindowMap.layout" name="MapImport" />
         <LayoutImport type="DefaultWindow" filename="WindowUserCameras.layout" name="UserCamerasImport" />
     </Window>

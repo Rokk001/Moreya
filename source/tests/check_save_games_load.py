@@ -219,6 +219,52 @@ def read_combat_groups(s):
             fail("combat group line invalid: " + (t + " " + rest)[:60])
 
 
+def read_raid(s):
+    """Mirror of RaidManager::importFromStream, read after the [Raid] tag.
+
+    Each line is a kind token and its fields up to [/Raid]: Gate, Seats, Countdown, Interval, EscapeShare, Group,
+    Member (level data) and State, Arrived, Plundered (saved games). Any other kind, a missing field, a raid group 0,
+    a Member or Arrived line of a raid group without Group line, an unknown leader state or a section without Gate
+    line refuses the save, as the loader does."""
+    groups = set()
+    has_gate = False
+    while True:
+        t = s.tok()
+        if t is None:
+            fail("[Raid] has no end")
+        if t == "[/Raid]":
+            if not has_gate:
+                fail("[Raid] section without a Gate line")
+            return
+        rest = s.line() or ""
+        f = rest.split()
+        if t == "Gate":
+            ok = len(f) >= 3 and is_int(f[0]) and is_int(f[1]) and is_num(f[2])
+            has_gate = has_gate or ok
+        elif t == "Seats":
+            ok = len(f) >= 2 and is_int(f[0]) and is_int(f[1])
+        elif t in ("Countdown", "Interval", "EscapeShare"):
+            ok = len(f) >= 1 and (f[0] == "-" or is_num(f[0]))
+        elif t == "Group":
+            ok = len(f) >= 2 and is_int(f[0]) and int(f[0]) > 0
+            if ok:
+                groups.add(int(f[0]))
+        elif t == "Member":
+            ok = len(f) >= 5 and is_int(f[0]) and int(f[0]) in groups and is_int(f[2]) and int(f[2]) >= 0
+        elif t == "State":
+            ok = len(f) >= 5 and is_int(f[0]) and is_int(f[1]) and is_int(f[2]) and int(f[2]) >= 0 \
+                and is_num(f[3]) and is_int(f[4])
+        elif t == "Arrived":
+            ok = len(f) >= 4 and is_int(f[0]) and int(f[0]) in groups and f[2] in ("none", "fleeing", "escaped") \
+                and is_int(f[3]) and int(f[3]) >= 0 and len(f) >= 4 + int(f[3])
+        elif t == "Plundered":
+            ok = len(f) >= 2
+        else:
+            fail("unknown line in [Raid]: " + t)
+        if not ok:
+            fail("raid line invalid: " + (t + " " + rest)[:60])
+
+
 def loader_int(t):
     """Mirror of the loader's parseInt: istringstream >> int64_t, then nothing but white space may follow.
 
@@ -932,9 +978,12 @@ def check_condition(t):
              "deliveredstone": (3,), "carryingstone": (3,), "possessed": (4, 5), "slabs": (7,), "tagged": (5, 6),
              "event": (4, 6), "slaps": (5,), "furniture": (6,), "breached": (3,), "portal": (4,), "alive": (3, 4),
              "reached": (5,), "stone": (5,), "defeated": (3,), "held": (4,), "owns": (4,), "spell": (4,),
-             "health": (5,), "built": (6,), "roomtiles": (6,), "roomsize": (6,), "timer": (5,), "region": (4, 6, 7)}
+             "health": (5,), "built": (6,), "roomtiles": (6,), "roomsize": (6,), "timer": (5,), "region": (4, 6, 7),
+             "raid": (3, 4)}
     if kind not in exact or n not in exact[kind]:
         return False
+    if kind == "raid":
+        return t[2] in ("arrived", "defeated", "escaped", "fleeing", "open") and (n == 3 or (is_int(t[3]) and int(t[3]) > 0))
     if kind in ("groundconnected", "roomclaimed", "groundclaimed"):
         return all(is_int(x) and int(x) >= 0 for x in t[2:7])
     if kind == "region" and n == 7:
@@ -960,7 +1009,7 @@ def check_action(t):
     fixed = {"gold": 4, "setflag": 4, "addflag": 4, "win": 3, "lose": 3, "reveal": 4, "make": 4, "timelimit": 3,
              "countdown": 3, "wavecountdown": 3, "keydoor": 4, "portal": 4, "available": 5, "golfball": 5,
              "stoneattach": 3, "keepminion": 3, "possess": 3, "remove": 3, "alliance": 5, "generate": 4,
-             "roomowner": 5, "slaplimit": 3, "discover": 3, "shard": 2}
+             "roomowner": 5, "slaplimit": 3, "discover": 3, "shard": 2, "raidopen": 2}
     if kind in fixed:
         return n == fixed[kind]
     if kind == "terrain":
@@ -977,6 +1026,8 @@ def check_action(t):
         return n >= 5 and is_int(t[2]) and int(t[2]) > 0
     if kind == "raidleader":
         return n == 4 and is_int(t[2]) and int(t[2]) > 0
+    if kind == "raidcountdown":
+        return n == 3 and is_int(t[2]) and int(t[2]) >= 0
     if kind == "timer":
         return n in (3, 4)
     return False
@@ -1191,6 +1242,9 @@ def read_save(path):
         t = s.tok()
     if t == "[CombatGroups]":
         read_combat_groups(s)
+        t = s.tok()
+    if t == "[Raid]":
+        read_raid(s)
     return seen
 
 

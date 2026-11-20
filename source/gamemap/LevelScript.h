@@ -124,6 +124,7 @@
 //!   Cond    flag <name> <value>               # flag has exactly that value
 //!   Cond    flag <name> <op> <value>          # op is == != < <= > >=; value may be @<otherFlag>
 //!   Cond    timer <name> <op> <seconds>       # a timer started by "Action timer" has run that long (a timer that was never started counts 0)
+//!   Cond    raid <state> [<raidGroupId>]       # the raid of the [Raid] section (whole raid, or one raid group): arrived (every group came through the gate), defeated (every group came and no member stands any more: dead, imprisoned or won over, and no leader escaped), escaped (a raid leader got out through the gate; the level is already lost), fleeing (a raid leader runs to the gate), open (the gate is open)
 //!
 //! Every comparison of a number accepts the operators >= <= == != > < (the older conditions
 //! only had >= and <=).
@@ -170,6 +171,8 @@
 //!   Action  raidmember <raidGroupId> <template|-> <name> [<name> ...]   # the creatures (names or party tags of a hero seat) belong to the raid group (1 or more); a raid group is always a combat group (a member won over by a keeper leaves the raid). With a template name (e.g. Guardian) they follow that skill template for good, with - they choose their template themselves
 //!   Action  raidleader <raidGroupId> <creatureName>   # the creature is the named leader of the raid group and leads it as long as he lives
 //!           # The same registry can be written in the [CombatGroups] section of the level file: RaidGroup <raidGroupId> <leaderName> and RaidMember <creatureName> <raidGroupId> <template|->
+//!   Action  raidopen                          # the Moreya gate opens now, as when the attacked keeper opens it early with the button of the HUD: the first raid group comes at once (only while the gate is closed)
+//!   Action  raidcountdown <seconds>           # the next raid group of the [Raid] section comes in that many seconds (the HUD countdown shows them)
 //!   State   <timesFired> <lastFiredTurn>      # written by the game, only needed in savegames
 //!   [/Trigger]
 //!   [/Triggers]
@@ -181,6 +184,20 @@
 //!   open or close a passage: Action terrain <x1> <y1> <x2> <y2> path | rock | water | lava (a single tile: both corners equal)
 //!   win by destroying a heart: Cond defeated <seatId>, then Action win -1
 //!   change sides: Action alliance <seatA> <seatB> make | break (takes effect at once for the AI and for fights)
+//!   raid victory: a main goal (mainobjectiveid) for the raid, Cond raid defeated -> Action objectivestate <seat> <id> reached, and Action win when the main goals are met (the escape of a raid leader loses the level by itself)
+//!
+//! The raid of a story level is level data, the [Raid] section after the [CombatGroups] section (see RaidManager):
+//!   [Raid]
+//!   Gate    <x> <y> <rotationDegrees>          # the tile of the Moreya gate: the central tile of a hero portal room of the raid seat, which then shows the gate model (front towards -y at rotation 0); unclaimable and indestructible like every hero portal
+//!   Seats   <raidSeatId> <targetSeatId>        # the hero seat of the raid and the keeper whose dungeon heart it attacks and who may open the gate early
+//!   Countdown <seconds|->                      # level start to the first raid group (- : RaidCountdownSeconds of global.cfg)
+//!   Interval <seconds|->                       # between two raid groups (- : RaidWaveIntervalSeconds)
+//!   EscapeShare <share|->                      # fallen share of his group before a leader flees to the gate (- : RaidLeaderEscapeShare)
+//!   Group   <raidGroupId> <leaderName|->        # a raid group, in the order of arrival; the leader is one of its members (by name)
+//!   Member  <raidGroupId> <class> <level> <name|-> <template|->   # one member with its fixed skill template (- : it chooses itself)
+//!   State / Arrived / Plundered                # written by the game in saved games: the countdown, the arrived groups with their members and leader state, the rooms each member plundered
+//!   [/Raid]
+//!   The members of a raid group belong to the party Raid<raidGroupId> (for event conditions such as Cond event Raid1 killed).
 //!
 //! All the conditions of a trigger must be true at the same time. A trigger that is
 //! not repeatable fires once. A repeatable one fires again once the cooldown elapsed
@@ -268,7 +285,8 @@ enum class LevelScriptConditionType
     attackedRegion,
     shotKilled,
     heldCreature,
-    deliveredStone
+    deliveredStone,
+    raidState
 };
 
 //! \brief Distinguishes legacy descriptions, required goals, optional goals and goals activated by discovery.
@@ -330,7 +348,9 @@ enum class LevelScriptActionType
     keyDoor,
     raidMember,
     raidLeader,
-    findShard
+    findShard,
+    raidOpen,
+    raidCountdown
 };
 
 //! \brief One condition of a trigger. The fields that are used depend on the type.
@@ -361,10 +381,10 @@ struct LevelScriptCondition
     LevelScriptCompare mCompare;
     //! \brief Seconds (time), count (creatures, room, claimed, -1 for all of the region),
     //! amount (gold, mana, goldMined), count (kills and the creature conditions), value (flag),
-    //! or the exact LevelScriptObjectiveState value (objectiveState).
+    //! or the exact LevelScriptObjectiveState value (objectiveState), or the raid group (raidState, 0: the whole raid).
     int64_t mNumber;
     //! \brief Room name (room), goal name (goal/goalMet), objective ID (objectiveState),
-    //! trigger name (triggerFired), flag name (flag) or, for region, the
+    //! trigger name (triggerFired), flag name (flag), the state word (raidState) or, for region, the
     //! name of a region of the script (empty when the rectangle is given by mX1 to mY2)
     std::string mName;
     //! The flag a flag condition compares with (empty when it compares with mNumber), or the creature class
@@ -400,7 +420,7 @@ struct LevelScriptAction
     //! \brief spawn: seat whose dungeon the spawned group attacks (-1: none)
     int32_t mTargetSeatId;
     //! \brief Gold amount (gold), flag value (setflag), amount added to a flag (addflag) or
-    //! seconds (timeLimit), or the LevelScriptObjectiveState value (objectiveState), or the raid group
+    //! seconds (timeLimit, raidCountdown), or the LevelScriptObjectiveState value (objectiveState), or the raid group
     //! (raidMember, raidLeader)
     int64_t mNumber;
     //! \brief Message text (message, objective, hint), flag name (setflag), region name (reveal),

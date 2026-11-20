@@ -174,12 +174,15 @@ void ODClient::sendWorkerJobSettings(const WorkerJobSettings& settings)
     queueClientNotification(notification);
 }
 
+//! \brief Creates a client without time limit, wave countdown and raid countdown.
 ODClient::ODClient() :
     ODSocketClient(),
     mIsPlayerConfig(false),
     mHasLevelStatistics(false),
     mTimeLimitSeconds(-1),
     mWaveCountdownSeconds(-1),
+    mRaidCountdownSeconds(-1),
+    mRaidGateClosed(false),
     mHasSandboxRealmComplete(false)
 {
 }
@@ -248,6 +251,7 @@ static bool areSavedGameSeatsFixed(const GameMap& gameMap)
 //! \brief Dispatches validated server packets to the active game or menu presentation.
 //! \brief Applies a server notification to the current client state.
 //! \brief Records frame-stall operation timing without changing the operation.
+//! \brief The time limit message also carries the raid countdown and the state of the Moreya gate.
 bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceived)
 {
     const std::string notificationName = ServerNotification::typeString(cmd);
@@ -604,6 +608,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             mLevelStatistics = LevelStatistics();
             mTimeLimitSeconds = -1;
             mWaveCountdownSeconds = -1;
+            mRaidCountdownSeconds = -1;
+            mRaidGateClosed = false;
             mHeartBadge = HeartHealthRing::BadgeState();
             mHeartStageFractions.clear();
             mHeartStageHitRemaining.clear();
@@ -1159,6 +1165,16 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         {
             OD_ASSERT_TRUE(packetReceived >> mTimeLimitSeconds);
             OD_ASSERT_TRUE(packetReceived >> mWaveCountdownSeconds);
+            // The countdown of the raid and the state of the gate follow (a recorded packet of an older game ends
+            // before them: no raid is shown then)
+            mRaidCountdownSeconds = -1;
+            mRaidGateClosed = false;
+            if(!packetReceived.endOfPacket())
+            {
+                int32_t gateClosed = 0;
+                OD_ASSERT_TRUE(packetReceived >> mRaidCountdownSeconds >> gateClosed);
+                mRaidGateClosed = (gateClosed != 0);
+            }
             break;
         }
 

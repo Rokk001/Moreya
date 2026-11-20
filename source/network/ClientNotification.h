@@ -142,7 +142,9 @@ enum class ClientNotificationType
     //! \brief Requests or updates the owner worker settings; uint32 isSet followed by a complete record when set.
     askWorkerSettings,
     //! \brief Subscribes to the allied Dungeonbook roster while its window is open.
-    askDungeonbookRoster
+    askDungeonbookRoster,
+    //! \brief The attacked keeper opens the Moreya gate before the countdown of the raid ends, without further fields.
+    askOpenRaidGate
 };
 
 //! \brief What an editorRegionEdit message asks the server to do with the region markers of the level script.

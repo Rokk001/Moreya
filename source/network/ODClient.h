@@ -119,6 +119,15 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline int32_t getWaveCountdownSeconds() const
     { return mWaveCountdownSeconds; }
 
+    //! \brief Seconds left until the raid (while the Moreya gate is closed) or its next group comes, -1 if none is
+    //! shown
+    inline int32_t getRaidCountdownSeconds() const
+    { return mRaidCountdownSeconds; }
+
+    //! \brief True while the Moreya gate is closed: the countdown runs to the raid and the gate can be opened early
+    inline bool isRaidGateClosed() const
+    { return mRaidGateClosed; }
+
     //! \brief What the heart health ring of the top-left badge has to show
     inline HeartHealthRing::BadgeState& getHeartBadge()
     { return mHeartBadge; }
@@ -219,6 +228,10 @@ class ODClient: public Ogre::Singleton<ODClient>,
     int32_t mTimeLimitSeconds;
     //! \brief Last wave countdown received with timeLimit, -1 when none is shown
     int32_t mWaveCountdownSeconds;
+    //! \brief Last raid countdown received with timeLimit, -1 when none is shown
+    int32_t mRaidCountdownSeconds;
+    //! \brief Last state of the Moreya gate received with timeLimit: true while it is closed
+    bool mRaidGateClosed;
 
     // Heart health received with heartHealth
     HeartHealthRing::BadgeState mHeartBadge;
