@@ -224,6 +224,12 @@ add_boost_test(00-CampaignLevels
         ${SRC}/game/Campaign.cpp
         ${SRC}/game/CampaignWorld.cpp)
 
+add_boost_test(00-HandLimitRules
+        SOURCES
+        test_HandLimitRules.cpp
+        ${SRC}/game/HandLimitRules.h
+        ${SRC}/game/HandLimitRules.cpp)
+
 add_boost_test(00-Pathfinding
         SOURCES
         test_Pathfinding.cpp)
