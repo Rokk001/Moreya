@@ -3267,7 +3267,7 @@ Action	objectivestate	1	saltmere-o04	reached
 Name	shardFound
 Mode	once
 Cond	region	1	ShardHollow
-Action	message	1	A shard of the Heartstone lies in this hollow. Bring it to your dungeon heart.
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
 Action	stonecreate	3	47	heartstone-shard	1	14	10
 [/Trigger]
 [Trigger]

@@ -1175,7 +1175,6 @@ Static source/resource route and exact outer-gate traversal only; combat, timing
 | Trigger `mainPort` | `Action	objectivestate	1	saltmere-main-port	reached`; conditions: `Cond	flag	highFlatVisited	1; Cond	trigger	lagoonReached; Cond	flag	southFlatVisited	1; Cond	trapgone	DoorWooden1; Cond	trapgone	DoorWooden2; Cond	flag	portCrossed	1` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	saltmere-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	saltmere-extra-gold	reached`; conditions: `Cond	mined	1	>=	1600` | yes |
-| Objective mapping | friendly mission discovery message differs from approved wording: heartstone-shard | no: requires design decision |
 | Briefing | Mine the salt walls and cross the white flats and green lagoons to his southern harbour. | yes: 800 actual mining gold; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing |
 | Briefing | Protect your heart while the heroes threaten the sleeping keeper nearby as well. | yes: own-heart protection |
 | Briefing | Kill Seward and answer Aurel's boast that no route reaches the inner realm. | no: Seward no longer stands in the port hall; mainRaid requires the defeated raid with its leader BramSeward |
