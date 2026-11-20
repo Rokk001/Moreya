@@ -108,6 +108,43 @@ int32_t tileDistance(const Tile& first, const Tile& second)
 {
     return std::max(std::abs(first.getX() - second.getX()), std::abs(first.getY() - second.getY()));
 }
+
+//! \brief The tiles of the candidates the creature reaches from its tile in at most maxSteps steps from tile to
+//! neighbour tile over tiles it can walk on (a breadth-first search: walls, earth and lava without a bridge stop it).
+std::vector<Tile*> reachableWithin(const Creature& creature, Tile* start, const std::set<Tile*>& candidates,
+    int32_t maxSteps)
+{
+    std::vector<Tile*> reached;
+    if((start == nullptr) || candidates.empty() || (maxSteps < 0))
+        return reached;
+
+    std::set<Tile*> seen;
+    std::vector<Tile*> frontier(1, start);
+    seen.insert(start);
+    for(int32_t step = 0; !frontier.empty(); ++step)
+    {
+        std::vector<Tile*> next;
+        for(Tile* tile : frontier)
+        {
+            if(candidates.count(tile) > 0)
+                reached.push_back(tile);
+
+            if(step >= maxSteps)
+                continue;
+
+            for(Tile* neighbor : tile->getAllNeighbors())
+            {
+                if((neighbor == nullptr) || (seen.count(neighbor) > 0) || !creature.canGoThroughTile(neighbor))
+                    continue;
+
+                seen.insert(neighbor);
+                next.push_back(neighbor);
+            }
+        }
+        frontier.swap(next);
+    }
+    return reached;
+}
 }
 
 //! \brief Creates the manager of the map without a raid.
@@ -357,9 +394,11 @@ bool RaidManager::doCreatureOrder(Creature& creature)
     if(mTargetSeatId < 0)
         return false;
 
-    // A treasury holding gold that lies on the way and that the leader did not plunder yet
+    // A treasury holding gold that lies on the way and that the leader did not plunder yet: he reaches one of its
+    // tiles within RaidPlunderDetourTiles steps over walkable tiles (a treasury behind a wall or earth is not on the
+    // way, however near it is). The x and y distance only sorts out the tiles that are too far for any walk.
     const double detour = raidConfig("RaidPlunderDetourTiles");
-    std::vector<Tile*> plunderTiles;
+    std::set<Tile*> nearTiles;
     for(Room* room : plunderableRooms())
     {
         if(mPlundered.count(std::make_pair(name, room->getName())) > 0)
@@ -368,9 +407,11 @@ bool RaidManager::doCreatureOrder(Creature& creature)
         for(Tile* tile : room->getCoveredTiles())
         {
             if(static_cast<double>(tileDistance(*myTile, *tile)) <= detour)
-                plunderTiles.push_back(tile);
+                nearTiles.insert(tile);
         }
     }
+    const std::vector<Tile*> plunderTiles = reachableWithin(creature, myTile, nearTiles,
+        static_cast<int32_t>(std::floor(detour)));
     if(!plunderTiles.empty())
     {
         // Standing in it, the leader plunders it at the next update
@@ -612,8 +653,8 @@ void RaidManager::updateLeaders()
     const double share = escapeShare();
     for(RaidGroupData& group : mGroups)
     {
-        // RA8 / FQ 10: a follower that reached the gate escapes through it, also when its leader has fallen or
-        // escaped before it
+        // RA8 / FQ 10: a follower that reached the gate escapes through it, also when its leader escaped before it
+        // (a leader who fell during the flight released his followers before, RA8b)
         const std::vector<std::string> followers = group.mFollowers;
         for(const std::string& follower : followers)
         {
@@ -632,7 +673,13 @@ void RaidManager::updateLeaders()
             continue;
 
         if(!isStanding(group.mLeaderSpawned))
+        {
+            // RA8b: a fleeing leader killed or captured before the gate ends the flight of his followers
+            if(group.mLeaderState == RaidLeaderState::fleeing)
+                endFlight(group);
+
             continue;
+        }
 
         Creature* leader = mGameMap.getCreature(group.mLeaderSpawned);
         if(group.mLeaderState == RaidLeaderState::fleeing)
@@ -682,6 +729,47 @@ void RaidManager::updateLeaders()
             + Helper::toString(static_cast<uint32_t>(group.mFollowers.size())));
         tellKeepers(group.mLeaderSpawned + " flees to the Moreya gate! Catch him before he escapes.");
     }
+}
+
+//! \brief The leader fell (dead, imprisoned or converted) while he fled: the flight is over. His followers that did
+//! not escape yet stop running, rejoin their raid group at their normal speed and fight again; the members that
+//! already escaped stay escaped. The leader state goes back to none, so that the fallen leader neither runs to the gate
+//! nor counts as fleeing.
+void RaidManager::endFlight(RaidGroupData& group)
+{
+    std::vector<std::string> escapedFollowers;
+    uint32_t released = 0;
+    for(const std::string& follower : group.mFollowers)
+    {
+        if(std::find(group.mEscapedMembers.begin(), group.mEscapedMembers.end(), follower) !=
+           group.mEscapedMembers.end())
+        {
+            escapedFollowers.push_back(follower);
+            continue;
+        }
+
+        mGameMap.getCombatGroups().setRaidMemberDetached(follower, false);
+        Creature* creature = mGameMap.getCreature(follower);
+        if((creature == nullptr) || !isStanding(follower))
+            continue;
+
+        ++released;
+        creature->clearMoveSpeedModifier();
+        if(creature->getIsOnServerMap())
+        {
+            creature->stopWalking();
+            creature->clearActionQueue();
+        }
+    }
+    // A captured or converted leader walks at his normal speed again
+    mGameMap.getCombatGroups().setRaidMemberDetached(group.mLeaderSpawned, false);
+    Creature* leader = mGameMap.getCreature(group.mLeaderSpawned);
+    if((leader != nullptr) && leader->isAlive())
+        leader->clearMoveSpeedModifier();
+    group.mFollowers = escapedFollowers;
+    group.mLeaderState = RaidLeaderState::none;
+    OD_LOG_INF("Raid leader " + group.mLeaderSpawned + " fell during his flight, " + Helper::toString(released)
+        + " followers fight again");
 }
 
 //! \brief The follower leaves the map through the gate with its gold and items; it counts as defeated (isStanding no
