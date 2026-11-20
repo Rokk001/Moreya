@@ -921,9 +921,6 @@ void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cav
             mTooltip->setVisible(false);
             return;
     }
-    if(level < campaign.getNumLevels())
-        text += "\nDifficulty: " + Helper::toString(campaign.getLevel(level).mDifficulty) + " / 5";
-
     const float scale = getModeManager().getGui().getLayoutScale();
     const CEGUI::Rectf& mapRect = mTooltip->getParent()->getUnclippedOuterRect().get();
     float width = std::min(TOOLTIP_WIDTH * scale, mapRect.getWidth());
