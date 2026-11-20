@@ -803,9 +803,9 @@ ProtectDungeonTemple	NULL
 20	25	1	0
 20	26	1	0
 20	27	1	0
-20	28	1	0
-20	29	1	0
-20	30	1	0
+20	28	1	0	3
+20	29	1	0	3
+20	30	1	0	3
 20	49	5	0
 20	50	5	0
 20	51	5	0
@@ -836,8 +836,9 @@ ProtectDungeonTemple	NULL
 21	25	1	0
 21	26	1	0
 21	27	1	0
-21	28	1	0
-21	29	1	0
+21	28	1	0	3
+21	29	1	0	3
+21	30	1	0	3
 21	49	5	0
 21	50	5	0
 21	51	5	0
@@ -867,9 +868,9 @@ ProtectDungeonTemple	NULL
 22	25	1	0
 22	26	1	0
 22	27	1	0
-22	28	1	0
-22	29	1	0
-22	30	1	0
+22	28	1	0	3
+22	29	1	0	3
+22	30	1	0	3
 22	49	5	0
 22	50	5	0
 22	51	5	0
@@ -898,6 +899,10 @@ ProtectDungeonTemple	NULL
 23	27	1	0
 23	28	1	0
 23	29	1	0
+23	30	1	0
+23	31	1	0
+23	32	1	0
+23	33	1	0
 23	48	5	0
 23	49	5	0
 23	50	5	0
@@ -924,6 +929,9 @@ ProtectDungeonTemple	NULL
 24	28	1	0
 24	29	1	0
 24	30	1	0
+24	31	1	0
+24	32	1	0
+24	33	1	0
 24	48	5	0
 24	49	5	0
 24	50	5	0
@@ -948,6 +956,8 @@ ProtectDungeonTemple	NULL
 25	29	1	0
 25	30	1	0
 25	31	1	0
+25	32	1	0
+25	33	1	0
 25	48	5	0
 25	49	5	0
 25	50	5	0
@@ -971,6 +981,9 @@ ProtectDungeonTemple	NULL
 26	24	1	0
 26	29	1	0
 26	30	1	0
+26	31	1	0
+26	32	1	0
+26	33	1	0
 26	48	5	0
 26	49	5	0
 26	50	5	0
@@ -992,6 +1005,9 @@ ProtectDungeonTemple	NULL
 27	29	1	0
 27	30	1	0
 27	31	1	0
+27	32	1	0
+27	33	1	0
+27	34	1	0
 27	47	5	0
 27	48	5	0
 27	49	5	0
@@ -1007,9 +1023,12 @@ ProtectDungeonTemple	NULL
 28	20	1	0
 28	21	1	0
 28	22	1	0
+28	29	1	0
 28	30	1	0
 28	31	1	0
 28	32	1	0
+28	33	1	0
+28	34	1	0
 28	47	5	0
 28	48	5	0
 28	49	5	0
@@ -1026,8 +1045,12 @@ ProtectDungeonTemple	NULL
 29	20	1	0
 29	21	1	0
 29	22	1	0
+29	29	1	0
 29	30	1	0
 29	31	1	0
+29	32	1	0
+29	33	1	0
+29	34	1	0
 29	46	5	0
 29	47	5	0
 29	48	5	0
@@ -1048,9 +1071,13 @@ ProtectDungeonTemple	NULL
 30	19	1	0
 30	20	1	0
 30	21	1	0
+30	29	1	0
 30	30	1	0
 30	31	1	0
 30	32	1	0
+30	33	1	0
+30	34	1	0
+30	35	1	0
 30	46	5	0
 30	47	5	0
 30	48	5	0
@@ -1076,9 +1103,13 @@ ProtectDungeonTemple	NULL
 31	19	1	0
 31	20	1	0
 31	21	1	0
+31	29	1	0
+31	30	1	0
 31	31	1	0
 31	32	1	0
 31	33	1	0
+31	34	1	0
+31	35	1	0
 31	46	5	0
 31	47	5	0
 31	48	5	0
@@ -1097,8 +1128,12 @@ ProtectDungeonTemple	NULL
 32	18	1	0
 32	19	1	0
 32	20	1	0
+32	30	1	0
 32	31	1	0
 32	32	1	0
+32	33	1	0
+32	34	1	0
+32	35	1	0
 32	45	5	0
 32	46	5	0
 32	47	5	0
@@ -1114,9 +1149,12 @@ ProtectDungeonTemple	NULL
 33	18	1	0
 33	19	1	0
 33	20	1	0
+33	30	1	0
 33	31	1	0
 33	32	1	0
 33	33	1	0
+33	34	1	0
+33	35	1	0
 33	45	5	0
 33	46	5	0
 33	47	5	0
@@ -1131,9 +1169,13 @@ ProtectDungeonTemple	NULL
 34	17	1	0
 34	18	1	0
 34	19	1	0
+34	30	1	0
+34	31	1	0
 34	32	1	0
 34	33	1	0
 34	34	1	0
+34	35	1	0
+34	36	1	0
 34	44	5	0
 34	45	5	0
 34	46	5	0
@@ -1167,8 +1209,12 @@ ProtectDungeonTemple	NULL
 35	17	1	0
 35	18	1	0
 35	28	2	100
+35	31	1	0
 35	32	1	0
 35	33	1	0
+35	34	1	0
+35	35	1	0
+35	36	1	0
 35	44	5	0
 35	45	5	0
 35	46	5	0
@@ -1207,8 +1253,12 @@ ProtectDungeonTemple	NULL
 36	25	2	100
 36	26	2	100
 36	28	2	100
+36	31	1	0
+36	32	1	0
 36	33	1	0
 36	34	1	0
+36	35	1	0
+36	36	1	0
 36	43	5	0
 36	44	5	0
 36	45	5	0
@@ -1248,9 +1298,12 @@ ProtectDungeonTemple	NULL
 37	24	2	100
 37	26	2	100
 37	28	2	100
+37	31	1	0
+37	32	1	0
 37	33	1	0
 37	34	1	0
 37	35	1	0
+37	36	1	0
 37	43	5	0
 37	44	5	0
 37	45	5	0
@@ -1274,9 +1327,12 @@ ProtectDungeonTemple	NULL
 38	18	1	0
 38	19	1	0
 38	20	1	0
+38	31	1	0
+38	32	1	0
 38	33	1	0
 38	34	1	0
 38	35	1	0
+38	36	1	0
 38	42	5	0
 38	43	5	0
 38	44	5	0
@@ -1303,6 +1359,8 @@ ProtectDungeonTemple	NULL
 39	19	1	0
 39	20	1	0
 39	21	1	0
+39	32	1	0
+39	33	1	0
 39	34	1	0
 39	35	1	0
 39	36	1	0
@@ -1335,8 +1393,11 @@ ProtectDungeonTemple	NULL
 40	19	1	0
 40	20	1	0
 40	21	1	0
+40	32	1	0
+40	33	1	0
 40	34	1	0
 40	35	1	0
+40	36	1	0
 40	42	5	0
 40	43	5	0
 40	44	5	0
@@ -1368,6 +1429,8 @@ ProtectDungeonTemple	NULL
 41	20	1	0
 41	21	1	0
 41	22	1	0
+41	32	1	0
+41	33	1	0
 41	34	1	0
 41	35	1	0
 41	36	1	0
@@ -1404,6 +1467,7 @@ ProtectDungeonTemple	NULL
 42	20	1	0
 42	21	1	0
 42	22	1	0
+42	32	1	0
 42	33	1	0
 42	34	1	0
 42	35	1	0
@@ -1609,6 +1673,15 @@ ProtectDungeonTemple	NULL
 46	42	5	0
 46	43	5	0
 46	44	5	0
+46	45	1	0
+46	46	1	0
+46	47	1	0
+46	48	1	0
+46	49	1	0
+46	50	1	0
+46	51	1	0
+46	52	1	0
+46	53	1	0
 46	54	1	0
 46	55	1	0
 46	56	1	0
@@ -1662,6 +1735,16 @@ ProtectDungeonTemple	NULL
 47	41	5	0
 47	42	5	0
 47	43	5	0
+47	44	1	0
+47	45	1	0
+47	46	1	0
+47	47	1	0
+47	48	1	0
+47	49	1	0
+47	50	1	0
+47	51	1	0
+47	52	1	0
+47	53	1	0
 47	54	1	0
 47	55	1	0
 47	56	1	0
@@ -1869,9 +1952,11 @@ ProtectDungeonTemple	NULL
 50	46	1	0
 50	47	1	0
 50	48	1	0
+50	49	1	0
 50	50	1	0
 50	51	1	0
 50	52	1	0
+50	53	1	0
 50	54	1	0
 50	55	1	0
 50	56	1	0
@@ -1942,12 +2027,20 @@ ProtectDungeonTemple	NULL
 51	59	1	0
 51	60	1	0
 51	61	1	0
-51	62	1	100
-51	71	1	100
-51	72	1	100
-51	73	1	100
-51	74	1	100
-51	75	1	100
+51	62	1	0
+51	63	1	0
+51	64	1	0
+51	65	1	0
+51	66	1	0
+51	67	1	0
+51	68	1	0
+51	69	1	0
+51	70	1	0
+51	71	1	0
+51	72	1	0
+51	73	1	0
+51	74	1	0
+51	75	1	0
 51	76	1	0	1
 51	77	1	0	1
 51	78	1	0	1
@@ -1996,10 +2089,18 @@ ProtectDungeonTemple	NULL
 52	59	1	0
 52	60	1	0
 52	61	1	0
-52	62	1	100
-52	71	1	100
-52	72	1	100
-52	73	1	100
+52	62	1	0
+52	63	1	0
+52	64	1	0
+52	65	1	0
+52	66	1	0
+52	67	1	0
+52	68	1	0
+52	69	1	0
+52	70	1	0
+52	71	1	0
+52	72	1	0
+52	73	1	0
 52	74	1	0
 52	75	1	0
 52	76	1	0
@@ -2046,10 +2147,18 @@ ProtectDungeonTemple	NULL
 53	59	1	0
 53	60	1	0
 53	61	1	0
-53	62	1	100
-53	71	1	100
-53	72	1	100
-53	73	1	100
+53	62	1	0
+53	63	1	0
+53	64	1	0
+53	65	1	0
+53	66	1	0
+53	67	1	0
+53	68	1	0
+53	69	1	0
+53	70	1	0
+53	71	1	0
+53	72	1	0
+53	73	1	0
 53	74	1	0
 53	75	1	0
 53	76	1	0
@@ -2096,9 +2205,18 @@ ProtectDungeonTemple	NULL
 54	59	1	0
 54	60	1	0
 54	61	1	0
-54	71	1	100
-54	72	1	100
-54	73	1	100
+54	62	1	0
+54	63	1	0
+54	64	1	0
+54	65	1	0
+54	66	1	0
+54	67	1	0
+54	68	1	0
+54	69	1	0
+54	70	1	0
+54	71	1	0
+54	72	1	0
+54	73	1	0
 54	74	1	0	1
 54	75	1	0	1
 54	76	1	0	1
@@ -2142,8 +2260,18 @@ ProtectDungeonTemple	NULL
 55	59	1	0
 55	60	1	0
 55	61	1	0
-55	72	1	100
-55	73	1	100
+55	62	1	0
+55	63	1	0
+55	64	1	0
+55	65	1	0
+55	66	1	0
+55	67	1	0
+55	68	1	0
+55	69	1	0
+55	70	1	0
+55	71	1	0
+55	72	1	0
+55	73	1	0
 55	74	1	0	1
 55	75	1	0	1
 55	76	1	0	1
@@ -3516,7 +3644,22 @@ ProtectDungeonTemple	NULL
 1
 [/Room]
 [Room]
-13	StoneBridge2	0	9
+13	StoneBridge2	0	24
+46	40
+46	41
+46	42
+46	43
+46	44
+47	39
+47	40
+47	41
+47	42
+47	43
+48	39
+48	40
+48	41
+48	42
+48	43
 49	39
 49	41
 49	42
@@ -3646,6 +3789,21 @@ ProtectDungeonTemple	NULL
 48	84
 0
 [/Room]
+[Room]
+10	MoreyaGate1	3	9
+20	28
+20	29
+20	30
+21	28
+21	29
+21	30
+22	28
+22	29
+22	30
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -3763,7 +3921,6 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker3	Kobold.mesh	46	78	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker4	Kobold.mesh	50	82	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker5	Kobold.mesh	52	74	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	PrinceAurel	Knight.mesh	52	15	0	Knight	8	0	max	100	0	0	none	none	nullSkillType	none	0
 2	FalconerEdda	Elf.mesh	17	21	0	Elf	6	0	max	100	0	0	none	none	nullSkillType	none	0
 2	HuntsmanBrann	Dwarf1.mesh	83	21	0	Dwarf1	6	0	max	100	0	0	none	none	nullSkillType	none	0
 2	SquireWick	Adventurer.mesh	49	37	0	Adventurer	6	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -3834,7 +3991,6 @@ Mode	once
 Cond	time	3
 Action	message	1	Kingsfall, master, where Prince Aurel hunts and where he has made his stand. His champions are Falconer Edda, Huntsman Brann and Squire Wick, and a keeper who wants the crown must take them alive.
 Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.
-Action	objectiveid	1	kingsfall-o02	Defeat Prince Aurel and his court.
 Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.
 [/Trigger]
 [Trigger]
@@ -3905,145 +4061,10 @@ Action	message	1	The grounds are paying. A bigger dungeon needs more gold.
 Action	gold	1	600
 [/Trigger]
 [Trigger]
-Name	horn1
-Mode	once
-Cond	time	500
-Action	message	1	A hunting party is sounding its horns.
-Action	spawn	3	45	22	1	Knight:3	Elf:3	Monk:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn2
-Mode	once
-Cond	time	720
-Action	message	1	Riders of the court are crossing a span.
-Action	spawn	3	21	29	1	Knight:3	Elf:3	Monk:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn3
-Mode	once
-Cond	time	940
-Action	message	1	The prince has called out his foresters.
-Action	spawn	3	75	29	1	Knight:3	Elf:3	Monk:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn4
-Mode	once
-Cond	time	1160
-Action	message	1	A column of the guard is on the trail.
-Action	spawn	3	48	44	1	Knight:3	Elf:3	Monk:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn5
-Mode	once
-Cond	time	1380
-Action	message	1	Hounds and spearmen are coming down from the lodges.
-Action	spawn	3	19	54	1	Knight:3	Elf:3	Monk:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn6
-Mode	once
-Cond	time	1600
-Action	message	1	The heralds have summoned the court.
-Action	spawn	3	79	53	1	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn7
-Mode	once
-Cond	time	1820
-Action	message	1	A hunting party is sounding its horns.
-Action	spawn	3	45	22	1	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn8
-Mode	once
-Cond	time	2040
-Action	message	1	Riders of the court are crossing a span.
-Action	spawn	3	21	29	1	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn9
-Mode	once
-Cond	time	2260
-Action	message	1	The prince has called out his foresters.
-Action	spawn	3	75	29	1	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn10
-Mode	once
-Cond	time	2480
-Action	message	1	A column of the guard is on the trail.
-Action	spawn	3	48	44	1	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	horn11
-Mode	once
-Cond	time	2700
-Action	message	1	Hounds and spearmen are coming down from the lodges.
-Action	spawn	3	19	54	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4
-[/Trigger]
-[Trigger]
-Name	horn12
-Mode	once
-Cond	time	2920
-Action	message	1	The heralds have summoned the court.
-Action	spawn	3	79	53	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4
-[/Trigger]
-[Trigger]
-Name	horn13
-Mode	once
-Cond	time	3140
-Action	message	1	A hunting party is sounding its horns.
-Action	spawn	3	45	22	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4
-[/Trigger]
-[Trigger]
-Name	horn14
-Mode	once
-Cond	time	3360
-Action	message	1	Riders of the court are crossing a span.
-Action	spawn	3	21	29	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4
-[/Trigger]
-[Trigger]
-Name	horn15
-Mode	once
-Cond	time	3580
-Action	message	1	The prince has called out his foresters.
-Action	spawn	3	75	29	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:4
-[/Trigger]
-[Trigger]
-Name	horn16
-Mode	once
-Cond	time	3800
-Action	message	1	A column of the guard is on the trail.
-Action	spawn	3	48	44	1	Knight:5	Knight:5	Elf:5	Monk:4	Dwarf2:4	Adventurer:4
-[/Trigger]
-[Trigger]
-Name	horn17
-Mode	once
-Cond	time	4020
-Action	message	1	Hounds and spearmen are coming down from the lodges.
-Action	spawn	3	19	54	1	Knight:5	Knight:5	Elf:5	Monk:4	Dwarf2:4	Adventurer:4
-[/Trigger]
-[Trigger]
-Name	horn18
-Mode	once
-Cond	time	4240
-Action	message	1	The heralds have summoned the court.
-Action	spawn	3	79	53	1	Knight:5	Knight:5	Elf:5	Monk:4	Dwarf2:4	Adventurer:4
-[/Trigger]
-[Trigger]
 Name	goalArmyAtHeart
 Mode	once
 Cond	creaturesatheart	1	>=	12
 Action	objectivestate	1	kingsfall-o03	reached
-[/Trigger]
-[Trigger]
-Name	courtTaken
-Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
-Cond	creatures	1	>=	12
-Action	objectivestate	1	kingsfall-o02	reached
-Action	win	1
 [/Trigger]
 [Trigger]
 Name	cacheOpensSlain
@@ -4080,24 +4101,6 @@ Mode	once
 Cond	owns	1	SquireWick
 Action	message	1	Squire Wick has taken your side.
 Action	addflag	champions	1
-[/Trigger]
-[Trigger]
-Name	princeWounded
-Mode	once
-Cond	health	PrinceAurel	<=	35
-Action	message	1	Prince Aurel is badly hurt. His court is rallying around him and the guard of the keep is called out.
-Action	spawn	3	48	14	1	Knight:4	Elf:4	Monk:4	Adventurer:4
-[/Trigger]
-[Trigger]
-Name	collectWin
-Mode	once
-Cond	time	5
-Cond	flag	champions	==	3
-Cond	alive	PrinceAurel	0
-Cond	creatures	1	>=	12
-Action	objectivestate	1	kingsfall-o01	reached
-Action	objectivestate	1	kingsfall-o02	reached
-Action	win	1
 [/Trigger]
 [Trigger]
 Name	centreWell
@@ -4142,7 +4145,7 @@ Cond	time	0
 Action	mainobjectiveid	1	kingsfall-main-heart	Protect your heart and cross a guarded lava bridge.
 Action	mainobjectiveid	1	kingsfall-main-champions	Capture or convert Edda, Brann and Wick alive.
 Action	mainobjectiveid	1	kingsfall-main-army	Gather 12 creatures at your heart.
-Action	mainobjectiveid	1	kingsfall-main-court	Defeat Prince Aurel and his court.
+Action	mainobjectiveid	1	kingsfall-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	kingsfall-extra-gold	Mine 4000 gold.
 [/Trigger]
 [Trigger]
@@ -4201,6 +4204,7 @@ Cond	held	1	FalconerEdda
 Cond	held	1	HuntsmanBrann
 Cond	held	1	SquireWick
 Action	objectivestate	1	kingsfall-main-champions	reached
+Action	objectivestate	1	kingsfall-o01	reached
 [/Trigger]
 [Trigger]
 Name	mainArmy
@@ -4209,11 +4213,16 @@ Cond	creaturesatheart	1	>=	12
 Action	objectivestate	1	kingsfall-main-army	reached
 [/Trigger]
 [Trigger]
-Name	mainCourt
-Mode	repeat	0
-Cond	event	PrinceAurel	killed
-Cond	creatures	3	<=	0
-Action	objectivestate	1	kingsfall-main-court	reached
+Name	mainRaid
+Mode	once
+Cond	raid	defeated
+Action	objectivestate	1	kingsfall-main-raid	reached
+[/Trigger]
+[Trigger]
+Name	raidFlees
+Mode	once
+Cond	raid	fleeing
+Action	message	1	Prince Aurel runs for the Moreya gate. Stop him before he escapes!
 [/Trigger]
 [Trigger]
 Name	extraGold
@@ -4227,8 +4236,60 @@ Mode	once
 Cond	objective	1	kingsfall-main-heart	reached
 Cond	objective	1	kingsfall-main-champions	reached
 Cond	objective	1	kingsfall-main-army	reached
-Cond	objective	1	kingsfall-main-court	reached
+Cond	objective	1	kingsfall-main-raid	reached
 Action	message	1	The prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours.
 Action	win	1
 [/Trigger]
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+Gate	21	29	180
+Seats	3	1
+Countdown	-
+Interval	-
+EscapeShare	-
+# PLACEHOLDER: composition set by simulation R3B
+Group	1	PrinceAurel
+Member	1	Knight	8	PrinceAurel	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Knight	5	-	Guardian
+Member	1	Monk	5	-	Guardian
+Member	1	Monk	5	-	Guardian
+Member	1	Monk	5	-	Guardian
+Member	1	Monk	5	-	Guardian
+Member	1	Elf	5	-	Marksman
+Member	1	Elf	5	-	Marksman
+Member	1	Elf	5	-	Marksman
+Member	1	Elf	5	-	Marksman
+Member	1	Elf	5	-	Marksman
+Member	1	Elf	5	-	Marksman
+Member	1	Elf	5	-	Marksman
+Member	1	Elf	5	-	Marksman
+Member	1	Elf	5	-	Hunter
+Member	1	Elf	5	-	Hunter
+Member	1	Elf	5	-	Hunter
+Member	1	Elf	5	-	Hunter
+Member	1	Dwarf2	5	-	Berserker
+Member	1	Dwarf2	5	-	Berserker
+Member	1	Dwarf2	5	-	Berserker
+Member	1	Dwarf2	5	-	Berserker
+Member	1	Adventurer	5	-	Shade
+Member	1	Adventurer	5	-	Shade
+Member	1	Adventurer	5	-	Shade
+Member	1	Adventurer	5	-	Shade
+Member	1	Adventurer	5	-	Shade
+[/Raid]

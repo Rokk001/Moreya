@@ -61,14 +61,12 @@ File: `levels/campaign/Bellwick.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3819 | `Action	objectiveid	1	bellwick-o01	Destroy the keeper's heart in the north undercroft.` | yes |
-| Advisory hint line 3820 | `Action	hint	1	Hold the nave against the faithful.` | not an objective; no state required |
-| Script line 3821 | `Action	objectiveid	1	bellwick-o03	Survive until both north gates open.` | yes |
-| Script line 3831 | `Action	objectiveid	1	bellwick-o04	Reach the transept through the nave.` | yes |
-| Script line 3955 | `Action	win	1` | yes |
-| Script line 3960 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3962 | `Action	win	1` | yes |
-| Script line 4044 | `Action	win	1` | yes |
+| Script line 3925 | `Action	objectiveid	1	bellwick-o01	Destroy the keeper's heart in the north undercroft.` | yes |
+| Advisory hint line 3926 | `Action	hint	1	Hold the nave against the faithful.` | not an objective; no state required |
+| Script line 3936 | `Action	objectiveid	1	bellwick-o04	Reach the transept through the nave.` | yes |
+| Script line 3997 | `Action	win	1` | yes |
+| Script line 4002 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4110 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -90,13 +88,55 @@ Static source and potential route evidence only; actual digging/movement, combat
 
 | Trigger `transept` | `Action	objectivestate	1	bellwick-o04	reached`; conditions: `Cond	region	1	Transept` | yes |
 | Trigger `keeperHeartDown` | `Action	objectivestate	1	bellwick-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
-| Trigger `naveGatesKills` | `Action	objectivestate	1	bellwick-o03	reached`; conditions: `Cond	kills	1	>=	12; Cond	flag	gatesOpen	0` | yes |
-| Trigger `naveGatesLate` | `Action	objectivestate	1	bellwick-o03	reached`; conditions: `Cond	time	1500; Cond	flag	gatesOpen	0` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	bellwick-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Trigger `mainHeart` | `Action	objectivestate	1	bellwick-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	gatesOpen	1` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	bellwick-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainNave` | `Action	objectivestate	1	bellwick-main-nave	reached`; conditions: `Cond	crossed	1	Nave	north` | yes |
 | Trigger `mainKeeper` | `Action	objectivestate	1	bellwick-main-keeper	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	bellwick-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraScriptorium` | `Action	objectivestate	1	bellwick-extra-scriptorium	reached`; conditions: `Cond	region	1	Scriptorium` | yes |
+| Objective mapping | grouped status conditions differ from reviewed conditions: mainHeart | no: requires design decision |
+| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
+| Objective mapping | required stable objective ID is missing: bellwick-o03 | no: requires design decision |
+| Objective mapping | grouped objective set differs from reviewed matrix: Bellwick | no: requires design decision |
+| Objective mapping | grouped goal differs from approved definition: bellwick-main-heart | no: requires design decision |
+| Objective mapping | grouped completion conditions differ: bellwick-main-heart | no: requires design decision |
+| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
+| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful1 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful2 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful3 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful4 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful5 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful6 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful7 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful8 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: faithful9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: tolling | no: requires design decision |
+| Objective mapping | original trial limit was changed: cryptRow | no: requires design decision |
+| Objective mapping | original trial limit was changed: cryptRow | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: faithful9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: naveGatesKills | no: requires design decision |
+| Objective mapping | original trial limit was changed: naveGatesKills | no: requires design decision |
+| Objective mapping | original trial limit was changed: naveGatesLate | no: requires design decision |
+| Objective mapping | original trial limit was changed: naveGatesLate | no: requires design decision |
+| Objective mapping | victory narration must occur exactly once after current main goals | no: requires design decision |
 | Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | yes: heart protected through the unchanged two-gate opening alternatives, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes |
 
 ## Bonus1
@@ -623,13 +663,10 @@ File: `levels/campaign/Goldspire.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3130 | `Action	objectiveid	1	goldspire-o01	Kill Alaric Penn inside the spire.` | yes |
-| Advisory hint line 3131 | `Action	hint	1	Mine gold and build an army.` | not an objective; no state required |
-| Script line 3132 | `Action	objectiveid	1	goldspire-o03	Take the low town below the spire.` | yes |
-| Script line 3161 | `Action	objectiveid	1	goldspire-o04	Enter the outer ring after the south gate opens.` | yes |
-| Script line 3221 | `Action	objectiveid	1	goldspire-o05	Kill Alaric Penn.` | yes |
-| Script line 3328 | `Action	win	1` | yes |
-| Script line 3505 | `Action	win	1` | yes |
+| Advisory hint line 3173 | `Action	hint	1	Mine gold and build an army.` | not an objective; no state required |
+| Script line 3174 | `Action	objectiveid	1	goldspire-o03	Take the low town below the spire.` | yes |
+| Script line 3202 | `Action	objectiveid	1	goldspire-o04	Enter the outer ring after the south gate opens.` | yes |
+| Script line 3460 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -654,14 +691,75 @@ Static route/bank/footprint/source evidence only; actual gate/link movement, cap
 
 | Trigger `lowTown` | `Action	objectivestate	1	goldspire-o03	reached`; conditions: `Cond	claimed	1	LowTown	40` | yes |
 | Trigger `onRing` | `Action	objectivestate	1	goldspire-o04	reached`; conditions: `Cond	region	1	OuterRing` | yes |
-| Trigger `wardenSlain` | `Action	objectivestate	1	goldspire-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Trigger `wardenSlain` | `Action	objectivestate	1	goldspire-o05	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	goldspire-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHome` | `Action	objectivestate	1	goldspire-main-home	reached`; conditions: `Cond	flag	mainArmyReady	1; Cond	goalmet	1	ProtectDungeonTemple` | yes |
-| Trigger `mainTown` | `Action	objectivestate	1	goldspire-main-town	reached`; conditions: `Cond	groundclaimed	1	46	60	49	60; Cond	groundclaimed	1	46	61	48	61; Cond	groundclaimed	1	46	62	48	62; Cond	groundclaimed	1	44	63	49	63; Cond	groundclaimed	1	42	64	52	64; Cond	groundclaimed	1	41	65	53	65; Cond	groundclaimed	1	41	66	53	66; Cond	groundclaimed	1	42	67	55	67; Cond	groundclaimed	1	42	68	56	68; Cond	groundclaimed	1	42	69	57	69; Cond	groundclaimed	1	59	69	59	69; Cond	groundclaimed	1	42	70	60	70; Cond	groundclaimed	1	43	71	54	71; Cond	groundclaimed	1	57	71	60	71; Cond	groundclaimed	1	45	72	53	72; Cond	groundclaimed	1	60	72	60	72; Cond	groundclaimed	1	46	73	51	73; Cond	groundclaimed	1	46	74	48	74` | yes |
+| Trigger `mainTown` | `Action	objectivestate	1	goldspire-main-town	reached`; conditions: `Cond	groundclaimed	1	46	60	49	60; Cond	groundclaimed	1	46	61	48	61; Cond	groundclaimed	1	46	62	48	62; Cond	groundclaimed	1	44	63	49	63; Cond	groundclaimed	1	42	64	52	64; Cond	groundclaimed	1	41	65	53	65; Cond	groundclaimed	1	41	66	45	66; Cond	groundclaimed	1	49	66	53	66; Cond	groundclaimed	1	42	67	45	67; Cond	groundclaimed	1	49	67	55	67; Cond	groundclaimed	1	42	68	45	68; Cond	groundclaimed	1	49	68	56	68; Cond	groundclaimed	1	42	69	57	69; Cond	groundclaimed	1	59	69	59	69; Cond	groundclaimed	1	42	70	60	70; Cond	groundclaimed	1	43	71	54	71; Cond	groundclaimed	1	57	71	60	71; Cond	groundclaimed	1	45	72	53	72; Cond	groundclaimed	1	60	72	60	72; Cond	groundclaimed	1	46	73	51	73; Cond	groundclaimed	1	46	74	48	74` | yes |
 | Trigger `mainRoute` | `Action	objectivestate	1	goldspire-main-route	reached`; conditions: `Cond	trigger	mainRingReached; Cond	flag	mainWestCrossed	1; Cond	flag	mainEastCrossed	1` | yes |
-| Trigger `mainWarden` | `Action	objectivestate	1	goldspire-main-warden	reached`; conditions: `Cond	trigger	pennVaultOpened; Cond	killedin	AlaricPenn	OuterRing; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainWarden` | `Action	objectivestate	1	goldspire-main-vault	reached`; conditions: `Cond	trigger	pennVaultOpened` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	goldspire-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraWing` | `Action	objectivestate	1	goldspire-extra-wing	reached`; conditions: `Cond	region	1	WestWing` | yes |
+| Objective mapping | grouped status conditions differ from reviewed conditions: mainTown | no: requires design decision |
+| Objective mapping | grouped status conditions differ from reviewed conditions: mainWarden | no: requires design decision |
+| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
+| Objective mapping | required stable objective ID is missing: goldspire-o01 | no: requires design decision |
+| Objective mapping | required stable objective ID is missing: goldspire-o05 | no: requires design decision |
+| Objective mapping | grouped objective set differs from reviewed matrix: Goldspire | no: requires design decision |
+| Objective mapping | grouped completion conditions differ: goldspire-main-town | no: requires design decision |
+| Objective mapping | grouped goal differs from approved definition: goldspire-main-warden | no: requires design decision |
+| Objective mapping | grouped completion conditions differ: goldspire-main-warden | no: requires design decision |
+| Objective mapping | grouped objective lacks its exact completion action: goldspire-main-warden | no: requires design decision |
+| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
+| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column1 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column2 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column3 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column4 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column5 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column6 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column7 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column8 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column9 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column10 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column11 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column12 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: treasurerKey | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: treasurerHurt | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: keyDropped | no: requires design decision |
+| Objective mapping | original trial limit was changed: rising | no: requires design decision |
+| Objective mapping | original trial limit was changed: firstCoin | no: requires design decision |
+| Objective mapping | original trial limit was changed: coreSeen | no: requires design decision |
+| Objective mapping | original trial limit was changed: coreSeen | no: requires design decision |
+| Objective mapping | original trial limit was changed: column1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column10 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column10 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column11 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column11 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column12 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column12 | no: requires design decision |
+| Objective mapping | original trial limit was changed: treasurerKey | no: requires design decision |
+| Objective mapping | original trial limit was changed: treasurerHurt | no: requires design decision |
+| Objective mapping | original trial limit was changed: treasurerHurt | no: requires design decision |
+| Objective mapping | original trial limit was changed: keyDropped | no: requires design decision |
+| Objective mapping | victory narration must occur exactly once after current main goals | no: requires design decision |
+| Objective mapping | original floor footprint differs or is unreachable: goldspire-main-town | no: requires design decision |
+| Objective mapping | unreachable or absent grouped target: AlaricPenn | no: requires design decision |
 | Briefing | With Zivs and a thin purse, build before challenging the garrison below its rings. | yes: actual two-fighter buildup and own-heart protection |
 | Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links |
 | Briefing | Aurel cannot hold this chosen barrier with promises. | yes: actual Penn death inside the spire and all remaining foes |
@@ -825,11 +923,9 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5673 | `Action	objectiveid	1	hollowmarkcitadel-o01	Kill King Castellan on his throne.` | yes |
-| Script line 5674 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
-| Script line 5675 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.` | yes |
-| Script line 6101 | `Action	win	1` | yes |
-| Script line 6364 | `Action	win	1` | yes |
+| Script line 5779 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
+| Script line 5780 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.` | yes |
+| Script line 6198 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -851,16 +947,159 @@ Possible route (static, not a playthrough):
 
 Static conditions only; full movement, claiming, combat, treasury payout and save/load remain unverified.
 
-| Trigger `goalHeartSafe3BeforeKingDead` | `Action	objectivestate	1	hollowmarkcitadel-o03	reached`; conditions: `Cond	time	5; Cond	alive	CastellanKing	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `goalHeartSafe3BeforeKingDead` | `Action	objectivestate	1	hollowmarkcitadel-o03	reached`; conditions: `Cond	time	5; Cond	raid	defeated; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalCourt3` | `Action	objectivestate	1	hollowmarkcitadel-o02	reached`; conditions: `Cond	region	1	ThroneHall; Cond	flag	goalCourt2	1; Cond	flag	upperWest	1; Cond	flag	upperEast	1` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	hollowmarkcitadel-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
-| Trigger `kingDead` | `Action	objectivestate	1	hollowmarkcitadel-o01	reached`; conditions: `Cond	time	5; Cond	alive	CastellanKing	0` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	hollowmark-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Trigger `mainHeart` | `Action	objectivestate	1	hollowmark-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	roomclaimed	1	12	42	14	43; Cond	roomclaimed	1	100	42	102	43; Cond	trigger	tower2` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	hollowmark-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	roomclaimed	1	8	42	10	43; Cond	roomclaimed	1	100	42	102	43; Cond	trigger	tower2` | yes |
 | Trigger `mainCourts` | `Action	objectivestate	1	hollowmark-main-courts	reached`; conditions: `Cond	flag	mainCourt3	1` | yes |
-| Trigger `mainKing` | `Action	objectivestate	1	hollowmark-main-king	reached`; conditions: `Cond	killedin	CastellanKing	ThroneHall` | yes |
 | Trigger `mainThrone` | `Action	objectivestate	1	hollowmark-main-throne	reached`; conditions: `Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	hollowmark-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraTower` | `Action	objectivestate	1	hollowmark-extra-tower	reached`; conditions: `Cond	region	1	WestTower3` | yes |
+| Objective mapping | grouped status conditions differ from reviewed conditions: goalHeartSafe3BeforeKingDead | no: requires design decision |
+| Objective mapping | grouped status conditions differ from reviewed conditions: mainHeart | no: requires design decision |
+| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
+| Objective mapping | required stable objective ID is missing: hollowmarkcitadel-o01 | no: requires design decision |
+| Objective mapping | grouped objective set differs from reviewed matrix: HollowmarkCitadel | no: requires design decision |
+| Objective mapping | grouped completion conditions differ: hollowmark-main-heart | no: requires design decision |
+| Objective mapping | grouped goal differs from approved definition: hollowmark-main-king | no: requires design decision |
+| Objective mapping | grouped completion conditions differ: hollowmark-main-king | no: requires design decision |
+| Objective mapping | grouped observer mode differs: hollowmark-main-king | no: requires design decision |
+| Objective mapping | grouped objective lacks its exact completion action: hollowmark-main-king | no: requires design decision |
+| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
+| Objective mapping | grouped failure conditions differ: mainUpperTowers | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster1 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster2 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster3 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster4 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster5 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster6 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster7 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster8 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster9 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster10 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster11 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster12 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster13 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster14 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster15 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster16 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster17 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster18 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster19 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster20 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster21 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster22 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster23 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster24 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster25 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster26 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster27 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster28 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster29 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster30 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster31 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster32 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster33 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster34 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster35 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster36 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster37 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster38 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster39 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: muster40 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: goalHeartSafe3BeforeKingDead | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: kingDead | no: requires design decision |
+| Objective mapping | original trial limit was changed: siege | no: requires design decision |
+| Objective mapping | original trial limit was changed: siege | no: requires design decision |
+| Objective mapping | original trial limit was changed: throneHall | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster10 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster10 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster11 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster11 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster12 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster12 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster13 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster13 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster14 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster14 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster15 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster15 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster16 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster16 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster17 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster17 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster18 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster18 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster19 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster19 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster20 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster20 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster21 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster21 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster22 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster22 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster23 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster23 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster24 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster24 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster25 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster25 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster26 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster26 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster27 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster27 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster28 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster28 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster29 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster29 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster30 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster30 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster31 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster31 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster32 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster32 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster33 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster33 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster34 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster34 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster35 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster35 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster36 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster36 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster37 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster37 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster38 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster38 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster39 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster39 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster40 | no: requires design decision |
+| Objective mapping | original trial limit was changed: muster40 | no: requires design decision |
+| Objective mapping | original trial limit was changed: kingDead | no: requires design decision |
+| Objective mapping | original trial limit was changed: kingDead | no: requires design decision |
+| Objective mapping | original trial limit was changed: gate2Open | no: requires design decision |
+| Objective mapping | original trial limit was changed: gate2Late | no: requires design decision |
+| Objective mapping | original trial limit was changed: gate2KeyFalls | no: requires design decision |
+| Objective mapping | victory narration must follow all current main-goal observers | no: requires design decision |
+| Objective mapping | original required room footprint or ownership observer differs: Treasury2 | no: requires design decision |
 | Briefing | Hold against the garrison, open the upper gates by the towers or their keys, and use the treasuries to sustain the assault. | yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes |
 | Briefing | Kill Castellan and claim the throne we promised at the beginning. | yes: actual Castellan death inside ThroneHall and all548original throne floor fields currently owned |
 
@@ -925,12 +1164,9 @@ File: `levels/campaign/Kingsfall.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3836 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
-| Script line 3837 | `Action	objectiveid	1	kingsfall-o02	Defeat Prince Aurel and his court.` | yes |
-| Script line 3838 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
-| Script line 4046 | `Action	win	1` | yes |
-| Script line 4100 | `Action	win	1` | yes |
-| Script line 4232 | `Action	win	1` | yes |
+| Script line 3993 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
+| Script line 3994 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
+| Script line 4241 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -953,18 +1189,85 @@ Possible route (static, not a playthrough):
 Static script/bridge/path/recruitment-source evidence only; actual capture/conversion,12creature assembly,KO handling,battles and save/load need runtime verification.
 
 | Trigger `goalArmyAtHeart` | `Action	objectivestate	1	kingsfall-o03	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
-| Trigger `courtTaken` | `Action	objectivestate	1	kingsfall-o02	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	creatures	1	>=	12` | yes |
-| Trigger `collectWin` | `Action	objectivestate	1	kingsfall-o01	reached`; conditions: `Cond	time	5; Cond	flag	champions	==	3; Cond	alive	PrinceAurel	0; Cond	creatures	1	>=	12` | yes |
-| Trigger `collectWin` | `Action	objectivestate	1	kingsfall-o02	reached`; conditions: `Cond	time	5; Cond	flag	champions	==	3; Cond	alive	PrinceAurel	0; Cond	creatures	1	>=	12` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	kingsfall-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `lostFalconerEdda` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	FalconerEdda	killed` | yes |
 | Trigger `lostHuntsmanBrann` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	HuntsmanBrann	killed` | yes |
 | Trigger `lostSquireWick` | `Action	objectivestate	1	kingsfall-main-champions	failed`; conditions: `Cond	event	SquireWick	killed` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	kingsfall-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	mainRavineCrossed	1` | yes |
 | Trigger `mainChampions` | `Action	objectivestate	1	kingsfall-main-champions	reached`; conditions: `Cond	held	1	FalconerEdda; Cond	held	1	HuntsmanBrann; Cond	held	1	SquireWick` | yes |
+| Trigger `mainChampions` | `Action	objectivestate	1	kingsfall-o01	reached`; conditions: `Cond	held	1	FalconerEdda; Cond	held	1	HuntsmanBrann; Cond	held	1	SquireWick` | yes |
 | Trigger `mainArmy` | `Action	objectivestate	1	kingsfall-main-army	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
-| Trigger `mainCourt` | `Action	objectivestate	1	kingsfall-main-court	reached`; conditions: `Cond	event	PrinceAurel	killed; Cond	creatures	3	<=	0` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	kingsfall-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	kingsfall-extra-gold	reached`; conditions: `Cond	mined	1	>=	4000` | yes |
+| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
+| Objective mapping | objective completion differs from reviewed trigger mapping: kingsfall-o01 | no: requires design decision |
+| Objective mapping | required stable objective ID is missing: kingsfall-o02 | no: requires design decision |
+| Objective mapping | grouped objective set differs from reviewed matrix: Kingsfall | no: requires design decision |
+| Objective mapping | grouped goal differs from approved definition: kingsfall-main-court | no: requires design decision |
+| Objective mapping | grouped completion conditions differ: kingsfall-main-court | no: requires design decision |
+| Objective mapping | grouped observer mode differs: kingsfall-main-court | no: requires design decision |
+| Objective mapping | grouped objective lacks its exact completion action: kingsfall-main-court | no: requires design decision |
+| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn1 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn2 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn3 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn4 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn5 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn6 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn7 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn8 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn9 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn10 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn11 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn12 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn13 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn14 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn15 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn16 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn17 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: horn18 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: princeWounded | no: requires design decision |
+| Objective mapping | original trial limit was changed: hunt | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn10 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn10 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn11 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn11 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn12 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn12 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn13 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn13 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn14 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn14 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn15 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn15 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn16 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn16 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn17 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn17 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn18 | no: requires design decision |
+| Objective mapping | original trial limit was changed: horn18 | no: requires design decision |
+| Objective mapping | original trial limit was changed: princeWounded | no: requires design decision |
+| Objective mapping | original trial limit was changed: princeWounded | no: requires design decision |
+| Objective mapping | victory narration must follow all current main-goal observers | no: requires design decision |
+| Objective mapping | unreachable or absent grouped target: PrinceAurel | no: requires design decision |
 | Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | yes: actual living captivity OR conversion of all three champions, real lava-span crossing and actual Aurel death with court clearance |
 | Briefing | Aurel must answer for every promise he made. | yes:12own living creatures currently on the own-heart tiles |
 
@@ -1547,14 +1850,13 @@ File: `levels/campaign/VarnsCrossing.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4448 | `Action	objectiveid	1	varnscrossing-o01	Defeat both rival keepers.` | yes |
-| Script line 4449 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against heroes.` | yes |
-| Script line 4450 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
-| Script line 4755 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4779 | `Action	win	1` | yes |
-| Script line 4784 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4786 | `Action	win	1` | yes |
-| Script line 4892 | `Action	win	1` | yes |
+| Script line 4516 | `Action	objectiveid	1	varnscrossing-o01	Defeat both rival keepers.` | yes |
+| Script line 4517 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against heroes.` | yes |
+| Script line 4518 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
+| Script line 4613 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4638 | `Action	win	1` | yes |
+| Script line 4643 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4777 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1583,7 +1885,104 @@ Static resource/footprint evidence only; claim takeover, bed/coop use, combat, s
 | Trigger `mainHome` | `Action	objectivestate	1	varnscrossing-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	claimed	1	Quarter	25; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1` | yes |
 | Trigger `mainKeep` | `Action	objectivestate	1	varnscrossing-main-keep	reached`; conditions: `Cond	trigger	quarterHeld; Cond	groundclaimed	1	36	38	37	38; Cond	groundclaimed	1	55	38	56	38; Cond	groundclaimed	1	36	39	36	39; Cond	groundclaimed	1	42	39	50	39; Cond	groundclaimed	1	56	39	56	39; Cond	groundclaimed	1	41	40	51	40; Cond	groundclaimed	1	39	41	53	41; Cond	groundclaimed	1	39	42	53	42; Cond	groundclaimed	1	38	43	54	43; Cond	groundclaimed	1	37	44	55	44; Cond	groundclaimed	1	37	45	55	45; Cond	groundclaimed	1	37	46	55	46; Cond	groundclaimed	1	37	47	55	47; Cond	groundclaimed	1	37	48	55	48; Cond	groundclaimed	1	37	49	55	49; Cond	groundclaimed	1	37	50	55	50; Cond	groundclaimed	1	37	51	55	51; Cond	groundclaimed	1	37	52	55	52; Cond	groundclaimed	1	38	53	54	53; Cond	groundclaimed	1	39	54	53	54; Cond	groundclaimed	1	39	55	53	55; Cond	groundclaimed	1	41	56	51	56; Cond	groundclaimed	1	36	57	36	57; Cond	groundclaimed	1	42	57	50	57; Cond	groundclaimed	1	56	57	56	57; Cond	groundclaimed	1	36	58	37	58; Cond	groundclaimed	1	55	58	56	58` | yes |
 | Trigger `mainRivals` | `Action	objectivestate	1	varnscrossing-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	varnscrossing-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	varnscrossing-extra-gold	reached`; conditions: `Cond	mined	1	>=	5000` | yes |
+| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
+| Objective mapping | grouped objective set differs from reviewed matrix: VarnsCrossing | no: requires design decision |
+| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
+| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
+| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column1 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column2 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column3 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column4 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column5 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column6 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column7 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column8 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column9 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column10 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column11 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column12 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column13 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column14 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column15 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column16 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column17 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column18 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column19 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column20 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column21 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column22 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column23 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column24 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column25 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column26 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column27 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column28 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column29 | no: requires design decision |
+| Objective mapping | required underlying trigger conditions differ: column30 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column1 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column2 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column3 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column4 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column5 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column6 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column7 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column8 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column9 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column10 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column10 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column11 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column11 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column12 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column12 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column13 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column13 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column14 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column14 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column15 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column15 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column16 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column16 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column17 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column17 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column18 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column18 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column19 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column19 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column20 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column20 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column21 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column21 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column22 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column22 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column23 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column23 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column24 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column24 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column25 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column25 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column26 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column26 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column27 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column27 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column28 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column28 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column29 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column29 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column30 | no: requires design decision |
+| Objective mapping | original trial limit was changed: column30 | no: requires design decision |
+| Objective mapping | victory narration must occur exactly once after current main goals | no: requires design decision |
 | Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes |
 
 ## Wolfscar
@@ -1641,14 +2040,13 @@ File: `levels/campaign/Wraithwood.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4838 | `Action	objectiveid	1	wraithwood-o01	Destroy the witch-warden's heart in the north-west.` | yes |
-| Script line 4839 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
-| Script line 4840 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
-| Script line 4901 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4917 | `Action	win	1` | yes |
-| Script line 4922 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4925 | `Action	win	1` | yes |
-| Script line 4990 | `Action	win	1` | yes |
+| Script line 4865 | `Action	objectiveid	1	wraithwood-o01	Destroy the rival heart in the north-west.` | yes |
+| Script line 4866 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
+| Script line 4867 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
+| Script line 4928 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4945 | `Action	win	1` | yes |
+| Script line 4950 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5031 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1678,5 +2076,17 @@ Static heart-seat/location and region evidence only; actual heart destruction, c
 | Trigger `mainWitch` | `Action	objectivestate	1	wraithwood-main-witch	reached`; conditions: `Cond	roomtiles	3	DungeonTemple	<=	0` | yes |
 | Trigger `mainRival` | `Action	objectivestate	1	wraithwood-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0` | yes |
 | Trigger `mainForces` | `Action	objectivestate	1	wraithwood-main-forces	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	wraithwood-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGrove` | `Action	objectivestate	1	wraithwood-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
+| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
+| Objective mapping | grouped objective set differs from reviewed matrix: Wraithwood | no: requires design decision |
+| Objective mapping | grouped goal differs from approved definition: wraithwood-main-witch | no: requires design decision |
+| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
+| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
+| Objective mapping | original trial limit was changed: mist | no: requires design decision |
+| Objective mapping | original trial limit was changed: mist | no: requires design decision |
+| Objective mapping | original trial limit was changed: westGlade | no: requires design decision |
+| Objective mapping | original trial limit was changed: southGlade | no: requires design decision |
+| Objective mapping | original trial limit was changed: covenStirs | no: requires design decision |
+| Objective mapping | victory narration must occur exactly once after current main goals | no: requires design decision |
 | Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately |
