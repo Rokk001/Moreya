@@ -298,9 +298,13 @@ bool CombatGroupManager::isKeeperSeat(const Seat* seat)
     return !seat->isRogueSeat() && (seat->getFaction() != "Hero");
 }
 
-//! \brief A raid member takes part while it lives on the map, is not imprisoned and was not won over by a keeper.
+//! \brief A raid member takes part while it lives on the map, is not imprisoned and was not won over by a keeper. A
+//! worker is never a group member.
 bool CombatGroupManager::isActiveRaidMember(const Creature& creature)
 {
+    if((creature.getDefinition() == nullptr) || creature.getDefinition()->isWorker())
+        return false;
+
     return creature.isAlive() && creature.getIsOnMap() && !creature.isInPrison() &&
         (creature.getSeat() != nullptr) && !isKeeperSeat(creature.getSeat());
 }

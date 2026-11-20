@@ -241,8 +241,8 @@ private:
     //! \brief True when the creature can be (or stay) a member of a keeper group of the given seat.
     bool canStayInKeeperGroup(const Creature& creature, int32_t seatId) const;
 
-    //! \brief True when the creature takes part in its raid group (alive, on the map, not imprisoned, not won over
-    //! by a keeper).
+    //! \brief True when the creature takes part in its raid group (no worker, alive, on the map, not imprisoned, not
+    //! won over by a keeper).
     static bool isActiveRaidMember(const Creature& creature);
 
     //! \brief Returns the group with that id, nullptr when there is none.
