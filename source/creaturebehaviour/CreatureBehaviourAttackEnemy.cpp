@@ -50,7 +50,7 @@ CreatureBehaviour* CreatureBehaviourAttackEnemy::clone() const
 }
 
 //! \brief Chooses fighting or flight using the configured angry-flight chance. A member of a retreating combat group
-//! starts no fight.
+//! starts no fight, and a member of a combat group does not flee out of anger (G10).
 bool CreatureBehaviourAttackEnemy::processBehaviour(Creature& creature) const
 {
     // Check if we are already fighting or fleeing, or retreating with our combat group
@@ -67,13 +67,14 @@ bool CreatureBehaviourAttackEnemy::processBehaviour(Creature& creature) const
             ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent"))
         return false;
 
-    // Unhappy creatures might flee instead of engaging enemies
+    // Unhappy creatures might flee instead of engaging enemies, unless they fight in a combat group (G10)
     switch(creature.getMoodValue())
     {
         case CreatureMoodLevel::Angry:
         case CreatureMoodLevel::Furious:
         {
-            if(Random::Int(0,100) > 100.0 - ConfigManager::getSingleton().getAngryFleeChancePercent())
+            if(creature.mayFleeOnItsOwn() &&
+               Random::Int(0,100) > 100.0 - ConfigManager::getSingleton().getAngryFleeChancePercent())
             {
                 creature.flee();
                 return false;

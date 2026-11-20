@@ -341,6 +341,8 @@ struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=10
  const std::vector<int>& getVisibleEnemyObjects()const{return enemies;}
  //! \brief Supplies a happy mood so combat boundary checks do not randomly flee.
  CreatureMoodLevel getMoodValue()const{return CreatureMoodLevel::Happy;}
+ //! \brief The fixture creature is in no combat group, so the flight rules apply as before.
+ bool mayFleeOnItsOwn()const{return true;}
  //! \brief Records the attack behaviour's decision to fight.
  void fight(){++fights;}
  //! \brief Records the attack behaviour's decision to flee.

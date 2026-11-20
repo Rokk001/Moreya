@@ -1939,6 +1939,11 @@ public:
 
     void flee();
 
+    //! \brief Server side. False while the creature is a member of a combat group: inside a group it does not flee on
+    //! its own (no FleeWhenOutmatched, no FleeWhenWeak, no flight out of anger), only the retreat of its group and the
+    //! flight with its fleeing raid leader apply (G10). True outside a group and on a client.
+    bool mayFleeOnItsOwn() const;
+
     //! \brief Makes the creature flee for nbTurns, optionally showing the ghost flinch first.
     void fleeFromTile(Tile* fearTile, double nbTurns, bool scaredPose = false);
 
@@ -2780,12 +2785,14 @@ private:
 
     //! \brief A sub-function called by doUpkeep() on the server. A member of a combat group whose group retreats
     //! drops what it does (its fight too) and walks to the gathering tile; a member that keeps the formation drops
-    //! its job and keeps its place behind the leader. Fleeing, the heart defence and the infirmary keep their
-    //! priority, a fight is not interrupted by the formation. Does nothing for a creature in no group.
+    //! its job and keeps its place behind the leader. A flight the member started on its own ends (G10); a flight from
+    //! fear, the heart defence and the infirmary keep their priority, a fight is not interrupted by the formation.
+    //! Does nothing for a creature in no group.
     void handleCombatGroup();
 
-    //! \brief A sub-function called by doUpkeep() on the server. A raid leader who flees to the Moreya gate drops a
-    //! fight, a flight or his place in a combat group and runs to the gate. Does nothing for any other creature.
+    //! \brief A sub-function called by doUpkeep() on the server. A raid leader who flees to the Moreya gate, and a
+    //! member of his group that follows him there, drops a fight, a flight or its place in a combat group and runs to
+    //! the gate. Does nothing for any other creature.
     void handleRaidEscape();
 
     //! \brief A sub-function called by doTurn()

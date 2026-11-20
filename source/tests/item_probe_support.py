@@ -435,6 +435,8 @@ struct Creature {
 };
 //! \brief Provides a no-loss world drop sink; the production loss method chooses each item.
 void dropCreatureItem(Creature& creature,std::unique_ptr<ItemInstance> item) { if(item.get()!=nullptr) creature.dropped.push_back(std::move(item)); }
+//! \brief The death drop goes to the same sink; the fixture has no raid that could loot it.
+void dropDeathItem(Creature& creature,std::unique_ptr<ItemInstance> item) { dropCreatureItem(creature, std::move(item)); }
 //! \brief Filters fixture room ownership for the production inventory code.
 std::vector<Room*> GameMap::getRoomsByTypeAndSeat(RoomType type,const Seat* seat) const {
     std::vector<Room*> result; for(Room* room:rooms) if(room->getType()==type&&room->getSeat()==seat) result.push_back(room); return result;

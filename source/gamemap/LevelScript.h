@@ -196,8 +196,11 @@
 //!   Group   <raidGroupId> <leaderName|->        # a raid group, in the order of arrival; the leader is one of its members (by name)
 //!   Member  <raidGroupId> <class> <level> <name|-> <template|->   # one member with its fixed skill template (- : it chooses itself)
 //!   State / Arrived / Plundered                # written by the game in saved games: the countdown, the arrived groups with their members and leader state, the rooms each member plundered
+//!   Follower / Escaped / Loot                  # written by the game in saved games: the members that follow their fleeing leader to the gate, the members that escaped through it, the item bags fallen keeper creatures dropped that the raid may loot
 //!   [/Raid]
 //!   The members of a raid group belong to the party Raid<raidGroupId> (for event conditions such as Cond event Raid1 killed).
+//!   When a leader flees, the standing members of his group follow him to the gate; a member that escapes through it
+//!   counts as defeated and takes its gold and items along, only a leader's escape loses the level.
 //!
 //! All the conditions of a trigger must be true at the same time. A trigger that is
 //! not repeatable fires once. A repeatable one fires again once the cooldown elapsed

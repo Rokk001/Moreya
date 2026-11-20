@@ -966,14 +966,50 @@ double ConfigManager::getRampageConfigDouble(const std::string& param) const
     return it->second;
 }
 
-//! \brief Reads the [Raid] block of global.cfg: one "key value" pair per line up to [/Raid].
+//! \brief Reads the [Raid] block of global.cfg: one key per line up to [/Raid]; its value is the rest of the line (a
+//! number, kept as a number, or a list of words such as the large raid member classes, kept as its words).
 bool ConfigManager::loadGlobalRaidConfig(std::stringstream& configFile)
 {
-    if(readGlobalNumberBlock(configFile, "[/Raid]", mRaidConfig))
-        return true;
+    std::string nextParam;
+    while(configFile.good())
+    {
+        if(!(configFile >> nextParam))
+            break;
+
+        if(nextParam == "[/Raid]")
+            return true;
+
+        std::string value;
+        std::getline(configFile, value);
+        std::stringstream ss(value);
+        std::string firstWord;
+        ss >> firstWord;
+        mRaidConfig[nextParam] = Helper::toDouble(firstWord);
+        mRaidConfigWords[nextParam] = value;
+    }
 
     OD_LOG_ERR("Missing [/Raid] in global.cfg");
     return false;
+}
+
+//! \brief Returns the words of a [Raid] key of global.cfg, an empty list (and an error in the log) when the key is
+//! unknown.
+std::vector<std::string> ConfigManager::getRaidConfigWords(const std::string& param) const
+{
+    std::vector<std::string> words;
+    std::map<std::string, std::string>::const_iterator it = mRaidConfigWords.find(param);
+    if(it == mRaidConfigWords.end())
+    {
+        OD_LOG_ERR("Unknown raid parameter param=" + param);
+        return words;
+    }
+
+    std::stringstream ss(it->second);
+    std::string word;
+    while(ss >> word)
+        words.push_back(word);
+
+    return words;
 }
 
 //! \brief Returns the value of a [Raid] key of global.cfg, 0 (and an error in the log) when the key is unknown.

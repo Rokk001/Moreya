@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Non-compiling check of the rules of the raid (raid plan R2: RA2 countdown, RA3 early opening, RA4 raid groups with
-interval, RA5 leader in his group, RA7 plundering, RA8 leader escape, RA9 victory, RA1 gate unclaimable and
-indestructible).
+interval, RA5 leader in his group, RA7 plundering with the carry amount of R10, RA8 leader escape, RA9 victory, RA1 gate
+unclaimable and indestructible).
 
 Every rule is checked twice: a Python model written from the rule computes fixed scenarios whose expected results are
 written in this file, and the C++ source of source/game/RaidRules.cpp and of the engine side (RaidManager, the hero
 portal room that shows the gate, the creature) is checked for the statements that implement the same rule. Nothing is
 compiled and the game is not started; the integration build compiles and runs the code.
 
-Not checked here because the plan leaves it open (functional question 10): a raid member other than the leader who
-escapes through the gate with its gold.
+The members that follow their fleeing leader through the gate, the looting and the other rules of raid plan R10 are
+checked in check_raid_behaviour.py.
 
 Usage: python -I source/tests/check_raid_rules.py
 Exit 0 and "raid rules ok" when every item holds.
@@ -130,9 +130,9 @@ def raid_defeated(all_arrived, spawned, standing, escaped):
     return all_arrived and spawned > 0 and standing == 0 and not escaped
 
 
-def plunder_amount(stored, per_member):
+def plunder_amount(stored, carried, capacity):
     """Model of RaidRules::plunderAmount."""
-    return max(0.0, min(stored, per_member))
+    return max(0.0, min(stored, capacity - carried))
 
 
 def run(groups, countdown, interval, seconds, events):
@@ -196,9 +196,11 @@ check(not raid_defeated(False, 4, 0, False), "RA9: a group that did not come yet
 check(not raid_defeated(True, 8, 0, True), "RA9: an escaped leader is no victory")
 check(not raid_defeated(True, 0, 0, False), "RA9: a raid that never came is no victory")
 
-# RA7: one member takes at most its share, at most what the room holds
-check(plunder_amount(150.0, 200.0) == 150.0 and plunder_amount(500.0, 200.0) == 200.0 and
-      plunder_amount(0.0, 200.0) == 0.0, "RA7: the plundered amount")
+# RA7: one member takes what it can still carry, at most what the room holds (capacity 1000 in these scenarios)
+check(plunder_amount(150.0, 0.0, 1000.0) == 150.0 and plunder_amount(5000.0, 0.0, 1000.0) == 1000.0 and
+      plunder_amount(0.0, 0.0, 1000.0) == 0.0, "RA7: the plundered amount")
+check(plunder_amount(5000.0, 600.0, 1000.0) == 400.0 and plunder_amount(5000.0, 1000.0, 1000.0) == 0.0,
+      "RA7: a member that carries gold takes only the rest of what it can carry")
 
 # ------------------------------------------------------------------------------------------------ C++ statements
 advance_cpp = function(RULES, "bool advance(Schedule& schedule, double seconds, double intervalSeconds)")
@@ -216,7 +218,7 @@ check("return fallenShare(others, fallen) >= escapeShare;" in function(RULES, "b
       "RA8: the escape share")
 check("return allGroupsArrived && (spawned > 0) && (standing == 0) && !leaderEscaped;" in
       function(RULES, "bool isRaidDefeated("), "RA9: the defeat of the whole raid")
-check("return std::max(0.0, std::min(stored, perMember));" in function(RULES, "double plunderAmount("),
+check("return std::max(0.0, std::min(stored, capacity - carried));" in function(RULES, "double plunderAmount("),
       "RA7: the plundered amount")
 check("#include <" in RULES_H and "Ogre" not in RULES_H and "GameMap" not in RULES_H,
       "the rules depend only on the standard library")
@@ -251,9 +253,11 @@ check("isNear(myTile, tile, NEAR_HEART_DISTANCE)" in heart and "RoomType::dungeo
 
 # RA7: the gold leaves the keeper at once and the member carries it; a killed member drops it as every creature does
 plunder = function(MANAGER, "void RaidManager::plunder()")
-check("room->withdrawGold(RaidRules::plunderAmount(room->getTotalGoldStored(), perMember))" in plunder and
+check("RaidRules::plunderAmount(room->getTotalGoldStored(), creature->getGoldCarried()," in plunder and
+      "carryCapacity(*creature));" in plunder and "room->withdrawGold(amount);" in plunder and
       "creature->addGoldStolen(taken);" in plunder, "RA7: the plundered gold leaves the treasury of the keeper")
-check("mPlundered.insert(key);" in plunder and "mPlundered.count(key) > 0" in plunder, "RA7: once per member and room")
+check(plunder.index("mPlundered.insert(std::make_pair(name, room->getName()));") < plunder.index("if(amount <= 0.0)"),
+      "RA7: a room the member entered is remembered, also when it can carry nothing more")
 rooms = function(MANAGER, "std::vector<Room*> RaidManager::plunderableRooms() const")
 check("RoomType::treasury, RoomType::dungeonTemple" in rooms and "owner->isAlliedSeat(raidSeat)" in rooms,
       "RA7: the treasuries and heart treasuries of the enemy keepers")
@@ -265,7 +269,7 @@ check(re.search(r"if\(mGoldCarried > 0\)\s*\{\s*TreasuryObject\* obj = new Treas
 leaders = function(MANAGER, "void RaidManager::updateLeaders()")
 check("RaidRules::leaderShouldFlee(others, fallen, share)" in leaders and
       "group.mLeaderState = RaidLeaderState::fleeing;" in leaders and
-      "setRaidMemberDetached(group.mLeaderSpawned, true);" in leaders and
+      "setRaidMemberDetached(name, true);" in leaders and
       "setMoveSpeedModifier(LevelScriptRunner::getRunSpeedFactor());" in leaders,
       "RA8: the leader leaves his group and runs to the gate")
 check("if(isAtGate(*leader))" in leaders and "escape(group, *leader);" in leaders, "RA8: at the gate he escapes")
@@ -285,7 +289,7 @@ state = function(MANAGER, "bool RaidManager::isStateMet(const std::string& state
 check("RaidRules::isRaidDefeated(arrived, spawned, standing, leaderEscaped)" in state and
       "for(const std::string& member : group.mSpawned)" in state, "RA9: defeated needs every member, leaders too")
 standing = function(MANAGER, "bool RaidManager::isStanding(const std::string& creatureName) const")
-check("creature->isAlive() && creature->getIsOnMap() && !creature->isInPrison()" in standing and
+check("creature->isAlive() && (creature->getIsOnMap() || creature->isInHand()) && !creature->isInPrison()" in standing and
       "!CombatGroupManager::isKeeperSeat(creature->getSeat())" in standing,
       "RA9: dead, imprisoned or won over members no longer stand")
 

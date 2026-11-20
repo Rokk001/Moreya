@@ -707,6 +707,9 @@ public:
     //! \brief Returns the value of a key of the [Raid] block of global.cfg (countdown, interval between the raid groups,
     //! escape share of a raid leader, plundering, gate); logs an error and returns 0 when the key is unknown.
     double getRaidConfigDouble(const std::string& param) const;
+    //! \brief Returns the words of a key of the [Raid] block of global.cfg (the classes of the large raid members);
+    //! logs an error and returns an empty list when the key is unknown.
+    std::vector<std::string> getRaidConfigWords(const std::string& param) const;
     //! \brief Same as getRoomConfigString but returns defaultValue instead of logging an error when the
     //! parameter is not in the configuration file (or has no value).
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
@@ -1188,6 +1191,8 @@ private:
     std::map<std::string, std::string> mGroupCombatConfig;
     //! \brief The keys of the [Raid] block of global.cfg
     std::map<std::string, double> mRaidConfig;
+    //! \brief The keys of the [Raid] block of global.cfg with the text of their value (word lists)
+    std::map<std::string, std::string> mRaidConfigWords;
     std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;

@@ -8,6 +8,7 @@
 #include "gamemap/GameMap.h"
 #include "game/ItemDrops.h"
 #include "game/Player.h"
+#include "game/RaidManager.h"
 #include "game/Seat.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -37,10 +38,11 @@ bool sameItemPath(const std::string& left, const std::string& right)
 }
 
 //! \brief Places a transferred instance on the creature's tile without changing its Epic registration.
-void dropCreatureItem(Creature& creature, std::unique_ptr<ItemInstance> item)
+//! \return The new item bag, nullptr when there was no item.
+ItemBagEntity* dropCreatureItem(Creature& creature, std::unique_ptr<ItemInstance> item)
 {
     if(item.get() == nullptr)
-        return;
+        return nullptr;
     ItemBagEntity* bag = new ItemBagEntity(creature.getGameMap(), std::move(item));
     bag->setSeat(creature.getSeat());
     bag->addToGameMap();
@@ -49,6 +51,15 @@ void dropCreatureItem(Creature& creature, std::unique_ptr<ItemInstance> item)
     position.x += static_cast<Ogre::Real>(Random::Double(-DROP_JITTER, DROP_JITTER));
     position.y += static_cast<Ogre::Real>(Random::Double(-DROP_JITTER, DROP_JITTER));
     bag->setPosition(position);
+    return bag;
+}
+
+//! \brief Drops the item at the death of the creature; raid members may loot what a keeper's creature drops (RA12).
+void dropDeathItem(Creature& creature, std::unique_ptr<ItemInstance> item)
+{
+    ItemBagEntity* bag = dropCreatureItem(creature, std::move(item));
+    if((bag != nullptr) && creature.getIsOnServerMap())
+        creature.getGameMap()->getRaid().registerFallenDrop(creature, *bag);
 }
 }
 
@@ -206,7 +217,8 @@ void Creature::decideEquipment()
     }
 }
 
-//! \brief Drops one uniform eligible item on the first knockout, or every owned item when dead.
+//! \brief Drops one uniform eligible item on the first knockout, or every owned item when dead. What a keeper's
+//! creature drops at its death may be looted by the raid (RaidManager::registerFallenDrop).
 void Creature::dropItems(bool dead)
 {
     if(getPositionTile() == nullptr || (!dead && mKoDroppedThisFight))
@@ -226,9 +238,9 @@ void Creature::dropItems(bool dead)
     }
     else
     {
-        for(std::unique_ptr<ItemInstance>* item : candidates) dropCreatureItem(*this, std::move(*item));
-        if(mWeaponR != nullptr) dropCreatureItem(*this, ItemDrops::poorWeapon(*mWeaponR));
-        if(mWeaponL != nullptr) dropCreatureItem(*this, ItemDrops::poorWeapon(*mWeaponL));
+        for(std::unique_ptr<ItemInstance>* item : candidates) dropDeathItem(*this, std::move(*item));
+        if(mWeaponR != nullptr) dropDeathItem(*this, ItemDrops::poorWeapon(*mWeaponR));
+        if(mWeaponL != nullptr) dropDeathItem(*this, ItemDrops::poorWeapon(*mWeaponL));
     }
     itemsChanged();
 }

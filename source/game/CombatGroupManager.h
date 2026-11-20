@@ -242,6 +242,10 @@ private:
     bool findRetreatTile(const CombatGroup& group, Creature& leader, double groupX, double groupY, double enemyX,
         double enemyY, int32_t& x, int32_t& y) const;
 
+    //! \brief Chooses the gathering tile of the retreat of a raid group: towards the Moreya gate (Q20.3), the gate tile
+    //! or a walkable tile next to it that the leader can reach. False when there is none.
+    bool findRaidRetreatTile(Creature& leader, int32_t& x, int32_t& y) const;
+
     //! \brief A walkable tile at or around the given position, nullptr when there is none.
     Tile* findStandingTile(double x, double y) const;
 
