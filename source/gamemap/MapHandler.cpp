@@ -21,6 +21,7 @@
 
 #include "creaturemood/CreatureMoodManager.h"
 #include "eventsystem/CreatureMoved.h"
+#include "game/CombatGroupManager.h"
 #include "game/CreatureRelationships.h"
 #include "gamemap/GameMap.h"
 #include "game/Seat.h"
@@ -182,7 +183,8 @@ const std::string& getLastLoadError()
     return lastLoadError;
 }
 
-//! \brief Loads map state and reports the failing section, retaining optional legacy sections.
+//! \brief Loads map state and reports the failing section, retaining optional legacy sections. The optional
+//! [CombatGroups] section (raid registry and running combat groups) comes last.
 bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 {
     lastLoadError.clear();
@@ -919,10 +921,25 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         // The creature definitions are not set up yet while the level is read: the states are applied by
         // GameMap::createAllEntities, so that every saved relationship of an existing creature is kept.
         gameMap.setPendingRelationshipStates(states);
+
+        // The optional combat groups follow
+        if(!(levelFile >> nextParam))
+            nextParam.clear();
+    }
+
+    // Optional raid registry (level data and saved games) and running combat groups (saved games). Older levels and
+    // saves do not have this section.
+    if(nextParam == "[CombatGroups]")
+    {
+        if(!gameMap.getCombatGroups().importFromStream(levelFile))
+        {
+            setLoadError(std::string("Invalid CombatGroups section") + ", file=" + fileName);
+            return false;
+        }
     }
 
 
-        
+
     return true;
 }
 
@@ -1115,6 +1132,7 @@ static void writeDirtSections(std::ostream& levelFile, GameMap& gameMap)
 
 //! \brief Saves the map with item bags after gift boxes and the existing remaining sections.
 //! \brief Campaign games also record their running context, separately from user progress.
+//! \brief The raid registry and, in a saved game, the running combat groups are written last ([CombatGroups]).
 bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 {
     std::ofstream levelFile(fileName.c_str(), std::ifstream::out);
@@ -1436,6 +1454,9 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
             levelFile << "[/RelationshipState]" << std::endl;
         }
     }
+
+    // The raid registry and the running combat groups (nothing is written without a raid)
+    gameMap.getCombatGroups().exportToStream(levelFile, isGameSave);
 
     if (!levelFile.good()) {
         OD_LOG_WRN("Unexpected failure on file: " + fileName);

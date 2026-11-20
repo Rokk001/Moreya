@@ -29,6 +29,7 @@
 #include "creaturemood/CreatureMood.h"
 #include "entities/Tile.h"
 #include "game/Campaign.h"
+#include "game/CombatGroupManager.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillType.h"
@@ -1339,6 +1340,7 @@ void removeCreature(GameMap& gameMap, const std::string& name)
 }
 
 //! \brief Executes actions, mission door locks and identified goal updates without objective notices; stone attachment requires a living carrier.
+//! The raid registry actions register the named creatures and the leader of a raid group.
 void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action,
     const std::string& sourceTrigger, int64_t sourceAction)
 {
@@ -1496,6 +1498,16 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
 
             break;
         }
+        case LevelScriptActionType::raidMember:
+        {
+            std::vector<std::string> names = resolveCreatureNames(gameMap, script, action.mCreatureNames);
+            for(const std::string& name : names)
+                gameMap.getCombatGroups().registerRaidMember(name, static_cast<uint32_t>(action.mNumber), action.mText);
+            break;
+        }
+        case LevelScriptActionType::raidLeader:
+            gameMap.getCombatGroups().setRaidLeader(static_cast<uint32_t>(action.mNumber), action.mText);
+            break;
     }
 }
 

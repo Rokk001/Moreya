@@ -166,6 +166,9 @@
 //!   Action  keepminion <seatId>              # campaign: the strongest fighter of the seat comes along to the next level if this level is won (it starts at the dungeon temple)
 //!   Action  terrain <x1> <y1> <x2> <y2> bridge <seatId>   # also: a wooden bridge of the seat over lava or water
 //!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg)
+//!   Action  raidmember <raidGroupId> <template|-> <name> [<name> ...]   # the creatures (names or party tags of a hero seat) belong to the raid group (1 or more); a raid group is always a combat group (a member won over by a keeper leaves the raid). With a template name (e.g. Guardian) they follow that skill template for good, with - they choose their template themselves
+//!   Action  raidleader <raidGroupId> <creatureName>   # the creature is the named leader of the raid group and leads it as long as he lives
+//!           # The same registry can be written in the [CombatGroups] section of the level file: RaidGroup <raidGroupId> <leaderName> and RaidMember <creatureName> <raidGroupId> <template|->
 //!   State   <timesFired> <lastFiredTurn>      # written by the game, only needed in savegames
 //!   [/Trigger]
 //!   [/Triggers]
@@ -322,7 +325,9 @@ enum class LevelScriptActionType
     keepMinion,
     objectiveState,
     hint,
-    keyDoor
+    keyDoor,
+    raidMember,
+    raidLeader
 };
 
 //! \brief One condition of a trigger. The fields that are used depend on the type.
@@ -392,10 +397,12 @@ struct LevelScriptAction
     //! \brief spawn: seat whose dungeon the spawned group attacks (-1: none)
     int32_t mTargetSeatId;
     //! \brief Gold amount (gold), flag value (setflag), amount added to a flag (addflag) or
-    //! seconds (timeLimit), or the LevelScriptObjectiveState value (objectiveState)
+    //! seconds (timeLimit), or the LevelScriptObjectiveState value (objectiveState), or the raid group
+    //! (raidMember, raidLeader)
     int64_t mNumber;
     //! \brief Message text (message, objective, hint), flag name (setflag), region name (reveal),
-    //! level file (discoverLevel) or skill type name (make)
+    //! level file (discoverLevel) or skill type name (make), fixed template (raidMember, empty for none)
+    //! or leader name (raidLeader)
     std::string mText;
     //! \brief Required, optional or legacy classification of an objective description.
     LevelScriptObjectiveGroup mObjectiveGroup;
@@ -403,7 +410,8 @@ struct LevelScriptAction
     std::string mObjectiveId;
     //! \brief spawn: creature class name and level
     std::vector<std::pair<std::string, uint32_t> > mCreatures;
-    //! \brief spawn: name of each creature of mCreatures (empty: the game chooses one)
+    //! \brief spawn: name of each creature of mCreatures (empty: the game chooses one); order, speed and
+    //! raidMember: the creature names or party tags
     std::vector<std::string> mCreatureNames;
     //! \brief spawn: tag of the party the created creatures belong to (empty: none)
     std::string mParty;
