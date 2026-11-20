@@ -25,7 +25,7 @@ client_ids = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', client_h.split(
 assert client_ids.index('editorRegionEdit') == client_ids.index('askPossessSkill') + 1, 'client message moved'
 assert client_ids[-16:] == ['editorRegionEdit', 'askUseSpecial', 'askMerchantWindow', 'askMerchantSettings', 'askMerchantBuy', 'askLabWindow', 'askLabSetting', 'askTavernWindow', 'askTavernPayer', 'askInfirmaryWindow', 'askInfirmarySettings', 'askGhostRoomSettings', 'askSpaPayer', 'askWorkerSettings', 'askDungeonbookRoster', 'askOpenRaidGate'], client_ids[-16:]
 assert 'case ClientNotificationType::editorRegionEdit:' in client_cpp
-assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', server_h.split('};')[0], re.M)[-14:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster'] and 'editorRegionData,' in server_h, 'server message appended out of order'
+assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', server_h.split('};')[0], re.M)[-15:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown'] and 'editorRegionData,' in server_h, 'server message appended out of order'
 assert 'case ServerNotificationType::editorRegionData:' in server_cpp
 
 # The three operations of the request are named, the editor and the server use the names.

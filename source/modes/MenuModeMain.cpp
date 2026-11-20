@@ -246,6 +246,7 @@ void MenuModeMain::activate()
     giveFocus();
 
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
 
     // Play the main menu music
     MusicPlayer::getSingleton().play(ConfigManager::getSingleton().getMainMenuMusic());

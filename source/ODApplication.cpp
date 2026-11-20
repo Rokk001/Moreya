@@ -76,6 +76,8 @@
 #include <exception>
 #include <pybind11/embed.h>
 
+//! \brief Starts the game: resources, renderer, GUI, the text boxes (debug messages, pointer text, hand cooldown) and
+//! the main loop, or one of the headless tools selected by the options.
 void ODApplication::startGame(boost::program_options::variables_map& options)
 {
     LogManager logMgr;
@@ -329,6 +331,9 @@ void ODApplication::startClient()
                                     30, 50, 70, Ogre::ColourValue::Green);
         textRenderer.addTextBox(ODApplication::POINTER_INFO_STRING, "",
                                     0, 0, 200, 50, Ogre::ColourValue::White);
+        // The hand cooldown of a campaign level, shown next to the hand (HL2)
+        textRenderer.addTextBox(ODApplication::HAND_COOLDOWN_STRING, "",
+                                    0, 0, 200, 50, Ogre::ColourValue(1.0f, 0.8f, 0.4f));
 
         ODFrameListener frameListener(resMgr.getConfigPath() + "mainmenuscene.cfg",
             renderWindow, &overlaySystem, &gui);
@@ -457,3 +462,4 @@ const std::string ODApplication::VERSIONSTRING = "OpenDungeons_Version:" + VERSI
 // The overlay font has no glyph for a tab, which showed as a box; spaces separate the two parts.
 std::string ODApplication::MOTD = "Welcome to Moreya   Version:  " + VERSION;
 const std::string ODApplication::POINTER_INFO_STRING = "pointerInfo";
+const std::string ODApplication::HAND_COOLDOWN_STRING = "handCooldown";
