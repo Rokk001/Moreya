@@ -221,6 +221,10 @@ def make_campaign_level(params, folder):
         out.append("[/Raid]")
         raid = "\n".join(out)
     text = text[:block.start()] + raid + text[block.end():]
+    if params.get("treasury_gold") is not None:
+        # The attacked keeper (seat 1 in every story level) starts with that much gold: what the dungeon heart cannot
+        # hold goes into his treasuries, so that the raid finds gold to plunder there
+        text = add_treasury_gold(text, params["treasury_gold"])
     key = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
     path = folder / ("%s-%s.level" % (params["level"], key))
     if not path.exists():
