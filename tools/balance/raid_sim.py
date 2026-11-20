@@ -439,6 +439,8 @@ def game_options(params):
                  "--raid-sim-force-level", str(int(params.get("force_level") or 1))]
     if params.get("hand_limit"):
         args.append("--raid-sim-hand-limit")
+    if params.get("hand_player"):
+        args.append("--raid-sim-hand-player")
     return args
 
 
@@ -633,7 +635,8 @@ def default_params():
     return {"size": 10, "groups": 1, "hero_level": 4, "composition": "all", "keeper_count": 10, "keeper_level": 4,
             "countdown": 10, "interval": 90, "escape": None, "treasury_gold": None, "treasury_offset": None,
             "level": None, "interval_level": None, "member_level": None, "leader_offset": None, "share": None,
-            "force_count": None, "force_level": None, "hand_limit": 0, "healers": None, "level_shift": None}
+            "force_count": None, "force_level": None, "hand_limit": 0, "healers": None, "level_shift": None,
+            "hand_player": 0}
 
 
 def run_batch(exe, work, params, overrides, seeds, seconds=900, keeper_ai=False, jobs=6, quiet=False):

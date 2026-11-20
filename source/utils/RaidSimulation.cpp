@@ -275,6 +275,8 @@ bool sHandLimit = false;
 uint32_t sHandDrops = 0;
 //! \brief Fighting creatures in the attacked keeper's hand after the last turn.
 uint32_t sHandFighters = 0;
+//! \brief True when --raid-sim-hand-player lets a model keeper use his hand in the fight.
+bool sHandPlayer = false;
 
 //! \brief The ground tiles around the centre of the seat's dungeon heart that the creature can walk on, nearest
 //! first (steps from tile to neighbour tile), at most count of them.
@@ -368,9 +370,119 @@ void noteHand(Player* keeper)
         return;
 
     const uint32_t fighters = keeper->numFightingCreaturesInHand();
-    if(fighters < sHandFighters)
+    // The hand player counts his own drops (he may pick up and drop in the same turn)
+    if((fighters < sHandFighters) && !sHandPlayer)
         sHandDrops += sHandFighters - fighters;
     sHandFighters = fighters;
+}
+
+//! \brief Tiles (largest of the x and y distance) a keeper fighter must stand away from every raid member before the
+//! hand player carries it into the fight.
+const int32_t HAND_PLAYER_MIN_DISTANCE = 6;
+
+//! \brief The largest of the x and y distance between two creatures in tiles.
+int32_t creatureDistance(const Creature& first, const Creature& second)
+{
+    Tile* a = first.getPositionTile();
+    Tile* b = second.getPositionTile();
+    if((a == nullptr) || (b == nullptr))
+        return 0;
+
+    return std::max(std::abs(a->getX() - b->getX()), std::abs(a->getY() - b->getY()));
+}
+
+//! \brief A model of a keeper who drops his fighters straight into the fight with the hand (the play the campaign hand
+//! limit restrains): once per turn, when the hand rules allow it, he picks up the keeper fighter farthest from the raid
+//! that does not fight and stands more than HAND_PLAYER_MIN_DISTANCE tiles from every raid member, and drops it next
+//! to the raid member nearest his dungeon heart. Each drop of a fighting creature is counted.
+void handPlayer(GameMap& gameMap, Player* keeper)
+{
+    if(!sHandPlayer || (keeper == nullptr) || (keeper->getSeat() == nullptr))
+        return;
+
+    Seat* seat = keeper->getSeat();
+    std::vector<Creature*> raiders;
+    for(const RaidGroupData& group : gameMap.getRaid().getGroups())
+    {
+        for(const std::string& name : group.mSpawned)
+        {
+            Creature* creature = gameMap.getCreature(name);
+            if((creature != nullptr) && isStanding(*creature) && (creature->getPositionTile() != nullptr))
+                raiders.push_back(creature);
+        }
+    }
+    if(raiders.empty())
+        return;
+
+    // The raid member nearest the heart is where the fight is carried to
+    Tile* heart = nullptr;
+    for(Room* room : gameMap.getRoomsByTypeAndSeat(RoomType::dungeonTemple, seat))
+    {
+        heart = room->getCentralTile();
+        break;
+    }
+    Creature* target = raiders.front();
+    if(heart != nullptr)
+    {
+        int32_t best = -1;
+        for(Creature* raider : raiders)
+        {
+            Tile* tile = raider->getPositionTile();
+            const int32_t distance = std::max(std::abs(tile->getX() - heart->getX()), std::abs(tile->getY() - heart->getY()));
+            if((best < 0) || (distance < best))
+            {
+                best = distance;
+                target = raider;
+            }
+        }
+    }
+
+    // A creature still held from an earlier turn is dropped first
+    if(keeper->numObjectsInHand() == 0)
+    {
+        Creature* chosen = nullptr;
+        int32_t chosenDistance = HAND_PLAYER_MIN_DISTANCE;
+        for(Creature* creature : gameMap.getCreaturesBySeat(seat))
+        {
+            if(creature->getDefinition()->isWorker() || !isStanding(*creature) ||
+               creature->isActionInList(CreatureActionType::fight) || !keeper->isHandLimitPickupAllowed(creature) ||
+               !creature->tryPickup(seat))
+                continue;
+
+            int32_t nearest = -1;
+            for(Creature* raider : raiders)
+            {
+                const int32_t distance = creatureDistance(*creature, *raider);
+                if((nearest < 0) || (distance < nearest))
+                    nearest = distance;
+            }
+            if(nearest > chosenDistance)
+            {
+                chosenDistance = nearest;
+                chosen = creature;
+            }
+        }
+        if(chosen == nullptr)
+            return;
+
+        keeper->pickUpEntity(chosen);
+        if(keeper->numObjectsInHand() == 0)
+            return;
+    }
+
+    Tile* targetTile = target->getPositionTile();
+    std::vector<Tile*> dropTiles(1, targetTile);
+    for(Tile* neighbor : targetTile->getAllNeighbors())
+        dropTiles.push_back(neighbor);
+    for(Tile* tile : dropTiles)
+    {
+        if((tile == nullptr) || !keeper->isDropHandPossible(tile))
+            continue;
+
+        keeper->dropHand(tile);
+        ++sHandDrops;
+        return;
+    }
 }
 }
 
@@ -392,6 +504,12 @@ void RaidSimulation::setKeeperForce(const std::string& classes, int32_t level)
 void RaidSimulation::setHandLimit(bool handLimit)
 {
     sHandLimit = handLimit;
+}
+
+//! \brief Remembers whether the model keeper of handPlayer uses his hand in the next run.
+void RaidSimulation::setHandPlayer(bool handPlayer)
+{
+    sHandPlayer = handPlayer;
 }
 
 //! \brief Loads the level on a server without socket, runs the turns and writes one line per turn; the result line
@@ -448,6 +566,7 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
     out << "# level=" << levelFile << " seed=" << usedSeed << " keeperAi=" << (keeperAi ? 1 : 0)
         << " turnsPerSecond=" << ODApplication::turnsPerSecond << " phase1Goals=" << sPhase1Goals.size()
         << " force=" << sForceClasses.size() << " forceLevel=" << sForceLevel << " handLimit=" << (sHandLimit ? 1 : 0)
+        << " handPlayer=" << (sHandPlayer ? 1 : 0)
         << "\n";
     writeHeader(out);
 
@@ -474,6 +593,7 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
             placeKeeperForce(gameMap, attackedSeatId);
             forcePlaced = true;
         }
+        handPlayer(gameMap, keeper);
         noteHand(keeper);
         writeTurn(out, gameMap, attackedSeatId);
         if(LogManager::getSingleton().getCriticalCount() > 0)

@@ -93,6 +93,7 @@ ResourceManager::ResourceManager(boost::program_options::variables_map& options)
         mRaidSimKeeperAi(false),
         mRaidSimForceLevel(1),
         mRaidSimHandLimit(false),
+        mRaidSimHandPlayer(false),
         mForcedNetworkPort(-1),
         mLogLevel(LogMessageLevel::NORMAL),
         mGameDataPath("./"),
@@ -484,6 +485,7 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
         mRaidSimForceLevel = itOption->second.as<int32_t>();
 
     mRaidSimHandLimit = (options.count("raid-sim-hand-limit") > 0);
+    mRaidSimHandPlayer = (options.count("raid-sim-hand-player") > 0);
 
     itOption = options.find("port");
     if(itOption != options.end())
@@ -661,6 +663,7 @@ void ResourceManager::buildCommandOptions(boost::program_options::options_descri
         ("raid-sim-force", boost::program_options::value<std::string>(), "Debug: comma-separated creature classes of a reference keeper force that --raid-sim places at the attacked keeper's dungeon heart when the gate opens")
         ("raid-sim-force-level", boost::program_options::value<int32_t>(), "Debug: level of the creatures of --raid-sim-force (default 1)")
         ("raid-sim-hand-limit", "Debug: the hand limit of campaign levels applies to every keeper in --raid-sim")
+        ("raid-sim-hand-player", "Debug: in --raid-sim a model keeper drops his fighters into the fight with the hand, as often as the hand rules allow")
         ("scenario", boost::program_options::value<std::string>(), "Debug: scenario set up by --run-level on the first turn (ignored-enemies: writes the combat state of fighters near enemies to run-level-scenario.txt; return-to-menu / editor-return-to-menu: plays the level as a game / opens it in the editor, leaves to the main menu after --seconds and passes after the menu frames)")
     ;
 }

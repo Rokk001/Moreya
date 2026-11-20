@@ -199,6 +199,10 @@ public:
     inline bool getRaidSimHandLimit() const
     { return mRaidSimHandLimit; }
 
+    //! \brief Debug option --raid-sim-hand-player: a model keeper drops his fighters into the fight with the hand
+    inline bool getRaidSimHandPlayer() const
+    { return mRaidSimHandPlayer; }
+
 private:
     //! \brief used when the executable is launched in server mode
     bool mServerMode;
@@ -221,6 +225,7 @@ private:
     std::string mRaidSimForce;
     int32_t mRaidSimForceLevel;
     bool mRaidSimHandLimit;
+    bool mRaidSimHandPlayer;
 
     //! \brief used when the network port is forced
     int32_t mForcedNetworkPort;

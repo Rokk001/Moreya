@@ -64,6 +64,11 @@ public:
     //! Player::setHandLimitForced.
     static void setHandLimit(bool handLimit);
 
+    //! \brief Lets a model keeper drop his fighters into the fight with the hand in the next run
+    //! (--raid-sim-hand-player): once per turn, as the hand rules allow, a fighter that stands away from the raid is
+    //! picked up and dropped next to the raid member nearest the keeper's heart.
+    static void setHandPlayer(bool handPlayer);
+
     //! \brief True once run was called (main returns its exit code then).
     static bool isActive();
 
