@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Non-compiling check of the raid behaviour of raid plan R10: the members follow their fleeing leader to the gate and
-escape through it (RA8, FQ 10), escaped members count as defeated and their gold and items are lost (RA7, RA9), no
+escape through it (RA8, FQ 10), the followers of a fleeing leader who is killed or captured before the gate stop
+fleeing and fight again (RA8b, Q20.33), escaped members count as defeated and their gold and items are lost (RA7, RA9), no
 individual flight inside a combat group but outside it (G10), the raid group retreats towards the gate (G7),
 unconscious is not fallen and a leader without further members never flees (RA8, Q20.12), the carry amount of a small
 member is 1 treasury tile and of a large one 2 tiles (RA7), the raid loots the items fallen keeper creatures drop and a
@@ -129,7 +130,13 @@ class Group(object):
             if self.escaping(name) and standing(m) and m.at_gate:
                 m.escaped = True
                 self.escaped_members.append(name)
-        if self.state == "escaped" or not standing(self.leader):
+        if self.state == "escaped":
+            return
+        if not standing(self.leader):
+            # RA8b [Q20.33]: a leader killed or captured during his flight releases the followers that did not escape
+            if self.state == "fleeing":
+                self.followers = [name for name in self.followers if name in self.escaped_members]
+                self.state = "none"
             return
         if self.state == "fleeing":
             if self.leader.at_gate:
@@ -184,6 +191,37 @@ g.members[2].at_gate = True
 g.update(0.25)
 check(g.escaped_members == ["B"], "RA8: a follower escapes also after its leader")
 
+# RA8b [Q20.33]: the keeper kills the fleeing leader before the gate: his followers stop fleeing and fight again; a
+# follower that escaped before stays escaped
+for fall in ("dead", "prison", "converted"):
+    g = make_group()
+    g.members[1].alive = False
+    g.update(0.25)
+    g.members[2].at_gate = True
+    g.update(0.25)
+    if fall == "dead":
+        g.leader.alive = False
+    elif fall == "prison":
+        g.leader.prison = True
+    else:
+        g.leader.converted = True
+    g.update(0.25)
+    check(g.state == "none" and g.followers == ["B"] and g.escaped_members == ["B"],
+          "RA8b: the flight ends when the fleeing leader falls (%s), the escaped follower stays escaped" % fall)
+    check(not g.escaping("C") and not g.escaping("D") and standing(g.members[3]) and standing(g.members[4]),
+          "RA8b: the followers of a fallen leader (%s) stop fleeing and stand" % fall)
+    g.members[3].at_gate = True
+    g.update(0.25)
+    check(g.escaped_members == ["B"] and standing(g.members[3]) and not g.lost,
+          "RA8b: a released follower at the gate does not escape any more (%s)" % fall)
+# An unconscious fleeing leader has not fallen: his followers keep fleeing
+g = make_group()
+g.members[1].alive = False
+g.update(0.25)
+g.leader.ko = True
+g.update(0.25)
+check(g.state == "fleeing" and g.escaping("C"), "RA8b: an unconscious leader keeps his followers fleeing")
+
 # Q20.12: unconscious and in a keeper's hand are not fallen; dead, imprisoned, converted are
 g = make_group()
 g.members[1].ko = True
@@ -218,6 +256,19 @@ check("notifyNoMoreDungeonTemple" not in escape_member and "mLost" not in escape
       "FQ 6: a follower's escape does not lose the level")
 check("dropItems" not in escape_member and "TreasuryObject" not in escape_member,
       "RA7: the gold and items of an escaped member are lost for the keeper")
+# RA8b [Q20.33]: a leader who fell during his flight ends it; his followers rejoin the raid group and fight again
+check("if(!isStanding(group.mLeaderSpawned))\n        {\n" in leaders and
+      "if(group.mLeaderState == RaidLeaderState::fleeing)\n                endFlight(group);" in leaders,
+      "RA8b: updateLeaders ends the flight of a fleeing leader who fell")
+end_flight = function(MANAGER, "void RaidManager::endFlight(RaidGroupData& group)")
+check("setRaidMemberDetached(follower, false);" in end_flight and "creature->clearMoveSpeedModifier();" in end_flight
+      and "creature->clearActionQueue();" in end_flight,
+      "RA8b: a released follower rejoins its raid group at its normal speed and takes up the fight again")
+check("escapedFollowers.push_back(follower);" in end_flight and "group.mFollowers = escapedFollowers;" in end_flight,
+      "RA8b: only the escaped followers stay in the follower list")
+check("group.mLeaderState = RaidLeaderState::none;" in end_flight,
+      "RA8b: the fallen leader no longer counts as fleeing")
+check("void endFlight(RaidGroupData& group);" in MANAGER_H, "RA8b: endFlight is declared")
 escaping = function(MANAGER, "bool RaidManager::isEscaping(const std::string& creatureName) const")
 check("group.mFollowers" in escaping and "group.mEscapedMembers" in escaping, "RA8: a follower runs to the gate")
 standing_cpp = function(MANAGER, "bool RaidManager::isStanding(const std::string& creatureName) const")
@@ -424,10 +475,10 @@ def dissolves(members, raiders, distance):
 
 
 DISSOLVE = float(block(GLOBAL_CFG, "GroupCombat")["GroupDissolveDistance"][0])
-check(DISSOLVE == 28.0, "G8: the dissolving distance of this branch is 28")
+check(DISSOLVE == 24.0, "G8: the dissolving distance of this branch is 24")
 check(dissolves([(0, 0)], None, DISSOLVE), "G8: the group dissolves when its raid group is gone")
-check(dissolves([(0, 0)], [(29, 0)], DISSOLVE), "G8: ... or no raid member is within the distance")
-check(not dissolves([(0, 0)], [(28, 0)], DISSOLVE), "G8: a raid member at the distance keeps the group")
+check(dissolves([(0, 0)], [(25, 0)], DISSOLVE), "G8: ... or no raid member is within the distance")
+check(not dissolves([(0, 0)], [(24, 0)], DISSOLVE), "G8: a raid member at the distance keeps the group")
 ended = function(GROUPS, "void CombatGroupManager::removeEndedGroups(")
 check('groupConfig("GroupDissolveDistance")' in ended and "raidIt != raid.end()" in ended and
       "ended = !raidNear;" in ended and "it = mGroups.erase(it);" in ended, "G8: the dissolving in the source")

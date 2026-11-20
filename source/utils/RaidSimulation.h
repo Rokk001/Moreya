@@ -54,6 +54,21 @@ public:
     static int run(const std::string& levelFile, int32_t seconds, uint32_t seed, const std::string& outFile,
         bool keeperAi);
 
+    //! \brief Sets the reference keeper force of the next run (--raid-sim-force, --raid-sim-force-level): when the gate
+    //! opens, one creature of each class stands at the attacked keeper's dungeon heart at the given level.
+    //! \param classes Comma-separated creature classes (empty: no reference force).
+    //! \param level Level of the creatures (at least 1).
+    static void setKeeperForce(const std::string& classes, int32_t level);
+
+    //! \brief Lets the hand limit of campaign levels apply in the next run (--raid-sim-hand-limit), see
+    //! Player::setHandLimitForced.
+    static void setHandLimit(bool handLimit);
+
+    //! \brief Lets a model keeper drop his fighters into the fight with the hand in the next run
+    //! (--raid-sim-hand-player): once per turn, as the hand rules allow, a fighter that stands away from the raid is
+    //! picked up and dropped next to the raid member nearest the keeper's heart.
+    static void setHandPlayer(bool handPlayer);
+
     //! \brief True once run was called (main returns its exit code then).
     static bool isActive();
 

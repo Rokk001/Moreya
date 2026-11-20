@@ -186,6 +186,23 @@ public:
     inline bool getRaidSimKeeperAi() const
     { return mRaidSimKeeperAi; }
 
+    //! \brief Debug option --raid-sim-force: comma-separated creature classes of the reference keeper force the raid
+    //! simulation places at the attacked keeper's heart when the gate opens (empty if not used)
+    inline const std::string& getRaidSimForce() const
+    { return mRaidSimForce; }
+
+    //! \brief Debug option --raid-sim-force-level: level of the creatures of --raid-sim-force (default 1)
+    inline int32_t getRaidSimForceLevel() const
+    { return mRaidSimForceLevel; }
+
+    //! \brief Debug option --raid-sim-hand-limit: the hand limit of campaign levels applies in the raid simulation
+    inline bool getRaidSimHandLimit() const
+    { return mRaidSimHandLimit; }
+
+    //! \brief Debug option --raid-sim-hand-player: a model keeper drops his fighters into the fight with the hand
+    inline bool getRaidSimHandPlayer() const
+    { return mRaidSimHandPlayer; }
+
 private:
     //! \brief used when the executable is launched in server mode
     bool mServerMode;
@@ -205,6 +222,10 @@ private:
     std::string mRaidSimLevel;
     std::string mRaidSimOut;
     bool mRaidSimKeeperAi;
+    std::string mRaidSimForce;
+    int32_t mRaidSimForceLevel;
+    bool mRaidSimHandLimit;
+    bool mRaidSimHandPlayer;
 
     //! \brief used when the network port is forced
     int32_t mForcedNetworkPort;

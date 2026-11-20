@@ -649,7 +649,9 @@ bool CreatureActionCarryEntity::handleDragCreature()
     {
         if(!mCreature.setDragDestination(mTileDest))
         {
-            OD_LOG_ERR("creature=" + mCreature.getName() + ", myTile=" + Tile::displayAsString(myTile) + ", tileDest=" + Tile::displayAsString(mTileDest));
+            // The way to the bed closed while pulling (a bridge lost, a door locked, a wall built): the worker lets go
+            // and the creature lies where it is, as when the bed is gone (the grave and cell pulls above do the same)
+            OD_LOG_WRN("creature=" + mCreature.getName() + " finds no way any more, myTile=" + Tile::displayAsString(myTile) + ", tileDest=" + Tile::displayAsString(mTileDest));
             return stopDragging(true);
         }
         return false;

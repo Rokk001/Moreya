@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Non-compiling check of the simulated raid values (raid plan R3C, V1, SIM1, RA2, RA11, HL1).
+
+No config key of [GroupCombat], [Raid] and [HandLimit] in config/global.cfg is marked PLACEHOLDER except the keys of
+PENDING_KEYS, whose value waits for an owner decision because the simulation measured no effect of them, no story level
+keeps a PLACEHOLDER line in its [Raid] section, every key of those blocks that the simulation sets has the fixed value of
+the third simulation pass, every story level sets its countdown inside 1800-3600 game seconds, and the countdown,
+interval and escape share of every story level, the member levels of its raid and the number of its healers (Wizards
+with the Healer template) have the fixed values of the third simulation pass. All expected values are fixed here
+(counted once on feature/raid-campaign-r3c); nothing is derived from the files under test.
+
+Usage: python -I source/tests/check_raid_simulation_values.py
+Exit 0 and "raid simulation values ok" when every item holds.
+"""
+import os
+import re
+import sys
+import time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+START = time.perf_counter()
+FAILURES = []
+
+# Keys that may stay marked PLACEHOLDER: the third simulation pass measured no effect of their value (owner decision
+# pending); every other key must be set
+PENDING_KEYS = ("RaidPlunderDetourTiles", "HandLimitCooldownSeconds")
+
+# Keys set by the simulation and their values after R3C
+CONFIG = {
+    "GroupCombat": {"GroupFormingDistance": "20", "GroupDissolveDistance": "24", "GroupRetreatHealthShare": "0.5",
+                    "GroupRetreatMaxSeconds": "30", "GroupRetreatCooldownSeconds": "30", "GroupGatherRadius": "3",
+                    "GroupAggroMemorySeconds": "3", "GroupFormationRowSpacing": "1", "GroupFormationRowWidth": "6",
+                    "GroupFormationTolerance": "2"},
+    "Raid": {"RaidCountdownSeconds": "3600", "RaidWaveIntervalSeconds": "90", "RaidLeaderEscapeShare": "0.25"},
+    "HandLimit": {},
+}
+
+
+def levels(*pairs):
+    """The sorted member levels of a raid from (level, count) pairs."""
+    result = []
+    for index in range(0, len(pairs), 2):
+        result.extend([pairs[index]] * pairs[index + 1])
+    return result
+
+
+# Story level: (Countdown, Interval or "-", EscapeShare or "-", sorted member levels, healers)
+LEVELS = {
+    "Brackenford": ("3600", "-", "-", levels(4, 4, 5, 1), 0),
+    "Coldwell": ("3600", "-", "-", levels(4, 4, 6, 1), 0),
+    "Ravensledge": ("3600", "-", "-", levels(2, 9, 3, 1), 0),
+    "Tinmoor": ("3600", "60", "-", levels(2, 8, 3, 1, 4, 1), 0),
+    "Greywater": ("3600", "90", "-", levels(2, 8, 3, 1, 4, 1), 0),
+    "Highcairn": ("3600", "150", "-", levels(3, 10, 4, 9, 6, 1), 0),
+    "Lanternhill": ("3600", "-", "0.5", levels(3, 9, 5, 1), 0),
+    "Saltmere": ("3600", "-", "-", levels(3, 9, 5, 1), 0),
+    "HollinFen": ("3600", "-", "-", levels(4, 24, 6, 1), 8),
+    "Cinderhollow": ("3600", "60", "-", levels(3, 19, 5, 1), 0),
+    "Ashcombe": ("3600", "120", "-", levels(4, 19, 6, 1), 0),
+    "Ironbridge": ("3600", "60", "-", levels(4, 49, 7, 1), 0),
+    "Bellwick": ("3600", "-", "-", levels(5, 24, 6, 1), 1),
+    "Goldspire": ("3600", "-", "-", levels(6, 24, 8, 1), 1),
+    "Kingsfall": ("3600", "-", "-", levels(5, 39, 8, 1), 1),
+    "VarnsCrossing": ("3600", "180", "-", levels(7, 49, 9, 1), 3),
+    "Wraithwood": ("3600", "90", "-", levels(4, 49, 6, 1), 6),
+    "HollowmarkCitadel": ("3600", "180", "-", levels(6, 78, 8, 1, 10, 1), 6),
+}
+
+
+def check(condition, message):
+    """Records the message as a failure when the condition does not hold."""
+    if not condition:
+        FAILURES.append(message)
+
+
+def read(relative):
+    """Returns the text of a file of the repository with Unix line ends."""
+    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
+        return handle.read().replace("\r\n", "\n")
+
+
+def block(text, name):
+    """The documentation lines before the [name] block and its key -> first word."""
+    start = text.index("[%s]\n" % name)
+    end = text.index("[/%s]" % name, start)
+    previous = text.rfind("[/", 0, start)
+    documentation = text[text.index("\n", previous) + 1:start]
+    values = {}
+    for line in text[start:end].split("\n")[1:]:
+        words = line.split()
+        if words:
+            values[words[0]] = words[1] if len(words) > 1 else ""
+    return documentation, values
+
+
+def main():
+    """Runs every item of the check and prints the result."""
+    cfg = read("config/global.cfg")
+    for name, expected in sorted(CONFIG.items()):
+        documentation, values = block(cfg, name)
+        marked = [key for key in re.findall(r"(?m)^#\s+(\w+)\s.*PLACEHOLDER:", documentation)
+                  if key not in PENDING_KEYS]
+        check(not marked, "V1: [%s] keys still marked PLACEHOLDER: %s" % (name, marked))
+        for key, value in sorted(expected.items()):
+            check(values.get(key) == value, "SIM1: [%s] %s must be %s, is %s" % (name, key, value, values.get(key)))
+    for name, (countdown, interval, escape, levels, healers) in sorted(LEVELS.items()):
+        text = read("levels/campaign/%s.level" % name)
+        raid = re.search(r"(?ms)^\[Raid\]$(.*?)^\[/Raid\]$", text).group(1)
+        check("PLACEHOLDER" not in raid, name + ": the [Raid] section keeps a PLACEHOLDER line")
+        rows = [line.split("\t") for line in raid.split("\n") if line and not line.startswith("#")]
+        values = dict((row[0], row[1]) for row in rows if row[0] in ("Countdown", "Interval", "EscapeShare"))
+        check(values.get("Countdown") == countdown and 1800 <= int(countdown) <= 3600, name + ": countdown (RA2)")
+        check(values.get("Interval") == interval, name + ": interval")
+        check(values.get("EscapeShare") == escape, name + ": escape share")
+        members = [row for row in rows if row[0] == "Member"]
+        check(sorted(int(row[3]) for row in members) == levels, name + ": member levels (SIM1)")
+        check(sum(1 for row in members if row[2] == "Wizard" and row[5] == "Healer") == healers,
+              name + ": healers (RA11)")
+    check(len(LEVELS) == 18, "SIM1: the values of all 18 story levels are fixed here")
+    print('ODP_TEST_PHASE {"name":"check","seconds":%.3f}' % (time.perf_counter() - START))
+    for failure in FAILURES:
+        print("FAIL " + failure)
+    if FAILURES:
+        return 1
+    print("raid simulation values ok")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

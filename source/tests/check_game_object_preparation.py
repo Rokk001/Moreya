@@ -32,7 +32,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-LISTED = 221
+LISTED = 223
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')

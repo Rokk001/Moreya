@@ -1183,6 +1183,9 @@ int32_t ODServer::startHeadlessGame(const std::string& levelFilename, bool keepe
                 player = new Player(gameMap, Seat::PLAYER_ID_HUMAN_MIN);
                 player->setNick("Simulated player " + Helper::toString(seat->getId()));
                 player->setIsHuman(true);
+                // The simulated player has no client: what the server sends him is dropped as for a disconnected
+                // player (his hand actions in the raid simulation send pickup and drop notifications)
+                mDisconnectedPlayers.push_back(player);
             }
         }
         else

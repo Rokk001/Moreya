@@ -6,6 +6,11 @@ import subprocess
 import threading
 import time
 
+# Telemetry helpers the MSVC tools start in the background and leave running after a compile finished (vctip.exe
+# lives on for minutes). They produce no part of a check result, so once the checked process itself has exited and
+# only they are left in the job, the job is ended instead of waiting for them until the check's time limit.
+DETACHED_HELPERS=('vctip.exe',)
+
 # Own one process tree so successful completion includes all descendants.
 class OwnedProcess:
     # Create the Windows job before allowing the child to execute.
@@ -54,6 +59,36 @@ class OwnedProcess:
             raise ctypes.WinError(ctypes.get_last_error())
         return ctypes.c_uint32.from_buffer(data,40).value
 
+    # Image names (lower case) of the processes still in the job; '?' for one whose name cannot be read.
+    def job_process_names(self):
+        if not self.job:
+            return []
+        data=ctypes.create_string_buffer(8+8*256)
+        if not self.api.QueryInformationJobObject(self.job,3,data,len(data),None):
+            raise ctypes.WinError(ctypes.get_last_error())
+        count=ctypes.c_uint32.from_buffer(data,4).value
+        self.api.OpenProcess.argtypes=[wintypes.DWORD,wintypes.BOOL,wintypes.DWORD]
+        self.api.OpenProcess.restype=wintypes.HANDLE
+        self.api.QueryFullProcessImageNameW.argtypes=[wintypes.HANDLE,wintypes.DWORD,wintypes.LPWSTR,ctypes.POINTER(wintypes.DWORD)]
+        names=[]
+        for index in range(min(count,256)):
+            pid=ctypes.c_size_t.from_buffer(data,8+8*index).value
+            handle=self.api.OpenProcess(0x1000,False,pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+            if not handle:
+                names.append('?'); continue
+            size=wintypes.DWORD(260); name=ctypes.create_unicode_buffer(260)
+            ok=self.api.QueryFullProcessImageNameW(handle,0,name,ctypes.byref(size))
+            self.api.CloseHandle(handle)
+            names.append(os.path.basename(name.value).lower() if ok else '?')
+        return names
+
+    # True when the checked process has exited and only detached tool helpers (DETACHED_HELPERS) are left.
+    def only_detached_helpers(self):
+        if (self.process.poll() is None) or not self.job:
+            return False
+        names=self.job_process_names()
+        return bool(names) and all(name in DETACHED_HELPERS for name in names)
+
     # Terminate only this newly-created job after its configured deadline.
     def stop(self):
         if self.job:
@@ -62,33 +97,35 @@ class OwnedProcess:
         elif self.process.poll() is None:
             self.process.kill()
 
-    # Collect all output and reap descendants before exposing any result or release marker.
+    # Collect all output and reap descendants before exposing any result or release marker. The output is read by a
+    # thread in both modes (stream also forwards it at once), so that a detached helper holding the output pipe open
+    # does not block the wait for the checked process.
     def collect(self, timeout, stream=False):
         start=time.monotonic(); timed_out=False
         chunks=[]
+        output=''
         # Forward compile/deploy output immediately while retaining its complete durable result.
         def forward():
             for line in self.process.stdout:
                 chunks.append(line)
-                print(line,end='',flush=True)
-        reader=threading.Thread(target=forward) if stream else None
+                if stream:
+                    print(line,end='',flush=True)
+        reader=threading.Thread(target=forward) if self.process.stdout is not None else None
         if reader:
             reader.start()
         try:
             try:
-                if stream:
-                    self.process.wait(timeout=timeout)
-                else:
-                    output,_=self.process.communicate(timeout=timeout)
+                self.process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 timed_out=True; self.stop()
-                if stream:
-                    self.process.wait()
-                else:
-                    output,_=self.process.communicate()
+                self.process.wait()
+            helpers_ended=False
             while self.active():
                 if time.monotonic()-start>=timeout:
                     timed_out=True; self.stop()
+                elif not helpers_ended and self.only_detached_helpers():
+                    # The check itself is complete; its result and exit code are those of the checked process
+                    helpers_ended=True; self.stop()
                 threading.Event().wait(0.02)
             if reader:
                 reader.join(timeout=5)

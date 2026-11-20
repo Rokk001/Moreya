@@ -712,11 +712,11 @@ File: `levels/campaign/Highcairn.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2891 | `Action	objectiveid	1	highcairn-o01	Defeat the raid and its leader.` | yes |
-| Script line 2892 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
-| Script line 2893 | `Action	objectiveid	1	highcairn-o03	Defend your heart.` | yes |
-| Script line 3020 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
-| Script line 3090 | `Action	win	1` | yes |
+| Script line 2886 | `Action	objectiveid	1	highcairn-o01	Defeat the raid and its leader.` | yes |
+| Script line 2887 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
+| Script line 2888 | `Action	objectiveid	1	highcairn-o03	Defend your heart.` | yes |
+| Script line 3015 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
+| Script line 3085 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -902,9 +902,9 @@ File: `levels/campaign/Kingsfall.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4002 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
-| Script line 4003 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
-| Script line 4251 | `Action	win	1` | yes |
+| Script line 3997 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
+| Script line 3998 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
+| Script line 4246 | `Action	win	1` | yes |
 
 ### Main and optional goals
 

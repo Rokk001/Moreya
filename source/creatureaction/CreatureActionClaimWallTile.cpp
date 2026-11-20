@@ -80,9 +80,11 @@ bool CreatureActionClaimWallTile::handleClaimWallTile(Creature& creature, Tile& 
         tileDest = tile;
     }
 
+    // The wall was reachable when the worker chose it (CreatureActionSearchWallTileToClaim); a way that closed since
+    // (a bridge lost, a door locked, a room or a wall built) ends the claim, and the worker looks for other work
     if(tileDest == nullptr)
     {
-        OD_LOG_ERR("creature=" + creature.getName() + ", myTile=" + Tile::displayAsString(myTile) + ", tileClaim=" + Tile::displayAsString(&tileClaim));
+        OD_LOG_WRN("creature=" + creature.getName() + " can no longer reach the wall, myTile=" + Tile::displayAsString(myTile) + ", tileClaim=" + Tile::displayAsString(&tileClaim));
         creature.popAction();
         return true;
     }
@@ -91,7 +93,7 @@ bool CreatureActionClaimWallTile::handleClaimWallTile(Creature& creature, Tile& 
     {
         if(!creature.setDestination(tileDest))
         {
-            OD_LOG_ERR("creature=" + creature.getName() + ", myTile=" + Tile::displayAsString(myTile) + ", tileClaim=" + Tile::displayAsString(&tileClaim) + ", tileDest=" + Tile::displayAsString(tileDest));
+            OD_LOG_WRN("creature=" + creature.getName() + " finds no way to the wall, myTile=" + Tile::displayAsString(myTile) + ", tileClaim=" + Tile::displayAsString(&tileClaim) + ", tileDest=" + Tile::displayAsString(tileDest));
             creature.popAction();
             return false;
         }

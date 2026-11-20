@@ -182,8 +182,13 @@ public:
     //! message and resends the cooldown (HL2). Server side only; computer keepers get nothing.
     void notifyHandLimitRefusal(const GameEntity* entity);
 
-    //! \brief True while the hand limit applies: a campaign level is played on the server.
+    //! \brief True while the hand limit applies: a campaign level is played on the server (or the raid simulation
+    //! switched it on, see setHandLimitForced).
     bool isHandLimitActive() const;
+
+    //! \brief Debug tool only (RaidSimulation, --raid-sim-hand-limit): the hand limit applies on the server although
+    //! no campaign is active, so that the headless simulation of a campaign level measures it. Off by default.
+    static void setHandLimitForced(bool forced);
 
     //! \brief Restores ordered held entities from a save without repeating pickup effects.
     void restoreObjectsInHand(const std::vector<GameEntity*>& entities);

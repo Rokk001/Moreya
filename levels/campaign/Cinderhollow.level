@@ -5415,33 +5415,32 @@ Action	win	1
 
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
-# PLACEHOLDER: interval and escape share set by simulation R3B
-# PLACEHOLDER: composition set by simulation R3B
+# Countdown, interval, escape share and composition set by the raid simulation R3C (tools/balance/raid_sim.py)
 Gate	70	50	180
 Seats	3	1
 Countdown	3600
-Interval	-
+Interval	60
 EscapeShare	-
 Group	1	-
-Member	1	Knight	4	-	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Monk	4	-	Guardian
-Member	1	Dwarf2	4	-	Guardian
-Member	1	Dwarf2	4	-	Guardian
-Member	1	Adventurer	4	-	Shade
-Member	1	Dwarf1	4	-	Berserker
-Member	1	Dwarf1	4	-	Berserker
-Member	1	Elf	4	-	Marksman
-Member	1	Elf	4	-	Hunter
+Member	1	Knight	3	-	Guardian
+Member	1	Knight	3	-	Guardian
+Member	1	Monk	3	-	Guardian
+Member	1	Dwarf2	3	-	Guardian
+Member	1	Dwarf2	3	-	Guardian
+Member	1	Adventurer	3	-	Shade
+Member	1	Dwarf1	3	-	Berserker
+Member	1	Dwarf1	3	-	Berserker
+Member	1	Elf	3	-	Marksman
+Member	1	Elf	3	-	Hunter
 Group	2	PellAshgrove
-Member	2	Knight	6	PellAshgrove	Guardian
-Member	2	Knight	4	-	Guardian
-Member	2	Monk	4	-	Guardian
-Member	2	Dwarf2	4	-	Guardian
-Member	2	Dwarf2	4	-	Guardian
-Member	2	Adventurer	4	-	Shade
-Member	2	Dwarf1	4	-	Berserker
-Member	2	Dwarf1	4	-	Berserker
-Member	2	Elf	4	-	Marksman
-Member	2	Elf	4	-	Hunter
+Member	2	Knight	5	PellAshgrove	Guardian
+Member	2	Knight	3	-	Guardian
+Member	2	Monk	3	-	Guardian
+Member	2	Dwarf2	3	-	Guardian
+Member	2	Dwarf2	3	-	Guardian
+Member	2	Adventurer	3	-	Shade
+Member	2	Dwarf1	3	-	Berserker
+Member	2	Dwarf1	3	-	Berserker
+Member	2	Elf	3	-	Marksman
+Member	2	Elf	3	-	Hunter
 [/Raid]

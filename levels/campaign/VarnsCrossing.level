@@ -4817,63 +4817,62 @@ Action	win	1
 
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
-# PLACEHOLDER: interval and escape share set by simulation R3B
+# Countdown, interval, escape share and composition set by the raid simulation R3C (tools/balance/raid_sim.py)
 Gate	45	7	180
 Seats	4	1
 Countdown	3600
-Interval	-
+Interval	180
 EscapeShare	-
-# PLACEHOLDER: composition set by simulation R3B
 Group	1	-
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Monk	5	-	Guardian
-Member	1	Monk	5	-	Guardian
-Member	1	Monk	5	-	Guardian
-Member	1	Monk	5	-	Guardian
-Member	1	Dwarf2	5	-	Berserker
-Member	1	Dwarf2	5	-	Berserker
-Member	1	Dwarf2	5	-	Berserker
-Member	1	Dwarf2	5	-	Berserker
-Member	1	Adventurer	5	-	Shade
-Member	1	Adventurer	5	-	Shade
-Member	1	Adventurer	5	-	Shade
-Member	1	Elf	5	-	Marksman
-Member	1	Elf	5	-	Marksman
-Member	1	Elf	5	-	Marksman
-Member	1	Elf	5	-	Marksman
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Knight	7	-	Guardian
+Member	1	Monk	7	-	Guardian
+Member	1	Monk	7	-	Guardian
+Member	1	Monk	7	-	Guardian
+Member	1	Monk	7	-	Guardian
+Member	1	Dwarf2	7	-	Berserker
+Member	1	Dwarf2	7	-	Berserker
+Member	1	Dwarf2	7	-	Berserker
+Member	1	Dwarf2	7	-	Berserker
+Member	1	Adventurer	7	-	Shade
+Member	1	Adventurer	7	-	Shade
+Member	1	Adventurer	7	-	Shade
+Member	1	Elf	7	-	Marksman
+Member	1	Elf	7	-	Marksman
+Member	1	Elf	7	-	Marksman
+Member	1	Elf	7	-	Marksman
 Group	2	MarshalVarn
-Member	2	Knight	7	MarshalVarn	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Monk	5	-	Guardian
-Member	2	Monk	5	-	Guardian
-Member	2	Monk	5	-	Guardian
-Member	2	Monk	5	-	Guardian
-Member	2	Dwarf2	5	-	Berserker
-Member	2	Dwarf2	5	-	Berserker
-Member	2	Dwarf2	5	-	Berserker
-Member	2	Dwarf2	5	-	Berserker
-Member	2	Adventurer	5	-	Shade
-Member	2	Adventurer	5	-	Shade
-Member	2	Adventurer	5	-	Shade
-Member	2	Elf	5	-	Marksman
-Member	2	Elf	5	-	Marksman
-Member	2	Elf	5	-	Marksman
-Member	2	Elf	5	-	Marksman
+Member	2	Knight	9	MarshalVarn	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Knight	7	-	Guardian
+Member	2	Monk	7	-	Guardian
+Member	2	Monk	7	-	Guardian
+Member	2	Monk	7	-	Guardian
+Member	2	Monk	7	-	Guardian
+Member	2	Dwarf2	7	-	Berserker
+Member	2	Dwarf2	7	-	Berserker
+Member	2	Dwarf2	7	-	Berserker
+Member	2	Dwarf2	7	-	Berserker
+Member	2	Wizard	7	-	Healer
+Member	2	Wizard	7	-	Healer
+Member	2	Wizard	7	-	Healer
+Member	2	Elf	7	-	Marksman
+Member	2	Elf	7	-	Marksman
+Member	2	Elf	7	-	Marksman
+Member	2	Elf	7	-	Marksman
 [/Raid]

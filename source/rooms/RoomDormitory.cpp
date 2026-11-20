@@ -34,6 +34,8 @@
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
 
+#include <algorithm>
+
 const std::string RoomDormitoryName = "Dormitory";
 const std::string RoomDormitoryNameDisplay = "Dormitory room";
 const RoomType RoomDormitory::mRoomType = RoomType::dormitory;
@@ -144,6 +146,30 @@ void RoomDormitory::absorbRoom(Room *r)
     // This function will copy the building objects (beds) into the new room
     // and remove the old room covered tiles.
     Room::absorbRoom(r);
+}
+
+//! \brief Hands the beds whose owning tile went to the other room over to it, as absorbRoom does for a whole room.
+void RoomDormitory::splitRoom(Room& newRoom, const std::vector<Tile*>& tiles)
+{
+    if(newRoom.getType() != getType())
+    {
+        OD_LOG_ERR("Trying to split into an incompatible room: " + getName() + " into " + newRoom.getName());
+        return;
+    }
+
+    RoomDormitory& receiver = static_cast<RoomDormitory&>(newRoom);
+    std::vector<BedRoomObjectInfo>::iterator it = mBedRoomObjectsInfo.begin();
+    while(it != mBedRoomObjectsInfo.end())
+    {
+        if(std::find(tiles.begin(), tiles.end(), it->getOwningTile()) == tiles.end())
+        {
+            ++it;
+            continue;
+        }
+
+        receiver.mBedRoomObjectsInfo.push_back(*it);
+        it = mBedRoomObjectsInfo.erase(it);
+    }
 }
 
 bool RoomDormitory::removeCoveredTile(Tile* t)

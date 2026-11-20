@@ -6236,13 +6236,12 @@ Action	win	1
 
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
-# PLACEHOLDER: interval and escape share set by simulation R3B
+# Countdown, interval, escape share and composition set by the raid simulation R3C (tools/balance/raid_sim.py)
 Gate	13	43	180
 Seats	4	1
 Countdown	3600
-Interval	-
+Interval	180
 EscapeShare	-
-# PLACEHOLDER: composition set by simulation R3B
 Group	1	SabineRook
 Member	1	Knight	8	SabineRook	Guardian
 Member	1	Knight	6	-	Guardian
@@ -6273,9 +6272,9 @@ Member	1	Dwarf1	6	-	Warlord
 Member	1	Dwarf1	6	-	Warlord
 Member	1	Adventurer	6	-	Shade
 Member	1	Adventurer	6	-	Shade
-Member	1	Adventurer	6	-	Shade
-Member	1	Adventurer	6	-	Shade
-Member	1	Adventurer	6	-	Shade
+Member	1	Wizard	6	-	Healer
+Member	1	Wizard	6	-	Healer
+Member	1	Wizard	6	-	Healer
 Member	1	Elf	6	-	Marksman
 Member	1	Elf	6	-	Marksman
 Member	1	Elf	6	-	Marksman
@@ -6314,9 +6313,9 @@ Member	2	Dwarf1	6	-	Warlord
 Member	2	Dwarf1	6	-	Warlord
 Member	2	Adventurer	6	-	Shade
 Member	2	Adventurer	6	-	Shade
-Member	2	Adventurer	6	-	Shade
-Member	2	Adventurer	6	-	Shade
-Member	2	Adventurer	6	-	Shade
+Member	2	Wizard	6	-	Healer
+Member	2	Wizard	6	-	Healer
+Member	2	Wizard	6	-	Healer
 Member	2	Elf	6	-	Marksman
 Member	2	Elf	6	-	Marksman
 Member	2	Elf	6	-	Marksman

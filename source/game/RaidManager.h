@@ -223,8 +223,12 @@ private:
     void plunder();
 
     //! \brief Starts the flight of the leaders whose groups have fallen (the standing members follow them) and ends it
-    //! at the gate for the leaders and their followers.
+    //! at the gate for the leaders and their followers; a leader who fell during his flight ends it (endFlight).
     void updateLeaders();
+
+    //! \brief RA8b: the fleeing leader of the group fell before the gate; his followers that did not escape stop
+    //! fleeing, rejoin their raid group and fight again, and the leader state goes back to none.
+    void endFlight(RaidGroupData& group);
 
     //! \brief The leader reached the gate: he leaves the map with what he carries and the level is lost.
     void escape(RaidGroupData& group, Creature& leader);

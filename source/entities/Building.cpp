@@ -509,14 +509,12 @@ void Building::notifySeatVision(Tile* tile, Seat* seat)
     std::vector<Seat*>::iterator it = std::find(tileData->mSeatsVision.begin(), tileData->mSeatsVision.end(), seat);
     if(tileData->mHP <= 0)
     {
-        // We remove the seat
-        if(it == tileData->mSeatsVision.end())
-        {
-            OD_LOG_ERR("building=" + getName() + ", tile=" + Tile::displayAsString(tile));
-            return;
-        }
+        // We remove the seat. A seat that was never added has nothing to remove: the tile data of a room part that
+        // broke off (or was absorbed) is a clone without the seats with vision (see TileData), so a seat can see
+        // such a tile for the first time when it is already destroyed
+        if(it != tileData->mSeatsVision.end())
+            tileData->mSeatsVision.erase(it);
 
-        tileData->mSeatsVision.erase(it);
         return;
     }
 

@@ -62,10 +62,10 @@ CMAKE = read("CMakeLists.txt")
 # The keys of the [GroupCombat] block counted once for this branch: value and whether the simulation still sets it
 EXPECTED_KEYS = {
     "GroupFormingDistance": ("20", False),
-    "GroupDissolveDistance": ("28", False),
-    "GroupRetreatHealthShare": ("0.4", False),
+    "GroupDissolveDistance": ("24", False),
+    "GroupRetreatHealthShare": ("0.5", False),
     "GroupRetreatMaxSeconds": ("30", False),
-    "GroupRetreatCooldownSeconds": ("60", False),
+    "GroupRetreatCooldownSeconds": ("30", False),
     "GroupGatherRadius": ("3", False),
     "GroupAggroAdjacentTiles": ("1", False),
     "GroupAggroMemorySeconds": ("3", False),

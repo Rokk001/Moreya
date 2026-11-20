@@ -97,6 +97,9 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
         if(!resMgr.getRaidSimLevel().empty())
         {
             boost::filesystem::path levelPath = boost::filesystem::absolute(boost::filesystem::path(resMgr.getRaidSimLevel()));
+            RaidSimulation::setKeeperForce(resMgr.getRaidSimForce(), resMgr.getRaidSimForceLevel());
+            RaidSimulation::setHandLimit(resMgr.getRaidSimHandLimit());
+            RaidSimulation::setHandPlayer(resMgr.getRaidSimHandPlayer());
             RaidSimulation::run(levelPath.generic_string(), resMgr.getRunLevelSeconds(), resMgr.getRunLevelSeed(),
                 resMgr.getRaidSimOut(), resMgr.getRaidSimKeeperAi());
         }

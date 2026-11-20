@@ -172,15 +172,32 @@ def raid_groups(text):
     return groups
 
 
-def campaign_members(level_name, text, member_level, leader_offset, share):
+def set_healers(counts, healers):
+    """Gives the group exactly that many healers (RA11): added healers replace members of the largest other role in
+    turn (never the last tank, so that the leader keeps his role), removed ones become members of the primary role
+    order OTHER_ROLES."""
+    healers = max(0, min(healers, sum(counts.values()) - 1))
+    while counts["healer"] < healers:
+        role = max((name for name in counts if name != "healer" and (counts[name] > 1 or name != "tank")),
+                   key=lambda name: counts[name])
+        counts[role] -= 1
+        counts["healer"] += 1
+    while counts["healer"] > healers:
+        counts["healer"] -= 1
+        counts["melee"] += 1
+
+
+def campaign_members(level_name, text, member_level, leader_offset, share, healers=None):
     """Member lines of the raid of a story level after its guild's role emphasis: every group keeps its size and its
     named leader (class and template as the level has them, level member_level + leader_offset); the other members are
     member_level and get their roles from role_counts() over the whole group (the leader counted in his role), their
-    classes and templates in turn from ROLE_CLASSES."""
+    classes and templates in turn from ROLE_CLASSES. With healers, every group has exactly that many healers."""
     primary, secondary, tanks = GUILDS[level_name]
     lines = []
     for group_id, leader, members in raid_groups(text):
         counts = role_counts(len(members), primary, secondary, share)
+        if healers is not None:
+            set_healers(counts, int(healers))
         if leader is not None:
             fields = next(member for member in members if member[4] == leader)
             lines.append("Member\t%d\t%s\t%d\t%s\t%s" % (group_id, fields[2], member_level + leader_offset, leader,
@@ -199,6 +216,57 @@ def campaign_members(level_name, text, member_level, leader_offset, share):
     return lines
 
 
+def adjust_members(raid, shift, healers):
+    """The level's own raid composition with every member level moved by shift (at least 1) and, with healers, that
+    many Wizards with the Healer template in every group (RA11): members of the role that has the most members (tanks
+    only when no other role is left, never the named leader) become healers at their level, surplus healers become
+    melee members (ROLE_CLASSES melee, first class)."""
+    lines = raid.split("\n")
+    leaders = {}
+    for line in lines:
+        fields = line.split("\t")
+        if fields[0] == "Group":
+            leaders[fields[1]] = None if fields[2] == "-" else fields[2]
+    members = {}
+    for index, line in enumerate(lines):
+        fields = line.split("\t")
+        if fields[0] != "Member":
+            continue
+        fields[3] = str(max(1, int(fields[3]) + shift))
+        lines[index] = "\t".join(fields)
+        if fields[4] != leaders.get(fields[1]):
+            members.setdefault(fields[1], []).append(index)
+
+    def role(index):
+        """Role of a member line by its template (rules G3)."""
+        fields = lines[index].split("\t")
+        return "healer" if fields[5] == "Healer" else TEMPLATE_ROLES.get(fields[5], "melee")
+
+    if healers is not None:
+        for group_id, indexes in members.items():
+            have = [index for index in indexes if role(index) == "healer"]
+            while len(have) < int(healers):
+                counts = {}
+                for index in indexes:
+                    if role(index) != "healer":
+                        counts.setdefault(role(index), []).append(index)
+                if not counts:
+                    break
+                others = [name for name in counts if name != "tank"] or ["tank"]
+                chosen = max(others, key=lambda name: len(counts[name]))
+                index = counts[chosen][-1]
+                fields = lines[index].split("\t")
+                fields[2], fields[5] = "Wizard", "Healer"
+                lines[index] = "\t".join(fields)
+                have.append(index)
+            while len(have) > int(healers):
+                index = have.pop()
+                fields = lines[index].split("\t")
+                fields[2], fields[5] = ROLE_CLASSES["melee"][0]
+                lines[index] = "\t".join(fields)
+    return "\n".join(lines)
+
+
 def make_campaign_level(params, folder):
     """Writes the variant of a story level (countdown, interval, escape share, composition) and returns its path."""
     text = (CAMPAIGN / ("%s.level" % params["level"])).read_text(encoding="utf-8")
@@ -210,7 +278,7 @@ def make_campaign_level(params, folder):
             raid = re.sub(r"(?m)^%s\t.*$" % key, "%s\t%s" % (key, fmt(value)), raid, count=1)
     if params.get("member_level") is not None:
         members = campaign_members(params["level"], text, int(params["member_level"]), int(params["leader_offset"]),
-                                   float(params["share"]))
+                                   float(params["share"]), params.get("healers"))
         kept = [line for line in raid.split("\n") if not line.startswith("Member\t")]
         groups = [line for line in kept if line.startswith("Group\t")]
         out = [line for line in kept if not line.startswith("Group\t") and line != "[/Raid]"]
@@ -220,6 +288,8 @@ def make_campaign_level(params, folder):
             out.extend(line for line in members if line.split("\t")[1] == group_id)
         out.append("[/Raid]")
         raid = "\n".join(out)
+    elif params.get("level_shift") is not None or params.get("healers") is not None:
+        raid = adjust_members(raid, int(params.get("level_shift") or 0), params.get("healers"))
     text = text[:block.start()] + raid + text[block.end():]
     if params.get("treasury_gold") is not None:
         # The attacked keeper (seat 1 in every story level) starts with that much gold: what the dungeon heart cannot
@@ -356,17 +426,36 @@ def runtime_environment():
     return env
 
 
-def run_one(exe, data, level, seed, seconds, keeper_ai, out_file):
-    """Runs one simulation and returns (exit code, wall seconds, stdout)."""
+def force_classes(count):
+    """The classes of a reference keeper force of count creatures: the keeper pool interleaved as KEEPER_POOL says."""
+    return [KEEPER_POOL[index % len(KEEPER_POOL)] for index in range(int(count))]
+
+
+def game_options(params):
+    """The game options of the reference keeper force (--force-count, --force-level) and the hand limit."""
+    args = []
+    if params.get("force_count"):
+        args += ["--raid-sim-force", ",".join(force_classes(params["force_count"])),
+                 "--raid-sim-force-level", str(int(params.get("force_level") or 1))]
+    if params.get("hand_limit"):
+        args.append("--raid-sim-hand-limit")
+    if params.get("hand_player"):
+        args.append("--raid-sim-hand-player")
+    return args
+
+
+def run_one(exe, data, level, seed, seconds, keeper_ai, out_file, options=()):
+    """Runs one simulation and returns (exit code, wall seconds, stdout). A run is stopped after four times its game
+    time of wall time (at least 300 s): a fully loaded host runs the large levels slower than the game clock."""
     app_data = out_file.parent / (out_file.stem + "-appdata")
     app_data.mkdir(parents=True, exist_ok=True)
     args = [str(exe), "--raid-sim", str(level), "--seconds", str(seconds), "--seed", str(seed),
-            "--raid-sim-out", str(out_file), "--appData", str(app_data), "--loglevel", "2"]
+            "--raid-sim-out", str(out_file), "--appData", str(app_data), "--loglevel", "2"] + list(options)
     if keeper_ai:
         args.append("--raid-sim-keeper-ai")
     start = time.monotonic()
     try:
-        done = subprocess.run(args, cwd=str(data), capture_output=True, text=True, timeout=max(120, seconds),
+        done = subprocess.run(args, cwd=str(data), capture_output=True, text=True, timeout=max(300, 4 * seconds),
                               env=runtime_environment())
         code, output = done.returncode, done.stdout + done.stderr
     except subprocess.TimeoutExpired as error:
@@ -457,7 +546,8 @@ def measures(rows, result):
     out["meanFight"] = statistics.mean(decided) if decided else None
     first = phase2[0]
     raid_peak = max(row["raidAlive"] for row in phase2)
-    keeper_start = rows[0]["keeperAlive"]
+    # The keeper's fighters when the first raid group arrived (a reference force stands at the heart from then on)
+    keeper_start = first["keeperAlive"]
     out["raidPeak"] = raid_peak
     out["raidLeft"] = phase2[-1]["raidAlive"]
     out["keeperStart"] = keeper_start
@@ -490,6 +580,10 @@ def measures(rows, result):
     out["quick"] = None if out["decision"] is None or out["result"] == "timeout" else (
         1.0 if out["decision"] < QUICK_DECISION else 0.0)
     out["fled"] = 0.0 if out["fleeAt"] is None else 1.0
+    # A flight the keeper caught: a leader fled and did not escape (RA8 and RA8b)
+    out["caught"] = 1.0 if out["fled"] and out["result"] != "escaped" else 0.0
+    if "handDrops" in rows[-1]:
+        out["handDrops"] = rows[-1]["handDrops"]
     # The main fight of the first raid group is over when three quarters of it have fallen (or the keeper has no
     # fighter left), measured from its arrival; before a second group arrives
     later = [row for row in phase2 if row["arrived"] <= 1]
@@ -541,7 +635,9 @@ def default_params():
     """The parameters of a level variant before the command line changes them."""
     return {"size": 10, "groups": 1, "hero_level": 4, "composition": "all", "keeper_count": 10, "keeper_level": 4,
             "countdown": 10, "interval": 90, "escape": None, "treasury_gold": None, "treasury_offset": None,
-            "level": None, "interval_level": None, "member_level": None, "leader_offset": None, "share": None}
+            "level": None, "interval_level": None, "member_level": None, "leader_offset": None, "share": None,
+            "force_count": None, "force_level": None, "hand_limit": 0, "healers": None, "level_shift": None,
+            "hand_player": 0}
 
 
 def run_batch(exe, work, params, overrides, seeds, seconds=900, keeper_ai=False, jobs=6, quiet=False):
@@ -571,7 +667,8 @@ def run_batch(exe, work, params, overrides, seeds, seconds=900, keeper_ai=False,
         futures = {}
         for seed, key in todo:
             out_file = work / "turns" / (key[:16] + ".tsv")
-            futures[pool.submit(run_one, exe, data, level, seed, seconds, keeper_ai, out_file)] = (seed, key, out_file)
+            futures[pool.submit(run_one, exe, data, level, seed, seconds, keeper_ai, out_file,
+                                game_options(params))] = (seed, key, out_file)
         for future in concurrent.futures.as_completed(futures):
             seed, key, out_file = futures[future]
             code, wall, output = future.result()
@@ -604,7 +701,7 @@ def summarize(results):
                  "raidRetreats", "groupsFormed", "fleeAt", "goldLost", "raidGoldPeak", "cohesion", "participation",
                  "heartLostShare", "fleeSeconds", "placeDistance", "marchSpread", "decision", "quick", "fled",
                  "mainFight", "treasuryTaken", "treasuryTakenShare", "treasuryHit", "treasuryLeft", "plunderTreasury",
-                 "plunderHeart", "treasuryPlundered", "wall", "phase1Max", "phase1Done", "fightersAtArrival",
+                 "plunderHeart", "treasuryPlundered", "wall", "caught", "handDrops", "phase1Max", "phase1Done", "fightersAtArrival",
                  "claimedAtArrival", "roomTilesAtArrival", "minedAtArrival"):
         values = [m[name] for m in good if m.get(name) is not None]
         summary[name] = round(statistics.mean(values), 3) if values else None

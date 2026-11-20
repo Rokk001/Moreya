@@ -3260,11 +3260,14 @@ void Creature::doUpkeep()
                 return;
             }
             Room* myRoom = myTile->getCoveringRoom();
-            if( myRoom!=nullptr && myRoom->getType() == RoomType::arena)
+            // An arena without a gate (no fence tile next to its floor any more, e.g. after fence tiles were lost)
+            // has nowhere to put the knocked out creature: it stays where it lies
+            Tile* arenaGate = nullptr;
+            if((myRoom != nullptr) && (myRoom->getType() == RoomType::arena))
+                arenaGate = static_cast<RoomArena*>(myRoom)->getGateTile();
+            if(arenaGate != nullptr)
             {
-                
-                RoomArena* myRoomArena = static_cast<RoomArena*>(myRoom);
-                Ogre::Vector3 dest = myRoomArena->getGateTile()->getPosition();
+                Ogre::Vector3 dest = arenaGate->getPosition();
                 setPosition(dest);
 
                 for(Seat* seat : mSeatsWithVisionNotified)

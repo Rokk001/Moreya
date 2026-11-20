@@ -149,6 +149,9 @@ public:
     { return mRoomType; }
 
     void absorbRoom(Room *r) override;
+    //! \brief A part that breaks off takes the beds standing on its tiles along (with their owners and sleep
+    //! directions), so that a creature whose bed is there still sleeps in its bed in the new room.
+    void splitRoom(Room& newRoom, const std::vector<Tile*>& tiles) override;
     bool removeCoveredTile(Tile* t) override;
 
     void restoreInitialEntityState() override;
