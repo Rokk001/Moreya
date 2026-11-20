@@ -3063,6 +3063,7 @@ Cond	objective	1	highcairn-main-home	reached
 Cond	objective	1	highcairn-main-terraces	reached
 Cond	objective	1	highcairn-main-captain	reached
 Cond	objective	1	highcairn-main-raid	reached
+Cond	raid	defeated
 Action	message	1	Warden Hilde Cairn lies dead among her own stones. Highcairn is yours.
 Action	win	1
 [/Trigger]

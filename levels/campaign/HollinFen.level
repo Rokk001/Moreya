@@ -3599,6 +3599,7 @@ Mode	once
 Cond	objective	1	hollinfen-main-home	reached
 Cond	objective	1	hollinfen-main-gate	reached
 Cond	objective	1	hollinfen-main-raid	reached
+Cond	raid	defeated
 Action	message	1	The Order's raid lies in the bog and its bells are silent. Hollin Fen is yours.
 Action	win	1
 [/Trigger]

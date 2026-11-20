@@ -4583,6 +4583,11 @@ Cond	roomtiles	2	DungeonTemple	<=	0
 Cond	goalmet	1	KillAllEnemies
 Cond	flag	storyVictorySent	0
 Cond	objective	1	ironbridge-main-raid	reached
+Cond	raid	defeated
+Cond	objective	1	ironbridge-main-home	reached
+Cond	objective	1	ironbridge-main-spans	reached
+Cond	objective	1	ironbridge-main-sites	reached
+Cond	objective	1	ironbridge-main-hold	reached
 Action	message	1	The rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.
 Action	objectivestate	1	ironbridge-o01	reached
 Action	win	1
@@ -4605,6 +4610,11 @@ Cond	roomtiles	2	DungeonTemple	<=	0
 Cond	goalmet	1	KillAllEnemies
 Cond	flag	storyVictorySent	0
 Cond	objective	1	ironbridge-main-raid	reached
+Cond	raid	defeated
+Cond	objective	1	ironbridge-main-home	reached
+Cond	objective	1	ironbridge-main-spans	reached
+Cond	objective	1	ironbridge-main-sites	reached
+Cond	objective	1	ironbridge-main-hold	reached
 Action	message	1	The rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.
 Action	objectivestate	1	ironbridge-o01	reached
 Action	win	1

@@ -6194,6 +6194,7 @@ Cond	objective	1	hollowmark-main-heart	reached
 Cond	objective	1	hollowmark-main-courts	reached
 Cond	objective	1	hollowmark-main-raid	reached
 Cond	objective	1	hollowmark-main-throne	reached
+Cond	raid	defeated
 Action	message	1	High King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours.
 Action	win	1
 [/Trigger]

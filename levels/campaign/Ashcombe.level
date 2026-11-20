@@ -3549,6 +3549,7 @@ Mode	once
 Cond	objective	1	ashcombe-main-heart	reached
 Cond	objective	1	ashcombe-main-basin	reached
 Cond	objective	1	ashcombe-main-raid	reached
+Cond	raid	defeated
 Action	message	1	Liesl Ashby has fallen before she could reach the gate. The ashes of Ashcombe are yours.
 Action	win	1
 [/Trigger]

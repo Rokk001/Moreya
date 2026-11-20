@@ -5267,6 +5267,11 @@ Name	rivalFalls
 Mode	once
 Cond	creatures	2	<=	0
 Cond	objective	1	cinderhollow-main-raid	reached
+Cond	raid	defeated
+Cond	objective	1	cinderhollow-main-heart	reached
+Cond	objective	1	cinderhollow-main-seams	reached
+Cond	objective	1	cinderhollow-main-bridge	reached
+Cond	objective	1	cinderhollow-main-rival	reached
 Action	win	1
 [/Trigger]
 [Trigger]
@@ -5274,6 +5279,11 @@ Name	rivalHeartDown
 Mode	once
 Cond	goal	1	KillAllEnemies
 Cond	objective	1	cinderhollow-main-raid	reached
+Cond	raid	defeated
+Cond	objective	1	cinderhollow-main-heart	reached
+Cond	objective	1	cinderhollow-main-seams	reached
+Cond	objective	1	cinderhollow-main-bridge	reached
+Cond	objective	1	cinderhollow-main-rival	reached
 Action	objectivestate	1	cinderhollow-o05	reached
 Action	win	1
 [/Trigger]
@@ -5289,6 +5299,11 @@ Name	rivalHeartFalls
 Mode	once
 Cond	defeated	2
 Cond	objective	1	cinderhollow-main-raid	reached
+Cond	raid	defeated
+Cond	objective	1	cinderhollow-main-heart	reached
+Cond	objective	1	cinderhollow-main-seams	reached
+Cond	objective	1	cinderhollow-main-bridge	reached
+Cond	objective	1	cinderhollow-main-rival	reached
 Action	objectivestate	1	cinderhollow-o05	reached
 Action	win	1
 [/Trigger]
@@ -5379,6 +5394,7 @@ Cond	objective	1	cinderhollow-main-seams	reached
 Cond	objective	1	cinderhollow-main-raid	reached
 Cond	objective	1	cinderhollow-main-bridge	reached
 Cond	objective	1	cinderhollow-main-rival	reached
+Cond	raid	defeated
 Action	message	1	The rival heart is shattered and the crater is silent. Cinderhollow is yours.
 Action	win	1
 [/Trigger]

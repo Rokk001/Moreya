@@ -4237,6 +4237,7 @@ Cond	objective	1	kingsfall-main-heart	reached
 Cond	objective	1	kingsfall-main-champions	reached
 Cond	objective	1	kingsfall-main-army	reached
 Cond	objective	1	kingsfall-main-raid	reached
+Cond	raid	defeated
 Action	message	1	The prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours.
 Action	win	1
 [/Trigger]

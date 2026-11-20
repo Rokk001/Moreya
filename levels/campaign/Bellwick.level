@@ -3995,6 +3995,10 @@ Mode	once
 Cond	raid	defeated
 Cond	time	5
 Cond	creatures	2	<=	0
+Cond	objective	1	bellwick-main-heart	reached
+Cond	objective	1	bellwick-main-nave	reached
+Cond	objective	1	bellwick-main-keeper	reached
+Cond	objective	1	bellwick-main-raid	reached
 Action	win	1
 [/Trigger]
 [Trigger]
@@ -4107,6 +4111,7 @@ Cond	objective	1	bellwick-main-heart	reached
 Cond	objective	1	bellwick-main-nave	reached
 Cond	objective	1	bellwick-main-keeper	reached
 Cond	objective	1	bellwick-main-raid	reached
+Cond	raid	defeated
 Action	message	1	The undead keeper is dust, the raid is broken and the bells hang silent. Bellwick is yours.
 Action	win	1
 [/Trigger]

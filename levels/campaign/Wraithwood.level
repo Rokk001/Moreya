@@ -4942,6 +4942,11 @@ Cond	raid	defeated
 Cond	time	5
 Cond	creatures	2	<=	0
 Cond	creatures	3	<=	0
+Cond	objective	1	wraithwood-main-heart	reached
+Cond	objective	1	wraithwood-main-witch	reached
+Cond	objective	1	wraithwood-main-rival	reached
+Cond	objective	1	wraithwood-main-forces	reached
+Cond	objective	1	wraithwood-main-raid	reached
 Action	win	1
 [/Trigger]
 [Trigger]
@@ -5027,6 +5032,7 @@ Cond	objective	1	wraithwood-main-witch	reached
 Cond	objective	1	wraithwood-main-rival	reached
 Cond	objective	1	wraithwood-main-forces	reached
 Cond	objective	1	wraithwood-main-raid	reached
+Cond	raid	defeated
 Action	message	1	Both rival keepers are dead, the Ash Coven is broken and the fog lifts from Wraithwood. The wood is yours.
 Action	win	1
 [/Trigger]

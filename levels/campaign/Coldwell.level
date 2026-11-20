@@ -1610,7 +1610,6 @@ Name	raidDefeated
 Mode	once
 Cond	raid	defeated
 Action	objectivestate	1	coldwell-o01	reached
-Action	win	1
 [/Trigger]
 [Trigger]
 Name	extraGold
@@ -1625,6 +1624,16 @@ Cond	roomtiles	1	DungeonTemple	<=	0
 Action	objectivestate	1	coldwell-main-heart	failed
 [/Trigger]
 
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	raid	defeated
+Cond	objective	1	coldwell-main-heart	reached
+Cond	objective	1	coldwell-main-plaza	reached
+Cond	objective	1	coldwell-main-gate	reached
+Cond	objective	1	coldwell-main-raid	reached
+Action	win	1
+[/Trigger]
 [/Triggers]
 
 [Raid]

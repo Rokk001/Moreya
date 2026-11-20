@@ -3236,6 +3236,10 @@ Mode	once
 Cond	time	5
 Cond	creatures	2	<=	0
 Cond	objective	1	lanternhill-main-raid	reached
+Cond	raid	defeated
+Cond	objective	1	lanternhill-main-home	reached
+Cond	objective	1	lanternhill-main-road	reached
+Cond	objective	1	lanternhill-main-rival	reached
 Action	win	1
 [/Trigger]
 [Trigger]
@@ -3243,6 +3247,10 @@ Name	rivalHeartDown
 Mode	once
 Cond	goal	1	KillAllEnemies
 Cond	objective	1	lanternhill-main-raid	reached
+Cond	raid	defeated
+Cond	objective	1	lanternhill-main-home	reached
+Cond	objective	1	lanternhill-main-road	reached
+Cond	objective	1	lanternhill-main-rival	reached
 Action	objectivestate	1	lanternhill-o01	reached
 Action	win	1
 [/Trigger]
@@ -3333,6 +3341,7 @@ Cond	objective	1	lanternhill-main-road	reached
 Cond	objective	1	lanternhill-main-rival	reached
 Cond	objective	1	lanternhill-main-raid	reached
 Cond	flag	victoryStoneReady	1
+Cond	raid	defeated
 Action	message	1	The rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now.
 Action	win	1
 [/Trigger]

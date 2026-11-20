@@ -3457,6 +3457,7 @@ Cond	objective	1	goldspire-main-town	reached
 Cond	objective	1	goldspire-main-route	reached
 Cond	objective	1	goldspire-main-vault	reached
 Cond	objective	1	goldspire-main-raid	reached
+Cond	raid	defeated
 Action	message	1	Alaric Penn lies dead on his own coin and his vault stands open. Goldspire is yours.
 Action	win	1
 [/Trigger]

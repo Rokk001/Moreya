@@ -16,7 +16,7 @@ File: `levels/campaign/Ashcombe.level`.
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3440 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin.` | yes |
-| Script line 3553 | `Action	win	1` | yes |
+| Script line 3554 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -56,9 +56,9 @@ File: `levels/campaign/Bellwick.level`.
 | Script line 3925 | `Action	objectiveid	1	bellwick-o01	Destroy the keeper's heart in the north undercroft.` | yes |
 | Advisory hint line 3926 | `Action	hint	1	Hold the nave against the faithful.` | not an objective; no state required |
 | Script line 3936 | `Action	objectiveid	1	bellwick-o04	Reach the transept through the nave.` | yes |
-| Script line 3998 | `Action	win	1` | yes |
-| Script line 4003 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4111 | `Action	win	1` | yes |
+| Script line 4002 | `Action	win	1` | yes |
+| Script line 4007 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4116 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -202,7 +202,7 @@ File: `levels/campaign/Brackenford.level`.
 | Script line 1475 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
 | Script line 1485 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
 | Script line 1559 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
-| Script line 1634 | `Action	win	1` | yes |
+| Script line 1657 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -359,11 +359,11 @@ File: `levels/campaign/Cinderhollow.level`.
 | Script line 5150 | `Action	objectiveid	1	cinderhollow-o04	Cross the lava bridge to the crater.` | yes |
 | Script line 5204 | `Action	objectiveid	1	cinderhollow-o05	Destroy the heart in the north-east crater.` | yes |
 | Script line 5218 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5270 | `Action	win	1` | yes |
-| Script line 5275 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5278 | `Action	win	1` | yes |
-| Script line 5293 | `Action	win	1` | yes |
-| Script line 5383 | `Action	win	1` | yes |
+| Script line 5275 | `Action	win	1` | yes |
+| Script line 5280 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5288 | `Action	win	1` | yes |
+| Script line 5308 | `Action	win	1` | yes |
+| Script line 5399 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -391,8 +391,8 @@ Static seam/wave-source/bank/bridge-action evidence only; real mining, battle, g
 | Trigger `goalHeartSafe1BeforeRivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalCraterAfterBridge` | `Action	objectivestate	1	cinderhollow-o04	reached`; conditions: `Cond	flag	goalDawnBridgeCrossed	1; Cond	region	1	RivalCrater` | yes |
 | Trigger `goalHeartLost1` | `Action	objectivestate	1	cinderhollow-o01	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
-| Trigger `rivalHeartDown` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	objective	1	cinderhollow-main-raid	reached` | yes |
-| Trigger `rivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	defeated	2; Cond	objective	1	cinderhollow-main-raid	reached` | yes |
+| Trigger `rivalHeartDown` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	objective	1	cinderhollow-main-raid	reached; Cond	raid	defeated; Cond	objective	1	cinderhollow-main-heart	reached; Cond	objective	1	cinderhollow-main-seams	reached; Cond	objective	1	cinderhollow-main-bridge	reached; Cond	objective	1	cinderhollow-main-rival	reached` | yes |
+| Trigger `rivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	defeated	2; Cond	objective	1	cinderhollow-main-raid	reached; Cond	raid	defeated; Cond	objective	1	cinderhollow-main-heart	reached; Cond	objective	1	cinderhollow-main-seams	reached; Cond	objective	1	cinderhollow-main-bridge	reached; Cond	objective	1	cinderhollow-main-rival	reached` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	cinderhollow-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	cinderhollow-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainSeams` | `Action	objectivestate	1	cinderhollow-main-seams	reached`; conditions: `Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0` | yes |
@@ -415,7 +415,7 @@ File: `levels/campaign/Coldwell.level`.
 | Script line 1497 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
 | Script line 1505 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
 | Script line 1520 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
-| Script line 1613 | `Action	win	1` | yes |
+| Script line 1635 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -615,7 +615,7 @@ File: `levels/campaign/Goldspire.level`.
 | Advisory hint line 3173 | `Action	hint	1	Mine gold and build an army.` | not an objective; no state required |
 | Script line 3174 | `Action	objectiveid	1	goldspire-o03	Take the low town below the spire.` | yes |
 | Script line 3203 | `Action	objectiveid	1	goldspire-o04	Enter the outer ring after the south gate opens.` | yes |
-| Script line 3461 | `Action	win	1` | yes |
+| Script line 3462 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -662,7 +662,7 @@ File: `levels/campaign/Greywater.level`.
 | Script line 3036 | `Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.` | yes |
 | Script line 3037 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
 | Script line 3062 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
-| Script line 3207 | `Action	win	1` | yes |
+| Script line 3223 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -709,7 +709,7 @@ File: `levels/campaign/Highcairn.level`.
 | Script line 2870 | `Action	objectiveid	1	highcairn-o02	Climb the terraces in order.` | yes |
 | Script line 2871 | `Action	objectiveid	1	highcairn-o03	Defend your heart.` | yes |
 | Script line 2998 | `Action	objectiveid	1	highcairn-o06	Kill the watch captain; take the key to the hold.` | yes |
-| Script line 3067 | `Action	win	1` | yes |
+| Script line 3068 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -756,7 +756,7 @@ File: `levels/campaign/HollinFen.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3491 | `Action	objectiveid	1	hollinfen-o02	Defend your heart.` | yes |
 | Script line 3518 | `Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.` | yes |
-| Script line 3603 | `Action	win	1` | yes |
+| Script line 3604 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -797,7 +797,7 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 5779 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
 | Script line 5780 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.` | yes |
-| Script line 6198 | `Action	win	1` | yes |
+| Script line 6199 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -843,9 +843,9 @@ File: `levels/campaign/Ironbridge.level`.
 | Script line 4339 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
 | Script line 4356 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
 | Script line 4377 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
-| Script line 4588 | `Action	win	1` | yes |
-| Script line 4594 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4610 | `Action	win	1` | yes |
+| Script line 4593 | `Action	win	1` | yes |
+| Script line 4599 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4620 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -872,8 +872,8 @@ Only static source, exact room footprints, bank connectivity and resource feasib
 | Trigger `goalIronbridgeAllSpans` | `Action	objectivestate	1	ironbridge-o02	reached`; conditions: `Cond	flag	goalIronbridgeCross1	1; Cond	flag	goalIronbridgeCross2	1; Cond	flag	goalIronbridgeCross3	1` | yes |
 | Trigger `goalRivalGateNorth` | `Action	objectivestate	1	ironbridge-o04	reached`; conditions: `Cond	trapgone	DoorWooden8; Cond	region	1	94	26	94	26` | yes |
 | Trigger `goalRivalGateSouth` | `Action	objectivestate	1	ironbridge-o04	reached`; conditions: `Cond	trapgone	DoorWooden9; Cond	region	1	94	27	94	27` | yes |
-| Trigger `rivalFalls` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0; Cond	objective	1	ironbridge-main-raid	reached` | yes |
-| Trigger `rivalHeartDown` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0; Cond	objective	1	ironbridge-main-raid	reached` | yes |
+| Trigger `rivalFalls` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0; Cond	objective	1	ironbridge-main-raid	reached; Cond	raid	defeated; Cond	objective	1	ironbridge-main-home	reached; Cond	objective	1	ironbridge-main-spans	reached; Cond	objective	1	ironbridge-main-sites	reached; Cond	objective	1	ironbridge-main-hold	reached` | yes |
+| Trigger `rivalHeartDown` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0; Cond	objective	1	ironbridge-main-raid	reached; Cond	raid	defeated; Cond	objective	1	ironbridge-main-home	reached; Cond	objective	1	ironbridge-main-spans	reached; Cond	objective	1	ironbridge-main-sites	reached; Cond	objective	1	ironbridge-main-hold	reached` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	ironbridge-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-spans	failed`; conditions: `Cond	defeated	1` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-sites	failed`; conditions: `Cond	defeated	1` | yes |
@@ -897,7 +897,7 @@ File: `levels/campaign/Kingsfall.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 3993 | `Action	objectiveid	1	kingsfall-o01	Capture or convert Edda, Brann and Wick.` | yes |
 | Script line 3994 | `Action	objectiveid	1	kingsfall-o03	Gather at least 12 creatures at your heart.` | yes |
-| Script line 4241 | `Action	win	1` | yes |
+| Script line 4242 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -945,10 +945,10 @@ File: `levels/campaign/Lanternhill.level`.
 | Script line 3134 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
 | Script line 3135 | `Action	objectiveid	1	lanternhill-o03	Defend your heart.` | yes |
 | Script line 3223 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3239 | `Action	win	1` | yes |
-| Script line 3244 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3247 | `Action	win	1` | yes |
-| Script line 3337 | `Action	win	1` | yes |
+| Script line 3243 | `Action	win	1` | yes |
+| Script line 3248 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3255 | `Action	win	1` | yes |
+| Script line 3346 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -973,7 +973,7 @@ Static floor source, own-heart destination and exact-item completion checked. Ac
 | Trigger `goalRingGroundPathOpened` | `Action	objectivestate	1	lanternhill-o02	reached`; conditions: `Cond	groundconnected	1	13	57	40	22` | yes |
 | Trigger `goalHeartSafe3BeforeRivalHeartDown` | `Action	objectivestate	1	lanternhill-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	lanternhill-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
-| Trigger `rivalHeartDown` | `Action	objectivestate	1	lanternhill-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	objective	1	lanternhill-main-raid	reached` | yes |
+| Trigger `rivalHeartDown` | `Action	objectivestate	1	lanternhill-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	objective	1	lanternhill-main-raid	reached; Cond	raid	defeated; Cond	objective	1	lanternhill-main-home	reached; Cond	objective	1	lanternhill-main-road	reached; Cond	objective	1	lanternhill-main-rival	reached` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	lanternhill-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHome` | `Action	objectivestate	1	lanternhill-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	mined	1	>=	700` | yes |
 | Trigger `mainRoad` | `Action	objectivestate	1	lanternhill-main-road	reached`; conditions: `Cond	groundconnected	1	13	57	40	22; Cond	roomclaimed	1	10	16	12	17; Cond	roomclaimed	1	13	20	15	21` | yes |
@@ -1098,7 +1098,7 @@ File: `levels/campaign/Ravensledge.level`.
 | Script line 2269 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
 | Script line 2277 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
 | Script line 2288 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
-| Script line 2374 | `Action	win	1` | yes |
+| Script line 2396 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1143,7 +1143,7 @@ File: `levels/campaign/Saltmere.level`.
 | Script line 3192 | `Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.` | yes |
 | Script line 3193 | `Action	objectiveid	1	saltmere-o03	Protect your heart.` | yes |
 | Script line 3236 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
-| Script line 3380 | `Action	win	1` | yes |
+| Script line 3381 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1419,7 +1419,7 @@ File: `levels/campaign/Tinmoor.level`.
 | Script line 1804 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
 | Script line 1822 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
 | Script line 1879 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
-| Script line 1935 | `Action	win	1` | yes |
+| Script line 1957 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1504,9 +1504,9 @@ File: `levels/campaign/VarnsCrossing.level`.
 | Script line 4517 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against heroes.` | yes |
 | Script line 4518 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
 | Script line 4613 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4638 | `Action	win	1` | yes |
-| Script line 4643 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4777 | `Action	win	1` | yes |
+| Script line 4642 | `Action	win	1` | yes |
+| Script line 4647 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4782 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1599,9 +1599,9 @@ File: `levels/campaign/Wraithwood.level`.
 | Script line 4866 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
 | Script line 4867 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
 | Script line 4928 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4945 | `Action	win	1` | yes |
-| Script line 4950 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5031 | `Action	win	1` | yes |
+| Script line 4950 | `Action	win	1` | yes |
+| Script line 4955 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5037 | `Action	win	1` | yes |
 
 ### Main and optional goals
 

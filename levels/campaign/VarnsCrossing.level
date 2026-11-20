@@ -4635,6 +4635,10 @@ Cond	raid	defeated
 Cond	time	5
 Cond	creatures	2	<=	0
 Cond	creatures	3	<=	0
+Cond	objective	1	varnscrossing-main-home	reached
+Cond	objective	1	varnscrossing-main-keep	reached
+Cond	objective	1	varnscrossing-main-rivals	reached
+Cond	objective	1	varnscrossing-main-raid	reached
 Action	win	1
 [/Trigger]
 [Trigger]
@@ -4773,6 +4777,7 @@ Cond	objective	1	varnscrossing-main-home	reached
 Cond	objective	1	varnscrossing-main-keep	reached
 Cond	objective	1	varnscrossing-main-rivals	reached
 Cond	objective	1	varnscrossing-main-raid	reached
+Cond	raid	defeated
 Action	message	1	Both keepers lie dead, the Black Legion is broken and the great roads are quiet. Varn has lost his crossing.
 Action	win	1
 [/Trigger]

@@ -3204,7 +3204,6 @@ Name	raidDefeated
 Mode	once
 Cond	raid	defeated
 Action	objectivestate	1	greywater-o01	reached
-Action	win	1
 [/Trigger]
 [Trigger]
 Name	extraGold
@@ -3213,6 +3212,16 @@ Cond	mined	1	>=	1200
 Action	objectivestate	1	greywater-extra-gold	reached
 [/Trigger]
 
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	raid	defeated
+Cond	objective	1	greywater-main-heart	reached
+Cond	objective	1	greywater-main-gold	reached
+Cond	objective	1	greywater-main-siege	reached
+Cond	objective	1	greywater-main-raid	reached
+Action	win	1
+[/Trigger]
 [/Triggers]
 
 [Raid]

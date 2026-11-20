@@ -582,6 +582,20 @@
             "failed"
           ]
         ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\traid\tdefeated",
+          "Cond\tobjective\t1\tbrackenford-main-home\treached",
+          "Cond\tobjective\t1\tbrackenford-main-grove\treached",
+          "Cond\tobjective\t1\tbrackenford-main-ford\treached",
+          "Cond\tobjective\t1\tbrackenford-main-keep\treached",
+          "Cond\tobjective\t1\tbrackenford-main-raid\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\twin\t1"
+        ]
       }
     },
     "reachability": {
@@ -734,6 +748,9 @@
       ],
       "cellarStoneHome": [
         "Action\tdiscover\tcampaign/Mossgate.level"
+      ],
+      "raidDefeated": [
+        "Action\tobjectivestate\t1\tbrackenford-o01\treached"
       ]
     },
     "preserved_conditions": {
@@ -843,6 +860,19 @@
             "coldwell-main-heart",
             "failed"
           ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\traid\tdefeated",
+          "Cond\tobjective\t1\tcoldwell-main-heart\treached",
+          "Cond\tobjective\t1\tcoldwell-main-plaza\treached",
+          "Cond\tobjective\t1\tcoldwell-main-gate\treached",
+          "Cond\tobjective\t1\tcoldwell-main-raid\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\twin\t1"
         ]
       }
     },
@@ -1058,6 +1088,9 @@
     "preserved_actions": {
       "larderShardHome": [
         "Action\tshard"
+      ],
+      "raidDefeated": [
+        "Action\tobjectivestate\t1\tcoldwell-o01\treached"
       ]
     },
     "preserved_conditions": {
@@ -1152,6 +1185,19 @@
             "failed"
           ]
         ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\traid\tdefeated",
+          "Cond\tobjective\t1\ttinmoor-main-heart\treached",
+          "Cond\tobjective\t1\ttinmoor-main-seams\treached",
+          "Cond\tobjective\t1\ttinmoor-main-posts\treached",
+          "Cond\tobjective\t1\ttinmoor-main-raid\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\twin\t1"
+        ]
       }
     },
     "preserved_actions": {
@@ -1167,6 +1213,9 @@
       ],
       "vaultStoneHome": [
         "Action\tdiscover\tcampaign/CrowshotGallery.level"
+      ],
+      "raidDefeated": [
+        "Action\tobjectivestate\t1\ttinmoor-o01\treached"
       ]
     },
     "reachability": {
@@ -1359,6 +1408,19 @@
             "failed"
           ]
         ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\traid\tdefeated",
+          "Cond\tobjective\t1\travensledge-main-heart\treached",
+          "Cond\tobjective\t1\travensledge-main-shelf\treached",
+          "Cond\tobjective\t1\travensledge-main-gate\treached",
+          "Cond\tobjective\t1\travensledge-main-raid\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\twin\t1"
+        ]
       }
     },
     "preserved_conditions": {
@@ -1496,6 +1558,11 @@
       "creatures": [
         "OsricVane"
       ]
+    },
+    "preserved_actions": {
+      "raidDefeated": [
+        "Action\tobjectivestate\t1\travensledge-o01\treached"
+      ]
     }
   },
   "Greywater": {
@@ -1582,6 +1649,19 @@
             "failed"
           ]
         ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\traid\tdefeated",
+          "Cond\tobjective\t1\tgreywater-main-heart\treached",
+          "Cond\tobjective\t1\tgreywater-main-gold\treached",
+          "Cond\tobjective\t1\tgreywater-main-siege\treached",
+          "Cond\tobjective\t1\tgreywater-main-raid\treached"
+        ],
+        "states": [],
+        "actions": [
+          "Action\twin\t1"
+        ]
       }
     },
     "preserved_conditions": {
@@ -1658,6 +1738,9 @@
       ],
       "galleryShardHome": [
         "Action\tshard"
+      ],
+      "raidDefeated": [
+        "Action\tobjectivestate\t1\tgreywater-o01\treached"
       ]
     },
     "reachability": {
@@ -1869,6 +1952,19 @@
             "hollinfen-main-home",
             "failed"
           ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\thollinfen-main-home\treached",
+          "Cond\tobjective\t1\thollinfen-main-gate\treached",
+          "Cond\tobjective\t1\thollinfen-main-raid\treached",
+          "Cond\traid\tdefeated"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe Order's raid lies in the bog and its bells are silent. Hollin Fen is yours.",
+          "Action\twin\t1"
         ]
       }
     },
@@ -2820,6 +2916,20 @@
         "states": [],
         "actions": [
           "Action\tsetflag\tportCrossed\t1"
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tsaltmere-main-heart\treached",
+          "Cond\tobjective\t1\tsaltmere-main-gold\treached",
+          "Cond\tobjective\t1\tsaltmere-main-port\treached",
+          "Cond\tobjective\t1\tsaltmere-main-raid\treached",
+          "Cond\traid\tdefeated"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tThe raid lies broken on the salt flats and its leader with it. Saltmere is yours.",
+          "Action\twin\t1"
         ]
       }
     },
@@ -3823,7 +3933,12 @@
         "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
         "Cond\tgoalmet\t1\tKillAllEnemies",
         "Cond\tflag\tstoryVictorySent\t0",
-        "Cond\tobjective\t1\tironbridge-main-raid\treached"
+        "Cond\tobjective\t1\tironbridge-main-raid\treached",
+        "Cond\traid\tdefeated",
+        "Cond\tobjective\t1\tironbridge-main-home\treached",
+        "Cond\tobjective\t1\tironbridge-main-spans\treached",
+        "Cond\tobjective\t1\tironbridge-main-sites\treached",
+        "Cond\tobjective\t1\tironbridge-main-hold\treached"
       ],
       "rivalHeartDown": [
         "Cond\tgoal\t1\tKillAllEnemies",
@@ -3839,7 +3954,12 @@
         "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
         "Cond\tgoalmet\t1\tKillAllEnemies",
         "Cond\tflag\tstoryVictorySent\t0",
-        "Cond\tobjective\t1\tironbridge-main-raid\treached"
+        "Cond\tobjective\t1\tironbridge-main-raid\treached",
+        "Cond\traid\tdefeated",
+        "Cond\tobjective\t1\tironbridge-main-home\treached",
+        "Cond\tobjective\t1\tironbridge-main-spans\treached",
+        "Cond\tobjective\t1\tironbridge-main-sites\treached",
+        "Cond\tobjective\t1\tironbridge-main-hold\treached"
       ]
     },
     "preserved_actions": {
@@ -4929,7 +5049,8 @@
           "Cond\tobjective\t1\tlanternhill-main-road\treached",
           "Cond\tobjective\t1\tlanternhill-main-rival\treached",
           "Cond\tobjective\t1\tlanternhill-main-raid\treached",
-          "Cond\tflag\tvictoryStoneReady\t1"
+          "Cond\tflag\tvictoryStoneReady\t1",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -5216,7 +5337,8 @@
           "Cond\tobjective\t1\tvarnscrossing-main-home\treached",
           "Cond\tobjective\t1\tvarnscrossing-main-keep\treached",
           "Cond\tobjective\t1\tvarnscrossing-main-rivals\treached",
-          "Cond\tobjective\t1\tvarnscrossing-main-raid\treached"
+          "Cond\tobjective\t1\tvarnscrossing-main-raid\treached",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -5975,7 +6097,8 @@
           "Cond\tobjective\t1\thighcairn-main-home\treached",
           "Cond\tobjective\t1\thighcairn-main-terraces\treached",
           "Cond\tobjective\t1\thighcairn-main-captain\treached",
-          "Cond\tobjective\t1\thighcairn-main-raid\treached"
+          "Cond\tobjective\t1\thighcairn-main-raid\treached",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -7349,7 +7472,8 @@
           "Cond\tobjective\t1\tcinderhollow-main-seams\treached",
           "Cond\tobjective\t1\tcinderhollow-main-raid\treached",
           "Cond\tobjective\t1\tcinderhollow-main-bridge\treached",
-          "Cond\tobjective\t1\tcinderhollow-main-rival\treached"
+          "Cond\tobjective\t1\tcinderhollow-main-rival\treached",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -7655,7 +7779,8 @@
           "Cond\tobjective\t1\tgoldspire-main-town\treached",
           "Cond\tobjective\t1\tgoldspire-main-route\treached",
           "Cond\tobjective\t1\tgoldspire-main-vault\treached",
-          "Cond\tobjective\t1\tgoldspire-main-raid\treached"
+          "Cond\tobjective\t1\tgoldspire-main-raid\treached",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -9087,7 +9212,8 @@
           "Cond\tobjective\t1\tbellwick-main-heart\treached",
           "Cond\tobjective\t1\tbellwick-main-nave\treached",
           "Cond\tobjective\t1\tbellwick-main-keeper\treached",
-          "Cond\tobjective\t1\tbellwick-main-raid\treached"
+          "Cond\tobjective\t1\tbellwick-main-raid\treached",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -10755,7 +10881,8 @@
           "Cond\tobjective\t1\twraithwood-main-witch\treached",
           "Cond\tobjective\t1\twraithwood-main-rival\treached",
           "Cond\tobjective\t1\twraithwood-main-forces\treached",
-          "Cond\tobjective\t1\twraithwood-main-raid\treached"
+          "Cond\tobjective\t1\twraithwood-main-raid\treached",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -11039,7 +11166,8 @@
           "Cond\tobjective\t1\tkingsfall-main-heart\treached",
           "Cond\tobjective\t1\tkingsfall-main-champions\treached",
           "Cond\tobjective\t1\tkingsfall-main-army\treached",
-          "Cond\tobjective\t1\tkingsfall-main-raid\treached"
+          "Cond\tobjective\t1\tkingsfall-main-raid\treached",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -11504,7 +11632,8 @@
           "Cond\tobjective\t1\thollowmark-main-heart\treached",
           "Cond\tobjective\t1\thollowmark-main-courts\treached",
           "Cond\tobjective\t1\thollowmark-main-raid\treached",
-          "Cond\tobjective\t1\thollowmark-main-throne\treached"
+          "Cond\tobjective\t1\thollowmark-main-throne\treached",
+          "Cond\traid\tdefeated"
         ],
         "states": [],
         "actions": [
@@ -12954,6 +13083,19 @@
             "ashcombe-main-heart",
             "failed"
           ]
+        ]
+      },
+      "mainVictory": {
+        "conditions": [
+          "Cond\tobjective\t1\tashcombe-main-heart\treached",
+          "Cond\tobjective\t1\tashcombe-main-basin\treached",
+          "Cond\tobjective\t1\tashcombe-main-raid\treached",
+          "Cond\traid\tdefeated"
+        ],
+        "states": [],
+        "actions": [
+          "Action\tmessage\t1\tLiesl Ashby has fallen before she could reach the gate. The ashes of Ashcombe are yours.",
+          "Action\twin\t1"
         ]
       }
     },
