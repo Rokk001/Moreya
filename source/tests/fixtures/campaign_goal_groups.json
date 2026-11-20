@@ -1963,7 +1963,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe Order's raid lies in the bog and its bells are silent. Hollin Fen is yours.",
+          "Action\tmessage\t1\tThe Order's raid lies in the bog and its bells are silent. The Bone Chapel is yours.",
           "Action\twin\t1"
         ]
       }
@@ -2928,7 +2928,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe raid lies broken on the salt flats and its leader with it. Saltmere is yours.",
+          "Action\tmessage\t1\tThe raid lies broken on the salt flats and its leader with it. The Tomb of Whispers is yours.",
           "Action\twin\t1"
         ]
       }
@@ -2952,7 +2952,7 @@
         "Action\tobjectivestate\t1\tsaltmere-o02\treached"
       ],
       "flatHeld": [
-        "Action\tmessage\t1\tThe south flat is yours and the port gates are in range. Seward knows it, and both gate tunnels grind open.",
+        "Action\tmessage\t1\tThe south flat is yours and the port gates are in range. The port knows it, and both gate tunnels grind open.",
         "Action\treveal\t1\tPort",
         "Action\tterrain\t40\t78\t41\t78\tpath",
         "Action\tterrain\t48\t78\t49\t78\tpath",
@@ -2971,7 +2971,7 @@
         "Action\tobjectivestate\t1\tsaltmere-o04\treached"
       ],
       "portEntered": [
-        "Action\tmessage\t1\tHorns sound over the water. Seward has called every deckhand ashore.",
+        "Action\tmessage\t1\tHorns sound over the water. The port has called every deckhand ashore.",
         "Action\tspawn\t3\t40\t84\t1\tKnight:3\tKnight:2\tDwarf2:2\tMonk:2\tAdventurer:2"
       ]
     },
@@ -3964,7 +3964,7 @@
     },
     "preserved_actions": {
       "forge": [
-        "Action\tmessage\t1\tIronbridge forges the arms of the kingdom, master, and it does it between three rifts of molten rock. Every crossing is a stone bridge, and every bridgehead is guarded. Warden Gareth Fenn has a good deal of time, so use yours well.",
+        "Action\tmessage\t1\tThe Torment Cells lie between three rifts of molten rock, master. Every crossing is a stone bridge, and every bridgehead is guarded. Gareth Fenn is bringing the Anvil Host of Ironbridge in two raids of heavy iron, so use your time well.",
         "Action\tobjectiveid\t1\tironbridge-o01\tDestroy the heart in the north-east hold.",
         "Action\tobjectiveid\t1\tironbridge-o02\tCross all three rifts by their bridges.",
         "Action\ttimelimit\t5400"
@@ -3976,13 +3976,13 @@
         "Action\tmessage\t1\tThe ore dock feeds the rival hold. Hold it and he will starve his own forges."
       ],
       "rivalFalls": [
-        "Action\tmessage\t1\tThe rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.",
+        "Action\tmessage\t1\tThe rival keeper is gone, the Anvil Host lies in pieces and the Torment Cells are yours.",
         "Action\tobjectivestate\t1\tironbridge-o01\treached",
         "Action\twin\t1",
         "Action\tsetflag\tstoryVictorySent\t1"
       ],
       "rivalHeartDown": [
-        "Action\tmessage\t1\tThe rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.",
+        "Action\tmessage\t1\tThe rival keeper is gone, the Anvil Host lies in pieces and the Torment Cells are yours.",
         "Action\tobjectivestate\t1\tironbridge-o01\treached",
         "Action\twin\t1",
         "Action\tsetflag\tstoryVictorySent\t1"
@@ -5054,7 +5054,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now.",
+          "Action\tmessage\t1\tThe rival keeper is dead, the Pale Flame is snuffed out and the lamps of the Ossuary burn for you now.",
           "Action\twin\t1"
         ]
       }
@@ -5226,7 +5226,7 @@
     "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tThe rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now."
+      "action": "Action\tmessage\t1\tThe rival keeper is dead, the Pale Flame is snuffed out and the lamps of the Ossuary burn for you now."
     },
     "removed": {
       "creatures": [
@@ -5342,7 +5342,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tBoth keepers lie dead, the Black Legion is broken and the great roads are quiet. Varn has lost his crossing.",
+          "Action\tmessage\t1\tBoth keepers lie dead, the Black Legion is broken and the great roads are quiet. The Ember Pit is yours.",
           "Action\twin\t1"
         ]
       }
@@ -5378,12 +5378,12 @@
         "Action\treveal\t1\tWestRoad"
       ],
       "keepEntered": [
-        "Action\tmessage\t1\tYou stand inside the fortress. The marshal left his strongbox behind.",
+        "Action\tmessage\t1\tYou stand inside the fortress. An old strongbox has been left behind.",
         "Action\tgold\t1\t2000",
         "Action\tspawn\t4\t45\t27\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4"
       ],
       "mined1": [
-        "Action\tmessage\t1\tThe great seams are paying. Spend it before the next column arrives.",
+        "Action\tmessage\t1\tThe great seams are paying. Spend it before the Legion arrives.",
         "Action\tgold\t1\t800"
       ],
       "crossingPact": [
@@ -5633,7 +5633,7 @@
     "runtime_limit": "Static resource/footprint evidence only; claim takeover, bed/coop use, combat, save/load and runtime UI need integrator/Mario verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tBoth keepers lie dead, the Black Legion is broken and the great roads are quiet. Varn has lost his crossing."
+      "action": "Action\tmessage\t1\tBoth keepers lie dead, the Black Legion is broken and the great roads are quiet. The Ember Pit is yours."
     },
     "removed": {
       "triggers": [
@@ -6102,7 +6102,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours.",
+          "Action\tmessage\t1\tHilde Cairn lies among the stones she came to rob, and the Stone Crown has lost its shine. The Slag Pit is yours.",
           "Action\twin\t1"
         ]
       }
@@ -6273,7 +6273,7 @@
     "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours."
+      "action": "Action\tmessage\t1\tHilde Cairn lies among the stones she came to rob, and the Stone Crown has lost its shine. The Slag Pit is yours."
     },
     "removed": {
       "triggers": [
@@ -7477,7 +7477,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe rival heart is shattered and the crater is silent. Cinderhollow is yours.",
+          "Action\tmessage\t1\tThe rival heart is shattered, the Ember Ram is broken and the crater is silent. The Rack Hall is yours.",
           "Action\twin\t1"
         ]
       }
@@ -7583,7 +7583,7 @@
     "runtime_limit": "Static seam/wave-source/bank/bridge-action evidence only; real mining, battle, generated-bridge traversal, timers and save/load require runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tThe rival heart is shattered and the crater is silent. Cinderhollow is yours."
+      "action": "Action\tmessage\t1\tThe rival heart is shattered, the Ember Ram is broken and the crater is silent. The Rack Hall is yours."
     },
     "removed": {
       "triggers": [
@@ -7784,7 +7784,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tAlaric Penn lies dead on his own coin and his vault stands open. Goldspire is yours.",
+          "Action\tmessage\t1\tAlaric Penn lies on the coin he came to take, and the vault stands open. The Corpse Gate is yours.",
           "Action\twin\t1"
         ]
       }
@@ -7854,7 +7854,7 @@
     },
     "preserved_actions": {
       "rising": [
-        "Action\tmessage\t1\tGoldspire stands over the plateau like a coin on its edge, master. Treasurer Alaric Penn counts the kingdom's tax in its core and soldiers pour out of its gates day and night.",
+        "Action\tmessage\t1\tThe Corpse Gate stands over the plateau like a coin on its edge, master, and soldiers pour out of its old spire day and night. Alaric Penn is bringing the Gilded Hand of Goldspire to count what you have.",
         "Action\thint\t1\tMine gold and build an army.",
         "Action\tobjectiveid\t1\tgoldspire-o03\tTake the low town below the spire.",
         "Action\tportal\t1\toff"
@@ -7867,7 +7867,7 @@
         "Action\tspawn\t1\t21\t73\t1\tOrc:2\tGoblin:2"
       ],
       "roadWalked": [
-        "Action\tmessage\t1\tThe road to the spire. The treasurer has spies on the low town, so move quickly.",
+        "Action\tmessage\t1\tThe road to the spire. The spire has spies on the low town, so move quickly.",
         "Action\treveal\t1\tLowTown",
         "Action\treveal\t1\tYard"
       ],
@@ -7913,14 +7913,14 @@
         "Action\tspawn\t3\t66\t23\t1\tKnight:4\tElf:3\tMonk:3\tDwarf2:3"
       ],
       "coreSeen": [
-        "Action\tmessage\t1\tThe core of the spire. The vault captain keeps the key at the treasurer's table, and his guards are rising."
+        "Action\tmessage\t1\tThe core of the spire. The vault captain keeps the key at the old counting table, and his guards are rising."
       ],
       "alertFollowup": [
-        "Action\tmessage\t1\tThe treasurer is paying his soldiers with the tax. The vaults are thinner now.",
+        "Action\tmessage\t1\tThe spire is paying its soldiers from the vaults. The vaults are thinner now.",
         "Action\tgold\t1\t800"
       ],
       "lowGold": [
-        "Action\tmessage\t1\tThe plateau has paid for your army. Do not let the waves outpace you."
+        "Action\tmessage\t1\tThe plateau has paid for your army. Do not let the garrison outpace you."
       ],
       "southGateOpens": [
         "Action\tmessage\t1\tThe seal of the south gate gives way and the road onto the outer ring is open.",
@@ -8306,7 +8306,7 @@
     "runtime_limit": "Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tAlaric Penn lies dead on his own coin and his vault stands open. Goldspire is yours."
+      "action": "Action\tmessage\t1\tAlaric Penn lies on the coin he came to take, and the vault stands open. The Corpse Gate is yours."
     },
     "removed": {
       "triggers": [
@@ -9217,7 +9217,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe undead keeper is dust, the raid is broken and the bells hang silent. Bellwick is yours.",
+          "Action\tmessage\t1\tThe undead keeper is dust, the raid is broken and the bells hang silent. The Charnel Stair is yours.",
           "Action\twin\t1"
         ]
       }
@@ -9264,7 +9264,7 @@
     },
     "preserved_actions": {
       "tolling": [
-        "Action\tmessage\t1\tBellwick stands over its own dead, master. The abbey bells call the faithful to arms, and Abbot Lorens Bell keeps an undead keeper in the undercroft to bring the sleepers up.",
+        "Action\tmessage\t1\tThe Charnel Stair stands over its own dead, master, and an undead keeper in the undercroft brings the sleepers up. Lorens Bell is leading the Silent Bell of Bellwick down after you, with more monks than a quiet guild should need.",
         "Action\tobjectiveid\t1\tbellwick-o01\tDestroy the keeper's heart in the north undercroft.",
         "Action\thint\t1\tHold the nave against the faithful.",
         "Action\tportal\t2\toff"
@@ -9293,7 +9293,7 @@
         "Action\tobjectivestate\t1\tbellwick-o04\treached"
       ],
       "kills1": [
-        "Action\tmessage\t1\tThe sextons are dying faster than the abbot can send them. Strengthen your creatures while the nave is quiet.",
+        "Action\tmessage\t1\tThe sextons are dying faster than the abbey can send them. Strengthen your creatures while the nave is quiet.",
         "Action\tgold\t1\t800"
       ],
       "mined1": [
@@ -9392,7 +9392,7 @@
     "runtime_limit": "Static source and potential route evidence only; actual digging/movement, combat, gate timing and save/load remain for runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tThe undead keeper is dust, the raid is broken and the bells hang silent. Bellwick is yours."
+      "action": "Action\tmessage\t1\tThe undead keeper is dust, the raid is broken and the bells hang silent. The Charnel Stair is yours."
     },
     "removed": {
       "triggers": [
@@ -10886,7 +10886,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tBoth rival keepers are dead, the Ash Coven is broken and the fog lifts from Wraithwood. The wood is yours.",
+          "Action\tmessage\t1\tBoth rival keepers are dead, the Ash Coven is broken and the fog lifts from the Throne of Ash. The wood is yours.",
           "Action\twin\t1"
         ]
       }
@@ -10932,7 +10932,7 @@
     },
     "preserved_actions": {
       "mist": [
-        "Action\tmessage\t1\tMaster, Wraithwood is a forest of grey trunks and drifting fog. Two rival keepers hold the northern corners of the wood, and behind the Moreya gate the Ash Coven of Elowen Ash is gathering.",
+        "Action\tmessage\t1\tMaster, the Throne of Ash is a forest of grey trunks and drifting fog. Two rival keepers hold its northern corners, and behind the Moreya gate Elowen Ash is gathering the Ash Coven of Wraithwood in two groups.",
         "Action\tobjectiveid\t1\twraithwood-o01\tDestroy the rival heart in the north-west.",
         "Action\tobjectiveid\t1\twraithwood-o02\tDestroy the rival heart in the north-east.",
         "Action\tobjectiveid\t1\twraithwood-o03\tDefend your heart against the kingdom's heroes."
@@ -10949,7 +10949,7 @@
         "Action\treveal\t1\tPortalCave"
       ],
       "middle": [
-        "Action\tmessage\t1\tThe middle glade. The witch and the keeper watch it from both sides, and what one of them sees the other hears.",
+        "Action\tmessage\t1\tThe middle glade. The two rival keepers watch it from both sides, and what one of them sees the other hears.",
         "Action\treveal\t1\tNorthGlade",
         "Action\treveal\t1\tEastGlade"
       ],
@@ -10962,7 +10962,7 @@
         "Action\tspawn\t2\t71\t15\t1\tTroll:5\tOrc:5\tOrc:5\tGoblin:5"
       ],
       "bond": [
-        "Action\tmessage\t1\tThe witch-warden and the rival keeper have sent one pack to each other. Whichever heart you strike, the other will answer.",
+        "Action\tmessage\t1\tThe two rival keepers have sent one pack to each other. Whichever heart you strike, the other will answer.",
         "Action\tspawn\t2\t28\t15\t1\tOrc:5\tTroll:5\tGoblin:5",
         "Action\tspawn\t3\t71\t15\t1\tDarkElf:5\tCultist:5\tSpider:5"
       ],
@@ -11021,7 +11021,7 @@
     "runtime_limit": "Static heart-seat/location and region evidence only; actual heart destruction, combat, icon updates and save/load need runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tBoth rival keepers are dead, the Ash Coven is broken and the fog lifts from Wraithwood. The wood is yours."
+      "action": "Action\tmessage\t1\tBoth rival keepers are dead, the Ash Coven is broken and the fog lifts from the Throne of Ash. The wood is yours."
     },
     "removed": {
       "creatures": [
@@ -11171,7 +11171,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours.",
+          "Action\tmessage\t1\tThe prince is beaten and his champions are in your hands. The Sun Court has set, and the Hall of Skulls is yours.",
           "Action\twin\t1"
         ]
       }
@@ -11243,7 +11243,7 @@
     },
     "preserved_actions": {
       "hunt": [
-        "Action\tmessage\t1\tKingsfall, master, where Prince Aurel hunts and where he has made his stand. His champions are Falconer Edda, Huntsman Brann and Squire Wick, and a keeper who wants the crown must take them alive.",
+        "Action\tmessage\t1\tThe Hall of Skulls, master, and Prince Aurel is coming for it himself with the Sun Court of Kingsfall. His champions Falconer Edda, Huntsman Brann and Squire Wick came ahead to hunt here, and a keeper who wants to hurt a prince takes them alive.",
         "Action\tobjectiveid\t1\tkingsfall-o01\tCapture or convert Edda, Brann and Wick.",
         "Action\tobjectiveid\t1\tkingsfall-o03\tGather at least 12 creatures at your heart."
       ],
@@ -11253,7 +11253,7 @@
         "Action\treveal\t1\tRavine"
       ],
       "meadows": [
-        "Action\tmessage\t1\tThe south meadows. The prince lets his hunting parties range here.",
+        "Action\tmessage\t1\tThe south meadows. The prince's hunting parties range here.",
         "Action\tspawn\t3\t48\t55\t1\tKnight:4\tElf:4\tMonk:3\tAdventurer:3"
       ],
       "ravineSeen": [
@@ -11276,11 +11276,11 @@
         "Action\treveal\t1\tKeep"
       ],
       "cacheSeen": [
-        "Action\tmessage\t1\tThe prince hid his hunting purse here. It will pay for a larger prison.",
+        "Action\tmessage\t1\tThe prince's hunters hid his hunting purse here. It will pay for a larger prison.",
         "Action\tgold\t1\t2000"
       ],
       "keepSeen": [
-        "Action\tmessage\t1\tThe keep of the prince. The last of his guard stands between you and the court.",
+        "Action\tmessage\t1\tThe keep the champions hold for the prince. The last of their guard stands in it.",
         "Action\tspawn\t3\t50\t19\t1\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:4"
       ],
       "mined1": [
@@ -11311,7 +11311,7 @@
         "Action\taddflag\tchampions\t1"
       ],
       "centreWell": [
-        "Action\tmessage\t1\tThe royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a Ziv.",
+        "Action\tmessage\t1\tThe royal glade is yours, and a spring of mana has opened where the hunters used to rest. Claim it with a Ziv.",
         "Action\tterrain\t49\t35\t49\t35\tmanawell"
       ],
       "cacheKey": [
@@ -11493,7 +11493,7 @@
     "runtime_limit": "Static script/bridge/path/recruitment-source evidence only; actual capture/conversion,12creature assembly,KO handling,battles and save/load need runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tThe prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours."
+      "action": "Action\tmessage\t1\tThe prince is beaten and his champions are in your hands. The Sun Court has set, and the Hall of Skulls is yours."
     },
     "removed": {
       "triggers": [
@@ -11637,7 +11637,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tHigh King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours.",
+          "Action\tmessage\t1\tSabine Rook and High King Castellan have fallen, and the crown lies in the Heart of Moreya. Moreya is yours.",
           "Action\twin\t1"
         ]
       },
@@ -11852,7 +11852,7 @@
     },
     "preserved_actions": {
       "siege": [
-        "Action\tmessage\t1\tThe capital, master. Three walled courts climb to an empty throne: High King Castellan has gathered the Crown Eternal behind the Moreya gate, two raids strong.",
+        "Action\tmessage\t1\tThe Heart of Moreya, master. Three walled courts climb to an empty throne, and High King Castellan has gathered the Crown Eternal of Hollowmark Citadel behind the Moreya gate: Sabine Rook leads the first raid, the king the second.",
         "Action\tobjectiveid\t1\thollowmarkcitadel-o02\tCross all three courts; take towers to open upper gates.",
         "Action\tobjectiveid\t1\thollowmarkcitadel-o03\tSurvive the hero attacks."
       ],
@@ -11908,11 +11908,11 @@
         "Action\tspawn\t3\t58\t24\t1\tKnight:6\tKnight:6\tElf:6\tMonk:6"
       ],
       "mined1": [
-        "Action\tmessage\t1\tThe royal seams are paying. Spend it before the next column arrives.",
+        "Action\tmessage\t1\tThe royal seams are paying. Spend it before the next raid arrives.",
         "Action\tgold\t1\t800"
       ],
       "kills1": [
-        "Action\tmessage\t1\tThe capital runs red. Your creatures fight on.",
+        "Action\tmessage\t1\tThe courts run red. Your creatures fight on.",
         "Action\tgold\t1\t1200"
       ],
       "goalHeartSafe3BeforeKingDead": [
@@ -12357,7 +12357,7 @@
     },
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tHigh King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours."
+      "action": "Action\tmessage\t1\tSabine Rook and High King Castellan have fallen, and the crown lies in the Heart of Moreya. Moreya is yours."
     },
     "removed": {
       "triggers": [
@@ -13094,7 +13094,7 @@
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tLiesl Ashby has fallen before she could reach the gate. The ashes of Ashcombe are yours.",
+          "Action\tmessage\t1\tLiesl Ashby has fallen before she could reach the gate. The ashes of the Iron Maw are yours.",
           "Action\twin\t1"
         ]
       }
@@ -13124,11 +13124,11 @@
     },
     "preserved_actions": {
       "smoulder": [
-        "Action\tmessage\t1\tThe Ashcombe valley still smokes from an old fire, master, and Warden Liesl Ashby has mounted her wagons to flee over the northern pass. You have most of an hour before she is gone.",
+        "Action\tmessage\t1\tThe Iron Maw still smokes from an old fire, master. Liesl Ashby is bringing the Burnt Wheel of Ashcombe in two groups, and she has a talent for leaving in a hurry, so keep an eye on the gate.",
         "Action\tobjectiveid\t1\tashcombe-o02\tCross the ash basin."
       ],
       "basinEntered": [
-        "Action\tmessage\t1\tThe ash is deep here and the lava cracks run in all directions. Her sentries watch the dunes, so keep your creatures close together.",
+        "Action\tmessage\t1\tThe ash is deep here and the lava cracks run in all directions. Sentries watch the dunes, so keep your creatures close together.",
         "Action\treveal\t1\tTrail"
       ],
       "ruinsFound": [
@@ -13136,7 +13136,7 @@
         "Action\treveal\t1\tNorthHall"
       ],
       "hollowFound": [
-        "Action\tmessage\t1\tThe east hollow joins the warden road from below. Gold lies in its walls, if you can hold it.",
+        "Action\tmessage\t1\tThe east hollow joins the old road from below. Gold lies in its walls, if you can hold it.",
         "Action\treveal\t1\tApproach"
       ],
       "wagonsMoving": [
@@ -13152,7 +13152,7 @@
       ]
     },
     "victory_narration": {
-      "action": "Action\tmessage\t1\tLiesl Ashby has fallen before she could reach the gate. The ashes of Ashcombe are yours.",
+      "action": "Action\tmessage\t1\tLiesl Ashby has fallen before she could reach the gate. The ashes of the Iron Maw are yours.",
       "trigger": "mainVictory"
     },
     "reachability": {

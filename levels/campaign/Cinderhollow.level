@@ -5144,7 +5144,7 @@ Region	AshPocket	43	72	46	75
 Name	firstLight
 Mode	once
 Cond	time	3
-Action	message	1	Pell Ashgrove has sent for the soldiers of the kingdom, master. They will come down into the hollow in three waves, and a rival keeper has taken the crater rim in the north-east.
+Action	message	1	Pell Ashgrove is leading the Ember Ram of Cinderhollow down to the Rack Hall in two groups, master, and a rival keeper has already taken the crater rim in the north-east.
 Action	objectiveid	1	cinderhollow-o01	Defeat the rival keeper.
 Action	objectiveid	1	cinderhollow-o02	Empty both starting gold seams: west and south.
 Action	objectiveid	1	cinderhollow-o04	Cross the lava bridge to the crater.
@@ -5153,7 +5153,7 @@ Action	objectiveid	1	cinderhollow-o04	Cross the lava bridge to the crater.
 Name	westRoad
 Mode	once
 Cond	region	1	WestRoad
-Action	message	1	The west road is the way the first column will take. A crypt and an alarm would serve you well at the narrow places.
+Action	message	1	The west road is narrow in all the right places. A crypt and an alarm would serve you well here.
 Action	reveal	1	NorthWayGate
 [/Trigger]
 [Trigger]
@@ -5187,7 +5187,7 @@ Action	message	1	The seams hold. You can afford stronger doors and heavier traps
 Name	eastWatch
 Mode	once
 Cond	region	1	EastGateZone
-Action	message	1	The east cave is the second gate of the hollow. The soldiers will arrive here after the first column has fallen.
+Action	message	1	The east cave is the second gate of the hall. Keep an eye on it; not every visitor uses the front door.
 [/Trigger]
 [Trigger]
 Name	craterSeen
@@ -5395,7 +5395,7 @@ Cond	objective	1	cinderhollow-main-raid	reached
 Cond	objective	1	cinderhollow-main-bridge	reached
 Cond	objective	1	cinderhollow-main-rival	reached
 Cond	raid	defeated
-Action	message	1	The rival heart is shattered and the crater is silent. Cinderhollow is yours.
+Action	message	1	The rival heart is shattered, the Ember Ram is broken and the crater is silent. The Rack Hall is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]

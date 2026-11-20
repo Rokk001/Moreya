@@ -3921,7 +3921,7 @@ Region	StoneChamber	8	100	11	103
 Name	tolling
 Mode	once
 Cond	time	3
-Action	message	1	Bellwick stands over its own dead, master. The abbey bells call the faithful to arms, and Abbot Lorens Bell keeps an undead keeper in the undercroft to bring the sleepers up.
+Action	message	1	The Charnel Stair stands over its own dead, master, and an undead keeper in the undercroft brings the sleepers up. Lorens Bell is leading the Silent Bell of Bellwick down after you, with more monks than a quiet guild should need.
 Action	objectiveid	1	bellwick-o01	Destroy the keeper's heart in the north undercroft.
 Action	hint	1	Hold the nave against the faithful.
 Action	portal	2	off
@@ -3965,7 +3965,7 @@ Action	objectivestate	1	bellwick-o04	reached
 Name	kills1
 Mode	once
 Cond	kills	1	>=	12
-Action	message	1	The sextons are dying faster than the abbot can send them. Strengthen your creatures while the nave is quiet.
+Action	message	1	The sextons are dying faster than the abbey can send them. Strengthen your creatures while the nave is quiet.
 Action	gold	1	800
 [/Trigger]
 [Trigger]
@@ -4112,7 +4112,7 @@ Cond	objective	1	bellwick-main-nave	reached
 Cond	objective	1	bellwick-main-keeper	reached
 Cond	objective	1	bellwick-main-raid	reached
 Cond	raid	defeated
-Action	message	1	The undead keeper is dust, the raid is broken and the bells hang silent. Bellwick is yours.
+Action	message	1	The undead keeper is dust, the raid is broken and the bells hang silent. The Charnel Stair is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]

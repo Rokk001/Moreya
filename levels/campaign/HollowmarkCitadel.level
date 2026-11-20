@@ -5775,7 +5775,7 @@ Region	EastTower3	92	12	110	28
 Name	siege
 Mode	once
 Cond	time	3
-Action	message	1	The capital, master. Three walled courts climb to an empty throne: High King Castellan has gathered the Crown Eternal behind the Moreya gate, two raids strong.
+Action	message	1	The Heart of Moreya, master. Three walled courts climb to an empty throne, and High King Castellan has gathered the Crown Eternal of Hollowmark Citadel behind the Moreya gate: Sabine Rook leads the first raid, the king the second.
 Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.
 Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.
 [/Trigger]
@@ -5867,14 +5867,14 @@ Action	spawn	3	58	24	1	Knight:6	Knight:6	Elf:6	Monk:6
 Name	mined1
 Mode	once
 Cond	mined	1	>=	5000
-Action	message	1	The royal seams are paying. Spend it before the next column arrives.
+Action	message	1	The royal seams are paying. Spend it before the next raid arrives.
 Action	gold	1	800
 [/Trigger]
 [Trigger]
 Name	kills1
 Mode	once
 Cond	kills	1	>=	50
-Action	message	1	The capital runs red. Your creatures fight on.
+Action	message	1	The courts run red. Your creatures fight on.
 Action	gold	1	1200
 [/Trigger]
 [Trigger]
@@ -6195,7 +6195,7 @@ Cond	objective	1	hollowmark-main-courts	reached
 Cond	objective	1	hollowmark-main-raid	reached
 Cond	objective	1	hollowmark-main-throne	reached
 Cond	raid	defeated
-Action	message	1	High King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours.
+Action	message	1	Sabine Rook and High King Castellan have fallen, and the crown lies in the Heart of Moreya. Moreya is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]

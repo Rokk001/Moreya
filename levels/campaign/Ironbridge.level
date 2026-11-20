@@ -4334,7 +4334,7 @@ Region	RivalKeep	94	3	110	24
 Name	forge
 Mode	once
 Cond	time	3
-Action	message	1	Ironbridge forges the arms of the kingdom, master, and it does it between three rifts of molten rock. Every crossing is a stone bridge, and every bridgehead is guarded. Warden Gareth Fenn has a good deal of time, so use yours well.
+Action	message	1	The Torment Cells lie between three rifts of molten rock, master. Every crossing is a stone bridge, and every bridgehead is guarded. Gareth Fenn is bringing the Anvil Host of Ironbridge in two raids of heavy iron, so use your time well.
 Action	objectiveid	1	ironbridge-o01	Destroy the heart in the north-east hold.
 Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.
 Action	timelimit	5400
@@ -4588,7 +4588,7 @@ Cond	objective	1	ironbridge-main-home	reached
 Cond	objective	1	ironbridge-main-spans	reached
 Cond	objective	1	ironbridge-main-sites	reached
 Cond	objective	1	ironbridge-main-hold	reached
-Action	message	1	The rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.
+Action	message	1	The rival keeper is gone, the Anvil Host lies in pieces and the Torment Cells are yours.
 Action	objectivestate	1	ironbridge-o01	reached
 Action	win	1
 Action	setflag	storyVictorySent	1
@@ -4615,7 +4615,7 @@ Cond	objective	1	ironbridge-main-home	reached
 Cond	objective	1	ironbridge-main-spans	reached
 Cond	objective	1	ironbridge-main-sites	reached
 Cond	objective	1	ironbridge-main-hold	reached
-Action	message	1	The rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.
+Action	message	1	The rival keeper is gone, the Anvil Host lies in pieces and the Torment Cells are yours.
 Action	objectivestate	1	ironbridge-o01	reached
 Action	win	1
 Action	setflag	storyVictorySent	1

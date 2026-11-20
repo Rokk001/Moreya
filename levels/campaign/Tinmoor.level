@@ -1791,7 +1791,7 @@ Region	Seams	14	8	50	34
 Name	shiftBell
 Mode	once
 Cond	time	3
-Action	message	1	The Tinmoor miners know every shaft and every seam, my lord, and the warden sits behind two of their watch posts. You have little gold, so start with the seams.
+Action	message	1	The Bleeding Seam has two watch posts and more shafts than anyone can count, my lord, and the Deep Picks of Tinmoor know every one of them. You have little gold, so start with the seams.
 Action	objectiveid	1	tinmoor-o01	Defeat the raid and its leader.
 Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.
 [/Trigger]
@@ -1799,7 +1799,7 @@ Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.
 Name	seamsFilled
 Mode	once
 Cond	mined	1	>=	900
-Action	message	1	That is a good haul. Doors will keep the miners off your back.
+Action	message	1	That is a good haul. Doors will keep the watch posts off your back.
 Action	reveal	1	PostA
 Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.
 Action	objectivestate	1	tinmoor-o02	reached
@@ -1825,7 +1825,7 @@ Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.
 Name	postBEntered
 Mode	once
 Cond	region	1	PostB
-Action	message	1	Merrin Tay has heard you. Her best are in that post.
+Action	message	1	The upper post has heard you. Its best are waiting for you.
 Action	spawn	3	58	15	1	Knight:2	Adventurer:2	Monk:2
 Action	reveal	1	Chamber
 Action	setflag	postBAlarm	1

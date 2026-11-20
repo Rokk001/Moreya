@@ -1454,7 +1454,7 @@ Region	Cellar	3	24	4	25
 Name	ferns
 Mode	once
 Cond	time	3
-Action	message	1	My lord, Brackenford is rich in gold and thin in soldiers. You have gold to spend, so spend it on rooms.
+Action	message	1	My lord, the Mold Pit is rich in gold and thin in guards, and the Mud Fists of Brackenford have heard about the gold. You have gold to spend, so spend it on rooms before they arrive.
 Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.
 Action	objectiveid	1	brackenford-o02	Build a dormitory.
 [/Trigger]
@@ -1490,7 +1490,7 @@ Action	objectivestate	1	brackenford-o04	reached
 Name	landingSeen
 Mode	once
 Cond	region	1	Landing
-Action	message	1	The ford folk have seen you. Expect them to come down the bank.
+Action	message	1	The guards of the landing have seen you. Expect them to come down the bank.
 Action	spawn	3	36	23	1	Adventurer:1	Adventurer:1
 Action	setflag	fordRaised	1
 [/Trigger]
@@ -1553,7 +1553,7 @@ Name	villageOpen
 Mode	once
 Cond	flag	fordRaised	1
 Cond	kills	1	>=	4
-Action	message	1	The landing is clear. The village and the keep lie behind it.
+Action	message	1	The landing is clear. The old huts and the keep lie behind it.
 Action	reveal	1	Village
 Action	reveal	1	Keep
 Action	objectiveid	1	brackenford-o06	Claim the keep.

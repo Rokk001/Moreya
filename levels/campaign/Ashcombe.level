@@ -3436,14 +3436,14 @@ Region	GoalOutsideHold04	73	22	89	75
 Name	smoulder
 Mode	once
 Cond	time	3
-Action	message	1	The Ashcombe valley still smokes from an old fire, master, and Warden Liesl Ashby has mounted her wagons to flee over the northern pass. You have most of an hour before she is gone.
+Action	message	1	The Iron Maw still smokes from an old fire, master. Liesl Ashby is bringing the Burnt Wheel of Ashcombe in two groups, and she has a talent for leaving in a hurry, so keep an eye on the gate.
 Action	objectiveid	1	ashcombe-o02	Cross the ash basin.
 [/Trigger]
 [Trigger]
 Name	basinEntered
 Mode	once
 Cond	region	1	Basin
-Action	message	1	The ash is deep here and the lava cracks run in all directions. Her sentries watch the dunes, so keep your creatures close together.
+Action	message	1	The ash is deep here and the lava cracks run in all directions. Sentries watch the dunes, so keep your creatures close together.
 Action	reveal	1	Trail
 [/Trigger]
 [Trigger]
@@ -3457,7 +3457,7 @@ Action	reveal	1	NorthHall
 Name	hollowFound
 Mode	once
 Cond	region	1	EastHollow
-Action	message	1	The east hollow joins the warden road from below. Gold lies in its walls, if you can hold it.
+Action	message	1	The east hollow joins the old road from below. Gold lies in its walls, if you can hold it.
 Action	reveal	1	Approach
 [/Trigger]
 [Trigger]
@@ -3550,7 +3550,7 @@ Cond	objective	1	ashcombe-main-heart	reached
 Cond	objective	1	ashcombe-main-basin	reached
 Cond	objective	1	ashcombe-main-raid	reached
 Cond	raid	defeated
-Action	message	1	Liesl Ashby has fallen before she could reach the gate. The ashes of Ashcombe are yours.
+Action	message	1	Liesl Ashby has fallen before she could reach the gate. The ashes of the Iron Maw are yours.
 Action	win	1
 [/Trigger]
 [/Triggers]
