@@ -445,6 +445,7 @@ set(OD_SOURCEFILES
     ${SRC}/game/CombatGroupRules.cpp
     ${SRC}/game/RaidManager.cpp
     ${SRC}/game/RaidRules.cpp
+    ${SRC}/game/HandLimitRules.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/ItemDrops.cpp
     ${SRC}/game/CreaturePanelData.cpp

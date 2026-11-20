@@ -29,6 +29,7 @@
 
 class Creature;
 class GameMap;
+class ItemBagEntity;
 class Room;
 class RoomPortalWave;
 class Seat;
@@ -87,13 +88,18 @@ struct RaidGroupData
     std::string mLeaderSpawned;
     //! \brief Flight of the leader.
     RaidLeaderState mLeaderState;
+    //! \brief Names of the members that follow their fleeing leader to the gate (every member still standing when he
+    //! started to flee).
+    std::vector<std::string> mFollowers;
+    //! \brief Names of the members other than the leader that escaped through the gate (they count as defeated).
+    std::vector<std::string> mEscapedMembers;
 };
 
 //! \brief Server side. The raid of a level: the Moreya gate (an unclaimable, indestructible hero portal room that shows
 //! the gate model), the countdown from the level start until the gate opens, the early opening by the player, the raid
 //! groups that come through the gate one after the other, their march to the dungeon heart of the attacked keeper with
-//! the plundering of the treasuries on the way, the flight of a raid leader to the gate and the defeat of the whole
-//! raid. The level data is the [Raid] section of the level file; a saved game adds the running state. Without a [Raid]
+//! the plundering of the treasuries on the way, the looting of the items fallen keeper creatures dropped, the flight of
+//! a raid leader to the gate with the members of his group that follow him, and the defeat of the whole raid. The level data is the [Raid] section of the level file; a saved game adds the running state. Without a [Raid]
 //! section nothing happens, so skirmish and multiplayer games stay as they are. Only the level that is played is
 //! attacked: the raid exists only in the level file that is loaded.
 class RaidManager
@@ -130,14 +136,33 @@ public:
     //! open the gate early; false when it shows the time to the next group.
     bool isGateClosed() const;
 
-    //! \brief True when the creature is a raid leader that flees to the gate (it takes part in no fight).
+    //! \brief True when the creature is a raid leader that flees to the gate, or a member of his group that follows
+    //! him there (it takes part in no fight).
     bool isEscaping(const std::string& creatureName) const;
 
-    //! \brief The standing order of a raid member that has nothing else to do: a fleeing leader runs to the gate, the
-    //! leader of a raid group leads it to the dungeon heart of the attacked keeper and turns aside to the treasuries on
-    //! the way. Called before the orders of the level script.
+    //! \brief The standing order of a raid member that has nothing else to do: a fleeing leader and the members that
+    //! follow him run to the gate, the leader of a raid group loots the items fallen keeper creatures dropped, leads
+    //! his group to the dungeon heart of the attacked keeper and turns aside to the treasuries on the way. Called
+    //! before the orders of the level script.
     //! \return True when the order takes the turn of the creature.
     bool doCreatureOrder(Creature& creature);
+
+    //! \brief A standing raid member that does not flee, does not fight and has a free inventory slot loots an item a
+    //! fallen keeper creature dropped that it sees and can reach: on the tile of the item it takes it, else it walks
+    //! there. Called by the formation of the raid members and by the raid order of the leader.
+    //! \return True when the creature takes an item or walks to one now (this takes its turn).
+    bool doLoot(Creature& creature);
+
+    //! \brief A keeper creature died and dropped the item bag: raid members may loot it (RA12). Ignored without a raid,
+    //! on a client and for a creature that is not a keeper's.
+    void registerFallenDrop(const Creature& fallen, const ItemBagEntity& bag);
+
+    //! \brief The tile in the middle of the gate, nullptr without a raid. A raid group retreats towards it.
+    Tile* getGateTile() const;
+
+    //! \brief The gold the raid member can carry: the gold of RaidCarryTilesSmall treasury tiles
+    //! (TreasuryGoldPerTile), of RaidCarryTilesLarge tiles for a member of a class of RaidLargeMemberClasses.
+    static double carryCapacity(const Creature& creature);
 
     //! \brief Level script condition "raid": arrived (every raid group came, or the given one), defeated (the whole
     //! raid with its leaders), escaped (a leader escaped through the gate), fleeing (a leader flees) and open (the gate
@@ -194,18 +219,25 @@ private:
     void spawnGroup(uint32_t index);
 
     //! \brief Every raid member standing on a tile of a treasury (or a dungeon heart) of a keeper that is an enemy of
-    //! the raid takes its share of the gold, once per room.
+    //! the raid takes gold from it until it carries what it can carry (carryCapacity).
     void plunder();
 
-    //! \brief Starts the flight of the leaders whose groups have fallen and ends it at the gate.
+    //! \brief Starts the flight of the leaders whose groups have fallen (the standing members follow them) and ends it
+    //! at the gate for the leaders and their followers.
     void updateLeaders();
 
-    //! \brief The leader reached the gate: he leaves the map with what he carries and the level is lost. Only a leader
-    //! leaves through the gate so far; when other members are to leave too, they get a state like RaidLeaderState in
-    //! RaidGroupData, isStanding counts them as fallen and isStateMet as defeated, and their gold is lost with them.
+    //! \brief The leader reached the gate: he leaves the map with what he carries and the level is lost.
     void escape(RaidGroupData& group, Creature& leader);
 
-    //! \brief True while a raid member stands: alive on the map, not imprisoned and not won over by a keeper.
+    //! \brief A member that follows its fleeing leader reached the gate: it leaves the map with the gold and the items it
+    //! carries (they are lost for the keeper) and counts as defeated; the level is not lost by it.
+    void escapeMember(RaidGroupData& group, Creature& member);
+
+    //! \brief Forgets the loot bags that are no longer on the map (taken, carried off or gone).
+    void forgetMissingLoot();
+
+    //! \brief True while a raid member stands: alive (unconscious included), on the map or in a keeper's hand, not
+    //! imprisoned and not won over by a keeper. Dead, imprisoned, converted and escaped members have fallen.
     bool isStanding(const std::string& creatureName) const;
 
     //! \brief True when the creature stands on the gate (a tile of the gate room or near the gate tile).
@@ -248,6 +280,8 @@ private:
     bool mLost;
     //! \brief The rooms each raid member already plundered: (creature name, room name).
     std::set<std::pair<std::string, std::string> > mPlundered;
+    //! \brief Names of the item bags fallen keeper creatures dropped that raid members may loot.
+    std::set<std::string> mLoot;
     //! \brief Transient: true once the gate room shows the gate model in this game.
     bool mGateShown;
     //! \brief Transient: true once the bonus level message was logged.

@@ -223,9 +223,9 @@ def read_raid(s):
     """Mirror of RaidManager::importFromStream, read after the [Raid] tag.
 
     Each line is a kind token and its fields up to [/Raid]: Gate, Seats, Countdown, Interval, EscapeShare, Group,
-    Member (level data) and State, Arrived, Plundered (saved games). Any other kind, a missing field, a raid group 0,
-    a Member or Arrived line of a raid group without Group line, an unknown leader state or a section without Gate
-    line refuses the save, as the loader does."""
+    Member (level data) and State, Arrived, Plundered, Follower, Escaped, Loot (saved games). Any other kind, a missing
+    field, a raid group 0, a Member, Arrived, Follower or Escaped line of a raid group without Group line, an unknown
+    leader state or a section without Gate line refuses the save, as the loader does."""
     groups = set()
     has_gate = False
     while True:
@@ -259,6 +259,10 @@ def read_raid(s):
                 and is_int(f[3]) and int(f[3]) >= 0 and len(f) >= 4 + int(f[3])
         elif t == "Plundered":
             ok = len(f) >= 2
+        elif t in ("Follower", "Escaped"):
+            ok = len(f) >= 2 and is_int(f[0]) and int(f[0]) in groups
+        elif t == "Loot":
+            ok = len(f) >= 1
         else:
             fail("unknown line in [Raid]: " + t)
         if not ok:
@@ -357,8 +361,12 @@ def read_seat(s, save):
     t = s.need("seat block")
     while t in ("[ResearchProgress]", "[HadLibrary]", "[StoredSpecials]", "[AnnouncedCreatureClasses]", "[Infirmary]",
                 "[SpellCooldowns]", "[Merchant]", "[MerchantBalance]", "[GhostRoom]", "[GhostBells]",
-                "[ResearchRemainder]", "[WorkerJobs]", "[PleasureRoomSettings]"):
-        if t == "[PleasureRoomSettings]":
+                "[ResearchRemainder]", "[WorkerJobs]", "[PleasureRoomSettings]", "[HandCooldown]"):
+        if t == "[HandCooldown]":
+            cooldown = s.number("hand cooldown")
+            if cooldown < 0.0 or s.need("[/HandCooldown]") != "[/HandCooldown]":
+                fail("seat %d: hand cooldown block invalid" % seat_id)
+        elif t == "[PleasureRoomSettings]":
             values = [s.integer("pleasure room setting") for _ in range(3)]
             if any(value not in (0, 1) for value in values):
                 fail("seat %d: invalid pleasure room setting" % seat_id)

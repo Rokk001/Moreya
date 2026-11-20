@@ -35,6 +35,7 @@
 #include "giftboxes/GiftBoxBonus.h"
 #include "game/Campaign.h"
 #include "game/SandboxProgress.h"
+#include "game/HandLimitRules.h"
 #include "game/HeartHealthRing.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -260,6 +261,14 @@ const float MINIMAP_ZOOM_REFRESH_SECONDS = 0.5f;
 
 //! Character height of the pointer info text at unscaled GUI size, as set when its text box is created.
 const float POINTER_TEXT_BASE_HEIGHT = 16.0f;
+
+//! Place of the hand cooldown text (HL2) at unscaled GUI size: in the column of the pointer text, in the line above it,
+//! so that neither the action icon nor the held creature icons cover it.
+const float HAND_COOLDOWN_TEXT_OFFSET_X = POINTER_TEXT_OFFSET_X;
+const float HAND_COOLDOWN_TEXT_OFFSET_Y = 4.0f;
+//! Width of one character of the hand cooldown text as a share of its height (an upper bound for the overlay font),
+//! used to keep the text inside the screen.
+const float HAND_COOLDOWN_CHAR_WIDTH_SHARE = 0.6f;
 
 //! Degrees the camera orbits per pixel of mouse movement while X or the middle mouse button is held.
 const float MOUSE_ORBIT_DEGREES_PER_PIXEL = 0.25f;
@@ -3432,6 +3441,8 @@ void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
     updateTrapProductionButtons();
 }
 
+//! \brief Starts the defeat sequence: the interface, the pointer and the texts that follow it (pointer text, hand
+//! cooldown) disappear and the camera cuts to the lost heart.
 void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, int32_t heartTileY)
 {
     OD_LOG_INF("Defeat sequence requested: conquerorSeatId=" + Helper::toString(conquerorSeatId)
@@ -3453,6 +3464,7 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
     // The pointer, the hand and the texts that follow it disappear with the interface
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
     RenderManager& renderManager = RenderManager::getSingleton();
     if(renderManager.isKeeperHandVisible())
         renderManager.rrToggleHandSelectorVisibility();
@@ -5009,6 +5021,29 @@ float GameMode::getHandFeedbackScale() const
     return mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / HAND_ACTION_ICON_DESIGN_SIZE;
 }
 
+//! \brief Shows the seconds left of the hand cooldown of a campaign level next to the hand (HL2), scaled like the
+//! pointer text and kept inside the screen; the text is empty while no cooldown runs.
+void GameMode::refreshHandCooldownText(float pointerX, float pointerY, float scale)
+{
+    TextRenderer& textRenderer = TextRenderer::getSingleton();
+    const Player* player = mGameMap->getLocalPlayer();
+    const std::string text = ((player == nullptr) || mDefeatSequence.isStarted()) ? std::string() :
+        HandLimitRules::cooldownText(player->getHandCooldownSeconds());
+    textRenderer.setText(ODApplication::HAND_COOLDOWN_STRING, text);
+    if(text.empty())
+        return;
+
+    const float height = POINTER_TEXT_BASE_HEIGHT * scale;
+    const float width = static_cast<float>(text.size()) * height * HAND_COOLDOWN_CHAR_WIDTH_SHARE;
+    const CEGUI::Sizef screen = CEGUI::System::getSingleton().getDefaultGUIContext().getSurfaceSize();
+    float left = 0.0f;
+    float top = 0.0f;
+    HandLimitRules::cooldownTextPlace(pointerX, pointerY, HAND_COOLDOWN_TEXT_OFFSET_X * scale,
+        HAND_COOLDOWN_TEXT_OFFSET_Y * scale, width, height, screen.d_width, screen.d_height, left, top);
+    textRenderer.setCharacterHeight(ODApplication::HAND_COOLDOWN_STRING, height);
+    textRenderer.moveText(ODApplication::HAND_COOLDOWN_STRING, left, top);
+}
+
 void GameMode::setHighlightedCreature(Creature* creature)
 {
     InputManager& inputManager = mModeManager->getInputManager();
@@ -5140,6 +5175,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         POINTER_TEXT_BASE_HEIGHT * pointerScale);
     TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
         pointer.d_x + POINTER_TEXT_OFFSET_X * pointerScale, pointer.d_y + POINTER_TEXT_OFFSET_Y * pointerScale);
+    refreshHandCooldownText(pointer.d_x, pointer.d_y, pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
@@ -5544,6 +5580,7 @@ void GameMode::notifyPossessionStarted()
     mPlayerSelection.setCurrentAction(SelectedAction::none);
     unselectAllTiles();
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
 
     // The own view of the creature: no keeper interface, a crosshair, the mouse kept in the window
     enterPossessionView();
@@ -5638,6 +5675,7 @@ void GameMode::refreshPossessionView()
 
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
 
     // The view is in the eyes of the creature, its own model is not shown
     Creature* creature = mGameMap->getCreature(mPossessionViewCreatureName);

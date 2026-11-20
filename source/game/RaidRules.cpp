@@ -113,9 +113,22 @@ bool isRaidDefeated(bool allGroupsArrived, uint32_t spawned, uint32_t standing, 
     return allGroupsArrived && (spawned > 0) && (standing == 0) && !leaderEscaped;
 }
 
-//! \brief min(perMember, stored), not below 0.
-double plunderAmount(double stored, double perMember)
+//! \brief Looks the class up in the list of the large classes (exact spelling).
+bool isLargeMember(const std::string& className, const std::vector<std::string>& largeClasses)
 {
-    return std::max(0.0, std::min(stored, perMember));
+    return std::find(largeClasses.begin(), largeClasses.end(), className) != largeClasses.end();
+}
+
+//! \brief Tiles of the member's size times the gold of one treasury tile, not below 0.
+double carryCapacity(bool large, double goldPerTile, double smallTiles, double largeTiles)
+{
+    const double tiles = large ? largeTiles : smallTiles;
+    return std::max(0.0, tiles * goldPerTile);
+}
+
+//! \brief min(stored, capacity - carried), not below 0.
+double plunderAmount(double stored, double carried, double capacity)
+{
+    return std::max(0.0, std::min(stored, capacity - carried));
 }
 }
