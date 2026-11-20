@@ -872,6 +872,15 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 
             continue;
         }
+
+        if(nextParam == "[HandLimit]")
+        {
+            // The hand limit block is optional: without it every hand limit key reads as 0
+            if(!loadGlobalHandLimitConfig(configFile))
+                break;
+
+            continue;
+        }
     }
 
     if(paramsOk != 0x07)
@@ -983,6 +992,29 @@ double ConfigManager::getRaidConfigDouble(const std::string& param) const
     if(it == mRaidConfig.end())
     {
         OD_LOG_ERR("Unknown raid parameter param=" + param);
+        return 0.0;
+    }
+
+    return it->second;
+}
+
+//! \brief Reads the [HandLimit] block of global.cfg: one "key value" pair per line up to [/HandLimit].
+bool ConfigManager::loadGlobalHandLimitConfig(std::stringstream& configFile)
+{
+    if(readGlobalNumberBlock(configFile, "[/HandLimit]", mHandLimitConfig))
+        return true;
+
+    OD_LOG_ERR("Missing [/HandLimit] in global.cfg");
+    return false;
+}
+
+//! \brief Returns the value of a [HandLimit] key of global.cfg, 0 (and an error in the log) when the key is unknown.
+double ConfigManager::getHandLimitConfigDouble(const std::string& param) const
+{
+    std::map<std::string, double>::const_iterator it = mHandLimitConfig.find(param);
+    if(it == mHandLimitConfig.end())
+    {
+        OD_LOG_ERR("Unknown hand limit parameter param=" + param);
         return 0.0;
     }
 

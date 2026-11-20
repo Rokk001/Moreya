@@ -153,8 +153,29 @@ public:
      * in our own hand, this is done by setting moveToHand to true.  If move to
      * hand is false we just hide the creature (and stop its AI, etc.), rather than
      * making it follow the cursor.
+     * On the server the hand limit of a campaign level can refuse a fighting creature (see isHandLimitPickupAllowed).
      */
     void pickUpEntity(GameEntity *entity);
+
+    //! \brief Hand limit of a campaign level (HL1), server side: true when this keeper may pick up the entity now.
+    //! In a campaign level a keeper holds at most HandLimitFighters fighting creatures (not Zivs, not prisoners) at
+    //! once and picks up no fighting creature while the cooldown after the last drop of one runs. Outside of a
+    //! campaign level (skirmish, multiplayer) and on the client every pickup is allowed.
+    bool isHandLimitPickupAllowed(const GameEntity* entity) const;
+
+    //! \brief Number of fighting creatures (creatures that are not Zivs and not prisoners) in the hand.
+    unsigned int numFightingCreaturesInHand() const;
+
+    //! \brief Seconds left of the hand cooldown after the last drop of a fighting creature in a campaign level.
+    inline double getHandCooldownSeconds() const
+    { return mHandCooldownSeconds; }
+
+    //! \brief Sets the seconds left of the hand cooldown (used when a saved game is loaded); a negative or invalid
+    //! value is 0.
+    void setHandCooldownSeconds(double seconds);
+
+    //! \brief True while the hand limit applies: a campaign level is played on the server.
+    bool isHandLimitActive() const;
 
     //! \brief Restores ordered held entities from a save without repeating pickup effects.
     void restoreObjectsInHand(const std::vector<GameEntity*>& entities);
@@ -421,6 +442,10 @@ private:
 
     //! \brief The creature the player possesses. Empty if none
     std::string mPossessedCreatureName;
+
+    //! \brief Seconds left of the hand cooldown after the last drop of a fighting creature in a campaign level (HL1).
+    //! Server side only; saved with the seat ([HandCooldown]).
+    double mHandCooldownSeconds;
 
     //! \brief Whether this owner is viewing laboratory information.
     bool mLabWindowOpen = false;

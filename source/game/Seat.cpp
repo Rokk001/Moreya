@@ -576,7 +576,8 @@ bool Seat::hasVisionOnTile(Tile* tile)
     return true;
 }
 
-//! \brief Initializes a seat and restores cooldowns, running reveals and its saved tile knowledge.
+//! \brief Initializes a seat and restores cooldowns (spells and the hand cooldown of a campaign level), running reveals
+//! and its saved tile knowledge.
 void Seat::initSeat()
 {
     if(getPlayer() == nullptr)
@@ -585,6 +586,10 @@ void Seat::initSeat()
     for(const std::pair<SpellType, uint32_t>& entry : mSpellCooldownsLoaded)
         getPlayer()->setSpellCooldownTurns(entry.first, entry.second);
     mSpellCooldownsLoaded.clear();
+
+    // The hand cooldown of a campaign level goes on with the seconds it had left
+    getPlayer()->setHandCooldownSeconds(mHandCooldownLoaded);
+    mHandCooldownLoaded = 0.0;
 
     // A running reveal (Reveal Enemy, a tortured creature) goes on with the turns it had left
     for(const std::pair<std::pair<int, int>, uint32_t>& entry : mRevealedTilesLoaded)
@@ -1221,7 +1226,8 @@ Seat* Seat::createRogueSeat(GameMap* gameMap)
 }
 
 
-//! \brief Loads seat state, including tile knowledge, arrival history, shared room settings and running reveals.
+//! \brief Loads seat state, including tile knowledge, arrival history, shared room settings, running reveals and the
+//! running hand cooldown of a campaign level (optional block, older saves have none).
 bool Seat::importSeatFromStream(std::istream& is)
 {
     std::string str;
@@ -1366,8 +1372,19 @@ bool Seat::importSeatFromStream(std::istream& is)
     while(str == "[ResearchProgress]" || str == "[HadLibrary]" || str == "[StoredSpecials]" ||
         str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
         str == "[SpellCooldowns]" || str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]" ||
-        str == "[ResearchRemainder]" || str == "[WorkerJobs]" || str == "[PleasureRoomSettings]" || str == "[RevealedTiles]")
+        str == "[ResearchRemainder]" || str == "[WorkerJobs]" || str == "[PleasureRoomSettings]" || str == "[RevealedTiles]" ||
+        str == "[HandCooldown]")
     {
+    // Optional: the seconds left of the hand cooldown of a campaign level (HL1); older saves have no cooldown
+    if(str == "[HandCooldown]")
+    {
+        double seconds = 0.0;
+        if(!(is >> seconds >> str) || !std::isfinite(seconds) || (seconds < 0.0) || (str != "[/HandCooldown]") ||
+           !(is >> str))
+            return false;
+        mHandCooldownLoaded = seconds;
+        continue;
+    }
     if(str == "[RevealedTiles]")
     {
         // Saved by Seat::exportSeatToStream: the number of entries, then x, y and the turns left of each
@@ -1760,8 +1777,9 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
-//! \brief Saves seat state, tile knowledge, shared room settings, announced creature classes and running reveals; the
-//! ectoplasm levels of the ghost room are written at round-trip precision without changing the stream precision.
+//! \brief Saves seat state, tile knowledge, shared room settings, announced creature classes, running reveals and the
+//! running hand cooldown of a campaign level; the ectoplasm levels of the ghost room and the hand cooldown are written
+//! at round-trip precision without changing the stream precision.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1917,6 +1935,15 @@ bool Seat::exportSeatToStream(std::ostream& os) const
             for(const std::pair<Tile*, uint32_t>& revealed : mRevealedTiles)
                 os << revealed.first->getX() << "\t" << revealed.first->getY() << "\t" << revealed.second << "\n";
             os << "[/RevealedTiles]\n";
+        }
+
+        // The running hand cooldown of a campaign level (HL1) at round-trip precision; without one nothing is written
+        if(getPlayer()->getHandCooldownSeconds() > 0.0)
+        {
+            const std::streamsize handPrecision = os.precision();
+            os << "[HandCooldown]\t" << std::setprecision(std::numeric_limits<double>::max_digits10)
+               << getPlayer()->getHandCooldownSeconds() << "\t[/HandCooldown]\n";
+            os.precision(handPrecision);
         }
     }
 
