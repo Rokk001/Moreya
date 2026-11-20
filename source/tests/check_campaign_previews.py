@@ -129,7 +129,7 @@ def briefing_layout_errors(layout, mode, gui):
     fit = mode.split("void MenuModeCampaign::fitDebriefingPanel()", 1)[-1].split(
         "void MenuModeCampaign::setBriefingPreviewVisible", 1)[0]
     frame = mode.split("void MenuModeCampaign::onFrameStarted", 1)[-1].split(
-        "void MenuModeCampaign::updateLift", 1)[0]
+        "size_t MenuModeCampaign::findCaveAt", 1)[0]
     if any(token not in debriefing for token in ('setBriefingPreviewVisible(false)',
             'getChild(CMP_BRIEFING_START)->setVisible(false)', 'fitDebriefingPanel();')):
         errors.append("debriefing must stay text only and fit after setting its result")
