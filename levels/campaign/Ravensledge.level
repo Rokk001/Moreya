@@ -2399,11 +2399,11 @@ Action	win	1
 
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
-# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: interval and escape share set by simulation R3B
 # PLACEHOLDER: composition set by simulation R3B
 Gate	12	40	180
 Seats	2	1
-Countdown	-
+Countdown	3600
 Interval	-
 EscapeShare	-
 Group	1	RolfScarrow
