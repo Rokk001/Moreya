@@ -469,7 +469,7 @@ ProtectDungeonTemple	NULL
 18	26	1	0
 18	27	1	0
 18	28	1	0
-18	29	1	0
+18	29	1	100
 18	30	1	0
 18	31	1	0
 18	32	1	0	1
@@ -926,11 +926,11 @@ ProtectDungeonTemple	NULL
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 1	DefaultWorker1	Kobold.mesh	14	33	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker2	Kobold.mesh	22	33	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Shooter1	Lizardman.mesh	15	28	0	LizardMan	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Shooter2	Lizardman.mesh	18	26	0	LizardMan	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Shooter3	Lizardman.mesh	21	28	0	LizardMan	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Shooter4	Cultist.mesh	24	26	0	Cultist	2	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Shooter5	Goblin.mesh	12	26	0	Goblin	2	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Shooter1	Lizardman.mesh	15	23	0	LizardMan	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Shooter2	Lizardman.mesh	18	22	0	LizardMan	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Shooter3	Lizardman.mesh	21	23	0	LizardMan	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Shooter4	Cultist.mesh	24	22	0	Cultist	2	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Shooter5	Goblin.mesh	12	22	0	Goblin	2	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Crow1	CaveHornet.mesh	15	12	0	CaveHornet	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Crow2	CaveHornet.mesh	21	12	0	CaveHornet	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Crow3	CaveHornet.mesh	16	18	0	CaveHornet	1	0	max	100	0	0	none	none	nullSkillType	none	0
