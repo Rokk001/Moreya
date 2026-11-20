@@ -5,6 +5,12 @@ per wing; the Heartstone has 3 shards in level 2 of wings 1 to 3; Summon champio
 with all shards; the first completion of a bonus level unlocks 1 Epic, 1 Rare and 1 Common item that
 the merchant of every later level sells once; every level starts fresh. The runtime rules themselves
 are covered by the Boost test 00-Campaign (test_Campaign.cpp); this check pins the data and the wiring.
+
+Campaign texts: every entry has a title, a briefing and a debriefing; no title names an old province or
+trial; every story briefing names its guild, leader, origin and raid size and its Warden key names the
+leader; bonus briefings and debriefings name the item unlock and no raid; no campaign text and no
+scripted message of the 24 levels calls the Ziv a worker or names a removed warden, wave, wagon,
+kept minion, Heartstone fragment or reputation.
 """
 from pathlib import Path
 import re
@@ -46,6 +52,41 @@ SHARDS = 3
 CHAMPION_WINGS = ("4", "5", "6")
 UNLOCK = "Epic Rare Common"
 DROPPED = ("Dunmarrow", "Mirewatch", "Wolfscar", "Thornreach", "Stormhaven", "Silverdeep", "Ebonrook")
+# Fixed raid of every story level: (file, Warden key, leaders, guild, origin, raid size) as the briefing names them
+RAIDS = (
+    ("campaign/Brackenford.level", "Elsa Brack", ("Elsa Brack",), "Mud Fists", "Brackenford", "one group of five"),
+    ("campaign/Coldwell.level", "Hugo Cole", ("Hugo Cole",), "Iron Latch", "Coldwell", "one group of five"),
+    ("campaign/Ravensledge.level", "Rolf Scarrow", ("Rolf Scarrow",), "Grey Fang", "Wolfscar", "one raid of ten"),
+    ("campaign/Tinmoor.level", "Merrin Tay", ("Merrin Tay",), "Deep Picks", "Tinmoor", "two groups of five"),
+    ("campaign/Greywater.level", "Corwin Gray", ("Corwin Gray",), "Drowned Oath", "Greywater", "two groups of five"),
+    ("campaign/Highcairn.level", "Hilde Cairn", ("Hilde Cairn",), "Stone Crown", "Highcairn", "two raids of ten"),
+    ("campaign/Lanternhill.level", "Ines Vale", ("Ines Vale",), "Pale Flame", "Lanternhill", "one group of ten"),
+    ("campaign/Saltmere.level", "Bram Seward", ("Bram Seward",), "Salt Wolves", "Saltmere", "one group of ten"),
+    ("campaign/HollinFen.level", "Agathe Hollin", ("Agathe Hollin",), "Order of the White Thorn", "Hollin Fen",
+     "one raid of twenty-five"),
+    ("campaign/Cinderhollow.level", "Pell Ashgrove", ("Pell Ashgrove",), "Ember Ram", "Cinderhollow", "two groups of ten"),
+    ("campaign/Ashcombe.level", "Liesl Ashby", ("Liesl Ashby",), "Burnt Wheel", "Ashcombe", "two groups of ten"),
+    ("campaign/Ironbridge.level", "Gareth Fenn", ("Gareth Fenn",), "Anvil Host", "Ironbridge", "two raids of twenty-five"),
+    ("campaign/Bellwick.level", "Lorens Bell", ("Lorens Bell",), "Silent Bell", "Bellwick", "one group of twenty-five"),
+    ("campaign/Goldspire.level", "Alaric Penn", ("Alaric Penn",), "Gilded Hand", "Goldspire", "one group of twenty-five"),
+    ("campaign/Kingsfall.level", "Prince Aurel", ("Prince Aurel",), "Sun Court", "Kingsfall", "one raid of forty"),
+    ("campaign/VarnsCrossing.level", "Marshal Varn", ("Marshal Varn",), "Black Legion", "Varn's Crossing",
+     "two groups of twenty-five"),
+    ("campaign/Wraithwood.level", "Elowen Ash", ("Elowen Ash",), "Ash Coven", "Wraithwood", "two groups of twenty-five"),
+    ("campaign/HollowmarkCitadel.level", "Sabine Rook and High King Castellan", ("Sabine Rook", "High King Castellan"),
+     "Crown Eternal", "Hollowmark Citadel", "two raids of forty"),
+)
+# Names of the old provinces and trials that no level title may carry any more
+OLD_TITLE_NAMES = ("Brackenford", "Coldwell", "Ravensledge", "Mossgate", "Tinmoor", "Greywater", "Highcairn", "Lanternhill",
+                   "Saltmere", "Hollin Fen", "HollinFen", "Cinderhollow", "Ashcombe", "Ironbridge", "Bellwick", "Goldspire",
+                   "Kingsfall", "Varn's Crossing", "VarnsCrossing", "Wraithwood", "Hollowmark", "Dunmarrow", "Mirewatch",
+                   "Wolfscar", "Thornreach", "Stormhaven", "Silverdeep", "Ebonrook", "Crowshot Gallery", "Skittle Cavern",
+                   "Swarm Night", "Boulder Course", "Twisting Halls")
+# Words that no campaign text and no scripted message may use any more: the worker is a Ziv; wardens, waves,
+# wagons, the kept minion, Heartstone fragments and reputation are gone from the campaign
+WORKER_WORD = re.compile(r"\bworkers?\b", re.I)
+REMOVED_WORDS = re.compile(r"\b(wardens?|waves?|wagons?|fragments?|reputation|keepminion|reeve|Osric|Tobin)\b", re.I)
+BONUS_UNLOCK_TEXT = "one Epic, one Rare and one Common item"
 
 failures = []
 
@@ -192,6 +233,45 @@ handler = read("source/gamemap/MapHandler.cpp")
 check("gameMap.exportCampaignMerchantInfo(levelFile);" in handler and
       "gameMap.importCampaignMerchantInfoLine(nextParam)" in handler,
       "a saved game keeps the unlocked items that still wait for the merchant")
+
+# TX1-TX4: titles, briefings, debriefings and the scripted messages of the 24 levels
+raids = {raid[0]: raid for raid in RAIDS}
+check(len(raids) == STORY_LEVELS, "every story level needs its fixed raid")
+for entry in entries:
+    file = entry.get("File", "")
+    texts = [entry.get(key, "") for key in ("Title", "Briefing", "Debriefing")]
+    check(all(texts), file + " needs a title, a briefing and a debriefing")
+    title, briefing, debriefing = texts
+    for name in OLD_TITLE_NAMES:
+        check(name.lower() not in title.lower(), file + " must not be titled after the old province or trial " + name)
+    for text in texts:
+        check(WORKER_WORD.search(text) is None, file + " calls the Ziv a worker: " + text[:60])
+        found = REMOVED_WORDS.search(text)
+        check(found is None, file + " still names " + (found.group(0) if found else "") + ": " + text[:60])
+    if entry.get("Bonus") == "1":
+        check("Warden" not in entry, file + " is a bonus level without a raid and needs no Warden key")
+        check("No raid" in briefing, file + " must tell that no raid comes")
+        check(BONUS_UNLOCK_TEXT in briefing and BONUS_UNLOCK_TEXT in debriefing,
+              file + " must name the unlock of " + BONUS_UNLOCK_TEXT)
+        check("Heartstone" not in briefing + debriefing, file + " carries no Heartstone shard")
+        continue
+    raid = raids.get(file)
+    if raid is None:
+        continue
+    _, warden, leaders, guild, origin, size = raid
+    check(entry.get("Warden") == warden, file + " must name its raid leader in the Warden key: " + warden)
+    for part in leaders + (guild, origin, "Moreya gate"):
+        check(part in briefing, file + " briefing must name " + part)
+    check(size in briefing.lower(), file + " briefing must name the raid size " + size)
+for file, *_ in EXPECTED:
+    for number, line in enumerate(read("levels/" + file).replace("\r", "").split("\n"), 1):
+        if not line.startswith(("Action\tmessage\t", "Action\thint\t")):
+            continue
+        check(WORKER_WORD.search(line) is None, "%s:%d calls the Ziv a worker" % (file, number))
+        found = REMOVED_WORDS.search(line)
+        check(found is None, "%s:%d still names %s" % (file, number, found.group(0) if found else ""))
+        if file in raids:
+            check("dawn" not in line.lower(), "%s:%d still names the dawn of the old waves" % (file, number))
 
 if failures:
     print("\n".join(failures))
