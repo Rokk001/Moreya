@@ -314,8 +314,8 @@ int RaidSimulation::getExitCode()
 
 //! \brief Columns: turn, game seconds, gate open, raid groups arrived, then per side (raid, keeper fighters) standing
 //! count, hit points, maximum hit points, fighting count, members at their formation place and members with one,
-//! carried gold; then raid leaders fleeing and escaped, keeper groups, standing keeper group members, retreating keeper and raid
-//! groups, the smallest distance in tiles between a standing raid member and a standing keeper fighter (-1 without
+//! carried gold; then raid leaders fleeing and escaped, keeper groups, standing keeper group members, retreating keeper
+//! and raid groups, the smallest distance in tiles between a standing raid member and a standing keeper fighter (-1 without
 //! both), the gold stored by the keeper, the hit points of his dungeon heart, 1 once he lost, the fleeing creatures of
 //! the raid and of the keeper, the highest id a combat group got so far (how many groups were formed), the summed
 //! distance of the raid and keeper group members to their formation places and the spread of the standing raid (mean

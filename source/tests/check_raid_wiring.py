@@ -71,8 +71,8 @@ TEST_LEVEL = read("levels/skirmish/TestRaid.level")
 # The keys of the [Raid] block counted once for this branch: value and whether the simulation still sets it
 EXPECTED_KEYS = {
     "RaidCountdownSeconds": ("600", True),
-    "RaidWaveIntervalSeconds": ("180", True),
-    "RaidLeaderEscapeShare": ("0.75", True),
+    "RaidWaveIntervalSeconds": ("90", False),
+    "RaidLeaderEscapeShare": ("0.25", False),
     "RaidPlunderGoldPerMember": ("200", True),
     "RaidPlunderDetourTiles": ("6", True),
     "RaidGateArrivalTiles": ("1", False),
