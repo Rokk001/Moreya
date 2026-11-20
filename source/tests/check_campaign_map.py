@@ -463,10 +463,12 @@ hall = root / "materials/textures/menu/MenuCampaignMap.png"
 with Image.open(hall) as hall_image, Image.open(art / world["base"]) as map_image:
     check(hall_image.size == map_image.size, "the hall texture must have the size of the map of Moreya")
     check(hall_image.convert("RGBA").tobytes() == map_image.convert("RGBA").tobytes(),
-          "the campaign hall must show the map of Moreya (run tools/artwork/moreya-map/make_placeholders.py --hall-only)")
-old_world = art / "world_base.png"
-if old_world.is_file():
-    check(hall.read_bytes() != old_world.read_bytes(), "the campaign hall must not show the old world map")
+          "the campaign hall must show the map of Moreya (copy gui/campaign/moreya/moreya_map.png to the hall texture)")
+# The old world map and its previews are gone (raid plan FINAL step 1b): the hall can no longer show them
+for gone in ("world_base.png", "world_idmap.png", "preview_states.png", "provinces", "sites"):
+    check(not (art / gone).exists(), "the old world map file %s must be gone" % gone)
+old_previews = sorted(path.name for path in (art / "previews").glob("*.png") if re.fullmatch(r"(T\d\d[AB]?|B0\d)\.png", path.name))
+check(not old_previews, "the old previews must be gone: %s" % old_previews)
 
 if failures:
     print("\n".join(failures))
