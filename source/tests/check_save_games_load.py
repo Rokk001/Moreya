@@ -929,7 +929,7 @@ def check_action(t):
     fixed = {"gold": 4, "setflag": 4, "addflag": 4, "win": 3, "lose": 3, "reveal": 4, "make": 4, "timelimit": 3,
              "countdown": 3, "wavecountdown": 3, "keydoor": 4, "portal": 4, "available": 5, "golfball": 5,
              "stoneattach": 3, "keepminion": 3, "possess": 3, "remove": 3, "alliance": 5, "generate": 4,
-             "roomowner": 5, "slaplimit": 3, "discover": 3}
+             "roomowner": 5, "slaplimit": 3, "discover": 3, "shard": 2}
     if kind in fixed:
         return n == fixed[kind]
     if kind == "terrain":

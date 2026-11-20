@@ -31,23 +31,31 @@ assert 'MENU_CAMPAIGN' in defeat and 'requestMainMenuWithSkirmishSubMenu()' in d
 # A seat whose only goal is to protect its temple must not win at once: the level script wins the hero levels
 game_map = read('source/gamemap/GameMap.cpp')
 assert 'hasCompletedWinningGoal(seat))' in game_map and '!= "ProtectDungeonTemple"' in game_map
-# The Heartstone has four pieces (B01 to B04); the fifth bonus site has its own reward.
+# The Heartstone has three shards, hidden in level 2 of wings 1 to 3 (Coldwell, Greywater, Saltmere);
+# the six bonus levels (one per wing) carry none, their reward is the item unlock at the merchant.
 campaign = read('levels/campaign/Campaign.cfg')
-entries = [e for e in campaign.replace(chr(13), '').split('[Level]')[1:] if 'Bonus=1' in e]
-assert len(entries) == 5
-pieces = [e for e in entries if 'Heartstone=0' not in e]
-assert len(pieces) == 4 and all('Province=B0' in e for e in pieces)
-assert 'Province=B05' in [e for e in entries if 'Heartstone=0' in e][0]
-assert 'key == "Heartstone"' in read('source/game/Campaign.cpp')
-# The complete Heartstone gives the keepers the Summon champion spell when a campaign level starts
+blocks = campaign.replace(chr(13), '').split('[Level]')[1:]
+entries = [e for e in blocks if 'Bonus=1' in e]
+assert len(entries) == 6
+assert not any('Shard=1' in e for e in entries)
+pieces = [e for e in blocks if 'Shard=1' in e]
+assert len(pieces) == 3
+for piece, file in zip(pieces, ('campaign/Coldwell.level', 'campaign/Greywater.level', 'campaign/Saltmere.level')):
+    assert 'File=' + file in piece, file
+assert 'Heartstone=' not in campaign
+assert 'key == "Shard"' in read('source/game/Campaign.cpp') and 'key == "Heartstone"' not in read('source/game/Campaign.cpp')
+# The complete Heartstone gives the keepers the Summon champion spell in the levels with Champion=1 (every level
+# from wing 4 on) when a campaign level starts
 server = read('source/network/ODServer.cpp')
-assert 'isLevelHeartstoneComplete()' in server and 'SkillType::spellSummonChampion, championAvailable, championAvailable' in server
+assert 'isLevelChampionAvailable()' in server and 'SkillType::spellSummonChampion, championAvailable, championAvailable' in server
+assert [('Champion=1' in e) for e in blocks if 'File=' in e] == [False] * 12 + [True] * 12
 campaign_state = read('source/game/Campaign.cpp')
-assert 'return mSavedHeartstoneComplete;' in campaign_state and 'return isHeartstoneComplete();' in campaign_state
+assert 'return mSavedChampionAvailable;' in campaign_state and 'return isChampionAvailableNoLock(mPlayedLevel);' in campaign_state
+assert 'return mLevels[index].mChampion;' in campaign_state
 # Victory keeps its authoritative goal list and saves progress before notifying the client.
 victory = game_map[game_map.index('void GameMap::addWinningSeat('):game_map.index('bool GameMap::seatIsAWinner(')]
 assert victory.index('mWinningSeats.push_back(s)') < victory.index('getGoalsStringForPlayer(player)')
-assert victory.index('sendLevelStatistics(true)') < victory.index('onLevelWon()') < victory.index('ServerNotificationType::campaignVictory')
+assert victory.index('sendLevelStatistics(true)') < victory.index('onLevelWon(campaignUnlockCandidates(*this), &drawCampaignUnlock)') < victory.index('ServerNotificationType::campaignVictory')
 assert 'Open the menu and quit' not in victory
 goals = game_map[game_map.index('std::string GameMap::getGoalsStringForPlayer('):game_map.index('double GameMap::addGoldToSeat(')]
 assert 'else if (seat->numFailedGoals()' not in goals

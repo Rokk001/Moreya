@@ -59,14 +59,16 @@ for part in definition.replace("\r", "").split("[Level]")[1:]:
     if "File" in fields:
         levels.append(fields)
 check(len(levels) > 0, "no levels in the campaign definition")
+# The levels are ordered by the 6 wings of Moreya and name no province of the old world map any more
 used = [f["Province"] for f in levels if "Province" in f]
-check(len(set(used)) == len(used), "two levels share a province")
+check(not used, "no level may name a province any more")
 for name in used:
     check(name in ids, name + " is not on the world map")
 for f in levels:
-    check("Province" in f, f["File"] + " has no Province setting")
+    check(f.get("Wing", "") in ("1", "2", "3", "4", "5", "6"), f["File"] + " has no Wing setting from 1 to 6")
     check(1 <= int(f.get("Difficulty", "1")) <= 5, f["File"] + " has a difficulty outside of 1 to 5")
-check('key == "Province"' in campaign_cpp and 'key == "Warden"' in campaign_cpp, "the reader must know Province and Warden")
+check('key == "Province"' not in campaign_cpp and 'key == "Wing"' in campaign_cpp and 'key == "Warden"' in campaign_cpp,
+      "the reader must know Wing and Warden and no longer read Province")
 
 # The screen: map keeps its aspect ratio, hit test with the id map, lift fade, tooltip, briefing and progress
 check("setAspectMode(CEGUI::AM_SHRINK)" in mode, "the map must keep its aspect ratio")
