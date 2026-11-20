@@ -31,6 +31,7 @@
 
 class LevelScript;
 class CombatGroupManager;
+class RaidManager;
 
 #ifdef __MINGW32__
 #ifndef mode_t
@@ -487,6 +488,12 @@ public:
     //! \brief Read-only access to the combat groups.
     const CombatGroupManager& getCombatGroups() const;
 
+    //! \brief The raid of the level: the Moreya gate, the countdown, the raid groups, the plundering and the escape of
+    //! a raid leader ([Raid] section of the level file). Only the server updates it.
+    RaidManager& getRaid();
+    //! \brief Read-only access to the raid.
+    const RaidManager& getRaid() const;
+
     //! \brief Withdraws the complete gold amount, including fractional admissions, or refuses it.
     bool withdrawFromTreasuries(double gold, Seat* seat);
 
@@ -793,8 +800,9 @@ public:
     //! Added to the seconds that sendTimeLimit sends when they are a countdown, not a time limit
     static const int32_t TIME_LIMIT_COUNTDOWN_FLAG = 0x40000000;
 
-    //! \brief Tells the human players how many seconds are left (-1: there is no time limit), and the
-    //! wave countdown that checkGameDuration set. Nothing is sent when both are the same as last time.
+    //! \brief Tells the human players how many seconds are left (-1: there is no time limit), the
+    //! wave countdown that checkGameDuration set and the countdown of the raid with whether the gate is still closed.
+    //! Nothing is sent when all of them are the same as last time.
     //! \param remainingSeconds Seconds left, with TIME_LIMIT_COUNTDOWN_FLAG added for a countdown
     void sendTimeLimit(int32_t remainingSeconds);
 
@@ -967,6 +975,14 @@ private:
     int32_t mWaveCountdownSentSeconds;
     //! \brief The wave countdown that the next sendTimeLimit sends, -1 when none is shown
     int32_t mWaveCountdownToSend;
+    //! \brief Last raid countdown sent to the players (with the time limit), -1 when none was sent or none is shown
+    int32_t mRaidCountdownSentSeconds;
+    //! \brief The raid countdown that the next sendTimeLimit sends, -1 when none is shown
+    int32_t mRaidCountdownToSend;
+    //! \brief Last sent and next sent: 1 while the gate is closed (countdown to the raid, the gate may be opened
+    //! early), 0 when the countdown is the time to the next raid group
+    int32_t mRaidGateClosedSent;
+    int32_t mRaidGateClosedToSend;
     //! \brief See getWallTorches()
     std::map<uint32_t, WallTorch> mWallTorches;
     //! \brief See getTileDirtSync()
@@ -1057,6 +1073,9 @@ private:
 
     //! \brief Combat groups and raid registry
     std::unique_ptr<CombatGroupManager> mCombatGroups;
+
+    //! \brief The raid of the level (gate, countdown, raid groups)
+    std::unique_ptr<RaidManager> mRaid;
 
     //! \brief Tells whether the map color flood filling is enabled.
     bool mFloodFillEnabled;

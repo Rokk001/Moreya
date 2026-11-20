@@ -126,6 +126,13 @@ public:
     //! \brief Names the leader of a raid group. He leads his group as long as he lives.
     void setRaidLeader(uint32_t raidGroupId, const std::string& leaderName);
 
+    //! \brief Takes a raid member out of its raid group or lets it take part again (a raid leader who flees to the gate
+    //! leaves his group, which goes on under the next leader). Set again by the raid when a game is loaded.
+    void setRaidMemberDetached(const std::string& creatureName, bool detached);
+
+    //! \brief True when the raid member was taken out of its raid group.
+    bool isRaidMemberDetached(const std::string& creatureName) const;
+
     //! \brief True when the creature is registered as a raid member.
     bool isRaidMember(const std::string& creatureName) const;
 
@@ -270,6 +277,8 @@ private:
     std::map<std::string, std::string> mAggroTargets;
     //! \brief Transient: raid members whose fixed template could not be given (logged once).
     std::set<std::string> mTemplateFailures;
+    //! \brief Raid members taken out of their raid group (a fleeing raid leader); the raid sets them again on a load.
+    std::set<std::string> mDetachedRaidMembers;
     //! \brief Transient: the role lists of the config, read at every update.
     CombatGroupRules::RoleSettings mRoleSettings;
 };

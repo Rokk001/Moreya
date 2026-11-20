@@ -22,6 +22,7 @@
 #include "creaturemood/CreatureMoodManager.h"
 #include "eventsystem/CreatureMoved.h"
 #include "game/CombatGroupManager.h"
+#include "game/RaidManager.h"
 #include "game/CreatureRelationships.h"
 #include "gamemap/GameMap.h"
 #include "game/Seat.h"
@@ -184,7 +185,8 @@ const std::string& getLastLoadError()
 }
 
 //! \brief Loads map state and reports the failing section, retaining optional legacy sections. The optional
-//! [CombatGroups] section (raid registry and running combat groups) comes last.
+//! [CombatGroups] section (raid registry and running combat groups) and the optional [Raid] section (gate, countdown
+//! and raid groups) come last.
 bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 {
     lastLoadError.clear();
@@ -939,8 +941,22 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             setLoadError(std::string("Invalid CombatGroups section") + ", file=" + fileName);
             return false;
         }
+
+        // The optional raid follows
+        if(!(levelFile >> nextParam))
+            nextParam.clear();
     }
 
+    // Optional raid: the Moreya gate, the countdown and the raid groups (level data), with their running state in
+    // saved games. Older levels and saves, and every level without a raid, do not have this section.
+    if(nextParam == "[Raid]")
+    {
+        if(!gameMap.getRaid().importFromStream(levelFile))
+        {
+            setLoadError(std::string("Invalid Raid section") + ", file=" + fileName);
+            return false;
+        }
+    }
 
 
     return true;
@@ -1135,7 +1151,8 @@ static void writeDirtSections(std::ostream& levelFile, GameMap& gameMap)
 
 //! \brief Saves the map with item bags after gift boxes and the existing remaining sections.
 //! \brief Campaign games also record their running context, separately from user progress.
-//! \brief The raid registry and, in a saved game, the running combat groups are written last ([CombatGroups]).
+//! \brief The raid registry and, in a saved game, the running combat groups are written last ([CombatGroups]),
+//! followed by the raid with, in a saved game, its running state ([Raid]).
 bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 {
     std::ofstream levelFile(fileName.c_str(), std::ifstream::out);
@@ -1461,6 +1478,9 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 
     // The raid registry and the running combat groups (nothing is written without a raid)
     gameMap.getCombatGroups().exportToStream(levelFile, isGameSave);
+
+    // The raid of the level and, in a saved game, its running state (nothing is written without a raid)
+    gameMap.getRaid().exportToStream(levelFile, isGameSave);
 
     if (!levelFile.good()) {
         OD_LOG_WRN("Unexpected failure on file: " + fileName);

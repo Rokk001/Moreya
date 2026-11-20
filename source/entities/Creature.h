@@ -2768,6 +2768,7 @@ private:
     //! This one checks if there is something prioritary to do (like fighting). If it is the case,
     //! it should empty the action list before adding what to do.
     //! \brief Keeps weak patients lying and preserves configured combat responses when they can rise.
+    //! \brief A raid leader who flees to the Moreya gate runs no behaviour (no fight, no other flight).
     void decidePrioritaryAction();
 
     //! \brief A sub-function called by doTurn()
@@ -2782,6 +2783,10 @@ private:
     //! its job and keeps its place behind the leader. Fleeing, the heart defence and the infirmary keep their
     //! priority, a fight is not interrupted by the formation. Does nothing for a creature in no group.
     void handleCombatGroup();
+
+    //! \brief A sub-function called by doUpkeep() on the server. A raid leader who flees to the Moreya gate drops a
+    //! fight, a flight or his place in a combat group and runs to the gate. Does nothing for any other creature.
+    void handleRaidEscape();
 
     //! \brief A sub-function called by doTurn()
     //! This functions will handle the creature idle action logic. A standing order of the level

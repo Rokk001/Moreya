@@ -169,7 +169,7 @@ bool parseOrderJob(const std::string& job)
 //! \brief Parses the saved spelling of one explicit objective state.
 bool parseObjectiveState(const std::string& text, LevelScriptObjectiveState& state);
 
-//! \brief Parses gameplay conditions and read-only goal presentation predicates.
+//! \brief Parses gameplay conditions and read-only goal presentation predicates, and the raid condition.
 bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& cond)
 {
     // t[0] is "Cond"
@@ -626,6 +626,23 @@ bool parseCondition(const std::vector<std::string>& t, LevelScriptCondition& con
         cond.mName = t[3];
         return parseInt32(t[2], cond.mSeatId) && parseOperator(t[4], cond) && parseInt(t[5], cond.mNumber);
     }
+    if(type == "raid")
+    {
+        cond.mType = LevelScriptConditionType::raidState;
+        if((t.size() != 3) && (t.size() != 4))
+            return false;
+
+        cond.mName = t[2];
+        if((cond.mName != "arrived") && (cond.mName != "defeated") && (cond.mName != "escaped") &&
+           (cond.mName != "fleeing") && (cond.mName != "open"))
+            return false;
+
+        cond.mNumber = 0;
+        if(t.size() == 4)
+            return parseInt(t[3], cond.mNumber) && (cond.mNumber > 0);
+
+        return true;
+    }
     if(type == "timer")
     {
         cond.mType = LevelScriptConditionType::timer;
@@ -653,7 +670,8 @@ bool parseObjectiveState(const std::string& text, LevelScriptObjectiveState& sta
 }
 
 //! \brief Parses actions including mission door locks and the campaign shard, retaining legacy objective text and
-//! ID/state variants, and the raid registry actions raidmember and raidleader.
+//! ID/state variants, the raid registry actions raidmember and raidleader, and the raid actions raidopen and
+//! raidcountdown.
 bool parseAction(const std::string& line, const std::vector<std::string>& t, LevelScriptAction& action)
 {
     // t[0] is "Action"
@@ -1024,10 +1042,20 @@ bool parseAction(const std::string& line, const std::vector<std::string>& t, Lev
         action.mType = LevelScriptActionType::findShard;
         return t.size() == 2;
     }
+    if(type == "raidopen")
+    {
+        action.mType = LevelScriptActionType::raidOpen;
+        return t.size() == 2;
+    }
+    if(type == "raidcountdown")
+    {
+        action.mType = LevelScriptActionType::raidCountdown;
+        return (t.size() == 3) && parseInt(t[2], action.mNumber) && (action.mNumber >= 0);
+    }
     return false;
 }
 
-//! \brief Writes gameplay and presentation condition syntax without changing legacy meanings.
+//! \brief Writes gameplay and presentation condition syntax without changing legacy meanings, and the raid condition.
 void writeCondition(std::ostream& os, const LevelScriptCondition& c)
 {
     os << "Cond\t";
@@ -1094,6 +1122,11 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
             break;
         case LevelScriptConditionType::deliveredStone:
             os << "deliveredstone\t" << c.mName;
+            break;
+        case LevelScriptConditionType::raidState:
+            os << "raid\t" << c.mName;
+            if(c.mNumber > 0)
+                os << "\t" << c.mNumber;
             break;
         case LevelScriptConditionType::carryingStone:
             os << "carryingstone\t" << c.mName;
@@ -1257,7 +1290,7 @@ void writeCondition(std::ostream& os, const LevelScriptCondition& c)
 }
 
 //! \brief Serializes mission door locks, the campaign shard, goal classification and actions with legacy objective
-//! compatibility, and the raid registry actions.
+//! compatibility, the raid registry actions and the raid actions raidopen and raidcountdown.
 void writeAction(std::ostream& os, const LevelScriptAction& a)
 {
     os << "Action\t";
@@ -1409,6 +1442,12 @@ void writeAction(std::ostream& os, const LevelScriptAction& a)
             break;
         case LevelScriptActionType::raidLeader:
             os << "raidleader\t" << a.mNumber << "\t" << a.mText;
+            break;
+        case LevelScriptActionType::raidOpen:
+            os << "raidopen";
+            break;
+        case LevelScriptActionType::raidCountdown:
+            os << "raidcountdown\t" << a.mNumber;
             break;
     }
     os << "\n";
