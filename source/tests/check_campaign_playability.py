@@ -1053,7 +1053,10 @@ def grouped_goal_errors(text, level_name):
                     or skill is None or int(skill[5]) > shooting["level"]
                     or float(skill[3]) + float(skill[4]) * shooting["level"] != shooting["range"]):
                 errors.append("original shooter level or available projectile range differs")
-            opened, queue = set(), deque([level["start"]])
+            # The shooter starts in the gallery, walled off from the heart, so its shooting positions are
+            # walked from the shooter's own start tile; that tile must itself be open dry ground.
+            origin_tile = (int(shooter[3]), int(shooter[4])) if shooter is not None else level["start"]
+            opened, queue = set(), deque([origin_tile])
             while queue:
                 tile = queue.popleft()
                 if tile in opened or tile not in level["tiles"] or level["tiles"][tile][1] != 0 or level["tiles"][tile][0] in (4, 5):

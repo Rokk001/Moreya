@@ -2645,7 +2645,7 @@
           "class": "LizardMan",
           "tile": [
             15,
-            28
+            23
           ]
         },
         "Shooter2": {
@@ -2653,7 +2653,7 @@
           "class": "LizardMan",
           "tile": [
             18,
-            26
+            22
           ]
         },
         "Shooter3": {
@@ -2661,7 +2661,7 @@
           "class": "LizardMan",
           "tile": [
             21,
-            28
+            23
           ]
         },
         "Shooter4": {
@@ -2669,7 +2669,7 @@
           "class": "Cultist",
           "tile": [
             24,
-            26
+            22
           ]
         },
         "Shooter5": {
@@ -2677,7 +2677,7 @@
           "class": "Goblin",
           "tile": [
             12,
-            26
+            22
           ]
         },
         "Crow1": {
