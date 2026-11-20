@@ -1627,7 +1627,7 @@ Region	Hollow	15	43	28	50
 Name	hello
 Mode	once
 Cond	time	3
-Action	message	1	Quietcrag, master. A small cave, a few workers and no hurry. Dig east toward the watch hall and let your first creatures come in through the portals.
+Action	message	1	Quietcrag, master. A small cave, a few Zivs and no hurry. Dig east toward the watch hall and let your first creatures come in through the portals.
 [/Trigger]
 [Trigger]
 Name	guard
@@ -1640,7 +1640,7 @@ Action	gold	1	200
 Name	shop
 Mode	once
 Cond	region	1	Workshop
-Action	message	1	A workshop nobody uses. Claim it and your workers will start crafting doors and traps.
+Action	message	1	A workshop nobody uses. Claim it and your Zivs will start crafting doors and traps.
 [/Trigger]
 [Trigger]
 Name	cross
@@ -1680,7 +1680,7 @@ Action	spawn	2	60	45	1	Knight:1	Elf:1	Adventurer:2	Monk:1
 Name	hollowWell
 Mode	once
 Cond	slabs	1	Hollow	claimed	>=	15
-Action	message	1	Your claim on the hollow has opened a spring of mana beside the pond. Claim it with a worker and your spells will come faster.
+Action	message	1	Your claim on the hollow has opened a spring of mana beside the pond. Claim it with a Ziv and your spells will come faster.
 Action	terrain	19	48	19	48	manawell
 [/Trigger]
 [/Triggers]

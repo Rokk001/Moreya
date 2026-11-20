@@ -313,7 +313,7 @@ int main(){
   if(n->player==&ownerPlayer&&n->type==ServerNotificationType::chatServer)lastChat=n;
  }
  check(lastChat!=nullptr&&lastChat->mPacket.texts.size()==1
-  &&lastChat->mPacket.texts[0]=="You redeemed your worker into 750 mana","the redemption chat names the refund");
+  &&lastChat->mPacket.texts[0]=="You redeemed your Ziv into 750 mana","the redemption chat names the refund");
 
  // Nothing is redeemed unless every condition holds, and nothing is removed then either
  removedBefore=GameEntity::removed;

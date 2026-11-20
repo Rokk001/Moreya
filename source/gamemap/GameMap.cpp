@@ -2467,7 +2467,7 @@ void GameMap::updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLas
         ServerNotification* serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, seat->getPlayer());
         serverNotification->mPacket
-            << "Your workers vanished because the mana ran out"
+            << "Your Zivs vanished because the mana ran out"
             << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }

@@ -274,11 +274,12 @@ public:
     const std::string& getTooltipTitle() const override
     { return SpellManager::getSpellReadableName(mSpellType); }
 
+    //! \brief Returns the cost line of the tooltip; Summon Ziv shows the price of the next Ziv.
     std::string getCostText(GameMap* gameMap) const override
     {
         if(mSpellType == SpellType::summonWorker)
             return Helper::toString(SpellSummonWorker::getNextWorkerPriceForPlayer(gameMap,
-                gameMap->getLocalPlayer())) + " mana for next worker";
+                gameMap->getLocalPlayer())) + " mana for next Ziv";
 
         const char* key = nullptr;
         switch(mSpellType)

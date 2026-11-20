@@ -9647,7 +9647,7 @@ Action	spawn	2	82	14	1	Knight:5	Knight:5	Wizard:5	Elf:5	Monk:5	Adventurer:5
 Name	springhallWell
 Mode	once
 Cond	slabs	1	Springhall	claimed	>=	40
-Action	message	1	The spring hall is yours and a spring of mana has opened in the middle of it. Claim it with a worker.
+Action	message	1	The spring hall is yours and a spring of mana has opened in the middle of it. Claim it with a Ziv.
 Action	terrain	18	15	18	15	manawell
 [/Trigger]
 [/Triggers]

@@ -4103,7 +4103,7 @@ Action	win	1
 Name	centreWell
 Mode	once
 Cond	slabs	1	Centre	claimed	>=	25
-Action	message	1	The royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a worker.
+Action	message	1	The royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a Ziv.
 Action	terrain	49	35	49	35	manawell
 [/Trigger]
 [Trigger]

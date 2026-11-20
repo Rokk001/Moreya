@@ -108,7 +108,7 @@ struct ODClient {
 };
 //! Uses the local roster fixture so opening does not discard its restored creatures.
 bool useLocalCreatureRoster() { return true; }
-const char* const FILTER_LABELS[] = {"All", "Workers", "Fighters", "Unhappy"};
+const char* const FILTER_LABELS[] = {"All", "Zivs", "Fighters", "Unhappy"};
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
 const char* const NAV_SKILLS_BUTTON = "NavSkills";
 const char* const NAV_ICON_ENABLED = "enabled";

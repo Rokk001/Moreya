@@ -11,7 +11,7 @@ book = ET.parse(repo / 'gui/WindowSocial.layout').getroot().find('Window')
 home = book.find("Window[@name='HomePage']")
 assert home.find("Window[@name='Filter']").get('type') == 'OD/Combobox'
 assert home.find("Window[@name='Filter']/Property[@name='ReadOnly']").get('value') == 'True'
-assert all(label in source for label in ('"All", "Workers", "Fighters", "Unhappy"',))
+assert all(label in source for label in ('"All", "Zivs", "Fighters", "Unhappy"',))
 
 def body(signature):
     return source.split(signature, 1)[1].split('\n}', 1)[0]

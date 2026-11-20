@@ -814,7 +814,7 @@
                     <Window type="OD/ResearchButton" name="SummonWorkerButton" >
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/SummonWorkerButton" />
-                        <Property name="TooltipText" value="Spell: Summon Worker" />
+                        <Property name="TooltipText" value="Spell: Summon Ziv" />
                         <Window type="OD/ProgressBar" name="SummonWorkerButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />

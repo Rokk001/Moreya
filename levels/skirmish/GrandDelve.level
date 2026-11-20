@@ -2640,7 +2640,7 @@ Action	gold	1	500
 Name	northHallWell
 Mode	once
 Cond	slabs	1	NorthHall	claimed	>=	20
-Action	message	1	The north hall is yours and a spring of mana has opened in it. Claim it with a worker.
+Action	message	1	The north hall is yours and a spring of mana has opened in it. Claim it with a Ziv.
 Action	terrain	46	11	46	11	manawell
 [/Trigger]
 [/Triggers]

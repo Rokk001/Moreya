@@ -143,8 +143,8 @@ CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) 
         CEGUI::Window* count = createWindow(mWindow, "OD/StaticText", "WorkerCount" + std::to_string(i),
             WORKER_COUNT_X, static_cast<float>(i) * WORKER_ROW_PITCH, WORKER_COUNT_WIDTH, COUNT_HEIGHT);
         prepareCount(count);
-        count->setTooltipText("Workers");
-        count->setUserString(Gui::USER_STRING_CONTEXT_HELP, std::string("Workers: ") + CRITERION_NAMES[static_cast<size_t>(WORKER_CRITERIA[i])]);
+        count->setTooltipText("Zivs");
+        count->setUserString(Gui::USER_STRING_CONTEXT_HELP, std::string("Zivs: ") + CRITERION_NAMES[static_cast<size_t>(WORKER_CRITERIA[i])]);
         count->setID(static_cast<CEGUI::uint>(i));
         mWorkerCounts[i] = count;
         mConnections.emplace_back(count->subscribeEvent(CEGUI::Window::EventMouseClick,

@@ -100,7 +100,7 @@ void SpellPlague::checkSpellCast(GameMap* gameMap, const InputManager& inputMana
 
     if(closestCreature->getDefinition()->isWorker() || closestCreature->getDefinition()->isChampion())
     {
-        inputCommand.displayText(Ogre::ColourValue::Red, "Workers and champions never get sick.");
+        inputCommand.displayText(Ogre::ColourValue::Red, "Zivs and champions never get sick.");
         return;
     }
 

@@ -4928,7 +4928,7 @@ Action	win	1
 Name	gladeWell
 Mode	once
 Cond	slabs	1	WestGlade	claimed	>=	40
-Action	message	1	The west glade is yours, master, and the fog over its middle has thinned to a spring of mana. Claim it with a worker.
+Action	message	1	The west glade is yours, master, and the fog over its middle has thinned to a spring of mana. Claim it with a Ziv.
 Action	terrain	17	52	17	52	manawell
 [/Trigger]
 

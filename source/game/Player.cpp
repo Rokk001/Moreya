@@ -500,7 +500,7 @@ bool Player::redemWorkerInHeart(GameEntity* entity, Tile* tile)
     ServerNotification* serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket
-        << "You redeemed your worker into " + Helper::toString(refund) + " mana"
+        << "You redeemed your Ziv into " + Helper::toString(refund) + " mana"
         << EventShortNoticeType::majorGameEvent;
     ODServer::getSingleton().queueServerNotification(serverNotification);
 
@@ -797,7 +797,7 @@ void Player::notifyNoWorker()
         return;
     }
 
-    std::string chatMsg = "You have no worker to fulfill your dark wishes.";
+    std::string chatMsg = "You have no Ziv to fulfill your dark wishes.";
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
     serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;

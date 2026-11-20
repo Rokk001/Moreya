@@ -178,7 +178,7 @@ File: `levels/campaign/BoulderCourse.level`.
 | --- | --- | --- |
 | main | `bouldercourse-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `bouldercourse-main-trial`: Sink all 4 boulders within 600s and 80 slaps. | `mainTrial`: Cond	trigger	courseDone |
-| optional | `bouldercourse-extra-survivors`: Keep all 3 starting workers alive. | `extraSurvivors`: Cond	objective	1	bouldercourse-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0 |
+| optional | `bouldercourse-extra-survivors`: Keep all 3 starting Zivs alive. | `extraSurvivors`: Cond	objective	1	bouldercourse-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0 |
 
 Possible route (static, not a playthrough):
 - Use the four original balls and four Cup regions; original limits remain 600 seconds after openingRound and 80 slaps.
@@ -662,7 +662,7 @@ Static route/bank/footprint/source evidence only; actual gate/link movement, cap
 | Trigger `mainRoute` | `Action	objectivestate	1	goldspire-main-route	reached`; conditions: `Cond	trigger	mainRingReached; Cond	flag	mainWestCrossed	1; Cond	flag	mainEastCrossed	1` | yes |
 | Trigger `mainWarden` | `Action	objectivestate	1	goldspire-main-warden	reached`; conditions: `Cond	trigger	pennVaultOpened; Cond	killedin	AlaricPenn	OuterRing; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `extraWing` | `Action	objectivestate	1	goldspire-extra-wing	reached`; conditions: `Cond	region	1	WestWing` | yes |
-| Briefing | With workers and a thin purse, build before challenging the garrison below its rings. | yes: actual two-fighter buildup and own-heart protection |
+| Briefing | With Zivs and a thin purse, build before challenging the garrison below its rings. | yes: actual two-fighter buildup and own-heart protection |
 | Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links |
 | Briefing | Aurel cannot hold this chosen barrier with promises. | yes: actual Penn death inside the spire and all remaining foes |
 
@@ -767,7 +767,7 @@ Static floor source, own-heart destination and exact-item completion checked. Ac
 | Trigger `mainWarden` | `Action	objectivestate	1	highcairn-main-warden	reached`; conditions: `Cond	killedin	HildeCairn	Hold; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainStone` | `Action	objectivestate	1	highcairn-main-stone	reached`; conditions: `Cond	flag	stoneDone	1` | yes |
 | Trigger `extraCaldera` | `Action	objectivestate	1	highcairn-extra-caldera	reached`; conditions: `Cond	region	1	Caldera` | yes |
-| Briefing | Build from your workers, guard your heart and ascend toward her mountain hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
+| Briefing | Build from your Zivs, guard your heart and ascend toward her mountain hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
 | Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with floor pickup, visible worker transport and same-item recovery; runtime remains unverified |
 
 ## HollinFen
@@ -1283,7 +1283,7 @@ File: `levels/campaign/SkittleCavern.level`.
 | --- | --- | --- |
 | main | `skittlecavern-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `skittlecavern-main-trial`: Open all 4 lanes; bowl down 10 guards within 540s. | `mainTrial`: Cond	trigger	laneCleared |
-| optional | `skittlecavern-extra-survivors`: Keep all 4 starting workers alive. | `extraSurvivors`: Cond	objective	1	skittlecavern-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0; Cond	alive	DefaultWorker4; Cond	event	DefaultWorker4	killed	==	0 |
+| optional | `skittlecavern-extra-survivors`: Keep all 4 starting Zivs alive. | `extraSurvivors`: Cond	objective	1	skittlecavern-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0; Cond	alive	DefaultWorker4; Cond	event	DefaultWorker4	killed	==	0 |
 
 Possible route (static, not a playthrough):
 - Open each original lane mouth at y8,16,24,32. Keep all original14boulder traps and ten exact guard spawns Pin1..10; original wait orders retained.
@@ -1381,7 +1381,7 @@ File: `levels/campaign/SwarmNight.level`.
 | --- | --- | --- |
 | main | `swarmnight-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `swarmnight-main-trial`: Survive until dawn (13 minutes). | `mainTrial`: Cond	time	780; Cond	goalmet	1	ProtectDungeonTemple |
-| optional | `swarmnight-extra-survivors`: Keep all 3 starting workers alive. | `extraSurvivors`: Cond	objective	1	swarmnight-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0 |
+| optional | `swarmnight-extra-survivors`: Keep all 3 starting Zivs alive. | `extraSurvivors`: Cond	objective	1	swarmnight-main-trial	reached; Cond	alive	DefaultWorker1; Cond	event	DefaultWorker1	killed	==	0; Cond	alive	DefaultWorker2; Cond	event	DefaultWorker2	killed	==	0; Cond	alive	DefaultWorker3; Cond	event	DefaultWorker3	killed	==	0 |
 
 Possible route (static, not a playthrough):
 - Prepare the existing dungeon against the six timed waves, preserving the heart.

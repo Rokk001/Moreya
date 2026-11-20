@@ -2,7 +2,7 @@
 <GUILayout version="4">
     <Window type="OD/SheetWindow" name="WorkersWindow">
         <Property name="Area" value="{{0.25,-154},{0.25,-124},{0.75,154},{0.75,124}}" />
-        <Property name="Text" value="Workers" />
+        <Property name="Text" value="Zivs" />
         <Property name="CaptionColour" value="00FFFFFF" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />
@@ -32,7 +32,7 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="TextColours" value="FFF2C860" />
-            <Property name="Text" value="Free workers" />
+            <Property name="Text" value="Free Zivs" />
         </Window>
         <Window type="OD/StaticText" name="FreeCount">
             <Property name="Area" value="{{0.112,0},{0.09,0},{0.286,0},{0.165,0}}" />
@@ -907,7 +907,7 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="TextColours" value="FFF6D690" />
-            <Property name="Text" value="Workers" />
+            <Property name="Text" value="Zivs" />
         </Window>
         <Window type="OD/StaticImage" name="DragGhostTablet">
             <Property name="Area" value="{{0.0146,0},{0.1848,0},{0.2082,0},{0.649,0}}" />
