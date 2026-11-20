@@ -153,6 +153,8 @@ struct Player {
     bool getHasLost()const{return false;}
     void notifyNoSkillInQueue(){++warnings;}
     uint32_t getSpellCooldownTurns(SpellType)const{return 0;}
+    //! \brief No hand cooldown runs in these cases, so the extracted save writes no HandCooldown block.
+    double getHandCooldownSeconds()const{return 0.0;}
 };
 enum class ServerNotificationType {skillsDone,skillTree,chatServer};
 enum class EventShortNoticeType {aboutSkills};
@@ -222,6 +224,8 @@ struct Seat {
     Player* getPlayer() {return &player;}
     Player* getPlayer() const {return const_cast<Player*>(&player);}
     std::vector<std::pair<SpellType,uint32_t>> mSpellCooldownsLoaded;
+    //! \brief Fixture storage for the hand cooldown that the extracted seat loader reads.
+    double mHandCooldownLoaded=0.0;
     bool isSkilling()const{return mCurrentSkill!=nullptr;}
     uint32_t getNbRooms(RoomType)const{return 1;}
     const std::vector<SkillType>& getSkillDone()const{return mSkillDone;}

@@ -558,7 +558,7 @@ enumerators = [name for name in enumerators if name not in ('relationshipTier', 
 # Equipment and infirmary notifications follow campaign victory without changing existing ordinals.
 assert enumerators[-18:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown'], enumerators[-18:]
 assert enumerators.count('campaignVictory') == 1
-enumerators = enumerators[:-14]
+enumerators = enumerators[:-15]
 # wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]
 assert enumerators.count('wallTorches') == 1
