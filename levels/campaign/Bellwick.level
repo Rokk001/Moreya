@@ -4084,7 +4084,7 @@ Action	objectivestate	1	bellwick-main-keeper	reached
 [/Trigger]
 [Trigger]
 Name	mainRaid
-Mode	once
+Mode	repeat	0
 Cond	raid	defeated
 Action	objectivestate	1	bellwick-main-raid	reached
 [/Trigger]

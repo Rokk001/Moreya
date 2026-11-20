@@ -4214,7 +4214,7 @@ Action	objectivestate	1	kingsfall-main-army	reached
 [/Trigger]
 [Trigger]
 Name	mainRaid
-Mode	once
+Mode	repeat	0
 Cond	raid	defeated
 Action	objectivestate	1	kingsfall-main-raid	reached
 [/Trigger]

@@ -87,7 +87,6 @@ Static source and potential route evidence only; actual digging/movement, combat
 | Trigger `mainKeeper` | `Action	objectivestate	1	bellwick-main-keeper	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	bellwick-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraScriptorium` | `Action	objectivestate	1	bellwick-extra-scriptorium	reached`; conditions: `Cond	region	1	Scriptorium` | yes |
-| Objective mapping | grouped observer mode differs: bellwick-main-raid | no: requires design decision |
 | Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | no: own heart protected, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes; holding against the faithful until the gates unseal is no longer checked, the faithful waves are removed |
 
 ## Bonus1
@@ -649,7 +648,6 @@ Static route/bank/footprint/source evidence only; actual gate/link movement, cap
 | Trigger `mainWarden` | `Action	objectivestate	1	goldspire-main-vault	reached`; conditions: `Cond	trigger	pennVaultOpened` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	goldspire-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraWing` | `Action	objectivestate	1	goldspire-extra-wing	reached`; conditions: `Cond	region	1	WestWing` | yes |
-| Objective mapping | grouped observer mode differs: goldspire-main-raid | no: requires design decision |
 | Briefing | With Zivs and a thin purse, build before challenging the garrison below its rings. | yes: actual two-fighter buildup and own-heart protection |
 | Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | no: all144open LowTown floor fields outside the Moreya gate room owned; actual south-gate crossing then outer-ring entry and both real sealed links; the treasurer no longer stands in the core, mainRaid requires the defeated raid with its leader AlaricPenn |
 
@@ -830,7 +828,6 @@ Static conditions only; full movement, claiming, combat, treasury payout and sav
 | Trigger `mainThrone` | `Action	objectivestate	1	hollowmark-main-throne	reached`; conditions: `Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	hollowmark-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraTower` | `Action	objectivestate	1	hollowmark-extra-tower	reached`; conditions: `Cond	region	1	WestTower3` | yes |
-| Objective mapping | grouped observer mode differs: hollowmark-main-raid | no: requires design decision |
 | Briefing | Hold against the garrison, open the upper gates by the towers or their keys, and use the treasuries to sustain the assault. | yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes |
 | Briefing | Kill Castellan and claim the throne we promised at the beginning. | no: all548original throne floor fields currently owned; Castellan no longer sits in ThroneHall, mainRaid requires both defeated raids with their leaders SabineRook and Castellan |
 
@@ -933,7 +930,6 @@ Static script/bridge/path/recruitment-source evidence only; actual capture/conve
 | Trigger `mainArmy` | `Action	objectivestate	1	kingsfall-main-army	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	kingsfall-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	kingsfall-extra-gold	reached`; conditions: `Cond	mined	1	>=	4000` | yes |
-| Objective mapping | grouped observer mode differs: kingsfall-main-raid | no: requires design decision |
 | Briefing | Cross the watched lava spans and defeat Aurel and his court. | no: real lava-span crossing; Aurel no longer holds court here, mainRaid requires the defeated raid with its leader PrinceAurel |
 | Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | yes: actual living captivity OR conversion of all three champions and 12 own living creatures currently on the own-heart tiles |
 
@@ -1543,7 +1539,6 @@ Static resource/footprint evidence only; claim takeover, bed/coop use, combat, s
 | Trigger `mainRivals` | `Action	objectivestate	1	varnscrossing-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	varnscrossing-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	varnscrossing-extra-gold	reached`; conditions: `Cond	mined	1	>=	5000` | yes |
-| Objective mapping | grouped observer mode differs: varnscrossing-main-raid | no: requires design decision |
 | Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes; mainRaid also requires the defeated raid with its leader MarshalVarn |
 
 ## Wolfscar
@@ -1640,5 +1635,4 @@ Static heart-seat/location and region evidence only; actual heart destruction, c
 | Trigger `mainForces` | `Action	objectivestate	1	wraithwood-main-forces	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	wraithwood-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGrove` | `Action	objectivestate	1	wraithwood-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
-| Objective mapping | grouped observer mode differs: wraithwood-main-raid | no: requires design decision |
 | Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately; mainRaid also requires the defeated raid with its leader ElowenAsh |

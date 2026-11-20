@@ -3433,7 +3433,7 @@ Action	objectivestate	1	goldspire-main-vault	reached
 [/Trigger]
 [Trigger]
 Name	mainRaid
-Mode	once
+Mode	repeat	0
 Cond	raid	defeated
 Action	objectivestate	1	goldspire-main-raid	reached
 [/Trigger]

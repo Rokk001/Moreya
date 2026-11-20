@@ -6171,7 +6171,7 @@ Action	objectivestate	1	hollowmark-main-throne	reached
 [/Trigger]
 [Trigger]
 Name	mainRaid
-Mode	once
+Mode	repeat	0
 Cond	raid	defeated
 Action	objectivestate	1	hollowmark-main-raid	reached
 [/Trigger]
