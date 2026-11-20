@@ -69,7 +69,7 @@ KEEPER_BEFORE = {
     "Brackenford": (3, 3), "Coldwell": (3, 0), "Ravensledge": (3, 0), "Tinmoor": (3, 2), "Greywater": (3, 6),
     "Highcairn": (3, 3), "Lanternhill": (3, 6), "Saltmere": (3, 5), "HollinFen": (12, 2), "Cinderhollow": (7, 3),
     "Ashcombe": (9, 0), "Ironbridge": (9, 0), "Bellwick": (11, 3), "Goldspire": (4, 2), "Kingsfall": (5, 0),
-    "VarnsCrossing": (5, 0), "Wraithwood": (0, 0), "HollowmarkCitadel": (5, 0),
+    "VarnsCrossing": (5, 0), "Wraithwood": (6, 0), "HollowmarkCitadel": (5, 0),
 }
 
 # Skill templates a raid member may be fixed to (fighter templates of config/creatureSkills.cfg; workers do not raid).
@@ -96,9 +96,30 @@ def read(relative):
 
 
 def section(text, name):
-    """Returns the body of the top-level section [name] ... [/name], or None when the level has none."""
-    match = re.search(r"^\[" + re.escape(name) + r"\][ \t]*\n(.*?)^\[/" + re.escape(name) + r"\]", text, re.M | re.S)
-    return match.group(1) if match else None
+    """Returns the body of the top-level section [name] ... [/name], or None when the level has none.
+
+    A section of the same name nested in another section (such as the [Creatures] of the wave data inside a hero
+    portal [Room]) is skipped: only a header that stands outside every other open section counts.
+    """
+    stack = []
+    body = None
+    for line in text.split("\n"):
+        marker = re.fullmatch(r"\[(/?)(\w+)\]", line.split("#", 1)[0].strip())
+        if body is not None and not (marker and marker.group(1) and marker.group(2) == name and stack == [name]):
+            body.append(line)
+        if marker is None:
+            continue
+        tag = marker.group(2)
+        if not marker.group(1):
+            if not stack and tag == name and body is None:
+                body = []
+            stack.append(tag)
+        elif tag in stack:
+            while stack.pop() != tag:
+                pass
+            if body is not None and not stack:
+                return "\n".join(body) + "\n"
+    return None
 
 
 def rows(body):
