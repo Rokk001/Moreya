@@ -1479,9 +1479,11 @@ Action	objectivestate	1	brackenford-o03	reached
 Name	groveClaimed
 Mode	once
 Cond	claimed	1	Grove	22
-Action	message	1	The grove is yours. The ford lies east of it.
+Action	message	1	Two goblins have heard about your grove and want a share. Let them stay.
+Action	spawn	1	12	28	-1	Goblin:2	Goblin:2
 Action	reveal	1	Landing
 Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.
+Action	generate	1	Goblin:1
 Action	objectivestate	1	brackenford-o04	reached
 [/Trigger]
 [Trigger]

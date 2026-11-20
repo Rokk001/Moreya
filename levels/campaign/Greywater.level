@@ -3041,7 +3041,8 @@ Action	portal	0	off
 Name	firstCoin
 Mode	once
 Cond	mined	1	>=	600
-Action	message	1	That is a start. A bridge crossing is open south of the dungeon.
+Action	message	1	That is a start. Two goblins heard the clink and want to join you. A bridge crossing is open south of the dungeon.
+Action	spawn	1	15	74	1	Goblin:1	Goblin:1	Spider:1
 Action	reveal	1	SouthLanding
 Action	objectivestate	1	greywater-o02	reached
 [/Trigger]
@@ -3072,11 +3073,13 @@ Action	objectivestate	1	greywater-o04	reached
 Name	midBankHeld
 Mode	once
 Cond	claimed	1	MidBank	60
-Action	message	1	The middle bank is held, and the sluice gate on the east bank grinds open.
+Action	message	1	The middle bank is held. Heavier creatures are ready to serve, and the sluice gate on the east bank grinds open.
+Action	spawn	1	16	75	1	Orc:2	Goblin:2
 Action	reveal	1	NorthBank
 Action	terrain	38	17	42	17	path
 Action	setflag	sluiceOpen	1
 Action	portal	0	on
+Action	generate	1	Spider:1
 [/Trigger]
 [Trigger]
 Name	wharfSeen

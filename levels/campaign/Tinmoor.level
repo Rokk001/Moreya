@@ -1835,7 +1835,10 @@ Name	vaultFound
 Mode	once
 Cond	region	1	SealedVault
 Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
+Action	spawn	1	66	50	1	Goblin:1@VaultBearer
 Action	stonecreate	65	50	vault-stone	1	9	46
+Action	setflag	vaultStone	1
+Action	timer	vaultSpawn	0
 [/Trigger]
 [Trigger]
 Name	vaultStoneHome
@@ -1843,6 +1846,15 @@ Mode	once
 Cond	deliveredstone	vault-stone
 Action	message	1	The stone sinks into the heart and a hidden hall has opened.
 Action	discover	campaign/CrowshotGallery.level
+[/Trigger]
+[Trigger]
+Name	vaultStoneLost
+Mode	repeat	60
+Cond	flag	vaultStone	1
+Cond	timer	vaultSpawn	>=	5
+Cond	alive	VaultBearer	0
+Action	message	1	Another goblin emerges. Send a Ziv for the stone.
+Action	spawn	1	66	50	1	Goblin:1@VaultBearer
 [/Trigger]
 [Trigger]
 Name	goalPostACleared

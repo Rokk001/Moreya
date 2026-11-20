@@ -210,9 +210,9 @@ File: `levels/campaign/Brackenford.level`.
 | Script line 1459 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
 | Script line 1466 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
 | Script line 1475 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
-| Script line 1484 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
-| Script line 1557 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
-| Script line 1632 | `Action	win	1` | yes |
+| Script line 1485 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
+| Script line 1559 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
+| Script line 1634 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -227,7 +227,7 @@ File: `levels/campaign/Brackenford.level`.
 
 Possible route (static, not a playthrough):
 - Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.
-- Claim at least 22 Grove tiles; the keeper gets no creatures from the grove.
+- Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.
 - Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.
 - Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.
 - Claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.
@@ -680,8 +680,8 @@ File: `levels/campaign/Greywater.level`.
 | Script line 3035 | `Action	objectiveid	1	greywater-o01	Defeat the raid and its leader.` | yes |
 | Script line 3036 | `Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.` | yes |
 | Script line 3037 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
-| Script line 3061 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
-| Script line 3204 | `Action	win	1` | yes |
+| Script line 3062 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
+| Script line 3207 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -694,7 +694,7 @@ File: `levels/campaign/Greywater.level`.
 | optional | `greywater-extra-gold`: Mine 1200 gold. | `extraGold`: Cond	mined	1	>=	1200 |
 
 Possible route (static, not a playthrough):
-- Mine 600 actual gold from the zero-gold start; the keeper gets no creatures from it. Reachable finite gold totals 58000; the optional total is 1200, including the main 600.
+- Mine 600 actual gold from the zero-gold start. Existing firstCoin spawns Goblin/Goblin/Spider at (15,74). Reachable finite gold totals 58000; the optional total is 1200, including the main 600.
 - Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.
 - Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.
 - Before final victory, mine 1200 total gold for the optional goal. Defeat both raid groups of the Drowned Oath with their leader CorwinGray, who come through the Moreya gate at (38,24), and claim/remove neutral Portal1 (7..9,49..51). The rival keeper stays a phase-1 enemy; original sluice control/timeout remain unchanged.
@@ -1463,8 +1463,8 @@ File: `levels/campaign/Tinmoor.level`.
 | Script line 1796 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
 | Script line 1804 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
 | Script line 1822 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
-| Script line 1867 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
-| Script line 1923 | `Action	win	1` | yes |
+| Script line 1879 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
+| Script line 1935 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1480,7 +1480,7 @@ Possible route (static, not a playthrough):
 - Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.
 - Possession comes from the level's own research list (spellPossess is pending and the library is available); no script grants it. Possess an own living creature and enter Seams (14,8)-(50,34).
 - Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.
-- After optional discovery, a worker collects vault-stone from (65, 50) and visibly carries the same item to the own heart at (9, 46); its delivery reveals the bonus level CrowshotGallery. Picking up the worker or losing it leaves the same item on the current floor for another worker.
+- After optional discovery, a worker collects vault-stone from (65, 50) beside VaultBearer and visibly carries the same item to the own heart at (9, 46). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
 - Claim or remove the neutral portal at (22,36) and defeat both raid groups of the Deep Picks with their leader MerrinTay, who come through the Moreya gate at (24,12), while preserving the heart. Stone transport is never required.
 
 Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.

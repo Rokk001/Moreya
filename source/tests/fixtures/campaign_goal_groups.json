@@ -665,7 +665,7 @@
     },
     "route": [
       "Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.",
-      "Claim at least 22 Grove tiles; the keeper gets no creatures from the grove.",
+      "Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.",
       "Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.",
       "Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.",
       "Claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.",
@@ -706,7 +706,7 @@
     },
     "preserved_actions": {
       "groveClaimed": [
-        "Action\tmessage\t1\tThe grove is yours. The ford lies east of it."
+        "Action\tspawn\t1\t12\t28\t-1\tGoblin:2\tGoblin:2"
       ],
       "cellarStoneHome": [
         "Action\tdiscover\tcampaign/Mossgate.level"
@@ -1089,7 +1089,13 @@
     "preserved_actions": {
       "vaultFound": [
         "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart.",
-        "Action\tstonecreate\t65\t50\tvault-stone\t1\t9\t46"
+        "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer",
+        "Action\tstonecreate\t65\t50\tvault-stone\t1\t9\t46",
+        "Action\tsetflag\tvaultStone\t1",
+        "Action\ttimer\tvaultSpawn\t0"
+      ],
+      "vaultStoneLost": [
+        "Action\tspawn\t1\t66\t50\t1\tGoblin:1@VaultBearer"
       ],
       "vaultStoneHome": [
         "Action\tdiscover\tcampaign/CrowshotGallery.level"
@@ -1122,13 +1128,32 @@
           ],
           "minimum_open_tiles": 1
         }
+      },
+      "mission_pickups": {
+        "vault-stone": {
+          "source": [
+            65,
+            50
+          ],
+          "friendly": "VaultBearer",
+          "friendly_spawn": [
+            66,
+            50
+          ],
+          "destination": [
+            9,
+            46
+          ],
+          "seat": 1,
+          "discovery": "vaultFound"
+        }
       }
     },
     "route": [
       "Mine at least 900 actual gold; 69000 finite gold is potentially reachable. The optional total requires 1500, not starting gold or the scouting reward.",
       "Possession comes from the level's own research list (spellPossess is pending and the library is available); no script grants it. Possess an own living creature and enter Seams (14,8)-(50,34).",
       "Clear both initial named watchmen at each post and the exact postAEntered/postBEntered spawn instances.",
-      "After optional discovery, a worker collects vault-stone from (65, 50) and visibly carries the same item to the own heart at (9, 46); its delivery reveals the bonus level CrowshotGallery. Picking up the worker or losing it leaves the same item on the current floor for another worker.",
+      "After optional discovery, a worker collects vault-stone from (65, 50) beside VaultBearer and visibly carries the same item to the own heart at (9, 46). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.",
       "Claim or remove the neutral portal at (22,36) and defeat both raid groups of the Deep Picks with their leader MerrinTay, who come through the Moreya gate at (24,12), while preserving the heart. Stone transport is never required."
     ],
     "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
@@ -1141,6 +1166,11 @@
       ],
       "vaultStoneHome": [
         "Cond\tdeliveredstone\tvault-stone"
+      ],
+      "vaultStoneLost": [
+        "Cond\tflag\tvaultStone\t1",
+        "Cond\ttimer\tvaultSpawn\t>=\t5",
+        "Cond\talive\tVaultBearer\t0"
       ],
       "raidDefeated": [
         "Cond\traid\tdefeated"
@@ -1504,7 +1534,8 @@
     },
     "preserved_actions": {
       "firstCoin": [
-        "Action\tmessage\t1\tThat is a start. A bridge crossing is open south of the dungeon.",
+        "Action\tmessage\t1\tThat is a start. Two goblins heard the clink and want to join you. A bridge crossing is open south of the dungeon.",
+        "Action\tspawn\t1\t15\t74\t1\tGoblin:1\tGoblin:1\tSpider:1",
         "Action\treveal\t1\tSouthLanding",
         "Action\tobjectivestate\t1\tgreywater-o02\treached"
       ],
@@ -1514,11 +1545,13 @@
         "Action\tobjectivestate\t1\tgreywater-o04\treached"
       ],
       "midBankHeld": [
-        "Action\tmessage\t1\tThe middle bank is held, and the sluice gate on the east bank grinds open.",
+        "Action\tmessage\t1\tThe middle bank is held. Heavier creatures are ready to serve, and the sluice gate on the east bank grinds open.",
+        "Action\tspawn\t1\t16\t75\t1\tOrc:2\tGoblin:2",
         "Action\treveal\t1\tNorthBank",
         "Action\tterrain\t38\t17\t42\t17\tpath",
         "Action\tsetflag\tsluiceOpen\t1",
-        "Action\tportal\t0\ton"
+        "Action\tportal\t0\ton",
+        "Action\tgenerate\t1\tSpider:1"
       ],
       "sluiceTimeout": [
         "Action\tmessage\t1\tThe river hall has lifted its sluice gate on the east bank. The way north is open.",
@@ -1647,7 +1680,7 @@
       }
     },
     "route": [
-      "Mine 600 actual gold from the zero-gold start; the keeper gets no creatures from it. Reachable finite gold totals 58000; the optional total is 1200, including the main 600.",
+      "Mine 600 actual gold from the zero-gold start. Existing firstCoin spawns Goblin/Goblin/Spider at (15,74). Reachable finite gold totals 58000; the optional total is 1200, including the main 600.",
       "Walk an own living creature east across either connected river bridge: south (30..34,68..69) or middle (21..25,46). Both join the western starting bank to the eastern bank. The original northern bridge ends at rock (37,20)-(37,21), so it is not used as a claimed feasible crossing; the pathfinder forbids diagonal corner cutting.",
       "Deal positive hostile creature damage as seat1 to seat3 in Siege (33,30)-(42,42). Initial SiegeHand1/2/3 are at (38,35),(37,37),(35,36); siegeSeen also spawns three seat3 fighters at (36,30). Hits by rival seat2 do not count.",
       "Before final victory, mine 1200 total gold for the optional goal. Defeat both raid groups of the Drowned Oath with their leader CorwinGray, who come through the Moreya gate at (38,24), and claim/remove neutral Portal1 (7..9,49..51). The rival keeper stays a phase-1 enemy; original sluice control/timeout remain unchanged.",
