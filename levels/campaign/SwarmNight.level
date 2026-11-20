@@ -1568,7 +1568,7 @@ Action	objectiveid	1	swarmnight-o02	Protect your heart.
 Name	swarm1
 Mode	once
 Cond	time	60
-Action	message	1	Wave 1: a swarm of 6 is coming down the roads.
+Action	message	1	The first swarm is coming down the roads: 6 of them.
 Action	spawn	2	6	23	1	Rat:2	Rat:2
 Action	spawn	2	38	23	-1	Rat:2	Rat:2
 Action	spawn	2	18	24	-1	Rat:2	Rat:2
@@ -1577,7 +1577,7 @@ Action	spawn	2	18	24	-1	Rat:2	Rat:2
 Name	swarm2
 Mode	once
 Cond	time	180
-Action	message	1	Wave 2: a swarm of 8 is coming down the roads.
+Action	message	1	The second swarm is coming down the roads: 8 of them.
 Action	spawn	2	6	23	1	Spider:2	Spider:2	Spider:2
 Action	spawn	2	38	23	-1	Spider:2	Spider:2	Spider:2
 Action	spawn	2	18	24	-1	Spider:2	Spider:2
@@ -1586,7 +1586,7 @@ Action	spawn	2	18	24	-1	Spider:2	Spider:2
 Name	swarm3
 Mode	once
 Cond	time	300
-Action	message	1	Wave 3: a swarm of 10 is coming down the roads.
+Action	message	1	The third swarm is coming down the roads: 10 of them.
 Action	spawn	2	6	23	1	Rat:3	Rat:3	Rat:3	Rat:3
 Action	spawn	2	38	23	-1	Rat:3	Rat:3	Rat:3
 Action	spawn	2	18	24	-1	Rat:3	Rat:3	Rat:3
@@ -1595,7 +1595,7 @@ Action	spawn	2	18	24	-1	Rat:3	Rat:3	Rat:3
 Name	swarm4
 Mode	once
 Cond	time	420
-Action	message	1	Wave 4: a swarm of 12 is coming down the roads.
+Action	message	1	The fourth swarm is coming down the roads: 12 of them.
 Action	spawn	2	6	23	1	Spider:3	Spider:3	Spider:3	Spider:3
 Action	spawn	2	38	23	-1	Spider:3	Spider:3	Spider:3	Spider:3
 Action	spawn	2	18	24	-1	Spider:3	Spider:3	Spider:3	Spider:3
@@ -1604,7 +1604,7 @@ Action	spawn	2	18	24	-1	Spider:3	Spider:3	Spider:3	Spider:3
 Name	swarm5
 Mode	once
 Cond	time	540
-Action	message	1	Wave 5: a swarm of 14 is coming down the roads.
+Action	message	1	The fifth swarm is coming down the roads: 14 of them.
 Action	spawn	2	6	23	1	Rat:4	Rat:4	Rat:4	Rat:4	Rat:4
 Action	spawn	2	38	23	-1	Rat:4	Rat:4	Rat:4	Rat:4	Rat:4
 Action	spawn	2	18	24	-1	Rat:4	Rat:4	Rat:4	Rat:4
@@ -1613,7 +1613,7 @@ Action	spawn	2	18	24	-1	Rat:4	Rat:4	Rat:4	Rat:4
 Name	swarm6
 Mode	once
 Cond	time	660
-Action	message	1	Wave 6: a swarm of 16 is coming down the roads.
+Action	message	1	The sixth swarm is coming down the roads: 16 of them.
 Action	spawn	2	6	23	1	Spider:4	Spider:4	Spider:4	Spider:4	Spider:4	Spider:4
 Action	spawn	2	38	23	-1	Spider:4	Spider:4	Spider:4	Spider:4	Spider:4
 Action	spawn	2	18	24	-1	Spider:4	Spider:4	Spider:4	Spider:4	Spider:4
@@ -1622,7 +1622,7 @@ Action	spawn	2	18	24	-1	Spider:4	Spider:4	Spider:4	Spider:4	Spider:4
 Name	firstSeams
 Mode	once
 Cond	mined	1	>=	300
-Action	message	1	Your diggers have found their stride. Spend the gold on doors, cannons and more beds before the next wave.
+Action	message	1	Your Zivs have found their stride. Spend the gold on doors, cannons and more beds before the next swarm.
 Action	gold	1	300
 [/Trigger]
 [Trigger]
@@ -1675,8 +1675,7 @@ Action	objectivestate	1	swarmnight-o02	failed
 Name	dawn
 Mode	once
 Cond	time	780
-Action	message	1	The first light touches the roads and the swarm melts away. Your heart still beats, and your strongest fighter is willing to follow you.
-Action	keepminion	1
+Action	message	1	The first light touches the roads and the swarm melts away. Your heart still beats.
 Action	win	1
 [/Trigger]
 

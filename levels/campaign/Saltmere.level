@@ -951,9 +951,9 @@ ProtectDungeonTemple	NULL
 20	49	1	0
 20	50	1	0
 20	51	1	0
-20	52	1	0
-20	53	1	0
-20	54	1	0
+20	52	1	0	4
+20	53	1	0	4
+20	54	1	0	4
 20	55	1	0
 20	56	1	0
 20	57	1	0
@@ -980,13 +980,13 @@ ProtectDungeonTemple	NULL
 21	45	1	0
 21	46	1	0
 21	47	1	0
-21	48	3	100
+21	48	1	0
 21	49	1	0
 21	50	1	0
 21	51	1	0
-21	52	1	0
-21	53	1	0
-21	54	1	0
+21	52	1	0	4
+21	53	1	0	4
+21	54	1	0	4
 21	55	1	0
 21	56	1	0
 21	57	1	0
@@ -1009,14 +1009,14 @@ ProtectDungeonTemple	NULL
 22	28	1	0
 22	45	1	0
 22	46	1	0
-22	47	3	100
-22	48	3	100
-22	49	3	100
+22	47	1	0
+22	48	1	0
+22	49	1	0
 22	50	1	0
 22	51	1	0
-22	52	1	0
-22	53	1	0
-22	54	1	0
+22	52	1	0	4
+22	53	1	0	4
+22	54	1	0	4
 22	55	1	0
 22	56	1	0
 22	57	1	0
@@ -2675,6 +2675,67 @@ ProtectDungeonTemple	NULL
 2	92	2	100	-1	150
 1	91	2	100	-1	150
 4	93	2	100	-1	150
+19	45	1	0
+19	46	1	0
+19	47	1	0
+18	45	1	0
+19	42	1	0
+17	43	1	0
+17	44	1	0
+16	43	1	0
+18	35	1	0
+18	34	1	0
+17	33	1	0
+17	32	1	0
+11	27	1	0
+12	27	1	0
+13	27	1	0
+11	26	1	0
+12	26	1	0
+13	26	1	0
+11	25	1	0
+12	25	1	0
+13	25	1	0
+11	24	1	0
+12	24	1	0
+13	24	1	0
+11	23	1	0
+12	23	1	0
+13	23	1	0
+11	22	1	0
+12	22	1	0
+13	22	1	0
+11	21	1	0
+12	21	1	0
+13	21	1	0
+11	20	1	0
+12	20	1	0
+13	20	1	0
+11	19	1	0
+12	19	1	0
+13	19	1	0
+11	18	1	0
+12	18	1	0
+13	18	1	0
+11	17	1	0
+12	17	1	0
+13	17	1	0
+11	16	1	0
+12	16	1	0
+13	16	1	0
+11	15	1	0
+12	15	1	0
+13	15	1	0
+11	14	1	0
+12	14	1	0
+13	14	1	0
+11	13	1	0
+12	13	1	0
+13	13	1	0
+3	47	1	0
+4	47	1	0
+3	48	1	0
+4	48	1	0
 [/Tiles]
 
 [Rooms]
@@ -2945,6 +3006,21 @@ ProtectDungeonTemple	NULL
 22	59
 0
 [/Room]
+[Room]
+10	MoreyaGate1	4	9
+20	52
+20	53
+20	54
+21	52
+21	53
+21	54
+22	52
+22	53
+22	54
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -3053,7 +3129,6 @@ ProtectDungeonTemple	NULL
 2	SleeperWorker2	Kobold.mesh	52	42	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	SleeperOrc	Orc.mesh	47	41	0	Orc	2	0	max	100	0	0	none	none	nullSkillType	none	0
 2	SleeperGoblin	Goblin.mesh	51	44	0	Goblin	2	0	max	100	0	0	none	none	nullSkillType	none	0
-4	BramSeward	Knight.mesh	46	86	0	Knight	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	DockGuard1	Knight.mesh	45	83	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	DockGuard2	Elf.mesh	38	87	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	DockGuard3	Dwarf2.mesh	52	90	0	Dwarf2	3	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -3108,12 +3183,12 @@ Region	SouthFlat	20	66	46	78
 Region	Shore	44	54	56	74
 Region	Port	31	80	56	93
 Region	WreckCove	3	78	14	92
+Region	ShardHollow	2	46	5	49
 [Trigger]
 Name	tide
 Mode	once
 Cond	time	3
-Action	message	1	Saltmere is a string of salt flats and lagoons, master, and at the bottom of the map sits the port where Admiral Bram Seward keeps his fleet. You start with a dungeon but no coin.
-Action	objectiveid	1	saltmere-o01	Kill Bram Seward in the southern port.
+Action	message	1	The Tomb of Whispers is a string of salt flats and lagoons, master, with an old port at its bottom. Bram Seward is bringing the Salt Wolves of Saltmere, and you start with a dungeon but no coin.
 Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.
 Action	objectiveid	1	saltmere-o03	Protect your heart.
 Action	portal	0	off
@@ -3152,7 +3227,7 @@ Action	spawn	3	50	70	1	Adventurer:2	Dwarf1:2	Elf:2
 Name	flatHeld
 Mode	once
 Cond	claimed	1	SouthFlat	50
-Action	message	1	The south flat is yours and the port gates are in range. Seward knows it, and both gate tunnels grind open.
+Action	message	1	The south flat is yours and the port gates are in range. The port knows it, and both gate tunnels grind open.
 Action	reveal	1	Port
 Action	terrain	40	78	41	78	path
 Action	terrain	48	78	49	78	path
@@ -3166,9 +3241,8 @@ Action	objectivestate	1	saltmere-o04	reached
 Name	portEntered
 Mode	once
 Cond	region	1	Port
-Action	message	1	Horns sound over the water. Seward has called every deckhand ashore.
+Action	message	1	Horns sound over the water. The port has called every deckhand ashore.
 Action	spawn	3	40	84	1	Knight:3	Knight:2	Dwarf2:2	Monk:2	Adventurer:2
-Action	objectiveid	1	saltmere-o05	Find Bram Seward in the harbour hall.
 [/Trigger]
 [Trigger]
 Name	coveSeen
@@ -3176,55 +3250,6 @@ Mode	once
 Cond	region	1	WreckCove
 Action	message	1	A dry store of the old harbour lies among the wrecks. Take what you can.
 Action	spawn	1	10	84	1	Spider:2	Orc:2
-[/Trigger]
-[Trigger]
-Name	landing1
-Mode	once
-Cond	time	260
-Action	message	1	Sailors are wading across the high flat.
-Action	spawn	3	31	21	1	Adventurer:2	Adventurer:2	Dwarf1:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	landing2
-Mode	once
-Cond	time	620
-Action	message	1	A boarding party is coming over the steaming ground.
-Action	spawn	3	12	40	1	Knight:2	Monk:2	Adventurer:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	landing3
-Mode	once
-Cond	time	980
-Action	message	1	Seward has sent a squad through the lagoon shallows.
-Action	spawn	3	21	53	1	Knight:2	Knight:2	Dwarf2:2	Monk:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	landing4
-Mode	once
-Cond	time	1350
-Action	message	1	Marines are on the high flat.
-Action	spawn	3	31	21	1	Knight:3	Elf:2	Adventurer:3	Monk:2	Dwarf2:2
-[/Trigger]
-[Trigger]
-Name	landing5
-Mode	once
-Cond	time	1750
-Action	message	1	The fleet has landed a second company on the west.
-Action	spawn	3	12	40	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	landing6
-Mode	once
-Cond	time	2200
-Action	message	1	Another column crosses the lagoon and it carries banners.
-Action	spawn	3	21	53	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	landing7
-Mode	once
-Cond	time	2700
-Action	message	1	The admiral has emptied his barracks.
-Action	spawn	3	31	21	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
 [/Trigger]
 [Trigger]
 Name	portGatesTimeout
@@ -3239,9 +3264,23 @@ Action	portal	0	on
 Action	objectivestate	1	saltmere-o04	reached
 [/Trigger]
 [Trigger]
+Name	shardFound
+Mode	once
+Cond	region	1	ShardHollow
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
+Action	stonecreate	3	47	heartstone-shard	1	14	10
+[/Trigger]
+[Trigger]
+Name	shardHome
+Mode	once
+Cond	deliveredstone	heartstone-shard
+Action	message	1	The shard sinks into your heart. The Heartstone is a piece closer to whole.
+Action	shard
+[/Trigger]
+[Trigger]
 Name	goalHeartSafe3BeforeAdmiralFalls
 Mode	once
-Cond	event	BramSeward	killed
+Cond	raid	defeated
 Cond	goalmet	1	ProtectDungeonTemple
 Action	objectivestate	1	saltmere-o03	reached
 [/Trigger]
@@ -3250,22 +3289,6 @@ Name	goalHeartLost3
 Mode	once
 Cond	room	1	DungeonTemple	==	0
 Action	objectivestate	1	saltmere-o03	failed
-[/Trigger]
-[Trigger]
-Name	admiralFalls
-Mode	once
-Cond	event	BramSeward	killed
-Action	message	1	Admiral Bram Seward is dead and his fleet is without a flag. Saltmere is yours.
-Action	objectivestate	1	saltmere-o01	reached
-Action	objectivestate	1	saltmere-o05	reached
-Action	win	1
-[/Trigger]
-[Trigger]
-Name	bramWavers
-Mode	once
-Cond	health	BramSeward	<	40
-Action	message	1	The admiral is wounded, and the harbour watch is closing around him.
-Action	spawn	3	47	85	1	Knight:3	Monk:2
 [/Trigger]
 
 
@@ -3278,7 +3301,7 @@ Cond	time	0
 Action	mainobjectiveid	1	saltmere-main-heart	Protect your heart.
 Action	mainobjectiveid	1	saltmere-main-gold	Mine 800 gold.
 Action	mainobjectiveid	1	saltmere-main-port	Cross flats and lagoons; breach both port gates.
-Action	mainobjectiveid	1	saltmere-main-admiral	Defeat Bram Seward and all enemy forces.
+Action	mainobjectiveid	1	saltmere-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	saltmere-extra-gold	Mine 1600 gold.
 [/Trigger]
 [Trigger]
@@ -3335,11 +3358,10 @@ Cond	flag	portCrossed	1
 Action	objectivestate	1	saltmere-main-port	reached
 [/Trigger]
 [Trigger]
-Name	mainAdmiral
+Name	mainRaid
 Mode	repeat	0
-Cond	event	BramSeward	killed
-Cond	goalmet	1	KillAllEnemies
-Action	objectivestate	1	saltmere-main-admiral	reached
+Cond	raid	defeated
+Action	objectivestate	1	saltmere-main-raid	reached
 [/Trigger]
 [Trigger]
 Name	extraGold
@@ -3347,5 +3369,38 @@ Mode	once
 Cond	mined	1	>=	1600
 Action	objectivestate	1	saltmere-extra-gold	reached
 [/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	saltmere-main-heart	reached
+Cond	objective	1	saltmere-main-gold	reached
+Cond	objective	1	saltmere-main-port	reached
+Cond	objective	1	saltmere-main-raid	reached
+Cond	raid	defeated
+Action	message	1	The raid lies broken on the salt flats and its leader with it. The Tomb of Whispers is yours.
+Action	win	1
+[/Trigger]
 
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	21	53	0
+Seats	4	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	BramSeward
+Member	1	Knight	5	BramSeward	Guardian
+Member	1	Knight	3	-	Guardian
+Member	1	Monk	3	-	Guardian
+Member	1	Dwarf2	3	-	Guardian
+Member	1	Adventurer	3	-	Shade
+Member	1	Adventurer	3	-	Dancer
+Member	1	Dwarf1	3	-	Berserker
+Member	1	Dwarf2	3	-	Warlord
+Member	1	Elf	3	-	Marksman
+Member	1	Elf	3	-	Hunter
+[/Raid]

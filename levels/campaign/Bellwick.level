@@ -439,6 +439,10 @@ ProtectDungeonTemple	NULL
 8	85	1	0
 8	86	1	0
 8	87	1	0
+8	100	1	0
+8	101	1	0
+8	102	1	0
+8	103	1	0
 8	115	2	100	-1	150
 8	116	2	100	-1	150
 8	119	3	100
@@ -484,6 +488,10 @@ ProtectDungeonTemple	NULL
 9	86	1	0
 9	87	1	0
 9	88	1	0
+9	100	1	0
+9	101	1	0
+9	102	1	0
+9	103	1	0
 9	114	2	100	-1	150
 9	119	3	100
 10	0	3	100
@@ -529,6 +537,10 @@ ProtectDungeonTemple	NULL
 10	86	1	0
 10	87	1	0
 10	88	1	0
+10	100	1	0
+10	101	1	0
+10	102	1	0
+10	103	1	0
 10	114	2	100	-1	150
 10	119	3	100
 11	0	3	100
@@ -572,6 +584,10 @@ ProtectDungeonTemple	NULL
 11	87	1	0
 11	88	1	0
 11	89	1	0
+11	100	1	0
+11	101	1	0
+11	102	1	0
+11	103	1	0
 11	119	3	100
 12	0	3	100
 12	8	1	0
@@ -1207,10 +1223,10 @@ ProtectDungeonTemple	NULL
 24	24	1	0
 24	26	1	0
 24	27	1	0
-24	28	1	0
-24	29	3	100
-24	30	3	100
-24	31	3	100
+24	28	3	100
+24	29	1	0	3
+24	30	1	0	3
+24	31	1	0	3
 24	32	1	0
 24	33	1	0
 24	34	1	0
@@ -1309,10 +1325,10 @@ ProtectDungeonTemple	NULL
 25	25	1	0
 25	26	1	0
 25	27	1	0
-25	28	1	0
-25	29	3	100
-25	30	3	100
-25	31	3	100
+25	28	3	100
+25	29	1	0	3
+25	30	1	0	3
+25	31	1	0	3
 25	32	1	0
 25	33	1	0
 25	34	1	0
@@ -1365,8 +1381,8 @@ ProtectDungeonTemple	NULL
 25	81	1	0
 25	82	1	0
 25	83	1	0
-25	84	1	100
-25	85	1	100
+25	84	1	0
+25	85	1	0
 25	86	1	0
 25	87	1	0
 25	88	1	0
@@ -1374,13 +1390,14 @@ ProtectDungeonTemple	NULL
 25	90	1	0
 25	91	1	0
 25	92	1	0
-25	93	1	100
-25	94	1	100
-25	95	1	100
-25	96	1	100
+25	93	1	0
+25	94	1	0
+25	95	1	0
+25	96	1	0
 25	97	1	0
 25	98	1	0
 25	99	1	0
+25	100	1	0
 25	103	1	100
 25	104	1	100
 25	105	1	100
@@ -1414,10 +1431,10 @@ ProtectDungeonTemple	NULL
 26	25	1	0
 26	26	1	0
 26	27	1	0
-26	28	1	0
-26	29	3	100
-26	30	3	100
-26	31	3	100
+26	28	3	100
+26	29	1	0	3
+26	30	1	0	3
+26	31	1	0	3
 26	32	1	0
 26	33	1	0
 26	34	1	0
@@ -1469,8 +1486,8 @@ ProtectDungeonTemple	NULL
 26	80	1	0
 26	81	1	0
 26	82	1	0
-26	83	1	100
-26	84	1	100
+26	83	1	0
+26	84	1	0
 26	85	1	0
 26	86	1	0
 26	87	1	0
@@ -1479,16 +1496,19 @@ ProtectDungeonTemple	NULL
 26	90	1	0
 26	91	1	0
 26	92	1	0
-26	93	1	100
-26	94	1	100
-26	95	1	100
-26	96	1	100
+26	93	1	0
+26	94	1	0
+26	95	1	0
+26	96	1	0
 26	97	1	0
 26	98	1	0
 26	99	1	0
-26	103	1	100
-26	104	1	100
-26	105	1	100
+26	100	1	0
+26	101	1	0
+26	102	1	0
+26	103	1	0
+26	104	1	0
+26	105	1	0
 26	106	1	0
 26	107	1	100
 26	108	1	100
@@ -1520,6 +1540,8 @@ ProtectDungeonTemple	NULL
 27	29	3	100
 27	30	3	100
 27	31	3	100
+27	32	1	0
+27	33	1	0
 27	34	1	0
 27	35	1	0
 27	36	1	0
@@ -1568,8 +1590,8 @@ ProtectDungeonTemple	NULL
 27	79	1	0
 27	80	1	0
 27	81	1	0
-27	82	1	100
-27	83	1	100
+27	82	1	0
+27	83	1	0
 27	84	1	0
 27	85	1	0
 27	86	1	0
@@ -1579,17 +1601,19 @@ ProtectDungeonTemple	NULL
 27	90	1	0
 27	91	1	0
 27	92	1	0
-27	93	1	100
-27	94	1	100
-27	95	1	100
-27	96	1	100
+27	93	1	0
+27	94	1	0
+27	95	1	0
+27	96	1	0
 27	97	1	0
 27	98	1	0
 27	99	1	0
-27	102	1	100
-27	103	1	100
-27	104	1	100
-27	105	1	100
+27	100	1	0
+27	101	1	0
+27	102	1	0
+27	103	1	0
+27	104	1	0
+27	105	1	0
 27	106	1	0
 27	107	1	0
 27	108	1	100
@@ -1668,7 +1692,7 @@ ProtectDungeonTemple	NULL
 28	79	1	0
 28	80	3	100
 28	81	1	100
-28	82	1	100
+28	82	1	0
 28	83	1	0
 28	84	1	0
 28	85	1	0
@@ -1679,16 +1703,19 @@ ProtectDungeonTemple	NULL
 28	90	1	0
 28	91	1	0
 28	92	1	0
-28	93	1	100
-28	94	1	100
-28	95	1	100
-28	96	1	100
-28	97	1	100
+28	93	1	0
+28	94	1	0
+28	95	1	0
+28	96	1	0
+28	97	1	0
 28	98	1	0
-28	102	1	100
-28	103	1	100
-28	104	1	100
-28	105	1	100
+28	99	1	0
+28	100	1	0
+28	101	1	0
+28	102	1	0
+28	103	1	0
+28	104	1	0
+28	105	1	0
 28	106	1	0
 28	107	1	0
 28	108	1	100
@@ -1727,18 +1754,35 @@ ProtectDungeonTemple	NULL
 29	62	1	0
 29	63	1	0
 29	64	1	0
+29	66	1	0
+29	67	1	0
+29	68	1	0
+29	69	1	0
+29	70	1	0
 29	71	1	0
+29	72	1	0
+29	73	1	0
+29	74	1	0
+29	75	1	0
+29	76	1	0
+29	77	1	0
+29	78	1	0
 29	79	1	0
-29	83	1	100
+29	80	1	0
+29	81	1	0
+29	82	1	0
+29	83	1	0
 29	84	1	0
 29	85	1	0
+29	86	1	0
+29	87	1	0
 29	91	1	0
 29	92	1	0
 29	93	1	100
 29	94	1	100
 29	95	1	100
 29	96	1	100
-29	97	1	100
+29	97	1	0
 29	98	1	0
 29	99	1	0
 29	100	1	0
@@ -1785,11 +1829,27 @@ ProtectDungeonTemple	NULL
 30	62	1	0
 30	63	1	0
 30	64	1	0
+30	66	1	0
+30	67	1	0
+30	68	1	0
+30	69	1	0
+30	70	1	0
 30	71	1	0
+30	72	1	0
+30	73	1	0
+30	74	1	0
+30	75	1	0
+30	76	1	0
+30	77	1	0
+30	78	1	0
 30	79	1	0
-30	83	1	100
-30	84	1	100
+30	80	1	0
+30	81	1	0
+30	82	1	0
+30	83	1	0
+30	84	1	0
 30	85	1	0
+30	86	1	0
 30	91	1	0
 30	92	1	0
 30	93	1	100
@@ -1842,11 +1902,26 @@ ProtectDungeonTemple	NULL
 31	62	1	0
 31	63	1	0
 31	64	1	0
+31	66	1	0
+31	67	1	0
+31	68	1	0
+31	69	1	0
+31	70	1	0
 31	71	1	0
+31	72	1	0
+31	73	1	0
+31	74	1	0
+31	75	1	0
+31	76	1	0
+31	77	1	0
+31	78	1	0
 31	79	1	0
+31	80	1	0
+31	81	1	0
+31	82	1	0
 31	83	1	0
-31	84	1	100
-31	85	1	100
+31	84	1	0
+31	85	1	0
 31	91	1	0
 31	92	1	0
 31	93	1	0
@@ -1899,11 +1974,26 @@ ProtectDungeonTemple	NULL
 32	62	1	0
 32	63	1	0
 32	64	1	0
+32	66	1	0
+32	67	1	0
+32	68	1	0
+32	69	1	0
+32	70	1	0
 32	71	1	0
+32	72	1	0
+32	73	1	0
+32	74	1	0
+32	75	1	0
+32	76	1	0
+32	77	1	0
+32	78	1	0
 32	79	1	0
+32	80	1	0
+32	81	1	0
+32	82	1	0
 32	83	1	0
 32	84	1	0
-32	85	1	100
+32	85	1	0
 32	91	1	0
 32	92	1	0
 32	93	1	100
@@ -3586,6 +3676,21 @@ ProtectDungeonTemple	NULL
 52	40
 52	41
 [/Room]
+[Room]
+10	MoreyaGate1	3	9
+24	29
+24	30
+24	31
+25	29
+25	30
+25	31
+26	29
+26	30
+26	31
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -3811,14 +3916,14 @@ Region	NaveNorth	20	30	30	50
 Region	BellTower	40	16	56	28
 Region	Undercroft	14	4	46	22
 Region	CryptRow	12	68	18	74
+Region	StoneChamber	8	100	11	103
 [Trigger]
 Name	tolling
 Mode	once
 Cond	time	3
-Action	message	1	Bellwick stands over its own dead, master. The abbey bells call the faithful to arms, and Abbot Lorens Bell keeps an undead keeper in the undercroft to bring the sleepers up.
+Action	message	1	The Charnel Stair stands over its own dead, master, and an undead keeper in the undercroft brings the sleepers up. Lorens Bell is leading the Silent Bell of Bellwick down after you, with more monks than a quiet guild should need.
 Action	objectiveid	1	bellwick-o01	Destroy the keeper's heart in the north undercroft.
 Action	hint	1	Hold the nave against the faithful.
-Action	objectiveid	1	bellwick-o03	Survive until both north gates open.
 Action	portal	2	off
 [/Trigger]
 [Trigger]
@@ -3860,7 +3965,7 @@ Action	objectivestate	1	bellwick-o04	reached
 Name	kills1
 Mode	once
 Cond	kills	1	>=	12
-Action	message	1	The sextons are dying faster than the abbot can send them. Strengthen your creatures while the nave is quiet.
+Action	message	1	The sextons are dying faster than the abbey can send them. Strengthen your creatures while the nave is quiet.
 Action	gold	1	800
 [/Trigger]
 [Trigger]
@@ -3885,73 +3990,15 @@ Action	message	1	The keeper of the undercroft has spent the dead. Break his hall
 Action	spawn	2	30	18	1	Skeleton:4	Lich:3	Cultist:3	Skeleton:3
 [/Trigger]
 [Trigger]
-Name	faithful1
-Mode	once
-Cond	time	240
-Action	message	1	Acolytes in armour are marching from the west gate.
-Action	spawn	3	7	62	1	Adventurer:2	Monk:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	faithful2
-Mode	once
-Cond	time	520
-Action	message	1	Pilgrims have come out of the east gate.
-Action	spawn	3	56	62	1	Knight:2	Monk:2	Adventurer:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	faithful3
-Mode	once
-Cond	time	850
-Action	message	1	The sacristans are taking up pikes.
-Action	spawn	3	7	62	1	Knight:2	Knight:2	Dwarf2:2	Monk:2
-[/Trigger]
-[Trigger]
-Name	faithful4
-Mode	once
-Cond	time	1200
-Action	message	1	The abbot has ordered the bells rung twice.
-Action	spawn	3	56	62	1	Knight:3	Elf:2	Adventurer:3	Monk:2	Dwarf2:2
-[/Trigger]
-[Trigger]
-Name	faithful5
-Mode	once
-Cond	time	1600
-Action	message	1	A column of the faithful is coming down the nave.
-Action	spawn	3	7	62	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	faithful6
-Mode	once
-Cond	time	2050
-Action	message	1	A heavy column with banners has left the east gate.
-Action	spawn	3	56	62	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3
-[/Trigger]
-[Trigger]
-Name	faithful7
-Mode	once
-Cond	time	2550
-Action	message	1	The abbey is emptying its dormitories.
-Action	spawn	3	7	62	1	Knight:4	Knight:3	Elf:3	Monk:3	Adventurer:3	Dwarf2:3
-[/Trigger]
-[Trigger]
-Name	faithful8
-Mode	once
-Cond	time	3100
-Action	message	1	Lorens Bell himself has called the last levy.
-Action	spawn	3	56	62	1	Knight:4	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	faithful9
-Mode	once
-Cond	time	3700
-Action	message	1	The bells are tolling for the last time.
-Action	spawn	3	7	62	1	Knight:4	Knight:4	Elf:4	Monk:4	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
 Name	keeperFalls
 Mode	once
+Cond	raid	defeated
 Cond	time	5
 Cond	creatures	2	<=	0
+Cond	objective	1	bellwick-main-heart	reached
+Cond	objective	1	bellwick-main-nave	reached
+Cond	objective	1	bellwick-main-keeper	reached
+Cond	objective	1	bellwick-main-raid	reached
 Action	win	1
 [/Trigger]
 [Trigger]
@@ -3959,7 +4006,6 @@ Name	keeperHeartDown
 Mode	once
 Cond	goal	1	KillAllEnemies
 Action	objectivestate	1	bellwick-o01	reached
-Action	win	1
 [/Trigger]
 [Trigger]
 Name	naveGatesKills
@@ -3967,11 +4013,10 @@ Mode	once
 Cond	kills	1	>=	12
 Cond	flag	gatesOpen	0
 Action	message	1	The masons of the north gates have fled the bells. Both gates of the nave grind open and the road to the undercroft is free.
-Action	terrain	24	29	26	31	path
+Action	terrain	24	28	26	28	path
 Action	terrain	48	29	48	31	path
 Action	setflag	gatesOpen	1
 Action	portal	2	on
-Action	objectivestate	1	bellwick-o03	reached
 [/Trigger]
 [Trigger]
 Name	naveGatesLate
@@ -3979,11 +4024,10 @@ Mode	once
 Cond	time	1500
 Cond	flag	gatesOpen	0
 Action	message	1	The seals of the north gates have given way. The road to the undercroft is free.
-Action	terrain	24	29	26	31	path
+Action	terrain	24	28	26	28	path
 Action	terrain	48	29	48	31	path
 Action	setflag	gatesOpen	1
 Action	portal	2	on
-Action	objectivestate	1	bellwick-o03	reached
 [/Trigger]
 [Trigger]
 Name	cryptWell
@@ -3992,14 +4036,29 @@ Cond	slabs	1	Nave	claimed	>=	30
 Action	message	1	The nave is yours, and the stones below it answer. A spring of mana has risen in the crypt cells.
 Action	terrain	16	71	16	71	manawell
 [/Trigger]
+[Trigger]
+Name	stoneFound
+Mode	once
+Cond	region	1	StoneChamber
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
+Action	stonecreate	10	102	bell-stone	1	32	108
+[/Trigger]
+[Trigger]
+Name	stoneHome
+Mode	once
+Cond	deliveredstone	bell-stone
+Action	message	1	The stone sinks into the heart and a hidden chamber has opened.
+Action	discover	campaign/BoulderCourse.level
+[/Trigger]
 
 [Trigger]
 Name	mainGoalList
 Mode	once
 Cond	time	0
-Action	mainobjectiveid	1	bellwick-main-heart	Protect your heart until both north gates open.
+Action	mainobjectiveid	1	bellwick-main-heart	Protect your heart.
 Action	mainobjectiveid	1	bellwick-main-nave	Pass through the nave to the transept.
 Action	mainobjectiveid	1	bellwick-main-keeper	Destroy the undercroft heart and all enemy forces.
+Action	mainobjectiveid	1	bellwick-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	bellwick-extra-scriptorium	Explore the western scriptorium.
 [/Trigger]
 [Trigger]
@@ -4012,7 +4071,6 @@ Action	objectivestate	1	bellwick-main-heart	failed
 Name	mainHeart
 Mode	repeat	0
 Cond	goalmet	1	ProtectDungeonTemple
-Cond	flag	gatesOpen	1
 Action	objectivestate	1	bellwick-main-heart	reached
 [/Trigger]
 [Trigger]
@@ -4029,6 +4087,18 @@ Cond	goalmet	1	KillAllEnemies
 Action	objectivestate	1	bellwick-main-keeper	reached
 [/Trigger]
 [Trigger]
+Name	mainRaid
+Mode	repeat	0
+Cond	raid	defeated
+Action	objectivestate	1	bellwick-main-raid	reached
+[/Trigger]
+[Trigger]
+Name	raidFlees
+Mode	once
+Cond	raid	fleeing
+Action	message	1	Lorens Bell runs for the Moreya gate. Stop him before he escapes!
+[/Trigger]
+[Trigger]
 Name	extraScriptorium
 Mode	once
 Cond	region	1	Scriptorium
@@ -4040,7 +4110,46 @@ Mode	once
 Cond	objective	1	bellwick-main-heart	reached
 Cond	objective	1	bellwick-main-nave	reached
 Cond	objective	1	bellwick-main-keeper	reached
-Action	message	1	The undead keeper is dust and the bells hang silent. Bellwick is yours.
+Cond	objective	1	bellwick-main-raid	reached
+Cond	raid	defeated
+Action	message	1	The undead keeper is dust, the raid is broken and the bells hang silent. The Charnel Stair is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+Gate	25	30	180
+Seats	3	1
+Countdown	-
+Interval	-
+EscapeShare	-
+# PLACEHOLDER: composition set by simulation R3B
+Group	1	LorensBell
+Member	1	Monk	5	LorensBell	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Dwarf2	4	-	Berserker
+Member	1	Dwarf2	4	-	Berserker
+Member	1	Dwarf2	4	-	Berserker
+Member	1	Adventurer	4	-	Shade
+Member	1	Adventurer	4	-	Shade
+Member	1	Adventurer	4	-	Shade
+Member	1	Adventurer	4	-	Shade
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Marksman
+[/Raid]
