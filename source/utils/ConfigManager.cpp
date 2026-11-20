@@ -767,7 +767,7 @@ ConfigManager::~ConfigManager()
     recentlyUsedLevels.clear();
 }
 
-//! \brief Reads global settings and the numeric item-system rule sections.
+//! \brief Reads global settings and the numeric item-system rule sections, and the optional group combat block.
 bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 {
     std::stringstream configFile;

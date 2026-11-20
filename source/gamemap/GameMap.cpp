@@ -304,6 +304,7 @@ struct AstarOpenItemOrder
 };
 
 
+//! \brief Creates an empty map of the server or of a client with its level script and its combat groups.
 GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         TileContainer(isServerGameMap ? 15 : 0),
         everVisitedFlagPool(nullptr),
@@ -387,7 +388,8 @@ bool GameMap::isInEditorMode() const
     return (ODFrameListener::getSingleton().getModeManager()->getCurrentModeType() == ModeManager::EDITOR);
 }
 
-//! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations.
+//! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations. The combat groups
+//! start empty and take the raid registry and groups of the loaded file.
 bool GameMap::loadLevel(const std::string& levelFilepath)
 {
     // Relationship states of an earlier load that were never applied are dropped
@@ -478,7 +480,7 @@ void GameMap::setAllFullnessAndNeighbors()
     }
 }
 
-//! \brief Clears map entities, definitions and ephemeral item ownership state.
+//! \brief Clears map entities, definitions and ephemeral item ownership state, and the combat groups.
 void GameMap::clearAll()
 {
     if(mNodeType == NodeType::MTILES_NODE)
@@ -1972,7 +1974,8 @@ void GameMap::doPlayerAITurn(double timeSinceLastTurn)
     mAiManager.doTurn(timeSinceLastTurn);
 }
 
-//! \brief Updates upkeep, including payday notices for human and AI keepers.
+//! \brief Updates upkeep, including payday notices for human and AI keepers. On the server the combat groups are
+//! decided before the creatures act.
 unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
 {
     Tile *tempTile;
