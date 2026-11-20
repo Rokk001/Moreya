@@ -133,6 +133,9 @@ unsigned int Player::numObjectsInHand() const
     return mObjectsInHand.size();
 }
 
+//! \brief Set by the raid simulation only: the hand limit applies without an active campaign (setHandLimitForced).
+static bool sHandLimitForced = false;
+
 //! \brief True when the entity counts against the hand limit of a campaign level: a creature that is neither a Ziv
 //! (worker) nor a prisoner (see HandLimitRules::isFightingCreature).
 static bool isHandLimitedEntity(const GameEntity* entity)
@@ -159,13 +162,22 @@ unsigned int Player::numFightingCreaturesInHand() const
 }
 
 //! \brief The hand limit applies on the server while a campaign level (story or bonus level) is played; skirmish and
-//! multiplayer games never start a campaign level.
+//! multiplayer games never start a campaign level. The raid simulation can switch it on without a campaign.
 bool Player::isHandLimitActive() const
 {
     if((mGameMap == nullptr) || !mGameMap->isServerGameMap() || mGameMap->isInEditorMode())
         return false;
 
+    if(sHandLimitForced)
+        return true;
+
     return Campaign::getSingleton().isActive();
+}
+
+//! \brief Switches the forced hand limit of the raid simulation on or off.
+void Player::setHandLimitForced(bool forced)
+{
+    sHandLimitForced = forced;
 }
 
 //! \brief Asks HandLimitRules::mayPickUp with the hand, the cooldown and the [HandLimit] keys of global.cfg.
