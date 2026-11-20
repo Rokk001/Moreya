@@ -37,8 +37,7 @@ struct CampaignLevel
         mBonus(false),
         mShard(false),
         mChampion(false),
-        mWing(0),
-        mDifficulty(1)
+        mWing(0)
     {
     }
 
@@ -65,8 +64,6 @@ struct CampaignLevel
     std::string mProvince;
     //! Ruler of the province, shown in its tooltip. Empty if it has none.
     std::string mWarden;
-    //! Difficulty of the level from 1 (easy) to 5, shown in the tooltip
-    uint32_t mDifficulty;
 };
 
 //! \brief One item line that the first completion of a bonus level made available at the merchant for good.
@@ -119,8 +116,8 @@ struct CampaignSave
 //!   Unlock=Epic Rare Common (optional, bonus levels) the qualities of the items its first
 //!   completion unlocks, one item per name.
 //!   Warden=Name (optional) shown in the tooltip.
-//!   Difficulty=1 to 5 (optional) the difficulty shown on the map.
-//! The keys of the former world map campaign (Province, Branch, Heartstone) are ignored.
+//! The keys of the former world map campaign (Province, Branch, Heartstone) and the former per-level Difficulty
+//! key are ignored; the only difficulty is the one chosen for the whole campaign.
 //!
 //! A bonus level is hidden until the level script of the first story level of its wing
 //! finds it (action "discover", the level file name as argument). It is not needed to

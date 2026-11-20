@@ -152,7 +152,7 @@ map_bonus = sorted((wing["bonus"]["file"], str(wing.get("wing"))) for wing in wi
 check(cfg_bonus == map_bonus, "the bonus caves of the map must be the bonus levels of Campaign.cfg in their wings")
 for f in levels:
     check(f.get("Wing", "") in ("1", "2", "3", "4", "5", "6"), f["File"] + " has no Wing setting from 1 to 6")
-    check(1 <= int(f.get("Difficulty", "1")) <= 5, f["File"] + " has a difficulty outside of 1 to 5")
+    check("Difficulty" not in f, f["File"] + " still has a per-level Difficulty setting (only the campaign difficulty exists)")
 check('key == "Province"' not in campaign_cpp and 'key == "Wing"' in campaign_cpp and 'key == "Warden"' in campaign_cpp,
       "the reader must know Wing and Warden and no longer read Province")
 check('key == "Map"' not in campaign_cpp and "mMapBlocks" not in campaign_cpp, "the old territory settings must be gone")
@@ -250,8 +250,8 @@ check("findCaveAt(" in hover and "updateHover(" in hover and "updateTooltip(" in
 ring = function(mode, "void MenuModeCampaign::updateHover")
 check("CampaignCaveState::locked" in ring, "locked caves get a tooltip but no ring")
 tip = function(mode, "void MenuModeCampaign::updateTooltip")
-check("Guild: " in tip and "Difficulty: " in tip and "State: " in tip and "Bonus cave of " in tip,
-      "tooltip shows wing, guild, state and difficulty")
+check("Guild: " in tip and "Difficulty: " not in tip and "State: " in tip and "Bonus cave of " in tip,
+      "tooltip shows wing, guild and state, and no per-level difficulty")
 check("getLayoutScale()" in tip and "std::min(TOOLTIP_WIDTH * scale, mapRect.getWidth())" in tip,
       "the tooltip scales with the layout and never gets larger than the map")
 click = function(mode, "bool MenuModeCampaign::mapClicked")
@@ -405,10 +405,10 @@ for name in controls:
     area = next(p.get("value") for p in windows[name].findall("Property") if p.get("name") == "Area")
     control_areas[name] = [float(v) for v in re.findall(r"-?\d+(?:\.\d+)?", area)]
 tooltip_size = (float(constant("TOOLTIP_WIDTH")), float(constant("TOOLTIP_HEIGHT")))
-tooltip_texts = ["%s\n%s\nGuild: %s\nState: Defeated, can be played again\nDifficulty: 5 / 5"
+tooltip_texts = ["%s\n%s\nGuild: %s\nState: Defeated, can be played again"
                  % (titles.get(level["file"], ""), wing["name"], level["guild"]["name"])
                  for wing in wings for level in wing["levels"]]
-tooltip_texts += ["%s\nBonus cave of %s\nState: Cleared, can be played again\nDifficulty: 5 / 5"
+tooltip_texts += ["%s\nBonus cave of %s\nState: Cleared, can be played again"
                   % (titles.get(wing["bonus"]["file"], ""), wing["name"]) for wing in wings]
 measured = 0
 for screen in SCREENS:

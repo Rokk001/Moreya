@@ -28,10 +28,6 @@
 
 namespace
 {
-//! Lowest and highest level difficulty a campaign file may state
-const int LEVEL_DIFFICULTY_MIN = 1;
-const int LEVEL_DIFFICULTY_MAX = 5;
-
 //! Version of the progress file written by exportProgress
 const uint32_t PROGRESS_VERSION = 2;
 
@@ -213,9 +209,6 @@ bool Campaign::importDefinition(std::istream& is)
         }
         else if(key == "Warden")
             level.mWarden = value;
-        else if(key == "Difficulty")
-            level.mDifficulty = static_cast<uint32_t>(
-                std::max(LEVEL_DIFFICULTY_MIN, std::min(LEVEL_DIFFICULTY_MAX, std::atoi(value.c_str()))));
     }
 
     if(inLevel && !level.mFile.empty())

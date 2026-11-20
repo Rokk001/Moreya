@@ -436,9 +436,8 @@ BOOST_AUTO_TEST_CASE(test_province_keys)
 
     BOOST_CHECK(campaign.getLevel(0).mProvince.empty());
     BOOST_CHECK_EQUAL(campaign.getLevel(0).mWarden, "Reeve Test");
-    // The difficulty is limited to 1..5, without the setting it is 1
-    BOOST_CHECK_EQUAL(campaign.getLevel(0).mDifficulty, 5u);
-    BOOST_CHECK_EQUAL(campaign.getLevel(1).mDifficulty, 1u);
+    // A Difficulty key of the former campaign file is ignored: the level is read as usual
+    BOOST_CHECK_EQUAL(campaign.getNumLevels(), 3u);
     BOOST_CHECK_EQUAL(campaign.findLevelByProvince("B01"), campaign.getNumLevels());
     BOOST_CHECK_EQUAL(campaign.findLevelByProvince("T01"), campaign.getNumLevels());
     BOOST_CHECK_EQUAL(campaign.findLevelByProvince(""), campaign.getNumLevels());
