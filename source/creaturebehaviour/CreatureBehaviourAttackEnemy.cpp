@@ -49,11 +49,13 @@ CreatureBehaviour* CreatureBehaviourAttackEnemy::clone() const
     return new CreatureBehaviourAttackEnemy;
 }
 
-//! \brief Chooses fighting or flight using the configured angry-flight chance.
+//! \brief Chooses fighting or flight using the configured angry-flight chance. A member of a retreating combat group
+//! starts no fight.
 bool CreatureBehaviourAttackEnemy::processBehaviour(Creature& creature) const
 {
-    // Check if we are already fighting or fleeing
-    if(creature.isActionInList(CreatureActionType::fight) || creature.isActionInList(CreatureActionType::flee))
+    // Check if we are already fighting or fleeing, or retreating with our combat group
+    if(creature.isActionInList(CreatureActionType::fight) || creature.isActionInList(CreatureActionType::flee) ||
+       creature.isActionInList(CreatureActionType::groupRetreat))
         return false;
 
     if (creature.getVisibleEnemyObjects().empty())

@@ -698,6 +698,12 @@ public:
     //! \brief Returns the value of a key of the [Rampage] block of global.cfg (damage to a room tile, turns between
     //! hits, turns between piles); logs an error and returns 0 when the key is unknown.
     double getRampageConfigDouble(const std::string& param) const;
+    //! \brief Returns the number of a key of the [GroupCombat] block of global.cfg (forming distance, retreat
+    //! condition, formation and aggro values of the combat groups); logs an error and returns 0 when the key is unknown.
+    double getGroupCombatConfigDouble(const std::string& param) const;
+    //! \brief Returns the words of a key of the [GroupCombat] block of global.cfg (the path and skill group lists of
+    //! the role rules); logs an error and returns an empty list when the key is unknown.
+    std::vector<std::string> getGroupCombatConfigWords(const std::string& param) const;
     //! \brief Same as getRoomConfigString but returns defaultValue instead of logging an error when the
     //! parameter is not in the configuration file (or has no value).
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
@@ -897,6 +903,8 @@ private:
     bool loadGlobalTavernConfig(std::stringstream& configFile);
     //! \brief Reads the [Rampage] block of global.cfg into mRampageConfig.
     bool loadGlobalRampageConfig(std::stringstream& configFile);
+    //! \brief Reads the [GroupCombat] block of global.cfg into mGroupCombatConfig: one key and the rest of its line.
+    bool loadGlobalGroupCombatConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
     //! \brief Loads equipment definitions and their numeric balance settings.
     bool loadEquipements(const std::string& fileName);
@@ -1171,6 +1179,8 @@ private:
     std::map<std::string, double> mTavernConfig;
     //! \brief The keys of the [Rampage] block of global.cfg
     std::map<std::string, double> mRampageConfig;
+    //! \brief The keys of the [GroupCombat] block of global.cfg with the text of their value
+    std::map<std::string, std::string> mGroupCombatConfig;
     std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;

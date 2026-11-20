@@ -767,7 +767,7 @@ ConfigManager::~ConfigManager()
     recentlyUsedLevels.clear();
 }
 
-//! \brief Reads global settings and the numeric item-system rule sections.
+//! \brief Reads global settings and the numeric item-system rule sections, and the optional group combat block.
 bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 {
     std::stringstream configFile;
@@ -849,6 +849,15 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
         {
             // The rampage block is optional: without it every rampage key keeps its shipped value
             if(!loadGlobalRampageConfig(configFile))
+                break;
+
+            continue;
+        }
+
+        if(nextParam == "[GroupCombat]")
+        {
+            // The group combat block is optional: without it every number reads as 0 and every list is empty
+            if(!loadGlobalGroupCombatConfig(configFile))
                 break;
 
             continue;
@@ -945,6 +954,69 @@ double ConfigManager::getRampageConfigDouble(const std::string& param) const
     }
 
     return it->second;
+}
+
+//! \brief Reads the [GroupCombat] block of global.cfg: one key per line, its value is the rest of the line (a number
+//! or a list of words) up to [/GroupCombat].
+bool ConfigManager::loadGlobalGroupCombatConfig(std::stringstream& configFile)
+{
+    std::string nextParam;
+    while(configFile.good())
+    {
+        if(!(configFile >> nextParam))
+            break;
+
+        if(nextParam == "[/GroupCombat]")
+            return true;
+
+        std::string value;
+        std::getline(configFile, value);
+        mGroupCombatConfig[nextParam] = value;
+    }
+
+    OD_LOG_ERR("Missing [/GroupCombat] in global.cfg");
+    return false;
+}
+
+//! \brief Returns the number of a [GroupCombat] key of global.cfg, 0 (and an error in the log) when the key is unknown.
+double ConfigManager::getGroupCombatConfigDouble(const std::string& param) const
+{
+    std::map<std::string, std::string>::const_iterator it = mGroupCombatConfig.find(param);
+    if(it == mGroupCombatConfig.end())
+    {
+        OD_LOG_ERR("Unknown group combat parameter param=" + param);
+        return 0.0;
+    }
+
+    std::stringstream ss(it->second);
+    std::string value;
+    if(!(ss >> value))
+    {
+        OD_LOG_ERR("Group combat parameter without value param=" + param);
+        return 0.0;
+    }
+
+    return Helper::toDouble(value);
+}
+
+//! \brief Returns the words of a [GroupCombat] key of global.cfg, an empty list (and an error in the log) when the key
+//! is unknown.
+std::vector<std::string> ConfigManager::getGroupCombatConfigWords(const std::string& param) const
+{
+    std::vector<std::string> words;
+    std::map<std::string, std::string>::const_iterator it = mGroupCombatConfig.find(param);
+    if(it == mGroupCombatConfig.end())
+    {
+        OD_LOG_ERR("Unknown group combat parameter param=" + param);
+        return words;
+    }
+
+    std::stringstream ss(it->second);
+    std::string word;
+    while(ss >> word)
+        words.push_back(word);
+
+    return words;
 }
 
 //! \brief Reads the [LegacyMood] block of global.cfg: one "key value" pair per line up to [/LegacyMood].

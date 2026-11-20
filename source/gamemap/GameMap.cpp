@@ -40,6 +40,7 @@
 #include "entities/ItemDefinition.h"
 #include "entities/ItemInstance.h"
 #include "game/Campaign.h"
+#include "game/CombatGroupManager.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -328,6 +329,7 @@ struct AstarOpenItemOrder
 };
 
 
+//! \brief Creates an empty map of the server or of a client with its level script and its combat groups.
 GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         TileContainer(isServerGameMap ? 15 : 0),
         everVisitedFlagPool(nullptr),
@@ -364,6 +366,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         generator(42)
 {
     mLevelScript.reset(new LevelScript());
+    mCombatGroups.reset(new CombatGroupManager(*this));
     resetUniqueNumbers();
 }
 
@@ -382,6 +385,18 @@ const LevelScript& GameMap::getLevelScript() const
     return *mLevelScript;
 }
 
+//! \brief Returns the combat groups and the raid registry of the map.
+CombatGroupManager& GameMap::getCombatGroups()
+{
+    return *mCombatGroups;
+}
+
+//! \brief Returns the combat groups and the raid registry of the map, read only.
+const CombatGroupManager& GameMap::getCombatGroups() const
+{
+    return *mCombatGroups;
+}
+
 std::string GameMap::serverStr()
 {
     if (mIsServerGameMap)
@@ -398,11 +413,14 @@ bool GameMap::isInEditorMode() const
     return (ODFrameListener::getSingleton().getModeManager()->getCurrentModeType() == ModeManager::EDITOR);
 }
 
-//! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations.
+//! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations. The combat groups
+//! start empty and take the raid registry and groups of the loaded file.
 bool GameMap::loadLevel(const std::string& levelFilepath)
 {
     // Relationship states of an earlier load that were never applied are dropped
     mPendingRelationshipStates.clear();
+    // The raid registry and the combat groups come from the level (or saved game) that is loaded now
+    mCombatGroups->clear();
 
     // We reset the creature definitions
     clearClasses();
@@ -487,7 +505,7 @@ void GameMap::setAllFullnessAndNeighbors()
     }
 }
 
-//! \brief Clears map entities, definitions and ephemeral item ownership state.
+//! \brief Clears map entities, definitions and ephemeral item ownership state, and the combat groups.
 void GameMap::clearAll()
 {
     if(mNodeType == NodeType::MTILES_NODE)
@@ -511,6 +529,7 @@ void GameMap::clearAll()
 
         clearGoalsForAllSeats();
         mLevelScript->clear();
+        mCombatGroups->clear();
         clearSeats();
         mLocalPlayer = nullptr;
         clearPlayers();
@@ -2089,7 +2108,8 @@ void GameMap::doPlayerAITurn(double timeSinceLastTurn)
     mAiManager.doTurn(timeSinceLastTurn);
 }
 
-//! \brief Updates upkeep, including payday notices for human and AI keepers.
+//! \brief Updates upkeep, including payday notices for human and AI keepers. On the server the combat groups are
+//! decided before the creatures act.
 unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
 {
     Tile *tempTile;
@@ -2263,6 +2283,9 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
             refreshWorkerTargets(*seat);
             WorkerAllocation::refreshFixed(*seat);
         }
+
+        // The combat groups are decided with this turn's vision, before the creatures act (nothing without a raid)
+        mCombatGroups->update();
     }
     // Carry out the upkeep round of all the active objects in the game.
     // Here, we work on a copy of the active objects list because they might

@@ -188,6 +188,37 @@ def read_relationship_states(s):
             fail("relationship state line invalid: " + ln[:60])
 
 
+def read_combat_groups(s):
+    """Mirror of CombatGroupManager::importFromStream, read after the [CombatGroups] tag.
+
+    Each line is a kind token and its fields up to [/CombatGroups]: RaidGroup, RaidMember, NextGroupId, Group and
+    Aggro. Any other kind, a missing field or a raid group 0 refuses the save, as the loader does."""
+    while True:
+        t = s.tok()
+        if t is None:
+            fail("[CombatGroups] has no end")
+        if t == "[/CombatGroups]":
+            return
+        rest = s.line() or ""
+        f = rest.split()
+        if t == "RaidGroup":
+            ok = len(f) >= 2 and is_int(f[0]) and int(f[0]) > 0
+        elif t == "RaidMember":
+            ok = len(f) >= 3 and is_int(f[1]) and int(f[1]) > 0
+        elif t == "NextGroupId":
+            ok = len(f) >= 1 and is_int(f[0]) and int(f[0]) >= 0
+        elif t == "Group":
+            ok = len(f) >= 16 and is_int(f[0]) and is_int(f[1]) and is_int(f[2]) and is_int(f[3]) \
+                and is_num(f[6]) and is_num(f[7]) and all(is_int(x) for x in f[8:13]) and is_num(f[13]) \
+                and is_num(f[14]) and is_int(f[15]) and int(f[15]) >= 0 and len(f) >= 16 + int(f[15])
+        elif t == "Aggro":
+            ok = len(f) >= 3 and is_int(f[2])
+        else:
+            fail("unknown line in [CombatGroups]: " + t)
+        if not ok:
+            fail("combat group line invalid: " + (t + " " + rest)[:60])
+
+
 def loader_int(t):
     """Mirror of the loader's parseInt: istringstream >> int64_t, then nothing but white space may follow.
 
@@ -942,6 +973,10 @@ def check_action(t):
         return n >= 6
     if kind == "speed":
         return n >= 4
+    if kind == "raidmember":
+        return n >= 5 and is_int(t[2]) and int(t[2]) > 0
+    if kind == "raidleader":
+        return n == 4 and is_int(t[2]) and int(t[2]) > 0
     if kind == "timer":
         return n in (3, 4)
     return False
@@ -1153,6 +1188,9 @@ def read_save(path):
         t = s.tok()
     if t == "[RelationshipState]":
         read_relationship_states(s)
+        t = s.tok()
+    if t == "[CombatGroups]":
+        read_combat_groups(s)
     return seen
 
 

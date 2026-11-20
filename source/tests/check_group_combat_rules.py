@@ -1,0 +1,371 @@
+#!/usr/bin/env python3
+"""Non-compiling check of the rules of the shared group combat (raid plan R1: G2 leader, G3 roles, G4 shared target,
+G5 aggro, G6 formation, G7 retreat).
+
+Every rule is checked twice: a Python model written from the rule computes fixed scenarios whose expected results are
+written in this file, and the C++ source of source/game/CombatGroupRules.cpp and of the engine side
+(CombatGroupManager, the creature actions, the fight action) is checked for the statements that implement the same
+rule. Nothing is compiled and the game is not started; the integration build compiles and runs the code.
+
+Usage: python -I source/tests/check_group_combat_rules.py
+Exit 0 and "group combat rules ok" when every item holds.
+"""
+import math
+import os
+import re
+import sys
+import time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+START = time.perf_counter()
+FAILURES = []
+
+
+def read(relative):
+    """Returns the text of a file of the repository."""
+    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
+        return handle.read()
+
+
+def function(source, signature):
+    """Returns the body of the function that starts with the signature (up to its closing brace)."""
+    start = source.index(signature)
+    brace = source.index("{", start)
+    depth = 0
+    for position in range(brace, len(source)):
+        if source[position] == "{":
+            depth += 1
+        elif source[position] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start:position + 1]
+    raise AssertionError("no end of " + signature)
+
+
+def check(condition, message):
+    """Records a failed item."""
+    if not condition:
+        FAILURES.append(message)
+
+
+RULES = read("source/game/CombatGroupRules.cpp")
+RULES_H = read("source/game/CombatGroupRules.h")
+MANAGER = read("source/game/CombatGroupManager.cpp")
+CREATURE = read("source/entities/Creature.cpp")
+FIGHT = read("source/creatureaction/CreatureActionFight.cpp")
+ATTACK = read("source/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp")
+GLOBAL_CFG = read("config/global.cfg")
+SKILLS_CFG = read("config/creatureSkills.cfg")
+
+
+def group_block_words(key):
+    """Returns the words of a key of the [GroupCombat] block of global.cfg."""
+    block = GLOBAL_CFG.split("[GroupCombat]")[1].split("[/GroupCombat]")[0]
+    for line in block.splitlines():
+        words = line.split("#")[0].split()
+        if words and words[0] == key:
+            return words[1:]
+    raise AssertionError("missing [GroupCombat] key " + key)
+
+
+# ------------------------------------------------------------------------------------------------ G3 roles
+TANK, MELEE, RANGED, HEALER = "tank", "melee", "ranged", "healer"
+TANK_PATHS = group_block_words("GroupTankPaths")
+HEALER_PATHS = group_block_words("GroupHealerPaths")
+RANGED_GROUPS = group_block_words("GroupRangedSkillGroups")
+
+
+def role_of(skill_group, has_template, primary):
+    """Model of CombatGroupRules::roleOf: tank and healer paths of the template, then the ranged skill groups."""
+    if has_template:
+        if primary in TANK_PATHS:
+            return TANK
+        if primary in HEALER_PATHS:
+            return HEALER
+    if skill_group in RANGED_GROUPS:
+        return RANGED
+    return MELEE
+
+
+def templates():
+    """The templates of config/creatureSkills.cfg as (group, name, primary path)."""
+    found = []
+    for block in re.findall(r"^\[Template\](.*?)^\[/Template\]", SKILLS_CFG, re.M | re.S):
+        values = {}
+        for line in block.strip().splitlines():
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                values[parts[0]] = parts[1].strip()
+        found.append((values["Group"], values["Name"], values["Primary"]))
+    return found
+
+
+# The role of every template of the fighters (plan G3), counted once from the plan: Guardian (Bulwark) and Protector
+# (Protection) tank, Healer (Healing) healer, the other archer and caster templates ranged, all others melee.
+EXPECTED_ROLES = {
+    ("blocker", "Berserker"): MELEE, ("blocker", "Guardian"): TANK, ("blocker", "Warlord"): MELEE,
+    ("blitzer", "Crusader"): MELEE, ("blitzer", "Protector"): TANK, ("blitzer", "Vanguard"): MELEE,
+    ("flanker", "Shade"): MELEE, ("flanker", "Venomist"): MELEE, ("flanker", "Dancer"): MELEE,
+    ("archer", "Marksman"): RANGED, ("archer", "Hunter"): RANGED, ("archer", "Skirmisher"): RANGED,
+    ("caster", "Destroyer"): RANGED, ("caster", "Healer"): HEALER, ("caster", "Hexer"): RANGED,
+}
+# A creature without a template: ranged in the archer and caster groups, otherwise melee
+EXPECTED_UNCHOSEN = {"blocker": MELEE, "blitzer": MELEE, "flanker": MELEE, "archer": RANGED, "caster": RANGED,
+                     "none": MELEE}
+
+computed = {}
+for group, name, primary in templates():
+    if group == "worker":
+        continue
+    computed[(group, name)] = role_of(group, True, primary)
+check(computed == EXPECTED_ROLES, "G3: role of every fighter template " + repr(computed))
+for group, expected in EXPECTED_UNCHOSEN.items():
+    check(role_of(group, False, "") == expected, "G3: role without template for " + group)
+
+role_body = function(RULES, "Role roleOf(")
+check(role_body.index("mTankPaths") < role_body.index("mHealerPaths") < role_body.index("mRangedSkillGroups"),
+      "G3: roleOf tests the tank paths, then the healer paths, then the ranged skill groups")
+check("if(hasTemplate)" in role_body and "return Role::melee;" in role_body, "G3: roleOf without template / melee")
+get_role = function(MANAGER, "CombatGroupRules::Role CombatGroupManager::getRole(")
+check("findTemplate(" in get_role and "creature.getSkillBuild().mTemplate" in get_role and "mPrimary" in get_role,
+      "G3: the role is read from the template the creature follows (mTemplate)")
+
+# ------------------------------------------------------------------------------------------------ G2 leader
+
+
+def choose_leader(candidates, named):
+    """Model of CombatGroupRules::chooseLeader on (name, level, experience) tuples."""
+    for index, candidate in enumerate(candidates):
+        if named and candidate[0] == named:
+            return index
+    best = -1
+    for index, candidate in enumerate(candidates):
+        if best < 0:
+            best = index
+            continue
+        other = candidates[best]
+        if (-candidate[1], -candidate[2], candidate[0]) < (-other[1], -other[2], other[0]):
+            best = index
+    return best
+
+
+group = [("Alda", 7, 10.0), ("Bran", 9, 2.0), ("Cora", 9, 30.0), ("Dunn", 3, 99.0)]
+check(group[choose_leader(group, "")][0] == "Cora", "G2: highest level leads, more experience breaks the tie")
+check(group[choose_leader([group[0], group[1]], "")][0] == "Bran", "G2: highest level leads")
+check(choose_leader([("Eric", 5, 1.0), ("Abel", 5, 1.0)], "") == 1, "G2: equal level and experience: first name")
+# Succession: the leader falls (he is no longer a present member), the next highest level leads at once
+survivors = [member for member in group if member[0] != "Cora"]
+check(survivors[choose_leader(survivors, "")][0] == "Bran", "G2: succession to the next highest level")
+# The named raid leader leads while he lives, whatever his level
+check(group[choose_leader(group, "Dunn")][0] == "Dunn", "G2: the named raid leader leads while alive")
+without_named = [member for member in survivors if member[0] != "Dunn"]
+check(without_named[choose_leader(without_named, "Dunn")][0] == "Bran",
+      "G2: after the named leader falls the highest level leads")
+
+leads = function(RULES, "bool leadsBefore(")
+check(leads.index("mLevel") < leads.index("mExperience") < leads.index("mName"),
+      "G2: leadsBefore compares level, then experience, then name")
+check("first.mLevel > second.mLevel" in leads and "first.mExperience > second.mExperience" in leads,
+      "G2: higher level and more experience lead")
+choose = function(RULES, "int32_t chooseLeader(")
+check(choose.index("namedLeader") < choose.index("leadsBefore"), "G2: the named leader is taken first")
+update_group = function(MANAGER, "void CombatGroupManager::updateGroup(")
+check("chooseLeader(candidates, namedLeader)" in update_group and "getRaidLeaderName(group.mRaidGroupId)" in update_group,
+      "G2: the leader is chosen at every update among the present members (immediate succession)")
+check("member->getLevel()" in update_group and "member->getExp()" in update_group, "G2: level and experience")
+
+# ------------------------------------------------------------------------------------------------ G4 shared target
+
+
+def choose_target(candidates, current):
+    """Model of CombatGroupRules::chooseSharedTarget on (name, role, squared distance) tuples."""
+    def key(candidate):
+        return (0 if candidate[1] == HEALER else 1, candidate[2], candidate[0])
+    if not candidates:
+        return None
+    best = min(candidates, key=key)
+    for candidate in candidates:
+        if candidate[0] == current and key(candidate)[0] == key(best)[0]:
+            return candidate[0]
+    return best[0]
+
+
+enemies = [("Knight1", TANK, 4), ("Wizard1", RANGED, 9), ("Priest1", HEALER, 64), ("Elf1", RANGED, 1)]
+check(choose_target(enemies, "") == "Priest1", "G4: the leader chooses the enemy healer first, even far away")
+check(choose_target([e for e in enemies if e[1] != HEALER], "") == "Elf1", "G4: without healer the nearest enemy")
+check(choose_target([e for e in enemies if e[1] != HEALER], "Wizard1") == "Wizard1",
+      "G4: the current target of the same priority is kept")
+check(choose_target(enemies, "Wizard1") == "Priest1", "G4: a healer in sight replaces a non-healer target")
+check(choose_target([], "Wizard1") is None, "G4: no enemy, no target")
+
+target_body = function(RULES, "int32_t chooseSharedTarget(")
+check("isBetterTarget" in target_body and "targetPriority" in target_body, "G4: priority and distance decide")
+check("return (role == Role::healer) ? 0 : 1;" in RULES, "G4: healers have the first priority")
+check("visibleEnemyCreatures(*leader)" in update_group, "G4: the leader chooses among the enemies he sees")
+
+# ------------------------------------------------------------------------------------------------ G5 aggro
+
+
+def choose_aggro(attacking, near, adjacent):
+    """Model of CombatGroupRules::chooseAggroTank on (name, distance) tuples."""
+    if attacking:
+        return attacking
+    close = sorted((d, n) for n, d in near if d <= adjacent)
+    return close[0][1] if close else ""
+
+
+ADJACENT = int(float(group_block_words("GroupAggroAdjacentTiles")[0]))
+check(ADJACENT == 1, "G5: next to a tank means the eight neighbour tiles (GroupAggroAdjacentTiles 1)")
+check(choose_aggro("Guard1", [("Guard2", 1)], ADJACENT) == "Guard1", "G5: the tank that hit the member wins")
+check(choose_aggro("", [("Guard2", 1), ("Guard3", 1)], ADJACENT) == "Guard2", "G5: next to a tank: that tank")
+check(choose_aggro("", [("Guard2", 2)], ADJACENT) == "", "G5: a tank two tiles away draws no aggro")
+
+
+def fight_target(aggro, shared):
+    """Model of CombatGroupManager::getFightTarget: the aggro tank, else the shared target."""
+    return aggro if aggro else shared
+
+
+check(fight_target("Guard2", "Priest1") == "Guard2", "G5: a member with aggro attacks the tank")
+check(fight_target("", "Priest1") == "Priest1", "G5: all other members follow the shared target")
+
+aggro_body = function(RULES, "std::string chooseAggroTank(")
+check(aggro_body.index("attackingTank") < aggro_body.index("adjacentTiles"), "G5: hit first, then next to")
+fight_target_body = function(MANAGER, "GameEntity* CombatGroupManager::getFightTarget(")
+check(fight_target_body.index("group->mTarget") < fight_target_body.index("mAggroTargets.find"),
+      "G5: the aggro tank replaces the shared target")
+notify = function(MANAGER, "void CombatGroupManager::notifyAttacked(")
+check("CombatGroupRules::Role::tank" in notify and "GroupAggroMemorySeconds" in notify,
+      "G5: only a hit of an enemy tank gives aggro, for GroupAggroMemorySeconds")
+take_damage = function(CREATURE, "double Creature::takeDamage(")
+check("getCombatGroups().notifyAttacked(*this, *creatureAttacking)" in take_damage, "G5: hits are reported")
+handle_fight = function(FIGHT, "bool CreatureActionFight::handleFight(")
+check("getCombatGroups().getFightTarget(creature)" in handle_fight and "enemyPrioritaryTargets = groupTargets;" in
+      handle_fight, "G4/G5: a member attacks the group target in its fight")
+# The aggro is a rule of target choice: no new skill
+for path in ("source/game/CombatGroupRules.cpp", "source/game/CombatGroupManager.cpp"):
+    check("CreatureSkill" not in read(path).replace("CreatureSkillTree", ""), "G5: no skill in " + path)
+check(not re.search(r"^Kind\s+(TAUNT|AGGRO)", SKILLS_CFG, re.M), "G5: no aggro skill in creatureSkills.cfg")
+
+# ------------------------------------------------------------------------------------------------ G6 formation
+
+
+def formation_places(members, width):
+    """Model of CombatGroupRules::formationPlaces: roles in order, each role in rows of width places."""
+    places = {}
+    row = 1
+    for role in (TANK, MELEE, RANGED, HEALER):
+        of_role = sorted(name for name, member_role in members if member_role == role)
+        for start in range(0, len(of_role), width):
+            in_row = of_role[start:start + width]
+            for index, name in enumerate(in_row):
+                places[name] = (row, index - (len(in_row) - 1) / 2.0)
+            row += 1
+    return places
+
+
+def place_position(leader, facing, place, spacing):
+    """Model of CombatGroupRules::placePosition: rows behind the leader, places to the side."""
+    length = math.hypot(facing[0], facing[1]) or 1.0
+    forward = (facing[0] / length, facing[1] / length) if math.hypot(*facing) else (1.0, 0.0)
+    side = (-forward[1], forward[0])
+    back = place[0] * spacing
+    return (leader[0] - forward[0] * back + side[0] * place[1] * spacing,
+            leader[1] - forward[1] * back + side[1] * place[1] * spacing)
+
+
+members = [("Tank1", TANK), ("Tank2", TANK), ("Melee1", MELEE), ("Range1", RANGED), ("Range2", RANGED),
+           ("Range3", RANGED), ("Range4", RANGED), ("Heal1", HEALER)]
+places = formation_places(members, 3)
+check(places == {"Tank1": (1, -0.5), "Tank2": (1, 0.5), "Melee1": (2, 0.0), "Range1": (3, -1.0), "Range2": (3, 0.0),
+                  "Range3": (3, 1.0), "Range4": (4, 0.0), "Heal1": (5, 0.0)}, "G6: formation rows " + repr(places))
+rows = {role: max(places[n][0] for n, r in members if r == role) for role in (TANK, MELEE, RANGED, HEALER)}
+check(rows[TANK] < rows[MELEE] < rows[RANGED] < rows[HEALER], "G6: tanks, melee, ranged, healers from the front")
+# The group faces +x: every place lies behind (smaller x than) the leader at 10,10
+for name, place in places.items():
+    position = place_position((10.0, 10.0), (1.0, 0.0), place, 1.0)
+    check(position[0] < 10.0, "G6: " + name + " stands behind the leader")
+check(place_position((10.0, 10.0), (0.0, 1.0), (2, 0.0), 1.0) == (10.0, 8.0), "G6: rows follow the facing")
+
+order_body = function(RULES, "std::vector<Role> formationOrder(")
+pushes = re.findall(r"order\.push_back\(Role::(\w+)\);", order_body)
+check(pushes == ["tank", "melee", "ranged", "healer"], "G6: formation order in the source " + repr(pushes))
+check(re.search(r"tank = 0,\s*melee = 1,\s*ranged = 2,\s*healer = 3", RULES_H) is not None, "G6: role order")
+check("leaderX - forwardX * back" in RULES and "leaderY - forwardY * back" in RULES, "G6: places behind the leader")
+check("formationPlaces(formationMembers" in update_group and "member == leader" in update_group,
+      "G6: every member but the leader gets a place")
+follow = read("source/creatureaction/CreatureActionGroupFollow.cpp")
+check("getFormationTile(creature)" in follow and "isAtFormationPlace(creature, *place)" in follow,
+      "G6: a member walks to its place and holds it")
+# Healers heal the members with the existing heal skills: the heal skills heal own creatures in range
+heal_ally = read("source/creatureskill/CreatureSkillHealAlly.cpp")
+check("getOwnCreaturesWithin(mRange)" in heal_ally, "G6: the existing heal skill heals own creatures in range")
+
+# ------------------------------------------------------------------------------------------------ G7 retreat
+
+
+def order_options(options, group_to_enemy):
+    """Model of CombatGroupRules::orderRetreatOptions on (x, y, to group, to enemy) tuples."""
+    kept = [o for o in options if o[3] > group_to_enemy]
+    return [options.index(o) for o in sorted(kept, key=lambda o: (o[2], o[0], o[1]))]
+
+
+def choose_retreat(doors, rooms, group_to_enemy):
+    """Model of CombatGroupManager::findRetreatTile with every option reachable: doors first, then rooms."""
+    for options, kind in ((doors, "door"), (rooms, "room")):
+        order = order_options(options, group_to_enemy)
+        if order:
+            return kind, options[order[0]][:2]
+    return None, None
+
+
+# The group stands at 10,10, the enemy at 20,10 (squared distance 100)
+door_behind = (5, 10, 25, 225)     # behind the group, away from the enemy
+door_ahead = (16, 10, 36, 16)      # between the group and the enemy: not away from it
+room_behind = (2, 10, 64, 324)
+room_ahead = (25, 10, 225, 25)
+check(choose_retreat([door_ahead, door_behind], [room_behind], 100) == ("door", (5, 10)),
+      "G7: the group retreats behind the next door away from the enemy")
+check(choose_retreat([door_ahead], [room_ahead, room_behind], 100) == ("room", (2, 10)),
+      "G7: without such a door the nearest own room away from the enemy")
+check(choose_retreat([door_ahead], [room_ahead], 100) == (None, None), "G7: no door and no room: no retreat")
+
+
+def should_retreat(hp, max_hp, enemy, share):
+    """Model of CombatGroupRules::shouldRetreat."""
+    return enemy and max_hp > 0 and hp / max_hp < share
+
+
+SHARE = float(group_block_words("GroupRetreatHealthShare")[0])
+check(should_retreat(SHARE * 100 - 1, 100, True, SHARE), "G7: below the share with an enemy in sight: retreat")
+check(not should_retreat(SHARE * 100 + 1, 100, True, SHARE), "G7: above the share: no retreat")
+check(not should_retreat(0, 100, False, SHARE), "G7: no enemy in sight: no retreat")
+
+find_retreat = function(MANAGER, "bool CombatGroupManager::findRetreatTile(")
+check(find_retreat.index("doorOptions") < find_retreat.index("roomOptions"), "G7: doors before rooms")
+check("trap->isDoor()" in find_retreat and "group.mSeatId" in find_retreat, "G7: only own doors and rooms")
+check(find_retreat.count("pathExists(&leader") == 2, "G7: the gathering tile must be reachable")
+check("mSquaredDistanceToEnemy <= groupToEnemySquared" in function(RULES, "std::vector<size_t> orderRetreatOptions("),
+      "G7: only options away from the enemy")
+check("shouldRetreat(groupHp, groupMaxHp, !enemies.empty(), groupConfig(\"GroupRetreatHealthShare\"))" in update_group,
+      "G7: the leader decides from the configured retreat condition")
+handle_group = function(CREATURE, "void Creature::handleCombatGroup()")
+check(handle_group.index("groups.isRetreating(*this)") < handle_group.index("shouldKeepFormation(*this)"),
+      "G7: the retreat comes before the formation")
+check("CreatureActionGroupRetreat" in handle_group and "clearActionQueue();" in handle_group,
+      "G7: a retreating member drops what it does")
+check("CreatureActionType::groupRetreat" in function(ATTACK, "bool CreatureBehaviourAttackEnemy::processBehaviour("),
+      "G7: a retreating member starts no fight")
+retreat = read("source/creatureaction/CreatureActionGroupRetreat.cpp")
+check("getRetreatTile(creature)" in retreat and "isAtGatheringTile(creature, *gathering)" in retreat,
+      "G7: members walk to the gathering tile and gather there")
+check("retreatFinished(arrived" in update_group and "GroupRetreatCooldownSeconds" in update_group,
+      "G7: the group gathers again and the next retreat waits for the cooldown")
+
+elapsed = time.perf_counter() - START
+print('ODP_TEST_PHASE {"name":"rules","seconds":%.3f}' % elapsed)
+if FAILURES:
+    for failure in FAILURES:
+        print("FAIL: " + failure)
+    sys.exit(1)
+print("group combat rules ok")
