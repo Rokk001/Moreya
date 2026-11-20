@@ -232,6 +232,11 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool startSandboxSingleInvasion(const CEGUI::EventArgs& = {});
     //! \brief Sandbox panel: asks the server for all hero waves one after the other
     bool startSandboxContinualInvasion(const CEGUI::EventArgs& = {});
+    //! \brief Raid panel: shows the countdown until the raid (with the button that opens the Moreya gate early while
+    //! the gate is closed) or until its next group, hidden when no raid group waits
+    void updateRaidPanel();
+    //! \brief Raid panel: asks the server to open the Moreya gate now, so that the raid comes at once
+    bool openRaidGate(const CEGUI::EventArgs& = {});
     //! \brief Shows the score and the room timer the server sent (on the HUD and in the sandbox window) and
     //! opens the prompt when the server tells that the realm is complete
     void updateSandboxStatus();
@@ -551,6 +556,10 @@ private:
     int32_t mTimeLimitShown = -1;
     //! \brief Seconds of the wave countdown that is shown on the HUD, -1 while it is hidden
     int32_t mWaveCountdownShown = -1;
+    //! \brief Seconds of the raid countdown that is shown on the HUD, -1 while the raid panel is hidden
+    int32_t mRaidCountdownShown = -1;
+    //! \brief True when the raid panel shows the countdown to the raid with the open gate button
+    bool mRaidGateClosedShown = false;
 
     //! \brief Sets whether a tile must marked or unmarked for digging.
     //! this value is based on the first marked flag tile selected.
