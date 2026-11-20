@@ -29,6 +29,7 @@
 #define __USE_GNU
 #endif
 
+#include "utils/RaidSimulation.h"
 #include "utils/ResourceManager.h"
 #include "utils/RunLevelTest.h"
 #include "utils/StackTracePrint.h"
@@ -117,6 +118,10 @@ int main(int argc, char** argv)
         std::cerr << "An unkownn exception has occurred: " << std::endl;
 #endif
     }
+
+    // The raid simulation reports its own result
+    if(RaidSimulation::isActive())
+        return RaidSimulation::getExitCode();
 
     return RunLevelTest::getExitCode();
 }

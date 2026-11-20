@@ -89,6 +89,8 @@ ResourceManager::ResourceManager(boost::program_options::variables_map& options)
         mRunLevelSeconds(120),
         mRunLevelSeed(0),
         mMenuTestSeconds(0),
+        mRaidSimOut("raid-sim.tsv"),
+        mRaidSimKeeperAi(false),
         mForcedNetworkPort(-1),
         mLogLevel(LogMessageLevel::NORMAL),
         mGameDataPath("./"),
@@ -461,6 +463,16 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
     if(itOption != options.end())
         mMenuTestSeconds = itOption->second.as<int32_t>();
 
+    itOption = options.find("raid-sim");
+    if(itOption != options.end())
+        mRaidSimLevel = itOption->second.as<std::string>();
+
+    itOption = options.find("raid-sim-out");
+    if(itOption != options.end())
+        mRaidSimOut = itOption->second.as<std::string>();
+
+    mRaidSimKeeperAi = (options.count("raid-sim-keeper-ai") > 0);
+
     itOption = options.find("port");
     if(itOption != options.end())
         mForcedNetworkPort = itOption->second.as<int32_t>();
@@ -631,6 +643,9 @@ void ResourceManager::buildCommandOptions(boost::program_options::options_descri
         ("seconds", boost::program_options::value<int32_t>(), "Debug: game time in seconds for --run-level (default 120)")
         ("seed", boost::program_options::value<uint32_t>(), "Debug: seed of the random generator for --run-level (not 0); also writes the game state to run-level-state.txt")
         ("menu-test", boost::program_options::value<int32_t>(), "Debug: shows the main menu scene for the given number of seconds, prints a MENUTEST line and exits")
+        ("raid-sim", boost::program_options::value<std::string>(), "Debug: plays the given level with a raid headless (no window, no network) for --seconds of game time with the random seed --seed and writes one line per turn to --raid-sim-out (tools/balance/raid_sim.py runs it)")
+        ("raid-sim-out", boost::program_options::value<std::string>(), "Debug: file the turn lines of --raid-sim are written to (default raid-sim.tsv)")
+        ("raid-sim-keeper-ai", "Debug: a computer keeper plays the human seat in --raid-sim")
         ("scenario", boost::program_options::value<std::string>(), "Debug: scenario set up by --run-level on the first turn (ignored-enemies: writes the combat state of fighters near enemies to run-level-scenario.txt; return-to-menu / editor-return-to-menu: plays the level as a game / opens it in the editor, leaves to the main menu after --seconds and passes after the menu frames)")
     ;
 }

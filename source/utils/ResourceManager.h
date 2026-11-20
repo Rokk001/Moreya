@@ -173,6 +173,19 @@ public:
     inline int32_t getMenuTestSeconds() const
     { return mMenuTestSeconds; }
 
+    //! \brief Debug option --raid-sim: level file the headless raid simulation plays (empty if not used); it uses
+    //! --seconds and --seed too
+    inline const std::string& getRaidSimLevel() const
+    { return mRaidSimLevel; }
+
+    //! \brief Debug option --raid-sim-out: file the raid simulation writes its turn lines to
+    inline const std::string& getRaidSimOut() const
+    { return mRaidSimOut; }
+
+    //! \brief Debug option --raid-sim-keeper-ai: a computer keeper plays the human seat of the raid simulation
+    inline bool getRaidSimKeeperAi() const
+    { return mRaidSimKeeperAi; }
+
 private:
     //! \brief used when the executable is launched in server mode
     bool mServerMode;
@@ -187,6 +200,11 @@ private:
 
     //! \brief used by the automated main menu test
     int32_t mMenuTestSeconds;
+
+    //! \brief used by the headless raid simulation
+    std::string mRaidSimLevel;
+    std::string mRaidSimOut;
+    bool mRaidSimKeeperAi;
 
     //! \brief used when the network port is forced
     int32_t mForcedNetworkPort;

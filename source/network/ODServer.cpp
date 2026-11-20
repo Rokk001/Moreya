@@ -1001,83 +1001,7 @@ void ODServer::serverThread()
                     MasterServer::updateGame(mMasterServerGameId, MASTER_SERVER_STATUS_STARTED);
                 }
 
-                // We configure the game for launching
-                const std::vector<Seat*>& seats = gameMap->getSeats();
-                for (int jj = 0; jj < gameMap->getMapSizeY(); ++jj)
-                {
-                    for (int ii = 0; ii < gameMap->getMapSizeX(); ++ii)
-                    {
-                        Tile* tile = gameMap->getTile(ii,jj);
-                        tile->setSeats(seats);
-                    }
-                }
-
-                // We set allied seats
-                for(Seat* seat : seats)
-                {
-                    for(Seat* alliedSeat : seats)
-                    {
-                        if(alliedSeat == seat)
-                            continue;
-                        if(!seat->isAlliedSeat(alliedSeat))
-                            continue;
-                        seat->addAlliedSeat(alliedSeat);
-                    }
-                }
-
-                // Every client is connected and ready, we can launch the game
-                // Send the first turn to init the map. A new level starts at turn 0, a saved
-                // game goes on from the turn it was saved at.
-                int64_t firstTurn = gameMap->getSavedTurnNumber();
-                ServerNotification* serverNotification = new ServerNotification(
-                    ServerNotificationType::turnStarted, nullptr);
-                serverNotification->mPacket << firstTurn;
-                queueServerNotification(serverNotification);
-
-                OD_LOG_INF("Server ready, starting game at turn " + Helper::toString(firstTurn));
-                gameMap->setTurnNumber(firstTurn);
-                gameMap->setGamePaused(false);
-
-                // In editor mode, we give vision on all the gamemap tiles
-                if(mServerMode == ServerMode::ModeEditor)
-                {
-                    for (Seat* seat : gameMap->getSeats())
-                    {
-                        for (int jj = 0; jj < gameMap->getMapSizeY(); ++jj)
-                        {
-                            for (int ii = 0; ii < gameMap->getMapSizeX(); ++ii)
-                            {
-                                gameMap->getTile(ii,jj)->notifyVision(seat);
-                            }
-                        }
-
-                        seat->sendVisibleTiles();
-                    }
-                }
-
-                gameMap->createAllEntities();
-
-                // Restore AI hands after entity placement and before the first game upkeep.
-                for(Seat* seat : seats)
-                {
-                    Player* player = seat->getPlayer();
-                    BaseAI* ai = player == nullptr ? nullptr : gameMap->getAI(*player);
-                    if(ai == nullptr)
-                        continue;
-                    const std::vector<std::string> lines = seat->takeAiStateLoaded();
-                    if(!lines.empty() && !ai->importState(lines))
-                        OD_LOG_WRN("Invalid AI state; starting a fresh keeper mind");
-                }
-                
-                // Fill starting gold
-                for(Seat* seat : gameMap->getSeats())
-                {
-                    if(seat->getPlayer() == nullptr)
-                        continue;
-
-                    if(seat->getGold() > 0)
-                        gameMap->addGoldToSeat(seat->getGold(), seat->getId());
-                }
+                launchGame();
             }
             else
             {
@@ -1113,6 +1037,194 @@ void ODServer::serverThread()
         mMasterServerGameStatusUpdateTime = 0.0;
         MasterServer::updateGame(mMasterServerGameId, MASTER_SERVER_STATUS_FINISHED);
     }
+}
+
+//! \brief Gives the tiles the seats, sets the allied seats, sends the first turn, creates the entities, restores the
+//! computer keepers of a saved game and fills the starting gold (the server thread once every seat is configured, the
+//! raid simulation without clients).
+void ODServer::launchGame()
+{
+    GameMap* gameMap = mGameMap;
+    // We configure the game for launching
+    const std::vector<Seat*>& seats = gameMap->getSeats();
+    for (int jj = 0; jj < gameMap->getMapSizeY(); ++jj)
+    {
+        for (int ii = 0; ii < gameMap->getMapSizeX(); ++ii)
+        {
+            Tile* tile = gameMap->getTile(ii,jj);
+            tile->setSeats(seats);
+        }
+    }
+
+    // We set allied seats
+    for(Seat* seat : seats)
+    {
+        for(Seat* alliedSeat : seats)
+        {
+            if(alliedSeat == seat)
+                continue;
+            if(!seat->isAlliedSeat(alliedSeat))
+                continue;
+            seat->addAlliedSeat(alliedSeat);
+        }
+    }
+
+    // Every client is connected and ready, we can launch the game
+    // Send the first turn to init the map. A new level starts at turn 0, a saved
+    // game goes on from the turn it was saved at.
+    int64_t firstTurn = gameMap->getSavedTurnNumber();
+    ServerNotification* serverNotification = new ServerNotification(
+        ServerNotificationType::turnStarted, nullptr);
+    serverNotification->mPacket << firstTurn;
+    queueServerNotification(serverNotification);
+
+    OD_LOG_INF("Server ready, starting game at turn " + Helper::toString(firstTurn));
+    gameMap->setTurnNumber(firstTurn);
+    gameMap->setGamePaused(false);
+
+    // In editor mode, we give vision on all the gamemap tiles
+    if(mServerMode == ServerMode::ModeEditor)
+    {
+        for (Seat* seat : gameMap->getSeats())
+        {
+            for (int jj = 0; jj < gameMap->getMapSizeY(); ++jj)
+            {
+                for (int ii = 0; ii < gameMap->getMapSizeX(); ++ii)
+                {
+                    gameMap->getTile(ii,jj)->notifyVision(seat);
+                }
+            }
+
+            seat->sendVisibleTiles();
+        }
+    }
+
+    gameMap->createAllEntities();
+
+    // Restore AI hands after entity placement and before the first game upkeep.
+    for(Seat* seat : seats)
+    {
+        Player* player = seat->getPlayer();
+        BaseAI* ai = player == nullptr ? nullptr : gameMap->getAI(*player);
+        if(ai == nullptr)
+            continue;
+        const std::vector<std::string> lines = seat->takeAiStateLoaded();
+        if(!lines.empty() && !ai->importState(lines))
+            OD_LOG_WRN("Invalid AI state; starting a fresh keeper mind");
+    }
+
+    // Fill starting gold
+    for(Seat* seat : gameMap->getSeats())
+    {
+        if(seat->getPlayer() == nullptr)
+            continue;
+
+        if(seat->getGold() > 0)
+            gameMap->addGoldToSeat(seat->getGold(), seat->getId());
+    }
+}
+
+//! \brief Loads the level as startServer does, but without socket and master server, and configures the seats as the
+//! seat configuration of a single player game does, without clients: the human seat gets a human player who gives no
+//! orders (or a computer keeper), computer seats their computer keeper and inactive seats an inactive player.
+int32_t ODServer::startHeadlessGame(const std::string& levelFilename, bool keeperAi)
+{
+    mSeatsConfigured = false;
+    mServerMode = ServerMode::ModeGameSinglePlayer;
+    mServerState = ServerState::StateConfiguration;
+    mUniqueNumberPlayer = 0;
+    GameMap* gameMap = mGameMap;
+    if(!gameMap->loadLevel(levelFilename))
+    {
+        OD_LOG_ERR("Raid simulation: the level file can't be loaded: " + levelFilename + ", cause: "
+            + MapHandler::getLastLoadError());
+        mServerMode = ServerMode::ModeNone;
+        mServerState = ServerState::StateNone;
+        return -1;
+    }
+    gameMap->setRelationshipsEnabled(true);
+
+    int32_t humanSeatId = -1;
+    const std::vector<std::string>& factions = ConfigManager::getSingleton().getFactions();
+    for(Seat* seat : gameMap->getSeats())
+    {
+        if(seat->isRogueSeat())
+            continue;
+
+        // A seat whose faction can be chosen plays the first faction, as in a single player game
+        if(seat->getFaction().compare(Seat::PLAYER_FACTION_CHOICE) == 0)
+            seat->setFaction(factions.front());
+
+        const std::vector<int>& availableTeamIds = seat->getAvailableTeamIds();
+        if(!availableTeamIds.empty())
+            seat->setTeamId(availableTeamIds.front());
+
+        Player* player = nullptr;
+        bool computer = false;
+        const std::string& type = seat->getPlayerType();
+        const bool human = (type.compare(Seat::PLAYER_TYPE_HUMAN) == 0) ||
+            ((type.compare(Seat::PLAYER_TYPE_CHOICE) == 0) && (humanSeatId < 0));
+        if(type.compare(Seat::PLAYER_TYPE_INACTIVE) == 0)
+        {
+            player = new Player(gameMap, 0);
+            player->setNick("Inactive AI " + Helper::toString(seat->getId()));
+        }
+        else if(human && (humanSeatId < 0))
+        {
+            humanSeatId = seat->getId();
+            if(keeperAi)
+            {
+                player = new Player(gameMap, 0);
+                player->setNick("Simulated keeper " + Helper::toString(seat->getId()));
+                computer = true;
+            }
+            else
+            {
+                player = new Player(gameMap, Seat::PLAYER_ID_HUMAN_MIN);
+                player->setNick("Simulated player " + Helper::toString(seat->getId()));
+                player->setIsHuman(true);
+            }
+        }
+        else
+        {
+            player = new Player(gameMap, 0);
+            player->setNick("Keeper AI " + Helper::toString(seat->getId()));
+            computer = true;
+        }
+        gameMap->addPlayer(player);
+        seat->setPlayer(player);
+        if(computer)
+        {
+            // The level's computer level, else normal, as in a single player game outside the campaign
+            KeeperAIType aiType = (seat->getAiLevel() != KeeperAIType::nbAI) ? seat->getAiLevel() : KeeperAIType::normal;
+            seat->setAiLevel(aiType);
+            gameMap->assignAI(*player, aiType);
+        }
+        seat->setMapSize(gameMap, gameMap->getMapSizeX(), gameMap->getMapSizeY());
+    }
+
+    if(humanSeatId < 0)
+    {
+        OD_LOG_ERR("Raid simulation: the level has no human seat: " + levelFilename);
+        return -1;
+    }
+
+    mServerState = ServerState::StateGame;
+    gameMap->applySkirmishSkillStates();
+    for(Seat* seat : gameMap->getSeats())
+        seat->initSeat();
+
+    mSeatsConfigured = true;
+    gameMap->notifySeatsConfigured();
+    launchGame();
+    return humanSeatId;
+}
+
+//! \brief The part of the server thread that runs a turn, with the given turn length instead of the real time.
+void ODServer::runHeadlessTurn(double seconds)
+{
+    startNewTurn(seconds);
+    processServerNotifications();
 }
 
 void ODServer::processServerNotifications()

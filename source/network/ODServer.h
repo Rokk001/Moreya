@@ -122,6 +122,19 @@ class ODServer: public Ogre::Singleton<ODServer>,
 
     int32_t getNetworkPort() const;
 
+    //! \brief Raid simulation (RaidSimulation): loads the level without a network socket and without clients, gives
+    //! every seat its player as a single player game does (the human seat a human player who gives no orders, or a
+    //! computer keeper of normal level when keeperAi is true) and prepares the first turn as the server thread does.
+    //! \return The id of the human seat, -1 when the level cannot be loaded or has no human seat.
+    int32_t startHeadlessGame(const std::string& levelFilename, bool keeperAi);
+
+    //! \brief Raid simulation: runs one game turn of the given length (game seconds) without clients.
+    void runHeadlessTurn(double seconds);
+
+    //! \brief The map the server plays.
+    inline GameMap* getGameMap() const
+    { return mGameMap; }
+
 protected:
     ODSocketClient* notifyNewConnection(sf::TcpListener& sockListener) override;
     bool notifyClientMessage(ODSocketClient *sock) override;
@@ -157,6 +170,10 @@ private:
 
     //! \brief Called when a new turn started.
     void startNewTurn(double timeSinceLastTurn);
+
+    //! \brief Launches the configured game: gives the tiles the seats, sets the allied seats, starts the first turn,
+    //! creates the entities, restores the computer keepers of a saved game and fills the starting gold.
+    void launchGame();
 
     /*! \brief Monitors mServerNotificationQueue for new events and informs the clients about them.
      *
