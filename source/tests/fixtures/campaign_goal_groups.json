@@ -10935,7 +10935,7 @@
         "Action\tmessage\t1\tMaster, the Throne of Ash is a forest of grey trunks and drifting fog. Two rival keepers hold its northern corners, and behind the Moreya gate Elowen Ash is gathering the Ash Coven of Wraithwood in two groups.",
         "Action\tobjectiveid\t1\twraithwood-o01\tDestroy the rival heart in the north-west.",
         "Action\tobjectiveid\t1\twraithwood-o02\tDestroy the rival heart in the north-east.",
-        "Action\tobjectiveid\t1\twraithwood-o03\tDefend your heart against the kingdom's heroes."
+        "Action\tobjectiveid\t1\twraithwood-o03\tDefend your heart against the raid."
       ],
       "westGlade": [
         "Action\tmessage\t1\tThe west glade. The road of the north-western keeper climbs north from here, closed with earth, and a creek bars the way east."
@@ -11854,7 +11854,7 @@
       "siege": [
         "Action\tmessage\t1\tThe Heart of Moreya, master. Three walled courts climb to an empty throne, and High King Castellan has gathered the Crown Eternal of Hollowmark Citadel behind the Moreya gate: Sabine Rook leads the first raid, the king the second.",
         "Action\tobjectiveid\t1\thollowmarkcitadel-o02\tCross all three courts; take towers to open upper gates.",
-        "Action\tobjectiveid\t1\thollowmarkcitadel-o03\tSurvive the hero attacks."
+        "Action\tobjectiveid\t1\thollowmarkcitadel-o03\tSurvive the raid."
       ],
       "campHeld": [
         "Action\tmessage\t1\tYour camp is secure. The first gate stands open to the north and mines lie east and west.",

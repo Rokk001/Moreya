@@ -803,7 +803,7 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 5779 | `Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.` | yes |
-| Script line 5780 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.` | yes |
+| Script line 5780 | `Action	objectiveid	1	hollowmarkcitadel-o03	Survive the raid.` | yes |
 | Script line 6199 | `Action	win	1` | yes |
 
 ### Main and optional goals
@@ -1422,7 +1422,7 @@ File: `levels/campaign/Tinmoor.level`.
 | Script line 1795 | `Action	objectiveid	1	tinmoor-o01	Defeat the raid and its leader.` | yes |
 | Script line 1796 | `Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.` | yes |
 | Script line 1804 | `Action	objectiveid	1	tinmoor-o03	Clear the lower watch post in the east gallery.` | yes |
-| Script line 1822 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.` | yes |
+| Script line 1822 | `Action	objectiveid	1	tinmoor-o04	Clear the upper watch post.` | yes |
 | Script line 1879 | `Action	objectiveid	1	tinmoor-o05	Possess a creature; scout the miners' tunnels.` | yes |
 | Script line 1957 | `Action	win	1` | yes |
 
@@ -1507,7 +1507,7 @@ File: `levels/campaign/VarnsCrossing.level`.
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 4516 | `Action	objectiveid	1	varnscrossing-o01	Defeat both rival keepers.` | yes |
-| Script line 4517 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against heroes.` | yes |
+| Script line 4517 | `Action	objectiveid	1	varnscrossing-o02	Defend the keep and your heart against the raid.` | yes |
 | Script line 4518 | `Action	objectiveid	1	varnscrossing-o03	Claim your quarter, then take the lava-ringed fortress.` | yes |
 | Script line 4613 | `Cond	goal	1	KillAllEnemies` | yes |
 | Script line 4642 | `Action	win	1` | yes |
@@ -1605,7 +1605,7 @@ File: `levels/campaign/Wraithwood.level`.
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
 | Script line 4865 | `Action	objectiveid	1	wraithwood-o01	Destroy the rival heart in the north-west.` | yes |
 | Script line 4866 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
-| Script line 4867 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
+| Script line 4867 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the raid.` | yes |
 | Script line 4928 | `Cond	goal	1	KillAllEnemies` | yes |
 | Script line 4950 | `Action	win	1` | yes |
 | Script line 4955 | `Cond	goal	1	KillAllEnemies` | yes |

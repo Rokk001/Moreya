@@ -5777,7 +5777,7 @@ Mode	once
 Cond	time	3
 Action	message	1	The Heart of Moreya, master. Three walled courts climb to an empty throne, and High King Castellan has gathered the Crown Eternal of Hollowmark Citadel behind the Moreya gate: Sabine Rook leads the first raid, the king the second.
 Action	objectiveid	1	hollowmarkcitadel-o02	Cross all three courts; take towers to open upper gates.
-Action	objectiveid	1	hollowmarkcitadel-o03	Survive the hero attacks.
+Action	objectiveid	1	hollowmarkcitadel-o03	Survive the raid.
 [/Trigger]
 [Trigger]
 Name	campHeld

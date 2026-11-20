@@ -4864,7 +4864,7 @@ Cond	time	3
 Action	message	1	Master, the Throne of Ash is a forest of grey trunks and drifting fog. Two rival keepers hold its northern corners, and behind the Moreya gate Elowen Ash is gathering the Ash Coven of Wraithwood in two groups.
 Action	objectiveid	1	wraithwood-o01	Destroy the rival heart in the north-west.
 Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.
-Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.
+Action	objectiveid	1	wraithwood-o03	Defend your heart against the raid.
 [/Trigger]
 [Trigger]
 Name	westGlade

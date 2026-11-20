@@ -1819,7 +1819,7 @@ Cond	flag	postAAlarm	1
 Cond	kills	1	>=	7
 Action	message	1	The lower post is silent. A lift shaft leads up to the second one.
 Action	reveal	1	PostB
-Action	objectiveid	1	tinmoor-o04	Clear the upper watch post below Merrin Tay.
+Action	objectiveid	1	tinmoor-o04	Clear the upper watch post.
 [/Trigger]
 [Trigger]
 Name	postBEntered
