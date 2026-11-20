@@ -29,6 +29,7 @@ handlers.append('bool attemptIdle(Creature& creature){Tile* tileDest=nullptr;\n'
 probe = r'''
 #include <iostream>
 #define OD_LOG_ERR(...) ((void)0)
+#define OD_LOG_WRN(...) ((void)0)
 struct Tile {};
 struct Creature {
  bool reachable=false;int requests=0,popped=0;
