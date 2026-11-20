@@ -76,7 +76,7 @@ EXPECTED_KEYS = {
     "RaidCarryTilesSmall": ("1", False),
     "RaidCarryTilesLarge": ("2", False),
     "RaidLargeMemberClasses": ("NatureMonster Defender Scarab", False),
-    "RaidPlunderDetourTiles": ("6", True),
+    "RaidPlunderDetourTiles": ("6", False),
     "RaidGateArrivalTiles": ("1", False),
     "RaidGatePortcullisSink": ("2.2", False),
 }

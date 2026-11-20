@@ -23,7 +23,7 @@ FAILURES = []
 
 # Keys that may stay marked PLACEHOLDER: the third simulation pass measured no effect of their value (owner decision
 # pending); every other key must be set
-PENDING_KEYS = ("RaidPlunderDetourTiles",)
+PENDING_KEYS = ()
 
 # Keys set by the simulation and their values after R3C
 CONFIG = {
@@ -31,7 +31,7 @@ CONFIG = {
                     "GroupRetreatMaxSeconds": "30", "GroupRetreatCooldownSeconds": "30", "GroupGatherRadius": "3",
                     "GroupAggroMemorySeconds": "3", "GroupFormationRowSpacing": "1", "GroupFormationRowWidth": "6",
                     "GroupFormationTolerance": "2"},
-    "Raid": {"RaidCountdownSeconds": "3600", "RaidWaveIntervalSeconds": "90", "RaidLeaderEscapeShare": "0.25"},
+    "Raid": {"RaidCountdownSeconds": "3600", "RaidPlunderDetourTiles": "6", "RaidWaveIntervalSeconds": "90", "RaidLeaderEscapeShare": "0.25"},
     "HandLimit": {"HandLimitCooldownSeconds": "60"},
 }
 
