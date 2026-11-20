@@ -152,6 +152,15 @@ double storedGold(GameMap& gameMap, Seat* seat)
     return gold;
 }
 
+//! \brief The gold stored in the treasuries of the seat (without the dungeon heart).
+double treasuryGold(GameMap& gameMap, Seat* seat)
+{
+    double gold = 0.0;
+    for(Room* room : gameMap.getRoomsByTypeAndSeat(RoomType::treasury, seat))
+        gold += room->getTotalGoldStored();
+    return gold;
+}
+
 //! \brief The hit points of the dungeon heart tiles of the seat.
 double heartHp(GameMap& gameMap, Seat* seat)
 {
@@ -285,7 +294,7 @@ int RaidSimulation::getExitCode()
 //! both), the gold stored by the keeper, the hit points of his dungeon heart, 1 once he lost, the fleeing creatures of
 //! the raid and of the keeper, the highest id a combat group got so far (how many groups were formed), the summed
 //! distance of the raid and keeper group members to their formation places and the spread of the standing raid (mean
-//! distance of its members to their centre).
+//! distance of its members to their centre) and the gold stored in the keeper's treasuries alone.
 void RaidSimulation::writeHeader(std::ostream& os)
 {
     os << "turn\tseconds\tgateOpen\tarrived"
@@ -293,7 +302,7 @@ void RaidSimulation::writeHeader(std::ostream& os)
         << "\tkeeperAlive\tkeeperHp\tkeeperMaxHp\tkeeperFighting\tkeeperInPlace\tkeeperWithPlace\tkeeperCarried"
         << "\tleadersFleeing\tleadersEscaped\tkeeperGroups\tkeeperGroupMembers\tkeeperRetreating\traidRetreating"
         << "\tminDistance\tkeeperGold\theartHp\tkeeperLost\traidFleeing\tkeeperFleeing\tmaxGroupId"
-        << "\traidPlaceDistance\tkeeperPlaceDistance\traidSpread\n";
+        << "\traidPlaceDistance\tkeeperPlaceDistance\traidSpread\ttreasuryGold\n";
 }
 
 //! \brief Counts both sides from the creatures of the map, the raid groups and the combat groups.
@@ -399,5 +408,6 @@ void RaidSimulation::writeTurn(std::ostream& os, GameMap& gameMap, int32_t attac
         << "\t" << ((keeperSeat == nullptr) ? 0.0 : heartHp(gameMap, keeperSeat))
         << "\t" << (keeperLost ? 1 : 0) << "\t" << raidSide.mFleeing << "\t" << keeperSide.mFleeing
         << "\t" << maxGroupId << "\t" << raidSide.mPlaceDistance << "\t" << keeperSide.mPlaceDistance
-        << "\t" << spread(raidStanding) << "\n";
+        << "\t" << spread(raidStanding) << "\t" << ((keeperSeat == nullptr) ? 0.0 : treasuryGold(gameMap, keeperSeat))
+        << "\n";
 }

@@ -60,7 +60,7 @@ COMPOSITIONS = {
 
 GATE = (33, 33)
 # Free dirt tiles near the keeper's heart (5..9) where the keeper force starts, row by row
-KEEPER_AREA = [(x, y) for y in range(11, 17) for x in range(11, 18)]
+KEEPER_AREA = [(x, y) for y in range(11, 21) for x in range(11, 18)]
 
 
 def parse_seeds(text):
@@ -336,6 +336,20 @@ def measures(rows, result):
     out["quick"] = None if out["decision"] is None or out["result"] == "timeout" else (
         1.0 if out["decision"] < QUICK_DECISION else 0.0)
     out["fled"] = 0.0 if out["fleeAt"] is None else 1.0
+    # The main fight of the first raid group is over when three quarters of it have fallen (or the keeper has no
+    # fighter left), measured from its arrival; before a second group arrives
+    later = [row for row in phase2 if row["arrived"] <= 1]
+    peak_first = max((row["raidAlive"] for row in later), default=0)
+    out["mainFight"] = next((row["seconds"] - arrival for row in later
+                             if peak_first and (row["raidAlive"] <= peak_first * 0.25 or row["keeperAlive"] == 0)),
+                            None)
+    if "treasuryGold" in rows[0]:
+        treasury_start = rows[0]["treasuryGold"]
+        # Gold the raid took from the treasuries (the lowest stock; workers may carry dropped gold back later)
+        out["treasuryTaken"] = treasury_start - min(row["treasuryGold"] for row in rows)
+        out["treasuryTakenShare"] = out["treasuryTaken"] / treasury_start if treasury_start else None
+        out["treasuryHit"] = 1.0 if out["treasuryTaken"] > 0 else 0.0
+        out["treasuryLeft"] = rows[-1]["treasuryGold"]
     out["fleeSeconds"] = sum(step for row in phase2 if row.get("raidFleeing", 0) > 0)
     out["heartLostShare"] = 1.0 - (phase2[-1]["heartHp"] / rows[0]["heartHp"]) if rows[0]["heartHp"] else None
     return out
@@ -406,7 +420,7 @@ def summarize(results):
                  "quickShare", "meanFight", "keeperLossShare", "raidLeft", "keeperLeft", "keeperRetreats",
                  "raidRetreats", "groupsFormed", "fleeAt", "goldLost", "raidGoldPeak", "cohesion", "participation",
                  "heartLostShare", "fleeSeconds", "placeDistance", "marchSpread", "decision", "quick", "fled",
-                 "wall"):
+                 "mainFight", "treasuryTaken", "treasuryTakenShare", "treasuryHit", "treasuryLeft", "wall"):
         values = [m[name] for m in good if m.get(name) is not None]
         summary[name] = round(statistics.mean(values), 3) if values else None
     return summary
