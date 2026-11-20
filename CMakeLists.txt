@@ -282,6 +282,8 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionGetFee.cpp
     ${SRC}/creatureaction/CreatureActionGoCallToWar.cpp
     ${SRC}/creatureaction/CreatureActionGoDefendHeart.cpp
+    ${SRC}/creatureaction/CreatureActionGroupFollow.cpp
+    ${SRC}/creatureaction/CreatureActionGroupRetreat.cpp
     ${SRC}/creatureaction/CreatureActionWatchBanner.cpp
     ${SRC}/creatureaction/CreatureActionGrabEntity.cpp
     ${SRC}/creatureaction/CreatureActionLeaveDungeon.cpp
@@ -439,6 +441,8 @@ set(OD_SOURCEFILES
 	
     ${SRC}/game/Campaign.cpp
     ${SRC}/game/CampaignWorld.cpp
+    ${SRC}/game/CombatGroupManager.cpp
+    ${SRC}/game/CombatGroupRules.cpp
     ${SRC}/game/Player.cpp
     ${SRC}/game/ItemDrops.cpp
     ${SRC}/game/CreaturePanelData.cpp

@@ -40,6 +40,7 @@
 #include "entities/ItemDefinition.h"
 #include "entities/ItemInstance.h"
 #include "game/Campaign.h"
+#include "game/CombatGroupManager.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -339,6 +340,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         generator(42)
 {
     mLevelScript.reset(new LevelScript());
+    mCombatGroups.reset(new CombatGroupManager(*this));
     resetUniqueNumbers();
 }
 
@@ -355,6 +357,18 @@ LevelScript& GameMap::getLevelScript()
 const LevelScript& GameMap::getLevelScript() const
 {
     return *mLevelScript;
+}
+
+//! \brief Returns the combat groups and the raid registry of the map.
+CombatGroupManager& GameMap::getCombatGroups()
+{
+    return *mCombatGroups;
+}
+
+//! \brief Returns the combat groups and the raid registry of the map, read only.
+const CombatGroupManager& GameMap::getCombatGroups() const
+{
+    return *mCombatGroups;
 }
 
 std::string GameMap::serverStr()
@@ -378,6 +392,8 @@ bool GameMap::loadLevel(const std::string& levelFilepath)
 {
     // Relationship states of an earlier load that were never applied are dropped
     mPendingRelationshipStates.clear();
+    // The raid registry and the combat groups come from the level (or saved game) that is loaded now
+    mCombatGroups->clear();
 
     // We reset the creature definitions
     clearClasses();
@@ -486,6 +502,7 @@ void GameMap::clearAll()
 
         clearGoalsForAllSeats();
         mLevelScript->clear();
+        mCombatGroups->clear();
         clearSeats();
         mLocalPlayer = nullptr;
         clearPlayers();
@@ -2129,6 +2146,9 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
             refreshWorkerTargets(*seat);
             WorkerAllocation::refreshFixed(*seat);
         }
+
+        // The combat groups are decided with this turn's vision, before the creatures act (nothing without a raid)
+        mCombatGroups->update();
     }
     // Carry out the upkeep round of all the active objects in the game.
     // Here, we work on a copy of the active objects list because they might
