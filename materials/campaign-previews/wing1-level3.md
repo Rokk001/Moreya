@@ -1,6 +1,6 @@
 # wing1-level3 campaign preview
 
-State: placeholder drawn by tools/artwork/moreya-map/make_placeholders.py; the painted image replaces it under the same name.
+State: text-free placeholder (wing colour and level shape only); the painted image replaces it under the same name.
 Output: gui/campaign/previews/wing1-level3.png.
 Format: PNG, 640 x 360, at most 400 KB.
 
