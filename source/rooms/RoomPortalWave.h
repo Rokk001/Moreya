@@ -111,6 +111,21 @@ public:
     //! \brief Spawns one of the available waves
     void spawnWave();
 
+    //! \brief Server side. The room is the Moreya gate of a raid (RaidManager): it shows the gate model with its
+    //! portcullis instead of the portal and spawns no waves of its own; the raid comes through it. It stays
+    //! unclaimable and indestructible like every hero portal.
+    //! \param rotationDegrees Rotation of the gate model (0: its front faces -Y).
+    //! \param open True when the portcullis is already sunk (the gate was opened).
+    //! \param portcullisSink Units the portcullis sinks into the floor when the gate is open.
+    void setMoreyaGate(double rotationDegrees, bool open, double portcullisSink);
+
+    //! \brief Server side. Raises or sinks the portcullis of the Moreya gate.
+    void setMoreyaGateOpen(bool open, double portcullisSink);
+
+    //! \brief True when the room is the Moreya gate of a raid.
+    inline bool isMoreyaGate() const
+    { return mIsMoreyaGate; }
+
     //! \brief Spawns the given creatures (class name and level) at the portal at once, whatever
     //! the waves of the portal are. Used by the sandbox mode. The names of the creatures that
     //! were created are added to spawnedNames.
@@ -197,6 +212,21 @@ private:
 
     //! \brief Tiles that will be checked if claimed by an enemy. If yes, the corresponding player will get attacked
     std::vector<Tile*> mTilesBorder;
+
+    //! \brief True when the room is the Moreya gate of a raid (set by the raid at every load, not saved)
+    bool mIsMoreyaGate;
+    //! \brief Rotation of the gate model in degrees
+    double mGateRotation;
+    //! \brief True when the portcullis of the gate is sunk (the gate is open)
+    bool mGateOpen;
+    //! \brief Units the portcullis sinks into the floor when the gate is open
+    double mPortcullisSink;
+    //! \brief The portcullis of the gate model, nullptr when the room is no gate
+    BuildingObject* mPortcullisObject;
+
+    //! \brief The covered tile the portcullis object is kept under (another tile than the central one, which holds
+    //! the gate itself), nullptr when the room has only one tile.
+    Tile* getPortcullisKeyTile();
     //! \brief List of the seats that can be attacked by the portal
     std::vector<Seat*> mAttackableSeats;
 
