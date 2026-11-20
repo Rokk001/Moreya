@@ -3,14 +3,23 @@
 
 For every level the state at the START of the game is checked (no trigger has fired yet):
 
-1. Enemy walk path. The sources of the enemy team are the creatures of other teams, their
+1. Enemy walk path. The sources of the enemy team are the creatures of other teams and of
+   the neutral seat 0, the script spawns of other teams and of seat 0 that happen at the
+   level start (a trigger whose only conditions are "time 0", or that has none), their
    wave portals, their portals and their dungeon temples. For every source the walk path
    to the dungeon temple of the human seat is measured (4-neighbourhood, like the game):
    only over tiles that can be walked right now (open dirt, claimed or built tiles, rooms,
    bridges, doors; doors count as walkable). Every such connection is a FAIL, whatever its
-   length: a source must always have to dig to reach the temple. Solid rock, water and lava
-   never count as passable. A tile that is rock at the start and opened later by a trigger
-   therefore separates, as it should. The shortest path that may also cross solid dirt,
+   length: a source must always have to dig to reach the temple. Water and lava are walked
+   like the game does: a source passes water if one of its creature classes has a
+   WaterMoveSpeed above 0 in config/creatures.cfg, and lava if one has a LavaMoveSpeed
+   above 0. The classes of a creature are its class (DefaultWorker: the WorkerClass of its
+   seat's faction in config/factions.cfg), of a spawn the classes it spawns, of a temple the
+   WorkerClass of the owner's faction, of a portal that and the faction's SpawnPool, of a
+   wave portal those plus the classes of its waves and of its raid members; a class or faction that the configs do
+   not know passes both. Solid rock never counts as passable. A tile that is rock at the
+   start and opened later by a trigger therefore separates, as it should. Spawns of
+   triggers that fire later in the game are game events and are covered by rule 3. The shortest path that may also cross solid dirt,
    gold and gem tiles is only reported (shortest_dig_path) and has no threshold. Levels
    outside the campaign (skirmish, realms) are exempt from this part.
    Exception: the Moreya gate of a story level in gate mode is no enemy source at the start,
@@ -111,6 +120,11 @@ class Level(object):
         self.creature_info = []  # (name, line number), parallel to creatures
         self.traps = []          # (name, seatId, x, y, line number)
         self.spawns = []         # (trigger name, seatId, x, y, line number)
+        self.creature_classes = []  # class name of each creature, parallel to creatures
+        self.spawn_classes = []  # [class names] of each spawn, parallel to spawns
+        self.spawn_triggers = []  # index into trigger_conds of each spawn, parallel to spawns
+        self.trigger_conds = []  # [(condition type, [arguments])] of each trigger block
+        self.room_wave_classes = []  # [class names] of the waves of each room, parallel to rooms
         self.room_waves = []     # number of [Wave] blocks of each room, parallel to rooms
         self.raid = None         # the [Raid] section: {"gate": (x, y), "seat": id, "countdown": text}
 
@@ -142,6 +156,13 @@ def parse_level(path):
             if section == "Rooms" and stripped == "[Wave]" and level.room_waves:
                 # a wave of the wave portal room read last
                 level.room_waves[-1] += 1
+            elif section == "Rooms" and stripped == "[Creatures]":
+                # the creature list of a wave, not the [Creatures] section of the level
+                section = "WaveCreatures"
+            elif section == "WaveCreatures" and stripped == "[/Creatures]":
+                section = "Rooms"
+            elif section == "Triggers" and stripped == "[Trigger]":
+                level.trigger_conds.append([])
             elif stripped == "[Raid]":
                 level.raid = {}
                 section = "Raid"
@@ -208,6 +229,7 @@ def parse_level(path):
                     level.rooms.append((to_int(fields[0]), to_int(fields[2]), tiles))
                     level.room_lines.append((fields[1], entry_line))
                     level.room_waves.append(0)
+                    level.room_wave_classes.append([])
                 else:
                     for pos in tiles:
                         level.traps.append((fields[1], to_int(fields[2]), pos[0], pos[1],
@@ -222,16 +244,28 @@ def parse_level(path):
                 if x is not None and y is not None:
                     level.creatures.append((to_int(fields[0]), x, y))
                     level.creature_info.append((fields[1], index))
+                    level.creature_classes.append(fields[6].strip() if len(fields) > 6 else "")
+        elif section == "WaveCreatures":
+            fields = stripped.split()
+            if fields and level.room_wave_classes:
+                level.room_wave_classes[-1].append(fields[0])
         elif section == "Triggers":
             fields = line.split("	")
             if fields[0] == "Name" and len(fields) >= 2:
                 trigger_name = fields[1].strip()
+            elif fields[0] == "Cond" and len(fields) >= 2 and level.trigger_conds:
+                level.trigger_conds[-1].append((fields[1].strip(),
+                                                [f.strip() for f in fields[2:]]))
             elif fields[0] == "Action" and len(fields) >= 6 and fields[1] == "spawn":
                 seat_value = to_int(fields[2])
                 x = to_int(fields[3])
                 y = to_int(fields[4])
                 if seat_value is not None and x is not None and y is not None:
                     level.spawns.append((trigger_name, seat_value, x, y, index))
+                    # Class:count or Class:count@Name entries after the count field
+                    level.spawn_classes.append([f.strip().split(":", 1)[0]
+                                                for f in fields[6:] if f.strip()])
+                    level.spawn_triggers.append(len(level.trigger_conds) - 1)
         elif section == "Raid":
             fields = stripped.split()
             if fields[0] == "Gate" and len(fields) >= 3:
@@ -243,6 +277,8 @@ def parse_level(path):
                 level.raid["seat"] = to_int(fields[1])
             elif fields[0] == "Countdown" and len(fields) >= 2:
                 level.raid["countdown"] = fields[1]
+            elif fields[0] == "Member" and len(fields) >= 3:
+                level.raid.setdefault("classes", []).append(fields[2])
     if level.width <= 0 or level.height <= 0:
         return None
     # A tile that is not listed is full, diggable dirt in the game (new maps start as dirt
@@ -342,6 +378,108 @@ def default_raid_countdown(root):
     return None
 
 
+def load_movement(root):
+    """Return {"classes": {class: (walks water, walks lava)}, "factions": {faction:
+    (WorkerClass, [SpawnPool classes])}} from config/creatures.cfg and config/factions.cfg
+    below root. A file that is missing gives an empty table."""
+    classes = {}
+    path = os.path.join(root, "config", "creatures.cfg")
+    if os.path.isfile(path):
+        current = None
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                fields = line.split("#", 1)[0].split()
+                if len(fields) < 2:
+                    continue
+                if fields[0] == "Name":
+                    current = fields[1]
+                    classes.setdefault(current, [False, False])
+                elif current is not None and fields[0] in ("WaterMoveSpeed", "LavaMoveSpeed"):
+                    try:
+                        speed = float(fields[1])
+                    except ValueError:
+                        continue
+                    classes[current][0 if fields[0] == "WaterMoveSpeed" else 1] = speed > 0
+    factions = {}
+    path = os.path.join(root, "config", "factions.cfg")
+    if os.path.isfile(path):
+        name = None
+        worker = None
+        pool = []
+        in_pool = False
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                fields = line.split("#", 1)[0].split()
+                if not fields:
+                    continue
+                if fields[0] == "[Faction]":
+                    name, worker, pool, in_pool = None, None, [], False
+                elif fields[0] == "[/Faction]":
+                    if name is not None:
+                        factions[name] = (worker, pool)
+                elif fields[0] == "[SpawnPool]":
+                    in_pool = True
+                elif fields[0] == "[/SpawnPool]":
+                    in_pool = False
+                elif in_pool:
+                    pool.append(fields[0])
+                elif fields[0] == "Name" and len(fields) >= 2:
+                    name = fields[1]
+                elif fields[0] == "WorkerClass" and len(fields) >= 2:
+                    worker = fields[1]
+    return {"classes": dict((k, tuple(v)) for k, v in classes.items()), "factions": factions}
+
+
+def class_moves(movement, class_name, faction):
+    """Return (walks water, walks lava) of a creature class. DefaultWorker is the WorkerClass
+    of the faction (of any faction if the faction is unknown); an unknown class walks both."""
+    if class_name == "DefaultWorker":
+        factions = movement["factions"]
+        if faction in factions:
+            workers = [factions[faction][0]]
+        else:
+            workers = [worker for worker, _ in factions.values()]
+        if not workers or None in workers:
+            return (True, True)
+        return classes_moves(movement, workers, faction)
+    return movement["classes"].get(class_name, (True, True))
+
+
+def classes_moves(movement, class_names, faction):
+    """Return (walks water, walks lava) of a group: it passes a tile if one of its classes
+    can. An empty group (classes not known) walks both."""
+    if not class_names:
+        return (True, True)
+    water = False
+    lava = False
+    for name in class_names:
+        moves = class_moves(movement, name, faction)
+        water = water or moves[0]
+        lava = lava or moves[1]
+    return (water, lava)
+
+
+def faction_classes(movement, faction, with_pool=True):
+    """Return the classes that a room of the faction brings into the game: its WorkerClass
+    (a temple), with with_pool also its SpawnPool (a portal or wave portal); for an unknown
+    faction every class of the config."""
+    factions = movement["factions"]
+    if faction in factions:
+        worker, pool = factions[faction]
+        return ([worker] if worker else []) + (list(pool) if with_pool else [])
+    return sorted(movement["classes"])
+
+
+def is_start_trigger(level, number):
+    """A trigger fires at the level start if it has no condition or only "time 0" ones."""
+    if number < 0 or number >= len(level.trigger_conds):
+        return False
+    for kind, args in level.trigger_conds[number]:
+        if kind != "time" or not args or to_int(args[0]) is None or to_int(args[0]) > 0:
+            return False
+    return True
+
+
 def gate_mode_room(level, raid_default):
     """Return the index of the room that is the Moreya gate in gate mode, or None.
 
@@ -368,43 +506,86 @@ def gate_mode_room(level, raid_default):
     return None
 
 
-def enemy_sources(level, seat_id, raid_default=None):
-    """Return the tiles where enemies of the seat start: other teams' temples, portals,
-    wave portals and creatures. The Moreya gate in gate mode is no source at the start."""
+def is_start_enemy(level, seat_id, owner):
+    """Enemy at the start = the neutral seat 0 or a seat of another team."""
+    if owner == 0:
+        return True
+    if owner not in level.seats or owner == seat_id:
+        return False
+    return level.seats[owner].get("teamId") != level.seats[seat_id].get("teamId")
+
+
+def enemy_sources(level, seat_id, raid_default=None, movement=None):
+    """Return (name, tile, (walks water, walks lava)) for every place where enemies of the
+    seat start: other teams' temples, portals and wave portals, the creatures and level start
+    spawns of other teams and of seat 0. The Moreya gate in gate mode is no source at the
+    start. movement is the table of load_movement (None: read from the repository)."""
+    if movement is None:
+        movement = load_movement(repo_root())
     team = level.seats[seat_id].get("teamId")
     gate = gate_mode_room(level, raid_default)
     sources = []
     for other_id, seat in level.seats.items():
         if other_id == seat_id or seat.get("teamId") == team:
             continue
+        faction = seat.get("faction")
         for room_type, owner, tiles in level.rooms:
             if owner == other_id and room_type in (ROOM_TEMPLE, ROOM_PORTAL) and tiles:
-                sources.append(("seat %d room type %d" % (other_id, room_type), tiles[0]))
+                names = faction_classes(movement, faction, room_type == ROOM_PORTAL)
+                sources.append(("seat %d room type %d" % (other_id, room_type), tiles[0],
+                                classes_moves(movement, names, faction)))
     for number, (room_type, owner, tiles) in enumerate(level.rooms):
         if number == gate:
             continue
         if room_type == ROOM_PORTAL_WAVE and tiles:
             owner_team = level.seats.get(owner, {}).get("teamId")
             if owner_team != team:
-                sources.append(("wave portal of seat %d" % owner, tiles[0]))
-    for owner, x, y in level.creatures:
-        owner_team = level.seats.get(owner, {}).get("teamId")
-        if owner in level.seats and owner_team != team:
-            sources.append(("creature of seat %d at %d,%d" % (owner, x, y), (x, y)))
+                faction = level.seats.get(owner, {}).get("faction")
+                names = faction_classes(movement, faction) + level.room_wave_classes[number]
+                if level.raid is not None and level.raid.get("seat") == owner:
+                    names = names + level.raid.get("classes", [])
+                sources.append(("wave portal of seat %d" % owner, tiles[0],
+                                classes_moves(movement, names, faction)))
+    for number, (owner, x, y) in enumerate(level.creatures):
+        if is_start_enemy(level, seat_id, owner):
+            name = level.creature_classes[number]
+            faction = level.seats.get(owner, {}).get("faction")
+            sources.append(("creature of seat %d at %d,%d (%s)" % (owner, x, y, name), (x, y),
+                            class_moves(movement, name, faction)))
+    for number, (trigger, owner, x, y, _) in enumerate(level.spawns):
+        if is_start_enemy(level, seat_id, owner) \
+                and is_start_trigger(level, level.spawn_triggers[number]):
+            names = level.spawn_classes[number]
+            faction = level.seats.get(owner, {}).get("faction")
+            sources.append(("start spawn %s of seat %d at %d,%d (%s)" % (
+                trigger, owner, x, y, " ".join(names)), (x, y),
+                classes_moves(movement, names, faction)))
     return sources
 
 
-def check_enemy_distance(level, seat_id, raid_default=None):
+def check_enemy_distance(level, seat_id, raid_default=None, movement=None):
     """Check how close enemies are to the seat's heart; return (reasons, shortest distance).
-    raid_default is RaidCountdownSeconds for a level whose raid countdown is "-"."""
+    raid_default is RaidCountdownSeconds for a level whose raid countdown is "-"; movement
+    is the table of load_movement (None: read from the repository). Each source walks the
+    water and lava tiles its classes can walk."""
     walkable, passable, _ = build_grids(level)
+    water = set(pos for pos, kind in level.types.items() if kind == TILE_WATER)
+    lava = set(pos for pos, kind in level.types.items() if kind == TILE_LAVA)
     hearts = heart_tiles(level, seat_id)
-    walk = bfs(hearts, walkable, level.width, level.height)
+    walks = {}
     dig = bfs(hearts, passable, level.width, level.height)
     reasons = []
     shortest = None
     connected = []
-    for name, pos in enemy_sources(level, seat_id, raid_default):
+    for name, pos, moves in enemy_sources(level, seat_id, raid_default, movement):
+        if moves not in walks:
+            allowed = set(walkable)
+            if moves[0]:
+                allowed |= water
+            if moves[1]:
+                allowed |= lava
+            walks[moves] = bfs(hearts, allowed, level.width, level.height)
+        walk = walks[moves]
         if pos in walk:
             connected.append((walk[pos], name))
         d = dig.get(pos)
@@ -625,9 +806,11 @@ def summarize_safe_zone(found, full):
     return reasons
 
 
-def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False, raid_default=None):
+def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False, raid_default=None,
+                movement=None):
     """Returns (status, reasons, numbers, violations). raid_default is RaidCountdownSeconds
-    for a raid countdown "-" (None: read from config/global.cfg of the repository)."""
+    for a raid countdown "-" (None: read from config/global.cfg of the repository);
+    movement is the water and lava table of load_movement (None: read from the repository)."""
     if raid_default is None:
         raid_default = default_raid_countdown(repo_root())
     level = parse_level(path)
@@ -643,7 +826,7 @@ def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False, raid_defau
     if seat_id is not None and heart_tiles(level, seat_id):
         gate_text = ""
         if campaign_index is not None:
-            found, shortest = check_enemy_distance(level, seat_id, raid_default)
+            found, shortest = check_enemy_distance(level, seat_id, raid_default, movement)
             reasons.extend(found)
             if gate_mode_room(level, raid_default) is not None:
                 gate_text = "gate_mode=%d,%d " % level.raid["gate"]
@@ -747,13 +930,19 @@ def run(files, root, use_allowlist, order, radius=SAFE_RADIUS, full=False):
 def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None, spawn_x=None,
                     trap_x=None, rock_wall_x=None, neutral_x=None, omit_dirt=False,
                     gate_x=None, gate_waves=0, gate_countdown="1800", gate_raid=True,
-                    gate_tile_x=None, walker_x=None):
+                    gate_tile_x=None, walker_x=None, enemy_seat=2, enemy_class="Knight",
+                    corridor_to=None, liquid_x=None, liquid_type=TILE_WATER, spawn_time=5,
+                    spawn_class="Knight"):
     """80x20 map, rock border, human temple around (heart_x, 10), enemy at enemy_x.
     omit_dirt leaves the full dirt tiles out of the file (the game fills them as dirt).
     gate_x puts a 3x3 wave portal room of seat 2 at gate_x..gate_x+2, joined to the temple
     by an open corridor on row 10, with gate_waves waves; gate_raid adds a [Raid] section
     whose Gate tile is (gate_tile_x or the room centre, 10) and whose Countdown is
-    gate_countdown. walker_x puts another creature of seat 2 on that corridor."""
+    gate_countdown. walker_x puts another creature of seat 2 on that corridor.
+    enemy_seat and enemy_class are the seat and class of the enemy creature. corridor_to
+    opens row 10 from the temple to that x; liquid_x puts one tile of liquid_type (or any
+    other tile type) on row 10. The spawn of spawn_x fires at spawn_time seconds and
+    spawns spawn_class."""
     width, height = 80, 20
     lines = ["OpenDungeons_Version:0.7.1", "", "[Seats]"]
     for seat_id, team, player, x in ((1, 1, "Human", heart_x), (2, 2, "Inactive", enemy_x)):
@@ -769,6 +958,9 @@ def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None,
             open_tiles.add((x, y))
     if enemy_x - heart_x < 20:
         for x in range(heart_x, enemy_x):
+            open_tiles.add((x, 10))
+    if corridor_to is not None:
+        for x in range(heart_x, corridor_to + 1):
             open_tiles.add((x, 10))
     room2 = [(heart_x - 3 - rooms_gap - i, y) for i in range(3) for y in range(8, 11)]
     if open_hall:
@@ -790,6 +982,9 @@ def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None,
         for x in range(width):
             if rock_wall_x is not None and x == rock_wall_x:
                 lines.append("%d\t%d\t3\t100" % (x, y))
+            elif liquid_x is not None and (x, y) == (liquid_x, 10):
+                lines.append("%d\t%d\t%d\t%d" % (x, y, liquid_type,
+                                                    100 if liquid_type == TILE_ROCK else 0))
             elif (x, y) in open_tiles:
                 lines.append("%d\t%d\t1\t0" % (x, y))
             elif x in (0, width - 1) or y in (0, height - 1):
@@ -819,7 +1014,8 @@ def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None,
     if trap_x is not None:
         lines += ["1\tCannon1\t2\t1", "%d\t10\t1" % trap_x]
     lines += ["[/Traps]", "", "[Creatures]",
-              "2\tHero1\tKnight.mesh\t%d\t10\t0\tKnight\t1\t0\tmax\t100\t0\t0" % enemy_x]
+              "%d\tHero1\tKnight.mesh\t%d\t10\t0\t%s\t1\t0\tmax\t100\t0\t0"
+              % (enemy_seat, enemy_x, enemy_class)]
     if neutral_x is not None:
         lines.append("0\tRogue1\tKnight.mesh\t%d\t10\t0\tKnight\t1\t0\tmax\t100\t0\t0"
                      % neutral_x)
@@ -828,8 +1024,9 @@ def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None,
                      % walker_x)
     lines += ["[/Creatures]", "", "[Triggers]"]
     if spawn_x is not None:
-        lines += ["[Trigger]", "Name\tambush", "Mode\tonce", "Cond\ttime\t5",
-                  "Action\tspawn\t2\t%d\t10\t1\tKnight:1" % spawn_x, "[/Trigger]"]
+        lines += ["[Trigger]", "Name\tambush", "Mode\tonce", "Cond\ttime\t%d" % spawn_time,
+                  "Action\tspawn\t2\t%d\t10\t1\t%s:1" % (spawn_x, spawn_class),
+                  "[/Trigger]"]
     lines += ["[/Triggers]", ""]
     if gate and gate_raid:
         lines += ["[Raid]", "# Gate X Y RotationDegrees",
@@ -838,6 +1035,11 @@ def synthetic_level(path, heart_x, enemy_x, rooms_gap, open_hall, portal_x=None,
                   "Group\t1\t-", "Member\t1\tKnight\t1\t-\t-", "[/Raid]", ""]
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines))
+
+
+# Fixed water and lava table of the self-test, independent of the configs of the repository.
+SELF_TEST_MOVEMENT = {"classes": {"Knight": (True, False), "CaveHornet": (True, True)},
+                      "factions": {}}
 
 
 def self_test():
@@ -878,28 +1080,28 @@ def self_test():
                         (sparse_ok, 5, "PASS"), (sparse_rock, 5, "PASS")]
         ok = True
         for path, index, expected in expectations:
-            status, reasons, numbers, _ = check_level(path, index)
+            status, reasons, numbers, _ = check_level(path, index, movement=SELF_TEST_MOVEMENT)
             print("%s (expected %s) %s | %s" % (status, expected, os.path.basename(path),
                                                   "; ".join(reasons)))
             if status != expected:
                 ok = False
         # the connected variant must report the walk and the distance reason
-        status, reasons, _, _ = check_level(near, 5)
+        status, reasons, _, _ = check_level(near, 5, movement=SELF_TEST_MOVEMENT)
         if not any("walk to the heart" in r for r in reasons):
             ok = False
-        status, reasons, _, _ = check_level(open_area, 5)
+        status, reasons, _, _ = check_level(open_area, 5, movement=SELF_TEST_MOVEMENT)
         if not any("open area" in r for r in reasons):
             ok = False
-        status, reasons, _, _ = check_level(touching, 5)
+        status, reasons, _, _ = check_level(touching, 5, movement=SELF_TEST_MOVEMENT)
         if not any("touch" in r for r in reasons):
             ok = False
-        status, reasons, _, _ = check_level(safe_spawn, 5)
+        status, reasons, _, _ = check_level(safe_spawn, 5, movement=SELF_TEST_MOVEMENT)
         if not any("enemy spawn" in r for r in reasons):
             ok = False
-        status, reasons, _, _ = check_level(safe_trap, 5)
+        status, reasons, _, _ = check_level(safe_trap, 5, movement=SELF_TEST_MOVEMENT)
         if not any("enemy trap" in r for r in reasons):
             ok = False
-        status, reasons, _, _ = check_level(sparse_spawn, 5)
+        status, reasons, _, _ = check_level(sparse_spawn, 5, movement=SELF_TEST_MOVEMENT)
         if not any("enemy spawn" in r for r in reasons):
             ok = False
         # The Moreya gate in gate mode is no enemy source at the start; anything else that
@@ -916,7 +1118,8 @@ def self_test():
         for name, options, raid_default, expected in gate_cases:
             path = os.path.join(directory, name + ".level")
             synthetic_level(path, 70, 4, 1, False, gate_x=30, **options)
-            status, reasons, numbers, _ = check_level(path, 5, raid_default=raid_default)
+            status, reasons, numbers, _ = check_level(path, 5, raid_default=raid_default,
+                                                      movement=SELF_TEST_MOVEMENT)
             print("%s (expected %s) %s | %s | %s" % (status, expected, name, numbers,
                                                        "; ".join(reasons)))
             if status != expected:
@@ -926,13 +1129,56 @@ def self_test():
             if expected == "PASS" and "gate_mode=31,10" not in numbers:
                 ok = False
         status, reasons, _, _ = check_level(os.path.join(directory, "gate_walker.level"), 5,
-                                            raid_default=600.0)
+                                            raid_default=600.0,
+                                            movement=SELF_TEST_MOVEMENT)
         if not any("creature of seat 2 at 40,10" in r for r in reasons):
             ok = False
         status, reasons, _, _ = check_level(os.path.join(directory, "gate_waves.level"), 5,
-                                            raid_default=600.0)
+                                            raid_default=600.0,
+                                            movement=SELF_TEST_MOVEMENT)
         if not any("wave portal of seat 2" in r for r in reasons):
             ok = False
+        # Water and lava are walked per class (Knight: water only, CaveHornet: water and
+        # lava), the neutral seat 0 is an enemy, and a spawn of a "time 0" trigger is a
+        # source at the start while a later spawn is not. Each case: (name, options,
+        # expected status, text the walk reason must contain or None).
+        corridor = {"enemy_x": 40, "corridor_to": 40}
+        start = {"enemy_x": 70, "corridor_to": 40, "spawn_x": 40}
+        walk_cases = [
+            ("water_knight", dict(corridor, liquid_x=30), "FAIL",
+             "creature of seat 2 at 40,10 (Knight)"),
+            ("lava_knight", dict(corridor, liquid_x=30, liquid_type=TILE_LAVA), "PASS", None),
+            ("lava_hornet", dict(corridor, liquid_x=30, liquid_type=TILE_LAVA,
+                                 enemy_class="CaveHornet"), "FAIL",
+             "creature of seat 2 at 40,10 (CaveHornet)"),
+            ("rock_hornet", dict(corridor, liquid_x=30, liquid_type=TILE_ROCK,
+                                 enemy_class="CaveHornet"), "PASS", None),
+            ("seat0_walker", dict(corridor, enemy_seat=0), "FAIL",
+             "creature of seat 0 at 40,10 (Knight)"),
+            ("seat0_water", dict(corridor, enemy_seat=0, liquid_x=30), "FAIL",
+             "creature of seat 0 at 40,10"),
+            ("seat0_lava", dict(corridor, enemy_seat=0, liquid_x=30, liquid_type=TILE_LAVA),
+             "PASS", None),
+            ("start_spawn", dict(start, spawn_time=0), "FAIL",
+             "start spawn ambush of seat 2 at 40,10 (Knight)"),
+            ("start_spawn_water", dict(start, spawn_time=0, liquid_x=30), "FAIL",
+             "start spawn ambush"),
+            ("start_spawn_lava", dict(start, spawn_time=0, liquid_x=30, liquid_type=TILE_LAVA),
+             "PASS", None),
+            ("start_spawn_lava_hornet", dict(start, spawn_time=0, liquid_x=30,
+                                             liquid_type=TILE_LAVA, spawn_class="CaveHornet"),
+             "FAIL", "start spawn ambush of seat 2 at 40,10 (CaveHornet)"),
+            ("later_spawn", dict(start, spawn_time=5), "PASS", None)]
+        for name, options, expected, text in walk_cases:
+            path = os.path.join(directory, name + ".level")
+            synthetic_level(path, 14, options.pop("enemy_x"), 1, False, **options)
+            status, reasons, numbers, _ = check_level(path, 5, movement=SELF_TEST_MOVEMENT)
+            print("%s (expected %s) %s | %s" % (status, expected, name, "; ".join(reasons)))
+            if status != expected:
+                ok = False
+            if text is not None and not any("walk to the heart" in r and text in r
+                                            for r in reasons):
+                ok = False
         print("self-test %s" % ("passed" if ok else "FAILED"))
         return 0 if ok else 1
     finally:
