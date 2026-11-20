@@ -411,14 +411,14 @@ ProtectDungeonTemple	NULL
 11	21	1	0
 11	31	1	0
 11	32	1	0
-11	33	1	100
-11	34	1	100
-11	35	3	100
-11	36	3	100
+11	33	1	0
+11	34	1	0
+11	35	1	0
+11	36	1	0
 11	46	1	100
-11	47	1	100
-11	48	1	100
-11	49	1	100
+11	47	1	0
+11	48	1	0
+11	49	1	0
 11	50	1	0	1
 11	51	1	0	1
 11	52	1	0	1
@@ -446,14 +446,14 @@ ProtectDungeonTemple	NULL
 12	29	1	0
 12	30	1	0
 12	31	1	0
-12	32	1	100
-12	33	1	100
+12	32	1	0
+12	33	1	0
 12	34	1	0
-12	35	3	100
-12	36	3	100
-12	37	3	100
-12	45	1	100
-12	46	1	100
+12	35	1	0
+12	36	1	0
+12	37	1	0
+12	45	1	0
+12	46	1	0
 12	47	1	0
 12	48	1	0
 12	49	1	0
@@ -486,14 +486,14 @@ ProtectDungeonTemple	NULL
 13	28	1	0
 13	29	1	0
 13	30	1	0
-13	31	1	100
-13	32	1	100
+13	31	1	0
+13	32	1	0
 13	33	1	0
 13	34	1	0
 13	35	1	0
-13	36	3	100
-13	37	3	100
-13	38	1	100
+13	36	1	0
+13	37	1	0
+13	38	1	0
 13	43	1	100
 13	44	1	0	1
 13	45	1	0	1
@@ -502,7 +502,7 @@ ProtectDungeonTemple	NULL
 13	48	1	0
 13	49	1	0
 13	50	1	0
-13	51	1	100
+13	51	1	0
 13	52	1	0
 13	53	1	100
 13	54	1	0
@@ -532,18 +532,18 @@ ProtectDungeonTemple	NULL
 14	27	1	0
 14	28	1	0
 14	29	1	0
-14	30	1	100
-14	31	1	100
+14	30	1	0
+14	31	1	0
 14	32	1	0
 14	33	1	0
 14	34	1	0
 14	35	1	0
 14	36	1	0
-14	37	1	100
-14	38	1	100
-14	39	1	100
+14	37	1	0
+14	38	1	0
+14	39	1	0
 14	42	1	100
-14	43	1	100
+14	43	1	0
 14	44	1	0	1
 14	45	1	0	1
 14	46	1	0
@@ -551,7 +551,7 @@ ProtectDungeonTemple	NULL
 14	48	1	0
 14	49	1	0
 14	50	1	0
-14	51	1	100
+14	51	1	0
 14	52	1	0
 14	53	1	100
 14	54	1	0
@@ -581,20 +581,20 @@ ProtectDungeonTemple	NULL
 15	24	1	0
 15	27	1	0
 15	28	1	0
-15	29	1	100
-15	30	1	100
+15	29	1	0
+15	30	1	0
 15	31	1	0
 15	32	1	0
 15	33	1	0
 15	34	1	0
 15	35	1	0
 15	36	1	0
-15	37	1	100
-15	38	1	100
-15	39	1	100
-15	40	1	100
-15	41	1	100
-15	42	1	100
+15	37	1	0
+15	38	1	0
+15	39	1	0
+15	40	1	0
+15	41	1	0
+15	42	1	0
 15	43	1	0
 15	44	1	0
 15	47	1	0	1
@@ -631,17 +631,17 @@ ProtectDungeonTemple	NULL
 16	27	1	0
 16	28	1	0
 16	29	1	0
-16	30	1	100
-16	31	1	100
+16	30	1	0
+16	31	1	0
 16	32	1	0
 16	33	1	0
 16	34	4	0
 16	35	1	0
 16	36	1	0
-16	37	1	100
-16	38	1	100
-16	39	1	100
-16	40	1	100
+16	37	1	0
+16	38	1	0
+16	39	1	0
+16	40	1	0
 16	41	1	0
 16	42	1	0
 16	43	1	0
@@ -682,9 +682,9 @@ ProtectDungeonTemple	NULL
 17	34	4	0
 17	35	4	0
 17	36	1	0
-17	37	1	100
-17	38	1	100
-17	39	1	100
+17	37	1	0
+17	38	1	0
+17	39	1	0
 17	40	1	0
 17	41	1	0
 17	47	1	0	1
@@ -718,9 +718,9 @@ ProtectDungeonTemple	NULL
 18	34	4	0
 18	35	4	0
 18	36	1	0
-18	37	1	100
-18	38	1	100
-18	39	1	100
+18	37	1	0
+18	38	1	0
+18	39	1	0
 18	40	1	0
 18	50	1	0
 18	62	6	100
@@ -785,9 +785,9 @@ ProtectDungeonTemple	NULL
 21	10	1	0
 21	11	1	0
 21	12	3	100
-21	13	1	0
-21	14	1	0
-21	15	1	0
+21	13	1	0	3
+21	14	1	0	3
+21	15	1	0	3
 21	16	1	0
 21	17	1	0
 21	29	1	0
@@ -809,9 +809,9 @@ ProtectDungeonTemple	NULL
 22	10	1	0
 22	11	3	100
 22	12	3	100
-22	13	3	100
-22	14	1	0
-22	15	1	0
+22	13	1	0	3
+22	14	1	0	3
+22	15	1	0	3
 22	16	1	0
 22	17	1	0
 22	18	1	0
@@ -832,9 +832,9 @@ ProtectDungeonTemple	NULL
 23	2	2	100	-1	150
 23	11	1	0
 23	12	3	100
-23	13	1	0
-23	14	1	0
-23	15	1	0
+23	13	1	0	3
+23	14	1	0	3
+23	15	1	0	3
 23	17	1	0
 23	18	1	0
 23	19	1	0
@@ -3642,6 +3642,75 @@ ProtectDungeonTemple	NULL
 59	36	2	100	-1	150
 59	37	2	100	-1	150
 58	36	2	100	-1	150
+21	18	1	0
+23	16	1	0
+20	19	1	0
+21	19	1	0
+22	19	1	0
+20	20	1	0
+21	20	1	0
+22	20	1	0
+23	20	1	0
+19	19	1	0
+19	20	1	0
+19	21	1	0
+20	21	1	0
+21	21	1	0
+22	21	1	0
+18	20	1	0
+18	21	1	0
+18	22	1	0
+19	22	1	0
+20	22	1	0
+21	22	1	0
+18	23	1	0
+19	23	1	0
+20	23	1	0
+21	23	1	0
+18	24	1	0
+19	24	1	0
+20	24	1	0
+21	24	1	0
+17	21	1	0
+17	22	1	0
+17	23	1	0
+17	24	1	0
+18	25	1	0
+19	25	1	0
+20	25	1	0
+16	22	1	0
+18	26	1	0
+19	26	1	0
+15	25	1	0
+15	26	1	0
+14	26	1	0
+13	27	1	0
+12	28	1	0
+11	37	1	0
+12	38	1	0
+13	39	1	0
+14	40	1	0
+18	41	1	0
+19	41	1	0
+17	42	1	0
+18	42	1	0
+19	42	1	0
+17	43	1	0
+18	43	1	0
+19	43	1	0
+16	44	1	0
+17	44	1	0
+18	44	1	0
+19	44	1	0
+16	45	1	0
+17	45	1	0
+18	45	1	0
+19	45	1	0
+15	45	1	0
+15	46	1	0
+16	46	1	0
+17	46	1	0
+18	46	1	0
 [/Tiles]
 
 [Rooms]
@@ -3983,6 +4052,21 @@ ProtectDungeonTemple	NULL
 31	23
 31	24
 [/Room]
+[Room]
+10	MoreyaGate1	3	9
+21	13
+21	14
+21	15
+22	13
+22	14
+22	15
+23	13
+23	14
+23	15
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -4315,62 +4399,6 @@ Action	message	1	The rolling yard is yours, and the old quench pool under it sti
 Action	terrain	78	38	78	38	manawell	1
 [/Trigger]
 [Trigger]
-Name	forgewave1
-Mode	once
-Cond	time	300
-Action	message	1	Smiths in armour are crossing from the west yard.
-Action	spawn	3	20	16	1	Adventurer:2	Dwarf1:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	forgewave2
-Mode	once
-Cond	time	700
-Action	message	1	A squad is coming from the north-west forge.
-Action	spawn	3	22	14	1	Knight:2	Monk:2	Adventurer:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	forgewave3
-Mode	once
-Cond	time	1150
-Action	message	1	Fenn is sending a bridge guard against your dungeon.
-Action	spawn	3	20	16	1	Knight:2	Knight:2	Dwarf2:2	Monk:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	forgewave4
-Mode	once
-Cond	time	1650
-Action	message	1	Another column has crossed the first rift.
-Action	spawn	3	22	14	1	Knight:3	Elf:2	Adventurer:3	Monk:2	Dwarf2:2
-[/Trigger]
-[Trigger]
-Name	forgewave5
-Mode	once
-Cond	time	2200
-Action	message	1	The forge guild has armed its apprentices.
-Action	spawn	3	20	16	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	forgewave6
-Mode	once
-Cond	time	2800
-Action	message	1	A heavy column is on the bridge.
-Action	spawn	3	22	14	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	forgewave7
-Mode	once
-Cond	time	3500
-Action	message	1	Fenn has emptied the armouries.
-Action	spawn	3	20	16	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	forgewave8
-Mode	once
-Cond	time	4300
-Action	message	1	The last of the town guard is marching.
-Action	spawn	3	22	14	1	Knight:4	Knight:4	Elf:4	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
 Name	goalIronbridgeSpan1Path1Before
 Mode	once
 Cond	region	1	35	20	35	21
@@ -4554,6 +4582,7 @@ Cond	flag	keepGateBreached	1
 Cond	roomtiles	2	DungeonTemple	<=	0
 Cond	goalmet	1	KillAllEnemies
 Cond	flag	storyVictorySent	0
+Cond	objective	1	ironbridge-main-raid	reached
 Action	message	1	The rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.
 Action	objectivestate	1	ironbridge-o01	reached
 Action	win	1
@@ -4575,6 +4604,7 @@ Cond	flag	keepGateBreached	1
 Cond	roomtiles	2	DungeonTemple	<=	0
 Cond	goalmet	1	KillAllEnemies
 Cond	flag	storyVictorySent	0
+Cond	objective	1	ironbridge-main-raid	reached
 Action	message	1	The rival keeper is gone and his heart is dark. The forges of Ironbridge are yours.
 Action	objectivestate	1	ironbridge-o01	reached
 Action	win	1
@@ -4601,6 +4631,7 @@ Action	mainobjectiveid	1	ironbridge-main-home	Build 6 beds and a hatchery; prote
 Action	mainobjectiveid	1	ironbridge-main-spans	Cross the 3 rifts in order.
 Action	mainobjectiveid	1	ironbridge-main-sites	Claim the north smithy and ore dock.
 Action	mainobjectiveid	1	ironbridge-main-hold	Breach the hold; destroy its heart and enemy forces.
+Action	mainobjectiveid	1	ironbridge-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	ironbridge-extra-coal	Explore the coal store.
 [/Trigger]
 [Trigger]
@@ -4691,6 +4722,7 @@ Cond	defeated	1
 Action	objectivestate	1	ironbridge-main-spans	failed
 Action	objectivestate	1	ironbridge-main-sites	failed
 Action	objectivestate	1	ironbridge-main-hold	failed
+Action	objectivestate	1	ironbridge-main-raid	failed
 [/Trigger]
 [Trigger]
 Name	mainHome
@@ -4725,6 +4757,12 @@ Cond	flag	storyVictorySent	1
 Action	objectivestate	1	ironbridge-main-hold	reached
 [/Trigger]
 [Trigger]
+Name	mainRaid
+Mode	repeat	0
+Cond	raid	defeated
+Action	objectivestate	1	ironbridge-main-raid	reached
+[/Trigger]
+[Trigger]
 Name	extraCoal
 Mode	once
 Cond	region	1	CoalStore
@@ -4732,3 +4770,66 @@ Action	objectivestate	1	ironbridge-extra-coal	reached
 [/Trigger]
 
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	22	14	180
+Seats	3	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	-
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Dwarf2	4	-	Guardian
+Member	1	Dwarf2	4	-	Guardian
+Member	1	Dwarf2	4	-	Guardian
+Member	1	Dwarf2	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Knight	4	-	Warlord
+Member	1	Knight	4	-	Warlord
+Member	1	Adventurer	4	-	Shade
+Member	1	Adventurer	4	-	Shade
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Hunter
+Member	1	Elf	4	-	Hunter
+Member	1	Elf	4	-	Skirmisher
+Group	2	GarethFenn
+Member	2	Knight	7	GarethFenn	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Dwarf1	4	-	Berserker
+Member	2	Dwarf1	4	-	Berserker
+Member	2	Dwarf1	4	-	Berserker
+Member	2	Knight	4	-	Warlord
+Member	2	Knight	4	-	Warlord
+Member	2	Adventurer	4	-	Shade
+Member	2	Adventurer	4	-	Shade
+Member	2	Elf	4	-	Marksman
+Member	2	Elf	4	-	Marksman
+Member	2	Elf	4	-	Marksman
+Member	2	Elf	4	-	Hunter
+Member	2	Elf	4	-	Hunter
+Member	2	Elf	4	-	Skirmisher
+[/Raid]

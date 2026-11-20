@@ -721,9 +721,9 @@ ProtectDungeonTemple	NULL
 27	34	1	0
 27	35	1	0
 27	36	1	0
-27	37	3	100
-27	38	3	100
-27	39	3	100
+27	37	1	0
+27	38	1	0
+27	39	1	0
 27	40	1	0
 27	41	1	0
 27	42	1	0
@@ -758,11 +758,11 @@ ProtectDungeonTemple	NULL
 28	33	1	0
 28	34	1	0
 28	35	1	0
-28	36	3	100
-28	37	3	100
-28	38	3	100
-28	39	3	100
-28	40	3	100
+28	36	1	0
+28	37	1	0
+28	38	1	0
+28	39	1	0
+28	40	1	0
 28	41	1	0
 28	42	1	0
 28	43	1	0
@@ -803,9 +803,9 @@ ProtectDungeonTemple	NULL
 29	34	1	0
 29	35	1	0
 29	36	1	0
-29	37	3	100
-29	38	3	100
-29	39	3	100
+29	37	1	0
+29	38	1	0
+29	39	1	0
 29	40	1	0
 29	41	1	0
 29	42	1	0
@@ -917,7 +917,7 @@ ProtectDungeonTemple	NULL
 32	18	1	0
 32	25	1	0
 32	26	1	0
-32	30	3	100
+32	30	1	0
 32	31	1	0
 32	32	1	0
 32	33	1	0
@@ -956,8 +956,8 @@ ProtectDungeonTemple	NULL
 33	17	1	0
 33	18	1	0
 33	26	1	0
-33	30	3	100
-33	31	3	100
+33	30	1	0
+33	31	1	0
 33	32	1	0
 33	33	1	0
 33	34	1	0
@@ -1411,8 +1411,8 @@ ProtectDungeonTemple	NULL
 45	8	1	0
 45	9	1	0
 45	10	1	0
-45	11	1	0
-45	12	1	0
+45	11	1	0	2
+45	12	1	0	2
 45	26	1	0
 45	27	1	0
 45	28	1	0
@@ -1452,9 +1452,9 @@ ProtectDungeonTemple	NULL
 46	8	1	0
 46	9	1	0
 46	10	1	0
-46	11	1	0
-46	12	1	0
-46	13	1	0
+46	11	1	0	2
+46	12	1	0	2
+46	13	1	0	2
 46	26	1	0
 46	27	1	0
 46	28	1	0
@@ -1495,9 +1495,9 @@ ProtectDungeonTemple	NULL
 47	8	1	0
 47	9	1	0
 47	10	1	0
-47	11	1	0
-47	12	1	0
-47	13	1	0
+47	11	1	0	2
+47	12	1	0	2
+47	13	1	0	2
 47	14	1	0
 47	26	1	0
 47	27	1	0
@@ -2990,6 +2990,147 @@ ProtectDungeonTemple	NULL
 91	73	3	100
 91	74	3	100
 91	75	3	100
+45	13	1	0	2
+43	12	1	0
+43	13	1	0
+44	12	1	0
+44	13	1	0
+42	13	1	0
+41	13	1	0
+40	11	1	0
+39	11	1	0
+39	12	1	0
+40	14	1	0
+41	14	1	0
+38	12	1	0
+38	13	1	0
+37	12	1	0
+37	13	1	0
+36	12	1	0
+36	13	1	0
+36	14	1	0
+35	13	1	0
+35	14	1	0
+37	16	1	0
+34	14	1	0
+34	15	1	0
+35	17	1	0
+36	17	1	0
+33	15	1	0
+33	16	1	0
+34	18	1	0
+35	18	1	0
+33	19	1	0
+34	19	1	0
+35	19	1	0
+33	20	1	0
+34	20	1	0
+35	20	1	0
+32	19	1	0
+32	20	1	0
+32	21	1	0
+33	21	1	0
+34	21	1	0
+31	20	1	0
+31	21	1	0
+31	22	1	0
+32	22	1	0
+33	22	1	0
+30	20	1	0
+30	21	1	0
+30	22	1	0
+30	23	1	0
+31	23	1	0
+32	23	1	0
+32	24	1	0
+30	26	1	0
+31	26	1	0
+30	27	1	0
+31	27	1	0
+32	27	1	0
+30	28	1	0
+31	28	1	0
+32	28	1	0
+30	29	1	0
+31	29	1	0
+32	29	1	0
+30	30	1	0
+31	30	1	0
+33	28	1	0
+33	29	1	0
+25	49	1	0
+25	50	1	0
+26	50	1	0
+24	48	1	0
+24	49	1	0
+24	50	1	0
+24	51	1	0
+25	51	1	0
+26	51	1	0
+24	52	1	0
+25	52	1	0
+26	52	1	0
+24	53	1	0
+25	53	1	0
+26	53	1	0
+24	54	1	0
+25	54	1	0
+26	54	1	0
+24	55	1	0
+25	55	1	0
+26	55	1	0
+25	56	1	0
+26	56	1	0
+26	57	1	0
+28	60	1	0
+30	60	1	0
+28	61	1	0
+29	61	1	0
+30	61	1	0
+28	62	1	0
+29	62	1	0
+30	62	1	0
+28	63	1	0
+29	63	1	0
+30	63	1	0
+28	64	1	0
+29	64	1	0
+30	64	1	0
+27	62	1	0
+27	63	1	0
+27	64	1	0
+26	62	1	0
+26	63	1	0
+26	64	1	0
+25	62	1	0
+25	63	1	0
+25	64	1	0
+24	62	1	0
+24	63	1	0
+24	64	1	0
+23	62	1	0
+23	63	1	0
+23	64	1	0
+22	62	1	0
+22	63	1	0
+22	64	1	0
+21	62	1	0
+21	63	1	0
+21	64	1	0
+20	62	1	0
+20	63	1	0
+20	64	1	0
+19	62	1	0
+18	62	1	0
+16	63	1	0
+16	64	1	0
+15	63	1	0
+15	64	1	0
+15	65	1	0
+16	65	1	0
+14	63	1	0
+14	64	1	0
+14	65	1	0
 [/Tiles]
 
 [Rooms]
@@ -3152,6 +3293,21 @@ ProtectDungeonTemple	NULL
 82	18
 82	19
 [/Room]
+[Room]
+10	MoreyaGate1	2	9
+45	11
+45	12
+45	13
+46	11
+46	12
+46	13
+47	11
+47	12
+47	13
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -3219,7 +3375,6 @@ ProtectDungeonTemple	NULL
 1	EmberSpider2	Spider.mesh	13	70	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
 1	EmberOrc	Orc.mesh	16	66	0	Orc	2	0	max	100	0	0	none	none	nullSkillType	none	0
 1	EmberRat	Rat.mesh	7	61	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
-2	LieslAshby	Knight.mesh	81	10	0	Knight	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	HoldGuard1	Knight.mesh	80	17	0	Knight	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	HoldGuard2	Adventurer.mesh	76	10	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	HoldGuard3	Monk.mesh	84	11	0	Monk	2	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -3273,7 +3428,6 @@ Region	Trail	56	12	72	32
 Region	Approach	70	3	90	28
 Region	Hold	73	5	89	21
 Region	EastHollow	80	30	90	42
-Region	ExitRoad	60	55	64	58
 Region	GoalOutsideHold01	0	0	72	75
 Region	GoalOutsideHold02	90	0	91	75
 Region	GoalOutsideHold03	73	0	89	4
@@ -3283,9 +3437,7 @@ Name	smoulder
 Mode	once
 Cond	time	3
 Action	message	1	The Ashcombe valley still smokes from an old fire, master, and Warden Liesl Ashby has mounted her wagons to flee over the northern pass. You have most of an hour before she is gone.
-Action	objectiveid	1	ashcombe-o01	Kill Ashby before she escapes.
 Action	objectiveid	1	ashcombe-o02	Cross the ash basin.
-Action	order	wait	2	-	LieslAshby
 [/Trigger]
 [Trigger]
 Name	basinEntered
@@ -3312,64 +3464,16 @@ Action	reveal	1	Approach
 Name	wagonsMoving
 Mode	once
 Cond	region	1	Approach
-Action	message	1	Her wagons are being loaded! Ashby will leave the hold in five minutes and run for the south road.
+Action	message	1	The guards of the hold have seen you and come out to meet you.
 Action	spawn	3	76	22	1	Knight:2	Elf:2	Adventurer:2	Monk:2
-Action	objectiveid	1	ashcombe-o03	Kill Ashby before she escapes.
-Action	setflag	fleeing	1
-Action	timer	wagonClock	0
 [/Trigger]
 [Trigger]
 Name	holdBreached
 Mode	once
 Cond	region	1	Hold
-Action	message	1	You are in her hold. Ashby is somewhere in the great hall, and her best are with her.
+Action	message	1	You are in the hold, and its best guards are waiting in the great hall.
 Action	spawn	3	80	12	1	Knight:3	Knight:2	Monk:2	Dwarf2:2
 [/Trigger]
-[Trigger]
-Name	firstEmber
-Mode	once
-Cond	time	480
-Action	message	1	Ash-stained patrols are crossing the basin towards you.
-Action	spawn	3	40	52	1	Adventurer:2	Dwarf1:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	secondEmber
-Mode	once
-Cond	time	1000
-Action	message	1	A heavier column marches down the south road.
-Action	spawn	3	62	62	1	Knight:2	Adventurer:2	Monk:2	Dwarf1:2
-[/Trigger]
-[Trigger]
-Name	thirdEmber
-Mode	once
-Cond	time	1700
-Action	message	1	The valley is rising against you. Fighters are coming from the old mill.
-Action	spawn	3	24	22	1	Knight:3	Elf:2	Dwarf2:2	Monk:2
-[/Trigger]
-[Trigger]
-Name	fourthEmber
-Mode	once
-Cond	time	2300
-Action	message	1	Ashby has called back everything she has left.
-Action	spawn	3	46	12	1	Knight:3	Knight:3	Elf:3	Adventurer:3	Monk:3
-[/Trigger]
-[Trigger]
-Name	wagonLeaves
-Mode	once
-Cond	flag	fleeing	1
-Cond	timer	wagonClock	>=	300
-Cond	alive	LieslAshby
-Action	message	1	The wagons are out of the gate! Ashby is making for the south road. Cut her off.
-Action	order	goto	2	82,18;83,24;84,30;87,36;84,45;81,49;78,52;75,55;63,56	LieslAshby
-Action	speed	run	LieslAshby
-[/Trigger]
-[Trigger]
-Name	goalKillBeforeEscape
-Mode	once
-Cond	event	LieslAshby	killed
-Cond	trigger	wardenEscaped	0
-Action	objectivestate	1	ashcombe-o03	reached
-[/Trigger]
 
 
 
@@ -3394,21 +3498,6 @@ Action	objectivestate	1	ashcombe-o03	reached
 
 
 
-[Trigger]
-Name	goalHoldOrRoadMissed
-Mode	once
-Cond	reached	LieslAshby	region	ExitRoad
-Cond	objective	1	ashcombe-o03	open
-Action	objectivestate	1	ashcombe-o03	failed
-[/Trigger]
-[Trigger]
-Name	wardenEscaped
-Mode	once
-Cond	reached	LieslAshby	region	ExitRoad
-Action	message	1	Ashby has reached the south road and her wagons are gone. Ashcombe is lost.
-Action	objectivestate	1	ashcombe-o01	failed
-Action	lose	1
-[/Trigger]
 [Trigger]
 Name	goalBasinCrossed
 Mode	once
@@ -3416,19 +3505,12 @@ Cond	crossed	1	Basin	north
 Action	objectivestate	1	ashcombe-o02	reached
 [/Trigger]
 [Trigger]
-Name	wardenDown
-Mode	once
-Cond	event	LieslAshby	killed
-Action	objectivestate	1	ashcombe-o01	reached
-Action	win	1
-[/Trigger]
-[Trigger]
 Name	mainObjectives
 Mode	once
 Cond	time	0
 Action	mainobjectiveid	1	ashcombe-main-heart	Protect your heart.
 Action	mainobjectiveid	1	ashcombe-main-basin	Cross the ash basin.
-Action	mainobjectiveid	1	ashcombe-main-warden	Kill Ashby before escape and defeat her forces.
+Action	mainobjectiveid	1	ashcombe-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	ashcombe-extra-ruins	Explore the old mill ruins.
 [/Trigger]
 [Trigger]
@@ -3444,12 +3526,10 @@ Cond	crossed	1	Basin	north
 Action	objectivestate	1	ashcombe-main-basin	reached
 [/Trigger]
 [Trigger]
-Name	mainWarden
+Name	mainRaid
 Mode	repeat	0
-Cond	event	LieslAshby	killed
-Cond	trigger	wardenEscaped	0
-Cond	goalmet	1	KillAllEnemies
-Action	objectivestate	1	ashcombe-main-warden	reached
+Cond	raid	defeated
+Action	objectivestate	1	ashcombe-main-raid	reached
 [/Trigger]
 [Trigger]
 Name	extraRuins
@@ -3464,18 +3544,45 @@ Cond	roomtiles	1	DungeonTemple	<=	0
 Action	objectivestate	1	ashcombe-main-heart	failed
 [/Trigger]
 [Trigger]
-Name	mainAshbyEscaped
-Mode	once
-Cond	trigger	wardenEscaped
-Action	objectivestate	1	ashcombe-main-warden	failed
-[/Trigger]
-[Trigger]
 Name	mainVictory
 Mode	once
 Cond	objective	1	ashcombe-main-heart	reached
 Cond	objective	1	ashcombe-main-basin	reached
-Cond	objective	1	ashcombe-main-warden	reached
-Action	message	1	Liesl Ashby has fallen before her wagons could leave. The ashes of Ashcombe are yours.
+Cond	objective	1	ashcombe-main-raid	reached
+Action	message	1	Liesl Ashby has fallen before she could reach the gate. The ashes of Ashcombe are yours.
 Action	win	1
 [/Trigger]
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	46	12	270
+Seats	2	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	-
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Dwarf2	4	-	Guardian
+Member	1	Dwarf2	4	-	Guardian
+Member	1	Adventurer	4	-	Shade
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Hunter
+Group	2	LieslAshby
+Member	2	Knight	6	LieslAshby	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Adventurer	4	-	Shade
+Member	2	Dwarf1	4	-	Berserker
+Member	2	Dwarf1	4	-	Berserker
+Member	2	Elf	4	-	Marksman
+Member	2	Elf	4	-	Hunter
+[/Raid]

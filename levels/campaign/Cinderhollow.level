@@ -1437,7 +1437,7 @@ ProtectDungeonTemple	NULL
 19	59	1	0
 19	60	1	0
 19	61	1	0
-19	62	1	100
+19	62	1	0
 19	63	1	0
 19	64	1	100
 19	65	1	100
@@ -1493,7 +1493,7 @@ ProtectDungeonTemple	NULL
 20	59	1	0
 20	60	1	0
 20	61	1	0
-20	62	1	100
+20	62	1	0
 20	63	1	0
 20	64	1	100
 20	65	1	100
@@ -1548,9 +1548,9 @@ ProtectDungeonTemple	NULL
 21	57	1	0	1
 21	58	1	0
 21	59	1	0
-21	60	1	100
+21	60	1	0
 21	61	1	0
-21	62	1	100
+21	62	1	0
 21	63	1	0
 21	64	1	0
 21	65	1	0	1
@@ -1599,8 +1599,8 @@ ProtectDungeonTemple	NULL
 22	59	1	100
 22	60	1	100
 22	61	1	0
-22	62	1	100
-22	63	1	100
+22	62	1	0
+22	63	1	0
 22	64	1	100
 22	65	1	0	1
 22	66	1	0	1
@@ -1646,8 +1646,8 @@ ProtectDungeonTemple	NULL
 23	59	1	100
 23	60	1	100
 23	61	1	0
-23	62	1	100
-23	63	1	100
+23	62	1	0
+23	63	1	0
 23	64	1	100
 23	65	1	0	1
 23	66	1	0	1
@@ -1697,8 +1697,8 @@ ProtectDungeonTemple	NULL
 24	59	1	100
 24	60	1	100
 24	61	1	0
-24	62	1	100
-24	63	1	100
+24	62	1	0
+24	63	1	0
 24	64	1	100
 24	65	1	100
 24	66	1	100
@@ -1750,9 +1750,9 @@ ProtectDungeonTemple	NULL
 25	58	1	100
 25	59	1	100
 25	60	1	100
-25	61	1	100
-25	62	1	100
-25	63	1	100
+25	61	1	0
+25	62	1	0
+25	63	1	0
 25	64	1	100
 25	65	1	100
 25	66	1	100
@@ -1799,9 +1799,9 @@ ProtectDungeonTemple	NULL
 26	58	1	100
 26	59	1	100
 26	60	1	100
-26	61	1	100
-26	62	1	100
-26	63	1	100
+26	61	1	0
+26	62	1	0
+26	63	1	0
 26	64	1	100
 26	65	1	100
 26	66	1	100
@@ -1849,9 +1849,9 @@ ProtectDungeonTemple	NULL
 27	58	1	100
 27	59	1	100
 27	60	1	100
-27	61	1	100
-27	62	1	100
-27	63	1	100
+27	61	1	0
+27	62	1	0
+27	63	1	0
 27	64	1	100
 27	65	1	100
 27	66	1	100
@@ -1901,9 +1901,9 @@ ProtectDungeonTemple	NULL
 28	58	1	100
 28	59	1	100
 28	60	1	100
-28	61	1	100
-28	62	1	100
-28	63	1	100
+28	61	1	0
+28	62	1	0
+28	63	1	0
 28	64	1	100
 28	65	1	100
 28	66	1	100
@@ -1952,7 +1952,7 @@ ProtectDungeonTemple	NULL
 29	58	1	100
 29	59	2	100
 29	60	1	100
-29	61	1	100
+29	61	1	0
 29	65	1	100
 29	66	1	100
 29	67	1	100
@@ -2104,8 +2104,8 @@ ProtectDungeonTemple	NULL
 32	60	1	0
 32	61	1	0
 32	62	1	0
-32	63	1	100
-32	64	1	100
+32	63	1	0
+32	64	1	0
 32	67	1	0
 32	68	1	0
 32	69	1	100
@@ -2160,8 +2160,8 @@ ProtectDungeonTemple	NULL
 33	59	1	0
 33	60	1	0
 33	61	1	0
-33	62	1	100
-33	63	1	100
+33	62	1	0
+33	63	1	0
 33	64	1	0
 33	67	1	0
 33	68	1	100
@@ -2218,8 +2218,8 @@ ProtectDungeonTemple	NULL
 34	58	1	0
 34	59	1	0
 34	60	1	0
-34	61	1	100
-34	62	1	100
+34	61	1	0
+34	62	1	0
 34	63	1	0
 34	64	1	0
 34	67	1	100
@@ -4102,9 +4102,9 @@ ProtectDungeonTemple	NULL
 69	46	1	0
 69	47	1	0
 69	48	1	0
-69	49	1	0
-69	50	1	0
-69	51	1	0
+69	49	1	0	3
+69	50	1	0	3
+69	51	1	0	3
 69	52	1	0
 69	53	1	0
 69	54	1	0
@@ -4169,9 +4169,9 @@ ProtectDungeonTemple	NULL
 70	46	1	0
 70	47	1	0
 70	48	1	0
-70	49	1	0
-70	50	1	0
-70	51	1	0
+70	49	1	0	3
+70	50	1	0	3
+70	51	1	0	3
 70	52	1	0
 70	53	1	0
 70	54	1	0
@@ -4230,9 +4230,9 @@ ProtectDungeonTemple	NULL
 71	46	1	0
 71	47	1	0
 71	48	1	0
-71	49	1	0
-71	50	1	0
-71	51	1	0
+71	49	1	0	3
+71	50	1	0	3
+71	51	1	0	3
 71	52	1	0
 71	53	1	0
 71	54	1	0
@@ -4775,6 +4775,48 @@ ProtectDungeonTemple	NULL
 79	77	3	100
 79	78	3	100
 79	79	3	100
+66	56	1	0
+66	57	1	0
+65	56	1	0
+65	57	1	0
+65	58	1	0
+64	57	1	0
+57	62	1	0
+57	63	1	0
+57	64	1	0
+56	63	1	0
+56	64	1	0
+55	64	1	0
+56	68	1	0
+53	69	1	0
+54	69	1	0
+55	69	1	0
+51	70	1	0
+50	70	1	0
+49	70	1	0
+41	68	1	0
+41	67	1	0
+40	66	1	0
+41	66	1	0
+41	65	1	0
+38	65	1	0
+38	66	1	0
+38	67	1	0
+37	65	1	0
+37	66	1	0
+36	65	1	0
+31	61	1	0
+31	62	1	0
+31	63	1	0
+30	61	1	0
+30	62	1	0
+30	63	1	0
+29	62	1	0
+29	63	1	0
+44	73	1	0
+45	73	1	0
+44	74	1	0
+45	74	1	0
 [/Tiles]
 
 [Rooms]
@@ -4956,6 +4998,21 @@ ProtectDungeonTemple	NULL
 61	22
 0
 [/Room]
+[Room]
+10	MoreyaGate1	3	9
+69	49
+69	50
+69	51
+70	49
+70	50
+70	51
+71	49
+71	50
+71	51
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -5082,15 +5139,15 @@ Region	RivalCrater	44	10	66	32
 Region	EastShelf	60	26	72	40
 Region	GoalWestGoldSeam	5	55	6	58
 Region	GoalSouthGoldSeam	30	72	33	73
+Region	AshPocket	43	72	46	75
 [Trigger]
 Name	firstLight
 Mode	once
 Cond	time	3
 Action	message	1	Pell Ashgrove has sent for the soldiers of the kingdom, master. They will come down into the hollow in three waves, and a rival keeper has taken the crater rim in the north-east.
-Action	objectiveid	1	cinderhollow-o01	Survive until dawn, then defeat the rival keeper.
+Action	objectiveid	1	cinderhollow-o01	Defeat the rival keeper.
 Action	objectiveid	1	cinderhollow-o02	Empty both starting gold seams: west and south.
-Action	objectiveid	1	cinderhollow-o03	Defeat all three waves at your heart.
-Action	objectiveid	1	cinderhollow-o04	After dawn, cross the lava bridge to the crater.
+Action	objectiveid	1	cinderhollow-o04	Cross the lava bridge to the crater.
 [/Trigger]
 [Trigger]
 Name	westRoad
@@ -5140,45 +5197,13 @@ Action	message	1	The rival keeper sees you at his bridge and calls out his pack.
 Action	spawn	2	55	25	1	Troll:3	Orc:3	LavaSpawn:3	Goblin:3
 [/Trigger]
 [Trigger]
-Name	waveOne
-Mode	once
-Cond	time	420
-Action	message	1	The first wave is coming down through the north-west gate.
-Action	wavecountdown	480
-Action	spawn	3	15	14	1	Adventurer:2	Dwarf1:2	Elf:2	Monk:2	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	waveTwo
-Mode	once
-Cond	time	900
-Action	message	1	The second wave has entered the hollow at the east gate.
-Action	wavecountdown	450
-Action	spawn	3	70	50	1	Knight:3	Elf:3	Monk:2	Adventurer:3	Dwarf2:3	Knight:2
-[/Trigger]
-[Trigger]
-Name	dawnWarning
-Mode	once
-Cond	time	1500
-Action	message	1	Dawn is five minutes away. Keep your heart a little longer.
-[/Trigger]
-[Trigger]
-Name	waveThree
-Mode	once
-Cond	time	1350
-Action	message	1	The last wave is on both roads at once, from the north-west gate and the east gate.
-Action	wavecountdown	0
-Action	spawn	3	15	14	1	Knight:4	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
-Action	spawn	3	70	50	1	Knight:4	Knight:3	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
 Name	dawn
 Mode	once
 Cond	time	1800
-Action	message	1	Dawn has come and the waves are spent. The rival keeper is stirring in the crater: destroy him before the hollow wakes again.
+Action	message	1	The rival keeper is stirring in the crater and calls up his pack.
 Action	objectiveid	1	cinderhollow-o05	Destroy the heart in the north-east crater.
 Action	gold	1	600
 Action	spawn	2	55	25	1	Troll:4	Orc:4	LavaSpawn:3	PitDemon:3	Goblin:3
-Action	timelimit	1800
 [/Trigger]
 [Trigger]
 Name	goalBothFiniteSeamsMined
@@ -5190,7 +5215,6 @@ Action	objectivestate	1	cinderhollow-o02	reached
 [Trigger]
 Name	goalHeartSafe1BeforeRivalHeartDown
 Mode	once
-Cond	time	1800
 Cond	goal	1	KillAllEnemies
 Cond	goalmet	1	ProtectDungeonTemple
 Action	objectivestate	1	cinderhollow-o01	reached
@@ -5198,7 +5222,6 @@ Action	objectivestate	1	cinderhollow-o01	reached
 [Trigger]
 Name	goalHeartSafe1BeforeRivalHeartFalls
 Mode	once
-Cond	time	1800
 Cond	defeated	2
 Cond	goalmet	1	ProtectDungeonTemple
 Action	objectivestate	1	cinderhollow-o01	reached
@@ -5234,15 +5257,6 @@ Action	objectivestate	1	cinderhollow-o04	reached
 [/Trigger]
 
 [Trigger]
-Name	goalThreeWavesDefeatedAtHeart
-Mode	once
-Cond	spawncleared	waveOne	2
-Cond	spawncleared	waveTwo	2
-Cond	spawncleared	waveThree	2
-Cond	spawncleared	waveThree	3
-Action	objectivestate	1	cinderhollow-o03	reached
-[/Trigger]
-[Trigger]
 Name	goalHeartLost1
 Mode	once
 Cond	room	1	DungeonTemple	==	0
@@ -5251,40 +5265,46 @@ Action	objectivestate	1	cinderhollow-o01	failed
 [Trigger]
 Name	rivalFalls
 Mode	once
-Cond	time	1800
 Cond	creatures	2	<=	0
+Cond	objective	1	cinderhollow-main-raid	reached
 Action	win	1
 [/Trigger]
 [Trigger]
 Name	rivalHeartDown
 Mode	once
-Cond	time	1800
 Cond	goal	1	KillAllEnemies
+Cond	objective	1	cinderhollow-main-raid	reached
 Action	objectivestate	1	cinderhollow-o05	reached
 Action	win	1
 [/Trigger]
 [Trigger]
-Name	dawnClock
-Mode	once
-Cond	time	3
-Action	timer	dawnClock
-Action	countdown	1797
-Action	wavecountdown	417
-[/Trigger]
-[Trigger]
 Name	lavaBridge
 Mode	once
-Cond	time	1800
-Action	message	1	The lava lake has sunk with the dawn and a stone causeway rises across it to the crater.
+Cond	time	3
+Action	message	1	The lava lake has sunk and a stone causeway rises across it to the crater.
 Action	terrain	55	31	55	34	bridge	1
 [/Trigger]
 [Trigger]
 Name	rivalHeartFalls
 Mode	once
-Cond	time	1800
 Cond	defeated	2
+Cond	objective	1	cinderhollow-main-raid	reached
 Action	objectivestate	1	cinderhollow-o05	reached
 Action	win	1
+[/Trigger]
+[Trigger]
+Name	stoneFound
+Mode	once
+Cond	region	1	AshPocket
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
+Action	stonecreate	44	73	ash-stone	1	16	61
+[/Trigger]
+[Trigger]
+Name	stoneHome
+Mode	once
+Cond	deliveredstone	ash-stone
+Action	message	1	The pale stone sinks into the heart and a hidden hall has opened.
+Action	discover	campaign/SwarmNight.level
 [/Trigger]
 [Trigger]
 Name	ashWell
@@ -5300,11 +5320,11 @@ Region	DawnCauseway	55	31	55	34
 Name	mainGoalList
 Mode	once
 Cond	time	0
-Action	mainobjectiveid	1	cinderhollow-main-heart	Protect your heart until dawn and victory.
+Action	mainobjectiveid	1	cinderhollow-main-heart	Protect your heart.
 Action	mainobjectiveid	1	cinderhollow-main-seams	Empty both starting gold seams: west and south.
-Action	mainobjectiveid	1	cinderhollow-main-waves	Defeat all three attacking waves.
-Action	mainobjectiveid	1	cinderhollow-main-bridge	After dawn, cross the lava bridge to the crater.
+Action	mainobjectiveid	1	cinderhollow-main-bridge	Cross the lava bridge to the crater.
 Action	mainobjectiveid	1	cinderhollow-main-rival	Destroy the rival heart and all enemy forces.
+Action	mainobjectiveid	1	cinderhollow-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	cinderhollow-extra-cave	Explore the southern creature cave.
 [/Trigger]
 [Trigger]
@@ -5316,7 +5336,6 @@ Action	objectivestate	1	cinderhollow-main-heart	failed
 [Trigger]
 Name	mainHeart
 Mode	repeat	0
-Cond	trigger	dawn
 Cond	goalmet	1	ProtectDungeonTemple
 Action	objectivestate	1	cinderhollow-main-heart	reached
 [/Trigger]
@@ -5326,15 +5345,6 @@ Mode	repeat	0
 Cond	slabs	-1	GoalWestGoldSeam	gold	==	0
 Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0
 Action	objectivestate	1	cinderhollow-main-seams	reached
-[/Trigger]
-[Trigger]
-Name	mainWaves
-Mode	repeat	0
-Cond	spawncleared	waveOne	2
-Cond	spawncleared	waveTwo	2
-Cond	spawncleared	waveThree	2
-Cond	spawncleared	waveThree	3
-Action	objectivestate	1	cinderhollow-main-waves	reached
 [/Trigger]
 [Trigger]
 Name	mainBridge
@@ -5350,6 +5360,12 @@ Cond	goalmet	1	KillAllEnemies
 Action	objectivestate	1	cinderhollow-main-rival	reached
 [/Trigger]
 [Trigger]
+Name	mainRaid
+Mode	repeat	0
+Cond	raid	defeated
+Action	objectivestate	1	cinderhollow-main-raid	reached
+[/Trigger]
+[Trigger]
 Name	extraCave
 Mode	once
 Cond	region	1	SouthCave
@@ -5360,10 +5376,43 @@ Name	mainVictory
 Mode	once
 Cond	objective	1	cinderhollow-main-heart	reached
 Cond	objective	1	cinderhollow-main-seams	reached
-Cond	objective	1	cinderhollow-main-waves	reached
+Cond	objective	1	cinderhollow-main-raid	reached
 Cond	objective	1	cinderhollow-main-bridge	reached
 Cond	objective	1	cinderhollow-main-rival	reached
 Action	message	1	The rival heart is shattered and the crater is silent. Cinderhollow is yours.
 Action	win	1
 [/Trigger]
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	70	50	180
+Seats	3	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	-
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Dwarf2	4	-	Guardian
+Member	1	Dwarf2	4	-	Guardian
+Member	1	Adventurer	4	-	Shade
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Hunter
+Group	2	PellAshgrove
+Member	2	Knight	6	PellAshgrove	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Dwarf2	4	-	Guardian
+Member	2	Adventurer	4	-	Shade
+Member	2	Dwarf1	4	-	Berserker
+Member	2	Dwarf1	4	-	Berserker
+Member	2	Elf	4	-	Marksman
+Member	2	Elf	4	-	Hunter
+[/Raid]
