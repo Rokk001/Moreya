@@ -37,6 +37,7 @@
 #include "utils/LogSinkFile.h"
 #include "utils/LogSinkOgre.h"
 #include "utils/Random.h"
+#include "utils/RaidSimulation.h"
 #include "utils/ResourceManager.h"
 #include "utils/RunLevelTest.h"
 
@@ -91,7 +92,13 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
 
     try
     {
-        if(!resMgr.getRunLevel().empty())
+        if(!resMgr.getRaidSimLevel().empty())
+        {
+            boost::filesystem::path levelPath = boost::filesystem::absolute(boost::filesystem::path(resMgr.getRaidSimLevel()));
+            RaidSimulation::run(levelPath.generic_string(), resMgr.getRunLevelSeconds(), resMgr.getRunLevelSeed(),
+                resMgr.getRaidSimOut(), resMgr.getRaidSimKeeperAi());
+        }
+        else if(!resMgr.getRunLevel().empty())
         {
             boost::filesystem::path levelPath = boost::filesystem::absolute(boost::filesystem::path(resMgr.getRunLevel()));
             RunLevelTest::configure(levelPath.generic_string(), resMgr.getRunLevelSeconds(), resMgr.getRunLevelSeed(),
