@@ -588,7 +588,8 @@ void Seat::initSeat()
     mSpellCooldownsLoaded.clear();
 
     // The hand cooldown of a campaign level goes on with the seconds it had left
-    getPlayer()->setHandCooldownSeconds(mHandCooldownLoaded);
+    if(mHandCooldownLoaded > 0.0)
+        getPlayer()->setHandCooldownSeconds(mHandCooldownLoaded);
     mHandCooldownLoaded = 0.0;
 
     // A running reveal (Reveal Enemy, a tortured creature) goes on with the turns it had left

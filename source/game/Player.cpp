@@ -181,13 +181,53 @@ bool Player::isHandLimitPickupAllowed(const GameEntity* entity) const
         maxFightersCount, mHandCooldownSeconds);
 }
 
-//! \brief Sets the hand cooldown; a negative or not finite value means no cooldown.
+//! \brief Sets the hand cooldown; a negative or not finite value means no cooldown. On the server a human keeper's
+//! client is told the new value, so that it shows it at the hand (HL2).
 void Player::setHandCooldownSeconds(double seconds)
 {
     if(!std::isfinite(seconds) || (seconds < 0.0))
         seconds = 0.0;
 
     mHandCooldownSeconds = seconds;
+    notifyHandCooldown();
+}
+
+//! \brief Lets the given game seconds pass for the hand cooldown (server upkeep and client turn).
+void Player::advanceHandCooldown(double seconds)
+{
+    mHandCooldownSeconds = HandLimitRules::advanceCooldown(mHandCooldownSeconds, seconds);
+}
+
+//! \brief Sends the seconds left of the hand cooldown to the client of a human keeper (server side only).
+void Player::notifyHandCooldown()
+{
+    if((mGameMap == nullptr) || !mGameMap->isServerGameMap() || !getIsHuman())
+        return;
+
+    ServerNotification* serverNotification = new ServerNotification(ServerNotificationType::setHandCooldown, this);
+    serverNotification->mPacket << mHandCooldownSeconds;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
+//! \brief Tells a human keeper why the pickup of a fighting creature was refused and resends the cooldown, so that
+//! the hand shows the right time (HL2). Server side only; computer keepers get nothing.
+void Player::notifyHandLimitRefusal(const GameEntity* entity)
+{
+    if((mGameMap == nullptr) || !mGameMap->isServerGameMap() || !getIsHuman())
+        return;
+
+    const double maxFighters = ConfigManager::getSingleton().getHandLimitConfigDouble("HandLimitFighters");
+    const uint32_t maxFightersCount = (maxFighters < 1.0) ? 1 : static_cast<uint32_t>(maxFighters);
+    const HandLimitRules::Refusal reason = HandLimitRules::refusal(isHandLimitActive(), isHandLimitedEntity(entity),
+        numFightingCreaturesInHand(), maxFightersCount, mHandCooldownSeconds);
+    const std::string message = HandLimitRules::refusalMessage(reason, mHandCooldownSeconds);
+    if(message.empty())
+        return;
+
+    ServerNotification* serverNotification = new ServerNotification(ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << message << EventShortNoticeType::genericGameInfo;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+    notifyHandCooldown();
 }
 
 void Player::addEntityToHand(GameEntity *entity)
@@ -384,6 +424,7 @@ void Player::pickUpEntity(GameEntity *entity)
     {
         OD_LOG_INF("player seatId=" + Helper::toString(getSeat()->getId()) + " cannot pick up " + entity->getName()
             + ": hand limit of the campaign level");
+        notifyHandLimitRefusal(entity);
         return;
     }
 
@@ -468,8 +509,10 @@ void Player::dropHand(Tile *t, unsigned int index)
             return;
 
         // Hand limit of a campaign level: a dropped fighting creature starts the cooldown before the next one
-        mHandCooldownSeconds = HandLimitRules::cooldownAfterDrop(isHandLimitActive(), isHandLimitedEntity(entity),
+        const double handCooldown = HandLimitRules::cooldownAfterDrop(isHandLimitActive(), isHandLimitedEntity(entity),
             mHandCooldownSeconds, ConfigManager::getSingleton().getHandLimitConfigDouble("HandLimitCooldownSeconds"));
+        if(handCooldown != mHandCooldownSeconds)
+            setHandCooldownSeconds(handCooldown);
 
         if(entity->getObjectType() == GameEntityType::treasuryObject)
             static_cast<TreasuryObject*>(entity)->setDropSeat(getSeat());
@@ -1246,7 +1289,7 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
     decreaseSpellCooldowns();
 
     // The hand cooldown after the drop of a fighting creature in a campaign level (HL1)
-    mHandCooldownSeconds = HandLimitRules::advanceCooldown(mHandCooldownSeconds, timeSinceLastUpkeep);
+    advanceHandCooldown(timeSinceLastUpkeep);
 
     // Shared stuff for human and AI players
 

@@ -17,6 +17,10 @@
 
 #include "game/HandLimitRules.h"
 
+#include <algorithm>
+#include <cmath>
+#include <sstream>
+
 namespace HandLimitRules
 {
 //! \brief A creature that is neither a worker nor a prisoner counts against the hand limit.
@@ -58,5 +62,66 @@ double advanceCooldown(double cooldownLeft, double seconds)
         return 0.0;
 
     return cooldownLeft - seconds;
+}
+
+//! \brief A full hand is named first, then a running cooldown; without the limit nothing is refused.
+Refusal refusal(bool limitActive, bool fightingCreature, uint32_t fightersInHand, uint32_t maxFighters,
+    double cooldownLeft)
+{
+    if(!limitActive || !fightingCreature)
+        return Refusal::none;
+
+    if(fightersInHand >= maxFighters)
+        return Refusal::handFull;
+
+    if(cooldownLeft > 0.0)
+        return Refusal::cooldown;
+
+    return Refusal::none;
+}
+
+//! \brief Rounds the running cooldown up to whole seconds.
+uint32_t displaySeconds(double cooldownLeft)
+{
+    if(!(cooldownLeft > 0.0))
+        return 0;
+
+    return static_cast<uint32_t>(std::max(1.0, std::ceil(cooldownLeft)));
+}
+
+//! \brief The message of a refused pickup with the whole seconds left of a running cooldown.
+std::string refusalMessage(Refusal reason, double cooldownLeft)
+{
+    if(reason == Refusal::handFull)
+        return "Your hand cannot hold another fighting creature.";
+
+    if(reason == Refusal::cooldown)
+    {
+        std::stringstream message;
+        message << "You can pick up the next fighting creature in " << displaySeconds(cooldownLeft) << " s.";
+        return message.str();
+    }
+
+    return std::string();
+}
+
+//! \brief The text at the hand with the whole seconds left of a running cooldown.
+std::string cooldownText(double cooldownLeft)
+{
+    const uint32_t seconds = displaySeconds(cooldownLeft);
+    if(seconds == 0)
+        return std::string();
+
+    std::stringstream text;
+    text << "Next fighter: " << seconds << " s";
+    return text.str();
+}
+
+//! \brief Puts the text at its distance from the pointer and moves it back inside the screen where it would leave it.
+void cooldownTextPlace(float pointerX, float pointerY, float offsetX, float offsetY, float textWidth,
+    float textHeight, float screenWidth, float screenHeight, float& left, float& top)
+{
+    left = std::max(0.0f, std::min(pointerX + offsetX, screenWidth - textWidth));
+    top = std::max(0.0f, std::min(pointerY + offsetY, screenHeight - textHeight));
 }
 }

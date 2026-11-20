@@ -19,6 +19,7 @@
 #define HANDLIMITRULES_H
 
 #include <cstdint>
+#include <string>
 
 //! \brief The decisions of the hand limit of a campaign level: a keeper holds at most HandLimitFighters fighting
 //! creatures in the hand at once, Zivs (workers) are not limited, and after a fighting creature is dropped a cooldown
@@ -55,6 +56,46 @@ double cooldownAfterDrop(bool limitActive, bool fightingCreature, double cooldow
 //! \param cooldownLeft Seconds left of the running cooldown.
 //! \param seconds Game seconds that passed.
 double advanceCooldown(double cooldownLeft, double seconds);
+
+//! \brief Why a pickup is refused (HL2).
+enum class Refusal
+{
+    //! The pickup is allowed.
+    none,
+    //! The hand holds HandLimitFighters fighting creatures already.
+    handFull,
+    //! The cooldown after the last drop of a fighting creature runs.
+    cooldown
+};
+
+//! \brief The reason why the keeper may not pick up the entity now (none when mayPickUp allows it); a full hand
+//! comes before a running cooldown. Same parameters as mayPickUp.
+Refusal refusal(bool limitActive, bool fightingCreature, uint32_t fightersInHand, uint32_t maxFighters,
+    double cooldownLeft);
+
+//! \brief Whole seconds shown for a running cooldown: rounded up, at least 1 while it runs, 0 when it is over.
+uint32_t displaySeconds(double cooldownLeft);
+
+//! \brief The short message a human keeper gets when a pickup is refused (HL2); empty for Refusal::none.
+std::string refusalMessage(Refusal reason, double cooldownLeft);
+
+//! \brief The text shown at the hand while the cooldown runs (HL2), empty when it is over.
+std::string cooldownText(double cooldownLeft);
+
+//! \brief Place of the cooldown text at the hand, in screen pixels: below the pointer text and moved back inside
+//! the screen, so that it stays readable on every screen size and UI scale.
+//! \param pointerX Horizontal position of the pointer in pixels.
+//! \param pointerY Vertical position of the pointer in pixels.
+//! \param offsetX Horizontal distance of the text from the pointer in pixels (already scaled with the UI).
+//! \param offsetY Vertical distance of the text from the pointer in pixels (already scaled with the UI).
+//! \param textWidth Width of the text in pixels.
+//! \param textHeight Height of the text in pixels.
+//! \param screenWidth Width of the screen in pixels.
+//! \param screenHeight Height of the screen in pixels.
+//! \param left Receives the left edge of the text.
+//! \param top Receives the top edge of the text.
+void cooldownTextPlace(float pointerX, float pointerY, float offsetX, float offsetY, float textWidth,
+    float textHeight, float screenWidth, float screenHeight, float& left, float& top);
 }
 
 #endif // HANDLIMITRULES_H

@@ -5034,10 +5034,13 @@ void GameMap::removeClientUpkeepEntity(GameEntity* entity)
     mGameEntityClientUpkeep.erase(it);
 }
 
+//! \brief Client turn: the turn number, the spell cooldowns and the hand cooldown of a campaign level shown at the
+//! hand (HL2) of the local player, then the client upkeep of the entities.
 void GameMap::clientUpKeep(int64_t turnNumber)
 {
     mTurnNumber = turnNumber;
     mLocalPlayer->decreaseSpellCooldowns();
+    mLocalPlayer->advanceHandCooldown(1.0 / ODApplication::turnsPerSecond);
 
     for(GameEntity* entity : mGameEntityClientUpkeep)
     {

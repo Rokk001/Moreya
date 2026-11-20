@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Non-compiling check of the hand limit in the campaign (raid plan R11, HL1 with V1/C5 config, C3 saving, C4 every
-keeper, C8 skirmish and multiplayer unchanged).
+keeper, C8 skirmish and multiplayer unchanged; HL2 message on a refused pickup and cooldown at the hand, C6 screen
+sizes and UI scales).
 
 A Python model of HandLimitRules plays fixed scenarios (second fighting creature refused, Zivs not limited, cooldown
 after a drop, skirmish and multiplayer unchanged, the cooldown carried through a save and a load with the [HandCooldown]
-block, an old save without the block), and the C++ sources, the config and the build lists are checked for the
+block, an old save without the block, the refusal messages, the text at the hand and its place on screens from 640x480
+to 7680x4320 at UI scale 80-120 %), and the C++ sources, the config and the build lists are checked for the
 statements that implement them. Nothing is compiled and the game is not started; the integration build compiles the
 code and runs the Boost test 00-HandLimitRules.
 
 Usage: python -I source/tests/check_hand_limit.py
 Exit 0 and "hand limit ok" when every item holds.
 """
+import math
 import os
 import re
 import sys
@@ -220,8 +223,10 @@ server_part = drop_hand[drop_hand.index("if(mGameMap->isServerGameMap())"):]
 check("HandLimitRules::cooldownAfterDrop(isHandLimitActive(), isHandLimitedEntity(entity)," in server_part
       and server_part.index("redemWorkerInHeart(entity, t)") < server_part.index("cooldownAfterDrop(")
       < server_part.index("entity->drop(pos);"), "HL1: a drop on the server starts the cooldown")
-check("mHandCooldownSeconds = HandLimitRules::advanceCooldown(mHandCooldownSeconds, timeSinceLastUpkeep);"
-      in function(PLAYER, "void Player::upkeepPlayer(double timeSinceLastUpkeep)"),
+check("advanceHandCooldown(timeSinceLastUpkeep);"
+      in function(PLAYER, "void Player::upkeepPlayer(double timeSinceLastUpkeep)")
+      and "mHandCooldownSeconds = HandLimitRules::advanceCooldown(mHandCooldownSeconds, seconds);"
+      in function(PLAYER, "void Player::advanceHandCooldown(double seconds)"),
       "HL1: the cooldown runs down in the upkeep of every keeper")
 check("mHandCooldownSeconds(0.0)" in function(PLAYER, "Player::Player(GameMap* gameMap, int32_t id)"),
       "HL1: a new keeper starts without cooldown")
@@ -298,6 +303,136 @@ check("if(!std::isfinite(seconds) || (seconds < 0.0))" in setter, "C3: an invali
 check('"[HandCooldown]"' in SAVE_CHECK and '"[/HandCooldown]"' in SAVE_CHECK,
       "C3: the saved game reader check knows the block")
 
+
+# ------------------------------------------------------------------------------------------------ HL2 message and text
+def refusal(limit_active, fighting, fighters_in_hand, max_fighters, cooldown_left):
+    """Mirror of HandLimitRules::refusal."""
+    if not limit_active or not fighting:
+        return "none"
+    if fighters_in_hand >= max_fighters:
+        return "handFull"
+    if cooldown_left > 0.0:
+        return "cooldown"
+    return "none"
+
+
+def display_seconds(cooldown_left):
+    """Mirror of HandLimitRules::displaySeconds."""
+    if not cooldown_left > 0.0:
+        return 0
+    return int(max(1.0, math.ceil(cooldown_left)))
+
+
+def refusal_message(reason, cooldown_left):
+    """Mirror of HandLimitRules::refusalMessage."""
+    if reason == "handFull":
+        return "Your hand cannot hold another fighting creature."
+    if reason == "cooldown":
+        return "You can pick up the next fighting creature in %d s." % display_seconds(cooldown_left)
+    return ""
+
+
+def cooldown_text(cooldown_left):
+    """Mirror of HandLimitRules::cooldownText."""
+    seconds = display_seconds(cooldown_left)
+    return "Next fighter: %d s" % seconds if seconds else ""
+
+
+def text_place(px, py, ox, oy, width, height, screen_w, screen_h):
+    """Mirror of HandLimitRules::cooldownTextPlace."""
+    return max(0.0, min(px + ox, screen_w - width)), max(0.0, min(py + oy, screen_h - height))
+
+
+# The C++ texts are the ones of the model (short plain English)
+for text in ("Your hand cannot hold another fighting creature.",
+             "You can pick up the next fighting creature in ", "Next fighter: "):
+    check('"' + text + '"' in RULES, "HL2: text " + repr(text))
+check(refusal(True, True, 1, MAX, 0.0) == "handFull" and refusal(True, True, 1, MAX, COOLDOWN) == "handFull",
+      "HL2: a full hand is named first")
+check(refusal(True, True, 0, MAX, 2.1) == "cooldown"
+      and refusal_message("cooldown", 2.1) == "You can pick up the next fighting creature in 3 s.",
+      "HL2: the cooldown message names the whole seconds left")
+check(refusal(True, False, 1, MAX, COOLDOWN) == "none" and refusal(False, True, 1, MAX, COOLDOWN) == "none",
+      "HL2: no message for Zivs, skirmish and multiplayer")
+check(cooldown_text(COOLDOWN) == "Next fighter: 10 s" and cooldown_text(0.01) == "Next fighter: 1 s"
+      and cooldown_text(0.0) == "", "HL2: the text at the hand")
+reason_body = function(RULES, "Refusal refusal(")
+check(reason_body.index("if(fightersInHand >= maxFighters)") < reason_body.index("if(cooldownLeft > 0.0)"),
+      "HL2: the rule names a full hand before the cooldown")
+check("std::max(0.0f, std::min(pointerX + offsetX, screenWidth - textWidth));" in RULES
+      and "std::max(0.0f, std::min(pointerY + offsetY, screenHeight - textHeight));" in RULES,
+      "C6: the text is moved back inside the screen")
+
+# C6: the longest text at the hand stays inside every screen from 640x480 to 8K at UI scale 80-120 %
+GAME_MODE = read("source/modes/GameMode.cpp")
+GAME_MODE_H = read("source/modes/GameMode.h")
+constants = dict((name, float(value)) for name, value in re.findall(
+    r"^const float (POINTER_TEXT_BASE_HEIGHT|HAND_COOLDOWN_TEXT_OFFSET_Y|HAND_COOLDOWN_CHAR_WIDTH_SHARE|"
+    r"POINTER_TEXT_OFFSET_X) = ([\d.]+)f;", GAME_MODE, re.M))
+check(len(constants) == 4, "C6: the place and size constants of the text at the hand " + repr(constants))
+longest = len(cooldown_text(999.5))
+for screen_w, screen_h in ((640, 480), (800, 600), (1920, 1080), (3840, 2160), (7680, 4320)):
+    for ui_scale in (0.8, 1.0, 1.2):
+        feedback = ui_scale * screen_h / 1080.0
+        height = constants.get("POINTER_TEXT_BASE_HEIGHT", 16.0) * feedback
+        width = longest * height * constants.get("HAND_COOLDOWN_CHAR_WIDTH_SHARE", 0.6)
+        for px, py in ((0, 0), (screen_w / 2, screen_h / 2), (screen_w - 1, screen_h - 1), (screen_w - 1, 0)):
+            left, top = text_place(px, py, constants.get("POINTER_TEXT_OFFSET_X", 145.0) * feedback,
+                                   constants.get("HAND_COOLDOWN_TEXT_OFFSET_Y", 4.0) * feedback, width, height,
+                                   screen_w, screen_h)
+            check(0 <= left and left + width <= screen_w and 0 <= top and top + height <= screen_h,
+                  "C6: text at the hand inside %dx%d at scale %.1f, pointer %s" % (screen_w, screen_h, ui_scale,
+                                                                                  (px, py)))
+
+# Server: a refused pickup tells a human keeper why and resends the cooldown; computer keepers get nothing
+pickup = function(PLAYER, "void Player::pickUpEntity(GameEntity *entity)")
+check("notifyHandLimitRefusal(entity);" in pickup[pickup.index("isHandLimitPickupAllowed(entity)"):
+                                                  pickup.index("entity->pickup();")],
+      "HL2: a refused pickup sends the message")
+refused = function(PLAYER, "void Player::notifyHandLimitRefusal(const GameEntity* entity)")
+check("!getIsHuman()" in refused and "HandLimitRules::refusalMessage(reason, mHandCooldownSeconds)" in refused
+      and "ServerNotificationType::chatServer" in refused and "notifyHandCooldown();" in refused,
+      "HL2: the message goes to a human keeper only, with the cooldown")
+notify = function(PLAYER, "void Player::notifyHandCooldown()")
+check("!mGameMap->isServerGameMap() || !getIsHuman()" in notify
+      and "ServerNotificationType::setHandCooldown" in notify and "<< mHandCooldownSeconds;" in notify,
+      "HL2: the cooldown goes to the client of a human keeper")
+check("notifyHandCooldown();" in setter, "HL2: every new cooldown (drop, load) is sent")
+drop_hand = function(PLAYER, "void Player::dropHand(Tile *t, unsigned int index)")
+check("setHandCooldownSeconds(handCooldown);" in drop_hand, "HL2: the cooldown of a drop is sent")
+check(re.search(r"dungeonbookRoster,\n(?:\s*//!.*\n)+\s*setHandCooldown\n\};", read(
+    "source/network/ServerNotification.h")) is not None, "HL2: the new notification is appended at the end")
+check('return "setHandCooldown";' in read("source/network/ServerNotification.cpp"), "HL2: notification name")
+client = read("source/network/ODClient.cpp")
+client_case = client[client.index("case ServerNotificationType::setHandCooldown:"):]
+client_case = client_case[:client_case.index("break;")]
+check("packetReceived >> seconds" in client_case and "getPlayer()->setHandCooldownSeconds(seconds);" in client_case,
+      "HL2: the client keeps the cooldown")
+check("mLocalPlayer->advanceHandCooldown(1.0 / ODApplication::turnsPerSecond);"
+      in function(read("source/gamemap/GameMap.cpp"), "void GameMap::clientUpKeep(int64_t turnNumber)"),
+      "HL2: the client counts the cooldown down every turn")
+# Client: the text at the hand
+check("addTextBox(ODApplication::HAND_COOLDOWN_STRING" in read("source/ODApplication.cpp")
+      and 'ODApplication::HAND_COOLDOWN_STRING = "handCooldown"' in read("source/ODApplication.cpp"),
+      "HL2: the text box at the hand exists")
+shown = function(GAME_MODE, "void GameMode::refreshHandCooldownText(float pointerX, float pointerY, float scale)")
+check("HandLimitRules::cooldownText(player->getHandCooldownSeconds())" in shown
+      and "HandLimitRules::cooldownTextPlace(" in shown and "POINTER_TEXT_BASE_HEIGHT * scale" in shown
+      and "getSurfaceSize()" in shown and "mDefeatSequence.isStarted()" in shown,
+      "HL2/C6: the text at the hand shows the cooldown, scaled and inside the screen")
+check("refreshHandCooldownText(pointer.d_x, pointer.d_y, pointerScale);"
+      in function(GAME_MODE, "void GameMode::refreshActionFeedback(float elapsed)"),
+      "HL2: the text follows the hand every frame")
+check("void refreshHandCooldownText(float pointerX, float pointerY, float scale);" in GAME_MODE_H,
+      "HL2: GameMode declares the text at the hand")
+for signature in ("void GameMode::startDefeatSequence(", "void GameMode::notifyPossessionStarted()",
+                  "void GameMode::refreshPossessionView()"):
+    check('setText(ODApplication::HAND_COOLDOWN_STRING, "")' in function(GAME_MODE, signature),
+          "HL2: the text at the hand disappears in " + signature)
+check('setText(ODApplication::HAND_COOLDOWN_STRING, "")' in function(read("source/modes/MenuModeMain.cpp"),
+                                                                       "void MenuModeMain::activate()"),
+      "HL2: the text at the hand disappears in the main menu")
+
 # ------------------------------------------------------------------------------------------------ build and tests
 check("${SRC}/game/HandLimitRules.cpp" in CMAKE, "C2: HandLimitRules.cpp is in the source list of the game")
 check(re.search(r"add_boost_test\(00-HandLimitRules\s+SOURCES\s+test_HandLimitRules\.cpp\s+\$\{SRC\}/game/"
@@ -307,8 +442,9 @@ cases = re.findall(r"(.*)\n(BOOST_AUTO_TEST_CASE\((\w+)\))", BOOST_TEST)
 check(sorted(name for _, _, name in cases) == sorted(["test_fightingCreature", "test_secondFighterRefused",
                                                        "test_zivsNotLimited", "test_cooldownAfterDrop",
                                                        "test_skirmishAndMultiplayerUnchanged",
-                                                       "test_savedCooldownGoesOn"]),
-      "the Boost test has the six cases of R11 step 3")
+                                                       "test_savedCooldownGoesOn", "test_refusalMessage",
+                                                       "test_cooldownText", "test_cooldownTextInsideScreen"]),
+      "the Boost test has the six cases of R11 step 3 and the three cases of HL2")
 check(all(line.startswith("//!") for line, _, _ in cases), "every Boost test case has a comment")
 check("auto " not in PLAYER and "auto " not in RULES and "auto " not in BOOST_TEST, "explicit types, no auto")
 

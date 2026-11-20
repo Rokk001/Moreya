@@ -170,9 +170,17 @@ public:
     inline double getHandCooldownSeconds() const
     { return mHandCooldownSeconds; }
 
-    //! \brief Sets the seconds left of the hand cooldown (used when a saved game is loaded); a negative or invalid
-    //! value is 0.
+    //! \brief Sets the seconds left of the hand cooldown (after a drop, when a saved game is loaded, on the client when
+    //! the server sends it); a negative or invalid value is 0. On the server a human keeper's client is told (HL2).
     void setHandCooldownSeconds(double seconds);
+
+    //! \brief Lets the given game seconds pass for the hand cooldown (server upkeep, and each turn on the client
+    //! so that the hand shows the time left).
+    void advanceHandCooldown(double seconds);
+
+    //! \brief Tells a human keeper why the pickup of the entity was refused (hand full or cooldown) with a short
+    //! message and resends the cooldown (HL2). Server side only; computer keepers get nothing.
+    void notifyHandLimitRefusal(const GameEntity* entity);
 
     //! \brief True while the hand limit applies: a campaign level is played on the server.
     bool isHandLimitActive() const;
@@ -362,6 +370,9 @@ public:
 
 
 private:
+    //! \brief Sends the seconds left of the hand cooldown to the client of a human keeper (server side only, HL2).
+    void notifyHandCooldown();
+
     //! \brief Shared part of the defeat: chat messages, sounds, defeat sequence and statistics
     //! \param hasTeamLost true when no dungeon temple of the team is left, so the whole team has lost
     void notifyDefeat(bool hasTeamLost);
