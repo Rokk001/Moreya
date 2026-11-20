@@ -115,7 +115,6 @@ mana	0
 
 [Goals]
 # goalName	arguments
-KillAllEnemies	NULL
 ProtectDungeonTemple	NULL
 [/Goals]
 
@@ -333,6 +332,19 @@ ProtectDungeonTemple	NULL
 11	28	1	0
 11	29	1	0
 11	30	1	0
+11	31	1	0
+11	32	1	0
+11	33	1	0
+11	34	1	0
+11	35	1	0
+11	36	1	0
+11	37	1	0
+11	38	1	0
+11	39	1	0	1
+11	40	1	0	1
+11	41	1	0	1
+11	42	1	0
+11	43	1	0
 11	44	1	0	1
 11	45	1	0	1
 11	46	1	0	1
@@ -350,6 +362,19 @@ ProtectDungeonTemple	NULL
 12	28	1	0
 12	29	1	0
 12	30	1	0
+12	31	1	0
+12	32	1	0
+12	33	1	0
+12	34	1	0
+12	35	1	0
+12	36	1	0
+12	37	1	0
+12	38	1	0
+12	39	1	0	1
+12	40	1	0	1
+12	41	1	0	1
+12	42	1	0
+12	43	1	0
 12	44	1	0
 12	46	1	0
 12	55	3	100
@@ -364,6 +389,19 @@ ProtectDungeonTemple	NULL
 13	28	1	0
 13	29	1	0
 13	30	1	0
+13	31	1	0
+13	32	1	0
+13	33	1	0
+13	34	1	0
+13	35	1	0
+13	36	1	0
+13	37	1	0
+13	38	1	0
+13	39	1	0	1
+13	40	1	0	1
+13	41	1	0	1
+13	42	1	0
+13	43	1	0
 13	44	1	0
 13	46	1	0
 13	55	3	100
@@ -514,15 +552,17 @@ ProtectDungeonTemple	NULL
 23	0	3	100
 23	8	2	100
 23	10	1	0
-23	11	1	0
-23	12	1	0
-23	13	1	0
+23	11	1	0	2
+23	12	1	0	2
+23	13	1	0	2
 23	14	1	0
 23	15	1	0
 23	16	1	0
 23	17	1	0
 23	18	1	0
 23	19	1	0
+23	20	1	0
+23	21	1	0
 23	28	1	0
 23	29	1	0
 23	30	1	0
@@ -538,9 +578,9 @@ ProtectDungeonTemple	NULL
 24	5	2	100
 24	8	2	100
 24	9	2	100
-24	11	1	0
-24	12	1	0
-24	13	1	0
+24	11	1	0	2
+24	12	1	0	2
+24	13	1	0	2
 24	14	1	0
 24	15	1	0
 24	16	1	0
@@ -561,10 +601,23 @@ ProtectDungeonTemple	NULL
 24	31	2	100	-1	50
 24	55	3	100
 25	0	3	100
-25	11	1	0
-25	12	1	0
-25	13	1	0
+25	11	1	0	2
+25	12	1	0	2
+25	13	1	0	2
+25	14	1	0
+25	15	1	0
+25	16	1	0
+25	17	1	0
+25	18	1	0
+25	19	1	0
+25	20	1	0
 25	21	1	0
+25	22	1	0
+25	23	1	0
+25	24	1	0
+25	25	1	0
+25	26	1	0
+25	27	1	0
 25	28	1	0
 25	29	1	0
 25	30	1	0
@@ -587,6 +640,12 @@ ProtectDungeonTemple	NULL
 26	19	1	0
 26	20	1	0
 26	21	1	0
+26	22	1	0
+26	23	1	0
+26	24	1	0
+26	25	1	0
+26	26	1	0
+26	27	1	0
 26	28	1	0
 26	29	1	0
 26	30	1	0
@@ -1602,6 +1661,33 @@ ProtectDungeonTemple	NULL
 62	14
 62	15
 [/Room]
+[Room]
+10	MoreyaGate1	2	9
+23	11
+23	12
+23	13
+24	11
+24	12
+24	13
+25	11
+25	12
+25	13
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
+[Room]
+3	TreasuryRaidRoute	1	9
+11	39
+11	40
+11	41
+12	39
+12	40
+12	41
+13	39
+13	40
+13	41
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -1650,7 +1736,6 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker1	Kobold.mesh	5	44	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker2	Kobold.mesh	11	49	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	13	44	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	MerrinTay	Knight.mesh	64	8	0	Knight	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	PostAWatch1	Adventurer.mesh	53	28	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	PostAWatch2	Dwarf1.mesh	54	27	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	PostBWatch1	Adventurer.mesh	61	14	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -1707,7 +1792,7 @@ Name	shiftBell
 Mode	once
 Cond	time	3
 Action	message	1	The Tinmoor miners know every shaft and every seam, my lord, and the warden sits behind two of their watch posts. You have little gold, so start with the seams.
-Action	objectiveid	1	tinmoor-o01	Kill Merrin Tay at the top of the mine.
+Action	objectiveid	1	tinmoor-o01	Defeat the raid and its leader.
 Action	objectiveid	1	tinmoor-o02	Mine 900 gold from the tin seams.
 [/Trigger]
 [Trigger]
@@ -1760,7 +1845,7 @@ Name	vaultStoneHome
 Mode	once
 Cond	deliveredstone	vault-stone
 Action	message	1	The stone sinks into the heart and a hidden hall has opened.
-Action	discover	campaign/BoulderCourse.level
+Action	discover	campaign/CrowshotGallery.level
 [/Trigger]
 [Trigger]
 Name	vaultStoneLost
@@ -1770,27 +1855,6 @@ Cond	timer	vaultSpawn	>=	5
 Cond	alive	VaultBearer	0
 Action	message	1	Another goblin emerges. Send a Ziv for the stone.
 Action	spawn	1	66	50	1	Goblin:1@VaultBearer
-[/Trigger]
-[Trigger]
-Name	firstShift
-Mode	once
-Cond	time	500
-Action	message	1	The mine bell is ringing. Miners with picks and shields are on their way.
-Action	spawn	3	40	46	1	Dwarf1:2	Dwarf1:2	Adventurer:2	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	secondShift
-Mode	once
-Cond	time	1100
-Action	message	1	The upper galleries have sent a second shift.
-Action	spawn	3	24	12	1	Knight:2	Dwarf2:2	Dwarf1:2	Monk:2
-[/Trigger]
-[Trigger]
-Name	thirdShift
-Mode	once
-Cond	time	1800
-Action	message	1	Tay has called out every digger in Tinmoor.
-Action	spawn	3	40	46	1	Knight:3	Dwarf2:3	Dwarf2:2	Adventurer:3	Monk:3
 [/Trigger]
 [Trigger]
 Name	goalPostACleared
@@ -1807,15 +1871,6 @@ Cond	event	PostBWatch1	killed
 Cond	event	PostBWatch2	killed
 Cond	spawncleared	postBEntered	1
 Action	objectivestate	1	tinmoor-o04	reached
-[/Trigger]
-[Trigger]
-Name	wardenDown
-Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
-Action	message	1	Merrin Tay is dead. The seams of Tinmoor are yours to work.
-Action	objectivestate	1	tinmoor-o01	reached
-Action	win	1
 [/Trigger]
 [Trigger]
 Name	scoutOrder
@@ -1839,14 +1894,8 @@ Cond	time	0
 Action	mainobjectiveid	1	tinmoor-main-heart	Protect your heart.
 Action	mainobjectiveid	1	tinmoor-main-seams	Mine 900 gold; scout the seams in possession.
 Action	mainobjectiveid	1	tinmoor-main-posts	Clear both watch posts and reinforcements.
-Action	mainobjectiveid	1	tinmoor-main-warden	Defeat Merrin Tay, all foes and portals.
+Action	mainobjectiveid	1	tinmoor-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	tinmoor-extra-gold	Mine 1500 gold.
-[/Trigger]
-[Trigger]
-Name	mainStoneList
-Mode	once
-Cond	trigger	vaultFound
-Action	conditionalobjectiveid	1	tinmoor-main-stone	If found, bring the vault stone home.
 [/Trigger]
 [Trigger]
 Name	mainHeart
@@ -1873,18 +1922,16 @@ Cond	spawncleared	postBEntered	1
 Action	objectivestate	1	tinmoor-main-posts	reached
 [/Trigger]
 [Trigger]
-Name	mainWarden
+Name	mainRaid
 Mode	repeat	0
-Cond	event	MerrinTay	killed
-Cond	goalmet	1	KillAllEnemies
-Action	objectivestate	1	tinmoor-main-warden	reached
+Cond	raid	defeated
+Action	objectivestate	1	tinmoor-main-raid	reached
 [/Trigger]
 [Trigger]
-Name	mainStone
-Mode	repeat	0
-Cond	trigger	vaultFound
-Cond	trigger	vaultStoneHome
-Action	objectivestate	1	tinmoor-main-stone	reached
+Name	raidDefeated
+Mode	once
+Cond	raid	defeated
+Action	objectivestate	1	tinmoor-o01	reached
 [/Trigger]
 [Trigger]
 Name	extraGold
@@ -1899,4 +1946,37 @@ Cond	roomtiles	1	DungeonTemple	<=	0
 Action	objectivestate	1	tinmoor-main-heart	failed
 [/Trigger]
 
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	raid	defeated
+Cond	objective	1	tinmoor-main-heart	reached
+Cond	objective	1	tinmoor-main-seams	reached
+Cond	objective	1	tinmoor-main-posts	reached
+Cond	objective	1	tinmoor-main-raid	reached
+Action	win	1
+[/Trigger]
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	24	12	180
+Seats	2	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	-
+Member	1	Dwarf1	2	-	Guardian
+Member	1	Dwarf1	2	-	Guardian
+Member	1	Knight	2	-	Guardian
+Member	1	Adventurer	2	-	Shade
+Member	1	Monk	2	-	Berserker
+Group	2	MerrinTay
+Member	2	Knight	4	MerrinTay	Guardian
+Member	2	Dwarf2	3	-	Guardian
+Member	2	Monk	2	-	Guardian
+Member	2	Dwarf1	2	-	Berserker
+Member	2	Adventurer	2	-	Dancer
+[/Raid]

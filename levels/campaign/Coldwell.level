@@ -115,7 +115,6 @@ mana	0
 
 [Goals]
 # goalName	arguments
-KillAllEnemies	NULL
 ProtectDungeonTemple	NULL
 [/Goals]
 
@@ -374,6 +373,9 @@ ProtectDungeonTemple	NULL
 13	0	3	100
 13	6	1	0
 13	7	1	0
+13	10	1	0
+13	11	1	0
+13	12	1	0
 13	26	1	0
 13	27	1	0
 13	40	1	0
@@ -385,6 +387,9 @@ ProtectDungeonTemple	NULL
 13	46	1	0
 13	53	3	100
 14	0	3	100
+14	10	1	0
+14	11	1	0
+14	12	1	0
 14	26	1	0
 14	27	1	0
 14	41	1	0
@@ -394,6 +399,9 @@ ProtectDungeonTemple	NULL
 14	45	1	0
 14	53	3	100
 15	0	3	100
+15	10	1	0	1
+15	11	1	0	1
+15	12	1	0	1
 15	26	1	0
 15	27	1	0
 15	42	1	0
@@ -402,6 +410,9 @@ ProtectDungeonTemple	NULL
 15	45	1	0
 15	53	3	100
 16	0	3	100
+16	10	1	0	1
+16	11	1	0	1
+16	12	1	0	1
 16	26	1	0
 16	27	1	0
 16	43	1	0
@@ -409,6 +420,9 @@ ProtectDungeonTemple	NULL
 16	49	2	100	-1	150
 16	53	3	100
 17	0	3	100
+17	10	1	0	1
+17	11	1	0	1
+17	12	1	0	1
 17	26	1	0
 17	27	1	0
 17	44	1	0
@@ -416,6 +430,9 @@ ProtectDungeonTemple	NULL
 17	49	2	100	-1	150
 17	53	3	100
 18	0	3	100
+18	10	1	0
+18	11	1	0
+18	12	1	0
 18	27	1	0
 18	28	1	0
 18	29	1	0
@@ -424,6 +441,9 @@ ProtectDungeonTemple	NULL
 18	49	2	100	-1	150
 18	53	3	100
 19	0	3	100
+19	10	1	0
+19	11	1	0
+19	12	1	0
 19	25	1	0
 19	26	1	0
 19	27	1	0
@@ -435,6 +455,9 @@ ProtectDungeonTemple	NULL
 19	49	2	100	-1	150
 19	53	3	100
 20	0	3	100
+20	10	1	0
+20	11	1	0
+20	12	1	0
 20	21	3	100
 20	25	1	0
 20	26	1	0
@@ -448,6 +471,9 @@ ProtectDungeonTemple	NULL
 20	49	2	100	-1	150
 20	53	3	100
 21	0	3	100
+21	10	1	0
+21	11	1	0
+21	12	1	0
 21	21	3	100
 21	22	3	100
 21	25	1	0
@@ -461,6 +487,9 @@ ProtectDungeonTemple	NULL
 21	45	1	0
 21	53	3	100
 22	0	3	100
+22	10	1	0
+22	11	1	0
+22	12	1	0
 22	21	3	100
 22	25	1	0
 22	26	1	0
@@ -474,6 +503,9 @@ ProtectDungeonTemple	NULL
 22	46	1	0
 22	53	3	100
 23	0	3	100
+23	10	1	0
+23	11	1	0
+23	12	1	0
 23	25	1	0
 23	26	1	0
 23	27	1	0
@@ -490,6 +522,9 @@ ProtectDungeonTemple	NULL
 23	46	1	0
 23	53	3	100
 24	0	3	100
+24	10	1	0
+24	11	1	0
+24	12	1	0
 24	25	1	0
 24	26	1	0
 24	27	1	0
@@ -507,6 +542,9 @@ ProtectDungeonTemple	NULL
 24	46	1	0
 24	53	3	100
 25	0	3	100
+25	10	1	0
+25	11	1	0
+25	12	1	0
 25	25	4	0
 25	26	4	0
 25	27	4	0
@@ -619,6 +657,7 @@ ProtectDungeonTemple	NULL
 29	0	3	100
 29	7	1	0
 29	8	1	0
+29	9	1	0
 29	10	1	0
 29	11	1	0
 29	12	4	0
@@ -676,6 +715,7 @@ ProtectDungeonTemple	NULL
 31	0	3	100
 31	8	1	0
 31	9	1	0
+31	10	1	0
 31	11	1	0
 31	12	1	0
 31	13	1	0
@@ -702,6 +742,7 @@ ProtectDungeonTemple	NULL
 32	0	3	100
 32	8	1	0
 32	9	1	0
+32	10	1	0
 32	20	1	0
 32	21	1	0
 32	22	1	0
@@ -723,6 +764,7 @@ ProtectDungeonTemple	NULL
 33	2	2	100
 33	8	1	0
 33	9	1	0
+33	10	1	0
 33	21	3	100
 33	22	3	100
 33	23	1	0
@@ -742,6 +784,7 @@ ProtectDungeonTemple	NULL
 34	3	2	100
 34	8	1	0
 34	9	1	0
+34	10	1	0
 34	22	3	100
 34	23	1	0
 34	24	1	0
@@ -759,6 +802,7 @@ ProtectDungeonTemple	NULL
 35	3	2	100
 35	8	1	0
 35	9	1	0
+35	10	1	0
 35	23	1	0
 35	24	1	0
 35	25	1	0
@@ -774,6 +818,7 @@ ProtectDungeonTemple	NULL
 36	3	2	100
 36	8	1	0
 36	9	1	0
+36	10	1	0
 36	25	1	0
 36	26	1	0
 36	27	1	0
@@ -787,13 +832,16 @@ ProtectDungeonTemple	NULL
 37	0	3	100
 37	8	1	0
 37	9	1	0
+37	10	1	0
 37	33	1	0
 37	34	1	0
 37	45	1	0
 37	46	1	0
 37	53	3	100
 38	0	3	100
+38	8	1	0
 38	9	1	0
+38	10	1	0
 38	34	1	0
 38	35	1	0
 38	45	1	0
@@ -802,6 +850,7 @@ ProtectDungeonTemple	NULL
 39	0	3	100
 39	8	1	0
 39	9	1	0
+39	10	1	0
 39	34	1	0
 39	35	1	0
 39	45	1	0
@@ -810,6 +859,7 @@ ProtectDungeonTemple	NULL
 40	0	3	100
 40	8	1	0
 40	9	1	0
+40	10	1	0
 40	35	1	0
 40	36	1	0
 40	45	1	0
@@ -837,6 +887,7 @@ ProtectDungeonTemple	NULL
 42	10	1	0
 42	11	1	0
 42	12	1	0
+42	13	1	0
 42	35	1	0
 42	36	1	0
 42	37	1	0
@@ -971,11 +1022,24 @@ ProtectDungeonTemple	NULL
 47	11	1	0
 47	12	1	0
 47	13	1	0
+47	14	1	0
+47	15	1	0
+47	16	1	0
+47	17	1	0
+47	18	1	0
+47	19	1	0
+47	20	1	0
+47	21	1	0
+47	22	1	0
+47	23	1	0
 47	24	1	0
 47	25	1	0
 47	26	1	0
 47	27	1	0
 47	28	1	0
+47	29	1	0	2
+47	30	1	0	2
+47	31	1	0	2
 47	35	1	0
 47	36	1	0
 47	37	1	0
@@ -1008,14 +1072,18 @@ ProtectDungeonTemple	NULL
 48	17	1	0
 48	18	1	0
 48	19	1	0
+48	20	1	0
+48	21	1	0
+48	22	1	0
+48	23	1	0
 48	24	1	0
 48	25	1	0
 48	26	1	0
 48	27	1	0
 48	28	1	0
-48	29	1	0
-48	30	1	0
-48	31	1	0
+48	29	1	0	2
+48	30	1	0	2
+48	31	1	0	2
 48	32	1	0
 48	33	1	0
 48	34	1	0
@@ -1045,6 +1113,7 @@ ProtectDungeonTemple	NULL
 49	11	1	0
 49	12	1	0
 49	13	1	0
+49	14	1	0
 49	15	1	0
 49	16	1	0
 49	17	1	0
@@ -1053,11 +1122,15 @@ ProtectDungeonTemple	NULL
 49	20	1	0
 49	21	1	0
 49	22	1	0
+49	23	1	0
 49	24	1	0
 49	25	1	0
 49	26	1	0
 49	27	1	0
 49	28	1	0
+49	29	1	0	2
+49	30	1	0	2
+49	31	1	0	2
 49	35	1	0
 49	36	1	0
 49	37	1	0
@@ -1137,6 +1210,8 @@ ProtectDungeonTemple	NULL
 52	9	1	0
 52	10	1	0
 52	11	4	0
+52	21	1	0
+52	22	1	0
 52	35	1	0
 52	36	1	0
 52	37	1	0
@@ -1149,6 +1224,8 @@ ProtectDungeonTemple	NULL
 53	8	1	0
 53	9	1	0
 53	10	1	0
+53	21	1	0
+53	22	1	0
 53	35	1	0
 53	36	1	0
 53	37	1	0
@@ -1283,6 +1360,33 @@ ProtectDungeonTemple	NULL
 26	29
 26	30
 [/Room]
+[Room]
+10	MoreyaGate1	2	9
+47	29
+47	30
+47	31
+48	29
+48	30
+48	31
+49	29
+49	30
+49	31
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
+[Room]
+3	TreasuryRaidRoute	1	9
+15	10
+15	11
+15	12
+16	10
+16	11
+16	12
+17	10
+17	11
+17	12
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -1331,7 +1435,6 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker1	Kobold.mesh	6	11	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker2	Kobold.mesh	13	6	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	9	13	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	HugoCole	Knight.mesh	47	48	0	Knight	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WellWatch1	Adventurer.mesh	30	26	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WellWatch2	Adventurer.mesh	31	28	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	KeepGuard1	Knight.mesh	43	38	0	Knight	2	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -1384,12 +1487,13 @@ Region	Undercroft	21	34	33	42
 Region	Court	40	34	54	41
 Region	Hall	41	44	52	50
 Region	EastRoad	44	24	52	34
+Region	Larder	52	21	53	22
 [Trigger]
 Name	firstFrost
 Mode	once
 Cond	time	3
 Action	message	1	Master, Coldwell drinks from one old well, and the springs say something lies beneath it. The warden keeps his keep shut tight.
-Action	objectiveid	1	coldwell-o01	Kill Hugo Cole in the keep hall.
+Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.
 Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.
 [/Trigger]
 [Trigger]
@@ -1434,34 +1538,18 @@ Action	setflag	keepAlarmed	1
 Action	objectivestate	1	coldwell-o04	reached
 [/Trigger]
 [Trigger]
-Name	firstDrill
+Name	larderFound
 Mode	once
-Cond	time	420
-Action	message	1	A drill of townsfolk is marching up from the south road.
-Action	spawn	3	30	46	1	Adventurer:2	Adventurer:2	Monk:2
+Cond	region	1	Larder
+Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
+Action	stonecreate	52	21	larder-shard	1	10	9
 [/Trigger]
 [Trigger]
-Name	secondDrill
+Name	larderShardHome
 Mode	once
-Cond	time	900
-Action	message	1	More watchmen are coming from the east road, and they carry shields.
-Action	spawn	3	48	30	1	Knight:2	Adventurer:2	Monk:2	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	thirdDrill
-Mode	once
-Cond	time	1500
-Action	message	1	Hugo Cole has emptied his barracks. This is everything he has.
-Action	spawn	3	49	8	1	Knight:3	Knight:2	Adventurer:3	Monk:2	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	wardenSlain
-Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
-Action	message	1	Warden Cole is dead and the gates stand open. Coldwell is yours.
-Action	objectivestate	1	coldwell-o01	reached
-Action	win	1
+Cond	deliveredstone	larder-shard
+Action	message	1	The shard sinks into the heart. One piece of the Heartstone is yours.
+Action	shard
 [/Trigger]
 [Trigger]
 Name	mainGoalList
@@ -1470,7 +1558,7 @@ Cond	time	0
 Action	mainobjectiveid	1	coldwell-main-heart	Protect your heart.
 Action	mainobjectiveid	1	coldwell-main-plaza	Claim the well plaza; mine 600 gold beneath it.
 Action	mainobjectiveid	1	coldwell-main-gate	Break the keep's north gate.
-Action	mainobjectiveid	1	coldwell-main-warden	Defeat Hugo Cole and all enemy forces.
+Action	mainobjectiveid	1	coldwell-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	coldwell-extra-gold	Mine 1200 gold.
 [/Trigger]
 [Trigger]
@@ -1512,11 +1600,16 @@ Cond	trapgone	DoorWooden2
 Action	objectivestate	1	coldwell-main-gate	reached
 [/Trigger]
 [Trigger]
-Name	mainWarden
+Name	mainRaid
 Mode	repeat	0
-Cond	event	HugoCole	killed
-Cond	goalmet	1	KillAllEnemies
-Action	objectivestate	1	coldwell-main-warden	reached
+Cond	raid	defeated
+Action	objectivestate	1	coldwell-main-raid	reached
+[/Trigger]
+[Trigger]
+Name	raidDefeated
+Mode	once
+Cond	raid	defeated
+Action	objectivestate	1	coldwell-o01	reached
 [/Trigger]
 [Trigger]
 Name	extraGold
@@ -1531,4 +1624,31 @@ Cond	roomtiles	1	DungeonTemple	<=	0
 Action	objectivestate	1	coldwell-main-heart	failed
 [/Trigger]
 
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	raid	defeated
+Cond	objective	1	coldwell-main-heart	reached
+Cond	objective	1	coldwell-main-plaza	reached
+Cond	objective	1	coldwell-main-gate	reached
+Cond	objective	1	coldwell-main-raid	reached
+Action	win	1
+[/Trigger]
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	48	30	0
+Seats	2	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	HugoCole
+Member	1	Knight	4	HugoCole	Guardian
+Member	1	Knight	2	-	Guardian
+Member	1	Adventurer	2	-	Shade
+Member	1	Adventurer	2	-	Dancer
+Member	1	Monk	2	-	Berserker
+[/Raid]

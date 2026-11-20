@@ -68,8 +68,11 @@ for level in sorted((root / 'levels/campaign').glob('*.level')):
             if line[:2] == ['Cond', 'flag'] and len(line) == 4:
                 for dependency in writers.get((line[2], line[3]), []):
                     assert dependency < index, str(level) + ': late presentation dependency for ' + name
+# The army observer runs before Kingsfall's only victory; the court victories courtTaken and collectWin were removed
+# with Prince Aurel's court goal (he leads the raid now) and must stay removed.
 kingsfall = (root / 'levels/campaign/Kingsfall.level').read_text(encoding='utf-8')
 army_observer = kingsfall.index('Name\tgoalArmyAtHeart\n')
-assert army_observer < kingsfall.index('Name\tcourtTaken\n')
-assert army_observer < kingsfall.index('Name\tcollectWin\n')
+assert army_observer < kingsfall.index('Name\tmainVictory\n')
+assert 'Name\tcourtTaken\n' not in kingsfall and 'Name\tcollectWin\n' not in kingsfall
+assert kingsfall.count('Action\twin\t1\n') == 1
 print('campaign exact ground/room source contracts: ok; C++ and gameplay not executed')

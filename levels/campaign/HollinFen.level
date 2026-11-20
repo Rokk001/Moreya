@@ -1209,9 +1209,9 @@ ProtectDungeonTemple	NULL
 35	36	4	0
 35	37	1	0
 35	38	1	0
-35	39	3	100
-35	40	3	100
-35	41	3	100
+35	39	1	0
+35	40	1	0
+35	41	1	0
 35	42	1	0
 35	43	1	0
 35	44	4	0
@@ -1254,9 +1254,9 @@ ProtectDungeonTemple	NULL
 36	36	4	0
 36	37	1	0
 36	38	1	0
-36	39	3	100
-36	40	3	100
-36	41	3	100
+36	39	1	0
+36	40	1	0
+36	41	1	0
 36	42	1	0
 36	43	1	0
 36	44	4	0
@@ -1297,9 +1297,9 @@ ProtectDungeonTemple	NULL
 37	36	1	0
 37	37	1	0
 37	38	1	0
-37	39	3	100
-37	40	3	100
-37	41	3	100
+37	39	1	0
+37	40	1	0
+37	41	1	0
 37	42	1	0
 37	43	4	0
 37	44	4	0
@@ -1481,9 +1481,9 @@ ProtectDungeonTemple	NULL
 41	38	1	0
 41	39	1	0
 41	40	1	0
-41	41	1	0
-41	42	1	0
-41	43	1	0
+41	41	1	0	2
+41	42	1	0	2
+41	43	1	0	2
 41	44	1	0
 41	45	1	0
 41	46	1	0
@@ -1522,9 +1522,9 @@ ProtectDungeonTemple	NULL
 42	38	1	0
 42	39	1	0
 42	40	1	0
-42	41	1	0
-42	42	1	0
-42	43	1	0
+42	41	1	0	2
+42	42	1	0	2
+42	43	1	0	2
 42	44	1	0
 42	45	1	0
 42	46	1	0
@@ -1562,9 +1562,9 @@ ProtectDungeonTemple	NULL
 43	38	4	0
 43	39	1	0
 43	40	1	0
-43	41	1	0
-43	42	1	0
-43	43	3	100
+43	41	1	0	2
+43	42	1	0	2
+43	43	1	0	2
 43	44	3	100
 43	45	3	100
 43	46	1	0
@@ -3083,6 +3083,60 @@ ProtectDungeonTemple	NULL
 81	75	3	100
 81	76	3	100
 81	77	3	100
+15	30	1	0
+14	29	1	0
+15	29	1	0
+16	29	1	0
+14	28	1	0
+15	28	1	0
+16	28	1	0
+12	31	1	0
+12	27	1	0
+13	27	1	0
+14	27	1	0
+15	27	1	0
+12	26	1	0
+13	26	1	0
+14	26	1	0
+15	26	1	0
+12	25	1	0
+13	25	1	0
+14	25	1	0
+15	25	1	0
+12	24	1	0
+13	24	1	0
+14	24	1	0
+15	24	1	0
+12	23	1	0
+13	23	1	0
+14	23	1	0
+15	23	1	0
+12	22	1	0
+13	22	1	0
+14	22	1	0
+15	22	1	0
+12	21	1	0
+13	21	1	0
+14	21	1	0
+15	21	1	0
+12	20	1	0
+13	20	1	0
+14	20	1	0
+15	20	1	0
+12	19	1	0
+13	19	1	0
+14	19	1	0
+15	19	1	0
+12	18	1	0
+15	18	1	0
+12	17	1	0
+15	17	1	0
+12	16	1	0
+14	16	1	0
+15	16	1	0
+12	15	1	0
+14	15	1	0
+15	15	1	0
 [/Tiles]
 
 [Rooms]
@@ -3266,6 +3320,21 @@ ProtectDungeonTemple	NULL
 77	62
 0
 [/Room]
+[Room]
+10	MoreyaGate1	2	9
+41	41
+41	42
+41	43
+42	41
+42	42
+42	43
+43	41
+43	42
+43	43
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -3365,7 +3434,6 @@ ProtectDungeonTemple	NULL
 1	FenKeeper7	Orc.mesh	11	15	0	Orc	2	0	max	100	0	0	none	none	nullSkillType	none	0
 1	FenKeeper8	Rat.mesh	9	10	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
 1	FenKeeper9	Roach.mesh	16	11	0	Roach	2	0	max	100	0	0	none	none	nullSkillType	none	0
-2	AgatheHollin	Knight.mesh	66	70	0	Knight	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WardGuard1	Knight.mesh	66	52	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WardGuard2	Adventurer.mesh	54	64	0	Adventurer	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WardGuard3	Elf.mesh	73	55	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -3415,14 +3483,12 @@ Region	EastBank	62	28	78	46
 Region	Cairn	56	6	76	22
 Region	Ward	52	48	78	72
 Region	Chapel	56	64	76	73
-Region	SealedHollow	2	50	10	58
 [Trigger]
 Name	reedCall
 Mode	once
 Cond	time	3
 Action	message	1	Hollin Fen is a bog of holly thickets, master, and its convent has more soldiers than nuns. Sister Agathe Hollin keeps every door shut and sends out patrols without rest.
-Action	objectiveid	1	hollinfen-o01	Kill Agathe Hollin in the convent chapel.
-Action	objectiveid	1	hollinfen-o02	Defend your heart against convent patrols.
+Action	objectiveid	1	hollinfen-o02	Defend your heart.
 [/Trigger]
 [Trigger]
 Name	fenEntered
@@ -3458,34 +3524,7 @@ Cond	region	1	Ward
 Action	message	1	Every bell in the convent is tolling. Sister Agathe has called out her whole guard.
 Action	spawn	3	56	56	1	Knight:3	Knight:2	Elf:2	Monk:2	Adventurer:2
 Action	reveal	1	Chapel
-Action	objectiveid	1	hollinfen-o04	Reach the chapel and kill Agathe Hollin.
 Action	objectivestate	1	hollinfen-o03	reached
-[/Trigger]
-[Trigger]
-Name	hollowFound
-Mode	once
-Cond	region	1	SealedHollow
-Action	message	1	A mysterious stone has been discovered. Bring it to your dungeon heart.
-Action	spawn	1	6	54	1	Goblin:1@HollowBearer
-Action	stonecreate	5	54	hollow-stone	1	12	12
-Action	setflag	hollowStone	1
-Action	timer	hollowSpawn	0
-[/Trigger]
-[Trigger]
-Name	hollowStoneHome
-Mode	once
-Cond	deliveredstone	hollow-stone
-Action	message	1	The pale stone sinks into the heart and a hidden hall has opened.
-Action	discover	campaign/CrowshotGallery.level
-[/Trigger]
-[Trigger]
-Name	hollowStoneLost
-Mode	repeat	60
-Cond	flag	hollowStone	1
-Cond	timer	hollowSpawn	>=	5
-Cond	alive	HollowBearer	0
-Action	message	1	Another goblin emerges. Send a Ziv for the stone.
-Action	spawn	1	6	54	1	Goblin:1@HollowBearer
 [/Trigger]
 [Trigger]
 Name	fenDrains
@@ -3496,59 +3535,9 @@ Action	terrain	27	35	33	37	path
 Action	terrain	38	36	38	36	manawell	1
 [/Trigger]
 [Trigger]
-Name	patrol1
-Mode	once
-Cond	time	240
-Action	message	1	A patrol of the convent is wading through the bog.
-Action	spawn	3	38	14	1	Adventurer:2	Adventurer:2	Dwarf1:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	patrol2
-Mode	once
-Cond	time	560
-Action	message	1	Sisters in armour are coming up through the fen.
-Action	spawn	3	44	30	1	Knight:2	Monk:2	Adventurer:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	patrol3
-Mode	once
-Cond	time	900
-Action	message	1	A heavy squad is marching along the northern ridge.
-Action	spawn	3	40	8	1	Knight:2	Knight:2	Dwarf2:2	Monk:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	patrol4
-Mode	once
-Cond	time	1250
-Action	message	1	The fen guard has found the dry path to your dungeon.
-Action	spawn	3	40	24	1	Knight:3	Elf:2	Adventurer:3	Monk:2	Dwarf2:2
-[/Trigger]
-[Trigger]
-Name	patrol5
-Mode	once
-Cond	time	1650
-Action	message	1	Agathe keeps feeding soldiers into the bog. Watch the fen.
-Action	spawn	3	42	40	1	Knight:3	Knight:2	Elf:3	Monk:3	Adventurer:2
-[/Trigger]
-[Trigger]
-Name	patrol6
-Mode	once
-Cond	time	2100
-Action	message	1	Another column is on the ridge, and this one has banners.
-Action	spawn	3	40	8	1	Knight:3	Knight:3	Elf:3	Monk:3	Dwarf2:3	Adventurer:3
-[/Trigger]
-[Trigger]
-Name	patrol7
-Mode	once
-Cond	time	2600
-Action	message	1	The convent is emptying its barracks.
-Action	spawn	3	42	42	1	Knight:4	Knight:3	Elf:3	Elf:3	Monk:3	Adventurer:3
-[/Trigger]
-[Trigger]
 Name	goalHeartSafe2BeforeWardenSlain
 Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
+Cond	raid	defeated
 Cond	goalmet	1	ProtectDungeonTemple
 Action	objectivestate	1	hollinfen-o02	reached
 [/Trigger]
@@ -3557,16 +3546,6 @@ Name	goalHeartLost2
 Mode	once
 Cond	room	1	DungeonTemple	==	0
 Action	objectivestate	1	hollinfen-o02	failed
-[/Trigger]
-[Trigger]
-Name	wardenSlain
-Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
-Action	message	1	Sister Agathe Hollin lies dead in her chapel, and the bells are silent. Hollin Fen is yours.
-Action	objectivestate	1	hollinfen-o01	reached
-Action	objectivestate	1	hollinfen-o04	reached
-Action	win	1
 [/Trigger]
 
 
@@ -3577,14 +3556,8 @@ Mode	once
 Cond	time	0
 Action	mainobjectiveid	1	hollinfen-main-home	Build 9 beds and a hatchery; protect your heart.
 Action	mainobjectiveid	1	hollinfen-main-gate	Claim 40 causeway tiles; break the west gate.
-Action	mainobjectiveid	1	hollinfen-main-warden	Defeat Agathe Hollin and all enemy forces.
+Action	mainobjectiveid	1	hollinfen-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	hollinfen-extra-fen	Claim 120 fen tiles and uncover the mana spring.
-[/Trigger]
-[Trigger]
-Name	mainStoneList
-Mode	once
-Cond	trigger	hollowFound
-Action	conditionalobjectiveid	1	hollinfen-main-stone	If found, bring the hollow stone home.
 [/Trigger]
 [Trigger]
 Name	mainHeartLost
@@ -3608,17 +3581,10 @@ Cond	trapgone	DoorWooden1
 Action	objectivestate	1	hollinfen-main-gate	reached
 [/Trigger]
 [Trigger]
-Name	mainWarden
+Name	mainRaid
 Mode	repeat	0
-Cond	event	AgatheHollin	killed
-Cond	goalmet	1	KillAllEnemies
-Action	objectivestate	1	hollinfen-main-warden	reached
-[/Trigger]
-[Trigger]
-Name	mainStone
-Mode	repeat	0
-Cond	trigger	hollowStoneHome
-Action	objectivestate	1	hollinfen-main-stone	reached
+Cond	raid	defeated
+Action	objectivestate	1	hollinfen-main-raid	reached
 [/Trigger]
 [Trigger]
 Name	extraFen
@@ -3627,5 +3593,52 @@ Cond	claimed	1	Fen	120
 Cond	slabs	1	ManaSpring	manawell	>=	1
 Action	objectivestate	1	hollinfen-extra-fen	reached
 [/Trigger]
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	objective	1	hollinfen-main-home	reached
+Cond	objective	1	hollinfen-main-gate	reached
+Cond	objective	1	hollinfen-main-raid	reached
+Cond	raid	defeated
+Action	message	1	The Order's raid lies in the bog and its bells are silent. Hollin Fen is yours.
+Action	win	1
+[/Trigger]
 
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	42	42	270
+Seats	2	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	AgatheHollin
+Member	1	Knight	6	AgatheHollin	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Hunter
+Member	1	Elf	4	-	Skirmisher
+Member	1	Adventurer	4	-	Shade
+Member	1	Adventurer	4	-	Shade
+Member	1	Adventurer	4	-	Dancer
+Member	1	Adventurer	4	-	Dancer
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Dwarf1	4	-	Berserker
+Member	1	Knight	4	-	Warlord
+[/Raid]

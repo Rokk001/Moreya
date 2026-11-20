@@ -1675,8 +1675,7 @@ Action	objectivestate	1	swarmnight-o02	failed
 Name	dawn
 Mode	once
 Cond	time	780
-Action	message	1	The first light touches the roads and the swarm melts away. Your heart still beats, and your strongest fighter is willing to follow you.
-Action	keepminion	1
+Action	message	1	The first light touches the roads and the swarm melts away. Your heart still beats.
 Action	win	1
 [/Trigger]
 

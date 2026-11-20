@@ -115,7 +115,6 @@ mana	0
 
 [Goals]
 # goalName	arguments
-KillAllEnemies	NULL
 ProtectDungeonTemple	NULL
 [/Goals]
 
@@ -459,9 +458,9 @@ ProtectDungeonTemple	NULL
 11	36	1	0
 11	37	1	0
 11	38	1	0
-11	39	1	0
-11	40	1	0
-11	41	1	0
+11	39	1	0	2
+11	40	1	0	2
+11	41	1	0	2
 11	42	1	0
 11	43	4	0
 11	44	4	0
@@ -498,9 +497,9 @@ ProtectDungeonTemple	NULL
 12	36	1	0
 12	37	1	0
 12	38	1	0
-12	39	1	0
-12	40	1	0
-12	41	1	0
+12	39	1	0	2
+12	40	1	0	2
+12	41	1	0	2
 12	42	1	0
 12	43	4	0
 12	44	4	0
@@ -531,9 +530,9 @@ ProtectDungeonTemple	NULL
 13	36	1	0
 13	37	1	0
 13	38	1	0
-13	39	1	0
-13	40	1	0
-13	41	1	0
+13	39	1	0	2
+13	40	1	0	2
+13	41	1	0	2
 13	42	1	0
 13	43	4	0
 13	44	4	0
@@ -843,6 +842,7 @@ ProtectDungeonTemple	NULL
 23	55	1	0
 23	56	1	0
 23	57	1	0
+23	58	1	0
 23	63	3	100
 24	0	3	100
 24	4	1	0
@@ -1265,6 +1265,9 @@ ProtectDungeonTemple	NULL
 33	46	4	0
 33	48	2	100	-1	50
 33	49	2	100	-1	50
+33	56	1	0
+33	57	1	0
+33	58	1	0
 33	63	3	100
 34	0	3	100
 34	4	1	0
@@ -1302,6 +1305,9 @@ ProtectDungeonTemple	NULL
 34	46	4	0
 34	48	2	100	-1	50
 34	49	2	100	-1	50
+34	56	1	0
+34	57	1	0
+34	58	1	0
 34	63	3	100
 35	0	3	100
 35	4	1	0
@@ -1336,6 +1342,9 @@ ProtectDungeonTemple	NULL
 35	44	4	0
 35	45	4	0
 35	46	4	0
+35	56	1	0
+35	57	1	0
+35	58	1	0
 35	63	3	100
 36	0	3	100
 36	4	1	0
@@ -1371,6 +1380,9 @@ ProtectDungeonTemple	NULL
 36	46	4	0
 36	47	1	0
 36	48	1	0
+36	56	1	0
+36	57	1	0
+36	58	1	0
 36	63	3	100
 37	0	3	100
 37	4	1	0
@@ -1403,6 +1415,9 @@ ProtectDungeonTemple	NULL
 37	48	2	100	-1	50
 37	49	2	100	-1	50
 37	50	2	100	-1	50
+37	56	1	0
+37	57	1	0
+37	58	1	0
 37	63	3	100
 38	0	3	100
 38	7	1	0
@@ -1428,6 +1443,9 @@ ProtectDungeonTemple	NULL
 38	46	4	0
 38	48	2	100	-1	50
 38	50	2	100	-1	50
+38	56	1	0
+38	57	1	0
+38	58	1	0
 38	63	3	100
 39	0	3	100
 39	7	1	0
@@ -1449,6 +1467,9 @@ ProtectDungeonTemple	NULL
 39	44	4	0
 39	45	4	0
 39	46	4	0
+39	56	1	0
+39	57	1	0
+39	58	1	0
 39	63	3	100
 40	0	3	100
 40	7	1	0
@@ -1476,6 +1497,9 @@ ProtectDungeonTemple	NULL
 40	45	4	0
 40	46	4	0
 40	50	2	100	-1	50
+40	56	1	0
+40	57	1	0
+40	58	1	0
 40	63	3	100
 41	0	3	100
 41	7	1	0
@@ -1501,6 +1525,9 @@ ProtectDungeonTemple	NULL
 41	44	4	0
 41	45	4	0
 41	46	4	0
+41	56	1	0	1
+41	57	1	0	1
+41	58	1	0	1
 41	63	3	100
 42	0	3	100
 42	6	2	100	-1	150
@@ -1526,6 +1553,9 @@ ProtectDungeonTemple	NULL
 42	44	4	0
 42	45	4	0
 42	46	4	0
+42	56	1	0	1
+42	57	1	0	1
+42	58	1	0	1
 42	63	3	100
 43	0	3	100
 43	5	2	100	-1	150
@@ -1558,6 +1588,9 @@ ProtectDungeonTemple	NULL
 43	52	1	0	1
 43	53	1	0	1
 43	54	1	0
+43	56	1	0	1
+43	57	1	0	1
+43	58	1	0	1
 43	63	3	100
 44	0	3	100
 44	5	2	100	-1	150
@@ -1587,6 +1620,8 @@ ProtectDungeonTemple	NULL
 44	53	1	0	1
 44	54	1	0
 44	56	1	0
+44	57	1	0
+44	58	1	0
 44	63	3	100
 45	0	3	100
 45	7	1	0
@@ -1606,6 +1641,8 @@ ProtectDungeonTemple	NULL
 45	54	1	0
 45	55	3	100
 45	56	1	0
+45	57	1	0
+45	58	1	0
 45	63	3	100
 46	0	3	100
 46	8	1	0
@@ -2072,6 +2109,33 @@ ProtectDungeonTemple	NULL
 19	19
 19	20
 [/Room]
+[Room]
+10	MoreyaGate1	2	9
+11	39
+11	40
+11	41
+12	39
+12	40
+12	41
+13	39
+13	40
+13	41
+9	100000	0	0	-
+[Waves]
+[/Waves]
+[/Room]
+[Room]
+3	TreasuryRaidRoute	1	9
+41	56
+41	57
+41	58
+42	56
+42	57
+42	58
+43	56
+43	57
+43	58
+[/Room]
 [/Rooms]
 
 [Traps]
@@ -2128,7 +2192,6 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker1	Kobold.mesh	46	58	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker2	Kobold.mesh	51	54	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	44	56	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	OsricVane	Knight.mesh	30	6	0	Knight	4	0	max	100	0	0	none	none	nullSkillType	none	0
 3	LedgeArcher1	Elf.mesh	20	24	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	LedgeArcher2	Elf.mesh	34	24	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	GateGuard	Knight.mesh	30	12	0	Knight	2	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -2187,7 +2250,7 @@ Name	firstCall
 Mode	once
 Cond	time	3
 Action	message	1	The Ravensledge fort sits on three cliff shelves, my lord, and the chasms between them have only a few crossings. Captain Osric Vane keeps archers on every ledge.
-Action	objectiveid	1	ravensledge-o01	Kill Osric Vane in the highest keep.
+Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.
 Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.
 [/Trigger]
 [Trigger]
@@ -2233,49 +2296,11 @@ Action	message	1	The east gate was meant for supply carts. A squad is already ru
 Action	spawn	3	48	8	1	Dwarf2:2	Adventurer:2	Elf:2
 [/Trigger]
 [Trigger]
-Name	firstRaid
-Mode	once
-Cond	time	600
-Action	message	1	Raiders are crossing the lower bridge from the shelf above.
-Action	spawn	3	47	37	1	Adventurer:2	Adventurer:2	Elf:2
-[/Trigger]
-[Trigger]
-Name	secondRaid
-Mode	once
-Cond	time	1300
-Action	message	1	The captain is sending a stronger party down the cliff road.
-Action	spawn	3	12	40	1	Knight:2	Elf:2	Dwarf1:2	Monk:2
-[/Trigger]
-[Trigger]
-Name	thirdRaid
-Mode	once
-Cond	time	2100
-Action	message	1	Vane is pulling in every archer he has. Do not let them reach your heart.
-Action	spawn	3	47	36	1	Knight:3	Elf:3	Elf:2	Adventurer:3	Monk:2
-[/Trigger]
-[Trigger]
 Name	goalInnerKeepEntered
 Mode	once
 Cond	trapgone	DoorWooden1
 Action	objectivestate	1	ravensledge-o05	reached
 [/Trigger]
-[Trigger]
-Name	captainDown
-Mode	once
-Cond	time	5
-Cond	creatures	2	<=	0
-Action	message	1	Captain Vane has fallen and the ravens have left the ledge. Ravensledge is yours.
-Action	objectivestate	1	ravensledge-o01	reached
-Action	win	1
-[/Trigger]
-[Trigger]
-Name	osricWavers
-Mode	once
-Cond	health	OsricVane	<	40
-Action	message	1	The captain is hurt. The fort's last guards are rushing to the keep.
-Action	spawn	3	30	8	1	Knight:2	Monk:2
-[/Trigger]
-
 
 Region	CrossLowerWest	11	43	13	46
 Region	CrossLowerEast	36	43	36	46
@@ -2288,7 +2313,7 @@ Cond	time	0
 Action	mainobjectiveid	1	ravensledge-main-heart	Protect your heart.
 Action	mainobjectiveid	1	ravensledge-main-shelf	Cross the lower bridge; claim 80 shelf tiles.
 Action	mainobjectiveid	1	ravensledge-main-gate	Cross the upper bridge; break the inner gate.
-Action	mainobjectiveid	1	ravensledge-main-captain	Defeat Osric Vane and all enemy forces.
+Action	mainobjectiveid	1	ravensledge-main-raid	Defeat the raid and its leader.
 Action	optionalobjectiveid	1	ravensledge-extra-east	Explore the east supply entrance.
 [/Trigger]
 [Trigger]
@@ -2336,11 +2361,16 @@ Cond	trapgone	DoorWooden1
 Action	objectivestate	1	ravensledge-main-gate	reached
 [/Trigger]
 [Trigger]
-Name	mainCaptain
+Name	mainRaid
 Mode	repeat	0
-Cond	event	OsricVane	killed
-Cond	goalmet	1	KillAllEnemies
-Action	objectivestate	1	ravensledge-main-captain	reached
+Cond	raid	defeated
+Action	objectivestate	1	ravensledge-main-raid	reached
+[/Trigger]
+[Trigger]
+Name	raidDefeated
+Mode	once
+Cond	raid	defeated
+Action	objectivestate	1	ravensledge-o01	reached
 [/Trigger]
 [Trigger]
 Name	extraEast
@@ -2355,4 +2385,36 @@ Cond	roomtiles	1	DungeonTemple	<=	0
 Action	objectivestate	1	ravensledge-main-heart	failed
 [/Trigger]
 
+[Trigger]
+Name	mainVictory
+Mode	once
+Cond	raid	defeated
+Cond	objective	1	ravensledge-main-heart	reached
+Cond	objective	1	ravensledge-main-shelf	reached
+Cond	objective	1	ravensledge-main-gate	reached
+Cond	objective	1	ravensledge-main-raid	reached
+Action	win	1
+[/Trigger]
 [/Triggers]
+
+[Raid]
+# Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
+# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# PLACEHOLDER: composition set by simulation R3B
+Gate	12	40	180
+Seats	2	1
+Countdown	-
+Interval	-
+EscapeShare	-
+Group	1	RolfScarrow
+Member	1	Elf	4	RolfScarrow	Marksman
+Member	1	Elf	3	-	Hunter
+Member	1	Elf	3	-	Skirmisher
+Member	1	Elf	3	-	Marksman
+Member	1	Elf	3	-	Hunter
+Member	1	Elf	3	-	Skirmisher
+Member	1	Knight	3	-	Guardian
+Member	1	Monk	3	-	Guardian
+Member	1	Adventurer	3	-	Shade
+Member	1	Dwarf1	3	-	Berserker
+[/Raid]

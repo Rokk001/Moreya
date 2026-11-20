@@ -19,9 +19,12 @@ room = next(block for block in re.findall(r"\[Room\](.*?)\[/Room\]", text, re.S)
             if "Treasury6" in block)
 assert len(campaign.lines(room)) == 11
 assert not campaign.lines(campaign.section(text, "TreasuryObject"))
-assert ("AlaricPenn", 2, (48, 30)) in level["creatures"]
+# Alaric Penn leads the raid; the vault captain at his old place carries the key.
+assert ("VaultCaptain", 2, (48, 30)) in level["creatures"]
+assert not any(creature[0] == "AlaricPenn" for creature in level["creatures"])
 assert re.search(r"4\s+PennVaultDoor\s+2\s+1\s+49\s+30\s+1\s+1 KeyLock 1", text)
-assert "Action\tstonedrop\tAlaricPenn\ttreasurer-key\t1\t48\t30" in text
+assert "Name\ttreasurerKey\nMode\tonce\nCond\tevent\tVaultCaptain\tkilled\nAction\tstonedrop\tVaultCaptain\ttreasurer-key\t1\t48\t30" in text
+assert text.count("Action\tstonedrop\t") == 1 and "AlaricPenn\ttreasurer-key" not in text
 assert "Cond\tdeliveredstone\ttreasurer-key\nAction\tkeydoor\tPennVaultDoor\topen" in text
 assert "Name\tmainWarden\nMode\trepeat\t0\nCond\ttrigger\tpennVaultOpened" in text
 # Model only the existing progression openings; the proposed vault door stays blocked.
