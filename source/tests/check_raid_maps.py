@@ -4,8 +4,8 @@
 Every story level of Campaign.cfg must have the Moreya gate at its fixed tile (the central tile of the only hero
 portal room, owned by the raid seat), a [Raid] section whose groups have the fixed sizes of the structure table, the
 named leader(s) of the structure table, members with a fixed skill template each, the attacked keeper as target, a
-treasury of that keeper, a main goal completed by "Cond raid defeated" and only victories that require the defeated
-raid, and no more creatures or spawns for the keeper than the level had before the rebuild. Heartstone shards are
+treasury of that keeper, a main goal completed by "Cond raid defeated", exactly its fixed main goals and victory
+triggers, every victory requiring "Cond raid defeated" and the reached state of every main goal (RA9), and no more creatures or spawns for the keeper than the level had before the rebuild. Heartstone shards are
 found (brought home) in exactly Coldwell, Greywater and Saltmere; the stone to a bonus level is found in exactly the
 first story level of its wing. Bonus levels have no raid, no shard, no discovery and no kept minion.
 
@@ -70,6 +70,45 @@ KEEPER_BEFORE = {
     "Highcairn": (3, 3), "Lanternhill": (3, 6), "Saltmere": (3, 5), "HollinFen": (12, 2), "Cinderhollow": (7, 3),
     "Ashcombe": (9, 0), "Ironbridge": (9, 0), "Bellwick": (11, 3), "Goldspire": (4, 2), "Kingsfall": (5, 0),
     "VarnsCrossing": (5, 0), "Wraithwood": (6, 0), "HollowmarkCitadel": (5, 0),
+}
+
+# RA9: the main goals of each story level (the kept main goals of the table "Per-map goals after the rebuild" plus
+# the raid goal) and the triggers that may win it, counted once on feature/raid-campaign-r5 after the RA9 repair:
+# 18 levels, 75 main goals, 27 victory triggers. Every victory trigger must require "Cond raid defeated" and the
+# reached state of every main goal of its level.
+MAIN_GOALS = {
+    "Brackenford": (("brackenford-main-home", "brackenford-main-grove", "brackenford-main-ford", "brackenford-main-keep",
+                     "brackenford-main-raid"), ("mainVictory",)),
+    "Coldwell": (("coldwell-main-heart", "coldwell-main-plaza", "coldwell-main-gate", "coldwell-main-raid"), ("mainVictory",)),
+    "Ravensledge": (("ravensledge-main-heart", "ravensledge-main-shelf", "ravensledge-main-gate", "ravensledge-main-raid"),
+                    ("mainVictory",)),
+    "Tinmoor": (("tinmoor-main-heart", "tinmoor-main-seams", "tinmoor-main-posts", "tinmoor-main-raid"), ("mainVictory",)),
+    "Greywater": (("greywater-main-heart", "greywater-main-gold", "greywater-main-siege", "greywater-main-raid"),
+                  ("mainVictory",)),
+    "Highcairn": (("highcairn-main-home", "highcairn-main-terraces", "highcairn-main-captain", "highcairn-main-raid"),
+                  ("mainVictory",)),
+    "Lanternhill": (("lanternhill-main-home", "lanternhill-main-road", "lanternhill-main-rival", "lanternhill-main-raid"),
+                    ("rivalFalls", "rivalHeartDown", "mainVictory")),
+    "Saltmere": (("saltmere-main-heart", "saltmere-main-gold", "saltmere-main-port", "saltmere-main-raid"), ("mainVictory",)),
+    "HollinFen": (("hollinfen-main-home", "hollinfen-main-gate", "hollinfen-main-raid"), ("mainVictory",)),
+    "Cinderhollow": (("cinderhollow-main-heart", "cinderhollow-main-seams", "cinderhollow-main-bridge",
+                      "cinderhollow-main-rival", "cinderhollow-main-raid"),
+                     ("rivalFalls", "rivalHeartDown", "rivalHeartFalls", "mainVictory")),
+    "Ashcombe": (("ashcombe-main-heart", "ashcombe-main-basin", "ashcombe-main-raid"), ("mainVictory",)),
+    "Ironbridge": (("ironbridge-main-home", "ironbridge-main-spans", "ironbridge-main-sites", "ironbridge-main-hold",
+                    "ironbridge-main-raid"), ("rivalFalls", "rivalHeartDown")),
+    "Bellwick": (("bellwick-main-heart", "bellwick-main-nave", "bellwick-main-keeper", "bellwick-main-raid"),
+                 ("keeperFalls", "mainVictory")),
+    "Goldspire": (("goldspire-main-home", "goldspire-main-town", "goldspire-main-route", "goldspire-main-vault",
+                   "goldspire-main-raid"), ("mainVictory",)),
+    "Kingsfall": (("kingsfall-main-heart", "kingsfall-main-champions", "kingsfall-main-army", "kingsfall-main-raid"),
+                  ("mainVictory",)),
+    "VarnsCrossing": (("varnscrossing-main-home", "varnscrossing-main-keep", "varnscrossing-main-rivals",
+                       "varnscrossing-main-raid"), ("crossingHeld", "mainVictory")),
+    "Wraithwood": (("wraithwood-main-heart", "wraithwood-main-witch", "wraithwood-main-rival", "wraithwood-main-forces",
+                    "wraithwood-main-raid"), ("bothFall", "mainVictory")),
+    "HollowmarkCitadel": (("hollowmark-main-heart", "hollowmark-main-courts", "hollowmark-main-raid",
+                           "hollowmark-main-throne"), ("mainVictory",)),
 }
 
 # Skill templates a raid member may be fixed to (fighter templates of config/creatureSkills.cfg; workers do not raid).
@@ -258,30 +297,32 @@ def check_raid(name, text, human, gate, sizes, fixed_leaders, leader_names):
 
 
 def check_victory(name, text, human):
-    """Checks the main goal 'raid defeated' and that every victory of the keeper requires the defeated raid."""
+    """Checks the main goal 'raid defeated' and that every victory of the keeper requires the defeated raid and the
+    reached state of every main goal of the level (RA9), with the fixed main goals and victory triggers."""
     all_triggers = triggers(text)
     main_goals = {fields[3] for _, _, actions in all_triggers for fields in actions
                   if len(fields) >= 5 and fields[1] == "mainobjectiveid" and fields[2] == str(human)}
     raid_goals = set()
-    raid_triggers = set()
     for trigger, conditions, actions in all_triggers:
         if ["Cond", "raid", "defeated"] in conditions:
-            raid_triggers.add(trigger)
             raid_goals.update(fields[3] for fields in actions if len(fields) == 5 and fields[1] == "objectivestate"
                               and fields[2] == str(human) and fields[4] == "reached" and fields[3] in main_goals)
     check(bool(raid_goals), name + ": a main goal of the keeper must be reached by 'Cond raid defeated'")
-    wins = 0
+    fixed_goals, fixed_victories = MAIN_GOALS[name]
+    check(sorted(main_goals) == sorted(fixed_goals),
+          name + ": the main goals must be exactly %s, found %s" % (", ".join(fixed_goals), ", ".join(sorted(main_goals))))
+    victories = []
     for trigger, conditions, actions in all_triggers:
         if not any(len(fields) >= 3 and fields[1] == "win" for fields in actions):
             continue
-        wins += 1
-        requires_raid = (["Cond", "raid", "defeated"] in conditions
-                         or any(len(fields) == 5 and fields[1] == "objective" and fields[3] in raid_goals
-                                and fields[4] == "reached" for fields in conditions)
-                         or any(len(fields) >= 3 and fields[1] == "trigger" and fields[2] in raid_triggers
-                                for fields in conditions))
-        check(requires_raid, name + ": the victory of trigger %s must require the defeated raid" % trigger)
-    check(wins > 0, name + ": no victory trigger")
+        victories.append(trigger)
+        check(["Cond", "raid", "defeated"] in conditions,
+              name + ": the victory of trigger %s must require 'Cond raid defeated'" % trigger)
+        for goal in fixed_goals:
+            check(["Cond", "objective", str(human), goal, "reached"] in conditions,
+                  name + ": the victory of trigger %s must require the main goal %s" % (trigger, goal))
+    check(victories == list(fixed_victories),
+          name + ": the victory triggers must be exactly %s, found %s" % (", ".join(fixed_victories), ", ".join(victories)))
 
 
 def main():
