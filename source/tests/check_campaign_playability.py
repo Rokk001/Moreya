@@ -30,36 +30,18 @@ REQUIRED = ("Info", "Seats", "Goals", "Tiles", "Rooms", "Traps", "Lights",
 # Reviewed goal-bearing sentences (one-based), with their actual level checks.
 BRIEFING_MATCH = {
     "Mossgate": {3: "no: mining and meadow claiming are not winning conditions", 4: "no: reeve elimination is checked; breaking the watch post separately is not"},
-    "Brackenford": {3: "no: beds, hatchery, grove and gathering are not winning conditions", 4: "yes: KillAllEnemies and the warden seat elimination trigger"},
-    "Coldwell": {3: "no: plaza ownership and mined gold are not winning conditions", 4: "no: Cole elimination is checked; breaking the gate separately is not"},
-    "Tinmoor": {2: "no: enemy elimination is checked; seams and both posts are not independent goals", 3: "no: optional stone discovery is not required to win"},
     "BoulderCourse": {3: "yes: courseDone checks all four cups; the timeout trigger limits the trial"},
-    "Ravensledge": {3: "yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate", 4: "yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals"},
-    "Ashcombe": {3: "yes: actual northward Basin crossing, actual Ashby death before escape regardless of location, remaining enemy forces and own-heart protection"},
-    "Greywater": {3: "yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "yes: mainWarden requires Gray killed and all remaining enemy forces/portals"},
-    "HollinFen": {3: "yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes", 4: "yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery"},
     "CrowshotGallery": {3: "yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline"},
-    "Ironbridge": {3: "yes: supply for six starting fighters, actual three-rift crossings in order with all seven alternate bridges, and ownership of the exact Smithy/OreDock rooms", 4: "yes: an actual fortress entrance breached, rival temple gone and all remaining enemy forces defeated"},
-    "Lanternhill": {2: "no: mining and digging the plugs are not independent goals", 3: "yes: KillAllEnemies includes the northern rival temple", 4: "no: optional stone discovery is not required to win"},
-    "VarnsCrossing": {3: "no: heart protection and enemy temples are checked; quarter and fortress ownership are not independent goals"},
     "Thornreach": {3: "no: enemy temples are checked; clearing ownership and maze progression are not independent goals"},
-    "Highcairn": {2: "no: heart protection is checked; building and ascent are not independent goals", 3: "no: enemy elimination is checked; carrying the optional stone is not required to win"},
     "SkittleCavern": {3: "no: laneCleared checks opened lanes and no remaining guards, not whether boulders killed them"},
     "Stormhaven": {3: "no: enemy temples are checked; stone-span control is not an independent goal"},
-    "Cinderhollow": {3: "no: ProtectDungeonTemple checks survival; mining is not required", 4: "no: enemy temple elimination is checked; bridge crossing is not an independent goal"},
-    "Saltmere": {3: "yes: 800 actual mining gold and heart protection; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing", 4: "yes: mainAdmiral requires Seward killed and all remaining enemy forces/portals"},
     "Dunmarrow": {3: "yes: actual northbound tunnel use and camp arrival before the original 900-second departure deadline; actual Dunn death before escape, heart protection and remaining foes"},
-    "Goldspire": {2: "no: building before attacking is not a winning condition", 3: "no: enemy elimination is checked; the ordered low-town/link route is not an independent goal"},
     "Mirewatch": {2: "no: digging/building order is not a winning condition", 3: "no: all tower ownership and both approaches are not independent winning goals", 4: "yes: KillAllEnemies includes the watcher"},
-    "Bellwick": {3: "no: enemy temple elimination is checked; holding until the gate event is not an independent goal"},
     "Wolfscar": {3: "yes: actual bridge crossings of both ravines, ownership of all344original den floor fields, four rival temples gone, remaining enemy forces and own-heart protection"},
     "TwistingHalls": {3: "no: hallReached checks region presence; it does not independently require possession"},
     "Silverdeep": {2: "no: mining/building are not independent goals", 3: "no: enemy temples are checked; building exactly three wooden spans is not a winning condition"},
     "Ebonrook": {2: "no: mining and feeding are not winning conditions", 3: "no: enemy elimination is checked; the named route is not an independent goal"},
-    "Wraithwood": {3: "yes: ProtectDungeonTemple and KillAllEnemies include both rival temples"},
-    "Kingsfall": {2: "no: prince elimination is checked; crossing the watched spans is not independent", 3: "no: collectWin checks all champions and twelve creatures, but courtTaken also wins without all three champions and neither checks their location at the heart"},
     "SwarmNight": {3: "yes: dawn at 780 seconds with ProtectDungeonTemple", 4: "no: nothing is carried to the next level any more (keepminion removed); no Heartstone shard is granted"},
-    "HollowmarkCitadel": {3: "yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes", 4: "yes: actual Castellan death inside ThroneHall and all548original throne floor fields currently owned"},
 }
 # Only existing triggers that actually satisfy each objective may change its state.
 # None is an unresolved mapping, deliberately reported as an error instead of inferred at victory.
@@ -69,96 +51,98 @@ BRIEFING_MATCH["Mossgate"] = {
     4: "no: mainWatch requires both watchmen and actual reinforcements; the reeve no longer stands in the bonus chamber, chamberCleared wins after the three main goals"
 }
 
-BRIEFING_MATCH["Brackenford"] = {3: "yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked", 4: "yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles"}
-BRIEFING_MATCH["Coldwell"] = {3: "yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold", 4: "yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces"}
-BRIEFING_MATCH["Tinmoor"] = {2: "yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals", 3: "yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone activates completion before victory"}
 BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active"}
 
-BRIEFING_MATCH["Lanternhill"] = {2: "yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed", 3: "yes: actual northern rival heart destroyed and all remaining enemies", 4: "yes: voluntary discovery activates delivery of the actual floor stone by a worker"}
-
-BRIEFING_MATCH["VarnsCrossing"] = {3: "yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes"}
-
 BRIEFING_MATCH["Thornreach"] = {3: "yes: all142original Clearing floor fields currently claimed, actual west-to-east maze crossing, own-heart protection and all four rival hearts plus remaining foes"}
-
-BRIEFING_MATCH["Highcairn"] = {2: "yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold", 3: "yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with floor pickup, visible worker transport and same-item recovery; runtime remains unverified"}
 
 BRIEFING_MATCH["SkittleCavern"] = {3: "yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit"}
 
 BRIEFING_MATCH["Stormhaven"] = {3: "yes: both actual stone bridges crossed in either direction and all20original bridge fields currently owned; own heart protected and all four rival temples plus remaining foes defeated"}
 
-BRIEFING_MATCH["Cinderhollow"] = {3: "yes: heart protected through dawn, both original finite seams exhausted and all actual three-wave instances killed anywhere", 4: "yes: real northward causeway crossing after original dawn bridge generation, rival temple destroyed and remaining enemies defeated"}
-
-BRIEFING_MATCH["Goldspire"] = {2: "yes: actual two-fighter buildup and own-heart protection", 3: "yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links", 4: "yes: actual Penn death inside the spire and all remaining foes"}
-
 BRIEFING_MATCH["Mirewatch"] = {2: "yes: actual two beds, hatchery coop and own-heart protection; the advice remains a hint", 3: "yes: all69original tower room fields currently claimed, actual east/north approach rooms and seals opened, TowerC visited in possession", 4: "yes: Mora actually killed in TowerH and remaining foes defeated"}
-
-BRIEFING_MATCH["Bellwick"] = {3: "yes: heart protected through the unchanged two-gate opening alternatives, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes"}
 
 BRIEFING_MATCH["Ebonrook"] = {2: "yes: 300actualgold,14realbeds,coop,own heart and actual southward crossing of any original northern river bridge", 3: "yes: both southern roads opened through preserved alternatives and actual possessed own scout in Hollow; Rook killed in Roots and all remaining foes"}
 
 BRIEFING_MATCH["Silverdeep"] = {2: "yes:400actualmining and actual supply for six fighters before crossings, with current own-heart protection", 3: "yes: actual crossings of all three lakes including both first-lake tracks, all three rival temples and remaining foes"}
 
-BRIEFING_MATCH["Wraithwood"] = {3: "yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately"}
+# Reviewed again after the raid rebuild: warden, wave and escape duties named by the briefings now fall to
+# the raid goal (briefing texts follow in the text package).
+BRIEFING_MATCH["Brackenford"] = {3: "no: mainHome checks two beds and a hatchery coop and mainGrove 22 claimed Grove tiles; gathering creatures is no longer checked (the rally before Brack is dropped)", 4: "no: mainFord checks the actual ford route and guards and mainKeep all 64 original Keep floor tiles; the warden no longer stands in her keep, mainRaid requires the defeated raid with its leader ElsaBrack"}
+BRIEFING_MATCH["Coldwell"] = {3: "yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold", 4: "no: mainGate requires the north door gone; Cole no longer stands in his hall, mainRaid requires the defeated raid with its leader HugoCole"}
+BRIEFING_MATCH["Ravensledge"] = {3: "yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate", 4: "no: OsricVane no longer stands in the highest keep; mainRaid requires the defeated raid with its leader RolfScarrow"}
+BRIEFING_MATCH["Tinmoor"] = {2: "no: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; Tay no longer stands in the upper chamber, mainRaid requires the defeated raid with its leader MerrinTay", 3: "yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone reveals CrowshotGallery"}
+BRIEFING_MATCH["Greywater"] = {3: "yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "no: Gray no longer stands in his river hall; mainRaid requires the defeated raid with its leader CorwinGray"}
+BRIEFING_MATCH["Highcairn"] = {2: "yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold", 3: "no: Hilde no longer stands in her hold, mainRaid requires the defeated raid with its leader HildeCairn; the hidden cairn hall holds no stone any more"}
+BRIEFING_MATCH["Lanternhill"] = {2: "yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed", 3: "yes: actual northern rival heart destroyed and all remaining enemies; mainRaid also requires the defeated raid with its leader InesVale", 4: "yes: voluntary discovery activates delivery of the actual floor stone by a worker, which reveals SkittleCavern"}
+BRIEFING_MATCH["Saltmere"] = {2: "yes: 800 actual mining gold; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing", 3: "yes: own-heart protection", 4: "no: Seward no longer stands in the port hall; mainRaid requires the defeated raid with its leader BramSeward"}
+BRIEFING_MATCH["HollinFen"] = {2: "no: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; Hollin no longer stands in the chapel, mainRaid requires the defeated raid with its leader AgatheHollin", 3: "no: the bricked hollow and its stone are removed; HollinFen reveals no bonus level"}
+BRIEFING_MATCH["Cinderhollow"] = {3: "no: mainSeams exhausts both original finite seams and mainHeart protects the heart; holding until dawn and the three waves are removed, the raid replaces them", 4: "yes: real northward causeway crossing after the lavaBridge causeway, rival temple destroyed and remaining enemies defeated"}
+BRIEFING_MATCH["Ashcombe"] = {3: "no: actual northward Basin crossing and own-heart protection are checked; Ashby leads the raid, mainRaid requires the defeated raid and only her flight to the gate loses, the hold and south road escape is removed"}
+BRIEFING_MATCH["Ironbridge"] = {3: "yes: supply for six starting fighters, actual three-rift crossings in order with all seven alternate bridges, and ownership of the exact Smithy/OreDock rooms", 4: "yes: an actual fortress entrance breached, rival temple gone, all remaining enemy forces and the raid with its leader GarethFenn defeated"}
+BRIEFING_MATCH["Bellwick"] = {3: "no: own heart protected, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes; holding against the faithful until the gates unseal is no longer checked, the faithful waves are removed"}
+BRIEFING_MATCH["Goldspire"] = {2: "yes: actual two-fighter buildup and own-heart protection", 3: "no: all144open LowTown floor fields outside the Moreya gate room owned; actual south-gate crossing then outer-ring entry and both real sealed links; the treasurer no longer stands in the core, mainRaid requires the defeated raid with its leader AlaricPenn"}
+BRIEFING_MATCH["Kingsfall"] = {2: "no: real lava-span crossing; Aurel no longer holds court here, mainRaid requires the defeated raid with its leader PrinceAurel", 3: "yes: actual living captivity OR conversion of all three champions and 12 own living creatures currently on the own-heart tiles"}
+BRIEFING_MATCH["VarnsCrossing"] = {3: "yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes; mainRaid also requires the defeated raid with its leader MarshalVarn"}
+BRIEFING_MATCH["Wraithwood"] = {3: "yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately; mainRaid also requires the defeated raid with its leader ElowenAsh"}
+BRIEFING_MATCH["HollowmarkCitadel"] = {3: "yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes", 4: "no: all548original throne floor fields currently owned; Castellan no longer sits in ThroneHall, mainRaid requires both defeated raids with their leaders SabineRook and Castellan"}
 
-BRIEFING_MATCH["Kingsfall"] = {3: "yes: actual living captivity OR conversion of all three champions, real lava-span crossing and actual Aurel death with court clearance", 4: "yes:12own living creatures currently on the own-heart tiles"}
-
-OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
+OBJECTIVE_TRIGGERS = {'Ashcombe': [None,
               ('goalBasinCrossed',),
-              ('goalKillBeforeEscape',)],
- 'Bellwick': [('keeperHeartDown',), None, ('naveGatesKills', 'naveGatesLate'), ('transept',)],
+              None],
+ 'Bellwick': [('keeperHeartDown',), None, None, ('transept',)],
  'BoulderCourse': [('courseDone',)],
- 'Brackenford': [('wardenGone',),
+ 'Brackenford': [('raidDefeated',),
                  ('bedsReady',),
                  ('larderReady',),
                  ('groveClaimed',),
                  ('goalLandingCleared',),
-                 ('wardenGone',)],
+                 ('mainKeep',)],
  'Campaign1': [('goalClassicComplete',)],
  'Campaign2': [('goalClassicComplete',)],
  'Campaign3': [('goalClassicComplete',)],
  'Cinderhollow': [('goalHeartSafe1BeforeRivalHeartDown', 'goalHeartSafe1BeforeRivalHeartFalls'),
                   ('goalBothFiniteSeamsMined',),
-                  ('goalThreeWavesDefeatedAtHeart',),
+                  None,
                   ('goalCraterAfterBridge',),
                   ('rivalHeartDown', 'rivalHeartFalls')],
- 'Coldwell': [('wardenSlain',), ('plazaReached',), ('goalUndercroft600',), ('courtBreached',)],
+ 'Coldwell': [('raidDefeated',), ('plazaReached',), ('goalUndercroft600',), ('courtBreached',)],
  'CrowshotGallery': [('galleryClear',)],
  'Dunmarrow': [('wardenCaught',), ('barrowsEntered',), ('goalCampBeforeLoading', 'goalCampBeforeDeparture')],
  'Ebonrook': [('wardenSlain',), ('crossed',), None, ('scoutPossessed',), ('wardenSlain',)],
- 'Goldspire': [('wardenSlain',), None, ('lowTown',), ('onRing',), ('wardenSlain',)],
- 'Greywater': [('wardenFalls',), ('firstCoin',), ('goalHeartSafe3BeforeWardenFalls',), ('siegeSeen',)],
- 'Highcairn': [('wardenSlain',),
+ 'Goldspire': [None, None, ('lowTown',), ('onRing',), None],
+ 'Greywater': [('raidDefeated',), ('firstCoin',), ('goalHeartSafe3BeforeRaidDefeated',), ('siegeSeen',)],
+ 'Highcairn': [('raidDefeated',),
                ('goalTerrace4',),
-               ('goalHeartSafe3BeforeWardenSlain',),
-               ('wardenSlain',),
-               ('stoneHome', 'stoneHome2'),
+               ('goalHeartSafe3BeforeRaidDefeated',),
+               None,
+               None,
                ('goalCaptainKilled',)],
- 'HollinFen': [('wardenSlain',), ('goalHeartSafe2BeforeWardenSlain',), ('wardEntered',), ('wardenSlain',)],
- 'HollowmarkCitadel': [('kingDead',), ('goalCourt3',), ('goalHeartSafe3BeforeKingDead',)],
+ 'HollinFen': [None, ('goalHeartSafe2BeforeWardenSlain',), ('wardEntered',), None],
+ 'HollowmarkCitadel': [None, ('goalCourt3',), ('goalHeartSafe3BeforeKingDead',)],
  'Ironbridge': [('rivalFalls', 'rivalHeartDown'),
                 ('goalIronbridgeAllSpans',),
                 ('yardReached',),
                 ('goalRivalGateNorth', 'goalRivalGateSouth')],
- 'Kingsfall': [('collectWin',), ('courtTaken', 'collectWin'), ('goalArmyAtHeart',)],
+ 'Kingsfall': [('mainChampions',), None, ('goalArmyAtHeart',)],
  'Lanternhill': [('rivalHeartDown',), ('goalRingGroundPathOpened',), ('goalHeartSafe3BeforeRivalHeartDown',)],
  'Mirewatch': [('watcherSlain',), None, ('goalNineTowerRoomsClaimed',), ('scoutTowerC',), ('watcherSlain',)],
  'Mossgate': [None, ('firstGold',), ('meadowOurs',), ('goalWatchPostCleared',), None],
- 'Ravensledge': [('captainDown',),
+ 'Ravensledge': [('raidDefeated',),
                  ('shelfHeld',),
                  ('shelfHeld',),
                  ('yardEntered',),
                  ('goalInnerKeepEntered',)],
- 'Saltmere': [('admiralFalls',),
+ 'Saltmere': [None,
               ('firstSalt',),
               ('goalHeartSafe3BeforeAdmiralFalls',),
               ('flatHeld', 'portGatesTimeout'),
-              ('admiralFalls',)],
+              None],
  'Silverdeep': [('silverWonGoal',), ('goalSilverdeepAllSpans',), None],
  'SkittleCavern': [('laneCleared',)],
  'Stormhaven': [('stormEndsGoal',), ('goalStormhavenBothSpans',), ('goalPactsPrevented',)],
  'SwarmNight': [('goalHeartSafe1BeforeDawn',), ('goalHeartSafe2BeforeDawn',)],
  'Thornreach': [('keepersGoneGoal',), None, ('goalHeartSafe3BeforeKeepersGoneGoal',)],
- 'Tinmoor': [('wardenDown',),
+ 'Tinmoor': [('raidDefeated',),
              ('seamsFilled',),
              ('goalPostACleared',),
              ('goalPostBCleared',),
@@ -172,9 +156,13 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [('wardenDown',),
               ('goalHeartSafe3BeforeHuntersGoneGoal',)],
  'Wraithwood': [('bothFallGoal',), ('bothFallGoal',), ('goalHeartSafe3BeforeBothFallGoal',)]}
 HINT_IDS = frozenset(['bellwick-o02', 'ebonrook-o03', 'goldspire-o02', 'mirewatch-o02', 'silverdeep-o03', 'thornreach-o02'])
-# Objective IDs removed with the reeve of the bonus chamber Mossgate; they must stay undeclared and
-# keep their numbers free so that the remaining IDs keep their saved states.
-REMOVED_OBJECTIVE_IDS = frozenset(['mossgate-o01', 'mossgate-o05'])
+# Objective IDs removed with the reeve of the bonus chamber Mossgate and with the warden, wave, escape and old stone
+# goals that the raid rebuild drops (the raid and its leader replace them); they must stay undeclared and keep their
+# numbers free so that the remaining IDs keep their saved states. Counted once on feature/raid-campaign-r5: 16 IDs.
+REMOVED_OBJECTIVE_IDS = frozenset(['mossgate-o01', 'mossgate-o05', 'ashcombe-o01', 'ashcombe-o03', 'bellwick-o03',
+                                   'cinderhollow-o03', 'goldspire-o01', 'goldspire-o05', 'highcairn-o04', 'highcairn-o05',
+                                   'hollinfen-o01', 'hollinfen-o04', 'hollowmarkcitadel-o01', 'kingsfall-o02',
+                                   'saltmere-o01', 'saltmere-o05'])
 # All mapped alternatives have explicit approved completion criteria.
 OBJECTIVE_COVERAGE_PENDING = {}
 
@@ -317,12 +305,8 @@ OBJECTIVE_REVIEW = {'bellwick-o02': ('naveGatesKills, naveGatesLate',
                        'should that existing goal trigger complete this text?')}
 
 # Fixed fingerprints of the reviewed existing conditions; never recalculated as expectations.
-OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a76ab7069491bc45a3439b9e8efff92f3363e0e0789',
-'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa328f53c00f5f2768be0f7367fda1c7aec6424870',
-  'Ashcombe/goalHoldOrRoadMissed': '6b50aa8f09f86e56c7383895f34b7b828306cbfa792e8aaf22af95b105e6708a',
+OBJECTIVE_CONDITIONS = {'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa328f53c00f5f2768be0f7367fda1c7aec6424870',
  'Ashcombe/holdBreached': 'bae0a393bc01e08ad3ae0b95d56ee971dc346396388423a3d0c019f97ff58aaf',
- 'Ashcombe/wardenDown': '9099b47ed59d017b8ca6cede9c74e2bbfe5d91a9ee0d4ee005dbbf423926927f',
- 'Ashcombe/wardenEscaped': '56e37df8874d71b952e4aff8e246d5568afc363fa678dde537ce5b53d3bb0604',
  'Bellwick/keeperHeartDown': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
  'Bellwick/naveGatesKills': 'e796048b8442103fde2ec73588b9d953975383db05e5bdf9017869aff366deb6',
  'Bellwick/naveGatesLate': '19a266ae96382f14cdc2629ae7b76df0f1c0af1308564afef74ad5f564e4da11',
@@ -339,7 +323,6 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a
  'Brackenford/groveClaimed': '4876c136061a43ce924a55baa9dc20f30a00ee0f1b9cb9598ce1e5a9c1c8a031',
  'Brackenford/larderReady': '562b2b930847e8f1fb6f9fe93dc680903ec501b0198b5d6696cce209c37aa637',
  'Brackenford/villageOpen': 'f979ec5bfc4d35b4bb42bccfdf08eb59d408b8688e3fc3b31e8ec7d10506f5ef',
- 'Brackenford/wardenGone': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Campaign1/goalClassicComplete': '96473efcffb5efb40af72300b603f80aa89d0b62b4c4954fa2a7546f63e5581c',
  'Campaign2/goalClassicComplete': '96473efcffb5efb40af72300b603f80aa89d0b62b4c4954fa2a7546f63e5581c',
  'Campaign3/goalClassicComplete': '96473efcffb5efb40af72300b603f80aa89d0b62b4c4954fa2a7546f63e5581c',
@@ -348,13 +331,11 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a
  'Cinderhollow/goalDawnBridge': '31bfa776f2fabb75b9c400e4c14449f2a23ae0ccb9c090599b354d62c37237b5',
  'Cinderhollow/goalDawnBridgeApproach': '7b7cc92553db0a630d9d8eeb64e9163000ea576ebde2679543af1f26f4ca5e02',
  'Cinderhollow/goalDawnBridgeCrossed': '05f90e1f8e74e92ee126418d8d02c528ef152fe4aff7e0f87c532bc0c3df4262',
- 'Cinderhollow/goalThreeWavesDefeatedAtHeart': '66ab2425596a2a131e5b81285debd24703c77d08988f7e274700157f8c323cea',
- 'Cinderhollow/rivalHeartDown': 'b490f8085c95c318f0aee37b0bcb7f903d47f272d0bedb3114676bcf5146fc3b',
- 'Cinderhollow/rivalHeartFalls': 'e39927741e06e2f5d2a2863a979535b542e7774e671af7d7838cc8153b14097d',
+ 'Cinderhollow/rivalHeartDown': '2a19ab8646705faf3c7269c21da274a774a350c6d66d36cea8238f0144ca55a1',
+ 'Cinderhollow/rivalHeartFalls': '832fca491192f8be10a2a41668636fa62ba08d569f439ef685db054b17d04878',
  'Coldwell/courtBreached': '44ebb7a1fa5c16d2bc4cf4cfd4e82ec1ea98501c6839fb6190f50f6b51175f33',
  'Coldwell/goalUndercroft600': '3998fc8dbd07fe00c625e156ff639e809b6d44933db162f7a9e0425ad8d86da4',
  'Coldwell/plazaReached': 'b3c03fd9a567992624fe4dfaffb2bd550a0585faddb0875c6d59676e3472c48e',
- 'Coldwell/wardenSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Coldwell/wellEmptied': '6591ba5aceeb629439c2b37862d24cadf5846841e8477f759af3d91288c59ad1',
  'CrowshotGallery/galleryClear': '70a36becadb693911641ad3bf0ea8bfcb986d9f6d515c0e1d89ee1ca6a9944e0',
  'Dunmarrow/barrowsEntered': '085380acca4d034f15c91a10680450c59c2d33c9865fef70b3a793273eb2e149',
@@ -368,33 +349,24 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a
  'Ebonrook/wardenSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Goldspire/lowTown': 'b0850f7040d983080895d0dde679743b6d2296c36ef4f248e7c3de5ec3c76dec',
  'Goldspire/onRing': '7f80618dff9ef40c3c8ba326475dea955da625c4cec0f63e159540e0716d0160',
- 'Goldspire/wardenSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Greywater/firstCoin': '6591ba5aceeb629439c2b37862d24cadf5846841e8477f759af3d91288c59ad1',
  'Greywater/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
- 'Greywater/goalHeartSafe3BeforeWardenFalls': '7511c2d91d074bbb659838927d53cedb4bf3600b0df0b6b29f74d9d3ac32304f',
  'Greywater/siegeSeen': '3abd24d1062606a705b9a1eccbf238205629f9896f24ea13ce4ccd40d444210f',
- 'Greywater/wardenFalls': '3a263d0a43819eb0c082efacc0eccd1096b304cddf3227642cd0db922bb597ca',
  'Highcairn/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
- 'Highcairn/goalHeartSafe3BeforeWardenSlain': '1c8e23a3845b1a642d748b1ddf1a7fc16ee5208432da7349f65c4c98948417ee',
  'Highcairn/goalTerrace1': 'c9e3c2088afe2f1eccaee96b0ad324aa2f1646e27b9cb86a860726417d412f1b',
  'Highcairn/goalTerrace2': '4acedeef1aea3f655e52c27459519c7bdb001c839d3ed01b16cd0fd4d21644b7',
  'Highcairn/goalTerrace3': '985150fc38e89890402b5e67d691ae0800fcd05adb22c486b72b559ee37eaa69',
  'Highcairn/goalTerrace4': 'ccd3ee14ef9755706a7c4575ab18958da05c515c1fccef0a6a9f38e78d0d6a4e',
  'Highcairn/goalCaptainKilled': 'e1747cd4004d2ca4f9cc7890eee8c6ae2e0cf86996ce7ac62af4602e141d524a',
  'Highcairn/holdSealBreaks': '8d98fbb5f48f929b4e4e9eca60cfdb982bfd32ca5d430f8918bdf3de7041f9fb',
- 'Highcairn/stoneHome': 'bf6c9dad942cb5d2f04f994d6355cd9af755cedc6c9e7d1122d8205843db3c19',
- 'Highcairn/stoneHome2': '14e787f8a1aa9a89f3e765383f0c68e97714f9cc40f58056110e73e77baff80c',
- 'Highcairn/wardenSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'HollinFen/goalHeartLost2': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
- 'HollinFen/goalHeartSafe2BeforeWardenSlain': '1c8e23a3845b1a642d748b1ddf1a7fc16ee5208432da7349f65c4c98948417ee',
+ 'HollinFen/goalHeartSafe2BeforeWardenSlain': '9ce58e2c16f4cadf0f062b96ccce4bed5d6475570bd17d6635eb680fa1d56c52',
  'HollinFen/wardEntered': '5104e92aff9354bc899db8c3294c4399f167ae7405b47ae4c7c15f58990f8c4a',
- 'HollinFen/wardenSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'HollowmarkCitadel/goalCourt1': '3d1ce8ca64b9a981c52c1f8ebdbbe83f4da4ed551b30c1928670f20af029b1db',
  'HollowmarkCitadel/goalCourt2': '9f6e92ea03889c9a1a6f2f5a8c6960c9fc2e1288acb8b7194f3921d6c08f5197',
  'HollowmarkCitadel/goalCourt3': '2ae7109231ea81d177354b7a722794606c9c505424d37b461e8500a795cca839',
  'HollowmarkCitadel/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
  'HollowmarkCitadel/goalHeartSafe3BeforeKingDead': '14f2b1e2aad09c1df88d5009c5a517af3ec88c319f3644c7db73160daf1e4f4d',
- 'HollowmarkCitadel/kingDead': '3ae8027124d07835bcc3ccbe6538e8c04c3e7c11a1a389cd2ad1b32e4bb37b4a',
  'Ironbridge/goalIronbridgeAllSpans': '6fb678898964c140879412d1ea1abf0b469c50007b55234fa26058644dd3bfd9',
  'Ironbridge/goalIronbridgeSpan1Path1After': 'fea92d67d0c5b1024bd003c64ef52d6bdbb6539794baee4d2a1f36bf45bee6c3',
  'Ironbridge/goalIronbridgeSpan1Path1Before': '082378aae54def52c9b74b1c8131d40833f57d3a9b31928027a9486b71808826',
@@ -424,26 +396,22 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a
  'Ironbridge/rivalFalls': '05b5e72367cf0376729d09cfb8ed22f46c191cc0c0b936db820e8cbf975aa7d5',
  'Ironbridge/rivalHeartDown': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
  'Ironbridge/yardReached': '9baa954870ffac33927dc1717bf9910ed278b7f82a585cb92216a909f587fba6',
- 'Kingsfall/collectWin': '248ae73a6216d7d671e187040748d230b66ca878354543dcd4139d5ead708d53',
- 'Kingsfall/courtTaken': '71e02274670b0b0e5cf5cf93d4ec3f43036487e9d3972f95314d7d52de10cb1d',
  'Kingsfall/goalArmyAtHeart': '7c8a4ba84f0d124e4800c8880845249ba6320cf154888bea68bebff9d7718d8e',
  'Lanternhill/goalRingGroundPathOpened': 'aa3d2a4caeaed837e5a0e80db31473d02090c14136c8df98937757f61389f0fc',
- 'Lanternhill/rivalHeartDown': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
+ 'Lanternhill/rivalHeartDown': '5820174be62318546e85dba07eeb2e62aed1db820b5955c82c47d4bbde4eec92',
  'Mirewatch/goalNineTowerRoomsClaimed': '84658f831313f77f8aac25816f828b1f3a0d8c541d2776dda77ccf139a4c215f',
  'Mirewatch/scoutTowerC': '47716bb4d4cf382a3c8361ed7ea924e83aec55ebe50a73512cced36d5cfa45b6',
  'Mirewatch/watcherSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Mossgate/firstGold': '4bb67357526e67e6cebc76c5f68d3724d44496fa4fa0af3b661369e6a7822232',
  'Mossgate/goalWatchPostCleared': '43dd83a2b12c44e8787c1d4915efd8d681e068d24c09d2f6481c7997d2ada8eb',
  'Mossgate/meadowOurs': 'dc24a3c61e63b2361437ecff16031829c4603c9cf3914b514de872c70ddb52e2',
- 'Ravensledge/captainDown': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Ravensledge/goalInnerKeepEntered': '457a1424f47049320d2f987087e3ab9988b1f0b77713ad34334d036446c9556d',
  'Ravensledge/shelfHeld': 'f3b5f12fb09cd6590ec8fe5d13f74cd7956b27e0a3bb9524b0a49ad2782cbef1',
  'Ravensledge/yardEntered': '9f57851e1a5a3e3b77dca2af5a58970e607f4f71b73268c2872e00d8b9eac1db',
- 'Saltmere/admiralFalls': 'c96e98ffdf3e6804c1011c44eb491c5380b0511c0097e4208292b74128f88dbd',
  'Saltmere/firstSalt': '44a33805891e8bde4816432f6122e61047c42e6a3206e750e684f084e0a8d625',
  'Saltmere/flatHeld': '013d7fc84c5e7c7c651d50bf9d20ed6116158743113badc7883dbbf4de2e0ce1',
  'Saltmere/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
- 'Saltmere/goalHeartSafe3BeforeAdmiralFalls': '3539faa948aae498e63ded7b84f4a1a1b58d95f29a3f61a48e88eba6161317c2',
+ 'Saltmere/goalHeartSafe3BeforeAdmiralFalls': '9ce58e2c16f4cadf0f062b96ccce4bed5d6475570bd17d6635eb680fa1d56c52',
  'Saltmere/portGatesTimeout': '461dcfa3ab8be3d790feeaaf6488d364908584efbd2cb9c4a0f0d4bebf5dc769',
  'Silverdeep/goalSilverdeepAllSpans': '416b30b15daccc2cc8efa057efa6a346d0ff60d754b4050adf781186638dc5ec',
  'Silverdeep/goalSilverdeepSpan1Path1After': '694e3bb32a4dad662193dfeb38ade55123d23d1197188182da6280353895482c',
@@ -483,7 +451,6 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a
  'Tinmoor/postACleared': 'dac3217efa10c0755d25613c88742aee86e44f9f96087c3fe996ec4d3e389fad',
  'Tinmoor/scoutSeams': 'b0046d533f6e970dbd28d295d8c86f436eafb42379ac010acd97b4cbe7587ac2',
  'Tinmoor/seamsFilled': '9cf34e5e445fe8b72c19705c624d55970832076f065272e785544ee60a0d46ea',
- 'Tinmoor/wardenDown': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'TwistingHalls/hallReached': '9e2ac4d840cc4b2cd6b37ea9260f16250976ae7ea3e0d5ae9563c5387778f0f9',
  'VarnsCrossing/crossingHeldGoal': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
  'VarnsCrossing/goalHeartLost2': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
@@ -497,8 +464,8 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalKillBeforeEscape': 'ddabf4e76b1a6c6388cb3a
  'Wraithwood/bothFallGoal': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
  'Wraithwood/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
  'Wraithwood/goalHeartSafe3BeforeBothFallGoal': 'f70d95a26645ff48ff76d89a9f3b38d12dd2439cd3004c3c25249ef2caf53e5d',
- 'Cinderhollow/goalHeartSafe1BeforeRivalHeartFalls': '72261b6e1a897402c27c01d339a576268aa58939eb72e41de9c88b8e29c2f812',
- 'Cinderhollow/goalHeartSafe1BeforeRivalHeartDown': 'b6d7002c1fcffaa18185d177955b81f6f612ba6e22c7356b448792085c34f3ec',
+ 'Cinderhollow/goalHeartSafe1BeforeRivalHeartFalls': 'a12e1cf1eb14e24570553adbda5435db3b00913f3fdfc8785131921f75b08957',
+ 'Cinderhollow/goalHeartSafe1BeforeRivalHeartDown': 'f70d95a26645ff48ff76d89a9f3b38d12dd2439cd3004c3c25249ef2caf53e5d',
  'Cinderhollow/goalHeartLost1': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
  'Lanternhill/goalHeartSafe3BeforeRivalHeartDown': 'f70d95a26645ff48ff76d89a9f3b38d12dd2439cd3004c3c25249ef2caf53e5d',
  'Lanternhill/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e'}
@@ -785,21 +752,26 @@ def check_level(level):
     return errors
 
 
-# Keep Ashby's existing escape route, and require death before escape without any location restriction.
+# Ashby's escape moved into the raid (RA8): she leads the last raid group, whose leader flight to the gate is the only
+# escape; no scripted wagon departure, escape region, escape defeat or death goal of hers may remain in the level.
 def ashcombe_escape_errors(text):
     errors = []
     blocks = {re.search(r"^Name\t([^\n]+)", b, re.M)[1]: b
               for b in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", text, re.S)}
-    completion = blocks.get("goalKillBeforeEscape", "")
-    conditions = [row for row in completion.splitlines() if row.startswith("Cond\t")]
-    if conditions != ["Cond\tevent\tLieslAshby\tkilled", "Cond\ttrigger\twardenEscaped\t0"]:
-        errors.append("Ashby must die before escape, without a location or departure prerequisite")
-    if "Cond\talive\tLieslAshby" not in blocks.get("wagonLeaves", ""):
-        errors.append("original departure must require Ashby alive")
-    if "Cond\treached\tLieslAshby\tregion\tExitRoad" not in blocks.get("wardenEscaped", ""):
-        errors.append("original escape destination differs")
-    if "Action\tlose\t1" not in blocks.get("wardenEscaped", ""):
-        errors.append("original escape defeat must remain")
+    if any("LieslAshby" in block.split() for block in blocks.values()):
+        errors.append("Ashby must not have a scripted escape, departure or death goal any more")
+    if any(name in blocks for name in ("wagonLeaves", "wardenEscaped", "goalKillBeforeEscape", "goalHoldOrRoadMissed")):
+        errors.append("the old wagon departure and escape triggers must be removed")
+    if re.search(r"^Region\tExitRoad\t", text, re.M):
+        errors.append("the old escape destination must be removed")
+    if any(row.startswith("Action\tlose\t") for block in blocks.values() for row in block.splitlines()):
+        errors.append("only the raid leader's flight to the gate may lose the level, no scripted escape defeat")
+    raid = [row.split("\t") for _, row in lines(section(text, "Raid"))] if "[Raid]" in text else []
+    groups = [row for row in raid if row[0] == "Group"]
+    if (not groups or groups[-1] != ["Group", str(len(groups)), "LieslAshby"]
+            or not any(row[0] == "Member" and row[1] == groups[-1][1] and row[4] == "LieslAshby" for row in raid)
+            or not any(row[0] == "EscapeShare" for row in raid)):
+        errors.append("Ashby must lead the last raid group, whose leader escape replaces her wagon escape")
     return errors
 
 
@@ -848,6 +820,45 @@ def mirewatch_errors(level):
     return errors
 
 
+# Check that the triggers, placed creatures and mission items the raid rebuild removed on purpose stay removed.
+def removed_content_errors(text, blocks, removed):
+    errors = []
+    for name in removed.get("triggers", []):
+        if name in blocks:
+            errors.append("removed trigger is still present: " + name)
+    placed = {row.split()[1] for _, row in lines(section(text, "Creatures"))} if removed.get("creatures") else set()
+    for name in removed.get("creatures", []):
+        if name in placed:
+            errors.append("removed creature still stands on the map: " + name)
+    for identity in removed.get("items", []):
+        if any(row.startswith(("Action\tstonecreate\t", "Action\tstonedrop\t", "Action\tstoneattach\t", "Cond\tdeliveredstone\t"))
+               and identity in row.split() for rows in blocks.values() for row in rows):
+            errors.append("removed mission item is still used: " + identity)
+    return errors
+
+
+# Check a worker-carried floor stone: it lies in its hidden discovery region, its discovery spawns no bearer for the
+# keeper (no added keeper creatures) and only its exact delivery to the heart gives the reviewed reward.
+def worker_stone_errors(text, blocks, identity, pickup):
+    errors = []
+    rows = blocks.get(pickup["discovery"], [])
+    x1, y1, x2, y2 = pickup["bounds"]
+    region = re.search(r"^Region\s+" + re.escape(pickup["region"]) + r"\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", text, re.M)
+    source = pickup["source"]
+    if ([row for row in rows if row.startswith("Cond\t")] != ["Cond\tregion\t%d\t%s" % (pickup["seat"], pickup["region"])]
+            or not region or list(map(int, region.groups())) != pickup["bounds"]
+            or not (x1 <= source[0] <= x2 and y1 <= source[1] <= y2) or "Mode\tonce" not in rows):
+        errors.append("worker-carried mission item must lie in its hidden discovery region: " + identity)
+    if any(row.startswith("Action\tspawn\t%d\t" % pickup["seat"]) for row in rows):
+        errors.append("worker-carried mission item must not spawn a bearer for the keeper: " + identity)
+    delivery = blocks.get(pickup["delivery"], [])
+    if ([row for row in delivery if row.startswith("Cond\t")] != ["Cond\tdeliveredstone\t" + identity]
+            or "Mode\tonce" not in delivery or pickup["reward"] not in delivery
+            or sum(row == pickup["reward"] for rows in blocks.values() for row in rows) != 1):
+        errors.append("worker-carried mission item delivery or reward differs: " + identity)
+    return errors
+
+
 # Validate reviewed grouped goals, continuous main observers and optional completion bindings.
 def grouped_goal_errors(text, level_name):
     review = GROUP_REVIEW.get(level_name, {})
@@ -868,8 +879,9 @@ def grouped_goal_errors(text, level_name):
                 actual[fields[3]] = fields
     if set(actual) != set(expected):
         errors.append("grouped objective set differs from reviewed matrix: " + level_name)
+    errors.extend(removed_content_errors(text, blocks, review.get("removed", {})))
     if not actual and not expected:
-        return []
+        return errors
     # Count the visible goals for each target seat, including shared declarations.
     target_seats = {row[2] for row in actual.values() if row[2] != "-1"} or {"-1"}
     for seat in target_seats:
@@ -946,10 +958,11 @@ def grouped_goal_errors(text, level_name):
             claimable = sum(candidate["tiles"][tile][0] in (1, 2, 7) for tile in candidate_area)
             if claimable < start.get("minimum_claimable_tiles", 0):
                 errors.append("selectable starting seat lacks claimable ground: " + str(start["seat"]))
-        # Friendly mission items start as one reachable floor object beside the original friendly spawn.
+        # Friendly mission items start as one reachable floor object beside the original friendly spawn; worker-carried
+        # floor stones (shards and bonus stones of the raid rebuild) lie in their hidden discovery region, spawn no bearer
+        # for the keeper and reward only their exact delivery.
         for identity, pickup in proof.get("mission_pickups", {}).items():
             source, target = tuple(pickup["source"]), tuple(pickup["destination"])
-            friendly = tuple(pickup["friendly_spawn"])
             create = "Action\tstonecreate\t" + "\t".join(map(str, (*source, identity, pickup["seat"], *target)))
             rows = blocks.get(pickup["discovery"], [])
             all_creations = [row for block_rows in blocks.values() for row in block_rows
@@ -957,12 +970,18 @@ def grouped_goal_errors(text, level_name):
             creation_rows = blocks.get(pickup.get("creation", pickup["discovery"]), [])
             if create not in creation_rows or all_creations != [create]:
                 errors.append("friendly mission item must have one exact floor creation: " + identity)
-            spawns = [row.split() for row in rows if row.startswith("Action\tspawn\t") and
-                      any("@" + pickup["friendly"] == "@" + token.rsplit("@", 1)[-1] for token in row.split()[6:] if "@" in token)]
-            if len(spawns) != 1 or list(map(int, spawns[0][3:5])) != list(friendly):
-                errors.append("friendly mission spawn was moved or removed: " + identity)
-            if abs(source[0] - friendly[0]) + abs(source[1] - friendly[1]) != 1:
-                errors.append("friendly mission item must lie beside its friendly creature: " + identity)
+            if pickup.get("carrier") == "worker":
+                errors.extend(worker_stone_errors(text, blocks, identity, pickup))
+            elif "friendly" in pickup:
+                friendly = tuple(pickup["friendly_spawn"])
+                spawns = [row.split() for row in rows if row.startswith("Action\tspawn\t") and
+                          any("@" + pickup["friendly"] == "@" + token.rsplit("@", 1)[-1] for token in row.split()[6:] if "@" in token)]
+                if len(spawns) != 1 or list(map(int, spawns[0][3:5])) != list(friendly):
+                    errors.append("friendly mission spawn was moved or removed: " + identity)
+                if abs(source[0] - friendly[0]) + abs(source[1] - friendly[1]) != 1:
+                    errors.append("friendly mission item must lie beside its friendly creature: " + identity)
+            else:
+                errors.append("mission item has neither a friendly bearer nor a worker carrier: " + identity)
             for tile in (source, target):
                 terrain = level["tiles"].get(tile)
                 if tile not in area or terrain is None or terrain[1] != 0 or terrain[0] in (4, 5):
@@ -1076,6 +1095,21 @@ def grouped_goal_errors(text, level_name):
             x1, y1, x2, y2 = footprint["bounds"]
             actual_tiles = {(x, y) for (x, y), (kind, fullness, _) in level["tiles"].items()
                             if x1 <= x <= x2 and y1 <= y <= y2 and fullness == 0 and kind not in (4, 5)}
+            # Only the exact unclaimable Moreya gate room of the raid seat may be left out of a floor footprint.
+            excluded = footprint.get("excluded_room")
+            if excluded:
+                gate_tiles = {tuple(tile) for tile in excluded["tiles"]}
+                room = next((room for room in level["rooms"] if room[1] == excluded["name"]), None)
+                if (room is None or room[0] != excluded["type"] or room[2] != excluded["seat"] or set(room[3]) != gate_tiles
+                        or excluded["seat"] == level["human"] or gate_tiles & expected_tiles):
+                    errors.append("excluded gate room of a floor footprint differs: " + footprint["goal"])
+                actual_tiles -= gate_tiles
+            # Fields dug open for the raid path were full ground in the original footprint; they are listed exactly,
+            # must be open reachable dry floor and are no part of the original footprint.
+            path_tiles = {tuple(tile) for tile in footprint.get("raid_path_tiles", [])}
+            if path_tiles - actual_tiles or path_tiles & expected_tiles or path_tiles - area:
+                errors.append("raid path fields of a floor footprint differ: " + footprint["goal"])
+            actual_tiles -= path_tiles
             if actual_tiles != expected_tiles or expected_tiles - area:
                 errors.append("original floor footprint differs or is unreachable: " + footprint["goal"])
             covered = set()
@@ -1468,9 +1502,11 @@ def self_test(root):
         assert old in trial
         assert grouped_goal_errors(trial.replace(old, new), name), (name, old)
     for name, old, new in (
-        ("Brackenford", "Cond\tregion\t1\tGrove\t>=\t2\t@fighters", "Cond\tregion\t1\tGrove\t>=\t2"),
-        ("Brackenford", "Cond\tevent\tElsaBrack\tattacked\t==\t0", "Cond\ttime\t0"),
-        ("Brackenford", "Action\tsetflag\tgroveAssembled\t1", "Action\tsetflag\tgroveAssembled\t0"),
+        ("Brackenford", "Cond\traid\tdefeated", "Cond\ttime\t0"),
+        ("Brackenford", "Action\tdiscover\tcampaign/Mossgate.level", "Action\tdiscover\tcampaign/SwarmNight.level"),
+        ("Brackenford", "Action\tstonecreate\t3\t24\tcellar-stone", "Action\tstonecreate\t3\t26\tcellar-stone"),
+        ("Brackenford", "Cond\tdeliveredstone\tcellar-stone", "Cond\ttime\t0"),
+        ("Brackenford", "Cond\tregion\t1\tCellar", "Cond\ttime\t0"),
         ("Brackenford", "gold\t2500", "gold\t250"),
         ("Brackenford", "Action\tspawn\t1\t12\t28\t-1\tGoblin:2\tGoblin:2", "Action\tspawn\t1\t12\t28\t-1\tDefaultWorker:2\tDefaultWorker:2"),
         ("Coldwell", "Cond\tminedregion\t1\tUndercroft\t>=\t600", "Cond\tmined\t1\t>=\t600"),
@@ -1481,8 +1517,9 @@ def self_test(root):
         assert grouped_goal_errors(candidate.replace(old, new), name), (name, old)
     tinmoor = (root / "levels/campaign/Tinmoor.level").read_text(encoding="utf-8")
     for old, new in (
-        ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\tvaultFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0"),
+        ("Action\tdiscover\tcampaign/CrowshotGallery.level", "Action\tdiscover\tcampaign/BoulderCourse.level"),
         ("Cond\tdeliveredstone\tvault-stone", "Cond\ttime\t0"),
+        ("Cond\traid\tdefeated", "Cond\ttime\t0"),
         ("Cond\tdeliveredstone\tvault-stone", "Cond\tcarryingstone\tVaultBearer"),
         ("Cond\tspawncleared\tpostAEntered\t1", "Cond\tspawncleared\tpostAEntered\t0"),
         ("Action\tstonecreate\t65\t50\tvault-stone\t1\t9\t46", "Action\tstonecreate\t66\t50\tvault-stone\t1\t9\t46")
@@ -1571,10 +1608,9 @@ def self_test(root):
         ("Cond\ttrapgone\tDoorWooden1", "Cond\ttrapgone\tDoorWooden2"),
         ("Cond\tclaimed\t1\tFen\t120", "Cond\tclaimed\t1\tFen\t40"),
         ("Cond\tslabs\t1\tManaSpring\tmanawell\t>=\t1", "Cond\ttime\t1"),
-        ("Cond\tdeliveredstone\thollow-stone", "Cond\ttime\t1"),
-        ("Cond\tdeliveredstone\thollow-stone", "Cond\tcarryingstone\tHollowBearer"),
+        ("[/Triggers]", "[Trigger]\nName\thollowFound\nMode\tonce\nCond\tregion\t1\tFen\nAction\tstonecreate\t5\t54\thollow-stone\t1\t12\t12\n[/Trigger]\n[/Triggers]"),
         ("gold\t1800", "gold\t100"),
-        ("Name\tmainStoneList\nMode\tonce\nCond\ttrigger\thollowFound", "Name\tmainStoneList\nMode\tonce\nCond\ttime\t0")
+        ("Cond\traid\tdefeated", "Cond\ttime\t0")
     ):
         assert old in hollin
         assert objective_errors(hollin.replace(old, new), "HollinFen"), old
@@ -1606,7 +1642,10 @@ def self_test(root):
     assert any("no initial named trap" in error for error in objective_errors(wrong_trap, "Ravensledge"))
     bellwick = (root / "levels/campaign/Bellwick.level").read_text(encoding="utf-8")
     assert not objective_errors(bellwick, "Bellwick"), "advisory hint must not renumber later IDs"
-    assert "objectiveid\t1\tbellwick-o03\t" in bellwick
+    assert "objectiveid\t1\tbellwick-o03\t" not in bellwick, "the removed survival goal must stay undeclared"
+    assert "objectiveid\t1\tbellwick-o04\t" in bellwick
+    revived_survival = bellwick.replace("Action\tobjectiveid\t1\tbellwick-o01\t", "Action\tobjectiveid\t1\tbellwick-o03\tSurvive.\nAction\tobjectiveid\t1\tbellwick-o01\t", 1)
+    assert any("fixed inventory: bellwick-o03" in error for error in objective_errors(revived_survival, "Bellwick"))
     assert "objectiveid\t1\tbellwick-o02\t" not in bellwick
     assert "Action\thint\t1\tHold the nave against the faithful." in bellwick
     legacy = (root / "levels/campaign/Campaign1.level").read_text(encoding="utf-8")
@@ -1652,10 +1691,15 @@ def self_test(root):
         assert any("conditions differ" in error for error in objective_errors(original_map.replace(needle, replacement), filename))
     ash = (root / "levels/campaign/Ashcombe.level").read_text(encoding="utf-8")
     assert not ashcombe_escape_errors(ash)
-    for replacement in ("Cond\tregion\t1\tHold", "Cond\tkilledin\tLieslAshby\tHold"):
-        assert ashcombe_escape_errors(ash.replace("Cond\tevent\tLieslAshby\tkilled\nCond\ttrigger\twardenEscaped\t0", replacement+"\nCond\ttrigger\twardenEscaped\t0"))
-    assert ashcombe_escape_errors(ash.replace("Cond\ttrigger\twardenEscaped\t0", "Cond\ttrigger\twagonLeaves"))
-    assert ashcombe_escape_errors(ash.replace("Cond\talive\tLieslAshby\n", ""))
+    for old, new in (
+            ("[/Triggers]", "[Trigger]\nName\twardenEscaped\nMode\tonce\nCond\treached\tLieslAshby\tregion\tHold\nAction\tlose\t1\n[/Trigger]\n[/Triggers]"),
+            ("[/Triggers]", "[Trigger]\nName\tgoalKillBeforeEscape\nMode\tonce\nCond\tevent\tLieslAshby\tkilled\n[/Trigger]\n[/Triggers]"),
+            ("Region\tBasin\t", "Region\tExitRoad\t60\t55\t64\t58\nRegion\tBasin\t"),
+            ("Group\t2\tLieslAshby", "Group\t2\t-"),
+            ("EscapeShare\t-\n", "")):
+        assert old in ash
+        assert ashcombe_escape_errors(ash.replace(old, new)), "Ashby's old escape must stay replaced by the raid: " + old
+    assert grouped_goal_errors(ash.replace("Cond\traid\tdefeated", "Cond\ttime\t0"), "Ashcombe")
     lantern = (root / "levels/campaign/Lanternhill.level").read_text(encoding="utf-8")
     assert not grouped_goal_errors(lantern, "Lanternhill")
     for needle, replacement in (
@@ -1707,19 +1751,15 @@ def self_test(root):
     for needle, replacement in (
             ("Cond\tflag\tgoalTerrace4\t1", "Cond\tregion\t1\tTerrace4"),
             ("Cond\tflag\tgoalTerrace3\t1", "Cond\tflag\tgoalTerrace3\t0"),
-            ("Cond\tkilledin\tHildeCairn\tHold", "Cond\tevent\tHildeCairn\tkilled"),
-            ("Cond\tdeliveredstone\tcairn-stone", "Cond\talive\tCairnBearer2"),
-            ("Cond\tdeliveredstone\tcairn-stone", "Cond\tcarryingstone\tCairnBearer"),
-            ("Cond\tflag\tbearerOut\t0", "Cond\tflag\tbearerOut\t1"),
+            ("Cond\traid\tdefeated", "Cond\ttime\t0"),
+            ("Cond\tobjective\t1\thighcairn-main-raid\treached", "Cond\ttime\t5"),
+            ("[/Triggers]", "[Trigger]\nName\tcairnStone\nMode\tonce\nCond\ttime\t3\nAction\tstonecreate\t5\t21\tcairn-stone\t1\t12\t60\n[/Trigger]\n[/Triggers]"),
             ("Cond\tobjective\t1\thighcairn-main-captain\treached", "Cond\tflag\tholdOpen\t1")):
         assert needle in high_grouped
         assert grouped_goal_errors(high_grouped.replace(needle, replacement), "Highcairn"), "Highcairn requirement weakening must fail: " + needle
     high_retry = (root / "levels/campaign/Highcairn.level").read_text(encoding="utf-8")
-    for needle, replacement in (
-            ("Cond\tevent\tCairnBearer2\tcreated\t==\t0", "Cond\talive\tCairnBearer2\t0"),
-            ("Name\tcarrierRecovery\nMode\trepeat\t0", "Name\tcarrierRecovery\nMode\tonce")):
-        assert needle in high_retry
-        assert grouped_goal_errors(high_retry.replace(needle, replacement), "Highcairn"), "replacement must retry only when its exact name is free"
+    revived_carrier = high_retry.replace("[/Triggers]", "[Trigger]\nName\tcarrierRecovery\nMode\trepeat\t0\nCond\ttime\t5\n[/Trigger]\n[/Triggers]")
+    assert any("removed trigger is still present: carrierRecovery" in error for error in grouped_goal_errors(revived_carrier, "Highcairn"))
     skittle = (root / "levels/campaign/SkittleCavern.level").read_text(encoding="utf-8")
     assert not grouped_goal_errors(skittle, "SkittleCavern")
     for needle, replacement in (
@@ -1743,23 +1783,22 @@ def self_test(root):
         assert needle in storm
         assert grouped_goal_errors(storm.replace(needle, replacement), "Stormhaven"), "Stormhaven requirement weakening must fail: " + needle
     cinder = (root / "levels/campaign/Cinderhollow.level").read_text(encoding="utf-8")
-    wave_status = next(block for block in re.findall(r"\[Trigger\](.*?)\[/Trigger\]", cinder, re.S) if "Name\tgoalThreeWavesDefeatedAtHeart\n" in block)
-    assert "atheart" not in wave_status
-    for source, action in (("waveOne", 2), ("waveTwo", 2), ("waveThree", 2), ("waveThree", 3)):
-        exact = "Cond\tspawncleared\t" + source + "\t" + str(action)
-        assert exact in wave_status
-        assert objective_errors(cinder.replace(exact + "\n", exact + "\tatheart\t1\n"), "Cinderhollow"), "intercepting a wave away from the heart must remain valid"
-        assert objective_errors(cinder.replace(exact + "\n", "Cond\tcreatures\t3\t<=\t0\n"), "Cinderhollow"), "only actual deaths of each exact wave count"
+    assert "spawncleared\twave" not in cinder and "Name\tgoalThreeWavesDefeatedAtHeart\n" not in cinder
+    for wave in ("waveOne", "waveTwo", "waveThree"):
+        revived_wave = cinder.replace("[/Triggers]", "[Trigger]\nName\t" + wave + "\nMode\tonce\nCond\ttime\t420\n[/Trigger]\n[/Triggers]")
+        assert any("removed trigger is still present: " + wave in error for error in objective_errors(revived_wave, "Cinderhollow")), "the waves must stay replaced by the raid"
     cinder_grouped = (root / "levels/campaign/Cinderhollow.level").read_text(encoding="utf-8")
     assert not grouped_goal_errors(cinder_grouped, "Cinderhollow")
     for needle, replacement in (
             ("Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge", "Cond\tregion\t1\tRivalCrater"),
             ("Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge", "Cond\tcrossed\t1\tDawnCauseway\tnorth"),
             ("Cond\tslabs\t-1\tGoalSouthGoldSeam\tgold\t==\t0", "Cond\tmined\t1\t>=\t700"),
-            ("Cond\tspawncleared\twaveThree\t3", "Cond\tcreatures\t3\t<=\t0"),
+            ("Cond\traid\tdefeated", "Cond\ttime\t0"),
+            ("Action\tstonecreate\t44\t73\tash-stone", "Action\tstonecreate\t44\t60\tash-stone"),
+            ("Action\tdiscover\tcampaign/SwarmNight.level", "Action\tdiscover\tcampaign/TwistingHalls.level"),
             ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tdefeated\t2"),
             ("Action\tterrain\t55\t31\t55\t34\tbridge\t1", "Action\tterrain\t55\t31\t55\t33\tbridge\t1"),
-            ("Cond\ttrigger\tdawn\nCond\tgoalmet", "Cond\ttime\t420\nCond\tgoalmet")):
+            ("Cond\tobjective\t1\tcinderhollow-main-raid\treached", "Cond\ttime\t5")):
         assert needle in cinder_grouped
         assert grouped_goal_errors(cinder_grouped.replace(needle, replacement), "Cinderhollow"), "Cinderhollow requirement weakening must fail: " + needle
     goldspire = (root / "levels/campaign/Goldspire.level").read_text(encoding="utf-8")
@@ -1770,11 +1809,20 @@ def self_test(root):
             ("Cond\tflag\tmainGateCrossed\t1", "Cond\ttrigger\tsouthGateOpens"),
             ("Cond\tcrossed\t1\tMainWestLink\tnorth\tafter\tlinksReady", "Cond\tcrossed\t1\tMainWestLink\tnorth"),
             ("Cond\tflag\tmainEastCrossed\t1", "Cond\ttrigger\tlinksOpen"),
-            ("Cond\tkilledin\tAlaricPenn\tOuterRing", "Cond\talive\tAlaricPenn\t0"),
-            ("Cond\ttrigger\tpennVaultOpened", "Cond\talive\tAlaricPenn\t0"),
+            ("Cond\traid\tdefeated", "Cond\ttime\t0"),
+            ("Cond\ttrigger\tpennVaultOpened", "Cond\talive\tVaultCaptain\t0"),
+            ("Cond\tgroundclaimed\t1\t41\t66\t45\t66", "Cond\tgroundclaimed\t1\t41\t66\t44\t66"),
+            ("10\tMoreyaGate1\t3\t9", "10\tMoreyaGate1\t2\t9"),
             ("Cond\tregion\t1\tWestWing", "Cond\tregion\t1\tYard")):
         assert needle in goldspire
         assert grouped_goal_errors(goldspire.replace(needle, replacement), "Goldspire"), "Goldspire requirement weakening must fail: " + needle
+    filled_path = goldspire.replace("\n42\t74\t1\t0\n", "\n42\t74\t1\t100\n", 1)
+    assert filled_path != goldspire
+    assert any("raid path fields of a floor footprint differ" in error for error in grouped_goal_errors(filled_path, "Goldspire"))
+    moved_gate = goldspire.replace("10\tMoreyaGate1\t3\t9", "10\tMoreyaGate1\t2\t9", 1)
+    assert any("excluded gate room of a floor footprint differs" in error for error in grouped_goal_errors(moved_gate, "Goldspire"))
+    revived_penn = goldspire.replace("[/Creatures]","3\tAlaricPenn\tKnight.mesh\t48\t30\t0\tKnight\t6\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n[/Creatures]", 1)
+    assert any("removed creature still stands on the map: AlaricPenn" in error for error in grouped_goal_errors(revived_penn, "Goldspire"))
     mire = (root / "levels/campaign/Mirewatch.level").read_text(encoding="utf-8")
     assert not grouped_goal_errors(mire, "Mirewatch")
     assert not mirewatch_errors(parse_level(mire))
@@ -1793,7 +1841,8 @@ def self_test(root):
     for needle, replacement in (
             ("Cond\tcrossed\t1\tNave\tnorth", "Cond\tregion\t1\tTransept"),
             ("Cond\tcrossed\t1\tNave\tnorth", "Cond\tcrossed\t2\tNave\tnorth"),
-            ("Cond\tflag\tgatesOpen\t1", "Cond\ttime\t5"),
+            ("Cond\traid\tdefeated", "Cond\ttime\t0"),
+            ("Action\tterrain\t24\t28\t26\t28\tpath", "Action\tterrain\t24\t28\t25\t28\tpath"),
             ("Action\tterrain\t48\t29\t48\t31\tpath", "Action\tterrain\t48\t29\t48\t30\tpath"),
             ("Cond\troomtiles\t2\tDungeonTemple\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
             ("Cond\tregion\t1\tScriptorium", "Cond\tregion\t1\tWestCloister")):
@@ -1841,8 +1890,8 @@ def self_test(root):
             ("Cond\theld\t1\tHuntsmanBrann", "Cond\talive\tHuntsmanBrann"),
             ("Cond\theld\t1\tSquireWick", "Cond\tflag\tchampions\t==\t3"),
             ("Cond\tcreaturesatheart\t1\t>=\t12", "Cond\tcreatures\t1\t>=\t12"),
-            ("Cond\tevent\tPrinceAurel\tkilled", "Cond\talive\tPrinceAurel\t0"),
-            ("Cond\tcreatures\t3\t<=\t0", "Cond\tcreatures\t2\t<=\t0"),
+            ("Cond\traid\tdefeated", "Cond\ttime\t0"),
+            ("Cond\tobjective\t1\tkingsfall-main-raid\treached", "Cond\ttime\t5"),
             ("Cond\tcrossed\t1\tMainMiddleSpan\tnorth", "Cond\tregion\t1\tCentre"),
             ("Cond\tmined\t1\t>=\t4000", "Cond\tmined\t1\t>=\t3000")):
         assert needle in kings
@@ -1854,7 +1903,8 @@ def self_test(root):
             ("Cond\tflag\tmainLowerProof\t1", "Cond\ttime\t900"),
             ("Cond\tevent\tGatewarden8\tkilled", "Cond\talive\tGatewarden8\t0"),
             ("Cond\troomclaimed\t1\t14\t64\t17\t65", "Cond\tregion\t1\tWestTower1"),
-            ("Cond\tkilledin\tCastellanKing\tThroneHall", "Cond\talive\tCastellanKing\t0"),
+            ("Cond\traid\tdefeated", "Cond\ttime\t0"),
+            ("Cond\troomclaimed\t1\t8\t42\t10\t43", "Cond\troomclaimed\t1\t12\t42\t14\t43"),
             ("Cond\ttrigger\ttower2", "Cond\ttime\t5"),
             ("Cond\tregion\t1\tWestTower3", "Cond\tregion\t1\tWestTower1")):
         assert needle in hollow
@@ -1903,7 +1953,7 @@ def self_test(root):
     for map_name, owner, identity, target in (
             ("Ebonrook", "SabineRook", "rook-key", "1\t36\t93"),
             ("Mirewatch", "MoraFenwick", "watch-key", "1\t96\t20"),
-            ("Goldspire", "AlaricPenn", "treasurer-key", "1\t48\t30"),
+            ("Goldspire", "VaultCaptain", "treasurer-key", "1\t48\t30"),
             ("Silverdeep", "DorianSilt", "silver-vault-key", "1\t80\t89"),
             ("Kingsfall", "HuntsmanBrann", "cache-key", "1\t88\t20"),
             ("Greywater", "SluiceWarden", "sluice-key", "1\t40\t18"),
@@ -1918,6 +1968,54 @@ def self_test(root):
                  "Action\tstonedrop\t" + owner + "\t" + identity + "\t1\t0\t0")):
             assert old in source
             assert grouped_goal_errors(source.replace(old, new), map_name), "Wrong item, KO or wrong destination must fail"
+    # Worker-carried floor stones: hidden region, no bearer for the keeper, exact delivery and reward.
+    for map_name, identity, create in (
+            ("Brackenford", "cellar-stone", "Action\tstonecreate\t3\t24\tcellar-stone\t1\t9\t38"),
+            ("Coldwell", "larder-shard", "Action\tstonecreate\t52\t21\tlarder-shard\t1\t10\t9"),
+            ("Greywater", "gallery-shard", "Action\tstonecreate\t52\t55\tgallery-shard\t1\t9\t76"),
+            ("Cinderhollow", "ash-stone", "Action\tstonecreate\t44\t73\tash-stone\t1\t16\t61"),
+            ("Bellwick", "bell-stone", "Action\tstonecreate\t10\t102\tbell-stone\t1\t32\t108"),
+            ("VarnsCrossing", "ember-stone", "Action\tstonecreate\t3\t73\tember-stone\t1\t14\t80")):
+        source = (root / "levels/campaign" / (map_name + ".level")).read_text(encoding="utf-8")
+        assert create in source
+        assert not any(identity in error for error in grouped_goal_errors(source, map_name)), identity
+        pickup = GROUP_REVIEW[map_name]["reachability"]["mission_pickups"][identity]
+        for old, new, expected in (
+                (create, "Action\tspawn\t1\t%d\t%d\t1\tGoblin:1@StoneBearer\n" % tuple(pickup["source"]) + create, "must not spawn a bearer"),
+                (create, create + "\n" + create, "one exact floor creation"),
+                ("Cond\tdeliveredstone\t" + identity, "Cond\tcarryingstone\t" + identity, "delivery or reward differs"),
+                (pickup["reward"], "Action\tmessage\t1\tNo reward.", "delivery or reward differs"),
+                ("Cond\tregion\t1\t" + pickup["region"] + "\n", "Cond\ttime\t0\n", "hidden discovery region"),
+                ("Region\t" + pickup["region"] + "\t", "Region\t" + pickup["region"] + "Moved\t0\t0\t0\t0\nRegion\t" + pickup["region"] + "Old\t", "hidden discovery region"),
+                ("A mysterious stone has been discovered.", "A stone lies here.", "approved wording")):
+            assert old in source, (map_name, old)
+            assert any(expected in error for error in grouped_goal_errors(source.replace(old, new), map_name)), (map_name, expected)
+    bearerless = json.loads(json.dumps(GROUP_REVIEW["Brackenford"]["reachability"]["mission_pickups"]["cellar-stone"]))
+    bearerless.pop("carrier")
+    GROUP_REVIEW["Brackenford"]["reachability"]["mission_pickups"]["cellar-stone"] = bearerless
+    brack = (root / "levels/campaign/Brackenford.level").read_text(encoding="utf-8")
+    try:
+        assert any("neither a friendly bearer nor a worker carrier" in error for error in grouped_goal_errors(brack, "Brackenford"))
+    finally:
+        bearerless["carrier"] = "worker"
+    # Removed warden goals, waves and items stay removed.
+    for map_name, old, new, expected in (
+            ("Saltmere", "[/Triggers]", "[Trigger]\nName\tadmiralFalls\nMode\tonce\nCond\ttime\t5\n[/Trigger]\n[/Triggers]", "removed trigger is still present: admiralFalls"),
+            ("VarnsCrossing", "[/Triggers]", "[Trigger]\nName\tcolumn1\nMode\tonce\nCond\ttime\t300\n[/Trigger]\n[/Triggers]", "removed trigger is still present: column1"),
+            ("HollowmarkCitadel", "[/Triggers]", "[Trigger]\nName\tmuster1\nMode\tonce\nCond\ttime\t300\n[/Trigger]\n[/Triggers]", "removed trigger is still present: muster1"),
+            ("Kingsfall", "[/Triggers]", "[Trigger]\nName\thorn1\nMode\tonce\nCond\ttime\t300\n[/Trigger]\n[/Triggers]", "removed trigger is still present: horn1"),
+            ("Bellwick", "[/Triggers]", "[Trigger]\nName\tfaithful1\nMode\tonce\nCond\ttime\t240\n[/Trigger]\n[/Triggers]", "removed trigger is still present: faithful1"),
+            ("Goldspire", "[/Triggers]", "[Trigger]\nName\ttreasurerHurt\nMode\tonce\nCond\ttime\t5\n[/Trigger]\n[/Triggers]", "removed trigger is still present: treasurerHurt")):
+        source = (root / "levels/campaign" / (map_name + ".level")).read_text(encoding="utf-8")
+        assert old in source
+        assert any(expected in error for error in grouped_goal_errors(source.replace(old, new), map_name)), expected
+    for map_name, identity in (("Saltmere", "saltmere-o01"), ("Kingsfall", "kingsfall-o02"), ("Goldspire", "goldspire-o05"),
+                               ("HollinFen", "hollinfen-o04"), ("Highcairn", "highcairn-o05"), ("Cinderhollow", "cinderhollow-o03"),
+                               ("HollowmarkCitadel", "hollowmarkcitadel-o01"), ("Ashcombe", "ashcombe-o03")):
+        source = (root / "levels/campaign" / (map_name + ".level")).read_text(encoding="utf-8")
+        assert "\t" + identity + "\t" not in source
+        revived = source.replace("[/Triggers]", "[Trigger]\nName\trevived\nMode\tonce\nCond\ttime\t3\nAction\tobjectiveid\t1\t" + identity + "\tOld goal.\n[/Trigger]\n[/Triggers]")
+        assert any("fixed inventory: " + identity in error for error in objective_errors(revived, map_name)), identity
     print("campaign playability self-test passed")
 
 

@@ -15,11 +15,8 @@ File: `levels/campaign/Ashcombe.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3286 | `Action	objectiveid	1	ashcombe-o01	Kill Ashby before she escapes.` | yes |
-| Script line 3287 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin.` | yes |
-| Script line 3317 | `Action	objectiveid	1	ashcombe-o03	Kill Ashby before she escapes.` | yes |
-| Script line 3423 | `Action	win	1` | yes |
-| Script line 3479 | `Action	win	1` | yes |
+| Script line 3440 | `Action	objectiveid	1	ashcombe-o02	Cross the ash basin.` | yes |
+| Script line 3553 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -27,30 +24,25 @@ File: `levels/campaign/Ashcombe.level`.
 | --- | --- | --- |
 | main | `ashcombe-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `ashcombe-main-basin`: Cross the ash basin. | `mainBasin`: Cond	crossed	1	Basin	north |
-| main | `ashcombe-main-warden`: Kill Ashby before escape and defeat her forces. | `mainWarden`: Cond	event	LieslAshby	killed; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies |
+| main | `ashcombe-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `ashcombe-extra-ruins`: Explore the old mill ruins. | `extraRuins`: Cond	region	1	RuinYard |
 
 Possible route (static, not a playthrough):
 - Protect the original heart throughout the mission.
 - Cross Basin (24,28)-(68,54) northwards with one living owned creature. A dry or removable corridor along x24 connects y55 to y27; visiting Hold is not a substitute.
 - Optionally enter RuinYard (12,16)-(30,28) before the last main goal; 166 original open dry fields are potentially reachable.
-- Kill LieslAshby before she reaches ExitRoad (60,55)-(64,58). Death inside Hold or anywhere on the road counts; no prior wagon departure is required. Preserve the original 300-second departure after Approach and its original route.
-- Defeat all remaining enemy creatures and portals before the final main objective. The original four patrol schedules and hold/approach reinforcements remain unchanged.
+- Defeat both raid groups of the Burnt Wheel with their leader LieslAshby, who come through the Moreya gate at (46,12). Her old wagon escape, ExitRoad and the scripted defeat are gone; the raid leader's own flight to the gate replaces them.
+- The four timed ember patrols are gone; the hold and approach guards stay phase-1 enemies with their original region triggers and spawns.
 
 Static geometry and source conditions are not a combat or timing playthrough; the original escape and optional exploration still require runtime verification.
 
-| Trigger `goalKillBeforeEscape` | `Action	objectivestate	1	ashcombe-o03	reached`; conditions: `Cond	event	LieslAshby	killed; Cond	trigger	wardenEscaped	0` | yes |
-| Trigger `goalHoldOrRoadMissed` | `Action	objectivestate	1	ashcombe-o03	failed`; conditions: `Cond	reached	LieslAshby	region	ExitRoad; Cond	objective	1	ashcombe-o03	open` | yes |
-| Trigger `wardenEscaped` | `Action	objectivestate	1	ashcombe-o01	failed`; conditions: `Cond	reached	LieslAshby	region	ExitRoad` | yes |
 | Trigger `goalBasinCrossed` | `Action	objectivestate	1	ashcombe-o02	reached`; conditions: `Cond	crossed	1	Basin	north` | yes |
-| Trigger `wardenDown` | `Action	objectivestate	1	ashcombe-o01	reached`; conditions: `Cond	event	LieslAshby	killed` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	ashcombe-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainBasin` | `Action	objectivestate	1	ashcombe-main-basin	reached`; conditions: `Cond	crossed	1	Basin	north` | yes |
-| Trigger `mainWarden` | `Action	objectivestate	1	ashcombe-main-warden	reached`; conditions: `Cond	event	LieslAshby	killed; Cond	trigger	wardenEscaped	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	ashcombe-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraRuins` | `Action	objectivestate	1	ashcombe-extra-ruins	reached`; conditions: `Cond	region	1	RuinYard` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	ashcombe-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Trigger `mainAshbyEscaped` | `Action	objectivestate	1	ashcombe-main-warden	failed`; conditions: `Cond	trigger	wardenEscaped` | yes |
-| Briefing | Cross the ashes and kill her before she escapes, whether in the hold or on the south road. | yes: actual northward Basin crossing, actual Ashby death before escape regardless of location, remaining enemy forces and own-heart protection |
+| Briefing | Cross the ashes and kill her before she escapes, whether in the hold or on the south road. | no: actual northward Basin crossing and own-heart protection are checked; Ashby leads the raid, mainRaid requires the defeated raid and only her flight to the gate loses, the hold and south road escape is removed |
 Mario decided: kill Ashby before she escapes, regardless of location. Actual death and no fired escape trigger are required; departure and a hold visit are not prerequisites or substitutes.
 
 ## Bellwick
@@ -72,17 +64,18 @@ File: `levels/campaign/Bellwick.level`.
 
 | Group | Goal | Current completion conditions |
 | --- | --- | --- |
-| main | `bellwick-main-heart`: Protect your heart until both north gates open. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	gatesOpen	1 |
+| main | `bellwick-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `bellwick-main-nave`: Pass through the nave to the transept. | `mainNave`: Cond	crossed	1	Nave	north |
 | main | `bellwick-main-keeper`: Destroy the undercroft heart and all enemy forces. | `mainKeeper`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| main | `bellwick-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `bellwick-extra-scriptorium`: Explore the western scriptorium. | `extraScriptorium`: Cond	region	1	Scriptorium |
 
 Possible route (static, not a playthrough):
-- Protect the own heart through both north-gate openings and until victory. Preserve original alternatives:12credited kills or1500seconds. Both exact terrain gate actions and gatesOpen1 remain unchanged; no new deadline.
+- Protect the own heart until victory. The north gates still open after 12 credited kills or 1500 seconds; the opening now clears row 28 above the Moreya gate (24..26,29..31).
 - Walk the same own living creature north from the south bank y89 through the full Nave(20..30,66..88)to y65 inside original Transept. A transept visit via a side cloister or mixed visitors does not count. A concrete potential route runs x20/y89..65,24steps with21removable dirt fields. This is not claimed to be initially open or actually played. Any legal internal path qualifies.
 - Destroy the actual original undercroft DungeonTemple2,footprint(28..32,10..14),and remaining enemy forces/portals. Mere seat2creature emptiness is insufficient.
 - Optionally enter western Scriptorium(4,34)-(22,48),161reachable open dry fields. No new reward. The advice to hold the nave remains a hint, while actual survival to the existing gate milestone is a separate main duty.
-- Preserve all nine faithful waves, crypt gifts, gate alternatives, mana spring and terrain. Move the unchanged duplicate victory sentence to one final completion after all current main observers; old win requests remain pending.
+- The nine timed faithful waves are gone (the gate replaces them). Defeat the raid of the Silent Bell and its leader LorensBell. After optional discovery of StoneChamber, a worker carries bell-stone from (10, 102) to the own heart at (32, 108); its delivery reveals BoulderCourse.
 
 Static source and potential route evidence only; actual digging/movement, combat, gate timing and save/load remain for runtime verification.
 
@@ -94,48 +87,8 @@ Static source and potential route evidence only; actual digging/movement, combat
 | Trigger `mainKeeper` | `Action	objectivestate	1	bellwick-main-keeper	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	bellwick-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraScriptorium` | `Action	objectivestate	1	bellwick-extra-scriptorium	reached`; conditions: `Cond	region	1	Scriptorium` | yes |
-| Objective mapping | grouped status conditions differ from reviewed conditions: mainHeart | no: requires design decision |
-| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
-| Objective mapping | required stable objective ID is missing: bellwick-o03 | no: requires design decision |
-| Objective mapping | grouped objective set differs from reviewed matrix: Bellwick | no: requires design decision |
-| Objective mapping | grouped goal differs from approved definition: bellwick-main-heart | no: requires design decision |
-| Objective mapping | grouped completion conditions differ: bellwick-main-heart | no: requires design decision |
-| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
-| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful1 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful2 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful3 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful4 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful5 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful6 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful7 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful8 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: faithful9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: tolling | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: faithful9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: naveGatesKills | no: requires design decision |
-| Objective mapping | original trial limit was changed: naveGatesKills | no: requires design decision |
-| Objective mapping | original trial limit was changed: naveGatesLate | no: requires design decision |
-| Objective mapping | original trial limit was changed: naveGatesLate | no: requires design decision |
-| Objective mapping | victory narration must occur exactly once after current main goals | no: requires design decision |
-| Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | yes: heart protected through the unchanged two-gate opening alternatives, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes |
+| Objective mapping | grouped observer mode differs: bellwick-main-raid | no: requires design decision |
+| Briefing | Hold against the faithful until the north gates unseal, then destroy the undercroft heart. | no: own heart protected, actual full nave-to-transept crossing and undercroft heart destroyed with all remaining foes; holding against the faithful until the gates unseal is no longer checked, the faithful waves are removed |
 
 ## Bonus1
 
@@ -265,7 +218,7 @@ File: `levels/campaign/Brackenford.level`.
 
 Possible route (static, not a playthrough):
 - Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.
-- Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.
+- Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28).
 - Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.
 - Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.
 - Claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.
@@ -287,10 +240,8 @@ Static footprint/resource/order checks are not an executed playthrough or a comb
 | Trigger `raidDefeated` | `Action	objectivestate	1	brackenford-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	brackenford-extra-gold	reached`; conditions: `Cond	mined	1	>=	500` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	brackenford-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Objective mapping | objective completion differs from reviewed trigger mapping: brackenford-o01 | no: requires design decision |
-| Objective mapping | objective completion differs from reviewed trigger mapping: brackenford-o06 | no: requires design decision |
-| Briefing | Build beds and a hatchery, claim the grove and gather your creatures. | yes: mainHome checks two beds and a hatchery coop; groveAssembly counts two living nonworkers before Brack is attacked |
-| Briefing | Cross the ford and kill the warden in her keep. | yes: mainFord checks the actual ford route and guards; mainKeep checks Brack, remaining enemies and all 64 original Keep floor tiles |
+| Briefing | Build beds and a hatchery, claim the grove and gather your creatures. | no: mainHome checks two beds and a hatchery coop and mainGrove 22 claimed Grove tiles; gathering creatures is no longer checked (the rally before Brack is dropped) |
+| Briefing | Cross the ford and kill the warden in her keep. | no: mainFord checks the actual ford route and guards and mainKeep all 64 original Keep floor tiles; the warden no longer stands in her keep, mainRaid requires the defeated raid with its leader ElsaBrack |
 
 ## Campaign1
 
@@ -404,56 +355,54 @@ File: `levels/campaign/Cinderhollow.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5090 | `Action	objectiveid	1	cinderhollow-o01	Survive until dawn, then defeat the rival keeper.` | yes |
-| Script line 5091 | `Action	objectiveid	1	cinderhollow-o02	Empty both starting gold seams: west and south.` | yes |
-| Script line 5092 | `Action	objectiveid	1	cinderhollow-o03	Defeat all three waves at your heart.` | yes |
-| Script line 5093 | `Action	objectiveid	1	cinderhollow-o04	After dawn, cross the lava bridge to the crater.` | yes |
-| Script line 5178 | `Action	objectiveid	1	cinderhollow-o05	Destroy the heart in the north-east crater.` | yes |
-| Script line 5194 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5256 | `Action	win	1` | yes |
-| Script line 5262 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 5264 | `Action	win	1` | yes |
-| Script line 5287 | `Action	win	1` | yes |
-| Script line 5367 | `Action	win	1` | yes |
+| Script line 5148 | `Action	objectiveid	1	cinderhollow-o01	Defeat the rival keeper.` | yes |
+| Script line 5149 | `Action	objectiveid	1	cinderhollow-o02	Empty both starting gold seams: west and south.` | yes |
+| Script line 5150 | `Action	objectiveid	1	cinderhollow-o04	Cross the lava bridge to the crater.` | yes |
+| Script line 5204 | `Action	objectiveid	1	cinderhollow-o05	Destroy the heart in the north-east crater.` | yes |
+| Script line 5218 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5270 | `Action	win	1` | yes |
+| Script line 5275 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 5278 | `Action	win	1` | yes |
+| Script line 5293 | `Action	win	1` | yes |
+| Script line 5383 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
 | Group | Goal | Current completion conditions |
 | --- | --- | --- |
-| main | `cinderhollow-main-heart`: Protect your heart until dawn and victory. | `mainHeart`: Cond	trigger	dawn; Cond	goalmet	1	ProtectDungeonTemple |
+| main | `cinderhollow-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `cinderhollow-main-seams`: Empty both starting gold seams: west and south. | `mainSeams`: Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0 |
-| main | `cinderhollow-main-waves`: Defeat all three attacking waves. | `mainWaves`: Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3 |
-| main | `cinderhollow-main-bridge`: After dawn, cross the lava bridge to the crater. | `mainBridge`: Cond	crossed	1	DawnCauseway	north	after	lavaBridge |
+| main | `cinderhollow-main-bridge`: Cross the lava bridge to the crater. | `mainBridge`: Cond	crossed	1	DawnCauseway	north	after	lavaBridge |
 | main | `cinderhollow-main-rival`: Destroy the rival heart and all enemy forces. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| main | `cinderhollow-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `cinderhollow-extra-cave`: Explore the southern creature cave. | `extraCave`: Cond	region	1	SouthCave |
 
 Possible route (static, not a playthrough):
-- Keep the own heart through original dawn at1800seconds and until final victory. Original waves at420,900,1350seconds and the1800second post-dawn limit remain unchanged.
+- Keep the own heart until final victory. The three timed waves, the dawn deadline and the post-dawn limit are gone; dawn at 1800 seconds still wakes the rival keeper's pack.
 - Fully exhaust exactly the two original finite starting seams:west x5..6/y55..58,south x30..33/y72..73,16gold fields total. No420second mining deadline and no unrelated gold threshold. Existing cinder_seam_errors binds original vein positions and finite material.
-- Defeat actual instances from waveOne action2,waveTwo action2,waveThree actions2and3. Every actual creature must die; KO is not death and interception away from heart tiles is valid. Heart survival is separate.
-- After lavaBridge fires at1800seconds, walk one own living creature north from dry bank(55,35)through all four generated causeway fields(55,34..31)to dry crater bank(55,30). A visitor, earlier flight or different creatures on the two banks does not count. The exact original time-gated terrain bridge action is preserved.
+- Defeat both raid groups of the Ember Ram with their leader PellAshgrove, who come through the Moreya gate at (70,50).
+- After lavaBridge raises the causeway at 3 seconds, walk one own living creature north from dry bank (55,35) through all four generated causeway fields (55,34..31) to dry crater bank (55,30). A visitor, earlier flight or different creatures on the two banks does not count.
 - Destroy the actual rival DungeonTemple of seat2 and remaining enemies/portals. Optional SouthCave visit has61reachable open dry fields.
-- The existing final rival-heart victory sentence is emitted once after all five current main goals; premature alternate victory sentences are suppressed without replacement story words. Original three win requests remain pending.
+- The rival-heart victory sentence is emitted once after all five current main goals. After optional discovery of AshPocket, a worker carries ash-stone from (44, 73) to the own heart at (16, 61); its delivery reveals SwarmNight.
 
 Static seam/wave-source/bank/bridge-action evidence only; real mining, battle, generated-bridge traversal, timers and save/load require runtime verification.
 
 | Trigger `goalBothFiniteSeamsMined` | `Action	objectivestate	1	cinderhollow-o02	reached`; conditions: `Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0` | yes |
-| Trigger `goalHeartSafe1BeforeRivalHeartDown` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	time	1800; Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
-| Trigger `goalHeartSafe1BeforeRivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	time	1800; Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `goalHeartSafe1BeforeRivalHeartDown` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `goalHeartSafe1BeforeRivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o01	reached`; conditions: `Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalCraterAfterBridge` | `Action	objectivestate	1	cinderhollow-o04	reached`; conditions: `Cond	flag	goalDawnBridgeCrossed	1; Cond	region	1	RivalCrater` | yes |
-| Trigger `goalThreeWavesDefeatedAtHeart` | `Action	objectivestate	1	cinderhollow-o03	reached`; conditions: `Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3` | yes |
 | Trigger `goalHeartLost1` | `Action	objectivestate	1	cinderhollow-o01	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
-| Trigger `rivalHeartDown` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	time	1800; Cond	goal	1	KillAllEnemies` | yes |
-| Trigger `rivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	time	1800; Cond	defeated	2` | yes |
+| Trigger `rivalHeartDown` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	objective	1	cinderhollow-main-raid	reached` | yes |
+| Trigger `rivalHeartFalls` | `Action	objectivestate	1	cinderhollow-o05	reached`; conditions: `Cond	defeated	2; Cond	objective	1	cinderhollow-main-raid	reached` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	cinderhollow-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Trigger `mainHeart` | `Action	objectivestate	1	cinderhollow-main-heart	reached`; conditions: `Cond	trigger	dawn; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `mainHeart` | `Action	objectivestate	1	cinderhollow-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainSeams` | `Action	objectivestate	1	cinderhollow-main-seams	reached`; conditions: `Cond	slabs	-1	GoalWestGoldSeam	gold	==	0; Cond	slabs	-1	GoalSouthGoldSeam	gold	==	0` | yes |
-| Trigger `mainWaves` | `Action	objectivestate	1	cinderhollow-main-waves	reached`; conditions: `Cond	spawncleared	waveOne	2; Cond	spawncleared	waveTwo	2; Cond	spawncleared	waveThree	2; Cond	spawncleared	waveThree	3` | yes |
 | Trigger `mainBridge` | `Action	objectivestate	1	cinderhollow-main-bridge	reached`; conditions: `Cond	crossed	1	DawnCauseway	north	after	lavaBridge` | yes |
 | Trigger `mainRival` | `Action	objectivestate	1	cinderhollow-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	cinderhollow-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraCave` | `Action	objectivestate	1	cinderhollow-extra-cave	reached`; conditions: `Cond	region	1	SouthCave` | yes |
-| Briefing | Mine the seams and defend your heart until dawn. | yes: heart protected through dawn, both original finite seams exhausted and all actual three-wave instances killed anywhere |
-| Briefing | Then cross the lava bridge and destroy the rival heart. | yes: real northward causeway crossing after original dawn bridge generation, rival temple destroyed and remaining enemies defeated |
+| Briefing | Mine the seams and defend your heart until dawn. | no: mainSeams exhausts both original finite seams and mainHeart protects the heart; holding until dawn and the three waves are removed, the raid replaces them |
+| Briefing | Then cross the lava bridge and destroy the rival heart. | yes: real northward causeway crossing after the lavaBridge causeway, rival temple destroyed and remaining enemies defeated |
 Mario's explicit criterion for cinderhollow-o02: fully mine all 16 original finite gold fields x5..6/y55..58 and x30..33/y72..73. The approved objective text requires complete depletion of both finite veins; no deadline or first-wave failure applies.
 
 ## Coldwell
@@ -499,9 +448,8 @@ Static footprint/resource/order checks are not an executed playthrough or a comb
 | Trigger `raidDefeated` | `Action	objectivestate	1	coldwell-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	coldwell-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	coldwell-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Objective mapping | objective completion differs from reviewed trigger mapping: coldwell-o01 | no: requires design decision |
 | Briefing | Take the old well plaza and mine the gold beneath it to raise your army. | yes: mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold |
-| Briefing | Break the north gate and slay Cole in his hall. | yes: mainGate requires the north door gone; mainWarden requires Cole and the remaining enemy forces |
+| Briefing | Break the north gate and slay Cole in his hall. | no: mainGate requires the north door gone; Cole no longer stands in his hall, mainRaid requires the defeated raid with its leader HugoCole |
 
 ## CrowshotGallery
 
@@ -675,19 +623,20 @@ File: `levels/campaign/Goldspire.level`.
 | Group | Goal | Current completion conditions |
 | --- | --- | --- |
 | main | `goldspire-main-home`: Raise 2 fighters; protect your heart. | `mainHome`: Cond	flag	mainArmyReady	1; Cond	goalmet	1	ProtectDungeonTemple |
-| main | `goldspire-main-town`: Capture the low town. | `mainTown`: Cond	groundclaimed	1	46	60	49	60; Cond	groundclaimed	1	46	61	48	61; Cond	groundclaimed	1	46	62	48	62; Cond	groundclaimed	1	44	63	49	63; Cond	groundclaimed	1	42	64	52	64; Cond	groundclaimed	1	41	65	53	65; Cond	groundclaimed	1	41	66	53	66; Cond	groundclaimed	1	42	67	55	67; Cond	groundclaimed	1	42	68	56	68; Cond	groundclaimed	1	42	69	57	69; Cond	groundclaimed	1	59	69	59	69; Cond	groundclaimed	1	42	70	60	70; Cond	groundclaimed	1	43	71	54	71; Cond	groundclaimed	1	57	71	60	71; Cond	groundclaimed	1	45	72	53	72; Cond	groundclaimed	1	60	72	60	72; Cond	groundclaimed	1	46	73	51	73; Cond	groundclaimed	1	46	74	48	74 |
+| main | `goldspire-main-town`: Capture the low town. | `mainTown`: Cond	groundclaimed	1	46	60	49	60; Cond	groundclaimed	1	46	61	48	61; Cond	groundclaimed	1	46	62	48	62; Cond	groundclaimed	1	44	63	49	63; Cond	groundclaimed	1	42	64	52	64; Cond	groundclaimed	1	41	65	53	65; Cond	groundclaimed	1	41	66	45	66; Cond	groundclaimed	1	49	66	53	66; Cond	groundclaimed	1	42	67	45	67; Cond	groundclaimed	1	49	67	55	67; Cond	groundclaimed	1	42	68	45	68; Cond	groundclaimed	1	49	68	56	68; Cond	groundclaimed	1	42	69	57	69; Cond	groundclaimed	1	59	69	59	69; Cond	groundclaimed	1	42	70	60	70; Cond	groundclaimed	1	43	71	54	71; Cond	groundclaimed	1	57	71	60	71; Cond	groundclaimed	1	45	72	53	72; Cond	groundclaimed	1	60	72	60	72; Cond	groundclaimed	1	46	73	51	73; Cond	groundclaimed	1	46	74	48	74 |
 | main | `goldspire-main-route`: Pass the south gate, outer ring and both sealed links. | `mainRoute`: Cond	trigger	mainRingReached; Cond	flag	mainWestCrossed	1; Cond	flag	mainEastCrossed	1 |
-| main | `goldspire-main-warden`: Defeat Penn in the spire and all enemy forces. Unlock his vault. | `mainWarden`: Cond	trigger	pennVaultOpened; Cond	killedin	AlaricPenn	OuterRing; Cond	goalmet	1	KillAllEnemies |
+| main | `goldspire-main-vault`: Unlock the vault. | `mainWarden`: Cond	trigger	pennVaultOpened |
+| main | `goldspire-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `goldspire-extra-wing`: Explore the western treasure wing. | `extraWing`: Cond	region	1	WestWing |
 
 Possible route (static, not a playthrough):
 - Raise at least2real own living nonworkers, anywhere on this actual map, recording the achieved buildup; protect the heart until victory. Start has4workers and300gold; original firstCoin at500actualmining generates Orc2+Goblin2 at(21,73)and400gold. No new mining requirement or free army invented.
-- Capture all153original open LowTown floor fields(38..60,60..74),all statically reachable. No placed room exists; no new room is required. Original40claimed trigger still opens the gate without changing its mechanics.
+- Capture all 144 open LowTown floor fields (38..60,60..74) outside the unclaimable Moreya gate room (46..48,66..68), all statically reachable. The five fields (42..45,74) and (45,73) dug open for the raid path are no part of the original low town. No placed room exists; no new room is required.
 - After southGateOpens opens actual rock plug x47..49/y56,physically cross north fromy57toy55,and then enter OuterRing. The gate is terrain,not an invented door object.
 - After that ring arrival and original linksOpen,physically traverse both full original link rectangles:west x11..12/y52..67,east x80..81/y58..72. Either north/south direction qualifies, no order between the two flanks. All dry entry/exit banks are checked; original linksOpen terrain actions retained.
-- Kill AlaricPenn inside the spire represented by the original OuterRing,which contains his Core(48,30)start,then clear remaining forces/portals. Defeat or KO does not replace his actual death.
+- Defeat the raid of the Gilded Hand and its leader AlaricPenn, who come through the Moreya gate at (47,67). The twelve timed columns and the wounded-treasurer reinforcement are gone.
 - Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request.
-- Penn remains at48,30 outside the relocated ten-tile treasury50..54,29..30. Its17rockwall fields surround one mission-locked wooden door49,30. Only actual treasurer-key delivery by a worker to48,30 opens PennVaultDoor; mainWarden requires this delivery trigger as well as the existing death and enemy conditions. Initial gold and treasury capacity unchanged.
+- VaultCaptain now stands at 48,30 and carries the treasurer-key. Only actual treasurer-key delivery by a worker to 48,30 opens PennVaultDoor; mainWarden completes goldspire-main-vault on that delivery trigger.
 
 Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.
 
@@ -700,70 +649,9 @@ Static route/bank/footprint/source evidence only; actual gate/link movement, cap
 | Trigger `mainWarden` | `Action	objectivestate	1	goldspire-main-vault	reached`; conditions: `Cond	trigger	pennVaultOpened` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	goldspire-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraWing` | `Action	objectivestate	1	goldspire-extra-wing	reached`; conditions: `Cond	region	1	WestWing` | yes |
-| Objective mapping | grouped status conditions differ from reviewed conditions: mainTown | no: requires design decision |
-| Objective mapping | grouped status conditions differ from reviewed conditions: mainWarden | no: requires design decision |
-| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
-| Objective mapping | required stable objective ID is missing: goldspire-o01 | no: requires design decision |
-| Objective mapping | required stable objective ID is missing: goldspire-o05 | no: requires design decision |
-| Objective mapping | grouped objective set differs from reviewed matrix: Goldspire | no: requires design decision |
-| Objective mapping | grouped completion conditions differ: goldspire-main-town | no: requires design decision |
-| Objective mapping | grouped goal differs from approved definition: goldspire-main-warden | no: requires design decision |
-| Objective mapping | grouped completion conditions differ: goldspire-main-warden | no: requires design decision |
-| Objective mapping | grouped objective lacks its exact completion action: goldspire-main-warden | no: requires design decision |
-| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
-| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column1 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column2 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column3 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column4 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column5 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column6 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column7 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column8 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column9 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column10 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column11 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column12 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: treasurerKey | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: treasurerHurt | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: keyDropped | no: requires design decision |
-| Objective mapping | original trial limit was changed: rising | no: requires design decision |
-| Objective mapping | original trial limit was changed: coreSeen | no: requires design decision |
-| Objective mapping | original trial limit was changed: coreSeen | no: requires design decision |
-| Objective mapping | original trial limit was changed: column1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column10 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column10 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column11 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column11 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column12 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column12 | no: requires design decision |
-| Objective mapping | original trial limit was changed: treasurerKey | no: requires design decision |
-| Objective mapping | original trial limit was changed: treasurerHurt | no: requires design decision |
-| Objective mapping | original trial limit was changed: treasurerHurt | no: requires design decision |
-| Objective mapping | original trial limit was changed: keyDropped | no: requires design decision |
-| Objective mapping | victory narration must occur exactly once after current main goals | no: requires design decision |
-| Objective mapping | original floor footprint differs or is unreachable: goldspire-main-town | no: requires design decision |
-| Objective mapping | unreachable or absent grouped target: AlaricPenn | no: requires design decision |
+| Objective mapping | grouped observer mode differs: goldspire-main-raid | no: requires design decision |
 | Briefing | With Zivs and a thin purse, build before challenging the garrison below its rings. | yes: actual two-fighter buildup and own-heart protection |
-| Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | yes: all153original LowTown floor fields owned; actual south-gate crossing then outer-ring entry and both real sealed links |
-| Briefing | Aurel cannot hold this chosen barrier with promises. | yes: actual Penn death inside the spire and all remaining foes |
+| Briefing | Take the low town, work through the sealed links and kill the treasurer in the core. | no: all144open LowTown floor fields outside the Moreya gate room owned; actual south-gate crossing then outer-ring entry and both real sealed links; the treasurer no longer stands in the core, mainRaid requires the defeated raid with its leader AlaricPenn |
 
 ## Greywater
 
@@ -809,10 +697,8 @@ Static source/resource route only; real siege combat, crossing movement, pursuit
 | Trigger `mainRaid` | `Action	objectivestate	1	greywater-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `raidDefeated` | `Action	objectivestate	1	greywater-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	greywater-extra-gold	reached`; conditions: `Cond	mined	1	>=	1200` | yes |
-| Objective mapping | objective completion differs from reviewed trigger mapping: greywater-o01 | no: requires design decision |
-| Objective mapping | objective completion differs from reviewed trigger mapping: greywater-o03 | no: requires design decision |
 | Briefing | Mine first and protect your heart, for those heroes may turn on you. | yes: mainGold checks 600 actual mining gold; mainHeart protects the heart; mainSiege requires a real river crossing and own creature damage to seat3 in Siege |
-| Briefing | Kill Gray in his river hall before Aurel's hopes become our burial. | yes: mainWarden requires Gray killed and all remaining enemy forces/portals |
+| Briefing | Kill Gray in his river hall before Aurel's hopes become our burial. | no: Gray no longer stands in his river hall; mainRaid requires the defeated raid with its leader CorwinGray |
 
 ## Highcairn
 
@@ -859,12 +745,8 @@ Static floor source, own-heart destination and exact-item completion checked. Ac
 | Trigger `mainRaid` | `Action	objectivestate	1	highcairn-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `raidDefeated` | `Action	objectivestate	1	highcairn-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraCaldera` | `Action	objectivestate	1	highcairn-extra-caldera	reached`; conditions: `Cond	region	1	Caldera` | yes |
-| Objective mapping | objective completion differs from reviewed trigger mapping: highcairn-o01 | no: requires design decision |
-| Objective mapping | objective completion differs from reviewed trigger mapping: highcairn-o03 | no: requires design decision |
-| Objective mapping | required stable objective ID is missing: highcairn-o04 | no: requires design decision |
-| Objective mapping | required stable objective ID is missing: highcairn-o05 | no: requires design decision |
 | Briefing | Build from your Zivs, guard your heart and ascend toward her mountain hold. | yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold |
-| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | yes: Hilde killed in Hold and remaining foes; voluntary discovery activates real owned stone delivery, with floor pickup, visible worker transport and same-item recovery; runtime remains unverified |
+| Briefing | Kill the warden, and carry the cairn spirit's pale stone home if you discover its hidden hall. | no: Hilde no longer stands in her hold, mainRaid requires the defeated raid with its leader HildeCairn; the hidden cairn hall holds no stone any more |
 
 ## HollinFen
 
@@ -874,11 +756,9 @@ File: `levels/campaign/HollinFen.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3424 | `Action	objectiveid	1	hollinfen-o01	Kill Agathe Hollin in the convent chapel.` | yes |
-| Script line 3425 | `Action	objectiveid	1	hollinfen-o02	Defend your heart against convent patrols.` | yes |
-| Script line 3452 | `Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.` | yes |
-| Script line 3461 | `Action	objectiveid	1	hollinfen-o04	Reach the chapel and kill Agathe Hollin.` | yes |
-| Script line 3569 | `Action	win	1` | yes |
+| Script line 3491 | `Action	objectiveid	1	hollinfen-o02	Defend your heart.` | yes |
+| Script line 3518 | `Action	objectiveid	1	hollinfen-o03	Break through the convent's west gate.` | yes |
+| Script line 3603 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -886,8 +766,7 @@ File: `levels/campaign/HollinFen.level`.
 | --- | --- | --- |
 | main | `hollinfen-main-home`: Build 9 beds and a hatchery; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	9; Cond	furniture	1	Hatchery	>=	1 |
 | main | `hollinfen-main-gate`: Claim 40 causeway tiles; break the west gate. | `mainGate`: Cond	claimed	1	Causeway	40; Cond	trapgone	DoorWooden1 |
-| main | `hollinfen-main-warden`: Defeat Agathe Hollin and all enemy forces. | `mainWarden`: Cond	event	AgatheHollin	killed; Cond	goalmet	1	KillAllEnemies |
-| main | `hollinfen-main-stone`: If found, bring the hollow stone home. | `mainStone`: Cond	trigger	hollowStoneHome |
+| main | `hollinfen-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `hollinfen-extra-fen`: Claim 120 fen tiles and uncover the mana spring. | `extraFen`: Cond	claimed	1	Fen	120; Cond	slabs	1	ManaSpring	manawell	>=	1 |
 
 Possible route (static, not a playthrough):
@@ -895,24 +774,21 @@ Possible route (static, not a playthrough):
 - Original Hatchery1 is (5..7,14..15); add (5..7,16) to make a 3x3 coop site for 330 gold. Total expansion 790 is below starting gold 1800; skills already unlocked, added ground diggable and reachable. Coops remain a spawn source, not a population cap.
 - Claim 40 Causeway fields in (22,62)-(50,72), then destroy actual west gate DoorWooden1 at (51,66). Potential Causeway fields306.
 - Before the last main goal, optionally claim 120 Fen fields (673 potentially reachable), triggering original fenDrains. It opens (27,35)-(33,37) and creates the owned mana well at (38,36); the optional observer checks the real well.
-- After optional discovery, a worker collects hollow-stone from (5, 54) beside HollowBearer and visibly carries the same item to the own heart at (12, 12). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.
-- Kill AgatheHollin (66,70), remaining enemy forces and claim/remove Portal1 (13..15,65..67). Existing seven patrol waves and convent reinforcements remain unchanged.
+- HollinFen is the third level of its wing and reveals no bonus level; the bricked hollow, its stone and its bearer are gone.
+- Defeat the raid of the Order of the White Thorn and its leader AgatheHollin, who come through the Moreya gate at (42,42), and claim/remove Portal1 (13..15,65..67). The convent reinforcements remain.
 
 Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
 | Trigger `wardEntered` | `Action	objectivestate	1	hollinfen-o03	reached`; conditions: `Cond	region	1	Ward` | yes |
-| Trigger `goalHeartSafe2BeforeWardenSlain` | `Action	objectivestate	1	hollinfen-o02	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `goalHeartSafe2BeforeWardenSlain` | `Action	objectivestate	1	hollinfen-o02	reached`; conditions: `Cond	raid	defeated; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost2` | `Action	objectivestate	1	hollinfen-o02	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
-| Trigger `wardenSlain` | `Action	objectivestate	1	hollinfen-o01	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
-| Trigger `wardenSlain` | `Action	objectivestate	1	hollinfen-o04	reached`; conditions: `Cond	time	5; Cond	creatures	2	<=	0` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	hollinfen-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHome` | `Action	objectivestate	1	hollinfen-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	9; Cond	furniture	1	Hatchery	>=	1` | yes |
 | Trigger `mainGate` | `Action	objectivestate	1	hollinfen-main-gate	reached`; conditions: `Cond	claimed	1	Causeway	40; Cond	trapgone	DoorWooden1` | yes |
-| Trigger `mainWarden` | `Action	objectivestate	1	hollinfen-main-warden	reached`; conditions: `Cond	event	AgatheHollin	killed; Cond	goalmet	1	KillAllEnemies` | yes |
-| Trigger `mainStone` | `Action	objectivestate	1	hollinfen-main-stone	reached`; conditions: `Cond	trigger	hollowStoneHome` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	hollinfen-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraFen` | `Action	objectivestate	1	hollinfen-extra-fen	reached`; conditions: `Cond	claimed	1	Fen	120; Cond	slabs	1	ManaSpring	manawell	>=	1` | yes |
-| Briefing | A pale stone behind a bricked hollow may reveal an optional trial if carried home. | yes: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; mainWarden checks Hollin and all remaining foes |
-| Briefing | Castellan has ordered good news this time. | yes: the hollow is voluntary, but its discovery activates real owned stone-carrier delivery |
+| Briefing | Build your dungeon, hold your heart and break the convent ward to kill her in the chapel. | no: mainHome requires nine actual beds, a hatchery coop and the protected heart; mainGate checks 40 Causeway tiles and the actual west gate; Hollin no longer stands in the chapel, mainRaid requires the defeated raid with its leader AgatheHollin |
+| Briefing | A pale stone behind a bricked hollow may reveal an optional trial if carried home. | no: the bricked hollow and its stone are removed; HollinFen reveals no bonus level |
 
 ## HollowmarkCitadel
 
@@ -929,16 +805,16 @@ File: `levels/campaign/HollowmarkCitadel.level`.
 
 | Group | Goal | Current completion conditions |
 | --- | --- | --- |
-| main | `hollowmark-main-heart`: Protect your heart and take the royal treasuries. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	roomclaimed	1	12	42	14	43; Cond	roomclaimed	1	100	42	102	43; Cond	trigger	tower2 |
+| main | `hollowmark-main-heart`: Protect your heart and take the royal treasuries. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	roomclaimed	1	8	42	10	43; Cond	roomclaimed	1	100	42	102	43; Cond	trigger	tower2 |
 | main | `hollowmark-main-courts`: Cross the three courts; take towers or gate keys. | `mainCourts`: Cond	flag	mainCourt3	1 |
-| main | `hollowmark-main-king`: Defeat King Castellan in the throne hall. | `mainKing`: Cond	killedin	CastellanKing	ThroneHall |
+| main | `hollowmark-main-raid`: Defeat both raids and their leaders. | `mainRaid`: Cond	raid	defeated |
 | main | `hollowmark-main-throne`: Claim the throne hall. | `mainThrone`: Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28 |
 | optional | `hollowmark-extra-tower`: Explore the western throne tower. | `extraTower`: Cond	region	1	WestTower3 |
 
 Possible route (static, not a playthrough):
-- Protect the heart and claim both original upper treasury rooms, receiving the unchanged tower2 reward.
+- Protect the heart and claim both upper treasury rooms, Treasury2 now at (8..10,42..43) beside the Moreya gate room (12..14,42..44) and Treasury3 at (100..102,42..43), receiving the unchanged tower2 reward.
 - Cross GateCourt northward, open gate2 with both lower guard rooms or the actual lower keywarden death, then cross GreatCourt. Repeat the upper treasury/keywarden alternative for gate3 before crossing ThroneHall. Timed openings alone do not replace the tower or key requirement.
-- Actually kill CastellanKing within ThroneHall and currently own all 548 original dry floor fields, including the covering treasury room.
+- Defeat both raids of the Crown Eternal: the first led by SabineRook, the second by High King Castellan, both through the Moreya gate at (13,43). Currently own all 548 original dry throne floor fields. The forty timed musters and the king's throne-hall duel are gone.
 - Optionally visit WestTower3; it is not one of the required gate towers.
 - The lower-gate-key drops at its owner's actual death position; a worker must carry that physical key to (58, 58) for gate2KeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.
 - The upper-gate-key drops at its owner's actual death position; a worker must carry that physical key to (58, 30) for gate3KeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.
@@ -954,152 +830,9 @@ Static conditions only; full movement, claiming, combat, treasury payout and sav
 | Trigger `mainThrone` | `Action	objectivestate	1	hollowmark-main-throne	reached`; conditions: `Cond	groundclaimed	1	57	11	58	11; Cond	groundclaimed	1	49	12	66	12; Cond	groundclaimed	1	45	13	69	13; Cond	groundclaimed	1	43	14	71	14; Cond	groundclaimed	1	41	15	41	15; Cond	groundclaimed	1	43	15	73	15; Cond	groundclaimed	1	40	16	40	16; Cond	groundclaimed	1	44	16	46	16; Cond	groundclaimed	1	49	16	64	16; Cond	groundclaimed	1	68	16	71	16; Cond	groundclaimed	1	74	16	75	16; Cond	groundclaimed	1	39	17	47	17; Cond	groundclaimed	1	49	17	76	17; Cond	groundclaimed	1	39	18	77	18; Cond	groundclaimed	1	39	19	78	19; Cond	groundclaimed	1	39	20	78	20; Cond	groundclaimed	1	39	21	78	21; Cond	groundclaimed	1	39	22	79	22; Cond	groundclaimed	1	38	23	65	23; Cond	groundclaimed	1	67	23	79	23; Cond	groundclaimed	1	38	24	40	24; Cond	groundclaimed	1	43	24	46	24; Cond	groundclaimed	1	49	24	64	24; Cond	groundclaimed	1	68	24	70	24; Cond	groundclaimed	1	74	24	79	24; Cond	groundclaimed	1	40	25	40	25; Cond	groundclaimed	1	42	25	65	25; Cond	groundclaimed	1	67	25	71	25; Cond	groundclaimed	1	73	25	77	25; Cond	groundclaimed	1	44	26	73	26; Cond	groundclaimed	1	46	27	71	27; Cond	groundclaimed	1	50	28	55	28; Cond	groundclaimed	1	60	28	68	28` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	hollowmark-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraTower` | `Action	objectivestate	1	hollowmark-extra-tower	reached`; conditions: `Cond	region	1	WestTower3` | yes |
-| Objective mapping | grouped status conditions differ from reviewed conditions: goalHeartSafe3BeforeKingDead | no: requires design decision |
-| Objective mapping | grouped status conditions differ from reviewed conditions: mainHeart | no: requires design decision |
-| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
-| Objective mapping | required stable objective ID is missing: hollowmarkcitadel-o01 | no: requires design decision |
-| Objective mapping | grouped objective set differs from reviewed matrix: HollowmarkCitadel | no: requires design decision |
-| Objective mapping | grouped completion conditions differ: hollowmark-main-heart | no: requires design decision |
-| Objective mapping | grouped goal differs from approved definition: hollowmark-main-king | no: requires design decision |
-| Objective mapping | grouped completion conditions differ: hollowmark-main-king | no: requires design decision |
-| Objective mapping | grouped observer mode differs: hollowmark-main-king | no: requires design decision |
-| Objective mapping | grouped objective lacks its exact completion action: hollowmark-main-king | no: requires design decision |
-| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
-| Objective mapping | grouped failure conditions differ: mainUpperTowers | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster1 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster2 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster3 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster4 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster5 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster6 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster7 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster8 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster9 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster10 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster11 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster12 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster13 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster14 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster15 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster16 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster17 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster18 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster19 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster20 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster21 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster22 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster23 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster24 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster25 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster26 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster27 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster28 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster29 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster30 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster31 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster32 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster33 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster34 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster35 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster36 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster37 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster38 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster39 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: muster40 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: goalHeartSafe3BeforeKingDead | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: kingDead | no: requires design decision |
-| Objective mapping | original trial limit was changed: siege | no: requires design decision |
-| Objective mapping | original trial limit was changed: siege | no: requires design decision |
-| Objective mapping | original trial limit was changed: throneHall | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster10 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster10 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster11 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster11 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster12 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster12 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster13 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster13 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster14 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster14 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster15 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster15 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster16 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster16 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster17 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster17 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster18 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster18 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster19 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster19 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster20 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster20 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster21 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster21 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster22 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster22 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster23 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster23 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster24 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster24 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster25 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster25 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster26 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster26 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster27 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster27 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster28 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster28 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster29 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster29 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster30 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster30 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster31 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster31 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster32 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster32 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster33 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster33 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster34 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster34 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster35 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster35 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster36 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster36 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster37 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster37 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster38 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster38 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster39 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster39 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster40 | no: requires design decision |
-| Objective mapping | original trial limit was changed: muster40 | no: requires design decision |
-| Objective mapping | original trial limit was changed: kingDead | no: requires design decision |
-| Objective mapping | original trial limit was changed: kingDead | no: requires design decision |
-| Objective mapping | original trial limit was changed: gate2Open | no: requires design decision |
-| Objective mapping | original trial limit was changed: gate2Late | no: requires design decision |
-| Objective mapping | original trial limit was changed: gate2KeyFalls | no: requires design decision |
-| Objective mapping | victory narration must follow all current main-goal observers | no: requires design decision |
-| Objective mapping | original required room footprint or ownership observer differs: Treasury2 | no: requires design decision |
+| Objective mapping | grouped observer mode differs: hollowmark-main-raid | no: requires design decision |
 | Briefing | Hold against the garrison, open the upper gates by the towers or their keys, and use the treasuries to sustain the assault. | yes: own heart and both actual royal treasuries with original payout; three real court crossings through tower or key routes |
-| Briefing | Kill Castellan and claim the throne we promised at the beginning. | yes: actual Castellan death inside ThroneHall and all548original throne floor fields currently owned |
+| Briefing | Kill Castellan and claim the throne we promised at the beginning. | no: all548original throne floor fields currently owned; Castellan no longer sits in ThroneHall, mainRaid requires both defeated raids with their leaders SabineRook and Castellan |
 
 ## Ironbridge
 
@@ -1109,13 +842,13 @@ File: `levels/campaign/Ironbridge.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4254 | `Action	objectiveid	1	ironbridge-o01	Destroy the heart in the north-east hold.` | yes |
-| Script line 4255 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
-| Script line 4272 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
-| Script line 4293 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
-| Script line 4559 | `Action	win	1` | yes |
-| Script line 4565 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4580 | `Action	win	1` | yes |
+| Script line 4338 | `Action	objectiveid	1	ironbridge-o01	Destroy the heart in the north-east hold.` | yes |
+| Script line 4339 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
+| Script line 4356 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
+| Script line 4377 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
+| Script line 4588 | `Action	win	1` | yes |
+| Script line 4594 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4610 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1125,6 +858,7 @@ File: `levels/campaign/Ironbridge.level`.
 | main | `ironbridge-main-spans`: Cross the 3 rifts in order. | `mainSpans`: Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1 |
 | main | `ironbridge-main-sites`: Claim the north smithy and ore dock. | `mainSites`: Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55 |
 | main | `ironbridge-main-hold`: Breach the hold; destroy its heart and enemy forces. | `mainHold`: Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	1 |
+| main | `ironbridge-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `ironbridge-extra-coal`: Explore the coal store. | `extraCoal`: Cond	region	1	CoalStore |
 
 Possible route (static, not a playthrough):
@@ -1132,7 +866,7 @@ Possible route (static, not a playthrough):
 - Walk east over rift1 via StoneBridge1 (36..39,20..21) or StoneBridge2 (36..39,46). Only after its actual completion may rift2 begin: StoneBridge3 (62..65,12), StoneBridge4 (62..65,34..35), or StoneBridge5 (62..65,54).
 - After rift2 completion walk east over rift3: StoneBridge6 (88..91,26..27) or StoneBridge7 (88..91,48). Each bridge requires one real own living walker from entry bank through the whole bridge to the opposite bank; mixed visitors and out-of-order crossings do not count.
 - Claim all six original Treasury6 fields (48..50,8..9) in Smithy and all six original Library3 fields (78..80,54..55) in OreDock. These are the actual placed rooms at the named sites, not an invented forge-room type or a region visit.
-- For the fortress entry destroy and physically pass either DoorWooden8 (93,26), DoorWooden9 (93,27), or the southern alternate DoorWooden10 (93,48). Destroy the rival heart and defeat remaining hostile forces/portals. The original two victory paths share all exact requirements and send the unchanged narration once.
+- For the fortress entry destroy and physically pass either DoorWooden8 (93,26), DoorWooden9 (93,27), or the southern alternate DoorWooden10 (93,48). Destroy the rival heart and defeat remaining hostile forces/portals. The original two victory paths share all exact requirements and send the unchanged narration once. Both victory paths now also require the defeated raid of the Anvil Host and its leader GarethFenn, who come through the Moreya gate at (22,14).
 - Before the final main goal optionally explore CoalStore (66,5)-(86,22),153initially open reachable fields. Claim/remove Portal1 (19..21,37..39) as part of remaining-enemy clearance. Keep the original5400second deadline and all original reinforcements.
 
 Only static source, exact room footprints, bank connectivity and resource feasibility; ordered movement, claiming, combat, the5400second route and save/load require integrator/Mario runtime verification.
@@ -1141,19 +875,21 @@ Only static source, exact room footprints, bank connectivity and resource feasib
 | Trigger `goalIronbridgeAllSpans` | `Action	objectivestate	1	ironbridge-o02	reached`; conditions: `Cond	flag	goalIronbridgeCross1	1; Cond	flag	goalIronbridgeCross2	1; Cond	flag	goalIronbridgeCross3	1` | yes |
 | Trigger `goalRivalGateNorth` | `Action	objectivestate	1	ironbridge-o04	reached`; conditions: `Cond	trapgone	DoorWooden8; Cond	region	1	94	26	94	26` | yes |
 | Trigger `goalRivalGateSouth` | `Action	objectivestate	1	ironbridge-o04	reached`; conditions: `Cond	trapgone	DoorWooden9; Cond	region	1	94	27	94	27` | yes |
-| Trigger `rivalFalls` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0` | yes |
-| Trigger `rivalHeartDown` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0` | yes |
+| Trigger `rivalFalls` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	defeated	2; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0; Cond	objective	1	ironbridge-main-raid	reached` | yes |
+| Trigger `rivalHeartDown` | `Action	objectivestate	1	ironbridge-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1; Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1; Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55; Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	0; Cond	objective	1	ironbridge-main-raid	reached` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	ironbridge-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-spans	failed`; conditions: `Cond	defeated	1` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-sites	failed`; conditions: `Cond	defeated	1` | yes |
 | Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-hold	failed`; conditions: `Cond	defeated	1` | yes |
+| Trigger `mainTrialFailed` | `Action	objectivestate	1	ironbridge-main-raid	failed`; conditions: `Cond	defeated	1` | yes |
 | Trigger `mainHome` | `Action	objectivestate	1	ironbridge-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	6; Cond	furniture	1	Hatchery	>=	1` | yes |
 | Trigger `mainSpans` | `Action	objectivestate	1	ironbridge-main-spans	reached`; conditions: `Cond	flag	bridgeOneDone	1; Cond	flag	bridgeTwoDone	1; Cond	flag	thirdSpanCrossed	1` | yes |
 | Trigger `mainSites` | `Action	objectivestate	1	ironbridge-main-sites	reached`; conditions: `Cond	roomclaimed	1	48	8	50	9; Cond	roomclaimed	1	78	54	80	55` | yes |
 | Trigger `mainHold` | `Action	objectivestate	1	ironbridge-main-hold	reached`; conditions: `Cond	flag	keepGateBreached	1; Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies; Cond	flag	storyVictorySent	1` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	ironbridge-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraCoal` | `Action	objectivestate	1	ironbridge-extra-coal	reached`; conditions: `Cond	region	1	CoalStore` | yes |
 | Briefing | Build your strength and take the guarded stone bridges one by one. | yes: supply for six starting fighters, actual three-rift crossings in order with all seven alternate bridges, and ownership of the exact Smithy/OreDock rooms |
-| Briefing | Destroy the rival heart in the north-east and deny Castellan this defence. | yes: an actual fortress entrance breached, rival temple gone and all remaining enemy forces defeated |
+| Briefing | Destroy the rival heart in the north-east and deny Castellan this defence. | yes: an actual fortress entrance breached, rival temple gone, all remaining enemy forces and the raid with its leader GarethFenn defeated |
 
 ## Kingsfall
 
@@ -1173,15 +909,15 @@ File: `levels/campaign/Kingsfall.level`.
 | main | `kingsfall-main-heart`: Protect your heart and cross a guarded lava bridge. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple; Cond	flag	mainRavineCrossed	1 |
 | main | `kingsfall-main-champions`: Capture or convert Edda, Brann and Wick alive. | `mainChampions`: Cond	held	1	FalconerEdda; Cond	held	1	HuntsmanBrann; Cond	held	1	SquireWick |
 | main | `kingsfall-main-army`: Gather 12 creatures at your heart. | `mainArmy`: Cond	creaturesatheart	1	>=	12 |
-| main | `kingsfall-main-court`: Defeat Prince Aurel and his court. | `mainCourt`: Cond	event	PrinceAurel	killed; Cond	creatures	3	<=	0 |
+| main | `kingsfall-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `kingsfall-extra-gold`: Mine 4000 gold. | `extraGold`: Cond	mined	1	>=	4000 |
 
 Possible route (static, not a playthrough):
 - Protect the heart and physically cross any actual watched lava span northward:west(18..19,49..53),middle(49..50,39..43),east(80..81,48..52). Each original bridge has9roomfields plus one natural dry gap; do not invent rectangular10field bridge rooms. Explicit open ground/bridge paths follow x19/y54..48,x50/y44..38,x81/y53..47. Any one original route qualifies.
 - Keep all three named champions alive and currently held by seat1:FalconerEdda,HuntsmanBrann,SquireWick. Each may be either actually jailed by seat1 or converted to seat1 with no foreign jailer. Escape or recapture removes current success; actual death permanently fails the task. Historical champions flags alone do not count.
 - Currently gather at least12own living creatures on actual own-heart tiles. Global army size or an old visit is not enough. Existing25field temple and own portal/worker recruitment allow staging; original start has5workers and7000gold. Foreign-seat prisoners do not become own creatures merely by captivity.
-- Actually kill PrinceAurel and clear living court troops of seat3,which contains all court guards and horn waves. Do not require seat2emptiness:the three live captured champions retain seat2,and must not block victory. This level has no KillAllEnemies goal or hostile temple/portal requirement.
-- Optionally mine4000actualgold from79000finitepotentialgold. Preserve original3000gold milestone,all18hornwaves,prison/torture setup,conversion messages and every cache-opening alternative. No champion death is required for optional mining.
+- Defeat the raid of the Sun Court and its leader PrinceAurel, who come through the Moreya gate at (21,29). Edda, Brann and Wick stay on the map as phase-1 enemies and do not march with the raid.
+- Optionally mine 4000 actual gold from 79000 finite potential gold. Preserve the original 3000 gold milestone, prison/torture setup, conversion messages and every cache-opening alternative; the eighteen timed horn waves and the wounded-prince reinforcement are gone.
 - The unchanged original sentence describing champions in your hands is emitted after all current main goals,followed by a new valid win request. This is necessary because both old requests assume conversion/seat2emptiness and can never cover the approved live-captive alternative. Old win requests remain preserved pending requests.
 
 Static script/bridge/path/recruitment-source evidence only; actual capture/conversion,12creature assembly,KO handling,battles and save/load need runtime verification.
@@ -1197,77 +933,9 @@ Static script/bridge/path/recruitment-source evidence only; actual capture/conve
 | Trigger `mainArmy` | `Action	objectivestate	1	kingsfall-main-army	reached`; conditions: `Cond	creaturesatheart	1	>=	12` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	kingsfall-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	kingsfall-extra-gold	reached`; conditions: `Cond	mined	1	>=	4000` | yes |
-| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
-| Objective mapping | objective completion differs from reviewed trigger mapping: kingsfall-o01 | no: requires design decision |
-| Objective mapping | required stable objective ID is missing: kingsfall-o02 | no: requires design decision |
-| Objective mapping | grouped objective set differs from reviewed matrix: Kingsfall | no: requires design decision |
-| Objective mapping | grouped goal differs from approved definition: kingsfall-main-court | no: requires design decision |
-| Objective mapping | grouped completion conditions differ: kingsfall-main-court | no: requires design decision |
-| Objective mapping | grouped observer mode differs: kingsfall-main-court | no: requires design decision |
-| Objective mapping | grouped objective lacks its exact completion action: kingsfall-main-court | no: requires design decision |
-| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn1 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn2 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn3 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn4 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn5 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn6 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn7 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn8 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn9 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn10 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn11 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn12 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn13 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn14 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn15 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn16 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn17 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: horn18 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: princeWounded | no: requires design decision |
-| Objective mapping | original trial limit was changed: hunt | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn10 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn10 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn11 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn11 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn12 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn12 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn13 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn13 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn14 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn14 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn15 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn15 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn16 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn16 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn17 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn17 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn18 | no: requires design decision |
-| Objective mapping | original trial limit was changed: horn18 | no: requires design decision |
-| Objective mapping | original trial limit was changed: princeWounded | no: requires design decision |
-| Objective mapping | original trial limit was changed: princeWounded | no: requires design decision |
-| Objective mapping | victory narration must follow all current main-goal observers | no: requires design decision |
-| Objective mapping | unreachable or absent grouped target: PrinceAurel | no: requires design decision |
-| Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | yes: actual living captivity OR conversion of all three champions, real lava-span crossing and actual Aurel death with court clearance |
-| Briefing | Aurel must answer for every promise he made. | yes:12own living creatures currently on the own-heart tiles |
+| Objective mapping | grouped observer mode differs: kingsfall-main-raid | no: requires design decision |
+| Briefing | Cross the watched lava spans and defeat Aurel and his court. | no: real lava-span crossing; Aurel no longer holds court here, mainRaid requires the defeated raid with its leader PrinceAurel |
+| Briefing | Capture or convert Falconer Edda, Huntsman Brann and Squire Wick, and keep at least twelve creatures at your heart. | yes: actual living captivity OR conversion of all three champions and 12 own living creatures currently on the own-heart tiles |
 
 ## Lanternhill
 
@@ -1277,14 +945,14 @@ File: `levels/campaign/Lanternhill.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3089 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
-| Script line 3090 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
-| Script line 3091 | `Action	objectiveid	1	lanternhill-o03	Defend your heart against the hill patrols.` | yes |
-| Script line 3221 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3236 | `Action	win	1` | yes |
-| Script line 3241 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3243 | `Action	win	1` | yes |
-| Script line 3324 | `Action	win	1` | yes |
+| Script line 3133 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
+| Script line 3134 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
+| Script line 3135 | `Action	objectiveid	1	lanternhill-o03	Defend your heart.` | yes |
+| Script line 3223 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3239 | `Action	win	1` | yes |
+| Script line 3244 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3247 | `Action	win	1` | yes |
+| Script line 3337 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1293,31 +961,33 @@ File: `levels/campaign/Lanternhill.level`.
 | main | `lanternhill-main-home`: Mine 700 gold; protect your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	mined	1	>=	700 |
 | main | `lanternhill-main-road`: Open the ring road; claim the crypt and library. | `mainRoad`: Cond	groundconnected	1	13	57	40	22; Cond	roomclaimed	1	10	16	12	17; Cond	roomclaimed	1	13	20	15	21 |
 | main | `lanternhill-main-rival`: Destroy the northern heart and all enemy forces. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
-| main | `lanternhill-main-stone`: If found, bring the lantern stone home. | `mainStone`: Cond	trigger	lanternStoneHome |
+| main | `lanternhill-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `lanternhill-extra-lamp`: Explore the lamp chamber. | `extraLamp`: Cond	region	1	LampRoom |
+| main | `lanternhill-main-stone`: If found, bring the lantern stone home. | `mainStone`: Cond	trigger	lanternStoneHome |
 
 Possible route (static, not a playthrough):
 - Mine700actualgold and protect the own heart;55500finite gold is potentially reachable. Original mined1 reward and patrols remain unchanged.
 - Dig a current dry worker route from(13,57)to(40,22). Initially disconnected; one possible62step route needs24dig fields. Any legal alternative qualifies.
 - Claim all six original neutral Crypt2 fields(10..12,16..17)and all six Library2 fields(13..15,20..21); visits do not replace ownership.
-- Destroy the actual northern heart and all remaining foes/portals; unchanged victory narration once after current main completion.
-- Optionally enter LampRoom,24reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement and TwistingHalls discovery remain.
+- Destroy the actual northern heart and all remaining foes/portals, and defeat the raid of the Pale Flame and its leader InesVale, who come through the Moreya gate at (66,56); unchanged victory narration once after current main completion.
+- Optionally enter LampRoom, 24 reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement remains and the delivery reveals SkittleCavern.
 
 Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.
 
 | Trigger `goalRingGroundPathOpened` | `Action	objectivestate	1	lanternhill-o02	reached`; conditions: `Cond	groundconnected	1	13	57	40	22` | yes |
 | Trigger `goalHeartSafe3BeforeRivalHeartDown` | `Action	objectivestate	1	lanternhill-o03	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	lanternhill-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
-| Trigger `rivalHeartDown` | `Action	objectivestate	1	lanternhill-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies` | yes |
+| Trigger `rivalHeartDown` | `Action	objectivestate	1	lanternhill-o01	reached`; conditions: `Cond	goal	1	KillAllEnemies; Cond	objective	1	lanternhill-main-raid	reached` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	lanternhill-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHome` | `Action	objectivestate	1	lanternhill-main-home	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple; Cond	mined	1	>=	700` | yes |
 | Trigger `mainRoad` | `Action	objectivestate	1	lanternhill-main-road	reached`; conditions: `Cond	groundconnected	1	13	57	40	22; Cond	roomclaimed	1	10	16	12	17; Cond	roomclaimed	1	13	20	15	21` | yes |
 | Trigger `mainRival` | `Action	objectivestate	1	lanternhill-main-rival	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	lanternhill-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `mainStone` | `Action	objectivestate	1	lanternhill-main-stone	reached`; conditions: `Cond	trigger	lanternStoneHome` | yes |
 | Trigger `extraLamp` | `Action	objectivestate	1	lanternhill-extra-lamp	reached`; conditions: `Cond	region	1	LampRoom` | yes |
 | Briefing | Mine the seams, dig through the ring road's earth plugs and withstand the kingdom's patrols. | yes: 700 actual mining gold, own-heart protection, current dry connection from start to ring road and all original crypt/library room fields claimed |
-| Briefing | Destroy the northern rival heart beneath Ines Vale's lamps. | yes: actual northern rival heart destroyed and all remaining enemies |
-| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | yes: voluntary discovery activates delivery of the actual floor stone by a worker |
+| Briefing | Destroy the northern rival heart beneath Ines Vale's lamps. | yes: actual northern rival heart destroyed and all remaining enemies; mainRaid also requires the defeated raid with its leader InesVale |
+| Briefing | A pale stone hidden in the hill may reveal another optional trial when carried home. | yes: voluntary discovery activates delivery of the actual floor stone by a worker, which reveals SkittleCavern |
 lanternhill-o02 requires an actual current dry worker path from (13,57) to (40,22), including legal alternative digging routes; no fixed plug subset is required.
 
 ## Mirewatch
@@ -1463,9 +1133,8 @@ Static route and exact source wiring only; real combat, bridge movement and save
 | Trigger `raidDefeated` | `Action	objectivestate	1	ravensledge-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraEast` | `Action	objectivestate	1	ravensledge-extra-east	reached`; conditions: `Cond	region	1	EastGate` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	ravensledge-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Objective mapping | objective completion differs from reviewed trigger mapping: ravensledge-o01 | no: requires design decision |
 | Briefing | Secure your bridgeheads and climb shelf by shelf. | yes: actual lower crossing plus 80 Shelf tiles, then actual upper crossing after shelfHeld and the inner gate |
-| Briefing | Slay him in the highest keep and send Castellan another answer. | yes: mainCaptain requires the actual death of OsricVane and all remaining enemy forces/portals |
+| Briefing | Slay him in the highest keep and send Castellan another answer. | no: OsricVane no longer stands in the highest keep; mainRaid requires the defeated raid with its leader RolfScarrow |
 
 ## Saltmere
 
@@ -1475,12 +1144,10 @@ File: `levels/campaign/Saltmere.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3116 | `Action	objectiveid	1	saltmere-o01	Kill Bram Seward in the southern port.` | yes |
-| Script line 3117 | `Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.` | yes |
-| Script line 3118 | `Action	objectiveid	1	saltmere-o03	Protect your heart.` | yes |
-| Script line 3161 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
-| Script line 3171 | `Action	objectiveid	1	saltmere-o05	Find Bram Seward in the harbour hall.` | yes |
-| Script line 3261 | `Action	win	1` | yes |
+| Script line 3192 | `Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.` | yes |
+| Script line 3193 | `Action	objectiveid	1	saltmere-o03	Protect your heart.` | yes |
+| Script line 3236 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
+| Script line 3380 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1489,7 +1156,7 @@ File: `levels/campaign/Saltmere.level`.
 | main | `saltmere-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
 | main | `saltmere-main-gold`: Mine 800 gold. | `mainGold`: Cond	mined	1	>=	800 |
 | main | `saltmere-main-port`: Cross flats and lagoons; breach both port gates. | `mainPort`: Cond	flag	highFlatVisited	1; Cond	trigger	lagoonReached; Cond	flag	southFlatVisited	1; Cond	trapgone	DoorWooden1; Cond	trapgone	DoorWooden2; Cond	flag	portCrossed	1 |
-| main | `saltmere-main-admiral`: Defeat Bram Seward and all enemy forces. | `mainAdmiral`: Cond	event	BramSeward	killed; Cond	goalmet	1	KillAllEnemies |
+| main | `saltmere-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `saltmere-extra-gold`: Mine 1600 gold. | `extraGold`: Cond	mined	1	>=	1600 |
 
 Possible route (static, not a playthrough):
@@ -1497,25 +1164,25 @@ Possible route (static, not a playthrough):
 - An own living creature must reach HighFlat (24,14)-(50,28), Lagoon (18,44)-(44,62) and SouthFlat (20,66)-(46,78). Current legacy lagoonReached and exact new region histories are used; no reveal or gate opening substitutes for those visits.
 - Keep both original tunnel-opening alternatives: claim 50 SouthFlat fields, or wait for portGatesTimeout at time2400 while closed. Both clear (40..41,78)/(48..49,78). The grouped goal adds no compulsory 50-field claim after the timed alternative.
 - Destroy both actual outer doors: DoorWooden2 (40,80) and DoorWooden1 (48,80). Walk one own living creature south through either whole two-field-wide gateway, x40..41 or x48..49 at y80, from y79 to y81. The complete tunnel width counts, not an arbitrary exact door-center field. Verified open banks permit both crossings; the original earth at (49,81) can be dug or the open exit at (48,81) used. Opening only the tunnel mouth never completes the requirement.
-- Defeat BramSeward, initially (46,86) in the port hall, and the remaining foes including the sleeper keeper; claim/remove neutral Portal1 (3..5,17..19). Original reinforcements, inner doors and all geometry remain unchanged.
+- Defeat the raid of the Salt Wolves and its leader BramSeward, who come through the Moreya gate at (21,53), and the remaining foes including the sleeper keeper; claim/remove neutral Portal1 (3..5,17..19). After optional discovery of ShardHollow, a worker carries heartstone-shard from (3, 47) to the own heart at (14, 10); its delivery finds the Heartstone shard of this level.
 
 Static source/resource route and exact outer-gate traversal only; combat, timing, save/load and the full playthrough require integrator/Mario verification.
 
 | Trigger `firstSalt` | `Action	objectivestate	1	saltmere-o02	reached`; conditions: `Cond	mined	1	>=	800` | yes |
 | Trigger `flatHeld` | `Action	objectivestate	1	saltmere-o04	reached`; conditions: `Cond	claimed	1	SouthFlat	50` | yes |
 | Trigger `portGatesTimeout` | `Action	objectivestate	1	saltmere-o04	reached`; conditions: `Cond	time	2400; Cond	flag	portGatesOpen	0` | yes |
-| Trigger `goalHeartSafe3BeforeAdmiralFalls` | `Action	objectivestate	1	saltmere-o03	reached`; conditions: `Cond	event	BramSeward	killed; Cond	goalmet	1	ProtectDungeonTemple` | yes |
+| Trigger `goalHeartSafe3BeforeAdmiralFalls` | `Action	objectivestate	1	saltmere-o03	reached`; conditions: `Cond	raid	defeated; Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `goalHeartLost3` | `Action	objectivestate	1	saltmere-o03	failed`; conditions: `Cond	room	1	DungeonTemple	==	0` | yes |
-| Trigger `admiralFalls` | `Action	objectivestate	1	saltmere-o01	reached`; conditions: `Cond	event	BramSeward	killed` | yes |
-| Trigger `admiralFalls` | `Action	objectivestate	1	saltmere-o05	reached`; conditions: `Cond	event	BramSeward	killed` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	saltmere-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
 | Trigger `mainHeart` | `Action	objectivestate	1	saltmere-main-heart	reached`; conditions: `Cond	goalmet	1	ProtectDungeonTemple` | yes |
 | Trigger `mainGold` | `Action	objectivestate	1	saltmere-main-gold	reached`; conditions: `Cond	mined	1	>=	800` | yes |
 | Trigger `mainPort` | `Action	objectivestate	1	saltmere-main-port	reached`; conditions: `Cond	flag	highFlatVisited	1; Cond	trigger	lagoonReached; Cond	flag	southFlatVisited	1; Cond	trapgone	DoorWooden1; Cond	trapgone	DoorWooden2; Cond	flag	portCrossed	1` | yes |
-| Trigger `mainAdmiral` | `Action	objectivestate	1	saltmere-main-admiral	reached`; conditions: `Cond	event	BramSeward	killed; Cond	goalmet	1	KillAllEnemies` | yes |
+| Trigger `mainRaid` | `Action	objectivestate	1	saltmere-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	saltmere-extra-gold	reached`; conditions: `Cond	mined	1	>=	1600` | yes |
-| Briefing | Protect your heart while the heroes threaten the sleeping keeper nearby as well. | yes: 800 actual mining gold and heart protection; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing |
-| Briefing | Kill Seward and answer Aurel's boast that no route reaches the inner realm. | yes: mainAdmiral requires Seward killed and all remaining enemy forces/portals |
+| Objective mapping | friendly mission discovery message differs from approved wording: heartstone-shard | no: requires design decision |
+| Briefing | Mine the salt walls and cross the white flats and green lagoons to his southern harbour. | yes: 800 actual mining gold; mainPort checks flats/lagoon visits, both actual outer gates and an own physical gate crossing |
+| Briefing | Protect your heart while the heroes threaten the sleeping keeper nearby as well. | yes: own-heart protection |
+| Briefing | Kill Seward and answer Aurel's boast that no route reaches the inner realm. | no: Seward no longer stands in the port hall; mainRaid requires the defeated raid with its leader BramSeward |
 
 ## Silverdeep
 
@@ -1789,9 +1456,8 @@ Static floor source, own-heart destination and exact-item completion checked. Ac
 | Trigger `raidDefeated` | `Action	objectivestate	1	tinmoor-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	tinmoor-extra-gold	reached`; conditions: `Cond	mined	1	>=	1500` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	tinmoor-main-heart	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Objective mapping | objective completion differs from reviewed trigger mapping: tinmoor-o01 | no: requires design decision |
-| Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | yes: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; mainWarden checks Tay and all remaining foes/portals |
-| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone activates completion before victory |
+| Briefing | Mine the seams, break both watch posts and kill her in the upper chamber. | no: mainSeams requires actual mining and possessed scouting; mainPosts tracks both exact posts and reinforcements; Tay no longer stands in the upper chamber, mainRaid requires the defeated raid with its leader MerrinTay |
+| Briefing | A sealed vault may hold a stone to carry home and reveal an optional trial. | yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone reveals CrowshotGallery |
 
 ## TwistingHalls
 
@@ -1854,15 +1520,16 @@ File: `levels/campaign/VarnsCrossing.level`.
 | main | `varnscrossing-main-home`: Claim your quarter; build a bed and coop; guard your heart. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	claimed	1	Quarter	25; Cond	furniture	1	Dormitory	>=	1; Cond	furniture	1	Hatchery	>=	1 |
 | main | `varnscrossing-main-keep`: Capture and hold the lava-ringed fortress. | `mainKeep`: Cond	trigger	quarterHeld; Cond	groundclaimed	1	36	38	37	38; Cond	groundclaimed	1	55	38	56	38; Cond	groundclaimed	1	36	39	36	39; Cond	groundclaimed	1	42	39	50	39; Cond	groundclaimed	1	56	39	56	39; Cond	groundclaimed	1	41	40	51	40; Cond	groundclaimed	1	39	41	53	41; Cond	groundclaimed	1	39	42	53	42; Cond	groundclaimed	1	38	43	54	43; Cond	groundclaimed	1	37	44	55	44; Cond	groundclaimed	1	37	45	55	45; Cond	groundclaimed	1	37	46	55	46; Cond	groundclaimed	1	37	47	55	47; Cond	groundclaimed	1	37	48	55	48; Cond	groundclaimed	1	37	49	55	49; Cond	groundclaimed	1	37	50	55	50; Cond	groundclaimed	1	37	51	55	51; Cond	groundclaimed	1	37	52	55	52; Cond	groundclaimed	1	38	53	54	53; Cond	groundclaimed	1	39	54	53	54; Cond	groundclaimed	1	39	55	53	55; Cond	groundclaimed	1	41	56	51	56; Cond	groundclaimed	1	36	57	36	57; Cond	groundclaimed	1	42	57	50	57; Cond	groundclaimed	1	56	57	56	57; Cond	groundclaimed	1	36	58	37	58; Cond	groundclaimed	1	55	58	56	58 |
 | main | `varnscrossing-main-rivals`: Destroy both rival hearts and all enemy forces. | `mainRivals`: Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies |
+| main | `varnscrossing-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `varnscrossing-extra-gold`: Mine 5000 gold. | `extraGold`: Cond	mined	1	>=	5000 |
 
 Possible route (static, not a playthrough):
 - Claim25Quarter fields, retaining original quarterHeld threshold. Protect the heart and provide at least one real bed and hatchery coop; the map starts with workers only, so no invented initial fighter population is assumed.
 - Dormitory1(18..20,76..77)already has6fields; one bed can fit at(18,76). Hatchery1(8..10,85..86)has6fields; add row87 to form a3x3site,330gold from4000startinggold. All three added fields are reachable removable dirt and room skills are unlocked. Later reinforcements still need player care.
 - Capture all317original open Keep floor fields in(36,38)-(56,58), including current ownership of any rooms on them. Lava, water and original walls are excluded. Do not require a new room on natural floor. Keep control until all other main goals are reached.
-- Destroy both real rival hearts,seats2and3,then defeat remaining enemies/portals. Original30columns,alliance changes and portal timing remain unchanged.
+- Destroy both real rival hearts, seats 2 and 3, then defeat remaining enemies/portals and both raid groups of the Black Legion with their leader MarshalVarn, who come through the Moreya gate at (45,7). The thirty timed columns are gone; alliance changes remain.
 - Optionally mine5000actualgold from118000potentialfinitegold,above original4000milestone. Original gold gifts are not mining.
-- Unchanged victory sentence and SwarmNight discovery move together to the final completion after all current main observers. Old win requests remain pending.
+- The victory sentence is emitted once after all current main observers. SwarmNight is no longer discovered here; after optional discovery of StoneChamber, a worker carries ember-stone from (3, 73) to the own heart at (14, 80); its delivery reveals TwistingHalls.
 
 Static resource/footprint evidence only; claim takeover, bed/coop use, combat, save/load and runtime UI need integrator/Mario verification.
 
@@ -1876,103 +1543,8 @@ Static resource/footprint evidence only; claim takeover, bed/coop use, combat, s
 | Trigger `mainRivals` | `Action	objectivestate	1	varnscrossing-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	varnscrossing-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	varnscrossing-extra-gold	reached`; conditions: `Cond	mined	1	>=	5000` | yes |
-| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
-| Objective mapping | grouped objective set differs from reviewed matrix: VarnsCrossing | no: requires design decision |
-| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
-| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
-| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column1 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column2 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column3 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column4 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column5 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column6 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column7 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column8 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column9 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column10 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column11 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column12 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column13 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column14 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column15 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column16 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column17 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column18 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column19 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column20 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column21 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column22 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column23 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column24 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column25 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column26 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column27 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column28 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column29 | no: requires design decision |
-| Objective mapping | required underlying trigger conditions differ: column30 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column1 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column2 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column3 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column4 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column5 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column6 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column7 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column8 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column9 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column10 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column10 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column11 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column11 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column12 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column12 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column13 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column13 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column14 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column14 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column15 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column15 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column16 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column16 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column17 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column17 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column18 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column18 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column19 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column19 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column20 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column20 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column21 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column21 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column22 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column22 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column23 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column23 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column24 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column24 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column25 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column25 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column26 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column26 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column27 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column27 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column28 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column28 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column29 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column29 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column30 | no: requires design decision |
-| Objective mapping | original trial limit was changed: column30 | no: requires design decision |
-| Objective mapping | victory narration must occur exactly once after current main goals | no: requires design decision |
-| Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes |
+| Objective mapping | grouped observer mode differs: varnscrossing-main-raid | no: requires design decision |
+| Briefing | Claim your quarter, hold the fortress and protect your heart as you destroy both rival hearts. | yes: quarter25, actual bed/coop and own heart; all317original fortress floor fields currently owned; both rival hearts actually destroyed and all remaining foes; mainRaid also requires the defeated raid with its leader MarshalVarn |
 
 ## Wolfscar
 
@@ -2042,17 +1614,18 @@ File: `levels/campaign/Wraithwood.level`.
 | Group | Goal | Current completion conditions |
 | --- | --- | --- |
 | main | `wraithwood-main-heart`: Protect your heart. | `mainHeart`: Cond	goalmet	1	ProtectDungeonTemple |
-| main | `wraithwood-main-witch`: Destroy the northwestern witch heart. | `mainWitch`: Cond	roomtiles	3	DungeonTemple	<=	0 |
+| main | `wraithwood-main-witch`: Destroy the northwestern rival heart. | `mainWitch`: Cond	roomtiles	3	DungeonTemple	<=	0 |
 | main | `wraithwood-main-rival`: Destroy the northeastern rival heart. | `mainRival`: Cond	roomtiles	2	DungeonTemple	<=	0 |
 | main | `wraithwood-main-forces`: Defeat all remaining enemy forces. | `mainForces`: Cond	goalmet	1	KillAllEnemies |
+| main | `wraithwood-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `wraithwood-extra-grove`: Explore the hidden western grove. | `extraGrove`: Cond	region	1	SealedGrove |
 
 Possible route (static, not a playthrough):
-- Protect the own heart through victory. Destroy actual northwest witch DungeonTemple2,seat3,original25fields(16..20,16..20). Its dedicated goal checks only that actual heart state,not the last enemy.
+- Protect the own heart through victory. Destroy the actual northwest rival DungeonTemple2, seat 3, original 25 fields (16..20,16..20); Elowen Ash no longer owns it because she leads the raid. Its dedicated goal checks only that actual heart state, not the last enemy.
 - Destroy actual northeast rival DungeonTemple3,seat2,original25fields(80..84,14..18). Its dedicated goal likewise checks only that actual heart state,independent of the witch and remaining enemies. Either destruction order is valid.
 - Defeat remaining enemy forces/portals as a separate main goal. This separates the matrix combined rival-heart/enemy duty so both individual heart icons can change immediately instead of waiting for global clearance. Four main goals remain within the approved2..5range.
 - Optionally enter hidden western SealedGrove(2,36)-(9,45),43reachable open dry fields. Retain original900gold reward. All spawns,bond reinforcements,mana spring and geometry remain unchanged.
-- The exact unchanged victory sentence is emitted once after all four current main goals. Original bothFall/bothFallGoal requests remain pending.
+- Defeat both raid groups of the Ash Coven with their leader ElowenAsh, who come through the Moreya gate at (84,86), the centre of the old hero portal. The victory sentence is emitted once after all five current main goals.
 
 Static heart-seat/location and region evidence only; actual heart destruction, combat, icon updates and save/load need runtime verification.
 
@@ -2067,15 +1640,5 @@ Static heart-seat/location and region evidence only; actual heart destruction, c
 | Trigger `mainForces` | `Action	objectivestate	1	wraithwood-main-forces	reached`; conditions: `Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `mainRaid` | `Action	objectivestate	1	wraithwood-main-raid	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGrove` | `Action	objectivestate	1	wraithwood-extra-grove	reached`; conditions: `Cond	region	1	SealedGrove` | yes |
-| Objective mapping | objective status trigger conditions differ from reviewed conditions: mainRaid | no: requires design decision |
-| Objective mapping | grouped objective set differs from reviewed matrix: Wraithwood | no: requires design decision |
-| Objective mapping | grouped goal differs from approved definition: wraithwood-main-witch | no: requires design decision |
-| Objective mapping | grouped failure conditions differ: mainVictory | no: requires design decision |
-| Objective mapping | grouped history flag action differs: mainVictory | no: requires design decision |
-| Objective mapping | original trial limit was changed: mist | no: requires design decision |
-| Objective mapping | original trial limit was changed: mist | no: requires design decision |
-| Objective mapping | original trial limit was changed: westGlade | no: requires design decision |
-| Objective mapping | original trial limit was changed: southGlade | no: requires design decision |
-| Objective mapping | original trial limit was changed: covenStirs | no: requires design decision |
-| Objective mapping | victory narration must occur exactly once after current main goals | no: requires design decision |
-| Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately |
+| Objective mapping | grouped observer mode differs: wraithwood-main-raid | no: requires design decision |
+| Briefing | Defend against the kingdom's heroes and destroy both hearts. | yes: own-heart protection, independent actual northwest seat3 and northeast seat2 heart destruction; remaining foes checked separately; mainRaid also requires the defeated raid with its leader ElowenAsh |

@@ -661,11 +661,35 @@
           ],
           "minimum_open_tiles": 4
         }
+      },
+      "mission_pickups": {
+        "cellar-stone": {
+          "carrier": "worker",
+          "source": [
+            3,
+            24
+          ],
+          "destination": [
+            9,
+            38
+          ],
+          "seat": 1,
+          "discovery": "cellarFound",
+          "region": "Cellar",
+          "bounds": [
+            3,
+            24,
+            4,
+            25
+          ],
+          "delivery": "cellarStoneHome",
+          "reward": "Action\tdiscover\tcampaign/Mossgate.level"
+        }
       }
     },
     "route": [
       "Build two usable Goblin beds (each 1x1) and a hatchery with an actual coop. A 3x3 hatchery and two bed tiles cost 1174 of the unchanged 2500 starting gold. One possible build site is hatchery (3,32)-(5,34), beds (3,35) and (3,36), after digging and claiming.",
-      "Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28); gather two living nonworkers inside Grove before ElsaBrack takes any damage.",
+      "Claim at least 22 Grove tiles. The existing groveClaimed spawn supplies two Goblins at (12,28).",
       "Use the original west/east ford flags and clear FordGuard1/2 plus the actual landingSeen reinforcements.",
       "Mine 500 actual gold for the optional task; 34000 finite potentially reachable gold is present, so this is not a prerequisite for the supplied starting-room budget.",
       "Claim the neutral portal and all 64 original open Keep tiles. No room construction on those natural floors is required.",
@@ -721,6 +745,17 @@
       ],
       "raidDefeated": [
         "Cond\traid\tdefeated"
+      ]
+    },
+    "removed": {
+      "triggers": [
+        "wardenGone",
+        "groveAssembly",
+        "groveAssemblyMissed",
+        "groveAssemblyMissedDeath"
+      ],
+      "creatures": [
+        "ElsaBrack"
       ]
     }
   },
@@ -985,6 +1020,30 @@
           ],
           "minimum_open_tiles": 4
         }
+      },
+      "mission_pickups": {
+        "larder-shard": {
+          "carrier": "worker",
+          "source": [
+            52,
+            21
+          ],
+          "destination": [
+            10,
+            9
+          ],
+          "seat": 1,
+          "discovery": "larderFound",
+          "region": "Larder",
+          "bounds": [
+            52,
+            21,
+            53,
+            22
+          ],
+          "delivery": "larderShardHome",
+          "reward": "Action\tshard"
+        }
       }
     },
     "route": [
@@ -1010,6 +1069,15 @@
       ],
       "raidDefeated": [
         "Cond\traid\tdefeated"
+      ]
+    },
+    "removed": {
+      "triggers": [
+        "wardenSlain",
+        "mainWarden"
+      ],
+      "creatures": [
+        "HugoCole"
       ]
     }
   },
@@ -1174,6 +1242,17 @@
       ],
       "raidDefeated": [
         "Cond\traid\tdefeated"
+      ]
+    },
+    "removed": {
+      "triggers": [
+        "wardenDown",
+        "mainWarden",
+        "mainStone",
+        "mainStoneList"
+      ],
+      "creatures": [
+        "MerrinTay"
       ]
     }
   },
@@ -1408,7 +1487,16 @@
       "Destroy the actual inner keep gate DoorWooden1 at (30,11). Before the final victory, optionally explore EastGate (44,16)-(52,24), with 22 initially open reachable tiles.",
       "Defeat the raid of the Grey Fang and its leader RolfScarrow, who come through the Moreya gate at (12,40). The phase-1 posts, triggers and bridges remain unchanged."
     ],
-    "runtime_limit": "Static route and exact source wiring only; real combat, bridge movement and save/load still require integrator/Mario runtime verification."
+    "runtime_limit": "Static route and exact source wiring only; real combat, bridge movement and save/load still require integrator/Mario runtime verification.",
+    "removed": {
+      "triggers": [
+        "captainDown",
+        "mainCaptain"
+      ],
+      "creatures": [
+        "OsricVane"
+      ]
+    }
   },
   "Greywater": {
     "goals": {
@@ -1677,6 +1765,30 @@
             24
           ]
         }
+      },
+      "mission_pickups": {
+        "gallery-shard": {
+          "carrier": "worker",
+          "source": [
+            52,
+            55
+          ],
+          "destination": [
+            9,
+            76
+          ],
+          "seat": 1,
+          "discovery": "vaultFound",
+          "region": "ChainVault",
+          "bounds": [
+            52,
+            55,
+            53,
+            56
+          ],
+          "delivery": "galleryShardHome",
+          "reward": "Action\tshard"
+        }
       }
     },
     "route": [
@@ -1687,7 +1799,17 @@
       "The sluice-key drops at its owner's actual death position; a worker must carry that physical key to (40, 18) for sluiceKeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.",
       "After optional discovery of the hidden ChainVault (52,55)-(53,56), a worker carries gallery-shard from (52, 55) to the own heart at (9, 76); its delivery finds the Heartstone shard of this level."
     ],
-    "runtime_limit": "Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification."
+    "runtime_limit": "Static source/resource route only; real siege combat, crossing movement, pursuit of units and save/load require integrator/Mario runtime verification.",
+    "removed": {
+      "triggers": [
+        "wardenFalls",
+        "mainWarden",
+        "goalHeartSafe3BeforeWardenFalls"
+      ],
+      "creatures": [
+        "CorwinGray"
+      ]
+    }
   },
   "HollinFen": {
     "goals": {
@@ -1714,24 +1836,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "hollinfen-main-warden": {
+      "hollinfen-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Agathe Hollin and all enemy forces.",
-        "completion": "mainWarden",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tevent\tAgatheHollin\tkilled",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
-        ],
-        "mode": "repeat\t0"
-      },
-      "hollinfen-main-stone": {
-        "kind": "conditionalobjectiveid",
-        "seat": "1",
-        "text": "If found, bring the hollow stone home.",
-        "completion": "mainStone",
-        "conditions": [
-          "Cond\ttrigger\thollowStoneHome"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -1748,15 +1859,6 @@
       }
     },
     "extra_status_triggers": {
-      "mainStoneList": {
-        "conditions": [
-          "Cond\ttrigger\thollowFound"
-        ],
-        "states": [],
-        "actions": [
-          "Action\tconditionalobjectiveid\t1\thollinfen-main-stone\tIf found, bring the hollow stone home."
-        ]
-      },
       "mainHeartLost": {
         "conditions": [
           "Cond\troomtiles\t1\tDungeonTemple\t<=\t0"
@@ -1776,17 +1878,6 @@
       ],
       "fenDrains": [
         "Cond\tclaimed\t1\tFen\t120"
-      ],
-      "hollowFound": [
-        "Cond\tregion\t1\tSealedHollow"
-      ],
-      "hollowStoneHome": [
-        "Cond\tdeliveredstone\thollow-stone"
-      ],
-      "hollowStoneLost": [
-        "Cond\tflag\thollowStone\t1",
-        "Cond\ttimer\thollowSpawn\t>=\t5",
-        "Cond\talive\tHollowBearer\t0"
       ]
     },
     "preserved_actions": {
@@ -1794,27 +1885,10 @@
         "Action\tmessage\t1\tWith so much of the fen under your claim, the reed pool has drained and a spring of raw mana has surfaced beside it.",
         "Action\tterrain\t27\t35\t33\t37\tpath",
         "Action\tterrain\t38\t36\t38\t36\tmanawell\t1"
-      ],
-      "hollowFound": [
-        "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart.",
-        "Action\tspawn\t1\t6\t54\t1\tGoblin:1@HollowBearer",
-        "Action\tstonecreate\t5\t54\thollow-stone\t1\t12\t12",
-        "Action\tsetflag\thollowStone\t1",
-        "Action\ttimer\thollowSpawn\t0"
-      ],
-      "hollowStoneHome": [
-        "Action\tmessage\t1\tThe pale stone sinks into the heart and a hidden hall has opened.",
-        "Action\tdiscover\tcampaign/CrowshotGallery.level"
-      ],
-      "hollowStoneLost": [
-        "Action\tmessage\t1\tAnother goblin emerges. Send a Ziv for the stone.",
-        "Action\tspawn\t1\t6\t54\t1\tGoblin:1@HollowBearer"
       ]
     },
     "reachability": {
-      "named_creatures": [
-        "AgatheHollin"
-      ],
+      "named_creatures": [],
       "regions": {
         "Fen": {
           "bounds": [
@@ -1833,15 +1907,6 @@
             72
           ],
           "minimum_potential_tiles": 40
-        },
-        "SealedHollow": {
-          "bounds": [
-            2,
-            50,
-            10,
-            58
-          ],
-          "minimum_open_tiles": 36
         },
         "ManaSpring": {
           "bounds": [
@@ -1959,25 +2024,6 @@
         ],
         "starting_gold": 1800,
         "cost": 790
-      },
-      "mission_pickups": {
-        "hollow-stone": {
-          "source": [
-            5,
-            54
-          ],
-          "friendly": "HollowBearer",
-          "friendly_spawn": [
-            6,
-            54
-          ],
-          "destination": [
-            12,
-            12
-          ],
-          "seat": 1,
-          "discovery": "hollowFound"
-        }
       }
     },
     "route": [
@@ -1985,10 +2031,27 @@
       "Original Hatchery1 is (5..7,14..15); add (5..7,16) to make a 3x3 coop site for 330 gold. Total expansion 790 is below starting gold 1800; skills already unlocked, added ground diggable and reachable. Coops remain a spawn source, not a population cap.",
       "Claim 40 Causeway fields in (22,62)-(50,72), then destroy actual west gate DoorWooden1 at (51,66). Potential Causeway fields306.",
       "Before the last main goal, optionally claim 120 Fen fields (673 potentially reachable), triggering original fenDrains. It opens (27,35)-(33,37) and creates the owned mana well at (38,36); the optional observer checks the real well.",
-      "After optional discovery, a worker collects hollow-stone from (5, 54) beside HollowBearer and visibly carries the same item to the own heart at (12, 12). Picking up the worker or losing it leaves the same item on the current floor for another worker; friendly-creature replacement does not create another stone.",
-      "Kill AgatheHollin (66,70), remaining enemy forces and claim/remove Portal1 (13..15,65..67). Existing seven patrol waves and convent reinforcements remain unchanged."
+      "HollinFen is the third level of its wing and reveals no bonus level; the bricked hollow, its stone and its bearer are gone.",
+      "Defeat the raid of the Order of the White Thorn and its leader AgatheHollin, who come through the Moreya gate at (42,42), and claim/remove Portal1 (13..15,65..67). The convent reinforcements remain."
     ],
-    "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification."
+    "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
+    "removed": {
+      "triggers": [
+        "hollowFound",
+        "hollowStoneHome",
+        "hollowStoneLost",
+        "mainWarden",
+        "mainStone",
+        "mainStoneList",
+        "wardenSlain"
+      ],
+      "creatures": [
+        "AgatheHollin"
+      ],
+      "items": [
+        "hollow-stone"
+      ]
+    }
   },
   "CrowshotGallery": {
     "goals": {
@@ -2689,14 +2752,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "saltmere-main-admiral": {
+      "saltmere-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Bram Seward and all enemy forces.",
-        "completion": "mainAdmiral",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tevent\tBramSeward\tkilled",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -2800,15 +2862,12 @@
       ],
       "portEntered": [
         "Action\tmessage\t1\tHorns sound over the water. Seward has called every deckhand ashore.",
-        "Action\tspawn\t3\t40\t84\t1\tKnight:3\tKnight:2\tDwarf2:2\tMonk:2\tAdventurer:2",
-        "Action\tobjectiveid\t1\tsaltmere-o05\tFind Bram Seward in the harbour hall."
+        "Action\tspawn\t3\t40\t84\t1\tKnight:3\tKnight:2\tDwarf2:2\tMonk:2\tAdventurer:2"
       ]
     },
     "reachability": {
       "minimum_mineable_gold": 1600,
-      "named_creatures": [
-        "BramSeward"
-      ],
+      "named_creatures": [],
       "regions": {
         "HighFlat": {
           "bounds": [
@@ -2923,16 +2982,49 @@
           49,
           80
         ]
-      ]
+      ],
+      "mission_pickups": {
+        "heartstone-shard": {
+          "carrier": "worker",
+          "source": [
+            3,
+            47
+          ],
+          "destination": [
+            14,
+            10
+          ],
+          "seat": 1,
+          "discovery": "shardFound",
+          "region": "ShardHollow",
+          "bounds": [
+            2,
+            46,
+            5,
+            49
+          ],
+          "delivery": "shardHome",
+          "reward": "Action\tshard"
+        }
+      }
     },
     "route": [
       "Mine 800 actual gold from the zero-gold start. Original firstSalt supplies Orc/Goblin at (16,13). Finite reachable gold totals 52000; optionally mine 1600 total before the final main goal.",
       "An own living creature must reach HighFlat (24,14)-(50,28), Lagoon (18,44)-(44,62) and SouthFlat (20,66)-(46,78). Current legacy lagoonReached and exact new region histories are used; no reveal or gate opening substitutes for those visits.",
       "Keep both original tunnel-opening alternatives: claim 50 SouthFlat fields, or wait for portGatesTimeout at time2400 while closed. Both clear (40..41,78)/(48..49,78). The grouped goal adds no compulsory 50-field claim after the timed alternative.",
       "Destroy both actual outer doors: DoorWooden2 (40,80) and DoorWooden1 (48,80). Walk one own living creature south through either whole two-field-wide gateway, x40..41 or x48..49 at y80, from y79 to y81. The complete tunnel width counts, not an arbitrary exact door-center field. Verified open banks permit both crossings; the original earth at (49,81) can be dug or the open exit at (48,81) used. Opening only the tunnel mouth never completes the requirement.",
-      "Defeat BramSeward, initially (46,86) in the port hall, and the remaining foes including the sleeper keeper; claim/remove neutral Portal1 (3..5,17..19). Original reinforcements, inner doors and all geometry remain unchanged."
+      "Defeat the raid of the Salt Wolves and its leader BramSeward, who come through the Moreya gate at (21,53), and the remaining foes including the sleeper keeper; claim/remove neutral Portal1 (3..5,17..19). After optional discovery of ShardHollow, a worker carries heartstone-shard from (3, 47) to the own heart at (14, 10); its delivery finds the Heartstone shard of this level."
     ],
-    "runtime_limit": "Static source/resource route and exact outer-gate traversal only; combat, timing, save/load and the full playthrough require integrator/Mario verification."
+    "runtime_limit": "Static source/resource route and exact outer-gate traversal only; combat, timing, save/load and the full playthrough require integrator/Mario verification.",
+    "removed": {
+      "triggers": [
+        "admiralFalls",
+        "mainAdmiral"
+      ],
+      "creatures": [
+        "BramSeward"
+      ]
+    }
   },
   "Dunmarrow": {
     "goals": {
@@ -3540,6 +3632,16 @@
         ],
         "mode": "repeat\t0"
       },
+      "ironbridge-main-raid": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
+        "conditions": [
+          "Cond\traid\tdefeated"
+        ],
+        "mode": "repeat\t0"
+      },
       "ironbridge-extra-coal": {
         "kind": "optionalobjectiveid",
         "seat": "1",
@@ -3694,6 +3796,11 @@
             "1",
             "ironbridge-main-hold",
             "failed"
+          ],
+          [
+            "1",
+            "ironbridge-main-raid",
+            "failed"
           ]
         ]
       }
@@ -3715,7 +3822,8 @@
         "Cond\tflag\tkeepGateBreached\t1",
         "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
         "Cond\tgoalmet\t1\tKillAllEnemies",
-        "Cond\tflag\tstoryVictorySent\t0"
+        "Cond\tflag\tstoryVictorySent\t0",
+        "Cond\tobjective\t1\tironbridge-main-raid\treached"
       ],
       "rivalHeartDown": [
         "Cond\tgoal\t1\tKillAllEnemies",
@@ -3730,7 +3838,8 @@
         "Cond\tflag\tkeepGateBreached\t1",
         "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
         "Cond\tgoalmet\t1\tKillAllEnemies",
-        "Cond\tflag\tstoryVictorySent\t0"
+        "Cond\tflag\tstoryVictorySent\t0",
+        "Cond\tobjective\t1\tironbridge-main-raid\treached"
       ]
     },
     "preserved_actions": {
@@ -4118,10 +4227,15 @@
       "Walk east over rift1 via StoneBridge1 (36..39,20..21) or StoneBridge2 (36..39,46). Only after its actual completion may rift2 begin: StoneBridge3 (62..65,12), StoneBridge4 (62..65,34..35), or StoneBridge5 (62..65,54).",
       "After rift2 completion walk east over rift3: StoneBridge6 (88..91,26..27) or StoneBridge7 (88..91,48). Each bridge requires one real own living walker from entry bank through the whole bridge to the opposite bank; mixed visitors and out-of-order crossings do not count.",
       "Claim all six original Treasury6 fields (48..50,8..9) in Smithy and all six original Library3 fields (78..80,54..55) in OreDock. These are the actual placed rooms at the named sites, not an invented forge-room type or a region visit.",
-      "For the fortress entry destroy and physically pass either DoorWooden8 (93,26), DoorWooden9 (93,27), or the southern alternate DoorWooden10 (93,48). Destroy the rival heart and defeat remaining hostile forces/portals. The original two victory paths share all exact requirements and send the unchanged narration once.",
+      "For the fortress entry destroy and physically pass either DoorWooden8 (93,26), DoorWooden9 (93,27), or the southern alternate DoorWooden10 (93,48). Destroy the rival heart and defeat remaining hostile forces/portals. The original two victory paths share all exact requirements and send the unchanged narration once. Both victory paths now also require the defeated raid of the Anvil Host and its leader GarethFenn, who come through the Moreya gate at (22,14).",
       "Before the final main goal optionally explore CoalStore (66,5)-(86,22),153initially open reachable fields. Claim/remove Portal1 (19..21,37..39) as part of remaining-enemy clearance. Keep the original5400second deadline and all original reinforcements."
     ],
-    "runtime_limit": "Only static source, exact room footprints, bank connectivity and resource feasibility; ordered movement, claiming, combat, the5400second route and save/load require integrator/Mario runtime verification."
+    "runtime_limit": "Only static source, exact room footprints, bank connectivity and resource feasibility; ordered movement, claiming, combat, the5400second route and save/load require integrator/Mario runtime verification.",
+    "removed": {
+      "creatures": [
+        "GarethFenn"
+      ]
+    }
   },
   "Wolfscar": {
     "goals": {
@@ -4734,13 +4848,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "lanternhill-main-stone": {
-        "kind": "conditionalobjectiveid",
+      "lanternhill-main-raid": {
+        "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "If found, bring the lantern stone home.",
-        "completion": "mainStone",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\ttrigger\tlanternStoneHome"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -4753,6 +4867,16 @@
           "Cond\tregion\t1\tLampRoom"
         ],
         "mode": "once"
+      },
+      "lanternhill-main-stone": {
+        "kind": "conditionalobjectiveid",
+        "seat": "1",
+        "text": "If found, bring the lantern stone home.",
+        "completion": "mainStone",
+        "conditions": [
+          "Cond\ttrigger\tlanternStoneHome"
+        ],
+        "mode": "repeat\t0"
       }
     },
     "extra_status_triggers": {
@@ -4782,6 +4906,7 @@
           "Cond\tobjective\t1\tlanternhill-main-home\treached",
           "Cond\tobjective\t1\tlanternhill-main-road\treached",
           "Cond\tobjective\t1\tlanternhill-main-rival\treached",
+          "Cond\tobjective\t1\tlanternhill-main-raid\treached",
           "Cond\tflag\tlanternStone\t0"
         ],
         "states": [],
@@ -4803,6 +4928,7 @@
           "Cond\tobjective\t1\tlanternhill-main-home\treached",
           "Cond\tobjective\t1\tlanternhill-main-road\treached",
           "Cond\tobjective\t1\tlanternhill-main-rival\treached",
+          "Cond\tobjective\t1\tlanternhill-main-raid\treached",
           "Cond\tflag\tvictoryStoneReady\t1"
         ],
         "states": [],
@@ -4842,7 +4968,7 @@
       ],
       "lanternStoneHome": [
         "Action\tmessage\t1\tThe pale stone sinks into the heart and a hidden hall has opened.",
-        "Action\tdiscover\tcampaign/TwistingHalls.level"
+        "Action\tdiscover\tcampaign/SkittleCavern.level"
       ],
       "lanternStoneLost": [
         "Action\tmessage\t1\tAnother spider emerges. Send a Ziv for the stone.",
@@ -4973,13 +5099,18 @@
       "Mine700actualgold and protect the own heart;55500finite gold is potentially reachable. Original mined1 reward and patrols remain unchanged.",
       "Dig a current dry worker route from(13,57)to(40,22). Initially disconnected; one possible62step route needs24dig fields. Any legal alternative qualifies.",
       "Claim all six original neutral Crypt2 fields(10..12,16..17)and all six Library2 fields(13..15,20..21); visits do not replace ownership.",
-      "Destroy the actual northern heart and all remaining foes/portals; unchanged victory narration once after current main completion.",
-      "Optionally enter LampRoom,24reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement and TwistingHalls discovery remain."
+      "Destroy the actual northern heart and all remaining foes/portals, and defeat the raid of the Pale Flame and its leader InesVale, who come through the Moreya gate at (66,56); unchanged victory narration once after current main completion.",
+      "Optionally enter LampRoom, 24 reachable open fields. Only voluntary hollowFound activates actual owned stone delivery; original replacement remains and the delivery reveals SkittleCavern."
     ],
     "runtime_limit": "Static floor source, own-heart destination and exact-item completion checked. Actual worker pickup, visible carrying, interruption, same-item recovery and save/load require runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe rival keeper is dead and his heart is cold. The lamps of Lanternhill burn for you now."
+    },
+    "removed": {
+      "creatures": [
+        "InesVale"
+      ]
     }
   },
   "VarnsCrossing": {
@@ -5046,6 +5177,16 @@
         ],
         "mode": "repeat\t0"
       },
+      "varnscrossing-main-raid": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
+        "conditions": [
+          "Cond\traid\tdefeated"
+        ],
+        "mode": "repeat\t0"
+      },
       "varnscrossing-extra-gold": {
         "kind": "optionalobjectiveid",
         "seat": "1",
@@ -5074,12 +5215,12 @@
         "conditions": [
           "Cond\tobjective\t1\tvarnscrossing-main-home\treached",
           "Cond\tobjective\t1\tvarnscrossing-main-keep\treached",
-          "Cond\tobjective\t1\tvarnscrossing-main-rivals\treached"
+          "Cond\tobjective\t1\tvarnscrossing-main-rivals\treached",
+          "Cond\tobjective\t1\tvarnscrossing-main-raid\treached"
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tBoth keepers lie dead and the great roads are quiet. Varn has lost his crossing.",
-          "Action\tdiscover\tcampaign/SwarmNight.level",
+          "Action\tmessage\t1\tBoth keepers lie dead, the Black Legion is broken and the great roads are quiet. Varn has lost his crossing.",
           "Action\twin\t1"
         ]
       }
@@ -5103,96 +5244,6 @@
       "portalWake": [
         "Cond\ttime\t500",
         "Cond\tflag\tportalOn\t0"
-      ],
-      "column1": [
-        "Cond\ttime\t150"
-      ],
-      "column2": [
-        "Cond\ttime\t290"
-      ],
-      "column3": [
-        "Cond\ttime\t430"
-      ],
-      "column4": [
-        "Cond\ttime\t570"
-      ],
-      "column5": [
-        "Cond\ttime\t710"
-      ],
-      "column6": [
-        "Cond\ttime\t850"
-      ],
-      "column7": [
-        "Cond\ttime\t990"
-      ],
-      "column8": [
-        "Cond\ttime\t1130"
-      ],
-      "column9": [
-        "Cond\ttime\t1270"
-      ],
-      "column10": [
-        "Cond\ttime\t1410"
-      ],
-      "column11": [
-        "Cond\ttime\t1550"
-      ],
-      "column12": [
-        "Cond\ttime\t1690"
-      ],
-      "column13": [
-        "Cond\ttime\t1830"
-      ],
-      "column14": [
-        "Cond\ttime\t1970"
-      ],
-      "column15": [
-        "Cond\ttime\t2110"
-      ],
-      "column16": [
-        "Cond\ttime\t2250"
-      ],
-      "column17": [
-        "Cond\ttime\t2390"
-      ],
-      "column18": [
-        "Cond\ttime\t2530"
-      ],
-      "column19": [
-        "Cond\ttime\t2670"
-      ],
-      "column20": [
-        "Cond\ttime\t2810"
-      ],
-      "column21": [
-        "Cond\ttime\t2950"
-      ],
-      "column22": [
-        "Cond\ttime\t3090"
-      ],
-      "column23": [
-        "Cond\ttime\t3230"
-      ],
-      "column24": [
-        "Cond\ttime\t3370"
-      ],
-      "column25": [
-        "Cond\ttime\t3510"
-      ],
-      "column26": [
-        "Cond\ttime\t3650"
-      ],
-      "column27": [
-        "Cond\ttime\t3790"
-      ],
-      "column28": [
-        "Cond\ttime\t3930"
-      ],
-      "column29": [
-        "Cond\ttime\t4070"
-      ],
-      "column30": [
-        "Cond\ttime\t4210"
       ]
     },
     "preserved_actions": {
@@ -5225,126 +5276,6 @@
         "Action\tmessage\t1\tThe crossing has quieted around your quarter, and your portal draws creatures again.",
         "Action\tportal\t1\ton",
         "Action\tsetflag\tportalOn\t1"
-      ],
-      "column1": [
-        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
-        "Action\tspawn\t4\t45\t7\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "column2": [
-        "Action\tmessage\t1\tRiders are crossing the west road.",
-        "Action\tspawn\t4\t7\t47\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "column3": [
-        "Action\tmessage\t1\tPikes are marching along the east road.",
-        "Action\tspawn\t4\t83\t47\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "column4": [
-        "Action\tmessage\t1\tThe south road is full of banners.",
-        "Action\tspawn\t4\t45\t87\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "column5": [
-        "Action\tmessage\t1\tThe marshal has sent another company.",
-        "Action\tspawn\t4\t45\t7\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "column6": [
-        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
-        "Action\tspawn\t4\t7\t47\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "column7": [
-        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
-        "Action\tspawn\t4\t83\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
-      ],
-      "column8": [
-        "Action\tmessage\t1\tRiders are crossing the west road.",
-        "Action\tspawn\t4\t45\t87\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
-      ],
-      "column9": [
-        "Action\tmessage\t1\tPikes are marching along the east road.",
-        "Action\tspawn\t4\t45\t7\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
-      ],
-      "column10": [
-        "Action\tmessage\t1\tThe south road is full of banners.",
-        "Action\tspawn\t4\t7\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
-      ],
-      "column11": [
-        "Action\tmessage\t1\tThe marshal has sent another company.",
-        "Action\tspawn\t4\t83\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
-      ],
-      "column12": [
-        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
-        "Action\tspawn\t4\t45\t87\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3"
-      ],
-      "column13": [
-        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
-        "Action\tspawn\t4\t45\t7\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
-      ],
-      "column14": [
-        "Action\tmessage\t1\tRiders are crossing the west road.",
-        "Action\tspawn\t4\t7\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
-      ],
-      "column15": [
-        "Action\tmessage\t1\tPikes are marching along the east road.",
-        "Action\tspawn\t4\t83\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
-      ],
-      "column16": [
-        "Action\tmessage\t1\tThe south road is full of banners.",
-        "Action\tspawn\t4\t45\t87\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
-      ],
-      "column17": [
-        "Action\tmessage\t1\tThe marshal has sent another company.",
-        "Action\tspawn\t4\t45\t7\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
-      ],
-      "column18": [
-        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
-        "Action\tspawn\t4\t7\t47\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
-      ],
-      "column19": [
-        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
-        "Action\tspawn\t4\t83\t47\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "column20": [
-        "Action\tmessage\t1\tRiders are crossing the west road.",
-        "Action\tspawn\t4\t45\t87\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "column21": [
-        "Action\tmessage\t1\tPikes are marching along the east road.",
-        "Action\tspawn\t4\t45\t7\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "column22": [
-        "Action\tmessage\t1\tThe south road is full of banners.",
-        "Action\tspawn\t4\t7\t47\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "column23": [
-        "Action\tmessage\t1\tThe marshal has sent another company.",
-        "Action\tspawn\t4\t83\t47\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "column24": [
-        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
-        "Action\tspawn\t4\t45\t87\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "column25": [
-        "Action\tmessage\t1\tA column of the kingdom comes down the north road.",
-        "Action\tspawn\t4\t45\t7\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "column26": [
-        "Action\tmessage\t1\tRiders are crossing the west road.",
-        "Action\tspawn\t4\t7\t47\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "column27": [
-        "Action\tmessage\t1\tPikes are marching along the east road.",
-        "Action\tspawn\t4\t83\t47\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "column28": [
-        "Action\tmessage\t1\tThe south road is full of banners.",
-        "Action\tspawn\t4\t45\t87\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "column29": [
-        "Action\tmessage\t1\tThe marshal has sent another company.",
-        "Action\tspawn\t4\t45\t7\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "column30": [
-        "Action\tmessage\t1\tA heavy column is on the road to the crossing.",
-        "Action\tspawn\t4\t7\t47\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
       ]
     },
     "reachability": {
@@ -5543,20 +5474,81 @@
             ]
           ]
         }
-      ]
+      ],
+      "mission_pickups": {
+        "ember-stone": {
+          "carrier": "worker",
+          "source": [
+            3,
+            73
+          ],
+          "destination": [
+            14,
+            80
+          ],
+          "seat": 1,
+          "discovery": "stoneFound",
+          "region": "StoneChamber",
+          "bounds": [
+            2,
+            72,
+            5,
+            75
+          ],
+          "delivery": "stoneHome",
+          "reward": "Action\tdiscover\tcampaign/TwistingHalls.level"
+        }
+      }
     },
     "route": [
       "Claim25Quarter fields, retaining original quarterHeld threshold. Protect the heart and provide at least one real bed and hatchery coop; the map starts with workers only, so no invented initial fighter population is assumed.",
       "Dormitory1(18..20,76..77)already has6fields; one bed can fit at(18,76). Hatchery1(8..10,85..86)has6fields; add row87 to form a3x3site,330gold from4000startinggold. All three added fields are reachable removable dirt and room skills are unlocked. Later reinforcements still need player care.",
       "Capture all317original open Keep floor fields in(36,38)-(56,58), including current ownership of any rooms on them. Lava, water and original walls are excluded. Do not require a new room on natural floor. Keep control until all other main goals are reached.",
-      "Destroy both real rival hearts,seats2and3,then defeat remaining enemies/portals. Original30columns,alliance changes and portal timing remain unchanged.",
+      "Destroy both real rival hearts, seats 2 and 3, then defeat remaining enemies/portals and both raid groups of the Black Legion with their leader MarshalVarn, who come through the Moreya gate at (45,7). The thirty timed columns are gone; alliance changes remain.",
       "Optionally mine5000actualgold from118000potentialfinitegold,above original4000milestone. Original gold gifts are not mining.",
-      "Unchanged victory sentence and SwarmNight discovery move together to the final completion after all current main observers. Old win requests remain pending."
+      "The victory sentence is emitted once after all current main observers. SwarmNight is no longer discovered here; after optional discovery of StoneChamber, a worker carries ember-stone from (3, 73) to the own heart at (14, 80); its delivery reveals TwistingHalls."
     ],
     "runtime_limit": "Static resource/footprint evidence only; claim takeover, bed/coop use, combat, save/load and runtime UI need integrator/Mario verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tBoth keepers lie dead and the great roads are quiet. Varn has lost his crossing."
+      "action": "Action\tmessage\t1\tBoth keepers lie dead, the Black Legion is broken and the great roads are quiet. Varn has lost his crossing."
+    },
+    "removed": {
+      "triggers": [
+        "column1",
+        "column2",
+        "column3",
+        "column4",
+        "column5",
+        "column6",
+        "column7",
+        "column8",
+        "column9",
+        "column10",
+        "column11",
+        "column12",
+        "column13",
+        "column14",
+        "column15",
+        "column16",
+        "column17",
+        "column18",
+        "column19",
+        "column20",
+        "column21",
+        "column22",
+        "column23",
+        "column24",
+        "column25",
+        "column26",
+        "column27",
+        "column28",
+        "column29",
+        "column30"
+      ],
+      "creatures": [
+        "MarshalVarn"
+      ]
     }
   },
   "Thornreach": {
@@ -6159,6 +6151,28 @@
     "victory_narration": {
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tWarden Hilde Cairn lies dead among her own stones. Highcairn is yours."
+    },
+    "removed": {
+      "triggers": [
+        "wardenSlain",
+        "mainWarden",
+        "mainStone",
+        "mainStoneList",
+        "stoneHome",
+        "stoneHome2",
+        "bearerLost",
+        "carrierRecovery",
+        "sealedFound",
+        "cairnStone",
+        "victoryWithoutStone",
+        "victoryWithStone"
+      ],
+      "creatures": [
+        "HildeCairn"
+      ],
+      "items": [
+        "cairn-stone"
+      ]
     }
   },
   "SkittleCavern": {
@@ -7256,10 +7270,9 @@
       "cinderhollow-main-heart": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Protect your heart until dawn and victory.",
+        "text": "Protect your heart.",
         "completion": "mainHeart",
         "conditions": [
-          "Cond\ttrigger\tdawn",
           "Cond\tgoalmet\t1\tProtectDungeonTemple"
         ],
         "mode": "repeat\t0"
@@ -7275,23 +7288,10 @@
         ],
         "mode": "repeat\t0"
       },
-      "cinderhollow-main-waves": {
-        "kind": "mainobjectiveid",
-        "seat": "1",
-        "text": "Defeat all three attacking waves.",
-        "completion": "mainWaves",
-        "conditions": [
-          "Cond\tspawncleared\twaveOne\t2",
-          "Cond\tspawncleared\twaveTwo\t2",
-          "Cond\tspawncleared\twaveThree\t2",
-          "Cond\tspawncleared\twaveThree\t3"
-        ],
-        "mode": "repeat\t0"
-      },
       "cinderhollow-main-bridge": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "After dawn, cross the lava bridge to the crater.",
+        "text": "Cross the lava bridge to the crater.",
         "completion": "mainBridge",
         "conditions": [
           "Cond\tcrossed\t1\tDawnCauseway\tnorth\tafter\tlavaBridge"
@@ -7306,6 +7306,16 @@
         "conditions": [
           "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
           "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "cinderhollow-main-raid": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
+        "conditions": [
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -7337,7 +7347,7 @@
         "conditions": [
           "Cond\tobjective\t1\tcinderhollow-main-heart\treached",
           "Cond\tobjective\t1\tcinderhollow-main-seams\treached",
-          "Cond\tobjective\t1\tcinderhollow-main-waves\treached",
+          "Cond\tobjective\t1\tcinderhollow-main-raid\treached",
           "Cond\tobjective\t1\tcinderhollow-main-bridge\treached",
           "Cond\tobjective\t1\tcinderhollow-main-rival\treached"
         ],
@@ -7349,68 +7359,33 @@
       }
     },
     "preserved_conditions": {
-      "waveOne": [
-        "Cond\ttime\t420"
-      ],
-      "waveTwo": [
-        "Cond\ttime\t900"
-      ],
-      "waveThree": [
-        "Cond\ttime\t1350"
-      ],
       "dawn": [
         "Cond\ttime\t1800"
       ],
       "lavaBridge": [
-        "Cond\ttime\t1800"
+        "Cond\ttime\t3"
       ],
       "goalBothFiniteSeamsMined": [
         "Cond\tslabs\t-1\tGoalWestGoldSeam\tgold\t==\t0",
         "Cond\tslabs\t-1\tGoalSouthGoldSeam\tgold\t==\t0"
-      ],
-      "goalThreeWavesDefeatedAtHeart": [
-        "Cond\tspawncleared\twaveOne\t2",
-        "Cond\tspawncleared\twaveTwo\t2",
-        "Cond\tspawncleared\twaveThree\t2",
-        "Cond\tspawncleared\twaveThree\t3"
       ],
       "ashWell": [
         "Cond\tslabs\t-1\tGoldHollow\tgold\t<=\t0"
       ]
     },
     "preserved_actions": {
-      "waveOne": [
-        "Action\tmessage\t1\tThe first wave is coming down through the north-west gate.",
-        "Action\twavecountdown\t480",
-        "Action\tspawn\t3\t15\t14\t1\tAdventurer:2\tDwarf1:2\tElf:2\tMonk:2\tAdventurer:2"
-      ],
-      "waveTwo": [
-        "Action\tmessage\t1\tThe second wave has entered the hollow at the east gate.",
-        "Action\twavecountdown\t450",
-        "Action\tspawn\t3\t70\t50\t1\tKnight:3\tElf:3\tMonk:2\tAdventurer:3\tDwarf2:3\tKnight:2"
-      ],
-      "waveThree": [
-        "Action\tmessage\t1\tThe last wave is on both roads at once, from the north-west gate and the east gate.",
-        "Action\twavecountdown\t0",
-        "Action\tspawn\t3\t15\t14\t1\tKnight:4\tElf:3\tMonk:3\tDwarf2:3\tAdventurer:3",
-        "Action\tspawn\t3\t70\t50\t1\tKnight:4\tKnight:3\tElf:3\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
       "dawn": [
-        "Action\tmessage\t1\tDawn has come and the waves are spent. The rival keeper is stirring in the crater: destroy him before the hollow wakes again.",
+        "Action\tmessage\t1\tThe rival keeper is stirring in the crater and calls up his pack.",
         "Action\tobjectiveid\t1\tcinderhollow-o05\tDestroy the heart in the north-east crater.",
         "Action\tgold\t1\t600",
-        "Action\tspawn\t2\t55\t25\t1\tTroll:4\tOrc:4\tLavaSpawn:3\tPitDemon:3\tGoblin:3",
-        "Action\ttimelimit\t1800"
+        "Action\tspawn\t2\t55\t25\t1\tTroll:4\tOrc:4\tLavaSpawn:3\tPitDemon:3\tGoblin:3"
       ],
       "lavaBridge": [
-        "Action\tmessage\t1\tThe lava lake has sunk with the dawn and a stone causeway rises across it to the crater.",
+        "Action\tmessage\t1\tThe lava lake has sunk and a stone causeway rises across it to the crater.",
         "Action\tterrain\t55\t31\t55\t34\tbridge\t1"
       ],
       "goalBothFiniteSeamsMined": [
         "Action\tobjectivestate\t1\tcinderhollow-o02\treached"
-      ],
-      "goalThreeWavesDefeatedAtHeart": [
-        "Action\tobjectivestate\t1\tcinderhollow-o03\treached"
       ],
       "ashWell": [
         "Action\tmessage\t1\tThe last gold of the seam is out and the rock behind it sweats mana. A spring has opened in the hollow.",
@@ -7447,20 +7422,58 @@
           55,
           30
         ]
-      ]
+      ],
+      "mission_pickups": {
+        "ash-stone": {
+          "carrier": "worker",
+          "source": [
+            44,
+            73
+          ],
+          "destination": [
+            16,
+            61
+          ],
+          "seat": 1,
+          "discovery": "stoneFound",
+          "region": "AshPocket",
+          "bounds": [
+            43,
+            72,
+            46,
+            75
+          ],
+          "delivery": "stoneHome",
+          "reward": "Action\tdiscover\tcampaign/SwarmNight.level"
+        }
+      }
     },
     "route": [
-      "Keep the own heart through original dawn at1800seconds and until final victory. Original waves at420,900,1350seconds and the1800second post-dawn limit remain unchanged.",
+      "Keep the own heart until final victory. The three timed waves, the dawn deadline and the post-dawn limit are gone; dawn at 1800 seconds still wakes the rival keeper's pack.",
       "Fully exhaust exactly the two original finite starting seams:west x5..6/y55..58,south x30..33/y72..73,16gold fields total. No420second mining deadline and no unrelated gold threshold. Existing cinder_seam_errors binds original vein positions and finite material.",
-      "Defeat actual instances from waveOne action2,waveTwo action2,waveThree actions2and3. Every actual creature must die; KO is not death and interception away from heart tiles is valid. Heart survival is separate.",
-      "After lavaBridge fires at1800seconds, walk one own living creature north from dry bank(55,35)through all four generated causeway fields(55,34..31)to dry crater bank(55,30). A visitor, earlier flight or different creatures on the two banks does not count. The exact original time-gated terrain bridge action is preserved.",
+      "Defeat both raid groups of the Ember Ram with their leader PellAshgrove, who come through the Moreya gate at (70,50).",
+      "After lavaBridge raises the causeway at 3 seconds, walk one own living creature north from dry bank (55,35) through all four generated causeway fields (55,34..31) to dry crater bank (55,30). A visitor, earlier flight or different creatures on the two banks does not count.",
       "Destroy the actual rival DungeonTemple of seat2 and remaining enemies/portals. Optional SouthCave visit has61reachable open dry fields.",
-      "The existing final rival-heart victory sentence is emitted once after all five current main goals; premature alternate victory sentences are suppressed without replacement story words. Original three win requests remain pending."
+      "The rival-heart victory sentence is emitted once after all five current main goals. After optional discovery of AshPocket, a worker carries ash-stone from (44, 73) to the own heart at (16, 61); its delivery reveals SwarmNight."
     ],
     "runtime_limit": "Static seam/wave-source/bank/bridge-action evidence only; real mining, battle, generated-bridge traversal, timers and save/load require runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe rival heart is shattered and the crater is silent. Cinderhollow is yours."
+    },
+    "removed": {
+      "triggers": [
+        "waveOne",
+        "waveTwo",
+        "waveThree",
+        "goalThreeWavesDefeatedAtHeart",
+        "mainWaves",
+        "dawnClock",
+        "dawnWarning"
+      ],
+      "creatures": [
+        "PellAshgrove"
+      ]
     }
   },
   "Goldspire": {
@@ -7488,9 +7501,12 @@
           "Cond\tgroundclaimed\t1\t44\t63\t49\t63",
           "Cond\tgroundclaimed\t1\t42\t64\t52\t64",
           "Cond\tgroundclaimed\t1\t41\t65\t53\t65",
-          "Cond\tgroundclaimed\t1\t41\t66\t53\t66",
-          "Cond\tgroundclaimed\t1\t42\t67\t55\t67",
-          "Cond\tgroundclaimed\t1\t42\t68\t56\t68",
+          "Cond\tgroundclaimed\t1\t41\t66\t45\t66",
+          "Cond\tgroundclaimed\t1\t49\t66\t53\t66",
+          "Cond\tgroundclaimed\t1\t42\t67\t45\t67",
+          "Cond\tgroundclaimed\t1\t49\t67\t55\t67",
+          "Cond\tgroundclaimed\t1\t42\t68\t45\t68",
+          "Cond\tgroundclaimed\t1\t49\t68\t56\t68",
           "Cond\tgroundclaimed\t1\t42\t69\t57\t69",
           "Cond\tgroundclaimed\t1\t59\t69\t59\t69",
           "Cond\tgroundclaimed\t1\t42\t70\t60\t70",
@@ -7515,15 +7531,23 @@
         ],
         "mode": "repeat\t0"
       },
-      "goldspire-main-warden": {
+      "goldspire-main-vault": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Penn in the spire and all enemy forces. Unlock his vault.",
+        "text": "Unlock the vault.",
         "completion": "mainWarden",
         "conditions": [
-          "Cond\ttrigger\tpennVaultOpened",
-          "Cond\tkilledin\tAlaricPenn\tOuterRing",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
+          "Cond\ttrigger\tpennVaultOpened"
+        ],
+        "mode": "repeat\t0"
+      },
+      "goldspire-main-raid": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
+        "conditions": [
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -7630,11 +7654,12 @@
           "Cond\tobjective\t1\tgoldspire-main-home\treached",
           "Cond\tobjective\t1\tgoldspire-main-town\treached",
           "Cond\tobjective\t1\tgoldspire-main-route\treached",
-          "Cond\tobjective\t1\tgoldspire-main-warden\treached"
+          "Cond\tobjective\t1\tgoldspire-main-vault\treached",
+          "Cond\tobjective\t1\tgoldspire-main-raid\treached"
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tAlaric Penn lies dead on his own coin. Goldspire is yours.",
+          "Action\tmessage\t1\tAlaric Penn lies dead on his own coin and his vault stands open. Goldspire is yours.",
           "Action\twin\t1"
         ]
       }
@@ -7681,42 +7706,6 @@
       "lowGold": [
         "Cond\tmined\t1\t>=\t2500"
       ],
-      "column1": [
-        "Cond\ttime\t200"
-      ],
-      "column2": [
-        "Cond\ttime\t420"
-      ],
-      "column3": [
-        "Cond\ttime\t650"
-      ],
-      "column4": [
-        "Cond\ttime\t900"
-      ],
-      "column5": [
-        "Cond\ttime\t1150"
-      ],
-      "column6": [
-        "Cond\ttime\t1400"
-      ],
-      "column7": [
-        "Cond\ttime\t1700"
-      ],
-      "column8": [
-        "Cond\ttime\t2000"
-      ],
-      "column9": [
-        "Cond\ttime\t2350"
-      ],
-      "column10": [
-        "Cond\ttime\t2700"
-      ],
-      "column11": [
-        "Cond\ttime\t3050"
-      ],
-      "column12": [
-        "Cond\ttime\t3500"
-      ],
       "southGateOpens": [
         "Cond\tflag\tsouthHeld\t1"
       ],
@@ -7724,14 +7713,11 @@
         "Cond\tflag\tringsBroken\t1"
       ],
       "treasurerKey": [
-        "Cond\tevent\tAlaricPenn\tkilled"
-      ],
-      "treasurerHurt": [
-        "Cond\thealth\tAlaricPenn\t<=\t40"
+        "Cond\tevent\tVaultCaptain\tkilled"
       ],
       "keyDropped": [
         "Cond\ttime\t5",
-        "Cond\talive\tAlaricPenn\t0"
+        "Cond\talive\tVaultCaptain\t0"
       ],
       "portalWake": [
         "Cond\ttime\t700",
@@ -7744,7 +7730,6 @@
     "preserved_actions": {
       "rising": [
         "Action\tmessage\t1\tGoldspire stands over the plateau like a coin on its edge, master. Treasurer Alaric Penn counts the kingdom's tax in its core and soldiers pour out of its gates day and night.",
-        "Action\tobjectiveid\t1\tgoldspire-o01\tKill Alaric Penn inside the spire.",
         "Action\thint\t1\tMine gold and build an army.",
         "Action\tobjectiveid\t1\tgoldspire-o03\tTake the low town below the spire.",
         "Action\tportal\t1\toff"
@@ -7803,8 +7788,7 @@
         "Action\tspawn\t3\t66\t23\t1\tKnight:4\tElf:3\tMonk:3\tDwarf2:3"
       ],
       "coreSeen": [
-        "Action\tmessage\t1\tThe core of the spire. The treasurer is at his table, and his guards are rising.",
-        "Action\tobjectiveid\t1\tgoldspire-o05\tKill Alaric Penn."
+        "Action\tmessage\t1\tThe core of the spire. The vault captain keeps the key at the treasurer's table, and his guards are rising."
       ],
       "alertFollowup": [
         "Action\tmessage\t1\tThe treasurer is paying his soldiers with the tax. The vaults are thinner now.",
@@ -7812,54 +7796,6 @@
       ],
       "lowGold": [
         "Action\tmessage\t1\tThe plateau has paid for your army. Do not let the waves outpace you."
-      ],
-      "column1": [
-        "Action\tmessage\t1\tA column is marching out of the south gate.",
-        "Action\tspawn\t3\t47\t51\t1\tAdventurer:2\tElf:2\tMonk:2"
-      ],
-      "column2": [
-        "Action\tmessage\t1\tPatrols are in the low town.",
-        "Action\tspawn\t3\t47\t67\t1\tKnight:2\tAdventurer:2\tElf:2\tMonk:2"
-      ],
-      "column3": [
-        "Action\tmessage\t1\tThe garrison is changing its watch, and the old one has come for you.",
-        "Action\tspawn\t3\t47\t51\t1\tKnight:2\tKnight:2\tDwarf2:2\tMonk:2"
-      ],
-      "column4": [
-        "Action\tmessage\t1\tAnother squad is on the road to the quarry.",
-        "Action\tspawn\t3\t47\t67\t1\tKnight:3\tElf:2\tAdventurer:3\tMonk:2"
-      ],
-      "column5": [
-        "Action\tmessage\t1\tPikes are coming down from the ring.",
-        "Action\tspawn\t3\t47\t51\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:2"
-      ],
-      "column6": [
-        "Action\tmessage\t1\tThe treasurer has paid a heavy column.",
-        "Action\tspawn\t3\t47\t67\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
-      "column7": [
-        "Action\tmessage\t1\tBanners are in the south gate.",
-        "Action\tspawn\t3\t47\t51\t1\tKnight:4\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
-      ],
-      "column8": [
-        "Action\tmessage\t1\tThe spire is emptying its barracks.",
-        "Action\tspawn\t3\t47\t67\t1\tKnight:4\tKnight:4\tElf:3\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
-      "column9": [
-        "Action\tmessage\t1\tThe heavy guard marches.",
-        "Action\tspawn\t3\t47\t51\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:3"
-      ],
-      "column10": [
-        "Action\tmessage\t1\tAlaric Penn has opened his last purse.",
-        "Action\tspawn\t3\t47\t67\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:3"
-      ],
-      "column11": [
-        "Action\tmessage\t1\tThe tower will not stop sending men.",
-        "Action\tspawn\t3\t47\t51\t1\tKnight:5\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "column12": [
-        "Action\tmessage\t1\tA last great column, every spear in the spire.",
-        "Action\tspawn\t3\t47\t67\t1\tKnight:5\tKnight:5\tElf:4\tMonk:4\tDwarf2:4\tAdventurer:4"
       ],
       "southGateOpens": [
         "Action\tmessage\t1\tThe seal of the south gate gives way and the road onto the outer ring is open.",
@@ -7871,14 +7807,10 @@
         "Action\tterrain\t80\t58\t81\t72\tpath"
       ],
       "treasurerKey": [
-        "Action\tstonedrop\tAlaricPenn\ttreasurer-key\t1\t48\t30"
-      ],
-      "treasurerHurt": [
-        "Action\tmessage\t1\tAlaric Penn is bleeding coin. He calls the last of his guard to the core.",
-        "Action\tspawn\t3\t48\t38\t1\tKnight:5\tElf:4\tMonk:4\tDwarf2:4"
+        "Action\tstonedrop\tVaultCaptain\ttreasurer-key\t1\t48\t30"
       ],
       "keyDropped": [
-        "Action\tmessage\t1\tThe treasurer is dead and the vault key he carried lies where he fell."
+        "Action\tmessage\t1\tThe vault captain is dead and the vault key he carried lies where he fell."
       ],
       "portalWake": [
         "Action\tmessage\t1\tThe quarry has gone quiet and your portal draws creatures again.",
@@ -7891,7 +7823,7 @@
     },
     "reachability": {
       "named_creatures": [
-        "AlaricPenn"
+        "VaultCaptain"
       ],
       "regions": {
         "ArmyGround": {
@@ -8007,17 +7939,35 @@
             [
               41,
               66,
+              45,
+              66
+            ],
+            [
+              49,
+              66,
               53,
               66
             ],
             [
               42,
               67,
+              45,
+              67
+            ],
+            [
+              49,
+              67,
               55,
               67
             ],
             [
               42,
+              68,
+              45,
+              68
+            ],
+            [
+              49,
               68,
               56,
               68
@@ -8074,6 +8024,71 @@
               46,
               74,
               48,
+              74
+            ]
+          ],
+          "excluded_room": {
+            "name": "MoreyaGate1",
+            "type": 10,
+            "seat": 3,
+            "tiles": [
+              [
+                46,
+                66
+              ],
+              [
+                46,
+                67
+              ],
+              [
+                46,
+                68
+              ],
+              [
+                47,
+                66
+              ],
+              [
+                47,
+                67
+              ],
+              [
+                47,
+                68
+              ],
+              [
+                48,
+                66
+              ],
+              [
+                48,
+                67
+              ],
+              [
+                48,
+                68
+              ]
+            ]
+          },
+          "raid_path_tiles": [
+            [
+              42,
+              74
+            ],
+            [
+              43,
+              74
+            ],
+            [
+              44,
+              74
+            ],
+            [
+              45,
+              73
+            ],
+            [
+              45,
               74
             ]
           ]
@@ -8156,17 +8171,37 @@
     },
     "route": [
       "Raise at least2real own living nonworkers, anywhere on this actual map, recording the achieved buildup; protect the heart until victory. Start has4workers and300gold; original firstCoin at500actualmining generates Orc2+Goblin2 at(21,73)and400gold. No new mining requirement or free army invented.",
-      "Capture all153original open LowTown floor fields(38..60,60..74),all statically reachable. No placed room exists; no new room is required. Original40claimed trigger still opens the gate without changing its mechanics.",
+      "Capture all 144 open LowTown floor fields (38..60,60..74) outside the unclaimable Moreya gate room (46..48,66..68), all statically reachable. The five fields (42..45,74) and (45,73) dug open for the raid path are no part of the original low town. No placed room exists; no new room is required.",
       "After southGateOpens opens actual rock plug x47..49/y56,physically cross north fromy57toy55,and then enter OuterRing. The gate is terrain,not an invented door object.",
       "After that ring arrival and original linksOpen,physically traverse both full original link rectangles:west x11..12/y52..67,east x80..81/y58..72. Either north/south direction qualifies, no order between the two flanks. All dry entry/exit banks are checked; original linksOpen terrain actions retained.",
-      "Kill AlaricPenn inside the spire represented by the original OuterRing,which contains his Core(48,30)start,then clear remaining forces/portals. Defeat or KO does not replace his actual death.",
+      "Defeat the raid of the Gilded Hand and its leader AlaricPenn, who come through the Moreya gate at (47,67). The twelve timed columns and the wounded-treasurer reinforcement are gone.",
       "Optionally enter WestWing,117reachable open fields; original500gold reward retained. Move the unchanged victory sentence after all current main observers, retaining the old pending win request.",
-      "Penn remains at48,30 outside the relocated ten-tile treasury50..54,29..30. Its17rockwall fields surround one mission-locked wooden door49,30. Only actual treasurer-key delivery by a worker to48,30 opens PennVaultDoor; mainWarden requires this delivery trigger as well as the existing death and enemy conditions. Initial gold and treasury capacity unchanged."
+      "VaultCaptain now stands at 48,30 and carries the treasurer-key. Only actual treasurer-key delivery by a worker to 48,30 opens PennVaultDoor; mainWarden completes goldspire-main-vault on that delivery trigger."
     ],
     "runtime_limit": "Static route/bank/footprint/source evidence only; actual gate/link movement, capture, force buildup, battle and save/load need runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tAlaric Penn lies dead on his own coin. Goldspire is yours."
+      "action": "Action\tmessage\t1\tAlaric Penn lies dead on his own coin and his vault stands open. Goldspire is yours."
+    },
+    "removed": {
+      "triggers": [
+        "column1",
+        "column2",
+        "column3",
+        "column4",
+        "column5",
+        "column6",
+        "column7",
+        "column8",
+        "column9",
+        "column10",
+        "column11",
+        "column12",
+        "treasurerHurt"
+      ],
+      "creatures": [
+        "AlaricPenn"
+      ]
     }
   },
   "Mirewatch": {
@@ -8985,11 +9020,10 @@
       "bellwick-main-heart": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Protect your heart until both north gates open.",
+        "text": "Protect your heart.",
         "completion": "mainHeart",
         "conditions": [
-          "Cond\tgoalmet\t1\tProtectDungeonTemple",
-          "Cond\tflag\tgatesOpen\t1"
+          "Cond\tgoalmet\t1\tProtectDungeonTemple"
         ],
         "mode": "repeat\t0"
       },
@@ -9011,6 +9045,16 @@
         "conditions": [
           "Cond\troomtiles\t2\tDungeonTemple\t<=\t0",
           "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "bellwick-main-raid": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
+        "conditions": [
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -9042,11 +9086,12 @@
         "conditions": [
           "Cond\tobjective\t1\tbellwick-main-heart\treached",
           "Cond\tobjective\t1\tbellwick-main-nave\treached",
-          "Cond\tobjective\t1\tbellwick-main-keeper\treached"
+          "Cond\tobjective\t1\tbellwick-main-keeper\treached",
+          "Cond\tobjective\t1\tbellwick-main-raid\treached"
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe undead keeper is dust and the bells hang silent. Bellwick is yours.",
+          "Action\tmessage\t1\tThe undead keeper is dust, the raid is broken and the bells hang silent. Bellwick is yours.",
           "Action\twin\t1"
         ]
       }
@@ -9079,33 +9124,6 @@
       "undercroftSeen": [
         "Cond\tregion\t1\tUndercroft"
       ],
-      "faithful1": [
-        "Cond\ttime\t240"
-      ],
-      "faithful2": [
-        "Cond\ttime\t520"
-      ],
-      "faithful3": [
-        "Cond\ttime\t850"
-      ],
-      "faithful4": [
-        "Cond\ttime\t1200"
-      ],
-      "faithful5": [
-        "Cond\ttime\t1600"
-      ],
-      "faithful6": [
-        "Cond\ttime\t2050"
-      ],
-      "faithful7": [
-        "Cond\ttime\t2550"
-      ],
-      "faithful8": [
-        "Cond\ttime\t3100"
-      ],
-      "faithful9": [
-        "Cond\ttime\t3700"
-      ],
       "naveGatesKills": [
         "Cond\tkills\t1\t>=\t12",
         "Cond\tflag\tgatesOpen\t0"
@@ -9123,7 +9141,6 @@
         "Action\tmessage\t1\tBellwick stands over its own dead, master. The abbey bells call the faithful to arms, and Abbot Lorens Bell keeps an undead keeper in the undercroft to bring the sleepers up.",
         "Action\tobjectiveid\t1\tbellwick-o01\tDestroy the keeper's heart in the north undercroft.",
         "Action\thint\t1\tHold the nave against the faithful.",
-        "Action\tobjectiveid\t1\tbellwick-o03\tSurvive until both north gates open.",
         "Action\tportal\t2\toff"
       ],
       "yardHeld": [
@@ -9165,57 +9182,19 @@
         "Action\tmessage\t1\tThe keeper of the undercroft has spent the dead. Break his hall and the bells go quiet.",
         "Action\tspawn\t2\t30\t18\t1\tSkeleton:4\tLich:3\tCultist:3\tSkeleton:3"
       ],
-      "faithful1": [
-        "Action\tmessage\t1\tAcolytes in armour are marching from the west gate.",
-        "Action\tspawn\t3\t7\t62\t1\tAdventurer:2\tMonk:2\tElf:2"
-      ],
-      "faithful2": [
-        "Action\tmessage\t1\tPilgrims have come out of the east gate.",
-        "Action\tspawn\t3\t56\t62\t1\tKnight:2\tMonk:2\tAdventurer:2\tElf:2"
-      ],
-      "faithful3": [
-        "Action\tmessage\t1\tThe sacristans are taking up pikes.",
-        "Action\tspawn\t3\t7\t62\t1\tKnight:2\tKnight:2\tDwarf2:2\tMonk:2"
-      ],
-      "faithful4": [
-        "Action\tmessage\t1\tThe abbot has ordered the bells rung twice.",
-        "Action\tspawn\t3\t56\t62\t1\tKnight:3\tElf:2\tAdventurer:3\tMonk:2\tDwarf2:2"
-      ],
-      "faithful5": [
-        "Action\tmessage\t1\tA column of the faithful is coming down the nave.",
-        "Action\tspawn\t3\t7\t62\t1\tKnight:3\tKnight:2\tElf:3\tMonk:3\tAdventurer:2"
-      ],
-      "faithful6": [
-        "Action\tmessage\t1\tA heavy column with banners has left the east gate.",
-        "Action\tspawn\t3\t56\t62\t1\tKnight:3\tKnight:3\tElf:3\tMonk:3\tDwarf2:3"
-      ],
-      "faithful7": [
-        "Action\tmessage\t1\tThe abbey is emptying its dormitories.",
-        "Action\tspawn\t3\t7\t62\t1\tKnight:4\tKnight:3\tElf:3\tMonk:3\tAdventurer:3\tDwarf2:3"
-      ],
-      "faithful8": [
-        "Action\tmessage\t1\tLorens Bell himself has called the last levy.",
-        "Action\tspawn\t3\t56\t62\t1\tKnight:4\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
-      "faithful9": [
-        "Action\tmessage\t1\tThe bells are tolling for the last time.",
-        "Action\tspawn\t3\t7\t62\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:3\tAdventurer:3"
-      ],
       "naveGatesKills": [
         "Action\tmessage\t1\tThe masons of the north gates have fled the bells. Both gates of the nave grind open and the road to the undercroft is free.",
-        "Action\tterrain\t24\t29\t26\t31\tpath",
+        "Action\tterrain\t24\t28\t26\t28\tpath",
         "Action\tterrain\t48\t29\t48\t31\tpath",
         "Action\tsetflag\tgatesOpen\t1",
-        "Action\tportal\t2\ton",
-        "Action\tobjectivestate\t1\tbellwick-o03\treached"
+        "Action\tportal\t2\ton"
       ],
       "naveGatesLate": [
         "Action\tmessage\t1\tThe seals of the north gates have given way. The road to the undercroft is free.",
-        "Action\tterrain\t24\t29\t26\t31\tpath",
+        "Action\tterrain\t24\t28\t26\t28\tpath",
         "Action\tterrain\t48\t29\t48\t31\tpath",
         "Action\tsetflag\tgatesOpen\t1",
-        "Action\tportal\t2\ton",
-        "Action\tobjectivestate\t1\tbellwick-o03\treached"
+        "Action\tportal\t2\ton"
       ],
       "cryptWell": [
         "Action\tmessage\t1\tThe nave is yours, and the stones below it answer. A spring of mana has risen in the crypt cells.",
@@ -9251,19 +9230,59 @@
           ],
           "minimum_open_tiles": 161
         }
+      },
+      "mission_pickups": {
+        "bell-stone": {
+          "carrier": "worker",
+          "source": [
+            10,
+            102
+          ],
+          "destination": [
+            32,
+            108
+          ],
+          "seat": 1,
+          "discovery": "stoneFound",
+          "region": "StoneChamber",
+          "bounds": [
+            8,
+            100,
+            11,
+            103
+          ],
+          "delivery": "stoneHome",
+          "reward": "Action\tdiscover\tcampaign/BoulderCourse.level"
+        }
       }
     },
     "route": [
-      "Protect the own heart through both north-gate openings and until victory. Preserve original alternatives:12credited kills or1500seconds. Both exact terrain gate actions and gatesOpen1 remain unchanged; no new deadline.",
+      "Protect the own heart until victory. The north gates still open after 12 credited kills or 1500 seconds; the opening now clears row 28 above the Moreya gate (24..26,29..31).",
       "Walk the same own living creature north from the south bank y89 through the full Nave(20..30,66..88)to y65 inside original Transept. A transept visit via a side cloister or mixed visitors does not count. A concrete potential route runs x20/y89..65,24steps with21removable dirt fields. This is not claimed to be initially open or actually played. Any legal internal path qualifies.",
       "Destroy the actual original undercroft DungeonTemple2,footprint(28..32,10..14),and remaining enemy forces/portals. Mere seat2creature emptiness is insufficient.",
       "Optionally enter western Scriptorium(4,34)-(22,48),161reachable open dry fields. No new reward. The advice to hold the nave remains a hint, while actual survival to the existing gate milestone is a separate main duty.",
-      "Preserve all nine faithful waves, crypt gifts, gate alternatives, mana spring and terrain. Move the unchanged duplicate victory sentence to one final completion after all current main observers; old win requests remain pending."
+      "The nine timed faithful waves are gone (the gate replaces them). Defeat the raid of the Silent Bell and its leader LorensBell. After optional discovery of StoneChamber, a worker carries bell-stone from (10, 102) to the own heart at (32, 108); its delivery reveals BoulderCourse."
     ],
     "runtime_limit": "Static source and potential route evidence only; actual digging/movement, combat, gate timing and save/load remain for runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tThe undead keeper is dust and the bells hang silent. Bellwick is yours."
+      "action": "Action\tmessage\t1\tThe undead keeper is dust, the raid is broken and the bells hang silent. Bellwick is yours."
+    },
+    "removed": {
+      "triggers": [
+        "faithful1",
+        "faithful2",
+        "faithful3",
+        "faithful4",
+        "faithful5",
+        "faithful6",
+        "faithful7",
+        "faithful8",
+        "faithful9"
+      ],
+      "creatures": [
+        "LorensBell"
+      ]
     }
   },
   "Ebonrook": {
@@ -10669,7 +10688,7 @@
       "wraithwood-main-witch": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Destroy the northwestern witch heart.",
+        "text": "Destroy the northwestern rival heart.",
         "completion": "mainWitch",
         "conditions": [
           "Cond\troomtiles\t3\tDungeonTemple\t<=\t0"
@@ -10693,6 +10712,16 @@
         "completion": "mainForces",
         "conditions": [
           "Cond\tgoalmet\t1\tKillAllEnemies"
+        ],
+        "mode": "repeat\t0"
+      },
+      "wraithwood-main-raid": {
+        "kind": "mainobjectiveid",
+        "seat": "1",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
+        "conditions": [
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -10725,11 +10754,12 @@
           "Cond\tobjective\t1\twraithwood-main-heart\treached",
           "Cond\tobjective\t1\twraithwood-main-witch\treached",
           "Cond\tobjective\t1\twraithwood-main-rival\treached",
-          "Cond\tobjective\t1\twraithwood-main-forces\treached"
+          "Cond\tobjective\t1\twraithwood-main-forces\treached",
+          "Cond\tobjective\t1\twraithwood-main-raid\treached"
         ],
         "states": [],
         "actions": [
-          "Action\tmessage\t1\tThe witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours.",
+          "Action\tmessage\t1\tBoth rival keepers are dead, the Ash Coven is broken and the fog lifts from Wraithwood. The wood is yours.",
           "Action\twin\t1"
         ]
       }
@@ -10775,20 +10805,20 @@
     },
     "preserved_actions": {
       "mist": [
-        "Action\tmessage\t1\tMaster, Wraithwood is a forest of grey trunks and drifting fog, and Witch-Warden Elowen Ash has bound a rival keeper to her cause. Their two hearts lie at opposite corners of the wood.",
-        "Action\tobjectiveid\t1\twraithwood-o01\tDestroy the witch-warden's heart in the north-west.",
+        "Action\tmessage\t1\tMaster, Wraithwood is a forest of grey trunks and drifting fog. Two rival keepers hold the northern corners of the wood, and behind the Moreya gate the Ash Coven of Elowen Ash is gathering.",
+        "Action\tobjectiveid\t1\twraithwood-o01\tDestroy the rival heart in the north-west.",
         "Action\tobjectiveid\t1\twraithwood-o02\tDestroy the rival heart in the north-east.",
         "Action\tobjectiveid\t1\twraithwood-o03\tDefend your heart against the kingdom's heroes."
       ],
       "westGlade": [
-        "Action\tmessage\t1\tThe west glade. The witch-warden's road climbs north from here, closed with earth, and a creek bars the way east."
+        "Action\tmessage\t1\tThe west glade. The road of the north-western keeper climbs north from here, closed with earth, and a creek bars the way east."
       ],
       "grove": [
         "Action\tmessage\t1\tA grove the fog had hidden. Someone buried a hoard under the roots long ago.",
         "Action\tgold\t1\t900"
       ],
       "southGlade": [
-        "Action\tmessage\t1\tThe south glade. The road east runs to the hero portal. Every column of the kingdom will come this way.",
+        "Action\tmessage\t1\tThe south glade. The road east runs to the Moreya gate. The raid will come this way.",
         "Action\treveal\t1\tPortalCave"
       ],
       "middle": [
@@ -10797,7 +10827,7 @@
         "Action\treveal\t1\tEastGlade"
       ],
       "covenStirs": [
-        "Action\tmessage\t1\tElowen Ash has seen you. Her coven comes to the gate.",
+        "Action\tmessage\t1\tThe keeper of the north-west has seen you. Its pack comes to the gate.",
         "Action\tspawn\t3\t28\t15\t1\tDarkElf:5\tCultist:5\tLizardMan:5\tSpider:5"
       ],
       "keeperStirs": [
@@ -10855,16 +10885,21 @@
       }
     },
     "route": [
-      "Protect the own heart through victory. Destroy actual northwest witch DungeonTemple2,seat3,original25fields(16..20,16..20). Its dedicated goal checks only that actual heart state,not the last enemy.",
+      "Protect the own heart through victory. Destroy the actual northwest rival DungeonTemple2, seat 3, original 25 fields (16..20,16..20); Elowen Ash no longer owns it because she leads the raid. Its dedicated goal checks only that actual heart state, not the last enemy.",
       "Destroy actual northeast rival DungeonTemple3,seat2,original25fields(80..84,14..18). Its dedicated goal likewise checks only that actual heart state,independent of the witch and remaining enemies. Either destruction order is valid.",
       "Defeat remaining enemy forces/portals as a separate main goal. This separates the matrix combined rival-heart/enemy duty so both individual heart icons can change immediately instead of waiting for global clearance. Four main goals remain within the approved2..5range.",
       "Optionally enter hidden western SealedGrove(2,36)-(9,45),43reachable open dry fields. Retain original900gold reward. All spawns,bond reinforcements,mana spring and geometry remain unchanged.",
-      "The exact unchanged victory sentence is emitted once after all four current main goals. Original bothFall/bothFallGoal requests remain pending."
+      "Defeat both raid groups of the Ash Coven with their leader ElowenAsh, who come through the Moreya gate at (84,86), the centre of the old hero portal. The victory sentence is emitted once after all five current main goals."
     ],
     "runtime_limit": "Static heart-seat/location and region evidence only; actual heart destruction, combat, icon updates and save/load need runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
-      "action": "Action\tmessage\t1\tThe witch-warden and the rival keeper are both dead and the fog lifts from Wraithwood. The wood is yours."
+      "action": "Action\tmessage\t1\tBoth rival keepers are dead, the Ash Coven is broken and the fog lifts from Wraithwood. The wood is yours."
+    },
+    "removed": {
+      "creatures": [
+        "ElowenAsh"
+      ]
     }
   },
   "Kingsfall": {
@@ -10902,14 +10937,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "kingsfall-main-court": {
+      "kingsfall-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat Prince Aurel and his court.",
-        "completion": "mainCourt",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tevent\tPrinceAurel\tkilled",
-          "Cond\tcreatures\t3\t<=\t0"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -11005,7 +11039,7 @@
           "Cond\tobjective\t1\tkingsfall-main-heart\treached",
           "Cond\tobjective\t1\tkingsfall-main-champions\treached",
           "Cond\tobjective\t1\tkingsfall-main-army\treached",
-          "Cond\tobjective\t1\tkingsfall-main-court\treached"
+          "Cond\tobjective\t1\tkingsfall-main-raid\treached"
         ],
         "states": [],
         "actions": [
@@ -11045,60 +11079,6 @@
       "mined1": [
         "Cond\tmined\t1\t>=\t3000"
       ],
-      "horn1": [
-        "Cond\ttime\t500"
-      ],
-      "horn2": [
-        "Cond\ttime\t720"
-      ],
-      "horn3": [
-        "Cond\ttime\t940"
-      ],
-      "horn4": [
-        "Cond\ttime\t1160"
-      ],
-      "horn5": [
-        "Cond\ttime\t1380"
-      ],
-      "horn6": [
-        "Cond\ttime\t1600"
-      ],
-      "horn7": [
-        "Cond\ttime\t1820"
-      ],
-      "horn8": [
-        "Cond\ttime\t2040"
-      ],
-      "horn9": [
-        "Cond\ttime\t2260"
-      ],
-      "horn10": [
-        "Cond\ttime\t2480"
-      ],
-      "horn11": [
-        "Cond\ttime\t2700"
-      ],
-      "horn12": [
-        "Cond\ttime\t2920"
-      ],
-      "horn13": [
-        "Cond\ttime\t3140"
-      ],
-      "horn14": [
-        "Cond\ttime\t3360"
-      ],
-      "horn15": [
-        "Cond\ttime\t3580"
-      ],
-      "horn16": [
-        "Cond\ttime\t3800"
-      ],
-      "horn17": [
-        "Cond\ttime\t4020"
-      ],
-      "horn18": [
-        "Cond\ttime\t4240"
-      ],
       "goalArmyAtHeart": [
         "Cond\tcreaturesatheart\t1\t>=\t12"
       ],
@@ -11117,9 +11097,6 @@
       ],
       "championSquireWick": [
         "Cond\towns\t1\tSquireWick"
-      ],
-      "princeWounded": [
-        "Cond\thealth\tPrinceAurel\t<=\t35"
       ],
       "centreWell": [
         "Cond\tslabs\t1\tCentre\tclaimed\t>=\t25"
@@ -11140,7 +11117,6 @@
       "hunt": [
         "Action\tmessage\t1\tKingsfall, master, where Prince Aurel hunts and where he has made his stand. His champions are Falconer Edda, Huntsman Brann and Squire Wick, and a keeper who wants the crown must take them alive.",
         "Action\tobjectiveid\t1\tkingsfall-o01\tCapture or convert Edda, Brann and Wick.",
-        "Action\tobjectiveid\t1\tkingsfall-o02\tDefeat Prince Aurel and his court.",
         "Action\tobjectiveid\t1\tkingsfall-o03\tGather at least 12 creatures at your heart."
       ],
       "hollowHeld": [
@@ -11183,78 +11159,6 @@
         "Action\tmessage\t1\tThe grounds are paying. A bigger dungeon needs more gold.",
         "Action\tgold\t1\t600"
       ],
-      "horn1": [
-        "Action\tmessage\t1\tA hunting party is sounding its horns.",
-        "Action\tspawn\t3\t45\t22\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "horn2": [
-        "Action\tmessage\t1\tRiders of the court are crossing a span.",
-        "Action\tspawn\t3\t21\t29\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "horn3": [
-        "Action\tmessage\t1\tThe prince has called out his foresters.",
-        "Action\tspawn\t3\t75\t29\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "horn4": [
-        "Action\tmessage\t1\tA column of the guard is on the trail.",
-        "Action\tspawn\t3\t48\t44\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "horn5": [
-        "Action\tmessage\t1\tHounds and spearmen are coming down from the lodges.",
-        "Action\tspawn\t3\t19\t54\t1\tKnight:3\tElf:3\tMonk:3\tAdventurer:3"
-      ],
-      "horn6": [
-        "Action\tmessage\t1\tThe heralds have summoned the court.",
-        "Action\tspawn\t3\t79\t53\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
-      "horn7": [
-        "Action\tmessage\t1\tA hunting party is sounding its horns.",
-        "Action\tspawn\t3\t45\t22\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
-      "horn8": [
-        "Action\tmessage\t1\tRiders of the court are crossing a span.",
-        "Action\tspawn\t3\t21\t29\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
-      "horn9": [
-        "Action\tmessage\t1\tThe prince has called out his foresters.",
-        "Action\tspawn\t3\t75\t29\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
-      "horn10": [
-        "Action\tmessage\t1\tA column of the guard is on the trail.",
-        "Action\tspawn\t3\t48\t44\t1\tKnight:4\tElf:4\tMonk:3\tDwarf2:3\tAdventurer:3"
-      ],
-      "horn11": [
-        "Action\tmessage\t1\tHounds and spearmen are coming down from the lodges.",
-        "Action\tspawn\t3\t19\t54\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "horn12": [
-        "Action\tmessage\t1\tThe heralds have summoned the court.",
-        "Action\tspawn\t3\t79\t53\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "horn13": [
-        "Action\tmessage\t1\tA hunting party is sounding its horns.",
-        "Action\tspawn\t3\t45\t22\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "horn14": [
-        "Action\tmessage\t1\tRiders of the court are crossing a span.",
-        "Action\tspawn\t3\t21\t29\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "horn15": [
-        "Action\tmessage\t1\tThe prince has called out his foresters.",
-        "Action\tspawn\t3\t75\t29\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "horn16": [
-        "Action\tmessage\t1\tA column of the guard is on the trail.",
-        "Action\tspawn\t3\t48\t44\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "horn17": [
-        "Action\tmessage\t1\tHounds and spearmen are coming down from the lodges.",
-        "Action\tspawn\t3\t19\t54\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "horn18": [
-        "Action\tmessage\t1\tThe heralds have summoned the court.",
-        "Action\tspawn\t3\t79\t53\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
       "goalArmyAtHeart": [
         "Action\tobjectivestate\t1\tkingsfall-o03\treached"
       ],
@@ -11277,10 +11181,6 @@
       "championSquireWick": [
         "Action\tmessage\t1\tSquire Wick has taken your side.",
         "Action\taddflag\tchampions\t1"
-      ],
-      "princeWounded": [
-        "Action\tmessage\t1\tPrince Aurel is badly hurt. His court is rallying around him and the guard of the keep is called out.",
-        "Action\tspawn\t3\t48\t14\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
       ],
       "centreWell": [
         "Action\tmessage\t1\tThe royal glade is yours, and a spring of mana has opened where the prince used to rest. Claim it with a Ziv.",
@@ -11432,7 +11332,6 @@
         }
       },
       "named_creatures": [
-        "PrinceAurel",
         "FalconerEdda",
         "HuntsmanBrann",
         "SquireWick"
@@ -11459,14 +11358,43 @@
       "Protect the heart and physically cross any actual watched lava span northward:west(18..19,49..53),middle(49..50,39..43),east(80..81,48..52). Each original bridge has9roomfields plus one natural dry gap; do not invent rectangular10field bridge rooms. Explicit open ground/bridge paths follow x19/y54..48,x50/y44..38,x81/y53..47. Any one original route qualifies.",
       "Keep all three named champions alive and currently held by seat1:FalconerEdda,HuntsmanBrann,SquireWick. Each may be either actually jailed by seat1 or converted to seat1 with no foreign jailer. Escape or recapture removes current success; actual death permanently fails the task. Historical champions flags alone do not count.",
       "Currently gather at least12own living creatures on actual own-heart tiles. Global army size or an old visit is not enough. Existing25field temple and own portal/worker recruitment allow staging; original start has5workers and7000gold. Foreign-seat prisoners do not become own creatures merely by captivity.",
-      "Actually kill PrinceAurel and clear living court troops of seat3,which contains all court guards and horn waves. Do not require seat2emptiness:the three live captured champions retain seat2,and must not block victory. This level has no KillAllEnemies goal or hostile temple/portal requirement.",
-      "Optionally mine4000actualgold from79000finitepotentialgold. Preserve original3000gold milestone,all18hornwaves,prison/torture setup,conversion messages and every cache-opening alternative. No champion death is required for optional mining.",
+      "Defeat the raid of the Sun Court and its leader PrinceAurel, who come through the Moreya gate at (21,29). Edda, Brann and Wick stay on the map as phase-1 enemies and do not march with the raid.",
+      "Optionally mine 4000 actual gold from 79000 finite potential gold. Preserve the original 3000 gold milestone, prison/torture setup, conversion messages and every cache-opening alternative; the eighteen timed horn waves and the wounded-prince reinforcement are gone.",
       "The unchanged original sentence describing champions in your hands is emitted after all current main goals,followed by a new valid win request. This is necessary because both old requests assume conversion/seat2emptiness and can never cover the approved live-captive alternative. Old win requests remain preserved pending requests."
     ],
     "runtime_limit": "Static script/bridge/path/recruitment-source evidence only; actual capture/conversion,12creature assembly,KO handling,battles and save/load need runtime verification.",
     "victory_narration": {
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tThe prince is beaten and his champions are in your hands. The hunting grounds of Kingsfall are yours."
+    },
+    "removed": {
+      "triggers": [
+        "horn1",
+        "horn2",
+        "horn3",
+        "horn4",
+        "horn5",
+        "horn6",
+        "horn7",
+        "horn8",
+        "horn9",
+        "horn10",
+        "horn11",
+        "horn12",
+        "horn13",
+        "horn14",
+        "horn15",
+        "horn16",
+        "horn17",
+        "horn18",
+        "princeWounded",
+        "mainCourt",
+        "courtTaken",
+        "collectWin"
+      ],
+      "creatures": [
+        "PrinceAurel"
+      ]
     }
   },
   "HollowmarkCitadel": {
@@ -11478,7 +11406,7 @@
         "completion": "mainHeart",
         "conditions": [
           "Cond\tgoalmet\t1\tProtectDungeonTemple",
-          "Cond\troomclaimed\t1\t12\t42\t14\t43",
+          "Cond\troomclaimed\t1\t8\t42\t10\t43",
           "Cond\troomclaimed\t1\t100\t42\t102\t43",
           "Cond\ttrigger\ttower2"
         ],
@@ -11494,13 +11422,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "hollowmark-main-king": {
+      "hollowmark-main-raid": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Defeat King Castellan in the throne hall.",
-        "completion": "mainKing",
+        "text": "Defeat both raids and their leaders.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tkilledin\tCastellanKing\tThroneHall"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -11575,7 +11503,7 @@
         "conditions": [
           "Cond\tobjective\t1\thollowmark-main-heart\treached",
           "Cond\tobjective\t1\thollowmark-main-courts\treached",
-          "Cond\tobjective\t1\thollowmark-main-king\treached",
+          "Cond\tobjective\t1\thollowmark-main-raid\treached",
           "Cond\tobjective\t1\thollowmark-main-throne\treached"
         ],
         "states": [],
@@ -11634,7 +11562,7 @@
       },
       "mainUpperTowers": {
         "conditions": [
-          "Cond\troomclaimed\t1\t12\t42\t14\t43",
+          "Cond\troomclaimed\t1\t8\t42\t10\t43",
           "Cond\troomclaimed\t1\t100\t42\t102\t43"
         ],
         "states": [],
@@ -11673,9 +11601,9 @@
       }
     },
     "route": [
-      "Protect the heart and claim both original upper treasury rooms, receiving the unchanged tower2 reward.",
+      "Protect the heart and claim both upper treasury rooms, Treasury2 now at (8..10,42..43) beside the Moreya gate room (12..14,42..44) and Treasury3 at (100..102,42..43), receiving the unchanged tower2 reward.",
       "Cross GateCourt northward, open gate2 with both lower guard rooms or the actual lower keywarden death, then cross GreatCourt. Repeat the upper treasury/keywarden alternative for gate3 before crossing ThroneHall. Timed openings alone do not replace the tower or key requirement.",
-      "Actually kill CastellanKing within ThroneHall and currently own all 548 original dry floor fields, including the covering treasury room.",
+      "Defeat both raids of the Crown Eternal: the first led by SabineRook, the second by High King Castellan, both through the Moreya gate at (13,43). Currently own all 548 original dry throne floor fields. The forty timed musters and the king's throne-hall duel are gone.",
       "Optionally visit WestTower3; it is not one of the required gate towers.",
       "The lower-gate-key drops at its owner's actual death position; a worker must carry that physical key to (58, 58) for gate2KeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged.",
       "The upper-gate-key drops at its owner's actual death position; a worker must carry that physical key to (58, 30) for gate3KeyFalls to open the matching seal. Owner death alone cannot open it. Existing independent tower, capture and timer opening alternatives remain unchanged."
@@ -11724,129 +11652,9 @@
       "kills1": [
         "Cond\tkills\t1\t>=\t50"
       ],
-      "muster1": [
-        "Cond\ttime\t200"
-      ],
-      "muster2": [
-        "Cond\ttime\t320"
-      ],
-      "muster3": [
-        "Cond\ttime\t440"
-      ],
-      "muster4": [
-        "Cond\ttime\t560"
-      ],
-      "muster5": [
-        "Cond\ttime\t680"
-      ],
-      "muster6": [
-        "Cond\ttime\t800"
-      ],
-      "muster7": [
-        "Cond\ttime\t920"
-      ],
-      "muster8": [
-        "Cond\ttime\t1040"
-      ],
-      "muster9": [
-        "Cond\ttime\t1160"
-      ],
-      "muster10": [
-        "Cond\ttime\t1280"
-      ],
-      "muster11": [
-        "Cond\ttime\t1400"
-      ],
-      "muster12": [
-        "Cond\ttime\t1520"
-      ],
-      "muster13": [
-        "Cond\ttime\t1640"
-      ],
-      "muster14": [
-        "Cond\ttime\t1760"
-      ],
-      "muster15": [
-        "Cond\ttime\t1880"
-      ],
-      "muster16": [
-        "Cond\ttime\t2000"
-      ],
-      "muster17": [
-        "Cond\ttime\t2120"
-      ],
-      "muster18": [
-        "Cond\ttime\t2240"
-      ],
-      "muster19": [
-        "Cond\ttime\t2360"
-      ],
-      "muster20": [
-        "Cond\ttime\t2480"
-      ],
-      "muster21": [
-        "Cond\ttime\t2600"
-      ],
-      "muster22": [
-        "Cond\ttime\t2720"
-      ],
-      "muster23": [
-        "Cond\ttime\t2840"
-      ],
-      "muster24": [
-        "Cond\ttime\t2960"
-      ],
-      "muster25": [
-        "Cond\ttime\t3080"
-      ],
-      "muster26": [
-        "Cond\ttime\t3200"
-      ],
-      "muster27": [
-        "Cond\ttime\t3320"
-      ],
-      "muster28": [
-        "Cond\ttime\t3440"
-      ],
-      "muster29": [
-        "Cond\ttime\t3560"
-      ],
-      "muster30": [
-        "Cond\ttime\t3680"
-      ],
-      "muster31": [
-        "Cond\ttime\t3800"
-      ],
-      "muster32": [
-        "Cond\ttime\t3920"
-      ],
-      "muster33": [
-        "Cond\ttime\t4040"
-      ],
-      "muster34": [
-        "Cond\ttime\t4160"
-      ],
-      "muster35": [
-        "Cond\ttime\t4280"
-      ],
-      "muster36": [
-        "Cond\ttime\t4400"
-      ],
-      "muster37": [
-        "Cond\ttime\t4520"
-      ],
-      "muster38": [
-        "Cond\ttime\t4640"
-      ],
-      "muster39": [
-        "Cond\ttime\t4760"
-      ],
-      "muster40": [
-        "Cond\ttime\t4880"
-      ],
       "goalHeartSafe3BeforeKingDead": [
         "Cond\ttime\t5",
-        "Cond\talive\tCastellanKing\t0",
+        "Cond\traid\tdefeated",
         "Cond\tgoalmet\t1\tProtectDungeonTemple"
       ],
       "goalCourt1": [
@@ -11866,10 +11674,6 @@
       ],
       "goalHeartLost3": [
         "Cond\troom\t1\tDungeonTemple\t==\t0"
-      ],
-      "kingDead": [
-        "Cond\ttime\t5",
-        "Cond\talive\tCastellanKing\t0"
       ],
       "gate2Open": [
         "Cond\tflag\tlowerWest\t1",
@@ -11919,8 +11723,7 @@
     },
     "preserved_actions": {
       "siege": [
-        "Action\tmessage\t1\tThe capital, master. High King Castellan sits on his throne at the top of three walled courts, and the heroes of the whole kingdom are marching to defend him.",
-        "Action\tobjectiveid\t1\thollowmarkcitadel-o01\tKill King Castellan on his throne.",
+        "Action\tmessage\t1\tThe capital, master. Three walled courts climb to an empty throne: High King Castellan has gathered the Crown Eternal behind the Moreya gate, two raids strong.",
         "Action\tobjectiveid\t1\thollowmarkcitadel-o02\tCross all three courts; take towers to open upper gates.",
         "Action\tobjectiveid\t1\thollowmarkcitadel-o03\tSurvive the hero attacks."
       ],
@@ -11970,7 +11773,7 @@
         "Action\tspawn\t3\t58\t30\t1\tKnight:6\tKnight:6\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
       ],
       "throneHall": [
-        "Action\tmessage\t1\tThe throne hall. High King Castellan rises from his seat. Kill him and the kingdom is yours.",
+        "Action\tmessage\t1\tThe throne hall. The seat of the king stands empty while he leads his raid. Claim the hall.",
         "Action\treveal\t1\tWestTower3",
         "Action\treveal\t1\tEastTower3",
         "Action\tspawn\t3\t58\t24\t1\tKnight:6\tKnight:6\tElf:6\tMonk:6"
@@ -11982,166 +11785,6 @@
       "kills1": [
         "Action\tmessage\t1\tThe capital runs red. Your creatures fight on.",
         "Action\tgold\t1\t1200"
-      ],
-      "muster1": [
-        "Action\tmessage\t1\tThe king has called every garrison.",
-        "Action\tspawn\t4\t57\t73\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
-      ],
-      "muster2": [
-        "Action\tmessage\t1\tA column marches out of the gate court.",
-        "Action\tspawn\t4\t58\t50\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
-      ],
-      "muster3": [
-        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
-        "Action\tspawn\t4\t13\t43\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
-      ],
-      "muster4": [
-        "Action\tmessage\t1\tThe royal guard has left the great court.",
-        "Action\tspawn\t4\t101\t43\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
-      ],
-      "muster5": [
-        "Action\tmessage\t1\tPikemen are pouring from the towers.",
-        "Action\tspawn\t4\t13\t65\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
-      ],
-      "muster6": [
-        "Action\tmessage\t1\tA heavy company advances from the capital.",
-        "Action\tspawn\t4\t101\t65\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
-      ],
-      "muster7": [
-        "Action\tmessage\t1\tThe king has called every garrison.",
-        "Action\tspawn\t4\t58\t22\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
-      ],
-      "muster8": [
-        "Action\tmessage\t1\tA column marches out of the gate court.",
-        "Action\tspawn\t4\t57\t73\t1\tKnight:4\tElf:4\tMonk:4\tAdventurer:4"
-      ],
-      "muster9": [
-        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
-        "Action\tspawn\t4\t58\t50\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "muster10": [
-        "Action\tmessage\t1\tThe royal guard has left the great court.",
-        "Action\tspawn\t4\t13\t43\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "muster11": [
-        "Action\tmessage\t1\tPikemen are pouring from the towers.",
-        "Action\tspawn\t4\t101\t43\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "muster12": [
-        "Action\tmessage\t1\tA heavy company advances from the capital.",
-        "Action\tspawn\t4\t13\t65\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "muster13": [
-        "Action\tmessage\t1\tThe king has called every garrison.",
-        "Action\tspawn\t4\t101\t65\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "muster14": [
-        "Action\tmessage\t1\tA column marches out of the gate court.",
-        "Action\tspawn\t4\t58\t22\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "muster15": [
-        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
-        "Action\tspawn\t4\t57\t73\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "muster16": [
-        "Action\tmessage\t1\tThe royal guard has left the great court.",
-        "Action\tspawn\t4\t58\t50\t1\tKnight:4\tKnight:4\tElf:4\tMonk:4\tDwarf2:4"
-      ],
-      "muster17": [
-        "Action\tmessage\t1\tPikemen are pouring from the towers.",
-        "Action\tspawn\t4\t13\t43\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "muster18": [
-        "Action\tmessage\t1\tA heavy company advances from the capital.",
-        "Action\tspawn\t4\t101\t43\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "muster19": [
-        "Action\tmessage\t1\tThe king has called every garrison.",
-        "Action\tspawn\t4\t13\t65\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "muster20": [
-        "Action\tmessage\t1\tA column marches out of the gate court.",
-        "Action\tspawn\t4\t101\t65\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "muster21": [
-        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
-        "Action\tspawn\t4\t58\t22\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "muster22": [
-        "Action\tmessage\t1\tThe royal guard has left the great court.",
-        "Action\tspawn\t4\t57\t73\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "muster23": [
-        "Action\tmessage\t1\tPikemen are pouring from the towers.",
-        "Action\tspawn\t4\t58\t50\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "muster24": [
-        "Action\tmessage\t1\tA heavy company advances from the capital.",
-        "Action\tspawn\t4\t13\t43\t1\tKnight:5\tKnight:5\tElf:5\tMonk:4\tDwarf2:4\tAdventurer:4"
-      ],
-      "muster25": [
-        "Action\tmessage\t1\tThe king has called every garrison.",
-        "Action\tspawn\t4\t101\t43\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster26": [
-        "Action\tmessage\t1\tA column marches out of the gate court.",
-        "Action\tspawn\t4\t13\t65\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster27": [
-        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
-        "Action\tspawn\t4\t101\t65\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster28": [
-        "Action\tmessage\t1\tThe royal guard has left the great court.",
-        "Action\tspawn\t4\t58\t22\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster29": [
-        "Action\tmessage\t1\tPikemen are pouring from the towers.",
-        "Action\tspawn\t4\t57\t73\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster30": [
-        "Action\tmessage\t1\tA heavy company advances from the capital.",
-        "Action\tspawn\t4\t58\t50\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster31": [
-        "Action\tmessage\t1\tThe king has called every garrison.",
-        "Action\tspawn\t4\t13\t43\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster32": [
-        "Action\tmessage\t1\tA column marches out of the gate court.",
-        "Action\tspawn\t4\t101\t43\t1\tKnight:5\tKnight:5\tKnight:5\tElf:5\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster33": [
-        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
-        "Action\tspawn\t4\t13\t65\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster34": [
-        "Action\tmessage\t1\tThe royal guard has left the great court.",
-        "Action\tspawn\t4\t101\t65\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster35": [
-        "Action\tmessage\t1\tPikemen are pouring from the towers.",
-        "Action\tspawn\t4\t58\t22\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster36": [
-        "Action\tmessage\t1\tA heavy company advances from the capital.",
-        "Action\tspawn\t4\t57\t73\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster37": [
-        "Action\tmessage\t1\tThe king has called every garrison.",
-        "Action\tspawn\t4\t58\t50\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster38": [
-        "Action\tmessage\t1\tA column marches out of the gate court.",
-        "Action\tspawn\t4\t13\t43\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster39": [
-        "Action\tmessage\t1\tRiders are coming down the flank galleries.",
-        "Action\tspawn\t4\t101\t43\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
-      ],
-      "muster40": [
-        "Action\tmessage\t1\tThe royal guard has left the great court.",
-        "Action\tspawn\t4\t13\t65\t1\tKnight:6\tKnight:6\tKnight:5\tElf:6\tMonk:5\tDwarf2:5\tAdventurer:5"
       ],
       "goalHeartSafe3BeforeKingDead": [
         "Action\tobjectivestate\t1\thollowmarkcitadel-o03\treached"
@@ -12159,20 +11802,16 @@
       "goalHeartLost3": [
         "Action\tobjectivestate\t1\thollowmarkcitadel-o03\tfailed"
       ],
-      "kingDead": [
-        "Action\tobjectivestate\t1\thollowmarkcitadel-o01\treached",
-        "Action\twin\t1"
-      ],
       "gate2Open": [
         "Action\tmessage\t-1\tThe seal of the second gate cracks and the gate stands open.",
-        "Action\tterrain\t56\t57\t59\t57\tpath",
+        "Action\tterrain\t55\t57\t59\t57\tpath",
         "Action\tterrain\t14\t57\t15\t57\tpath",
         "Action\tterrain\t101\t57\t103\t57\tpath",
         "Action\tsetflag\tgate2Open\t1"
       ],
       "gate2Late": [
         "Action\tmessage\t-1\tThe masons of the second gate have been called away. The seal gives way.",
-        "Action\tterrain\t56\t57\t59\t57\tpath",
+        "Action\tterrain\t55\t57\t59\t57\tpath",
         "Action\tterrain\t14\t57\t15\t57\tpath",
         "Action\tterrain\t101\t57\t103\t57\tpath",
         "Action\tsetflag\tgate2Open\t1"
@@ -12212,7 +11851,7 @@
       ],
       "gate2KeyFalls": [
         "Action\tmessage\t1\tThe key turns in the lock. The second gate opens.",
-        "Action\tterrain\t56\t57\t59\t57\tpath",
+        "Action\tterrain\t55\t57\t59\t57\tpath",
         "Action\tterrain\t14\t57\t15\t57\tpath",
         "Action\tterrain\t101\t57\t103\t57\tpath",
         "Action\tsetflag\tgate2Open\t1"
@@ -12485,34 +12124,34 @@
           "seat": 3,
           "tiles": [
             [
-              12,
+              8,
               42
             ],
             [
-              12,
+              8,
               43
             ],
             [
-              13,
+              9,
               42
             ],
             [
-              13,
+              9,
               43
             ],
             [
-              14,
+              10,
               42
             ],
             [
-              14,
+              10,
               43
             ]
           ],
           "bounds": [
-            12,
+            8,
             42,
-            14,
+            10,
             43
           ],
           "goal": "hollowmark-main-heart"
@@ -12590,6 +12229,56 @@
     "victory_narration": {
       "trigger": "mainVictory",
       "action": "Action\tmessage\t1\tHigh King Castellan is dead and the throne of Hollowmark is empty. The kingdom is yours."
+    },
+    "removed": {
+      "triggers": [
+        "muster1",
+        "muster2",
+        "muster3",
+        "muster4",
+        "muster5",
+        "muster6",
+        "muster7",
+        "muster8",
+        "muster9",
+        "muster10",
+        "muster11",
+        "muster12",
+        "muster13",
+        "muster14",
+        "muster15",
+        "muster16",
+        "muster17",
+        "muster18",
+        "muster19",
+        "muster20",
+        "muster21",
+        "muster22",
+        "muster23",
+        "muster24",
+        "muster25",
+        "muster26",
+        "muster27",
+        "muster28",
+        "muster29",
+        "muster30",
+        "muster31",
+        "muster32",
+        "muster33",
+        "muster34",
+        "muster35",
+        "muster36",
+        "muster37",
+        "muster38",
+        "muster39",
+        "muster40",
+        "kingDead",
+        "mainKing"
+      ],
+      "creatures": [
+        "CastellanKing",
+        "SabineRook"
+      ]
     }
   },
   "Campaign1": {
@@ -13233,15 +12922,13 @@
         ],
         "mode": "repeat\t0"
       },
-      "ashcombe-main-warden": {
+      "ashcombe-main-raid": {
         "kind": "mainobjectiveid",
-        "text": "Kill Ashby before escape and defeat her forces.",
         "seat": "1",
-        "completion": "mainWarden",
+        "text": "Defeat the raid and its leader.",
+        "completion": "mainRaid",
         "conditions": [
-          "Cond\tevent\tLieslAshby\tkilled",
-          "Cond\ttrigger\twardenEscaped\t0",
-          "Cond\tgoalmet\t1\tKillAllEnemies"
+          "Cond\traid\tdefeated"
         ],
         "mode": "repeat\t0"
       },
@@ -13268,18 +12955,6 @@
             "failed"
           ]
         ]
-      },
-      "mainAshbyEscaped": {
-        "conditions": [
-          "Cond\ttrigger\twardenEscaped"
-        ],
-        "states": [
-          [
-            "1",
-            "ashcombe-main-warden",
-            "failed"
-          ]
-        ]
       }
     },
     "preserved_conditions": {
@@ -13301,37 +12976,6 @@
       "holdBreached": [
         "Cond\tregion\t1\tHold"
       ],
-      "firstEmber": [
-        "Cond\ttime\t480"
-      ],
-      "secondEmber": [
-        "Cond\ttime\t1000"
-      ],
-      "thirdEmber": [
-        "Cond\ttime\t1700"
-      ],
-      "fourthEmber": [
-        "Cond\ttime\t2300"
-      ],
-      "wagonLeaves": [
-        "Cond\tflag\tfleeing\t1",
-        "Cond\ttimer\twagonClock\t>=\t300",
-        "Cond\talive\tLieslAshby"
-      ],
-      "goalKillBeforeEscape": [
-        "Cond\tevent\tLieslAshby\tkilled",
-        "Cond\ttrigger\twardenEscaped\t0"
-      ],
-      "goalHoldOrRoadMissed": [
-        "Cond\treached\tLieslAshby\tregion\tExitRoad",
-        "Cond\tobjective\t1\tashcombe-o03\topen"
-      ],
-      "wardenEscaped": [
-        "Cond\treached\tLieslAshby\tregion\tExitRoad"
-      ],
-      "wardenDown": [
-        "Cond\tevent\tLieslAshby\tkilled"
-      ],
       "goalBasinCrossed": [
         "Cond\tcrossed\t1\tBasin\tnorth"
       ]
@@ -13339,9 +12983,7 @@
     "preserved_actions": {
       "smoulder": [
         "Action\tmessage\t1\tThe Ashcombe valley still smokes from an old fire, master, and Warden Liesl Ashby has mounted her wagons to flee over the northern pass. You have most of an hour before she is gone.",
-        "Action\tobjectiveid\t1\tashcombe-o01\tKill Ashby before she escapes.",
-        "Action\tobjectiveid\t1\tashcombe-o02\tCross the ash basin.",
-        "Action\torder\twait\t2\t-\tLieslAshby"
+        "Action\tobjectiveid\t1\tashcombe-o02\tCross the ash basin."
       ],
       "basinEntered": [
         "Action\tmessage\t1\tThe ash is deep here and the lava cracks run in all directions. Her sentries watch the dunes, so keep your creatures close together.",
@@ -13356,58 +12998,19 @@
         "Action\treveal\t1\tApproach"
       ],
       "wagonsMoving": [
-        "Action\tmessage\t1\tHer wagons are being loaded! Ashby will leave the hold in five minutes and run for the south road.",
-        "Action\tspawn\t3\t76\t22\t1\tKnight:2\tElf:2\tAdventurer:2\tMonk:2",
-        "Action\tobjectiveid\t1\tashcombe-o03\tKill Ashby before she escapes.",
-        "Action\tsetflag\tfleeing\t1",
-        "Action\ttimer\twagonClock\t0"
+        "Action\tmessage\t1\tThe guards of the hold have seen you and come out to meet you.",
+        "Action\tspawn\t3\t76\t22\t1\tKnight:2\tElf:2\tAdventurer:2\tMonk:2"
       ],
       "holdBreached": [
-        "Action\tmessage\t1\tYou are in her hold. Ashby is somewhere in the great hall, and her best are with her.",
+        "Action\tmessage\t1\tYou are in the hold, and its best guards are waiting in the great hall.",
         "Action\tspawn\t3\t80\t12\t1\tKnight:3\tKnight:2\tMonk:2\tDwarf2:2"
-      ],
-      "firstEmber": [
-        "Action\tmessage\t1\tAsh-stained patrols are crossing the basin towards you.",
-        "Action\tspawn\t3\t40\t52\t1\tAdventurer:2\tDwarf1:2\tElf:2"
-      ],
-      "secondEmber": [
-        "Action\tmessage\t1\tA heavier column marches down the south road.",
-        "Action\tspawn\t3\t62\t62\t1\tKnight:2\tAdventurer:2\tMonk:2\tDwarf1:2"
-      ],
-      "thirdEmber": [
-        "Action\tmessage\t1\tThe valley is rising against you. Fighters are coming from the old mill.",
-        "Action\tspawn\t3\t24\t22\t1\tKnight:3\tElf:2\tDwarf2:2\tMonk:2"
-      ],
-      "fourthEmber": [
-        "Action\tmessage\t1\tAshby has called back everything she has left.",
-        "Action\tspawn\t3\t46\t12\t1\tKnight:3\tKnight:3\tElf:3\tAdventurer:3\tMonk:3"
-      ],
-      "wagonLeaves": [
-        "Action\tmessage\t1\tThe wagons are out of the gate! Ashby is making for the south road. Cut her off.",
-        "Action\torder\tgoto\t2\t82,18;83,24;84,30;87,36;84,45;81,49;78,52;75,55;63,56\tLieslAshby",
-        "Action\tspeed\trun\tLieslAshby"
-      ],
-      "goalKillBeforeEscape": [
-        "Action\tobjectivestate\t1\tashcombe-o03\treached"
-      ],
-      "goalHoldOrRoadMissed": [
-        "Action\tobjectivestate\t1\tashcombe-o03\tfailed"
-      ],
-      "wardenEscaped": [
-        "Action\tmessage\t1\tAshby has reached the south road and her wagons are gone. Ashcombe is lost.",
-        "Action\tobjectivestate\t1\tashcombe-o01\tfailed",
-        "Action\tlose\t1"
-      ],
-      "wardenDown": [
-        "Action\tobjectivestate\t1\tashcombe-o01\treached",
-        "Action\twin\t1"
       ],
       "goalBasinCrossed": [
         "Action\tobjectivestate\t1\tashcombe-o02\treached"
       ]
     },
     "victory_narration": {
-      "action": "Action\tmessage\t1\tLiesl Ashby has fallen before her wagons could leave. The ashes of Ashcombe are yours.",
+      "action": "Action\tmessage\t1\tLiesl Ashby has fallen before she could reach the gate. The ashes of Ashcombe are yours.",
       "trigger": "mainVictory"
     },
     "reachability": {
@@ -13431,17 +13034,33 @@
           "minimum_open_tiles": 166
         }
       },
-      "named_creatures": [
-        "LieslAshby"
-      ]
+      "named_creatures": []
     },
     "route": [
       "Protect the original heart throughout the mission.",
       "Cross Basin (24,28)-(68,54) northwards with one living owned creature. A dry or removable corridor along x24 connects y55 to y27; visiting Hold is not a substitute.",
       "Optionally enter RuinYard (12,16)-(30,28) before the last main goal; 166 original open dry fields are potentially reachable.",
-      "Kill LieslAshby before she reaches ExitRoad (60,55)-(64,58). Death inside Hold or anywhere on the road counts; no prior wagon departure is required. Preserve the original 300-second departure after Approach and its original route.",
-      "Defeat all remaining enemy creatures and portals before the final main objective. The original four patrol schedules and hold/approach reinforcements remain unchanged."
+      "Defeat both raid groups of the Burnt Wheel with their leader LieslAshby, who come through the Moreya gate at (46,12). Her old wagon escape, ExitRoad and the scripted defeat are gone; the raid leader's own flight to the gate replaces them.",
+      "The four timed ember patrols are gone; the hold and approach guards stay phase-1 enemies with their original region triggers and spawns."
     ],
-    "runtime_limit": "Static geometry and source conditions are not a combat or timing playthrough; the original escape and optional exploration still require runtime verification."
+    "runtime_limit": "Static geometry and source conditions are not a combat or timing playthrough; the original escape and optional exploration still require runtime verification.",
+    "removed": {
+      "triggers": [
+        "firstEmber",
+        "secondEmber",
+        "thirdEmber",
+        "fourthEmber",
+        "wagonLeaves",
+        "goalKillBeforeEscape",
+        "goalHoldOrRoadMissed",
+        "wardenEscaped",
+        "wardenDown",
+        "mainWarden",
+        "mainAshbyEscaped"
+      ],
+      "creatures": [
+        "LieslAshby"
+      ]
+    }
   }
 }
