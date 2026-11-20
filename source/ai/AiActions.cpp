@@ -405,6 +405,11 @@ void perform(KeeperAI& ai, const std::string& target)
         {
             Creature* creature = map.getCreature(decode(name));
             if(creature == nullptr) { failedEye(); return; }
+            // A lightning target that was won over or left the map since the cast was planned is no target any more
+            // (the server refuses it); the cast is dropped like one whose target is gone
+            if((spell == SpellType::lightning) && ((creature->getSeat() == nullptr) ||
+               creature->getSeat()->isAlliedSeat(seat) || (creature->getPositionTile() == nullptr)))
+            { failedEye(); return; }
             if(spell == SpellType::creatureHeal || spell == SpellType::creatureExplosion) packet << uint32_t(1);
             packet << creature->getName();
         }

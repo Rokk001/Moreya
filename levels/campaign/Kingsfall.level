@@ -3823,11 +3823,6 @@ ProtectDungeonTemple	NULL
 0
 [/Trap]
 [Trap]
-4	DoorWooden2	3	1
-22	28	1
-0
-[/Trap]
-[Trap]
 4	DoorWooden3	3	1
 76	28	1
 0

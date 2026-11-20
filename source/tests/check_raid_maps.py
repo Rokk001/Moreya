@@ -203,6 +203,19 @@ def rooms(text):
     return result
 
 
+def traps(text):
+    """Returns the traps of the level (doors included) as (type, name, seat, [tiles])."""
+    result = []
+    for block in re.findall(r"\[Trap\](.*?)\[/Trap\]", section(text, "Traps") or "", re.S):
+        lines = rows(block)
+        if not lines or len(lines[0]) < 4:
+            continue
+        kind, name, seat, count = int(lines[0][0]), lines[0][1], int(lines[0][2]), int(lines[0][3])
+        tiles = [(int(fields[0]), int(fields[1])) for fields in lines[1:count + 1]]
+        result.append((kind, name, seat, tiles))
+    return result
+
+
 def triggers(text):
     """Returns the triggers of the level as (name, [condition fields], [action fields])."""
     result = []
@@ -265,6 +278,11 @@ def check_raid(name, text, human, gate, sizes, fixed_leaders, leader_names):
         centre = (round(sum(x for x, _ in tiles) / len(tiles)), round(sum(y for _, y in tiles) / len(tiles)))
         check(owner == raid_seat and centre == gate and gate in tiles,
               name + ": the gate room must belong to the raid seat and be centred on the gate tile")
+        # RA1: no other room and no trap or door stands on a tile of the gate room (a door on the gate tile hides the
+        # gate room from the raid, which then comes without the gate)
+        others = [other[1] for other in rooms(text) + traps(text)
+                  if other[1] != portals[0][1] and set(other[3]) & set(tiles)]
+        check(not others, name + ": no other building may stand on the gate room, found %s" % others)
     groups = [fields for fields in lines if fields[0] == "Group"]
     members = [fields for fields in lines if fields[0] == "Member"]
     check([len(fields) for fields in groups] == [3] * len(groups) and len(groups) == len(sizes),
