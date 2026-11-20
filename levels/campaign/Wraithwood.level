@@ -5041,63 +5041,62 @@ Action	win	1
 
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
-# PLACEHOLDER: countdown, interval and escape share set by simulation R3B
+# Countdown, interval, escape share and composition set by the raid simulation R3C (tools/balance/raid_sim.py)
 Gate	84	86	270
 Seats	4	1
-Countdown	-
-Interval	-
+Countdown	3600
+Interval	90
 EscapeShare	-
-# PLACEHOLDER: composition set by simulation R3B
 Group	1	-
-Member	1	Wizard	5	-	Hexer
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Knight	5	-	Guardian
-Member	1	Monk	5	-	Guardian
-Member	1	Monk	5	-	Guardian
-Member	1	Monk	5	-	Guardian
-Member	1	Wizard	5	-	Destroyer
-Member	1	Wizard	5	-	Destroyer
-Member	1	Wizard	5	-	Destroyer
-Member	1	Wizard	5	-	Destroyer
-Member	1	Wizard	5	-	Hexer
-Member	1	Wizard	5	-	Healer
-Member	1	Wizard	5	-	Healer
-Member	1	Wizard	5	-	Healer
-Member	1	Elf	5	-	Marksman
-Member	1	Elf	5	-	Marksman
-Member	1	Dwarf2	5	-	Berserker
-Member	1	Dwarf2	5	-	Berserker
+Member	1	Wizard	4	-	Hexer
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Knight	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Monk	4	-	Guardian
+Member	1	Wizard	4	-	Destroyer
+Member	1	Wizard	4	-	Destroyer
+Member	1	Wizard	4	-	Destroyer
+Member	1	Wizard	4	-	Destroyer
+Member	1	Wizard	4	-	Hexer
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Wizard	4	-	Healer
+Member	1	Elf	4	-	Marksman
+Member	1	Elf	4	-	Marksman
+Member	1	Dwarf2	4	-	Berserker
+Member	1	Dwarf2	4	-	Berserker
 Group	2	ElowenAsh
-Member	2	Wizard	7	ElowenAsh	Hexer
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Knight	5	-	Guardian
-Member	2	Monk	5	-	Guardian
-Member	2	Monk	5	-	Guardian
-Member	2	Monk	5	-	Guardian
-Member	2	Wizard	5	-	Destroyer
-Member	2	Wizard	5	-	Destroyer
-Member	2	Wizard	5	-	Destroyer
-Member	2	Wizard	5	-	Destroyer
-Member	2	Wizard	5	-	Hexer
-Member	2	Wizard	5	-	Healer
-Member	2	Wizard	5	-	Healer
-Member	2	Wizard	5	-	Healer
-Member	2	Elf	5	-	Marksman
-Member	2	Elf	5	-	Marksman
-Member	2	Dwarf2	5	-	Berserker
-Member	2	Dwarf2	5	-	Berserker
+Member	2	Wizard	6	ElowenAsh	Hexer
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Knight	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Monk	4	-	Guardian
+Member	2	Wizard	4	-	Destroyer
+Member	2	Wizard	4	-	Destroyer
+Member	2	Wizard	4	-	Destroyer
+Member	2	Wizard	4	-	Destroyer
+Member	2	Wizard	4	-	Hexer
+Member	2	Wizard	4	-	Healer
+Member	2	Wizard	4	-	Healer
+Member	2	Wizard	4	-	Healer
+Member	2	Elf	4	-	Marksman
+Member	2	Elf	4	-	Marksman
+Member	2	Dwarf2	4	-	Berserker
+Member	2	Dwarf2	4	-	Berserker
 [/Raid]

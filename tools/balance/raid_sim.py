@@ -226,7 +226,7 @@ def adjust_members(raid, shift, healers):
     for line in lines:
         fields = line.split("\t")
         if fields[0] == "Group":
-            leaders[fields[1]] = fields[2]
+            leaders[fields[1]] = None if fields[2] == "-" else fields[2]
     members = {}
     for index, line in enumerate(lines):
         fields = line.split("\t")
@@ -445,7 +445,8 @@ def game_options(params):
 
 
 def run_one(exe, data, level, seed, seconds, keeper_ai, out_file, options=()):
-    """Runs one simulation and returns (exit code, wall seconds, stdout)."""
+    """Runs one simulation and returns (exit code, wall seconds, stdout). A run is stopped after four times its game
+    time of wall time (at least 300 s): a fully loaded host runs the large levels slower than the game clock."""
     app_data = out_file.parent / (out_file.stem + "-appdata")
     app_data.mkdir(parents=True, exist_ok=True)
     args = [str(exe), "--raid-sim", str(level), "--seconds", str(seconds), "--seed", str(seed),
@@ -454,7 +455,7 @@ def run_one(exe, data, level, seed, seconds, keeper_ai, out_file, options=()):
         args.append("--raid-sim-keeper-ai")
     start = time.monotonic()
     try:
-        done = subprocess.run(args, cwd=str(data), capture_output=True, text=True, timeout=max(120, seconds),
+        done = subprocess.run(args, cwd=str(data), capture_output=True, text=True, timeout=max(300, 4 * seconds),
                               env=runtime_environment())
         code, output = done.returncode, done.stdout + done.stderr
     except subprocess.TimeoutExpired as error:

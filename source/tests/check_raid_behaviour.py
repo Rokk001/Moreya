@@ -475,10 +475,10 @@ def dissolves(members, raiders, distance):
 
 
 DISSOLVE = float(block(GLOBAL_CFG, "GroupCombat")["GroupDissolveDistance"][0])
-check(DISSOLVE == 28.0, "G8: the dissolving distance of this branch is 28")
+check(DISSOLVE == 24.0, "G8: the dissolving distance of this branch is 24")
 check(dissolves([(0, 0)], None, DISSOLVE), "G8: the group dissolves when its raid group is gone")
-check(dissolves([(0, 0)], [(29, 0)], DISSOLVE), "G8: ... or no raid member is within the distance")
-check(not dissolves([(0, 0)], [(28, 0)], DISSOLVE), "G8: a raid member at the distance keeps the group")
+check(dissolves([(0, 0)], [(25, 0)], DISSOLVE), "G8: ... or no raid member is within the distance")
+check(not dissolves([(0, 0)], [(24, 0)], DISSOLVE), "G8: a raid member at the distance keeps the group")
 ended = function(GROUPS, "void CombatGroupManager::removeEndedGroups(")
 check('groupConfig("GroupDissolveDistance")' in ended and "raidIt != raid.end()" in ended and
       "ended = !raidNear;" in ended and "it = mGroups.erase(it);" in ended, "G8: the dissolving in the source")

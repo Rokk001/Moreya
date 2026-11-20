@@ -2417,22 +2417,21 @@ Action	win	1
 
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
-# PLACEHOLDER: interval and escape share set by simulation R3B
-# PLACEHOLDER: composition set by simulation R3B
+# Countdown, interval, escape share and composition set by the raid simulation R3C (tools/balance/raid_sim.py)
 Gate	12	40	180
 Seats	2	1
 Countdown	3600
 Interval	-
 EscapeShare	-
 Group	1	RolfScarrow
-Member	1	Elf	4	RolfScarrow	Marksman
-Member	1	Elf	3	-	Hunter
-Member	1	Elf	3	-	Skirmisher
-Member	1	Elf	3	-	Marksman
-Member	1	Elf	3	-	Hunter
-Member	1	Elf	3	-	Skirmisher
-Member	1	Knight	3	-	Guardian
-Member	1	Monk	3	-	Guardian
-Member	1	Adventurer	3	-	Shade
-Member	1	Dwarf1	3	-	Berserker
+Member	1	Elf	3	RolfScarrow	Marksman
+Member	1	Elf	2	-	Hunter
+Member	1	Elf	2	-	Skirmisher
+Member	1	Elf	2	-	Marksman
+Member	1	Elf	2	-	Hunter
+Member	1	Elf	2	-	Skirmisher
+Member	1	Knight	2	-	Guardian
+Member	1	Monk	2	-	Guardian
+Member	1	Adventurer	2	-	Shade
+Member	1	Dwarf1	2	-	Berserker
 [/Raid]

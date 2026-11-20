@@ -3471,37 +3471,36 @@ Action	keydoor	PennVaultDoor	open
 
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
-# PLACEHOLDER: interval and escape share set by simulation R3B
+# Countdown, interval, escape share and composition set by the raid simulation R3C (tools/balance/raid_sim.py)
 Gate	47	67	270
 Seats	3	1
 Countdown	3600
 Interval	-
 EscapeShare	-
-# PLACEHOLDER: composition set by simulation R3B
 Group	1	AlaricPenn
-Member	1	Knight	6	AlaricPenn	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Knight	4	-	Guardian
-Member	1	Monk	4	-	Guardian
-Member	1	Monk	4	-	Guardian
-Member	1	Elf	4	-	Marksman
-Member	1	Elf	4	-	Marksman
-Member	1	Elf	4	-	Marksman
-Member	1	Elf	4	-	Marksman
-Member	1	Elf	4	-	Marksman
-Member	1	Elf	4	-	Hunter
-Member	1	Elf	4	-	Hunter
-Member	1	Elf	4	-	Hunter
-Member	1	Dwarf2	4	-	Berserker
-Member	1	Dwarf2	4	-	Berserker
-Member	1	Dwarf2	4	-	Berserker
-Member	1	Adventurer	4	-	Shade
-Member	1	Adventurer	4	-	Shade
-Member	1	Adventurer	4	-	Shade
+Member	1	Knight	8	AlaricPenn	Guardian
+Member	1	Knight	6	-	Guardian
+Member	1	Knight	6	-	Guardian
+Member	1	Knight	6	-	Guardian
+Member	1	Knight	6	-	Guardian
+Member	1	Knight	6	-	Guardian
+Member	1	Knight	6	-	Guardian
+Member	1	Knight	6	-	Guardian
+Member	1	Knight	6	-	Guardian
+Member	1	Monk	6	-	Guardian
+Member	1	Monk	6	-	Guardian
+Member	1	Elf	6	-	Marksman
+Member	1	Elf	6	-	Marksman
+Member	1	Elf	6	-	Marksman
+Member	1	Elf	6	-	Marksman
+Member	1	Elf	6	-	Marksman
+Member	1	Elf	6	-	Hunter
+Member	1	Elf	6	-	Hunter
+Member	1	Wizard	6	-	Healer
+Member	1	Dwarf2	6	-	Berserker
+Member	1	Dwarf2	6	-	Berserker
+Member	1	Dwarf2	6	-	Berserker
+Member	1	Adventurer	6	-	Shade
+Member	1	Adventurer	6	-	Shade
+Member	1	Adventurer	6	-	Shade
 [/Raid]
