@@ -4,14 +4,15 @@
 The flying crows are the animated crow entities SKY_CROWS of config/mainmenuscene.cfg. The check follows the scene
 commands of every crow (AddEntity, ResizeEntity, PosEntity, MoveEntity, Wait) and asserts:
 
-- appear and vanish only out of sight: every place where a crow is put (AddEntity, each PosEntity) and every place
-  where a flight ends lies outside the frame or behind scenery in every view of the menu camera: every Pose of
+- appear and vanish only out of sight: every place where a crow is put (AddEntity, each PosEntity), stands (Wait)
+  or is taken away from lies outside the frame or behind scenery in every view of the menu camera: every Pose of
   [MenuCamera] and dense samples of every flight (outward routes, return routes and the arrival, sampled like
-  RenderSceneMenu::samplePath with the slerped rotation). The frame is the narrowest supported window (5:4) with the
-  16:9 horizontal field of view the menu projection keeps (CameraManager), so it contains every supported window.
+  RenderSceneMenu::samplePath with the slerped rotation). The frame has the horizontal field of view of the widest
+  window (32:9) and the vertical one of the narrowest (5:4), so it contains every window of the menu projection.
   A crow counts as out of the frame when its whole bounding sphere lies outside a side plane of the frustum, and as
   behind scenery when the sight lines to its centre and to the six extreme points of that sphere all hit an opaque
   scene triangle first;
+- a curved flight is a chain of straight MoveEntity legs whose directions differ by at most MAX_TURN_DEGREES;
 - no pop at the far clip or at the sky dome: wherever a crow is in a frame along its flight, it lies nearer than the
   far clip distance and inside the sky dome (the sight line from the overview camera reaches it before the dome);
 - the crows still fly at the moon: from Pose overview every crow is in view and unhidden for at least
@@ -51,6 +52,8 @@ SKY_CROWS = ("SkyCrow1", "SkyCrow2", "SkyCrow3", "SkyCrow4", "SkyCrow5", "SkyCro
 #: Entities that never hide a crow: the moving crows themselves and the thin distant crow silhouettes (the sky dome
 #: materials are left out of every entity; the moon disc BloodMoon stays opaque scenery).
 NOT_OCCLUDERS = ("CrowA", "CrowB", "CrowC", "CrowD", "HorizonCrows") + SKY_CROWS
+#: Widest supported window aspect (32:9 super-wide screens) and narrowest (5:4, sky.CHECK_ASPECT).
+WIDEST_ASPECT = 32.0 / 9.0
 #: Flight samples per route segment between two waypoints.
 SAMPLES_PER_SEGMENT = 24
 #: Spacing in world units of the samples along a crow flight.
@@ -60,6 +63,8 @@ MIN_OVERVIEW_SECONDS = 4.0
 MAX_MOON_DEGREES = 12.0
 #: Smallest rise and fall of a wing tip over one Flap loop, as a share of the half wingspan.
 MIN_TIP_STROKE = 0.5
+#: Largest turn in degrees between two straight legs of a curved flight (the crow turns at once at each joint).
+MAX_TURN_DEGREES = 8.0
 #: Margin added to the crow's bounding sphere (world units) for the out-of-frame and behind-scenery tests.
 SPHERE_MARGIN = 0.25
 
@@ -80,19 +85,30 @@ def parse_scene():
 
 
 def crow_program(name, entities, groups):
-    """Returns (scale, places, flights, problems) of one crow from its scene commands.
+    """Returns (scale, stops, flights, turns, problems) of one crow from its scene commands.
 
-    places are the different positions the crow is put at (AddEntity, PosEntity); flights are the different
-    (start, end, speed, clip) of its MoveEntity commands in order, each starting where the crow stood before.
+    stops are the different positions where the crow appears, stands or vanishes: where it is put (AddEntity,
+    PosEntity), where it stands during a Wait and where it is before it is put elsewhere. flights are the different
+    (start, end, speed, clip) of its MoveEntity commands in order, each starting where the crow stood before; a crow
+    may fly a curve as a chain of MoveEntity legs. turns are the angles in degrees between the directions of two legs
+    flown one after the other (MoveEntity turns the crow at once to its next destination).
     """
     problems = []
     position = entities[name][1].copy()
-    places = [position.copy()]
+    stops = []
     flights = []
+    turns = []
     scale = 1.0
+
+    def stop(point):
+        if not any(np.array_equal(point, other) for other in stops):
+            stops.append(point.copy())
+
+    stop(position)
     own = [group for group in groups if any(len(w) > 1 and w[1] == name and w[0] != "AddEntity" for w in group)]
     if len(own) != 1:
-        return scale, places, flights, ["%s: needs exactly one scene group with its commands, found %d" % (name, len(own))]
+        return scale, stops, flights, turns, ["%s: needs exactly one scene group with its commands, found %d"
+                                              % (name, len(own))]
     group = own[0]
     if ["*Repeat"] not in group:
         problems.append(name + ": its flight must repeat (*Repeat)")
@@ -100,29 +116,35 @@ def crow_program(name, entities, groups):
     # The repeated part runs twice so that the place before its first command is the end of the previous loop.
     repeat = group.index(["*Repeat"]) if ["*Repeat"] in group else len(group)
     loop = [words for words in group[repeat + 1:]]
+    previous = None
     for words in commands + loop:
-        if words[0] in ("PosEntity", "MoveEntity", "ResizeEntity", "TurnEntity", "AnimationOnce", "AnimationTime") \
-                and words[1] != name:
+        if words[0] in ("PosEntity", "MoveEntity", "ResizeEntity", "TurnEntity", "AnimationOnce", "AnimationTime")                 and words[1] != name:
             problems.append(name + ": its group drives another entity " + words[1])
         if words[0] == "ResizeEntity":
             scale = float(words[2])
         elif words[0] == "PosEntity":
+            stop(position)
             position = np.array([float(v) for v in words[2:5]])
-            if not any(np.array_equal(position, place) for place in places):
-                places.append(position.copy())
+            stop(position)
+            previous = None
         elif words[0] == "MoveEntity":
             end = np.array([float(v) for v in words[4:7]])
+            direction = (end - position) / np.linalg.norm(end - position)
+            if previous is not None:
+                turns.append(math.degrees(math.acos(max(-1.0, min(1.0, float(previous @ direction))))))
+            previous = direction
             flight = (position.copy(), end, float(words[3]), words[2])
             if not any(np.array_equal(flight[0], other[0]) and np.array_equal(flight[1], other[1]) for other in flights):
                 flights.append(flight)
             position = end
-        elif words[0] in ("Wait", "*Repeat"):
-            pass
-        else:
+        elif words[0] == "Wait":
+            stop(position)
+            previous = None
+        elif words[0] != "*Repeat":
             problems.append(name + ": unexpected command " + words[0])
     if not flights:
         problems.append(name + ": never flies (no MoveEntity)")
-    return scale, places, flights, problems
+    return scale, stops, flights, turns, problems
 
 
 def camera_views(poses, flights):
@@ -132,10 +154,15 @@ def camera_views(poses, flights):
 
 
 def frame_slopes():
-    """Returns (tan of the half horizontal, tan of the half vertical field of view) of the containing 5:4 frame."""
+    """Returns (tan of the half horizontal, tan of the half vertical field of view) of the containing frame.
+
+    The menu projection (CameraManager::setViewportSize) keeps the vertical field of view of 45 degrees for windows
+    of 16:9 and wider, so they see more to the sides, and widens the vertical one for narrower windows. The containing
+    frame takes the horizontal extent of the widest window (WIDEST_ASPECT) and the vertical one of the narrowest (5:4).
+    """
     half_y = math.atan(math.tan(math.radians(sky.MENU_FOV_Y_DEGREES) * 0.5)
                        * max(1.0, sky.MENU_REFERENCE_ASPECT / sky.CHECK_ASPECT))
-    return math.tan(half_y) * sky.CHECK_ASPECT, math.tan(half_y)
+    return math.tan(math.radians(sky.MENU_FOV_Y_DEGREES) * 0.5) * WIDEST_ASPECT, math.tan(half_y)
 
 
 def in_frame(points, position, axes, radius):
@@ -426,17 +453,19 @@ def main():
             skins[mesh] = Skin(mesh)
             failures.extend(wing_beat_problems(mesh, skins[mesh]))
         skin = skins[mesh]
-        scale, places, routes, problems = crow_program(name, entities, groups)
+        scale, places, routes, turns, problems = crow_program(name, entities, groups)
+        if turns and max(turns) > MAX_TURN_DEGREES:
+            failures.append("%s turns by %.1f degrees at once between two legs (at most %.1f)"
+                            % (name, max(turns), MAX_TURN_DEGREES))
         failures.extend(problems)
         radius = scale * skin.reach("Flap") + SPHERE_MARGIN
         for place in places:
-            failures.extend(unseen_problems(name + " put", place, radius, views, occluders))
+            failures.extend(unseen_problems(name + " stop", place, radius, views, occluders))
         seen_seconds = 0.0
         moon_angle = 180.0
         for start, end, speed, clip in routes:
             if clip != "Flap":
                 failures.append("%s flies with %s instead of the looped Flap wing beat" % (name, clip))
-            failures.extend(unseen_problems(name + " flight end", end, radius, views, occluders))
             samples = flight_samples(start, end)
             step = float(np.linalg.norm(end - start)) / max(len(samples) - 1, 1)
             for label, position, axes in views:
