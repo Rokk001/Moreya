@@ -19,6 +19,7 @@
 #define MENUMODECONFIGURESEATS_H
 
 #include "AbstractApplicationMode.h"
+#include "network/MultiplayerClientRules.h"
 
 #include <cstdint>
 #include <map>
@@ -51,7 +52,8 @@ public:
 
     void receiveChat(const ChatMessage& chat) override;
 
-    //! \brief Shows the loading picture and asks the server to start the configured map.
+    //! \brief Asks the server to start the configured map: with the loading picture in single player, in
+    //! multiplayer only once every seat is filled (otherwise the host gets a message).
     bool launchSelectedButtonPressed(const CEGUI::EventArgs&);
     bool goBack(const CEGUI::EventArgs& e = {}) override;
     bool chatText(const CEGUI::EventArgs& e);
@@ -72,6 +74,9 @@ public:
     void activatePlayerConfig();
     void refreshSeatConfiguration(ODPacket& packet);
 
+    //! \brief Tells the host when the server did not start a requested multiplayer game in time.
+    void onFrameStarted(const Ogre::FrameEvent& evt) override;
+
 private:
     bool mIsActivePlayerConfig;
     std::vector<int> mSeatIds;
@@ -81,6 +86,12 @@ private:
     bool mSettingsReceived;
     //! \brief True while the window is refreshed from the server, to not send the values back
     bool mIsRefreshing;
+    //! \brief True from the start request of a multiplayer game until the server starts it or the wait is reported
+    bool mLaunchPending;
+    //! \brief Seconds waited for the server to start the requested multiplayer game
+    float mLaunchWaitSeconds;
+    //! \brief True once the host was told that the server did not start the game
+    bool mLaunchReported;
     //! \brief The availability chosen for each skill, indexed by SkillType
     std::vector<uint32_t> mItemStates;
     //! \brief The buttons of the rooms, spells, traps and doors pages, by SkillType
@@ -91,6 +102,12 @@ private:
     std::vector<CEGUI::Window*> mHostSettingWindows;
 
     void fireSeatConfigurationToServer();
+
+    //! \brief Reads for every seat whether its player, team and faction are chosen.
+    std::vector<MultiplayerClientRules::LobbySeatChoice> collectSeatChoices();
+
+    //! \brief Shows a message below the seat list; an empty message hides it.
+    void showLobbyMessage(const std::string& message);
 
     //! \brief Fills the skirmish setting combos and the maximum creatures, game speed and game duration spinners with their choices
     void initSettingCombos();
