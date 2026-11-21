@@ -242,7 +242,10 @@ def _add_paving(rng, geometry):
                 continue
             top = -0.03 + rng.uniform(-0.09, 0.05)
             size = (1.66 + rng.uniform(-0.2, 0.05), 1.58 + rng.uniform(-0.2, 0.05), top + 0.55)
-            geometry.block((x, y, top - size[2] / 2), size, rng.uniform(-0.05, 0.05), PAVING_MATERIAL, 3.3)
+            turn = rng.uniform(-0.05, 0.05)
+            # Every flagstone reaches down to the ground level, so none hangs above it where its neighbours are missing.
+            size = (size[0], size[1], top - FOOTPRINT_LEVEL)
+            geometry.block((x, y, top - size[2] / 2), size, turn, PAVING_MATERIAL, 3.3)
 
 
 def _add_veins(rng, geometry):
