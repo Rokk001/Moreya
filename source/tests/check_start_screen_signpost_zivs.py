@@ -58,8 +58,9 @@ PAINT_LUMINANCE = 60.0
 MIN_PAINT_SPAN = 0.9
 #: Weathering limits (style guide: wood saturation <= 0.45, no white speckles or near-white texels; the courtyard is
 #: dark and worn). Luminance is Rec. 601 in 0..255, saturation the HSV saturation, areas are blocks of BLOCK_PIXELS.
+#: The clean bone white paint had areas of 182; the old paint keeps the letters readable in the menu light at 100.
 MAX_TEXEL_LUMINANCE = 140.0
-MAX_BLOCK_LUMINANCE = 90.0
+MAX_BLOCK_LUMINANCE = 105.0
 MAX_MEAN_SATURATION = 0.40
 MAX_BLOCK_SATURATION = 0.45
 BLOCK_PIXELS = 16

@@ -48,7 +48,7 @@ SUPERSAMPLE = 4
 #: Paint colour (sRGB, like the board texture) and its weathering.
 PAINT = numpy.array((0.84, 0.75, 0.56))
 #: Colour of the old paint of the weathered board: a dull, darkened bone that kept a little of its warmth.
-OLD_PAINT = numpy.array((0.40, 0.37, 0.31))
+OLD_PAINT = numpy.array((0.46, 0.42, 0.35))
 #: Groove depth relative to the plank grain of the plain normal map and the width of the carved bevel in pixels.
 GROOVE_DEPTH = 6.0
 BEVEL_PIXELS = 3.0
@@ -135,12 +135,12 @@ def weathered_lettering(colour, normal, mask, rng):
     worn = numpy.clip(mask * 1.25 - 0.18 - 0.12 * fray, 0.0, 1.0)
     # The groove is darker than the planks and collected dirt; a soot rim keeps the letters readable from afar.
     rim = numpy.clip(blurred(worn, 4.0) * 1.6 - worn, 0.0, 1.0)
-    result = aged * (1.0 - 0.45 * rim)[:, :, None]
+    result = aged * (1.0 - 0.6 * rim)[:, :, None]
     result = result * (1.0 - 0.5 * worn)[:, :, None]
     # Old paint: large flaked-off areas, a few bare streaks along the grain and a dull uneven tone.
     flakes = 0.75 * weathering.periodic_noise(rng, height, width, 10, 40)         + 0.25 * weathering.periodic_noise(rng, height, width, 90, 360)
     grain = weathering.periodic_noise(rng, height, width, 80, 4)
-    cover = numpy.clip((flakes + 0.7 - 0.35 * numpy.clip(grain - 0.8, 0.0, 2.0)) / 0.35, 0.0, 1.0)
+    cover = numpy.clip((flakes + 0.9 - 0.35 * numpy.clip(grain - 0.8, 0.0, 2.0)) / 0.35, 0.0, 1.0)
     paint_cover = worn * (0.15 + 0.85 * cover)
     shade = 0.78 + 0.22 * numpy.clip(0.5 + 0.3 * weathering.periodic_noise(rng, height, width, 30, 120), 0.0, 1.0)
     paint = OLD_PAINT[None, None, :] * shade[:, :, None]
