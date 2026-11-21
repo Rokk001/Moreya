@@ -58,6 +58,8 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 option(OD_ENABLE_WARNINGS "Compile the game with all standard warnings enabled" ON)
 option(OD_TREAT_WARNINGS_AS_ERRORS "Treat any warning seen while compiling as errors." ON)
 option(OD_USE_SFML_WINDOW "Use SFML for window and input handling" OFF)
+# Lobby multiplayer through a separate helper process (docs/development/NETWORK-TRANSPORT.md); off by default
+option(OD_NET_HELPER_RELAY "Build the lobby and relay transport through a separate helper process" OFF)
 
 # enable/disable unit tests
 option(OD_BUILD_TESTING "Compile unit tests (to enable unit tests both this and BUILD_TESTING has to be on." OFF)
@@ -527,6 +529,7 @@ set(OD_SOURCEFILES
     ${SRC}/network/ChatEventMessage.cpp
     ${SRC}/network/ClientNotification.cpp
     ${SRC}/network/CosmeticEvent.cpp
+    ${SRC}/network/NetTransport.cpp
     ${SRC}/network/ODClient.cpp
     ${SRC}/network/ODPacket.cpp
     ${SRC}/network/ODServer.cpp
@@ -534,6 +537,7 @@ set(OD_SOURCEFILES
     ${SRC}/network/ODSocketServer.cpp
     ${SRC}/network/ServerMode.cpp
     ${SRC}/network/ServerNotification.cpp
+    ${SRC}/network/TcpNetTransport.cpp
 
     ${SRC}/render/CreatureOverlayStatus.cpp
     ${SRC}/render/CreatureReactionConfig.cpp
@@ -725,6 +729,13 @@ ELSE()
     SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${SRC}/utils/StackTraceStub.cpp)
 ENDIF ()
 
+# The helper relay transport is compiled only with OD_NET_HELPER_RELAY
+IF (OD_NET_HELPER_RELAY)
+    SET(OD_SOURCEFILES ${OD_SOURCEFILES}
+        ${SRC}/network/HelperRelayProcess.cpp
+        ${SRC}/network/HelperRelayTransport.cpp)
+ENDIF ()
+
 # Adds the Windows icon resource file when building on windows.
 IF (WIN32)
     SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${CMAKE_SOURCE_DIR}/dist/icon.rc)
@@ -850,6 +861,11 @@ endif()
 
 # Create the binary file (WIN32 makes sure there is no console window on windows.)
 add_executable(${PROJECT_BINARY_NAME} WIN32 ${OD_SOURCEFILES})
+
+# Only the game gets the define; the unit test of the relay sets it on its own target (source/tests)
+if(OD_NET_HELPER_RELAY)
+    target_compile_definitions(${PROJECT_BINARY_NAME} PRIVATE OD_NET_HELPER_RELAY)
+endif()
 
 #target_link_libraries(opendungeons-plus PRIVATE Python::Development)
 

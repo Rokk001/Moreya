@@ -4542,12 +4542,13 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
     return true;
 }
 
-//! \brief Accepts a new client connection; returns nullptr if accepting fails or the server state does not allow it.
-ODSocketClient* ODServer::notifyNewConnection(sf::TcpListener& sockListener)
+//! \brief Accepts a new client connection from the transport listener; returns nullptr if accepting fails or the
+//! server state does not allow it.
+ODSocketClient* ODServer::notifyNewConnection(NetListener& listener)
 {
     ODSocketClient* newClient = new ODSocketClient;
-    sf::Socket::Status status = sockListener.accept(newClient->getSockClient());
-    if (status != sf::Socket::Status::Done)
+    NetStatus status = listener.accept(newClient->getConnection());
+    if (status != NetStatus::Done)
     {
         OD_LOG_ERR("Error while listening to socket status=" + Helper::toString(static_cast<uint32_t>(status)));
         delete newClient;
