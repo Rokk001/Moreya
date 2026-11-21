@@ -50,7 +50,7 @@ ODPacket& operator<<(ODPacket& os, const ServerMode& sm)
     return os;
 }
 
-//! rief Reads a ServerMode. A value outside of the enum marks the packet as failed and leaves sm unchanged,
+//! \brief Reads a ServerMode. A value outside of the enum marks the packet as failed and leaves sm unchanged,
 //! like a failed read.
 ODPacket& operator>>(ODPacket& is, ServerMode& sm)
 {

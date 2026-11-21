@@ -199,7 +199,7 @@ ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt)
     return os;
 }
 
-//! rief Reads a ClientNotificationType. A value outside of the enum marks the packet as failed and leaves nt
+//! \brief Reads a ClientNotificationType. A value outside of the enum marks the packet as failed and leaves nt
 //! unchanged, like a failed read.
 ODPacket& operator>>(ODPacket& is, ClientNotificationType& nt)
 {

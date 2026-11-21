@@ -253,7 +253,7 @@ ODPacket::operator bool() const
     return static_cast<bool>(mPacket);
 }
 
-//! rief Reads the remaining bytes and one more, so that sf::Packet reports the packet as invalid.
+//! \brief Reads the remaining bytes and one more, so that sf::Packet reports the packet as invalid.
 void ODPacket::markInvalid()
 {
     uint8_t rest = 0;
