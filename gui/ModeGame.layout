@@ -442,8 +442,16 @@
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Visible" value="False" />
+            <Window type="OD/StaticImage" name="RaidIcon" >
+                <Property name="Area" value="{{0,0},{0,0},{0,44},{1,0}}" />
+                <Property name="Image" value="RaidHud/RaidBanner" />
+                <Property name="TooltipText" value="Time left until the raid comes through the Moreya gate" />
+                <Property name="FrameEnabled" value="True" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            </Window>
             <Window type="OD/StaticText" name="Countdown" >
-                <Property name="Area" value="{{0,0},{0,0},{1,-112},{1,0}}" />
+                <Property name="Area" value="{{0,44},{0,0},{1,-44},{1,0}}" />
                 <Property name="Text" value="" />
                 <Property name="Font" value="MedievalSharp-13" />
                 <Property name="TextColours" value="FFF6CB62" />
@@ -454,10 +462,9 @@
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
             </Window>
-            <Window type="OD/Button" name="OpenGateButton" >
-                <Property name="Area" value="{{1,-108},{0,4},{1,0},{1,-4}}" />
-                <Property name="Text" value="Open gate" />
-                <Property name="Font" value="MedievalSharp-10" />
+            <Window type="OD/ImageButton" name="OpenGateButton" >
+                <Property name="Area" value="{{1,-44},{0,4},{1,0},{1,-4}}" />
+                <Property name="ButtonImage" value="RaidHud/GateOpen" />
                 <Property name="TooltipText" value="Open the Moreya gate now: the raid comes at once" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
             </Window>

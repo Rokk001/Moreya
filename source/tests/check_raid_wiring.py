@@ -267,8 +267,15 @@ check("getRaid().openGateEarly(clientSocket->getPlayer()->getSeat()->getId());" 
       "RA3: the server opens the gate for the seat that asks")
 panel_update = function(GAME_MODE, "void GameMode::updateRaidPanel()")
 check('getChild("RaidPanel")' in panel_update and "button->show();" in panel_update and "button->hide();" in panel_update
-      and '"Raid in "' in panel_update and '"Next group in "' in panel_update,
+      and "countdown->setText(formatDebriefingTime(seconds));" in panel_update,
       "RA2/RA3/RA4: the panel shows the countdown, the button only while the gate is closed")
+check('"Raid in "' not in panel_update and '"Next group in "' not in panel_update and "Raid in" not in LAYOUT
+      and "Next group in" not in LAYOUT,
+      "K14: the countdown carries the time only, no words")
+check("Raid in" not in panel_update.replace("until the raid", "") and "Time left until the raid comes through" in panel_update
+      and "Time left until the next raid group comes through" in panel_update
+      and panel_update.count("icon->setTooltipText(") == 2 and panel_update.count("countdown->setTooltipText(") == 2,
+      "K14: the tooltip of the picture and the time names the arrival or the next group")
 check("ClientNotificationType::askOpenRaidGate" in function(GAME_MODE, "bool GameMode::openRaidGate("),
       "RA3: the button asks the server to open the gate")
 check('getChild("RaidPanel/OpenGateButton")' in GAME_MODE and "&GameMode::openRaidGate" in GAME_MODE,
@@ -291,6 +298,24 @@ def area_of(window):
 
 windows = {window.get("name"): window for window in root.iter("Window")}
 check("RaidPanel" in windows and "Countdown" in windows and "OpenGateButton" in windows, "C6: the raid panel exists")
+gate_button = windows.get("OpenGateButton")
+gate_props = dict((p.get("name"), p.get("value")) for p in gate_button.findall("Property")) if gate_button is not None else {}
+check(gate_button is not None and gate_button.get("type") == "OD/ImageButton" and gate_props.get("ButtonImage") == "RaidHud/GateOpen"
+      and not gate_props.get("Text") and gate_props.get("TooltipText"),
+      "K13: the gate button shows only a picture, has no text and has a tooltip")
+raid_icon = windows.get("RaidIcon")
+icon_props = dict((p.get("name"), p.get("value")) for p in raid_icon.findall("Property")) if raid_icon is not None else {}
+check(raid_icon is not None and icon_props.get("Image") == "RaidHud/RaidBanner" and icon_props.get("TooltipText"),
+      "K14: the countdown shows the raid banner picture with a tooltip")
+countdown_props = dict((p.get("name"), p.get("value")) for p in windows["Countdown"].findall("Property"))
+check(countdown_props.get("Text") == "" and countdown_props.get("TooltipText"),
+      "K14: the countdown window holds no words of its own and has a tooltip")
+imageset = ElementTree.parse(os.path.join(ROOT, "gui", "RaidHud.imageset")).getroot()
+check(sorted(i.get("name") for i in imageset.findall("Image")) == ["GateOpen", "RaidBanner"]
+      and os.path.exists(os.path.join(ROOT, "gui", imageset.get("imagefile"))),
+      "G11: the two pictures exist under their final image names")
+check('name="RaidHud"' in open(os.path.join(ROOT, "gui", "ODSkin.scheme"), encoding="utf-8").read(),
+      "G11: the picture set is registered in the scheme")
 raid_root = [w for w in root.find("Window").findall("Window") if w.get("name") == "RaidPanel"]
 check(len(raid_root) == 1, "C6: the raid panel is a window of the root sheet")
 
@@ -329,8 +354,11 @@ if len(raid_root) == 1:
             inner = (panel[0], panel[1], panel[2] - panel[0], panel[3] - panel[1])
             text = rect(area_of(windows["Countdown"]), width, height, scale, inner)
             button = rect(area_of(windows["OpenGateButton"]), width, height, scale, inner)
+            icon = rect(area_of(windows["RaidIcon"]), width, height, scale, inner)
             check(not overlaps(text, button) and text[2] > text[0] and button[2] > button[0],
                   "C6: countdown and button side by side at " + name)
+            check(not overlaps(icon, text) and not overlaps(icon, button) and icon[2] > icon[0],
+                  "K14: the picture, the time and the gate button do not overlap at " + name)
 
 # ------------------------------------------------------------------------------------------------ test level (step 4)
 for word in ("Action\traidopen", "Action\traidcountdown\t", "Cond\traid\topen", "Cond\traid\tarrived\t1",

@@ -1629,7 +1629,7 @@ float imagePixelDensity(const CEGUI::String& ceguiName)
         return MENU_SHEET_IMAGE_PIXEL_DENSITY;
     if(name == "OpenDungeonsIcons/Prohibition")
         return DEFAULT_IMAGE_PIXEL_DENSITY;
-    if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "RoomCentreIcon") || startsWith(name, "OpenDungeonsNavigation/"))
+    if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "RoomCentreIcon") || startsWith(name, "OpenDungeonsNavigation/") || startsWith(name, "RaidHud/"))
         return ICON_IMAGE_PIXEL_DENSITY;
     return DEFAULT_IMAGE_PIXEL_DENSITY;
 }
@@ -1644,6 +1644,7 @@ bool shouldScaleImage(const CEGUI::String& ceguiName)
         || startsWith(name, "RoomCentreIcon")
         || startsWith(name, "OpenDungeonsNavigation/")
         || startsWith(name, "GoalStatus/")
+        || startsWith(name, "RaidHud/")
         || startsWith(name, "ODMainMenuButton/")
         || startsWith(name, "ODHudSurface/")
         || startsWith(name, "ODLogo/");

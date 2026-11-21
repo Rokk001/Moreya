@@ -5,6 +5,7 @@
     <Imageset filename="DungeonbookFrame.imageset" name="DungeonbookFrame" />
     <Imageset filename="DungeonbookIcons.imageset" name="DungeonbookIcons" />
     <Imageset filename="ODIcons.imageset" name="OpenDungeonsIcons" />
+    <Imageset filename="RaidHud.imageset" name="RaidHud" />
     <Imageset filename="RoomArtworkSpaBath.imageset" name="RoomArtworkSpaBath" />
     <Imageset filename="RoomArtworkGhostVessel.imageset" name="RoomArtworkGhostVessel" />
     <Imageset filename="RoomArtworkGhostManaCrystal.imageset" name="RoomArtworkGhostManaCrystal" />
