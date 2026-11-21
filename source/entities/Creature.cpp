@@ -12486,17 +12486,19 @@ void Creature::removeOutliner()
 }
 
 
+//! rief Marks the creature under the cursor: the thin seat-colour contour (INGAME-QS-10 K7), shown only while hovered.
 void Creature::maxAmbient()
 {
-
+    showOutliner();
     RenderManager::getSingleton().rrIncreaseAmbient(this);
 
 }
 
+//! rief Removes the hover contour again, so the creature carries no seat-colour outline when not under the cursor.
 void Creature::normalizeAmbient()
 {
-
     RenderManager::getSingleton().rrNormalizeAmbient(this);
+    removeOutliner();
 
 }
 
