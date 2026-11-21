@@ -2138,6 +2138,27 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::markEdgePlaces:
+        {
+            bool digSet;
+            uint32_t nbPlaces;
+            OD_ASSERT_TRUE(packetReceived >> digSet >> nbPlaces);
+
+            SoundEffectsManager::getSingleton().playRelativeSound(SoundRelativeInterface::PickSelector);
+
+            Seat* seat = getPlayer()->getSeat();
+            while(nbPlaces > 0)
+            {
+                --nbPlaces;
+                int x;
+                int y;
+                OD_ASSERT_TRUE(packetReceived >> x >> y);
+                seat->setEdgePlaceMarked(x, y, digSet);
+            }
+            RenderManager::getSingleton().rrRefreshEdgeMarks(seat->getEdgeDigMarks(), *gameMap);
+            break;
+        }
+
         case ServerNotificationType::carryEntity:
         {
             std::string carrierName;

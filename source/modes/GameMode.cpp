@@ -90,6 +90,7 @@
 #include "utils/ResourceManager.h"
 #include "utils/RunLevelTest.h"
 #include "utils/SelectionSize.h"
+#include "utils/EdgePlaces.h"
 #include "ODApplication.h"
 
 #include <CEGUI/CEGUI.h>
@@ -1087,6 +1088,65 @@ bool GameMode::findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre:
     return tile->isBuildableUpon(mGameMap->getLocalPlayer()->getSeat());
 }
 
+//! Distance in places at which a drag above the horizon is taken to end, far beyond the reach of EdgePlaces.h.
+static const float EDGE_PLACE_FAR_DISTANCE = 100000.0f;
+
+//! \brief Tells whether the coordinates are a place beyond the map edge that can be marked for digging now.
+bool GameMode::isDigEdgePlace(int x, int y) const
+{
+    const SelectedAction action = mPlayerSelection.getCurrentAction();
+    return (action == SelectedAction::none || action == SelectedAction::selectTile) &&
+        mGameMap->getLocalPlayer()->numObjectsInHand() == 0 &&
+        EdgePlaces::isMarkable(x, y, mGameMap->getMapSizeX(), mGameMap->getMapSizeY());
+}
+
+//! \brief Finds the place beyond the map edge under the pointer, so that it can be marked for digging like an
+//! undiscovered tile.
+bool GameMode::findDigEdgePlaceFromMouse(const OIS::MouseEvent& arg, int& x, int& y, Ogre::Vector3& position)
+{
+    const SelectedAction action = mPlayerSelection.getCurrentAction();
+    if((action != SelectedAction::none && action != SelectedAction::selectTile) ||
+       mGameMap->getLocalPlayer()->numObjectsInHand() > 0)
+        return false;
+
+    // The pointer is picked on the top of the earth block that a marked place shows
+    const float height = RenderManager::getSingleton().rrGetEdgeMarkHeight(*mGameMap);
+    const bool dragging = action == SelectedAction::selectTile &&
+        mModeManager->getInputManager().mLMouseDown;
+    Ogre::Vector3 hit;
+    if(!ODFrameListener::getSingleton().findWorldPositionFromMouse(arg, hit, height))
+    {
+        // A drag that goes on above the horizon keeps its selection: the place lies far out in the ray direction
+        if(!dragging)
+            return false;
+
+        const CEGUI::Vector2f mouse = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
+        const Ogre::Ray ray = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getCameraToViewportRay(
+            mouse.d_x / static_cast<float>(arg.state.width), mouse.d_y / static_cast<float>(arg.state.height));
+        Ogre::Vector2 direction(ray.getDirection().x, ray.getDirection().y);
+        if(direction.squaredLength() <= 0.0f)
+            return false;
+
+        direction.normalise();
+        hit = Ogre::Vector3(ray.getOrigin().x + direction.x * EDGE_PLACE_FAR_DISTANCE,
+            ray.getOrigin().y + direction.y * EDGE_PLACE_FAR_DISTANCE, height);
+    }
+
+    const int sizeX = mGameMap->getMapSizeX();
+    const int sizeY = mGameMap->getMapSizeY();
+    x = Helper::round(hit.x);
+    y = Helper::round(hit.y);
+    if(!EdgePlaces::isBeyondEdge(x, y, sizeX, sizeY))
+        return false;
+
+    // Every ground point beyond the edge is a place, however far out the camera can show it: one that lies beyond the
+    // reach is moved to the outermost markable ring, so the dig marking never refuses and never shows where the map ends
+    EdgePlaces::clampToReach(x, y, sizeX, sizeY);
+
+    position = Ogre::Vector3(static_cast<float>(x), static_cast<float>(y), height);
+    return true;
+}
+
 //! \brief Updates pointer targeting and selection as the mouse moves.
 bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 {
@@ -1152,6 +1212,21 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     {
         inputManager.mXPos = -1;
         inputManager.mYPos = -1;
+        // Beyond the map edge, digging marks still reach: the place is treated like an undiscovered tile
+        int placeX;
+        int placeY;
+        if(findDigEdgePlaceFromMouse(arg, placeX, placeY, inputManager.mKeeperHandPos))
+        {
+            inputManager.mXPos = placeX;
+            inputManager.mYPos = placeY;
+            RenderManager::getSingleton().moveWorldCoords(inputManager.mKeeperHandPos.x, inputManager.mKeeperHandPos.y);
+            if(!inputManager.mLMouseDown)
+            {
+                inputManager.mLStartDragX = placeX;
+                inputManager.mLStartDragY = placeY;
+            }
+            return true;
+        }
         if(mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom)
             unselectAllTiles();
         return true;
@@ -1496,6 +1571,15 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     {
         inputManager.mXPos = -1;
         inputManager.mYPos = -1;
+        // A place beyond the map edge is clicked like an undiscovered tile (see below)
+        int placeX;
+        int placeY;
+        if(findDigEdgePlaceFromMouse(arg, placeX, placeY, inputManager.mKeeperHandPos))
+        {
+            inputManager.mXPos = placeX;
+            inputManager.mYPos = placeY;
+            RenderManager::getSingleton().moveWorldCoords(inputManager.mKeeperHandPos.x, inputManager.mKeeperHandPos.y);
+        }
     }
 
     // The player should be able to move the mouse even if not clicking on a tile. Because of that, we set
@@ -1509,6 +1593,18 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     }
 
     Tile* tileClicked = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
+    if(tileClicked == nullptr && id == OIS::MB_Left && isDigEdgePlace(inputManager.mXPos, inputManager.mYPos))
+    {
+        // A place beyond the map edge starts a dig selection like an undiscovered tile: there is no entity to
+        // pick up, and the mark is set or removed depending on the place the drag starts on
+        inputManager.mLMouseDown = true;
+        inputManager.mLStartDragX = inputManager.mXPos;
+        inputManager.mLStartDragY = inputManager.mYPos;
+        if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
+            mPlayerSelection.setCurrentAction(SelectedAction::selectTile);
+        mDigSetBool = !mGameMap->getLocalPlayer()->getSeat()->isEdgePlaceMarked(inputManager.mXPos, inputManager.mYPos);
+        return true;
+    }
     if(tileClicked == nullptr)
     {
         if(id == OIS::MB_Left ||
@@ -1764,6 +1860,16 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     {
         inputManager.mXPos = -1;
         inputManager.mYPos = -1;
+        // The drag selection may end beyond the map edge
+        int placeX;
+        int placeY;
+        inputManager.mLMouseDown = wasLeftMouseDown;
+        if(findDigEdgePlaceFromMouse(arg, placeX, placeY, inputManager.mKeeperHandPos))
+        {
+            inputManager.mXPos = placeX;
+            inputManager.mYPos = placeY;
+        }
+        inputManager.mLMouseDown = false;
     }
 
     // We notify current selection input
@@ -5194,6 +5300,14 @@ void GameMode::refreshActionFeedback(float elapsed)
         {
             inputManager.mXPos = -1;
             inputManager.mYPos = -1;
+            // Beyond the map edge, the digging marks still reach (see mouseMoved)
+            int placeX;
+            int placeY;
+            if(findDigEdgePlaceFromMouse(mouseEvent, placeX, placeY, inputManager.mKeeperHandPos))
+            {
+                inputManager.mXPos = placeX;
+                inputManager.mYPos = placeY;
+            }
         }
         if(!inputManager.mLMouseDown)
         {
@@ -5256,9 +5370,14 @@ void GameMode::refreshActionFeedback(float elapsed)
         pointer.d_x + POINTER_TEXT_OFFSET_X * pointerScale, pointer.d_y + POINTER_TEXT_OFFSET_Y * pointerScale);
     refreshHandCooldownIcon(pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
-    const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
+    // A place beyond the map edge is dug at like an undiscovered tile: the hand shows the digging pose there too
+    const bool edgeDigging = !overGui && !holding && !mGameMap->getGamePaused() && tile == nullptr &&
+        isDigEdgePlace(inputManager.mXPos, inputManager.mYPos) &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
-         (!active && !mPreviewTiles.empty() && tile->isDiggable(player->getSeat())));
+         (!active && !mPreviewEdgePlaces.empty()));
+    const bool digging = edgeDigging || (!overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
+        (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
+         (!active && !mPreviewTiles.empty() && tile->isDiggable(player->getSeat()))));
     const bool building = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
          mPlayerSelection.getCurrentAction() == SelectedAction::buildTrap);
@@ -5373,11 +5492,36 @@ void GameMode::refreshSelectionSizeLabel()
     int width = 0;
     int height = 0;
     getSelectionSize(mPreviewTiles, width, height);
+    if(!mPreviewEdgePlaces.empty())
+    {
+        // Places beyond the map edge count like the tiles: the size is that of everything the drag marks
+        int minX = mPreviewEdgePlaces.front().first;
+        int maxX = minX;
+        int minY = mPreviewEdgePlaces.front().second;
+        int maxY = minY;
+        for(const std::pair<int, int>& place : mPreviewEdgePlaces)
+        {
+            minX = std::min(minX, place.first);
+            maxX = std::max(maxX, place.first);
+            minY = std::min(minY, place.second);
+            maxY = std::max(maxY, place.second);
+        }
+        for(const Tile* tile : mPreviewTiles)
+        {
+            minX = std::min(minX, tile->getX());
+            maxX = std::max(maxX, tile->getX());
+            minY = std::min(minY, tile->getY());
+            maxY = std::max(maxY, tile->getY());
+        }
+        width = maxX - minX + 1;
+        height = maxY - minY + 1;
+    }
     // Only while a drag marks more than one tile; a single tile click shows nothing
     const bool show = areaAction && inputManager.mLMouseDown && !isMouseDownOnCEGUIWindow() &&
         !mGameMap->getGamePaused() && mGameMap->getLocalPlayer()->numObjectsInHand() == 0 &&
-        !mPreviewTiles.empty() && width * height > 1 &&
-        mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) != nullptr;
+        (!mPreviewTiles.empty() || !mPreviewEdgePlaces.empty()) && width * height > 1 &&
+        (mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) != nullptr ||
+         isDigEdgePlace(inputManager.mXPos, inputManager.mYPos));
     if(!show)
     {
         if(mSelectionSizeLabel != nullptr)
@@ -5444,7 +5588,10 @@ void GameMode::updateSelectedTiles()
         mPlayerSelection.getCurrentAction() == SelectedAction::destroyTrap ||
         mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding;
     if(!mActionTargetValid && !building)
+    {
         mPreviewTiles.clear();
+        mPreviewEdgePlaces.clear();
+    }
     const Ogre::ColourValue colour = mActionTargetValid ? Ogre::ColourValue(0.35f, 0.3f, 1.0f) :
         Ogre::ColourValue(1.0f, 0.15f, 0.1f);
     const InputManager& inputManager = mModeManager->getInputManager();
@@ -5458,16 +5605,24 @@ void GameMode::updateSelectedTiles()
         outlineTiles = mPreviewTiles;
     }
     // Rectangle demolition retains its existing line; filled construction borders apply to room building.
+    // A dig selection also frames the places beyond the map edge it reaches, like undiscovered tiles
+    std::vector<std::pair<int, int> > outlineEdgePlaces = mPreviewEdgePlaces;
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::selectTile && inputManager.mLMouseDown)
+        outlineEdgePlaces = EdgePlaces::inRectangle(inputManager.mXPos, inputManager.mYPos,
+            inputManager.mLStartDragX, inputManager.mLStartDragY, mGameMap->getMapSizeX(), mGameMap->getMapSizeY());
+    const float edgeHeight = outlineEdgePlaces.empty() ? 0.0f : RenderManager::getSingleton().rrGetEdgeMarkHeight(*mGameMap);
     if(mPreviewTiles == mSelectedTiles)
     {
-        RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle);
+        RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle,
+            outlineEdgePlaces, edgeHeight);
         return;
     }
     Player* player = mGameMap->getLocalPlayer();
     for(Tile* tile : mSelectedTiles)
         tile->setSelected(false, player);
     mSelectedTiles = mPreviewTiles;
-    RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle);
+    RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle,
+        outlineEdgePlaces, edgeHeight);
 }
 
 void GameMode::unselectAllTiles()
@@ -5477,6 +5632,7 @@ void GameMode::unselectAllTiles()
         tile->setSelected(false, player);
     mSelectedTiles.clear();
     mPreviewTiles.clear();
+    mPreviewEdgePlaces.clear();
     RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, Ogre::ColourValue::White);
 }
 
@@ -5817,10 +5973,12 @@ void GameMode::checkInputCommand()
     const InputManager& inputManager = mModeManager->getInputManager();
 
     mPreviewTiles.clear();
+    mPreviewEdgePlaces.clear();
     mActionTargetValid = false;
     mActionTargetText.clear();
     if(mPlayerSelection.getCurrentAction() != SelectedAction::none &&
-       mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) == nullptr)
+       mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) == nullptr &&
+       !isDigEdgePlace(inputManager.mXPos, inputManager.mYPos))
     {
         displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
         unselectAllTiles();
@@ -6036,6 +6194,19 @@ void GameMode::handlePlayerActionNone()
     if(player->numObjectsInHand() == 0)
     {
         Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
+        if(tile == nullptr && isDigEdgePlace(inputManager.mXPos, inputManager.mYPos))
+        {
+            // A place beyond the map edge reads exactly like an undiscovered tile
+            displayText(Ogre::ColourValue::White, "Unexplored. Click or drag to mark for digging.");
+            mPreviewEdgePlaces.push_back(std::pair<int, int>(inputManager.mXPos, inputManager.mYPos));
+            InputManager& edgeInput = mModeManager->getInputManager();
+            if(edgeInput.mHighlightedCreature != nullptr)
+            {
+                edgeInput.mHighlightedCreature->normalizeAmbient();
+                edgeInput.mHighlightedCreature = nullptr;
+            }
+            return;
+        }
         if(tile != nullptr && (!tile->getEverVisible() || tile->getHasFogOfWar()))
         {
             displayText(Ogre::ColourValue::White, "Unexplored. Click or drag to mark for digging.");
@@ -6166,7 +6337,17 @@ void GameMode::handlePlayerActionSelectTile()
         if(mDigSetBool ? (!tile->getEverVisible() || tile->getHasFogOfWar() || tile->isDiggable(player->getSeat())) : tile->getMarkedForDigging(player))
             diggableTiles.push_back(tile);
     }
-    if(diggableTiles.empty())
+    // The places beyond the map edge inside the rectangle are marked like undiscovered tiles; unmarking
+    // concerns only the ones that are marked
+    std::vector<std::pair<int, int> > edgePlaces;
+    const std::vector<std::pair<int, int> > edgeRectangle = EdgePlaces::inRectangle(inputManager.mXPos, inputManager.mYPos,
+        inputManager.mLStartDragX, inputManager.mLStartDragY, mGameMap->getMapSizeX(), mGameMap->getMapSizeY());
+    for(const std::pair<int, int>& place : edgeRectangle)
+    {
+        if(mDigSetBool || player->getSeat()->isEdgePlaceMarked(place.first, place.second))
+            edgePlaces.push_back(place);
+    }
+    if(diggableTiles.empty() && edgePlaces.empty())
     {
         Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if(!mDigSetBool)
@@ -6186,6 +6367,7 @@ void GameMode::handlePlayerActionSelectTile()
     if(inputManager.mCommandState != InputCommandState::validated)
     {
         selectTiles(diggableTiles);
+        mPreviewEdgePlaces = edgePlaces;
         return;
     }
 

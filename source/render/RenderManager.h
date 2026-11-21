@@ -377,7 +377,17 @@ public:
     //! \brief Plays the pickaxe swing once, then returns to the current pose.
     void rrPlayDigAnimation();
     //! \brief Draws tile previews with equally thick filled borders for construction and digging.
-    void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false, bool singleRectangle = false);
+    //! The optional edge places are places beyond the map edge (no tile) that are framed like undiscovered tiles, at the
+    //! given height (see rrGetEdgeMarkHeight).
+    void rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction = false, bool digging = false, bool singleRectangle = false,
+        const std::vector<std::pair<int, int> >& edgePlaces = std::vector<std::pair<int, int> >(), float edgeHeight = 0.0f);
+    //! \brief Shows the places beyond the map edge that are marked for digging, one earth block with the dig marking
+    //! each, exactly as a marked undiscovered tile looks. Blocks of places that are no longer marked are removed.
+    //! \param marks All places beyond the edge the local player has marked
+    //! \param gameMap The map whose tile set gives the earth block
+    void rrRefreshEdgeMarks(const std::set<std::pair<int, int> >& marks, GameMap& gameMap);
+    //! \brief Top height of the earth block shown on a marked place beyond the map edge; the pointer is picked on it.
+    float rrGetEdgeMarkHeight(GameMap& gameMap);
     //! \brief Starts a short particle burst on each of the given tiles. The bursts remove
     //! themselves after a fixed time. Null entries are skipped.
     void rrCreateRoomConstructionEffect(const std::vector<Tile*>& tiles);
@@ -592,6 +602,8 @@ private:
     Ogre::Vector3 mHammerStrikePoint = Ogre::Vector3::ZERO;
     //! \brief Outline of the tiles the current action would affect.
     Ogre::ManualObject* mTilePreview = nullptr;
+    //! Scene nodes of the earth blocks shown on the marked places beyond the map edge.
+    std::map<std::pair<int, int>, Ogre::SceneNode*> mEdgeMarkNodes;
 
     //! \brief Short particle effect shown at a creature that was hit.
     struct CreatureCombatImpactEffect

@@ -56,6 +56,11 @@ add_boost_test(00-SelectionSize
         test_SelectionSize.cpp
         ${SRC}/utils/SelectionSize.h)
 
+add_boost_test(00-EdgePlaces
+        SOURCES
+        test_EdgePlaces.cpp
+        ${SRC}/utils/EdgePlaces.h)
+
 add_boost_test(00-PointerMapping
         SOURCES
         test_PointerMapping.cpp

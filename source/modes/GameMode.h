@@ -578,6 +578,9 @@ private:
     std::vector<Tile*> mPreviewTiles;
     //! \brief Tiles currently outlined in the world.
     std::vector<Tile*> mSelectedTiles;
+    //! \brief Places beyond the map edge (no tile) that the dig selection would mark or unmark; they are outlined and
+    //! marked like undiscovered tiles, so the player is never told where the map ends.
+    std::vector<std::pair<int, int> > mPreviewEdgePlaces;
 
     //! \brief Index of the event in the game event queue (for zooming automatically)
     uint32_t mIndexEvent;
@@ -644,6 +647,21 @@ private:
     //! \brief Picks room floors through walls and uses normal surface picking for other actions.
     //! While dragging, any tile (also a wall) may end the drag so the valid floors inside are built.
     bool findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position, bool dragging);
+
+    //! \brief Finds the place beyond the map edge under the pointer, if the digging marks apply there.
+    //! A place beyond the edge can be marked for digging like an undiscovered tile: only while no creature is
+    //! held and no other action is selected. Every ground point beyond the edge is a place: one farther out than
+    //! the reach of EdgePlaces.h is moved to the outermost markable ring, so the marking never refuses. A drag also
+    //! keeps its selection while the pointer is above the horizon.
+    //! \param arg The mouse event, for the screen size
+    //! \param x Receives the place coordinate
+    //! \param y Receives the place coordinate
+    //! \param position Receives the point under the pointer
+    //! \return true if the pointer is over such a place
+    bool findDigEdgePlaceFromMouse(const OIS::MouseEvent& arg, int& x, int& y, Ogre::Vector3& position);
+
+    //! \brief Tells whether the coordinates are a place beyond the map edge that can be marked for digging now.
+    bool isDigEdgePlace(int x, int y) const;
 
     //! \brief A sub-function called by mouseMoved()
     //! It will handle the potential mouse wheel logic
