@@ -64,8 +64,9 @@ $dlls = 'OgreMain.dll', 'OgreOverlay.dll', 'OgreRTShaderSystem.dll', 'OgreBites.
     'sfml-audio-3.dll', 'sfml-network-3.dll', 'sfml-system-3.dll', 'OIS.dll', 'freetype.dll', 'libexpat.dll'
 foreach ($dll in $dlls) { Copy-Item -LiteralPath (Join-Path "$deps\bin" $dll) -Destination $Out }
 # MSVC runtime (CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS): the newest redistributable folder of the build tools
-$crt = Get-ChildItem -Path (Join-Path $taskVsPath 'VC\Redist\MSVC\*\x64') -Directory -Filter 'Microsoft.VC*.CRT' -ErrorAction SilentlyContinue |
-    Sort-Object FullName -Descending | Select-Object -First 1
+$crt = Get-ChildItem -LiteralPath (Join-Path $taskVsPath 'VC\Redist\MSVC') -Directory -ErrorAction SilentlyContinue |
+    Sort-Object Name -Descending | ForEach-Object { Join-Path $_.FullName 'x64' } | Where-Object { Test-Path -LiteralPath $_ } |
+    ForEach-Object { Get-ChildItem -LiteralPath $_ -Directory -Filter 'Microsoft.VC*.CRT' } | Select-Object -First 1
 if (-not $crt) { throw "MSVC runtime not found below $taskVsPath\VC\Redist\MSVC" }
 Get-ChildItem -LiteralPath $crt.FullName -Filter '*.dll' | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $Out }
 
