@@ -259,6 +259,7 @@ bool ResourceManager::takeOverOldUserFolder(const std::string& oldPath, const st
     return true;
 }
 
+//! \brief Sets up the user data folders and reads the command line options for logs, tests, port and (OD_NET_HELPER_RELAY) the relay helper.
 void ResourceManager::setupUserDataFolders(boost::program_options::variables_map& options)
 {
     // Empty the members so we can check their validity later.
@@ -568,6 +569,12 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
     if(itOption != options.end())
         mForcedNetworkPort = itOption->second.as<int32_t>();
 
+#ifdef OD_NET_HELPER_RELAY
+    itOption = options.find("net-helper");
+    if(itOption != options.end())
+        mNetHelperPath = itOption->second.as<std::string>();
+#endif
+
     itOption = options.find("loglevel");
     if(itOption != options.end())
         mLogLevel = static_cast<LogMessageLevel>(itOption->second.as<int32_t>());
@@ -719,6 +726,7 @@ std::string ResourceManager::buildReplayFilename()
     return ss.str();
 }
 
+//! \brief Adds the command line options the resource manager reads; --net-helper only in OD_NET_HELPER_RELAY builds.
 void ResourceManager::buildCommandOptions(boost::program_options::options_description& desc)
 {
     desc.add_options()
@@ -745,6 +753,11 @@ void ResourceManager::buildCommandOptions(boost::program_options::options_descri
         ("raid-sim-goal-player", "Debug: in --raid-sim with --raid-sim-keeper-ai the keeper of the human seat also pursues the goals of the level (test player of the build time)")
         ("scenario", boost::program_options::value<std::string>(), "Debug: scenario set up by --run-level on the first turn (ignored-enemies: writes the combat state of fighters near enemies to run-level-scenario.txt; return-to-menu / editor-return-to-menu: plays the level as a game / opens it in the editor, leaves to the main menu after --seconds and passes after the menu frames)")
     ;
+#ifdef OD_NET_HELPER_RELAY
+    desc.add_options()
+        ("net-helper", boost::program_options::value<std::string>(), "Starts the given relay helper program for lobby multiplayer (see docs/development/NETWORK-TRANSPORT.md)")
+    ;
+#endif
 }
 
 std::string ResourceManager::getGameLevelPathSkirmish() const

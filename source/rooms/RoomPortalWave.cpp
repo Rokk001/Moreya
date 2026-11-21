@@ -28,6 +28,7 @@
 #include "gamemap/Pathfinding.h"
 #include "gamemap/GameMap.h"
 #include "network/ODServer.h"
+#include "network/ServerGuards.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
 #include "spells/SpellCallToWar.h"
@@ -1257,37 +1258,63 @@ ODPacket& operator<<(ODPacket& os, const RoomPortalWaveConfig& config)
     return os;
 }
 
+//! \brief Reads a wave portal configuration. The editor client sends it, so an unknown strategy or a count above
+//! the limits of ServerGuards marks the packet as failed, and the reading stops at the first failed read.
 ODPacket& operator>>(ODPacket& is, RoomPortalWaveConfig& config)
 {
-    int32_t strategy;
+    int32_t strategy = 0;
     is >> config.mTurnsBetween2Waves >> strategy >> config.mRangeTilesAttack;
+    if(!is)
+        return is;
+    if((strategy < 0) || (strategy > static_cast<int32_t>(RoomPortalWaveStrategy::fixedTeamIds)))
+    {
+        is.markInvalid();
+        return is;
+    }
     config.mStrategy = static_cast<RoomPortalWaveStrategy>(strategy);
 
-    uint32_t nb;
+    uint32_t nb = 0;
     is >> nb;
+    if(!is || !ServerGuards::isCountAllowed(nb, ServerGuards::MAX_PORTAL_TARGET_TEAMS))
+    {
+        is.markInvalid();
+        return is;
+    }
     config.mTargetTeams.clear();
     while(nb > 0)
     {
         --nb;
         int32_t team;
-        is >> team;
+        if(!(is >> team))
+            return is;
         config.mTargetTeams.push_back(team);
     }
 
     is >> nb;
+    if(!is || !ServerGuards::isCountAllowed(nb, ServerGuards::MAX_PORTAL_WAVES))
+    {
+        is.markInvalid();
+        return is;
+    }
     config.mWaves.clear();
     while(nb > 0)
     {
         --nb;
         RoomPortalWaveData wave;
         is >> wave.mSpawnTurnMin >> wave.mSpawnTurnMax;
-        uint32_t nbCreatures;
+        uint32_t nbCreatures = 0;
         is >> nbCreatures;
+        if(!is || !ServerGuards::isCountAllowed(nbCreatures, ServerGuards::MAX_PORTAL_WAVE_CREATURES))
+        {
+            is.markInvalid();
+            return is;
+        }
         while(nbCreatures > 0)
         {
             --nbCreatures;
             std::pair<std::string, uint32_t> p;
-            is >> p.first >> p.second;
+            if(!(is >> p.first >> p.second))
+                return is;
             wave.mSpawnCreatureClassName.push_back(p);
         }
         config.mWaves.push_back(wave);

@@ -150,6 +150,12 @@ public:
     inline int32_t getForcedNetworkPort() const
     { return mForcedNetworkPort; }
 
+#ifdef OD_NET_HELPER_RELAY
+    //! \brief Option --net-helper: path of the relay helper program for lobby multiplayer (empty if not used)
+    inline const std::string& getNetHelperPath() const
+    { return mNetHelperPath; }
+#endif
+
     inline LogMessageLevel getLogLevel() const
     { return mLogLevel; }
 
@@ -239,6 +245,11 @@ private:
 
     //! \brief used when the network port is forced
     int32_t mForcedNetworkPort;
+
+#ifdef OD_NET_HELPER_RELAY
+    //! \brief Path of the relay helper program given with --net-helper
+    std::string mNetHelperPath;
+#endif
 
     //! \brief The log level
     LogMessageLevel mLogLevel;

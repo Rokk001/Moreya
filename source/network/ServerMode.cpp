@@ -18,6 +18,8 @@
 #include "network/ServerMode.h"
 
 #include "network/ODPacket.h"
+#include "network/ServerGuards.h"
+#include "utils/LogManager.h"
 #include "utils/Helper.h"
 
 namespace ServerModes
@@ -48,10 +50,19 @@ ODPacket& operator<<(ODPacket& os, const ServerMode& sm)
     return os;
 }
 
+//! \brief Reads a ServerMode. A value outside of the enum marks the packet as failed and leaves sm unchanged,
+//! like a failed read.
 ODPacket& operator>>(ODPacket& is, ServerMode& sm)
 {
-    int32_t tmp;
-    is >> tmp;
+    int32_t tmp = 0;
+    if(!(is >> tmp))
+        return is;
+    if(!ServerGuards::isServerModeValue(tmp))
+    {
+        OD_LOG_WRN("Unknown ServerMode=" + Helper::toString(tmp));
+        is.markInvalid();
+        return is;
+    }
     sm = static_cast<ServerMode>(tmp);
     return is;
 }

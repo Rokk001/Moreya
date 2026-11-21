@@ -2583,6 +2583,7 @@ const std::string Gui::MPM_LIST_LEVELS = "LevelWindowFrame/LevelSelect";
 const std::string Gui::MPM_CHECK_RELATIONSHIPS = "LevelWindowFrame/RelationshipsCheckbox";
 const std::string Gui::MPM_EDIT_IP = "LevelWindowFrame/IpEdit";
 const std::string Gui::MPM_EDIT_NICK = "LevelWindowFrame/NickEdit";
+const std::string Gui::MPM_EDIT_PORT = "LevelWindowFrame/PortEdit";
 
 const std::string Gui::EDM_TEXT_LOADING = "LoadingText";
 const std::string Gui::EDM_BUTTON_LAUNCH = "LevelWindowFrame/LaunchEditorButton";

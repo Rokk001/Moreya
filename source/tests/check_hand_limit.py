@@ -422,7 +422,7 @@ check("!mGameMap->isServerGameMap() || !getIsHuman()" in notify
 check("notifyHandCooldown();" in setter, "HL2: every new cooldown (drop, load) is sent")
 drop_hand = function(PLAYER, "void Player::dropHand(Tile *t, unsigned int index)")
 check("setHandCooldownSeconds(handCooldown);" in drop_hand, "HL2: the cooldown of a drop is sent")
-check(re.search(r"dungeonbookRoster,\n(?:\s*//!.*\n)+\s*setHandCooldown\n\};", read(
+check(re.search(r"dungeonbookRoster,\n(?:\s*//!.*\n)+\s*setHandCooldown,\n(?:\s*//!.*\n)+\s*startGameRefused\n\};", read(
     "source/network/ServerNotification.h")) is not None, "HL2: the new notification is appended at the end")
 check('return "setHandCooldown";' in read("source/network/ServerNotification.cpp"), "HL2: notification name")
 client = read("source/network/ODClient.cpp")

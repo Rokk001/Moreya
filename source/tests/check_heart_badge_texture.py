@@ -505,6 +505,7 @@ class MenuModeMain
 public:
     ModeManager mManager;
     bool mSkirmishSubMenuPending = false;
+    bool mMultiplayerSubMenuPending = false;
     bool mOverviewPending = false;
     std::string mPendingSubMenu;
     AbstractModeManager::ModeType mPendingMode = AbstractModeManager::NONE;

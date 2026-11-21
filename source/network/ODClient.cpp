@@ -47,7 +47,9 @@
 #include "modes/ModeManager.h"
 #include "network/ChatEventMessage.h"
 #include "network/CosmeticEvent.h"
+#include "network/MultiplayerClientRules.h"
 #include "network/ODPacket.h"
+#include "network/ODServer.h"
 #include "network/RelationshipPacket.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
@@ -184,7 +186,8 @@ ODClient::ODClient() :
     mRaidCountdownSeconds(-1),
     mRaidGateClosed(false),
     mRaidWaitsForKeeper(false),
-    mHasSandboxRealmComplete(false)
+    mHasSandboxRealmComplete(false),
+    mServerLost(false)
 {
 }
 
@@ -218,14 +221,42 @@ void ODClient::updateHeartStageHits(float timeSinceLastFrame)
     }
 }
 
-//! \brief Restores the presentation and reports a lost server connection.
+//! \brief Restores the presentation and reports a lost server connection. In a multiplayer game the
+//! client is disconnected at once, so the closed socket is not read again every frame, and the loss is
+//! kept for the frame listener, which returns to the main menu (consumeServerLost). A single player
+//! game keeps the event message as before.
 void ODClient::playerDisconnected()
 {
     LoadingScreen::finish();
+    // Asked before disconnecting: afterwards the client no longer reads from the network
+    if(isMultiplayerSession())
+    {
+        OD_LOG_WRN("Lost the connection to the server of the multiplayer game");
+        disconnect();
+        mServerLost = true;
+        return;
+    }
     std::string message = getPlayer() ? getPlayer()->getNick() + " disconnected from the server." : "A player disconnected.";
     // Place an event in the queue to inform the user about the disconnection.
     addEventMessage(new EventMessage(message));
     // TODO : try to reconnect to the server
+}
+
+//! \brief Asks the local server whether it hosts the game: a client on the network takes part in a
+//! multiplayer game unless its server is a local single player, loaded game or editor server.
+bool ODClient::isMultiplayerSession()
+{
+    ODServer& server = ODServer::getSingleton();
+    return MultiplayerClientRules::isMultiplayerSession(getSource() == ODSource::network,
+        server.isConnected(), server.getServerMode() == ServerMode::ModeGameMultiPlayer);
+}
+
+//! \brief Returns the lost server connection once, so that the menu is opened only one time.
+bool ODClient::consumeServerLost()
+{
+    bool lost = mServerLost;
+    mServerLost = false;
+    return lost;
 }
 
 //! \brief Tells whether a loaded saved game already fixes the human seat, the faction and the team
@@ -536,6 +567,24 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             MenuModeConfigureSeats* mode = static_cast<MenuModeConfigureSeats*>(frameListener->getModeManager()->getCurrentMode());
             mode->refreshSeatConfiguration(packetReceived);
+            break;
+        }
+
+        case ServerNotificationType::startGameRefused:
+        {
+            // The server answers a start request it does not carry out with the reason
+            int32_t reasonValue = -1;
+            if(!(packetReceived >> reasonValue))
+            {
+                OD_LOG_ERR("Could not read the reason of the refused start");
+                break;
+            }
+            OD_LOG_INF("The server refused to start the game, reason=" + Helper::toString(reasonValue));
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::MENU_CONFIGURE_SEATS)
+                break;
+
+            MenuModeConfigureSeats* mode = static_cast<MenuModeConfigureSeats*>(frameListener->getModeManager()->getCurrentMode());
+            mode->showStartRefused(reasonValue);
             break;
         }
 

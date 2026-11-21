@@ -29,12 +29,10 @@ ODPacket& operator<<(ODPacket& os, const GameEntityType& type)
     return os;
 }
 
+//! \brief Reads a GameEntityType. A value outside of the enum marks the packet as failed and leaves type unchanged.
 ODPacket& operator>>(ODPacket& is, GameEntityType& type)
 {
-    int32_t tmp;
-    OD_ASSERT_TRUE(is >> tmp);
-    type = static_cast<GameEntityType>(tmp);
-    return is;
+    return ODPacket::readEnum<int32_t>(is, type, GameEntityType::poolAttendantEntity);
 }
 
 std::ostream& operator<<(std::ostream& os, const GameEntityType& type)

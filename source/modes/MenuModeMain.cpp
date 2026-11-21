@@ -57,6 +57,8 @@ const std::string WINDOW_SKIRMISH = "SkirmishSubMenuWindow";
 const std::string WINDOW_MULTIPLAYER = "MultiplayerSubMenuWindow";
 const std::string WINDOW_EDITOR = "EditorSubMenuWindow";
 const std::string WINDOW_SETTINGS = "SettingsSubMenuWindow";
+//! Text of the main menu that shows a message kept for it once, such as a lost server connection.
+const std::string TEXT_NOTICE = "NoticeText";
 
 const std::string BUTTON_NEW_CAMPAIGN = "NewCampaignButton";
 const std::string BUTTON_CONTINUE_CAMPAIGN = "ContinueCampaignButton";
@@ -212,7 +214,8 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
         );
 }
 
-//! \brief Restores main controls after any requested arrival flight from a finished game.
+//! \brief Restores main controls after any requested arrival flight from a finished game; after a game it opens the
+//! requested skirmish or multiplayer sub-menu and shows a message kept for the main menu once.
 void MenuModeMain::activate()
 {
     // Loads the corresponding Gui sheet.
@@ -228,6 +231,7 @@ void MenuModeMain::activate()
     window->getChild(WINDOW_SETTINGS)->hide();
     mSettingsPageOpen = false;
     mSkirmishSubMenuPending = false;
+    mMultiplayerSubMenuPending = false;
     mOverviewPending = false;
     mPendingSubMenu.clear();
     mPendingMode = AbstractModeManager::NONE;
@@ -238,6 +242,17 @@ void MenuModeMain::activate()
         mSkirmishSubMenuPending = true;
         showMainMenuButtons(false);
     }
+    // After a multiplayer game (its defeat debriefing or a lost server): the same, with the multiplayer sub-menu
+    if(getModeManager().consumeMultiplayerSubMenuRequest())
+    {
+        mMultiplayerSubMenuPending = true;
+        showMainMenuButtons(false);
+    }
+    // A message kept for the main menu, such as a lost server connection, is shown once
+    const std::string notice = getModeManager().consumeMainMenuNotice();
+    CEGUI::Window* noticeText = window->getChild(TEXT_NOTICE);
+    noticeText->setText(reinterpret_cast<const CEGUI::utf8*>(notice.c_str()));
+    noticeText->setVisible(!notice.empty());
 
     // Reaching the main menu ends the campaign flow. The campaign buttons
     // depend on the campaign definition and the saved progress.
@@ -261,20 +276,21 @@ void MenuModeMain::activate()
 
     ODFrameListener::getSingleton().stopGameRenderer();
     ODFrameListener::getSingleton().createMainMenuScene();
-    if(getModeManager().consumeMainMenuArrivalRequest() || mSkirmishSubMenuPending)
+    if(getModeManager().consumeMainMenuArrivalRequest() || mSkirmishSubMenuPending || mMultiplayerSubMenuPending)
     {
         ODFrameListener::getSingleton().startMainMenuFlight();
         if(ODFrameListener::getSingleton().isMainMenuFlightActive())
         {
             showMainMenuButtons(false);
-            mOverviewPending = !mSkirmishSubMenuPending;
+            mOverviewPending = !mSkirmishSubMenuPending && !mMultiplayerSubMenuPending;
         }
     }
 
     restartPendingLevel();
 }
 
-//! \brief Reveals the overview or selected existing pane only after its configured flight finishes.
+//! \brief Reveals the overview or selected existing pane (also the skirmish or multiplayer sub-menu requested after a
+//! game) only after its configured flight finishes.
 void MenuModeMain::onFrameStarted(const Ogre::FrameEvent& /*evt*/)
 {
     if(ODFrameListener::getSingleton().isMainMenuFlightActive())
@@ -289,6 +305,12 @@ void MenuModeMain::onFrameStarted(const Ogre::FrameEvent& /*evt*/)
     {
         mSkirmishSubMenuPending = false;
         toggleSubMenu(WINDOW_SKIRMISH);
+        return;
+    }
+    if(mMultiplayerSubMenuPending)
+    {
+        mMultiplayerSubMenuPending = false;
+        toggleSubMenu(WINDOW_MULTIPLAYER);
         return;
     }
     if(!mPendingSubMenu.empty())

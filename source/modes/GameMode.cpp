@@ -51,6 +51,7 @@
 #include "modes/GameEditorModeConsole.h"
 #include "modes/InputBridge.h"
 #include "network/ChatEventMessage.h"
+#include "network/MultiplayerClientRules.h"
 #include "network/ODClient.h"
 #include "network/ODServer.h"
 #include "network/ServerMode.h"
@@ -2793,15 +2794,21 @@ bool GameMode::onClickCampaignVictoryConfirm(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Leaves the lost game once the debriefing is confirmed: to the campaign menu in a campaign, otherwise to the
+//! main menu opened with the multiplayer sub-menu after a multiplayer game or with the skirmish sub-menu.
 bool GameMode::onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& /*arg*/)
 {
     if(!mDefeatSequence.confirmDebriefing())
         return true;
     // In a campaign the way out of a lost level is the campaign menu, where the level can be
     // played again. Otherwise it is the same way out as the quit menu, but the main menu
-    // opens with the skirmish sub-menu.
-    if(Campaign::getSingleton().isActive())
+    // opens with the skirmish sub-menu, or with the multiplayer sub-menu after a multiplayer game.
+    const MultiplayerClientRules::DebriefingExit destination = MultiplayerClientRules::debriefingExit(
+        Campaign::getSingleton().isActive(), ODClient::getSingleton().isMultiplayerSession());
+    if(destination == MultiplayerClientRules::DebriefingExit::campaignMenu)
         mModeManager->requestMode(AbstractModeManager::MENU_CAMPAIGN);
+    else if(destination == MultiplayerClientRules::DebriefingExit::multiplayerSubMenu)
+        mModeManager->requestMainMenuWithMultiplayerSubMenu();
     else
         mModeManager->requestMainMenuWithSkirmishSubMenu();
     return true;

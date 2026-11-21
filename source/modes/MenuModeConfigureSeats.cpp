@@ -25,6 +25,7 @@
 #include "modes/MenuModeConfigureSeats.h"
 #include "modes/ModeManager.h"
 #include "network/ChatEventMessage.h"
+#include "network/MultiplayerClientRules.h"
 #include "network/ODServer.h"
 #include "network/ODClient.h"
 #include "render/Gui.h"
@@ -732,7 +733,9 @@ void MenuModeConfigureSeats::activate()
         LoadingScreen::finish();
 }
 
-//! \brief Presents the loading image before asking the server to start the configured map.
+//! \brief Asks the server to start the configured map. A single player game presents the loading image at once. In
+//! multiplayer the start of the game shows the image itself, so the lobby only asks: with a seat that is not filled it
+//! tells the host instead, and if the server refuses the start it answers with startGameRefused (see showStartRefused).
 bool MenuModeConfigureSeats::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     // We send to the server the associations faction/seat/player
@@ -740,11 +743,60 @@ bool MenuModeConfigureSeats::launchSelectedButtonPressed(const CEGUI::EventArgs&
     if(!mIsActivePlayerConfig)
         return true;
 
+    if(ODClient::getSingleton().isMultiplayerSession())
+    {
+        // The server refuses to start while a seat lacks a player, a team or a faction; the lobby says so at once
+        if(!MultiplayerClientRules::areSeatsFilled(collectSeatChoices()))
+        {
+            OD_LOG_INF("The game is not started: not every seat has a player, a team and a faction");
+            showLobbyMessage(MultiplayerClientRules::SEATS_NOT_FILLED_MESSAGE);
+            return true;
+        }
+        showLobbyMessage("");
+        ClientNotification* notif = new ClientNotification(ClientNotificationType::seatConfigurationSet);
+        ODClient::getSingleton().queueClientNotification(notif);
+        return true;
+    }
+
     LoadingScreen loading;
     ClientNotification* notif = new ClientNotification(ClientNotificationType::seatConfigurationSet);
     ODClient::getSingleton().queueClientNotification(notif);
     loading.continueLoading();
     return true;
+}
+
+//! \brief Shows in the lobby why the server refused to start the game. The server answers every start request it
+//! does not carry out with startGameRefused, so the lobby needs no timeout: a server with another protocol is already
+//! refused at the hello (wire suffix), so no server that stays silent can be reached. The loading image of a single
+//! player start is closed so that the message can be read.
+void MenuModeConfigureSeats::showStartRefused(int32_t reasonValue)
+{
+    LoadingScreen::finish();
+    showLobbyMessage(MultiplayerClientRules::startRefusedMessage(reasonValue));
+}
+
+//! \brief Reads for every seat of the lobby whether its player, team and faction are chosen (their combo shows a value).
+std::vector<MultiplayerClientRules::LobbySeatChoice> MenuModeConfigureSeats::collectSeatChoices()
+{
+    CEGUI::Window* playersWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
+    std::vector<MultiplayerClientRules::LobbySeatChoice> choices;
+    for(int seatId : mSeatIds)
+    {
+        MultiplayerClientRules::LobbySeatChoice choice;
+        choice.mPlayerChosen = !playersWin->getChild(COMBOBOX_PLAYER_PREFIX + Helper::toString(seatId))->getText().empty();
+        choice.mTeamChosen = !playersWin->getChild(COMBOBOX_TEAM_ID_PREFIX + Helper::toString(seatId))->getText().empty();
+        choice.mFactionChosen = !playersWin->getChild(COMBOBOX_PLAYER_FACTION_PREFIX + Helper::toString(seatId))->getText().empty();
+        choices.push_back(choice);
+    }
+    return choices;
+}
+
+//! \brief Shows a message below the seat list of the lobby; an empty message hides it.
+void MenuModeConfigureSeats::showLobbyMessage(const std::string& message)
+{
+    CEGUI::Window* msgWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("LoadingText");
+    msgWin->setText(reinterpret_cast<const CEGUI::utf8*>(message.c_str()));
+    msgWin->setVisible(!message.empty());
 }
 
 bool MenuModeConfigureSeats::goBack(const CEGUI::EventArgs&)

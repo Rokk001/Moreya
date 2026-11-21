@@ -21,6 +21,7 @@
 #include "ODSocketServer.h"
 #include "ai/KeeperAIType.h"
 #include "modes/ConsoleInterface.h"
+#include "network/StartGameRefusal.h"
 
 #include <OgreSingleton.h>
 
@@ -140,7 +141,8 @@ class ODServer: public Ogre::Singleton<ODServer>,
     { return mGameMap; }
 
 protected:
-    ODSocketClient* notifyNewConnection(sf::TcpListener& sockListener) override;
+    //! \brief Accepts the pending peer from the transport listener into a new ODSocketClient, or returns nullptr.
+    ODSocketClient* notifyNewConnection(NetListener& listener) override;
     bool notifyClientMessage(ODSocketClient *sock) override;
     //! \brief Server main loop: runs turns until the server is asked to stop.
     void serverThread() override;
@@ -204,6 +206,13 @@ private:
     //! \brief Sends the seat choices and the skirmish game settings (gold density, mana regeneration,
     //! maximum creatures, creature class limits and skill availability) to every client
     void fireSeatConfigurationRefresh();
+
+    //! \brief Returns true if the socket may change or confirm the seat configuration: the game is configured and
+    //! its player is the one that configures the game (mPlayerConfig). Logs a warning otherwise.
+    bool isSeatConfigurationSender(ODSocketClient* clientSocket);
+
+    //! \brief Tells the client that asked for the start of the game that the server does not start it, and why.
+    void sendStartGameRefused(ODSocketClient* clientSocket, StartGameRefusal::Reason reason);
 
     //! \brief Handles console command. player is the player that launched the command
     void handleConsoleCommand(Player* player, GameMap* gameMap, const std::vector<std::string>& args);

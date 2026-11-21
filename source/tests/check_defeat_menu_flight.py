@@ -60,6 +60,7 @@ namespace Ogre {struct FrameEvent {};}
 namespace CEGUI {struct EventArgs {};}
 struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY};};
 const std::string WINDOW_SKIRMISH = "SkirmishSubMenuWindow";
+const std::string WINDOW_MULTIPLAYER = "MultiplayerSubMenuWindow";
 int gToggles = 0;
 int gShown = 0;
 int gChanged = 0;
@@ -79,12 +80,18 @@ struct ModeManager
 {
     enum ModeType {MENU_MAIN = 2};
     bool mOpenSkirmishSubMenu = false;
+    bool mOpenMultiplayerSubMenu = false;
+    std::string mMainMenuNotice;
     bool mMainMenuArrivalRequested = false;
     //! \brief Accepts the original hand-over request without a full application mode switch.
     void requestMode(ModeType, bool = true) {}
 @@REQUESTMAINMENU@@
 @@CONSUMEREQUEST@@
 @@CONSUMEARRIVAL@@
+@@REQUESTMULTIPLAYER@@
+@@CONSUMEMULTIPLAYER@@
+@@SETNOTICE@@
+@@CONSUMENOTICE@@
 };
 
 class MenuModeMain
@@ -101,6 +108,7 @@ public:
     //! \brief Records a deferred mode request once its flight completes.
     bool changeModeEvent(AbstractModeManager::ModeType, const CEGUI::EventArgs&) {++gChanged;return true;}
     bool mSkirmishSubMenuPending = false;
+    bool mMultiplayerSubMenuPending = false;
     bool mOverviewPending = false;
     std::string mPendingSubMenu;
     AbstractModeManager::ModeType mPendingMode = AbstractModeManager::NONE;
@@ -205,6 +213,26 @@ int main()
     menu.onFrameStarted(event);
     check(gChanged == 1, "the replay pane opens exactly once at arrival");
 
+    // After a multiplayer game (debriefing or lost server) the multiplayer sub-menu and its message are handed over once
+    check(!manager.consumeMultiplayerSubMenuRequest(), "no multiplayer request: nothing to consume");
+    manager.requestMainMenuWithMultiplayerSubMenu();
+    check(manager.consumeMultiplayerSubMenuRequest() && !manager.consumeMultiplayerSubMenuRequest(), "the multiplayer hand-over is consumed exactly once");
+    check(!manager.consumeSkirmishSubMenuRequest(), "the multiplayer hand-over does not ask for the skirmish sub-menu");
+    manager.setMainMenuNotice("The connection to the server was lost.");
+    check(manager.consumeMainMenuNotice() == "The connection to the server was lost." && manager.consumeMainMenuNotice().empty(),
+        "the main menu message is handed over exactly once");
+    gToggles = 0;
+    gToggled.clear();
+    menu.mMultiplayerSubMenuPending = true;
+    gFlight.start();
+    menu.onFrameStarted(event);
+    check(gToggles == 0 && menu.mMultiplayerSubMenuPending, "during the arrival flight the multiplayer sub-menu waits");
+    while(gFlight.isActive())
+        gFlight.advance(0.1f);
+    menu.onFrameStarted(event);
+    check(gToggles == 1 && gToggled == WINDOW_MULTIPLAYER && !menu.mMultiplayerSubMenuPending,
+        "after arrival the flight to the multiplayer sub-menu starts exactly once");
+
     std::cout << "CHECKS=" << gChecks << " FAILURES=" << gFailures << '\n';
     return gFailures ? 1 : 0;
 }
@@ -212,6 +240,10 @@ int main()
 probe = probe.replace('@@REQUESTMAINMENU@@', function(mode_manager, 'void requestMainMenuWithSkirmishSubMenu('))
 probe = probe.replace('@@CONSUMEREQUEST@@', function(mode_manager, 'bool consumeSkirmishSubMenuRequest('))
 probe = probe.replace('@@CONSUMEARRIVAL@@', function(mode_manager, 'bool consumeMainMenuArrivalRequest('))
+probe = probe.replace('@@REQUESTMULTIPLAYER@@', function(mode_manager, 'void requestMainMenuWithMultiplayerSubMenu('))
+probe = probe.replace('@@CONSUMEMULTIPLAYER@@', function(mode_manager, 'bool consumeMultiplayerSubMenuRequest('))
+probe = probe.replace('@@SETNOTICE@@', function(mode_manager, 'void setMainMenuNotice('))
+probe = probe.replace('@@CONSUMENOTICE@@', function(mode_manager, 'std::string consumeMainMenuNotice('))
 probe = probe.replace('@@FRAME@@', function(menu_main, 'void MenuModeMain::onFrameStarted('))
 assert '@@' not in probe
 

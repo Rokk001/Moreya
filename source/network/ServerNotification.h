@@ -253,7 +253,11 @@ enum class ServerNotificationType
     //! \brief Seconds left of the hand cooldown of a campaign level (HL2), sent to the human keeper when it starts,
     //! when a pickup is refused and when a saved game is loaded: + double seconds.
     //! Appended after dungeonbookRoster so that no existing numeric value changes.
-    setHandCooldown
+    setHandCooldown,
+    //! \brief The server does not start the game the receiving client asked for with seatConfigurationSet:
+    //! + int32_t reason (StartGameRefusal::Reason). Sent only to the client that asked.
+    //! Appended after setHandCooldown so that no existing numeric value changes.
+    startGameRefused
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

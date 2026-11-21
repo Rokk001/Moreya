@@ -28,36 +28,21 @@
 #include <optional>
 #include <vector>
 
-//! \brief Resolves the host and connects to the server; returns false if resolving or connecting fails.
+//! \brief Connects to the server through the transport and opens the replay file; returns false if resolving or connecting fails.
 bool ODSocketClient::connect(const std::string& host, const int port, uint32_t timeout, const std::string& outputReplayFilename)
 {
     mSource = ODSource::none;
 
-    // As we use selector, there is no need to set the socket as not-blocking
-    // SFML 3 connects to an address, not to a host name, so the host is resolved first (IPv4 only, as before).
-    // A host that cannot be resolved is reported as a connection error.
-    sf::Socket::Status status = sf::Socket::Status::Error;
-    // SFML 3: Dns::resolve without timeout, first IPv4 address only (same as SFML 2 IpAddress(host)).
-    std::optional<std::vector<sf::IpAddress> > addresses = sf::Dns::resolve(host, std::vector<sf::IpAddress>(), std::nullopt);
-    if(addresses.has_value())
-    {
-        for(std::vector<sf::IpAddress>::const_iterator it = addresses->begin(); it != addresses->end(); ++it)
-        {
-            if(!it->isV4())
-                continue;
-
-            status = mSockClient.connect(*it, port, sf::milliseconds(timeout));
-            break;
-        }
-    }
-    if (status != sf::Socket::Status::Done)
+    // The transport resolves the host and connects (for TCP see TcpNetConnection::connect, which also
+    // reports a host that cannot be resolved as a connection error). The status numbers are those of SFML.
+    NetStatus status = mConnection->connect(host, port, timeout);
+    if (status != NetStatus::Done)
     {
         OD_LOG_ERR("Could not connect to distant server status="
             + Helper::toString(static_cast<int>(status)));
-        mSockClient.disconnect();
+        mConnection->disconnect();
         return false;
     }
-    mSockSelector.add(mSockClient);
     OD_LOG_INF("Connected to server successfully");
 
     mOutputReplayFilename = outputReplayFilename;
@@ -102,9 +87,8 @@ void ODSocketClient::disconnect(bool keepReplay)
         case ODSource::network:
         {
             // Remove any remaining client sockets from the socket selector,
-            // if there is any left.
-            mSockSelector.clear();
-            mSockClient.disconnect();
+            // if there is any left. The transport does both (TcpNetConnection::disconnect).
+            mConnection->disconnect();
             break;
         }
         case ODSource::file:
@@ -124,6 +108,7 @@ void ODSocketClient::disconnect(bool keepReplay)
     mOutputReplayFilename.clear();
 }
 
+//! \brief Tells whether a message can be read: waits up to miliseconds on the transport, or checks the replay clock.
 bool ODSocketClient::isDataAvailable(int miliseconds)
 {
     switch(mSource)
@@ -136,9 +121,8 @@ bool ODSocketClient::isDataAvailable(int miliseconds)
         {
             // There is only 1 socket in the selector so it should be ready if
             // wait returns true but it doesn't hurt to return isReady...
-            if(!mSockSelector.wait(sf::milliseconds(miliseconds)))
-                return false;
-            return mSockSelector.isReady(mSockClient);
+            // The transport waits on its own selector (TcpNetConnection::waitForData).
+            return mConnection->waitForData(miliseconds);
         }
         case ODSource::file:
         {
@@ -170,8 +154,8 @@ ODSocketClient::ODComStatus ODSocketClient::send(ODPacket& s)
     if(mSource != ODSource::network)
         return ODComStatus::OK;
 
-    sf::Socket::Status status = mSockClient.send(s.mPacket);
-    if (status == sf::Socket::Status::Done)
+    NetStatus status = mConnection->send(s);
+    if (status == NetStatus::Done)
         return ODComStatus::OK;
 
     OD_LOG_ERR("Could not send data from client status="
@@ -192,21 +176,21 @@ ODSocketClient::ODComStatus ODSocketClient::recv(ODPacket& s)
         }
         case ODSource::network:
         {
-            sf::Socket::Status status = mSockClient.receive(s.mPacket);
-            if (status == sf::Socket::Status::Done)
+            NetStatus status = mConnection->receive(s);
+            if (status == NetStatus::Done)
             {
                 s.writePacket(mGameClock.getElapsedTime().asMilliseconds(),
                     mReplayOutputStream);
                 return ODComStatus::OK;
             }
 
-            if((!mSockClient.isBlocking()) &&
-                    (status == sf::Socket::Status::NotReady))
+            if((!mConnection->isBlocking()) &&
+                    (status == NetStatus::NotReady))
             {
                 return ODComStatus::NotReady;
             }
 
-            if(status == sf::Socket::Status::Disconnected)
+            if(status == NetStatus::Disconnected)
             {
                 OD_LOG_WRN("Socket disconnected");
                 return ODComStatus::Error;
@@ -250,9 +234,9 @@ bool ODSocketClient::processOneClientSocketMessage(int miliseconds)
         // Poll without any wait. A selector wait of zero would block until data comes, and even a very short
         // wait lasts at least one tick of the system timer. The socket is non blocking for this receive only;
         // SFML keeps a packet that has arrived only in part until the rest comes with a later call.
-        mSockClient.setBlocking(false);
+        mConnection->setBlocking(false);
         comStatus = recv(packetReceived);
-        mSockClient.setBlocking(true);
+        mConnection->setBlocking(true);
         if(comStatus == ODComStatus::NotReady)
             return false;
     }

@@ -240,6 +240,8 @@ public:
     static const std::string MPM_CHECK_RELATIONSHIPS;
     static const std::string MPM_EDIT_IP;
     static const std::string MPM_EDIT_NICK;
+    //! \brief The optional server port of the join menu
+    static const std::string MPM_EDIT_PORT;
     static const std::string EDM_TEXT_LOADING;
     static const std::string EDM_BUTTON_LAUNCH;
     static const std::string EDM_BUTTON_BACK;
