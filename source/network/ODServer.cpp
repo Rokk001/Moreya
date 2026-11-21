@@ -2027,7 +2027,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             gameMap->applySkirmishSkillStates();
 
             // The complete campaign Heartstone gives the keepers the Summon champion spell in the levels
-            // with Champion=1 in Campaign.cfg, every level from wing 4 on (a saved game keeps the availability it was saved with).
+            // with Champion=1 in the Package.cfg of their wing, every level from wing 4 on (a saved game keeps the availability it was saved with).
             // The items unlocked by bonus levels are put up for sale once at the merchant of a freshly
             // started level; a saved game brings its waiting items in its Info block.
             if(Campaign::getSingleton().isActive())

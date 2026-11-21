@@ -16,7 +16,7 @@ $ErrorActionPreference = 'Stop'
 # Return fixed process observations without inspecting the owner's processes.
 function Get-Process {
     param($Name, $ErrorAction)
-    if ($Name -ne 'opendungeons-plus') { throw 'Wrong process name' }
+    if ($Name -ne 'moreya') { throw 'Wrong process name' }
     $script:queries += 1
     if ($script:alwaysRunning -or $script:queries -le $script:busyQueries) {
         [pscustomobject]@{ Id = 123 }

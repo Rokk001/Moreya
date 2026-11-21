@@ -70,7 +70,13 @@ const std::string ResourceManager::CONFIGSUBPATH = "config/";
 const std::string ResourceManager::SCRIPTSUBPATH = "scripts/";
 const std::string ResourceManager::LANGUAGESUBPATH = "lang/";
 const std::string ResourceManager::SHADERCACHESUBPATH = "shaderCache/";
-const std::string ResourceManager::LOGFILENAME = "opendungeons.log";
+const std::string ResourceManager::LOGFILENAME = "moreya.log";
+#if OGRE_PLATFORM == OGRE_PLATFORM_LINUX
+const std::string ResourceManager::USERFOLDERNAME = "moreya";
+#else
+const std::string ResourceManager::USERFOLDERNAME = "Moreya";
+#endif
+const std::string ResourceManager::OLDUSERFOLDERNAME = "opendungeons";
 const std::string ResourceManager::CEGUILOGFILENAME = "CEGUI.log";
 const std::string ResourceManager::USERCFGFILENAME = "config.cfg";
 
@@ -203,6 +209,56 @@ void ResourceManager::setupDataPath(boost::program_options::variables_map& optio
     mLanguagePath = mGameDataPath + LANGUAGESUBPATH;
 }
 
+bool ResourceManager::takeOverOldUserFolder(const std::string& oldPath, const std::string& newPath)
+{
+    boost::system::error_code error;
+    const boost::filesystem::path oldFolder = boost::filesystem::path(oldPath).parent_path();
+    const boost::filesystem::path newFolder = boost::filesystem::path(newPath).parent_path();
+    // Only the first start takes the old data over: once the new folder exists it is never touched here.
+    if(newFolder.empty() || boost::filesystem::exists(newFolder, error) ||
+       !boost::filesystem::is_directory(oldFolder, error))
+        return false;
+
+    // Copy into a temporary folder first and rename it at the end, so an interrupted copy never leaves
+    // a half filled new folder that a later start would take for complete. The old folder stays as it is.
+    const boost::filesystem::path partialFolder(newFolder.string() + ".takeover");
+    boost::filesystem::remove_all(partialFolder, error);
+    error.clear();
+    boost::filesystem::create_directories(partialFolder, error);
+    if(error)
+    {
+        OD_LOG_WRN("Could not create " + partialFolder.string() + " to take over " + oldPath + ": " + error.message());
+        return false;
+    }
+
+    boost::filesystem::recursive_directory_iterator end;
+    for(boost::filesystem::recursive_directory_iterator it(oldFolder, error); !error && it != end; it.increment(error))
+    {
+        const boost::filesystem::path source = it->path();
+        // Log files of the old name are written anew at every start; they are not carried over.
+        if(it.depth() == 0 && source.extension().string() == ".log")
+            continue;
+        const boost::filesystem::path target = partialFolder / boost::filesystem::relative(source, oldFolder, error);
+        if(error)
+            break;
+        if(boost::filesystem::is_directory(source, error))
+            boost::filesystem::create_directories(target, error);
+        else if(!error && boost::filesystem::is_regular_file(source, error))
+            boost::filesystem::copy_file(source, target, error);
+    }
+    if(!error)
+        boost::filesystem::rename(partialFolder, newFolder, error);
+    if(error)
+    {
+        OD_LOG_WRN("Could not take over the user data of " + oldPath + ": " + error.message());
+        boost::system::error_code cleanup;
+        boost::filesystem::remove_all(partialFolder, cleanup);
+        return false;
+    }
+    OD_LOG_INF("Took over the user data of " + oldPath + " into " + newPath);
+    return true;
+}
+
 void ResourceManager::setupUserDataFolders(boost::program_options::variables_map& options)
 {
     // Empty the members so we can check their validity later.
@@ -228,40 +284,54 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
         passwd* pw = getpwuid(getuid());
         if(pw)
         {
-            mUserDataPath = std::string(pw->pw_dir) + "/Library/Application Support/opendungeons/";
+            const std::string base = std::string(pw->pw_dir) + "/Library/Application Support/";
+            mUserDataPath = base + USERFOLDERNAME + "/";
             mUserConfigPath = mUserDataPath + "cfg/";
+            takeOverOldUserFolder(base + OLDUSERFOLDERNAME + "/", mUserDataPath);
         }
 #elif OGRE_PLATFORM == OGRE_PLATFORM_LINUX
-        // $XDG_DATA_HOME/opendungeons/
-        // equals to: ~/.local/share/opendungeons/ most of the time
+        // $XDG_DATA_HOME/moreya/
+        // equals to: ~/.local/share/moreya/ most of the time
+        std::string dataBase;
         if (std::getenv("XDG_DATA_HOME"))
         {
-            mUserDataPath = std::string(std::getenv("XDG_DATA_HOME")) + "/opendungeons/";
+            dataBase = std::string(std::getenv("XDG_DATA_HOME")) + "/";
         }
         else
         {
-            // We create a sane default if possible: ~/.local/share/opendungeons
+            // We create a sane default if possible: ~/.local/share/moreya
             passwd *pw = getpwuid(getuid());
             if(pw)
             {
-                mUserDataPath = std::string(pw->pw_dir) + "/.local/share/opendungeons/";
+                dataBase = std::string(pw->pw_dir) + "/.local/share/";
             }
+        }
+        if(!dataBase.empty())
+        {
+            mUserDataPath = dataBase + USERFOLDERNAME + "/";
+            takeOverOldUserFolder(dataBase + OLDUSERFOLDERNAME + "/", mUserDataPath);
         }
 
-        // $XDG_CONFIG_HOME/opendungeons
-        // equals to: ~/.config/opendungeons/ most of the time
+        // $XDG_CONFIG_HOME/moreya
+        // equals to: ~/.config/moreya/ most of the time
+        std::string configBase;
         if (std::getenv("XDG_CONFIG_HOME"))
         {
-            mUserConfigPath = std::string(std::getenv("XDG_CONFIG_HOME")) + "/opendungeons/";
+            configBase = std::string(std::getenv("XDG_CONFIG_HOME")) + "/";
         }
         else
         {
-            // We create a sane default if possible: ~/.config/opendungeons
+            // We create a sane default if possible: ~/.config/moreya
             passwd *pw = getpwuid(getuid());
             if(pw)
             {
-                mUserConfigPath = std::string(pw->pw_dir) + "/.config/opendungeons/";
+                configBase = std::string(pw->pw_dir) + "/.config/";
             }
+        }
+        if(!configBase.empty())
+        {
+            mUserConfigPath = configBase + USERFOLDERNAME + "/";
+            takeOverOldUserFolder(configBase + OLDUSERFOLDERNAME + "/", mUserConfigPath);
         }
 
 #elif OGRE_PLATFORM == OGRE_PLATFORM_WIN32
@@ -269,8 +339,9 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
         // %APPDATA% (%USERPROFILE%\Application Data)
         if(SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, path)))
         {
-            mUserDataPath = std::string(path) + "/opendungeons/";
+            mUserDataPath = std::string(path) + "/" + USERFOLDERNAME + "/";
             mUserConfigPath = mUserDataPath + "cfg/";
+            takeOverOldUserFolder(std::string(path) + "/" + OLDUSERFOLDERNAME + "/", mUserDataPath);
         }
 #else
 #error("Unknown platform!")

@@ -5,7 +5,7 @@ Ogre's RenderWindow::setVisible() does nothing on Win32; only setHidden(false) u
 "hidden" creation parameter. Without it the game runs with sound but shows no picture.
 
 Note for the integrator: the deploy test must prove that the window is visible, not only
-that the process runs. Required evidence: the line "window shown" in Opendungeons.log AND
+that the process runs. Required evidence: the line "window shown" in moreya.log AND
 the game window visible through Win32 (IsWindowVisible on its handle, or a screenshot).
 """
 from pathlib import Path

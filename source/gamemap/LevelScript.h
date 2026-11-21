@@ -166,8 +166,8 @@
 //!   Action  stoneattach <creatureName>          # the creature carries a portal stone; it drops where the creature dies
 //!   Action  keepminion <seatId>              # former campaign kept minion: still read for older files, it has no effect (every campaign level starts fresh)
 //!   Action  terrain <x1> <y1> <x2> <y2> bridge <seatId>   # also: a wooden bridge of the seat over lava or water
-//!   Action  discover <levelFile>              # campaign: reveals a bonus level (level file as in Campaign.cfg); counts only in the first story level of the bonus level's wing
-//!   Action  shard                             # campaign: the Heartstone shard of the level that is played is found (counts only in a level with Shard=1 in Campaign.cfg, once)
+//!   Action  discover <levelFile>              # campaign: reveals a bonus level (campaign name of the level as in the Package.cfg of its wing package); counts only in the first story level of the bonus level's wing
+//!   Action  shard                             # campaign: the Heartstone shard of the level that is played is found (counts only in a level with Shard=1 in its Package.cfg, once)
 //!   Action  raidmember <raidGroupId> <template|-> <name> [<name> ...]   # the creatures (names or party tags of a hero seat) belong to the raid group (1 or more); a raid group is always a combat group (a member won over by a keeper leaves the raid). With a template name (e.g. Guardian) they follow that skill template for good, with - they choose their template themselves
 //!   Action  raidleader <raidGroupId> <creatureName>   # the creature is the named leader of the raid group and leads it as long as he lives
 //!           # The same registry can be written in the [CombatGroups] section of the level file: RaidGroup <raidGroupId> <leaderName> and RaidMember <creatureName> <raidGroupId> <template|->

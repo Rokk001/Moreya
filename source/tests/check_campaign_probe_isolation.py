@@ -41,7 +41,7 @@ def verify_isolation(selection_mode):
     """Keep probe isolation in explicit campaign and saved integration-range modes."""
     with tempfile.TemporaryDirectory(prefix='campaign-isolation-') as temporary:
         directory = Path(temporary)
-        executable = directory / 'deployed' / 'opendungeons-plus.exe'
+        executable = directory / 'deployed' / 'moreya.exe'
         executable.parent.mkdir()
         executable.touch()
         foreign = directory / 'another-worktree' / executable.name

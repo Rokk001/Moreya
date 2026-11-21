@@ -79,7 +79,7 @@ class RunnerTests(unittest.TestCase):
     def setUp(self):
         JournalTests.setUp(self)
         for name in ['scripts/check-a.py','scripts/check-b.py','scripts/run-level-test.py',
-                     'scripts/run-campaign-load-tests.py','levels/campaign/Mossgate.level','build/windows/opendungeons-plus.exe']:
+                     'scripts/run-campaign-load-tests.py','levels/campaign/Mossgate.level','build/windows/moreya.exe']:
             target=self.repo/name; target.parent.mkdir(parents=True,exist_ok=True); target.write_text('fixture')
         (self.repo/'levels/campaign/Campaign.cfg').write_text('[Level]\nFile=campaign/Mossgate.level\n')
         subprocess.run(['git','-C',str(self.repo),'add','.'],check=True)
@@ -136,7 +136,7 @@ class RunnerTests(unittest.TestCase):
 
     # Missing game prerequisites become required failures, never missing final results or fake passes.
     def test_missing_executable_is_explicit(self):
-        (self.repo/'build/windows/opendungeons-plus.exe').unlink()
+        (self.repo/'build/windows/moreya.exe').unlink()
         subprocess.run(['git','-C',str(self.repo),'add','-u'],check=True)
         subprocess.run(['git','-C',str(self.repo),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','no executable'],check=True)
         self.head=events.git(self.repo,'rev-parse','HEAD');os.environ['HQ_CHECK_COMMIT']=self.head
@@ -173,9 +173,10 @@ class BuildControllerTests(unittest.TestCase):
                 (repo/'scripts/next-build-number.py').write_text('print(17)')
                 (repo/'scripts/check-first.py').write_text('print("early fixture failure");raise SystemExit(9)')
                 (repo/'scripts/check-second.py').write_text('print("later fixture check executed")')
-                (repo/'levels/campaign').mkdir(parents=True)
-                (repo/'levels/campaign/Mossgate.level').write_text('fixture')
-                (repo/'levels/campaign/Campaign.cfg').write_text('[Level]\nFile=campaign/Mossgate.level\n')
+                # The campaign layout of wing packages: Mossgate in the wing 1 package folder
+                (repo/'levels/campaign/wing1').mkdir(parents=True)
+                (repo/'levels/campaign/wing1/Mossgate.level').write_text('fixture')
+                (repo/'levels/campaign/wing1/Package.cfg').write_text('[Level]\nFile=campaign/Mossgate.level\n')
                 subprocess.run(['git','init','-q',str(repo)],check=True)
                 subprocess.run(['git','-C',str(repo),'add','.'],check=True)
                 subprocess.run(['git','-C',str(repo),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','fixture'],check=True)
@@ -201,7 +202,7 @@ class BuildControllerTests(unittest.TestCase):
                 self.assertEqual(final['build:release']['exit'],build_code)
                 self.assertEqual(final['scripts/check-first.py']['exit'],9)
                 self.assertEqual(final['scripts/check-second.py']['exit'],0)
-                self.assertEqual(final['load:levels/campaign/Mossgate.level']['exit'],125)
+                self.assertEqual(final['load:levels/campaign/wing1/Mossgate.level']['exit'],125)
                 self.assertEqual(final['deploy-readiness']['exit'],125)
                 self.assertIn('fixture configure output',Path(final['build:configure']['output_path']).read_text())
                 self.assertEqual(rows[-1]['event'],'shared_writes_finished')

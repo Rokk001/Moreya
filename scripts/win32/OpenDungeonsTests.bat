@@ -1,11 +1,11 @@
-REM batch file to test the unit test for OpenDungeons
+REM batch file to test the unit test for Moreya
 REM The boost test filenames are supposed to be as follows:
 REM boosttest-source_tests-LL-*.exe
 REM LL=name of the level server the game should launch (00 if none). For example, if gg, a server instance will be launched with test map gg.level
 REM * can be any relevant description
 @echo off
 
-SET OPEN_DUNGEONS_EXE=OpenDungeons.exe
+SET OPEN_DUNGEONS_EXE=moreya.exe
 
 for %%i in (boosttest-source_tests-*) do call:handleBoostTest %%i
 goto:eof

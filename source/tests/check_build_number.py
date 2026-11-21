@@ -62,7 +62,7 @@ check('--parallel $(if ($env:BUILD_PARALLEL) { $env:BUILD_PARALLEL } else { 1 })
 check('build-start-$Run.txt' in build_script, 'integrator build script does not record the build start time')
 orchestrator = (repo / 'scripts/win32/orchestrator-build.ps1').read_text()
 remove_exe = "Remove-Item -LiteralPath $exe -Force -ErrorAction Stop"
-check("Join-Path $wt 'build\\windows\\opendungeons-plus.exe'" in orchestrator,
+check("Join-Path $wt 'build\\windows\\moreya.exe'" in orchestrator,
       'orchestrator does not identify the load-test executable')
 check(remove_exe in orchestrator and orchestrator.index(remove_exe) < orchestrator.index('$start = [DateTimeOffset]') < orchestrator.index('--build "$wt\\build\\windows"'),
       'orchestrator must remove the old executable before recording the build start and rebuilding')

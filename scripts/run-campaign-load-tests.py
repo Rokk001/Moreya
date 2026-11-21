@@ -30,20 +30,19 @@ def probe_environment():
     return environment
 
 
-# Read only real campaign entries, ignoring commented examples.
+# The helper module for the campaign wing packages, loaded by path so that isolated Python finds it.
+def packages_module():
+    if 'campaign_packages' not in sys.modules:
+        spec = importlib.util.spec_from_file_location('campaign_packages', Path(__file__).with_name('campaign_packages.py'))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules['campaign_packages'] = module
+        spec.loader.exec_module(module)
+    return sys.modules['campaign_packages']
+
+
+# Read only real campaign entries of the wing packages (with the content packages when present), in campaign order.
 def campaign_levels(repo):
-    text = (repo / 'levels/campaign/Campaign.cfg').read_text(encoding='utf-8')
-    active = False
-    levels = []
-    for raw in text.splitlines():
-        line = raw.strip()
-        if line == '[Level]':
-            active = True
-        elif line == '[/Level]':
-            active = False
-        elif active and line.startswith('File='):
-            levels.append(repo / 'levels' / line.split('=', 1)[1].strip())
-    return levels
+    return [entry['_path'] for entry in packages_module().entries(repo)]
 
 
 # Refuse to launch probes while another copy of this executable is running.
@@ -108,7 +107,10 @@ def integration_levels(repo, base_file):
     git_output(repo, 'merge-base', '--is-ancestor', base, tip)
     changed = git_output(repo, 'diff', '--name-only', '-z', '--no-renames',
                          '--diff-filter=AM', base, tip, '--', 'levels')
-    names = ['levels/campaign/Mossgate.level']
+    # Mossgate of the public wing 1 package, or at its former path in a tree of an older layout
+    smoke = next((name for name in ('levels/campaign/wing1/Mossgate.level', 'levels/campaign/Mossgate.level')
+                  if (repo / name).is_file()), 'levels/campaign/wing1/Mossgate.level')
+    names = [smoke]
     names.extend(name for name in changed.split('\0')
                  if name.endswith('.level') and name not in names)
     levels = [repo / name for name in names]
@@ -168,7 +170,8 @@ def main():
     if not levels:
         parser.error('No configured campaign maps found')
     args.output.mkdir(parents=True, exist_ok=True)
-    environment = probe_environment()
+    # The game finds the content packages through MOREYA_CONTENT_DIR when they are present
+    environment = packages_module().game_environment(repo, probe_environment())
     port = available_server_port()
     failed = 0
     for level in levels:

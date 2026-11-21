@@ -21,6 +21,7 @@
 
 #include "creaturemood/CreatureMoodManager.h"
 #include "eventsystem/CreatureMoved.h"
+#include "game/CampaignPackages.h"
 #include "game/CombatGroupManager.h"
 #include "game/RaidManager.h"
 #include "game/CreatureRelationships.h"
@@ -68,13 +69,13 @@
 
 namespace MapHandler {
 
-//! \brief Loads campaign progress for both save browsing and direct saved-game server starts.
+//! \brief Loads the campaign from its wing packages and its progress for both save browsing and direct saved-game
+//! server starts.
 bool loadCampaignProgress()
 {
     ResourceManager& resources = ResourceManager::getSingleton();
     Campaign& campaign = Campaign::getSingleton();
-    std::ifstream definition((resources.getGameDataPath() + "levels/campaign/Campaign.cfg").c_str());
-    if(!definition.is_open() || !campaign.importDefinition(definition))
+    if(!CampaignPackages::loadCampaign(campaign, resources.getGameDataPath()))
     {
         campaign.stopCampaign();
         return false;

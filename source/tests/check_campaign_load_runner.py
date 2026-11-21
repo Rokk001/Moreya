@@ -80,8 +80,8 @@ print('Campaign load runner: bounded deadline and nine acceptance/failure cases 
 
 def check_process_identity():
     """Keep the deployed-executable guard without rejecting independent worktrees."""
-    executable = ROOT / 'build/windows/opendungeons-plus.exe'
-    other = ROOT / 'other-worktree/build/windows/opendungeons-plus.exe'
+    executable = ROOT / 'build/windows/moreya.exe'
+    other = ROOT / 'other-worktree/build/windows/moreya.exe'
     cases = [([], False),
              ([{'ProcessId': 42, 'ExecutablePath': str(other)}], False),
              ([{'ProcessId': 43, 'ExecutablePath': str(executable).upper()}], True),
@@ -117,10 +117,10 @@ def check_mid_campaign_process():
     """Keep six explicit campaign probes valid when a foreign worktree starts after probe five."""
     with tempfile.TemporaryDirectory(prefix='campaign-identity-') as temporary:
         directory = Path(temporary)
-        executable = directory / 'deployed/opendungeons-plus.exe'
+        executable = directory / 'deployed/moreya.exe'
         executable.parent.mkdir()
         executable.touch()
-        other = directory / 'other-worktree/opendungeons-plus.exe'
+        other = directory / 'other-worktree/moreya.exe'
         levels = [directory / ('probe%d.level' % index) for index in range(6)]
         launches = []
         inspections = []
@@ -158,8 +158,8 @@ print('Campaign load runner: seven process identity/error cases and mid-campaign
 
 def check_process_scope():
     """Reject the deployed game and unknown paths, but permit a separate worktree game."""
-    executable = ROOT / 'build/windows/opendungeons-plus.exe'
-    other = ROOT / 'other-worktree/build/windows/opendungeons-plus.exe'
+    executable = ROOT / 'build/windows/moreya.exe'
+    other = ROOT / 'other-worktree/build/windows/moreya.exe'
     for paths, expected in (([], False), ([str(other)], False), ([str(executable)], True),
                             ([str(other), str(executable)], True)):
         output = json.dumps([{'ExecutablePath': path} for path in paths]).encode('utf-8')
@@ -188,7 +188,7 @@ def check_interleaved_worktree():
     """Reproduce another worktree appearing between passing probes without aborting deployment."""
     with tempfile.TemporaryDirectory(prefix='campaign-concurrency-') as temporary:
         directory = Path(temporary)
-        executable = directory / 'opendungeons-plus.exe'
+        executable = directory / 'moreya.exe'
         executable.touch()
         levels = [ROOT / 'levels/campaign/Mossgate.level', ROOT / 'levels/campaign/HollinFen.level']
         commands = []
@@ -196,7 +196,7 @@ def check_interleaved_worktree():
         def run(command, **kwargs):
             """Introduce a different worktree process before the second probe."""
             if command[0] == 'powershell':
-                paths = [] if not commands else [{'ExecutablePath': str(directory / 'other/opendungeons-plus.exe')}]
+                paths = [] if not commands else [{'ExecutablePath': str(directory / 'other/moreya.exe')}]
                 return subprocess.CompletedProcess(command, 0, json.dumps(paths).encode('utf-8'))
             commands.append(command)
             output = success.replace(b'Mossgate.level', Path(command[2]).name.encode('utf-8'))

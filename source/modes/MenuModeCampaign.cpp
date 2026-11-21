@@ -19,6 +19,7 @@
 
 #include "ai/KeeperAIType.h"
 #include "game/Campaign.h"
+#include "game/CampaignPackages.h"
 #include "game/Seat.h"
 #include "gamemap/LevelScript.h"
 #include "goals/Goal.h"
@@ -55,7 +56,6 @@
 
 namespace
 {
-const std::string CAMPAIGN_DEFINITION_FILE = "levels/campaign/Campaign.cfg";
 const std::string CAMPAIGN_PROGRESS_FILE = "campaign.progress";
 
 const std::string CMP_FRAME = "CampaignWindowFrame";
@@ -375,10 +375,10 @@ bool MenuModeCampaign::loadCampaign()
     ResourceManager& resources = ResourceManager::getSingleton();
     Campaign& campaign = Campaign::getSingleton();
 
-    std::ifstream definition((resources.getGameDataPath() + CAMPAIGN_DEFINITION_FILE).c_str());
-    if(!definition.is_open() || !campaign.importDefinition(definition))
+    // The campaign comes from the wing packages; a missing package leaves its wing locked on the map
+    if(!CampaignPackages::loadCampaign(campaign, resources.getGameDataPath()))
     {
-        OD_LOG_ERR("Could not read the campaign definition " + CAMPAIGN_DEFINITION_FILE);
+        OD_LOG_ERR("Could not read any campaign package below " + resources.getGameDataPath() + "levels/campaign/");
         return false;
     }
 
@@ -678,6 +678,13 @@ void MenuModeCampaign::fillMap()
         uint32_t defeated = mWorld.getDefeatedInWing(campaign, wing.mNumber);
         bool wingDefeated = (defeated >= CampaignWorld::STORY_CAVES_PER_WING);
         std::string wingId = Helper::toString(wing.mNumber);
+        if(!campaign.isWingAvailable(wing.mNumber))
+        {
+            // The package of the wing is missing: the wing name is shown locked, its caves say that the wing is
+            // coming in Early Access
+            createMapText("Wing_" + wingId, wing.mLabel, FONT_WING, COLOUR_LOCKED, "WordWrapLeftAligned", wing.mName);
+            continue;
+        }
         createMapText("Wing_" + wingId, wing.mLabel, FONT_WING, wingDefeated ? COLOUR_HIGHLIGHT : COLOUR_TEXT,
             "WordWrapLeftAligned", wing.mName + "   " + Helper::toString(defeated) + " / "
             + Helper::toString(CampaignWorld::STORY_CAVES_PER_WING));
@@ -724,12 +731,18 @@ void MenuModeCampaign::fillMap()
         createMapImage("Cave_" + caveId, *icon, static_cast<float>(cave.mX) - size / 2.0f,
             static_cast<float>(cave.mY) - size / 2.0f, size, size);
 
-        // The name of a level stands under its cave; a bonus cave names itself in its tooltip
-        size_t level = campaign.findLevelByFile(cave.mFile);
+        // The name of a level stands under its cave; a bonus cave names itself in its tooltip. The caves of a wing
+        // without package say that the wing is coming in Early Access.
+        size_t level = mWorld.findLevel(campaign, i);
         if(!cave.mBonus && (level < campaign.getNumLevels()))
         {
             createMapText("CaveName_" + caveId, cave.mLabel, FONT_CAVE, colour, "WordWrapCentreAligned",
                 campaign.getLevel(level).mTitle);
+        }
+        else if(!cave.mBonus && !campaign.isWingAvailable(cave.mWing))
+        {
+            createMapText("CaveName_" + caveId, cave.mLabel, FONT_CAVE, colour, "WordWrapCentreAligned",
+                CampaignPackages::MISSING_WING_TEXT);
         }
     }
 
@@ -752,11 +765,19 @@ void MenuModeCampaign::fillMap()
 //! current level in front of the gate. Once every story level is defeated no guild comes any more.
 void MenuModeCampaign::fillGuildPanel()
 {
-    size_t cave = mWorld.findCurrentCave(Campaign::getSingleton());
+    Campaign& campaign = Campaign::getSingleton();
+    size_t cave = mWorld.findCurrentCave(campaign);
     if(cave >= mWorld.getCaves().size())
         return;
 
-    const CampaignWorldGuild& guild = mWorld.getCaves()[cave].mGuild;
+    // The guild comes with the level from its wing package
+    size_t level = mWorld.findLevel(campaign, cave);
+    if(level >= campaign.getNumLevels())
+        return;
+
+    const CampaignWorldGuild& guild = campaign.getLevel(level).mGuild;
+    if(guild.mName.empty())
+        return;
     const CampaignWorldGuildPanel& panel = mWorld.getGuildPanel();
     createMapImage("GuildBanner", guild.mBanner, static_cast<float>(panel.mBanner.mX),
         static_cast<float>(panel.mBanner.mY), static_cast<float>(panel.mBanner.mWidth),
@@ -890,15 +911,18 @@ void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cav
 
     Campaign& campaign = Campaign::getSingleton();
     const CampaignWorldCave& worldCave = caves[cave];
-    size_t level = campaign.findLevelByFile(worldCave.mFile);
-    std::string text = (level < campaign.getNumLevels()) ? campaign.getLevel(level).mTitle : worldCave.mFile;
+    size_t level = mWorld.findLevel(campaign, cave);
+    bool known = (level < campaign.getNumLevels());
+    std::string text = known ? campaign.getLevel(level).mTitle : CampaignPackages::MISSING_WING_TEXT;
     std::string wingName;
     if((worldCave.mWing >= 1) && (worldCave.mWing <= mWorld.getWings().size()))
         wingName = mWorld.getWings()[worldCave.mWing - 1].mName;
     if(worldCave.mBonus)
         text += "\nBonus cave of " + wingName;
+    else if(known && !campaign.getLevel(level).mGuild.mName.empty())
+        text += "\n" + wingName + "\nGuild: " + campaign.getLevel(level).mGuild.mName;
     else
-        text += "\n" + wingName + "\nGuild: " + worldCave.mGuild.mName;
+        text += "\n" + wingName;
 
     switch(mCaveStates[cave])
     {
@@ -984,6 +1008,8 @@ bool MenuModeCampaign::mapClicked(const CEGUI::EventArgs& e)
     {
         if(level < campaign.getNumLevels())
             statusText->setText("This cave is locked. Defeat the levels before it first.");
+        else if(!campaign.isWingAvailable(mWorld.getCaves()[cave].mWing))
+            statusText->setText("This wing is locked: " + CampaignPackages::MISSING_WING_TEXT + ".");
         else
             statusText->setText("This cave cannot be played yet.");
         return true;
@@ -1009,7 +1035,8 @@ void MenuModeCampaign::showBriefing(size_t level)
     std::string text = "Briefing - " + campaignLevel.mTitle + "\n\n" + campaignLevel.mBriefing;
     sheet->getChild(CMP_BRIEFING_TEXT)->setText(reinterpret_cast<const CEGUI::utf8*>(text.c_str()));
     std::string goals;
-    const std::string path = ResourceManager::getSingleton().getGameDataPath() + "levels/" + campaignLevel.mFile;
+    const std::string path = CampaignPackages::getLevelFile(campaignLevel,
+        ResourceManager::getSingleton().getGameDataPath());
     if(!readBriefingGoals(path, goals))
     {
         OD_LOG_ERR("Could not read campaign briefing goals from " + path);
@@ -1140,8 +1167,8 @@ void MenuModeCampaign::startLevel(size_t index)
         return;
     }
 
-    std::string level = ResourceManager::getSingleton().getGameDataPath() + "levels/"
-        + campaign.getLevel(index).mFile;
+    std::string level = CampaignPackages::getLevelFile(campaign.getLevel(index),
+        ResourceManager::getSingleton().getGameDataPath());
     if(!boost::filesystem::exists(boost::filesystem::path(level)))
     {
         OD_LOG_ERR("Campaign level not found: " + level);

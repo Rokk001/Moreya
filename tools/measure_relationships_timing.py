@@ -11,7 +11,7 @@ Exit code 0: the difference of the average is within the noise or below --tolera
 1: it is larger. 2: a run failed.
 
 Usage:
-    python tools/measure_relationships_timing.py --exe build/windows/Release/opendungeons-plus.exe
+    python tools/measure_relationships_timing.py --exe build/windows/Release/moreya.exe
         [--level levels/skirmish/DuelToDeath.level] [--seconds 60] [--runs 3] [--tolerance 5]
 """
 

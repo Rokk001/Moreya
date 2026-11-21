@@ -23,6 +23,7 @@
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Campaign.h"
+#include "game/CampaignPackages.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -542,7 +543,9 @@ void RunLevelTest::onServerTurn(GameMap& gameMap)
         return;
     }
 
-    if(firstTurn && boost::filesystem::path(sLevelFile).parent_path().filename().string() == CAMPAIGN_DIRECTORY)
+    // Maps of levels/campaign/ and every campaign entry of a wing package must register goals
+    if(firstTurn && (sCampaignRun.load()
+        || (boost::filesystem::path(sLevelFile).parent_path().filename().string() == CAMPAIGN_DIRECTORY)))
     {
         const unsigned int goalCount = humanSeat->numUncompleteGoals()
             + humanSeat->numCompletedGoals() + humanSeat->numFailedGoals();
@@ -612,10 +615,13 @@ void RunLevelTest::prepareCampaignLevel()
 {
     Campaign& campaign = Campaign::getSingleton();
     boost::filesystem::path level(sLevelFile);
-    const std::string relativeFile = (level.parent_path().filename() / level.filename()).generic_string();
+    const std::string gameData = ResourceManager::getSingleton().getGameDataPath();
     for(size_t index = 0; index < campaign.getNumLevels(); ++index)
     {
-        if(campaign.getLevel(index).mFile != relativeFile)
+        // The tested file is the level file of the campaign entry in its wing package
+        boost::filesystem::path entry(CampaignPackages::getLevelFile(campaign.getLevel(index), gameData));
+        boost::system::error_code error;
+        if(!boost::filesystem::equivalent(level, entry, error) || error)
             continue;
 
         // The test never writes the saved progress of the player
@@ -658,6 +664,14 @@ void RunLevelTest::onCampaignMapShown(bool levelWon)
         return;
     }
     const size_t nextLevel = campaign.getCurrentLevel();
+    if((nextLevel >= campaign.getNumLevels()) && campaign.hasMissingWings())
+    {
+        // Every story level of the packages there is won; the next wing has no package and is locked on the map
+        emitResult(codePass, "PASS " + sLevelName + " : " + sWinDescription
+            + ", victory message shown, campaign map shows the next wing locked (" + CampaignPackages::MISSING_WING_TEXT
+            + ")");
+        return;
+    }
     if((nextLevel >= campaign.getNumLevels()) || !campaign.isUnlocked(nextLevel))
     {
         fail(codeNoVictory, "no victory: the campaign map shows no unlocked next level");

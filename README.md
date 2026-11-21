@@ -5,15 +5,16 @@ keeper of a dungeon: your workers dig, claim and mine, you build rooms, traps
 and doors, attract creatures and lead them into battle by dropping them where
 they are needed, casting spells and luring enemies into traps.
 
-### Download
+### Getting the game
 
-Ready-to-play builds for Windows and Linux are attached to the
-[releases](https://github.com/Rokk001/Moreya/releases) of this repository.
+There are no ready-made builds of Moreya outside Steam. To play for free,
+build the game from this repository as described under "Build instructions"
+below.
 
-- **Windows:** unpack the zip archive and start `opendungeons-plus.exe`.
-- **Linux (x86_64):** unpack the tar.gz archive and start `./moreya` in its
-  top folder. The build needs glibc 2.38 or newer (for example Ubuntu 24.04,
-  Fedora 39, Debian 13 or newer).
+Settings, saved games, logs and screenshots are kept in the folder `Moreya` in
+`%APPDATA%` on Windows and in `~/.local/share/moreya` and `~/.config/moreya` on
+Linux. At the first start the game copies the user folder of older versions
+there, so settings and saved games stay available.
 
 ### The campaign
 
@@ -40,6 +41,14 @@ The campaign tells of the guilds that try to plunder the dungeon of Moreya.
   Skirmish and multiplayer games have no such limit.
 - When every guild is defeated the campaign is complete. Defeated levels can be
   played again from the campaign map, or a new campaign can be started.
+
+The campaign is loaded from content packages, one per wing. This repository
+holds the package of wing 1 (`levels/campaign/wing1/`, three story levels and
+its bonus chamber). The packages of wings 2 to 6 come with the Steam build;
+further wings arrive by update as new packages. Without a package the game
+runs completely and shows that wing on the campaign map as locked, "Coming in
+Early Access". A build from this repository finds additional packages in the
+folder named by the environment variable `MOREYA_CONTENT_DIR`.
 
 ### Other ways to play
 
@@ -75,8 +84,10 @@ make -jX    # X is the number of CPU cores to use
 The workflow `.github/workflows/linux-release.yml` shows a complete Linux
 build including its dependencies.
 
-On Windows, generate a Visual Studio solution with CMake and build the
-`opendungeons-plus` target in the Release configuration.
+On Windows, generate a Visual Studio solution with CMake and build the game
+in the Release configuration (CMake target `opendungeons-plus`); it writes `moreya.exe`.
+`scripts/win32/package-windows-release.ps1` assembles the release archive
+`Moreya-<version>-windows-x64.zip` from that build.
 
 #### Repository organisation
 
@@ -85,7 +96,7 @@ On Windows, generate a Visual Studio solution with CMake and build the
 config/          - Game config files
 dist/            - Icons and desktop entry files
 gui/             - CEGUI files and GUI images
-levels/          - Game levels, including the campaign
+levels/          - Game levels, including the wing 1 package of the campaign
 licenses/        - License files used for game data and code
 materials/       - Materials (model texturing scripts and textures)
 models/          - Model files
@@ -114,5 +125,10 @@ The source code is licensed under the GNU General Public License version 3 or
 later. The art assets are covered by their respective licenses, listed in the
 CREDITS file; see LICENSE.md and the licenses folder.
 
-Moreya is based on the source code of the open source projects OpenDungeons and
-OpenDungeonsPlus.
+The campaign contents have licenses of their own and are not covered by the
+GPL: wing 1 (`levels/campaign/wing1/`) is all rights reserved, viewing and
+playing are allowed, redistributing it or distributing changed versions is
+not (see `levels/campaign/wing1/LICENSE.txt`). Wings 2 to 6 are not part of
+this repository.
+
+Moreya is based on the source code of the open source projects OpenDungeons and OpenDungeonsPlus.

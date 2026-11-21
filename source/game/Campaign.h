@@ -24,11 +24,43 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 #include <set>
 
+//! \brief The guild that raids a story level of Moreya, read from the wing package of the level: shown in front of
+//! the gate of the campaign map while the level is the current one, and in the tooltip of its cave.
+struct CampaignGuild
+{
+    //! \brief Creates a guild without name that sends one group of no member
+    CampaignGuild():
+        mGroups(0), mSize(0), mRaid(false)
+    {
+    }
+
+    //! Name of the guild, shown with its banner
+    std::string mName;
+    //! The named leader of the raid (with the last group or raid of a level with two)
+    std::string mLeader;
+    //! Leader of the first raid when the two raids of a level have different leaders; empty otherwise
+    std::string mFirstLeader;
+    //! Origin of the guild, shown with its banner
+    std::string mOrigin;
+    //! Number of groups or raids (1 or 2)
+    uint32_t mGroups;
+    //! Number of members of each group or raid
+    uint32_t mSize;
+    //! True for raids, false for groups
+    bool mRaid;
+    //! Banner image, relative to the campaign art directory
+    std::string mBanner;
+    //! Leader portrait image, relative to the campaign art directory
+    std::string mPortrait;
+};
+
 //! \brief One level of the campaign sequence.
-//! The level file name is relative to the "levels" directory.
+//! The campaign name of the level (mFile, "campaign/<level file name>") is the name the progress, saved games and
+//! level scripts use; the level file itself lies in the folder of the wing package (mPath).
 struct CampaignLevel
 {
     //! \brief Creates a story level (no bonus level) of no wing that hides no Heartstone shard, offers no Summon
@@ -64,6 +96,20 @@ struct CampaignLevel
     std::string mProvince;
     //! Ruler of the province, shown in its tooltip. Empty if it has none.
     std::string mWarden;
+    //! The guild that raids the story level; empty name for a bonus level or a definition without guild
+    CampaignGuild mGuild;
+    //! Path of the level file in the folder of its wing package; empty when the definition was not read from a
+    //! package (the file is then mFile relative to the "levels" directory)
+    std::string mPath;
+};
+
+//! \brief One wing package of the campaign: the folder that holds its level files and the text of its Package.cfg.
+struct CampaignPackage
+{
+    //! Folder of the package; the level files of its entries lie in it
+    std::string mDirectory;
+    //! Text of the Package.cfg of the package, in the format of the campaign definition
+    std::string mDefinition;
 };
 
 //! \brief One item line that the first completion of a bonus level made available at the merchant for good.
@@ -101,7 +147,12 @@ struct CampaignSave
 
 //! \brief The campaign: an ordered list of levels plus the saved progress.
 //!
-//! Definition file (levels/campaign/Campaign.cfg), one setting per line:
+//! The campaign is read from wing packages (importPackages): one folder per wing with a Package.cfg and the level files
+//! of the wing. A wing without a package is missing: its levels are not in the campaign, the story levels of later
+//! wings stay locked and the campaign is not finished while a wing is missing (the map shows the wing locked, "Coming
+//! in Early Access"). Progress of levels whose package is missing is kept and written again unchanged.
+//!
+//! Definition format (Package.cfg of a wing package), one setting per line:
 //!   # comment
 //!   [Level]
 //!   File=campaign/Level1.level
@@ -116,6 +167,8 @@ struct CampaignSave
 //!   Unlock=Epic Rare Common (optional, bonus levels) the qualities of the items its first
 //!   completion unlocks, one item per name.
 //!   Warden=Name (optional) shown in the tooltip.
+//!   Guild, GuildLeader, GuildFirstLeader (optional), GuildOrigin, GuildGroups, GuildSize, GuildKind (group or raid),
+//!   GuildBanner, GuildPortrait (story levels) the guild that raids the level.
 //! The keys of the former world map campaign (Province, Branch, Heartstone) and the former per-level Difficulty
 //! key are ignored; the only difficulty is the one chosen for the whole campaign.
 //!
@@ -152,8 +205,26 @@ public:
     //! \brief The one campaign of the process
     static Campaign& getSingleton();
 
-    //! \brief Reads the campaign settings and the level sequence. Returns false if no level was found.
+    //! Number of wings of Moreya; a wing in 1 to NUM_WINGS without a package is missing
+    static const uint32_t NUM_WINGS = 6;
+    //! Shards of the Heartstone of the campaign of Moreya; the total of a campaign read from packages never falls below
+    //! it while a wing with a shard is missing
+    static const uint32_t HEARTSTONE_SHARDS = 3;
+
+    //! \brief Reads the campaign settings and the level sequence of one definition (no wing is missing). Returns false if
+    //! no level was found.
     bool importDefinition(std::istream& is);
+    //! \brief Reads the campaign from wing packages in the order of their wings. A package must name one wing in 1 to
+    //! NUM_WINGS for all of its levels; a package with another wing, mixed wings or the wing of a package read before is
+    //! skipped. Every wing without a package is missing. Returns false if no level was found.
+    bool importPackages(const std::vector<CampaignPackage>& packages);
+    //! \brief True if the levels of the wing were read (its package is there)
+    bool isWingAvailable(uint32_t wing) const;
+    //! \brief True if a wing of 1 to NUM_WINGS has no package (read with importPackages)
+    bool hasMissingWings() const;
+    //! \brief Index of the level on a cave of the campaign map: the bonus level of the wing, or its story level with that
+    //! order (0 for the first). The number of levels if there is none, e.g. while the wing's package is missing.
+    size_t findLevelInWing(uint32_t wing, bool bonus, size_t order) const;
     //! \brief Reads the saved progress. Unknown level files are ignored; a file without a Version line keeps
     //! only its difficulty.
     bool importProgress(std::istream& is);
@@ -183,7 +254,7 @@ public:
     bool isUnlocked(size_t index) const;
     //! \brief First story (non bonus) level not completed. Equals the number of levels if all are done.
     size_t getCurrentLevel() const;
-    //! \brief True if every story level was won
+    //! \brief True if every story level was won and no wing is missing
     bool isFinished() const;
     //! \brief A level script found the bonus level with that file name. Only
     //! counts while the first story level of the bonus level's wing is played (any campaign level
@@ -248,8 +319,9 @@ public:
     bool getPlayedLevelWon() const;
     //! \brief Clears the "last played" result once the menu has shown it.
     void clearPlayedLevel();
-    //! \brief True if the level played last was won and every story level is defeated now: the campaign ends with
-    //! the end message and the main menu instead of the campaign map. Holds for every such win, replays included.
+    //! \brief True if the level played last was won and every story level is defeated now while no wing is missing:
+    //! the campaign ends with the end message and the main menu instead of the campaign map. Holds for every such win,
+    //! replays included.
     bool isPlayedLevelCampaignEnd() const;
 
     //! \brief Message shown in place of the campaign map after a win that leaves every story level defeated
@@ -296,11 +368,27 @@ private:
     bool mLoadedCampaignSave;
     bool mSavedChampionAvailable;
     std::set<std::string> mFinishedDifficulties;
+    //! Wings of 1 to NUM_WINGS without a package
+    std::set<uint32_t> mMissingWings;
+    //! Progress entries (keyword Completed, Discovered or Shards and the level) of levels that are not in the campaign,
+    //! e.g. while their package is missing; written again unchanged
+    std::vector<std::pair<std::string, std::string> > mOtherProgress;
+    //! True when the levels were read from wing packages (importPackages)
+    bool mFromPackages;
 
     //! \brief getCurrentLevel for callers that hold the mutex already
     size_t getCurrentLevelNoLock() const;
     //! \brief isUnlocked for callers that hold the mutex already
     bool isUnlockedNoLock(size_t index) const;
+    //! \brief True if every story level was won and no wing is missing. The mutex is held by the caller.
+    bool isCampaignCompleteNoLock() const;
+    //! \brief Reads the levels of a definition into levels (bonus levels carry no shard, only bonus levels unlock)
+    static void parseLevels(std::istream& is, std::vector<CampaignLevel>& levels);
+    //! \brief Sets up the progress of freshly read levels. The mutex is held by the caller.
+    void resetLevelStateNoLock();
+    //! \brief Writes the kept progress entries of levels of missing packages with that keyword. The mutex is held by
+    //! the caller.
+    void writeOtherProgressNoLock(std::ostream& os, const std::string& keyword) const;
     //! \brief Resolves a save while the caller holds the campaign mutex.
     size_t findSavedLevelNoLock(const CampaignSave& saved, const std::string& saveFilename) const;
     //! \brief Index of the level with that file, or the number of levels. The mutex is held by the caller.

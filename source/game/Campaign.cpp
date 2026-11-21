@@ -109,7 +109,8 @@ Campaign::Campaign():
     mDifficulty(getDefaultDifficulty()),
     mLevelDifficulty(getDefaultDifficulty()),
     mLoadedCampaignSave(false),
-    mSavedChampionAvailable(false)
+    mSavedChampionAvailable(false),
+    mFromPackages(false)
 {
 }
 
@@ -139,15 +140,124 @@ std::string Campaign::unescapeText(const std::string& text)
 
 //! \brief Reads the campaign levels, including their optional briefing images, wings, shards, Summon champion
 //! and item unlocks. The level list is read; when no campaign level is running, no level counts as played
-//! afterwards. Province, Branch and Heartstone keys of the former campaign are ignored.
+//! afterwards. Province, Branch and Heartstone keys of the former campaign are ignored. No wing counts as missing.
 bool Campaign::importDefinition(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
     mLevels.clear();
-    mCompleted.clear();
-    mDiscovered.clear();
-    mShardFound.clear();
+    mMissingWings.clear();
+    mFromPackages = false;
+    parseLevels(is, mLevels);
+    resetLevelStateNoLock();
+    return !mLevels.empty();
+}
 
+//! \brief Reads the wing packages in the order of their wings. The level files of a package lie in its folder; a
+//! package whose levels do not all name the same wing of 1 to NUM_WINGS, or whose wing was read before, is skipped.
+bool Campaign::importPackages(const std::vector<CampaignPackage>& packages)
+{
+    std::map<uint32_t, std::vector<CampaignLevel> > wings;
+    for(const CampaignPackage& package : packages)
+    {
+        std::vector<CampaignLevel> levels;
+        std::istringstream definition(package.mDefinition);
+        parseLevels(definition, levels);
+        if(levels.empty())
+            continue;
+
+        uint32_t wing = levels.front().mWing;
+        bool valid = (wing >= 1) && (wing <= NUM_WINGS) && (wings.count(wing) == 0);
+        const std::string& directory = package.mDirectory;
+        bool slash = !directory.empty() && ((directory[directory.size() - 1] == '/')
+            || (directory[directory.size() - 1] == '\\'));
+        for(CampaignLevel& level : levels)
+        {
+            valid = valid && (level.mWing == wing);
+            size_t separator = level.mFile.find_last_of("/\\");
+            std::string name = level.mFile.substr(separator == std::string::npos ? 0 : separator + 1);
+            level.mPath = directory + (slash ? "" : "/") + name;
+        }
+        if(valid)
+            wings[wing] = levels;
+    }
+
+    std::lock_guard<std::mutex> lock(mMutex);
+    mLevels.clear();
+    mMissingWings.clear();
+    mFromPackages = true;
+    for(uint32_t wing = 1; wing <= NUM_WINGS; ++wing)
+    {
+        std::map<uint32_t, std::vector<CampaignLevel> >::const_iterator found = wings.find(wing);
+        if(found == wings.end())
+        {
+            mMissingWings.insert(wing);
+            continue;
+        }
+        mLevels.insert(mLevels.end(), found->second.begin(), found->second.end());
+    }
+    resetLevelStateNoLock();
+    return !mLevels.empty();
+}
+
+//! \brief A wing is available when one of its levels was read.
+bool Campaign::isWingAvailable(uint32_t wing) const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    for(const CampaignLevel& level : mLevels)
+    {
+        if(level.mWing == wing)
+            return true;
+    }
+    return false;
+}
+
+//! \brief True while a wing package of 1 to NUM_WINGS is missing.
+bool Campaign::hasMissingWings() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return !mMissingWings.empty();
+}
+
+//! \brief Finds the bonus level of the wing, or the story level of the wing with that order in the definition.
+size_t Campaign::findLevelInWing(uint32_t wing, bool bonus, size_t order) const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    size_t story = 0;
+    for(size_t i = 0; i < mLevels.size(); ++i)
+    {
+        if(mLevels[i].mWing != wing)
+            continue;
+        if(bonus && mLevels[i].mBonus)
+            return i;
+        if(bonus || mLevels[i].mBonus)
+            continue;
+        if(story == order)
+            return i;
+        ++story;
+    }
+    return mLevels.size();
+}
+
+//! \brief Sets up the progress of freshly read levels: nothing completed, found or discovered; when no campaign level
+//! is running, no level counts as played.
+void Campaign::resetLevelStateNoLock()
+{
+    mCompleted.assign(mLevels.size(), false);
+    mDiscovered.assign(mLevels.size(), false);
+    mShardFound.assign(mLevels.size(), false);
+    // No level was played yet. The initial value 0 would name the first level as played and make the
+    // campaign menu show a lost-level message when the list was empty while the campaign was stopped.
+    if(!mActive)
+    {
+        mPlayedLevel = mLevels.size();
+        mPlayedLevelWon = false;
+    }
+}
+
+//! \brief Reads the [Level] entries of a definition with their texts, images, wing, shard, Summon champion, item
+//! unlocks, warden and guild. Bonus levels carry no shard and only bonus levels unlock items, whatever the file says.
+void Campaign::parseLevels(std::istream& is, std::vector<CampaignLevel>& levels)
+{
     CampaignLevel level;
     bool inLevel = false;
     std::string line;
@@ -160,7 +270,7 @@ bool Campaign::importDefinition(std::istream& is)
         if(line == "[Level]")
         {
             if(inLevel && !level.mFile.empty())
-                mLevels.push_back(level);
+                levels.push_back(level);
 
             level = CampaignLevel();
             inLevel = true;
@@ -209,42 +319,53 @@ bool Campaign::importDefinition(std::istream& is)
         }
         else if(key == "Warden")
             level.mWarden = value;
+        else if(key == "Guild")
+            level.mGuild.mName = value;
+        else if(key == "GuildLeader")
+            level.mGuild.mLeader = value;
+        else if(key == "GuildFirstLeader")
+            level.mGuild.mFirstLeader = value;
+        else if(key == "GuildOrigin")
+            level.mGuild.mOrigin = value;
+        else if(key == "GuildGroups")
+            parseWholeNumber(value, level.mGuild.mGroups);
+        else if(key == "GuildSize")
+            parseWholeNumber(value, level.mGuild.mSize);
+        else if(key == "GuildKind")
+            level.mGuild.mRaid = (value == "raid");
+        else if(key == "GuildBanner")
+            level.mGuild.mBanner = value;
+        else if(key == "GuildPortrait")
+            level.mGuild.mPortrait = value;
     }
 
     if(inLevel && !level.mFile.empty())
-        mLevels.push_back(level);
+        levels.push_back(level);
 
-    // Bonus levels carry no shard and only bonus levels unlock items, whatever the file says
-    for(CampaignLevel& entry : mLevels)
+    // Bonus levels carry no shard and no guild, and only bonus levels unlock items, whatever the file says
+    for(CampaignLevel& entry : levels)
     {
         if(entry.mBonus)
+        {
             entry.mShard = false;
+            entry.mGuild = CampaignGuild();
+        }
         else
             entry.mUnlockQualities.clear();
     }
-
-    mCompleted.assign(mLevels.size(), false);
-    mDiscovered.assign(mLevels.size(), false);
-    mShardFound.assign(mLevels.size(), false);
-    // No level was played yet. The initial value 0 would name the first level as played and make the
-    // campaign menu show a lost-level message when the list was empty while the campaign was stopped.
-    if(!mActive)
-    {
-        mPlayedLevel = mLevels.size();
-        mPlayedLevelWon = false;
-    }
-    return !mLevels.empty();
 }
 
 //! \brief Reads campaign progress (levels by file, shards, unlocked items), finished difficulties and the
 //! difficulty. A file without the Version line was written for the former campaign: only its difficulty is
-//! kept; its level lines, finished difficulties and kept creature are dropped, so the player starts fresh.
+//! kept; its level lines, finished difficulties and kept creature are dropped, so the player starts fresh. Level
+//! entries of levels that are not in the campaign (their wing package is missing) are kept to be written again.
 bool Campaign::importProgress(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
     mCompleted.assign(mLevels.size(), false);
     mDiscovered.assign(mLevels.size(), false);
     mShardFound.assign(mLevels.size(), false);
+    mOtherProgress.clear();
     mUnlockedItems.clear();
     mDifficulty = getDefaultDifficulty();
     mFinishedDifficulties.clear();
@@ -312,7 +433,13 @@ bool Campaign::importProgress(std::istream& is)
         {
             size_t index = findLevelByFileNoLock(file);
             if(index >= mLevels.size())
+            {
+                // The level of a missing package keeps its progress until the package is there again
+                std::pair<std::string, std::string> other(keyword, file);
+                if(std::find(mOtherProgress.begin(), mOtherProgress.end(), other) == mOtherProgress.end())
+                    mOtherProgress.push_back(other);
                 continue;
+            }
             if(keyword == "Completed")
                 mCompleted[index] = true;
             else if((keyword == "Discovered") && mLevels[index].mBonus)
@@ -325,7 +452,7 @@ bool Campaign::importProgress(std::istream& is)
 }
 
 //! \brief Writes campaign progress (version 2: levels by file, shards, unlocked items) and completed
-//! difficulties.
+//! difficulties. The kept entries of levels whose package is missing follow the levels of the campaign.
 void Campaign::exportProgress(std::ostream& os) const
 {
     std::lock_guard<std::mutex> lock(mMutex);
@@ -337,6 +464,7 @@ void Campaign::exportProgress(std::ostream& os) const
         if(mCompleted[i])
             os << " " << mLevels[i].mFile;
     }
+    writeOtherProgressNoLock(os, "Completed");
     os << "\n";
     os << "Discovered";
     for(size_t i = 0; i < mDiscovered.size(); ++i)
@@ -344,6 +472,7 @@ void Campaign::exportProgress(std::ostream& os) const
         if(mDiscovered[i])
             os << " " << mLevels[i].mFile;
     }
+    writeOtherProgressNoLock(os, "Discovered");
     os << "\n";
     os << "Shards";
     for(size_t i = 0; i < mShardFound.size(); ++i)
@@ -351,6 +480,7 @@ void Campaign::exportProgress(std::ostream& os) const
         if(mShardFound[i])
             os << " " << mLevels[i].mFile;
     }
+    writeOtherProgressNoLock(os, "Shards");
     os << "\n";
     for(const CampaignUnlockedItem& item : mUnlockedItems)
         os << "Unlocked " << item.mBonusFile << " " << item.mQuality << " " << item.mItemId << "\n";
@@ -359,6 +489,16 @@ void Campaign::exportProgress(std::ostream& os) const
     for(std::set<std::string>::const_iterator it = mFinishedDifficulties.begin(); it != mFinishedDifficulties.end(); ++it)
         os << " " << *it;
     os << "\n";
+}
+
+//! \brief Writes the kept levels of missing packages that carry the keyword, each with a leading space.
+void Campaign::writeOtherProgressNoLock(std::ostream& os, const std::string& keyword) const
+{
+    for(const std::pair<std::string, std::string>& other : mOtherProgress)
+    {
+        if(other.first == keyword)
+            os << " " << other.second;
+    }
 }
 
 void Campaign::setProgressPath(const std::string& path)
@@ -443,13 +583,18 @@ size_t Campaign::findFirstStoryLevelOfWingNoLock(uint32_t wing) const
     return mLevels.size();
 }
 
-//! \brief The first story level that is not completed; bonus levels never block the sequence.
+//! \brief The first story level that is not completed; bonus levels never block the sequence. A missing wing blocks
+//! it: the story levels of later wings are not reached while a wing before them has no package.
 size_t Campaign::getCurrentLevelNoLock() const
 {
     for(size_t i = 0; i < mCompleted.size(); ++i)
     {
         if(!mCompleted[i] && !mLevels[i].mBonus)
+        {
+            if(!mMissingWings.empty() && (*mMissingWings.begin() < mLevels[i].mWing))
+                return mCompleted.size();
             return i;
+        }
     }
     return mCompleted.size();
 }
@@ -461,7 +606,7 @@ size_t Campaign::getCurrentLevel() const
 }
 
 //! \brief A story level is unlocked when every story level before it is completed, a bonus level when it
-//! was discovered (or completed before).
+//! was discovered (or completed before). A story level after a missing wing stays locked.
 bool Campaign::isUnlockedNoLock(size_t index) const
 {
     if(index >= mLevels.size())
@@ -469,6 +614,10 @@ bool Campaign::isUnlockedNoLock(size_t index) const
 
     if(mLevels[index].mBonus)
         return mDiscovered[index] || mCompleted[index];
+
+    // The story levels of a missing wing are needed before the levels of later wings
+    if(!mMissingWings.empty() && (*mMissingWings.begin() < mLevels[index].mWing))
+        return false;
 
     // All story levels before the level must be completed.
     for(size_t i = 0; i < index; ++i)
@@ -541,6 +690,7 @@ bool Campaign::isShardFound(size_t index) const
 }
 
 //! \brief Counts the found shards while the caller holds the mutex.
+//! The shards found in levels whose package is missing count as well (kept progress entries).
 size_t Campaign::getHeartstonePiecesNoLock() const
 {
     size_t count = 0;
@@ -549,10 +699,17 @@ size_t Campaign::getHeartstonePiecesNoLock() const
         if(mLevels[i].mShard && mShardFound[i])
             ++count;
     }
-    return count;
+    for(const std::pair<std::string, std::string>& other : mOtherProgress)
+    {
+        if(other.first == "Shards")
+            ++count;
+    }
+    return std::min(count, getHeartstoneTotalNoLock());
 }
 
 //! \brief Counts the levels with a shard while the caller holds the mutex.
+//! A campaign read from packages has at least HEARTSTONE_SHARDS shards, so the total does not shrink while a wing is
+//! missing.
 size_t Campaign::getHeartstoneTotalNoLock() const
 {
     size_t count = 0;
@@ -561,7 +718,7 @@ size_t Campaign::getHeartstoneTotalNoLock() const
         if(mLevels[i].mShard)
             ++count;
     }
-    return count;
+    return mFromPackages ? std::max(count, static_cast<size_t>(HEARTSTONE_SHARDS)) : count;
 }
 
 //! \brief Number of found Heartstone shards.
@@ -633,7 +790,13 @@ bool Campaign::isItemUnlockedNoLock(const std::string& quality, const std::strin
 bool Campaign::isFinished() const
 {
     std::lock_guard<std::mutex> lock(mMutex);
-    return !mLevels.empty() && (getCurrentLevelNoLock() == mLevels.size());
+    return isCampaignCompleteNoLock();
+}
+
+//! \brief The campaign is complete when every story level was won and no wing package is missing.
+bool Campaign::isCampaignCompleteNoLock() const
+{
+    return !mLevels.empty() && mMissingWings.empty() && (getCurrentLevelNoLock() == mLevels.size());
 }
 
 bool Campaign::hasProgress() const
@@ -663,6 +826,7 @@ void Campaign::resetProgress()
         mDiscovered.assign(mLevels.size(), false);
         mShardFound.assign(mLevels.size(), false);
         mUnlockedItems.clear();
+        mOtherProgress.clear();
         mPlayedLevel = mLevels.size();
         mPlayedLevelWon = false;
         mDifficulty = getDefaultDifficulty();
@@ -826,11 +990,11 @@ void Campaign::clearPlayedLevel()
     mLevelSummary.clear();
 }
 
-//! \brief A won level ends the campaign when no story level is left undefeated afterwards.
+//! \brief A won level ends the campaign when no story level is left undefeated afterwards and no wing is missing.
 bool Campaign::isPlayedLevelCampaignEnd() const
 {
     std::lock_guard<std::mutex> lock(mMutex);
-    return (mPlayedLevel < mLevels.size()) && mPlayedLevelWon && (getCurrentLevelNoLock() == mLevels.size());
+    return (mPlayedLevel < mLevels.size()) && mPlayedLevelWon && isCampaignCompleteNoLock();
 }
 
 void Campaign::setLevelSummary(const std::string& summary)
@@ -892,7 +1056,7 @@ bool Campaign::completePlayedLevel(const std::map<std::string, std::vector<std::
                 mUnlockedItems.push_back(item);
             }
         }
-        if(getCurrentLevelNoLock() == mLevels.size())
+        if(isCampaignCompleteNoLock())
             mFinishedDifficulties.insert(KeeperAITypes::nameOf(static_cast<KeeperAIType>(mLevelDifficulty)));
         mPlayedLevelWon = true;
     }

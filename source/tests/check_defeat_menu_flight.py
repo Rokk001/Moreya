@@ -58,7 +58,7 @@ void check(bool ok, const char* msg) {++gChecks;if(!ok){++gFailures;std::cout <<
 
 namespace Ogre {struct FrameEvent {};}
 namespace CEGUI {struct EventArgs {};}
-struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY, ADVERTISMENT};};
+struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY};};
 const std::string WINDOW_SKIRMISH = "SkirmishSubMenuWindow";
 int gToggles = 0;
 int gShown = 0;

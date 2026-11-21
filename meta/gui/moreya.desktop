@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Moreya
+GenericName=Underground real-time strategy game
+Exec=moreya
+Icon=${SNAP}/meta/gui/moreya.svg
+Terminal=false
+Type=Application
+Categories=Game;StrategyGame;

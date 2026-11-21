@@ -445,7 +445,7 @@ PRODUCTION_MENU_CODE
 PRODUCTION_PROJECTION
 
 //! \brief Existing menu destinations used by the extracted callbacks.
-struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY, MENU_LOAD_SAVEDGAME, ADVERTISMENT};};
+struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY, MENU_LOAD_SAVEDGAME};};
 //! \brief Supplies only the existing menu-sheet lookup used by the real callbacks.
 class Gui
 {
@@ -469,6 +469,9 @@ class ODFrameListener
 public:
     RenderSceneMenu* mMenu = nullptr;
     CameraManager* mCamera = nullptr;
+    bool mExitRequested = false;
+    //! \brief Records the exit request of the production Quit callback instead of closing the probe.
+    void requestExit() {mExitRequested = true;}
     //! \brief Returns the fixture listener owning the real camera path state.
     static ODFrameListener& getSingleton() {static ODFrameListener listener;return listener;}
     //! \brief Reads the production path timer.
@@ -514,8 +517,10 @@ public:
     void showNewCampaignConfirm(bool) {}
     //! \brief Runs the production delayed-pane completion callback.
     void onFrameStarted(const Ogre::FrameEvent&);
-    //! \brief Runs production immediate Quit or delayed Replay navigation.
+    //! \brief Runs production delayed Replay navigation.
     bool changeModeAfterFlight(AbstractModeManager::ModeType, const CEGUI::EventArgs&);
+    //! \brief Runs the production Quit callback that closes the game directly.
+    bool quitButtonPressed(const CEGUI::EventArgs&);
     //! \brief Starts the production submenu destination request.
     bool toggleSubMenu(const std::string&);
     //! \brief Reveals the existing submenu through its production callback.
@@ -778,14 +783,15 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
 
     navigation.mLastMode = AbstractModeManager::NONE;
     navigation.toggleSubMenu(WINDOW_CAMPAIGN);
-    navigation.changeModeAfterFlight(AbstractModeManager::ADVERTISMENT, CEGUI::EventArgs());
-    check(navigation.mLastMode == AbstractModeManager::ADVERTISMENT && menuScene.isFlightActive(),
-        "Quit keeps its original immediate action during a flight");
+    ODFrameListener::getSingleton().mExitRequested = false;
+    navigation.quitButtonPressed(CEGUI::EventArgs());
+    check(ODFrameListener::getSingleton().mExitRequested && menuScene.isFlightActive(),
+        "Quit closes the game at once, also during a flight");
     check(navigation.mPendingSubMenu.empty() && navigation.mPendingMode == AbstractModeManager::NONE &&
         !navigation.mSkirmishSubMenuPending, "Quit clears deferred actions that could replace it");
     finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
-    check(navigation.mLastMode == AbstractModeManager::ADVERTISMENT && !menuRoot->getChild(WINDOW_CAMPAIGN)->isVisible(),
-        "completed flight cannot overwrite Quit or reveal its canceled pane");
+    check(navigation.mLastMode == AbstractModeManager::NONE && !menuRoot->getChild(WINDOW_CAMPAIGN)->isVisible(),
+        "completed flight cannot replace Quit or reveal its canceled pane");
     check(menuScene.flyTo(menuCamera, "overview"), "restore overview after the Quit timing assertion");
     navigation.showMainMenuButtons(false);
     navigation.mOverviewPending = true;
@@ -839,6 +845,7 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     navigation_constants = '\n'.join(re.findall(r'^(?:static )?const std::string [^;]+;', navigation_source, re.MULTILINE))
     navigation_functions = '\n'.join(function(navigation_source, signature) for signature in (
         'void MenuModeMain::onFrameStarted(', 'bool MenuModeMain::changeModeAfterFlight(',
+        'bool MenuModeMain::quitButtonPressed(',
         'bool MenuModeMain::toggleSubMenu(', 'void MenuModeMain::showSubMenu(',
         'void MenuModeMain::showMainMenuButtons(', 'bool MenuModeMain::goBack('))
     navigation_functions += '\n' + function((repo / 'source/modes/ModeManager.cpp').read_text(), 'void ModeManager::requestPreviousMode(')

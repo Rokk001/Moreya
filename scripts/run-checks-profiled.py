@@ -28,7 +28,7 @@ PROFILE_SECONDS = 120
 REGRESSION_RATIO = 1.25
 REGRESSION_SECONDS = 5
 BUILD_PROCESSES = {'cl.exe', 'msbuild.exe', 'cmake.exe', 'ninja.exe',
-                   'opendungeons-plus.exe'}
+                   'moreya.exe'}
 
 
 # Read process ancestry without launching monitoring processes or changing their state.

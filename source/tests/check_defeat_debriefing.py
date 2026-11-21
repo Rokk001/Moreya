@@ -241,7 +241,7 @@ struct Campaign
 };
 struct ModeManager
 {
-    enum ModeType {NONE = 0, ADVERTISMENT = 1, MENU_MAIN, MENU_CAMPAIGN};
+    enum ModeType {NONE = 0, MENU_MAIN, MENU_CAMPAIGN};
     bool mOpenSkirmishSubMenu = false;
     void requestMode(ModeType mode, bool = true) {++gModeRequests;gLastMode = mode;}
 @@REQUESTMAINMENU@@

@@ -38,7 +38,7 @@ PATH_EXTRA = [os.path.join(DEPS_ROOT, 'install', 'bin')]
 SKIP_NAMES = ['check-protected-content.py', 'check-level-similarity.py']
 TAIL_LINES = 25
 LOADED_LEVELS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'LOADED-LEVELS.md')
-ALWAYS_LOADED = os.path.join('levels', 'campaign', 'Mossgate.level')
+ALWAYS_LOADED = os.path.join('levels', 'campaign', 'wing1', 'Mossgate.level')
 # Fixed time limit of the load test in seconds (56 levels need well over 1 hour)
 LOAD_TEST_TIMEOUT = 10800
 # Time limit in seconds for check-level-similarity.py (it grows with the number of level files)
@@ -307,7 +307,7 @@ def main():
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
             selection_error = str(error)
         if selection_error:
-            selected = {'levels/campaign/Mossgate.level': 'selection prerequisite failed'}
+            selected = {'levels/campaign/wing1/Mossgate.level': 'selection prerequisite failed'}
     stages = {}
     if args.build_status:
         try:
@@ -367,7 +367,7 @@ def main():
             for line in out.splitlines()[-TAIL_LINES:]:
                 record('    ' + line)
     # Red static checks never suppress independent level diagnostics. Missing build prerequisites are explicit failures.
-    executable = os.path.join(repo, 'build', 'windows', 'opendungeons-plus.exe')
+    executable = os.path.join(repo, 'build', 'windows', 'moreya.exe')
     load_test = os.path.join(repo, 'scripts', 'run-level-test.py')
     prerequisite = selection_error or session.initial_error
     if load_required:

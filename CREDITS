@@ -28,8 +28,6 @@ ChampionCrownIcon.png                  Mario                   GPLv3+           
 ChampionCrown.imageset                 Mario                   GPLv3+                  Written for this project
 OD.project                             Bertram                 GPLv3+                  CEED Project file.
 OD.looknfeel                           OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
-ODAdvertisment.imageset                Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
-ODAdvertisment.png                     Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 ODBackgrounds.imageset                 OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
 ODBackgrounds.png                      OD Team                 CC-BY-SA 3.0
 ODHudSurface.imageset                  Mario                   GPLv3+
@@ -44,16 +42,12 @@ assets-src/gui/icons/tiles/*.png        AI-generated with Codex  GPLv3+         
 assets-src/gui/icons/navigation/*.png   AI-generated with Codex  GPLv3+                  Existing navigation sprites assembled from painted icon and skin sources, 2026-10-25
 assets-src/gui/icons/tiles/TavernButton.png AI-generated with Codex GPLv3+                 Original painted foaming wooden tankard source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+                  Original painted beer keg and brass tap source, 256x256, 2026-10-25
-ODLogo.imageset                        OD Team                 GPLv3+
-ODLogo.png                             Svenskmand              CC-BY-SA 3.0
 ODMainMenuBackground.imageset          Bertram                 GPLv3+
 ODMainMenuBackground.png               Vagner                  CC-BY-SA 3.0            http://opengameart.org/content/mammon-angel-of-darkness
 ODMainMenuButtons.imageset             Bertram                 GPLv3+
 ODMainMenuButtons.png                  Mario                   GPLv3+                  Drawn from scratch by tools/generate_forged_skin.py (procedural, no source pixels)
 ODMenuTemplate.png                     AI-generated with Codex  GPLv3+                  Menu button template (four states), its compact form, the load screen panel, the window frame, list inset and screen border, cut by tools/make_menu_template.py from the painted menu sheet assets-src/ingame-qs-9/d1/variant-2.png (Codex, 2026-11-09, original work)
 ODMenuTemplate.imageset                Mario                   GPLv3+                  Written by tools/make_menu_template.py
-ODMainMenuLogo.imageset                Mario                   GPLv3+
-ODMainMenuLogo.png                     AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
 ODSkin.imageset                        OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
 ODSkin.png                             AI-generated with Codex  GPLv3+                  Painted for this project (2026-10-24), regenerated 2026-10-25 by scripts/gui/build_skin_atlas.py; original transparent default cursor preserved for the 3D hand
 ODSkin.scheme                          OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
@@ -103,41 +97,29 @@ multiplayer/
 -> UnitTest.level                      OD Team                 GPLv3+
 
 campaign/
--> Ashcombe.level                      OD Team                 GPLv3+
--> Bellwick.level                      OD Team                 GPLv3+
 -> Bonus1.level                        OD Team                 GPLv3+
--> BoulderCourse.level                 OD Team                 GPLv3+
--> Brackenford.level                   OD Team                 GPLv3+
 -> Campaign1.level                     OD Team                 GPLv3+
 -> Campaign2.level                     OD Team                 GPLv3+
 -> Campaign3.level                     OD Team                 GPLv3+
--> Cinderhollow.level                  OD Team                 GPLv3+
--> Coldwell.level                      OD Team                 GPLv3+
--> CrowshotGallery.level               OD Team                 GPLv3+
 -> Dunmarrow.level                     OD Team                 GPLv3+
 -> Ebonrook.level                      OD Team                 GPLv3+
--> Goldspire.level                     OD Team                 GPLv3+
--> Greywater.level                     OD Team                 GPLv3+
--> Highcairn.level                     OD Team                 GPLv3+
--> HollinFen.level                     OD Team                 GPLv3+
--> HollowmarkCitadel.level             OD Team                 GPLv3+
--> Ironbridge.level                    OD Team                 GPLv3+
--> Kingsfall.level                     OD Team                 GPLv3+
--> Lanternhill.level                   OD Team                 GPLv3+
 -> Mirewatch.level                     OD Team                 GPLv3+
--> Mossgate.level                      OD Team                 GPLv3+
--> Ravensledge.level                   OD Team                 GPLv3+
--> Saltmere.level                      OD Team                 GPLv3+
 -> Silverdeep.level                    OD Team                 GPLv3+
--> SkittleCavern.level                 OD Team                 GPLv3+
 -> Stormhaven.level                    OD Team                 GPLv3+
--> SwarmNight.level                    OD Team                 GPLv3+
 -> Thornreach.level                    OD Team                 GPLv3+
--> Tinmoor.level                       OD Team                 GPLv3+
--> TwistingHalls.level                 OD Team                 GPLv3+
--> VarnsCrossing.level                 OD Team                 GPLv3+
 -> Wolfscar.level                      OD Team                 GPLv3+
--> Wraithwood.level                    OD Team                 GPLv3+
+
+campaign/wing1/                        (public wing 1 package of the campaign; own licence file, not GPL)
+-> Package.cfg                         Mario                   All rights reserved     levels/campaign/wing1/LICENSE.txt: viewing and playing allowed, redistribution and distributing changed versions not allowed
+-> Brackenford.level                   Mario                   All rights reserved     levels/campaign/wing1/LICENSE.txt
+-> Coldwell.level                      Mario                   All rights reserved     levels/campaign/wing1/LICENSE.txt
+-> Ravensledge.level                   Mario                   All rights reserved     levels/campaign/wing1/LICENSE.txt
+-> Mossgate.level                      Mario                   All rights reserved     levels/campaign/wing1/LICENSE.txt
+-> LICENSE.txt                         Mario                   All rights reserved     Licence of the wing 1 package
+
+The campaign packages of wings 2 to 6 are not part of this repository: they come from the private campaign
+content repository under its own licence (all rights reserved) and are added to the Steam build. Earlier
+versions of the campaign level files in the history of this repository keep the licence they were published with.
 
 skirmish/
 -> Barrackdeep.level                   OD Team                 GPLv3+
@@ -581,10 +563,8 @@ Name                                   Author                  License          
 ------------------------------------------------------------------------------------------------------------------------
 assets-src/DungeonHeartObject.blend    Mario                   GPLv3+                  Editable source of the dungeon heart model (first commit 8318b4559); made with Blender, AI-assisted (Claude Code)
 assets-src/DungeonHeartObject{Healthy,Damaged,Critical}.glbMario                   GPLv3+                  Exports of DungeonHeartObject.blend; made with Blender, AI-assisted (Claude Code)
-meta/gui/application-icon.png          AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
-meta/gui/icon.svg                      Remi Verschelde         CC-BY-SA 3.0            Added 2014 (first commit)
-meta/gui/iconplus.svg                  Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
-meta/gui/opendungeons.desktop          Pavel Rojtberg          GPLv3+                  Added 2018 (first commit)
+meta/gui/moreya.desktop                Pavel Rojtberg          GPLv3+                  Added 2018 (first commit) as the snap desktop entry; renamed and rewritten for Moreya 2026-11-21
+meta/gui/moreya.svg                    AI-generated (Claude Code)  GPLv3+              Moreya gate icon, own design 2026-11-21, copy of dist/hicolor/scalable/apps/moreya.svg written by tools/artwork/moreya-icon/make_moreya_icon.py
 screenshots/*                          Tomasz Luchowski        GPLv3+                  Screenshots of the game (first commit 056c7086b)
 tools/artwork/CreatureMoodAtlas.png    AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 
@@ -595,7 +575,7 @@ tools/artwork/CreatureMoodAtlas.png    AI-generated with Codex  GPLv3+          
 
 Name                                   Author                  License                 Source URL
 ------------------------------------------------------------------------------------------------------------------------
-OpenDungeonsMainTheme_pZi.ogg          Pal Zoltan Illes (pZi)  CC-BY-SA 3.0            https://soundcloud.com/pal_zoltan_illes/opendungeons-main-theme
+MainTheme_pZi.ogg                      Pal Zoltan Illes (pZi)  CC-BY-SA 3.0            "OpenDungeons Main Theme", https://soundcloud.com/pal_zoltan_illes/opendungeons-main-theme (file renamed 2026-11-21)
  ->                                                                                    http://forum.freegamedev.net/viewtopic.php?f=39&t=2278
 TheDarkAmulet_MP.ogg                   Matthew Pablo           CC-BY 3.0               http://opengameart.org/content/the-dark-amulet-dark-mage-theme
 Searching_yd.ogg                       yd                      CC0                     http://opengameart.org/content/searching
@@ -1032,18 +1012,18 @@ source/tests/check_trap_meshes.py      OD Team                 GPLv3+
 ==  Distribution data: dist/  ==
 ================================
 
-hicolor/*/apps/opendungeons.*          Svenskmand              CC-BY-SA 3.0
-  except hicolor/16x16/apps/opendungeons.png  OD Team          CC-BY-SA 3.0
+hicolor/*/apps/moreya.*                AI-generated (Claude Code)  GPLv3+              Moreya gate icon (stone arch with portcullis), own design 2026-11-21; SVG and PNG sizes written by tools/artwork/moreya-icon/make_moreya_icon.py
+moreya.ico                             AI-generated (Claude Code)  GPLv3+              Same icon in 16, 24, 32, 48, 64, 128 and 256 pixels for the Windows executable and window, written by tools/artwork/moreya-icon/make_moreya_icon.py
+moreya.manifest                        OD Team                 GPLv3+                  Windows application manifest (renamed 2026-11-21)
 icon.rc                                OD Team                 GPLv3+
-logo.svg                               Svenskmand              CC-BY-SA 3.0
+tools/artwork/moreya-icon/make_moreya_icon.py  AI-generated (Claude Code)  GPLv3+      Generator of the Moreya icon files, 2026-11-21
 
 ====================================================
 == Portrait feature assets: materials/portraits/  ==
 materials/portraits/neutral-bases/*.png  AI-generated with Codex  GPLv3+  AI-generated neutral Dungeonbook bases from this project's portrait references; exact prompts and provenance in materials/portraits/neutral-bases/generation-records.json; originals preserved.
 ====================================================
 
-OD-Logo.ico                            AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
-opendungeons-plus.appdata.xml          Remi Verschelde         GPLv3+                  Added 2015 (first commit)
+moreya.appdata.xml                     Remi Verschelde         GPLv3+                  Added 2015 (first commit); renamed and rewritten for Moreya 2026-11-21
 
 
 =========================
@@ -1060,10 +1040,7 @@ tools/artwork/CreatureMoodAtlas.png    AI-generated with Codex  GPLv3+          
 materials/textures/CreatureExperience.png      AI-generated            GPLv3+                  AI-generated, created for this project
 materials/textures/CreatureRecovery.png        AI-generated            GPLv3+                  AI-generated, created for this project
 materials/textures/DefeatFireball.png          AI-generated            GPLv3+                  AI-generated, created for this project
-gui/ODMainMenuLogo.png                 AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
 gui/ODHudSurface.png                   AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
-meta/gui/application-icon.png          AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
-dist/OD-Logo.ico                       AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
 materials/textures/Creature{Angry,Furious,Hungry,KO,Leaving,Paid,Prisoner,RallyTroops,Sleepy,Stunned,Unhappy}.pngAI-generated with Codex  GPLv3+                  Resampled from CreatureMoodAtlas.png by tools/package-creature-mood-icons.ps1
 
 

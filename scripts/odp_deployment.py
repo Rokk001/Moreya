@@ -76,7 +76,7 @@ def record_build(repo, run, number, commit):
     if git(repo, 'rev-parse', 'HEAD') != commit or git(repo, 'status', '--porcelain', '--untracked-files=no'):
         raise RuntimeError('Source changed during Build; normal integration revalidation required')
     receipt = {'commit': commit, 'run': run, 'number': number,
-               'sha256': digest(repo / 'build/windows/opendungeons-plus.exe')}
+               'sha256': digest(repo / 'build/windows/moreya.exe')}
     (repo / 'out' / ('validated-' + run + '.json')).write_text(json.dumps(receipt), encoding='utf-8')
 
 
@@ -94,7 +94,7 @@ def validate_build(repo, run, target):
         raise RuntimeError('Build/commit/target mismatch; normal integration revalidation required')
     if git(repo, 'status', '--porcelain', '--untracked-files=no'):
         raise RuntimeError('Tracked changes invalidate the validated build; normal integration revalidation required')
-    if receipt['sha256'] != digest(repo / 'build/windows/opendungeons-plus.exe'):
+    if receipt['sha256'] != digest(repo / 'build/windows/moreya.exe'):
         raise RuntimeError('Build artifact changed since validation; normal integration revalidation required')
     number = (repo / 'out' / ('build-number-' + run + '.txt')).read_text().strip()
     if str(receipt['number']) != number:
@@ -123,7 +123,7 @@ def deploy(repo, counter, script, game_wait_seconds=1800):
     if not 0 <= game_wait_seconds <= 86400:
         raise ValueError('Game wait seconds must be between 0 and 86400')
     common = Path(git(repo, 'rev-parse', '--path-format=absolute', '--git-common-dir'))
-    executable = common.parent / 'build/windows/opendungeons-plus.exe'
+    executable = common.parent / 'build/windows/moreya.exe'
     runner = campaign_runner()
     with executable_lock(executable):
         deadline = time.monotonic() + game_wait_seconds

@@ -1,7 +1,8 @@
 """Static check: every saved game in the user's saves folder can be read by the level loader.
 
-Pure Python, needs no compiler and never starts the game. The folder %APPDATA%/opendungeons/saves (or
-~/.config/opendungeons/saves on other systems) is only read, nothing is copied. Without that folder, or without
+Pure Python, needs no compiler and never starts the game. The folder %APPDATA%/Moreya/saves (or
+~/.local/share/moreya/saves on other systems; the folder of older versions, opendungeons, while the game has not
+taken it over yet) is only read, nothing is copied. Without that folder, or without
 any save in it, the check is skipped and reports OK.
 
 The reader of MapHandler::readGameMapFromFile is mirrored section by section with its own rules: the version gate,
@@ -40,10 +41,13 @@ args = parser.parse_args()
 
 if args.dir:
     saves_dir = Path(args.dir)
-elif os.environ.get("APPDATA"):
-    saves_dir = Path(os.environ["APPDATA"]) / "opendungeons" / "saves"
 else:
-    saves_dir = Path.home() / ".config" / "opendungeons" / "saves"
+    # The game copies the old user folder into the new one at its first start; until then the saves are in the old one.
+    base = Path(os.environ["APPDATA"]) if os.environ.get("APPDATA") else Path.home() / ".local" / "share"
+    names = ("Moreya", "opendungeons") if os.environ.get("APPDATA") else ("moreya", "opendungeons")
+    saves_dir = base / names[0] / "saves"
+    if not saves_dir.is_dir():
+        saves_dir = base / names[1] / "saves"
 files = sorted(saves_dir.glob("*.level")) if saves_dir.is_dir() else []
 if not files:
     print("SKIPPED: no saved games in " + str(saves_dir))

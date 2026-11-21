@@ -1,9 +1,9 @@
-name: opendungeons-plus
+name: moreya
 version: "0.8.0"
-summary: OpenDungeonsPlus – enhanced fork
+summary: Moreya – underground real-time strategy
 description: |
-  A dungeon management game inspired by Dungeon Keeper, Overlord 
-  and Evil Genius. Enhanced fork with upgraded editor and engine.
+  Keep a dungeon: dig, build rooms, traps and doors, attract creatures
+  and break the guild raids that come through the Moreya gate.
 
 confinement: strict
 base: core22
@@ -18,8 +18,8 @@ layout:
 
 
 apps:
-  opendungeons-plus:
-    command: usr/bin/opendungeons-plus
+  moreya:
+    command: usr/bin/moreya
     plugs:
       - opengl
       - audio-playback
@@ -197,7 +197,7 @@ parts:
       - -DCMAKE_INSTALL_PREFIX=/usr
       - -DBUILD_SHARED_LIBS=ON
 
-      # Enable audio (required by OpenDungeons)
+      # Enable audio (required by the game)
       - -DSFML_BUILD_AUDIO=ON
 
       # Enable needed modules
@@ -239,12 +239,12 @@ parts:
 
 
   ######################################################################
-  # OpenDungeonsPlus
+  # Moreya
   ######################################################################
-  opendungeons-plus:
+  moreya:
     plugin: cmake
-    source: https://github.com/tomluchowski/OpenDungeonsPlus.git
-    source-tag: shaders-improvement
+    source: https://github.com/Rokk001/Moreya.git
+    source-branch: main
     source-depth: 1
 
 
@@ -292,7 +292,7 @@ parts:
 
     override-build: |
       snapcraftctl build
-      #odres="$SNAPCRAFT_PRIME/usr/share/games/opendungeons-plus/resources.cfg"
+      #odres="$SNAPCRAFT_PRIME/usr/share/games/moreya/resources.cfg"
       #if [ -f "$odres" ]; then
       #  sed -i \
       #    -e 's|FileSystem=.*OGRE/Media/Main|FileSystem=$SNAP/usr/share/OGRE/Media/Main|g' \
@@ -300,13 +300,13 @@ parts:
       #    "$odres"
       #fi
       # Move binary into /usr/bin
-      install -Dm755 $SNAPCRAFT_PART_INSTALL/usr/games/opendungeons-plus \
-                     $SNAPCRAFT_PART_INSTALL/usr/bin/opendungeons-plus
+      install -Dm755 $SNAPCRAFT_PART_INSTALL/usr/games/moreya \
+                     $SNAPCRAFT_PART_INSTALL/usr/bin/moreya
     override-prime: |
       snapcraftctl prime
 
-      # OpenDungeons config directory
-      # odcfg="$SNAPCRAFT_PRIME/etc/opendungeons-plus"
+      # Game config directory
+      # odcfg="$SNAPCRAFT_PRIME/etc/moreya"
 
       # Patch plugins.cfg actually used by the game
       # if [ -f "$odcfg/plugins.cfg" ]; then
@@ -319,13 +319,13 @@ parts:
 
     # Assets
     organize:
-      models: usr/share/opendungeons-plus/models
-      materials: usr/share/opendungeons-plus/materials
-      shaders: usr/share/opendungeons-plus/shaders
-      levels: usr/share/opendungeons-plus/levels
-      sounds: usr/share/opendungeons-plus/sounds
-      music: usr/share/opendungeons-plus/music
-      gui: usr/share/opendungeons-plus/gui
-      config: usr/share/opendungeons-plus/config
+      models: usr/share/moreya/models
+      materials: usr/share/moreya/materials
+      shaders: usr/share/moreya/shaders
+      levels: usr/share/moreya/levels
+      sounds: usr/share/moreya/sounds
+      music: usr/share/moreya/music
+      gui: usr/share/moreya/gui
+      config: usr/share/moreya/config
 
     after: [ogre, cegui, libois, sfml]

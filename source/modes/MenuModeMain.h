@@ -71,7 +71,7 @@ private:
     //! \brief Connects an existing mode-changing button through flight-aware navigation.
     void connectModeChangeEvent(CEGUI::Window* button, AbstractModeManager::ModeType mode);
 
-    //! \brief Function triggered when pushing a button
+    //! \brief Quit button: closes the game directly, without any further screen.
     bool quitButtonPressed(const CEGUI::EventArgs&);
     //! \brief Flies to the right tower before showing the existing settings submenu.
     bool toggleSettings(const CEGUI::EventArgs&);

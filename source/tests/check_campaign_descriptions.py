@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Check the [Info] Description lines of the 24 campaign level files (no compile, no game start).
 
+The levels of wings 2 to 6 and their rows come from the content repository (scripts/campaign_packages.py); without
+it the 4 levels of the public package are checked.
+
 Every level file of the campaign has exactly one Description line in its [Info] block, written as one plain text line
 for the raid campaign: a story level names its dungeon title, the guild of its raid and the Moreya gate; a bonus level
 names its chamber title and that no raid comes. No description names an old warden of the former campaign or the word
@@ -13,44 +16,49 @@ import sys
 import time
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import campaign_packages  # noqa: E402
 
-#: Story level file -> (dungeon title, guild of its raid), 18 levels in campaign order.
+#: Story level file -> (dungeon title, guild of its raid): the 3 levels of the public package (wing 1); the
+#: content repository adds the 15 of wings 2 to 6 (checks/campaign_descriptions.json), 18 in campaign order.
 STORY = [
-    ("Brackenford", "Mold Pit", "Mud Fists"),
-    ("Coldwell", "Drowned Larder", "Iron Latch"),
-    ("Ravensledge", "Rat Warren", "Grey Fang"),
-    ("Tinmoor", "Bleeding Seam", "Deep Picks"),
-    ("Greywater", "Chain Gallery", "Drowned Oath"),
-    ("Highcairn", "Slag Pit", "Stone Crown"),
-    ("Lanternhill", "Ossuary", "Pale Flame"),
-    ("Saltmere", "Tomb of Whispers", "Salt Wolves"),
-    ("HollinFen", "Bone Chapel", "Order of the White Thorn"),
-    ("Cinderhollow", "Rack Hall", "Ember Ram"),
-    ("Ashcombe", "Iron Maw", "Burnt Wheel"),
-    ("Ironbridge", "Torment Cells", "Anvil Host"),
-    ("Bellwick", "Charnel Stair", "Silent Bell"),
-    ("Goldspire", "Corpse Gate", "Gilded Hand"),
-    ("Kingsfall", "Hall of Skulls", "Sun Court"),
-    ("VarnsCrossing", "Ember Pit", "Black Legion"),
-    ("Wraithwood", "Throne of Ash", "Ash Coven"),
-    ("HollowmarkCitadel", "Heart of Moreya", "Crown Eternal"),
+    ('Brackenford', 'Mold Pit', 'Mud Fists'),
+    ('Coldwell', 'Drowned Larder', 'Iron Latch'),
+    ('Ravensledge', 'Rat Warren', 'Grey Fang'),
 ]
-#: Bonus level file -> chamber title, 6 levels.
+#: Bonus level file -> chamber title: the bonus level of wing 1; the content repository adds the 5 of wings 2 to 6.
 BONUS = [
-    ("Mossgate", "The Forgotten Pit"),
-    ("CrowshotGallery", "The Gallery of Crows"),
-    ("SkittleCavern", "The Skull Lanes"),
-    ("SwarmNight", "The Swarming Dark"),
-    ("BoulderCourse", "The Rolling Tomb"),
-    ("TwistingHalls", "The Twisting Abyss"),
+    ('Mossgate', 'The Forgotten Pit'),
 ]
-#: The wardens of the former campaign (names without their titles), 31 entries.
+#: The wardens of the former campaign (names without their titles), 31 entries: the 18 names the public tree
+#: may hold; the 13 names that are also paid campaign names come from the content repository.
 OLD_WARDENS = [
-    "Tobin Marsh", "Elsa Brack", "Hugo Cole", "Merrin Tay", "Bram Tull", "Osric Vane", "Liesl Ashby", "Corwin Gray",
-    "Agathe Hollin", "Wren", "Bram Seward", "Ysolde Dunn", "Gareth Fenn", "Rolf Scarrow", "Ines Vale", "Oswin",
-    "Pell Ashgrove", "Cassia Thorne", "Lorens Bell", "Hilde Cairn", "Hald", "Ivo Strand", "Mora Fenwick",
-    "Alaric Penn", "Sabine Rook", "Varn", "Sable", "Dorian Silt", "Elowen Ash", "Aurel", "Castellan",
+    'Tobin Marsh',
+    'Elsa Brack',
+    'Hugo Cole',
+    'Bram Tull',
+    'Osric Vane',
+    'Wren',
+    'Ysolde Dunn',
+    'Rolf Scarrow',
+    'Oswin',
+    'Cassia Thorne',
+    'Hald',
+    'Ivo Strand',
+    'Mora Fenwick',
+    'Varn',
+    'Sable',
+    'Dorian Silt',
+    'Aurel',
+    'Castellan',
 ]
+#: The rows of the content packages; without them only the public package is checked and wings 2 to 6 must be missing
+CONTENT = campaign_packages.content_data(ROOT, "campaign_descriptions")
+if CONTENT is not None:
+    STORY += [tuple(row) for row in CONTENT["story"]]
+    BONUS += [tuple(row) for row in CONTENT["bonus"]]
+    OLD_WARDENS += CONTENT["old_wardens"]
+
 #: Longest description in characters, so that it stays one readable line.
 MAX_LENGTH = 240
 
@@ -76,13 +84,17 @@ def main():
     """Checks every description and reports each failure."""
     started = time.monotonic()
     failures = []
-    if len(STORY) != 18 or len(BONUS) != 6 or len(OLD_WARDENS) != 31:
-        failures.append("the fixed tables must hold 18 story levels, 6 bonus levels and 31 old wardens")
+    expected = (18, 6, 31) if CONTENT is not None else (3, 1, 18)
+    if (len(STORY), len(BONUS), len(OLD_WARDENS)) != expected:
+        failures.append("the fixed tables must hold %d story levels, %d bonus levels and %d old wardens" % expected)
+    if CONTENT is None and campaign_packages.missing_wings(ROOT) != [2, 3, 4, 5, 6]:
+        failures.append("without content packages wings 2 to 6 must be missing")
     patterns = [(warden, pattern) for warden in OLD_WARDENS for pattern in names_of(warden)]
     entries = [(name, title, guild) for name, title, guild in STORY] + [(name, title, None) for name, title in BONUS]
     for name, title, guild in entries:
-        relative = "levels/campaign/%s.level" % name
-        lines = description_lines(os.path.join(ROOT, relative))
+        path = campaign_packages.level_path(ROOT, name)
+        relative = os.path.relpath(str(path), ROOT).replace("\\", "/")
+        lines = description_lines(str(path))
         if lines is None or len(lines) != 1:
             failures.append("%s must have exactly one Description line in [Info]" % relative)
             continue
@@ -112,7 +124,7 @@ def main():
         print("FAIL " + failure)
     if failures:
         return 1
-    print("campaign level descriptions: 18 raid levels and 6 chambers, no old warden: PASS")
+    print("campaign level descriptions: %d raid levels and %d chambers, no old warden: PASS" % (len(STORY), len(BONUS)))
     return 0
 
 

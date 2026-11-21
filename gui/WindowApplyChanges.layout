@@ -14,7 +14,7 @@
             <Property Name="VertFormatting" Value="TopAligned" />
             <Property name="HorzFormatting" value="WordWrapCentered" />
             <Property name="Area" value="{{0,25},{0,40},{1,-25},{1,-108}}" />
-            <Property name="Text" value="To actually apply this setting,&#0010;Open Dungeons needs to be stopped now.&#0010;Do you want to apply this change now?" />
+            <Property name="Text" value="To actually apply this setting,&#0010;Moreya needs to be stopped now.&#0010;Do you want to apply this change now?" />
         </Window>
         <Window type="OD/MenuTextButton" name="CancelButton" >
             <Property name="Font" value="MedievalSharp-13" />

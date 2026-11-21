@@ -1,0 +1,44 @@
+.\" Process this file with: groff -man -Tlatin1 foo.1
+.\" Please report any issue with this man page at
+.\" https://github.com/Rokk001/Moreya/issues
+.TH MOREYA 6 "November 2026" Linux
+.SH NAME
+Moreya \- real-time strategy game in an underground dungeon
+.SH SYNOPSIS
+.B moreya
+.SH DESCRIPTION
+Moreya is an open source real-time strategy game set underground. As the
+keeper of a dungeon you dig, claim and mine, build rooms, traps and doors,
+attract creatures and lead them into battle by dropping them where they are
+needed, casting spells and luring enemies into traps. In the campaign the
+guilds raid your dungeon through the Moreya gate.
+.SH OPTIONS
+.TP
+.B \-\-help
+Shows the version and the list of command-line options.
+.SH FILES
+~/.config/moreya/
+.RS
+User-specific configuration files. At the first start the configuration
+folder of older versions is copied here if it exists.
+.RE
+~/.local/share/moreya/
+.RS
+Holds logs (moreya.log and CEGUI.log), saved games, screenshots and replays.
+At the first start the data folder of older versions is copied here if it
+exists.
+.RE
+@OD_DATA_PATH@/
+.RS
+Arch-independent game data files
+.RE
+@OD_SHARE_PATH@/doc/moreya/
+.RS
+Additional documentation files
+.RE
+.SH BUGS
+If you encounter a bug, please report it at
+\fIhttps://github.com/Rokk001/Moreya/issues\fR.
+.SH AUTHOR
+This man page was first written by Rémi Verschelde <remi@verschelde.fr> for
+OpenDungeons, the game Moreya is based on, and adapted for Moreya.

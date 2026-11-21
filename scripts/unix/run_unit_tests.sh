@@ -1,7 +1,7 @@
 #!/bin/bash
-# Shell script to run the unit tests for OpenDungeons
+# Shell script to run the unit tests for Moreya
 
-OD_BINARY="opendungeons-plus"
+OD_BINARY="moreya"
 TEST_BASENAME="boosttest-source_tests-"
 
 if [ ! -x $(pwd)/${OD_BINARY} ]; then
