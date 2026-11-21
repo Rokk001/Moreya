@@ -355,11 +355,19 @@ class PartBuilder:
     """Collects faces with a material and a grain direction for the signpost and makes one mesh of them."""
 
     def __init__(self, name, seed):
-        """Starts an empty part list with its own random sequence."""
+        """Starts an empty part list with its own random sequence.
+
+        board_material names the material of the board front face, board_box gives the board outline (back end, tip,
+        lower and upper edge) that its texture spans, and to_board maps a final point back into the untilted board
+        frame (None when the board lies in the XZ plane as built), so other signposts can reuse the builder.
+        """
         self.name = name
         self.vertices = []
         self.faces = []
         self.rng = random.Random(seed)
+        self.board_material = "MenuSignpostBoard"
+        self.board_box = (BOARD_BACK, BOARD_TIP, BOARD_BOTTOM, BOARD_TOP)
+        self.to_board = None
 
     def face(self, points, material, grain=(0, 0, 1), board=False):
         """Adds one polygon given by world points with its material, grain axis and board mapping flag."""
@@ -368,7 +376,11 @@ class PartBuilder:
         self.faces.append((tuple(range(start, start + len(points))), material, Vector(grain), board))
 
     def solid(self, outline, axis, material, grain, front_board=False):
-        """Extrudes a convex outline (list of world points of the back cap) along a vector into a closed solid."""
+        """Extrudes a convex outline (list of world points of the back cap) along a vector into a closed solid.
+
+        Every face winds counter-clockwise seen from outside, so its normal points out of the solid (the side faces
+        used to wind the other way and faced inwards).
+        """
         back = [Vector(point) for point in outline]
         front = [point + Vector(axis) for point in back]
         count = len(back)
@@ -377,10 +389,10 @@ class PartBuilder:
             back.reverse()
             front.reverse()
         self.face(back, material, grain)
-        self.face(list(reversed(front)), "MenuSignpostBoard" if front_board else material, grain, front_board)
+        self.face(list(reversed(front)), self.board_material if front_board else material, grain, front_board)
         for index in range(count):
             following = (index + 1) % count
-            self.face((back[index], back[following], front[following], front[index]), material, grain)
+            self.face((back[index], front[index], front[following], back[following]), material, grain)
 
     def log_column(self, base, top, radius, top_radius, material, sides=9, rough=0.018):
         """Adds a slightly irregular many-sided timber or iron column between two points."""
@@ -441,8 +453,9 @@ class PartBuilder:
             for loop_index in polygon.loop_indices:
                 point = mesh.vertices[mesh.loops[loop_index].vertex_index].co
                 if board:
-                    uv.data[loop_index].uv = ((point.x - BOARD_BACK) / (BOARD_TIP - BOARD_BACK),
-                                              (point.z - BOARD_BOTTOM) / (BOARD_TOP - BOARD_BOTTOM))
+                    local = self.to_board @ point if self.to_board is not None else point
+                    back, tip, bottom, top = self.board_box
+                    uv.data[loop_index].uv = ((local.x - back) / (tip - back), (local.z - bottom) / (top - bottom))
                 else:
                     uv.data[loop_index].uv = (point.dot(side) * 1.4 + offset, point.dot(along) * 0.7)
         return obj

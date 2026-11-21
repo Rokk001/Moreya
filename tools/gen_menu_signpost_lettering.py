@@ -13,7 +13,15 @@ The letters keep clear of the two iron straps at the back end (u up to about 0.2
 gui/fonts/MedievalSharp-Bold.ttf, the menu font. The result is deterministic (fixed random seed).
 
 Run from anywhere: python tools/gen_menu_signpost_lettering.py [<repo>]
+
+The Moreya signpost at the staircase behind the campaign table (models/MenuMoreyaSignpost.mesh,
+tools/blender-assets/menu_moreya_entrance.py) uses the same planks with the word "Moreya":
+
+    python tools/gen_menu_signpost_lettering.py [<repo>] --text Moreya --output MenuMoreyaSignpostBoard
+
+writes materials/textures/menu/MenuMoreyaSignpostBoard.png and MenuMoreyaSignpostBoardNormal.png.
 """
+import argparse
 import sys
 from pathlib import Path
 
@@ -45,21 +53,21 @@ def save_rgb(path, rgb):
     Image.fromarray((numpy.clip(rgb, 0.0, 1.0) * 255.0 + 0.5).astype(numpy.uint8), "RGB").save(path, optimize=True)
 
 
-def letter_mask(font_path, width, height):
-    """Returns the antialiased coverage (0..1) of the subtitle, as large as fits into the lettering box."""
+def letter_mask(font_path, width, height, text=TEXT):
+    """Returns the antialiased coverage (0..1) of a text (the subtitle by default), as large as fits into the box."""
     box_width = (BOX_RIGHT - BOX_LEFT) * width * SUPERSAMPLE
     box_height = (BOX_BOTTOM - BOX_TOP) * height * SUPERSAMPLE
     size = int(box_height)
     while True:
         font = ImageFont.truetype(str(font_path), size)
-        left, top, right, bottom = font.getbbox(TEXT)
+        left, top, right, bottom = font.getbbox(text)
         if right - left <= box_width and bottom - top <= box_height:
             break
         size -= 2
     canvas = Image.new("L", (width * SUPERSAMPLE, height * SUPERSAMPLE), 0)
     centre_x = (BOX_LEFT + BOX_RIGHT) * 0.5 * width * SUPERSAMPLE
     centre_y = (BOX_TOP + BOX_BOTTOM) * 0.5 * height * SUPERSAMPLE
-    ImageDraw.Draw(canvas).text((centre_x - (left + right) * 0.5, centre_y - (top + bottom) * 0.5), TEXT, fill=255,
+    ImageDraw.Draw(canvas).text((centre_x - (left + right) * 0.5, centre_y - (top + bottom) * 0.5), text, fill=255,
                                 font=font)
     canvas = canvas.resize((width, height), Image.LANCZOS)
     return numpy.asarray(canvas, dtype=numpy.float64) / 255.0
@@ -103,17 +111,23 @@ def lettered_board(colour, normal, mask, rng):
 
 
 def main():
-    """Writes the lettered board texture and normal map of the start screen signpost."""
-    repo = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]
+    """Writes the lettered board texture and normal map of a signpost (the subtitle board unless --text is given)."""
+    parser = argparse.ArgumentParser(description="Paint a text onto a copy of the signpost board planks.")
+    parser.add_argument("repo", nargs="?", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--text", default=TEXT)
+    parser.add_argument("--output", default="MenuSignpostBoardLettered",
+                        help="base name of the written colour texture (the normal map adds Normal)")
+    arguments = parser.parse_args(sys.argv[1:])
+    repo = arguments.repo
     folder = repo / "materials/textures/menu"
     colour = load_rgb(folder / "MenuSignpostBoard.png")
     normal = load_rgb(folder / "MenuSignpostBoardNormal.png")
     height, width = colour.shape[:2]
-    mask = letter_mask(repo / "gui/fonts/MedievalSharp-Bold.ttf", width, height)
+    mask = letter_mask(repo / "gui/fonts/MedievalSharp-Bold.ttf", width, height, arguments.text)
     rng = numpy.random.default_rng(4711)
     lettered, carved = lettered_board(colour, normal, mask, rng)
-    save_rgb(folder / "MenuSignpostBoardLettered.png", lettered)
-    save_rgb(folder / "MenuSignpostBoardLetteredNormal.png", carved)
+    save_rgb(folder / (arguments.output + ".png"), lettered)
+    save_rgb(folder / (arguments.output + "Normal.png"), carved)
     columns = numpy.nonzero(mask.max(axis=0) > 0.5)[0]
     rows = numpy.nonzero(mask.max(axis=1) > 0.5)[0]
     print("lettering u %.3f..%.3f, v %.3f..%.3f" % (columns[0] / width, columns[-1] / width, rows[0] / height,
