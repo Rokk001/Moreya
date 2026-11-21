@@ -23,14 +23,12 @@
 #include <boost/property_tree/ptree.hpp>
 
 #include <istream>
+#include <iterator>
 #include <sstream>
 
 namespace
 {
 typedef boost::property_tree::ptree Tree;
-
-//! Most groups or raids a level sends
-const uint32_t MAX_GROUPS = 2;
 
 //! Reads a JSON array of integers; returns false if it has fewer than count entries
 bool readInts(const Tree& node, size_t count, std::vector<int>& values)
@@ -69,34 +67,13 @@ bool readPoint(const Tree& parent, const char* key, int& x, int& y)
     return true;
 }
 
-//! \brief Reads the level file and the place of a cave marker, and of its label when withLabel is set; returns false
-//! if one is missing or the size is not positive
+//! \brief Reads the place of a cave marker, and of its label when withLabel is set; returns false if one is missing
+//! or the size is not positive. A cave names no level file and no guild: both come from the wing package.
 bool readCavePlace(const Tree& node, bool withLabel, CampaignWorldCave& cave)
 {
-    cave.mFile = node.get<std::string>("file");
     cave.mSize = node.get<int>("size");
-    return !cave.mFile.empty() && (cave.mSize > 0) && readPoint(node, "pos", cave.mX, cave.mY)
+    return (cave.mSize > 0) && readPoint(node, "pos", cave.mX, cave.mY)
         && (!withLabel || readRect(node, "label", cave.mLabel));
-}
-
-//! \brief Reads the guild of a story cave; returns false if a name, the leader, the origin, an image or a valid
-//! raid size is missing
-bool readGuild(const Tree& node, CampaignWorldGuild& guild)
-{
-    guild.mName = node.get<std::string>("name");
-    guild.mLeader = node.get<std::string>("leader");
-    guild.mFirstLeader = node.get<std::string>("first_leader", std::string());
-    guild.mOrigin = node.get<std::string>("origin");
-    guild.mGroups = node.get<uint32_t>("groups");
-    guild.mSize = node.get<uint32_t>("size");
-    std::string kind = node.get<std::string>("kind");
-    guild.mRaid = (kind == "raid");
-    guild.mBanner = node.get<std::string>("banner");
-    guild.mPortrait = node.get<std::string>("portrait");
-    return !guild.mName.empty() && !guild.mLeader.empty() && !guild.mOrigin.empty()
-        && !guild.mBanner.empty() && !guild.mPortrait.empty()
-        && (guild.mGroups >= 1) && (guild.mGroups <= MAX_GROUPS) && (guild.mSize > 0)
-        && ((kind == "raid") || (kind == "group"));
 }
 
 //! \brief The number as a word for the counts of groups a level can send, else as digits
@@ -138,7 +115,7 @@ void CampaignWorld::clear()
 }
 
 //! \brief Reads the map of Moreya: size and image, cave icons, title, progress and guild panel, then the 6 wings with
-//! their 3 story caves (each with its guild) and their bonus cave. Anything missing makes the whole map invalid.
+//! their 3 story caves and their bonus cave. Anything missing makes the whole map invalid.
 bool CampaignWorld::importDefinition(std::istream& is)
 {
     clear();
@@ -204,7 +181,8 @@ bool CampaignWorld::importDefinition(std::istream& is)
             {
                 CampaignWorldCave cave;
                 cave.mWing = wing.mNumber;
-                if(!readCavePlace(level->second, true, cave) ||!readGuild(level->second.get_child("guild"), cave.mGuild))
+                cave.mOrder = static_cast<uint32_t>(std::distance(levels.begin(), level));
+                if(!readCavePlace(level->second, true, cave))
                 {
                     clear();
                     return false;
@@ -239,12 +217,23 @@ bool CampaignWorld::importDefinition(std::istream& is)
     return true;
 }
 
-//! \brief Finds the cave of a level by the level file of the campaign definition
-size_t CampaignWorld::findCave(const std::string& file) const
+//! \brief Finds the campaign level on a cave: the story level of the cave's wing with the cave's order, or the bonus
+//! level of the wing
+size_t CampaignWorld::findLevel(const Campaign& campaign, size_t cave) const
+{
+    if(cave >= mCaves.size())
+        return campaign.getNumLevels();
+
+    const CampaignWorldCave& worldCave = mCaves[cave];
+    return campaign.findLevelInWing(worldCave.mWing, worldCave.mBonus, worldCave.mOrder);
+}
+
+//! \brief Finds the cave whose campaign level is that level
+size_t CampaignWorld::findCave(const Campaign& campaign, size_t level) const
 {
     for(size_t i = 0; i < mCaves.size(); ++i)
     {
-        if(mCaves[i].mFile == file)
+        if((level < campaign.getNumLevels()) && (findLevel(campaign, i) == level))
             return i;
     }
     return mCaves.size();
@@ -277,7 +266,7 @@ CampaignCaveState CampaignWorld::getCaveState(const Campaign& campaign, size_t c
         return CampaignCaveState::hidden;
 
     const CampaignWorldCave& worldCave = mCaves[cave];
-    level = campaign.findLevelByFile(worldCave.mFile);
+    level = findLevel(campaign, cave);
     if(level >= campaign.getNumLevels())
         return worldCave.mBonus ? CampaignCaveState::hidden : CampaignCaveState::locked;
 
@@ -321,7 +310,7 @@ size_t CampaignWorld::findCurrentCave(const Campaign& campaign) const
     if(current >= campaign.getNumLevels())
         return mCaves.size();
 
-    size_t cave = findCave(campaign.getLevel(current).mFile);
+    size_t cave = findCave(campaign, current);
     if((cave < mCaves.size()) && mCaves[cave].mBonus)
         return mCaves.size();
 

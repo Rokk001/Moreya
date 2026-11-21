@@ -658,7 +658,7 @@ def collect_sources(against):
             continue
         names[:] = sorted(name for name in names if name != "rework")
         for name in sorted(files):
-            if not (name.endswith(".level") or name == "Campaign.cfg"):
+            if not (name.endswith(".level") or name in ("Campaign.cfg", "Package.cfg")):
                 continue
             path = os.path.join(directory, name)
             with open(path, "rb") as handle:
@@ -734,14 +734,22 @@ def check_files(files, against):
 
 
 def default_files():
-    """Return all .level files and Campaign.cfg files below the levels folder."""
+    """Return all .level files and campaign definitions (Campaign.cfg, Package.cfg) below the levels folder, and
+    those of the content packages when the content repository is present (scripts/campaign_packages.py)."""
     root = os.path.join(repository_root(), "levels")
+    folders = [root]
+    sys.path.insert(0, os.path.join(repository_root(), "scripts"))
+    import campaign_packages
+    content = campaign_packages.content_folder(repository_root())
+    if content is not None:
+        folders.append(str(content))
     files = []
-    for directory, names, names_files in os.walk(root):
-        names.sort()
-        for name in sorted(names_files):
-            if name.endswith(".level") or name == "Campaign.cfg":
-                files.append(os.path.join(directory, name))
+    for folder in folders:
+        for directory, names, names_files in os.walk(folder):
+            names.sort()
+            for name in sorted(names_files):
+                if name.endswith(".level") or name in ("Campaign.cfg", "Package.cfg"):
+                    files.append(os.path.join(directory, name))
     return files
 
 

@@ -58,44 +58,27 @@ WORD_DIRECTIVE = "word:"
 # Blocked path prefixes, filled from the "path:" lines of the term list.
 BLOCKED_PREFIXES = []
 
-# Placeholder campaign files that exist in origin/integration/all.
+# Placeholder campaign files that exist in origin/integration/all, as exact paths. The campaign is read from wing
+# packages: the public package of wing 1 lies in levels/campaign/wing1/ (definition, licence and its 4 levels);
+# the packages of wings 2 to 6 are not part of this repository, so their former files are no longer allowed here.
 CAMPAIGN_ALLOW_LIST = [
     "levels/campaign/Bonus1.level",
-    "levels/campaign/Campaign.cfg",
     "levels/campaign/Campaign1.level",
     "levels/campaign/Campaign2.level",
     "levels/campaign/Campaign3.level",
-    "levels/campaign/Mossgate.level",
-    "levels/campaign/Brackenford.level",
-    "levels/campaign/Coldwell.level",
-    "levels/campaign/Tinmoor.level",
-    "levels/campaign/Ravensledge.level",
-    "levels/campaign/Ashcombe.level",
-    "levels/campaign/Greywater.level",
-    "levels/campaign/HollinFen.level",
-    "levels/campaign/Saltmere.level",
     "levels/campaign/Dunmarrow.level",
-    "levels/campaign/Ironbridge.level",
     "levels/campaign/Wolfscar.level",
-    "levels/campaign/Lanternhill.level",
-    "levels/campaign/Cinderhollow.level",
     "levels/campaign/Thornreach.level",
-    "levels/campaign/Bellwick.level",
-    "levels/campaign/Highcairn.level",
     "levels/campaign/Stormhaven.level",
     "levels/campaign/Mirewatch.level",
-    "levels/campaign/Goldspire.level",
     "levels/campaign/Ebonrook.level",
-    "levels/campaign/VarnsCrossing.level",
     "levels/campaign/Silverdeep.level",
-    "levels/campaign/Wraithwood.level",
-    "levels/campaign/Kingsfall.level",
-    "levels/campaign/HollowmarkCitadel.level",
-    "levels/campaign/BoulderCourse.level",
-    "levels/campaign/CrowshotGallery.level",
-    "levels/campaign/TwistingHalls.level",
-    "levels/campaign/SkittleCavern.level",
-    "levels/campaign/SwarmNight.level",
+    "levels/campaign/wing1/Package.cfg",
+    "levels/campaign/wing1/LICENSE.txt",
+    "levels/campaign/wing1/Brackenford.level",
+    "levels/campaign/wing1/Coldwell.level",
+    "levels/campaign/wing1/Ravensledge.level",
+    "levels/campaign/wing1/Mossgate.level",
 ]
 
 CAMPAIGN_PREFIX = "levels/campaign/"

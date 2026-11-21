@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Non-compiling check of the rebuilt campaign maps of Moreya (raid plan R5, MAP1-MAP4, MAP7, CS2-CS5, RA1, RA5, RA9).
 
-Every story level of Campaign.cfg must have the Moreya gate at its fixed tile (the central tile of the only hero
+Every story level of the wing packages must have the Moreya gate at its fixed tile (the central tile of the only hero
 portal room, owned by the raid seat), a [Raid] section whose groups have the fixed sizes of the structure table, the
 named leader(s) of the structure table, members with a fixed skill template each, the attacked keeper as target, a
 treasury of that keeper, a main goal completed by "Cond raid defeated", exactly its fixed main goals and victory
@@ -23,6 +23,8 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import campaign_packages  # noqa: E402
 START = time.perf_counter()
 FAILURES = []
 
@@ -345,16 +347,19 @@ def check_victory(name, text, human):
 
 def main():
     """Runs every item of the check and prints the result."""
-    campaign = read("levels/campaign/Campaign.cfg")
+    # The wing packages: all 24 levels with the content repository, the 4 of wing 1 without it
+    campaign = campaign_packages.definition_text(ROOT)
     configured = re.findall(r"^File=campaign/(\w+)\.level\s*$", campaign, re.M)
-    story_names = [entry[0] for entry in STORY]
-    bonus_names = [entry[0] for entry in BONUS]
+    story_names = campaign_packages.checked_names(ROOT, [entry[0] for entry in STORY])
+    bonus_names = campaign_packages.checked_names(ROOT, [entry[0] for entry in BONUS])
     check(sorted(configured) == sorted(story_names + bonus_names),
-          "Campaign.cfg must list exactly the 18 story and 6 bonus levels of the structure table")
+          "the packages must list exactly the story and bonus levels of the structure table")
     discover_expected = {first: "campaign/%s.level" % bonus for bonus, first in BONUS}
 
     for name, gate, sizes, fixed_leaders, leader_names in STORY:
-        text = read("levels/campaign/%s.level" % name)
+        if name not in story_names:
+            continue
+        text = campaign_packages.read_level(ROOT, name).replace("\r\n", "\n")
         human = human_seat(text)
         check(human is not None, name + ": no single human keeper seat")
         if human is None:
@@ -370,7 +375,7 @@ def main():
               % (spawned, before[1]))
 
     for name in story_names + bonus_names:
-        text = read("levels/campaign/%s.level" % name)
+        text = campaign_packages.read_level(ROOT, name).replace("\r\n", "\n")
         human = human_seat(text)
         all_triggers = triggers(text)
         shards = [(trigger, conditions) for trigger, conditions, actions in all_triggers
@@ -396,7 +401,7 @@ def main():
               name + ": nothing is carried to the next level (keepminion)")
 
     for name in bonus_names:
-        text = read("levels/campaign/%s.level" % name)
+        text = campaign_packages.read_level(ROOT, name).replace("\r\n", "\n")
         check(section(text, "Raid") is None, name + ": a bonus level has no raid ([Raid] section)")
         groups = section(text, "CombatGroups")
         check(not any(fields[0] in ("RaidGroup", "RaidMember") for fields in rows(groups)),

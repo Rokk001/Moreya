@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-class Campaign;
+#include "game/Campaign.h"
 
 //! \brief A rectangle in pixels of the campaign map image.
 struct CampaignWorldRect
@@ -41,49 +41,25 @@ struct CampaignWorldRect
     int mHeight;
 };
 
-//! \brief The guild that raids a story level of Moreya: shown in front of the gate while the level is the
-//! current one, and in the tooltip of its cave.
-struct CampaignWorldGuild
-{
-    //! \brief Creates a guild without name that sends one group of no member
-    CampaignWorldGuild():
-        mGroups(0), mSize(0), mRaid(false)
-    {
-    }
+//! \brief The guild that raids a story level of Moreya. It comes with the level from the wing package
+//! (CampaignLevel::mGuild); the map itself names no guild.
+typedef CampaignGuild CampaignWorldGuild;
 
-    //! Name of the guild, shown with its banner
-    std::string mName;
-    //! The named leader of the raid (with the last group or raid of a level with two)
-    std::string mLeader;
-    //! Leader of the first raid when the two raids of a level have different leaders; empty otherwise
-    std::string mFirstLeader;
-    //! Origin of the guild, shown with its banner
-    std::string mOrigin;
-    //! Number of groups or raids (1 or 2)
-    uint32_t mGroups;
-    //! Number of members of each group or raid
-    uint32_t mSize;
-    //! True for raids, false for groups
-    bool mRaid;
-    //! Banner image, relative to the campaign art directory
-    std::string mBanner;
-    //! Leader portrait image, relative to the campaign art directory
-    std::string mPortrait;
-};
-
-//! \brief One cave of the campaign map: a story level (with the guild that raids it) or the bonus cave of a wing.
+//! \brief One cave of the campaign map: a story level or the bonus cave of a wing. The cave names no level; the
+//! campaign level on it is the story level of its wing with its order, or the bonus level of its wing, so a wing
+//! whose package is missing shows locked caves.
 struct CampaignWorldCave
 {
-    //! \brief Creates a story cave of no wing at the origin
+    //! \brief Creates the first story cave of no wing at the origin
     CampaignWorldCave():
-        mWing(0), mBonus(false), mX(0), mY(0), mSize(0)
+        mWing(0), mOrder(0), mBonus(false), mX(0), mY(0), mSize(0)
     {
     }
 
-    //! Level file as in the campaign definition, relative to the "levels" directory
-    std::string mFile;
     //! Wing (1 to 6) the cave belongs to
     uint32_t mWing;
+    //! Order of a story cave in its wing (0 to 2); 0 for the bonus cave
+    uint32_t mOrder;
     //! True for the bonus cave of the wing
     bool mBonus;
     //! Centre of the cave marker in map pixels
@@ -93,8 +69,6 @@ struct CampaignWorldCave
     int mSize;
     //! Where the name of the level is written in map pixels; empty for a bonus cave, whose name is in its tooltip
     CampaignWorldRect mLabel;
-    //! The guild that raids the level; empty for a bonus cave
-    CampaignWorldGuild mGuild;
 };
 
 //! \brief One wing of Moreya on the campaign map: its name, its place and where its progress is shown.
@@ -180,7 +154,7 @@ public:
     CampaignWorld();
 
     //! \brief Reads the JSON description. Returns false if it is invalid or does not have exactly 6 wings in
-    //! order, each with 3 story caves with a guild and one bonus cave.
+    //! order, each with 3 story caves and one bonus cave.
     bool importDefinition(std::istream& is);
 
     //! \brief Width of the map image in pixels
@@ -211,14 +185,17 @@ public:
     const CampaignWorldRect& getTitleCartouche() const
     { return mTitleCartouche; }
 
-    //! \brief Index of the cave of that level file, or the number of caves if none.
-    size_t findCave(const std::string& file) const;
+    //! \brief Index of the campaign level on the cave (Campaign::findLevelInWing), or the number of levels if its
+    //! wing has no such level.
+    size_t findLevel(const Campaign& campaign, size_t cave) const;
+    //! \brief Index of the cave of the campaign level, or the number of caves if none.
+    size_t findCave(const Campaign& campaign, size_t level) const;
     //! \brief Index of the cave whose marker is at the map pixel, or the number of caves if there is none.
     //! Hidden bonus caves are not on the map, so the caller passes the states of the caves (one per cave).
     size_t getCaveAt(float x, float y, const std::vector<CampaignCaveState>& states) const;
 
     //! \brief State of the cave with the campaign's progress. level is set to the campaign level of the cave, or
-    //! to the number of levels if the campaign has no level with its file (such a cave is locked or hidden).
+    //! to the number of levels if the campaign has no level for it (such a cave is locked or hidden).
     CampaignCaveState getCaveState(const Campaign& campaign, size_t cave, size_t& level) const;
     //! \brief Number of story caves of the wing whose level was won
     uint32_t getDefeatedInWing(const Campaign& campaign, uint32_t wing) const;

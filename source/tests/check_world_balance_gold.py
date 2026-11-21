@@ -362,6 +362,12 @@ for line in result.stdout.splitlines():
     fields = [field.strip() for field in line.split('|')]
     if len(fields) == 6:
         found_levels[fields[0]] = tuple(fields[1:])
+# The levels of the content packages are only there with the content repository (scripts/campaign_packages.py)
+sys.path.insert(0, str(ROOT / 'scripts'))
+import campaign_packages  # noqa: E402
+if not campaign_packages.has_content(ROOT):
+    EXPECTED_LEVELS = {name: value for name, value in EXPECTED_LEVELS.items()
+                       if (ROOT / name).is_file() or Path(name).stem in campaign_packages.PUBLIC_LEVELS}
 assert sorted(found_levels) == sorted(EXPECTED_LEVELS), sorted(set(found_levels) ^ set(EXPECTED_LEVELS))
 for level_name, expected in EXPECTED_LEVELS.items():
     assert found_levels[level_name] == expected, (level_name, found_levels[level_name], expected)

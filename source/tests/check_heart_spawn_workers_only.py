@@ -89,7 +89,7 @@ def check_level(rel):
 
 
 skirmish_first = sorted(p.name for p in (repo / "levels/skirmish").glob("*.level"))[0]
-for rel in ("levels/campaign/Brackenford.level", "levels/skirmish/" + skirmish_first):
+for rel in ("levels/campaign/wing1/Brackenford.level", "levels/skirmish/" + skirmish_first):
     print(rel, check_level(rel))
 
 print("check_heart_spawn_workers_only: ok")

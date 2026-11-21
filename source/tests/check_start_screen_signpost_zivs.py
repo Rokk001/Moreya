@@ -293,7 +293,12 @@ def check_ziv_names(failures):
 
     # Levels and the campaign: messages, objectives, descriptions, briefings.
     levels = os.path.join(ROOT, "levels")
-    for folder, _, files in os.walk(levels):
+    # The levels of the content packages too, when the content repository is present
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    import campaign_packages
+    content = campaign_packages.content_folder(ROOT)
+    walks = list(os.walk(levels)) + (list(os.walk(str(content))) if content is not None else [])
+    for folder, _, files in walks:
         for name in sorted(files):
             if not name.endswith((".level", ".cfg")):
                 continue

@@ -18,6 +18,8 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import campaign_packages  # noqa: E402
 START = time.perf_counter()
 FAILURES = []
 
@@ -104,8 +106,10 @@ def main():
         check("PLACEHOLDER" not in documentation, "V1: the documentation of [%s] still names a placeholder" % name)
         for key, value in sorted(expected.items()):
             check(values.get(key) == value, "SIM1: [%s] %s must be %s, is %s" % (name, key, value, values.get(key)))
-    for name, (countdown, interval, escape, levels, healers) in sorted(LEVELS.items()):
-        text = read("levels/campaign/%s.level" % name)
+    # The levels of the wing packages present: all 18 story levels with the content repository, else wing 1
+    for name in campaign_packages.checked_names(ROOT, sorted(LEVELS)):
+        countdown, interval, escape, levels, healers = LEVELS[name]
+        text = campaign_packages.read_level(ROOT, name).replace("\r\n", "\n")
         raid = re.search(r"(?ms)^\[Raid\]$(.*?)^\[/Raid\]$", text).group(1)
         check("PLACEHOLDER" not in raid, name + ": the [Raid] section keeps a PLACEHOLDER line")
         rows = [line.split("\t") for line in raid.split("\n") if line and not line.startswith("#")]

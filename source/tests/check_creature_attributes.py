@@ -10,6 +10,8 @@ import sys
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import campaign_packages  # noqa: E402
 sys.path.insert(0, str(root / 'tools/balance'))
 from combat_sim import combat_stat, multiplier
 
@@ -317,7 +319,8 @@ def check_part_h():
 
     # Level-file creature definitions: the values of the type whose mesh they use
     found_classes = set()
-    for level_file in sorted((root / 'levels').rglob('*.level')):
+    # With the levels of the content packages when the content repository is present
+    for level_file in sorted((root / 'levels').rglob('*.level')) + campaign_packages.content_files(root, ('.level',)):
         level_text = level_file.read_text(encoding='utf-8', errors='replace')
         if '[Creature]' not in level_text:
             continue

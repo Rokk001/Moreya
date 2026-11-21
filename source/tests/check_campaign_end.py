@@ -59,8 +59,12 @@ def main():
     check("static const std::string CAMPAIGN_END_MESSAGE;" in header, "Campaign.h must declare CAMPAIGN_END_MESSAGE")
     check("bool isPlayedLevelCampaignEnd() const;" in header, "Campaign.h must declare isPlayedLevelCampaignEnd")
     end = body(campaign, "bool Campaign::isPlayedLevelCampaignEnd(")
-    check("mPlayedLevelWon" in end and "getCurrentLevelNoLock() == mLevels.size()" in end,
+    complete = body(campaign, "bool Campaign::isCampaignCompleteNoLock(")
+    check("mPlayedLevelWon" in end and "isCampaignCompleteNoLock()" in end
+          and "getCurrentLevelNoLock() == mLevels.size()" in complete,
           "the campaign ends only after a won level that leaves no story level undefeated")
+    # A missing wing package keeps the campaign open: the map shows the wing locked instead of the end message
+    check("mMissingWings.empty()" in complete, "the campaign ends only while no wing package is missing")
 
     # The menu: the end replaces the map and the debriefing, then the main menu follows
     activate = body(menu, "void MenuModeCampaign::activate(")

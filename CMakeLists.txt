@@ -443,6 +443,7 @@ set(OD_SOURCEFILES
 	${SRC}/eventsystem/Subject.cpp		
 	
     ${SRC}/game/Campaign.cpp
+    ${SRC}/game/CampaignPackages.cpp
     ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/CombatGroupManager.cpp
     ${SRC}/game/CombatGroupRules.cpp
@@ -1036,6 +1037,16 @@ endif()
 #### Installation ################
 ##################################
 
+# The campaign is read from wing packages (folders with a Package.cfg below levels/campaign/ of the game data). Wing 1
+# is part of this repository; a release build (Steam) adds the packages of the private content repository: set
+# MOREYA_CONTENT_DIR to its packages folder and they are installed next to wing 1. Without it the game runs with
+# wing 1 and shows the other wings locked. A run-in-place build finds them through the environment variable
+# MOREYA_CONTENT_DIR at run time instead.
+set(MOREYA_CONTENT_DIR "" CACHE PATH "Folder of the campaign content packages (packages folder of the content repository)")
+if(MOREYA_CONTENT_DIR AND NOT IS_DIRECTORY "${MOREYA_CONTENT_DIR}")
+    message(FATAL_ERROR "MOREYA_CONTENT_DIR is not a folder: ${MOREYA_CONTENT_DIR}")
+endif()
+
 if(UNIX)
     set(OD_PLUGINSCFGFILE ${CMAKE_BINARY_DIR}/plugins.cfg)
 
@@ -1069,6 +1080,11 @@ if(UNIX)
             DESTINATION ${OD_DATA_PATH})
     install(DIRECTORY ${OD_RESOURCES}
             DESTINATION ${OD_DATA_PATH})           
+    # Campaign content packages (wings 2 to 6, private content repository): installed next to the wing 1 package
+    if(MOREYA_CONTENT_DIR)
+        install(DIRECTORY ${MOREYA_CONTENT_DIR}/
+                DESTINATION ${OD_DATA_PATH}/levels/campaign)
+    endif()
 
     # Additional distribution content (desktop file, icons, man page, doc)
     install(FILES ${CMAKE_SOURCE_DIR}/dist/moreya.appdata.xml
@@ -1207,6 +1223,11 @@ elseif(WIN32)
             DESTINATION ${OD_DATA_PATH})
     install(DIRECTORY ${OD_RESOURCES}
             DESTINATION ${OD_DATA_PATH})
+    # Campaign content packages (wings 2 to 6, private content repository): installed next to the wing 1 package
+    if(MOREYA_CONTENT_DIR)
+        install(DIRECTORY ${MOREYA_CONTENT_DIR}/
+                DESTINATION ${OD_DATA_PATH}/levels/campaign)
+    endif()
 
     # Additional distribution content (desktop file, icons, man page, doc)
     install(FILES ${OD_DOC}

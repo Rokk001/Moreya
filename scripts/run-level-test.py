@@ -23,7 +23,7 @@ if all levels passed.
 
 Usage:
     python scripts/run-level-test.py --exe build/windows/Release/moreya.exe
-    python scripts/run-level-test.py --exe ... --seconds 60 levels/campaign/Mossgate.level
+    python scripts/run-level-test.py --exe ... --seconds 60 levels/campaign/wing1/Mossgate.level
     python scripts/run-level-test.py --exe ... --markdown   # result paragraph as markdown
     python scripts/run-level-test.py --exe ... --port 31301   # own server port, for parallel instances
 """
@@ -41,6 +41,8 @@ import tempfile
 import time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import campaign_packages  # noqa: E402
 
 CODE_NAMES = {
     0: "PASS",
@@ -53,15 +55,13 @@ CODE_NAMES = {
 
 
 def campaign_levels():
-    """Level files listed in levels/campaign/Campaign.cfg, in order."""
-    cfg = os.path.join(REPO, "levels", "campaign", "Campaign.cfg")
-    levels = []
-    with open(cfg, encoding="utf-8") as handle:
-        for line in handle:
-            match = re.match(r"\s*File\s*=\s*(\S+)", line)
-            if match:
-                levels.append(os.path.join(REPO, "levels", match.group(1)))
-    return levels
+    """Level files of the campaign wing packages, in campaign order (with the content packages when present)."""
+    return [str(entry["_path"]) for entry in campaign_packages.entries(REPO)]
+
+
+def game_environment():
+    """Environment of a game process: MOREYA_CONTENT_DIR names the content packages when they are present."""
+    return campaign_packages.game_environment(REPO)
 
 
 FRAME_LINE = re.compile(r"^FRAMETIME frames=(\d+) avg_ms=([0-9.eE+-]+)")
@@ -148,7 +148,7 @@ def run_menu_test(exe, seconds, port=None):
     command = [exe, "--menu-test", str(seconds), "--appData", appdata] + port_arguments(port)
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               universal_newlines=True)
+                               universal_newlines=True, env=game_environment())
     process_diagnostic(process, command, port)
     try:
         output, _ = process.communicate(timeout=limit)
@@ -194,7 +194,7 @@ def run_level_with_frame_time(exe, level, seconds, port=None):
     command = [exe, "--run-level", level, "--seconds", str(seconds), "--appData", appdata] + port_arguments(port)
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               universal_newlines=True)
+                               universal_newlines=True, env=game_environment())
     process_diagnostic(process, command, port)
     try:
         output, _ = process.communicate(timeout=limit)
@@ -249,7 +249,7 @@ def main():
     parser.add_argument("--port", type=int, default=None,
                         help="server port of the game (default: an available local TCP port); explicit ports must be unique")
     parser.add_argument("--progress-file", help="append one progress line per finished level to this file")
-    parser.add_argument("levels", nargs="*", help="level files (default: all levels of Campaign.cfg)")
+    parser.add_argument("levels", nargs="*", help="level files (default: all levels of the campaign packages)")
     args = parser.parse_args()
     if args.port is None:
         args.port = available_server_port()

@@ -255,15 +255,24 @@ def apply_result(level, result):
     return lines[:level.tiles_end] + added_lines + lines[level.tiles_end:]
 
 
-# Lists the level files below the root, minus the excluded names (paths with "/" separators).
+# Lists the level files below the root, minus the excluded names, as (name, file): the name is the path with "/"
+# separators. A level of a campaign wing package (scripts/campaign_packages.py; wing 1 in levels/campaign/wing1/,
+# wings 2 to 6 in the content repository when it is present) keeps its former name levels/campaign/<level>.level,
+# the name it has at the base commit.
 def level_paths(root):
+    sys.path.insert(0, str(root / "scripts"))
+    import campaign_packages
     paths = []
     for path in sorted(root.glob("levels/*/*.level")):
         name = path.relative_to(root).as_posix()
         if any(excluded in name for excluded in EXCLUDED_NAMES):
             continue
-        paths.append(name)
-    return paths
+        paths.append((name, path))
+    for entry in campaign_packages.entries(root):
+        name = "levels/" + entry["File"]
+        if not any(excluded in name for excluded in EXCLUDED_NAMES):
+            paths.append((name, entry["_path"]))
+    return sorted(paths)
 
 
 # Reads a level file of the work tree as lines without line ends.
@@ -312,8 +321,7 @@ def summary(name, level, result):
 
 # Rewrites the level files of the work tree (run once).
 def run_apply(root):
-    for name in level_paths(root):
-        path = root / name
+    for name, path in level_paths(root):
         lines = read_lines(path)
         level = Level(lines)
         if not level.starts:
@@ -330,7 +338,7 @@ def run_apply(root):
 # Recomputes every level from the commit and compares only the gold lines with the files; returns the exit code.
 def run_check(root, commit):
     failures = 0
-    for name in level_paths(root):
+    for name, path in level_paths(root):
         # A level that did not exist at the base commit is read from the commit that introduced it
         source_commit = commit if exists_at(root, commit, name) else NEW_LEVELS_BASE_COMMIT
         base_lines = read_lines_at(root, source_commit, name)
@@ -339,7 +347,7 @@ def run_check(root, commit):
             continue
         result = rebalance(level)
         expected = gold_lines(apply_result(level, result))
-        found = gold_lines(read_lines(root / name))
+        found = gold_lines(read_lines(path))
         print(summary(name, level, result))
         if expected != found:
             failures += 1

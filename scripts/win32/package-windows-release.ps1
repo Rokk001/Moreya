@@ -2,10 +2,14 @@
 # Moreya-<version>-windows-x64.zip (one top folder of the same name).
 #
 # Usage: powershell -NoProfile -File scripts\win32\package-windows-release.ps1 [-Build <build dir>] [-OutDir <folder>]
+#            [-Content <content repository>]
 #   -Build   Release build tree that holds moreya.exe, plugins.cfg, resources.cfg and ogre-includes
 #            (default build\windows of this worktree)
 #   -OutDir  folder for the game folder and the zip archive (default out\package of this worktree);
 #            the game folder and the zip must not exist yet.
+#   -Content checkout of the private campaign content repository (the Steam build); the wing packages of its
+#            packages folder at its HEAD are added to levels\campaign next to the wing 1 package. Without it the
+#            package holds the public game: wing 1 playable, wings 2 to 6 locked.
 #
 # Follows the WIN32 install rules of CMakeLists.txt (exe, OGRE/CEGUI/SFML/OIS libraries and the MSVC runtime,
 # plugins.cfg, resources.cfg, the game data folders and the documents), the runtime list of
@@ -15,7 +19,8 @@
 # Machine locations come from windows-paths.ps1 (BUILD_DEPS_ROOT, BUILD_PYTHON_ROOT, BUILD_VS_PATH).
 param(
     [string]$Build = '',
-    [string]$OutDir = ''
+    [string]$OutDir = '',
+    [string]$Content = ''
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
@@ -56,6 +61,20 @@ if ($LASTEXITCODE -ne 0) { throw 'git archive failed' }
 & tar -xf $tar -C $Out
 if ($LASTEXITCODE -ne 0) { throw 'tar extract failed' }
 Remove-Item -LiteralPath $tar
+# Campaign content packages of the private content repository (committed content of its HEAD only)
+if ($Content) {
+    $contentTar = Join-Path $OutDir "$name-content.tar"
+    & git -C (Resolve-Path -LiteralPath $Content).Path archive --format=tar -o $contentTar HEAD packages
+    if ($LASTEXITCODE -ne 0) { throw 'git archive of the content packages failed' }
+    $contentDir = Join-Path $OutDir "$name-content"
+    New-Item -ItemType Directory -Force $contentDir | Out-Null
+    & tar -xf $contentTar -C $contentDir
+    if ($LASTEXITCODE -ne 0) { throw 'tar extract of the content packages failed' }
+    Get-ChildItem -LiteralPath (Join-Path $contentDir 'packages') -Directory |
+        ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $Out 'levels\campaign') -Recurse }
+    Remove-Item -LiteralPath $contentTar
+    Remove-Item -LiteralPath $contentDir -Recurse
+}
 
 # Libraries: the external libraries of the install rules and the runtime list of prepare-windows-runtime.ps1
 $dlls = 'OgreMain.dll', 'OgreOverlay.dll', 'OgreRTShaderSystem.dll', 'OgreBites.dll',

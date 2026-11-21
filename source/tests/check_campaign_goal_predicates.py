@@ -1,6 +1,7 @@
 """Check exact ground and room-ownership source contracts; does not execute C++ or gameplay."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
 runner = (root / 'source/gamemap/LevelScriptRunner.cpp').read_text(encoding='utf-8')
@@ -44,7 +45,10 @@ assert 'os << "groundconnected\\t"' in parser
 assert '? "roomclaimed\\t" : "groundclaimed\\t"' in parser
 
 # Victory packets snapshot goals immediately: every new pure observer and its display dependencies must run first.
-for level in sorted((root / 'levels/campaign').glob('*.level')):
+# Every campaign level of the wing packages and the dropped maps of levels/campaign/ (scripts/campaign_packages.py)
+sys.path.insert(0, str(root / 'scripts'))
+import campaign_packages  # noqa: E402
+for level in campaign_packages.all_level_files(root):
     blocks = re.findall(r'\[Trigger\].*?\[/Trigger\]', level.read_text(encoding='utf-8'), re.S)
     observers = []
     wins = []
@@ -70,9 +74,11 @@ for level in sorted((root / 'levels/campaign').glob('*.level')):
                     assert dependency < index, str(level) + ': late presentation dependency for ' + name
 # The army observer runs before Kingsfall's only victory; the court victories courtTaken and collectWin were removed
 # with Prince Aurel's court goal (he leads the raid now) and must stay removed.
-kingsfall = (root / 'levels/campaign/Kingsfall.level').read_text(encoding='utf-8')
-army_observer = kingsfall.index('Name\tgoalArmyAtHeart\n')
-assert army_observer < kingsfall.index('Name\tmainVictory\n')
-assert 'Name\tcourtTaken\n' not in kingsfall and 'Name\tcollectWin\n' not in kingsfall
-assert kingsfall.count('Action\twin\t1\n') == 1
+# Kingsfall belongs to the wing 5 content package and is checked when it is present.
+if campaign_packages.has_content(root):
+    kingsfall = campaign_packages.read_level(root, 'Kingsfall')
+    army_observer = kingsfall.index('Name\tgoalArmyAtHeart\n')
+    assert army_observer < kingsfall.index('Name\tmainVictory\n')
+    assert 'Name\tcourtTaken\n' not in kingsfall and 'Name\tcollectWin\n' not in kingsfall
+    assert kingsfall.count('Action\twin\t1\n') == 1
 print('campaign exact ground/room source contracts: ok; C++ and gameplay not executed')

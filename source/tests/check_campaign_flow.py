@@ -1,7 +1,12 @@
 """Static check of two campaign flow rules: new campaign confirmation and the way out of a lost level."""
 from pathlib import Path
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import campaign_packages  # noqa: E402
+# The wing packages of the content repository; without them the public package (wing 1) is checked alone
+has_content = campaign_packages.has_content(repo)
 
 
 def read(path):
@@ -33,13 +38,14 @@ game_map = read('source/gamemap/GameMap.cpp')
 assert 'hasCompletedWinningGoal(seat))' in game_map and '!= "ProtectDungeonTemple"' in game_map
 # The Heartstone has three shards, hidden in level 2 of wings 1 to 3 (Coldwell, Greywater, Saltmere);
 # the six bonus levels (one per wing) carry none, their reward is the item unlock at the merchant.
-campaign = read('levels/campaign/Campaign.cfg')
-blocks = campaign.replace(chr(13), '').split('[Level]')[1:]
+# Wing 1 alone has one bonus level and the shard of Coldwell.
+campaign = campaign_packages.definition_text(repo)
+blocks = [e for e in campaign.replace(chr(13), '').split('[Level]')[1:] if 'File=' in e]
 entries = [e for e in blocks if 'Bonus=1' in e]
-assert len(entries) == 6
+assert len(entries) == (6 if has_content else 1)
 assert not any('Shard=1' in e for e in entries)
 pieces = [e for e in blocks if 'Shard=1' in e]
-assert len(pieces) == 3
+assert len(pieces) == (3 if has_content else 1)
 for piece, file in zip(pieces, ('campaign/Coldwell.level', 'campaign/Greywater.level', 'campaign/Saltmere.level')):
     assert 'File=' + file in piece, file
 assert 'Heartstone=' not in campaign
@@ -48,7 +54,7 @@ assert 'key == "Shard"' in read('source/game/Campaign.cpp') and 'key == "Heartst
 # from wing 4 on) when a campaign level starts
 server = read('source/network/ODServer.cpp')
 assert 'isLevelChampionAvailable()' in server and 'SkillType::spellSummonChampion, championAvailable, championAvailable' in server
-assert [('Champion=1' in e) for e in blocks if 'File=' in e] == [False] * 12 + [True] * 12
+assert [('Champion=1' in e) for e in blocks if 'File=' in e] == ([False] * 12 + [True] * 12 if has_content else [False] * 4)
 campaign_state = read('source/game/Campaign.cpp')
 assert 'return mSavedChampionAvailable;' in campaign_state and 'return isChampionAvailableNoLock(mPlayedLevel);' in campaign_state
 assert 'return mLevels[index].mChampion;' in campaign_state
