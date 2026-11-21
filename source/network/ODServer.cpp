@@ -451,6 +451,23 @@ namespace
         return static_cast<RoomPortalWave*>(room);
     }
 
+    //! \brief One seat of a seatConfigurationRefresh message, read and checked before it is applied.
+    struct SeatConfigurationEntry
+    {
+        //! \brief Creates an entry with nothing chosen.
+        SeatConfigurationEntry() :
+            mSeat(nullptr),
+            mFactionIndex(-1),
+            mPlayerId(-1),
+            mTeamId(-1)
+        {}
+
+        Seat* mSeat;
+        int32_t mFactionIndex;
+        int32_t mPlayerId;
+        int32_t mTeamId;
+    };
+
     //! \brief Returns true if the socket finished the handshake and its player has a seat, i.e. it takes part in
     //! the running game or editor. Rejected sockets and sockets still in the handshake do not.
     bool isPlayingClient(ODSocketClient* client)
@@ -1807,7 +1824,25 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
         case ClientNotificationType::seatConfigurationRefresh:
         {
+            // Only the player that configures the game may change the seats and the game settings, and only
+            // while the game is configured
+            if(!isSeatConfigurationSender(clientSocket))
+                break;
+
+            // The ids of the connected human players a seat may be given
+            std::vector<int32_t> humanIds;
+            for(ODSocketClient* client : mSockClients)
+            {
+                if((client->getPlayer() != nullptr) && (ServerGuards::STATE_READY == client->getState()))
+                    humanIds.push_back(client->getPlayer()->getId());
+            }
+
+            // The whole message is read and checked before anything is applied, so that a message cut short
+            // changes nothing
             const std::vector<std::string>& factions = ConfigManager::getSingleton().getFactions();
+            std::vector<SeatConfigurationEntry> seatEntries;
+            std::vector<int32_t> usedHumanIds;
+            bool seatsRead = true;
             for(Seat* seat : gameMap->getSeats())
             {
                 // Rogue seat do not have to be configured
@@ -1816,43 +1851,155 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
                 int seatId;
                 bool isSet;
-                OD_ASSERT_TRUE(packetReceived >> seatId);
-                OD_ASSERT_TRUE_MSG(seatId == seat->getId(), "seatId=" + Helper::toString(seatId) + ", seat->getId()=" + Helper::toString(seat->getId()));
+                if(!(packetReceived >> seatId))
+                {
+                    seatsRead = false;
+                    break;
+                }
+                if(seatId != seat->getId())
+                {
+                    OD_LOG_WRN("Seat configuration in a wrong order seatId=" + Helper::toString(seatId)
+                        + ", seat->getId()=" + Helper::toString(seat->getId()));
+                    seatsRead = false;
+                    break;
+                }
 
-                OD_ASSERT_TRUE(packetReceived >> isSet);
+                SeatConfigurationEntry entry;
+                entry.mSeat = seat;
+                if(!(packetReceived >> isSet))
+                {
+                    seatsRead = false;
+                    break;
+                }
                 int32_t factionIndex = -1;
                 if(isSet)
                 {
-                    OD_ASSERT_TRUE(packetReceived >> factionIndex);
+                    if(!(packetReceived >> factionIndex))
+                    {
+                        seatsRead = false;
+                        break;
+                    }
                     if(static_cast<uint32_t>(factionIndex) >= factions.size())
                         factionIndex = -1;
                 }
-                seat->setConfigFactionIndex(factionIndex);
+                entry.mFactionIndex = factionIndex;
 
-                OD_ASSERT_TRUE(packetReceived >> isSet);
+                if(!(packetReceived >> isSet))
+                {
+                    seatsRead = false;
+                    break;
+                }
                 int32_t playerId = -1;
                 if(isSet)
                 {
-                    OD_ASSERT_TRUE(packetReceived >> playerId);
+                    if(!(packetReceived >> playerId))
+                    {
+                        seatsRead = false;
+                        break;
+                    }
                 }
-                seat->setConfigPlayerId(playerId);
+                if(!ServerGuards::isConfigPlayerIdAllowed(playerId, Seat::PLAYER_ID_HUMAN_MIN, humanIds))
+                {
+                    OD_LOG_WRN("Ignored unknown player id=" + Helper::toString(playerId) + " for seatId="
+                        + Helper::toString(seatId));
+                    playerId = -1;
+                }
+                else if(playerId >= Seat::PLAYER_ID_HUMAN_MIN)
+                {
+                    // A human player can only take one seat
+                    if(std::find(usedHumanIds.begin(), usedHumanIds.end(), playerId) != usedHumanIds.end())
+                    {
+                        OD_LOG_WRN("Ignored player id=" + Helper::toString(playerId) + " given a second seatId="
+                            + Helper::toString(seatId));
+                        playerId = -1;
+                    }
+                    else
+                        usedHumanIds.push_back(playerId);
+                }
+                entry.mPlayerId = playerId;
 
-                OD_ASSERT_TRUE(packetReceived >> isSet);
+                if(!(packetReceived >> isSet))
+                {
+                    seatsRead = false;
+                    break;
+                }
                 int32_t teamId = -1;
                 if(isSet)
                 {
-                    OD_ASSERT_TRUE(packetReceived >> teamId);
+                    if(!(packetReceived >> teamId))
+                    {
+                        seatsRead = false;
+                        break;
+                    }
                 }
-                seat->setConfigTeamId(teamId);
+                if(!ServerGuards::isConfigTeamIdAllowed(teamId, seat->getAvailableTeamIds()))
+                {
+                    OD_LOG_WRN("Ignored team id=" + Helper::toString(teamId) + " not available for seatId="
+                        + Helper::toString(seatId));
+                    teamId = -1;
+                }
+                entry.mTeamId = teamId;
+                seatEntries.push_back(entry);
+            }
+            if(!seatsRead)
+            {
+                OD_LOG_WRN("Ignored an incomplete seat configuration from player=" + clientSocket->getPlayer()->getNick());
+                break;
             }
 
             // The skirmish game settings follow the seats
             uint32_t goldDensityPercent = GameMap::SKIRMISH_PERCENT_DEFAULT;
             uint32_t manaRegenerationPercent = GameMap::SKIRMISH_PERCENT_DEFAULT;
             uint32_t maxCreaturesSetting = 0;
-            OD_ASSERT_TRUE(packetReceived >> goldDensityPercent);
-            OD_ASSERT_TRUE(packetReceived >> manaRegenerationPercent);
-            OD_ASSERT_TRUE(packetReceived >> maxCreaturesSetting);
+            packetReceived >> goldDensityPercent;
+            packetReceived >> manaRegenerationPercent;
+            packetReceived >> maxCreaturesSetting;
+
+            uint32_t gameSpeedPercent = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+            uint32_t gameDurationMinutes = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+            uint32_t fogOfWar = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+            uint32_t heartDestroyedReward = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+            packetReceived >> gameSpeedPercent;
+            packetReceived >> gameDurationMinutes;
+            packetReceived >> fogOfWar;
+            packetReceived >> heartDestroyedReward;
+
+            std::vector<std::pair<std::string, uint32_t>> creatureLimits;
+            uint32_t nbCreatureLimits = 0;
+            packetReceived >> nbCreatureLimits;
+            for(uint32_t i = 0; packetReceived && (i < nbCreatureLimits); ++i)
+            {
+                std::string className;
+                uint32_t limit;
+                if(packetReceived >> className >> limit)
+                    creatureLimits.push_back(std::pair<std::string, uint32_t>(className, limit));
+            }
+
+            std::vector<std::pair<uint32_t, uint32_t>> skillStates;
+            uint32_t nbSkillStates = 0;
+            packetReceived >> nbSkillStates;
+            for(uint32_t i = 0; packetReceived && (i < nbSkillStates); ++i)
+            {
+                uint32_t skillType;
+                uint32_t skillState;
+                if(packetReceived >> skillType >> skillState)
+                    skillStates.push_back(std::pair<uint32_t, uint32_t>(skillType, skillState));
+            }
+
+            if(!packetReceived)
+            {
+                OD_LOG_WRN("Ignored a seat configuration with incomplete game settings from player="
+                    + clientSocket->getPlayer()->getNick());
+                break;
+            }
+
+            for(const SeatConfigurationEntry& entry : seatEntries)
+            {
+                entry.mSeat->setConfigFactionIndex(entry.mFactionIndex);
+                entry.mSeat->setConfigPlayerId(entry.mPlayerId);
+                entry.mSeat->setConfigTeamId(entry.mTeamId);
+            }
+
             // A setting the page has not shown yet is not chosen: the value of the server is kept
             if(goldDensityPercent == GameMap::SKIRMISH_SETTING_UNCHOSEN)
                 goldDensityPercent = gameMap->getGoldDensityPercent();
@@ -1862,14 +2009,6 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 maxCreaturesSetting = gameMap->getMaxCreaturesSetting();
             gameMap->setSkirmishSettings(goldDensityPercent, manaRegenerationPercent, maxCreaturesSetting);
 
-            uint32_t gameSpeedPercent;
-            uint32_t gameDurationMinutes;
-            uint32_t fogOfWar;
-            uint32_t heartDestroyedReward = GameMap::SKIRMISH_SETTING_UNCHOSEN;
-            OD_ASSERT_TRUE(packetReceived >> gameSpeedPercent);
-            OD_ASSERT_TRUE(packetReceived >> gameDurationMinutes);
-            OD_ASSERT_TRUE(packetReceived >> fogOfWar);
-            OD_ASSERT_TRUE(packetReceived >> heartDestroyedReward);
             if(gameSpeedPercent == GameMap::SKIRMISH_SETTING_UNCHOSEN)
                 gameSpeedPercent = gameMap->getGameSpeedPercent();
             if(gameDurationMinutes == GameMap::SKIRMISH_SETTING_UNCHOSEN)
@@ -1880,24 +2019,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 heartDestroyedReward = gameMap->getHeartDestroyedReward();
             gameMap->setGameRules(gameSpeedPercent, gameDurationMinutes, fogOfWar != 0, heartDestroyedReward);
 
-            uint32_t nbCreatureLimits;
-            OD_ASSERT_TRUE(packetReceived >> nbCreatureLimits);
-            for(uint32_t i = 0; i < nbCreatureLimits; ++i)
+            for(const std::pair<std::string, uint32_t>& creatureLimit : creatureLimits)
             {
-                std::string className;
-                uint32_t limit;
-                OD_ASSERT_TRUE(packetReceived >> className >> limit);
+                const std::string& className = creatureLimit.first;
+                uint32_t limit = creatureLimit.second;
                 if(limit != GameMap::SKIRMISH_SETTING_UNCHOSEN)
                     gameMap->setCreatureClassLimit(className, limit);
             }
 
-            uint32_t nbSkillStates;
-            OD_ASSERT_TRUE(packetReceived >> nbSkillStates);
-            for(uint32_t i = 0; i < nbSkillStates; ++i)
+            for(const std::pair<uint32_t, uint32_t>& skillTypeState : skillStates)
             {
-                uint32_t skillType;
-                uint32_t skillState;
-                OD_ASSERT_TRUE(packetReceived >> skillType >> skillState);
+                uint32_t skillType = skillTypeState.first;
+                uint32_t skillState = skillTypeState.second;
                 if(skillState > static_cast<uint32_t>(GameMap::SkirmishItemState::needsResearch))
                     continue;
                 if(skillType >= static_cast<uint32_t>(SkillType::countSkill))
@@ -1918,6 +2051,10 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 OD_LOG_ERR("Wrong server state=" + Helper::toString(static_cast<int>(mServerState)));
                 break;
             }
+
+            // Only the player that configures the game may start it
+            if(!isSeatConfigurationSender(clientSocket))
+                break;
 
             bool isConfigured = true;
             for(Seat* seat : gameMap->getSeats())
@@ -4336,6 +4473,26 @@ int32_t ODServer::getNetworkPort() const
         return port;
 
     return ConfigManager::getSingleton().getNetworkPort();
+}
+
+//! \brief Returns true if the socket may change or confirm the seat configuration: the game is configured and its
+//! player is the one that configures the game. Logs a warning otherwise.
+bool ODServer::isSeatConfigurationSender(ODSocketClient* clientSocket)
+{
+    Player* player = clientSocket->getPlayer();
+    if(mServerState != ServerState::StateConfiguration)
+    {
+        OD_LOG_WRN("Ignored seat configuration outside of the configuration, state="
+            + Helper::toString(static_cast<int>(mServerState)));
+        return false;
+    }
+    if((player == nullptr) || (player != mPlayerConfig))
+    {
+        OD_LOG_WRN("Ignored seat configuration from a player that does not configure the game: "
+            + (player == nullptr ? std::string("no player") : player->getNick()));
+        return false;
+    }
+    return true;
 }
 
 void ODServer::printConsoleMsg(const std::string& text)

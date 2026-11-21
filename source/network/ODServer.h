@@ -201,6 +201,10 @@ private:
     //! maximum creatures, creature class limits and skill availability) to every client
     void fireSeatConfigurationRefresh();
 
+    //! \brief Returns true if the socket may change or confirm the seat configuration: the game is configured and
+    //! its player is the one that configures the game (mPlayerConfig). Logs a warning otherwise.
+    bool isSeatConfigurationSender(ODSocketClient* clientSocket);
+
     //! \brief Handles console command. player is the player that launched the command
     void handleConsoleCommand(Player* player, GameMap* gameMap, const std::vector<std::string>& args);
 };
