@@ -16,6 +16,9 @@ gui/ODMenuTemplate.imageset:
 * the window frame of the load screen (corners, edges, knobs) and its list inset as named parts of the panel, a seamless
   interior wood tile woven from the empty panel wood, and the iron border the sheet draws around the whole screen.
   The imageset is scaled by the game like the sheet (Gui.cpp: 1920x1200 sheet pixels = 1.5625 per design pixel).
+* the scrollbar the sheet paints beside the list (rail with the up and down arrow boxes and the thumb), cut into the
+  up arrow box, the down arrow box, a piece of the empty rail and the thumb in three parts, for the scrollbars and the
+  drop-down arrow of the in-game windows (OD/SheetScrollbar, OD/SheetCombobox in OD.looknfeel).
 
 Usage: python tools/make_menu_template.py [path of variant-2.png]
 """
@@ -97,6 +100,14 @@ BORDER_PENDANT = (925, 995)
 ATLAS_SIZE = (1700, 1100)
 BORDER_AT = (1190, 0)
 INTERIOR_AT = (1190, 800)
+# Scrollbar of the list of the load screen (sheet coordinates x0, y0, x1, y1): the two arrow boxes, an empty piece of the
+# rail below the thumb (stretched along the track) and the thumb with its top and bottom ends (the middle is stretched).
+SCROLL_PIECES = (("ScrollUp", (1795, 455, 1842, 496)), ("ScrollDown", (1795, 829, 1842, 870)),
+                 ("ScrollRail", (1795, 625, 1842, 825)), ("ScrollThumbTop", (1808, 509, 1829, 521)),
+                 ("ScrollThumbMiddle", (1808, 521, 1829, 605)), ("ScrollThumbBottom", (1808, 605, 1829, 617)))
+SCROLL_AT = (230, 560)
+SCROLL_GAP = 4
+LIST_ROWS_FREE_RIGHT = 520     # the free atlas column between the compact buttons and the load panel ends here
 STATE_PITCH = 122
 SELECTED_AT = (0, 490)
 PANEL_AT = (524, 0)
@@ -408,6 +419,13 @@ def main():
     tile = interior_tile(sheet)
     atlas[INTERIOR_AT[1]:INTERIOR_AT[1] + INTERIOR_SIZE, INTERIOR_AT[0]:INTERIOR_AT[0] + INTERIOR_SIZE] = tile
     images.append(("FrameInterior", INTERIOR_AT[0], INTERIOR_AT[1], INTERIOR_SIZE, INTERIOR_SIZE))
+    x = SCROLL_AT[0]
+    for name, (x0, y0, x1, y1) in SCROLL_PIECES:
+        piece = np.dstack([sheet[y0:y1, x0:x1], np.full((y1 - y0, x1 - x0), 255.0, np.float32)])
+        atlas[SCROLL_AT[1]:SCROLL_AT[1] + (y1 - y0), x:x + (x1 - x0)] = piece
+        images.append((name, x, SCROLL_AT[1], x1 - x0, y1 - y0))
+        x += (x1 - x0) + SCROLL_GAP
+    assert x <= LIST_ROWS_FREE_RIGHT, "scrollbar pieces overlap the load panel"
     x, y, row_height = BORDER_AT[0], BORDER_AT[1], 0
     for name, piece in screen_border(sheet).items():
         height, width = piece.shape[:2]

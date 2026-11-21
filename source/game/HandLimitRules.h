@@ -79,23 +79,32 @@ uint32_t displaySeconds(double cooldownLeft);
 //! \brief The short message a human keeper gets when a pickup is refused (HL2); empty for Refusal::none.
 std::string refusalMessage(Refusal reason, double cooldownLeft);
 
-//! \brief The text shown at the hand while the cooldown runs (HL2), empty when it is over.
+//! \brief The number shown under the prohibition picture while the cooldown runs (HL2, K5): the whole seconds as
+//! digits only, empty when it is over.
 std::string cooldownText(double cooldownLeft);
 
-//! \brief Place of the cooldown text at the hand, in screen pixels: below the pointer text and moved back inside
-//! the screen, so that it stays readable on every screen size and UI scale.
-//! \param pointerX Horizontal position of the pointer in pixels.
-//! \param pointerY Vertical position of the pointer in pixels.
-//! \param offsetX Horizontal distance of the text from the pointer in pixels (already scaled with the UI).
-//! \param offsetY Vertical distance of the text from the pointer in pixels (already scaled with the UI).
-//! \param textWidth Width of the text in pixels.
-//! \param textHeight Height of the text in pixels.
+//! \brief The whole seconds the prohibition picture shows over a creature (K5): 0, so nothing is drawn, unless the
+//! pointer is over a fighting creature the keeper could otherwise pick up and the cooldown runs.
+//! \param overPickableFighter True when the pointer is over such a creature.
+//! \param cooldownLeft Seconds left of the cooldown.
+uint32_t cooldownIconSeconds(bool overPickableFighter, double cooldownLeft);
+
+//! \brief Place of the prohibition picture and its number, in screen pixels: the picture centred on the given point
+//! of the hovered creature, the number directly under it, both moved back inside the screen so that they stay visible
+//! on every screen size and UI scale.
+//! \param centreX Horizontal screen position of the creature point in pixels.
+//! \param centreY Vertical screen position of the creature point in pixels.
+//! \param iconSize Side of the square picture in pixels (already scaled with the UI).
+//! \param numberWidth Width of the number in pixels.
+//! \param numberHeight Height of the number in pixels.
 //! \param screenWidth Width of the screen in pixels.
 //! \param screenHeight Height of the screen in pixels.
-//! \param left Receives the left edge of the text.
-//! \param top Receives the top edge of the text.
-void cooldownTextPlace(float pointerX, float pointerY, float offsetX, float offsetY, float textWidth,
-    float textHeight, float screenWidth, float screenHeight, float& left, float& top);
+//! \param iconLeft Receives the left edge of the picture.
+//! \param iconTop Receives the top edge of the picture.
+//! \param numberLeft Receives the left edge of the number.
+//! \param numberTop Receives the top edge of the number.
+void cooldownIconPlace(float centreX, float centreY, float iconSize, float numberWidth, float numberHeight,
+    float screenWidth, float screenHeight, float& iconLeft, float& iconTop, float& numberLeft, float& numberTop);
 }
 
 #endif // HANDLIMITRULES_H

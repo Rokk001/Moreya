@@ -331,6 +331,14 @@ public:
     //! \brief Marks the tiles for digging and send the refresh event to concerned player if human
     void markTilesForDigging(bool marked, const std::vector<Tile*>& tiles, bool asyncMsg);
 
+    //! \brief Marks or unmarks places beyond the map edge for digging (human players only). Such a place behaves like
+    //! an undiscovered tile that is never discovered: it reveals nothing and gives no dig work. The player is told
+    //! about the places whose mark changed.
+    void markEdgePlacesForDigging(bool marked, const std::vector<std::pair<int, int> >& places, bool asyncMsg);
+
+    //! \brief Tells the client of this player that the given places beyond the map edge are (un)marked.
+    void notifyEdgePlacesMarked(bool marked, const std::vector<std::pair<int, int> >& places, bool asyncMsg);
+
     //! \brief Gets the spell cooldown in turns for the given spell
     uint32_t getSpellCooldownTurns(SpellType spellType) const;
 

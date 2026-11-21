@@ -4,10 +4,16 @@ material ItemBag
     {
         pass
         {
-            ambient 0.4300 0.2900 0.1500
-            diffuse 0.4300 0.2900 0.1500 1
+            ambient 1 1 1 1
+            diffuse 1 1 1 1
             specular 0.12 0.12 0.12 1 16
             emissive 0.0000 0.0000 0.0000
+            texture_unit
+            {
+                texture ItemBagCloth.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
         }
     }
 }

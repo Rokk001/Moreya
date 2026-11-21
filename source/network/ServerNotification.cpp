@@ -113,6 +113,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "pingEditorAskSetRoundedPositionDraggableTileContainer";            
         case ServerNotificationType::markTiles:
             return "markTiles";
+        case ServerNotificationType::markEdgePlaces:
+            return "markEdgePlaces";
         case ServerNotificationType::refreshTiles:
             return "refreshTiles";           
         case ServerNotificationType::refreshVisibleTiles:

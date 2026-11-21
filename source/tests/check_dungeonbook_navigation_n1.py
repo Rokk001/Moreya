@@ -9,7 +9,8 @@ repo = Path(__file__).resolve().parents[2]
 source = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
 book = ET.parse(repo / 'gui/WindowSocial.layout').getroot().find('Window')
 home = book.find("Window[@name='HomePage']")
-assert home.find("Window[@name='Filter']").get('type') == 'OD/Combobox'
+# The filter is a drop-down built from the parts of the chosen menu sheet (INGAME-QS-12 K8; OD/Combobox before)
+assert home.find("Window[@name='Filter']").get('type') == 'OD/SheetCombobox'
 assert home.find("Window[@name='Filter']/Property[@name='ReadOnly']").get('value') == 'True'
 assert all(label in source for label in ('"All", "Zivs", "Fighters", "Unhappy"',))
 
@@ -52,7 +53,7 @@ feed_right = rectangle(home.find("Window[@name='FeedPanel']"))[2]
 nav = book.find("Window[@name='NavBar']")
 assert nav.find("Property[@name='Visible']").get('value') == 'False'
 nav_box = rectangle(nav)
-for name in ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'):
+for name in ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage', 'SkillsPage'):
     page_box = rectangle(book.find("Window[@name='%s']" % name))
     # The page of one creature takes the whole width the list and the feed of the start page share
     assert page_box[0] <= list_left + 0.01 and page_box[2] >= feed_right - 0.01 and page_box[3] <= nav_box[1]
@@ -62,9 +63,11 @@ styles = []
 
 
 def collect_styles(window, path=''):
-    """Pin all 877 existing image, font, background and frame properties, excluding replaced filter buttons.
+    """Pin all 928 existing image, font, background and frame properties, excluding replaced filter buttons.
 
-    787 before the window got the frame of the menu sheet: the 15 properties of the ornate book frame and its title
+    877 before the Skills page of INGAME-QS-12 K7 (the skill tree of the creature as a page of the book): its 51
+    properties came (Font, no background or frame of the 13 rank texts and the 4 path titles); the 877 others are
+    pinned unchanged below. 787 before the window got the frame of the menu sheet: the 15 properties of the ornate book frame and its title
     band (TitlebarFont, Frame*Image, Title*Image on the window and its title bar) are gone, every page style is kept.
     772 before plan INGAME-QS-11 B1 built the pages of one creature as book-variant-2: 27 properties went (the social
     holder, info and keeper texts of the profile, the MedievalSharp-6 slot names, the back arrow of the head) and 78
@@ -88,8 +91,13 @@ def collect_styles(window, path=''):
 
 
 collect_styles(book)
-assert len(styles) == 877
+assert len(styles) == 928
 assert hashlib.sha256(json.dumps(styles, separators=(',', ':')).encode()).hexdigest() == \
+    '4aa7d7f5c6d8fc37806ec17eb59cd9d152999a3830fe0b2e574a0d3f7aa55684'
+# Every style that was there before the Skills page is unchanged
+before_skills = [style for style in styles if not style[0].startswith('/SocialWindow/SkillsPage')]
+assert len(before_skills) == 877
+assert hashlib.sha256(json.dumps(before_skills, separators=(',', ':')).encode()).hexdigest() == \
     '5339f5b2640405b50e49a9cb120f8fa9df750db5e3f66af0a252c1a99fc686f0'
 
 expected = {

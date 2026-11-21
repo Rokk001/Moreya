@@ -20,6 +20,7 @@ def make_probe():
         'bool SocialWindow::onListRowClicked(', 'bool SocialWindow::onLinkClicked(',
         'bool SocialWindow::onBackClicked(', 'bool SocialWindow::onNavClicked(',
         'void SocialWindow::selectCreature(', 'void SocialWindow::showPage(',
+        'bool SocialWindow::onSkillTreeClicked(',
     ]
     implementations = '\n'.join(function(social, name) for name in signatures)
     roster = function(social, 'void SocialWindow::rebuildCreatureList()')
@@ -120,7 +121,7 @@ void setNavState(CEGUI::Window*, bool) {}
 //! Hosts unchanged production handlers with explicit roster and painting service boundaries.
 struct SocialWindow {
     enum class CreatureFilter { All, Workers, Fighters, Unhappy };
-    enum class Page { Home, Feed, Profile, Values, Inventory };
+    enum class Page { Home, Feed, Profile, Values, Inventory, Skills };
     CEGUI::Window* mWindow;
     CreatureFilter mFilter = CreatureFilter::All;
     Page mPage = Page::Home;
@@ -130,7 +131,7 @@ struct SocialWindow {
     void show(); void showCreature(const std::string&); void hide();
     bool onFilterClicked(const CEGUI::EventArgs&); bool onListRowClicked(const CEGUI::EventArgs&);
     bool onLinkClicked(const CEGUI::EventArgs&); bool onBackClicked(const CEGUI::EventArgs&);
-    bool onNavClicked(const CEGUI::EventArgs&);
+    bool onNavClicked(const CEGUI::EventArgs&); bool onSkillTreeClicked(const CEGUI::EventArgs&);
     void selectCreature(const std::string&, Page); void showPage(Page);
     //! The worker of the fixture has a skill tree, the fighter has none (plan INGAME-QS-11 K4).
     bool selectedCreatureHasSkillTree() const { return mSelectedCreature == "worker"; }
@@ -164,9 +165,9 @@ int main() {
     const char* names[] = {"HomePage", "FeedPage", "ProfilePage", "ValuesPage", "InventoryPage", "NavBar", "Header",
         "HomePage/FeedPanel", "HomePage/FeedTitle", "HomePage/FeedTitleRule", "HomePage/FeedRows",
         "HomePage/FeedScroll", "HomePage/FeedEmpty", "NavBar/NavFeed", "NavBar/NavProfile", "NavBar/NavValues", "NavBar/NavInventory",
-        "NavBar/NavSkills", "BackButton"};
-    CEGUI::Window windows[19];
-    for(std::size_t i = 0; i < 19; ++i) root.children[names[i]] = &windows[i];
+        "NavBar/NavSkills", "BackButton", "SkillsPage"};
+    CEGUI::Window windows[20];
+    for(std::size_t i = 0; i < 20; ++i) root.children[names[i]] = &windows[i];
     CEGUI::Window skillsIcon, skillsLabel;
     windows[17].children["Icon"] = &skillsIcon;
     windows[17].children["Label"] = &skillsLabel;
@@ -218,8 +219,24 @@ int main() {
         assert(static_cast<unsigned>(book.mPage) == tab && !root.getChild("HomePage")->visible);
         assert(root.getChild("NavBar")->visible);
     }
+    // The Skills button shows the skill tree as a page of the book, the other pages hidden; no window opens
+    // (INGAME-QS-12 K7)
+    book.onSkillTreeClicked(event);
+    assert(book.mPage == SocialWindow::Page::Skills && root.getChild("SkillsPage")->visible);
+    for(const char* page : {"HomePage", "FeedPage", "ProfilePage", "ValuesPage", "InventoryPage"})
+        assert(!root.getChild(page)->visible);
+    assert(root.getChild("NavBar")->visible && root.getChild("Header")->visible && root.getChild("NavBar/NavSkills")->enabled);
+    // A switch to a creature without a skill tree on the Skills page shows its inventory
+    book.mSelectedCreature = "fighter";
+    book.showPage(SocialWindow::Page::Skills);
+    assert(book.mPage == SocialWindow::Page::Inventory && !root.getChild("SkillsPage")->visible);
+    assert(root.getChild("InventoryPage")->visible && !root.getChild("NavBar/NavSkills")->enabled);
+    book.onSkillTreeClicked(event);
+    assert(book.mPage == SocialWindow::Page::Inventory && !root.getChild("SkillsPage")->visible);
+    book.mSelectedCreature = "worker";
     book.onBackClicked(event);
     assert(book.mSelectedCreature.empty() && book.mPage == SocialWindow::Page::Home);
+    assert(!root.getChild("SkillsPage")->visible);
     // Saving keeps the live UI unchanged; loading creates a fresh book over restored creatures.
     filter.item.id = 3;
     book.onFilterClicked(event);

@@ -73,6 +73,10 @@ struct SpellManager { static void checkSpellCast(GameMap*,int,const InputManager
 struct RenderManager { int swings=0;static RenderManager& getSingleton(){static RenderManager r;return r;}void rrPlayBuildAnimation(){++swings;} };
 struct GameMode { GameMap* mGameMap;ModeManager* mModeManager;Selection mPlayerSelection;
  std::vector<Tile*> mPreviewTiles;bool mActionTargetValid=false;std::string mActionTargetText;
+ //! \brief Places beyond the map edge of the dig preview; the probe has no map edge, so they stay empty.
+ std::vector<std::pair<int,int> > mPreviewEdgePlaces;
+ //! \brief No place beyond the map edge is markable in the probe; build actions never mark one in the game either.
+ bool isDigEdgePlace(int,int)const{return false;}
  void displayText(int colour,const std::string& text){mActionTargetValid=colour!=Ogre::ColourValue::Red;mActionTargetText=text;}
  void displayPointerText(int,const std::string&){}void displayTileBuildFailure(Tile*,Seat*){mActionTargetValid=false;}
  void selectTiles(const std::vector<Tile*>&){}void selectSquaredTiles(int,int,int,int){}

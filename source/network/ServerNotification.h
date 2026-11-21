@@ -81,6 +81,7 @@ enum class ServerNotificationType
     pingDeleteDraggableTileContainer,
     pingEditorAskSetRoundedPositionDraggableTileContainer,
     markTiles,
+    markEdgePlaces, // Places beyond the map edge marked or unmarked for digging.
     refreshTiles,
     refreshVisibleTiles,
     revealTiles,

@@ -56,6 +56,11 @@ add_boost_test(00-SelectionSize
         test_SelectionSize.cpp
         ${SRC}/utils/SelectionSize.h)
 
+add_boost_test(00-EdgePlaces
+        SOURCES
+        test_EdgePlaces.cpp
+        ${SRC}/utils/EdgePlaces.h)
+
 add_boost_test(00-PointerMapping
         SOURCES
         test_PointerMapping.cpp
@@ -295,6 +300,11 @@ add_boost_test(00-ServerGuards
         ${SRC}/network/ODPacket.cpp
         LIBRARIES
         ${SFML_LIBRARIES})
+
+add_boost_test(00-WorkerDigOrder
+        SOURCES
+        test_WorkerDigOrder.cpp
+        ${SRC}/game/WorkerDigOrder.h)
 
 add_boost_test(00-Pathfinding
         SOURCES

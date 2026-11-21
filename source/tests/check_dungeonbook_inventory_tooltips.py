@@ -58,6 +58,13 @@ def function_of(text, signature):
 client = (0.0, 0.0, 1.0, 1.0)
 top = book.findall('Window')
 names = [w.get('name') for w in top]
+# Pages of one creature that showPage shows one at a time: each is visible only while it is the shown page
+SHOWN_ALONE = ('SkillsPage',)
+show_page = function_of(social, 'void SocialWindow::showPage(Page page)')
+assert '"InventoryPage", "SkillsPage"};' in show_page and 'Page::Inventory, Page::Skills};' in show_page and \
+    'mWindow->getChild(pageNames[i])->setVisible(pages[i] == page);' in show_page, \
+    'showPage shows the inventory page and the Skills page never at the same time'
+assert all(props(child(book, name)).get('Visible') == 'False' for name in SHOWN_ALONE)
 page = child(book, 'InventoryPage')
 page_box = area(page, client)
 page_children = page.findall('Window')
@@ -78,9 +85,12 @@ for i in range(SLOTS):
     for later in page_children[page_children.index(box_window) + 1:]:
         if not passes(later) and props(later).get('Visible') != 'False':
             assert not overlaps(area(later, page_box), box), '%s lies over SlotBox%d' % (later.get('name'), i)
-    # Header and navigation bar come after the pages in the book
+    # Header and navigation bar come after the pages in the book. The Skills page (INGAME-QS-12 K7) follows the
+    # inventory page but is hidden whenever the inventory page is shown (showPage shows exactly one page, below)
     for name in names[names.index('InventoryPage') + 1:]:
         sibling = child(book, name)
+        if name in SHOWN_ALONE:
+            continue
         if not passes(sibling):
             assert not overlaps(area(sibling, client), box), '%s lies over SlotBox%d' % (name, i)
 

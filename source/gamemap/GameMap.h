@@ -886,6 +886,9 @@ public:
     //! \brief Gets tileset geometry and material, using ordinary earth for never-seen client tiles.
     const TileSetValue& getMeshForTile(const Tile* tile) ;
 
+    //! \brief The earth block shown on a marked place beyond the map edge: the full earth tile surrounded by full earth.
+    const TileSetValue& getMeshForEdgeMark();
+
     void playerSelects(std::vector<GameEntity*>& entities, int tileX1, int tileY1, int tileX2,
         int tileY2, SelectionTileAllowed tileAllowed, SelectionEntityWanted entityWanted, Player* player);
 

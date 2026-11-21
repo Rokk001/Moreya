@@ -5,7 +5,7 @@ sizes and UI scales).
 
 A Python model of HandLimitRules plays fixed scenarios (second fighting creature refused, Zivs not limited, cooldown
 after a drop, skirmish and multiplayer unchanged, the cooldown carried through a save and a load with the [HandCooldown]
-block, an old save without the block, the refusal messages, the text at the hand and its place on screens from 640x480
+block, an old save without the block, the refusal messages, the crossed-out hand picture with the seconds over the hovered creature and its place on screens from 640x480
 to 7680x4320 at UI scale 80-120 %), and the C++ sources, the config and the build lists are checked for the
 statements that implement them. Nothing is compiled and the game is not started; the integration build compiles the
 code and runs the Boost test 00-HandLimitRules.
@@ -333,19 +333,27 @@ def refusal_message(reason, cooldown_left):
 
 
 def cooldown_text(cooldown_left):
-    """Mirror of HandLimitRules::cooldownText."""
+    """Mirror of HandLimitRules::cooldownText: the whole seconds as digits only."""
     seconds = display_seconds(cooldown_left)
-    return "Next fighter: %d s" % seconds if seconds else ""
+    return "%d" % seconds if seconds else ""
 
 
-def text_place(px, py, ox, oy, width, height, screen_w, screen_h):
-    """Mirror of HandLimitRules::cooldownTextPlace."""
-    return max(0.0, min(px + ox, screen_w - width)), max(0.0, min(py + oy, screen_h - height))
+def icon_seconds(over_pickable_fighter, cooldown_left):
+    """Mirror of HandLimitRules::cooldownIconSeconds."""
+    return display_seconds(cooldown_left) if over_pickable_fighter else 0
+
+
+def icon_place(cx, cy, icon, number_w, number_h, screen_w, screen_h):
+    """Mirror of HandLimitRules::cooldownIconPlace: (icon left, icon top, number left, number top)."""
+    icon_left = max(0.0, min(cx - icon * 0.5, screen_w - icon))
+    icon_top = max(0.0, min(cy - icon * 0.5, screen_h - icon - number_h))
+    number_left = max(0.0, min(icon_left + (icon - number_w) * 0.5, screen_w - number_w))
+    return icon_left, icon_top, number_left, icon_top + icon
 
 
 # The C++ texts are the ones of the model (short plain English)
 for text in ("Your hand cannot hold another fighting creature.",
-             "You can pick up the next fighting creature in ", "Next fighter: "):
+             "You can pick up the next fighting creature in "):
     check('"' + text + '"' in RULES, "HL2: text " + repr(text))
 check(refusal(True, True, 1, MAX, 0.0) == "handFull" and refusal(True, True, 1, MAX, COOLDOWN) == "handFull",
       "HL2: a full hand is named first")
@@ -354,35 +362,49 @@ check(refusal(True, True, 0, MAX, 2.1) == "cooldown"
       "HL2: the cooldown message names the whole seconds left")
 check(refusal(True, False, 1, MAX, COOLDOWN) == "none" and refusal(False, True, 1, MAX, COOLDOWN) == "none",
       "HL2: no message for Zivs, skirmish and multiplayer")
-check(cooldown_text(COOLDOWN) == "Next fighter: 10 s" and cooldown_text(0.01) == "Next fighter: 1 s"
-      and cooldown_text(0.0) == "", "HL2: the text at the hand")
+check(cooldown_text(COOLDOWN) == "10" and cooldown_text(0.01) == "1" and cooldown_text(0.0) == ""
+      and cooldown_text(22.4) == "23", "K5: the number under the picture is the whole seconds, digits only")
+check("Next fighter" not in RULES and "Next fighter" not in read("source/modes/GameMode.cpp"),
+      "K5: no cooldown words in the rules or the game view")
+# K5: the picture is placed over the hovered fighting creature only and counts down with the cooldown
+check(icon_seconds(True, 23.0) == 23 and icon_seconds(True, 22.0) == 22 and icon_seconds(True, 21.2) == 22
+      and icon_seconds(True, 0.01) == 1, "K5: the picture counts the whole seconds down")
+check(icon_seconds(False, 23.0) == 0 and icon_seconds(True, 0.0) == 0 and icon_seconds(False, 0.0) == 0,
+      "K5: nothing is drawn when the pointer is not over a pickable fighter or no cooldown runs")
 reason_body = function(RULES, "Refusal refusal(")
 check(reason_body.index("if(fightersInHand >= maxFighters)") < reason_body.index("if(cooldownLeft > 0.0)"),
       "HL2: the rule names a full hand before the cooldown")
-check("std::max(0.0f, std::min(pointerX + offsetX, screenWidth - textWidth));" in RULES
-      and "std::max(0.0f, std::min(pointerY + offsetY, screenHeight - textHeight));" in RULES,
-      "C6: the text is moved back inside the screen")
+check("std::max(0.0f, std::min(centreX - iconSize * 0.5f, screenWidth - iconSize));" in RULES
+      and "std::max(0.0f, std::min(centreY - iconSize * 0.5f, screenHeight - iconSize - numberHeight));" in RULES
+      and "numberTop = iconTop + iconSize;" in RULES,
+      "C6: the picture and its number are moved back inside the screen, the number sits under the picture")
 
-# C6: the longest text at the hand stays inside every screen from 640x480 to 8K at UI scale 80-120 %
+# C6: the picture and the longest number stay inside every screen from 640x480 to 8K at UI scale 80-120 %
 GAME_MODE = read("source/modes/GameMode.cpp")
 GAME_MODE_H = read("source/modes/GameMode.h")
 constants = dict((name, float(value)) for name, value in re.findall(
-    r"^const float (POINTER_TEXT_BASE_HEIGHT|HAND_COOLDOWN_TEXT_OFFSET_Y|HAND_COOLDOWN_CHAR_WIDTH_SHARE|"
-    r"POINTER_TEXT_OFFSET_X) = ([\d.]+)f;", GAME_MODE, re.M))
-check(len(constants) == 4, "C6: the place and size constants of the text at the hand " + repr(constants))
+    r"^const float (HAND_COOLDOWN_ICON_SIZE|HAND_COOLDOWN_NUMBER_HEIGHT|HAND_COOLDOWN_CHAR_WIDTH_SHARE) = ([\d.]+)f;",
+    GAME_MODE, re.M))
+check(len(constants) == 3, "C6: the size constants of the picture and its number " + repr(constants))
 longest = len(cooldown_text(999.5))
 for screen_w, screen_h in ((640, 480), (800, 600), (1920, 1080), (3840, 2160), (7680, 4320)):
     for ui_scale in (0.8, 1.0, 1.2):
         feedback = ui_scale * screen_h / 1080.0
-        height = constants.get("POINTER_TEXT_BASE_HEIGHT", 16.0) * feedback
-        width = longest * height * constants.get("HAND_COOLDOWN_CHAR_WIDTH_SHARE", 0.6)
-        for px, py in ((0, 0), (screen_w / 2, screen_h / 2), (screen_w - 1, screen_h - 1), (screen_w - 1, 0)):
-            left, top = text_place(px, py, constants.get("POINTER_TEXT_OFFSET_X", 145.0) * feedback,
-                                   constants.get("HAND_COOLDOWN_TEXT_OFFSET_Y", 4.0) * feedback, width, height,
-                                   screen_w, screen_h)
-            check(0 <= left and left + width <= screen_w and 0 <= top and top + height <= screen_h,
-                  "C6: text at the hand inside %dx%d at scale %.1f, pointer %s" % (screen_w, screen_h, ui_scale,
-                                                                                  (px, py)))
+        icon = constants.get("HAND_COOLDOWN_ICON_SIZE", 48.0) * feedback
+        number_h = constants.get("HAND_COOLDOWN_NUMBER_HEIGHT", 24.0) * feedback
+        number_w = longest * number_h * constants.get("HAND_COOLDOWN_CHAR_WIDTH_SHARE", 0.6)
+        for cx, cy in ((0, 0), (screen_w / 2, screen_h / 2), (screen_w - 1, screen_h - 1), (screen_w - 1, 0),
+                       (0, screen_h - 1)):
+            icon_left, icon_top, number_left, number_top = icon_place(cx, cy, icon, number_w, number_h, screen_w,
+                                                                       screen_h)
+            check(0 <= icon_left and icon_left + icon <= screen_w and 0 <= icon_top and icon_top + icon <= screen_h
+                  and 0 <= number_left and number_left + number_w <= screen_w and 0 <= number_top
+                  and number_top + number_h <= screen_h,
+                  "C6: picture and number inside %dx%d at scale %.1f, creature point %s" % (screen_w, screen_h,
+                                                                                            ui_scale, (cx, cy)))
+# Away from the edges the picture is centred on the creature point and the number under it
+check(icon_place(500, 400, 48, 30, 24, 1920, 1080) == (476.0, 376.0, 485.0, 424.0),
+      "K5: the picture is centred over the creature, the number under it")
 
 # Server: a refused pickup tells a human keeper why and resends the cooldown; computer keepers get nothing
 pickup = function(PLAYER, "void Player::pickUpEntity(GameEntity *entity)")
@@ -411,27 +433,63 @@ check("packetReceived >> seconds" in client_case and "getPlayer()->setHandCooldo
 check("mLocalPlayer->advanceHandCooldown(1.0 / ODApplication::turnsPerSecond);"
       in function(read("source/gamemap/GameMap.cpp"), "void GameMap::clientUpKeep(int64_t turnNumber)"),
       "HL2: the client counts the cooldown down every turn")
-# Client: the text at the hand
+# Client: the picture over the hovered creature (K5); no text at the pointer
 check("addTextBox(ODApplication::HAND_COOLDOWN_STRING" in read("source/ODApplication.cpp")
       and 'ODApplication::HAND_COOLDOWN_STRING = "handCooldown"' in read("source/ODApplication.cpp"),
-      "HL2: the text box at the hand exists")
-shown = function(GAME_MODE, "void GameMode::refreshHandCooldownText(float pointerX, float pointerY, float scale)")
-check("HandLimitRules::cooldownText(player->getHandCooldownSeconds())" in shown
-      and "HandLimitRules::cooldownTextPlace(" in shown and "POINTER_TEXT_BASE_HEIGHT * scale" in shown
-      and "getSurfaceSize()" in shown and "mDefeatSequence.isStarted()" in shown,
-      "HL2/C6: the text at the hand shows the cooldown, scaled and inside the screen")
-check("refreshHandCooldownText(pointer.d_x, pointer.d_y, pointerScale);"
+      "K5: the text box of the number exists")
+shown = function(GAME_MODE, "void GameMode::refreshHandCooldownIcon(float scale)")
+check("HandLimitRules::cooldownIconSeconds(creature != nullptr, cooldownLeft)" in shown
+      and "mGameMap->getCreature(mHandCooldownCreatureName)" in shown
+      and "creature->getPosition()" in shown and "projectToScreen(" in shown
+      and "HandLimitRules::cooldownIconPlace(" in shown and "getSurfaceSize()" in shown
+      and "mDefeatSequence.isStarted()" in shown and "HAND_COOLDOWN_ICON_SIZE * scale" in shown
+      and "mHandCooldownIcon->setVisible(true);" in shown and "hideHandCooldownIcon();" in shown,
+      "K5/C6: the picture and the number are placed over the hovered creature, scaled and inside the screen")
+check("POINTER_TEXT_OFFSET" not in shown and "getMouseCursor()" not in shown and "POINTER_INFO_STRING" not in shown,
+      "K5: no cooldown text at the pointer")
+check('HAND_COOLDOWN_ICON_IMAGE = "HandCooldown/NoPickup"' in GAME_MODE
+      and "mHandCooldownIcon->setProperty(\"Image\", HAND_COOLDOWN_ICON_IMAGE);" in shown,
+      "K5: the picture uses its final image name")
+hide = function(GAME_MODE, "void GameMode::hideHandCooldownIcon()")
+check('setText(ODApplication::HAND_COOLDOWN_STRING, "")' in hide and "mHandCooldownIcon->setVisible(false);" in hide,
+      "K5: hiding clears the number and the picture")
+check("refreshHandCooldownIcon(pointerScale);"
       in function(GAME_MODE, "void GameMode::refreshActionFeedback(float elapsed)"),
-      "HL2: the text follows the hand every frame")
-check("void refreshHandCooldownText(float pointerX, float pointerY, float scale);" in GAME_MODE_H,
-      "HL2: GameMode declares the text at the hand")
+      "K5: the picture follows the hovered creature every frame")
+frame = function(GAME_MODE, "void GameMode::refreshActionFeedback(float elapsed)")
+check(frame.index("mHandCooldownCreatureName.clear();") < frame.index("checkInputCommand();"),
+      "K5: the hovered fighter is forgotten every frame before the hover is evaluated")
+none_body = function(GAME_MODE, "void GameMode::handlePlayerActionNone()")
+check("HandLimitRules::isFightingCreature(true," in none_body
+      and "mHandCooldownCreatureName = creature->getName();" in none_body
+      and none_body.index("tryPickup(player->getSeat())") < none_body.index("mHandCooldownCreatureName = "),
+      "K5: the hovered pickable fighting creature (not a Ziv, not a prisoner) is the one that gets the picture")
+check("void refreshHandCooldownIcon(float scale);" in GAME_MODE_H and "void hideHandCooldownIcon();" in GAME_MODE_H
+      and "std::string mHandCooldownCreatureName;" in GAME_MODE_H and "CEGUI::Window* mHandCooldownIcon" in GAME_MODE_H,
+      "K5: GameMode declares the picture")
+check("refreshHandCooldownText" not in GAME_MODE and "HAND_COOLDOWN_TEXT_OFFSET" not in GAME_MODE,
+      "K5: the text at the pointer is gone")
+check("destroyWindow(mHandCooldownIcon)" in GAME_MODE, "K5: the picture is destroyed with the mode")
 for signature in ("void GameMode::startDefeatSequence(", "void GameMode::notifyPossessionStarted()",
                   "void GameMode::refreshPossessionView()"):
-    check('setText(ODApplication::HAND_COOLDOWN_STRING, "")' in function(GAME_MODE, signature),
-          "HL2: the text at the hand disappears in " + signature)
+    check("hideHandCooldownIcon();" in function(GAME_MODE, signature),
+          "K5: the picture disappears in " + signature)
 check('setText(ODApplication::HAND_COOLDOWN_STRING, "")' in function(read("source/modes/MenuModeMain.cpp"),
                                                                        "void MenuModeMain::activate()"),
-      "HL2: the text at the hand disappears in the main menu")
+      "K5: the number disappears in the main menu")
+# The refusal message of HL2 goes to the message line (an event message), never to the pointer or the context line
+check("ServerNotificationType::chatServer" in refused and "displayText" not in refused
+      and "case ServerNotificationType::chatServer:" in client and "addEventMessage(new EventMessage(evtMsg, type));" in client,
+      "K5: the refusal message appears in the message line only")
+# G11: the crossed-out hand is a text-free placeholder under its final image name
+imageset = read("gui/HandCooldown.imageset")
+check('name="HandCooldown"' in imageset and 'name="NoPickup"' in imageset and 'imagefile="HandCooldownIcon.png"' in imageset,
+      "G11: the imageset HandCooldown/NoPickup exists")
+check(os.path.getsize(os.path.join(ROOT, "gui", "HandCooldownIcon.png")) > 100, "G11: the picture file exists")
+check('filename="HandCooldown.imageset" name="HandCooldown"' in read("gui/ODSkin.scheme"),
+      "G11: the scheme loads the imageset")
+check("HandCooldownIcon.png" in read("CREDITS") and "HandCooldown.imageset" in read("CREDITS"),
+      "G11: the picture and the imageset have CREDITS entries")
 
 # ------------------------------------------------------------------------------------------------ build and tests
 check("${SRC}/game/HandLimitRules.cpp" in CMAKE, "C2: HandLimitRules.cpp is in the source list of the game")
@@ -443,8 +501,9 @@ check(sorted(name for _, _, name in cases) == sorted(["test_fightingCreature", "
                                                        "test_zivsNotLimited", "test_cooldownAfterDrop",
                                                        "test_skirmishAndMultiplayerUnchanged",
                                                        "test_savedCooldownGoesOn", "test_refusalMessage",
-                                                       "test_cooldownText", "test_cooldownTextInsideScreen"]),
-      "the Boost test has the six cases of R11 step 3 and the three cases of HL2")
+                                                       "test_cooldownText", "test_cooldownIconSeconds",
+                                                       "test_cooldownIconInsideScreen"]),
+      "the Boost test has the six cases of R11 step 3 and the four cases of HL2 and K5")
 check(all(line.startswith("//!") for line, _, _ in cases), "every Boost test case has a comment")
 check("auto " not in PLAYER and "auto " not in RULES and "auto " not in BOOST_TEST, "explicit types, no auto")
 

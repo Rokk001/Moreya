@@ -91,6 +91,7 @@
 #include "utils/ResourceManager.h"
 #include "utils/RunLevelTest.h"
 #include "utils/SelectionSize.h"
+#include "utils/EdgePlaces.h"
 #include "ODApplication.h"
 
 #include <CEGUI/CEGUI.h>
@@ -107,9 +108,11 @@
 #include <iomanip>
 #include <sstream>
 
+#include <OgreCamera.h>
 #include <OgreRoot.h>
 #include <OgreRenderWindow.h>
 #include <OgreSceneNode.h>
+#include <OgreViewport.h>
 
 #include <algorithm>
 #include <cmath>
@@ -122,34 +125,6 @@
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 //! Seconds between two refreshes of the open trap production window.
 const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
-
-//! \brief Existing context text bounds and the specified item icon side, in design pixels.
-static const float ITEM_CONTEXT_LEFT = 404.0f;
-static const float ITEM_CONTEXT_TOP = 2.0f;
-static const float ITEM_CONTEXT_RIGHT_INSET = 4.0f;
-static const float ITEM_CONTEXT_ORDINARY_BOTTOM = 44.0f;
-static const float ITEM_CONTEXT_IMAGE_SIDE = 64.0f;
-//! \brief The four specified quality colours, encoded as RGBA.
-static const uint32_t ITEM_CONTEXT_COLOURS[] = {0x8A8A8AFF, 0xFFFFFFFF, 0x3E7BFFFF, 0xA64DFFFF};
-//! \brief The item atlas and quality-frame resource prefixes.
-static const std::string ITEM_CONTEXT_IMAGE_PREFIX = "ItemImages/";
-static const std::string ITEM_CONTEXT_FRAME_PREFIX = "OpenDungeonsIcons/ItemFrame";
-
-//! \brief Removes only CEGUI colour tags when an item tooltip is used by Ogre pointer text.
-static std::string getPlainItemTooltip(std::string text)
-{
-    static const std::string tag = "[colour='";
-    std::size_t start = text.find(tag);
-    while(start != std::string::npos)
-    {
-        const std::size_t end = text.find("']", start);
-        if(end == std::string::npos)
-            break;
-        text.erase(start, end + 2 - start);
-        start = text.find(tag, start);
-    }
-    return text;
-}
 
 // Text colours (ARGB) of the mana change next to the mana display.
 const std::string MANA_GAIN_TEXT_COLOUR = "FFF0E2C0";
@@ -263,12 +238,16 @@ const float MINIMAP_ZOOM_REFRESH_SECONDS = 0.5f;
 //! Character height of the pointer info text at unscaled GUI size, as set when its text box is created.
 const float POINTER_TEXT_BASE_HEIGHT = 16.0f;
 
-//! Place of the hand cooldown text (HL2) at unscaled GUI size: in the column of the pointer text, in the line above it,
-//! so that neither the action icon nor the held creature icons cover it.
-const float HAND_COOLDOWN_TEXT_OFFSET_X = POINTER_TEXT_OFFSET_X;
-const float HAND_COOLDOWN_TEXT_OFFSET_Y = 4.0f;
-//! Width of one character of the hand cooldown text as a share of its height (an upper bound for the overlay font),
-//! used to keep the text inside the screen.
+//! Name of the crossed-out hand picture (a text-free placeholder until it is replaced under the same name).
+const char* const HAND_COOLDOWN_ICON_IMAGE = "HandCooldown/NoPickup";
+//! Side of the hand cooldown prohibition picture (HL2, K5) at unscaled GUI size.
+const float HAND_COOLDOWN_ICON_SIZE = 48.0f;
+//! Character height of the cooldown number under the picture at unscaled GUI size.
+const float HAND_COOLDOWN_NUMBER_HEIGHT = 24.0f;
+//! Height above the ground, in tiles, of the point of a hovered creature on which the prohibition picture is centred.
+const float HAND_COOLDOWN_CREATURE_HEIGHT = 1.4f;
+//! Width of one character of the hand cooldown number as a share of its height (an upper bound for the overlay font),
+//! used to centre the number under the picture and keep it inside the screen.
 const float HAND_COOLDOWN_CHAR_WIDTH_SHARE = 0.6f;
 
 //! Degrees the camera orbits per pixel of mouse movement while X or the middle mouse button is held.
@@ -946,6 +925,8 @@ GameMode::~GameMode()
     RenderManager::getSingleton().rrEnableHeldCreatureDisplay(false, mGameMap->getLocalPlayer());
     for(CEGUI::Window* icon : mHeldCreatureIcons)
         CEGUI::WindowManager::getSingleton().destroyWindow(icon);
+    if(mHandCooldownIcon != nullptr)
+        CEGUI::WindowManager::getSingleton().destroyWindow(mHandCooldownIcon);
     if(mSelectionSizeLabel != nullptr)
         CEGUI::WindowManager::getSingleton().destroyWindow(mSelectionSizeLabel);
     // Remove tile listeners before the base destructor clears the game map.
@@ -1080,6 +1061,65 @@ bool GameMode::findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre:
     return tile->isBuildableUpon(mGameMap->getLocalPlayer()->getSeat());
 }
 
+//! Distance in places at which a drag above the horizon is taken to end, far beyond the reach of EdgePlaces.h.
+static const float EDGE_PLACE_FAR_DISTANCE = 100000.0f;
+
+//! \brief Tells whether the coordinates are a place beyond the map edge that can be marked for digging now.
+bool GameMode::isDigEdgePlace(int x, int y) const
+{
+    const SelectedAction action = mPlayerSelection.getCurrentAction();
+    return (action == SelectedAction::none || action == SelectedAction::selectTile) &&
+        mGameMap->getLocalPlayer()->numObjectsInHand() == 0 &&
+        EdgePlaces::isMarkable(x, y, mGameMap->getMapSizeX(), mGameMap->getMapSizeY());
+}
+
+//! \brief Finds the place beyond the map edge under the pointer, so that it can be marked for digging like an
+//! undiscovered tile.
+bool GameMode::findDigEdgePlaceFromMouse(const OIS::MouseEvent& arg, int& x, int& y, Ogre::Vector3& position)
+{
+    const SelectedAction action = mPlayerSelection.getCurrentAction();
+    if((action != SelectedAction::none && action != SelectedAction::selectTile) ||
+       mGameMap->getLocalPlayer()->numObjectsInHand() > 0)
+        return false;
+
+    // The pointer is picked on the top of the earth block that a marked place shows
+    const float height = RenderManager::getSingleton().rrGetEdgeMarkHeight(*mGameMap);
+    const bool dragging = action == SelectedAction::selectTile &&
+        mModeManager->getInputManager().mLMouseDown;
+    Ogre::Vector3 hit;
+    if(!ODFrameListener::getSingleton().findWorldPositionFromMouse(arg, hit, height))
+    {
+        // A drag that goes on above the horizon keeps its selection: the place lies far out in the ray direction
+        if(!dragging)
+            return false;
+
+        const CEGUI::Vector2f mouse = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
+        const Ogre::Ray ray = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getCameraToViewportRay(
+            mouse.d_x / static_cast<float>(arg.state.width), mouse.d_y / static_cast<float>(arg.state.height));
+        Ogre::Vector2 direction(ray.getDirection().x, ray.getDirection().y);
+        if(direction.squaredLength() <= 0.0f)
+            return false;
+
+        direction.normalise();
+        hit = Ogre::Vector3(ray.getOrigin().x + direction.x * EDGE_PLACE_FAR_DISTANCE,
+            ray.getOrigin().y + direction.y * EDGE_PLACE_FAR_DISTANCE, height);
+    }
+
+    const int sizeX = mGameMap->getMapSizeX();
+    const int sizeY = mGameMap->getMapSizeY();
+    x = Helper::round(hit.x);
+    y = Helper::round(hit.y);
+    if(!EdgePlaces::isBeyondEdge(x, y, sizeX, sizeY))
+        return false;
+
+    // Every ground point beyond the edge is a place, however far out the camera can show it: one that lies beyond the
+    // reach is moved to the outermost markable ring, so the dig marking never refuses and never shows where the map ends
+    EdgePlaces::clampToReach(x, y, sizeX, sizeY);
+
+    position = Ogre::Vector3(static_cast<float>(x), static_cast<float>(y), height);
+    return true;
+}
+
 //! \brief Updates pointer targeting and selection as the mouse moves.
 bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
 {
@@ -1145,6 +1185,21 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     {
         inputManager.mXPos = -1;
         inputManager.mYPos = -1;
+        // Beyond the map edge, digging marks still reach: the place is treated like an undiscovered tile
+        int placeX;
+        int placeY;
+        if(findDigEdgePlaceFromMouse(arg, placeX, placeY, inputManager.mKeeperHandPos))
+        {
+            inputManager.mXPos = placeX;
+            inputManager.mYPos = placeY;
+            RenderManager::getSingleton().moveWorldCoords(inputManager.mKeeperHandPos.x, inputManager.mKeeperHandPos.y);
+            if(!inputManager.mLMouseDown)
+            {
+                inputManager.mLStartDragX = placeX;
+                inputManager.mLStartDragY = placeY;
+            }
+            return true;
+        }
         if(mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom)
             unselectAllTiles();
         return true;
@@ -1489,6 +1544,15 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     {
         inputManager.mXPos = -1;
         inputManager.mYPos = -1;
+        // A place beyond the map edge is clicked like an undiscovered tile (see below)
+        int placeX;
+        int placeY;
+        if(findDigEdgePlaceFromMouse(arg, placeX, placeY, inputManager.mKeeperHandPos))
+        {
+            inputManager.mXPos = placeX;
+            inputManager.mYPos = placeY;
+            RenderManager::getSingleton().moveWorldCoords(inputManager.mKeeperHandPos.x, inputManager.mKeeperHandPos.y);
+        }
     }
 
     // The player should be able to move the mouse even if not clicking on a tile. Because of that, we set
@@ -1502,6 +1566,18 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     }
 
     Tile* tileClicked = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
+    if(tileClicked == nullptr && id == OIS::MB_Left && isDigEdgePlace(inputManager.mXPos, inputManager.mYPos))
+    {
+        // A place beyond the map edge starts a dig selection like an undiscovered tile: there is no entity to
+        // pick up, and the mark is set or removed depending on the place the drag starts on
+        inputManager.mLMouseDown = true;
+        inputManager.mLStartDragX = inputManager.mXPos;
+        inputManager.mLStartDragY = inputManager.mYPos;
+        if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
+            mPlayerSelection.setCurrentAction(SelectedAction::selectTile);
+        mDigSetBool = !mGameMap->getLocalPlayer()->getSeat()->isEdgePlaceMarked(inputManager.mXPos, inputManager.mYPos);
+        return true;
+    }
     if(tileClicked == nullptr)
     {
         if(id == OIS::MB_Left ||
@@ -1757,6 +1833,16 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     {
         inputManager.mXPos = -1;
         inputManager.mYPos = -1;
+        // The drag selection may end beyond the map edge
+        int placeX;
+        int placeY;
+        inputManager.mLMouseDown = wasLeftMouseDown;
+        if(findDigEdgePlaceFromMouse(arg, placeX, placeY, inputManager.mKeeperHandPos))
+        {
+            inputManager.mXPos = placeX;
+            inputManager.mYPos = placeY;
+        }
+        inputManager.mLMouseDown = false;
     }
 
     // We notify current selection input
@@ -3184,17 +3270,21 @@ void GameMode::updateRaidPanel()
     mRaidCountdownShown = seconds;
     mRaidGateClosedShown = gateClosed;
     CEGUI::Window* countdown = panel->getChild("Countdown");
+    CEGUI::Window* icon = panel->getChild("RaidIcon");
     CEGUI::Window* button = panel->getChild("OpenGateButton");
+    countdown->setText(formatDebriefingTime(seconds));
     if(gateClosed)
     {
-        countdown->setText("Raid in " + formatDebriefingTime(seconds));
-        countdown->setTooltipText("Time left until the raid comes through the Moreya gate");
+        const std::string arrivalTip = "Time left until the raid comes through the Moreya gate";
+        countdown->setTooltipText(arrivalTip);
+        icon->setTooltipText(arrivalTip);
         button->show();
     }
     else
     {
-        countdown->setText("Next group in " + formatDebriefingTime(seconds));
-        countdown->setTooltipText("Time left until the next raid group comes through the Moreya gate");
+        const std::string nextGroupTip = "Time left until the next raid group comes through the Moreya gate";
+        countdown->setTooltipText(nextGroupTip);
+        icon->setTooltipText(nextGroupTip);
         button->hide();
     }
     panel->show();
@@ -3471,7 +3561,7 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
     // The pointer, the hand and the texts that follow it disappear with the interface
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
-    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
+    hideHandCooldownIcon();
     RenderManager& renderManager = RenderManager::getSingleton();
     if(renderManager.isKeeperHandVisible())
         renderManager.rrToggleHandSelectorVisibility();
@@ -5028,27 +5118,92 @@ float GameMode::getHandFeedbackScale() const
     return mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / HAND_ACTION_ICON_DESIGN_SIZE;
 }
 
-//! \brief Shows the seconds left of the hand cooldown of a campaign level next to the hand (HL2), scaled like the
-//! pointer text and kept inside the screen; the text is empty while no cooldown runs.
-void GameMode::refreshHandCooldownText(float pointerX, float pointerY, float scale)
+//! \brief Projects a world position through the camera onto the screen in pixels.
+//! \param camera Camera of the game view.
+//! \param position World position.
+//! \param screenWidth Width of the screen in pixels.
+//! \param screenHeight Height of the screen in pixels.
+//! \param x Receives the horizontal screen position.
+//! \param y Receives the vertical screen position.
+//! \return False when the position is behind the camera.
+static bool projectToScreen(const Ogre::Camera* camera, const Ogre::Vector3& position, float screenWidth,
+    float screenHeight, float& x, float& y)
 {
-    TextRenderer& textRenderer = TextRenderer::getSingleton();
-    const Player* player = mGameMap->getLocalPlayer();
-    const std::string text = ((player == nullptr) || mDefeatSequence.isStarted()) ? std::string() :
-        HandLimitRules::cooldownText(player->getHandCooldownSeconds());
-    textRenderer.setText(ODApplication::HAND_COOLDOWN_STRING, text);
-    if(text.empty())
-        return;
+    if(camera == nullptr)
+        return false;
 
-    const float height = POINTER_TEXT_BASE_HEIGHT * scale;
-    const float width = static_cast<float>(text.size()) * height * HAND_COOLDOWN_CHAR_WIDTH_SHARE;
+    const Ogre::Vector3 viewPosition = camera->getViewMatrix() * position;
+    const Ogre::Vector4 projected = camera->getProjectionMatrix() *
+        Ogre::Vector4(viewPosition.x, viewPosition.y, viewPosition.z, 1.0f);
+    if(projected.w <= 0.0f)
+        return false;
+
+    x = (0.5f + projected.x / projected.w * 0.5f) * screenWidth;
+    y = (0.5f - projected.y / projected.w * 0.5f) * screenHeight;
+    return true;
+}
+
+//! \brief Hides the prohibition picture and the number of the hand cooldown.
+void GameMode::hideHandCooldownIcon()
+{
+    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
+    if(mHandCooldownIcon != nullptr)
+        mHandCooldownIcon->setVisible(false);
+}
+
+//! \brief Shows the crossed-out hand with the whole seconds left of the hand cooldown (HL2, K5) over the creature
+//! under the pointer that the keeper could otherwise pick up, scaled with the hand feedback and kept inside the
+//! screen. Nothing is shown while no cooldown runs or the pointer is not over such a creature, and no text is shown
+//! at the pointer.
+//! \param scale Scale of the hand feedback (getHandFeedbackScale).
+void GameMode::refreshHandCooldownIcon(float scale)
+{
+    const Player* player = mGameMap->getLocalPlayer();
+    Creature* creature = ((player == nullptr) || mDefeatSequence.isStarted() || mHandCooldownCreatureName.empty()) ?
+        nullptr : mGameMap->getCreature(mHandCooldownCreatureName);
+    const double cooldownLeft = (player == nullptr) ? 0.0 : player->getHandCooldownSeconds();
+    const uint32_t seconds = HandLimitRules::cooldownIconSeconds(creature != nullptr, cooldownLeft);
+    Ogre::Viewport* viewport = RenderManager::getSingleton().getViewport();
     const CEGUI::Sizef screen = CEGUI::System::getSingleton().getDefaultGUIContext().getSurfaceSize();
-    float left = 0.0f;
-    float top = 0.0f;
-    HandLimitRules::cooldownTextPlace(pointerX, pointerY, HAND_COOLDOWN_TEXT_OFFSET_X * scale,
-        HAND_COOLDOWN_TEXT_OFFSET_Y * scale, width, height, screen.d_width, screen.d_height, left, top);
-    textRenderer.setCharacterHeight(ODApplication::HAND_COOLDOWN_STRING, height);
-    textRenderer.moveText(ODApplication::HAND_COOLDOWN_STRING, left, top);
+    float centreX = 0.0f;
+    float centreY = 0.0f;
+    if((seconds == 0) || (viewport == nullptr) ||
+       !projectToScreen(viewport->getCamera(), creature->getPosition() +
+            Ogre::Vector3(0.0f, 0.0f, HAND_COOLDOWN_CREATURE_HEIGHT), screen.d_width, screen.d_height, centreX, centreY))
+    {
+        hideHandCooldownIcon();
+        return;
+    }
+
+    if(mHandCooldownIcon == nullptr)
+    {
+        mHandCooldownIcon = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage", "HandCooldownIcon");
+        mHandCooldownIcon->setAlwaysOnTop(true);
+        mHandCooldownIcon->setMousePassThroughEnabled(true);
+        mHandCooldownIcon->setProperty("ClippedByParent", "False");
+        mHandCooldownIcon->setProperty("FrameEnabled", "False");
+        mHandCooldownIcon->setProperty("BackgroundEnabled", "False");
+        mHandCooldownIcon->setProperty("Image", HAND_COOLDOWN_ICON_IMAGE);
+        mRootWindow->addChild(mHandCooldownIcon);
+    }
+
+    const std::string number = HandLimitRules::cooldownText(cooldownLeft);
+    const float iconSize = HAND_COOLDOWN_ICON_SIZE * scale;
+    const float numberHeight = HAND_COOLDOWN_NUMBER_HEIGHT * scale;
+    const float numberWidth = static_cast<float>(number.size()) * numberHeight * HAND_COOLDOWN_CHAR_WIDTH_SHARE;
+    float iconLeft = 0.0f;
+    float iconTop = 0.0f;
+    float numberLeft = 0.0f;
+    float numberTop = 0.0f;
+    HandLimitRules::cooldownIconPlace(centreX, centreY, iconSize, numberWidth, numberHeight, screen.d_width,
+        screen.d_height, iconLeft, iconTop, numberLeft, numberTop);
+    mHandCooldownIcon->setSize(CEGUI::USize(CEGUI::UDim(0, iconSize), CEGUI::UDim(0, iconSize)));
+    mHandCooldownIcon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, iconLeft), CEGUI::UDim(0, iconTop)));
+    mHandCooldownIcon->setVisible(true);
+    TextRenderer& textRenderer = TextRenderer::getSingleton();
+    textRenderer.setText(ODApplication::HAND_COOLDOWN_STRING, number);
+    textRenderer.setCharacterHeight(ODApplication::HAND_COOLDOWN_STRING, numberHeight);
+    textRenderer.moveText(ODApplication::HAND_COOLDOWN_STRING, numberLeft, numberTop);
 }
 
 void GameMode::setHighlightedCreature(Creature* creature)
@@ -5086,10 +5241,13 @@ void GameMode::refreshActionFeedback(float elapsed)
         }
     }
     InputManager& inputManager = mModeManager->getInputManager();
+    // Set again by handlePlayerActionNone while the pointer stays over a fighter that cannot be picked up yet
+    mHandCooldownCreatureName.clear();
     if(isMouseDownOnCEGUIWindow())
     {
         unselectAllTiles();
         mActionTargetText.clear();
+        mModeManager->getGui().hideItemTooltipAtCursor();
         CEGUI::Window* hover = CEGUI::System::getSingleton().getDefaultGUIContext().getWindowContainingMouse();
         if(hover != nullptr)
         {
@@ -5122,6 +5280,14 @@ void GameMode::refreshActionFeedback(float elapsed)
         {
             inputManager.mXPos = -1;
             inputManager.mYPos = -1;
+            // Beyond the map edge, the digging marks still reach (see mouseMoved)
+            int placeX;
+            int placeY;
+            if(findDigEdgePlaceFromMouse(mouseEvent, placeX, placeY, inputManager.mKeeperHandPos))
+            {
+                inputManager.mXPos = placeX;
+                inputManager.mYPos = placeY;
+            }
         }
         if(!inputManager.mLMouseDown)
         {
@@ -5182,11 +5348,16 @@ void GameMode::refreshActionFeedback(float elapsed)
         POINTER_TEXT_BASE_HEIGHT * pointerScale);
     TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
         pointer.d_x + POINTER_TEXT_OFFSET_X * pointerScale, pointer.d_y + POINTER_TEXT_OFFSET_Y * pointerScale);
-    refreshHandCooldownText(pointer.d_x, pointer.d_y, pointerScale);
+    refreshHandCooldownIcon(pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
-    const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
+    // A place beyond the map edge is dug at like an undiscovered tile: the hand shows the digging pose there too
+    const bool edgeDigging = !overGui && !holding && !mGameMap->getGamePaused() && tile == nullptr &&
+        isDigEdgePlace(inputManager.mXPos, inputManager.mYPos) &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
-         (!active && !mPreviewTiles.empty() && tile->isDiggable(player->getSeat())));
+         (!active && !mPreviewEdgePlaces.empty()));
+    const bool digging = edgeDigging || (!overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
+        (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
+         (!active && !mPreviewTiles.empty() && tile->isDiggable(player->getSeat()))));
     const bool building = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
          mPlayerSelection.getCurrentAction() == SelectedAction::buildTrap);
@@ -5301,11 +5472,36 @@ void GameMode::refreshSelectionSizeLabel()
     int width = 0;
     int height = 0;
     getSelectionSize(mPreviewTiles, width, height);
+    if(!mPreviewEdgePlaces.empty())
+    {
+        // Places beyond the map edge count like the tiles: the size is that of everything the drag marks
+        int minX = mPreviewEdgePlaces.front().first;
+        int maxX = minX;
+        int minY = mPreviewEdgePlaces.front().second;
+        int maxY = minY;
+        for(const std::pair<int, int>& place : mPreviewEdgePlaces)
+        {
+            minX = std::min(minX, place.first);
+            maxX = std::max(maxX, place.first);
+            minY = std::min(minY, place.second);
+            maxY = std::max(maxY, place.second);
+        }
+        for(const Tile* tile : mPreviewTiles)
+        {
+            minX = std::min(minX, tile->getX());
+            maxX = std::max(maxX, tile->getX());
+            minY = std::min(minY, tile->getY());
+            maxY = std::max(maxY, tile->getY());
+        }
+        width = maxX - minX + 1;
+        height = maxY - minY + 1;
+    }
     // Only while a drag marks more than one tile; a single tile click shows nothing
     const bool show = areaAction && inputManager.mLMouseDown && !isMouseDownOnCEGUIWindow() &&
         !mGameMap->getGamePaused() && mGameMap->getLocalPlayer()->numObjectsInHand() == 0 &&
-        !mPreviewTiles.empty() && width * height > 1 &&
-        mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) != nullptr;
+        (!mPreviewTiles.empty() || !mPreviewEdgePlaces.empty()) && width * height > 1 &&
+        (mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) != nullptr ||
+         isDigEdgePlace(inputManager.mXPos, inputManager.mYPos));
     if(!show)
     {
         if(mSelectionSizeLabel != nullptr)
@@ -5372,7 +5568,10 @@ void GameMode::updateSelectedTiles()
         mPlayerSelection.getCurrentAction() == SelectedAction::destroyTrap ||
         mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding;
     if(!mActionTargetValid && !building)
+    {
         mPreviewTiles.clear();
+        mPreviewEdgePlaces.clear();
+    }
     const Ogre::ColourValue colour = mActionTargetValid ? Ogre::ColourValue(0.35f, 0.3f, 1.0f) :
         Ogre::ColourValue(1.0f, 0.15f, 0.1f);
     const InputManager& inputManager = mModeManager->getInputManager();
@@ -5386,16 +5585,24 @@ void GameMode::updateSelectedTiles()
         outlineTiles = mPreviewTiles;
     }
     // Rectangle demolition retains its existing line; filled construction borders apply to room building.
+    // A dig selection also frames the places beyond the map edge it reaches, like undiscovered tiles
+    std::vector<std::pair<int, int> > outlineEdgePlaces = mPreviewEdgePlaces;
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::selectTile && inputManager.mLMouseDown)
+        outlineEdgePlaces = EdgePlaces::inRectangle(inputManager.mXPos, inputManager.mYPos,
+            inputManager.mLStartDragX, inputManager.mLStartDragY, mGameMap->getMapSizeX(), mGameMap->getMapSizeY());
+    const float edgeHeight = outlineEdgePlaces.empty() ? 0.0f : RenderManager::getSingleton().rrGetEdgeMarkHeight(*mGameMap);
     if(mPreviewTiles == mSelectedTiles)
     {
-        RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle);
+        RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle,
+            outlineEdgePlaces, edgeHeight);
         return;
     }
     Player* player = mGameMap->getLocalPlayer();
     for(Tile* tile : mSelectedTiles)
         tile->setSelected(false, player);
     mSelectedTiles = mPreviewTiles;
-    RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle);
+    RenderManager::getSingleton().rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle,
+        outlineEdgePlaces, edgeHeight);
 }
 
 void GameMode::unselectAllTiles()
@@ -5405,6 +5612,7 @@ void GameMode::unselectAllTiles()
         tile->setSelected(false, player);
     mSelectedTiles.clear();
     mPreviewTiles.clear();
+    mPreviewEdgePlaces.clear();
     RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, Ogre::ColourValue::White);
 }
 
@@ -5587,7 +5795,7 @@ void GameMode::notifyPossessionStarted()
     mPlayerSelection.setCurrentAction(SelectedAction::none);
     unselectAllTiles();
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
-    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
+    hideHandCooldownIcon();
 
     // The own view of the creature: no keeper interface, a crosshair, the mouse kept in the window
     enterPossessionView();
@@ -5682,7 +5890,7 @@ void GameMode::refreshPossessionView()
 
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
-    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
+    hideHandCooldownIcon();
 
     // The view is in the eyes of the creature, its own model is not shown
     Creature* creature = mGameMap->getCreature(mPossessionViewCreatureName);
@@ -5745,10 +5953,12 @@ void GameMode::checkInputCommand()
     const InputManager& inputManager = mModeManager->getInputManager();
 
     mPreviewTiles.clear();
+    mPreviewEdgePlaces.clear();
     mActionTargetValid = false;
     mActionTargetText.clear();
     if(mPlayerSelection.getCurrentAction() != SelectedAction::none &&
-       mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) == nullptr)
+       mGameMap->getTile(inputManager.mXPos, inputManager.mYPos) == nullptr &&
+       !isDigEdgePlace(inputManager.mXPos, inputManager.mYPos))
     {
         displayText(Ogre::ColourValue::Red, "Point at a tile inside the map.");
         unselectAllTiles();
@@ -5909,61 +6119,45 @@ void GameMode::handlePlayerActionQuery()
         openDungeonbookOnCreature(creature);
 }
 
-//! \brief Restores the original context text bounds after an item hover ends.
+//! \brief Takes the item card of a hovered loot bag away; the top info bar never shows an item (plan INGAME-QS-12 K11).
 void GameMode::clearItemContextImage()
 {
-    CEGUI::Window* context = mRootWindow->getChild("ContextInfo");
-    context->getChild("ContextImage")->hide();
-    context->setProperty("TextParsingEnabled", "False");
-    mModeManager->getGui().setScaledArea(context,
-        CEGUI::URect(CEGUI::UDim(0, ITEM_CONTEXT_LEFT), CEGUI::UDim(0, ITEM_CONTEXT_TOP),
-            CEGUI::UDim(1, -ITEM_CONTEXT_RIGHT_INSET), CEGUI::UDim(0, ITEM_CONTEXT_ORDINARY_BOTTOM)));
+    mModeManager->getGui().hideItemTooltipAtCursor();
 }
 
-//! \brief Shows the complete pointer tooltip and places the icon immediately left of its context name.
+//! \brief Shows the standard item tooltip of the hovered loot bag (same content, look and place as in the Dungeonbook,
+//! at once). Neither the top info bar nor the pointer text names the item (plan INGAME-QS-12 K11).
 void GameMode::showItemContext(const ItemBagEntity& bag)
 {
     const ItemInstance* item = bag.getItem();
     if(item == nullptr)
         return;
-
-    const std::string description = item->describe(mGameMap);
-    CEGUI::Window* context = mRootWindow->getChild("ContextInfo");
-    context->setProperty("TextParsingEnabled", "True");
-    mActionTargetText = description.substr(0, description.find('\n'));
-    context->setText(mActionTargetText);
-    CEGUI::Window* image = context->getChild("ContextImage");
-    const std::string imageName = ITEM_CONTEXT_IMAGE_PREFIX + item->getImageName();
-    if(CEGUI::ImageManager::getSingleton().isDefined(imageName))
-    {
-        image->setProperty("Image", imageName);
-        Gui& gui = mModeManager->getGui();
-        gui.setScaledArea(context,
-            CEGUI::URect(CEGUI::UDim(0, ITEM_CONTEXT_LEFT + ITEM_CONTEXT_IMAGE_SIDE),
-                CEGUI::UDim(0, ITEM_CONTEXT_TOP), CEGUI::UDim(1, -ITEM_CONTEXT_RIGHT_INSET),
-                CEGUI::UDim(0, ITEM_CONTEXT_TOP + ITEM_CONTEXT_IMAGE_SIDE)));
-        gui.setScaledArea(image, CEGUI::URect(CEGUI::UDim(0, -ITEM_CONTEXT_IMAGE_SIDE), CEGUI::UDim(0, 0),
-            CEGUI::UDim(0, 0), CEGUI::UDim(0, ITEM_CONTEXT_IMAGE_SIDE)));
-        CEGUI::Window* frame = image->getChild("QualityFrame");
-        const std::string frameName = ITEM_CONTEXT_FRAME_PREFIX + qualityName(item->mQuality);
-        frame->setVisible(CEGUI::ImageManager::getSingleton().isDefined(frameName));
-        if(frame->isVisible())
-            frame->setProperty("Image", frameName);
-        image->show();
-    }
-    Ogre::ColourValue colour;
-    colour.setAsRGBA(ITEM_CONTEXT_COLOURS[static_cast<std::size_t>(item->mQuality)]);
-    displayPointerText(colour, getPlainItemTooltip(description));
+    mModeManager->getGui().showItemTooltipAtCursor(*item, mGameMap);
 }
 
 //! \brief Describes visible bags as well as the existing pickable creatures, objects and terrain.
 void GameMode::handlePlayerActionNone()
 {
+    // The card of a bag shows again at the end of this call when the pointer is still on one
+    mModeManager->getGui().hideItemTooltipAtCursor();
     const InputManager& inputManager = mModeManager->getInputManager();
     Player* player = mGameMap->getLocalPlayer();
     if(player->numObjectsInHand() == 0)
     {
         Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
+        if(tile == nullptr && isDigEdgePlace(inputManager.mXPos, inputManager.mYPos))
+        {
+            // A place beyond the map edge reads exactly like an undiscovered tile
+            displayText(Ogre::ColourValue::White, "Unexplored. Click or drag to mark for digging.");
+            mPreviewEdgePlaces.push_back(std::pair<int, int>(inputManager.mXPos, inputManager.mYPos));
+            InputManager& edgeInput = mModeManager->getInputManager();
+            if(edgeInput.mHighlightedCreature != nullptr)
+            {
+                edgeInput.mHighlightedCreature->normalizeAmbient();
+                edgeInput.mHighlightedCreature = nullptr;
+            }
+            return;
+        }
         if(tile != nullptr && (!tile->getEverVisible() || tile->getHasFogOfWar()))
         {
             displayText(Ogre::ColourValue::White, "Unexplored. Click or drag to mark for digging.");
@@ -6004,14 +6198,14 @@ void GameMode::handlePlayerActionNone()
                     displayText(Ogre::ColourValue::White, "Gold");
                 else if(closest->getObjectType() == GameEntityType::itemBagEntity)
                 {
-                    const ItemBagEntity* bag = static_cast<const ItemBagEntity*>(closest);
-                    const ItemInstance* item = bag->getItem();
-                    if(item != nullptr)
-                        displayText(Ogre::ColourValue::White, item->getDisplayName(mGameMap));
+                    // The item is described by its tooltip (showItemContext), not by text in the info bar
                     mActionTargetValid = closest->tryPickup(player->getSeat());
                 }
                 else
                 {
+                    if(creature != nullptr && HandLimitRules::isFightingCreature(true,
+                           creature->getDefinition()->isWorker(), creature->getSeatPrison() != nullptr))
+                        mHandCooldownCreatureName = creature->getName();
                     std::string text = creature != nullptr ? creature->getDefinition()->getClassName() : closest->getName();
                     // Strongest friend and worst enemy of an own creature, one line (relationship option)
                     std::string relations = creature != nullptr ? creature->getRelationshipTooltip() : std::string();
@@ -6091,7 +6285,17 @@ void GameMode::handlePlayerActionSelectTile()
         if(mDigSetBool ? (!tile->getEverVisible() || tile->getHasFogOfWar() || tile->isDiggable(player->getSeat())) : tile->getMarkedForDigging(player))
             diggableTiles.push_back(tile);
     }
-    if(diggableTiles.empty())
+    // The places beyond the map edge inside the rectangle are marked like undiscovered tiles; unmarking
+    // concerns only the ones that are marked
+    std::vector<std::pair<int, int> > edgePlaces;
+    const std::vector<std::pair<int, int> > edgeRectangle = EdgePlaces::inRectangle(inputManager.mXPos, inputManager.mYPos,
+        inputManager.mLStartDragX, inputManager.mLStartDragY, mGameMap->getMapSizeX(), mGameMap->getMapSizeY());
+    for(const std::pair<int, int>& place : edgeRectangle)
+    {
+        if(mDigSetBool || player->getSeat()->isEdgePlaceMarked(place.first, place.second))
+            edgePlaces.push_back(place);
+    }
+    if(diggableTiles.empty() && edgePlaces.empty())
     {
         Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
         if(!mDigSetBool)
@@ -6111,6 +6315,7 @@ void GameMode::handlePlayerActionSelectTile()
     if(inputManager.mCommandState != InputCommandState::validated)
     {
         selectTiles(diggableTiles);
+        mPreviewEdgePlaces = edgePlaces;
         return;
     }
 
