@@ -45,8 +45,9 @@ class Window;
 //! \brief The Dungeonbook (gui/WindowSocial.layout). Its start page lists the creatures of the local player and its
 //! allies on the left (portrait, name, level and mood, filtered by All, Workers, Fighters or Unhappy) and the feed of
 //! all their posts (see social/PostLog.h) on the right. A click on a creature opens its own pages in place of the start
-//! page: its feed, its social profile, its values and its inventory, switched by the navigation bar at the bottom, whose
-//! fifth button Skills opens the skill tree window. The back arrow in the title bar returns to the start page and the
+//! page: its feed, its social profile, its values, its inventory and its skill tree, switched by the navigation bar at
+//! the bottom; the fifth button Skills shows the skill tree as a page of the book (INGAME-QS-12 K7), no window of its
+//! own opens. The back arrow in the title bar returns to the start page and the
 //! arrows around the name below the title switch to the previous and next creature of the list. The window connects its own
 //! controls; the game mode connects the close button, the HUD button and the key. It only redraws while it is visible
 //! and only when the post log or the roster changed, or every few seconds for the ages of the posts.
@@ -86,14 +87,15 @@ private:
         Unhappy
     };
 
-    //! The pages of the book: the start page and the four pages of one creature
+    //! The pages of the book: the start page and the five pages of one creature
     enum class Page
     {
         Home,
         Feed,
         Profile,
         Values,
-        Inventory
+        Inventory,
+        Skills
     };
 
     //! \brief The filter dropdown returns to the overview.
@@ -109,15 +111,15 @@ private:
     bool onNextClicked(const CEGUI::EventArgs& e);
     //! \brief A post of the all-creature feed (user string "Creature"): shows the inventory of that creature.
     bool onLinkClicked(const CEGUI::EventArgs& e);
-    //! \brief The Skills button of the navigation bar: opens the skill tree window of the selected creature.
+    //! \brief The Skills button of the navigation bar: shows the skill tree of the selected creature as the Skills page
+    //! of the book.
     bool onSkillTreeClicked(const CEGUI::EventArgs& e);
     //! \brief True when the selected creature is known here and has a skill tree, so the Skills button can be used.
     bool selectedCreatureHasSkillTree() const;
-    //! \brief The close button of the skill tree window hides it.
-    bool onSkillTreeCloseClicked(const CEGUI::EventArgs& e);
-    //! \brief Fills the skill tree window with the tree of the creature it shows; hides the window when the creature
-    //! is no longer known or has no tree. Only shows the tree, nothing in it can be clicked to spend a point.
-    void refreshSkillTree();
+    //! \brief Fills the Skills page with the skill tree of the selected creature: the path titles, the tier 4 skill and
+    //! every skill of its paths with icon, rank bar, rank and hover text. Only shows the tree, nothing in it can be
+    //! clicked to spend a point. Returns false and fills nothing when the creature is not known here or has no tree.
+    bool refreshSkills();
     //! \brief The scrollbars of the list and of the feeds move the shown rows.
     bool onListScrolled(const CEGUI::EventArgs& e);
     bool onFeedScrolled(const CEGUI::EventArgs& e);
@@ -187,10 +189,6 @@ private:
     uint32_t mShownProfilePostVersion;
     //! Seconds since the creature page was last refreshed
     float mSinceProfileRefresh;
-    //! The skill tree window (gui/WindowCreatureSkillTree.layout), opened by the Skills button of the navigation bar
-    CEGUI::Window* mSkillTreeWindow;
-    //! Name of the creature the skill tree window shows
-    std::string mSkillTreeCreature;
 };
 
 #endif // SOCIALWINDOW_H

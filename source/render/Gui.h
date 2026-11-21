@@ -106,6 +106,7 @@ public:
     //! \brief Marks the window as showing an item card: the look OD/ItemTooltip with its frame in the quality colour
     //! (ARGB hex, ItemInstance::getQualityColour). itemArea is the box of the item on the screen as "left top right
     //! bottom" in pixels (a cell of a list); empty means the whole window is the item. The tooltip never covers it.
+    //! The card has no hover delay and stays while the pointer stays on the window (plan INGAME-QS-12 K6).
     static void markItemTooltip(CEGUI::Window* window, const std::string& qualityColour, const std::string& itemArea);
 
     //! \brief Gives the window a plain text tooltip in the normal look, or none when the text is empty.

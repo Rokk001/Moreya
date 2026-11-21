@@ -95,9 +95,16 @@ const char* const FEED_TEXT_COLOUR = "[colour='FFE8DCC0']";
 
 //! Labels of the filter choices and names of the navigation buttons, in their displayed order
 const char* const FILTER_LABELS[] = {"All", "Zivs", "Fighters", "Unhappy"};
+//! The highlighted list row of the chosen menu sheet and the caption colour of its list and buttons (OD/MenuCompactButton
+//! NormalTextColour), used for the entries of the creature filter (INGAME-QS-12 K8)
+const char* const FILTER_SELECTION_BRUSH = "ODMenuTemplate/LoadRowSelected";
+const char* const FILTER_TEXT_COLOUR = "FFF9DAB0";
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
-//! The fifth button of the navigation bar, after the four pages: it opens the skill tree window (plan INGAME-QS-11 K4)
+//! The fifth button of the navigation bar, after the four pages (plan INGAME-QS-11 K4): it shows the skill tree of the
+//! creature as the Skills page of the book (INGAME-QS-12 K7)
 const char* const NAV_SKILLS_BUTTON = "NavSkills";
+//! Paths of a skill tree shown side by side on the Skills page (gui/WindowSocial.layout SkillsPage/Column0..3)
+const std::size_t SKILL_TREE_COLUMNS = 4;
 //! Colours of the symbol of the skills button while it can be used and while the creature has no skill tree
 const char* const NAV_ICON_ENABLED = "tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF";
 const char* const NAV_ICON_DISABLED = "tl:FF606060 tr:FF606060 bl:FF606060 br:FF606060";
@@ -611,15 +618,17 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mSinceRefreshCheck(0.0f),
     mSinceFeedRebuild(0.0f),
     mShownProfilePostVersion(0),
-    mSinceProfileRefresh(0.0f),
-    mSkillTreeWindow(rootWindow->getChild("CreatureSkillTreeWindow"))
+    mSinceProfileRefresh(0.0f)
 {
     CEGUI::Window* home = mWindow->getChild("HomePage");
     CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(home->getChild("Filter"));
     for(std::size_t i = 0; i < 4; ++i)
     {
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(FILTER_LABELS[i], static_cast<CEGUI::uint>(i));
-        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+        // The entries of the drop-down look like the list rows of the chosen menu sheet (INGAME-QS-12 K8): its caption
+        // colour, and the sheet's highlighted row for the chosen entry
+        item->setSelectionBrushImage(FILTER_SELECTION_BRUSH);
+        item->setTextColours(CEGUI::PropertyHelper<CEGUI::Colour>::fromString(FILTER_TEXT_COLOUR));
         filter->addItem(item);
     }
     filter->setText(FILTER_LABELS[0]);
@@ -631,7 +640,7 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         nav->setUserString("Page", std::to_string(i + 1));
         connect(nav, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onNavClicked, this));
     }
-    // The fifth button of the bar opens the skill tree window of the creature; it is no page of the book
+    // The fifth button of the bar shows the skill tree of the creature as the Skills page of the book
     connect(mWindow->getChild(std::string("NavBar/") + NAV_SKILLS_BUTTON), CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&SocialWindow::onSkillTreeClicked, this));
     for(std::size_t i = 0; i < LIST_ROWS; ++i)
@@ -669,8 +678,6 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
             connect(link, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this));
         }
     }
-    connect(mSkillTreeWindow, CEGUI::FrameWindow::EventCloseClicked,
-        CEGUI::Event::Subscriber(&SocialWindow::onSkillTreeCloseClicked, this));
 }
 
 //! \brief Disconnects the controls of the book.
@@ -764,15 +771,12 @@ void SocialWindow::hide()
     mWindow->hide();
 }
 
+//! \brief Redraws the shown page when the post log or the roster changed, every few seconds for the ages of the posts,
+//! and the Skills page at every check so that it follows the creature (new ranks at a level-up, a reset).
 void SocialWindow::update(float elapsed)
 {
     if(!mWindow->isVisible())
-    {
-        // The skill tree window belongs to the book and closes with it
-        if(mSkillTreeWindow->isVisible())
-            mSkillTreeWindow->hide();
         return;
-    }
 
     mSinceRefreshCheck += elapsed;
     mSinceFeedRebuild += elapsed;
@@ -781,9 +785,10 @@ void SocialWindow::update(float elapsed)
         return;
 
     mSinceRefreshCheck = 0.0f;
-    // The open skill tree follows the creature (new ranks at a level-up, a reset)
-    if(mSkillTreeWindow->isVisible())
-        refreshSkillTree();
+    // The shown skill tree follows the creature (new ranks at a level-up, a reset); a creature that lost its tree
+    // falls back to its inventory
+    if(mPage == Page::Skills && !refreshSkills())
+        showPage(Page::Inventory);
     social::PostLog& log = social::PostLog::getSingleton();
     if(log.getRosterVersion() != mShownRosterVersion)
         rebuildCreatureList();
@@ -892,26 +897,14 @@ bool SocialWindow::selectedCreatureHasSkillTree() const
     return creature != nullptr && !creature->getSkillTypeInfo().mGroup.empty();
 }
 
-//! \brief Opens the skill tree window of the creature selected in the book (Skills button of the navigation bar).
+//! \brief Shows the skill tree of the creature selected in the book as its Skills page (Skills button of the
+//! navigation bar, INGAME-QS-12 K7); no window opens.
 bool SocialWindow::onSkillTreeClicked(const CEGUI::EventArgs& /*e*/)
 {
     if(mSelectedCreature.empty() || !selectedCreatureHasSkillTree())
         return true;
 
-    mSkillTreeCreature = mSelectedCreature;
-    refreshSkillTree();
-    if(!mSkillTreeCreature.empty())
-    {
-        mSkillTreeWindow->show();
-        mSkillTreeWindow->activate();
-    }
-    return true;
-}
-
-//! \brief Hides the skill tree window.
-bool SocialWindow::onSkillTreeCloseClicked(const CEGUI::EventArgs& /*e*/)
-{
-    mSkillTreeWindow->hide();
+    showPage(Page::Skills);
     return true;
 }
 
@@ -956,17 +949,13 @@ void showSkillTreeNode(CEGUI::Window* tree, const std::string& name, const Creat
 }
 }
 
-void SocialWindow::refreshSkillTree()
+bool SocialWindow::refreshSkills()
 {
-    Creature* creature = mSkillTreeCreature.empty() ? nullptr : mGameMap.getCreature(mSkillTreeCreature);
+    Creature* creature = mSelectedCreature.empty() ? nullptr : mGameMap.getCreature(mSelectedCreature);
     const CreatureSkillTree::TypeInfo type = (creature == nullptr) ? CreatureSkillTree::TypeInfo() :
         creature->getSkillTypeInfo();
     if(type.mGroup.empty())
-    {
-        mSkillTreeCreature.clear();
-        mSkillTreeWindow->hide();
-        return;
-    }
+        return false;
 
     const ConfigManager& config = ConfigManager::getSingleton();
     CreatureSkillTree::ViewRules rules;
@@ -977,16 +966,9 @@ void SocialWindow::refreshSkillTree()
     const CreatureSkillTree::TreeView view = CreatureSkillTree::buildTreeView(config.getCreatureSkillTree(), type,
         creature->getSkillBuild(), rules);
 
-    const social::DungeonbookEntry* entry = findEntry(mSkillTreeCreature);
-    std::string windowTitle = mSkillTreeCreature;
-    if(entry != nullptr)
-        windowTitle = social::SocialProfileCache::getSingleton().getProfile(entry->name, entry->className,
-            entry->worker).getFullName();
-    mSkillTreeWindow->setText("Skill Tree: " + escapeMarkup(windowTitle));
-
-    CEGUI::Window* tree = mSkillTreeWindow->getChild("Tree");
-    const std::size_t COLUMNS = 4;
-    for(std::size_t column = 0; column < COLUMNS; ++column)
+    // The head of the book names the creature ("< Name >"), the page shows only its tree
+    CEGUI::Window* tree = mWindow->getChild("SkillsPage");
+    for(std::size_t column = 0; column < SKILL_TREE_COLUMNS; ++column)
     {
         const std::string prefix = "Column" + std::to_string(column);
         CEGUI::Window* title = tree->getChild(prefix + "Title");
@@ -1005,6 +987,7 @@ void SocialWindow::refreshSkillTree()
         }
     }
     showSkillTreeNode(tree, "TierFour", view.mHasTierFour ? view.mTierFour : CreatureSkillTree::ViewNode(), false);
+    return true;
 }
 
 bool SocialWindow::onListScrolled(const CEGUI::EventArgs& /*e*/)
@@ -1077,7 +1060,8 @@ void SocialWindow::stepCreature(int direction)
     showPage(mPage);
 }
 
-//! \brief Shows the overview or creature page while retaining the roster.
+//! \brief Shows the overview or creature page while retaining the roster. The Skills page of a creature without a
+//! skill tree (switched to with the arrows of the head) shows its inventory instead.
 void SocialWindow::showPage(Page page)
 {
     // Right after opening, the server roster is still on its way; the page of the creature is filled when it arrives
@@ -1085,12 +1069,15 @@ void SocialWindow::showPage(Page page)
         !social::PostLog::getSingleton().isDungeonbookRosterReady();
     if(page != Page::Home && findEntry(mSelectedCreature) == nullptr && !waitingForRoster)
         page = Page::Home;
+    const bool hasSkillTree = selectedCreatureHasSkillTree();
+    if(page == Page::Skills && !hasSkillTree)
+        page = Page::Inventory;
     mPage = page;
-    const char* const pageNames[] = {"HomePage", "FeedPage", "ProfilePage", "ValuesPage", "InventoryPage"};
-    const Page pages[] = {Page::Home, Page::Feed, Page::Profile, Page::Values, Page::Inventory};
+    const char* const pageNames[] = {"HomePage", "FeedPage", "ProfilePage", "ValuesPage", "InventoryPage", "SkillsPage"};
+    const Page pages[] = {Page::Home, Page::Feed, Page::Profile, Page::Values, Page::Inventory, Page::Skills};
     // One creature's pages replace the start page: the creature list is not shown beside them (book-switch-variant-1)
     mWindow->getChild("HomePage")->setVisible(page == Page::Home);
-    for(std::size_t i = 1; i < 5; ++i)
+    for(std::size_t i = 1; i < 6; ++i)
     {
         mWindow->getChild(pageNames[i])->setVisible(pages[i] == page);
         if(pages[i] == page)
@@ -1102,12 +1089,15 @@ void SocialWindow::showPage(Page page)
     mWindow->getChild("NavBar")->setVisible(page != Page::Home);
     mWindow->getChild("Header")->setVisible(page != Page::Home);
     mWindow->getChild("BackButton")->setVisible(page != Page::Home);
-    // The skills button is shown greyed out for a creature without a skill tree
+    // The skills button is shown greyed out for a creature without a skill tree, gold like the other buttons while its
+    // page is shown
     CEGUI::Window* skills = mWindow->getChild(std::string("NavBar/") + NAV_SKILLS_BUTTON);
-    const bool hasSkillTree = selectedCreatureHasSkillTree();
     skills->setEnabled(hasSkillTree);
     skills->getChild("Icon")->setProperty("ImageColours", hasSkillTree ? NAV_ICON_ENABLED : NAV_ICON_DISABLED);
-    skills->getChild("Label")->setProperty("TextColours", hasSkillTree ? TAB_COLOUR_INACTIVE : TAB_COLOUR_DISABLED);
+    if(hasSkillTree)
+        setNavState(skills, page == Page::Skills);
+    else
+        skills->getChild("Label")->setProperty("TextColours", TAB_COLOUR_DISABLED);
     // The start page is the feed of all creatures, so its feed button is the active one there
     const Page navPages[] = {Page::Feed, Page::Profile, Page::Values, Page::Inventory};
     for(std::size_t i = 0; i < 4; ++i)
@@ -1420,6 +1410,8 @@ void SocialWindow::refreshPage()
         refreshValues(*entry);
     else if(mPage == Page::Inventory)
         refreshInventory(*entry);
+    else if(mPage == Page::Skills)
+        refreshSkills();
 }
 
 //! \brief Fills the head "< Name >" (book-switch-variant-1): the whole name between the two arrows, which stand right

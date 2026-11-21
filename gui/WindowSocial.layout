@@ -22,7 +22,9 @@
                 <Property name="VertFormatting" value="CentreAligned" />
                 <Property name="Text" value="Creatures" />
             </Window>
-            <Window type="OD/Combobox" name="Filter">
+            <!-- The creature filter is a drop-down of the chosen menu sheet: its inset field with the sheet's arrow box
+                 (INGAME-QS-12 K8). -->
+            <Window type="OD/SheetCombobox" name="Filter">
                 <Property name="Area" value="{{0.21,0},{0.0156,0},{0.36,0},{0.3,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="ReadOnly" value="True" />
@@ -620,8 +622,10 @@
                     </Window>
                 </Window>
             </Window>
-            <Window type="OD/VerticalScrollbar" name="ListScroll">
-                <Property name="Area" value="{{0.342,0},{0.125,0},{0.362,0},{0.9922,0}}" />
+            <!-- The scrollbars of the book are the scrollbar of the chosen menu sheet (INGAME-QS-12 K9), as wide as the
+                 room between the rows and the frame of their panel allows. -->
+            <Window type="OD/SheetScrollbar" name="ListScroll">
+                <Property name="Area" value="{{0.3385,0},{0.125,0},{0.364,0},{0.9922,0}}" />
                 <Property name="Visible" value="False" />
             </Window>
             <Window type="OD/StaticText" name="FeedPanel">
@@ -846,8 +850,8 @@
                     </Window>
                 </Window>
             </Window>
-            <Window type="OD/VerticalScrollbar" name="FeedScroll">
-                <Property name="Area" value="{{0.971,0},{0.1484,0},{0.9903,0},{0.9922,0}}" />
+            <Window type="OD/SheetScrollbar" name="FeedScroll">
+                <Property name="Area" value="{{0.967,0},{0.1484,0},{0.993,0},{0.9922,0}}" />
                 <Property name="Visible" value="False" />
             </Window>
             <Window type="OD/StaticText" name="FeedEmpty">
@@ -1075,8 +1079,8 @@
                     </Window>
                 </Window>
             </Window>
-            <Window type="OD/VerticalScrollbar" name="FeedScroll">
-                <Property name="Area" value="{{0.9695,0},{0.0858,0},{0.9898,0},{1,0}}" />
+            <Window type="OD/SheetScrollbar" name="FeedScroll">
+                <Property name="Area" value="{{0.962,0},{0.0858,0},{0.99,0},{1,0}}" />
                 <Property name="Visible" value="False" />
             </Window>
             <Window type="OD/StaticText" name="FeedEmpty">
@@ -2451,6 +2455,323 @@
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="Image" value="DungeonbookIcons/BookTitleRule" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+        </Window>
+        <!-- Skills (INGAME-QS-12 K7): the skill tree of the creature as a page of the book, shown by the fifth button of the
+             navigation bar like the other pages, no window of its own. The tier 4 skill on top, then one column per
+             path (three group paths, the family path) with tier 3, 2 and 1 from top to bottom; every skill is its icon
+             with a rank bar and the rank, its hover text names it and its ranks (SocialWindow::refreshSkills). -->
+        <Window type="DefaultWindow" name="SkillsPage">
+            <Property name="Area" value="{{0.012,0},{0.085,0},{0.988,0},{0.885,0}}" />
+            <Property name="Visible" value="False" />
+            <Window type="OD/ResearchButton" name="TierFour">
+                <Property name="Area" value="{{0.46,0},{0.0133,0},{0.54,0},{0.1551,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="TierFourBar">
+                <Property name="Area" value="{{0.46,0},{0.1595,0},{0.54,0},{0.1728,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="TierFourRank">
+                <Property name="Area" value="{{0.45,0},{0.175,0},{0.55,0},{0.2193,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/StaticText" name="Column0Title">
+                <Property name="Area" value="{{0.0049,0},{0.2304,0},{0.2451,0},{0.2858,0}}" />
+                <Property name="Text" value="" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column0Tier3">
+                <Property name="Area" value="{{0.085,0},{0.2969,0},{0.165,0},{0.4386,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column0Tier3Bar">
+                <Property name="Area" value="{{0.085,0},{0.4431,0},{0.165,0},{0.4564,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column0Tier3Rank">
+                <Property name="Area" value="{{0.075,0},{0.4586,0},{0.175,0},{0.5029,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column0Tier2">
+                <Property name="Area" value="{{0.085,0},{0.5162,0},{0.165,0},{0.658,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column0Tier2Bar">
+                <Property name="Area" value="{{0.085,0},{0.6624,0},{0.165,0},{0.6757,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column0Tier2Rank">
+                <Property name="Area" value="{{0.075,0},{0.6779,0},{0.175,0},{0.7222,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column0Tier1">
+                <Property name="Area" value="{{0.085,0},{0.7355,0},{0.165,0},{0.8773,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column0Tier1Bar">
+                <Property name="Area" value="{{0.085,0},{0.8817,0},{0.165,0},{0.895,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column0Tier1Rank">
+                <Property name="Area" value="{{0.075,0},{0.8972,0},{0.175,0},{0.9415,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/StaticText" name="Column1Title">
+                <Property name="Area" value="{{0.2549,0},{0.2304,0},{0.4951,0},{0.2858,0}}" />
+                <Property name="Text" value="" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column1Tier3">
+                <Property name="Area" value="{{0.335,0},{0.2969,0},{0.415,0},{0.4386,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column1Tier3Bar">
+                <Property name="Area" value="{{0.335,0},{0.4431,0},{0.415,0},{0.4564,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column1Tier3Rank">
+                <Property name="Area" value="{{0.325,0},{0.4586,0},{0.425,0},{0.5029,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column1Tier2">
+                <Property name="Area" value="{{0.335,0},{0.5162,0},{0.415,0},{0.658,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column1Tier2Bar">
+                <Property name="Area" value="{{0.335,0},{0.6624,0},{0.415,0},{0.6757,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column1Tier2Rank">
+                <Property name="Area" value="{{0.325,0},{0.6779,0},{0.425,0},{0.7222,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column1Tier1">
+                <Property name="Area" value="{{0.335,0},{0.7355,0},{0.415,0},{0.8773,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column1Tier1Bar">
+                <Property name="Area" value="{{0.335,0},{0.8817,0},{0.415,0},{0.895,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column1Tier1Rank">
+                <Property name="Area" value="{{0.325,0},{0.8972,0},{0.425,0},{0.9415,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/StaticText" name="Column2Title">
+                <Property name="Area" value="{{0.5049,0},{0.2304,0},{0.7451,0},{0.2858,0}}" />
+                <Property name="Text" value="" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column2Tier3">
+                <Property name="Area" value="{{0.585,0},{0.2969,0},{0.665,0},{0.4386,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column2Tier3Bar">
+                <Property name="Area" value="{{0.585,0},{0.4431,0},{0.665,0},{0.4564,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column2Tier3Rank">
+                <Property name="Area" value="{{0.575,0},{0.4586,0},{0.675,0},{0.5029,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column2Tier2">
+                <Property name="Area" value="{{0.585,0},{0.5162,0},{0.665,0},{0.658,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column2Tier2Bar">
+                <Property name="Area" value="{{0.585,0},{0.6624,0},{0.665,0},{0.6757,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column2Tier2Rank">
+                <Property name="Area" value="{{0.575,0},{0.6779,0},{0.675,0},{0.7222,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column2Tier1">
+                <Property name="Area" value="{{0.585,0},{0.7355,0},{0.665,0},{0.8773,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column2Tier1Bar">
+                <Property name="Area" value="{{0.585,0},{0.8817,0},{0.665,0},{0.895,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column2Tier1Rank">
+                <Property name="Area" value="{{0.575,0},{0.8972,0},{0.675,0},{0.9415,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/StaticText" name="Column3Title">
+                <Property name="Area" value="{{0.7549,0},{0.2304,0},{0.9951,0},{0.2858,0}}" />
+                <Property name="Text" value="" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column3Tier3">
+                <Property name="Area" value="{{0.835,0},{0.2969,0},{0.915,0},{0.4386,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column3Tier3Bar">
+                <Property name="Area" value="{{0.835,0},{0.4431,0},{0.915,0},{0.4564,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column3Tier3Rank">
+                <Property name="Area" value="{{0.825,0},{0.4586,0},{0.925,0},{0.5029,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column3Tier2">
+                <Property name="Area" value="{{0.835,0},{0.5162,0},{0.915,0},{0.658,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column3Tier2Bar">
+                <Property name="Area" value="{{0.835,0},{0.6624,0},{0.915,0},{0.6757,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column3Tier2Rank">
+                <Property name="Area" value="{{0.825,0},{0.6779,0},{0.925,0},{0.7222,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="MousePassThroughEnabled" value="True" />
+            </Window>
+            <Window type="OD/ResearchButton" name="Column3Tier1">
+                <Property name="Area" value="{{0.835,0},{0.7355,0},{0.915,0},{0.8773,0}}" />
+                <Property name="ButtonImage" value="CreatureSkillIcons/BLK_A1" />
+                <Property name="TooltipText" value="" />
+            </Window>
+            <Window type="OD/ProgressBar" name="Column3Tier1Bar">
+                <Property name="Area" value="{{0.835,0},{0.8817,0},{0.915,0},{0.895,0}}" />
+                <Property name="CurrentProgress" value="0.0" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+            </Window>
+            <Window type="OD/StaticText" name="Column3Tier1Rank">
+                <Property name="Area" value="{{0.825,0},{0.8972,0},{0.925,0},{0.9415,0}}" />
+                <Property name="Text" value="0/5" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
         </Window>

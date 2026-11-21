@@ -155,7 +155,6 @@
         <LayoutImport type="DefaultWindow" filename="WindowSkillTree.layout" name="SkillTreeWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowRoomManager.layout" name="RoomManagerWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSocial.layout" name="SocialWindowImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowCreatureSkillTree.layout" name="CreatureSkillTreeWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSandbox.layout" name="SandboxWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSandboxRealm.layout" name="SandboxRealmWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowGameOptions.layout" name="GameOptionsMenuImport" />

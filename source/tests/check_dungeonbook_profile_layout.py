@@ -117,7 +117,8 @@ def visible_default(name):
 
 assert visible_default('HomePage') and not any(visible_default(p) for p in pages[1:]), 'the book opens on the start page'
 assert not visible_default('Header'), 'the start page has no head with arrows'
-# Navigation: five buttons in the bottom bar, the last opens the skill tree (plan INGAME-QS-11 K4); the arrows in the
+# Navigation: five buttons in the bottom bar, the last shows the skill tree page (plan INGAME-QS-11 K4, INGAME-QS-12
+# K7); the arrows in the
 # head "< Name >" below the title; the back arrow in the title bar (K3); the filters in the head of the start page
 nav = [n for n in boxes if n.startswith('NavBar/Nav') and n.count('/') == 1 and n != 'NavBar/NavRule']
 assert nav == ['NavBar/NavFeed', 'NavBar/NavProfile', 'NavBar/NavValues', 'NavBar/NavInventory', 'NavBar/NavSkills'], nav
@@ -131,7 +132,7 @@ assert back_arrow is not None and back_arrow.find("Property[@name='NonClient']")
 prev_box, name_box, next_box = (boxes['Header/' + n][0] for n in ('PrevButton', 'NameText', 'NextButton'))
 assert prev_box[2] <= name_box[0] and name_box[2] <= next_box[0], 'the arrows sit around the name'
 filters = ['HomePage/Filter']
-assert boxes[filters[0]][1].get('type') == 'OD/Combobox'
+assert boxes[filters[0]][1].get('type') == 'OD/SheetCombobox', 'the filter is the drop-down of the menu sheet (INGAME-QS-12 K8)'
 assert boxes['HomePage/CreaturesLabel'][0][2] <= boxes[filters[0]][0][0]
 assert boxes[filters[0]][0][1] < boxes['HomePage/ListRows'][0][1]
 buttons = [n for n, (b, e) in boxes.items() if e.get('type') in ('OD/Button', 'OD/InvisibleButton')]
@@ -148,7 +149,7 @@ for page in ('HomePage', 'FeedPage'):
     assert len(rows) == 3 and 'FEED_ROWS = 3' in social, page
     for upper, lower in zip(rows, rows[1:]):
         assert boxes[upper][0][3] <= boxes[lower][0][1] + 1e-9
-    assert boxes[page + '/FeedScroll'][1].get('type') == 'OD/VerticalScrollbar'
+    assert boxes[page + '/FeedScroll'][1].get('type') == 'OD/SheetScrollbar', 'the scrollbar of the menu sheet (INGAME-QS-12 K9)'
 for upper, lower in zip(list_rows, list_rows[1:]):
     assert boxes[upper][0][3] <= boxes[lower][0][1] + 1e-9
 for part in ('Highlight', 'Portrait', 'Name', 'Level', 'MoodIcon', 'Mood', 'Button'):
