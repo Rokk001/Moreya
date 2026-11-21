@@ -54,6 +54,7 @@
 #include "modes/ConsoleCommands.h"
 #include "network/CosmeticEvent.h"
 #include "network/ODClient.h"
+#include "network/ServerGuards.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
 #include "rooms/Room.h"
@@ -449,6 +450,17 @@ namespace
 
         return static_cast<RoomPortalWave*>(room);
     }
+
+    //! \brief Returns true if the socket finished the handshake and its player has a seat, i.e. it takes part in
+    //! the running game or editor. Rejected sockets and sockets still in the handshake do not.
+    bool isPlayingClient(ODSocketClient* client)
+    {
+        if(client == nullptr)
+            return false;
+        Player* player = client->getPlayer();
+        return ServerGuards::isCommandAllowed(ServerGuards::CommandRequirement::seat, client->getState(),
+            player != nullptr, (player != nullptr) && (player->getSeat() != nullptr));
+    }
 }
 
 template<> ODServer* Ogre::Singleton<ODServer>::msSingleton = nullptr;
@@ -789,8 +801,12 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
 
     // We wait until every client acknowledge the turn to start the next one. This way, we ensure
     // synchronisation is not too bad
+    // A socket without a player or a seat (rejected at the seat configuration, or still in the handshake) cannot
+    // acknowledge turns and does not hold the others.
     for (ODSocketClient* client : mSockClients)
     {
+        if(!isPlayingClient(client))
+            continue;
         if(client->getLastTurnAck() != turn)
             return;
     }
@@ -812,6 +828,9 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
     // We notify the clients about what they got
     for (ODSocketClient* sock : mSockClients)
     {
+        // Rejected sockets and sockets still in the handshake have no player or seat to notify
+        if(!isPlayingClient(sock))
+            continue;
         Player* player = sock->getPlayer();
         // For now, only the player whose seat changed is notified. If we need it, we could send the event to every player
         // so that they can see how far from the goals the other players are
@@ -1379,7 +1398,25 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
     }
 
     ClientNotificationType clientCommand;
-    OD_ASSERT_TRUE(packetReceived >> clientCommand);
+    if(!(packetReceived >> clientCommand))
+    {
+        OD_LOG_WRN("Ignored a client message without a valid command, state=" + clientSocket->getState());
+        return true;
+    }
+
+    // Commands other than the handshake are only handled for a socket that finished the handshake and has a
+    // player, and, for the commands of a running game or editor, a seat.
+    Player* senderPlayer = clientSocket->getPlayer();
+    const bool senderHasSeat = (senderPlayer != nullptr) && (senderPlayer->getSeat() != nullptr);
+    if(!ServerGuards::isCommandAllowed(ServerGuards::commandRequirement(clientCommand), clientSocket->getState(),
+        senderPlayer != nullptr, senderHasSeat))
+    {
+        OD_LOG_WRN("Ignored command " + ClientNotification::typeString(clientCommand)
+            + " from a client in state=" + clientSocket->getState()
+            + (senderPlayer == nullptr ? std::string(" without a player") : std::string(""))
+            + (senderHasSeat ? std::string("") : std::string(" without a seat")));
+        return true;
+    }
 
     OD_LOG_INF("processClientNotifications type=" + ClientNotification::typeString(clientCommand));
     switch(clientCommand)
@@ -1678,6 +1715,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(std::string("ready").compare(clientSocket->getState()) != 0)
                 return false;
 
+            // Seats are only handed out while the game is configured
+            if(mServerState != ServerState::StateConfiguration)
+            {
+                OD_LOG_WRN("Ignored readyForSeatConfiguration outside of the seat configuration from player="
+                    + clientSocket->getPlayer()->getNick());
+                break;
+            }
+
             // By default, the first player to connect is the one allowed to configure game
             if(mPlayerConfig == nullptr)
             {
@@ -1690,10 +1735,17 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             ODPacket packetSend;
             OD_LOG_INF("New player: " + clientSocket->getPlayer()->getNick());
-            // We notify to the newly connected player all the currently connected players (including himself)
-            uint32_t nbPlayers = mSockClients.size();
-            packetSend << ServerNotificationType::addPlayers << nbPlayers;
+            // We notify to the newly connected player all the currently connected players (including himself).
+            // Sockets still in the handshake have no player yet and are left out.
+            std::vector<ODSocketClient*> clientsWithPlayer;
             for (ODSocketClient* client : mSockClients)
+            {
+                if((client->getPlayer() != nullptr) && (ServerGuards::STATE_READY == client->getState()))
+                    clientsWithPlayer.push_back(client);
+            }
+            uint32_t nbPlayers = clientsWithPlayer.size();
+            packetSend << ServerNotificationType::addPlayers << nbPlayers;
+            for (ODSocketClient* client : clientsWithPlayer)
             {
                 const std::string& nick = client->getPlayer()->getNick();
                 int32_t id = client->getPlayer()->getId();
@@ -1959,10 +2011,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
 
             // Now, we can disconnect the players that were not configured
+            // A socket still in the handshake has no player and is rejected as well
             std::vector<ODSocketClient*> clientsToRemove;
             for (ODSocketClient* client : mSockClients)
             {
-                if(client->getPlayer()->getSeat() == nullptr)
+                if((client->getPlayer() == nullptr) || (client->getPlayer()->getSeat() == nullptr))
                     clientsToRemove.push_back(client);
             }
 
@@ -1973,9 +2026,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 for(ODSocketClient* client : clientsToRemove)
                 {
                     Player* player = client->getPlayer();
-                    OD_LOG_INF("Rejecting player id="
-                        + Helper::toString(player->getId())
-                        + ", nick=" + player->getNick());
+                    if(player != nullptr)
+                    {
+                        OD_LOG_INF("Rejecting player id="
+                            + Helper::toString(player->getId())
+                            + ", nick=" + player->getNick());
+                    }
+                    else
+                        OD_LOG_INF("Rejecting a client still in the handshake, state=" + client->getState());
                     client->setState("rejected");
                     client->send(packetSend);
                     delete player;
