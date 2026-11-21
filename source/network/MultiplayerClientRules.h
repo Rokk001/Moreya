@@ -16,6 +16,8 @@
 #ifndef MULTIPLAYERCLIENTRULES_H
 #define MULTIPLAYERCLIENTRULES_H
 
+#include "network/StartGameRefusal.h"
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -28,18 +30,20 @@ namespace MultiplayerClientRules
 //! \brief Highest valid network port.
 const uint32_t MAX_PORT = 65535;
 
-//! \brief Seconds the lobby waits for the server to start the game after the host pressed Start,
-//! before it tells the host that the server did not start it.
-const float LAUNCH_ANSWER_SECONDS = 5.0f;
-
 //! \brief Message shown in the main menu after the connection to the server was lost.
 const char* const LOST_SERVER_MESSAGE = "The connection to the server was lost.";
 
 //! \brief Message shown in the lobby when not every seat has a player, a team and a faction.
 const char* const SEATS_NOT_FILLED_MESSAGE = "Every seat needs a player, a team and a faction before the game can start.";
 
-//! \brief Message shown in the lobby when the server did not start the game after Start was pressed.
-const char* const LAUNCH_NOT_ANSWERED_MESSAGE = "The server did not start the game. Check that every seat is filled.";
+//! \brief Message shown in the lobby when the server refused the start because the client is not the host.
+const char* const NOT_HOST_MESSAGE = "Only the host can start the game.";
+
+//! \brief Message shown in the lobby when the server refused the start because it no longer configures the seats.
+const char* const WRONG_STATE_MESSAGE = "The game cannot be started now.";
+
+//! \brief Message shown in the lobby when the server refused the start with a reason this client does not know.
+const char* const START_REFUSED_MESSAGE = "The server did not start the game.";
 
 //! \brief Message shown in the join menu for a port that is not a number from 1 to 65535.
 const char* const INVALID_PORT_MESSAGE = "Please enter a port from 1 to 65535.";
@@ -103,11 +107,22 @@ inline bool areSeatsFilled(const std::vector<LobbySeatChoice>& seats)
     return true;
 }
 
-//! \brief Tells whether the lobby has waited long enough for the start of the game to report that
-//! the server did not start it. Once reported, it is not reported again.
-inline bool isLaunchUnanswered(float waitedSeconds, bool alreadyReported)
+//! \brief Returns the lobby message for the reason code the server sent with startGameRefused. A value that is
+//! not a StartGameRefusal::Reason gives the general START_REFUSED_MESSAGE.
+inline const char* startRefusedMessage(int32_t reasonValue)
 {
-    return !alreadyReported && waitedSeconds >= LAUNCH_ANSWER_SECONDS;
+    if(!StartGameRefusal::isReasonValue(reasonValue))
+        return START_REFUSED_MESSAGE;
+    switch(static_cast<StartGameRefusal::Reason>(reasonValue))
+    {
+        case StartGameRefusal::Reason::seatsIncomplete:
+            return SEATS_NOT_FILLED_MESSAGE;
+        case StartGameRefusal::Reason::notHost:
+            return NOT_HOST_MESSAGE;
+        case StartGameRefusal::Reason::wrongState:
+            return WRONG_STATE_MESSAGE;
+    }
+    return START_REFUSED_MESSAGE;
 }
 
 //! \brief Reads the port typed in the join menu. Leading and trailing spaces are ignored; an empty

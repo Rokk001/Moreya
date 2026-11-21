@@ -2,8 +2,8 @@
 
 The runtime probe compiles source/network/MultiplayerClientRules.h as it is and checks its decisions against fixed
 expected values (counted once on this branch: 8 session cases, 6 pause cases, 4 debriefing exits, 5 seat lists,
-4 launch waits, 14 port inputs). The wiring part checks that the client, the frame listener, the defeat debriefing,
-the lobby and the join menu use these decisions. Use --source-only to skip the compiled probe.
+8 refusal reasons, 14 port inputs). The wiring part checks that the client, the frame listener, the defeat
+debriefing, the lobby (with the startGameRefused answer of the server) and the join menu use these decisions. Use --source-only to skip the compiled probe.
 """
 from pathlib import Path
 import os
@@ -113,11 +113,15 @@ int main()
     seats[1] = seat(true, true, false);
     check(!R::areSeatsFilled(seats), "a seat without faction: not filled");
 
-    // Waiting for the start of the game
-    check(R::LAUNCH_ANSWER_SECONDS == 5.0f, "the lobby waits 5 seconds for the start");
-    check(!R::isLaunchUnanswered(4.9f, false), "before 5 seconds nothing is reported");
-    check(R::isLaunchUnanswered(5.0f, false), "after 5 seconds the refused start is reported");
-    check(!R::isLaunchUnanswered(60.0f, true), "the refused start is reported once");
+    // The reason codes of startGameRefused are fixed on the wire, and each has its lobby message
+    check(static_cast<int32_t>(StartGameRefusal::Reason::seatsIncomplete) == 0, "seats incomplete is sent as 0");
+    check(static_cast<int32_t>(StartGameRefusal::Reason::notHost) == 1, "not the host is sent as 1");
+    check(static_cast<int32_t>(StartGameRefusal::Reason::wrongState) == 2, "wrong state is sent as 2");
+    check(std::string(R::startRefusedMessage(0)) == R::SEATS_NOT_FILLED_MESSAGE, "seats incomplete: the seat message");
+    check(std::string(R::startRefusedMessage(1)) == "Only the host can start the game.", "not the host: the host message");
+    check(std::string(R::startRefusedMessage(2)) == "The game cannot be started now.", "wrong state: the state message");
+    check(std::string(R::startRefusedMessage(3)) == "The server did not start the game.", "an unknown reason: the general message");
+    check(std::string(R::startRefusedMessage(-1)) == "The server did not start the game.", "a negative reason: the general message");
 
     // Join port
     check(port("") == 32222, "empty: the configured port");
@@ -136,7 +140,7 @@ int main()
     check(port("80 81") == -1, "two numbers: refused");
 
     std::cout << "CHECKS=" << gChecks << " FAILURES=" << gFailures << std::endl;
-    return gFailures == 0 && gChecks == 41 ? 0 : 1;
+    return gFailures == 0 && gChecks == 45 ? 0 : 1;
 }
 '''
 
@@ -210,22 +214,28 @@ assert 'requestMainMenuWithMultiplayerSubMenu();' in confirm and 'requestMainMen
     and 'MENU_CAMPAIGN' in confirm
 print('DEBRIEFING OK: campaign, multiplayer and skirmish exits')
 
-# 4. The lobby shows the loading picture only in single player and tells the host about a refused start
+# 4. The lobby shows the loading picture only in single player and shows at once why the server refused the start
 seats = read('source/modes/MenuModeConfigureSeats.cpp')
 launch = function(seats, 'bool MenuModeConfigureSeats::launchSelectedButtonPressed(')
 multiplayer = launch.index('if(ODClient::getSingleton().isMultiplayerSession())')
 picture = launch.index('LoadingScreen loading;')
 assert multiplayer < launch.index('areSeatsFilled(collectSeatChoices())') < launch.index('SEATS_NOT_FILLED_MESSAGE') \
-    < launch.index('ClientNotificationType::seatConfigurationSet') < launch.index('mLaunchPending = true;') < picture, \
+    < launch.index('ClientNotificationType::seatConfigurationSet') < picture, \
     'in multiplayer the start is only asked for with filled seats, without the loading picture'
 assert launch.count('LoadingScreen loading;') == 1
-frame = function(seats, 'void MenuModeConfigureSeats::onFrameStarted(')
-assert 'isLaunchUnanswered(mLaunchWaitSeconds, mLaunchReported)' in frame and 'LAUNCH_NOT_ANSWERED_MESSAGE' in frame
+# The server answers a refused start, so the lobby has no timeout any more
+assert 'void MenuModeConfigureSeats::onFrameStarted(' not in seats and 'mLaunchPending' not in seats
+refused = function(seats, 'void MenuModeConfigureSeats::showStartRefused(int32_t reasonValue)')
+assert refused.index('LoadingScreen::finish();') < refused.index('showLobbyMessage(MultiplayerClientRules::startRefusedMessage(reasonValue));')
+assert 'void showStartRefused(int32_t reasonValue);' in read('source/modes/MenuModeConfigureSeats.h')
+answer = client[client.index('case ServerNotificationType::startGameRefused:'):]
+answer = answer[:answer.index('\n        case ServerNotificationType::')]
+assert answer.index('if(!(packetReceived >> reasonValue))') < answer.index('ModeManager::ModeType::MENU_CONFIGURE_SEATS') \
+    < answer.index('mode->showStartRefused(reasonValue);'), 'the client reads the reason and shows it in the lobby'
 choices = function(seats, 'MenuModeConfigureSeats::collectSeatChoices()')
 for prefix in ('COMBOBOX_PLAYER_PREFIX', 'COMBOBOX_TEAM_ID_PREFIX', 'COMBOBOX_PLAYER_FACTION_PREFIX'):
     assert prefix in choices, prefix
-assert 'mLaunchPending(false)' in seats and 'mLaunchReported(false)' in seats
-print('LOBBY OK: no loading picture before a multiplayer start, messages for unfilled seats and a refused start')
+print('LOBBY OK: no loading picture before a multiplayer start, messages for unfilled seats and the refusal reason')
 
 # 5. The join menu has an optional, validated port
 client_menu = read('source/modes/MenuModeMultiplayerClient.cpp')

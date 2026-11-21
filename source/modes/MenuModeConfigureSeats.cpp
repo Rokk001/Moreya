@@ -37,8 +37,6 @@
 #include "utils/Helper.h"
 #include "utils/RunLevelTest.h"
 
-#include <OgreFrameListener.h>
-
 #include <algorithm>
 #include <CEGUI/CEGUI.h>
 
@@ -212,10 +210,7 @@ MenuModeConfigureSeats::MenuModeConfigureSeats(ModeManager* modeManager):
     AbstractApplicationMode(modeManager, ModeManager::MENU_CONFIGURE_SEATS),
     mIsActivePlayerConfig(false),
     mSettingsReceived(false),
-    mIsRefreshing(false),
-    mLaunchPending(false),
-    mLaunchWaitSeconds(0.0f),
-    mLaunchReported(false)
+    mIsRefreshing(false)
 {
     CEGUI::Window* window = modeManager->getGui().getGuiSheet(Gui::guiSheet::configureSeats);
     addEventConnection(
@@ -740,7 +735,7 @@ void MenuModeConfigureSeats::activate()
 
 //! \brief Asks the server to start the configured map. A single player game presents the loading image at once. In
 //! multiplayer the start of the game shows the image itself, so the lobby only asks: with a seat that is not filled it
-//! tells the host instead, and if the server does not start the game in time it says so (see onFrameStarted).
+//! tells the host instead, and if the server refuses the start it answers with startGameRefused (see showStartRefused).
 bool MenuModeConfigureSeats::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     // We send to the server the associations faction/seat/player
@@ -750,7 +745,7 @@ bool MenuModeConfigureSeats::launchSelectedButtonPressed(const CEGUI::EventArgs&
 
     if(ODClient::getSingleton().isMultiplayerSession())
     {
-        // The server refuses to start while a seat lacks a player, a team or a faction, without an answer
+        // The server refuses to start while a seat lacks a player, a team or a faction; the lobby says so at once
         if(!MultiplayerClientRules::areSeatsFilled(collectSeatChoices()))
         {
             OD_LOG_INF("The game is not started: not every seat has a player, a team and a faction");
@@ -760,9 +755,6 @@ bool MenuModeConfigureSeats::launchSelectedButtonPressed(const CEGUI::EventArgs&
         showLobbyMessage("");
         ClientNotification* notif = new ClientNotification(ClientNotificationType::seatConfigurationSet);
         ODClient::getSingleton().queueClientNotification(notif);
-        mLaunchWaitSeconds = 0.0f;
-        mLaunchPending = true;
-        mLaunchReported = false;
         return true;
     }
 
@@ -773,19 +765,14 @@ bool MenuModeConfigureSeats::launchSelectedButtonPressed(const CEGUI::EventArgs&
     return true;
 }
 
-//! \brief Tells the host after a while that the server did not start the requested multiplayer game. Once the game
-//! starts, this mode is left and nothing is shown.
-void MenuModeConfigureSeats::onFrameStarted(const Ogre::FrameEvent& evt)
+//! \brief Shows in the lobby why the server refused to start the game. The server answers every start request it
+//! does not carry out with startGameRefused, so the lobby needs no timeout: a server with another protocol is already
+//! refused at the hello (wire suffix), so no server that stays silent can be reached. The loading image of a single
+//! player start is closed so that the message can be read.
+void MenuModeConfigureSeats::showStartRefused(int32_t reasonValue)
 {
-    if(!mLaunchPending)
-        return;
-    mLaunchWaitSeconds += evt.timeSinceLastFrame;
-    if(!MultiplayerClientRules::isLaunchUnanswered(mLaunchWaitSeconds, mLaunchReported))
-        return;
-    mLaunchReported = true;
-    mLaunchPending = false;
-    OD_LOG_WRN("The server did not start the game after the start was requested");
-    showLobbyMessage(MultiplayerClientRules::LAUNCH_NOT_ANSWERED_MESSAGE);
+    LoadingScreen::finish();
+    showLobbyMessage(MultiplayerClientRules::startRefusedMessage(reasonValue));
 }
 
 //! \brief Reads for every seat of the lobby whether its player, team and faction are chosen (their combo shows a value).

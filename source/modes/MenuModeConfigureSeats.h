@@ -74,8 +74,8 @@ public:
     void activatePlayerConfig();
     void refreshSeatConfiguration(ODPacket& packet);
 
-    //! \brief Tells the host when the server did not start a requested multiplayer game in time.
-    void onFrameStarted(const Ogre::FrameEvent& evt) override;
+    //! \brief Shows in the lobby why the server refused to start the game (the reason code of startGameRefused).
+    void showStartRefused(int32_t reasonValue);
 
 private:
     bool mIsActivePlayerConfig;
@@ -86,12 +86,6 @@ private:
     bool mSettingsReceived;
     //! \brief True while the window is refreshed from the server, to not send the values back
     bool mIsRefreshing;
-    //! \brief True from the start request of a multiplayer game until the server starts it or the wait is reported
-    bool mLaunchPending;
-    //! \brief Seconds waited for the server to start the requested multiplayer game
-    float mLaunchWaitSeconds;
-    //! \brief True once the host was told that the server did not start the game
-    bool mLaunchReported;
     //! \brief The availability chosen for each skill, indexed by SkillType
     std::vector<uint32_t> mItemStates;
     //! \brief The buttons of the rooms, spells, traps and doors pages, by SkillType

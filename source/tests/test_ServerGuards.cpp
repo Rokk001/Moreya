@@ -15,12 +15,14 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// The checks the server applies to client messages (ServerGuards.h) and the failure state of ODPacket::markInvalid.
+// The checks the server applies to client messages (ServerGuards.h), the failure state of ODPacket::markInvalid and
+// the reason codes the server sends with a refused start (StartGameRefusal.h).
 #define BOOST_TEST_MODULE ServerGuards
 #include "BoostTestTargetConfig.h"
 
 #include "network/ODPacket.h"
 #include "network/ServerGuards.h"
+#include "network/StartGameRefusal.h"
 
 #include <cstdint>
 #include <string>
@@ -281,4 +283,25 @@ BOOST_AUTO_TEST_CASE(test_clipRectangleToMap)
     x2 = 9;
     y2 = 2147483647;
     BOOST_CHECK(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, 10, 20));
+}
+
+//! Checks the fixed wire values and the range of the reason codes of startGameRefused, and that a reason survives
+//! a packet round trip.
+BOOST_AUTO_TEST_CASE(test_startGameRefusal)
+{
+    BOOST_CHECK_EQUAL(static_cast<int32_t>(StartGameRefusal::Reason::seatsIncomplete), 0);
+    BOOST_CHECK_EQUAL(static_cast<int32_t>(StartGameRefusal::Reason::notHost), 1);
+    BOOST_CHECK_EQUAL(static_cast<int32_t>(StartGameRefusal::Reason::wrongState), 2);
+    BOOST_CHECK(StartGameRefusal::LAST_REASON == StartGameRefusal::Reason::wrongState);
+
+    BOOST_CHECK(StartGameRefusal::isReasonValue(0));
+    BOOST_CHECK(StartGameRefusal::isReasonValue(2));
+    BOOST_CHECK(!StartGameRefusal::isReasonValue(3));
+    BOOST_CHECK(!StartGameRefusal::isReasonValue(-1));
+
+    ODPacket packet;
+    packet << static_cast<int32_t>(StartGameRefusal::Reason::notHost);
+    int32_t reasonValue = -1;
+    BOOST_CHECK(packet >> reasonValue);
+    BOOST_CHECK_EQUAL(reasonValue, 1);
 }

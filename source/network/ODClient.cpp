@@ -569,6 +569,24 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::startGameRefused:
+        {
+            // The server answers a start request it does not carry out with the reason
+            int32_t reasonValue = -1;
+            if(!(packetReceived >> reasonValue))
+            {
+                OD_LOG_ERR("Could not read the reason of the refused start");
+                break;
+            }
+            OD_LOG_INF("The server refused to start the game, reason=" + Helper::toString(reasonValue));
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::MENU_CONFIGURE_SEATS)
+                break;
+
+            MenuModeConfigureSeats* mode = static_cast<MenuModeConfigureSeats*>(frameListener->getModeManager()->getCurrentMode());
+            mode->showStartRefused(reasonValue);
+            break;
+        }
+
        
         case ServerNotificationType::addPlayers:
         {

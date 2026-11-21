@@ -6,8 +6,10 @@ switch of ODServer::processClientNotifications, the console command rule, the ho
 seat configuration, the bounds of notifyTileRevealed, the nickname and chat limits, the turn barrier without
 playerless sockets, the editor checks of the draggable tile container, the range checks of the enum reads (network
 and game enums), the packet reads that stop a command when they fail, and the bounds of counts, names, lists and
-rectangles sent by clients. The fixed values (20 letters, 512 bytes, the command groups, the last enum values, the
-7 asserted setNick reads, the count and name limits) were counted once for this branch.
+rectangles sent by clients, and the startGameRefused answer (reasons wrongState, notHost, seatsIncomplete) to a start
+the server does not carry out. The fixed values (20 letters, 512 bytes, the command groups, the last enum values,
+the 3 refusal reasons 0 to 2, the 7 asserted setNick reads, the count and name limits) were counted once for this
+branch.
 Nothing is compiled and the game is not started; the integration build compiles the code and runs the Boost test
 00-ServerGuards, which tests the guard functions themselves.
 
@@ -144,6 +146,35 @@ check("if(!isSeatConfigurationSender(clientSocket))" in set_case, "seatConfigura
 check("(client->getPlayer() == nullptr) || (client->getPlayer()->getSeat() == nullptr)" in set_case,
       "sockets still in the handshake are rejected without a crash")
 
+# ------------------------------------------------------------------------------------------------ refused start
+REFUSAL = read("source/network/StartGameRefusal.h")
+SERVER_NOTIFICATION_H = read("source/network/ServerNotification.h")
+reason_body = re.search(r"enum class Reason : int32_t\s*\{(.*?)\};", REFUSAL, re.S).group(1)
+reasons = re.findall(r"^\s*(\w+) = (\d+),?\s*$", reason_body, re.M)
+check(reasons == [("seatsIncomplete", "0"), ("notHost", "1"), ("wrongState", "2")], "refusal reasons " + repr(reasons))
+check("LAST_REASON = Reason::wrongState;" in REFUSAL, "LAST_REASON is the last refusal reason")
+notification_body = re.search(r"enum class ServerNotificationType\s*\{(.*?)\};", SERVER_NOTIFICATION_H, re.S).group(1)
+notification_names = [re.sub(r"//.*", "", line).strip().rstrip(",") for line in notification_body.split("\n")]
+notification_names = [name for name in notification_names if name]
+check(notification_names[-2:] == ["setHandCooldown", "startGameRefused"],
+      "startGameRefused is appended last: " + repr(notification_names[-2:]))
+check('WIRE_SCHEMA_SUFFIX = " / wire-5";' in PACKET_H, "the wire suffix is wire-5 since startGameRefused")
+check("void sendStartGameRefused(ODSocketClient* clientSocket, StartGameRefusal::Reason reason);" in SERVER_H,
+      "the refusal sender is declared")
+refusal_sender = block(SERVER, "void ODServer::sendStartGameRefused", "void ODServer::printConsoleMsg")
+check("packetSend << ServerNotificationType::startGameRefused << static_cast<int32_t>(reason);" in refusal_sender
+      and "clientSocket->send(packetSend);" in refusal_sender, "the refusal goes to the socket that asked")
+refused = [set_case.index(text) for text in [
+    "sendStartGameRefused(clientSocket, StartGameRefusal::Reason::wrongState);",
+    "if(!isSeatConfigurationSender(clientSocket))",
+    "sendStartGameRefused(clientSocket, StartGameRefusal::Reason::notHost);",
+    "sendStartGameRefused(clientSocket, StartGameRefusal::Reason::seatsIncomplete);",
+    "mServerState = ServerState::StateGame;"] if text in set_case]
+check(len(refused) == 5 and refused == sorted(refused),
+      "seatConfigurationSet answers wrong state, not the host and incomplete seats before it starts the game")
+check(set_case.count("sendStartGameRefused(") == 3 and set_case.count("break;") >= 3,
+      "every refusal of seatConfigurationSet is answered once")
+
 # ------------------------------------------------------------------------------------------------ handlers
 revealed = case(SERVER, "notifyTileRevealed")
 check("ServerGuards::isTileOnMap(xx, yy, gameMap->getMapSizeX(), gameMap->getMapSizeY())" in revealed
@@ -241,7 +272,7 @@ check(re.search(r"add_boost_test\(00-ServerGuards\s+SOURCES\s+test_ServerGuards\
 test_cases = re.findall(r"BOOST_AUTO_TEST_CASE\((\w+)\)", BOOST_TEST)
 check(test_cases == ["test_commandRequirement", "test_isCommandAllowed", "test_enumValues", "test_tileAndSeatBounds",
                      "test_consoleCommand", "test_seatConfigurationIds", "test_textLimits", "test_markInvalid",
-                     "test_readEnum", "test_clientLimits", "test_clipRectangleToMap"],
+                     "test_readEnum", "test_clientLimits", "test_clipRectangleToMap", "test_startGameRefusal"],
       "Boost test cases " + repr(test_cases))
 
 print('ODP_TEST_PHASE {"name":"check","seconds":%.3f}' % (time.perf_counter() - START))

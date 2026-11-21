@@ -2065,12 +2065,16 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(mServerState != ServerState::StateConfiguration)
             {
                 OD_LOG_ERR("Wrong server state=" + Helper::toString(static_cast<int>(mServerState)));
+                sendStartGameRefused(clientSocket, StartGameRefusal::Reason::wrongState);
                 break;
             }
 
             // Only the player that configures the game may start it
             if(!isSeatConfigurationSender(clientSocket))
+            {
+                sendStartGameRefused(clientSocket, StartGameRefusal::Reason::notHost);
                 break;
+            }
 
             bool isConfigured = true;
             for(Seat* seat : gameMap->getSeats())
@@ -2102,7 +2106,10 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             // If configuration is not complete, we don't go further
             if(!isConfigured)
+            {
+                sendStartGameRefused(clientSocket, StartGameRefusal::Reason::seatsIncomplete);
                 break;
+            }
 
             mServerState = ServerState::StateGame;
 
@@ -4810,6 +4817,16 @@ bool ODServer::isSeatConfigurationSender(ODSocketClient* clientSocket)
         return false;
     }
     return true;
+}
+
+//! \brief Sends startGameRefused with the reason code to the socket that asked for the start, so that its lobby
+//! can tell the player at once why the game does not start.
+void ODServer::sendStartGameRefused(ODSocketClient* clientSocket, StartGameRefusal::Reason reason)
+{
+    OD_LOG_INF("Refusing to start the game, reason=" + Helper::toString(static_cast<int32_t>(reason)));
+    ODPacket packetSend;
+    packetSend << ServerNotificationType::startGameRefused << static_cast<int32_t>(reason);
+    clientSocket->send(packetSend);
 }
 
 void ODServer::printConsoleMsg(const std::string& text)
