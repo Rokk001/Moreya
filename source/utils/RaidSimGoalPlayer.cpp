@@ -518,13 +518,15 @@ void expandCond(GameMap& gameMap, Seat* seat, const std::vector<std::string>& co
         if((roomType == RoomType::nullRoomType) || (roomType == RoomType::dungeonTemple) ||
            roomCondHolds(gameMap, seat, cond, roomType))
             return;
-        // Furniture such as beds comes with the creatures that use the room: one block of the room is enough for it
-        if(type == "furniture")
+        // Furniture such as beds comes with the creatures that use the room: the rooms of the type need as many active
+        // spots as the goal asks pieces of furniture (creatures come and the furniture with them), more tiles do not help
+        if((type == "furniture") && (cond.size() >= 5))
         {
-            size_t tiles = 0;
+            int32_t wanted = 0;
+            uint32_t spots = 0;
             for(Room* room : gameMap.getRoomsByTypeAndSeat(roomType, seat))
-                tiles += room->getCoveredTiles().size();
-            if(tiles >= ROOM_BLOCK_TILES)
+                spots += room->getNumActiveSpots();
+            if(toInt(cond[4], wanted) && (static_cast<int32_t>(spots) >= wanted))
                 return;
         }
         target.mKind = TargetKind::room;
@@ -1244,7 +1246,15 @@ void act(GameMap& gameMap, Player* keeper)
                 markDiggable(keeper, reached, areas, fighters, target.mTiles, true, budget);
             ++digs;
         }
-        if(handUsed || ((target.mKind != TargetKind::fight) && (target.mKind != TargetKind::visit)))
+        if(handUsed || ((target.mKind != TargetKind::fight) && (target.mKind != TargetKind::visit) &&
+           (target.mKind != TargetKind::claim)))
+            continue;
+        // The way to a region to claim beyond the regions dug towards now (it is only walked, not marked)
+        if((target.mKind == TargetKind::claim) && way.empty())
+            way = findWay(gameMap, seat, worker, target.mTiles, zone);
+        // A region to claim that the workers could walk to but do not take on (unseen or far from their work) gets a
+        // worker dropped at it, once no creature of the seat stands in it
+        if((target.mKind == TargetKind::claim) && ownCreatureOn(gameMap, seat, target.mTiles))
             continue;
         if(!wayIsOpen(worker, way, target.mTiles))
             continue;
@@ -1269,14 +1279,20 @@ void act(GameMap& gameMap, Player* keeper)
                 continue;
         }
         // A worker visits a region only away from the enemies; a fighter is dropped next to them
-        Tile* dropTile = dropTileNear(gameMap, keeper, worker, target.mTiles, fight ? none : zone);
+        // A region to claim is approached along its walkable way: the worker is dropped at the claimed tile nearest
+        // the first step of the way, from where it sees and claims the next tiles
+        const bool approach = (target.mKind == TargetKind::claim) && !way.empty();
+        std::vector<Tile*> dropNear = target.mTiles;
+        if(approach)
+            dropNear = std::vector<Tile*>(1, way.back());
+        Tile* dropTile = dropTileNear(gameMap, keeper, worker, dropNear, fight ? none : zone);
         if(dropTile == nullptr)
             continue;
         // A worker visits a region only when it can be dropped in it or right next to it
         if(!fight)
         {
             int32_t distance = -1;
-            for(Tile* tile : target.mTiles)
+            for(Tile* tile : dropNear)
             {
                 const int32_t d = std::max(std::abs(tile->getX() - dropTile->getX()),
                     std::abs(tile->getY() - dropTile->getY()));
@@ -1286,7 +1302,7 @@ void act(GameMap& gameMap, Player* keeper)
             if(distance > 1)
                 continue;
         }
-        handUsed = carry(gameMap, keeper, target.mTiles, dropTile, !fight);
+        handUsed = carry(gameMap, keeper, dropNear, dropTile, !fight);
     }
 }
 
@@ -1354,7 +1370,24 @@ std::string describeOpenGoals(GameMap& gameMap, int32_t seatId)
         std::map<std::string, std::vector<std::vector<std::string> > >::const_iterator it = sGoalConds.find(goal);
         if(it != sGoalConds.end())
             expandConds(gameMap, seat, it->second, 0, seen, targets);
-        text += " " + goal + "[";
+        // A failed goal is marked: the level script never sets a failed goal reached again
+        const bool failed = (gameMap.getLevelScript().getObjectiveState(seatId, goal) == LevelScriptObjectiveState::failed);
+        text += " " + goal + (failed ? "(failed)" : "") + "[";
+        // The room conditions of the goal with their value now (furniture, room tiles, rooms)
+        if(it != sGoalConds.end())
+        {
+            for(const std::vector<std::string>& cond : it->second)
+            {
+                if((cond.size() < 4) || ((cond[0] != "furniture") && (cond[0] != "roomtiles") && (cond[0] != "room")))
+                    continue;
+                const RoomType roomType = RoomManager::getRoomTypeFromRoomName(cond[2]);
+                size_t objects = 0;
+                for(Room* room : gameMap.getRoomsByTypeAndSeat(roomType, seat))
+                    objects += room->getBuildingObjects().size();
+                text += cond[0] + " " + cond[2] + "=" + Helper::toString(static_cast<uint32_t>(objects)) +
+                    (roomCondHolds(gameMap, seat, cond, roomType) ? " holds; " : " open; ");
+            }
+        }
         Creature* worker = gameMap.getWorkerForPathFinding(seat);
         for(size_t i = 0; i < targets.size(); ++i)
         {
