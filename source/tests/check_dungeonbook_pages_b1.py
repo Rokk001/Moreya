@@ -14,7 +14,9 @@ arrow in the title bar, at 640x480, 1920x1200 and 7680x4320 (and 1024x768) with 
 3. The profile has the portrait, the name and handle line, the rows Age, Gender, Relationship, Origin, Job and Path in
    this order, Skills, the quote, "Posts" and the six newest post pictures as a grid of 2 columns x 3 rows (K1).
 4. The bottom bar has five buttons with icon and label, Skills last (K4); the code disables Skills without a skill tree
-   and opens the skill tree window with it; the profile layout holds no skill tree button.
+   and shows the skill tree with it as the Skills page of the book (INGAME-QS-12 K7: tier 4 skill, four path titles
+   and three tiers per path, each skill with its rank inside the page and its rank text and every path name uncut at
+   every screen and UI scale above); the profile layout holds no skill tree button.
 5. The single-creature view hides the creature list (showPage) and shows the back arrow inside the title bar, left of
    the title and clear of the close button, and the head "< Name >" below the title (K3).
 6. The item tooltip (K6): the held KoboldPick shows its display name and no value line, every value line of every
@@ -292,6 +294,16 @@ DYNAMIC = {
 }
 for key in ('Experience', 'HitPoints', 'Gold', 'SightRadius', 'Potions', 'Inventory', 'DamagePerSecond', 'SkillPoints'):
     DYNAMIC['ValuesPage/%sValue' % key] = NUMBERS + PAIRS + ['-', '4 / 4']
+# The Skills page (INGAME-QS-12 K7): every path name of config/creatureSkills.cfg as a column title, every rank text of
+# a skill ("rank/most ranks" of CreatureSkillTreeView barText; SkillRanksPerSkill of config/global.cfg, 1 for tier 4)
+max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', (repo / 'config/global.cfg').read_text(encoding='utf-8'),
+                         re.M).group(1))
+SKILL_NODES = ['TierFour'] + ['Column%dTier%d' % (c, t) for c in range(4) for t in (3, 2, 1)]
+for column in range(4):
+    DYNAMIC['SkillsPage/Column%dTitle' % column] = paths
+for node_name in SKILL_NODES:
+    DYNAMIC['SkillsPage/%sRank' % node_name] = (['%d/1' % r for r in (0, 1)] if node_name == 'TierFour' else
+                                                ['%d/%d' % (r, max_rank) for r in range(max_rank + 1)])
 # Windows whose text SocialWindow shortens to the box (setFittedText); they need room for at least one line
 SOCIAL_LINES = ('LikesText', 'DislikesText', 'FriendsText', 'FoeText', 'StatusText', 'EffectLine0', 'EffectLine1',
                 'EffectLine2', 'RemarksText')
@@ -363,11 +375,14 @@ check('Gui::setPlainTooltip(slot, std::string(slot->getParent()->getChild("Label
       in social_cpp, 'an empty slot names itself')
 
 # ------------------------------------------------------------------------------------------------ 1. to 3. pages
-CREATURE_PAGES = ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage')
+CREATURE_PAGES = ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage', 'SkillsPage')
 BUTTON_TYPES = ('OD/Button', 'OD/InvisibleButton', 'OD/ImageButton', 'OD/IconButton', 'OD/MenuTextButton',
-                'OD/Checkbox', 'OD/RadioButton', 'OD/Combobox', 'OD/TabButton')
-SCROLL_TYPES = ('OD/VerticalScrollbar', 'OD/HorizontalScrollbar', 'OD/ScrollablePane', 'OD/MenuScrollablePane')
-for page_name in ('ProfilePage', 'ValuesPage', 'InventoryPage'):
+                'OD/Checkbox', 'OD/RadioButton', 'OD/Combobox', 'OD/SheetCombobox', 'OD/TabButton')
+SCROLL_TYPES = ('OD/VerticalScrollbar', 'OD/HorizontalScrollbar', 'OD/ScrollablePane', 'OD/MenuScrollablePane',
+                'OD/SheetScrollbar')
+# The Skills page (INGAME-QS-12 K7) is a plain page as well; its skills are the icons of the former skill tree window
+# (OD/ResearchButton, nothing happens on a click, check_creature_skill_tree_view.py)
+for page_name in ('ProfilePage', 'ValuesPage', 'InventoryPage', 'SkillsPage'):
     page = book.child(page_name)
     check(page.type == 'DefaultWindow', page_name + ' is a plain page, no scrolled pane')
     for node in page.walk():

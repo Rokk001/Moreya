@@ -142,16 +142,20 @@ assert 'askDungeonbookRoster, true' in window and 'askDungeonbookRoster, false' 
 # keeper row, plan INGAME-QS-11 K1)
 assert 'getDungeonbookRoster()' in window and '"), keeper " + entry->keeper' in window
 # Roster rendering must not require a visible map entity: every page works with the roster entry alone, a creature
-# known on this side only adds its relationships, its mood level, its items and its skill tree window
+# known on this side only adds its relationships, its mood level, its items and its skill tree (the Skills page)
 assert 'getCreature(selected->name)' not in window
 assert window.count('mGameMap.getCreature(') == 6, 'every use of a map entity in the book is one of the six below'
-# The skill tree window reads the ranks of a known creature and hides itself when the creature is not known; the
-# Skills button of the bar can only be used for a known creature with a skill tree
-assert 'Creature* creature = mSkillTreeCreature.empty() ? nullptr : mGameMap.getCreature(mSkillTreeCreature);' in window
-assert 'Creature* creature = mSelectedCreature.empty() ? nullptr : mGameMap.getCreature(mSelectedCreature);' in window
+# The Skills page of the book (INGAME-QS-12 K7; the skill tree window before) reads the ranks of a known creature and
+# fills nothing when the creature is not known, the book then shows its inventory; the Skills button of the bar can
+# only be used for a known creature with a skill tree
+skills_page = body(window, 'bool SocialWindow::refreshSkills()')
+selected_creature = 'Creature* creature = mSelectedCreature.empty() ? nullptr : mGameMap.getCreature(mSelectedCreature);'
+assert selected_creature in skills_page and window.count(selected_creature) == 2
 assert 'return creature != nullptr && !creature->getSkillTypeInfo().mGroup.empty();' in window
-assert 'const CreatureSkillTree::TypeInfo type = (creature == nullptr) ? CreatureSkillTree::TypeInfo() :' in window
-assert 'mSkillTreeCreature.clear();\n        mSkillTreeWindow->hide();\n        return;' in window
+assert 'const CreatureSkillTree::TypeInfo type = (creature == nullptr) ? CreatureSkillTree::TypeInfo() :' in skills_page
+assert 'if(type.mGroup.empty())\n        return false;' in skills_page
+assert 'if(mPage == Page::Skills && !refreshSkills())\n        showPage(Page::Inventory);' in window
+assert 'if(page == Page::Skills && !hasSkillTree)\n        page = Page::Inventory;' in window
 assert 'const CreatureMoodLevel level = creature == nullptr ? CreatureMoodLevel::Unknown' in window
 # The profile takes the real relationship of a known creature and the one of its social profile otherwise
 assert ('const std::string relationship = creature != nullptr ? creature->getProfileRelationshipText() : '

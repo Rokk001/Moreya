@@ -169,6 +169,14 @@ const char* const ITEM_TOOLTIP_AREA_USER_STRING = "ItemTooltipArea";
 //! pixels).
 const char* const ITEM_TOOLTIP_FRAME_IMAGE = "OpenDungeonsIcons/ItemTooltipFrame";
 const int ITEM_TOOLTIP_FRAME_PIXELS = 16;
+//! \brief Seconds the pointer rests on an item before its card is shown, and seconds the card is shown at most (0: as
+//! long as the pointer stays on the item); plan INGAME-QS-12 K6: the card appears at once and stays
+const float ITEM_TOOLTIP_HOVER_TIME = 0.0f;
+const float ITEM_TOOLTIP_DISPLAY_TIME = 0.0f;
+//! The hover time and display time of every other tooltip: the values the default tooltip has when CEGUI creates it,
+//! read in the constructor of Gui
+float sPlainTooltipHoverTime = 0.4f;
+float sPlainTooltipDisplayTime = 7.5f;
 //! Set when a sibling of the default tooltip changed its place in the drawing order (owner decision 920). The tooltip
 //! and every shown dialog share the always-on-top layer of the root window (GameMode::raiseShownDialog), and CEGUI
 //! leaves the tooltip where it is while it stays attached between two targets: a dialog that rose later (opened, or
@@ -331,6 +339,54 @@ CEGUI::Tooltip* getWorldItemTooltip(bool create)
         root->addChild(tooltip);
     }
     return tooltip;
+}
+
+//! \brief True when the window shows the item card as its tooltip (Gui::setItemTooltip, Gui::markItemTooltip).
+bool isItemTooltipWindow(const CEGUI::Window* window)
+{
+    return window != nullptr && window->isUserStringDefined(ITEM_TOOLTIP_USER_STRING) &&
+        window->getUserString(ITEM_TOOLTIP_USER_STRING) == "1";
+}
+
+//! \brief Item tooltips appear at once and stay while the pointer stays on the item (plan INGAME-QS-12 K6). CEGUI
+//! shows a tooltip only after the pointer rested on its window for the hover time, restarts that time at every move
+//! of the pointer and hides the tooltip after the display time. While the default tooltip points at an item card it has
+//! no hover time and no display time, and it is switched on right away (a time pulse of zero seconds) instead of at
+//! the next time pulse, so it is drawn in the frame the pointer entered the item. Every other tooltip keeps the CEGUI
+//! timing it had (sPlainTooltipHoverTime, sPlainTooltipDisplayTime).
+void applyItemTooltipTiming(CEGUI::Tooltip* tooltip)
+{
+    if(tooltip == nullptr)
+        return;
+
+    const bool itemCard = isItemTooltipWindow(tooltip->getTargetWindow());
+    const float hoverTime = itemCard ? ITEM_TOOLTIP_HOVER_TIME : sPlainTooltipHoverTime;
+    const float displayTime = itemCard ? ITEM_TOOLTIP_DISPLAY_TIME : sPlainTooltipDisplayTime;
+    if(tooltip->getHoverTime() != hoverTime)
+        tooltip->setHoverTime(hoverTime);
+    if(tooltip->getDisplayTime() != displayTime)
+        tooltip->setDisplayTime(displayTime);
+    if(itemCard)
+        tooltip->update(0.0f);
+}
+
+//! \brief Applies the tooltip timing of applyItemTooltipTiming when the default tooltip points at the given window.
+void applyTooltipTimingOf(CEGUI::Window* window)
+{
+    if(window == nullptr || CEGUI::System::getSingletonPtr() == nullptr)
+        return;
+
+    CEGUI::Tooltip* tooltip = window->getGUIContext().getDefaultTooltipObject();
+    if(tooltip != nullptr && tooltip->getTargetWindow() == window)
+        applyItemTooltipTiming(tooltip);
+}
+
+//! \brief The pointer entered a window (global CEGUI event of every window): CEGUI has just pointed the default tooltip
+//! at it, so an item card is shown at once and every other tooltip gets the plain timing (applyItemTooltipTiming).
+bool onWindowEnteredForTooltip(const CEGUI::EventArgs& e)
+{
+    applyTooltipTimingOf(static_cast<const CEGUI::WindowEventArgs&>(e).window);
+    return false;
 }
 
 //! \brief Hits the round integrated plate without intercepting the surrounding minimap.
@@ -1791,6 +1847,12 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     context.getMouseCursor().setVisible(true);
     context.setDefaultTooltipType("OD/Tooltip");
     CEGUI::Tooltip* defaultTooltip = context.getDefaultTooltipObject();
+    // The timing of the plain tooltips stays as CEGUI sets it; item cards are shown at once (plan INGAME-QS-12 K6)
+    if(defaultTooltip != nullptr)
+    {
+        sPlainTooltipHoverTime = defaultTooltip->getHoverTime();
+        sPlainTooltipDisplayTime = defaultTooltip->getDisplayTime();
+    }
     if(defaultTooltip != nullptr)
         defaultTooltip->subscribeEvent(CEGUI::Window::EventMoved,
         CEGUI::Event::Subscriber([](const CEGUI::EventArgs& e)
@@ -1907,6 +1969,10 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     ges.subscribeEvent(
         CEGUI::PushButton::EventNamespace + "/" + CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&Gui::playButtonClickSound, this));
+    // An item card is shown in the frame the pointer enters its window (plan INGAME-QS-12 K6)
+    ges.subscribeEvent(
+        CEGUI::Window::EventNamespace + "/" + CEGUI::Window::EventMouseEntersSurface,
+        CEGUI::Event::Subscriber(&onWindowEnteredForTooltip));
 }
 
 Gui::~Gui()
@@ -1989,19 +2055,25 @@ std::string Gui::describeItemTooltip(const ItemInstance& item, const GameMap* ma
     return item.describeTooltip(map, heldWeapon, coinSize);
 }
 
+//! \brief Marks the window as showing an item card. When the pointer already rests on the window (an item that came
+//! into the slot under it, or a refresh of the page), the card is shown at once and stays (plan INGAME-QS-12 K6).
 void Gui::markItemTooltip(CEGUI::Window* window, const std::string& qualityColour, const std::string& itemArea)
 {
     window->setUserString(ITEM_TOOLTIP_USER_STRING, "1");
     window->setUserString(ITEM_TOOLTIP_COLOUR_USER_STRING, qualityColour);
     window->setUserString(ITEM_TOOLTIP_AREA_USER_STRING, itemArea);
+    applyTooltipTimingOf(window);
 }
 
+//! \brief Gives the window a plain tooltip; when the pointer rests on it, the tooltip takes the plain timing again.
 void Gui::setPlainTooltip(CEGUI::Window* window, const std::string& text)
 {
     window->setTooltipText(text);
     window->setUserString(ITEM_TOOLTIP_USER_STRING, "0");
+    applyTooltipTimingOf(window);
 }
 
+//! \brief Gives the window the tooltip text, the look and the quality colour of another window.
 void Gui::copyTooltip(const CEGUI::Window* from, CEGUI::Window* to)
 {
     to->setTooltipText(from->getTooltipText());
@@ -2011,6 +2083,8 @@ void Gui::copyTooltip(const CEGUI::Window* from, CEGUI::Window* to)
     to->setUserString(ITEM_TOOLTIP_COLOUR_USER_STRING, from->isUserStringDefined(ITEM_TOOLTIP_COLOUR_USER_STRING) ?
         from->getUserString(ITEM_TOOLTIP_COLOUR_USER_STRING) : CEGUI::String());
     to->setUserString(ITEM_TOOLTIP_AREA_USER_STRING, CEGUI::String());
+    // A card copied to the window under the resting pointer is shown at once as well (plan INGAME-QS-12 K6)
+    applyTooltipTimingOf(to);
 }
 
 void Gui::loadGuiSheet(guiSheet newSheet)
