@@ -38,12 +38,10 @@ std::ostream& operator<<(std::ostream& os, const TrapType& tt)
     return os;
 }
 
+//! \brief Reads a TrapType. A value above nbTraps marks the packet as failed and leaves tt unchanged.
 ODPacket& operator>>(ODPacket& is, TrapType& tt)
 {
-    uint32_t tmp;
-    is >> tmp;
-    tt = static_cast<TrapType>(tmp);
-    return is;
+    return ODPacket::readEnum<uint32_t>(is, tt, TrapType::nbTraps);
 }
 
 ODPacket& operator<<(ODPacket& os, const TrapType& tt)

@@ -230,6 +230,14 @@ add_boost_test(00-HandLimitRules
         ${SRC}/game/HandLimitRules.h
         ${SRC}/game/HandLimitRules.cpp)
 
+add_boost_test(00-ServerGuards
+        SOURCES
+        test_ServerGuards.cpp
+        ${SRC}/network/ServerGuards.h
+        ${SRC}/network/ODPacket.cpp
+        LIBRARIES
+        ${SFML_LIBRARIES})
+
 add_boost_test(00-Pathfinding
         SOURCES
         test_Pathfinding.cpp)

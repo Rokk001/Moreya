@@ -22,12 +22,10 @@ std::ostream& operator<<(std::ostream& os, const RoomType& rt)
   return os;
 }
 
+//! \brief Reads a RoomType. A value above nbRooms marks the packet as failed and leaves rt unchanged.
 ODPacket& operator>>(ODPacket& is, RoomType& rt)
 {
-  uint32_t tmp;
-  is >> tmp;
-  rt = static_cast<RoomType>(tmp);
-  return is;
+  return ODPacket::readEnum<uint32_t>(is, rt, RoomType::nbRooms);
 }
 
 ODPacket& operator<<(ODPacket& os, const RoomType& rt)
