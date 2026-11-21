@@ -203,6 +203,14 @@ public:
     inline bool getRaidSimHandPlayer() const
     { return mRaidSimHandPlayer; }
 
+    //! \brief The campaign difficulty of --raid-sim-difficulty (easy, medium, normal, hard, hell), empty when not given.
+    inline const std::string& getRaidSimDifficulty() const
+    { return mRaidSimDifficulty; }
+
+    //! \brief True when --raid-sim-goal-player lets the keeper of the human seat pursue the goals of the level.
+    inline bool getRaidSimGoalPlayer() const
+    { return mRaidSimGoalPlayer; }
+
 private:
     //! \brief used when the executable is launched in server mode
     bool mServerMode;
@@ -226,6 +234,8 @@ private:
     int32_t mRaidSimForceLevel;
     bool mRaidSimHandLimit;
     bool mRaidSimHandPlayer;
+    std::string mRaidSimDifficulty;
+    bool mRaidSimGoalPlayer;
 
     //! \brief used when the network port is forced
     int32_t mForcedNetworkPort;

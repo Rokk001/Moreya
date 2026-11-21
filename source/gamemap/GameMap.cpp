@@ -350,6 +350,8 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mRaidCountdownToSend(-1),
         mRaidGateClosedSent(0),
         mRaidGateClosedToSend(0),
+        mRaidWaitsSent(0),
+        mRaidWaitsToSend(0),
         mWallTorchesDirty(true),
         mWallTorchesVersion(0),
         mLocalPlayer(nullptr),
@@ -577,6 +579,8 @@ void GameMap::clearAll()
         mRaidCountdownToSend = -1;
         mRaidGateClosedSent = 0;
         mRaidGateClosedToSend = 0;
+        mRaidWaitsSent = 0;
+        mRaidWaitsToSend = 0;
         mWallTorches.clear();
         mWallTorchesDirty = true;
         ++mWallTorchesVersion;
@@ -4822,13 +4826,15 @@ void GameMap::setScriptWaveCountdown(int64_t seconds)
 void GameMap::sendTimeLimit(int32_t remainingSeconds)
 {
     if((remainingSeconds == mTimeLimitSentSeconds) && (mWaveCountdownToSend == mWaveCountdownSentSeconds) &&
-       (mRaidCountdownToSend == mRaidCountdownSentSeconds) && (mRaidGateClosedToSend == mRaidGateClosedSent))
+       (mRaidCountdownToSend == mRaidCountdownSentSeconds) && (mRaidGateClosedToSend == mRaidGateClosedSent) &&
+       (mRaidWaitsToSend == mRaidWaitsSent))
         return;
 
     mTimeLimitSentSeconds = remainingSeconds;
     mWaveCountdownSentSeconds = mWaveCountdownToSend;
     mRaidCountdownSentSeconds = mRaidCountdownToSend;
     mRaidGateClosedSent = mRaidGateClosedToSend;
+    mRaidWaitsSent = mRaidWaitsToSend;
     for(Player* player : getPlayers())
     {
         if(!player->getIsHuman())
@@ -4840,6 +4846,7 @@ void GameMap::sendTimeLimit(int32_t remainingSeconds)
         serverNotification->mPacket << mWaveCountdownToSend;
         serverNotification->mPacket << mRaidCountdownToSend;
         serverNotification->mPacket << mRaidGateClosedToSend;
+        serverNotification->mPacket << mRaidWaitsToSend;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
@@ -4863,6 +4870,7 @@ void GameMap::checkGameDuration()
     // same way
     mRaidCountdownToSend = mRaid->getCountdownToShow();
     mRaidGateClosedToSend = mRaid->isGateClosed() ? 1 : 0;
+    mRaidWaitsToSend = mRaid->isWaitingForKeeper() ? 1 : 0;
 
     // The limit of a script action wins over the game duration of the game settings.
     // Both count game time, not real time, so the game speed does not change them.

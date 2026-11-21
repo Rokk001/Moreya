@@ -88,7 +88,9 @@ bool CreatureActionLeaveDungeon::handleLeaveDungeon(Creature& creature)
     Tile* tile = room->getCentralTile();
     if(!creature.setDestination(tile))
     {
-        OD_LOG_ERR("creature=" + creature.getName() + ", myTile=" + Tile::displayAsString(myTile) + " cannot reach " + Tile::displayAsString(tile));
+        // The portal counts as reachable through one of its tiles while no way leads to its central tile (an object
+        // stands on it, the way closed meanwhile): the creature stays and tries again later
+        OD_LOG_WRN("creature=" + creature.getName() + ", myTile=" + Tile::displayAsString(myTile) + " cannot reach " + Tile::displayAsString(tile));
         creature.popAction();
         return false;
     }

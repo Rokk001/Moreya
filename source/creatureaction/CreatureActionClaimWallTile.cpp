@@ -26,16 +26,21 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+//! \brief Counts the worker on the tile when the tile has room for one more claiming worker.
 CreatureActionClaimWallTile::CreatureActionClaimWallTile(Creature& creature, Tile& tileClaim) :
     CreatureAction(creature),
-    mTileClaim(tileClaim)
+    mTileClaim(tileClaim),
+    mClaimCounted(false)
 {
-    mTileClaim.addWorkerClaiming(mCreature);
+    mClaimCounted = mTileClaim.addWorkerClaiming(mCreature);
 }
 
+//! \brief Takes the worker off the count of the tile, only when it was counted (else it would take another worker's
+//! place off the count).
 CreatureActionClaimWallTile::~CreatureActionClaimWallTile()
 {
-    mTileClaim.removeWorkerClaiming(mCreature);
+    if(mClaimCounted)
+        mTileClaim.removeWorkerClaiming(mCreature);
 }
 
 std::function<bool()> CreatureActionClaimWallTile::action()

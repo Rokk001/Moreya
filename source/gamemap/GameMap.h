@@ -983,6 +983,10 @@ private:
     //! early), 0 when the countdown is the time to the next raid group
     int32_t mRaidGateClosedSent;
     int32_t mRaidGateClosedToSend;
+    //! \brief Last sent and next sent: 1 while a raid group waits behind the closed gate until the keeper opens it (no
+    //! countdown on the campaign difficulty Easy and Medium), else 0
+    int32_t mRaidWaitsSent;
+    int32_t mRaidWaitsToSend;
     //! \brief See getWallTorches()
     std::map<uint32_t, WallTorch> mWallTorches;
     //! \brief See getTileDirtSync()

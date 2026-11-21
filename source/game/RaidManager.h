@@ -18,6 +18,7 @@
 #ifndef RAIDMANAGER_H
 #define RAIDMANAGER_H
 
+#include "ai/KeeperAIType.h"
 #include "game/RaidRules.h"
 
 #include <cstdint>
@@ -96,7 +97,9 @@ struct RaidGroupData
 };
 
 //! \brief Server side. The raid of a level: the Moreya gate (an unclaimable, indestructible hero portal room that shows
-//! the gate model), the countdown from the level start until the gate opens, the early opening by the player, the raid
+//! the gate model), the countdown from the level start until the gate opens (on the campaign difficulty Normal, Hard and
+//! Hell, each with its own length; on Easy and Medium no countdown runs and every raid group waits until the player
+//! opens the gate), the early opening by the player, the raid
 //! groups that come through the gate one after the other, their march to the dungeon heart of the attacked keeper with
 //! the plundering of the treasuries on the way, the looting of the items fallen keeper creatures dropped, the flight of
 //! a raid leader to the gate with the members of his group that follow him, and the defeat of the whole raid. The level data is the [Raid] section of the level file; a saved game adds the running state. Without a [Raid]
@@ -120,8 +123,9 @@ public:
     //! escaped. Does nothing without a raid and in a campaign bonus level.
     void update();
 
-    //! \brief The keeper of the seat opens the gate before the countdown ends (button of the HUD, script action
-    //! raidopen with seat -1): the first raid group comes at once.
+    //! \brief The keeper of the seat opens the gate (button of the HUD, script action raidopen with seat -1): before
+    //! the countdown ends the first raid group comes at once; without a countdown (campaign difficulty Easy and Medium)
+    //! the raid group that waits behind the closed gate comes at once.
     //! \param seatId The seat that asks, -1 for the level script. Only the attacked keeper may open the gate.
     //! \return True when the gate opens now.
     bool openGateEarly(int32_t seatId);
@@ -133,8 +137,26 @@ public:
     int32_t getCountdownToShow() const;
 
     //! \brief True while the gate is closed, so that the countdown runs to the first raid group and the player may
-    //! open the gate early; false when it shows the time to the next group.
+    //! open the gate early (without a countdown: a raid group waits until he opens it); false when it shows the time
+    //! to the next group.
     bool isGateClosed() const;
+
+    //! \brief True when no countdown runs (campaign difficulty Easy and Medium) and a raid group waits behind the
+    //! closed gate until the attacked keeper opens it. Before the first turn of the level the state it starts with.
+    bool isWaitingForKeeper() const;
+
+    //! \brief Sets the campaign difficulty the raid of the level is played at, instead of the difficulty of the
+    //! running campaign (the raid simulation, which plays a story level outside the campaign). nbAI: the difficulty
+    //! of the campaign, Normal outside the campaign.
+    void setDifficulty(KeeperAIType difficulty);
+
+    //! \brief The campaign difficulty the raid is played at: the one set by setDifficulty, else the difficulty of the
+    //! running campaign level, else Normal (a level outside the campaign).
+    KeeperAIType getDifficulty() const;
+
+    //! \brief The countdown of the level for the difficulty Normal, Hard or Hell in seconds (-1: config
+    //! RaidCountdownSeconds applies).
+    double getLevelCountdownSeconds(KeeperAIType difficulty) const;
 
     //! \brief True when the creature is a raid leader that flees to the gate, or a member of his group that follows
     //! him there (it takes part in no fight).
@@ -197,15 +219,24 @@ public:
     static bool parseLeaderState(const std::string& text, RaidLeaderState& state);
 
 private:
-    //! \brief Countdown of the level, else of the config.
+    //! \brief Countdown of the level for the difficulty the raid is played at, else of the config.
     double countdownSeconds() const;
+    //! \brief Sets the countdown of the level for the difficulty Normal (also any difficulty but Hard and Hell), Hard
+    //! or Hell in seconds (-1: config RaidCountdownSeconds applies).
+    void setLevelCountdownSeconds(KeeperAIType difficulty, double seconds);
+    //! \brief True when no countdown runs because the raid is played at the campaign difficulty Easy or Medium.
+    bool opensByKeeper() const;
+    //! \brief Starts the arrival schedule: with the countdown of the difficulty, or without countdown on Easy and
+    //! Medium.
+    void startSchedule();
     //! \brief Interval of the level, else of the config.
     double intervalSeconds() const;
     //! \brief Escape share of the level, else of the config.
     double escapeShare() const;
 
-    //! \brief Lets the seconds pass on the schedule: a raid group whose countdown ended comes through the gate, and the
-    //! portcullis of the gate model sinks when the gate opens.
+    //! \brief Lets the seconds pass on the schedule: a raid group whose countdown ended comes through the gate, the
+    //! portcullis of the gate model sinks when the gate opens and rises again when the gate closes behind a raid group
+    //! while the next one waits for the keeper (no countdown).
     void advanceSchedule(double seconds);
 
     //! \brief Finds the hero portal room on the gate tile and lets it show the gate with the portcullis down or sunk.
@@ -248,6 +279,9 @@ private:
     //! imprisoned and not won over by a keeper. Dead, imprisoned, converted and escaped members have fallen.
     bool isStanding(const std::string& creatureName) const;
 
+    //! \brief True while a standing raid member is on a tile of the gate room: the gate does not close again on it.
+    bool isRaidMemberInGate() const;
+
     //! \brief True when the creature stands on the gate (a tile of the gate room or near the gate tile).
     bool isAtGate(const Creature& creature) const;
 
@@ -272,8 +306,18 @@ private:
     int32_t mRaidSeatId;
     //! \brief Seat whose dungeon the raid attacks (-1: every human keeper loses on an escape, no heart is attacked).
     int32_t mTargetSeatId;
-    //! \brief Seconds from the level start to the first group, negative: config RaidCountdownSeconds.
+    //! \brief Seconds from the level start to the first group on the campaign difficulty Normal (and outside the
+    //! campaign), negative: config RaidCountdownSeconds.
     double mCountdownSeconds;
+    //! \brief Seconds from the level start to the first group on the campaign difficulty Hard, negative: config
+    //! RaidCountdownSeconds.
+    double mCountdownHardSeconds;
+    //! \brief Seconds from the level start to the first group on the campaign difficulty Hell, negative: config
+    //! RaidCountdownSeconds.
+    double mCountdownHellSeconds;
+    //! \brief Difficulty set by setDifficulty, nbAI: the difficulty of the campaign. Not saved: a saved game keeps the
+    //! difficulty of its campaign level, and the started schedule keeps whether a countdown runs.
+    KeeperAIType mDifficulty;
     //! \brief Seconds between two groups, negative: config RaidWaveIntervalSeconds.
     double mIntervalSeconds;
     //! \brief Fallen share before a leader flees, negative: config RaidLeaderEscapeShare.

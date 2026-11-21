@@ -100,6 +100,8 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
             RaidSimulation::setKeeperForce(resMgr.getRaidSimForce(), resMgr.getRaidSimForceLevel());
             RaidSimulation::setHandLimit(resMgr.getRaidSimHandLimit());
             RaidSimulation::setHandPlayer(resMgr.getRaidSimHandPlayer());
+            RaidSimulation::setDifficulty(resMgr.getRaidSimDifficulty());
+            RaidSimulation::setGoalPlayer(resMgr.getRaidSimGoalPlayer());
             RaidSimulation::run(levelPath.generic_string(), resMgr.getRunLevelSeconds(), resMgr.getRunLevelSeed(),
                 resMgr.getRaidSimOut(), resMgr.getRaidSimKeeperAi());
         }
