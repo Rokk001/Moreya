@@ -147,7 +147,7 @@ assert "mLongest = std::max(mLongest, seconds)" in add
 assert 'set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Zi")' in cmake
 assert 'LINK_FLAGS_RELEASE " /DEBUG:FULL"' in cmake
 assert 'PDB_OUTPUT_DIRECTORY_RELEASE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"' in cmake
-assert 'PDB_NAME_RELEASE "${PROJECT_BINARY_NAME}"' in cmake
+assert 'PDB_NAME_RELEASE "${OD_EXECUTABLE_NAME}"' in cmake
 assert cmake.count("${SRC}/render/FrameStatistics.cpp") == 1
 assert "MenuFlightFrameStats mDragFrames" in header and "MenuFlightFrameStats mGameFrames" in header
 print("Frame statistics contracts passed; percentile fixtures=4; no compilation or game launch")
