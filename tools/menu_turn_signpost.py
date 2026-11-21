@@ -17,6 +17,11 @@ scene cannot rotate an entity, so the turn is baked into the mesh. This script
 The turn is measured from the mesh itself, so running the script again leaves an already turned mesh as it is.
 
 Run from anywhere: python tools/menu_turn_signpost.py [<repo>]
+
+With --wood-only <mesh> it only gives another signpost mesh of the same builder the weathered wood, without turning
+it; the Moreya signpost of the staircase uses this:
+
+    python tools/menu_turn_signpost.py [<repo>] --wood-only MenuMoreyaSignpost.mesh
 """
 import argparse
 import math
@@ -90,11 +95,35 @@ def board_positions(root):
     return numpy.array([vertices[index] for index in sorted(used)])
 
 
+def weather_wood_only(mesh):
+    """Gives the plain signpost wood submeshes of a mesh the weathered wood and leaves its geometry as it is."""
+    with tempfile.TemporaryDirectory() as folder:
+        xml_path = os.path.join(folder, "signpost.mesh.xml")
+        subprocess.run([converter(), "-q", str(mesh), xml_path], check=True, cwd=folder)
+        tree = ElementTree.parse(xml_path)
+        changed = 0
+        for submesh in tree.getroot().iter("submesh"):
+            if submesh.get("material") == PLAIN_WOOD:
+                submesh.set("material", WEATHERED_WOOD)
+                changed += 1
+        tree.write(xml_path, encoding="utf-8", xml_declaration=False)
+        out_path = os.path.join(folder, "signpost.mesh")
+        subprocess.run([converter(), "-q", xml_path, out_path], check=True, cwd=folder)
+        mesh.write_bytes(Path(out_path).read_bytes())
+    print("%s: %d wood submeshes now use %s" % (mesh.name, changed, WEATHERED_WOOD))
+
+
 def main():
-    """Turns models/MenuSignpost.mesh towards the gate and gives it the weathered wood."""
+    """Turns models/MenuSignpost.mesh towards the gate and gives it the weathered wood (or, with --wood-only, only
+    gives another signpost mesh the weathered wood)."""
     parser = argparse.ArgumentParser(description="Turn the subtitle signpost towards the gate.")
     parser.add_argument("repo", nargs="?", type=Path, default=Path(__file__).resolve().parents[1])
-    repo = parser.parse_args(sys.argv[1:]).repo
+    parser.add_argument("--wood-only", metavar="MESH", help="only give models/MESH the weathered wood")
+    arguments = parser.parse_args(sys.argv[1:])
+    repo = arguments.repo
+    if arguments.wood_only:
+        weather_wood_only(repo / "models" / arguments.wood_only)
+        return
     mesh = repo / "models/MenuSignpost.mesh"
     signpost = scene_position(repo, "Signpost")
     gate = scene_position(repo, "Gate")

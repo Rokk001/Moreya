@@ -23,7 +23,7 @@ Run from anywhere: python tools/gen_menu_signpost_lettering.py [<repo>]
 The Moreya signpost at the staircase behind the campaign table (models/MenuMoreyaSignpost.mesh,
 tools/blender-assets/menu_moreya_entrance.py) uses the same planks with the word "Moreya":
 
-    python tools/gen_menu_signpost_lettering.py [<repo>] --text Moreya --output MenuMoreyaSignpostBoard --clean
+    python tools/gen_menu_signpost_lettering.py [<repo>] --text Moreya --output MenuMoreyaSignpostBoard --paint-keep 1.1
 
 writes materials/textures/menu/MenuMoreyaSignpostBoard.png and MenuMoreyaSignpostBoardNormal.png.
 """
@@ -49,6 +49,9 @@ SUPERSAMPLE = 4
 PAINT = numpy.array((0.84, 0.75, 0.56))
 #: Colour of the old paint of the weathered board: a dull, darkened bone that kept a little of its warmth.
 OLD_PAINT = numpy.array((0.46, 0.42, 0.35))
+#: How much of the old paint survives the flaking by default (higher keeps more; the large "Moreya" letters of the
+#: staircase signpost use --paint-keep 1.1 so their shapes stay whole from the campaign flight).
+PAINT_KEEP = 0.9
 #: Groove depth relative to the plank grain of the plain normal map and the width of the carved bevel in pixels.
 GROOVE_DEPTH = 6.0
 BEVEL_PIXELS = 3.0
@@ -121,8 +124,10 @@ def lettered_board(colour, normal, mask, rng):
     return result, carved * 0.5 + 0.5
 
 
-def weathered_lettering(colour, normal, mask, rng):
+def weathered_lettering(colour, normal, mask, rng, keep=PAINT_KEEP):
     """Carves the letter mask into weathered planks and paints it with old, flaked and dirty paint.
+
+    keep sets how much paint survives the flaking (PAINT_KEEP by default).
 
     The planks are aged first (weathering.weather_board), the letter edges are worn ragged, the paint keeps only
     patches in the grooves, grime and soot lie over it, and the splits of weathering.crack_board run through
@@ -140,7 +145,7 @@ def weathered_lettering(colour, normal, mask, rng):
     # Old paint: large flaked-off areas, a few bare streaks along the grain and a dull uneven tone.
     flakes = 0.75 * weathering.periodic_noise(rng, height, width, 10, 40)         + 0.25 * weathering.periodic_noise(rng, height, width, 90, 360)
     grain = weathering.periodic_noise(rng, height, width, 80, 4)
-    cover = numpy.clip((flakes + 0.9 - 0.35 * numpy.clip(grain - 0.8, 0.0, 2.0)) / 0.35, 0.0, 1.0)
+    cover = numpy.clip((flakes + keep - 0.35 * numpy.clip(grain - 0.8, 0.0, 2.0)) / 0.35, 0.0, 1.0)
     paint_cover = worn * (0.15 + 0.85 * cover)
     shade = 0.78 + 0.22 * numpy.clip(0.5 + 0.3 * weathering.periodic_noise(rng, height, width, 30, 120), 0.0, 1.0)
     paint = OLD_PAINT[None, None, :] * shade[:, :, None]
@@ -163,6 +168,8 @@ def main():
     parser.add_argument("--text", default=TEXT)
     parser.add_argument("--output", default="MenuSignpostBoardLettered",
                         help="base name of the written colour texture (the normal map adds Normal)")
+    parser.add_argument("--paint-keep", type=float, default=PAINT_KEEP,
+                        help="how much of the old paint survives the flaking of the weathered board")
     parser.add_argument("--clean", action="store_true",
                         help="clean planks and bone white paint instead of the weathered board")
     arguments = parser.parse_args(sys.argv[1:])
@@ -176,7 +183,7 @@ def main():
     if arguments.clean:
         lettered, carved = lettered_board(colour, normal, mask, rng)
     else:
-        lettered, carved = weathered_lettering(colour, normal, mask, rng)
+        lettered, carved = weathered_lettering(colour, normal, mask, rng, arguments.paint_keep)
     save_rgb(folder / (arguments.output + ".png"), lettered)
     save_rgb(folder / (arguments.output + "Normal.png"), carved)
     columns = numpy.nonzero(mask.max(axis=0) > 0.5)[0]

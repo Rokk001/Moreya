@@ -404,7 +404,9 @@ def build_signpost(raid):
     b = raid.PartBuilder("MenuMoreyaSignpost", 6607)
     b.board_material = "MenuMoreyaSignpostBoard"
     b.board_box = (SIGN_BACK, SIGN_TIP, SIGN_BOTTOM, SIGN_TOP)
-    wood, iron, rust = "MenuSignpostWood", "MenuIron", "MenuCorrodedIron"
+    # The post wears the weathered signpost wood like the subtitle signpost (tools/menu_turn_signpost.py --wood-only
+    # gave the committed mesh this material without rebuilding it).
+    wood, iron, rust = "MenuSignpostWeatheredWood", "MenuIron", "MenuCorrodedIron"
     post_top = Vector((-0.03, 0.02, 2.62))
     b.log_column((0, 0, -0.35), post_top, 0.13, 0.11, wood, sides=10, rough=0.015)
     b.log_column(post_top, post_top + Vector((0.0, 0.0, 0.18)), 0.12, 0.0, rust, sides=10, rough=0.0)
