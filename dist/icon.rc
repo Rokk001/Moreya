@@ -1,5 +1,5 @@
-1 ICON "OD-Logo.ico"
+1 ICON "moreya.ico"
 
 #ifdef __GNUC__
-1 24 "opendungeons.manifest"
+1 24 "moreya.manifest"
 #endif

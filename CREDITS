@@ -575,10 +575,8 @@ Name                                   Author                  License          
 ------------------------------------------------------------------------------------------------------------------------
 assets-src/DungeonHeartObject.blend    Mario                   GPLv3+                  Editable source of the dungeon heart model (first commit 8318b4559); made with Blender, AI-assisted (Claude Code)
 assets-src/DungeonHeartObject{Healthy,Damaged,Critical}.glbMario                   GPLv3+                  Exports of DungeonHeartObject.blend; made with Blender, AI-assisted (Claude Code)
-meta/gui/application-icon.png          AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
-meta/gui/icon.svg                      Remi Verschelde         CC-BY-SA 3.0            Added 2014 (first commit)
-meta/gui/iconplus.svg                  Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 meta/gui/moreya.desktop                Pavel Rojtberg          GPLv3+                  Added 2018 (first commit) as the snap desktop entry; renamed and rewritten for Moreya 2026-11-21
+meta/gui/moreya.svg                    AI-generated (Claude Code)  GPLv3+              Moreya gate icon, own design 2026-11-21, copy of dist/hicolor/scalable/apps/moreya.svg written by tools/artwork/moreya-icon/make_moreya_icon.py
 screenshots/*                          Tomasz Luchowski        GPLv3+                  Screenshots of the game (first commit 056c7086b)
 tools/artwork/CreatureMoodAtlas.png    AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 
@@ -1026,17 +1024,17 @@ source/tests/check_trap_meshes.py      OD Team                 GPLv3+
 ==  Distribution data: dist/  ==
 ================================
 
-hicolor/*/apps/opendungeons.*          Svenskmand              CC-BY-SA 3.0
-  except hicolor/16x16/apps/opendungeons.png  OD Team          CC-BY-SA 3.0
+hicolor/*/apps/moreya.*                AI-generated (Claude Code)  GPLv3+              Moreya gate icon (stone arch with portcullis), own design 2026-11-21; SVG and PNG sizes written by tools/artwork/moreya-icon/make_moreya_icon.py
+moreya.ico                             AI-generated (Claude Code)  GPLv3+              Same icon in 16, 24, 32, 48, 64, 128 and 256 pixels for the Windows executable and window, written by tools/artwork/moreya-icon/make_moreya_icon.py
+moreya.manifest                        OD Team                 GPLv3+                  Windows application manifest (renamed 2026-11-21)
 icon.rc                                OD Team                 GPLv3+
-logo.svg                               Svenskmand              CC-BY-SA 3.0
+tools/artwork/moreya-icon/make_moreya_icon.py  AI-generated (Claude Code)  GPLv3+      Generator of the Moreya icon files, 2026-11-21
 
 ====================================================
 == Portrait feature assets: materials/portraits/  ==
 materials/portraits/neutral-bases/*.png  AI-generated with Codex  GPLv3+  AI-generated neutral Dungeonbook bases from this project's portrait references; exact prompts and provenance in materials/portraits/neutral-bases/generation-records.json; originals preserved.
 ====================================================
 
-OD-Logo.ico                            AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
 moreya.appdata.xml                     Remi Verschelde         GPLv3+                  Added 2015 (first commit); renamed and rewritten for Moreya 2026-11-21
 
 
@@ -1055,8 +1053,6 @@ materials/textures/CreatureExperience.png      AI-generated            GPLv3+   
 materials/textures/CreatureRecovery.png        AI-generated            GPLv3+                  AI-generated, created for this project
 materials/textures/DefeatFireball.png          AI-generated            GPLv3+                  AI-generated, created for this project
 gui/ODHudSurface.png                   AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
-meta/gui/application-icon.png          AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
-dist/OD-Logo.ico                       AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09)
 materials/textures/Creature{Angry,Furious,Hungry,KO,Leaving,Paid,Prisoner,RallyTroops,Sleepy,Stunned,Unhappy}.pngAI-generated with Codex  GPLv3+                  Resampled from CreatureMoodAtlas.png by tools/package-creature-mood-icons.ps1
 
 
