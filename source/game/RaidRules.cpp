@@ -22,20 +22,22 @@
 
 namespace RaidRules
 {
-//! \brief Resets the schedule: no group came, the gate is closed and the first group waits countdownSeconds.
-void start(Schedule& schedule, uint32_t groupCount, double countdownSeconds)
+//! \brief Resets the schedule: no group came, the gate is closed and the first group waits countdownSeconds, or waits
+//! for the keeper without a countdown.
+void start(Schedule& schedule, uint32_t groupCount, double countdownSeconds, bool openByKeeper)
 {
     schedule.mNextGroup = 0;
     schedule.mGroupCount = groupCount;
     schedule.mGateOpen = false;
-    if(groupCount == 0)
+    schedule.mOpenByKeeper = openByKeeper;
+    if((groupCount == 0) || openByKeeper)
         schedule.mSecondsToNext = -1.0;
     else
         schedule.mSecondsToNext = std::max(0.0, countdownSeconds);
 }
 
 //! \brief Counts the countdown down; at its end the gate opens and the next group comes, then the interval starts for
-//! the group after it.
+//! the group after it. Without a countdown the next group waits for the keeper instead.
 bool advance(Schedule& schedule, double seconds, double intervalSeconds)
 {
     if((schedule.mNextGroup >= schedule.mGroupCount) || (schedule.mSecondsToNext < 0.0))
@@ -47,7 +49,7 @@ bool advance(Schedule& schedule, double seconds, double intervalSeconds)
 
     schedule.mGateOpen = true;
     ++schedule.mNextGroup;
-    if(schedule.mNextGroup < schedule.mGroupCount)
+    if((schedule.mNextGroup < schedule.mGroupCount) && !schedule.mOpenByKeeper)
         schedule.mSecondsToNext = std::max(0.0, intervalSeconds);
     else
         schedule.mSecondsToNext = -1.0;
@@ -55,14 +57,38 @@ bool advance(Schedule& schedule, double seconds, double intervalSeconds)
     return true;
 }
 
-//! \brief Ends the countdown of the first group at once while the gate is still closed.
+//! \brief Ends the countdown of the first group at once while the gate is still closed; without a countdown lets the
+//! waiting group come at once.
 bool openEarly(Schedule& schedule)
 {
-    if(schedule.mGateOpen || (schedule.mNextGroup != 0) || (schedule.mGroupCount == 0))
+    if(schedule.mGateOpen || (schedule.mNextGroup >= schedule.mGroupCount))
+        return false;
+
+    if(!schedule.mOpenByKeeper && (schedule.mNextGroup != 0))
         return false;
 
     schedule.mSecondsToNext = 0.0;
     return true;
+}
+
+//! \brief No countdown, the gate open, no group on its way and a group left that did not come yet.
+bool shouldCloseAgain(const Schedule& schedule)
+{
+    return schedule.mOpenByKeeper && schedule.mGateOpen && (schedule.mNextGroup < schedule.mGroupCount) &&
+        (schedule.mSecondsToNext < 0.0);
+}
+
+//! \brief Closes the gate.
+void closeAgain(Schedule& schedule)
+{
+    schedule.mGateOpen = false;
+}
+
+//! \brief No countdown, the gate closed and a group left that did not come yet.
+bool waitsForKeeper(const Schedule& schedule)
+{
+    return schedule.mOpenByKeeper && !schedule.mGateOpen && (schedule.mNextGroup < schedule.mGroupCount) &&
+        (schedule.mSecondsToNext < 0.0);
 }
 
 //! \brief Sets the countdown of the waiting group, at least 0 seconds.

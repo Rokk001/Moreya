@@ -178,7 +178,8 @@ bool CreatureActionFight::handleFight(Creature& creature, GameEntity* entityAtta
             std::list<Tile*> result = creature.getGameMap()->path(&creature, tilePosition);
             if(result.empty())
             {
-                OD_LOG_ERR("name=" + creature.getName() + ", myTile=" + Tile::displayAsString(myTile) + ", dest=" + Tile::displayAsString(tilePosition));
+                // The way to the attack position closed meanwhile (dug, built, a door): the fight looks again
+                OD_LOG_WRN("name=" + creature.getName() + ", myTile=" + Tile::displayAsString(myTile) + ", dest=" + Tile::displayAsString(tilePosition));
                 return false;
             }
 
@@ -218,7 +219,8 @@ bool CreatureActionFight::handleFight(Creature& creature, GameEntity* entityAtta
             std::list<Tile*> result = creature.getGameMap()->path(&creature, tilePosition);
             if(result.empty())
             {
-                OD_LOG_ERR("name" + creature.getName() + ", myTile=" + Tile::displayAsString(myTile) + ", dest=" + Tile::displayAsString(tilePosition));
+                // The way to the attack position closed meanwhile (dug, built, a door): the fight looks again
+                OD_LOG_WRN("name" + creature.getName() + ", myTile=" + Tile::displayAsString(myTile) + ", dest=" + Tile::displayAsString(tilePosition));
                 return false;
             }
 

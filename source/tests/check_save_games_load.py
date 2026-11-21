@@ -247,7 +247,10 @@ def read_raid(s):
             has_gate = has_gate or ok
         elif t == "Seats":
             ok = len(f) >= 2 and is_int(f[0]) and is_int(f[1])
-        elif t in ("Countdown", "Interval", "EscapeShare"):
+        elif t == "Countdown":
+            # one value (written before the campaign difficulties) or one each for Normal, Hard and Hell
+            ok = len(f) in (1, 3) and all(v == "-" or is_num(v) for v in f)
+        elif t in ("Interval", "EscapeShare"):
             ok = len(f) >= 1 and (f[0] == "-" or is_num(f[0]))
         elif t == "Group":
             ok = len(f) >= 2 and is_int(f[0]) and int(f[0]) > 0
@@ -256,6 +259,8 @@ def read_raid(s):
         elif t == "Member":
             ok = len(f) >= 5 and is_int(f[0]) and int(f[0]) in groups and is_int(f[2]) and int(f[2]) >= 0
         elif t == "State":
+            # OpenByKeeper follows in games saved since the campaign difficulties; the loader reads it as 0 when it
+            # is missing or no number
             ok = len(f) >= 5 and is_int(f[0]) and is_int(f[1]) and is_int(f[2]) and int(f[2]) >= 0 \
                 and is_num(f[3]) and is_int(f[4])
         elif t == "Arrived":

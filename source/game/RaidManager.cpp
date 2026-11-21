@@ -55,6 +55,13 @@ namespace
 //! \brief Written instead of an empty name or a value the level leaves to the config in the [Raid] section.
 const std::string NO_VALUE = "-";
 
+//! \brief The campaign difficulties with a countdown, in the order of the values of the Countdown line. On Easy and
+//! Medium no countdown runs.
+const KeeperAIType COUNTDOWN_DIFFICULTIES[] = {KeeperAIType::normal, KeeperAIType::hard, KeeperAIType::hell};
+
+//! \brief Number of the values of a Countdown line with one value per difficulty.
+const size_t COUNTDOWN_DIFFICULTY_COUNT = sizeof(COUNTDOWN_DIFFICULTIES) / sizeof(COUNTDOWN_DIFFICULTIES[0]);
+
 //! \brief Returns the text, "-" for an empty one.
 std::string textOrDash(const std::string& text)
 {
@@ -157,6 +164,9 @@ RaidManager::RaidManager(GameMap& gameMap) :
     mRaidSeatId(0),
     mTargetSeatId(-1),
     mCountdownSeconds(-1.0),
+    mCountdownHardSeconds(-1.0),
+    mCountdownHellSeconds(-1.0),
+    mDifficulty(KeeperAIType::nbAI),
     mIntervalSeconds(-1.0),
     mEscapeShare(-1.0),
     mStarted(false),
@@ -166,8 +176,8 @@ RaidManager::RaidManager(GameMap& gameMap) :
 {
 }
 
-//! \brief Forgets the level data, the running state (followers, escaped members and loot included) and the transient
-//! state.
+//! \brief Forgets the level data, the difficulty set for the raid, the running state (followers, escaped members and
+//! loot included) and the transient state.
 void RaidManager::clear()
 {
     mHasGate = false;
@@ -177,6 +187,9 @@ void RaidManager::clear()
     mRaidSeatId = 0;
     mTargetSeatId = -1;
     mCountdownSeconds = -1.0;
+    mCountdownHardSeconds = -1.0;
+    mCountdownHellSeconds = -1.0;
+    mDifficulty = KeeperAIType::nbAI;
     mIntervalSeconds = -1.0;
     mEscapeShare = -1.0;
     mGroups.clear();
@@ -189,10 +202,78 @@ void RaidManager::clear()
     mBonusLogged = false;
 }
 
-//! \brief The countdown of the level, else RaidCountdownSeconds.
+//! \brief The difficulty set for the raid, else of the running campaign level, else Normal.
+KeeperAIType RaidManager::getDifficulty() const
+{
+    if(mDifficulty != KeeperAIType::nbAI)
+        return mDifficulty;
+
+    Campaign& campaign = Campaign::getSingleton();
+    if(!campaign.isActive())
+        return KeeperAIType::normal;
+
+    const uint32_t difficulty = campaign.getLevelDifficulty();
+    if(difficulty >= static_cast<uint32_t>(KeeperAIType::nbAI))
+        return KeeperAIType::normal;
+
+    return static_cast<KeeperAIType>(difficulty);
+}
+
+//! \brief Remembers the difficulty (nbAI: the one of the campaign).
+void RaidManager::setDifficulty(KeeperAIType difficulty)
+{
+    mDifficulty = difficulty;
+}
+
+//! \brief The level value of Hard or Hell, the Normal value for every other difficulty.
+double RaidManager::getLevelCountdownSeconds(KeeperAIType difficulty) const
+{
+    if(difficulty == KeeperAIType::hard)
+        return mCountdownHardSeconds;
+
+    if(difficulty == KeeperAIType::hell)
+        return mCountdownHellSeconds;
+
+    return mCountdownSeconds;
+}
+
+//! \brief Sets the level value of Hard or Hell, the Normal value for every other difficulty.
+void RaidManager::setLevelCountdownSeconds(KeeperAIType difficulty, double seconds)
+{
+    if(difficulty == KeeperAIType::hard)
+        mCountdownHardSeconds = seconds;
+    else if(difficulty == KeeperAIType::hell)
+        mCountdownHellSeconds = seconds;
+    else
+        mCountdownSeconds = seconds;
+}
+
+//! \brief The countdown of the level for the difficulty, else RaidCountdownSeconds.
 double RaidManager::countdownSeconds() const
 {
-    return (mCountdownSeconds >= 0.0) ? mCountdownSeconds : raidConfig("RaidCountdownSeconds");
+    const double seconds = getLevelCountdownSeconds(getDifficulty());
+    return (seconds >= 0.0) ? seconds : raidConfig("RaidCountdownSeconds");
+}
+
+//! \brief Easy and Medium have no countdown.
+bool RaidManager::opensByKeeper() const
+{
+    const KeeperAIType difficulty = getDifficulty();
+    return (difficulty == KeeperAIType::easy) || (difficulty == KeeperAIType::medium);
+}
+
+//! \brief Starts the schedule with the groups of the level and the countdown or the opening by the keeper.
+void RaidManager::startSchedule()
+{
+    const bool byKeeper = opensByKeeper();
+    RaidRules::start(mSchedule, static_cast<uint32_t>(mGroups.size()), countdownSeconds(), byKeeper);
+    mStarted = true;
+    if(byKeeper)
+        OD_LOG_INF("Raid without countdown: the groups wait until the keeper opens the gate, groups="
+            + Helper::toString(static_cast<uint32_t>(mGroups.size())));
+    else
+        OD_LOG_INF("Raid countdown starts: " + Helper::toString(mSchedule.mSecondsToNext) + " s, groups="
+            + Helper::toString(static_cast<uint32_t>(mGroups.size())));
 }
 
 //! \brief The interval of the level, else RaidWaveIntervalSeconds.
@@ -226,12 +307,7 @@ void RaidManager::update()
     }
 
     if(!mStarted)
-    {
-        RaidRules::start(mSchedule, static_cast<uint32_t>(mGroups.size()), countdownSeconds());
-        mStarted = true;
-        OD_LOG_INF("Raid countdown starts: " + Helper::toString(mSchedule.mSecondsToNext) + " s, groups="
-            + Helper::toString(static_cast<uint32_t>(mGroups.size())));
-    }
+        startSchedule();
 
     if(!mGateShown)
     {
@@ -248,20 +324,25 @@ void RaidManager::update()
     updateLeaders();
 }
 
-//! \brief Lets the seconds pass on the schedule; a group whose countdown ended comes through the gate, and the
-//! portcullis sinks when the gate opens.
+//! \brief Lets the seconds pass on the schedule; a group whose countdown ended comes through the gate, the portcullis
+//! sinks when the gate opens and rises when the gate closes behind a group while the next one waits for the keeper.
 void RaidManager::advanceSchedule(double seconds)
 {
     const bool wasOpen = mSchedule.mGateOpen;
     if(RaidRules::advance(mSchedule, seconds, intervalSeconds()))
         spawnGroup(mSchedule.mNextGroup - 1);
+    else if(RaidRules::shouldCloseAgain(mSchedule) && !isRaidMemberInGate())
+        RaidRules::closeAgain(mSchedule);
 
-    if(!wasOpen && mSchedule.mGateOpen)
-    {
-        RoomPortalWave* gate = getGateRoom();
-        if(gate != nullptr)
-            gate->setMoreyaGateOpen(true, raidConfig("RaidGatePortcullisSink"));
-    }
+    if(wasOpen == mSchedule.mGateOpen)
+        return;
+
+    RoomPortalWave* gate = getGateRoom();
+    if(gate != nullptr)
+        gate->setMoreyaGateOpen(mSchedule.mGateOpen, raidConfig("RaidGatePortcullisSink"));
+
+    if(!mSchedule.mGateOpen)
+        tellKeepers("The Moreya gate closes again. The next raid group comes when you open the gate.");
 }
 
 //! \brief Only the attacked keeper (or the level script) may open the gate, and only while it is closed.
@@ -278,15 +359,12 @@ bool RaidManager::openGateEarly(int32_t seatId)
     }
 
     if(!mStarted)
-    {
-        RaidRules::start(mSchedule, static_cast<uint32_t>(mGroups.size()), countdownSeconds());
-        mStarted = true;
-    }
+        startSchedule();
 
     if(!RaidRules::openEarly(mSchedule))
         return false;
 
-    OD_LOG_INF("The Moreya gate is opened early by seat " + Helper::toString(seatId));
+    OD_LOG_INF("The Moreya gate is opened by seat " + Helper::toString(seatId));
     // The raid comes at once
     advanceSchedule(0.0);
     return true;
@@ -299,10 +377,8 @@ void RaidManager::setSecondsToNextGroup(double seconds)
         return;
 
     if(!mStarted)
-    {
-        RaidRules::start(mSchedule, static_cast<uint32_t>(mGroups.size()), countdownSeconds());
-        mStarted = true;
-    }
+        startSchedule();
+
     RaidRules::setSecondsToNext(mSchedule, seconds);
 }
 
@@ -313,15 +389,32 @@ int32_t RaidManager::getCountdownToShow() const
         return -1;
 
     if(!mStarted)
+    {
+        if(opensByKeeper())
+            return -1;
+
         return static_cast<int32_t>(std::ceil(std::max(0.0, countdownSeconds())));
+    }
 
     return RaidRules::displaySeconds(mSchedule);
 }
 
-//! \brief The gate is closed until the first group comes.
+//! \brief The gate is closed until the first group comes; without a countdown also while the next group waits.
 bool RaidManager::isGateClosed() const
 {
     return !mSchedule.mGateOpen;
+}
+
+//! \brief Before the start: a raid on Easy or Medium waits for the keeper; afterwards the schedule tells.
+bool RaidManager::isWaitingForKeeper() const
+{
+    if(!mHasGate || mLost || mGroups.empty() || Campaign::getSingleton().isPlayedLevelBonus())
+        return false;
+
+    if(!mStarted)
+        return opensByKeeper();
+
+    return RaidRules::waitsForKeeper(mSchedule);
 }
 
 //! \brief Looks for a fleeing leader with that name, or a follower of a leader who fled that did not escape yet.
@@ -989,6 +1082,31 @@ bool RaidManager::isAtGate(const Creature& creature) const
     return static_cast<double>(tileDistance(*tile, *gateTile)) <= raidConfig("RaidGateArrivalTiles");
 }
 
+//! \brief Looks for a standing raid member on a tile of the gate room.
+bool RaidManager::isRaidMemberInGate() const
+{
+    RoomPortalWave* gate = getGateRoom();
+    if(gate == nullptr)
+        return false;
+
+    for(const RaidGroupData& group : mGroups)
+    {
+        for(const std::string& name : group.mSpawned)
+        {
+            if(!isStanding(name))
+                continue;
+
+            Creature* creature = mGameMap.getCreature(name);
+            if((creature == nullptr) || (creature->getPositionTile() == nullptr))
+                continue;
+
+            if(creature->getPositionTile()->getCoveringRoom() == gate)
+                return true;
+        }
+    }
+    return false;
+}
+
 //! \brief Sends the text as a major event to the attacked keeper, or to every human keeper without one.
 void RaidManager::tellKeepers(const std::string& text) const
 {
@@ -1040,9 +1158,10 @@ bool RaidManager::parseLeaderState(const std::string& text, RaidLeaderState& sta
 //! \brief The line formats of the section, one per kind of line.
 std::string RaidManager::getStreamFormat()
 {
-    return "Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | "
+    return "Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown NormalSeconds|- HardSeconds|- "
+        "HellSeconds|- | Interval Seconds|- | "
         "EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|- | "
-        "State Started GateOpen NextGroup SecondsToNext Lost | Arrived RaidGroupId LeaderName|- LeaderState NbMembers "
+        "State Started GateOpen NextGroup SecondsToNext Lost OpenByKeeper | Arrived RaidGroupId LeaderName|- LeaderState NbMembers "
         "Member... | Plundered CreatureName RoomName | Follower RaidGroupId CreatureName | Escaped RaidGroupId "
         "CreatureName | Loot ItemBagName";
 }
@@ -1059,7 +1178,10 @@ void RaidManager::exportToStream(std::ostream& os, bool isGameSave) const
     os << "# " << getStreamFormat() << "\n";
     os << "Gate\t" << mGateX << "\t" << mGateY << "\t" << mGateRotation << "\n";
     os << "Seats\t" << mRaidSeatId << "\t" << mTargetSeatId << "\n";
-    os << "Countdown\t" << optionalNumberText(mCountdownSeconds) << "\n";
+    os << "Countdown";
+    for(size_t i = 0; i < COUNTDOWN_DIFFICULTY_COUNT; ++i)
+        os << "\t" << optionalNumberText(getLevelCountdownSeconds(COUNTDOWN_DIFFICULTIES[i]));
+    os << "\n";
     os << "Interval\t" << optionalNumberText(mIntervalSeconds) << "\n";
     os << "EscapeShare\t" << optionalNumberText(mEscapeShare) << "\n";
     for(const RaidGroupData& group : mGroups)
@@ -1075,7 +1197,8 @@ void RaidManager::exportToStream(std::ostream& os, bool isGameSave) const
     if(isGameSave)
     {
         os << "State\t" << (mStarted ? 1 : 0) << "\t" << (mSchedule.mGateOpen ? 1 : 0) << "\t" << mSchedule.mNextGroup
-            << "\t" << mSchedule.mSecondsToNext << "\t" << (mLost ? 1 : 0) << "\n";
+            << "\t" << mSchedule.mSecondsToNext << "\t" << (mLost ? 1 : 0) << "\t" << (mSchedule.mOpenByKeeper ? 1 : 0)
+            << "\n";
         for(const RaidGroupData& group : mGroups)
         {
             if(!group.mArrived)
@@ -1159,7 +1282,33 @@ bool RaidManager::importFromStream(std::istream& is)
             continue;
         }
 
-        if((token == "Countdown") || (token == "Interval") || (token == "EscapeShare"))
+        if(token == "Countdown")
+        {
+            // One value per difficulty of COUNTDOWN_DIFFICULTIES; a single value (a level or saved game written before
+            // the difficulties) is the countdown of every difficulty
+            std::vector<double> values;
+            std::string valueText;
+            while(line >> valueText)
+            {
+                double value = -1.0;
+                if(!parseOptionalNumber(valueText, value))
+                {
+                    OD_LOG_ERR("Invalid Countdown line=" + rest);
+                    return false;
+                }
+                values.push_back(value);
+            }
+            if((values.size() != 1) && (values.size() != COUNTDOWN_DIFFICULTY_COUNT))
+            {
+                OD_LOG_ERR("Invalid Countdown line (one value or one per difficulty Normal, Hard, Hell)=" + rest);
+                return false;
+            }
+            for(size_t i = 0; i < COUNTDOWN_DIFFICULTY_COUNT; ++i)
+                setLevelCountdownSeconds(COUNTDOWN_DIFFICULTIES[i], (values.size() == 1) ? values.front() : values[i]);
+            continue;
+        }
+
+        if((token == "Interval") || (token == "EscapeShare"))
         {
             std::string valueText;
             double value = -1.0;
@@ -1168,9 +1317,7 @@ bool RaidManager::importFromStream(std::istream& is)
                 OD_LOG_ERR("Invalid " + token + " line=" + rest);
                 return false;
             }
-            if(token == "Countdown")
-                mCountdownSeconds = value;
-            else if(token == "Interval")
+            if(token == "Interval")
                 mIntervalSeconds = value;
             else
                 mEscapeShare = value;
@@ -1229,8 +1376,14 @@ bool RaidManager::importFromStream(std::istream& is)
                 OD_LOG_ERR("Invalid State line=" + rest);
                 return false;
             }
+            // OpenByKeeper follows in a game saved since the campaign difficulties: a game saved before ran its
+            // countdown
+            int32_t openByKeeper = 0;
+            if(!(line >> openByKeeper))
+                openByKeeper = 0;
             mStarted = (started != 0);
             mSchedule.mGateOpen = (gateOpen != 0);
+            mSchedule.mOpenByKeeper = (openByKeeper != 0);
             mLost = (lost != 0);
             continue;
         }

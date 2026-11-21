@@ -150,6 +150,9 @@ for writer, reader in (('os << "Gate\\t" << mGateX << "\\t" << mGateY << "\\t" <
                         "line >> raidGroupId >> spec.mClassName >> spec.mLevel >> name >> templateName"),
                        ('os << "State\\t" << (mStarted ? 1 : 0) << "\\t" << (mSchedule.mGateOpen ? 1 : 0)',
                         "line >> started >> gateOpen >> mSchedule.mNextGroup >> mSchedule.mSecondsToNext >> lost"),
+                       ('<< "\\t" << (mSchedule.mOpenByKeeper ? 1 : 0)', "line >> openByKeeper"),
+                       ('os << "\\t" << optionalNumberText(getLevelCountdownSeconds(COUNTDOWN_DIFFICULTIES[i]));',
+                        "setLevelCountdownSeconds(COUNTDOWN_DIFFICULTIES[i], (values.size() == 1) ? values.front() : values[i]);"),
                        ('os << "Arrived\\t" << group.mRaidGroupId << "\\t" << textOrDash(group.mLeaderSpawned)',
                         "line >> raidGroupId >> leader >> stateText >> nbMembers"),
                        ('os << "Plundered\\t" << done.first << "\\t" << done.second', "line >> name >> room")):
@@ -177,7 +180,7 @@ def export_model(raid, game_save):
     def number(value):
         return "-" if value < 0 else repr(value)
     lines = ["[Raid]", "Gate\t%d\t%d\t%s" % (raid["gate"][0], raid["gate"][1], repr(raid["gate"][2])),
-             "Seats\t%d\t%d" % raid["seats"], "Countdown\t" + number(raid["countdown"]),
+             "Seats\t%d\t%d" % raid["seats"], "Countdown\t" + "\t".join(number(v) for v in raid["countdown"]),
              "Interval\t" + number(raid["interval"]), "EscapeShare\t" + number(raid["share"])]
     for group in raid["groups"]:
         lines.append("Group\t%d\t%s" % (group["id"], group["leader"] or "-"))
@@ -186,8 +189,8 @@ def export_model(raid, game_save):
                                                         member[3] or "-"))
     if game_save:
         state = raid["state"]
-        lines.append("State\t%d\t%d\t%d\t%s\t%d" % (state["started"], state["open"], state["next"], repr(state["seconds"]),
-                                                   state["lost"]))
+        lines.append("State\t%d\t%d\t%d\t%s\t%d\t%d" % (state["started"], state["open"], state["next"],
+                                                       repr(state["seconds"]), state["lost"], state["byKeeper"]))
         for group in raid["groups"]:
             if group["arrived"]:
                 lines.append("\t".join(["Arrived", str(group["id"]), group["spawnedLeader"] or "-", group["leaderState"],
@@ -202,7 +205,8 @@ def import_model(text):
     """Model of RaidManager::importFromStream."""
     def number(token):
         return -1.0 if token == "-" else float(token)
-    raid = {"groups": [], "plundered": set(), "state": {"started": 0, "open": 0, "next": 0, "seconds": -1.0, "lost": 0}}
+    raid = {"groups": [], "plundered": set(), "state": {"started": 0, "open": 0, "next": 0, "seconds": -1.0, "lost": 0,
+                                                        "byKeeper": 0}}
     by_id = {}
     for line in text.splitlines()[1:]:
         f = line.split()
@@ -212,8 +216,12 @@ def import_model(text):
             raid["gate"] = (int(f[1]), int(f[2]), float(f[3]))
         elif f[0] == "Seats":
             raid["seats"] = (int(f[1]), int(f[2]))
-        elif f[0] in ("Countdown", "Interval", "EscapeShare"):
-            raid[{"Countdown": "countdown", "Interval": "interval", "EscapeShare": "share"}[f[0]]] = number(f[1])
+        elif f[0] == "Countdown":
+            # one value (written before the difficulties) for Normal, Hard and Hell, or one value each
+            assert len(f) in (2, 4)
+            raid["countdown"] = tuple(number(v) for v in (f[1:] if len(f) == 4 else f[1:] * 3))
+        elif f[0] in ("Interval", "EscapeShare"):
+            raid[{"Interval": "interval", "EscapeShare": "share"}[f[0]]] = number(f[1])
         elif f[0] == "Group":
             group = {"id": int(f[1]), "leader": "" if f[2] == "-" else f[2], "members": [], "arrived": False,
                      "spawnedLeader": "", "leaderState": "none", "spawned": []}
@@ -223,7 +231,7 @@ def import_model(text):
             by_id[int(f[1])]["members"].append((f[2], int(f[3]), "" if f[4] == "-" else f[4], "" if f[5] == "-" else f[5]))
         elif f[0] == "State":
             raid["state"] = {"started": int(f[1]), "open": int(f[2]), "next": int(f[3]), "seconds": float(f[4]),
-                             "lost": int(f[5])}
+                             "lost": int(f[5]), "byKeeper": int(f[6]) if len(f) > 6 else 0}
         elif f[0] == "Arrived":
             group = by_id[int(f[1])]
             group["arrived"] = True
@@ -237,17 +245,26 @@ def import_model(text):
 
 # Mid-raid: the first group came and its leader flees, the second waits 37.5 s more; one member plundered
 RUNNING = {
-    "gate": (33, 33, 90.0), "seats": (2, 1), "countdown": 240.0, "interval": -1.0, "share": 0.6,
+    "gate": (33, 33, 90.0), "seats": (2, 1), "countdown": (2400.0, 2100.0, -1.0), "interval": -1.0, "share": 0.6,
     "groups": [
         {"id": 1, "leader": "LeaderOne", "members": [("Knight", 4, "LeaderOne", "Guardian"), ("Elf", 3, "", "Marksman")],
          "arrived": True, "spawnedLeader": "LeaderOne", "leaderState": "fleeing", "spawned": ["LeaderOne", "Elf_12"]},
         {"id": 2, "leader": "LeaderTwo", "members": [("Knight", 5, "LeaderTwo", "Guardian"), ("Wizard", 3, "", "Healer")],
          "arrived": False, "spawnedLeader": "", "leaderState": "none", "spawned": []},
     ],
-    "state": {"started": 1, "open": 1, "next": 1, "seconds": 37.5, "lost": 0},
+    "state": {"started": 1, "open": 1, "next": 1, "seconds": 37.5, "lost": 0, "byKeeper": 0},
     "plundered": {("Elf_12", "Treasury1")},
 }
 check(import_model(export_model(RUNNING, True)) == RUNNING, "C3: a running raid is saved and loaded one to one")
+# R13: a raid on Easy or Medium whose second group waits behind the closed gate for the player is saved and loaded as it is
+WAITING = dict(RUNNING, state={"started": 1, "open": 0, "next": 1, "seconds": -1.0, "lost": 0, "byKeeper": 1})
+check(import_model(export_model(WAITING, True)) == WAITING,
+      "C3/R13: a raid that waits for the player keeps waiting after loading")
+# R13: a level or saved game written before the difficulties (one Countdown value, State without OpenByKeeper) loads
+OLD = import_model("[Raid]\nGate\t3\t4\t0\nSeats\t2\t1\nCountdown\t3600\nInterval\t-\nEscapeShare\t-\nGroup\t1\t-\n"
+                   "State\t1\t0\t0\t12.5\t0\n[/Raid]\n")
+check(OLD["countdown"] == (3600.0, 3600.0, 3600.0) and OLD["state"]["byKeeper"] == 0 and OLD["state"]["seconds"] == 12.5,
+      "C3/R13: an old single countdown applies to every difficulty, an old saved countdown keeps running")
 LEVEL_ONLY = import_model(export_model(RUNNING, False))
 check(LEVEL_ONLY["state"]["started"] == 0 and not LEVEL_ONLY["groups"][0]["arrived"] and not LEVEL_ONLY["plundered"],
       "C3: a level written by the editor starts the raid from the beginning")
@@ -257,7 +274,12 @@ check("mRaidCountdownToSend = mRaid->getCountdownToShow();" in function(GAME_MAP
       "RA2: the server sends the raid countdown")
 send = function(GAME_MAP, "void GameMap::sendTimeLimit(int32_t remainingSeconds)")
 check("serverNotification->mPacket << mRaidCountdownToSend;" in send and
-      "serverNotification->mPacket << mRaidGateClosedToSend;" in send, "RA2: the countdown travels with the time limit")
+      "serverNotification->mPacket << mRaidGateClosedToSend;" in send and
+      "serverNotification->mPacket << mRaidWaitsToSend;" in send, "RA2: the countdown travels with the time limit")
+check("mRaidWaitsToSend = mRaid->isWaitingForKeeper() ? 1 : 0;" in
+      function(GAME_MAP, "void GameMap::checkGameDuration()"), "R13/RA2: the server sends that a group waits for the player")
+check("packetReceived >> waits" in CLIENT and "mRaidWaitsForKeeper = (waits != 0);" in CLIENT,
+      "R13/RA2: the client reads that a group waits for the player (older recorded packets end before it)")
 check("if(!packetReceived.endOfPacket())" in CLIENT and "packetReceived >> mRaidCountdownSeconds >> gateClosed" in CLIENT,
       "RA2: the client reads the countdown (older recorded packets end before it)")
 check(re.findall(r"^\s*(\w+)\s*,?\s*(?://.*)?$", CLIENT_NOTIFICATION_H.split("};")[0], re.M)[-1] == "askOpenRaidGate",
@@ -269,6 +291,9 @@ panel_update = function(GAME_MODE, "void GameMode::updateRaidPanel()")
 check('getChild("RaidPanel")' in panel_update and "button->show();" in panel_update and "button->hide();" in panel_update
       and '"Raid in "' in panel_update and '"Next group in "' in panel_update,
       "RA2/RA3/RA4: the panel shows the countdown, the button only while the gate is closed")
+check('"Raid waits at the gate"' in panel_update and "isRaidWaitingForKeeper()" in panel_update and
+      panel_update.index("if(waits)") < panel_update.index("button->show();"),
+      "R13/RA2: on Easy and Medium the panel shows no countdown but the button while a group waits for the player")
 check("ClientNotificationType::askOpenRaidGate" in function(GAME_MODE, "bool GameMode::openRaidGate("),
       "RA3: the button asks the server to open the gate")
 check('getChild("RaidPanel/OpenGateButton")' in GAME_MODE and "&GameMode::openRaidGate" in GAME_MODE,

@@ -128,6 +128,11 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline bool isRaidGateClosed() const
     { return mRaidGateClosed; }
 
+    //! \brief True while a raid group waits behind the closed Moreya gate until the player opens it (no countdown on the
+    //! campaign difficulty Easy and Medium)
+    inline bool isRaidWaitingForKeeper() const
+    { return mRaidWaitsForKeeper; }
+
     //! \brief What the heart health ring of the top-left badge has to show
     inline HeartHealthRing::BadgeState& getHeartBadge()
     { return mHeartBadge; }
@@ -232,6 +237,8 @@ class ODClient: public Ogre::Singleton<ODClient>,
     int32_t mRaidCountdownSeconds;
     //! \brief Last state of the Moreya gate received with timeLimit: true while it is closed
     bool mRaidGateClosed;
+    //! \brief Received with timeLimit: true while a raid group waits behind the closed gate for the player
+    bool mRaidWaitsForKeeper;
 
     // Heart health received with heartHealth
     HeartHealthRing::BadgeState mHeartBadge;

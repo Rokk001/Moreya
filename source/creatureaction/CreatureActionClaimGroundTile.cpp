@@ -32,16 +32,21 @@ double CreatureActionClaimGroundTile::getClaimExperience(const Creature& creatur
         (config.getClaimXpDivisorBase() + config.getClaimXpDivisorPerLevel() * creature.getLevel()));
 }
 
+//! \brief Counts the worker on the tile when the tile has room for one more claiming worker.
 CreatureActionClaimGroundTile::CreatureActionClaimGroundTile(Creature& creature, Tile& tileClaim) :
     CreatureAction(creature),
-    mTileClaim(tileClaim)
+    mTileClaim(tileClaim),
+    mClaimCounted(false)
 {
-    mTileClaim.addWorkerClaiming(mCreature);
+    mClaimCounted = mTileClaim.addWorkerClaiming(mCreature);
 }
 
+//! \brief Takes the worker off the count of the tile, only when it was counted (else it would take another worker's
+//! place off the count).
 CreatureActionClaimGroundTile::~CreatureActionClaimGroundTile()
 {
-    mTileClaim.removeWorkerClaiming(mCreature);
+    if(mClaimCounted)
+        mTileClaim.removeWorkerClaiming(mCreature);
 }
 
 std::function<bool()> CreatureActionClaimGroundTile::action()

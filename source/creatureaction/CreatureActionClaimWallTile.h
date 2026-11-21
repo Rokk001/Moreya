@@ -38,6 +38,9 @@ public:
 
 private:
     Tile& mTileClaim;
+    //! \brief True when this action counted its worker on the tile (the tile had room for one more claiming worker);
+    //! only then the worker is taken off the count again when the action ends.
+    bool mClaimCounted;
 };
 
 #endif // CREATUREACTIONCLAIMWALLTILE_H
