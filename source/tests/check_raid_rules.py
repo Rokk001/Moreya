@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Non-compiling check of the rules of the raid (raid plan R2: RA2 countdown, RA3 early opening, RA4 raid groups with
 interval, RA5 leader in his group, RA7 plundering with the carry amount of R10, RA8 leader escape, RA9 victory, RA1 gate
-unclaimable and indestructible, walked through when open and blocked by its portcullis when closed).
+unclaimable and indestructible, walked through when open and blocked by its portcullis when closed; raid plan R13: on
+the campaign difficulty Easy and Medium no countdown, every raid group comes only when the player opens the gate, the
+gate closes again behind a group while another one waits; on Normal, Hard and Hell the countdown of that difficulty).
 
 Every rule is checked twice: a Python model written from the rule computes fixed scenarios whose expected results are
 written in this file, and the C++ source of source/game/RaidRules.cpp and of the engine side (RaidManager, the hero
@@ -71,14 +73,16 @@ class Schedule(object):
         self.group_count = 0
         self.seconds = -1.0
         self.gate_open = False
+        self.by_keeper = False
 
 
-def start(s, groups, countdown):
+def start(s, groups, countdown, by_keeper=False):
     """Model of RaidRules::start."""
     s.next_group = 0
     s.group_count = groups
     s.gate_open = False
-    s.seconds = -1.0 if groups == 0 else max(0.0, countdown)
+    s.by_keeper = by_keeper
+    s.seconds = -1.0 if groups == 0 or by_keeper else max(0.0, countdown)
 
 
 def advance(s, seconds, interval):
@@ -90,16 +94,28 @@ def advance(s, seconds, interval):
         return False
     s.gate_open = True
     s.next_group += 1
-    s.seconds = max(0.0, interval) if s.next_group < s.group_count else -1.0
+    s.seconds = max(0.0, interval) if s.next_group < s.group_count and not s.by_keeper else -1.0
     return True
 
 
 def open_early(s):
     """Model of RaidRules::openEarly."""
-    if s.gate_open or s.next_group != 0 or s.group_count == 0:
+    if s.gate_open or s.next_group >= s.group_count:
+        return False
+    if not s.by_keeper and s.next_group != 0:
         return False
     s.seconds = 0.0
     return True
+
+
+def should_close_again(s):
+    """Model of RaidRules::shouldCloseAgain."""
+    return s.by_keeper and s.gate_open and s.next_group < s.group_count and s.seconds < 0.0
+
+
+def waits_for_keeper(s):
+    """Model of RaidRules::waitsForKeeper."""
+    return s.by_keeper and not s.gate_open and s.next_group < s.group_count and s.seconds < 0.0
 
 
 def set_seconds(s, seconds):
@@ -135,18 +151,20 @@ def plunder_amount(stored, carried, capacity):
     return max(0.0, min(stored, capacity - carried))
 
 
-def run(groups, countdown, interval, seconds, events):
+def run(groups, countdown, interval, seconds, events, by_keeper=False, in_gate=()):
     """Runs the schedule in steps of one second for the given seconds, in the order of a game turn: the raid update
     first, then the level script or the button of the player; events maps a second to such an action ("open" for the
-    early opening, a number for raidcountdown). Returns the seconds at which groups came and the countdown shown at
-    every second."""
+    early opening, a number for raidcountdown). in_gate lists the seconds at which a raid member stands in the gate, so
+    that it does not close again. Returns the seconds at which groups came and the countdown shown at every second."""
     s = Schedule()
-    start(s, groups, countdown)
+    start(s, groups, countdown, by_keeper)
     arrivals = []
     shown = []
     for second in range(1, seconds + 1):
         if advance(s, 1.0, interval):
             arrivals.append(second)
+        elif should_close_again(s) and second not in in_gate:
+            s.gate_open = False
         action = events.get(second)
         if action == "open":
             if open_early(s) and advance(s, 0.0, interval):
@@ -173,6 +191,32 @@ check(open_early(s) and advance(s, 0.0, 90.0) and not open_early(s), "RA3: the g
 s = Schedule()
 start(s, 0, 240.0)
 check(not open_early(s) and display(s) == -1, "RA3: without raid groups there is nothing to open")
+
+# R13 / RA2 Easy and Medium: no countdown; the raid comes only when the player opens the gate
+arrivals, shown, schedule = run(1, 3600.0, 90.0, 5000, {})
+check(arrivals == [3600], "RA2: on Normal, Hard and Hell the group comes when the countdown ends, not " + str(arrivals))
+arrivals, shown, schedule = run(1, 3600.0, 90.0, 5000, {}, by_keeper=True)
+check(arrivals == [] and set(shown) == {-1} and waits_for_keeper(schedule),
+      "RA2: on Easy and Medium no countdown is shown and no group comes before the gate is opened")
+arrivals, shown, schedule = run(1, 3600.0, 90.0, 5000, {4321: "open"}, by_keeper=True)
+check(arrivals == [4321] and schedule.gate_open and not waits_for_keeper(schedule),
+      "RA2/RA3: on Easy and Medium the group comes when the player opens the gate, not " + str(arrivals))
+# R13 / RA4 (Frage 43 b): the second group comes only when the player opens the gate again; the gate closes once the
+# first group left it (a member stands in the gate up to 3 s)
+arrivals, shown, schedule = run(2, 3600.0, 90.0, 900, {100: "open", 101: "open", 500: "open"}, by_keeper=True,
+                                in_gate=(101, 102, 103))
+check(arrivals == [100, 500], "RA4: the second group comes only when the gate is opened again, not " + str(arrivals))
+check(set(shown) == {-1}, "RA4: on Easy and Medium no countdown to the second group is shown")
+s = Schedule()
+start(s, 2, 3600.0, True)
+check(open_early(s) and advance(s, 0.0, 90.0) and should_close_again(s) and not open_early(s) and
+      not waits_for_keeper(s), "RA4: while the first group is in the open gate the gate cannot be opened again")
+s.gate_open = False
+check(waits_for_keeper(s) and open_early(s) and advance(s, 0.0, 90.0) and s.gate_open and not should_close_again(s)
+      and not open_early(s), "RA4: after the last group the gate stays open and nothing waits")
+arrivals, shown, schedule = run(2, 3600.0, 90.0, 4000, {10: "open"})
+check(arrivals == [10, 100] and shown[10] == 89, "RA4: on Normal, Hard and Hell the second group still follows the "
+      "interval with its countdown")
 
 # Script action raidcountdown 150 at 5 s
 arrivals, shown, schedule = run(1, 240.0, 90.0, 200, {5: 150})
@@ -209,9 +253,22 @@ check("schedule.mSecondsToNext -= seconds;" in advance_cpp and "if(schedule.mSec
 check("schedule.mGateOpen = true;" in advance_cpp and "++schedule.mNextGroup;" in advance_cpp and
       "schedule.mSecondsToNext = std::max(0.0, intervalSeconds);" in advance_cpp and
       "schedule.mSecondsToNext = -1.0;" in advance_cpp, "RA4: advance opens the gate and starts the interval")
+check("if((schedule.mNextGroup < schedule.mGroupCount) && !schedule.mOpenByKeeper)" in advance_cpp,
+      "R13/RA4: without a countdown no interval runs to the next group")
+start_cpp = function(RULES, "void start(Schedule& schedule, uint32_t groupCount, double countdownSeconds, bool openByKeeper)")
+check("schedule.mOpenByKeeper = openByKeeper;" in start_cpp and "if((groupCount == 0) || openByKeeper)" in start_cpp,
+      "R13/RA2: without a countdown the first group waits for the keeper")
 early_cpp = function(RULES, "bool openEarly(Schedule& schedule)")
-check("if(schedule.mGateOpen || (schedule.mNextGroup != 0) || (schedule.mGroupCount == 0))" in early_cpp and
-      "schedule.mSecondsToNext = 0.0;" in early_cpp, "RA3: openEarly ends the countdown of the first group")
+check("if(schedule.mGateOpen || (schedule.mNextGroup >= schedule.mGroupCount))" in early_cpp and
+      "if(!schedule.mOpenByKeeper && (schedule.mNextGroup != 0))" in early_cpp and
+      "schedule.mSecondsToNext = 0.0;" in early_cpp,
+      "RA3: openEarly ends the countdown of the first group; without a countdown it lets the waiting group come")
+check("return schedule.mOpenByKeeper && schedule.mGateOpen && (schedule.mNextGroup < schedule.mGroupCount) &&" in
+      function(RULES, "bool shouldCloseAgain(const Schedule& schedule)") and
+      "schedule.mGateOpen = false;" in function(RULES, "void closeAgain(Schedule& schedule)"),
+      "R13/RA4: without a countdown the gate closes again while a group is left")
+check("return schedule.mOpenByKeeper && !schedule.mGateOpen && (schedule.mNextGroup < schedule.mGroupCount) &&" in
+      function(RULES, "bool waitsForKeeper(const Schedule& schedule)"), "R13/RA2: a group waits for the keeper")
 check("std::ceil(schedule.mSecondsToNext)" in function(RULES, "int32_t displaySeconds(const Schedule& schedule)"),
       "RA2: the countdown is rounded up")
 check("return fallenShare(others, fallen) >= escapeShare;" in function(RULES, "bool leaderShouldFlee("),
@@ -225,11 +282,33 @@ check("#include <" in RULES_H and "Ogre" not in RULES_H and "GameMap" not in RUL
 
 # RA2 / RA3 engine: the countdown runs every turn, the early opening brings the group at once
 update = function(MANAGER, "void RaidManager::update()")
-check("RaidRules::start(mSchedule, static_cast<uint32_t>(mGroups.size()), countdownSeconds());" in update and
-      "advanceSchedule(1.0 / ODApplication::turnsPerSecond);" in update, "RA2: the countdown starts with the level")
+check("startSchedule();" in update and "advanceSchedule(1.0 / ODApplication::turnsPerSecond);" in update,
+      "RA2: the countdown starts with the level")
+start_engine = function(MANAGER, "void RaidManager::startSchedule()")
+check("RaidRules::start(mSchedule, static_cast<uint32_t>(mGroups.size()), countdownSeconds(), byKeeper);" in start_engine
+      and "const bool byKeeper = opensByKeeper();" in start_engine, "RA2: the schedule starts with the difficulty")
+by_keeper = function(MANAGER, "bool RaidManager::opensByKeeper() const")
+check("(difficulty == KeeperAIType::easy) || (difficulty == KeeperAIType::medium)" in by_keeper,
+      "R13/RA2: Easy and Medium have no countdown")
+difficulty = function(MANAGER, "KeeperAIType RaidManager::getDifficulty() const")
+check("campaign.getLevelDifficulty()" in difficulty and "return KeeperAIType::normal;" in difficulty,
+      "R13/RA2: the difficulty of the campaign level, Normal outside the campaign")
+level_countdown = function(MANAGER, "double RaidManager::getLevelCountdownSeconds(KeeperAIType difficulty) const")
+check("return mCountdownHardSeconds;" in level_countdown and "return mCountdownHellSeconds;" in level_countdown and
+      "return mCountdownSeconds;" in level_countdown, "R13/RA2: Normal, Hard and Hell have their own countdown")
+check("getLevelCountdownSeconds(getDifficulty())" in function(MANAGER, "double RaidManager::countdownSeconds() const"),
+      "R13/RA2: the countdown of the difficulty the raid is played at")
 advance_engine = function(MANAGER, "void RaidManager::advanceSchedule(double seconds)")
-check("spawnGroup(mSchedule.mNextGroup - 1);" in advance_engine and "setMoreyaGateOpen(true," in advance_engine,
+check("spawnGroup(mSchedule.mNextGroup - 1);" in advance_engine and
+      "setMoreyaGateOpen(mSchedule.mGateOpen," in advance_engine,
       "RA4: an arrival lets the group come and sinks the portcullis")
+check("RaidRules::shouldCloseAgain(mSchedule) && !isRaidMemberInGate()" in advance_engine and
+      "RaidRules::closeAgain(mSchedule);" in advance_engine,
+      "R13/RA4: the gate closes again only once the group left the gate")
+shown_engine = function(MANAGER, "int32_t RaidManager::getCountdownToShow() const")
+check("if(opensByKeeper())" in shown_engine, "R13/RA2: no countdown is shown on Easy and Medium")
+check("return RaidRules::waitsForKeeper(mSchedule);" in function(MANAGER, "bool RaidManager::isWaitingForKeeper() const"),
+      "R13/RA2: the HUD learns that a group waits for the player")
 early = function(MANAGER, "bool RaidManager::openGateEarly(int32_t seatId)")
 check("(seatId != mTargetSeatId)" in early and "RaidRules::openEarly(mSchedule)" in early and
       "advanceSchedule(0.0);" in early, "RA3: only the attacked keeper opens early, the raid comes at once")

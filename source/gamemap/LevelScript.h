@@ -190,12 +190,12 @@
 //!   [Raid]
 //!   Gate    <x> <y> <rotationDegrees>          # the tile of the Moreya gate: the central tile of a hero portal room of the raid seat, which then shows the gate model (front towards -y at rotation 0); unclaimable and indestructible like every hero portal
 //!   Seats   <raidSeatId> <targetSeatId>        # the hero seat of the raid and the keeper whose dungeon heart it attacks and who may open the gate early
-//!   Countdown <seconds|->                      # level start to the first raid group (- : RaidCountdownSeconds of global.cfg)
-//!   Interval <seconds|->                       # between two raid groups (- : RaidWaveIntervalSeconds)
+//!   Countdown <normal|-> <hard|-> <hell|->     # level start to the first raid group on the campaign difficulty Normal (also outside the campaign), Hard and Hell (- : RaidCountdownSeconds of global.cfg; a single value applies to all three). On Easy and Medium no countdown runs: every raid group waits behind the closed gate until the attacked keeper opens it, and the gate closes again behind a group while another one waits
+//!   Interval <seconds|->                       # between two raid groups on Normal, Hard and Hell (- : RaidWaveIntervalSeconds)
 //!   EscapeShare <share|->                      # fallen share of his group before a leader flees to the gate (- : RaidLeaderEscapeShare)
 //!   Group   <raidGroupId> <leaderName|->        # a raid group, in the order of arrival; the leader is one of its members (by name)
 //!   Member  <raidGroupId> <class> <level> <name|-> <template|->   # one member with its fixed skill template (- : it chooses itself)
-//!   State / Arrived / Plundered                # written by the game in saved games: the countdown, the arrived groups with their members and leader state, the rooms each member plundered
+//!   State / Arrived / Plundered                # written by the game in saved games: the countdown (or that the groups wait for the keeper), the arrived groups with their members and leader state, the rooms each member plundered
 //!   Follower / Escaped / Loot                  # written by the game in saved games: the members that follow their fleeing leader to the gate, the members that escaped through it, the item bags fallen keeper creatures dropped that the raid may loot
 //!   [/Raid]
 //!   The members of a raid group belong to the party Raid<raidGroupId> (for event conditions such as Cond event Raid1 killed).
