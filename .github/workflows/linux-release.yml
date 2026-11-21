@@ -112,6 +112,9 @@ jobs:
                    cegui-current-cmake-policies cegui-ogre-forward-declarations; do
             git -C "$SRC/cegui" apply --recount "$PATCHES/$p.patch"
           done
+          # OGRE 14 headers need C++14; CEGUI forces C++03/C++11 on GCC (MSVC defaults to C++14).
+          sed -i -e 's/ -std=c++03//' -e 's/set(CMAKE_CXX_STANDARD 11)/set(CMAKE_CXX_STANDARD 14)/' "$SRC/cegui/CMakeLists.txt"
+          grep -n 'CMAKE_CXX_STANDARD 14' "$SRC/cegui/CMakeLists.txt"
           cmake -S "$SRC/cegui" -B "$SRC/cegui/build" "${common[@]}" \
             -DCEGUI_BUILD_RENDERER_OGRE=ON -DCEGUI_BUILD_RENDERER_OPENGL=OFF -DCEGUI_BUILD_RENDERER_OPENGL3=OFF \
             -DCEGUI_BUILD_RENDERER_OPENGLES=OFF -DCEGUI_BUILD_RENDERER_OPENGLES2=OFF -DCEGUI_BUILD_RENDERER_OPENGLES3=OFF \
