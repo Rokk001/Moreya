@@ -74,8 +74,9 @@ material MenuSignpostBoard : RTSS/NormalMapping_MultiPass
 }
 
 // The Moreya signpost at the staircase behind the campaign table (models/MenuMoreyaSignpost.mesh,
-// tools/blender-assets/menu_moreya_entrance.py) uses MenuSignpostWood for its post and this board: its texture
-// shows "Moreya" in a lettered copy of the same planks (tools/gen_menu_signpost_lettering.py --text Moreya).
+// tools/blender-assets/menu_moreya_entrance.py) uses MenuSignpostWeatheredWood for its post and this board: its
+// texture shows "Moreya" carved into a weathered copy of the same planks with old, flaked paint
+// (tools/gen_menu_signpost_lettering.py --text Moreya --output MenuMoreyaSignpostBoard --paint-keep 1.1).
 material MenuMoreyaSignpostBoard : RTSS/NormalMapping_MultiPass
 {
     technique
