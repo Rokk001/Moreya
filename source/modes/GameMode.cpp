@@ -3185,17 +3185,21 @@ void GameMode::updateRaidPanel()
     mRaidCountdownShown = seconds;
     mRaidGateClosedShown = gateClosed;
     CEGUI::Window* countdown = panel->getChild("Countdown");
+    CEGUI::Window* icon = panel->getChild("RaidIcon");
     CEGUI::Window* button = panel->getChild("OpenGateButton");
+    countdown->setText(formatDebriefingTime(seconds));
     if(gateClosed)
     {
-        countdown->setText("Raid in " + formatDebriefingTime(seconds));
-        countdown->setTooltipText("Time left until the raid comes through the Moreya gate");
+        const std::string arrivalTip = "Time left until the raid comes through the Moreya gate";
+        countdown->setTooltipText(arrivalTip);
+        icon->setTooltipText(arrivalTip);
         button->show();
     }
     else
     {
-        countdown->setText("Next group in " + formatDebriefingTime(seconds));
-        countdown->setTooltipText("Time left until the next raid group comes through the Moreya gate");
+        const std::string nextGroupTip = "Time left until the next raid group comes through the Moreya gate";
+        countdown->setTooltipText(nextGroupTip);
+        icon->setTooltipText(nextGroupTip);
         button->hide();
     }
     panel->show();
