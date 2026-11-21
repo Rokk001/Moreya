@@ -118,20 +118,37 @@ BOOST_AUTO_TEST_CASE(test_refusalMessage)
     BOOST_CHECK_EQUAL(HandLimitRules::refusalMessage(HandLimitRules::Refusal::none, 2.1), "");
 }
 
-//! Checks the text at the hand (HL2): the whole seconds left, at least 1 while the cooldown runs, nothing once it is
-//! over.
+//! Checks the number under the prohibition picture (HL2, K5): the whole seconds left as digits only, at least 1 while the
+//! cooldown runs, nothing once it is over, and no word in it.
 BOOST_AUTO_TEST_CASE(test_cooldownText)
 {
-    BOOST_CHECK_EQUAL(HandLimitRules::cooldownText(COOLDOWN), "Next fighter: 10 s");
-    BOOST_CHECK_EQUAL(HandLimitRules::cooldownText(0.01), "Next fighter: 1 s");
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownText(COOLDOWN), "10");
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownText(23.0), "23");
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownText(22.4), "23");
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownText(0.01), "1");
     BOOST_CHECK_EQUAL(HandLimitRules::cooldownText(0.0), "");
     BOOST_CHECK_EQUAL(HandLimitRules::displaySeconds(9.0), 9u);
     BOOST_CHECK_EQUAL(HandLimitRules::displaySeconds(-1.0), 0u);
 }
 
-//! Checks that the cooldown text stays inside the screen from 640x480 to 7680x4320 at UI scale 80 % to 120 %, with the
-//! pointer anywhere, also in the corners (Global Constraint 6).
-BOOST_AUTO_TEST_CASE(test_cooldownTextInsideScreen)
+//! Checks that the prohibition picture shows its whole seconds only over a pickable fighting creature while the
+//! cooldown runs, counts down with the cooldown, and nothing is drawn when the pointer is not over such a creature or
+//! the cooldown is over (K5).
+BOOST_AUTO_TEST_CASE(test_cooldownIconSeconds)
+{
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownIconSeconds(true, 23.0), 23u);
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownIconSeconds(true, 22.0), 22u);
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownIconSeconds(true, 21.2), 22u);
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownIconSeconds(true, 0.01), 1u);
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownIconSeconds(true, 0.0), 0u);
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownIconSeconds(false, 23.0), 0u);
+    BOOST_CHECK_EQUAL(HandLimitRules::cooldownIconSeconds(false, 0.0), 0u);
+}
+
+//! Checks that the prohibition picture and its number stay inside the screen from 640x480 to 7680x4320 at UI scale 80 %
+//! to 120 %, with the hovered creature anywhere, also in the corners (Global Constraint 6), and that away from the
+//! edges the picture is centred on the creature point with the number centred under it.
+BOOST_AUTO_TEST_CASE(test_cooldownIconInsideScreen)
 {
     const float screens[][2] = {{640.0f, 480.0f}, {1920.0f, 1080.0f}, {7680.0f, 4320.0f}};
     const float scales[] = {0.8f, 1.0f, 1.2f};
@@ -141,26 +158,36 @@ BOOST_AUTO_TEST_CASE(test_cooldownTextInsideScreen)
         {
             // The size of a 640x480 screen scales the hand feedback down, an 8K screen up
             const float feedback = scale * screen[1] / 1080.0f;
-            const float height = 16.0f * feedback;
-            const float width = 18.0f * height * 0.6f;
-            const float pointers[][2] = {{0.0f, 0.0f}, {screen[0] / 2.0f, screen[1] / 2.0f},
-                {screen[0] - 1.0f, screen[1] - 1.0f}};
-            for(const float* pointer : pointers)
+            const float iconSize = 48.0f * feedback;
+            const float numberHeight = 24.0f * feedback;
+            const float numberWidth = 3.0f * numberHeight * 0.6f;
+            const float points[][2] = {{0.0f, 0.0f}, {screen[0] / 2.0f, screen[1] / 2.0f},
+                {screen[0] - 1.0f, screen[1] - 1.0f}, {screen[0] - 1.0f, 0.0f}, {0.0f, screen[1] - 1.0f}};
+            for(const float* point : points)
             {
-                float left = -1.0f;
-                float top = -1.0f;
-                HandLimitRules::cooldownTextPlace(pointer[0], pointer[1], 145.0f * feedback, 4.0f * feedback, width,
-                    height, screen[0], screen[1], left, top);
-                BOOST_CHECK(left >= 0.0f && left + width <= screen[0]);
-                BOOST_CHECK(top >= 0.0f && top + height <= screen[1]);
+                float iconLeft = -1.0f;
+                float iconTop = -1.0f;
+                float numberLeft = -1.0f;
+                float numberTop = -1.0f;
+                HandLimitRules::cooldownIconPlace(point[0], point[1], iconSize, numberWidth, numberHeight, screen[0],
+                    screen[1], iconLeft, iconTop, numberLeft, numberTop);
+                BOOST_CHECK(iconLeft >= 0.0f && iconLeft + iconSize <= screen[0]);
+                BOOST_CHECK(iconTop >= 0.0f && iconTop + iconSize <= screen[1]);
+                BOOST_CHECK(numberLeft >= 0.0f && numberLeft + numberWidth <= screen[0]);
+                BOOST_CHECK(numberTop >= 0.0f && numberTop + numberHeight <= screen[1]);
             }
         }
     }
 
-    // Away from the edges the text keeps its place next to the pointer
-    float left = 0.0f;
-    float top = 0.0f;
-    HandLimitRules::cooldownTextPlace(100.0f, 100.0f, 145.0f, 4.0f, 100.0f, 16.0f, 1920.0f, 1080.0f, left, top);
-    BOOST_CHECK_EQUAL(left, 245.0f);
-    BOOST_CHECK_EQUAL(top, 104.0f);
+    // Away from the edges the picture is centred on the point and the number centred under it
+    float iconLeft = 0.0f;
+    float iconTop = 0.0f;
+    float numberLeft = 0.0f;
+    float numberTop = 0.0f;
+    HandLimitRules::cooldownIconPlace(500.0f, 400.0f, 48.0f, 30.0f, 24.0f, 1920.0f, 1080.0f, iconLeft, iconTop,
+        numberLeft, numberTop);
+    BOOST_CHECK_EQUAL(iconLeft, 476.0f);
+    BOOST_CHECK_EQUAL(iconTop, 376.0f);
+    BOOST_CHECK_EQUAL(numberLeft, 485.0f);
+    BOOST_CHECK_EQUAL(numberTop, 424.0f);
 }

@@ -54,6 +54,12 @@
     <Image name="InsetRight" xPos="1130" yPos="185" width="24" height="395" />
     <Image name="InsetPlanks" xPos="581" yPos="241" width="549" height="320" />
     <Image name="FrameInterior" xPos="1190" yPos="800" width="256" height="256" />
+    <Image name="ScrollUp" xPos="230" yPos="560" width="47" height="41" />
+    <Image name="ScrollDown" xPos="281" yPos="560" width="47" height="41" />
+    <Image name="ScrollRail" xPos="332" yPos="560" width="47" height="200" />
+    <Image name="ScrollThumbTop" xPos="383" yPos="560" width="21" height="12" />
+    <Image name="ScrollThumbMiddle" xPos="408" yPos="560" width="21" height="84" />
+    <Image name="ScrollThumbBottom" xPos="433" yPos="560" width="21" height="12" />
     <Image name="BorderTopLeft" xPos="1190" yPos="0" width="110" height="110" />
     <Image name="BorderTopRight" xPos="1302" yPos="0" width="110" height="110" />
     <Image name="BorderBottomLeft" xPos="1414" yPos="0" width="110" height="110" />

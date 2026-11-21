@@ -64,6 +64,7 @@
 #include "network/ServerNotification.h"
 #include "render/CreatureOverlayStatus.h"
 #include "render/ODFrameListener.h"
+#include "render/RenderManager.h"
 #include "rooms/Room.h"
 #include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomManager.h"
@@ -553,6 +554,9 @@ void GameMap::clearAll()
         mLevelScript->clear();
         mCombatGroups->clear();
         mRaid->clear();
+        // The blocks shown on marked places beyond the edge belong to the client map only
+        if(!isServerGameMap() && RenderManager::getSingletonPtr() != nullptr)
+            RenderManager::getSingleton().rrRefreshEdgeMarks(std::set<std::pair<int, int> >(), *this);
         clearSeats();
         mLocalPlayer = nullptr;
         clearPlayers();
@@ -4667,6 +4671,14 @@ const TileSetValue& GameMap::getMeshForTile(const Tile* tile)
 
     int random_number = distribution(generator);
     return mTileSet->getTileValues(visual).at(index).at(random_number) ;
+}
+
+//! \brief The earth block of a place beyond the map edge: the tile set value of an undiscovered tile whose four
+//! neighbours are all earth too (every link bit set), so it looks like any other undiscovered earth.
+const TileSetValue& GameMap::getMeshForEdgeMark()
+{
+    const int allNeighboursLinked = 15;
+    return mTileSet->getTileValues(TileVisual::dirtFull).at(allNeighboursLinked).at(0);
 }
 
 //! \brief The number of creatures the seat can control: default or setting, its portals and the dominion research, at most the absolute limit.

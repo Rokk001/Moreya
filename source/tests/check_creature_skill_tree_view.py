@@ -1,15 +1,16 @@
-"""Creature skill tree window: runs source/tests/test_CreatureSkillTreeView.cpp without Boost.Test and checks the
-wiring of the window.
+"""Creature skill tree (the Skills page of the Dungeonbook): runs source/tests/test_CreatureSkillTreeView.cpp without
+Boost.Test and checks the wiring of the page.
 
 The test file is compiled with creatureskill/CreatureSkillTreeView.cpp and CreatureSkillTree.cpp against a tiny
 stand-in for the Boost.Test macros it uses and for the configuration and log singletons (like
 check_level_script.py and check_creature_skill_trees.py), and run on config/creatureSkills.cfg. The wiring checks
-read the layouts and the sources: the window layout holds the tier 4 node and 4 columns of 3 tiers, it is imported by
-ModeGame.layout, only the Dungeonbook (SocialWindow) connects it, through the fifth button Skills of its navigation
-bar (plan INGAME-QS-11 K4, disabled for a creature without a skill tree; no page holds a skill tree button), and
-clicking a skill spends nothing.
+read the layouts and the sources: the Skills page of the book (gui/WindowSocial.layout SkillsPage, INGAME-QS-12 K7;
+the separate skill tree window gui/WindowCreatureSkillTree.layout before) holds the tier 4 node and 4 columns of 3
+tiers, no separate skill tree window exists or is imported by ModeGame.layout, the fifth button Skills of the
+navigation bar shows the page (plan INGAME-QS-11 K4, disabled for a creature without a skill tree; no page holds a
+skill tree button), and clicking a skill spends nothing.
 
-Expected: 5 test cases, 0 failures; 13 skill buttons in gui/WindowCreatureSkillTree.layout.
+Expected: 5 test cases, 0 failures; 13 skill buttons on the Skills page of gui/WindowSocial.layout.
 
 Calls (from the repository root):
   python source/tests/check_creature_skill_tree_view.py
@@ -24,7 +25,7 @@ import tempfile
 
 repo = Path(__file__).resolve().parents[2]
 
-# Test cases of test_CreatureSkillTreeView.cpp and skill buttons of the window (tier 4 and 4 x 3)
+# Test cases of test_CreatureSkillTreeView.cpp and skill buttons of the Skills page (tier 4 and 4 x 3)
 EXPECTED_CASES = 5
 EXPECTED_BUTTONS = 13
 
@@ -152,27 +153,31 @@ print(output.strip())
 if code != 0 or ('%d cases, 0 failures' % EXPECTED_CASES) not in output:
     errors.append('test cases: expected %d cases with 0 failures' % EXPECTED_CASES)
 
-layout = read('gui/WindowCreatureSkillTree.layout')
+book = read('gui/WindowSocial.layout')
+page = re.search(r'<Window type="DefaultWindow" name="SkillsPage">(.*?)\n        </Window>', book, re.S)
+layout = page.group(1) if page else ''
+if not page:
+    errors.append('gui/WindowSocial.layout: the Skills page is missing')
 buttons = re.findall(r'type="OD/ResearchButton" name="([^"]+)"', layout)
 expected = ['TierFour'] + ['Column%dTier%d' % (c, t) for c in range(4) for t in (3, 2, 1)]
 if len(buttons) != EXPECTED_BUTTONS or sorted(buttons) != sorted(expected):
-    errors.append('gui/WindowCreatureSkillTree.layout: expected the %d skill buttons %s' % (EXPECTED_BUTTONS, expected))
+    errors.append('gui/WindowSocial.layout SkillsPage: expected the %d skill buttons %s' % (EXPECTED_BUTTONS, expected))
 for name in expected:
     for suffix in ('Bar', 'Rank'):
         if 'name="%s%s"' % (name, suffix) not in layout:
-            errors.append('gui/WindowCreatureSkillTree.layout: %s%s missing' % (name, suffix))
+            errors.append('gui/WindowSocial.layout SkillsPage: %s%s missing' % (name, suffix))
 for column in range(4):
     if 'name="Column%dTitle"' % column not in layout:
-        errors.append('gui/WindowCreatureSkillTree.layout: Column%dTitle missing' % column)
-if 'filename="WindowCreatureSkillTree.layout"' not in read('gui/ModeGame.layout'):
-    errors.append('gui/ModeGame.layout does not import WindowCreatureSkillTree.layout')
+        errors.append('gui/WindowSocial.layout SkillsPage: Column%dTitle missing' % column)
+# INGAME-QS-12 K7: no separate window opens for the skill tree
+if (repo / 'gui/WindowCreatureSkillTree.layout').exists() or 'WindowCreatureSkillTree' in read('gui/ModeGame.layout'):
+    errors.append('the separate skill tree window still exists; the skill tree is a page of the Dungeonbook')
 
 # Plan INGAME-QS-11 K4: the skill tree opens from the fifth button "Skills" of the navigation bar of the book, no page
 # holds a skill tree button any more
 for layout_path in sorted((repo / 'gui').glob('*.layout')):
     if 'SkillTreeButton' in layout_path.read_text(encoding='utf-8', errors='replace'):
         errors.append('gui/%s: a page holds a SkillTreeButton' % layout_path.name)
-book = read('gui/WindowSocial.layout')
 nav = re.search(r'<Window type="DefaultWindow" name="NavBar">(.*?)\n        </Window>', book, re.S)
 nav_buttons = re.findall(r'<Window type="OD/Button" name="(Nav[A-Za-z]+)">', nav.group(1)) if nav else []
 if nav_buttons != ['NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills']:
@@ -181,10 +186,17 @@ if nav_buttons != ['NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSki
 
 social = read('source/render/SocialWindow.cpp')
 for needle in ('NAV_SKILLS_BUTTON = "NavSkills"', 'NAV_SKILLS_BUTTON), CEGUI::PushButton::EventClicked,',
-               '&SocialWindow::onSkillTreeClicked', 'skills->setEnabled(hasSkillTree);',
-               '&SocialWindow::onSkillTreeCloseClicked', 'buildTreeView('):
+               '&SocialWindow::onSkillTreeClicked', 'skills->setEnabled(hasSkillTree);', 'buildTreeView(',
+               'CEGUI::Window* tree = mWindow->getChild("SkillsPage");', '"InventoryPage", "SkillsPage"};'):
     if needle not in social:
         errors.append('source/render/SocialWindow.cpp: %s missing' % needle)
+clicked = social[social.index('bool SocialWindow::onSkillTreeClicked('):]
+clicked = clicked[:clicked.index('\n}\n')]
+if 'showPage(Page::Skills);' not in clicked or 'show()' in clicked or 'activate()' in clicked:
+    errors.append('source/render/SocialWindow.cpp: the Skills button must show the Skills page and open no window')
+for gone in ('CreatureSkillTreeWindow', 'onSkillTreeCloseClicked', 'mSkillTreeWindow'):
+    if gone in social or gone in read('source/render/SocialWindow.h'):
+        errors.append('source/render/SocialWindow: the skill tree window (%s) is gone' % gone)
 # The button needs a creature with a skill tree; without one it is shown disabled
 has_tree = social[social.index('bool SocialWindow::selectedCreatureHasSkillTree() const'):]
 if '!creature->getSkillTypeInfo().mGroup.empty()' not in has_tree[:has_tree.index('\n}\n')]:
@@ -202,4 +214,4 @@ for error in errors:
     print('FAIL: ' + error)
 if errors:
     sys.exit(1)
-print('OK: %d test cases, %d skill buttons, window wired to the Skills button of the Dungeonbook' % (EXPECTED_CASES, EXPECTED_BUTTONS))
+print('OK: %d test cases, %d skill buttons, Skills page wired to the Skills button of the Dungeonbook' % (EXPECTED_CASES, EXPECTED_BUTTONS))

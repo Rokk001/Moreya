@@ -200,7 +200,7 @@ FRAME_TYPES = ('OD/FrameWindow', 'OD/MenuFrameWindow', 'OD/MenuSelectionWindow',
 SCROLL_TYPES = ('OD/ScrollablePane', 'OD/MenuScrollablePane')
 # widgets whose rows are filled by the code and scrolled by their own scrollbar
 LIST_TYPES = ('OD/Listbox', 'OD/MenuListbox', 'OD/LoadListbox', 'OD/SheetListbox', 'OD/MultiColumnList', 'OD/MenuMultiColumnList', 'OD/Combobox',
-              'OD/PopupMenu', 'OD/Menubar', 'OD/MultiLineEditbox')
+              'OD/SheetCombobox', 'OD/PopupMenu', 'OD/Menubar', 'OD/MultiLineEditbox')
 
 
 def is_fill(node):
@@ -517,6 +517,13 @@ def walk(node, parent_client, parent_outer, screen, user, top_fit, problems, sta
         # windows and is never part of the layout rectangle
         ascent, descent = font_metrics(node.font(), screen, user)
         rect = (rect[0], rect[1], rect[2], min(rect[3], rect[1] + 1.5 * (ascent + descent)))
+    if node.type == 'OD/SheetCombobox':
+        # the same for the drop-down of the menu sheet (INGAME-QS-12 K8): its edit box is one line spacing inside the
+        # inset frame of the sheet at half size (OD.looknfeel OD/SheetCombobox)
+        ascent, descent = font_metrics(node.font(), screen, user)
+        frame = 0.5 * (image_size('ODMenuTemplate/InsetTop', screen, user)[1] +
+                       image_size('ODMenuTemplate/InsetBottom', screen, user)[1])
+        rect = (rect[0], rect[1], rect[2], min(rect[3], rect[1] + ascent + descent + frame))
     skip = overhang_allowed(node)
     if node.parent is not None and not screen_sized_container(node.parent):
         pc = parent_outer if non_client else parent_client

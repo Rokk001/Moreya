@@ -56,6 +56,11 @@ add_boost_test(00-SelectionSize
         test_SelectionSize.cpp
         ${SRC}/utils/SelectionSize.h)
 
+add_boost_test(00-EdgePlaces
+        SOURCES
+        test_EdgePlaces.cpp
+        ${SRC}/utils/EdgePlaces.h)
+
 add_boost_test(00-PointerMapping
         SOURCES
         test_PointerMapping.cpp
@@ -229,6 +234,11 @@ add_boost_test(00-HandLimitRules
         test_HandLimitRules.cpp
         ${SRC}/game/HandLimitRules.h
         ${SRC}/game/HandLimitRules.cpp)
+
+add_boost_test(00-WorkerDigOrder
+        SOURCES
+        test_WorkerDigOrder.cpp
+        ${SRC}/game/WorkerDigOrder.h)
 
 add_boost_test(00-Pathfinding
         SOURCES

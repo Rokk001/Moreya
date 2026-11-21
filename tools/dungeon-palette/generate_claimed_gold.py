@@ -38,12 +38,13 @@ N = 512
 COMMITTED_TEXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'materials', 'textures')
 MASK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'materials', 'textures', 'ClaimedMask.png')
 
-# Target tones (8 bit) and the claimed floor tone.
+# Target tones (8 bit) and the claimed floor tone. The gold ore follows the style guide gold ore colour (about
+# 150,120,30): a muted ore in dark rock, no saturated yellow.
 CLAIMED_BASE = np.array([80.0, 73.0, 65.0])
 ROCK_BASE = np.array([52.0, 46.0, 42.0])
-GOLD_DARK = np.array([178.0, 124.0, 16.0])
-GOLD_MID = np.array([246.0, 186.0, 38.0])
-GOLD_GLINT = np.array([252.0, 208.0, 84.0])
+GOLD_DARK = np.array([132.0, 100.0, 24.0])
+GOLD_MID = np.array([176.0, 140.0, 34.0])
+GOLD_GLINT = np.array([212.0, 178.0, 74.0])
 
 # Gold vein parameters per wall density (percent). keep: smoothstep limits of the share of the veins that exists;
 # width: factor on the half width of a vein; nugget_lo: lower threshold of the nuggets (upper = lower + 0.25);

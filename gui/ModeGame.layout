@@ -155,7 +155,6 @@
         <LayoutImport type="DefaultWindow" filename="WindowSkillTree.layout" name="SkillTreeWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowRoomManager.layout" name="RoomManagerWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSocial.layout" name="SocialWindowImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowCreatureSkillTree.layout" name="CreatureSkillTreeWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSandbox.layout" name="SandboxWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSandboxRealm.layout" name="SandboxRealmWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowGameOptions.layout" name="GameOptionsMenuImport" />
@@ -442,22 +441,24 @@
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Visible" value="False" />
-            <Window type="OD/StaticText" name="Countdown" >
-                <Property name="Area" value="{{0,0},{0,0},{1,-112},{1,0}}" />
+            <Window type="OD/MenuPlate" name="Countdown" >
+                <Property name="Area" value="{{0,0},{0,0},{1,-56},{1,0}}" />
                 <Property name="Text" value="" />
                 <Property name="Font" value="MedievalSharp-13" />
-                <Property name="TextColours" value="FFF6CB62" />
                 <Property name="TooltipText" value="Time left until the raid comes through the Moreya gate" />
-                <Property name="HorzFormatting" value="CentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
-                <Property name="FrameEnabled" value="True" />
-                <Property name="BackgroundEnabled" value="True" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
             </Window>
-            <Window type="OD/Button" name="OpenGateButton" >
-                <Property name="Area" value="{{1,-108},{0,4},{1,0},{1,-4}}" />
-                <Property name="Text" value="Open gate" />
-                <Property name="Font" value="MedievalSharp-10" />
+            <Window type="OD/StaticImage" name="RaidIcon" >
+                <Property name="Area" value="{{0,18},{0,5},{0,52},{1,-5}}" />
+                <Property name="Image" value="RaidHud/RaidBanner" />
+                <Property name="TooltipText" value="Time left until the raid comes through the Moreya gate" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            </Window>
+            <Window type="OD/MenuIconButton" name="OpenGateButton" >
+                <Property name="Area" value="{{1,-52},{0,4},{1,0},{1,-4}}" />
+                <Property name="ButtonImage" value="RaidHud/GateOpen" />
                 <Property name="TooltipText" value="Open the Moreya gate now: the raid comes at once" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
             </Window>

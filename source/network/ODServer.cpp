@@ -82,6 +82,7 @@
 #include "utils/MasterServer.h"
 #include "utils/ResourceManager.h"
 #include "utils/RunLevelTest.h"
+#include "utils/EdgePlaces.h"
 #include "ODApplication.h"
 
 #include <SFML/Network.hpp>
@@ -2235,6 +2236,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2 >> isDigSet);
             std::vector<Tile*> tiles = gameMap->rectangularRegion(x1, y1, x2, y2);
             player->markTilesForDigging(isDigSet, tiles, true);
+            // The rectangle may reach beyond the map edge: those places are marked like undiscovered tiles
+            player->markEdgePlacesForDigging(isDigSet, EdgePlaces::inRectangle(x1, y1, x2, y2,
+                gameMap->getMapSizeX(), gameMap->getMapSizeY()), true);
 
             break;
         }

@@ -58,6 +58,7 @@
 #include "utils/LogManager.h"
 #include "utils/NameAliases.h"
 #include "utils/Random.h"
+#include "utils/EdgePlaces.h"
 
 #include <algorithm>
 #include <limits>
@@ -739,6 +740,13 @@ void Seat::initSeat()
         }
 
         getPlayer()->markTilesForDigging(true, tilesMark, false);
+    }
+
+    // The marks beyond the map edge were restored with the saved marks; the client is told about them too
+    if(getPlayer()->getIsHuman() && !mEdgeDigMarks.empty())
+    {
+        const std::vector<std::pair<int, int> > edgeMarks(mEdgeDigMarks.begin(), mEdgeDigMarks.end());
+        getPlayer()->notifyEdgePlacesMarked(true, edgeMarks, false);
     }
     mHasSavedOwnCreatureSightAges = true;
 }
@@ -1690,6 +1698,13 @@ bool Seat::importSeatFromStream(std::istream& is)
             return false;
         tilecoords.second = Helper::toInt(str);
 
+        // A place beyond the map edge has no tile: its mark is kept apart and restored with the others
+        if(EdgePlaces::isBeyondEdge(tilecoords.first, tilecoords.second, mGameMap->getMapSizeX(), mGameMap->getMapSizeY()))
+        {
+            setEdgePlaceMarked(tilecoords.first, tilecoords.second, true);
+            continue;
+        }
+
         TileStateNotified& tileState = mTilesStateLoaded[tilecoords];
         tileState.mMarkedForDigging = true;
     }
@@ -2005,6 +2020,10 @@ bool Seat::exportSeatToStream(std::ostream& os) const
 
         os << p.first->getX()<< "\t" << p.first->getY() << std::endl;
     }
+
+    // The marks beyond the map edge are saved like the others, with their coordinates outside the map
+    for(const std::pair<int, int>& place : mEdgeDigMarks)
+        os << place.first << "\t" << place.second << std::endl;
 
     os << "[/markedTiles]" << std::endl;
 
@@ -2877,6 +2896,25 @@ void Seat::tileMarkedDiggingNotifiedToPlayer(Tile* tile, bool isDigSet)
         return;
     }
     tileState->mMarkedForDigging = isDigSet;
+}
+
+//! \brief Tells whether the place beyond the map edge is marked for digging by this seat.
+bool Seat::isEdgePlaceMarked(int x, int y) const
+{
+    return mEdgeDigMarks.find(std::pair<int, int>(x, y)) != mEdgeDigMarks.end();
+}
+
+//! \brief Marks or unmarks a place beyond the map edge for digging; a place out of reach is ignored.
+bool Seat::setEdgePlaceMarked(int x, int y, bool isDigSet)
+{
+    if(!EdgePlaces::isMarkable(x, y, mGameMap->getMapSizeX(), mGameMap->getMapSizeY()))
+        return false;
+
+    const std::pair<int, int> place(x, y);
+    if(isDigSet)
+        return mEdgeDigMarks.insert(place).second;
+
+    return mEdgeDigMarks.erase(place) > 0;
 }
 
 bool Seat::isTileDiggableForClient(Tile* tile) const

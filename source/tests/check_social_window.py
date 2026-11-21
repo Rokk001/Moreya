@@ -33,7 +33,7 @@ check('name="Visible" value="False"' in layout, 'hidden by default')
 for name in ('HomePage', 'CreaturesLabel', 'Filter', 'ListRows',
              'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'QuoteText', 'PostThumb0', 'ValuesPage',
              'InventoryPage', 'Header', 'BackButton', 'PrevButton', 'NextButton', 'NavBar', 'NavFeed', 'NavProfile',
-             'NavValues', 'NavInventory', 'NavSkills'):
+             'NavValues', 'NavInventory', 'NavSkills', 'SkillsPage'):
     check('name="%s"' % name in layout, name)
 check('OpenProfileButton' not in layout, 'the profile opens in the book, not in a window')
 # The start page has the list on the left and the feed of all creatures on the right, inside the shared frame client.
@@ -57,20 +57,22 @@ check(area('ListScroll')[0] >= list_area[2] and area('ListScroll')[2] <= feed[0]
 # The feed column keeps the original minimum text-column width (light frame of at most 16 design pixels per side).
 check((width - 2 * 16) * (feed[2] - feed[0]) >= 400, 'the feed needs about 400 design pixels')
 pages = [w.get('name') for w in social_root.findall('Window')]
-check(pages[:5] == ['HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'], pages)
-for page in pages[1:5] + ['Header']:
+# The five pages of one creature follow the start page in the order of the navigation bar; the Skills page is the
+# skill tree of the creature inside the book (INGAME-QS-12 K7)
+check(pages[:6] == ['HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage', 'SkillsPage'], pages)
+for page in pages[1:6] + ['Header']:
     own = social_root.find("Window[@name='%s']" % page).findall('Property')
     check(any(p.get('name') == 'Visible' and p.get('value') == 'False' for p in own),
           page + ' is hidden until a creature is opened')
 filter_window = social_root.find("Window[@name='HomePage']/Window[@name='Filter']")
-check(filter_window.get('type') == 'OD/Combobox', 'filter is a dropdown')
+check(filter_window.get('type') == 'OD/SheetCombobox', 'filter is a dropdown of the menu sheet (INGAME-QS-12 K8)')
 check(filter_window.find("Property[@name='ReadOnly']").get('value') == 'True', 'filter selects a fixed entry')
 check(area('CreaturesLabel')[2] == area('Filter')[0], 'dropdown sits beside the roster heading')
 check(not any('name="Filter%s"' % name in layout for name in ('All', 'Workers', 'Fighters', 'Unhappy')),
       'old filter buttons are replaced')
 nav_areas = [area(n) for n in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills')]
 check(all(abs((a[2] - a[0]) - (nav_areas[0][2] - nav_areas[0][0])) < 1e-6 for a in nav_areas), 'equal navigation widths')
-check(area('NavBar')[1] >= max(area(p)[3] for p in pages[1:5]) - 1e-6,
+check(area('NavBar')[1] >= max(area(p)[3] for p in pages[1:6]) - 1e-6,
       'the navigation bar sits below the selected creature pages')
 # The pages of one creature replace the start page (plan INGAME-QS-11 K3): the bar spans the whole client width
 check(area('NavBar')[0] <= area('ListPanel')[0] + 0.01 and area('NavBar')[2] >= area('FeedPanel')[2] - 0.01,

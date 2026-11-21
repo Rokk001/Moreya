@@ -1204,6 +1204,46 @@ void Player::fireEvents()
 }
 
 
+//! \brief Marks or unmarks places beyond the map edge for digging and tells the client about the changed ones.
+void Player::markEdgePlacesForDigging(bool marked, const std::vector<std::pair<int, int> >& places, bool asyncMsg)
+{
+    if(!getIsHuman())
+        return;
+
+    std::vector<std::pair<int, int> > changed;
+    for(const std::pair<int, int>& place : places)
+    {
+        if(getSeat()->setEdgePlaceMarked(place.first, place.second, marked))
+            changed.push_back(place);
+    }
+    notifyEdgePlacesMarked(marked, changed, asyncMsg);
+}
+
+//! \brief Sends the (un)marked places beyond the map edge to the client of this player.
+void Player::notifyEdgePlacesMarked(bool marked, const std::vector<std::pair<int, int> >& places, bool asyncMsg)
+{
+    if(places.empty())
+        return;
+
+    const uint32_t nbPlaces = static_cast<uint32_t>(places.size());
+    if(!asyncMsg)
+    {
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::markEdgePlaces, this);
+        serverNotification->mPacket << marked << nbPlaces;
+        for(const std::pair<int, int>& place : places)
+            serverNotification->mPacket << place.first << place.second;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+        return;
+    }
+
+    ServerNotification serverNotification(ServerNotificationType::markEdgePlaces, this);
+    serverNotification.mPacket << marked << nbPlaces;
+    for(const std::pair<int, int>& place : places)
+        serverNotification.mPacket << place.first << place.second;
+    ODServer::getSingleton().sendAsyncMsg(serverNotification);
+}
+
 void Player::markTilesForDigging(bool marked, const std::vector<Tile*>& tiles, bool asyncMsg)
 {
     if(tiles.empty())
