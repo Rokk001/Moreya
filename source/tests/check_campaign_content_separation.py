@@ -42,6 +42,8 @@ NAME_KEYS = ("Title", "Warden", "Guild", "GuildLeader", "GuildFirstLeader")
 TEXT_KEYS = ("Briefing", "Debriefing")
 #: Folders of the public game data; a text the public game ships there is public
 PUBLIC_GAME_DATA = ("config/", "gui/", "levels/")
+#: Two words in a row: a line without them holds no name and no sentence
+WORDS = re.compile(r"[A-Za-z]{2,} [A-Za-z]")
 #: Level script actions whose text the player reads
 SCRIPT_TEXT = re.compile(r"^Action\t(?:message|hint|objective|objectiveid|mainobjectiveid|optionalobjectiveid|"
                          r"conditionalobjectiveid)\t(.*)$", re.M)
@@ -77,6 +79,15 @@ def texts_of(entries, level_files):
             # The text is the last field; seat and objective id before it are no text
             lines |= sentences(match.group(1).split("\t")[-1])
     return names, lines
+
+
+def occurring(candidates, text):
+    """The candidate texts that occur in the text, found in one pass (longest first where they start together).
+    A candidate hidden inside an overlapping longer one may be missed, which only keeps it as paid text."""
+    if not candidates:
+        return set()
+    pattern = re.compile("|".join(re.escape(item) for item in sorted(candidates, key=len, reverse=True)))
+    return {match.group(0) for match in pattern.finditer(text)}
 
 
 def package_files(folder):
@@ -136,11 +147,17 @@ if content is not None:
     shipped = [(ROOT / name).read_text(encoding="utf-8", errors="replace").replace("\r", "").replace("\\n", " ")
                for name in public_files if name.startswith(PUBLIC_GAME_DATA)]
     shipped += [entry.get(key, "") for entry in public_entries for key in TEXT_KEYS]
-    names = {name for name in names - public_names if not any(name in text for text in shipped)}
-    lines = {line for line in lines - public_lines if not any(line in text for text in shipped)}
+    # One joined text (the separator occurs in no name or sentence) keeps the lookups linear
+    # Only lines with words can hold a name or a sentence (tile and number rows of the levels cannot)
+    shipped_text = "\0".join(line for text in shipped for line in text.split("\n") if WORDS.search(line))
+    names = (names - public_names) - occurring(names - public_names, shipped_text)
+    lines = (lines - public_lines) - occurring(lines - public_lines, shipped_text)
     paid_count = len(names) + len(lines)
     name_pattern = re.compile(r"(?<![A-Za-z])(?:%s)(?![A-Za-z])" % "|".join(
         re.escape(name) for name in sorted(names, key=len, reverse=True))) if names else None
+    # The sentences as one alternation: one pass over a file instead of one search per sentence
+    line_pattern = re.compile("|".join(re.escape(line) for line in sorted(lines, key=len, reverse=True))) \
+        if lines else None
     for name in public_files:
         if name.startswith(PUBLIC_PACKAGE + "/"):
             continue
@@ -149,11 +166,12 @@ if content is not None:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        flat = text.replace("\r", "").replace("\\n", " ")
+        flat = "\n".join(line for line in text.replace("\r", "").replace("\\n", " ").split("\n") if WORDS.search(line))
         found = name_pattern.search(flat) if name_pattern else None
         if found is None:
-            found_line = next((line for line in lines if line in flat), None)
-            check(found_line is None, "%s carries paid campaign text: %s" % (name, (found_line or "")[:70]))
+            found_line = line_pattern.search(flat) if line_pattern else None
+            check(found_line is None, "%s carries paid campaign text: %s" % (
+                name, found_line.group(0)[:70] if found_line else ""))
         else:
             check(False, "%s carries the paid campaign name %s" % (name, found.group(0)))
 
