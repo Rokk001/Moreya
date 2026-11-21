@@ -669,6 +669,12 @@ public:
     Ogre::Vector2 getWorkerDiggingPosition(const Creature& worker) const;
     bool addWorkerDigging(Creature& worker, Tile& tile);
     bool removeWorkerDigging(const Creature& worker, Tile& tile);
+    //! \brief Marks that a digger carried a full load away from this gold or gem wall (server state, not saved).
+    void setDigLoadTaken()
+    { mDigLoadTaken = true; }
+    //! \brief Returns whether a digger carried a full load away from this wall (WorkerDigOrder).
+    bool getDigLoadTaken() const
+    { return mDigLoadTaken; }
 
     static void exportToStream(Tile* tile, std::ostream& os);
 
@@ -805,6 +811,9 @@ private:
     //! to the index in mNeighbors
     std::vector<std::array<const Creature*, 3>> mWorkersDigging;
     std::map<const Creature*, Ogre::Vector2> mWorkerDigPositions;
+    //! \brief A digger carried a full load away from this wall; ranks it after untouched walls in a digger's choice
+    //! right after a delivery (WorkerDigOrder)
+    bool mDigLoadTaken = false;
     uint32_t mNbWorkersClaiming;
     std::vector<TileStateListener*> mStateListeners;
 

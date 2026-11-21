@@ -193,6 +193,11 @@ public:
     bool isWorkerJobFixed() const { return mWorkerJobFixed; }
     //! \brief Sets the worker's current job and whether it is fixed.
     void setWorkerJob(WorkerJob job, bool fixed) { mWorkerJob = job; mWorkerJobFixed = fixed; }
+    //! \brief Reports whether the digger left its wall to deliver a full load and has not chosen a wall since
+    //! (WorkerDigOrder).
+    bool isDigAfterDelivery() const { return mDigAfterDelivery; }
+    //! \brief Sets whether the digger left its wall to deliver a full load and has not chosen a wall since.
+    void setDigAfterDelivery(bool afterDelivery) { mDigAfterDelivery = afterDelivery; }
 
     bool parkingBit;
     
@@ -2099,6 +2104,8 @@ private:
     //! \brief Assigned worker job and fixed/free status, saved with the creature.
     WorkerJob mWorkerJob = WorkerJob::none;
     bool mWorkerJobFixed = false;
+    //! \brief The digger left its wall to deliver a full load and has not chosen a wall since (not saved)
+    bool mDigAfterDelivery = false;
     
     enum ForceAction
     {

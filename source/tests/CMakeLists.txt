@@ -230,6 +230,11 @@ add_boost_test(00-HandLimitRules
         ${SRC}/game/HandLimitRules.h
         ${SRC}/game/HandLimitRules.cpp)
 
+add_boost_test(00-WorkerDigOrder
+        SOURCES
+        test_WorkerDigOrder.cpp
+        ${SRC}/game/WorkerDigOrder.h)
+
 add_boost_test(00-Pathfinding
         SOURCES
         test_Pathfinding.cpp)
