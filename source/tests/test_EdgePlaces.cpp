@@ -57,3 +57,22 @@ BOOST_AUTO_TEST_CASE(test_ReachIsBounded)
     EdgePlaces::clampToReach(x, y, 10, 10);
     BOOST_CHECK(EdgePlaces::isMarkable(x, y, 10, 10));
 }
+
+// Every coordinate beyond the edge, however far out, is moved to a markable place, so the dig marking never has a
+// coordinate it must refuse: far out on each side and in each corner of the map.
+BOOST_AUTO_TEST_CASE(test_EveryPlaceBeyondTheEdgeResolvesToAMarkablePlace)
+{
+    const int far[] = {-100000, -13, -1, 10, 11, 25, 100000};
+    for(size_t i = 0; i < sizeof(far) / sizeof(far[0]); ++i)
+    {
+        for(size_t j = 0; j < sizeof(far) / sizeof(far[0]); ++j)
+        {
+            int x = far[i];
+            int y = far[j];
+            if(!EdgePlaces::isBeyondEdge(x, y, 10, 10))
+                continue;
+            EdgePlaces::clampToReach(x, y, 10, 10);
+            BOOST_CHECK(EdgePlaces::isMarkable(x, y, 10, 10));
+        }
+    }
+}

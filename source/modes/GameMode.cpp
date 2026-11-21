@@ -1080,6 +1080,9 @@ bool GameMode::findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre:
     return tile->isBuildableUpon(mGameMap->getLocalPlayer()->getSeat());
 }
 
+//! Distance in places at which a drag above the horizon is taken to end, far beyond the reach of EdgePlaces.h.
+static const float EDGE_PLACE_FAR_DISTANCE = 100000.0f;
+
 //! \brief Tells whether the coordinates are a place beyond the map edge that can be marked for digging now.
 bool GameMode::isDigEdgePlace(int x, int y) const
 {
@@ -1100,9 +1103,26 @@ bool GameMode::findDigEdgePlaceFromMouse(const OIS::MouseEvent& arg, int& x, int
 
     // The pointer is picked on the top of the earth block that a marked place shows
     const float height = RenderManager::getSingleton().rrGetEdgeMarkHeight(*mGameMap);
+    const bool dragging = action == SelectedAction::selectTile &&
+        mModeManager->getInputManager().mLMouseDown;
     Ogre::Vector3 hit;
     if(!ODFrameListener::getSingleton().findWorldPositionFromMouse(arg, hit, height))
-        return false;
+    {
+        // A drag that goes on above the horizon keeps its selection: the place lies far out in the ray direction
+        if(!dragging)
+            return false;
+
+        const CEGUI::Vector2f mouse = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
+        const Ogre::Ray ray = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getCameraToViewportRay(
+            mouse.d_x / static_cast<float>(arg.state.width), mouse.d_y / static_cast<float>(arg.state.height));
+        Ogre::Vector2 direction(ray.getDirection().x, ray.getDirection().y);
+        if(direction.squaredLength() <= 0.0f)
+            return false;
+
+        direction.normalise();
+        hit = Ogre::Vector3(ray.getOrigin().x + direction.x * EDGE_PLACE_FAR_DISTANCE,
+            ray.getOrigin().y + direction.y * EDGE_PLACE_FAR_DISTANCE, height);
+    }
 
     const int sizeX = mGameMap->getMapSizeX();
     const int sizeY = mGameMap->getMapSizeY();
@@ -1111,12 +1131,9 @@ bool GameMode::findDigEdgePlaceFromMouse(const OIS::MouseEvent& arg, int& x, int
     if(!EdgePlaces::isBeyondEdge(x, y, sizeX, sizeY))
         return false;
 
-    const bool dragging = action == SelectedAction::selectTile &&
-        mModeManager->getInputManager().mLMouseDown;
-    if(dragging)
-        EdgePlaces::clampToReach(x, y, sizeX, sizeY);
-    else if(!EdgePlaces::isMarkable(x, y, sizeX, sizeY))
-        return false;
+    // Every ground point beyond the edge is a place, however far out the camera can show it: one that lies beyond the
+    // reach is moved to the outermost markable ring, so the dig marking never refuses and never shows where the map ends
+    EdgePlaces::clampToReach(x, y, sizeX, sizeY);
 
     position = Ogre::Vector3(static_cast<float>(x), static_cast<float>(y), height);
     return true;

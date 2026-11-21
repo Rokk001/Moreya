@@ -450,15 +450,15 @@ public:
     //! Used on server side only
     void tileMarkedDiggingNotifiedToPlayer(Tile* tile, bool isDigSet);
 
-    //! rief Tells whether the place beyond the map edge is marked for digging by this seat. Such a place has no
+    //! \brief Tells whether the place beyond the map edge is marked for digging by this seat. Such a place has no
     //! tile; it behaves like an undiscovered tile that is never discovered (see EdgePlaces.h).
     bool isEdgePlaceMarked(int x, int y) const;
 
-    //! rief Marks or unmarks a place beyond the map edge for digging. Places that are not markable are ignored.
+    //! \brief Marks or unmarks a place beyond the map edge for digging. Places that are not markable are ignored.
     //! eturn true if the mark changed
     bool setEdgePlaceMarked(int x, int y, bool isDigSet);
 
-    //! rief The places beyond the map edge this seat has marked for digging.
+    //! \brief The places beyond the map edge this seat has marked for digging.
     const std::set<std::pair<int, int> >& getEdgeDigMarks() const
     { return mEdgeDigMarks; }
 

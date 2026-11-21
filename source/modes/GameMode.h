@@ -645,8 +645,9 @@ private:
 
     //! \brief Finds the place beyond the map edge under the pointer, if the digging marks apply there.
     //! A place beyond the edge can be marked for digging like an undiscovered tile: only while no creature is
-    //! held and no other action is selected, and within the reach of EdgePlaces.h. During a drag the place is
-    //! moved to the outermost markable ring, so the drag keeps its selection.
+    //! held and no other action is selected. Every ground point beyond the edge is a place: one farther out than
+    //! the reach of EdgePlaces.h is moved to the outermost markable ring, so the marking never refuses. A drag also
+    //! keeps its selection while the pointer is above the horizon.
     //! \param arg The mouse event, for the screen size
     //! \param x Receives the place coordinate
     //! \param y Receives the place coordinate

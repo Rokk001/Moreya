@@ -44,6 +44,12 @@ assert 'bool GameMode::findDigEdgePlaceFromMouse(' in game_mode
 finder = body(game_mode, 'bool GameMode::findDigEdgePlaceFromMouse(')
 assert 'SelectedAction::none' in finder and 'SelectedAction::selectTile' in finder and 'numObjectsInHand() > 0' in finder
 assert 'EdgePlaces::clampToReach' in finder
+# No ground point beyond the edge is refused: the reach does not reject, it only moves a far place to the outer ring, and a
+# drag above the horizon still resolves (the visible ground is not bounded by the camera limits: the view direction may
+# be as flat as MAX_VIEW_DIRECTION_Z = -0.1, so a fixed reach cannot be proved to cover it).
+assert 'isMarkable' not in finder, 'the finder must not refuse places beyond the reach'
+assert 'EdgePlaces::clampToReach(x, y, sizeX, sizeY);' in finder
+assert 'EDGE_PLACE_FAR_DISTANCE' in finder and 'if(!dragging)' in finder
 assert game_mode.count('findDigEdgePlaceFromMouse(') == 5, 'moved, pressed, released, frame update and the definition'
 
 # Press: a left press beyond the edge starts a dig selection and decides between marking and unmarking by the mark there.
