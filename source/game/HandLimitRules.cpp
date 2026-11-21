@@ -129,7 +129,8 @@ uint32_t cooldownIconSeconds(bool overPickableFighter, double cooldownLeft)
 }
 
 //! \brief Puts the prohibition picture centred on the given point of the creature and the number directly under the
-//! picture; both are moved back inside the screen where they would leave it.
+//! picture; both are moved back inside the screen where they would leave it. The number is clamped once more against
+//! the lower screen edge because float rounding of the picture's lowest place can put it a fraction below the edge.
 void cooldownIconPlace(float centreX, float centreY, float iconSize, float numberWidth, float numberHeight,
     float screenWidth, float screenHeight, float& iconLeft, float& iconTop, float& numberLeft, float& numberTop)
 {
@@ -137,5 +138,7 @@ void cooldownIconPlace(float centreX, float centreY, float iconSize, float numbe
     iconTop = std::max(0.0f, std::min(centreY - iconSize * 0.5f, screenHeight - iconSize - numberHeight));
     numberLeft = std::max(0.0f, std::min(iconLeft + (iconSize - numberWidth) * 0.5f, screenWidth - numberWidth));
     numberTop = iconTop + iconSize;
+    // screenHeight - iconSize - numberHeight rounds, so iconTop + iconSize + numberHeight can exceed the screen height
+    numberTop = std::min(numberTop, screenHeight - numberHeight);
 }
 }
