@@ -6,15 +6,17 @@ rear yard behind the campaign hall, in front of the abandoned castle. Two openin
 coordinates, see CUTS):
 - the stairwell: x -3.0..3.0, y 31.0..37.0, z -0.95..0.3 out of the yard paving with its bedding (OuterGround) and
   the loose rubble of the bailey (FortressRear) lying there;
-- the back wall of the campaign hall: x -3.3..3.3, y 29.0..30.5, z 0.12..3.6 out of CampaignHall, so the campaign
-  flight looks through it into the yard; the stone frame MenuHallRearArch covers the cut edges.
+- the back wall of the campaign hall: x -4.0..4.0, y 29.0..30.5, z 0.12..4.2 out of CampaignHall, so the campaign
+  flight looks through it into the yard; the stone frame MenuHallRearArch covers the cut edges;
+- the flat glowing slab floating over the forge hearth of the yard: x 2.99..5.01, y 40.89..42.11, z 1.08..1.18 out of
+  FortressRear; the coal heap MenuForgeCoals takes its place.
 
     python tools/menu_cut_moreya_opening.py <work folder>
 
 Run it on the meshes as they were before any cut (the tool never adds geometry back). Each mesh is converted to XML
 with OgreXMLConverter (BUILD_DEPS_ROOT, else %USERPROFILE%/build-deps). Every triangle that overlaps a box is split
 along the box's six planes; the piece inside the box is dropped and the pieces outside replace the triangle in its
-place. New vertices on the cut edges interpolate every vertex attribute (normals and tangents renormalised). Triangles
+place (a box can be limited to some materials; a submesh left without faces is dropped). New vertices on the cut edges interpolate every vertex attribute (normals and tangents renormalised). Triangles
 away from the boxes and every vertex still in use stay as they were; vertices no face uses any more (those of the
 dropped pieces and of splits that were not needed) are removed. The XML before and
 after is kept in the work folder (outside the repository) and converted back into models/<mesh>; the vertex values
@@ -31,8 +33,12 @@ from xml.etree import ElementTree
 ROOT = Path(__file__).resolve().parents[1]
 #: The boxes cut out of the entities' meshes, in scene coordinates (x min, x max, y min, y max, z min, z max).
 STAIRWELL = (-3.0, 3.0, 31.0, 37.0, -0.95, 0.3)
-HALL_BACK_OPENING = (-3.3, 3.3, 29.0, 30.5, 0.12, 3.6)
-CUTS = {"OuterGround": (STAIRWELL,), "FortressRear": (STAIRWELL,), "CampaignHall": (HALL_BACK_OPENING,)}
+HALL_BACK_OPENING = (-4.0, 4.0, 29.0, 30.5, 0.12, 4.2)
+FORGE_SLAB = (2.99, 5.01, 40.89, 42.11, 1.08, 1.18)
+#: Per entity: (box, materials) pairs; materials None cuts every submesh, else only the submeshes of those materials
+#: (the forge slab is the glowing material alone; the hearth stone around it stays whole).
+CUTS = {"OuterGround": ((STAIRWELL, None),), "FortressRear": ((STAIRWELL, None), (FORGE_SLAB, ("MenuEmber",))),
+        "CampaignHall": ((HALL_BACK_OPENING, None),)}
 #: Attributes that are directions and are renormalised after interpolation.
 DIRECTIONS = ("normal", "tangent", "binormal")
 #: Distance from a cut plane within which a vertex counts as lying on it.
@@ -288,7 +294,7 @@ def compact(geometry, face_lists):
 
 
 def cut_mesh(path, boxes, binary):
-    """Cuts boxes (mesh coordinates) out of every submesh of one Ogre XML mesh file in place; returns the triangles cut.
+    """Cuts (box, materials) pairs (mesh coordinates) out of one Ogre XML mesh file in place; returns the triangles cut.
 
     binary is the mesh file the XML was made from; its exact vertex values replace the rounded ones of the XML.
     """
@@ -308,12 +314,26 @@ def cut_mesh(path, boxes, binary):
             geometry, cache = Geometry(submesh.find("geometry"), next(exact)), {}
         if submesh.get("operationtype", "triangle_list") != "triangle_list":
             continue
-        for box in boxes:
-            total += cut_faces(geometry, submesh.find("faces"), box, cache)
+        for box, materials in boxes:
+            if materials is None or submesh.get("material") in materials:
+                total += cut_faces(geometry, submesh.find("faces"), box, cache)
         if geometry is not shared_geometry:
             compact(geometry, [submesh.find("faces")])
     if shared_geometry is not None:
         compact(shared_geometry, shared_faces)
+    # A submesh left without faces is dropped together with its name entry.
+    submeshes = root.find("submeshes")
+    names = root.find("submeshnames")
+    for index, submesh in reversed(list(enumerate(submeshes.findall("submesh")))):
+        if int(submesh.find("faces").get("count")) == 0:
+            submeshes.remove(submesh)
+            if names is not None:
+                for entry in names.findall("submeshname"):
+                    position = int(entry.get("index"))
+                    if position == index:
+                        names.remove(entry)
+                    elif position > index:
+                        entry.set("index", str(position - 1))
     tree.write(path, encoding="utf-8", xml_declaration=True)
     return total
 
@@ -328,8 +348,8 @@ def main():
     entities = entity_positions()
     for name, scene_boxes in CUTS.items():
         mesh, offset = entities[name]
-        boxes = [(box[0] - offset[0], box[1] - offset[0], box[2] - offset[1], box[3] - offset[1], box[4] - offset[2],
-                  box[5] - offset[2]) for box in scene_boxes]
+        boxes = [((box[0] - offset[0], box[1] - offset[0], box[2] - offset[1], box[3] - offset[1], box[4] - offset[2],
+                   box[5] - offset[2]), materials) for box, materials in scene_boxes]
         before = work / (mesh + ".before.xml")
         after = work / (mesh + ".xml")
         binary = work / (Path(mesh).stem + ".before.mesh")

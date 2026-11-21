@@ -10,17 +10,20 @@ No compile needed. Reads config/mainmenuscene.cfg and the binary meshes under mo
   MIN_STEP_LEVELS levels that drop step by step in one direction, and the lowest lies at least MIN_DEPTH down;
   at least MIN_OPEN_LEVELS of them lie open to the sky;
 - it lies in the rear yard: its open part starts behind the hall's back wall, at least MIN_GAP behind the table's
-  back edge, and the stair head and signpost stay in front of the abandoned castle;
+  back edge, and the stair head and signpost stay in front of the abandoned castle; the head lies on the hall side,
+  at most MAX_HEAD_FROM_HALL behind the back wall, and the stairs go down away from the hall (the reversed
+  orientation fails);
 - both stand on the ground: the ground of the other entities under the corners of the stair rim lies between the
   bottom and the top of the rim, the foot of the signpost post reaches the ground, and the signpost stands beside
   the stair head (within MAX_SIGN_FROM_HEAD of it, beside the opening);
 - the yard floor is open over the stairwell (no other entity covers its open treads) and whole around it (left,
   right, behind the head, beyond the tunnel mouth), and the hall floor behind the table has no hole;
-- some frame of the campaign flight from gate_exit to campaign (vertical field of view 45 degrees, 16:9 and 4:3,
-  path and rotation as RenderSceneMenu::samplePath) shows the whole board unhidden and facing the camera together
-  with at least MIN_FLIGHT_STEPS open step levels;
-- the board's arrow tip points down (at least MIN_POINTER_DROP) and along the descent, and the line from the tip
-  along the arrow enters the stairwell opening;
+- the gate_exit frame and at least one more frame of the campaign flight to campaign (vertical field of view 45
+  degrees at 16:9, 16:9 and 4:3, path and rotation as RenderSceneMenu::samplePath) show the whole board unhidden,
+  facing the camera and at least MIN_BOARD_PIXELS long on a 1080 line screen, and both parapets of the opening;
+- the board is upright (MAX_BOARD_TILT), at least MIN_BOARD_LENGTH long, its arrow points along the descent and
+  its tip hangs over the stairwell opening;
+- no glowing material forms a flat slab in the rear yard (largest flat connected patch at most MAX_FLAT_GLOW);
 - the board texture shows the word "Moreya": where it differs from the plain planks matches the letter shapes;
 - the new files (stairs, signpost, the frame of the hall's back opening, board textures) have CREDITS entries.
 
@@ -55,8 +58,18 @@ MIN_GAP = 6.0
 MIN_OPEN_LEVELS = 10
 #: The signpost stands beside the stair head: at most this far from the head along the stairs and beside the opening.
 MAX_SIGN_FROM_HEAD = 1.0
-#: Some frame of the campaign flight from gate_exit to campaign shows the whole board and this many step levels.
-MIN_FLIGHT_STEPS = 3
+#: The stair head lies at most this far behind the hall's back wall (one walks through the opening onto the top step).
+MAX_HEAD_FROM_HALL = 1.5
+#: The board is upright (arrow and normal at most this far out of the horizontal) and at least this long; in the
+#: flight frames it spans at least MIN_BOARD_PIXELS on a 1080 line screen.
+MAX_BOARD_TILT = 0.1
+MIN_BOARD_LENGTH = 2.8
+MIN_BOARD_PIXELS = 150
+#: Glowing materials that must not form a flat slab in the rear yard (YARD: x min, x max, y min, y max), and the
+#: largest flat connected patch of them allowed there in square units.
+GLOW_SLAB_MATERIALS = ("MenuEmber", "MenuFlame", "MenuFlameCore")
+YARD = (-9.0, 9.0, 30.3, 44.0)
+MAX_FLAT_GLOW = 0.1
 BOARD_MATERIAL = "MenuMoreyaSignpostBoard"
 #: The material of the step stones (treads, landing and the steps behind the doorway).
 STEP_MATERIAL = "MenuChippedStone"
@@ -71,8 +84,7 @@ MIN_STEP_LEVELS = 15
 FOV_Y = 45.0
 ASPECTS = (16.0 / 9.0, 4.0 / 3.0)
 REFERENCE_ASPECT = 16.0 / 9.0
-#: The arrow drops at least this much per unit along its length (about 20 degrees).
-MIN_POINTER_DROP = 0.34
+
 #: The board front must face the flight camera: cosine between its normal and the direction to the camera.
 MIN_FACING = 0.3
 #: Share of the letter shapes that must coincide with the painted change of the board texture.
@@ -240,8 +252,9 @@ def arrow(board):
     along = (points - centre) @ axis
     across = (points - centre) @ np.cross(normal, axis)
     length = along.max() - along.min()
-    high = along > along.max() - 0.15 * length
-    low = along < along.min() + 0.15 * length
+    # The arrow shoulders lie 12.5 % of the length before the tip, so only the tip falls into the last tenth.
+    high = along > along.max() - 0.1 * length
+    low = along < along.min() + 0.1 * length
     # The pointed end narrows to the tip: its points spread less across the board than those of the square end.
     if np.ptp(across[high]) > np.ptp(across[low]):
         axis, along, high, low = -axis, -along, low, high
@@ -249,6 +262,50 @@ def arrow(board):
     back = points[low].mean(axis=0)
     direction = tip - back
     return back, tip, direction / np.linalg.norm(direction), normal
+
+
+def board_pixels(eye, rotation, board, aspect, lines=1080):
+    """Returns the larger screen extent in pixels of the board on a screen with the given number of lines."""
+    half_x = math.tan(math.radians(FOV_Y) / 2) * max(aspect, REFERENCE_ASPECT)
+    half_y = half_x / aspect
+    points = []
+    for point in board.reshape(-1, 3):
+        local = rotation.T @ (point - eye)
+        depth = -local[2]
+        points.append((local[0] / depth / half_x * lines * aspect / 2, local[1] / depth / half_y * lines / 2))
+    points = np.array(points)
+    return max(np.ptp(points[:, 0]), np.ptp(points[:, 1]))
+
+
+def largest_flat_patch(triangles):
+    """Returns the area of the largest connected group of coplanar triangles (shared corners connect them)."""
+    normals = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
+    areas = np.linalg.norm(normals, axis=1) / 2
+    units = normals / np.maximum(areas * 2, 1e-12)[:, None]
+    offsets = np.einsum("ij,ij->i", units, triangles[:, 0])
+    parent = list(range(len(triangles)))
+
+    def find(index):
+        """Returns the representative of a triangle's group."""
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    owners = {}
+    for index, triangle in enumerate(triangles):
+        plane = (tuple(np.round(units[index] * 50).astype(int)), int(round(offsets[index] * 50)))
+        for corner in triangle:
+            key = (plane, tuple(np.round(corner * 1000).astype(int)))
+            if key in owners:
+                parent[find(index)] = find(owners[key])
+            else:
+                owners[key] = index
+    totals = {}
+    for index in range(len(triangles)):
+        root = find(index)
+        totals[root] = totals.get(root, 0.0) + areas[index]
+    return max(totals.values()) if totals else 0.0
 
 
 def letters_match():
@@ -392,7 +449,7 @@ def main():
         failures.append("the stairwell opening is covered by " + ", ".join(sorted(covering)))
     middle_y = sum(open_y) / 2
     for x, y, label in ((origin[0] - 3.9, middle_y, "left"), (origin[0] + 3.9, middle_y, "right"),
-                        (origin[0], head_y - along * 0.9, "behind the head"),
+                        (origin[0], head_y - along * 0.6, "behind the head"),
                         (origin[0], end_y + along * 0.5, "beyond the tunnel mouth")):
         floor = floor_height(ground, x, y)
         if floor is None or abs(floor) > 0.2:
@@ -403,60 +460,75 @@ def main():
             failures.append("the hall floor behind the table has a hole at y %.1f" % y)
             break
 
-    # The campaign flight from gate_exit to campaign sees the board and the steps going down. Every sight line runs
-    # between the flight path and the stairs, so only the triangles near the box around both can hide anything.
+    # The campaign flight shows the opening with its parapets and the signpost at the head through the opening in the
+    # hall's back wall: in the gate_exit frame and in at least one later frame of the flight to campaign. Every sight
+    # line runs between the flight path and the stairs, so only the triangles near the box around both can hide it.
     occluders = np.concatenate((ground, stairs, signpost))
-    path = np.array([flight_pose(all_poses, share)[:3] for share in np.arange(0.0, 1.0001, 0.05)])
+    shares = np.arange(0.0, 1.0001, 0.05)
+    path = np.array([flight_pose(all_poses, share)[:3] for share in shares])
     corridor = np.vstack((path, stairs.reshape(-1, 3), signpost.reshape(-1, 3)))
     low, high = corridor.min(axis=0) - 0.5, corridor.max(axis=0) + 0.5
     occluders = occluders[np.all(occluders.max(axis=1) >= low, axis=1) & np.all(occluders.min(axis=1) <= high, axis=1)]
     bounds = (occluders.min(axis=1), occluders.max(axis=1))
     back, tip, direction, normal = arrow(board)
     centre = board.reshape(-1, 3).mean(axis=0)
+    parapet_tops = []
+    for side in (-1.0, 1.0):
+        x = origin[0] + side * 3.22
+        tops = []
+        for y in np.arange(open_y[0] + 0.3, open_y[1] - 0.3, 0.5):
+            height = heights_at(stairs, x, y)
+            if len(height) and height.max() > 0.1:
+                tops.append(np.array([x, y, height.max() + 0.02]))
+        parapet_tops.append(tops)
+    if not all(parapet_tops):
+        failures.append("the stairwell has no parapet on both sides")
     for aspect in ASPECTS:
-        best = (0, -1.0, None)
-        for share in np.arange(0.0, 1.0001, 0.05):
+        showing = []
+        for share in shares:
             eye, rotation = camera(flight_pose(all_poses, share))
             if any(not in_view(eye, rotation, point, aspect) for point in board.reshape(-1, 3)):
                 continue
-            if any(blocked(occluders, eye, point + normal * 0.03, bounds=bounds) for point in (centre, tip)):
+            if any(blocked(occluders, eye, point + normal * 0.03, bounds=bounds) for point in (centre, tip, back)):
                 continue
             if normal @ ((eye - centre) / np.linalg.norm(eye - centre)) < MIN_FACING:
                 continue
-            seen = 0
-            for row in open_rows:
-                for y in (row[3] + 0.1, (row[3] + row[4]) / 2, row[4] - 0.1):
-                    hit = False
-                    for dx in (-2.0, 0.0, 2.0):
-                        surface = heights_at(steps, origin[0] + dx, y)
-                        surface = surface[np.abs(surface - row[0]) < 0.1]
-                        if len(surface):
-                            point = np.array([origin[0] + dx, y, surface.max() + 0.03])
-                            if in_view(eye, rotation, point, aspect) and not blocked(occluders, eye, point,
-                                                                                    bounds=bounds):
-                                hit = True
-                                break
-                    if hit:
-                        seen += 1
-                        break
-                if seen >= MIN_FLIGHT_STEPS:
-                    break
-            if seen > best[0]:
-                best = (seen, share, eye)
-            if seen >= MIN_FLIGHT_STEPS:
-                break
-        if best[0] < MIN_FLIGHT_STEPS:
-            failures.append("no frame of the campaign flight at aspect %.2f shows the board and %d step levels "
-                            "(best %d)" % (aspect, MIN_FLIGHT_STEPS, best[0]))
+            if board_pixels(eye, rotation, board, aspect) < MIN_BOARD_PIXELS:
+                continue
+            if not all(any(in_view(eye, rotation, point, aspect) and not blocked(occluders, eye, point, bounds=bounds)
+                           for point in tops) for tops in parapet_tops):
+                continue
+            showing.append(share)
+        if 0.0 not in showing or len(showing) < 2:
+            failures.append("at aspect %.2f the board (readable, at least %d pixels long) and both parapets show in "
+                            "flight frames %s, need gate_exit and one more" % (aspect, MIN_BOARD_PIXELS, showing))
 
-    # The pointer points down the stairs.
-    if direction[2] > -MIN_POINTER_DROP or direction[1] * along <= 0.25:
-        failures.append("signpost arrow (%.2f, %.2f, %.2f) does not point down along the stairs" % tuple(direction))
-    else:
-        reach = tip + direction * ((tip[2] + 1.0) / -direction[2])
-        if not (abs(reach[0] - origin[0]) < 3.0 and open_y[0] < reach[1] < open_y[1]):
-            failures.append("signpost arrow line meets z -1 at (%.2f, %.2f), outside the stairwell" % tuple(reach[:2]))
+    # The stairs start on the hall side and go down away from it; the board is upright and points down the stairs.
+    if along < 0 or head_y - hall_back > MAX_HEAD_FROM_HALL:
+        failures.append("the stair head (y %.2f) is not right behind the hall (back y %.2f) with the stairs going down "
+                        "away from it (descent %+.0f along y)" % (head_y, hall_back, along))
+    if abs(direction[2]) > MAX_BOARD_TILT or abs(normal[2]) > MAX_BOARD_TILT:
+        failures.append("signpost board is not upright: arrow (%.2f, %.2f, %.2f), normal z %.2f"
+                        % (direction[0], direction[1], direction[2], normal[2]))
+    if direction[1] * along < 0.5 or not (abs(tip[0] - origin[0]) < 3.0 and open_y[0] < tip[1] < open_y[1]):
+        failures.append("signpost arrow (%.2f, %.2f, %.2f) with tip at (%.2f, %.2f) does not point down the stairs"
+                        % (direction[0], direction[1], direction[2], tip[0], tip[1]))
+    if np.linalg.norm(tip - back) < MIN_BOARD_LENGTH:
+        failures.append("signpost board is only %.2f long (need %.1f)" % (np.linalg.norm(tip - back), MIN_BOARD_LENGTH))
 
+    # No flat glowing slab in the rear yard: embers there are lumps, not a plane.
+    for name, (mesh, position) in entities.items():
+        for material, (vertices, triangles) in submeshes(os.path.join(flight.MODELS, mesh)).items():
+            if material not in GLOW_SLAB_MATERIALS or not len(triangles):
+                continue
+            glowing = vertices[triangles] + position
+            middle = glowing.mean(axis=1)
+            inside = ((middle[:, 0] > YARD[0]) & (middle[:, 0] < YARD[1]) & (middle[:, 1] > YARD[2])
+                      & (middle[:, 1] < YARD[3]))
+            largest = largest_flat_patch(glowing[inside]) if inside.any() else 0.0
+            if largest > MAX_FLAT_GLOW:
+                failures.append("%s has a flat %s patch of %.2f m2 in the rear yard (at most %.2f)"
+                                % (name, material, largest, MAX_FLAT_GLOW))
     # The board shows "Moreya".
     covered, stray = letters_match()
     if covered < MIN_LETTER_MATCH or stray > 1.0 - MIN_LETTER_MATCH:

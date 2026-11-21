@@ -4,22 +4,25 @@
                         the abandoned castle, down into the ground and on as a tunnel under the yard to an ember-lit
                         doorway; kerb and low parapets frame the opening, iron ember bowls hang on the stairwell walls
     MenuMoreyaSignpost  a smaller signpost of the start screen signpost family (moreya_raid_models.py PartBuilder,
-                        same wood, iron and board planks); its arrow board carries the word "Moreya" and its tip
-                        points down into the stairwell
+                        same wood, iron and board planks); its upright arrow board carries the word "Moreya" and
+                        its tip points down the stairs
     MenuHallRearArch    the stone frame (jambs, lintel, threshold) of the opening in the back wall of the campaign
-                        hall through which the campaign flight looks out into the rear yard
+                        hall through which one walks from the table to the stair head and the campaign flight looks
+                        out into the rear yard
+    MenuForgeCoals      a heap of charred coal lumps with small embers glowing between them on the forge hearth of
+                        the rear yard (MenuFortressRear.mesh), in place of its former flat glowing slab
 
 Units are menu scene units. The stairs' origin is the middle of the upper edge of the first step on the yard floor
-(z 0); they are built descending along +Y and turned by STAIRS_TURN, so they descend along -Y, towards the hall.
-The opening in the floor is x -3.0..3.0, y -6.0..0 of the mesh; the scene places the mesh at (0, 37.0, 0), so the
-yard floor must be open over x -3.0..3.0, y 31.0..37.0 (tools/menu_cut_moreya_opening.py); the tunnel runs on under
-the yard and the hall. The signpost's origin is the foot of its post; the scene places it at the left side of the
-stair head. The board front faces the hall and its tip points into the stairwell, down and along -Y.
+(z 0); they descend along +Y, away from the hall towards the castle. The opening in the floor is x -3.0..3.0,
+y 0..6.0 of the mesh; the scene places the mesh at (0, 31.0, 0), right behind the opening in the hall's back wall,
+so the yard floor must be open over x -3.0..3.0, y 31.0..37.0 (tools/menu_cut_moreya_opening.py); the tunnel runs on
+under the yard and the castle. The signpost's origin is the foot of its post; the scene places it beside the top
+step on the hall side. Its board is upright, faces the hall and its tip points over the stairwell along +Y.
 
 Run in Blender (5.x):
     blender --background --python menu_moreya_entrance.py -- <repo> <private output folder> [stairs] [signpost]
-        [render | render_open | render_real]
-"stairs", "signpost" and "arch" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes with
+        [arch] [coals] [render | render_open | render_real | render_after2]
+"stairs", "signpost", "arch" and "coals" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes with
 OgreXMLConverter into <repo>/models. "render" renders the menu scene of config/mainmenuscene.cfg from the campaign
 pose and the waypoints of the campaign flight into <private>/renders (see render_poses). The board lettering is
 written by tools/gen_menu_signpost_lettering.py (--text Moreya). Progress goes to <private>/menu_moreya_entrance.log.
@@ -47,22 +50,24 @@ CEILING_START, CEILING_SLOPE = -1.05, RISE / TREAD
 TUNNEL_COVER = 0.12
 #: The doorway at the foot of the stairs: half width, height above the landing, depth of the recess.
 DOOR_HALF, DOOR_HEIGHT, DOOR_DEPTH = 1.1, 1.75, 1.2
-#: Turn of the finished stairs about Z (degrees) and where the scene places their head (y of the upper edge of the
-#: first step); the opening in the yard floor then runs from STAIRS_HEAD_Y - OPEN_LENGTH to STAIRS_HEAD_Y.
-STAIRS_TURN = 180.0
-STAIRS_HEAD_Y = 37.0
+#: Where the scene places the stair head (y of the upper edge of the first step), right behind the opening in the
+#: hall's back wall; the opening in the yard floor runs from STAIRS_HEAD_Y to STAIRS_HEAD_Y + OPEN_LENGTH.
+STAIRS_HEAD_Y = 31.0
 #: The opening in the back wall of the campaign hall (scene coordinates): half width, sill and top height, and the
 #: wall's inner and outer face (y). tools/menu_cut_moreya_opening.py cuts the same box out of the hall mesh.
-ARCH_HALF, ARCH_SILL, ARCH_HEIGHT = 3.3, 0.12, 3.6
+ARCH_HALF, ARCH_SILL, ARCH_HEIGHT = 4.0, 0.12, 4.2
 ARCH_WALL = (29.25, 30.25)
+#: The coal bed on the forge hearth of the rear yard (scene x min, x max, y min, y max) and the hearth top height.
+FORGE_BED = (3.05, 4.95, 40.95, 42.05)
+FORGE_HEARTH = 0.85
 #: Signpost: board outline in its own frame (back end, shoulder, tip, lower and upper edge), thickness planes,
-#: the tilt of the board (tip down) and the turn of the whole signpost about Z (tip towards -Y, down the stairs,
-#: board front towards the hall and the campaign flight).
+#: the tilt of the board (0: upright), the turn of the whole signpost about Z (tip towards +Y and the middle of the
+#: stairwell, down the stairs; board front towards the hall and the campaign flight) and its size factor.
 SIGN_BACK, SIGN_SHOULDER, SIGN_TIP = -0.30, 1.80, 2.10
 SIGN_BOTTOM, SIGN_TOP = 1.75, 2.35
 SIGN_FRONT_Y, SIGN_BACK_Y = -0.22, -0.135
 SIGN_PIVOT_Z = 2.05
-SIGN_TILT, SIGN_TURN = 32.0, -45.0
+SIGN_TILT, SIGN_TURN, SIGN_SCALE = 0.0, 45.0, 1.6
 
 LOG = None
 
@@ -335,9 +340,6 @@ def build_stairs(raid):
     add_tread_cracks(b)
     add_kerb_and_parapets(b)
     add_ember_bowls(b)
-    # Built descending along +Y; turned so that it descends along -Y, towards the hall: the campaign flight looks
-    # over the yard at the stair head on the far side and sees the steps go down towards it.
-    transform_faces(b, 0, Matrix.Rotation(math.radians(STAIRS_TURN), 4, "Z"))
     return b.finish(["MenuChippedStone", "MenuDarkStone", "MenuCarvedStone", "MenuSoot", "MenuRoughStone",
                      "MenuCorrodedIron", "MenuEmber", "MenuEmberCrack"])
 
@@ -365,6 +367,28 @@ def build_hall_arch(raid):
     return b.finish(["MenuCarvedStone", "MenuChippedStone"])
 
 
+def build_forge_coals(raid):
+    """Builds the coal heap on the forge hearth of the rear yard: dark charred lumps with small embers between them.
+
+    Scene coordinates (the scene places it at the origin). The lumps rest on the hearth top (about z 0.86) over
+    FORGE_BED (x and y range); tools/menu_cut_moreya_opening.py removes the flat glowing slab that floated there.
+    """
+    b = raid.PartBuilder("MenuForgeCoals", 4409)
+    x0, x1, y0, y1 = FORGE_BED
+    rows, columns = 6, 10
+    for row in range(rows):
+        for column in range(columns):
+            x = x0 + (column + 0.5 + b.rng.uniform(-0.25, 0.25)) * (x1 - x0) / columns
+            y = y0 + (row + 0.5 + b.rng.uniform(-0.25, 0.25)) * (y1 - y0) / rows
+            size = (b.rng.uniform(0.1, 0.16), b.rng.uniform(0.09, 0.14), b.rng.uniform(0.06, 0.1))
+            b.rock((x, y, FORGE_HEARTH + size[2] * 0.55), size, "MenuSoot")
+            if b.rng.random() < 0.45:
+                ember = (b.rng.uniform(0.04, 0.07), b.rng.uniform(0.04, 0.07), b.rng.uniform(0.03, 0.05))
+                b.rock((x + (x1 - x0) / columns * 0.5, y + (y1 - y0) / rows * 0.5, FORGE_HEARTH + ember[2] * 0.6),
+                       ember, "MenuEmber")
+    return b.finish(["MenuSoot", "MenuEmber"])
+
+
 def transform_faces(b, first, matrix):
     """Moves the vertices and turns the grain of every face from index first on by a matrix."""
     rotation = matrix.to_3x3()
@@ -376,7 +400,7 @@ def transform_faces(b, first, matrix):
 
 
 def build_signpost(raid):
-    """Builds the Moreya signpost: post, tilted arrow board with lettering face, iron rod, straps, nails, stones."""
+    """Builds the Moreya signpost: post, arrow board with lettering face, iron rod, straps, nails, stones."""
     b = raid.PartBuilder("MenuMoreyaSignpost", 6607)
     b.board_material = "MenuMoreyaSignpostBoard"
     b.board_box = (SIGN_BACK, SIGN_TIP, SIGN_BOTTOM, SIGN_TOP)
@@ -386,7 +410,7 @@ def build_signpost(raid):
     b.log_column(post_top, post_top + Vector((0.0, 0.0, 0.18)), 0.12, 0.0, rust, sides=10, rough=0.0)
     b.solid([(-0.075, SIGN_BACK_Y, 1.62), (0.075, SIGN_BACK_Y, 1.62), (0.075, SIGN_BACK_Y, 2.48),
              (-0.075, SIGN_BACK_Y, 2.48)], (0, 0.085, 0), wood, (0, 0, 1))
-    # Everything from here on belongs to the board and is tilted with it about the pivot on the post.
+    # Everything from here on belongs to the board and is tilted with it about the pivot on the post (SIGN_TILT).
     first_board_face = len(b.faces)
     outline = [(SIGN_BACK, SIGN_BOTTOM), (SIGN_SHOULDER, SIGN_BOTTOM), (SIGN_TIP, (SIGN_BOTTOM + SIGN_TOP) / 2),
                (SIGN_SHOULDER, SIGN_TOP), (SIGN_BACK, SIGN_TOP)]
@@ -401,13 +425,13 @@ def build_signpost(raid):
     tilt = (Matrix.Translation((0, 0, SIGN_PIVOT_Z)) @ Matrix.Rotation(math.radians(SIGN_TILT), 4, "Y")
             @ Matrix.Translation((0, 0, -SIGN_PIVOT_Z)))
     transform_faces(b, first_board_face, tilt)
-    # An iron rod from the top of the post carries the long arm of the tilted board.
+    # An iron rod from the top of the post carries the long arm of the board.
     rod_end = tilt @ Vector((1.6, (SIGN_FRONT_Y + SIGN_BACK_Y) / 2, SIGN_TOP))
     b.log_column((0.06, rod_end.y, 2.5), rod_end, 0.022, 0.02, rust, sides=6, rough=0.0)
     for angle, distance, size in ((0.3, 0.26, (0.18, 0.14, 0.12)), (1.9, 0.27, (0.16, 0.18, 0.11)),
                                   (3.4, 0.25, (0.2, 0.16, 0.13)), (4.9, 0.26, (0.14, 0.13, 0.1))):
         b.rock((distance * math.cos(angle), distance * math.sin(angle), size[2] * 0.35 + 0.1), size)
-    turn = Matrix.Rotation(math.radians(SIGN_TURN), 4, "Z")
+    turn = Matrix.Rotation(math.radians(SIGN_TURN), 4, "Z") @ Matrix.Scale(SIGN_SCALE, 4)
     transform_faces(b, 0, turn)
     b.to_board = (turn @ tilt).inverted()
     return b.finish([wood, "MenuMoreyaSignpostBoard", rust, iron, "MenuRoughStone"])
@@ -486,14 +510,14 @@ def cut_opening(obj):
     bm.from_mesh(obj.data)
     origin = obj.location
     # Split the large floor faces along the four edges of the opening first, so only the part over it goes.
-    for point, normal in (((-HALF, 0, 0), (1, 0, 0)), ((HALF, 0, 0), (1, 0, 0)), ((0, STAIRS_HEAD_Y - OPEN_LENGTH, 0), (0, 1, 0)),
-                          ((0, STAIRS_HEAD_Y, 0), (0, 1, 0))):
+    for point, normal in (((-HALF, 0, 0), (1, 0, 0)), ((HALF, 0, 0), (1, 0, 0)), ((0, STAIRS_HEAD_Y, 0), (0, 1, 0)),
+                          ((0, STAIRS_HEAD_Y + OPEN_LENGTH, 0), (0, 1, 0))):
         geometry = bm.verts[:] + bm.edges[:] + bm.faces[:]
         bmesh.ops.bisect_plane(bm, geom=geometry, plane_co=Vector(point) - origin, plane_no=Vector(normal))
     doomed = []
     for face in bm.faces:
         centre = face.calc_center_median() + origin
-        if -HALF < centre.x < HALF and STAIRS_HEAD_Y - OPEN_LENGTH < centre.y < STAIRS_HEAD_Y and -1.0 < centre.z < 0.3:
+        if -HALF < centre.x < HALF and STAIRS_HEAD_Y < centre.y < STAIRS_HEAD_Y + OPEN_LENGTH and -1.0 < centre.z < 0.3:
             doomed.append(face)
     bmesh.ops.delete(bm, geom=doomed, context="FACES")
     bm.to_mesh(obj.data)
@@ -543,7 +567,8 @@ def render_poses(repo, private, raid, exporter, states=("before", "after_closed"
     output = Path(private) / "renders"
     output.mkdir(parents=True, exist_ok=True)
     for state, with_entrance, open_floor in (("before", False, False), ("after_closed", True, False),
-                                             ("after_open", True, True), ("after_real", True, False)):
+                                             ("after_open", True, True), ("after_real", True, False),
+                                             ("after2", True, False)):
         if state not in states:
             continue
         bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -598,7 +623,7 @@ def main():
     global LOG
     arguments = sys.argv[sys.argv.index("--") + 1:]
     repo, private = Path(arguments[0]), Path(arguments[1])
-    wanted = set(arguments[2:]) or {"stairs", "signpost", "arch"}
+    wanted = set(arguments[2:]) or {"stairs", "signpost", "arch", "coals"}
     private.mkdir(parents=True, exist_ok=True)
     LOG = open(private / "menu_moreya_entrance.log", "w", encoding="utf-8")
     try:
@@ -615,12 +640,17 @@ def main():
         if "arch" in wanted:
             bpy.ops.wm.read_factory_settings(use_empty=True)
             export(exporter, repo, private, build_hall_arch(raid))
+        if "coals" in wanted:
+            bpy.ops.wm.read_factory_settings(use_empty=True)
+            export(exporter, repo, private, build_forge_coals(raid))
         if "render" in wanted:
             render_poses(repo, private, raid, exporter)
         elif "render_open" in wanted:
             render_poses(repo, private, raid, exporter, ("after_open",))
         elif "render_real" in wanted:
             render_poses(repo, private, raid, exporter, ("after_real",))
+        elif "render_after2" in wanted:
+            render_poses(repo, private, raid, exporter, ("after2",))
         log("finished")
     except Exception:
         LOG.write(traceback.format_exc())
