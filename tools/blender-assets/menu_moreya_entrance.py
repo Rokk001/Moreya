@@ -15,7 +15,7 @@ stone. The board front faces the campaign camera and its tip points into the sta
 
 Run in Blender (5.x):
     blender --background --python menu_moreya_entrance.py -- <repo> <private output folder> [stairs] [signpost]
-        [render | render_open]
+        [render | render_open | render_real]
 "stairs" and "signpost" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes with
 OgreXMLConverter into <repo>/models. "render" renders the menu scene of config/mainmenuscene.cfg from the campaign
 pose and the waypoints of the campaign flight into <private>/renders (see render_poses). The board lettering is
@@ -452,7 +452,8 @@ def render_poses(repo, private, raid, exporter, states=("before", "after_closed"
 
     Writes <private>/renders/<state>_<pose>_<width>x<height>.png for the states "before" (scene without the
     entrance), "after_closed" (entrance with today's floor) and "after_open" (entrance with the floor opened over
-    the stairwell); states limits the run to some of them. Lights come from the AddPointLight lines, the ambient from [MenuLighting] FlightAmbient, the
+    the stairwell), and on request "after_real" (entrance with the meshes as they are, after
+    tools/menu_cut_moreya_opening.py opened the floor); states limits the run to some of them. Lights come from the AddPointLight lines, the ambient from [MenuLighting] FlightAmbient, the
     camera from the [MenuCamera] poses with the vertical field of view of 45 degrees of the game camera.
     """
     sys.path.insert(0, str(Path(repo) / "tools/blender-assets"))
@@ -470,7 +471,7 @@ def render_poses(repo, private, raid, exporter, states=("before", "after_closed"
     output = Path(private) / "renders"
     output.mkdir(parents=True, exist_ok=True)
     for state, with_entrance, open_floor in (("before", False, False), ("after_closed", True, False),
-                                             ("after_open", True, True)):
+                                             ("after_open", True, True), ("after_real", True, False)):
         if state not in states:
             continue
         bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -537,6 +538,8 @@ def main():
             render_poses(repo, private, raid, exporter)
         elif "render_open" in wanted:
             render_poses(repo, private, raid, exporter, ("after_open",))
+        elif "render_real" in wanted:
+            render_poses(repo, private, raid, exporter, ("after_real",))
         log("finished")
     except Exception:
         LOG.write(traceback.format_exc())
