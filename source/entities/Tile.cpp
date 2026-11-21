@@ -352,12 +352,10 @@ ODPacket& operator<<(ODPacket& os, const TileType& type)
     return os;
 }
 
+//! \brief Reads a TileType. A value above countTileType marks the packet as failed and leaves type unchanged.
 ODPacket& operator>>(ODPacket& is, TileType& type)
 {
-    uint32_t intType;
-    is >> intType;
-    type = static_cast<TileType>(intType);
-    return is;
+    return ODPacket::readEnum<uint32_t>(is, type, TileType::countTileType);
 }
 
 std::ostream& operator<<(std::ostream& os, const TileType& type)

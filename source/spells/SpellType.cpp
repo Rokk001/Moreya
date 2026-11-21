@@ -20,12 +20,10 @@ std::ostream& operator<<(std::ostream& os, const SpellType& tt)
     return os;
 }
 
+//! \brief Reads a SpellType. A value above nbSpells marks the packet as failed and leaves tt unchanged.
 ODPacket& operator>>(ODPacket& is, SpellType& tt)
 {
-    uint32_t tmp;
-    is >> tmp;
-    tt = static_cast<SpellType>(tmp);
-    return is;
+    return ODPacket::readEnum<uint32_t>(is, tt, SpellType::nbSpells);
 }
 
 ODPacket& operator<<(ODPacket& os, const SpellType& tt)
