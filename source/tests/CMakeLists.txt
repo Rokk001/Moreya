@@ -91,6 +91,25 @@ add_boost_test(00-ODPacket
         LIBRARIES
         ${SFML_LIBRARIES})
 
+# Frame layout and decoder of the pipe protocol between the game and the relay helper; no dependencies.
+add_boost_test(00-HelperPipeProtocol
+        SOURCES
+        test_HelperPipeProtocol.cpp
+        ${SRC}/network/HelperPipeProtocol.h)
+
+# TCP transport backend over the loopback interface, through the NetListener and NetConnection interfaces.
+add_boost_test(00-NetTransport
+        SOURCES
+        test_NetTransport.cpp
+        ${SRC}/network/HelperPipeProtocol.h
+        ${SRC}/network/NetTransport.h
+        ${SRC}/network/TcpNetTransport.h
+        ${SRC}/network/TcpNetTransport.cpp
+        ${SRC}/network/ODPacket.h
+        ${SRC}/network/ODPacket.cpp
+        LIBRARIES
+        ${SFML_LIBRARIES})
+
 add_boost_test(00-ConsoleInterface
         SOURCES
         test_ConsoleInterface.cpp
