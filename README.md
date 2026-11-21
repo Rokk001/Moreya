@@ -66,13 +66,13 @@ cmake --build build\windows --config Release --target opendungeons-plus
 
 #### Linux
 
-Requirements: GCC 9 or newer, CMake, Ninja, the X11, OpenGL, FreeType,
-Ogg/Vorbis/FLAC and Boost development packages of the distribution, and the
-libraries above installed into one prefix.
+Requirements: GCC 9 or newer, CMake, Ninja, Git, Python 3 and the X11,
+OpenGL, FreeType, Ogg/Vorbis/FLAC and Boost development packages of the
+distribution (`INSTALL_SYSTEM_PACKAGES=1` installs them with apt-get).
 
 ```
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=<prefix>
-cmake --build build --target opendungeons-plus
+scripts/unix/install-linux-prereqs.sh <prefix>
+scripts/unix/build-linux.sh <prefix>
 ```
 
 #### Repository organisation
