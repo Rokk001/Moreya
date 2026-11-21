@@ -83,6 +83,7 @@ probe = r'''
 #include "game/LevelStatistics.h"
 #include "modes/DebriefingTable.h"
 #include "modes/DefeatSequence.h"
+#include "network/MultiplayerClientRules.h"
 
 std::vector<std::string> gLog;
 #define OD_LOG_INF(x) gLog.push_back(x)
@@ -208,10 +209,12 @@ struct Seat
 };
 struct ODClient
 {
-    bool has = false;LevelStatistics statistics;
+    bool has = false;LevelStatistics statistics;bool multiplayer = false;
     static ODClient& getSingleton() {static ODClient client;return client;}
     bool hasLevelStatistics() const {return has;}
     const LevelStatistics& getLevelStatistics() const {return statistics;}
+    //! \brief Tells the confirm handler whether the lost game was a multiplayer game.
+    bool isMultiplayerSession() const {return multiplayer;}
 };
 // The visible pointer of the game is the keeper hand (the CEGUI arrow image is transparent)
 struct RenderManager {bool handVisible=false;int toggles=0;
@@ -243,9 +246,12 @@ struct ModeManager
 {
     enum ModeType {NONE = 0, ADVERTISMENT = 1, MENU_MAIN, MENU_CAMPAIGN};
     bool mOpenSkirmishSubMenu = false;
+    bool mOpenMultiplayerSubMenu = false;
     void requestMode(ModeType mode, bool = true) {++gModeRequests;gLastMode = mode;}
 @@REQUESTMAINMENU@@
 @@CONSUMEREQUEST@@
+@@REQUESTMULTIPLAYER@@
+@@CONSUMEMULTIPLAYER@@
 };
 typedef ModeManager AbstractModeManager;
 @@CONSTANTS@@
@@ -438,6 +444,21 @@ int main()
         check(gModeRequests == 1 && gLastMode == ModeManager::MENU_CAMPAIGN && !mode.mManager.mOpenSkirmishSubMenu,
             "in a campaign the confirm button leads to the campaign menu");
     }
+    // After a multiplayer game the way out is the main menu with the multiplayer sub-menu, not the skirmish one
+    {
+        GameMode mode;
+        mode.mMap.player.nick = "Keeper";
+        finish(mode.mDefeatSequence);
+        mode.onDefeatSequenceFinished();
+        gModeRequests = 0;
+        ODClient::getSingleton().multiplayer = true;
+        mode.mDefeatDebriefing->byPath["Panel/ConfirmButton"]->onClick();
+        ODClient::getSingleton().multiplayer = false;
+        check(gModeRequests == 1 && gLastMode == ModeManager::MENU_MAIN, "after a multiplayer game the confirm button requests the main menu");
+        check(mode.mManager.consumeMultiplayerSubMenuRequest() && !mode.mManager.mOpenSkirmishSubMenu,
+            "after a multiplayer game the main menu opens the multiplayer sub-menu");
+        check(!mode.mManager.consumeMultiplayerSubMenuRequest(), "the multiplayer hand-over is consumed once");
+    }
     // The statistics table: pure rows
     {
         LevelStatistics empty;
@@ -560,6 +581,8 @@ for marker, text in (
         ('@@CONSTANTS@@', constants),
         ('@@REQUESTMAINMENU@@', function(mode_manager, 'void requestMainMenuWithSkirmishSubMenu(')),
         ('@@CONSUMEREQUEST@@', function(mode_manager, 'bool consumeSkirmishSubMenuRequest(')),
+        ('@@REQUESTMULTIPLAYER@@', function(mode_manager, 'void requestMainMenuWithMultiplayerSubMenu(')),
+        ('@@CONSUMEMULTIPLAYER@@', function(mode_manager, 'bool consumeMultiplayerSubMenuRequest(')),
         ('@@FINISHED@@', function(game_mode, 'void GameMode::onDefeatSequenceFinished(')),
         ('@@SHOW@@', function(game_mode, 'void GameMode::showDefeatDebriefing(')),
         ('@@FILL@@', function(game_mode, 'void GameMode::fillDefeatStatistics(')),
