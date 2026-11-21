@@ -64,6 +64,9 @@ const size_t DIG_TARGETS = 3;
 //! \brief Tiles (largest of the x and y distance) around a fight target within which the enemies are counted that
 //! the fighters of the seat must outnumber before the player carries them there.
 const int32_t FIGHT_RADIUS = 6;
+//! \brief Tiles (largest of the x and y distance) within which enemy creatures of an area count for opening the
+//! dungeon to that area.
+const int32_t OPENING_SIGHT = 12;
 //! \brief Tiles the player marks for digging at most per look at the goals.
 const size_t MARK_BUDGET = 12;
 //! \brief A fighter that stands this near (largest of the x and y distance) to a fight target is not carried there.
@@ -754,12 +757,26 @@ std::set<Tile*> reachedTiles(GameMap& gameMap, Seat* seat, Creature* worker)
 }
 
 //! \brief The areas the enemy creatures walk in that the workers of the seat do not reach yet: every walkable tile of
-//! such an area with the area's index, and per area the number of enemy creatures standing in it.
+//! such an area with the area's index, per area the number of enemy creatures standing in it and their tiles.
 struct EnemyAreas
 {
     std::map<Tile*, size_t> mArea;
     std::vector<int32_t> mEnemies;
+    std::vector<std::vector<Tile*> > mEnemyTiles;
 };
+
+//! \brief The enemy creatures of the area that stand within OPENING_SIGHT of the tile: the ones that see a dungeon
+//! opened there and come (guards farther away keep their posts until they see the keeper's creatures).
+int32_t enemiesNear(const EnemyAreas& areas, size_t index, const Tile& tile)
+{
+    int32_t count = 0;
+    for(Tile* enemy : areas.mEnemyTiles[index])
+    {
+        if(std::max(std::abs(enemy->getX() - tile.getX()), std::abs(enemy->getY() - tile.getY())) <= OPENING_SIGHT)
+            ++count;
+    }
+    return count;
+}
 
 //! \brief True when an enemy creature walks on the tile: where a worker of the seat walks, and on every bridge, also one
 //! the seat may not use (the heroes cross the bridges that belong to nobody).
@@ -783,10 +800,12 @@ EnemyAreas enemyAreas(GameMap& gameMap, Seat* seat, Creature* worker, const std:
         if(it != areas.mArea.end())
         {
             ++areas.mEnemies[it->second];
+            areas.mEnemyTiles[it->second].push_back(start);
             continue;
         }
         const size_t index = areas.mEnemies.size();
         areas.mEnemies.push_back(1);
+        areas.mEnemyTiles.push_back(std::vector<Tile*>(1, start));
         std::vector<Tile*> frontier(1, start);
         areas.mArea[start] = index;
         while(!frontier.empty())
@@ -824,7 +843,7 @@ size_t unmarkOpenings(GameMap& gameMap, Player* keeper, const std::set<Tile*>& r
                 if((neighbor == nullptr) || (reached.count(neighbor) > 0))
                     continue;
                 std::map<Tile*, size_t>::const_iterator it = areas.mArea.find(neighbor);
-                if((it != areas.mArea.end()) && (areas.mEnemies[it->second] > fighters))
+                if((it != areas.mArea.end()) && (enemiesNear(areas, it->second, *tile) > fighters))
                 {
                     unmarked.push_back(tile);
                     break;
@@ -853,7 +872,8 @@ int32_t countFighters(GameMap& gameMap, Seat* seat)
 //! the marked tiles). Only the face is marked: tiles next to a tile the workers reach from the dungeon (reached), so
 //! that no worker is given a tile it cannot get to (the engine searches a way to every marked tile); the tiles behind
 //! follow at the next looks. A tile next to an area where enemy creatures walk is dug only when the seat has at least
-//! as many fighters as enemies stand in that area: digging it opens the dungeon to them.
+//! as many fighters as enemies of that area stand near the tile
+//! (enemiesNear): digging it opens the dungeon to them.
 void markDiggable(Player* keeper, const std::set<Tile*>& reached, const EnemyAreas& areas, int32_t fighters,
     const std::vector<Tile*>& tiles, bool goldOnly, size_t& budget)
 {
@@ -875,7 +895,7 @@ void markDiggable(Player* keeper, const std::set<Tile*>& reached, const EnemyAre
             if(reached.count(neighbor) > 0)
                 open = true;
             std::map<Tile*, size_t>::const_iterator it = areas.mArea.find(neighbor);
-            if((it != areas.mArea.end()) && (areas.mEnemies[it->second] > fighters))
+            if((it != areas.mArea.end()) && (enemiesNear(areas, it->second, *tile) > fighters))
                 opensToEnemies = true;
         }
         if(!open || opensToEnemies)
