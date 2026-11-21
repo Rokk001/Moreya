@@ -51,12 +51,16 @@ jobs:
 
       - name: Restore dependency cache
         id: deps-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/deps
           key: deps-${{ runner.os }}-ubuntu24-${{ env.DEPS_REVISION }}-${{ steps.python.outputs.python-version }}-${{ env.OIS_TAG }}-${{ env.OGRE_TAG }}-${{ env.CEGUI_TAG }}-${{ env.SFML_TAG }}-${{ env.PYBIND11_TAG }}-${{ hashFiles('scripts/win32/patches/*.patch') }}
+          # A partial cache from a failed run keeps the dependencies that were finished.
+          restore-keys: |
+            deps-${{ runner.os }}-ubuntu24-${{ env.DEPS_REVISION }}-${{ steps.python.outputs.python-version }}-${{ env.OIS_TAG }}-${{ env.OGRE_TAG }}-${{ env.CEGUI_TAG }}-${{ env.SFML_TAG }}-${{ env.PYBIND11_TAG }}-${{ hashFiles('scripts/win32/patches/*.patch') }}-partial-
 
       - name: Build dependencies
+        id: deps
         if: steps.deps-cache.outputs.cache-hit != 'true'
         env:
           DEPS: ${{ runner.temp }}/deps
@@ -68,20 +72,27 @@ jobs:
           common=(-G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_INSTALL_PREFIX=$DEPS" "-DCMAKE_PREFIX_PATH=$DEPS"
                   -DCMAKE_INSTALL_LIBDIR=lib -DBUILD_SHARED_LIBS=ON)
 
+          if [ ! -e "$DEPS/.done-OIS" ]; then
           echo "::group::OIS"
           git clone --depth 1 --branch "$OIS_TAG" https://github.com/wgois/OIS.git "$SRC/ois"
           cmake -S "$SRC/ois" -B "$SRC/ois/build" "${common[@]}" -DOIS_BUILD_DEMOS=OFF -DOIS_BUILD_SHARED_LIBS=ON \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build "$SRC/ois/build" --target install
           echo "::endgroup::"
+          touch "$DEPS/.done-OIS"
+          fi
 
+          if [ ! -e "$DEPS/.done-pybind11" ]; then
           echo "::group::pybind11"
           git clone --depth 1 --branch "$PYBIND11_TAG" https://github.com/pybind/pybind11.git "$SRC/pybind11"
           cmake -S "$SRC/pybind11" -B "$SRC/pybind11/build" "${common[@]}" -DPYBIND11_TEST=OFF -DPYBIND11_INSTALL=ON \
             -DPYBIND11_FINDPYTHON=ON "-DPython_ROOT_DIR=$pythonLocation"
           cmake --build "$SRC/pybind11/build" --target install
           echo "::endgroup::"
+          touch "$DEPS/.done-pybind11"
+          fi
 
+          if [ ! -e "$DEPS/.done-OGRE" ]; then
           echo "::group::OGRE"
           git clone --depth 1 --branch "$OGRE_TAG" https://github.com/OGRECave/ogre.git "$SRC/ogre"
           # Same prerequisite patches and order as scripts/win32/install-ogre-prereq.ps1
@@ -104,7 +115,10 @@ jobs:
             -DOGRE_INSTALL_DOCS=OFF -DOGRE_ENABLE_PRECOMPILED_HEADERS=OFF
           cmake --build "$SRC/ogre/build" --target install
           echo "::endgroup::"
+          touch "$DEPS/.done-OGRE"
+          fi
 
+          if [ ! -e "$DEPS/.done-CEGUI" ]; then
           echo "::group::CEGUI"
           git clone --depth 1 --branch "$CEGUI_TAG" "$CEGUI_REPO" "$SRC/cegui"
           # Same prerequisite patches and order as scripts/win32/install-cegui-prereq.ps1
@@ -130,13 +144,25 @@ jobs:
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build "$SRC/cegui/build" --target install
           echo "::endgroup::"
+          touch "$DEPS/.done-CEGUI"
+          fi
 
+          if [ ! -e "$DEPS/.done-SFML" ]; then
           echo "::group::SFML"
           git clone --depth 1 --branch "$SFML_TAG" https://github.com/SFML/SFML.git "$SRC/sfml"
           cmake -S "$SRC/sfml" -B "$SRC/sfml/build" "${common[@]}" -DSFML_BUILD_EXAMPLES=OFF -DSFML_BUILD_DOC=OFF \
-            -DSFML_BUILD_WINDOW=ON -DSFML_BUILD_GRAPHICS=ON -DSFML_BUILD_AUDIO=ON -DSFML_BUILD_NETWORK=ON
+            -DSFML_USE_SYSTEM_DEPS=OFF -DSFML_BUILD_WINDOW=ON -DSFML_BUILD_GRAPHICS=ON -DSFML_BUILD_AUDIO=ON -DSFML_BUILD_NETWORK=ON
           cmake --build "$SRC/sfml/build" --target install
           echo "::endgroup::"
+          touch "$DEPS/.done-SFML"
+          fi
+
+      - name: Save dependency cache
+        if: always() && steps.deps-cache.outputs.cache-hit != 'true' && steps.deps.conclusion != 'skipped'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/deps
+          key: ${{ steps.deps.conclusion == 'success' && steps.deps-cache.outputs.cache-primary-key || format('{0}-partial-{1}-{2}', steps.deps-cache.outputs.cache-primary-key, github.run_id, github.run_attempt) }}
 
       - name: Configure game
         env:
