@@ -142,6 +142,8 @@ material MenuCloth : RTSS/NormalMapping_MultiPass
     }
 }
 
+// Glowing coal bed of the braziers and the forge: dark lumps with glowing cracks (tools/gen_menu_ember_texture.py),
+// so the ember seen from above is no flat orange surface; the texture multiplies the lit and emissive ember colour.
 material MenuEmber
 {
     technique
@@ -151,6 +153,7 @@ material MenuEmber
             ambient 0.9 0.16 0.015 1
             diffuse 0.9 0.16 0.015 1
             emissive 0.9 0.16 0.015
+            texture_unit { texture MenuEmberCoals.png gamma }
         }
     }
 }

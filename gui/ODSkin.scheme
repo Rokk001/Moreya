@@ -5,6 +5,7 @@
     <Imageset filename="DungeonbookFrame.imageset" name="DungeonbookFrame" />
     <Imageset filename="DungeonbookIcons.imageset" name="DungeonbookIcons" />
     <Imageset filename="ODIcons.imageset" name="OpenDungeonsIcons" />
+    <Imageset filename="RaidHud.imageset" name="RaidHud" />
     <Imageset filename="RoomArtworkSpaBath.imageset" name="RoomArtworkSpaBath" />
     <Imageset filename="RoomArtworkGhostVessel.imageset" name="RoomArtworkGhostVessel" />
     <Imageset filename="RoomArtworkGhostManaCrystal.imageset" name="RoomArtworkGhostManaCrystal" />
@@ -50,6 +51,7 @@
     <Imageset filename="ChampionCrown.imageset" name="ChampionCrown" />
     <Imageset filename="CreatureSkillIcons.imageset" name="CreatureSkillIcons" />
     <Imageset filename="GoalStatus.imageset" name="GoalStatus" />
+    <Imageset filename="HandCooldown.imageset" name="HandCooldown" />
     <Imageset filename="ODLogo.imageset" name="ODLogo" />
     <Imageset filename="ODMainMenuLogo.imageset" name="ODMainMenuLogo" />
     <Imageset filename="ODBackgrounds.imageset" name="ODBackgrounds" />
@@ -124,6 +126,8 @@
     <FalagardMapping lookNFeel="OD/MenuTextButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuTextButton" />
     <FalagardMapping lookNFeel="OD/MenuIconTextButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuIconTextButton" />
     <FalagardMapping lookNFeel="OD/MenuCompactButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuCompactButton" />
+    <FalagardMapping lookNFeel="OD/MenuIconButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuIconButton" />
+    <FalagardMapping lookNFeel="OD/MenuPlate" renderer="Core/Default" targetType="DefaultWindow" windowType="OD/MenuPlate" />
     <FalagardMapping lookNFeel="OD/MenuFilterButton" renderer="Core/ToggleButton" targetType="CEGUI/RadioButton" windowType="OD/MenuFilterButton" />
     <FalagardMapping lookNFeel="OD/LoadListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/LoadListbox" />
     <FalagardMapping lookNFeel="OD/SheetWindow" renderer="Core/FrameWindow" targetType="CEGUI/FrameWindow" windowType="OD/SheetWindow" />
@@ -131,6 +135,11 @@
     <FalagardMapping lookNFeel="OD/SheetPanel" renderer="Core/Default" targetType="DefaultWindow" windowType="OD/SheetPanel" />
     <FalagardMapping lookNFeel="OD/SheetStaticText" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/SheetStaticText" />
     <FalagardMapping lookNFeel="OD/SheetListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/SheetListbox" />
+    <FalagardMapping lookNFeel="OD/SheetScrollbarThumb" renderer="Core/Button" targetType="CEGUI/Thumb" windowType="OD/SheetScrollbarThumb" />
+    <FalagardMapping lookNFeel="OD/SheetScrollbar" renderer="Core/Scrollbar" targetType="CEGUI/Scrollbar" windowType="OD/SheetScrollbar" />
+    <FalagardMapping lookNFeel="OD/SheetComboEditbox" renderer="Core/Editbox" targetType="CEGUI/Editbox" windowType="OD/SheetComboEditbox" />
+    <FalagardMapping lookNFeel="OD/SheetComboDropList" renderer="Core/Listbox" targetType="CEGUI/ComboDropList" windowType="OD/SheetComboDropList" />
+    <FalagardMapping lookNFeel="OD/SheetCombobox" renderer="Core/Default" targetType="CEGUI/Combobox" windowType="OD/SheetCombobox" />
     <FalagardMapping lookNFeel="OD/ScreenBorder" renderer="Core/Default" targetType="DefaultWindow" windowType="OD/ScreenBorder" />
     <FalagardMapping lookNFeel="OD/MenuTitle" renderer="Core/StaticText" targetType="DefaultWindow" windowType="OD/MenuTitle" />
     <FalagardMapping lookNFeel="OD/MenuScrollablePane" renderer="Core/ScrollablePane" targetType="CEGUI/ScrollablePane" windowType="OD/MenuScrollablePane" />

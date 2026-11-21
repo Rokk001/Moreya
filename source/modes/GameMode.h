@@ -502,6 +502,11 @@ private:
     //! The Workers window of the keeper (key J and the HUD button)
     std::unique_ptr<WorkersWindow> mWorkersWindow;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
+    //! \brief The crossed-out hand over the hovered creature while the hand cooldown runs (K5), created on first use.
+    CEGUI::Window* mHandCooldownIcon = nullptr;
+    //! \brief Name of the creature under the pointer that the keeper could otherwise pick up, set every frame by
+    //! handlePlayerActionNone; empty when the pointer is not over such a creature.
+    std::string mHandCooldownCreatureName;
     //! \brief Creates, updates and places the held creature portraits.
     void refreshHeldCreatureIcons();
     //! \brief Label next to the hand showing the width x height of the area being dragged
@@ -573,6 +578,9 @@ private:
     std::vector<Tile*> mPreviewTiles;
     //! \brief Tiles currently outlined in the world.
     std::vector<Tile*> mSelectedTiles;
+    //! \brief Places beyond the map edge (no tile) that the dig selection would mark or unmark; they are outlined and
+    //! marked like undiscovered tiles, so the player is never told where the map ends.
+    std::vector<std::pair<int, int> > mPreviewEdgePlaces;
 
     //! \brief Index of the event in the game event queue (for zooming automatically)
     uint32_t mIndexEvent;
@@ -639,6 +647,21 @@ private:
     //! \brief Picks room floors through walls and uses normal surface picking for other actions.
     //! While dragging, any tile (also a wall) may end the drag so the valid floors inside are built.
     bool findActionTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position, bool dragging);
+
+    //! \brief Finds the place beyond the map edge under the pointer, if the digging marks apply there.
+    //! A place beyond the edge can be marked for digging like an undiscovered tile: only while no creature is
+    //! held and no other action is selected. Every ground point beyond the edge is a place: one farther out than
+    //! the reach of EdgePlaces.h is moved to the outermost markable ring, so the marking never refuses. A drag also
+    //! keeps its selection while the pointer is above the horizon.
+    //! \param arg The mouse event, for the screen size
+    //! \param x Receives the place coordinate
+    //! \param y Receives the place coordinate
+    //! \param position Receives the point under the pointer
+    //! \return true if the pointer is over such a place
+    bool findDigEdgePlaceFromMouse(const OIS::MouseEvent& arg, int& x, int& y, Ogre::Vector3& position);
+
+    //! \brief Tells whether the coordinates are a place beyond the map edge that can be marked for digging now.
+    bool isDigEdgePlace(int x, int y) const;
 
     //! \brief A sub-function called by mouseMoved()
     //! It will handle the potential mouse wheel logic
@@ -838,9 +861,9 @@ private:
 
     //! \brief Called when there is a mouse input change
     void checkInputCommand();
-    //! \brief Restores the ordinary context area and hides its item image and quality frame.
+    //! \brief Takes the item card of a hovered loot bag away.
     void clearItemContextImage();
-    //! \brief Shows one bag's image, quality frame and complete pointer tooltip.
+    //! \brief Shows the standard item tooltip of one loot bag at the pointer.
     void showItemContext(const ItemBagEntity& bag);
     //! \brief Handles the hover when no action is selected: unexplored tiles get a dig hint, otherwise
     //! the closest pickable entity, visible item bag, wall or ground under the pointer is described.
@@ -868,12 +891,13 @@ private:
     void updateSelectedTiles();
     //! \brief Scale of the hand feedback (action icon, pointer text, held portraits) relative to its design size.
     float getHandFeedbackScale() const;
-    //! \brief Shows the seconds left of the hand cooldown of a campaign level next to the hand (HL2), scaled with the
-    //! hand feedback and kept inside the screen; empty while no cooldown runs.
-    //! \param pointerX Horizontal position of the pointer in pixels.
-    //! \param pointerY Vertical position of the pointer in pixels.
+    //! \brief Hides the prohibition picture and the number of the hand cooldown.
+    void hideHandCooldownIcon();
+    //! \brief Shows the crossed-out hand with the whole seconds left of the hand cooldown (HL2, K5) over the
+    //! creature under the pointer that the keeper could otherwise pick up; nothing while no cooldown runs or the pointer
+    //! is not over such a creature.
     //! \param scale Scale of the hand feedback (getHandFeedbackScale).
-    void refreshHandCooldownText(float pointerX, float pointerY, float scale);
+    void refreshHandCooldownIcon(float scale);
     //! \brief Highlights the given creature and restores the previously highlighted one.
     void setHighlightedCreature(Creature* creature);
 

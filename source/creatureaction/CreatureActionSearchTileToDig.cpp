@@ -24,6 +24,7 @@
 #include "entities/TreasuryObject.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/WorkerDigOrder.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
 #include "gamemap/RoomObjectNavigation.h"
@@ -49,7 +50,9 @@ std::function<bool()> CreatureActionSearchTileToDig::action()
         std::ref(mCreature), getNbTurns(), mForced);
 }
 
-//! \brief Searches eligible work while the worker retains this job.
+//! \brief Searches eligible work while the worker retains this job. The wall is chosen by WorkerDigOrder: untouched
+//! walls first (right after a delivery also no wall a load was carried away from), with "gold first" gold and gem
+//! walls before the others, then the place the worker stands on, then the nearest.
 bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, int32_t nbTurns, bool forced)
 {
     if(creature.getDigRate() <= 0.0)
@@ -89,9 +92,11 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
         }
     }
 
-    // Prefer untouched targets, and optionally gold and gems, before distance.
+    // Prefer untouched targets, and optionally gold and gems, before distance. Right after a delivery a wall a load
+    // was carried away from counts as touched, so the digger does not stay on one gold wall until it is empty.
     Player* tempPlayer = creature.getGameMap()->getPlayerBySeat(creature.getSeat());
     const bool goldFirst = creature.getSeat()->getWorkerJobSettings().goldFirst != 0;
+    const bool afterDelivery = creature.isDigAfterDelivery();
     const std::vector<Tile*>& sight = creature.getTilesWithinSightRadius();
     int bestGroup = 5;
     bool bestStanding = false;
@@ -106,7 +111,8 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
         if(tile == nullptr || tempPlayer == nullptr || !tile->getMarkedForDigging(tempPlayer))
             continue;
         const bool gold = tile->getType() == TileType::gold || tile->getType() == TileType::gem;
-        const int group = (goldFirst && !gold ? 2 : 0) + (tile->hasWorkerDigging() ? 1 : 0);
+        const int group = WorkerDigOrder::group(goldFirst, gold, tile->hasWorkerDigging(), tile->getDigLoadTaken(),
+            afterDelivery);
         std::vector<Tile*> positions;
         tile->canWorkerDig(creature, positions, &routeCache);
         for(Tile* standing : positions)
@@ -119,9 +125,7 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
                 continue;
             const bool here = standing == myTile;
             float dist = Pathfinding::squaredDistanceTile(*myTile, *standing);
-            if(tileToDig != nullptr && (group > bestGroup ||
-               (group == bestGroup && bestStanding && !here) ||
-               (group == bestGroup && bestStanding == here && dist >= distBest)))
+            if(!WorkerDigOrder::ranksBefore(tileToDig != nullptr, group, here, dist, bestGroup, bestStanding, distBest))
                 continue;
             bestGroup = group;
             bestStanding = here;
@@ -136,6 +140,7 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
         // We also push the dig action to lock the tile to make sure not every worker will try to go to the same tile
         if(forced)
             creature.popAction();
+        creature.setDigAfterDelivery(false);
         creature.pushAction(Utils::make_unique<CreatureActionDigTile>(creature, *tileToDig, *tilePos, forced));
         return true;
     }

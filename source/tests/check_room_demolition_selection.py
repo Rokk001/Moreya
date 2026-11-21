@@ -1,5 +1,6 @@
 """Execute the production sale routing and room filtering without a game."""
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
@@ -21,7 +22,9 @@ first = rooms.index(signature)
 second = rooms.index(signature, first + 1)
 preview = function(game, 'void GameMode::updateSelectedTiles()')
 flags = preview[preview.index('    const bool building'):preview.index('    if(!mActionTargetValid')]
-assert preview.count('colour, building || (roomDemolition && !rectangle), digging, rectangle)') == 2
+# Both preview calls pass the same thick-border flag; the edge places beyond the map follow the rectangle flag
+assert preview.count('colour, building || (roomDemolition && !rectangle), digging, rectangle,') == 2
+assert len(re.findall(r'digging, rectangle,\s+outlineEdgePlaces, edgeHeight\);', preview)) == 2
 probe = r'''
 #include <algorithm>
 #include <iostream>

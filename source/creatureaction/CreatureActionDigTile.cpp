@@ -26,6 +26,7 @@
 #include "entities/TreasuryObject.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/WorkerDigOrder.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
 #include "gamemap/Pathfinding.h"
@@ -79,7 +80,9 @@ static void payMinedGold(Creature& creature, Tile& tileDig, double gold)
         tileDig.getX(), tileDig.getY(), wholeGold);
 }
 
-//! \brief Performs digging and drops a full gold load when the worker's dig job has ended.
+//! \brief Performs digging and drops a full gold load when the worker's dig job has ended. With "gold first" off a
+//! worker that carries a full load to the treasury leaves its wall and chooses again after the delivery
+//! (WorkerDigOrder); with it on, or after a hand drop, it comes back to the same wall.
 bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos, bool forced)
 {
     Tile* myTile = creature.getPositionTile();
@@ -256,7 +259,18 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         {
             // We do not push CreatureActionType::searchEntityToCarry because we want
             // this worker to be count as digging, not as carrying stuff
-            
+            // A gold wall holds many loads. With "gold first" off the worker leaves the wall for the delivery and
+            // chooses again afterwards, where a wall a load was carried away from ranks after the untouched walls;
+            // otherwise it would stay on this wall until it is empty and dig no other wall meanwhile
+            const bool goldFirst = creature.getSeat()->getWorkerJobSettings().goldFirst != 0;
+            if(!forced && !WorkerDigOrder::keepsWallForDelivery(goldFirst))
+            {
+                tileDig.setDigLoadTaken();
+                creature.setDigAfterDelivery(true);
+                const std::vector<std::unique_ptr<CreatureAction>>& actions = creature.getActions();
+                if(!actions.empty() && actions.back()->getType() == CreatureActionType::digTile)
+                    creature.popAction();
+            }
             creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *obj, forced, true));
             if(creature.mDiggingEffect)
             {

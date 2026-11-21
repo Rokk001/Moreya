@@ -450,6 +450,18 @@ public:
     //! Used on server side only
     void tileMarkedDiggingNotifiedToPlayer(Tile* tile, bool isDigSet);
 
+    //! \brief Tells whether the place beyond the map edge is marked for digging by this seat. Such a place has no
+    //! tile; it behaves like an undiscovered tile that is never discovered (see EdgePlaces.h).
+    bool isEdgePlaceMarked(int x, int y) const;
+
+    //! \brief Marks or unmarks a place beyond the map edge for digging. Places that are not markable are ignored.
+    //! eturn true if the mark changed
+    bool setEdgePlaceMarked(int x, int y, bool isDigSet);
+
+    //! \brief The places beyond the map edge this seat has marked for digging.
+    const std::set<std::pair<int, int> >& getEdgeDigMarks() const
+    { return mEdgeDigMarks; }
+
     //! \brief Tells whether the tile is diggable by dig-capable creatures. It relies
     //! on the tile state the client knows, not on the real tile state
     //! Called on server side only
@@ -610,6 +622,8 @@ private:
     TileStateNotified* getTileStateNotified(Tile* tile);
 
     std::map<std::pair<int, int>, TileStateNotified> mTilesStateLoaded;
+    //! Places beyond the map edge marked for digging; they have no tile and are never discovered.
+    std::set<std::pair<int, int> > mEdgeDigMarks;
     //! Whether a saved sight-age section exists; legacy discovered tiles receive one initial grace period.
     bool mHasSavedOwnCreatureSightAges = false;
 

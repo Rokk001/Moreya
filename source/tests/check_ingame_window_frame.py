@@ -49,11 +49,13 @@ def imports(layout, seen):
 
 INGAME = imports('ModeGame.layout', set()) | imports('ModeEditor.layout', set()) | set(CODE_LOADED)
 # The build bar tabs, the room manager pages and the chat line are parts of windows or of the HUD, not windows; they
-# are measured with their windows below. Counted once on this branch: 43 layouts (the creature skill tree window of
-# integration/all included; 45 before INGAME-QS-11: the player information window left the game with K7, its KO setting
-# is on the Game page of the settings window, and the shared creature profile page was deleted, owner decision
-# 2026-11-18).
-assert len(INGAME) == 43, (len(INGAME), sorted(INGAME))
+# are measured with their windows below. Counted once on this branch: 42 layouts (43 before INGAME-QS-12: the creature
+# skill tree window of integration/all became the Skills page of the Dungeonbook with K7; 45 before INGAME-QS-11: the
+# player information window left the game with K7, its KO setting is on the Game page of the settings window, and the
+# shared creature profile page was deleted, owner decision 2026-11-18).
+assert len(INGAME) == 42, (len(INGAME), sorted(INGAME))
+assert 'WindowCreatureSkillTree.layout' not in INGAME and not (gui / 'WindowCreatureSkillTree.layout').exists(), \
+    'the skill tree is a page of the Dungeonbook, no window of its own (INGAME-QS-12 K7)'
 
 # ------------------------------------------------------------------------------------------------ looks
 skin = ET.parse(gui / 'OD.looknfeel').getroot()
@@ -146,10 +148,11 @@ for layout in sorted(INGAME):
         elif kind in ('OD/SheetPanel', 'OD/EventPanel'):
             panels.append((layout, window.get('name')))
             check_sheet_frame(look, PANEL_STATES, (layout, window.get('name')))
-# Counted once on this branch: 25 frame windows (the quit confirmation is imported by the game and by the editor and
-# counted once per layout file; the player information window is gone) and 3 panels (the message panels of game and
-# editor, the debriefing panel).
-assert len(frame_windows) == 25, (len(frame_windows), frame_windows)
+# Counted once on this branch: 24 frame windows (the quit confirmation is imported by the game and by the editor and
+# counted once per layout file; the player information window is gone; 25 before INGAME-QS-12, whose K7 made the
+# creature skill tree window a page of the Dungeonbook) and 3 panels (the message panels of game and editor, the
+# debriefing panel).
+assert len(frame_windows) == 24, (len(frame_windows), frame_windows)
 assert sorted(panels) == [('WindowDefeatDebriefing.layout', 'Panel'), ('WindowEvent.layout', 'GameEventText'),
                           ('WindowGameEvent.layout', 'GameEventText')], panels
 # The windows the owner named are among them.
