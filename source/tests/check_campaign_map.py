@@ -19,6 +19,9 @@ import xml.etree.ElementTree as ET
 from PIL import Image, ImageFont
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / "scripts"))
+import campaign_packages  # noqa: E402
+
 layout = ET.fromstring((root / "gui/MenuCampaign.layout").read_text(encoding="utf-8"))
 mode = (root / "source/modes/MenuModeCampaign.cpp").read_text(encoding="utf-8")
 mode_h = (root / "source/modes/MenuModeCampaign.h").read_text(encoding="utf-8")
@@ -26,9 +29,26 @@ world_cpp = (root / "source/game/CampaignWorld.cpp").read_text(encoding="utf-8")
 world_h = (root / "source/game/CampaignWorld.h").read_text(encoding="utf-8")
 campaign_cpp = (root / "source/game/Campaign.cpp").read_text(encoding="utf-8")
 gui_cpp = (root / "source/render/Gui.cpp").read_text(encoding="utf-8")
-definition = (root / "levels/campaign/Campaign.cfg").read_text(encoding="utf-8")
+# The Package.cfg texts of all wing packages in campaign order
+definition = campaign_packages.definition_text(root)
 world_text = (root / "gui/campaign/campaign-world.json").read_text(encoding="utf-8")
 world = json.loads(world_text)
+# The public map names no level and no guild: the cave of a wing finds its level by order in the wing package
+MAP_NAMES_NO_CONTENT = all("file" not in cave and "guild" not in cave for wing in world.get("wings", [])
+                           for cave in wing.get("levels", []) + [wing.get("bonus", {})])
+package_entries = campaign_packages.entries(root)
+for wing in world.get("wings", []):
+    number = str(wing.get("wing"))
+    story = [entry for entry in package_entries if entry.get("Wing") == number and entry.get("Bonus") != "1"]
+    bonus = [entry for entry in package_entries if entry.get("Wing") == number and entry.get("Bonus") == "1"]
+    for order, cave in enumerate(wing.get("levels", [])):
+        # A cave of a wing without package keeps a name of its place only
+        cave["file"] = story[order]["File"] if order < len(story) else "campaign/wing%s-cave%d" % (number, order + 1)
+        guild = campaign_packages.guild_of(story[order]) if order < len(story) else None
+        if guild is not None:
+            cave["guild"] = guild
+    if "bonus" in wing:
+        wing["bonus"]["file"] = bonus[0]["File"] if bonus else "campaign/wing%s-bonus" % number
 art = root / "gui/campaign"
 failures = []
 
@@ -47,36 +67,21 @@ def function(text, name):
 
 
 # ------------------------------------------------------------------------------------------------ expected content
-# Structure table: wing name, its 3 story maps in order with their guild (name, leader, first raid leader, origin,
-# groups, members per group, kind), and its bonus map.
+# Names of the 6 wings on the map of Moreya (public: the map shows every wing, a missing one locked)
+WING_NAMES = ['The Rotting Cellars', 'The Blood Mines', 'The Weeping Crypts', 'The Chained Depths', 'The Black Catacombs', 'The Abyssal Heart']
+# Structure table: wing number, its 3 story maps in order with their guild (name, leader, first raid leader, origin,
+# groups, members per group, kind), and its bonus map. Wing 1 here; the content repository adds wings 2 to 6
+# (checks/campaign_map.json).
 EXPECTED_WINGS = [
-    ("The Rotting Cellars", [
-        ("Brackenford", "The Mud Fists", "Elsa Brack", "", "Brackenford", 1, 5, "group"),
-        ("Coldwell", "The Iron Latch", "Hugo Cole", "", "Coldwell", 1, 5, "group"),
-        ("Ravensledge", "The Grey Fang", "Rolf Scarrow", "", "Wolfscar", 1, 10, "raid")], "Mossgate"),
-    ("The Blood Mines", [
-        ("Tinmoor", "The Deep Picks", "Merrin Tay", "", "Tinmoor", 2, 5, "group"),
-        ("Greywater", "The Drowned Oath", "Corwin Gray", "", "Greywater", 2, 5, "group"),
-        ("Highcairn", "The Stone Crown", "Hilde Cairn", "", "Highcairn", 2, 10, "raid")], "CrowshotGallery"),
-    ("The Weeping Crypts", [
-        ("Lanternhill", "The Pale Flame", "Ines Vale", "", "Lanternhill", 1, 10, "group"),
-        ("Saltmere", "The Salt Wolves", "Bram Seward", "", "Saltmere", 1, 10, "group"),
-        ("HollinFen", "The Order of the White Thorn", "Agathe Hollin", "", "Hollin Fen", 1, 25, "raid")],
-     "SkittleCavern"),
-    ("The Chained Depths", [
-        ("Cinderhollow", "The Ember Ram", "Pell Ashgrove", "", "Cinderhollow", 2, 10, "group"),
-        ("Ashcombe", "The Burnt Wheel", "Liesl Ashby", "", "Ashcombe", 2, 10, "group"),
-        ("Ironbridge", "The Anvil Host", "Gareth Fenn", "", "Ironbridge", 2, 25, "raid")], "SwarmNight"),
-    ("The Black Catacombs", [
-        ("Bellwick", "The Silent Bell", "Lorens Bell", "", "Bellwick", 1, 25, "group"),
-        ("Goldspire", "The Gilded Hand", "Alaric Penn", "", "Goldspire", 1, 25, "group"),
-        ("Kingsfall", "The Sun Court", "Prince Aurel", "", "Kingsfall", 1, 40, "raid")], "BoulderCourse"),
-    ("The Abyssal Heart", [
-        ("VarnsCrossing", "The Black Legion", "Marshal Varn", "", "Varn's Crossing", 2, 25, "group"),
-        ("Wraithwood", "The Ash Coven", "Elowen Ash", "", "Wraithwood", 2, 25, "group"),
-        ("HollowmarkCitadel", "The Crown Eternal", "High King Castellan", "Sabine Rook", "Hollowmark Citadel", 2, 40,
-         "raid")], "TwistingHalls"),
+    (1, [
+        ('Brackenford', 'The Mud Fists', 'Elsa Brack', '', 'Brackenford', 1, 5, 'group'),
+        ('Coldwell', 'The Iron Latch', 'Hugo Cole', '', 'Coldwell', 1, 5, 'group'),
+        ('Ravensledge', 'The Grey Fang', 'Rolf Scarrow', '', 'Wolfscar', 1, 10, 'raid'),
+    ], 'Mossgate'),
 ]
+CONTENT = campaign_packages.content_data(root, "campaign_map")
+if CONTENT is not None:
+    EXPECTED_WINGS += [(row[0], [tuple(level) for level in row[1]], row[2]) for row in CONTENT["wings"]]
 EXPECTED_STORY_CAVES = 18
 EXPECTED_BONUS_CAVES = 6
 MAP_SIZE = (2560, 1600)
@@ -91,19 +96,26 @@ check(tuple(world.get("size", ())) == MAP_SIZE, "the map must be 2560 x 1600 pix
 check("provinces" not in world and "sites" not in world, "the provinces and bonus sites of the world map must be gone")
 check(not re.search(r'"T\d\d[AB]?"|"B0\d"|mask_rgb|world_idmap', world_text), "no province id, mask or id map may remain")
 wings = world.get("wings", [])
-check(len(wings) == len(EXPECTED_WINGS), "the map needs exactly 6 wings")
+check(MAP_NAMES_NO_CONTENT, "the caves of the map must name no level file and no guild (they come with the packages)")
+check(len(wings) == len(WING_NAMES), "the map needs exactly 6 wings")
+check([row[0] for row in EXPECTED_WINGS] == ([1, 2, 3, 4, 5, 6] if CONTENT is not None else [1]),
+      "the structure table needs wing 1 and, with the content repository, wings 2 to 6")
+check(CONTENT is not None or campaign_packages.missing_wings(root) == [2, 3, 4, 5, 6],
+      "without content packages wings 2 to 6 must be missing")
+for index, wing in enumerate(wings, 1):
+    check(wing.get("wing") == index, "wing %d is out of order" % index)
+    check(wing.get("name") == WING_NAMES[index - 1], "wing %d must be %s" % (index, WING_NAMES[index - 1]))
+    check(len(wing.get("levels", [])) == 3, "wing %d needs 3 level caves" % index)
+    check("guild" not in wing.get("bonus", {}), "the bonus cave of wing %d has no raid" % index)
 story_caves = [level for wing in wings for level in wing.get("levels", [])]
 bonus_caves = [wing["bonus"] for wing in wings if "bonus" in wing]
 check(len(story_caves) == EXPECTED_STORY_CAVES, "the map needs 18 level caves")
 check(len(bonus_caves) == EXPECTED_BONUS_CAVES, "the map needs 6 bonus caves")
-for index, (wing, expected) in enumerate(zip(wings, EXPECTED_WINGS), 1):
-    name, expected_levels, bonus = expected
-    check(wing.get("wing") == index, "wing %d is out of order" % index)
-    check(wing.get("name") == name, "wing %d must be %s" % (index, name))
-    check(len(wing.get("levels", [])) == 3, "wing %d needs 3 level caves" % index)
+# Every wing of the structure table: its levels and guilds come with its package
+for index, expected_levels, bonus in EXPECTED_WINGS:
+    wing = wings[index - 1] if index <= len(wings) else {}
     check(wing.get("bonus", {}).get("file") == "campaign/%s.level" % bonus,
           "wing %d needs the bonus cave %s" % (index, bonus))
-    check("guild" not in wing.get("bonus", {}), "the bonus cave of wing %d has no raid" % index)
     for level, row in zip(wing.get("levels", []), expected_levels):
         map_name, guild_name, leader, first, origin, groups, size, kind = row
         label = "wing %d %s" % (index, map_name)
@@ -121,9 +133,10 @@ for index, (wing, expected) in enumerate(zip(wings, EXPECTED_WINGS), 1):
             if path.is_file():
                 with Image.open(path) as image:
                     check(image.size == expected_size, label + ": %s must be %d x %d" % ((key,) + expected_size))
-check(len({level["guild"]["banner"] for level in story_caves if "guild" in level}) == EXPECTED_STORY_CAVES,
+GUILDS = 3 * len(EXPECTED_WINGS)
+check(len({level["guild"]["banner"] for level in story_caves if "guild" in level}) == GUILDS,
       "every guild needs its own banner")
-check(len({level["guild"]["portrait"] for level in story_caves if "guild" in level}) == EXPECTED_STORY_CAVES,
+check(len({level["guild"]["portrait"] for level in story_caves if "guild" in level}) == GUILDS,
       "every leader needs its own portrait")
 check((art / world.get("base", "-")).is_file(), "missing map image " + world.get("base", "-"))
 if (art / world.get("base", "-")).is_file():
@@ -142,35 +155,39 @@ for part in re.split(r"(?m)^\[Level\]", definition.replace("\r", ""))[1:]:
     fields = dict(line.split("=", 1) for line in part.splitlines() if "=" in line and not line.startswith("#"))
     if "File" in fields:
         levels.append(fields)
-check(len(levels) == EXPECTED_STORY_CAVES + EXPECTED_BONUS_CAVES, "the campaign must have 24 levels")
+check(len(levels) == 4 * len(EXPECTED_WINGS), "the packages must have %d levels" % (4 * len(EXPECTED_WINGS)))
 check(not any("Province" in f for f in levels), "no level may name a province any more")
 cfg_story = [(f["File"], f.get("Wing")) for f in levels if f.get("Bonus") != "1"]
-map_story = [(level.get("file"), str(wing.get("wing"))) for wing in wings for level in wing.get("levels", [])]
-check(cfg_story == map_story, "the story caves of the map must be the story levels of Campaign.cfg in their order")
+map_story = [(level.get("file"), str(wing.get("wing"))) for wing in wings for level in wing.get("levels", [])
+             if level.get("file") in [f["File"] for f in levels]]
+check(cfg_story == map_story, "the story caves of the map must be the story levels of the packages in their order")
 cfg_bonus = sorted((f["File"], f.get("Wing")) for f in levels if f.get("Bonus") == "1")
-map_bonus = sorted((wing["bonus"]["file"], str(wing.get("wing"))) for wing in wings if "bonus" in wing)
-check(cfg_bonus == map_bonus, "the bonus caves of the map must be the bonus levels of Campaign.cfg in their wings")
+map_bonus = sorted((wing["bonus"]["file"], str(wing.get("wing"))) for wing in wings if "bonus" in wing
+                   and wing["bonus"]["file"] in [f["File"] for f in levels])
+check(cfg_bonus == map_bonus, "the bonus caves of the map must be the bonus levels of the packages in their wings")
 for f in levels:
     check(f.get("Wing", "") in ("1", "2", "3", "4", "5", "6"), f["File"] + " has no Wing setting from 1 to 6")
     check("Difficulty" not in f, f["File"] + " still has a per-level Difficulty setting (only the campaign difficulty exists)")
 check('key == "Province"' not in campaign_cpp and 'key == "Wing"' in campaign_cpp and 'key == "Warden"' in campaign_cpp,
       "the reader must know Wing and Warden and no longer read Province")
 check('key == "Map"' not in campaign_cpp and "mMapBlocks" not in campaign_cpp, "the old territory settings must be gone")
-check("size_t Campaign::findLevelByFile(const std::string& file) const" in campaign_cpp,
-      "the map finds the level of a cave by its file")
+check("size_t Campaign::findLevelInWing(uint32_t wing, bool bonus, size_t order) const" in campaign_cpp
+      and "campaign.findLevelInWing(worldCave.mWing, worldCave.mBonus, worldCave.mOrder)" in world_cpp,
+      "the map finds the level of a cave by its wing and its order")
+for key in ('"Guild"', '"GuildLeader"', '"GuildFirstLeader"', '"GuildOrigin"', '"GuildGroups"', '"GuildSize"',
+            '"GuildKind"', '"GuildBanner"', '"GuildPortrait"'):
+    check("key == " + key in campaign_cpp, "the package reader must read the guild key " + key)
 
 # The loader: 6 wings in order, 3 story caves with a guild each, one bonus cave each; no provinces or id map
 check("static const uint32_t NUM_WINGS = 6;" in world_h and "static const uint32_t STORY_CAVES_PER_WING = 3;" in world_h,
       "the loader must require 6 wings of 3 story caves")
-importer = world_cpp[world_cpp.index("bool CampaignWorld::importDefinition"):world_cpp.index("size_t CampaignWorld::findCave")]
+importer = world_cpp[world_cpp.index("bool CampaignWorld::importDefinition"):world_cpp.index("size_t CampaignWorld::findLevel")]
 for token in ('get_child("wings")', "wing.mNumber != mWings.size() + 1", "levels.size() != STORY_CAVES_PER_WING",
-              'readGuild(level->second.get_child("guild")', 'node.get_child("bonus")', "mWings.size() != NUM_WINGS"):
+              'node.get_child("bonus")', "mWings.size() != NUM_WINGS"):
     check(token in importer, "the loader must check " + token)
+check('"guild"' not in world_cpp and '"file"' not in world_cpp, "the map loader reads no level file and no guild")
 for gone in ("Province", "mask", "IdMap", "provinces", "sites"):
     check(gone not in world_cpp and gone not in world_h, "the loader must not know " + gone + " any more")
-guild_reader = world_cpp[world_cpp.index("bool readGuild"):world_cpp.index("std::string countText")]
-for key in ('"name"', '"leader"', '"first_leader"', '"origin"', '"groups"', '"size"', '"kind"', '"banner"', '"portrait"'):
-    check(key in guild_reader, "the guild reader must read " + key)
 
 # ------------------------------------------------------------------------------------------------ CM3: progress
 state = world_cpp[world_cpp.index("CampaignCaveState CampaignWorld::getCaveState"):
@@ -346,12 +363,22 @@ def scaled_rectangle(values, parent, scale):
 
 # The texts drawn on the map: (what, rectangle in map pixels, font constant, texts, wrapped)
 titles = {f["File"]: f.get("Title", "") for f in levels}
+# A cave of a wing without package says that the wing is coming in Early Access
+for wing in wings:
+    for cave in wing["levels"]:
+        titles.setdefault(cave["file"], campaign_packages.MISSING_WING_TEXT)
+check('MISSING_WING_TEXT = "%s"' % campaign_packages.MISSING_WING_TEXT
+      in (root / "source/game/CampaignPackages.cpp").read_text(encoding="utf-8"),
+      "the game names a missing wing as the checks do")
 map_texts = [("title", world["title_cartouche"], "FONT_TITLE", [constant("CAMPAIGN_TITLE")], False)]
 for wing in wings:
-    map_texts.append(("wing %s label" % wing["wing"], wing["label"], "FONT_WING", [wing["name"] + "   3 / 3"], True))
+    map_texts.append(("wing %s label" % wing["wing"], wing["label"], "FONT_WING",
+                      [wing["name"] + "   3 / 3", wing["name"]], True))
     for cave in wing["levels"]:
         map_texts.append((cave["file"] + " label", cave["label"], "FONT_CAVE", [titles.get(cave["file"], "")], True))
     for level in wing["levels"]:
+        if "guild" not in level:
+            continue
         guild = level["guild"]
         leader = ("Leaders: %s and %s" % (guild["first_leader"], guild["leader"]) if guild.get("first_leader")
                   else "Leader: " + guild["leader"])
@@ -407,7 +434,8 @@ for name in controls:
 tooltip_size = (float(constant("TOOLTIP_WIDTH")), float(constant("TOOLTIP_HEIGHT")))
 tooltip_texts = ["%s\n%s\nGuild: %s\nState: Defeated, can be played again"
                  % (titles.get(level["file"], ""), wing["name"], level["guild"]["name"])
-                 for wing in wings for level in wing["levels"]]
+                 for wing in wings for level in wing["levels"] if "guild" in level]
+tooltip_texts += ["%s\n%s\nState: Locked" % (campaign_packages.MISSING_WING_TEXT, wing["name"]) for wing in wings]
 tooltip_texts += ["%s\nBonus cave of %s\nState: Cleared, can be played again"
                   % (titles.get(wing["bonus"]["file"], ""), wing["name"]) for wing in wings]
 measured = 0
@@ -474,5 +502,5 @@ if failures:
     print("\n".join(failures))
     sys.exit(1)
 print("campaign map checks passed: 6 wings, %d level caves, %d bonus caves, %d guilds; %d text fits at %d screens x %d "
-      "UI scales; the campaign hall shows the map of Moreya" % (len(story_caves), len(bonus_caves), len(story_caves),
+      "UI scales; the campaign hall shows the map of Moreya" % (len(story_caves), len(bonus_caves), GUILDS,
                                                                 measured, len(SCREENS), len(USER_SCALES)))

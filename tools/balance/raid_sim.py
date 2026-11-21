@@ -109,8 +109,6 @@ OTHER_ROLES = ["melee", "ranged", "healer", "caster", "tank"]
 TEMPLATE_ROLES = {"Guardian": "tank", "Protector": "tank", "Healer": "healer", "Marksman": "ranged",
                   "Hunter": "ranged", "Skirmisher": "ranged", "Destroyer": "caster", "Hexer": "caster"}
 
-CAMPAIGN = REPO / "levels" / "campaign"
-
 GATE = (33, 33)
 # Free dirt tiles near the keeper's heart (5..9) where the keeper force starts, row by row
 KEEPER_AREA = [(x, y) for y in range(11, 21) for x in range(11, 18)]
@@ -269,7 +267,10 @@ def adjust_members(raid, shift, healers):
 
 def make_campaign_level(params, folder):
     """Writes the variant of a story level (countdown, interval, escape share, composition) and returns its path."""
-    text = (CAMPAIGN / ("%s.level" % params["level"])).read_text(encoding="utf-8")
+    # The story level of its wing package (wing 1 public, wings 2 to 6 from the content repository)
+    sys.path.insert(0, str(REPO / "scripts"))
+    import campaign_packages
+    text = campaign_packages.read_level(REPO, params["level"])
     block = re.search(r"^\[Raid\]$.*?^\[/Raid\]$", text, re.S | re.M)
     raid = block.group(0)
     for key, value in (("Countdown", params["countdown"]), ("Interval", params.get("interval_level")),

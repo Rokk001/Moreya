@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Check campaign preview assets without compiling or starting the game.
 
-Run with --self-test to exercise malformed assets entirely in memory.
+Run with --self-test to exercise malformed assets entirely in memory. The levels come from the campaign wing packages
+(scripts/campaign_packages.py): all 24 with the content repository, the 4 of wing 1 without it. The image
+specification of a public level lies in materials/campaign-previews/, that of a content level in docs/previews/ of
+the content repository.
 """
 import argparse
 from io import BytesIO
@@ -14,8 +17,11 @@ import zlib
 
 from PIL import Image
 
-# 18 story levels and 6 bonus levels in 6 wings
-EXPECTED_LEVELS = 24
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import campaign_packages  # noqa: E402
+
+# 18 story levels and 6 bonus levels in 6 wings; the public package alone has 3 story levels and 1 bonus level
+EXPECTED_LEVELS = 24 if campaign_packages.has_content(Path(__file__).resolve().parents[2]) else 4
 PREVIEW_WIDTH = 640
 PREVIEW_HEIGHT = 360
 MAX_PREVIEW_BYTES = 400 * 1024
@@ -198,8 +204,8 @@ def compact_goal_fit_errors(root):
     for kind in ("KillAllEnemies", "ProtectDungeonTemple"):
         text = (root / ("source/goals/Goal" + kind + ".cpp")).read_text(encoding="utf-8")
         descriptions[kind] = re.search(r"getDescription\([^)]*\)\s*\{\s*return \"([^\"]+)\";", text)[1]
-    for entry in read_levels((root / "levels/campaign/Campaign.cfg").read_text(encoding="utf-8")):
-        text = (root / "levels" / entry["File"]).read_text(encoding="utf-8")
+    for entry in campaign_packages.entries(root):
+        text = entry["_path"].read_text(encoding="utf-8")
         classic = [descriptions[row.split()[0]] for row in text.split("[Goals]", 1)[1].split("[/Goals]", 1)[0].splitlines() if row.strip() and not row.lstrip().startswith("#")]
         objectives = [row.split(None, 4)[4] for row in text.splitlines() if row.startswith("Action\tobjectiveid\t")]
         hints = [row.split(None, 3)[3] for row in text.splitlines() if row.startswith("Action\thint\t")]
@@ -251,7 +257,7 @@ def compact_goal_fit_errors(root):
 # Validate every configured preview and the briefing image window.
 def check_repository(root):
     failures = []
-    levels = read_levels((root / "levels/campaign/Campaign.cfg").read_text(encoding="utf-8"))
+    levels = campaign_packages.entries(root)
     if len(levels) != EXPECTED_LEVELS:
         failures.append("campaign must contain %d levels" % EXPECTED_LEVELS)
     art = (root / "gui/campaign").resolve()
@@ -269,7 +275,9 @@ def check_repository(root):
             failures.append(province + ": missing image " + preview)
         else:
             failures.extend(province + ": " + error for error in png_errors(image.read_bytes()))
-        if not (root / "materials/campaign-previews" / (Path(preview).stem + ".md")).is_file():
+        specifications = (root / "materials/campaign-previews" if fields["_public"]
+                          else campaign_packages.content_repository(root) / "docs/previews")
+        if not (specifications / (Path(preview).stem + ".md")).is_file():
             failures.append(province + ": missing image specification")
     layout = ET.fromstring((root / "gui/MenuCampaign.layout").read_text(encoding="utf-8"))
     if not any(window.get("name") == "BriefingImage" and window.get("type") == "OD/StaticImage"

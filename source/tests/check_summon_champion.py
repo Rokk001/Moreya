@@ -5,6 +5,7 @@ price / drain = 48 seconds. The champion is the only creature that cannot be hur
 researchable, the complete campaign Heartstone unlocks it."""
 from pathlib import Path
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
@@ -75,10 +76,14 @@ assert "SkillType::spellSummonChampion, championAvailable, championAvailable" in
 campaign_state = read("source/game/Campaign.cpp")
 assert "return mSavedChampionAvailable;" in campaign_state and "return isChampionAvailableNoLock(mPlayedLevel);" in campaign_state
 assert "return mLevels[index].mChampion;" in campaign_state, "only in the levels with Champion=1"
-definition = read("levels/campaign/Campaign.cfg").replace("\r", "")
+# The Package.cfg texts of the wing packages; wings 4 to 6 come from the content repository
+sys.path.insert(0, str(repo / "scripts"))
+import campaign_packages  # noqa: E402
+definition = campaign_packages.definition_text(repo)
 champion_wings = sorted(set(re.search(r"^Wing=(\d)$", block, re.M).group(1)
                             for block in definition.split("\n[Level]\n")[1:] if "\nChampion=1\n" in block))
-assert champion_wings == ["4", "5", "6"], "Summon champion from wing 4 on"
+assert champion_wings == (["4", "5", "6"] if campaign_packages.has_content(repo) else []), \
+    "Summon champion from wing 4 on"
 
 # The buttons exist in both windows, the tree node stays hidden
 spells_tab = ET.parse(repo / "gui/WindowTabSpells.layout").find('.//Window[@name="SummonChampionButton"]')

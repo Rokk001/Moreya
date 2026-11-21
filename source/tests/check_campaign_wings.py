@@ -1,6 +1,10 @@
 """Static checks of the campaign structure of Moreya; compiles nothing and never starts a game.
 
-Campaign.cfg lists exactly 18 story levels (6 wings x 3) in the fixed order and one bonus level
+The campaign is read from its wing packages (scripts/campaign_packages.py): wing 1 from the public tree, wings 2 to 6
+from the content repository with their fixed rows; without it the public package is checked alone and wings 2 to 6
+must be missing.
+
+The wing packages list exactly 18 story levels (6 wings x 3) in the fixed order and one bonus level
 per wing; the Heartstone has 3 shards in level 2 of wings 1 to 3; Summon champion comes from wing 4
 with all shards; the first completion of a bonus level unlocks 1 Epic, 1 Rare and 1 Common item that
 the merchant of every later level sells once; every level starts fresh. The runtime rules themselves
@@ -17,65 +21,36 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import campaign_packages  # noqa: E402
 
 # Fixed expected structure: (file, wing, title, bonus, shard); Summon champion in wings 4 to 6, every bonus level
-# unlocks one Epic, one Rare and one Common item
-EXPECTED = (
-    ("campaign/Brackenford.level", "1", "Mold Pit", False, False),
-    ("campaign/Coldwell.level", "1", "Drowned Larder", False, True),
-    ("campaign/Ravensledge.level", "1", "Rat Warren", False, False),
-    ("campaign/Mossgate.level", "1", "The Forgotten Pit", True, False),
-    ("campaign/Tinmoor.level", "2", "Bleeding Seam", False, False),
-    ("campaign/Greywater.level", "2", "Chain Gallery", False, True),
-    ("campaign/Highcairn.level", "2", "Slag Pit", False, False),
-    ("campaign/CrowshotGallery.level", "2", "The Gallery of Crows", True, False),
-    ("campaign/Lanternhill.level", "3", "Ossuary", False, False),
-    ("campaign/Saltmere.level", "3", "Tomb of Whispers", False, True),
-    ("campaign/HollinFen.level", "3", "Bone Chapel", False, False),
-    ("campaign/SkittleCavern.level", "3", "The Skull Lanes", True, False),
-    ("campaign/Cinderhollow.level", "4", "Rack Hall", False, False),
-    ("campaign/Ashcombe.level", "4", "Iron Maw", False, False),
-    ("campaign/Ironbridge.level", "4", "Torment Cells", False, False),
-    ("campaign/SwarmNight.level", "4", "The Swarming Dark", True, False),
-    ("campaign/Bellwick.level", "5", "Charnel Stair", False, False),
-    ("campaign/Goldspire.level", "5", "Corpse Gate", False, False),
-    ("campaign/Kingsfall.level", "5", "Hall of Skulls", False, False),
-    ("campaign/BoulderCourse.level", "5", "The Rolling Tomb", True, False),
-    ("campaign/VarnsCrossing.level", "6", "Ember Pit", False, False),
-    ("campaign/Wraithwood.level", "6", "Throne of Ash", False, False),
-    ("campaign/HollowmarkCitadel.level", "6", "Heart of Moreya", False, False),
-    ("campaign/TwistingHalls.level", "6", "The Twisting Abyss", True, False),
-)
-STORY_LEVELS = 18
-BONUS_LEVELS = 6
-SHARDS = 3
+# unlocks one Epic, one Rare and one Common item. The rows of wing 1 (public package); the content repository
+# adds the 20 rows of wings 2 to 6 (checks/campaign_wings.json).
+EXPECTED = [
+    ('campaign/Brackenford.level', '1', 'Mold Pit', False, False),
+    ('campaign/Coldwell.level', '1', 'Drowned Larder', False, True),
+    ('campaign/Ravensledge.level', '1', 'Rat Warren', False, False),
+    ('campaign/Mossgate.level', '1', 'The Forgotten Pit', True, False),
+]
 CHAMPION_WINGS = ("4", "5", "6")
 UNLOCK = "Epic Rare Common"
 DROPPED = ("Dunmarrow", "Mirewatch", "Wolfscar", "Thornreach", "Stormhaven", "Silverdeep", "Ebonrook")
-# Fixed raid of every story level: (file, Warden key, leaders, guild, origin, raid size) as the briefing names them
-RAIDS = (
-    ("campaign/Brackenford.level", "Elsa Brack", ("Elsa Brack",), "Mud Fists", "Brackenford", "one group of five"),
-    ("campaign/Coldwell.level", "Hugo Cole", ("Hugo Cole",), "Iron Latch", "Coldwell", "one group of five"),
-    ("campaign/Ravensledge.level", "Rolf Scarrow", ("Rolf Scarrow",), "Grey Fang", "Wolfscar", "one raid of ten"),
-    ("campaign/Tinmoor.level", "Merrin Tay", ("Merrin Tay",), "Deep Picks", "Tinmoor", "two groups of five"),
-    ("campaign/Greywater.level", "Corwin Gray", ("Corwin Gray",), "Drowned Oath", "Greywater", "two groups of five"),
-    ("campaign/Highcairn.level", "Hilde Cairn", ("Hilde Cairn",), "Stone Crown", "Highcairn", "two raids of ten"),
-    ("campaign/Lanternhill.level", "Ines Vale", ("Ines Vale",), "Pale Flame", "Lanternhill", "one group of ten"),
-    ("campaign/Saltmere.level", "Bram Seward", ("Bram Seward",), "Salt Wolves", "Saltmere", "one group of ten"),
-    ("campaign/HollinFen.level", "Agathe Hollin", ("Agathe Hollin",), "Order of the White Thorn", "Hollin Fen",
-     "one raid of twenty-five"),
-    ("campaign/Cinderhollow.level", "Pell Ashgrove", ("Pell Ashgrove",), "Ember Ram", "Cinderhollow", "two groups of ten"),
-    ("campaign/Ashcombe.level", "Liesl Ashby", ("Liesl Ashby",), "Burnt Wheel", "Ashcombe", "two groups of ten"),
-    ("campaign/Ironbridge.level", "Gareth Fenn", ("Gareth Fenn",), "Anvil Host", "Ironbridge", "two raids of twenty-five"),
-    ("campaign/Bellwick.level", "Lorens Bell", ("Lorens Bell",), "Silent Bell", "Bellwick", "one group of twenty-five"),
-    ("campaign/Goldspire.level", "Alaric Penn", ("Alaric Penn",), "Gilded Hand", "Goldspire", "one group of twenty-five"),
-    ("campaign/Kingsfall.level", "Prince Aurel", ("Prince Aurel",), "Sun Court", "Kingsfall", "one raid of forty"),
-    ("campaign/VarnsCrossing.level", "Marshal Varn", ("Marshal Varn",), "Black Legion", "Varn's Crossing",
-     "two groups of twenty-five"),
-    ("campaign/Wraithwood.level", "Elowen Ash", ("Elowen Ash",), "Ash Coven", "Wraithwood", "two groups of twenty-five"),
-    ("campaign/HollowmarkCitadel.level", "Sabine Rook and High King Castellan", ("Sabine Rook", "High King Castellan"),
-     "Crown Eternal", "Hollowmark Citadel", "two raids of forty"),
-)
+# Fixed raid of every story level: (file, Warden key, leaders, guild, origin, raid size) as the briefing names them;
+# the raids of wing 1 here, those of wings 2 to 6 in the content repository
+RAIDS = [
+    ('campaign/Brackenford.level', 'Elsa Brack', ('Elsa Brack',), 'Mud Fists', 'Brackenford', 'one group of five'),
+    ('campaign/Coldwell.level', 'Hugo Cole', ('Hugo Cole',), 'Iron Latch', 'Coldwell', 'one group of five'),
+    ('campaign/Ravensledge.level', 'Rolf Scarrow', ('Rolf Scarrow',), 'Grey Fang', 'Wolfscar', 'one raid of ten'),
+]
+# The content rows; without content packages wings 2 to 6 must be missing and the public package is checked alone
+CONTENT = campaign_packages.content_data(ROOT, "campaign_wings")
+if CONTENT is not None:
+    EXPECTED += [tuple(row) for row in CONTENT["expected"]]
+    RAIDS += [(row[0], row[1], tuple(row[2]), row[3], row[4], row[5]) for row in CONTENT["raids"]]
+# Counts of the whole campaign, and of the public package alone (wing 1)
+STORY_LEVELS, BONUS_LEVELS, SHARDS = (18, 6, 3) if CONTENT is not None else (3, 1, 1)
+WINGS = "123456" if CONTENT is not None else "1"
 # Names of the old provinces and trials that no level title may carry any more
 OLD_TITLE_NAMES = ("Brackenford", "Coldwell", "Ravensledge", "Mossgate", "Tinmoor", "Greywater", "Highcairn", "Lanternhill",
                    "Saltmere", "Hollin Fen", "HollinFen", "Cinderhollow", "Ashcombe", "Ironbridge", "Bellwick", "Goldspire",
@@ -114,16 +89,19 @@ def body(source, signature):
     return source[start:end]
 
 
-definition = read("levels/campaign/Campaign.cfg").replace("\r", "")
+# The Package.cfg texts of all wing packages in campaign order
+definition = campaign_packages.definition_text(ROOT)
+check(CONTENT is not None or campaign_packages.missing_wings(ROOT) == [2, 3, 4, 5, 6],
+      "without content packages wings 2 to 6 must be missing")
 # Comment lines may name the section markers; only the setting lines count
 settings_text = "\n".join(line for line in definition.split("\n") if not line.startswith("#"))
-check(not settings_text.split("[Level]", 1)[0].strip(), "Campaign.cfg has settings outside of the [Level] entries")
+check(not settings_text.split("[Level]", 1)[0].strip(), "a Package.cfg has settings outside of the [Level] entries")
 entries = [dict(re.findall(r"^(\w+)=(.*)$", block, re.M)) for block in settings_text.split("[Level]")[1:]]
 
 # CS1: 18 story levels in the order of the structure table and one bonus level per wing
-check(len(entries) == len(EXPECTED), "Campaign.cfg must list %d levels, found %d" % (len(EXPECTED), len(entries)))
-check(sum(1 for e in entries if e.get("Bonus") != "1") == STORY_LEVELS, "there must be 18 story levels")
-check(sum(1 for e in entries if e.get("Bonus") == "1") == BONUS_LEVELS, "there must be 6 bonus levels")
+check(len(entries) == len(EXPECTED), "the packages must list %d levels, found %d" % (len(EXPECTED), len(entries)))
+check(sum(1 for e in entries if e.get("Bonus") != "1") == STORY_LEVELS, "there must be %d story levels" % STORY_LEVELS)
+check(sum(1 for e in entries if e.get("Bonus") == "1") == BONUS_LEVELS, "there must be %d bonus levels" % BONUS_LEVELS)
 for index, (file, wing, title, bonus, shard) in enumerate(EXPECTED):
     if index >= len(entries):
         break
@@ -136,12 +114,12 @@ for index, (file, wing, title, bonus, shard) in enumerate(EXPECTED):
     champion = wing in CHAMPION_WINGS
     check((entry.get("Champion") == "1") == champion, file + (" must" if champion else " must not") + " offer Summon champion")
     check(entry.get("Unlock") == (UNLOCK if bonus else None), file + (" must unlock " + UNLOCK if bonus else " must unlock nothing"))
-    check((ROOT / "levels" / file).is_file(), file + " is missing")
+    check(campaign_packages.level_path(ROOT, file).is_file(), file + " is missing")
     for key in ("Briefing", "Debriefing", "Preview"):
         check(bool(entry.get(key)), file + " has no " + key)
     for key in ("Province", "Branch", "Heartstone"):
         check(key not in entry, file + " must not have the former key " + key)
-for wing in "123456":
+for wing in WINGS:
     story = [e for e in entries if e.get("Wing") == wing and e.get("Bonus") != "1"]
     bonus = [e for e in entries if e.get("Wing") == wing and e.get("Bonus") == "1"]
     check(len(story) == 3 and len(bonus) == 1, "wing " + wing + " needs 3 story levels and 1 bonus level")
@@ -154,7 +132,7 @@ for name in DROPPED:
 # CS3, CS6: the champion and unlock keys are documented in the file
 for key in ("Wing", "Bonus", "Shard", "Champion", "Unlock"):
     check(re.search(r"^# " + key + " ", definition, re.M) is not None, key + " needs a documentation line")
-check(sum(1 for e in entries if e.get("Shard") == "1") == SHARDS, "the Heartstone needs 3 shards")
+check(sum(1 for e in entries if e.get("Shard") == "1") == SHARDS, "the Heartstone needs %d shards here" % SHARDS)
 
 # Loader and progression: wings, shards, settings; no provinces, branches or bonus Heartstone pieces
 campaign = read("source/game/Campaign.cpp")
@@ -163,8 +141,9 @@ for key in ('key == "Wing"', 'key == "Shard"', 'key == "Champion"', 'key == "Unl
     check(key in campaign, "the loader must read " + key)
 for key in ('key == "Province"', 'key == "Branch"', 'key == "Heartstone"'):
     check(key not in campaign, "the loader must not read " + key)
-loader = body(campaign, "bool Campaign::importDefinition(")
-check("if(entry.mBonus)\n            entry.mShard = false;\n        else\n            entry.mUnlockQualities.clear();" in loader,
+loader = body(campaign, "void Campaign::parseLevels(")
+check("if(entry.mBonus)\n        {\n            entry.mShard = false;\n            entry.mGuild = CampaignGuild();\n        }\n"
+      "        else\n            entry.mUnlockQualities.clear();" in loader,
       "bonus levels must never carry a shard and story levels never unlock items")
 
 # CS2: every level starts fresh; nothing is carried over
@@ -264,7 +243,8 @@ for entry in entries:
         check(part in briefing, file + " briefing must name " + part)
     check(size in briefing.lower(), file + " briefing must name the raid size " + size)
 for file, *_ in EXPECTED:
-    for number, line in enumerate(read("levels/" + file).replace("\r", "").split("\n"), 1):
+    lines = campaign_packages.read_level(ROOT, file).replace("\r", "").split("\n")
+    for number, line in enumerate(lines, 1):
         if not line.startswith(("Action\tmessage\t", "Action\thint\t")):
             continue
         check(WORKER_WORD.search(line) is None, "%s:%d calls the Ziv a worker" % (file, number))

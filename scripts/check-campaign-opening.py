@@ -66,7 +66,8 @@ Usage:
   check-campaign-opening.py [--no-allowlist] [--safe-radius N] [--full] [--all] [<file> ...]
   check-campaign-opening.py --self-test
 
-Without files all levels of levels/campaign/Campaign.cfg are checked; --all checks every
+Without files all levels of the campaign wing packages are checked (scripts/campaign_packages.py: wing 1 in
+levels/campaign/wing1/, wings 2 to 6 from the content repository when it is present); --all checks every
 level file below levels/ (campaign, skirmish, multiplayer). --full lists every violation
 (by default at most MAX_EXAMPLES examples per kind). A summary block ends the output.
 """
@@ -852,17 +853,10 @@ def repo_root():
 
 
 def campaign_files(root):
-    """Return the level files listed in the campaign config."""
-    cfg = os.path.join(root, "levels", "Campaign.cfg")
-    if not os.path.isfile(cfg):
-        cfg = os.path.join(root, "levels", "campaign", "Campaign.cfg")
-    result = []
-    with open(cfg, "r", encoding="utf-8", errors="replace") as handle:
-        for line in handle:
-            line = line.strip()
-            if line.startswith("File="):
-                result.append(os.path.join(root, "levels", line[5:].replace("/", os.sep)))
-    return result
+    """Return the level files of the campaign wing packages, in campaign order."""
+    sys.path.insert(0, os.path.join(root, "scripts"))
+    import campaign_packages
+    return [str(entry["_path"]) for entry in campaign_packages.entries(root)]
 
 
 def read_allowlist(root):

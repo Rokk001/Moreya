@@ -8,8 +8,12 @@ import re
 import subprocess
 import sys
 
-SMOKE = 'levels/campaign/Mossgate.level'
+# The agreed basis level: Mossgate in the public wing 1 package, or at its former path in older commits
+SMOKES = ('levels/campaign/wing1/Mossgate.level', 'levels/campaign/Mossgate.level')
+# The former single campaign definition; the campaign now comes from the Package.cfg of each wing package folder
 CAMPAIGN = 'levels/campaign/Campaign.cfg'
+PACKAGE_DEFINITION = re.compile(r'^levels/campaign/[^/]+/Package\.cfg$')
+PACKAGE_TEXT = re.compile(r'^levels/campaign/[^/]+/(LICENSE\.txt|README\.md)$')
 
 
 # Read immutable Git data without changing any worktree or ref.
@@ -26,9 +30,26 @@ def commit(repo, value):
     return value
 
 
+# The campaign definitions of a commit: the Package.cfg of every public wing package (its levels lie in its folder),
+# or the former levels/campaign/Campaign.cfg of an older commit (levels below levels/). Pairs of (text, folder).
+def definitions(repo, revision):
+    tracked = git(repo, 'ls-tree', '-r', '--name-only', revision, '--', 'levels/campaign').splitlines()
+    packages = sorted(name for name in tracked if PACKAGE_DEFINITION.match(name))
+    if packages:
+        return [(git(repo, 'show', revision + ':' + name), name.rsplit('/', 1)[0] + '/') for name in packages]
+    return [(git(repo, 'show', revision + ':' + CAMPAIGN), None)]
+
+
 # Parse campaign entries including their order, which determines successor unlocking.
 def entries(repo, revision):
-    text = git(repo, 'show', revision + ':' + CAMPAIGN)
+    result = {}
+    for text, folder in definitions(repo, revision):
+        result.update(definition_entries(text, folder, result))
+    return result
+
+
+# Parse the entries of one definition; a package entry names its level file in the package folder.
+def definition_entries(text, folder, known):
     result = {}
     block = None
     blocks = []
@@ -49,10 +70,10 @@ def entries(repo, revision):
         files = [line[5:].strip() for line in block if line.startswith('File=')]
         if len(files) != 1 or not files[0].endswith('.level'):
             raise RuntimeError('Invalid Campaign.cfg level entry')
-        name = 'levels/' + files[0]
+        name = folder + files[0].split('/')[-1] if folder else 'levels/' + files[0]
         if '..' in Path(name).parts or '\\' in name or ':' in name or files[0].startswith('/'):
             raise RuntimeError('Campaign level path escapes levels: ' + name)
-        if name in result:
+        if name in result or name in known:
             raise RuntimeError('Duplicate Campaign.cfg level: ' + name)
         result[name] = tuple(block)
     return result
@@ -67,13 +88,17 @@ def select(repo, base, tip, full=False):
     commit(repo, base)
     changed = git(repo, 'diff', '--name-only', '-z', '--no-renames', base, tip, '--', 'levels').split('\0')
     tracked = set(git(repo, 'ls-tree', '-r', '--name-only', tip, '--', 'levels').splitlines())
-    selected = {SMOKE: 'agreed basis level (owner decision 99)'}
+    smoke = next((name for name in SMOKES if name in tracked), SMOKES[0])
+    selected = {smoke: 'agreed basis level (owner decision 99)'}
+    definition_changed = False
     for name in changed:
         if name.endswith('.level') and name in tracked:
             selected.setdefault(name, 'level changed since successful deploy')
-        elif name and not name.endswith('.level') and name != CAMPAIGN:
+        elif name == CAMPAIGN or PACKAGE_DEFINITION.match(name):
+            definition_changed = True
+        elif name and not name.endswith('.level') and not PACKAGE_TEXT.match(name):
             raise RuntimeError('Unmapped shared level file changed: ' + name + '; review dependencies or request explicit full check')
-    if CAMPAIGN in changed:
+    if definition_changed:
         previous = entries(repo, base)
         old_order, new_order = list(previous), list(current)
         for name, value in current.items():
