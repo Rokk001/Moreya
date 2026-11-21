@@ -163,15 +163,17 @@ class MeshBuilder:
         self.face_materials.extend([material]*(sides+2))
 
     # Add a curved row of separate wedge-shaped masonry blocks.
-    def arch(self, x, y, spring, radius, thickness, depth, count=18):
+    # whole: every stone stays and the joints close, so no stone of the arch hangs in the air (campaign hall).
+    def arch(self, x, y, spring, radius, thickness, depth, count=18, whole=False):
         for i in range(count):
             gap = int(count * (0.24 + (VARIANT_SEED % 4)*0.10))
-            if radius > 1.4 and i in (gap, gap+1) and self.name != "MenuGate":
+            if not whole and radius > 1.4 and i in (gap, gap+1) and self.name != "MenuGate":
                 continue
-            a=math.pi*i/count+0.012
-            b=math.pi*(i+1)/count-0.012
+            joint = 0.002 if whole else 0.012
+            a=math.pi*i/count+joint
+            b=math.pi*(i+1)/count-joint
             poly=[(x+radius*math.cos(a),spring+radius*math.sin(a)),(x+(radius+thickness)*math.cos(a),spring+(radius+thickness)*math.sin(a)),(x+(radius+thickness)*math.cos(b),spring+(radius+thickness)*math.sin(b)),(x+radius*math.cos(b),spring+radius*math.sin(b))]
-            sag = self.rng.uniform(-0.12,0.08)*VARIANT_DAMAGE
+            sag = 0.0 if whole else self.rng.uniform(-0.12,0.08)*VARIANT_DAMAGE
             self.prism([(px,pz+sag) for px,pz in poly],y-depth/2,y+depth/2)
 
     # Add a worn elliptical chain link, with occasional broken sections closed by fracture caps.
@@ -996,13 +998,14 @@ def backdrop():
 
 
 # Build the vaulted hall beyond the gate without obstructing the entry flight.
+# Only top courses of the side walls are missing and the arches are whole, so no block hangs over a gap.
 def hall():
     b=MeshBuilder("MenuCampaignHall")
     b.box((0,0,-0.15),(13,16,0.3))
     for side in (-1,1):
         for row in range(7):
             for col in range(9):
-                if (row,col,side) in ((5,3,-1),(6,3,-1),(4,7,1)):
+                if (row,col,side) in ((5,3,-1),(6,3,-1),(6,7,1)):
                     continue
                 b.box((side*6.4,-7+col*1.75,row+0.5),(0.7,1.64,1.07))
     for row in range(7):
@@ -1011,7 +1014,7 @@ def hall():
                 continue
             b.box((-5.7+col*1.6,7.8,row+0.5),(1.5,0.7,1.07))
     for y in (-6,-2,2,6):
-        b.arch(0,y,5.0,5.8,0.45,0.5,18)
+        b.arch(0,y,5.0,5.8,0.45,0.5,18,whole=True)
         for side in (-1,1):
             b.column((side*5.8,y,0),0.35,5.1,material="MenuStone",sides=10)
     return b.finish()

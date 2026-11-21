@@ -410,8 +410,10 @@ def add_smoke_and_fog_patches(collection,definitions):
         x,y,z=positions[words[1]]
         add_soft_volume(collection,words[1]+" lower dense smoke",(x+0.20,y,z+5.6),(1.15,1.0,2.35),(0.22,0.18,0.14),2.0,(0.025,0.006,0.001),0.025,index*1.7)
         add_soft_volume(collection,words[1]+" advecting smoke",(x+0.85,y,z+9.0),(1.9,1.5,3.7),(0.16,0.14,0.12),1.65,(0.012,0.004,0.001),0.025,index*1.7+0.7)
-    x,y,z=positions["GateBeast"]
-    add_soft_volume(collection,"Dim backlit gate haze",(x,y+1.8,z+4.3),(3.6,1.0,3.4),(0.18,0.07,0.018),0.7,(0.16,0.018,0.002),0.30,4.2)
+    # The gate haze hangs in the campaign hall behind the grille; its entity (AbandonedCastle) stands at the origin and
+    # the emitter position of MenuGateHaze (particles/MenuScene.particle) is the place in the hall.
+    x,y,z=next(positions[words[1]] for words in definitions if words[0]=="AddParticleEffect" and words[2]=="MenuGateHaze")
+    add_soft_volume(collection,"Dim backlit gate haze",(x,y+28.8,z+4.12),(3.6,1.0,3.4),(0.18,0.07,0.018),0.7,(0.16,0.018,0.002),0.30,4.2)
     for index,(position,scale) in enumerate((((-12,-12,0.85),(7,5,0.65)),((11,-5,0.80),(6,6,0.60)),((-5,6,0.85),(8,4,0.65)),((3,-20,0.55),(7,3,0.40)))):
         add_soft_volume(collection,"Low drifting fog bank %d"%index,position,scale,(0.48,0.51,0.49),1.0,(0,0,0),0,index*2.3)
 
