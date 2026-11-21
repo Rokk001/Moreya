@@ -213,7 +213,7 @@ class SelectionTests(unittest.TestCase):
         tip = self.git('rev-parse', 'HEAD')
         self.git('fetch', '.', 'HEAD:refs/remotes/origin/integration/all')
         self.git('worktree', 'add', '--detach', str(self.repo / 'build/current-worktree'), tip)
-        self.write('build/windows/opendungeons-plus.exe', 'fixture executable')
+        self.write('build/windows/moreya.exe', 'fixture executable')
         self.write('.git/odp-deploy-success.json', json.dumps({'schema': 1, 'status': 'success',
                    'data_commit': tip, 'evidence': 'verified fixture deploy'}))
         self.write('out/orch-run.txt', 'test')
@@ -260,13 +260,13 @@ class SelectionTests(unittest.TestCase):
                                        '-GameWaitSeconds', '0'],
                                       capture_output=True, text=True, timeout=30)
             self.assertEqual(completed.returncode, 1 if result else 0, completed.stdout + completed.stderr)
-            self.assertEqual(process_queries.read_text(encoding='utf-8').splitlines(), ['opendungeons-plus'])
+            self.assertEqual(process_queries.read_text(encoding='utf-8').splitlines(), ['moreya'])
             self.assertEqual(counter.read_text().strip(), '16' if result else '17')
             self.assertTrue((self.repo / 'scripts/run-campaign-load-tests.args').is_file(),
                             completed.stdout + completed.stderr)
             args = json.loads((self.repo / 'scripts/run-campaign-load-tests.args').read_text())
             self.assertEqual(Path(args[args.index('--executable') + 1]),
-                             self.repo / 'build/windows/opendungeons-plus.exe')
+                             self.repo / 'build/windows/moreya.exe')
             self.assertEqual(Path(args[args.index('--repo') + 1]), self.repo / 'build/current-worktree')
             self.assertEqual(Path(args[args.index('--deployment-selection') + 1]), self.repo / 'out/deploy-selection-test.json')
             manifest = json.loads((self.repo / 'out/deploy-selection-test.json').read_text())

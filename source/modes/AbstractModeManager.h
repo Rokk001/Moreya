@@ -27,7 +27,6 @@ public:
     enum ModeType
     {
         NONE = 0, // No change requested
-        ADVERTISMENT =1,
         MENU_MAIN,
         MENU_SKIRMISH,
         MENU_MULTIPLAYER_CLIENT,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prove from the logs of one game start that the loading picture comes first.
 
-Reads the game log (opendungeons.log) and Ogre.log of the same start and checks three proofs:
+Reads the game log (moreya.log) and Ogre.log of the same start and checks three proofs:
 
 1. The startup loading picture is drawn before the resources are registered: in the game log the line
    "startup loading picture drawn" comes before the first "Resource in section" line, and in Ogre.log the
@@ -15,10 +15,10 @@ Reads the game log (opendungeons.log) and Ogre.log of the same start and checks 
 Both logs must belong to the same start: the Ogre root is created in both within 5 s.
 
 A start that writes both logs without touching the player's own logs:
-    opendungeons-plus.exe --menu-test 5 --appData <empty folder>
-(run in the folder of the executable; Ogre.log is written there, opendungeons.log into the --appData folder).
+    moreya.exe --menu-test 5 --appData <empty folder>
+(run in the folder of the executable; Ogre.log is written there, moreya.log into the --appData folder).
 
-Usage: python scripts/startup-log-order.py --game-log <opendungeons.log> --ogre-log <Ogre.log>
+Usage: python scripts/startup-log-order.py --game-log <moreya.log> --ogre-log <Ogre.log>
 Exit code 0 when all three proofs hold, 1 otherwise; every proof is printed with its log lines and times.
 """
 import argparse

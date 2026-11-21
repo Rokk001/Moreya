@@ -9,7 +9,7 @@ Compiles nothing and never starts the game.
 - The layout model of check_ghost_apparatus_placement.py runs on the ghost room of levels/skirmish/TestGhosts.level
   (the owner's [Test] Ghosts map): the three apparatuses stand off the wall, two of them in the middle row three
   tiles from both long walls (fixed values, decision 845).
-- The same model runs on every ghost room of every save in the user's save folder (%APPDATA%/opendungeons/saves),
+- The same model runs on every ghost room of every save in the user's save folder (%APPDATA%/Moreya/saves, before the first start of Moreya the old folder opendungeons),
   when there is one: its GhostApparatus record holds twelve counters and no place, and a loaded room gets the places
   of the current rule (inner tiles first, an inner tile never touches a wall); the count off the wall is printed.
 """
@@ -122,7 +122,11 @@ def test_level():
 
 def user_saves():
     base = os.environ.get("APPDATA")
-    folder = Path(base) / "opendungeons" / "saves" if base else Path.home() / ".config" / "opendungeons" / "saves"
+    root = Path(base) if base else Path.home() / ".local" / "share"
+    folder = root / ("Moreya" if base else "moreya") / "saves"
+    if not folder.is_dir():
+        # The game takes the old folder over at its first start; until then the saves are there.
+        folder = root / "opendungeons" / "saves"
     saves = sorted(folder.glob("*.level")) if folder.is_dir() else []
     checked = off = placed = 0
     for save in saves:

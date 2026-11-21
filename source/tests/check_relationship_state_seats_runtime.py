@@ -26,7 +26,7 @@ The run passes only when, with the same rules as check_relationship_state_load_h
   - for the committed fixture, the logged values also match the fixed expectations (load.FIXTURE_EXPECTED).
   Grief is compared as a record: the logged grief equals the loader's value (restored without applying the mood again).
 The original save is never opened for writing; the check works on a copy. It refuses to run while another
-opendungeons-plus.exe is running, so a game the owner is playing is never touched.
+moreya.exe is running, so a game the owner is playing is never touched.
 
 The hello message carries the build version, so --version is required: it must be the version of the executable
 (OD_VERSION = MAJOR.MINOR.PATCH.BUILD_NUMBER, for example 0.7.4.44 for build number 44). It is not guessed or
@@ -216,7 +216,7 @@ def logged_restore(log, name):
 def runtime_check(exe, save, seconds, entries, existing, is_fixture, port, version):
     """Starts the game with a test client on a copy of the save. Returns (failures, received) or None when skipped."""
     if load.game_running():
-        print("SKIPPED: an opendungeons-plus.exe process is running; this check does not touch it")
+        print("SKIPPED: an moreya.exe process is running; this check does not touch it")
         return None
     before = load.sha256(save)
     appdata = Path(tempfile.mkdtemp(prefix="relstate-seats-"))

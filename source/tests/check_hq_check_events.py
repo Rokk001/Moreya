@@ -79,7 +79,7 @@ class RunnerTests(unittest.TestCase):
     def setUp(self):
         JournalTests.setUp(self)
         for name in ['scripts/check-a.py','scripts/check-b.py','scripts/run-level-test.py',
-                     'scripts/run-campaign-load-tests.py','levels/campaign/Mossgate.level','build/windows/opendungeons-plus.exe']:
+                     'scripts/run-campaign-load-tests.py','levels/campaign/Mossgate.level','build/windows/moreya.exe']:
             target=self.repo/name; target.parent.mkdir(parents=True,exist_ok=True); target.write_text('fixture')
         (self.repo/'levels/campaign/Campaign.cfg').write_text('[Level]\nFile=campaign/Mossgate.level\n')
         subprocess.run(['git','-C',str(self.repo),'add','.'],check=True)
@@ -136,7 +136,7 @@ class RunnerTests(unittest.TestCase):
 
     # Missing game prerequisites become required failures, never missing final results or fake passes.
     def test_missing_executable_is_explicit(self):
-        (self.repo/'build/windows/opendungeons-plus.exe').unlink()
+        (self.repo/'build/windows/moreya.exe').unlink()
         subprocess.run(['git','-C',str(self.repo),'add','-u'],check=True)
         subprocess.run(['git','-C',str(self.repo),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','no executable'],check=True)
         self.head=events.git(self.repo,'rev-parse','HEAD');os.environ['HQ_CHECK_COMMIT']=self.head

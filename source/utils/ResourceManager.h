@@ -234,20 +234,20 @@ private:
     LogMessageLevel mLogLevel;
 
     //! \brief The application data path
-    //! \example "/usr/share/game/opendungeons" on linux
-    //! \example "C:/opendungeons" on windows
+    //! \example "/usr/share/games/moreya" on linux
+    //! \example "C:/Moreya" on windows
     std::string mGameDataPath;
 
     //! \brief Specific mac bundle path
     std::string mMacBundlePath;
 
     //! \brief The user custom data path
-    //! \example "~/.local/share/opendungeons" on linux
-    //! \example %APPDATA% "%USERPROFILE%\Application Data\opendungeons" on windows
+    //! \example "~/.local/share/moreya" on linux
+    //! \example %APPDATA% "%USERPROFILE%\Application Data\Moreya" on windows
     std::string mUserDataPath;
 
     //! \brief The user custom config path
-    //! \example "~/.config/opendungeons" on linux
+    //! \example "~/.config/moreya" on linux
     //! Same as home path + "cfg/" on Windows.
     std::string mUserConfigPath;
 
@@ -278,6 +278,10 @@ private:
     static const std::string LANGUAGESUBPATH;
     static const std::string SHADERCACHESUBPATH;
     static const std::string LOGFILENAME;
+    //! \brief Name of the user data and config folders.
+    static const std::string USERFOLDERNAME;
+    //! \brief Name of the user data and config folders of older versions; taken over at the first start.
+    static const std::string OLDUSERFOLDERNAME;
     static const std::string CEGUILOGFILENAME;
     static const std::string USERCFGFILENAME;
 
@@ -286,6 +290,12 @@ private:
 
     //! \brief Setup user data and config path
     void setupUserDataFolders(boost::program_options::variables_map& options);
+
+    //! \brief Copies the folder oldPath of an older version to newPath when newPath does not exist yet, so
+    //! settings, saved games and other user data stay available. The old folder is left unchanged.
+    //! Both paths end with a slash.
+    //! \returns true when the old data was taken over.
+    static bool takeOverOldUserFolder(const std::string& oldPath, const std::string& newPath);
 
     //! \brief Setup the game data path
     //! \note If game data path is found in the current folder,

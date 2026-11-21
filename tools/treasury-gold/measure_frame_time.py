@@ -43,9 +43,10 @@ LEVEL_TEST = load_level_test()
 def default_config():
     appdata = os.environ.get('APPDATA')
     if appdata:
-        path = os.path.join(appdata, 'OpenDungeons', 'cfg', 'config.cfg')
-        if os.path.exists(path):
-            return path
+        for folder in ('Moreya', 'OpenDungeons'):
+            path = os.path.join(appdata, folder, 'cfg', 'config.cfg')
+            if os.path.exists(path):
+                return path
     return None
 
 

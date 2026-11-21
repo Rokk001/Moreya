@@ -6,12 +6,15 @@ cmake_minimum_required(VERSION 3.13)
 
 project(opendungeons-plus)
 
-# Set a capitalized exe name on Windows
+# Name of the CMake target (stays the project name; scripts build it with --target opendungeons-plus)
 if(WIN32)
     set(PROJECT_BINARY_NAME "opendungeons-plus")
 else()
     set(PROJECT_BINARY_NAME "opendungeons-plus")
 endif()
+# Name of the game executable (moreya.exe on Windows, moreya on Linux) and of the installed
+# data, config and documentation folders, the desktop entry, the manual page and the icons.
+set(OD_EXECUTABLE_NAME "moreya")
 
 # Project version
 set(OD_MAJOR_VERSION 0)
@@ -36,12 +39,12 @@ if(WIN32)
 else()
     # Set binary and data install locations if we want to use the installer
     set(OD_BIN_PATH ${CMAKE_INSTALL_PREFIX}/games CACHE PATH "Absolute path to the game binary directory")
-    set(OD_DATA_PATH ${CMAKE_INSTALL_PREFIX}/share/games/${PROJECT_NAME} CACHE PATH "Absolute path to the game data directory") 
+    set(OD_DATA_PATH ${CMAKE_INSTALL_PREFIX}/share/games/${OD_EXECUTABLE_NAME} CACHE PATH "Absolute path to the game data directory") 
     set(OD_SHARE_PATH ${CMAKE_INSTALL_PREFIX}/share CACHE PATH "Absolute path to the shared data directory (desktop file, icons, etc.)")
     set(OD_MAN_PATH ${OD_SHARE_PATH}/man CACHE PATH "Absolute path to the manpages directory")
     # Set the plugins.cfg file path to a common but architecture-dependent location.
     # Because the plugins.cfg Ogre plugins path path may vary depending on the architecture used.
-    set(OD_PLUGINS_CFG_PATH /etc/${PROJECT_NAME} CACHE PATH "Absolute path to the Ogre plugins.cfg file")
+    set(OD_PLUGINS_CFG_PATH /etc/${OD_EXECUTABLE_NAME} CACHE PATH "Absolute path to the Ogre plugins.cfg file")
     
 endif()
 
@@ -494,7 +497,6 @@ set(OD_SOURCEFILES
     ${SRC}/goals/GoalProtectDungeonTemple.cpp
 
     ${SRC}/modes/AbstractApplicationMode.cpp
-    ${SRC}/modes/AdvertMode.cpp
     ${SRC}/modes/Command.cpp
     ${SRC}/modes/ConsoleCommands.cpp
     ${SRC}/modes/ConsoleInterface.cpp
@@ -729,7 +731,7 @@ ENDIF ()
 IF (WIN32)
     SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${CMAKE_SOURCE_DIR}/dist/icon.rc)
     IF (MSVC)
-        SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${CMAKE_SOURCE_DIR}/dist/opendungeons.manifest)
+        SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${CMAKE_SOURCE_DIR}/dist/moreya.manifest)
     ENDIF ()
 ENDIF ()
 
@@ -850,6 +852,7 @@ endif()
 
 # Create the binary file (WIN32 makes sure there is no console window on windows.)
 add_executable(${PROJECT_BINARY_NAME} WIN32 ${OD_SOURCEFILES})
+set_target_properties(${PROJECT_BINARY_NAME} PROPERTIES OUTPUT_NAME "${OD_EXECUTABLE_NAME}")
 
 #target_link_libraries(opendungeons-plus PRIVATE Python::Development)
 
@@ -897,11 +900,11 @@ if(WIN32 AND MSVC)
     # Keep the full Release symbols alongside the executable for deployment and profiling.
     set_target_properties(${PROJECT_BINARY_NAME} PROPERTIES
         PDB_OUTPUT_DIRECTORY_RELEASE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
-        PDB_NAME_RELEASE "${PROJECT_BINARY_NAME}")
+        PDB_NAME_RELEASE "${OD_EXECUTABLE_NAME}")
 endif()
 
 if(OD_HAS_BUILD_SUFFIX)
-    SET_TARGET_PROPERTIES(${PROJECT_BINARY_NAME} PROPERTIES OUTPUT_NAME_DEBUG "${PROJECT_BINARY_NAME}${OD_BUILD_SUFFIX}")
+    SET_TARGET_PROPERTIES(${PROJECT_BINARY_NAME} PROPERTIES OUTPUT_NAME_DEBUG "${OD_EXECUTABLE_NAME}${OD_BUILD_SUFFIX}")
 endif()
 
 # The name of the OGRE Overlay library is available as CMAKE variable, also discovering debug versions correctly; please leave it like that!
@@ -1000,12 +1003,12 @@ endif()
 configure_file(${CMAKE_CONFIG_DIR}/resources.cfg.in ${CMAKE_BINARY_DIR}/resources.cfg @ONLY)
 # Link icon with its full path when not installed in the /usr prefix since it might not be caught by the hicolor theme
 if(CMAKE_INSTALL_PREFIX STREQUAL "/usr")
-    set(OD_ICON_FULLPATH ${PROJECT_BINARY_NAME})
+    set(OD_ICON_FULLPATH ${OD_EXECUTABLE_NAME})
 else()
-    set(OD_ICON_FULLPATH ${OD_SHARE_PATH}/icons/hicolor/scalable/apps/opendungeons.svg)
+    set(OD_ICON_FULLPATH ${OD_SHARE_PATH}/icons/hicolor/scalable/apps/moreya.svg)
 endif()
-configure_file(${CMAKE_CONFIG_DIR}/opendungeons.desktop.in ${CMAKE_BINARY_DIR}/opendungeons-plus.desktop)
-configure_file(${CMAKE_CONFIG_DIR}/opendungeons.6.in ${CMAKE_BINARY_DIR}/opendungeons-plus.6)
+configure_file(${CMAKE_CONFIG_DIR}/moreya.desktop.in ${CMAKE_BINARY_DIR}/moreya.desktop)
+configure_file(${CMAKE_CONFIG_DIR}/moreya.6.in ${CMAKE_BINARY_DIR}/moreya.6)
 
 ##################################
 ### Run-in-place customisation ###
@@ -1038,6 +1041,7 @@ if(UNIX)
 
     set(OD_RESOURCESFILE ${CMAKE_BINARY_DIR}/resources.cfg)
     
+    # Game data folders; scripts/ holds developer tools only and is not installed.
     set(OD_RESOURCES   ${CMAKE_SOURCE_DIR}/config
                        ${CMAKE_SOURCE_DIR}/gui
                        ${CMAKE_SOURCE_DIR}/levels
@@ -1046,7 +1050,6 @@ if(UNIX)
                        ${CMAKE_SOURCE_DIR}/music
                        ${CMAKE_SOURCE_DIR}/particles
                        ${CMAKE_SOURCE_DIR}/python
-                       ${CMAKE_SOURCE_DIR}/scripts
                        ${CMAKE_SOURCE_DIR}/shaders
                        ${CMAKE_SOURCE_DIR}/sounds)
 
@@ -1068,14 +1071,14 @@ if(UNIX)
             DESTINATION ${OD_DATA_PATH})           
 
     # Additional distribution content (desktop file, icons, man page, doc)
-    install(FILES ${CMAKE_SOURCE_DIR}/dist/opendungeons-plus.appdata.xml
+    install(FILES ${CMAKE_SOURCE_DIR}/dist/moreya.appdata.xml
             DESTINATION ${OD_SHARE_PATH}/appdata)
-    install(FILES ${CMAKE_BINARY_DIR}/opendungeons-plus.desktop
+    install(FILES ${CMAKE_BINARY_DIR}/moreya.desktop
             DESTINATION ${OD_SHARE_PATH}/applications)
-    install(FILES ${CMAKE_BINARY_DIR}/opendungeons-plus.6
+    install(FILES ${CMAKE_BINARY_DIR}/moreya.6
             DESTINATION ${OD_MAN_PATH}/man6)
     install(FILES ${OD_DOC}
-            DESTINATION ${OD_SHARE_PATH}/doc/${PROJECT_NAME})
+            DESTINATION ${OD_SHARE_PATH}/doc/${OD_EXECUTABLE_NAME})
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/dist/hicolor
             DESTINATION ${OD_SHARE_PATH}/icons)
 elseif(WIN32)
@@ -1142,6 +1145,7 @@ elseif(WIN32)
 
     set(OD_RESOURCESFILE ${CMAKE_BINARY_DIR}/resources.cfg)
 
+    # Game data folders; scripts/ holds developer tools only and is not installed.
     set(OD_RESOURCES   ${CMAKE_SOURCE_DIR}/config
                        ${CMAKE_SOURCE_DIR}/gui
                        ${CMAKE_SOURCE_DIR}/levels
@@ -1151,7 +1155,6 @@ elseif(WIN32)
                        ${CMAKE_SOURCE_DIR}/music
                        ${CMAKE_SOURCE_DIR}/particles
                        ${CMAKE_SOURCE_DIR}/python
-                       ${CMAKE_SOURCE_DIR}/scripts
                        ${CMAKE_SOURCE_DIR}/shaders
                        ${CMAKE_SOURCE_DIR}/sounds)
 

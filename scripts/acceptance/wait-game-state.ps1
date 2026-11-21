@@ -18,7 +18,7 @@ function Test-GameReady($Process, [string]$AppData, [bool]$LevelRequested)
     $Process.Refresh()
     if($Process.HasExited) { throw "The game exited early with code $($Process.ExitCode)." }
     if($Process.MainWindowHandle -eq [IntPtr]::Zero -or -not $Process.Responding) { return $false }
-    $name = if($LevelRequested) { 'acceptance-stdout.txt' } else { 'opendungeons.log' }
+    $name = if($LevelRequested) { 'acceptance-stdout.txt' } else { 'moreya.log' }
     $marker = if($LevelRequested) { '(?m)^GOALS registered=[1-9][0-9]*' } else { 'startup menu ready' }
     $path = Join-Path $AppData $name
     if(-not (Test-Path -LiteralPath $path)) { return $false }

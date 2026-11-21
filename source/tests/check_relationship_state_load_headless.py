@@ -21,7 +21,7 @@ Usage:
   check_relationship_state_load_headless.py                                  (static part, the normal runner)
   check_relationship_state_load_headless.py --exe PATH --version X.Y.Z.N [--save PATH] [--seconds 30]
 The TestGhosts runtime test is run the same way with its own --save and --exe.
-The check starts only its own process. It refuses to run while another opendungeons-plus.exe is running, so
+The check starts only its own process. It refuses to run while another moreya.exe is running, so
 that a game the owner is playing is never touched.
 """
 import argparse
@@ -177,9 +177,9 @@ def static_check(save_path, expect_fixture):
 
 
 def game_running():
-    """True when an opendungeons-plus.exe process exists (tasklist, no kill)."""
-    result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq opendungeons-plus.exe", "/NH"], capture_output=True)
-    return "opendungeons-plus.exe" in result.stdout.decode("utf-8", errors="replace").lower()
+    """True when an moreya.exe process exists (tasklist, no kill)."""
+    result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq moreya.exe", "/NH"], capture_output=True)
+    return "moreya.exe" in result.stdout.decode("utf-8", errors="replace").lower()
 
 
 def main():

@@ -3,10 +3,11 @@
 #
 # Usage: package-linux-release.sh <build-dir> <deps-prefix> <python-prefix> <output-dir>
 #
-# The layout mirrors the Windows deployment: the binary, plugins.cfg, resources.cfg and the
-# game data folders sit side by side, so the game finds its data in the current folder.
+# The layout mirrors the Windows deployment: plugins.cfg, resources.cfg and the game data
+# folders sit side by side, so the game finds its data in the current folder. The game binary
+# moreya lies in bin/, the launcher script moreya in the top folder.
 # Shared libraries go to lib/ (OGRE plugins to lib/OGRE, CEGUI modules to lib/cegui-0.9999,
-# the Python standard library to lib/python<ver>). A launcher script changes into the folder
+# the Python standard library to lib/python<ver>). The launcher changes into the folder
 # and sets the CEGUI module directory and the Python home before starting the binary.
 
 set -euo pipefail
@@ -21,18 +22,20 @@ BUILD_DIR="$(cd "$1" && pwd)"
 DEPS="$(cd "$2" && pwd)"
 PYTHON_PREFIX="$(cd "$3" && pwd)"
 OUT="$4"
-BINARY=opendungeons-plus
+# Name of the game binary in the build tree and in bin/ of the package
+BINARY=moreya
 
 rm -rf "$OUT"
-mkdir -p "$OUT/lib/OGRE"
+mkdir -p "$OUT/lib/OGRE" "$OUT/bin"
 OUT="$(cd "$OUT" && pwd)"
+GAME="$OUT/bin/$BINARY"
 
 # Game binary
-install -m 755 "$BUILD_DIR/$BINARY" "$OUT/$BINARY"
-strip --strip-unneeded "$OUT/$BINARY"
+install -m 755 "$BUILD_DIR/$BINARY" "$GAME"
+strip --strip-unneeded "$GAME"
 
-# Game data, the same folders as the Windows install rules in CMakeLists.txt
-for dir in config gui levels licenses materials models music particles python scripts shaders sounds; do
+# Game data, the same folders as the Windows install rules in CMakeLists.txt (scripts/ holds developer tools only)
+for dir in config gui levels licenses materials models music particles python shaders sounds; do
     cp -a "$SRC_DIR/$dir" "$OUT/$dir"
 done
 for doc in AUTHORS CREDITS LICENSE.md README.md RELEASE-NOTES.md; do
@@ -85,7 +88,7 @@ bundle_deps() {
 }
 
 export LD_LIBRARY_PATH="$DEPS/lib:$DEPS/lib/OGRE:$CEGUI_MODULE_SRC:$PYTHON_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-pending=("$OUT/$BINARY" "$OUT"/lib/OGRE/*.so "$OUT/lib/$CEGUI_MODULE_DIR_NAME"/*.so)
+pending=("$GAME" "$OUT"/lib/OGRE/*.so "$OUT/lib/$CEGUI_MODULE_DIR_NAME"/*.so)
 while [ "${#pending[@]}" -gt 0 ]; do
     next=()
     for object in "${pending[@]}"; do
@@ -97,7 +100,7 @@ while [ "${#pending[@]}" -gt 0 ]; do
 done
 
 # Search paths relative to each object, so the folder can be moved anywhere
-patchelf --set-rpath '$ORIGIN/lib' "$OUT/$BINARY"
+patchelf --set-rpath '$ORIGIN/../lib' "$GAME"
 for lib in "$OUT"/lib/*.so*; do
     [ -L "$lib" ] && continue
     patchelf --set-rpath '$ORIGIN' "$lib"
@@ -167,7 +170,7 @@ cd "\$HERE" || exit 1
 CEGUI_MODULE_DIR="\$HERE/lib/$CEGUI_MODULE_DIR_NAME"
 PYTHONHOME="\$HERE"
 export CEGUI_MODULE_DIR PYTHONHOME
-exec "\$HERE/$BINARY" "\$@"
+exec "\$HERE/bin/$BINARY" "\$@"
 EOF
 chmod 755 "$OUT/moreya"
 
@@ -176,7 +179,7 @@ ls -l "$OUT/lib" "$OUT/lib/OGRE" "$OUT/lib/$CEGUI_MODULE_DIR_NAME"
 # Every object must resolve its dependencies from the folder or the base system alone
 unset LD_LIBRARY_PATH
 missing=0
-for object in "$OUT/$BINARY" "$OUT"/lib/*.so* "$OUT"/lib/OGRE/*.so "$OUT/lib/$CEGUI_MODULE_DIR_NAME"/*.so*; do
+for object in "$GAME" "$OUT"/lib/*.so* "$OUT"/lib/OGRE/*.so "$OUT/lib/$CEGUI_MODULE_DIR_NAME"/*.so*; do
     if ldd "$object" | grep -q 'not found'; then
         echo "unresolved dependencies of $object:" >&2
         ldd "$object" | grep 'not found' >&2
@@ -185,7 +188,7 @@ for object in "$OUT/$BINARY" "$OUT"/lib/*.so* "$OUT"/lib/OGRE/*.so "$OUT/lib/$CE
 done
 [ "$missing" -eq 0 ] || exit 1
 echo "Remaining system dependencies of the binary:"
-ldd "$OUT/$BINARY" | grep -v "$OUT" || true
+ldd "$GAME" | grep -v "$OUT" || true
 echo "resources.cfg:"
 cat "$OUT/resources.cfg"
 echo "plugins.cfg:"

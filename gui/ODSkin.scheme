@@ -50,14 +50,11 @@
     <Imageset filename="ChampionCrown.imageset" name="ChampionCrown" />
     <Imageset filename="CreatureSkillIcons.imageset" name="CreatureSkillIcons" />
     <Imageset filename="GoalStatus.imageset" name="GoalStatus" />
-    <Imageset filename="ODLogo.imageset" name="ODLogo" />
-    <Imageset filename="ODMainMenuLogo.imageset" name="ODMainMenuLogo" />
     <Imageset filename="ODBackgrounds.imageset" name="ODBackgrounds" />
     <Imageset filename="ODHudSurface.imageset" name="ODHudSurface" />
     <Imageset filename="ODMainMenuButtons.imageset" name="ODMainMenuButtons" />
     <Imageset filename="ODMenuTemplate.imageset" name="ODMenuTemplate" />
     <Imageset filename="ODMainMenuBackground.imageset" name="ODMainMenuBackground" />
-    <Imageset filename="ODAdvertisment.imageset" name="ODAdvertisment" />    
     <Font filename="LiberationSans-10.font" name="LiberationSans-10" />
     <Font filename="LiberationSans-20.font" name="LiberationSans-20" />
     <Font filename="MedievalSharp-10.font" name="MedievalSharp-10" />

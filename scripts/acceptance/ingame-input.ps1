@@ -32,7 +32,7 @@
     Stop    end the game process started by Start
 
 .EXAMPLE
-    .\ingame-input.ps1 -Action Start -Exe build\windows\opendungeons-plus.exe -Level levels\campaign\Campaign1.level -Seed 12345
+    .\ingame-input.ps1 -Action Start -Exe build\windows\moreya.exe -Level levels\campaign\Campaign1.level -Seed 12345
     .\ingame-input.ps1 -Action Click -X 512 -Y 400
     .\ingame-input.ps1 -Action Print -OutFile out\menu.png
     .\ingame-input.ps1 -Action Stop

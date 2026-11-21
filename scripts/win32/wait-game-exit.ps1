@@ -5,14 +5,14 @@ function Wait-GameExit {
     )
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
     $announced = $false
-    while (Get-Process -Name 'opendungeons-plus' -ErrorAction SilentlyContinue) {
+    while (Get-Process -Name 'moreya' -ErrorAction SilentlyContinue) {
         if (-not $announced) {
-            Write-Output "Waiting up to $TimeoutSeconds seconds for opendungeons-plus.exe to close; no process will be stopped."
+            Write-Output "Waiting up to $TimeoutSeconds seconds for moreya.exe to close; no process will be stopped."
             $announced = $true
         }
         $remaining = $TimeoutSeconds - $timer.Elapsed.TotalSeconds
         if ($remaining -le 0) {
-            throw "opendungeons-plus.exe is still running after $TimeoutSeconds seconds; deployment was not started. Close the game and retry."
+            throw "moreya.exe is still running after $TimeoutSeconds seconds; deployment was not started. Close the game and retry."
         }
         Start-Sleep -Milliseconds ([int][Math]::Min(1000, [Math]::Ceiling($remaining * 1000)))
     }
