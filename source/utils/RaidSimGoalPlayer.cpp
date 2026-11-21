@@ -67,6 +67,13 @@ const int32_t FIGHT_RADIUS = 6;
 //! \brief Tiles (largest of the x and y distance) within which enemy creatures of an area count for opening the
 //! dungeon to that area.
 const int32_t OPENING_SIGHT = 12;
+//! \brief Game seconds between two workers the player carries to a region to visit or claim.
+const double WORKER_DROP_SECONDS = 60.0;
+//! \brief Fighters the seat should have before the player stops building the rooms that attract them.
+const int32_t FIGHTERS_WANTED = 4;
+//! \brief Active spots the player gives the dormitory, the hatchery and the training hall of a seat with few fighters
+//! (the spawn conditions of the keeper's light fighters ask for 2 dormitory spots).
+const uint32_t FIGHTER_ROOM_SPOTS = 2;
 //! \brief Tiles the player marks for digging at most per look at the goals.
 const size_t MARK_BUDGET = 12;
 //! \brief A fighter that stands this near (largest of the x and y distance) to a fight target is not carried there.
@@ -125,6 +132,8 @@ std::map<std::string, Rect> sRegions;
 std::vector<TriggerText> sTriggers;
 int32_t sSeatId = -1;
 int64_t sLastActTurn = -1;
+//! \brief Turn the player last carried a worker to a region, -1 before.
+int64_t sLastWorkerDropTurn = -1;
 uint32_t sCarried = 0;
 std::map<RoomType, int64_t> sLastRoomBuild;
 
@@ -826,38 +835,6 @@ EnemyAreas enemyAreas(GameMap& gameMap, Seat* seat, Creature* worker, const std:
     return areas;
 }
 
-//! \brief Takes the dig mark of the player off the tiles whose digging would open the dungeon to an area where more
-//! enemy creatures walk than the seat has fighters (the computer keeper marks border tiles for claiming without looking
-//! at what lies behind them). Returns the number of tiles unmarked.
-size_t unmarkOpenings(GameMap& gameMap, Player* keeper, const std::set<Tile*>& reached, const EnemyAreas& areas,
-    int32_t fighters)
-{
-    std::vector<Tile*> unmarked;
-    for(int32_t x = 0; x < gameMap.getMapSizeX(); ++x)
-    {
-        for(int32_t y = 0; y < gameMap.getMapSizeY(); ++y)
-        {
-            Tile* tile = gameMap.getTile(x, y);
-            if((tile == nullptr) || !tile->getMarkedForDigging(keeper))
-                continue;
-            for(Tile* neighbor : tile->getAllNeighbors())
-            {
-                if((neighbor == nullptr) || (reached.count(neighbor) > 0))
-                    continue;
-                std::map<Tile*, size_t>::const_iterator it = areas.mArea.find(neighbor);
-                if((it != areas.mArea.end()) && (enemiesNear(areas, it->second, *tile) > fighters))
-                {
-                    unmarked.push_back(tile);
-                    break;
-                }
-            }
-        }
-    }
-    if(!unmarked.empty())
-        keeper->markTilesForDigging(false, unmarked, true);
-    return unmarked.size();
-}
-
 //! \brief The living fighters (creatures that are not workers) of the seat.
 int32_t countFighters(GameMap& gameMap, Seat* seat)
 {
@@ -1091,6 +1068,7 @@ void load(const std::string& levelFile, int32_t seatId)
     sTriggers.clear();
     sLastRoomBuild.clear();
     sLastActTurn = -1;
+    sLastWorkerDropTurn = -1;
     sCarried = 0;
     sSeatId = seatId;
 
@@ -1220,7 +1198,20 @@ void act(GameMap& gameMap, Player* keeper)
     {
         reached = reachedTiles(gameMap, seat, worker);
         areas = enemyAreas(gameMap, seat, worker, reached);
-        unmarkOpenings(gameMap, keeper, reached, areas, fighters);
+    }
+    // Fighters come through an own portal only to a dungeon with beds, food and training: while the seat has a portal
+    // and few fighters, the rooms they ask for get active spots (the computer keeper leaves them out on some maps)
+    if(!gameMap.getRoomsByTypeAndSeat(RoomType::portal, seat).empty() && (fighters < FIGHTERS_WANTED))
+    {
+        const RoomType wanted[] = {RoomType::dormitory, RoomType::hatchery, RoomType::trainingHall};
+        for(RoomType type : wanted)
+        {
+            uint32_t spots = 0;
+            for(Room* room : gameMap.getRoomsByTypeAndSeat(type, seat))
+                spots += room->getNumActiveSpots();
+            if(spots < FIGHTER_ROOM_SPOTS)
+                buildRoom(gameMap, keeper, type);
+        }
     }
     bool handUsed = (keeper->numObjectsInHand() > 0);
     for(Target& target : targets)
@@ -1302,7 +1293,13 @@ void act(GameMap& gameMap, Player* keeper)
             if(distance > 1)
                 continue;
         }
+        // Workers are carried at most every WORKER_DROP_SECONDS: each carried worker leaves its digging and mining
+        if(!fight && (sLastWorkerDropTurn >= 0) &&
+           (static_cast<double>(turn - sLastWorkerDropTurn) < WORKER_DROP_SECONDS * ODApplication::turnsPerSecond))
+            continue;
         handUsed = carry(gameMap, keeper, dropNear, dropTile, !fight);
+        if(handUsed && !fight)
+            sLastWorkerDropTurn = turn;
     }
 }
 
@@ -1403,16 +1400,33 @@ std::string describeOpenGoals(GameMap& gameMap, int32_t seatId)
                     ++claimed;
             }
             size_t dig = 0;
+            size_t wayLength = 0;
+            uint32_t walkable = 0;
+            uint32_t claimable = 0;
+            uint32_t seen = 0;
             if((worker != nullptr) && !target.mTiles.empty())
             {
                 const std::set<Tile*> none;
-                for(Tile* tile : findWay(gameMap, seat, worker, target.mTiles, none))
+                const std::vector<Tile*> way = findWay(gameMap, seat, worker, target.mTiles, none);
+                wayLength = way.size();
+                for(Tile* tile : way)
                 {
                     if(!worker->canGoThroughTile(tile))
                         ++dig;
                 }
+                for(Tile* tile : target.mTiles)
+                {
+                    if(worker->canGoThroughTile(tile))
+                        ++walkable;
+                    if(tile->isGroundClaimable(seat))
+                        ++claimable;
+                    if(seat->hasVisionOnTile(tile))
+                        ++seen;
+                }
             }
-            text += (i > 0 ? "," : "") + target.mText + "(" + Helper::toString(claimed) + "/" +
+            text += (i > 0 ? "," : "") + target.mText + "(way " + Helper::toString(static_cast<uint32_t>(wayLength)) +
+                " walk " + Helper::toString(walkable) + " claimable " + Helper::toString(claimable) + " seen " +
+                Helper::toString(seen) + " " + Helper::toString(claimed) + "/" +
                 Helper::toString(ground) + "/" + Helper::toString(static_cast<uint32_t>(target.mTiles.size())) +
                 " dig " + Helper::toString(static_cast<uint32_t>(dig)) + ")";
         }
