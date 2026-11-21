@@ -50,6 +50,7 @@
     <Imageset filename="ChampionCrown.imageset" name="ChampionCrown" />
     <Imageset filename="CreatureSkillIcons.imageset" name="CreatureSkillIcons" />
     <Imageset filename="GoalStatus.imageset" name="GoalStatus" />
+    <Imageset filename="HandCooldown.imageset" name="HandCooldown" />
     <Imageset filename="ODLogo.imageset" name="ODLogo" />
     <Imageset filename="ODMainMenuLogo.imageset" name="ODMainMenuLogo" />
     <Imageset filename="ODBackgrounds.imageset" name="ODBackgrounds" />

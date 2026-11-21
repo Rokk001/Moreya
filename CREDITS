@@ -26,6 +26,8 @@ Name                                   Author                  License          
 ------------------------------------------------------------------------------------------------------------------------
 ChampionCrownIcon.png                  Mario                   GPLv3+                  Drawn from simple shapes by tools/gen_champion_crown.py (script generated, original work)
 ChampionCrown.imageset                 Mario                   GPLv3+                  Written for this project
+HandCooldownIcon.png                    Mario                   GPLv3+                  Text-free placeholder (crossed-out hand) drawn from simple shapes by tools/gen_hand_cooldown_icon.py (script generated, original work); a painted picture replaces it under the same name later
+HandCooldown.imageset                   Mario                   GPLv3+                  Written for this project
 OD.project                             Bertram                 GPLv3+                  CEED Project file.
 OD.looknfeel                           OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
 ODAdvertisment.imageset                Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)

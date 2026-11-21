@@ -105,7 +105,8 @@ std::string refusalMessage(Refusal reason, double cooldownLeft)
     return std::string();
 }
 
-//! \brief The text at the hand with the whole seconds left of a running cooldown.
+//! \brief The number shown under the prohibition picture with the whole seconds left of a running cooldown (HL2, K5):
+//! only the digits, no words; empty when the cooldown is over.
 std::string cooldownText(double cooldownLeft)
 {
     const uint32_t seconds = displaySeconds(cooldownLeft);
@@ -113,15 +114,28 @@ std::string cooldownText(double cooldownLeft)
         return std::string();
 
     std::stringstream text;
-    text << "Next fighter: " << seconds << " s";
+    text << seconds;
     return text.str();
 }
 
-//! \brief Puts the text at its distance from the pointer and moves it back inside the screen where it would leave it.
-void cooldownTextPlace(float pointerX, float pointerY, float offsetX, float offsetY, float textWidth,
-    float textHeight, float screenWidth, float screenHeight, float& left, float& top)
+//! \brief The whole seconds the prohibition picture shows over a creature: 0 (nothing is drawn) unless the pointer is
+//! over a fighting creature the keeper could otherwise pick up and the cooldown runs.
+uint32_t cooldownIconSeconds(bool overPickableFighter, double cooldownLeft)
 {
-    left = std::max(0.0f, std::min(pointerX + offsetX, screenWidth - textWidth));
-    top = std::max(0.0f, std::min(pointerY + offsetY, screenHeight - textHeight));
+    if(!overPickableFighter)
+        return 0;
+
+    return displaySeconds(cooldownLeft);
+}
+
+//! \brief Puts the prohibition picture centred on the given point of the creature and the number directly under the
+//! picture; both are moved back inside the screen where they would leave it.
+void cooldownIconPlace(float centreX, float centreY, float iconSize, float numberWidth, float numberHeight,
+    float screenWidth, float screenHeight, float& iconLeft, float& iconTop, float& numberLeft, float& numberTop)
+{
+    iconLeft = std::max(0.0f, std::min(centreX - iconSize * 0.5f, screenWidth - iconSize));
+    iconTop = std::max(0.0f, std::min(centreY - iconSize * 0.5f, screenHeight - iconSize - numberHeight));
+    numberLeft = std::max(0.0f, std::min(iconLeft + (iconSize - numberWidth) * 0.5f, screenWidth - numberWidth));
+    numberTop = iconTop + iconSize;
 }
 }
