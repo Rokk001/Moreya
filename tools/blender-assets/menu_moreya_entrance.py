@@ -1,22 +1,28 @@
-"""Build the entrance into Moreya for the start screen: the staircase behind the campaign table and its signpost.
+"""Build the entrance into Moreya for the start screen: the staircase in the rear yard and its signpost.
 
-    MenuMoreyaStairs    a wide stone staircase that leads from the floor of the campaign hall down into the ground,
-                        under the back wall of the hall and on to an ember-lit doorway; kerb and low parapets
-                        frame the opening, iron ember bowls hang on the stairwell walls
+    MenuMoreyaStairs    a wide stone staircase that leads from the rear yard behind the campaign hall, in front of
+                        the abandoned castle, down into the ground and on as a tunnel under the yard to an ember-lit
+                        doorway; kerb and low parapets frame the opening, iron ember bowls hang on the stairwell walls
     MenuMoreyaSignpost  a smaller signpost of the start screen signpost family (moreya_raid_models.py PartBuilder,
-                        same wood, iron and board planks); its arrow board carries the word "Moreya" and its tip
-                        points down into the stairwell
+                        same wood, iron and board planks); its upright arrow board carries the word "Moreya" and
+                        its tip points down the stairs
+    MenuHallRearArch    the stone frame (jambs, lintel, threshold) of the opening in the back wall of the campaign
+                        hall through which one walks from the table to the stair head and the campaign flight looks
+                        out into the rear yard
+    MenuForgeCoals      a heap of charred coal lumps with small embers glowing between them on the forge hearth of
+                        the rear yard (MenuFortressRear.mesh), in place of its former flat glowing slab
 
-Units are menu scene units. The stairs' origin is the middle of the upper edge of the first step on the hall floor
-(z 0); the stairs descend along +Y. The opening on the floor is x -3.0..3.0, y 0..5.0 of the mesh; the scene places
-the mesh at (0, 24.2, 0), behind the campaign table, so the floor of the campaign hall must be open over
-x -3.0..3.0, y 24.2..29.2. The signpost's origin is the foot of its post; the scene places it on the front left kerb
-stone. The board front faces the campaign camera and its tip points into the stairwell, down and along +Y.
+Units are menu scene units. The stairs' origin is the middle of the upper edge of the first step on the yard floor
+(z 0); they descend along +Y, away from the hall towards the castle. The opening in the floor is x -3.0..3.0,
+y 0..6.0 of the mesh; the scene places the mesh at (0, 31.0, 0), right behind the opening in the hall's back wall,
+so the yard floor must be open over x -3.0..3.0, y 31.0..37.0 (tools/menu_cut_moreya_opening.py); the tunnel runs on
+under the yard and the castle. The signpost's origin is the foot of its post; the scene places it beside the top
+step on the hall side. Its board is upright, faces the hall and its tip points over the stairwell along +Y.
 
 Run in Blender (5.x):
     blender --background --python menu_moreya_entrance.py -- <repo> <private output folder> [stairs] [signpost]
-        [render | render_open | render_real]
-"stairs" and "signpost" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes with
+        [arch] [coals] [render | render_open | render_real | render_after2]
+"stairs", "signpost", "arch" and "coals" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes with
 OgreXMLConverter into <repo>/models. "render" renders the menu scene of config/mainmenuscene.cfg from the campaign
 pose and the waypoints of the campaign flight into <private>/renders (see render_poses). The board lettering is
 written by tools/gen_menu_signpost_lettering.py (--text Moreya). Progress goes to <private>/menu_moreya_entrance.log.
@@ -34,21 +40,34 @@ from mathutils import Matrix, Quaternion, Vector
 
 #: Inner half width of the stairwell, tread depth and riser height of a step, number of steps.
 HALF, TREAD, RISE, STEPS = 3.0, 0.5, 0.3, 20
-#: Length of the open part of the stairwell (the rest runs under the back wall of the hall) and of the landing.
-OPEN_LENGTH, LANDING = 5.0, 1.6
+#: Length of the open part of the stairwell (the rest runs as a tunnel under the yard) and of the landing.
+OPEN_LENGTH, LANDING = 6.0, 1.6
 #: The stairwell walls: mortar plane behind the blocks and the depth of the wall blocks.
 BACKING = HALF + 0.06
-#: Ceiling of the tunnel under the hall: underside height at the open end and its slope (parallel to the steps).
+#: Ceiling of the tunnel under the yard: underside height at the open end and its slope (parallel to the steps).
 CEILING_START, CEILING_SLOPE = -1.05, RISE / TREAD
+#: Thickness of the tunnel ceiling and of the wall courses above its underside (keeps the tunnel under the bedding).
+TUNNEL_COVER = 0.12
 #: The doorway at the foot of the stairs: half width, height above the landing, depth of the recess.
 DOOR_HALF, DOOR_HEIGHT, DOOR_DEPTH = 1.1, 1.75, 1.2
+#: Where the scene places the stair head (y of the upper edge of the first step), right behind the opening in the
+#: hall's back wall; the opening in the yard floor runs from STAIRS_HEAD_Y to STAIRS_HEAD_Y + OPEN_LENGTH.
+STAIRS_HEAD_Y = 31.0
+#: The opening in the back wall of the campaign hall (scene coordinates): half width, sill and top height, and the
+#: wall's inner and outer face (y). tools/menu_cut_moreya_opening.py cuts the same box out of the hall mesh.
+ARCH_HALF, ARCH_SILL, ARCH_HEIGHT = 4.0, 0.12, 4.2
+ARCH_WALL = (29.25, 30.25)
+#: The coal bed on the forge hearth of the rear yard (scene x min, x max, y min, y max) and the hearth top height.
+FORGE_BED = (3.05, 4.95, 40.95, 42.05)
+FORGE_HEARTH = 0.85
 #: Signpost: board outline in its own frame (back end, shoulder, tip, lower and upper edge), thickness planes,
-#: the tilt of the board (tip down) and the turn of the whole signpost about Z towards the campaign camera.
+#: the tilt of the board (0: upright), the turn of the whole signpost about Z (tip towards +Y and the middle of the
+#: stairwell, down the stairs; board front towards the hall and the campaign flight) and its size factor.
 SIGN_BACK, SIGN_SHOULDER, SIGN_TIP = -0.30, 1.80, 2.10
 SIGN_BOTTOM, SIGN_TOP = 1.75, 2.35
 SIGN_FRONT_Y, SIGN_BACK_Y = -0.22, -0.135
 SIGN_PIVOT_Z = 2.05
-SIGN_TILT, SIGN_TURN = 32.0, 30.0
+SIGN_TILT, SIGN_TURN, SIGN_SCALE = 0.0, 45.0, 1.6
 
 LOG = None
 
@@ -94,6 +113,8 @@ def add_steps(b):
     for index in range(STEPS):
         front = index * TREAD
         top = tread_height(front)
+        # A dark mortar bed under the whole step closes the joints between its slabs (no view through them).
+        box(b, -BACKING, BACKING, front - 0.08, front + TREAD - 0.04, top - RISE - 0.1, top - 0.05, "MenuSoot")
         x = -BACKING
         while x < BACKING - 0.05:
             width = b.rng.uniform(0.9, 1.7)
@@ -113,6 +134,7 @@ def add_steps(b):
     # The landing at the foot of the stairs.
     end = STEPS * TREAD
     bottom = tread_height(end)
+    box(b, -BACKING, BACKING, end - 0.05, end + LANDING + 0.1, bottom - 0.38, bottom - 0.05, "MenuSoot")
     x = -BACKING
     while x < BACKING - 0.05:
         right = min(x + b.rng.uniform(1.0, 1.6), BACKING)
@@ -131,7 +153,12 @@ def add_walls(b):
     """Adds both stairwell walls: a mortar plane and coursed stone blocks in front of it, under the ceiling."""
     end = STEPS * TREAD + LANDING
     for side in (-1, 1):
-        wall_face(b, side, -0.1, end + 0.1, -7.5, 0.0, "MenuSoot")
+        # The mortar plane reaches the yard floor along the open part and stays under the ground over the tunnel.
+        wall_face(b, side, -0.1, OPEN_LENGTH, -7.5, 0.0, "MenuSoot")
+        points = [(side * BACKING, OPEN_LENGTH, -7.5), (side * BACKING, end + 0.1, -7.5),
+                  (side * BACKING, end + 0.1, ceiling_height(end) + TUNNEL_COVER),
+                  (side * BACKING, OPEN_LENGTH, ceiling_height(OPEN_LENGTH) + TUNNEL_COVER)]
+        b.face(points if side < 0 else list(reversed(points)), "MenuSoot", (0, 1, 0))
         top = 0.0
         while top > -7.4:
             height = b.rng.uniform(0.3, 0.42)
@@ -144,7 +171,7 @@ def add_walls(b):
                     far = OPEN_LENGTH
                 block_top = top
                 if far > OPEN_LENGTH:
-                    block_top = min(top, ceiling_height(y) + 0.3)
+                    block_top = min(top, ceiling_height(y) + TUNNEL_COVER)
                 block_bottom = top - height
                 if block_top - block_bottom > 0.06 and block_top > tread_height(far) - RISE:
                     face = side * (HALF + b.rng.uniform(-0.025, 0.03))
@@ -156,16 +183,22 @@ def add_walls(b):
 
 
 def add_ceiling(b):
-    """Adds the tunnel under the back wall of the hall: a carved lintel and ceiling slabs following the steps."""
-    box(b, -BACKING - 0.3, BACKING + 0.3, OPEN_LENGTH - 0.12, OPEN_LENGTH + 0.3, CEILING_START - 0.08, 0.0,
+    """Adds the tunnel under the yard: a carved lintel at the end of the opening and ceiling slabs along the steps.
+
+    Over the tunnel the ground stays; everything of the tunnel lies at least 0.9 below the floor (under the bedding
+    of the paving), so nothing of it shows through the joints of the flagstones.
+    """
+    box(b, -BACKING - 0.3, BACKING + 0.3, OPEN_LENGTH - 0.3, OPEN_LENGTH, CEILING_START - 0.08, 0.04,
         "MenuCarvedStone")
+    box(b, -BACKING - 0.3, BACKING + 0.3, OPEN_LENGTH, OPEN_LENGTH + 0.3, CEILING_START - 0.08,
+        CEILING_START + TUNNEL_COVER, "MenuCarvedStone")
     end = STEPS * TREAD + LANDING
     y = OPEN_LENGTH + 0.3
     while y < end + 0.05:
         far = min(y + b.rng.uniform(0.7, 1.0), end + 0.1)
         drop = b.rng.uniform(0.0, 0.04)
         near_z, far_z = ceiling_height(y) - drop, ceiling_height(far) - drop
-        profile_x(b, [(y, near_z), (far, far_z), (far, far_z + 0.35), (y, near_z + 0.35)], -BACKING - 0.1,
+        profile_x(b, [(y, near_z), (far, far_z), (far, far_z + TUNNEL_COVER), (y, near_z + TUNNEL_COVER)], -BACKING - 0.1,
                   BACKING + 0.1, "MenuDarkStone")
         y = far + 0.015
 
@@ -311,6 +344,51 @@ def build_stairs(raid):
                      "MenuCorrodedIron", "MenuEmber", "MenuEmberCrack"])
 
 
+def build_hall_arch(raid):
+    """Builds the stone frame of the opening in the back wall of the campaign hall that leads into the rear yard.
+
+    Scene coordinates (the scene places it at the origin): tools/menu_cut_moreya_opening.py cuts the wall over
+    x -ARCH_HALF..ARCH_HALF, z ARCH_SILL..ARCH_HEIGHT out of MenuCampaignHall.mesh; the jambs, the lintel and the
+    threshold of this frame cover the cut edges and stand on the floor.
+    """
+    b = raid.PartBuilder("MenuHallRearArch", 3307)
+    front, back = ARCH_WALL[0] - 0.12, ARCH_WALL[1] + 0.12
+    for side in (-1, 1):
+        inner, outer = sorted((side * (ARCH_HALF - 0.15), side * (ARCH_HALF + 0.38)))
+        bottom = -0.05
+        for top in (1.25, 2.5, ARCH_HEIGHT + 0.08):
+            lift = b.rng.uniform(-0.02, 0.02)
+            box(b, inner + b.rng.uniform(-0.02, 0.01), outer, front + b.rng.uniform(-0.03, 0.0), back, bottom,
+                top + lift, "MenuCarvedStone", (0, 0, 1))
+            bottom = top + lift + 0.015
+    box(b, -ARCH_HALF - 0.5, ARCH_HALF + 0.5, front - 0.04, back + 0.04, ARCH_HEIGHT - 0.05, ARCH_HEIGHT + 0.6,
+        "MenuCarvedStone")
+    box(b, -ARCH_HALF - 0.15, ARCH_HALF + 0.15, front, back, -0.12, ARCH_SILL + 0.04, "MenuChippedStone")
+    return b.finish(["MenuCarvedStone", "MenuChippedStone"])
+
+
+def build_forge_coals(raid):
+    """Builds the coal heap on the forge hearth of the rear yard: dark charred lumps with small embers between them.
+
+    Scene coordinates (the scene places it at the origin). The lumps rest on the hearth top (about z 0.86) over
+    FORGE_BED (x and y range); tools/menu_cut_moreya_opening.py removes the flat glowing slab that floated there.
+    """
+    b = raid.PartBuilder("MenuForgeCoals", 4409)
+    x0, x1, y0, y1 = FORGE_BED
+    rows, columns = 6, 10
+    for row in range(rows):
+        for column in range(columns):
+            x = x0 + (column + 0.5 + b.rng.uniform(-0.25, 0.25)) * (x1 - x0) / columns
+            y = y0 + (row + 0.5 + b.rng.uniform(-0.25, 0.25)) * (y1 - y0) / rows
+            size = (b.rng.uniform(0.1, 0.16), b.rng.uniform(0.09, 0.14), b.rng.uniform(0.06, 0.1))
+            b.rock((x, y, FORGE_HEARTH + size[2] * 0.55), size, "MenuSoot")
+            if b.rng.random() < 0.45:
+                ember = (b.rng.uniform(0.04, 0.07), b.rng.uniform(0.04, 0.07), b.rng.uniform(0.03, 0.05))
+                b.rock((x + (x1 - x0) / columns * 0.5, y + (y1 - y0) / rows * 0.5, FORGE_HEARTH + ember[2] * 0.6),
+                       ember, "MenuEmber")
+    return b.finish(["MenuSoot", "MenuEmber"])
+
+
 def transform_faces(b, first, matrix):
     """Moves the vertices and turns the grain of every face from index first on by a matrix."""
     rotation = matrix.to_3x3()
@@ -322,7 +400,7 @@ def transform_faces(b, first, matrix):
 
 
 def build_signpost(raid):
-    """Builds the Moreya signpost: post, tilted arrow board with lettering face, iron rod, straps, nails, stones."""
+    """Builds the Moreya signpost: post, arrow board with lettering face, iron rod, straps, nails, stones."""
     b = raid.PartBuilder("MenuMoreyaSignpost", 6607)
     b.board_material = "MenuMoreyaSignpostBoard"
     b.board_box = (SIGN_BACK, SIGN_TIP, SIGN_BOTTOM, SIGN_TOP)
@@ -332,7 +410,7 @@ def build_signpost(raid):
     b.log_column(post_top, post_top + Vector((0.0, 0.0, 0.18)), 0.12, 0.0, rust, sides=10, rough=0.0)
     b.solid([(-0.075, SIGN_BACK_Y, 1.62), (0.075, SIGN_BACK_Y, 1.62), (0.075, SIGN_BACK_Y, 2.48),
              (-0.075, SIGN_BACK_Y, 2.48)], (0, 0.085, 0), wood, (0, 0, 1))
-    # Everything from here on belongs to the board and is tilted with it about the pivot on the post.
+    # Everything from here on belongs to the board and is tilted with it about the pivot on the post (SIGN_TILT).
     first_board_face = len(b.faces)
     outline = [(SIGN_BACK, SIGN_BOTTOM), (SIGN_SHOULDER, SIGN_BOTTOM), (SIGN_TIP, (SIGN_BOTTOM + SIGN_TOP) / 2),
                (SIGN_SHOULDER, SIGN_TOP), (SIGN_BACK, SIGN_TOP)]
@@ -347,13 +425,13 @@ def build_signpost(raid):
     tilt = (Matrix.Translation((0, 0, SIGN_PIVOT_Z)) @ Matrix.Rotation(math.radians(SIGN_TILT), 4, "Y")
             @ Matrix.Translation((0, 0, -SIGN_PIVOT_Z)))
     transform_faces(b, first_board_face, tilt)
-    # An iron rod from the top of the post carries the long arm of the tilted board.
+    # An iron rod from the top of the post carries the long arm of the board.
     rod_end = tilt @ Vector((1.6, (SIGN_FRONT_Y + SIGN_BACK_Y) / 2, SIGN_TOP))
     b.log_column((0.06, rod_end.y, 2.5), rod_end, 0.022, 0.02, rust, sides=6, rough=0.0)
     for angle, distance, size in ((0.3, 0.26, (0.18, 0.14, 0.12)), (1.9, 0.27, (0.16, 0.18, 0.11)),
                                   (3.4, 0.25, (0.2, 0.16, 0.13)), (4.9, 0.26, (0.14, 0.13, 0.1))):
         b.rock((distance * math.cos(angle), distance * math.sin(angle), size[2] * 0.35 + 0.1), size)
-    turn = Matrix.Rotation(math.radians(SIGN_TURN), 4, "Z")
+    turn = Matrix.Rotation(math.radians(SIGN_TURN), 4, "Z") @ Matrix.Scale(SIGN_SCALE, 4)
     transform_faces(b, 0, turn)
     b.to_board = (turn @ tilt).inverted()
     return b.finish([wood, "MenuMoreyaSignpostBoard", rust, iron, "MenuRoughStone"])
@@ -427,19 +505,19 @@ def import_scene(repo, private, raid, exporter, with_entrance, open_floor):
 
 
 def cut_opening(obj):
-    """Deletes the faces of a ground mesh that lie over the stairwell opening (x -3..3, y 24.2..29.2, z -1..0.3)."""
+    """Deletes the faces of a ground mesh that lie over the stairwell opening (x -3..3, y 31..37, z -1..0.3)."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     origin = obj.location
     # Split the large floor faces along the four edges of the opening first, so only the part over it goes.
-    for point, normal in (((-HALF, 0, 0), (1, 0, 0)), ((HALF, 0, 0), (1, 0, 0)), ((0, 24.2, 0), (0, 1, 0)),
-                          ((0, 24.2 + OPEN_LENGTH, 0), (0, 1, 0))):
+    for point, normal in (((-HALF, 0, 0), (1, 0, 0)), ((HALF, 0, 0), (1, 0, 0)), ((0, STAIRS_HEAD_Y, 0), (0, 1, 0)),
+                          ((0, STAIRS_HEAD_Y + OPEN_LENGTH, 0), (0, 1, 0))):
         geometry = bm.verts[:] + bm.edges[:] + bm.faces[:]
         bmesh.ops.bisect_plane(bm, geom=geometry, plane_co=Vector(point) - origin, plane_no=Vector(normal))
     doomed = []
     for face in bm.faces:
         centre = face.calc_center_median() + origin
-        if -HALF < centre.x < HALF and 24.2 < centre.y < 24.2 + OPEN_LENGTH and -1.0 < centre.z < 0.3:
+        if -HALF < centre.x < HALF and STAIRS_HEAD_Y < centre.y < STAIRS_HEAD_Y + OPEN_LENGTH and -1.0 < centre.z < 0.3:
             doomed.append(face)
     bmesh.ops.delete(bm, geom=doomed, context="FACES")
     bm.to_mesh(obj.data)
@@ -447,14 +525,32 @@ def cut_opening(obj):
     log("opened %d faces of %s" % (len(doomed), obj.name))
 
 
+def flight_sample(poses, share):
+    """Returns the camera [x, y, z, rx, ry, rz] at a share (0..1) of the campaign flight from gate_exit to campaign.
+
+    Positions follow the Catmull-Rom curve of RenderSceneMenu::samplePath through gate_entry, gate_exit and campaign;
+    both poses only turn about X, so the slerp of their rotations is the linear blend of the X angles.
+    """
+    before, first, second = (Vector(poses[name][:3]) for name in ("gate_entry", "gate_exit", "campaign"))
+    after = second
+    t, t2, t3 = share, share * share, share * share * share
+    position = 0.5 * ((2 * first) + (-before + second) * t + (2 * before - 5 * first + 4 * second - after) * t2
+                      + (-before + 3 * first - 3 * second + after) * t3)
+    angles = [poses["gate_exit"][3 + k] + (poses["campaign"][3 + k] - poses["gate_exit"][3 + k]) * share
+              for k in range(3)]
+    return [position.x, position.y, position.z] + angles
+
+
 def render_poses(repo, private, raid, exporter, states=("before", "after_closed", "after_open")):
     """Renders the menu scene from the campaign pose and the campaign flight waypoints, before and after.
 
-    Writes <private>/renders/<state>_<pose>_<width>x<height>.png for the states "before" (scene without the
+    Writes <private>/renders/<state>_<pose>_<width>x<height>.png (poses campaign, gate_entry, gate_exit and two
+    frames of the flight from gate_exit to campaign) for the states "before" (scene without the
     entrance), "after_closed" (entrance with today's floor) and "after_open" (entrance with the floor opened over
     the stairwell), and on request "after_real" (entrance with the meshes as they are, after
     tools/menu_cut_moreya_opening.py opened the floor); states limits the run to some of them. Lights come from the AddPointLight lines, the ambient from [MenuLighting] FlightAmbient, the
-    camera from the [MenuCamera] poses with the vertical field of view of 45 degrees of the game camera.
+    camera from the [MenuCamera] poses with the field of view of the menu camera (45 degrees vertical at 16:9, the same
+    horizontal field of view for narrower windows).
     """
     sys.path.insert(0, str(Path(repo) / "tools/blender-assets"))
     import menu_scene_assembly as assembly
@@ -471,7 +567,8 @@ def render_poses(repo, private, raid, exporter, states=("before", "after_closed"
     output = Path(private) / "renders"
     output.mkdir(parents=True, exist_ok=True)
     for state, with_entrance, open_floor in (("before", False, False), ("after_closed", True, False),
-                                             ("after_open", True, True), ("after_real", True, False)):
+                                             ("after_open", True, True), ("after_real", True, False),
+                                             ("after2", True, False)):
         if state not in states:
             continue
         bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -492,18 +589,24 @@ def render_poses(repo, private, raid, exporter, states=("before", "after_closed"
             if words[0] == "AddPointLight":
                 assembly.add_light(words, lights)
         camera_data = bpy.data.cameras.new("Menu camera")
-        camera_data.sensor_fit = "VERTICAL"
-        camera_data.sensor_height = 24
-        camera_data.lens = camera_data.sensor_height / (2 * math.tan(math.radians(45) / 2))
+        # The menu keeps the horizontal field of view of 16:9 (vertical 45 degrees) and widens the vertical one for
+        # narrower windows (CameraManager::setViewportSize).
+        camera_data.sensor_fit = "HORIZONTAL"
+        camera_data.sensor_width = 36
+        camera_data.lens = camera_data.sensor_width / (2 * math.tan(math.radians(45) / 2) * 16 / 9)
         camera_data.clip_start = 0.05
         camera_data.clip_end = 400
         camera = bpy.data.objects.new("Menu camera", camera_data)
         scene.collection.objects.link(camera)
         scene.camera = camera
         camera.rotation_mode = "QUATERNION"
-        for pose, sizes in (("campaign", ((1920, 1080), (1440, 1080))), ("gate_entry", ((1920, 1080),)),
-                            ("gate_exit", ((1920, 1080),))):
-            values = poses[pose]
+        views = [("campaign", poses["campaign"], ((1920, 1080), (1440, 1080))),
+                 ("gate_entry", poses["gate_entry"], ((1920, 1080),)),
+                 ("gate_exit", poses["gate_exit"], ((1920, 1080), (1440, 1080)))]
+        for share in (0.25, 0.5):
+            views.append(("flight_exit_to_campaign_%02d" % int(share * 100), flight_sample(poses, share),
+                          ((1920, 1080), (1440, 1080))))
+        for pose, values, sizes in views:
             camera.location = values[:3]
             camera.rotation_quaternion = (Quaternion((1, 0, 0), math.radians(values[3]))
                                           @ Quaternion((0, 1, 0), math.radians(values[4]))
@@ -520,7 +623,7 @@ def main():
     global LOG
     arguments = sys.argv[sys.argv.index("--") + 1:]
     repo, private = Path(arguments[0]), Path(arguments[1])
-    wanted = set(arguments[2:]) or {"stairs", "signpost"}
+    wanted = set(arguments[2:]) or {"stairs", "signpost", "arch", "coals"}
     private.mkdir(parents=True, exist_ok=True)
     LOG = open(private / "menu_moreya_entrance.log", "w", encoding="utf-8")
     try:
@@ -534,12 +637,20 @@ def main():
         if "signpost" in wanted:
             bpy.ops.wm.read_factory_settings(use_empty=True)
             export(exporter, repo, private, build_signpost(raid))
+        if "arch" in wanted:
+            bpy.ops.wm.read_factory_settings(use_empty=True)
+            export(exporter, repo, private, build_hall_arch(raid))
+        if "coals" in wanted:
+            bpy.ops.wm.read_factory_settings(use_empty=True)
+            export(exporter, repo, private, build_forge_coals(raid))
         if "render" in wanted:
             render_poses(repo, private, raid, exporter)
         elif "render_open" in wanted:
             render_poses(repo, private, raid, exporter, ("after_open",))
         elif "render_real" in wanted:
             render_poses(repo, private, raid, exporter, ("after_real",))
+        elif "render_after2" in wanted:
+            render_poses(repo, private, raid, exporter, ("after2",))
         log("finished")
     except Exception:
         LOG.write(traceback.format_exc())

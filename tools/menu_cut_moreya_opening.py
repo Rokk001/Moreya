@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
-"""Open the floor of the menu scene over the staircase into Moreya (INGAME-QS-12 K1).
+"""Open the menu scene for the staircase into Moreya in the rear yard (INGAME-QS-12 K1).
 
-The staircase MoreyaStairs (models/MenuMoreyaStairs.mesh, tools/blender-assets/menu_moreya_entrance.py) leads down
-behind the campaign table; its opening in config/mainmenuscene.cfg coordinates is x -3.0..3.0, y 24.2..29.2. The
-floor of the campaign hall (CampaignHall) and the paving with its bedding (OuterGround) covered it. This tool cuts that
-rectangle out of both meshes:
+The staircase MoreyaStairs (models/MenuMoreyaStairs.mesh, tools/blender-assets/menu_moreya_entrance.py) lies in the
+rear yard behind the campaign hall, in front of the abandoned castle. Two openings are cut (config/mainmenuscene.cfg
+coordinates, see CUTS):
+- the stairwell: x -3.0..3.0, y 31.0..37.0, z -0.95..0.3 out of the yard paving with its bedding (OuterGround) and
+  the loose rubble of the bailey (FortressRear) lying there;
+- the back wall of the campaign hall: x -4.0..4.0, y 29.0..30.5, z 0.12..4.2 out of CampaignHall, so the campaign
+  flight looks through it into the yard; the stone frame MenuHallRearArch covers the cut edges;
+- the flat glowing slab floating over the forge hearth of the yard: x 2.99..5.01, y 40.89..42.11, z 1.08..1.18 out of
+  FortressRear; the coal heap MenuForgeCoals takes its place.
 
     python tools/menu_cut_moreya_opening.py <work folder>
 
-Each mesh is converted to XML with OgreXMLConverter (BUILD_DEPS_ROOT, else %USERPROFILE%/build-deps). Every triangle
-that overlaps the rectangle is split along its four edges; the pieces inside it whose heights all lie between
-FLOOR_BOTTOM and FLOOR_TOP are dropped, and the pieces outside replace the triangle in its place. New vertices on the
-cut edges interpolate every vertex attribute (normals and tangents renormalised). Triangles away from the rectangle,
-pieces outside the height band (the roof of the hall) and every vertex still in use stay as they were; vertices no
-face uses any more (those of the dropped pieces and of splits that were not needed) are removed. The XML before and
+Run it on the meshes as they were before any cut (the tool never adds geometry back). Each mesh is converted to XML
+with OgreXMLConverter (BUILD_DEPS_ROOT, else %USERPROFILE%/build-deps). Every triangle that overlaps a box is split
+along the box's six planes; the piece inside the box is dropped and the pieces outside replace the triangle in its
+place (a box can be limited to some materials; a submesh left without faces is dropped). New vertices on the cut edges interpolate every vertex attribute (normals and tangents renormalised). Triangles
+away from the boxes and every vertex still in use stay as they were; vertices no face uses any more (those of the
+dropped pieces and of splits that were not needed) are removed. The XML before and
 after is kept in the work folder (outside the repository) and converted back into models/<mesh>; the vertex values
 are taken bit for bit from the binary mesh, so the XML round trip rounds nothing. Running the tool
 again on cut meshes changes nothing.
@@ -26,12 +31,14 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[1]
-#: The opening in scene coordinates (x min, x max, y min, y max).
-OPENING = (-3.0, 3.0, 24.2, 29.2)
-#: Height band of the floor, the paving and its bedding that is removed over the opening (scene coordinates).
-FLOOR_BOTTOM, FLOOR_TOP = -0.95, 0.3
-#: The entities whose meshes are cut.
-ENTITIES = ("CampaignHall", "OuterGround")
+#: The boxes cut out of the entities' meshes, in scene coordinates (x min, x max, y min, y max, z min, z max).
+STAIRWELL = (-3.0, 3.0, 31.0, 37.0, -0.95, 0.3)
+HALL_BACK_OPENING = (-4.0, 4.0, 29.0, 30.5, 0.12, 4.2)
+FORGE_SLAB = (2.99, 5.01, 40.89, 42.11, 1.08, 1.18)
+#: Per entity: (box, materials) pairs; materials None cuts every submesh, else only the submeshes of those materials
+#: (the forge slab is the glowing material alone; the hearth stone around it stays whole).
+CUTS = {"OuterGround": ((STAIRWELL, None),), "FortressRear": ((STAIRWELL, None), (FORGE_SLAB, ("MenuEmber",))),
+        "CampaignHall": ((HALL_BACK_OPENING, None),)}
 #: Attributes that are directions and are renormalised after interpolation.
 DIRECTIONS = ("normal", "tangent", "binormal")
 #: Distance from a cut plane within which a vertex counts as lying on it.
@@ -193,7 +200,7 @@ class Geometry:
 
 
 def split(geometry, polygon, axis, value, cache):
-    """Splits a polygon of vertex indices at a plane (axis 0 or 1 equals value): returns (below, above)."""
+    """Splits a polygon of vertex indices at a plane (axis 0, 1 or 2 equals value): returns (below, above)."""
     below, above = [], []
     for index, vertex in enumerate(polygon):
         following = polygon[(index + 1) % len(polygon)]
@@ -226,36 +233,31 @@ def area(geometry, polygon):
     return sum(value * value for value in total) ** 0.5
 
 
-def cut_faces(geometry, faces, offset, cache):
-    """Cuts the opening out of the triangles of one faces element; returns (cut triangles, dropped pieces)."""
-    x0, x1, y0, y1 = (OPENING[0] - offset[0], OPENING[1] - offset[0], OPENING[2] - offset[1], OPENING[3] - offset[1])
-    bottom, top = FLOOR_BOTTOM - offset[2], FLOOR_TOP - offset[2]
+def cut_faces(geometry, faces, box, cache):
+    """Cuts a box (mesh coordinates) out of the triangles of one faces element; returns the triangles cut."""
+    planes = ((0, box[0], True), (0, box[1], False), (1, box[2], True), (1, box[3], False), (2, box[4], True),
+              (2, box[5], False))
     result = []
-    changed = dropped = 0
+    changed = 0
     for face in faces.findall("face"):
         triangle = [int(face.get(name)) for name in ("v1", "v2", "v3")]
         points = [geometry.position(index) for index in triangle]
-        overlaps = (max(p[0] for p in points) > x0 and min(p[0] for p in points) < x1
-                    and max(p[1] for p in points) > y0 and min(p[1] for p in points) < y1)
+        overlaps = all(max(p[axis] for p in points) > box[2 * axis] and min(p[axis] for p in points) < box[2 * axis + 1]
+                       for axis in range(3))
         if not overlaps:
             result.append(triangle)
             continue
         outside = []
         rest = triangle
-        for axis, value, keep_below in ((0, x0, True), (0, x1, False), (1, y0, True), (1, y1, False)):
+        for axis, value, keep_below in planes:
             below, above = split(geometry, rest, axis, value, cache)
             outside.append(below if keep_below else above)
             rest = above if keep_below else below
             if len(rest) < 3:
                 break
-        inside_heights = [geometry.position(index)[2] for index in rest] if len(rest) >= 3 else []
-        if not inside_heights or area(geometry, rest) < 1e-10:
+        if len(rest) < 3 or area(geometry, rest) < 1e-10:
             result.append(triangle)
             continue
-        if not all(bottom < height < top for height in inside_heights):
-            result.append(triangle)
-            continue
-        dropped += 1
         changed += 1
         for piece in outside:
             if len(piece) >= 3 and area(geometry, piece) > 1e-10:
@@ -267,7 +269,7 @@ def cut_faces(geometry, faces, offset, cache):
         ElementTree.SubElement(faces, "face", {"v1": str(triangle[0]), "v2": str(triangle[1]),
                                                "v3": str(triangle[2])})
     faces.set("count", str(len(result)))
-    return changed, dropped
+    return changed
 
 
 def compact(geometry, face_lists):
@@ -291,8 +293,8 @@ def compact(geometry, face_lists):
     return removed
 
 
-def cut_mesh(path, offset, binary):
-    """Cuts the opening out of every submesh of one Ogre XML mesh file in place; returns the triangles cut.
+def cut_mesh(path, boxes, binary):
+    """Cuts (box, materials) pairs (mesh coordinates) out of one Ogre XML mesh file in place; returns the triangles cut.
 
     binary is the mesh file the XML was made from; its exact vertex values replace the rounded ones of the XML.
     """
@@ -312,33 +314,49 @@ def cut_mesh(path, offset, binary):
             geometry, cache = Geometry(submesh.find("geometry"), next(exact)), {}
         if submesh.get("operationtype", "triangle_list") != "triangle_list":
             continue
-        changed, _ = cut_faces(geometry, submesh.find("faces"), offset, cache)
-        total += changed
+        for box, materials in boxes:
+            if materials is None or submesh.get("material") in materials:
+                total += cut_faces(geometry, submesh.find("faces"), box, cache)
         if geometry is not shared_geometry:
             compact(geometry, [submesh.find("faces")])
     if shared_geometry is not None:
         compact(shared_geometry, shared_faces)
+    # A submesh left without faces is dropped together with its name entry.
+    submeshes = root.find("submeshes")
+    names = root.find("submeshnames")
+    for index, submesh in reversed(list(enumerate(submeshes.findall("submesh")))):
+        if int(submesh.find("faces").get("count")) == 0:
+            submeshes.remove(submesh)
+            if names is not None:
+                for entry in names.findall("submeshname"):
+                    position = int(entry.get("index"))
+                    if position == index:
+                        names.remove(entry)
+                    elif position > index:
+                        entry.set("index", str(position - 1))
     tree.write(path, encoding="utf-8", xml_declaration=True)
     return total
 
 
 def main():
-    """Cuts the opening out of the hall floor and the outer ground and writes both meshes back."""
+    """Cuts the boxes of CUTS out of the named entities' meshes and writes the meshes back."""
     if len(sys.argv) != 2:
         print(__doc__)
         return 2
     work = Path(sys.argv[1])
     work.mkdir(parents=True, exist_ok=True)
     entities = entity_positions()
-    for name in ENTITIES:
+    for name, scene_boxes in CUTS.items():
         mesh, offset = entities[name]
+        boxes = [((box[0] - offset[0], box[1] - offset[0], box[2] - offset[1], box[3] - offset[1], box[4] - offset[2],
+                   box[5] - offset[2]), materials) for box, materials in scene_boxes]
         before = work / (mesh + ".before.xml")
         after = work / (mesh + ".xml")
         binary = work / (Path(mesh).stem + ".before.mesh")
         binary.write_bytes((ROOT / "models" / mesh).read_bytes())
         convert(binary, before)
         after.write_bytes(before.read_bytes())
-        total = cut_mesh(after, offset, binary)
+        total = cut_mesh(after, boxes, binary)
         convert(after, ROOT / "models" / mesh)
         print("%s: %d triangles cut" % (mesh, total))
     return 0
