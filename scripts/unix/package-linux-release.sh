@@ -116,13 +116,19 @@ tar -C "$PYTHON_LIB_DIR" \
     -cf - . | tar -C "$OUT/lib/$PYTHON_LIB_NAME" -xf -
 
 # OGRE media used by the resource configuration
+# The install folder of the media depends on the OGRE version (share/OGRE or share/OGRE-<ver>)
+OGRE_MEDIA="$(dirname "$(find "$DEPS/share" -type d -path '*/Media/RTShaderLib' | head -n 1)")"
+if [ ! -d "$OGRE_MEDIA/Main" ]; then
+    echo "OGRE media not found below $DEPS/share" >&2
+    exit 1
+fi
 mkdir -p "$OUT/ogre-media" "$OUT/ogre-includes"
-cp -a "$DEPS/share/OGRE/Media/Main" "$OUT/ogre-media/Main"
-cp -a "$DEPS/share/OGRE/Media/RTShaderLib" "$OUT/ogre-media/RTShaderLib"
+cp -a "$OGRE_MEDIA/Main" "$OUT/ogre-media/Main"
+cp -a "$OGRE_MEDIA/RTShaderLib" "$OUT/ogre-media/RTShaderLib"
 # OGRE 14 resolves shader includes only inside the group of the program (see CMakeLists.txt),
 # so the shared includes get their own folder in the Graphics group, as on Windows.
 for include in OgreUnifiedShader.h GLSL_GL3Support.glsl HLSL_SM4Support.hlsl DefaultShaders.metal; do
-    cp "$DEPS/share/OGRE/Media/Main/$include" "$OUT/ogre-includes/$include"
+    cp "$OGRE_MEDIA/Main/$include" "$OUT/ogre-includes/$include"
 done
 
 # plugins.cfg: plugin folder relative to the plugins.cfg file
