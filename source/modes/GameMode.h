@@ -838,9 +838,9 @@ private:
 
     //! \brief Called when there is a mouse input change
     void checkInputCommand();
-    //! \brief Restores the ordinary context area and hides its item image and quality frame.
+    //! \brief Takes the item card of a hovered loot bag away.
     void clearItemContextImage();
-    //! \brief Shows one bag's image, quality frame and complete pointer tooltip.
+    //! \brief Shows the standard item tooltip of one loot bag at the pointer.
     void showItemContext(const ItemBagEntity& bag);
     //! \brief Handles the hover when no action is selected: unexplored tiles get a dig hint, otherwise
     //! the closest pickable entity, visible item bag, wall or ground under the pointer is described.

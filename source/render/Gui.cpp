@@ -257,23 +257,80 @@ ItemTooltipPlacement::Box getItemTooltipItemBox(const CEGUI::Window* target)
     return ItemTooltipPlacement::Box(area.left(), area.top(), area.right(), area.bottom());
 }
 
-//! \brief Gives the item card the frame in the colour of its quality and puts it right of and below the hand cursor,
-//! never left of the cursor and never over the item (ItemTooltipPlacement, plan INGAME-QS-11 K6 and K11).
-void placeItemTooltip(CEGUI::Tooltip* tooltip, const CEGUI::Window* target, const CEGUI::Rectf& hand,
-    const CEGUI::Vector2f& cursor, const CEGUI::Sizef& screen, float gap)
+//! \brief The picture of the hand cursor on the screen in pixels, a box of no size at the cursor without a hand picture.
+CEGUI::Rectf getHandBoxOnScreen(const CEGUI::Vector2f& cursor, const CEGUI::Sizef& screen)
 {
-    const std::string colour = target->isUserStringDefined(ITEM_TOOLTIP_COLOUR_USER_STRING) ?
-        std::string(target->getUserString(ITEM_TOOLTIP_COLOUR_USER_STRING).c_str()) : std::string("FF8A8A8A");
+    CEGUI::Rectf hand(cursor, CEGUI::Sizef(0, 0));
+    if(RenderManager::getSingletonPtr() != nullptr)
+    {
+        const Ogre::FloatRect area = RenderManager::getSingleton().getHandCursorBounds(
+            cursor.d_x / screen.d_width, cursor.d_y / screen.d_height);
+        hand = CEGUI::Rectf(area.left * screen.d_width, area.top * screen.d_height,
+            area.right * screen.d_width, area.bottom * screen.d_height);
+    }
+    return hand;
+}
+
+//! \brief Gives the item card the frame in the given quality colour (ARGB hex) and puts it right of and below the hand
+//! cursor, never left of the cursor and never over the item box (ItemTooltipPlacement, plan INGAME-QS-11 K6 and K11).
+void placeItemTooltipBox(CEGUI::Tooltip* tooltip, const std::string& colour, const ItemTooltipPlacement::Box& item,
+    const CEGUI::Rectf& hand, const CEGUI::Vector2f& cursor, const CEGUI::Sizef& screen, float gap)
+{
     const std::string frame = "tl:" + colour + " tr:" + colour + " bl:" + colour + " br:" + colour;
     if(tooltip->getProperty("QualityFrameColour") != frame)
         tooltip->setProperty("QualityFrameColour", frame);
 
     const CEGUI::Rectf bounds = tooltip->getUnclippedOuterRect().get();
     const ItemTooltipPlacement::Box box = ItemTooltipPlacement::place(cursor.d_x, cursor.d_y,
-        ItemTooltipPlacement::Box(hand.left(), hand.top(), hand.right(), hand.bottom()), getItemTooltipItemBox(target),
+        ItemTooltipPlacement::Box(hand.left(), hand.top(), hand.right(), hand.bottom()), item,
         bounds.getWidth(), bounds.getHeight(), screen.d_width, screen.d_height, gap);
     if(box.mLeft != bounds.left() || box.mTop != bounds.top())
         tooltip->setPosition(CEGUI::UVector2(CEGUI::UDim(0, box.mLeft), CEGUI::UDim(0, box.mTop)));
+}
+
+//! \brief Gives the item card of a hovered window the frame in the colour of its quality and puts it right of and below
+//! the hand cursor, never left of the cursor and never over the item (ItemTooltipPlacement, plan INGAME-QS-11 K6 and K11).
+void placeItemTooltip(CEGUI::Tooltip* tooltip, const CEGUI::Window* target, const CEGUI::Rectf& hand,
+    const CEGUI::Vector2f& cursor, const CEGUI::Sizef& screen, float gap)
+{
+    const std::string colour = target->isUserStringDefined(ITEM_TOOLTIP_COLOUR_USER_STRING) ?
+        std::string(target->getUserString(ITEM_TOOLTIP_COLOUR_USER_STRING).c_str()) : std::string("FF8A8A8A");
+    placeItemTooltipBox(tooltip, colour, getItemTooltipItemBox(target), hand, cursor, screen, gap);
+}
+
+//! \brief Name of the item card that is shown for an item in the 3D world (Gui::showItemTooltipAtCursor).
+const char* const WORLD_ITEM_TOOLTIP_NAME = "WorldItemTooltip";
+
+//! \brief Returns the item card window of items in the 3D world, which has no window of its own to hover. It is a
+//! tooltip of the same type and look as the default tooltip, so the card is the same as everywhere else. It is created
+//! on first use when create is true and hangs in the root window of the shown sheet; null without root window or card.
+CEGUI::Tooltip* getWorldItemTooltip(bool create)
+{
+    CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
+    CEGUI::Window* root = context.getRootWindow();
+    CEGUI::WindowManager& manager = CEGUI::WindowManager::getSingleton();
+    if(root == nullptr)
+        return nullptr;
+    CEGUI::Tooltip* tooltip = nullptr;
+    if(manager.isWindowPresent(WORLD_ITEM_TOOLTIP_NAME))
+        tooltip = static_cast<CEGUI::Tooltip*>(manager.getWindow(WORLD_ITEM_TOOLTIP_NAME));
+    else if(create)
+    {
+        tooltip = static_cast<CEGUI::Tooltip*>(manager.createWindow("OD/Tooltip", WORLD_ITEM_TOOLTIP_NAME));
+        tooltip->setLookNFeel(ITEM_TOOLTIP_LOOK);
+        tooltip->setAlwaysOnTop(true);
+        // The pointer stays on the world below the card: it never takes a click or a hover
+        tooltip->setMousePassThroughEnabled(true);
+        tooltip->hide();
+    }
+    if(tooltip != nullptr && tooltip->getParent() != root)
+    {
+        // A sheet that was destroyed or replaced leaves the card without parent or in the old sheet
+        if(tooltip->getParent() != nullptr)
+            tooltip->getParent()->removeChild(tooltip);
+        root->addChild(tooltip);
+    }
+    return tooltip;
 }
 
 //! \brief Hits the round integrated plate without intercepting the surrounding minimap.
@@ -1760,14 +1817,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
             const CEGUI::Rectf bounds = tooltip->getUnclippedOuterRect().get();
             const CEGUI::Sizef screen = tooltip->getRootContainerSize();
             const CEGUI::Vector2f cursor = tooltip->getGUIContext().getMouseCursor().getPosition();
-            CEGUI::Rectf hand(cursor, CEGUI::Sizef(0, 0));
-            if(RenderManager::getSingletonPtr() != nullptr)
-            {
-                const Ogre::FloatRect area = RenderManager::getSingleton().getHandCursorBounds(
-                    cursor.d_x / screen.d_width, cursor.d_y / screen.d_height);
-                hand = CEGUI::Rectf(area.left * screen.d_width, area.top * screen.d_height,
-                    area.right * screen.d_width, area.bottom * screen.d_height);
-            }
+            const CEGUI::Rectf hand = getHandBoxOnScreen(cursor, screen);
             const float gap = tooltip->getFont()->getFontHeight() * TOOLTIP_HAND_GAP_FACTOR;
             // An item card goes right of and below the hand and never over its item (plan INGAME-QS-11 K11)
             if(itemCard)
@@ -1898,6 +1948,36 @@ void Gui::setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const 
 {
     window->setTooltipText(describeItemTooltip(item, map, heldWeapon));
     markItemTooltip(window, ItemInstance::getQualityColour(item.mQuality), std::string());
+}
+
+void Gui::showItemTooltipAtCursor(const ItemInstance& item, const GameMap* map)
+{
+    CEGUI::Tooltip* tooltip = getWorldItemTooltip(true);
+    if(tooltip == nullptr)
+        return;
+    const std::string text = describeItemTooltip(item, map, nullptr);
+    if(tooltip->getText() != text)
+        tooltip->setText(text);
+    // Size first, since the place of the card depends on it; the card appears in this frame, with no hover time
+    tooltip->sizeSelf();
+    const CEGUI::Sizef screen = tooltip->getRootContainerSize();
+    const CEGUI::Vector2f cursor = tooltip->getGUIContext().getMouseCursor().getPosition();
+    const CEGUI::Rectf hand = getHandBoxOnScreen(cursor, screen);
+    const float gap = tooltip->getFont()->getFontHeight() * TOOLTIP_HAND_GAP_FACTOR;
+    // The item is under the hand, so its box is the box of the hand
+    placeItemTooltipBox(tooltip, ItemInstance::getQualityColour(item.mQuality),
+        ItemTooltipPlacement::Box(hand.left(), hand.top(), hand.right(), hand.bottom()), hand, cursor, screen, gap);
+    if(!tooltip->isVisible())
+        tooltip->show();
+}
+
+void Gui::hideItemTooltipAtCursor()
+{
+    if(CEGUI::System::getSingletonPtr() == nullptr)
+        return;
+    CEGUI::Tooltip* tooltip = getWorldItemTooltip(false);
+    if(tooltip != nullptr && tooltip->isVisible())
+        tooltip->hide();
 }
 
 std::string Gui::describeItemTooltip(const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon)
