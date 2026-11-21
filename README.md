@@ -5,16 +5,6 @@ keeper of a dungeon: your workers dig, claim and mine, you build rooms, traps
 and doors, attract creatures and lead them into battle by dropping them where
 they are needed, casting spells and luring enemies into traps.
 
-### Download
-
-Ready-to-play builds for Windows and Linux are attached to the
-[releases](https://github.com/Rokk001/Moreya/releases) of this repository.
-
-- **Windows:** unpack the zip archive and start `opendungeons-plus.exe`.
-- **Linux (x86_64):** unpack the tar.gz archive and start `./moreya` in its
-  top folder. The build needs glibc 2.38 or newer (for example Ubuntu 24.04,
-  Fedora 39, Debian 13 or newer).
-
 ### The campaign
 
 The campaign tells of the guilds that try to plunder the dungeon of Moreya.
@@ -53,30 +43,37 @@ the saved-game browser.
 
 ### Build instructions
 
-You need the following libraries:
+Moreya is built with CMake 3.13 or newer and a C++17 compiler. It needs
+OGRE 14.6.1, CEGUI 0.9999.0, SFML 3.1.0, OIS 1.5.1, Boost, pybind11 and
+Python 3. OGRE and CEGUI are built with the patches in
+`scripts/win32/patches`.
 
-- OGRE SDK (14.6.1)
-- Boost (the version OGRE was linked against)
-- CEGUI SDK (0.9999.0)
-- SFML (3.1.0)
-- OIS (1.5.1)
+#### Windows
 
-You also need CMake 3.13 or newer and a C++17 compiler:
+Requirements: Visual Studio 2026 Build Tools (C++ workload), CMake 4.4.1
+under `%BUILD_DEPS_ROOT%	ools`, Python 3.14 and Git. The default paths are
+set in `scripts/win32/windows-paths.ps1` and can be overridden with
+`BUILD_DEPS_ROOT`, `BUILD_PYTHON_ROOT` and `BUILD_VS_PATH`.
 
-- Windows: Visual Studio 2019 or newer
-- Linux: GCC 9 or newer
-
-On Linux:
 ```
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -jX    # X is the number of CPU cores to use
+powershell -File scripts\win32\install-base-prereqs.ps1
+powershell -File scripts\win32\install-boost-prereq.ps1
+powershell -File scripts\win32\install-ogre-prereq.ps1
+powershell -File scripts\win32\install-cegui-prereq.ps1
+powershell -File scripts\win32\configure-windows-prereqs.ps1
+cmake --build build\windows --config Release --target opendungeons-plus
 ```
-The workflow `.github/workflows/linux-release.yml` shows a complete Linux
-build including its dependencies.
 
-On Windows, generate a Visual Studio solution with CMake and build the
-`opendungeons-plus` target in the Release configuration.
+#### Linux
+
+Requirements: GCC 9 or newer, CMake, Ninja, Git, Python 3 and the X11,
+OpenGL, FreeType, Ogg/Vorbis/FLAC and Boost development packages of the
+distribution (`INSTALL_SYSTEM_PACKAGES=1` installs them with apt-get).
+
+```
+scripts/unix/install-linux-prereqs.sh <prefix>
+scripts/unix/build-linux.sh <prefix>
+```
 
 #### Repository organisation
 
