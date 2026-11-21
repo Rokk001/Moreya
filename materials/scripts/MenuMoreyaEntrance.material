@@ -1,0 +1,31 @@
+// Entrance into Moreya on the start screen (models/MenuMoreyaStairs.mesh, models/MenuMoreyaSignpost.mesh,
+// tools/blender-assets/menu_moreya_entrance.py). The stairs use the menu stone, iron and ember materials of
+// MenuScene.material; the signpost uses the wood of MenuSignpost.material.
+// MenuMoreyaSignpostBoard is the front face of the signpost's arrow board: its texture spans the whole board outline
+// (u from the back end to the arrow tip, v from the lower to the upper edge) and shows "Moreya" carved and painted
+// into a lettered copy of the signpost planks (tools/gen_menu_signpost_lettering.py --text Moreya).
+import RTSS/NormalMapping_MultiPass from "RTShaderSystem.material"
+
+material MenuMoreyaSignpostBoard : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap
+            {
+                texture MenuMoreyaSignpostBoard.png gamma
+                tex_address_mode clamp
+            }
+            texture_unit
+            {
+                texture MenuMoreyaSignpostBoardNormal.png
+                tex_address_mode clamp
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 0.90 0.88 0.86 1
+            diffuse 0.90 0.88 0.86 1
+            specular 0.03 0.03 0.03 1 10
+        }
+    }
+}
