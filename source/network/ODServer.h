@@ -136,7 +136,8 @@ class ODServer: public Ogre::Singleton<ODServer>,
     { return mGameMap; }
 
 protected:
-    ODSocketClient* notifyNewConnection(sf::TcpListener& sockListener) override;
+    //! \brief Accepts the pending peer from the transport listener into a new ODSocketClient, or returns nullptr.
+    ODSocketClient* notifyNewConnection(NetListener& listener) override;
     bool notifyClientMessage(ODSocketClient *sock) override;
     //! \brief Server main loop: runs turns until the server is asked to stop.
     void serverThread() override;

@@ -19,6 +19,7 @@
 #define ODSOCKETCLIENT_H
 
 #include "gamemap/TileDirtSync.h"
+#include "network/NetTransport.h"
 #include "network/ODPacket.h"
 #include "utils/Timer.h"
 
@@ -28,6 +29,7 @@
 #include <cstdint>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <set>
 
 class Player;
@@ -50,9 +52,10 @@ class ODSocketClient
             file
         };
 
-        //! \brief Initializes the connection and disables all negotiated extensions.
+        //! \brief Initializes the connection with the default transport and disables all negotiated extensions.
         ODSocketClient():
             mSource(ODSource::none),
+            mConnection(NetTransport::createConnection(NetTransport::getDefaultKind())),
             mPlayer(nullptr),
             mLastTurnAck(-1),
             mHeartHealthSent(-1.0f),
@@ -158,8 +161,9 @@ class ODSocketClient
         { mGameClock.start(); }
         void setState(const std::string& state) {mState = state;}
 
-        sf::TcpSocket& getSockClient()
-        { return mSockClient; }
+        //! \brief The transport connection to the peer, for the listener that accepts into it and watches it.
+        NetConnection& getConnection()
+        { return *mConnection; }
 
         void setSource(ODSource source)
         { mSource = source; }
@@ -196,8 +200,8 @@ class ODSocketClient
         bool processOneClientSocketMessage(int miliseconds=5);
 
         ODSource mSource;
-        sf::SocketSelector mSockSelector;
-        sf::TcpSocket mSockClient;
+        //! \brief Carries the messages to and from the peer (TCP by default, see NetTransport.h).
+        std::unique_ptr<NetConnection> mConnection;
         Player* mPlayer;
         int64_t mLastTurnAck;
         float mHeartHealthSent;

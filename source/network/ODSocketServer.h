@@ -19,9 +19,11 @@
 #define ODSOCKETSERVER_H
 
 #include "ODSocketClient.h"
+#include "network/NetTransport.h"
 
 #include <SFML/Network.hpp>
 #include <atomic>
+#include <memory>
 #include <thread>
 
 class ODPacket;
@@ -48,9 +50,10 @@ class ODSocketServer
         void requestStop();
 
         /*! \brief Function called when a new client connects. If the server returns an ODSocketClient,
-         *! it will be added to the client list
+         *! it will be added to the client list. The implementation accepts the peer with
+         *! listener.accept() into the connection of a new ODSocketClient.
          */
-        virtual ODSocketClient* notifyNewConnection(sf::TcpListener& sockListener) = 0;
+        virtual ODSocketClient* notifyNewConnection(NetListener& listener) = 0;
 
         /*! \brief Function called when a client sends a message. As this function is called
          * from the doTask context, it shall return as soon as possible (we should not send
@@ -77,8 +80,8 @@ class ODSocketServer
         std::thread* mThread;
 
     private:
-        sf::TcpListener mSockListener;
-        sf::SocketSelector mSockSelector;
+        //! \brief Accepts peers and waits for them; holds the TCP listener and selector by default (see NetTransport.h).
+        std::unique_ptr<NetListener> mListener;
         sf::Clock mClockMainTask;
         std::atomic<bool> mIsConnected;
 };

@@ -288,11 +288,13 @@ add_boost_test(aa-LaunchGame
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
+        ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
         ${SRC}/network/ODSocketClient.cpp
         ${SRC}/network/ODSocketServer.cpp
         ${SRC}/network/ServerMode.cpp
         ${SRC}/network/ServerNotification.cpp
+        ${SRC}/network/TcpNetTransport.cpp
         ${SRC}/utils/Helper.cpp
         ${SRC}/utils/NameAliases.cpp
         ${SRC}/render/FrameStatistics.cpp
@@ -313,11 +315,13 @@ add_boost_test(aa-TestCreatures
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
+        ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
         ${SRC}/network/ODSocketClient.cpp
         ${SRC}/network/ODSocketServer.cpp
         ${SRC}/network/ServerMode.cpp
         ${SRC}/network/ServerNotification.cpp
+        ${SRC}/network/TcpNetTransport.cpp
         ${SRC}/utils/Helper.cpp
         ${SRC}/utils/NameAliases.cpp
         ${SRC}/render/FrameStatistics.cpp
@@ -338,11 +342,13 @@ add_boost_test(aa-TestRooms
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
+        ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
         ${SRC}/network/ODSocketClient.cpp
         ${SRC}/network/ODSocketServer.cpp
         ${SRC}/network/ServerMode.cpp
         ${SRC}/network/ServerNotification.cpp
+        ${SRC}/network/TcpNetTransport.cpp
         ${SRC}/rooms/RoomType.cpp
         ${SRC}/utils/Helper.cpp
         ${SRC}/utils/NameAliases.cpp
@@ -364,11 +370,13 @@ add_boost_test(aa-TestRoomSplit
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
+        ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
         ${SRC}/network/ODSocketClient.cpp
         ${SRC}/network/ODSocketServer.cpp
         ${SRC}/network/ServerMode.cpp
         ${SRC}/network/ServerNotification.cpp
+        ${SRC}/network/TcpNetTransport.cpp
         ${SRC}/rooms/RoomType.cpp
         ${SRC}/utils/Helper.cpp
         ${SRC}/utils/NameAliases.cpp
@@ -390,11 +398,13 @@ add_boost_test(ab-TestTraps
         ${SRC}/game/SeatData.cpp
         ${SRC}/game/SkillType.cpp
         ${SRC}/network/ClientNotification.cpp
+        ${SRC}/network/NetTransport.cpp
         ${SRC}/network/ODPacket.cpp
         ${SRC}/network/ODSocketClient.cpp
         ${SRC}/network/ODSocketServer.cpp
         ${SRC}/network/ServerMode.cpp
         ${SRC}/network/ServerNotification.cpp
+        ${SRC}/network/TcpNetTransport.cpp
         ${SRC}/rooms/RoomType.cpp
         ${SRC}/utils/Helper.cpp
         ${SRC}/utils/NameAliases.cpp

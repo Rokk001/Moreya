@@ -38,6 +38,7 @@ probe = r'''
 #include <atomic>
 #include <deque>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -50,11 +51,12 @@ struct ODSocketClient { static int disconnected; void disconnect(){++disconnecte
 int ODSocketClient::disconnected=0;
 struct Selector {int cleared=0;void clear(){++cleared;}};
 struct Listener {int closed=0;void close(){++closed;}};
+struct NetListener {int closed=0;void close(){++closed;}};
 class ODSocketServer {
 public:
     std::thread* mThread=nullptr;
     RUNNING_TYPE mIsConnected{false};
-    Selector mSockSelector; Listener mSockListener;
+    SOCKET_MEMBERS
     std::vector<ODSocketClient*> mSockClients;
     ~ODSocketServer(); bool isConnected(); void requestStop(); virtual void stopServer();
 };
@@ -120,7 +122,7 @@ int main(int argc,char** argv){
     check(server.mServerNotificationQueue.empty(),"owner drains pending events");
     check(server.map.cleared==1 && server.mServerState==ServerState::StateNone,"owner clears game state");
     check(ODSocketClient::disconnected==1 && server.mSockClients.empty(),"owner disconnects clients once");
-    check(server.mSockSelector.cleared==1 && server.mSockListener.closed==1,"owner clears sockets after join");
+    check(SOCKETS_CLEARED,"owner clears sockets after join");
     server.stopServer();
     check(server.mThread==nullptr && ODSocketClient::disconnected==1,"repeated owner stop is safe");
     server.ready=false;server.release=false;server.finished=false;
@@ -140,6 +142,15 @@ functions += [extract(server, name) for name in (
     'void ODServer::stopServer()')]
 probe = probe.replace('FUNCTIONS', '\n'.join(functions)).replace('RUNNING_TYPE',
     'std::atomic<bool>' if 'std::atomic<bool> mIsConnected' in header else 'bool')
+# Older sources hold the TCP listener and selector directly; newer ones a transport listener whose close()
+# clears its selector and closes the listening socket (checked in the TCP backend below).
+transport_listener = 'std::unique_ptr<NetListener> mListener;' in header
+if transport_listener:
+    probe = probe.replace('SOCKET_MEMBERS', 'std::unique_ptr<NetListener> mListener{new NetListener};').replace(
+        'SOCKETS_CLEARED', 'server.mListener->closed==1')
+else:
+    probe = probe.replace('SOCKET_MEMBERS', 'Selector mSockSelector; Listener mSockListener;').replace(
+        'SOCKETS_CLEARED', 'server.mSockSelector.cleared==1 && server.mSockListener.closed==1')
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 failed = False
 with tempfile.TemporaryDirectory(prefix='odp-server-shutdown-') as temporary:
@@ -164,6 +175,12 @@ next_turn = loop.index('startNewTurn(', poll)
 if 'if(!isConnected())\n            break;' not in loop[poll:next_turn]:
     print('FAIL server loop can start a turn after shutdown was requested')
     failed = True
+if transport_listener:
+    tcp = read('source/network/TcpNetTransport.cpp')
+    close = extract(tcp, 'void TcpNetListener::close()')
+    if 'mSelector.clear();' not in close or 'mListener.close();' not in close:
+        print('FAIL the TCP listener close must clear the selector and close the listening socket')
+        failed = True
 if 'std::atomic<bool> mIsConnected' not in header:
     print('FAIL shared running flag is not atomic')
     failed = True

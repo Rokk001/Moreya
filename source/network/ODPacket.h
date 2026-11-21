@@ -72,6 +72,8 @@ namespace NetworkProtocol
 class ODPacket
 {
     friend class ODSocketClient;
+    //! The TCP backend hands the inner sf::Packet to the socket unchanged, which keeps the wire format.
+    friend class TcpNetConnection;
 
     public:
         ODPacket()
@@ -136,6 +138,24 @@ class ODPacket
          * be empty.
          */
         void clear();
+
+        //! \brief The message bytes without any transport framing, for a backend that frames messages itself.
+        const void* getRawData() const
+        { return mPacket.getData(); }
+
+        //! \brief Number of message bytes returned by getRawData().
+        std::size_t getRawDataSize() const
+        { return mPacket.getDataSize(); }
+
+        /*! \brief Replaces the content with message bytes received by a backend that frames messages itself.
+         * Reading starts at the first byte, as for a packet received from a socket.
+         */
+        void setRawData(const void* data, std::size_t size)
+        {
+            mPacket.clear();
+            if(size > 0)
+                mPacket.append(data, size);
+        }
 
         /*! \brief Writes the packet content to the given ofstream.
          */

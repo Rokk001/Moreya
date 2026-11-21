@@ -527,6 +527,7 @@ set(OD_SOURCEFILES
     ${SRC}/network/ChatEventMessage.cpp
     ${SRC}/network/ClientNotification.cpp
     ${SRC}/network/CosmeticEvent.cpp
+    ${SRC}/network/NetTransport.cpp
     ${SRC}/network/ODClient.cpp
     ${SRC}/network/ODPacket.cpp
     ${SRC}/network/ODServer.cpp
@@ -534,6 +535,7 @@ set(OD_SOURCEFILES
     ${SRC}/network/ODSocketServer.cpp
     ${SRC}/network/ServerMode.cpp
     ${SRC}/network/ServerNotification.cpp
+    ${SRC}/network/TcpNetTransport.cpp
 
     ${SRC}/render/CreatureOverlayStatus.cpp
     ${SRC}/render/CreatureReactionConfig.cpp
