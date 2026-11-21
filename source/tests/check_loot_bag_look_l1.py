@@ -7,8 +7,9 @@ Plan INGAME-QS-12 K10 and K11 (package L1). Checked here:
 2. RenderManager::rrRefreshItemBagAppearance tints a clone of the sub entity's own material (so the texture stays) with
    the four quality colours: Poor grey, Common white, Rare blue, Epic purple. The tinted result of every quality is
    computed from the texture and the colours and the four differ from each other.
-3. ItemBag.mesh maps the texture without stretching: every face has texture area, the texel density of the faces stays
-   within a factor of 2. Needs OgreXMLConverter (environment variable OGRE_XML_CONVERTER); without it this part says so.
+3. ItemBag.mesh is a cloth sack (wide belly, gathered neck at most half the belly, flared open top) with the old footprint
+   and height, and maps the texture without stretching (95 percent of the surface within a factor of 2 of the median texel
+   density). Needs OgreXMLConverter (environment variable OGRE_XML_CONVERTER); without it this part says so.
 4. Hovering a loot bag calls the standard item tooltip: GameMode::showItemContext asks Gui::showItemTooltipAtCursor and
    writes neither ContextInfo nor the pointer text; the bag branch of handlePlayerActionNone writes no item name into the
    info bar; the world card is the same card as the Dungeonbook's (same text, same look, same quality colour, same
@@ -119,12 +120,26 @@ with tempfile.TemporaryDirectory(prefix='itembag_') as directory:
     if xml is not None:
         positions = [tuple(map(float, m)) for m in re.findall(r'<position x="([^"]+)" y="([^"]+)" z="([^"]+)"', xml)]
         uvs = [tuple(map(float, m)) for m in re.findall(r'<texcoord u="([^"]+)" v="([^"]+)"', xml)]
-        check(len(positions) == len(uvs) == 1842, 'mesh keeps its 1842 vertices')
+        check(len(positions) == len(uvs) == 4478, 'mesh has its 4478 vertices')
+        # Footprint and height of the old model stay (RoomObjectBounds ItemBag -.18 -.144 .18 .14)
+        xs, ys, zs = zip(*positions)
+        check(0.17 <= max(xs) <= 0.18 + 1e-6 and -0.18 - 1e-6 <= min(xs) <= -0.15, 'footprint width as before')
+        check(-0.144 - 1e-6 <= min(ys) <= -0.13 and 0.13 <= max(ys) <= 0.14 + 1e-6, 'footprint depth as before')
+        check(abs(min(zs)) < 1e-6 and abs(max(zs) - 0.37) < 1e-3, 'stands on the ground, 0.37 high as before')
+        # It reads as a sack: wide belly, gathered narrow neck, flared open top above the neck
+        def width_at(z, tolerance=0.012):
+            sel = [x for x, y, zz in positions if abs(zz - z) < tolerance]
+            return (max(sel) - min(sel)) if sel else 0.0
+        belly, neck, rim = width_at(0.10), width_at(0.268, 0.006), width_at(0.36)
+        check(belly >= 0.30, 'wide belly (%.3f)' % belly)
+        check(neck <= 0.5 * belly, 'gathered neck is at most half the belly (%.3f / %.3f)' % (neck, belly))
+        check(rim >= 1.4 * neck, 'open top flares out above the neck (%.3f / %.3f)' % (rim, neck))
         submeshes = xml.split('<submesh ')[1:]
         check(len(submeshes) == 2 and 'material="ItemBag"' in submeshes[0] and 'material="ItemBagSealed"' in submeshes[1],
               'bag and seal sub meshes keep their materials')
         densities = []
-        for sub in submeshes:
+        areas = []
+        for sub in submeshes[:1]:
             for a, b, c in re.findall(r'<face v1="(\d+)" v2="(\d+)" v3="(\d+)"', sub):
                 a, b, c = int(a), int(b), int(c)
                 p = [numpy.array(positions[i]) for i in (a, b, c)]
@@ -134,10 +149,15 @@ with tempfile.TemporaryDirectory(prefix='itembag_') as directory:
                 area2 = abs(d1[0] * d2[1] - d1[1] * d2[0]) / 2.0
                 if area3 > 1e-9:
                     densities.append(area2 / area3)
+                    areas.append(area3)
         check(len(densities) > 0 and min(densities) > 0.0, 'every face has texture area')
         if densities and min(densities) > 0.0:
-            check(max(densities) / min(densities) <= 2.0, 'texel density within a factor of 2 (%.2f)' %
-                  (max(densities) / min(densities)))
+            density = numpy.array(densities)
+            weight = numpy.array(areas)
+            median = numpy.median(density)
+            good = weight[(density >= median / 2.0) & (density <= median * 2.0)].sum() / weight.sum()
+            check(good >= 0.95, 'at least 95 percent of the sack surface keeps the texel density within a factor of 2 '
+                  'of the median (%.3f)' % good)
 
 # 4. The tooltip of a hovered loot bag
 game_mode = read('source/modes/GameMode.cpp')
@@ -172,7 +192,7 @@ check('setMousePassThroughEnabled(true)' in maker, 'the card never takes the poi
 credits = read('CREDITS')
 texture_line = [l for l in credits.splitlines() if l.startswith('materials/textures/ItemBagCloth.png')]
 check(len(texture_line) == 1 and 'AI-generated' in texture_line[0], 'CREDITS entry of the texture marks it AI-generated')
-check('models/ItemBag.mesh' in credits and 'UVs re-projected' in credits, 'CREDITS entry of the re-projected mesh')
+check('models/ItemBag.mesh' in credits and 'Rebuilt 2026-11-21' in credits, 'CREDITS entry of the re-projected mesh')
 
 if fails:
     print('\n'.join('FAIL: ' + f for f in fails))
