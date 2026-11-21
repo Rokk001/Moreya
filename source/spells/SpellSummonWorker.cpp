@@ -84,7 +84,7 @@ static SpellRegister reg(new SpellSummonWorkerFactory);
 //! but it can also miss one, hence the larger of the two counts.
 //! \param gameMap The game map holding the creatures.
 //! \param seat The seat whose workers are counted.
-//! eturn The number of workers to base the price on.
+//! \return The number of workers to base the price on.
 int32_t getNbWorkersForSeat(GameMap* gameMap, const Seat* seat)
 {
     int32_t nbWorkers = 0;
