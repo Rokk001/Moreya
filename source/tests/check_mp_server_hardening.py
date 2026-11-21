@@ -4,8 +4,10 @@
 The C++ sources are checked for the statements that implement the guards: the central command check before the
 switch of ODServer::processClientNotifications, the console command rule, the host check and the id checks of the
 seat configuration, the bounds of notifyTileRevealed, the nickname and chat limits, the turn barrier without
-playerless sockets, the editor checks of the draggable tile container and the range checks of the enum reads. The
-fixed values (20 letters, 512 bytes, the command groups, the last enum values) were counted once for this branch.
+playerless sockets, the editor checks of the draggable tile container, the range checks of the enum reads (network
+and game enums), the packet reads that stop a command when they fail, and the bounds of counts, names, lists and
+rectangles sent by clients. The fixed values (20 letters, 512 bytes, the command groups, the last enum values, the
+7 asserted setNick reads, the count and name limits) were counted once for this branch.
 Nothing is compiled and the game is not started; the integration build compiles the code and runs the Boost test
 00-ServerGuards, which tests the guard functions themselves.
 
@@ -172,12 +174,74 @@ check("if(selectedTile == nullptr)" in case(SERVER, "editorAskChangeTile"), "edi
 check("mServerMode != ServerMode::ModeEditor" in case(SERVER, "editorAskDeleteDraggableTileContainer"),
       "editorAskDeleteDraggableTileContainer checks the editor mode")
 
+# ------------------------------------------------------------------------------------------------ every packet read
+# The only asserted reads left are the 7 optional one-byte capability reads of setNick, which cannot fail once
+# endOfPacket said that a byte is left
+asserted = re.findall(r"OD_ASSERT_TRUE\(packetReceived >> (\w+)\);", process)
+check(asserted == ["liveNickname", "creatureMood", "creatureActivity", "creaturePanel", "creatureProgress",
+                   "cosmeticEvents", "dungeonbookRoster"], "asserted packet reads left " + repr(asserted))
+check(all(name in case(SERVER, "setNick") for name in asserted), "the asserted reads left are those of setNick")
+
+# ------------------------------------------------------------------------------------------------ game enum reads
+check("static ODPacket& readEnum(ODPacket& packet, TEnum& value, TEnum last)" in PACKET_H
+      and "packet.markInvalid();" in PACKET_H, "ODPacket::readEnum marks out-of-range values as a failed read")
+ENUM_READERS = [
+    ("source/entities/GameEntityType.cpp", "GameEntityType& type", "readEnum<int32_t>(is, type, GameEntityType::poolAttendantEntity)"),
+    ("source/entities/Tile.cpp", "TileType& type", "readEnum<uint32_t>(is, type, TileType::countTileType)"),
+    ("source/rooms/RoomType.cpp", "RoomType& rt", "readEnum<uint32_t>(is, rt, RoomType::nbRooms)"),
+    ("source/spells/SpellType.cpp", "SpellType& tt", "readEnum<uint32_t>(is, tt, SpellType::nbSpells)"),
+    ("source/traps/TrapType.cpp", "TrapType& tt", "readEnum<uint32_t>(is, tt, TrapType::nbTraps)"),
+    ("source/game/SkillType.cpp", "SkillType& type", "readEnum<int32_t>(is, type, SkillType::countSkill)"),
+    ("source/entities/NodeType.cpp", "NodeType& rt", "readEnum<uint32_t>(is, rt, NodeType::MTILES_NODE)"),
+]
+for path, parameter, call in ENUM_READERS:
+    text = read(path)
+    reader = block(text, "ODPacket& operator>>(ODPacket& is, " + parameter + ")", "}")
+    check("ODPacket::" + call in reader, path + " reads with " + call)
+# The last values named above are the last of their enums
+entity_body = re.search(r"enum class GameEntityType\s*\{(.*?)\};", read("source/entities/GameEntityType.h"), re.S).group(1)
+entity_names = [re.sub(r"//.*", "", line).strip().rstrip(",") for line in entity_body.split("\n")]
+entity_names = [name for name in entity_names if name]
+check(entity_names[-1] == "poolAttendantEntity", "last GameEntityType is " + entity_names[-1])
+node_body = re.search(r"enum class NodeType\s*\{(.*?)\};", read("source/entities/NodeType.h"), re.S).group(1)
+check([n.strip() for n in node_body.split(",") if n.strip()][-1] == "MTILES_NODE", "last NodeType is MTILES_NODE")
+
+# ------------------------------------------------------------------------------------------------ counts, names, lists
+LIMITS = {"MAX_REGION_NAME_BYTES": "64", "MAX_REGIONS": "256", "MAX_INFO_SUBSCRIPTIONS": "64",
+          "MAX_PORTAL_TARGET_TEAMS": "64", "MAX_PORTAL_WAVES": "1024", "MAX_PORTAL_WAVE_CREATURES": "256",
+          "MAX_NAME_BYTES": "256"}
+for name, value in LIMITS.items():
+    check(re.search(r"\b" + name + r" = " + value + r";", GUARDS) is not None, name + " is " + value)
+PORTAL = read("source/rooms/RoomPortalWave.cpp")
+portal_reader = block(PORTAL, "ODPacket& operator>>(ODPacket& is, RoomPortalWaveConfig& config)", "\n}\n")
+for limit in ["MAX_PORTAL_TARGET_TEAMS", "MAX_PORTAL_WAVES", "MAX_PORTAL_WAVE_CREATURES"]:
+    check("ServerGuards::isCountAllowed(" in portal_reader and "ServerGuards::" + limit in portal_reader,
+          "the wave portal reader bounds " + limit)
+check("RoomPortalWaveStrategy::fixedTeamIds" in portal_reader, "the wave portal strategy is range-checked")
+region = case(SERVER, "editorRegionEdit")
+check("ServerGuards::isRegionNameAllowed(regionName)" in region and "ServerGuards::MAX_REGIONS" in region
+      and region.count("ServerGuards::isTileOnMap(") == 2, "editor regions are bounded")
+creature_infos = case(SERVER, "askCreatureInfos")
+check("ServerGuards::isNameAllowed(name)" in creature_infos
+      and "ServerGuards::MAX_INFO_SUBSCRIPTIONS" in creature_infos, "creature info subscriptions are bounded")
+tile_infos = case(SERVER, "askTileInfos")
+check("ServerGuards::isTileOnMap(xx, yy" in tile_infos and "ServerGuards::MAX_INFO_SUBSCRIPTIONS" in tile_infos,
+      "tile info subscriptions are bounded")
+for name in ["askMarkTiles", "editorAskChangeTiles"]:
+    handler = case(SERVER, name)
+    check("ServerGuards::clipRectangleToMap(x1, y1, x2, y2" in handler
+          and handler.index("clipRectangleToMap") < handler.index("rectangularRegion"),
+          name + " walks only the part of the rectangle on the map")
+for name in ["editorAskChangeTile", "editorAskChangeTiles"]:
+    check("tileType == TileType::countTileType" in case(SERVER, name), name + " ignores the TileType count value")
+
 # ------------------------------------------------------------------------------------------------ Boost test
 check(re.search(r"add_boost_test\(00-ServerGuards\s+SOURCES\s+test_ServerGuards\.cpp\s+\$\{SRC\}/network/ServerGuards\.h"
                 r"\s+\$\{SRC\}/network/ODPacket\.cpp", TESTS_CMAKE) is not None, "the Boost test 00-ServerGuards is built")
 test_cases = re.findall(r"BOOST_AUTO_TEST_CASE\((\w+)\)", BOOST_TEST)
 check(test_cases == ["test_commandRequirement", "test_isCommandAllowed", "test_enumValues", "test_tileAndSeatBounds",
-                     "test_consoleCommand", "test_seatConfigurationIds", "test_textLimits", "test_markInvalid"],
+                     "test_consoleCommand", "test_seatConfigurationIds", "test_textLimits", "test_markInvalid",
+                     "test_readEnum", "test_clientLimits", "test_clipRectangleToMap"],
       "Boost test cases " + repr(test_cases))
 
 print('ODP_TEST_PHASE {"name":"check","seconds":%.3f}' % (time.perf_counter() - START))

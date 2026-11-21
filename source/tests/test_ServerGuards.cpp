@@ -172,3 +172,113 @@ BOOST_AUTO_TEST_CASE(test_markInvalid)
     BOOST_CHECK(!packet);
     BOOST_CHECK(!(packet >> value));
 }
+
+namespace
+{
+//! A small enum for the readEnum checks, sent as uint32_t like most game enums
+enum class TestEnum
+{
+    first,
+    second,
+    count
+};
+}
+
+//! Checks that readEnum accepts 0 up to the last value and fails the packet for larger and negative values.
+BOOST_AUTO_TEST_CASE(test_readEnum)
+{
+    {
+        ODPacket packet;
+        packet << static_cast<uint32_t>(2);
+        TestEnum value = TestEnum::first;
+        BOOST_CHECK(ODPacket::readEnum<uint32_t>(packet, value, TestEnum::count));
+        BOOST_CHECK(value == TestEnum::count);
+    }
+    {
+        ODPacket packet;
+        packet << static_cast<uint32_t>(3) << static_cast<uint32_t>(1);
+        TestEnum value = TestEnum::second;
+        BOOST_CHECK(!ODPacket::readEnum<uint32_t>(packet, value, TestEnum::count));
+        BOOST_CHECK(value == TestEnum::second);
+        BOOST_CHECK(!packet);
+    }
+    {
+        ODPacket packet;
+        packet << static_cast<int32_t>(-1);
+        TestEnum value = TestEnum::second;
+        BOOST_CHECK(!ODPacket::readEnum<int32_t>(packet, value, TestEnum::count));
+        BOOST_CHECK(value == TestEnum::second);
+    }
+    {
+        ODPacket packet;
+        TestEnum value = TestEnum::second;
+        BOOST_CHECK(!ODPacket::readEnum<uint32_t>(packet, value, TestEnum::count));
+        BOOST_CHECK(value == TestEnum::second);
+    }
+}
+
+//! Checks the fixed limits for counts, names and lists sent by clients.
+BOOST_AUTO_TEST_CASE(test_clientLimits)
+{
+    BOOST_CHECK_EQUAL(ServerGuards::MAX_REGION_NAME_BYTES, 64u);
+    BOOST_CHECK_EQUAL(ServerGuards::MAX_REGIONS, 256u);
+    BOOST_CHECK_EQUAL(ServerGuards::MAX_INFO_SUBSCRIPTIONS, 64u);
+    BOOST_CHECK_EQUAL(ServerGuards::MAX_PORTAL_TARGET_TEAMS, 64u);
+    BOOST_CHECK_EQUAL(ServerGuards::MAX_PORTAL_WAVES, 1024u);
+    BOOST_CHECK_EQUAL(ServerGuards::MAX_PORTAL_WAVE_CREATURES, 256u);
+    BOOST_CHECK_EQUAL(ServerGuards::MAX_NAME_BYTES, 256u);
+
+    BOOST_CHECK(ServerGuards::isCountAllowed(0, 64));
+    BOOST_CHECK(ServerGuards::isCountAllowed(64, 64));
+    BOOST_CHECK(!ServerGuards::isCountAllowed(65, 64));
+    BOOST_CHECK(!ServerGuards::isCountAllowed(0xFFFFFFFFu, 64));
+
+    BOOST_CHECK(!ServerGuards::isRegionNameAllowed(""));
+    BOOST_CHECK(ServerGuards::isRegionNameAllowed("Gate"));
+    BOOST_CHECK(ServerGuards::isRegionNameAllowed(std::string(64, 'r')));
+    BOOST_CHECK(!ServerGuards::isRegionNameAllowed(std::string(65, 'r')));
+
+    BOOST_CHECK(ServerGuards::isNameAllowed(""));
+    BOOST_CHECK(ServerGuards::isNameAllowed(std::string(256, 'n')));
+    BOOST_CHECK(!ServerGuards::isNameAllowed(std::string(257, 'n')));
+
+    BOOST_CHECK(ServerGuards::canAddEntry(63, 64));
+    BOOST_CHECK(!ServerGuards::canAddEntry(64, 64));
+}
+
+//! Checks that rectangles are cut to the map, corners are ordered and rectangles off the map are refused.
+BOOST_AUTO_TEST_CASE(test_clipRectangleToMap)
+{
+    int32_t x1 = -5;
+    int32_t y1 = 30;
+    int32_t x2 = 12;
+    int32_t y2 = 2;
+    BOOST_CHECK(ServerGuards::clipRectangleToMap(x1, y1, x2, y2, 10, 20));
+    BOOST_CHECK_EQUAL(x1, 0);
+    BOOST_CHECK_EQUAL(y1, 2);
+    BOOST_CHECK_EQUAL(x2, 9);
+    BOOST_CHECK_EQUAL(y2, 19);
+
+    x1 = 3;
+    y1 = 4;
+    x2 = 5;
+    y2 = 6;
+    BOOST_CHECK(ServerGuards::clipRectangleToMap(x1, y1, x2, y2, 10, 20));
+    BOOST_CHECK_EQUAL(x1, 3);
+    BOOST_CHECK_EQUAL(y1, 4);
+    BOOST_CHECK_EQUAL(x2, 5);
+    BOOST_CHECK_EQUAL(y2, 6);
+
+    x1 = -2147483647 - 1;
+    y1 = 0;
+    x2 = -1;
+    y2 = 5;
+    BOOST_CHECK(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, 10, 20));
+    BOOST_CHECK_EQUAL(x1, -2147483647 - 1);
+
+    x1 = 0;
+    y1 = 20;
+    x2 = 9;
+    y2 = 2147483647;
+    BOOST_CHECK(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, 10, 20));
+}
