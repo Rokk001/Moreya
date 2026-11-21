@@ -110,6 +110,45 @@ add_boost_test(00-NetTransport
         LIBRARIES
         ${SFML_LIBRARIES})
 
+# Test-only stand-in for the relay helper program: answers HelperPipeProtocol.h frames on its standard
+# input and output with fixed values; no platform SDK.
+add_executable(odp-fake-net-helper
+        mocks/FakeNetHelper.cpp
+        ${SRC}/network/HelperPipeProtocol.h)
+target_include_directories(odp-fake-net-helper PRIVATE ${SRC})
+
+# Game side of the helper relay (process, pipes, listener, connections) against the fake helper. The relay
+# backend is compiled for this test only; the game build keeps the CMake option OD_NET_HELPER_RELAY off.
+add_boost_test(00-HelperRelay
+        SOURCES
+        test_HelperRelay.cpp
+        ${SRC}/network/HelperPipeProtocol.h
+        ${SRC}/network/HelperRelayProcess.h
+        ${SRC}/network/HelperRelayProcess.cpp
+        ${SRC}/network/HelperRelayTransport.h
+        ${SRC}/network/HelperRelayTransport.cpp
+        ${SRC}/network/NetTransport.h
+        ${SRC}/network/TcpNetTransport.h
+        ${SRC}/network/TcpNetTransport.cpp
+        ${SRC}/network/ODPacket.h
+        ${SRC}/network/ODPacket.cpp
+        ${SRC}/utils/Helper.cpp
+        ${SRC}/render/FrameStatistics.cpp
+        ${SRC}/utils/LogManager.cpp
+        ${SRC}/utils/LogSinkConsole.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES}
+        ${SFML_LIBRARIES}
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE}
+        Threads::Threads)
+if(DEFINED 00-HelperRelay_TARGET_NAME)
+    target_compile_definitions(${00-HelperRelay_TARGET_NAME} PRIVATE
+        OD_NET_HELPER_RELAY
+        OD_FAKE_NET_HELPER="$<TARGET_FILE:odp-fake-net-helper>")
+    add_dependencies(${00-HelperRelay_TARGET_NAME} odp-fake-net-helper)
+endif()
+
 add_boost_test(00-ConsoleInterface
         SOURCES
         test_ConsoleInterface.cpp
