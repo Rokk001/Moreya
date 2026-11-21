@@ -39,6 +39,51 @@ namespace ServerGuards
     //! \brief Longest chat message in bytes; longer messages are cut.
     static const std::size_t MAX_CHAT_BYTES = 512;
 
+    //! \brief Longest region name of the level script in bytes an editor client may set.
+    static const std::size_t MAX_REGION_NAME_BYTES = 64;
+
+    //! \brief Most region markers a level script may hold; an editor client cannot add more.
+    static const std::size_t MAX_REGIONS = 256;
+
+    //! \brief Most creatures and most tiles one client may follow in its info windows at the same time.
+    static const std::size_t MAX_INFO_SUBSCRIPTIONS = 64;
+
+    //! \brief Most target teams of a wave portal configuration read from a packet.
+    static const uint32_t MAX_PORTAL_TARGET_TEAMS = 64;
+
+    //! \brief Most waves of a wave portal configuration read from a packet.
+    static const uint32_t MAX_PORTAL_WAVES = 1024;
+
+    //! \brief Most creature entries of one wave of a wave portal configuration read from a packet.
+    static const uint32_t MAX_PORTAL_WAVE_CREATURES = 256;
+
+    //! \brief Longest name (creature, entity, creature class, trap order) in bytes the server accepts from a client.
+    static const std::size_t MAX_NAME_BYTES = 256;
+
+    //! \brief Returns true if a count read from a packet does not exceed the given maximum.
+    inline bool isCountAllowed(uint32_t count, uint32_t maximum)
+    {
+        return count <= maximum;
+    }
+
+    //! \brief Returns true if a region name sent by an editor client may be used: not empty and not too long.
+    inline bool isRegionNameAllowed(const std::string& name)
+    {
+        return !name.empty() && (name.size() <= MAX_REGION_NAME_BYTES);
+    }
+
+    //! \brief Returns true if a name sent by a client is not longer than MAX_NAME_BYTES.
+    inline bool isNameAllowed(const std::string& name)
+    {
+        return name.size() <= MAX_NAME_BYTES;
+    }
+
+    //! \brief Returns true if one more entry may be added to a list that already holds size entries.
+    inline bool canAddEntry(std::size_t size, std::size_t maximum)
+    {
+        return size < maximum;
+    }
+
     //! \brief Last value of ClientNotificationType. Must be updated when a new message is appended to the enum.
     static const ClientNotificationType LAST_CLIENT_NOTIFICATION_TYPE = ClientNotificationType::askOpenRaidGate;
 
@@ -106,6 +151,25 @@ namespace ServerGuards
     inline bool isTileOnMap(int32_t x, int32_t y, int32_t mapSizeX, int32_t mapSizeY)
     {
         return (x >= 0) && (y >= 0) && (x < mapSizeX) && (y < mapSizeY);
+    }
+
+    //! \brief Cuts the rectangle between the corners x1, y1 and x2, y2 (any order) to the part on a map of the given
+    //! size, so that a rectangle sent by a client never makes the server walk over more than the map. Afterwards
+    //! x1 <= x2 and y1 <= y2. Returns false, leaving the corners as they were, if no tile of the rectangle is on
+    //! the map.
+    inline bool clipRectangleToMap(int32_t& x1, int32_t& y1, int32_t& x2, int32_t& y2, int32_t mapSizeX, int32_t mapSizeY)
+    {
+        const int32_t minX = (x1 < x2) ? x1 : x2;
+        const int32_t maxX = (x1 < x2) ? x2 : x1;
+        const int32_t minY = (y1 < y2) ? y1 : y2;
+        const int32_t maxY = (y1 < y2) ? y2 : y1;
+        if((mapSizeX <= 0) || (mapSizeY <= 0) || (maxX < 0) || (maxY < 0) || (minX >= mapSizeX) || (minY >= mapSizeY))
+            return false;
+        x1 = (minX < 0) ? 0 : minX;
+        y1 = (minY < 0) ? 0 : minY;
+        x2 = (maxX >= mapSizeX) ? mapSizeX - 1 : maxX;
+        y2 = (maxY >= mapSizeY) ? mapSizeY - 1 : maxY;
+        return true;
     }
 
     //! \brief Returns true if the seat id is an index of a per-seat array with the given number of entries.

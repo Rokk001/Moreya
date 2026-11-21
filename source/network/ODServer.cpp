@@ -2454,6 +2454,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 OD_LOG_WRN("Ignored askMarkTiles with an incomplete message");
                 break;
             }
+            // Only the part of the rectangle on the map is walked
+            if(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, gameMap->getMapSizeX(), gameMap->getMapSizeY()))
+                break;
             std::vector<Tile*> tiles = gameMap->rectangularRegion(x1, y1, x2, y2);
             player->markTilesForDigging(isDigSet, tiles, true);
 
@@ -2853,6 +2856,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             std::vector<std::string>::iterator it = std::find(creatures.begin(), creatures.end(), name);
             if(refreshEachTurn && (it == creatures.end()))
             {
+                // The list is kept for every turn: its names and its length are bounded
+                if(!ServerGuards::isNameAllowed(name) ||
+                   !ServerGuards::canAddEntry(creatures.size(), ServerGuards::MAX_INFO_SUBSCRIPTIONS))
+                {
+                    OD_LOG_WRN("Ignored askCreatureInfos subscription, list size="
+                        + Helper::toString(static_cast<uint32_t>(creatures.size())));
+                    break;
+                }
                 creatures.push_back(name);
             }
             else if(!refreshEachTurn && (it != creatures.end()))
@@ -2876,6 +2887,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             std::vector<std::pair<int,int>>::iterator it = std::find(tiles.begin(), tiles.end(), std::pair<int,int>(xx,yy));
             if(refreshEachTurn && (it == tiles.end()))
             {
+                // The list is kept for every turn: only tiles on the map, and a bounded number of them
+                if(!ServerGuards::isTileOnMap(xx, yy, gameMap->getMapSizeX(), gameMap->getMapSizeY()) ||
+                   !ServerGuards::canAddEntry(tiles.size(), ServerGuards::MAX_INFO_SUBSCRIPTIONS))
+                {
+                    OD_LOG_WRN("Ignored askTileInfos subscription x=" + Helper::toString(xx) + ", y="
+                        + Helper::toString(yy) + ", list size=" + Helper::toString(static_cast<uint32_t>(tiles.size())));
+                    break;
+                }
                 tiles.push_back(std::pair<int,int>(xx,yy));
             }
             else if(!refreshEachTurn && (it != tiles.end()))
@@ -3247,6 +3266,12 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             }
             Tile* selectedTile = gameMap->getTile(x1,y1);
+            // The count value is no tile type
+            if(tileType == TileType::countTileType)
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTile with no tile type");
+                break;
+            }
             if(selectedTile == nullptr)
             {
                 OD_LOG_WRN("Ignored editorAskChangeTile outside of the map x=" + Helper::toString(x1)
@@ -3314,6 +3339,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 OD_LOG_WRN("Ignored editorAskChangeTiles with an incomplete message");
                 break;
             }
+            // Only the part of the rectangle on the map is walked, and the count value is no tile type
+            if(tileType == TileType::countTileType)
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTiles with no tile type");
+                break;
+            }
+            if(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, gameMap->getMapSizeX(), gameMap->getMapSizeY()))
+                break;
             std::vector<Tile*> selectedTiles = gameMap->rectangularRegion(x1, y1, x2, y2);
             std::vector<Tile*> affectedTiles;
             Seat* seat = nullptr;
@@ -3966,7 +3999,26 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // The markers belong to the level script, which is saved from the server side
             LevelScript& levelScript = gameMap->getLevelScript();
             if(operation == static_cast<int32_t>(EditorRegionOperation::set))
-                levelScript.setRegion(LevelScriptRegion(regionName, x1, y1, x2, y2));
+            {
+                // A region needs a usable name and corners on the map, and the number of regions is bounded
+                bool regionExists = false;
+                for(const LevelScriptRegion& region : levelScript.getRegions())
+                {
+                    if(region.mName == regionName)
+                        regionExists = true;
+                }
+                if(!ServerGuards::isRegionNameAllowed(regionName) ||
+                   !ServerGuards::isTileOnMap(x1, y1, gameMap->getMapSizeX(), gameMap->getMapSizeY()) ||
+                   !ServerGuards::isTileOnMap(x2, y2, gameMap->getMapSizeX(), gameMap->getMapSizeY()) ||
+                   (!regionExists && !ServerGuards::canAddEntry(levelScript.getRegions().size(), ServerGuards::MAX_REGIONS)))
+                {
+                    OD_LOG_WRN("Ignored editor region with a name of " + Helper::toString(static_cast<uint32_t>(regionName.size()))
+                        + " bytes at x1=" + Helper::toString(x1) + ", y1=" + Helper::toString(y1)
+                        + ", x2=" + Helper::toString(x2) + ", y2=" + Helper::toString(y2));
+                }
+                else
+                    levelScript.setRegion(LevelScriptRegion(regionName, x1, y1, x2, y2));
+            }
             else if(operation == static_cast<int32_t>(EditorRegionOperation::remove))
                 levelScript.removeRegion(regionName);
 
