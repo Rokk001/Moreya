@@ -18,17 +18,24 @@
 #include "network/NetTransport.h"
 #include "network/TcpNetTransport.h"
 
-// The helper relay backend is not built yet. OD_NET_HELPER_RELAY is defined nowhere; the stub exists
-// to show where the backend plugs in (see docs/development/NETWORK-TRANSPORT.md).
+// The helper relay backend is built only with the CMake option OD_NET_HELPER_RELAY, which is off by default
+// (see docs/development/NETWORK-TRANSPORT.md).
 #ifdef OD_NET_HELPER_RELAY
+#include "network/HelperRelayProcess.h"
 #include "network/HelperRelayTransport.h"
 #endif
 
 #include "utils/LogManager.h"
 
-//! \brief The backend used by the game; TCP until the helper relay is built and offered in the menus.
+//! \brief The backend used by the game; TCP unless the helper relay is built and a helper process is set up.
 NetTransportKind NetTransport::getDefaultKind()
 {
+#ifdef OD_NET_HELPER_RELAY
+    // The relay backend carries direct TCP as well (host names, addresses, the host's own client on localhost),
+    // so with a helper process set up (--net-helper) it serves every session
+    if(HelperRelayProcess::getActive() != nullptr)
+        return NetTransportKind::helperRelay;
+#endif
     return NetTransportKind::tcp;
 }
 
@@ -42,7 +49,7 @@ std::unique_ptr<NetConnection> NetTransport::createConnection(NetTransportKind k
         case NetTransportKind::helperRelay:
         {
 #ifdef OD_NET_HELPER_RELAY
-            return std::unique_ptr<NetConnection>(new HelperRelayConnection);
+            return std::unique_ptr<NetConnection>(new HelperRelayConnection(HelperRelayProcess::getActive()));
 #else
             OD_LOG_ERR("The helper relay transport is not built, using TCP");
             break;
@@ -65,7 +72,7 @@ std::unique_ptr<NetListener> NetTransport::createListener(NetTransportKind kind)
         case NetTransportKind::helperRelay:
         {
 #ifdef OD_NET_HELPER_RELAY
-            return std::unique_ptr<NetListener>(new HelperRelayListener);
+            return std::unique_ptr<NetListener>(new HelperRelayListener(HelperRelayProcess::getActive()));
 #else
             OD_LOG_ERR("The helper relay transport is not built, using TCP");
             break;

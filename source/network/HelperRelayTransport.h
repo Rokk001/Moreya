@@ -19,18 +19,25 @@
 #define HELPERRELAYTRANSPORT_H
 
 /*! \file HelperRelayTransport.h
- * \brief Stub of the second transport backend: lobby and relay through a helper process.
+ * \brief The second transport backend: lobby and relay through a helper process.
  *
- * Not built and not selectable: the whole file is compiled only with OD_NET_HELPER_RELAY, which no build
- * defines yet. It shows where the backend plugs into NetTransport.h. The planned design:
+ * Compiled only with OD_NET_HELPER_RELAY (CMake option of the same name, off by default). It shows where the
+ * backend plugs into NetTransport.h, as NetTransportKind::helperRelay. The design:
  *
- * - HelperRelayProcess (one per game) starts the helper executable next to the game binary, owns both
- *   pipes and a HelperPipe::FrameDecoder, sends hello, waits for ready and dispatches incoming frames to
- *   the listener (host) or connection (client). Lobby frames go to the multiplayer menus.
- * - HelperRelayListener (host): listen() sends lobbyCreate; peerConnected queues a pending peer that
- *   accept() hands to a fresh HelperRelayConnection; wait() reads the pipe until a frame is there.
- * - HelperRelayConnection: one peer id; send() wraps ODPacket::getRawData() in a peerData frame;
- *   receive() returns the next queued peerData payload through ODPacket::setRawData().
+ * - HelperRelayProcess (one per game, HelperRelayProcess.h) starts the helper executable, owns both pipes and a
+ *   HelperPipe::FrameDecoder, sends hello, waits for ready and files incoming frames into peer queues that the
+ *   listener (host) and the connections (client) read. Lobby frames go to the multiplayer menus through a
+ *   HelperLobbyObserver.
+ * - HelperRelayListener (host): listens on the TCP port as the TCP backend does, so the host's own client keeps
+ *   connecting by TCP on localhost, and additionally accepts the peers that the helper announces with
+ *   peerConnected into fresh HelperRelayConnections. wait() covers both: the reader thread wakes the socket
+ *   selector through a local socket pair.
+ * - HelperRelayConnection: either one relayed peer id or, for a host name or address, a plain TCP connection.
+ *   send() wraps ODPacket::getRawData() in a peerData frame; receive() returns the next queued peerData payload
+ *   through ODPacket::setRawData(). Lobbies are addressed as "lobby:<id>" (formatLobbyAddress()).
+ *
+ * Status values follow the TCP backend: Done, NotReady for a non blocking receive without a message,
+ * Disconnected once the peer or the helper is gone (queued messages are read first), Error for a failed connect.
  *
  * Nothing of the platform SDK is used here: the game only speaks the pipe protocol of HelperPipeProtocol.h.
  */
@@ -38,99 +45,166 @@
 #ifdef OD_NET_HELPER_RELAY
 
 #include "network/HelperPipeProtocol.h"
+#include "network/HelperRelayProcess.h"
 #include "network/NetTransport.h"
+#include "network/TcpNetTransport.h"
 
-//! \brief Connection to one peer relayed by the helper process. Stub: every operation fails.
+#include <SFML/Network.hpp>
+
+#include <memory>
+#include <mutex>
+#include <set>
+#include <string>
+
+/*! \brief Connection to one peer relayed by the helper process, or a plain TCP connection.
+ * connect() with a lobby address joins the lobby and talks to its host through the helper; any other host is
+ * connected by TCP, so the host's own client (localhost) and direct joins by address work unchanged.
+ * HelperRelayListener::accept() fills it with a relayed peer or an accepted TCP socket.
+ */
 class HelperRelayConnection : public NetConnection
 {
 public:
-    //! \brief Creates a connection that has no peer yet.
-    HelperRelayConnection():
-        mPeerId(0),
-        mBlocking(true)
-    {}
+    //! \brief Prefix of a lobby address passed to connect() as the host.
+    static const char* const LOBBY_ADDRESS_PREFIX;
+
+    //! \brief The host string that connect() takes for a lobby: "lobby:<decimal id>".
+    static std::string formatLobbyAddress(uint64_t lobbyId);
+
+    //! \brief Reads a lobby address; false for anything else (a host name or address) or a lobby id of 0.
+    static bool parseLobbyAddress(const std::string& host, uint64_t& lobbyId);
+
+    //! \brief Creates a connection that has no peer yet; relayed operations go through process (may be nullptr).
+    explicit HelperRelayConnection(HelperRelayProcess* process);
+
+    //! \brief Closes a relayed peer that is still attached; a TCP socket closes with its object.
+    ~HelperRelayConnection() override;
 
     //! \brief Reports NetTransportKind::helperRelay.
-    NetTransportKind getKind() const override
-    { return NetTransportKind::helperRelay; }
+    NetTransportKind getKind() const override;
 
-    //! \brief Will join the lobby named by host (a lobby id) through the helper. Stub: fails.
-    NetStatus connect(const std::string& host, int port, uint32_t timeoutMs) override
-    { return NetStatus::Error; }
+    /*! \brief A lobby address joins that lobby through the helper (the port is ignored) and waits up to timeoutMs
+     * (0: no limit) for lobbyJoined; anything else connects by TCP. Error if the join fails or the helper does
+     * not run.
+     */
+    NetStatus connect(const std::string& host, int port, uint32_t timeoutMs) override;
 
-    //! \brief Will send a peerData frame with the packet bytes. Stub: fails.
-    NetStatus send(ODPacket& packet) override
-    { return NetStatus::Error; }
+    //! \brief Relayed: sends a peerData frame with the packet bytes. TCP: sends the packet as one sf::Packet.
+    NetStatus send(ODPacket& packet) override;
 
-    //! \brief Will return the next peerData payload of this peer. Stub: fails.
-    NetStatus receive(ODPacket& packet) override
-    { return NetStatus::Error; }
+    //! \brief Relayed: returns the next peerData payload of this peer; waits for it when blocking.
+    NetStatus receive(ODPacket& packet) override;
 
-    //! \brief Will wait for a peerData frame of this peer. Stub: nothing comes.
-    bool waitForData(int milliseconds) override
-    { return false; }
+    //! \brief Relayed: waits for a peerData frame or the disconnect of this peer (0: no limit). TCP: as the TCP backend.
+    bool waitForData(int milliseconds) override;
 
-    //! \brief Stores the blocking mode for receive().
-    void setBlocking(bool blocking) override
-    { mBlocking = blocking; }
+    //! \brief Stores the blocking mode for receive() and passes it to the TCP socket.
+    void setBlocking(bool blocking) override;
 
     //! \brief Whether receive() waits.
-    bool isBlocking() const override
-    { return mBlocking; }
+    bool isBlocking() const override;
 
-    //! \brief Will send peerClose for this peer. Stub: forgets the peer.
-    void disconnect() override
-    { mPeerId = 0; }
+    //! \brief Relayed: sends peerClose for this peer and forgets the peer. TCP: closes the socket.
+    void disconnect() override;
+
+    //! \brief Listener side: makes this connection the relayed peer peerId.
+    void attachPeer(uint64_t peerId);
+
+    //! \brief Listener side: the TCP connection to accept a socket into; created on first use.
+    TcpNetConnection& useTcp();
+
+    //! \brief The TCP connection, nullptr for a relayed or unused connection.
+    TcpNetConnection* getTcp() const
+    { return mTcp.get(); }
+
+    //! \brief Platform user id of the relayed peer; 0 while none is attached.
+    uint64_t getPeerId() const
+    { return mPeerId; }
 
 private:
+    HelperRelayProcess* mProcess;
     //! \brief Platform user id of the peer; 0 while not connected.
     uint64_t mPeerId;
     bool mBlocking;
+    //! \brief Set for a TCP connection (connect to an address, or a socket accepted by the listener).
+    std::unique_ptr<TcpNetConnection> mTcp;
 };
 
-//! \brief Host side of the helper relay: a lobby instead of a TCP port. Stub: listening fails.
-class HelperRelayListener : public NetListener
+/*! \brief Host side of the helper relay: a lobby in addition to the TCP port.
+ * The lobby itself is created by the menus through HelperRelayProcess::createLobby(); peers announced with
+ * peerConnected are accepted like new TCP clients. close() leaves a lobby the game hosts.
+ */
+class HelperRelayListener : public NetListener, private HelperRelayEventSink
 {
 public:
+    //! \brief Creates a listener that does not listen yet; relayed peers come from process (may be nullptr).
+    explicit HelperRelayListener(HelperRelayProcess* process);
+
+    //! \brief Closes the listener (see close()).
+    ~HelperRelayListener() override;
+
     //! \brief Reports NetTransportKind::helperRelay.
-    NetTransportKind getKind() const override
-    { return NetTransportKind::helperRelay; }
+    NetTransportKind getKind() const override;
 
-    //! \brief Will create the lobby (the port is ignored). Stub: fails.
-    NetStatus listen(int port) override
-    { return NetStatus::Error; }
+    //! \brief Listens on the TCP port (for the host's own client), opens the local wake socket pair and registers with the process.
+    NetStatus listen(int port) override;
 
-    //! \brief A lobby has no port.
-    unsigned short getLocalPort() const override
-    { return 0; }
+    //! \brief The TCP port, including one chosen by the operating system; a lobby has no port.
+    unsigned short getLocalPort() const override;
 
-    //! \brief Will hand the oldest peerConnected peer to the connection. Stub: fails.
-    NetStatus accept(NetConnection& connection) override
-    { return NetStatus::Error; }
+    //! \brief Accepts a pending TCP client, else hands the oldest peerConnected peer to the connection.
+    NetStatus accept(NetConnection& connection) override;
 
-    //! \brief Will include the peer in wait(). Stub: nothing to do.
-    void watch(NetConnection& connection) override
-    {}
+    //! \brief Includes the relayed peer or the TCP socket in wait().
+    void watch(NetConnection& connection) override;
 
-    //! \brief Will remove the peer from wait(). Stub: nothing to do.
-    void unwatch(NetConnection& connection) override
-    {}
+    //! \brief Removes the relayed peer or the TCP socket from wait().
+    void unwatch(NetConnection& connection) override;
 
-    //! \brief Will read the pipe until a frame comes. Stub: nothing comes.
-    bool wait(int timeoutMs) override
-    { return false; }
+    //! \brief Waits on the selector of TCP sockets and the wake socket, so a frame read from the pipe ends the wait.
+    bool wait(int timeoutMs) override;
 
-    //! \brief Whether a peerConnected is queued. Stub: never.
-    bool isPendingConnection() const override
-    { return false; }
+    //! \brief Whether a TCP client waits or a peerConnected is queued.
+    bool isPendingConnection() const override;
 
-    //! \brief Whether peerData of the peer is queued. Stub: never.
-    bool isReady(NetConnection& connection) const override
-    { return false; }
+    //! \brief Whether peerData (or the disconnect) of the peer is queued, or the TCP socket is readable.
+    bool isReady(NetConnection& connection) const override;
 
-    //! \brief Will leave the lobby. Stub: nothing to do.
-    void close() override
-    {}
+    //! \brief Leaves the lobby the game hosts, closes the TCP listener and the wake sockets and forgets the watched peers.
+    void close() override;
+
+private:
+    //! \brief Reader thread of the process: new frames are there, so wake wait().
+    void onRelayEvent() override;
+
+    //! \brief Writes one byte to the wake socket, which makes the selector return.
+    void wake();
+
+    //! \brief Reads the wake bytes that are there.
+    void drainWake();
+
+    //! \brief Whether a relayed peer waits to be accepted or a watched relayed peer is ready.
+    bool isRelayReady() const;
+
+    //! \brief The TCP socket of a TCP connection or of a HelperRelayConnection that carries TCP; nullptr otherwise.
+    static sf::TcpSocket* tcpSocketOf(NetConnection& connection);
+
+    //! \brief The connection as HelperRelayConnection; nullptr for a connection of another backend.
+    static HelperRelayConnection* relayOf(NetConnection& connection);
+
+    HelperRelayProcess* mProcess;
+    bool mListening;
+    sf::TcpListener mTcpListener;
+    sf::SocketSelector mSelector;
+    //! \brief Set by wait() when the TCP listener was ready; cleared by accept().
+    bool mTcpPending;
+    //! \brief Relayed peers included in wait() and isReady().
+    std::set<uint64_t> mWatchedPeers;
+    //! \brief Guards mWakeSender and mWakeConnected; the reader thread and wait() both write the sender.
+    std::mutex mWakeMutex;
+    bool mWakeConnected;
+    sf::TcpSocket mWakeSender;
+    //! \brief Read end of the wake pair; part of the selector.
+    sf::TcpSocket mWakeReceiver;
 };
 
 #endif // OD_NET_HELPER_RELAY

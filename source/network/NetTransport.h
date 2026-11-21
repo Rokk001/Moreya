@@ -32,11 +32,12 @@
  *
  * Backends:
  * - NetTransportKind::tcp: direct connection by host name or IP address over SFML TCP sockets
- *   (TcpNetTransport.h). It is the default and the only one built today. Its bytes on the wire are those
+ *   (TcpNetTransport.h). It is the default and the only one built without OD_NET_HELPER_RELAY. Its bytes on the wire are those
  *   of sf::Packet over sf::TcpSocket: a 32 bit big-endian length followed by the packet data.
  * - NetTransportKind::helperRelay: lobby and relay through a separate helper process that the game
- *   starts and talks to over a pipe (HelperPipeProtocol.h, HelperRelayTransport.h). Not built yet and not
- *   selectable; see docs/development/NETWORK-TRANSPORT.md.
+ *   starts and talks to over a pipe (HelperPipeProtocol.h, HelperRelayProcess.h, HelperRelayTransport.h). Built
+ *   only with the CMake option OD_NET_HELPER_RELAY (off by default) and used once a helper process is set up
+ *   with --net-helper; see docs/development/NETWORK-TRANSPORT.md.
  */
 
 #include <cstdint>
@@ -66,7 +67,7 @@ enum class NetTransportKind
 {
     //! Direct TCP connection by host name or IP address. Default.
     tcp,
-    //! Lobby and relay through an external helper process over a pipe. Not selectable yet.
+    //! Lobby and relay through an external helper process over a pipe; also carries direct TCP. Only with OD_NET_HELPER_RELAY.
     helperRelay
 };
 
@@ -165,7 +166,7 @@ public:
 //! \brief Creates the transport objects of a backend.
 namespace NetTransport
 {
-    //! \brief The backend used by the game. Always NetTransportKind::tcp until a second backend is built.
+    //! \brief The backend used by the game: NetTransportKind::tcp, or helperRelay once a helper process is set up (OD_NET_HELPER_RELAY builds only).
     NetTransportKind getDefaultKind();
 
     //! \brief Creates an unconnected connection of the given kind. An unbuilt kind falls back to TCP with an error log.

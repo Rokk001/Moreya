@@ -24,6 +24,9 @@
 #include "network/ODServer.h"
 #include "network/ODClient.h"
 #include "network/ServerMode.h"
+#ifdef OD_NET_HELPER_RELAY
+#include "network/HelperRelayProcess.h"
+#endif
 #include "sound/MusicPlayer.h"
 #include "sound/SoundEffectsManager.h"
 #include "render/Gui.h"
@@ -176,6 +179,7 @@ bool menuTestElapsed(const std::chrono::steady_clock::time_point& start, int32_t
 
 //! \brief Releases visual owners before RTSS and leaves the primary window alive for Ogre resource teardown.
 //! Cleans up RTSS in the same order when loading or rendering throws.
+//! With OD_NET_HELPER_RELAY and --net-helper it runs the relay helper process for the whole session.
 void ODApplication::startClient()
 {
     ResourceManager& resMgr = ResourceManager::getSingleton();
@@ -321,6 +325,13 @@ void ODApplication::startClient()
         pybind11::gil_scoped_release pythonMainThreadRelease;
         LoadingScreen::presentStartup(LoadingScreen::startupFraction(5.0f));
 
+#ifdef OD_NET_HELPER_RELAY
+        // Lobby multiplayer through the relay helper (docs/development/NETWORK-TRANSPORT.md). It is set up before the
+        // server and the client, whose connections it carries; the handshake finishes in the background.
+        HelperRelayProcess helperRelay;
+        if(!resMgr.getNetHelperPath().empty() && helperRelay.start(resMgr.getNetHelperPath(), std::vector<std::string>()))
+            HelperRelayProcess::setActive(&helperRelay);
+#endif
         ODServer server;
         ODClient client;
 
@@ -386,6 +397,10 @@ void ODApplication::startClient()
                 break;
             // If renderOneFrame returns false, it indicates that an exit has been requested
             running = ogreRoot.renderOneFrame();
+#ifdef OD_NET_HELPER_RELAY
+            // Lobby answers of the helper reach the menus on the render thread; nothing here waits for the pipe
+            helperRelay.dispatchLobbyEvents();
+#endif
             ++menuTestFrames;
             RunLevelTest::onFrameRendered(*renderWindow);
         }
@@ -412,6 +427,10 @@ void ODApplication::startClient()
             // renderOneFrame() returns false once an exit has been requested.
             if (!ogreRoot.renderOneFrame())
                 break;
+#ifdef OD_NET_HELPER_RELAY
+            // Lobby answers of the helper reach the menus on the render thread; nothing here waits for the pipe
+            helperRelay.dispatchLobbyEvents();
+#endif
             ++menuTestFrames;
             RunLevelTest::onFrameRendered(*renderWindow);
         }
@@ -425,6 +444,10 @@ void ODApplication::startClient()
         client.disconnect();
         OD_LOG_INF("Stopping server...");
         server.stopServer();
+#ifdef OD_NET_HELPER_RELAY
+        HelperRelayProcess::setActive(nullptr);
+        helperRelay.stop(HelperRelayProcess::DEFAULT_STOP_TIMEOUT_MS);
+#endif
         ogreRoot.removeFrameListener(&frameListener);
         frameListener.prepareRenderWindowShutdown();
     }
