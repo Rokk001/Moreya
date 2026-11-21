@@ -22,9 +22,12 @@ The campaign tells of the guilds that try to plunder the dungeon of Moreya.
 
 - 18 story levels in six wings, each with its own guild, and six hidden bonus
   chambers.
-- Every story level starts with the Moreya gate closed. Until the countdown
-  ends (up to 60 minutes) you build up your dungeon and reach the goals of the
-  level; when you are ready you can open the gate earlier.
+- Every story level starts with the Moreya gate closed while you build up your
+  dungeon and reach the goals of the level. On Normal, Hard and Hell a
+  countdown runs from the level start (30 to 60 minutes, set per map and
+  difficulty); when you are ready you can open the gate earlier. On Easy and
+  Medium there is no countdown: the raid comes only when you open the gate,
+  and a second group only when you open it again.
 - Then the guild's raid comes through the gate: one or two groups under a
   named leader, with fighters, ranged members and healers. Raid members carry
   off gold from your treasuries and pick up the items your fallen creatures

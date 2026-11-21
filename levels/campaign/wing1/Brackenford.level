@@ -1663,7 +1663,7 @@ Action	win	1
 # Countdown, interval, escape share and composition set by the raid simulation R3C (tools/balance/raid_sim.py)
 Gate	38	12	180
 Seats	2	1
-Countdown	3600
+Countdown	3600	3600	3600
 Interval	-
 EscapeShare	-
 Group	1	ElsaBrack

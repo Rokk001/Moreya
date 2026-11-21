@@ -4,7 +4,9 @@
 No config key of [GroupCombat], [Raid] and [HandLimit] in config/global.cfg is marked PLACEHOLDER and their
 documentation does not name a placeholder at all (every value is final: simulated or decided by the owner), no story level
 keeps a PLACEHOLDER line in its [Raid] section, every key of those blocks that the simulation sets has the fixed value of
-the third simulation pass, every story level sets its countdown inside 1800-3600 game seconds, and the countdown,
+the third simulation pass, every story level sets its countdown inside 1800-3600 game seconds (raid plan R13: wing 1
+one value each for Normal, Hard and Hell, Hard and Hell never above Normal; all 3600 by the owner decision Frage 44 of
+2026-11-21 until the owner has played the maps), and the countdown,
 interval and escape share of every story level, the member levels of its raid and the number of its healers (Wizards
 with the Healer template) have the fixed values of the third simulation pass. All expected values are fixed here
 (counted once on feature/raid-campaign-r3c); nothing is derived from the files under test.
@@ -42,11 +44,14 @@ def levels(*pairs):
     return result
 
 
-# Story level: (Countdown, Interval or "-", EscapeShare or "-", sorted member levels, healers)
+# Story level: (Countdown values as written: Normal, Hard, Hell or one value for all three, Interval or "-",
+# EscapeShare or "-", sorted member levels, healers). R13: wing 1 writes one countdown per campaign difficulty; all are
+# 3600 by the owner decision of 2026-11-21 (Frage 44: no measured values, every wing 1 map keeps 3600 s on Normal, Hard
+# and Hell until the owner has played it). The levels of wings 2-6 keep their single 3600 (R13 scope: wing 1 only).
 LEVELS = {
-    "Brackenford": ("3600", "-", "-", levels(4, 4, 5, 1), 0),
-    "Coldwell": ("3600", "-", "-", levels(4, 4, 6, 1), 0),
-    "Ravensledge": ("3600", "-", "-", levels(2, 9, 3, 1), 0),
+    "Brackenford": (("3600", "3600", "3600"), "-", "-", levels(4, 4, 5, 1), 0),
+    "Coldwell": (("3600", "3600", "3600"), "-", "-", levels(4, 4, 6, 1), 0),
+    "Ravensledge": (("3600", "3600", "3600"), "-", "-", levels(2, 9, 3, 1), 0),
     "Tinmoor": ("3600", "60", "-", levels(2, 8, 3, 1, 4, 1), 0),
     "Greywater": ("3600", "90", "-", levels(2, 8, 3, 1, 4, 1), 0),
     "Highcairn": ("3600", "150", "-", levels(3, 10, 4, 9, 6, 1), 0),
@@ -113,8 +118,17 @@ def main():
         raid = re.search(r"(?ms)^\[Raid\]$(.*?)^\[/Raid\]$", text).group(1)
         check("PLACEHOLDER" not in raid, name + ": the [Raid] section keeps a PLACEHOLDER line")
         rows = [line.split("\t") for line in raid.split("\n") if line and not line.startswith("#")]
-        values = dict((row[0], row[1]) for row in rows if row[0] in ("Countdown", "Interval", "EscapeShare"))
-        check(values.get("Countdown") == countdown and 1800 <= int(countdown) <= 3600, name + ": countdown (RA2)")
+        values = dict((row[0], row[1]) for row in rows if row[0] in ("Interval", "EscapeShare"))
+        written = tuple(next((row[1:] for row in rows if row[0] == "Countdown"), ()))
+        expected = countdown if isinstance(countdown, tuple) else (countdown,)
+        check(written == expected, name + ": countdown (RA2) must be %s, is %s" % (expected, written))
+        check(len(written) in (1, 3) and all(1800 <= int(value) <= 3600 for value in written),
+              name + ": every countdown inside 1800-3600 s (RA2)")
+        if len(written) == 3:
+            # RA2 wants Hard and Hell below Normal; suspended by the owner decision of 2026-11-21 (Frage 44): until the
+            # owner has played the map, Normal, Hard and Hell are equal (3600). Never above Normal.
+            check(int(written[1]) <= int(written[0]) and int(written[2]) <= int(written[0]),
+                  name + ": Hard and Hell not above Normal (RA2, Frage 44)")
         check(values.get("Interval") == interval, name + ": interval")
         check(values.get("EscapeShare") == escape, name + ": escape share")
         members = [row for row in rows if row[0] == "Member"]
