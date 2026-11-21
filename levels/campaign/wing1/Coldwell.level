@@ -293,6 +293,9 @@ ProtectDungeonTemple	NULL
 8	47	1	0
 8	53	3	100
 9	0	3	100
+9	2	1	0
+9	3	1	0
+9	4	1	0
 9	7	1	0	1
 9	8	1	0	1
 9	9	1	0	1
@@ -317,6 +320,9 @@ ProtectDungeonTemple	NULL
 9	47	1	0
 9	53	3	100
 10	0	3	100
+10	2	1	0
+10	3	1	0
+10	4	1	0
 10	7	1	0	1
 10	8	1	0	1
 10	9	1	0	1
@@ -338,6 +344,9 @@ ProtectDungeonTemple	NULL
 10	47	1	0
 10	53	3	100
 11	0	3	100
+11	2	1	0
+11	3	1	0
+11	4	1	0
 11	7	1	0	1
 11	8	1	0	1
 11	9	1	0	1
@@ -1340,6 +1349,19 @@ ProtectDungeonTemple	NULL
 12	11
 [/Room]
 [Room]
+4	Portal1	0	9
+9	2
+9	3
+9	4
+10	2
+10	3
+10	4
+11	2
+11	3
+11	4
+9	5
+[/Room]
+[Room]
 3	Treasury1	2	6
 43	46
 43	47
@@ -1481,8 +1503,6 @@ Block	1	CaveHornet
 Block	1	Spider
 Block	1	Rat
 Block	1	Roach
-Block	1	Goblin
-Block	1	Cultist
 Block	1	LavaSpawn
 Block	1	LizardMan
 Block	1	DarkElf
