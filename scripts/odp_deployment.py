@@ -118,10 +118,24 @@ def deployment_selection():
     return module
 
 
-def deploy(repo, counter, script, game_wait_seconds=1800):
-    """Deploy a validated target and its successful-deployment selection under one lock."""
+def split_integration_ref(integration_ref):
+    """Split an integration ref of the form <remote>/<branch> (origin/main, moreya/main, origin/integration/all)."""
+    remote, _, branch = str(integration_ref).partition('/')
+    if not remote or not branch or remote.startswith('-') or branch.startswith('-'):
+        raise ValueError('Integration ref must be <remote>/<branch>: ' + str(integration_ref))
+    return remote, branch
+
+
+def deploy(repo, counter, script, game_wait_seconds=1800, integration_ref='origin/integration/all'):
+    """Deploy a validated target and its successful-deployment selection under one lock.
+
+    The deployed target is the tip of integration_ref (origin/integration/all for the old line, origin/main in the
+    Moreya clone or moreya/main in a checkout with that remote); the deployed folder is build/windows of the main
+    checkout of the shared Git directory.
+    """
     if not 0 <= game_wait_seconds <= 86400:
         raise ValueError('Game wait seconds must be between 0 and 86400')
+    remote, branch = split_integration_ref(integration_ref)
     common = Path(git(repo, 'rev-parse', '--path-format=absolute', '--git-common-dir'))
     executable = common.parent / 'build/windows/moreya.exe'
     runner = campaign_runner()
@@ -138,9 +152,9 @@ def deploy(repo, counter, script, game_wait_seconds=1800):
                 raise RuntimeError('Game is still running after %s seconds; deployment was not started. '
                                    'Close the game and retry.' % game_wait_seconds)
             time.sleep(min(1, remaining))
-        git(repo, 'fetch', 'origin', 'integration/all')
+        git(repo, 'fetch', remote, branch)
         run = (repo / 'out/orch-run.txt').read_text().strip()
-        target = git(repo, 'rev-parse', 'origin/integration/all')
+        target = git(repo, 'rev-parse', remote + '/' + branch)
         receipt = validate_build(repo, run, target)
         selection = deployment_selection()
         success_file = common / 'odp-deploy-success.json'
@@ -157,8 +171,10 @@ def deploy(repo, counter, script, game_wait_seconds=1800):
                    "& '" + str(script).replace("'", "''") + "' -ExeDir '" + str(repo / 'build/windows').replace("'", "''") +
                    "' -SelectionFile '" + str(manifest).replace("'", "''") + "'; "
                    "if ($?) { exit 0 }; if ($LASTEXITCODE) { exit $LASTEXITCODE }; exit 1")
+        # The deploy script reads the integration ref so its data snapshot is checked against the same branch.
         environment = dict(os.environ, ODP_DEPLOY_EXPECTED_COMMIT=receipt['commit'],
-                           ODP_DEPLOY_LOCK_OWNER=str(os.getpid()))
+                           ODP_DEPLOY_LOCK_OWNER=str(os.getpid()),
+                           ODP_DEPLOY_INTEGRATION_REF=remote + '/' + branch)
         subprocess.run(['powershell', '-NoProfile', '-Command', command], check=True, env=environment)
         snapshot = git(common.parent / 'build/current-worktree', 'rev-parse', 'HEAD')
         if snapshot != receipt['commit'] or digest(executable) != receipt['sha256']:
@@ -199,11 +215,13 @@ def main():
     parser.add_argument('--deploy-script', type=Path)
     parser.add_argument('--game-wait-seconds', type=int, default=1800, choices=range(86401),
                         metavar='0..86400')
+    parser.add_argument('--integration-ref', default='origin/integration/all',
+                        help='<remote>/<branch> whose tip is deployed, e.g. origin/main in the Moreya clone')
     args = parser.parse_args()
     if args.action == 'record':
         record_build(args.repo, args.run, args.number, args.commit)
     else:
-        deploy(args.repo, args.counter, args.deploy_script, args.game_wait_seconds)
+        deploy(args.repo, args.counter, args.deploy_script, args.game_wait_seconds, args.integration_ref)
 
 
 if __name__ == '__main__':
