@@ -286,12 +286,17 @@ def contact_edges(cells, owner, group, size):
 
     The samples (cells, positions in metres) are sorted into cubes of size metres in eight grids shifted by half a
     cube along each axis; parts with samples in one cube of a grid (and the same group) touch.
+    The keys are made unique by an in-place sort and a neighbour comparison: the same result as np.unique, which
+    takes its slower hash path for the 18 million keys of the menu scene.
     """
     edges = []
+    scaled = cells / size
     for shift in [(dx, dy, dz) for dx in (0, 1) for dy in (0, 1) for dz in (0, 1)]:
-        cube = np.floor(cells / size + np.array(shift) * 0.5).astype(np.int64) + 2048
+        cube = np.floor(scaled + np.array(shift) * 0.5).astype(np.int64) + 2048
         key = (((cube[:, 0] * 4096 + cube[:, 1]) * 4096 + cube[:, 2]) * 128 + group) * 65536 + owner
-        key = np.unique(key)
+        key.sort()
+        if len(key):
+            key = key[np.concatenate(([True], key[1:] != key[:-1]))]
         same = (key[1:] >> 16) == (key[:-1] >> 16)
         edges.append(np.stack([key[:-1][same] & 65535, key[1:][same] & 65535], axis=1))
     return np.concatenate(edges)
