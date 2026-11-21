@@ -61,6 +61,11 @@ const int32_t SPAWN_RADIUS = 10;
 const int32_t DIG_COST = 3;
 //! \brief Goal regions (not counting rooms and fights) the player digs towards at the same time.
 const size_t DIG_TARGETS = 3;
+//! \brief Tiles (largest of the x and y distance) around a fight target within which the enemies are counted that
+//! the fighters of the seat must outnumber before the player carries them there.
+const int32_t FIGHT_RADIUS = 6;
+//! \brief Tiles the player marks for digging at most per look at the goals.
+const size_t MARK_BUDGET = 12;
 //! \brief A fighter that stands this near (largest of the x and y distance) to a fight target is not carried there.
 const int32_t NEAR_TARGET = 5;
 //! \brief Tiles (largest of the x and y distance) around a standing enemy creature that the way of a dig or visit
@@ -510,6 +515,15 @@ void expandCond(GameMap& gameMap, Seat* seat, const std::vector<std::string>& co
         if((roomType == RoomType::nullRoomType) || (roomType == RoomType::dungeonTemple) ||
            roomCondHolds(gameMap, seat, cond, roomType))
             return;
+        // Furniture such as beds comes with the creatures that use the room: one block of the room is enough for it
+        if(type == "furniture")
+        {
+            size_t tiles = 0;
+            for(Room* room : gameMap.getRoomsByTypeAndSeat(roomType, seat))
+                tiles += room->getCoveredTiles().size();
+            if(tiles >= ROOM_BLOCK_TILES)
+                return;
+        }
         target.mKind = TargetKind::room;
         target.mRoom = roomType;
         out.push_back(target);
@@ -585,7 +599,7 @@ void expandConds(GameMap& gameMap, Seat* seat, const std::vector<std::vector<std
 //! \brief The targets of every goal that is not reached, goal after goal in the order of the level.
 std::vector<Target> openTargets(GameMap& gameMap, Seat* seat)
 {
-    std::vector<Target> out;
+    std::vector<Target> goals;
     std::set<std::string> seen;
     for(const std::string& goal : sGoals)
     {
@@ -593,7 +607,50 @@ std::vector<Target> openTargets(GameMap& gameMap, Seat* seat)
             continue;
         std::map<std::string, std::vector<std::vector<std::string> > >::const_iterator it = sGoalConds.find(goal);
         if(it != sGoalConds.end())
-            expandConds(gameMap, seat, it->second, 0, seen, out);
+            expandConds(gameMap, seat, it->second, 0, seen, goals);
+    }
+
+    std::vector<Target> out;
+    // A portal that belongs to nobody is claimed first while the seat has none: the fighters come through it
+    if(gameMap.getRoomsByTypeAndSeat(RoomType::portal, seat).empty())
+    {
+        for(Room* room : gameMap.getRooms())
+        {
+            if((room->getType() != RoomType::portal) || ((room->getSeat() != nullptr) && !room->getSeat()->isRogueSeat()))
+                continue;
+            Target portal;
+            portal.mKind = TargetKind::claim;
+            portal.mRoom = RoomType::nullRoomType;
+            portal.mTiles = room->getCoveredTiles();
+            portal.mText = "claim portal " + room->getName();
+            out.push_back(portal);
+        }
+    }
+    // The enemies that stand at a region the workers have to go to are fought there first
+    for(const Target& target : goals)
+    {
+        if((target.mKind != TargetKind::fight) && (target.mKind != TargetKind::room) && !target.mTiles.empty())
+        {
+            Target clear;
+            clear.mKind = TargetKind::fight;
+            clear.mRoom = RoomType::nullRoomType;
+            clear.mText = "clear " + target.mText;
+            for(Tile* enemy : enemyTiles(gameMap, seat, nullptr, -1))
+            {
+                for(Tile* tile : target.mTiles)
+                {
+                    if(std::max(std::abs(enemy->getX() - tile->getX()), std::abs(enemy->getY() - tile->getY())) <=
+                       ENEMY_AVOID)
+                    {
+                        clear.mTiles.push_back(enemy);
+                        break;
+                    }
+                }
+            }
+            if(!clear.mTiles.empty())
+                out.push_back(clear);
+        }
+        out.push_back(target);
     }
     return out;
 }
@@ -668,18 +725,164 @@ std::vector<Tile*> findWay(GameMap& gameMap, Seat* seat, Creature* worker, const
     return way;
 }
 
-//! \brief Marks the tiles that have to be dug for digging by the player (nothing when none).
-void markDiggable(Player* keeper, const std::vector<Tile*>& tiles, bool goldOnly)
+//! \brief The tiles a worker of the seat walks to from the claimed ground of the seat (flood fill over walkable tiles).
+std::set<Tile*> reachedTiles(GameMap& gameMap, Seat* seat, Creature* worker)
+{
+    std::set<Tile*> reached;
+    std::vector<Tile*> frontier;
+    for(int32_t x = 0; x < gameMap.getMapSizeX(); ++x)
+    {
+        for(int32_t y = 0; y < gameMap.getMapSizeY(); ++y)
+        {
+            Tile* tile = gameMap.getTile(x, y);
+            if((tile != nullptr) && tile->isClaimedForSeat(seat) && worker->canGoThroughTile(tile) &&
+               reached.insert(tile).second)
+                frontier.push_back(tile);
+        }
+    }
+    while(!frontier.empty())
+    {
+        Tile* tile = frontier.back();
+        frontier.pop_back();
+        for(Tile* neighbor : tile->getAllNeighbors())
+        {
+            if((neighbor != nullptr) && worker->canGoThroughTile(neighbor) && reached.insert(neighbor).second)
+                frontier.push_back(neighbor);
+        }
+    }
+    return reached;
+}
+
+//! \brief The areas the enemy creatures walk in that the workers of the seat do not reach yet: every walkable tile of
+//! such an area with the area's index, and per area the number of enemy creatures standing in it.
+struct EnemyAreas
+{
+    std::map<Tile*, size_t> mArea;
+    std::vector<int32_t> mEnemies;
+};
+
+//! \brief True when an enemy creature walks on the tile: where a worker of the seat walks, and on every bridge, also one
+//! the seat may not use (the heroes cross the bridges that belong to nobody).
+bool enemyCanWalk(const Creature& worker, Tile& tile)
+{
+    if(worker.canGoThroughTile(&tile))
+        return true;
+    Room* room = tile.getCoveringRoom();
+    return (room != nullptr) && ((room->getType() == RoomType::bridgeWooden) || (room->getType() == RoomType::bridgeStone));
+}
+
+//! \brief Flood fills the walkable tiles around the enemy creatures that stand outside the tiles the workers reach.
+EnemyAreas enemyAreas(GameMap& gameMap, Seat* seat, Creature* worker, const std::set<Tile*>& reached)
+{
+    EnemyAreas areas;
+    for(Tile* start : enemyTiles(gameMap, seat, nullptr, -1))
+    {
+        if(reached.count(start) > 0)
+            continue;
+        std::map<Tile*, size_t>::iterator it = areas.mArea.find(start);
+        if(it != areas.mArea.end())
+        {
+            ++areas.mEnemies[it->second];
+            continue;
+        }
+        const size_t index = areas.mEnemies.size();
+        areas.mEnemies.push_back(1);
+        std::vector<Tile*> frontier(1, start);
+        areas.mArea[start] = index;
+        while(!frontier.empty())
+        {
+            Tile* tile = frontier.back();
+            frontier.pop_back();
+            for(Tile* neighbor : tile->getAllNeighbors())
+            {
+                if((neighbor == nullptr) || !enemyCanWalk(*worker, *neighbor) || (areas.mArea.count(neighbor) > 0))
+                    continue;
+                areas.mArea[neighbor] = index;
+                frontier.push_back(neighbor);
+            }
+        }
+    }
+    return areas;
+}
+
+//! \brief Takes the dig mark of the player off the tiles whose digging would open the dungeon to an area where more
+//! enemy creatures walk than the seat has fighters (the computer keeper marks border tiles for claiming without looking
+//! at what lies behind them). Returns the number of tiles unmarked.
+size_t unmarkOpenings(GameMap& gameMap, Player* keeper, const std::set<Tile*>& reached, const EnemyAreas& areas,
+    int32_t fighters)
+{
+    std::vector<Tile*> unmarked;
+    for(int32_t x = 0; x < gameMap.getMapSizeX(); ++x)
+    {
+        for(int32_t y = 0; y < gameMap.getMapSizeY(); ++y)
+        {
+            Tile* tile = gameMap.getTile(x, y);
+            if((tile == nullptr) || !tile->getMarkedForDigging(keeper))
+                continue;
+            for(Tile* neighbor : tile->getAllNeighbors())
+            {
+                if((neighbor == nullptr) || (reached.count(neighbor) > 0))
+                    continue;
+                std::map<Tile*, size_t>::const_iterator it = areas.mArea.find(neighbor);
+                if((it != areas.mArea.end()) && (areas.mEnemies[it->second] > fighters))
+                {
+                    unmarked.push_back(tile);
+                    break;
+                }
+            }
+        }
+    }
+    if(!unmarked.empty())
+        keeper->markTilesForDigging(false, unmarked, true);
+    return unmarked.size();
+}
+
+//! \brief The living fighters (creatures that are not workers) of the seat.
+int32_t countFighters(GameMap& gameMap, Seat* seat)
+{
+    int32_t fighters = 0;
+    for(Creature* creature : gameMap.getCreaturesBySeat(seat))
+    {
+        if(creature->isAlive() && !creature->getDefinition()->isWorker())
+            ++fighters;
+    }
+    return fighters;
+}
+
+//! \brief Marks the tiles that have to be dug for digging by the player, at most budget of them (the budget shrinks by
+//! the marked tiles). Only the face is marked: tiles next to a tile the workers reach from the dungeon (reached), so
+//! that no worker is given a tile it cannot get to (the engine searches a way to every marked tile); the tiles behind
+//! follow at the next looks. A tile next to an area where enemy creatures walk is dug only when the seat has at least
+//! as many fighters as enemies stand in that area: digging it opens the dungeon to them.
+void markDiggable(Player* keeper, const std::set<Tile*>& reached, const EnemyAreas& areas, int32_t fighters,
+    const std::vector<Tile*>& tiles, bool goldOnly, size_t& budget)
 {
     std::vector<Tile*> marked;
     for(Tile* tile : tiles)
     {
+        if(marked.size() >= budget)
+            break;
         if(!tile->isDiggable(keeper->getSeat()) || tile->getMarkedForDigging(keeper))
             continue;
         if(goldOnly && (tile->getType() != TileType::gold))
             continue;
+        bool open = false;
+        bool opensToEnemies = false;
+        for(Tile* neighbor : tile->getAllNeighbors())
+        {
+            if(neighbor == nullptr)
+                continue;
+            if(reached.count(neighbor) > 0)
+                open = true;
+            std::map<Tile*, size_t>::const_iterator it = areas.mArea.find(neighbor);
+            if((it != areas.mArea.end()) && (areas.mEnemies[it->second] > fighters))
+                opensToEnemies = true;
+        }
+        if(!open || opensToEnemies)
+            continue;
         marked.push_back(tile);
     }
+    budget -= marked.size();
     if(!marked.empty())
         keeper->markTilesForDigging(true, marked, true);
 }
@@ -987,6 +1190,16 @@ void act(GameMap& gameMap, Player* keeper)
     const std::set<Tile*> zone = enemyZone(gameMap, seat);
     const std::set<Tile*> none;
     size_t digs = 0;
+    size_t budget = MARK_BUDGET;
+    std::set<Tile*> reached;
+    EnemyAreas areas;
+    const int32_t fighters = countFighters(gameMap, seat);
+    if(worker != nullptr)
+    {
+        reached = reachedTiles(gameMap, seat, worker);
+        areas = enemyAreas(gameMap, seat, worker, reached);
+        unmarkOpenings(gameMap, keeper, reached, areas, fighters);
+    }
     bool handUsed = (keeper->numObjectsInHand() > 0);
     for(Target& target : targets)
     {
@@ -1004,21 +1217,55 @@ void act(GameMap& gameMap, Player* keeper)
         if(digs < DIG_TARGETS)
         {
             way = findWay(gameMap, seat, worker, target.mTiles, fight ? none : zone);
-            markDiggable(keeper, way, false);
+            markDiggable(keeper, reached, areas, fighters, way, false, budget);
             if(target.mKind == TargetKind::claim)
-                markDiggable(keeper, target.mTiles, false);
+                markDiggable(keeper, reached, areas, fighters, target.mTiles, false, budget);
             else if(target.mKind == TargetKind::mine)
-                markDiggable(keeper, target.mTiles, true);
+                markDiggable(keeper, reached, areas, fighters, target.mTiles, true, budget);
             ++digs;
         }
         if(handUsed || ((target.mKind != TargetKind::fight) && (target.mKind != TargetKind::visit)))
             continue;
         if(!wayIsOpen(worker, way, target.mTiles))
             continue;
+        // Fighters go into a fight only when the seat has more of them than enemies stand there; else they wait and
+        // gather (one by one they would only die)
+        if(fight)
+        {
+            int32_t enemies = 0;
+            for(Tile* enemy : enemyTiles(gameMap, seat, nullptr, -1))
+            {
+                for(Tile* tile : target.mTiles)
+                {
+                    if(std::max(std::abs(enemy->getX() - tile->getX()), std::abs(enemy->getY() - tile->getY())) <=
+                       FIGHT_RADIUS)
+                    {
+                        ++enemies;
+                        break;
+                    }
+                }
+            }
+            if(fighters <= enemies)
+                continue;
+        }
         // A worker visits a region only away from the enemies; a fighter is dropped next to them
         Tile* dropTile = dropTileNear(gameMap, keeper, worker, target.mTiles, fight ? none : zone);
         if(dropTile == nullptr)
             continue;
+        // A worker visits a region only when it can be dropped in it or right next to it
+        if(!fight)
+        {
+            int32_t distance = -1;
+            for(Tile* tile : target.mTiles)
+            {
+                const int32_t d = std::max(std::abs(tile->getX() - dropTile->getX()),
+                    std::abs(tile->getY() - dropTile->getY()));
+                if((distance < 0) || (d < distance))
+                    distance = d;
+            }
+            if(distance > 1)
+                continue;
+        }
         handUsed = carry(gameMap, keeper, target.mTiles, dropTile, !fight);
     }
 }
@@ -1051,6 +1298,23 @@ std::string describeKeeper(GameMap& gameMap, int32_t seatId)
     text += " creatures=";
     for(const std::pair<const std::string, uint32_t>& creature : creatures)
         text += creature.first + ":" + Helper::toString(creature.second) + ",";
+    // The enemy creatures within 12 tiles of the heart (class, seat and tile): who threatens the dungeon
+    std::vector<Tile*> hearts = heartTiles(gameMap, seatId);
+    text += " nearHeart=";
+    for(Creature* creature : gameMap.getCreatures())
+    {
+        Tile* tile = creature->getPositionTile();
+        if((tile == nullptr) || !creature->isAlive() || (creature->getSeat() == nullptr) ||
+           (creature->getSeat() == seat) || seat->isAlliedSeat(creature->getSeat()))
+            continue;
+        // Without a heart (it was destroyed) the tile the seat started at stands for it
+        const int32_t heartX = hearts.empty() ? static_cast<int32_t>(seat->getStartingPosition().x) : hearts.front()->getX();
+        const int32_t heartY = hearts.empty() ? static_cast<int32_t>(seat->getStartingPosition().y) : hearts.front()->getY();
+        if(std::max(std::abs(tile->getX() - heartX), std::abs(tile->getY() - heartY)) > 12)
+            continue;
+        text += creature->getDefinition()->getClassName() + "@" + Helper::toString(creature->getSeat()->getId()) + ":" +
+            Helper::toString(tile->getX()) + "," + Helper::toString(tile->getY()) + ";";
+    }
     return text;
 }
 
@@ -1071,8 +1335,34 @@ std::string describeOpenGoals(GameMap& gameMap, int32_t seatId)
         if(it != sGoalConds.end())
             expandConds(gameMap, seat, it->second, 0, seen, targets);
         text += " " + goal + "[";
+        Creature* worker = gameMap.getWorkerForPathFinding(seat);
         for(size_t i = 0; i < targets.size(); ++i)
-            text += (i > 0 ? "," : "") + targets[i].mText;
+        {
+            // How far the target is: tiles claimed by the seat, ground tiles, and the tiles still to dig on the way
+            const Target& target = targets[i];
+            uint32_t claimed = 0;
+            uint32_t ground = 0;
+            for(Tile* tile : target.mTiles)
+            {
+                if(!tile->isFullTile())
+                    ++ground;
+                if(tile->isClaimedForSeat(seat))
+                    ++claimed;
+            }
+            size_t dig = 0;
+            if((worker != nullptr) && !target.mTiles.empty())
+            {
+                const std::set<Tile*> none;
+                for(Tile* tile : findWay(gameMap, seat, worker, target.mTiles, none))
+                {
+                    if(!worker->canGoThroughTile(tile))
+                        ++dig;
+                }
+            }
+            text += (i > 0 ? "," : "") + target.mText + "(" + Helper::toString(claimed) + "/" +
+                Helper::toString(ground) + "/" + Helper::toString(static_cast<uint32_t>(target.mTiles.size())) +
+                " dig " + Helper::toString(static_cast<uint32_t>(dig)) + ")";
+        }
         text += "]";
     }
     return text;
