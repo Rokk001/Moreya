@@ -1,147 +1,117 @@
-## OpenDungeonsPlus
+## Moreya
 
-OpenDungeonsPlus is an open source, real time strategy game sharing game elements
-with the Dungeon Keeper series and Evil Genius. Players build an underground
-dungeon which is inhabited by creatures. Players fight each other for control
-of the underground by indirectly commanding their creatures, directly casting
-spells in combat, and luring enemies into sinister traps.
+Moreya is an open source real-time strategy game set underground. You are the
+keeper of a dungeon: your workers dig, claim and mine, you build rooms, traps
+and doors, attract creatures and lead them into battle by dropping them where
+they are needed, casting spells and luring enemies into traps.
 
-The game is developed by a friendly community of developers and artists, and
-has now reached a quite playable and enjoyable status after more than 6 years
-of development.
+### Download
 
-### How to play
+Ready-to-play builds for Windows and Linux are attached to the
+[releases](https://github.com/Rokk001/Moreya/releases) of this repository.
 
-Future versions will have an in-game tutorial, but for now, you can use the
-following resources to learn the basic gameplay concepts:
+- **Windows:** unpack the zip archive and start `opendungeons-plus.exe`.
+- **Linux (x86_64):** unpack the tar.gz archive and start the launcher script
+  in its top folder.
 
-- In-game help screen, available through Options
-- Video tutorial (version 0.5.0): https://www.youtube.com/watch?v=P4MClQUdb0E
-- Wiki page: https://github.com/OpenDungeons/OpenDungeons/wiki/Gameplay
+### The campaign
 
-You can play singleplayer levels using the Skirmish menu, or host/join a
-multiplayer game by using the corresponding menus.
+The campaign tells of the guilds that try to plunder the dungeon of Moreya.
 
-Press Print Screen to save a PNG screenshot from menus, dialogs, gameplay or
-the editor; images use the existing timestamped filenames in the configured
-user-data directory.
+- 18 story levels in six wings, each with its own guild, and six hidden bonus
+  chambers.
+- Every story level starts with the Moreya gate closed. Until the countdown
+  ends (up to 60 minutes) you build up your dungeon and reach the goals of the
+  level; when you are ready you can open the gate earlier.
+- Then the guild's raid comes through the gate: one or two groups under a
+  named leader, with fighters, ranged members and healers. Raid members carry
+  off gold from your treasuries and pick up the items your fallen creatures
+  drop. Break the raid and catch its leader before the leader flees back
+  through the gate; a fleeing leader's group follows.
+- Hidden shards of the Heartstone can be carried home by your workers. Once all
+  are found, later levels offer Summon Champion.
+- The first win of a bonus chamber adds three new items to the merchant's
+  wares for every later level.
+- The difficulty (Easy to Hell) is chosen when a campaign starts and stays for
+  the whole campaign.
+- In campaign levels the hand holds at most one fighting creature at a time,
+  with a 60 second cooldown after dropping it; workers are not limited.
+  Skirmish and multiplayer games have no such limit.
+- When every guild is defeated the campaign is complete. Defeated levels can be
+  played again from the campaign map, or a new campaign can be started.
 
-The [creature portrait exporter](tools/portraits/README.md) builds a standalone
-tool for rendering the configured creature models to PNG files.
+### Other ways to play
 
-Use Load Game in the game options, or F8 while hosting a local game, to open
-the saved-game browser; Back preserves the current game until another save is
-selected. Loaded single-player saves resume their stored side without a new
-seat-selection step. Long save descriptions can be scrolled.
+- **Skirmish:** single-player levels against computer keepers.
+- **Multiplayer:** host or join a game over the network.
+- **Editor:** create and change your own levels.
 
-Levels, saved games and editor maps load over one of twenty-five painted dungeon-world pictures, fitted to the screen without stretching.
-
-The main menu explores a ruined 3D fortress with flickering fire, a green-lit spired tower, low ground mist and embers.
-Its chain-hung title sign can be renamed by replacing only `materials/textures/menu/MenuTitle.png`; its mesh, animation and layout remain reusable.
-Selecting an entry flies to its place in the fortress; Back or Escape returns to the courtyard overview.
-
-Creature combat uses model-specific attacks, directional impact reactions, visible fireballs and arrows, with an optional blood-effects setting.
-
-Creatures reach for and carry chicken meals using their available limb rigs, with brief feather effects and cleanup when eating is interrupted.
-
-Creatures settle into their beds, align with the mattress and restore their ground pose and facing when waking or interrupted.
-Use Production beside the minimap or in Options to inspect owned trap orders and workshop progress, and move pending orders up or down in the production priority.
-
-Research rooms, traps and spells through three levels in the skill tree; grey,
-silver and gold states show progress, prerequisite paths show dependencies, and
-completed upgrades, research points and the selected order are retained in saves.
-
-Creatures route through usable gaps around solid room furniture, including corner-aligned beds, without treating other creatures as route blockers.
-
-The hand holds a pointer-aligned hammer while building rooms, traps and doors; an eligible build request reuses the digging hand angle and strike movement.
-
-Creature health and needs indicators are visible by default; press Alt to toggle
-them, and zoom in to enlarge their level, experience, attack, cast and work recovery display, including digging and claiming.
-Depleted health segments disappear so creatures remain visible through the gaps.
-
-After thirty seconds without input, the empty hand randomly checks a wristwatch or plays with a yo-yo while retaining its normal angle; the index finger follows each yo-yo pull, and any input immediately returns the hand to the current action.
-
-### Be part of the community
-
-As free software aficionados, we value community-based development and
-welcome any willing contributor regardless of their skills. Giving us
-feedback about the gameplay, or reporting bugs on our tracker, is already
-a very relevant way of contributing to the development of this game,
-so please get in touch!
-
-You will find us on the following channels:
-- Snapcraft: https://snapcraft.io/opendungeons-plus
-- Discord (Scroll down and click "Links"): https://flathub.org/apps/io.github.tomluchowski.OpenDungeonsPlus 
-- OpenDungeons (upstream code):
-  - Forum: http://forum.freegamedev.net/viewforum.php?f=15
-  - GitHub: https://github.com/tomluchowski/OpenDungeonsPlus
-  - IRC: #opendungeons channel on Freenode
+The in-game help is available through Options. Press Print Screen to save a
+screenshot; Load Game in the options (or F8 while hosting a local game) opens
+the saved-game browser.
 
 ### Build instructions
 
-If you retrieve the source code of OpenDungeonsPlus and want to have a go at
-building it yourself, have a look at platform-specific build instructions
-on our wiki: https://github.com/OpenDungeons/OpenDungeons/wiki/Compile
-
-In a few words, to build OpenDungeonsPlus, you need the following libraries:
+You need the following libraries:
 
 - OGRE SDK (14.6.1)
-- Boost (same version that OGRE was linked against)
+- Boost (the version OGRE was linked against)
 - CEGUI SDK (0.9999.0)
 - SFML (3.1.0)
-- OIS
+- OIS (1.5.1)
 
-You will also need a recent CMake version (3.13 or newer) and a compiler
-that supports C++17 features reasonably well, i.e.:
+You also need CMake 3.13 or newer and a C++17 compiler:
 
-- Linux: GCC 9+
-- Windows: MSVS 2019+ or MinGW 9+
+- Windows: Visual Studio 2019 or newer
+- Linux: GCC 9 or newer
 
-On an UNIX system, you can then run:
+On Linux:
 ```
 mkdir build && cd build
-cmake ..
-make -jX    // X is the number of CPU cores that you want to allocate  
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -jX    # X is the number of CPU cores to use
 ```
-And run the *opendungeons* output binary.
+The workflow in `.github/workflows/` shows a complete Linux build including
+its dependencies.
 
-### Contributing code
-
-If you want to contribute code, you should take a look at our coding
-guidelines: https://github.com/OpenDungeons/OpenDungeons/wiki/Code-Guidelines
-
-It contains a rather deep introduction on how we name, indent, structure and
-extend our code. It also has some performance optimisation tips.
+On Windows, generate a Visual Studio solution with CMake and build the
+`opendungeons-plus` target in the Release configuration.
 
 #### Repository organisation
 
 **Data files**
 ```
-config/          - Several game config files
-dist/            - Icons and linux desktop entry file.
-gui/             - CEGUI files + corresponding Gui images
-levels/          - Game levels
+config/          - Game config files
+dist/            - Icons and desktop entry files
+gui/             - CEGUI files and GUI images
+levels/          - Game levels, including the campaign
 licenses/        - License files used for game data and code
-materials/       - Materials (models texturing scripts and textures)
+materials/       - Materials (model texturing scripts and textures)
 models/          - Model files
 music/           - Music files
-particles/       - Particle effects scripts
-scripts/         - Various packaging and CI scripts
-sounds/          - Game Sounds
+particles/       - Particle effect scripts
+scripts/         - Packaging, check and CI scripts
+sounds/          - Game sounds
 AUTHORS          - List of past and current contributors
-CREDITS          - Detailed listing of licenses and credits for our assets
-LICENSE.md       - General information about the code and assets licenses
+CREDITS          - Detailed listing of licenses and credits for the assets
+LICENSE.md       - General information about the code and asset licenses
 README.md        - The file you are currently reading
-RELEASE-NOTES.md - What's new in OpenDungeonsPlus
+RELEASE-NOTES.md - What changed between versions
 ```
 
 **Code files**
 ```
 cmake/           - Helper files for CMake
- |- config/      - Variable input files for the CMake script
- |- modules/     - Addon scripts for CMake to find dependencies
-sources/         - All our own .cpp and .h files of the game
-tools/           - Some developers shell scripts
-.gitignore       - The files and folders that are ignored by git locally
-CMakeLists.txt   - CMake script for generating the Makefile and IDE projects
+source/          - The .cpp and .h files of the game
+tools/           - Developer tools and asset generators
+CMakeLists.txt   - CMake script for the build
 ```
+
+### License
+
+The source code is licensed under the GNU General Public License version 3 or
+later. The art assets are covered by their respective licenses, listed in the
+CREDITS file; see LICENSE.md and the licenses folder.
+
+Moreya is based on the source code of the open source projects OpenDungeons and
+OpenDungeonsPlus.
