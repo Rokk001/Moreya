@@ -8815,6 +8815,46 @@
         <StateImagery name="PushedOff"><Layer><Section section="plate_normal" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="NormalTextColour" /></Section></Layer></StateImagery>
         <StateImagery name="Disabled"><Layer><Section section="plate_disabled" /><Section section="caption_shadow" /><Section section="caption"><ColourProperty name="DisabledTextColour" /></Section></Layer></StateImagery>
     </WidgetLook>
+    <!-- Picture button in the plank plate of the chosen menu sheet: the compact template plates with their four
+         states (see OD/MenuCompactButton) and the picture of the ButtonImage property, centred, in place of a caption. -->
+    <WidgetLook name="OD/MenuIconButton" inherits="OD/MenuCompactButton">
+        <PropertyDefinition initialValue="" name="ButtonImage" redrawOnWrite="true" />
+        <ImagerySection name="symbol">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="0.5" type="Width" /><UnifiedDim scale="0.36" type="Height" /></OperatorDim></Dim>
+                    <Dim type="TopEdge"><UnifiedDim scale="0.14" type="Height" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="0.72" type="Height" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="0.72" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="ButtonImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
+        <StateImagery name="Normal"><Layer><Section section="plate_normal" /><Section section="symbol" /></Layer></StateImagery>
+        <StateImagery name="Hover"><Layer><Section section="plate_hover" /><Section section="symbol"><Colours topLeft="FFFFEBC0" topRight="FFFFEBC0" bottomLeft="FFFFEBC0" bottomRight="FFFFEBC0" /></Section></Layer></StateImagery>
+        <StateImagery name="Pushed"><Layer><Section section="plate_pushed" /><Section section="symbol"><Colours topLeft="FFDDDDDD" topRight="FFDDDDDD" bottomLeft="FFDDDDDD" bottomRight="FFDDDDDD" /></Section></Layer></StateImagery>
+        <StateImagery name="PushedOff"><Layer><Section section="plate_normal" /><Section section="symbol" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section section="plate_disabled" /><Section section="symbol"><Colours topLeft="FF777777" topRight="FF777777" bottomLeft="FF777777" bottomRight="FF777777" /></Section></Layer></StateImagery>
+    </WidgetLook>
+    <!-- Plain plank plate of the chosen menu sheet (the compact template plate, not clickable) with a centred caption:
+         the panel of the raid countdown. -->
+    <WidgetLook name="OD/MenuPlate">
+        <ImagerySection name="caption_shadow">
+            <TextComponent>
+                <Colours topLeft="C0000000" topRight="C0000000" bottomLeft="C0000000" bottomRight="C0000000" />
+                <VertFormat type="CentreAligned" /><HorzFormat type="CentreAligned" />
+            </TextComponent>
+        </ImagerySection>
+        <ImagerySection name="caption">
+            <TextComponent>
+                <Colours topLeft="FFF9DAB0" topRight="FFF9DAB0" bottomLeft="FFF9DAB0" bottomRight="FFF9DAB0" />
+                <VertFormat type="CentreAligned" /><HorzFormat type="CentreAligned" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Enabled"><Layer><Section look="OD/MenuCompactButton" section="plate_normal" /><Section section="caption_shadow" /><Section section="caption" /></Layer></StateImagery>
+        <StateImagery name="Disabled"><Layer><Section look="OD/MenuCompactButton" section="plate_disabled" /><Section section="caption" /></Layer></StateImagery>
+    </WidgetLook>
     <!-- Filter entry of the load screen: a compact template button that keeps the glowing hovered plate while it is
          the chosen entry, as the chosen sheet shows the selected filter. -->
     <WidgetLook name="OD/MenuFilterButton">

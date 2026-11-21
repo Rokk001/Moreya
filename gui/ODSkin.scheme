@@ -125,6 +125,8 @@
     <FalagardMapping lookNFeel="OD/MenuTextButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuTextButton" />
     <FalagardMapping lookNFeel="OD/MenuIconTextButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuIconTextButton" />
     <FalagardMapping lookNFeel="OD/MenuCompactButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuCompactButton" />
+    <FalagardMapping lookNFeel="OD/MenuIconButton" renderer="Core/Button" targetType="CEGUI/PushButton" windowType="OD/MenuIconButton" />
+    <FalagardMapping lookNFeel="OD/MenuPlate" renderer="Core/Default" targetType="DefaultWindow" windowType="OD/MenuPlate" />
     <FalagardMapping lookNFeel="OD/MenuFilterButton" renderer="Core/ToggleButton" targetType="CEGUI/RadioButton" windowType="OD/MenuFilterButton" />
     <FalagardMapping lookNFeel="OD/LoadListbox" renderer="Core/Listbox" targetType="CEGUI/Listbox" windowType="OD/LoadListbox" />
     <FalagardMapping lookNFeel="OD/SheetWindow" renderer="Core/FrameWindow" targetType="CEGUI/FrameWindow" windowType="OD/SheetWindow" />

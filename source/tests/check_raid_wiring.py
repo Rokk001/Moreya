@@ -300,13 +300,35 @@ windows = {window.get("name"): window for window in root.iter("Window")}
 check("RaidPanel" in windows and "Countdown" in windows and "OpenGateButton" in windows, "C6: the raid panel exists")
 gate_button = windows.get("OpenGateButton")
 gate_props = dict((p.get("name"), p.get("value")) for p in gate_button.findall("Property")) if gate_button is not None else {}
-check(gate_button is not None and gate_button.get("type") == "OD/ImageButton" and gate_props.get("ButtonImage") == "RaidHud/GateOpen"
+check(gate_button is not None and gate_button.get("type") == "OD/MenuIconButton" and gate_props.get("ButtonImage") == "RaidHud/GateOpen"
       and not gate_props.get("Text") and gate_props.get("TooltipText"),
-      "K13: the gate button shows only a picture, has no text and has a tooltip")
+      "K13: the gate button is the sheet plank button with only a picture, no text and a tooltip")
 raid_icon = windows.get("RaidIcon")
 icon_props = dict((p.get("name"), p.get("value")) for p in raid_icon.findall("Property")) if raid_icon is not None else {}
 check(raid_icon is not None and icon_props.get("Image") == "RaidHud/RaidBanner" and icon_props.get("TooltipText"),
       "K14: the countdown shows the raid banner picture with a tooltip")
+K_LOOK = read("gui/OD.looknfeel")
+SCHEME = read("gui/ODSkin.scheme")
+icon_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuIconButton"'):]
+icon_look = icon_look[:icon_look.index("</WidgetLook>")]
+plate_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuPlate"'):]
+plate_look = plate_look[:plate_look.index("</WidgetLook>")]
+compact_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuCompactButton"'):]
+compact_look = compact_look[:compact_look.index("</WidgetLook>")]
+check('inherits="OD/MenuCompactButton"' in icon_look and all(
+      'StateImagery name="%s"' % state in icon_look for state in ("Normal", "Hover", "Pushed", "PushedOff", "Disabled"))
+      and all(("plate_" + state) in icon_look for state in ("normal", "hover", "pushed", "disabled"))
+      and 'ImageProperty name="ButtonImage"' in icon_look and "OpenDungeonsSkin/" not in icon_look,
+      "G12: the gate button look is the sheet plank plate with its four states, built only from the sheet parts")
+check("ODMenuTemplate/CompactNormalLeftCap" in compact_look and "ODMenuTemplate/CompactHoverFill" in compact_look
+      and "ODMenuTemplate/CompactPushedRightCap" in compact_look and "ODMenuTemplate/CompactDisabledFill" in compact_look,
+      "G12: the plank plate comes from the ODMenuTemplate images of the chosen sheet")
+check('look="OD/MenuCompactButton" section="plate_normal"' in plate_look and "OpenDungeonsSkin/" not in plate_look,
+      "G12: the countdown panel is the sheet plank plate")
+check('windowType="OD/MenuIconButton"' in SCHEME and 'windowType="OD/MenuPlate"' in SCHEME,
+      "G12: the two sheet looks are mapped in the scheme")
+check(windows["Countdown"].get("type") == "OD/MenuPlate" and (raid_icon is None or icon_props.get("FrameEnabled") == "False"),
+      "G12: the countdown window takes the sheet plate look, the picture sits on it without an old frame")
 countdown_props = dict((p.get("name"), p.get("value")) for p in windows["Countdown"].findall("Property"))
 check(countdown_props.get("Text") == "" and countdown_props.get("TooltipText"),
       "K14: the countdown window holds no words of its own and has a tooltip")
@@ -357,8 +379,9 @@ if len(raid_root) == 1:
             icon = rect(area_of(windows["RaidIcon"]), width, height, scale, inner)
             check(not overlaps(text, button) and text[2] > text[0] and button[2] > button[0],
                   "C6: countdown and button side by side at " + name)
-            check(not overlaps(icon, text) and not overlaps(icon, button) and icon[2] > icon[0],
-                  "K14: the picture, the time and the gate button do not overlap at " + name)
+            check(icon[0] >= text[0] and icon[2] <= text[2] and icon[1] >= text[1] and icon[3] <= text[3] and not overlaps(icon, button)
+                  and icon[2] > icon[0] and not overlaps(text, button),
+                  "K14: the picture sits on the plate and the gate button does not overlap them at " + name)
 
 # ------------------------------------------------------------------------------------------------ test level (step 4)
 for word in ("Action\traidopen", "Action\traidcountdown\t", "Cond\traid\topen", "Cond\traid\tarrived\t1",
