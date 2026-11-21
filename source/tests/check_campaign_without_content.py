@@ -8,14 +8,18 @@ The public tree must work completely on its own (scripts/campaign_packages.py). 
     finishes the campaign (end message, finished difficulties, Hell) while a wing is missing, keeps the Heartstone at
     its 3 shards and writes the progress of missing wings again (Boost case test_wing_packages);
   * the protected-content allow list names the files of the public package exactly.
-Runtime part, when the built game build/windows/moreya.exe exists: the last story level of wing 1 is played with the
-load test (MOREYA_CONTENT_DIR empty, so no content package is found); the run must pass and the campaign map must show
+Runtime part, when the built game build/windows/moreya.exe exists: the game plays the last story level of wing 1 with
+the load test parameters (--run-level, 1 second) without MOREYA_CONTENT_DIR, so no content package is found, and with
+a progress file in which the two story levels before it are won; the run must pass and the campaign map must show
 the next wing locked ("Coming in Early Access").
 
 Usage: python source/tests/check_campaign_without_content.py
 """
 import json
 import os
+import shutil
+import socket
+import tempfile
 from pathlib import Path
 import re
 import subprocess
@@ -37,6 +41,8 @@ EXECUTABLE = ROOT / "build/windows/moreya.exe"
 PROBE_SECONDS = 1
 #: Wall-clock limit of the runtime probe in seconds (the load test's own limit is 2 * seconds + 400)
 PROBE_TIMEOUT = 420
+#: Progress of the probe: the story levels of wing 1 before Ravensledge are won
+PROBE_PROGRESS = "Version 2\nCompleted campaign/Brackenford.level campaign/Coldwell.level\nDifficulty 1\n"
 
 failures = []
 
@@ -135,21 +141,30 @@ runtime = "not run: the built game %s is missing" % EXECUTABLE.relative_to(ROOT)
 if EXECUTABLE.is_file() and not failures:
     started = time.monotonic()
     environment = dict(os.environ)
-    environment[campaign_packages.CONTENT_VARIABLE] = ""
-    result = subprocess.run([sys.executable, str(ROOT / "scripts/run-level-test.py"), "--exe", str(EXECUTABLE),
-                             "--seconds", str(PROBE_SECONDS), "--menu-seconds", "0", str(ROOT / LAST_PUBLIC_STORY_LEVEL)],
-                            cwd=str(ROOT), env=environment, capture_output=True, text=True, encoding="utf-8",
-                            errors="replace", timeout=PROBE_TIMEOUT, stdin=subprocess.DEVNULL)
+    environment.pop(campaign_packages.CONTENT_VARIABLE, None)
+    app_data = tempfile.mkdtemp(prefix="od-no-content-")
+    with open(os.path.join(app_data, "campaign.progress"), "w", encoding="utf-8") as handle:
+        handle.write(PROBE_PROGRESS)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    try:
+        result = subprocess.run([str(EXECUTABLE), "--run-level", str(ROOT / LAST_PUBLIC_STORY_LEVEL), "--seconds",
+                                 str(PROBE_SECONDS), "--appData", app_data, "--port", str(port)],
+                                cwd=str(EXECUTABLE.parent), env=environment, capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=PROBE_TIMEOUT, stdin=subprocess.DEVNULL)
+    finally:
+        shutil.rmtree(app_data, ignore_errors=True)
     print('ODP_TEST_PHASE ' + json.dumps({"name": "runtime", "seconds": round(time.monotonic() - started, 3)}))
     output = result.stdout + result.stderr
     expected = "campaign map shows the next wing locked (%s)" % campaign_packages.MISSING_WING_TEXT
-    check(result.returncode == 0 and expected in output,
+    check(result.returncode == 0 and "PASS Ravensledge.level" in output and expected in output,
           "the game without content packages must pass Ravensledge and show wing 2 locked:\n"
           + "\n".join(output.splitlines()[-12:]))
     runtime = "Ravensledge passed without content packages, next wing shown locked (%s)" % (
         campaign_packages.MISSING_WING_TEXT)
 
 if failures:
-    print("\n".join(failures))
+    print("\n".join(failures).encode("ascii", "replace").decode("ascii"))
     sys.exit(1)
 print("campaign without content: wing 1 only (4 levels), wings 2 to 6 locked; " + runtime + ": PASS")
