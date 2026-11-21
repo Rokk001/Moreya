@@ -66,14 +66,15 @@ for module in "$CEGUI_MODULE_SRC"/libCEGUI*Parser*.so* "$CEGUI_MODULE_SRC"/libCE
 done
 
 # Copies every shared library dependency that is not part of the base system
-# (our own prefix, the Python runtime and Boost) next to the game.
+# (our own prefix, the Python runtime, Boost and the X toolkit libraries of the OGRE
+# config dialog, which many desktops do not install) next to the game.
 bundle_deps() {
     local object="$1"
     ldd "$object" | while read -r name arrow path rest; do
         [ "$arrow" = "=>" ] || continue
         [ "$path" != "not" ] || continue
         case "$path" in
-            "$DEPS"/*|"$PYTHON_PREFIX"/*|*/libboost_*)
+            "$DEPS"/*|"$PYTHON_PREFIX"/*|*/libboost_*|*/libXaw.so*|*/libXmu.so*|*/libXpm.so*|*/libXt.so*)
                 if [ ! -e "$OUT/lib/$name" ]; then
                     cp -L "$path" "$OUT/lib/$name"
                     echo "$OUT/lib/$name"
