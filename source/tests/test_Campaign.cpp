@@ -482,10 +482,9 @@ BOOST_AUTO_TEST_CASE(test_branch_levels)
 }
 
 //! \brief Writes a map of Moreya in the format of gui/campaign/campaign-world.json: wingCount wings with levelCount
-//! story caves each (files campaign/W<wing>L<level>.level, the last of wing 6 with two raids and two leaders) and a
-//! bonus cave (campaign/W<wing>B.level). Cave n of a wing is at x = 100 * wing + 20 * n, y = 50, 10 pixels wide; the
-//! bonus cave at y = 80. Without guilds the story caves have no guild entry.
-static std::string moreyaMap(uint32_t wingCount, uint32_t levelCount, bool withGuilds)
+//! story caves each and a bonus cave; the caves name no level and no guild. Cave n of a wing is at
+//! x = 100 * wing + 20 * n, y = 50, 10 pixels wide; the bonus cave at y = 80.
+static std::string moreyaMap(uint32_t wingCount, uint32_t levelCount)
 {
     std::ostringstream os;
     os << "{\"version\":2,\"size\":[800,200],\"base\":\"moreya/map.png\","
@@ -505,24 +504,32 @@ static std::string moreyaMap(uint32_t wingCount, uint32_t levelCount, bool withG
         {
             if(level > 1)
                 os << ",";
-            bool kingsRaid = (wing == 6) && (level == 3);
-            os << "{\"file\":\"campaign/W" << wing << "L" << level << ".level\",\"pos\":[" << 100 * wing + 20 * level
-                << ",50],\"size\":10,\"label\":[" << 100 * wing + 20 * level - 5 << ",60,10,5]";
-            if(withGuilds)
-            {
-                os << ",\"guild\":{\"name\":\"Guild " << wing << level << "\",\"leader\":\"Leader " << wing << level
-                    << "\"," << (kingsRaid ? "\"first_leader\":\"First Leader\"," : "")
-                    << "\"origin\":\"Origin " << wing << level << "\",\"groups\":" << ((wing % 2 == 0) ? 2 : 1)
-                    << ",\"size\":" << 5 * wing << ",\"kind\":\"" << ((level == 3) ? "raid" : "group")
-                    << "\",\"banner\":\"banners/b" << wing << level << ".png\",\"portrait\":\"portraits/p" << wing
-                    << level << ".png\"}";
-            }
-            os << "}";
+            os << "{\"pos\":[" << 100 * wing + 20 * level << ",50],\"size\":10,\"label\":["
+                << 100 * wing + 20 * level - 5 << ",60,10,5]}";
         }
-        os << "],\"bonus\":{\"file\":\"campaign/W" << wing << "B.level\",\"pos\":[" << 100 * wing + 20
+        os << "],\"bonus\":{\"pos\":[" << 100 * wing + 20
             << ",80],\"size\":10,\"label\":[" << 100 * wing + 30 << ",75,20,10]}}";
     }
     os << "]}";
+    return os.str();
+}
+
+//! \brief Package definition of one wing for moreyaMap: 3 story levels (campaign/W<wing>L<level>.level, each with
+//! its guild; the last of wing 6 with two raids and two leaders), then its bonus level (campaign/W<wing>B.level).
+static std::string moreyaWing(uint32_t wing)
+{
+    std::ostringstream os;
+    for(uint32_t level = 1; level <= 3; ++level)
+    {
+        bool kingsRaid = (wing == 6) && (level == 3);
+        os << "[Level]\nFile=campaign/W" << wing << "L" << level << ".level\nWing=" << wing << "\nTitle=Level "
+            << wing << level << "\nGuild=Guild " << wing << level << "\nGuildLeader=Leader " << wing << level << "\n"
+            << (kingsRaid ? "GuildFirstLeader=First Leader\n" : "") << "GuildOrigin=Origin " << wing << level
+            << "\nGuildGroups=" << ((wing % 2 == 0) ? 2 : 1) << "\nGuildSize=" << 5 * wing << "\nGuildKind="
+            << ((level == 3) ? "raid" : "group") << "\nGuildBanner=banners/b" << wing << level
+            << ".png\nGuildPortrait=portraits/p" << wing << level << ".png\n";
+    }
+    os << "[Level]\nFile=campaign/W" << wing << "B.level\nWing=" << wing << "\nBonus=1\nTitle=Bonus " << wing << "\n";
     return os.str();
 }
 
@@ -531,22 +538,17 @@ static std::string moreyaCampaign()
 {
     std::ostringstream os;
     for(uint32_t wing = 1; wing <= 6; ++wing)
-    {
-        for(uint32_t level = 1; level <= 3; ++level)
-            os << "[Level]\nFile=campaign/W" << wing << "L" << level << ".level\nWing=" << wing << "\nTitle=Level "
-                << wing << level << "\n";
-        os << "[Level]\nFile=campaign/W" << wing << "B.level\nWing=" << wing << "\nBonus=1\nTitle=Bonus " << wing
-            << "\n";
-    }
+        os << moreyaWing(wing);
     return os.str();
 }
 
-//! \brief The map of Moreya is read with its 6 wings, 18 story caves with their guilds and 6 bonus caves; a map with
-//! another number of wings or caves, or a story cave without guild, is rejected
+//! \brief The map of Moreya is read with its 6 wings, 18 story caves and 6 bonus caves, each cave finds its level by
+//! wing and order, the guild of a level comes from its package; a map with another number of wings or caves is
+//! rejected
 BOOST_AUTO_TEST_CASE(test_world_map)
 {
     CampaignWorld world;
-    std::istringstream is(moreyaMap(6, 3, true));
+    std::istringstream is(moreyaMap(6, 3));
     BOOST_REQUIRE(world.importDefinition(is));
     BOOST_CHECK_EQUAL(world.getWidth(), 800);
     BOOST_CHECK_EQUAL(world.getHeight(), 200);
@@ -570,24 +572,29 @@ BOOST_AUTO_TEST_CASE(test_world_map)
         BOOST_CHECK_EQUAL(cave.mWing, static_cast<uint32_t>(i / 4 + 1));
         BOOST_CHECK_EQUAL(cave.mBonus, (i % 4) == 3);
         if(cave.mBonus)
-        {
             ++bonusCaves;
-            BOOST_CHECK(cave.mGuild.mName.empty());
-        }
         else
         {
             ++storyCaves;
-            BOOST_CHECK(!cave.mGuild.mName.empty());
+            BOOST_CHECK_EQUAL(cave.mOrder, static_cast<uint32_t>(i % 4));
         }
     }
     BOOST_CHECK_EQUAL(storyCaves, 18u);
     BOOST_CHECK_EQUAL(bonusCaves, 6u);
-    BOOST_CHECK_EQUAL(world.findCave("campaign/W2L3.level"), 6u);
-    BOOST_CHECK_EQUAL(world.findCave("campaign/W6B.level"), 23u);
-    BOOST_CHECK_EQUAL(world.findCave("campaign/Unknown.level"), 24u);
+
+    // Every cave finds its level by wing and order; the guild of a level comes from the definition
+    Campaign& campaign = Campaign::getSingleton();
+    std::istringstream definition(moreyaCampaign());
+    BOOST_REQUIRE(campaign.importDefinition(definition));
+    BOOST_CHECK_EQUAL(campaign.getLevel(world.findLevel(campaign, 6)).mFile, "campaign/W2L3.level");
+    BOOST_CHECK_EQUAL(campaign.getLevel(world.findLevel(campaign, 23)).mFile, "campaign/W6B.level");
+    BOOST_CHECK_EQUAL(world.findCave(campaign, campaign.findLevelByFile("campaign/W2L3.level")), 6u);
+    BOOST_CHECK_EQUAL(world.findCave(campaign, campaign.getNumLevels()), 24u);
+    BOOST_CHECK_EQUAL(world.findLevel(campaign, 24), campaign.getNumLevels());
+    BOOST_CHECK(campaign.getLevel(world.findLevel(campaign, 3)).mGuild.mName.empty());
 
     // The guild of a level: banner, portrait, leader, origin and raid size
-    const CampaignWorldGuild& guild = world.getCaves()[world.findCave("campaign/W2L3.level")].mGuild;
+    const CampaignWorldGuild& guild = campaign.getLevel(campaign.findLevelByFile("campaign/W2L3.level")).mGuild;
     BOOST_CHECK_EQUAL(guild.mName, "Guild 23");
     BOOST_CHECK_EQUAL(guild.mLeader, "Leader 23");
     BOOST_CHECK(guild.mFirstLeader.empty());
@@ -600,26 +607,24 @@ BOOST_AUTO_TEST_CASE(test_world_map)
     BOOST_CHECK_EQUAL(CampaignWorld::getRaidSizeText(guild), "two raids of 10");
     BOOST_CHECK_EQUAL(CampaignWorld::getGuildDetailsText(guild),
         "Leader: Leader 23\nRaid size: two raids of 10\nOrigin: Origin 23");
-    const CampaignWorldGuild& group = world.getCaves()[world.findCave("campaign/W1L1.level")].mGuild;
+    const CampaignWorldGuild& group = campaign.getLevel(campaign.findLevelByFile("campaign/W1L1.level")).mGuild;
     BOOST_CHECK_EQUAL(CampaignWorld::getRaidSizeText(group), "one group of 5");
-    const CampaignWorldGuild& kingsRaid = world.getCaves()[world.findCave("campaign/W6L3.level")].mGuild;
+    const CampaignWorldGuild& kingsRaid = campaign.getLevel(campaign.findLevelByFile("campaign/W6L3.level")).mGuild;
     BOOST_CHECK_EQUAL(kingsRaid.mFirstLeader, "First Leader");
     BOOST_CHECK_EQUAL(CampaignWorld::getGuildDetailsText(kingsRaid),
         "Leaders: First Leader and Leader 63\nRaid size: two raids of 30\nOrigin: Origin 63");
 
-    // Another number of wings or story caves, a missing guild or a broken file are rejected and leave the map empty
-    std::istringstream fiveWings(moreyaMap(5, 3, true));
+    // Another number of wings or story caves or a broken file are rejected and leave the map empty
+    std::istringstream fiveWings(moreyaMap(5, 3));
     BOOST_CHECK(!world.importDefinition(fiveWings));
     BOOST_CHECK(world.getCaves().empty());
     BOOST_CHECK(world.getWings().empty());
-    std::istringstream sevenWings(moreyaMap(7, 3, true));
+    std::istringstream sevenWings(moreyaMap(7, 3));
     BOOST_CHECK(!world.importDefinition(sevenWings));
-    std::istringstream twoLevels(moreyaMap(6, 2, true));
+    std::istringstream twoLevels(moreyaMap(6, 2));
     BOOST_CHECK(!world.importDefinition(twoLevels));
-    std::istringstream fourLevels(moreyaMap(6, 4, true));
+    std::istringstream fourLevels(moreyaMap(6, 4));
     BOOST_CHECK(!world.importDefinition(fourLevels));
-    std::istringstream noGuilds(moreyaMap(6, 3, false));
-    BOOST_CHECK(!world.importDefinition(noGuilds));
     std::istringstream broken("{\"size\":[4,2]}");
     BOOST_CHECK(!world.importDefinition(broken));
 }
@@ -630,7 +635,7 @@ BOOST_AUTO_TEST_CASE(test_world_map)
 BOOST_AUTO_TEST_CASE(test_world_map_progress)
 {
     CampaignWorld world;
-    std::istringstream map(moreyaMap(6, 3, true));
+    std::istringstream map(moreyaMap(6, 3));
     BOOST_REQUIRE(world.importDefinition(map));
     Campaign& campaign = Campaign::getSingleton();
     std::istringstream definition(moreyaCampaign());
@@ -740,4 +745,109 @@ BOOST_AUTO_TEST_CASE(test_kept_minion)
     std::ostringstream record;
     campaign.getSaveState().exportInfo(record);
     BOOST_CHECK_EQUAL(record.str(), "Campaign\t2 campaign/Two.level 1 0\n");
+}
+
+//! \brief Wing packages: the levels come in wing order with their files in the package folders; a package with mixed
+//! wings, a wing out of range or a second package of a wing is skipped. Without the packages of wings 2 to 6 those
+//! wings are missing: their caves are locked, the campaign is not finished after wing 1, no difficulty is finished,
+//! and the progress of their levels is kept and written again unchanged
+BOOST_AUTO_TEST_CASE(test_wing_packages)
+{
+    Campaign& campaign = Campaign::getSingleton();
+    campaign.setProgressPath("");
+    campaign.stopCampaign();
+
+    // Every wing in its own package, given out of order, plus packages that must be skipped
+    std::vector<CampaignPackage> packages;
+    for(uint32_t wing = 6; wing >= 1; --wing)
+    {
+        CampaignPackage package;
+        package.mDirectory = "packs/wing" + std::to_string(wing);
+        package.mDefinition = moreyaWing(wing);
+        packages.push_back(package);
+    }
+    CampaignPackage twice;
+    twice.mDirectory = "other/wing2/";
+    twice.mDefinition = "[Level]\nFile=campaign/Twice.level\nWing=2\n";
+    packages.push_back(twice);
+    CampaignPackage mixed;
+    mixed.mDirectory = "other/mixed";
+    mixed.mDefinition = "[Level]\nFile=campaign/M1.level\nWing=1\n[Level]\nFile=campaign/M2.level\nWing=2\n";
+    packages.push_back(mixed);
+    CampaignPackage outside;
+    outside.mDirectory = "other/wing7";
+    outside.mDefinition = "[Level]\nFile=campaign/Seven.level\nWing=7\n";
+    packages.push_back(outside);
+    BOOST_REQUIRE(campaign.importPackages(packages));
+    BOOST_REQUIRE_EQUAL(campaign.getNumLevels(), 24u);
+    BOOST_CHECK(!campaign.hasMissingWings());
+    BOOST_CHECK_EQUAL(campaign.getLevel(0).mFile, "campaign/W1L1.level");
+    BOOST_CHECK_EQUAL(campaign.getLevel(0).mPath, "packs/wing1/W1L1.level");
+    BOOST_CHECK_EQUAL(campaign.getLevel(23).mFile, "campaign/W6B.level");
+    BOOST_CHECK_EQUAL(campaign.getLevel(23).mPath, "packs/wing6/W6B.level");
+    BOOST_CHECK_EQUAL(campaign.findLevelByFile("campaign/Twice.level"), campaign.getNumLevels());
+    BOOST_CHECK_EQUAL(campaign.findLevelInWing(2, false, 1), 5u);
+    BOOST_CHECK_EQUAL(campaign.findLevelInWing(2, true, 0), 7u);
+    BOOST_CHECK_EQUAL(campaign.findLevelInWing(2, false, 3), campaign.getNumLevels());
+
+    // Only the package of wing 1: wings 2 to 6 are missing
+    std::vector<CampaignPackage> first(1, packages[5]);
+    BOOST_REQUIRE(campaign.importPackages(first));
+    BOOST_REQUIRE_EQUAL(campaign.getNumLevels(), 4u);
+    BOOST_CHECK(campaign.hasMissingWings());
+    BOOST_CHECK(campaign.isWingAvailable(1));
+    for(uint32_t wing = 2; wing <= Campaign::NUM_WINGS; ++wing)
+        BOOST_CHECK(!campaign.isWingAvailable(wing));
+
+    // Progress of the missing wings stays and is written again; the levels of wing 1 are read
+    std::istringstream progress("Version 2\nCompleted campaign/W1L1.level campaign/W2L1.level\n"
+        "Discovered campaign/W2B.level\nShards campaign/W2L2.level\nDifficulty 1\nFinished\n");
+    BOOST_REQUIRE(campaign.importProgress(progress));
+    BOOST_CHECK(campaign.isCompleted(0));
+    std::ostringstream written;
+    campaign.exportProgress(written);
+    BOOST_CHECK(written.str().find("Completed campaign/W1L1.level campaign/W2L1.level\n") != std::string::npos);
+    BOOST_CHECK(written.str().find("Discovered campaign/W2B.level\n") != std::string::npos);
+    BOOST_CHECK(written.str().find("Shards campaign/W2L2.level\n") != std::string::npos);
+    // The Heartstone keeps its 3 shards while wings are missing; the shard found in a missing wing still counts
+    BOOST_CHECK_EQUAL(campaign.getHeartstoneTotal(), static_cast<size_t>(Campaign::HEARTSTONE_SHARDS));
+    BOOST_CHECK_EQUAL(campaign.getHeartstonePieces(), 1u);
+    BOOST_CHECK(!campaign.isHeartstoneComplete());
+
+    // The map shows the caves of the missing wings locked and their bonus caves hidden
+    CampaignWorld world;
+    std::istringstream map(moreyaMap(6, 3));
+    BOOST_REQUIRE(world.importDefinition(map));
+    size_t level = 0;
+    BOOST_CHECK(world.getCaveState(campaign, 4, level) == CampaignCaveState::locked);
+    BOOST_CHECK_EQUAL(level, campaign.getNumLevels());
+    BOOST_CHECK(world.getCaveState(campaign, 7, level) == CampaignCaveState::hidden);
+
+    // Winning all of wing 1 does not finish the campaign: wing 2 is coming, Hell stays locked
+    // Hard: a finished campaign on Hard would unlock Hell
+    campaign.setDifficulty(2);
+    for(size_t i = 1; i < 3; ++i)
+    {
+        campaign.startLevel(i);
+        BOOST_CHECK(campaign.onLevelWon());
+    }
+    BOOST_CHECK_EQUAL(campaign.getCurrentLevel(), campaign.getNumLevels());
+    BOOST_CHECK(!campaign.isFinished());
+    BOOST_CHECK(!campaign.isPlayedLevelCampaignEnd());
+    BOOST_CHECK(!campaign.isHellUnlocked());
+    BOOST_CHECK_EQUAL(world.findCurrentCave(campaign), 24u);
+    campaign.stopCampaign();
+
+    // A package of wing 3 without wing 2 keeps the story levels of wing 3 locked
+    std::vector<CampaignPackage> gap;
+    gap.push_back(packages[5]);
+    gap.push_back(packages[3]);
+    BOOST_REQUIRE(campaign.importPackages(gap));
+    std::istringstream wingOneDone("Version 2\nCompleted campaign/W1L1.level campaign/W1L2.level campaign/W1L3.level\n");
+    BOOST_REQUIRE(campaign.importProgress(wingOneDone));
+    BOOST_CHECK(!campaign.isUnlocked(campaign.findLevelByFile("campaign/W3L1.level")));
+    // The missing wing 2 also keeps wing 3 from becoming the current level, and the campaign is not finished
+    BOOST_CHECK_EQUAL(campaign.getCurrentLevel(), campaign.getNumLevels());
+    BOOST_CHECK(!campaign.isFinished());
+    campaign.resetProgress();
 }

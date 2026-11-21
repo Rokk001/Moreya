@@ -42,6 +42,14 @@ The campaign tells of the guilds that try to plunder the dungeon of Moreya.
 - When every guild is defeated the campaign is complete. Defeated levels can be
   played again from the campaign map, or a new campaign can be started.
 
+The campaign is loaded from content packages, one per wing. This repository
+holds the package of wing 1 (`levels/campaign/wing1/`, three story levels and
+its bonus chamber). The packages of wings 2 to 6 come with the Steam build;
+further wings arrive by update as new packages. Without a package the game
+runs completely and shows that wing on the campaign map as locked, "Coming in
+Early Access". A build from this repository finds additional packages in the
+folder named by the environment variable `MOREYA_CONTENT_DIR`.
+
 ### Other ways to play
 
 - **Skirmish:** single-player levels against computer keepers.
@@ -88,7 +96,7 @@ in the Release configuration (CMake target `opendungeons-plus`); it writes `more
 config/          - Game config files
 dist/            - Icons and desktop entry files
 gui/             - CEGUI files and GUI images
-levels/          - Game levels, including the campaign
+levels/          - Game levels, including the wing 1 package of the campaign
 licenses/        - License files used for game data and code
 materials/       - Materials (model texturing scripts and textures)
 models/          - Model files
@@ -116,5 +124,11 @@ CMakeLists.txt   - CMake script for the build
 The source code is licensed under the GNU General Public License version 3 or
 later. The art assets are covered by their respective licenses, listed in the
 CREDITS file; see LICENSE.md and the licenses folder.
+
+The campaign contents have licenses of their own and are not covered by the
+GPL: wing 1 (`levels/campaign/wing1/`) is all rights reserved, viewing and
+playing are allowed, redistributing it or distributing changed versions is
+not (see `levels/campaign/wing1/LICENSE.txt`). Wings 2 to 6 are not part of
+this repository.
 
 Moreya is based on the source code of the open source projects OpenDungeons and OpenDungeonsPlus.

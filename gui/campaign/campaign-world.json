@@ -85,7 +85,6 @@
       "seal_size": 72,
       "levels": [
         {
-          "file": "campaign/Brackenford.level",
           "pos": [
             200,
             625
@@ -96,20 +95,9 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Mud Fists",
-            "leader": "Elsa Brack",
-            "origin": "Brackenford",
-            "groups": 1,
-            "size": 5,
-            "kind": "group",
-            "banner": "banners/mud-fists.png",
-            "portrait": "portraits/elsa-brack.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Coldwell.level",
           "pos": [
             460,
             625
@@ -120,20 +108,9 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Iron Latch",
-            "leader": "Hugo Cole",
-            "origin": "Coldwell",
-            "groups": 1,
-            "size": 5,
-            "kind": "group",
-            "banner": "banners/iron-latch.png",
-            "portrait": "portraits/hugo-cole.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Ravensledge.level",
           "pos": [
             720,
             625
@@ -144,21 +121,10 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Grey Fang",
-            "leader": "Rolf Scarrow",
-            "origin": "Wolfscar",
-            "groups": 1,
-            "size": 10,
-            "kind": "raid",
-            "banner": "banners/grey-fang.png",
-            "portrait": "portraits/rolf-scarrow.png"
-          }
+          ]
         }
       ],
       "bonus": {
-        "file": "campaign/Mossgate.level",
         "pos": [
           795,
           488
@@ -188,7 +154,6 @@
       "seal_size": 72,
       "levels": [
         {
-          "file": "campaign/Tinmoor.level",
           "pos": [
             1020,
             625
@@ -199,20 +164,9 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Deep Picks",
-            "leader": "Merrin Tay",
-            "origin": "Tinmoor",
-            "groups": 2,
-            "size": 5,
-            "kind": "group",
-            "banner": "banners/deep-picks.png",
-            "portrait": "portraits/merrin-tay.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Greywater.level",
           "pos": [
             1280,
             625
@@ -223,20 +177,9 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Drowned Oath",
-            "leader": "Corwin Gray",
-            "origin": "Greywater",
-            "groups": 2,
-            "size": 5,
-            "kind": "group",
-            "banner": "banners/drowned-oath.png",
-            "portrait": "portraits/corwin-gray.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Highcairn.level",
           "pos": [
             1540,
             625
@@ -247,21 +190,10 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Stone Crown",
-            "leader": "Hilde Cairn",
-            "origin": "Highcairn",
-            "groups": 2,
-            "size": 10,
-            "kind": "raid",
-            "banner": "banners/stone-crown.png",
-            "portrait": "portraits/hilde-cairn.png"
-          }
+          ]
         }
       ],
       "bonus": {
-        "file": "campaign/CrowshotGallery.level",
         "pos": [
           1615,
           488
@@ -291,7 +223,6 @@
       "seal_size": 72,
       "levels": [
         {
-          "file": "campaign/Lanternhill.level",
           "pos": [
             1840,
             625
@@ -302,20 +233,9 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Pale Flame",
-            "leader": "Ines Vale",
-            "origin": "Lanternhill",
-            "groups": 1,
-            "size": 10,
-            "kind": "group",
-            "banner": "banners/pale-flame.png",
-            "portrait": "portraits/ines-vale.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Saltmere.level",
           "pos": [
             2100,
             625
@@ -326,20 +246,9 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Salt Wolves",
-            "leader": "Bram Seward",
-            "origin": "Saltmere",
-            "groups": 1,
-            "size": 10,
-            "kind": "group",
-            "banner": "banners/salt-wolves.png",
-            "portrait": "portraits/bram-seward.png"
-          }
+          ]
         },
         {
-          "file": "campaign/HollinFen.level",
           "pos": [
             2360,
             625
@@ -350,21 +259,10 @@
             700,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Order of the White Thorn",
-            "leader": "Agathe Hollin",
-            "origin": "Hollin Fen",
-            "groups": 1,
-            "size": 25,
-            "kind": "raid",
-            "banner": "banners/order-of-the-white-thorn.png",
-            "portrait": "portraits/agathe-hollin.png"
-          }
+          ]
         }
       ],
       "bonus": {
-        "file": "campaign/SkittleCavern.level",
         "pos": [
           2435,
           488
@@ -394,7 +292,6 @@
       "seal_size": 72,
       "levels": [
         {
-          "file": "campaign/Cinderhollow.level",
           "pos": [
             2360,
             1045
@@ -405,20 +302,9 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Ember Ram",
-            "leader": "Pell Ashgrove",
-            "origin": "Cinderhollow",
-            "groups": 2,
-            "size": 10,
-            "kind": "group",
-            "banner": "banners/ember-ram.png",
-            "portrait": "portraits/pell-ashgrove.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Ashcombe.level",
           "pos": [
             2100,
             1045
@@ -429,20 +315,9 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Burnt Wheel",
-            "leader": "Liesl Ashby",
-            "origin": "Ashcombe",
-            "groups": 2,
-            "size": 10,
-            "kind": "group",
-            "banner": "banners/burnt-wheel.png",
-            "portrait": "portraits/liesl-ashby.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Ironbridge.level",
           "pos": [
             1840,
             1045
@@ -453,21 +328,10 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Anvil Host",
-            "leader": "Gareth Fenn",
-            "origin": "Ironbridge",
-            "groups": 2,
-            "size": 25,
-            "kind": "raid",
-            "banner": "banners/anvil-host.png",
-            "portrait": "portraits/gareth-fenn.png"
-          }
+          ]
         }
       ],
       "bonus": {
-        "file": "campaign/SwarmNight.level",
         "pos": [
           2435,
           908
@@ -497,7 +361,6 @@
       "seal_size": 72,
       "levels": [
         {
-          "file": "campaign/Bellwick.level",
           "pos": [
             1540,
             1045
@@ -508,20 +371,9 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Silent Bell",
-            "leader": "Lorens Bell",
-            "origin": "Bellwick",
-            "groups": 1,
-            "size": 25,
-            "kind": "group",
-            "banner": "banners/silent-bell.png",
-            "portrait": "portraits/lorens-bell.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Goldspire.level",
           "pos": [
             1280,
             1045
@@ -532,20 +384,9 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Gilded Hand",
-            "leader": "Alaric Penn",
-            "origin": "Goldspire",
-            "groups": 1,
-            "size": 25,
-            "kind": "group",
-            "banner": "banners/gilded-hand.png",
-            "portrait": "portraits/alaric-penn.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Kingsfall.level",
           "pos": [
             1020,
             1045
@@ -556,21 +397,10 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Sun Court",
-            "leader": "Prince Aurel",
-            "origin": "Kingsfall",
-            "groups": 1,
-            "size": 40,
-            "kind": "raid",
-            "banner": "banners/sun-court.png",
-            "portrait": "portraits/prince-aurel.png"
-          }
+          ]
         }
       ],
       "bonus": {
-        "file": "campaign/BoulderCourse.level",
         "pos": [
           1615,
           908
@@ -600,7 +430,6 @@
       "seal_size": 72,
       "levels": [
         {
-          "file": "campaign/VarnsCrossing.level",
           "pos": [
             720,
             1045
@@ -611,20 +440,9 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Black Legion",
-            "leader": "Marshal Varn",
-            "origin": "Varn's Crossing",
-            "groups": 2,
-            "size": 25,
-            "kind": "group",
-            "banner": "banners/black-legion.png",
-            "portrait": "portraits/marshal-varn.png"
-          }
+          ]
         },
         {
-          "file": "campaign/Wraithwood.level",
           "pos": [
             460,
             1045
@@ -635,20 +453,9 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Ash Coven",
-            "leader": "Elowen Ash",
-            "origin": "Wraithwood",
-            "groups": 2,
-            "size": 25,
-            "kind": "group",
-            "banner": "banners/ash-coven.png",
-            "portrait": "portraits/elowen-ash.png"
-          }
+          ]
         },
         {
-          "file": "campaign/HollowmarkCitadel.level",
           "pos": [
             200,
             1045
@@ -659,22 +466,10 @@
             1120,
             256,
             116
-          ],
-          "guild": {
-            "name": "The Crown Eternal",
-            "leader": "High King Castellan",
-            "first_leader": "Sabine Rook",
-            "origin": "Hollowmark Citadel",
-            "groups": 2,
-            "size": 40,
-            "kind": "raid",
-            "banner": "banners/crown-eternal.png",
-            "portrait": "portraits/high-king-castellan.png"
-          }
+          ]
         }
       ],
       "bonus": {
-        "file": "campaign/TwistingHalls.level",
         "pos": [
           795,
           908
