@@ -43,28 +43,37 @@ the saved-game browser.
 
 ### Build instructions
 
-You need the following libraries:
+Moreya is built with CMake 3.13 or newer and a C++17 compiler. It needs
+OGRE 14.6.1, CEGUI 0.9999.0, SFML 3.1.0, OIS 1.5.1, Boost, pybind11 and
+Python 3. OGRE and CEGUI are built with the patches in
+`scripts/win32/patches`.
 
-- OGRE SDK (14.6.1)
-- Boost (the version OGRE was linked against)
-- CEGUI SDK (0.9999.0)
-- SFML (3.1.0)
-- OIS (1.5.1)
+#### Windows
 
-You also need CMake 3.13 or newer and a C++17 compiler:
+Requirements: Visual Studio 2026 Build Tools (C++ workload), CMake 4.4.1
+under `%BUILD_DEPS_ROOT%	ools`, Python 3.14 and Git. The default paths are
+set in `scripts/win32/windows-paths.ps1` and can be overridden with
+`BUILD_DEPS_ROOT`, `BUILD_PYTHON_ROOT` and `BUILD_VS_PATH`.
 
-- Windows: Visual Studio 2019 or newer
-- Linux: GCC 9 or newer
-
-On Linux:
 ```
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -jX    # X is the number of CPU cores to use
+powershell -File scripts\win32\install-base-prereqs.ps1
+powershell -File scripts\win32\install-boost-prereq.ps1
+powershell -File scripts\win32\install-ogre-prereq.ps1
+powershell -File scripts\win32\install-cegui-prereq.ps1
+powershell -File scripts\win32\configure-windows-prereqs.ps1
+cmake --build build\windows --config Release --target opendungeons-plus
 ```
 
-On Windows, generate a Visual Studio solution with CMake and build the
-`opendungeons-plus` target in the Release configuration.
+#### Linux
+
+Requirements: GCC 9 or newer, CMake, Ninja, the X11, OpenGL, FreeType,
+Ogg/Vorbis/FLAC and Boost development packages of the distribution, and the
+libraries above installed into one prefix.
+
+```
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=<prefix>
+cmake --build build --target opendungeons-plus
+```
 
 #### Repository organisation
 
