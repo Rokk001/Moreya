@@ -110,7 +110,7 @@ MAX_EXAMPLES = 5
 # fighter classes the portal can bring).
 WING1_PORTALS = {
     "Brackenford.level": ((7, 17), 3, ("Cultist", "Goblin")),
-    "Coldwell.level": ((9, 2), 2, ()),
+    "Coldwell.level": ((9, 2), 2, ("Cultist", "Goblin")),
     "Ravensledge.level": ((28, 51), 0, ("Cultist", "DarkElf")),
     "Mossgate.level": ((30, 29), 0, ("Goblin",)),
 }
