@@ -11,8 +11,9 @@ Ready-to-play builds for Windows and Linux are attached to the
 [releases](https://github.com/Rokk001/Moreya/releases) of this repository.
 
 - **Windows:** unpack the zip archive and start `opendungeons-plus.exe`.
-- **Linux (x86_64):** unpack the tar.gz archive and start the launcher script
-  in its top folder.
+- **Linux (x86_64):** unpack the tar.gz archive and start `./moreya` in its
+  top folder. The build needs glibc 2.38 or newer (for example Ubuntu 24.04,
+  Fedora 39, Debian 13 or newer).
 
 ### The campaign
 
@@ -71,8 +72,8 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -jX    # X is the number of CPU cores to use
 ```
-The workflow in `.github/workflows/` shows a complete Linux build including
-its dependencies.
+The workflow `.github/workflows/linux-release.yml` shows a complete Linux
+build including its dependencies.
 
 On Windows, generate a Visual Studio solution with CMake and build the
 `opendungeons-plus` target in the Release configuration.
