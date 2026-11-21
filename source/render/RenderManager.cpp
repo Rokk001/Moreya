@@ -9468,13 +9468,17 @@ static void addPreviewBorderBand(Ogre::ManualObject* object, const Ogre::Vector3
 //! \param digging Also draws the filled borders of selected walls (digging selection).
 //! \param singleRectangle Draws one outline around all given tiles instead of one frame per tile
 //!        (the rectangle of a drag selection).
-void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging, bool singleRectangle)
+//! \param edgePlaces Places beyond the map edge (no tile) that are framed like undiscovered tiles, so a selection
+//!        can reach over the edge without showing where it is.
+//! \param edgeHeight The height at which the frame of an edge place is drawn (rrGetEdgeMarkHeight).
+void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogre::ColourValue& colour, bool construction, bool digging, bool singleRectangle,
+    const std::vector<std::pair<int, int> >& edgePlaces, float edgeHeight)
 {
     if(singleRectangle)
     {
         if(mTilePreview == nullptr)
         {
-            if(tiles.empty())
+            if(tiles.empty() && edgePlaces.empty())
                 return;
             mTilePreview = mSceneManager->createManualObject("KeeperTilePreview");
             mTilePreview->setDynamic(true);
@@ -9482,14 +9486,22 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             mSceneManager->getRootSceneNode()->createChildSceneNode("KeeperTilePreviewNode")->attachObject(mTilePreview);
         }
         mTilePreview->clear();
-        if(tiles.empty())
+        if(tiles.empty() && edgePlaces.empty())
             return;
 
-        int minX = tiles.front()->getX();
+        int minX = tiles.empty() ? edgePlaces.front().first : tiles.front()->getX();
         int maxX = minX;
-        int minY = tiles.front()->getY();
+        int minY = tiles.empty() ? edgePlaces.front().second : tiles.front()->getY();
         int maxY = minY;
         float z = TILE_PREVIEW_FLOOR_HEIGHT;
+        for(const std::pair<int, int>& place : edgePlaces)
+        {
+            minX = std::min(minX, place.first);
+            maxX = std::max(maxX, place.first);
+            minY = std::min(minY, place.second);
+            maxY = std::max(maxY, place.second);
+            z = std::max(z, edgeHeight + WALL_BORDER_LIFT);
+        }
         for(Tile* tile : tiles)
         {
             minX = std::min(minX, tile->getX());
@@ -9550,9 +9562,20 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
         mSceneManager->getRootSceneNode()->createChildSceneNode("KeeperTilePreviewNode")->attachObject(mTilePreview);
     }
     mTilePreview->clear();
-    if(tiles.empty())
+    if(tiles.empty() && edgePlaces.empty())
         return;
     mTilePreview->begin("debug_draw", Ogre::RenderOperation::OT_LINE_LIST, "Graphics");
+    // A place beyond the map edge is framed like the top of an undiscovered tile
+    for(const std::pair<int, int>& place : edgePlaces)
+    {
+        const float x = static_cast<float>(place.first);
+        const float y = static_cast<float>(place.second);
+        const float z = edgeHeight + WALL_BORDER_LIFT;
+        const Ogre::Vector3 corners[] = {{x-0.5f,y-0.5f,z}, {x+0.5f,y-0.5f,z},
+            {x+0.5f,y+0.5f,z}, {x-0.5f,y+0.5f,z}};
+        for(int i = 0; i < 4; ++i)
+            addPreviewLine(mTilePreview, corners[i], corners[(i+1)%4], colour);
+    }
     for(Tile* tile : tiles)
     {
         const float x = static_cast<float>(tile->getX());
@@ -9585,6 +9608,21 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
         const float ribbonHeight = 0.045f;
         const float ribbonInnerHalfWidth = 0.44f;
         mTilePreview->begin("debug_draw", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
+        for(const std::pair<int, int>& place : edgePlaces)
+        {
+            const float x = static_cast<float>(place.first);
+            const float y = static_cast<float>(place.second);
+            const float z = edgeHeight + WALL_BORDER_LIFT;
+            const Ogre::Vector3 outer[] = {{x-0.5f,y-0.5f,z}, {x+0.5f,y-0.5f,z},
+                {x+0.5f,y+0.5f,z}, {x-0.5f,y+0.5f,z}};
+            const Ogre::Vector3 inner[] = {{x-ribbonInnerHalfWidth,y-ribbonInnerHalfWidth,z}, {x+ribbonInnerHalfWidth,y-ribbonInnerHalfWidth,z},
+                {x+ribbonInnerHalfWidth,y+ribbonInnerHalfWidth,z}, {x-ribbonInnerHalfWidth,y+ribbonInnerHalfWidth,z}};
+            for(int i = 0; i < 4; ++i)
+            {
+                const int next = (i + 1) % 4;
+                addPreviewBorderBand(mTilePreview, outer[i], outer[next], inner[next], inner[i], colour);
+            }
+        }
         for(Tile* tile : tiles)
         {
             if(tile->isFullTile() && !digging)
@@ -9605,6 +9643,86 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             }
         }
         mTilePreview->end();
+    }
+}
+
+//! \brief Top height of the earth block on a marked place beyond the map edge, read from its mesh.
+float RenderManager::rrGetEdgeMarkHeight(GameMap& gameMap)
+{
+    const TileSetValue& value = gameMap.getMeshForEdgeMark();
+    const std::string meshName = value.getMeshName();
+    if(!Ogre::MeshManager::getSingleton().resourceExists(meshName, "Graphics"))
+        Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
+    Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName, "Graphics");
+    return meshPtr->getBounds().getMaximum().z;
+}
+
+//! \brief Shows one earth block with the dig marking on each marked place beyond the map edge and removes the blocks
+//! of places that are not marked any more. A block uses the mesh and the marked material of a marked undiscovered tile.
+void RenderManager::rrRefreshEdgeMarks(const std::set<std::pair<int, int> >& marks, GameMap& gameMap)
+{
+    std::map<std::pair<int, int>, Ogre::SceneNode*>::iterator it = mEdgeMarkNodes.begin();
+    while(it != mEdgeMarkNodes.end())
+    {
+        if(marks.find(it->first) != marks.end())
+        {
+            ++it;
+            continue;
+        }
+
+        Ogre::SceneNode* node = it->second;
+        const std::string entityName = node->getName() + "_mesh";
+        if(mSceneManager->hasEntity(entityName))
+        {
+            Ogre::Entity* entity = mSceneManager->getEntity(entityName);
+            node->detachObject(entity);
+            mSceneManager->destroyEntity(entity);
+        }
+        mSceneManager->destroySceneNode(node);
+        mEdgeMarkNodes.erase(it++);
+    }
+
+    if(marks.empty())
+        return;
+
+    const TileSetValue& value = gameMap.getMeshForEdgeMark();
+    const std::string meshName = value.getMeshName();
+    if(!Ogre::MeshManager::getSingleton().resourceExists(meshName, "Graphics"))
+        Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
+    Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName, "Graphics");
+    unsigned short src;
+    if(!meshPtr->suggestTangentVectorBuildParams(src))
+        meshPtr->buildTangentVectors(src);
+
+    for(const std::pair<int, int>& mark : marks)
+    {
+        if(mEdgeMarkNodes.find(mark) != mEdgeMarkNodes.end())
+            continue;
+
+        const std::string nodeName = "EdgeMark_" + Helper::toString(mark.first) + "_" + Helper::toString(mark.second);
+        Ogre::SceneNode* node = mSceneManager->getRootSceneNode()->createChildSceneNode(nodeName,
+            Ogre::Vector3(static_cast<Ogre::Real>(mark.first), static_cast<Ogre::Real>(mark.second), 0.0f));
+        Ogre::Entity* entity = mSceneManager->createEntity(nodeName + "_mesh", meshPtr);
+        node->attachObject(entity);
+        entity->setCastShadows(false);
+        entity->setLightMask(ALL_LIGHTS_MASK);
+        if(!value.getMaterialName().empty())
+            entity->setMaterialName(value.getMaterialName());
+        // Marked, without seat colour and without vision: the look of a marked undiscovered tile
+        colourizeEntity(entity, nullptr, true, false);
+
+        // The block is turned like the tile set turns this tile
+        Ogre::Quaternion q;
+        if(value.getRotationX() != 0.0f)
+            q = q * Ogre::Quaternion(Ogre::Degree(value.getRotationX()), Ogre::Vector3::UNIT_X);
+        if(value.getRotationY() != 0.0f)
+            q = q * Ogre::Quaternion(Ogre::Degree(value.getRotationY()), Ogre::Vector3::UNIT_Y);
+        if(value.getRotationZ() != 0.0f)
+            q = q * Ogre::Quaternion(Ogre::Degree(value.getRotationZ()), Ogre::Vector3::UNIT_Z);
+        if(q != Ogre::Quaternion::IDENTITY)
+            node->rotate(q);
+
+        mEdgeMarkNodes[mark] = node;
     }
 }
 
