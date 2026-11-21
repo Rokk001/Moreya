@@ -132,6 +132,12 @@ class ODPacket
         bool endOfPacket() const
         { return mPacket.endOfPacket(); }
 
+        /*! rief Marks the packet as failed, as if a read had gone past its end. Used when a value was read but
+         * is out of range (an unknown enum value), so that the caller sees the same failure as for a missing value.
+         * The data not read yet is dropped.
+         */
+        void markInvalid();
+
         /*! \brief Clears the packet. After calling Clear, the packet should
          * be empty.
          */

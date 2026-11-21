@@ -16,6 +16,7 @@
  */
 
 #include "ClientNotification.h"
+#include "network/ServerGuards.h"
 #include "utils/LogManager.h"
 #include "utils/Helper.h"
 
@@ -198,10 +199,19 @@ ODPacket& operator<<(ODPacket& os, const ClientNotificationType& nt)
     return os;
 }
 
+//! rief Reads a ClientNotificationType. A value outside of the enum marks the packet as failed and leaves nt
+//! unchanged, like a failed read.
 ODPacket& operator>>(ODPacket& is, ClientNotificationType& nt)
 {
-    int32_t tmp;
-    is >> tmp;
+    int32_t tmp = 0;
+    if(!(is >> tmp))
+        return is;
+    if(!ServerGuards::isClientNotificationTypeValue(tmp))
+    {
+        OD_LOG_WRN("Unknown ClientNotificationType=" + Helper::toString(tmp));
+        is.markInvalid();
+        return is;
+    }
     nt = static_cast<ClientNotificationType>(tmp);
     return is;
 }
