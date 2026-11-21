@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""Checks the entrance into Moreya on the start screen: the staircase behind the campaign table and its signpost.
+"""Checks the entrance into Moreya on the start screen: the staircase in the rear yard and its signpost.
 
 No compile needed. Reads config/mainmenuscene.cfg and the binary meshes under models/ and asserts:
 
 - the scene places the staircase MoreyaStairs (MenuMoreyaStairs.mesh) and the signpost MoreyaSignpost
-  (MenuMoreyaSignpost.mesh); both lie behind the campaign table (further along +Y than every point of the table);
+  (MenuMoreyaSignpost.mesh); the campaign table stays at the entrance of the hall (TABLE_POSITION) and Pose campaign
+  stays as it was (CAMPAIGN_POSE);
 - the staircase is wide and deep and leads down: its treads span at least MIN_WIDTH across, form at least
-  MIN_STEP_LEVELS levels that drop step by step along +Y, and the lowest lies at least MIN_DEPTH below the floor;
+  MIN_STEP_LEVELS levels that drop step by step in one direction, and the lowest lies at least MIN_DEPTH down;
+  at least MIN_OPEN_LEVELS of them lie open to the sky;
+- it lies in the rear yard: its open part starts behind the hall's back wall, at least MIN_GAP behind the table's
+  back edge, and the stair head and signpost stay in front of the abandoned castle;
 - both stand on the ground: the ground of the other entities under the corners of the stair rim lies between the
-  bottom and the top of the rim, and the foot of the signpost post reaches the ground (or the kerb) below it;
-- the hall floor is open over the stairwell: no other entity covers the treads of the open part from above;
-- from the camera pose "campaign" (vertical field of view 45 degrees, 16:9 and 4:3) the signpost board lies in the
-  view and is not hidden, and at least MIN_VISIBLE_STEPS step levels are seen, down to MIN_VISIBLE_DEPTH;
-- the board front faces that camera, its arrow tip points down (at least MIN_POINTER_DROP) and along the descent,
-  and the line from the tip along the arrow enters the stairwell opening;
+  bottom and the top of the rim, the foot of the signpost post reaches the ground, and the signpost stands beside
+  the stair head (within MAX_SIGN_FROM_HEAD of it, beside the opening);
+- the yard floor is open over the stairwell (no other entity covers its open treads) and whole around it (left,
+  right, behind the head, beyond the tunnel mouth), and the hall floor behind the table has no hole;
+- some frame of the campaign flight from gate_exit to campaign (vertical field of view 45 degrees, 16:9 and 4:3,
+  path and rotation as RenderSceneMenu::samplePath) shows the whole board unhidden and facing the camera together
+  with at least MIN_FLIGHT_STEPS open step levels;
+- the board's arrow tip points down (at least MIN_POINTER_DROP) and along the descent, and the line from the tip
+  along the arrow enters the stairwell opening;
 - the board texture shows the word "Moreya": where it differs from the plain planks matches the letter shapes;
-- the new files have CREDITS entries.
+- the new files (stairs, signpost, the frame of the hall's back opening, board textures) have CREDITS entries.
 
 Sky and horizon elements (Backdrop, BloodMoon, HorizonCrows, VolcanicRuins) are neither ground nor occluders.
 """
@@ -34,7 +41,22 @@ import check_menu_flight_geometry as flight  # noqa: E402
 ROOT = flight.ROOT
 STAIRS, STAIRS_MESH = "MoreyaStairs", "MenuMoreyaStairs.mesh"
 SIGNPOST, SIGNPOST_MESH = "MoreyaSignpost", "MenuMoreyaSignpost.mesh"
-TABLE = "CampaignTable"
+TABLE, TABLE_MESH = "CampaignTable", "MenuMapTable.mesh"
+#: The table stays at the entrance of the campaign hall and the campaign camera pose stays as it was.
+TABLE_POSITION = (0.0, 22.0, 0.0)
+CAMPAIGN_POSE = (0.0, 19.0, 7.0, 29.5, 0.0, 0.0)
+#: The hall, the castle behind the rear yard and the stone frame of the opening in the hall's back wall.
+HALL, CASTLE, ARCH_MESH = "CampaignHall", "AbandonedCastle", "MenuHallRearArch.mesh"
+#: The hall floor behind the table stays whole up to this y (the back wall stands behind it).
+HALL_FLOOR_END = 29.0
+#: Free floor between the table's back edge and the stairwell, at least.
+MIN_GAP = 6.0
+#: Tread levels open to the sky (not under the tunnel ceiling), at least.
+MIN_OPEN_LEVELS = 10
+#: The signpost stands beside the stair head: at most this far from the head along the stairs and beside the opening.
+MAX_SIGN_FROM_HEAD = 1.0
+#: Some frame of the campaign flight from gate_exit to campaign shows the whole board and this many step levels.
+MIN_FLIGHT_STEPS = 3
 BOARD_MATERIAL = "MenuMoreyaSignpostBoard"
 #: The material of the step stones (treads, landing and the steps behind the doorway).
 STEP_MATERIAL = "MenuChippedStone"
@@ -44,15 +66,14 @@ MIN_WIDTH = 5.5
 #: Deep: the lowest tread lies at least this far below the hall floor, over at least this many step levels.
 MIN_DEPTH = 5.0
 MIN_STEP_LEVELS = 15
-#: Seen from the campaign pose: number of step levels with a visible tread and the depth the view reaches.
-MIN_VISIBLE_STEPS = 6
-MIN_VISIBLE_DEPTH = -2.0
-#: Vertical field of view of the menu camera and the checked aspect ratios.
+
+#: Vertical field of view of the menu camera at 16:9 (REFERENCE_ASPECT) and the checked aspect ratios.
 FOV_Y = 45.0
 ASPECTS = (16.0 / 9.0, 4.0 / 3.0)
+REFERENCE_ASPECT = 16.0 / 9.0
 #: The arrow drops at least this much per unit along its length (about 20 degrees).
 MIN_POINTER_DROP = 0.34
-#: The board front must face the camera: cosine between its normal and the direction to the camera.
+#: The board front must face the flight camera: cosine between its normal and the direction to the camera.
 MIN_FACING = 0.3
 #: Share of the letter shapes that must coincide with the painted change of the board texture.
 MIN_LETTER_MATCH = 0.8
@@ -136,6 +157,18 @@ def heights_at(triangles, x, y):
     return (a[:, 2] + w1 * v0[:, 2] + w2 * v1[:, 2])[inside]
 
 
+def floor_height(triangles, x, y, spread=0.2):
+    """Returns the highest surface below z 1 at (x, y) and four points around it (None when there is none).
+
+    The yard paving has open joints down to its bedding; looking at a few points finds the flagstone tops.
+    """
+    found = []
+    for dx, dy in ((0, 0), (spread, 0), (-spread, 0), (0, spread), (0, -spread)):
+        heights = heights_at(triangles, x + dx, y + dy)
+        found.extend(heights[heights < 1.0])
+    return max(found) if found else None
+
+
 def blocked(triangles, start, end, margin=0.03, bounds=None):
     """Tells whether a segment from start to end hits a triangle before it comes within margin of the end.
 
@@ -172,13 +205,18 @@ def camera(pose):
 
 
 def in_view(eye, rotation, point, aspect):
-    """Tells whether a point lies inside the camera frame of the given aspect ratio."""
+    """Tells whether a point lies inside the camera frame of the given aspect ratio.
+
+    Like CameraManager::setViewportSize for the menu: the vertical field of view is FOV_Y at 16:9; a narrower
+    window keeps the horizontal field of view of 16:9 and sees more vertically.
+    """
     local = rotation.T @ (point - eye)
     depth = -local[2]
     if depth < 0.1:
         return False
-    half = math.tan(math.radians(FOV_Y) / 2)
-    return abs(local[0] / depth) <= half * aspect and abs(local[1] / depth) <= half
+    half_x = math.tan(math.radians(FOV_Y) / 2) * max(aspect, REFERENCE_ASPECT)
+    half_y = half_x / aspect
+    return abs(local[0] / depth) <= half_x and abs(local[1] / depth) <= half_y
 
 
 def poses():
@@ -227,14 +265,38 @@ def letters_match():
     return (mask & changed).sum() / float(mask.sum()), (changed & ~mask).sum() / float(changed.sum())
 
 
+def flight_pose(all_poses, share):
+    """Returns the camera [x, y, z, rx, ry, rz] at a share (0..1) of the campaign flight from gate_exit to campaign.
+
+    Positions follow the Catmull-Rom curve of RenderSceneMenu::samplePath (gate_entry before, campaign after); the
+    rotation is the slerp of the two poses, which for two turns about X alone is the blend of their X angles.
+    """
+    before, first, second = (np.array(all_poses[name][:3]) for name in ("gate_entry", "gate_exit", "campaign"))
+    after = second
+    position = 0.5 * ((2 * first) + (-before + second) * share
+                      + (2 * before - 5 * first + 4 * second - after) * share ** 2
+                      + (-before + 3 * first - 3 * second + after) * share ** 3)
+    angles = [all_poses["gate_exit"][3 + k] + (all_poses["campaign"][3 + k] - all_poses["gate_exit"][3 + k]) * share
+              for k in range(3)]
+    return list(position) + angles
+
+
 def main():
     """Runs every assertion and prints each failure; returns 1 on a failure."""
     failures = []
     entities, _, _ = flight.parse_config()
-    for name, mesh in ((STAIRS, STAIRS_MESH), (SIGNPOST, SIGNPOST_MESH)):
+    all_poses = poses()
+    for name, mesh in ((STAIRS, STAIRS_MESH), (SIGNPOST, SIGNPOST_MESH), (TABLE, TABLE_MESH)):
         if entities.get(name, (None,))[0] != mesh:
             print("FAIL scene has no AddEntity %s %s" % (name, mesh))
             return 1
+
+    # The table stays at the entrance of the hall and the campaign camera stays where it was.
+    if tuple(entities[TABLE][1]) != TABLE_POSITION:
+        failures.append("the campaign table moved to %s (stays at %s)" % (tuple(entities[TABLE][1]), TABLE_POSITION))
+    if tuple(all_poses.get("campaign", ())) != CAMPAIGN_POSE:
+        failures.append("Pose campaign changed to %s (stays %s)" % (all_poses.get("campaign"), CAMPAIGN_POSE))
+
     stairs = world_triangles(STAIRS_MESH, entities[STAIRS][1])
     sign_parts = submeshes(os.path.join(flight.MODELS, SIGNPOST_MESH))
     signpost = world_triangles(SIGNPOST_MESH, entities[SIGNPOST][1])
@@ -244,13 +306,6 @@ def main():
     others = {name: world_triangles(mesh, position) for name, (mesh, position) in entities.items()
               if name not in SKY and name not in (STAIRS, SIGNPOST)}
     ground = np.concatenate(list(others.values()))
-
-    # Behind the table.
-    table_back = table[:, :, 1].max()
-    for name, part in ((STAIRS, stairs), (SIGNPOST, signpost)):
-        if part[:, :, 1].min() <= table_back:
-            failures.append("%s reaches y %.2f, not behind the table (back edge y %.2f)"
-                            % (name, part[:, :, 1].min(), table_back))
 
     # Wide, deep, leading down: upward faces of the step stones grouped by height.
     origin = entities[STAIRS][1]
@@ -267,80 +322,139 @@ def main():
     for key in sorted(levels, reverse=True):
         points = np.concatenate(levels[key])
         if np.ptp(points[:, 0]) >= MIN_WIDTH:
-            rows.append((points[:, 2].mean(), points[:, 1].mean(), np.ptp(points[:, 0]), points[:, 1].max()))
+            rows.append((points[:, 2].mean(), points[:, 1].mean(), np.ptp(points[:, 0]), points[:, 1].min(),
+                         points[:, 1].max()))
     if len(rows) < MIN_STEP_LEVELS:
-        failures.append("only %d tread levels at least %.1f wide (need %d)" % (len(rows), MIN_WIDTH, MIN_STEP_LEVELS))
-    elif rows[-1][0] > -MIN_DEPTH:
+        print("FAIL only %d tread levels at least %.1f wide (need %d)" % (len(rows), MIN_WIDTH, MIN_STEP_LEVELS))
+        return 1
+    if rows[-1][0] > -MIN_DEPTH:
         failures.append("lowest tread at %.2f, not %.1f deep" % (rows[-1][0], MIN_DEPTH))
-    if any(lower[1] <= upper[1] for upper, lower in zip(rows, rows[1:])):
-        failures.append("the tread levels do not drop step by step along +Y")
+    along = 1.0 if rows[-1][1] > rows[0][1] else -1.0
+    if any((lower[1] - upper[1]) * along <= 0 for upper, lower in zip(rows, rows[1:])):
+        failures.append("the tread levels do not drop step by step in one direction")
+
+    # The open part of the stairwell: tread levels with nothing of the stairs above them (no tunnel ceiling).
+    open_rows = []
+    for row in rows:
+        middle = (row[3] + row[4]) / 2
+        above = heights_at(stairs, origin[0], middle)
+        if not len(above[above > row[0] + 0.3]):
+            open_rows.append(row)
+    if len(open_rows) < MIN_OPEN_LEVELS:
+        failures.append("only %d tread levels lie open to the sky (need %d)" % (len(open_rows), MIN_OPEN_LEVELS))
+    # The head is the upper end of the open part, its far end lies where the tunnel begins.
+    head_y = open_rows[0][3] if along > 0 else open_rows[0][4]
+    end_y = min(row[3] for row in open_rows) if along < 0 else max(row[4] for row in open_rows)
+    open_y = (min(row[3] for row in open_rows), max(row[4] for row in open_rows))
+
+    # In the rear yard: behind the hall, before the castle, far behind the table.
+    table_back = table[:, :, 1].max()
+    hall_back = others[HALL][:, :, 1].max()
+    castle_front = others[CASTLE][:, :, 1].min()
+    gap = open_y[0] - table_back
+    if gap < MIN_GAP:
+        failures.append("only %.2f of floor between the table (back edge y %.2f) and the stairwell (y %.2f), need %.1f"
+                        % (gap, table_back, open_y[0], MIN_GAP))
+    if open_y[0] <= hall_back:
+        failures.append("the stairwell starts at y %.2f, inside the campaign hall (back y %.2f)" % (open_y[0], hall_back))
+    raised = stairs[stairs[:, :, 2].max(axis=1) > 0.05]
+    if raised[:, :, 1].max() >= castle_front or signpost[:, :, 1].max() >= castle_front:
+        failures.append("the stair head reaches the abandoned castle (front y %.2f)" % castle_front)
 
     # Standing on the ground: the rim corners and the signpost foot.
-    for dx, dy in ((-3.3, -0.2), (3.3, -0.2), (-3.3, 4.8), (3.3, 4.8)):
-        x, y = origin[0] + dx, origin[1] + dy
-        ground_heights = heights_at(ground, x, y)
-        ground_heights = ground_heights[ground_heights < 1.0]
-        rim = heights_at(stairs, x, y)
-        if not len(ground_heights) or not len(rim) or not rim.min() <= ground_heights.max() <= rim.max():
-            failures.append("stair rim at (%.1f, %.1f) does not stand on the ground" % (x, y))
+    for x in (origin[0] - 3.3, origin[0] + 3.3):
+        for y in (head_y + along * 0.2, end_y - along * 0.2):
+            ground_height = floor_height(ground, x, y)
+            rim = heights_at(stairs, x, y)
+            if ground_height is None or not len(rim) or not rim.min() <= ground_height <= rim.max():
+                failures.append("stair rim at (%.1f, %.1f) does not stand on the ground" % (x, y))
     foot = entities[SIGNPOST][1]
-    below = np.concatenate((heights_at(ground, foot[0], foot[1]), heights_at(stairs, foot[0], foot[1])))
-    below = below[below < 1.0]
+    below = [height for height in (floor_height(ground, foot[0], foot[1]), floor_height(stairs, foot[0], foot[1]))
+             if height is not None]
     post = heights_at(signpost, foot[0], foot[1])
-    if not len(below) or not len(post) or not post.min() <= below.max() <= post.min() + 0.6 or post.max() < 2.0:
+    if not below or not len(post) or not post.min() <= max(below) <= post.min() + 0.6 or post.max() < 2.0:
         failures.append("signpost post at (%.2f, %.2f) does not stand on the ground" % (foot[0], foot[1]))
+    if abs(foot[1] - head_y) > MAX_SIGN_FROM_HEAD or not 3.0 <= abs(foot[0] - origin[0]) <= 3.0 + MAX_SIGN_FROM_HEAD:
+        failures.append("signpost at (%.2f, %.2f) does not stand beside the stair head (y %.2f)"
+                        % (foot[0], foot[1], head_y))
 
-    # The hall floor is open over the stairwell: nothing of another entity lies over the treads of the open part.
+    # The floor is open over the stairwell and whole around it.
     covering = set()
     for name, part in others.items():
-        for dx in (-2.0, 0.0, 2.0):
-            for dy in (0.6, 2.0, 3.5, 4.7):
-                tread = heights_at(stairs, origin[0] + dx, origin[1] + dy)
-                over = heights_at(part, origin[0] + dx, origin[1] + dy)
+        for row in open_rows:
+            for dx in (-2.0, 0.0, 2.0):
+                y = (row[3] + row[4]) / 2
+                tread = heights_at(stairs, origin[0] + dx, y)
+                over = heights_at(part, origin[0] + dx, y)
                 if len(tread) and len(over[(over > tread.max() + 0.01) & (over < 8.0)]):
                     covering.add(name)
     if covering:
         failures.append("the stairwell opening is covered by " + ", ".join(sorted(covering)))
+    middle_y = sum(open_y) / 2
+    for x, y, label in ((origin[0] - 3.9, middle_y, "left"), (origin[0] + 3.9, middle_y, "right"),
+                        (origin[0], head_y - along * 0.9, "behind the head"),
+                        (origin[0], end_y + along * 0.5, "beyond the tunnel mouth")):
+        floor = floor_height(ground, x, y)
+        if floor is None or abs(floor) > 0.2:
+            failures.append("no floor %s of the stairwell at (%.1f, %.1f)" % (label, x, y))
+    for y in np.arange(table_back + 0.5, HALL_FLOOR_END, 0.5):
+        floor = floor_height(ground, origin[0], y)
+        if floor is None or abs(floor) > 0.2:
+            failures.append("the hall floor behind the table has a hole at y %.1f" % y)
+            break
 
-    # The campaign pose sees the board and the steps going down.
-    eye, rotation = camera(poses()["campaign"])
+    # The campaign flight from gate_exit to campaign sees the board and the steps going down. Every sight line runs
+    # between the flight path and the stairs, so only the triangles near the box around both can hide anything.
     occluders = np.concatenate((ground, stairs, signpost))
+    path = np.array([flight_pose(all_poses, share)[:3] for share in np.arange(0.0, 1.0001, 0.05)])
+    corridor = np.vstack((path, stairs.reshape(-1, 3), signpost.reshape(-1, 3)))
+    low, high = corridor.min(axis=0) - 0.5, corridor.max(axis=0) + 0.5
+    occluders = occluders[np.all(occluders.max(axis=1) >= low, axis=1) & np.all(occluders.min(axis=1) <= high, axis=1)]
     bounds = (occluders.min(axis=1), occluders.max(axis=1))
     back, tip, direction, normal = arrow(board)
-    for aspect in ASPECTS:
-        outside = [point for point in board.reshape(-1, 3) if not in_view(eye, rotation, point, aspect)]
-        if outside:
-            failures.append("signpost board leaves the campaign view at aspect %.2f" % aspect)
-        seen = []
-        # Each tread is sampled just before its far edge: the nosing of the step above hides its near part.
-        for depth, _, _, far in rows:
-            y = far - 0.1
-            for dx in (-2.0, 0.0, 2.0):
-                surface = heights_at(steps, origin[0] + dx, y)
-                surface = surface[np.abs(surface - depth) < 0.1]
-                if not len(surface):
-                    continue
-                point = np.array([origin[0] + dx, y, surface.max() + 0.03])
-                if in_view(eye, rotation, point, aspect) and not blocked(occluders, eye, point, bounds=bounds):
-                    seen.append(depth)
-                    break
-        if len(seen) < MIN_VISIBLE_STEPS or min(seen, default=0.0) > MIN_VISIBLE_DEPTH:
-            failures.append("campaign view at aspect %.2f sees %d step levels down to %.2f (need %d, %.1f)"
-                            % (aspect, len(seen), min(seen, default=0.0), MIN_VISIBLE_STEPS, MIN_VISIBLE_DEPTH))
     centre = board.reshape(-1, 3).mean(axis=0)
-    for label, point in (("centre", centre + normal * 0.03), ("tip", tip + normal * 0.03)):
-        if blocked(occluders, eye, point, bounds=bounds):
-            failures.append("signpost board %s is hidden from the campaign view" % label)
-    towards_camera = (eye - centre) / np.linalg.norm(eye - centre)
-    if normal @ towards_camera < MIN_FACING:
-        failures.append("signpost board faces away from the campaign camera (%.2f)" % (normal @ towards_camera))
+    for aspect in ASPECTS:
+        best = (0, -1.0, None)
+        for share in np.arange(0.0, 1.0001, 0.05):
+            eye, rotation = camera(flight_pose(all_poses, share))
+            if any(not in_view(eye, rotation, point, aspect) for point in board.reshape(-1, 3)):
+                continue
+            if any(blocked(occluders, eye, point + normal * 0.03, bounds=bounds) for point in (centre, tip)):
+                continue
+            if normal @ ((eye - centre) / np.linalg.norm(eye - centre)) < MIN_FACING:
+                continue
+            seen = 0
+            for row in open_rows:
+                for y in (row[3] + 0.1, (row[3] + row[4]) / 2, row[4] - 0.1):
+                    hit = False
+                    for dx in (-2.0, 0.0, 2.0):
+                        surface = heights_at(steps, origin[0] + dx, y)
+                        surface = surface[np.abs(surface - row[0]) < 0.1]
+                        if len(surface):
+                            point = np.array([origin[0] + dx, y, surface.max() + 0.03])
+                            if in_view(eye, rotation, point, aspect) and not blocked(occluders, eye, point,
+                                                                                    bounds=bounds):
+                                hit = True
+                                break
+                    if hit:
+                        seen += 1
+                        break
+                if seen >= MIN_FLIGHT_STEPS:
+                    break
+            if seen > best[0]:
+                best = (seen, share, eye)
+            if seen >= MIN_FLIGHT_STEPS:
+                break
+        if best[0] < MIN_FLIGHT_STEPS:
+            failures.append("no frame of the campaign flight at aspect %.2f shows the board and %d step levels "
+                            "(best %d)" % (aspect, MIN_FLIGHT_STEPS, best[0]))
 
     # The pointer points down the stairs.
-    if direction[2] > -MIN_POINTER_DROP or direction[1] <= 0.25:
+    if direction[2] > -MIN_POINTER_DROP or direction[1] * along <= 0.25:
         failures.append("signpost arrow (%.2f, %.2f, %.2f) does not point down along the stairs" % tuple(direction))
     else:
         reach = tip + direction * ((tip[2] + 1.0) / -direction[2])
-        if not (abs(reach[0] - origin[0]) < 3.0 and origin[1] < reach[1] < origin[1] + 5.0):
+        if not (abs(reach[0] - origin[0]) < 3.0 and open_y[0] < reach[1] < open_y[1]):
             failures.append("signpost arrow line meets z -1 at (%.2f, %.2f), outside the stairwell" % tuple(reach[:2]))
 
     # The board shows "Moreya".
@@ -351,7 +465,7 @@ def main():
 
     # CREDITS.
     credits = open(os.path.join(ROOT, "CREDITS"), encoding="utf-8").read()
-    for name in (STAIRS_MESH, SIGNPOST_MESH, "MenuMoreyaSignpostBoard.png",
+    for name in (STAIRS_MESH, SIGNPOST_MESH, ARCH_MESH, "MenuMoreyaSignpostBoard.png",
                  "MenuMoreyaSignpostBoardNormal.png"):
         if name not in credits:
             failures.append("CREDITS has no entry for " + name)
@@ -360,10 +474,11 @@ def main():
         print("FAIL " + line)
     if failures:
         return 1
-    print("OK: stairs %d levels down to %.2f, %.1f wide; board arrow (%.2f, %.2f, %.2f); letters %.2f"
-          % (len(rows), rows[-1][0], rows[0][2], direction[0], direction[1], direction[2], covered))
+    print("OK: stairs in the rear yard %.2f behind the table, %d levels down to %.2f (%d open), %.1f wide; "
+          "board arrow (%.2f, %.2f, %.2f); letters %.2f"
+          % (gap, len(rows), rows[-1][0], len(open_rows), rows[0][2], direction[0], direction[1], direction[2],
+             covered))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())
