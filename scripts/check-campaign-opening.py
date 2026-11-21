@@ -54,6 +54,23 @@ For every level the state at the START of the game is checked (no trigger has fi
    checked around the heart. Applies to every level with a human (or, failing that,
    a choice) seat, campaign or not.
 
+4. Portal start of the wing 1 levels (WING1_PORTALS, fixed values per level). The keeper must
+   be able to build up before he is attacked: the level has a portal of the seat or an
+   unclaimed one (seat 0) that the keeper reaches from the heart by digging and claiming
+   (dirt, gold, gem, rooms and doors not of another team, fewest tiles to dig) without
+   touching a tile an enemy can walk to; its first tile and the number of tiles to dig are
+   the expected ones. Once that path is dug, no enemy source of rule 1 and no spawn of a
+   trigger that waits only for time (of another team or of seat 0) can walk to the heart,
+   the portal, the path or the open tiles joined to them, and no trap or room of another team
+   and no trap of seat 0 lies on those tiles (a door is no trap; the Moreya gate in gate mode
+   is allowed, its raid comes as designed). A tunneller among those sources (a class with a
+   DigRate that is no worker) digs like the game does, step by step toward the heart, and must
+   be stopped by rock, gem or walls claimed by the keeper before it reaches those tiles; a
+   plain dirt wall does not stop it. Finally the portal must bring the expected
+   fighter classes: the classes of the faction's SpawnPool that no "Block" line forbids for
+   the seat, whose spawn conditions (config/spawnconditions.cfg) need no room the seat may
+   never build and no creature that cannot come itself; at least one is required.
+
 Tiles that the level file does not list are treated like the game does: full dirt
 (fullness 100), diggable but not walkable until dug. This applies to every rule above.
 
@@ -88,6 +105,15 @@ PASSAGE_ROOM_DISTANCE = 2
 # Safe zone around heart and nearest portal of the human seat (walk/dig path in tiles).
 SAFE_RADIUS = 20
 MAX_EXAMPLES = 5
+# Rule 4, portal start of the wing 1 levels (fixed, counted once on the levels):
+# level file -> (first tile of the portal the keeper claims, tiles to dig from the heart to it,
+# fighter classes the portal can bring).
+WING1_PORTALS = {
+    "Brackenford.level": ((7, 17), 3, ("Cultist", "Goblin")),
+    "Coldwell.level": ((9, 2), 2, ()),
+    "Ravensledge.level": ((28, 51), 0, ("Cultist", "DarkElf")),
+    "Mossgate.level": ((30, 29), 0, ("Goblin",)),
+}
 
 TILE_DIRT = 1
 TILE_GOLD = 2
@@ -129,6 +155,8 @@ class Level(object):
         self.room_wave_classes = []  # [class names] of the waves of each room, parallel to rooms
         self.room_waves = []     # number of [Wave] blocks of each room, parallel to rooms
         self.raid = None         # the [Raid] section: {"gate": (x, y), "seat": id, "countdown": text}
+        self.owners = {}         # (x, y) -> seat id of the tiles that name one (claimed floor or wall)
+        self.blocked = []        # (seatId, class name) of the "Block" lines of the [Triggers] section
 
 
 def to_int(text):
@@ -146,6 +174,7 @@ def parse_level(path):
     level = Level(path)
     section = ""
     seat = None
+    skill_list = None
     trigger_name = ""
     index = 0
     while index < len(lines):
@@ -155,7 +184,15 @@ def parse_level(path):
         if stripped == "":
             continue
         if stripped.startswith("["):
-            if section == "Rooms" and stripped == "[Wave]" and level.room_waves:
+            if section == "Seat" and stripped in ("[SkillDone]", "[SkillNotAllowed]",
+                                                  "[SkillPending]"):
+                # one skill name per line until the closing tag
+                skill_list = stripped[1:-1]
+                seat.setdefault(skill_list, [])
+            elif section == "Seat" and stripped in ("[/SkillDone]", "[/SkillNotAllowed]",
+                                                    "[/SkillPending]"):
+                skill_list = None
+            elif section == "Rooms" and stripped == "[Wave]" and level.room_waves:
                 # a wave of the wave portal room read last
                 level.room_waves[-1] += 1
             elif section == "Rooms" and stripped == "[Creatures]":
@@ -189,7 +226,9 @@ def parse_level(path):
             continue
         if section == "Seat":
             fields = line.split("\t")
-            if len(fields) == 2:
+            if skill_list is not None:
+                seat[skill_list].append(stripped)
+            elif len(fields) == 2:
                 if fields[0] == "seatId" or fields[0] == "teamId":
                     value = to_int(fields[1])
                     if value is not None:
@@ -214,6 +253,8 @@ def parse_level(path):
                 y = int(fields[1])
                 level.types[(x, y)] = int(fields[2])
                 level.fullness[(x, y)] = float(fields[3])
+                if len(fields) >= 5 and to_int(fields[4]) is not None and to_int(fields[4]) > 0:
+                    level.owners[(x, y)] = to_int(fields[4])
         elif section in ("Rooms", "Traps"):
             fields = line.split("\t")
             if len(fields) == 4 and to_int(fields[0]) is not None:
@@ -253,7 +294,9 @@ def parse_level(path):
                 level.room_wave_classes[-1].append(fields[0])
         elif section == "Triggers":
             fields = line.split("	")
-            if fields[0] == "Name" and len(fields) >= 2:
+            if fields[0] == "Block" and len(fields) >= 3 and to_int(fields[1]) is not None:
+                level.blocked.append((to_int(fields[1]), fields[2].strip()))
+            elif fields[0] == "Name" and len(fields) >= 2:
                 trigger_name = fields[1].strip()
             elif fields[0] == "Cond" and len(fields) >= 2 and level.trigger_conds:
                 level.trigger_conds[-1].append((fields[1].strip(),
@@ -383,8 +426,11 @@ def default_raid_countdown(root):
 def load_movement(root):
     """Return {"classes": {class: (walks water, walks lava)}, "factions": {faction:
     (WorkerClass, [SpawnPool classes])}} from config/creatures.cfg and config/factions.cfg
-    below root. A file that is missing gives an empty table."""
+    below root. A file that is missing gives an empty table. "diggers" is the set of classes
+    with a DigRate above 0 that are no WorkerClass of a faction: tunnellers that dig their own
+    way to an enemy heart they cannot walk to."""
     classes = {}
+    digging = set()
     path = os.path.join(root, "config", "creatures.cfg")
     if os.path.isfile(path):
         current = None
@@ -396,6 +442,12 @@ def load_movement(root):
                 if fields[0] == "Name":
                     current = fields[1]
                     classes.setdefault(current, [False, False])
+                elif current is not None and fields[0] == "DigRate":
+                    try:
+                        if float(fields[1]) > 0:
+                            digging.add(current)
+                    except ValueError:
+                        continue
                 elif current is not None and fields[0] in ("WaterMoveSpeed", "LavaMoveSpeed"):
                     try:
                         speed = float(fields[1])
@@ -429,7 +481,9 @@ def load_movement(root):
                     name = fields[1]
                 elif fields[0] == "WorkerClass" and len(fields) >= 2:
                     worker = fields[1]
-    return {"classes": dict((k, tuple(v)) for k, v in classes.items()), "factions": factions}
+    workers = set(worker for worker, _ in factions.values())
+    return {"classes": dict((k, tuple(v)) for k, v in classes.items()), "factions": factions,
+            "diggers": digging - workers}
 
 
 def class_moves(movement, class_name, faction):
@@ -480,6 +534,14 @@ def is_start_trigger(level, number):
         if kind != "time" or not args or to_int(args[0]) is None or to_int(args[0]) > 0:
             return False
     return True
+
+
+def is_time_trigger(level, number):
+    """A trigger fires whatever the player does if it has no condition or only "time" ones
+    (at any second); a trigger with another condition waits for the player."""
+    if number < 0 or number >= len(level.trigger_conds):
+        return False
+    return all(kind == "time" for kind, _ in level.trigger_conds[number])
 
 
 def gate_mode_room(level, raid_default):
@@ -808,6 +870,321 @@ def summarize_safe_zone(found, full):
     return reasons
 
 
+def dig_bfs(sources, allowed, walkable, width, height):
+    """0-1 breadth-first search over allowed tiles: entering a walkable tile costs 0, any other
+    tile 1 (it has to be dug). Return (distances, parents) with the fewest tiles to dig."""
+    dist = {}
+    parent = {}
+    queue = deque()
+    for pos in sources:
+        if pos in allowed and pos not in dist:
+            dist[pos] = 0
+            parent[pos] = None
+            queue.append(pos)
+    while queue:
+        x, y = queue.popleft()
+        d = dist[(x, y)]
+        for dx, dy in NEIGHBOURS:
+            nxt = (x + dx, y + dy)
+            if not (0 <= nxt[0] < width and 0 <= nxt[1] < height) or nxt not in allowed:
+                continue
+            cost = 0 if nxt in walkable else 1
+            if nxt not in dist or d + cost < dist[nxt]:
+                dist[nxt] = d + cost
+                parent[nxt] = (x, y)
+                if cost == 0:
+                    queue.appendleft(nxt)
+                else:
+                    queue.append(nxt)
+    return dist, parent
+
+
+def load_spawn_conditions(root):
+    """Return {class: [(condition kind, [arguments])]} of config/spawnconditions.cfg below root;
+    a missing file gives an empty table."""
+    table = {}
+    path = os.path.join(root, "config", "spawnconditions.cfg")
+    if not os.path.isfile(path):
+        return table
+    current = None
+    in_condition = False
+    with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            fields = line.split("#", 1)[0].split()
+            if not fields:
+                continue
+            if fields[0] == "[SpawnCondition]":
+                current = None
+            elif fields[0] == "CreatureClass" and len(fields) >= 2:
+                current = fields[1]
+                table.setdefault(current, [])
+            elif fields[0] == "[Condition]":
+                in_condition = True
+            elif fields[0] == "[/Condition]":
+                in_condition = False
+            elif in_condition and current is not None:
+                table[current].append((fields[0], fields[1:]))
+    return table
+
+
+def portal_fighters(level, seat_id, movement, conditions):
+    """Return the sorted classes the portal of the seat can bring: classes of the SpawnPool of
+    the seat's faction that the level does not block for the seat ("Block" lines), whose spawn
+    conditions name no room the seat may never build ([SkillNotAllowed]) and whose required
+    creatures (Creature condition with a minimum above 0) can come through the portal as well."""
+    seat = level.seats[seat_id]
+    faction = seat.get("faction")
+    pool = movement["factions"].get(faction, (None, []))[1]
+    blocked = set(name for owner, name in level.blocked if owner == seat_id)
+    forbidden = set(seat.get("SkillNotAllowed", []))
+    candidates = [name for name in pool if name not in blocked]
+
+    def room_ok(args):
+        """A room condition with a minimum above 0 is met only if the room is not forbidden
+        for the seat; a minimum of 0 asks for nothing."""
+        if len(args) < 2 or to_int(args[1]) is None or to_int(args[1]) <= 0:
+            return True
+        return "room" + args[0] not in forbidden
+
+    possible = set()
+    changed = True
+    while changed:
+        changed = False
+        for name in candidates:
+            if name in possible:
+                continue
+            fine = True
+            for kind, args in conditions.get(name, []):
+                if kind in ("Room", "RoomTiles") and not room_ok(args):
+                    fine = False
+                elif kind == "Creature" and len(args) >= 2 and to_int(args[1]) is not None \
+                        and to_int(args[1]) > 0 and args[0] not in possible:
+                    fine = False
+            if fine:
+                possible.add(name)
+                changed = True
+    return sorted(possible)
+
+
+def tunnel_breaches(level, seat_id, sources, movement, start, dug):
+    """Return the names of the tunnellers among the sources that dig into the keeper's tiles.
+
+    A tunneller is a source with a class of movement["diggers"]. Like the tunnel action of the
+    game it steps from where it stands toward the first tile of the keeper's heart, the axis
+    with the larger distance first: it walks onto a tile it can walk, digs a full dirt or gold
+    tile that is not a wall claimed by the keeper's team, and stops when both steps are
+    blocked (rock, gem, claimed wall). It may start from every tile it can walk to, including
+    the tiles it dug before. The keeper's tiles are those walkable from start (heart, path and
+    portal; dug: path and portal tiles) for the tunneller's water and lava moves."""
+    diggers = movement.get("diggers", set())
+    team = level.seats[seat_id].get("teamId")
+    hearts = heart_tiles(level, seat_id)
+    if not diggers or not hearts:
+        return []
+    target = hearts[0]
+    walkable, _, _ = build_grids(level)
+    water = set(pos for pos, kind in level.types.items() if kind == TILE_WATER)
+    lava = set(pos for pos, kind in level.types.items() if kind == TILE_LAVA)
+
+    def diggable(pos):
+        """A full dirt or gold tile that is no wall claimed by the keeper's team."""
+        if level.types.get(pos) not in (TILE_DIRT, TILE_GOLD) or pos in walkable:
+            return False
+        owner = level.owners.get(pos)
+        return not (owner in level.seats and level.seats[owner].get("teamId") == team)
+
+    found = []
+    for name, pos, moves in sources:
+        if "(" in name:
+            classes = name[name.rindex("(") + 1:-1].split()
+        else:
+            classes = []
+        number = None
+        for index, (trigger, owner, x, y, _) in enumerate(level.spawns):
+            if name.startswith("spawn %s of seat %d at %d,%d" % (trigger, owner, x, y)):
+                number = index
+        if number is not None:
+            classes = level.spawn_classes[number]
+        if not diggers.intersection(classes):
+            continue
+        walk = set(walkable) | dug
+        if moves[0]:
+            walk |= water
+        if moves[1]:
+            walk |= lava
+        keeper = set(bfs(start, walk, level.width, level.height))
+        tunnel = set()
+        breach = False
+        changed = True
+        while changed and not breach:
+            changed = False
+            reach = bfs([pos], walk | tunnel | set([pos]), level.width, level.height)
+            if any(tile in keeper for tile in reach):
+                breach = True
+                break
+            for tile in sorted(reach):
+                here = tile
+                for _ in range(level.width + level.height):
+                    dx = target[0] - here[0]
+                    dy = target[1] - here[1]
+                    step_x = (here[0] + (dx > 0) - (dx < 0), here[1]) if dx else None
+                    step_y = (here[0], here[1] + (dy > 0) - (dy < 0)) if dy else None
+                    steps = [step_x, step_y] if abs(dx) >= abs(dy) else [step_y, step_x]
+                    moved = False
+                    for step in steps:
+                        if step is None:
+                            continue
+                        if step in walk or step in tunnel:
+                            here = step
+                            moved = True
+                            break
+                        if diggable(step):
+                            tunnel.add(step)
+                            changed = True
+                            here = step
+                            moved = True
+                            break
+                    if not moved or here in keeper:
+                        break
+                if here in keeper:
+                    breach = True
+                    break
+        if breach:
+            found.append(name)
+    return found
+
+
+def check_portal_start(level, seat_id, expected, raid_default=None, movement=None,
+                       conditions=None):
+    """Rule 4 (portal start of a wing 1 level). expected is (first portal tile, tiles to dig,
+    fighter classes), fixed per level in WING1_PORTALS. Returns (reasons, text).
+
+    The keeper digs from the heart to the portal of the seat or an unclaimed one (seat 0) over
+    dirt, gold, gem, rooms and doors that are not of another team, avoiding every tile an enemy
+    can walk to now. Once that path is dug no enemy may reach the heart, the portal, the path
+    or the open tiles joined to them: the sources of rule 1 (the Moreya gate in gate mode
+    excepted) and the spawn of every trigger of another team or of seat 0 walk over open and
+    dug tiles, doors and the water and lava their classes walk. No trap or room of another team
+    or trap of seat 0 may lie on those tiles (a door is no trap; the gate room in gate mode is
+    allowed), and the portal must bring the expected fighter classes."""
+    if movement is None:
+        movement = load_movement(repo_root())
+    if conditions is None:
+        conditions = load_spawn_conditions(repo_root())
+    expected_tile, expected_dig, expected_fighters = expected
+    reasons = []
+    walkable, passable, _ = build_grids(level)
+    water = set(pos for pos, kind in level.types.items() if kind == TILE_WATER)
+    lava = set(pos for pos, kind in level.types.items() if kind == TILE_LAVA)
+    hearts = heart_tiles(level, seat_id)
+    team = level.seats[seat_id].get("teamId")
+    gate = gate_mode_room(level, raid_default)
+
+    def foreign(owner):
+        """A seat of another team (not seat 0 and not the seat's own team)."""
+        return owner in level.seats and owner != seat_id and owner != 0 \
+            and level.seats[owner].get("teamId") != team
+
+    sources = list(enemy_sources(level, seat_id, raid_default, movement))
+    for number, (trigger, owner, x, y, _) in enumerate(level.spawns):
+        if is_start_enemy(level, seat_id, owner) \
+                and not is_start_trigger(level, level.spawn_triggers[number]) \
+                and is_time_trigger(level, level.spawn_triggers[number]):
+            faction = level.seats.get(owner, {}).get("faction")
+            sources.append(("spawn %s of seat %d at %d,%d" % (trigger, owner, x, y), (x, y),
+                            classes_moves(movement, level.spawn_classes[number], faction)))
+
+    def allowed_for(moves, base):
+        """Walkable tiles of a source with the given water/lava moves, plus base."""
+        allowed = set(walkable) | base
+        if moves[0]:
+            allowed |= water
+        if moves[1]:
+            allowed |= lava
+        return allowed
+
+    enemy_reach = set()
+    for name, pos, moves in sources:
+        enemy_reach.update(bfs([pos], allowed_for(moves, set([pos])), level.width, level.height))
+    portals = [(room_number, tiles) for room_number, (room_type, owner, tiles)
+               in enumerate(level.rooms)
+               if room_type == ROOM_PORTAL and owner in (seat_id, 0) and tiles]
+    if not portals:
+        return ["portal start: no portal of the seat or unclaimed"], "portal=none"
+    foreign_doors = set((x, y) for trap_name, owner, x, y, _ in level.traps
+                        if "Door" in trap_name and owner != seat_id)
+    foreign_rooms = set(pos for room_type, owner, tiles in level.rooms
+                        if foreign(owner) for pos in tiles)
+    # digging a tile next to a tile an enemy walks to would open the way, so the path keeps
+    # one tile away from them
+    near_enemy = set((x + dx, y + dy) for x, y in enemy_reach for dx, dy in NEIGHBOURS)
+    dig_allowed = set(pos for pos in passable
+                      if pos not in enemy_reach and pos not in foreign_doors
+                      and (pos in walkable or pos not in near_enemy)
+                      and pos not in foreign_rooms
+                      and not (level.fullness.get(pos, 100.0) > 0
+                               and foreign(level.owners.get(pos))))
+    dist, parent = dig_bfs(hearts, dig_allowed, walkable, level.width, level.height)
+    reachable = sorted((dist[pos], pos, tiles) for _, tiles in portals for pos in tiles
+                       if pos in dist)
+    if not reachable:
+        return ["portal start: no portal reachable from the heart without passing an enemy"], \
+            "portal=unreachable"
+    _, best, portal = reachable[0]
+    path = []
+    pos = best
+    while pos is not None:
+        path.append(pos)
+        pos = parent[pos]
+    dig = sum(1 for pos in path if pos not in walkable)
+    text = "portal=%d,%d dig=%d" % (portal[0][0], portal[0][1], dig)
+    if portal[0] != expected_tile:
+        reasons.append("portal start: nearest portal at %d,%d, expected %d,%d"
+                       % (portal[0][0], portal[0][1], expected_tile[0], expected_tile[1]))
+    if dig != expected_dig:
+        reasons.append("portal start: %d tiles to dig to the portal, expected %d"
+                       % (dig, expected_dig))
+    start = set(hearts) | set(path) | set(portal)
+    dug = set(path) | set(portal)
+    area = bfs(start, set(walkable) | dug, level.width, level.height)
+    walks = {}
+    reached = []
+    for name, pos, moves in sources:
+        if moves not in walks:
+            walks[moves] = bfs(start, allowed_for(moves, dug), level.width, level.height)
+        if pos in walks[moves]:
+            reached.append(name)
+    if reached:
+        reasons.append("portal start: %d enemy source(s) reach the heart, the portal or the "
+                       "path once it is dug: %s" % (len(reached), "; ".join(reached[:MAX_EXAMPLES])))
+    for trap_name, owner, x, y, _ in level.traps:
+        if "Door" in trap_name or (x, y) not in area:
+            continue
+        if owner == 0 or foreign(owner):
+            reasons.append("portal start: trap %s of seat %d at %d,%d on the keeper's tiles"
+                           % (trap_name, owner, x, y))
+    for number, (room_type, owner, tiles) in enumerate(level.rooms):
+        if number == gate or not foreign(owner):
+            continue
+        inside = [pos for pos in tiles if pos in area]
+        if inside:
+            reasons.append("portal start: room %s of seat %d at %d,%d on the keeper's tiles"
+                           % (level.room_lines[number][0], owner, inside[0][0], inside[0][1]))
+    tunnelled = tunnel_breaches(level, seat_id, sources, movement, start, dug)
+    if tunnelled:
+        reasons.append("portal start: %d tunneller(s) dig into the keeper's tiles: %s"
+                       % (len(tunnelled), "; ".join(tunnelled[:MAX_EXAMPLES])))
+    fighters = portal_fighters(level, seat_id, movement, conditions)
+    text += " fighters=%s" % ("+".join(fighters) if fighters else "none")
+    if not fighters:
+        reasons.append("portal start: no fighter class can come through the portal")
+    if tuple(fighters) != tuple(expected_fighters):
+        reasons.append("portal start: the portal brings %s, expected %s"
+                       % ("+".join(fighters) or "no fighter",
+                          "+".join(expected_fighters) or "no fighter"))
+    return reasons, text
+
+
 def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False, raid_default=None,
                 movement=None):
     """Returns (status, reasons, numbers, violations). raid_default is RaidCountdownSeconds
@@ -844,6 +1221,11 @@ def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False, raid_defau
         portal_texts.append(portal_text)
     reasons.extend(summarize_safe_zone(violations, full))
     numbers += "safe_zone(r=%d): %s" % (radius, "; ".join(portal_texts))
+    expected = WING1_PORTALS.get(os.path.basename(path))
+    if expected is not None and seat_id is not None and heart_tiles(level, seat_id):
+        found, portal_text = check_portal_start(level, seat_id, expected, raid_default, movement)
+        reasons.extend(found)
+        numbers += " portal_start: %s" % portal_text
     return ("FAIL" if reasons else "PASS"), reasons, numbers, violations
 
 
@@ -1174,10 +1556,71 @@ def self_test():
             if text is not None and not any("walk to the heart" in r and text in r
                                             for r in reasons):
                 ok = False
+        ok = portal_start_self_test(directory) and ok
         print("self-test %s" % ("passed" if ok else "FAILED"))
         return 0 if ok else 1
     finally:
         shutil.rmtree(directory, ignore_errors=True)
+
+
+# Fixed faction and spawn condition tables of the portal start self-test: Goblin needs only a
+# dormitory, Troll needs a LavaSpawn, which no Keeper pool of the test brings.
+SELF_TEST_PORTAL_MOVEMENT = {"classes": {"Knight": (True, False), "Goblin": (True, False),
+                                         "Troll": (True, False), "Digger": (False, False)},
+                             "factions": {"Keeper": ("Kobold", ["Goblin", "Troll"])},
+                             "diggers": set(["Digger"])}
+SELF_TEST_SPAWN_CONDITIONS = {"Goblin": [("Room", ["Dormitory", "2", "5"])],
+                              "Troll": [("Creature", ["LavaSpawn", "1", "10"])]}
+
+
+def portal_start_self_test(directory):
+    """Run rule 4 on generated levels with fixed expectations; return True if all match.
+
+    Heart at x 50, portal at x 60 to 62 (or as given), 7 dirt tiles between them. Cases: a
+    sealed level passes; an enemy on an open corridor to the heart, an enemy pocket that the
+    portal touches, an enemy trap on the portal, a spawn of a time trigger at the heart, a
+    missing portal, a blocked fighter, a wrong expected portal tile or dig count and a tunneller
+    behind dirt fail; the same tunneller behind a rock wall passes."""
+    ok = True
+    expected = ((60, 9), 7, ("Goblin",))
+    cases = [
+        ("portal_ok", {"portal_x": 60}, None, expected, "PASS", None),
+        ("portal_enemy_open", {"portal_x": 60, "enemy_x": 66}, None, expected, "FAIL",
+         "no portal reachable"),
+        ("portal_enemy_touch", {"portal_x": 72, "enemy_x": 76}, None,
+         ((72, 9), 19, ("Goblin",)), "FAIL", "no portal reachable"),
+        ("portal_trap", {"portal_x": 60, "trap_x": 61}, None, expected, "FAIL", "trap Cannon1"),
+        ("portal_spawn", {"portal_x": 60, "spawn_x": 51, "spawn_time": 300}, None, expected,
+         "FAIL", "no portal reachable"),
+        ("portal_none", {}, None, expected, "FAIL", "no portal of the seat"),
+        ("portal_blocked", {"portal_x": 60}, "Goblin", expected, "FAIL",
+         "no fighter class"),
+        ("portal_wrong_tile", {"portal_x": 60}, None, ((61, 9), 7, ("Goblin",)), "FAIL",
+         "expected 61,9"),
+        ("portal_wrong_dig", {"portal_x": 60}, None, ((60, 9), 6, ("Goblin",)), "FAIL",
+         "expected 6"),
+        ("portal_tunneller", {"portal_x": 60, "enemy_class": "Digger"}, None, expected, "FAIL",
+         "tunneller(s) dig into"),
+        ("portal_tunneller_rock", {"portal_x": 60, "enemy_class": "Digger", "rock_wall_x": 20},
+         None, expected, "PASS", None)]
+    for name, options, block, wanted, status_expected, text in cases:
+        path = os.path.join(directory, name + ".level")
+        enemy_x = options.pop("enemy_x", 4)
+        synthetic_level(path, 50, enemy_x, 1, False, **options)
+        level = parse_level(path)
+        level.seats[1]["faction"] = "Keeper"
+        if block is not None:
+            level.blocked.append((1, block))
+        reasons, numbers = check_portal_start(level, 1, wanted, 600.0, SELF_TEST_PORTAL_MOVEMENT,
+                                              SELF_TEST_SPAWN_CONDITIONS)
+        status = "FAIL" if reasons else "PASS"
+        print("%s (expected %s) %s | %s | %s" % (status, status_expected, name, numbers,
+                                                   "; ".join(reasons)))
+        if status != status_expected:
+            ok = False
+        if text is not None and not any(text in reason for reason in reasons):
+            ok = False
+    return ok
 
 
 def main(argv):
