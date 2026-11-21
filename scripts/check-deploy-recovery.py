@@ -198,7 +198,7 @@ class Recovery(unittest.TestCase):
             repo = Path(directory)
             (repo / 'out').mkdir()
             (repo / 'build/windows').mkdir(parents=True)
-            exe = repo / 'build/windows/opendungeons-plus.exe'
+            exe = repo / 'build/windows/moreya.exe'
             exe.write_bytes(b'validated')
             (repo / 'out/build-number-test.txt').write_text('42')
             with patch.object(deployment, 'git', side_effect=lambda repo, *args: '' if args[0] == 'status' else 'a' * 40):
@@ -243,7 +243,7 @@ class Recovery(unittest.TestCase):
                 """Keep saved map selection inside the lock before publishing the counter."""
                 self.assertEqual(counter.read_text(), '41')
                 self.assertEqual(sys.argv, ['campaign-load', '--executable',
-                                           str(repo / 'build/windows/opendungeons-plus.exe'),
+                                           str(repo / 'build/windows/moreya.exe'),
                                            '--repo', str(repo / 'build/current-worktree'), '--deployment-selection',
                                            str(repo / 'out/deploy-selection-test.json'),
                                            '--output', str(repo / 'out/deployed-load-test')])

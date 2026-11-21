@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Moreya
+GenericName=Underground real-time strategy game
+GenericName[de]=Unterirdisches Echtzeit-Strategiespiel
+GenericName[fr]=Jeu de stratégie en temps réel souterrain
+Comment=Keep a dungeon and break the guild raids through the Moreya gate
+Exec=@OD_BIN_PATH@/moreya
+Icon=@OD_ICON_FULLPATH@
+Terminal=false
+Type=Application
+Categories=Game;StrategyGame;

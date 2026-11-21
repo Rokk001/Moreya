@@ -10,10 +10,15 @@ they are needed, casting spells and luring enemies into traps.
 Ready-to-play builds for Windows and Linux are attached to the
 [releases](https://github.com/Rokk001/Moreya/releases) of this repository.
 
-- **Windows:** unpack the zip archive and start `opendungeons-plus.exe`.
+- **Windows:** unpack the zip archive and start `moreya.exe`.
 - **Linux (x86_64):** unpack the tar.gz archive and start `./moreya` in its
   top folder. The build needs glibc 2.38 or newer (for example Ubuntu 24.04,
   Fedora 39, Debian 13 or newer).
+
+Settings, saved games, logs and screenshots are kept in the folder `Moreya` in
+`%APPDATA%` on Windows and in `~/.local/share/moreya` and `~/.config/moreya` on
+Linux. At the first start the game copies the user folder of older versions
+there, so settings and saved games stay available.
 
 ### The campaign
 
@@ -75,8 +80,10 @@ make -jX    # X is the number of CPU cores to use
 The workflow `.github/workflows/linux-release.yml` shows a complete Linux
 build including its dependencies.
 
-On Windows, generate a Visual Studio solution with CMake and build the
-`opendungeons-plus` target in the Release configuration.
+On Windows, generate a Visual Studio solution with CMake and build the game
+in the Release configuration (CMake target `opendungeons-plus`); it writes `moreya.exe`.
+`scripts/win32/package-windows-release.ps1` assembles the release archive
+`Moreya-<version>-windows-x64.zip` from that build.
 
 #### Repository organisation
 
@@ -114,5 +121,4 @@ The source code is licensed under the GNU General Public License version 3 or
 later. The art assets are covered by their respective licenses, listed in the
 CREDITS file; see LICENSE.md and the licenses folder.
 
-Moreya is based on the source code of the open source projects OpenDungeons and
-OpenDungeonsPlus.
+Moreya is based on the source code of the open source projects OpenDungeons and OpenDungeonsPlus.

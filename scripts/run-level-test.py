@@ -22,7 +22,7 @@ also kills a game that outlives its own limit. Exit code of the script: 0 only
 if all levels passed.
 
 Usage:
-    python scripts/run-level-test.py --exe build/windows/Release/opendungeons-plus.exe
+    python scripts/run-level-test.py --exe build/windows/Release/moreya.exe
     python scripts/run-level-test.py --exe ... --seconds 60 levels/campaign/Mossgate.level
     python scripts/run-level-test.py --exe ... --markdown   # result paragraph as markdown
     python scripts/run-level-test.py --exe ... --port 31301   # own server port, for parallel instances

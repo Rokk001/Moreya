@@ -1,12 +1,15 @@
-## OpenDungeons Release Notes
+## Moreya Release Notes
 
-This file contains the subsequent release notes for each version of
-OpenDungeons since version 0.4.7, in reverse chronological order.
+This file contains the release notes for each version of Moreya, in reverse
+chronological order. The entries of the versions before Moreya are kept as
+history: Moreya is based on OpenDungeons (release notes since version 0.4.7) and OpenDungeonsPlus.
 
-The numbers preceded by a hash (e.g. #9) reference GitHub issue numbers on
-our repository at https://github.com/OpenDungeons/OpenDungeons
+In those past entries, numbers preceded by a hash (e.g. #9) are the issue
+numbers of the OpenDungeons project at that time.
 
 ### Unreleased
+
+* The game is called Moreya everywhere: the executable is moreya.exe (Linux: moreya), the release archives, desktop entry, icon and user data folder carry the new name. At the first start the settings and saved games of the old user folder are taken over. Quitting from the main menu closes the game directly. New Moreya gate icon.
 
 * Creature mood: mood is a stored value from 0 to 1500 that problems, events, rooms and buffs move; an unhappy creature tells you why in the Dungeonbook, and one left at the bottom too long leaves, turns rogue or rampages.
 

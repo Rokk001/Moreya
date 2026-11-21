@@ -108,8 +108,12 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
 
     connectModeChangeEvent(BUTTON_LOAD_GAME, AbstractModeManager::ModeType::MENU_LOAD_SAVEDGAME);
 
-    connectModeChangeEvent(rootWin->getChild(BUTTON_QUIT),
-                           AbstractModeManager::ModeType::ADVERTISMENT);
+    addEventConnection(
+        rootWin->getChild(BUTTON_QUIT)->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&MenuModeMain::quitButtonPressed, this)
+        )
+    );
     addEventConnection(
         rootWin->getChild(BUTTON_SETTINGS)->subscribeEvent(
             CEGUI::PushButton::EventClicked,
@@ -301,17 +305,9 @@ void MenuModeMain::onFrameStarted(const Ogre::FrameEvent& /*evt*/)
     }
 }
 
-//! \brief Keeps Quit immediate and delays the load browser until its archive flight arrives.
+//! \brief Delays the load browser until its archive flight arrives.
 bool MenuModeMain::changeModeAfterFlight(AbstractModeManager::ModeType mode, const CEGUI::EventArgs& e)
 {
-    if(mode == AbstractModeManager::ADVERTISMENT)
-    {
-        mPendingSubMenu.clear();
-        mPendingMode = AbstractModeManager::NONE;
-        mSkirmishSubMenuPending = false;
-        mOverviewPending = false;
-        return changeModeEvent(mode, e);
-    }
     ODFrameListener& listener = ODFrameListener::getSingleton();
     if(listener.isMainMenuFlightActive())
         return true;
@@ -388,9 +384,14 @@ void MenuModeMain::connectModeChangeEvent(CEGUI::Window* button, AbstractModeMan
     );
 }
 
+//! \brief Closes the game at once, also during a menu flight; deferred menu actions are dropped so none replaces it.
 bool MenuModeMain::quitButtonPressed(const CEGUI::EventArgs&)
 {
-    ODFrameListener::getSingletonPtr()->requestExit();
+    mPendingSubMenu.clear();
+    mPendingMode = AbstractModeManager::NONE;
+    mSkirmishSubMenuPending = false;
+    mOverviewPending = false;
+    ODFrameListener::getSingleton().requestExit();
     return true;
 }
 

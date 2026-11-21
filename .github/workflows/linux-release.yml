@@ -174,8 +174,10 @@ jobs:
             -DOD_TREAT_WARNINGS_AS_ERRORS=OFF
 
       - name: Build game
-        # -k 0 reports every failing file in one run
-        run: cmake --build build --target opendungeons-plus -- -k 0
+        # -k 0 reports every failing file in one run; the CMake target opendungeons-plus writes the binary build/moreya
+        run: |
+          cmake --build build --target opendungeons-plus -- -k 0
+          test -x build/moreya
 
       - name: Package
         id: package

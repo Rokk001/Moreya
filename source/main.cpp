@@ -76,7 +76,7 @@ int main(int argc, char** argv)
         if (options.count("help"))
         {
             std::stringstream ss;
-            ss << "OpenDungeons version: " << ODApplication::VERSION << "\n";
+            ss << "Moreya version: " << ODApplication::VERSION << "\n";
             ss << desc;
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
             MessageBox(0, ss.str().c_str(), "Help", MB_OK | MB_TASKMODAL);

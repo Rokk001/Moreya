@@ -14,11 +14,11 @@ it through the Yes handler of the quit dialog (campaign: to the campaign map, th
 every following frame that no render target the frame loop updates shows a camera that the scene manager no longer
 owns, and passes after the main menu has started 120 frames. A run passes only with exit code 0 and a PASS line that
 says the main menu was reached. A crash, a destroyed camera on a target, a timeout or a missing line is a failure.
-It refuses to run while another opendungeons-plus.exe is running, so a game the owner plays is never touched.
+It refuses to run while another moreya.exe is running, so a game the owner plays is never touched.
 
 The runtime part is not started by the check runner: CLAUDE.md allows exactly one load test per integration, and this
 part starts the game four times. Run it once on a build that contains the change:
-  python -I source/tests/check_return_to_main_menu.py --exe build/windows/opendungeons-plus.exe
+  python -I source/tests/check_return_to_main_menu.py --exe build/windows/moreya.exe
 
 Static part (no arguments; run by the check runner, compiles nothing): the release order that removes the cause, with
 mutations that must be rejected:
@@ -186,9 +186,9 @@ def static_check():
 
 
 def game_running():
-    """True when an opendungeons-plus.exe process exists (tasklist, no kill)."""
-    result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq opendungeons-plus.exe', '/NH'], capture_output=True)
-    return 'opendungeons-plus.exe' in result.stdout.decode('utf-8', errors='replace').lower()
+    """True when an moreya.exe process exists (tasklist, no kill)."""
+    result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq moreya.exe', '/NH'], capture_output=True)
+    return 'moreya.exe' in result.stdout.decode('utf-8', errors='replace').lower()
 
 
 def free_port():
@@ -230,7 +230,7 @@ def run_kind(exe, kind, level, scenario, seconds):
 
 def runtime_check(exe, seconds):
     if game_running():
-        print('FAIL: another opendungeons-plus.exe is running; the runtime part is not started')
+        print('FAIL: another moreya.exe is running; the runtime part is not started')
         return 1
     failed = 0
     for kind, level, scenario in KINDS:

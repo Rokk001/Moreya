@@ -1,5 +1,5 @@
 #!/bin/bash
-# Launch a headless OpenDungeons server, run the given boost test binary
+# Launch a headless Moreya server, run the given boost test binary
 # (which acts as a game client) against it, then shut the server down.
 #
 # Usage: run_boost_test_with_server.sh <od-binary> <level> <test-command...>

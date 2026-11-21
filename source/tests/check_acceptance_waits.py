@@ -32,7 +32,7 @@ Assert-Throws { Wait-GameCondition { throw 'process died' } 1 'dead' } 'process 
 $process = [pscustomobject]@{HasExited=$false; MainWindowHandle=[IntPtr]1; Responding=$true; ExitCode=7}
 $process | Add-Member ScriptMethod Refresh { }
 Assert (-not (Test-GameReady $process $Work $false)) 'window alone is not startup readiness'
-Set-Content (Join-Path $Work 'opendungeons.log') 'startup menu ready'
+Set-Content (Join-Path $Work 'moreya.log') 'startup menu ready'
 Assert (Test-GameReady $process $Work $false) 'ready menu not detected'
 Assert (-not (Test-GameReady $process $Work $true)) 'menu marker must not accept an unloaded level'
 Set-Content (Join-Path $Work 'acceptance-stdout.txt') 'GOALS registered=0'

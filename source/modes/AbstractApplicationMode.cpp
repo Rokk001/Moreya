@@ -181,7 +181,7 @@ bool AbstractApplicationMode::keyPressed(const OIS::KeyEvent& arg)
     {
     case OIS::KC_ESCAPE:
         if(!CEGUI::System::getSingleton().getDefaultGUIContext().injectKeyDown(CEGUI::Key::Escape) &&
-           !closeTopWindow() && mModeType != ModeManager::ADVERTISMENT)
+           !closeTopWindow())
             goBack();
         break;
     default:

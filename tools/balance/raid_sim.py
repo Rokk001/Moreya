@@ -16,9 +16,9 @@ fixed random seed and writes one line per turn (raid and keeper state). This scr
     repeated).
 
 Usage (from the repository root, after building the game, e.g. in build/r3):
-  python tools/balance/raid_sim.py run --exe build/r3/Release/opendungeons-plus.exe --work out/raid-sim \
+  python tools/balance/raid_sim.py run --exe build/r3/Release/moreya.exe --work out/raid-sim \
       --size 10 --hero-level 4 --keeper-count 10 --keeper-level 4 --seeds 1-8 --set GroupCombat.GroupFormingDistance=8
-  python tools/balance/raid_sim.py run --exe build/r3b/opendungeons-plus.exe --work out/raid-sim/w --level Brackenford \
+  python tools/balance/raid_sim.py run --exe build/r3b/moreya.exe --work out/raid-sim/w --level Brackenford \
       --keeper-ai --countdown 100000 --seconds 2400 --seeds 1-8     (phase 1 of a story level played by the keeper AI)
   python tools/balance/raid_sim.py sweep --exe ... --work ... --level Tinmoor --keeper-ai --countdown 600 \
       --member-level 3 --leader-offset 2 --share 0.6 --axis member_level --values 2,3,4 --report out/raid-sim/x.jsonl
@@ -462,7 +462,7 @@ def run_one(exe, data, level, seed, seconds, keeper_ai, out_file, options=()):
         code, output = -9, "timeout: " + str(error)
     if code != 0:
         # The error lines of the game log tell why a run failed
-        for log in app_data.rglob("opendungeons.log"):
+        for log in app_data.rglob("moreya.log"):
             errors = [line for line in log.read_text(encoding="utf-8", errors="replace").splitlines()
                       if "ERROR" in line or "CRITICAL" in line]
             output += "\n" + "\n".join(errors[:20])

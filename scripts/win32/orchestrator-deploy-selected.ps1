@@ -48,7 +48,7 @@ if ($LASTEXITCODE -ne 0) { throw "Deploy failed (exit $LASTEXITCODE)" }
 $data = Join-Path $repo 'build\current-worktree'
 $actual = (& git -C $data rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $actual -ne $tip) { throw 'Deployed data does not match selected commit' }
-$exe = Join-Path $repo 'build\windows\opendungeons-plus.exe'
+$exe = Join-Path $repo 'build\windows\moreya.exe'
 & python "$scripts\run-campaign-load-tests.py" --repo $data --deployment-selection $manifest --executable $exe --output "$wt\out\deployed-load-$run"
 if ($LASTEXITCODE -ne 0) { throw "Load test with the deployed exe failed (exit $LASTEXITCODE)" }
 Set-Content -Encoding ascii -LiteralPath $Counter -Value $n

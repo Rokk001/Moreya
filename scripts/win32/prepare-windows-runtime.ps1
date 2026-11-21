@@ -59,4 +59,4 @@ foreach ($taskSource in $taskRuntimeSources) {
 # The paths apply only to the Python DLL beside this Release executable.
 $taskPythonPaths = @('.', $taskPythonRoot, "$taskPythonRoot\Lib", "$taskPythonRoot\DLLs", 'import site')
 [System.IO.File]::WriteAllLines((Join-Path $taskBuild 'python314._pth'), [string[]]$taskPythonPaths)
-Write-Output "Release runtime prepared in $taskBuild; open opendungeons-plus.exe to test the game."
+Write-Output "Release runtime prepared in $taskBuild; open moreya.exe to test the game."

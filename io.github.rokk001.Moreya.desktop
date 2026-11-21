@@ -1,0 +1,10 @@
+[Desktop Entry]
+Comment=Keep a dungeon and break the guild raids through the Moreya gate
+Categories=Game;StrategyGame;
+Exec=moreya
+Icon=io.github.rokk001.Moreya
+Name=Moreya
+StartupNotify=true
+Terminal=false
+Type=Application
+Keywords=Dungeon;Strategy;Keeper;Creatures;Raid;

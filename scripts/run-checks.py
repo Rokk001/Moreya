@@ -367,7 +367,7 @@ def main():
             for line in out.splitlines()[-TAIL_LINES:]:
                 record('    ' + line)
     # Red static checks never suppress independent level diagnostics. Missing build prerequisites are explicit failures.
-    executable = os.path.join(repo, 'build', 'windows', 'opendungeons-plus.exe')
+    executable = os.path.join(repo, 'build', 'windows', 'moreya.exe')
     load_test = os.path.join(repo, 'scripts', 'run-level-test.py')
     prerequisite = selection_error or session.initial_error
     if load_required:
