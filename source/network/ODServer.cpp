@@ -1608,7 +1608,13 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             // Pick nick
             std::string clientNick;
-            OD_ASSERT_TRUE(packetReceived >> clientNick);
+            if(!(packetReceived >> clientNick))
+            {
+                OD_LOG_WRN("Refused a client without a readable nickname");
+                return false;
+            }
+            // The nickname has at most as many letters as the multiplayer menus allow
+            clientNick = ServerGuards::truncateUtf8Letters(clientNick, ServerGuards::MAX_NICK_LETTERS);
             bool liveNickname = false;
             if(!packetReceived.endOfPacket())
                 OD_ASSERT_TRUE(packetReceived >> liveNickname);
@@ -1713,7 +1719,13 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
 
             std::string nickname;
-            OD_ASSERT_TRUE(packetReceived >> nickname);
+            if(!(packetReceived >> nickname))
+            {
+                OD_LOG_WRN("Ignored changeNick without a readable nickname");
+                break;
+            }
+            // The nickname has at most as many letters as the multiplayer menus allow
+            nickname = ServerGuards::truncateUtf8Letters(nickname, ServerGuards::MAX_NICK_LETTERS);
             Player* player = clientSocket->getPlayer();
             player->setNick(nickname);
             const int32_t playerId = player->getId();
@@ -2259,7 +2271,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // them directly to the clients instead of queuing a ServerNotification
             // to the Server
             std::string chatMsg;
-            OD_ASSERT_TRUE(packetReceived >> chatMsg);
+            if(!(packetReceived >> chatMsg))
+            {
+                OD_LOG_WRN("Ignored chat without a readable message from player=" + clientSocket->getPlayer()->getNick());
+                break;
+            }
+            // Longer messages are cut so that one client cannot flood the others with huge packets
+            if(chatMsg.size() > ServerGuards::MAX_CHAT_BYTES)
+            {
+                OD_LOG_WRN("Cut a chat message of " + Helper::toString(static_cast<uint32_t>(chatMsg.size()))
+                    + " bytes from player=" + clientSocket->getPlayer()->getNick());
+                chatMsg = ServerGuards::truncateUtf8Bytes(chatMsg, ServerGuards::MAX_CHAT_BYTES);
+            }
             int32_t seatId = -1;
             if(clientSocket->getPlayer()->getSeat() != nullptr)
                 seatId = clientSocket->getPlayer()->getSeat()->getId();
@@ -2704,9 +2727,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
         case ClientNotificationType::askSetPlayerSettings:
         {
+            // The central check before the switch makes sure the player has a seat
             Seat* playerSeat = clientSocket->getPlayer()->getSeat();
             bool koCreatures;
-            OD_ASSERT_TRUE(packetReceived >> koCreatures);
+            if(!(packetReceived >> koCreatures))
+            {
+                OD_LOG_WRN("Ignored askSetPlayerSettings without a readable value");
+                break;
+            }
             playerSeat->setPlayerSettings(koCreatures);
             break;
         }
@@ -2727,7 +2755,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::ackNewTurn:
         {
             int64_t turn;
-            OD_ASSERT_TRUE(packetReceived >> turn);
+            if(!(packetReceived >> turn))
+            {
+                OD_LOG_WRN("Ignored ackNewTurn without a readable turn");
+                break;
+            }
             clientSocket->setLastTurnAck(turn);
             break;
         }
@@ -2948,8 +2980,21 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         int yy;
  
         int seatId;
-        OD_ASSERT_TRUE(packetReceived >> xx >> yy );
+        if(!(packetReceived >> xx >> yy))
+        {
+            OD_LOG_WRN("Ignored notifyTileRevealed without readable coordinates");
+            break;
+        }
         seatId = clientSocket->getPlayer()->getSeat()->getId();
+        // The coordinates come from the client: a tile or a seat outside of the arrays of the map must not be written to
+        if((gameMap->everVisitedFlagPool == nullptr) ||
+           !ServerGuards::isTileOnMap(xx, yy, gameMap->getMapSizeX(), gameMap->getMapSizeY()) ||
+           !ServerGuards::isSeatIndexValid(seatId, gameMap->everVisitedFlagPool[xx][yy].size()))
+        {
+            OD_LOG_WRN("Ignored revealed tile x=" + Helper::toString(xx) + ", y=" + Helper::toString(yy)
+                + " of seat id=" + Helper::toString(seatId));
+            break;
+        }
         gameMap->everVisitedFlagPool[xx][yy][seatId] = true;
 
 
