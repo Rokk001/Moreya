@@ -94,6 +94,7 @@ ResourceManager::ResourceManager(boost::program_options::variables_map& options)
         mRaidSimForceLevel(1),
         mRaidSimHandLimit(false),
         mRaidSimHandPlayer(false),
+        mRaidSimGoalPlayer(false),
         mForcedNetworkPort(-1),
         mLogLevel(LogMessageLevel::NORMAL),
         mGameDataPath("./"),
@@ -486,6 +487,11 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
 
     mRaidSimHandLimit = (options.count("raid-sim-hand-limit") > 0);
     mRaidSimHandPlayer = (options.count("raid-sim-hand-player") > 0);
+    mRaidSimGoalPlayer = (options.count("raid-sim-goal-player") > 0);
+
+    itOption = options.find("raid-sim-difficulty");
+    if(itOption != options.end())
+        mRaidSimDifficulty = itOption->second.as<std::string>();
 
     itOption = options.find("port");
     if(itOption != options.end())
@@ -664,6 +670,8 @@ void ResourceManager::buildCommandOptions(boost::program_options::options_descri
         ("raid-sim-force-level", boost::program_options::value<int32_t>(), "Debug: level of the creatures of --raid-sim-force (default 1)")
         ("raid-sim-hand-limit", "Debug: the hand limit of campaign levels applies to every keeper in --raid-sim")
         ("raid-sim-hand-player", "Debug: in --raid-sim a model keeper drops his fighters into the fight with the hand, as often as the hand rules allow")
+        ("raid-sim-difficulty", boost::program_options::value<std::string>(), "Debug: campaign difficulty (easy, medium, normal, hard, hell) --raid-sim plays the level at: the computer keepers without own level get it and the raid uses its countdown")
+        ("raid-sim-goal-player", "Debug: in --raid-sim with --raid-sim-keeper-ai the keeper of the human seat also pursues the goals of the level (test player of the build time)")
         ("scenario", boost::program_options::value<std::string>(), "Debug: scenario set up by --run-level on the first turn (ignored-enemies: writes the combat state of fighters near enemies to run-level-scenario.txt; return-to-menu / editor-return-to-menu: plays the level as a game / opens it in the editor, leaves to the main menu after --seconds and passes after the menu frames)")
     ;
 }

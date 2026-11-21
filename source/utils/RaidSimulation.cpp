@@ -17,6 +17,7 @@
 
 #include "utils/RaidSimulation.h"
 
+#include "ai/KeeperAIType.h"
 #include "creatureaction/CreatureAction.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -33,6 +34,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/RaidSimGoalPlayer.h"
 #include "utils/Random.h"
 #include "utils/ResourceManager.h"
 #include "ODApplication.h"
@@ -277,6 +279,10 @@ uint32_t sHandDrops = 0;
 uint32_t sHandFighters = 0;
 //! \brief True when --raid-sim-hand-player lets a model keeper use his hand in the fight.
 bool sHandPlayer = false;
+//! \brief Campaign difficulty of --raid-sim-difficulty, nbAI when none was given.
+KeeperAIType sDifficulty = KeeperAIType::nbAI;
+//! \brief True when --raid-sim-goal-player lets the keeper of the human seat pursue the goals of the level.
+bool sGoalPlayer = false;
 
 //! \brief The ground tiles around the centre of the seat's dungeon heart that the creature can walk on, nearest
 //! first (steps from tile to neighbour tile), at most count of them.
@@ -512,6 +518,18 @@ void RaidSimulation::setHandPlayer(bool handPlayer)
     sHandPlayer = handPlayer;
 }
 
+//! \brief Remembers the difficulty of the next run; an empty text keeps none.
+void RaidSimulation::setDifficulty(const std::string& difficulty)
+{
+    sDifficulty = difficulty.empty() ? KeeperAIType::nbAI : KeeperAITypes::fromString(difficulty);
+}
+
+//! \brief Remembers whether the goal player plays in the next run.
+void RaidSimulation::setGoalPlayer(bool goalPlayer)
+{
+    sGoalPlayer = goalPlayer;
+}
+
 //! \brief Loads the level on a server without socket, runs the turns and writes one line per turn; the result line
 //! names how the raid ended.
 int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t seed, const std::string& outFile,
@@ -543,7 +561,7 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
     std::chrono::steady_clock::time_point wallStart = std::chrono::steady_clock::now();
     Player::setHandLimitForced(sHandLimit);
     ODServer server;
-    const int32_t attackedSeatId = server.startHeadlessGame(levelFile, keeperAi);
+    const int32_t attackedSeatId = server.startHeadlessGame(levelFile, keeperAi, sDifficulty);
     if(attackedSeatId < 0)
     {
         std::cout << "RAIDSIM load error: the level could not be started: " << levelFile << std::endl;
@@ -560,6 +578,9 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
     }
 
     readPhase1Goals(levelFile, attackedSeatId);
+    // The raid uses the countdown of the difficulty (none on Easy and Medium)
+    gameMap.getRaid().setDifficulty(sDifficulty);
+    RaidSimGoalPlayer::load(levelFile, attackedSeatId);
 
     // The seed again right before the first turn, so that loading does not change what the turns draw
     Random::setSeed(usedSeed);
@@ -567,6 +588,8 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
         << " turnsPerSecond=" << ODApplication::turnsPerSecond << " phase1Goals=" << sPhase1Goals.size()
         << " force=" << sForceClasses.size() << " forceLevel=" << sForceLevel << " handLimit=" << (sHandLimit ? 1 : 0)
         << " handPlayer=" << (sHandPlayer ? 1 : 0)
+        << " difficulty=" << ((sDifficulty == KeeperAIType::nbAI) ? std::string("-") : KeeperAITypes::toString(sDifficulty))
+        << " goalPlayer=" << (sGoalPlayer ? 1 : 0) << " goals=" << RaidSimGoalPlayer::getGoals().size()
         << "\n";
     writeHeader(out);
 
@@ -582,6 +605,8 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
 
     const RaidManager& raid = gameMap.getRaid();
     bool forcePlaced = false;
+    // First game second at which every goal of the seat (main and optional, without the raid goal) is reached at once
+    double allGoalsSecond = -1.0;
     sHandDrops = 0;
     sHandFighters = 0;
     for(int64_t turn = 0; turn < maxTurns; ++turn)
@@ -594,8 +619,21 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
             forcePlaced = true;
         }
         handPlayer(gameMap, keeper);
+        if(sGoalPlayer)
+            RaidSimGoalPlayer::act(gameMap, keeper);
         noteHand(keeper);
         writeTurn(out, gameMap, attackedSeatId);
+        if((allGoalsSecond < 0.0) && !RaidSimGoalPlayer::getGoals().empty() &&
+           (RaidSimGoalPlayer::countReached(gameMap, attackedSeatId) == RaidSimGoalPlayer::getGoals().size()))
+        {
+            allGoalsSecond = static_cast<double>(gameMap.getTurnNumber()) / ODApplication::turnsPerSecond;
+            // The goal player measures the build time: the run ends with every goal reached
+            if(sGoalPlayer)
+            {
+                result = "goals";
+                break;
+            }
+        }
         if(LogManager::getSingleton().getCriticalCount() > 0)
         {
             result = "error";
@@ -621,7 +659,11 @@ int RaidSimulation::run(const std::string& levelFile, int32_t seconds, uint32_t 
     const double wallSeconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count();
     out << "# result=" << result << " turn=" << gameMap.getTurnNumber() << " seconds="
         << (static_cast<double>(gameMap.getTurnNumber()) / ODApplication::turnsPerSecond)
-        << " wallSeconds=" << wallSeconds << "\n";
+        << " wallSeconds=" << wallSeconds << " allGoalsSecond=" << allGoalsSecond << " goalsReached="
+        << RaidSimGoalPlayer::countReached(gameMap, attackedSeatId) << "/" << RaidSimGoalPlayer::getGoals().size()
+        << "\n";
+    out << "# openGoals=" << RaidSimGoalPlayer::describeOpenGoals(gameMap, attackedSeatId) << "\n";
+    out << "# keeper=" << RaidSimGoalPlayer::describeKeeper(gameMap, attackedSeatId) << "\n";
     out.close();
     std::cout << "RAIDSIM result=" << result << " turn=" << gameMap.getTurnNumber() << " wallSeconds=" << wallSeconds
         << std::endl;
@@ -653,7 +695,9 @@ int RaidSimulation::getExitCode()
 //! took so far from treasuries and from dungeon hearts (what a member's carried gold grew by while it stood there), the
 //! phase-1 main goals of the keeper reached now and their number (see readPhase1Goals), the ground tiles he claimed, the
 //! tiles of his rooms and the gold he mined so far; the fighting creatures in his hand, the fighting creatures he
-//! dropped from his hand so far and the seconds left of his hand cooldown.
+//! dropped from his hand so far and the seconds left of his hand cooldown; the goals of his seat reached now and
+//! their number (main and optional goals without the raid goal, see RaidSimGoalPlayer), his living workers and the
+//! creatures the goal player carried with the hand so far.
 void RaidSimulation::writeHeader(std::ostream& os)
 {
     os << "turn\tseconds\tgateOpen\tarrived"
@@ -662,7 +706,8 @@ void RaidSimulation::writeHeader(std::ostream& os)
         << "\tleadersFleeing\tleadersEscaped\tkeeperGroups\tkeeperGroupMembers\tkeeperRetreating\traidRetreating"
         << "\tminDistance\tkeeperGold\theartHp\tkeeperLost\traidFleeing\tkeeperFleeing\tmaxGroupId"
         << "\traidPlaceDistance\tkeeperPlaceDistance\traidSpread\ttreasuryGold\tplunderedTreasury\tplunderedHeart"
-        << "\tphase1Reached\tphase1Total\tclaimedTiles\troomTiles\tgoldMined\thandFighters\thandDrops\thandCooldown\n";
+        << "\tphase1Reached\tphase1Total\tclaimedTiles\troomTiles\tgoldMined\thandFighters\thandDrops\thandCooldown"
+        << "\tgoalsReached\tgoalsTotal\tworkers\tgoalCarried\n";
 }
 
 //! \brief Counts both sides from the creatures of the map, the raid groups and the combat groups.
@@ -780,5 +825,13 @@ void RaidSimulation::writeTurn(std::ostream& os, GameMap& gameMap, int32_t attac
 
     Player* keeper = (keeperSeat == nullptr) ? nullptr : keeperSeat->getPlayer();
     os << "\t" << sHandFighters << "\t" << sHandDrops << "\t"
-        << ((keeper == nullptr) ? 0.0 : keeper->getHandCooldownSeconds()) << "\n";
+        << ((keeper == nullptr) ? 0.0 : keeper->getHandCooldownSeconds())
+        << "\t" << RaidSimGoalPlayer::countReached(gameMap, attackedSeatId) << "\t" << RaidSimGoalPlayer::getGoals().size();
+    uint32_t workers = 0;
+    for(Creature* creature : gameMap.getCreaturesBySeat(keeperSeat))
+    {
+        if(creature->getDefinition()->isWorker() && creature->isAlive())
+            ++workers;
+    }
+    os << "\t" << workers << "\t" << RaidSimGoalPlayer::getCarried() << "\n";
 }

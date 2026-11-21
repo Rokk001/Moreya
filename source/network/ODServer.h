@@ -19,6 +19,7 @@
 #define ODSERVER_H
 
 #include "ODSocketServer.h"
+#include "ai/KeeperAIType.h"
 #include "modes/ConsoleInterface.h"
 
 #include <OgreSingleton.h>
@@ -123,10 +124,13 @@ class ODServer: public Ogre::Singleton<ODServer>,
     int32_t getNetworkPort() const;
 
     //! \brief Raid simulation (RaidSimulation): loads the level without a network socket and without clients, gives
-    //! every seat its player as a single player game does (the human seat a human player who gives no orders, or a
-    //! computer keeper of normal level when keeperAi is true) and prepares the first turn as the server thread does.
+    //! every seat its player as a single player game does (the human seat a human player who gives no orders, or, when
+    //! keeperAi is true, a human player that a computer keeper of normal level plays) and prepares the first turn as
+    //! the server thread does.
+    //! \param campaignLevel The computer level of the other computer keepers without own level, as the campaign gives
+    //! them the campaign difficulty; nbAI: normal.
     //! \return The id of the human seat, -1 when the level cannot be loaded or has no human seat.
-    int32_t startHeadlessGame(const std::string& levelFilename, bool keeperAi);
+    int32_t startHeadlessGame(const std::string& levelFilename, bool keeperAi, KeeperAIType campaignLevel);
 
     //! \brief Raid simulation: runs one game turn of the given length (game seconds) without clients.
     void runHeadlessTurn(double seconds);
