@@ -3009,6 +3009,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 OD_LOG_ERR("Received editor command while wrong mode mode" + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored createAllEntities without a draggable tile container");
+                break;
+            }
             mDraggableTileContainer->createAllEntities();
             Player* player = clientSocket->getPlayer();
             ServerNotification *notif = new ServerNotification(ServerNotificationType::pingCreateAllEntities, player);
@@ -3032,7 +3037,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int TileMarkerMinY;
             int TileMarkerMaxX;
             int TileMarkerMaxY;            
-            OD_ASSERT_TRUE(packetReceived >> sizeX >> sizeY >> posX >> posY >> TileMarkerMinX>> TileMarkerMinY >> TileMarkerMaxX>>TileMarkerMaxY);
+            if(!(packetReceived >> sizeX >> sizeY >> posX >> posY >> TileMarkerMinX>> TileMarkerMinY >> TileMarkerMaxX>>TileMarkerMaxY))
+            {
+                OD_LOG_WRN("Ignored editorAskCreateDraggableTileContainer with an incomplete message");
+                break;
+            }
+            // The container copies a part of the map: it cannot be empty or larger than the map
+            if((sizeX <= 0) || (sizeY <= 0) || (sizeX > gameMap->getMapSizeX()) || (sizeY > gameMap->getMapSizeY()))
+            {
+                OD_LOG_WRN("Ignored draggable tile container of size " + Helper::toString(sizeX) + "x"
+                    + Helper::toString(sizeY));
+                break;
+            }
             if(mDraggableTileContainer==nullptr)
             {
                 mDraggableTileContainer= new DraggableTileContainer(true);
@@ -3075,6 +3091,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         }
         case ClientNotificationType::editorAskDeleteDraggableTileContainer:
         {
+            if(mServerMode != ServerMode::ModeEditor)
+            {
+                OD_LOG_ERR("Received editor command while wrong mode mode" + Helper::toString(static_cast<int>(mServerMode)));
+                break;
+            }
             if(mDraggableTileContainer!=nullptr)
             {
                 delete mDraggableTileContainer;
@@ -3144,8 +3165,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int seatId;
             uint32_t goldDensity = Tile::GOLD_DENSITY_DEFAULT;
 
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> tileType >> tileFullness >> seatId >> goldDensity);
+            if(!(packetReceived >> x1 >> y1 >> tileType >> tileFullness >> seatId >> goldDensity))
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTile with an incomplete message");
+                break;
+            }
             Tile* selectedTile = gameMap->getTile(x1,y1);
+            if(selectedTile == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTile outside of the map x=" + Helper::toString(x1)
+                    + ", y=" + Helper::toString(y1));
+                break;
+            }
             Seat* seat = nullptr;
             if(seatId != -1)
                 seat = gameMap->getSeatById(seatId);
@@ -3266,6 +3297,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                     + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskCopyRoom without a draggable tile container");
+                break;
+            }
     
             for(Room* room : mDraggableTileContainer->mRooms)
             {
@@ -3328,6 +3364,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                     + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }            
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskCopyTrap without a draggable tile container");
+                break;
+            }
             for(Trap* trap : mDraggableTileContainer->mTraps)
             {
                 ODPacket auxPacket;
@@ -3423,6 +3464,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                            + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskRevealTiles without a draggable tile container");
+                break;
+            }
             unsigned int x1, y1;
 
             unsigned int length, width;
@@ -3431,7 +3477,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             
             width = mDraggableTileContainer->getMapSizeY();
             
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1);
+            if(!(packetReceived >> x1 >> y1))
+            {
+                OD_LOG_WRN("Ignored editorAskRevealTiles with an incomplete message");
+                break;
+            }
 
             gameMap->copyTilesWithOffsetInto( mDraggableTileContainer, 0, 0, length, width, mDraggableTileContainer->getPosition().x, mDraggableTileContainer->getPosition().y);
             
@@ -3468,9 +3518,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                            + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskRevealRooms without a draggable tile container");
+                break;
+            }
             unsigned int x1, y1, x2, y2;
             uint32_t nbRooms;
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2);
+            if(!(packetReceived >> x1 >> y1 >> x2 >> y2))
+            {
+                OD_LOG_WRN("Ignored editorAskRevealRooms with an incomplete message");
+                break;
+            }
             std::vector<Room*> affectedRooms;
 
             for(Room* room : gameMap->mRooms)
@@ -3534,8 +3593,17 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                            + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskRevealTraps without a draggable tile container");
+                break;
+            }
             unsigned int x1, y1, x2, y2;
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2);
+            if(!(packetReceived >> x1 >> y1 >> x2 >> y2))
+            {
+                OD_LOG_WRN("Ignored editorAskRevealTraps with an incomplete message");
+                break;
+            }
             std::vector<Trap*> affectedTraps;
 
             for(Trap* trap : gameMap->mTraps)
@@ -3557,7 +3625,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             for(Trap* trap : affectedTraps)
             {
                 int32_t seatId;
-                seatId = trap->getSeat()->getId();
+                seatId = (trap->getSeat() == nullptr ? -1 : trap->getSeat()->getId());
                 ODPacket auxPacket;
                 auxPacket << seatId;
                 uint32_t nbTiles = 0 ;
@@ -3591,7 +3659,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 }
                 if(!TrapManager::buildTrapEditor(mDraggableTileContainer, trap->getType(), auxPacket))
                 {
-                    OD_LOG_INF("WARNING: player seatId=" + Helper::toString(trap->getSeat()->getId())
+                    OD_LOG_INF("WARNING: player seatId=" + Helper::toString(seatId)
                                + " couldn't build trap: " + TrapManager::getTrapNameFromTrapType(trap->getType()));
                     break;
                 }                                     
