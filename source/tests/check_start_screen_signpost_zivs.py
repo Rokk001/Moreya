@@ -2,12 +2,19 @@
 """Check the start screen subtitle signpost, the removed title crest and the Ziv name of the worker (no compile).
 
 Start screen (config/mainmenuscene.cfg, overview pose of the menu camera):
-- the signpost MenuSignpost.mesh stands once in the scene, on the courtyard ground left of the gate, so that its board
-  (pointing along +X) points towards the gate; MenuTitleCrest.mesh is no longer placed, its mesh file stays;
+- the signpost MenuSignpost.mesh stands once in the scene, on the courtyard ground left of the gate; its board points
+  diagonally at the gate: the horizontal direction of the board front (measured from the mesh) lies inside the angle
+  the Gate entity covers seen from the post, the line of the board meets the gate front inside the gate opening, and
+  it is at least MIN_TURN_FROM_X_DEGREES away from +X; MenuTitleCrest.mesh is no longer placed, its mesh file stays;
 - the board material shows the lettered board texture; the lettering lies inside the lettering area of the board
-  (clear of the iron straps and the arrow tip) and the planks outside it are the plain planks;
-- seen from the overview pose the lettering is at least MIN_LETTER_PIXELS high at 1920x1080, lies on the screen and
-  left of the menu button column for every supported window aspect, and no scenery hides it.
+  (clear of the iron straps and the arrow tip);
+- board, lettering and post look old and weathered like the courtyard, not clean (style guide: dark, worn wood with
+  saturation <= 0.45, no near-white texels): the board and post textures have no bright texel and no bright or
+  saturated area, they are split by cracks, the post uses the weathered wood, and the letter paint is dull and
+  flaked yet stands out from the planks;
+- seen from the overview pose the lettering is at least MIN_LETTER_PIXELS high at 1920x1080 at both ends, the board
+  front faces the camera, the lettering lies on the screen and left of the menu button column for every supported
+  window aspect, and no scenery hides it.
 
 Ziv name: no player-facing text calls the worker "Worker"/"Workers" (layouts, C++ string literals that are not log or
 assert messages, player-facing config texts, level and campaign texts); the identifiers stay as they are. Exception by
@@ -20,27 +27,60 @@ import sys
 import time
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_menu_sky_below_horizon as scene  # noqa: E402  (numpy mesh reader of the menu scene check)
 
 #: Placement of the signpost, chosen once on this branch (left front of the courtyard, foot on the paving, its board
-#: between the replay camera flight and the left brazier).
-SIGNPOST_LINE = "AddEntity Signpost MenuSignpost.mesh -10.8 -11.1 -0.05"
-#: Board of MenuSignpost.mesh in mesh units (tools/blender-assets/moreya_raid_models.py): back end, tip, lower and
-#: upper edge and the front face.
+#: between the replay camera flight and the left brazier). Moved 1.3 m right and 2.4 m towards the camera on the
+#: INGAME-QS-12 branch, so that the board turned towards the gate ends short of the left brazier, stays clear of the
+#: replay flight (which now passes behind its back end) and its far end stays as readable as before.
+SIGNPOST_LINE = "AddEntity Signpost MenuSignpost.mesh -9.5 -13.5 -0.05"
+#: Board of MenuSignpost.mesh in the board frame (tools/blender-assets/moreya_raid_models.py, before the turn about
+#: the post foot by tools/menu_turn_signpost.py): back end, tip, lower and upper edge and the front face.
 BOARD_BACK, BOARD_TIP, BOARD_BOTTOM, BOARD_TOP, BOARD_FRONT_Y = -0.5, 3.5, 3.7, 4.7, -0.36
-#: Lettering box of tools/gen_menu_signpost_lettering.py and the painted letters measured once in its output
-#: (u from the back end, v from the upper edge).
+#: Board front vertices may differ from this layout by this much (mesh units).
+LAYOUT_TOLERANCE = 0.03
+#: Half width of the gate opening around the Gate entity position along X, measured once from MenuGate.mesh (the
+#: wall stones beside the portcullis end at about |x| 4 at 2 m height), and the smallest angle between the board
+#: direction and +X (the old direction, which pointed past the gate).
+GATE_OPENING_HALF_WIDTH = 4.0
+MIN_TURN_FROM_X_DEGREES = 30.0
+#: Lettering box of tools/gen_menu_signpost_lettering.py and the carved letters measured once in its letter mask
+#: (u from the back end, v from the upper edge). The flaked paint (texels brighter than PAINT_LUMINANCE) lies inside
+#: the carved letters and still spans at least MIN_PAINT_SPAN of their width and height.
 LETTER_BOX = (0.215, 0.17, 0.86, 0.83)
 LETTERS = (0.221, 0.371, 0.856, 0.627)
 LETTER_TOLERANCE = 0.004
-#: The planks left of u 0.19 (iron straps) and right of u 0.875 (arrow tip) stay the plain planks.
-PLAIN_LEFT, PLAIN_RIGHT = 0.19, 0.875
+PAINT_LUMINANCE = 60.0
+MIN_PAINT_SPAN = 0.9
+#: Weathering limits (style guide: wood saturation <= 0.45, no white speckles or near-white texels; the courtyard is
+#: dark and worn). Luminance is Rec. 601 in 0..255, saturation the HSV saturation, areas are blocks of BLOCK_PIXELS.
+MAX_TEXEL_LUMINANCE = 140.0
+MAX_BLOCK_LUMINANCE = 90.0
+MAX_MEAN_SATURATION = 0.40
+MAX_BLOCK_SATURATION = 0.45
+BLOCK_PIXELS = 16
+#: Cracks: share of the open wood whose texels are at most CRACK_RATIO as bright as their surroundings (Gaussian
+#: radius CRACK_RADIUS). On the board the open wood leaves out the plank joints, the edges and the letters with
+#: their soot rim (OPEN_WOOD_MARGIN board fractions, LETTER_RIM_PIXELS). Measured once: the clean board 0.0019 and
+#: the clean post wood 0.0021, the weathered board 0.0075 and the weathered post wood 0.0109.
+MIN_CRACK_SHARE = 0.005
+CRACK_RATIO = 0.3
+CRACK_RADIUS = 6
+OPEN_WOOD_MARGIN = (0.03, 0.05, 0.03)
+LETTER_RIM_PIXELS = 21
+#: The old paint stays dull (mean luminance of the letters), is flaked (share of letter texels still brighter than
+#: PAINT_LUMINANCE) and the letters stay readable (mean luminance against the planks just around them).
+MAX_PAINT_LUMINANCE = 110.0
+PAINT_COVER = (0.35, 0.92)
+MIN_LETTER_CONTRAST = 1.8
 #: Smallest height of the lettering at 1920x1080 seen from the overview pose (measured 19.2 pixels).
 MIN_LETTER_PIXELS = 18.0
+#: The board front faces the overview camera at least this much (cosine; 1 = straight at it).
+MIN_FACING = 0.7
 #: The menu button column of MenuMain.layout never reaches further left than 0.36 of the window width (640x480 at
 #: UI scale 120 %, measured once); the lettering ends left of this share.
 BUTTON_COLUMN_LEFT_SHARE = 0.35
@@ -86,10 +126,74 @@ def project(point, camera, screen):
     return screen[0] / 2.0 * (1.0 + ndc_x), screen[1] / 2.0 * (1.0 - ndc_y)
 
 
-def board_point(origin, u, v):
-    """World point of the board front at texture coordinates u (back end to tip) and v (upper to lower edge)."""
-    return origin + np.array([BOARD_BACK + u * (BOARD_TIP - BOARD_BACK), BOARD_FRONT_Y,
+def board_point(origin, u, v, yaw):
+    """World point of the board front at texture coordinates u (back end to tip) and v (upper to lower edge).
+
+    yaw is the turn of the board about the post foot in radians (0: the board points along +X).
+    """
+    local_x = BOARD_BACK + u * (BOARD_TIP - BOARD_BACK)
+    cosine, sine = math.cos(yaw), math.sin(yaw)
+    return origin + np.array([cosine * local_x - sine * BOARD_FRONT_Y, sine * local_x + cosine * BOARD_FRONT_Y,
                               BOARD_TOP - v * (BOARD_TOP - BOARD_BOTTOM)])
+
+
+def board_yaw(vertices, faces, materials):
+    """Returns the yaw (radians) of the board of MenuSignpost.mesh and the board front vertices in mesh units.
+
+    The direction is the horizontal main axis of the board front vertices (material MenuSignpostBoard), directed from
+    the post foot (mesh origin) towards the arrow tip.
+    """
+    used = faces[np.array([material == "MenuSignpostBoard" for material in materials])]
+    board = vertices[np.unique(used)]
+    flat = board[:, :2]
+    centre = flat.mean(axis=0)
+    axis = np.linalg.svd(flat - centre)[2][0]
+    if np.dot(axis, centre) < 0:
+        axis = -axis
+    return math.atan2(axis[1], axis[0]), board
+
+
+def angle_between(a, b):
+    """Unsigned angle in degrees between two horizontal directions given as angles in radians."""
+    return abs(math.degrees(math.atan2(math.sin(a - b), math.cos(a - b))))
+
+
+def texture_stats(rgb):
+    """Returns the luminance (0..255) and HSV saturation (0..1) arrays of an 8-bit RGB float array."""
+    luminance = rgb @ np.array([0.299, 0.587, 0.114])
+    high = rgb.max(axis=2)
+    saturation = np.where(high > 0, (high - rgb.min(axis=2)) / np.maximum(high, 1e-6), 0.0)
+    return luminance, saturation
+
+
+def block_means(values, size):
+    """Returns the means of the size x size blocks of a 2D array (cut to whole blocks)."""
+    height, width = (values.shape[0] // size) * size, (values.shape[1] // size) * size
+    return values[:height, :width].reshape(height // size, size, width // size, size).mean(axis=(1, 3))
+
+
+def check_weathered(name, rgb, failures, open_wood=None):
+    """A board or post texture is dark, dull and cracked like the courtyard: no bright texel, no bright or saturated
+    area, and splits in the open wood (all texels unless the boolean array open_wood is given). Returns the
+    luminance array."""
+    luminance, saturation = texture_stats(rgb)
+    if luminance.max() > MAX_TEXEL_LUMINANCE:
+        failures.append("%s has a near-white texel (luminance %.0f > %.0f)" % (name, luminance.max(), MAX_TEXEL_LUMINANCE))
+    bright = block_means(luminance, BLOCK_PIXELS).max()
+    if bright > MAX_BLOCK_LUMINANCE:
+        failures.append("%s has a clean bright area (block luminance %.0f > %.0f)" % (name, bright, MAX_BLOCK_LUMINANCE))
+    if saturation.mean() > MAX_MEAN_SATURATION:
+        failures.append("%s is too saturated for weathered wood (%.2f > %.2f)" % (name, saturation.mean(), MAX_MEAN_SATURATION))
+    saturated = block_means(saturation, BLOCK_PIXELS).max()
+    if saturated > MAX_BLOCK_SATURATION:
+        failures.append("%s has a saturated area (block saturation %.2f > %.2f)" % (name, saturated, MAX_BLOCK_SATURATION))
+    image = Image.fromarray(np.clip(luminance, 0, 255).astype(np.uint8), "L")
+    surroundings = np.asarray(image.filter(ImageFilter.GaussianBlur(CRACK_RADIUS)), dtype=float)
+    split = luminance < CRACK_RATIO * surroundings
+    cracks = (split[open_wood] if open_wood is not None else split).mean()
+    if cracks < MIN_CRACK_SHARE:
+        failures.append("%s shows no cracks or splits (%.4f of the texels, at least %.4f)" % (name, cracks, MIN_CRACK_SHARE))
+    return luminance
 
 
 def ray_hits(origin, direction, a, b, c):
@@ -123,43 +227,120 @@ def check_scene(failures):
         failures.append("models/MenuTitleCrest.mesh must stay in the repository")
     origin = np.array([float(value) for value in signposts[0][3:6]])
     gate = [words for words in entities if words[1] == "Gate"][0]
-    if not origin[0] < float(gate[3]):
-        failures.append("the board points along +X, so the signpost must stand left of the gate")
+    gate_position = np.array([float(value) for value in gate[3:6]])
 
-    # Material: the board shows the lettered copy of the plain planks.
+    # Direction: the board points from the post at the gate, not along +X.
+    vertices, faces, materials = scene.load_mesh(os.path.join(ROOT, "models", "MenuSignpost.mesh"))
+    yaw, board_vertices = board_yaw(vertices, faces, materials)
+    gate_points = scene.load_mesh(os.path.join(ROOT, "models", gate[2]))[0][:, :2] + gate_position[:2]
+    gate_angles = np.arctan2(gate_points[:, 1] - origin[1], gate_points[:, 0] - origin[0])
+    if not gate_angles.min() <= yaw <= gate_angles.max():
+        failures.append("the board points at %.1f degrees, outside the angle %.1f..%.1f the gate covers"
+                        % (math.degrees(yaw), math.degrees(gate_angles.min()), math.degrees(gate_angles.max())))
+    start = board_point(origin, 0.5, 0.5, yaw)
+    if math.sin(yaw) <= 0:
+        failures.append("the board points away from the gate (%.1f degrees)" % math.degrees(yaw))
+    else:
+        meets = start[0] + (gate_position[1] - start[1]) * math.cos(yaw) / math.sin(yaw)
+        if abs(meets - gate_position[0]) > GATE_OPENING_HALF_WIDTH:
+            failures.append("the board points at x %.1f of the gate front, outside the gate opening %.1f..%.1f"
+                            % (meets, gate_position[0] - GATE_OPENING_HALF_WIDTH,
+                               gate_position[0] + GATE_OPENING_HALF_WIDTH))
+    if angle_between(yaw, 0.0) < MIN_TURN_FROM_X_DEGREES:
+        failures.append("the board still points along +X (%.1f degrees)" % math.degrees(yaw))
+    # The board keeps its outline: turned back, its front matches the layout the letters are placed by.
+    cosine, sine = math.cos(-yaw), math.sin(-yaw)
+    local_x = cosine * board_vertices[:, 0] - sine * board_vertices[:, 1]
+    local_y = sine * board_vertices[:, 0] + cosine * board_vertices[:, 1]
+    front = np.abs(local_y - BOARD_FRONT_Y) < LAYOUT_TOLERANCE
+    if not front.any():
+        failures.append("the board front is not at its layout distance from the post")
+    else:
+        measured = (local_x[front].min(), local_x[front].max(), board_vertices[front, 2].min(), board_vertices[front, 2].max())
+        if any(abs(a - b) > LAYOUT_TOLERANCE for a, b in zip(measured, (BOARD_BACK, BOARD_TIP, BOARD_BOTTOM, BOARD_TOP))):
+            failures.append("the board front left its layout: %s" % (np.round(measured, 3),))
+
+    # Materials: the board shows the weathered lettered planks, the post the weathered wood.
     material = read("materials/scripts/MenuSignpost.material")
-    board = material.split("material MenuSignpostBoard", 1)[1]
+    board = material.split("material MenuSignpostBoard ", 1)[1].split("\nmaterial ", 1)[0]
     for texture in ("MenuSignpostBoardLettered.png", "MenuSignpostBoardLetteredNormal.png"):
         if texture not in board:
             failures.append("MenuSignpostBoard does not use " + texture)
+    if "MenuSignpostWood" in set(materials):
+        failures.append("the signpost still uses the clean wood MenuSignpostWood")
+    if "MenuSignpostWeatheredWood" not in set(materials):
+        failures.append("the signpost does not use the weathered wood MenuSignpostWeatheredWood")
+    post = material.split("material MenuSignpostWeatheredWood ", 1)[-1].split("\nmaterial ", 1)[0]
+    if "texture MenuSignpostWeatheredWood.png" not in post:
+        failures.append("MenuSignpostWeatheredWood does not use MenuSignpostWeatheredWood.png")
     folder = os.path.join(ROOT, "materials", "textures", "menu")
     lettered = np.asarray(Image.open(os.path.join(folder, "MenuSignpostBoardLettered.png")).convert("RGB"), dtype=float)
-    plain = np.asarray(Image.open(os.path.join(folder, "MenuSignpostBoard.png")).convert("RGB"), dtype=float)
-    if lettered.shape != plain.shape:
-        failures.append("the lettered board texture has another size than the plain board")
-        return
-    height, width = plain.shape[:2]
-    left, right = int(PLAIN_LEFT * width), int(math.ceil(PLAIN_RIGHT * width))
-    if not (np.array_equal(lettered[:, :left], plain[:, :left]) and np.array_equal(lettered[:, right:], plain[:, right:])):
-        failures.append("the straps and the arrow tip of the lettered board differ from the plain planks")
-    paint = lettered.mean(axis=2) > 120.0
+    height, width = lettered.shape[:2]
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gen_menu_signpost_lettering as lettering
+    mask = lettering.letter_mask(os.path.join(ROOT, "gui", "fonts", "MedievalSharp-Bold.ttf"), width, height)
+    rows = np.arange(height)[:, None] / float(height)
+    columns = np.arange(width)[None, :] / float(width)
+    rim = np.asarray(Image.fromarray((mask * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(LETTER_RIM_PIXELS)),
+                     dtype=float) > 0
+    joint, edge_v, edge_u = OPEN_WOOD_MARGIN
+    open_wood = (~rim & (np.abs(rows - 1.0 / 3.0) > joint) & (np.abs(rows - 2.0 / 3.0) > joint)
+                 & (rows > edge_v) & (rows < 1.0 - edge_v) & (columns > edge_u) & (columns < 1.0 - edge_u))
+    luminance = check_weathered("the lettered board", lettered, failures, open_wood)
+    post_path = os.path.join(folder, "MenuSignpostWeatheredWood.png")
+    if os.path.isfile(post_path):
+        check_weathered("the post wood", np.asarray(Image.open(post_path).convert("RGB"), dtype=float), failures)
+    else:
+        failures.append("the weathered post wood MenuSignpostWeatheredWood.png is missing")
+
+    # The old paint: dull, flaked, and the letters still stand out from the planks.
+    inside = mask > 0.5
+    grown = np.asarray(Image.fromarray((mask * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(15)), dtype=float)
+    ring = (grown > 0) & (mask < 0.02)
+    if luminance[inside].mean() > MAX_PAINT_LUMINANCE:
+        failures.append("the letter paint is bright and clean (mean luminance %.0f > %.0f)"
+                        % (luminance[inside].mean(), MAX_PAINT_LUMINANCE))
+    cover = (luminance[inside] > PAINT_LUMINANCE).mean()
+    if not PAINT_COVER[0] <= cover <= PAINT_COVER[1]:
+        failures.append("the letter paint covers %.2f of the letters, not worn to %.2f..%.2f" % ((cover,) + PAINT_COVER))
+    if luminance[inside].mean() < MIN_LETTER_CONTRAST * luminance[ring].mean():
+        failures.append("the letters do not stand out from the planks (%.0f against %.0f)"
+                        % (luminance[inside].mean(), luminance[ring].mean()))
+    paint = luminance > PAINT_LUMINANCE
     rows, columns = np.nonzero(paint)
     if len(rows) == 0:
         failures.append("the lettered board shows no painted letters")
         return
     box = (columns.min() / float(width), rows.min() / float(height), columns.max() / float(width), rows.max() / float(height))
-    if box[0] < LETTER_BOX[0] or box[1] < LETTER_BOX[1] or box[2] > LETTER_BOX[2] or box[3] > LETTER_BOX[3]:
-        failures.append("the letters leave the lettering box: %s" % (box,))
-    if any(abs(measured - expected) > LETTER_TOLERANCE for measured, expected in zip(box, LETTERS)):
-        failures.append("the letters cover u %.3f..%.3f, v %.3f..%.3f instead of %s" % (box[0], box[2], box[1], box[3], LETTERS))
+    carved_rows, carved_columns = np.nonzero(inside)
+    carved = (carved_columns.min() / float(width), carved_rows.min() / float(height),
+              carved_columns.max() / float(width), carved_rows.max() / float(height))
+    if carved[0] < LETTER_BOX[0] or carved[1] < LETTER_BOX[1] or carved[2] > LETTER_BOX[2] or carved[3] > LETTER_BOX[3]:
+        failures.append("the letters leave the lettering box: %s" % (carved,))
+    if any(abs(measured - expected) > LETTER_TOLERANCE for measured, expected in zip(carved, LETTERS)):
+        failures.append("the letters cover u %.3f..%.3f, v %.3f..%.3f instead of %s"
+                        % (carved[0], carved[2], carved[1], carved[3], LETTERS))
+    if box[0] < LETTERS[0] - LETTER_TOLERANCE or box[1] < LETTERS[1] - LETTER_TOLERANCE             or box[2] > LETTERS[2] + LETTER_TOLERANCE or box[3] > LETTERS[3] + LETTER_TOLERANCE:
+        failures.append("paint lies outside the carved letters: %s" % (box,))
+    if box[2] - box[0] < MIN_PAINT_SPAN * (LETTERS[2] - LETTERS[0]) or box[3] - box[1] < MIN_PAINT_SPAN * (LETTERS[3] - LETTERS[1]):
+        failures.append("the paint is gone from whole letters: it spans %s of %s" % (box, LETTERS))
 
     # Size and place of the lettering on the screen.
     camera = overview_camera()
-    corners = [board_point(origin, u, v) for u in (LETTERS[0], LETTERS[2]) for v in (LETTERS[1], LETTERS[3])]
-    top = project(board_point(origin, LETTERS[0], LETTERS[1]), camera, (1920, 1080))
-    bottom = project(board_point(origin, LETTERS[0], LETTERS[3]), camera, (1920, 1080))
-    if bottom[1] - top[1] < MIN_LETTER_PIXELS:
-        failures.append("the lettering is %.1f pixels high at 1920x1080, less than %.0f" % (bottom[1] - top[1], MIN_LETTER_PIXELS))
+    corners = [board_point(origin, u, v, yaw) for u in (LETTERS[0], LETTERS[2]) for v in (LETTERS[1], LETTERS[3])]
+    for u in (LETTERS[0], LETTERS[2]):
+        top = project(board_point(origin, u, LETTERS[1], yaw), camera, (1920, 1080))
+        bottom = project(board_point(origin, u, LETTERS[3], yaw), camera, (1920, 1080))
+        if bottom[1] - top[1] < MIN_LETTER_PIXELS:
+            failures.append("the lettering is %.1f pixels high at 1920x1080 at u %.3f, less than %.0f"
+                            % (bottom[1] - top[1], u, MIN_LETTER_PIXELS))
+    # The turned board still shows its front to the overview camera.
+    normal = np.array([math.sin(yaw), -math.cos(yaw), 0.0])
+    centre = board_point(origin, 0.5 * (LETTERS[0] + LETTERS[2]), 0.5 * (LETTERS[1] + LETTERS[3]), yaw)
+    towards = (camera[0] - centre) / np.linalg.norm(camera[0] - centre)
+    if np.dot(normal, towards) < MIN_FACING:
+        failures.append("the board front turns away from the overview camera (cosine %.2f < %.2f)"
+                        % (np.dot(normal, towards), MIN_FACING))
     for screen in ASPECTS:
         points = [project(corner, camera, screen) for corner in corners]
         xs = [point[0] for point in points]
@@ -187,7 +368,7 @@ def check_scene(failures):
     triangles = np.concatenate(triangles)
     position = camera[0]
     # Only triangles in front of the board and inside the cone towards it can hide the lettering.
-    target = board_point(origin, 0.5 * (LETTERS[0] + LETTERS[2]), 0.5 * (LETTERS[1] + LETTERS[3]))
+    target = board_point(origin, 0.5 * (LETTERS[0] + LETTERS[2]), 0.5 * (LETTERS[1] + LETTERS[3]), yaw)
     axis = (target - position) / np.linalg.norm(target - position)
     reach = np.linalg.norm(target - position)
     radius = 0.5 * (LETTERS[2] - LETTERS[0]) * (BOARD_TIP - BOARD_BACK) + 0.5
@@ -201,7 +382,7 @@ def check_scene(failures):
     samples = 0
     for u in np.linspace(LETTERS[0], LETTERS[2], 9):
         for v in np.linspace(LETTERS[1], LETTERS[3], 3):
-            point = board_point(origin, u, v)
+            point = board_point(origin, u, v, yaw)
             direction = point - position
             distance = np.linalg.norm(direction)
             samples += 1
