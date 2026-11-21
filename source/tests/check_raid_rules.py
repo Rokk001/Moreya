@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Non-compiling check of the rules of the raid (raid plan R2: RA2 countdown, RA3 early opening, RA4 raid groups with
 interval, RA5 leader in his group, RA7 plundering with the carry amount of R10, RA8 leader escape, RA9 victory, RA1 gate
-unclaimable and indestructible).
+unclaimable and indestructible, walked through when open and blocked by its portcullis when closed).
 
 Every rule is checked twice: a Python model written from the rule computes fixed scenarios whose expected results are
 written in this file, and the C++ source of source/game/RaidRules.cpp and of the engine side (RaidManager, the hero
@@ -305,6 +305,16 @@ check('"MoreyaGate"' in position and '"MoreyaGatePortcullis"' in function(PORTAL
       "RA1: the gate shows the gate model with its portcullis")
 check("-portcullisSink" in function(PORTAL, "void RoomPortalWave::setMoreyaGateOpen("),
       "RA3: the portcullis sinks into the floor when the gate opens")
+# RA1/RA3: walking at the gate: the arch is walked through, the closed portcullis blocks, the sunk (open) one does not
+BOUNDS_H = read("source/gamemap/RoomObjectBounds.h")
+NAVIGATION = read("source/gamemap/RoomObjectNavigation.cpp")
+check('{"MoreyaGate", ' in BOUNDS_H and '{"MoreyaGatePortcullis", ' in BOUNDS_H,
+      "RA1: both gate models are in the navigation catalog")
+collect = function(NAVIGATION, "std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(")
+check("object->getMeshName() == RoomObjectPath::MOREYA_GATE_MESH ||" in collect,
+      "RA1: the gate arch is no obstacle (the raid walks through it)")
+check("(object->getMeshName() == RoomObjectPath::MOREYA_PORTCULLIS_MESH && object->getPosition().z < 0.0f) ||" in collect,
+      "RA3: only the sunk portcullis of an open gate is left out; a closed portcullis stays an obstacle")
 
 elapsed = time.perf_counter() - START
 print('ODP_TEST_PHASE {"name":"rules","seconds":%.3f}' % elapsed)

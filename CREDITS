@@ -1068,137 +1068,6 @@ materials/textures/Creature{Angry,Furious,Hungry,KO,Leaving,Paid,Prisoner,RallyT
 
 
 
-===================================
-==  Hollowmark campaign artwork  ==
-===================================
-
-gui/campaign/previews/*.png            AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-10), see "Hollowmark campaign artwork" below; 31 painted chapter scenes, prompts and identity references in materials/campaign-previews/*.md
-gui/campaign/campaign-world.json    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/preview_states.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T01_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T01_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T01_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T01_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T02_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T02_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T02_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T02_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T03_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T03_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T03_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T03_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T04_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T04_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T04_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T04_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T05_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T05_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T05_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T05_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T06_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T06_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T06_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T06_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T07_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T07_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T07_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T07_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T08_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T08_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T08_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T08_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T09A_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T09A_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T09A_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T09A_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T09B_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T09B_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T09B_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T09B_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T10_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T10_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T10_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T10_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T11_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T11_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T11_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T11_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T12_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T12_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T12_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T12_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T13_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T13_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T13_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T13_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T14_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T14_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T14_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T14_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T15_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T15_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T15_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T15_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T16_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T16_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T16_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T16_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T17_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T17_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T17_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T17_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T18A_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T18A_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T18A_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T18A_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T18B_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T18B_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T18B_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T18B_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T19_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T19_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T19_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T19_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T20_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T20_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T20_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T20_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T21_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T21_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T21_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T21_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T22_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T22_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T22_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T22_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T23_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T23_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T23_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T23_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T24_available.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T24_conquered.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T24_lift.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/provinces/T24_locked.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B01_done.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B01_found.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B01_hidden.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B02_done.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B02_found.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B02_hidden.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B03_done.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B03_found.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B03_hidden.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B04_done.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B04_found.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B04_hidden.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B05_done.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B05_found.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/sites/B05_hidden.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/world_base.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-gui/campaign/world_idmap.png    AI-generated with Codex, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-tools/artwork/campaign-map/PROMPTS.md    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-tools/artwork/campaign-map/validate_world.py    AI-generated for this project, 2026-10, GPLv3+, prompts in tools/artwork/campaign-map/PROMPTS.md
-
 =======================================================
 ==  Hatchery visuals: egg, nest, rooster, effects    ==
 =======================================================
@@ -1340,7 +1209,6 @@ materials/textures/menu/MenuTornCloth.png, materials/textures/menu/MenuTornCloth
 materials/textures/menu/MenuTitle.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; transparent massive bevelled stone-and-metal Moreya lettering in orange, with riveted repairs, deep side faces, corrosion and emissive cracks. The single texture can be replaced to rename the hanging title without replacing its model.
 materials/textures/menu/MenuBat.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; original transparent dark bat silhouette for the capped distant swarm effect.
 materials/textures/menu/MenuCrow.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; original transparent ragged crow silhouette for a separate capped distant swarm effect.
-materials/textures/menu/MenuCampaignMap.png OD Team             GPLv3+                  Exact reuse of this project's AI-generated gui/campaign/world_base.png, credited above, on the campaign table; no changes to the map.
 tools/blender-assets/menu_scene_models.py OD Team                GPLv3+                  Original AI-generated Blender source generator for the fortress models.
 materials/scripts/MenuScene.material, particles/MenuScene.particle OD Team GPLv3+       Original AI-authored scene materials and looping effects generated for this project; the credited stone, paving, guardian stone, iron and cloth texture pairs supply albedo and matching normals. Original dark blood, slime, ash, bone, web and lunar surfaces accompany green tower scatter, volcanic horizon heat, red cracks, bowl smoke, grave vapour and windblown embers. Generated bat/crow silhouettes provide distinct capped swarm effects; smoke and fire reuse the project's credited particle textures. Surface colour overrides and tangent-space normals share the same lighting pass to preserve the authored textured fortress appearance.
 assets-src/menu-scene/MenuSceneAssembly.blend OD Team            GPLv3+                  Own AI-authored Blender assembly of this project's fortress families, individual damage variants and original graveyard props at configured positions. Native skeletal loops, animated fire volumes, point-light flicker, low grave vapour, rising smoke, ash and swarms map the original scene effects. Packed images contain the five credited albedo/normal pairs, existing campaign map, three generated title/bird images and the project's credited RoomAmbSmoke.png for lunar cloud tatters. Every placed prop retains its independently exported source and credits above.
@@ -2405,14 +2273,15 @@ particles/RoomAmbienceSpells.particle (SpellCreaturePlague)    OD Team    GPLv3+
 ==  Moreya campaign map  ==
 ======================================
 
+gui/campaign/campaign-world.json    OD Team    GPLv3+    Own work: description of the campaign map of Moreya (6 wings with 3 level caves and 1 bonus cave each, gate, guild panel), written with Claude Code (AI-assisted), 2026-11-20; no external source
 gui/campaign/moreya/moreya_map.png    OD Team    GPLv3+    PLACEHOLDER without text, own work: drawn from simple shapes (wing colour and level shape) by a procedural Python script written with Claude Code (AI-assisted), script kept outside the repository; no external source; replaced later by the painted image under the same name, 2026-11-20 (map of Moreya)
-gui/campaign/moreya/cave_locked.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes by tools/artwork/moreya-map/make_placeholders.py from gui/campaign/campaign-world.json, text set in Source Serif 4 (SIL OFL 1.1, gui/fonts); no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
-gui/campaign/moreya/cave_current.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes by tools/artwork/moreya-map/make_placeholders.py from gui/campaign/campaign-world.json, text set in Source Serif 4 (SIL OFL 1.1, gui/fonts); no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
-gui/campaign/moreya/cave_defeated.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes by tools/artwork/moreya-map/make_placeholders.py from gui/campaign/campaign-world.json, text set in Source Serif 4 (SIL OFL 1.1, gui/fonts); no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
-gui/campaign/moreya/bonus_found.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes by tools/artwork/moreya-map/make_placeholders.py from gui/campaign/campaign-world.json, text set in Source Serif 4 (SIL OFL 1.1, gui/fonts); no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
-gui/campaign/moreya/bonus_cleared.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes by tools/artwork/moreya-map/make_placeholders.py from gui/campaign/campaign-world.json, text set in Source Serif 4 (SIL OFL 1.1, gui/fonts); no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
-gui/campaign/moreya/wing_defeated.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes by tools/artwork/moreya-map/make_placeholders.py from gui/campaign/campaign-world.json, text set in Source Serif 4 (SIL OFL 1.1, gui/fonts); no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
-gui/campaign/moreya/cave_hover.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes by tools/artwork/moreya-map/make_placeholders.py from gui/campaign/campaign-world.json, text set in Source Serif 4 (SIL OFL 1.1, gui/fonts); no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
+gui/campaign/moreya/cave_locked.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes without text by a procedural Python script (tools/artwork/moreya-map/make_placeholders.py, removed from the repository with the text-drawing placeholders it also made) from gui/campaign/campaign-world.json; no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
+gui/campaign/moreya/cave_current.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes without text by a procedural Python script (tools/artwork/moreya-map/make_placeholders.py, removed from the repository with the text-drawing placeholders it also made) from gui/campaign/campaign-world.json; no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
+gui/campaign/moreya/cave_defeated.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes without text by a procedural Python script (tools/artwork/moreya-map/make_placeholders.py, removed from the repository with the text-drawing placeholders it also made) from gui/campaign/campaign-world.json; no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
+gui/campaign/moreya/bonus_found.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes without text by a procedural Python script (tools/artwork/moreya-map/make_placeholders.py, removed from the repository with the text-drawing placeholders it also made) from gui/campaign/campaign-world.json; no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
+gui/campaign/moreya/bonus_cleared.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes without text by a procedural Python script (tools/artwork/moreya-map/make_placeholders.py, removed from the repository with the text-drawing placeholders it also made) from gui/campaign/campaign-world.json; no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
+gui/campaign/moreya/wing_defeated.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes without text by a procedural Python script (tools/artwork/moreya-map/make_placeholders.py, removed from the repository with the text-drawing placeholders it also made) from gui/campaign/campaign-world.json; no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
+gui/campaign/moreya/cave_hover.png    OD Team    GPLv3+    PLACEHOLDER, AI-generated (procedural Python script written with Claude Code): drawn from simple shapes without text by a procedural Python script (tools/artwork/moreya-map/make_placeholders.py, removed from the repository with the text-drawing placeholders it also made) from gui/campaign/campaign-world.json; no external source; replaced later by the painted image under the same name, 2026-11-20 (cave marker)
 gui/campaign/banners/mud-fists.png    OD Team    GPLv3+    PLACEHOLDER without text, own work: drawn from simple shapes (wing colour and level shape) by a procedural Python script written with Claude Code (AI-assisted), script kept outside the repository; no external source; replaced later by the painted image under the same name, 2026-11-20 (guild banner)
 gui/campaign/portraits/elsa-brack.png    OD Team    GPLv3+    PLACEHOLDER without text, own work: drawn from simple shapes (wing colour and level shape) by a procedural Python script written with Claude Code (AI-assisted), script kept outside the repository; no external source; replaced later by the painted image under the same name, 2026-11-20 (leader portrait)
 gui/campaign/banners/iron-latch.png    OD Team    GPLv3+    PLACEHOLDER without text, own work: drawn from simple shapes (wing colour and level shape) by a procedural Python script written with Claude Code (AI-assisted), script kept outside the repository; no external source; replaced later by the painted image under the same name, 2026-11-20 (guild banner)

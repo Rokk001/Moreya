@@ -461,6 +461,16 @@ check("setRaidMemberDetached(follower, true);" in load, "C3: the followers leave
 check("Follower RaidGroupId CreatureName" in function(MANAGER, "std::string RaidManager::getStreamFormat()"),
       "C3: the format comment names the new lines")
 check("mLoot.clear();" in function(MANAGER, "void RaidManager::clear()"), "C3: a new level forgets the loot")
+# The speed of a creature is not saved: a loaded flight gets its running speed again on the first turn
+restore = function(MANAGER, "void RaidManager::restoreFlightSpeed()")
+check("group.mLeaderState != RaidLeaderState::fleeing" in restore and "group.mEscapedMembers" in restore and
+      "setMoveSpeedModifier(LevelScriptRunner::getRunSpeedFactor())" in restore,
+      "C3: a loaded fleeing leader and his followers still on the map run again")
+update = function(MANAGER, "void RaidManager::update()")
+check(update.index("setUpGate();") < update.index("restoreFlightSpeed();") < update.index("updateLeaders();"),
+      "C3: the running speed is restored on the first turn after loading, before the flight goes on")
+check("mGateShown = false;" in function(MANAGER, "void RaidManager::clear()"),
+      "C3: every loaded game shows the gate again and so restores the running speed")
 
 # ------------------------------------------------------------------------------------------------ G8 / G9
 

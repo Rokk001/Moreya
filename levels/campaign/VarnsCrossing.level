@@ -4844,7 +4844,7 @@ Member	1	Dwarf2	7	-	Berserker
 Member	1	Dwarf2	7	-	Berserker
 Member	1	Adventurer	7	-	Shade
 Member	1	Adventurer	7	-	Shade
-Member	1	Adventurer	7	-	Shade
+Member	1	Wizard	7	-	Healer
 Member	1	Elf	7	-	Marksman
 Member	1	Elf	7	-	Marksman
 Member	1	Elf	7	-	Marksman
@@ -4869,8 +4869,8 @@ Member	2	Dwarf2	7	-	Berserker
 Member	2	Dwarf2	7	-	Berserker
 Member	2	Dwarf2	7	-	Berserker
 Member	2	Wizard	7	-	Healer
-Member	2	Wizard	7	-	Healer
-Member	2	Wizard	7	-	Healer
+Member	2	Adventurer	7	-	Shade
+Member	2	Adventurer	7	-	Shade
 Member	2	Elf	7	-	Marksman
 Member	2	Elf	7	-	Marksman
 Member	2	Elf	7	-	Marksman

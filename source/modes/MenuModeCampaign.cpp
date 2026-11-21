@@ -874,8 +874,8 @@ void MenuModeCampaign::updateHover(size_t cave)
     mHoverWindow->setVisible(true);
 }
 
-//! \brief Names the cave under the mouse: level title, wing, guild, state and difficulty. The tooltip is scaled with
-//! the layout and kept inside the map.
+//! \brief Names the cave under the mouse: level title, wing, guild and state (a level has no difficulty of its
+//! own). The tooltip is scaled with the layout and kept inside the map.
 void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cave)
 {
     if(mTooltip == nullptr)

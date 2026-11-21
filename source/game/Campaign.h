@@ -108,7 +108,7 @@ struct CampaignSave
 //!   Title=Some title
 //!   Briefing=Text shown before the level. "\n" starts a new line.
 //!   Debriefing=Text shown after the level was won.
-//!   Preview=previews/T01.png (optional) briefing image relative to gui/campaign.
+//!   Preview=previews/wing1-level1.png (optional) briefing image relative to gui/campaign.
 //!   Wing=1 the wing of Moreya the level belongs to (bonus levels too).
 //!   Bonus=1 (optional) marks a bonus level.
 //!   Shard=1 (optional) the story level hides a shard of the Heartstone.

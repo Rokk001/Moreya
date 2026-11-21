@@ -234,7 +234,11 @@ void RaidManager::update()
     }
 
     if(!mGateShown)
+    {
         setUpGate();
+        // The first turn of a level or of a loaded game: the creatures of a saved flight exist now and run again
+        restoreFlightSpeed();
+    }
 
     if(!mLost)
         advanceSchedule(1.0 / ODApplication::turnsPerSecond);
@@ -770,6 +774,31 @@ void RaidManager::endFlight(RaidGroupData& group)
     group.mLeaderState = RaidLeaderState::none;
     OD_LOG_INF("Raid leader " + group.mLeaderSpawned + " fell during his flight, " + Helper::toString(released)
         + " followers fight again");
+}
+
+//! \brief Gives a fleeing leader and his followers that did not escape yet their running speed again (the speed is
+//! not saved, the flight is: Leader and Follower lines of the [Raid] section).
+void RaidManager::restoreFlightSpeed()
+{
+    for(const RaidGroupData& group : mGroups)
+    {
+        if(group.mLeaderState != RaidLeaderState::fleeing)
+            continue;
+
+        std::vector<std::string> fleeing(1, group.mLeaderSpawned);
+        for(const std::string& follower : group.mFollowers)
+        {
+            if(std::find(group.mEscapedMembers.begin(), group.mEscapedMembers.end(), follower) ==
+               group.mEscapedMembers.end())
+                fleeing.push_back(follower);
+        }
+        for(const std::string& name : fleeing)
+        {
+            Creature* creature = mGameMap.getCreature(name);
+            if((creature != nullptr) && creature->isAlive())
+                creature->setMoveSpeedModifier(LevelScriptRunner::getRunSpeedFactor());
+        }
+    }
 }
 
 //! \brief The follower leaves the map through the gate with its gold and items; it counts as defeated (isStanding no

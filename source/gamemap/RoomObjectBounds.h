@@ -71,6 +71,8 @@ static const MeshBounds meshBounds[] = {
     {"KnightStatue2", -.323145f, -.358743f, .332038f, .367767f},
     {"LizardmanBed", -.32835f, -.77042f, .328337f, .769587f, .952407f},
     {"MerchantShelf", -.435f, -.28f, .45f, .215f},
+    {"MoreyaGate", -1.79931f, -.659372f, 1.79931f, .659372f},
+    {"MoreyaGatePortcullis", -.909357f, -.014077f, .917172f, .0630372f},
     {"MushroomLamp", -.29f, -.29f, .29f, .29f},
     {"OrcBed", -.533745f, -.997136f, .529433f, .987434f, .560469f},
     {"Podium", -.193612f, -.148315f, .193891f, .148315f},
@@ -115,6 +117,18 @@ static const std::string HEART_MESH_CRITICAL = "DungeonHeartObjectCritical";
 inline bool isDungeonHeartMesh(const std::string& name)
 {
     return name == HEART_MESH_HEALTHY || name == HEART_MESH_DAMAGED || name == HEART_MESH_CRITICAL;
+}
+
+//! Names of the Moreya gate models (see RoomPortalWave.cpp): the arch and its portcullis. They have to match the
+//! entries of meshBounds. The arch is walked through; the portcullis blocks the passage while the gate is closed and
+//! is sunk below the floor while it is open.
+static const std::string MOREYA_GATE_MESH = "MoreyaGate";
+static const std::string MOREYA_PORTCULLIS_MESH = "MoreyaGatePortcullis";
+
+//! \brief Returns true if name is the arch or the portcullis of the Moreya gate.
+inline bool isMoreyaGateMesh(const std::string& name)
+{
+    return name == MOREYA_GATE_MESH || name == MOREYA_PORTCULLIS_MESH;
 }
 
 //! Names of the pool pieces of the lava spa. Creatures walk over them (the mud only hides the lower body), so they are
@@ -187,7 +201,7 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
     if(name == "TavernCounter")
         return {1.0f / (bounds.maxX - bounds.minX), 1.0f};
     if(name == "FenceCorner" || name == "FenceStraight" || name == "PrisonDoor" ||
-       name == "PortalObject" || isDungeonHeartMesh(name) ||
+       name == "PortalObject" || isMoreyaGateMesh(name) || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
        name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
        name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron" || name == "ManaStill" || name == "GhostPress" ||

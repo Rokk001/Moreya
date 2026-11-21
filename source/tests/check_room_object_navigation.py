@@ -270,7 +270,8 @@ int main(){
   object.mesh=row.name;object.angle=rotation;object.pos={5,5,0};
   const float angle=rotation*.01745329252f;
   const auto placed=RoomObjectNavigation::collect(map,0);
-  if(object.mesh=="PortalObject"||RoomObjectPath::isDungeonHeartMesh(object.mesh)||object.mesh=="GhostBell"||object.mesh=="GhostHook"||
+  // The arch of the Moreya gate is walked through like the portal; its portcullis is checked as furniture (closed)
+  if(object.mesh=="PortalObject"||object.mesh==RoomObjectPath::MOREYA_GATE_MESH||RoomObjectPath::isDungeonHeartMesh(object.mesh)||object.mesh=="GhostBell"||object.mesh=="GhostHook"||
    object.mesh=="GhostHookEmpty"||object.mesh=="GhostWallGauges"||object.mesh=="GhostRack"||RoomObjectPath::isWalkableSpaMesh(object.mesh)){
    check(placed.empty(),"portal and dungeon heart do not create furniture blockers");
    for(const auto& model:RoomObjectPath::walkingRadii)for(int level:{1,30}){

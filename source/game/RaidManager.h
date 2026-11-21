@@ -230,6 +230,10 @@ private:
     //! fleeing, rejoin their raid group and fight again, and the leader state goes back to none.
     void endFlight(RaidGroupData& group);
 
+    //! \brief Gives a fleeing leader and his followers that did not escape yet their running speed again. The speed of
+    //! a creature is not part of a saved game, so a flight that was saved goes on at running speed after loading.
+    void restoreFlightSpeed();
+
     //! \brief The leader reached the gate: he leaves the map with what he carries and the level is lost.
     void escape(RaidGroupData& group, Creature& leader);
 
