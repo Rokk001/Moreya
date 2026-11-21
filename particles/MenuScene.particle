@@ -379,6 +379,8 @@ particle_system MenuBatSwarm
 }
 
 // Separate generated crow silhouettes remain irregular and distinct from the bat swarm.
+// No longer placed in the menu scene: its sprites appeared and faded inside the open sky. The crows at the moon are
+// the animated SkyCrow entities of config/mainmenuscene.cfg; the Blender preview of the menu still shows this swarm.
 particle_system MenuCrowSwarm
 {
     material MenuCrowSprite
