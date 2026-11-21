@@ -4920,7 +4920,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
 
     creatureOverlay->displayHealthOverlay(mCreatureTextOverlayDisplayed ? -1.0 : 0.0);
 
-    curCreature->showOutliner();
+    // No seat-colour outline: a creature is drawn in its normal colours until the pointer is over it (maxAmbient)
     rrRefreshCreatureGoldSack(curCreature);
 }
 
@@ -4978,7 +4978,7 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
     curCreature->setOverlayStatus(creatureOverlay);
     creatureOverlay->displayHealthOverlay(mCreatureTextOverlayDisplayed ? -1.0 : 0.0);
 
-    curCreature->showOutliner();
+    // No seat-colour outline on the new entity either (see rrCreateCreature)
 
     rrSetObjectAnimationState(curCreature, animName, animLoop);
 }
@@ -8767,11 +8767,10 @@ void RenderManager::rrRemoveOutliner(Creature* creature)
 
         Ogre::SubEntity *tempSubEntity = ent->getSubEntity(i);        
         std::string materialName = tempSubEntity->getMaterialName();
+        // A creature that is not marked (for example one that got a new entity while under the cursor) has none
         if(materialName.find("##_Outliner") == std::string::npos)
-        {
-            OD_LOG_ERR("Called rrRemoveOutliner on creature, which has currently no Outliner=: " + entityName + "with material " + materialName);
-            return ;
-        }    
+            continue;
+
         size_t pp = materialName.find("##_Outliner");
         materialName.erase(materialName.begin() + pp, materialName.end());
         Ogre::MaterialPtr  myMaterialPtr = Ogre::MaterialManager::getSingletonPtr()->getByName(materialName,"Graphics");
@@ -8828,11 +8827,10 @@ void RenderManager::rrNormalizeAmbient(Creature* creature)
 
         Ogre::SubEntity *tempSubEntity = ent->getSubEntity(i);        
         std::string materialName = tempSubEntity->getMaterialName();
+        // A creature that is not marked (for example one that got a new entity while under the cursor) has none
         if(materialName.find("##_Brighter") == std::string::npos)
-        {
-            OD_LOG_ERR("Called rrRemoveBrighter on creature, which has currently no Brighter=: " + entityName + "with material " + materialName);
-            return ;
-        }    
+            continue;
+
         size_t pp = materialName.find("##_Brighter");
         materialName.erase(materialName.begin() + pp, materialName.end());
         Ogre::MaterialPtr  myMaterialPtr = Ogre::MaterialManager::getSingletonPtr()->getByName(materialName,"Graphics");
