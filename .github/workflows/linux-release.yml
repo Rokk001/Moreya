@@ -174,7 +174,8 @@ jobs:
             -DOD_TREAT_WARNINGS_AS_ERRORS=OFF
 
       - name: Build game
-        run: cmake --build build --target opendungeons-plus
+        # -k 0 reports every failing file in one run
+        run: cmake --build build --target opendungeons-plus -- -k 0
 
       - name: Package
         id: package
