@@ -25,6 +25,17 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
+        <!-- One message for the player shown when the menu opens, such as a lost server connection (MenuModeMain::activate). -->
+        <Window type="OD/StaticText" name="NoticeText" >
+            <Property name="Visible" value="False" />
+            <Property name="Area" value="{{0.5,-320},{0,30},{0.5,320},{0,62}}" />
+            <Property name="Text" value="" />
+            <Property name="MaxSize" value="{{1,0},{1,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
 
         <Window type="OD/MenuTextButton" name="StartCampaignButton" >
             <Property name="Font" value="MedievalSharp-13" />

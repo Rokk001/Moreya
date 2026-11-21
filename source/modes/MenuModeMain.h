@@ -59,6 +59,8 @@ private:
     bool mSettingsPageOpen = false;
     //! True while the menu waits for the flight to end before it shows the skirmish sub-menu
     bool mSkirmishSubMenuPending = false;
+    //! True while the menu waits for the flight to end before it shows the multiplayer sub-menu
+    bool mMultiplayerSubMenuPending = false;
     //! True while overview entries wait for the outside arrival or return flight to finish.
     bool mOverviewPending = false;
     //! Existing submenu waiting for its configured scene flight to finish.
