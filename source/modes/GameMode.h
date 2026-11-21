@@ -556,7 +556,8 @@ private:
     int32_t mTimeLimitShown = -1;
     //! \brief Seconds of the wave countdown that is shown on the HUD, -1 while it is hidden
     int32_t mWaveCountdownShown = -1;
-    //! \brief Seconds of the raid countdown that is shown on the HUD, -1 while the raid panel is hidden
+    //! \brief Seconds of the raid countdown that is shown on the HUD, -1 while the raid panel is hidden, -2 while it
+    //! shows that a raid group waits for the player
     int32_t mRaidCountdownShown = -1;
     //! \brief True when the raid panel shows the countdown to the raid with the open gate button
     bool mRaidGateClosedShown = false;

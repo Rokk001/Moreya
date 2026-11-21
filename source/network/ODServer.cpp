@@ -1127,7 +1127,7 @@ void ODServer::launchGame()
 //! \brief Loads the level as startServer does, but without socket and master server, and configures the seats as the
 //! seat configuration of a single player game does, without clients: the human seat gets a human player who gives no
 //! orders (or a computer keeper), computer seats their computer keeper and inactive seats an inactive player.
-int32_t ODServer::startHeadlessGame(const std::string& levelFilename, bool keeperAi)
+int32_t ODServer::startHeadlessGame(const std::string& levelFilename, bool keeperAi, KeeperAIType campaignLevel)
 {
     mSeatsConfigured = false;
     mServerMode = ServerMode::ModeGameSinglePlayer;
@@ -1174,8 +1174,12 @@ int32_t ODServer::startHeadlessGame(const std::string& levelFilename, bool keepe
             humanSeatId = seat->getId();
             if(keeperAi)
             {
-                player = new Player(gameMap, 0);
+                // A computer keeper plays the seat, but the seat stays the human player's: the level script keeps
+                // the objective states of human players only, and the goals of the level are the human player's
+                player = new Player(gameMap, Seat::PLAYER_ID_HUMAN_MIN);
                 player->setNick("Simulated keeper " + Helper::toString(seat->getId()));
+                player->setIsHuman(true);
+                mDisconnectedPlayers.push_back(player);
                 computer = true;
             }
             else
@@ -1198,8 +1202,13 @@ int32_t ODServer::startHeadlessGame(const std::string& levelFilename, bool keepe
         seat->setPlayer(player);
         if(computer)
         {
-            // The level's computer level, else normal, as in a single player game outside the campaign
+            // The level's computer level, else the campaign level for the other keepers (as the campaign gives them
+            // the campaign difficulty), else normal as in a single player game outside the campaign; the simulated
+            // keeper of the human seat always plays at normal level
             KeeperAIType aiType = (seat->getAiLevel() != KeeperAIType::nbAI) ? seat->getAiLevel() : KeeperAIType::normal;
+            if((seat->getAiLevel() == KeeperAIType::nbAI) && (campaignLevel != KeeperAIType::nbAI) &&
+               (seat->getId() != humanSeatId))
+                aiType = campaignLevel;
             seat->setAiLevel(aiType);
             gameMap->assignAI(*player, aiType);
         }

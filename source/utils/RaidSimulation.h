@@ -69,6 +69,15 @@ public:
     //! picked up and dropped next to the raid member nearest the keeper's heart.
     static void setHandPlayer(bool handPlayer);
 
+    //! \brief Sets the campaign difficulty of the next run (--raid-sim-difficulty): the computer keepers of the level
+    //! without own level get it as their computer level, as in the campaign, and the raid uses the countdown of that
+    //! difficulty (none on Easy and Medium). Empty: the level's computer levels (else normal) and the Normal countdown.
+    static void setDifficulty(const std::string& difficulty);
+
+    //! \brief Lets the keeper of the human seat also pursue the goals of the level in the next run
+    //! (--raid-sim-goal-player, see RaidSimGoalPlayer); it needs --raid-sim-keeper-ai.
+    static void setGoalPlayer(bool goalPlayer);
+
     //! \brief True once run was called (main returns its exit code then).
     static bool isActive();
 

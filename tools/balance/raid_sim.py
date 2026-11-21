@@ -442,6 +442,10 @@ def game_options(params):
         args.append("--raid-sim-hand-limit")
     if params.get("hand_player"):
         args.append("--raid-sim-hand-player")
+    if params.get("difficulty"):
+        args += ["--raid-sim-difficulty", str(params["difficulty"])]
+    if params.get("goal_player"):
+        args.append("--raid-sim-goal-player")
     return args
 
 
@@ -476,8 +480,14 @@ def read_turns(path):
     rows, result = [], {}
     header = None
     for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("# keeper="):
+            result["keeper"] = line[len("# keeper="):].strip()
+            continue
+        if line.startswith("# openGoals="):
+            result["openGoals"] = line[len("# openGoals="):].strip()
+            continue
         if line.startswith("# result="):
-            result = dict(item.split("=", 1) for item in line[2:].split())
+            result.update(dict(item.split("=", 1) for item in line[2:].split()))
             continue
         if line.startswith("#"):
             continue
@@ -499,6 +509,7 @@ QUICK_DECISION = 60.0
 def measures(rows, result):
     """The measures of one run (see the report for their meaning)."""
     out = {"result": result.get("result", "none"), "end": float(result.get("seconds", 0)),
+           "openGoals": result.get("openGoals", ""), "keeper": result.get("keeper", ""),
            "wall": float(result.get("wallSeconds", 0))}
     arrival = next((row["seconds"] for row in rows if row["arrived"] >= 1), None)
     out["arrival"] = arrival
@@ -629,6 +640,13 @@ def phase1_measures(rows, out):
     out["claimedAtArrival"] = at["claimedTiles"]
     out["roomTilesAtArrival"] = at["roomTiles"]
     out["minedAtArrival"] = at["goldMined"]
+    if "goalsTotal" in rows[0]:
+        # The goal player (R13): every goal of the seat, main and optional, without the raid goal
+        out["goalsTotal"] = rows[0]["goalsTotal"]
+        out["goalsMax"] = max(row["goalsReached"] for row in rows)
+        out["goalsEnd"] = rows[-1]["goalsReached"]
+        out["allGoals"] = next((row["seconds"] for row in rows
+                                if rows[0]["goalsTotal"] > 0 and row["goalsReached"] >= rows[0]["goalsTotal"]), None)
     return out
 
 
@@ -638,7 +656,7 @@ def default_params():
             "countdown": 10, "interval": 90, "escape": None, "treasury_gold": None, "treasury_offset": None,
             "level": None, "interval_level": None, "member_level": None, "leader_offset": None, "share": None,
             "force_count": None, "force_level": None, "hand_limit": 0, "healers": None, "level_shift": None,
-            "hand_player": 0}
+            "hand_player": 0, "difficulty": None, "goal_player": 0}
 
 
 def run_batch(exe, work, params, overrides, seeds, seconds=900, keeper_ai=False, jobs=6, quiet=False):
@@ -764,7 +782,7 @@ def main():
     parser.add_argument("--set", action="append", help="Section.Key=Value of global.cfg")
     for name, value in default_params().items():
         parser.add_argument("--" + name.replace("_", "-"), default=value,
-                            type=(str if isinstance(value, str) or name == "level"
+                            type=(str if isinstance(value, str) or name in ("level", "difficulty")
                                   else float if value is None else type(value)))
     args = parser.parse_args()
     params = {name: getattr(args, name) for name in default_params()}

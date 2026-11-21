@@ -183,6 +183,7 @@ ODClient::ODClient() :
     mWaveCountdownSeconds(-1),
     mRaidCountdownSeconds(-1),
     mRaidGateClosed(false),
+    mRaidWaitsForKeeper(false),
     mHasSandboxRealmComplete(false)
 {
 }
@@ -610,6 +611,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             mWaveCountdownSeconds = -1;
             mRaidCountdownSeconds = -1;
             mRaidGateClosed = false;
+            mRaidWaitsForKeeper = false;
             mHeartBadge = HeartHealthRing::BadgeState();
             mHeartStageFractions.clear();
             mHeartStageHitRemaining.clear();
@@ -1169,11 +1171,20 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             // before them: no raid is shown then)
             mRaidCountdownSeconds = -1;
             mRaidGateClosed = false;
+            mRaidWaitsForKeeper = false;
             if(!packetReceived.endOfPacket())
             {
                 int32_t gateClosed = 0;
                 OD_ASSERT_TRUE(packetReceived >> mRaidCountdownSeconds >> gateClosed);
                 mRaidGateClosed = (gateClosed != 0);
+                // Whether a raid group waits for the player follows since the campaign difficulties (older recorded
+                // packets end before it)
+                if(!packetReceived.endOfPacket())
+                {
+                    int32_t waits = 0;
+                    OD_ASSERT_TRUE(packetReceived >> waits);
+                    mRaidWaitsForKeeper = (waits != 0);
+                }
             }
             break;
         }

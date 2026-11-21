@@ -36,7 +36,8 @@ struct Schedule
         mNextGroup(0),
         mGroupCount(0),
         mSecondsToNext(-1.0),
-        mGateOpen(false)
+        mGateOpen(false),
+        mOpenByKeeper(false)
     {}
 
     //! \brief Index of the raid group that comes next (equal to mGroupCount when every group has come).
@@ -45,25 +46,44 @@ struct Schedule
     uint32_t mGroupCount;
     //! \brief Seconds until the next raid group comes, negative when none is waiting.
     double mSecondsToNext;
-    //! \brief True once the gate was opened (by the countdown or early by the player).
+    //! \brief True while the gate is open (opened by the countdown or by the player). Without a countdown it closes
+    //! again after a raid group came through it while further groups wait.
     bool mGateOpen;
+    //! \brief True when no countdown runs (campaign difficulty Easy and Medium): every raid group waits behind the
+    //! closed gate until the attacked keeper opens it.
+    bool mOpenByKeeper;
 };
 
-//! \brief Starts the schedule at the level start: the first raid group comes after countdownSeconds.
+//! \brief Starts the schedule at the level start: the first raid group comes after countdownSeconds, or, when
+//! openByKeeper is set, only when the keeper opens the gate (no countdown).
 //! \param groupCount Number of raid groups of the level (0: nothing ever comes).
-//! \param countdownSeconds Seconds from the level start until the gate opens (at least 0).
-void start(Schedule& schedule, uint32_t groupCount, double countdownSeconds);
+//! \param countdownSeconds Seconds from the level start until the gate opens (at least 0); unused with openByKeeper.
+//! \param openByKeeper True when no countdown runs and every raid group waits until the keeper opens the gate.
+void start(Schedule& schedule, uint32_t groupCount, double countdownSeconds, bool openByKeeper);
 
 //! \brief Lets the given seconds pass. When the countdown ends, the gate opens and the next raid group comes; while
-//! raid groups are left, the countdown then runs for intervalSeconds until the following one. At most one group
-//! comes per call.
+//! raid groups are left, the countdown then runs for intervalSeconds until the following one. Without a countdown
+//! (mOpenByKeeper) a group comes only once the keeper opened the gate, and no countdown runs for the following one.
+//! At most one group comes per call.
 //! \return True when a raid group comes now (it is the group with the index mNextGroup - 1).
 bool advance(Schedule& schedule, double seconds, double intervalSeconds);
 
-//! \brief The player opens the gate before the countdown ends: the first raid group comes at once (at the next call
-//! of advance). Refused when the gate is already open or there is no raid group.
-//! \return True when the gate is opened early.
+//! \brief The player opens the gate: with a countdown before it ends and only for the first raid group; without a
+//! countdown (mOpenByKeeper) for every raid group that waits behind the closed gate. The group comes at once (at the
+//! next call of advance). Refused when the gate is open or no raid group waits.
+//! \return True when the gate is opened.
 bool openEarly(Schedule& schedule);
+
+//! \brief True when no countdown runs, the gate is open after a raid group came through it and a further raid group
+//! is left: the gate closes again (closeAgain) once the group that came has left the gate, and the next group waits
+//! until the keeper opens the gate again.
+bool shouldCloseAgain(const Schedule& schedule);
+
+//! \brief Closes the gate again behind a raid group (see shouldCloseAgain).
+void closeAgain(Schedule& schedule);
+
+//! \brief True when no countdown runs and a raid group waits behind the closed gate until the keeper opens it.
+bool waitsForKeeper(const Schedule& schedule);
 
 //! \brief Sets the seconds until the next raid group (script action raidcountdown). Ignored when no group waits.
 void setSecondsToNext(Schedule& schedule, double seconds);

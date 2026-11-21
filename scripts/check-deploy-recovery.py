@@ -134,7 +134,7 @@ class Recovery(unittest.TestCase):
                                            '--game-wait-seconds', bound]), \
                     patch.object(deployment, 'deploy') as run:
                 deployment.main()
-                run.assert_called_once_with(Path('.'), None, None, int(bound))
+                run.assert_called_once_with(Path('.'), None, None, int(bound), 'origin/integration/all')
         from contextlib import redirect_stderr
         from io import StringIO
         for bound in ('-1', '86401'):

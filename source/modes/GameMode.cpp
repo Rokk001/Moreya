@@ -119,6 +119,8 @@
 
 //! Width of the screen border that scrolls the camera, as a fraction of the screen size
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
+//! Value of mRaidCountdownShown while the raid panel shows that a raid group waits for the player (no countdown)
+const int32_t RAID_PANEL_WAITS = -2;
 //! Seconds between two refreshes of the open trap production window.
 const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
 
@@ -3155,15 +3157,19 @@ bool GameMode::startSandboxContinualInvasion(const CEGUI::EventArgs&)
 }
 
 //! \brief Shows the countdown the server sent: "Raid in mm:ss" with the button that opens the gate while the gate is
-//! closed, "Next group in mm:ss" afterwards; hides the panel when no raid group waits.
+//! closed, "Next group in mm:ss" afterwards; on the campaign difficulty Easy and Medium no countdown but "Raid waits at
+//! the gate" with the button while a raid group waits for the player; hides the panel when no raid group waits.
 void GameMode::updateRaidPanel()
 {
     CEGUI::Window* panel = mRootWindow->getChild("RaidPanel");
     const int32_t seconds = ODClient::getSingleton().getRaidCountdownSeconds();
     const bool gateClosed = ODClient::getSingleton().isRaidGateClosed();
-    if(seconds < 0)
+    const bool waits = ODClient::getSingleton().isRaidWaitingForKeeper();
+    // RAID_PANEL_WAITS stands for the state "a raid group waits for the player" in mRaidCountdownShown
+    const int32_t shown = waits ? RAID_PANEL_WAITS : seconds;
+    if(shown == -1)
     {
-        if(mRaidCountdownShown >= 0)
+        if(mRaidCountdownShown != -1)
         {
             panel->hide();
             mRaidCountdownShown = -1;
@@ -3171,14 +3177,20 @@ void GameMode::updateRaidPanel()
         return;
     }
 
-    if((seconds == mRaidCountdownShown) && (gateClosed == mRaidGateClosedShown))
+    if((shown == mRaidCountdownShown) && (gateClosed == mRaidGateClosedShown))
         return;
 
-    mRaidCountdownShown = seconds;
+    mRaidCountdownShown = shown;
     mRaidGateClosedShown = gateClosed;
     CEGUI::Window* countdown = panel->getChild("Countdown");
     CEGUI::Window* button = panel->getChild("OpenGateButton");
-    if(gateClosed)
+    if(waits)
+    {
+        countdown->setText("Raid waits at the gate");
+        countdown->setTooltipText("The raid group comes only when you open the Moreya gate");
+        button->show();
+    }
+    else if(gateClosed)
     {
         countdown->setText("Raid in " + formatDebriefingTime(seconds));
         countdown->setTooltipText("Time left until the raid comes through the Moreya gate");
