@@ -380,7 +380,7 @@ def scene_definitions(repo):
 
 
 def menu_material_text(repo):
-    """Returns the text of every menu material script (MenuScene, MenuSignpost, MenuMoreyaEntrance)."""
+    """Returns the text of every menu material script (MenuScene with the stone, MenuSignpost with the wood and boards)."""
     folder = Path(repo) / "materials/scripts"
     return "\n".join(path.read_text(encoding="utf-8") for path in sorted(folder.glob("Menu*.material")))
 

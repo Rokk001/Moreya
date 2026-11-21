@@ -58,6 +58,27 @@ MIN_FACING = 0.3
 MIN_LETTER_MATCH = 0.8
 
 
+def positions(data, start, end):
+    """Returns the vertex positions (n, 3) of one Ogre geometry chunk, read straight from its vertex buffer."""
+    count, = struct.unpack_from("<I", data, start)
+    elements = []
+    buffers = {}
+    for chunk_id, s, e in flight.chunks(data, start + 4, end):
+        if chunk_id == 0x5100:
+            for _, s3, _ in flight.chunks(data, s, e):
+                source, _, semantic, offset, _ = struct.unpack_from("<HHHHH", data, s3)
+                elements.append((source, semantic, offset))
+        elif chunk_id == 0x5200:
+            bind, stride = struct.unpack_from("<HH", data, s)
+            for kind, s3, _ in flight.chunks(data, s + 4, e):
+                if kind == 0x5210:
+                    buffers[bind] = (stride, s3)
+    source, _, offset = [element for element in elements if element[1] == 1][0]
+    stride, base = buffers[source]
+    raw = np.frombuffer(data, dtype=np.uint8, count=count * stride, offset=base).reshape(count, stride)
+    return raw[:, offset:offset + 12].copy().view("<f4").astype(np.float64)
+
+
 def submeshes(path):
     """Returns {material: (vertices, triangles)} of an Ogre binary mesh (all submeshes, decals included)."""
     data = open(path, "rb").read()
@@ -70,7 +91,7 @@ def submeshes(path):
         parts = []
         for kind, s2, e2 in flight.chunks(data, s + 1, e):
             if kind == 0x5000:
-                shared = flight.read_geometry(data, s2, e2)
+                shared = positions(data, s2, e2)
             elif kind == 0x4000:
                 parts.append((s2, e2))
         for s2, e2 in parts:
@@ -86,11 +107,11 @@ def submeshes(path):
             if not uses_shared:
                 for kind, s3, e3 in flight.chunks(data, p, e2):
                     if kind == 0x5000:
-                        vertices = flight.read_geometry(data, s3, e3)
+                        vertices = positions(data, s3, e3)
                         break
             triangles = np.array(indices, dtype=np.int64).reshape(-1, 3)
             old_vertices, old_triangles = result.get(material, (np.zeros((0, 3)), np.zeros((0, 3), dtype=np.int64)))
-            result[material] = (np.vstack((old_vertices, np.array(vertices, dtype=np.float64))),
+            result[material] = (np.vstack((old_vertices, vertices)),
                                 np.vstack((old_triangles, triangles + len(old_vertices))))
     return result
 
@@ -115,8 +136,14 @@ def heights_at(triangles, x, y):
     return (a[:, 2] + w1 * v0[:, 2] + w2 * v1[:, 2])[inside]
 
 
-def blocked(triangles, start, end, margin=0.03):
-    """Tells whether a segment from start to end hits a triangle before it comes within margin of the end."""
+def blocked(triangles, start, end, margin=0.03, bounds=None):
+    """Tells whether a segment from start to end hits a triangle before it comes within margin of the end.
+
+    bounds, the per-triangle (minimum, maximum) corners computed once, skips triangles away from the segment.
+    """
+    if bounds is not None:
+        near = np.all(bounds[0] <= np.maximum(start, end), axis=1) & np.all(bounds[1] >= np.minimum(start, end), axis=1)
+        triangles = triangles[near]
     direction = end - start
     length = np.linalg.norm(direction)
     direction = direction / length
@@ -214,9 +241,9 @@ def main():
     vertices, triangles = sign_parts[BOARD_MATERIAL]
     board = vertices[triangles] + entities[SIGNPOST][1]
     table = world_triangles(entities[TABLE][0], entities[TABLE][1])
-    others = [world_triangles(mesh, position) for name, (mesh, position) in entities.items()
-              if name not in SKY and name not in (STAIRS, SIGNPOST)]
-    ground = np.concatenate(others)
+    others = {name: world_triangles(mesh, position) for name, (mesh, position) in entities.items()
+              if name not in SKY and name not in (STAIRS, SIGNPOST)}
+    ground = np.concatenate(list(others.values()))
 
     # Behind the table.
     table_back = table[:, :, 1].max()
@@ -265,10 +292,7 @@ def main():
 
     # The hall floor is open over the stairwell: nothing of another entity lies over the treads of the open part.
     covering = set()
-    for name, (mesh, position) in entities.items():
-        if name in SKY or name in (STAIRS, SIGNPOST):
-            continue
-        part = world_triangles(mesh, position)
+    for name, part in others.items():
         for dx in (-2.0, 0.0, 2.0):
             for dy in (0.6, 2.0, 3.5, 4.7):
                 tread = heights_at(stairs, origin[0] + dx, origin[1] + dy)
@@ -281,6 +305,7 @@ def main():
     # The campaign pose sees the board and the steps going down.
     eye, rotation = camera(poses()["campaign"])
     occluders = np.concatenate((ground, stairs, signpost))
+    bounds = (occluders.min(axis=1), occluders.max(axis=1))
     back, tip, direction, normal = arrow(board)
     for aspect in ASPECTS:
         outside = [point for point in board.reshape(-1, 3) if not in_view(eye, rotation, point, aspect)]
@@ -296,7 +321,7 @@ def main():
                 if not len(surface):
                     continue
                 point = np.array([origin[0] + dx, y, surface.max() + 0.03])
-                if in_view(eye, rotation, point, aspect) and not blocked(occluders, eye, point):
+                if in_view(eye, rotation, point, aspect) and not blocked(occluders, eye, point, bounds=bounds):
                     seen.append(depth)
                     break
         if len(seen) < MIN_VISIBLE_STEPS or min(seen, default=0.0) > MIN_VISIBLE_DEPTH:
@@ -304,7 +329,7 @@ def main():
                             % (aspect, len(seen), min(seen, default=0.0), MIN_VISIBLE_STEPS, MIN_VISIBLE_DEPTH))
     centre = board.reshape(-1, 3).mean(axis=0)
     for label, point in (("centre", centre + normal * 0.03), ("tip", tip + normal * 0.03)):
-        if blocked(occluders, eye, point):
+        if blocked(occluders, eye, point, bounds=bounds):
             failures.append("signpost board %s is hidden from the campaign view" % label)
     towards_camera = (eye - centre) / np.linalg.norm(eye - centre)
     if normal @ towards_camera < MIN_FACING:
@@ -326,7 +351,7 @@ def main():
 
     # CREDITS.
     credits = open(os.path.join(ROOT, "CREDITS"), encoding="utf-8").read()
-    for name in (STAIRS_MESH, SIGNPOST_MESH, "MenuMoreyaEntrance.material", "MenuMoreyaSignpostBoard.png",
+    for name in (STAIRS_MESH, SIGNPOST_MESH, "MenuMoreyaSignpostBoard.png",
                  "MenuMoreyaSignpostBoardNormal.png"):
         if name not in credits:
             failures.append("CREDITS has no entry for " + name)
