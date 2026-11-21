@@ -106,9 +106,11 @@
 #include <iomanip>
 #include <sstream>
 
+#include <OgreCamera.h>
 #include <OgreRoot.h>
 #include <OgreRenderWindow.h>
 #include <OgreSceneNode.h>
+#include <OgreViewport.h>
 
 #include <algorithm>
 #include <cmath>
@@ -262,12 +264,16 @@ const float MINIMAP_ZOOM_REFRESH_SECONDS = 0.5f;
 //! Character height of the pointer info text at unscaled GUI size, as set when its text box is created.
 const float POINTER_TEXT_BASE_HEIGHT = 16.0f;
 
-//! Place of the hand cooldown text (HL2) at unscaled GUI size: in the column of the pointer text, in the line above it,
-//! so that neither the action icon nor the held creature icons cover it.
-const float HAND_COOLDOWN_TEXT_OFFSET_X = POINTER_TEXT_OFFSET_X;
-const float HAND_COOLDOWN_TEXT_OFFSET_Y = 4.0f;
-//! Width of one character of the hand cooldown text as a share of its height (an upper bound for the overlay font),
-//! used to keep the text inside the screen.
+//! Name of the crossed-out hand picture (a text-free placeholder until it is replaced under the same name).
+const char* const HAND_COOLDOWN_ICON_IMAGE = "HandCooldown/NoPickup";
+//! Side of the hand cooldown prohibition picture (HL2, K5) at unscaled GUI size.
+const float HAND_COOLDOWN_ICON_SIZE = 48.0f;
+//! Character height of the cooldown number under the picture at unscaled GUI size.
+const float HAND_COOLDOWN_NUMBER_HEIGHT = 24.0f;
+//! Height above the ground, in tiles, of the point of a hovered creature on which the prohibition picture is centred.
+const float HAND_COOLDOWN_CREATURE_HEIGHT = 1.4f;
+//! Width of one character of the hand cooldown number as a share of its height (an upper bound for the overlay font),
+//! used to centre the number under the picture and keep it inside the screen.
 const float HAND_COOLDOWN_CHAR_WIDTH_SHARE = 0.6f;
 
 //! Degrees the camera orbits per pixel of mouse movement while X or the middle mouse button is held.
@@ -945,6 +951,8 @@ GameMode::~GameMode()
     RenderManager::getSingleton().rrEnableHeldCreatureDisplay(false, mGameMap->getLocalPlayer());
     for(CEGUI::Window* icon : mHeldCreatureIcons)
         CEGUI::WindowManager::getSingleton().destroyWindow(icon);
+    if(mHandCooldownIcon != nullptr)
+        CEGUI::WindowManager::getSingleton().destroyWindow(mHandCooldownIcon);
     if(mSelectionSizeLabel != nullptr)
         CEGUI::WindowManager::getSingleton().destroyWindow(mSelectionSizeLabel);
     // Remove tile listeners before the base destructor clears the game map.
@@ -3464,7 +3472,7 @@ void GameMode::startDefeatSequence(int32_t conquerorSeatId, int32_t heartTileX, 
     // The pointer, the hand and the texts that follow it disappear with the interface
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
-    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
+    hideHandCooldownIcon();
     RenderManager& renderManager = RenderManager::getSingleton();
     if(renderManager.isKeeperHandVisible())
         renderManager.rrToggleHandSelectorVisibility();
@@ -5021,27 +5029,92 @@ float GameMode::getHandFeedbackScale() const
     return mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / HAND_ACTION_ICON_DESIGN_SIZE;
 }
 
-//! \brief Shows the seconds left of the hand cooldown of a campaign level next to the hand (HL2), scaled like the
-//! pointer text and kept inside the screen; the text is empty while no cooldown runs.
-void GameMode::refreshHandCooldownText(float pointerX, float pointerY, float scale)
+//! \brief Projects a world position through the camera onto the screen in pixels.
+//! \param camera Camera of the game view.
+//! \param position World position.
+//! \param screenWidth Width of the screen in pixels.
+//! \param screenHeight Height of the screen in pixels.
+//! \param x Receives the horizontal screen position.
+//! \param y Receives the vertical screen position.
+//! \return False when the position is behind the camera.
+static bool projectToScreen(const Ogre::Camera* camera, const Ogre::Vector3& position, float screenWidth,
+    float screenHeight, float& x, float& y)
 {
-    TextRenderer& textRenderer = TextRenderer::getSingleton();
-    const Player* player = mGameMap->getLocalPlayer();
-    const std::string text = ((player == nullptr) || mDefeatSequence.isStarted()) ? std::string() :
-        HandLimitRules::cooldownText(player->getHandCooldownSeconds());
-    textRenderer.setText(ODApplication::HAND_COOLDOWN_STRING, text);
-    if(text.empty())
-        return;
+    if(camera == nullptr)
+        return false;
 
-    const float height = POINTER_TEXT_BASE_HEIGHT * scale;
-    const float width = static_cast<float>(text.size()) * height * HAND_COOLDOWN_CHAR_WIDTH_SHARE;
+    const Ogre::Vector3 viewPosition = camera->getViewMatrix() * position;
+    const Ogre::Vector4 projected = camera->getProjectionMatrix() *
+        Ogre::Vector4(viewPosition.x, viewPosition.y, viewPosition.z, 1.0f);
+    if(projected.w <= 0.0f)
+        return false;
+
+    x = (0.5f + projected.x / projected.w * 0.5f) * screenWidth;
+    y = (0.5f - projected.y / projected.w * 0.5f) * screenHeight;
+    return true;
+}
+
+//! \brief Hides the prohibition picture and the number of the hand cooldown.
+void GameMode::hideHandCooldownIcon()
+{
+    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
+    if(mHandCooldownIcon != nullptr)
+        mHandCooldownIcon->setVisible(false);
+}
+
+//! \brief Shows the crossed-out hand with the whole seconds left of the hand cooldown (HL2, K5) over the creature
+//! under the pointer that the keeper could otherwise pick up, scaled with the hand feedback and kept inside the
+//! screen. Nothing is shown while no cooldown runs or the pointer is not over such a creature, and no text is shown
+//! at the pointer.
+//! \param scale Scale of the hand feedback (getHandFeedbackScale).
+void GameMode::refreshHandCooldownIcon(float scale)
+{
+    const Player* player = mGameMap->getLocalPlayer();
+    Creature* creature = ((player == nullptr) || mDefeatSequence.isStarted() || mHandCooldownCreatureName.empty()) ?
+        nullptr : mGameMap->getCreature(mHandCooldownCreatureName);
+    const double cooldownLeft = (player == nullptr) ? 0.0 : player->getHandCooldownSeconds();
+    const uint32_t seconds = HandLimitRules::cooldownIconSeconds(creature != nullptr, cooldownLeft);
+    Ogre::Viewport* viewport = RenderManager::getSingleton().getViewport();
     const CEGUI::Sizef screen = CEGUI::System::getSingleton().getDefaultGUIContext().getSurfaceSize();
-    float left = 0.0f;
-    float top = 0.0f;
-    HandLimitRules::cooldownTextPlace(pointerX, pointerY, HAND_COOLDOWN_TEXT_OFFSET_X * scale,
-        HAND_COOLDOWN_TEXT_OFFSET_Y * scale, width, height, screen.d_width, screen.d_height, left, top);
-    textRenderer.setCharacterHeight(ODApplication::HAND_COOLDOWN_STRING, height);
-    textRenderer.moveText(ODApplication::HAND_COOLDOWN_STRING, left, top);
+    float centreX = 0.0f;
+    float centreY = 0.0f;
+    if((seconds == 0) || (viewport == nullptr) ||
+       !projectToScreen(viewport->getCamera(), creature->getPosition() +
+            Ogre::Vector3(0.0f, 0.0f, HAND_COOLDOWN_CREATURE_HEIGHT), screen.d_width, screen.d_height, centreX, centreY))
+    {
+        hideHandCooldownIcon();
+        return;
+    }
+
+    if(mHandCooldownIcon == nullptr)
+    {
+        mHandCooldownIcon = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage", "HandCooldownIcon");
+        mHandCooldownIcon->setAlwaysOnTop(true);
+        mHandCooldownIcon->setMousePassThroughEnabled(true);
+        mHandCooldownIcon->setProperty("ClippedByParent", "False");
+        mHandCooldownIcon->setProperty("FrameEnabled", "False");
+        mHandCooldownIcon->setProperty("BackgroundEnabled", "False");
+        mHandCooldownIcon->setProperty("Image", HAND_COOLDOWN_ICON_IMAGE);
+        mRootWindow->addChild(mHandCooldownIcon);
+    }
+
+    const std::string number = HandLimitRules::cooldownText(cooldownLeft);
+    const float iconSize = HAND_COOLDOWN_ICON_SIZE * scale;
+    const float numberHeight = HAND_COOLDOWN_NUMBER_HEIGHT * scale;
+    const float numberWidth = static_cast<float>(number.size()) * numberHeight * HAND_COOLDOWN_CHAR_WIDTH_SHARE;
+    float iconLeft = 0.0f;
+    float iconTop = 0.0f;
+    float numberLeft = 0.0f;
+    float numberTop = 0.0f;
+    HandLimitRules::cooldownIconPlace(centreX, centreY, iconSize, numberWidth, numberHeight, screen.d_width,
+        screen.d_height, iconLeft, iconTop, numberLeft, numberTop);
+    mHandCooldownIcon->setSize(CEGUI::USize(CEGUI::UDim(0, iconSize), CEGUI::UDim(0, iconSize)));
+    mHandCooldownIcon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, iconLeft), CEGUI::UDim(0, iconTop)));
+    mHandCooldownIcon->setVisible(true);
+    TextRenderer& textRenderer = TextRenderer::getSingleton();
+    textRenderer.setText(ODApplication::HAND_COOLDOWN_STRING, number);
+    textRenderer.setCharacterHeight(ODApplication::HAND_COOLDOWN_STRING, numberHeight);
+    textRenderer.moveText(ODApplication::HAND_COOLDOWN_STRING, numberLeft, numberTop);
 }
 
 void GameMode::setHighlightedCreature(Creature* creature)
@@ -5079,6 +5152,8 @@ void GameMode::refreshActionFeedback(float elapsed)
         }
     }
     InputManager& inputManager = mModeManager->getInputManager();
+    // Set again by handlePlayerActionNone while the pointer stays over a fighter that cannot be picked up yet
+    mHandCooldownCreatureName.clear();
     if(isMouseDownOnCEGUIWindow())
     {
         unselectAllTiles();
@@ -5175,7 +5250,7 @@ void GameMode::refreshActionFeedback(float elapsed)
         POINTER_TEXT_BASE_HEIGHT * pointerScale);
     TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
         pointer.d_x + POINTER_TEXT_OFFSET_X * pointerScale, pointer.d_y + POINTER_TEXT_OFFSET_Y * pointerScale);
-    refreshHandCooldownText(pointer.d_x, pointer.d_y, pointerScale);
+    refreshHandCooldownIcon(pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
@@ -5580,7 +5655,7 @@ void GameMode::notifyPossessionStarted()
     mPlayerSelection.setCurrentAction(SelectedAction::none);
     unselectAllTiles();
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
-    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
+    hideHandCooldownIcon();
 
     // The own view of the creature: no keeper interface, a crosshair, the mouse kept in the window
     enterPossessionView();
@@ -5675,7 +5750,7 @@ void GameMode::refreshPossessionView()
 
     CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(false);
     TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
-    TextRenderer::getSingleton().setText(ODApplication::HAND_COOLDOWN_STRING, "");
+    hideHandCooldownIcon();
 
     // The view is in the eyes of the creature, its own model is not shown
     Creature* creature = mGameMap->getCreature(mPossessionViewCreatureName);
@@ -6005,6 +6080,9 @@ void GameMode::handlePlayerActionNone()
                 }
                 else
                 {
+                    if(creature != nullptr && HandLimitRules::isFightingCreature(true,
+                           creature->getDefinition()->isWorker(), creature->getSeatPrison() != nullptr))
+                        mHandCooldownCreatureName = creature->getName();
                     std::string text = creature != nullptr ? creature->getDefinition()->getClassName() : closest->getName();
                     // Strongest friend and worst enemy of an own creature, one line (relationship option)
                     std::string relations = creature != nullptr ? creature->getRelationshipTooltip() : std::string();

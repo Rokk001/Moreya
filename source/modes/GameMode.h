@@ -502,6 +502,11 @@ private:
     //! The Workers window of the keeper (key J and the HUD button)
     std::unique_ptr<WorkersWindow> mWorkersWindow;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
+    //! \brief The crossed-out hand over the hovered creature while the hand cooldown runs (K5), created on first use.
+    CEGUI::Window* mHandCooldownIcon = nullptr;
+    //! \brief Name of the creature under the pointer that the keeper could otherwise pick up, set every frame by
+    //! handlePlayerActionNone; empty when the pointer is not over such a creature.
+    std::string mHandCooldownCreatureName;
     //! \brief Creates, updates and places the held creature portraits.
     void refreshHeldCreatureIcons();
     //! \brief Label next to the hand showing the width x height of the area being dragged
@@ -868,12 +873,13 @@ private:
     void updateSelectedTiles();
     //! \brief Scale of the hand feedback (action icon, pointer text, held portraits) relative to its design size.
     float getHandFeedbackScale() const;
-    //! \brief Shows the seconds left of the hand cooldown of a campaign level next to the hand (HL2), scaled with the
-    //! hand feedback and kept inside the screen; empty while no cooldown runs.
-    //! \param pointerX Horizontal position of the pointer in pixels.
-    //! \param pointerY Vertical position of the pointer in pixels.
+    //! \brief Hides the prohibition picture and the number of the hand cooldown.
+    void hideHandCooldownIcon();
+    //! \brief Shows the crossed-out hand with the whole seconds left of the hand cooldown (HL2, K5) over the
+    //! creature under the pointer that the keeper could otherwise pick up; nothing while no cooldown runs or the pointer
+    //! is not over such a creature.
     //! \param scale Scale of the hand feedback (getHandFeedbackScale).
-    void refreshHandCooldownText(float pointerX, float pointerY, float scale);
+    void refreshHandCooldownIcon(float scale);
     //! \brief Highlights the given creature and restores the previously highlighted one.
     void setHighlightedCreature(Creature* creature);
 
