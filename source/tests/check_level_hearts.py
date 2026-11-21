@@ -8,11 +8,16 @@ import sys
 
 repo = Path(__file__).resolve().parents[2]
 levels = Path(sys.argv[1]) if len(sys.argv) > 1 else repo / 'levels'
+sys.path.insert(0, str(repo / 'scripts'))
+import campaign_packages  # noqa: E402
 
 HEART_TILES = 25
 failures = 0
 hearts = 0
 files = sorted(levels.rglob('*.level'))
+# The shipped levels of the content packages too, when the content repository is present
+content = [] if len(sys.argv) > 1 else campaign_packages.content_files(repo, ('.level',))
+files += content
 if not files:
     print('FAIL: no level files found in %s' % levels)
     sys.exit(1)
@@ -35,7 +40,7 @@ for path in files:
         if len(header) < 2 or 'DungeonTemple' not in header[1]:
             continue
         hearts += 1
-        name = '%s %s' % (path.relative_to(levels).as_posix(), header[1])
+        name = '%s %s' % (campaign_packages.display_path(repo, path), header[1])
         xs = [t[0] for t in tiles]
         ys = [t[1] for t in tiles]
         square = (len(set(tiles)) == HEART_TILES and max(xs) - min(xs) == 4 and max(ys) - min(ys) == 4)

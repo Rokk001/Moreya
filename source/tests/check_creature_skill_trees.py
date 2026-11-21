@@ -17,6 +17,8 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import campaign_packages  # noqa: E402
 FIXTURE = root / 'source/tests/fixtures/creature_skills_example.cfg'
 BS = chr(92)
 
@@ -917,8 +919,10 @@ SKILL_FAMILIES = ('greenskin', 'dwarf', 'undead', 'vermin', 'tentacle', 'demon',
 
 
 def level_files():
-    """All level files of the repository as repository relative paths."""
-    return sorted(p.relative_to(root).as_posix() for p in (root / 'levels').rglob('*.level'))
+    """All level files of the repository as repository relative paths, then the level files of the content packages
+    (absolute paths) when the content repository is present."""
+    return (sorted(p.relative_to(root).as_posix() for p in (root / 'levels').rglob('*.level'))
+            + [p.as_posix() for p in campaign_packages.content_files(root, ('.level',))])
 
 
 def parse_config_blocks(relative):

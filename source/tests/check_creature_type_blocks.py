@@ -15,6 +15,8 @@ import subprocess
 import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import campaign_packages  # noqa: E402
 failures = []
 
 
@@ -57,7 +59,9 @@ pool = [l.strip() for l in factions[factions.index("[SpawnPool]", start) + 11:fa
         .split("\n") if l.strip() and not l.strip().startswith("#")]
 expect(len(pool) >= 12, "keeper spawn pool not found")
 blocked_levels = 0
-for path in sorted((repo / "levels").glob("*/*.level")):
+# The levels below levels/, the wing 1 package and, when present, the content packages
+for path in (sorted((repo / "levels").glob("*/*.level")) + sorted((repo / "levels/campaign").glob("*/*.level"))
+             + campaign_packages.content_files(repo, (".level",))):
     seat_players = {}
     current = None
     in_triggers = False
@@ -91,7 +95,9 @@ for path in sorted((repo / "levels").glob("*/*.level")):
             expect((fields[1], fields[2]) not in names, "%s: duplicate Block %s" % (path.name, fields))
             names.add((fields[1], fields[2]))
     expect(len(names) < len(pool), "%s: every type is blocked" % path.name)
-expect(blocked_levels >= 20, "expected the campaign levels to carry blocks, found %d" % blocked_levels)
+# At least 20 levels carry blocks with the content packages; the public tree alone has 11 (counted on this branch)
+expected_blocked = 20 if campaign_packages.has_content(repo) else 11
+expect(blocked_levels >= expected_blocked, "expected the campaign levels to carry blocks, found %d" % blocked_levels)
 expect("Block" not in text("levels/skirmish/TestLegacy.level"), "legacy level changed")
 
 # Runtime round trip through the compiled script test

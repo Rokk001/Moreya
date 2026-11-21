@@ -10,6 +10,8 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import campaign_packages  # noqa: E402
 # State the damage and cooldown values are compared with (integration state before the weapon cooldown work)
 BASE_COMMIT = 'cdaa5856d'
 
@@ -285,7 +287,7 @@ for name, item in equipments.items():
 for weapon_name, carrier in WEAK_PARRY_WEAPONS.items():
     carriers = [n for n, c in creatures.items() if weapon_name in c['weapons']]
     assert carriers == [carrier], (weapon_name, carriers)
-    for level_file in (root / 'levels').rglob('*'):
+    for level_file in list((root / 'levels').rglob('*')) + campaign_packages.content_files(root, ('.level', '.cfg')):
         if level_file.is_file() and level_file.suffix in ('.level', '.cfg', '.txt'):
             assert weapon_name not in level_file.read_text(encoding='utf-8', errors='ignore'), (weapon_name, level_file)
 # The shield values and the fallback values stay in global.cfg unchanged

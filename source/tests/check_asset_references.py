@@ -14,6 +14,9 @@ import re
 import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import campaign_packages  # noqa: E402
+
 STRING = r'"(?:\\.|[^"\\])*"'
 CPP_TOKEN = re.compile(STRING + r'|\b[A-Za-z_]\w*(?:::\w+)*\b|[^\s]')
 EMPTY = {'', 'none', "''", '-', 'null'}
@@ -145,10 +148,12 @@ def add(refs, path, line, kind, name):
 def data_references(root):
     """Read named and positional asset fields of configuration and saved levels."""
     refs = set()
+    # The levels of the content packages count as well when the content repository is present
     paths = sorted(set((root / 'config').rglob('*.cfg')) |
-                   {p for p in (root / 'levels').rglob('*') if p.is_file() and p.suffix in {'.level', '.cfg'}})
+                   {p for p in (root / 'levels').rglob('*') if p.is_file() and p.suffix in {'.level', '.cfg'}} |
+                   set(campaign_packages.content_files(root, ('.level', '.cfg'))))
     for path in paths:
-        relative = path.relative_to(root).as_posix()
+        relative = campaign_packages.display_path(root, path)
         sections = []
         for line_no, original in enumerate(read(path).splitlines(), 1):
             line = original.split('#', 1)[0].strip()
@@ -458,7 +463,8 @@ def finite_name_references(root):
         match = re.search(r'PILE_MESH_PREFIX\s*=\s*"([^"]+)"', text)
         assert match, 'cannot resolve the pile mesh prefix'
         prefix = match[1]
-        for path in list((root / 'config').rglob('*.cfg')) + list((root / 'levels').rglob('*.level')):
+        for path in (list((root / 'config').rglob('*.cfg')) + list((root / 'levels').rglob('*.level'))
+                     + campaign_packages.content_files(root, ('.level',))):
             content = read(path)
             for creature in re.finditer(r'\[Creature\](.*?)\[/Creature\]', content, re.S):
                 name = re.search(r'^\s*Name\s+(\S+)', creature[1], re.M)

@@ -177,6 +177,25 @@ def content_data(repo, name):
     return json.loads(path.read_text(encoding='utf-8'))
 
 
+# The files of the content packages with one of the suffixes (e.g. ('.level', '.cfg')), sorted; empty without
+# content. Checks that scan every level file of levels/ add these, so they cover wings 2 to 6 as well.
+def content_files(repo, suffixes):
+    folder = content_folder(repo)
+    if folder is None:
+        return []
+    return sorted(path for path in folder.rglob('*') if path.is_file() and path.suffix in tuple(suffixes))
+
+
+# A path for messages: relative to the repository, or content/<path in the content folder> for a content file.
+def display_path(repo, path):
+    path = Path(path).resolve()
+    try:
+        return path.relative_to(Path(repo).resolve()).as_posix()
+    except ValueError:
+        folder = content_folder(repo)
+        return 'content/' + path.relative_to(folder.resolve()).as_posix() if folder else path.as_posix()
+
+
 # The level names (file stems) a check covers: every name of its table with content packages, else the names of
 # the public package.
 def checked_names(repo, names):
