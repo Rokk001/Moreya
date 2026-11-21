@@ -15,7 +15,7 @@ stone. The board front faces the campaign camera and its tip points into the sta
 
 Run in Blender (5.x):
     blender --background --python menu_moreya_entrance.py -- <repo> <private output folder> [stairs] [signpost]
-        [render]
+        [render | render_open]
 "stairs" and "signpost" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes with
 OgreXMLConverter into <repo>/models. "render" renders the menu scene of config/mainmenuscene.cfg from the campaign
 pose and the waypoints of the campaign flight into <private>/renders (see render_poses). The board lettering is
@@ -285,10 +285,16 @@ def bowl(b, centre):
         following = (index + 1) % sides
         b.face((lower[index], lower[following], upper[following], upper[index]), "MenuCorrodedIron", (0, 0, 1))
         b.face((upper[index], upper[following], lower[following], lower[index]), "MenuCorrodedIron", (0, 0, 1))
-    coals = [centre + Vector((0.92 * (point - centre).x, 0.92 * (point - centre).y, -0.03)) for point in upper]
-    top = centre + Vector((0.0, 0.0, 0.03))
+    # A small glowing core sunk into the bowl, mostly covered by dark lumps of charred coal, so the bowl reads as
+    # dark iron with embers between the coals rather than as a bright disc.
+    coals = [centre + Vector((0.6 * (point - centre).x, 0.6 * (point - centre).y, -0.07)) for point in upper]
+    top = centre + Vector((0.0, 0.0, -0.05))
     for index in range(sides):
         b.face((coals[index], coals[(index + 1) % sides], top), "MenuEmber", (1, 0, 0))
+    for angle in (0.4, 1.9, 3.3, 4.6, 5.7):
+        lump = centre + Vector((0.09 * math.cos(angle), 0.09 * math.sin(angle), -0.04))
+        b.rock(lump, (0.06, 0.055, 0.04), "MenuSoot")
+    b.rock(centre + Vector((0.0, 0.0, -0.03)), (0.045, 0.05, 0.035), "MenuSoot")
 
 
 def build_stairs(raid):
@@ -425,6 +431,11 @@ def cut_opening(obj):
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     origin = obj.location
+    # Split the large floor faces along the four edges of the opening first, so only the part over it goes.
+    for point, normal in (((-HALF, 0, 0), (1, 0, 0)), ((HALF, 0, 0), (1, 0, 0)), ((0, 24.2, 0), (0, 1, 0)),
+                          ((0, 24.2 + OPEN_LENGTH, 0), (0, 1, 0))):
+        geometry = bm.verts[:] + bm.edges[:] + bm.faces[:]
+        bmesh.ops.bisect_plane(bm, geom=geometry, plane_co=Vector(point) - origin, plane_no=Vector(normal))
     doomed = []
     for face in bm.faces:
         centre = face.calc_center_median() + origin
@@ -436,12 +447,12 @@ def cut_opening(obj):
     log("opened %d faces of %s" % (len(doomed), obj.name))
 
 
-def render_poses(repo, private, raid, exporter):
+def render_poses(repo, private, raid, exporter, states=("before", "after_closed", "after_open")):
     """Renders the menu scene from the campaign pose and the campaign flight waypoints, before and after.
 
     Writes <private>/renders/<state>_<pose>_<width>x<height>.png for the states "before" (scene without the
     entrance), "after_closed" (entrance with today's floor) and "after_open" (entrance with the floor opened over
-    the stairwell). Lights come from the AddPointLight lines, the ambient from [MenuLighting] FlightAmbient, the
+    the stairwell); states limits the run to some of them. Lights come from the AddPointLight lines, the ambient from [MenuLighting] FlightAmbient, the
     camera from the [MenuCamera] poses with the vertical field of view of 45 degrees of the game camera.
     """
     sys.path.insert(0, str(Path(repo) / "tools/blender-assets"))
@@ -460,6 +471,8 @@ def render_poses(repo, private, raid, exporter):
     output.mkdir(parents=True, exist_ok=True)
     for state, with_entrance, open_floor in (("before", False, False), ("after_closed", True, False),
                                              ("after_open", True, True)):
+        if state not in states:
+            continue
         bpy.ops.wm.read_factory_settings(use_empty=True)
         scene = bpy.context.scene
         scene.render.engine = "BLENDER_EEVEE"
@@ -522,6 +535,8 @@ def main():
             export(exporter, repo, private, build_signpost(raid))
         if "render" in wanted:
             render_poses(repo, private, raid, exporter)
+        elif "render_open" in wanted:
+            render_poses(repo, private, raid, exporter, ("after_open",))
         log("finished")
     except Exception:
         LOG.write(traceback.format_exc())
