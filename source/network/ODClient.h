@@ -187,6 +187,15 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline void clearSandboxRealmComplete()
     { mHasSandboxRealmComplete = false; }
 
+    //! \brief Tells whether this client takes part in a multiplayer game: it is connected to a remote
+    //! server or to the local multiplayer host. Single player games, loaded games, the editor and
+    //! replays are not multiplayer.
+    bool isMultiplayerSession();
+
+    //! \brief Returns true once after the connection to the server of a multiplayer game was lost
+    //! (see playerDisconnected), then forgets it.
+    bool consumeServerLost();
+
     inline void pause()
     { mGameClock.pause(); }
 
@@ -203,7 +212,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
     //! \return true if the notification was processed.
     //! \brief Adopts authoritative game updates and complete owner-only laboratory snapshots.
     bool processMessage(ServerNotificationType cmd, ODPacket& packetReceived) override;
-    //! \brief Restores any loading presentation and reports the lost connection.
+    //! \brief Restores any loading presentation and reports the lost connection. In multiplayer the
+    //! client is stopped once and the loss is kept for consumeServerLost; a single player game keeps
+    //! reporting it as an event message.
     void playerDisconnected() override;
 
  private:
@@ -245,6 +256,8 @@ class ODClient: public Ogre::Singleton<ODClient>,
     // Received with sandboxStatus and sandboxRealmComplete
     SandboxStatus mSandboxStatus;
     bool mHasSandboxRealmComplete;
+    //! \brief True after the connection to the server of a multiplayer game was lost, until consumeServerLost
+    bool mServerLost;
     std::string mSandboxRealmId;
     std::string mSandboxNextLevel;
     std::string mSandboxRealmText;

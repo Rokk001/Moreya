@@ -54,6 +54,7 @@
 #include "modes/ConsoleCommands.h"
 #include "network/CosmeticEvent.h"
 #include "network/ODClient.h"
+#include "network/ServerGuards.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
 #include "rooms/Room.h"
@@ -449,6 +450,34 @@ namespace
 
         return static_cast<RoomPortalWave*>(room);
     }
+
+    //! \brief One seat of a seatConfigurationRefresh message, read and checked before it is applied.
+    struct SeatConfigurationEntry
+    {
+        //! \brief Creates an entry with nothing chosen.
+        SeatConfigurationEntry() :
+            mSeat(nullptr),
+            mFactionIndex(-1),
+            mPlayerId(-1),
+            mTeamId(-1)
+        {}
+
+        Seat* mSeat;
+        int32_t mFactionIndex;
+        int32_t mPlayerId;
+        int32_t mTeamId;
+    };
+
+    //! \brief Returns true if the socket finished the handshake and its player has a seat, i.e. it takes part in
+    //! the running game or editor. Rejected sockets and sockets still in the handshake do not.
+    bool isPlayingClient(ODSocketClient* client)
+    {
+        if(client == nullptr)
+            return false;
+        Player* player = client->getPlayer();
+        return ServerGuards::isCommandAllowed(ServerGuards::CommandRequirement::seat, client->getState(),
+            player != nullptr, (player != nullptr) && (player->getSeat() != nullptr));
+    }
 }
 
 template<> ODServer* Ogre::Singleton<ODServer>::msSingleton = nullptr;
@@ -789,8 +818,12 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
 
     // We wait until every client acknowledge the turn to start the next one. This way, we ensure
     // synchronisation is not too bad
+    // A socket without a player or a seat (rejected at the seat configuration, or still in the handshake) cannot
+    // acknowledge turns and does not hold the others.
     for (ODSocketClient* client : mSockClients)
     {
+        if(!isPlayingClient(client))
+            continue;
         if(client->getLastTurnAck() != turn)
             return;
     }
@@ -812,6 +845,9 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
     // We notify the clients about what they got
     for (ODSocketClient* sock : mSockClients)
     {
+        // Rejected sockets and sockets still in the handshake have no player or seat to notify
+        if(!isPlayingClient(sock))
+            continue;
         Player* player = sock->getPlayer();
         // For now, only the player whose seat changed is notified. If we need it, we could send the event to every player
         // so that they can see how far from the goals the other players are
@@ -1379,7 +1415,25 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
     }
 
     ClientNotificationType clientCommand;
-    OD_ASSERT_TRUE(packetReceived >> clientCommand);
+    if(!(packetReceived >> clientCommand))
+    {
+        OD_LOG_WRN("Ignored a client message without a valid command, state=" + clientSocket->getState());
+        return true;
+    }
+
+    // Commands other than the handshake are only handled for a socket that finished the handshake and has a
+    // player, and, for the commands of a running game or editor, a seat.
+    Player* senderPlayer = clientSocket->getPlayer();
+    const bool senderHasSeat = (senderPlayer != nullptr) && (senderPlayer->getSeat() != nullptr);
+    if(!ServerGuards::isCommandAllowed(ServerGuards::commandRequirement(clientCommand), clientSocket->getState(),
+        senderPlayer != nullptr, senderHasSeat))
+    {
+        OD_LOG_WRN("Ignored command " + ClientNotification::typeString(clientCommand)
+            + " from a client in state=" + clientSocket->getState()
+            + (senderPlayer == nullptr ? std::string(" without a player") : std::string(""))
+            + (senderHasSeat ? std::string("") : std::string(" without a seat")));
+        return true;
+    }
 
     OD_LOG_INF("processClientNotifications type=" + ClientNotification::typeString(clientCommand));
     switch(clientCommand)
@@ -1389,7 +1443,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(std::string("connected").compare(clientSocket->getState()) != 0)
                 return false;
             std::string version;
-            OD_ASSERT_TRUE(packetReceived >> version);
+            if(!(packetReceived >> version))
+            {
+                OD_LOG_WRN("Refused a client with an incomplete hello message");
+                return false;
+            }
 
             // If the version is different, we refuse the client
             if(version.compare(std::string("OpenDungeons V ") + ODApplication::VERSION + NetworkProtocol::WIRE_SCHEMA_SUFFIX) != 0)
@@ -1554,7 +1612,13 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             // Pick nick
             std::string clientNick;
-            OD_ASSERT_TRUE(packetReceived >> clientNick);
+            if(!(packetReceived >> clientNick))
+            {
+                OD_LOG_WRN("Refused a client without a readable nickname");
+                return false;
+            }
+            // The nickname has at most as many letters as the multiplayer menus allow
+            clientNick = ServerGuards::truncateUtf8Letters(clientNick, ServerGuards::MAX_NICK_LETTERS);
             bool liveNickname = false;
             if(!packetReceived.endOfPacket())
                 OD_ASSERT_TRUE(packetReceived >> liveNickname);
@@ -1659,7 +1723,13 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
 
             std::string nickname;
-            OD_ASSERT_TRUE(packetReceived >> nickname);
+            if(!(packetReceived >> nickname))
+            {
+                OD_LOG_WRN("Ignored changeNick without a readable nickname");
+                break;
+            }
+            // The nickname has at most as many letters as the multiplayer menus allow
+            nickname = ServerGuards::truncateUtf8Letters(nickname, ServerGuards::MAX_NICK_LETTERS);
             Player* player = clientSocket->getPlayer();
             player->setNick(nickname);
             const int32_t playerId = player->getId();
@@ -1678,6 +1748,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(std::string("ready").compare(clientSocket->getState()) != 0)
                 return false;
 
+            // Seats are only handed out while the game is configured
+            if(mServerState != ServerState::StateConfiguration)
+            {
+                OD_LOG_WRN("Ignored readyForSeatConfiguration outside of the seat configuration from player="
+                    + clientSocket->getPlayer()->getNick());
+                break;
+            }
+
             // By default, the first player to connect is the one allowed to configure game
             if(mPlayerConfig == nullptr)
             {
@@ -1690,10 +1768,17 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             ODPacket packetSend;
             OD_LOG_INF("New player: " + clientSocket->getPlayer()->getNick());
-            // We notify to the newly connected player all the currently connected players (including himself)
-            uint32_t nbPlayers = mSockClients.size();
-            packetSend << ServerNotificationType::addPlayers << nbPlayers;
+            // We notify to the newly connected player all the currently connected players (including himself).
+            // Sockets still in the handshake have no player yet and are left out.
+            std::vector<ODSocketClient*> clientsWithPlayer;
             for (ODSocketClient* client : mSockClients)
+            {
+                if((client->getPlayer() != nullptr) && (ServerGuards::STATE_READY == client->getState()))
+                    clientsWithPlayer.push_back(client);
+            }
+            uint32_t nbPlayers = clientsWithPlayer.size();
+            packetSend << ServerNotificationType::addPlayers << nbPlayers;
+            for (ODSocketClient* client : clientsWithPlayer)
             {
                 const std::string& nick = client->getPlayer()->getNick();
                 int32_t id = client->getPlayer()->getId();
@@ -1755,7 +1840,25 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
         case ClientNotificationType::seatConfigurationRefresh:
         {
+            // Only the player that configures the game may change the seats and the game settings, and only
+            // while the game is configured
+            if(!isSeatConfigurationSender(clientSocket))
+                break;
+
+            // The ids of the connected human players a seat may be given
+            std::vector<int32_t> humanIds;
+            for(ODSocketClient* client : mSockClients)
+            {
+                if((client->getPlayer() != nullptr) && (ServerGuards::STATE_READY == client->getState()))
+                    humanIds.push_back(client->getPlayer()->getId());
+            }
+
+            // The whole message is read and checked before anything is applied, so that a message cut short
+            // changes nothing
             const std::vector<std::string>& factions = ConfigManager::getSingleton().getFactions();
+            std::vector<SeatConfigurationEntry> seatEntries;
+            std::vector<int32_t> usedHumanIds;
+            bool seatsRead = true;
             for(Seat* seat : gameMap->getSeats())
             {
                 // Rogue seat do not have to be configured
@@ -1764,43 +1867,155 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
                 int seatId;
                 bool isSet;
-                OD_ASSERT_TRUE(packetReceived >> seatId);
-                OD_ASSERT_TRUE_MSG(seatId == seat->getId(), "seatId=" + Helper::toString(seatId) + ", seat->getId()=" + Helper::toString(seat->getId()));
+                if(!(packetReceived >> seatId))
+                {
+                    seatsRead = false;
+                    break;
+                }
+                if(seatId != seat->getId())
+                {
+                    OD_LOG_WRN("Seat configuration in a wrong order seatId=" + Helper::toString(seatId)
+                        + ", seat->getId()=" + Helper::toString(seat->getId()));
+                    seatsRead = false;
+                    break;
+                }
 
-                OD_ASSERT_TRUE(packetReceived >> isSet);
+                SeatConfigurationEntry entry;
+                entry.mSeat = seat;
+                if(!(packetReceived >> isSet))
+                {
+                    seatsRead = false;
+                    break;
+                }
                 int32_t factionIndex = -1;
                 if(isSet)
                 {
-                    OD_ASSERT_TRUE(packetReceived >> factionIndex);
+                    if(!(packetReceived >> factionIndex))
+                    {
+                        seatsRead = false;
+                        break;
+                    }
                     if(static_cast<uint32_t>(factionIndex) >= factions.size())
                         factionIndex = -1;
                 }
-                seat->setConfigFactionIndex(factionIndex);
+                entry.mFactionIndex = factionIndex;
 
-                OD_ASSERT_TRUE(packetReceived >> isSet);
+                if(!(packetReceived >> isSet))
+                {
+                    seatsRead = false;
+                    break;
+                }
                 int32_t playerId = -1;
                 if(isSet)
                 {
-                    OD_ASSERT_TRUE(packetReceived >> playerId);
+                    if(!(packetReceived >> playerId))
+                    {
+                        seatsRead = false;
+                        break;
+                    }
                 }
-                seat->setConfigPlayerId(playerId);
+                if(!ServerGuards::isConfigPlayerIdAllowed(playerId, Seat::PLAYER_ID_HUMAN_MIN, humanIds))
+                {
+                    OD_LOG_WRN("Ignored unknown player id=" + Helper::toString(playerId) + " for seatId="
+                        + Helper::toString(seatId));
+                    playerId = -1;
+                }
+                else if(playerId >= Seat::PLAYER_ID_HUMAN_MIN)
+                {
+                    // A human player can only take one seat
+                    if(std::find(usedHumanIds.begin(), usedHumanIds.end(), playerId) != usedHumanIds.end())
+                    {
+                        OD_LOG_WRN("Ignored player id=" + Helper::toString(playerId) + " given a second seatId="
+                            + Helper::toString(seatId));
+                        playerId = -1;
+                    }
+                    else
+                        usedHumanIds.push_back(playerId);
+                }
+                entry.mPlayerId = playerId;
 
-                OD_ASSERT_TRUE(packetReceived >> isSet);
+                if(!(packetReceived >> isSet))
+                {
+                    seatsRead = false;
+                    break;
+                }
                 int32_t teamId = -1;
                 if(isSet)
                 {
-                    OD_ASSERT_TRUE(packetReceived >> teamId);
+                    if(!(packetReceived >> teamId))
+                    {
+                        seatsRead = false;
+                        break;
+                    }
                 }
-                seat->setConfigTeamId(teamId);
+                if(!ServerGuards::isConfigTeamIdAllowed(teamId, seat->getAvailableTeamIds()))
+                {
+                    OD_LOG_WRN("Ignored team id=" + Helper::toString(teamId) + " not available for seatId="
+                        + Helper::toString(seatId));
+                    teamId = -1;
+                }
+                entry.mTeamId = teamId;
+                seatEntries.push_back(entry);
+            }
+            if(!seatsRead)
+            {
+                OD_LOG_WRN("Ignored an incomplete seat configuration from player=" + clientSocket->getPlayer()->getNick());
+                break;
             }
 
             // The skirmish game settings follow the seats
             uint32_t goldDensityPercent = GameMap::SKIRMISH_PERCENT_DEFAULT;
             uint32_t manaRegenerationPercent = GameMap::SKIRMISH_PERCENT_DEFAULT;
             uint32_t maxCreaturesSetting = 0;
-            OD_ASSERT_TRUE(packetReceived >> goldDensityPercent);
-            OD_ASSERT_TRUE(packetReceived >> manaRegenerationPercent);
-            OD_ASSERT_TRUE(packetReceived >> maxCreaturesSetting);
+            packetReceived >> goldDensityPercent;
+            packetReceived >> manaRegenerationPercent;
+            packetReceived >> maxCreaturesSetting;
+
+            uint32_t gameSpeedPercent = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+            uint32_t gameDurationMinutes = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+            uint32_t fogOfWar = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+            uint32_t heartDestroyedReward = GameMap::SKIRMISH_SETTING_UNCHOSEN;
+            packetReceived >> gameSpeedPercent;
+            packetReceived >> gameDurationMinutes;
+            packetReceived >> fogOfWar;
+            packetReceived >> heartDestroyedReward;
+
+            std::vector<std::pair<std::string, uint32_t>> creatureLimits;
+            uint32_t nbCreatureLimits = 0;
+            packetReceived >> nbCreatureLimits;
+            for(uint32_t i = 0; packetReceived && (i < nbCreatureLimits); ++i)
+            {
+                std::string className;
+                uint32_t limit;
+                if(packetReceived >> className >> limit)
+                    creatureLimits.push_back(std::pair<std::string, uint32_t>(className, limit));
+            }
+
+            std::vector<std::pair<uint32_t, uint32_t>> skillStates;
+            uint32_t nbSkillStates = 0;
+            packetReceived >> nbSkillStates;
+            for(uint32_t i = 0; packetReceived && (i < nbSkillStates); ++i)
+            {
+                uint32_t skillType;
+                uint32_t skillState;
+                if(packetReceived >> skillType >> skillState)
+                    skillStates.push_back(std::pair<uint32_t, uint32_t>(skillType, skillState));
+            }
+
+            if(!packetReceived)
+            {
+                OD_LOG_WRN("Ignored a seat configuration with incomplete game settings from player="
+                    + clientSocket->getPlayer()->getNick());
+                break;
+            }
+
+            for(const SeatConfigurationEntry& entry : seatEntries)
+            {
+                entry.mSeat->setConfigFactionIndex(entry.mFactionIndex);
+                entry.mSeat->setConfigPlayerId(entry.mPlayerId);
+                entry.mSeat->setConfigTeamId(entry.mTeamId);
+            }
+
             // A setting the page has not shown yet is not chosen: the value of the server is kept
             if(goldDensityPercent == GameMap::SKIRMISH_SETTING_UNCHOSEN)
                 goldDensityPercent = gameMap->getGoldDensityPercent();
@@ -1810,14 +2025,6 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 maxCreaturesSetting = gameMap->getMaxCreaturesSetting();
             gameMap->setSkirmishSettings(goldDensityPercent, manaRegenerationPercent, maxCreaturesSetting);
 
-            uint32_t gameSpeedPercent;
-            uint32_t gameDurationMinutes;
-            uint32_t fogOfWar;
-            uint32_t heartDestroyedReward = GameMap::SKIRMISH_SETTING_UNCHOSEN;
-            OD_ASSERT_TRUE(packetReceived >> gameSpeedPercent);
-            OD_ASSERT_TRUE(packetReceived >> gameDurationMinutes);
-            OD_ASSERT_TRUE(packetReceived >> fogOfWar);
-            OD_ASSERT_TRUE(packetReceived >> heartDestroyedReward);
             if(gameSpeedPercent == GameMap::SKIRMISH_SETTING_UNCHOSEN)
                 gameSpeedPercent = gameMap->getGameSpeedPercent();
             if(gameDurationMinutes == GameMap::SKIRMISH_SETTING_UNCHOSEN)
@@ -1828,24 +2035,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 heartDestroyedReward = gameMap->getHeartDestroyedReward();
             gameMap->setGameRules(gameSpeedPercent, gameDurationMinutes, fogOfWar != 0, heartDestroyedReward);
 
-            uint32_t nbCreatureLimits;
-            OD_ASSERT_TRUE(packetReceived >> nbCreatureLimits);
-            for(uint32_t i = 0; i < nbCreatureLimits; ++i)
+            for(const std::pair<std::string, uint32_t>& creatureLimit : creatureLimits)
             {
-                std::string className;
-                uint32_t limit;
-                OD_ASSERT_TRUE(packetReceived >> className >> limit);
+                const std::string& className = creatureLimit.first;
+                uint32_t limit = creatureLimit.second;
                 if(limit != GameMap::SKIRMISH_SETTING_UNCHOSEN)
                     gameMap->setCreatureClassLimit(className, limit);
             }
 
-            uint32_t nbSkillStates;
-            OD_ASSERT_TRUE(packetReceived >> nbSkillStates);
-            for(uint32_t i = 0; i < nbSkillStates; ++i)
+            for(const std::pair<uint32_t, uint32_t>& skillTypeState : skillStates)
             {
-                uint32_t skillType;
-                uint32_t skillState;
-                OD_ASSERT_TRUE(packetReceived >> skillType >> skillState);
+                uint32_t skillType = skillTypeState.first;
+                uint32_t skillState = skillTypeState.second;
                 if(skillState > static_cast<uint32_t>(GameMap::SkirmishItemState::needsResearch))
                     continue;
                 if(skillType >= static_cast<uint32_t>(SkillType::countSkill))
@@ -1864,6 +2065,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(mServerState != ServerState::StateConfiguration)
             {
                 OD_LOG_ERR("Wrong server state=" + Helper::toString(static_cast<int>(mServerState)));
+                sendStartGameRefused(clientSocket, StartGameRefusal::Reason::wrongState);
+                break;
+            }
+
+            // Only the player that configures the game may start it
+            if(!isSeatConfigurationSender(clientSocket))
+            {
+                sendStartGameRefused(clientSocket, StartGameRefusal::Reason::notHost);
                 break;
             }
 
@@ -1897,7 +2106,10 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             // If configuration is not complete, we don't go further
             if(!isConfigured)
+            {
+                sendStartGameRefused(clientSocket, StartGameRefusal::Reason::seatsIncomplete);
                 break;
+            }
 
             mServerState = ServerState::StateGame;
 
@@ -1959,10 +2171,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
 
             // Now, we can disconnect the players that were not configured
+            // A socket still in the handshake has no player and is rejected as well
             std::vector<ODSocketClient*> clientsToRemove;
             for (ODSocketClient* client : mSockClients)
             {
-                if(client->getPlayer()->getSeat() == nullptr)
+                if((client->getPlayer() == nullptr) || (client->getPlayer()->getSeat() == nullptr))
                     clientsToRemove.push_back(client);
             }
 
@@ -1973,9 +2186,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 for(ODSocketClient* client : clientsToRemove)
                 {
                     Player* player = client->getPlayer();
-                    OD_LOG_INF("Rejecting player id="
-                        + Helper::toString(player->getId())
-                        + ", nick=" + player->getNick());
+                    if(player != nullptr)
+                    {
+                        OD_LOG_INF("Rejecting player id="
+                            + Helper::toString(player->getId())
+                            + ", nick=" + player->getNick());
+                    }
+                    else
+                        OD_LOG_INF("Rejecting a client still in the handshake, state=" + client->getState());
                     client->setState("rejected");
                     client->send(packetSend);
                     delete player;
@@ -2064,7 +2282,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // them directly to the clients instead of queuing a ServerNotification
             // to the Server
             std::string chatMsg;
-            OD_ASSERT_TRUE(packetReceived >> chatMsg);
+            if(!(packetReceived >> chatMsg))
+            {
+                OD_LOG_WRN("Ignored chat without a readable message from player=" + clientSocket->getPlayer()->getNick());
+                break;
+            }
+            // Longer messages are cut so that one client cannot flood the others with huge packets
+            if(chatMsg.size() > ServerGuards::MAX_CHAT_BYTES)
+            {
+                OD_LOG_WRN("Cut a chat message of " + Helper::toString(static_cast<uint32_t>(chatMsg.size()))
+                    + " bytes from player=" + clientSocket->getPlayer()->getNick());
+                chatMsg = ServerGuards::truncateUtf8Bytes(chatMsg, ServerGuards::MAX_CHAT_BYTES);
+            }
             int32_t seatId = -1;
             if(clientSocket->getPlayer()->getSeat() != nullptr)
                 seatId = clientSocket->getPlayer()->getSeat()->getId();
@@ -2081,7 +2310,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             std::string entityName;
             GameEntityType entityType;
-            OD_ASSERT_TRUE(packetReceived >> entityType >> entityName);
+            if(!(packetReceived >> entityType >> entityName))
+            {
+                OD_LOG_WRN("Ignored askEntityPickUp with an incomplete message");
+                break;
+            }
 
             Player *player = clientSocket->getPlayer();
             GameEntity* entity = gameMap->getEntityFromTypeAndName(entityType, entityName);
@@ -2223,7 +2456,14 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             bool isDigSet;
             Player* player = clientSocket->getPlayer();
 
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2 >> isDigSet);
+            if(!(packetReceived >> x1 >> y1 >> x2 >> y2 >> isDigSet))
+            {
+                OD_LOG_WRN("Ignored askMarkTiles with an incomplete message");
+                break;
+            }
+            // Only the part of the rectangle on the map is walked
+            if(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, gameMap->getMapSizeX(), gameMap->getMapSizeY()))
+                break;
             std::vector<Tile*> tiles = gameMap->rectangularRegion(x1, y1, x2, y2);
             player->markTilesForDigging(isDigSet, tiles, true);
 
@@ -2237,7 +2477,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             float handX;
             float handY;
             Player* player = clientSocket->getPlayer();
-            OD_ASSERT_TRUE(packetReceived >> entityType >> entityName >> handX >> handY);
+            if(!(packetReceived >> entityType >> entityName >> handX >> handY))
+            {
+                OD_LOG_WRN("Ignored askSlapEntity with an incomplete message");
+                break;
+            }
             GameEntity* entity = gameMap->getEntityFromTypeAndName(entityType, entityName);
             if(entity == nullptr)
             {
@@ -2277,7 +2521,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             RoomType type;
 
-            OD_ASSERT_TRUE(packetReceived >> type);
+            if(!(packetReceived >> type))
+            {
+                OD_LOG_WRN("Ignored askBuildRoom with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(refuseIfDefeated(player))
                 break;
@@ -2325,7 +2573,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             TrapType type;
 
-            OD_ASSERT_TRUE(packetReceived >> type);
+            if(!(packetReceived >> type))
+            {
+                OD_LOG_WRN("Ignored askBuildTrap with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(refuseIfDefeated(player))
                 break;
@@ -2368,7 +2620,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             SpellType spellType;
 
-            OD_ASSERT_TRUE(packetReceived >> spellType);
+            if(!(packetReceived >> spellType))
+            {
+                OD_LOG_WRN("Ignored askCastSpell with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(refuseIfDefeated(player))
                 break;
@@ -2414,7 +2670,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::askPossessMove:
         {
             Ogre::Vector2 direction;
-            OD_ASSERT_TRUE(packetReceived >> direction);
+            if(!(packetReceived >> direction))
+            {
+                OD_LOG_WRN("Ignored askPossessMove with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(!player->isPossessing())
                 break;
@@ -2430,7 +2690,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::askPossessAttack:
         {
             Ogre::Vector2 aim;
-            OD_ASSERT_TRUE(packetReceived >> aim);
+            if(!(packetReceived >> aim))
+            {
+                OD_LOG_WRN("Ignored askPossessAttack with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(!player->isPossessing())
                 break;
@@ -2447,7 +2711,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             uint32_t slot;
             Ogre::Vector2 aim;
-            OD_ASSERT_TRUE(packetReceived >> slot >> aim);
+            if(!(packetReceived >> slot >> aim))
+            {
+                OD_LOG_WRN("Ignored askPossessSkill with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(!player->isPossessing())
                 break;
@@ -2494,7 +2762,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             std::string className;
             uint32_t level;
-            OD_ASSERT_TRUE(packetReceived >> className >> level);
+            if(!(packetReceived >> className >> level))
+            {
+                OD_LOG_WRN("Ignored askSandboxTakeHero with an incomplete message");
+                break;
+            }
             gameMap->getSandboxMode().takeHero(clientSocket->getPlayer(), className, level);
             break;
         }
@@ -2502,16 +2774,25 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::askSandboxInvasion:
         {
             bool continual;
-            OD_ASSERT_TRUE(packetReceived >> continual);
+            if(!(packetReceived >> continual))
+            {
+                OD_LOG_WRN("Ignored askSandboxInvasion with an incomplete message");
+                break;
+            }
             gameMap->getSandboxMode().startInvasion(clientSocket->getPlayer(), continual);
             break;
         }
 
         case ClientNotificationType::askSetPlayerSettings:
         {
+            // The central check before the switch makes sure the player has a seat
             Seat* playerSeat = clientSocket->getPlayer()->getSeat();
             bool koCreatures;
-            OD_ASSERT_TRUE(packetReceived >> koCreatures);
+            if(!(packetReceived >> koCreatures))
+            {
+                OD_LOG_WRN("Ignored askSetPlayerSettings without a readable value");
+                break;
+            }
             playerSeat->setPlayerSettings(koCreatures);
             break;
         }
@@ -2532,7 +2813,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::ackNewTurn:
         {
             int64_t turn;
-            OD_ASSERT_TRUE(packetReceived >> turn);
+            if(!(packetReceived >> turn))
+            {
+                OD_LOG_WRN("Ignored ackNewTurn without a readable turn");
+                break;
+            }
             clientSocket->setLastTurnAck(turn);
             break;
         }
@@ -2543,7 +2828,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                clientSocket->getPlayer() == nullptr || clientSocket->getPlayer()->getSeat() == nullptr)
                 return false;
             bool open = false;
-            OD_ASSERT_TRUE(packetReceived >> open);
+            if(!(packetReceived >> open))
+            {
+                OD_LOG_WRN("Ignored askDungeonbookRoster with an incomplete message");
+                break;
+            }
             clientSocket->setDungeonbookRosterOpen(open);
             if(open)
                 notifyDungeonbookRoster(gameMap, clientSocket->getPlayer());
@@ -2564,12 +2853,24 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             std::string name;
             bool refreshEachTurn;
-            OD_ASSERT_TRUE(packetReceived >> name >> refreshEachTurn);
+            if(!(packetReceived >> name >> refreshEachTurn))
+            {
+                OD_LOG_WRN("Ignored askCreatureInfos with an incomplete message");
+                break;
+            }
             std::vector<std::string>& creatures = mCreaturesInfoWanted[clientSocket];
 
             std::vector<std::string>::iterator it = std::find(creatures.begin(), creatures.end(), name);
             if(refreshEachTurn && (it == creatures.end()))
             {
+                // The list is kept for every turn: its names and its length are bounded
+                if(!ServerGuards::isNameAllowed(name) ||
+                   !ServerGuards::canAddEntry(creatures.size(), ServerGuards::MAX_INFO_SUBSCRIPTIONS))
+                {
+                    OD_LOG_WRN("Ignored askCreatureInfos subscription, list size="
+                        + Helper::toString(static_cast<uint32_t>(creatures.size())));
+                    break;
+                }
                 creatures.push_back(name);
             }
             else if(!refreshEachTurn && (it != creatures.end()))
@@ -2583,12 +2884,24 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int xx;
             int yy;
             bool refreshEachTurn;
-            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> refreshEachTurn);
+            if(!(packetReceived >> xx >> yy >> refreshEachTurn))
+            {
+                OD_LOG_WRN("Ignored askTileInfos with an incomplete message");
+                break;
+            }
             std::vector<std::pair<int,int>>& tiles = mTilesInfoWanted[clientSocket];
 
             std::vector<std::pair<int,int>>::iterator it = std::find(tiles.begin(), tiles.end(), std::pair<int,int>(xx,yy));
             if(refreshEachTurn && (it == tiles.end()))
             {
+                // The list is kept for every turn: only tiles on the map, and a bounded number of them
+                if(!ServerGuards::isTileOnMap(xx, yy, gameMap->getMapSizeX(), gameMap->getMapSizeY()) ||
+                   !ServerGuards::canAddEntry(tiles.size(), ServerGuards::MAX_INFO_SUBSCRIPTIONS))
+                {
+                    OD_LOG_WRN("Ignored askTileInfos subscription x=" + Helper::toString(xx) + ", y="
+                        + Helper::toString(yy) + ", list size=" + Helper::toString(static_cast<uint32_t>(tiles.size())));
+                    break;
+                }
                 tiles.push_back(std::pair<int,int>(xx,yy));
             }
             else if(!refreshEachTurn && (it != tiles.end()))
@@ -2616,8 +2929,16 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             std::string receivedFilePath;
             std::string receivedFileLevel;
-            OD_ASSERT_TRUE(packetReceived >>receivedFilePath);
-            OD_ASSERT_TRUE(packetReceived >>receivedFileLevel);    
+            if(!(packetReceived >> receivedFilePath))
+            {
+                OD_LOG_WRN("Ignored askSaveMap with an incomplete message");
+                break;
+            }
+            if(!(packetReceived >> receivedFileLevel))
+            {
+                OD_LOG_WRN("Ignored askSaveMap with an incomplete message");
+                break;
+            }
             const boost::filesystem::path levelPath(gameMap->getLevelFileName());
             std::string fileLevel = levelPath.filename().string();
             // In editor mode, we don't allow a player to have creatures in hand while saving map
@@ -2753,8 +3074,21 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         int yy;
  
         int seatId;
-        OD_ASSERT_TRUE(packetReceived >> xx >> yy );
+        if(!(packetReceived >> xx >> yy))
+        {
+            OD_LOG_WRN("Ignored notifyTileRevealed without readable coordinates");
+            break;
+        }
         seatId = clientSocket->getPlayer()->getSeat()->getId();
+        // The coordinates come from the client: a tile or a seat outside of the arrays of the map must not be written to
+        if((gameMap->everVisitedFlagPool == nullptr) ||
+           !ServerGuards::isTileOnMap(xx, yy, gameMap->getMapSizeX(), gameMap->getMapSizeY()) ||
+           !ServerGuards::isSeatIndexValid(seatId, gameMap->everVisitedFlagPool[xx][yy].size()))
+        {
+            OD_LOG_WRN("Ignored revealed tile x=" + Helper::toString(xx) + ", y=" + Helper::toString(yy)
+                + " of seat id=" + Helper::toString(seatId));
+            break;
+        }
         gameMap->everVisitedFlagPool[xx][yy][seatId] = true;
 
 
@@ -2767,6 +3101,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(mServerMode != ServerMode::ModeEditor)
             {
                 OD_LOG_ERR("Received editor command while wrong mode mode" + Helper::toString(static_cast<int>(mServerMode)));
+                break;
+            }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored createAllEntities without a draggable tile container");
                 break;
             }
             mDraggableTileContainer->createAllEntities();
@@ -2792,7 +3131,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int TileMarkerMinY;
             int TileMarkerMaxX;
             int TileMarkerMaxY;            
-            OD_ASSERT_TRUE(packetReceived >> sizeX >> sizeY >> posX >> posY >> TileMarkerMinX>> TileMarkerMinY >> TileMarkerMaxX>>TileMarkerMaxY);
+            if(!(packetReceived >> sizeX >> sizeY >> posX >> posY >> TileMarkerMinX>> TileMarkerMinY >> TileMarkerMaxX>>TileMarkerMaxY))
+            {
+                OD_LOG_WRN("Ignored editorAskCreateDraggableTileContainer with an incomplete message");
+                break;
+            }
+            // The container copies a part of the map: it cannot be empty or larger than the map
+            if((sizeX <= 0) || (sizeY <= 0) || (sizeX > gameMap->getMapSizeX()) || (sizeY > gameMap->getMapSizeY()))
+            {
+                OD_LOG_WRN("Ignored draggable tile container of size " + Helper::toString(sizeX) + "x"
+                    + Helper::toString(sizeY));
+                break;
+            }
             if(mDraggableTileContainer==nullptr)
             {
                 mDraggableTileContainer= new DraggableTileContainer(true);
@@ -2835,6 +3185,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         }
         case ClientNotificationType::editorAskDeleteDraggableTileContainer:
         {
+            if(mServerMode != ServerMode::ModeEditor)
+            {
+                OD_LOG_ERR("Received editor command while wrong mode mode" + Helper::toString(static_cast<int>(mServerMode)));
+                break;
+            }
             if(mDraggableTileContainer!=nullptr)
             {
                 delete mDraggableTileContainer;
@@ -2860,7 +3215,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             Ogre::Real posY;
             Ogre::Real offsetX;
             Ogre::Real offsetY;
-            OD_ASSERT_TRUE(packetReceived >> posX >> posY >> offsetX >> offsetY);
+            if(!(packetReceived >> posX >> posY >> offsetX >> offsetY))
+            {
+                OD_LOG_WRN("Ignored editorAskSetRoundedPositionDraggableTileContainer with an incomplete message");
+                break;
+            }
             if(mDraggableTileContainer!=nullptr)
             {
                 mDraggableTileContainer->setRoundedPosition(Ogre::Vector2(posX, posY),Ogre::Vector2(offsetX, offsetY));
@@ -2883,7 +3242,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             int sizeX;
             int sizeY;
-            OD_ASSERT_TRUE(packetReceived >> sizeX >> sizeY);
+            if(!(packetReceived >> sizeX >> sizeY))
+            {
+                OD_LOG_WRN("Ignored editorAskMoveDeltaDraggableTileContainer with an incomplete message");
+                break;
+            }
             if(mDraggableTileContainer!=nullptr)
             {
                 mDraggableTileContainer->moveDelta(Ogre::Vector2(sizeX, sizeY));
@@ -2904,8 +3267,24 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int seatId;
             uint32_t goldDensity = Tile::GOLD_DENSITY_DEFAULT;
 
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> tileType >> tileFullness >> seatId >> goldDensity);
+            if(!(packetReceived >> x1 >> y1 >> tileType >> tileFullness >> seatId >> goldDensity))
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTile with an incomplete message");
+                break;
+            }
             Tile* selectedTile = gameMap->getTile(x1,y1);
+            // The count value is no tile type
+            if(tileType == TileType::countTileType)
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTile with no tile type");
+                break;
+            }
+            if(selectedTile == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTile outside of the map x=" + Helper::toString(x1)
+                    + ", y=" + Helper::toString(y1));
+                break;
+            }
             Seat* seat = nullptr;
             if(seatId != -1)
                 seat = gameMap->getSeatById(seatId);
@@ -2962,7 +3341,19 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int seatId;
             uint32_t goldDensity = Tile::GOLD_DENSITY_DEFAULT;
 
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2 >> tileType >> tileFullness >> seatId >> goldDensity);
+            if(!(packetReceived >> x1 >> y1 >> x2 >> y2 >> tileType >> tileFullness >> seatId >> goldDensity))
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTiles with an incomplete message");
+                break;
+            }
+            // Only the part of the rectangle on the map is walked, and the count value is no tile type
+            if(tileType == TileType::countTileType)
+            {
+                OD_LOG_WRN("Ignored editorAskChangeTiles with no tile type");
+                break;
+            }
+            if(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, gameMap->getMapSizeX(), gameMap->getMapSizeY()))
+                break;
             std::vector<Tile*> selectedTiles = gameMap->rectangularRegion(x1, y1, x2, y2);
             std::vector<Tile*> affectedTiles;
             Seat* seat = nullptr;
@@ -3026,6 +3417,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                     + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskCopyRoom without a draggable tile container");
+                break;
+            }
     
             for(Room* room : mDraggableTileContainer->mRooms)
             {
@@ -3068,7 +3464,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
             RoomType type;
 
-            OD_ASSERT_TRUE(packetReceived >> type);
+            if(!(packetReceived >> type))
+            {
+                OD_LOG_WRN("Ignored editorAskBuildRoom with an incomplete message");
+                break;
+            }
 
             Player* player = clientSocket->getPlayer();
             if(!RoomManager::buildRoomEditor(gameMap, type, packetReceived))
@@ -3088,6 +3488,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                     + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }            
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskCopyTrap without a draggable tile container");
+                break;
+            }
             for(Trap* trap : mDraggableTileContainer->mTraps)
             {
                 ODPacket auxPacket;
@@ -3139,7 +3544,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
             TrapType type;
 
-            OD_ASSERT_TRUE(packetReceived >> type);
+            if(!(packetReceived >> type))
+            {
+                OD_LOG_WRN("Ignored editorAskBuildTrap with an incomplete message");
+                break;
+            }
 
             Player* player = clientSocket->getPlayer();
             if(!TrapManager::buildTrapEditor(gameMap, type, packetReceived))
@@ -3163,7 +3572,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
             TrapType type;
 
-            OD_ASSERT_TRUE(packetReceived >> type);
+            if(!(packetReceived >> type))
+            {
+                OD_LOG_WRN("Ignored editorAskBuildTrapWithActivation with an incomplete message");
+                break;
+            }
 
             Player* player = clientSocket->getPlayer();
             if(!TrapManager::buildTrapEditor(gameMap, type, packetReceived))
@@ -3183,6 +3596,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                            + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskRevealTiles without a draggable tile container");
+                break;
+            }
             unsigned int x1, y1;
 
             unsigned int length, width;
@@ -3191,7 +3609,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             
             width = mDraggableTileContainer->getMapSizeY();
             
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1);
+            if(!(packetReceived >> x1 >> y1))
+            {
+                OD_LOG_WRN("Ignored editorAskRevealTiles with an incomplete message");
+                break;
+            }
 
             gameMap->copyTilesWithOffsetInto( mDraggableTileContainer, 0, 0, length, width, mDraggableTileContainer->getPosition().x, mDraggableTileContainer->getPosition().y);
             
@@ -3228,9 +3650,18 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                            + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskRevealRooms without a draggable tile container");
+                break;
+            }
             unsigned int x1, y1, x2, y2;
             uint32_t nbRooms;
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2);
+            if(!(packetReceived >> x1 >> y1 >> x2 >> y2))
+            {
+                OD_LOG_WRN("Ignored editorAskRevealRooms with an incomplete message");
+                break;
+            }
             std::vector<Room*> affectedRooms;
 
             for(Room* room : gameMap->mRooms)
@@ -3294,8 +3725,17 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                            + Helper::toString(static_cast<int>(mServerMode)));
                 break;
             }
+            if(mDraggableTileContainer == nullptr)
+            {
+                OD_LOG_WRN("Ignored editorAskRevealTraps without a draggable tile container");
+                break;
+            }
             unsigned int x1, y1, x2, y2;
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2);
+            if(!(packetReceived >> x1 >> y1 >> x2 >> y2))
+            {
+                OD_LOG_WRN("Ignored editorAskRevealTraps with an incomplete message");
+                break;
+            }
             std::vector<Trap*> affectedTraps;
 
             for(Trap* trap : gameMap->mTraps)
@@ -3317,7 +3757,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             for(Trap* trap : affectedTraps)
             {
                 int32_t seatId;
-                seatId = trap->getSeat()->getId();
+                seatId = (trap->getSeat() == nullptr ? -1 : trap->getSeat()->getId());
                 ODPacket auxPacket;
                 auxPacket << seatId;
                 uint32_t nbTiles = 0 ;
@@ -3351,7 +3791,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 }
                 if(!TrapManager::buildTrapEditor(mDraggableTileContainer, trap->getType(), auxPacket))
                 {
-                    OD_LOG_INF("WARNING: player seatId=" + Helper::toString(trap->getSeat()->getId())
+                    OD_LOG_INF("WARNING: player seatId=" + Helper::toString(seatId)
                                + " couldn't build trap: " + TrapManager::getTrapNameFromTrapType(trap->getType()));
                     break;
                 }                                     
@@ -3372,7 +3812,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             Player* player = clientSocket->getPlayer();
             int seatId;
             uint32_t level;
-            OD_ASSERT_TRUE(packetReceived >> seatId >> level);
+            if(!(packetReceived >> seatId >> level))
+            {
+                OD_LOG_WRN("Ignored editorCreateWorker with an incomplete message");
+                break;
+            }
             Seat* seatCreature = gameMap->getSeatById(seatId);
             if(seatCreature == nullptr)
             {
@@ -3416,7 +3860,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int seatId;
             std::string className;
             uint32_t level;
-            OD_ASSERT_TRUE(packetReceived >> seatId >> className >> level);
+            if(!(packetReceived >> seatId >> className >> level))
+            {
+                OD_LOG_WRN("Ignored editorCreateFighter with an incomplete message");
+                break;
+            }
             Seat* seatCreature = gameMap->getSeatById(seatId);
             if(seatCreature == nullptr)
             {
@@ -3457,7 +3905,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
             Player* player = clientSocket->getPlayer();
             uint32_t level;
-            OD_ASSERT_TRUE(packetReceived >> level);
+            if(!(packetReceived >> level))
+            {
+                OD_LOG_WRN("Ignored editorSetCreatureLevel with an incomplete message");
+                break;
+            }
 
             // This is how the level of a creature already placed on the map is changed:
             // it is picked up, given a level and dropped again. An empty hand, or one
@@ -3511,7 +3963,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
             Tile* tile = gameMap->tileFromPacket(packetReceived);
             RoomPortalWaveConfig config;
-            OD_ASSERT_TRUE(packetReceived >> config);
+            if(!(packetReceived >> config))
+            {
+                OD_LOG_WRN("Ignored editorSetPortalWaveData with an incomplete message");
+                break;
+            }
 
             RoomPortalWave* roomPortalWave = getWavePortalOnTile(tile);
             if(roomPortalWave == nullptr)
@@ -3550,7 +4006,26 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // The markers belong to the level script, which is saved from the server side
             LevelScript& levelScript = gameMap->getLevelScript();
             if(operation == static_cast<int32_t>(EditorRegionOperation::set))
-                levelScript.setRegion(LevelScriptRegion(regionName, x1, y1, x2, y2));
+            {
+                // A region needs a usable name and corners on the map, and the number of regions is bounded
+                bool regionExists = false;
+                for(const LevelScriptRegion& region : levelScript.getRegions())
+                {
+                    if(region.mName == regionName)
+                        regionExists = true;
+                }
+                if(!ServerGuards::isRegionNameAllowed(regionName) ||
+                   !ServerGuards::isTileOnMap(x1, y1, gameMap->getMapSizeX(), gameMap->getMapSizeY()) ||
+                   !ServerGuards::isTileOnMap(x2, y2, gameMap->getMapSizeX(), gameMap->getMapSizeY()) ||
+                   (!regionExists && !ServerGuards::canAddEntry(levelScript.getRegions().size(), ServerGuards::MAX_REGIONS)))
+                {
+                    OD_LOG_WRN("Ignored editor region with a name of " + Helper::toString(static_cast<uint32_t>(regionName.size()))
+                        + " bytes at x1=" + Helper::toString(x1) + ", y1=" + Helper::toString(y1)
+                        + ", x2=" + Helper::toString(x2) + ", y2=" + Helper::toString(y2));
+                }
+                else
+                    levelScript.setRegion(LevelScriptRegion(regionName, x1, y1, x2, y2));
+            }
             else if(operation == static_cast<int32_t>(EditorRegionOperation::remove))
                 levelScript.removeRegion(regionName);
 
@@ -3567,7 +4042,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             Player* player = clientSocket->getPlayer();
             uint32_t nbItems;
-            OD_ASSERT_TRUE(packetReceived >> nbItems);
+            if(!(packetReceived >> nbItems))
+            {
+                OD_LOG_WRN("Ignored askSetSkillTree with an incomplete message");
+                break;
+            }
             if(nbItems >= static_cast<uint32_t>(SkillType::countSkill))
                 return false;
             std::vector<SkillType> skills;
@@ -3630,7 +4109,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         {
             Player* player = clientSocket->getPlayer();
             int32_t giftBoxTypeInt;
-            OD_ASSERT_TRUE(packetReceived >> giftBoxTypeInt);
+            if(!(packetReceived >> giftBoxTypeInt))
+            {
+                OD_LOG_WRN("Ignored askUseSpecial with an incomplete message");
+                break;
+            }
             if((giftBoxTypeInt <= static_cast<int32_t>(GiftBoxType::skill)) ||
                (giftBoxTypeInt >= static_cast<int32_t>(GiftBoxType::item)))
             {
@@ -3658,7 +4141,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::askLabWindow:
         {
             bool open;
-            OD_ASSERT_TRUE(packetReceived >> open);
+            if(!(packetReceived >> open))
+            {
+                OD_LOG_WRN("Ignored askLabWindow with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(player == nullptr || player->getSeat() == nullptr || player->getHasLost())
                 break;
@@ -3672,7 +4159,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::askLabSetting:
         {
             int32_t mode;
-            OD_ASSERT_TRUE(packetReceived >> mode);
+            if(!(packetReceived >> mode))
+            {
+                OD_LOG_WRN("Ignored askLabSetting with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(player == nullptr || player->getSeat() == nullptr || player->getHasLost() || mode < 0 || mode > 2 ||
                gameMap->getRoomsByTypeAndSeat(RoomType::alchemyLab, player->getSeat()).empty())
@@ -3719,7 +4210,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::askInfirmaryWindow:
         {
             bool open;
-            OD_ASSERT_TRUE(packetReceived >> open);
+            if(!(packetReceived >> open))
+            {
+                OD_LOG_WRN("Ignored askInfirmaryWindow with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(player == nullptr || player->getSeat() == nullptr || !player->getIsHuman())
                 break;
@@ -3733,7 +4228,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int32_t payer;
             int32_t threshold;
             bool healOn;
-            OD_ASSERT_TRUE(packetReceived >> payer >> threshold >> healOn);
+            if(!(packetReceived >> payer >> threshold >> healOn))
+            {
+                OD_LOG_WRN("Ignored askInfirmarySettings with an incomplete message");
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             if(player == nullptr || player->getSeat() == nullptr || player->getHasLost() || !player->getIsHuman())
                 break;
@@ -3794,7 +4293,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int yy;
             uint32_t level;
             bool isSet;
-            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> level >> isSet);
+            if(!(packetReceived >> xx >> yy >> level >> isSet))
+            {
+                OD_LOG_WRN("Ignored askCasinoPayout with an incomplete message");
+                break;
+            }
             Tile* tile = gameMap->getTile(xx, yy);
             if(tile == nullptr)
                 break;
@@ -3825,7 +4328,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             int xx;
             int yy;
-            OD_ASSERT_TRUE(packetReceived >> xx >> yy);
+            if(!(packetReceived >> xx >> yy))
+            {
+                OD_LOG_WRN("Ignored askTavernWindow with an incomplete message");
+                break;
+            }
             RoomTavern* roomTavern = getOwnedTavern(gameMap, player, xx, yy);
             if(roomTavern == nullptr)
                 break;
@@ -3846,7 +4353,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int xx;
             int yy;
             uint32_t payer;
-            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer);
+            if(!(packetReceived >> xx >> yy >> payer))
+            {
+                OD_LOG_WRN("Ignored askTavernPayer with an incomplete message");
+                break;
+            }
             RoomTavern* roomTavern = getOwnedTavern(gameMap, player, xx, yy);
             if(roomTavern == nullptr)
                 break;
@@ -3871,7 +4382,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int yy;
             uint32_t payer;
             bool isSet;
-            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer >> isSet);
+            if(!(packetReceived >> xx >> yy >> payer >> isSet))
+            {
+                OD_LOG_WRN("Ignored askSpaPayer with an incomplete message");
+                break;
+            }
             RoomSpa* roomSpa = getOwnedSpa(gameMap, player, xx, yy);
             if(roomSpa == nullptr)
                 break;
@@ -3889,17 +4404,42 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
         case ClientNotificationType::askExecuteConsoleCommand:
         {
+            Player* player = clientSocket->getPlayer();
+            // Console commands change the game for everybody (gold, mana, fog of war, skills, creatures). In a
+            // multiplayer game only the host may run them, and only when its client runs in the server process.
+            const bool multiPlayer = (mServerMode == ServerMode::ModeGameMultiPlayer);
+            const bool serverHasLocalClient = (ODClient::getSingletonPtr() != nullptr);
+            if(!ServerGuards::isConsoleCommandAllowed(multiPlayer, player == mPlayerConfig, serverHasLocalClient))
+            {
+                OD_LOG_WRN("Refused console command from player=" + player->getNick()
+                    + " in a multiplayer game: only the local host may run console commands");
+                break;
+            }
+
             uint32_t nbArgs;
             std::string str;
             std::vector<std::string> args;
-            OD_ASSERT_TRUE(packetReceived >> nbArgs);
+            if(!(packetReceived >> nbArgs))
+            {
+                OD_LOG_WRN("Ignored console command without an argument count from player=" + player->getNick());
+                break;
+            }
+            bool argsRead = true;
             while(nbArgs > 0)
             {
                 --nbArgs;
-                OD_ASSERT_TRUE(packetReceived >> str);
+                if(!(packetReceived >> str))
+                {
+                    argsRead = false;
+                    break;
+                }
                 args.push_back(str);
             }
-            Player* player = clientSocket->getPlayer();
+            if(!argsRead)
+            {
+                OD_LOG_WRN("Ignored console command with missing arguments from player=" + player->getNick());
+                break;
+            }
             handleConsoleCommand(player, gameMap, args);
             break;
         }
@@ -3934,7 +4474,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
             Player* player = clientSocket->getPlayer();
             int32_t giftBoxTypeInt;
-            OD_ASSERT_TRUE(packetReceived >> giftBoxTypeInt);
+            if(!(packetReceived >> giftBoxTypeInt))
+            {
+                OD_LOG_WRN("Ignored editorCreateGiftBox with an incomplete message");
+                break;
+            }
             GiftBoxType giftBoxType = static_cast<GiftBoxType>(giftBoxTypeInt);
             if((giftBoxType == GiftBoxType::skill) ||
                (giftBoxType < GiftBoxType::skill) ||
@@ -4253,6 +4797,36 @@ int32_t ODServer::getNetworkPort() const
         return port;
 
     return ConfigManager::getSingleton().getNetworkPort();
+}
+
+//! \brief Returns true if the socket may change or confirm the seat configuration: the game is configured and its
+//! player is the one that configures the game. Logs a warning otherwise.
+bool ODServer::isSeatConfigurationSender(ODSocketClient* clientSocket)
+{
+    Player* player = clientSocket->getPlayer();
+    if(mServerState != ServerState::StateConfiguration)
+    {
+        OD_LOG_WRN("Ignored seat configuration outside of the configuration, state="
+            + Helper::toString(static_cast<int>(mServerState)));
+        return false;
+    }
+    if((player == nullptr) || (player != mPlayerConfig))
+    {
+        OD_LOG_WRN("Ignored seat configuration from a player that does not configure the game: "
+            + (player == nullptr ? std::string("no player") : player->getNick()));
+        return false;
+    }
+    return true;
+}
+
+//! \brief Sends startGameRefused with the reason code to the socket that asked for the start, so that its lobby
+//! can tell the player at once why the game does not start.
+void ODServer::sendStartGameRefused(ODSocketClient* clientSocket, StartGameRefusal::Reason reason)
+{
+    OD_LOG_INF("Refusing to start the game, reason=" + Helper::toString(static_cast<int32_t>(reason)));
+    ODPacket packetSend;
+    packetSend << ServerNotificationType::startGameRefused << static_cast<int32_t>(reason);
+    clientSocket->send(packetSend);
 }
 
 void ODServer::printConsoleMsg(const std::string& text)

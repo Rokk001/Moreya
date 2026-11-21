@@ -74,6 +74,34 @@ public:
         return requested;
     }
 
+    //! \brief Request the main menu, opened with its multiplayer sub-menu (used after the defeat debriefing of a
+    //! multiplayer game and after the connection to the server was lost).
+    void requestMainMenuWithMultiplayerSubMenu()
+    {
+        mOpenMultiplayerSubMenu = true;
+        requestMode(MENU_MAIN);
+    }
+
+    //! \brief Returns true once if the main menu should open its multiplayer sub-menu, then forgets it.
+    bool consumeMultiplayerSubMenuRequest()
+    {
+        const bool requested = mOpenMultiplayerSubMenu;
+        mOpenMultiplayerSubMenu = false;
+        return requested;
+    }
+
+    //! \brief Keeps a message that the main menu shows the next time it is activated.
+    void setMainMenuNotice(const std::string& notice)
+    { mMainMenuNotice = notice; }
+
+    //! \brief Returns the message kept for the main menu once, then forgets it; empty when there is none.
+    std::string consumeMainMenuNotice()
+    {
+        std::string notice = mMainMenuNotice;
+        mMainMenuNotice.clear();
+        return notice;
+    }
+
     //! \brief Consumes a request to fly into the main menu after returning from a game or editor.
     bool consumeMainMenuArrivalRequest()
     {
@@ -116,6 +144,10 @@ private:
     bool mStoreCurrentModeAtChange;
     //! Set by requestMainMenuWithSkirmishSubMenu, consumed by the main menu when it is activated
     bool mOpenSkirmishSubMenu = false;
+    //! Set by requestMainMenuWithMultiplayerSubMenu, consumed by the main menu when it is activated
+    bool mOpenMultiplayerSubMenu = false;
+    //! Message the main menu shows once when it is activated next, empty when there is none
+    std::string mMainMenuNotice;
     //! Requests the configured outside-to-overview flight on the next main-menu activation.
     bool mMainMenuArrivalRequested = false;
     //! True while returning from another menu pane to the overview before activating the main menu.

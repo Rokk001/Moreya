@@ -80,6 +80,7 @@ probe = r'''
 #include "game/LevelStatistics.h"
 #include "modes/DebriefingTable.h"
 #include "modes/DefeatSequence.h"
+#include "network/MultiplayerClientRules.h"
 
 std::vector<std::string> gLog;
 #define OD_LOG_INF(x) gLog.push_back(x)
@@ -117,6 +118,8 @@ struct ODClient
     static ODClient& getSingleton() {static ODClient client;return client;}
     bool hasLevelStatistics() const {return has;}
     const LevelStatistics& getLevelStatistics() const {return statistics;}
+    //! \brief The clicked game is a single player game, so the debriefing leads to the skirmish sub-menu.
+    bool isMultiplayerSession() const {return false;}
 };
 // The visible pointer of the game is the keeper hand (the CEGUI arrow image is transparent)
 struct RenderManager {bool handVisible=false;int toggles=0;
@@ -144,9 +147,12 @@ struct ModeManager
 {
     enum ModeType {NONE = 0, MENU_MAIN = 1, MENU_CAMPAIGN = 2};
     bool mOpenSkirmishSubMenu = false;
+    bool mOpenMultiplayerSubMenu = false;
     void requestMode(ModeType mode, bool = true) {++gModeRequests;gLastMode = mode;}
 @@REQUESTMAINMENU@@
 @@CONSUMEREQUEST@@
+@@REQUESTMULTIPLAYER@@
+@@CONSUMEMULTIPLAYER@@
 };
 typedef ModeManager AbstractModeManager;
 @@CONSTANTS@@
@@ -419,6 +425,8 @@ constants = '\n'.join(constant(name) for name in ('DEFEAT_CAMERA_MARKER_IMAGE', 
 for marker, text in (
         ('@@REQUESTMAINMENU@@', function(mode_manager, 'void requestMainMenuWithSkirmishSubMenu(')),
         ('@@CONSUMEREQUEST@@', function(mode_manager, 'bool consumeSkirmishSubMenuRequest(')),
+        ('@@REQUESTMULTIPLAYER@@', function(mode_manager, 'void requestMainMenuWithMultiplayerSubMenu(')),
+        ('@@CONSUMEMULTIPLAYER@@', function(mode_manager, 'bool consumeMultiplayerSubMenuRequest(')),
         ('@@CONSTANTS@@', constants),
         ('@@MOVED@@', handler_guard('bool GameMode::mouseMoved(')),
         ('@@PRESSED@@', handler_guard('bool GameMode::mousePressed(')),

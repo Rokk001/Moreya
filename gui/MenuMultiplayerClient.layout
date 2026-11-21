@@ -75,6 +75,18 @@
             <Window type="OD/Editbox" name="NickEdit" >
                 <Property name="Area" value="{{0.5,-296},{0.5,-70},{0.5,-10},{0.5,-34}}" />
             </Window>
+            <!-- Optional server port; the menu fills in the NetworkPort of the configuration. -->
+            <Window type="OD/StaticText" name="PortText" >
+                <Property name="Area" value="{{0.5,10},{0.5,-26},{0.5,296},{0.5,0}}" />
+                <Property name="Text" value="Server port:" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+            </Window>
+            <Window type="OD/Editbox" name="PortEdit" >
+                <Property name="Area" value="{{0.5,10},{0.5,4},{0.5,150},{0.5,40}}" />
+                <Property name="MaxTextLength" value="5" />
+            </Window>
             <Window type="OD/MenuTextButton" name="ClientButton" >
                 <Property name="Font" value="MedievalSharp-13" />
                 <Property name="Area" value="{{0.5,126},{0.5,92},{0.5,296},{0.5,146}}" />

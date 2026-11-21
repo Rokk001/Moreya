@@ -250,6 +250,10 @@ private:
     //! leaves the game or editor, or asks for the main menu, when the run says so.
     void stepReturnToMenuTest(Ogre::Real seconds);
 
+    //! \brief Opens the main menu with its multiplayer sub-menu and the lost connection message after the client lost
+    //! the server of a multiplayer game.
+    void returnToMenuAfterLostServer();
+
     int32_t lastSecondFrameRenderingQueued;
 
     //! \brief Tells whether the frame listener is initialized.

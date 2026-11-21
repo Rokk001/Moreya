@@ -27,7 +27,7 @@
 namespace NetworkProtocol
 {
     //! Network record schema; checked by the existing hello before any level data.
-    static const std::string WIRE_SCHEMA_SUFFIX = " / wire-4";
+    static const std::string WIRE_SCHEMA_SUFFIX = " / wire-5";
 }
 
 /*! \brief This class is an utility class to transfer data through ODSocketClient.
@@ -131,6 +131,33 @@ class ODPacket
         //! \brief Whether everything was read, used to detect optional trailing fields of older peers
         bool endOfPacket() const
         { return mPacket.endOfPacket(); }
+
+        /*! \brief Marks the packet as failed, as if a read had gone past its end. Used when a value was read but
+         * is out of range (an unknown enum value), so that the caller sees the same failure as for a missing value.
+         * The data not read yet is dropped.
+         */
+        void markInvalid();
+
+        /*! \brief Reads an enum value sent as TStored. A value below 0 or above last marks the packet as failed
+         * (markInvalid) and leaves value unchanged, like a failed read. last is the highest value accepted; for
+         * enums that end with a count value (nbRooms, countSkill, ...) that count is accepted as well, because
+         * the code uses it as "none".
+         */
+        template<typename TStored, typename TEnum>
+        static ODPacket& readEnum(ODPacket& packet, TEnum& value, TEnum last)
+        {
+            TStored raw = 0;
+            if(!(packet >> raw))
+                return packet;
+            const int64_t rawValue = static_cast<int64_t>(raw);
+            if((rawValue < 0) || (rawValue > static_cast<int64_t>(last)))
+            {
+                packet.markInvalid();
+                return packet;
+            }
+            value = static_cast<TEnum>(raw);
+            return packet;
+        }
 
         /*! \brief Clears the packet. After calling Clear, the packet should
          * be empty.

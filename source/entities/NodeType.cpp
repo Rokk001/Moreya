@@ -21,12 +21,10 @@ std::ostream& operator<<(std::ostream& os, const NodeType& rt)
   return os;
 }
 
+//! \brief Reads a NodeType. A value outside of the enum marks the packet as failed and leaves rt unchanged.
 ODPacket& operator>>(ODPacket& is, NodeType& rt)
 {
-  uint32_t tmp;
-  is >> tmp;
-  rt = static_cast<NodeType>(tmp);
-  return is;
+  return ODPacket::readEnum<uint32_t>(is, rt, NodeType::MTILES_NODE);
 }
 
 ODPacket& operator<<(ODPacket& os, const NodeType& rt)

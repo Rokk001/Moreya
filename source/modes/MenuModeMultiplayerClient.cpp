@@ -19,6 +19,7 @@
 
 #include "gamemap/GameMap.h"
 #include "modes/ModeManager.h"
+#include "network/MultiplayerClientRules.h"
 #include "network/ODServer.h"
 #include "network/ODClient.h"
 #include "render/Gui.h"
@@ -60,6 +61,7 @@ MenuModeMultiplayerClient::MenuModeMultiplayerClient(ModeManager *modeManager):
     );
 }
 
+//! \brief Shows the join menu with the saved nickname; an empty port field gets the configured network port.
 void MenuModeMultiplayerClient::activate()
 {
     // Loads the corresponding Gui sheet.
@@ -83,9 +85,15 @@ void MenuModeMultiplayerClient::activate()
     std::string nickname = config.getGameValue(Config::NICKNAME, std::string(), false);
     if (!nickname.empty())
         editNick->setText(reinterpret_cast<const CEGUI::utf8*>(nickname.c_str()));
+
+    // The port typed last is kept; a host with another port than this configuration can be joined by changing it
+    CEGUI::Editbox* editPort = static_cast<CEGUI::Editbox*>(mainWin->getChild(Gui::MPM_EDIT_PORT));
+    if(editPort->getText().empty())
+        editPort->setText(Helper::toString(ODServer::getSingleton().getNetworkPort()));
 }
 
-//! \brief Displays the existing loading text before a blocking server connection.
+//! \brief Checks the server IP, the nickname and the optional port (empty: the configured network port), then
+//! displays the existing loading text before a blocking server connection.
 bool MenuModeMultiplayerClient::clientButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::multiplayerClientMenu);
@@ -114,17 +122,25 @@ bool MenuModeMultiplayerClient::clientButtonPressed(const CEGUI::EventArgs&)
         return true;
     }
 
+    CEGUI::Editbox* editPort = static_cast<CEGUI::Editbox*>(mainWin->getChild(Gui::MPM_EDIT_PORT));
+    const std::string portText = editPort->getText().c_str();
+    uint32_t port = 0;
+    if(!MultiplayerClientRules::parsePort(portText, static_cast<uint32_t>(ODServer::getSingleton().getNetworkPort()), port))
+    {
+        infoText->setText(MultiplayerClientRules::INVALID_PORT_MESSAGE);
+        return true;
+    }
+
     ODFrameListener::getSingleton().getClientGameMap()->setLocalPlayerNick(nick);
 
-    int port = ODServer::getSingleton().getNetworkPort();
     uint32_t timeout = ConfigManager::getSingleton().getClientConnectionTimeout();
     std::string replayFilename = ResourceManager::getSingleton().getReplayDataPath()
         + ResourceManager::getSingleton().buildReplayFilename();
     infoText->setText("Loading...");
-    if(!ODClient::getSingleton().connect(ip, port, timeout, replayFilename))
+    if(!ODClient::getSingleton().connect(ip, static_cast<int>(port), timeout, replayFilename))
     {
         // Error while connecting
-        infoText->setText("Could not connect to: " + ip);
+        infoText->setText("Could not connect to: " + ip + ":" + Helper::toString(port));
         return true;
     }
 

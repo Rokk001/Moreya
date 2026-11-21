@@ -37,6 +37,7 @@
 #include "modes/ModeManager.h"
 #include "network/ODServer.h"
 #include "network/ODClient.h"
+#include "network/MultiplayerClientRules.h"
 #include "render/DebugDrawer.h"
 #include "render/CreatureOverlayStatus.h"
 #include "render/CreatureReactions.h"
@@ -423,7 +424,17 @@ void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
         mRoomAmbience->update(gameTime);
 }
 
-//! \brief Advances the interface and world while preserving any active loading presentation.
+//! \brief Opens the main menu with its multiplayer sub-menu after the server of a multiplayer game was lost and keeps
+//! the message for it. Leaving the game or lobby mode stops the local server, if one runs, as on the quit path.
+void ODFrameListener::returnToMenuAfterLostServer()
+{
+    OD_LOG_WRN("The connection to the server was lost, returning to the main menu");
+    mModeManager->setMainMenuNotice(MultiplayerClientRules::LOST_SERVER_MESSAGE);
+    mModeManager->requestMainMenuWithMultiplayerSubMenu();
+}
+
+//! \brief Advances the interface and world while preserving any active loading presentation. In multiplayer the
+//! server is read while the local pause menu is open, and a lost server leads back to the main menu.
 bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
 {
     FrameStallTrace::get().setPhase(FrameStallTrace::FrameQueued);
@@ -483,7 +494,11 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     }
     lastSecondFrameRenderingQueued = currentSeconds;
     FrameStallTrace::get().setPhase(FrameStallTrace::Present);
-    if((currentTurn != -1) && (mGameMap->getGamePaused()) && (!mExitRequested))
+    // A paused single player game stops reading the server, which holds the server's turns. In multiplayer the
+    // pause menu only covers this player's screen: the client keeps reading and acknowledging the turns, or the
+    // server's turn barrier would stop every player.
+    if(MultiplayerClientRules::pauseStopsNetwork(currentTurn != -1, mGameMap->getGamePaused(), mExitRequested,
+        ODClient::getSingleton().isMultiplayerSession()))
         return true;
 
     //If an exit has been requested, start cleaning up.
@@ -501,6 +516,9 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     mGameMap.get()->processDeletionQueues();
     // Timeout 0: the frame reads every server message that has arrived but never waits for one
     ODClient::getSingleton().processClientSocketMessages(0);
+    // The client has already stopped itself; this leaves the game or lobby once
+    if(ODClient::getSingleton().consumeServerLost())
+        returnToMenuAfterLostServer();
     FrameStallTrace::get().setPhase(FrameStallTrace::Notifications);
     ODClient::getSingleton().processClientNotifications();
     LoadingScreen::update();

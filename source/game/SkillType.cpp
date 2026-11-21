@@ -365,12 +365,10 @@ ODPacket& operator<<(ODPacket& os, const SkillType& type)
     return os;
 }
 
+//! \brief Reads a SkillType. A value above countSkill marks the packet as failed and leaves type unchanged.
 ODPacket& operator>>(ODPacket& is, SkillType& type)
 {
-    int32_t tmp;
-    is >> tmp;
-    type = static_cast<SkillType>(tmp);
-    return is;
+    return ODPacket::readEnum<int32_t>(is, type, SkillType::countSkill);
 }
 
 std::ostream& operator<<(std::ostream& os, const SkillType& type)
