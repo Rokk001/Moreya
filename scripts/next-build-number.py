@@ -6,6 +6,8 @@ CMakeLists.txt differ from the last deployed state (the base ref, normally origi
 before the merges), the numbering starts again and N is 1.
 
 Usage: python -I scripts/next-build-number.py --counter <BUILD-NUMBER.txt> [--base origin/integration/all]
+Moreya releases pass the deployed branch as base: --base origin/main in the Moreya clone (moreya/main where the remote
+has that name); the counter file is the same one the old line used, so numbering continues.
 """
 import argparse
 import os

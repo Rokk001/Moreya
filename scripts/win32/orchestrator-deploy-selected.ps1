@@ -6,13 +6,15 @@ param(
     [string]$Worktree = (Get-Location).Path,
     [ValidateRange(0, 86400)][int]$GameWaitSeconds = 1800,
     [switch]$FullCampaign,
-    [switch]$SelectionOnly
+    [switch]$SelectionOnly,
+    # <remote>/<branch> that must contain the outgoing commit (origin/main in the Moreya clone).
+    [string]$IntegrationRef = 'origin/integration/all'
 )
 $ErrorActionPreference = 'Stop'
 $wt = (Resolve-Path -LiteralPath $Worktree).Path
 # Delivery remains a failing command after any partial copy or failed post-copy probe.
 if ($env:HQ_CHECK_EVENTS -and -not $SelectionOnly) {
-    $childArgs = @('powershell', '-NoProfile', '-File', $PSCommandPath, '-Counter', $Counter, '-DeployScript', $DeployScript, '-Worktree', $wt, '-GameWaitSeconds', $GameWaitSeconds)
+    $childArgs = @('powershell', '-NoProfile', '-File', $PSCommandPath, '-Counter', $Counter, '-DeployScript', $DeployScript, '-Worktree', $wt, '-GameWaitSeconds', $GameWaitSeconds, '-IntegrationRef', $IntegrationRef)
     if ($FullCampaign) { $childArgs += '-FullCampaign' }
     & python "$PSScriptRoot\..\hq-check-command.py" --repo $wt --name deploy-delivery -- @childArgs
     exit $LASTEXITCODE
@@ -34,8 +36,10 @@ if ($FullCampaign) { $selectionArgs += '--all-campaign' }
 & python "$scripts\deploy-level-selection.py" @selectionArgs
 if ($LASTEXITCODE -ne 0) { throw 'Deployment selection failed; no deployment or map test was started' }
 if ($SelectionOnly) { exit 0 }
-& git -C $wt merge-base --is-ancestor $tip origin/integration/all
-if ($LASTEXITCODE -ne 0) { throw 'Outgoing worktree commit is not contained in integration/all' }
+& git -C $wt merge-base --is-ancestor $tip $IntegrationRef
+if ($LASTEXITCODE -ne 0) { throw "Outgoing worktree commit is not contained in $IntegrationRef" }
+# The deploy script checks its data snapshot against the same integration ref.
+$env:ODP_DEPLOY_INTEGRATION_REF = $IntegrationRef
 # Preserve the bounded game-close wait in worktrees that already provide that deployment feature.
 $waitHelper = Join-Path $wt 'scripts\win32\wait-game-exit.ps1'
 if (Test-Path -LiteralPath $waitHelper) {
