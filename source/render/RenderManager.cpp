@@ -6508,9 +6508,24 @@ void RenderManager::startCreatureFeedingAnimation(Creature* creature, Ogre::Enti
         }
     }
     Ogre::SceneNode* node = creature->getEntityNode();
-    mCreatureFeedingAnimations.push_back({creature, node, entity, node->getPosition(),
-        node->getOrientation(), node->getScale(), 0.0f, style, animation,
-        nullptr, nullptr, Ogre::Vector3::ZERO, Ogre::Vector3::UNIT_SCALE, head, 0});
+    // Filled member by member: GCC does not accept a braced list for this nested struct with default member initializers.
+    CreatureFeedingAnimation feedingState;
+    feedingState.mCreature = creature;
+    feedingState.mNode = node;
+    feedingState.mEntity = entity;
+    feedingState.mBasePosition = node->getPosition();
+    feedingState.mBaseOrientation = node->getOrientation();
+    feedingState.mBaseScale = node->getScale();
+    feedingState.mElapsed = 0.0f;
+    feedingState.mStyle = style;
+    feedingState.mAnimation = animation;
+    feedingState.mChickenNode = nullptr;
+    feedingState.mChickenEntity = nullptr;
+    feedingState.mChickenStart = Ogre::Vector3::ZERO;
+    feedingState.mChickenScale = Ogre::Vector3::UNIT_SCALE;
+    feedingState.mHead = head;
+    feedingState.mFeatherBursts = 0;
+    mCreatureFeedingAnimations.push_back(feedingState);
     CreatureFeedingAnimation& started = mCreatureFeedingAnimations.back();
     started.mMouthForward = style == CreatureFeedingStyle::heavy ? meal.mMouthForwardHeavy :
         (style == CreatureFeedingStyle::lunge ? meal.mMouthForwardLunge : meal.mMouthForward);
