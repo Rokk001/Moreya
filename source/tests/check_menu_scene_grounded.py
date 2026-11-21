@@ -3,7 +3,8 @@
 
 No compile needed. Every AddEntity of config/mainmenuscene.cfg is loaded from its binary mesh at its configured
 position (bind pose; the crows CrowA-CrowD stand at their perch positions, which are their configured positions).
-The sky and horizon elements Backdrop, BloodMoon, HorizonCrows and VolcanicRuins belong in the air and are left out.
+The sky and horizon elements Backdrop, BloodMoon, HorizonCrows and VolcanicRuins belong in the air and are left out,
+and so do the crows SkyCrow1-SkyCrow6 that fly through the moon sky (K17; check_menu_sky_crows checks their flights).
 
 Grounding: the triangles of every mesh are split into connected parts (triangles sharing a vertex position). The
 terrain is the largest part of MenuOuterGround (the ground rings and crags); a part whose vertex lies at most
@@ -34,8 +35,9 @@ CONFIG = os.path.join(ROOT, "config", "mainmenuscene.cfg")
 MODELS = os.path.join(ROOT, "models")
 MATERIAL_SCRIPTS = [os.path.join(ROOT, "materials", "scripts", name)
                     for name in ("MenuScene.material", "MenuSignpost.material")]
-#: Sky and horizon elements that belong in the air (INGAME-QS-12 K1).
-SKY_ENTITIES = ("Backdrop", "BloodMoon", "HorizonCrows", "VolcanicRuins")
+#: Sky and horizon elements that belong in the air (INGAME-QS-12 K1) and the crows flying in the sky (K17).
+SKY_ENTITIES = ("Backdrop", "BloodMoon", "HorizonCrows", "VolcanicRuins",
+                "SkyCrow1", "SkyCrow2", "SkyCrow3", "SkyCrow4", "SkyCrow5", "SkyCrow6")
 #: The entity whose largest part is the terrain everything else must stand on.
 TERRAIN_ENTITY = "OuterGround"
 #: Parts closer than this many metres touch (mortar joints, eroded faces); parts up to about 2.6 times as far
