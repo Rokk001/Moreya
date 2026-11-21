@@ -5353,6 +5353,7 @@ void RenderManager::rrRefreshItemBag(ItemBagEntity* bag)
 }
 
 //! \brief Applies identical quality material clones and seal visibility to every item-bag presentation.
+//! The clone keeps the texture of the bag material, so the quality colour tints the textured bag (plan INGAME-QS-12 K10).
 void RenderManager::rrRefreshItemBagAppearance(RenderedMovableEntity* bag, Quality quality, bool sealed)
 {
     if(bag == nullptr)

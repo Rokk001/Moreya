@@ -100,6 +100,14 @@ public:
     //! takes that look while it shows this window and goes right of and below the hand, never over the window (K11).
     static void setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon);
 
+    //! \brief Shows the item card of setItemTooltip for an item in the 3D world, which has no window to hover: the same
+    //! content, look and place (right of and below the hand cursor) as the tooltip of an item in the Dungeonbook, at once.
+    //! Call it again while the pointer stays or moves on the item; hideItemTooltipAtCursor takes the card away.
+    void showItemTooltipAtCursor(const ItemInstance& item, const GameMap* map);
+
+    //! \brief Hides the card of showItemTooltipAtCursor; does nothing when it is not shown.
+    void hideItemTooltipAtCursor();
+
     //! \brief The text of the item card of setItemTooltip, with the gold coin as high as a line of its values.
     static std::string describeItemTooltip(const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon);
 

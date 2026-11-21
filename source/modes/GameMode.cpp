@@ -125,34 +125,6 @@ const double AUTOSCROLL_EDGE_RATIO = 0.02;
 //! Seconds between two refreshes of the open trap production window.
 const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
 
-//! \brief Existing context text bounds and the specified item icon side, in design pixels.
-static const float ITEM_CONTEXT_LEFT = 404.0f;
-static const float ITEM_CONTEXT_TOP = 2.0f;
-static const float ITEM_CONTEXT_RIGHT_INSET = 4.0f;
-static const float ITEM_CONTEXT_ORDINARY_BOTTOM = 44.0f;
-static const float ITEM_CONTEXT_IMAGE_SIDE = 64.0f;
-//! \brief The four specified quality colours, encoded as RGBA.
-static const uint32_t ITEM_CONTEXT_COLOURS[] = {0x8A8A8AFF, 0xFFFFFFFF, 0x3E7BFFFF, 0xA64DFFFF};
-//! \brief The item atlas and quality-frame resource prefixes.
-static const std::string ITEM_CONTEXT_IMAGE_PREFIX = "ItemImages/";
-static const std::string ITEM_CONTEXT_FRAME_PREFIX = "OpenDungeonsIcons/ItemFrame";
-
-//! \brief Removes only CEGUI colour tags when an item tooltip is used by Ogre pointer text.
-static std::string getPlainItemTooltip(std::string text)
-{
-    static const std::string tag = "[colour='";
-    std::size_t start = text.find(tag);
-    while(start != std::string::npos)
-    {
-        const std::size_t end = text.find("']", start);
-        if(end == std::string::npos)
-            break;
-        text.erase(start, end + 2 - start);
-        start = text.find(tag, start);
-    }
-    return text;
-}
-
 // Text colours (ARGB) of the mana change next to the mana display.
 const std::string MANA_GAIN_TEXT_COLOUR = "FFF0E2C0";
 const std::string MANA_LOSS_TEXT_COLOUR = "FFF0E2C0";
@@ -5268,6 +5240,7 @@ void GameMode::refreshActionFeedback(float elapsed)
     {
         unselectAllTiles();
         mActionTargetText.clear();
+        mModeManager->getGui().hideItemTooltipAtCursor();
         CEGUI::Window* hover = CEGUI::System::getSingleton().getDefaultGUIContext().getWindowContainingMouse();
         if(hover != nullptr)
         {
@@ -6139,56 +6112,27 @@ void GameMode::handlePlayerActionQuery()
         openDungeonbookOnCreature(creature);
 }
 
-//! \brief Restores the original context text bounds after an item hover ends.
+//! \brief Takes the item card of a hovered loot bag away; the top info bar never shows an item (plan INGAME-QS-12 K11).
 void GameMode::clearItemContextImage()
 {
-    CEGUI::Window* context = mRootWindow->getChild("ContextInfo");
-    context->getChild("ContextImage")->hide();
-    context->setProperty("TextParsingEnabled", "False");
-    mModeManager->getGui().setScaledArea(context,
-        CEGUI::URect(CEGUI::UDim(0, ITEM_CONTEXT_LEFT), CEGUI::UDim(0, ITEM_CONTEXT_TOP),
-            CEGUI::UDim(1, -ITEM_CONTEXT_RIGHT_INSET), CEGUI::UDim(0, ITEM_CONTEXT_ORDINARY_BOTTOM)));
+    mModeManager->getGui().hideItemTooltipAtCursor();
 }
 
-//! \brief Shows the complete pointer tooltip and places the icon immediately left of its context name.
+//! \brief Shows the standard item tooltip of the hovered loot bag (same content, look and place as in the Dungeonbook,
+//! at once). Neither the top info bar nor the pointer text names the item (plan INGAME-QS-12 K11).
 void GameMode::showItemContext(const ItemBagEntity& bag)
 {
     const ItemInstance* item = bag.getItem();
     if(item == nullptr)
         return;
-
-    const std::string description = item->describe(mGameMap);
-    CEGUI::Window* context = mRootWindow->getChild("ContextInfo");
-    context->setProperty("TextParsingEnabled", "True");
-    mActionTargetText = description.substr(0, description.find('\n'));
-    context->setText(mActionTargetText);
-    CEGUI::Window* image = context->getChild("ContextImage");
-    const std::string imageName = ITEM_CONTEXT_IMAGE_PREFIX + item->getImageName();
-    if(CEGUI::ImageManager::getSingleton().isDefined(imageName))
-    {
-        image->setProperty("Image", imageName);
-        Gui& gui = mModeManager->getGui();
-        gui.setScaledArea(context,
-            CEGUI::URect(CEGUI::UDim(0, ITEM_CONTEXT_LEFT + ITEM_CONTEXT_IMAGE_SIDE),
-                CEGUI::UDim(0, ITEM_CONTEXT_TOP), CEGUI::UDim(1, -ITEM_CONTEXT_RIGHT_INSET),
-                CEGUI::UDim(0, ITEM_CONTEXT_TOP + ITEM_CONTEXT_IMAGE_SIDE)));
-        gui.setScaledArea(image, CEGUI::URect(CEGUI::UDim(0, -ITEM_CONTEXT_IMAGE_SIDE), CEGUI::UDim(0, 0),
-            CEGUI::UDim(0, 0), CEGUI::UDim(0, ITEM_CONTEXT_IMAGE_SIDE)));
-        CEGUI::Window* frame = image->getChild("QualityFrame");
-        const std::string frameName = ITEM_CONTEXT_FRAME_PREFIX + qualityName(item->mQuality);
-        frame->setVisible(CEGUI::ImageManager::getSingleton().isDefined(frameName));
-        if(frame->isVisible())
-            frame->setProperty("Image", frameName);
-        image->show();
-    }
-    Ogre::ColourValue colour;
-    colour.setAsRGBA(ITEM_CONTEXT_COLOURS[static_cast<std::size_t>(item->mQuality)]);
-    displayPointerText(colour, getPlainItemTooltip(description));
+    mModeManager->getGui().showItemTooltipAtCursor(*item, mGameMap);
 }
 
 //! \brief Describes visible bags as well as the existing pickable creatures, objects and terrain.
 void GameMode::handlePlayerActionNone()
 {
+    // The card of a bag shows again at the end of this call when the pointer is still on one
+    mModeManager->getGui().hideItemTooltipAtCursor();
     const InputManager& inputManager = mModeManager->getInputManager();
     Player* player = mGameMap->getLocalPlayer();
     if(player->numObjectsInHand() == 0)
@@ -6247,10 +6191,7 @@ void GameMode::handlePlayerActionNone()
                     displayText(Ogre::ColourValue::White, "Gold");
                 else if(closest->getObjectType() == GameEntityType::itemBagEntity)
                 {
-                    const ItemBagEntity* bag = static_cast<const ItemBagEntity*>(closest);
-                    const ItemInstance* item = bag->getItem();
-                    if(item != nullptr)
-                        displayText(Ogre::ColourValue::White, item->getDisplayName(mGameMap));
+                    // The item is described by its tooltip (showItemContext), not by text in the info bar
                     mActionTargetValid = closest->tryPickup(player->getSeat());
                 }
                 else
