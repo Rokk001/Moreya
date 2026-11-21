@@ -66,7 +66,7 @@ check("Join-Path $wt 'build\\windows\\moreya.exe'" in orchestrator,
       'orchestrator does not identify the load-test executable')
 check(remove_exe in orchestrator and orchestrator.index(remove_exe) < orchestrator.index('$start = [DateTimeOffset]') < orchestrator.index('--build "$wt\\build\\windows"'),
       'orchestrator must remove the old executable before recording the build start and rebuilding')
-check('Work on a feature or fix branch never runs a full build.' in claude and 'Before a branch is merged into integration/all' in claude and 'the result must compile' in claude, 'CLAUDE.md lacks the branch build and pre-integration compile rules')
+check('Work on a feature or fix branch never runs a full build.' in claude and 'Before a branch is merged into main' in claude and 'the result must compile' in claude, 'CLAUDE.md lacks the branch build and pre-integration compile rules')
 check('Kein Release- oder Abschlussbuild' not in claude, 'CLAUDE.md still allows a full build after a release')
 
 for message in failures:

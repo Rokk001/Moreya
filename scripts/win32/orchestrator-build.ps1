@@ -31,7 +31,7 @@ if (-not $env:ODP_ASSETS_SRC) { $env:ODP_ASSETS_SRC = [Environment]::GetEnvironm
 Set-Content -Encoding ascii "$wt\out\orch-run.txt" $run
 $buildCommit = (& git -C $wt rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-# Freeze the integration reference before Push updates origin/integration/all.
+# Freeze the integration reference before Push updates origin/main.
 & python "$scripts\run-campaign-load-tests.py" --repo $wt --capture-base $Base --output "$wt\out\load-base-$run.json" 2>&1 | Tee-Object -FilePath $preflightLog
 if ($LASTEXITCODE -ne 0) { throw 'could not capture integration load-test base' }
 $loadBase = (Get-Content -Raw "$wt\out\load-base-$run.json" | ConvertFrom-Json).base

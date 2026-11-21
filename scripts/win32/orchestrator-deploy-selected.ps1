@@ -8,7 +8,7 @@ param(
     [switch]$FullCampaign,
     [switch]$SelectionOnly,
     # <remote>/<branch> that must contain the outgoing commit (origin/main in the Moreya clone).
-    [string]$IntegrationRef = 'origin/integration/all'
+    [string]$IntegrationRef = 'origin/main'
 )
 $ErrorActionPreference = 'Stop'
 $wt = (Resolve-Path -LiteralPath $Worktree).Path

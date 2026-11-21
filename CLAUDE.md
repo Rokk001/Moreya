@@ -24,7 +24,7 @@ These instructions apply to every change made to this repository with an AI assi
 
 ## Branches
 
-- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when the owner explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
+- Every new feature or fix branch starts from the tip of main (origin/main), never from shaders-improvement. Nothing is committed directly on main. No upstream pull requests are created any more. A pull request is only created when the owner explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
 
 ## Protected content
 
@@ -98,10 +98,10 @@ Diese Pfade direkt verwenden, nie danach suchen.
 ## Builds
 
 - Work on a feature or fix branch never runs a full build.
-- Before a branch is merged into integration/all, the current origin/integration/all is merged into it and all conflicts are
+- Before a branch is merged into main, the current origin/main is merged into it and all conflicts are
   resolved so that the content of both sides is kept completely; the result must compile, and all check scripts (including
   those in source/tests that compile small C++ probes with cl) and the load test must be green.
-- Every release build that is merged into integration/all and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on the owner's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every release build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
+- Every release build that is merged into main and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on the owner's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every release build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
 
 ## Working rules
 
@@ -109,10 +109,10 @@ Diese Pfade direkt verwenden, nie danach suchen.
 - Never use `git commit --amend`, `git reset`, `git update-ref` or any other ref rewrite, also not for unpushed commits. A wrong commit message stays; corrections are new commits. If a guard or hook blocks a git command, stop and report instead of working around it. No force push.
 - Never remove an existing comment; update it when its code changes. Every new or changed function, method and class gets a short Doxygen-style comment, and every new or changed Boost test case gets a short comment saying what it checks.
 - Commit messages are English and plain, say what changed and why, and carry no AI attribution.
-- Check scripts use fixed expected values that match the state of the branch, counted once and named in the commit; they never derive the expected value at run time from the code under test. A check that is red on the branch and green on `origin/integration/all` is a regression of the branch and is fixed on the branch, never in the check.
-- Review fixes go into a fix branch from the tip of `integration/all`; they are never pushed to a pull request head unless the owner orders it separately.
+- Check scripts use fixed expected values that match the state of the branch, counted once and named in the commit; they never derive the expected value at run time from the code under test. A check that is red on the branch and green on `origin/main` is a regression of the branch and is fixed on the branch, never in the check.
+- Review fixes go into a fix branch from the tip of `main`; they are never pushed to a pull request head unless the owner orders it separately.
 - Technical test adjustments (stubs, sample texts, calls, formal adaption of a check to a new layout) are done without asking; gameplay behaviour, values and level layout are the owner's decisions.
-- Before removing a worktree: back up uncommitted and untracked files, verify the backup byte for byte, then run `git worktree remove` without `--force`. If the backup fails or HEAD is not contained in `origin/integration/all`, remove nothing. Branches stay.
+- Before removing a worktree: back up uncommitted and untracked files, verify the backup byte for byte, then run `git worktree remove` without `--force`. If the backup fails or HEAD is not contained in `origin/main`, remove nothing. Branches stay.
 - Sounds are real recordings under CC0 or CC-BY, with author, licence and source URL in the CREDITS entry of the same commit; never synthesized or generated files.
 - Internal planning documents, design reference images and notes are never stored in this repository and never referenced from tracked files.
 - No absolute personal paths in tracked files: use the file name, a neutral word or an environment variable.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that every change on the integration line is also carried by an open pull request.
 
-Compares the target ref (default origin/integration/all, or HEAD when --note is given) with the union of the heads of all
+Compares the target ref (default origin/main, or HEAD when --note is given) with the union of the heads of all
 open pull requests of one author (default Rokk001, listed through the GitHub CLI against the
 upstream repository). Both sides are diffed against the merge base with the upstream base
 branch. Reported are
@@ -41,7 +41,7 @@ import sysconfig
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_TARGET = "origin/integration/all"
+DEFAULT_TARGET = "origin/main"
 DEFAULT_BASE = "upstream/shaders-improvement"
 DEFAULT_REPO = "tomluchowski/OpenDungeonsPlus"
 DEFAULT_AUTHOR = "Rokk001"

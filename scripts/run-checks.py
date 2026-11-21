@@ -2,7 +2,7 @@
 """Check runner of the integrator (fixed steps of the check runs in the integrator rules).
 
 Usage (from anywhere):
-    python run-checks.py --repo <worktree> --out <result file> [--base origin/integration/all]
+    python run-checks.py --repo <worktree> --out <result file> [--base origin/main]
                          [--tip HEAD] [--only <script> ...] [--timeout 600] [--no-4551-retry]
 
 Runs tools/check_*.py, source/tests/check_*.py, scripts/check_*.py and scripts/check-*.py of the
@@ -230,7 +230,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--repo', default=os.getcwd())
     ap.add_argument('--out', required=True)
-    ap.add_argument('--base', default='origin/integration/all')
+    ap.add_argument('--base', default='origin/main')
     ap.add_argument('--tip', default='HEAD')
     ap.add_argument('--timeout', type=int, default=600)
     ap.add_argument('--only', nargs='*', default=[])

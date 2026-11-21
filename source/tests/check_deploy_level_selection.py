@@ -211,7 +211,7 @@ class SelectionTests(unittest.TestCase):
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1', scripts / 'orchestrator-deploy-selected.ps1')
         shutil.copyfile(ROOT / 'scripts/deploy-level-selection.py', scripts.parent / 'deploy-level-selection.py')
         tip = self.git('rev-parse', 'HEAD')
-        self.git('fetch', '.', 'HEAD:refs/remotes/origin/integration/all')
+        self.git('fetch', '.', 'HEAD:refs/remotes/origin/main')
         self.git('worktree', 'add', '--detach', str(self.repo / 'build/current-worktree'), tip)
         self.write('build/windows/moreya.exe', 'fixture executable')
         self.write('.git/odp-deploy-success.json', json.dumps({'schema': 1, 'status': 'success',

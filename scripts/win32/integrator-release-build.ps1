@@ -6,7 +6,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Run,
     [Parameter(Mandatory = $true)][string]$Counter,
-    [string]$Base = 'origin/integration/all'
+    [string]$Base = 'origin/main'
 )
 $wt = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')

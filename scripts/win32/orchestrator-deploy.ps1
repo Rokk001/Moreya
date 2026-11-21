@@ -7,7 +7,7 @@ param(
     [Parameter(Mandatory = $true)][string]$DeployScript,
     [ValidateRange(0, 86400)][int]$GameWaitSeconds = 1800,
     # -IntegrationRef: <remote>/<branch> whose tip is deployed (origin/main in the Moreya clone).
-    [string]$IntegrationRef = 'origin/integration/all'
+    [string]$IntegrationRef = 'origin/main'
 )
 # Native errors and real child exit codes determine the outcome, never log text.
 $ErrorActionPreference = 'Stop'

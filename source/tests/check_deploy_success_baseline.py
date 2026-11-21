@@ -132,7 +132,7 @@ class DeployedSelectionTests(unittest.TestCase):
         shutil.copyfile(ROOT / 'scripts/deploy-level-selection.py', scripts / 'deploy-level-selection.py')
         wrapper = scripts / 'win32/orchestrator-deploy-selected.ps1'
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1', wrapper)
-        self.git('fetch', '.', 'HEAD:refs/remotes/origin/integration/all')
+        self.git('fetch', '.', 'HEAD:refs/remotes/origin/main')
         self.git('worktree', 'add', '--detach', str(self.repo / 'build/current-worktree'), self.base)
         self.write('build/windows/moreya.exe', 'fixture executable')
         self.write('out/orch-run.txt', 'test')
