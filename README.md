@@ -5,16 +5,6 @@ keeper of a dungeon: your workers dig, claim and mine, you build rooms, traps
 and doors, attract creatures and lead them into battle by dropping them where
 they are needed, casting spells and luring enemies into traps.
 
-### Download
-
-Ready-to-play builds for Windows and Linux are attached to the
-[releases](https://github.com/Rokk001/Moreya/releases) of this repository.
-
-- **Windows:** unpack the zip archive and start `opendungeons-plus.exe`.
-- **Linux (x86_64):** unpack the tar.gz archive and start `./moreya` in its
-  top folder. The build needs glibc 2.38 or newer (for example Ubuntu 24.04,
-  Fedora 39, Debian 13 or newer).
-
 ### The campaign
 
 The campaign tells of the guilds that try to plunder the dungeon of Moreya.
@@ -72,8 +62,6 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -jX    # X is the number of CPU cores to use
 ```
-The workflow `.github/workflows/linux-release.yml` shows a complete Linux
-build including its dependencies.
 
 On Windows, generate a Visual Studio solution with CMake and build the
 `opendungeons-plus` target in the Release configuration.
