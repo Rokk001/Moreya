@@ -3947,17 +3947,42 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
         case ClientNotificationType::askExecuteConsoleCommand:
         {
+            Player* player = clientSocket->getPlayer();
+            // Console commands change the game for everybody (gold, mana, fog of war, skills, creatures). In a
+            // multiplayer game only the host may run them, and only when its client runs in the server process.
+            const bool multiPlayer = (mServerMode == ServerMode::ModeGameMultiPlayer);
+            const bool serverHasLocalClient = (ODClient::getSingletonPtr() != nullptr);
+            if(!ServerGuards::isConsoleCommandAllowed(multiPlayer, player == mPlayerConfig, serverHasLocalClient))
+            {
+                OD_LOG_WRN("Refused console command from player=" + player->getNick()
+                    + " in a multiplayer game: only the local host may run console commands");
+                break;
+            }
+
             uint32_t nbArgs;
             std::string str;
             std::vector<std::string> args;
-            OD_ASSERT_TRUE(packetReceived >> nbArgs);
+            if(!(packetReceived >> nbArgs))
+            {
+                OD_LOG_WRN("Ignored console command without an argument count from player=" + player->getNick());
+                break;
+            }
+            bool argsRead = true;
             while(nbArgs > 0)
             {
                 --nbArgs;
-                OD_ASSERT_TRUE(packetReceived >> str);
+                if(!(packetReceived >> str))
+                {
+                    argsRead = false;
+                    break;
+                }
                 args.push_back(str);
             }
-            Player* player = clientSocket->getPlayer();
+            if(!argsRead)
+            {
+                OD_LOG_WRN("Ignored console command with missing arguments from player=" + player->getNick());
+                break;
+            }
             handleConsoleCommand(player, gameMap, args);
             break;
         }
