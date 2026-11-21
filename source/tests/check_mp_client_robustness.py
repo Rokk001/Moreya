@@ -199,7 +199,9 @@ assert activate.index('consumeSkirmishSubMenuRequest()') < activate.index('consu
 assert 'noticeText->setVisible(!notice.empty());' in activate and 'mMultiplayerSubMenuPending = true;' in activate
 assert 'mSkirmishSubMenuPending || mMultiplayerSubMenuPending' in activate
 assert 'toggleSubMenu(WINDOW_MULTIPLAYER);' in function(menu, 'void MenuModeMain::onFrameStarted(')
-assert 'mMultiplayerSubMenuPending = false;' in function(menu, 'bool MenuModeMain::changeModeAfterFlight(')
+# The exit screen (ADVERTISMENT) that cleared the pending sub-menus in changeModeAfterFlight was removed from the game;
+# no path to it is left that could keep a pending sub-menu.
+assert 'ADVERTISMENT' not in function(menu, 'bool MenuModeMain::changeModeAfterFlight(')
 assert 'const std::string TEXT_NOTICE = "NoticeText";' in menu
 main_layout = ET.parse(ROOT / 'gui/MenuMain.layout').getroot()
 notice = [w for w in main_layout.iter('Window') if w.get('name') == 'NoticeText']
