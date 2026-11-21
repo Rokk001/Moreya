@@ -1,5 +1,6 @@
 """Compile the actual preview renderer against a geometry-recording scene stub."""
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
@@ -9,7 +10,16 @@ source = (repo / 'source/render/RenderManager.cpp').read_text()
 start = source.find('static const float WALL_BORDER_LIFT')
 if start < 0:
     start = source.index('void RenderManager::rrDrawTilePreview(')
-method = source[start:source.index('\nbool RenderManager::getKeeperHandPosition(')]
+# The preview renderer ends before the edge mark functions when the file has them (they need the tile set and the
+# mesh manager), else before getKeeperHandPosition
+end = source.find('\nfloat RenderManager::rrGetEdgeMarkHeight(')
+if end < 0:
+    end = source.index('\nbool RenderManager::getKeeperHandPosition(')
+method = source[start:end]
+# The preview renderer also frames places beyond the map edge when it takes them as parameters
+edge_parameters = ''
+if 'const std::vector<std::pair<int, int> >& edgePlaces, float edgeHeight)' in method:
+    edge_parameters = ',const std::vector<std::pair<int,int> >& =std::vector<std::pair<int,int> >(),float=0.0f'
 # The floor height and the line helper of the preview lie far above in the file; they are taken along when it has them
 preamble = ''
 height_at = source.find('const float TILE_PREVIEW_FLOOR_HEIGHT')
@@ -49,7 +59,7 @@ struct Tile {int x,y;bool full;int getX(){return x;}int getY(){return y;}bool is
  bool getEverVisible(){return true;}bool getHasFogOfWar(){return false;}
  Ogre::MovableObject* getFogOfWarMesh(){return nullptr;}std::string getOgreNamePrefix(){return "tile";}std::string getName(){return "1";}};
 struct RenderManager {Ogre::SceneManager* mSceneManager;Ogre::ManualObject* mTilePreview=nullptr;
- void rrDrawTilePreview(const std::vector<Tile*>&,const Ogre::ColourValue&,bool=false,bool=false,bool=false);};
+ void rrDrawTilePreview(const std::vector<Tile*>&,const Ogre::ColourValue&,bool=false,bool=false,bool=falseEDGE_PARAMETERS);};
 METHOD
 //! \brief Checks emitted preview geometry and identical construction and digging frame widths.
 int main(){int checks=0,failures=0;auto check=[&](bool pass,const char* label){++checks;if(!pass){++failures;std::cout<<"FAIL "<<label<<'\n';}};
@@ -105,7 +115,7 @@ for(const Ogre::Vector3& p:digging[0].points)check(std::abs(p.z-2.02f)<.00001f,"
   "drag outline reaches full selection maximum");
  render.rrDrawTilePreview({}, {1,1,1},true);check(scene.object.sections.empty(),"cancel clears ribbon and lines");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;}
-'''.replace('METHOD', preamble + method)
+'''.replace('EDGE_PARAMETERS', edge_parameters).replace('METHOD', preamble + method)
 with tempfile.TemporaryDirectory(prefix='odp-construction-preview-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(code)
@@ -114,7 +124,9 @@ with tempfile.TemporaryDirectory(prefix='odp-construction-preview-') as director
 
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 update = game.split('void GameMode::updateSelectedTiles()', 1)[1].split('void GameMode::unselectAllTiles()', 1)[0]
-assert update.count('rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle)') == 2
+# Both preview calls pass the same flags; the places beyond the map edge of a dig selection follow them
+assert update.count('rrDrawTilePreview(outlineTiles, colour, building || (roomDemolition && !rectangle), digging, rectangle,') == 2
+assert len(re.findall(r'digging, rectangle,\s+outlineEdgePlaces, edgeHeight\);', update)) == 2
 assert 'inputManager.mLStartDragX, inputManager.mLStartDragY' in update
 assert 'SelectedAction::sellBuilding' in update and 'SelectedAction::destroyRoom' in update and 'SelectedAction::destroyTrap' in update
 assert 'SelectedAction::buildRoom' in update and 'SelectedAction::buildTrap' in update
