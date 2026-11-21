@@ -2,7 +2,8 @@
 // MenuSignpostBoard is the front face of the arrow board: its texture spans the whole board outline (u from the back
 // end to the arrow tip, v from the lower to the upper edge); the lettering area is u 0 to 0.875.
 // The board shows the subtitle "Lords of the Deep" carved and painted into a lettered copy of the plain planks
-// (tools/gen_menu_signpost_lettering.py writes MenuSignpostBoardLettered*.png from MenuSignpostBoard*.png).
+// (tools/gen_menu_signpost_lettering.py writes MenuSignpostBoardLettered*.png from MenuSignpostBoard*.png); the copy
+// is weathered: aged grey wood, grime, soot, chipped edges, cracks through planks and letters, old flaked paint.
 import RTSS/NormalMapping_MultiPass from "RTShaderSystem.material"
 
 material MenuSignpostWood : RTSS/NormalMapping_MultiPass
@@ -15,6 +16,29 @@ material MenuSignpostWood : RTSS/NormalMapping_MultiPass
             texture_unit
             {
                 texture MenuSignpostWoodNormal.png
+                tex_address_mode wrap
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 0.90 0.88 0.86 1
+            diffuse 0.90 0.88 0.86 1
+            specular 0.03 0.03 0.03 1 10
+        }
+    }
+}
+
+// The subtitle signpost (models/MenuSignpost.mesh) has its post, brace and board edges in this weathered copy of
+// MenuSignpostWood: bleached, grimy, sooty and split along the grain like the rest of the courtyard
+// (tools/menu_wood_weathering.py writes MenuSignpostWeatheredWood*.png from MenuSignpostWood*.png).
+material MenuSignpostWeatheredWood : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap { texture MenuSignpostWeatheredWood.png gamma }
+            texture_unit
+            {
+                texture MenuSignpostWeatheredWoodNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
