@@ -5,15 +5,11 @@ keeper of a dungeon: your workers dig, claim and mine, you build rooms, traps
 and doors, attract creatures and lead them into battle by dropping them where
 they are needed, casting spells and luring enemies into traps.
 
-### Download
+### Getting the game
 
-Ready-to-play builds for Windows and Linux are attached to the
-[releases](https://github.com/Rokk001/Moreya/releases) of this repository.
-
-- **Windows:** unpack the zip archive and start `moreya.exe`.
-- **Linux (x86_64):** unpack the tar.gz archive and start `./moreya` in its
-  top folder. The build needs glibc 2.38 or newer (for example Ubuntu 24.04,
-  Fedora 39, Debian 13 or newer).
+There are no ready-made builds of Moreya outside Steam. To play for free,
+build the game from this repository as described under "Build instructions"
+below.
 
 Settings, saved games, logs and screenshots are kept in the folder `Moreya` in
 `%APPDATA%` on Windows and in `~/.local/share/moreya` and `~/.config/moreya` on
