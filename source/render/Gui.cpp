@@ -309,9 +309,14 @@ void placeItemTooltip(CEGUI::Tooltip* tooltip, const CEGUI::Window* target, cons
 //! \brief Name of the item card that is shown for an item in the 3D world (Gui::showItemTooltipAtCursor).
 const char* const WORLD_ITEM_TOOLTIP_NAME = "WorldItemTooltip";
 
+//! \brief The item card window of items in the 3D world created by getWorldItemTooltip; it is only used after
+//! CEGUI::WindowManager::isAlive confirms that it was not destroyed together with its sheet.
+CEGUI::Tooltip* worldItemTooltipWindow = nullptr;
+
 //! \brief Returns the item card window of items in the 3D world, which has no window of its own to hover. It is a
 //! tooltip of the same type and look as the default tooltip, so the card is the same as everywhere else. It is created
 //! on first use when create is true and hangs in the root window of the shown sheet; null without root window or card.
+//! CEGUI 0.8 has no lookup of a window by name in the WindowManager, so the card is remembered and checked with isAlive.
 CEGUI::Tooltip* getWorldItemTooltip(bool create)
 {
     CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
@@ -320,11 +325,20 @@ CEGUI::Tooltip* getWorldItemTooltip(bool create)
     if(root == nullptr)
         return nullptr;
     CEGUI::Tooltip* tooltip = nullptr;
-    if(manager.isWindowPresent(WORLD_ITEM_TOOLTIP_NAME))
-        tooltip = static_cast<CEGUI::Tooltip*>(manager.getWindow(WORLD_ITEM_TOOLTIP_NAME));
-    else if(create)
+    if(worldItemTooltipWindow != nullptr && manager.isAlive(worldItemTooltipWindow)
+        && worldItemTooltipWindow->getName() == WORLD_ITEM_TOOLTIP_NAME)
+    {
+        tooltip = worldItemTooltipWindow;
+    }
+    else
+    {
+        // The card was destroyed together with the sheet it hung in, or was never created
+        worldItemTooltipWindow = nullptr;
+    }
+    if(tooltip == nullptr && create)
     {
         tooltip = static_cast<CEGUI::Tooltip*>(manager.createWindow("OD/Tooltip", WORLD_ITEM_TOOLTIP_NAME));
+        worldItemTooltipWindow = tooltip;
         tooltip->setLookNFeel(ITEM_TOOLTIP_LOOK);
         tooltip->setAlwaysOnTop(true);
         // The pointer stays on the world below the card: it never takes a click or a hover
