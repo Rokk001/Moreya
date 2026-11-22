@@ -34,7 +34,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 CONFIG = os.path.join(ROOT, "config", "mainmenuscene.cfg")
 MODELS = os.path.join(ROOT, "models")
 MATERIAL_SCRIPTS = [os.path.join(ROOT, "materials", "scripts", name)
-                    for name in ("MenuScene.material", "MenuSignpost.material", "MenuMoreyaPortal.material")]
+                    for name in ("MenuScene.material", "MenuSignpost.material")]
 #: Sky and horizon elements that belong in the air (INGAME-QS-12 K1) and the crows flying in the sky (K17).
 SKY_ENTITIES = ("Backdrop", "BloodMoon", "HorizonCrows", "VolcanicRuins",
                 "SkyCrow1", "SkyCrow2", "SkyCrow3", "SkyCrow4", "SkyCrow5", "SkyCrow6")

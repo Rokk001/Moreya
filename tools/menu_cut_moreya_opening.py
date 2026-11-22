@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Cut the flat glowing slab off the forge hearth of the rear yard in the menu scene (INGAME-QS-12 K1).
+"""Open the menu scene for the staircase into Moreya in the rear yard (INGAME-QS-12 K1).
 
-The rear yard behind the campaign hall had a flat glowing slab floating over the forge hearth; the coal heap
-MenuForgeCoals (tools/blender-assets/menu_moreya_entrance.py) takes its place. One box is cut (config/mainmenuscene.cfg
-coordinates, see CUTS): x 2.99..5.01, y 40.89..42.11, z 1.08..1.18 out of the glowing material of FortressRear.
-The staircase into Moreya in the rear yard, with its stairwell opening in the yard floor and the opening in the back
-wall of the campaign hall, gave way to the green portal behind the campaign table (MenuMoreyaPortal.mesh); the yard
-floor and the hall's back wall are whole again, so only the forge slab is cut.
+The staircase MoreyaStairs (models/MenuMoreyaStairs.mesh, tools/blender-assets/menu_moreya_entrance.py) lies in the
+rear yard behind the campaign hall, in front of the abandoned castle. Two openings are cut (config/mainmenuscene.cfg
+coordinates, see CUTS):
+- the stairwell: x -3.0..3.0, y 31.0..37.0, z -0.95..0.3 out of the yard paving with its bedding (OuterGround) and
+  the loose rubble of the bailey (FortressRear) lying there;
+- the back wall of the campaign hall: x -4.0..4.0, y 29.0..30.5, z 0.12..4.2 out of CampaignHall, so the campaign
+  flight looks through it into the yard; the stone frame MenuHallRearArch covers the cut edges;
+- the flat glowing slab floating over the forge hearth of the yard: x 2.99..5.01, y 40.89..42.11, z 1.08..1.18 out of
+  FortressRear; the coal heap MenuForgeCoals takes its place.
 
     python tools/menu_cut_moreya_opening.py <work folder>
 
@@ -29,10 +32,13 @@ from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[1]
 #: The boxes cut out of the entities' meshes, in scene coordinates (x min, x max, y min, y max, z min, z max).
+STAIRWELL = (-3.0, 3.0, 31.0, 37.0, -0.95, 0.3)
+HALL_BACK_OPENING = (-4.0, 4.0, 29.0, 30.5, 0.12, 4.2)
 FORGE_SLAB = (2.99, 5.01, 40.89, 42.11, 1.08, 1.18)
 #: Per entity: (box, materials) pairs; materials None cuts every submesh, else only the submeshes of those materials
 #: (the forge slab is the glowing material alone; the hearth stone around it stays whole).
-CUTS = {"FortressRear": ((FORGE_SLAB, ("MenuEmber",)),)}
+CUTS = {"OuterGround": ((STAIRWELL, None),), "FortressRear": ((STAIRWELL, None), (FORGE_SLAB, ("MenuEmber",))),
+        "CampaignHall": ((HALL_BACK_OPENING, None),)}
 #: Attributes that are directions and are renormalised after interpolation.
 DIRECTIONS = ("normal", "tangent", "binormal")
 #: Distance from a cut plane within which a vertex counts as lying on it.
