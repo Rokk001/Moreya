@@ -1890,7 +1890,7 @@ void EditorMode::onEditPaste()
     }
 }
 
-//! rief Deletes the pasted block; a drag of it can no longer be in progress.
+//! brief Deletes the pasted block; a drag of it can no longer be in progress.
 void EditorMode::onEditDelete()
 {
     // The block is gone once the server answers, so the next mouse move must not try to round its position
