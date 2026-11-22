@@ -71,8 +71,10 @@ struct ServerNotification {
 int ServerNotification::destroyed=0;
 struct GameMap {int cleared=0;void clearAll(){++cleared;}};
 enum class ServerState {StateNone,StateGame};
+struct DraggableTileContainer {};
 struct ODServer:ODSocketServer {
     GameMap map;GameMap* mGameMap=&map;
+    DraggableTileContainer* mDraggableTileContainer=nullptr;
     ServerState mServerState=ServerState::StateGame;bool mSeatsConfigured=true;
     std::vector<Player*> mDisconnectedPlayers;Player* mPlayerConfig=nullptr;
     std::deque<ServerNotification*> mServerNotificationQueue;

@@ -112,6 +112,10 @@ void setLoadError(const std::string& message)
 //! \brief Largest side of a map that a level or a saved game may declare.
 const int MAX_MAP_SIDE = 4096;
 
+//! \brief Largest seat id (and number of seats) a level or a saved game may declare. The shipped levels use at most
+//! 8; 64 leaves room for any real level and keeps the per-tile seat pool small (65 bits per tile).
+const int MAX_SEAT_ID = 64;
+
 //! \brief Reads a whole number out of a text; false if the text is empty or has anything else than the number.
 bool parseWholeNumber(const std::string& text, int& value)
 {
@@ -315,6 +319,14 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
     {
         setLoadError("The map size after [Tiles] is missing or not between 1 and " + Helper::toString(MAX_MAP_SIDE)
             + " (x=" + Helper::toString(mapSizeX) + ", y=" + Helper::toString(mapSizeY) + "), file=" + fileName);
+        return false;
+    }
+    // The pool below has a slot per seat id: a huge id or seat count must end in a message, never in a huge
+    // allocation or an overflow
+    if((highestSeatId > MAX_SEAT_ID) || (numberOfSeats > MAX_SEAT_ID))
+    {
+        setLoadError("A seat id or the number of seats is above " + Helper::toString(MAX_SEAT_ID) + " (highest id="
+            + Helper::toString(highestSeatId) + ", seats=" + Helper::toString(numberOfSeats) + "), file=" + fileName);
         return false;
     }
     const int scannedMapSizeX = mapSizeX;
@@ -1805,14 +1817,15 @@ void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberO
         if (nextParam == "[Seat]")
         {
             numberOfSeats++;
-            // The seat id follows the tag; a value that is no number is left to the seat reader, which refuses it
+            // The seat id follows the tag; a value that is no number reads as 0 and is left to the seat reader,
+            // which refuses it, and a value too large for an int reads as the largest int, which the caller refuses
             std::string idParam;
             int seatId = 0;
             if((ss >> idParam) && (idParam == "seatId"))
             {
                 if(!(ss >> seatId))
                     ss.clear();
-                else if(seatId > highestSeatId)
+                if(seatId > highestSeatId)
                     highestSeatId = seatId;
             }
         }

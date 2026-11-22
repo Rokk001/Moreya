@@ -5,7 +5,9 @@
 Requirements checked (each reported on its own, expected values are fixed):
   F1  seat ids with gaps: the pool of the ever visited tiles has a slot for the highest seat id of the level, not
       only for the number of seats (compiled probe on the production blocks of MapHandler.cpp: seats 1, 2, 5 need
-      6 slots, seats 1, 2 keep 3); a negative seat id is refused like seat id 0 (static)
+      6 slots, seats 1, 2 keep 3); seat ids and seat counts above MAX_SEAT_ID = 64 are refused with a load error
+      (id 64 -> 65 slots; 65, 2147483647 and an id too large for an int -> refused); a negative seat id is refused
+      like seat id 0 (static)
   F2  no defect: the trap copy (tile - x1) and the room copy (tile - container position) use the same offset,
       because the server sets the container position only when it creates it, from the same corner the client
       sends with the reveal requests, and the client sends these requests right after the creation; the seat of a
@@ -111,6 +113,9 @@ load_start = maphandler.find('int mapSizeX;')
 pool_call = maphandler.find('initializeEverVisitedFlagTilesPools(', load_start)
 load_block = maphandler[load_start:maphandler.index(';', pool_call) + 1] if load_start != -1 and pool_call != -1 else ''
 check(scan != '' and load_block != '', 'F1 MapHandler.cpp has getXandYandSeatsNumber and the pool set-up of the loader')
+seat_limit = re.search(r'const int MAX_SEAT_ID = (\d+);', maphandler)
+check(seat_limit is not None and seat_limit.group(1) == '64', 'F1 MapHandler.cpp limits seat ids with MAX_SEAT_ID = 64')
+seat_limit_line = seat_limit.group(0) if seat_limit is not None else ''
 F1_PROBE = r'''
 #include <algorithm>
 #include <cstdint>
@@ -119,6 +124,7 @@ F1_PROBE = r'''
 #include <string>
 #define OD_ASSERT_TRUE_MSG(a, b) (void)0
 static const int MAX_MAP_SIDE = 4096;
+@@LIMIT@@
 //! \brief Number formatting of the messages.
 struct Helper { static std::string toString(int value) { std::ostringstream s; s << value; return s.str(); } };
 //! \brief Load errors are printed.
@@ -157,10 +163,17 @@ int main()
     plain += "[Seat]\nseatId\t1\nteamId\t1\nplayer\tHuman\n";
     plain += "[Seat]\nseatId\t2\nteamId\t2\nplayer\tAI\n" + tail;
     std::cout << "gap=" << slots(gap) << " plain=" << slots(plain) << std::endl;
+    const char* ids[] = {"64", "65", "2147483647", "99999999999"};
+    for(int i = 0; i < 4; ++i)
+    {
+        std::string level = head + "[Seat]\nseatId\t1\nteamId\t1\nplayer\tHuman\n";
+        level += std::string("[Seat]\nseatId\t") + ids[i] + "\nteamId\t2\nplayer\tAI\n" + tail;
+        std::cout << "id" << ids[i] << "=" << slots(level) << std::endl;
+    }
     return 0;
 }
 '''
-probes['f1'] = F1_PROBE.replace('@@SCAN@@', scan).replace('@@BLOCK@@', load_block)
+probes['f1'] = F1_PROBE.replace('@@SCAN@@', scan).replace('@@BLOCK@@', load_block).replace('@@LIMIT@@', seat_limit_line)
 import_seat = function(seat_cpp, 'bool Seat::importSeatFromStream(')
 check(re.search(r'if\s*\(\s*mId\s*<=\s*0\s*\)', import_seat) is not None,
       'F1 Seat::importSeatFromStream refuses a seat id below 1 (negative ids index the pool too)')
@@ -513,6 +526,10 @@ if 'f1' in results:
     ok, output = results['f1']
     check(ok and 'gap=6 plain=3' in output,
           'F1 the pool has 6 slots for seats 1, 2, 5 and 3 slots for seats 1, 2; got: ' + output.strip()[:400])
+    lines = output.splitlines()
+    check(ok and all(line in lines for line in ('id64=65', 'id65=0', 'id2147483647=0', 'id99999999999=0')),
+          'F1 seat id 64 gets 65 slots; ids 65, 2147483647 and 99999999999 are refused with a load error; got: '
+          + output.strip()[:600])
 if 'f3' in results:
     ok, output = results['f3']
     expected = ['room-good result=1 changed=2 deleted=0 added=1', 'room-nulltile result=0 changed=0 deleted=1 added=0',
