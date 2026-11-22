@@ -4692,6 +4692,12 @@ void ODServer::stopServer()
         delete mServerNotificationQueue.front();
         mServerNotificationQueue.pop_front();
     }
+    // The copy block holds seats of the level that is closed: it goes before the map is cleared
+    if(mDraggableTileContainer != nullptr)
+    {
+        delete mDraggableTileContainer;
+        mDraggableTileContainer = nullptr;
+    }
     mGameMap->clearAll();
 }
 

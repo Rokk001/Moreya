@@ -2298,9 +2298,13 @@ void EditorMode::resetStateAfterLevelChange()
     hidePortalWaveWindow();
 
     // The seats of the old level are gone: the selection goes back to the seat of the local player
+    // and, when there is none yet, to a seat that exists in the new level
     Player* player = mGameMap->getLocalPlayer();
+    int& seatIdSelected = getModeManager().getInputManager().mSeatIdSelected;
     if((player != nullptr) && (player->getSeat() != nullptr))
-        getModeManager().getInputManager().mSeatIdSelected = player->getSeat()->getId();
+        seatIdSelected = player->getSeat()->getId();
+    else if(mGameMap->getSeatById(seatIdSelected) == nullptr && !mGameMap->getSeats().empty())
+        seatIdSelected = mGameMap->getSeats().front()->getId();
     updateFlagColor();
     updateCursorText();
 }
@@ -2747,8 +2751,10 @@ void EditorMode::connectTileSelect(const std::string& buttonName, TileVisual til
 
 void EditorMode::updateFlagColor()
 {
-    std::string colorStr = Helper::getImageColoursStringFromColourValue(
-        mGameMap->getSeatById(getModeManager().getInputManager().mSeatIdSelected)->getColorValue());
+    Seat* seat = mGameMap->getSeatById(getModeManager().getInputManager().mSeatIdSelected);
+    if(seat == nullptr)
+        return;
+    std::string colorStr = Helper::getImageColoursStringFromColourValue(seat->getColorValue());
     mRootWindow->getChild("HorizontalPipe/SeatIdDisplay/Icon")->setProperty("ImageColours", colorStr);
 }
 

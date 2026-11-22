@@ -156,9 +156,17 @@ check(reset != '' and 'delete draggableTileContainer' in reset and 'draggableTil
       'B4 resetStateAfterLevelChange drops the copy block of the client')
 check('mTileMarker.isVisible = false' in reset, 'B4 resetStateAfterLevelChange hides the tile marker')
 check('unselectAllTiles()' in reset, 'B4 resetStateAfterLevelChange clears the tile selection')
-check(re.search(r'mSeatIdSelected\s*=', reset) is not None and 'getLocalPlayer()' in reset
+check(re.search(r'[sS]eatIdSelected\s*=', reset) is not None and 'getLocalPlayer()' in reset
       and 'updateFlagColor()' in reset and 'updateCursorText()' in reset,
       'B4 resetStateAfterLevelChange selects the seat of the local player and refreshes flag and cursor text')
+stop = func(server, 'void ODServer::stopServer(')
+check(before(stop, 'delete mDraggableTileContainer', 'clearAll()') and 'mDraggableTileContainer = nullptr' in stop,
+      'B4 ODServer::stopServer deletes the server copy block (it holds seats of the old level) before clearAll')
+check('getSeatById(seatIdSelected) == nullptr' in reset and 'getSeats().front()' in reset,
+      'B4 resetStateAfterLevelChange falls back to an existing seat when there is no local seat')
+flag = func(editor, 'void EditorMode::updateFlagColor(')
+check(before(flag, 'seat == nullptr', 'getColorValue'),
+      'B4 updateFlagColor returns when the selected seat does not exist')
 check('hidePortalWaveWindow()' in reset, 'B4 resetStateAfterLevelChange closes the wave window')
 load = func(editor, 'bool EditorMode::loadLevelFromFile(')
 check('resetStateAfterLevelChange()' in load, 'B4 loadLevelFromFile resets the editor state')
