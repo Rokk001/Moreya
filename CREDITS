@@ -1447,7 +1447,6 @@ assets-src/gui/icons/tiles/InfirmaryButton.png    AI-generated with Codex    GPL
 
 == Infirmary room surface and healing effect ==
 
-particles/CreatureReactions.particle (InfirmaryHealGlow)    OpenDungeonsPlus contributors    GPLv3+    Additional continuous healing glow based on the existing ReactionHeal definition, 2026-10-25; existing particle definitions unchanged; additional definition AI-generated with Codex
 
 
 == Tavern sound recordings ==
@@ -1458,6 +1457,7 @@ sounds/Creatures/Default/Cheer.ogg       qubodup                  CC0 1.0       
 assets-src/dirt/Vomit.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
 materials/scripts/TavernObjects.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
 materials/textures/tavern/TavernVomit.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+models/TavernMug.mesh    AI-generated with Codex    GPLv3+    Original wooden mug exported with a grip-centred origin and the existing right-hand weapon-mount orientation, 2026-10-25
 tools/tavern-meshes/make_tavern_stool.py    AI-generated with Claude Code    GPLv3+    Original generator of the round tavern stool mesh, decision 863, 2026-11-08
 models/Vomit.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 
@@ -1645,14 +1645,11 @@ models/Pile_BossDragon.mesh    OD Team    GPLv3+    Byte-identical alias of mode
 models/Pile_VeteranScarab.mesh    OD Team    GPLv3+    Byte-identical alias of models/Pile_Scarab.mesh for a level creature explicitly using Scarab.mesh; original Blender source assets-src/dirt/Pile_Scarab.blend, unchanged geometry alias prepared with Codex, 2026-10-26
 == Original hot mud bath surfaces and effects ==
 
-particles/RoomAmbienceProduction.particle (SpaSteam) OD Team GPLv3+ Original hot mud pool steam effect; AI-generated with Codex
-particles/ChickenFeathers.particle (SpaMudSplash) OD Team GPLv3+ Original brown mud splash effect; AI-generated with Codex
 
 assets-src/gui/icons/tiles/SpaButton.png AI-generated with Codex GPLv3+ Original painted steaming mud pool and towel in the existing room icon style, generated with built-in imagegen and downsampled to the 256-pixel source, 2026-10-26
 tools/spa-meshes/paint_spa_textures.py AI-generated with Claude Code GPLv3+ Own work: paints the chair, life ring, metal and hair textures of the hot mud bath, 2026-11-17
 tools/spa-meshes/texture_spa_meshes.py AI-generated with Claude Code GPLv3+ Own work: writes the texture coordinates of the chair, life ring and attendant meshes, 2026-11-17
 
-particles/RoomAmbienceProduction.particle (SpaMudBubbles) AI-generated with Codex GPLv3+ Original expanding and popping hot mud domes over the opaque bath, decision 863, 2026-11-08
 
 
 == Bath and cannonball creature performances ==
@@ -1842,6 +1839,7 @@ models/Slime.mesh    AI-generated modification with Codex    GPLv3+ for added wo
 models/Slime.skeleton    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Independent grasp rig and complete calm cup cycles, preserving native body animation and supported seated transition. 2026-11-09.
 models/Spider.mesh    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Original right front leg weights retargeted to independently placed anatomical grasp joints; original geometry and materials retained. 2026-11-09.
 models/Spider.skeleton    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Independent anatomical grasp rig, supported seated gestures and complete calm cup cycles, preserving unrelated native tracks. 2026-11-09.
+models/TavernMug.mesh    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Corrected physical bowl and foam axis, retaining original wooden lip, base, UVs, materials and textures. 2026-11-09.
 models/Tentacle.skeleton    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Retargeted right foretentacle and complete calm supported cup cycles, preserving native locomotion and rest poses. 2026-11-09.
 models/TentacleAlbine.mesh    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Anatomical right foretentacle extension for real table reach, retaining original topology, skin weights, UVs and colour variant. 2026-11-09.
 models/TentacleGreen.mesh    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Anatomical right foretentacle extension for real table reach, retaining original topology, skin weights, UVs and colour variant. 2026-11-09.
