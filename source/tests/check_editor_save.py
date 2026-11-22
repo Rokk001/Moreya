@@ -440,7 +440,7 @@ for name, signature in (('onSaveButtonClickFromOptions', 'bool EditorMode::onSav
     check(sent != -1 and reset != -1 and sent < reset < close,
           'D6 %s resets mModifiedMapBit only when the request was queued' % name)
 trap = editor[editor.index('case SelectedAction::destroyTrap:'):]
-trap = trap[:trap.index('case SelectedAction::castSpell:')]
+trap = trap[:trap.index('default:')]
 check(before(trap, 'mModifiedMapBit = true', 'return'), 'D6 destroying a trap sets the modified bit before the return')
 
 # ---------------------------------------------------------------- D7
