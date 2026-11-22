@@ -22,6 +22,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/MiniMapColours.h"
 #include "render/ODFrameListener.h"
 
 #include <cmath>
@@ -100,7 +101,8 @@ void fillPixelRegion(const Ogre::ColourValue& colour, Ogre::PixelBox& output,
 }
 }
 
-//! \brief Creates the full drawn map with an alpha channel for the circular HUD backing.
+//! \brief Creates the full drawn map with an alpha channel; pixels that no map tile covers start as opaque solid
+//! earth, so the circular HUD backing never shows where the map ends.
 MiniMapDrawnFull::MiniMapDrawnFull(CEGUI::Window* miniMapWindow, const std::string& suffix) :
     mMiniMapWindow(miniMapWindow),
     mResourceSuffix(suffix),
@@ -120,6 +122,9 @@ MiniMapDrawnFull::MiniMapDrawnFull(CEGUI::Window* miniMapWindow, const std::stri
             Ogre::TU_DYNAMIC_WRITE_ONLY)),
     mPixelBuffer(mMiniMapOgreTexture->getBuffer())
 {
+    // Pixels outside every tile region keep this earth; the tile listeners below overwrite all others.
+    fillPixelRegion(MiniMapColours::DIRT_COLOUR, mPixelBox, 0, mWidth, 0, mHeight);
+
     uint32_t tileXMax = mGameMap.getMapSizeX();
     uint32_t tileYMax = mGameMap.getMapSizeY();
     uint32_t tileX = 0;
