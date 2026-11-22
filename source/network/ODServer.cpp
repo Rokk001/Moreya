@@ -2801,6 +2801,8 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
 
             creature->possessedUseSkill(slot, aim);
+            // The skill bar shows the new recovery at once, not only at the next turn
+            creature->sendPossessionSkillBar();
             break;
         }
 

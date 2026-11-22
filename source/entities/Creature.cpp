@@ -122,6 +122,7 @@
 
 #include "modes/GameEditorModeConsole.h"
 #include "modes/GameMode.h"
+#include "modes/PossessionBarRules.h"
 #include "modes/ModeManager.h"
 
 #include "network/CosmeticEvent.h"
@@ -3620,6 +3621,9 @@ void Creature::doUpkeep()
             if(skillData.mCooldown > 0.0)
                 skillData.mCooldown -= 1.0;
         }
+
+        // The skill bar of the player follows the recovery every turn
+        sendPossessionSkillBar();
 
         std::function<bool()> possessedFunc = mActions.back()->action();
         possessedFunc();
@@ -12548,6 +12552,9 @@ void Creature::startPossession(Player& player)
     const std::string& name = getName();
     serverNotification->mPacket << name;
     ODServer::getSingleton().queueServerNotification(serverNotification);
+
+    // The skill bar is filled as soon as the possession view opens
+    sendPossessionSkillBar();
 }
 
 //! \brief Puts back the saved possession of an AI keeper after loading: the turns and the follow group were read with
@@ -13377,6 +13384,46 @@ void Creature::possessedHandleGold()
         if(taken > 0.0)
             addGoldCarried(taken);
     }
+}
+
+std::vector<CreatureSkillData*> Creature::getPossessedSkillSlots()
+{
+    std::vector<CreatureSkillData*> slots;
+    for(CreatureSkillData& skillData : mSkillData)
+    {
+        if(isPossessedBasicAttack(*skillData.mSkill))
+            continue;
+
+        if(!skillData.mSkill->canBeUsedBy(this))
+            continue;
+
+        slots.push_back(&skillData);
+    }
+    return slots;
+}
+
+void Creature::sendPossessionSkillBar()
+{
+    if(!getIsOnServerMap() || (mPossessor == nullptr) || !mPossessor->getIsHuman())
+        return;
+
+    std::vector<CreatureSkillData*> slots = getPossessedSkillSlots();
+    const uint32_t count = static_cast<uint32_t>(std::min<std::size_t>(slots.size(), PossessionBarRules::MAX_SLOTS));
+    ServerNotification* serverNotification = new ServerNotification(
+        ServerNotificationType::possessionSkillBar, mPossessor);
+    serverNotification->mPacket << count;
+    for(uint32_t index = 0; index < count; ++index)
+    {
+        const CreatureSkillData& skillData = *slots[index];
+        // The timers keep negative remainders (see doUpkeep); the bar shows only the time still to run
+        const double remaining = std::max(0.0, std::max(skillData.mCooldown, skillData.mWarmup));
+        const double duration = std::max(remaining, getAppliedCooldownNbTurns(*skillData.mSkill));
+        const bool usable = hasManaFor(*skillData.mSkill);
+        const std::string icon = PossessionBarRules::iconImage(skillData.mTreeSkillId,
+            skillData.mSkill->getSkillName());
+        serverNotification->mPacket << icon << remaining << duration << usable;
+    }
+    ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
 void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)

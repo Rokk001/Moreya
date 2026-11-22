@@ -230,6 +230,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "setHandCooldown";
         case ServerNotificationType::startGameRefused:
             return "startGameRefused";
+        case ServerNotificationType::possessionSkillBar:
+            return "possessionSkillBar";
         default:
             OD_LOG_ERR("Unknown enum for ServerNotificationType="
                 + Helper::toString(static_cast<int>(type)));

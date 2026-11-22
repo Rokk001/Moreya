@@ -293,6 +293,12 @@ add_boost_test(00-HandLimitRules
         ${SRC}/game/HandLimitRules.h
         ${SRC}/game/HandLimitRules.cpp)
 
+add_boost_test(00-PossessionBarRules
+        SOURCES
+        test_PossessionBarRules.cpp
+        ${SRC}/modes/PossessionBarRules.h
+        ${SRC}/modes/PossessionBarRules.cpp)
+
 add_boost_test(00-ServerGuards
         SOURCES
         test_ServerGuards.cpp
