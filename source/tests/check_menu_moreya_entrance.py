@@ -1,33 +1,36 @@
 #!/usr/bin/env python3
-"""Checks the entrance into Moreya on the start screen: the green portal behind the campaign table and its signpost.
+"""Checks the entrance into Moreya on the start screen: the forecourt behind the campaign table and its green portal.
 
 No compile needed. Reads config/mainmenuscene.cfg, the particle and material scripts, the textures and the binary
 meshes under models/ and asserts:
 
-- the scene places the portal MoreyaPortal (MenuMoreyaPortal.mesh) and the signpost MoreyaSignpost
-  (MenuMoreyaSignpost.mesh); the staircase into the ground and the frame of the opening in the hall's back wall are
-  gone from the scene and from models/ (GONE_MESHES); the campaign table stays at the entrance of the hall
-  (TABLE_POSITION) and Pose campaign stays as it was (CAMPAIGN_POSE);
-- the portal stands right behind the table in the campaign hall: centred behind it (MAX_PORTAL_OFFSET), at least
-  MIN_TABLE_GAP behind its back edge, in front of the hall's back wall (HALL_BACK_WALL) and between the side walls
-  (HALL_HALF_WIDTH), its foot on the hall floor (MAX_FOOT_GAP);
-- it is a stone arch filled with green fire: the fire faces (FIRE_MATERIAL) face the table, cover at least
+- the scene places the forecourt MoreyaForecourt (MenuMoreyaForecourt.mesh), the frame of the opening in the hall's
+  back wall HallRearArch (MenuHallRearArch.mesh), the portal MoreyaPortal (MenuMoreyaPortal.mesh) and the signpost
+  MoreyaSignpost (MenuMoreyaSignpost.mesh); the staircase into the ground is gone from the scene and from models/
+  (GONE_MESHES); the campaign table stays at the entrance of the hall (TABLE_POSITION) and Pose campaign stays as it
+  was (CAMPAIGN_POSE);
+- behind the table the hall's back wall is open over OPENING_AREA (at least MIN_OPENING_SHARE of the sight lines
+  through it pass) into a large forecourt: its walls stand at least MIN_FORECOURT_WIDTH apart and its rear wall at
+  least MIN_FORECOURT_DEPTH behind the hall's back wall (HALL_BACK_WALL); its floor is paved and whole and lies open
+  to the sky between the hall and the portal (nothing but the signpost stands on it higher than MAX_CLUTTER);
+- the portal stands at the far end of the forecourt: centred behind the table (MAX_PORTAL_OFFSET), its fire at least
+  MIN_PORTAL_DISTANCE behind the table's back edge and its back at most MAX_PORTAL_FROM_REAR in front of the rear
+  wall, its foot on the forecourt floor (MAX_FOOT_GAP);
+- it is a stone arch filled with green fire: the fire faces (FIRE_MATERIAL) face the hall, cover at least
   MIN_FIRE_AREA and an opening at least MIN_FIRE_WIDTH wide and MIN_FIRE_HEIGHT high; stone stands on both sides of
   the fire (pillars) and over its top (arch); the fire material ignores the scene lights and lets its texture rise;
   the texture is green (GREEN_SHARE of its bright texels); the green flame particles rise in the opening and the
   orange flames burn over two fire bowls (MenuEmber patches of the portal) left and right in front of the fire;
-- the hall's back wall is whole behind the portal: at least MIN_WALL_SHARE of the sight lines through it over
-  WALL_AREA end in it (only the thin joints between its blocks let a line through), and the yard floor where the
-  stairwell was is whole again (MAX_FLOOR_STEP);
 - the gate_exit frame of the campaign flight to campaign (vertical field of view 45 degrees at 16:9, 16:9 and 4:3,
   path and rotation as RenderSceneMenu::samplePath) shows the middle of the fire and the crown of the arch unhidden;
   it and at least one more frame of the flight show the middle of the fire and the whole signpost board unhidden,
   the board facing the camera and at least MIN_BOARD_PIXELS long on a 1080 line screen;
-- the signpost stands on the hall floor left of the portal between the table and the back wall; its board is upright
-  (MAX_BOARD_TILT), at least MIN_BOARD_LENGTH long and its arrow points towards the fire (MIN_POINTING);
-- no glowing material forms a flat slab in the rear yard (largest flat connected patch at most MAX_FLAT_GLOW);
+- the signpost stands on the forecourt floor near the hall; its board is upright (MAX_BOARD_TILT), at least
+  MIN_BOARD_LENGTH long and its arrow points towards the fire (MIN_POINTING);
+- no glowing material forms a flat slab in the rear yard behind the forecourt (largest flat connected patch at most
+  MAX_FLAT_GLOW);
 - the board texture shows the word "Moreya": where it differs from the plain planks matches the letter shapes;
-- the files of the entrance (portal, fire textures, signpost, board textures) have CREDITS entries.
+- the files of the entrance (forecourt, frame, portal, fire textures, signpost, board textures) have CREDITS entries.
 
 Sky and horizon elements (Backdrop, BloodMoon, HorizonCrows, VolcanicRuins) are neither ground nor occluders.
 """
@@ -49,24 +52,35 @@ PORTAL, PORTAL_MESH = "MoreyaPortal", "MenuMoreyaPortal.mesh"
 SIGNPOST, SIGNPOST_MESH = "MoreyaSignpost", "MenuMoreyaSignpost.mesh"
 TABLE, TABLE_MESH = "CampaignTable", "MenuMapTable.mesh"
 HALL, HALL_MESH = "CampaignHall", "MenuCampaignHall.mesh"
-#: The staircase into the ground and the frame of the opening in the hall's back wall gave way to the portal.
-GONE_MESHES = ("MenuMoreyaStairs.mesh", "MenuHallRearArch.mesh")
+FORECOURT, FORECOURT_MESH = "MoreyaForecourt", "MenuMoreyaForecourt.mesh"
+ARCH, ARCH_MESH = "HallRearArch", "MenuHallRearArch.mesh"
+#: The staircase into the ground gave way to the forecourt and the portal.
+GONE_MESHES = ("MenuMoreyaStairs.mesh",)
 #: The table stays at the entrance of the campaign hall and the campaign camera pose stays as it was.
 TABLE_POSITION = (0.0, 22.0, 0.0)
 CAMPAIGN_POSE = (0.0, 19.0, 7.0, 29.5, 0.0, 0.0)
-#: The inner face of the hall's back wall (scene y) and the half width of the hall between its side walls.
+#: The inner face of the hall's back wall (scene y); the opening in it is sampled over OPENING_AREA (x min, x max,
+#: z min, z max, step) and at least MIN_OPENING_SHARE of the sight lines through it must pass.
 HALL_BACK_WALL = 29.25
-HALL_HALF_WIDTH = 5.8
-#: The portal is centred behind the table (x offset at most), at least this far behind its back edge, and its foot
-#: lies at most this far from the hall floor.
+OPENING_AREA = (-4.5, 4.5, 0.5, 5.5, 0.25)
+MIN_OPENING_SHARE = 0.95
+#: The forecourt: its walls stand at least this far apart and its rear wall at least this far behind the hall's back
+#: wall; on its floor nothing but the signpost stands higher than MAX_CLUTTER (sampled every CLUTTER_STEP).
+MIN_FORECOURT_WIDTH = 23.0
+MIN_FORECOURT_DEPTH = 28.0
+MAX_CLUTTER = 0.5
+CLUTTER_STEP = 1.0
+#: The portal is centred behind the table (x offset at most), its fire at least this far behind the table's back edge,
+#: its back at most this far in front of the forecourt's rear wall, and its foot at most this far from the floor.
 MAX_PORTAL_OFFSET = 0.3
-MIN_TABLE_GAP = 1.5
+MIN_PORTAL_DISTANCE = 30.0
+MAX_PORTAL_FROM_REAR = 1.5
 MAX_FOOT_GAP = 0.15
 #: The green fire: its material, the least area of its faces and the least width and top height of the opening.
 FIRE_MATERIAL = "MenuMoreyaPortalFire"
-MIN_FIRE_AREA = 10.0
-MIN_FIRE_WIDTH = 3.0
-MIN_FIRE_HEIGHT = 4.5
+MIN_FIRE_AREA = 25.0
+MIN_FIRE_WIDTH = 4.5
+MIN_FIRE_HEIGHT = 7.0
 #: Share of the bright texels of the fire texture that must be green (green above twice red and twice blue).
 GREEN_SHARE = 0.95
 #: The stone of the arch and the pillars, the glowing coals of the fire bowls.
@@ -93,7 +107,7 @@ MIN_POINTING = 0.7
 #: Glowing materials that must not form a flat slab in the rear yard (YARD: x min, x max, y min, y max), and the
 #: largest flat connected patch of them allowed there in square units.
 GLOW_SLAB_MATERIALS = ("MenuEmber", "MenuFlame", "MenuFlameCore")
-YARD = (-9.0, 9.0, 30.3, 44.0)
+YARD = (-9.0, 9.0, 61.5, 72.0)
 MAX_FLAT_GLOW = 0.1
 BOARD_MATERIAL = "MenuMoreyaSignpostBoard"
 SKY = ("Backdrop", "BloodMoon", "HorizonCrows", "VolcanicRuins")
@@ -406,7 +420,8 @@ def main():
     failures = []
     entities, _, _ = flight.parse_config()
     all_poses = poses()
-    for name, mesh in ((PORTAL, PORTAL_MESH), (SIGNPOST, SIGNPOST_MESH), (TABLE, TABLE_MESH), (HALL, HALL_MESH)):
+    for name, mesh in ((PORTAL, PORTAL_MESH), (SIGNPOST, SIGNPOST_MESH), (TABLE, TABLE_MESH), (HALL, HALL_MESH),
+                       (FORECOURT, FORECOURT_MESH), (ARCH, ARCH_MESH)):
         if entities.get(name, (None,))[0] != mesh:
             print("FAIL scene has no AddEntity %s %s" % (name, mesh))
             return 1
@@ -439,32 +454,86 @@ def main():
               if name not in SKY and name not in (PORTAL, SIGNPOST)}
     ground = np.concatenate(list(others.values()))
 
-    # Right behind the table, centred, in front of the back wall and between the side walls, its foot on the floor.
+    # The forecourt behind the hall: the opening in the back wall, the walls round it, its open, paved floor.
     table_back = table[:, :, 1].max()
     low, high = portal.reshape(-1, 3).min(axis=0), portal.reshape(-1, 3).max(axis=0)
+    hall = others[HALL]
+    hall_bounds = (hall.min(axis=1), hall.max(axis=1))
+    x_min, x_max, z_min, z_max, step = OPENING_AREA
+    passing = [not blocked(hall, np.array([x, HALL_BACK_WALL - 1.0, z]), np.array([x, HALL_BACK_WALL + 2.0, z]),
+                           bounds=hall_bounds)
+               for x in np.arange(x_min, x_max + 1e-6, step) for z in np.arange(z_min, z_max + 1e-6, step)]
+    if np.mean(passing) < MIN_OPENING_SHARE:
+        failures.append("the hall's back wall is closed: only %.2f of the sight lines through its opening pass (need "
+                        "%.2f)" % (np.mean(passing), MIN_OPENING_SHARE))
+    court = others[FORECOURT]
+    court_bounds = (court.min(axis=1), court.max(axis=1))
+    middle_y = (HALL_BACK_WALL + low[1]) / 2
+    walls = []
+    for side in (-1.0, 1.0):
+        reach = 0.0
+        for distance in np.arange(1.0, 30.0, 0.25):
+            if blocked(court, np.array([0.0, middle_y, 3.0]), np.array([side * distance, middle_y, 3.0]),
+                       bounds=court_bounds, margin=0.0):
+                reach = distance
+                break
+        walls.append(reach)
+    rear = 0.0
+    for distance in np.arange(HALL_BACK_WALL + 1.0, HALL_BACK_WALL + 60.0, 0.25):
+        if blocked(court, np.array([0.0, HALL_BACK_WALL + 0.5, high[2] + 0.5]), np.array([0.0, distance, high[2] + 0.5]),
+                   bounds=court_bounds, margin=0.0):
+            rear = distance
+            break
+    width, depth = sum(walls), rear - HALL_BACK_WALL
+    if min(walls) == 0.0 or width < MIN_FORECOURT_WIDTH or rear == 0.0 or depth < MIN_FORECOURT_DEPTH:
+        failures.append("the forecourt is %.2f wide and %.2f deep (need %.1f and %.1f)"
+                        % (width, depth, MIN_FORECOURT_WIDTH, MIN_FORECOURT_DEPTH))
+    # Only the triangles over the forecourt matter for its floor and for what stands on it.
+    area_low = np.array([-walls[0] - 1.0, HALL_BACK_WALL, -5.0])
+    area_high = np.array([walls[1] + 1.0, low[1], 40.0])
+
+    def over_forecourt(triangles):
+        """Returns the triangles whose bounding boxes reach into the box over the forecourt."""
+        return triangles[np.all(triangles.max(axis=1) >= area_low, axis=1)
+                         & np.all(triangles.min(axis=1) <= area_high, axis=1)]
+
+    clutter = over_forecourt(np.concatenate([part for name, part in others.items() if name != HALL]))
+    court_ground = over_forecourt(ground)
+    for x in np.arange(-walls[0] + 1.0, walls[1] - 0.5, CLUTTER_STEP):
+        for y in np.arange(HALL_BACK_WALL + 1.5, low[1] - 0.5, CLUTTER_STEP):
+            floor = floor_height(court_ground, x, y)
+            if floor is None or abs(floor) > MAX_FLOOR_STEP:
+                failures.append("the forecourt floor has a hole at (%.1f, %.1f)" % (x, y))
+                continue
+            standing = heights_at(clutter, x, y)
+            if len(standing[(standing > floor + MAX_CLUTTER) & (standing < 40.0)]):
+                failures.append("something stands or hangs over the forecourt at (%.1f, %.1f)" % (x, y))
+
+    # The portal at the far end of the forecourt: centred behind the table, its back at the rear wall, on the floor.
     middle_x = (low[0] + high[0]) / 2
     table_x = (table[:, :, 0].min() + table[:, :, 0].max()) / 2
     if abs(middle_x - table_x) > MAX_PORTAL_OFFSET:
         failures.append("the portal (middle x %.2f) is not centred behind the table (x %.2f)" % (middle_x, table_x))
-    if low[1] < table_back + MIN_TABLE_GAP or high[1] > HALL_BACK_WALL:
-        failures.append("the portal (y %.2f..%.2f) does not stand between the table (back edge y %.2f, gap %.1f) and "
-                        "the hall's back wall (y %.2f)" % (low[1], high[1], table_back, MIN_TABLE_GAP, HALL_BACK_WALL))
-    if low[0] < -HALL_HALF_WIDTH or high[0] > HALL_HALF_WIDTH:
-        failures.append("the portal (x %.2f..%.2f) reaches into the hall's side walls" % (low[0], high[0]))
+    if rear and not 0.0 <= rear - high[1] <= MAX_PORTAL_FROM_REAR:
+        failures.append("the portal (back y %.2f) does not stand at the forecourt's rear wall (y %.2f)"
+                        % (high[1], rear))
     for x, y in ((low[0] + 0.6, low[1] + 0.6), (high[0] - 0.6, low[1] + 0.6), (low[0] + 0.6, high[1] - 0.6),
                  (high[0] - 0.6, high[1] - 0.6)):
         floor = floor_height(ground, x, y)
         foot = heights_at(portal, x, y)
-        if floor is None or not len(foot) or abs(foot.min() - floor) > MAX_FOOT_GAP:
-            failures.append("the portal foot at (%.1f, %.1f) does not stand on the hall floor" % (x, y))
+        if floor is None or not len(foot) or abs(foot.min() - floor) > MAX_FOOT_GAP + 0.25:
+            failures.append("the portal foot at (%.1f, %.1f) does not stand on the forecourt floor" % (x, y))
 
-    # A stone arch filled with green fire that faces the table.
+    # A stone arch filled with green fire that faces the hall and stands far behind the table.
     normals = np.cross(fire[:, 1] - fire[:, 0], fire[:, 2] - fire[:, 0])
     areas = np.linalg.norm(normals, axis=1) / 2
     facing = normals[:, 1] / (2 * areas + 1e-12)
     fire_area = areas.sum()
     fire_low, fire_high = fire.reshape(-1, 3).min(axis=0), fire.reshape(-1, 3).max(axis=0)
     fire_centre = (fire_low + fire_high) / 2
+    if fire_centre[1] - table_back < MIN_PORTAL_DISTANCE:
+        failures.append("the fire is only %.2f behind the table's back edge (need %.1f)"
+                        % (fire_centre[1] - table_back, MIN_PORTAL_DISTANCE))
     if (facing > -0.9).any():
         failures.append("%d fire faces do not face the table (-y)" % int((facing > -0.9).sum()))
     if (fire_area < MIN_FIRE_AREA or fire_high[0] - fire_low[0] < MIN_FIRE_WIDTH
@@ -523,16 +592,7 @@ def main():
         if any(not colour[0] > colour[1] > colour[2] for colour in colours):
             failures.append(BOWL_FIRE + " has no orange flames")
 
-    # The back wall is whole behind the portal and the yard floor where the stairwell was is whole again.
-    hall = others[HALL]
-    hall_bounds = (hall.min(axis=1), hall.max(axis=1))
-    x_min, x_max, z_min, z_max, step = WALL_AREA
-    closed = [blocked(hall, np.array([x, HALL_BACK_WALL - 1.0, z]), np.array([x, HALL_BACK_WALL + 2.0, z]),
-                      bounds=hall_bounds)
-              for x in np.arange(x_min, x_max + 1e-6, step) for z in np.arange(z_min, z_max + 1e-6, step)]
-    if np.mean(closed) < MIN_WALL_SHARE:
-        failures.append("the hall's back wall is open: only %.2f of the sight lines through it end in it (need %.2f)"
-                        % (np.mean(closed), MIN_WALL_SHARE))
+    # The floor where the stairwell was is whole again.
     for x, y in OLD_STAIRWELL:
         floor = floor_height(ground, x, y)
         if floor is None or abs(floor) > MAX_FLOOR_STEP:
@@ -547,7 +607,10 @@ def main():
     occluders = occluders[np.all(occluders.max(axis=1) >= box_low, axis=1)
                           & np.all(occluders.min(axis=1) <= box_high, axis=1)]
     bounds = (occluders.min(axis=1), occluders.max(axis=1))
-    crown_top = np.array([fire_centre[0], fire_centre[1] - 0.6, crown.max() + 0.02]) if len(crown) else fire_high
+    # A point just above the front edge of the crown (the front of the stones within half a unit of its top).
+    top_stones = stone[stone[:, :, 2].max(axis=1) > crown.max() - 0.5] if len(crown) else stone
+    crown_top = (np.array([fire_centre[0], top_stones[:, :, 1].min() - 0.05, crown.max() + 0.02]) if len(crown)
+                 else fire_high)
     fire_middle = fire_centre - np.array([0.0, 0.03, 0.0])
     back, tip, direction, normal = arrow(board)
     centre = board.reshape(-1, 3).mean(axis=0)
@@ -574,16 +637,14 @@ def main():
             failures.append("at aspect %.2f the board (readable, at least %d pixels long) shows in flight frames %s, "
                             "need gate_exit and one more" % (aspect, MIN_BOARD_PIXELS, showing))
 
-    # The signpost stands on the hall floor left of the portal; its board is upright and points towards the fire.
+    # The signpost stands on the forecourt floor near the hall; its board is upright and points towards the fire.
     foot = entities[SIGNPOST][1]
     floor = floor_height(ground, foot[0], foot[1])
     post = heights_at(signpost, foot[0], foot[1])
     if floor is None or not len(post) or not post.min() <= floor <= post.min() + 0.6 or post.max() < 2.0:
         failures.append("signpost post at (%.2f, %.2f) does not stand on the ground" % (foot[0], foot[1]))
-    sign_low, sign_high = signpost.reshape(-1, 3).min(axis=0), signpost.reshape(-1, 3).max(axis=0)
-    if not (table_back < foot[1] < HALL_BACK_WALL and foot[0] < low[0] and sign_low[0] > -HALL_HALF_WIDTH
-            and sign_high[1] < HALL_BACK_WALL):
-        failures.append("signpost at (%.2f, %.2f) does not stand in the hall left of the portal" % (foot[0], foot[1]))
+    if not (HALL_BACK_WALL + 1.0 < foot[1] < middle_y and -walls[0] < foot[0] < walls[1]):
+        failures.append("signpost at (%.2f, %.2f) does not stand in the forecourt near the hall" % (foot[0], foot[1]))
     if abs(direction[2]) > MAX_BOARD_TILT or abs(normal[2]) > MAX_BOARD_TILT:
         failures.append("signpost board is not upright: arrow (%.2f, %.2f, %.2f), normal z %.2f"
                         % (direction[0], direction[1], direction[2], normal[2]))
@@ -617,7 +678,7 @@ def main():
 
     # CREDITS.
     credits = open(os.path.join(ROOT, "CREDITS"), encoding="utf-8").read()
-    for name in (PORTAL_MESH, SIGNPOST_MESH, "MenuMoreyaPortalFire.png", "MenuMoreyaPortalFireShade.png",
+    for name in (FORECOURT_MESH, ARCH_MESH, PORTAL_MESH, SIGNPOST_MESH, "MenuMoreyaPortalFire.png", "MenuMoreyaPortalFireShade.png",
                  "MenuMoreyaSignpostBoard.png", "MenuMoreyaSignpostBoardNormal.png"):
         if name not in credits:
             failures.append("CREDITS has no entry for " + name)
@@ -626,9 +687,10 @@ def main():
         print("FAIL " + line)
     if failures:
         return 1
-    print("OK: portal %.2f behind the table, fire %.2f m2 (%.2f x %.2f), arch crown at %.2f, %.2f of the fire texels "
-          "green; board arrow (%.2f, %.2f, %.2f) points at the portal (%.2f); letters %.2f"
-          % (low[1] - table_back, fire_area, fire_high[0] - fire_low[0], fire_high[2] - fire_low[2], crown.max(),
+    print("OK: forecourt %.2f wide, %.2f deep, opening %.2f open; fire %.2f behind the table, %.2f m2 (%.2f x %.2f), "
+          "arch crown at %.2f, %.2f of the fire texels green; board arrow (%.2f, %.2f, %.2f) points at the portal "
+          "(%.2f); letters %.2f"
+          % (width, depth, np.mean(passing), fire_centre[1] - table_back, fire_area, fire_high[0] - fire_low[0], fire_high[2] - fire_low[2], crown.max(),
              green, direction[0], direction[1], direction[2], pointing, covered))
     return 0
 
