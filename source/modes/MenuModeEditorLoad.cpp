@@ -287,7 +287,7 @@ bool MenuModeEditorLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 bool MenuModeEditorLoad::updateDescription(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::editorLoadMenu);
-    CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>(window->getChild(Gui::SKM_LIST_LEVELS));
+    CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>(window->getChild(Gui::EDM_LIST_LEVELS));
     CEGUI::Window* descTxt = window->getChild("LevelWindowFrame/MapDescriptionText");
 
     if(levelSelectList->getSelectedCount() == 0)

@@ -130,7 +130,7 @@ std::vector<CEGUI::Window*> independentAlpha;
 CEGUI::Window* findLoadingText(CEGUI::Window* window)
 {
     if(window->getName() == "LoadingText" ||
-       (window->getName() == "LevelTypeText" && window->getText() == "Loading..."))
+       (window->getName() == "LevelMessageText" && window->getText() == "Loading..."))
         return window;
     if(!window->isVisible())
         return nullptr;

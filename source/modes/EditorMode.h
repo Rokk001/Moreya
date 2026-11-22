@@ -134,8 +134,6 @@ public:
     bool launchNewLevelPressed(const CEGUI::EventArgs&);
     //! \brief Drops the state that belongs to the level that was open before a load or a new level.
     void resetStateAfterLevelChange();
-    //! \brief Brings the editor view back after the console was left, without a full activate().
-    void restoreAfterConsole() override;
     void setTileVisualIfArgNotNull(TileVisual tileVisual)
     { mCurrentTileVisual = tileVisual; }
 
@@ -154,6 +152,9 @@ public:
 
     //! \brief Replaces the region markers shown by the ones the server has just sent
     void setRegions(const std::vector<LevelScriptRegion>& regions);
+protected:
+    //! \brief Brings the editor view back after the console was left, without a full activate().
+    void restoreAfterConsole() override;
 private:
     std::vector<std::string> mItemBoxContents;
 

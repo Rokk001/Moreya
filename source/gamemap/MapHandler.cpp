@@ -235,7 +235,8 @@ bool isEditOfficialLevelsEnabled()
         return false;
     std::string value = ConfigManager::getSingleton().getGameValue(EDIT_OFFICIAL_LEVELS_KEY, "0", false);
     Helper::trim(value);
-    std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+    for(std::string::iterator it = value.begin(); it != value.end(); ++it)
+        *it = static_cast<char>(std::tolower(static_cast<unsigned char>(*it)));
     return (value == "1") || (value == "true") || (value == "on") || (value == "yes");
 }
 

@@ -800,11 +800,13 @@ void RoomPortalWave::restoreInitialEntityState()
     Room::restoreInitialEntityState();
 }
 
+//! \brief Adds a wave to the spawnable list when the current turn lies in its range (max -1 means no upper limit,
+//! like in handleSpawnWave), otherwise to the not spawnable list.
 void RoomPortalWave::addRoomPortalWaveData(RoomPortalWaveData* roomPortalWaveData)
 {
     int64_t curTurn = getGameMap()->getTurnNumber();
-    if((roomPortalWaveData->mSpawnTurnMin >= curTurn) &&
-       (roomPortalWaveData->mSpawnTurnMax <= curTurn))
+    if((roomPortalWaveData->mSpawnTurnMin <= curTurn) &&
+       ((roomPortalWaveData->mSpawnTurnMax == -1) || (roomPortalWaveData->mSpawnTurnMax >= curTurn)))
     {
         mRoomPortalWaveDataSpawnable.push_back(roomPortalWaveData);
     }

@@ -122,7 +122,8 @@ namespace
     };
 }
 
-//! \brief Creates the editor widgets and connects the existing tools and shared item choices.
+//! \brief Creates the editor widgets and connects the existing tools and shared item choices. The Back button of
+//! the New dialog closes it like the X button does.
 EditorMode::EditorMode(ModeManager* modeManager):
     GameEditorModeBase(modeManager, ModeManager::EDITOR, modeManager->getGui().getGuiSheet(Gui::guiSheet::editorModeGui)),
     draggableTileContainer(nullptr),
@@ -375,13 +376,6 @@ EditorMode::EditorMode(ModeManager* modeManager):
             CEGUI::Window::EventMouseClick,
             CEGUI::Event::Subscriber(&EditorMode::showQuitMenuFromOptions, this)
     ));
-
-    addEventConnection(
-        mRootWindow->getChild("EditorOptionsWindow/QuitEditorButton")
-        ->subscribeEvent(
-            CEGUI::Window::EventMouseClick,
-            CEGUI::Event::Subscriber(&EditorMode::showQuitMenuFromOptions, this)
-    ));
     addEventConnection(
         mRootWindow->getChild("MenuEditorSave")->getChild("LevelWindowFrame")
         ->getChild("OnlyLevel")->subscribeEvent(
@@ -408,7 +402,7 @@ EditorMode::EditorMode(ModeManager* modeManager):
     ));
 
     
-    // Connect editor specific buttons (Rooms, traps, spells, tiles, lights, ...)
+    // Connect editor specific buttons (Rooms, traps, tiles, lights, ...)
 
     //Map light
     connectGuiAction(Gui::EDITOR_MAPLIGHT_BUTTON,
@@ -621,7 +615,7 @@ bool EditorMode::mouseMoved(const OIS::MouseEvent &arg)
             ODClient::getSingleton().queueClientNotification(clientNotification);
         }
     }
-    // If we have a room/trap/spell selected, show it
+    // If we have a room/trap selected, show it
     // TODO: This should be changed, or combined with an icon or something later.
     TextRenderer& textRenderer = TextRenderer::getSingleton();
     textRenderer.moveText(ODApplication::POINTER_INFO_STRING,
@@ -2199,6 +2193,7 @@ void EditorMode::askCreateGiftBox(GiftBoxType type, const std::string& content, 
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Opens the New dialog with an empty message line and switches the input to the dialog.
 bool EditorMode::showNewLevelDialog(const CEGUI::EventArgs& /*arg*/)
 {
     mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("");
@@ -2854,9 +2849,6 @@ void EditorMode::checkInputCommand()
             TrapManager::checkSellTrapTilesEditor(mGameMap, inputManager, *this);
             mModifiedMapBit = true;
             return;
-        case SelectedAction::castSpell:
-            // TODO: create skill entity with corresponding spell
-            return;
         default:
             return;
     }
@@ -2978,7 +2970,11 @@ void EditorMode::uninstallCreaturesMenuButtons()
 {
     CEGUI::Window* pm = mRootWindow->getChild("Menubar")->getChild("Creatures")->getChild("PopupMenu4");
     while(pm->getChildCount() > 0)
-        pm->removeChild(pm->getChildAtIdx(0));
+    {
+        CEGUI::Window* child = pm->getChildAtIdx(0);
+        pm->removeChild(child);
+        CEGUI::WindowManager::getSingleton().destroyWindow(child);
+    }
 }
 
 void EditorMode::installCreaturesMenuButtons()
@@ -3016,7 +3012,11 @@ void EditorMode::uninstallRecentlyUsedFilesButtons()
 {
     CEGUI::Window *pm = mRootWindow->getChild("Menubar")->getChild("File")->getChild("PopupMenu1")->getChild("RecentlyUsed")->getChild("PopupMenu2");
     while(pm->getChildCount() > 0)
-        pm->removeChild(pm->getChildAtIdx(0));
+    {
+        CEGUI::Window* child = pm->getChildAtIdx(0);
+        pm->removeChild(child);
+        CEGUI::WindowManager::getSingleton().destroyWindow(child);
+    }
 
 }
 
@@ -3049,7 +3049,11 @@ void EditorMode::uninstallSeatsMenuButtons()
 {
     CEGUI::Window *pm = mRootWindow->getChild("Menubar")->getChild("Seats")->getChild("PopupMenu5");
     while(pm->getChildCount() > 0)
-        pm->removeChild(pm->getChildAtIdx(0));
+    {
+        CEGUI::Window* child = pm->getChildAtIdx(0);
+        pm->removeChild(child);
+        CEGUI::WindowManager::getSingleton().destroyWindow(child);
+    }
 }
 
 void EditorMode::installSeatsMenuButtons()

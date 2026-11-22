@@ -239,6 +239,7 @@ void GameEditorModeBase::onFrameStarted(const Ogre::FrameEvent& evt)
         mMiniMap = MiniMap::createMiniMap(mRootWindow->getChild(Gui::MINIMAP));
         mMiniMapType = miniMapType;
     }
+    mConsole->flushConsoleOutput();
     updateMessages(evt.timeSinceLastFrame);
     if(mMainCullingManager != nullptr)
     {
