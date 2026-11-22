@@ -29,6 +29,12 @@
 #include <string>
 #include <vector>
 
+// The test target defines OD_LEVELS_DIR (source/tests/CMakeLists.txt). The compile check of changed files uses the
+// game target's flags, which do not define it; this fallback only lets that check compile the file.
+#ifndef OD_LEVELS_DIR
+#define OD_LEVELS_DIR "levels"
+#endif
+
 namespace
 {
 //! \brief The content of the test level.
