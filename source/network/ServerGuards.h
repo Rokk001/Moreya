@@ -21,6 +21,7 @@
 #include "network/ClientNotification.h"
 #include "network/ServerMode.h"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -66,10 +67,47 @@ namespace ServerGuards
         return count <= maximum;
     }
 
-    //! \brief Returns true if a region name sent by an editor client may be used: not empty and not too long.
+    //! \brief Returns true if a region name sent by an editor client may be used: not empty, not too long and
+    //! without white space (the level script reads a name as one word).
     inline bool isRegionNameAllowed(const std::string& name)
     {
-        return !name.empty() && (name.size() <= MAX_REGION_NAME_BYTES);
+        if(name.empty() || (name.size() > MAX_REGION_NAME_BYTES))
+            return false;
+        for(std::size_t index = 0; index < name.size(); ++index)
+        {
+            const char letter = name[index];
+            if((letter == ' ') || (letter == '\t') || (letter == '\n') || (letter == '\r') || (letter == '\v')
+               || (letter == '\f'))
+                return false;
+        }
+        return true;
+    }
+
+    //! \brief Returns true if the value read from a packet is a tile type: at least 0 and below the number of
+    //! tile types (the count value is no tile type).
+    inline bool isTileTypeValue(int32_t value, int32_t tileTypeCount)
+    {
+        return (value >= 0) && (value < tileTypeCount);
+    }
+
+    //! \brief Returns true if a tile fullness sent by an editor client may be used: a finite number that is not
+    //! negative (NaN and infinity are refused).
+    inline bool isFullnessAllowed(double fullness)
+    {
+        return std::isfinite(fullness) && (fullness >= 0.0);
+    }
+
+    //! \brief Returns true if the seat id sent by an editor client is -1 (no seat) or the id of a seat of the map.
+    inline bool isSeatIdKnown(int32_t seatId, const std::vector<int32_t>& knownSeatIds)
+    {
+        if(seatId == -1)
+            return true;
+        for(std::size_t index = 0; index < knownSeatIds.size(); ++index)
+        {
+            if(knownSeatIds[index] == seatId)
+                return true;
+        }
+        return false;
     }
 
     //! \brief Returns true if a name sent by a client is not longer than MAX_NAME_BYTES.

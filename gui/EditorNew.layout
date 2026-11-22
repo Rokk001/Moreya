@@ -69,6 +69,13 @@
                 <Property name="Font" value="LiberationSans-10" />
                 <Property name="Text" value="" />
             </Window>
+            <!-- Messages of the dialog (errors, progress), so that the "Level Type:" label keeps its text -->
+            <Window type="OD/StaticText" name="LevelMessageText" >
+                <Property name="Area" value="{{0,15},{0,282},{0,440},{0,350}}" />
+                <Property name="Text" value="" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+            </Window>
             <Window type="OD/MenuTextButton" name="BackButton" >
                 <Property name="Font" value="MedievalSharp-13" />
                 <Property name="Area" value="{{0.5,-222},{1,-62},{0.5,-8},{1,-8}}" />

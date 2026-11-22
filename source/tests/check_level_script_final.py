@@ -64,7 +64,9 @@ assert 'mGameDurationAnnounced = false' in set_limit
 assert 'TIME_LIMIT_REMOVED' in set_limit
 send = function(gamemap, 'void GameMap::sendTimeLimit(')
 assert 'ServerNotificationType::timeLimit' in send and 'getIsHuman()' in send
-assert 'rebaseTimeLimit(' in map_handler
+# a saved game goes on from its saved turn and the editor level restarts at turn 0, so the writer must not subtract
+# the elapsed time from the limit (it was subtracted twice); check_editor_save.py proves the written limit
+assert 'rebaseTimeLimit(' not in map_handler
 enum_body = server_h.split('enum class ServerNotificationType')[1].split('};')[0]
 assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-16:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown', 'startGameRefused'], 'campaignVictory must be appended after the existing notifications'
 assert 'case ServerNotificationType::timeLimit:' in server_cpp

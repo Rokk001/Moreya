@@ -69,7 +69,8 @@ restore = body(campaign, "bool Campaign::restoreSavedLevel(")
 assert "findSavedLevel" in restore
 start = body(server, "bool ODServer::startServer(")
 assert "mode == ServerMode::ModeGameLoaded" in start
-assert start.index("gameMap->loadLevel(levelFilename)") < start.index("restoreSavedLevel(")
+# The second argument of loadLevel is the multiplayer strictness of the shipped level check
+assert start.index("gameMap->loadLevel(levelFilename, ") < start.index("restoreSavedLevel(")
 assert start.index("restoreSavedLevel(") < start.index("seat->getAiLevel()")
 assert "getLevelDifficulty()" in start
 assert start.index("if((mode == ServerMode::ModeGameLoaded) && Campaign::getSingleton().isActive())") < start.index("else if(seat->getAiLevel()")

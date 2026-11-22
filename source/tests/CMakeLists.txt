@@ -356,6 +356,40 @@ if(DEFINED 00-LevelPreview_TARGET_NAME)
         OD_LEVELS_DIR="${CMAKE_SOURCE_DIR}/levels")
 endif()
 
+# The protection of the shipped levels, as a release build and with the developer option; both use the checksums
+# generated for the game (OD_LEVEL_CHECKSUMS_SOURCE of the main CMakeLists.txt)
+add_boost_test(00-OfficialLevels
+        SOURCES
+        test_OfficialLevels.cpp
+        ${SRC}/gamemap/OfficialLevels.h
+        ${SRC}/gamemap/OfficialLevels.cpp
+        ${SRC}/gamemap/OfficialLevelChecksums.h
+        ${OD_LEVEL_CHECKSUMS_SOURCE}
+        LIBRARIES
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE})
+if(DEFINED 00-OfficialLevels_TARGET_NAME)
+    target_compile_definitions(${00-OfficialLevels_TARGET_NAME} PRIVATE
+        OD_LEVELS_DIR="${CMAKE_SOURCE_DIR}/levels")
+    add_dependencies(${00-OfficialLevels_TARGET_NAME} od_official_level_checksums)
+endif()
+
+add_boost_test(00-OfficialLevelsDeveloper
+        SOURCES
+        test_OfficialLevels.cpp
+        ${SRC}/gamemap/OfficialLevels.h
+        ${SRC}/gamemap/OfficialLevels.cpp
+        ${SRC}/gamemap/OfficialLevelChecksums.h
+        ${OD_LEVEL_CHECKSUMS_SOURCE}
+        LIBRARIES
+        ${Boost_FILESYSTEM_LIBRARY_RELEASE}
+        ${Boost_SYSTEM_LIBRARY_RELEASE})
+if(DEFINED 00-OfficialLevelsDeveloper_TARGET_NAME)
+    target_compile_definitions(${00-OfficialLevelsDeveloper_TARGET_NAME} PRIVATE
+        OD_LEVELS_DIR="${CMAKE_SOURCE_DIR}/levels" OD_DEVELOPER_MODE)
+    add_dependencies(${00-OfficialLevelsDeveloper_TARGET_NAME} od_official_level_checksums)
+endif()
+
 add_boost_test(aa-LaunchGame
         ${SERVER_LAUNCHER_AA}
         SOURCES

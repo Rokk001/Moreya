@@ -220,6 +220,8 @@ void TrapFactory::checkBuildTrapDefaultEditor(GameMap* gameMap, TrapType type, c
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Builds the trap of an editor request on its tiles. All tiles are read before one is changed, so a request
+//! with a tile outside the map changes nothing; the trap is deleted whenever it is not added to the map.
 bool TrapFactory::buildTrapDefaultEditor(GameMap* gameMap, Trap* trap, ODPacket& packet) const
 {
     int32_t seatId;
@@ -228,10 +230,11 @@ bool TrapFactory::buildTrapDefaultEditor(GameMap* gameMap, Trap* trap, ODPacket&
     if(seatTrap == nullptr)
     {
         OD_LOG_ERR("seatId=" + Helper::toString(seatId));
+        delete trap;
         return false;
     }
 
-    std::vector<Tile*> tiles;
+    std::vector<Tile*> packetTiles;
     uint32_t nbTiles;
     OD_ASSERT_TRUE(packet >> nbTiles);
 
@@ -242,9 +245,15 @@ bool TrapFactory::buildTrapDefaultEditor(GameMap* gameMap, Trap* trap, ODPacket&
         if(tile == nullptr)
         {
             OD_LOG_ERR("unexpected null tile");
+            delete trap;
             return false;
         }
+        packetTiles.push_back(tile);
+    }
 
+    std::vector<Tile*> tiles;
+    for(Tile* tile : packetTiles)
+    {
         // If the tile is not buildable, we change it
         if(tile->getCoveringBuilding() != nullptr)
         {
@@ -264,7 +273,13 @@ bool TrapFactory::buildTrapDefaultEditor(GameMap* gameMap, Trap* trap, ODPacket&
     }
 
 
-    return buildTrapDefault(gameMap, trap, seatTrap, tiles);
+    // Without a free tile the trap is not added to the map
+    if(!buildTrapDefault(gameMap, trap, seatTrap, tiles))
+    {
+        delete trap;
+        return false;
+    }
+    return true;
 }
 
 void TrapManager::registerFactory(const TrapFactory* factory)
@@ -383,6 +398,8 @@ void TrapManager::checkBuildTrapEditor(GameMap* gameMap, TrapType type, const In
     factory.checkBuildTrapEditor(gameMap, inputManager, inputCommand);
 }
 
+//! \brief Builds a trap the editor placed; a type outside the factories or without a factory builds nothing and
+//! returns false.
 bool TrapManager::buildTrapEditor(GameMap* gameMap, TrapType type, ODPacket& packet)
 {
     std::vector<const TrapFactory*>& factories = getFactories();
@@ -390,6 +407,13 @@ bool TrapManager::buildTrapEditor(GameMap* gameMap, TrapType type, ODPacket& pac
     if(index >= factories.size())
     {
         OD_LOG_ERR("type=" + Helper::toString(index) + ", factories.size=" + Helper::toString(factories.size()));
+        return false;
+    }
+
+    // A type without a registered factory has nothing to build
+    if(factories[index] == nullptr)
+    {
+        OD_LOG_ERR("no trap factory for type=" + Helper::toString(index));
         return false;
     }
 

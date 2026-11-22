@@ -2172,6 +2172,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             OD_ASSERT_TRUE(packetReceived >> offsetX );
             OD_ASSERT_TRUE(packetReceived >> offsetY );
             DraggableTileContainer*& draggableTileContainer =  (dynamic_cast<EditorMode*>(frameListener->getModeManager()->getCurrentMode())->draggableTileContainer);            
+            // The block can be deleted while this answer is on its way
+            if(draggableTileContainer == nullptr)
+                break;
             draggableTileContainer->setRoundedPosition(Ogre::Vector2(posX, posY), Ogre::Vector2(offsetX, offsetY));
 
             break;

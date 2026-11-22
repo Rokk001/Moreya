@@ -46,12 +46,6 @@
                     <Window type="OD/MenuItem" name="Delete">
                         <Property name="Text" value="Delete"/>     
                     </Window>
-                    <Window type="OD/MenuItem" name="Rotate">
-                        <Property name="Text" value="Rotate"/>     
-                    </Window>
-                    <Window type="OD/MenuItem" name="MirrorX">
-                        <Property name="Text" value="MirrorX"/>     
-                    </Window>                    
                 </Window>
             </Window>
             <Window type="OD/MenuItem" name="Creatures">
@@ -72,9 +66,6 @@
                 <Window type="OD/PopupMenu" name="PopupMenu6">
                     <Window type="OD/MenuItem" name="Controls">
                         <Property name="Text" value="Controls"/>     
-                    </Window>
-                    <Window type="OD/MenuItem" name="About">
-                        <Property name="Text" value="About"/>     
                     </Window>
                 </Window>
             </Window>

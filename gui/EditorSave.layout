@@ -13,9 +13,9 @@
         </Window>
         <Window type="OD/SheetWindow" name="LevelWindowFrame" >
             <Property name="Area" value="{{0.5,-290},{0.5,-267},{0.5,290},{0.5,268}}" />
-            <Property name="Text" value="Please choose a Level..." />
+            <Property name="Text" value="Save Level" />
             <Property name="MaxSize" value="{{0,1000},{0,1000}}" />
-            <Property name="MinSize" value="{{0,800},{0,600}}" />
+            <Property name="MinSize" value="{{0,580},{0,535}}" />
             <Property name="AlwaysOnTop" value="True" />
 
             <Window type="OD/Editbox" name="FilePath" >
