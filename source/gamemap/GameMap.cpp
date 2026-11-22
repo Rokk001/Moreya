@@ -435,8 +435,9 @@ bool GameMap::isInEditorMode() const
 }
 
 //! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations. The combat groups
-//! start empty and take the raid registry and groups of the loaded file, and so does the raid.
-bool GameMap::loadLevel(const std::string& levelFilepath)
+//! start empty and take the raid registry and groups of the loaded file, and so does the raid. A shipped level must
+//! match the checksum of the build (see MapHandler::readGameMapFromFile).
+bool GameMap::loadLevel(const std::string& levelFilepath, bool strictOfficialCheck)
 {
     // Relationship states of an earlier load that were never applied are dropped
     mPendingRelationshipStates.clear();
@@ -471,7 +472,7 @@ bool GameMap::loadLevel(const std::string& levelFilepath)
         delete rogueSeat;
     }
 
-    if (MapHandler::readGameMapFromFile(levelFilepath, *this))
+    if (MapHandler::readGameMapFromFile(levelFilepath, *this, strictOfficialCheck))
         setLevelFileName(levelFilepath);
         
     else
@@ -552,6 +553,7 @@ void GameMap::clearAll()
 
         clearGoalsForAllSeats();
         mLevelScript->clear();
+        mScriptEntries.clear();
         mCombatGroups->clear();
         mRaid->clear();
         // The blocks shown on marked places beyond the edge belong to the client map only

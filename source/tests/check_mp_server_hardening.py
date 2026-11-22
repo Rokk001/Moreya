@@ -264,7 +264,10 @@ for name in ["askMarkTiles", "editorAskChangeTiles"]:
           and handler.index("clipRectangleToMap") < handler.index("rectangularRegion"),
           name + " walks only the part of the rectangle on the map")
 for name in ["editorAskChangeTile", "editorAskChangeTiles"]:
-    check("tileType == TileType::countTileType" in case(SERVER, name), name + " ignores the TileType count value")
+    # the type, fullness and seat rules of both cases live in isEditorTileChangeValid (check_editor_save.py D7)
+    check("isEditorTileChangeValid(gameMap, tileType, tileFullness, seatId)" in case(SERVER, name)
+          and "TileType::countTileType" in SERVER[SERVER.index("bool isEditorTileChangeValid("):SERVER.index("bool ODServer::processClientNotifications(")],
+          name + " ignores the TileType count value")
 
 # ------------------------------------------------------------------------------------------------ Boost test
 check(re.search(r"add_boost_test\(00-ServerGuards\s+SOURCES\s+test_ServerGuards\.cpp\s+\$\{SRC\}/network/ServerGuards\.h"

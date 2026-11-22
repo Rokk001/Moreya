@@ -387,15 +387,33 @@ bool GameEditorModeConsole::keyPressed(const OIS::KeyEvent &arg)
     return true;
 }
 
+//! \brief Queues the text; CEGUI is not thread safe, so only flushConsoleOutput() touches it.
 void GameEditorModeConsole::printToConsole(const std::string& text)
 {
-    CEGUI::ListboxTextItem* lbi = new CEGUI::ListboxTextItem("");
-    lbi->setTextParsingEnabled(false);
-    std::string ss = text;
-    if (ss[ss.length() - 1] == '\n')
-             ss.pop_back();
-    lbi->setText(ss);
-    mConsoleHistoryWindow->addItem(lbi);
+    std::lock_guard<std::mutex> lk(mOutputMutex);
+    mOutputQueue.push(text);
+}
+
+//! \brief Adds the queued texts to the history window (main thread only). A trailing line break is dropped, an
+//! empty text gives an empty line.
+void GameEditorModeConsole::flushConsoleOutput()
+{
+    std::queue<std::string> pending;
+    {
+        std::lock_guard<std::mutex> lk(mOutputMutex);
+        pending.swap(mOutputQueue);
+    }
+    while(!pending.empty())
+    {
+        CEGUI::ListboxTextItem* lbi = new CEGUI::ListboxTextItem("");
+        lbi->setTextParsingEnabled(false);
+        std::string ss = pending.front();
+        pending.pop();
+        if(!ss.empty() && ss[ss.length() - 1] == '\n')
+            ss.pop_back();
+        lbi->setText(ss);
+        mConsoleHistoryWindow->addItem(lbi);
+    }
 }
 
 bool GameEditorModeConsole::executeCurrentPrompt(const CEGUI::EventArgs& e)

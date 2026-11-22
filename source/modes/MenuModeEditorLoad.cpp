@@ -35,6 +35,7 @@
 
 #include <boost/filesystem.hpp>
 
+//! \brief Builds the editor load menu; the shipped level types are listed only with the hidden option.
 MenuModeEditorLoad::MenuModeEditorLoad(ModeManager* modeManager):
     AbstractApplicationMode(modeManager, ModeManager::MENU_EDITOR_LOAD)
 {
@@ -42,17 +43,22 @@ MenuModeEditorLoad::MenuModeEditorLoad(ModeManager* modeManager):
     
 
     // Fills the Level type combo box with the available level types.
+    // The shipped levels are offered only with the hidden option EditOfficialLevels; the item ids stay the same.
     const CEGUI::Image* selImg = &CEGUI::ImageManager::getSingleton().get("OpenDungeonsSkin/SelectionBrush");
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>(window->getChild(Gui::EDM_LIST_LEVEL_TYPES));
     levelTypeCb->resetList();
 
-    CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem("Official Skirmish Levels", 0);
-    item->setSelectionBrushImage(selImg);
-    levelTypeCb->addItem(item);
+    CEGUI::ListboxTextItem* item = nullptr;
+    if(MapHandler::isEditOfficialLevelsEnabled())
+    {
+        item = new CEGUI::ListboxTextItem("Official Skirmish Levels", 0);
+        item->setSelectionBrushImage(selImg);
+        levelTypeCb->addItem(item);
 
-    item = new CEGUI::ListboxTextItem("Official Multiplayer Levels", 1);
-    item->setSelectionBrushImage(selImg);
-    levelTypeCb->addItem(item);
+        item = new CEGUI::ListboxTextItem("Official Multiplayer Levels", 1);
+        item->setSelectionBrushImage(selImg);
+        levelTypeCb->addItem(item);
+    }
 
     item = new CEGUI::ListboxTextItem("Custom Skirmish Levels", 2);
     item->setSelectionBrushImage(selImg);
@@ -134,6 +140,8 @@ static bool findFileStemIn(const std::vector<std::string>& fileList, std::string
     return false;
 }
 
+//! \brief Lists the levels of the selected level type (both level extensions); shipped levels only with the hidden
+//! option.
 bool MenuModeEditorLoad::updateFilesList(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::editorLoadMenu);
@@ -148,12 +156,19 @@ bool MenuModeEditorLoad::updateFilesList(const CEGUI::EventArgs&)
     levelSelectList->resetList();
 
     std::string levelPath;
-    size_t selection = levelTypeCb->getItemIndex(levelTypeCb->getSelectedItem());
+    // The item id is the level type: without the hidden option the list holds only the custom types (ids 2 and 3)
+    CEGUI::ListboxItem* selectedType = levelTypeCb->getSelectedItem();
+    unsigned int selection = (selectedType != nullptr) ? selectedType->getID() : 2;
+    if(((selection == 0) || (selection == 1)) && !MapHandler::isEditOfficialLevelsEnabled())
+        selection = 2;
     bool officialSkirmishMaps = false;
     bool officialMultiplayerMaps = false;
     switch (selection)
     {
         default:
+        case 2:
+            levelPath = ResourceManager::getSingleton().getUserLevelPathSkirmish();
+            break;
         case 0:
             levelPath = ResourceManager::getSingleton().getGameLevelPathSkirmish();
             officialSkirmishMaps = true;
@@ -162,15 +177,13 @@ bool MenuModeEditorLoad::updateFilesList(const CEGUI::EventArgs&)
             levelPath = ResourceManager::getSingleton().getGameLevelPathMultiplayer();
             officialMultiplayerMaps = true;
             break;
-        case 2:
-            levelPath = ResourceManager::getSingleton().getUserLevelPathSkirmish();
-            break;
         case 3:
             levelPath = ResourceManager::getSingleton().getUserLevelPathMultiplayer();
             break;
     }
 
-    if(Helper::fillFilesList(levelPath, mFilesList, MapHandler::LEVEL_EXTENSION))
+    // Both extensions: the .mmap maps of the editor and the older own maps saved as .level
+    if(MapHandler::fillLevelFilesList(levelPath, mFilesList))
     {
         std::vector<std::string> officialFileList;
         if (officialSkirmishMaps)
@@ -180,7 +193,7 @@ bool MenuModeEditorLoad::updateFilesList(const CEGUI::EventArgs&)
 
         if (officialSkirmishMaps || officialMultiplayerMaps)
         {
-            if (!Helper::fillFilesList(levelPath, officialFileList, MapHandler::LEVEL_EXTENSION))
+            if (!MapHandler::fillLevelFilesList(levelPath, officialFileList))
                 officialFileList.clear();
         }
 
@@ -220,6 +233,8 @@ bool MenuModeEditorLoad::updateFilesList(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Opens the selected level in the editor; a shipped level without the hidden option, or a changed one, is
+//! refused with a message.
 bool MenuModeEditorLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::editorLoadMenu);
@@ -237,6 +252,14 @@ bool MenuModeEditorLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     int id = selItem->getID();
 
     const std::string& level = mFilesList[id];
+
+    // A shipped level opens only with the hidden option (the server start checks it again)
+    std::string refusal;
+    if(!MapHandler::checkEditorMayOpen(level, refusal))
+    {
+        window->getChild(Gui::EDM_TEXT_LOADING)->setText(refusal);
+        return true;
+    }
 
     // In editor mode, we act as a server
     ConfigManager& config = ConfigManager::getSingleton();
@@ -264,7 +287,7 @@ bool MenuModeEditorLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 bool MenuModeEditorLoad::updateDescription(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::editorLoadMenu);
-    CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>(window->getChild(Gui::SKM_LIST_LEVELS));
+    CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>(window->getChild(Gui::EDM_LIST_LEVELS));
     CEGUI::Window* descTxt = window->getChild("LevelWindowFrame/MapDescriptionText");
 
     if(levelSelectList->getSelectedCount() == 0)

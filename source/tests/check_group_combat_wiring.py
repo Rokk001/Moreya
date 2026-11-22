@@ -291,7 +291,7 @@ check("os.precision(17)" in export, "C3: the numbers are saved with all their di
 # MapHandler: written last, read last and optional, so that older levels and saves load as before
 writer = function(MAP_HANDLER, "bool writeGameMapToFile(")
 check(writer.index("[/RelationshipState]") < writer.index("getCombatGroups().exportToStream(levelFile, isGameSave)")
-      < writer.rindex("if (!levelFile.good())"), "C3: the section is written after the relationship state")
+      < writer.index("SafeSave::closeWritten(levelFile)"), "C3: the section is written after the relationship state")
 reader = function(MAP_HANDLER, "bool readGameMapFromFile(")
 optional = reader[reader.index('if(nextParam == "[RelationshipState]")'):]
 check(optional.index("if(!(levelFile >> nextParam))") < optional.index('if(nextParam == "[CombatGroups]")'),
