@@ -642,7 +642,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
             OD_LOG_WRN("Room " + tempRoom->getName() + " is left out: the package of room "
                 + RoomPackages::getPackageRoomName(tempRoom->getType()) + " is missing, its tiles stay claimed ground"
                 + ", file=" + fileName);
-            delete tempRoom;
+            RoomManager::discardUnaddedRoom(tempRoom);
         }
 
         levelFile >> nextParam;

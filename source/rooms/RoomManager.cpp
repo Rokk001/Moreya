@@ -457,6 +457,18 @@ bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& pac
     return factory.buildRoomEditor(gameMap, packet);
 }
 
+//! \brief Deletes a room that was read from a level but never added to the game map. Reading the room already made
+//! it the covering building of its tiles; they are released first, so no tile keeps a pointer to the deleted room.
+void RoomManager::discardUnaddedRoom(Room* room)
+{
+    for(Tile* tile : room->getCoveredTiles())
+    {
+        if(tile->getCoveringBuilding() == room)
+            tile->setCoveringBuilding(nullptr);
+    }
+    delete room;
+}
+
 //! \brief Reads a room of a saved game; a room that could not be read gives no room.
 Room* RoomManager::getRoomFromStream(GameMap* gameMap, std::istream& is)
 {
@@ -484,7 +496,7 @@ Room* RoomManager::getRoomFromStream(GameMap* gameMap, std::istream& is)
     {
         // A room that could not be read has no seat or tiles to be added to the map with
         OD_LOG_ERR("Could not read the room " + room->getName() + " of type=" + Helper::toString(index));
-        delete room;
+        discardUnaddedRoom(room);
         return nullptr;
     }
     return room;

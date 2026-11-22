@@ -113,8 +113,14 @@ game_mode = body(read("source/modes/GameMode.cpp"), "void GameMode::refreshSkill
 check("SkillManager::isSkillContentAvailable(resType)" in game_mode and "&& isContentAvailable)" in game_mode,
       "the research of a room without package must be not allowed and its build button hidden")
 loader = read("source/gamemap/MapHandler.cpp")
-check("RoomPackages::isRoomAvailable(tempRoom->getType())" in loader and "delete tempRoom;" in loader,
+check("RoomPackages::isRoomAvailable(tempRoom->getType())" in loader
+      and "RoomManager::discardUnaddedRoom(tempRoom);" in loader and "delete tempRoom;" not in loader,
       "a level or save must leave a room without package out and keep loading")
+# Reading a room makes it the covering building of its tiles: a room that is left out must release them before it is
+# deleted, or the tiles keep a pointer to the deleted room (the crash of the first integration of this branch)
+discard = body(read("source/rooms/RoomManager.cpp"), "void RoomManager::discardUnaddedRoom(")
+check("tile->setCoveringBuilding(nullptr);" in discard and discard.index("setCoveringBuilding(nullptr)")
+      < discard.index("delete room;"), "a left-out room must release its tiles before it is deleted")
 check("RoomPackages::isRoomAvailable(RoomType::ghostRoom)" in loader
       and "RoomPackages::isRoomAvailable(RoomType::herbGarden)" in loader,
       "saved capture boxes and herb bundles need their room packages")

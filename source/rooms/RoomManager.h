@@ -105,6 +105,10 @@ public:
     //! \brief Constructs a room according to the data in the stream
     static Room* getRoomFromStream(GameMap* gameMap, std::istream &is);
 
+    //! \brief Deletes a room that was read from a level but never added to the game map, after releasing the tiles
+    //! that reading the room made it cover.
+    static void discardUnaddedRoom(Room* room);
+
     //! \brief Creates an empty room of the given type. It has no tiles, no name and no seat:
     //! the caller is expected to hand it what it should own. Returns nullptr if the type is
     //! not known.
