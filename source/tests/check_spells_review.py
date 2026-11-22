@@ -360,9 +360,13 @@ for skill, parent, button, tier, spell, points in NODES:
     need(re.search(r"^#\s*%s\s+\(int\)" % skill, skills_cfg, re.M) is not None, "skills.cfg documents %s" % skill)
     need('{SkillType::%s, "%s", ResearchBaseSource::spells,' % (skill, EFFECTS[skill][0]) in manager,
          "the tooltip has a base value for %s" % skill)
-ICONS = {"CurseButton": "CreatureWeakButton", "BlessingButton": "CreatureStrengthButton",
-         "InvisibilityButton": "CreatureHasteButton", "PlagueButton": "CreatureSlowButton",
-         "BreakWallButton": "TremorButton", "RevealEnemyButton": "SpellEyeEvilButton"}
+# Every one of the six spells shows its own painted icon of gui/ODIcons.png, named like its button
+ICONS = {"CurseButton": "CurseButton", "BlessingButton": "BlessingButton",
+         "InvisibilityButton": "InvisibilityButton", "PlagueButton": "PlagueButton",
+         "BreakWallButton": "BreakWallButton", "RevealEnemyButton": "RevealEnemyButton"}
+icon_names = [i.get("name") for i in ET.parse(os.path.join(ROOT, "gui", "ODIcons.imageset")).getroot().findall("Image")]
+for icon in ICONS.values():
+    need(icon_names.count(icon) == 1, "gui/ODIcons.imageset has the icon %s once" % icon)
 bar = ET.parse(os.path.join(ROOT, "gui", "WindowTabSpells.layout")).getroot().find("Window")
 bar_buttons = [w for w in bar.findall("Window") if w.get("type") == "OD/GameTabButton"]
 need(len(bar_buttons) == 24, "the spells tab holds 24 buttons: %d" % len(bar_buttons))
