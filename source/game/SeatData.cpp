@@ -254,7 +254,7 @@ void SeatData::exportToPacketForUpdate(ODPacket& os) const
     for(const RoomManagerEntry& entry : mRoomManagerEntries) os << entry.count << static_cast<uint32_t>(entry.dot);
 }
 
-//! \brief Sends full seat data followed by shared room settings.
+//! \brief Sends full seat data (the forbidden and the withheld free skills included) followed by shared room settings.
 void SeatData::exportToPacket(ODPacket& os) const
 {
     os << mId << mTeamId << mPlayerType << mFaction << mStartingX
@@ -281,10 +281,15 @@ void SeatData::exportToPacket(ODPacket& os) const
     os << nb;
     for(SkillType resType : mSkillNotAllowed)
         os << resType;
+
+    nb = mSkillNotFree.size();
+    os << nb;
+    for(SkillType resType : mSkillNotFree)
+        os << resType;
     exportItemSettingsToPacket(os);
 }
 
-//! \brief Receives full seat data and its trailing room-setting values.
+//! \brief Receives full seat data (the forbidden and the withheld free skills included) and its trailing room-setting values.
 bool SeatData::importFromPacket(ODPacket& is)
 {
     is >> mId >> mTeamId >> mPlayerType;
@@ -318,6 +323,15 @@ bool SeatData::importFromPacket(ODPacket& is)
         SkillType resType;
         is >> resType;
         mSkillNotAllowed.push_back(resType);
+    }
+
+    is >> nb;
+    while(nb > 0)
+    {
+        --nb;
+        SkillType resType;
+        is >> resType;
+        mSkillNotFree.push_back(resType);
     }
 
     return importItemSettingsFromPacket(is);

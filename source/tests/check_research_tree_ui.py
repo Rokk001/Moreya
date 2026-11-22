@@ -80,7 +80,8 @@ struct Seat {bool gate=true;uint32_t level=0,queue=0;bool current=false;std::vec
  uint32_t isSkillPending(SkillType)const{return queue;}
  bool isSkillNotAllowed(SkillType t)const{return std::find(denied.begin(),denied.end(),t)!=denied.end();}
  bool canResearchLevel(SkillType,int,const std::vector<std::pair<SkillType,int> >&)const{return gate;}
- bool getCurrentSkillProgress(SkillType& t,float& p){t=currentType;p=.5f;return current;}};
+ bool getCurrentSkillProgress(SkillType& t,float& p){t=currentType;p=.5f;return current;}
+ int getSkillCost(SkillType,uint32_t level)const{return 100*static_cast<int>(level);}};
 struct Player {Seat seat;Seat* getSeat(){return &seat;}};
 struct GameMap {Player player;Player* getLocalPlayer(){return &player;}};
 enum class SkillTab {rooms,traps,spells,nb};

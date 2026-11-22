@@ -77,13 +77,13 @@ File: `levels/campaign/wing1/Brackenford.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1458 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
-| Script line 1459 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
-| Script line 1466 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
-| Script line 1475 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
-| Script line 1485 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
-| Script line 1559 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
-| Script line 1657 | `Action	win	1` | yes |
+| Script line 1464 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
+| Script line 1465 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
+| Script line 1472 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
+| Script line 1481 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
+| Script line 1491 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
+| Script line 1565 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
+| Script line 1663 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -235,11 +235,11 @@ File: `levels/campaign/wing1/Coldwell.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1522 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
-| Script line 1523 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
-| Script line 1531 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
-| Script line 1546 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
-| Script line 1661 | `Action	win	1` | yes |
+| Script line 1517 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
+| Script line 1518 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
+| Script line 1526 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
+| Script line 1541 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
+| Script line 1656 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -435,10 +435,10 @@ File: `levels/campaign/wing1/Mossgate.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 761 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
-| Script line 768 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
-| Script line 778 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
-| Script line 861 | `Action	win	1` | yes |
+| Script line 767 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
+| Script line 774 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
+| Script line 784 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
+| Script line 867 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -475,12 +475,12 @@ File: `levels/campaign/wing1/Ravensledge.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2295 | `Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.` | yes |
-| Script line 2296 | `Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.` | yes |
-| Script line 2311 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
-| Script line 2319 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
-| Script line 2330 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
-| Script line 2438 | `Action	win	1` | yes |
+| Script line 2277 | `Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.` | yes |
+| Script line 2278 | `Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.` | yes |
+| Script line 2293 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
+| Script line 2301 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
+| Script line 2312 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
+| Script line 2420 | `Action	win	1` | yes |
 
 ### Main and optional goals
 

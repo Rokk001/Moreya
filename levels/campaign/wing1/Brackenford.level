@@ -23,19 +23,28 @@ mana	100
 roomDormitory
 roomHatchery
 roomLibrary
-roomTrainingHall
+roomTreasury
 [/SkillDone]
+[SkillNotFree]
+roomTavern
+[/SkillNotFree]
 [SkillNotAllowed]
+roomAlchemyLab
 roomArena
 roomBridgeStone
 roomBridgeWooden
 roomCasino
 roomCrypt
+roomGhostRoom
 roomGuardRoom
+roomHerbGarden
+roomInfirmary
+roomMerchant
 roomPrison
+roomSpa
 roomTemple
+roomToilet
 roomTorture
-roomTreasury
 roomWorkshop
 spellCallToWar
 spellHexenHen
@@ -301,9 +310,9 @@ ProtectDungeonTemple	NULL
 10	28	1	0
 10	29	1	0
 10	30	1	0
-10	31	1	0	1
-10	32	1	0	1
-10	33	1	0	1
+10	31	1	0
+10	32	1	0
+10	33	1	0
 10	34	1	0
 10	35	1	0
 10	36	1	0	1
@@ -332,9 +341,9 @@ ProtectDungeonTemple	NULL
 11	28	1	0
 11	29	1	0
 11	30	1	0
-11	31	1	0	1
-11	32	1	0	1
-11	33	1	0	1
+11	31	1	0
+11	32	1	0
+11	33	1	0
 11	34	1	0
 11	35	1	0
 11	36	1	0	1
@@ -363,13 +372,22 @@ ProtectDungeonTemple	NULL
 12	28	1	0
 12	29	1	0
 12	30	1	0
-12	31	1	0	1
-12	32	1	0	1
-12	33	1	0	1
+12	31	1	0
+12	32	1	0
+12	33	1	0
 12	34	1	0
 12	35	1	0
 12	40	1	0
 12	41	1	0
+13	38	1	0
+13	39	1	0
+13	40	1	0
+14	38	1	0
+14	39	1	0
+14	40	1	0
+15	38	1	0
+15	39	1	0
+15	40	1	0
 12	45	3	100
 13	0	3	100
 13	5	1	0
@@ -1341,15 +1359,15 @@ ProtectDungeonTemple	NULL
 [/Room]
 [Room]
 4	Portal1	0	9
-7	17
-7	18
-7	19
-8	17
-8	18
-8	19
-9	17
-9	18
-9	19
+13	38
+13	39
+13	40
+14	38
+14	39
+14	40
+15	38
+15	39
+15	40
 9	5
 [/Room]
 [Room]
@@ -1366,18 +1384,6 @@ ProtectDungeonTemple	NULL
 9	100000	0	0	-
 [Waves]
 [/Waves]
-[/Room]
-[Room]
-3	TreasuryRaidRoute	1	9
-10	31
-10	32
-10	33
-11	31
-11	32
-11	33
-12	31
-12	32
-12	33
 [/Room]
 [/Rooms]
 

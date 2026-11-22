@@ -42,6 +42,10 @@ public:
     //! levels 2 and 3 use the configured research cost factors.
     int32_t getNeededSkillPoints(uint32_t level = 1) const;
 
+    //! \brief Like getNeededSkillPoints(uint32_t), but level 1 of a free level-one skill costs the full tier cost when
+    //! levelOneWithheld is true (the level withholds the free start, see Seat::isSkillNotFree)
+    int32_t getNeededSkillPoints(uint32_t level, bool levelOneWithheld) const;
+
     //! \brief True if every seat starts with level 1 of this skill
     inline bool isFreeLevelOne() const
     { return mFreeLevelOne; }

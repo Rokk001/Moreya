@@ -20,26 +20,30 @@ gold	400
 goldMined	0
 mana	100
 [SkillDone]
-roomBridgeWooden
 roomDormitory
-roomGuardRoom
 roomHatchery
 roomLibrary
-roomTrainingHall
 roomTreasury
-roomWorkshop
 spellLightning
 spellPossess
 spellSummonWorker
 trapCannon
 trapDoorWooden
 [/SkillDone]
+[SkillNotFree]
+roomTavern
+[/SkillNotFree]
 [SkillNotAllowed]
+roomAlchemyLab
 roomArena
 roomBridgeStone
+roomBridgeWooden
 roomCasino
 roomCrypt
-roomPrison
+roomGhostRoom
+roomHerbGarden
+roomInfirmary
+roomMerchant
 roomTemple
 roomTorture
 spellCallToWar
@@ -1552,9 +1556,9 @@ ProtectDungeonTemple	NULL
 41	44	4	0
 41	45	4	0
 41	46	4	0
-41	56	1	0	1
-41	57	1	0	1
-41	58	1	0	1
+41	56	1	0
+41	57	1	0
+41	58	1	0
 41	63	3	100
 42	0	3	100
 42	6	2	100	-1	150
@@ -1581,9 +1585,9 @@ ProtectDungeonTemple	NULL
 42	44	4	0
 42	45	4	0
 42	46	4	0
-42	56	1	0	1
-42	57	1	0	1
-42	58	1	0	1
+42	56	1	0
+42	57	1	0
+42	58	1	0
 42	63	3	100
 43	0	3	100
 43	5	2	100	-1	150
@@ -1614,12 +1618,12 @@ ProtectDungeonTemple	NULL
 43	44	3	100
 43	45	3	100
 43	46	3	100
-43	52	1	0	1
-43	53	1	0	1
+43	52	1	0
+43	53	1	0
 43	54	1	0
-43	56	1	0	1
-43	57	1	0	1
-43	58	1	0	1
+43	56	1	0
+43	57	1	0
+43	58	1	0
 43	63	3	100
 44	0	3	100
 44	5	2	100	-1	150
@@ -1646,8 +1650,8 @@ ProtectDungeonTemple	NULL
 44	44	3	100
 44	45	3	100
 44	46	3	100
-44	52	1	0	1
-44	53	1	0	1
+44	52	1	0
+44	53	1	0
 44	54	1	0
 44	56	1	0
 44	57	1	0
@@ -1667,8 +1671,8 @@ ProtectDungeonTemple	NULL
 45	44	3	100
 45	45	3	100
 45	46	3	100
-45	52	1	0	1
-45	53	1	0	1
+45	52	1	0
+45	53	1	0
 45	54	1	0
 45	55	3	100
 45	56	1	0
@@ -2112,16 +2116,6 @@ ProtectDungeonTemple	NULL
 9	5
 [/Room]
 [Room]
-11	Prison1	1	6
-43	52
-43	53
-44	52
-44	53
-45	52
-45	53
-0
-[/Room]
-[Room]
 3	Treasury1	2	6
 27	5
 27	6
@@ -2165,18 +2159,6 @@ ProtectDungeonTemple	NULL
 9	100000	0	0	-
 [Waves]
 [/Waves]
-[/Room]
-[Room]
-3	TreasuryRaidRoute	1	9
-41	56
-41	57
-41	58
-42	56
-42	57
-42	58
-43	56
-43	57
-43	58
 [/Room]
 [/Rooms]
 
