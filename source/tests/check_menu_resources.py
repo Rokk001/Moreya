@@ -398,7 +398,7 @@ def check_menu_lighting(root):
     assert "collectMenuNodeMaterials(mMainMenuSceneNode, materials);" in prepare and "createShaderBasedTechnique(*material, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme)" in prepare and "validateMaterial(scheme, *material);" in prepare, "every menu material must get its generated shaders before the first flight"
     lights = {words[1]: [float(value) for value in words[2:]] for words in
               (line.split() for line in config.splitlines()) if words and words[0] == "AddPointLight"}
-    assert len(lights) == 44, "unexpected number of menu lights: " + str(len(lights))
+    assert len(lights) == 42, "unexpected number of menu lights: " + str(len(lights))
     green = {name for name, values in lights.items() if values[4] > values[3] * 1.5 and values[4] > values[5] * 1.5}
     assert green == {"SpireLight", "SpireSummitScatter"}, "green light belongs only to the spire and the right tower: " + str(sorted(green))
     # The title and its crest carry no green of their own.

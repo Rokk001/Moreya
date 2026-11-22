@@ -1,38 +1,30 @@
-"""Build the entrance into Moreya for the start screen: the forecourt behind the campaign table and its green portal.
+"""Build the entrance into Moreya for the start screen: the green portal behind the campaign table and its signpost.
 
-    MenuMoreyaForecourt a large open forecourt behind the campaign hall (FORECOURT, 24 wide and 30 deep): wet
-                        flagstones, high coursed walls with coping, merlons and pilasters, short walls that join the
-                        hall, moss and rubble at the feet of the walls; the abandoned castle and the rear buildings of
-                        the fortress stand behind its rear wall
-    MenuHallRearArch    the stone frame (jambs, lintel, threshold) of the wide opening in the back wall of the campaign
-                        hall through which one walks from the table into the forecourt
-    MenuMoreyaPortal    the other side of the green start gate of the campaign map, at the far end of the forecourt
-                        in front of its rear wall: a round arch of grey stone blocks on two coursed pillars with carved
-                        capitals, its opening filled with green fire (material MenuMoreyaPortalFire, texture by
-                        tools/gen_menu_portal_fire.py), damp moss on the stones and hanging from the arch, two iron fire
-                        bowls on stone pedestals in front of the pillars, all on a low stone platform with a front step,
-                        built at PORTAL_SCALE; the flames over the bowls and the rising green flames in the arch are
-                        particle systems (particles/MenuScene.particle)
+    MenuMoreyaPortal    the other side of the green start gate of the campaign map: a round arch of grey stone
+                        blocks on two coursed pillars with carved capitals, its opening filled with green fire
+                        (material MenuMoreyaPortalFire, texture by tools/gen_menu_portal_fire.py), damp moss on the
+                        stones and hanging from the arch, two iron fire bowls on stone pedestals in front of the
+                        pillars, all on a low stone platform with a front step; the flames over the bowls and the
+                        rising green flames in the arch are particle systems (particles/MenuScene.particle)
     MenuMoreyaSignpost  a smaller signpost of the start screen signpost family (moreya_raid_models.py PartBuilder,
                         same wood, iron and board planks); its upright arrow board carries the word "Moreya"
     MenuForgeCoals      a heap of charred coal lumps with small embers glowing between them on the forge hearth of
-                        the rear buildings (MenuFortressRear.mesh), in place of its former flat glowing slab
+                        the rear yard (MenuFortressRear.mesh), in place of its former flat glowing slab
 
-Units are menu scene units. The forecourt and the frame are built in scene coordinates (the scene places them at the
-origin). The portal's origin is the middle of its foot in the plane of the fire; the fire faces -Y, back along the
-forecourt towards the hall, the table and the camera of the campaign flight, which sees it through the opening in
-the hall's back wall. The signpost's origin is the foot of its post; the scene places it in the forecourt near the
-hall, its board upright and facing the hall, its tip pointing along the forecourt towards the portal. MenuForgeCoals
-is built in the coordinates of MenuFortressRear.mesh; the scene places both at the same position.
+Units are menu scene units. The portal's origin is the middle of its foot on the hall floor (z 0) in the plane of
+the fire; the fire faces -Y, towards the campaign table and the camera of the campaign flight. The scene places it
+in the campaign hall right behind the table, its back just in front of the hall's back wall (inner face at y
+HALL_BACK_WALL). The signpost's origin is the foot of its post; the scene places it in the hall beside the portal,
+its board upright and facing the hall, its tip pointing towards the portal.
 
 Run in Blender (5.x):
-    blender --background --python menu_moreya_entrance.py -- <repo> <private output folder> [forecourt] [arch]
-        [portal] [signpost] [coals] [render]
-"forecourt", "arch", "portal", "signpost" and "coals" write <name>.blend and <name>.mesh.xml into the private folder
-and convert the meshes with OgreXMLConverter into <repo>/models. "render" renders the menu scene of
-config/mainmenuscene.cfg from the campaign pose and the waypoints of the campaign flight into <private>/renders (see
-render_poses). The board lettering is written by tools/gen_menu_signpost_lettering.py (--text Moreya). Progress goes
-to <private>/menu_moreya_entrance.log.
+    blender --background --python menu_moreya_entrance.py -- <repo> <private output folder> [portal] [signpost]
+        [coals] [render]
+"portal", "signpost" and "coals" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes
+with OgreXMLConverter into <repo>/models. "render" renders the menu scene of config/mainmenuscene.cfg from the
+campaign pose and the waypoints of the campaign flight into <private>/renders (see render_poses). The board lettering
+is written by tools/gen_menu_signpost_lettering.py (--text Moreya). Progress goes to
+<private>/menu_moreya_entrance.log.
 """
 import math
 import os
@@ -44,39 +36,23 @@ from pathlib import Path
 import bpy
 from mathutils import Matrix, Quaternion, Vector
 
-#: The campaign hall: inner face of its back wall (scene y) and outer half width of its walls.
+#: The inner face of the campaign hall's back wall (scene y); the portal stands in front of it.
 HALL_BACK_WALL = 29.25
-HALL_HALF_OUTER = 6.84
-#: The wide opening in the back wall of the campaign hall (scene coordinates): half width, sill and top height, and
-#: the wall's inner and outer face (y). tools/menu_cut_moreya_opening.py cuts the same box out of the hall mesh.
-ARCH_HALF, ARCH_SILL, ARCH_HEIGHT = 5.0, 0.12, 6.6
-ARCH_WALL = (29.25, 30.25)
-#: The forecourt inside its walls (x min, x max, y min, y max: from the hall's back wall to the rear wall), the
-#: thickness of its walls, the height of the side walls and of the rear wall, and the top of the flagstones.
-FORECOURT = (-12.0, 12.0, 30.25, 60.25)
-FORECOURT_WALL, FORECOURT_WALL_HEIGHT, FORECOURT_REAR_HEIGHT = 1.2, 7.0, 11.0
-PAVING_TOP = 0.08
-#: The paved rear yard behind the forecourt's rear wall (x min, x max, y min, y max) and the top of its flagstones.
-REAR_YARD, REAR_YARD_TOP = (-15.0, 15.0, 61.45, 77.0), 0.02
-#: The portal as designed before it is scaled by PORTAL_SCALE: inner half width of the opening, spring height of the
-#: arch (top of the capitals), width of the pillars and of the arch ring, half depth of the pillars, number of arch
-#: blocks and the plane of the fire (y).
+#: The portal: inner half width of the opening, spring height of the arch (top of the capitals), width of the
+#: pillars and of the arch ring, half depth of the pillars, number of arch blocks and the plane of the fire (y).
 PORTAL_INNER, PORTAL_SPRING, PILLAR_WIDTH, PILLAR_DEPTH = 1.6, 3.6, 0.85, 0.5
 ARCH_BLOCKS, FIRE_Y = 13, 0.0
 FIRE_MATERIAL = "MenuMoreyaPortalFire"
-PORTAL_SCALE = 1.5
 #: The platform under the portal (x min, x max, y min, y max) and its top height.
 PLINTH, PLINTH_TOP = (-3.3, 3.3, -2.2, 0.62), 0.22
 #: The fire bowls: distance of their centres from the middle, their y and the height of their rims.
 BOWL_X, BOWL_Y, BOWL_TOP, BOWL_RIM = 2.3, -1.5, 1.3, 0.45
-#: The coal bed on the forge hearth of the rear buildings (x min, x max, y min, y max in the coordinates of
-#: MenuFortressRear.mesh) and the hearth top height.
+#: The coal bed on the forge hearth of the rear yard (scene x min, x max, y min, y max) and the hearth top height.
 FORGE_BED = (3.05, 4.95, 40.95, 42.05)
 FORGE_HEARTH = 0.85
 #: Signpost: board outline in its own frame (back end, shoulder, tip, lower and upper edge), thickness planes,
 #: the tilt of the board (0: upright), the turn of the whole signpost about Z (tip towards +X and +Y, from the left
-#: side of the forecourt along it towards the portal; board front towards the hall and the campaign flight) and its
-#: size factor.
+#: of the portal towards its opening; board front towards the hall and the campaign flight) and its size factor.
 SIGN_BACK, SIGN_SHOULDER, SIGN_TIP = -0.30, 1.80, 2.10
 SIGN_BOTTOM, SIGN_TOP = 1.75, 2.35
 SIGN_FRONT_Y, SIGN_BACK_Y = -0.22, -0.135
@@ -234,11 +210,7 @@ def add_fire_bowls(b):
 
 
 def build_portal(raid):
-    """Builds the portal into Moreya: platform, pillars, round arch, green fire face, moss and two fire bowls.
-
-    Every part is designed at the unscaled sizes above and the whole portal is then scaled by PORTAL_SCALE about its
-    origin.
-    """
+    """Builds the portal into Moreya: platform, pillars, round arch, green fire face, moss and two fire bowls."""
     b = raid.PartBuilder("MenuMoreyaPortal", 5821)
     add_plinth(b)
     add_pillars(b)
@@ -246,143 +218,21 @@ def build_portal(raid):
     add_fire(b)
     add_moss(b)
     add_fire_bowls(b)
-    transform_faces(b, 0, Matrix.Scale(PORTAL_SCALE, 4))
     obj = b.finish(["MenuChippedStone", "MenuCarvedStone", "MenuSoot", "MenuMoss", "MenuCorrodedIron", "MenuEmber",
                     FIRE_MATERIAL])
     # The fire face shows its texture once across the opening: u from left to right, v from the crown down in the game
     # (the exporter writes 1 - v, so the Blender v rises from the foot to the crown).
     fire_index = obj.data.materials.find(FIRE_MATERIAL)
     uv = obj.data.uv_layers.active
-    crown = (PORTAL_SPRING + PORTAL_INNER) * PORTAL_SCALE
-    inner, bottom = PORTAL_INNER * PORTAL_SCALE, PLINTH_TOP * PORTAL_SCALE
+    crown = PORTAL_SPRING + PORTAL_INNER
     for polygon in obj.data.polygons:
         if polygon.material_index != fire_index:
             continue
         for loop_index in polygon.loop_indices:
             point = obj.data.vertices[obj.data.loops[loop_index].vertex_index].co
-            uv.data[loop_index].uv = ((point.x + inner) / (2 * inner), (point.z - bottom) / (crown - bottom))
+            uv.data[loop_index].uv = ((point.x + PORTAL_INNER) / (2 * PORTAL_INNER),
+                                      (point.z - PLINTH_TOP) / (crown - PLINTH_TOP))
     return obj
-
-
-def build_hall_arch(raid):
-    """Builds the stone frame of the wide opening in the back wall of the campaign hall that leads into the forecourt.
-
-    Scene coordinates (the scene places it at the origin): tools/menu_cut_moreya_opening.py cuts the wall over
-    x -ARCH_HALF..ARCH_HALF, z ARCH_SILL..ARCH_HEIGHT out of MenuCampaignHall.mesh; the jambs, the lintel and the
-    threshold of this frame cover the cut edges and stand on the floor.
-    """
-    b = raid.PartBuilder("MenuHallRearArch", 3307)
-    front, back = ARCH_WALL[0] - 0.12, ARCH_WALL[1] + 0.12
-    for side in (-1, 1):
-        inner, outer = sorted((side * (ARCH_HALF - 0.15), side * (ARCH_HALF + 0.38)))
-        bottom = -0.05
-        for top in (1.4, 2.9, 4.4, ARCH_HEIGHT + 0.08):
-            lift = b.rng.uniform(-0.02, 0.02)
-            box(b, inner + b.rng.uniform(-0.02, 0.01), outer, front + b.rng.uniform(-0.03, 0.0), back, bottom,
-                top + lift, "MenuCarvedStone", (0, 0, 1))
-            bottom = top + lift + 0.015
-    box(b, -ARCH_HALF - 0.5, ARCH_HALF + 0.5, front - 0.04, back + 0.04, ARCH_HEIGHT - 0.05, ARCH_HEIGHT + 0.7,
-        "MenuCarvedStone")
-    box(b, -ARCH_HALF - 0.15, ARCH_HALF + 0.15, front, back, -0.12, ARCH_SILL + 0.04, "MenuChippedStone")
-    return b.finish(["MenuCarvedStone", "MenuChippedStone"])
-
-
-def add_forecourt_paving(b, area, top):
-    """Paves an area (x min, x max, y min, y max) with worn wet flagstones of uneven size on a dark bed."""
-    x0, x1, y0, y1 = area
-    box(b, x0, x1, y0, y1, top - 0.38, top - 0.12, "MenuSoot")
-    y = y0
-    while y < y1 - 0.05:
-        far = min(y + b.rng.uniform(1.3, 2.2), y1)
-        if y1 - far < 0.8:
-            far = y1
-        x = x0 + b.rng.uniform(-0.6, 0.0)
-        while x < x1 - 0.05:
-            right = min(x + b.rng.uniform(1.3, 2.4), x1)
-            if x1 - right < 0.8:
-                right = x1
-            box(b, max(x, x0) + 0.02, right - 0.02, y + 0.02, far - 0.02, top - 0.33,
-                top + b.rng.uniform(-0.03, 0.015), "MenuWetStone")
-            x = right
-        y = far
-
-
-def add_wall(b, x0, x1, y0, y1, top):
-    """Adds a coursed stone wall over a rectangle (along its longer side) with a dark core, coping and merlons."""
-    along_x = x1 - x0 >= y1 - y0
-    box(b, x0 + 0.06, x1 - 0.06, y0 + 0.06, y1 - 0.06, -0.2, top - 0.05, "MenuSoot")
-    start, end = (x0, x1) if along_x else (y0, y1)
-    bottom, row = -0.15, 0
-    while bottom < top - 0.4:
-        height = min(b.rng.uniform(0.6, 0.78), top - 0.4 - bottom)
-        position = start - (0.5 if row % 2 else 0.0)
-        while position < end - 0.05:
-            length = b.rng.uniform(1.0, 1.9)
-            following = min(position + length, end)
-            if end - following < 0.5:
-                following = end
-            low, high = max(position, start) + 0.012, following - 0.012
-            out = b.rng.uniform(-0.03, 0.03)
-            material = "MenuChippedStone" if b.rng.random() < 0.3 else "MenuStone"
-            if along_x:
-                box(b, low, high, y0 - out, y1 + out, bottom, bottom + height - 0.015, material, (1, 0, 0))
-            else:
-                box(b, x0 - out, x1 + out, low, high, bottom, bottom + height - 0.015, material, (0, 1, 0))
-            position = following
-        bottom += height
-        row += 1
-    if along_x:
-        box(b, x0 - 0.1, x1 + 0.1, y0 - 0.1, y1 + 0.1, top - 0.4, top, "MenuCarvedStone")
-    else:
-        box(b, x0 - 0.1, x1 + 0.1, y0 - 0.1, y1 + 0.1, top - 0.4, top, "MenuCarvedStone")
-    position = start + 0.3
-    while position < end - 1.0:
-        if along_x:
-            box(b, position, position + 0.8, y0, y1, top, top + 0.75, "MenuStone")
-        else:
-            box(b, x0, x1, position, position + 0.8, top, top + 0.75, "MenuStone")
-        position += 1.6
-
-
-def add_forecourt_walls(b):
-    """Adds the walls round the forecourt, the pilasters on their inner faces and moss and rubble at their feet."""
-    x0, x1, y0, y1 = FORECOURT
-    thick = FORECOURT_WALL
-    add_wall(b, x0 - thick, x0, y0 - 1.0, y1 + thick, FORECOURT_WALL_HEIGHT)
-    add_wall(b, x1, x1 + thick, y0 - 1.0, y1 + thick, FORECOURT_WALL_HEIGHT)
-    add_wall(b, x0 - thick, x1 + thick, y1, y1 + thick, FORECOURT_REAR_HEIGHT)
-    # Short walls close the forecourt between the campaign hall and the side walls.
-    for side in (-1, 1):
-        inner, outer = sorted((side * HALL_HALF_OUTER, side * x1))
-        add_wall(b, inner, outer, y0 - 1.0, y0, FORECOURT_WALL_HEIGHT)
-    for side in (-1, 1):
-        face = side * x1
-        y = y0 + 3.0
-        while y < y1 - 2.0:
-            inner, outer = sorted((face - side * 0.45, face))
-            box(b, inner, outer, y - 0.5, y + 0.5, -0.1, FORECOURT_WALL_HEIGHT + 0.3, "MenuCarvedStone", (0, 0, 1))
-            b.rock((face - side * 0.6, y + b.rng.uniform(-0.6, 0.6), 0.12), (0.35, 0.3, 0.1), "MenuMoss")
-            if b.rng.random() < 0.6:
-                b.rock((face - side * b.rng.uniform(1.0, 1.8), y + b.rng.uniform(1.0, 2.0), 0.15),
-                       (b.rng.uniform(0.25, 0.45), b.rng.uniform(0.2, 0.4), b.rng.uniform(0.15, 0.3)), "MenuRoughStone")
-            y += 6.0
-    x = x0 + 2.0
-    while x < x1 - 2.0:
-        box(b, x - 0.5, x + 0.5, y1 - 0.45, y1, -0.1, FORECOURT_REAR_HEIGHT + 0.3, "MenuCarvedStone", (0, 0, 1))
-        x += 4.0
-
-
-def build_forecourt(raid):
-    """Builds the forecourt behind the campaign hall: paving, walls with pilasters, coping and merlons, moss, rubble,
-    and the paving of the rear yard behind it."""
-    b = raid.PartBuilder("MenuMoreyaForecourt", 7717)
-    add_forecourt_paving(b, FORECOURT, PAVING_TOP)
-    # The rear yard behind the forecourt keeps its paving: the rubble and the forge of the rear buildings
-    # (MenuFortressRear.mesh, moved back with them) lie on it.
-    add_forecourt_paving(b, REAR_YARD, REAR_YARD_TOP)
-    add_forecourt_walls(b)
-    return b.finish(["MenuWetStone", "MenuSoot", "MenuStone", "MenuChippedStone", "MenuCarvedStone", "MenuMoss",
-                     "MenuRoughStone"])
 
 
 def build_forge_coals(raid):
@@ -605,11 +455,11 @@ def render_poses(repo, private, raid, exporter):
 
 
 def main():
-    """Runs the requested builds and renders (every model when none is named) and logs the result."""
+    """Runs the requested builds and renders (portal, signpost and coals when none is named) and logs the result."""
     global LOG
     arguments = sys.argv[sys.argv.index("--") + 1:]
     repo, private = Path(arguments[0]), Path(arguments[1])
-    wanted = set(arguments[2:]) or {"forecourt", "arch", "portal", "signpost", "coals"}
+    wanted = set(arguments[2:]) or {"portal", "signpost", "coals"}
     private.mkdir(parents=True, exist_ok=True)
     LOG = open(private / "menu_moreya_entrance.log", "w", encoding="utf-8")
     try:
@@ -617,12 +467,6 @@ def main():
         import moreya_raid_models as raid
         import odp_ogre_io as exporter
         bpy.context.preferences.filepaths.save_version = 0
-        if "forecourt" in wanted:
-            bpy.ops.wm.read_factory_settings(use_empty=True)
-            export(exporter, repo, private, build_forecourt(raid))
-        if "arch" in wanted:
-            bpy.ops.wm.read_factory_settings(use_empty=True)
-            export(exporter, repo, private, build_hall_arch(raid))
         if "portal" in wanted:
             bpy.ops.wm.read_factory_settings(use_empty=True)
             export(exporter, repo, private, build_portal(raid))
