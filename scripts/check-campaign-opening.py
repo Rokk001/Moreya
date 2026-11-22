@@ -107,9 +107,10 @@ SAFE_RADIUS = 20
 MAX_EXAMPLES = 5
 # Rule 4, portal start of the wing 1 levels (fixed, counted once on the levels):
 # level file -> (first tile of the portal the keeper claims, tiles to dig from the heart to it,
-# fighter classes the portal can bring).
+# fighter classes the portal can bring). Brackenford (Mold Pit): the portal lies next to the heart and is
+# reached without digging (wing 1 rooms plan WR5, counted on the level on feature/raid-campaign-r17).
 WING1_PORTALS = {
-    "Brackenford.level": ((7, 17), 3, ("Cultist", "Goblin")),
+    "Brackenford.level": ((13, 38), 0, ("Cultist", "Goblin")),
     "Coldwell.level": ((9, 2), 2, ("Cultist", "Goblin")),
     "Ravensledge.level": ((28, 51), 0, ("Cultist", "DarkElf")),
     "Mossgate.level": ((30, 29), 0, ("Goblin",)),
