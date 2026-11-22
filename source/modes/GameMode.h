@@ -615,7 +615,8 @@ private:
     bool mIsLibraryLostShown;
 
     //! \brief Whether the research tree and the build navigation were last shown with the rules of a campaign level
-    //! (padlock on forbidden fields, question mark placeholders, traps and doors only with a built Workshop)
+    //! (padlock on allowed but unresearched entries, question mark on forbidden ones, traps and doors only with a built
+    //! Workshop)
     bool mIsCampaignLevelShown = false;
 
     //! \brief Whether the build navigation was last shown with a built Workshop of the local keeper
@@ -679,9 +680,10 @@ private:
 
     //! \brief Set the state of the given skill button accordingly to the skill type given.
     //! The cast button is shown only once the skill has been researched at least to level 1.
-    //! In a campaign level the build buttons of rooms, traps and doors follow the research state instead: an allowed
-    //! entry not researched yet shows the question mark placeholder and cannot be built, a forbidden one is hidden,
-    //! traps and doors are hidden while no Workshop is built; a forbidden research field shows the padlock.
+    //! In a campaign level the build buttons of rooms, spells, traps and doors and the research fields follow the
+    //! research state instead: an allowed entry not researched yet shows its darkened icon under the padlock (it can be
+    //! queued but not built), a forbidden one shows the question mark in place of its icon (it can neither be queued
+    //! nor built), traps and doors are hidden while no Workshop is built.
     //! \note: Called by refreshGuiSkill() for each skillType.
     void refreshSkillButtonState(const std::string& skillButton, const std::string& castButton,
         const std::string& skillProgressBar, SkillType resType);

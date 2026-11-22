@@ -6747,17 +6747,18 @@
     <WidgetLook name="OD/ResearchButton" inherits="OD/ImageButton">
         <PropertyDefinition name="ResearchLevelColour" initialValue="00FFFFFF" redrawOnWrite="true" />
         <PropertyDefinition name="ResearchTileImage" initialValue="OpenDungeonsSkin/ResearchTileLocked" redrawOnWrite="true" />
-        <!-- Padlock over the whole research field a campaign level forbids; empty draws nothing -->
+        <!-- Padlock over the darkened icon of a research field a campaign level allows but the keeper has not
+             researched yet, in the icon area inside the tile frame and under the state badge; empty draws nothing -->
         <PropertyDefinition name="LockImage" initialValue="" redrawOnWrite="true" />
         <ImagerySection name="research">
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><ImageProperty name="ResearchTileImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area><ImageProperty name="ButtonImage" /><ColourRectProperty name="ButtonImageColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area><ImageProperty name="LockImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.05" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.95" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.05" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.05" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.05" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.9" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.95" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.05" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.05" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.9" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.7" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.7" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.27" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.27" type="Height" /></Dim></Area><ImageProperty name="StateImage" /><ColourRectProperty name="StateImageColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><ImageProperty name="LockImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
         </ImagerySection>
         <ImagerySection name="research_hover">
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/ResearchTileFocus" /><Colours topLeft="FFFFFFFF" topRight="FFFFFFFF" bottomLeft="FFFFFFFF" bottomRight="FFFFFFFF" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
@@ -6770,12 +6771,12 @@
             <ImagerySection name="research_pushed">
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><ImageProperty name="ResearchTileImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area><ImageProperty name="ButtonImage" /><ColourRectProperty name="ButtonImageColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area><ImageProperty name="LockImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.05" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush__Pushed" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.95" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.05" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush__Pushed" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.05" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.05" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.9" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush__Pushed" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.95" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.05" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.05" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.9" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush__Pushed" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.7" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.7" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.27" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.27" type="Height" /></Dim></Area><ImageProperty name="StateImage" /><ColourRectProperty name="StateImageColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><ImageProperty name="LockImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
         </ImagerySection>
         <ImagerySection name="research_hover_pushed">
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/ResearchTileFocus__Pushed" /><Colours topLeft="FFFFFFFF" topRight="FFFFFFFF" bottomLeft="FFFFFFFF" bottomRight="FFFFFFFF" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
@@ -6783,12 +6784,12 @@
         <ImagerySection name="research_disabled">
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><ImageProperty name="ResearchTileImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area><ImageProperty name="ButtonImage" /><ColourRectProperty name="ButtonImageColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
+            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area><ImageProperty name="LockImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.05" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush__Disabled" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.95" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.05" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush__Disabled" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.05" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.05" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.9" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush__Disabled" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.95" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.05" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.05" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.9" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/SelectionBrush__Disabled" /><ColourRectProperty name="ResearchLevelColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0.7" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0.7" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.27" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="0.27" type="Height" /></Dim></Area><ImageProperty name="StateImage" /><ColourRectProperty name="StateImageColour" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
-            <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><ImageProperty name="LockImage" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
         </ImagerySection>
     </WidgetLook>
     <WidgetLook name="OD/IconButton">
@@ -7139,6 +7140,10 @@
         <PropertyDefinition name="NavigationColour" initialValue="FFFFFFFF" redrawOnWrite="true" />
         <Property name="WantsMultiClickEvents" value="False" />
         <PropertyDefinition initialValue="" name="NormalImage" redrawOnWrite="true" />
+        <!-- Campaign level mark drawn over the icon and under the frame in every state (the padlock of an entry not
+             researched yet; empty draws nothing), and the colour of the icon (darkened under the padlock) -->
+        <PropertyDefinition initialValue="" name="MarkImage" redrawOnWrite="true" />
+        <PropertyDefinition initialValue="FFFFFFFF" name="IconColour" redrawOnWrite="true" />
         <PropertyDefinition initialValue="OpenDungeonsSkin/ButtonHoverEffect" name="HoverImage" redrawOnWrite="true" />
         <PropertyDefinition initialValue="OpenDungeonsSkin/ButtonPushedEffect" name="PushedImage" redrawOnWrite="true" />
         <PropertyDefinition initialValue="OpenDungeonsSkin/ButtonDisabledEffect" name="DisabledImage" redrawOnWrite="true" />
@@ -7167,6 +7172,20 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
                 <ImageProperty name="NormalImage" />
+                <ColourRectProperty name="IconColour" />
+                <VertFormatProperty name="VertImageFormatting" />
+                <HorzFormatProperty name="HorzImageFormatting" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="mark">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <ImageProperty name="MarkImage" />
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
@@ -7264,6 +7283,7 @@
             </Layer>
             <Layer priority="1">
                 <Section section="normal" />
+                <Section section="mark" />
             </Layer>
             <Layer priority="2">
                 <Section section="frame" controlProperty="NavigationFrame" controlValue="false" />
@@ -7282,6 +7302,7 @@
             </Layer>
             <Layer priority="1">
                 <Section section="normal" />
+                <Section section="mark" />
             </Layer>
             <Layer priority="2">
                 <Section section="frame_hover" controlProperty="NavigationFrame" controlValue="false" />
@@ -7303,6 +7324,7 @@
             </Layer>
             <Layer priority="1">
                 <Section section="normal" />
+                <Section section="mark" />
             </Layer>
             <Layer priority="2">
                 <Section section="frame_pushed" controlProperty="NavigationFrame" controlValue="false" />
@@ -7324,6 +7346,7 @@
             </Layer>
             <Layer priority="1">
                 <Section section="normal" />
+                <Section section="mark" />
             </Layer>
             <Layer priority="2">
                 <Section section="frame_pushed" controlProperty="NavigationFrame" controlValue="false" />
@@ -7345,6 +7368,7 @@
             </Layer>
             <Layer priority="1">
                 <Section section="normal" />
+                <Section section="mark" />
             </Layer>
             <Layer priority="2">
                 <Section section="frame_disabled" controlProperty="NavigationFrame" controlValue="false" />
