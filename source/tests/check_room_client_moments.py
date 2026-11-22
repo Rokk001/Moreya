@@ -15,6 +15,8 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import room_packages  # noqa: E402
 # Effects the config file must contain
 EXPECTED = ("TempleGongRing", "TempleBellSparks", "ConvertedFlash", "ConvertedRing", "ConvertedSparks", "HeartHurtPulse", "HeartHurtDrops", "HeartLowBeatSound")
 # Files below the repository root that the group brings
@@ -53,11 +55,15 @@ for path in sorted(glob.glob(os.path.join(ROOT, "config", "roomAmbience*.cfg")))
         if other != os.path.basename(path):
             problems.append("effect %s is in %s and in %s" % (found.group(1), other, os.path.basename(path)))
 
+# The gong comes from the temple room package: read there when the package is present, not checked without it
 for path in FILES:
-    if not os.path.exists(os.path.join(ROOT, *path.split("/"))):
+    if room_packages.is_missing_packaged(ROOT, path):
+        continue
+    if room_packages.asset(ROOT, path) is None:
         problems.append("missing file %s" % path)
 
-credits = read("CREDITS")
+credits = room_packages.credits_text(ROOT) if room_packages.has_room(ROOT, "Temple") else read("CREDITS")
+MESHES = tuple(mesh for mesh in MESHES if room_packages.has_room(ROOT, "Temple") or "Temple/Gong" not in mesh)
 for mesh in MESHES:
     if mesh not in credits:
         problems.append("no CREDITS line for %s" % mesh)

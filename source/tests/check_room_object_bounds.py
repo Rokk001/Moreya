@@ -3,9 +3,12 @@ from pathlib import Path
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 catalog = (repo / 'source/gamemap/RoomObjectBounds.h').read_text()
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
@@ -34,12 +37,21 @@ probe = r'''
 #include <Ogre.h>
 #include "gamemap/RoomObjectBounds.h"
 #include <iostream>
+#include <set>
+#include <sstream>
+//! \brief The parts of a list joined with ';'.
+static std::vector<std::string> splitList(const std::string& text){std::vector<std::string> parts;std::istringstream in(text);
+ std::string part;while(std::getline(in,part,';'))if(!part.empty())parts.push_back(part);return parts;}
 int main(int argc,char** argv){try{
  Ogre::Root root("","","bounds.log");root.loadPlugin("RenderSystem_GL3Plus");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
  Ogre::NameValuePairList opts;opts["hidden"]="true";root.createRenderWindow("Bounds",64,64,false,&opts);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
- groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);groups.initialiseAllResourceGroups();
+ groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);
+ // The models folders of the room packages that are present, and the meshes of the room packages that are not
+ for(const std::string& folder:splitList(argv[2]))groups.addResourceLocation(folder,"FileSystem","Graphics",true);
+ const std::vector<std::string> missing=splitList(argv[3]);const std::set<std::string> skipped(missing.begin(),missing.end());
+ groups.initialiseAllResourceGroups();
  int checks=0,failures=0;
  Ogre::SceneManager* scene=root.createSceneManager();
  Ogre::SceneNode* node=scene->getRootSceneNode()->createChildSceneNode();
@@ -48,6 +60,7 @@ int main(int argc,char** argv){try{
  struct BuildingObject {Ogre::Vector2 scale=Ogre::Vector2::ZERO;Ogre::Vector2 getFurnitureScale()const{return scale;}} object;
  BuildingObject* renderedMovableEntity=&object;
  for(const RoomObjectPath::MeshBounds& row:RoomObjectPath::meshBounds){
+  if(skipped.count(row.name))continue;
   const Ogre::MeshPtr mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
   const Ogre::AxisAlignedBox& b=mesh->getBounds();
   if(std::isfinite(row.maxZ)){
@@ -84,7 +97,7 @@ int main(int argc,char** argv){try{
    }
   }
  }
- for(const BedSize& size:beds)for(const RoomObjectPath::MeshBounds& row:RoomObjectPath::meshBounds)if(std::string(row.name)==size.name){
+ for(const BedSize& size:beds)for(const RoomObjectPath::MeshBounds& row:RoomObjectPath::meshBounds)if(std::string(row.name)==size.name&&!skipped.count(row.name)){
   const Ogre::MeshPtr mesh=Ogre::MeshManager::getSingleton().load(std::string(row.name)+".mesh","Graphics");
   const Ogre::AxisAlignedBox& bounds=mesh->getBounds();const RoomObjectPath::FurnitureScale scale=RoomObjectPath::bedPlacement(row,5,7,size.width,size.height,0,"Creature1").scale;
   const std::string meshName=row.name;object.scale={scale.x,scale.y};
@@ -140,7 +153,15 @@ with tempfile.TemporaryDirectory(prefix='odp-room-bounds-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
-    result = subprocess.run([str(work / 'check.exe'), str(repo)], cwd=work, capture_output=True, text=True)
+    # The meshes of a room package are read from the package; without the package its rows are left out
+    folders = ';'.join(str(folder / 'models') for folder in room_packages.packages(repo).values()
+                       if (folder / 'models').is_dir())
+    missing = ';'.join(sorted(Path(relative).stem for relative in room_packages.ASSET_ROOMS
+                              if relative.endswith('.mesh') and room_packages.is_missing_packaged(repo, relative)))
+    if missing:
+        print('room packages not present, their meshes are not measured: ' + missing.replace(';', ' '))
+    result = subprocess.run([str(work / 'check.exe'), str(repo), folders, missing], cwd=work, capture_output=True,
+                            text=True)
     print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
     if result.returncode:
         print(result.stderr)

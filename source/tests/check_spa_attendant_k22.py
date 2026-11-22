@@ -405,6 +405,17 @@ RENDER_REFERENCE = {  # zlib + hex of the uint8 renders of the figure before the
 }
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Spa')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
 helper_source = (ROOT / 'source/tests/check_spa_owner_863.py').read_text(encoding='utf-8')
 helpers = {'__file__': str(ROOT / 'source/tests/check_spa_owner_863.py')}
 exec(compile(helper_source[:helper_source.index('def check_pose')], 'check_spa_owner_863_helpers', 'exec'), helpers)
@@ -414,15 +425,23 @@ KEY = 1.0 / 24
 
 
 def read(name):
-    """Read a repository text file."""
-    return (ROOT / name).read_text(encoding='utf-8', errors='replace')
+    """Read a repository text file (the CREDITS of the content repository too, for the rows of the spa package)."""
+    if name == 'CREDITS':
+        return room_packages.credits_text(ROOT)
+    return room_file(name).read_text(encoding='utf-8', errors='replace')
+
+
+if not ROOM_ASSETS:
+    print('check_spa_attendant_k22: not checked, the spa room package is not present (the check measures its assets only)')
+    sys.exit(0)
+
 
 
 with tempfile.TemporaryDirectory(prefix='spa-k22-') as folder:
     converted = {}
     for name in ('PoolAttendant.mesh', 'PoolAttendant.skeleton', 'SpaChair.mesh'):
         path = Path(folder) / (name + '.xml')
-        result = subprocess.run([str(CONVERTER), str(ROOT / 'models' / name), str(path)], capture_output=True, text=True,
+        result = subprocess.run([str(CONVERTER), str(room_file('models/' + name)), str(path)], capture_output=True, text=True,
                                 cwd=folder)
         assert result.returncode == 0, result.stdout + result.stderr
         converted[name] = ET.parse(path).getroot()
@@ -777,7 +796,7 @@ for bone in ('UpperArm_R', 'Forearm_R'):
     assert worst < 30, 'Whistle: %s turns %.0f degrees between two keys' % (bone, worst)
 
 # ---- 6. Textures show on every surface ----------------------------------------------------------------------------------
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (ROOT / 'materials/scripts').glob('*.material'))
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(ROOT, 'materials/scripts', '*.material'))
 
 
 def texture_of(material):
@@ -786,7 +805,7 @@ def texture_of(material):
     assert block, material + ' is not defined'
     name = re.search(r'^\s*texture\s+(\S+)', block.group(0), re.M)
     assert name, material + ' has no texture'
-    image = np.asarray(Image.open(ROOT / 'materials/textures' / name.group(1)).convert('L'), dtype=float) / 255
+    image = np.asarray(Image.open(room_file('materials/textures/' + name.group(1))).convert('L'), dtype=float) / 255
     return image
 
 
@@ -866,8 +885,8 @@ facing = np.cross(b - a, c - a)[:, 1] < 0
 white = front_area[facing].sum()
 assert white < EYE_WHITE_MAX_AREA, 'the eye whites are too big (%.6f m2 seen from the front)' % white
 # the face is shaded: its texture, sampled at its texture coordinates, has dark folds and a ruddy nose
-face_image = np.asarray(Image.open(ROOT / 'materials/textures' / re.search(
-    r'^material SpaAttendantFace\b[^\n]*\n\{.*?texture\s+(\S+)', materials, re.M | re.S).group(1)).convert('RGB'), float) / 255
+face_image = np.asarray(Image.open(room_file('materials/textures/' + re.search(
+    r'^material SpaAttendantFace\b[^\n]*\n\{.*?texture\s+(\S+)', materials, re.M | re.S).group(1))).convert('RGB'), float) / 255
 fh, fw, _ = face_image.shape
 face_uv = uvs[verts('SpaAttendantFace')]
 texels = face_image[np.clip((face_uv[:, 1] * fh).astype(int), 0, fh - 1), (face_uv[:, 0] * fw).astype(int) % fw]

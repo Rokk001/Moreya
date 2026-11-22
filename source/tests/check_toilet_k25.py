@@ -20,11 +20,22 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the toilet come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Toilet')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
 START = time.monotonic()
 
 
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8', errors='replace')
+    return room_file(path).read_text(encoding='utf-8', errors='replace')
 
 
 def body(source, signature):
@@ -43,102 +54,103 @@ place_y = float(re.search(r'constexpr float toiletSeatPlaceY = ([.\d]+)f;', boun
 # 1. The shipped seat mesh: its bounds are the catalog bounds, it fits its tile with the back at the wall, the stone top is
 #    at the height the user is drawn at, the hole goes down into a shaft under the place of the user, and the lid stands
 #    up at the back with a real thickness.
-converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
-work = Path(tempfile.mkdtemp(prefix='toilet_k25_'))
-target = work / 'ToiletSeat.mesh.xml'
-subprocess.run([converter, '-q', '-log', str(target) + '.log', str(ROOT / 'models' / 'ToiletSeat.mesh'), str(target)],
-               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=120, check=True)
-tree = ET.parse(target).getroot()
-submeshes = list(tree.iter('submesh'))
-assert [s.get('material') for s in submeshes] == ['ToiletSeat'], 'the seat uses the one material ToiletSeat'
+if ROOM_ASSETS:
+    converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
+    work = Path(tempfile.mkdtemp(prefix='toilet_k25_'))
+    target = work / 'ToiletSeat.mesh.xml'
+    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(room_file('models/ToiletSeat.mesh')), str(target)],
+                   stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=120, check=True)
+    tree = ET.parse(target).getroot()
+    submeshes = list(tree.iter('submesh'))
+    assert [s.get('material') for s in submeshes] == ['ToiletSeat'], 'the seat uses the one material ToiletSeat'
 
 
-def corners(geometry):
-    """Positions and texture coordinates of a geometry block (they may sit in separate vertex buffers)."""
-    pos, tex = [], []
-    for vb in geometry.iter('vertexbuffer'):
-        for v in vb.iter('vertex'):
-            p, t = v.find('position'), v.find('texcoord')
-            if p is not None:
-                pos.append((float(p.get('x')), float(p.get('y')), float(p.get('z'))))
-            if t is not None:
-                tex.append((float(t.get('u')), float(t.get('v'))))
-    return pos, tex
+    def corners(geometry):
+        """Positions and texture coordinates of a geometry block (they may sit in separate vertex buffers)."""
+        pos, tex = [], []
+        for vb in geometry.iter('vertexbuffer'):
+            for v in vb.iter('vertex'):
+                p, t = v.find('position'), v.find('texcoord')
+                if p is not None:
+                    pos.append((float(p.get('x')), float(p.get('y')), float(p.get('z'))))
+                if t is not None:
+                    tex.append((float(t.get('u')), float(t.get('v'))))
+        return pos, tex
 
 
-positions, uvs, triangles = [], [], []
-shared = tree.find('sharedgeometry')
-if shared is not None:
-    positions, uvs = corners(shared)
-for sm in submeshes:
-    base = 0
-    own = sm.find('geometry')
-    if own is not None:
-        base = len(positions)
-        pos, tex = corners(own)
-        positions += pos
-        uvs += tex
-    for f in sm.iter('face'):
-        triangles.append(tuple(base + int(f.get(k)) for k in ('v1', 'v2', 'v3')))
-assert len(positions) == len(uvs) > 0, 'every vertex of the seat has a texture coordinate'
-P = np.array(positions)
-assert 400 <= len(triangles) <= 3000, 'triangles %d: detailed, but in the range of the other room furniture' % len(triangles)
-lo, hi = P.min(0), P.max(0)
-for got, want, name in ((lo[0], min_x, 'minX'), (lo[1], min_y, 'minY'), (hi[0], max_x, 'maxX'), (hi[1], max_y, 'maxY')):
-    assert abs(got - want) <= 2e-5, 'catalog %s %.6f differs from the mesh %.6f' % (name, want, got)
-assert -0.5 < lo[0] and hi[0] < 0.5 and hi[1] <= 0.5 and lo[1] >= -0.1, 'the seat stands in its tile, back at the wall (+y)'
-assert abs(lo[2]) < 1e-4, 'the seat stands on the floor'
-stone = P[P[:, 1] < 0.35]
-assert abs(stone[:, 2].max() - seat_top) <= 0.006, 'stone top %.3f, users are drawn at %.3f' % (stone[:, 2].max(), seat_top)
-# hole: an oval opening around the place of the user that goes down at least 10 cm
-inside = P[(P[:, 2] < seat_top - 0.10) & (np.abs(P[:, 0]) < 0.08) & (P[:, 1] > place_y - 0.1) & (P[:, 1] < place_y + 0.12)]
-assert len(inside) >= 8, 'no shaft below the hole'
-hole_centre_y = inside[:, 1].mean()
-assert abs(hole_centre_y - place_y) <= 0.06, 'the user sits over the hole (place %.3f, hole %.3f)' % (place_y, hole_centre_y)
-top_ring = P[(np.abs(P[:, 2] - seat_top) < 0.02) & (np.abs(P[:, 0]) < 0.12) & (np.abs(P[:, 1] - hole_centre_y) < 0.12)]
-assert len(top_ring) >= 16, 'the rim of the hole lies in the stone top'
-# lid: standing at the back, higher than the seat, with thickness
-lid = P[P[:, 2] > seat_top + 0.15]
-assert len(lid) >= 16 and lid[:, 1].min() >= 0.36, 'the wooden lid stands up at the back of the seat'
-assert lid[:, 1].max() - lid[:, 1].min() >= 0.03, 'the lid has a thickness and leans back'
-assert hi[2] - seat_top >= 0.2, 'the lid rises at least 20 cm above the stone top'
-# depth: the outline of the stone is not flat (cap slab over the base, rough blocks)
-assert len(set(np.round(P[:, 2], 3))) >= 20, 'the seat has relief, not a flat box'
+    positions, uvs, triangles = [], [], []
+    shared = tree.find('sharedgeometry')
+    if shared is not None:
+        positions, uvs = corners(shared)
+    for sm in submeshes:
+        base = 0
+        own = sm.find('geometry')
+        if own is not None:
+            base = len(positions)
+            pos, tex = corners(own)
+            positions += pos
+            uvs += tex
+        for f in sm.iter('face'):
+            triangles.append(tuple(base + int(f.get(k)) for k in ('v1', 'v2', 'v3')))
+    assert len(positions) == len(uvs) > 0, 'every vertex of the seat has a texture coordinate'
+    P = np.array(positions)
+    assert 400 <= len(triangles) <= 3000, 'triangles %d: detailed, but in the range of the other room furniture' % len(triangles)
+    lo, hi = P.min(0), P.max(0)
+    for got, want, name in ((lo[0], min_x, 'minX'), (lo[1], min_y, 'minY'), (hi[0], max_x, 'maxX'), (hi[1], max_y, 'maxY')):
+        assert abs(got - want) <= 2e-5, 'catalog %s %.6f differs from the mesh %.6f' % (name, want, got)
+    assert -0.5 < lo[0] and hi[0] < 0.5 and hi[1] <= 0.5 and lo[1] >= -0.1, 'the seat stands in its tile, back at the wall (+y)'
+    assert abs(lo[2]) < 1e-4, 'the seat stands on the floor'
+    stone = P[P[:, 1] < 0.35]
+    assert abs(stone[:, 2].max() - seat_top) <= 0.006, 'stone top %.3f, users are drawn at %.3f' % (stone[:, 2].max(), seat_top)
+    # hole: an oval opening around the place of the user that goes down at least 10 cm
+    inside = P[(P[:, 2] < seat_top - 0.10) & (np.abs(P[:, 0]) < 0.08) & (P[:, 1] > place_y - 0.1) & (P[:, 1] < place_y + 0.12)]
+    assert len(inside) >= 8, 'no shaft below the hole'
+    hole_centre_y = inside[:, 1].mean()
+    assert abs(hole_centre_y - place_y) <= 0.06, 'the user sits over the hole (place %.3f, hole %.3f)' % (place_y, hole_centre_y)
+    top_ring = P[(np.abs(P[:, 2] - seat_top) < 0.02) & (np.abs(P[:, 0]) < 0.12) & (np.abs(P[:, 1] - hole_centre_y) < 0.12)]
+    assert len(top_ring) >= 16, 'the rim of the hole lies in the stone top'
+    # lid: standing at the back, higher than the seat, with thickness
+    lid = P[P[:, 2] > seat_top + 0.15]
+    assert len(lid) >= 16 and lid[:, 1].min() >= 0.36, 'the wooden lid stands up at the back of the seat'
+    assert lid[:, 1].max() - lid[:, 1].min() >= 0.03, 'the lid has a thickness and leans back'
+    assert hi[2] - seat_top >= 0.2, 'the lid rises at least 20 cm above the stone top'
+    # depth: the outline of the stone is not flat (cap slab over the base, rough blocks)
+    assert len(set(np.round(P[:, 2], 3))) >= 20, 'the seat has relief, not a flat box'
 
-# 2. The texture: every face samples one part of the atlas; stone, wood, iron and hole each have surface detail, colours
-#    in the dark dungeon range of the style guide and no near-white texel.
-decals = (ROOT / 'tools' / 'gen_dirt_decals.py').read_text(encoding='utf-8')
-regions = ast.literal_eval(re.search(r'^SEAT_REGIONS = (\{.*?\})$', decals, re.M | re.S).group(1))
-image = np.asarray(Image.open(ROOT / 'materials' / 'textures' / 'ToiletSeat.png').convert('RGB')).astype(float)
-assert image.shape[:2] == (512, 512), 'the seat atlas is 512 x 512'
-assert image.max() <= 200, 'near-white texels in the seat texture (max %d)' % image.max()
-used = {name: 0 for name in regions}
-for tri in triangles:
-    px = [(uvs[i][0] * 512.0, uvs[i][1] * 512.0) for i in tri]
-    owner = [name for name, (x0, y0, x1, y1) in regions.items()
-             if all(x0 - 0.5 <= x <= x1 + 0.5 and y0 - 0.5 <= y <= y1 + 0.5 for x, y in px)]
-    assert owner, 'a face of the seat samples across atlas parts: %s' % (px,)
-    used[owner[0]] += 1
-assert all(used[name] > 0 for name in ('stone_top', 'stone_side', 'lid', 'iron', 'hole')), used
-
-
-def region_stats(name):
-    x0, y0, x1, y1 = regions[name]
-    part = image[y0:y1, x0:x1].reshape(-1, 3)
-    lum = part @ np.array([0.299, 0.587, 0.114])
-    sat = (part.max(1) - part.min(1)) / np.maximum(part.max(1), 1.0)
-    return lum.mean(), lum.std(), sat.mean()
+    # 2. The texture: every face samples one part of the atlas; stone, wood, iron and hole each have surface detail, colours
+    #    in the dark dungeon range of the style guide and no near-white texel.
+    decals = (ROOT / 'tools' / 'gen_dirt_decals.py').read_text(encoding='utf-8')
+    regions = ast.literal_eval(re.search(r'^SEAT_REGIONS = (\{.*?\})$', decals, re.M | re.S).group(1))
+    image = np.asarray(Image.open(room_file('materials/textures/ToiletSeat.png')).convert('RGB')).astype(float)
+    assert image.shape[:2] == (512, 512), 'the seat atlas is 512 x 512'
+    assert image.max() <= 200, 'near-white texels in the seat texture (max %d)' % image.max()
+    used = {name: 0 for name in regions}
+    for tri in triangles:
+        px = [(uvs[i][0] * 512.0, uvs[i][1] * 512.0) for i in tri]
+        owner = [name for name, (x0, y0, x1, y1) in regions.items()
+                 if all(x0 - 0.5 <= x <= x1 + 0.5 and y0 - 0.5 <= y <= y1 + 0.5 for x, y in px)]
+        assert owner, 'a face of the seat samples across atlas parts: %s' % (px,)
+        used[owner[0]] += 1
+    assert all(used[name] > 0 for name in ('stone_top', 'stone_side', 'lid', 'iron', 'hole')), used
 
 
-for name, (y_lo, y_hi, sat_hi, detail) in {'stone_top': (55, 90, 0.30, 6), 'stone_side': (45, 90, 0.30, 6),
-                                          'lid': (35, 65, 0.45, 5), 'iron': (35, 65, 0.30, 3)}.items():
-    lum, std, sat = region_stats(name)
-    assert y_lo <= lum <= y_hi and sat <= sat_hi, '%s: luminance %.1f sat %.2f outside the dark dungeon range' % (name, lum, sat)
-    assert std >= detail, '%s: luminance spread %.1f, the surface is flat' % (name, std)
-assert region_stats('hole')[0] <= 25, 'the hole is dark'
-assert region_stats('lid')[0] < region_stats('stone_top')[0], 'dark wood against lighter stone'
-material = read('materials/scripts/ToiletSeat.material')
-assert re.search(r'^\s*texture ToiletSeat\.png\s*$', material, re.M) and 'tex_address_mode clamp' in material
+    def region_stats(name):
+        x0, y0, x1, y1 = regions[name]
+        part = image[y0:y1, x0:x1].reshape(-1, 3)
+        lum = part @ np.array([0.299, 0.587, 0.114])
+        sat = (part.max(1) - part.min(1)) / np.maximum(part.max(1), 1.0)
+        return lum.mean(), lum.std(), sat.mean()
+
+
+    for name, (y_lo, y_hi, sat_hi, detail) in {'stone_top': (55, 90, 0.30, 6), 'stone_side': (45, 90, 0.30, 6),
+                                              'lid': (35, 65, 0.45, 5), 'iron': (35, 65, 0.30, 3)}.items():
+        lum, std, sat = region_stats(name)
+        assert y_lo <= lum <= y_hi and sat <= sat_hi, '%s: luminance %.1f sat %.2f outside the dark dungeon range' % (name, lum, sat)
+        assert std >= detail, '%s: luminance spread %.1f, the surface is flat' % (name, std)
+    assert region_stats('hole')[0] <= 25, 'the hole is dark'
+    assert region_stats('lid')[0] < region_stats('stone_top')[0], 'dark wood against lighter stone'
+    material = read('materials/scripts/ToiletSeat.material')
+    assert re.search(r'^\s*texture ToiletSeat\.png\s*$', material, re.M) and 'tex_address_mode clamp' in material
 
 # 3. Solid seats in the navigation and the user drawn on top of the seat
 nav = read('source/gamemap/RoomObjectNavigation.cpp')

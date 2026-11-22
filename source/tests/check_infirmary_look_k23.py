@@ -41,7 +41,15 @@ import xml.etree.ElementTree as ET
 from PIL import Image, ImageFilter, ImageStat
 
 ROOT = Path(__file__).resolve().parents[2]
-ASSETS = Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+# The infirmary assets lie in the infirmary room package (scripts/room_packages.py); this check measures only them
+INFIRMARY_PACKAGE = room_packages.package(ROOT, 'Infirmary')
+ASSETS = Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else (INFIRMARY_PACKAGE or ROOT)
+if '--assets' not in sys.argv and INFIRMARY_PACKAGE is None:
+    print('infirmary look: not checked, the infirmary room package is not present (the check measures its assets only)')
+    sys.exit(0)
 FURNITURE = ('InfirmaryCotSmall', 'InfirmaryCotMedium', 'InfirmaryCotLarge', 'MedicineCabinet', 'InstrumentTable',
              'WashBasin', 'HerbShelf')
 CLIPS = {'Idle', 'Walk', 'Chant', 'RattleShake', 'HerbSniff', 'PotionTaste', 'TripOverBucket', 'Dance'}

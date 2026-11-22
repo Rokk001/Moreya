@@ -13,6 +13,17 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir, resolve  # noqa: E402
+sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 
 # Read one shipped text asset.
 def read(path):
@@ -23,7 +34,10 @@ def credited(path, credits):
     asset = resolve(repo, path)
     assert asset.is_file() and asset.stat().st_size, path
     rows = [row for row in credits.splitlines() if path in row]
-    assert any(any(licence in row for licence in ('GPL','CC0','CC-BY','public domain')) for row in rows), path
+    # The rows of the room package stand in the CREDITS of the content repository under its licence
+    packaged = room_packages.content_credit_rows(repo)
+    assert any(any(licence in row for licence in ('GPL','CC0','CC-BY','public domain')) or
+               (row in packaged and 'All rights reserved' in row) for row in rows), path
     return rows
 
 # Read actual native animation chunks using the maintained serializer parser.
@@ -41,7 +55,7 @@ def clips(credits):
         skeleton = mesh.removesuffix('.mesh')+'.skeleton'
         credited('models/'+skeleton, credits)
         credited('assets-src/creatures/ghosts/'+skeleton.removesuffix('.skeleton')+'.blend', credits)
-        _, chunks = module.chunks((repo/'models'/skeleton).read_bytes())
+        _, chunks = module.chunks(room_file('models/'+skeleton).read_bytes())
         animations = {name:data for kind,name,data in chunks if kind==module.ANIMATION}
         expected = ('Scared',) if creature in scared else ('Beam','Throw','Empty')
         for name in expected:
@@ -56,7 +70,7 @@ def clips(credits):
 # Check the actual cauldron export, its reachable seat, material set and timed clips (decision 894).
 def cauldron_delivery(credits, chunks_module):
     credited('models/GhostCauldron.skeleton', credits)
-    mesh = (repo/'models/GhostCauldron.mesh').read_bytes()
+    mesh = room_file('models/GhostCauldron.mesh').read_bytes()
     assert b'GhostCauldron.skeleton\n' in mesh, 'cauldron rig link'
     materials = sorted(set(name.decode() for name in re.findall(rb'(Ghost[A-Za-z]+)\n', mesh)))
     assert materials == ['GhostBrass','GhostCauldronEctoplasm','GhostCoal','GhostEctoplasm','GhostEmbers','GhostIron',
@@ -100,7 +114,7 @@ def cauldron_delivery(credits, chunks_module):
     assert len({vertex for vertex,bone,weight in assignments if weight > 0}) == count, 'unweighted vertices'
     assert all(bone in (0,2) and abs(weight-1)<1e-6 for vertex,bone,weight in assignments), 'rigid body or inset glow weights'
 
-    _, chunks = chunks_module.chunks((repo/'models/GhostCauldron.skeleton').read_bytes())
+    _, chunks = chunks_module.chunks(room_file('models/GhostCauldron.skeleton').read_bytes())
     bones = {data[6:data.index(b'\n',6)].decode(): data for kind,name,data in chunks if kind == chunks_module.BONE}
     assert set(bones) == {'Root','DeliverySocket','DeliveryGlow'}, set(bones)
     socket = bones['DeliverySocket']
@@ -116,7 +130,7 @@ def cauldron_delivery(credits, chunks_module):
         assert {bone for kind,bone,track in tracks if kind == 0x4100} == {1,2}, (name,'socket/glow tracks')
     # The independent client-controlled inspection-window fill: the decision 845 geometry with the textured, moving
     # GhostCauldronEctoplasm and planar UVs of decision 998 point 6 (check_ghost_cauldron_ectoplasm.py), byte for byte.
-    assert hashlib.sha256((repo/'models/GhostCauldronFill.mesh').read_bytes()).hexdigest() == \
+    assert hashlib.sha256(room_file('models/GhostCauldronFill.mesh').read_bytes()).hexdigest() == \
         '86f6e60d854a391752facbf6e4c3eb330188df0ba654df3235d6a62924b474d7', 'inspection fill changed'
 
 
@@ -140,8 +154,29 @@ def hose_coupling(credits):
 
 
 # Check all original ghost assets and their runtime registrations.
+def code_side():
+    """The source side of the ghost room assets, checked without the ghost room package."""
+    apparatus = read('source/rooms/RoomGhostRoom.cpp')
+    assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress","SoulForge"\}',apparatus), 'apparatus meshes'
+    assert 'ItemInstance::createSoulCrystal()' in apparatus, 'level crystal'
+    items = read('source/entities/ItemBagEntity.cpp')
+    for needle in ('MANA_CRYSTAL_MESH = "ManaCrystal"','RESEARCH_BOOK_MESH = "Grimoire"','ECTOPLASM_MESH = "Ectoplasm"'):
+        assert needle in items, needle
+    bounds = read('source/gamemap/RoomObjectBounds.h')
+    for name in ('ManaStill','GhostPress','SoulForge','GhostCauldron','GhostCauldronFill','CrystalBowl','GhostBell','GhostHook',
+            'GhostHookEmpty','GhostWallGauges','GhostRack'):
+        assert re.search(r'\{"'+name+r'"\s*,',bounds), name
+    assert 'Rooms/GhostRoom/Hum' in read('config/roomAmbience.cfg')
+    events = read('config/roomAmbienceSpells.cfg')
+    assert 'SpellFxWorkerVanish' in events and re.search(r'System\s+WorkerVanish\b',events)
+
+
 def main():
-    credits = read('CREDITS')
+    if not ROOM_ASSETS:
+        code_side()
+        print('ghost assets: ok (ghost room package not present: source side only)')
+        return
+    credits = room_packages.credits_text(repo)
     hose_coupling(credits)
     models = ('GhostCauldron','GhostCauldronFill','CrystalBowl','GhostBell','GhostHook','GhostHookEmpty',
         'GhostWallGauges','GhostBackpack','GhostBox','SoulCrystal','GhostRack')
@@ -155,10 +190,10 @@ def main():
     chunks_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(chunks_module)
     cauldron_delivery(credits, chunks_module)
-    _, chunks = chunks_module.chunks((repo/'models/ManaStill.skeleton').read_bytes())
+    _, chunks = chunks_module.chunks(room_file('models/ManaStill.skeleton').read_bytes())
     still_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
     assert {'Working','Idle','Locked'} <= still_clips, still_clips
-    assert b'ManaStill.skeleton' in (repo/'models/ManaStill.mesh').read_bytes()
+    assert b'ManaStill.skeleton' in room_file('models/ManaStill.mesh').read_bytes()
     apparatus = read('source/rooms/RoomGhostRoom.cpp')
     assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill",',apparatus), 'mana still mesh'
     assert 'MANA_CRYSTAL_MESH = "ManaCrystal"' in read('source/entities/ItemBagEntity.cpp')
@@ -172,7 +207,7 @@ def main():
         'ManaStillPuff.png','ManaStillCoilCopper.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
     for texture in textures:
         credited('materials/textures/'+texture,credits)
-    still_mesh = (repo/'models/ManaStill.mesh').read_bytes()
+    still_mesh = room_file('models/ManaStill.mesh').read_bytes()
     for name in ('ManaStillIron','ManaStillCoilGlass','ManaStillCoil','ManaStillEmbers','ManaStillBanked','ManaStillFireGlow',
             'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand','ManaStillCopper',
             'ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillResidue','ManaStillCoilCopper',
@@ -182,7 +217,7 @@ def main():
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
             for file in texture.split():
                 if file.endswith('.png'):
-                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+                    assert room_file('materials/textures/'+file).is_file(), (name,file)
         assert name.encode()+b'\n' in still_mesh, ('mana still uses',name)
     # Visible motion: the embers flicker by texture, the coil ectoplasm flows, the vapour drifts.
     assert re.search(r'anim_texture ManaStillEmbers_0\.png( ManaStillEmbers_\d\.png){5} [\d.]+',still_material), 'ember flicker'
@@ -194,22 +229,22 @@ def main():
     # The coil band is lit with its own copper texture, which is not one flat colour (luminance spread 37.8 when painted,
     # the flat rework 2 copper had 9.7).
     assert re.search(r'^material ManaStillCoilCopper\s*\{(?:(?!^\}).)*texture ManaStillCoilCopper\.png',still_material,re.S|re.M), 'coil band'
-    with Image.open(repo/'materials/textures/ManaStillCoilCopper.png') as band:
+    with Image.open(room_file('materials/textures/ManaStillCoilCopper.png')) as band:
         luminance = list(band.convert('L').tobytes())
     mean = sum(luminance)/len(luminance)
     assert (sum((value-mean)**2 for value in luminance)/len(luminance))**0.5 > 30, 'coil copper texture is flat'
-    still_skeleton = (repo/'models/ManaStill.skeleton').read_bytes()
+    still_skeleton = room_file('models/ManaStill.skeleton').read_bytes()
     for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway',
             b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in still_skeleton, bone
-    assert b'ManaCrystal\n' in (repo/'models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
+    assert b'ManaCrystal\n' in room_file('models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
     # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.
     for path in ('models/GhostPress.mesh','models/GhostPress.skeleton'):
         credited(path,credits)
-    _, chunks = chunks_module.chunks((repo/'models/GhostPress.skeleton').read_bytes())
+    _, chunks = chunks_module.chunks(room_file('models/GhostPress.skeleton').read_bytes())
     press_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
     assert {'Working','Idle','Locked'} <= press_clips, press_clips
-    assert b'GhostPress.skeleton' in (repo/'models/GhostPress.mesh').read_bytes()
+    assert b'GhostPress.skeleton' in room_file('models/GhostPress.mesh').read_bytes()
     assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress",',apparatus), 'ghost press mesh'
     assert 'RESEARCH_BOOK_MESH = "Grimoire"' in read('source/entities/ItemBagEntity.cpp')
     for name in ('GhostBookLeather','GhostBookPages'):
@@ -219,7 +254,7 @@ def main():
     # Rework 2 (owner decision 686): heavy chains in their own steel, the book and green light also in Idle (dimmer).
     for texture in ['GhostPressIron.png','GhostPressPages.png','GhostPressRune.png','GhostPressStain.png','GhostPressChain.png']+['GhostPressGlow_%d.png'%k for k in range(4)]:
         credited('materials/textures/'+texture,credits)
-    press_mesh = (repo/'models/GhostPress.mesh').read_bytes()
+    press_mesh = room_file('models/GhostPress.mesh').read_bytes()
     for name in ('GhostPressIron','GhostPressEngraving','GhostPressEmblem','GhostPressPages','GhostPressRune','GhostPressFlow',
             'GhostPressVapour','GhostPressResidue','GhostBookLeather','GhostBrass','GhostEctoplasm','ManaStillWeb','ManaStillWebStrand',
             'GhostPressChain','GhostPressEmblemDim','GhostPressRuneDim','GhostPressGlow','GhostPressGlowDim','GhostPressPuff'):
@@ -228,7 +263,7 @@ def main():
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
             for file in texture.split():
                 if file.endswith('.png'):
-                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+                    assert room_file('materials/textures/'+file).is_file(), (name,file)
         assert name.encode()+b'\n' in press_mesh, ('ghost press uses',name)
     assert re.search(r'anim_texture GhostPressGlow_0\.png( GhostPressGlow_\d\.png){3} [\d.]+',still_material), 'emblem pulse'
     assert re.search(r'material GhostPressFlow\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'ectoplasm flow'
@@ -236,7 +271,7 @@ def main():
     assert re.search(r'^material GhostPressChain\s*\{(?:(?!^\}).)*texture GhostPressChain\.png',still_material,re.S|re.M), 'press chains'
     for name in ('GhostPressRuneDim','GhostPressGlow','GhostPressGlowDim','GhostPressPuff'):
         assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
-    press_skeleton = (repo/'models/GhostPress.skeleton').read_bytes()
+    press_skeleton = room_file('models/GhostPress.skeleton').read_bytes()
     for bone in (b'Root',b'Press',b'Handle',b'Glow',b'Drips',b'Dull',b'Webs',b'SpringL',b'Stream',b'RuneL',b'Drip1',b'Drop1',
             b'Wisp1',b'Mist',b'Residue',b'WebSway',b'Book',b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdleRuneL',
             b'IdleRuneR',b'IdleHalo',b'IdlePuff1',b'IdlePuff2'):
@@ -246,7 +281,7 @@ def main():
     # broad glow texture, a steady light set (bone Light: opening under the platen, pages, columns, emblem halos, floor)
     # shown in Working and Idle, and on top of it in Working the bright cards.
     credited('materials/textures/GhostApparatusGlow.png',credits)
-    with Image.open(repo/'materials/textures/GhostApparatusGlow.png') as glow:
+    with Image.open(room_file('materials/textures/GhostApparatusGlow.png')) as glow:
         glow_values = list(glow.convert('L').tobytes())
     assert sum(glow_values)/len(glow_values) > 70, 'apparatus glow texture is too small a spot'
     def manual_tint(name):
@@ -270,12 +305,12 @@ def main():
     # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
     for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):
         credited(path,credits)
-    forge_skeleton = (repo/'models/SoulForge.skeleton').read_bytes()
+    forge_skeleton = room_file('models/SoulForge.skeleton').read_bytes()
     _, chunks = chunks_module.chunks(forge_skeleton)
     forge_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
     assert {'Working','Idle','Locked'} <= forge_clips, forge_clips
     assert b'Hammer' in forge_skeleton, 'soul forge hammer bone'
-    assert b'SoulForge.skeleton' in (repo/'models/SoulForge.mesh').read_bytes()
+    assert b'SoulForge.skeleton' in room_file('models/SoulForge.mesh').read_bytes()
     assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress","SoulForge"\}',apparatus), 'soul forge mesh'
     assert 'ItemInstance::createSoulCrystal()' in apparatus, 'level crystal'
     assert re.search(r'^\s*material\s+GhostForgeFire\s*$',still_material,re.M), 'GhostForgeFire'
@@ -285,7 +320,7 @@ def main():
     # additive green light in the grate, on the floor and over the crystals, dim idle cores and glow.
     for texture in ['SoulForgeStone.png','SoulForgeIron.png','SoulForgeSteel.png','SoulForgeSpark.png']+['SoulForgeFire_%d.png'%k for k in range(4)]:
         credited('materials/textures/'+texture,credits)
-    forge_mesh = (repo/'models/SoulForge.mesh').read_bytes()
+    forge_mesh = room_file('models/SoulForge.mesh').read_bytes()
     for name in ('SoulForgeStone','SoulForgeIron','SoulForgeFire','SoulForgeGlow','SoulForgeSpark','GhostCoal','ManaStillEmbers',
             'ManaStillBanked','GhostEctoplasm','GhostPressFlow','GhostCrystalCore','GhostEmbers','GhostPressVapour',
             'GhostPressResidue','ManaStillWeb','ManaStillWebStrand','SoulForgeSteel','SoulForgeCrystal','SoulForgeCoreDim',
@@ -295,7 +330,7 @@ def main():
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
             for file in texture.split():
                 if file.endswith('.png'):
-                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+                    assert room_file('materials/textures/'+file).is_file(), (name,file)
         assert name.encode()+b'\n' in forge_mesh, ('soul forge uses',name)
     assert re.search(r'anim_texture SoulForgeFire_0\.png( SoulForgeFire_\d\.png){3} [\d.]+',still_material), 'forge flame flicker'
     # The anvil face, grate bars and hammer head are lit steel with their own texture; the green light is additive.
@@ -320,7 +355,7 @@ def main():
         assert bone+b'\n' in forge_skeleton, bone
     # Ectoplasm item: its own static mesh replaces the cauldron fill placeholder (the cauldron keeps its fill level).
     credited('models/Ectoplasm.mesh',credits)
-    assert (repo/'models/Ectoplasm.mesh').read_bytes()[2:20] == b'[MeshSerializer_v1', 'ectoplasm mesh'
+    assert room_file('models/Ectoplasm.mesh').read_bytes()[2:20] == b'[MeshSerializer_v1', 'ectoplasm mesh'
     assert 'ECTOPLASM_MESH = "Ectoplasm"' in read('source/entities/ItemBagEntity.cpp')
     for name in ('EctoplasmShell','EctoplasmSwirl','GhostEctoplasm'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
@@ -352,7 +387,7 @@ def main():
             'Rooms/GhostRoom/BoxSnap','Rooms/GhostRoom/PressHiss','Rooms/GhostRoom/CrystalRing'):
         path = 'sounds/Spatial/'+family+'/'+family.rsplit('/',1)[1]+'.ogg'
         rows = credited(path,credits)
-        assert (repo/path).read_bytes().startswith(b'OggS'), path
+        assert room_file(path).read_bytes().startswith(b'OggS'), path
         assert any('CC0' in row and 'https://freesound.org/' in row for row in rows), path
     imageset = ET.parse(repo/'gui/ODIcons.imageset').getroot()
     icon = imageset.find("Image[@name='GhostRoomButton']")

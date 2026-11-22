@@ -12,6 +12,8 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402  (room models are read from their room package)
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'tools/blender-assets'))
 import author_chicken_wings as wings
@@ -26,7 +28,8 @@ import retime_animation_chunk as retiming
 def export(name, out, return_tree=True):
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     target = out / (name + '.xml')
-    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(ROOT / 'models' / name), str(target)],
+    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(room_packages.resolve(ROOT, 'models/' + name)),
+                    str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
     return ET.parse(target).getroot() if return_tree else None
 

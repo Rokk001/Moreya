@@ -25,10 +25,26 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(root, 'Spa')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(root, relative)
+
+
+if not ROOM_ASSETS:
+    print('check_spa_owner_837: not checked, the spa room package is not present (the check measures its assets only)')
+    sys.exit(0)
 
 
 def read(relative):
-    return (root / relative).read_text(encoding='utf-8')
+    return room_file(relative).read_text(encoding='utf-8')
 
 
 def body(text, signature):
@@ -131,7 +147,7 @@ keep = body(attendant_cpp, 'void PoolAttendantEntity::addEntityToPositionTile(')
 assert keep.index('const float height = getPosition().z;') < keep.index('RenderedMovableEntity::addEntityToPositionTile(gameMap);') \
     < keep.index('setEntityHeight(height);'), 'the attendant must keep the height he was given when he enters a tile'
 seat_height = float(re.search(r'const double CHAIR_SEAT_HEIGHT = ([0-9.]+);', attendant_cpp).group(1))
-chair, chair_bounds = read_mesh(root / 'models/SpaChair.mesh')
+chair, chair_bounds = read_mesh(room_file('models/SpaChair.mesh'))
 wood = [q for material, points in chair if material == 'SpaChairWood' for q in points]  # K22: the chair's own textured wood
 seat_top = max(q[2] for q in wood if q[2] < 1.2)  # the seat plate is the highest part below the armrests (1.28)
 assert abs(seat_top - seat_height) < 0.01, 'CHAIR_SEAT_HEIGHT %.3f must be the top of the seat plate %.3f' % (seat_height, seat_top)
@@ -145,7 +161,7 @@ assert re.search(r'const double ATTENDANT_ANGLE = 180\.0;', room_cpp) and \
 assert re.search(r'const double LADDER_FOOT_OFFSET = -0\.4;', attendant_cpp), 'the foot of the ladder is behind the chair'
 assert 'const Ogre::Vector3 TOWARDS_CHAIR = TOWARDS_POOL;' in attendant_cpp and 'AWAY_FROM_POOL' not in attendant_cpp
 assert attendant_cpp.count('setAnimationState(PoolAttendantPose::climb, true, TOWARDS_CHAIR, false);') == 2
-springboard, _ = read_mesh(root / 'models/SpaSpringboard.mesh')
+springboard, _ = read_mesh(room_file('models/SpaSpringboard.mesh'))
 board = [q for material, points in springboard if material == 'SpaWood' for q in points]
 stone = [q for material, points in springboard if material == 'SpaStone' for q in points]
 assert span(board, 1)[1] > 0.45 and span(stone, 1)[1] < 0.0, 'the board of SpaSpringboard reaches out on +y (180: over the pool)'
@@ -160,7 +176,7 @@ assert row and all(abs(float(a) - b) < 0.00002 for a, b in zip(row.groups(), (ch
                                                                             chair_bounds[3], chair_bounds[4]))), \
     'the SpaChair row of meshBounds must be the bounds of the mesh with the lifebuoy'
 # Towel and whistle are parts of his mesh
-attendant_mesh = (root / 'models/PoolAttendant.mesh').read_bytes()
+attendant_mesh = (room_file('models/PoolAttendant.mesh')).read_bytes()
 assert b'SpaLinen' in attendant_mesh and b'SpaWhistle' in attendant_mesh
 assert (root / 'tools/spa-meshes/add_chair_lifebuoy.py').is_file()
 
@@ -172,7 +188,7 @@ assert 'scroll_anim 0.02 0.01' in mud, 'the slow scroll of the plan stays'
 specular = re.search(r'specular ([0-9.]+) ([0-9.]+) ([0-9.]+) 1 ([0-9.]+)', mud)
 assert specular and float(specular.group(1)) >= 0.3 and float(specular.group(4)) >= 16, 'the mud is wet and glossy'
 assert 'scene_blend' not in mud and 'depth_write off' not in mud, 'the mud stays opaque, it hides the bathers'
-texture = root / 'materials/textures/SpaMud.png'
+texture = room_file('materials/textures/SpaMud.png')
 try:
     from PIL import Image
     image = Image.open(texture).convert('RGB')
@@ -190,10 +206,10 @@ with tempfile.TemporaryDirectory() as folder:
     subprocess.run([sys.executable, str(root / 'tools/spa-textures/generate_spa_mud.py'), folder], check=True)
     assert hashlib.md5((Path(folder) / 'SpaMud.png').read_bytes()).digest() == hashlib.md5(texture.read_bytes()).digest(), \
         'SpaMud.png is the output of tools/spa-textures/generate_spa_mud.py'
-assert 'materials/textures/SpaMud.png' in read('CREDITS')
+assert 'materials/textures/SpaMud.png' in room_packages.credits_text(root)
 
 # ---- 3  The rim stands on the outer edges ------------------------------------------------------------------------------
-rim, _ = read_mesh(root / 'models/SpaPoolRim.mesh')
+rim, _ = read_mesh(room_file('models/SpaPoolRim.mesh'))
 rim_points = [q for _, points in rim for q in points]
 assert span(rim_points, 1)[1] < -0.4, 'SpaPoolRim lies on the -y edge of its tile'
 angles = {name: float(value) for name, value in re.findall(r'const double OBJECT_ANGLE_SIDE_(\w+) = ([0-9.]+);', room_cpp)}

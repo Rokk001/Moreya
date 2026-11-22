@@ -16,12 +16,25 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Spa')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
 CONVERTER = Path(os.environ.get('OGRE_XML_CONVERTER', str(Path.home() / 'build-deps/install/bin/OgreXMLConverter.exe')))
 
 
 def read(name):
-    """Read a game source file."""
-    return (ROOT / name).read_text(encoding='utf-8')
+    """Read a game source file (the CREDITS of the content repository too, for the rows of the spa package)."""
+    if name == 'CREDITS':
+        return room_packages.credits_text(ROOT)
+    return room_file(name).read_text(encoding='utf-8')
 
 
 def vector(element):
@@ -191,11 +204,14 @@ def check_pose(mesh, skeleton):
                 assert .45 < ratio < 1.65, 'shoulder skin collapses or stretches: %.3f at key %d' % (ratio, frame)
 
 
+if not ROOM_ASSETS:
+    print('check_spa_owner_863: not checked, the spa room package is not present (the check measures its assets only)')
+    sys.exit(0)
 with tempfile.TemporaryDirectory(prefix='spa-863-') as folder:
     converted = {}
     for name in ('SpaMudPool.mesh', 'SpaChair.mesh', 'PoolAttendant.mesh', 'PoolAttendant.skeleton'):
         path = Path(folder) / (name + '.xml')
-        result = subprocess.run([str(CONVERTER), str(ROOT / 'models' / name), str(path)], capture_output=True, text=True, cwd=folder)
+        result = subprocess.run([str(CONVERTER), str(room_file('models/' + name)), str(path)], capture_output=True, text=True, cwd=folder)
         assert result.returncode == 0, result.stdout + result.stderr
         converted[name] = ET.parse(path).getroot()
     check_pose(converted['PoolAttendant.mesh'], converted['PoolAttendant.skeleton'])
@@ -235,15 +251,16 @@ with tempfile.TemporaryDirectory(prefix='spa-863-') as folder:
     whistle = points_for(converted['PoolAttendant.mesh'], 'SpaWhistle')
     assert np.ptp(whistle[:, 0]) > .05 and np.ptp(whistle[:, 2]) > .095, 'whistle barrel and mouthpiece must read from the camera'
     subprocess.run([sys.executable, str(ROOT / 'tools/spa-textures/generate_spa_bubbles.py'), folder], check=True)
-    assert (Path(folder) / 'SpaMudBubble.png').read_bytes() == (ROOT / 'materials/textures/SpaMudBubble.png').read_bytes()
+    assert (Path(folder) / 'SpaMudBubble.png').read_bytes() == (room_file('materials/textures/SpaMudBubble.png')).read_bytes()
 
 material = read('materials/scripts/Spa.material')
 mud_material = material[material.index('material SpaMud '):material.index('material SpaMudBubble')]
 assert 'scroll_anim 0.02 0.01' in mud_material and 'tex_address_mode wrap' in mud_material
 assert 'specular 0.5 0.42 0.32 1 36' in mud_material
 assert 'scene_blend' not in mud_material and 'depth_write off' not in mud_material, 'D6 mud must stay opaque'
-particles = read('particles/RoomAmbienceProduction.particle')
-bubbles = particles[particles.index('particle_system SpaMudBubbles'):particles.index('// Something was finished')]
+# The spa systems moved out of the shared RoomAmbienceProduction.particle into the particle script of the spa package
+particles = read('particles/Spa.particle')
+bubbles = particles[particles.index('particle_system SpaMudBubbles'):]
 for required in ('material        SpaMudBubble', 'billboard_type  perpendicular_common', 'common_direction 0 0 1',
                  'position            0 0 0.256', 'emission_rate       2.5', 'rate    0.16', 'alpha   -1.6'):
     assert required in bubbles, required

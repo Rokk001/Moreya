@@ -21,6 +21,18 @@ import random
 import re
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 
 
 def read(path):
@@ -378,8 +390,11 @@ last = unit(sub(seat, moving[-20]))
 assert last[2] < -0.9, ('it comes down onto the seat from above', last)
 # The bottom of the trap mesh is its origin, so the trap set at the seat lies on it (bounds of models/GhostBox.mesh)
 import struct
-mesh = (repo / 'models/GhostBox.mesh').read_bytes()
-bounds = next(struct.unpack_from('<7f', mesh, i + 6) for i in range(len(mesh) - 34)
-              if struct.unpack_from('<HI', mesh, i) == (0x9000, 34))
-assert abs(bounds[2]) < 1e-6 and bounds[5] > 0.1, ('the trap stands on its origin', bounds)
+if ROOM_ASSETS:
+    mesh = room_file('models/GhostBox.mesh').read_bytes()
+    bounds = next(struct.unpack_from('<7f', mesh, i + 6) for i in range(len(mesh) - 34)
+                  if struct.unpack_from('<HI', mesh, i) == (0x9000, 34))
+    assert abs(bounds[2]) < 1e-6 and bounds[5] > 0.1, ('the trap stands on its origin', bounds)
+else:
+    print('the trap mesh: not checked, the ghost room package is not present')
 print('ghost pick-up and hand placement (decision 936 points 2 and 3): ok')

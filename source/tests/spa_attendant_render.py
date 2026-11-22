@@ -12,6 +12,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
+import room_packages  # noqa: E402  (the spa assets come from the spa room package)
+
 RENDER_PIXEL = 0.0125
 RENDER_HALF_WIDTH = 0.45
 RENDER_LIGHT = (-0.4, -0.6, 0.7)
@@ -24,13 +29,14 @@ VIEWS = {'game': ((0.0, math.sin(math.radians(25)), -math.cos(math.radians(25)))
 
 def material_colours(root, materials, overrides=None):
     """Texture (or None) and diffuse colour of every material from the material scripts."""
-    text = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (Path(root) / 'materials/scripts').glob('*.material'))
+    text = ''.join(p.read_text(encoding='utf-8', errors='replace')
+                   for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
     result = {}
     for name in materials:
         block = re.search(r'^material ' + re.escape(name) + r'\b[^\n]*\n\{.*?^\}', text, re.M | re.S).group(0)
         diffuse = np.array([float(x) for x in re.search(r'diffuse ([\d.]+) ([\d.]+) ([\d.]+)', block).groups()])
         texture = re.search(r'^\s*texture\s+(\S+)', block, re.M)
-        path = (overrides or {}).get(name) or (Path(root) / 'materials/textures' / texture.group(1) if texture else None)
+        path = (overrides or {}).get(name) or (room_packages.resolve(root, 'materials/textures/' + texture.group(1)) if texture else None)
         image = np.asarray(Image.open(path).convert('RGB'), dtype=np.float64) if path else None
         result[name] = (image, diffuse)
     return result

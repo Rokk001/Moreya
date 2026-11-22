@@ -16,6 +16,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import campaign_packages  # noqa: E402
+import room_packages  # noqa: E402
 
 STRING = r'"(?:\\.|[^"\\])*"'
 CPP_TOKEN = re.compile(STRING + r'|\b[A-Za-z_]\w*(?:::\w+)*\b|[^\s]')
@@ -79,8 +80,9 @@ def registered_flat_sound_families(root):
     paths = set(re.findall(
         r'const\s+std::string\s*&\s*(\w+)\s*=\s*'
         r'ResourceManager::getSingleton\(\)\.getSoundPath\(\)\s*;', text))
-    files = {p.relative_to(root / 'sounds').as_posix()
-             for p in (root / 'sounds').rglob('*.ogg') if p.is_file()}
+    # The loader reads the flat recordings from the game data and from the room packages that are present
+    files = {p.relative_to(base / 'sounds').as_posix() for base in [root] + room_packages.package_roots(root)
+             for p in (base / 'sounds').rglob('*.ogg') if p.is_file()}
     families = set()
     arrays = re.finditer(r'(?:static\s+)?const\s+char\s*\*\s*(?:const\s+)?'
                          r'(\w+)\s*\[\s*\]\s*=\s*\{([^{}]*)\}\s*;', text)
@@ -114,15 +116,17 @@ def registered_flat_sound_families(root):
 
 # Index the resources accepted by the production loaders.
 def inventory(root):
-    """Index logical script names, exact mesh filenames and loaded sound families."""
+    """Index logical script names, exact mesh filenames and loaded sound families, of the game data and of the room
+    packages that are present (the game adds their folders to the same resource group and sound families)."""
     assets = {'particle': set(), 'material': set(), 'mesh': set(), 'sound': set(), 'relative_sound': set()}
-    for path in (root / 'particles').rglob('*.particle'):
-        assets['particle'].update(script_names(path, 'particle'))
-    for path in (root / 'materials').rglob('*.material'):
-        assets['material'].update(script_names(path, 'material'))
-    assets['mesh'].update(path.name for path in (root / 'models').rglob('*.mesh'))
-    for path in (root / 'sounds/Spatial').rglob('*.ogg'):
-        assets['sound'].add(path.parent.relative_to(root / 'sounds/Spatial').as_posix())
+    for base in [root] + room_packages.package_roots(root):
+        for path in (base / 'particles').rglob('*.particle'):
+            assets['particle'].update(script_names(path, 'particle'))
+        for path in (base / 'materials').rglob('*.material'):
+            assets['material'].update(script_names(path, 'material'))
+        assets['mesh'].update(path.name for path in (base / 'models').rglob('*.mesh'))
+        for path in (base / 'sounds/Spatial').rglob('*.ogg'):
+            assets['sound'].add(path.parent.relative_to(base / 'sounds/Spatial').as_posix())
     assets['sound'].update(registered_flat_sound_families(root))
     # Incomplete voices fall back to Default in SoundEffectsManager::playRelativeSound.
     config_source = root / 'source/utils/ConfigManager.cpp'
@@ -504,7 +508,8 @@ def finite_name_references(root):
 def missing_references(root, refs, assets):
     """Return unresolved exact, case-sensitive names and file paths."""
     missing = []
-    sound_files = {p.relative_to(root / 'sounds').as_posix() for p in (root / 'sounds').rglob('*') if p.is_file()}
+    sound_files = {p.relative_to(base / 'sounds').as_posix() for base in [root] + room_packages.package_roots(root)
+                   for p in (base / 'sounds').rglob('*') if p.is_file()}
     music_files = {p.relative_to(root / 'music').as_posix() for p in (root / 'music').rglob('*') if p.is_file()}
     for ref in sorted(refs, key=lambda r: (r.path, r.line, r.kind, r.name)):
         if ref.kind == 'music_file':
@@ -515,9 +520,27 @@ def missing_references(root, refs, assets):
         else:
             names = assets[ref.kind]
             found = ref.name in names
+        if not found and packaged_elsewhere(root, ref):
+            continue
         if not found:
             missing.append(ref)
     return missing
+
+
+def packaged_elsewhere(root, ref):
+    """True for a name of a room package that is not present: only the code side of such a reference is checked."""
+    if ref.kind in ('particle', 'material'):
+        return room_packages.is_missing_packaged_name(root, ref.name)
+    if ref.kind == 'mesh':
+        return room_packages.is_missing_packaged(root, 'models/' + ref.name)
+    if ref.kind == 'sound':
+        # A sound family is a folder of recordings below sounds/Spatial or a flat recording below sounds
+        return room_packages.is_missing_packaged(root, 'sounds/' + ref.name + '.ogg') or any(
+            room_packages.is_missing_packaged(root, relative) for relative in room_packages.ASSET_ROOMS
+            if relative.startswith('sounds/Spatial/' + ref.name + '/'))
+    if ref.kind == 'sound_file':
+        return room_packages.is_missing_packaged(root, 'sounds/' + ref.name.removeprefix('sounds/'))
+    return False
 
 
 def audit(root):

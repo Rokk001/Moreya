@@ -12,23 +12,37 @@ from pathlib import Path
 import re
 
 root = Path(__file__).resolve().parents[2]
-material = (root / 'materials/scripts/Spa.material').read_text(encoding='utf-8')
-glow = material[material.index('material SpaLavaGlow'):]
-assert 'lighting off' in glow and 'emissive' in glow
-assert re.search(r'texture_unit\s*\{\s*colour_op_ex source1 src_manual src_current 1\.0 0\.15 0\.015', glow), \
-    'SpaLavaGlow must take its colour from a texture unit, or the lava seam is white'
+import sys
+sys.path.insert(0, str(root / 'scripts'))
+import room_packages  # noqa: E402
 
-particle = (root / 'particles/RoomAmbienceProduction.particle').read_text(encoding='utf-8')
-steam = particle[particle.index('particle_system SpaSteam'):]
-steam = steam[:steam.index('\n}\n')]
-mud_top = 0.28
-start = float(re.search(r'position\s+0 0 ([0-9.]+)', steam).group(1))
-assert start > mud_top, 'the steam must start above the mud surface'
-alpha = float(re.search(r'colour_range_start\s+\S+ \S+ \S+ ([0-9.]+)', steam).group(1))
-assert alpha <= 0.35, 'the steam must be thin'
-assert float(re.search(r'rate\s+([0-9.]+)', steam.split('affector Scaler')[1]).group(1)) <= 0.15
+#: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(root, 'Spa')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(root, relative)
+if ROOM_ASSETS:
+    material = room_file('materials/scripts/Spa.material').read_text(encoding='utf-8')
+    glow = material[material.index('material SpaLavaGlow'):]
+    assert 'lighting off' in glow and 'emissive' in glow
+    assert re.search(r'texture_unit\s*\{\s*colour_op_ex source1 src_manual src_current 1\.0 0\.15 0\.015', glow), \
+        'SpaLavaGlow must take its colour from a texture unit, or the lava seam is white'
+
+    # The steam moved out of the shared RoomAmbienceProduction.particle into the particle script of the spa package
+    particle = room_file('particles/Spa.particle').read_text(encoding='utf-8')
+    steam = particle[particle.index('particle_system SpaSteam'):]
+    steam = steam[:steam.index('\n}\n')]
+    mud_top = 0.28
+    start = float(re.search(r'position\s+0 0 ([0-9.]+)', steam).group(1))
+    assert start > mud_top, 'the steam must start above the mud surface'
+    alpha = float(re.search(r'colour_range_start\s+\S+ \S+ \S+ ([0-9.]+)', steam).group(1))
+    assert alpha <= 0.35, 'the steam must be thin'
+    assert float(re.search(r'rate\s+([0-9.]+)', steam.split('affector Scaler')[1]).group(1)) <= 0.15
 
 bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text(encoding='utf-8')
 assert 'return name == SPA_POOL_MESH || name == SPA_RIM_MESH' in bounds
 assert 'isSteppableMesh' in bounds and 'name == "KnightCoffin"' in bounds
-print('check_spa_white_rim_steam_x1 ok')
+print('check_spa_white_rim_steam_x1 ok' + ('' if ROOM_ASSETS else ' (spa room package not present: material and steam not checked)'))

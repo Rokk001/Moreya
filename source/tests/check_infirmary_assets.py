@@ -10,6 +10,16 @@ repo = Path(__file__).resolve().parents[2]
 import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the infirmary come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'Infirmary')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 from assets_src import assets_src_dir, resolve  # noqa: E402
 
 
@@ -20,10 +30,14 @@ def read(path):
 
 # Verify referenced assets exist and have their own source/licence entry.
 def credited(path, credits):
+    # Without the infirmary package its assets and their rows (in the content repository) are not there
+    if not ROOM_ASSETS and (room_packages.is_packaged(path) or path.startswith("assets-src/rooms/infirmary/")):
+        return
     asset = resolve(repo, path)
     assert asset.is_file() and asset.stat().st_size > 0, "missing asset: " + path
     rows = [line for line in credits.splitlines() if path in line]
-    assert rows and any("GPL" in line or "CC0" in line for line in rows), "missing licence: " + path
+    assert rows and any(room_packages.licence_ok(repo, line, "GPL") or "CC0" in line for line in rows), \
+        "missing licence: " + path
 
 
 # Parse animation chunks with the maintained Ogre chunk reader and check actual clip lengths.
@@ -32,7 +46,7 @@ def clips():
     spec = importlib.util.spec_from_file_location("infirmary_skeleton_chunks", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    _, chunks = module.chunks((repo / "models/InfirmaryShaman.skeleton").read_bytes())
+    _, chunks = module.chunks(room_file("models/InfirmaryShaman.skeleton").read_bytes())
     animations = {name: data for kind, name, data in chunks if kind == module.ANIMATION}
     expected = {"Idle", "Walk", "Chant", "RattleShake", "HerbSniff", "PotionTaste", "TripOverBucket", "Dance"}
     assert set(animations) == expected, sorted(animations)
@@ -55,7 +69,7 @@ def floor_seam():
 
 # Validate every asset family and reject an uninstalled logical GUI image.
 def main():
-    credits = read("CREDITS")
+    credits = room_packages.credits_text(repo)
     furniture = ("InfirmaryCotSmall", "InfirmaryCotMedium", "InfirmaryCotLarge",
         "MedicineCabinet", "InstrumentTable", "WashBasin", "HerbShelf")
     for name in furniture + ("InfirmaryShaman",):
@@ -63,27 +77,31 @@ def main():
         credited("assets-src/rooms/infirmary/" + name + ".blend", credits)
     credited("models/InfirmaryShaman.skeleton", credits)
     credited("materials/scripts/InfirmaryObjects.material", credits)
-    objects = read("materials/scripts/InfirmaryObjects.material")
-    textures = set(re.findall(r"^\s*texture\s+(\S+)", objects, re.M))
-    assert textures, "object materials have no textures"
-    for texture in textures:
-        credited("materials/textures/" + texture, credits)
+    if ROOM_ASSETS:
+        objects = read("materials/scripts/InfirmaryObjects.material")
+        textures = set(re.findall(r"^\s*texture\s+(\S+)", objects, re.M))
+        assert textures, "object materials have no textures"
+        for texture in textures:
+            credited("materials/textures/" + texture, credits)
     for path in ("materials/textures/InfirmaryFloor.png", "materials/textures/InfirmaryFloorNormal.png",
             "materials/scripts/InfirmaryFloor.material", "assets-src/gui/icons/tiles/InfirmaryButton.png"):
         credited(path, credits)
-    floor = read("materials/scripts/InfirmaryFloor.material")
-    assert "InfirmaryFloor.png" in floor and "InfirmaryFloorNormal.png" in floor
+    if ROOM_ASSETS:
+        floor = read("materials/scripts/InfirmaryFloor.material")
+        assert "InfirmaryFloor.png" in floor and "InfirmaryFloorNormal.png" in floor
     tiles = read("config/tilesets.cfg")
     assert re.search(r"^\s*infirmaryRoom\s+infirmaryRoom\s*$", tiles, re.M)
     block = tiles.split("[infirmaryRoom]", 1)[1].split("[/infirmaryRoom]", 1)[0]
     assert "InfirmaryFloor" in block and "TortureFloor" not in block
-    particle = read("particles/CreatureReactions.particle")
-    block = particle.split("particle_system InfirmaryHealGlow", 1)[1].split("particle_system", 1)[0]
-    for pattern in (r"colour\s+0\.45\s+1\.0\s+0\.55\s+0\.8", r"emission_rate\s+4\b", r"quota\s+6\b"):
-        assert re.search(pattern, block), pattern
-    assert not re.search(r"^\s*duration\s", block, re.M), "heal glow must stay continuous"
-    assert "InfirmaryHealGlow" in credits
-    for name in ("Admit", "Discharge", "Chant", "Rattle"):
+    # The heal glow stands in the particle script of the infirmary package
+    if ROOM_ASSETS:
+        particle = read("particles/Infirmary.particle")
+        block = particle.split("particle_system InfirmaryHealGlow", 1)[1].split("particle_system", 1)[0]
+        for pattern in (r"colour\s+0\.45\s+1\.0\s+0\.55\s+0\.8", r"emission_rate\s+4\b", r"quota\s+6\b"):
+            assert re.search(pattern, block), pattern
+        assert not re.search(r"^\s*duration\s", block, re.M), "heal glow must stay continuous"
+        assert "InfirmaryHealGlow" in credits
+    for name in ("Admit", "Discharge", "Chant", "Rattle") if ROOM_ASSETS else ():
         path = "sounds/Rooms/Infirmary/" + name + ".ogg"
         credited(path, credits)
         assert resolve(repo, path).read_bytes().startswith(b"OggS"), path
@@ -96,7 +114,8 @@ def main():
     block = chants[0]
     for pattern in (r"Match\s+InfirmaryShaman", r"Kind\s+Sound", r"Family\s+Rooms/Infirmary/Chant", r"Loop\s+yes"):
         assert re.search(pattern, block), pattern
-    clips()
+    if ROOM_ASSETS:
+        clips()
     bounds = read("source/gamemap/RoomObjectBounds.h")
     for name in furniture:
         assert re.search(r'\{"' + name + r'"\s*,', bounds), "missing measured mesh bounds: " + name
@@ -127,7 +146,7 @@ def main():
     assert atlas[:8] == b"\x89PNG\r\n\x1a\n", "icon atlas must be a PNG"
     width, height = struct.unpack_from(">II", atlas, 16)
     assert int(image.get("xPos")) + icon_width <= width and int(image.get("yPos")) + icon_height <= height
-    print("infirmary assets: ok")
+    print("infirmary assets: ok" + ("" if ROOM_ASSETS else " (infirmary package not present: its assets not checked)"))
 
 
 if __name__ == "__main__":

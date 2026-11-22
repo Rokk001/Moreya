@@ -18,6 +18,36 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import room_packages  # noqa: E402
+
+# The game data and the room packages that are present: the game adds their asset folders and sounds alike
+ROOTS = [ROOT] + [str(package) for package in room_packages.package_roots(ROOT)]
+# Stand-in material of the particle systems of a room package that is not present (their names are known, their
+# scripts are not)
+PACKAGED_MATERIAL = "<room package not present>"
+
+
+def exists_any(*parts):
+    """True when the file is in the game data or a present room package, or belongs to a room package that is not
+    present (then only the config side is checked)."""
+    relative = "/".join(parts)
+    return (any(os.path.exists(os.path.join(root, *parts)) for root in ROOTS)
+            or room_packages.is_missing_packaged(ROOT, relative))
+
+
+def glob_any(*parts):
+    """The files of the pattern in the game data and in the present room packages."""
+    return [path for root in ROOTS for path in glob.glob(os.path.join(root, *parts))]
+
+
+def sound_family_present(family):
+    """True when a sound family folder holds an .ogg file in the game data or a present room package, or the family
+    belongs to a room package that is not present."""
+    prefix = "sounds/Spatial/" + family + "/"
+    return (bool(glob_any("sounds", "Spatial", *family.split("/") + ["*.ogg"]))
+            or any(room_packages.is_missing_packaged(ROOT, relative) for relative in room_packages.ASSET_ROOMS
+                   if relative.startswith(prefix)))
 SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions", "MaxOneShots", "MaxMarks", "MaxFlights", "OccupiedRadius",
             "ReducedDistanceFactor")
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
@@ -109,18 +139,25 @@ def tile_visuals():
 
 def particle_systems():
     systems = {}
-    for path in glob.glob(os.path.join(ROOT, "particles", "*.particle")):
+    for path in glob_any("particles", "*.particle"):
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
         for match in re.finditer(r"particle_system\s+(\S+)\s*\{(.*?)\n\}", text, re.S):
             material = re.search(r"^\s*material\s+(\S+)", match.group(2), re.M)
             systems[match.group(1)] = material.group(1) if material else None
+    for room, names in room_packages.PACKAGED_PARTICLES.items():
+        if not room_packages.has_room(ROOT, room):
+            systems.update((name, PACKAGED_MATERIAL) for name in names)
     return systems
 
 
 def materials():
     result = {}
-    for path in glob.glob(os.path.join(ROOT, "materials", "scripts", "*.material")):
+    result[PACKAGED_MATERIAL] = []
+    for room, names in room_packages.PACKAGED_MATERIALS.items():
+        if not room_packages.has_room(ROOT, room):
+            result.update((name, []) for name in names)
+    for path in glob_any("materials", "scripts", "*.material"):
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
         for match in re.finditer(r"^material\s+(\S+)", text, re.M):
@@ -199,7 +236,7 @@ def check_particle_files(problems):
 
 
 def mesh_exists(name):
-    return os.path.exists(os.path.join(ROOT, "models", name + ".mesh"))
+    return exists_any("models", name + ".mesh")
 
 
 # The piles of a treasury are meshes built at run time from their names (source/rooms/TreasuryGoldLayer.h):
@@ -281,8 +318,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if family is None:
             problems.append("%s: sound without Family" % where)
         else:
-            folder = os.path.join(ROOT, "sounds", "Spatial", *family.split("/"))
-            if not glob.glob(os.path.join(folder, "*.ogg")):
+            if not sound_family_present(family):
                 problems.append("%s: no .ogg file for sound family %s" % (where, family))
         if "Delay" in effect and target != "Event":
             problems.append("%s: Delay only works for events" % where)
@@ -352,7 +388,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         mesh = effect.get("Mesh", [None])[0]
         if mesh is None or not mesh_exists(mesh):
             problems.append("%s: crawl without an existing Mesh (%s)" % (where, mesh))
-        elif not os.path.isfile(os.path.join(ROOT, "models", mesh + ".skeleton")):
+        elif not exists_any("models", mesh + ".skeleton"):
             problems.append("%s: the crawl mesh %s has no skeleton for its Crawl clip" % (where, mesh))
         for key in ("Amount", "Speed", "Duration"):
             if key not in effect:
@@ -403,13 +439,13 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                 problems.append("%s: particle system %s uses unknown material %s" % (where, system, material))
             else:
                 for texture in mats[material]:
-                    if not os.path.exists(os.path.join(ROOT, "materials", "textures", texture)):
+                    if not exists_any("materials", "textures", texture):
                         problems.append("%s: material %s uses missing texture %s" % (where, material, texture))
     elif kind == "Model":
         mesh = effect.get("Mesh", [None])[0]
         if mesh is None:
             problems.append("%s: model without Mesh" % where)
-        elif not os.path.exists(os.path.join(ROOT, "models", mesh)):
+        elif not exists_any("models", mesh):
             problems.append("%s: no mesh file %s" % (where, mesh))
         if target != "Tile":
             problems.append("%s: models only work on tiles" % where)
@@ -474,10 +510,9 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if key in effect and effect[key][0] not in ("yes", "no", "true", "false", "1", "0"):
             problems.append("%s: %s needs yes or no" % (where, key))
     if "Sound" in effect:
-        folder = os.path.join(ROOT, "sounds", "Spatial", *effect["Sound"][0].split("/"))
         if target != "Event":
             problems.append("%s: Sound only works on event effects" % where)
-        elif not glob.glob(os.path.join(folder, "*.ogg")):
+        elif not sound_family_present(effect["Sound"][0]):
             problems.append("%s: no .ogg file in the sound family %s" % (where, effect["Sound"][0]))
     if "HeartRate" in effect and effect["HeartRate"][0] in ("yes", "true", "1") and "Speed" not in effect:
         problems.append("%s: HeartRate needs a Speed" % where)

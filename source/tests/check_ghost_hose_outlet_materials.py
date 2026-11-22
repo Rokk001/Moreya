@@ -25,6 +25,18 @@ import re
 from PIL import Image, ImageStat
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 OGRE_DEFAULT_GROUP = 'General'  # ManualObject::begin(material, type, groupName = DEFAULT_RESOURCE_GROUP_NAME)
 
 
@@ -59,6 +71,10 @@ def groups():
 
 
 GROUPS = groups()
+# The game adds the asset folders of every found room package to the Graphics group (ResourceManager)
+for package in room_packages.package_roots(repo):
+    GROUPS.setdefault('Graphics', []).extend(folder for folder in (package / 'models', package / 'materials/scripts',
+                                                                     package / 'materials/textures') if folder.is_dir())
 
 
 def materials_in(group):
@@ -302,7 +318,8 @@ def run_outlet(building):
 spec = importlib.util.spec_from_file_location('ghost_meshes', repo / 'source/tests/check_ghost_apparatus_visible.py')
 meshes = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(meshes)
-CAULDRON_MATERIALS = {material for material, _ in meshes.read_mesh('GhostCauldron')['submeshes']}
+CAULDRON_MATERIALS = ({material for material, _ in meshes.read_mesh('GhostCauldron')['submeshes']} if ROOM_ASSETS
+                      else set())
 
 
 def check_outlet(building):
@@ -331,6 +348,14 @@ def main():
     for name in ('GhostHose', 'GhostHoseWire', 'GhostBrass', 'GhostIron', 'GhostCauldronEctoplasm'):
         assert resolve(name, OGRE_DEFAULT_GROUP) == 'BaseWhite', (name, 'Ogre default group loads no material scripts')
     check_hose(creature)
+    if not ROOM_ASSETS:
+        # The outlet uses the cauldron mesh and textures of the ghost room package
+        try:
+            check_hose(creature.replace(',"Graphics");', ');'))
+        except AssertionError:
+            print('ghost hose materials: ok (ghost room package not present: outlet not checked)')
+            return
+        raise AssertionError(('check_hose', 'the reported white state must fail'))
     check_outlet(building)
     # The reported state: no group in begin(), and the outlet bore and lip on one texel.
     reported_creature = creature.replace(',"Graphics");', ');')

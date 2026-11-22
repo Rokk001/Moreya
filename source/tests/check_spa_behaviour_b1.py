@@ -47,6 +47,17 @@ import tempfile
 import time
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(root, 'Spa')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(root, relative)
 started = time.monotonic()
 
 
@@ -149,7 +160,8 @@ assert config['PoolAttendantClipSeconds'] == '2', config
 turns_per_second = float(line(read('source/ODApplication.cpp'), r'^double ODApplication::turnsPerSecond = ([0-9.]+);$'))
 
 # ---- The rim the lift has to clear: the real mesh and its footprint ------------------------------------------------
-rim_top = mesh_top(root / 'models' / 'SpaPoolRim.mesh')
+# The rim mesh is in the spa package; without it the height the mesh measures (fixed value below) stands in
+rim_top = mesh_top(room_file('models/SpaPoolRim.mesh')) if ROOM_ASSETS else 0.3
 rim_row = re.search(r'\{"SpaPoolRim", ([-.0-9]+)f, ([-.0-9]+)f, ([-.0-9]+)f, ([-.0-9]+)f\}', bounds_h)
 rim_near, rim_far = float(rim_row.group(2)), float(rim_row.group(4))
 assert abs(rim_top - 0.3) < 1e-4 and abs(rim_near + 0.575) < 1e-6 and abs(rim_far + 0.425) < 1e-6, (rim_top, rim_near, rim_far)

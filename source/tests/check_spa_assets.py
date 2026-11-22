@@ -38,6 +38,16 @@ import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(root, 'Spa')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(root, relative)
 from assets_src import assets_src_dir, resolve  # noqa: E402
 
 # The bath clips every creature skeleton gets and the clips of the pool attendant
@@ -93,49 +103,50 @@ def script_block(text, kind, name):
     return match.group(0)
 
 
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
-credits = read('CREDITS')
-spa_material = read('materials/scripts/Spa.material')
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+credits = room_packages.credits_text(root)
+spa_material = read('materials/scripts/Spa.material') if ROOM_ASSETS else ''
 
 # 1. Models: mesh, Blender source, the materials of the mesh, the attendant's skeleton
 MODELS = {name: 'assets-src/rooms/spa/' + name + '.blend'
           for name in ('SpaMudPool', 'SpaPoolRim', 'SpaChair', 'SpaSpringboard', 'PoolAttendant')}
-for name, source in MODELS.items():
-    mesh = root / 'models' / (name + '.mesh')
-    assert mesh.is_file() and mesh.stat().st_size > 0, 'models/' + name + '.mesh missing'
-    assert resolve(root, source).is_file(), source + ' missing'
-    for used in set(re.findall(rb'Spa[A-Za-z]+', mesh.read_bytes())):
-        assert re.search(r'^material ' + used.decode('ascii') + r'\b', materials, re.M), \
-            'models/' + name + '.mesh uses the material ' + used.decode('ascii') + ' which no material script defines'
-assert b'SpaMud' in (root / 'models' / 'SpaMudPool.mesh').read_bytes(), 'the pool uses SpaMud'
-assert b'SpaLavaGlow' in (root / 'models' / 'SpaPoolRim.mesh').read_bytes(), 'the rim carries the lava seam'
+if ROOM_ASSETS:
+    for name, source in MODELS.items():
+        mesh = room_file('models/' + name + '.mesh')
+        assert mesh.is_file() and mesh.stat().st_size > 0, 'models/' + name + '.mesh missing'
+        assert resolve(root, source).is_file(), source + ' missing'
+        for used in set(re.findall(rb'Spa[A-Za-z]+', mesh.read_bytes())):
+            assert re.search(r'^material ' + used.decode('ascii') + r'\b', materials, re.M), \
+                'models/' + name + '.mesh uses the material ' + used.decode('ascii') + ' which no material script defines'
+    assert b'SpaMud' in (room_file('models/SpaMudPool.mesh')).read_bytes(), 'the pool uses SpaMud'
+    assert b'SpaLavaGlow' in (room_file('models/SpaPoolRim.mesh')).read_bytes(), 'the rim carries the lava seam'
 
-# Decision 902: a 1.78-tile thin plank extends 0.85 tiles beyond the pool edge, supported only on the dry rim.
-converter = os.environ.get('OGRE_XML_CONVERTER', str(Path.home() / 'build-deps/install/bin/OgreXMLConverter.exe'))
-with tempfile.TemporaryDirectory(prefix='odp-spa-board-') as directory:
-    xml = Path(directory) / 'board.xml'
-    subprocess.run([converter, str(root / 'models/SpaSpringboard.mesh'), str(xml)],
-                   cwd=directory, capture_output=True, check=True)
-    exported_board = ET.parse(xml)
-    board_parts = {}
-    for submesh in exported_board.findall('.//submesh'):
-        board_parts.setdefault(submesh.get('material'), []).extend(
-            tuple(float(vertex.get(axis)) for axis in 'xyz') for vertex in submesh.findall('.//position'))
-    wood = board_parts['SpaWood']
-    stone = board_parts['SpaStone']
-    assert sum(map(len, board_parts.values())) == 4212, 'fixed board export vertex count'
-    assert abs(max(p[1] for p in wood) - 1.35) < 1e-5, 'plank tip must extend over the mud'
-    assert abs(min(p[1] for p in wood) + 0.43) < 1e-5, 'plank heel remains on the rim'
-    assert abs(max(p[2] for p in wood) - min(p[2] for p in wood) - 0.045) < 1e-5, 'thin flexible plank'
-    assert max(p[1] for p in stone) < -0.12, 'the anchor stays behind the pool edge'
-    for axis, expected in enumerate(((-0.24, 0.24), (-0.43, 1.35), (0.0, 0.4195))):
-        points = [p[axis] for part in board_parts.values() for p in part]
-        assert abs(min(points) - expected[0]) < 1e-5 and abs(max(points) - expected[1]) < 1e-5, 'fixed exported bounds'
-assert b'PoolAttendant.skeleton' in (root / 'models' / 'PoolAttendant.mesh').read_bytes(), 'the attendant mesh needs its skeleton'
-attendant_skeleton = (root / 'models' / 'PoolAttendant.skeleton').read_bytes()
-for clip in ATTENDANT_CLIPS:
-    assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', attendant_skeleton)) == 1, \
-        'PoolAttendant.skeleton must hold the clip ' + clip + ' exactly once'
+    # Decision 902: a 1.78-tile thin plank extends 0.85 tiles beyond the pool edge, supported only on the dry rim.
+    converter = os.environ.get('OGRE_XML_CONVERTER', str(Path.home() / 'build-deps/install/bin/OgreXMLConverter.exe'))
+    with tempfile.TemporaryDirectory(prefix='odp-spa-board-') as directory:
+        xml = Path(directory) / 'board.xml'
+        subprocess.run([converter, str(room_file('models/SpaSpringboard.mesh')), str(xml)],
+                       cwd=directory, capture_output=True, check=True)
+        exported_board = ET.parse(xml)
+        board_parts = {}
+        for submesh in exported_board.findall('.//submesh'):
+            board_parts.setdefault(submesh.get('material'), []).extend(
+                tuple(float(vertex.get(axis)) for axis in 'xyz') for vertex in submesh.findall('.//position'))
+        wood = board_parts['SpaWood']
+        stone = board_parts['SpaStone']
+        assert sum(map(len, board_parts.values())) == 4212, 'fixed board export vertex count'
+        assert abs(max(p[1] for p in wood) - 1.35) < 1e-5, 'plank tip must extend over the mud'
+        assert abs(min(p[1] for p in wood) + 0.43) < 1e-5, 'plank heel remains on the rim'
+        assert abs(max(p[2] for p in wood) - min(p[2] for p in wood) - 0.045) < 1e-5, 'thin flexible plank'
+        assert max(p[1] for p in stone) < -0.12, 'the anchor stays behind the pool edge'
+        for axis, expected in enumerate(((-0.24, 0.24), (-0.43, 1.35), (0.0, 0.4195))):
+            points = [p[axis] for part in board_parts.values() for p in part]
+            assert abs(min(points) - expected[0]) < 1e-5 and abs(max(points) - expected[1]) < 1e-5, 'fixed exported bounds'
+    assert b'PoolAttendant.skeleton' in (room_file('models/PoolAttendant.mesh')).read_bytes(), 'the attendant mesh needs its skeleton'
+    attendant_skeleton = (room_file('models/PoolAttendant.skeleton')).read_bytes()
+    for clip in ATTENDANT_CLIPS:
+        assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', attendant_skeleton)) == 1, \
+            'PoolAttendant.skeleton must hold the clip ' + clip + ' exactly once'
 # The clip names the code asks for are the clips of the skeleton
 attendant_h = read('source/entities/PoolAttendantEntity.h')
 for token in ('sit = "Sit"', 'whistle = "Whistle"', 'towelWave = "TowelWave"', 'doze = "Doze"', 'climb = "Climb"'):
@@ -144,27 +155,29 @@ animation_h = read('source/entities/MovableGameEntity.h')
 for token in ('walk_anim = "Walk"', 'bathe_anim = "Bathe"', 'jump_anim = "Jump"'):
     assert token in animation_h, 'EntityAnimation lacks ' + token
 
-# 2. Materials and textures
-mud = script_block(spa_material, 'material', 'SpaMud')
-assert 'scroll_anim 0.02 0.01' in mud, 'the mud scrolls slowly'
-glow = script_block(spa_material, 'material', 'SpaLavaGlow')
-assert 'emissive' in glow and 'lighting off' in glow, 'the lava seam glows'
-for used in re.findall(r'^\s*texture\s+(\S+)', spa_material, re.M):
-    assert list((root / 'materials' / 'textures').rglob(used)), 'texture ' + used + ' of Spa.material is missing'
-torture = read('materials/scripts/TortureFloor.material')
-spa_floor = read('materials/scripts/SpaFloor.material')
+if ROOM_ASSETS:
+    # 2. Materials and textures
+    mud = script_block(spa_material, 'material', 'SpaMud')
+    assert 'scroll_anim 0.02 0.01' in mud, 'the mud scrolls slowly'
+    glow = script_block(spa_material, 'material', 'SpaLavaGlow')
+    assert 'emissive' in glow and 'lighting off' in glow, 'the lava seam glows'
+    for used in re.findall(r'^\s*texture\s+(\S+)', spa_material, re.M):
+        assert any(list((base / 'materials' / 'textures').rglob(used)) for base in [root] + room_packages.package_roots(root)), \
+            'texture ' + used + ' of Spa.material is missing'
+    torture = read('materials/scripts/TortureFloor.material')
+    spa_floor = read('materials/scripts/SpaFloor.material')
 
 
-# The material script without the trailing blanks of each line (the copy was cleaned of them)
-def normalised(text):
-    return [line.rstrip() for line in text.replace('\r\n', '\n').split('\n')]
+    # The material script without the trailing blanks of each line (the copy was cleaned of them)
+    def normalised(text):
+        return [line.rstrip() for line in text.replace('\r\n', '\n').split('\n')]
 
 
-assert normalised(spa_floor) == normalised(torture.replace('TortureFloor', 'SpaFloor')), \
-    'SpaFloor.material must be TortureFloor.material with every TortureFloor replaced by SpaFloor'
-for suffix in ('', 'Normal'):
-    assert png_size('materials/textures/SpaFloor' + suffix + '.png')[0] > 0, 'SpaFloor' + suffix + '.png missing'
-assert png_size('materials/textures/SpaFloor.png') == png_size('materials/textures/TortureFloor.png'), 'SpaFloor.png has the size of the torture floor'
+    assert normalised(spa_floor) == normalised(torture.replace('TortureFloor', 'SpaFloor')), \
+        'SpaFloor.material must be TortureFloor.material with every TortureFloor replaced by SpaFloor'
+    for suffix in ('', 'Normal'):
+        assert png_size('materials/textures/SpaFloor' + suffix + '.png')[0] > 0, 'SpaFloor' + suffix + '.png missing'
+    assert png_size('materials/textures/SpaFloor.png') == png_size('materials/textures/TortureFloor.png'), 'SpaFloor.png has the size of the torture floor'
 
 # 3. The floor painter lists the spa and paints the stored textures byte for byte
 generator = read('tools/room-floors/generate_room_floors.py')
@@ -177,24 +190,23 @@ with tempfile.TemporaryDirectory(prefix='odp-spa-floor-') as directory:
                              capture_output=True, text=True, cwd=str(root))
     assert painted.returncode == 0, 'generate_room_floors.py failed:\n' + painted.stdout + painted.stderr
     assert 'spa wrap seam ratio' in painted.stdout, 'the check output lists the spa floor'
-    for name in ('SpaFloor.png', 'SpaFloorNormal.png'):
-        assert (Path(directory) / name).read_bytes() == (root / 'materials' / 'textures' / name).read_bytes(), name + ' differs from what the painter writes'
+    for name in ('SpaFloor.png', 'SpaFloorNormal.png') if ROOM_ASSETS else ():
+        assert (Path(directory) / name).read_bytes() == room_file('materials/textures/' + name).read_bytes(), name + ' differs from what the painter writes'
 
 # 4. Particles: each defined once, the values of the design, the order next to the template, the materials exist
-all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'particles').glob('*.particle'))
-for system in ('SpaSteam', 'SpaMudSplash'):
-    assert len(re.findall(r'^particle_system ' + system + r'\s*$', all_particles, re.M)) == 1, 'particle ' + system + ' must be defined exactly once'
-production = read('particles/RoomAmbienceProduction.particle')
-assert production.index('particle_system RoomAmbSteam') < production.index('particle_system SpaSteam'), 'SpaSteam follows RoomAmbSteam'
-steam = script_block(production.replace('particle_system', 'particle_system'), 'particle_system', 'SpaSteam')
-assert re.search(r'colour_range_start\s+0\.85 0\.8 0\.75 0\.3', steam) and re.search(r'emission_rate\s+2\b', steam) and re.search(r'time_to_live\s+3\b', steam)
-feathers = read('particles/ChickenFeathers.particle')
-assert feathers.index('particle_system ChickenFeathers') < feathers.index('particle_system SpaMudSplash'), 'SpaMudSplash follows ChickenFeathers'
-splash = script_block(feathers, 'particle_system', 'SpaMudSplash')
-assert 'colour_range_start 0.30 0.20 0.12 1.0' in splash and 'duration 0.5' in splash, 'the mud splash is brown and lasts half a second'
-for text in (steam, splash):
-    for used in re.findall(r'^\s*material\s+(\S+)', text, re.M):
-        assert re.search(r'^material ' + used + r'\b', materials, re.M), 'particle material ' + used + ' missing'
+all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'particles', '*.particle'))
+if ROOM_ASSETS:
+    for system in ('SpaSteam', 'SpaMudSplash'):
+        assert len(re.findall(r'^particle_system ' + system + r'\s*$', all_particles, re.M)) == 1, 'particle ' + system + ' must be defined exactly once'
+    # The spa systems moved out of the shared scripts (RoomAmbienceProduction, ChickenFeathers) into the spa package
+    spa_particles = read('particles/Spa.particle')
+    steam = script_block(spa_particles, 'particle_system', 'SpaSteam')
+    assert re.search(r'colour_range_start\s+0\.85 0\.8 0\.75 0\.3', steam) and re.search(r'emission_rate\s+2\b', steam) and re.search(r'time_to_live\s+3\b', steam)
+    splash = script_block(spa_particles, 'particle_system', 'SpaMudSplash')
+    assert 'colour_range_start 0.30 0.20 0.12 1.0' in splash and 'duration 0.5' in splash, 'the mud splash is brown and lasts half a second'
+    for text in (steam, splash):
+        for used in re.findall(r'^\s*material\s+(\S+)', text, re.M):
+            assert re.search(r'^material ' + used + r'\b', materials, re.M), 'particle material ' + used + ' missing'
 room_h = read('source/rooms/RoomSpa.cpp')
 assert 'SPA_STEAM_EFFECT = "SpaSteam"' in room_h and 'SPA_SPLASH_EFFECT = "SpaMudSplash"' in room_h, 'the room names the particles'
 
@@ -207,9 +219,9 @@ assert 'SpaButton' in read('gui/WindowSkillTree.layout'), 'the research tree sho
 
 # 6. Sounds: the three files as mono 22050 Hz Vorbis, the families, the ambience entry
 ambience = read('config/roomAmbience.cfg')
-for family in ('Bubble', 'Whistle', 'Splash'):
+for family in ('Bubble', 'Whistle', 'Splash') if ROOM_ASSETS else ():
     sound = 'sounds/Spatial/Rooms/Spa/' + family + '/' + family + '.ogg'
-    assert (root / sound).is_file(), sound + ' missing'
+    assert room_file(sound).is_file(), sound + ' missing'
     assert vorbis_format(sound) == (SOUND_CHANNELS, SOUND_RATE), sound + ' must be mono 22050 Hz Vorbis, found ' + str(vorbis_format(sound))
 bubble_effect = ambience[ambience.index('Name        SpaBubbleLoop'):]
 bubble_effect = bubble_effect[:bubble_effect.index('[/Effect]')]
@@ -224,13 +236,13 @@ types = creature_types()
 assert len(types) == 35, len(types)
 skeletons = {}
 for name, mesh in types.items():
-    found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (root / 'models' / mesh).read_bytes())
+    found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (room_file('models/' + mesh)).read_bytes())
     assert found, mesh + ' has no skeleton'
     skeletons[name] = found[0].decode('ascii') + '.skeleton'
 unique_skeletons = sorted(set(skeletons.values()))
 assert len(unique_skeletons) == 32, 'the 35 types use 32 skeletons, found ' + str(len(unique_skeletons))
 for skeleton in unique_skeletons:
-    data = (root / 'models' / skeleton).read_bytes()
+    data = (room_file('models/' + skeleton)).read_bytes()
     for clip in BATH_CLIPS:
         assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
     # The clips of the tavern and the older ones are still there
@@ -264,14 +276,18 @@ files += ['materials/scripts/SpaFloor.material', 'materials/textures/SpaFloor.pn
           'assets-src/gui/icons/tiles/SpaButton.png',
           'sounds/Spatial/Rooms/Spa/Bubble/Bubble.ogg', 'sounds/Spatial/Rooms/Spa/Whistle/Whistle.ogg', 'sounds/Spatial/Rooms/Spa/Splash/Splash.ogg']
 for path in files:
+    # The rows of the spa package and of its sources stand in the CREDITS of the content repository
+    if room_packages.is_missing_packaged(root, path) or (not ROOM_ASSETS and path.startswith('assets-src/rooms/spa/Spa')) or \
+            (not ROOM_ASSETS and path == 'assets-src/rooms/spa/PoolAttendant.blend'):
+        continue
     assert credited(path), 'CREDITS has no row for ' + path
-assert 'particles/RoomAmbienceProduction.particle (SpaSteam)' in credits and 'particles/ChickenFeathers.particle (SpaMudSplash)' in credits
+assert not ROOM_ASSETS or ('particles/Spa.particle (SpaSteam)' in credits and 'particles/Spa.particle (SpaMudSplash)' in credits)
 for skeleton in unique_skeletons:
     assert re.search(r'^models/' + re.escape(skeleton) + r' \(Bathe, Jump clips\)', credits, re.M | re.I), \
         'CREDITS has no row for the new clips in ' + skeleton
     assert credited('assets-src/rooms/spa/creatures/' + skeleton[:-len('.skeleton')] + '.blend'), 'CREDITS has no row for the Blender source of ' + skeleton
 # Every sound row names a source address and the licence CC0 (the recordings are real, never generated)
-for sound in ('Bubble', 'Whistle', 'Splash'):
+for sound in ('Bubble', 'Whistle', 'Splash') if ROOM_ASSETS else ():
     row = [l for l in credits.splitlines() if re.search(r'Spa/' + sound + r'/' + sound + r'\.ogg\s', l)]
     assert row, 'CREDITS has no row for ' + sound + '.ogg'
     for line in row:
@@ -284,4 +300,4 @@ if '--no-compile' not in sys.argv:
 else:
     print('room-object-bounds compiled probe deferred explicitly (--no-compile)')
 
-print('spa assets ok')
+print('spa assets ok' + ('' if ROOM_ASSETS else ' (spa room package not present: its models, textures, particles and sounds not checked)'))
