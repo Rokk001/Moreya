@@ -83,6 +83,7 @@
 #include "utils/MasterServer.h"
 #include "utils/ResourceManager.h"
 #include "utils/RunLevelTest.h"
+#include "utils/SafeSave.h"
 #include "utils/EdgePlaces.h"
 #include "ODApplication.h"
 
@@ -91,6 +92,7 @@
 
 #include <chrono>
 #include <algorithm>
+#include <functional>
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
@@ -1357,6 +1359,20 @@ bool refuseIfDefeated(Player* player)
     serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
     ODServer::getSingleton().queueServerNotification(serverNotification);
     return true;
+}
+
+//! \brief Returns true if the tile type, fullness and seat id of an editor tile change are usable: a tile type of
+//! the enum (not its count value), a finite fullness that is not negative and -1 or the id of a seat of the map.
+//! A request that fails is dropped, as one bad value would otherwise be written into the tile.
+bool isEditorTileChangeValid(GameMap* gameMap, TileType tileType, double tileFullness, int seatId)
+{
+    std::vector<int32_t> seatIds;
+    for(Seat* knownSeat : gameMap->getSeats())
+        seatIds.push_back(static_cast<int32_t>(knownSeat->getId()));
+
+    return ServerGuards::isTileTypeValue(static_cast<int32_t>(tileType), static_cast<int32_t>(TileType::countTileType))
+        && ServerGuards::isFullnessAllowed(tileFullness)
+        && ServerGuards::isSeatIdKnown(static_cast<int32_t>(seatId), seatIds);
 }
 }
 
@@ -2952,8 +2968,6 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 OD_LOG_WRN("Ignored askSaveMap with an incomplete message");
                 break;
             }
-            const boost::filesystem::path levelPath(gameMap->getLevelFileName());
-            std::string fileLevel = levelPath.filename().string();
             // In editor mode, we don't allow a player to have creatures in hand while saving map
             if((mServerMode == ServerMode::ModeEditor) &&
                 (player->numObjectsInHand() > 0))
@@ -2967,135 +2981,132 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
 
             boost::filesystem::path levelSave;
-            if(mServerMode == ServerMode::ModeEditor)
+            std::string levelSaveText;
+            bool saveOk = true;
+            // Building the path can throw (a name that cannot be converted): that must not end the server thread
+            try
             {
-                if(receivedFilePath=="" && receivedFileLevel=="")
+                const boost::filesystem::path levelPath(gameMap->getLevelFileName());
+                std::string fileLevel = levelPath.filename().string();
+                if(mServerMode == ServerMode::ModeEditor)
                 {
-                    // In editor mode, we save in the original folder
-                    levelSave = levelPath;
+                    if(receivedFilePath=="" && receivedFileLevel=="")
+                    {
+                        // In editor mode, we save in the original folder
+                        levelSave = levelPath;
 
-                    // // If the level was not a custom one, we save it as a custom one now.
-                    // // Note: We don't compare for official levels path, as they may be relative and unreliable.
-                    // std::string levelStr = levelSave.string();
-                    // ResourceManager& resMgr = ResourceManager::getSingleton();
-                    // bool skirmishLevelType = (levelStr.find("skirmish") != std::string::npos);
-                    // if (skirmishLevelType) {
-                    //     if (levelStr.find(resMgr.getUserLevelPathSkirmish()) == std::string::npos) {
-                    //         levelSave = boost::filesystem::path(resMgr.getUserLevelPathSkirmish() + fileLevel);
-                    //     }
-                    // }
-                    // else if (levelStr.find(resMgr.getUserLevelPathMultiplayer()) == std::string::npos) {
-                    //     levelSave = boost::filesystem::path(resMgr.getUserLevelPathMultiplayer() + fileLevel);
-                    // }
+                        // // If the level was not a custom one, we save it as a custom one now.
+                        // // Note: We don't compare for official levels path, as they may be relative and unreliable.
+                        // std::string levelStr = levelSave.string();
+                        // ResourceManager& resMgr = ResourceManager::getSingleton();
+                        // bool skirmishLevelType = (levelStr.find("skirmish") != std::string::npos);
+                        // if (skirmishLevelType) {
+                        //     if (levelStr.find(resMgr.getUserLevelPathSkirmish()) == std::string::npos) {
+                        //         levelSave = boost::filesystem::path(resMgr.getUserLevelPathSkirmish() + fileLevel);
+                        //     }
+                        // }
+                        // else if (levelStr.find(resMgr.getUserLevelPathMultiplayer()) == std::string::npos) {
+                        //     levelSave = boost::filesystem::path(resMgr.getUserLevelPathMultiplayer() + fileLevel);
+                        // }
+                    }
+                    else
+                    {
+                        levelSave = boost::filesystem::path(receivedFilePath) /  receivedFileLevel;
+
+                    }
+                    OD_LOG_INF( levelSave.string() + '\n');
                 }
                 else
                 {
-                    levelSave = boost::filesystem::path(receivedFilePath) /  receivedFileLevel;
+                    // We save in the saved game folder
+                    static std::locale loc(std::wcout.getloc(), new boost::posix_time::time_facet("%Y-%m-%d_%H%M%S"));
 
-                }
-                OD_LOG_INF( levelSave.string() + '\n');
-            }
-            else
-            {
-                // We save in the saved game folder
-                static std::locale loc(std::wcout.getloc(), new boost::posix_time::time_facet("%Y-%m-%d_%H%M%S"));
-
-                std::ostringstream ss;
-                ss.imbue(loc);
-                ss << boost::posix_time::second_clock::local_time() << "-";
-                switch(mServerMode)
-                {
-                    case ServerMode::ModeGameSinglePlayer:
-                        ss << SAVEGAME_SKIRMISH_PREFIX;
-                        ss << fileLevel;
-                        break;
-                    case ServerMode::ModeGameMultiPlayer:
-                        ss << SAVEGAME_MULTIPLAYER_PREFIX;
-                        ss << fileLevel;
-                        break;
-                    case ServerMode::ModeGameLoaded:
+                    std::ostringstream ss;
+                    ss.imbue(loc);
+                    ss << boost::posix_time::second_clock::local_time() << "-";
+                    switch(mServerMode)
                     {
-                        // We look for the Skirmish or multiplayer prefix and keep it.
-                        size_t indexSk = fileLevel.find(SAVEGAME_SKIRMISH_PREFIX);
-                        size_t indexMp = fileLevel.find(SAVEGAME_MULTIPLAYER_PREFIX);
-                        if((indexSk != std::string::npos) && (indexMp == std::string::npos))
-                        {
-                            // Skirmish savegame
+                        case ServerMode::ModeGameSinglePlayer:
                             ss << SAVEGAME_SKIRMISH_PREFIX;
-                            ss << fileLevel.substr(indexSk + SAVEGAME_SKIRMISH_PREFIX.length());
-
-                        }
-                        else if((indexSk == std::string::npos) && (indexMp != std::string::npos))
-                        {
-                            // Multiplayer savegame
+                            ss << fileLevel;
+                            break;
+                        case ServerMode::ModeGameMultiPlayer:
                             ss << SAVEGAME_MULTIPLAYER_PREFIX;
-                            ss << fileLevel.substr(indexMp + SAVEGAME_MULTIPLAYER_PREFIX.length());
-                        }
-                        else if((indexSk != std::string::npos) && (indexMp != std::string::npos))
+                            ss << fileLevel;
+                            break;
+                        case ServerMode::ModeGameLoaded:
                         {
-                            // We found both prefixes. That can happen if the name contains the other
-                            // prefix. Because of filename construction, we know that the lowest is the good
-                            if(indexSk < indexMp)
+                            // We look for the Skirmish or multiplayer prefix and keep it.
+                            size_t indexSk = fileLevel.find(SAVEGAME_SKIRMISH_PREFIX);
+                            size_t indexMp = fileLevel.find(SAVEGAME_MULTIPLAYER_PREFIX);
+                            if((indexSk != std::string::npos) && (indexMp == std::string::npos))
                             {
+                                // Skirmish savegame
                                 ss << SAVEGAME_SKIRMISH_PREFIX;
                                 ss << fileLevel.substr(indexSk + SAVEGAME_SKIRMISH_PREFIX.length());
+
                             }
-                            else
+                            else if((indexSk == std::string::npos) && (indexMp != std::string::npos))
                             {
+                                // Multiplayer savegame
                                 ss << SAVEGAME_MULTIPLAYER_PREFIX;
                                 ss << fileLevel.substr(indexMp + SAVEGAME_MULTIPLAYER_PREFIX.length());
                             }
+                            else if((indexSk != std::string::npos) && (indexMp != std::string::npos))
+                            {
+                                // We found both prefixes. That can happen if the name contains the other
+                                // prefix. Because of filename construction, we know that the lowest is the good
+                                if(indexSk < indexMp)
+                                {
+                                    ss << SAVEGAME_SKIRMISH_PREFIX;
+                                    ss << fileLevel.substr(indexSk + SAVEGAME_SKIRMISH_PREFIX.length());
+                                }
+                                else
+                                {
+                                    ss << SAVEGAME_MULTIPLAYER_PREFIX;
+                                    ss << fileLevel.substr(indexMp + SAVEGAME_MULTIPLAYER_PREFIX.length());
+                                }
+                            }
+                            else
+                            {
+                                // We couldn't find any prefix. That's not normal
+                                OD_LOG_ERR("fileLevel=" + fileLevel);
+                                ss << fileLevel;
+                            }
+                            break;
                         }
-                        else
-                        {
-                            // We couldn't find any prefix. That's not normal
-                            OD_LOG_ERR("fileLevel=" + fileLevel);
+                        default:
+                            OD_LOG_ERR("mode=" + Helper::toString(static_cast<int>(mServerMode)));
                             ss << fileLevel;
-                        }
-                        break;
+                            break;
                     }
-                    default:
-                        OD_LOG_ERR("mode=" + Helper::toString(static_cast<int>(mServerMode)));
-                        ss << fileLevel;
-                        break;
+                    std::string savePath = ResourceManager::getSingleton().getSaveGamePath() + ss.str();
+                    levelSave = boost::filesystem::path(savePath);
                 }
-                std::string savePath = ResourceManager::getSingleton().getSaveGamePath() + ss.str();
-                levelSave = boost::filesystem::path(savePath);
-            }
-
-            // If the file exists, we make a backup. The error_code variants keep a file system error
-            // (read-only folder, locked file) from ending the server thread with an exception.
-            boost::system::error_code backupError;
-            bool saveOk = true;
-            if (boost::filesystem::exists(levelSave, backupError))
-            {
-                boost::filesystem::rename(levelSave, levelSave.string() + ".bak", backupError);
-                if(backupError)
-                {
-                    OD_LOG_ERR("Couldn't back up " + levelSave.string() + ": " + backupError.message());
-                    saveOk = false;
-                }
-            }
-            else if(backupError)
-            {
-                OD_LOG_ERR("Couldn't check " + levelSave.string() + ": " + backupError.message());
-                saveOk = false;
-            }
-
-            std::string msg = "Map saved successfully as: " + levelSave.string();
-            try
-            {
-                if(saveOk)
-                    saveOk = MapHandler::writeGameMapToFile(levelSave.string(), *gameMap);
+                levelSaveText = levelSave.string();
             }
             catch(const std::exception& e)
             {
-                OD_LOG_ERR("Exception while saving " + levelSave.string() + ": " + e.what());
+                OD_LOG_ERR(std::string("Couldn't build the path to save the map: ") + e.what());
                 saveOk = false;
             }
+
+            // The map is written to a temp file first and replaces the old file only when it is complete; the .bak
+            // is made from the complete old file. The error_code variants (in SafeSave) keep a file system error
+            // (read-only folder, locked file) from ending the server thread with an exception.
+            if(saveOk)
+            {
+                std::string saveError;
+                SafeSave::Writer writer = std::bind(MapHandler::writeGameMapToFile, std::placeholders::_1, std::ref(*gameMap));
+                saveOk = SafeSave::replaceFile(levelSave, writer, saveError);
+                if(!saveOk)
+                    OD_LOG_ERR("Couldn't save " + levelSaveText + ": " + saveError);
+            }
+
+            std::string msg = "Map saved successfully as: " + levelSaveText;
             if (!saveOk)
             {
-                msg = "Couldn't not save map file as: " + levelSave.string() + "\nPlease check logs.";
+                msg = "Couldn't not save map file as: " + levelSaveText + "\nPlease check logs.";
             }
             // We notify all the players that the game was saved successfully
             ServerNotification notif(ServerNotificationType::chatServer, nullptr);
@@ -3311,10 +3322,10 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             }
             Tile* selectedTile = gameMap->getTile(x1,y1);
-            // The count value is no tile type
-            if(tileType == TileType::countTileType)
+            // The count value is no tile type, and the fullness and the seat have to be usable
+            if(!isEditorTileChangeValid(gameMap, tileType, tileFullness, seatId))
             {
-                OD_LOG_WRN("Ignored editorAskChangeTile with no tile type");
+                OD_LOG_WRN("Ignored editorAskChangeTile with an invalid tile type, fullness or seat");
                 break;
             }
             if(selectedTile == nullptr)
@@ -3384,10 +3395,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 OD_LOG_WRN("Ignored editorAskChangeTiles with an incomplete message");
                 break;
             }
-            // Only the part of the rectangle on the map is walked, and the count value is no tile type
-            if(tileType == TileType::countTileType)
+            // Only the part of the rectangle on the map is walked, the count value is no tile type, and the
+            // fullness and the seat have to be usable
+            if(!isEditorTileChangeValid(gameMap, tileType, tileFullness, seatId))
             {
-                OD_LOG_WRN("Ignored editorAskChangeTiles with no tile type");
+                OD_LOG_WRN("Ignored editorAskChangeTiles with an invalid tile type, fullness or seat");
                 break;
             }
             if(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, gameMap->getMapSizeX(), gameMap->getMapSizeY()))

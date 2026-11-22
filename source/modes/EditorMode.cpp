@@ -2244,6 +2244,8 @@ bool EditorMode::showQuitMenuFromOptions(const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Asks the server to save the map from the options window. The map counts as saved only when the request
+//! was sent.
 bool EditorMode::onSaveButtonClickFromOptions(const CEGUI::EventArgs& /*arg*/)
 {
     if(ODClient::getSingleton().isConnected())
@@ -2253,8 +2255,8 @@ bool EditorMode::onSaveButtonClickFromOptions(const CEGUI::EventArgs& /*arg*/)
             ClientNotificationType::askSaveMap);
         clientNotification->mPacket << std::string() << std::string();
         ODClient::getSingleton().queueClientNotification(clientNotification);
+        mModifiedMapBit = false;
     }
-    mModifiedMapBit = false;
     return true;
 }
 
@@ -2357,6 +2359,8 @@ bool EditorMode::loadLevelFromFile(const std::string& fileName)
 }
 
 
+//! \brief Asks the server to save the map where it was loaded from. The map counts as saved only when the request
+//! was sent.
 bool EditorMode::quickSavePopUpMenu(const CEGUI::EventArgs& /*arg*/)
 {
     if(ODClient::getSingleton().isConnected())
@@ -2364,8 +2368,8 @@ bool EditorMode::quickSavePopUpMenu(const CEGUI::EventArgs& /*arg*/)
         // Send a message to the server telling it we want to drop the creature
         ODClient::getSingleton().queueClientNotification(ClientNotificationType::askSaveMap,
             std::string(), std::string());
+        mModifiedMapBit = false;
     }
-    mModifiedMapBit = false;
     return true;
 }
 
@@ -2552,6 +2556,8 @@ void EditorMode::loadMenuAskForConfirmation(const std::string& fileName)
     }
 }
 
+//! \brief Asks the server to save the map under the name of the save menu. The map counts as saved only when the
+//! request was sent (connected, and the folder exists).
 bool EditorMode::saveMenuSaveButtonClicked(const CEGUI::EventArgs& /*arg*/)
 {
 
@@ -2562,8 +2568,8 @@ bool EditorMode::saveMenuSaveButtonClicked(const CEGUI::EventArgs& /*arg*/)
     {
         // Send a message to the server telling it we want to drop the creature
         ODClient::getSingleton().queueClientNotification(ClientNotificationType::askSaveMap,filePath, fileName);
+        mModifiedMapBit = false;
     }
-    mModifiedMapBit = false;
     return true;
 }
 
@@ -2786,8 +2792,8 @@ void EditorMode::checkInputCommand()
             return;
         case SelectedAction::destroyTrap:
             TrapManager::checkSellTrapTilesEditor(mGameMap, inputManager, *this);
-            return;
             mModifiedMapBit = true;
+            return;
         case SelectedAction::castSpell:
             // TODO: create skill entity with corresponding spell
             return;
@@ -3101,14 +3107,19 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     }
 
     level = levelPath + "/" + level;
+    // Maps made in the editor carry the .mmap extension (a typed .level becomes .mmap, so that the map never
+    // looks like a shipped level). It is added before the test, so that the file that would be written is tested.
+    boost::filesystem::path pp(level);
+    if (pp.extension() == ".level") {
+        level = pp.replace_extension(".mmap").string();
+    }
+    else if (pp.extension() != ".mmap") {
+        level.append(".mmap");
+    }
     if (boost::filesystem::exists(level)) {
         mRootWindow->getChild("LevelWindowFrame/LevelTypeText")
             ->setText("The level filename already exists.\nPlease set a different filename.");
         return true;
-    }
-    boost::filesystem::path pp(level);
-    if (pp.extension() != ".level") {
-        level.append(".level");
     }
 
     // Get the map size.

@@ -552,6 +552,7 @@ void GameMap::clearAll()
 
         clearGoalsForAllSeats();
         mLevelScript->clear();
+        mScriptEntries.clear();
         mCombatGroups->clear();
         mRaid->clear();
         // The blocks shown on marked places beyond the edge belong to the client map only

@@ -133,13 +133,18 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     }
 
     level = levelPath + "/" + level;
+    // Maps made in the editor carry the .mmap extension (a typed .level becomes .mmap, so that the map never
+    // looks like a shipped level). It is added before the test, so that the file that would be written is tested.
+    boost::filesystem::path pp (level);
+    if (pp.extension() == ".level") {
+        level = pp.replace_extension(".mmap").string();
+    }
+    else if (pp.extension() != ".mmap") {
+        level.append(".mmap");
+    }
     if (boost::filesystem::exists(level)) {
         window->getChild(TEXT_LOADING)->setText("The level filename already exists.\nPlease set a different filename.");
         return true;
-    }
-    boost::filesystem::path pp (level);
-    if (pp.extension() != ".level") {
-        level.append(".level");
     }
 
     // Get the map size.

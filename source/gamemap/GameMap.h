@@ -651,6 +651,19 @@ public:
     inline void setSavedTurnNumber(int64_t turnNumber)
     { mSavedTurnNumber = turnNumber; }
 
+    //! \brief The lines of the [Scripts] section the level was loaded with (see ScriptEntry), so that saving the
+    //! level writes them again.
+    inline const std::vector<std::string>& getScriptEntries() const
+    { return mScriptEntries; }
+
+    //! \brief Keeps one line of the [Scripts] section of the loaded level.
+    inline void addScriptEntry(const std::string& entry)
+    { mScriptEntries.push_back(entry); }
+
+    //! \brief Forgets the lines of the [Scripts] section (a level is about to be loaded).
+    inline void clearScriptEntries()
+    { mScriptEntries.clear(); }
+
     inline bool isServerGameMap() const
     { return mIsServerGameMap; }
     
@@ -1015,6 +1028,9 @@ private:
 
     //! \brief The turn the level file was saved at (see getSavedTurnNumber).
     int64_t mSavedTurnNumber;
+
+    //! \brief The lines of the [Scripts] section of the loaded level (see getScriptEntries).
+    std::vector<std::string> mScriptEntries;
 
     //! \brief Unique numbers to ensure names are unique
     int mUniqueNumberCreature;

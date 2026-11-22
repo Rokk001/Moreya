@@ -109,14 +109,18 @@ copy_cases = ''.join(case_body(server, n) for n in ('editorAskCopyRoom', 'editor
 check(re.search(r'toString\(player->getSeat\(\)->getId\(\)\)', copy_cases) is None,
       'A5 the failure logs of CopyRoom and CopyTrap do not read the seat of the player unguarded')
 
-# A6
+# A6 (since the atomic save of check_editor_save.py D5, the file system calls live in SafeSave.h)
 ask = case_body(server, 'askSaveMap')
-check('error_code' in ask and re.search(r'exists\(levelSave,\s*\w+\)', ask) is not None
-      and re.search(r'rename\(levelSave,[^;]*,\s*\w+\)', ask) is not None,
-      'A6 askSaveMap uses the error_code overloads of exists and rename')
-check('catch' in ask and before(ask, 'try', 'writeGameMapToFile') and before(ask, 'writeGameMapToFile', 'catch'),
-      'A6 askSaveMap catches an exception of writeGameMapToFile')
-check(before(ask, 'saveOk', 'Couldn\'t not save') and 'chatServer' in ask,
+safe = read('source/utils/SafeSave.h')
+check('error_code' in safe and re.search(r'status\(target,\s*\w+\)', safe) is not None
+      and re.search(r'rename\(tempPath,\s*target,\s*\w+\)', safe) is not None
+      and 'SafeSave::replaceFile(' in ask,
+      'A6 askSaveMap saves through SafeSave, which uses the error_code overloads of status and rename')
+check('catch' in safe and before(safe, 'try', 'writer(') and before(safe, 'writer(', 'catch'),
+      'A6 SafeSave catches an exception of the writer')
+check('catch' in ask and before(ask, 'try', 'levelSave =') and before(ask, 'levelSave =', 'catch'),
+      'A6 askSaveMap catches an exception while it builds the path to save')
+check(before(ask, 'saveOk', "Couldn't not save") and 'chatServer' in ask,
       'A6 a failed save tells the player in the chat')
 
 if failures:

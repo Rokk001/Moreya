@@ -18,6 +18,7 @@
 #include "gamemap/MapHandler.h"
 
 #include "gamemap/LevelScript.h"
+#include "gamemap/ScriptEntry.h"
 
 #include "creaturemood/CreatureMoodManager.h"
 #include "eventsystem/CreatureMoved.h"
@@ -221,6 +222,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     // std::vector CreatureMoved::alreadyVisited also depends on map Size : 
     CreatureMoved::alreadyVisited.assign(mapSizeX*mapSizeY, false);
     GameEditorModeConsole::scriptRegister.clear();
+    gameMap.clearScriptEntries();
     /// int CreatureMoved::GAME_MAP_WIDTH also depends on map Size:
     CreatureMoved::GAME_MAP_WIDTH = mapSizeX;
     
@@ -857,22 +859,19 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             std::getline(levelFile, nextParam);
             entire_line += nextParam;
 
-            std::stringstream ss(entire_line);
             std::stringstream script_body;
             std::string actionName;
             std::string scriptName;
             std::vector<int> auxVector;
-            int auxI;
-            ss >> actionName;
-            ss >> scriptName;
-            if(!Helper::readFile( ResourceManager::getSingleton().getGameScriptsPath() +  scriptName,script_body,false))            
+            // A comment line or a line without a script file is no entry
+            if(!ScriptEntry::parse(entire_line, actionName, scriptName, auxVector))
+                continue;
+            if(!Helper::readFile( ResourceManager::getSingleton().getGameScriptsPath() +  scriptName,script_body,false))
                 OD_LOG_ERR("COULD NOT READ THE FILE " + scriptName);
-            while(ss>>auxI)
-            {
-                auxVector.push_back(auxI);
-            }
-           
+
             GameEditorModeConsole::scriptRegister[actionName].insert(make_pair(auxVector, script_body.str())); // std::make_pair(auxF,  script_body.str()));
+            // The entry is kept so that writeGameMapToFile writes the section again
+            gameMap.addScriptEntry(ScriptEntry::format(actionName, scriptName, auxVector));
 
         }
 
@@ -1442,16 +1441,23 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         }
     levelFile << "[/HerbBundles]\n";
 
+    // The [Scripts] section the level was loaded with is written again, in the form the loader reads
+    if(!gameMap.getScriptEntries().empty())
+    {
+        levelFile << "\n[Scripts]\n";
+        levelFile << "# EventName ScriptFile Trigger\n";
+        for(const std::string& scriptEntry : gameMap.getScriptEntries())
+            levelFile << scriptEntry << "\n";
+        levelFile << "[/Scripts]\n";
+    }
+
     if(!gameMap.getLevelScript().isEmpty())
     {
         levelFile << "\n";
-        // The turn counter starts at 0 again when the game is loaded, so a time limit is
-        // written as the time that is left
-        LevelScript script = gameMap.getLevelScript();
-        int64_t elapsedSeconds = static_cast<int64_t>(static_cast<double>(std::max<int64_t>(0, gameMap.getTurnNumber()))
-            / ODApplication::turnsPerSecond);
-        script.rebaseTimeLimit(elapsedSeconds);
-        script.exportToStream(levelFile);
+        // The time limit and the countdowns are written as they are in memory: a saved game goes on from
+        // its saved turn (TurnNumber in [Info]) and a level of the editor starts again at turn 0, so the
+        // turn counter is the one they were set against in both cases and nothing is subtracted
+        gameMap.getLevelScript().exportToStream(levelFile);
     }
 
     if(isGameSave && gameMap.isRelationshipsEnabled())
