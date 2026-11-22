@@ -218,7 +218,7 @@ struct Seat {
     SkillType mCurrentSkillType=SkillType::nullSkillType;float mCurrentSkillProgress=0;
     bool mGuiSkillNeedsRefresh=false;
     std::vector<SkillType> mSkillDone,mSkillPending,mSkillNotAllowed;
-    //! rief Free level one entries the level withholds ([SkillNotFree]), read and written by the extracted load and save.
+    //! \brief Free level one entries the level withholds ([SkillNotFree]), read and written by the extracted load and save.
     std::vector<SkillType> mSkillNotFree;
     //! \brief Fixture list for the optional arrival history that the seat load and save paths handle.
     std::vector<std::string> mAnnouncedCreatureClasses;
@@ -323,9 +323,7 @@ int main(int argc,char** argv){try {
      check(withheld.getSkillLevel(SkillType::roomTavern)==0,"the withheld Tavern is not done before its cost is paid");
      withheld.addSkillPoints(1);check(withheld.getSkillLevel(SkillType::roomTavern)==1,"the withheld Tavern is researched with its tier cost");
      std::stringstream kept;withheld.save(kept);
-     check(kept.str().find("[SkillNotFree]
-roomTavern
-[/SkillNotFree]")!=std::string::npos,"the withheld list is saved");
+     check(kept.str().find("[SkillNotFree]\nroomTavern\n[/SkillNotFree]")!=std::string::npos,"the withheld list is saved");
      Seat restored;check(restored.load(kept)&&restored.mSkillNotFree==std::vector<SkillType>{SkillType::roomTavern},"the withheld list survives a save and load");
      std::stringstream none;probeSeat.save(none);check(none.str().find("[SkillNotFree]")==std::string::npos,"a seat without withheld entries saves no block");
      std::stringstream bad("[SkillDone] roomLibrary [/SkillDone] [SkillNotFree] roomNothing [/SkillNotFree] [SkillNotAllowed] [/SkillNotAllowed] [SkillPending] [/SkillPending]");
