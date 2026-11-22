@@ -2,8 +2,9 @@
 """Draws the text-free placeholder of the crossed-out hand shown over a creature while the hand cooldown runs.
 
 Everything is drawn from simple shapes by this script, nothing is taken from another work. The output is
-deterministic. The picture is a placeholder under its final image name (HandCooldown/NoPickup); a painted picture
-replaces gui/HandCooldownIcon.png later without a code or layout change. Run it from the repository root:
+deterministic. The picture was a placeholder under its final image name (HandCooldown/NoPickup); since 2026-11-22
+gui/HandCooldownIcon.png is the painted picture (see CREDITS), and running this script would overwrite it with the
+placeholder again. Run it from the repository root only to reproduce the old placeholder:
 
     python tools/gen_hand_cooldown_icon.py
 
