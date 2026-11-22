@@ -1,12 +1,9 @@
 """Build the entrance into Moreya for the start screen: the forecourt behind the campaign table and its green portal.
 
-    MenuMoreyaForecourt a large open forecourt behind the campaign hall (FORECOURT, 24 wide and 30 deep), old,
-                        abandoned and overgrown: broken wet flagstones (gone, sunken, tilted, moss in their place),
-                        high coursed walls with pilasters whose coping and merlons are partly gone and which have
-                        fallen in two places, ivy climbing them and vines hanging down, moss cushions, rubble heaps, a
-                        fallen column with its stump and dead trees grown out of the paving; a clear path leads from
-                        the hall to the portal; short walls join the hall; the abandoned castle and the rear buildings
-                        of the fortress stand behind its rear wall
+    MenuMoreyaForecourt a large open forecourt behind the campaign hall (FORECOURT, 24 wide and 30 deep): wet
+                        flagstones, high coursed walls with coping, merlons and pilasters, short walls that join the
+                        hall, moss and rubble at the feet of the walls; the abandoned castle and the rear buildings of
+                        the fortress stand behind its rear wall
     MenuHallRearArch    the stone frame (jambs, lintel, threshold) of the wide opening in the back wall of the campaign
                         hall through which one walks from the table into the forecourt
     MenuMoreyaPortal    the other side of the green start gate of the campaign map, at the far end of the forecourt
@@ -59,11 +56,6 @@ ARCH_WALL = (29.25, 30.25)
 FORECOURT = (-12.0, 12.0, 30.25, 60.25)
 FORECOURT_WALL, FORECOURT_WALL_HEIGHT, FORECOURT_REAR_HEIGHT = 1.2, 7.0, 11.0
 PAVING_TOP = 0.08
-#: The forecourt is an old abandoned ruin: share of decayed flagstones, the half width of the clear path from the
-#: hall to the portal (nothing tall stands on it) and the fallen parts of the side walls (start y, end y, lowest top).
-FORECOURT_DECAY, PATH_HALF = 0.3, 3.5
-LEFT_BREACHES = ((39.0, 45.0, 3.2),)
-RIGHT_BREACHES = ((50.5, 54.5, 4.2),)
 #: The paved rear yard behind the forecourt's rear wall (x min, x max, y min, y max) and the top of its flagstones.
 REAR_YARD, REAR_YARD_TOP = (-15.0, 15.0, 61.45, 77.0), 0.02
 #: The portal as designed before it is scaled by PORTAL_SCALE: inner half width of the opening, spring height of the
@@ -295,12 +287,8 @@ def build_hall_arch(raid):
     return b.finish(["MenuCarvedStone", "MenuChippedStone"])
 
 
-def add_forecourt_paving(b, area, top, decay=0.0):
-    """Paves an area (x min, x max, y min, y max) with worn wet flagstones of uneven size on a dark bed.
-
-    decay is the share of flagstones that are gone (moss or bare bed in their place) or sunken and tilted; the
-    flagstones of the clear path (|x| < PATH_HALF) are only sunken or tilted, never gone.
-    """
+def add_forecourt_paving(b, area, top):
+    """Paves an area (x min, x max, y min, y max) with worn wet flagstones of uneven size on a dark bed."""
     x0, x1, y0, y1 = area
     box(b, x0, x1, y0, y1, top - 0.38, top - 0.12, "MenuSoot")
     y = y0
@@ -313,68 +301,17 @@ def add_forecourt_paving(b, area, top, decay=0.0):
             right = min(x + b.rng.uniform(1.3, 2.4), x1)
             if x1 - right < 0.8:
                 right = x1
-            left = max(x, x0)
-            chance = b.rng.random()
-            on_path = abs((left + right) / 2) < PATH_HALF
-            if chance < decay * 0.45 and not on_path:
-                # A flagstone is gone: its bed shows, often grown over with moss.
-                if b.rng.random() < 0.7:
-                    moss_patch(b, ((left + right) / 2, (y + far) / 2), ((right - left) * 0.45, (far - y) * 0.45),
-                               top - 0.12, 0.06)
-            else:
-                first = len(b.faces)
-                box(b, left + 0.02, right - 0.02, y + 0.02, far - 0.02, top - 0.33,
-                    top + b.rng.uniform(-0.03, 0.015), "MenuWetStone")
-                if chance < decay:
-                    # A sunken, tilted flagstone.
-                    centre = Vector(((left + right) / 2, (y + far) / 2, top))
-                    tilt = (Matrix.Translation(centre) @ Matrix.Rotation(b.rng.uniform(-0.06, 0.06), 4, "X")
-                            @ Matrix.Rotation(b.rng.uniform(-0.06, 0.06), 4, "Y")
-                            @ Matrix.Translation(-centre + Vector((0.0, 0.0, -b.rng.uniform(0.02, 0.07)))))
-                    transform_faces(b, first, tilt)
+            box(b, max(x, x0) + 0.02, right - 0.02, y + 0.02, far - 0.02, top - 0.33,
+                top + b.rng.uniform(-0.03, 0.015), "MenuWetStone")
             x = right
         y = far
 
 
-def moss_patch(b, centre, radius, z, thickness):
-    """Adds a flat, irregular cushion of moss (centre and radii in x and y) lying on a surface at height z."""
-    points = []
-    for index in range(9):
-        angle = index * 2 * math.pi / 9
-        scale = b.rng.uniform(0.75, 1.0)
-        points.append((centre[0] + radius[0] * scale * math.cos(angle), centre[1] + radius[1] * scale * math.sin(angle),
-                       z - 0.02))
-    b.solid(points, (0, 0, thickness + 0.02), "MenuMoss", (1, 0, 0))
-
-
-def add_wall(b, x0, x1, y0, y1, top, breaches=()):
-    """Adds a coursed stone wall over a rectangle (along its longer side) with a dark core, coping and merlons.
-
-    The wall is old: some merlons and pieces of the coping are gone. breaches lists (start, end, low) ranges along
-    the wall where it has partly fallen: there the courses end at a ragged line that sinks to the height low.
-    """
+def add_wall(b, x0, x1, y0, y1, top):
+    """Adds a coursed stone wall over a rectangle (along its longer side) with a dark core, coping and merlons."""
     along_x = x1 - x0 >= y1 - y0
+    box(b, x0 + 0.06, x1 - 0.06, y0 + 0.06, y1 - 0.06, -0.2, top - 0.05, "MenuSoot")
     start, end = (x0, x1) if along_x else (y0, y1)
-
-    def ruined_top(position):
-        """Returns the height the wall still reaches at a position along it."""
-        height = top
-        for first, last, low in breaches:
-            if first <= position <= last:
-                middle, half = (first + last) / 2, (last - first) / 2
-                height = min(height, low + (top - low) * (abs(position - middle) / half) ** 2)
-        return height
-
-    # The dark core follows the ruined top in short pieces.
-    position = start
-    while position < end - 0.01:
-        following = min(position + 0.5, end)
-        height = min(ruined_top(position), ruined_top(following)) - 0.05
-        if along_x:
-            box(b, position + 0.01, following - 0.01, y0 + 0.06, y1 - 0.06, -0.2, height, "MenuSoot")
-        else:
-            box(b, x0 + 0.06, x1 - 0.06, position + 0.01, following - 0.01, -0.2, height, "MenuSoot")
-        position = following
     bottom, row = -0.15, 0
     while bottom < top - 0.4:
         height = min(b.rng.uniform(0.6, 0.78), top - 0.4 - bottom)
@@ -385,9 +322,6 @@ def add_wall(b, x0, x1, y0, y1, top, breaches=()):
             if end - following < 0.5:
                 following = end
             low, high = max(position, start) + 0.012, following - 0.012
-            if bottom + height > min(ruined_top(low), ruined_top(high)) - b.rng.uniform(0.0, 0.3):
-                position = following
-                continue
             out = b.rng.uniform(-0.03, 0.03)
             material = "MenuChippedStone" if b.rng.random() < 0.3 else "MenuStone"
             if along_x:
@@ -397,155 +331,40 @@ def add_wall(b, x0, x1, y0, y1, top, breaches=()):
             position = following
         bottom += height
         row += 1
-    # The coping in pieces, some of them gone, and the merlons on it, many of them gone.
-    position = start
-    while position < end - 0.05:
-        following = min(position + b.rng.uniform(1.5, 3.0), end)
-        if b.rng.random() > 0.18 and ruined_top(position) >= top and ruined_top(following) >= top:
-            if along_x:
-                box(b, position, following, y0 - 0.1, y1 + 0.1, top - 0.4, top, "MenuCarvedStone")
-            else:
-                box(b, x0 - 0.1, x1 + 0.1, position, following, top - 0.4, top, "MenuCarvedStone")
-            merlon = position + 0.2
-            while merlon < following - 0.9:
-                if b.rng.random() > 0.35:
-                    lean = b.rng.uniform(0.45, 0.75)
-                    if along_x:
-                        box(b, merlon, merlon + 0.8, y0, y1, top - 0.02, top + lean, "MenuStone")
-                    else:
-                        box(b, x0, x1, merlon, merlon + 0.8, top - 0.02, top + lean, "MenuStone")
-                merlon += 1.6
-        position = following
-
-
-def ivy(b, base, normal, height):
-    """Adds a strand of ivy that climbs a wall face from base (on the floor) up to a height, with leaf clumps.
-
-    normal points out of the wall face into the forecourt; the strand winds sideways along the face as it climbs.
-    """
-    normal = Vector(normal)
-    side = Vector((-normal.y, normal.x, 0.0))
-    point = Vector(base) + normal * 0.06
-    while point.z < height:
-        following = point + side * b.rng.uniform(-0.35, 0.35) + Vector((0.0, 0.0, b.rng.uniform(0.35, 0.6)))
-        b.log_column(point, following, 0.045, 0.04, "MenuMoss", sides=5, rough=0.008)
-        for _ in range(2):
-            leaf = following + side * b.rng.uniform(-0.25, 0.25) + Vector((0.0, 0.0, b.rng.uniform(-0.25, 0.05)))
-            b.rock(leaf + normal * 0.05, (0.16 + 0.1 * abs(normal.y), 0.16 + 0.1 * abs(normal.x), 0.14), "MenuMoss")
-        point = following
-
-
-def add_overgrowth(b):
-    """Grows the forecourt over: moss cushions along the walls, ivy climbing them, vines hanging from the coping."""
-    x0, x1, y0, y1 = FORECOURT
-    for side in (-1, 1):
-        face = side * x1
-        normal = (-side, 0.0, 0.0)
-        y = y0 + 0.8
-        while y < y1 - 0.5:
-            moss_patch(b, (face - side * b.rng.uniform(0.7, 1.5), y + b.rng.uniform(-0.5, 0.5)),
-                       (b.rng.uniform(0.6, 1.3), b.rng.uniform(0.8, 1.8)), PAVING_TOP, 0.05)
-            if b.rng.random() < 0.75:
-                ivy(b, (face, y + b.rng.uniform(-0.8, 0.8), PAVING_TOP), normal,
-                    b.rng.uniform(1.8, FORECOURT_WALL_HEIGHT - 0.6))
-            if b.rng.random() < 0.55:
-                hang = Vector((face - side * 0.12, y + b.rng.uniform(-1.0, 1.0), FORECOURT_WALL_HEIGHT - 0.42))
-                b.log_column(hang, hang + Vector((-side * 0.05, 0.0, -b.rng.uniform(1.0, 3.2))), 0.04, 0.015,
-                             "MenuMoss", sides=5, rough=0.008)
-            y += b.rng.uniform(1.6, 2.8)
-    x = x0 + 0.8
-    while x < x1 - 0.5:
-        if abs(x) > PORTAL_SCALE * (PORTAL_INNER + PILLAR_WIDTH) + 1.5:
-            moss_patch(b, (x, y1 - b.rng.uniform(0.6, 1.3)), (b.rng.uniform(0.8, 1.6), b.rng.uniform(0.5, 1.0)),
-                       PAVING_TOP, 0.05)
-            if b.rng.random() < 0.8:
-                ivy(b, (x, y1, PAVING_TOP), (0.0, -1.0, 0.0), b.rng.uniform(2.5, FORECOURT_REAR_HEIGHT - 1.5))
-        x += b.rng.uniform(1.5, 2.6)
-    # Moss and weeds in the joints all over the floor, low enough to walk over.
-    for _ in range(140):
-        centre = (b.rng.uniform(x0 + 0.5, x1 - 0.5), b.rng.uniform(y0 + 0.5, y1 - 4.5))
-        moss_patch(b, centre, (b.rng.uniform(0.2, 0.7), b.rng.uniform(0.2, 0.7)), PAVING_TOP, 0.04)
-
-
-def rubble_heap(b, centre, radius, count):
-    """Adds a heap of fallen wall blocks and broken stones around a centre on the forecourt floor."""
-    for _ in range(count):
-        angle, distance = b.rng.uniform(0, 2 * math.pi), radius * math.sqrt(b.rng.random())
-        x, y = centre[0] + distance * math.cos(angle), centre[1] + distance * math.sin(angle)
-        height = 0.2 + 0.9 * (1.0 - distance / radius) * b.rng.random()
-        if b.rng.random() < 0.45:
-            size = (b.rng.uniform(0.5, 1.2), b.rng.uniform(0.4, 0.8), b.rng.uniform(0.35, 0.6))
-            first = len(b.faces)
-            box(b, x - size[0] / 2, x + size[0] / 2, y - size[1] / 2, y + size[1] / 2, PAVING_TOP - 0.1,
-                PAVING_TOP - 0.1 + size[2], "MenuChippedStone")
-            pivot = Vector((x, y, PAVING_TOP))
-            transform_faces(b, first, Matrix.Translation(pivot) @ Matrix.Rotation(b.rng.uniform(0, 2 * math.pi), 4, "Z")
-                            @ Matrix.Rotation(b.rng.uniform(-0.3, 0.3), 4, "X") @ Matrix.Translation(-pivot))
+    if along_x:
+        box(b, x0 - 0.1, x1 + 0.1, y0 - 0.1, y1 + 0.1, top - 0.4, top, "MenuCarvedStone")
+    else:
+        box(b, x0 - 0.1, x1 + 0.1, y0 - 0.1, y1 + 0.1, top - 0.4, top, "MenuCarvedStone")
+    position = start + 0.3
+    while position < end - 1.0:
+        if along_x:
+            box(b, position, position + 0.8, y0, y1, top, top + 0.75, "MenuStone")
         else:
-            size = (b.rng.uniform(0.2, 0.5), b.rng.uniform(0.2, 0.45), b.rng.uniform(0.15, 0.35))
-            b.rock((x, y, PAVING_TOP + min(height, size[2] * 0.6)), size, "MenuRoughStone")
-
-
-def dead_tree(b, root, height, lean):
-    """Adds a dead gnarled tree that has grown out of the broken paving: roots, trunk and bare branches."""
-    root = Vector(root)
-    top = root + Vector((lean[0], lean[1], height))
-    b.log_column(root + Vector((0, 0, -0.3)), root + (top - root) * 0.55, 0.32, 0.2, "MenuAgedWood", sides=8,
-                 rough=0.04)
-    middle = root + (top - root) * 0.55
-    b.log_column(middle, top, 0.2, 0.06, "MenuAgedWood", sides=7, rough=0.03)
-    for index in range(5):
-        angle = index * 2 * math.pi / 5 + b.rng.uniform(-0.3, 0.3)
-        b.log_column(root + Vector((0, 0, 0.1)), root + Vector((1.1 * math.cos(angle), 1.1 * math.sin(angle), -0.1)),
-                     0.14, 0.04, "MenuAgedWood", sides=6, rough=0.02)
-    for index in range(6):
-        start = root + (top - root) * b.rng.uniform(0.45, 0.95)
-        angle = b.rng.uniform(0, 2 * math.pi)
-        reach = b.rng.uniform(0.9, 2.0)
-        end = start + Vector((reach * math.cos(angle), reach * math.sin(angle), b.rng.uniform(0.4, 1.3)))
-        b.log_column(start, end, 0.09, 0.02, "MenuAgedWood", sides=5, rough=0.015)
-        twig = end + Vector((b.rng.uniform(-0.5, 0.5), b.rng.uniform(-0.5, 0.5), b.rng.uniform(0.2, 0.6)))
-        b.log_column(end, twig, 0.03, 0.008, "MenuAgedWood", sides=4, rough=0.0)
-
-
-def add_decay(b):
-    """Adds the ruin of the forecourt: rubble under the breaches and along the walls, a fallen column with its
-    broken stump, and dead trees grown out of the paving."""
-    x0, x1, y0, y1 = FORECOURT
-    for first, last, low in LEFT_BREACHES:
-        rubble_heap(b, (x0 + 1.4, (first + last) / 2), (last - first) / 2 + 0.4, 34)
-    for first, last, low in RIGHT_BREACHES:
-        rubble_heap(b, (x1 - 1.4, (first + last) / 2), (last - first) / 2 + 0.4, 30)
-    for centre in ((x0 + 1.6, 35.5), (x1 - 1.7, 49.5), (x0 + 2.2, 55.5), (x1 - 2.0, 33.0)):
-        rubble_heap(b, centre, 1.3, 12)
-    # A fallen column lies broken across the right half; its stump still stands.
-    b.log_column((8.0, 41.0, PAVING_TOP - 0.05), (8.0, 41.0, 1.4), 0.5, 0.46, "MenuCarvedStone", sides=10, rough=0.03)
-    b.log_column((7.4, 42.0, 0.5), (5.0, 45.6, 0.48), 0.46, 0.45, "MenuCarvedStone", sides=10, rough=0.03)
-    b.log_column((4.8, 46.1, 0.44), (4.5, 47.4, 0.42), 0.45, 0.44, "MenuCarvedStone", sides=10, rough=0.03)
-    rubble_heap(b, (6.4, 43.9), 1.0, 8)
-    dead_tree(b, (-7.6, 46.5, PAVING_TOP), 5.2, (-0.4, 0.3))
-    dead_tree(b, (8.6, 54.0, PAVING_TOP), 4.0, (0.3, -0.2))
-    dead_tree(b, (-9.4, 33.8, PAVING_TOP), 3.4, (0.2, 0.3))
+            box(b, x0, x1, position, position + 0.8, top, top + 0.75, "MenuStone")
+        position += 1.6
 
 
 def add_forecourt_walls(b):
-    """Adds the walls round the forecourt, partly fallen, the pilasters on their inner faces and stones at their feet."""
+    """Adds the walls round the forecourt, the pilasters on their inner faces and moss and rubble at their feet."""
     x0, x1, y0, y1 = FORECOURT
     thick = FORECOURT_WALL
-    add_wall(b, x0 - thick, x0, y0 - 1.0, y1 + thick, FORECOURT_WALL_HEIGHT, LEFT_BREACHES)
-    add_wall(b, x1, x1 + thick, y0 - 1.0, y1 + thick, FORECOURT_WALL_HEIGHT, RIGHT_BREACHES)
+    add_wall(b, x0 - thick, x0, y0 - 1.0, y1 + thick, FORECOURT_WALL_HEIGHT)
+    add_wall(b, x1, x1 + thick, y0 - 1.0, y1 + thick, FORECOURT_WALL_HEIGHT)
     add_wall(b, x0 - thick, x1 + thick, y1, y1 + thick, FORECOURT_REAR_HEIGHT)
     # Short walls close the forecourt between the campaign hall and the side walls.
     for side in (-1, 1):
         inner, outer = sorted((side * HALL_HALF_OUTER, side * x1))
         add_wall(b, inner, outer, y0 - 1.0, y0, FORECOURT_WALL_HEIGHT)
-    for side, breaches in ((-1, LEFT_BREACHES), (1, RIGHT_BREACHES)):
+    for side in (-1, 1):
         face = side * x1
         y = y0 + 3.0
         while y < y1 - 2.0:
-            if not any(first - 0.6 <= y <= last + 0.6 for first, last, low in breaches):
-                inner, outer = sorted((face - side * 0.45, face))
-                box(b, inner, outer, y - 0.5, y + 0.5, -0.1, FORECOURT_WALL_HEIGHT + 0.3, "MenuCarvedStone", (0, 0, 1))
+            inner, outer = sorted((face - side * 0.45, face))
+            box(b, inner, outer, y - 0.5, y + 0.5, -0.1, FORECOURT_WALL_HEIGHT + 0.3, "MenuCarvedStone", (0, 0, 1))
+            b.rock((face - side * 0.6, y + b.rng.uniform(-0.6, 0.6), 0.12), (0.35, 0.3, 0.1), "MenuMoss")
+            if b.rng.random() < 0.6:
+                b.rock((face - side * b.rng.uniform(1.0, 1.8), y + b.rng.uniform(1.0, 2.0), 0.15),
+                       (b.rng.uniform(0.25, 0.45), b.rng.uniform(0.2, 0.4), b.rng.uniform(0.15, 0.3)), "MenuRoughStone")
             y += 6.0
     x = x0 + 2.0
     while x < x1 - 2.0:
@@ -554,19 +373,16 @@ def add_forecourt_walls(b):
 
 
 def build_forecourt(raid):
-    """Builds the forecourt behind the campaign hall as an old, abandoned and overgrown ruin: broken paving, partly
-    fallen walls with pilasters, ivy, moss, rubble, a fallen column and dead trees, and the paving of the rear yard
-    behind it."""
+    """Builds the forecourt behind the campaign hall: paving, walls with pilasters, coping and merlons, moss, rubble,
+    and the paving of the rear yard behind it."""
     b = raid.PartBuilder("MenuMoreyaForecourt", 7717)
-    add_forecourt_paving(b, FORECOURT, PAVING_TOP, FORECOURT_DECAY)
+    add_forecourt_paving(b, FORECOURT, PAVING_TOP)
     # The rear yard behind the forecourt keeps its paving: the rubble and the forge of the rear buildings
     # (MenuFortressRear.mesh, moved back with them) lie on it.
     add_forecourt_paving(b, REAR_YARD, REAR_YARD_TOP)
     add_forecourt_walls(b)
-    add_overgrowth(b)
-    add_decay(b)
     return b.finish(["MenuWetStone", "MenuSoot", "MenuStone", "MenuChippedStone", "MenuCarvedStone", "MenuMoss",
-                     "MenuRoughStone", "MenuAgedWood"])
+                     "MenuRoughStone"])
 
 
 def build_forge_coals(raid):

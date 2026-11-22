@@ -1022,41 +1022,13 @@ def hall():
 
 # Build the campaign table with a separate plane for the map image of Moreya (material MenuCampaignMap,
 # texture MenuCampaignMap.png, a copy of gui/campaign/moreya/moreya_map.png).
-# The table is old weathered stone: a heavy top slab with a broken-off corner and chipped edges on two massive
-# trestle blocks joined by a cracked stretcher, moss, lichen and water stains on it, creeping moss strands down the
-# trestles and the broken corner lying in pieces on the floor. The worn parchment and the map plane lie on the top at
-# the same place and size as on the former wooden table, so the campaign view frames the map as before.
 def table():
     b=MeshBuilder("MenuMapTable")
-    # The top slab: an irregular outline with chipped corners and the front left corner broken off.
-    outline=[(-2.05,-1.72),(-1.62,-1.55),(-1.2,-1.71),(0.4,-1.73),(1.95,-1.7),(2.27,-1.45),(2.3,0.2),(2.26,1.5),
-        (2.0,1.74),(0.3,1.71),(-1.9,1.73),(-2.28,1.48),(-2.31,-0.3),(-2.3,-1.25)]
-    b.slab(outline,1.36,1.665,"MenuStone")
-    # A darker underside course and a chamfered lower edge make the slab read as thick stone.
-    b.slab([(x*0.97,y*0.96) for x,y in outline],1.24,1.37,"MenuDarkStone")
-    # Two massive trestle blocks and a cracked stretcher between them.
-    for x in (-1.45,1.45):
-        b.box((x,0,0.66),(0.78,2.5,1.32),"MenuRoughStone")
-        b.box((x,0,0.09),(1.05,2.8,0.2),"MenuStone")
-        b.box((x+0.02,0,1.18),(0.95,2.65,0.14),"MenuCarvedStone")
-    b.box((0,0.05,0.42),(2.2,0.55,0.38),"MenuStone")
-    b.prism([(-0.08,0.24),(0.05,0.42),(-0.04,0.61)],0.32,0.335,"MenuBlack")
-    # The broken corner lies in pieces on the floor in front of the table.
-    b.oval((-2.15,-2.15,0.12),(0.32,0.26,0.13),"MenuRoughStone",9,5)
-    b.oval((-1.7,-2.45,0.07),(0.16,0.13,0.07),"MenuRoughStone",8,4)
-    b.oval((-2.55,-1.85,0.06),(0.12,0.1,0.06),"MenuRoughStone",8,4)
-    # Moss and lichen on the top edges outside the map, water stains on the front, moss on the trestles.
-    for x,y,size in ((2.12,1.2,(0.18,0.42)),(2.15,-0.9,(0.15,0.3)),(-2.12,0.6,(0.16,0.5)),(0.9,1.58,(0.5,0.12)),
-                     (-1.1,1.6,(0.4,0.11)),(1.4,-1.6,(0.45,0.1))):
-        b.slab([(x-size[0],y-size[1]),(x+size[0],y-size[1]*0.7),(x+size[0]*0.8,y+size[1]),(x-size[0]*0.7,y+size[1]*0.8)],
-            1.655,1.68,"MenuMoss" if b.rng.random()<0.6 else "MenuLichen")
-    for x in (-0.9,0.6,1.7):
-        b.prism([(x-0.12,1.25),(x+0.1,1.25),(x+0.05,1.6),(x-0.06,1.62)],-1.745,-1.735,"MenuWaterStain")
-    for x in (-1.45,1.45):
-        for y,height in ((-1.26,1.1),(1.27,0.8),(-0.6,0.5)):
-            b.segment((x+b.rng.uniform(-0.3,0.3),y,1.2),(x+b.rng.uniform(-0.3,0.3),y,1.2-height),0.04,0.015,"MenuMoss",5)
-        b.box((x,-1.27,0.15),(0.7,0.08,0.3),"MenuMoss")
-    # The worn parchment and the map of Moreya on it.
+    b.box((0,0,1.55),(4.4,3.2,0.24),"MenuAgedWood")
+    for x in (-1.75,1.75):
+        for y in (-1.15,1.15):
+            b.box((x,y,0.75),(0.24,0.24,1.5),"MenuAgedWood")
+    b.segment((-1.8,-1.20,0.08),(-1.1,-1.7,0.05),0.10,0.06,"MenuAgedWood",7)
     b.box((0,0,1.68),(4.05,2.85,0.03),"MenuParchment")
     start=len(b.vertices)
     b.vertices.extend([(-1.9,-1.3,1.705),(1.9,-1.3,1.705),(1.9,1.3,1.705),(-1.9,1.3,1.705)])

@@ -5,19 +5,14 @@ No compile needed. Reads config/mainmenuscene.cfg, the particle and material scr
 meshes under models/ and asserts:
 
 - the scene places the forecourt MoreyaForecourt (MenuMoreyaForecourt.mesh), the frame of the opening in the hall's
-  back wall HallRearArch (MenuHallRearArch.mesh) and the portal MoreyaPortal (MenuMoreyaPortal.mesh); the staircase
-  into the ground and the Moreya signpost are gone from the scene (GONE_MESHES, GONE_ENTITIES); the campaign table
-  stays at the entrance of the hall (TABLE_POSITION) and Pose campaign stays as it was (CAMPAIGN_POSE);
-- the table is weathered stone, no wood (TABLE_STONE share of its faces, no WOOD_MATERIALS), with moss on it, and it
-  carries the map plane (MenuCampaignMap);
+  back wall HallRearArch (MenuHallRearArch.mesh), the portal MoreyaPortal (MenuMoreyaPortal.mesh) and the signpost
+  MoreyaSignpost (MenuMoreyaSignpost.mesh); the staircase into the ground is gone from the scene and from models/
+  (GONE_MESHES); the campaign table stays at the entrance of the hall (TABLE_POSITION) and Pose campaign stays as it
+  was (CAMPAIGN_POSE);
 - behind the table the hall's back wall is open over OPENING_AREA (at least MIN_OPENING_SHARE of the sight lines
   through it pass) into a large forecourt: its walls stand at least MIN_FORECOURT_WIDTH apart and its rear wall at
-  least MIN_FORECOURT_DEPTH behind the hall's back wall (HALL_BACK_WALL); its floor is paved and whole and a clear
-  path (PATH_HALF either side of the middle) leads over it to the portal open to the sky (nothing on it higher than
-  MAX_CLUTTER);
-- the forecourt is old, abandoned and overgrown, not clean: moss covers at least MIN_MOSS_AREA, dead wood stands in
-  it (MIN_DEAD_WOOD triangles of MenuAgedWood), rubble lies in it (MIN_RUBBLE triangles of MenuRoughStone), and each
-  side wall has fallen somewhere to at most MAX_BREACH_TOP while standing elsewhere at least MIN_WALL_TOP high;
+  least MIN_FORECOURT_DEPTH behind the hall's back wall (HALL_BACK_WALL); its floor is paved and whole and lies open
+  to the sky between the hall and the portal (nothing but the signpost stands on it higher than MAX_CLUTTER);
 - the portal stands at the far end of the forecourt: centred behind the table (MAX_PORTAL_OFFSET), its fire at least
   MIN_PORTAL_DISTANCE behind the table's back edge and its back at most MAX_PORTAL_FROM_REAR in front of the rear
   wall, its foot on the forecourt floor (MAX_FOOT_GAP);
@@ -28,10 +23,14 @@ meshes under models/ and asserts:
   orange flames burn over two fire bowls (MenuEmber patches of the portal) left and right in front of the fire;
 - the gate_exit frame of the campaign flight to campaign (vertical field of view 45 degrees at 16:9, 16:9 and 4:3,
   path and rotation as RenderSceneMenu::samplePath) shows the middle of the fire and the crown of the arch unhidden;
-  it and at least one more frame of the flight show the middle of the fire unhidden;
+  it and at least one more frame of the flight show the middle of the fire and the whole signpost board unhidden,
+  the board facing the camera and at least MIN_BOARD_PIXELS long on a 1080 line screen;
+- the signpost stands on the forecourt floor near the hall; its board is upright (MAX_BOARD_TILT), at least
+  MIN_BOARD_LENGTH long and its arrow points towards the fire (MIN_POINTING);
 - no glowing material forms a flat slab in the rear yard behind the forecourt (largest flat connected patch at most
   MAX_FLAT_GLOW);
-- the files of the entrance (table, forecourt, frame, portal, fire textures) have CREDITS entries.
+- the board texture shows the word "Moreya": where it differs from the plain planks matches the letter shapes;
+- the files of the entrance (forecourt, frame, portal, fire textures, signpost, board textures) have CREDITS entries.
 
 Sky and horizon elements (Backdrop, BloodMoon, HorizonCrows, VolcanicRuins) are neither ground nor occluders.
 """
@@ -50,19 +49,13 @@ import check_menu_flight_geometry as flight  # noqa: E402
 
 ROOT = flight.ROOT
 PORTAL, PORTAL_MESH = "MoreyaPortal", "MenuMoreyaPortal.mesh"
+SIGNPOST, SIGNPOST_MESH = "MoreyaSignpost", "MenuMoreyaSignpost.mesh"
 TABLE, TABLE_MESH = "CampaignTable", "MenuMapTable.mesh"
 HALL, HALL_MESH = "CampaignHall", "MenuCampaignHall.mesh"
 FORECOURT, FORECOURT_MESH = "MoreyaForecourt", "MenuMoreyaForecourt.mesh"
 ARCH, ARCH_MESH = "HallRearArch", "MenuHallRearArch.mesh"
-#: The staircase into the ground gave way to the forecourt and the portal; the Moreya signpost is no longer in the scene.
+#: The staircase into the ground gave way to the forecourt and the portal.
 GONE_MESHES = ("MenuMoreyaStairs.mesh",)
-GONE_ENTITIES = ("MoreyaSignpost",)
-#: The table is stone: at least this share of its faces (by area, the map and parchment left out) is stone, none wood.
-TABLE_STONE = 0.8
-STONE_LOOK = ("MenuStone", "MenuDarkStone", "MenuCarvedStone", "MenuRoughStone", "MenuChippedStone", "MenuMoss",
-              "MenuLichen", "MenuWaterStain", "MenuBlack")
-WOOD_MATERIALS = ("MenuWood", "MenuAgedWood")
-MAP_MATERIAL = "MenuCampaignMap"
 #: The table stays at the entrance of the campaign hall and the campaign camera pose stays as it was.
 TABLE_POSITION = (0.0, 22.0, 0.0)
 CAMPAIGN_POSE = (0.0, 19.0, 7.0, 29.5, 0.0, 0.0)
@@ -72,21 +65,11 @@ HALL_BACK_WALL = 29.25
 OPENING_AREA = (-4.5, 4.5, 0.5, 5.5, 0.25)
 MIN_OPENING_SHARE = 0.95
 #: The forecourt: its walls stand at least this far apart and its rear wall at least this far behind the hall's back
-#: wall; on the path (PATH_HALF either side of the middle) nothing stands higher than MAX_CLUTTER (sampled every
-#: CLUTTER_STEP).
+#: wall; on its floor nothing but the signpost stands higher than MAX_CLUTTER (sampled every CLUTTER_STEP).
 MIN_FORECOURT_WIDTH = 23.0
 MIN_FORECOURT_DEPTH = 28.0
-PATH_HALF = 3.0
 MAX_CLUTTER = 0.5
 CLUTTER_STEP = 1.0
-#: The forecourt is an overgrown ruin: least moss area (square units), dead wood and rubble (triangles), and the side
-#: walls (sampled every WALL_STEP) fall somewhere to at most MAX_BREACH_TOP while standing elsewhere MIN_WALL_TOP high.
-MIN_MOSS_AREA = 120.0
-MIN_DEAD_WOOD = 200
-MIN_RUBBLE = 800
-MAX_BREACH_TOP = 4.5
-MIN_WALL_TOP = 6.5
-WALL_STEP = 0.5
 #: The portal is centred behind the table (x offset at most), its fire at least this far behind the table's back edge,
 #: its back at most this far in front of the forecourt's rear wall, and its foot at most this far from the floor.
 MAX_PORTAL_OFFSET = 0.3
@@ -114,11 +97,19 @@ MIN_WALL_SHARE = 0.85
 #: The yard floor where the stairwell was (scene x, y) is whole again: the paving lies at most this far from z 0.
 OLD_STAIRWELL = ((-2.0, 32.0), (0.0, 34.0), (2.0, 36.0))
 MAX_FLOOR_STEP = 0.25
+#: The board is upright (arrow and normal at most this far out of the horizontal) and at least this long; in the
+#: flight frames it spans at least MIN_BOARD_PIXELS on a 1080 line screen; its arrow points towards the fire
+#: (cosine between the arrow and the direction from the board's back end to the middle of the fire, at least).
+MAX_BOARD_TILT = 0.1
+MIN_BOARD_LENGTH = 2.8
+MIN_BOARD_PIXELS = 150
+MIN_POINTING = 0.7
 #: Glowing materials that must not form a flat slab in the rear yard (YARD: x min, x max, y min, y max), and the
 #: largest flat connected patch of them allowed there in square units.
 GLOW_SLAB_MATERIALS = ("MenuEmber", "MenuFlame", "MenuFlameCore")
 YARD = (-9.0, 9.0, 61.5, 72.0)
 MAX_FLAT_GLOW = 0.1
+BOARD_MATERIAL = "MenuMoreyaSignpostBoard"
 SKY = ("Backdrop", "BloodMoon", "HorizonCrows", "VolcanicRuins")
 
 #: Vertical field of view of the menu camera at 16:9 (REFERENCE_ASPECT) and the checked aspect ratios.
@@ -126,6 +117,10 @@ FOV_Y = 45.0
 ASPECTS = (16.0 / 9.0, 4.0 / 3.0)
 REFERENCE_ASPECT = 16.0 / 9.0
 
+#: The board front must face the flight camera: cosine between its normal and the direction to the camera.
+MIN_FACING = 0.3
+#: Share of the letter shapes that must coincide with the painted change of the board texture.
+MIN_LETTER_MATCH = 0.8
 
 
 def positions(data, start, end):
@@ -278,6 +273,42 @@ def poses():
     return result
 
 
+def arrow(board):
+    """Returns (back end centre, tip, unit direction, unit front normal) of the board front triangles."""
+    points = board.reshape(-1, 3)
+    centre = points.mean(axis=0)
+    normal = np.cross(board[:, 1] - board[:, 0], board[:, 2] - board[:, 0]).sum(axis=0)
+    normal /= np.linalg.norm(normal)
+    _, _, axes = np.linalg.svd(points - centre)
+    axis = axes[0]
+    along = (points - centre) @ axis
+    across = (points - centre) @ np.cross(normal, axis)
+    length = along.max() - along.min()
+    # The arrow shoulders lie 12.5 % of the length before the tip, so only the tip falls into the last tenth.
+    high = along > along.max() - 0.1 * length
+    low = along < along.min() + 0.1 * length
+    # The pointed end narrows to the tip: its points spread less across the board than those of the square end.
+    if np.ptp(across[high]) > np.ptp(across[low]):
+        axis, along, high, low = -axis, -along, low, high
+    tip = points[np.argmax(along)]
+    back = points[low].mean(axis=0)
+    direction = tip - back
+    return back, tip, direction / np.linalg.norm(direction), normal
+
+
+def board_pixels(eye, rotation, board, aspect, lines=1080):
+    """Returns the larger screen extent in pixels of the board on a screen with the given number of lines."""
+    half_x = math.tan(math.radians(FOV_Y) / 2) * max(aspect, REFERENCE_ASPECT)
+    half_y = half_x / aspect
+    points = []
+    for point in board.reshape(-1, 3):
+        local = rotation.T @ (point - eye)
+        depth = -local[2]
+        points.append((local[0] / depth / half_x * lines * aspect / 2, local[1] / depth / half_y * lines / 2))
+    points = np.array(points)
+    return max(np.ptp(points[:, 0]), np.ptp(points[:, 1]))
+
+
 def largest_flat_patch(triangles):
     """Returns the area of the largest connected group of coplanar triangles (shared corners connect them)."""
     normals = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
@@ -307,6 +338,20 @@ def largest_flat_patch(triangles):
         root = find(index)
         totals[root] = totals.get(root, 0.0) + areas[index]
     return max(totals.values()) if totals else 0.0
+
+
+def letters_match():
+    """Returns the share of the "Moreya" letter shapes that coincide with the painted change of the board texture."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gen_menu_signpost_lettering as lettering
+    folder = os.path.join(ROOT, "materials", "textures", "menu")
+    plain = lettering.load_rgb(os.path.join(folder, "MenuSignpostBoard.png"))
+    painted = lettering.load_rgb(os.path.join(folder, "MenuMoreyaSignpostBoard.png"))
+    height, width = plain.shape[:2]
+    mask = lettering.letter_mask(os.path.join(ROOT, "gui", "fonts", "MedievalSharp-Bold.ttf"), width, height,
+                                 "Moreya") > 0.5
+    changed = np.abs(painted - plain).max(axis=2) > 0.12
+    return (mask & changed).sum() / float(mask.sum()), (changed & ~mask).sum() / float(changed.sum())
 
 
 def flight_pose(all_poses, share):
@@ -375,8 +420,8 @@ def main():
     failures = []
     entities, _, _ = flight.parse_config()
     all_poses = poses()
-    for name, mesh in ((PORTAL, PORTAL_MESH), (TABLE, TABLE_MESH), (HALL, HALL_MESH), (FORECOURT, FORECOURT_MESH),
-                       (ARCH, ARCH_MESH)):
+    for name, mesh in ((PORTAL, PORTAL_MESH), (SIGNPOST, SIGNPOST_MESH), (TABLE, TABLE_MESH), (HALL, HALL_MESH),
+                       (FORECOURT, FORECOURT_MESH), (ARCH, ARCH_MESH)):
         if entities.get(name, (None,))[0] != mesh:
             print("FAIL scene has no AddEntity %s %s" % (name, mesh))
             return 1
@@ -384,9 +429,6 @@ def main():
         users = [name for name, (used, _) in entities.items() if used == mesh]
         if users or os.path.exists(os.path.join(flight.MODELS, mesh)):
             failures.append("%s is still in the scene (%s) or in models/" % (mesh, ", ".join(users) or "unused"))
-    for name in GONE_ENTITIES:
-        if name in entities:
-            failures.append("the scene still places " + name)
 
     # The table stays at the entrance of the hall and the campaign camera stays where it was.
     if tuple(entities[TABLE][1]) != TABLE_POSITION:
@@ -404,25 +446,13 @@ def main():
     fire = vertices[triangles] + origin
     stone = np.concatenate([parts[material][0][parts[material][1]] for material in STONE_MATERIALS
                             if material in parts]) + origin
+    signpost = world_triangles(SIGNPOST_MESH, entities[SIGNPOST][1])
+    vertices, triangles = submeshes(os.path.join(flight.MODELS, SIGNPOST_MESH))[BOARD_MATERIAL]
+    board = vertices[triangles] + entities[SIGNPOST][1]
     table = world_triangles(TABLE_MESH, entities[TABLE][1])
     others = {name: world_triangles(mesh, position) for name, (mesh, position) in entities.items()
-              if name not in SKY and name != PORTAL}
+              if name not in SKY and name not in (PORTAL, SIGNPOST)}
     ground = np.concatenate(list(others.values()))
-
-    # The table is weathered stone with moss, no wood, and carries the map.
-    table_parts = submeshes(os.path.join(flight.MODELS, TABLE_MESH))
-    areas_by_material = {}
-    for material, (vertices, triangles) in table_parts.items():
-        corners = vertices[triangles]
-        areas_by_material[material] = np.linalg.norm(np.cross(corners[:, 1] - corners[:, 0],
-                                                              corners[:, 2] - corners[:, 0]), axis=1).sum() / 2
-    body = sum(area for material, area in areas_by_material.items() if material not in (MAP_MATERIAL, "MenuParchment"))
-    stone_share = sum(areas_by_material.get(material, 0.0) for material in STONE_LOOK) / max(body, 1e-9)
-    if stone_share < TABLE_STONE or any(material in table_parts for material in WOOD_MATERIALS):
-        failures.append("the table is not weathered stone: %.2f of it is stone, wood materials %s"
-                        % (stone_share, sorted(set(table_parts) & set(WOOD_MATERIALS))))
-    if "MenuMoss" not in table_parts or MAP_MATERIAL not in table_parts:
-        failures.append("the stone table has no moss or no map plane")
 
     # The forecourt behind the hall: the opening in the back wall, the walls round it, its open, paved floor.
     table_back = table[:, :, 1].max()
@@ -469,7 +499,7 @@ def main():
 
     clutter = over_forecourt(np.concatenate([part for name, part in others.items() if name != HALL]))
     court_ground = over_forecourt(ground)
-    for x in np.arange(-PATH_HALF, PATH_HALF + 1e-6, CLUTTER_STEP):
+    for x in np.arange(-walls[0] + 1.0, walls[1] - 0.5, CLUTTER_STEP):
         for y in np.arange(HALL_BACK_WALL + 1.5, low[1] - 0.5, CLUTTER_STEP):
             floor = floor_height(court_ground, x, y)
             if floor is None or abs(floor) > MAX_FLOOR_STEP:
@@ -477,35 +507,7 @@ def main():
                 continue
             standing = heights_at(clutter, x, y)
             if len(standing[(standing > floor + MAX_CLUTTER) & (standing < 40.0)]):
-                failures.append("something stands or hangs over the path to the portal at (%.1f, %.1f)" % (x, y))
-
-    # An overgrown ruin: moss, dead wood, rubble and fallen parts of both side walls.
-    court_parts = submeshes(os.path.join(flight.MODELS, FORECOURT_MESH))
-
-    def total_area(material):
-        """Returns the area of the forecourt faces of one material."""
-        if material not in court_parts:
-            return 0.0
-        vertices, triangles = court_parts[material]
-        corners = vertices[triangles]
-        return np.linalg.norm(np.cross(corners[:, 1] - corners[:, 0], corners[:, 2] - corners[:, 0]), axis=1).sum() / 2
-
-    moss = total_area("MenuMoss")
-    dead_wood = len(court_parts.get("MenuAgedWood", (None, ()))[1])
-    rubble = len(court_parts.get("MenuRoughStone", (None, ()))[1])
-    if moss < MIN_MOSS_AREA or dead_wood < MIN_DEAD_WOOD or rubble < MIN_RUBBLE:
-        failures.append("the forecourt is too clean: %.1f m2 moss, %d dead wood and %d rubble triangles (need %.0f, "
-                        "%d, %d)" % (moss, dead_wood, rubble, MIN_MOSS_AREA, MIN_DEAD_WOOD, MIN_RUBBLE))
-    wall_tops = []
-    for side, reach in ((-1.0, walls[0]), (1.0, walls[1])):
-        x = side * (reach + 0.6)
-        tops = [heights_at(court, x, y) for y in np.arange(HALL_BACK_WALL + 2.0, rear - 1.0, WALL_STEP)]
-        tops = [values.max() for values in tops if len(values)]
-        wall_tops.append((min(tops), max(tops)) if tops else (0.0, 0.0))
-        if not tops or min(tops) > MAX_BREACH_TOP or max(tops) < MIN_WALL_TOP:
-            failures.append("the %s wall has not partly fallen (tops %.2f..%.2f, need one below %.1f and one above %.1f)"
-                            % ("left" if side < 0 else "right", wall_tops[-1][0], wall_tops[-1][1], MAX_BREACH_TOP,
-                               MIN_WALL_TOP))
+                failures.append("something stands or hangs over the forecourt at (%.1f, %.1f)" % (x, y))
 
     # The portal at the far end of the forecourt: centred behind the table, its back at the rear wall, on the floor.
     middle_x = (low[0] + high[0]) / 2
@@ -596,12 +598,12 @@ def main():
         if floor is None or abs(floor) > MAX_FLOOR_STEP:
             failures.append("the yard floor where the stairwell was has a hole at (%.1f, %.1f)" % (x, y))
 
-    # The campaign flight shows the fire and the arch crown in the gate_exit frame and the fire in at least one later
-    # frame; only triangles near the box around the flight path and the portal can hide them.
+    # The campaign flight shows the fire and the arch crown, and the signpost board, in the gate_exit frame and in at
+    # least one later frame; only triangles near the box around the flight path and both can hide them.
     path = np.array([flight_pose(all_poses, share)[:3] for share in np.arange(0.0, 1.0001, 0.05)])
-    corridor = np.vstack((path, portal.reshape(-1, 3)))
+    corridor = np.vstack((path, portal.reshape(-1, 3), signpost.reshape(-1, 3)))
     box_low, box_high = corridor.min(axis=0) - 0.5, corridor.max(axis=0) + 0.5
-    occluders = np.concatenate((ground, portal))
+    occluders = np.concatenate((ground, portal, signpost))
     occluders = occluders[np.all(occluders.max(axis=1) >= box_low, axis=1)
                           & np.all(occluders.min(axis=1) <= box_high, axis=1)]
     bounds = (occluders.min(axis=1), occluders.max(axis=1))
@@ -610,6 +612,17 @@ def main():
     crown_top = (np.array([fire_centre[0], top_stones[:, :, 1].min() - 0.05, crown.max() + 0.02]) if len(crown)
                  else fire_high)
     fire_middle = fire_centre - np.array([0.0, 0.03, 0.0])
+    back, tip, direction, normal = arrow(board)
+    centre = board.reshape(-1, 3).mean(axis=0)
+
+    def board_readable(eye, rotation, aspect):
+        """Tells whether the whole board is in view, facing the camera and long enough on screen."""
+        if any(not in_view(eye, rotation, point, aspect) for point in board.reshape(-1, 3)):
+            return False
+        if normal @ ((eye - centre) / np.linalg.norm(eye - centre)) < MIN_FACING:
+            return False
+        return board_pixels(eye, rotation, board, aspect) >= MIN_BOARD_PIXELS
+
     for aspect in ASPECTS:
         showing = visible_frames(all_poses, aspect, [fire_middle], occluders, bounds)
         if 0.0 not in showing or len(showing) < 2:
@@ -617,6 +630,33 @@ def main():
                             "more" % (aspect, showing))
         if 0.0 not in visible_frames(all_poses, aspect, [fire_middle, crown_top], occluders, bounds):
             failures.append("at aspect %.2f the gate_exit frame does not show the crown of the arch" % aspect)
+        board_points = [point + normal * 0.03 for point in (centre, tip, back)]
+        showing = visible_frames(all_poses, aspect, board_points, occluders, bounds,
+                                 lambda eye, rotation: board_readable(eye, rotation, aspect))
+        if 0.0 not in showing or len(showing) < 2:
+            failures.append("at aspect %.2f the board (readable, at least %d pixels long) shows in flight frames %s, "
+                            "need gate_exit and one more" % (aspect, MIN_BOARD_PIXELS, showing))
+
+    # The signpost stands on the forecourt floor near the hall; its board is upright and points towards the fire.
+    foot = entities[SIGNPOST][1]
+    floor = floor_height(ground, foot[0], foot[1])
+    post = heights_at(signpost, foot[0], foot[1])
+    if floor is None or not len(post) or not post.min() <= floor <= post.min() + 0.6 or post.max() < 2.0:
+        failures.append("signpost post at (%.2f, %.2f) does not stand on the ground" % (foot[0], foot[1]))
+    if not (HALL_BACK_WALL + 1.0 < foot[1] < middle_y and -walls[0] < foot[0] < walls[1]):
+        failures.append("signpost at (%.2f, %.2f) does not stand in the forecourt near the hall" % (foot[0], foot[1]))
+    if abs(direction[2]) > MAX_BOARD_TILT or abs(normal[2]) > MAX_BOARD_TILT:
+        failures.append("signpost board is not upright: arrow (%.2f, %.2f, %.2f), normal z %.2f"
+                        % (direction[0], direction[1], direction[2], normal[2]))
+    towards = fire_centre - back
+    towards[2] = 0.0
+    pointing = direction @ (towards / np.linalg.norm(towards))
+    if pointing < MIN_POINTING:
+        failures.append("signpost arrow (%.2f, %.2f, %.2f) does not point towards the portal (%.2f)"
+                        % (direction[0], direction[1], direction[2], pointing))
+    if np.linalg.norm(tip - back) < MIN_BOARD_LENGTH:
+        failures.append("signpost board is only %.2f long (need %.1f)" % (np.linalg.norm(tip - back), MIN_BOARD_LENGTH))
+
     # No flat glowing slab in the rear yard: embers there are lumps, not a plane.
     for name, (mesh, position) in entities.items():
         for material, (vertices, triangles) in submeshes(os.path.join(flight.MODELS, mesh)).items():
@@ -630,10 +670,16 @@ def main():
             if largest > MAX_FLAT_GLOW:
                 failures.append("%s has a flat %s patch of %.2f m2 in the rear yard (at most %.2f)"
                                 % (name, material, largest, MAX_FLAT_GLOW))
+    # The board shows "Moreya".
+    covered, stray = letters_match()
+    if covered < MIN_LETTER_MATCH or stray > 1.0 - MIN_LETTER_MATCH:
+        failures.append("board texture does not show the letters of Moreya (%.2f covered, %.2f stray)"
+                        % (covered, stray))
+
     # CREDITS.
     credits = open(os.path.join(ROOT, "CREDITS"), encoding="utf-8").read()
-    for name in (TABLE_MESH, FORECOURT_MESH, ARCH_MESH, PORTAL_MESH, "MenuMoreyaPortalFire.png",
-                 "MenuMoreyaPortalFireShade.png"):
+    for name in (FORECOURT_MESH, ARCH_MESH, PORTAL_MESH, SIGNPOST_MESH, "MenuMoreyaPortalFire.png", "MenuMoreyaPortalFireShade.png",
+                 "MenuMoreyaSignpostBoard.png", "MenuMoreyaSignpostBoardNormal.png"):
         if name not in credits:
             failures.append("CREDITS has no entry for " + name)
 
@@ -641,12 +687,11 @@ def main():
         print("FAIL " + line)
     if failures:
         return 1
-    print("OK: stone table (%.2f stone); forecourt %.2f wide, %.2f deep, opening %.2f open, %.1f m2 moss, %d dead wood "
-          "and %d rubble triangles, walls fallen to %.2f and %.2f; fire %.2f behind the table, %.2f m2 (%.2f x %.2f), "
-          "arch crown at %.2f, %.2f of the fire texels green"
-          % (stone_share, width, depth, np.mean(passing), moss, dead_wood, rubble, wall_tops[0][0], wall_tops[1][0],
-             fire_centre[1] - table_back, fire_area, fire_high[0] - fire_low[0], fire_high[2] - fire_low[2],
-             crown.max(), green))
+    print("OK: forecourt %.2f wide, %.2f deep, opening %.2f open; fire %.2f behind the table, %.2f m2 (%.2f x %.2f), "
+          "arch crown at %.2f, %.2f of the fire texels green; board arrow (%.2f, %.2f, %.2f) points at the portal "
+          "(%.2f); letters %.2f"
+          % (width, depth, np.mean(passing), fire_centre[1] - table_back, fire_area, fire_high[0] - fire_low[0], fire_high[2] - fire_low[2], crown.max(),
+             green, direction[0], direction[1], direction[2], pointing, covered))
     return 0
 
 
