@@ -4517,6 +4517,7 @@ void GameMode::setHelpWindowText()
 }
 
 //! \brief Updates research icons, progress and the plain-language hover state without changing research rules.
+//! The skill of a room whose room package is missing is shown not allowed and its build button stays hidden.
 void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
 {
@@ -4524,7 +4525,9 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     Seat* localPlayerSeat = mGameMap->getLocalPlayer()->getSeat();
     const uint32_t level = localPlayerSeat->getSkillLevel(resType);
     bool isDone = level >= 3;
-    bool isAllowed = !localPlayerSeat->isSkillNotAllowed(resType);
+    // The skill of a room whose room package is missing cannot be researched and its build button stays hidden
+    const bool isContentAvailable = SkillManager::isSkillContentAvailable(resType);
+    bool isAllowed = !localPlayerSeat->isSkillNotAllowed(resType) && isContentAvailable;
     uint32_t queueNumber = 0;
     if(!isDone)
     {
@@ -4651,7 +4654,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     // A keeper skill has no cast button (its name is empty)
     if(!castButtonName.empty())
     {
-        guiSheet->getChild(castButtonName)->setVisible(level > 0);
+        guiSheet->getChild(castButtonName)->setVisible((level > 0) && isContentAvailable);
         guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
     }
     skillButton->setText("");

@@ -51,6 +51,7 @@
 #include "modes/GameEditorModeConsole.h"
 #include "rooms/Room.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomPackages.h"
 #include "spells/Spell.h"
 #include "traps/Trap.h"
 #include "traps/TrapManager.h"
@@ -631,7 +632,18 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
             return false;
         }
 
-        tempRoom->addToGameMap();
+        // A room whose room package is missing is left out: its tiles stay claimed ground of its seat
+        // (see RoomPackages). The level still loads.
+        const bool roomAvailable = RoomPackages::isRoomAvailable(tempRoom->getType());
+        if(roomAvailable)
+            tempRoom->addToGameMap();
+        else
+        {
+            OD_LOG_WRN("Room " + tempRoom->getName() + " is left out: the package of room "
+                + RoomPackages::getPackageRoomName(tempRoom->getType()) + " is missing, its tiles stay claimed ground"
+                + ", file=" + fileName);
+            delete tempRoom;
+        }
 
         levelFile >> nextParam;
         if (nextParam != "[/Room]")
@@ -958,6 +970,13 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
                 setLoadError("Invalid HerbBundles entry=" + nextParam + remainder + ", file=" + fileName);
                 return false;
             }
+            // Herb bundles take their mesh from the herb garden package; without it they are left out
+            if(!RoomPackages::isRoomAvailable(RoomType::herbGarden))
+            {
+                OD_LOG_WRN("Herb bundle left out: the package of room HerbGarden is missing, file=" + fileName);
+                delete bundle;
+                continue;
+            }
             bundle->addToGameMap();
         }
         levelFile >> nextParam;
@@ -1219,6 +1238,13 @@ bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType ty
             }
             legacyBook->getSeat()->addSkillPoints(legacyBook->getSkillPoints());
             delete legacyBook;
+        }
+        else if((type == GameEntityType::ghostBoxEntity) && !RoomPackages::isRoomAvailable(RoomType::ghostRoom))
+        {
+            // Capture boxes take their mesh from the ghost room package; without it they are left out
+            OD_LOG_WRN("Ghost box left out in " + item + ": the package of room GhostRoom is missing");
+            delete entity;
+            continue;
         }
         else
             entity->addToGameMap();

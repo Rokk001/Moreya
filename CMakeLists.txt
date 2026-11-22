@@ -634,6 +634,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomHatchery.cpp
     ${SRC}/rooms/RoomLibrary.cpp
     ${SRC}/rooms/RoomManager.cpp
+    ${SRC}/rooms/RoomPackages.cpp
     ${SRC}/rooms/RoomPortal.cpp
     ${SRC}/rooms/RoomPortalWave.cpp
     ${SRC}/rooms/RoomPrison.cpp

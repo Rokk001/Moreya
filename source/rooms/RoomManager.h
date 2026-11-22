@@ -94,6 +94,10 @@ public:
     //! returns true if the room was correctly built and false otherwise
     static bool buildRoom(GameMap* gameMap, RoomType type, Player* player, ODPacket& packet);
 
+    //! \brief True when the room can be built: its room package is there or it needs none (RoomPackages).
+    //! A room whose package is missing is refused with a log entry.
+    static bool isRoomPackageAvailable(RoomType type);
+
     //! \brief Same as previous functions but for EditorMode
     static void checkBuildRoomEditor(GameMap* gameMap, RoomType type, const InputManager& inputManager, InputCommand& inputCommand);
     static bool buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& packet);

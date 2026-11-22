@@ -22,9 +22,12 @@
 #include "utils/ResourceManager.h"
 #include "utils/Random.h"
 #include "utils/LogManager.h"
+#include "rooms/RoomPackages.h"
 #include "network/ODPacket.h"
 
 #include <OgreQuaternion.h>
+
+#include <boost/filesystem.hpp>
 
 namespace
 {
@@ -114,13 +117,24 @@ void GameSound::play(float x, float y, float z)
 // SoundEffectsManager class
 template<> SoundEffectsManager* Ogre::Singleton<SoundEffectsManager>::msSingleton = nullptr;
 
-//! \brief Loads the normal sound families and the named infirmary recordings.
+//! \brief Loads the normal sound families and the named infirmary recordings, from the game data and from the sounds
+//! folder of every found room package (the same layout as the game data).
 SoundEffectsManager::SoundEffectsManager() :
     mNextLoopHandle(1)
 {
     const std::string& soundFolderPath = ResourceManager::getSingleton().getSoundPath();
-    // We read the spatial sound directory
-    readSounds(mSpatialSounds, soundFolderPath + "Spatial/", "", true);
+    std::vector<std::string> spatialFolders;
+    spatialFolders.push_back(soundFolderPath);
+    for(const std::string& package : RoomPackages::getPackageDirectories())
+    {
+        const std::string packageSounds = package + "/sounds/";
+        boost::system::error_code error;
+        if(boost::filesystem::is_directory(packageSounds, error))
+            spatialFolders.push_back(packageSounds);
+    }
+    // We read the spatial sound directory of the game data and of the room packages
+    for(const std::string& folder : spatialFolders)
+        readSounds(mSpatialSounds, folder + "Spatial/", "", true);
     // These room recordings are individual files rather than per-family directories.
     static const char* const infirmarySounds[] = {"Admit", "Discharge", "Chant", "Rattle"};
     for(const char* name : infirmarySounds)
@@ -128,9 +142,17 @@ SoundEffectsManager::SoundEffectsManager() :
         const std::string family = std::string("Rooms/Infirmary/") + name;
         if(mSpatialSounds.find(family) != mSpatialSounds.end())
             continue;
-        GameSound* sound = getGameSound(soundFolderPath + family + ".ogg", true);
-        if(sound != nullptr)
-            mSpatialSounds[family].push_back(sound);
+        for(const std::string& folder : spatialFolders)
+        {
+            const std::string file = folder + family + ".ogg";
+            boost::system::error_code error;
+            if(!boost::filesystem::is_regular_file(file, error))
+                continue;
+            GameSound* sound = getGameSound(file, true);
+            if(sound != nullptr)
+                mSpatialSounds[family].push_back(sound);
+            break;
+        }
     }
 
     // We read the relative sound directory
