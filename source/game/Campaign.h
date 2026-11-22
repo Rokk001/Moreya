@@ -77,7 +77,8 @@ struct CampaignLevel
     std::string mTitle;
     std::string mBriefing;
     std::string mDebriefing;
-    //! \brief Optional briefing image path relative to gui/campaign; empty means text only.
+    //! \brief Optional briefing image path relative to the folder of the wing package when the image lies there,
+    //! else relative to gui/campaign; empty means text only.
     std::string mPreview;
     //! A bonus (secret) level does not block the story levels. It is found by the hidden stone in the
     //! first story level of its wing, and its first completion unlocks items for the merchant.
@@ -159,7 +160,7 @@ struct CampaignSave
 //!   Title=Some title
 //!   Briefing=Text shown before the level. "\n" starts a new line.
 //!   Debriefing=Text shown after the level was won.
-//!   Preview=previews/wing1-level1.png (optional) briefing image relative to gui/campaign.
+//!   Preview=previews/wing1-level1.png (optional) briefing image relative to the package folder, else gui/campaign.
 //!   Wing=1 the wing of Moreya the level belongs to (bonus levels too).
 //!   Bonus=1 (optional) marks a bonus level.
 //!   Shard=1 (optional) the story level hides a shard of the Heartstone.

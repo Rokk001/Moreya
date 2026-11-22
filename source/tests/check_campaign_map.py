@@ -47,6 +47,8 @@ for wing in world.get("wings", []):
         guild = campaign_packages.guild_of(story[order]) if order < len(story) else None
         if guild is not None:
             cave["guild"] = guild
+            # Banner and portrait of a private package lie in its folder
+            cave["_package"] = story[order]["_package"]
     if "bonus" in wing:
         wing["bonus"]["file"] = bonus[0]["File"] if bonus else "campaign/wing%s-bonus" % number
 art = root / "gui/campaign"
@@ -128,7 +130,7 @@ for index, expected_levels, bonus in EXPECTED_WINGS:
         check((guild.get("groups"), guild.get("size"), guild.get("kind")) == (groups, size, kind),
               label + ": raid size must be %d %s(s) of %d" % (groups, kind, size))
         for key, expected_size in (("banner", BANNER_SIZE), ("portrait", PORTRAIT_SIZE)):
-            path = art / guild.get(key, "-")
+            path = campaign_packages.image_path(root, level.get("_package"), guild.get(key, "-"))
             check(path.is_file(), label + ": missing " + key + " " + guild.get(key, "-"))
             if path.is_file():
                 with Image.open(path) as image:

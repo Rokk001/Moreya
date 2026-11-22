@@ -80,9 +80,10 @@ private:
 
     //! \brief Reads the map description once. Returns false if it cannot be read or is invalid.
     bool loadWorld();
-    //! \brief The image of the world art file (relative to gui/campaign), loaded on first use.
-    //! Returns NULL if it cannot be read.
-    CEGUI::Image* loadWorldImage(const std::string& file);
+    //! \brief The image of the world art file, loaded on first use: from the folder of the wing package when it lies
+    //! there (the private content packages bring their own previews, banners and portraits), else relative to
+    //! gui/campaign. Returns NULL if it cannot be read.
+    CEGUI::Image* loadWorldImage(const std::string& file, const std::string& packageDirectory = std::string());
     //! \brief Draws the caves in their states, the wing progress, the guild in front of the gate, the title and
     //! the progress panel on the map
     void fillMap();
@@ -93,9 +94,10 @@ private:
     //! \brief Creates a text window on the map without frame and background
     CEGUI::Window* createMapText(const std::string& name, const CampaignWorldRect& area, const std::string& font,
         const std::string& colour, const std::string& formatting, const std::string& text);
-    //! \brief Creates an image window on the map for a campaign art file; returns NULL if the image cannot be read
+    //! \brief Creates an image window on the map for a campaign art file, looked up first in the folder of the wing
+    //! package when one is given; returns NULL if the image cannot be read
     CEGUI::Window* createMapImage(const std::string& name, const std::string& file, float x, float y, float width,
-        float height);
+        float height, const std::string& packageDirectory = std::string());
     //! \brief Removes everything fillMap drew
     void clearMap();
     //! \brief Places a window on the map. The values are map pixels, the window gets the share of the map they cover.

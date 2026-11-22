@@ -3,11 +3,12 @@
 
 Sources of the references: the map description gui/campaign/campaign-world.json (map of Moreya, cave markers), the
 Guild and Preview keys of the wing packages (guild banners, leader portraits, level previews; scripts/
-campaign_packages.py) and the campaign hall texture named by materials/scripts/MenuScene.material. The images are
-public assets: all of them lie in gui/campaign/ also when the content packages that use most of them are absent.
-The expected counts are the campaign's structure, counted once for this branch: 24 previews (18 story and 6 bonus
-levels), 18 guild banners, 18 leader portraits, 1 map and 7 cave markers; the package of wing 1 alone uses 4
-previews, 3 banners and 3 portraits. Run from any directory; it compiles nothing and starts no game.
+campaign_packages.py) and the campaign hall texture named by materials/scripts/MenuScene.material. The public
+repository holds only the images of wing 1 in gui/campaign/; the private content packages of wings 2 to 6 bring
+their own previews, banners and portraits in their package folders, where the game looks first.
+The expected counts are the campaign's structure, counted once for this branch: public 4 previews, 3 guild banners,
+3 leader portraits (wing 1), 1 map and 7 cave markers; the content packages add 20 previews (15 story and 5 bonus
+levels), 15 banners and 15 portraits. Run from any directory; it compiles nothing and starts no game.
 """
 from pathlib import Path
 import json
@@ -16,9 +17,11 @@ import sys
 
 from PIL import Image
 
-EXPECTED_PREVIEWS = 24
-EXPECTED_BANNERS = 18
-EXPECTED_PORTRAITS = 18
+EXPECTED_PREVIEWS = 4
+EXPECTED_BANNERS = 3
+EXPECTED_PORTRAITS = 3
+# Images of the private content packages: previews, banners, portraits
+EXPECTED_CONTENT = (20, 15, 15)
 EXPECTED_ICONS = 7
 MAP_SIZE = (2560, 1600)
 PREVIEW_SIZE = (640, 360)
@@ -30,8 +33,9 @@ HALL_TEXTURE = "materials/textures/menu/MenuCampaignMap.png"
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / "scripts"))
 import campaign_packages  # noqa: E402
+HAS_CONTENT = campaign_packages.has_content(root)
 # Images the packages present use: all with the content repository, those of wing 1 without it
-USED = (24, 18, 18) if campaign_packages.has_content(root) else (4, 3, 3)
+USED = (24, 18, 18) if HAS_CONTENT else (4, 3, 3)
 art = root / "gui/campaign"
 failures = []
 
@@ -83,10 +87,14 @@ used_banners = {entry["GuildBanner"] for entry in package_entries if entry.get("
 used_portraits = {entry["GuildPortrait"] for entry in package_entries if entry.get("GuildPortrait")}
 check((len(used_banners), len(used_portraits)) == USED[1:], "the packages must use %d banners and %d portraits"
       % USED[1:])
+public_entries = [entry for entry in package_entries if entry["_public"]]
+content_entries = [entry for entry in package_entries if not entry["_public"]]
+used_banners = {entry["GuildBanner"] for entry in public_entries if entry.get("GuildBanner")}
+used_portraits = {entry["GuildPortrait"] for entry in public_entries if entry.get("GuildPortrait")}
 banners = sorted(path.relative_to(art).as_posix() for path in (art / "banners").glob("*.png"))
 portraits = sorted(path.relative_to(art).as_posix() for path in (art / "portraits").glob("*.png"))
 check(used_banners <= set(banners) and used_portraits <= set(portraits),
-      "every banner and portrait of a package must lie in gui/campaign")
+      "every banner and portrait of a public package must lie in gui/campaign")
 check(len(set(banners)) == EXPECTED_BANNERS, "expected %d distinct banners, found %d" % (EXPECTED_BANNERS,
                                                                                        len(set(banners))))
 check(len(set(portraits)) == EXPECTED_PORTRAITS, "expected %d distinct portraits, found %d" % (EXPECTED_PORTRAITS,
@@ -100,11 +108,35 @@ definition = campaign_packages.definition_text(root)
 used_previews = {value.strip() for value in re.findall(r"(?m)^\s*Preview\s*=\s*(\S+)", definition)}
 check(len(used_previews) == USED[0], "the packages must use %d distinct previews" % USED[0])
 previews = sorted(path.relative_to(art).as_posix() for path in (art / "previews").glob("*.png"))
-check(used_previews <= set(previews), "every preview of a package must lie in gui/campaign/previews")
+public_previews = {entry["Preview"].strip() for entry in public_entries if entry.get("Preview")}
+check(public_previews <= set(previews), "every preview of a public package must lie in gui/campaign/previews")
 check(len(set(previews)) == EXPECTED_PREVIEWS, "expected %d distinct previews, found %d" % (EXPECTED_PREVIEWS,
                                                                                            len(set(previews))))
 for relative in previews:
     check_image("gui/campaign/" + relative, PREVIEW_SIZE, "level preview", credits)
+
+# Images of the private content packages lie in their own package folders and are credited in their CREDITS
+content_counts = (0, 0, 0)
+if HAS_CONTENT:
+    content_credits = (campaign_packages.content_repository(root) / "CREDITS").read_text(encoding="utf-8")
+    kinds = (("Preview", PREVIEW_SIZE, "level preview", "previews"),
+             ("GuildBanner", BANNER_SIZE, "guild banner", "banners"),
+             ("GuildPortrait", PORTRAIT_SIZE, "leader portrait", "portraits"))
+    counts = []
+    for key, size, kind, folder in kinds:
+        files = sorted({(entry["_package"], entry[key].strip()) for entry in content_entries if entry.get(key)})
+        counts.append(len(files))
+        check("-> %s/*.png" % folder in content_credits, "the content CREDITS must name the %s images" % folder)
+        for package, relative in files:
+            path = package / relative
+            check(path.is_file(), "missing %s %s in %s" % (kind, relative, package.name))
+            if path.is_file():
+                with Image.open(path) as image:
+                    check(image.format == "PNG" and image.size == size,
+                          "%s %s in %s must be a PNG of %d x %d" % ((kind, relative, package.name) + size))
+    content_counts = tuple(counts)
+    check(content_counts == EXPECTED_CONTENT, "the content packages must bring %d previews, %d banners and %d "
+          "portraits, found %d, %d and %d" % (EXPECTED_CONTENT + content_counts))
 
 material = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
 block = material[material.index("material MenuCampaignMap"):]
@@ -117,5 +149,5 @@ if failures:
     print("\n".join(failures))
     sys.exit(1)
 print("campaign image checks passed: 1 map, %d cave markers, %d banners, %d portraits, %d previews and the campaign "
-      "hall texture exist with their sizes and CREDITS entries" % (len(icons), len(set(banners)), len(set(portraits)),
-                                                                   len(set(previews))))
+      "hall texture exist with their sizes and CREDITS entries; content packages: %d previews, %d banners, %d "
+      "portraits" % ((len(icons), len(set(banners)), len(set(portraits)), len(set(previews))) + content_counts))

@@ -268,9 +268,11 @@ def check_repository(root):
         if not preview:
             failures.append(province + ": missing Preview")
             continue
-        image = (art / preview).resolve()
-        if not image.is_relative_to(art):
-            failures.append(province + ": Preview must stay inside gui/campaign")
+        # A private package brings its preview in its own folder, where the game looks first
+        image = campaign_packages.image_path(root, fields["_package"], preview).resolve()
+        base = fields["_package"].resolve() if not image.is_relative_to(art) else art
+        if not image.is_relative_to(base):
+            failures.append(province + ": Preview must stay inside gui/campaign or its package folder")
         elif not image.is_file():
             failures.append(province + ": missing image " + preview)
         else:

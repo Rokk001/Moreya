@@ -164,6 +164,14 @@ def guild_of(entry):
     return guild
 
 
+# The file of a campaign image (preview, banner, portrait) as the game finds it: in the package folder when it
+# lies there (the private packages bring their own images), else in gui/campaign of the repository.
+def image_path(repo, package, relative):
+    if package is not None and (Path(package) / relative).is_file():
+        return Path(package) / relative
+    return Path(repo) / 'gui/campaign' / relative
+
+
 # The fixed expectations of a check for the content packages (checks/<name>.json of the content repository), or None
 # without content. With content present the file must exist: a check never skips the content it has.
 def content_data(repo, name):

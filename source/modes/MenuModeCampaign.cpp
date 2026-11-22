@@ -300,6 +300,15 @@ bool decodeImage(const std::string& path, int& width, int& height, std::vector<u
     }
     return true;
 }
+
+//! \brief The folder of the wing package a level was read from, where its own previews, banners and portraits may
+//! lie; empty when the level was not read from a package.
+std::string packageDirectoryOf(const CampaignLevel& level)
+{
+    if(level.mPath.empty())
+        return std::string();
+    return boost::filesystem::path(level.mPath).parent_path().string();
+}
 } // namespace
 
 //! \brief Connects campaign controls and initializes map and debriefing layout state.
@@ -537,7 +546,9 @@ bool MenuModeCampaign::loadWorld()
     return true;
 }
 
-CEGUI::Image* MenuModeCampaign::loadWorldImage(const std::string& file)
+//! \brief Loads a campaign art file once as a CEGUI image named after the file: from the folder of the wing package
+//! when the file lies there, else from gui/campaign. Returns NULL if it cannot be read.
+CEGUI::Image* MenuModeCampaign::loadWorldImage(const std::string& file, const std::string& packageDirectory)
 {
     std::string name = WORLD_IMAGE_PREFIX + file;
     CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
@@ -548,6 +559,12 @@ CEGUI::Image* MenuModeCampaign::loadWorldImage(const std::string& file)
     int height = 0;
     std::vector<uint8_t> rgba;
     std::string path = ResourceManager::getSingleton().getGameDataPath() + WORLD_DIRECTORY + file;
+    if(!packageDirectory.empty())
+    {
+        boost::filesystem::path packagePath = boost::filesystem::path(packageDirectory) / file;
+        if(boost::filesystem::is_regular_file(packagePath))
+            path = packagePath.string();
+    }
     if(!decodeImage(path, width, height, rgba))
     {
         OD_LOG_ERR("Could not read the campaign world image " + path);
@@ -629,10 +646,11 @@ CEGUI::Window* MenuModeCampaign::createMapText(const std::string& name, const Ca
 }
 
 //! \brief Creates an image of the campaign art in a rectangle of map pixels, or nothing when the file is missing.
+//! The file is looked up first in the folder of the wing package when one is given.
 CEGUI::Window* MenuModeCampaign::createMapImage(const std::string& name, const std::string& file, float x, float y,
-    float width, float height)
+    float width, float height, const std::string& packageDirectory)
 {
-    if(file.empty() || (loadWorldImage(file) == nullptr))
+    if(file.empty() || (loadWorldImage(file, packageDirectory) == nullptr))
         return nullptr;
 
     CEGUI::Window* window = createMapWindow("OD/StaticImage", name, x, y, width, height);
@@ -776,16 +794,19 @@ void MenuModeCampaign::fillGuildPanel()
     if(level >= campaign.getNumLevels())
         return;
 
-    const CampaignWorldGuild& guild = campaign.getLevel(level).mGuild;
+    const CampaignLevel& campaignLevel = campaign.getLevel(level);
+    const CampaignWorldGuild& guild = campaignLevel.mGuild;
     if(guild.mName.empty())
         return;
+    // Banner and portrait of a private wing package lie in its own folder
+    const std::string packageDirectory = packageDirectoryOf(campaignLevel);
     const CampaignWorldGuildPanel& panel = mWorld.getGuildPanel();
     createMapImage("GuildBanner", guild.mBanner, static_cast<float>(panel.mBanner.mX),
         static_cast<float>(panel.mBanner.mY), static_cast<float>(panel.mBanner.mWidth),
-        static_cast<float>(panel.mBanner.mHeight));
+        static_cast<float>(panel.mBanner.mHeight), packageDirectory);
     createMapImage("GuildPortrait", guild.mPortrait, static_cast<float>(panel.mPortrait.mX),
         static_cast<float>(panel.mPortrait.mY), static_cast<float>(panel.mPortrait.mWidth),
-        static_cast<float>(panel.mPortrait.mHeight));
+        static_cast<float>(panel.mPortrait.mHeight), packageDirectory);
     createMapText("GuildName", panel.mName, FONT_GUILD_NAME, COLOUR_HIGHLIGHT, "WordWrapLeftAligned", guild.mName);
     createMapText("GuildDetails", panel.mDetails, FONT_GUILD_DETAILS, COLOUR_TEXT, "WordWrapLeftAligned",
         CampaignWorld::getGuildDetailsText(guild));
@@ -1029,7 +1050,7 @@ void MenuModeCampaign::showBriefing(size_t level)
     const CampaignLevel& campaignLevel = campaign.getLevel(level);
     CEGUI::Image* image = nullptr;
     if(!campaignLevel.mPreview.empty())
-        image = loadWorldImage(campaignLevel.mPreview);
+        image = loadWorldImage(campaignLevel.mPreview, packageDirectoryOf(campaignLevel));
     setBriefingPreviewVisible(image != nullptr);
     if(image != nullptr)
         sheet->getChild(CMP_BRIEFING_IMAGE)->setProperty("Image", WORLD_IMAGE_PREFIX + campaignLevel.mPreview);
