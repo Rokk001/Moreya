@@ -2,6 +2,9 @@
 """Draws the Moreya application icon: the Moreya gate (stone arch with a lowered portcullis in front of
 green light) on a dark rounded tile with a bronze rim, so it reads on light and dark backgrounds.
 
+Since 2026-11-22 the shipped icon is the painted one built by build_painted_icon.py (see CREDITS); running this
+script would overwrite it with the former shape-drawn icon. Run it only to reproduce that former icon.
+
 One shape description drives every output:
 - dist/hicolor/scalable/apps/moreya.svg (vector source, 256 x 256 units) and meta/gui/moreya.svg (snap copy),
 - dist/hicolor/<n>x<n>/apps/moreya.png for 16, 32, 48, 64, 128 and 256 pixels,
