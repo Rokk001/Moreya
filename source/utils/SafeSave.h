@@ -21,6 +21,7 @@
 #include <boost/filesystem.hpp>
 
 #include <exception>
+#include <fstream>
 #include <functional>
 #include <string>
 
@@ -35,6 +36,16 @@ namespace SafeSave
     {
         boost::system::error_code ignored;
         boost::filesystem::remove(file, ignored);
+    }
+
+    //! \brief Closes a file a writer has written and tells whether all of it reached the file. close() flushes the
+    //! last buffer, so a write error there (for example a full disk) shows only in the stream state after it; an
+    //! earlier write error is kept by close. A writer returns this result, so replaceFile never takes a truncated
+    //! temp file for a complete one.
+    inline bool closeWritten(std::ofstream& file)
+    {
+        file.close();
+        return !file.fail();
     }
 
     //! \brief Replaces the target file with the content the writer produces. The content is written completely

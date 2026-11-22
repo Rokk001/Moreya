@@ -415,6 +415,8 @@ void RoomManager::checkBuildRoomEditor(GameMap* gameMap, RoomType type, const In
     factory.checkBuildRoomEditor(gameMap, inputManager, inputCommand);
 }
 
+//! \brief Builds a room the editor placed; a type outside the factories or without a factory builds nothing and
+//! returns false.
 bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& packet)
 {
     std::vector<const RoomFactory*>& factories = getFactories();

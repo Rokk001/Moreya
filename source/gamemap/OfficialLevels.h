@@ -99,6 +99,10 @@ namespace OfficialLevels
     //! name gets ".mmap" appended. An empty name, "." and ".." stay as they are.
     std::string toUserMapName(const std::string& fileName);
 
+    //! \brief Gives the name of a saved game the extension the Load menu lists: a trailing ".mmap" (a game played
+    //! on an own map) becomes ".level", every other name stays as it is. The SK-/MP- prefix is not touched.
+    std::string toSavedGameName(const std::string& fileName);
+
     //! \brief Decides where an editor save goes. A shipped level is written in place only with the hidden option;
     //! without it the save becomes an own copy (stem + ".mmap", "-2", "-3"... if taken) in the user skirmish folder
     //! (user multiplayer folder for a multiplayer level). A save under a new name (saveAs) outside the shipped folders

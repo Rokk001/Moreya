@@ -317,6 +317,19 @@ std::string toUserMapName(const std::string& fileName)
     return fileName + mapExtension;
 }
 
+//! \brief Keeps saved games of own maps loadable: a trailing ".mmap" becomes ".level".
+std::string toSavedGameName(const std::string& fileName)
+{
+    const std::string levelExtension(LEVEL_FILE_EXTENSION);
+    const std::string mapExtension(USER_MAP_EXTENSION);
+    if((fileName.size() > mapExtension.size())
+        && (fileName.compare(fileName.size() - mapExtension.size(), mapExtension.size(), mapExtension) == 0))
+    {
+        return fileName.substr(0, fileName.size() - mapExtension.size()) + levelExtension;
+    }
+    return fileName;
+}
+
 //! \brief Picks the file an editor save writes; never a shipped level without the hidden option.
 EditorSaveTarget resolveEditorSaveTarget(const std::string& target, bool saveAs, const std::string& levelsRoot,
     bool editOfficialLevels, const std::string& userSkirmishFolder, const std::string& userMultiplayerFolder)

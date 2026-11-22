@@ -3120,7 +3120,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                             ss << fileLevel;
                             break;
                     }
-                    std::string savePath = ResourceManager::getSingleton().getSaveGamePath() + ss.str();
+                    // A game played on an own map (.mmap) is saved as .level, the extension the Load menu lists
+                    std::string savePath = ResourceManager::getSingleton().getSaveGamePath()
+                        + OfficialLevels::toSavedGameName(ss.str());
                     levelSave = boost::filesystem::path(savePath);
                 }
                 levelSaveText = levelSave.string();
@@ -4722,6 +4724,8 @@ bool ODServer::notifyClientMessage(ODSocketClient *clientSocket)
     return ret;
 }
 
+//! \brief Stops the server: no new message comes in, the pending notifications and the copy block of the editor
+//! are deleted before the map of the closed level is cleared.
 void ODServer::stopServer()
 {
     // We start by stopping server to make sure no new message comes

@@ -229,6 +229,8 @@ bool GameEditorModeBase::onMinimapClick(const CEGUI::EventArgs& arg)
     return true;
 }
 
+//! \brief Updates the frame: recreates the minimap when its type changed, shows the console output and the
+//! messages, and updates the culling and the minimap only while they exist.
 void GameEditorModeBase::onFrameStarted(const Ogre::FrameEvent& evt)
 {
     const std::string miniMapType = ConfigManager::getSingleton().getGameValue(Config::MINIMAP_TYPE, MiniMap::DEFAULT_MINIMAP, false);

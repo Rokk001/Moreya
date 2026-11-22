@@ -398,6 +398,8 @@ void TrapManager::checkBuildTrapEditor(GameMap* gameMap, TrapType type, const In
     factory.checkBuildTrapEditor(gameMap, inputManager, inputCommand);
 }
 
+//! \brief Builds a trap the editor placed; a type outside the factories or without a factory builds nothing and
+//! returns false.
 bool TrapManager::buildTrapEditor(GameMap* gameMap, TrapType type, ODPacket& packet)
 {
     std::vector<const TrapFactory*>& factories = getFactories();

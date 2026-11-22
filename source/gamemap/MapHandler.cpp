@@ -58,6 +58,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/SafeSave.h"
 #include "gamemap/OfficialLevelChecksums.h"
 
 #include "ODApplication.h"
@@ -1273,6 +1274,7 @@ static void writeDirtSections(std::ostream& levelFile, GameMap& gameMap)
 //! \brief Campaign games also record their running context, separately from user progress.
 //! \brief The raid registry and, in a saved game, the running combat groups are written last ([CombatGroups]),
 //! followed by the raid with, in a saved game, its running state ([Raid]).
+//! \brief Returns true only when the file was closed without an error, the flush of the last buffer included.
 bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 {
     std::ofstream levelFile(fileName.c_str(), std::ifstream::out);
@@ -1609,12 +1611,12 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     // The raid of the level and, in a saved game, its running state (nothing is written without a raid)
     gameMap.getRaid().exportToStream(levelFile, isGameSave);
 
-    if (!levelFile.good()) {
+    // close() flushes the last buffer: a write error there shows only in the stream state after the close
+    if (!SafeSave::closeWritten(levelFile)) {
         OD_LOG_WRN("Unexpected failure on file: " + fileName);
         return false;
     }
 
-    levelFile.close();
     return true;
 }
 

@@ -2966,6 +2966,7 @@ bool EditorMode::updateDescription(const CEGUI::EventArgs&)
 }
 
 
+//! \brief Removes and destroys every entry of the Creatures menu, so that no entry of the closed level is left.
 void EditorMode::uninstallCreaturesMenuButtons()
 {
     CEGUI::Window* pm = mRootWindow->getChild("Menubar")->getChild("Creatures")->getChild("PopupMenu4");
@@ -3008,6 +3009,7 @@ void EditorMode::installCreaturesMenuButtons()
     }
 }
 
+//! \brief Removes and destroys every entry of the Recently used menu before it is filled again.
 void EditorMode::uninstallRecentlyUsedFilesButtons()
 {
     CEGUI::Window *pm = mRootWindow->getChild("Menubar")->getChild("File")->getChild("PopupMenu1")->getChild("RecentlyUsed")->getChild("PopupMenu2");
@@ -3045,6 +3047,7 @@ void EditorMode::installRecentlyUsedFilesButtons()
 }
 
 
+//! \brief Removes and destroys every entry of the Seats menu, so that no seat of the closed level is left.
 void EditorMode::uninstallSeatsMenuButtons()
 {
     CEGUI::Window *pm = mRootWindow->getChild("Menubar")->getChild("Seats")->getChild("PopupMenu5");

@@ -14,7 +14,8 @@ Requirements checked (each reported on its own, expected values are fixed):
       (compiled probe on the production block and on LevelScript.cpp)
   D5  saving is atomic (SafeSave.h, compiled probe on disk): the map is written to a temp file first, the .bak is
       made only from the complete old file, a failed write leaves the old file and the .bak as they were; the
-      path of askSaveMap is built inside a try
+      path of askSaveMap is built inside a try; writeGameMapToFile judges the file only after close (the last
+      flush), through SafeSave::closeWritten (compiled probe on the helper, static for its use)
   D6  the modified bit is reset only when the save request was sent; "Falle abreissen" sets it (static)
   D7  the server rejects a tile type outside the enum, a negative or NaN fullness, an unknown seat id (other
       than -1) and a region name that is empty or has white space (compiled probe on ServerGuards.h, static for
@@ -427,6 +428,54 @@ check('SafeSave::replaceFile(' in ask and 'writeGameMapToFile(levelSave' not in 
 check('try' in ask and 'levelSave =' in function(ask, 'try') and 'levelPath' in function(ask, 'try'),
       'D5 the path of the save is built inside a try block (path construction can throw)')
 check('rename(levelSave' not in ask, 'D5 askSaveMap no longer renames the old file before the new one is written')
+
+# D5: close() flushes the last buffer, so the writer has to judge the stream after close (compiled probe on
+# SafeSave::closeWritten, static for its use at the end of writeGameMapToFile)
+D5_CLOSE_PROBE = r'''
+#include "utils/SafeSave.h"
+#include <fstream>
+#include <iostream>
+#include <sstream>
+//! \brief Reads a whole file, or "<missing>".
+static std::string slurp(const std::string& name)
+{
+    std::ifstream in(name.c_str(), std::ios::binary);
+    if(!in)
+        return "<missing>";
+    std::stringstream ss;
+    ss << in.rdbuf();
+    return ss.str();
+}
+int main()
+{
+    // a complete write: the buffered rest reaches the file on close and the result is true
+    std::ofstream good("closed.txt", std::ios::binary);
+    good << "complete";
+    bool r1 = SafeSave::closeWritten(good);
+    std::cout << "good=" << r1 << ":" << slurp("closed.txt") << std::endl;
+
+    // a close that fails (no file behind the stream): the failure is reported
+    std::ofstream notOpen;
+    std::cout << "closefail=" << SafeSave::closeWritten(notOpen) << std::endl;
+
+    // an earlier write error is not lost by the close
+    std::ofstream broken("broken.txt", std::ios::binary);
+    broken << "half";
+    broken.setstate(std::ios::badbit);
+    std::cout << "earlier=" << SafeSave::closeWritten(broken) << std::endl;
+    return 0;
+}
+'''
+ok, output = run_probe('d5close', D5_CLOSE_PROBE, boost=True)
+check(ok and all(line in output.splitlines() for line in ['good=1:complete', 'closefail=0', 'earlier=0']),
+      'D5 SafeSave::closeWritten closes the file and reports a failed close and an earlier write error; got: '
+      + output[:600])
+writer_body = function(maphandler, 'bool writeGameMapToFile(')
+writer_tail = writer_body[writer_body.find('getRaid().exportToStream(levelFile'):]
+check('getRaid().exportToStream(levelFile' in writer_body and 'SafeSave::closeWritten(levelFile)' in writer_tail
+      and 'levelFile.close()' not in writer_tail and 'levelFile.good()' not in writer_tail,
+      'D5 writeGameMapToFile judges the file only after close (SafeSave::closeWritten), so a failed last flush '
+      'returns false')
 
 # ---------------------------------------------------------------- D6
 for name, signature in (('onSaveButtonClickFromOptions', 'bool EditorMode::onSaveButtonClickFromOptions('),
