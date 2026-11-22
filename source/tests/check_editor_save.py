@@ -173,6 +173,93 @@ check(ok and 'entries=2' in output and 'entry ClockTick hello3.py 0 10' in outpu
       and 'entry ClockTick hello4.py 0 15' in output and 'comment=0' in output and 'blank=0' in output,
       'D3 the [Scripts] lines of TestLegacy round-trip through ScriptEntry (expected 2 entries); got: ' + output[:300])
 
+# The production [Scripts] loader block (readGameMapFromFile) and writer block (writeGameMapToFile), compiled together:
+# the section of TestLegacy is read, written, and read again
+loader_block = function(loader, 'if(nextParam == "[Scripts]")')
+writer_block = function(writer, 'if(!gameMap.getScriptEntries().empty())')
+section_text = '[Scripts]\n' + '\n'.join(script_lines) + '\n[/Scripts]\n'
+cpp_section = ''.join('"%s\\n"\n' % l.replace('\\', '\\\\').replace('"', '\\"').replace('\t', '\\t')
+                      for l in section_text.split('\n')[:-1])
+D3B_HEAD = r"""
+#include "gamemap/ScriptEntry.h"
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#define OD_LOG_ERR(x) (void)0
+//! \brief The loader keeps the lines of the section in the map.
+struct GameMapStub
+{
+    std::vector<std::string> mEntries;
+    const std::vector<std::string>& getScriptEntries() const { return mEntries; }
+    void addScriptEntry(const std::string& entry) { mEntries.push_back(entry); }
+};
+//! \brief The script register of the console.
+struct GameEditorModeConsole
+{
+    static std::unordered_map<std::string, std::multimap<std::vector<int>, std::string> > scriptRegister;
+};
+std::unordered_map<std::string, std::multimap<std::vector<int>, std::string> > GameEditorModeConsole::scriptRegister;
+//! \brief The script file reader; the body of a script is not needed here.
+struct Helper
+{
+    static bool readFile(const std::string&, std::stringstream& out, bool) { out << "body"; return true; }
+};
+//! \brief The folder of the script files.
+struct ResourceManagerStub { std::string getGameScriptsPath() const { return "scripts/"; } };
+//! \brief Gives the stub of the resource manager.
+struct ResourceManager { static ResourceManagerStub& getSingleton() { static ResourceManagerStub r; return r; } };
+//! \brief Load errors are not expected.
+static void setLoadError(const std::string& text) { std::cout << "loaderror " << text << std::endl; }
+//! \brief The production loader block for the [Scripts] section.
+static bool loadScripts(GameMapStub& gameMap, std::stringstream& levelFile, const std::string& fileName)
+{
+    std::string nextParam;
+    levelFile >> nextParam;
+"""
+D3B_MID = r"""
+    return true;
+}
+//! \brief The production writer block for the [Scripts] section.
+static std::string writeScripts(GameMapStub& gameMap)
+{
+    std::ostringstream out;
+    std::ostream& levelFile = out;
+"""
+D3B_MAIN = r"""
+    return out.str();
+}
+int main()
+{
+    std::stringstream first(std::string(
+"""
+D3B_TAIL = r"""    ));
+    GameMapStub one;
+    if(!loadScripts(one, first, "x"))
+        return 1;
+    std::string written = writeScripts(one);
+    std::stringstream second(written);
+    GameMapStub two;
+    GameEditorModeConsole::scriptRegister.clear();
+    if(!loadScripts(two, second, "y"))
+        return 1;
+    std::cout << "first=" << one.mEntries.size() << " second=" << two.mEntries.size()
+              << " same=" << (one.mEntries == two.mEntries) << " registered="
+              << GameEditorModeConsole::scriptRegister["ClockTick"].size() << std::endl;
+    for(size_t i = 0; i < two.mEntries.size(); ++i)
+        std::cout << "entry " << two.mEntries[i] << std::endl;
+    return 0;
+}
+"""
+D3B_PROBE = D3B_HEAD + loader_block + D3B_MID + writer_block + D3B_MAIN + cpp_section + D3B_TAIL
+ok, output = run_probe('d3b', D3B_PROBE)
+check(ok and 'first=2 second=2 same=1 registered=2' in output and 'entry ClockTick hello3.py 0 10' in output
+      and 'entry ClockTick hello4.py 0 15' in output,
+      'D3 the production loader and writer blocks carry the 2 TestLegacy [Scripts] entries through write and read-back; got: '
+      + output[:400])
+
 # ---------------------------------------------------------------- D4
 # The production block that writes the level script, compiled against the real LevelScript.cpp
 block = function(writer, 'if(!gameMap.getLevelScript().isEmpty())')
