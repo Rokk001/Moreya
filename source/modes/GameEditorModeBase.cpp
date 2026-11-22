@@ -213,6 +213,10 @@ bool GameEditorModeBase::onMinimapClick(const CEGUI::EventArgs& arg)
             return true;
     }
 
+    // The minimap is null while a level is being replaced or after a failed load
+    if(mMiniMap == nullptr)
+        return true;
+
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
 
     Ogre::Vector2 cc = mMiniMap->camera_2dPositionFromClick(static_cast<int>(mouseEvt.position.d_x),

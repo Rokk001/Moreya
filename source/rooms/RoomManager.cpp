@@ -410,6 +410,13 @@ bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& pac
         return false;
     }
 
+    // A type without a registered factory has nothing to build
+    if(factories[index] == nullptr)
+    {
+        OD_LOG_ERR("no room factory for type=" + Helper::toString(index));
+        return false;
+    }
+
     const RoomFactory& factory = *factories[index];
     return factory.buildRoomEditor(gameMap, packet);
 }

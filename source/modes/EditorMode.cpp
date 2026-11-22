@@ -1890,8 +1890,11 @@ void EditorMode::onEditPaste()
     }
 }
 
+//! rief Deletes the pasted block; a drag of it can no longer be in progress.
 void EditorMode::onEditDelete()
 {
+    // The block is gone once the server answers, so the next mouse move must not try to round its position
+    mModeManager->getInputManager().mMouseDownOnDraggableTileContainer = false;
 
     ClientNotification* notif1 = new ClientNotification(ClientNotificationType::editorAskDeleteDraggableTileContainer);
     ODClient::getSingleton().queueClientNotification(notif1);
@@ -2289,7 +2292,9 @@ bool EditorMode::loadLevelFromFile(const std::string& fileName)
     // left a viewport on a destroyed camera (initGameRenderer makes a new target for the loaded level)
     RenderManager::getSingleton().destroySmokeRenderTarget();
 
-    mMainCullingManager->stopTileCulling(mCameraTilesIntersections);
+    // A failed earlier load or new level can have left the culling manager null
+    if(mMainCullingManager != nullptr)
+        mMainCullingManager->stopTileCulling(mCameraTilesIntersections);
     // eliminating the race condition
     MiniMap* mm;
     mm = mMiniMap;
@@ -3118,7 +3123,17 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
         mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Invalid map size.");
         return true;
     }
-    mMainCullingManager->stopTileCulling(mCameraTilesIntersections);
+
+    // The title is checked here, before anything of the open level is torn down
+    editWin = static_cast<CEGUI::Editbox*>(mRootWindow->getChild("LevelWindowFrame/LevelTitleEdit"));
+    std::string levelTitle = editWin->getText().c_str();
+    if (levelTitle.empty()) {
+        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Please set a level title.");
+        return true;
+    }
+    // A failed earlier load or new level can have left the culling manager null
+    if(mMainCullingManager != nullptr)
+        mMainCullingManager->stopTileCulling(mCameraTilesIntersections);
     // eliminating the race condition
     MiniMap* mm;
     mm = mMiniMap;
@@ -3151,12 +3166,6 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     gameMap->setGamePaused(true);
     gameMap->createNewMap(width, height);
     gameMap->setLevelFileName(level);
-    editWin = static_cast<CEGUI::Editbox*>(mRootWindow->getChild("LevelWindowFrame/LevelTitleEdit"));
-    std::string levelTitle = editWin->getText().c_str();
-    if (levelTitle.empty()) {
-        //     mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Please set a level title.");
-        return true;
-    }
     gameMap->setLevelName(levelTitle);
     CEGUI::MultiLineEditbox* meditWin = static_cast<CEGUI::MultiLineEditbox*>(
         mRootWindow->getChild("LevelWindowFrame/LevelDescriptionEdit"));

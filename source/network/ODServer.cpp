@@ -3063,12 +3063,37 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 levelSave = boost::filesystem::path(savePath);
             }
 
-            // If the file exists, we make a backup
-            if (boost::filesystem::exists(levelSave))
-                boost::filesystem::rename(levelSave, levelSave.string() + ".bak");
+            // If the file exists, we make a backup. The error_code variants keep a file system error
+            // (read-only folder, locked file) from ending the server thread with an exception.
+            boost::system::error_code backupError;
+            bool saveOk = true;
+            if (boost::filesystem::exists(levelSave, backupError))
+            {
+                boost::filesystem::rename(levelSave, levelSave.string() + ".bak", backupError);
+                if(backupError)
+                {
+                    OD_LOG_ERR("Couldn't back up " + levelSave.string() + ": " + backupError.message());
+                    saveOk = false;
+                }
+            }
+            else if(backupError)
+            {
+                OD_LOG_ERR("Couldn't check " + levelSave.string() + ": " + backupError.message());
+                saveOk = false;
+            }
 
             std::string msg = "Map saved successfully as: " + levelSave.string();
-            if (!MapHandler::writeGameMapToFile(levelSave.string(), *gameMap))
+            try
+            {
+                if(saveOk)
+                    saveOk = MapHandler::writeGameMapToFile(levelSave.string(), *gameMap);
+            }
+            catch(const std::exception& e)
+            {
+                OD_LOG_ERR("Exception while saving " + levelSave.string() + ": " + e.what());
+                saveOk = false;
+            }
+            if (!saveOk)
             {
                 msg = "Couldn't not save map file as: " + levelSave.string() + "\nPlease check logs.";
             }
@@ -3457,7 +3482,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 Player* player = clientSocket->getPlayer();
                 if(!RoomManager::buildRoomEditor(gameMap, roomType, auxPacket))
                 {
-                    OD_LOG_INF("WARNING: player seatId=" + Helper::toString(player->getSeat()->getId())
+                    OD_LOG_INF("WARNING: player seatId=" + Helper::toString((player->getSeat() == nullptr) ? -1 : player->getSeat()->getId())
                                + " couldn't build room: " + RoomManager::getRoomNameFromRoomType(roomType));
                     break;
                 }
@@ -3486,7 +3511,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             Player* player = clientSocket->getPlayer();
             if(!RoomManager::buildRoomEditor(gameMap, type, packetReceived))
             {
-                OD_LOG_INF("WARNING: player seatId=" + Helper::toString(player->getSeat()->getId())
+                OD_LOG_INF("WARNING: player seatId=" + Helper::toString((player->getSeat() == nullptr) ? -1 : player->getSeat()->getId())
                     + " couldn't build room: " + RoomManager::getRoomNameFromRoomType(type));
                 break;
             }
@@ -3539,7 +3564,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 Player* player = clientSocket->getPlayer();
                 if(!TrapManager::buildTrapEditor(gameMap, trapType, auxPacket))
                 {
-                    OD_LOG_INF("WARNING: player seatId=" + Helper::toString(player->getSeat()->getId())
+                    OD_LOG_INF("WARNING: player seatId=" + Helper::toString((player->getSeat() == nullptr) ? -1 : player->getSeat()->getId())
                                + " couldn't build trap: " + TrapManager::getTrapNameFromTrapType(trapType));
                     break;
                 }        
@@ -3566,7 +3591,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             Player* player = clientSocket->getPlayer();
             if(!TrapManager::buildTrapEditor(gameMap, type, packetReceived))
             {
-                OD_LOG_INF("WARNING: player seatId=" + Helper::toString(player->getSeat()->getId())
+                OD_LOG_INF("WARNING: player seatId=" + Helper::toString((player->getSeat() == nullptr) ? -1 : player->getSeat()->getId())
                     + " couldn't build trap: " + TrapManager::getTrapNameFromTrapType(type));
                 break;
             }
@@ -3594,7 +3619,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             Player* player = clientSocket->getPlayer();
             if(!TrapManager::buildTrapEditor(gameMap, type, packetReceived))
             {
-                OD_LOG_INF("WARNING: player seatId=" + Helper::toString(player->getSeat()->getId())
+                OD_LOG_INF("WARNING: player seatId=" + Helper::toString((player->getSeat() == nullptr) ? -1 : player->getSeat()->getId())
                     + " couldn't build trap: " + TrapManager::getTrapNameFromTrapType(type));
                 break;
             }

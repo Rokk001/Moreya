@@ -393,6 +393,13 @@ bool TrapManager::buildTrapEditor(GameMap* gameMap, TrapType type, ODPacket& pac
         return false;
     }
 
+    // A type without a registered factory has nothing to build
+    if(factories[index] == nullptr)
+    {
+        OD_LOG_ERR("no trap factory for type=" + Helper::toString(index));
+        return false;
+    }
+
     const TrapFactory& factory = *factories[index];
     return factory.buildTrapEditor(gameMap, packet);
 }
