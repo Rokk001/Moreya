@@ -428,6 +428,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Called at each frame. It checks if the Gui should be refreshed (for example,
     //! if a skill is done) and, if yes, refreshes accordingly. A change of the research progress alone refreshes
     //! only while the skill tree is open; while it is closed, the refresh is kept for when the tree opens.
+    //! Starting a campaign level and building or losing the Workshop also refresh, since the build navigation of a
+    //! campaign level depends on them.
     //! \param forceRefresh Refresh the gui even if no changes was declared by the local player Seat.
     void refreshGuiSkill(bool forceRefresh = false);
 
@@ -612,6 +614,13 @@ private:
     //! \brief Whether the spell buttons were last shown locked because the library was lost
     bool mIsLibraryLostShown;
 
+    //! \brief Whether the research tree and the build navigation were last shown with the rules of a campaign level
+    //! (padlock on forbidden fields, question mark placeholders, traps and doors only with a built Workshop)
+    bool mIsCampaignLevelShown = false;
+
+    //! \brief Whether the build navigation was last shown with a built Workshop of the local keeper
+    bool mHasWorkshopShown = false;
+
     //! \brief Whether the research progress changed while the skill tree was closed, so the tree is refreshed
     //! when it opens
     bool mIsSkillTreeOutdated = false;
@@ -670,6 +679,9 @@ private:
 
     //! \brief Set the state of the given skill button accordingly to the skill type given.
     //! The cast button is shown only once the skill has been researched at least to level 1.
+    //! In a campaign level the build buttons of rooms, traps and doors follow the research state instead: an allowed
+    //! entry not researched yet shows the question mark placeholder and cannot be built, a forbidden one is hidden,
+    //! traps and doors are hidden while no Workshop is built; a forbidden research field shows the padlock.
     //! \note: Called by refreshGuiSkill() for each skillType.
     void refreshSkillButtonState(const std::string& skillButton, const std::string& castButton,
         const std::string& skillProgressBar, SkillType resType);

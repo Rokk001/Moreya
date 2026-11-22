@@ -359,6 +359,19 @@ static const uint32_t RESEARCH_TREE_MIN_ROWS = 4;
 static const float RESEARCH_LINK_BAR_WIDTH = .012f;
 static const float RESEARCH_LINK_CLEARANCE = 3.0f;
 static const unsigned RESEARCH_LINK_MAX_BARS = 9;
+//! Campaign level marks: the padlock laid over a research field the level forbids, the question mark placeholder that
+//! stands in the build navigation for an entry the level allows but the keeper has not researched yet, and the
+//! research field property that draws the padlock (defined by OD/ResearchButton)
+static const std::string RESEARCH_LOCK_IMAGE = "SkillLockMarks/Padlock";
+static const std::string NAVIGATION_PLACEHOLDER_IMAGE = "SkillLockMarks/QuestionPlaceholder";
+static const std::string RESEARCH_LOCK_PROPERTY = "LockImage";
+//! User strings of a build navigation button: the real icon of its layout, kept while the placeholder is shown, and
+//! whether the placeholder is shown ("true" or "false")
+static const std::string NAVIGATION_REAL_IMAGE = "NavigationRealImage";
+static const std::string NAVIGATION_PLACEHOLDER = "NavigationPlaceholder";
+//! Paths of the build navigation pages: rooms, and traps with doors (spells have their own page and stay unchanged)
+static const std::string NAVIGATION_PATH_ROOMS = "MainTabControl/Rooms/";
+static const std::string NAVIGATION_PATH_TRAPS = "MainTabControl/Traps/";
 
 //! \brief Returns the frame colour of a research node: gold from the gold level, bronze at the bronze level, otherwise none.
 //! \param level The research level of the node.
@@ -4517,6 +4530,10 @@ void GameMode::setHelpWindowText()
 }
 
 //! \brief Updates research icons, progress and the plain-language hover state without changing research rules.
+//! \brief In a campaign level a field the level forbids shows the padlock instead of the cross, and the build
+//! navigation of rooms, traps and doors follows the research state: researched entries with their real icon, allowed
+//! but unresearched ones as a question mark placeholder that cannot be built, forbidden ones hidden, traps and doors
+//! hidden while the keeper has no built Workshop. Skirmish and multiplayer keep the navigation and tree of before.
 void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
 {
@@ -4647,12 +4664,43 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         skillButton->setEnabled(true);
         skillProgressBar->hide();
     }
+    // In a campaign level a forbidden field carries the padlock in place of the cross; elsewhere no padlock is drawn
+    const bool isCampaignLocked = mIsCampaignLevelShown && !isAllowed;
+    if(isCampaignLocked)
+        skillButton->setProperty("StateImage", "");
+    skillButton->setProperty(RESEARCH_LOCK_PROPERTY, isCampaignLocked ? RESEARCH_LOCK_IMAGE : "");
     const bool isLockedByLibrary = SkillManager::isLockedByLostLibrary(resType, localPlayerSeat);
     // A keeper skill has no cast button (its name is empty)
     if(!castButtonName.empty())
     {
-        guiSheet->getChild(castButtonName)->setVisible(level > 0);
-        guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
+        CEGUI::Window* castButton = guiSheet->getChild(castButtonName);
+        const bool isTrapEntry = castButtonName.compare(0, NAVIGATION_PATH_TRAPS.size(), NAVIGATION_PATH_TRAPS) == 0;
+        const bool isBuildEntry = isTrapEntry ||
+            castButtonName.compare(0, NAVIGATION_PATH_ROOMS.size(), NAVIGATION_PATH_ROOMS) == 0;
+        bool isVisible = level > 0;
+        bool isPlaceholder = false;
+        if(isBuildEntry)
+        {
+            // The real icon of the layout is kept so that it comes back once the entry is researched, also when a
+            // later skirmish game reuses the window
+            if(!castButton->isUserStringDefined(NAVIGATION_REAL_IMAGE))
+                castButton->setUserString(NAVIGATION_REAL_IMAGE, castButton->getProperty("NormalImage"));
+            if(mIsCampaignLevelShown)
+            {
+                if(!isAllowed || (isTrapEntry && !mHasWorkshopShown))
+                    isVisible = false;
+                else
+                {
+                    isVisible = true;
+                    isPlaceholder = (level == 0);
+                }
+            }
+            castButton->setProperty("NormalImage", isPlaceholder ? CEGUI::String(NAVIGATION_PLACEHOLDER_IMAGE) :
+                castButton->getUserString(NAVIGATION_REAL_IMAGE));
+            castButton->setUserString(NAVIGATION_PLACEHOLDER, isPlaceholder ? "true" : "false");
+        }
+        castButton->setVisible(isVisible);
+        castButton->setEnabled(!isLockedByLibrary && !isPlaceholder);
     }
     skillButton->setText("");
     skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF808080" : (level == 0 ? "FF666666" : "FFFFFFFF"));
@@ -4760,6 +4808,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     skillProgressBar->setVisible(state == "Researching");
 }
 
+//! \brief Refreshes the research tree and the action buttons when the research, the library, the campaign level rules
+//! or the Workshop of the local keeper changed.
 void GameMode::refreshGuiSkill(bool forceRefresh)
 {
     Seat* localPlayerSeat = mGameMap->getLocalPlayer()->getSeat();
@@ -4785,6 +4835,17 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
     if(mIsLibraryLostShown != localPlayerSeat->isLibraryLost())
     {
         mIsLibraryLostShown = localPlayerSeat->isLibraryLost();
+        forceRefresh = true;
+    }
+
+    // A campaign level shows the build navigation by research state, and its traps and doors only with a built
+    // Workshop: starting such a level or building or losing the Workshop refreshes the buttons
+    const bool isCampaignLevel = Campaign::getSingleton().isActive() && !ODClient::getSingleton().isMultiplayerSession();
+    const bool hasWorkshop = localPlayerSeat->getNbRooms(RoomType::workshop) > 0;
+    if((mIsCampaignLevelShown != isCampaignLevel) || (mHasWorkshopShown != hasWorkshop))
+    {
+        mIsCampaignLevelShown = isCampaignLevel;
+        mHasWorkshopShown = hasWorkshop;
         forceRefresh = true;
     }
 

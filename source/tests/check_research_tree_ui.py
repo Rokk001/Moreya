@@ -108,6 +108,7 @@ std::map<SkillType,Skill> SkillManager::data;
 std::vector<SkillType> SkillManager::order;
 namespace Skills {NAMES}
 struct GameMode {CEGUI::Window* mRootWindow;GameMap* mGameMap;bool mIsSkillWindowOpen=false;std::vector<SkillType> mSkillPending;
+ bool mIsCampaignLevelShown=false;bool mHasWorkshopShown=false;
  struct Progress {CEGUI::ProgressBar* mProgressBar=nullptr;float mCompleteness=0;void setValue(CEGUI::ProgressBar* b,float p){mProgressBar=b;mCompleteness=p;}}mSkillCurrentCompletion;
  void refreshSkillButtonState(const std::string&,const std::string&,const std::string&,SkillType);
  void refreshSkillConnections();};
@@ -221,6 +222,46 @@ int main(int argc,char** argv){try{
   check(treasury->getUserString("ResearchState")=="Locked","level II waits for the tab gate");
   check(std::string(treasury->getUserString("ResearchDetails").c_str()).find("Locked: more entries of the Rooms tab")!=std::string::npos,"the tooltip says why the level is locked");
   seat.gate=true;seat.levels.clear();}
+ // Campaign level rules: padlock on a forbidden tree field, question mark placeholder for an allowed entry not researched
+ // yet, forbidden entries hidden, traps and doors only with a built Workshop; skirmish rules afterwards stay as before
+ {Seat& seat=map.player.seat;seat.denied.assign(1,SkillType::roomGuardRoom);seat.levels.clear();seat.level=0;seat.queue=0;seat.current=false;
+  CEGUI::Window* navigation=windows.createWindow("DefaultWindow","MainTabControl");root->addChild(navigation);
+  navigation->addChild(windows.createWindow("DefaultWindow","Rooms"));navigation->addChild(windows.createWindow("DefaultWindow","Traps"));
+  const std::string roomIcon="RoomCentreIconDormitory/Icon";
+  std::function<CEGUI::Window*(SkillType,const std::string&)> refreshNavigation=[&](SkillType type,const std::string& page)->CEGUI::Window*{
+   const std::string path=data.at(type).path;const std::string cast="MainTabControl/"+page+"/Nav"+std::to_string(int(type));
+   if(!root->isChild(cast)){CEGUI::Window* button=windows.createWindow("OD/GameTabButton","Nav"+std::to_string(int(type)));button->setProperty("NormalImage",roomIcon);navigation->getChild(page)->addChild(button);}
+   game.refreshSkillButtonState(path,cast,path+"/"+path.substr(path.find_last_of('/')+1)+"ProgressBar",type);return root->getChild(cast);};
+  game.mIsCampaignLevelShown=true;game.mHasWorkshopShown=false;
+  seat.levels[SkillType::roomDormitory]=1;
+  CEGUI::Window* fromStart=refreshNavigation(SkillType::roomDormitory,"Rooms");
+  check(fromStart->isVisible()&&!fromStart->isDisabled()&&fromStart->getProperty("NormalImage")==roomIcon,"campaign: an entry from the start shows its real icon and can be built");
+  CEGUI::Window* allowed=refreshNavigation(SkillType::roomTrainingHall,"Rooms");
+  check(allowed->isVisible()&&allowed->isDisabled()&&allowed->getProperty("NormalImage")=="SkillLockMarks/QuestionPlaceholder","campaign: an allowed entry not researched yet is a question mark that cannot be built");
+  seat.levels[SkillType::roomTrainingHall]=1;allowed=refreshNavigation(SkillType::roomTrainingHall,"Rooms");
+  check(allowed->isVisible()&&!allowed->isDisabled()&&allowed->getProperty("NormalImage")==roomIcon,"campaign: once researched the question mark gives way to the real icon");
+  CEGUI::Window* forbidden=refreshNavigation(SkillType::roomGuardRoom,"Rooms");
+  check(!forbidden->isVisible(),"campaign: a forbidden entry is not shown in the navigation");
+  CEGUI::Window* guardField=root->getChild("SkillTreeWindow/Skills/"+data.at(SkillType::roomGuardRoom).path);
+  check(guardField->isDisabled()&&guardField->getProperty("LockImage")=="SkillLockMarks/Padlock"&&guardField->getProperty("StateImage").empty(),"campaign: a forbidden field shows the padlock instead of the cross and cannot be clicked");
+  check(guardField->getProperty("ButtonImageColour")=="FF808080"&&guardField->getProperty("ResearchTileImage")=="OpenDungeonsSkin/ResearchTileLocked","campaign: a forbidden field stays darkened and grey");
+  CEGUI::Window* allowedField=root->getChild("SkillTreeWindow/Skills/"+data.at(SkillType::roomTrainingHall).path);
+  check(allowedField->getProperty("LockImage").empty()&&!allowedField->isDisabled(),"campaign: an allowed field has no padlock and stays clickable");
+  seat.levels[SkillType::trapCannon]=1;
+  CEGUI::Window* trap=refreshNavigation(SkillType::trapCannon,"Traps");
+  CEGUI::Window* door=refreshNavigation(SkillType::trapDoorWooden,"Traps");
+  check(!trap->isVisible()&&!door->isVisible(),"campaign: no trap and no door without a built Workshop");
+  game.mHasWorkshopShown=true;trap=refreshNavigation(SkillType::trapCannon,"Traps");door=refreshNavigation(SkillType::trapDoorWooden,"Traps");
+  check(trap->isVisible()&&!trap->isDisabled()&&trap->getProperty("NormalImage")==roomIcon,"campaign: with a Workshop a researched trap shows its real icon");
+  check(door->isVisible()&&door->isDisabled()&&door->getProperty("NormalImage")=="SkillLockMarks/QuestionPlaceholder","campaign: with a Workshop an unresearched door is a question mark");
+  game.mIsCampaignLevelShown=false;game.mHasWorkshopShown=false;seat.levels.erase(SkillType::roomTrainingHall);
+  allowed=refreshNavigation(SkillType::roomTrainingHall,"Rooms");door=refreshNavigation(SkillType::trapDoorWooden,"Traps");
+  check(!allowed->isVisible()&&!door->isVisible()&&allowed->getProperty("NormalImage")==roomIcon,"skirmish: an unresearched entry stays hidden with its real icon");
+  trap=refreshNavigation(SkillType::trapCannon,"Traps");
+  check(trap->isVisible()&&!trap->isDisabled(),"skirmish: a researched trap is shown without a Workshop as before");
+  refreshNavigation(SkillType::roomGuardRoom,"Rooms");
+  check(guardField->getProperty("StateImage")=="OpenDungeonsIcons/AbortIcon"&&guardField->getProperty("LockImage").empty(),"skirmish: a forbidden field keeps the cross and has no padlock");
+  seat.denied.clear();seat.levels.clear();}
  map.player.seat.levels.clear();
  map.player.seat.level=0;map.player.seat.current=true;map.player.seat.queue=2;
  SkillManager::listAllSkills([&](const std::string& n,const std::string& c,const std::string& b,SkillType t){game.refreshSkillButtonState(n,c,b,t);});
