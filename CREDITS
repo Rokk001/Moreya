@@ -1458,6 +1458,7 @@ sounds/Creatures/Default/Cheer.ogg       qubodup                  CC0 1.0       
 assets-src/dirt/Vomit.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
 materials/scripts/TavernObjects.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
 materials/textures/tavern/TavernVomit.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+tools/tavern-meshes/make_tavern_stool.py    AI-generated with Claude Code    GPLv3+    Original generator of the round tavern stool mesh, decision 863, 2026-11-08
 models/Vomit.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 
 == Tavern anatomical creature motions ==
@@ -1648,6 +1649,8 @@ particles/RoomAmbienceProduction.particle (SpaSteam) OD Team GPLv3+ Original hot
 particles/ChickenFeathers.particle (SpaMudSplash) OD Team GPLv3+ Original brown mud splash effect; AI-generated with Codex
 
 assets-src/gui/icons/tiles/SpaButton.png AI-generated with Codex GPLv3+ Original painted steaming mud pool and towel in the existing room icon style, generated with built-in imagegen and downsampled to the 256-pixel source, 2026-10-26
+tools/spa-meshes/paint_spa_textures.py AI-generated with Claude Code GPLv3+ Own work: paints the chair, life ring, metal and hair textures of the hot mud bath, 2026-11-17
+tools/spa-meshes/texture_spa_meshes.py AI-generated with Claude Code GPLv3+ Own work: writes the texture coordinates of the chair, life ring and attendant meshes, 2026-11-17
 
 particles/RoomAmbienceProduction.particle (SpaMudBubbles) AI-generated with Codex GPLv3+ Original expanding and popping hot mud domes over the opaque bath, decision 863, 2026-11-08
 
