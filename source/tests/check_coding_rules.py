@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Non-compiling check of the coding rules for the lines a change ADDS.
 
-Only added lines are checked (diff against a base, default origin/integration/all, plus
+Only added lines are checked (diff against a base, default origin/main, plus
 untracked files); the existing code is never reported. Rules:
 
   auto            `auto` used as a type in C++ files (source/**, *.cpp/*.h) and in the C++
@@ -30,7 +30,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SELF_PATH = "source/tests/check_coding_rules.py"
-DEFAULT_BASE = "origin/integration/all"
+DEFAULT_BASE = "origin/main"
 HOOK_SCRIPT = os.path.join("scripts", "check-protected-content.py")
 
 # Marker that excuses a lambda in a block a check script cuts out.

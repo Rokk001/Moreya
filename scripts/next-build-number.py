@@ -2,10 +2,10 @@
 """Print the build number N for the next integrator release build (version major.minor.patch.N).
 
 N is the last deployed number plus one. If OD_MAJOR_VERSION, OD_MINOR_VERSION or OD_PATCH_LEVEL in
-CMakeLists.txt differ from the last deployed state (the base ref, normally origin/integration/all
+CMakeLists.txt differ from the last deployed state (the base ref, normally origin/main
 before the merges), the numbering starts again and N is 1.
 
-Usage: python -I scripts/next-build-number.py --counter <BUILD-NUMBER.txt> [--base origin/integration/all]
+Usage: python -I scripts/next-build-number.py --counter <BUILD-NUMBER.txt> [--base origin/main]
 Moreya releases pass the deployed branch as base: --base origin/main in the Moreya clone (moreya/main where the remote
 has that name); the counter file is the same one the old line used, so numbering continues.
 """
@@ -40,7 +40,7 @@ def main():
     """Read the counter file and both CMakeLists.txt states and print N."""
     parser = argparse.ArgumentParser()
     parser.add_argument('--counter', required=True)
-    parser.add_argument('--base', default='origin/integration/all')
+    parser.add_argument('--base', default='origin/main')
     args = parser.parse_args()
     with open(args.counter, 'r') as counter_file:
         last_number = int(counter_file.readline().strip())

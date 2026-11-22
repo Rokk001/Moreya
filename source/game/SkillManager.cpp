@@ -27,6 +27,7 @@
 #include "render/Gui.h"
 #include "rooms/RoomType.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomPackages.h"
 #include "spells/SpellSummonWorker.h"
 #include "spells/SpellManager.h"
 #include "spells/SpellType.h"
@@ -148,6 +149,10 @@ public:
 
     virtual void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const = 0;
 
+    //! \brief False when the content the entry needs is not installed (a room whose room package is missing).
+    virtual bool isContentAvailable() const
+    { return true; }
+
     virtual const std::string& getGuiPath() const = 0;
 
     virtual void mapSkill(std::vector<std::vector<SkillType>>& skillsFamily) const = 0;
@@ -173,15 +178,23 @@ public:
     std::string getCostText(GameMap* gameMap) const override
     { return Helper::toString(RoomManager::costPerTile(mRoomType)) + " gold per tile"; }
 
+    //! \brief Connects the build button of the room; the button of a room whose room package is missing is hidden.
     void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const override
     {
+        CEGUI::Window* button = rootWindow->getChild(getGuiPath() + mButtonName);
         mode->addEventConnection(
-            rootWindow->getChild(getGuiPath() + mButtonName)->subscribeEvent(
+            button->subscribeEvent(
               CEGUI::PushButton::EventClicked,
               CEGUI::Event::Subscriber(RoomSelector(mRoomType, playerSelection))
             )
         );
+        if(!RoomPackages::isRoomAvailable(mRoomType))
+            button->hide();
     }
+
+    //! \brief A room skill needs the room package of its room.
+    bool isContentAvailable() const override
+    { return RoomPackages::isRoomAvailable(mRoomType); }
 
     const std::string& getGuiPath() const override
     {
@@ -797,8 +810,12 @@ SkillManager::~SkillManager()
     mSkills.clear();
 }
 
+//! \brief A room is available when its room package is there (RoomPackages) and its skill is done.
 bool SkillManager::isRoomAvailable(RoomType type, const Seat* seat)
 {
+    if(!RoomPackages::isRoomAvailable(type))
+        return false;
+
     uint32_t index = static_cast<uint32_t>(SkillFamily::rooms);
     std::vector<SkillType>& family = getSkillManager().mSkillsFamily[index];
     index = static_cast<uint32_t>(type);
@@ -829,6 +846,18 @@ bool SkillManager::isSpellAvailable(SpellType type, const Seat* seat)
         return false;
 
     return seat->isSkillDone(resType);
+}
+
+//! \brief Looks the entry of the skill up; a skill without entry needs no content.
+bool SkillManager::isSkillContentAvailable(SkillType type)
+{
+    for(const SkillDef* skill : getSkillManager().mSkills)
+    {
+        if((skill != nullptr) && (skill->mSkill->getType() == type))
+            return skill->isContentAvailable();
+    }
+
+    return true;
 }
 
 bool SkillManager::isLockedByLostLibrary(SkillType type, const Seat* seat)

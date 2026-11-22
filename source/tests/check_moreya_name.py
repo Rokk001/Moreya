@@ -185,9 +185,11 @@ linux = read('scripts/unix/package-linux-release.sh')
 check('BINARY=moreya\n' in linux and 'cat > "$OUT/moreya" <<EOF' in linux and 'exec "\\$HERE/bin/$BINARY"' in linux,
       'Linux package: launcher moreya starts bin/moreya')
 check(' scripts ' not in linux.split('for dir in ')[1].split(';')[0], 'Linux package ships no developer scripts')
-workflow = read('.github/workflows/linux-release.yml')
-check('name="Moreya-${version}-linux-x86_64"' in workflow and 'test -x build/moreya' in workflow,
-      'Linux workflow builds build/moreya and names the archive Moreya-<version>-linux-x86_64')
+# The Linux release workflow was removed (no ready-made builds outside Steam); the Linux build runs through
+# scripts/unix/build-linux.sh, which builds the game target that writes moreya.
+check(not (ROOT / '.github/workflows/linux-release.yml').exists(), 'no Linux release workflow')
+linux_build = read('scripts/unix/build-linux.sh')
+check('--target opendungeons-plus' in linux_build, 'Linux build script builds the game target (output moreya)')
 windows = read('scripts/win32/package-windows-release.ps1')
 check('$name = "Moreya-$version-windows-x64"' in windows and '$zip = Join-Path $OutDir "$name.zip"' in windows and
       "Join-Path $Build 'moreya.exe'" in windows, 'Windows package: moreya.exe in Moreya-<version>-windows-x64.zip')

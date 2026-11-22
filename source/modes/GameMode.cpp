@@ -4540,6 +4540,7 @@ void GameMode::setHelpWindowText()
 //! darkened icon under the padlock (queueable in the tree, not buildable in the navigation), a forbidden one as the
 //! question mark in place of its icon (not clickable in the tree, not buildable in the navigation), traps and doors
 //! hidden while the keeper has no built Workshop. Skirmish and multiplayer keep the navigation and tree of before.
+//! The skill of a room whose room package is missing is shown not allowed and its build button stays hidden.
 void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
 {
@@ -4547,7 +4548,9 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     Seat* localPlayerSeat = mGameMap->getLocalPlayer()->getSeat();
     const uint32_t level = localPlayerSeat->getSkillLevel(resType);
     bool isDone = level >= 3;
-    bool isAllowed = !localPlayerSeat->isSkillNotAllowed(resType);
+    // The skill of a room whose room package is missing cannot be researched and its build button stays hidden
+    const bool isContentAvailable = SkillManager::isSkillContentAvailable(resType);
+    bool isAllowed = !localPlayerSeat->isSkillNotAllowed(resType) && isContentAvailable;
     uint32_t queueNumber = 0;
     if(!isDone)
     {
@@ -4716,7 +4719,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         // A marked button stays enabled so that it shows the frames of every button state like a real icon; the
         // selectors build nothing for it
         castButton->setUserString(NAVIGATION_LOCKED, isMarked ? "true" : "false");
-        castButton->setVisible(isVisible);
+        // The build button of a skill whose content package is missing stays hidden in every mode
+        castButton->setVisible(isVisible && isContentAvailable);
         castButton->setEnabled(!isLockedByLibrary);
     }
     skillButton->setText("");

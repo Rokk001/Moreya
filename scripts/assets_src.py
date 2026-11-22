@@ -16,11 +16,19 @@ def assets_src_dir(repo):
 
 
 # Maps a repository-relative path to a real path: paths below "assets-src" are resolved through assets_src_dir(),
-# all other paths stay below repo. Backslashes in relative are accepted.
+# all other paths stay below repo. A room asset that moved into a room package of the private content repository
+# (scripts/room_packages.py) is found there when the public tree no longer has it and the content is present.
+# Backslashes in relative are accepted.
 def resolve(repo, relative):
     normalized = str(relative).replace("\\", "/")
     if normalized == PREFIX:
         return assets_src_dir(repo)
     if normalized.startswith(PREFIX + "/"):
         return assets_src_dir(repo) / normalized[len(PREFIX) + 1:]
-    return Path(repo) / relative
+    public = Path(repo) / relative
+    if not public.exists():
+        import room_packages
+        packaged = room_packages.asset(repo, normalized)
+        if packaged is not None:
+            return packaged
+    return public

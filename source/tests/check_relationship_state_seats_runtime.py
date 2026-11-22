@@ -11,7 +11,9 @@ fixed (ODClient.cpp, ServerNotificationType::pickNick, ServerMode::ModeGameLoade
 Packet layout, as written by ODPacket (SFML sf::Packet):
   - each message is a frame: uint32 payload size, big-endian, then the payload;
   - int32 (also every enum class value): big-endian; string: uint32 length + UTF-8 bytes; bool: one byte 0/1.
-  - hello: int32 type + string "OpenDungeons V <VERSION> / wire-5" (NetworkProtocol::WIRE_SCHEMA_SUFFIX)
+  - hello: int32 type + string "OpenDungeons V <VERSION> / wire-6" (NetworkProtocol::WIRE_SCHEMA_SUFFIX)
+    + uint32 count + the room package names (ContentPackageCheck::writeList); the test client names every packaged
+    room (ROOM_NAMES of scripts/room_packages.py), so the server never refuses it for a missing room package
   - levelOK: int32 type
   - setNick: int32 type + string nick + 7 bools (the server asked for all seven in pickNick)
   - readyForSeatConfiguration, seatConfigurationSet: int32 type only
@@ -54,10 +56,12 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_relationship_state_load_headless as load  # noqa: E402  (same folder: shared checks and constants)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import room_packages  # noqa: E402  (the packaged room names the test client names in its hello)
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parent
-WIRE_SUFFIX = " / wire-5"
+WIRE_SUFFIX = " / wire-6"
 PICK_NICK_FLAGS = 7
 
 
@@ -164,7 +168,9 @@ def drive_seats(sock, version, nick, seconds, received):
     """Runs the normal loaded-save handshake. Returns a list of failures and the time the window ends."""
     failures = []
     deadline = time.time() + seconds
-    hello = pack_int(client_type("hello")) + pack_string("OpenDungeons V " + version + WIRE_SUFFIX)
+    names = sorted(room_packages.ROOM_NAMES)
+    hello = pack_int(client_type("hello")) + pack_string("OpenDungeons V " + version + WIRE_SUFFIX) \
+        + struct.pack(">I", len(names)) + b"".join(pack_string(name) for name in names)
     sock.sendall(frame(hello))
 
     if wait_for_type(sock, "loadLevel", received, time.time() + 30) is None:

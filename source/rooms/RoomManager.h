@@ -94,12 +94,20 @@ public:
     //! returns true if the room was correctly built and false otherwise
     static bool buildRoom(GameMap* gameMap, RoomType type, Player* player, ODPacket& packet);
 
+    //! \brief True when the room can be built: its room package is there or it needs none (RoomPackages).
+    //! A room whose package is missing is refused with a log entry.
+    static bool isRoomPackageAvailable(RoomType type);
+
     //! \brief Same as previous functions but for EditorMode
     static void checkBuildRoomEditor(GameMap* gameMap, RoomType type, const InputManager& inputManager, InputCommand& inputCommand);
     static bool buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& packet);
 
     //! \brief Constructs a room according to the data in the stream
     static Room* getRoomFromStream(GameMap* gameMap, std::istream &is);
+
+    //! \brief Deletes a room that was read from a level but never added to the game map, after releasing the tiles
+    //! that reading the room made it cover.
+    static void discardUnaddedRoom(Room* room);
 
     //! \brief Creates an empty room of the given type. It has no tiles, no name and no seat:
     //! the caller is expected to hand it what it should own. Returns nullptr if the type is

@@ -233,6 +233,10 @@ bool GameEditorModeBase::onMinimapClick(const CEGUI::EventArgs& arg)
             return true;
     }
 
+    // The minimap is null while a level is being replaced or after a failed load
+    if(mMiniMap == nullptr)
+        return true;
+
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
 
     Ogre::Vector2 cc = mMiniMap->camera_2dPositionFromClick(static_cast<int>(mouseEvt.position.d_x),
@@ -245,6 +249,8 @@ bool GameEditorModeBase::onMinimapClick(const CEGUI::EventArgs& arg)
     return true;
 }
 
+//! \brief Updates the frame: recreates the minimap when its type changed, shows the console output and the
+//! messages, and updates the culling and the minimap only while they exist.
 void GameEditorModeBase::onFrameStarted(const Ogre::FrameEvent& evt)
 {
     const std::string miniMapType = ConfigManager::getSingleton().getGameValue(Config::MINIMAP_TYPE, MiniMap::DEFAULT_MINIMAP, false);
@@ -255,6 +261,7 @@ void GameEditorModeBase::onFrameStarted(const Ogre::FrameEvent& evt)
         mMiniMap = MiniMap::createMiniMap(mRootWindow->getChild(Gui::MINIMAP));
         mMiniMapType = miniMapType;
     }
+    mConsole->flushConsoleOutput();
     updateMessages(evt.timeSinceLastFrame);
     if(mMainCullingManager != nullptr)
     {
@@ -397,5 +404,11 @@ void GameEditorModeBase::leaveConsole()
 {
     // We're no more in console mode.
     mCurrentInputMode = InputModeNormal;
+    restoreAfterConsole();
+}
+
+//! \brief Default view restore after the console: a full activate().
+void GameEditorModeBase::restoreAfterConsole()
+{
     activate();
 }

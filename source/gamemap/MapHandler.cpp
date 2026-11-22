@@ -18,6 +18,7 @@
 #include "gamemap/MapHandler.h"
 
 #include "gamemap/LevelScript.h"
+#include "gamemap/ScriptEntry.h"
 
 #include "creaturemood/CreatureMoodManager.h"
 #include "eventsystem/CreatureMoved.h"
@@ -50,6 +51,7 @@
 #include "modes/GameEditorModeConsole.h"
 #include "rooms/Room.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomPackages.h"
 #include "spells/Spell.h"
 #include "traps/Trap.h"
 #include "traps/TrapManager.h"
@@ -57,10 +59,15 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "utils/SafeSave.h"
+#include "gamemap/OfficialLevelChecksums.h"
 
 #include "ODApplication.h"
 
+#include <boost/filesystem.hpp>
+
 #include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -106,6 +113,10 @@ void setLoadError(const std::string& message)
 
 //! \brief Largest side of a map that a level or a saved game may declare.
 const int MAX_MAP_SIDE = 4096;
+
+//! \brief Largest seat id (and number of seats) a level or a saved game may declare. The shipped levels use at most
+//! 8; 64 leaves room for any real level and keeps the per-tile seat pool small (65 bits per tile).
+const int MAX_SEAT_ID = 64;
 
 //! \brief Reads a whole number out of a text; false if the text is empty or has anything else than the number.
 bool parseWholeNumber(const std::string& text, int& value)
@@ -185,12 +196,112 @@ const std::string& getLastLoadError()
     return lastLoadError;
 }
 
+namespace {
+//! \brief Key of the hidden option in the [Game] part of the user config file; no menu shows it.
+const std::string EDIT_OFFICIAL_LEVELS_KEY = "EditOfficialLevels";
+
+//! \brief The folder of the game data that holds the shipped level folders.
+std::string getGameLevelsRoot()
+{
+    return ResourceManager::getSingleton().getGameDataPath() + "levels";
+}
+
+//! \brief The file name of a path for messages.
+std::string getShownFileName(const std::string& fileName)
+{
+    return boost::filesystem::path(fileName).filename().string();
+}
+} // namespace
+
+//! \brief Accepts the two level extensions.
+bool isLevelFileExtension(const std::string& extension)
+{
+    return (extension == LEVEL_EXTENSION) || (extension == USER_MAP_EXTENSION);
+}
+
+//! \brief Lists the files of both level extensions of a folder.
+bool fillLevelFilesList(const std::string& path, std::vector<std::string>& listFiles)
+{
+    if(!Helper::fillFilesList(path, listFiles, LEVEL_EXTENSION))
+        return false;
+    return Helper::fillFilesList(path, listFiles, USER_MAP_EXTENSION);
+}
+
+//! \brief Tests the path against the shipped level folders of the game data.
+bool isOfficialLevelPath(const std::string& fileName)
+{
+    std::string key;
+    return OfficialLevels::getOfficialKey(fileName, getGameLevelsRoot(), key);
+}
+
+//! \brief Reads the hidden option; it is off when missing.
+bool isEditOfficialLevelsEnabled()
+{
+    if(ConfigManager::getSingletonPtr() == nullptr)
+        return false;
+    std::string value = ConfigManager::getSingleton().getGameValue(EDIT_OFFICIAL_LEVELS_KEY, "0", false);
+    Helper::trim(value);
+    for(std::string::iterator it = value.begin(); it != value.end(); ++it)
+        *it = static_cast<char>(std::tolower(static_cast<unsigned char>(*it)));
+    return (value == "1") || (value == "true") || (value == "on") || (value == "yes");
+}
+
+//! \brief Rejects a changed shipped level with a message for the player.
+bool checkOfficialLevel(const std::string& fileName, bool multiplayer, std::string& message)
+{
+    message.clear();
+    const OfficialLevels::Verdict verdict = OfficialLevels::verifyLevelFile(fileName, getGameLevelsRoot(),
+        OfficialLevelChecksums::ENTRIES, OfficialLevelChecksums::ENTRY_COUNT);
+    if(OfficialLevels::mayLoad(verdict, multiplayer))
+    {
+#ifdef OD_DEVELOPER_MODE
+        if(verdict == OfficialLevels::Verdict::Modified)
+            OD_LOG_WRN("Developer mode: loading the changed shipped level " + fileName);
+#endif
+        return true;
+    }
+
+    message = "The shipped level " + getShownFileName(fileName)
+        + " was changed and cannot be loaded (it does not match the checksum of this build).";
+    OD_LOG_ERR("Rejected the changed shipped level " + fileName);
+    return false;
+}
+
+//! \brief Refuses shipped levels in the editor without the hidden option, and changed shipped levels.
+bool checkEditorMayOpen(const std::string& fileName, std::string& message)
+{
+    message.clear();
+    if(!OfficialLevels::mayEditorOpen(isOfficialLevelPath(fileName), isEditOfficialLevelsEnabled()))
+    {
+        message = "Shipped levels cannot be opened in the editor: " + getShownFileName(fileName);
+        OD_LOG_WRN("The editor refused the shipped level " + fileName);
+        return false;
+    }
+    return checkOfficialLevel(fileName, false, message);
+}
+
+//! \brief Resolves an editor save target with the shipped and the user level folders of the game.
+OfficialLevels::EditorSaveTarget resolveEditorSaveTarget(const std::string& target, bool saveAs,
+    bool editOfficialLevels)
+{
+    ResourceManager& resources = ResourceManager::getSingleton();
+    return OfficialLevels::resolveEditorSaveTarget(target, saveAs, getGameLevelsRoot(), editOfficialLevels,
+        resources.getUserLevelPathSkirmish(), resources.getUserLevelPathMultiplayer());
+}
+
 //! \brief Loads map state and reports the failing section, retaining optional legacy sections. The optional
 //! [CombatGroups] section (raid registry and running combat groups) and the optional [Raid] section (gate, countdown
-//! and raid groups) come last.
-bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
+//! and raid groups) come last. A shipped level is first compared with the checksum compiled into the game.
+bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool strictOfficialCheck)
 {
     lastLoadError.clear();
+    // A changed shipped level is rejected before anything of it is read
+    std::string officialRejection;
+    if(!checkOfficialLevel(fileName, strictOfficialCheck, officialRejection))
+    {
+        setLoadError(officialRejection);
+        return false;
+    }
     std::stringstream levelFile;
     if(!Helper::readFile(fileName, levelFile,true))
     {
@@ -202,8 +313,9 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     int mapSizeX;
     int mapSizeY;
     int numberOfSeats;
-    
-    getXandYandSeatsNumber(levelFile,mapSizeX,mapSizeY,numberOfSeats);  
+    int highestSeatId;
+
+    getXandYandSeatsNumber(levelFile,mapSizeX,mapSizeY,numberOfSeats,highestSeatId);
     // A missing, negative or absurd map size must end in a message, never in a huge or negative allocation
     if((mapSizeX <= 0) || (mapSizeY <= 0) || (mapSizeX > MAX_MAP_SIDE) || (mapSizeY > MAX_MAP_SIDE))
     {
@@ -211,16 +323,28 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             + " (x=" + Helper::toString(mapSizeX) + ", y=" + Helper::toString(mapSizeY) + "), file=" + fileName);
         return false;
     }
+    // The pool below has a slot per seat id: a huge id or seat count must end in a message, never in a huge
+    // allocation or an overflow
+    if((highestSeatId > MAX_SEAT_ID) || (numberOfSeats > MAX_SEAT_ID))
+    {
+        setLoadError("A seat id or the number of seats is above " + Helper::toString(MAX_SEAT_ID) + " (highest id="
+            + Helper::toString(highestSeatId) + ", seats=" + Helper::toString(numberOfSeats) + "), file=" + fileName);
+        return false;
+    }
     const int scannedMapSizeX = mapSizeX;
     const int scannedMapSizeY = mapSizeY;
     levelFile.clear();               // Clear any eof or fail flags
     levelFile.seekg(0, std::ios::beg);  // Move read position to beginning
-    gameMap.initializeEverVisitedFlagTilesPools(mapSizeX,mapSizeY,numberOfSeats + 1);  // mind that the mId = 0 is always reserved and is not a valid Seat number, instead mId = 0 is for rogue ( enemy to all ) creatures
+    // The pool is indexed by the seat id, so a level whose seat ids have gaps (1, 2, 5) needs a slot for the
+    // highest id, not only one per seat
+    const int everVisitedSeatSlots = std::max(numberOfSeats, highestSeatId) + 1;
+    gameMap.initializeEverVisitedFlagTilesPools(mapSizeX,mapSizeY,everVisitedSeatSlots);  // mind that the mId = 0 is always reserved and is not a valid Seat number, instead mId = 0 is for rogue ( enemy to all ) creatures
     // Read in the version number from the level file
 
     // std::vector CreatureMoved::alreadyVisited also depends on map Size : 
     CreatureMoved::alreadyVisited.assign(mapSizeX*mapSizeY, false);
     GameEditorModeConsole::scriptRegister.clear();
+    gameMap.clearScriptEntries();
     /// int CreatureMoved::GAME_MAP_WIDTH also depends on map Size:
     CreatureMoved::GAME_MAP_WIDTH = mapSizeX;
     
@@ -508,7 +632,18 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             return false;
         }
 
-        tempRoom->addToGameMap();
+        // A room whose room package is missing is left out: its tiles stay claimed ground of its seat
+        // (see RoomPackages). The level still loads.
+        const bool roomAvailable = RoomPackages::isRoomAvailable(tempRoom->getType());
+        if(roomAvailable)
+            tempRoom->addToGameMap();
+        else
+        {
+            OD_LOG_WRN("Room " + tempRoom->getName() + " is left out: the package of room "
+                + RoomPackages::getPackageRoomName(tempRoom->getType()) + " is missing, its tiles stay claimed ground"
+                + ", file=" + fileName);
+            RoomManager::discardUnaddedRoom(tempRoom);
+        }
 
         levelFile >> nextParam;
         if (nextParam != "[/Room]")
@@ -835,6 +970,13 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
                 setLoadError("Invalid HerbBundles entry=" + nextParam + remainder + ", file=" + fileName);
                 return false;
             }
+            // Herb bundles take their mesh from the herb garden package; without it they are left out
+            if(!RoomPackages::isRoomAvailable(RoomType::herbGarden))
+            {
+                OD_LOG_WRN("Herb bundle left out: the package of room HerbGarden is missing, file=" + fileName);
+                delete bundle;
+                continue;
+            }
             bundle->addToGameMap();
         }
         levelFile >> nextParam;
@@ -857,22 +999,19 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             std::getline(levelFile, nextParam);
             entire_line += nextParam;
 
-            std::stringstream ss(entire_line);
             std::stringstream script_body;
             std::string actionName;
             std::string scriptName;
             std::vector<int> auxVector;
-            int auxI;
-            ss >> actionName;
-            ss >> scriptName;
-            if(!Helper::readFile( ResourceManager::getSingleton().getGameScriptsPath() +  scriptName,script_body,false))            
+            // A comment line or a line without a script file is no entry
+            if(!ScriptEntry::parse(entire_line, actionName, scriptName, auxVector))
+                continue;
+            if(!Helper::readFile( ResourceManager::getSingleton().getGameScriptsPath() +  scriptName,script_body,false))
                 OD_LOG_ERR("COULD NOT READ THE FILE " + scriptName);
-            while(ss>>auxI)
-            {
-                auxVector.push_back(auxI);
-            }
-           
+
             GameEditorModeConsole::scriptRegister[actionName].insert(make_pair(auxVector, script_body.str())); // std::make_pair(auxF,  script_body.str()));
+            // The entry is kept so that writeGameMapToFile writes the section again
+            gameMap.addScriptEntry(ScriptEntry::format(actionName, scriptName, auxVector));
 
         }
 
@@ -1100,6 +1239,13 @@ bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType ty
             legacyBook->getSeat()->addSkillPoints(legacyBook->getSkillPoints());
             delete legacyBook;
         }
+        else if((type == GameEntityType::ghostBoxEntity) && !RoomPackages::isRoomAvailable(RoomType::ghostRoom))
+        {
+            // Capture boxes take their mesh from the ghost room package; without it they are left out
+            OD_LOG_WRN("Ghost box left out in " + item + ": the package of room GhostRoom is missing");
+            delete entity;
+            continue;
+        }
         else
             entity->addToGameMap();
         ++nbEntity;
@@ -1154,6 +1300,7 @@ static void writeDirtSections(std::ostream& levelFile, GameMap& gameMap)
 //! \brief Campaign games also record their running context, separately from user progress.
 //! \brief The raid registry and, in a saved game, the running combat groups are written last ([CombatGroups]),
 //! followed by the raid with, in a saved game, its running state ([Raid]).
+//! \brief Returns true only when the file was closed without an error, the flush of the last buffer included.
 bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 {
     std::ofstream levelFile(fileName.c_str(), std::ifstream::out);
@@ -1442,16 +1589,23 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         }
     levelFile << "[/HerbBundles]\n";
 
+    // The [Scripts] section the level was loaded with is written again, in the form the loader reads
+    if(!gameMap.getScriptEntries().empty())
+    {
+        levelFile << "\n[Scripts]\n";
+        levelFile << "# EventName ScriptFile Trigger\n";
+        for(const std::string& scriptEntry : gameMap.getScriptEntries())
+            levelFile << scriptEntry << "\n";
+        levelFile << "[/Scripts]\n";
+    }
+
     if(!gameMap.getLevelScript().isEmpty())
     {
         levelFile << "\n";
-        // The turn counter starts at 0 again when the game is loaded, so a time limit is
-        // written as the time that is left
-        LevelScript script = gameMap.getLevelScript();
-        int64_t elapsedSeconds = static_cast<int64_t>(static_cast<double>(std::max<int64_t>(0, gameMap.getTurnNumber()))
-            / ODApplication::turnsPerSecond);
-        script.rebaseTimeLimit(elapsedSeconds);
-        script.exportToStream(levelFile);
+        // The time limit and the countdowns are written as they are in memory: a saved game goes on from
+        // its saved turn (TurnNumber in [Info]) and a level of the editor starts again at turn 0, so the
+        // turn counter is the one they were set against in both cases and nothing is subtracted
+        gameMap.getLevelScript().exportToStream(levelFile);
     }
 
     if(isGameSave && gameMap.isRelationshipsEnabled())
@@ -1483,12 +1637,12 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     // The raid of the level and, in a saved game, its running state (nothing is written without a raid)
     gameMap.getRaid().exportToStream(levelFile, isGameSave);
 
-    if (!levelFile.good()) {
+    // close() flushes the last buffer: a write error there shows only in the stream state after the close
+    if (!SafeSave::closeWritten(levelFile)) {
         OD_LOG_WRN("Unexpected failure on file: " + fileName);
         return false;
     }
 
-    levelFile.close();
     return true;
 }
 
@@ -1674,10 +1828,12 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
     return true;
 }
 
-//! \brief Finds the map size of the last [Tiles] section and counts the seats; a size that is no number stays -1.
-void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats)
+//! \brief Finds the map size of the last [Tiles] section, counts the seats and finds the highest seat id (0 without
+//! seats); a size that is no number stays -1.
+void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats, int& highestSeatId)
 {
     numberOfSeats = 0;
+    highestSeatId = 0;
     xx = -1;
     yy = -1;
     std::string nextParam;
@@ -1687,7 +1843,20 @@ void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberO
             break;
         ss >> nextParam;
         if (nextParam == "[Seat]")
-            numberOfSeats++;    
+        {
+            numberOfSeats++;
+            // The seat id follows the tag; a value that is no number reads as 0 and is left to the seat reader,
+            // which refuses it, and a value too large for an int reads as the largest int, which the caller refuses
+            std::string idParam;
+            int seatId = 0;
+            if((ss >> idParam) && (idParam == "seatId"))
+            {
+                if(!(ss >> seatId))
+                    ss.clear();
+                if(seatId > highestSeatId)
+                    highestSeatId = seatId;
+            }
+        }
         else if (nextParam == "[Tiles]")
         {
         

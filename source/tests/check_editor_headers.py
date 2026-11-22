@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
@@ -117,6 +118,9 @@ int main()
     catch(const std::exception& error) { std::cerr << error.what() << std::endl; return 1; }
 }
 """.replace('@@SCALER@@', scaler).replace('@@FONTS@@', (repo / 'gui/fonts').as_posix() + '/')
+
+if shutil.which('cl') is None:
+    sys.exit('check_editor_headers.py needs the MSVC compiler cl on the PATH: run it from a shell prepared with vcvars64.bat (VS Build Tools, VC/Auxiliary/Build).')
 
 with tempfile.TemporaryDirectory(prefix='odp-editor-headers-') as directory:
     work = Path(directory)

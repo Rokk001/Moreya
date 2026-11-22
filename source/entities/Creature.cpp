@@ -151,6 +151,7 @@
 #include "rooms/RoomDormitory.h"
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomPrison.h"
+#include "rooms/RoomPackages.h"
 #include "rooms/RoomArena.h"
 #include "rooms/RoomCasino.h"
 #include "rooms/RoomSpa.h"
@@ -14077,10 +14078,11 @@ void Creature::clearGhostHuntVisuals()
 //! \brief Keeps hunter equipment sized to the hunter, the backpack on the back, the box in the hand and the capture cannon
 //! in the hand while beaming (in its holster on the pack otherwise), and starts capture effects at the cannon's emitter tip.
 //! Stops the cannon clip and effects as soon as the ghost has visibly entered the trap (decision 1078).
+//! The equipment meshes come from the ghost room package: without it the hunter shows no equipment.
 void Creature::updateGhostHuntVisuals(double seconds)
 {
     if(getIsOnServerMap() || getEntityNode()==nullptr) return;
-    if(!mGhostBackpack) { clearGhostHuntVisuals();return; }
+    if(!mGhostBackpack || !RoomPackages::isRoomAvailable(RoomType::ghostRoom)) { clearGhostHuntVisuals();return; }
     Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
     if(mGhostBackpackNode==nullptr)
     {

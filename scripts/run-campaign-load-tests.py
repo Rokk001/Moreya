@@ -189,7 +189,9 @@ def main():
             success = r'^PASS ' + re.escape(level.name) + r' : '
             if level in campaign:
                 success += r'.*victory message shown, campaign map shows'
-            passed = (result.returncode == 0 and re.search(r'GOALS registered=[1-9][0-9]*', log)
+            # The game reports registered goals only for campaign maps (RunLevelTest), so only those must show them.
+            goals = level not in campaign or re.search(r'GOALS registered=[1-9][0-9]*', log)
+            passed = (result.returncode == 0 and goals
                       and re.search(success, log, re.MULTILINE))
             status = 'PASS' if passed else 'FAIL exit=' + str(result.returncode)
         except subprocess.TimeoutExpired as error:

@@ -119,6 +119,10 @@ public:
     //! \brief Leave the console.
     void leaveConsole();
 protected:
+    //! \brief Brings the view back after the console was left. The default is a full activate(); the editor
+    //! overrides it so that its selected seat and dialog paths survive.
+    virtual void restoreAfterConsole();
+
     enum InputMode
     {
         InputModeNormal,

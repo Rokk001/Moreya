@@ -29,11 +29,22 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Tavern')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
 sys.path.insert(0, str(ROOT / 'tools'))
 
 
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8', errors='replace')
+    return room_file(path).read_text(encoding='utf-8', errors='replace')
 
 
 def extract(text, head):
@@ -179,7 +190,7 @@ def check_innkeeper():
     out = ROOT / 'out' / 'tavern-seated-poses'
     out.mkdir(parents=True, exist_ok=True)
     for name in ('Innkeeper.skeleton', 'Innkeeper.mesh', 'TavernCounter.mesh'):
-        subprocess.run([converter, '-q', str(ROOT / 'models' / name), str(out / (name + '.xml'))],
+        subprocess.run([converter, '-q', str(room_file('models/' + name)), str(out / (name + '.xml'))],
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
     counter, faces, _ = rest.mesh_data(out / 'TavernCounter.mesh.xml')
     # The top boards: combine near-horizontal triangles that reach the central opening.
@@ -241,7 +252,10 @@ def main():
     check_facing()
     check_reactions()
     check_rotation()
-    check_innkeeper()
+    if ROOM_ASSETS:
+        check_innkeeper()
+    else:
+        print('innkeeper poses: not checked, the tavern room package is not present')
     print('tavern seated poses ok')
 
 

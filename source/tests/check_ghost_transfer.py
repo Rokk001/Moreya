@@ -29,6 +29,18 @@ import re
 import struct
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 
 
 def read(path):
@@ -158,8 +170,9 @@ assert stand not in [(x, y) for x in range(2) for y in range(2)], 'the standing 
 has(body(room, 'void RoomGhostRoom::createCauldronObjects()'), 'cauldron centred on its block', 'tile->getX()+0.5f,tile->getY()+0.5f,0.0f,0.0f,false);')
 assets = read('source/tests/check_ghost_assets.py')
 has(assets, 'the seat marker of the export is checked there', 'zip(offset,(.5,.82,1.1))')
-mesh = (repo / 'models/GhostCauldron.mesh').read_bytes()
-assert b'GhostEctoplasm\n' in mesh
+if ROOM_ASSETS:
+    mesh = room_file('models/GhostCauldron.mesh').read_bytes()
+    assert b'GhostEctoplasm\n' in mesh
 
 # 4. The client: the share is sent, the trap stands open and shines on the socket, the ghost gets the share
 creature = read('source/entities/Creature.cpp')

@@ -19,6 +19,7 @@
 
 #include "game/SeatData.h"
 #include "network/ClientNotification.h"
+#include "network/ContentPackageCheck.h"
 #include "network/ServerMode.h"
 #include "network/ServerNotification.h"
 #include "utils/LogManager.h"
@@ -32,6 +33,15 @@ static const std::string OD_VERSION_STR = OD_VERSION;
 #else
 static const std::string OD_VERSION_STR = "undefined";
 #endif
+
+//! \brief The room names of every packaged room (PACKAGED_ROOMS of RoomPackages.cpp), sorted. The test client draws
+//! nothing, so it names every room package and the server never refuses it for a missing one.
+static std::vector<std::string> allRoomPackageNames()
+{
+    const char* const names[] = { "AlchemyLab", "GhostRoom", "GuardRoom", "HerbGarden", "Infirmary", "Merchant",
+        "Spa", "Tavern", "Temple", "Toilet" };
+    return std::vector<std::string>(names, names + sizeof(names) / sizeof(names[0]));
+}
 
 ODClientTest::ODClientTest(const std::vector<PlayerInfo>& players, uint32_t indexLocalPlayer) :
     mTurnNum(0),
@@ -54,7 +64,8 @@ ODClientTest::~ODClientTest()
     mSeats.clear();
 }
 
-//! \brief Retries server startup within five seconds, stopping immediately on connection.
+//! \brief Retries server startup within five seconds, stopping immediately on connection. The hello names every room
+//! package.
 bool ODClientTest::connect(const std::string& host, const int port, uint32_t timeout, const std::string& outputReplayFilename)
 {
     sf::Clock clock;
@@ -76,10 +87,11 @@ bool ODClientTest::connect(const std::string& host, const int port, uint32_t tim
     mLocalServerPort = (host == "localhost" || host == "127.0.0.1") ? port : 0;
 
     // Send a hello request to start the conversation with the server; like the game client it names the
-    // network record schema, which the server checks together with the version
+    // network record schema, which the server checks together with the version, and its room packages
     ODPacket packSend;
     packSend << ClientNotificationType::hello
         << std::string("OpenDungeons V ") + OD_VERSION_STR + NetworkProtocol::WIRE_SCHEMA_SUFFIX;
+    ContentPackageCheck::writeList(packSend, allRoomPackageNames());
     send(packSend);
 
     return true;
@@ -120,6 +132,9 @@ bool ODClientTest::processMessage(ServerNotificationType cmd, ODPacket& packetRe
             BOOST_CHECK(packetReceived >> odVersion);
 
             OD_LOG_INF("odVersion=" + odVersion);
+            // The room packages of the server
+            std::vector<std::string> serverPackages;
+            BOOST_CHECK(ContentPackageCheck::readList(packetReceived, serverPackages));
             // Map
             int32_t mapSizeX;
             int32_t mapSizeY;

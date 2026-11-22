@@ -283,7 +283,7 @@ def main():
     original = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     original.add_argument('--repo', type=Path, default=Path.cwd())
     original.add_argument('--out', type=Path, required=True)
-    original.add_argument('--base', default='origin/integration/all')
+    original.add_argument('--base', default='origin/main')
     original.add_argument('--tip', default='HEAD')
     original.add_argument('--timeout', type=int, default=600)
     original.add_argument('--only', nargs='*', default=[])

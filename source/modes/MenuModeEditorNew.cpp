@@ -30,7 +30,9 @@
 #include "sound/MusicPlayer.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/LevelFileNameInput.h"
 #include "utils/LogManager.h"
+#include "utils/MapSizeInput.h"
 #include "utils/ResourceManager.h"
 
 #include <CEGUI/CEGUI.h>
@@ -102,7 +104,8 @@ void MenuModeEditorNew::activate()
     window->getChild(TEXT_LOADING)->setText("");
 }
 
-//! \brief Presents loading before creating, writing and opening the new editor map.
+//! \brief Presents loading before creating, writing and opening the new editor map. The file name must be a plain
+//! name in the user level folder.
 bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::editorNewMenu);
@@ -131,27 +134,38 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         window->getChild(TEXT_LOADING)->setText("Please set a level filename.");
         return true;
     }
+    // The map is made in the user level folder: a name with a folder or ".." could put it anywhere else
+    if(!LevelFileNameInput::isPlainFileName(level))
+    {
+        window->getChild(TEXT_LOADING)->setText("The level filename must be a plain file name, without folders.");
+        return true;
+    }
 
     level = levelPath + "/" + level;
+    // Maps made in the editor carry the .mmap extension (a typed .level becomes .mmap, so that the map never
+    // looks like a shipped level). It is added before the test, so that the file that would be written is tested.
+    boost::filesystem::path pp (level);
+    if (pp.extension() == MapHandler::LEVEL_EXTENSION) {
+        level = pp.replace_extension(MapHandler::USER_MAP_EXTENSION).string();
+    }
+    else if (pp.extension() != MapHandler::USER_MAP_EXTENSION) {
+        level.append(MapHandler::USER_MAP_EXTENSION);
+    }
     if (boost::filesystem::exists(level)) {
         window->getChild(TEXT_LOADING)->setText("The level filename already exists.\nPlease set a different filename.");
         return true;
-    }
-    boost::filesystem::path pp (level);
-    if (pp.extension() != ".level") {
-        level.append(".level");
     }
 
     // Get the map size.
     editWin = static_cast<CEGUI::Editbox*>(window->getChild("LevelWindowFrame/LevelWidthEdit"));
     std::string widthStr = editWin->getText().c_str();
-    uint32_t width = Helper::toUInt32(widthStr);
     editWin = static_cast<CEGUI::Editbox*>(window->getChild("LevelWindowFrame/LevelHeightEdit"));
     std::string heightStr = editWin->getText().c_str();
-    uint32_t height = Helper::toUInt32(heightStr);
-
-    if (width == 0 || height == 0) {
-        window->getChild(TEXT_LOADING)->setText("Invalid map size.");
+    int32_t width = 0;
+    int32_t height = 0;
+    if (!MapSizeInput::parse(widthStr, width) || !MapSizeInput::parse(heightStr, height)) {
+        window->getChild(TEXT_LOADING)->setText("Invalid map size. Width and height must be whole numbers from 1 to "
+            + Helper::toString(MapSizeInput::MAX_SIZE) + ".");
         return true;
     }
 
@@ -162,7 +176,12 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     gameMap->clearAll();
     gameMap->setGamePaused(true);
-    gameMap->createNewMap(width, height);
+    if(!gameMap->createNewMap(width, height))
+    {
+        OD_LOG_WRN("Couldn't create a new map of size " + Helper::toString(width) + "x" + Helper::toString(height));
+        window->getChild(TEXT_LOADING)->setText("Couldn't create a map of this size.");
+        return true;
+    }
     gameMap->setLevelFileName(level);
     editWin = static_cast<CEGUI::Editbox*>(window->getChild("LevelWindowFrame/LevelTitleEdit"));
     std::string levelTitle = editWin->getText().c_str();

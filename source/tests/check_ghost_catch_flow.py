@@ -49,6 +49,16 @@ repo = Path(__file__).resolve().parents[2]
 import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 from assets_src import resolve  # noqa: E402
 
 
@@ -300,7 +310,7 @@ def alarm_lamps():
 
 # Read the shared vertex positions and the index buffers (start, count, wide, material) of a binary OGRE mesh.
 def mesh(name):
-    data = (repo / "models" / (name + ".mesh")).read_bytes()
+    data = room_file("models/" + name + ".mesh").read_bytes()
     end = data.index(b"\n", 2)
     kind, length = struct.unpack_from("<HI", data, end + 1)
     assert kind == 0x3000, name
@@ -360,7 +370,7 @@ def no_flat_panels():
     wall = body(room, "void RoomGhostRoom::updateActiveSpots(")
     has(wall, "one wall item per backpack plus the bell", "const size_t slots=static_cast<size_t>(getBackpackCount())+1;")
     meshes = set(re.findall(r'"(Ghost\w+|ManaStill|SoulForge)"', room))
-    created = {name for name in meshes if (repo / "models" / (name + ".mesh")).exists()}
+    created = {name for name in meshes if room_file("models/" + name + ".mesh").exists()}
     assert created <= {"GhostCauldron", "GhostBell", "GhostHook", "GhostHookEmpty", "GhostRack", "GhostPress", "ManaStill", "SoulForge"}, created
     # Build 40: every hook (3 per cauldron) showed a 0.4 x 0.8 dark iron backing board (0.29 and 0.59 square units here).
     for name in ("GhostHook", "GhostHookEmpty", "GhostBell"):
@@ -371,7 +381,7 @@ def no_flat_panels():
 
 # Material names of the index buffers of a binary OGRE mesh, in the order mesh() returns them.
 def submesh_materials(name):
-    data = (repo / "models" / (name + ".mesh")).read_bytes()
+    data = room_file("models/" + name + ".mesh").read_bytes()
     end = data.index(b"\n", 2)
     _, length = struct.unpack_from("<HI", data, end + 1)
     names, cursor = [], end + 1 + 7
@@ -428,7 +438,8 @@ def png_luminance(path):
 # Bodies of all material definitions in the shipped material scripts, by material name.
 def material_scripts():
     found = {}
-    for script in (repo / "materials" / "scripts").glob("*.material"):
+    for script in [path for base in [repo] + room_packages.package_roots(repo)
+                   for path in (base / "materials" / "scripts").glob("*.material")]:
         text = script.read_text(encoding="utf-8")
         for match in re.finditer(r"^material (\w+)\b[^\n]*\n\{(.*?)^\}", text, re.M | re.S):
             found[match.group(1)] = match.group(2)
@@ -470,7 +481,7 @@ def small_textured_box():
     main = max(areas, key=areas.get)
     texture = re.search(r"^\s*texture\s+(\S+\.png)", scripts[main], re.M)
     assert texture, ("main box surface without texture", main)
-    mean, deviation = png_luminance(repo / "materials" / "textures" / texture.group(1))
+    mean, deviation = png_luminance(room_file("materials/textures/" + texture.group(1)))
     assert mean >= 90 and deviation >= 10, ("main box surface is dark or flat", main, round(mean, 1), round(deviation, 1))
     assert len(set(materials)) >= 3, ("box needs case, fittings and glow", materials)
     # Build 41: one translucent slit on the front only, no opaque glow on the back.
@@ -551,8 +562,9 @@ def beam_from_capture_cannon():
     areas, _ = material_areas("GhostCaptureGun")
     for material in areas:
         assert material in scripts, ("cannon material without a definition", material)
-    credits = read("CREDITS")
-    assert any("models/GhostCaptureGun.mesh" in row and "GPL" in row for row in credits.splitlines()), "cannon credit"
+    credits = room_packages.credits_text(repo)
+    assert any("models/GhostCaptureGun.mesh" in row and room_packages.licence_ok(repo, row, "GPL")
+               for row in credits.splitlines()), "cannon credit"
     creature = read("source/entities/Creature.cpp")
     update = body(creature, "void Creature::updateGhostHuntVisuals(double seconds)")
     # Every hunter holds the cannon on a hand bone: weapon hands first, then hand bones; without any, a node at the chest.
@@ -567,7 +579,7 @@ def beam_from_capture_cannon():
     assert sorted(hunters) == ["Defender", "Knight", "PitDemon", "RunelordDwarf", "Skeleton", "Troll"], sorted(hunters)
     for name in hunters:
         skeleton = re.search(r"^\s*MeshName\s+(\S+)\.mesh", blocks[name], re.M).group(1) + ".skeleton"
-        names = {bone.decode() for bone in skeleton_bones(repo / "models" / skeleton)}
+        names = {bone.decode() for bone in skeleton_bones(room_file("models/" + skeleton))}
         assert any(bone in names for bone in bones), (name, "holds the cannon in a hand", sorted(names)[:12])
     has(update, "the cannon goes into the hand with the game's weapon mount",
         '"_GhostCaptureGun","GhostCaptureGun.mesh"', "mount.FromAngleAxis(Ogre::Degree(-90.0),Ogre::Vector3::UNIT_X);",
@@ -611,7 +623,8 @@ def beam_from_capture_cannon():
     has(header, "box phases", "uint32_t getBoxVisualState() const;", "bool hasBackpack() const { return mEquipped && !mInterrupted; }")
     has(update, "only the small box is in the hand", "mGhostHeldBox->setVisible(mGhostBoxMode==2);", '"_HeldGhostBox","GhostBox.mesh"',
         "position=hand+(floor-hand)*progress;")
-    has(update, "no backpack, no hunter equipment", "if(!mGhostBackpack) { clearGhostHuntVisuals();return; }")
+    has(update, "no backpack (or no ghost room package), no hunter equipment",
+        "if(!mGhostBackpack || !RoomPackages::isRoomAvailable(RoomType::ghostRoom)) { clearGhostHuntVisuals();return; }")
     # The pack comes from its hook and goes back to it.
     action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
     hunt = body(action, "bool CreatureActionHuntGhost::handleHunt()")
@@ -644,7 +657,7 @@ def textured_backpack_sized_to_hunter():
     main = max(areas, key=areas.get)
     texture = re.search(r"^\s*texture\s+(\S+\.png)", scripts[main], re.M)
     assert texture, ("main pack surface without texture", main)
-    mean, deviation = png_luminance(repo / "materials" / "textures" / texture.group(1))
+    mean, deviation = png_luminance(room_file("materials/textures/" + texture.group(1)))
     assert mean >= 90 and deviation >= 10, ("main pack surface is dark or flat", main, round(mean, 1), round(deviation, 1))
     assert areas[main] >= 0.4 * sum(areas.values()), ("the textured main surface covers the pack", main)
     assert not {"GhostLeather", "GhostIron"} & set(areas), ("no near-black leather or iron on the worn pack", sorted(areas))
@@ -655,7 +668,8 @@ def textured_backpack_sized_to_hunter():
     assert "GhostPackRubber" in inner, ("padded straps on the hunter's side", sorted(inner))
     assert abs(low[2]) < 1e-4, "the pack origin is its bottom"
     for name in ("GhostPackCanvas", "GhostPackSteel", "GhostPackRubber"):
-        assert any("materials/textures/%s.png" % name in row and "GPL" in row for row in read("CREDITS").splitlines()), name
+        assert any("materials/textures/%s.png" % name in row and room_packages.licence_ok(repo, row, "GPL")
+                   for row in room_packages.credits_text(repo).splitlines()), name
     models = read("assets-src/rooms/ghostroom/create_models.py")
     has(models, "the pack straps lie on its +y side", "box('Padded shoulder strap',(x,.094,.27)", "'GhostBackpack':worn_backpack,")
     creature = read("source/entities/Creature.cpp")
@@ -814,11 +828,15 @@ def main():
     catch_order()
     catch_timing()
     alarm_lamps()
-    no_flat_panels()
-    small_textured_box()
-    beam_from_capture_cannon()
-    textured_backpack_sized_to_hunter()
-    hook_pack_like_worn_pack()
+    # These parts measure the meshes and textures of the ghost room package
+    if ROOM_ASSETS:
+        no_flat_panels()
+        small_textured_box()
+        beam_from_capture_cannon()
+        textured_backpack_sized_to_hunter()
+        hook_pack_like_worn_pack()
+    else:
+        print("panels, box, cannon, backpack and hook pack: not checked, the ghost room package is not present")
     decision_865_beam_and_trap_order()
     print("ghost catch flow: ok")
 

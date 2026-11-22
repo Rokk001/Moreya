@@ -1,9 +1,12 @@
-"""Multiplayer client robustness: lost server, pause in multiplayer, defeat exit, refused start, join port.
+"""Multiplayer client robustness: lost server, pause in multiplayer, defeat exit, refused start, join port, room packages.
 
-The runtime probe compiles source/network/MultiplayerClientRules.h as it is and checks its decisions against fixed
-expected values (counted once on this branch: 8 session cases, 6 pause cases, 4 debriefing exits, 5 seat lists,
-8 refusal reasons, 14 port inputs). The wiring part checks that the client, the frame listener, the defeat
-debriefing, the lobby (with the startGameRefused answer of the server) and the join menu use these decisions. Use --source-only to skip the compiled probe.
+The runtime probe compiles source/network/MultiplayerClientRules.h and source/network/ContentPackageCheck.h as they are
+and checks their decisions against fixed expected values (counted once on this branch: 8 session cases, 6 pause cases,
+4 debriefing exits, 5 seat lists, 8 refusal reasons, 14 port inputs, 8 room package list bounds, 5 missing package
+comparisons, 2 refusal messages, 7 package list reads; 67 checks). The wiring part checks that the client, the frame
+listener, the defeat debriefing, the lobby (with the startGameRefused answer of the server), the join menu and the
+room package lists of hello, loadLevel and clientRejected use these decisions. Use --source-only to skip the compiled
+probe.
 """
 from pathlib import Path
 import os
@@ -39,8 +42,10 @@ PROBE = r'''
 #include <string>
 #include <vector>
 #include "network/MultiplayerClientRules.h"
+#include "network/ContentPackageCheck.h"
 
 namespace R = MultiplayerClientRules;
+namespace P = ContentPackageCheck;
 int gChecks = 0;
 int gFailures = 0;
 
@@ -72,6 +77,61 @@ long port(const std::string& text, uint32_t defaultPort = 32222)
     if(!R::parsePort(text, defaultPort, value))
         return value == 7 ? -1 : -2;
     return static_cast<long>(value);
+}
+
+//! \brief Stands in for ODPacket: keeps the written values in order and fails a read past the end.
+struct FakePacket
+{
+    std::vector<std::string> mItems;
+    size_t mRead = 0;
+    bool mOk = true;
+
+    //! \brief Writes a count.
+    FakePacket& operator<<(uint32_t value) { mItems.push_back(std::to_string(value)); return *this; }
+    //! \brief Writes a name.
+    FakePacket& operator<<(const std::string& value) { mItems.push_back(value); return *this; }
+    //! \brief Reads a count, failing past the end.
+    FakePacket& operator>>(uint32_t& value)
+    {
+        if(mRead >= mItems.size()) { mOk = false; return *this; }
+        value = static_cast<uint32_t>(std::stoul(mItems[mRead++]));
+        return *this;
+    }
+    //! \brief Reads a name, failing past the end.
+    FakePacket& operator>>(std::string& value)
+    {
+        if(mRead >= mItems.size()) { mOk = false; return *this; }
+        value = mItems[mRead++];
+        return *this;
+    }
+    //! \brief True while no read failed.
+    operator bool() const { return mOk; }
+};
+
+//! \brief Builds a list of names from a text with names separated by spaces.
+std::vector<std::string> names(const std::string& text)
+{
+    std::vector<std::string> list;
+    std::string::size_type start = 0;
+    while(start < text.size())
+    {
+        std::string::size_type end = text.find(' ', start);
+        if(end == std::string::npos)
+            end = text.size();
+        if(end > start)
+            list.push_back(text.substr(start, end - start));
+        start = end + 1;
+    }
+    return list;
+}
+
+//! \brief Reads a list from a packet holding the given items and returns whether the read succeeded.
+bool readItems(const std::vector<std::string>& items, std::vector<std::string>& list)
+{
+    FakePacket packet;
+    packet.mItems = items;
+    list.push_back("stale");
+    return P::readList(packet, list);
 }
 
 int main()
@@ -139,8 +199,49 @@ int main()
     check(port("-1") == -1, "a sign: refused");
     check(port("80 81") == -1, "two numbers: refused");
 
+    // Room package lists: bounds of the lists on the wire
+    check(P::MAX_PACKAGES == 64, "at most 64 package names");
+    check(P::MAX_NAME_BYTES == 64, "at most 64 bytes per package name");
+    check(P::isCountAllowed(64), "64 names are allowed");
+    check(!P::isCountAllowed(65), "65 names are refused");
+    check(P::isNameAllowed("Spa"), "a short name is allowed");
+    check(!P::isNameAllowed(""), "an empty name is refused");
+    check(P::isNameAllowed(std::string(64, 'a')), "a name of 64 bytes is allowed");
+    check(!P::isNameAllowed(std::string(65, 'a')), "a name of 65 bytes is refused");
+
+    // The packages of the server the client lacks; the server's packages govern
+    check(P::findMissing(names("Tavern Spa"), names("Spa Tavern")).empty(), "same packages: nothing missing");
+    check(P::findMissing(names("Tavern Spa GhostRoom"), names("Spa")) == names("GhostRoom Tavern"),
+        "the missing packages, sorted");
+    check(P::findMissing(names("Spa"), names("Spa Tavern Temple")).empty(), "a client with more packages is accepted");
+    check(P::findMissing(names(""), names("")).empty(), "no packages on both sides: nothing missing");
+    check(P::findMissing(names("Spa Spa"), names("")) == names("Spa"), "a duplicate name is missing once");
+
+    // The message of the refused client
+    check(P::missingMessage(names("GhostRoom Tavern")) == "Missing content package(s): GhostRoom, Tavern",
+        "two missing packages");
+    check(P::missingMessage(names("Spa")) == "Missing content package(s): Spa", "one missing package");
+
+    // Reading and writing the lists
+    FakePacket written;
+    P::writeList(written, names("GhostRoom Spa"));
+    std::vector<std::string> list;
+    check(readItems(written.mItems, list) && list == names("GhostRoom Spa"), "a written list reads back");
+    FakePacket empty;
+    P::writeList(empty, std::vector<std::string>());
+    check(readItems(empty.mItems, list) && list.empty(), "an empty list reads back empty");
+    check(!readItems(names("65"), list) && list.empty(), "a count above the limit is refused");
+    check(!readItems(names("2 Spa"), list) && list.empty(), "a list shorter than its count is refused");
+    std::vector<std::string> longName = names("1");
+    longName.push_back(std::string(65, 'a'));
+    check(!readItems(longName, list) && list.empty(), "a name above the limit is refused");
+    std::vector<std::string> emptyName = names("1");
+    emptyName.push_back("");
+    check(!readItems(emptyName, list) && list.empty(), "an empty name is refused");
+    check(!readItems(std::vector<std::string>(), list) && list.empty(), "a packet without count is refused");
+
     std::cout << "CHECKS=" << gChecks << " FAILURES=" << gFailures << std::endl;
-    return gFailures == 0 && gChecks == 45 ? 0 : 1;
+    return gFailures == 0 && gChecks == 67 ? 0 : 1;
 }
 '''
 
@@ -187,9 +288,31 @@ assert 'isMultiplayerSession()' in queued[:socket]
 assert socket < queued.index('consumeServerLost()') < queued.index('returnToMenuAfterLostServer();') \
     < queued.index('processClientNotifications();'), 'the lost server is handled right after the socket read'
 back = function(listener, 'void ODFrameListener::returnToMenuAfterLostServer()')
-assert 'setMainMenuNotice(MultiplayerClientRules::LOST_SERVER_MESSAGE);' in back
-assert back.index('setMainMenuNotice(') < back.index('requestMainMenuWithMultiplayerSubMenu();')
+assert 'refusal.empty() ? std::string(MultiplayerClientRules::LOST_SERVER_MESSAGE) : refusal' in back
+assert back.index('consumeRefusalMessage()') < back.index('setMainMenuNotice(') \
+    < back.index('requestMainMenuWithMultiplayerSubMenu();')
 print('LOST SERVER OK: one disconnect, one return to the main menu with its message')
+
+# 1b. Room packages: the hello names the client's packages, loadLevel limits the rooms to the server's, a join refused
+# for missing packages returns to the multiplayer menu with their names, and a disconnect removes the limit
+connect = function(client, 'bool ODClient::connect(')
+assert connect.index('RoomPackages::clearServerPackages();') < connect.index('ODSocketClient::connect(') \
+    < connect.index('ContentPackageCheck::writeList(packSend, RoomPackages::getAvailablePackageNames());') \
+    < connect.index('send(packSend);'), 'the hello names the room packages of the client'
+load_level = client[client.index('case ServerNotificationType::loadLevel:'):]
+load_level = load_level[:load_level.index('createNewMap(')]
+assert load_level.index('packetReceived >> odVersion') < load_level.index('ContentPackageCheck::readList(packetReceived, serverPackages)') \
+    < load_level.index('RoomPackages::setServerPackages(serverPackages);'), 'loadLevel limits the rooms to the server\'s'
+rejected = client[client.index('case ServerNotificationType::clientRejected:'):]
+rejected = rejected[:rejected.index('\n        case ServerNotificationType::')]
+assert rejected.index('ContentPackageCheck::readList(packetReceived, missingPackages)') \
+    < rejected.index('mRefusalMessage = ContentPackageCheck::missingMessage(missingPackages);') \
+    < rejected.index('disconnect();') < rejected.index('mServerLost = true;') < rejected.index('mode->goBack();'), \
+    'a join refused for missing room packages stops the client before the lobby rejection'
+assert 'RoomPackages::clearServerPackages();' in function(client, 'void ODClient::disconnect(') \
+    and 'RoomPackages::clearServerPackages();' in function(client, 'bool ODClient::replay(')
+assert 'mRefusalMessage.clear();' in function(client, 'std::string ODClient::consumeRefusalMessage()')
+print('ROOM PACKAGES OK: hello list, server limit, refusal message and limit removed on disconnect')
 
 # 2. The main menu shows the message once and opens the multiplayer sub-menu after its flight
 menu = read('source/modes/MenuModeMain.cpp')
@@ -199,7 +322,9 @@ assert activate.index('consumeSkirmishSubMenuRequest()') < activate.index('consu
 assert 'noticeText->setVisible(!notice.empty());' in activate and 'mMultiplayerSubMenuPending = true;' in activate
 assert 'mSkirmishSubMenuPending || mMultiplayerSubMenuPending' in activate
 assert 'toggleSubMenu(WINDOW_MULTIPLAYER);' in function(menu, 'void MenuModeMain::onFrameStarted(')
-assert 'mMultiplayerSubMenuPending = false;' in function(menu, 'bool MenuModeMain::changeModeAfterFlight(')
+# The exit screen (ADVERTISMENT) that cleared the pending sub-menus in changeModeAfterFlight was removed from the game;
+# no path to it is left that could keep a pending sub-menu.
+assert 'ADVERTISMENT' not in function(menu, 'bool MenuModeMain::changeModeAfterFlight(')
 assert 'const std::string TEXT_NOTICE = "NoticeText";' in menu
 main_layout = ET.parse(ROOT / 'gui/MenuMain.layout').getroot()
 notice = [w for w in main_layout.iter('Window') if w.get('name') == 'NoticeText']
@@ -251,6 +376,7 @@ assert children.get('PortEdit') == 'OD/Editbox' and children.get('PortText') == 
 print('JOIN MENU OK: optional port field, validated before connecting')
 
 assert re.search(r'\bauto\b', PROBE) is None and re.search(r'\bauto\b', read('source/network/MultiplayerClientRules.h')) is None
+assert re.search(r'\bauto\b', read('source/network/ContentPackageCheck.h')) is None
 
 if '--source-only' not in sys.argv:
     compile_probe()

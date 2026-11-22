@@ -164,7 +164,7 @@ check("setRaidMemberDetached(group.mLeaderSpawned, true);" in load and "setRaidM
       "C3: a fleeing leader and his followers leave their group again")
 writer = function(MAP_HANDLER, "bool writeGameMapToFile(")
 check(writer.index("getCombatGroups().exportToStream(levelFile, isGameSave)") <
-      writer.index("getRaid().exportToStream(levelFile, isGameSave)") < writer.rindex("if (!levelFile.good())"),
+      writer.index("getRaid().exportToStream(levelFile, isGameSave)") < writer.index("SafeSave::closeWritten(levelFile)"),
       "C3: the section is written after the combat groups")
 reader = function(MAP_HANDLER, "bool readGameMapFromFile(")
 optional = reader[reader.index('if(nextParam == "[CombatGroups]")'):]

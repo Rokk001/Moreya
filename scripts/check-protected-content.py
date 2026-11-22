@@ -58,7 +58,7 @@ WORD_DIRECTIVE = "word:"
 # Blocked path prefixes, filled from the "path:" lines of the term list.
 BLOCKED_PREFIXES = []
 
-# Placeholder campaign files that exist in origin/integration/all, as exact paths. The campaign is read from wing
+# Placeholder campaign files that exist in origin/main, as exact paths. The campaign is read from wing
 # packages: the public package of wing 1 lies in levels/campaign/wing1/ (definition, licence and its 4 levels);
 # the packages of wings 2 to 6 are not part of this repository, so their former files are no longer allowed here.
 CAMPAIGN_ALLOW_LIST = [

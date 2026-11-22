@@ -156,4 +156,10 @@
     <Image height="256" name="WorkersButton" width="256" xPos="512" yPos="4352" />
     <Image height="256" name="WorkersTitlePlaque" width="512" xPos="768" yPos="4352" />
     <Image height="256" name="GhostHuntersButton" width="256" xPos="1280" yPos="4352" />
+    <Image height="256" name="CurseButton" width="256" xPos="1024" yPos="3072" />
+    <Image height="256" name="BlessingButton" width="256" xPos="1280" yPos="3072" />
+    <Image height="256" name="InvisibilityButton" width="256" xPos="1536" yPos="3072" />
+    <Image height="256" name="PlagueButton" width="256" xPos="1792" yPos="3072" />
+    <Image height="256" name="BreakWallButton" width="256" xPos="1536" yPos="4352" />
+    <Image height="256" name="RevealEnemyButton" width="256" xPos="1792" yPos="4352" />
 </Imageset>

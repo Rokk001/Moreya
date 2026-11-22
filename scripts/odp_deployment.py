@@ -126,7 +126,7 @@ def split_integration_ref(integration_ref):
     return remote, branch
 
 
-def deploy(repo, counter, script, game_wait_seconds=1800, integration_ref='origin/integration/all'):
+def deploy(repo, counter, script, game_wait_seconds=1800, integration_ref='origin/main'):
     """Deploy a validated target and its successful-deployment selection under one lock.
 
     The deployed target is the tip of integration_ref (origin/integration/all for the old line, origin/main in the
@@ -215,7 +215,7 @@ def main():
     parser.add_argument('--deploy-script', type=Path)
     parser.add_argument('--game-wait-seconds', type=int, default=1800, choices=range(86401),
                         metavar='0..86400')
-    parser.add_argument('--integration-ref', default='origin/integration/all',
+    parser.add_argument('--integration-ref', default='origin/main',
                         help='<remote>/<branch> whose tip is deployed, e.g. origin/main in the Moreya clone')
     args = parser.parse_args()
     if args.action == 'record':

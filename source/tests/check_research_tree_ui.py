@@ -97,6 +97,7 @@ struct SkillManager {static std::map<SkillType,Skill> data;
  static const Skill* getSkill(SkillType t){return &data.at(t);}
  static std::string getResearchDescription(SkillType,uint32_t){return "Test research description";}
  static bool isLockedByLostLibrary(SkillType,const Seat*){return false;}
+ static bool isSkillContentAvailable(SkillType){return true;}
  static std::vector<SkillType> order;
  static SkillTab getSkillTab(SkillType t){return static_cast<SkillTab>(data.at(t).tab);}
  static uint32_t getSkillTier(SkillType t){return data.at(t).tier;}

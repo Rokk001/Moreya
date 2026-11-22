@@ -1247,7 +1247,8 @@ bool Seat::importSeatFromStream(std::istream& is)
         return false;
     }
     OD_ASSERT_TRUE(is >> mId);
-    if(mId == 0)
+    // 0 is the rogue seat; a negative id would index the per-seat pools of the map below their start
+    if(mId <= 0)
     {
         OD_LOG_INF("WARNING: Forbidden seatId used");
         return false;

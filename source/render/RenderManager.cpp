@@ -2675,6 +2675,43 @@ static const char* const GAME_EFFECT_MATERIAL_PREFIXES[] = {"CreatureProp_", "Re
 //! Suffix of the overlay material copies whose shaders prepareGameShaders() makes.
 static const Ogre::String PREPARED_OVERLAY_SUFFIX = "##_PreparedOverlay";
 
+//! \brief True when every texture the material names can be found in a resource group. The textures of a room whose
+//! room package is missing cannot; such a material is not prepared ahead (its room is not available and never shows
+//! it), so the preparation does not try to load files that are not there.
+static bool materialTexturesFound(const Ogre::Material& material)
+{
+    Ogre::ResourceGroupManager& groups = Ogre::ResourceGroupManager::getSingleton();
+    for(const Ogre::Technique* technique : material.getTechniques())
+    {
+        for(const Ogre::Pass* pass : technique->getPasses())
+        {
+            for(const Ogre::TextureUnitState* unit : pass->getTextureUnitStates())
+            {
+                for(unsigned int frame = 0; frame < unit->getNumFrames(); ++frame)
+                {
+                    const Ogre::String& texture = unit->getFrameTextureName(frame);
+                    if(!texture.empty() && !groups.resourceExistsInAnyGroup(texture))
+                        return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+//! \brief True when the textures of every material of the mesh can be found (see materialTexturesFound()).
+static bool meshTexturesFound(const Ogre::Mesh& mesh)
+{
+    Ogre::MaterialManager& materials = Ogre::MaterialManager::getSingleton();
+    for(const Ogre::SubMesh* subMesh : mesh.getSubMeshes())
+    {
+        Ogre::MaterialPtr material = materials.getByName(subMesh->getMaterialName(), mesh.getGroup());
+        if(material && !materialTexturesFound(*material))
+            return false;
+    }
+    return true;
+}
+
 //! \brief Tells whether a name starts with one of the given prefixes.
 template<size_t Count>
 static bool hasPrefix(const Ogre::String& name, const char* const (&prefixes)[Count])
@@ -2688,6 +2725,7 @@ static bool hasPrefix(const Ogre::String& name, const char* const (&prefixes)[Co
 }
 
 //! \brief Prepares effects, overlays and Tavern surfaces without changing their visible settings.
+//! Materials whose textures are in a missing room package are left out.
 //! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::prepareGameShaders()
 {
@@ -2723,7 +2761,8 @@ void RenderManager::prepareGameShaders()
     for(const Ogre::String& name : effectNames)
     {
         Ogre::MaterialPtr material = materialManager.getByName(name);
-        if(!material)
+        // A material of a room whose room package is missing is never shown and is not prepared
+        if(!material || !materialTexturesFound(*material))
             continue;
         prepareGeneratedShaders(*material);
         ++prepared;
@@ -4828,6 +4867,7 @@ static std::vector<std::string> readPreparedObjectMeshes()
 
 //! \brief Prepares each listed object mesh the way rrCreateRenderedMovableEntity uses it, without drawing it.
 //! A mesh that cannot be prepared is reported and left to load when it first appears, as before.
+//! A mesh whose textures are in a missing room package is left out.
 //! \brief Records frame-stall operation timing without changing the operation.
 void RenderManager::prepareGameObjectResources()
 {
@@ -4848,6 +4888,12 @@ void RenderManager::prepareGameObjectResources()
         try
         {
             Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(objectFile, "Graphics");
+            // An object of a room whose room package is missing (its textures are in the package) is not prepared
+            if(!meshTexturesFound(*mesh))
+            {
+                OD_LOG_INF("Object mesh " + objectFile + " not prepared: its textures are in a missing room package");
+                continue;
+            }
             // The same tangents rrCreateRenderedMovableEntity builds, so the object's later entity finds them ready
             unsigned short src;
             try

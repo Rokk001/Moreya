@@ -30,6 +30,7 @@
 #include "network/ODServer.h"
 #include "network/ServerGuards.h"
 #include "network/ServerNotification.h"
+#include "rooms/PortalWaveRules.h"
 #include "rooms/RoomManager.h"
 #include "spells/SpellCallToWar.h"
 #include "utils/ConfigManager.h"
@@ -800,11 +801,13 @@ void RoomPortalWave::restoreInitialEntityState()
     Room::restoreInitialEntityState();
 }
 
+//! \brief Adds a wave to the spawnable list when the current turn lies in its range (max -1 means no upper limit,
+//! like in handleSpawnWave), otherwise to the not spawnable list.
 void RoomPortalWave::addRoomPortalWaveData(RoomPortalWaveData* roomPortalWaveData)
 {
     int64_t curTurn = getGameMap()->getTurnNumber();
-    if((roomPortalWaveData->mSpawnTurnMin >= curTurn) &&
-       (roomPortalWaveData->mSpawnTurnMax <= curTurn))
+    if((roomPortalWaveData->mSpawnTurnMin <= curTurn) &&
+       ((roomPortalWaveData->mSpawnTurnMax == -1) || (roomPortalWaveData->mSpawnTurnMax >= curTurn)))
     {
         mRoomPortalWaveDataSpawnable.push_back(roomPortalWaveData);
     }
@@ -834,6 +837,8 @@ void RoomPortalWave::exportWaveConfig(RoomPortalWaveConfig& config) const
         config.mWaves.push_back(*roomPortalWaveData);
 }
 
+//! \brief Takes the waves the editor sent. Like the level loader, it drops target team 0, and it drops creature class
+//! names the level file cannot hold (empty or with white space), so that the saved level can be read back.
 void RoomPortalWave::importWaveConfig(const RoomPortalWaveConfig& config)
 {
     mTurnsBetween2Waves = config.mTurnsBetween2Waves;
@@ -842,7 +847,14 @@ void RoomPortalWave::importWaveConfig(const RoomPortalWaveConfig& config)
 
     mTargetTeams.clear();
     for(int32_t team : config.mTargetTeams)
+    {
+        if(!PortalWaveRules::isTargetTeamAllowed(team))
+        {
+            OD_LOG_ERR("Cannot use team 0 as a target for portal wave=" + getName());
+            continue;
+        }
         mTargetTeams.push_back(team);
+    }
 
     for(RoomPortalWaveData* roomPortalWaveData : mRoomPortalWaveDataSpawnable)
         delete roomPortalWaveData;
@@ -854,7 +866,20 @@ void RoomPortalWave::importWaveConfig(const RoomPortalWaveConfig& config)
     mRoomPortalWaveDataNotSpawnable.clear();
 
     for(const RoomPortalWaveData& wave : config.mWaves)
-        addRoomPortalWaveData(new RoomPortalWaveData(wave));
+    {
+        RoomPortalWaveData* waveData = new RoomPortalWaveData(wave);
+        waveData->mSpawnCreatureClassName.clear();
+        for(const std::pair<std::string, uint32_t>& creature : wave.mSpawnCreatureClassName)
+        {
+            if(!PortalWaveRules::isStorableClassName(creature.first))
+            {
+                OD_LOG_ERR("Dropped a creature class name the level file cannot hold for portal wave=" + getName());
+                continue;
+            }
+            waveData->mSpawnCreatureClassName.push_back(creature);
+        }
+        addRoomPortalWaveData(waveData);
+    }
 }
 
 bool RoomPortalWave::handleSearchFoe()

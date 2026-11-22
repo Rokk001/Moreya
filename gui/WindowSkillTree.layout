@@ -1100,11 +1100,11 @@
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <!-- The six spells of the spells review show the icon of a related spell until their own icons come;
+                    <!-- The six spells of the spells review show their own painted icons;
                          the position of every node is computed from its tier (GameMode::refreshSkillConnections) -->
                     <Window type="OD/ResearchButton" name="CurseButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureWeakButton" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/CurseButton" />
                         <Property name="TooltipText" value="Spell: Curse" />
                         <Window type="OD/ProgressBar" name="CurseButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -1121,7 +1121,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="BlessingButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureStrengthButton" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/BlessingButton" />
                         <Property name="TooltipText" value="Spell: Blessing" />
                         <Window type="OD/ProgressBar" name="BlessingButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -1138,7 +1138,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="InvisibilityButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureHasteButton" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/InvisibilityButton" />
                         <Property name="TooltipText" value="Spell: Invisibility" />
                         <Window type="OD/ProgressBar" name="InvisibilityButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -1155,7 +1155,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="PlagueButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureSlowButton" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/PlagueButton" />
                         <Property name="TooltipText" value="Spell: Plague" />
                         <Window type="OD/ProgressBar" name="PlagueButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -1172,7 +1172,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="BreakWallButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/TremorButton" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/BreakWallButton" />
                         <Property name="TooltipText" value="Spell: Break Wall" />
                         <Window type="OD/ProgressBar" name="BreakWallButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -1189,7 +1189,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="RevealEnemyButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/SpellEyeEvilButton" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/RevealEnemyButton" />
                         <Property name="TooltipText" value="Spell: Reveal Enemy" />
                         <Window type="OD/ProgressBar" name="RevealEnemyButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />

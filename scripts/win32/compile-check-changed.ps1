@@ -3,7 +3,7 @@
 # -Worktree is the worktree to check (default: the one this script lives in); -Base is the state the branch is compared with; -ReleaseProject is the project file of the integrator's build folder.
 # Writes out\compile-check.log (file, exit code, duration) in this worktree and exits 0 only if every listed file compiled.
 param(
-    [string]$Base = 'origin/integration/all',
+    [string]$Base = 'origin/main',
     [string]$ReleaseProject = '',
     [int]$MaxWaitMinutes = 60,
     [string]$Worktree = ''

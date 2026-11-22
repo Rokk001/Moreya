@@ -25,6 +25,16 @@ root = Path(__file__).resolve().parents[2]
 import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(root, 'Tavern')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(root, relative)
 from assets_src import assets_src_dir, resolve  # noqa: E402
 
 
@@ -86,11 +96,12 @@ block = re.search(r'\[tavernRoom\](.*?)\[/tavernRoom\]', tilesets, re.S)
 assert block is not None, '[tavernRoom] block missing'
 lines = [l.split() for l in block.group(1).splitlines() if l.strip()]
 assert [l[0] for l in lines] == ['%04d' % int(format(i, 'b')) for i in range(16)], 'the block needs the 16 masks 0000-1111'
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
 for words in lines:
     # Floor, wainscot and mug shelf are painted into the 16 floor pieces (one material per mask)
     assert words[1] == 'Room.mesh' and words[2] == 'Tavern' + words[0], words
-    assert re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
+    assert room_packages.is_missing_packaged_name(root, words[2]) or \
+        re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
 
 # 4. Buttons: action bar (hidden by default, after the hatchery) and research tree with the icons of the room and Beer
 rooms_layout = read('gui/WindowTabRooms.layout')
@@ -161,7 +172,8 @@ assert 'entry.second->getMeshName() == TAVERN_TABLE_MESH' in tables, 'seats exis
 drinking_tiles = extract(room_cpp, 'uint32_t RoomTavern::getNbDrinkingTiles()')
 assert 'nbTiles - 1' in drinking_tiles
 for mesh in ('TavernCounter', 'TavernKeg', 'TavernTable', 'Innkeeper', 'TavernMug', 'Vomit'):
-    assert (root / 'models' / (mesh + '.mesh')).exists(), 'models/' + mesh + '.mesh missing'
+    assert room_packages.is_missing_packaged(root, 'models/' + mesh + '.mesh') or \
+        room_file('models/' + mesh + '.mesh').exists(), 'models/' + mesh + '.mesh missing'
 
 # 8. AI payer default: the human keeper starts with "keeper pays", computer keepers with "creature pays"
 header = read('source/rooms/RoomTavern.h')

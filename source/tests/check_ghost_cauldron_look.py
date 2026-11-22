@@ -20,6 +20,16 @@ repo = Path(__file__).resolve().parents[2]
 import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 from assets_src import assets_src_dir  # noqa: E402
 
 generator = (assets_src_dir(repo) / 'rooms/ghostroom/create_models.py').read_text(encoding='utf-8')
@@ -32,31 +42,34 @@ for part in ('Bellied cauldron body', 'Ectoplasm surface', 'Rolled rim', 'Ring h
     assert part in body, ('cauldron part missing', part)
 assert "'GhostCauldron'}" in generator.split('OUTSIDE_GIT = ')[1].split('\n')[0], 'reworked source kept outside Git'
 
-mesh = (repo / 'models/GhostCauldron.mesh').read_bytes()
-materials = sorted(set(m.decode() for m in re.findall(rb'(Ghost[A-Za-z]+)\n', mesh)))
-assert materials == ['GhostBrass', 'GhostCauldronEctoplasm', 'GhostCoal', 'GhostEctoplasm', 'GhostEmbers', 'GhostIron',
-                     'GhostWindow'], materials
-bounds = None
-position = 0
-while True:
-    position = mesh.find(struct.pack('<H', 0x9000), position)
-    if position < 0:
-        break
-    if struct.unpack('<I', mesh[position + 2:position + 6])[0] == 34:
-        bounds = struct.unpack('<7f', mesh[position + 6:position + 34])
-    position += 1
-assert bounds is not None
-assert [round(v, 2) for v in bounds[:6]] == [-1.0, -1.0, 0.0, 1.0, 1.0, 1.14], bounds
-assert b'GhostCauldron.skeleton' in mesh, 'the cauldron has the rig of the trap seat'
+if ROOM_ASSETS:
+    mesh = room_file('models/GhostCauldron.mesh').read_bytes()
+    materials = sorted(set(m.decode() for m in re.findall(rb'(Ghost[A-Za-z]+)\n', mesh)))
+    assert materials == ['GhostBrass', 'GhostCauldronEctoplasm', 'GhostCoal', 'GhostEctoplasm', 'GhostEmbers', 'GhostIron',
+                         'GhostWindow'], materials
+    bounds = None
+    position = 0
+    while True:
+        position = mesh.find(struct.pack('<H', 0x9000), position)
+        if position < 0:
+            break
+        if struct.unpack('<I', mesh[position + 2:position + 6])[0] == 34:
+            bounds = struct.unpack('<7f', mesh[position + 6:position + 34])
+        position += 1
+    assert bounds is not None
+    assert [round(v, 2) for v in bounds[:6]] == [-1.0, -1.0, 0.0, 1.0, 1.0, 1.14], bounds
+    assert b'GhostCauldron.skeleton' in mesh, 'the cauldron has the rig of the trap seat'
 
-material_script = (repo / 'materials/scripts/Ghost.material').read_text(encoding='utf-8')
-for name in materials:
-    assert re.search(r'^material ' + name + r'\s*$', material_script, re.M), name
+    material_script = (repo / 'materials/scripts/Ghost.material').read_text(encoding='utf-8')
+    for name in materials:
+        assert re.search(r'^material ' + name + r'\s*$', material_script, re.M), name
 
 building = (repo / 'source/entities/BuildingObject.cpp').read_text(encoding='utf-8')
 assert 'createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.0f,0.74f,0.40f));' in building
 
-credits = (repo / 'CREDITS').read_text(encoding='utf-8')
-assert re.search(r'^models/GhostCauldron\.mesh\s+AI-generated with Claude Code\s+GPLv3\+\s+Ghost cauldron reworked so it no '
-                 r'longer reads as a press \(owner decision 845\)', credits, re.M)
-print('ghost cauldron look: ok')
+if ROOM_ASSETS:
+    credits = room_packages.credits_text(repo)
+    assert re.search(r'^models/GhostCauldron\.mesh\s+AI-generated with Claude Code\s+(?:GPLv3\+|All rights reserved)\s+'
+                     r'Ghost cauldron reworked so it no '
+                     r'longer reads as a press \(owner decision 845\)', credits, re.M)
+print('ghost cauldron look: ok' + ('' if ROOM_ASSETS else ' (ghost room package not present: mesh and credits not checked)'))

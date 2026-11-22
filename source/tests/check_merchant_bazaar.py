@@ -58,11 +58,31 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the merchant come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Merchant')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
+
+if not ROOM_ASSETS:
+    print('merchant bazaar: not checked, the merchant room package is not present (the check measures its assets only)')
+    sys.exit(0)
+
+
+def texture_file(name):
+    """A texture of the game data or of the merchant room package."""
+    return room_file('materials/textures/' + str(name))
 # Largest bone-white surface (m2) a furniture piece may show; a skull of 0.15 m has about 0.07
 BONE_MAX_AREA = 0.01
 START = time.monotonic()
 TEXTURES = ROOT / 'materials' / 'textures'
-MATERIALS = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (ROOT / 'materials' / 'scripts').glob('*.material'))
+MATERIALS = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(ROOT, 'materials/scripts', '*.material'))
 fails = []
 
 
@@ -154,7 +174,7 @@ work = Path(tempfile.mkdtemp(prefix='merchant_bazaar_'))
 def mesh(name):
     """Returns {material: [triangles of ((x, y, z), (u, v)) corners]} of a shipped mesh."""
     target = work / (name + '.mesh.xml')
-    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(ROOT / 'models' / (name + '.mesh')), str(target)],
+    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(room_file('models/' + name + '.mesh')), str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=120, check=True)
     tree = ET.parse(target).getroot()
 
@@ -214,7 +234,7 @@ def samples(material, tri):
     """Texture colours at seven points inside a triangle's UVs (one point could hit a thin line of the pattern)."""
     tex = material_texture(material)
     if tex not in images:
-        images[tex] = Image.open(TEXTURES / tex).convert('RGB')
+        images[tex] = Image.open(texture_file(tex)).convert('RGB')
     img = images[tex]
     out = []
     for a, b in BARYCENTRIC:
@@ -273,13 +293,13 @@ def area(tri):
 
 
 # Floor and table cloth textures
-floor = Image.open(TEXTURES / 'MerchantFloor.png')
+floor = Image.open(texture_file('MerchantFloor.png'))
 floor_families, floor_dyed = texture_families(floor, 0.01)
 if not 0.08 <= floor_dyed <= 0.45:
     fails.append('floor carpets: %.0f %% of the floor is dyed carpet (8-45 %% wanted: planks with carpet remnants)' % (100 * floor_dyed))
 if not {'red', 'blue', 'ochre'} <= floor_families:
     fails.append('floor carpets: the carpet remnants need red, blue and ochre dyes, found %s' % sorted(floor_families))
-cloth = Image.open(TEXTURES / material_texture('MerchantTableCloth'))
+cloth = Image.open(texture_file(material_texture('MerchantTableCloth')))
 cloth_families, _ = texture_families(cloth, 0.02)
 if len(cloth_families) < 3:
     fails.append('table cloth: at least three dye families wanted, found %s' % sorted(cloth_families))
@@ -425,13 +445,13 @@ if top > FLOOR_MAX_CHANNEL:
     fails.append('dark look: floor has near-white or glaring texels (channel %d above %d)' % (top, FLOOR_MAX_CHANNEL))
 for material in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares'):
     tex = material_texture(material)
-    lum, sat, _ = texel_stats(Image.open(TEXTURES / tex))
+    lum, sat, _ = texel_stats(Image.open(texture_file(tex)))
     print('%s Y %.1f sat %.2f' % (tex, lum, sat))
     if not OBJECT_Y[0] <= lum <= OBJECT_Y[1]:
         fails.append('dark look: %s mean luminance %.1f outside %.1f-%.1f' % (tex, lum, OBJECT_Y[0], OBJECT_Y[1]))
     if sat > OBJECT_MAX_SAT:
         fails.append('dark look: %s mean saturation %.2f above %.2f (garish colours)' % (tex, sat, OBJECT_MAX_SAT))
-glass = Image.open(TEXTURES / material_texture('MerchantLantern')).convert('RGB')
+glass = Image.open(texture_file(material_texture('MerchantLantern'))).convert('RGB')
 lum, sat, _ = texel_stats(glass)
 print('%s Y %.1f sat %.2f' % (material_texture('MerchantLantern'), lum, sat))
 if lum > GLOW_MAX_Y:
@@ -452,7 +472,7 @@ if emissive:
 # Shelf wood: dark weathered, open frame of separate boards
 SHELF_WOOD_Y = (1.0 * ANCHOR_Y, 1.1 * ANCHOR_Y)
 SHELF_MIN_PIECES = 15
-lum, sat, _ = texel_stats(Image.open(TEXTURES / material_texture('MerchantTableWood')))
+lum, sat, _ = texel_stats(Image.open(texture_file(material_texture('MerchantTableWood'))))
 if not SHELF_WOOD_Y[0] <= lum <= SHELF_WOOD_Y[1]:
     fails.append('shelf wood: MerchantTableWood mean luminance %.1f outside %.1f-%.1f (dark weathered wood)'
                  % (lum, SHELF_WOOD_Y[0], SHELF_WOOD_Y[1]))

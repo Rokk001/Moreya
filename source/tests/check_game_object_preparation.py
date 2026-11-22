@@ -32,6 +32,15 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+
+def mesh_exists(name):
+    """True when the mesh is in models/ of the game data or of a present room package; a mesh of a room package that is
+    not present counts as there (only the list and the code are checked then)."""
+    relative = 'models/' + name
+    return room_packages.asset(ROOT, relative) is not None or room_packages.is_missing_packaged(ROOT, relative)
 LISTED = 223
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
@@ -82,7 +91,7 @@ def referenced():
         if ref.kind == 'mesh' and ref.name.startswith(pile_prefix):
             names.add(ref.name)
     return {name for name in names
-            if (ROOT / 'models' / name).is_file() and not name.startswith('Menu') and name not in creatures}
+            if mesh_exists(name) and not name.startswith('Menu') and name not in creatures}
 
 
 def coverage():
@@ -91,7 +100,7 @@ def coverage():
     assert len(names) == LISTED, len(names)
     assert len(set(names)) == len(names), 'a mesh is listed twice'
     for name in names:
-        assert (ROOT / 'models' / name).is_file(), name
+        assert mesh_exists(name), name
     missing = sorted(referenced() - set(names))
     assert not missing, 'object meshes not prepared: %s' % missing
     for figure in ('ChickenEgg.mesh', 'Innkeeper.mesh', 'TavernCounter.mesh', 'SmallSpider.mesh', 'GoldstackLv1.mesh'):

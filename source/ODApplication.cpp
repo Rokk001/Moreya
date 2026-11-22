@@ -42,6 +42,7 @@
 #include "utils/Random.h"
 #include "utils/RaidSimulation.h"
 #include "utils/ResourceManager.h"
+#include "rooms/RoomPackages.h"
 #include "utils/RunLevelTest.h"
 
 #include <OgreLogManager.h>
@@ -93,6 +94,8 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
     logMgr.addSink(std::unique_ptr<LogSink>(new LogSinkFile(resMgr.getLogFile())));
 
     logMgr.setLevel(resMgr.getLogLevel());
+    // The room packages decide which packaged rooms are available; every mode (game, server, tools) needs them
+    RoomPackages::discover(resMgr.getGameDataPath());
 
 
     try

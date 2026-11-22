@@ -211,7 +211,7 @@ class SelectionTests(unittest.TestCase):
         shutil.copyfile(ROOT / 'scripts/win32/orchestrator-deploy-selected.ps1', scripts / 'orchestrator-deploy-selected.ps1')
         shutil.copyfile(ROOT / 'scripts/deploy-level-selection.py', scripts.parent / 'deploy-level-selection.py')
         tip = self.git('rev-parse', 'HEAD')
-        self.git('fetch', '.', 'HEAD:refs/remotes/origin/integration/all')
+        self.git('fetch', '.', 'HEAD:refs/remotes/origin/main')
         self.git('worktree', 'add', '--detach', str(self.repo / 'build/current-worktree'), tip)
         self.write('build/windows/moreya.exe', 'fixture executable')
         self.write('.git/odp-deploy-success.json', json.dumps({'schema': 1, 'status': 'success',
@@ -242,6 +242,9 @@ class SelectionTests(unittest.TestCase):
         for result in (7, 0):
             process_queries.unlink(missing_ok=True)
             counter.write_text('16')
+            # Both probe stubs have the same size and may share an mtime second, so cached bytecode of
+            # the previous stub would still be valid for Python; drop it so each pass runs its own stub.
+            shutil.rmtree(self.repo / 'scripts/__pycache__', ignore_errors=True)
             self.write('scripts/run-campaign-load-tests.py',
                        'import json, subprocess, sys\nfrom pathlib import Path\n'
                        '# Exercise the real wait helper through the locked runner process probe.\n'

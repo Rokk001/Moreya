@@ -143,7 +143,9 @@ public:
 
     //! \brief Load a level file (Part of the resource paths)
     //! \returns whether the file loaded correctly
-    bool loadLevel(const std::string& levelFilepath);
+    //! \param strictOfficialCheck True (multiplayer, and the default): a changed shipped level is always rejected.
+    //! False: a developer build loads a changed shipped level (single player and editor).
+    bool loadLevel(const std::string& levelFilepath, bool strictOfficialCheck = true);
 
     //! \brief Setup the map memory to fit the given size.
     //! This methods also puts default (dirt) tiles on the new map.
@@ -651,6 +653,19 @@ public:
     inline void setSavedTurnNumber(int64_t turnNumber)
     { mSavedTurnNumber = turnNumber; }
 
+    //! \brief The lines of the [Scripts] section the level was loaded with (see ScriptEntry), so that saving the
+    //! level writes them again.
+    inline const std::vector<std::string>& getScriptEntries() const
+    { return mScriptEntries; }
+
+    //! \brief Keeps one line of the [Scripts] section of the loaded level.
+    inline void addScriptEntry(const std::string& entry)
+    { mScriptEntries.push_back(entry); }
+
+    //! \brief Forgets the lines of the [Scripts] section (a level is about to be loaded).
+    inline void clearScriptEntries()
+    { mScriptEntries.clear(); }
+
     inline bool isServerGameMap() const
     { return mIsServerGameMap; }
     
@@ -1015,6 +1030,9 @@ private:
 
     //! \brief The turn the level file was saved at (see getSavedTurnNumber).
     int64_t mSavedTurnNumber;
+
+    //! \brief The lines of the [Scripts] section of the loaded level (see getScriptEntries).
+    std::vector<std::string> mScriptEntries;
 
     //! \brief Unique numbers to ensure names are unique
     int mUniqueNumberCreature;

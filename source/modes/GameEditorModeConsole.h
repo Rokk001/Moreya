@@ -65,7 +65,11 @@ public:
     
     void activate();
     bool isFreshlyEnabled();
+    //! \brief Queues a text for the console history. Safe to call from any thread (the Python thread writes here);
+    //! the text reaches CEGUI only when the main thread calls flushConsoleOutput().
     void printToConsole(const std::string& text);
+    //! \brief Moves the queued texts into the console history window. Must be called on the main thread.
+    void flushConsoleOutput();
     
     //! \brief Stops the interpreter thread; the application keeps the main thread GIL released meanwhile
     void stopInterpreterThread();
@@ -97,6 +101,10 @@ private:
     std::mutex mCommandMutex;
     std::condition_variable mCommandCond;
     std::queue<std::string> mCommandQueue;
+
+    // === Output queue (texts printed from any thread, shown by the main thread) ===
+    std::mutex mOutputMutex;
+    std::queue<std::string> mOutputQueue;
 
     // === Stdin queue (for input() calls) ===
     std::mutex mStdinMutex;

@@ -46,6 +46,7 @@
 #include "modes/MenuModeConfigureSeats.h"
 #include "modes/ModeManager.h"
 #include "network/ChatEventMessage.h"
+#include "network/ContentPackageCheck.h"
 #include "network/CosmeticEvent.h"
 #include "network/MultiplayerClientRules.h"
 #include "network/ODPacket.h"
@@ -60,6 +61,7 @@
 #include "render/RenderManager.h"
 #include "render/RoomAmbience.h"
 #include "rooms/HatcheryNestField.h"
+#include "rooms/RoomPackages.h"
 #include "rooms/RoomPortalWave.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
@@ -191,6 +193,14 @@ ODClient::ODClient() :
 {
 }
 
+//! \brief Returns the message of a refused join once, then forgets it.
+std::string ODClient::consumeRefusalMessage()
+{
+    std::string message = mRefusalMessage;
+    mRefusalMessage.clear();
+    return message;
+}
+
 ODClient::~ODClient()
 {
 }
@@ -309,6 +319,15 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             std::string odVersion;
             OD_ASSERT_TRUE(packetReceived >> odVersion);
+
+            // The room packages of the server: rooms whose package only this client has are not offered
+            std::vector<std::string> serverPackages;
+            if(!ContentPackageCheck::readList(packetReceived, serverPackages))
+            {
+                OD_LOG_ERR("Could not read the room packages of the server");
+                return false;
+            }
+            RoomPackages::setServerPackages(serverPackages);
 
             // Map
             int32_t mapSizeX;
@@ -694,6 +713,17 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::clientRejected:
         {
             LoadingScreen::finish();
+            // A join refused for missing room packages names them: the client stops and the frame listener returns
+            // to the multiplayer menu with the message
+            std::vector<std::string> missingPackages;
+            if(ContentPackageCheck::readList(packetReceived, missingPackages) && !missingPackages.empty())
+            {
+                mRefusalMessage = ContentPackageCheck::missingMessage(missingPackages);
+                OD_LOG_WRN("The server refused the join: " + mRefusalMessage);
+                disconnect();
+                mServerLost = true;
+                break;
+            }
             // If should be in seat configuration. If we are rejected, we regress mode
             ModeManager::ModeType modeType = frameListener->getModeManager()->getCurrentModeType();
             if(modeType != ModeManager::ModeType::MENU_CONFIGURE_SEATS)
@@ -2172,6 +2202,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             OD_ASSERT_TRUE(packetReceived >> offsetX );
             OD_ASSERT_TRUE(packetReceived >> offsetY );
             DraggableTileContainer*& draggableTileContainer =  (dynamic_cast<EditorMode*>(frameListener->getModeManager()->getCurrentMode())->draggableTileContainer);            
+            // The block can be deleted while this answer is on its way
+            if(draggableTileContainer == nullptr)
+                break;
             draggableTileContainer->setRoundedPosition(Ogre::Vector2(posX, posY), Ogre::Vector2(offsetX, offsetY));
 
             break;
@@ -2737,7 +2770,8 @@ void ODClient::refreshMainUI(const std::string& goalsString)
     // Note: Later, we can handle other modes here if necessary.
 }
 
-//! \brief Presents a loading frame before connecting and keeps it through the map handshake.
+//! \brief Presents a loading frame before connecting and keeps it through the map handshake. The hello names the room
+//! packages of this client, and the limit of a previous server's room packages is removed.
 bool ODClient::connect(const std::string& host, const int port, uint32_t timeout, const std::string& outputReplayFilename)
 {
     mIsPlayerConfig = false;
@@ -2749,23 +2783,29 @@ bool ODClient::connect(const std::string& host, const int port, uint32_t timeout
     }
 
     LoadingScreen loading;
+    // The rooms of the previous server no longer limit the rooms until this server sends its room packages
+    RoomPackages::clearServerPackages();
+    mRefusalMessage.clear();
     if(!ODSocketClient::connect(host, port, timeout, outputReplayFilename))
         return false;
     LoadingScreen::loadStepDone(LoadingScreen::LOAD_CONNECTED);
 
-    // Send a hello request to start the conversation with the server
+    // Send a hello request to start the conversation with the server; it names the room packages of this client
     ODPacket packSend;
     packSend << ClientNotificationType::hello
         << std::string("OpenDungeons V ") + ODApplication::VERSION + NetworkProtocol::WIRE_SCHEMA_SUFFIX;
+    ContentPackageCheck::writeList(packSend, RoomPackages::getAvailablePackageNames());
     send(packSend);
     loading.continueLoading();
 
     return true;
 }
 
+//! \brief Starts a replay; the replayed loadLevel sets the room packages of the recorded server again.
 bool ODClient::replay(const std::string& filename)
 {
     mIsPlayerConfig = false;
+    RoomPackages::clearServerPackages();
     // Start the server socket listener as well as the server socket thread
     if (ODClient::getSingleton().isConnected())
     {
@@ -2796,11 +2836,13 @@ void ODClient::requestNicknameChange(const std::string& nickname)
     queueClientNotification(ClientNotificationType::changeNick, nickname);
 }
 
-//! \brief Restores the normal presentation and disconnects from the server or replay.
+//! \brief Restores the normal presentation and disconnects from the server or replay. The room packages of that server
+//! no longer limit the rooms.
 void ODClient::disconnect(bool keepReplay)
 {
     LoadingScreen::finish();
     ODSocketClient::disconnect(keepReplay);
+    RoomPackages::clearServerPackages();
     while(!mClientNotificationQueue.empty())
     {
         delete mClientNotificationQueue.front();

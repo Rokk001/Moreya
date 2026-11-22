@@ -48,8 +48,13 @@ import xml.etree.ElementTree as ET
 import base64
 import zlib
 
+import sys
+
 import numpy as np
 from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
+import room_packages  # noqa: E402  (the merchant assets come from the merchant room package)
 
 # Filled once from the reviewed export of 2026-11-17 (A1b rework), never derived from the assets during a test.
 VERTICES = 47741
@@ -336,7 +341,7 @@ def deserialize(root, filename, directory):
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     output = directory / (filename + '.xml')
     subprocess.run([converter, '-q', '-log', str(output) + '.log',
-                    str(root / 'models' / filename), str(output)],
+                    str(room_packages.resolve(root, 'models/' + filename)), str(output)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                    stderr=subprocess.PIPE, timeout=120, check=True)
     return output
@@ -345,7 +350,7 @@ def deserialize(root, filename, directory):
 # Keep the delivered files byte-exact against the reviewed export, the atlases against the look of 2026-11-15.
 def check_files(root):
     for relative, wanted in HASHES.items():
-        with (root / relative).open('rb') as stream:
+        with room_packages.resolve(root, relative).open('rb') as stream:
             digest = hashlib.sha256()
             for block in iter(lambda: stream.read(1024 * 1024), b''):
                 digest.update(block)
@@ -361,8 +366,8 @@ def material_block(script, name):
 
 # Atlases with their normal maps on the body, opaque hand variants on the colour atlas, sizes and credits of every atlas.
 def check_surfaces(root):
-    script = (root / 'materials/scripts/MerchantApproved.material').read_text(encoding='utf-8')
-    credits = (root / 'CREDITS').read_text(encoding='utf-8')
+    script = room_packages.resolve(root, 'materials/scripts/MerchantApproved.material').read_text(encoding='utf-8')
+    credits = room_packages.credits_text(root)
     for family, size in ATLASES.items():
         block = material_block(script, 'MerchantApproved' + family)
         assert 'normal_map tangent_space' in block, family
@@ -370,7 +375,7 @@ def check_surfaces(root):
             name = 'Merchant' + family + 'Approved' + kind + '.png'
             assert 'texture ' + name in block, name
             relative = 'materials/textures/' + name
-            with (root / relative).open('rb') as stream:
+            with room_packages.resolve(root, relative).open('rb') as stream:
                 header = stream.read(33)
             assert header[:8] == b'\x89PNG\r\n\x1a\n', name
             assert struct.unpack('>II', header[16:24]) == (size, size), name
@@ -388,7 +393,7 @@ def check_surfaces(root):
 # Hood and cloak atlases are a dark brown, not the mottled olive (decisions 862/863, owner finding on A1b).
 def check_brown_cloth(root):
     for relative in BROWN_ATLASES:
-        rgb = np.asarray(Image.open(root / relative).convert('RGB'), dtype=np.float64)
+        rgb = np.asarray(Image.open(room_packages.resolve(root, relative)).convert('RGB'), dtype=np.float64)
         mean = rgb.reshape(-1, 3).mean(0)
         luminance = rgb @ np.array([0.299, 0.587, 0.114])
         assert BROWN_LUMINANCE[0] <= luminance.mean() <= BROWN_LUMINANCE[1], (relative, luminance.mean())
@@ -415,7 +420,7 @@ def check_brown_cloth(root):
 # The hands must not be lit through a normal map nor blended (see-through hands, owner finding of 2026-11-17).
 def check_opaque_hands(root, hand_materials):
     text = ''.join(p.read_text(encoding='utf-8', errors='replace')
-                   for p in (root / 'materials' / 'scripts').glob('*.material'))
+                   for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
     assert hand_materials, 'no hand faces found'
     for name in hand_materials:
         block = material_block(text, name)
@@ -773,11 +778,11 @@ def check_sleeve(skinned, world, side):
 
 # Colour of every triangle: its material's colour atlas at the triangle's UV centre (Ogre v runs downwards).
 def triangle_colours(root, mesh):
-    script = (root / 'materials/scripts/MerchantApproved.material').read_text(encoding='utf-8')
+    script = room_packages.resolve(root, 'materials/scripts/MerchantApproved.material').read_text(encoding='utf-8')
     colours, triangles = [], []
     for name in sorted(mesh['faces']):
         texture = re.search(r'texture\s+(\S+Color\.png)', material_block(script, name)).group(1)
-        image = np.asarray(Image.open(root / 'materials' / 'textures' / texture).convert('RGB'), dtype=np.float64)
+        image = np.asarray(Image.open(room_packages.resolve(root, 'materials/textures/' + texture)).convert('RGB'), dtype=np.float64)
         tri = np.array(mesh['faces'][name], dtype=np.int64)
         uv = mesh['uvs'][tri].mean(1)
         h, w = image.shape[:2]

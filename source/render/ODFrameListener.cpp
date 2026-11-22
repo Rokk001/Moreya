@@ -425,11 +425,13 @@ void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
 }
 
 //! \brief Opens the main menu with its multiplayer sub-menu after the server of a multiplayer game was lost and keeps
-//! the message for it. Leaving the game or lobby mode stops the local server, if one runs, as on the quit path.
+//! the message for it. Leaving the game or lobby mode stops the local server, if one runs, as on the quit path. A join
+//! the server refused for missing room packages shows the names of the missing packages instead.
 void ODFrameListener::returnToMenuAfterLostServer()
 {
     OD_LOG_WRN("The connection to the server was lost, returning to the main menu");
-    mModeManager->setMainMenuNotice(MultiplayerClientRules::LOST_SERVER_MESSAGE);
+    const std::string refusal = ODClient::getSingleton().consumeRefusalMessage();
+    mModeManager->setMainMenuNotice(refusal.empty() ? std::string(MultiplayerClientRules::LOST_SERVER_MESSAGE) : refusal);
     mModeManager->requestMainMenuWithMultiplayerSubMenu();
 }
 
