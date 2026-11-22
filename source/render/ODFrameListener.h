@@ -183,6 +183,11 @@ public:
         const std::map<std::string, std::string>& previousRendererOptions,
         const std::map<std::string, std::string>& previousVideoConfig);
 
+    //! \brief Adds the window procedure of Ogre's window events to the parameters of a new render window.
+    //! Without it a Win32 render window uses the default window procedure: closing it with the X button then only
+    //! destroys the window, windowClosed() is never called and the game keeps running without a window.
+    static void addWindowEventProcedure(Ogre::NameValuePairList& miscParams);
+
     //! \brief Sets the given renderer options and video config values again and saves the user config.
     static void restoreVideoSettings(const std::map<std::string, std::string>& rendererOptions,
         const std::map<std::string, std::string>& videoConfig);
