@@ -65,24 +65,44 @@ namespace {
         AbstractApplicationMode::GuiAction action;
         GameEditorModeBase& mode;
     };
+
+    //! \brief Whether the clicked build navigation button carries a campaign level mark (the padlock of an entry not
+    //! researched yet or the question mark of a forbidden one), set by GameMode::refreshSkillButtonState: such a
+    //! button shows its frames like a real icon but selects nothing. The editor never sets the mark.
+    //! \param e The click event of the button.
+    bool isNavigationMarked(const CEGUI::EventArgs& e)
+    {
+        const CEGUI::Window* button = static_cast<const CEGUI::WindowEventArgs&>(e).window;
+        return (button != nullptr) && button->isUserStringDefined("NavigationLocked") &&
+            (button->getUserString("NavigationLocked") == "true");
+    }
 }
 
+//! \brief Selects the room for building, unless the button carries a campaign level mark.
 bool RoomSelector::operator()(const CEGUI::EventArgs& e)
 {
+    if(isNavigationMarked(e))
+        return true;
     mPlayerSelection.setCurrentAction(SelectedAction::buildRoom);
     mPlayerSelection.setNewRoomType(mRoomType);
     return true;
 }
 
+//! \brief Selects the trap or door for building, unless the button carries a campaign level mark.
 bool TrapSelector::operator()(const CEGUI::EventArgs& e)
 {
+    if(isNavigationMarked(e))
+        return true;
     mPlayerSelection.setCurrentAction(SelectedAction::buildTrap);
     mPlayerSelection.setNewTrapType(mTrapType);
     return true;
 }
 
+//! \brief Selects the spell for casting, unless the button carries a campaign level mark.
 bool SpellSelector::operator()(const CEGUI::EventArgs& e)
 {
+    if(isNavigationMarked(e))
+        return true;
     mPlayerSelection.setCurrentAction(SelectedAction::castSpell);
     mPlayerSelection.setNewSpellType(mSpellType);
     return true;

@@ -359,18 +359,23 @@ static const uint32_t RESEARCH_TREE_MIN_ROWS = 4;
 static const float RESEARCH_LINK_BAR_WIDTH = .012f;
 static const float RESEARCH_LINK_CLEARANCE = 3.0f;
 static const unsigned RESEARCH_LINK_MAX_BARS = 9;
-//! Campaign level marks: the padlock laid over a research field the level forbids, the question mark placeholder that
-//! stands in the build navigation for an entry the level allows but the keeper has not researched yet, and the
-//! research field property that draws the padlock (defined by OD/ResearchButton)
+//! Campaign level marks, in the research tree and in the build navigation: the padlock laid over the darkened real
+//! icon of an entry the level allows but the keeper has not researched yet, the question mark that stands in place of
+//! the icon of an entry the level forbids, the colour of a darkened real icon, and the properties that draw the
+//! padlock (LockImage of OD/ResearchButton, MarkImage and IconColour of OD/GameTabButton)
 static const std::string RESEARCH_LOCK_IMAGE = "SkillLockMarks/Padlock";
 static const std::string NAVIGATION_PLACEHOLDER_IMAGE = "SkillLockMarks/QuestionPlaceholder";
+static const std::string MARK_LOCKED_ICON_COLOUR = "FF666666";
 static const std::string RESEARCH_LOCK_PROPERTY = "LockImage";
-//! User strings of a build navigation button: the real icon of its layout, kept while the placeholder is shown, and
-//! whether the placeholder is shown ("true" or "false")
+static const std::string NAVIGATION_MARK_PROPERTY = "MarkImage";
+static const std::string NAVIGATION_ICON_COLOUR_PROPERTY = "IconColour";
+//! User strings: the real icon of a build navigation button and of a research field, kept while the question mark is
+//! shown, and whether a build navigation button carries a mark and so builds nothing ("true" or "false"; read by the
+//! selectors in GameEditorModeBase.cpp)
 static const std::string NAVIGATION_REAL_IMAGE = "NavigationRealImage";
-static const std::string NAVIGATION_PLACEHOLDER = "NavigationPlaceholder";
-//! Paths of the build navigation pages: rooms, and traps with doors (spells have their own page and stay unchanged)
-static const std::string NAVIGATION_PATH_ROOMS = "MainTabControl/Rooms/";
+static const std::string RESEARCH_REAL_IMAGE = "ResearchRealImage";
+static const std::string NAVIGATION_LOCKED = "NavigationLocked";
+//! Path of the trap and door page of the build navigation: its entries need a built Workshop in a campaign level
 static const std::string NAVIGATION_PATH_TRAPS = "MainTabControl/Traps/";
 
 //! \brief Returns the frame colour of a research node: gold from the gold level, bronze at the bronze level, otherwise none.
@@ -4530,9 +4535,10 @@ void GameMode::setHelpWindowText()
 }
 
 //! \brief Updates research icons, progress and the plain-language hover state without changing research rules.
-//! \brief In a campaign level a field the level forbids shows the padlock instead of the cross, and the build
-//! navigation of rooms, traps and doors follows the research state: researched entries with their real icon, allowed
-//! but unresearched ones as a question mark placeholder that cannot be built, forbidden ones hidden, traps and doors
+//! \brief In a campaign level the research field and the build navigation of rooms, spells, traps and doors follow the
+//! research state: an entry from the start or researched with its real icon, an allowed but unresearched one with its
+//! darkened icon under the padlock (queueable in the tree, not buildable in the navigation), a forbidden one as the
+//! question mark in place of its icon (not clickable in the tree, not buildable in the navigation), traps and doors
 //! hidden while the keeper has no built Workshop. Skirmish and multiplayer keep the navigation and tree of before.
 void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
@@ -4664,46 +4670,58 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         skillButton->setEnabled(true);
         skillProgressBar->hide();
     }
-    // In a campaign level a forbidden field carries the padlock in place of the cross; elsewhere no padlock is drawn
-    const bool isCampaignLocked = mIsCampaignLevelShown && !isAllowed;
-    if(isCampaignLocked)
+    // In a campaign level an entry the level allows but the keeper has not researched yet carries the padlock over its
+    // darkened icon and can still be queued; a forbidden one shows the question mark in place of its icon and no cross.
+    // Elsewhere no mark is drawn
+    const bool isCampaignForbidden = mIsCampaignLevelShown && !isAllowed;
+    const bool isCampaignLocked = mIsCampaignLevelShown && isAllowed && (level == 0);
+    if(isCampaignForbidden)
         skillButton->setProperty("StateImage", "");
     skillButton->setProperty(RESEARCH_LOCK_PROPERTY, isCampaignLocked ? RESEARCH_LOCK_IMAGE : "");
+    // The real icon of the layout is kept so that it comes back in a later skirmish game that reuses the window
+    if(!skillButton->isUserStringDefined(RESEARCH_REAL_IMAGE))
+        skillButton->setUserString(RESEARCH_REAL_IMAGE, skillButton->getProperty("ButtonImage"));
+    skillButton->setProperty("ButtonImage", isCampaignForbidden ? CEGUI::String(NAVIGATION_PLACEHOLDER_IMAGE) :
+        skillButton->getUserString(RESEARCH_REAL_IMAGE));
     const bool isLockedByLibrary = SkillManager::isLockedByLostLibrary(resType, localPlayerSeat);
     // A keeper skill has no cast button (its name is empty)
     if(!castButtonName.empty())
     {
         CEGUI::Window* castButton = guiSheet->getChild(castButtonName);
         const bool isTrapEntry = castButtonName.compare(0, NAVIGATION_PATH_TRAPS.size(), NAVIGATION_PATH_TRAPS) == 0;
-        const bool isBuildEntry = isTrapEntry ||
-            castButtonName.compare(0, NAVIGATION_PATH_ROOMS.size(), NAVIGATION_PATH_ROOMS) == 0;
         bool isVisible = level > 0;
-        bool isPlaceholder = false;
-        if(isBuildEntry)
+        bool isForbiddenMark = false;
+        bool isPadlockMark = false;
+        // The real icon of the layout is kept so that it comes back once the entry is researched, also when a later
+        // skirmish game reuses the window
+        if(!castButton->isUserStringDefined(NAVIGATION_REAL_IMAGE))
+            castButton->setUserString(NAVIGATION_REAL_IMAGE, castButton->getProperty("NormalImage"));
+        if(mIsCampaignLevelShown)
         {
-            // The real icon of the layout is kept so that it comes back once the entry is researched, also when a
-            // later skirmish game reuses the window
-            if(!castButton->isUserStringDefined(NAVIGATION_REAL_IMAGE))
-                castButton->setUserString(NAVIGATION_REAL_IMAGE, castButton->getProperty("NormalImage"));
-            if(mIsCampaignLevelShown)
+            // Rooms, spells, traps and doors: traps and doors only with a built Workshop
+            if(isTrapEntry && !mHasWorkshopShown)
+                isVisible = false;
+            else
             {
-                if(!isAllowed || (isTrapEntry && !mHasWorkshopShown))
-                    isVisible = false;
-                else
-                {
-                    isVisible = true;
-                    isPlaceholder = (level == 0);
-                }
+                isVisible = true;
+                isForbiddenMark = !isAllowed;
+                isPadlockMark = isAllowed && (level == 0);
             }
-            castButton->setProperty("NormalImage", isPlaceholder ? CEGUI::String(NAVIGATION_PLACEHOLDER_IMAGE) :
-                castButton->getUserString(NAVIGATION_REAL_IMAGE));
-            castButton->setUserString(NAVIGATION_PLACEHOLDER, isPlaceholder ? "true" : "false");
         }
+        const bool isMarked = isForbiddenMark || isPadlockMark;
+        castButton->setProperty("NormalImage", isForbiddenMark ? CEGUI::String(NAVIGATION_PLACEHOLDER_IMAGE) :
+            castButton->getUserString(NAVIGATION_REAL_IMAGE));
+        castButton->setProperty(NAVIGATION_MARK_PROPERTY, isPadlockMark ? RESEARCH_LOCK_IMAGE : "");
+        castButton->setProperty(NAVIGATION_ICON_COLOUR_PROPERTY, isPadlockMark ? MARK_LOCKED_ICON_COLOUR : "FFFFFFFF");
+        // A marked button stays enabled so that it shows the frames of every button state like a real icon; the
+        // selectors build nothing for it
+        castButton->setUserString(NAVIGATION_LOCKED, isMarked ? "true" : "false");
         castButton->setVisible(isVisible);
-        castButton->setEnabled(!isLockedByLibrary && !isPlaceholder);
+        castButton->setEnabled(!isLockedByLibrary);
     }
     skillButton->setText("");
-    skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF808080" : (level == 0 ? "FF666666" : "FFFFFFFF"));
+    skillButton->setProperty("ButtonImageColour", !isAllowed ? (isCampaignForbidden ? "FFFFFFFF" : "FF808080") :
+        (level == 0 ? MARK_LOCKED_ICON_COLOUR : "FFFFFFFF"));
     skillButton->setProperty("ResearchLevelColour", getResearchFrameColour(level));
     CEGUI::Window* levelBadge;
     if(skillButton->isChild("ResearchLevel"))

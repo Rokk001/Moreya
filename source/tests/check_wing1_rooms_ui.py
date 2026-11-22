@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""Non-compiling check of the research tree padlock and the build navigation placeholders of a campaign level
-(wing 1 rooms plan, WR4 and WR8; Global Constraint 8 skirmish and multiplayer unchanged; screen sizes and UI scales).
+"""Non-compiling check of the campaign level marks in the research tree and the build navigation (wing 1 rooms plan,
+WR4, WR8 and WR10; Global Constraint 8 skirmish and multiplayer unchanged; screen sizes and UI scales).
 
-WR4: in a campaign level a research field the level forbids is darkened and grey with the padlock image
-SkillLockMarks/Padlock laid over it (in place of the cross), it is disabled and cannot be queued; allowed fields are
-unchanged; the question mark is never used in the tree. WR8: in a campaign level the build navigation of rooms, traps
-and doors shows an entry from the start or researched with its real icon, an allowed entry not researched yet as the
-question mark placeholder SkillLockMarks/QuestionPlaceholder that cannot be built, a forbidden entry not at all, and
-traps and doors only with a built Workshop; spells stay as before. Outside a campaign level (skirmish, multiplayer) the
-tree keeps its cross and the navigation shows an entry once it has level 1, as before.
+In a campaign level, in the research tree and in the build navigation of rooms, spells, traps and doors:
+- an entry available from the start or researched shows its real icon, as before;
+- an entry the level allows but the keeper has not researched yet shows its real icon darkened with the padlock image
+  SkillLockMarks/Padlock on it; in the tree it can still be queued and researched, in the navigation it builds nothing;
+- an entry the level forbids shows the question mark SkillLockMarks/QuestionPlaceholder in place of its icon; in the
+  tree it cannot be clicked, in the navigation it builds nothing (it is no longer hidden);
+- traps and doors are not shown in the navigation while the keeper has no built Workshop.
+WR10: both marks sit inside the frames the game draws for the button in every state, exactly like a real icon: the
+navigation mark between the icon and the frame of every state (a marked button stays enabled, so it shows the hover
+frame, and the selectors ignore its click), the tree padlock in the icon area inside the tile frame.
+Outside a campaign level (skirmish, multiplayer) the tree keeps its cross and the navigation shows an entry once it has
+level 1, as before.
 
-The C++ sources, the look of the research field, the scheme and the navigation layouts are checked for the statements
-that implement this, with fixed expected values. Nothing is compiled and the game is not started; the compiled probe
-of check_research_tree_ui.py plays the same cases against CEGUI in the integration run.
+The C++ sources, the looks, the scheme and the layouts are checked for the statements that implement this, with fixed
+expected values. Nothing is compiled and the game is not started; the compiled probe of check_research_tree_ui.py
+plays the same cases against CEGUI in the integration run.
 
 Usage: python -I source/tests/check_wing1_rooms_ui.py
 Exit 0 and "wing1 rooms ui ok" when every item holds.
@@ -33,7 +38,8 @@ IMAGESET_NAME = "SkillLockMarks"
 PADLOCK = "SkillLockMarks/Padlock"
 PLACEHOLDER = "SkillLockMarks/QuestionPlaceholder"
 
-# Build navigation buttons of rooms (23) and of traps and doors (17) on this branch, counted once from the layouts
+# Build navigation buttons of rooms (23), of traps and doors (17) and of spells (24) on this branch, counted once from
+# the layouts
 ROOM_BUTTONS = ["DormitoryButton", "ToiletButton", "HatcheryButton", "TavernButton", "SpaButton", "LibraryButton",
     "TrainingHallButton", "TreasuryButton", "WorkshopButton", "CasinoButton", "PrisonButton", "WoodenBridgeButton",
     "TortureButton", "StoneBridgeButton", "CryptButton", "GhostRoomButton", "ArenaButton", "GuardRoomButton",
@@ -42,10 +48,15 @@ TRAP_BUTTONS = ["WoodenDoorTrapButton", "IronboundDoorTrapButton", "SteelDoorTra
     "SecretDoorTrapButton", "RunedDoorTrapButton", "CannonButton", "SpikeTrapButton", "BoulderTrapButton",
     "AlarmTrapButton", "FearTrapButton", "GasTrapButton", "LightningTrapButton", "FireburstTrapButton",
     "FreezeTrapButton", "WatchBannerTrapButton", "TriggerTrapButton"]
+SPELL_BUTTONS = ["SummonWorkerButton", "CallToWarButton", "CreatureHealButton", "CreatureExplosionButton",
+    "CreatureHasteButton", "CreatureDefenseButton", "CreatureSlowButton", "CreatureStrengthButton", "CreatureWeakButton",
+    "SpellEyeEvilButton", "CreateGoldButton", "LightningButton", "TremorButton", "HexenHenButton", "DefectorButton",
+    "InfernoButton", "PossessButton", "CurseButton", "BlessingButton", "InvisibilityButton", "PlagueButton",
+    "BreakWallButton", "RevealEnemyButton", "SummonChampionButton"]
 
 # Number of campaign and skirmish cases the compiled research tree probe plays (counted once on this branch)
-PROBE_CAMPAIGN_CASES = 10
-PROBE_SKIRMISH_CASES = 3
+PROBE_CAMPAIGN_CASES = 16
+PROBE_SKIRMISH_CASES = 4
 
 
 def read(relative):
@@ -86,51 +97,83 @@ def main():
     check(imagesets.count((IMAGESET_FILE, IMAGESET_NAME)) == 1, "ODSkin.scheme loads SkillLockMarks.imageset once")
     check('static const std::string RESEARCH_LOCK_IMAGE = "' + PADLOCK + '";' in game, "padlock image name")
     check('static const std::string NAVIGATION_PLACEHOLDER_IMAGE = "' + PLACEHOLDER + '";' in game,
-          "question mark placeholder image name")
-    check('static const std::string RESEARCH_LOCK_PROPERTY = "LockImage";' in game, "padlock property name")
-    check('static const std::string NAVIGATION_PATH_ROOMS = "MainTabControl/Rooms/";' in game and
-          'static const std::string NAVIGATION_PATH_TRAPS = "MainTabControl/Traps/";' in game,
-          "build navigation pages of rooms and of traps and doors")
-    check("MainTabControl/Spells/" not in game, "the spells page is not part of the campaign navigation rules")
+          "question mark image name")
+    check('static const std::string MARK_LOCKED_ICON_COLOUR = "FF666666";' in game, "colour of a darkened icon")
+    check('static const std::string RESEARCH_LOCK_PROPERTY = "LockImage";' in game and
+          'static const std::string NAVIGATION_MARK_PROPERTY = "MarkImage";' in game and
+          'static const std::string NAVIGATION_ICON_COLOUR_PROPERTY = "IconColour";' in game,
+          "properties that draw the marks")
+    check('static const std::string NAVIGATION_LOCKED = "NavigationLocked";' in game, "user string of a marked button")
+    check('static const std::string NAVIGATION_PATH_TRAPS = "MainTabControl/Traps/";' in game,
+          "build navigation page of traps and doors")
+    check("NAVIGATION_PATH_ROOMS" not in game and "MainTabControl/Spells/" not in game,
+          "WR8: rooms and spells follow the rules without a page test")
 
     refresh = function(game, "void GameMode::refreshSkillButtonState(")
-    # WR4: padlock on a forbidden field of a campaign level, cross elsewhere, darkened grey, disabled
-    check("const bool isCampaignLocked = mIsCampaignLevelShown && !isAllowed;" in refresh,
-          "WR4: the padlock is tied to a forbidden field of a campaign level")
-    check("if(isCampaignLocked)\n        skillButton->setProperty(\"StateImage\", \"\");" in refresh,
-          "WR4: the cross gives way to the padlock in a campaign level")
+    # WR4: tree marks of a campaign level, cross elsewhere
+    check("const bool isCampaignForbidden = mIsCampaignLevelShown && !isAllowed;" in refresh,
+          "WR4: the question mark is tied to a forbidden field of a campaign level")
+    check("const bool isCampaignLocked = mIsCampaignLevelShown && isAllowed && (level == 0);" in refresh,
+          "WR4: the padlock is tied to an allowed field of a campaign level that is not researched yet")
+    check("if(isCampaignForbidden)\n        skillButton->setProperty(\"StateImage\", \"\");" in refresh,
+          "WR4: the cross gives way to the question mark in a campaign level")
     check("skillButton->setProperty(RESEARCH_LOCK_PROPERTY, isCampaignLocked ? RESEARCH_LOCK_IMAGE : \"\");" in refresh,
-          "WR4: the padlock is set on the forbidden field and cleared on every other field")
+          "WR4: the padlock is set on an unresearched allowed field and cleared on every other field")
+    check("skillButton->setUserString(RESEARCH_REAL_IMAGE, skillButton->getProperty(\"ButtonImage\"));" in refresh and
+          "skillButton->setProperty(\"ButtonImage\", isCampaignForbidden ? CEGUI::String(NAVIGATION_PLACEHOLDER_IMAGE) :\n"
+          "        skillButton->getUserString(RESEARCH_REAL_IMAGE));" in refresh,
+          "WR4: a forbidden field shows the question mark in place of its icon, every other field its real icon")
     check('skillButton->setProperty("StateImage", abortIcon);' in refresh and "skillButton->setEnabled(false);" in refresh,
           "WR4 and skirmish: a forbidden field keeps the cross outside a campaign level and is disabled")
-    check('skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF808080"' in refresh,
-          "WR4: a forbidden field stays darkened and grey")
-    check(refresh.count("RESEARCH_LOCK_IMAGE") == 1 and refresh.count("NAVIGATION_PLACEHOLDER_IMAGE") == 1,
-          "WR4: the padlock appears once (tree field), the question mark once (navigation button)")
-    placeholder_line = [line for line in refresh.splitlines() if "NAVIGATION_PLACEHOLDER_IMAGE" in line]
-    check(len(placeholder_line) == 1 and "castButton->setProperty(\"NormalImage\"" in placeholder_line[0],
-          "WR4: the question mark is only set on a navigation button, never on a tree field")
+    check('skillButton->setProperty("ButtonImageColour", !isAllowed ? (isCampaignForbidden ? "FFFFFFFF" : "FF808080") :\n'
+          '        (level == 0 ? MARK_LOCKED_ICON_COLOUR : "FFFFFFFF"));' in refresh,
+          "WR4: the padlocked icon is darkened, the question mark keeps its colours, skirmish as before")
     clicked = function(game, "bool GameMode::skillButtonTreeClicked(")
     check("if(std::find(skillNotAllowed.begin(), skillNotAllowed.end(), type) != skillNotAllowed.end())\n        return false;"
           in clicked, "WR4: a forbidden field cannot be queued")
+    check("isCampaignLocked" not in clicked and "LockImage" not in clicked and "RESEARCH_LOCK" not in clicked,
+          "WR4: a padlocked field can still be queued")
 
-    # WR8: navigation states of a campaign level, skirmish unchanged
+    # WR8: navigation states of a campaign level for rooms, spells, traps and doors, skirmish unchanged
     check("bool isVisible = level > 0;" in refresh, "skirmish: an entry is shown once it has level 1")
     check("const bool isTrapEntry = castButtonName.compare(0, NAVIGATION_PATH_TRAPS.size(), NAVIGATION_PATH_TRAPS) == 0;"
           in refresh, "WR8: traps and doors are told by their navigation page")
-    check("castButtonName.compare(0, NAVIGATION_PATH_ROOMS.size(), NAVIGATION_PATH_ROOMS) == 0;" in refresh,
-          "WR8: rooms are told by their navigation page")
-    check("if(!isAllowed || (isTrapEntry && !mHasWorkshopShown))\n                    isVisible = false;" in refresh,
-          "WR8: forbidden entries and traps and doors without a built Workshop are not shown")
-    check("isVisible = true;\n                    isPlaceholder = (level == 0);" in refresh,
-          "WR8: an allowed entry is shown, as a question mark until it is researched")
-    check("if(mIsCampaignLevelShown)\n            {" in refresh, "WR8: the navigation states apply only in a campaign level")
+    check("isBuildEntry" not in refresh, "WR8: spells follow the same rules as rooms, traps and doors")
+    check("if(mIsCampaignLevelShown)\n        {" in refresh, "WR8: the navigation marks apply only in a campaign level")
+    check("if(isTrapEntry && !mHasWorkshopShown)\n                isVisible = false;" in refresh,
+          "WR8: traps and doors without a built Workshop are not shown")
+    check("isVisible = true;\n                isForbiddenMark = !isAllowed;\n"
+          "                isPadlockMark = isAllowed && (level == 0);" in refresh,
+          "WR8: every other entry is shown, forbidden as the question mark, unresearched with the padlock")
     check("castButton->setUserString(NAVIGATION_REAL_IMAGE, castButton->getProperty(\"NormalImage\"));" in refresh and
-          "castButton->getUserString(NAVIGATION_REAL_IMAGE));" in refresh,
-          "WR8: the real icon of the layout comes back once the entry is researched")
-    check("castButton->setEnabled(!isLockedByLibrary && !isPlaceholder);" in refresh,
-          "WR8: a question mark cannot be built; the library lock stays as before")
+          "castButton->setProperty(\"NormalImage\", isForbiddenMark ? CEGUI::String(NAVIGATION_PLACEHOLDER_IMAGE) :\n"
+          "            castButton->getUserString(NAVIGATION_REAL_IMAGE));" in refresh,
+          "WR8: a forbidden entry shows the question mark, every other entry its real icon")
+    check("castButton->setProperty(NAVIGATION_MARK_PROPERTY, isPadlockMark ? RESEARCH_LOCK_IMAGE : \"\");" in refresh and
+          "castButton->setProperty(NAVIGATION_ICON_COLOUR_PROPERTY, isPadlockMark ? MARK_LOCKED_ICON_COLOUR : "
+          "\"FFFFFFFF\");" in refresh,
+          "WR8: an unresearched entry shows its darkened icon under the padlock")
+    check("const bool isMarked = isForbiddenMark || isPadlockMark;" in refresh and
+          "castButton->setUserString(NAVIGATION_LOCKED, isMarked ? \"true\" : \"false\");" in refresh,
+          "WR8: a marked button is flagged so that it builds nothing")
+    check("castButton->setEnabled(!isLockedByLibrary);" in refresh,
+          "WR10: a marked button stays enabled to show the frames of every state; the library lock stays as before")
     check("castButton->setVisible(isVisible);" in refresh, "WR8: the visibility is set for every cast button")
+    check(refresh.count("RESEARCH_LOCK_IMAGE") == 2 and refresh.count("NAVIGATION_PLACEHOLDER_IMAGE") == 2,
+          "the padlock and the question mark appear once in the tree and once in the navigation")
+
+    # WR8: the selectors build or cast nothing for a marked button
+    base = read("source/modes/GameEditorModeBase.cpp")
+    check("bool isNavigationMarked(const CEGUI::EventArgs& e)" in base and
+          "const CEGUI::Window* button = static_cast<const CEGUI::WindowEventArgs&>(e).window;" in base and
+          'return (button != nullptr) && button->isUserStringDefined("NavigationLocked") &&\n'
+          '            (button->getUserString("NavigationLocked") == "true");' in base,
+          "WR8: a marked button is recognised by its user string")
+    for selector in ("RoomSelector", "TrapSelector", "SpellSelector"):
+        selector_body = function(base, "bool " + selector + "::operator()(")
+        guard = "if(isNavigationMarked(e))\n        return true;"
+        check(guard in selector_body and selector_body.index(guard) < selector_body.index("mPlayerSelection"),
+              "WR8: " + selector + " selects nothing for a marked button")
 
     gui_refresh = function(game, "void GameMode::refreshGuiSkill(")
     check("const bool isCampaignLevel = Campaign::getSingleton().isActive() && "
@@ -144,38 +187,74 @@ def main():
     check("bool mIsCampaignLevelShown = false;" in header and "bool mHasWorkshopShown = false;" in header,
           "a new game starts with the skirmish rules until the campaign is read")
 
-    # Look of the research field: padlock over the whole field, relative size (640x480 to 8K, UI scale 80-120 %)
-    look = read("gui/OD.looknfeel")
+    # WR10, tree: the padlock in the icon area (inside the tile frame), right after the icon and under the state badge,
+    # relative size (640x480 to 8K, UI scale 80-120 %)
+    look = read("gui/OD.looknfeel").replace("\r\n", "\n")
     research = look[look.index('<WidgetLook name="OD/ResearchButton"'):]
     research = research[:research.index("</WidgetLook>")]
     check('<PropertyDefinition name="LockImage" initialValue="" redrawOnWrite="true" />' in research,
           "OD/ResearchButton defines the padlock property, empty by default")
-    lock_components = re.findall(r'<ImageryComponent>(?:(?!</ImageryComponent>).)*<ImageProperty name="LockImage" />'
-                                 r'(?:(?!</ImageryComponent>).)*</ImageryComponent>', research)
-    check(len(lock_components) == 3, "the padlock is drawn in the normal, pushed and disabled look of the field")
-    for component in lock_components:
-        check('<Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim>' in component and
-              '<Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim>' in component and
-              '<Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>' in component and
-              '<Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>' in component,
-              "the padlock image (drawn for the whole field) covers the whole field")
+    components = re.findall(r'<ImageryComponent>(?:(?!</ImageryComponent>).)*</ImageryComponent>', research)
+    icon_area = ('<Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge">'
+                 '<UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" />'
+                 '</Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area>')
+    lock_positions = [i for i, component in enumerate(components) if '<ImageProperty name="LockImage" />' in component]
+    check(len(lock_positions) == 3, "the padlock is drawn in the normal, pushed and disabled look of the field")
+    for position in lock_positions:
+        component = components[position]
+        check(position > 0 and '<ImageProperty name="ButtonImage" />' in components[position - 1],
+              "the padlock is drawn right over the icon")
+        check(icon_area in component and position > 0 and icon_area in components[position - 1],
+              "the padlock covers exactly the icon area inside the tile frame")
         check("AbsoluteDim" not in component and '<VertFormat type="Stretched" />' in component and
               '<HorzFormat type="Stretched" />' in component,
               "the padlock scales with the field at every screen size and UI scale")
+    sections = re.findall(r'<ImagerySection name="research(?:_pushed|_disabled)?">.*?</ImagerySection>', research,
+                          re.S)
+    check(len(sections) == 3, "the field has its normal, pushed and disabled look")
+    for section in sections:
+        check('name="LockImage"' in section and 'name="StateImage"' in section and
+              section.index('name="LockImage"') < section.index('name="StateImage"'),
+              "the queue and research badges stay visible over the padlock")
 
-    # Navigation buttons: each room, trap and door button has its real icon in the layout and a stretched icon look
-    for layout, names in (("gui/WindowTabRooms.layout", ROOM_BUTTONS), ("gui/WindowTabTraps.layout", TRAP_BUTTONS)):
+    # WR10, navigation: the mark between the icon and the frame in every state, relative size
+    tab_button = look[look.index('<WidgetLook name="OD/GameTabButton">'):]
+    tab_button = tab_button[:tab_button.index("</WidgetLook>")]
+    check('<PropertyDefinition initialValue="" name="MarkImage" redrawOnWrite="true" />' in tab_button and
+          '<PropertyDefinition initialValue="FFFFFFFF" name="IconColour" redrawOnWrite="true" />' in tab_button,
+          "OD/GameTabButton defines the mark, empty by default, and the icon colour, white by default")
+    normal = re.search(r'<ImagerySection name="normal">.*?</ImagerySection>', tab_button, re.S).group(0)
+    check('<ImageProperty name="NormalImage" />' in normal and '<ColourRectProperty name="IconColour" />' in normal,
+          "the icon is drawn in the icon colour")
+    mark = re.search(r'<ImagerySection name="mark">.*?</ImagerySection>', tab_button, re.S)
+    check(mark is not None and '<ImageProperty name="MarkImage" />' in mark.group(0) and
+          '<Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>' in mark.group(0) and
+          '<Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>' in mark.group(0) and
+          '<VertFormatProperty name="VertImageFormatting" />' in mark.group(0) and
+          '<HorzFormatProperty name="HorzImageFormatting" />' in mark.group(0),
+          "the mark covers the icon area and scales with the button")
+    states = re.findall(r'<StateImagery name="(\w+)">(.*?)</StateImagery>', tab_button, re.S)
+    check(sorted(name for name, _ in states) == ["Disabled", "Hover", "Normal", "Pushed", "PushedOff"],
+          "the navigation button has its five states")
+    for name, state in states:
+        check('<Layer priority="1">\n                <Section section="normal" />\n'
+              '                <Section section="mark" />\n            </Layer>' in state,
+              "WR10: the mark is drawn over the icon in the " + name + " state")
+        check('<Layer priority="2">' in state and state.index('section="mark"') < state.index('<Layer priority="2">'),
+              "WR10: the frame of the " + name + " state is drawn over the mark")
+    check('<PropertyDefinition initialValue="Stretched" name="VertImageFormatting" redrawOnWrite="true" />' in tab_button
+          and '<PropertyDefinition initialValue="Stretched" name="HorzImageFormatting" redrawOnWrite="true" />'
+          in tab_button, "the marks fill the navigation button at every screen size and UI scale")
+
+    # Navigation buttons: each room, spell, trap and door button has its real icon in the layout
+    for layout, names in (("gui/WindowTabRooms.layout", ROOM_BUTTONS), ("gui/WindowTabTraps.layout", TRAP_BUTTONS),
+                          ("gui/WindowTabSpells.layout", SPELL_BUTTONS)):
         tree = ET.fromstring(read(layout))
         for name in names:
             button = tree.find(".//Window[@name='" + name + "']")
             image = None if button is None else button.find("Property[@name='NormalImage']")
             check(button is not None and button.get("type") == "OD/GameTabButton" and image is not None and
                   image.get("value"), layout + ": " + name + " has its real icon")
-    tab_button = look[look.index('<WidgetLook name="OD/GameTabButton">'):]
-    tab_button = tab_button[:tab_button.index("</WidgetLook>")]
-    check('<PropertyDefinition initialValue="Stretched" name="VertImageFormatting" redrawOnWrite="true" />' in tab_button
-          and '<PropertyDefinition initialValue="Stretched" name="HorzImageFormatting" redrawOnWrite="true" />'
-          in tab_button, "the question mark fills the navigation button at every screen size and UI scale")
 
     # The compiled probe of the research tree plays the campaign and skirmish cases
     probe = read("source/tests/check_research_tree_ui.py")
