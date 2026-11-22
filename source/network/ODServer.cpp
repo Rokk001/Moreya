@@ -493,6 +493,7 @@ ODServer::ODServer() :
     mDraggableTileContainer(nullptr),
     mSeatsConfigured(false),
     mPlayerConfig(nullptr),
+    mEditOfficialLevels(false),
     mConsoleInterface(std::bind(&ODServer::printConsoleMsg, this, std::placeholders::_1)),
     mMasterServerGameStatusUpdateTime(0)
 {
@@ -510,6 +511,8 @@ ODServer::~ODServer()
 //! \brief Shows the loading picture while synchronously reading the level and starting the server.
 //! \brief Restores campaign save context before configuring players and their campaign effects.
 //! Load tests without an explicit port listen on an OS-assigned port.
+//! \brief Refuses a shipped level in the editor without the hidden option and a changed shipped level (always in
+//! multiplayer).
 bool ODServer::startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer,
     bool relationships)
 {
@@ -534,6 +537,18 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         return false;
     }
 
+    // The editor opens a shipped level only with the hidden option (the editor saves follow the same option)
+    mEditOfficialLevels = MapHandler::isEditOfficialLevelsEnabled();
+    if(mode == ServerMode::ModeEditor)
+    {
+        std::string refusal;
+        if(!MapHandler::checkEditorMayOpen(levelFilename, refusal))
+        {
+            OD_LOG_ERR("Couldn't start the editor: " + refusal);
+            return false;
+        }
+    }
+
     LoadingScreen loading;
 
     // Read in the map. The map loading should be happen here and not in the server thread to
@@ -542,7 +557,8 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
     mServerState = ServerState::StateConfiguration;
     mUniqueNumberPlayer = 0;
     GameMap* gameMap = mGameMap;
-    if (!gameMap->loadLevel(levelFilename))
+    // A changed shipped level is always rejected in multiplayer; a developer build loads it in the other modes
+    if (!gameMap->loadLevel(levelFilename, mode == ServerMode::ModeGameMultiPlayer))
     {
         mServerMode = ServerMode::ModeNone;
         mServerState = ServerState::StateNone;
@@ -1166,6 +1182,7 @@ void ODServer::launchGame()
 //! \brief Loads the level as startServer does, but without socket and master server, and configures the seats as the
 //! seat configuration of a single player game does, without clients: the human seat gets a human player who gives no
 //! orders (or a computer keeper), computer seats their computer keeper and inactive seats an inactive player.
+//! The shipped level check is the one of a single player game.
 int32_t ODServer::startHeadlessGame(const std::string& levelFilename, bool keeperAi, KeeperAIType campaignLevel)
 {
     mSeatsConfigured = false;
@@ -1173,7 +1190,8 @@ int32_t ODServer::startHeadlessGame(const std::string& levelFilename, bool keepe
     mServerState = ServerState::StateConfiguration;
     mUniqueNumberPlayer = 0;
     GameMap* gameMap = mGameMap;
-    if(!gameMap->loadLevel(levelFilename))
+    // The raid simulation is a single player game: a developer build may run a changed shipped level
+    if(!gameMap->loadLevel(levelFilename, false))
     {
         OD_LOG_ERR("Raid simulation: the level file can't be loaded: " + levelFilename + ", cause: "
             + MapHandler::getLastLoadError());
@@ -2983,6 +3001,8 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             boost::filesystem::path levelSave;
             std::string levelSaveText;
             bool saveOk = true;
+            // True when the editor save of a shipped level was turned into an own copy
+            bool savedAsCopy = false;
             // Building the path can throw (a name that cannot be converted): that must not end the server thread
             try
             {
@@ -2990,9 +3010,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 std::string fileLevel = levelPath.filename().string();
                 if(mServerMode == ServerMode::ModeEditor)
                 {
-                    if(receivedFilePath=="" && receivedFileLevel=="")
+                    const bool saveAs = !(receivedFilePath=="" && receivedFileLevel=="");
+                    if(!saveAs)
                     {
-                        // In editor mode, we save in the original folder
+                        // In editor mode, we save in the original folder (a shipped level only with the hidden
+                        // option, see resolveEditorSaveTarget below)
                         levelSave = levelPath;
 
                         // // If the level was not a custom one, we save it as a custom one now.
@@ -3014,6 +3036,12 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                         levelSave = boost::filesystem::path(receivedFilePath) /  receivedFileLevel;
 
                     }
+                    // A shipped level is never written without the hidden option: the save becomes an own copy in
+                    // the user level folder. A save under a new name gets the extension of the player maps.
+                    const OfficialLevels::EditorSaveTarget saveTarget =
+                        MapHandler::resolveEditorSaveTarget(levelSave.string(), saveAs, mEditOfficialLevels);
+                    levelSave = boost::filesystem::path(saveTarget.mPath);
+                    savedAsCopy = saveTarget.mRedirected;
                     OD_LOG_INF( levelSave.string() + '\n');
                 }
                 else
@@ -3107,6 +3135,12 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if (!saveOk)
             {
                 msg = "Couldn't not save map file as: " + levelSaveText + "\nPlease check logs.";
+            }
+            else if(savedAsCopy)
+            {
+                // The next saves go to the copy, the shipped level stays as it is
+                gameMap->setLevelFileName(levelSaveText);
+                msg = "Shipped levels cannot be changed. Your own copy was saved as: " + levelSaveText;
             }
             // We notify all the players that the game was saved successfully
             ServerNotification notif(ServerNotificationType::chatServer, nullptr);

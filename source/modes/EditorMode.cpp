@@ -2319,9 +2319,20 @@ void EditorMode::restoreAfterConsole()
     updateCursorText();
 }
 
-//! \brief Replaces the editor map while using its existing status text for the loading screen.
+//! \brief Replaces the editor map while using its existing status text for the loading screen. A shipped level
+//! without the hidden option, or a changed one, is refused with a message and the open level stays.
 bool EditorMode::loadLevelFromFile(const std::string& fileName)
 {
+    // A shipped level opens only with the hidden option, and a changed one never: refused before the open level is
+    // torn down (the server start checks it again)
+    std::string refusal;
+    if(!MapHandler::checkEditorMayOpen(fileName, refusal))
+    {
+        displayText(Ogre::ColourValue::White, refusal);
+        mRootWindow->getChild("ConfirmLoad")->hide();
+        return true;
+    }
+
     // Ogre::MaterialManager::getSingletonPtr()->unload("LiftedGold");    
     RenderManager::removeLiftedGoldMaterials();
     // The frame loop keeps drawing the depth pre-pass target until it is taken out: removing only its camera
@@ -2450,6 +2461,8 @@ bool EditorMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Lists the folder of the load browser; levels of both extensions are marked, shipped levels are left out
+//! without the hidden option.
 bool EditorMode::loadMenuFilePathTextChanged( const CEGUI::EventArgs& /*arg*/)
 {
 
@@ -2479,8 +2492,14 @@ bool EditorMode::loadMenuFilePathTextChanged( const CEGUI::EventArgs& /*arg*/)
                     if(!(isFileHidden(xx.path())
                          && !isCheckboxSelected("MenuEditorLoad/LevelWindowFrame/HiddenFiles")))
                     {
-                        if(xx.path().has_extension() && xx.path().extension().compare(L".level") == 0)
+                        if(xx.path().has_extension() && MapHandler::isLevelFileExtension(xx.path().extension().string()))
                         {
+                            // Shipped levels are not offered without the hidden option EditOfficialLevels
+                            if(!MapHandler::isEditOfficialLevelsEnabled()
+                                && MapHandler::isOfficialLevelPath(xx.path().string()))
+                            {
+                                continue;
+                            }
                             addPathNameToList(xx, levelSelectList, CEGUI::Colour(1,0.64,0), nn);
                         }
                     
@@ -2510,6 +2529,7 @@ bool EditorMode::loadMenuFilePathTextChanged( const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Opens a folder of the load browser or shows the description of a level of either extension.
 bool EditorMode::loadMenuLevelSelectSelected(const CEGUI::EventArgs& /*arg*/)
 {
     CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("MenuEditorLoad")->getChild("LevelWindowFrame")->getChild("LevelSelect"));
@@ -2529,7 +2549,7 @@ bool EditorMode::loadMenuLevelSelectSelected(const CEGUI::EventArgs& /*arg*/)
             levelEditBox->fireEvent(CEGUI::Editbox::EventTextAccepted,args);               
         }
 
-        else if(pp.has_extension() && pp.extension().compare(std::string(".level"))==0)
+        else if(pp.has_extension() && MapHandler::isLevelFileExtension(pp.extension().string()))
         {
             CEGUI::Window* descTxt =  mRootWindow->getChild("MenuEditorLoad")->getChild("LevelWindowFrame/MapDescriptionText");
             LevelInfo levelInfo;
@@ -2552,6 +2572,7 @@ bool EditorMode::loadMenuLevelSelectSelected(const CEGUI::EventArgs& /*arg*/)
 }
 
 
+//! \brief Loads a level of either extension that was double clicked in the load browser.
 bool EditorMode::loadMenuLevelDoubleClicked(const CEGUI::EventArgs& /*arg*/)
 {
     CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("MenuEditorLoad")->getChild("LevelWindowFrame")->getChild("LevelSelect"));
@@ -2560,7 +2581,7 @@ bool EditorMode::loadMenuLevelDoubleClicked(const CEGUI::EventArgs& /*arg*/)
     if(levelSelectList->getFirstSelectedItem())
     {
         path pp (levelSelectList->getFirstSelectedItem()->getText().c_str());
-        if(pp.has_extension() && pp.extension().compare(std::string(".level"))==0)
+        if(pp.has_extension() && MapHandler::isLevelFileExtension(pp.extension().string()))
         {
             loadMenuAskForConfirmation((levelEditBox->getText() + "/" + levelSelectList->getFirstSelectedItem()->getText()).c_str());
         }
@@ -2608,6 +2629,7 @@ bool EditorMode::saveMenuSaveButtonClicked(const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Lists the folder of the save browser; levels of both extensions are marked.
 bool EditorMode::saveMenuFilePathTextChanged(const CEGUI::EventArgs& /*arg*/)
 {
 
@@ -2634,7 +2656,7 @@ bool EditorMode::saveMenuFilePathTextChanged(const CEGUI::EventArgs& /*arg*/)
                 {
                     if(!(isFileHidden(xx.path()) && !isCheckboxSelected("MenuEditorSave/LevelWindowFrame/HiddenFiles")))
                     {
-                        if(xx.path().has_extension() && xx.path().extension().compare(std::string(".level")) == 0)
+                        if(xx.path().has_extension() && MapHandler::isLevelFileExtension(xx.path().extension().string()))
                         {
                             addPathNameToList(xx, levelSelectList, CEGUI::Colour(1,0.64,0), nn);
                         }
@@ -2670,6 +2692,7 @@ bool EditorMode::saveMenuFileNameTextChanged(const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Opens a folder of the save browser or takes the name of a level of either extension.
 bool EditorMode::saveMenuLevelSelectSelected(const CEGUI::EventArgs& /*arg*/)
 {
     CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>
@@ -2693,7 +2716,7 @@ bool EditorMode::saveMenuLevelSelectSelected(const CEGUI::EventArgs& /*arg*/)
             levelPathEditBox->fireEvent(CEGUI::Editbox::EventTextAccepted,args);               
         }
 
-        else if(pp.has_extension() && pp.extension().compare(std::string(".level"))==0)
+        else if(pp.has_extension() && MapHandler::isLevelFileExtension(pp.extension().string()))
         {
             levelNameEditBox->setText(pp.generic_string());
             levelNameEditBox->fireEvent(CEGUI::Editbox::EventTextAccepted,args);                  
@@ -3147,11 +3170,11 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     // Maps made in the editor carry the .mmap extension (a typed .level becomes .mmap, so that the map never
     // looks like a shipped level). It is added before the test, so that the file that would be written is tested.
     boost::filesystem::path pp(level);
-    if (pp.extension() == ".level") {
-        level = pp.replace_extension(".mmap").string();
+    if (pp.extension() == MapHandler::LEVEL_EXTENSION) {
+        level = pp.replace_extension(MapHandler::USER_MAP_EXTENSION).string();
     }
-    else if (pp.extension() != ".mmap") {
-        level.append(".mmap");
+    else if (pp.extension() != MapHandler::USER_MAP_EXTENSION) {
+        level.append(MapHandler::USER_MAP_EXTENSION);
     }
     if (boost::filesystem::exists(level)) {
         mRootWindow->getChild("LevelWindowFrame/LevelMessageText")

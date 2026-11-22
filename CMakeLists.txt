@@ -63,6 +63,8 @@ option(OD_TREAT_WARNINGS_AS_ERRORS "Treat any warning seen while compiling as er
 option(OD_USE_SFML_WINDOW "Use SFML for window and input handling" OFF)
 # Lobby multiplayer through a separate helper process (docs/development/NETWORK-TRANSPORT.md); off by default
 option(OD_NET_HELPER_RELAY "Build the lobby and relay transport through a separate helper process" OFF)
+# Map development builds: a changed shipped level still loads outside of multiplayer; off for every release build
+option(OD_DEVELOPER_MODE "Load changed shipped levels outside of multiplayer (map development builds only)" OFF)
 
 # enable/disable unit tests
 option(OD_BUILD_TESTING "Compile unit tests (to enable unit tests both this and BUILD_TESTING has to be on." OFF)
@@ -476,6 +478,7 @@ set(OD_SOURCEFILES
     ${SRC}/gamemap/LevelPreview.cpp
     ${SRC}/gamemap/RoomObjectNavigation.cpp
     ${SRC}/gamemap/MapHandler.cpp
+    ${SRC}/gamemap/OfficialLevels.cpp
     ${SRC}/gamemap/MiniMap.cpp
     ${SRC}/gamemap/MiniMapColours.cpp
     ${SRC}/gamemap/MiniMapDrawn.cpp
@@ -740,6 +743,20 @@ IF (OD_NET_HELPER_RELAY)
         ${SRC}/network/HelperRelayTransport.cpp)
 ENDIF ()
 
+# The checksums of the shipped levels (every .level below levels/skirmish, levels/multiplayer and levels/campaign)
+# are computed from the levels folder at every build into a generated source of the build directory and compiled into
+# the game; the generated file is not part of the repository. It is written once at configure time so that the
+# project files can list it, and the target below rewrites it at every build when a level changed.
+set(OD_LEVEL_CHECKSUMS_SOURCE "${CMAKE_BINARY_DIR}/generated/OfficialLevelChecksums.cpp")
+set(OD_LEVEL_CHECKSUMS_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/GenerateOfficialLevelChecksums.cmake")
+execute_process(COMMAND ${CMAKE_COMMAND} "-DLEVELS_DIR=${CMAKE_SOURCE_DIR}/levels"
+                "-DOUTPUT=${OD_LEVEL_CHECKSUMS_SOURCE}" -P "${OD_LEVEL_CHECKSUMS_SCRIPT}"
+                RESULT_VARIABLE OD_LEVEL_CHECKSUMS_RESULT)
+if(NOT OD_LEVEL_CHECKSUMS_RESULT EQUAL 0)
+    message(FATAL_ERROR "Could not compute the checksums of the shipped levels")
+endif()
+SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${OD_LEVEL_CHECKSUMS_SOURCE})
+
 # Adds the Windows icon resource file when building on windows.
 IF (WIN32)
     SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${CMAKE_SOURCE_DIR}/dist/icon.rc)
@@ -870,6 +887,21 @@ set_target_properties(${PROJECT_BINARY_NAME} PROPERTIES OUTPUT_NAME "${OD_EXECUT
 # Only the game gets the define; the unit test of the relay sets it on its own target (source/tests)
 if(OD_NET_HELPER_RELAY)
     target_compile_definitions(${PROJECT_BINARY_NAME} PRIVATE OD_NET_HELPER_RELAY)
+endif()
+
+# A custom target without output runs at every build: it recomputes the checksums of the shipped levels before the
+# game is compiled (the generated source only changes, and is only recompiled, when a level changed)
+add_custom_target(od_official_level_checksums
+    COMMAND ${CMAKE_COMMAND} "-DLEVELS_DIR=${CMAKE_SOURCE_DIR}/levels" "-DOUTPUT=${OD_LEVEL_CHECKSUMS_SOURCE}"
+            -P "${OD_LEVEL_CHECKSUMS_SCRIPT}"
+    BYPRODUCTS "${OD_LEVEL_CHECKSUMS_SOURCE}"
+    COMMENT "Computing the checksums of the shipped levels"
+    VERBATIM)
+add_dependencies(${PROJECT_BINARY_NAME} od_official_level_checksums)
+
+# The developer code path is compiled only with OD_DEVELOPER_MODE
+if(OD_DEVELOPER_MODE)
+    target_compile_definitions(${PROJECT_BINARY_NAME} PRIVATE OD_DEVELOPER_MODE)
 endif()
 
 #target_link_libraries(opendungeons-plus PRIVATE Python::Development)

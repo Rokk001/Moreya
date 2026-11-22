@@ -58,10 +58,14 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
+#include "gamemap/OfficialLevelChecksums.h"
 
 #include "ODApplication.h"
 
+#include <boost/filesystem.hpp>
+
 #include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -186,12 +190,111 @@ const std::string& getLastLoadError()
     return lastLoadError;
 }
 
+namespace {
+//! \brief Key of the hidden option in the [Game] part of the user config file; no menu shows it.
+const std::string EDIT_OFFICIAL_LEVELS_KEY = "EditOfficialLevels";
+
+//! \brief The folder of the game data that holds the shipped level folders.
+std::string getGameLevelsRoot()
+{
+    return ResourceManager::getSingleton().getGameDataPath() + "levels";
+}
+
+//! \brief The file name of a path for messages.
+std::string getShownFileName(const std::string& fileName)
+{
+    return boost::filesystem::path(fileName).filename().string();
+}
+} // namespace
+
+//! \brief Accepts the two level extensions.
+bool isLevelFileExtension(const std::string& extension)
+{
+    return (extension == LEVEL_EXTENSION) || (extension == USER_MAP_EXTENSION);
+}
+
+//! \brief Lists the files of both level extensions of a folder.
+bool fillLevelFilesList(const std::string& path, std::vector<std::string>& listFiles)
+{
+    if(!Helper::fillFilesList(path, listFiles, LEVEL_EXTENSION))
+        return false;
+    return Helper::fillFilesList(path, listFiles, USER_MAP_EXTENSION);
+}
+
+//! \brief Tests the path against the shipped level folders of the game data.
+bool isOfficialLevelPath(const std::string& fileName)
+{
+    std::string key;
+    return OfficialLevels::getOfficialKey(fileName, getGameLevelsRoot(), key);
+}
+
+//! \brief Reads the hidden option; it is off when missing.
+bool isEditOfficialLevelsEnabled()
+{
+    if(ConfigManager::getSingletonPtr() == nullptr)
+        return false;
+    std::string value = ConfigManager::getSingleton().getGameValue(EDIT_OFFICIAL_LEVELS_KEY, "0", false);
+    Helper::trim(value);
+    std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+    return (value == "1") || (value == "true") || (value == "on") || (value == "yes");
+}
+
+//! \brief Rejects a changed shipped level with a message for the player.
+bool checkOfficialLevel(const std::string& fileName, bool multiplayer, std::string& message)
+{
+    message.clear();
+    const OfficialLevels::Verdict verdict = OfficialLevels::verifyLevelFile(fileName, getGameLevelsRoot(),
+        OfficialLevelChecksums::ENTRIES, OfficialLevelChecksums::ENTRY_COUNT);
+    if(OfficialLevels::mayLoad(verdict, multiplayer))
+    {
+#ifdef OD_DEVELOPER_MODE
+        if(verdict == OfficialLevels::Verdict::Modified)
+            OD_LOG_WRN("Developer mode: loading the changed shipped level " + fileName);
+#endif
+        return true;
+    }
+
+    message = "The shipped level " + getShownFileName(fileName)
+        + " was changed and cannot be loaded (it does not match the checksum of this build).";
+    OD_LOG_ERR("Rejected the changed shipped level " + fileName);
+    return false;
+}
+
+//! \brief Refuses shipped levels in the editor without the hidden option, and changed shipped levels.
+bool checkEditorMayOpen(const std::string& fileName, std::string& message)
+{
+    message.clear();
+    if(!OfficialLevels::mayEditorOpen(isOfficialLevelPath(fileName), isEditOfficialLevelsEnabled()))
+    {
+        message = "Shipped levels cannot be opened in the editor: " + getShownFileName(fileName);
+        OD_LOG_WRN("The editor refused the shipped level " + fileName);
+        return false;
+    }
+    return checkOfficialLevel(fileName, false, message);
+}
+
+//! \brief Resolves an editor save target with the shipped and the user level folders of the game.
+OfficialLevels::EditorSaveTarget resolveEditorSaveTarget(const std::string& target, bool saveAs,
+    bool editOfficialLevels)
+{
+    ResourceManager& resources = ResourceManager::getSingleton();
+    return OfficialLevels::resolveEditorSaveTarget(target, saveAs, getGameLevelsRoot(), editOfficialLevels,
+        resources.getUserLevelPathSkirmish(), resources.getUserLevelPathMultiplayer());
+}
+
 //! \brief Loads map state and reports the failing section, retaining optional legacy sections. The optional
 //! [CombatGroups] section (raid registry and running combat groups) and the optional [Raid] section (gate, countdown
-//! and raid groups) come last.
-bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
+//! and raid groups) come last. A shipped level is first compared with the checksum compiled into the game.
+bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool strictOfficialCheck)
 {
     lastLoadError.clear();
+    // A changed shipped level is rejected before anything of it is read
+    std::string officialRejection;
+    if(!checkOfficialLevel(fileName, strictOfficialCheck, officialRejection))
+    {
+        setLoadError(officialRejection);
+        return false;
+    }
     std::stringstream levelFile;
     if(!Helper::readFile(fileName, levelFile,true))
     {

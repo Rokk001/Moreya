@@ -198,10 +198,15 @@ def free_port():
 
 
 def run_kind(exe, kind, level, scenario, seconds):
-    """Runs one game kind; returns (passed, text)."""
+    """Runs one game kind; returns (passed, text). The editor opens no shipped level without the hidden option, so
+    the editor kind opens an own copy of the level (.mmap) in the temporary app data folder."""
     appdata = tempfile.mkdtemp(prefix='od-return-menu-')
     limit = RUN_LIMIT_BASE_SECONDS + 2 * seconds
-    command = [str(exe), '--run-level', str(REPO / level), '--seconds', str(seconds), '--scenario', scenario,
+    level_file = REPO / level
+    if scenario == 'editor-return-to-menu':
+        level_file = Path(appdata) / (Path(level).stem + '.mmap')
+        shutil.copyfile(str(REPO / level), str(level_file))
+    command = [str(exe), '--run-level', str(level_file), '--seconds', str(seconds), '--scenario', scenario,
                '--appData', appdata, '--port', str(free_port())]
     started = time.monotonic()
     try:

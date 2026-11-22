@@ -130,6 +130,7 @@ void MenuModeMultiplayerServer::activate()
     updateFilesList();
 }
 
+//! \brief Lists the levels of the selected level type, with both level extensions.
 bool MenuModeMultiplayerServer::updateFilesList(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::multiplayerServerMenu);
@@ -156,7 +157,8 @@ bool MenuModeMultiplayerServer::updateFilesList(const CEGUI::EventArgs&)
             break;
     }
 
-    if(Helper::fillFilesList(levelPath, mFilesList, MapHandler::LEVEL_EXTENSION))
+    // Both extensions: the shipped .level files and the .mmap maps of the editor (older own maps are .level files)
+    if(MapHandler::fillLevelFilesList(levelPath, mFilesList))
     {
         for (uint32_t n = 0; n < mFilesList.size(); ++n)
         {
@@ -188,6 +190,7 @@ bool MenuModeMultiplayerServer::updateFilesList(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Hosts the selected level; a changed shipped level is never hosted, the host gets a message instead.
 bool MenuModeMultiplayerServer::serverButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::multiplayerServerMenu);
@@ -226,6 +229,14 @@ bool MenuModeMultiplayerServer::serverButtonPressed(const CEGUI::EventArgs&)
         return true;
     }
     const std::string& level = mFilesList[id];
+
+    // A changed shipped level is rejected in multiplayer, also in a developer build (the server start checks it again)
+    std::string rejection;
+    if(!MapHandler::checkOfficialLevel(level, true, rejection))
+    {
+        mainWin->getChild(Gui::MPM_TEXT_LOADING)->setText(rejection);
+        return true;
+    }
 
     bool useMasterServer = (getModeType() == ModeManager::MENU_MASTERSERVER_HOST);
 

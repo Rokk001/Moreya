@@ -156,6 +156,8 @@ private:
     bool mSeatsConfigured;
     //! Player allowed to configure the lobby, save the game, ...
     Player* mPlayerConfig;
+    //! The hidden option EditOfficialLevels, read when the server starts: the editor may open and save shipped levels
+    bool mEditOfficialLevels;
     std::vector<Player*> mDisconnectedPlayers;
 
     std::deque<ServerNotification*> mServerNotificationQueue;

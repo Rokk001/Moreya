@@ -3,8 +3,8 @@
     python source/tests/check_editor_save.py        (cl must be on the path: run it under vcvars64)
 
 Requirements checked (each reported on its own, expected values are fixed):
-  D2  the New dialog of EditorMode and of MenuModeEditorNew appends the .mmap extension before it tests whether
-      the file exists (static)
+  D2  the New dialog of EditorMode and of MenuModeEditorNew appends the .mmap extension (the shared constant
+      MapHandler::USER_MAP_EXTENSION, which is ".mmap") before it tests whether the file exists (static)
   D3  writeGameMapToFile writes the [Scripts] section the loader reads: the entries live in the GameMap, the loader
       fills them and skips comment lines, the section is written between [HerbBundles] and the level script, and
       ScriptEntry::format / ScriptEntry::parse (the production header) round-trip the [Scripts] lines of the
@@ -107,7 +107,9 @@ maphandler = read('source/gamemap/MapHandler.cpp')
 for label, text, name in (('EditorMode', editor, 'bool EditorMode::launchNewLevelPressed('),
                           ('MenuModeEditorNew', new_menu, 'bool MenuModeEditorNew::launchSelectedButtonPressed(')):
     body = function(text, name)
-    check('".mmap"' in body and before(body, '".mmap"', 'exists(level'),
+    # The extension is the shared constant of MapHandler.h (".mmap", checked by check_official_level_protection P5)
+    extension = 'MapHandler::USER_MAP_EXTENSION'
+    check('append(%s)' % extension in body and before(body, extension, 'exists(level'),
           'D2 %s appends .mmap before it tests whether the file exists' % label)
     check('append(".level")' not in body, 'D2 %s no longer appends the .level extension' % label)
 

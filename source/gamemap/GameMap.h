@@ -143,7 +143,9 @@ public:
 
     //! \brief Load a level file (Part of the resource paths)
     //! \returns whether the file loaded correctly
-    bool loadLevel(const std::string& levelFilepath);
+    //! \param strictOfficialCheck True (multiplayer, and the default): a changed shipped level is always rejected.
+    //! False: a developer build loads a changed shipped level (single player and editor).
+    bool loadLevel(const std::string& levelFilepath, bool strictOfficialCheck = true);
 
     //! \brief Setup the map memory to fit the given size.
     //! This methods also puts default (dirt) tiles on the new map.
