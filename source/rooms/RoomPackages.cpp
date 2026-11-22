@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <fstream>
 #include <mutex>
+#include <set>
 #include <sstream>
 #include <utility>
 
@@ -54,11 +55,21 @@ const PackagedRoom PACKAGED_ROOMS[] =
     { RoomType::spa, "Spa" }
 };
 
-//! \brief The kept room packages (room type to package folder) and the lock that guards them.
+//! \brief The kept room packages (room type to package folder), the limit of the server's room packages and the lock
+//! that guards them.
 struct Registry
 {
+    //! \brief Starts without packages and without the limit of a server.
+    Registry() :
+        mServerLimited(false)
+    {}
+
     std::mutex mMutex;
     std::map<RoomType, std::string> mPackages;
+    //! True while the room packages of the server (mServerPackages) limit the available rooms
+    bool mServerLimited;
+    //! The room names of the server's room packages
+    std::set<std::string> mServerPackages;
 };
 
 //! \brief The registry of the found packages, created on first use.
@@ -206,14 +217,47 @@ void RoomPackages::setPackages(const std::map<RoomType, std::string>& packages)
     registry.mPackages = packages;
 }
 
-//! \brief A room that is not packaged is always available; a packaged room needs its package.
+//! \brief A room that is not packaged is always available; a packaged room needs its package and, while the server's
+//! room packages limit the rooms, the server's package too.
 bool RoomPackages::isRoomAvailable(RoomType type)
 {
     if(!isPackagedRoom(type))
         return true;
     Registry& registry = getRegistry();
     std::lock_guard<std::mutex> lock(registry.mMutex);
-    return registry.mPackages.count(type) != 0;
+    if(registry.mPackages.count(type) == 0)
+        return false;
+    return !registry.mServerLimited || (registry.mServerPackages.count(getPackageRoomName(type)) != 0);
+}
+
+//! \brief The names of the kept packages; the map is in room type order, so the names are sorted afterwards.
+std::vector<std::string> RoomPackages::getAvailablePackageNames()
+{
+    Registry& registry = getRegistry();
+    std::lock_guard<std::mutex> lock(registry.mMutex);
+    std::vector<std::string> names;
+    for(const std::pair<const RoomType, std::string>& package : registry.mPackages)
+        names.push_back(getPackageRoomName(package.first));
+    std::sort(names.begin(), names.end());
+    return names;
+}
+
+//! \brief Keeps the server's room names under the lock.
+void RoomPackages::setServerPackages(const std::vector<std::string>& names)
+{
+    Registry& registry = getRegistry();
+    std::lock_guard<std::mutex> lock(registry.mMutex);
+    registry.mServerPackages = std::set<std::string>(names.begin(), names.end());
+    registry.mServerLimited = true;
+}
+
+//! \brief Forgets the server's room names under the lock.
+void RoomPackages::clearServerPackages()
+{
+    Registry& registry = getRegistry();
+    std::lock_guard<std::mutex> lock(registry.mMutex);
+    registry.mServerPackages.clear();
+    registry.mServerLimited = false;
 }
 
 //! \brief The kept folder of the room's package, or an empty text.

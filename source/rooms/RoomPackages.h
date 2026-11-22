@@ -62,8 +62,20 @@ namespace RoomPackages
     //! \brief Replaces the kept packages (the result of discover()), for tools and tests.
     void setPackages(const std::map<RoomType, std::string>& packages);
 
-    //! \brief True for every room that needs no package and for a packaged room whose package was found.
+    //! \brief True for every room that needs no package and for a packaged room whose package was found and, while
+    //! the client is connected to a server that sent its room packages (setServerPackages), the server has too.
     bool isRoomAvailable(RoomType type);
+
+    //! \brief The room names of the found packages (the kept packages, not limited by setServerPackages), sorted.
+    //! The client sends them with hello and the server with loadLevel.
+    std::vector<std::string> getAvailablePackageNames();
+
+    //! \brief Limits the packaged rooms isRoomAvailable() offers to those the server named: a client may have more
+    //! room packages than its server, and the server's packages govern. Kept until clearServerPackages().
+    void setServerPackages(const std::vector<std::string>& names);
+
+    //! \brief Removes the limit of setServerPackages(), so that only the found packages count again.
+    void clearServerPackages();
 
     //! \brief The folder of the package of the room; empty when the room is not packaged or its package is missing.
     std::string getPackageDirectory(RoomType type);

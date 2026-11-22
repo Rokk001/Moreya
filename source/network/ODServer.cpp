@@ -52,6 +52,7 @@
 #include "gamemap/DraggableTileContainer.h"
 #include "gamemap/MapHandler.h"
 #include "modes/ConsoleCommands.h"
+#include "network/ContentPackageCheck.h"
 #include "network/CosmeticEvent.h"
 #include "network/ODClient.h"
 #include "network/ServerGuards.h"
@@ -66,6 +67,7 @@
 #include "rooms/RoomGhostRoom.h"
 #include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomPackages.h"
 #include "rooms/RoomPortalWave.h"
 #include "rooms/RoomSpa.h"
 #include "rooms/RoomTavern.h"
@@ -1398,7 +1400,8 @@ bool isEditorTileChangeValid(GameMap* gameMap, TileType tileType, double tileFul
 //! \brief Validates and handles requests received from a connected player, the early opening of the raid gate
 //! included.
 //! \brief Processes one client notification, including Dungeonbook subscriptions. A player who possesses a creature
-//! cannot save the game.
+//! cannot save the game. The hello of a client that lacks a room package of the server is refused with the names of
+//! the missing packages.
 bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 {
     if (!clientSocket)
@@ -1502,6 +1505,27 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 return false;
             }
 
+            // The client names its room packages after the version. A client that lacks a room package of this
+            // server is refused with the names of the missing packages; more packages than the server is fine.
+            std::vector<std::string> clientPackages;
+            if(!ContentPackageCheck::readList(packetReceived, clientPackages))
+            {
+                OD_LOG_WRN("Refused a client with an invalid list of room packages in its hello message");
+                return false;
+            }
+            const std::vector<std::string> serverPackages = RoomPackages::getAvailablePackageNames();
+            const std::vector<std::string> missingPackages = ContentPackageCheck::findMissing(serverPackages,
+                clientPackages);
+            if(!missingPackages.empty())
+            {
+                OD_LOG_INF("Server rejected client. " + ContentPackageCheck::missingMessage(missingPackages));
+                ODPacket packetRefused;
+                packetRefused << ServerNotificationType::clientRejected;
+                ContentPackageCheck::writeList(packetRefused, missingPackages);
+                clientSocket->send(packetRefused);
+                return false;
+            }
+
             // Tell the client to load the given map
             OD_LOG_INF("Level sent to client: " + gameMap->getLevelName());
             clientSocket->setState("loadLevel");
@@ -1511,6 +1535,8 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             ODPacket packet;
             packet << ServerNotificationType::loadLevel;
             packet << version;
+            // The client offers only the packaged rooms this server can build
+            ContentPackageCheck::writeList(packet, serverPackages);
             packet << mapSizeX << mapSizeY;
             // Map infos
             packet << gameMap->getLevelName();
@@ -2228,6 +2254,8 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             {
                 ODPacket packetSend;
                 packetSend << ServerNotificationType::clientRejected;
+                // No missing room packages: these clients were left out of the seat configuration
+                ContentPackageCheck::writeList(packetSend, std::vector<std::string>());
                 for(ODSocketClient* client : clientsToRemove)
                 {
                     Player* player = client->getPlayer();

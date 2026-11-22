@@ -15,7 +15,9 @@ Static part, always:
     the files of PACKAGED_ASSETS.
 Probe (needs cl): RoomPackages.cpp compiled with small stand-ins for the logger, the wing package folders and
 boost::filesystem (std::filesystem) answers: a room without package is unavailable, a room with package is available,
-a room that needs no package is always available, a wing package names no room, the first package of a room wins.
+a room that needs no package is always available, a wing package names no room, the first package of a room wins,
+the found packages are named sorted, and the room packages of a server limit the available rooms until the limit is
+removed (a room of the client that the server lacks is unavailable, the names of the found packages stay).
 Runtime part, when the built game build/windows/moreya.exe exists: the game plays levels/skirmish/TestSpa.level (a
 tavern and a spa) with the load test parameters (--run-level, 1 second) without MOREYA_CONTENT_DIR, so no room package
 is found; the run must pass and the log must show both rooms left out.
@@ -136,6 +138,8 @@ check("RoomPackages::getPackageDirectories()" in read("source/sound/SoundEffects
       "the sounds of the room packages must be loaded")
 check("RoomPackages::discover(resMgr.getGameDataPath())" in read("source/ODApplication.cpp"),
       "the game must find the room packages at startup")
+check("registry.mServerLimited" in body(packages_cpp, "bool RoomPackages::isRoomAvailable("),
+      "the room packages of the server must limit the available rooms")
 
 # The public tree holds none of the packaged room assets
 tracked = set(subprocess.run(["git", "-C", str(ROOT), "ls-files"], capture_output=True, text=True,
@@ -246,6 +250,21 @@ int main(int argc, char** argv)
     check(RoomPackages::getPackageDirectory(RoomType::tavern) == (root / "content/room-tavern").generic_string(),
         "the first package of a room wins");
     check(RoomPackages::getPackageDirectories().size() == 2, "two packages found");
+    const std::vector<std::string> found = RoomPackages::getAvailablePackageNames();
+    check((found.size() == 2) && (found[0] == "Spa") && (found[1] == "Tavern"), "the found packages are named sorted");
+
+    // A server with the tavern and the merchant: the client offers only the tavern
+    std::vector<std::string> server;
+    server.push_back("Tavern");
+    server.push_back("Merchant");
+    RoomPackages::setServerPackages(server);
+    check(RoomPackages::isRoomAvailable(RoomType::tavern), "a room both have is available");
+    check(!RoomPackages::isRoomAvailable(RoomType::spa), "a room the server lacks is unavailable");
+    check(!RoomPackages::isRoomAvailable(RoomType::merchant), "a room the client lacks stays unavailable");
+    check(RoomPackages::isRoomAvailable(RoomType::dormitory), "a room that needs no package stays available");
+    check(RoomPackages::getAvailablePackageNames().size() == 2, "the limit does not change the found packages");
+    RoomPackages::clearServerPackages();
+    check(RoomPackages::isRoomAvailable(RoomType::spa), "without the limit the found packages count again");
     std::cout << "room packages probe: failures=" << failures << '\n';
     return failures == 0 ? 0 : 1;
 }

@@ -24,6 +24,8 @@ probe = r'''
 #include <string>
 #include <cstdint>
 #include <stdexcept>
+#include <vector>
+#include "network/ContentPackageCheck.h"
 static int ticks=0, attempts=0, readyAt=0, sleeps=0, binds=0, freeAt=0, errors=0, closes=0, disconnects=0, sends=0;
 namespace sf {
 //! \brief Exposes deterministic elapsed milliseconds.
@@ -50,6 +52,8 @@ struct TcpListener {
 struct ODPacket { template<class T> ODPacket& operator<<(const T&) { return *this; } };
 enum class ClientNotificationType {hello};
 static const std::string OD_VERSION_STR="test";
+//! \brief Supplies the room package names that the hello names.
+static std::vector<std::string> allRoomPackageNames() { return std::vector<std::string>(1, "Spa"); }
 //! \brief Supplies the network record schema suffix that the hello names.
 namespace NetworkProtocol { static const std::string WIRE_SCHEMA_SUFFIX=" / wire-test"; }
 //! \brief Simulates server connection readiness.
@@ -92,7 +96,8 @@ int main() {
 with tempfile.TemporaryDirectory(prefix='odp-network-waits-') as temporary:
     work = Path(temporary)
     (work / 'probe.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', 'probe.cpp', '/Feprobe.exe'], cwd=work, check=True, timeout=60)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', '/I' + str(ROOT / 'source'), 'probe.cpp', '/Feprobe.exe'],
+                   cwd=work, check=True, timeout=60)
     subprocess.run([str(work / 'probe.exe')], cwd=work, check=True, timeout=10)
     # Verify that the real socket library rejects an occupied listener and accepts its release.
     (work / 'port.cpp').write_text(r'''
