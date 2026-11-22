@@ -237,6 +237,8 @@ bool RoomFactory::buildRoomDefault(GameMap* gameMap, Room* room, Seat* seat, con
     return true;
 }
 
+//! \brief Builds the room of an editor request on its tiles. All tiles are read before one is changed, so a request
+//! with a tile outside the map changes nothing; the room is deleted whenever it is not added to the map.
 bool RoomFactory::buildRoomDefaultEditor(GameMap* gameMap, Room* room, ODPacket& packet) const
 {
     int32_t seatId;
@@ -245,10 +247,11 @@ bool RoomFactory::buildRoomDefaultEditor(GameMap* gameMap, Room* room, ODPacket&
     if(seatRoom == nullptr)
     {
         OD_LOG_ERR("seatId=" + Helper::toString(seatId));
+        delete room;
         return false;
     }
 
-    std::vector<Tile*> tiles;
+    std::vector<Tile*> packetTiles;
     uint32_t nbTiles;
     OD_ASSERT_TRUE(packet >> nbTiles);
 
@@ -259,9 +262,15 @@ bool RoomFactory::buildRoomDefaultEditor(GameMap* gameMap, Room* room, ODPacket&
         if(tile == nullptr)
         {
             OD_LOG_ERR("unexpected null tile room=" + room->getName());
+            delete room;
             return false;
         }
+        packetTiles.push_back(tile);
+    }
 
+    std::vector<Tile*> tiles;
+    for(Tile* tile : packetTiles)
+    {
         // If the tile is not buildable, we change it
         if(tile->getCoveringBuilding() != nullptr)
         {
@@ -281,7 +290,13 @@ bool RoomFactory::buildRoomDefaultEditor(GameMap* gameMap, Room* room, ODPacket&
     }
 
 
-    return buildRoomDefault(gameMap, room, seatRoom, tiles);
+    // Without a free tile the room is not added to the map
+    if(!buildRoomDefault(gameMap, room, seatRoom, tiles))
+    {
+        delete room;
+        return false;
+    }
+    return true;
 }
 
 void RoomManager::registerFactory(const RoomFactory* factory)
@@ -400,6 +415,8 @@ void RoomManager::checkBuildRoomEditor(GameMap* gameMap, RoomType type, const In
     factory.checkBuildRoomEditor(gameMap, inputManager, inputCommand);
 }
 
+//! \brief Builds a room the editor placed; a type outside the factories or without a factory builds nothing and
+//! returns false.
 bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& packet)
 {
     std::vector<const RoomFactory*>& factories = getFactories();
@@ -407,6 +424,13 @@ bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& pac
     if(index >= factories.size())
     {
         OD_LOG_ERR("type=" + Helper::toString(index) + ", factories.size=" + Helper::toString(factories.size()));
+        return false;
+    }
+
+    // A type without a registered factory has nothing to build
+    if(factories[index] == nullptr)
+    {
+        OD_LOG_ERR("no room factory for type=" + Helper::toString(index));
         return false;
     }
 

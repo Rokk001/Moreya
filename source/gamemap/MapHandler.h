@@ -20,7 +20,9 @@
 #define MAPHANDLER_H
 
 #include <string>
+#include <vector>
 #include "game/Campaign.h"
+#include "gamemap/OfficialLevels.h"
 
 class GameMap;
 
@@ -60,7 +62,9 @@ namespace MapHandler
     //! \param gameMap The game map to fill.
     //! \return False if the file or one of its sections is invalid.
     //! \brief Loads supported level formats and reports every rejected section.
-    bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap);
+    //! \param strictOfficialCheck True (multiplayer, and the default): a changed shipped level is always rejected.
+    //! False: a developer build loads a changed shipped level (single player and editor).
+    bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool strictOfficialCheck = true);
 
     //! \brief Tells whether a file version header (e.g. "OpenDungeons_Version:0.7.4.20") can be loaded.
     //! Any build number of a supported release (0.7.1, 0.7.2, 0.7.4) is accepted, as is the running version.
@@ -96,11 +100,43 @@ namespace MapHandler
     bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo);
 
     //! \brief Counts the number of all seats in the levelfile, needed to initialize the structure
-    //! everVisitedflagpool plus map Size X and map Size Y
+    //! everVisitedflagpool plus map Size X and map Size Y. highestSeatId is the highest seat id of the [Seat] tags
+    //! (0 without seats): the pool is indexed by the seat id, and the ids of a level can have gaps.
 
-    void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats);
+    void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats, int& highestSeatId);
     //! \brief Level extension constant, used in different GUI modes.
-    static const std::string LEVEL_EXTENSION = ".level";
+    static const std::string LEVEL_EXTENSION = OfficialLevels::LEVEL_FILE_EXTENSION;
+    //! \brief Extension of the maps made in the editor (the shipped levels keep LEVEL_EXTENSION).
+    static const std::string USER_MAP_EXTENSION = OfficialLevels::USER_MAP_EXTENSION;
+
+    //! \brief Tells whether an extension (with its dot) is the one of a level: LEVEL_EXTENSION or USER_MAP_EXTENSION.
+    bool isLevelFileExtension(const std::string& extension);
+
+    //! \brief Adds the levels of a folder to the list: both extensions, LEVEL_EXTENSION and USER_MAP_EXTENSION.
+    //! \return False if the folder does not exist.
+    bool fillLevelFilesList(const std::string& path, std::vector<std::string>& listFiles);
+
+    //! \brief Tells whether a file lies inside one of the shipped level folders of the game data.
+    bool isOfficialLevelPath(const std::string& fileName);
+
+    //! \brief Tells whether the hidden option EditOfficialLevels of the user config file is on.
+    bool isEditOfficialLevelsEnabled();
+
+    //! \brief Compares a shipped level with the checksum compiled into the game.
+    //! \param multiplayer True for a multiplayer game, where a changed shipped level is always rejected.
+    //! \param message Set to the reason shown to the player when the level is rejected.
+    //! \return False if the level must not be loaded.
+    bool checkOfficialLevel(const std::string& fileName, bool multiplayer, std::string& message);
+
+    //! \brief Tells whether the editor may open a file: a shipped level only with the hidden option, and only when
+    //! it passes checkOfficialLevel.
+    //! \param message Set to the reason shown to the player when the file is refused.
+    bool checkEditorMayOpen(const std::string& fileName, std::string& message);
+
+    //! \brief Decides where an editor save of target is written (see OfficialLevels::resolveEditorSaveTarget), with
+    //! the folders of the game.
+    OfficialLevels::EditorSaveTarget resolveEditorSaveTarget(const std::string& target, bool saveAs,
+        bool editOfficialLevels);
 };
 
 #endif // MAPHANDLER_H

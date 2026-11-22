@@ -171,6 +171,7 @@ void MenuModeSkirmish::activate()
         ODFrameListener::getSingleton().getClientGameMap()->setLocalPlayerNick(nickname);
 }
 
+//! \brief Lists the levels of the selected level type, with both level extensions.
 bool MenuModeSkirmish::updateFilesList(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::skirmishMenu);
@@ -204,12 +205,12 @@ bool MenuModeSkirmish::updateFilesList(const CEGUI::EventArgs&)
             break;
         case LEVEL_TYPE_SANDBOX:
             levelPath = ResourceManager::getSingleton().getGameLevelPathSkirmish();
-            Helper::fillFilesList(ResourceManager::getSingleton().getUserLevelPathSkirmish(),
-                levelFiles, MapHandler::LEVEL_EXTENSION);
+            MapHandler::fillLevelFilesList(ResourceManager::getSingleton().getUserLevelPathSkirmish(), levelFiles);
             break;
     }
 
-    Helper::fillFilesList(levelPath, levelFiles, MapHandler::LEVEL_EXTENSION);
+    // Both extensions: the shipped .level files and the .mmap maps of the editor (older own maps are .level files)
+    MapHandler::fillLevelFilesList(levelPath, levelFiles);
 
     // The realms of the sandbox are listed in the order of their file names
     // A realm is open once the realm before it (the one that names it as its next realm) is complete
@@ -281,6 +282,7 @@ bool MenuModeSkirmish::updateFilesList(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Starts the selected level as a single player game; a changed shipped level is rejected with a message.
 bool MenuModeSkirmish::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::skirmishMenu);
@@ -298,6 +300,13 @@ bool MenuModeSkirmish::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     int id = selItem->getID();
 
     const std::string& level = mFilesList[id];
+    // A changed shipped level is rejected with its reason (the server start checks it again)
+    std::string rejection;
+    if(!MapHandler::checkOfficialLevel(level, false, rejection))
+    {
+        mainWin->getChild(Gui::SKM_TEXT_LOADING)->setText(rejection);
+        return true;
+    }
     // In single player mode, we act as a server
     const std::string& nickname = ODFrameListener::getSingleton().getClientGameMap()->getLocalPlayerNick();
     CEGUI::ToggleButton* relationshipsCheckbox = static_cast<CEGUI::ToggleButton*>(

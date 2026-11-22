@@ -25,6 +25,7 @@
 #include "goals/Goal.h"
 #include "goals/GoalLoading.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/MapHandler.h"
 #include "modes/ModeManager.h"
 #include "network/ODClient.h"
 #include "network/ODServer.h"
@@ -1155,6 +1156,7 @@ bool MenuModeCampaign::briefingClosePressed(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Starts a campaign level; a locked, missing or changed shipped level is refused with a message.
 void MenuModeCampaign::startLevel(size_t index)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -1173,6 +1175,14 @@ void MenuModeCampaign::startLevel(size_t index)
     {
         OD_LOG_ERR("Campaign level not found: " + level);
         statusText->setText("ERROR: Campaign level file not found.");
+        return;
+    }
+
+    // A changed shipped level is rejected with its reason (the server start checks it again)
+    std::string rejection;
+    if(!MapHandler::checkOfficialLevel(level, false, rejection))
+    {
+        statusText->setText(rejection);
         return;
     }
 
