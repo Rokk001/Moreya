@@ -250,6 +250,8 @@ void ODApplication::startClient()
     const bool fullscreen = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes" && sf::VideoMode({w, h}).isValid();
 #else
     const bool fullscreen = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes";
+    // The X button must reach ODFrameListener::windowClosed(), otherwise the game runs on without a window
+    ODFrameListener::addWindowEventProcedure(misc);
 #endif
     OD_LOG_INF("Creating window: with resolution " + Helper::toString(w) + " " + Helper::toString(h));
     Ogre::RenderWindow* renderWindow = ogreRoot.createRenderWindow(windowTitle, w, h,
