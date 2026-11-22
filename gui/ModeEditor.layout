@@ -49,9 +49,6 @@
                     <Window type="OD/MenuItem" name="Rotate">
                         <Property name="Text" value="Rotate"/>     
                     </Window>
-                    <Window type="OD/MenuItem" name="MirrorX">
-                        <Property name="Text" value="MirrorX"/>     
-                    </Window>                    
                 </Window>
             </Window>
             <Window type="OD/MenuItem" name="Creatures">

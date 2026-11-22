@@ -56,6 +56,7 @@
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
 #include "utils/Helper.h"
+#include "utils/MapSizeInput.h"
 #include "ODApplication.h"
 
 
@@ -229,12 +230,6 @@ EditorMode::EditorMode(ModeManager* modeManager):
             CEGUI::Event::Subscriber(&EditorMode::onEditDelete, this)
     ));
     addEventConnection(
-        mRootWindow->getChild("Menubar")->getChild("Edit")->getChild("PopupMenu3")
-        ->getChild("MirrorX")->subscribeEvent(
-            CEGUI::Window::EventMouseClick,
-            CEGUI::Event::Subscriber(&EditorMode::onEditMirrorX, this)
-    ));
-    addEventConnection(
         mRootWindow->getChild("Menubar")->getChild("Help")->getChild("PopupMenu6")
         ->getChild("Controls")->subscribeEvent(
             CEGUI::Window::EventMouseClick,
@@ -250,6 +245,12 @@ EditorMode::EditorMode(ModeManager* modeManager):
     addEventConnection(
         mRootWindow->getChild("LevelWindowFrame")->subscribeEvent(
             CEGUI::FrameWindow::EventCloseClicked,
+            CEGUI::Event::Subscriber(&EditorMode::hideNewLevelDialog, this)
+    ));
+    // The Back button closes the New dialog like the X button and Escape do
+    addEventConnection(
+        mRootWindow->getChild("LevelWindowFrame/BackButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&EditorMode::hideNewLevelDialog, this)
     ));
    
@@ -1429,12 +1430,15 @@ bool EditorMode::onPortalWaveAddWave(const CEGUI::EventArgs& /*arg*/)
     return true;
 }
 
+//! \brief Removes the selected wave. The values typed into the window are taken over first, so that the
+//! other waves keep what was typed into them.
 bool EditorMode::onPortalWaveRemoveWave(const CEGUI::EventArgs& /*arg*/)
 {
     if((mPortalWaveSelectedWave < 0) ||
        (static_cast<size_t>(mPortalWaveSelectedWave) >= mPortalWaveConfig.mWaves.size()))
         return true;
 
+    readPortalWaveWindow();
     mPortalWaveConfig.mWaves.erase(mPortalWaveConfig.mWaves.begin() + mPortalWaveSelectedWave);
     if(mPortalWaveConfig.mWaves.empty())
         mPortalWaveSelectedWave = -1;
@@ -1963,13 +1967,6 @@ void EditorMode::unmarkRegion()
     displayText(Ogre::ColourValue::White, name + " removed. Save the level to keep the change.");
 }
 
-void EditorMode::onEditMirrorX()
-{
-
-    ClientNotification* notif1 = new ClientNotification(ClientNotificationType::editorAskDeleteDraggableTileContainer);
-    ODClient::getSingleton().queueClientNotification(notif1);
-}
-
 
 //! Rendering methods
 void EditorMode::onFrameStarted(const Ogre::FrameEvent& evt)
@@ -2204,6 +2201,7 @@ void EditorMode::askCreateGiftBox(GiftBoxType type, const std::string& content, 
 
 bool EditorMode::showNewLevelDialog(const CEGUI::EventArgs& /*arg*/)
 {
+    mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("");
     mRootWindow->getChild("LevelWindowFrame")->show();
     mCurrentInputMode = InputModeNew;
     return true;
@@ -2285,6 +2283,38 @@ bool EditorMode::onYesConfirmMenu(const CEGUI::EventArgs& /*arg*/)
     return loadLevelFromFile(dialogFullPath);
 }
 
+//! \brief Drops what belongs to the level that was open before a load or a new level: the copy block of the client,
+//! the tile marker and selection, the selected seat (back to the seat of the local player) and the wave window.
+void EditorMode::resetStateAfterLevelChange()
+{
+    if(draggableTileContainer != nullptr)
+    {
+        delete draggableTileContainer;
+        draggableTileContainer = nullptr;
+    }
+    mModeManager->getInputManager().mMouseDownOnDraggableTileContainer = false;
+    mTileMarker.isVisible = false;
+    unselectAllTiles();
+    hidePortalWaveWindow();
+
+    // The seats of the old level are gone: the selection goes back to the seat of the local player
+    Player* player = mGameMap->getLocalPlayer();
+    if((player != nullptr) && (player->getSeat() != nullptr))
+        getModeManager().getInputManager().mSeatIdSelected = player->getSeat()->getId();
+    updateFlagColor();
+    updateCursorText();
+}
+
+//! \brief Brings the editor view back after the console was left. Only the sheet, the focus and the displays are
+//! restored: the selected seat and the paths of the file dialogs stay as they are.
+void EditorMode::restoreAfterConsole()
+{
+    getModeManager().getGui().loadGuiSheet(Gui::editorModeGui);
+    giveFocus();
+    updateFlagColor();
+    updateCursorText();
+}
+
 //! \brief Replaces the editor map while using its existing status text for the loading screen.
 bool EditorMode::loadLevelFromFile(const std::string& fileName)
 {
@@ -2349,6 +2379,7 @@ bool EditorMode::loadLevelFromFile(const std::string& fileName)
     mMiniMap = MiniMap::createMiniMap(mRootWindow->getChild(Gui::MINIMAP));
     mMainCullingManager = new CullingManager(mGameMap, CullingType::SHOW_MAIN_WINDOW);
     mMainCullingManager->startTileCulling(ODFrameListener::getSingleton().getCameraManager()->getActiveCamera(), mCameraTilesIntersections);
+    resetStateAfterLevelChange();
     mRootWindow->getChild("ConfirmLoad")->hide();
     mModifiedMapBit = false;
     addToRecentlyUsed(fileName);
@@ -3101,7 +3132,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     std::string level = editWin->getText().c_str();
     Helper::trim(level);
     if (level.empty()) {
-        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
             ->setText("Please set a level filename.");
         return true;
     }
@@ -3117,7 +3148,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
         level.append(".mmap");
     }
     if (boost::filesystem::exists(level)) {
-        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
             ->setText("The level filename already exists.\nPlease set a different filename.");
         return true;
     }
@@ -3125,13 +3156,13 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     // Get the map size.
     editWin = static_cast<CEGUI::Editbox*>(mRootWindow->getChild("LevelWindowFrame/LevelWidthEdit"));
     std::string widthStr = editWin->getText().c_str();
-    uint32_t width = Helper::toUInt32(widthStr);
     editWin = static_cast<CEGUI::Editbox*>(mRootWindow->getChild("LevelWindowFrame/LevelHeightEdit"));
     std::string heightStr = editWin->getText().c_str();
-    uint32_t height = Helper::toUInt32(heightStr);
-
-    if (width == 0 || height == 0) {
-        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Invalid map size.");
+    int32_t width = 0;
+    int32_t height = 0;
+    if (!MapSizeInput::parse(widthStr, width) || !MapSizeInput::parse(heightStr, height)) {
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Invalid map size.\nWidth and height must be\nwhole numbers from 1 to "
+            + Helper::toString(MapSizeInput::MAX_SIZE) + ".");
         return true;
     }
 
@@ -3139,7 +3170,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     editWin = static_cast<CEGUI::Editbox*>(mRootWindow->getChild("LevelWindowFrame/LevelTitleEdit"));
     std::string levelTitle = editWin->getText().c_str();
     if (levelTitle.empty()) {
-        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Please set a level title.");
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Please set a level title.");
         return true;
     }
     // A failed earlier load or new level can have left the culling manager null
@@ -3168,14 +3199,19 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
         ODServer::getSingleton().stopServer();
 
     
-    mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Loading...");
+    mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Loading...");
     LoadingScreen loading;
 
     // Create the level before opening it.
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     gameMap->clearAll();
     gameMap->setGamePaused(true);
-    gameMap->createNewMap(width, height);
+    if(!gameMap->createNewMap(width, height))
+    {
+        OD_LOG_WRN("Couldn't create a new map of size " + Helper::toString(width) + "x" + Helper::toString(height));
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Couldn't create a map of this size.");
+        return true;
+    }
     gameMap->setLevelFileName(level);
     gameMap->setLevelName(levelTitle);
     CEGUI::MultiLineEditbox* meditWin = static_cast<CEGUI::MultiLineEditbox*>(
@@ -3197,13 +3233,13 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     {
         OD_LOG_WRN("Couldn't add seat id=" + Helper::toString(seat->getId()));
         delete seat;
-        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Invalid seat data...");
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")->setText("Invalid seat data...");
         return true;
     }
 
     if (!MapHandler::writeGameMapToFile(level, *gameMap)) {
         OD_LOG_WRN("Couldn't write new map before loading: " + level);
-        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
             ->setText("Couldn't write new map before loading.\nPlease check logs.");
         return true;
     }
@@ -3214,7 +3250,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeEditor, false))
     {
         OD_LOG_ERR("Could not start server for editor!");
-        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
             ->setText("ERROR: Could not start server for editor!");
         return true;
     }
@@ -3226,11 +3262,11 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     if(!ODClient::getSingleton().connect("localhost", port, timeout, replayFilename))
     {
         OD_LOG_ERR("Could not connect to server for editor!");
-        mRootWindow->getChild("LevelWindowFrame/LevelTypeText")
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
             ->setText("Error: Couldn't connect to local server!");
         return true;
     }
-    mRootWindow->getChild("LevelWindowFrame/LevelTypeText")
+    mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
         ->setText("The level was created successfully.");
 
     ODClient::getSingleton().processClientSocketMessages(75);
@@ -3241,6 +3277,7 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     mMiniMap = MiniMap::createMiniMap(mRootWindow->getChild(Gui::MINIMAP));
     mMainCullingManager = new CullingManager(mGameMap, CullingType::SHOW_MAIN_WINDOW);
     mMainCullingManager->startTileCulling(ODFrameListener::getSingleton().getCameraManager()->getActiveCamera(), mCameraTilesIntersections);
+    resetStateAfterLevelChange();
     
     loading.continueLoading();
     return true;

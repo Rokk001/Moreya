@@ -31,6 +31,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/MapSizeInput.h"
 #include "utils/ResourceManager.h"
 
 #include <CEGUI/CEGUI.h>
@@ -150,13 +151,13 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     // Get the map size.
     editWin = static_cast<CEGUI::Editbox*>(window->getChild("LevelWindowFrame/LevelWidthEdit"));
     std::string widthStr = editWin->getText().c_str();
-    uint32_t width = Helper::toUInt32(widthStr);
     editWin = static_cast<CEGUI::Editbox*>(window->getChild("LevelWindowFrame/LevelHeightEdit"));
     std::string heightStr = editWin->getText().c_str();
-    uint32_t height = Helper::toUInt32(heightStr);
-
-    if (width == 0 || height == 0) {
-        window->getChild(TEXT_LOADING)->setText("Invalid map size.");
+    int32_t width = 0;
+    int32_t height = 0;
+    if (!MapSizeInput::parse(widthStr, width) || !MapSizeInput::parse(heightStr, height)) {
+        window->getChild(TEXT_LOADING)->setText("Invalid map size. Width and height must be whole numbers from 1 to "
+            + Helper::toString(MapSizeInput::MAX_SIZE) + ".");
         return true;
     }
 
@@ -167,7 +168,12 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     gameMap->clearAll();
     gameMap->setGamePaused(true);
-    gameMap->createNewMap(width, height);
+    if(!gameMap->createNewMap(width, height))
+    {
+        OD_LOG_WRN("Couldn't create a new map of size " + Helper::toString(width) + "x" + Helper::toString(height));
+        window->getChild(TEXT_LOADING)->setText("Couldn't create a map of this size.");
+        return true;
+    }
     gameMap->setLevelFileName(level);
     editWin = static_cast<CEGUI::Editbox*>(window->getChild("LevelWindowFrame/LevelTitleEdit"));
     std::string levelTitle = editWin->getText().c_str();

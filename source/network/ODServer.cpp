@@ -4496,6 +4496,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
         case ClientNotificationType::editorAskCreateMapLight:
         {
+            if(mServerMode != ServerMode::ModeEditor)
+            {
+                OD_LOG_ERR("Received editor command while wrong mode=" + Helper::toString(static_cast<int>(mServerMode)));
+                break;
+            }
             Player* player = clientSocket->getPlayer();
             MapLight* mapLight = new MapLight(gameMap, true);
             mapLight->setName(gameMap->nextUniqueNameMapLight());

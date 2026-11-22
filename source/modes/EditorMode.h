@@ -132,6 +132,10 @@ public:
     bool onYesConfirmMenu(const CEGUI::EventArgs& /*arg*/);
     //! \brief Creates and opens a new editor map while retaining the loading presentation.
     bool launchNewLevelPressed(const CEGUI::EventArgs&);
+    //! \brief Drops the state that belongs to the level that was open before a load or a new level.
+    void resetStateAfterLevelChange();
+    //! \brief Brings the editor view back after the console was left, without a full activate().
+    void restoreAfterConsole() override;
     void setTileVisualIfArgNotNull(TileVisual tileVisual)
     { mCurrentTileVisual = tileVisual; }
 
@@ -287,7 +291,6 @@ private:
     void onEditCopy();
     void onEditPaste();
     void onEditDelete();
-    void onEditMirrorX();
     
     //! \brief Called when there is a mouse input change
     void checkInputCommand();

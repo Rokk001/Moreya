@@ -381,5 +381,11 @@ void GameEditorModeBase::leaveConsole()
 {
     // We're no more in console mode.
     mCurrentInputMode = InputModeNormal;
+    restoreAfterConsole();
+}
+
+//! \brief Default view restore after the console: a full activate().
+void GameEditorModeBase::restoreAfterConsole()
+{
     activate();
 }
