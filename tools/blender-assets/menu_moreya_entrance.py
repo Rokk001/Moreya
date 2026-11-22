@@ -1,31 +1,30 @@
-"""Build the entrance into Moreya for the start screen: the staircase in the rear yard and its signpost.
+"""Build the entrance into Moreya for the start screen: the green portal behind the campaign table and its signpost.
 
-    MenuMoreyaStairs    a wide stone staircase that leads from the rear yard behind the campaign hall, in front of
-                        the abandoned castle, down into the ground and on as a tunnel under the yard to an ember-lit
-                        doorway; kerb and low parapets frame the opening, iron ember bowls hang on the stairwell walls
+    MenuMoreyaPortal    the other side of the green start gate of the campaign map: a round arch of grey stone
+                        blocks on two coursed pillars with carved capitals, its opening filled with green fire
+                        (material MenuMoreyaPortalFire, texture by tools/gen_menu_portal_fire.py), damp moss on the
+                        stones and hanging from the arch, two iron fire bowls on stone pedestals in front of the
+                        pillars, all on a low stone platform with a front step; the flames over the bowls and the
+                        rising green flames in the arch are particle systems (particles/MenuScene.particle)
     MenuMoreyaSignpost  a smaller signpost of the start screen signpost family (moreya_raid_models.py PartBuilder,
-                        same wood, iron and board planks); its upright arrow board carries the word "Moreya" and
-                        its tip points down the stairs
-    MenuHallRearArch    the stone frame (jambs, lintel, threshold) of the opening in the back wall of the campaign
-                        hall through which one walks from the table to the stair head and the campaign flight looks
-                        out into the rear yard
+                        same wood, iron and board planks); its upright arrow board carries the word "Moreya"
     MenuForgeCoals      a heap of charred coal lumps with small embers glowing between them on the forge hearth of
                         the rear yard (MenuFortressRear.mesh), in place of its former flat glowing slab
 
-Units are menu scene units. The stairs' origin is the middle of the upper edge of the first step on the yard floor
-(z 0); they descend along +Y, away from the hall towards the castle. The opening in the floor is x -3.0..3.0,
-y 0..6.0 of the mesh; the scene places the mesh at (0, 31.0, 0), right behind the opening in the hall's back wall,
-so the yard floor must be open over x -3.0..3.0, y 31.0..37.0 (tools/menu_cut_moreya_opening.py); the tunnel runs on
-under the yard and the castle. The signpost's origin is the foot of its post; the scene places it beside the top
-step on the hall side. Its board is upright, faces the hall and its tip points over the stairwell along +Y.
+Units are menu scene units. The portal's origin is the middle of its foot on the hall floor (z 0) in the plane of
+the fire; the fire faces -Y, towards the campaign table and the camera of the campaign flight. The scene places it
+in the campaign hall right behind the table, its back just in front of the hall's back wall (inner face at y
+HALL_BACK_WALL). The signpost's origin is the foot of its post; the scene places it in the hall beside the portal,
+its board upright and facing the hall, its tip pointing towards the portal.
 
 Run in Blender (5.x):
-    blender --background --python menu_moreya_entrance.py -- <repo> <private output folder> [stairs] [signpost]
-        [arch] [coals] [render | render_open | render_real | render_after2]
-"stairs", "signpost", "arch" and "coals" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes with
-OgreXMLConverter into <repo>/models. "render" renders the menu scene of config/mainmenuscene.cfg from the campaign
-pose and the waypoints of the campaign flight into <private>/renders (see render_poses). The board lettering is
-written by tools/gen_menu_signpost_lettering.py (--text Moreya). Progress goes to <private>/menu_moreya_entrance.log.
+    blender --background --python menu_moreya_entrance.py -- <repo> <private output folder> [portal] [signpost]
+        [coals] [render]
+"portal", "signpost" and "coals" write <name>.blend and <name>.mesh.xml into the private folder and convert the meshes
+with OgreXMLConverter into <repo>/models. "render" renders the menu scene of config/mainmenuscene.cfg from the
+campaign pose and the waypoints of the campaign flight into <private>/renders (see render_poses). The board lettering
+is written by tools/gen_menu_signpost_lettering.py (--text Moreya). Progress goes to
+<private>/menu_moreya_entrance.log.
 """
 import math
 import os
@@ -35,34 +34,25 @@ import traceback
 from pathlib import Path
 
 import bpy
-import bmesh
 from mathutils import Matrix, Quaternion, Vector
 
-#: Inner half width of the stairwell, tread depth and riser height of a step, number of steps.
-HALF, TREAD, RISE, STEPS = 3.0, 0.5, 0.3, 20
-#: Length of the open part of the stairwell (the rest runs as a tunnel under the yard) and of the landing.
-OPEN_LENGTH, LANDING = 6.0, 1.6
-#: The stairwell walls: mortar plane behind the blocks and the depth of the wall blocks.
-BACKING = HALF + 0.06
-#: Ceiling of the tunnel under the yard: underside height at the open end and its slope (parallel to the steps).
-CEILING_START, CEILING_SLOPE = -1.05, RISE / TREAD
-#: Thickness of the tunnel ceiling and of the wall courses above its underside (keeps the tunnel under the bedding).
-TUNNEL_COVER = 0.12
-#: The doorway at the foot of the stairs: half width, height above the landing, depth of the recess.
-DOOR_HALF, DOOR_HEIGHT, DOOR_DEPTH = 1.1, 1.75, 1.2
-#: Where the scene places the stair head (y of the upper edge of the first step), right behind the opening in the
-#: hall's back wall; the opening in the yard floor runs from STAIRS_HEAD_Y to STAIRS_HEAD_Y + OPEN_LENGTH.
-STAIRS_HEAD_Y = 31.0
-#: The opening in the back wall of the campaign hall (scene coordinates): half width, sill and top height, and the
-#: wall's inner and outer face (y). tools/menu_cut_moreya_opening.py cuts the same box out of the hall mesh.
-ARCH_HALF, ARCH_SILL, ARCH_HEIGHT = 4.0, 0.12, 4.2
-ARCH_WALL = (29.25, 30.25)
+#: The inner face of the campaign hall's back wall (scene y); the portal stands in front of it.
+HALL_BACK_WALL = 29.25
+#: The portal: inner half width of the opening, spring height of the arch (top of the capitals), width of the
+#: pillars and of the arch ring, half depth of the pillars, number of arch blocks and the plane of the fire (y).
+PORTAL_INNER, PORTAL_SPRING, PILLAR_WIDTH, PILLAR_DEPTH = 1.6, 3.6, 0.85, 0.5
+ARCH_BLOCKS, FIRE_Y = 13, 0.0
+FIRE_MATERIAL = "MenuMoreyaPortalFire"
+#: The platform under the portal (x min, x max, y min, y max) and its top height.
+PLINTH, PLINTH_TOP = (-3.3, 3.3, -2.2, 0.62), 0.22
+#: The fire bowls: distance of their centres from the middle, their y and the height of their rims.
+BOWL_X, BOWL_Y, BOWL_TOP, BOWL_RIM = 2.3, -1.5, 1.3, 0.45
 #: The coal bed on the forge hearth of the rear yard (scene x min, x max, y min, y max) and the hearth top height.
 FORGE_BED = (3.05, 4.95, 40.95, 42.05)
 FORGE_HEARTH = 0.85
 #: Signpost: board outline in its own frame (back end, shoulder, tip, lower and upper edge), thickness planes,
-#: the tilt of the board (0: upright), the turn of the whole signpost about Z (tip towards +Y and the middle of the
-#: stairwell, down the stairs; board front towards the hall and the campaign flight) and its size factor.
+#: the tilt of the board (0: upright), the turn of the whole signpost about Z (tip towards +X and +Y, from the left
+#: of the portal towards its opening; board front towards the hall and the campaign flight) and its size factor.
 SIGN_BACK, SIGN_SHOULDER, SIGN_TIP = -0.30, 1.80, 2.10
 SIGN_BOTTOM, SIGN_TOP = 1.75, 2.35
 SIGN_FRONT_Y, SIGN_BACK_Y = -0.22, -0.135
@@ -78,237 +68,120 @@ def log(text):
     LOG.flush()
 
 
-def tread_height(y):
-    """Returns the height of the tread at distance y along the stairs (0 before the first step, flat on the landing)."""
-    if y < 0.0:
-        return 0.0
-    return -(min(int(y / TREAD), STEPS - 1) + 1) * RISE
-
-
-def ceiling_height(y):
-    """Returns the underside height of the tunnel ceiling at distance y along the stairs."""
-    end = STEPS * TREAD
-    return CEILING_START - CEILING_SLOPE * (min(max(y, OPEN_LENGTH), end) - OPEN_LENGTH)
-
-
 def box(b, x0, x1, y0, y1, z0, z1, material, grain=(1, 0, 0)):
     """Adds an axis-aligned box between two corners."""
     b.solid([(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0)], (0, 0, z1 - z0), material, grain)
 
 
-def profile_x(b, profile, x0, x1, material, grain=(1, 0, 0)):
-    """Extrudes a convex profile given as (y, z) points from x0 to x1."""
-    b.solid([(x0, y, z) for y, z in profile], (x1 - x0, 0, 0), material, grain)
-
-
-def wall_face(b, side, y0, y1, z0, z1, material):
-    """Adds one quad of the stairwell wall plane at x = side * BACKING facing the inside of the stairwell."""
-    x = side * BACKING
-    points = [(x, y0, z0), (x, y1, z0), (x, y1, z1), (x, y0, z1)]
-    b.face(points if side < 0 else list(reversed(points)), material, (0, 1, 0))
-
-
-def add_steps(b):
-    """Adds the steps: each step is a row of worn slabs with chipped nosings, slightly uneven."""
-    for index in range(STEPS):
-        front = index * TREAD
-        top = tread_height(front)
-        # A dark mortar bed under the whole step closes the joints between its slabs (no view through them).
-        box(b, -BACKING, BACKING, front - 0.08, front + TREAD - 0.04, top - RISE - 0.1, top - 0.05, "MenuSoot")
-        x = -BACKING
-        while x < BACKING - 0.05:
-            width = b.rng.uniform(0.9, 1.7)
-            right = min(x + width, BACKING)
-            if BACKING - right < 0.6:
-                right = BACKING
-            lift = b.rng.uniform(-0.02, 0.015)
-            chip = b.rng.uniform(0.03, 0.06) if b.rng.random() < 0.6 else b.rng.uniform(0.08, 0.16)
-            shift = b.rng.uniform(-0.03, 0.02)
-            # The stairs descend along +Y: the far edge of each tread is the worn nosing over the next, lower step,
-            # and the slab reaches back under the step above it.
-            edge = front + TREAD + shift
-            profile = [(front - 0.08, top - RISE - 0.12), (edge, top - RISE - 0.12), (edge, top + lift - chip * 0.7),
-                       (edge - chip, top + lift), (front - 0.08, top + lift)]
-            profile_x(b, profile, x + 0.012, right - 0.012, "MenuChippedStone")
-            x = right
-    # The landing at the foot of the stairs.
-    end = STEPS * TREAD
-    bottom = tread_height(end)
-    box(b, -BACKING, BACKING, end - 0.05, end + LANDING + 0.1, bottom - 0.38, bottom - 0.05, "MenuSoot")
-    x = -BACKING
-    while x < BACKING - 0.05:
-        right = min(x + b.rng.uniform(1.0, 1.6), BACKING)
-        if BACKING - right < 0.6:
-            right = BACKING
-        y = end
-        while y < end + LANDING - 0.05:
-            far = min(y + b.rng.uniform(0.6, 0.9), end + LANDING + 0.1)
-            box(b, x + 0.012, right - 0.012, y + 0.012, far - 0.012, bottom - 0.4, bottom + b.rng.uniform(-0.02, 0.01),
-                "MenuChippedStone")
+def add_plinth(b):
+    """Adds the stone platform the portal and its fire bowls stand on: worn slabs on a dark bed and a front step."""
+    x0, x1, y0, y1 = PLINTH
+    box(b, x0 + 0.03, x1 - 0.03, y0 + 0.03, y1 - 0.03, -0.12, PLINTH_TOP - 0.04, "MenuSoot")
+    x = x0
+    while x < x1 - 0.05:
+        right = min(x + b.rng.uniform(0.9, 1.5), x1)
+        if x1 - right < 0.5:
+            right = x1
+        y = y0
+        while y < y1 - 0.05:
+            far = min(y + b.rng.uniform(0.7, 1.1), y1)
+            if y1 - far < 0.4:
+                far = y1
+            box(b, x + 0.015, right - 0.015, y + 0.015, far - 0.015, -0.1,
+                PLINTH_TOP + b.rng.uniform(-0.025, 0.01), "MenuChippedStone")
             y = far
+        x = right
+    x = x0 + 0.3
+    while x < x1 - 0.35:
+        right = min(x + b.rng.uniform(1.0, 1.6), x1 - 0.3)
+        if x1 - 0.3 - right < 0.5:
+            right = x1 - 0.3
+        box(b, x + 0.015, right - 0.015, y0 - 0.45, y0 + 0.02, -0.1, PLINTH_TOP / 2 + b.rng.uniform(-0.02, 0.01),
+            "MenuChippedStone")
         x = right
 
 
-def add_walls(b):
-    """Adds both stairwell walls: a mortar plane and coursed stone blocks in front of it, under the ceiling."""
-    end = STEPS * TREAD + LANDING
+def add_pillars(b):
+    """Adds the two pillars of coursed blocks with a wider base block and a carved capital under the arch."""
     for side in (-1, 1):
-        # The mortar plane reaches the yard floor along the open part and stays under the ground over the tunnel.
-        wall_face(b, side, -0.1, OPEN_LENGTH, -7.5, 0.0, "MenuSoot")
-        points = [(side * BACKING, OPEN_LENGTH, -7.5), (side * BACKING, end + 0.1, -7.5),
-                  (side * BACKING, end + 0.1, ceiling_height(end) + TUNNEL_COVER),
-                  (side * BACKING, OPEN_LENGTH, ceiling_height(OPEN_LENGTH) + TUNNEL_COVER)]
-        b.face(points if side < 0 else list(reversed(points)), "MenuSoot", (0, 1, 0))
-        top = 0.0
-        while top > -7.4:
-            height = b.rng.uniform(0.3, 0.42)
-            y = -b.rng.uniform(0.0, 0.5)
-            while y < end:
-                length = b.rng.uniform(0.55, 1.1)
-                far = min(y + length, end + 0.1)
-                if y < OPEN_LENGTH < far:
-                    # No block reaches from the open stairwell into the tunnel: the tunnel blocks end at its ceiling.
-                    far = OPEN_LENGTH
-                block_top = top
-                if far > OPEN_LENGTH:
-                    block_top = min(top, ceiling_height(y) + TUNNEL_COVER)
-                block_bottom = top - height
-                if block_top - block_bottom > 0.06 and block_top > tread_height(far) - RISE:
-                    face = side * (HALF + b.rng.uniform(-0.025, 0.03))
-                    inner, outer = sorted((face, side * (BACKING + 0.25)))
-                    box(b, inner, outer, max(y, -0.1) + 0.02, far - 0.02, block_bottom + 0.02, block_top - 0.02,
-                        "MenuDarkStone", (0, 1, 0))
-                y = far
-            top -= height
+        inner, outer = sorted((side * PORTAL_INNER, side * (PORTAL_INNER + PILLAR_WIDTH)))
+        box(b, inner - 0.1, outer + 0.1, -PILLAR_DEPTH - 0.12, PILLAR_DEPTH + 0.12, PLINTH_TOP - 0.02,
+            PLINTH_TOP + 0.55, "MenuCarvedStone", (0, 0, 1))
+        bottom = PLINTH_TOP + 0.565
+        capital = PORTAL_SPRING - 0.38
+        while bottom < capital - 0.05:
+            top = min(bottom + b.rng.uniform(0.48, 0.62), capital)
+            if capital - top < 0.3:
+                top = capital
+            jitter = (b.rng.uniform(-0.03, 0.02), b.rng.uniform(-0.02, 0.03))
+            box(b, inner + jitter[0], outer + jitter[1], -PILLAR_DEPTH + b.rng.uniform(-0.03, 0.02),
+                PILLAR_DEPTH, bottom, top - 0.015, "MenuChippedStone", (0, 0, 1))
+            bottom = top
+        box(b, inner - 0.14, outer + 0.14, -PILLAR_DEPTH - 0.14, PILLAR_DEPTH + 0.1, capital, capital + 0.14,
+            "MenuCarvedStone")
+        box(b, inner - 0.06, outer + 0.06, -PILLAR_DEPTH - 0.06, PILLAR_DEPTH + 0.05, capital + 0.14,
+            PORTAL_SPRING, "MenuCarvedStone")
 
 
-def add_ceiling(b):
-    """Adds the tunnel under the yard: a carved lintel at the end of the opening and ceiling slabs along the steps.
-
-    Over the tunnel the ground stays; everything of the tunnel lies at least 0.9 below the floor (under the bedding
-    of the paving), so nothing of it shows through the joints of the flagstones.
-    """
-    box(b, -BACKING - 0.3, BACKING + 0.3, OPEN_LENGTH - 0.3, OPEN_LENGTH, CEILING_START - 0.08, 0.04,
-        "MenuCarvedStone")
-    box(b, -BACKING - 0.3, BACKING + 0.3, OPEN_LENGTH, OPEN_LENGTH + 0.3, CEILING_START - 0.08,
-        CEILING_START + TUNNEL_COVER, "MenuCarvedStone")
-    end = STEPS * TREAD + LANDING
-    y = OPEN_LENGTH + 0.3
-    while y < end + 0.05:
-        far = min(y + b.rng.uniform(0.7, 1.0), end + 0.1)
-        drop = b.rng.uniform(0.0, 0.04)
-        near_z, far_z = ceiling_height(y) - drop, ceiling_height(far) - drop
-        profile_x(b, [(y, near_z), (far, far_z), (far, far_z + TUNNEL_COVER), (y, near_z + TUNNEL_COVER)], -BACKING - 0.1,
-                  BACKING + 0.1, "MenuDarkStone")
-        y = far + 0.015
+def arch_point(radius, angle):
+    """Returns the (x, z) of a point on a circle about the arch centre (angle 0 right, pi left)."""
+    return radius * math.cos(angle), PORTAL_SPRING + radius * math.sin(angle)
 
 
-def add_doorway(b):
-    """Adds the end wall at the foot of the stairs with a doorway whose steps lead on into the ember-lit deep."""
-    end = STEPS * TREAD + LANDING
-    floor = tread_height(STEPS * TREAD)
-    ceiling = ceiling_height(end)
-    lintel = floor + DOOR_HEIGHT
-    box(b, -BACKING, -DOOR_HALF, end, end + 0.5, floor - 0.2, ceiling + 0.3, "MenuDarkStone")
-    box(b, DOOR_HALF, BACKING, end, end + 0.5, floor - 0.2, ceiling + 0.3, "MenuDarkStone")
-    box(b, -DOOR_HALF - 0.1, DOOR_HALF + 0.1, end - 0.08, end + 0.5, lintel, ceiling + 0.3, "MenuCarvedStone")
-    back = end + DOOR_DEPTH
+def add_arch(b):
+    """Adds the round arch of wedge-shaped blocks over the pillars, with a larger keystone at the crown."""
+    inner, outer = PORTAL_INNER, PORTAL_INNER + PILLAR_WIDTH
+    gap = 0.012
+    for index in range(ARCH_BLOCKS):
+        a0 = math.pi * index / ARCH_BLOCKS + gap
+        a1 = math.pi * (index + 1) / ARCH_BLOCKS - gap
+        key = index == ARCH_BLOCKS // 2
+        reach = outer + (0.22 if key else b.rng.uniform(-0.04, 0.05))
+        front = -PILLAR_DEPTH - (0.1 if key else b.rng.uniform(-0.02, 0.03))
+        corners = [arch_point(inner, a0), arch_point(inner, a1), arch_point(reach, a1), arch_point(reach, a0)]
+        b.solid([(x, front, z) for x, z in corners], (0, PILLAR_DEPTH - front, 0), "MenuChippedStone",
+                (math.cos((a0 + a1) / 2), 0, math.sin((a0 + a1) / 2)))
+
+
+def add_fire(b):
+    """Adds the green fire face that fills the opening under the arch, facing the hall (-Y)."""
+    y, bottom = FIRE_Y, PLINTH_TOP - 0.01
+    columns = 6
+    for index in range(columns):
+        x0 = -PORTAL_INNER + 2 * PORTAL_INNER * index / columns
+        x1 = -PORTAL_INNER + 2 * PORTAL_INNER * (index + 1) / columns
+        b.face([(x0, y, bottom), (x1, y, bottom), (x1, y, PORTAL_SPRING), (x0, y, PORTAL_SPRING)], FIRE_MATERIAL)
+    sides = 16
+    for index in range(sides):
+        a0, a1 = math.pi * index / sides, math.pi * (index + 1) / sides
+        x0, z0 = arch_point(PORTAL_INNER, a0)
+        x1, z1 = arch_point(PORTAL_INNER, a1)
+        b.face([(0.0, y, PORTAL_SPRING), (x0, y, z0), (x1, y, z1)], FIRE_MATERIAL)
+
+
+def add_moss(b):
+    """Adds damp moss on the capitals, the base blocks and the arch, and strands hanging from the arch."""
     for side in (-1, 1):
-        inner, outer = sorted((side * DOOR_HALF, side * (DOOR_HALF + 0.3)))
-        box(b, inner, outer, end + 0.5, back, floor - 1.2, lintel, "MenuDarkStone", (0, 1, 0))
-    box(b, -DOOR_HALF - 0.3, DOOR_HALF + 0.3, end + 0.5, back, lintel, lintel + 0.3, "MenuDarkStone")
-    box(b, -DOOR_HALF - 0.3, DOOR_HALF + 0.3, back, back + 0.3, floor - 1.2, lintel + 0.3, "MenuDarkStone")
-    box(b, -DOOR_HALF, DOOR_HALF, end - 0.05, end + 0.5, floor - 0.4, floor, "MenuChippedStone")
-    for index in range(3):
-        y = end + 0.5 + index * 0.24
-        far = back if index == 2 else y + 0.24
-        box(b, -DOOR_HALF, DOOR_HALF, y, far, floor - 1.3, floor - (index + 1) * RISE, "MenuChippedStone")
-    # Ember light from the deep: glowing cracks on the back of the recess and in the floor in front of it.
-    crack(b, [(-0.8, floor - 0.9), (-0.45, floor - 0.2), (-0.55, floor + 0.5), (-0.2, floor + 1.2)],
-          "y", back - 0.005, 0.035)
-    crack(b, [(0.7, floor - 0.9), (0.4, floor - 0.1), (0.55, floor + 0.6), (0.25, floor + 1.4)], "y", back - 0.005,
-          0.03)
-    crack(b, [(-0.25, floor - 0.95), (0.05, floor - 0.4), (-0.05, floor + 0.3)], "y", back - 0.005, 0.025)
+        middle = side * (PORTAL_INNER + PILLAR_WIDTH / 2)
+        for dx in (-0.3, 0.05, 0.32):
+            b.rock((middle + dx, -PILLAR_DEPTH + 0.05, PORTAL_SPRING - 0.22), (0.2, 0.16, 0.05), "MenuMoss")
+        for dx in (-0.35, 0.3):
+            b.rock((middle + dx, -PILLAR_DEPTH - 0.05, PLINTH_TOP + 0.56), (0.22, 0.14, 0.05), "MenuMoss")
+    outer = PORTAL_INNER + PILLAR_WIDTH
+    for angle in (0.35, 0.8, 1.25, 1.9, 2.35, 2.8):
+        x, z = arch_point(outer + 0.02, angle)
+        b.rock((x, -PILLAR_DEPTH + 0.15, z), (0.24, 0.2, 0.07), "MenuMoss")
+        for strand in range(b.rng.randint(1, 3)):
+            sx, sz = arch_point(b.rng.uniform(PORTAL_INNER + 0.15, outer - 0.1), angle + b.rng.uniform(-0.12, 0.12))
+            length = b.rng.uniform(0.35, 1.0)
+            b.log_column((sx, -PILLAR_DEPTH - 0.01, sz), (sx + b.rng.uniform(-0.06, 0.06), -PILLAR_DEPTH - 0.05,
+                         sz - length), 0.035, 0.012, "MenuMoss", sides=5, rough=0.008)
 
 
-def crack(b, points, plane, offset, width):
-    """Adds a glowing ember crack: a thin strip along a polyline of (a, b) points on a plane.
-
-    plane "y" lays the strip on the plane y = offset facing -Y with points (x, z); plane "z" lays it on the plane
-    z = offset facing up with points (x, y).
-    """
-    for (a0, b0), (a1, b1) in zip(points, points[1:]):
-        length = math.hypot(a1 - a0, b1 - b0)
-        na, nb = -(b1 - b0) / length * width, (a1 - a0) / length * width
-        quad = [(a0 - na, b0 - nb), (a1 - na, b1 - nb), (a1 + na, b1 + nb), (a0 + na, b0 + nb)]
-        if plane == "y":
-            points3, wanted = [Vector((qa, offset, qb)) for qa, qb in quad], Vector((0, -1, 0))
-        else:
-            points3, wanted = [Vector((qa, qb, offset)) for qa, qb in quad], Vector((0, 0, 1))
-        if (points3[1] - points3[0]).cross(points3[2] - points3[1]).dot(wanted) < 0:
-            points3.reverse()
-        b.face(points3, "MenuEmberCrack", (1, 0, 0))
-
-
-def add_tread_cracks(b):
-    """Adds glowing cracks on the lower steps, where the ember light of the deep comes up between the slabs."""
-    for index in range(9, STEPS, 2):
-        y = index * TREAD + b.rng.uniform(0.12, 0.38)
-        x = b.rng.uniform(-2.2, 0.6)
-        points = [(x, y)]
-        for _ in range(3):
-            x += b.rng.uniform(0.25, 0.55)
-            points.append((x, y + b.rng.uniform(-0.05, 0.05)))
-        crack(b, points, "z", tread_height(index * TREAD + 0.25) + 0.03, 0.018)
-
-
-def add_kerb_and_parapets(b):
-    """Adds the kerb stones in front of the first step and the low, partly broken parapets along both sides."""
-    x = -HALF - 0.45
-    while x < HALF + 0.45 - 0.05:
-        right = min(x + b.rng.uniform(0.7, 1.2), HALF + 0.45)
-        if HALF + 0.45 - right < 0.4:
-            right = HALF + 0.45
-        box(b, x + 0.015, right - 0.015, -0.38, 0.0, -0.35, 0.1 + b.rng.uniform(-0.02, 0.01), "MenuCarvedStone")
-        x = right
-    for side in (-1, 1):
-        inner, outer = sorted((side * HALF, side * (HALF + 0.45)))
-        y = 0.0
-        while y < OPEN_LENGTH - 0.2:
-            far = min(y + b.rng.uniform(0.7, 1.2), OPEN_LENGTH - 0.12)
-            if OPEN_LENGTH - 0.12 - far < 0.5:
-                far = OPEN_LENGTH - 0.12
-            height = 0.45 + b.rng.uniform(-0.04, 0.03)
-            if side > 0 and 2.0 < y < 3.4:
-                # A broken stretch of the right parapet: the upper course has fallen onto the steps.
-                height = 0.12 + b.rng.uniform(0.0, 0.05)
-            box(b, inner + 0.01, outer - 0.01, y + 0.015, far - 0.015, -0.45, height, "MenuCarvedStone", (0, 1, 0))
-            y = far
-    for centre, size in (((HALF - 0.55, 2.65, tread_height(2.65) + 0.12), (0.34, 0.26, 0.17)),
-                         ((HALF - 1.15, 3.35, tread_height(3.35) + 0.08), (0.22, 0.2, 0.12)),
-                         ((HALF + 0.75, 2.4, 0.08), (0.2, 0.24, 0.12)),
-                         ((-HALF + 0.4, 6.7, tread_height(6.7) + 0.08), (0.2, 0.18, 0.11))):
-        b.rock(centre, size, "MenuRoughStone")
-
-
-def add_ember_bowls(b):
-    """Adds iron ember bowls on brackets along both walls; their coals glow."""
-    for side in (-1, 1):
-        for y in (1.6, 4.1, 7.0, 9.6):
-            base = tread_height(y) + 1.05
-            wall = side * HALF
-            centre = Vector((side * (HALF - 0.32), y, base))
-            b.log_column((wall + side * 0.02, y, base - 0.32), (centre.x, y, base - 0.06), 0.03, 0.03,
-                         "MenuCorrodedIron", sides=6, rough=0.0)
-            b.log_column((wall + side * 0.02, y, base + 0.02), (centre.x, y, base + 0.02), 0.025, 0.025,
-                         "MenuCorrodedIron", sides=6, rough=0.0)
-            bowl(b, centre)
-
-
-def bowl(b, centre):
-    """Adds one open iron bowl filled with glowing coals at a centre point (the rim height)."""
-    sides = 10
-    rim, foot, depth = 0.22, 0.1, 0.17
+def fire_bowl(b, centre):
+    """Adds one wide iron fire bowl at a centre point (the rim height) filled with glowing coals."""
+    sides = 14
+    rim, foot, depth = BOWL_RIM, 0.2, 0.3
     upper = [centre + Vector((rim * math.cos(i * 2 * math.pi / sides), rim * math.sin(i * 2 * math.pi / sides), 0.0))
              for i in range(sides)]
     lower = [centre + Vector((foot * math.cos(i * 2 * math.pi / sides), foot * math.sin(i * 2 * math.pi / sides),
@@ -318,53 +191,48 @@ def bowl(b, centre):
         following = (index + 1) % sides
         b.face((lower[index], lower[following], upper[following], upper[index]), "MenuCorrodedIron", (0, 0, 1))
         b.face((upper[index], upper[following], lower[following], lower[index]), "MenuCorrodedIron", (0, 0, 1))
-    # A small glowing core sunk into the bowl, mostly covered by dark lumps of charred coal, so the bowl reads as
-    # dark iron with embers between the coals rather than as a bright disc.
-    coals = [centre + Vector((0.6 * (point - centre).x, 0.6 * (point - centre).y, -0.07)) for point in upper]
-    top = centre + Vector((0.0, 0.0, -0.05))
+    coals = [centre + Vector((0.75 * (point - centre).x, 0.75 * (point - centre).y, -0.09)) for point in upper]
+    top = centre + Vector((0.0, 0.0, -0.04))
     for index in range(sides):
         b.face((coals[index], coals[(index + 1) % sides], top), "MenuEmber", (1, 0, 0))
-    for angle in (0.4, 1.9, 3.3, 4.6, 5.7):
-        lump = centre + Vector((0.09 * math.cos(angle), 0.09 * math.sin(angle), -0.04))
-        b.rock(lump, (0.06, 0.055, 0.04), "MenuSoot")
-    b.rock(centre + Vector((0.0, 0.0, -0.03)), (0.045, 0.05, 0.035), "MenuSoot")
+    for angle in (0.3, 1.4, 2.5, 3.6, 4.7, 5.6):
+        lump = centre + Vector((0.2 * math.cos(angle), 0.2 * math.sin(angle), -0.04))
+        b.rock(lump, (0.1, 0.09, 0.06), "MenuSoot")
 
 
-def build_stairs(raid):
-    """Builds the staircase with its walls, tunnel, doorway, kerb, parapets, ember bowls and cracks."""
-    b = raid.PartBuilder("MenuMoreyaStairs", 2411)
-    add_steps(b)
-    add_walls(b)
-    add_ceiling(b)
-    add_doorway(b)
-    add_tread_cracks(b)
-    add_kerb_and_parapets(b)
-    add_ember_bowls(b)
-    return b.finish(["MenuChippedStone", "MenuDarkStone", "MenuCarvedStone", "MenuSoot", "MenuRoughStone",
-                     "MenuCorrodedIron", "MenuEmber", "MenuEmberCrack"])
+def add_fire_bowls(b):
+    """Adds the two fire bowls on short stone pedestals in front of the pillars."""
+    for x in (-BOWL_X, BOWL_X):
+        b.log_column((x, BOWL_Y, PLINTH_TOP - 0.02), (x, BOWL_Y, BOWL_TOP - 0.36), 0.3, 0.22, "MenuCarvedStone",
+                     sides=8, rough=0.01)
+        box(b, x - 0.3, x + 0.3, BOWL_Y - 0.3, BOWL_Y + 0.3, BOWL_TOP - 0.4, BOWL_TOP - 0.3, "MenuCarvedStone")
+        fire_bowl(b, Vector((x, BOWL_Y, BOWL_TOP)))
 
 
-def build_hall_arch(raid):
-    """Builds the stone frame of the opening in the back wall of the campaign hall that leads into the rear yard.
-
-    Scene coordinates (the scene places it at the origin): tools/menu_cut_moreya_opening.py cuts the wall over
-    x -ARCH_HALF..ARCH_HALF, z ARCH_SILL..ARCH_HEIGHT out of MenuCampaignHall.mesh; the jambs, the lintel and the
-    threshold of this frame cover the cut edges and stand on the floor.
-    """
-    b = raid.PartBuilder("MenuHallRearArch", 3307)
-    front, back = ARCH_WALL[0] - 0.12, ARCH_WALL[1] + 0.12
-    for side in (-1, 1):
-        inner, outer = sorted((side * (ARCH_HALF - 0.15), side * (ARCH_HALF + 0.38)))
-        bottom = -0.05
-        for top in (1.25, 2.5, ARCH_HEIGHT + 0.08):
-            lift = b.rng.uniform(-0.02, 0.02)
-            box(b, inner + b.rng.uniform(-0.02, 0.01), outer, front + b.rng.uniform(-0.03, 0.0), back, bottom,
-                top + lift, "MenuCarvedStone", (0, 0, 1))
-            bottom = top + lift + 0.015
-    box(b, -ARCH_HALF - 0.5, ARCH_HALF + 0.5, front - 0.04, back + 0.04, ARCH_HEIGHT - 0.05, ARCH_HEIGHT + 0.6,
-        "MenuCarvedStone")
-    box(b, -ARCH_HALF - 0.15, ARCH_HALF + 0.15, front, back, -0.12, ARCH_SILL + 0.04, "MenuChippedStone")
-    return b.finish(["MenuCarvedStone", "MenuChippedStone"])
+def build_portal(raid):
+    """Builds the portal into Moreya: platform, pillars, round arch, green fire face, moss and two fire bowls."""
+    b = raid.PartBuilder("MenuMoreyaPortal", 5821)
+    add_plinth(b)
+    add_pillars(b)
+    add_arch(b)
+    add_fire(b)
+    add_moss(b)
+    add_fire_bowls(b)
+    obj = b.finish(["MenuChippedStone", "MenuCarvedStone", "MenuSoot", "MenuMoss", "MenuCorrodedIron", "MenuEmber",
+                    FIRE_MATERIAL])
+    # The fire face shows its texture once across the opening: u from left to right, v from the crown down in the game
+    # (the exporter writes 1 - v, so the Blender v rises from the foot to the crown).
+    fire_index = obj.data.materials.find(FIRE_MATERIAL)
+    uv = obj.data.uv_layers.active
+    crown = PORTAL_SPRING + PORTAL_INNER
+    for polygon in obj.data.polygons:
+        if polygon.material_index != fire_index:
+            continue
+        for loop_index in polygon.loop_indices:
+            point = obj.data.vertices[obj.data.loops[loop_index].vertex_index].co
+            uv.data[loop_index].uv = ((point.x + PORTAL_INNER) / (2 * PORTAL_INNER),
+                                      (point.z - PLINTH_TOP) / (crown - PLINTH_TOP))
+    return obj
 
 
 def build_forge_coals(raid):
@@ -471,21 +339,16 @@ def menu_material_text(repo):
     return "\n".join(path.read_text(encoding="utf-8") for path in sorted(folder.glob("Menu*.material")))
 
 
-def import_scene(repo, private, raid, exporter, with_entrance, open_floor):
-    """Imports every AddEntity mesh of the menu scene at its position and gives each material its preview nodes.
-
-    with_entrance False leaves the staircase and the Moreya signpost out (the scene before this change);
-    open_floor True removes the floor faces over the stairwell opening from the hall and the outer ground.
-    """
+def import_scene(repo, private, raid, exporter):
+    """Imports every AddEntity mesh of the menu scene at its position and gives each material its preview nodes."""
     root = Path(os.environ.get("BUILD_DEPS_ROOT", str(Path.home() / "build-deps")))
     converter = root / "install" / "bin" / "OgreXMLConverter.exe"
     xml_folder = Path(private) / "scene-xml"
     xml_folder.mkdir(parents=True, exist_ok=True)
     collection = bpy.data.collections.new("Menu scene")
     bpy.context.scene.collection.children.link(collection)
-    entrance = {"MenuMoreyaStairs.mesh", "MenuMoreyaSignpost.mesh"}
     for words in scene_definitions(repo):
-        if words[0] != "AddEntity" or (not with_entrance and words[2] in entrance):
+        if words[0] != "AddEntity":
             continue
         xml = xml_folder / (words[2] + ".xml")
         if not xml.exists() or xml.stat().st_mtime < (Path(repo) / "models" / words[2]).stat().st_mtime:
@@ -493,8 +356,6 @@ def import_scene(repo, private, raid, exporter, with_entrance, open_floor):
                            capture_output=True)
         obj = exporter.import_mesh(str(xml), None, words[1], collection=collection)
         obj.location = [float(value) for value in words[3:6]]
-        if open_floor and words[1] in ("CampaignHall", "OuterGround"):
-            cut_opening(obj)
     text = menu_material_text(repo)
     images = {}
     for material in bpy.data.materials:
@@ -504,27 +365,6 @@ def import_scene(repo, private, raid, exporter, with_entrance, open_floor):
             except ValueError:
                 values = {"diffuse": (0.3, 0.3, 0.3)}
             raid.configure_preview_material(material, values, repo, images)
-
-
-def cut_opening(obj):
-    """Deletes the faces of a ground mesh that lie over the stairwell opening (x -3..3, y 31..37, z -1..0.3)."""
-    bm = bmesh.new()
-    bm.from_mesh(obj.data)
-    origin = obj.location
-    # Split the large floor faces along the four edges of the opening first, so only the part over it goes.
-    for point, normal in (((-HALF, 0, 0), (1, 0, 0)), ((HALF, 0, 0), (1, 0, 0)), ((0, STAIRS_HEAD_Y, 0), (0, 1, 0)),
-                          ((0, STAIRS_HEAD_Y + OPEN_LENGTH, 0), (0, 1, 0))):
-        geometry = bm.verts[:] + bm.edges[:] + bm.faces[:]
-        bmesh.ops.bisect_plane(bm, geom=geometry, plane_co=Vector(point) - origin, plane_no=Vector(normal))
-    doomed = []
-    for face in bm.faces:
-        centre = face.calc_center_median() + origin
-        if -HALF < centre.x < HALF and STAIRS_HEAD_Y < centre.y < STAIRS_HEAD_Y + OPEN_LENGTH and -1.0 < centre.z < 0.3:
-            doomed.append(face)
-    bmesh.ops.delete(bm, geom=doomed, context="FACES")
-    bm.to_mesh(obj.data)
-    bm.free()
-    log("opened %d faces of %s" % (len(doomed), obj.name))
 
 
 def flight_sample(poses, share):
@@ -543,14 +383,12 @@ def flight_sample(poses, share):
     return [position.x, position.y, position.z] + angles
 
 
-def render_poses(repo, private, raid, exporter, states=("before", "after_closed", "after_open")):
-    """Renders the menu scene from the campaign pose and the campaign flight waypoints, before and after.
+def render_poses(repo, private, raid, exporter):
+    """Renders the menu scene from the campaign pose and the campaign flight waypoints.
 
-    Writes <private>/renders/<state>_<pose>_<width>x<height>.png (poses campaign, gate_entry, gate_exit and two
-    frames of the flight from gate_exit to campaign) for the states "before" (scene without the
-    entrance), "after_closed" (entrance with today's floor) and "after_open" (entrance with the floor opened over
-    the stairwell), and on request "after_real" (entrance with the meshes as they are, after
-    tools/menu_cut_moreya_opening.py opened the floor); states limits the run to some of them. Lights come from the AddPointLight lines, the ambient from [MenuLighting] FlightAmbient, the
+    Writes <private>/renders/scene_<pose>_<width>x<height>.png (poses campaign, gate_entry, gate_exit and two
+    frames of the flight from gate_exit to campaign) with the meshes as they are. Particle effects are not rendered.
+    Lights come from the AddPointLight lines, the ambient from [MenuLighting] FlightAmbient, the
     camera from the [MenuCamera] poses with the field of view of the menu camera (45 degrees vertical at 16:9, the same
     horizontal field of view for narrower windows).
     """
@@ -568,11 +406,7 @@ def render_poses(repo, private, raid, exporter, states=("before", "after_closed"
             ambient = tuple(float(value) for value in words[1:])
     output = Path(private) / "renders"
     output.mkdir(parents=True, exist_ok=True)
-    for state, with_entrance, open_floor in (("before", False, False), ("after_closed", True, False),
-                                             ("after_open", True, True), ("after_real", True, False),
-                                             ("after2", True, False)):
-        if state not in states:
-            continue
+    for state in ("scene",):
         bpy.ops.wm.read_factory_settings(use_empty=True)
         scene = bpy.context.scene
         scene.render.engine = "BLENDER_EEVEE"
@@ -584,7 +418,7 @@ def render_poses(repo, private, raid, exporter, states=("before", "after_closed"
         world.node_tree.nodes["Background"].inputs["Color"].default_value = (*ambient, 1)
         world.node_tree.nodes["Background"].inputs["Strength"].default_value = 1.0
         scene.world = world
-        import_scene(repo, private, raid, exporter, with_entrance, open_floor)
+        import_scene(repo, private, raid, exporter)
         lights = bpy.data.collections.new("Lights")
         scene.collection.children.link(lights)
         for words in definitions:
@@ -621,11 +455,11 @@ def render_poses(repo, private, raid, exporter, states=("before", "after_closed"
 
 
 def main():
-    """Runs the requested builds and renders (stairs and signpost when none is named) and logs the result."""
+    """Runs the requested builds and renders (portal, signpost and coals when none is named) and logs the result."""
     global LOG
     arguments = sys.argv[sys.argv.index("--") + 1:]
     repo, private = Path(arguments[0]), Path(arguments[1])
-    wanted = set(arguments[2:]) or {"stairs", "signpost", "arch", "coals"}
+    wanted = set(arguments[2:]) or {"portal", "signpost", "coals"}
     private.mkdir(parents=True, exist_ok=True)
     LOG = open(private / "menu_moreya_entrance.log", "w", encoding="utf-8")
     try:
@@ -633,26 +467,17 @@ def main():
         import moreya_raid_models as raid
         import odp_ogre_io as exporter
         bpy.context.preferences.filepaths.save_version = 0
-        if "stairs" in wanted:
+        if "portal" in wanted:
             bpy.ops.wm.read_factory_settings(use_empty=True)
-            export(exporter, repo, private, build_stairs(raid))
+            export(exporter, repo, private, build_portal(raid))
         if "signpost" in wanted:
             bpy.ops.wm.read_factory_settings(use_empty=True)
             export(exporter, repo, private, build_signpost(raid))
-        if "arch" in wanted:
-            bpy.ops.wm.read_factory_settings(use_empty=True)
-            export(exporter, repo, private, build_hall_arch(raid))
         if "coals" in wanted:
             bpy.ops.wm.read_factory_settings(use_empty=True)
             export(exporter, repo, private, build_forge_coals(raid))
         if "render" in wanted:
             render_poses(repo, private, raid, exporter)
-        elif "render_open" in wanted:
-            render_poses(repo, private, raid, exporter, ("after_open",))
-        elif "render_real" in wanted:
-            render_poses(repo, private, raid, exporter, ("after_real",))
-        elif "render_after2" in wanted:
-            render_poses(repo, private, raid, exporter, ("after2",))
         log("finished")
     except Exception:
         LOG.write(traceback.format_exc())
