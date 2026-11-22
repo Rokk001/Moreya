@@ -78,6 +78,44 @@ assert exercise(b'FAIL Mossgate.level : load error\n', code=2)[0] == 1
 print('Campaign load runner: bounded deadline and nine acceptance/failure cases verified')
 
 
+def exercise_other_map(output, code=0):
+    """Run one recorded probe of a non-campaign map selected for a deployment and return the runner result."""
+    def run(command, **kwargs):
+        """Simulate the game's completion for the selected map."""
+        return subprocess.CompletedProcess(command, code, output, b'')
+
+    with tempfile.TemporaryDirectory(prefix='campaign-runner-other-') as temporary:
+        directory = Path(temporary)
+        executable = directory / 'game.exe'
+        executable.touch()
+        selection_file = directory / 'selection.json'
+        selection_file.write_text('{}', encoding='utf-8')
+        saved = (runner.subprocess.run, runner.game_is_running, runner.probe_environment, runner.campaign_levels,
+                 runner.deployment_levels, sys.argv)
+        runner.game_is_running = lambda executable: False
+        runner.probe_environment = lambda: {}
+        runner.campaign_levels = lambda repo: [ROOT / 'levels/campaign/wing1/Mossgate.level']
+        runner.deployment_levels = lambda repo, selection: [ROOT / 'levels/skirmish/Quietcrag.level']
+        runner.subprocess.run = run
+        sys.argv = ['campaign-load-runner', '--deployment-selection', str(selection_file),
+                    '--executable', str(executable), '--output', str(directory / 'logs')]
+        try:
+            with redirect_stdout(StringIO()):
+                return runner.main()
+        finally:
+            (runner.subprocess.run, runner.game_is_running, runner.probe_environment, runner.campaign_levels,
+             runner.deployment_levels, sys.argv) = saved
+
+
+# A skirmish or multiplayer map passes on the game's PASS line alone: the game prints no goal count for it.
+other_pass = b'PASS Quietcrag.level : level loaded, ran 1 s game time, no errors\n'
+assert exercise_other_map(other_pass) == 0
+assert exercise_other_map(other_pass, code=2) == 1
+assert exercise_other_map(b'FAIL Quietcrag.level : load error\n', code=2) == 1
+assert exercise_other_map(b'level loaded\n') == 1
+print('Campaign load runner: four non-campaign map cases verified')
+
+
 def check_process_identity():
     """Keep the deployed-executable guard without rejecting independent worktrees."""
     executable = ROOT / 'build/windows/moreya.exe'
