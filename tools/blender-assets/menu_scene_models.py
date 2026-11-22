@@ -1022,11 +1022,32 @@ def hall():
 
 # Build the campaign table with a separate plane for the map image of Moreya (material MenuCampaignMap,
 # texture MenuCampaignMap.png, a copy of gui/campaign/moreya/moreya_map.png).
-# The table is old weathered stone: a heavy top slab with a broken-off corner and chipped edges on two massive
+def table():
+    b=MeshBuilder("MenuMapTable")
+    b.box((0,0,1.55),(4.4,3.2,0.24),"MenuAgedWood")
+    for x in (-1.75,1.75):
+        for y in (-1.15,1.15):
+            b.box((x,y,0.75),(0.24,0.24,1.5),"MenuAgedWood")
+    b.segment((-1.8,-1.20,0.08),(-1.1,-1.7,0.05),0.10,0.06,"MenuAgedWood",7)
+    b.box((0,0,1.68),(4.05,2.85,0.03),"MenuParchment")
+    start=len(b.vertices)
+    b.vertices.extend([(-1.9,-1.3,1.705),(1.9,-1.3,1.705),(1.9,1.3,1.705),(-1.9,1.3,1.705)])
+    b.faces.append(tuple(start+i for i in range(4)))
+    b.face_materials.append("MenuCampaignMap")
+    obj=b.finish()
+    polygon=obj.data.polygons[-1]
+    for index,uv in zip(polygon.loop_indices,((0,0),(1,0),(1,1),(0,1))):
+        obj.data.uv_layers.active.data[index].uv=uv
+    return obj
+
+
+# Build the stone campaign table of the campaign scene (MenuMapTableStone, config/mainmenuscene.cfg [MenuCampaignScene])
+# with the same map plane as the wooden table. The table is old weathered stone: a heavy top slab with a broken-off corner and chipped edges on two massive
 # trestle blocks joined by a cracked stretcher, moss, lichen and water stains on it, creeping moss strands down the
 # trestles and the broken corner lying in pieces on the floor. The worn parchment and the map plane lie on the top at
-# the same place and size as on the former wooden table, so the campaign view frames the map as before.
-def table():
+# the same place and size as on the wooden table, so the campaign view frames the map as on the start screen. Its
+# builder keeps the wooden table's name, so it shares that table's random sequence.
+def stone_table():
     b=MeshBuilder("MenuMapTable")
     # The top slab: an irregular outline with chipped corners and the front left corner broken off.
     outline=[(-2.05,-1.72),(-1.62,-1.55),(-1.2,-1.71),(0.4,-1.73),(1.95,-1.7),(2.27,-1.45),(2.3,0.2),(2.26,1.5),
@@ -1888,6 +1909,7 @@ def model_specs():
         specs.append((build,name,family,2001+index*10,0.85+index*0.045))
     for index in range(8):
         specs.append((rock,"MenuRuinRock%02d"%(index+1),"MenuCourtyard",701+index,1.35))
+    specs.append((stone_table,"MenuMapTableStone","MenuMapTable",1110,1.15))
     for index in range(3):
         specs.append((arcade_arch,"MenuArcadeArch%02d"%(index+1),"MenuArches",801+index,1.1+index*0.23))
     for index,(name,position,family) in enumerate(POLISH_SPECS):

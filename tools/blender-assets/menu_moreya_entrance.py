@@ -7,8 +7,9 @@
                         fallen column with its stump and dead trees grown out of the paving; a clear path leads from
                         the hall to the portal; short walls join the hall; the abandoned castle and the rear buildings
                         of the fortress stand behind its rear wall
-    MenuHallRearArch    the stone frame (jambs, lintel, threshold) of the wide opening in the back wall of the campaign
-                        hall through which one walks from the table into the forecourt
+    MenuHallForecourtArch the stone frame (jambs, lintel, threshold) of the wide opening in the back wall of the
+                        campaign scene's hall copy (MenuCampaignHallOpen.mesh) through which one walks from the table
+                        into the forecourt
     MenuMoreyaPortal    the other side of the green start gate of the campaign map, at the far end of the forecourt
                         in front of its rear wall: a round arch of grey stone blocks on two coursed pillars with carved
                         capitals, its opening filled with green fire (material MenuMoreyaPortalFire, texture by
@@ -51,7 +52,8 @@ from mathutils import Matrix, Quaternion, Vector
 HALL_BACK_WALL = 29.25
 HALL_HALF_OUTER = 6.84
 #: The wide opening in the back wall of the campaign hall (scene coordinates): half width, sill and top height, and
-#: the wall's inner and outer face (y). tools/menu_cut_moreya_opening.py cuts the same box out of the hall mesh.
+#: the wall's inner and outer face (y). tools/menu_cut_moreya_opening.py cuts the same box out of the hall copy of the
+#: campaign scene (MenuCampaignHallOpen.mesh).
 ARCH_HALF, ARCH_SILL, ARCH_HEIGHT = 5.0, 0.12, 6.6
 ARCH_WALL = (29.25, 30.25)
 #: The forecourt inside its walls (x min, x max, y min, y max: from the hall's back wall to the rear wall), the
@@ -276,10 +278,10 @@ def build_hall_arch(raid):
     """Builds the stone frame of the wide opening in the back wall of the campaign hall that leads into the forecourt.
 
     Scene coordinates (the scene places it at the origin): tools/menu_cut_moreya_opening.py cuts the wall over
-    x -ARCH_HALF..ARCH_HALF, z ARCH_SILL..ARCH_HEIGHT out of MenuCampaignHall.mesh; the jambs, the lintel and the
+    x -ARCH_HALF..ARCH_HALF, z ARCH_SILL..ARCH_HEIGHT out of MenuCampaignHallOpen.mesh; the jambs, the lintel and the
     threshold of this frame cover the cut edges and stand on the floor.
     """
-    b = raid.PartBuilder("MenuHallRearArch", 3307)
+    b = raid.PartBuilder("MenuHallForecourtArch", 3307)
     front, back = ARCH_WALL[0] - 0.12, ARCH_WALL[1] + 0.12
     for side in (-1, 1):
         inner, outer = sorted((side * (ARCH_HALF - 0.15), side * (ARCH_HALF + 0.38)))

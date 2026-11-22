@@ -119,6 +119,11 @@ private:
     void logFlightFrames(const char* outcome) const;
     //! \brief Advances configured firelight without multiplying the previous frame's result.
     void updateFireLights(Ogre::Real elapsed);
+    //! \brief Shows the campaign scene's entities and lights and hides the start screen's ones, or the other way round.
+    void showCampaignScene(RenderManager& renderManager, bool campaign);
+    //! \brief Switches to the campaign scene once a flight to it has passed its first waypoint (the gate) and back
+    //! once the return flight has passed its last waypoint before the overview.
+    void updateCampaignScene(RenderManager& renderManager);
     //! Parsed native scene commands, in authored activation order.
     std::vector<RenderSceneGroup*> mSceneGroups;
     //! Named camera endpoints read from the scene configuration.
@@ -149,6 +154,14 @@ private:
     Ogre::Real mFlightFill = 0.0f;
     //! Share of the away fill when the active flight started.
     Ogre::Real mFlightFillStart = 0.0f;
+    //! Entities shown only in the campaign scene ([MenuCampaignScene] Show).
+    std::vector<std::string> mCampaignEntities;
+    //! Lights shown only in the campaign scene ([MenuCampaignScene] ShowLight).
+    std::vector<std::string> mCampaignLights;
+    //! Entities shown only outside the campaign scene ([MenuCampaignScene] Hide).
+    std::vector<std::string> mStartEntities;
+    //! Whether the campaign scene is currently shown.
+    bool mCampaignScene = false;
 };
 
 #endif // RENDERSCENEMENU_H

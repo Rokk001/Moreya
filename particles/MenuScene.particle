@@ -249,8 +249,7 @@ particle_system MenuBrazierSmoke
 }
 
 // A dim warm background haze behind the grille, inside the campaign hall, without lighting the court. It belongs to the
-// AbandonedCastle entity, which stands 28 behind the origin (behind the forecourt), so its emitter position is the place in
-// the hall (where the old silhouette stood) minus that shift.
+// AbandonedCastle entity at the origin, so its emitter position is the place in the hall (where the old silhouette stood).
 particle_system MenuGateHaze
 {
     material RoomAmbSmoke
@@ -261,7 +260,7 @@ particle_system MenuGateHaze
     billboard_type point
     emitter Box
     {
-        position 0 0.8 4.12
+        position 0 28.8 4.12
         width 5.6
         height 1.0
         depth 4.8
