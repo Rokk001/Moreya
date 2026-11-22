@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PLACEHOLDER: both marks show the existing lock icon of DungeonbookIcons.png until the painted padlock and question mark arrive -->
+<Imageset name="SkillLockMarks" imagefile="DungeonbookIcons.png" nativeHorzRes="3840" nativeVertRes="2160" autoScaled="min" version="2">
+    <Image name="Padlock" xPos="384" yPos="128" width="128" height="128" />
+    <Image name="QuestionPlaceholder" xPos="384" yPos="128" width="128" height="128" />
+</Imageset>
