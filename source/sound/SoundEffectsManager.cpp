@@ -123,36 +123,46 @@ SoundEffectsManager::SoundEffectsManager() :
     mNextLoopHandle(1)
 {
     const std::string& soundFolderPath = ResourceManager::getSingleton().getSoundPath();
-    std::vector<std::string> spatialFolders;
-    spatialFolders.push_back(soundFolderPath);
+    // We read the spatial sound directory
+    readSounds(mSpatialSounds, soundFolderPath + "Spatial/", "", true);
+    // The sounds of the room packages lie in the same layout below the sounds folder of each package
+    std::vector<std::string> packageSoundFolders;
     for(const std::string& package : RoomPackages::getPackageDirectories())
     {
         const std::string packageSounds = package + "/sounds/";
         boost::system::error_code error;
-        if(boost::filesystem::is_directory(packageSounds, error))
-            spatialFolders.push_back(packageSounds);
-    }
-    // We read the spatial sound directory of the game data and of the room packages
-    for(const std::string& folder : spatialFolders)
-        readSounds(mSpatialSounds, folder + "Spatial/", "", true);
-    // These room recordings are individual files rather than per-family directories.
-    static const char* const infirmarySounds[] = {"Admit", "Discharge", "Chant", "Rattle"};
-    for(const char* name : infirmarySounds)
-    {
-        const std::string family = std::string("Rooms/Infirmary/") + name;
-        if(mSpatialSounds.find(family) != mSpatialSounds.end())
+        if(!boost::filesystem::is_directory(packageSounds, error))
             continue;
-        for(const std::string& folder : spatialFolders)
+        packageSoundFolders.push_back(packageSounds);
+        readSounds(mSpatialSounds, packageSounds + "Spatial/", "", true);
+    }
+    // These room recordings are individual files rather than per-family directories. The package of the room holds
+    // them, so they are looked up there first; a recording that is in no folder is left out.
+    static const char* const infirmarySounds[] = {"Admit", "Discharge", "Chant", "Rattle"};
+    for(const std::string& packageSounds : packageSoundFolders)
+    {
+        for(const char* name : infirmarySounds)
         {
-            const std::string file = folder + family + ".ogg";
+            const std::string family = std::string("Rooms/Infirmary/") + name;
+            const std::string file = packageSounds + family + ".ogg";
             boost::system::error_code error;
-            if(!boost::filesystem::is_regular_file(file, error))
+            if((mSpatialSounds.find(family) != mSpatialSounds.end()) || !boost::filesystem::is_regular_file(file, error))
                 continue;
             GameSound* sound = getGameSound(file, true);
             if(sound != nullptr)
                 mSpatialSounds[family].push_back(sound);
-            break;
         }
+    }
+    for(const char* name : infirmarySounds)
+    {
+        const std::string family = std::string("Rooms/Infirmary/") + name;
+        boost::system::error_code error;
+        if((mSpatialSounds.find(family) != mSpatialSounds.end())
+            || !boost::filesystem::is_regular_file(soundFolderPath + family + ".ogg", error))
+            continue;
+        GameSound* sound = getGameSound(soundFolderPath + family + ".ogg", true);
+        if(sound != nullptr)
+            mSpatialSounds[family].push_back(sound);
     }
 
     // We read the relative sound directory
