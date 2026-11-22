@@ -30,7 +30,9 @@ def check(condition, message):
 calls = re.findall(r"castButton->setVisible\(([^;]*)\);", text)
 check(len(calls) == 1, "expected exactly one setVisible call for the cast button, found %d" % len(calls))
 for argument in calls:
-    check(argument == "isVisible", "the cast button must follow the computed visibility: " + argument)
+    # The computed visibility, and a skill whose room package is missing keeps its build button hidden in every mode
+    check(argument == "isVisible && isContentAvailable",
+          "the cast button must follow the computed visibility and the content package: " + argument)
 check(len(re.findall(r"getChild\(castButtonName\)->setVisible\(", text)) == 0,
       "no second visibility rule for the cast button")
 # The visibility starts from the learned level and is only widened in a campaign level, where an entry that is

@@ -158,7 +158,8 @@ def main():
           "WR8: a marked button is flagged so that it builds nothing")
     check("castButton->setEnabled(!isLockedByLibrary);" in refresh,
           "WR10: a marked button stays enabled to show the frames of every state; the library lock stays as before")
-    check("castButton->setVisible(isVisible);" in refresh, "WR8: the visibility is set for every cast button")
+    check("castButton->setVisible(isVisible && isContentAvailable);" in refresh,
+          "WR8: the visibility is set for every cast button, hidden while its room package is missing")
     check(refresh.count("RESEARCH_LOCK_IMAGE") == 2 and refresh.count("NAVIGATION_PLACEHOLDER_IMAGE") == 2,
           "the padlock and the question mark appear once in the tree and once in the navigation")
 
