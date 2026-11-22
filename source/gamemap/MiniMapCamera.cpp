@@ -22,6 +22,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/MiniMapColours.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "utils/Helper.h"
@@ -53,7 +54,7 @@ static const Ogre::Real CAM_HEIGHT = NB_TILES_DISPLAYED_IN_MINIMAP * 0.5f / Ogre
 static const Ogre::uint TEXTURE_SIZE = 512;
 static const Ogre::Real MIN_TIME_REFRESH_SECS = 0.5;
 
-//! \brief Creates the camera map with transparent empty pixels over the circular HUD stone backing.
+//! \brief Creates the camera map; pixels without map are opaque solid earth over the circular HUD stone backing.
 MiniMapCamera::MiniMapCamera(CEGUI::Window* miniMapWindow) :
     mMiniMapWindow(miniMapWindow),
     mGameMap(*ODFrameListener::getSingleton().getClientGameMap()),
@@ -91,10 +92,8 @@ MiniMapCamera::MiniMapCamera(CEGUI::Window* miniMapWindow) :
     Ogre::Viewport* vp = rt->addViewport(mMiniMapCam);
     vp->setClearEveryFrame(true);
     vp->setOverlaysEnabled(false);
-    Ogre::ColourValue background = Ogre::ColourValue::Black;
-    if(mMiniMapWindow->isUserStringDefined("Circular") && mMiniMapWindow->getUserString("Circular") == "true")
-        background.a = 0.0f;
-    vp->setBackgroundColour(background);
+    // Where the camera sees no map, it shows opaque solid earth, so the minimap does not show where the map ends.
+    vp->setBackgroundColour(MiniMapColours::DIRT_COLOUR);
 
     CEGUI::Texture& miniMapTextureGui = static_cast<CEGUI::OgreRenderer*>(CEGUI::System::getSingletonPtr()
                                             ->getRenderer())->createTexture("miniMapTextureGui", mMiniMapOgreTexture);
