@@ -67,13 +67,16 @@ bool readPoint(const Tree& parent, const char* key, int& x, int& y)
     return true;
 }
 
-//! \brief Reads the place of a cave marker, and of its label when withLabel is set; returns false if one is missing
-//! or the size is not positive. A cave names no level file and no guild: both come from the wing package.
+//! \brief Reads the place of a cave marker, and of its label when withLabel is set and the cave has one; returns false
+//! if the place is missing, a label is invalid or the size is not positive. A cave without label is named in its
+//! tooltip only. A cave names no level file and no guild: both come from the wing package.
 bool readCavePlace(const Tree& node, bool withLabel, CampaignWorldCave& cave)
 {
     cave.mSize = node.get<int>("size");
-    return (cave.mSize > 0) && readPoint(node, "pos", cave.mX, cave.mY)
-        && (!withLabel || readRect(node, "label", cave.mLabel));
+    if((cave.mSize <= 0) || !readPoint(node, "pos", cave.mX, cave.mY))
+        return false;
+
+    return !withLabel || !node.get_child_optional("label") || readRect(node, "label", cave.mLabel);
 }
 
 //! \brief The number as a word for the counts of groups a level can send, else as digits
@@ -162,6 +165,7 @@ bool CampaignWorld::importDefinition(std::istream& is)
             wing.mNumber = node.get<uint32_t>("wing");
             wing.mName = node.get<std::string>("name");
             wing.mSealSize = node.get<int>("seal_size");
+            wing.mNamePainted = node.get<bool>("name_painted", false);
             // The wings come in their order 1 to 6
             if((wing.mNumber != mWings.size() + 1) || wing.mName.empty() || (wing.mSealSize <= 0)
                 || !readRect(node, "area", wing.mArea) || !readRect(node, "label", wing.mLabel)

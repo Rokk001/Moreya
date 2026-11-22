@@ -253,7 +253,8 @@ check('CAMPAIGN_TITLE = "Moreya"' in mode, "the map is titled Moreya")
 for gone in ("getProvinceAt", "world_idmap", "WORLD_IDMAP_FILE", "Province", "province", "mLiftWindow", "findSiteAt"):
     check(gone not in mode and gone not in mode_h, "the menu must not know " + gone + " any more")
 check("hidden land" not in mode, "no surface land is named any more")
-check("if(!cave.mBonus && (level < campaign.getNumLevels()))" in fill, "only level caves carry a name on the map")
+check("bool named = !cave.mBonus && (cave.mLabel.mWidth > 0);" in fill
+      and "if(named && (level < campaign.getNumLevels()))" in fill, "only level caves carry a name on the map")
 
 # ------------------------------------------------------------------------------------------------ menu behaviour
 windows = {w.get("name"): w for w in layout.iter("Window")}
@@ -374,10 +375,14 @@ check('MISSING_WING_TEXT = "%s"' % campaign_packages.MISSING_WING_TEXT
       "the game names a missing wing as the checks do")
 map_texts = [("title", world["title_cartouche"], "FONT_TITLE", [constant("CAMPAIGN_TITLE")], False)]
 for wing in wings:
-    map_texts.append(("wing %s label" % wing["wing"], wing["label"], "FONT_WING",
-                      [wing["name"] + "   3 / 3", wing["name"]], True))
+    # A wing whose name is painted on the map gets only its progress written
+    wing_texts = ["3 / 3"] if wing.get("name_painted") else [wing["name"] + "   3 / 3", wing["name"]]
+    map_texts.append(("wing %s label" % wing["wing"], wing["label"], "FONT_WING", wing_texts, True))
     for cave in wing["levels"]:
-        map_texts.append((cave["file"] + " label", cave["label"], "FONT_CAVE", [titles.get(cave["file"], "")], True))
+        # A level without label is named in its tooltip only
+        if "label" in cave:
+            map_texts.append((cave["file"] + " label", cave["label"], "FONT_CAVE", [titles.get(cave["file"], "")],
+                              True))
     for level in wing["levels"]:
         if "guild" not in level:
             continue
@@ -420,7 +425,8 @@ for wing in wings:
         if name == "wing %s label" % wing["wing"] or name == "wing %s seal" % wing["wing"]:
             check(inside(rect, wing["area"]), name + " lies outside its wing")
     for cave in wing["levels"]:
-        check(inside(cave["label"], wing["area"]), cave["file"] + " label lies outside its wing")
+        if "label" in cave:
+            check(inside(cave["label"], wing["area"]), cave["file"] + " label lies outside its wing")
     check("label" not in wing["bonus"], "the bonus cave of wing %s is named in its tooltip only" % wing["wing"])
 caves_and_labels = [item for item in map_items if item[0].startswith("campaign/") or "label" in item[0]
                     or "seal" in item[0]]

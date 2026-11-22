@@ -67,7 +67,8 @@ struct CampaignWorldCave
     int mY;
     //! Width and height of the cave marker in map pixels
     int mSize;
-    //! Where the name of the level is written in map pixels; empty for a bonus cave, whose name is in its tooltip
+    //! Where the name of the level is written in map pixels; empty when the level is named in its tooltip only,
+    //! as a bonus cave always is
     CampaignWorldRect mLabel;
 };
 
@@ -76,7 +77,7 @@ struct CampaignWorldWing
 {
     //! \brief Creates a wing without number and name
     CampaignWorldWing():
-        mNumber(0), mSealX(0), mSealY(0), mSealSize(0)
+        mNumber(0), mNamePainted(false), mSealX(0), mSealY(0), mSealSize(0)
     {
     }
 
@@ -86,7 +87,9 @@ struct CampaignWorldWing
     std::string mName;
     //! Area of the wing on the map in map pixels
     CampaignWorldRect mArea;
-    //! Where the wing name and its progress are written
+    //! True when the name of the wing is painted on the map; the game then writes only its progress
+    bool mNamePainted;
+    //! Where the wing name and its progress are written, or only the progress when the name is painted
     CampaignWorldRect mLabel;
     //! Centre of the seal shown once all story levels of the wing are defeated
     int mSealX;

@@ -114,7 +114,7 @@ const float TOOLTIP_WIDTH = 420.0f;
 const float TOOLTIP_HEIGHT = 150.0f;
 const float TOOLTIP_OFFSET = 48.0f;
 //! Size of the ring around the cave under the mouse, relative to the cave marker
-const float HOVER_SCALE = 1.2f;
+const float HOVER_SCALE = 1.0f;
 //! Aspect ratio (width to height) of the campaign map art
 const float MAP_ASPECT_RATIO = 1.6f;
 //! Percent value of a completely finished campaign and its factor to a bar fraction
@@ -700,13 +700,16 @@ void MenuModeCampaign::fillMap()
         if(!campaign.isWingAvailable(wing.mNumber))
         {
             // The package of the wing is missing: the wing name is shown locked, its caves say that the wing is
-            // coming in Early Access
-            createMapText("Wing_" + wingId, wing.mLabel, FONT_WING, COLOUR_LOCKED, "WordWrapLeftAligned", wing.mName);
+            // coming in Early Access. A name painted on the map needs no text.
+            if(!wing.mNamePainted)
+                createMapText("Wing_" + wingId, wing.mLabel, FONT_WING, COLOUR_LOCKED, "WordWrapLeftAligned", wing.mName);
             continue;
         }
+        // A name painted on the map gets only the progress beside it
+        std::string progress = Helper::toString(defeated) + " / "
+            + Helper::toString(CampaignWorld::STORY_CAVES_PER_WING);
         createMapText("Wing_" + wingId, wing.mLabel, FONT_WING, wingDefeated ? COLOUR_HIGHLIGHT : COLOUR_TEXT,
-            "WordWrapLeftAligned", wing.mName + "   " + Helper::toString(defeated) + " / "
-            + Helper::toString(CampaignWorld::STORY_CAVES_PER_WING));
+            "WordWrapLeftAligned", wing.mNamePainted ? progress : wing.mName + "   " + progress);
         if(wingDefeated)
         {
             float size = static_cast<float>(wing.mSealSize);
@@ -750,15 +753,17 @@ void MenuModeCampaign::fillMap()
         createMapImage("Cave_" + caveId, *icon, static_cast<float>(cave.mX) - size / 2.0f,
             static_cast<float>(cave.mY) - size / 2.0f, size, size);
 
-        // The name of a level stands under its cave; a bonus cave names itself in its tooltip. The caves of a wing
-        // without package say that the wing is coming in Early Access.
+        // The name of a level stands under its cave when the map gives it a label; a bonus cave and a level without
+        // label name themselves in their tooltip. The caves of a wing without package say that the wing is coming in
+        // Early Access.
         size_t level = mWorld.findLevel(campaign, i);
-        if(!cave.mBonus && (level < campaign.getNumLevels()))
+        bool named = !cave.mBonus && (cave.mLabel.mWidth > 0);
+        if(named && (level < campaign.getNumLevels()))
         {
             createMapText("CaveName_" + caveId, cave.mLabel, FONT_CAVE, colour, "WordWrapCentreAligned",
                 campaign.getLevel(level).mTitle);
         }
-        else if(!cave.mBonus && !campaign.isWingAvailable(cave.mWing))
+        else if(named && !campaign.isWingAvailable(cave.mWing))
         {
             createMapText("CaveName_" + caveId, cave.mLabel, FONT_CAVE, colour, "WordWrapCentreAligned",
                 CampaignPackages::MISSING_WING_TEXT);
