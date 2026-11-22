@@ -417,6 +417,14 @@ public:
     //! \brief Returns true if the level does not allow the skill to be researched
     bool isSkillNotAllowed(SkillType type) const;
 
+    //! \brief Returns true if the level withholds the free level one start of the skill (section [SkillNotFree]
+    //! of the seat): the seat does not start with it and its level 1 costs the full research points
+    bool isSkillNotFree(SkillType type) const;
+
+    //! \brief Research points the seat needs to raise the skill to the given level: Skill::getNeededSkillPoints,
+    //! with the full level 1 cost when the level withholds the free level one start of the skill
+    int32_t getSkillCost(SkillType type, uint32_t level) const;
+
     //! \brief Server side function. Called when a fresh grimoire is brought to the dungeon
     //! temple. When enough points are gathered, the corresponding skill will become available
     void addSkillPoints(int32_t points);
@@ -698,7 +706,8 @@ private:
     //! \return A short reason text or nullptr if the entry may be queued
     const char* getResearchGateFailure(SkillType type, int level, const std::vector<std::pair<SkillType, int> >& queuedBefore) const;
 
-    //! \brief Adds the free level one skills (skills.cfg) that the level does not forbid to the given done list
+    //! \brief Adds the free level one skills (skills.cfg) that the level neither forbids nor withholds
+    //! ([SkillNotFree]) to the given done list
     //! \param skills The done list to extend
     void addFreeLevelOneSkills(std::vector<SkillType>& skills) const;
 

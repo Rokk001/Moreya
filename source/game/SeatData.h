@@ -204,6 +204,10 @@ public:
     inline const std::vector<SkillType>& getSkillNotAllowed() const
     { return mSkillNotAllowed; }
 
+    //! \brief The free level one skills the level withholds from this seat (section [SkillNotFree])
+    inline const std::vector<SkillType>& getSkillNotFree() const
+    { return mSkillNotFree; }
+
     //! \brief functions to transfer Seat data through network. Note that they should not be overriden as
     //! unit tests use them to get the data from the Seat (without having to take Seat and all its dependencies)
     //! \brief Reads full seat data and its appended shared room settings.
@@ -313,6 +317,10 @@ protected:
 
     //! \brief Skills not allowed. Used on server side only
     std::vector<SkillType> mSkillNotAllowed;
+
+    //! \brief Free level one skills (skills.cfg) the level withholds: the seat does not start with them and their
+    //! level 1 costs the full research points. Read from the level, saved, and sent to the clients with the seat
+    std::vector<SkillType> mSkillNotFree;
 
     //! \brief Progress for current skill. Allows to display the progressbar on the client side
     SkillType mCurrentSkillType;

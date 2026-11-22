@@ -4688,7 +4688,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     else
     {
         description += "\nNext: level " + Helper::toString(level + 1) + " - " +
-            Helper::toString(SkillManager::getSkill(resType)->getNeededSkillPoints(level + 1)) + " research points.\n" +
+            Helper::toString(localPlayerSeat->getSkillCost(resType, level + 1)) + " research points.\n" +
             SkillManager::getResearchDescription(resType, level + 1);
         if(queueNumber > 0)
             description += "\nQueue position: " + Helper::toString(queueNumber) + ".";
