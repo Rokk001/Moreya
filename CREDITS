@@ -566,7 +566,7 @@ Name                                   Author                  License          
 assets-src/DungeonHeartObject.blend    Mario                   GPLv3+                  Editable source of the dungeon heart model (first commit 8318b4559); made with Blender, AI-assisted (Claude Code)
 assets-src/DungeonHeartObject{Healthy,Damaged,Critical}.glbMario                   GPLv3+                  Exports of DungeonHeartObject.blend; made with Blender, AI-assisted (Claude Code)
 meta/gui/moreya.desktop                Pavel Rojtberg          GPLv3+                  Added 2018 (first commit) as the snap desktop entry; renamed and rewritten for Moreya 2026-11-21
-meta/gui/moreya.svg                    AI-generated (Claude Code)  GPLv3+              Moreya gate icon, own design 2026-11-21, copy of dist/hicolor/scalable/apps/moreya.svg written by tools/artwork/moreya-icon/make_moreya_icon.py
+meta/gui/moreya.*                      AI-generated with Codex  GPLv3+                 Painted Moreya gate icon, AI-generated with Codex image generation (2026-11-22); SVG (copy of dist/hicolor/scalable/apps/moreya.svg) and the 256 px moreya.png it shows, written by tools/artwork/moreya-icon/build_painted_icon.py
 screenshots/*                          Tomasz Luchowski        GPLv3+                  Screenshots of the game (first commit 056c7086b)
 tools/artwork/CreatureMoodAtlas.png    AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 
@@ -1012,11 +1012,12 @@ source/tests/check_trap_meshes.py      OD Team                 GPLv3+
 ==  Distribution data: dist/  ==
 ================================
 
-hicolor/*/apps/moreya.*                AI-generated (Claude Code)  GPLv3+              Moreya gate icon (stone arch with portcullis), own design 2026-11-21; SVG and PNG sizes written by tools/artwork/moreya-icon/make_moreya_icon.py
-moreya.ico                             AI-generated (Claude Code)  GPLv3+              Same icon in 16, 24, 32, 48, 64, 128 and 256 pixels for the Windows executable and window, written by tools/artwork/moreya-icon/make_moreya_icon.py
+hicolor/*/apps/moreya.*                AI-generated with Codex  GPLv3+                 Painted Moreya gate icon (stone arch, half-raised portcullis, green light), AI-generated with Codex image generation (2026-11-22), text-free; 16 and 32 px from a simplified painting of the same gate, larger sizes from the detailed one; sources moreya-icon/GateB.png and moreya-icon/SmallB1.png in ODP_ASSETS_SRC; SVG (embedding the 256 px painting) and PNG sizes written by tools/artwork/moreya-icon/build_painted_icon.py
+moreya.ico                             AI-generated with Codex  GPLv3+                 Same painted icon in 16, 24, 32, 48, 64, 128 and 256 pixels for the Windows executable and window (16 to 32 px simplified painting), written by tools/artwork/moreya-icon/build_painted_icon.py
 moreya.manifest                        OD Team                 GPLv3+                  Windows application manifest (renamed 2026-11-21)
 icon.rc                                OD Team                 GPLv3+
-tools/artwork/moreya-icon/make_moreya_icon.py  AI-generated (Claude Code)  GPLv3+      Generator of the Moreya icon files, 2026-11-21
+tools/artwork/moreya-icon/make_moreya_icon.py  AI-generated (Claude Code)  GPLv3+      Generator of the former shape-drawn Moreya icon files, 2026-11-21; no longer used for the shipped icon
+tools/artwork/moreya-icon/build_painted_icon.py  AI-generated (Claude Code)  GPLv3+    Builds the Moreya icon files from the two painted sources, 2026-11-22
 
 ====================================================
 == Portrait feature assets: materials/portraits/  ==
