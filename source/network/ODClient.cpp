@@ -42,6 +42,7 @@
 #include "gamemap/DraggableTileContainer.h"
 #include "modes/EditorMode.h"
 #include "modes/GameMode.h"
+#include "modes/PossessionBarRules.h"
 #include "modes/InputCommand.h"
 #include "modes/MenuModeConfigureSeats.h"
 #include "modes/ModeManager.h"
@@ -82,6 +83,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include <cmath>
 #include <string>
 
 //! \brief Number of position units per tile in the place of a trampled egg that the server sends (hundredths of a tile).
@@ -2697,6 +2699,44 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                     gm->displayText(POSSESSION_LOST_COLOUR, POSSESSION_LOST_TEXT);
                 else
                     gm->displayText(POSSESSION_END_COLOUR, POSSESSION_END_TEXT);
+            }
+            break;
+        }
+
+        case ServerNotificationType::possessionSkillBar:
+        {
+            // The skill bar of the possession view: per skill key its icon, its recovery and whether it can be used
+            uint32_t count = 0;
+            if(!(packetReceived >> count) || (count > PossessionBarRules::MAX_SLOTS))
+            {
+                OD_LOG_ERR("Invalid possessionSkillBar packet");
+                break;
+            }
+
+            std::vector<PossessionBarRules::Slot> slots;
+            bool isComplete = true;
+            for(uint32_t index = 0; index < count; ++index)
+            {
+                PossessionBarRules::Slot slot;
+                if(!(packetReceived >> slot.mIcon >> slot.mRemaining >> slot.mDuration >> slot.mUsable) ||
+                   !std::isfinite(slot.mRemaining) || !std::isfinite(slot.mDuration) || (slot.mRemaining < 0.0) ||
+                   (slot.mDuration < 0.0))
+                {
+                    isComplete = false;
+                    break;
+                }
+                slots.push_back(slot);
+            }
+            if(!isComplete)
+            {
+                OD_LOG_ERR("Invalid possessionSkillBar packet");
+                break;
+            }
+
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
+            {
+                GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+                gm->setPossessionSkillBar(slots);
             }
             break;
         }

@@ -23,8 +23,8 @@ names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.M
 # Existing kinds retain their order before the appended equipment and infirmary notifications.
 # The hand cooldown of the campaign (setHandCooldown) is appended after dungeonbookRoster, the refused start of the
 # lobby (startGameRefused) after it.
-assert names[-26:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
-                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown', 'startGameRefused'], names[-26:]
+assert names[-27:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
+                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown', 'startGameRefused', 'possessionSkillBar'], names[-26:]
 assert 'case ServerNotificationType::cosmeticEvent:' in read('source/network/ServerNotification.cpp')
 
 server = read('source/network/ODServer.cpp')

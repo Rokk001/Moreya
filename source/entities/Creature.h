@@ -2073,6 +2073,16 @@ public:
     //! use the enemy in front of the creature.
     void possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim);
 
+    //! \brief Called on server side. The skills on the skill keys of the possessed creature in the order of the keys:
+    //! every skill the creature can use other than its melee and ranged attack (those are on the left mouse button),
+    //! counted the same way as possessedUseSkill counts the slots.
+    std::vector<CreatureSkillData*> getPossessedSkillSlots();
+
+    //! \brief Called on server side. Sends the skill bar of the possession view (possessionSkillBar) to the human
+    //! player that possesses the creature: per key slot its icon, the recovery still to run and whether the
+    //! creature can use the skill. Nothing is sent for an AI keeper or a creature that is not possessed.
+    void sendPossessionSkillBar();
+
     //! Called on server side. True if the creature follows a possessed leader (possession group)
     inline bool isInPossessionGroup() const
     { return !mGroupLeaderName.empty(); }
