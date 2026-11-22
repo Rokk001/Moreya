@@ -100,9 +100,10 @@ namespace MapHandler
     bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo);
 
     //! \brief Counts the number of all seats in the levelfile, needed to initialize the structure
-    //! everVisitedflagpool plus map Size X and map Size Y
+    //! everVisitedflagpool plus map Size X and map Size Y. highestSeatId is the highest seat id of the [Seat] tags
+    //! (0 without seats): the pool is indexed by the seat id, and the ids of a level can have gaps.
 
-    void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats);
+    void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats, int& highestSeatId);
     //! \brief Level extension constant, used in different GUI modes.
     static const std::string LEVEL_EXTENSION = OfficialLevels::LEVEL_FILE_EXTENSION;
     //! \brief Extension of the maps made in the editor (the shipped levels keep LEVEL_EXTENSION).

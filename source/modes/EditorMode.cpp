@@ -56,6 +56,7 @@
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
 #include "utils/Helper.h"
+#include "utils/LevelFileNameInput.h"
 #include "utils/MapSizeInput.h"
 #include "ODApplication.h"
 
@@ -771,13 +772,10 @@ bool EditorMode::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     if(!ODFrameListener::getSingleton().findWorldPositionFromMouse(
            arg, keeperHandPos,RenderManager::KEEPER_HAND_WORLD_Z))
         return true;
-    
-    if(!ODFrameListener::getSingleton().findWorldPositionFromMouse(
-           arg, keeperHandPos,RenderManager::getSingletonPtr()
-           ->getSceneManager()->getRootSceneNode()->getChild("Draggable_scene_node")->getPosition().z))
-        return true;
+    // The clicked tile is taken on the same plane as the hovered tile of mouseMoved; the copy block is hit with
+    // its own ray test below
 
-            
+
     RenderManager::getSingleton().moveWorldCoords(keeperHandPos.x, keeperHandPos.y);
 
     int tileX = Helper::round(keeperHandPos.x);
@@ -2608,7 +2606,8 @@ void EditorMode::loadMenuAskForConfirmation(const std::string& fileName)
 }
 
 //! \brief Asks the server to save the map under the name of the save menu. The map counts as saved only when the
-//! request was sent (connected, and the folder exists).
+//! request was sent (connected, and the folder exists) with a name that names a file; the server refuses any other
+//! name with a message.
 bool EditorMode::saveMenuSaveButtonClicked(const CEGUI::EventArgs& /*arg*/)
 {
 
@@ -2619,7 +2618,8 @@ bool EditorMode::saveMenuSaveButtonClicked(const CEGUI::EventArgs& /*arg*/)
     {
         // Send a message to the server telling it we want to drop the creature
         ODClient::getSingleton().queueClientNotification(ClientNotificationType::askSaveMap,filePath, fileName);
-        mModifiedMapBit = false;
+        if(LevelFileNameInput::namesFile(fileName))
+            mModifiedMapBit = false;
     }
     return true;
 }
@@ -3141,7 +3141,8 @@ EditorMode::~EditorMode()
         debugDrawer->clear();
 }
 
-//! \brief Creates and opens a new map with the existing editor status above the loading picture.
+//! \brief Creates and opens a new map with the existing editor status above the loading picture. The file name
+//! must be a plain name in the user level folder.
 bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
 {
     // Creating the filename
@@ -3167,6 +3168,13 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     if (level.empty()) {
         mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
             ->setText("Please set a level filename.");
+        return true;
+    }
+    // The map is made in the user level folder: a name with a folder or ".." could put it anywhere else
+    if(!LevelFileNameInput::isPlainFileName(level))
+    {
+        mRootWindow->getChild("LevelWindowFrame/LevelMessageText")
+            ->setText("The level filename must be a plain file name,\nwithout folders.");
         return true;
     }
 

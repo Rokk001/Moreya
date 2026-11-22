@@ -30,6 +30,7 @@
 #include "sound/MusicPlayer.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/LevelFileNameInput.h"
 #include "utils/LogManager.h"
 #include "utils/MapSizeInput.h"
 #include "utils/ResourceManager.h"
@@ -103,7 +104,8 @@ void MenuModeEditorNew::activate()
     window->getChild(TEXT_LOADING)->setText("");
 }
 
-//! \brief Presents loading before creating, writing and opening the new editor map.
+//! \brief Presents loading before creating, writing and opening the new editor map. The file name must be a plain
+//! name in the user level folder.
 bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::editorNewMenu);
@@ -130,6 +132,12 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     Helper::trim(level);
     if (level.empty()) {
         window->getChild(TEXT_LOADING)->setText("Please set a level filename.");
+        return true;
+    }
+    // The map is made in the user level folder: a name with a folder or ".." could put it anywhere else
+    if(!LevelFileNameInput::isPlainFileName(level))
+    {
+        window->getChild(TEXT_LOADING)->setText("The level filename must be a plain file name, without folders.");
         return true;
     }
 

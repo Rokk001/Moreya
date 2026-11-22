@@ -79,6 +79,7 @@
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
+#include "utils/LevelFileNameInput.h"
 #include "utils/LogManager.h"
 #include "utils/MasterServer.h"
 #include "utils/ResourceManager.h"
@@ -2992,6 +2993,17 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             {
                 // We cannot save the map
                 std::string msg = "Map could not be saved because player hand is not empty";
+                ServerNotification notif(ServerNotificationType::chatServer, player);
+                notif.mPacket << msg << EventShortNoticeType::genericGameInfo;
+                sendAsyncMsg(notif);
+                break;
+            }
+            // A save under a new name needs a file name: with an empty name the folder itself would become the
+            // target, and the map would be written next to the folder under the folder's name
+            if((mServerMode == ServerMode::ModeEditor) && !(receivedFilePath.empty() && receivedFileLevel.empty())
+                && !LevelFileNameInput::namesFile(receivedFileLevel))
+            {
+                std::string msg = "Map could not be saved: please enter a file name";
                 ServerNotification notif(ServerNotificationType::chatServer, player);
                 notif.mPacket << msg << EventShortNoticeType::genericGameInfo;
                 sendAsyncMsg(notif);

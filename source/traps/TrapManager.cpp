@@ -220,6 +220,8 @@ void TrapFactory::checkBuildTrapDefaultEditor(GameMap* gameMap, TrapType type, c
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Builds the trap of an editor request on its tiles. All tiles are read before one is changed, so a request
+//! with a tile outside the map changes nothing; the trap is deleted whenever it is not added to the map.
 bool TrapFactory::buildTrapDefaultEditor(GameMap* gameMap, Trap* trap, ODPacket& packet) const
 {
     int32_t seatId;
@@ -228,10 +230,11 @@ bool TrapFactory::buildTrapDefaultEditor(GameMap* gameMap, Trap* trap, ODPacket&
     if(seatTrap == nullptr)
     {
         OD_LOG_ERR("seatId=" + Helper::toString(seatId));
+        delete trap;
         return false;
     }
 
-    std::vector<Tile*> tiles;
+    std::vector<Tile*> packetTiles;
     uint32_t nbTiles;
     OD_ASSERT_TRUE(packet >> nbTiles);
 
@@ -242,9 +245,15 @@ bool TrapFactory::buildTrapDefaultEditor(GameMap* gameMap, Trap* trap, ODPacket&
         if(tile == nullptr)
         {
             OD_LOG_ERR("unexpected null tile");
+            delete trap;
             return false;
         }
+        packetTiles.push_back(tile);
+    }
 
+    std::vector<Tile*> tiles;
+    for(Tile* tile : packetTiles)
+    {
         // If the tile is not buildable, we change it
         if(tile->getCoveringBuilding() != nullptr)
         {
@@ -264,7 +273,13 @@ bool TrapFactory::buildTrapDefaultEditor(GameMap* gameMap, Trap* trap, ODPacket&
     }
 
 
-    return buildTrapDefault(gameMap, trap, seatTrap, tiles);
+    // Without a free tile the trap is not added to the map
+    if(!buildTrapDefault(gameMap, trap, seatTrap, tiles))
+    {
+        delete trap;
+        return false;
+    }
+    return true;
 }
 
 void TrapManager::registerFactory(const TrapFactory* factory)

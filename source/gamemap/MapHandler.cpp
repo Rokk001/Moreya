@@ -307,8 +307,9 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
     int mapSizeX;
     int mapSizeY;
     int numberOfSeats;
-    
-    getXandYandSeatsNumber(levelFile,mapSizeX,mapSizeY,numberOfSeats);  
+    int highestSeatId;
+
+    getXandYandSeatsNumber(levelFile,mapSizeX,mapSizeY,numberOfSeats,highestSeatId);
     // A missing, negative or absurd map size must end in a message, never in a huge or negative allocation
     if((mapSizeX <= 0) || (mapSizeY <= 0) || (mapSizeX > MAX_MAP_SIDE) || (mapSizeY > MAX_MAP_SIDE))
     {
@@ -320,7 +321,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
     const int scannedMapSizeY = mapSizeY;
     levelFile.clear();               // Clear any eof or fail flags
     levelFile.seekg(0, std::ios::beg);  // Move read position to beginning
-    gameMap.initializeEverVisitedFlagTilesPools(mapSizeX,mapSizeY,numberOfSeats + 1);  // mind that the mId = 0 is always reserved and is not a valid Seat number, instead mId = 0 is for rogue ( enemy to all ) creatures
+    // The pool is indexed by the seat id, so a level whose seat ids have gaps (1, 2, 5) needs a slot for the
+    // highest id, not only one per seat
+    const int everVisitedSeatSlots = std::max(numberOfSeats, highestSeatId) + 1;
+    gameMap.initializeEverVisitedFlagTilesPools(mapSizeX,mapSizeY,everVisitedSeatSlots);  // mind that the mId = 0 is always reserved and is not a valid Seat number, instead mId = 0 is for rogue ( enemy to all ) creatures
     // Read in the version number from the level file
 
     // std::vector CreatureMoved::alreadyVisited also depends on map Size : 
@@ -1784,10 +1788,12 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
     return true;
 }
 
-//! \brief Finds the map size of the last [Tiles] section and counts the seats; a size that is no number stays -1.
-void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats)
+//! \brief Finds the map size of the last [Tiles] section, counts the seats and finds the highest seat id (0 without
+//! seats); a size that is no number stays -1.
+void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats, int& highestSeatId)
 {
     numberOfSeats = 0;
+    highestSeatId = 0;
     xx = -1;
     yy = -1;
     std::string nextParam;
@@ -1797,7 +1803,19 @@ void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberO
             break;
         ss >> nextParam;
         if (nextParam == "[Seat]")
-            numberOfSeats++;    
+        {
+            numberOfSeats++;
+            // The seat id follows the tag; a value that is no number is left to the seat reader, which refuses it
+            std::string idParam;
+            int seatId = 0;
+            if((ss >> idParam) && (idParam == "seatId"))
+            {
+                if(!(ss >> seatId))
+                    ss.clear();
+                else if(seatId > highestSeatId)
+                    highestSeatId = seatId;
+            }
+        }
         else if (nextParam == "[Tiles]")
         {
         
