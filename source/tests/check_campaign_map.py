@@ -6,7 +6,8 @@ current level and the found bonus caves. The province structure of the former wo
 of the main menu shows the same map on its table.
 
 Menu UX plan (M2 to M6): the map is carved into stone and the table top shows its carved map region (TABLE_CROP) on a
-map plane that takes up the table top; the current level glows with an arrow over it; every wing has a greyed out
+map plane that takes up the table top; the clickable map is that table top, with the table edge and the hall floor
+around it; the current level glows with an arrow over it; every wing has a greyed out
 image drawn over it while it is locked; the hover display is a small carved tablet fitted to its text; the guild
 stands on a carved slab with a trail of embers to the current level and its banner there.
 
@@ -559,6 +560,18 @@ with Image.open(art / world["base"]) as map_image:
     saturation = sum(region.getchannel("S").tobytes()) / (440 * 250 * 255.0)
 check(saturation <= MAX_MAP_SATURATION, "the map is not carved stone: mean saturation %.2f (at most %.2f)"
       % (saturation, MAX_MAP_SATURATION))
+# M2 (Mario on build 93): the clickable map is the carved top of the stone table, it ends at the table edge and the
+# hall floor lies around it: the full screen map keeps the carved map frame (TABLE_CROP) and is built round it from
+# the render of the stone table and the hall floor of the menu scene, not from the rock around the carved frame
+art_tool = (root / "tools/gen_campaign_map_art.py").read_text(encoding="utf-8")
+render_tool = (root / "tools/render_campaign_map_table.py").read_text(encoding="utf-8")
+check("TABLE_RENDER" in art_tool and "screen = table_surroundings(root)" in art_tool
+      and "screen[top:top + height, left:left + width] = colours[top:top + height, left:left + width]" in art_tool,
+      "the full screen map must be the carved map frame on the stone table in the hall (tools/gen_campaign_map_art.py)")
+check(all(name in render_tool for name in ("MenuMapTableStone.mesh", "MenuCourtyard.mesh", "MenuOuterGround.mesh")),
+      "the table render must show the stone table and the hall floor of the menu scene")
+check(re.search(r"(?m)^TABLE_CROP = \(400, 418, 1752, 980\)$", art_tool) is not None,
+      "the carved map frame of the full screen map is TABLE_CROP (400, 418, 1752, 980)")
 # M4: every wing has a greyed out image over its own caves: RGBA, inside the map, grey (mean saturation of its opaque
 # pixels at most MAX_LOCKED_SATURATION) and darker than the map below it (at most MAX_LOCKED_SHARE of its luminance)
 MAX_LOCKED_SATURATION = 0.1

@@ -7,9 +7,12 @@ generation of OpenAI Codex from an own written brief (asset source moreya_map_ca
 $ODP_ASSETS_SRC/gui/campaign-map-carved, next to the painted map it was made from and the brief); its layout is that
 of the painted map, so the cave markers of gui/campaign/campaign-world.json stay where they were. This script writes:
 
-- gui/campaign/moreya/moreya_map.png (2560 x 1600): the carved map scaled up to the map size, slightly sharpened,
-  with the rock around the map frame darkened towards the edges, so the title, the progress and the guild panel read
-  on it;
+- gui/campaign/moreya/moreya_map.png (2560 x 1600): the carved map as the top of the stone table in the campaign
+  hall: inside TABLE_CROP the carved map scaled up to the map size and slightly sharpened, around it the edge of the
+  stone table and the hall floor of the menu scene (asset source moreya_map_table_render.png next to the carved map,
+  rendered from the menu meshes by tools/render_campaign_map_table.py), stretched so that the table top of the
+  render is exactly TABLE_CROP, toned like the hall floor in the game and darkened towards the edges, so the title,
+  the progress and the guild panel read on it; the rock around the carved map frame is no longer shown there;
 - materials/textures/menu/MenuCampaignMap.png (2560 x 1600): the carved map frame, TABLE_CROP, which covers the whole
   table top (the table is fitted to its aspect ratio by tools/menu_table_map_plane.py), stretched to the map size; the
   plane maps it back to its own aspect ratio;
@@ -39,11 +42,21 @@ import assets_src  # noqa: E402
 #: Asset source of the carved map (Codex output at its own resolution) and the size of the map.
 CARVED_SOURCE = "assets-src/gui/campaign-map-carved/moreya_map_carved_codex_raw.png"
 MAP_SIZE = (2560, 1600)
+#: Asset source of the table and the hall floor around the map (tools/render_campaign_map_table.py; a JSON file of the
+#: same name gives the pixels of the corners of the map plane in it).
+TABLE_RENDER = "assets-src/gui/campaign-map-carved/moreya_map_table_render.png"
 #: The carved map frame in map pixels (x, y, width, height); outside it the rock darkens towards the edges.
 MAP_FRAME = (395, 410, 1765, 1000)
 #: Share of brightness kept at the map edges and the width of the transition in map pixels.
 EDGE_DARKEN = 0.62
 EDGE_FEATHER = 260.0
+#: Tone of the hall floor and the table edge around the table top of the full screen map (mean and spread of every
+#: colour channel, 0..1), the dark warm stone of the hall floor in the game, and the share of brightness kept at the
+#: screen edges (over FLOOR_FEATHER map pixels from the table top).
+FLOOR_MEAN = np.array([0.196, 0.133, 0.118])
+FLOOR_SPREAD = np.array([0.058, 0.040, 0.035])
+FLOOR_EDGE_DARKEN = 0.72
+FLOOR_FEATHER = 420.0
 #: The part of the map on the table top (x, y, width, height): exactly the carved map frame, no stone around it; the
 #: table follows its aspect ratio (map plane 6.15 x 3.44, tools/menu_table_map_plane.py).
 TABLE_CROP = (400, 418, 1752, 980)
@@ -142,19 +155,50 @@ def save_rgba(rgba, path):
     Image.fromarray(np.round(np.clip(rgba, 0.0, 1.0) * 255.0).astype(np.uint8), "RGBA").save(path, optimize=True)
 
 
+def table_surroundings(root):
+    """Returns the table edge and the hall floor around the table top as RGB array (0..1) of the map size: the table
+    render stretched so that its map plane covers exactly TABLE_CROP, toned to FLOOR_MEAN and FLOOR_SPREAD outside the
+    table top and darkened towards the screen edges."""
+    render_path = assets_src.resolve(root, TABLE_RENDER)
+    render = Image.open(render_path).convert("RGB")
+    corners = json.load(open(os.path.splitext(str(render_path))[0] + ".json", encoding="utf-8"))["map_plane_corners"]
+    render_left = min(corner[0] for corner in corners)
+    render_right = max(corner[0] for corner in corners)
+    render_top = min(corner[1] for corner in corners)
+    render_bottom = max(corner[1] for corner in corners)
+    left, top, width, height = TABLE_CROP
+    scale_x = (render_right - render_left) / float(width)
+    scale_y = (render_bottom - render_top) / float(height)
+    # Map pixel (x, y) shows render pixel (render_left + (x - left) * scale_x, render_top + (y - top) * scale_y)
+    stretched = render.transform(MAP_SIZE, Image.AFFINE, (scale_x, 0.0, render_left - left * scale_x,
+                                                          0.0, scale_y, render_top - top * scale_y), Image.BICUBIC)
+    colours = np.asarray(stretched, dtype=np.float64) / 255.0
+    outside = rounded_box(MAP_SIZE[0], MAP_SIZE[1], TABLE_CROP, 0.5) > 0.0
+    mean = colours[outside].mean(axis=0)
+    spread = colours[outside].std(axis=0)
+    toned = np.clip((colours - mean) * (FLOOR_SPREAD / spread) + FLOOR_MEAN, 0.0, 1.0)
+    distance = rounded_box(MAP_SIZE[0], MAP_SIZE[1], TABLE_CROP, 0.5)
+    keep = 1.0 - (1.0 - FLOOR_EDGE_DARKEN) * np.clip(distance / FLOOR_FEATHER, 0.0, 1.0)
+    return toned * keep[:, :, None]
+
+
 def build_map(root):
-    """Writes the full screen map and the table texture; returns the map as RGB array (0..1)."""
+    """Writes the full screen map (the carved map as the table top in the hall) and the table texture; returns the
+    carved map with its rock around the frame as RGB array (0..1), the stone of the locked wings and the plaques."""
     source = Image.open(assets_src.resolve(root, CARVED_SOURCE)).convert("RGB")
     scaled = source.resize(MAP_SIZE, Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=2, percent=60, threshold=2))
     colours = np.asarray(scaled, dtype=np.float64) / 255.0
     frame = rounded_box(MAP_SIZE[0], MAP_SIZE[1], MAP_FRAME, 20.0)
     keep = 1.0 - (1.0 - EDGE_DARKEN) * np.clip(frame / EDGE_FEATHER, 0.0, 1.0)
     colours = colours * keep[:, :, None]
+    # The full screen map: the carved map frame (TABLE_CROP) unchanged, around it the table edge and the hall floor
+    left, top, width, height = TABLE_CROP
+    screen = table_surroundings(root)
+    screen[top:top + height, left:left + width] = colours[top:top + height, left:left + width]
     folder = os.path.join(root, "gui", "campaign", "moreya")
-    Image.fromarray(np.round(colours * 255.0).astype(np.uint8), "RGB").save(os.path.join(folder, "moreya_map.png"),
+    Image.fromarray(np.round(screen * 255.0).astype(np.uint8), "RGB").save(os.path.join(folder, "moreya_map.png"),
                                                                            optimize=True)
     table = Image.fromarray(np.round(colours * 255.0).astype(np.uint8), "RGB")
-    left, top, width, height = TABLE_CROP
     table = table.crop((left, top, left + width, top + height)).resize(MAP_SIZE, Image.LANCZOS)
     table.save(os.path.join(root, "materials", "textures", "menu", "MenuCampaignMap.png"), optimize=True)
     return colours
