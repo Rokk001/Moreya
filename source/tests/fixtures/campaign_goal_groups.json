@@ -134,7 +134,7 @@
       "brackenford-main-ford": {
         "kind": "mainobjectiveid",
         "seat": "1",
-        "text": "Cross the ford; clear the landing.",
+        "text": "Dig across the dry ford; clear the landing.",
         "completion": "mainFord",
         "conditions": [
           "Cond\tflag\tgoalFordCrossed\t1",

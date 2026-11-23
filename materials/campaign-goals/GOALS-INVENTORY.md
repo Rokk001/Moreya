@@ -77,13 +77,13 @@ File: `levels/campaign/wing1/Brackenford.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1470 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
-| Script line 1471 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
-| Script line 1478 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
-| Script line 1487 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
-| Script line 1497 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
-| Script line 1571 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
-| Script line 1669 | `Action	win	1` | yes |
+| Script line 1433 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
+| Script line 1434 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
+| Script line 1441 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
+| Script line 1450 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
+| Script line 1460 | `Action	objectiveid	1	brackenford-o05	Dig across the dry ford and clear the landing yard.` | yes |
+| Script line 1534 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
+| Script line 1632 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -91,7 +91,7 @@ File: `levels/campaign/wing1/Brackenford.level`.
 | --- | --- | --- |
 | main | `brackenford-main-home`: Keep your heart, 2 beds and a hatchery. | `mainHome`: Cond	goalmet	1	ProtectDungeonTemple; Cond	furniture	1	Dormitory	>=	2; Cond	furniture	1	Hatchery	>=	1 |
 | main | `brackenford-main-grove`: Claim the grove. | `mainGrove`: Cond	claimed	1	Grove	22 |
-| main | `brackenford-main-ford`: Cross the ford; clear the landing. | `mainFord`: Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1 |
+| main | `brackenford-main-ford`: Dig across the dry ford; clear the landing. | `mainFord`: Cond	flag	goalFordCrossed	1; Cond	event	FordGuard1	killed; Cond	event	FordGuard2	killed; Cond	spawncleared	landingSeen	1 |
 | main | `brackenford-main-keep`: Claim the keep. | `mainKeep`: Cond	groundclaimed	1	44	5	48	5; Cond	groundclaimed	1	43	6	50	6; Cond	groundclaimed	1	43	7	52	7; Cond	groundclaimed	1	43	8	52	8; Cond	groundclaimed	1	43	9	52	9; Cond	groundclaimed	1	43	10	51	10; Cond	groundclaimed	1	41	11	48	11; Cond	groundclaimed	1	41	12	44	12 |
 | main | `brackenford-main-raid`: Defeat the raid and its leader. | `mainRaid`: Cond	raid	defeated |
 | optional | `brackenford-extra-gold`: Mine 500 gold. | `extraGold`: Cond	mined	1	>=	500 |
@@ -120,7 +120,7 @@ Static footprint/resource/order checks are not an executed playthrough or a comb
 | Trigger `raidDefeated` | `Action	objectivestate	1	brackenford-o01	reached`; conditions: `Cond	raid	defeated` | yes |
 | Trigger `extraGold` | `Action	objectivestate	1	brackenford-extra-gold	reached`; conditions: `Cond	mined	1	>=	500` | yes |
 | Trigger `mainHeartLost` | `Action	objectivestate	1	brackenford-main-home	failed`; conditions: `Cond	roomtiles	1	DungeonTemple	<=	0` | yes |
-| Briefing | Until the gate opens, keep your heart, two beds and a hatchery, claim the grove, cross the ford, clear the landing and claim the keep. | yes: mainHome checks the protected heart, two beds and a hatchery coop; mainGrove 22 claimed Grove tiles; mainFord the actual ford route, both ford guards and the landing reinforcements; mainKeep all 64 original Keep floor tiles |
+| Briefing | Until the gate opens, keep your heart, two beds and a hatchery, claim the grove, dig across the dry ford, clear the landing and claim the keep. | yes: mainHome checks the protected heart, two beds and a hatchery coop; mainGrove 22 claimed Grove tiles; mainFord the actual ford route, both ford guards and the landing reinforcements; mainKeep all 64 original Keep floor tiles |
 | Briefing | A stone lies hidden in the cellars; let a Ziv carry it home and a forgotten pit may open. | yes: entering Cellar creates the cellar-stone; only its actual delivery to the heart reveals Mossgate |
 | Briefing | Then break the raid and catch Elsa Brack before she runs back through the gate. | yes: mainRaid requires the defeated raid with its leader ElsaBrack; the leader's escape through the gate loses the level by itself |
 
