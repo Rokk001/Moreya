@@ -1,15 +1,21 @@
 // In-game Moreya gate (models/MoreyaGate.mesh, models/MoreyaGatePortcullis.mesh, tools/blender-assets/moreya_raid_models.py).
 // The gate keeps the start screen gate's own surfaces (MenuScene.material); only the dark passage behind its arch is new.
 
+// The passage behind the bars: dark, cool fortress stone with a faint cold green glow of its own, so that it reads as a
+// stone passage leading into the wall and not as a flat black sheet. The fortress stone texture is very dark (mean
+// linear colour 0.0706 0.06 0.0494, see MenuWood in MenuScene.material), so the lit stone stays well below the gate's
+// own stone (MenuDarkStone) and the emissive term, multiplied by the texture, only lifts the stones into a dim green.
 material MoreyaGateDepth
 {
     technique
     {
         pass
         {
-            ambient 0 0 0 1
-            diffuse 0 0 0 1
-            emissive 0.004 0.022 0.008
+            ambient 0.30 0.34 0.33 1
+            diffuse 0.22 0.26 0.25 1
+            specular 0 0 0 1 1
+            emissive 0.10 0.55 0.24
+            texture_unit { texture MenuFortressStone.png gamma }
         }
     }
 }

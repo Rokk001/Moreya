@@ -274,7 +274,26 @@
               44,
               12
             ]
-          ]
+          ],
+          "excluded_room": {
+            "name": "MoreyaGate1",
+            "type": 10,
+            "seat": 2,
+            "tiles": [
+              [
+                53,
+                7
+              ],
+              [
+                53,
+                8
+              ],
+              [
+                53,
+                9
+              ]
+            ]
+          }
         }
       ],
       "regions": {

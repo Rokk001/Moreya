@@ -140,7 +140,7 @@ int main(int argc,char** argv){try{
    check(badge->getText()==std::to_string(level)+"/3","actual current and maximum level visible on every node");
    check(badge->isVisible()&&badge->isMousePassThroughEnabled()&&!badge->isClippedByParent(),"badge visible below icon without intercepting clicks");
    check(b->getProperty("ButtonImageColour")== (level==0?"FF666666":"FFFFFFFF"),"unresearched icons are greyed and researched icons retain colour");
-   check(b->getProperty("ResearchLevelColour")== (level==3?"FFFFC947":level==2?"FFC98A4A":"00FFFFFF"),"level has no, bronze or gold frame");
+   check(b->getProperty("ResearchLevelColour")== (level==3?"FFFFC947":level==2?"FFCDD3DC":"00FFFFFF"),"level has no, silver or gold frame");
    {const std::string st=b->getUserString("ResearchState").c_str();
     const std::string want=st=="Researching"?"OpenDungeonsSkin/ResearchTileWorking":st=="Queued"?"OpenDungeonsSkin/ResearchTileQueued":level>0?"OpenDungeonsSkin/ResearchTileLearned":"OpenDungeonsSkin/ResearchTileLocked";
     check(b->getProperty("ResearchTileImage")==CEGUI::String(want),"node state shows as a material tile, not a flat colour square");
@@ -223,11 +223,10 @@ int main(int argc,char** argv){try{
   check(treasury->getUserString("ResearchState")=="Locked","level II waits for the tab gate");
   check(std::string(treasury->getUserString("ResearchDetails").c_str()).find("Locked: more entries of the Rooms tab")!=std::string::npos,"the tooltip says why the level is locked");
   seat.gate=true;seat.levels.clear();}
- // Campaign level rules, in the tree and in the navigation of rooms, spells, traps and doors: the real icon for an entry
- // from the start or researched, the darkened real icon under the padlock for an allowed entry not researched yet (still
- // queueable in the tree, building nothing in the navigation), the question mark in place of the icon for a forbidden
- // entry, traps and doors only with a built Workshop; a marked navigation button stays enabled so that it shows the
- // frames of every state; skirmish rules afterwards stay as before
+ // Campaign level rules of rooms, spells, traps and doors: in the tree the real icon for an entry from the start or
+ // researched, the darkened real icon under the padlock for an allowed entry not researched yet (still queueable), the
+ // question mark in place of the icon for a forbidden entry; the navigation shows only researched allowed entries with
+ // their real icon and never a mark, traps and doors only with a built Workshop; skirmish rules afterwards stay as before
  {Seat& seat=map.player.seat;seat.denied.clear();seat.denied.push_back(SkillType::roomGuardRoom);seat.denied.push_back(SkillType::spellCurse);seat.denied.push_back(SkillType::trapDoorIronbound);
   seat.levels.clear();seat.level=0;seat.queue=0;seat.current=false;
   CEGUI::Window* navigation=windows.createWindow("DefaultWindow","MainTabControl");root->addChild(navigation);
@@ -241,13 +240,15 @@ int main(int argc,char** argv){try{
   std::function<bool(CEGUI::Window*,const std::string&,const std::string&,const char*,bool)> navigationIs=[&](CEGUI::Window* b,const std::string& icon,const std::string& mark,const char* colour,bool locked)->bool{
    return b->isVisible()&&!b->isDisabled()&&b->getProperty("NormalImage")==icon&&b->getProperty("MarkImage")==mark&&b->getProperty("IconColour")==colour&&
     b->getUserString("NavigationLocked")==(locked?"true":"false")&&b->getUserString("NavigationRealImage")==roomIcon;};
+  std::function<bool(CEGUI::Window*)> hiddenUnmarked=[&](CEGUI::Window* b)->bool{
+   return !b->isVisible()&&b->getProperty("NormalImage")==roomIcon&&b->getProperty("MarkImage").empty()&&b->getUserString("NavigationLocked")=="false";};
   const std::string trainingIcon=field(SkillType::roomTrainingHall)->getProperty("ButtonImage").c_str();const std::string guardIcon=field(SkillType::roomGuardRoom)->getProperty("ButtonImage").c_str();
   game.mIsCampaignLevelShown=true;game.mHasWorkshopShown=false;
   seat.levels[SkillType::roomDormitory]=1;
   CEGUI::Window* fromStart=refreshNavigation(SkillType::roomDormitory,"Rooms");
   check(navigationIs(fromStart,roomIcon,"","FFFFFFFF",false)&&field(SkillType::roomDormitory)->getProperty("LockImage").empty(),"campaign: an entry from the start shows its real icon and can be built");
   CEGUI::Window* allowed=refreshNavigation(SkillType::roomTrainingHall,"Rooms");
-  check(navigationIs(allowed,roomIcon,padlock,"FF666666",true),"campaign: an allowed entry not researched yet shows its darkened icon under the padlock and builds nothing");
+  check(hiddenUnmarked(allowed),"campaign: an allowed entry not researched yet is not in the navigation");
   CEGUI::Window* allowedField=field(SkillType::roomTrainingHall);
   check(allowedField->getProperty("LockImage")==padlock&&allowedField->getProperty("ButtonImageColour")=="FF666666"&&allowedField->getProperty("ButtonImage")==trainingIcon,"campaign: an allowed field not researched yet shows its darkened icon under the padlock");
   check(!allowedField->isDisabled()&&allowedField->getUserString("ResearchState")!="Unavailable","campaign: a padlocked field can still be queued and researched");
@@ -257,14 +258,14 @@ int main(int argc,char** argv){try{
   check(navigationIs(allowed,roomIcon,"","FFFFFFFF",false),"campaign: once researched the padlock goes and the real icon shows in the navigation");
   check(allowedField->getProperty("LockImage").empty()&&allowedField->getProperty("ButtonImageColour")=="FFFFFFFF","campaign: once researched the padlock goes and the real icon shows in the tree");
   CEGUI::Window* forbidden=refreshNavigation(SkillType::roomGuardRoom,"Rooms");
-  check(navigationIs(forbidden,question,"","FFFFFFFF",true),"campaign: a forbidden entry shows the question mark in the navigation and builds nothing");
+  check(hiddenUnmarked(forbidden),"campaign: a forbidden entry is not in the navigation");
   CEGUI::Window* guardField=field(SkillType::roomGuardRoom);
   check(guardField->isDisabled()&&guardField->getProperty("ButtonImage")==question&&guardField->getProperty("StateImage").empty()&&guardField->getProperty("LockImage").empty(),"campaign: a forbidden field shows the question mark in place of its icon and cannot be clicked");
   check(guardField->getProperty("ButtonImageColour")=="FFFFFFFF"&&guardField->getProperty("ResearchTileImage")=="OpenDungeonsSkin/ResearchTileLocked","campaign: the question mark keeps its colours inside the locked tile");
   CEGUI::Window* spell=refreshNavigation(SkillType::spellCreatureHeal,"Spells");
-  check(navigationIs(spell,roomIcon,padlock,"FF666666",true),"campaign: an unresearched spell shows its darkened icon under the padlock");
+  check(hiddenUnmarked(spell),"campaign: an unresearched spell is not in the navigation");
   CEGUI::Window* forbiddenSpell=refreshNavigation(SkillType::spellCurse,"Spells");
-  check(navigationIs(forbiddenSpell,question,"","FFFFFFFF",true),"campaign: a forbidden spell shows the question mark");
+  check(hiddenUnmarked(forbiddenSpell),"campaign: a forbidden spell is not in the navigation");
   seat.levels[SkillType::trapCannon]=1;
   CEGUI::Window* trap=refreshNavigation(SkillType::trapCannon,"Traps");
   CEGUI::Window* door=refreshNavigation(SkillType::trapDoorWooden,"Traps");
@@ -272,8 +273,8 @@ int main(int argc,char** argv){try{
   check(!trap->isVisible()&&!door->isVisible()&&!forbiddenDoor->isVisible(),"campaign: no trap and no door without a built Workshop");
   game.mHasWorkshopShown=true;trap=refreshNavigation(SkillType::trapCannon,"Traps");door=refreshNavigation(SkillType::trapDoorWooden,"Traps");forbiddenDoor=refreshNavigation(SkillType::trapDoorIronbound,"Traps");
   check(navigationIs(trap,roomIcon,"","FFFFFFFF",false),"campaign: with a Workshop a researched trap shows its real icon");
-  check(navigationIs(door,roomIcon,padlock,"FF666666",true),"campaign: with a Workshop an unresearched door shows its darkened icon under the padlock");
-  check(navigationIs(forbiddenDoor,question,"","FFFFFFFF",true),"campaign: with a Workshop a forbidden door shows the question mark");
+  check(hiddenUnmarked(door),"campaign: with a Workshop an unresearched door is still not in the navigation");
+  check(hiddenUnmarked(forbiddenDoor),"campaign: with a Workshop a forbidden door is not in the navigation");
   game.mIsCampaignLevelShown=false;game.mHasWorkshopShown=false;seat.levels.erase(SkillType::roomTrainingHall);
   allowed=refreshNavigation(SkillType::roomTrainingHall,"Rooms");door=refreshNavigation(SkillType::trapDoorWooden,"Traps");
   check(!allowed->isVisible()&&!door->isVisible()&&allowed->getProperty("NormalImage")==roomIcon&&allowed->getProperty("MarkImage").empty()&&allowed->getUserString("NavigationLocked")=="false","skirmish: an unresearched entry stays hidden with its real icon and no mark");

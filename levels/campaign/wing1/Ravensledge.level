@@ -195,6 +195,11 @@ ProtectDungeonTemple	NULL
 1	25	2	100	-1	150
 1	26	2	100	-1	150
 1	27	2	100	-1	150
+1	31	3	100
+1	32	3	100
+1	33	3	100
+1	34	3	100
+1	35	3	100
 1	46	2	100
 1	47	2	100
 1	48	2	100
@@ -203,6 +208,11 @@ ProtectDungeonTemple	NULL
 2	27	2	100	-1	150
 2	28	2	100	-1	150
 2	29	2	100	-1	150
+2	31	3	100
+2	32	1	0	2
+2	33	1	0	2
+2	34	1	0	2
+2	35	3	100
 2	40	2	100
 2	46	2	100
 2	48	2	100
@@ -219,6 +229,7 @@ ProtectDungeonTemple	NULL
 3	32	1	0
 3	33	1	0
 3	34	1	0
+3	35	3	100
 3	40	2	100
 3	43	4	0
 3	44	4	0
@@ -478,9 +489,9 @@ ProtectDungeonTemple	NULL
 11	36	1	0
 11	37	1	0
 11	38	1	0
-11	39	1	0	2
-11	40	1	0	2
-11	41	1	0	2
+11	39	1	0
+11	40	1	0
+11	41	1	0
 11	42	1	0
 11	43	4	0
 11	44	4	0
@@ -517,9 +528,9 @@ ProtectDungeonTemple	NULL
 12	36	1	100
 12	37	1	0
 12	38	1	0
-12	39	1	0	2
-12	40	1	0	2
-12	41	1	0	2
+12	39	1	0
+12	40	1	0
+12	41	1	0
 12	42	1	0
 12	43	4	0
 12	44	4	0
@@ -550,9 +561,9 @@ ProtectDungeonTemple	NULL
 13	36	1	100
 13	37	1	100
 13	38	1	0
-13	39	1	0	2
-13	40	1	0	2
-13	41	1	0	2
+13	39	1	0
+13	40	1	0
+13	41	1	0
 13	42	1	0
 13	43	4	0
 13	44	4	0
@@ -2146,17 +2157,11 @@ ProtectDungeonTemple	NULL
 19	20
 [/Room]
 [Room]
-10	MoreyaGate1	2	9
-11	39
-11	40
-11	41
-12	39
-12	40
-12	41
-13	39
-13	40
-13	41
-9	100000	0	0	-
+10	MoreyaGate1	2	3
+2	32
+2	33
+2	34
+3	100000	0	0	-
 [Waves]
 [/Waves]
 [/Room]
@@ -2424,7 +2429,7 @@ Action	win	1
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
 # Countdown, interval, escape share and composition set by the raid simulation R3C (tools/balance/raid_sim.py)
-Gate	12	40	180
+Gate	2	33	90
 Seats	2	1
 Countdown	3600	3600	3600
 Interval	-

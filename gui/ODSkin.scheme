@@ -53,6 +53,7 @@
     <Imageset filename="GoalStatus.imageset" name="GoalStatus" />
     <Imageset filename="HandCooldown.imageset" name="HandCooldown" />
     <Imageset filename="SkillLockMarks.imageset" name="SkillLockMarks" />
+    <Imageset filename="SkillRankStar.imageset" name="SkillRankStar" />
     <Imageset filename="ODBackgrounds.imageset" name="ODBackgrounds" />
     <Imageset filename="ODHudSurface.imageset" name="ODHudSurface" />
     <Imageset filename="ODMainMenuButtons.imageset" name="ODMainMenuButtons" />

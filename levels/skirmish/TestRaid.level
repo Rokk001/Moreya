@@ -1340,7 +1340,7 @@ ProtectDungeonTemple	NULL
 31	35	1	0
 31	36	1	0
 31	37	1	0
-31	38	1	0
+31	38	3	100
 31	39	3	100
 32	0	3	100
 32	1	1	0
@@ -1374,13 +1374,13 @@ ProtectDungeonTemple	NULL
 32	29	1	0
 32	30	1	0
 32	31	1	0
-32	32	1	0	2
-32	33	1	0	2
-32	34	1	0	2
+32	32	1	0
+32	33	1	0
+32	34	1	0
 32	35	1	0
 32	36	1	0
 32	37	1	0
-32	38	1	0
+32	38	1	0	2
 32	39	3	100
 33	0	3	100
 33	1	1	0
@@ -1414,13 +1414,13 @@ ProtectDungeonTemple	NULL
 33	29	1	0
 33	30	1	0
 33	31	1	0
-33	32	1	0	2
-33	33	1	0	2
-33	34	1	0	2
+33	32	1	0
+33	33	1	0
+33	34	1	0
 33	35	1	0
 33	36	1	0
 33	37	1	0
-33	38	1	0
+33	38	1	0	2
 33	39	3	100
 34	0	3	100
 34	1	1	0
@@ -1454,13 +1454,13 @@ ProtectDungeonTemple	NULL
 34	29	1	0
 34	30	1	0
 34	31	1	0
-34	32	1	0	2
-34	33	1	0	2
-34	34	1	0	2
+34	32	1	0
+34	33	1	0
+34	34	1	0
 34	35	1	0
 34	36	1	0
 34	37	1	0
-34	38	1	0
+34	38	1	0	2
 34	39	3	100
 35	0	3	100
 35	1	1	0
@@ -1500,7 +1500,7 @@ ProtectDungeonTemple	NULL
 35	35	1	0
 35	36	1	0
 35	37	1	0
-35	38	1	0
+35	38	3	100
 35	39	3	100
 36	0	3	100
 36	1	1	0
@@ -1707,17 +1707,11 @@ ProtectDungeonTemple	NULL
 20	20
 [/Room]
 [Room]
-10	MoreyaGate1	2	9
-32	32
-32	33
-32	34
-33	32
-33	33
-33	34
-34	32
-34	33
-34	34
-9	100000	0	0	-
+10	MoreyaGate1	2	3
+32	38
+33	38
+34	38
+3	100000	0	0	-
 [Waves]
 [/Waves]
 [/Room]
@@ -1729,7 +1723,7 @@ ProtectDungeonTemple	NULL
 
 [Lights]
 # posX	posY	posZ	diffuseR	diffuseG	diffuseB	specularR	specularG	specularB	attenRange	attenConst	attenLin	attenQuad
-33	30	3.75	0.9	0.8	0.6	0.2	0.2	0.2	50	0.012	0.32	0.0018
+33	35	3.75	0.9	0.8	0.6	0.2	0.2	0.2	50	0.012	0.32	0.0018
 [/Lights]
 
 [CreatureDefinitions]
@@ -1776,7 +1770,7 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 # Raid test. See source/gamemap/LevelScript.h for the format of the triggers and of the [Raid] section.
-Region	NearGate	30	28	36	31
+Region	NearGate	30	33	36	36
 [Trigger]
 Name	welcome
 Mode	once
@@ -1845,7 +1839,7 @@ Action	win	1
 
 [Raid]
 # Gate X Y RotationDegrees | Seats RaidSeatId TargetSeatId | Countdown Seconds|- | Interval Seconds|- | EscapeShare Share|- | Group RaidGroupId LeaderName|- | Member RaidGroupId ClassName Level Name|- Template|-
-Gate	33	33	0
+Gate	33	38	0
 Seats	2	1
 Countdown	240
 Interval	90

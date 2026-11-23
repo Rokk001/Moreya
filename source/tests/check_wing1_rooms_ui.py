@@ -2,16 +2,15 @@
 """Non-compiling check of the campaign level marks in the research tree and the build navigation (wing 1 rooms plan,
 WR4, WR8 and WR10; Global Constraint 8 skirmish and multiplayer unchanged; screen sizes and UI scales).
 
-In a campaign level, in the research tree and in the build navigation of rooms, spells, traps and doors:
+In a campaign level, in the research tree of rooms, spells, traps and doors:
 - an entry available from the start or researched shows its real icon, as before;
 - an entry the level allows but the keeper has not researched yet shows its real icon darkened with the padlock image
-  SkillLockMarks/Padlock on it; in the tree it can still be queued and researched, in the navigation it builds nothing;
-- an entry the level forbids shows the question mark SkillLockMarks/QuestionPlaceholder in place of its icon; in the
-  tree it cannot be clicked, in the navigation it builds nothing (it is no longer hidden);
-- traps and doors are not shown in the navigation while the keeper has no built Workshop.
-WR10: both marks sit inside the frames the game draws for the button in every state, exactly like a real icon: the
-navigation mark between the icon and the frame of every state (a marked button stays enabled, so it shows the hover
-frame, and the selectors ignore its click), the tree padlock in the icon area inside the tile frame.
+  SkillLockMarks/Padlock on it; it can still be queued and researched;
+- an entry the level forbids shows the question mark SkillLockMarks/QuestionPlaceholder in place of its icon and
+  cannot be clicked.
+The build navigation of a campaign level shows only researched entries the level allows, with their real icon and no
+mark (owner decision of 2026-11-23: padlock and question mark only in the research window); traps and doors are not
+shown there while the keeper has no built Workshop. WR10: the tree padlock sits in the icon area inside the tile frame.
 Outside a campaign level (skirmish, multiplayer) the tree keeps its cross and the navigation shows an entry once it has
 level 1, as before.
 
@@ -139,29 +138,22 @@ def main():
     check("const bool isTrapEntry = castButtonName.compare(0, NAVIGATION_PATH_TRAPS.size(), NAVIGATION_PATH_TRAPS) == 0;"
           in refresh, "WR8: traps and doors are told by their navigation page")
     check("isBuildEntry" not in refresh, "WR8: spells follow the same rules as rooms, traps and doors")
-    check("if(mIsCampaignLevelShown)\n        {" in refresh, "WR8: the navigation marks apply only in a campaign level")
-    check("if(isTrapEntry && !mHasWorkshopShown)\n                isVisible = false;" in refresh,
-          "WR8: traps and doors without a built Workshop are not shown")
-    check("isVisible = true;\n                isForbiddenMark = !isAllowed;\n"
-          "                isPadlockMark = isAllowed && (level == 0);" in refresh,
-          "WR8: every other entry is shown, forbidden as the question mark, unresearched with the padlock")
+    check("if(mIsCampaignLevelShown)\n        {" in refresh, "WR8: the navigation rule applies only in a campaign level")
+    check("isVisible = isAllowed && (level > 0) && !(isTrapEntry && !mHasWorkshopShown);" in refresh,
+          "the navigation shows only researched allowed entries, traps and doors only with a built Workshop")
     check("castButton->setUserString(NAVIGATION_REAL_IMAGE, castButton->getProperty(\"NormalImage\"));" in refresh and
-          "castButton->setProperty(\"NormalImage\", isForbiddenMark ? CEGUI::String(NAVIGATION_PLACEHOLDER_IMAGE) :\n"
-          "            castButton->getUserString(NAVIGATION_REAL_IMAGE));" in refresh,
-          "WR8: a forbidden entry shows the question mark, every other entry its real icon")
-    check("castButton->setProperty(NAVIGATION_MARK_PROPERTY, isPadlockMark ? RESEARCH_LOCK_IMAGE : \"\");" in refresh and
-          "castButton->setProperty(NAVIGATION_ICON_COLOUR_PROPERTY, isPadlockMark ? MARK_LOCKED_ICON_COLOUR : "
-          "\"FFFFFFFF\");" in refresh,
-          "WR8: an unresearched entry shows its darkened icon under the padlock")
-    check("const bool isMarked = isForbiddenMark || isPadlockMark;" in refresh and
-          "castButton->setUserString(NAVIGATION_LOCKED, isMarked ? \"true\" : \"false\");" in refresh,
-          "WR8: a marked button is flagged so that it builds nothing")
+          "castButton->setProperty(\"NormalImage\", castButton->getUserString(NAVIGATION_REAL_IMAGE));" in refresh,
+          "every shown navigation entry has its real icon")
+    check("castButton->setProperty(NAVIGATION_MARK_PROPERTY, \"\");" in refresh and
+          "castButton->setProperty(NAVIGATION_ICON_COLOUR_PROPERTY, \"FFFFFFFF\");" in refresh and
+          "castButton->setUserString(NAVIGATION_LOCKED, \"false\");" in refresh,
+          "the navigation never carries a padlock or a question mark")
     check("castButton->setEnabled(!isLockedByLibrary);" in refresh,
-          "WR10: a marked button stays enabled to show the frames of every state; the library lock stays as before")
+          "the library lock stays as before")
     check("castButton->setVisible(isVisible && isContentAvailable);" in refresh,
           "WR8: the visibility is set for every cast button, hidden while its room package is missing")
-    check(refresh.count("RESEARCH_LOCK_IMAGE") == 2 and refresh.count("NAVIGATION_PLACEHOLDER_IMAGE") == 2,
-          "the padlock and the question mark appear once in the tree and once in the navigation")
+    check(refresh.count("RESEARCH_LOCK_IMAGE") == 1 and refresh.count("NAVIGATION_PLACEHOLDER_IMAGE") == 1,
+          "the padlock and the question mark appear in the tree only")
 
     # WR8: the selectors build or cast nothing for a marked button
     base = read("source/modes/GameEditorModeBase.cpp")
