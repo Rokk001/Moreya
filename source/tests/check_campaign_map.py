@@ -503,12 +503,15 @@ check("texture MenuCampaignMap.png" in block[:block.index("\n}")], "the table sh
 models = (root / "tools/blender-assets/menu_scene_models.py").read_text(encoding="utf-8")
 check('b.face_materials.append("MenuCampaignMap")' in models, "the table model has the map plane")
 hall = root / "materials/textures/menu/MenuCampaignMap.png"
-# The table top shows the carved map region of the map of Moreya (TABLE_CROP of tools/gen_campaign_map_art.py, the
-# aspect ratio of the map plane), stretched to the map size; the map plane takes up the table top (at least
-# MIN_TABLE_MAP_WIDTH wide, the old plane was 3.8) and has the aspect ratio of that region
-TABLE_CROP = (395, 290, 1760, 1241)
+# The table top shows the carved map frame of the map of Moreya (TABLE_CROP of tools/gen_campaign_map_art.py),
+# stretched to the map size; the map covers the whole table top and the table follows the map (Mario 2026-11-23): the
+# map plane is at least MIN_TABLE_MAP_WIDTH wide (the old plane was 3.8), has the aspect ratio of the map frame and
+# covers at least MIN_TOP_COVER of the width and the depth of the table top (its faces above TOP_HEIGHT)
+TABLE_CROP = (400, 418, 1752, 980)
 MAX_HALL_DIFFERENCE = 1.0
-MIN_TABLE_MAP_WIDTH = 4.0
+MIN_TABLE_MAP_WIDTH = 6.0
+MIN_TOP_COVER = 0.98
+TOP_HEIGHT = 1.6
 with Image.open(hall) as hall_image, Image.open(art / world["base"]) as map_image:
     check(hall_image.size == map_image.size, "the hall texture must have the size of the map of Moreya")
     left, top, width, height = TABLE_CROP
@@ -530,6 +533,19 @@ if plane is not None:
     check(abs(plane_width / plane_depth - TABLE_CROP[2] / TABLE_CROP[3]) < 0.01,
           "the map plane (%.3f) and the carved map region (%.3f) need the same aspect ratio"
           % (plane_width / plane_depth, TABLE_CROP[2] / TABLE_CROP[3]))
+    top_faces = [vertices[triangles] for material, (vertices, triangles) in
+                 entrance.submeshes(str(root / "models/MenuMapTableStone.mesh")).items()
+                 if material != "MenuCampaignMap" and len(triangles)]
+    top = [faces[faces[:, :, 2].min(axis=1) > TOP_HEIGHT].reshape(-1, 3) for faces in top_faces]
+    top = [points for points in top if len(points)]
+    if top:
+        import numpy  # noqa: E402
+        points = numpy.concatenate(top)
+        top_width = points[:, 0].max() - points[:, 0].min()
+        top_depth = points[:, 1].max() - points[:, 1].min()
+        check(plane_width >= MIN_TOP_COVER * top_width and plane_depth >= MIN_TOP_COVER * top_depth,
+              "the map does not cover the table top: %.2f x %.2f of %.2f x %.2f"
+              % (plane_width, plane_depth, top_width, top_depth))
 
 # ------------------------------------------------------------------------------------------------ menu UX M2 to M6
 # M2: the map is carved stone, no painted colours: the mean saturation of the map region (MAP_REGION) stays at most

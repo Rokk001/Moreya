@@ -10,9 +10,9 @@ of the painted map, so the cave markers of gui/campaign/campaign-world.json stay
 - gui/campaign/moreya/moreya_map.png (2560 x 1600): the carved map scaled up to the map size, slightly sharpened,
   with the rock around the map frame darkened towards the edges, so the title, the progress and the guild panel read
   on it;
-- materials/textures/menu/MenuCampaignMap.png (2560 x 1600): the part of that map that the table top shows,
-  TABLE_CROP, with the aspect ratio of the map plane of the table (tools/menu_table_map_plane.py), stretched to the map
-  size; the plane maps it back to its own aspect ratio;
+- materials/textures/menu/MenuCampaignMap.png (2560 x 1600): the carved map frame, TABLE_CROP, which covers the whole
+  table top (the table is fitted to its aspect ratio by tools/menu_table_map_plane.py), stretched to the map size; the
+  plane maps it back to its own aspect ratio;
 - gui/campaign/moreya/wing<N>_locked.png: for every wing a greyed out, darkened copy of its basin (WING_BASINS, outlines
   traced on the map, feathered), drawn over a wing that is still locked; the place of each is written into the map
   description as "locked" (image and area);
@@ -44,9 +44,9 @@ MAP_FRAME = (395, 410, 1765, 1000)
 #: Share of brightness kept at the map edges and the width of the transition in map pixels.
 EDGE_DARKEN = 0.62
 EDGE_FEATHER = 260.0
-#: The part of the map on the table top (x, y, width, height): the aspect ratio of the map plane of the table
-#: (4.07 x 2.87).
-TABLE_CROP = (395, 290, 1760, 1241)
+#: The part of the map on the table top (x, y, width, height): exactly the carved map frame, no stone around it; the
+#: table follows its aspect ratio (map plane 6.15 x 3.44, tools/menu_table_map_plane.py).
+TABLE_CROP = (400, 418, 1752, 980)
 #: Outlines of the six wing basins of the map in map pixels, traced on the map; a wing gets the basin that holds its
 #: caves. Feather of their edge and the brightness and saturation kept when a wing is locked.
 WING_BASINS = (
