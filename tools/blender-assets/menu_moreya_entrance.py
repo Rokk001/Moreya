@@ -37,6 +37,8 @@ and convert the meshes with OgreXMLConverter into <repo>/models. "render" render
 config/mainmenuscene.cfg from the campaign pose and the waypoints of the campaign flight into <private>/renders (see
 render_poses). The board lettering is written by tools/gen_menu_signpost_lettering.py (--text Moreya). Progress goes
 to <private>/menu_moreya_entrance.log.
+The shipped forecourt, arch and portal meshes use the dark ruin materials MenuRuin* instead of the shared stone named
+here: after converting them, run tools/menu_rename_mesh_materials.py as its docstring lists.
 """
 import math
 import os

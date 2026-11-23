@@ -88,6 +88,8 @@ private:
         Ogre::Real mDuration = MenuFlightSettings::DURATION;
         //! Pose names in travel order, excluding the current camera position.
         std::vector<std::string> mWaypoints;
+        //! Place the path starts from (FlightFrom); empty for a path from the overview (Flight).
+        std::string mFrom;
     };
 
     //! \brief One configured firelight waveform and the native light's unmodulated colours.
@@ -109,6 +111,10 @@ private:
         Ogre::ColourValue mSpecular = Ogre::ColourValue::Black;
     };
 
+    //! \brief Appends the waypoints of the way back from a place to the overview, without the overview itself: the
+    //! reversed path of the place and, for a path that starts at another place (FlightFrom), that place and its own
+    //! way back. Returns the summed duration of the paths on the way.
+    Ogre::Real appendReturnWaypoints(const std::string& place, std::vector<std::string>& waypoints) const;
     //! \brief Applies a pose to the existing camera hierarchy without gameplay movement or map clamping.
     void applyCameraPose(CameraManager& cameraManager, const CameraPose& pose);
     //! \brief Begins a validated path from the actual current camera position.

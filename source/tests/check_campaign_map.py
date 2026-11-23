@@ -5,6 +5,11 @@ current level in front of it (banner, leader portrait, raid size, origin), the p
 current level and the found bonus caves. The province structure of the former world map is gone. The campaign hall
 of the main menu shows the same map on its table.
 
+Menu UX plan (M2 to M6): the map is carved into stone and the table top shows its carved map region (TABLE_CROP) on a
+map plane that takes up the table top; the current level glows with an arrow over it; every wing has a greyed out
+image drawn over it while it is locked; the hover display is a small carved tablet fitted to its text; the guild
+stands on a carved slab with a trail of embers to the current level and its banner there.
+
 The expected values are the structure and guild tables of the campaign, counted once for this branch. The layout is
 measured with the shipped font at every supported screen size from 640 x 480 to 7680 x 4320 and at UI scales of
 80, 100 and 120 percent. Run from any directory. It does not start a game and compiles nothing.
@@ -318,9 +323,9 @@ SCREENS = ((640, 480), (800, 600), (1024, 768), (1280, 720), (1280, 1024), (1366
 USER_SCALES = (0.8, 1.0, 1.2)
 DESIGN_W, DESIGN_H = (float(re.search(r"LAYOUT_DESIGN_%s = ([0-9.]+)f" % k, gui_cpp)[1]) for k in ("WIDTH", "HEIGHT"))
 FONT_W, FONT_H = (float(re.search(r"FONT_DESIGN_%s = ([0-9.]+)f" % k, gui_cpp)[1]) for k in ("WIDTH", "HEIGHT"))
-# Inner margin of a text window without frame, in screen pixels, and of the framed tooltip, in design pixels
+# Inner margin of a text window without frame, in screen pixels; the text of the hover display keeps the shares
+# TOOLTIP_INSET_X and TOOLTIP_INSET_Y of its carved tablet free on every side (read from the menu code), plus that margin
 TEXT_MARGIN = 2
-TOOLTIP_MARGIN = 12
 _font_cache = {}
 
 
@@ -477,29 +482,148 @@ for screen in SCREENS:
                       "%s covers %s at %s" % (control, name, where))
         # The tooltip: never larger than the map, its longest texts fit
         tooltip = (min(tooltip_size[0] * layout_scale, map_width), min(tooltip_size[1] * layout_scale, map_height))
+        inner = (tooltip[0] * (1.0 - 2.0 * float(constant("TOOLTIP_INSET_X"))) - 2 * TEXT_MARGIN,
+                 tooltip[1] * (1.0 - 2.0 * float(constant("TOOLTIP_INSET_Y"))) - 2 * TEXT_MARGIN)
         face = screen_font(constant("FONT_TOOLTIP"), screen, user_scale)
         for text in tooltip_texts:
-            used = wrapped_height(face, text, tooltip[0] - 2 * TOOLTIP_MARGIN * layout_scale, True)
+            used = wrapped_height(face, text, inner[0], True)
             measured += 1
-            check(used is not None and used <= tooltip[1] - 2 * TOOLTIP_MARGIN * layout_scale,
-                  "the tooltip text does not fit at " + where)
+            check(used is not None and used <= inner[1], "the tooltip text does not fit at " + where)
 check(measured > 0, "no text was measured")
 
 # ------------------------------------------------------------------------------------------------ CM5: campaign hall
 scene = (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
-check(re.search(r"(?m)^AddEntity CampaignHall MenuCampaignHall\.mesh ", scene) is not None, "the campaign hall stays")
-check(re.search(r"(?m)^AddEntity CampaignTable MenuMapTable\.mesh ", scene) is not None,
-      "the map table stays in the hall")
+# The hall with the stone table is the open hall of the whole scene (menu UX plan M1)
+check(re.search(r"(?m)^AddEntity CampaignHallOpen MenuCampaignHallOpen\.mesh ", scene) is not None,
+      "the campaign hall stays")
+check(re.search(r"(?m)^AddEntity CampaignStoneTable MenuMapTableStone\.mesh ", scene) is not None,
+      "the stone map table stays in the hall")
 material = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
 block = material[material.index("material MenuCampaignMap"):]
 check("texture MenuCampaignMap.png" in block[:block.index("\n}")], "the table shows the texture MenuCampaignMap.png")
 models = (root / "tools/blender-assets/menu_scene_models.py").read_text(encoding="utf-8")
 check('b.face_materials.append("MenuCampaignMap")' in models, "the table model has the map plane")
 hall = root / "materials/textures/menu/MenuCampaignMap.png"
+# The table top shows the carved map frame of the map of Moreya (TABLE_CROP of tools/gen_campaign_map_art.py),
+# stretched to the map size; the map covers the whole table top and the table follows the map (Mario 2026-11-23): the
+# map plane is at least MIN_TABLE_MAP_WIDTH wide (the old plane was 3.8), has the aspect ratio of the map frame and
+# covers at least MIN_TOP_COVER of the width and the depth of the table top (its faces above TOP_HEIGHT)
+TABLE_CROP = (400, 418, 1752, 980)
+MAX_HALL_DIFFERENCE = 1.0
+MIN_TABLE_MAP_WIDTH = 6.0
+MIN_TOP_COVER = 0.98
+TOP_HEIGHT = 1.6
 with Image.open(hall) as hall_image, Image.open(art / world["base"]) as map_image:
     check(hall_image.size == map_image.size, "the hall texture must have the size of the map of Moreya")
-    check(hall_image.convert("RGBA").tobytes() == map_image.convert("RGBA").tobytes(),
-          "the campaign hall must show the map of Moreya (copy gui/campaign/moreya/moreya_map.png to the hall texture)")
+    left, top, width, height = TABLE_CROP
+    expected = map_image.convert("RGB").crop((left, top, left + width, top + height)).resize(map_image.size,
+                                                                                            Image.LANCZOS)
+    difference = sum(abs(a - b) for a, b in zip(hall_image.convert("RGB").resize((256, 160)).tobytes(),
+                                                expected.resize((256, 160)).tobytes())) / (256 * 160 * 3)
+    check(difference <= MAX_HALL_DIFFERENCE, "the campaign hall must show the carved map region of the map of Moreya "
+          "(run tools/gen_campaign_map_art.py), mean difference %.2f" % difference)
+sys.path.insert(0, str(root / "source/tests"))
+import check_menu_moreya_entrance as entrance  # noqa: E402
+plane = entrance.submeshes(str(root / "models/MenuMapTableStone.mesh")).get("MenuCampaignMap")
+check(plane is not None, "the stone table has no map plane")
+if plane is not None:
+    corners = plane[0][plane[1]].reshape(-1, 3)
+    plane_width, plane_depth = corners[:, 0].max() - corners[:, 0].min(), corners[:, 1].max() - corners[:, 1].min()
+    check(plane_width >= MIN_TABLE_MAP_WIDTH, "the map plane is only %.2f wide (at least %.2f)"
+          % (plane_width, MIN_TABLE_MAP_WIDTH))
+    check(abs(plane_width / plane_depth - TABLE_CROP[2] / TABLE_CROP[3]) < 0.01,
+          "the map plane (%.3f) and the carved map region (%.3f) need the same aspect ratio"
+          % (plane_width / plane_depth, TABLE_CROP[2] / TABLE_CROP[3]))
+    top_faces = [vertices[triangles] for material, (vertices, triangles) in
+                 entrance.submeshes(str(root / "models/MenuMapTableStone.mesh")).items()
+                 if material != "MenuCampaignMap" and len(triangles)]
+    top = [faces[faces[:, :, 2].min(axis=1) > TOP_HEIGHT].reshape(-1, 3) for faces in top_faces]
+    top = [points for points in top if len(points)]
+    if top:
+        import numpy  # noqa: E402
+        points = numpy.concatenate(top)
+        top_width = points[:, 0].max() - points[:, 0].min()
+        top_depth = points[:, 1].max() - points[:, 1].min()
+        check(plane_width >= MIN_TOP_COVER * top_width and plane_depth >= MIN_TOP_COVER * top_depth,
+              "the map does not cover the table top: %.2f x %.2f of %.2f x %.2f"
+              % (plane_width, plane_depth, top_width, top_depth))
+
+# ------------------------------------------------------------------------------------------------ menu UX M2 to M6
+# M2: the map is carved stone, no painted colours: the mean saturation of the map region (MAP_REGION) stays at most
+# MAX_MAP_SATURATION (the painted map had 0.68, the carved one 0.45)
+MAP_REGION = (395, 410, 1765, 1000)
+MAX_MAP_SATURATION = 0.5
+with Image.open(art / world["base"]) as map_image:
+    region = map_image.convert("HSV").crop((MAP_REGION[0], MAP_REGION[1], MAP_REGION[0] + MAP_REGION[2],
+                                            MAP_REGION[1] + MAP_REGION[3])).resize((440, 250))
+    saturation = sum(region.getchannel("S").tobytes()) / (440 * 250 * 255.0)
+check(saturation <= MAX_MAP_SATURATION, "the map is not carved stone: mean saturation %.2f (at most %.2f)"
+      % (saturation, MAX_MAP_SATURATION))
+# M4: every wing has a greyed out image over its own caves: RGBA, inside the map, grey (mean saturation of its opaque
+# pixels at most MAX_LOCKED_SATURATION) and darker than the map below it (at most MAX_LOCKED_SHARE of its luminance)
+MAX_LOCKED_SATURATION = 0.1
+MAX_LOCKED_SHARE = 0.7
+with Image.open(art / world["base"]) as map_image:
+    map_grey = map_image.convert("L")
+    for wing in wings:
+        locked = wing.get("locked", {})
+        area = locked.get("area", [0, 0, 0, 0])
+        path = art / locked.get("image", "-")
+        check(path.is_file(), "wing %d has no greyed out image" % wing["wing"])
+        check(inside(area, [0, 0, MAP_SIZE[0], MAP_SIZE[1]]), "the greyed out image of wing %d leaves the map"
+              % wing["wing"])
+        for cave in wing["levels"] + [wing["bonus"]]:
+            check(inside([cave["pos"][0], cave["pos"][1], 1, 1], area),
+                  "the greyed out image of wing %d does not cover its cave at %s" % (wing["wing"], cave["pos"]))
+        if not path.is_file():
+            continue
+        with Image.open(path) as image:
+            check(image.mode == "RGBA" and list(image.size) == area[2:], "the greyed out image of wing %d must be "
+                  "RGBA in the size of its area" % wing["wing"])
+            hsv = image.convert("RGB").convert("HSV")
+            alpha = image.getchannel("A").tobytes()
+            opaque = [index for index, value in enumerate(alpha) if value > 128]
+            sat = hsv.getchannel("S").tobytes()
+            lum = image.convert("L").tobytes()
+            below = map_grey.crop((area[0], area[1], area[0] + area[2], area[1] + area[3])).tobytes()
+            mean_sat = sum(sat[index] for index in opaque) / (255.0 * max(len(opaque), 1))
+            share = sum(lum[index] for index in opaque) / max(sum(below[index] for index in opaque), 1)
+            check(mean_sat <= MAX_LOCKED_SATURATION and share <= MAX_LOCKED_SHARE,
+                  "the greyed out image of wing %d is not grey and dark (saturation %.2f, luminance share %.2f)"
+                  % (wing["wing"], mean_sat, share))
+locking = function(mode, "bool MenuModeCampaign::isWingLocked")
+check("CampaignCaveState::locked" in locking and "CampaignCaveState::hidden" in locking
+      and "isWingAvailable(wing)" in locking, "a wing is locked while none of its caves can be played")
+check("wing.mLockedImage" in fill and "isWingLocked(wing.mNumber)" in fill and "LOCKED_CAVE_ALPHA" in fill,
+      "fillMap must grey out the locked wings and their caves")
+check('get_child_optional("locked")' in world_cpp and "mLockedImage" in world_h,
+      "the map loader must read the greyed out image of a wing")
+# M3: the current level glows under its larger marker and a golden arrow bobs over it, without hovering
+ART_SIZES = {"tooltip_plaque.png": (512, 200), "current_glow.png": (256, 256), "current_pointer.png": (128, 160),
+             "raid_ember.png": (64, 64), "guild_plaque.png": tuple(panel["area"][2:])}
+for name, size in ART_SIZES.items():
+    path = art / "moreya" / name
+    check(path.is_file(), "missing map art " + name)
+    if path.is_file():
+        with Image.open(path) as image:
+            check(image.mode == "RGBA" and image.size == size, "map art %s must be RGBA %d x %d" % ((name,) + size))
+check("fillCurrentMarker();" in fill and "CURRENT_CAVE_SCALE" in fill and "ART_CURRENT_POINTER" in fill,
+      "fillMap must draw the glow, the larger marker and the arrow of the current level")
+animation = function(mode, "void MenuModeCampaign::updateMapAnimation")
+check("mCurrentGlow->setAlpha(" in animation and "setMapArea(mCurrentPointer" in animation
+      and "mRaidEmbers[i]->setAlpha(" in animation, "the glow pulses, the arrow bobs and the raid trail runs")
+check("updateMapAnimation(evt.timeSinceLastFrame);" in function(mode, "void MenuModeCampaign::onFrameStarted"),
+      "the map is animated every frame")
+# M5: the hover display is a carved tablet just large enough for its text
+check("ART_TOOLTIP_PLAQUE" in fill and "mTooltipPlaque->addChild(mTooltip)" in fill,
+      "the hover display is a carved tablet with its text inside")
+check("getTextExtent(" in tip and '"VertExtent"' in tip and "TOOLTIP_INSET_X" in tip,
+      "the hover display is fitted to its text")
+# M6: the guild stands on a carved slab, and its trail of embers leads to the level it attacks with its banner there
+check("ART_GUILD_PLAQUE" in guild_panel and "fillRaidTrail(cave, guild.mBanner, packageDirectory);" in guild_panel,
+      "the guild panel needs its slab and the raid trail to the current level")
+trail = function(mode, "void MenuModeCampaign::fillRaidTrail")
+check("ART_RAID_EMBER" in trail and '"RaidBanner", banner' in trail, "the raid trail needs its embers and the banner")
 # The old world map and its previews are gone (raid plan FINAL step 1b): the hall can no longer show them
 for gone in ("world_base.png", "world_idmap.png", "preview_states.png", "provinces", "sites"):
     check(not (art / gone).exists(), "the old world map file %s must be gone" % gone)
