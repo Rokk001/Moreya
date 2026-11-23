@@ -423,11 +423,12 @@ for group_id, leader in groups:
 check(all(m[4] != "-" for m in members if m[3] != "-"), "RA5/FQ8: the leaders follow fixed templates")
 gate = re.search(r"^Gate\t(\d+)\t(\d+)\t", raid_section, re.M)
 seats = re.search(r"^Seats\t(\d+)\t(\d+)", raid_section, re.M)
-portal = re.search(r"\[Room\]\n10\t(\w+)\t(\d+)\t9\n((?:\d+\t\d+\n){9})", TEST_LEVEL)
+# The gate room is the row of three tiles of the gate niche in the outer wall (check_moreya_gate_wall.py)
+portal = re.search(r"\[Room\]\n10\t(\w+)\t(\d+)\t3\n((?:\d+\t\d+\n){3})", TEST_LEVEL)
 check(gate is not None and seats is not None and portal is not None, "RA1: the test level has a gate room")
 if gate and seats and portal:
     tiles = [tuple(int(v) for v in line.split("\t")) for line in portal.group(3).split("\n") if line]
-    centre = (sorted(t[0] for t in tiles)[4], sorted(t[1] for t in tiles)[4])
+    centre = (sorted(t[0] for t in tiles)[1], sorted(t[1] for t in tiles)[1])
     check(centre == (int(gate.group(1)), int(gate.group(2))), "RA1: the gate tile is the centre of the hero portal room")
     check(portal.group(2) == seats.group(1), "RA1: the gate room belongs to the raid seat")
     raid_seat = re.search(r"seatId\t" + seats.group(1) + r"\nteamId\t\d+\nplayer\t\w+\nfaction\t(\w+)", TEST_LEVEL)

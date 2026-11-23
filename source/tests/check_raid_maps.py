@@ -31,10 +31,11 @@ FAILURES = []
 
 # Story levels in campaign order: (map, gate tile, raid group sizes, leader of each group (None: not fixed),
 # accepted names of the named leader of the last group). Wing 6 level 3: Sabine Rook leads the first raid.
+# Wing 1: the gates stand in the outer wall of the map (owner's decision of 2026-11-23, check_moreya_gate_wall.py).
 STORY = (
-    ("Brackenford", (38, 12), (5,), (None,), ("ElsaBrack",)),
-    ("Coldwell", (48, 30), (5,), (None,), ("HugoCole",)),
-    ("Ravensledge", (12, 40), (10,), (None,), ("RolfScarrow",)),
+    ("Brackenford", (53, 8), (5,), (None,), ("ElsaBrack",)),
+    ("Coldwell", (52, 27), (5,), (None,), ("HugoCole",)),
+    ("Ravensledge", (2, 33), (10,), (None,), ("RolfScarrow",)),
     ("Tinmoor", (24, 12), (5, 5), (None, None), ("MerrinTay",)),
     ("Greywater", (38, 24), (5, 5), (None, None), ("CorwinGray",)),
     ("Highcairn", (62, 45), (10, 10), (None, None), ("HildeCairn",)),
