@@ -29,6 +29,8 @@ PUBLIC_WING = 1
 PUBLIC_LEVEL_COUNT = 4
 #: Files a package folder may hold besides its level files
 PACKAGE_TEXT_FILES = {"Package.cfg", "LICENSE.txt", "LICENSE", "README.md"}
+#: The image folders a wing package may hold: its own campaign images, PNG files only
+PACKAGE_IMAGE_FOLDERS = {"previews", "banners", "portraits"}
 #: Extensions of code files; none of them belongs in a package or in the content repository
 CODE_EXTENSIONS = {".py", ".cpp", ".h", ".hpp", ".c", ".cmake", ".ps1", ".sh", ".bat", ".cmd", ".js", ".lua",
                    ".pyw", ".mjs", ".ts"}
@@ -91,9 +93,14 @@ def occurring(candidates, text):
 
 
 def package_files(folder):
-    """Checks that a package folder holds only content files."""
+    """Checks that a package folder holds only content files and its campaign image folders with PNG files only."""
     for path in sorted(folder.iterdir()):
         name = path.name
+        if path.is_dir() and name in PACKAGE_IMAGE_FOLDERS:
+            for image in sorted(path.iterdir()):
+                check(image.is_file() and image.suffix == ".png",
+                      "%s: %s/%s is no campaign image of a package" % (folder, name, image.name))
+            continue
         check(path.is_file(), "%s: a package holds no subfolder (%s)" % (folder, name))
         check(name.endswith(".level") or name in PACKAGE_TEXT_FILES,
               "%s: %s is no content file of a package" % (folder, name))
