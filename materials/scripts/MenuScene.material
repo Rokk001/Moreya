@@ -303,14 +303,16 @@ material MenuSky
     }
 }
 
+// The map of Moreya carved into the top of the stone campaign table: the carved stone texture is darker than the
+// former painted map, so the table top takes the full light.
 material MenuCampaignMap
 {
     technique
     {
         pass
         {
-            ambient 0.8 0.8 0.8 1
-            diffuse 0.8 0.8 0.8 1
+            ambient 1.0 1.0 1.0 1
+            diffuse 1.0 1.0 1.0 1
             texture_unit
             {
                 texture MenuCampaignMap.png gamma

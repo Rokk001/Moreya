@@ -113,7 +113,16 @@
         ],
         "size": 64
       },
-      "name_painted": true
+      "name_painted": true,
+      "locked": {
+        "image": "moreya/wing1_locked.png",
+        "area": [
+          1360,
+          400,
+          717,
+          384
+        ]
+      }
     },
     {
       "wing": 2,
@@ -165,7 +174,16 @@
         ],
         "size": 64
       },
-      "name_painted": true
+      "name_painted": true,
+      "locked": {
+        "image": "moreya/wing2_locked.png",
+        "area": [
+          380,
+          400,
+          801,
+          378
+        ]
+      }
     },
     {
       "wing": 3,
@@ -217,7 +235,16 @@
         ],
         "size": 64
       },
-      "name_painted": true
+      "name_painted": true,
+      "locked": {
+        "image": "moreya/wing3_locked.png",
+        "area": [
+          1513,
+          700,
+          667,
+          392
+        ]
+      }
     },
     {
       "wing": 4,
@@ -269,7 +296,16 @@
         ],
         "size": 64
       },
-      "name_painted": true
+      "name_painted": true,
+      "locked": {
+        "image": "moreya/wing4_locked.png",
+        "area": [
+          365,
+          700,
+          624,
+          404
+        ]
+      }
     },
     {
       "wing": 5,
@@ -321,7 +357,16 @@
         ],
         "size": 64
       },
-      "name_painted": true
+      "name_painted": true,
+      "locked": {
+        "image": "moreya/wing5_locked.png",
+        "area": [
+          451,
+          983,
+          826,
+          416
+        ]
+      }
     },
     {
       "wing": 6,
@@ -373,7 +418,16 @@
         ],
         "size": 64
       },
-      "name_painted": true
+      "name_painted": true,
+      "locked": {
+        "image": "moreya/wing6_locked.png",
+        "area": [
+          1238,
+          1001,
+          871,
+          398
+        ]
+      }
     }
   ]
 }

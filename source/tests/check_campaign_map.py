@@ -5,6 +5,11 @@ current level in front of it (banner, leader portrait, raid size, origin), the p
 current level and the found bonus caves. The province structure of the former world map is gone. The campaign hall
 of the main menu shows the same map on its table.
 
+Menu UX plan (M2 to M6): the map is carved into stone and the table top shows its carved map region (TABLE_CROP) on a
+map plane that takes up the table top; the current level glows with an arrow over it; every wing has a greyed out
+image drawn over it while it is locked; the hover display is a small carved tablet fitted to its text; the guild
+stands on a carved slab with a trail of embers to the current level and its banner there.
+
 The expected values are the structure and guild tables of the campaign, counted once for this branch. The layout is
 measured with the shipped font at every supported screen size from 640 x 480 to 7680 x 4320 and at UI scales of
 80, 100 and 120 percent. Run from any directory. It does not start a game and compiles nothing.
@@ -487,19 +492,88 @@ check(measured > 0, "no text was measured")
 
 # ------------------------------------------------------------------------------------------------ CM5: campaign hall
 scene = (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
-check(re.search(r"(?m)^AddEntity CampaignHall MenuCampaignHall\.mesh ", scene) is not None, "the campaign hall stays")
-check(re.search(r"(?m)^AddEntity CampaignTable MenuMapTable\.mesh ", scene) is not None,
-      "the map table stays in the hall")
+# The hall with the stone table is the open hall of the whole scene (menu UX plan M1)
+check(re.search(r"(?m)^AddEntity CampaignHallOpen MenuCampaignHallOpen\.mesh ", scene) is not None,
+      "the campaign hall stays")
+check(re.search(r"(?m)^AddEntity CampaignStoneTable MenuMapTableStone\.mesh ", scene) is not None,
+      "the stone map table stays in the hall")
 material = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
 block = material[material.index("material MenuCampaignMap"):]
 check("texture MenuCampaignMap.png" in block[:block.index("\n}")], "the table shows the texture MenuCampaignMap.png")
 models = (root / "tools/blender-assets/menu_scene_models.py").read_text(encoding="utf-8")
 check('b.face_materials.append("MenuCampaignMap")' in models, "the table model has the map plane")
 hall = root / "materials/textures/menu/MenuCampaignMap.png"
+# The table top shows the carved map region of the map of Moreya (TABLE_CROP of tools/gen_campaign_map_art.py, the
+# aspect ratio of the map plane), stretched to the map size; the map plane takes up the table top (at least
+# MIN_TABLE_MAP_WIDTH wide, the old plane was 3.8) and has the aspect ratio of that region
+TABLE_CROP = (395, 290, 1760, 1241)
+MAX_HALL_DIFFERENCE = 1.0
+MIN_TABLE_MAP_WIDTH = 4.0
 with Image.open(hall) as hall_image, Image.open(art / world["base"]) as map_image:
     check(hall_image.size == map_image.size, "the hall texture must have the size of the map of Moreya")
-    check(hall_image.convert("RGBA").tobytes() == map_image.convert("RGBA").tobytes(),
-          "the campaign hall must show the map of Moreya (copy gui/campaign/moreya/moreya_map.png to the hall texture)")
+    left, top, width, height = TABLE_CROP
+    expected = map_image.convert("RGB").crop((left, top, left + width, top + height)).resize(map_image.size,
+                                                                                            Image.LANCZOS)
+    difference = sum(abs(a - b) for a, b in zip(hall_image.convert("RGB").resize((256, 160)).tobytes(),
+                                                expected.resize((256, 160)).tobytes())) / (256 * 160 * 3)
+    check(difference <= MAX_HALL_DIFFERENCE, "the campaign hall must show the carved map region of the map of Moreya "
+          "(run tools/gen_campaign_map_art.py), mean difference %.2f" % difference)
+sys.path.insert(0, str(root / "source/tests"))
+import check_menu_moreya_entrance as entrance  # noqa: E402
+plane = entrance.submeshes(str(root / "models/MenuMapTableStone.mesh")).get("MenuCampaignMap")
+check(plane is not None, "the stone table has no map plane")
+if plane is not None:
+    corners = plane[0][plane[1]].reshape(-1, 3)
+    plane_width, plane_depth = corners[:, 0].max() - corners[:, 0].min(), corners[:, 1].max() - corners[:, 1].min()
+    check(plane_width >= MIN_TABLE_MAP_WIDTH, "the map plane is only %.2f wide (at least %.2f)"
+          % (plane_width, MIN_TABLE_MAP_WIDTH))
+    check(abs(plane_width / plane_depth - TABLE_CROP[2] / TABLE_CROP[3]) < 0.01,
+          "the map plane (%.3f) and the carved map region (%.3f) need the same aspect ratio"
+          % (plane_width / plane_depth, TABLE_CROP[2] / TABLE_CROP[3]))
+
+# ------------------------------------------------------------------------------------------------ menu UX M2 to M6
+# M2: the map is carved stone, no painted colours: the mean saturation of the map region (MAP_REGION) stays at most
+# MAX_MAP_SATURATION (the painted map had 0.68, the carved one 0.45)
+MAP_REGION = (395, 410, 1765, 1000)
+MAX_MAP_SATURATION = 0.5
+with Image.open(art / world["base"]) as map_image:
+    region = map_image.convert("HSV").crop((MAP_REGION[0], MAP_REGION[1], MAP_REGION[0] + MAP_REGION[2],
+                                            MAP_REGION[1] + MAP_REGION[3])).resize((440, 250))
+    saturation = sum(region.getchannel("S").tobytes()) / (440 * 250 * 255.0)
+check(saturation <= MAX_MAP_SATURATION, "the map is not carved stone: mean saturation %.2f (at most %.2f)"
+      % (saturation, MAX_MAP_SATURATION))
+# M4: every wing has a greyed out image over its own caves: RGBA, inside the map, grey (mean saturation of its opaque
+# pixels at most MAX_LOCKED_SATURATION) and darker than the map below it (at most MAX_LOCKED_SHARE of its luminance)
+MAX_LOCKED_SATURATION = 0.1
+MAX_LOCKED_SHARE = 0.7
+with Image.open(art / world["base"]) as map_image:
+    map_grey = map_image.convert("L")
+    for wing in wings:
+        locked = wing.get("locked", {})
+        area = locked.get("area", [0, 0, 0, 0])
+        path = art / locked.get("image", "-")
+        check(path.is_file(), "wing %d has no greyed out image" % wing["wing"])
+        check(inside(area, [0, 0, MAP_SIZE[0], MAP_SIZE[1]]), "the greyed out image of wing %d leaves the map"
+              % wing["wing"])
+        for cave in wing["levels"] + [wing["bonus"]]:
+            check(inside([cave["pos"][0], cave["pos"][1], 1, 1], area),
+                  "the greyed out image of wing %d does not cover its cave at %s" % (wing["wing"], cave["pos"]))
+        if not path.is_file():
+            continue
+        with Image.open(path) as image:
+            check(image.mode == "RGBA" and list(image.size) == area[2:], "the greyed out image of wing %d must be "
+                  "RGBA in the size of its area" % wing["wing"])
+            hsv = image.convert("RGB").convert("HSV")
+            alpha = image.getchannel("A").tobytes()
+            opaque = [index for index, value in enumerate(alpha) if value > 128]
+            sat = hsv.getchannel("S").tobytes()
+            lum = image.convert("L").tobytes()
+            below = map_grey.crop((area[0], area[1], area[0] + area[2], area[1] + area[3])).tobytes()
+            mean_sat = sum(sat[index] for index in opaque) / (255.0 * max(len(opaque), 1))
+            share = sum(lum[index] for index in opaque) / max(sum(below[index] for index in opaque), 1)
+            check(mean_sat <= MAX_LOCKED_SATURATION and share <= MAX_LOCKED_SHARE,
+                  "the greyed out image of wing %d is not grey and dark (saturation %.2f, luminance share %.2f)"
+                  % (wing["wing"], mean_sat, share))
 # The old world map and its previews are gone (raid plan FINAL step 1b): the hall can no longer show them
 for gone in ("world_base.png", "world_idmap.png", "preview_states.png", "provinces", "sites"):
     check(not (art / gone).exists(), "the old world map file %s must be gone" % gone)
