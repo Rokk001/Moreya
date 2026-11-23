@@ -96,6 +96,11 @@ struct CampaignWorldWing
     int mSealY;
     //! Width and height of the seal in map pixels
     int mSealSize;
+    //! Greyed out image of the wing drawn over it while it is locked, relative to the campaign art directory; empty
+    //! when the map has none
+    std::string mLockedImage;
+    //! Where the greyed out image of the wing is drawn in map pixels
+    CampaignWorldRect mLockedArea;
 };
 
 //! \brief Where the guild of the current level stands in front of the gate, in map pixels.

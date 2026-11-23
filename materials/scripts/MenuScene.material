@@ -303,14 +303,16 @@ material MenuSky
     }
 }
 
+// The map of Moreya carved into the top of the stone campaign table: the carved stone texture is darker than the
+// former painted map, so the table top takes the full light.
 material MenuCampaignMap
 {
     technique
     {
         pass
         {
-            ambient 0.8 0.8 0.8 1
-            diffuse 0.8 0.8 0.8 1
+            ambient 1.0 1.0 1.0 1
+            diffuse 1.0 1.0 1.0 1
             texture_unit
             {
                 texture MenuCampaignMap.png gamma
@@ -494,6 +496,72 @@ material MenuWaterStain : MenuStone
         diffuse 0.050 0.045 0.040 1
         specular 0.14 0.13 0.11 1 40
     } }
+}
+
+// The forecourt behind the campaign hall, its portal into Moreya and the frame of the hall opening are an abandoned
+// ruin: dark, grimy and weathered stone (MenuRuinStone.png, aged from MenuFortressStone.png by
+// tools/gen_menu_ruin_stone.py) on the same relief, which the fire bowls light without a pale or polished shine.
+material MenuRuinStone : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap { texture MenuRuinStone.png gamma }
+            texture_unit
+            {
+                texture MenuFortressStoneNormal.png
+                tex_address_mode wrap
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
+            }
+            ambient 0.62 0.62 0.60 1
+            diffuse 0.58 0.57 0.55 1
+            specular 0.008 0.008 0.008 1 4
+        }
+    }
+}
+
+// Chipped and carved faces of the ruin stay as dark and dull as its walls.
+material MenuRuinChippedStone : MenuRuinStone
+{
+    technique { pass lighting {
+        ambient 0.58 0.58 0.56 1
+        diffuse 0.54 0.53 0.51 1
+        specular 0.006 0.006 0.006 1 4
+    } }
+}
+
+material MenuRuinCarvedStone : MenuRuinStone
+{
+    technique { pass lighting {
+        ambient 0.60 0.60 0.60 1
+        diffuse 0.56 0.56 0.56 1
+        specular 0.008 0.008 0.008 1 4
+    } }
+}
+
+// Old, dry and dirty flagstones of the forecourt: no wet gloss (MenuRuinPaving.png, aged from MenuWetPaving.png).
+material MenuRuinPaving : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap { texture MenuRuinPaving.png gamma }
+            texture_unit
+            {
+                texture MenuWetPavingNormal.png
+                tex_address_mode wrap
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 0.62 0.62 0.62 1
+            diffuse 0.56 0.56 0.56 1
+            specular 0.03 0.03 0.03 1 12
+        }
+    }
 }
 
 // Exposed chipped faces remain dark and granular rather than clean pale cut stone.

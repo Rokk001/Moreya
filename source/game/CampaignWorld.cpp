@@ -174,6 +174,17 @@ bool CampaignWorld::importDefinition(std::istream& is)
                 clear();
                 return false;
             }
+            // The greyed out image of a locked wing is optional, but when it is given its area must be valid
+            boost::optional<const Tree&> locked = node.get_child_optional("locked");
+            if(locked)
+            {
+                wing.mLockedImage = locked->get<std::string>("image");
+                if(wing.mLockedImage.empty() || !readRect(*locked, "area", wing.mLockedArea))
+                {
+                    clear();
+                    return false;
+                }
+            }
 
             const Tree& levels = node.get_child("levels");
             if(levels.size() != STORY_CAVES_PER_WING)

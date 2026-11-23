@@ -380,11 +380,14 @@ bool RenderSceneMenu::startFlight(CameraManager& cameraManager)
     return true;
 }
 
-//! \brief Starts a destination path or reverses its entry path when returning to the overview.
+//! \brief Starts a destination path or reverses its entry path when returning to the overview. A path that starts
+//! at another place (FlightFrom) is only flown from that place.
 bool RenderSceneMenu::flyTo(CameraManager& cameraManager, const std::string& place)
 {
     std::map<std::string, CameraPath>::const_iterator path = mCameraPaths.find(place);
     if(path == mCameraPaths.end() || mFlight.isActive() || !mActive)
+        return false;
+    if(!path->second.mFrom.empty() && path->second.mFrom != mCurrentPlace)
         return false;
     CameraPath route = path->second;
     if(place == OVERVIEW_PLACE && mCurrentPlace != OVERVIEW_PLACE)
@@ -393,14 +396,27 @@ bool RenderSceneMenu::flyTo(CameraManager& cameraManager, const std::string& pla
         if(outward != mCameraPaths.end())
         {
             route.mWaypoints.clear();
-            route.mDuration = outward->second.mDuration;
-            const std::vector<std::string>& points = outward->second.mWaypoints;
-            for(size_t index = points.size(); index > 1; --index)
-                route.mWaypoints.push_back(points[index - 2]);
+            route.mDuration = appendReturnWaypoints(mCurrentPlace, route.mWaypoints);
             route.mWaypoints.push_back(OVERVIEW_PLACE);
         }
     }
     return beginPath(cameraManager, route, place);
+}
+
+//! \brief Collects the reversed entry paths from a place back to the overview, following FlightFrom starts.
+Ogre::Real RenderSceneMenu::appendReturnWaypoints(const std::string& place, std::vector<std::string>& waypoints) const
+{
+    std::map<std::string, CameraPath>::const_iterator outward = mCameraPaths.find(place);
+    if(outward == mCameraPaths.end())
+        return 0.0f;
+    const std::vector<std::string>& points = outward->second.mWaypoints;
+    for(size_t index = points.size(); index > 1; --index)
+        waypoints.push_back(points[index - 2]);
+    const std::string& from = outward->second.mFrom;
+    if(from.empty() || from == OVERVIEW_PLACE)
+        return outward->second.mDuration;
+    waypoints.push_back(from);
+    return outward->second.mDuration + appendReturnWaypoints(from, waypoints);
 }
 
 //! \brief Returns a named authored endpoint for the existing menu probe.
@@ -535,9 +551,15 @@ void RenderSceneMenu::readSceneMenu(const std::string& fileName)
                 * Ogre::Quaternion(Ogre::Degree(rotation.z), Ogre::Vector3::UNIT_Z);
             mCameraPoses[name] = pose;
         }
-        else if(kind == "Flight")
+        else if(kind == "Flight" || kind == "FlightFrom")
         {
+            // FlightFrom names the place the path starts from before its duration.
             CameraPath path;
+            if(kind == "FlightFrom" && !(command >> path.mFrom))
+            {
+                OD_LOG_ERR("Invalid menu camera start place: " + line);
+                return;
+            }
             if(!(command >> path.mDuration) || !std::isfinite(path.mDuration)
                 || path.mDuration < MIN_FLIGHT_DURATION || path.mDuration > MAX_FLIGHT_DURATION)
             {
