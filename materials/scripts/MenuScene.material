@@ -608,6 +608,29 @@ material MenuHallWall : RTSS/NormalMapping_MultiPass
     }
 }
 
+// The slab of the campaign table is one piece of the stone of the map carved into it (tools/gen_menu_table_stone.py):
+// top, bevels, cut-off corners and side faces have the colour of the carved stone, so the map reads as cut into the
+// table and nothing lies on it.
+material MenuTableStone : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap { texture MenuTableStone.png gamma }
+            texture_unit
+            {
+                texture MenuFortressStoneNormal.png
+                tex_address_mode wrap
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 1.0 1.0 1.0 1
+            diffuse 1.0 1.0 1.0 1
+            specular 0.01 0.01 0.01 1 4
+        }
+    }
+}
+
 // Exposed chipped faces remain dark and granular rather than clean pale cut stone.
 material MenuChippedStone : MenuStone
 {

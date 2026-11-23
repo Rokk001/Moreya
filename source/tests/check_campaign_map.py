@@ -560,16 +560,18 @@ with Image.open(art / world["base"]) as map_image:
     saturation = sum(region.getchannel("S").tobytes()) / (440 * 250 * 255.0)
 check(saturation <= MAX_MAP_SATURATION, "the map is not carved stone: mean saturation %.2f (at most %.2f)"
       % (saturation, MAX_MAP_SATURATION))
-# M2 (Mario on build 93): the clickable map is the carved top of the stone table, it ends at the table edge and the
-# hall floor lies around it: the full screen map keeps the carved map frame (TABLE_CROP) and is built round it from
-# the render of the stone table and the hall floor of the menu scene, not from the rock around the carved frame
+# M2 (Mario on build 93 and on the previews): the clickable map is the solid stone table in the hall, the table is the
+# map: the full screen map is the render of the stone table with its own carved map texture on its (cut-off) top, its
+# slab, trestles and the hall floor round it, seen in perspective; no map image is laid over it
 art_tool = (root / "tools/gen_campaign_map_art.py").read_text(encoding="utf-8")
 render_tool = (root / "tools/render_campaign_map_table.py").read_text(encoding="utf-8")
-check("TABLE_RENDER" in art_tool and "screen = table_surroundings(root)" in art_tool
-      and "screen[top:top + height, left:left + width] = colours[top:top + height, left:left + width]" in art_tool,
-      "the full screen map must be the carved map frame on the stone table in the hall (tools/gen_campaign_map_art.py)")
-check(all(name in render_tool for name in ("MenuMapTableStone.mesh", "MenuCampaignHallOpen.mesh",
-                                              "MenuCourtyard.mesh", "MenuOuterGround.mesh")),
+check("TABLE_RENDER" in art_tool and "screen = table_view(root, outline, placement)" in art_tool
+      and "screen[top:top + height, left:left + width]" not in art_tool,
+      "the full screen map must be the rendered stone table in the hall, nothing laid over it "
+      "(tools/gen_campaign_map_art.py)")
+check("MenuCampaignMap.png" in render_tool,
+      "the table render must show the table with its carved map texture on the map plane")
+check(all(name in render_tool for name in ("MenuMapTableStone.mesh", "MenuCampaignHallOpen.mesh", "MenuHallFloor")),
       "the table render must show the stone table and the hall floor of the menu scene")
 check(re.search(r"(?m)^TABLE_CROP = \(400, 418, 1752, 980\)$", art_tool) is not None,
       "the carved map frame of the full screen map is TABLE_CROP (400, 418, 1752, 980)")
