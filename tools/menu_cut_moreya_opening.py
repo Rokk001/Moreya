@@ -11,6 +11,11 @@ coordinates, see CUTS):
 - the flat glowing slab floating over the forge hearth of the yard: x 2.99..5.01, y 40.89..42.11, z 1.08..1.18 out of
   FortressRear; the coal heap MenuForgeCoals takes its place.
 
+The campaign scene (config/mainmenuscene.cfg [MenuCampaignScene]) has its own copy of the campaign hall,
+CampaignHallOpen (models/MenuCampaignHallOpen.mesh, a copy of the hall before any cut): a wide opening into the
+forecourt behind the hall, x -5.0..5.0, y 29.0..30.5, z 0.12..6.6, is cut out of its back wall; the stone frame
+MenuHallForecourtArch covers the cut edges. The start screen keeps the hall, yard and rear buildings above.
+
     python tools/menu_cut_moreya_opening.py <work folder>
 
 Run it on the meshes as they were before any cut (the tool never adds geometry back). Each mesh is converted to XML
@@ -35,10 +40,12 @@ ROOT = Path(__file__).resolve().parents[1]
 STAIRWELL = (-3.0, 3.0, 31.0, 37.0, -0.95, 0.3)
 HALL_BACK_OPENING = (-4.0, 4.0, 29.0, 30.5, 0.12, 4.2)
 FORGE_SLAB = (2.99, 5.01, 40.89, 42.11, 1.08, 1.18)
+#: The wide opening of the campaign scene's hall copy into the forecourt.
+FORECOURT_OPENING = (-5.0, 5.0, 29.0, 30.5, 0.12, 6.6)
 #: Per entity: (box, materials) pairs; materials None cuts every submesh, else only the submeshes of those materials
 #: (the forge slab is the glowing material alone; the hearth stone around it stays whole).
 CUTS = {"OuterGround": ((STAIRWELL, None),), "FortressRear": ((STAIRWELL, None), (FORGE_SLAB, ("MenuEmber",))),
-        "CampaignHall": ((HALL_BACK_OPENING, None),)}
+        "CampaignHall": ((HALL_BACK_OPENING, None),), "CampaignHallOpen": ((FORECOURT_OPENING, None),)}
 #: Attributes that are directions and are renormalised after interpolation.
 DIRECTIONS = ("normal", "tangent", "binormal")
 #: Distance from a cut plane within which a vertex counts as lying on it.

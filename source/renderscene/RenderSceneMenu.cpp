@@ -56,6 +56,11 @@ static const std::string CAMERA_SECTION_END = "[/MenuCamera]";
 //! Firelight timing is separate from native render groups and camera metadata.
 static const std::string FIRE_LIGHT_SECTION = "[MenuFireLights]";
 static const std::string FIRE_LIGHT_SECTION_END = "[/MenuFireLights]";
+//! Entities and lights that only the campaign view shows, and the start screen's ones it replaces.
+static const std::string CAMPAIGN_SCENE_SECTION = "[MenuCampaignScene]";
+static const std::string CAMPAIGN_SCENE_SECTION_END = "[/MenuCampaignScene]";
+//! The menu place whose flight switches to the campaign scene.
+static const std::string CAMPAIGN_PLACE = "campaign";
 //! Menu fill is parsed separately from native commands so world ambient can be restored.
 static const std::string LIGHTING_SECTION = "[MenuLighting]";
 static const std::string LIGHTING_SECTION_END = "[/MenuLighting]";
@@ -127,6 +132,7 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
         fire.mSpecular = fire.mLight->getSpecularColour();
     }
     mCurrentPlace = OVERVIEW_PLACE;
+    showCampaignScene(renderManager, false);
     std::map<std::string, CameraPose>::const_iterator overview = mCameraPoses.find(OVERVIEW_PLACE);
     if(overview != mCameraPoses.end())
         applyCameraPose(cameraManager, overview->second);
@@ -143,6 +149,7 @@ void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& rend
     mFlightPoses.clear();
     mFlightPlace.clear();
     mCurrentPlace.clear();
+    mCampaignScene = false;
     renderManager.rrSetHandPose(false, false);
     for(FireLight& fire : mFireLights)
     {
@@ -202,6 +209,7 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     // Measured at the render listener before the flight clamps its step, so slow frames keep their real length.
     const bool arrived = mFlight.advance(timeSinceLastFrame);
     applyCameraPose(cameraManager, samplePath(mFlight.getProgress()));
+    updateCampaignScene(renderManager);
     const Ogre::Real fillTarget = mFlightPlace == OVERVIEW_PLACE ? 0.0f : 1.0f;
     mFlightFill = mFlightFillStart + (fillTarget - mFlightFillStart) * mFlight.getProgress();
     renderManager.setMenuAmbient(mMenuAmbient + (mFlightAmbient - mMenuAmbient) * mFlightFill);
@@ -209,7 +217,50 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     {
         logFlightFrames("arrived");
         mCurrentPlace = mFlightPlace;
+        showCampaignScene(renderManager, mCurrentPlace == CAMPAIGN_PLACE);
     }
+}
+
+//! \brief Shows the campaign scene's entities (with their particle effects) and lights and hides the start screen's
+//! entities, or the other way round; a name that the scene does not create is reported once per switch.
+void RenderSceneMenu::showCampaignScene(RenderManager& renderManager, bool campaign)
+{
+    mCampaignScene = campaign;
+    for(const std::string& name : mCampaignEntities)
+    {
+        Ogre::SceneNode* node = renderManager.getMenuEntityNode(name);
+        if(node != nullptr)
+            node->setVisible(campaign, true);
+    }
+    for(const std::string& name : mStartEntities)
+    {
+        Ogre::SceneNode* node = renderManager.getMenuEntityNode(name);
+        if(node != nullptr)
+            node->setVisible(!campaign, true);
+    }
+    Ogre::SceneManager* sceneManager = renderManager.getSceneManager();
+    for(const std::string& name : mCampaignLights)
+    {
+        if(!sceneManager->hasLight(name))
+        {
+            OD_LOG_ERR("Missing campaign scene light: " + name);
+            continue;
+        }
+        sceneManager->getLight(name)->setVisible(campaign);
+    }
+}
+
+//! \brief Switches to the campaign scene inside the gate on the way in and back inside the gate on the way out.
+void RenderSceneMenu::updateCampaignScene(RenderManager& renderManager)
+{
+    if(mFlightPoses.size() < 2)
+        return;
+    const Ogre::Real reached = mFlight.getProgress() * (mFlightPoses.size() - 1);
+    if(!mCampaignScene && mFlightPlace == CAMPAIGN_PLACE && reached >= 1.0f)
+        showCampaignScene(renderManager, true);
+    else if(mCampaignScene && mFlightPlace != CAMPAIGN_PLACE
+            && reached >= static_cast<Ogre::Real>(mFlightPoses.size() - 2))
+        showCampaignScene(renderManager, false);
 }
 
 //! \brief Counts only rendered frames during an active flight, never zero-time setup updates.
@@ -385,8 +436,32 @@ void RenderSceneMenu::readSceneMenu(const std::string& fileName)
     bool cameraSection = false;
     bool fireSection = false;
     bool lightingSection = false;
+    bool campaignSection = false;
     while(Helper::readNextLineNotEmpty(definition, line))
     {
+        if(line == CAMPAIGN_SCENE_SECTION || line == CAMPAIGN_SCENE_SECTION_END)
+        {
+            campaignSection = (line == CAMPAIGN_SCENE_SECTION);
+            continue;
+        }
+        if(campaignSection)
+        {
+            std::stringstream command(line);
+            std::string kind;
+            std::string name;
+            if(!(command >> kind >> name) || (kind != "Show" && kind != "ShowLight" && kind != "Hide"))
+            {
+                OD_LOG_ERR("Invalid menu campaign scene definition: " + line);
+                return;
+            }
+            if(kind == "Show")
+                mCampaignEntities.push_back(name);
+            else if(kind == "ShowLight")
+                mCampaignLights.push_back(name);
+            else
+                mStartEntities.push_back(name);
+            continue;
+        }
         if(line == CAMERA_SECTION || line == CAMERA_SECTION_END)
         {
             cameraSection = (line == CAMERA_SECTION);
