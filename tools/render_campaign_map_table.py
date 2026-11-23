@@ -4,10 +4,15 @@
 The clickable campaign map shows the carved map as the top of the stone table in the campaign hall: the map ends at
 the table edge and the floor of the hall lies around the table. This script renders that view from the meshes of the
 menu scene, so table edge and floor are those of the game: the stone table (models/MenuMapTableStone.mesh, placed
-like CampaignStoneTable in config/mainmenuscene.cfg) and the part of the floor under and around it (the courtyard
-paving, models/MenuCourtyard.mesh, and the ground below it, models/MenuOuterGround.mesh), with the menu textures and the diffuse colours of materials/scripts/MenuScene.material. The
-camera is orthographic and tilted towards the front of the table by TILT degrees, so the front face of the table
-shows below the table top; tools/gen_campaign_map_art.py stretches the render back so that the table top is the
+like CampaignStoneTable in config/mainmenuscene.cfg) and the floor it stands on (the floor of the campaign hall,
+models/MenuCampaignHallOpen.mesh, up to FLOOR_HEIGHT, and below it the courtyard paving, models/MenuCourtyard.mesh,
+and the ground, models/MenuOuterGround.mesh), with the menu textures and the diffuse colours of
+materials/scripts/MenuScene.material. The camera is orthographic and tilted towards the front of the table by TILT
+degrees (about the pitch of the campaign camera of the menu), so the front face of the top slab and the trestles show
+below the table top. So that the table body reads on every side, the render draws the table body (every part but the
+map plane) BODY_GROW wider than the map plane: the stone rim of the top slab shows round the map on all four sides.
+The dark surface materials (moss, lichen, water stains) are lifted by SURFACE_LIFT of the stone colour, as the lights
+of the hall show them in the game. tools/gen_campaign_map_art.py stretches the render back so that the table top is the
 exact carved map rectangle of the full screen map and lays the carved map itself over it.
 
     blender --background --python tools/render_campaign_map_table.py -- [<repo>] [<output png>]
@@ -31,9 +36,16 @@ from mathutils import Vector
 #: Place of the stone table in the menu scene (CampaignStoneTable) and the floor window rendered around it.
 TABLE_OFFSET = (0.0, 22.0, 0.0)
 FLOOR_WINDOW = (-7.5, 7.5, 16.0, 28.0)
+#: Highest point of a triangle of the campaign hall that still belongs to its floor (walls and roof are left out).
+FLOOR_HEIGHT = 0.6
+#: Rim of the table body round the map plane in the render (mesh units on every side of x and y).
+BODY_GROW = 0.11
+#: Share of the stone colour added to the dark surface materials.
+SURFACE_LIFT = 0.32
+DARK_SURFACES = ("MenuMoss", "MenuLichen", "MenuWaterStain")
 #: Tilt of the camera towards the front of the table (degrees from straight down), its pixels per mesh unit (the
 #: carved map: 1752 map pixels over the 6.15 units of the map plane) and the render size.
-TILT = 24.0
+TILT = 29.5
 PIXELS_PER_UNIT = 1752.0 / 6.15
 RENDER_SIZE = (2600, 1800)
 SAMPLES = 96
@@ -56,15 +68,19 @@ MATERIALS = {
     "MenuBlack": (None, (0.01, 0.01, 0.01)),
     "MenuCampaignMap": ("MenuCampaignMap.png", (1.0, 1.0, 1.0)),
 }
-#: Light of the hall: warm firelight from the top left (as the light of the carved map) and a dim warm ambient.
+#: Light of the hall as in the menu scene: the point lights over the front of the table (HallFire and GateBacklight of
+#: config/mainmenuscene.cfg: name, position, colour) with the power given here, a weak warm light from the top left (as
+#: the light of the carved map) and a dim ambient.
+FIRES = (
+    ("HallFire", (0.0, 20.0, 5.8), (1.0, 0.36 / 1.3, 0.07 / 1.3), 2600.0),
+    ("GateBacklight", (0.0, 16.2, 4.2), (1.0, 0.36 / 2.7, 0.024 / 2.7), 1500.0),
+)
+FIRE_RADIUS = 0.4
 SUN_DIRECTION = (-0.5, 0.55, 0.67)
 SUN_COLOUR = (1.0, 0.72, 0.52)
-SUN_STRENGTH = 3.2
-#: A weaker fill light from the front (the side of the viewer) lights the front edge of the table.
-FILL_DIRECTION = (0.15, -0.8, 0.6)
-FILL_STRENGTH = 1.3
-AMBIENT_COLOUR = (0.30, 0.20, 0.15)
-AMBIENT_STRENGTH = 1.4
+SUN_STRENGTH = 0.6
+AMBIENT_COLOUR = (0.30, 0.22, 0.18)
+AMBIENT_STRENGTH = 0.35
 
 
 def converter_path():
@@ -112,6 +128,9 @@ def material_for(name, textures):
     if name in bpy.data.materials:
         return bpy.data.materials[name]
     texture, colour = MATERIALS.get(name, MATERIALS["MenuStone"])
+    if name in DARK_SURFACES:
+        stone = MATERIALS["MenuStone"][1]
+        colour = tuple(colour[channel] + SURFACE_LIFT * stone[channel] for channel in range(3))
     material = bpy.data.materials.new(name)
     material.use_nodes = True
     nodes = material.node_tree.nodes
@@ -135,9 +154,10 @@ def material_for(name, textures):
     return material
 
 
-def build_object(name, submeshes, offset, textures, window=None):
+def build_object(name, submeshes, offset, textures, window=None, max_height=None):
     """Creates one Blender object of the submeshes, moved by offset; with a window (x0, x1, y0, y1) only the
-    triangles that reach into it are kept. Returns the object and its materials."""
+    triangles that reach into it are kept, with max_height only the triangles that stay below it. Returns the object
+    and its materials."""
     vertices = []
     faces = []
     face_materials = []
@@ -157,6 +177,8 @@ def build_object(name, submeshes, offset, textures, window=None):
                 high_y = max(point[1] for point in points)
                 if high_x < window[0] or low_x > window[1] or high_y < window[2] or low_y > window[3]:
                     continue
+            if max_height is not None and max(point[2] for point in points) > max_height:
+                continue
             base = len(vertices)
             vertices.extend(points)
             faces.append((base, base + 1, base + 2))
@@ -175,6 +197,22 @@ def build_object(name, submeshes, offset, textures, window=None):
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.scene.collection.objects.link(obj)
     return obj, materials
+
+
+def grown_table(submeshes):
+    """Returns the submeshes of the table with every part but the map plane widened by BODY_GROW on every side
+    (positions scaled in x and y about the centre of the map plane), so the table body shows round the map."""
+    corners = map_plane_corners(submeshes, (0.0, 0.0, 0.0))
+    half_x = max(abs(corner.x) for corner in corners)
+    half_y = max(abs(corner.y) for corner in corners)
+    scale_x = (half_x + BODY_GROW) / half_x
+    scale_y = (half_y + BODY_GROW) / half_y
+    result = []
+    for material_name, positions, coordinates, triangles in submeshes:
+        if material_name != "MenuCampaignMap":
+            positions = [(point[0] * scale_x, point[1] * scale_y, point[2]) for point in positions]
+        result.append((material_name, positions, coordinates, triangles))
+    return result
 
 
 def map_plane_corners(submeshes, offset):
@@ -200,7 +238,9 @@ def main():
     scene = bpy.context.scene
     work = tempfile.mkdtemp()
     table = load_mesh(os.path.join(repo, "models", "MenuMapTableStone.mesh"), work)
-    build_object("StoneTable", table, TABLE_OFFSET, textures)
+    build_object("StoneTable", grown_table(table), TABLE_OFFSET, textures)
+    hall = load_mesh(os.path.join(repo, "models", "MenuCampaignHallOpen.mesh"), work)
+    build_object("HallFloor", hall, TABLE_OFFSET, textures, FLOOR_WINDOW, FLOOR_HEIGHT)
     for floor_mesh in ("MenuCourtyard.mesh", "MenuOuterGround.mesh"):
         floor = load_mesh(os.path.join(repo, "models", floor_mesh), work)
         build_object(floor_mesh, floor, (0.0, 0.0, 0.0), textures, FLOOR_WINDOW)
@@ -217,21 +257,22 @@ def main():
     camera.rotation_euler = (tilt, 0.0, 0.0)
     camera.location = centre - Vector((0.0, math.sin(tilt), -math.cos(tilt))) * 30.0
     scene.camera = camera
-    # Light: the firelight, the fill light from the front and the ambient of the hall
-    sun_data = bpy.data.lights.new("HallFire", "SUN")
+    # Light: the fires over the front of the table, the weak light from the top left and the ambient of the hall
+    for name, position, colour, power in FIRES:
+        fire_data = bpy.data.lights.new(name, "POINT")
+        fire_data.color = colour
+        fire_data.energy = power
+        fire_data.shadow_soft_size = FIRE_RADIUS
+        fire = bpy.data.objects.new(name, fire_data)
+        scene.collection.objects.link(fire)
+        fire.location = position
+    sun_data = bpy.data.lights.new("TopLeft", "SUN")
     sun_data.color = SUN_COLOUR
     sun_data.energy = SUN_STRENGTH
     sun_data.angle = math.radians(12.0)
-    sun = bpy.data.objects.new("HallFire", sun_data)
+    sun = bpy.data.objects.new("TopLeft", sun_data)
     scene.collection.objects.link(sun)
     sun.rotation_euler = Vector(SUN_DIRECTION).to_track_quat("Z", "Y").to_euler()
-    fill_data = bpy.data.lights.new("FrontFire", "SUN")
-    fill_data.color = SUN_COLOUR
-    fill_data.energy = FILL_STRENGTH
-    fill_data.angle = math.radians(20.0)
-    fill = bpy.data.objects.new("FrontFire", fill_data)
-    scene.collection.objects.link(fill)
-    fill.rotation_euler = Vector(FILL_DIRECTION).to_track_quat("Z", "Y").to_euler()
     world = bpy.data.worlds.new("Hall")
     world.use_nodes = True
     background = next(node for node in world.node_tree.nodes if node.type == "BACKGROUND")

@@ -9,7 +9,8 @@ of the painted map, so the cave markers of gui/campaign/campaign-world.json stay
 
 - gui/campaign/moreya/moreya_map.png (2560 x 1600): the carved map as the top of the stone table in the campaign
   hall: inside TABLE_CROP the carved map scaled up to the map size and slightly sharpened, around it the edge of the
-  stone table and the hall floor of the menu scene (asset source moreya_map_table_render.png next to the carved map,
+  stone table (rim, front side and trestles) and the hall floor of the menu scene (asset source
+  moreya_map_table_render.png next to the carved map,
   rendered from the menu meshes by tools/render_campaign_map_table.py), stretched so that the table top of the
   render is exactly TABLE_CROP, toned like the hall floor in the game and darkened towards the edges, so the title,
   the progress and the guild panel read on it; the rock around the carved map frame is no longer shown there;

@@ -568,7 +568,8 @@ render_tool = (root / "tools/render_campaign_map_table.py").read_text(encoding="
 check("TABLE_RENDER" in art_tool and "screen = table_surroundings(root)" in art_tool
       and "screen[top:top + height, left:left + width] = colours[top:top + height, left:left + width]" in art_tool,
       "the full screen map must be the carved map frame on the stone table in the hall (tools/gen_campaign_map_art.py)")
-check(all(name in render_tool for name in ("MenuMapTableStone.mesh", "MenuCourtyard.mesh", "MenuOuterGround.mesh")),
+check(all(name in render_tool for name in ("MenuMapTableStone.mesh", "MenuCampaignHallOpen.mesh",
+                                              "MenuCourtyard.mesh", "MenuOuterGround.mesh")),
       "the table render must show the stone table and the hall floor of the menu scene")
 check(re.search(r"(?m)^TABLE_CROP = \(400, 418, 1752, 980\)$", art_tool) is not None,
       "the carved map frame of the full screen map is TABLE_CROP (400, 418, 1752, 980)")
