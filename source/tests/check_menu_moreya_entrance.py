@@ -4,12 +4,15 @@
 No compile needed. Reads config/mainmenuscene.cfg, the menu scene code, the particle and material scripts, the
 textures and the binary meshes under models/ and asserts:
 
-- the start screen stays as it was: its entities START_SCENE (hall, wooden table, frame of the old opening,
-  staircase, signpost, rear buildings, forge coals, castle) keep their meshes and places, and those meshes keep their
-  bytes (START_MESHES, SHA-1);
-- the campaign scene ([MenuCampaignScene]) shows exactly CAMPAIGN_SCENE and CAMPAIGN_LIGHTS and hides exactly the
-  start entities, and RenderSceneMenu reads that section and switches the scene on the campaign flight; every check
-  below looks at the scene as the campaign view shows it (the start entities left out);
+- the campaign scene is the whole scene from the first frame (menu UX plan M1): the former start screen entities
+  GONE_ENTITIES (closed hall, wooden table, frame of the old opening, staircase, signpost and the rear buildings,
+  forge coals and castle in front of the forecourt) are no longer placed, the entities CAMPAIGN_SCENE stand in the
+  scene, the [MenuCampaignScene] section that RenderSceneMenu still reads switches nothing (no Show, ShowLight or
+  Hide), so no flight makes an entity or the lights CAMPAIGN_LIGHTS appear or vanish, and the meshes of the scene
+  that the old start screen shared keep their bytes (KEPT_MESHES, SHA-1);
+- the start screen sees the green fire through the portcullis: from the overview pose and the end of the arrival
+  (OVERVIEW_POSES) at least MIN_OVERVIEW_FIRE of the sight lines to the points of the fire (FIRE_GRID) are unhidden
+  and in the frame at 16:9 and 4:3;
 - the campaign scene places the forecourt MoreyaForecourt (MenuMoreyaForecourt.mesh), the frame of the opening in the
   hall's back wall ForecourtArch (MenuHallForecourtArch.mesh), the open hall CampaignHallOpen and the portal
   MoreyaPortal (MenuMoreyaPortal.mesh); the stone table stays at the entrance of the hall (TABLE_POSITION) and Pose
@@ -61,21 +64,18 @@ TABLE, TABLE_MESH = "CampaignStoneTable", "MenuMapTableStone.mesh"
 HALL, HALL_MESH = "CampaignHallOpen", "MenuCampaignHallOpen.mesh"
 FORECOURT, FORECOURT_MESH = "MoreyaForecourt", "MenuMoreyaForecourt.mesh"
 ARCH, ARCH_MESH = "ForecourtArch", "MenuHallForecourtArch.mesh"
-#: The start screen: its entities with mesh and place, and the SHA-1 of their meshes (counted once on this branch).
-START_SCENE = {"CampaignHall": ("MenuCampaignHall.mesh", (0.0, 22.0, 0.0)),
-               "CampaignTable": ("MenuMapTable.mesh", (0.0, 22.0, 0.0)),
-               "HallRearArch": ("MenuHallRearArch.mesh", (0.0, 0.0, 0.0)),
-               "MoreyaStairs": ("MenuMoreyaStairs.mesh", (0.0, 31.0, 0.0)),
-               "MoreyaSignpost": ("MenuMoreyaSignpost.mesh", (-3.7, 31.2, 0.0)),
-               "FortressRear": ("MenuFortressRear.mesh", (0.0, 0.0, 0.0)),
-               "ForgeCoals": ("MenuForgeCoals.mesh", (0.0, 0.0, 0.0)),
-               "AbandonedCastle": ("MenuAbandonedCastle.mesh", (0.0, 0.0, 0.0))}
-START_MESHES = {"MenuCampaignHall.mesh": "05cb9dd1a241828a", "MenuMapTable.mesh": "9bdb82a4c38aa4cf",
-                "MenuHallRearArch.mesh": "01104c3f3df9e01a", "MenuMoreyaStairs.mesh": "c86396a13a29a760",
-                "MenuOuterGround.mesh": "cb24fe4aa84dbe8d", "MenuFortressRear.mesh": "d033c9d4f46b553c",
-                "MenuForgeCoals.mesh": "e15c0b3c243609ad", "MenuAbandonedCastle.mesh": "d1d4d9922f6f17e1",
-                "MenuMoreyaSignpost.mesh": "c2b98c0baac223f4"}
-#: The campaign scene: the entities and lights it shows.
+#: The former start screen entities that hid the forecourt; none of them is placed any more.
+GONE_ENTITIES = ("CampaignHall", "CampaignTable", "HallRearArch", "MoreyaStairs", "MoreyaSignpost", "FortressRear",
+                 "ForgeCoals", "AbandonedCastle")
+#: The SHA-1 of the meshes the old start screen shared with the scene that stays (counted once on this branch).
+KEPT_MESHES = {"MenuOuterGround.mesh": "cb24fe4aa84dbe8d", "MenuFortressRear.mesh": "d033c9d4f46b553c",
+               "MenuForgeCoals.mesh": "e15c0b3c243609ad", "MenuAbandonedCastle.mesh": "d1d4d9922f6f17e1"}
+#: The start screen poses that look through the portcullis, the least share of unhidden sight lines to the fire in
+#: their frame, and the grid of fire points (columns, rows) sampled inside the fire's box (0.3 in from its edges).
+OVERVIEW_POSES = ("overview", "arrival_approach")
+MIN_OVERVIEW_FIRE = 0.4
+FIRE_GRID = (7, 9)
+#: The campaign scene: the entities and lights of the whole scene.
 CAMPAIGN_SCENE = ("CampaignHallOpen", "CampaignStoneTable", "ForecourtArch", "MoreyaForecourt", "MoreyaPortal",
                   "FortressRearBack", "ForgeCoalsBack", "AbandonedCastleBack")
 CAMPAIGN_LIGHTS = ("PortalBowlLeft", "PortalBowlRight")
@@ -413,26 +413,29 @@ def main():
     entities, _, _ = flight.parse_config()
     all_poses = poses()
 
-    # The start screen stays as it was.
-    for name, (mesh, position) in START_SCENE.items():
-        if name not in entities or entities[name][0] != mesh or tuple(entities[name][1]) != position:
-            failures.append("the start screen entity %s is not %s at %s" % (name, mesh, position))
-    for mesh, digest in START_MESHES.items():
+    # The campaign scene is the whole scene: the old start screen entities are gone and nothing is switched.
+    for name in GONE_ENTITIES:
+        if name in entities:
+            failures.append("the former start screen entity %s is still placed" % name)
+    for name in CAMPAIGN_SCENE:
+        if name not in entities:
+            failures.append("the scene has no entity %s" % name)
+    lights = set(re.findall(r"(?m)^AddPointLight (\S+)", open(flight.CONFIG, encoding="utf-8").read()))
+    for name in CAMPAIGN_LIGHTS:
+        if name not in lights:
+            failures.append("the scene has no light %s" % name)
+    for mesh, digest in KEPT_MESHES.items():
         found = hashlib.sha1(open(os.path.join(flight.MODELS, mesh), "rb").read()).hexdigest()[:16]
         if found != digest:
-            failures.append("the start screen mesh %s changed (SHA-1 %s, was %s)" % (mesh, found, digest))
-    # The campaign scene shows its own entities and lights instead of the start screen's ones.
+            failures.append("the scene mesh %s changed (SHA-1 %s, was %s)" % (mesh, found, digest))
     section = campaign_section()
-    if (sorted(section.get("Show", [])) != sorted(CAMPAIGN_SCENE)
-            or sorted(section.get("ShowLight", [])) != sorted(CAMPAIGN_LIGHTS)
-            or sorted(section.get("Hide", [])) != sorted(START_SCENE)):
-        failures.append("[MenuCampaignScene] must show %s and %s and hide %s, has %s"
-                        % (sorted(CAMPAIGN_SCENE), sorted(CAMPAIGN_LIGHTS), sorted(START_SCENE), section))
+    if "[MenuCampaignScene]" not in open(flight.CONFIG, encoding="utf-8").read() or any(section.values()):
+        failures.append("[MenuCampaignScene] must be present and switch nothing, has %s" % section)
     code = open(MENU_CODE, encoding="utf-8").read()
     for needle in ('"[MenuCampaignScene]"', "showCampaignScene(renderManager, false);", "updateCampaignScene(renderManager);",
                    'CAMPAIGN_PLACE = "campaign"'):
         if needle not in code:
-            failures.append("RenderSceneMenu.cpp does not switch the campaign scene (%s)" % needle)
+            failures.append("RenderSceneMenu.cpp no longer reads the campaign scene section (%s)" % needle)
     entities = {name: value for name, value in entities.items() if name not in section.get("Hide", [])}
     for name, mesh in ((PORTAL, PORTAL_MESH), (TABLE, TABLE_MESH), (HALL, HALL_MESH), (FORECOURT, FORECOURT_MESH),
                        (ARCH, ARCH_MESH)):
@@ -662,6 +665,25 @@ def main():
     crown_top = (np.array([fire_centre[0], top_stones[:, :, 1].min() - 0.05, crown.max() + 0.02]) if len(crown)
                  else fire_high)
     fire_middle = fire_centre - np.array([0.0, 0.03, 0.0])
+    # The start screen sees the fire through the portcullis.
+    grid = [np.array([x, fire_low[1] - 0.05, z])
+            for x in np.linspace(fire_low[0] + 0.3, fire_high[0] - 0.3, FIRE_GRID[0])
+            for z in np.linspace(fire_low[2] + 0.3, fire_high[2] - 0.3, FIRE_GRID[1])]
+    every = np.concatenate((ground, portal))
+    overview_shares = []
+    for name in OVERVIEW_POSES:
+        eye, rotation = camera(all_poses[name])
+        box_low = np.minimum(eye, fire_low) - 1.0
+        box_high = np.maximum(eye, fire_high) + 1.0
+        near = every[np.all(every.max(axis=1) >= box_low, axis=1) & np.all(every.min(axis=1) <= box_high, axis=1)]
+        near_bounds = (near.min(axis=1), near.max(axis=1))
+        for aspect in ASPECTS:
+            share = np.mean([in_view(eye, rotation, point, aspect)
+                             and not blocked(near, eye, point, bounds=near_bounds) for point in grid])
+            overview_shares.append(share)
+            if share < MIN_OVERVIEW_FIRE:
+                failures.append("from the %s pose at aspect %.2f only %.2f of the fire shows through the portcullis "
+                                "(need %.2f)" % (name, aspect, share, MIN_OVERVIEW_FIRE))
     for aspect in ASPECTS:
         showing = visible_frames(all_poses, aspect, [fire_middle], occluders, bounds)
         if 0.0 not in showing or len(showing) < 2:
@@ -693,10 +715,11 @@ def main():
         print("FAIL " + line)
     if failures:
         return 1
-    print("OK: start screen unchanged (%d entities, %d meshes); campaign scene of %d entities and %d lights; stone table (%.2f stone); forecourt %.2f wide, %.2f deep, opening %.2f open, %.1f m2 moss, %d dead wood "
+    print("OK: %d former start screen entities gone, %d kept meshes unchanged, fire seen from the start screen (least "
+          "share %.2f); campaign scene of %d entities and %d lights; stone table (%.2f stone); forecourt %.2f wide, %.2f deep, opening %.2f open, %.1f m2 moss, %d dead wood "
           "and %d rubble triangles, walls fallen to %.2f and %.2f; fire %.2f behind the table, %.2f m2 (%.2f x %.2f), "
           "arch crown at %.2f, %.2f of the fire texels green"
-          % (len(START_SCENE), len(START_MESHES), len(CAMPAIGN_SCENE), len(CAMPAIGN_LIGHTS), stone_share, width, depth, np.mean(passing), moss, dead_wood, rubble, wall_tops[0][0], wall_tops[1][0],
+          % (len(GONE_ENTITIES), len(KEPT_MESHES), min(overview_shares), len(CAMPAIGN_SCENE), len(CAMPAIGN_LIGHTS), stone_share, width, depth, np.mean(passing), moss, dead_wood, rubble, wall_tops[0][0], wall_tops[1][0],
              fire_centre[1] - table_back, fire_area, fire_high[0] - fire_low[0], fire_high[2] - fire_low[2],
              crown.max(), green))
     return 0
