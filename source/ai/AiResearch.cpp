@@ -88,8 +88,8 @@ int gateDistance(const Seat& seat, SkillType type)
 //! \brief Orders equal-cost entries by tab gate distance and the reference tree order.
 bool cheaper(const Seat& seat, SkillType left, SkillType right)
 {
-    const int32_t leftCost = SkillManager::getSkill(left)->getNeededSkillPoints(seat.getSkillLevel(left) + 1);
-    const int32_t rightCost = SkillManager::getSkill(right)->getNeededSkillPoints(seat.getSkillLevel(right) + 1);
+    const int32_t leftCost = seat.getSkillCost(left, seat.getSkillLevel(left) + 1);
+    const int32_t rightCost = seat.getSkillCost(right, seat.getSkillLevel(right) + 1);
     if(leftCost != rightCost)
         return leftCost < rightCost;
     const int leftGate = gateDistance(seat, left);

@@ -58,7 +58,7 @@ check('SkillType::spellSummonWorker' in locked and 'SkillFamily::spells' in lock
 check('Skills::isRewardSkill(resType)' in available and 'Skills::isRewardSkill(type)' in locked,
       'reward skills (Summon champion) come from a Heartstone, not from research, and are not locked')
 check('isLockedByLostLibrary(resType, localPlayerSeat)' in game_mode
-      and 'castButtonName)->setEnabled(!isLockedByLibrary)' in game_mode, 'the cast button is locked on the client')
+      and 'castButton->setEnabled(!isLockedByLibrary);' in game_mode, 'the cast button is locked on the client')
 check('mIsLibraryLostShown != localPlayerSeat->isLibraryLost()' in function(game_mode, 'void GameMode::refreshGuiSkill('),
       'the spell buttons refresh when the library is lost or regained')
 
