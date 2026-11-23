@@ -68,7 +68,7 @@ assert 'ServerNotificationType::timeLimit' in send and 'getIsHuman()' in send
 # the elapsed time from the limit (it was subtracted twice); check_editor_save.py proves the written limit
 assert 'rebaseTimeLimit(' not in map_handler
 enum_body = server_h.split('enum class ServerNotificationType')[1].split('};')[0]
-assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-16:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown', 'startGameRefused'], 'campaignVictory must be appended after the existing notifications'
+assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-17:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown', 'startGameRefused', 'possessionSkillBar'], 'campaignVictory must be appended after the existing notifications'
 assert 'case ServerNotificationType::timeLimit:' in server_cpp
 handler = client[client.index('case ServerNotificationType::timeLimit:'):]
 handler = handler[:handler.index('break;')]

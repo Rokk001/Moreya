@@ -25,6 +25,7 @@
 #include "modes/DefeatSequence.h"
 #include "modes/InputCommand.h"
 #include "modes/InputBridge.h"
+#include "modes/PossessionBarRules.h"
 #include "modes/SettingsWindow.h"
 #include "game/CreaturePanelData.h"
 #include "game/TrapProductionData.h"
@@ -452,6 +453,10 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Called on client side when the local player is no longer in control of a creature
     void notifyPossessionEnded();
 
+    //! \brief Called on client side with the skill bar the server sent for the possessed creature (possessionSkillBar):
+    //! one slot per skill key in key order. The bar shows it while the possession view is open.
+    void setPossessionSkillBar(const std::vector<PossessionBarRules::Slot>& slots);
+
 protected:
     //! \brief Leaves the game: starts the level again when that was asked, to the desktop, to the campaign menu while a campaign level is played, otherwise to the main menu
     bool onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/);
@@ -859,6 +864,22 @@ private:
 
     //! \brief The root windows the possession view hid, shown again when it ends
     std::vector<CEGUI::Window*> mPossessionHiddenWindows;
+
+    //! \brief Creates the skill bar of the possession view (possession view A): the iron bar at the bottom centre with
+    //! one slot per skill key and the plate that names Esc as the way out
+    void createPossessionBar();
+
+    //! \brief Places the skill bar for the window size and shows the slots, their keys and their recovery
+    void refreshPossessionBar();
+
+    //! \brief Removes the skill bar of the possession view
+    void destroyPossessionBar();
+
+    //! \brief The skill bar of the possession view while it is shown (a child of the root window), else nullptr
+    CEGUI::Window* mPossessionBar = nullptr;
+
+    //! \brief The slots of the skill bar as the server sent them last, in the order of the skill keys
+    std::vector<PossessionBarRules::Slot> mPossessionBarSlots;
 
     //! \brief Whether the left mouse button is held while possessing, and when its request is sent again
     bool mPossessAttackHeld = false;
