@@ -2534,14 +2534,15 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 OD_LOG_WRN("Ignored askMarkTiles with an incomplete message");
                 break;
             }
+            // The rectangle may reach beyond the map edge: those places are marked like undiscovered tiles. They are
+            // taken from the rectangle as sent, before it is clipped to the map; EdgePlaces bounds them to its reach.
+            player->markEdgePlacesForDigging(isDigSet, EdgePlaces::inRectangle(x1, y1, x2, y2,
+                gameMap->getMapSizeX(), gameMap->getMapSizeY()), true);
             // Only the part of the rectangle on the map is walked
             if(!ServerGuards::clipRectangleToMap(x1, y1, x2, y2, gameMap->getMapSizeX(), gameMap->getMapSizeY()))
                 break;
             std::vector<Tile*> tiles = gameMap->rectangularRegion(x1, y1, x2, y2);
             player->markTilesForDigging(isDigSet, tiles, true);
-            // The rectangle may reach beyond the map edge: those places are marked like undiscovered tiles
-            player->markEdgePlacesForDigging(isDigSet, EdgePlaces::inRectangle(x1, y1, x2, y2,
-                gameMap->getMapSizeX(), gameMap->getMapSizeY()), true);
 
             break;
         }

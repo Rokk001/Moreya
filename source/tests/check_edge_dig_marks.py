@@ -84,6 +84,9 @@ assert select.index('unselectAllTiles();') < select.index('ClientNotificationTyp
 ask = server[server.index('case ClientNotificationType::askMarkTiles:'):]
 ask = ask[:ask.index('case ClientNotificationType::askSlapEntity:')]
 assert 'player->markEdgePlacesForDigging(isDigSet, EdgePlaces::inRectangle(x1, y1, x2, y2,' in ask
+# The edge places come from the rectangle as sent: clipping it to the map first would drop every one of them.
+assert ask.index('player->markEdgePlacesForDigging(') < ask.index('ServerGuards::clipRectangleToMap('), \
+    'edge places must be marked before the rectangle is clipped to the map'
 
 # The drag rectangle outline and the size label extend over edge places.
 update = body(game_mode, 'void GameMode::updateSelectedTiles()')
