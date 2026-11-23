@@ -6764,7 +6764,8 @@
             <ImageryComponent><Area><Dim type="LeftEdge"><UnifiedDim scale="0" type="Width" /></Dim><Dim type="TopEdge"><UnifiedDim scale="0" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim><Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim></Area><Image name="OpenDungeonsSkin/ResearchTileFocus" /><Colours topLeft="FFFFFFFF" topRight="FFFFFFFF" bottomLeft="FFFFFFFF" bottomRight="FFFFFFFF" /><VertFormat type="Stretched" /><HorzFormat type="Stretched" /></ImageryComponent>
         </ImagerySection>
         <StateImagery name="Normal"><Layer><Section section="research" /></Layer></StateImagery>
-        <StateImagery name="Hover"><Layer><Section section="research_hover" /><Section section="research_hover" /></Layer></StateImagery>
+        <!-- Hover keeps the whole field (tile, icon, padlock, level frame, state badge) and lays the focus over it -->
+        <StateImagery name="Hover"><Layer><Section section="research" /><Section section="research_hover" /></Layer></StateImagery>
         <StateImagery name="Pushed"><Layer><Section section="research_pushed" /><Section section="research_hover_pushed" /></Layer></StateImagery>
         <StateImagery name="PushedOff"><Layer><Section section="research_pushed" /><Section section="research_hover_pushed" /></Layer></StateImagery>
         <StateImagery name="Disabled"><Layer><Section section="research_disabled" /></Layer></StateImagery>

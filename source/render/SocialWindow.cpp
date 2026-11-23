@@ -916,9 +916,35 @@ const char* const SKILL_TREE_NORMAL_TEXT = "tl:FFE7E0D0 tr:FFE7E0D0 bl:FFE7E0D0 
 const char* const SKILL_TREE_HIGHLIGHT_FRAME = "FFFFC94A";
 const char* const SKILL_TREE_NORMAL_FRAME = "00FFFFFF";
 
-//! \brief Shows one skill of the tree in its icon button, rank bar and rank text: the icon from the imageset
+//! Image of one rank star (gold; an unlearned rank draws it in SKILL_RANK_STAR_EMPTY_COLOUR) and the share of the rank
+//! label's height a star takes
+const char* const SKILL_RANK_STAR_IMAGE = "SkillRankStar/Star";
+const char* const SKILL_RANK_STAR_FULL_COLOUR = "FFFFFFFF";
+const char* const SKILL_RANK_STAR_EMPTY_COLOUR = "FF4A4A4A";
+const float SKILL_RANK_STAR_HEIGHT_SHARE = 0.8f;
+
+//! \brief Returns the CEGUI markup of the rank stars of a skill: maxRank stars, the first rank of them gold and the
+//! rest greyed, each a square of the given share of the label height (at least 8 pixels).
+//! \param rank The learned ranks.
+//! \param maxRank The ranks the skill can reach.
+//! \param labelHeight The height in pixels of the label that shows the stars.
+std::string skillRankStars(uint32_t rank, uint32_t maxRank, float labelHeight)
+{
+    const int size = std::max(8, static_cast<int>(labelHeight * SKILL_RANK_STAR_HEIGHT_SHARE));
+    const std::string image = "[image-size='w:" + std::to_string(size) + " h:" + std::to_string(size) +
+        "'][image='" + SKILL_RANK_STAR_IMAGE + "']";
+    std::string stars;
+    for(uint32_t i = 0; i < maxRank; ++i)
+    {
+        stars += std::string("[colour='") + (i < rank ? SKILL_RANK_STAR_FULL_COLOUR : SKILL_RANK_STAR_EMPTY_COLOUR) +
+            "']" + image;
+    }
+    return stars;
+}
+
+//! \brief Shows one skill of the tree in its icon button and rank label: the icon from the imageset
 //! CreatureSkillIcons, dark while the skill is not unlocked (like a research button that is not researched), the
-//! tooltip lines and the frame colour of a highlighted path.
+//! tooltip lines, the frame colour of a highlighted path and the rank as stars (the rank bar stays hidden).
 //! \param tree The window holding the skill's windows.
 //! \param name The name of the skill's icon button; the bar and the rank text are named <name>Bar and <name>Rank.
 void showSkillTreeNode(CEGUI::Window* tree, const std::string& name, const CreatureSkillTree::ViewNode& node,
@@ -944,8 +970,11 @@ void showSkillTreeNode(CEGUI::Window* tree, const std::string& name, const Creat
     for(std::size_t i = 0; i < node.mTooltip.size(); ++i)
         tooltip += (i == 0 ? "" : "\n") + node.mTooltip[i];
     button->setTooltipText(escapeMarkup(tooltip));
-    bar->setProgress(node.mMaxRank == 0 ? 0.0f : static_cast<float>(node.mRank) / static_cast<float>(node.mMaxRank));
-    rank->setText(node.mBarText);
+    // The rank is shown as stars, one per rank the skill can reach: learned ranks gold, the others greyed. The thin
+    // progress bar under the icon is no longer shown, and the text "x/y" stays in the tooltip of the label
+    bar->setVisible(false);
+    rank->setText(skillRankStars(node.mRank, node.mMaxRank, rank->getPixelSize().d_height));
+    rank->setTooltipText(escapeMarkup(node.mBarText));
 }
 }
 

@@ -361,12 +361,12 @@ static const std::string RESEARCH_ICON_COLOUR_DONE = "FF3CB46E";
 static const std::string RESEARCH_ICON_COLOUR_UNAVAILABLE = "FFC4472A";
 static const std::string RESEARCH_ICON_COLOUR_WORKING = "FFC8A030";
 static const std::string RESEARCH_FRAME_COLOUR_NONE = "00FFFFFF";
-static const std::string RESEARCH_FRAME_COLOUR_BRONZE = "FFC98A4A";
+static const std::string RESEARCH_FRAME_COLOUR_SILVER = "FFCDD3DC";
 static const std::string RESEARCH_FRAME_COLOUR_GOLD = "FFFFC947";
 static const std::string RESEARCH_LINK_COLOUR_READY = "FFE8862E";
 static const std::string RESEARCH_LINK_COLOUR_WAITING = "FF6E5232";
-//! Research level at which a node gets the bronze frame and the one with the gold frame
-static const uint32_t RESEARCH_LEVEL_BRONZE = 2;
+//! Research level at which a node gets the silver frame and the one with the gold frame; level 1 keeps the plain tile
+static const uint32_t RESEARCH_LEVEL_SILVER = 2;
 static const uint32_t RESEARCH_LEVEL_GOLD = 3;
 //! Layout of the research tree: the widest share of the page width a node may take, the share of the page height
 //! left free above the first and below the last row, the least number of rows a page is laid out for, the bar
@@ -398,14 +398,14 @@ static const std::string NAVIGATION_LOCKED = "NavigationLocked";
 //! Path of the trap and door page of the build navigation: its entries need a built Workshop in a campaign level
 static const std::string NAVIGATION_PATH_TRAPS = "MainTabControl/Traps/";
 
-//! \brief Returns the frame colour of a research node: gold from the gold level, bronze at the bronze level, otherwise none.
+//! \brief Returns the frame colour of a research node: gold from the gold level, silver at the silver level, otherwise none.
 //! \param level The research level of the node.
 static const std::string& getResearchFrameColour(uint32_t level)
 {
     if(level >= RESEARCH_LEVEL_GOLD)
         return RESEARCH_FRAME_COLOUR_GOLD;
-    if(level == RESEARCH_LEVEL_BRONZE)
-        return RESEARCH_FRAME_COLOUR_BRONZE;
+    if(level == RESEARCH_LEVEL_SILVER)
+        return RESEARCH_FRAME_COLOUR_SILVER;
     return RESEARCH_FRAME_COLOUR_NONE;
 }
 
@@ -4556,10 +4556,11 @@ void GameMode::setHelpWindowText()
 
 //! \brief Updates research icons, progress and the plain-language hover state without changing research rules.
 //! \brief In a campaign level the research field and the build navigation of rooms, spells, traps and doors follow the
-//! research state: an entry from the start or researched with its real icon, an allowed but unresearched one with its
-//! darkened icon under the padlock (queueable in the tree, not buildable in the navigation), a forbidden one as the
-//! question mark in place of its icon (not clickable in the tree, not buildable in the navigation), traps and doors
-//! hidden while the keeper has no built Workshop. Skirmish and multiplayer keep the navigation and tree of before.
+//! research state. The research field shows an entry from the start or researched with its real icon, an allowed but
+//! unresearched one with its darkened icon under the padlock (queueable) and a forbidden one as the question mark in
+//! place of its icon (not clickable). The build navigation shows only researched entries, never a padlock or a
+//! question mark; traps and doors stay hidden while the keeper has no built Workshop. Skirmish and multiplayer keep
+//! the navigation and tree of before.
 //! The skill of a room whose room package is missing is shown not allowed and its build button stays hidden.
 void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
@@ -4713,32 +4714,21 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         CEGUI::Window* castButton = guiSheet->getChild(castButtonName);
         const bool isTrapEntry = castButtonName.compare(0, NAVIGATION_PATH_TRAPS.size(), NAVIGATION_PATH_TRAPS) == 0;
         bool isVisible = level > 0;
-        bool isForbiddenMark = false;
-        bool isPadlockMark = false;
         // The real icon of the layout is kept so that it comes back once the entry is researched, also when a later
         // skirmish game reuses the window
         if(!castButton->isUserStringDefined(NAVIGATION_REAL_IMAGE))
             castButton->setUserString(NAVIGATION_REAL_IMAGE, castButton->getProperty("NormalImage"));
         if(mIsCampaignLevelShown)
         {
-            // Rooms, spells, traps and doors: traps and doors only with a built Workshop
-            if(isTrapEntry && !mHasWorkshopShown)
-                isVisible = false;
-            else
-            {
-                isVisible = true;
-                isForbiddenMark = !isAllowed;
-                isPadlockMark = isAllowed && (level == 0);
-            }
+            // Rooms, spells, traps and doors show only what the keeper has researched; the padlock and the question
+            // mark belong to the research window alone. Traps and doors only with a built Workshop
+            isVisible = isAllowed && (level > 0) && !(isTrapEntry && !mHasWorkshopShown);
         }
-        const bool isMarked = isForbiddenMark || isPadlockMark;
-        castButton->setProperty("NormalImage", isForbiddenMark ? CEGUI::String(NAVIGATION_PLACEHOLDER_IMAGE) :
-            castButton->getUserString(NAVIGATION_REAL_IMAGE));
-        castButton->setProperty(NAVIGATION_MARK_PROPERTY, isPadlockMark ? RESEARCH_LOCK_IMAGE : "");
-        castButton->setProperty(NAVIGATION_ICON_COLOUR_PROPERTY, isPadlockMark ? MARK_LOCKED_ICON_COLOUR : "FFFFFFFF");
-        // A marked button stays enabled so that it shows the frames of every button state like a real icon; the
-        // selectors build nothing for it
-        castButton->setUserString(NAVIGATION_LOCKED, isMarked ? "true" : "false");
+        // The navigation never carries a mark: every shown entry has its real icon and builds
+        castButton->setProperty("NormalImage", castButton->getUserString(NAVIGATION_REAL_IMAGE));
+        castButton->setProperty(NAVIGATION_MARK_PROPERTY, "");
+        castButton->setProperty(NAVIGATION_ICON_COLOUR_PROPERTY, "FFFFFFFF");
+        castButton->setUserString(NAVIGATION_LOCKED, "false");
         // The build button of a skill whose content package is missing stays hidden in every mode
         castButton->setVisible(isVisible && isContentAvailable);
         castButton->setEnabled(!isLockedByLibrary);
