@@ -508,21 +508,44 @@ hall = root / "materials/textures/menu/MenuCampaignMap.png"
 # The table top shows the carved map frame of the map of Moreya (TABLE_CROP of tools/gen_campaign_map_art.py),
 # stretched to the map size; the map covers the whole table top and the table follows the map (Mario 2026-11-23): the
 # map plane is at least MIN_TABLE_MAP_WIDTH wide (the old plane was 3.8), has the aspect ratio of the map frame and
-# covers at least MIN_TOP_COVER of the width and the depth of the table top (its faces above TOP_HEIGHT)
+# covers at least MIN_TOP_COVER of the width and the depth of the table top (its faces above TOP_HEIGHT). The clickable
+# map is the rendered table (M2, Mario 2026-11-23), so it shows the hall texture on the table top seen in perspective:
+# the hall texture projected through the corners of the table top of the map description ("table_top": texture pixel,
+# place on the full screen map) correlates in luminance (640 x 400, inside the table top) by at least
+# MIN_TABLE_TOP_CORRELATION with the full screen map (0.94 measured on this branch; the same projection 20 pixels to
+# the side 0.36, 20 pixels down -0.02); it replaces the mean colour difference of at most 1.0 against the carved map
+# frame, which held only while the full screen map was the unlit flat image the texture was cut from
 TABLE_CROP = (400, 418, 1752, 980)
-MAX_HALL_DIFFERENCE = 1.0
+MIN_TABLE_TOP_CORRELATION = 0.85
 MIN_TABLE_MAP_WIDTH = 6.0
 MIN_TOP_COVER = 0.98
 TOP_HEIGHT = 1.6
 with Image.open(hall) as hall_image, Image.open(art / world["base"]) as map_image:
     check(hall_image.size == map_image.size, "the hall texture must have the size of the map of Moreya")
-    left, top, width, height = TABLE_CROP
-    expected = map_image.convert("RGB").crop((left, top, left + width, top + height)).resize(map_image.size,
-                                                                                            Image.LANCZOS)
-    difference = sum(abs(a - b) for a, b in zip(hall_image.convert("RGB").resize((256, 160)).tobytes(),
-                                                expected.resize((256, 160)).tobytes())) / (256 * 160 * 3)
-    check(difference <= MAX_HALL_DIFFERENCE, "the campaign hall must show the carved map region of the map of Moreya "
-          "(run tools/gen_campaign_map_art.py), mean difference %.2f" % difference)
+    import numpy  # noqa: E402
+    from PIL import ImageDraw  # noqa: E402
+    table_top = world.get("table_top", [])
+    check(len(table_top) >= 4, "the map description names no corners of the table top (table_top)")
+    if len(table_top) >= 4:
+        # Homography from the full screen map to the hall texture through the corners of the table top
+        rows = []
+        values = []
+        for u, v, x, y in table_top:
+            rows.append([x, y, 1.0, 0.0, 0.0, 0.0, -u * x, -u * y])
+            rows.append([0.0, 0.0, 0.0, x, y, 1.0, -v * x, -v * y])
+            values.extend([u, v])
+        coefficients = numpy.linalg.lstsq(numpy.array(rows), numpy.array(values), rcond=None)[0]
+        projected = hall_image.convert("L").transform(map_image.size, Image.PERSPECTIVE, tuple(coefficients),
+                                                      Image.BICUBIC)
+        top_mask = Image.new("L", map_image.size, 0)
+        ImageDraw.Draw(top_mask).polygon([(x, y) for _, _, x, y in table_top], fill=255)
+        hall_grey = numpy.asarray(projected.resize((640, 400)), dtype=numpy.float64)
+        map_grey = numpy.asarray(map_image.convert("L").resize((640, 400)), dtype=numpy.float64)
+        inside_top = numpy.asarray(top_mask.resize((640, 400))) > 250
+        correlation = numpy.corrcoef(hall_grey[inside_top], map_grey[inside_top])[0, 1]
+        check(correlation >= MIN_TABLE_TOP_CORRELATION, "the clickable map must show the carved map of the campaign "
+              "hall on the table top (run tools/gen_campaign_map_art.py), correlation %.3f (at least %.2f)"
+              % (correlation, MIN_TABLE_TOP_CORRELATION))
 sys.path.insert(0, str(root / "source/tests"))
 import check_menu_moreya_entrance as entrance  # noqa: E402
 plane = entrance.submeshes(str(root / "models/MenuMapTableStone.mesh")).get("MenuCampaignMap")

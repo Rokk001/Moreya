@@ -87,7 +87,7 @@ MENU_CODE = os.path.join(ROOT, "source", "renderscene", "RenderSceneMenu.cpp")
 #: The table is stone: at least this share of its faces (by area, the map and parchment left out) is stone, none wood.
 TABLE_STONE = 0.8
 STONE_LOOK = ("MenuStone", "MenuDarkStone", "MenuCarvedStone", "MenuRoughStone", "MenuChippedStone", "MenuMoss",
-              "MenuLichen", "MenuWaterStain", "MenuBlack")
+              "MenuLichen", "MenuWaterStain", "MenuBlack", "MenuTableStone")
 WOOD_MATERIALS = ("MenuWood", "MenuAgedWood")
 MAP_MATERIAL = "MenuCampaignMap"
 #: The table stays at the entrance of the campaign hall and the campaign camera pose stays as it was.
