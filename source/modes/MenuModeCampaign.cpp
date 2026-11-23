@@ -117,8 +117,39 @@ const std::string PLACE_PORTAL = "portal";
 const float TOOLTIP_WIDTH = 420.0f;
 const float TOOLTIP_HEIGHT = 150.0f;
 const float TOOLTIP_OFFSET = 48.0f;
+//! Inner margin of the hover display: share of the tablet width left and right and of its height above and below
+//! its text (the text stays inside the recess of tooltip_plaque.png)
+const float TOOLTIP_INSET_X = 0.09f;
+const float TOOLTIP_INSET_Y = 0.17f;
 //! Size of the ring around the cave under the mouse, relative to the cave marker
 const float HOVER_SCALE = 1.0f;
+//! The carved art of the map, relative to the campaign art directory (tools/gen_campaign_map_art.py)
+const std::string ART_TOOLTIP_PLAQUE = "moreya/tooltip_plaque.png";
+const std::string ART_GUILD_PLAQUE = "moreya/guild_plaque.png";
+const std::string ART_CURRENT_GLOW = "moreya/current_glow.png";
+const std::string ART_CURRENT_POINTER = "moreya/current_pointer.png";
+const std::string ART_RAID_EMBER = "moreya/raid_ember.png";
+//! The current level: its marker is drawn larger than the others, its glow is a multiple of the marker, its arrow
+//! (map pixels) stands above the marker and bobs by POINTER_BOB; glow and arrow pulse once per PULSE_PERIOD seconds
+const float CURRENT_CAVE_SCALE = 1.25f;
+const float CURRENT_GLOW_SCALE = 2.8f;
+const float POINTER_WIDTH = 64.0f;
+const float POINTER_HEIGHT = 80.0f;
+const float POINTER_GAP = 6.0f;
+const float POINTER_BOB = 12.0f;
+const float PULSE_PERIOD = 1.6f;
+const float TWO_PI = 6.2831853f;
+//! The raid trail: distance of its embers and their number, size of an ember, how fast the glow runs along the trail
+//! (trail lengths per second) and the size of the guild banner at the attacked cave (map pixels)
+const float RAID_EMBER_SPACING = 70.0f;
+const size_t RAID_EMBERS_MIN = 4;
+const size_t RAID_EMBERS_MAX = 18;
+const float RAID_EMBER_SIZE = 28.0f;
+const float RAID_TRAIL_SPEED = 0.45f;
+const float RAID_BANNER_WIDTH = 40.0f;
+const float RAID_BANNER_HEIGHT = 80.0f;
+//! Opacity of the locked caves of a greyed out wing
+const float LOCKED_CAVE_ALPHA = 0.6f;
 //! Aspect ratio (width to height) of the campaign map art
 const float MAP_ASPECT_RATIO = 1.6f;
 //! Percent value of a completely finished campaign and its factor to a bar fraction
@@ -321,6 +352,13 @@ MenuModeCampaign::MenuModeCampaign(ModeManager* modeManager):
     mWorldLoaded(false),
     mHoverWindow(nullptr),
     mTooltip(nullptr),
+    mTooltipPlaque(nullptr),
+    mCurrentGlow(nullptr),
+    mCurrentPointer(nullptr),
+    mCurrentX(0.0f),
+    mCurrentY(0.0f),
+    mCurrentGlowSize(0.0f),
+    mMapTime(0.0f),
     mBriefingLevel(0),
     mPortalLevel(0),
     mPortalFlight(false),
@@ -614,6 +652,11 @@ void MenuModeCampaign::clearMap()
     windowManager.cleanDeadPool();
     mHoverWindow = nullptr;
     mTooltip = nullptr;
+    mTooltipPlaque = nullptr;
+    mCurrentGlow = nullptr;
+    mCurrentPointer = nullptr;
+    mRaidEmbers.clear();
+    mMapTime = 0.0f;
 }
 
 void MenuModeCampaign::setMapArea(CEGUI::Window* window, float x, float y, float width, float height) const
@@ -688,6 +731,16 @@ void MenuModeCampaign::fillMap()
         mCaveStates[i] = mWorld.getCaveState(campaign, i, level);
     }
 
+    // A wing that cannot be played yet is greyed out, so the open wings stand out
+    for(const CampaignWorldWing& wing : mWorld.getWings())
+    {
+        if(wing.mLockedImage.empty() || !isWingLocked(wing.mNumber))
+            continue;
+        createMapImage("WingLocked_" + Helper::toString(wing.mNumber), wing.mLockedImage,
+            static_cast<float>(wing.mLockedArea.mX), static_cast<float>(wing.mLockedArea.mY),
+            static_cast<float>(wing.mLockedArea.mWidth), static_cast<float>(wing.mLockedArea.mHeight));
+    }
+
     // The ring around the cave under the mouse lies below the cave markers
     if(loadWorldImage(mWorld.getIcons().mHover) != nullptr)
     {
@@ -717,7 +770,11 @@ void MenuModeCampaign::fillMap()
         // A name painted on the map gets only the progress beside it
         std::string progress = Helper::toString(defeated) + " / "
             + Helper::toString(CampaignWorld::STORY_CAVES_PER_WING);
-        createMapText("Wing_" + wingId, wing.mLabel, FONT_WING, wingDefeated ? COLOUR_HIGHLIGHT : COLOUR_TEXT,
+        // The progress of a greyed out wing is grey as well
+        std::string wingColour = wingDefeated ? COLOUR_HIGHLIGHT : COLOUR_TEXT;
+        if(isWingLocked(wing.mNumber))
+            wingColour = COLOUR_LOCKED;
+        createMapText("Wing_" + wingId, wing.mLabel, FONT_WING, wingColour,
             "WordWrapLeftAligned", wing.mNamePainted ? progress : wing.mName + "   " + progress);
         if(wingDefeated)
         {
@@ -726,6 +783,9 @@ void MenuModeCampaign::fillMap()
                 static_cast<float>(wing.mSealX) - size / 2.0f, static_cast<float>(wing.mSealY) - size / 2.0f, size, size);
         }
     }
+
+    // The glow of the current level lies below the cave markers
+    fillCurrentMarker();
 
     // The caves in their states with the names of their levels; a bonus cave only once its stone was found
     const CampaignWorldIcons& icons = mWorld.getIcons();
@@ -759,8 +819,14 @@ void MenuModeCampaign::fillMap()
 
         std::string caveId = Helper::toString(static_cast<uint32_t>(i));
         float size = static_cast<float>(cave.mSize);
-        createMapImage("Cave_" + caveId, *icon, static_cast<float>(cave.mX) - size / 2.0f,
+        // The current level is drawn larger than the other caves
+        if(mCaveStates[i] == CampaignCaveState::current)
+            size *= CURRENT_CAVE_SCALE;
+        CEGUI::Window* marker = createMapImage("Cave_" + caveId, *icon, static_cast<float>(cave.mX) - size / 2.0f,
             static_cast<float>(cave.mY) - size / 2.0f, size, size);
+        // The locked caves of a greyed out wing recede with it
+        if((marker != nullptr) && (mCaveStates[i] == CampaignCaveState::locked) && isWingLocked(cave.mWing))
+            marker->setAlpha(LOCKED_CAVE_ALPHA);
 
         // The name of a level stands under its cave when the map gives it a label; a bonus cave and a level without
         // label name themselves in their tooltip. The caves of a wing without package say that the wing is coming in
@@ -786,16 +852,134 @@ void MenuModeCampaign::fillMap()
 
     fillProgressPanel();
 
-    // The tooltip is the topmost window of the map
-    mTooltip = createMapWindow("OD/StaticText", "Tooltip", 0, 0, 1, 1);
+    // The arrow above the current level lies above the cave markers and the guild
+    if((mCurrentGlow != nullptr) && (loadWorldImage(ART_CURRENT_POINTER) != nullptr))
+    {
+        mCurrentPointer = createMapImage("CurrentPointer", ART_CURRENT_POINTER, mCurrentX - POINTER_WIDTH / 2.0f,
+            mCurrentY - POINTER_HEIGHT, POINTER_WIDTH, POINTER_HEIGHT);
+    }
+
+    // The tooltip is the topmost window of the map: a small carved stone tablet with its text inside its recess
+    mTooltipPlaque = createMapWindow("OD/StaticImage", "TooltipPlaque", 0, 0, 1, 1);
+    mTooltipPlaque->setProperty("FrameEnabled", "False");
+    mTooltipPlaque->setProperty("BackgroundEnabled", "False");
+    if(loadWorldImage(ART_TOOLTIP_PLAQUE) != nullptr)
+        mTooltipPlaque->setProperty("Image", WORLD_IMAGE_PREFIX + ART_TOOLTIP_PLAQUE);
+    mTooltip = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticText", WORLD_WINDOW_PREFIX + "Tooltip");
+    mTooltip->setArea(CEGUI::UDim(TOOLTIP_INSET_X, 0), CEGUI::UDim(TOOLTIP_INSET_Y, 0),
+        CEGUI::UDim(1.0f - 2.0f * TOOLTIP_INSET_X, 0), CEGUI::UDim(1.0f - 2.0f * TOOLTIP_INSET_Y, 0));
+    mTooltip->setMousePassThroughEnabled(true);
+    mTooltip->setProperty("FrameEnabled", "False");
+    mTooltip->setProperty("BackgroundEnabled", "False");
     mTooltip->setProperty("Font", FONT_TOOLTIP);
     mTooltip->setProperty("HorzFormatting", "WordWrapLeftAligned");
     mTooltip->setProperty("VertFormatting", "CentreAligned");
-    mTooltip->setVisible(false);
+    mTooltip->setProperty("TextColours", COLOUR_TEXT);
+    mTooltipPlaque->addChild(mTooltip);
+    setTooltipVisible(false);
+}
+
+//! \brief Tells whether every cave of the wing is locked or a hidden bonus cave; a wing without its package is locked.
+bool MenuModeCampaign::isWingLocked(uint32_t wing) const
+{
+    if(!Campaign::getSingleton().isWingAvailable(wing))
+        return true;
+    const std::vector<CampaignWorldCave>& caves = mWorld.getCaves();
+    for(size_t i = 0; (i < caves.size()) && (i < mCaveStates.size()); ++i)
+    {
+        if(caves[i].mWing != wing)
+            continue;
+        if((mCaveStates[i] != CampaignCaveState::locked) && (mCaveStates[i] != CampaignCaveState::hidden))
+            return false;
+    }
+    return true;
+}
+
+//! \brief Puts the golden glow below the marker of the current level; the arrow above it is added after the markers.
+//! Nothing is drawn when no level is current (the campaign is finished).
+void MenuModeCampaign::fillCurrentMarker()
+{
+    size_t cave = mWorld.findCurrentCave(Campaign::getSingleton());
+    if((cave >= mWorld.getCaves().size()) || (cave >= mCaveStates.size())
+        || (mCaveStates[cave] != CampaignCaveState::current))
+        return;
+    const CampaignWorldCave& worldCave = mWorld.getCaves()[cave];
+    mCurrentX = static_cast<float>(worldCave.mX);
+    mCurrentY = static_cast<float>(worldCave.mY) - static_cast<float>(worldCave.mSize) * CURRENT_CAVE_SCALE / 2.0f
+        - POINTER_GAP;
+    mCurrentGlowSize = static_cast<float>(worldCave.mSize) * CURRENT_GLOW_SCALE;
+    mCurrentGlow = createMapImage("CurrentGlow", ART_CURRENT_GLOW, mCurrentX - mCurrentGlowSize / 2.0f,
+        static_cast<float>(worldCave.mY) - mCurrentGlowSize / 2.0f, mCurrentGlowSize, mCurrentGlowSize);
+}
+
+//! \brief Lays embers along the straight way from the bottom of the guild panel below the portrait to the top of the
+//! attacked cave and plants the guild's banner beside the cave.
+void MenuModeCampaign::fillRaidTrail(size_t cave, const std::string& banner, const std::string& packageDirectory)
+{
+    if((cave >= mWorld.getCaves().size()) || (loadWorldImage(ART_RAID_EMBER) == nullptr))
+        return;
+    const CampaignWorldGuildPanel& panel = mWorld.getGuildPanel();
+    const CampaignWorldCave& worldCave = mWorld.getCaves()[cave];
+    float startX = static_cast<float>(panel.mPortrait.mX) + static_cast<float>(panel.mPortrait.mWidth) / 2.0f;
+    float startY = static_cast<float>(panel.mArea.mY + panel.mArea.mHeight);
+    float size = static_cast<float>(worldCave.mSize) * CURRENT_CAVE_SCALE;
+    float endX = static_cast<float>(worldCave.mX);
+    float endY = static_cast<float>(worldCave.mY) - size / 2.0f - POINTER_HEIGHT;
+    float length = std::sqrt((endX - startX) * (endX - startX) + (endY - startY) * (endY - startY));
+    size_t count = static_cast<size_t>(length / RAID_EMBER_SPACING);
+    count = std::max(RAID_EMBERS_MIN, std::min(RAID_EMBERS_MAX, count));
+    for(size_t i = 0; i < count; ++i)
+    {
+        float share = (static_cast<float>(i) + 0.5f) / static_cast<float>(count);
+        float x = startX + (endX - startX) * share;
+        float y = startY + (endY - startY) * share;
+        CEGUI::Window* ember = createMapImage("RaidEmber_" + Helper::toString(static_cast<uint32_t>(i)),
+            ART_RAID_EMBER, x - RAID_EMBER_SIZE / 2.0f, y - RAID_EMBER_SIZE / 2.0f, RAID_EMBER_SIZE,
+            RAID_EMBER_SIZE);
+        if(ember != nullptr)
+            mRaidEmbers.push_back(ember);
+    }
+    // The guild's banner stands at the cave it attacks
+    createMapImage("RaidBanner", banner, endX + size / 2.0f, static_cast<float>(worldCave.mY) - RAID_BANNER_HEIGHT,
+        RAID_BANNER_WIDTH, RAID_BANNER_HEIGHT, packageDirectory);
+}
+
+//! \brief The glow of the current level pulses, its arrow bobs over it and a brighter glow runs along the embers of
+//! the raid trail towards the current level.
+void MenuModeCampaign::updateMapAnimation(float elapsed)
+{
+    if(std::isfinite(elapsed) && (elapsed > 0.0f))
+        mMapTime += elapsed;
+    float wave = std::sin(TWO_PI * mMapTime / PULSE_PERIOD);
+    if(mCurrentGlow != nullptr)
+        mCurrentGlow->setAlpha(0.7f + 0.3f * wave);
+    if(mCurrentPointer != nullptr)
+    {
+        setMapArea(mCurrentPointer, mCurrentX - POINTER_WIDTH / 2.0f,
+            mCurrentY - POINTER_HEIGHT - POINTER_BOB * (0.5f + 0.5f * wave), POINTER_WIDTH, POINTER_HEIGHT);
+    }
+    float head = std::fmod(mMapTime * RAID_TRAIL_SPEED, 1.0f);
+    for(size_t i = 0; i < mRaidEmbers.size(); ++i)
+    {
+        float share = (static_cast<float>(i) + 0.5f) / static_cast<float>(mRaidEmbers.size());
+        // Distance behind the running glow, 0 at the glow and growing towards the guild
+        float behind = std::fmod(head - share + 1.0f, 1.0f);
+        mRaidEmbers[i]->setAlpha(0.3f + 0.7f * std::max(0.0f, 1.0f - behind * 3.0f));
+    }
+}
+
+//! \brief Shows or hides the tablet of the hover display together with its text.
+void MenuModeCampaign::setTooltipVisible(bool visible)
+{
+    if(mTooltipPlaque != nullptr)
+        mTooltipPlaque->setVisible(visible);
+    if(mTooltip != nullptr)
+        mTooltip->setVisible(visible);
 }
 
 //! \brief Shows the banner, the leader's portrait, the name, leader, raid size and origin of the guild that raids the
-//! current level in front of the gate. Once every story level is defeated no guild comes any more.
+//! current level on a carved stone slab, with a trail of embers from it to the current level and its banner there.
+//! Once every story level is defeated no guild comes any more.
 void MenuModeCampaign::fillGuildPanel()
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -815,6 +999,12 @@ void MenuModeCampaign::fillGuildPanel()
     // Banner and portrait of a private wing package lie in its own folder
     const std::string packageDirectory = packageDirectoryOf(campaignLevel);
     const CampaignWorldGuildPanel& panel = mWorld.getGuildPanel();
+    // The guild stands on a carved stone slab with a niche for its banner and a frame round the portrait, and its
+    // embers lead to the level it attacks, where its banner stands
+    createMapImage("GuildPlaque", ART_GUILD_PLAQUE, static_cast<float>(panel.mArea.mX),
+        static_cast<float>(panel.mArea.mY), static_cast<float>(panel.mArea.mWidth),
+        static_cast<float>(panel.mArea.mHeight));
+    fillRaidTrail(cave, guild.mBanner, packageDirectory);
     createMapImage("GuildBanner", guild.mBanner, static_cast<float>(panel.mBanner.mX),
         static_cast<float>(panel.mBanner.mY), static_cast<float>(panel.mBanner.mWidth),
         static_cast<float>(panel.mBanner.mHeight), packageDirectory);
@@ -889,17 +1079,26 @@ void MenuModeCampaign::fillProgressPanel()
         Helper::toString(percent) + "%");
 }
 
-//! \brief Fits a visible debriefing after display or UI-scale changes. Once the camera has arrived in the green
+//! \brief Fits a visible debriefing after display or UI-scale changes and animates the current level and the raid
+//! trail. Once the camera has arrived in the green
 //! portal the chosen level is loaded, so its loading screen comes only then; if it cannot be started the map comes
 //! back with the reason.
-void MenuModeCampaign::onFrameStarted(const Ogre::FrameEvent&)
+void MenuModeCampaign::onFrameStarted(const Ogre::FrameEvent& evt)
 {
     fitDebriefingPanel();
+    updateMapAnimation(evt.timeSinceLastFrame);
     if(!mPortalFlight || ODFrameListener::getSingleton().isMainMenuFlightActive())
         return;
     mPortalFlight = false;
-    if(!startLevel(mPortalLevel))
-        getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu)->setVisible(true);
+    startLevel(mPortalLevel);
+}
+
+//! \brief Escape would leave the campaign while the level is about to be loaded, so it waits for the portal.
+bool MenuModeCampaign::keyPressed(const OIS::KeyEvent& arg)
+{
+    if(mPortalFlight && (arg.key == OIS::KC_ESCAPE))
+        return true;
+    return AbstractApplicationMode::keyPressed(arg);
 }
 
 //! \brief Converts the screen position into map pixels and finds the visible cave whose marker is there.
@@ -918,7 +1117,8 @@ size_t MenuModeCampaign::findCaveAt(const CEGUI::Vector2f& position, const CEGUI
     return mWorld.getCaveAt(x, y, mCaveStates);
 }
 
-//! \brief Puts the ring around a cave that can be played; locked caves and empty map get no ring.
+//! \brief Puts the ring around a cave that can be played, as large as its marker; locked caves and empty map get no
+//! ring.
 void MenuModeCampaign::updateHover(size_t cave)
 {
     if(mHoverWindow == nullptr)
@@ -933,22 +1133,26 @@ void MenuModeCampaign::updateHover(size_t cave)
 
     const CampaignWorldCave& worldCave = mWorld.getCaves()[cave];
     float size = static_cast<float>(worldCave.mSize) * HOVER_SCALE;
+    // The marker of the current level is drawn larger, its ring too
+    if(mCaveStates[cave] == CampaignCaveState::current)
+        size *= CURRENT_CAVE_SCALE;
     setMapArea(mHoverWindow, static_cast<float>(worldCave.mX) - size / 2.0f,
         static_cast<float>(worldCave.mY) - size / 2.0f, size, size);
     mHoverWindow->setVisible(true);
 }
 
 //! \brief Names the cave under the mouse: level title, wing, guild and state (a level has no difficulty of its
-//! own). The tooltip is scaled with the layout and kept inside the map.
+//! own), on a small carved stone tablet that is just large enough for its text: the title in gold, the state in the
+//! colour of the cave. The tooltip is scaled with the layout, never wider than TOOLTIP_WIDTH and kept inside the map.
 void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cave)
 {
-    if(mTooltip == nullptr)
+    if((mTooltip == nullptr) || (mTooltipPlaque == nullptr))
         return;
 
     const std::vector<CampaignWorldCave>& caves = mWorld.getCaves();
     if((cave >= caves.size()) || (cave >= mCaveStates.size()))
     {
-        mTooltip->setVisible(false);
+        setTooltipVisible(false);
         return;
     }
 
@@ -967,31 +1171,58 @@ void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cav
     else
         text += "\n" + wingName;
 
+    std::string state;
+    std::string stateColour = COLOUR_TEXT;
     switch(mCaveStates[cave])
     {
         case CampaignCaveState::locked:
-            text += "\nState: Locked";
+            state = "State: Locked";
+            stateColour = COLOUR_LOCKED;
             break;
         case CampaignCaveState::current:
-            text += "\nState: Current level";
+            state = "State: Current level";
+            stateColour = COLOUR_HIGHLIGHT;
             break;
         case CampaignCaveState::defeated:
-            text += "\nState: Defeated, can be played again";
+            state = "State: Defeated, can be played again";
             break;
         case CampaignCaveState::bonusFound:
-            text += "\nState: Found";
+            state = "State: Found";
+            stateColour = COLOUR_HIGHLIGHT;
             break;
         case CampaignCaveState::bonusCleared:
-            text += "\nState: Cleared, can be played again";
+            state = "State: Cleared, can be played again";
             break;
         case CampaignCaveState::hidden:
-            mTooltip->setVisible(false);
+            setTooltipVisible(false);
             return;
     }
+    text += "\n" + state;
     const float scale = getModeManager().getGui().getLayoutScale();
-    const CEGUI::Rectf& mapRect = mTooltip->getParent()->getUnclippedOuterRect().get();
-    float width = std::min(TOOLTIP_WIDTH * scale, mapRect.getWidth());
-    float height = std::min(TOOLTIP_HEIGHT * scale, mapRect.getHeight());
+    const CEGUI::Rectf& mapRect = mTooltipPlaque->getParent()->getUnclippedOuterRect().get();
+    // The tablet is as wide as the longest line needs, at most TOOLTIP_WIDTH, and as high as the wrapped text
+    const CEGUI::Font* font = mTooltip->getFont();
+    float textWidth = 0.0f;
+    std::istringstream lines(text);
+    std::string line;
+    while(std::getline(lines, line))
+    {
+        textWidth = std::max(textWidth,
+            font->getTextExtent(CEGUI::String(reinterpret_cast<const CEGUI::utf8*>(line.c_str()))));
+    }
+    float width = std::min(std::min(TOOLTIP_WIDTH * scale, mapRect.getWidth()),
+        std::ceil(textWidth + 2.0f) / (1.0f - 2.0f * TOOLTIP_INSET_X));
+    mTooltipPlaque->setArea(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(0, width),
+        CEGUI::UDim(0, std::min(TOOLTIP_HEIGHT * scale, mapRect.getHeight())));
+    // The title in gold, the state in the colour of the cave; the text is measured without the colour tags
+    std::string title = text.substr(0, text.find('\n'));
+    std::string middle = text.substr(title.size(), text.size() - title.size() - state.size());
+    std::string shown = "[colour='" + COLOUR_HIGHLIGHT + "']" + title + "[colour='" + COLOUR_TEXT + "']" + middle
+        + "[colour='" + stateColour + "']" + state;
+    mTooltip->setText(reinterpret_cast<const CEGUI::utf8*>(shown.c_str()));
+    float textHeight = CEGUI::PropertyHelper<float>::fromString(mTooltip->getProperty("VertExtent"));
+    float height = std::min(std::min(TOOLTIP_HEIGHT * scale, mapRect.getHeight()),
+        std::ceil(textHeight + 2.0f) / (1.0f - 2.0f * TOOLTIP_INSET_Y));
     float offset = TOOLTIP_OFFSET * scale;
     float x = position.d_x - mapRect.left() + offset;
     float y = position.d_y - mapRect.top() + offset;
@@ -1002,9 +1233,8 @@ void MenuModeCampaign::updateTooltip(const CEGUI::Vector2f& position, size_t cav
         y = position.d_y - mapRect.top() - offset - height;
     x = std::max(0.0f, std::min(x, mapRect.getWidth() - width));
     y = std::max(0.0f, std::min(y, mapRect.getHeight() - height));
-    mTooltip->setArea(CEGUI::UDim(0, x), CEGUI::UDim(0, y), CEGUI::UDim(0, width), CEGUI::UDim(0, height));
-    mTooltip->setText(reinterpret_cast<const CEGUI::utf8*>(text.c_str()));
-    mTooltip->setVisible(true);
+    mTooltipPlaque->setArea(CEGUI::UDim(0, x), CEGUI::UDim(0, y), CEGUI::UDim(0, width), CEGUI::UDim(0, height));
+    setTooltipVisible(true);
 }
 
 //! \brief Highlights the cave under the mouse and shows its tooltip.
@@ -1021,8 +1251,7 @@ bool MenuModeCampaign::mapMoved(const CEGUI::EventArgs& e)
 bool MenuModeCampaign::mapLeft(const CEGUI::EventArgs&)
 {
     updateHover(mWorld.getCaves().size());
-    if(mTooltip != nullptr)
-        mTooltip->setVisible(false);
+    setTooltipVisible(false);
     return true;
 }
 
@@ -1214,7 +1443,8 @@ bool MenuModeCampaign::briefingClosePressed(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Refuses a locked, missing or changed shipped level with a message in the status text.
+//! \brief Refuses a locked, missing or changed shipped level with a message in the status text before the flight
+//! into the portal; startLevel checks the same again when the level is started.
 bool MenuModeCampaign::canStartLevel(size_t index)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -1246,19 +1476,39 @@ bool MenuModeCampaign::canStartLevel(size_t index)
     return true;
 }
 
-//! \brief Starts a campaign level; a locked, missing or changed shipped level is refused with a message. Returns
-//! false when the level could not be started.
-bool MenuModeCampaign::startLevel(size_t index)
+//! \brief Starts a campaign level; a locked, missing or changed shipped level is refused with a message. Every refusal
+//! shows the map again, which the flight into the portal hid.
+void MenuModeCampaign::startLevel(size_t index)
 {
     Campaign& campaign = Campaign::getSingleton();
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
     CEGUI::Window* statusText = mainWin->getChild(CMP_TEXT_LOADING);
 
-    if(!canStartLevel(index))
-        return false;
+    if(!campaign.isUnlocked(index))
+    {
+        statusText->setText("This level is locked. Complete the previous levels first.");
+        mainWin->setVisible(true);
+        return;
+    }
 
     std::string level = CampaignPackages::getLevelFile(campaign.getLevel(index),
         ResourceManager::getSingleton().getGameDataPath());
+    if(!boost::filesystem::exists(boost::filesystem::path(level)))
+    {
+        OD_LOG_ERR("Campaign level not found: " + level);
+        statusText->setText("ERROR: Campaign level file not found.");
+        mainWin->setVisible(true);
+        return;
+    }
+
+    // A changed shipped level is rejected with its reason (the server start checks it again)
+    std::string rejection;
+    if(!MapHandler::checkOfficialLevel(level, false, rejection))
+    {
+        statusText->setText(rejection);
+        mainWin->setVisible(true);
+        return;
+    }
 
     hideBriefing();
     statusText->setText("Loading...");
@@ -1274,7 +1524,8 @@ bool MenuModeCampaign::startLevel(size_t index)
         OD_LOG_ERR("Could not start server for campaign game !!!");
         statusText->setText("ERROR: Could not start server for campaign game !!!");
         campaign.stopCampaign();
-        return false;
+        mainWin->setVisible(true);
+        return;
     }
 
     int port = ODServer::getSingleton().getNetworkPort();
@@ -1286,9 +1537,9 @@ bool MenuModeCampaign::startLevel(size_t index)
         OD_LOG_ERR("Could not connect to server for campaign game !!!");
         statusText->setText("Error: Couldn't connect to local server!");
         campaign.stopCampaign();
-        return false;
+        mainWin->setVisible(true);
+        return;
     }
-    return true;
 }
 
 //! \brief Leaves the campaign for the main menu; the campaign end message is closed with it.

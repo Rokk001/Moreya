@@ -33,12 +33,13 @@ namespace CEGUI
 class Image;
 }
 
-//! \brief The campaign menu: the map of Moreya. Each of its 6 wings has 3 caves, one per story level, and a
-//! bonus cave that appears once its hidden stone was found. A cave that can be played (the current level, a
-//! defeated level or a found bonus cave) opens its briefing on a click. In front of the gate stands the guild that
-//! raids the current level with its banner, the portrait of its leader, the raid size and its origin. A tooltip
-//! names the cave under the mouse, the wings show how many of their levels are defeated and a panel shows the
-//! progress of the campaign. After a win that leaves every guild defeated the map is not shown: the campaign end
+//! \brief The campaign menu: the map of Moreya, carved into stone. Each of its 6 wings has 3 caves, one per story
+//! level, and a bonus cave that appears once its hidden stone was found. A cave that can be played (the current level,
+//! a defeated level or a found bonus cave) opens its briefing on a click. The current level glows with a golden arrow
+//! above it, and a wing that is still locked is greyed out. On a carved stone slab stands the guild that raids the
+//! current level with its banner, the portrait of its leader, the raid size and its origin; a trail of embers leads
+//! from it to the current level, where its banner stands. A small carved tablet names the cave under the mouse, the
+//! wings show how many of their levels are defeated and a panel shows the progress of the campaign. After a win that leaves every guild defeated the map is not shown: the campaign end
 //! message appears and closing it shows the main menu; opening the campaign again shows the map for replays.
 class MenuModeCampaign: public AbstractApplicationMode
 {
@@ -54,6 +55,10 @@ public:
     //! has flown into the portal
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
 
+    //! \brief Ignores Escape while the camera flies into the portal to start a level; every other key (the
+    //! screenshot key too) works as in every menu
+    bool keyPressed(const OIS::KeyEvent& arg) override;
+
     //! \brief Reads the campaign definition and the saved progress from disk.
     //! Returns false if there is no campaign definition.
     static bool loadCampaign();
@@ -68,7 +73,21 @@ private:
     std::vector<CEGUI::Window*> mWorldWindows;
     //! Ring drawn around the cave under the mouse
     CEGUI::Window* mHoverWindow;
+    //! Text of the hover display, inside its carved stone tablet mTooltipPlaque
     CEGUI::Window* mTooltip;
+    //! Carved stone tablet of the hover display; it is shown and hidden with its text
+    CEGUI::Window* mTooltipPlaque;
+    //! Golden glow under the current level and the golden arrow above it, animated by updateMapAnimation()
+    CEGUI::Window* mCurrentGlow;
+    CEGUI::Window* mCurrentPointer;
+    //! Centre of the current level and the size of its glow in map pixels
+    float mCurrentX;
+    float mCurrentY;
+    float mCurrentGlowSize;
+    //! Embers of the trail from the guild panel to the current level, in the order of the raid's way
+    std::vector<CEGUI::Window*> mRaidEmbers;
+    //! Interface seconds since the map was drawn, the clock of its animation
+    float mMapTime;
     //! State of every cave of the map with the current progress, set by fillMap()
     std::vector<CampaignCaveState> mCaveStates;
     //! Level of the open briefing, or the number of levels if none
@@ -92,8 +111,20 @@ private:
     //! \brief Draws the caves in their states, the wing progress, the guild in front of the gate, the title and
     //! the progress panel on the map
     void fillMap();
-    //! \brief Shows the guild of the current level in front of the gate; nothing when the campaign is finished
+    //! \brief Shows the guild of the current level on its carved stone slab, with a trail of embers to the current
+    //! level and its banner there; nothing when the campaign is finished
     void fillGuildPanel();
+    //! \brief Draws the golden glow under the current level and the golden arrow above it
+    void fillCurrentMarker();
+    //! \brief Draws the trail of embers from the guild panel to the cave the guild attacks and its banner at the cave
+    void fillRaidTrail(size_t cave, const std::string& banner, const std::string& packageDirectory);
+    //! \brief Tells whether no cave of the wing can be played yet (its story caves are locked and its bonus cave is
+    //! not found), so the wing is greyed out
+    bool isWingLocked(uint32_t wing) const;
+    //! \brief Lets the current level glow and its arrow bob and the embers of the raid trail run towards it
+    void updateMapAnimation(float elapsed);
+    //! \brief Shows or hides the hover display with its tablet
+    void setTooltipVisible(bool visible);
     //! \brief Writes the defeated levels, wings, shards and cleared bonus caves and the bar in the progress panel
     void fillProgressPanel();
     //! \brief Creates a text window on the map without frame and background
@@ -131,8 +162,9 @@ private:
     //! \brief Tells whether a campaign level can be started (unlocked, its file present and unchanged); otherwise
     //! writes the reason into the status text
     bool canStartLevel(size_t index);
-    //! \brief Starts the server and the client for a campaign level; returns false and shows the reason when it fails
-    bool startLevel(size_t index);
+    //! \brief Starts the server and the client for a campaign level; when it fails the map is shown again with the
+    //! reason (it may have been hidden for the flight into the portal)
+    void startLevel(size_t index);
 
     //! \brief The mouse moves over the map: the cave below it is highlighted and named in the tooltip
     bool mapMoved(const CEGUI::EventArgs& e);

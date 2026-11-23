@@ -323,9 +323,9 @@ SCREENS = ((640, 480), (800, 600), (1024, 768), (1280, 720), (1280, 1024), (1366
 USER_SCALES = (0.8, 1.0, 1.2)
 DESIGN_W, DESIGN_H = (float(re.search(r"LAYOUT_DESIGN_%s = ([0-9.]+)f" % k, gui_cpp)[1]) for k in ("WIDTH", "HEIGHT"))
 FONT_W, FONT_H = (float(re.search(r"FONT_DESIGN_%s = ([0-9.]+)f" % k, gui_cpp)[1]) for k in ("WIDTH", "HEIGHT"))
-# Inner margin of a text window without frame, in screen pixels, and of the framed tooltip, in design pixels
+# Inner margin of a text window without frame, in screen pixels; the text of the hover display keeps the shares
+# TOOLTIP_INSET_X and TOOLTIP_INSET_Y of its carved tablet free on every side (read from the menu code), plus that margin
 TEXT_MARGIN = 2
-TOOLTIP_MARGIN = 12
 _font_cache = {}
 
 
@@ -482,12 +482,13 @@ for screen in SCREENS:
                       "%s covers %s at %s" % (control, name, where))
         # The tooltip: never larger than the map, its longest texts fit
         tooltip = (min(tooltip_size[0] * layout_scale, map_width), min(tooltip_size[1] * layout_scale, map_height))
+        inner = (tooltip[0] * (1.0 - 2.0 * float(constant("TOOLTIP_INSET_X"))) - 2 * TEXT_MARGIN,
+                 tooltip[1] * (1.0 - 2.0 * float(constant("TOOLTIP_INSET_Y"))) - 2 * TEXT_MARGIN)
         face = screen_font(constant("FONT_TOOLTIP"), screen, user_scale)
         for text in tooltip_texts:
-            used = wrapped_height(face, text, tooltip[0] - 2 * TOOLTIP_MARGIN * layout_scale, True)
+            used = wrapped_height(face, text, inner[0], True)
             measured += 1
-            check(used is not None and used <= tooltip[1] - 2 * TOOLTIP_MARGIN * layout_scale,
-                  "the tooltip text does not fit at " + where)
+            check(used is not None and used <= inner[1], "the tooltip text does not fit at " + where)
 check(measured > 0, "no text was measured")
 
 # ------------------------------------------------------------------------------------------------ CM5: campaign hall
@@ -590,6 +591,39 @@ with Image.open(art / world["base"]) as map_image:
             check(mean_sat <= MAX_LOCKED_SATURATION and share <= MAX_LOCKED_SHARE,
                   "the greyed out image of wing %d is not grey and dark (saturation %.2f, luminance share %.2f)"
                   % (wing["wing"], mean_sat, share))
+locking = function(mode, "bool MenuModeCampaign::isWingLocked")
+check("CampaignCaveState::locked" in locking and "CampaignCaveState::hidden" in locking
+      and "isWingAvailable(wing)" in locking, "a wing is locked while none of its caves can be played")
+check("wing.mLockedImage" in fill and "isWingLocked(wing.mNumber)" in fill and "LOCKED_CAVE_ALPHA" in fill,
+      "fillMap must grey out the locked wings and their caves")
+check('get_child_optional("locked")' in world_cpp and "mLockedImage" in world_h,
+      "the map loader must read the greyed out image of a wing")
+# M3: the current level glows under its larger marker and a golden arrow bobs over it, without hovering
+ART_SIZES = {"tooltip_plaque.png": (512, 200), "current_glow.png": (256, 256), "current_pointer.png": (128, 160),
+             "raid_ember.png": (64, 64), "guild_plaque.png": tuple(panel["area"][2:])}
+for name, size in ART_SIZES.items():
+    path = art / "moreya" / name
+    check(path.is_file(), "missing map art " + name)
+    if path.is_file():
+        with Image.open(path) as image:
+            check(image.mode == "RGBA" and image.size == size, "map art %s must be RGBA %d x %d" % ((name,) + size))
+check("fillCurrentMarker();" in fill and "CURRENT_CAVE_SCALE" in fill and "ART_CURRENT_POINTER" in fill,
+      "fillMap must draw the glow, the larger marker and the arrow of the current level")
+animation = function(mode, "void MenuModeCampaign::updateMapAnimation")
+check("mCurrentGlow->setAlpha(" in animation and "setMapArea(mCurrentPointer" in animation
+      and "mRaidEmbers[i]->setAlpha(" in animation, "the glow pulses, the arrow bobs and the raid trail runs")
+check("updateMapAnimation(evt.timeSinceLastFrame);" in function(mode, "void MenuModeCampaign::onFrameStarted"),
+      "the map is animated every frame")
+# M5: the hover display is a carved tablet just large enough for its text
+check("ART_TOOLTIP_PLAQUE" in fill and "mTooltipPlaque->addChild(mTooltip)" in fill,
+      "the hover display is a carved tablet with its text inside")
+check("getTextExtent(" in tip and '"VertExtent"' in tip and "TOOLTIP_INSET_X" in tip,
+      "the hover display is fitted to its text")
+# M6: the guild stands on a carved slab, and its trail of embers leads to the level it attacks with its banner there
+check("ART_GUILD_PLAQUE" in guild_panel and "fillRaidTrail(cave, guild.mBanner, packageDirectory);" in guild_panel,
+      "the guild panel needs its slab and the raid trail to the current level")
+trail = function(mode, "void MenuModeCampaign::fillRaidTrail")
+check("ART_RAID_EMBER" in trail and '"RaidBanner", banner' in trail, "the raid trail needs its embers and the banner")
 # The old world map and its previews are gone (raid plan FINAL step 1b): the hall can no longer show them
 for gone in ("world_base.png", "world_idmap.png", "preview_states.png", "provinces", "sites"):
     check(not (art / gone).exists(), "the old world map file %s must be gone" % gone)
