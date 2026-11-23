@@ -6,7 +6,8 @@ current level and the found bonus caves. The province structure of the former wo
 of the main menu shows the same map on its table.
 
 Menu UX plan (M2 to M6): the map is carved into stone and the table top shows its carved map region (TABLE_CROP) on a
-map plane that takes up the table top; the current level glows with an arrow over it; every wing has a greyed out
+map plane that takes up the table top; the clickable map is that table top, with the table edge and the hall floor
+around it; the current level glows with an arrow over it; every wing has a greyed out
 image drawn over it while it is locked; the hover display is a small carved tablet fitted to its text; the guild
 stands on a carved slab with a trail of embers to the current level and its banner there.
 
@@ -507,21 +508,44 @@ hall = root / "materials/textures/menu/MenuCampaignMap.png"
 # The table top shows the carved map frame of the map of Moreya (TABLE_CROP of tools/gen_campaign_map_art.py),
 # stretched to the map size; the map covers the whole table top and the table follows the map (Mario 2026-11-23): the
 # map plane is at least MIN_TABLE_MAP_WIDTH wide (the old plane was 3.8), has the aspect ratio of the map frame and
-# covers at least MIN_TOP_COVER of the width and the depth of the table top (its faces above TOP_HEIGHT)
+# covers at least MIN_TOP_COVER of the width and the depth of the table top (its faces above TOP_HEIGHT). The clickable
+# map is the rendered table (M2, Mario 2026-11-23), so it shows the hall texture on the table top seen in perspective:
+# the hall texture projected through the corners of the table top of the map description ("table_top": texture pixel,
+# place on the full screen map) correlates in luminance (640 x 400, inside the table top) by at least
+# MIN_TABLE_TOP_CORRELATION with the full screen map (0.94 measured on this branch; the same projection 20 pixels to
+# the side 0.36, 20 pixels down -0.02); it replaces the mean colour difference of at most 1.0 against the carved map
+# frame, which held only while the full screen map was the unlit flat image the texture was cut from
 TABLE_CROP = (400, 418, 1752, 980)
-MAX_HALL_DIFFERENCE = 1.0
+MIN_TABLE_TOP_CORRELATION = 0.85
 MIN_TABLE_MAP_WIDTH = 6.0
 MIN_TOP_COVER = 0.98
 TOP_HEIGHT = 1.6
 with Image.open(hall) as hall_image, Image.open(art / world["base"]) as map_image:
     check(hall_image.size == map_image.size, "the hall texture must have the size of the map of Moreya")
-    left, top, width, height = TABLE_CROP
-    expected = map_image.convert("RGB").crop((left, top, left + width, top + height)).resize(map_image.size,
-                                                                                            Image.LANCZOS)
-    difference = sum(abs(a - b) for a, b in zip(hall_image.convert("RGB").resize((256, 160)).tobytes(),
-                                                expected.resize((256, 160)).tobytes())) / (256 * 160 * 3)
-    check(difference <= MAX_HALL_DIFFERENCE, "the campaign hall must show the carved map region of the map of Moreya "
-          "(run tools/gen_campaign_map_art.py), mean difference %.2f" % difference)
+    import numpy  # noqa: E402
+    from PIL import ImageDraw  # noqa: E402
+    table_top = world.get("table_top", [])
+    check(len(table_top) >= 4, "the map description names no corners of the table top (table_top)")
+    if len(table_top) >= 4:
+        # Homography from the full screen map to the hall texture through the corners of the table top
+        rows = []
+        values = []
+        for u, v, x, y in table_top:
+            rows.append([x, y, 1.0, 0.0, 0.0, 0.0, -u * x, -u * y])
+            rows.append([0.0, 0.0, 0.0, x, y, 1.0, -v * x, -v * y])
+            values.extend([u, v])
+        coefficients = numpy.linalg.lstsq(numpy.array(rows), numpy.array(values), rcond=None)[0]
+        projected = hall_image.convert("L").transform(map_image.size, Image.PERSPECTIVE, tuple(coefficients),
+                                                      Image.BICUBIC)
+        top_mask = Image.new("L", map_image.size, 0)
+        ImageDraw.Draw(top_mask).polygon([(x, y) for _, _, x, y in table_top], fill=255)
+        hall_grey = numpy.asarray(projected.resize((640, 400)), dtype=numpy.float64)
+        map_grey = numpy.asarray(map_image.convert("L").resize((640, 400)), dtype=numpy.float64)
+        inside_top = numpy.asarray(top_mask.resize((640, 400))) > 250
+        correlation = numpy.corrcoef(hall_grey[inside_top], map_grey[inside_top])[0, 1]
+        check(correlation >= MIN_TABLE_TOP_CORRELATION, "the clickable map must show the carved map of the campaign "
+              "hall on the table top (run tools/gen_campaign_map_art.py), correlation %.3f (at least %.2f)"
+              % (correlation, MIN_TABLE_TOP_CORRELATION))
 sys.path.insert(0, str(root / "source/tests"))
 import check_menu_moreya_entrance as entrance  # noqa: E402
 plane = entrance.submeshes(str(root / "models/MenuMapTableStone.mesh")).get("MenuCampaignMap")
@@ -559,6 +583,21 @@ with Image.open(art / world["base"]) as map_image:
     saturation = sum(region.getchannel("S").tobytes()) / (440 * 250 * 255.0)
 check(saturation <= MAX_MAP_SATURATION, "the map is not carved stone: mean saturation %.2f (at most %.2f)"
       % (saturation, MAX_MAP_SATURATION))
+# M2 (Mario on build 93 and on the previews): the clickable map is the solid stone table in the hall, the table is the
+# map: the full screen map is the render of the stone table with its own carved map texture on its (cut-off) top, its
+# slab, trestles and the hall floor round it, seen in perspective; no map image is laid over it
+art_tool = (root / "tools/gen_campaign_map_art.py").read_text(encoding="utf-8")
+render_tool = (root / "tools/render_campaign_map_table.py").read_text(encoding="utf-8")
+check("TABLE_RENDER" in art_tool and "screen = table_view(root, outline, placement)" in art_tool
+      and "screen[top:top + height, left:left + width]" not in art_tool,
+      "the full screen map must be the rendered stone table in the hall, nothing laid over it "
+      "(tools/gen_campaign_map_art.py)")
+check("MenuCampaignMap.png" in render_tool,
+      "the table render must show the table with its carved map texture on the map plane")
+check(all(name in render_tool for name in ("MenuMapTableStone.mesh", "MenuCampaignHallOpen.mesh", "MenuHallFloor")),
+      "the table render must show the stone table and the hall floor of the menu scene")
+check(re.search(r"(?m)^TABLE_CROP = \(400, 418, 1752, 980\)$", art_tool) is not None,
+      "the carved map frame of the full screen map is TABLE_CROP (400, 418, 1752, 980)")
 # M4: every wing has a greyed out image over its own caves: RGBA, inside the map, grey (mean saturation of its opaque
 # pixels at most MAX_LOCKED_SATURATION) and darker than the map below it (at most MAX_LOCKED_SHARE of its luminance)
 MAX_LOCKED_SATURATION = 0.1

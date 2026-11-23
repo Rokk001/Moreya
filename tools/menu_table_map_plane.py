@@ -14,7 +14,9 @@ first scales every vertex of the table along x by scale-x (positions; normals ar
 bounds of the mesh follow), then moves the corners of the map plane to +-half-width in x and +-half-depth in y (mesh
 units, the table centred at the origin); the height and the texture coordinates stay. Only the map plane vertices that
 no other submesh uses are moved; the file is rewritten in place. The shipped table was made with --scale-x 1.337
---half-width 3.075 --half-depth 1.72 from the table of 2026-11-22.
+--half-width 3.075 --half-depth 1.72 from the table of 2026-11-22. Afterwards tools/menu_table_map_chamfer.py cuts off
+the corners of the table top and replaces the map plane by an octagon; this script expects the rectangular plane of
+four vertices and is run only on a table before that step.
 """
 import argparse
 import math

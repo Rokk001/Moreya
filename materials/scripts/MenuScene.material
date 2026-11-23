@@ -564,6 +564,73 @@ material MenuRuinPaving : RTSS/NormalMapping_MultiPass
     }
 }
 
+// The campaign hall is an abandoned castle hall: its floor is worn, dirty, matt flagstones with grime and debris and
+// its walls rough masonry with damp stains and soot (tools/gen_menu_hall_textures.py), each clearly unlike the other
+// and unlike the stone of the table, so floor, walls and table do not melt into one mass. The floor has its own planar
+// texture coordinates (tools/menu_hall_floor_walls.py): one tile every 4 units, the flagstones square to the hall.
+material MenuHallFloor : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap { texture MenuHallFloor.png gamma }
+            texture_unit
+            {
+                texture MenuHallFloorNormal.png
+                tex_address_mode wrap
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 0.80 0.80 0.80 1
+            diffuse 0.80 0.80 0.80 1
+            specular 0.01 0.01 0.01 1 4
+        }
+    }
+}
+
+material MenuHallWall : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap { texture MenuHallWall.png gamma }
+            texture_unit
+            {
+                texture MenuHallWallNormal.png
+                tex_address_mode wrap
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 0.80 0.80 0.80 1
+            diffuse 0.80 0.80 0.80 1
+            specular 0.01 0.01 0.01 1 4
+        }
+    }
+}
+
+// The slab of the campaign table is one piece of the stone of the map carved into it (tools/gen_menu_table_stone.py):
+// top, bevels, cut-off corners and side faces have the colour of the carved stone, so the map reads as cut into the
+// table and nothing lies on it.
+material MenuTableStone : RTSS/NormalMapping_MultiPass
+{
+    technique
+    {
+        pass lighting
+        {
+            texture_unit decalmap { texture MenuTableStone.png gamma }
+            texture_unit
+            {
+                texture MenuFortressStoneNormal.png
+                tex_address_mode wrap
+                rtshader_system { normal_map tangent_space }
+            }
+            ambient 1.0 1.0 1.0 1
+            diffuse 1.0 1.0 1.0 1
+            specular 0.01 0.01 0.01 1 4
+        }
+    }
+}
+
 // Exposed chipped faces remain dark and granular rather than clean pale cut stone.
 material MenuChippedStone : MenuStone
 {
