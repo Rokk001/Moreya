@@ -23,6 +23,7 @@
 
 #include "render/FrameStallTrace.h"
 #include "gamemap/MiniMapDrawn.h"
+#include "gamemap/MiniMapColours.h"
 
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -143,15 +144,16 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
             int oo = mCamera_2dPosition.x + static_cast<int>(((mm - mCamera_2dPosition.x) * mCosRotation - (nn - mCamera_2dPosition.y) * mSinRotation) * getZoomScale());
             int pp = mCamera_2dPosition.y + static_cast<int>(((mm - mCamera_2dPosition.x) * mSinRotation + (nn - mCamera_2dPosition.y) * mCosRotation) * getZoomScale());
 
-            /* The texture now uses all four RGBA channels. Grains outside the map keep
-             * their black RGB but use transparent alpha over the shared stone backing on the
-             * circular map; every map tile, also one never seen (drawn as solid earth), and
-             * the black creature blink remain opaque.
+            /* The texture now uses all four RGBA channels. Grains outside the map are drawn
+             * as opaque solid earth, like a tile never seen, so the minimap does not show
+             * where the map ends; every map tile, also one never seen (drawn as solid earth),
+             * and the black creature blink remain opaque.
              */
             Tile* tile = mGameMap.getTile(oo, pp);
             if(tile == nullptr)
             {
-                drawPixel(ii, jj, 0x00, 0x00, 0x00, circular ? 0 : 255);
+                drawPixel(ii, jj, MiniMapColours::DIRT_COLOUR.r * 255.0f, MiniMapColours::DIRT_COLOUR.g * 255.0f,
+                    MiniMapColours::DIRT_COLOUR.b * 255.0f, 255);
                 continue;
             }
 

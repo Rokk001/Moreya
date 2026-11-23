@@ -50,6 +50,17 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Tavern')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
 from asset_check_timing import profile_check
@@ -88,7 +99,7 @@ LARGE_BENCH_PLACES = {'Troll.mesh': 4, 'PitDemon.mesh': 4, 'Dragon.mesh': 3}
 
 
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8', errors='replace')
+    return room_file(path).read_text(encoding='utf-8', errors='replace')
 
 
 def extract(text, head):
@@ -229,10 +240,12 @@ def check_stool_code():
     bounds = read('source/gamemap/RoomObjectBounds.h')
     assert '{"TavernStool", -.1655f, -.1655f, .1655f, .1655f},' in bounds
     assert 'name == "TavernStool"' in bounds
-    credits = read('CREDITS')
-    assert re.search(r'^models/TavernStool\.mesh\s+AI-generated with Claude Code\s+GPLv3\+\s+Original', credits, re.M)
+    credits = room_packages.credits_text(ROOT)
+    if ROOM_ASSETS:
+        assert re.search(r'^models/TavernStool\.mesh\s+AI-generated with Claude Code\s+(?:GPLv3\+|All rights reserved)\s+Original',
+                         credits, re.M)
     assert re.search(r'^tools/tavern-meshes/make_tavern_stool\.py\s+AI-generated', credits, re.M)
-    assert (ROOT / 'models' / 'TavernStool.mesh').is_file()
+    assert not ROOM_ASSETS or room_file('models/TavernStool.mesh').is_file()
     print('stool code ok: %d stool models, stools at %.1f, places 8 and 9, blocked places, footprint and reach rules' % (len(bodies), STOOL_DISTANCE))
 
 
@@ -581,7 +594,7 @@ def check_models(out):
     posed = {}
     stool_names = set()
     for mesh in meshes:
-        name = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (ROOT / 'models' / mesh).read_bytes())[0].decode('ascii')
+        name = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (room_file('models/' + mesh)).read_bytes())[0].decode('ascii')
         if mesh in EXPECTED_BODIES:
             stool_names.add(name)
         skeleton = assets.skeleton(name)
@@ -650,7 +663,7 @@ def check_models(out):
     sunk = np.stack((wide[:, 1], wide[:, 2] - STOOL_DISTANCE, -wide[:, 0] + 0.25), axis=1)[None]
     assert mug_table_share(sunk, True) > MAX_MUG_IN_TABLE, 'a sunken physical cup was accepted'
     assert re.search(r'^const Ogre::Real TAVERN_MUG_GRIP_SHIFT = 0\.1f;$', read('source/render/RenderManager.cpp'), re.M) and seats.MUG_GRIP_SHIFT == 0.1
-    names = sorted({re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (ROOT / 'models' / m).read_bytes())[0].decode('ascii') for m in meshes})
+    names = sorted({re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (room_file('models/' + m)).read_bytes())[0].decode('ascii') for m in meshes})
     worst = 0.0
     for name in names:
         skeleton = assets.skeleton(name)
@@ -683,6 +696,8 @@ def main():
     converter = os.environ.get('OGRE_XML_CONVERTER') or shutil.which('OgreXMLConverter') or shutil.which('OgreXMLConverter.exe')
     if converter is None:
         print('models skipped: OgreXMLConverter not found')
+    elif not ROOM_ASSETS:
+        print('models skipped: the tavern room package is not present')
     else:
         with tempfile.TemporaryDirectory(prefix='odp-tavern-stools-') as directory:
             check_models(Path(directory))

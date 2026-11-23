@@ -9,6 +9,18 @@ import re
 import struct
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 APPARATUS_MESHES = ("ManaStill", "GhostPress", "SoulForge")
 STATES = ("Working", "Idle", "Locked")
 
@@ -37,7 +49,7 @@ def ogre_string(data, position):
 
 # Read bounds, submesh materials and vertices, vertex positions and bone assignments of a binary OGRE mesh.
 def read_mesh(name):
-    data = (repo / "models" / (name + ".mesh")).read_bytes()
+    data = room_file("models/" + name + ".mesh").read_bytes()
     assert struct.unpack_from("<H", data)[0] == 0x1000, name
     version, position = ogre_string(data, 2)
     assert version.startswith("[MeshSerializer_v1"), (name, version)
@@ -84,7 +96,7 @@ def read_mesh(name):
 
 # Read bones, parents and the first key scale of every track of every clip of a binary OGRE skeleton.
 def read_skeleton(name):
-    data = (repo / "models" / name).read_bytes()
+    data = room_file("models/" + name).read_bytes()
     _, position = ogre_string(data, 2)
     bones, parents, clips = {}, {}, {}
     while position < len(data):
@@ -283,7 +295,10 @@ def mesh_per_kind():
 
 def main():
     client_creation()
-    visible_size()
+    if ROOM_ASSETS:
+        visible_size()
+    else:
+        print("visible size of the apparatuses: not checked, the ghost room package is not present")
     mesh_per_kind()
     print("ghost apparatus visible: ok")
 

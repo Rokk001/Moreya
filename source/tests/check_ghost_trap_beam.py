@@ -24,6 +24,16 @@ repo = Path(__file__).resolve().parents[2]
 import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 from assets_src import resolve  # noqa: E402
 
 
@@ -239,7 +249,7 @@ def ogre_string(data, position):
 
 # Bones and the Lid track of the Open clip of the box skeleton: [(time, angle about x in degrees)].
 def box_skeleton():
-    data = (repo / "models/GhostBox.skeleton").read_bytes()
+    data = room_file("models/GhostBox.skeleton").read_bytes()
     _, position = ogre_string(data, 2)
     bones, clips = {}, {}
     while position < len(data):
@@ -286,7 +296,7 @@ def box_mesh():
     # The lid opens steadily (the game sets the clip time to the open share)
     angles = [angle for _, angle, _ in keys]
     assert all(b < a for a, b in zip(angles, angles[1:])), angles
-    mesh = (repo / "models/GhostBox.mesh").read_bytes()
+    mesh = room_file("models/GhostBox.mesh").read_bytes()
     assert b"GhostBox.skeleton" in mesh, "the box mesh uses its rig"
     models = read("assets-src/rooms/ghostroom/create_models.py")
     has(models, "lid parts on the Lid bone, glow in the opening",
@@ -296,9 +306,10 @@ def box_mesh():
         "rod('Rear hinge pin',(x-.025,.108,.17),(x+.025,.108,.17),.011,'GhostBrass',10)",
         "pivot=(Vector((0,.108,.17))-centre)*factors",
         "else box_rig(obj,factors,centre) if name=='GhostBox' else None")
-    credits = read("CREDITS")
+    credits = room_packages.credits_text(repo)
     for name in ("models/GhostBox.mesh", "models/GhostBox.skeleton"):
-        assert any(row.startswith(name + " ") and "Lid" in row and "GPLv3+" in row for row in credits.splitlines()), name
+        assert any(row.startswith(name + " ") and "Lid" in row and room_packages.licence_ok(repo, row, "GPLv3+")
+                   for row in credits.splitlines()), name
     print("box mesh with a Lid bone and an Open clip to 110 degrees: ok")
 
 
@@ -354,7 +365,10 @@ def main():
     ghost_source()
     trap_source()
     timeline(values)
-    box_mesh()
+    if ROOM_ASSETS:
+        box_mesh()
+    else:
+        print("box mesh: not checked, the ghost room package is not present")
     beam(values)
     print("ghost trap and beam: ok")
 

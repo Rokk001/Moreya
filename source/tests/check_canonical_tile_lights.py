@@ -13,8 +13,27 @@ import itertools
 import math
 import re
 import runpy
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: Room-shader material scripts of each room package, counted once for this branch: without the package they are not
+#: there, with it they are counted like the public ones
+PACKAGED_ROOM_SHADER_MATERIALS = {'GhostRoom': 1, 'Infirmary': 1, 'Spa': 1, 'Tavern': 2, 'Toilet': 1}
+
+
+def material_folders():
+    """The materials folder of the game data and of every room package that is present."""
+    return [ROOT / 'materials'] + [package / 'materials' for package in room_packages.package_roots(ROOT)]
+
+
+def missing_room_shader_materials():
+    """The room-shader material scripts of the room packages that are not present."""
+    return sum(count for room, count in PACKAGED_ROOM_SHADER_MATERIALS.items()
+               if not room_packages.has_room(ROOT, room))
 body = runpy.run_path(str(ROOT / 'source/tests/check_terrain_draw_batch.py'))['body']
 
 
@@ -60,13 +79,13 @@ def check_shaders():
         fragment = (ROOT / 'shaders' / name).read_text()
         assert '#include "LocalLighting.glsl"' in fragment and 'lightPos' not in fragment
     materials = 0
-    for path in sorted((ROOT / 'materials').rglob('*.material')):
+    for path in sorted(path for folder in material_folders() for path in folder.rglob('*.material')):
         text = path.read_text(encoding='utf-8', errors='replace')
         if not re.search(r'^\s*source\s+(DirtTile|Room|ClaimedTile)\.frag\s*$', text, re.M):
             continue
         materials += 1
         assert re.findall(r'param_named_auto\s+\w+\s+light_casts_shadows\s+(\d+)', text) == ['0'], path.name
-    assert materials == 78, materials
+    assert materials == 78 - missing_room_shader_materials(), materials
     return materials
 
 

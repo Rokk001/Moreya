@@ -71,6 +71,21 @@ import zlib
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the merchant come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(root, 'Merchant')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(root, relative)
+
+if not ROOM_ASSETS:
+    print('merchant assets: not checked, the merchant room package is not present (the check measures its assets only)')
+    sys.exit(0)
 
 FURNITURE = ('SalesTable', 'MerchantShelf')
 # Flat materials the furniture may still use: small dark iron parts only
@@ -167,16 +182,16 @@ BOUNDS_TOLERANCE = 1e-3
 
 
 def read(path):
-    return (root / path).read_text(encoding='utf-8', errors='replace')
+    return room_file(path).read_text(encoding='utf-8', errors='replace')
 
 
 def png_size(path):
-    data = (root / path).read_bytes()
+    data = room_file(path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     return struct.unpack('>II', data[16:24])
 
 
-materials_text = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
+materials_text = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
 
 
 def material_block(name):
@@ -196,7 +211,7 @@ def material_diffuse(name):
 
 
 def texture_exists(tex):
-    return any((root / 'materials' / 'textures').rglob(tex))
+    return any(path for base in [root] + room_packages.package_roots(root) for path in (base / 'materials' / 'textures').rglob(tex))
 
 
 # Returns (mean luminance, mean red, mean green, mean blue, luminance standard deviation), 0..255, of an 8-bit grey,
@@ -221,7 +236,7 @@ def hue_saturation(r, g, b):
 
 # png_stats plus (share of yellow-olive pixels under FRONT_LIGHT, standard deviation of the CLOTH_BLOCK block means)
 def png_analyse(path):
-    data = (root / path).read_bytes()
+    data = room_file(path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     at, idat, head = 8, b'', None
     while at < len(data):
@@ -297,14 +312,14 @@ work = Path(tempfile.mkdtemp(prefix='merchant_assets_'))
 
 def mesh_xml(name):
     target = work / (name + '.mesh.xml')
-    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(root / 'models' / (name + '.mesh')), str(target)],
+    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(room_file('models/' + name + '.mesh')), str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=120, check=True)
     return ET.parse(target).getroot()
 
 
 def skeleton_xml(name):
     target = work / (name + '.skeleton.xml')
-    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(root / 'models' / (name + '.skeleton')), str(target)],
+    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(room_file('models/' + name + '.skeleton')), str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=120, check=True)
     return ET.parse(target).getroot()
 
@@ -569,13 +584,13 @@ def check_legacy_figure():
     assert not outside, 'the merchant reaches into the neighbouring tile (%d vertices below the table top)' % len(outside)
 
     # 7. Skeleton and clips
-    assert b'Merchant.skeleton' in (root / 'models' / 'Merchant.mesh').read_bytes(), 'Merchant.mesh must link Merchant.skeleton'
-    skeleton = (root / 'models' / 'Merchant.skeleton').read_bytes()
+    assert b'Merchant.skeleton' in (room_file('models/Merchant.mesh')).read_bytes(), 'Merchant.mesh must link Merchant.skeleton'
+    skeleton = (room_file('models/Merchant.skeleton')).read_bytes()
     for clip in MERCHANT_CLIPS:
         assert (clip + '\n').encode('ascii') in skeleton, 'Merchant.skeleton has no clip ' + clip
 
     # 8. Textures and credits
-    credits = read('CREDITS')
+    credits = room_packages.credits_text(root)
     patterns = []
     for line in credits.splitlines():
         first = re.split(r'\s{2,}|\t', line.strip())[0]
@@ -623,8 +638,8 @@ def check_legacy_figure():
 # look is pinned by the byte-exact atlases and its geometry, skinning, own node position and motions by the exact native
 # contract (fixed counts, hashes, clips, arm swing, clasped hands, visible coin, opaque hands). The look contract above
 # belongs to the variant-1 texture layout and runs only for a figure with that layout; the native contract always runs.
-if b'MerchantApproved' in (root / 'models/Merchant.mesh').read_bytes():
-    credits = read('CREDITS')
+if b'MerchantApproved' in room_file('models/Merchant.mesh').read_bytes():
+    credits = room_packages.credits_text(root)
     patterns = [re.split(r'\s{2,}|\t', line.strip())[0] for line in credits.splitlines() if line.strip()]
     for texture in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares', 'MerchantLantern'):
         path = 'materials/textures/' + texture + '.png'

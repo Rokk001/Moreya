@@ -19,6 +19,18 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Spa')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
 helper_source = (ROOT / 'source/tests/check_spa_owner_863.py').read_text(encoding='utf-8')
 helpers = {'__file__': str(ROOT / 'source/tests/check_spa_owner_863.py')}
 exec(compile(helper_source[:helper_source.index('def check_pose')], 'check_spa_owner_863_helpers', 'exec'), helpers)
@@ -28,13 +40,21 @@ vector, rotation, sample_track, points_for = (helpers[name] for name in
 
 
 def read(name):
-    return (ROOT / name).read_text(encoding='utf-8')
+    if name == 'CREDITS':
+        return room_packages.credits_text(ROOT)
+    return room_file(name).read_text(encoding='utf-8')
+
+
+if not ROOM_ASSETS:
+    print('check_spa_owner_1057: not checked, the spa room package is not present (the check measures its assets only)')
+    sys.exit(0)
+
 
 
 # K22 restored the hairy mesh of decisions 1057-1060 and 1070 that fits the skeleton (decision 1186 had put back the older
 # mesh, whose joints sat beside the joints of this skeleton) and, after the owner findings of 2026-11-17, carries the head of
 # the attendant in the game today, volume body hair and a small whistle; check_spa_attendant_k22.py checks fit and look.
-assert sha256((ROOT / 'models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
+assert sha256(room_file('models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
     '6b22bbb1da5fdb1292d38e37141b543a94f175dc04cecfaffb5e14de672c4403'
 ), 'K22 restores the hairy attendant mesh that fits its skeleton'
 
@@ -42,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
     converted = {}
     for name in ('PoolAttendant.mesh', 'PoolAttendant.skeleton'):
         path = Path(folder) / (name + '.xml')
-        result = subprocess.run([str(CONVERTER), str(ROOT / 'models' / name), str(path)], capture_output=True, text=True, cwd=folder)
+        result = subprocess.run([str(CONVERTER), str(room_file('models/' + name)), str(path)], capture_output=True, text=True, cwd=folder)
         assert result.returncode == 0, result.stdout + result.stderr
         converted[name] = ET.parse(path).getroot()
 mesh, skeleton = converted['PoolAttendant.mesh'], converted['PoolAttendant.skeleton']

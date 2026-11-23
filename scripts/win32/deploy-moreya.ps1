@@ -19,8 +19,9 @@
 #
 # What it does:
 #  1. checks out the selected commit (contained in -IntegrationRef) detached in build\current-worktree (data snapshot),
-#  2. installs the wing packages of the committed HEAD of the content repository into levels\campaign of the snapshot
-#     (next to the wing 1 package, as the release package does), replacing the packages of the previous deploy,
+#  2. installs the wing packages and room packages of the committed HEAD of the content repository into
+#     levels\campaign of the snapshot (next to the wing 1 package, as the release package does), replacing the
+#     packages of the previous deploy,
 #  3. backs up the old exe/cfgs of build\windows once and records the old junction targets (rollback),
 #  4. copies moreya.exe, its symbols, all DLLs, plugins.cfg and resources.cfg from -ExeDir to build\windows,
 #  5. points the data junctions of build\windows to build\current-worktree.
@@ -202,7 +203,7 @@ if (-not (Test-Path $current)) { Invoke-Git -C $Repo worktree add --detach $curr
 else { Invoke-Git -C $current checkout --detach $sha | Out-Null }
 Write-Host "data snapshot: $sha"
 
-# 2. wing packages next to the wing 1 package; a package folder that the snapshot tracks is never replaced
+# 2. wing and room packages next to the wing 1 package; a package folder that the snapshot tracks is never replaced
 foreach ($name in $contentNames) {
     if (Invoke-Git -C $current ls-files -- "levels/campaign/$name") { throw "Content package $name collides with a tracked folder of $sha." }
     $destination = Join-Path $campaign $name

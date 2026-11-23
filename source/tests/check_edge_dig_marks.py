@@ -34,7 +34,14 @@ render = read('source/render/RenderManager.cpp')
 game_map = read('source/gamemap/GameMap.cpp')
 
 # The reach and the rectangle logic are in one header, covered by the 00-EdgePlaces unit test.
-assert 'static const int EDGE_PLACE_REACH = 12;' in places
+assert 'static const int EDGE_PLACE_REACH = 96;' in places
+# The reach lies beyond all ground the game camera can show (farthest about 88 places on a 32:9 screen), so a drag never
+# shows where marking stops. These are the camera limits that bound the visible ground; if one changes, the reach must be
+# checked again.
+assert 'const Ogre::Real MAX_CAMERA_Z = 16.0;' in read('source/camera/CameraManager.h')
+camera = read('source/camera/CameraManager.cpp')
+assert 'const Ogre::Real MAX_CAMERA_PITCH = 50.0f;' in camera
+assert camera.count('setFOVy(') == 2, 'only the main menu changes the field of view, and restores it'
 assert 'add_boost_test(00-EdgePlaces' in read('source/tests/CMakeLists.txt')
 assert (repo / 'source/tests/test_EdgePlaces.cpp').exists()
 

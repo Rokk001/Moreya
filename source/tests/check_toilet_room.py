@@ -7,10 +7,22 @@ from pathlib import Path
 import re
 
 root = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(root / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the toilet come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(root, 'Toilet')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(root, relative)
 
 
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return room_file(path).read_text(encoding='utf-8')
 
 
 # Returns the identifiers of an enum (comments and "= value" skipped), in order.
@@ -81,9 +93,10 @@ for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
     block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]
     assert block_order == loaded_visuals, 'tileset blocks must match the sequential ConfigManager loader order'
 # The materials of the pieces exist
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
 for words in lines:
-    assert re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
+    assert room_packages.is_missing_packaged_name(root, words[2]) or \
+        re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
 
 # 5. Buttons: action bar (hidden by default, positioned like the others) and research tree, same icon
 rooms_layout = read('gui/WindowTabRooms.layout')

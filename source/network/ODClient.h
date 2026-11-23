@@ -201,6 +201,10 @@ class ODClient: public Ogre::Singleton<ODClient>,
     //! (see playerDisconnected), then forgets it.
     bool consumeServerLost();
 
+    //! \brief Returns once the message of a join the server refused for missing room packages ("Missing content
+    //! package(s): ..."), then forgets it; empty when the last loss of the server was no such refusal.
+    std::string consumeRefusalMessage();
+
     inline void pause()
     { mGameClock.pause(); }
 
@@ -265,6 +269,8 @@ class ODClient: public Ogre::Singleton<ODClient>,
     bool mHasSandboxRealmComplete;
     //! \brief True after the connection to the server of a multiplayer game was lost, until consumeServerLost
     bool mServerLost;
+    //! \brief The message of a join the server refused for missing room packages, until consumeRefusalMessage
+    std::string mRefusalMessage;
     std::string mSandboxRealmId;
     std::string mSandboxNextLevel;
     std::string mSandboxRealmText;

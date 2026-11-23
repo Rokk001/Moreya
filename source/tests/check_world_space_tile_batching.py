@@ -11,8 +11,27 @@ from pathlib import Path
 import math
 import re
 import runpy
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: Room-shader material scripts of each room package, counted once for this branch: without the package they are not
+#: there, with it they are counted like the public ones
+PACKAGED_ROOM_SHADER_MATERIALS = {'GhostRoom': 1, 'Infirmary': 1, 'Spa': 1, 'Tavern': 2, 'Toilet': 1}
+
+
+def material_folders():
+    """The materials folder of the game data and of every room package that is present."""
+    return [ROOT / 'materials'] + [package / 'materials' for package in room_packages.package_roots(ROOT)]
+
+
+def missing_room_shader_materials():
+    """The room-shader material scripts of the room packages that are not present."""
+    return sum(count for room, count in PACKAGED_ROOM_SHADER_MATERIALS.items()
+               if not room_packages.has_room(ROOT, room))
 body = runpy.run_path(str(ROOT / 'source/tests/check_terrain_draw_batch.py'))['body']
 
 # Fixed once from the branch: shader family -> shadow projection auto constant.
@@ -90,7 +109,7 @@ def check_shaders():
 def check_materials():
     """Every material of the three families uses only accepted constants and its family's shadow matrix."""
     counts = {family: 0 for family in FAMILIES}
-    for path in sorted((ROOT / 'materials').rglob('*.material')):
+    for path in sorted(path for folder in material_folders() for path in folder.rglob('*.material')):
         text = path.read_text(encoding='utf-8', errors='replace')
         sources = re.findall(r'^\s*source\s+(\w+)\.(vert|frag)\s*$', text, re.M)
         families = {name for name, _ in sources if name in FAMILIES}
@@ -105,7 +124,7 @@ def check_materials():
         assert re.findall(r'(light_\w+_array) (\d+)', text) and all(
             size == '8' for _, size in re.findall(r'(light_\w+_array) (\d+)', text)), path.name
     # Fixed once from the branch's material scripts.
-    assert counts == {'DirtTile': 2, 'Room': 71, 'ClaimedTile': 5}, counts
+    assert counts == {'DirtTile': 2, 'Room': 71 - missing_room_shader_materials(), 'ClaimedTile': 5}, counts
     return sum(counts.values())
 
 

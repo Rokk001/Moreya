@@ -142,6 +142,10 @@ public:
     //! (an enemy took it over), even though the spell was researched.
     static bool isLockedByLostLibrary(SkillType type, const Seat* seat);
 
+    //! \brief False for the skill of a room whose room package is missing (see RoomPackages): such a skill cannot
+    //! be researched and its build button stays hidden.
+    static bool isSkillContentAvailable(SkillType type);
+
     //! \brief Checks if the given trap is available for the given trap. This check
     //! should be done on server side to avoid cheating
     static bool isTrapAvailable(TrapType type, const Seat* seat);

@@ -19,16 +19,30 @@ import struct
 from PIL import Image
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(repo / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.asset(repo, relative) or (repo / relative)
 MATERIAL = 'GhostCauldronEctoplasm'
 
 
 def read(path):
-    return (repo/path).read_text(encoding='utf-8')
+    if path == 'CREDITS':
+        return room_packages.credits_text(repo)
+    return room_file(path).read_text(encoding='utf-8')
 
 
 # Shared vertex positions, normals and first UV set plus (material, indices) per submesh of a binary OGRE mesh.
 def mesh(name):
-    data = (repo/'models'/(name+'.mesh')).read_bytes()
+    data = room_file('models/'+name+'.mesh').read_bytes()
     start = data.index(b'\n', 2)+1
     kind, size = struct.unpack_from('<HI', data, start)
     assert kind == 0x3000 and start+size <= len(data), name
@@ -83,9 +97,10 @@ def numbers(text, key):
 def textures():
     credits = read('CREDITS')
     for name, size in (('GhostCauldronEctoplasm.png', 512), ('GhostCauldronEctoGlint.png', 256)):
-        path = repo/'materials/textures'/name
+        path = room_file('materials/textures/'+name)
         assert path.is_file(), name
-        assert any('materials/textures/'+name in row and 'GPLv3+' in row and '998' in row for row in credits.splitlines()), \
+        assert any('materials/textures/'+name in row and room_packages.licence_ok(repo, row, 'GPLv3+') and '998' in row
+                   for row in credits.splitlines()), \
             ('CREDITS', name)
         image = Image.open(path).convert('RGB')
         assert image.size == (size, size), (name, image.size)
@@ -183,8 +198,12 @@ def fill_path():
     assert 'setMaterial' not in building.split('"GhostCauldronFill.mesh"')[1].split('}')[0], 'mesh material is used'
 
 
-textures()
+if ROOM_ASSETS:
+    textures()
 material()
-meshes()
+if ROOM_ASSETS:
+    meshes()
+else:
+    print('ghost cauldron ectoplasm textures and meshes: not checked, the ghost room package is not present')
 fill_path()
 print('ghost cauldron ectoplasm: ok')

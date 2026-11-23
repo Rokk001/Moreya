@@ -27,8 +27,11 @@
 //! places away from it, so the number of marks stays bounded.
 namespace EdgePlaces
 {
-//! How far beyond the map edge, in places, marks can reach.
-static const int EDGE_PLACE_REACH = 12;
+//! How far beyond the map edge, in places, marks can reach. The reach lies beyond all ground the game camera can show,
+//! so a drag never shows where marking stops and thus where the map ends: the camera looks at a point on the map, from
+//! at most MAX_CAMERA_Z = 16 high, tilted at most MAX_CAMERA_PITCH = 50 degrees with the default 45 degree field of
+//! view, which puts the farthest visible ground about 62 places away on a 16:9 screen, 70 on 21:9 and 88 on 32:9.
+static const int EDGE_PLACE_REACH = 96;
 
 //! \brief True if the coordinates are outside a map of the given size.
 inline bool isBeyondEdge(int x, int y, int sizeX, int sizeY)

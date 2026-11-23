@@ -27,6 +27,17 @@ import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Tavern')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
 ROOM_CPP = (ROOT / 'source' / 'rooms' / 'RoomTavern.cpp').read_text(encoding='utf-8', errors='replace')
 # A footprint may touch the edge of its tiles (the table with its benches is exactly one tile wide)
 EDGE_TOLERANCE = 1e-3
@@ -82,11 +93,22 @@ def placed_scale(name, bounds):
     return parts[0], parts[1]
 
 
+def catalog_bounds(name):
+    """(min x, min y, max x, max y) of the row of the mesh in RoomObjectBounds.h (equal to the mesh, see
+    check_room_object_bounds.py): the bounds without the tavern room package."""
+    row = re.search(r'\{"' + name + r'",\s*([^}]+)\}', BOUNDS_H)
+    values = [float(value.strip().rstrip('f')) for value in row.group(1).split(',')]
+    return values[0], values[1], values[2], values[3]
+
+
 def mesh_bounds(name, work):
-    """(min x, min y, max x, max y) of the vertices of a shipped mesh."""
+    """(min x, min y, max x, max y) of the vertices of a shipped mesh; without the tavern room package the row of its
+    navigation catalog."""
+    if not ROOM_ASSETS:
+        return catalog_bounds(name)
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     source = Path(work) / (name + '.mesh')
-    source.write_bytes((ROOT / 'models' / (name + '.mesh')).read_bytes())
+    source.write_bytes((room_file('models/' + name + '.mesh')).read_bytes())
     target = Path(work) / (name + '.mesh.xml')
     subprocess.run([converter, '-q', str(source), str(target)], check=True, capture_output=True)
     xs, ys = [], []

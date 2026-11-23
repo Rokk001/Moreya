@@ -320,10 +320,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <!-- The six spells of the spells review show the icon of a related spell until their own icons come -->
+        <!-- The six spells of the spells review show their own painted icons -->
         <Window type="OD/GameTabButton" name="CurseButton" >
             <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CreatureWeakButton" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/CurseButton" />
             <Property name="TooltipText" value="Lowers the mood of an enemy creature for a while. Target: visible enemy creature anywhere" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
@@ -341,7 +341,7 @@
         </Window>
         <Window type="OD/GameTabButton" name="BlessingButton" >
             <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CreatureStrengthButton" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/BlessingButton" />
             <Property name="TooltipText" value="Raises the mood of one of your creatures for a while. Target: own creature anywhere" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
@@ -359,7 +359,7 @@
         </Window>
         <Window type="OD/GameTabButton" name="InvisibilityButton" >
             <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CreatureHasteButton" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/InvisibilityButton" />
             <Property name="TooltipText" value="Makes one of your creatures invisible to the enemy until it attacks. Target: own creature anywhere" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
@@ -377,7 +377,7 @@
         </Window>
         <Window type="OD/GameTabButton" name="PlagueButton" >
             <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CreatureSlowButton" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/PlagueButton" />
             <Property name="TooltipText" value="Makes an enemy creature sick: it loses health until an infirmary cures it and can infect the creatures around it. Target: visible enemy creature anywhere" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
@@ -395,7 +395,7 @@
         </Window>
         <Window type="OD/GameTabButton" name="BreakWallButton" >
             <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/TremorButton" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/BreakWallButton" />
             <Property name="TooltipText" value="Turns an enemy claimed wall back into earth that can be dug. Target: enemy claimed wall" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
@@ -413,7 +413,7 @@
         </Window>
         <Window type="OD/GameTabButton" name="RevealEnemyButton" >
             <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/SpellEyeEvilButton" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/RevealEnemyButton" />
             <Property name="TooltipText" value="Shows every tile an enemy keeper has claimed for a few seconds. Target: visible enemy claimed tile" />
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />

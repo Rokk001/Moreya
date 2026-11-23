@@ -634,6 +634,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomHatchery.cpp
     ${SRC}/rooms/RoomLibrary.cpp
     ${SRC}/rooms/RoomManager.cpp
+    ${SRC}/rooms/RoomPackages.cpp
     ${SRC}/rooms/RoomPortal.cpp
     ${SRC}/rooms/RoomPortalWave.cpp
     ${SRC}/rooms/RoomPrison.cpp
@@ -1090,7 +1091,8 @@ endif()
 # is part of this repository; a release build (Steam) adds the packages of the private content repository: set
 # MOREYA_CONTENT_DIR to its packages folder and they are installed next to wing 1. Without it the game runs with
 # wing 1 and shows the other wings locked. A run-in-place build finds them through the environment variable
-# MOREYA_CONTENT_DIR at run time instead.
+# MOREYA_CONTENT_DIR at run time instead. The room packages of the content repository (packages/room-*, the assets of
+# the own rooms) are installed the same way; a room without its package is not available.
 set(MOREYA_CONTENT_DIR "" CACHE PATH "Folder of the campaign content packages (packages folder of the content repository)")
 if(MOREYA_CONTENT_DIR AND NOT IS_DIRECTORY "${MOREYA_CONTENT_DIR}")
     message(FATAL_ERROR "MOREYA_CONTENT_DIR is not a folder: ${MOREYA_CONTENT_DIR}")
@@ -1129,7 +1131,8 @@ if(UNIX)
             DESTINATION ${OD_DATA_PATH})
     install(DIRECTORY ${OD_RESOURCES}
             DESTINATION ${OD_DATA_PATH})           
-    # Campaign content packages (wings 2 to 6, private content repository): installed next to the wing 1 package
+    # Content packages of the private content repository (wings 2 to 6 and the room packages): installed next to the
+    # wing 1 package
     if(MOREYA_CONTENT_DIR)
         install(DIRECTORY ${MOREYA_CONTENT_DIR}/
                 DESTINATION ${OD_DATA_PATH}/levels/campaign)
@@ -1272,7 +1275,8 @@ elseif(WIN32)
             DESTINATION ${OD_DATA_PATH})
     install(DIRECTORY ${OD_RESOURCES}
             DESTINATION ${OD_DATA_PATH})
-    # Campaign content packages (wings 2 to 6, private content repository): installed next to the wing 1 package
+    # Content packages of the private content repository (wings 2 to 6 and the room packages): installed next to the
+    # wing 1 package
     if(MOREYA_CONTENT_DIR)
         install(DIRECTORY ${MOREYA_CONTENT_DIR}/
                 DESTINATION ${OD_DATA_PATH}/levels/campaign)

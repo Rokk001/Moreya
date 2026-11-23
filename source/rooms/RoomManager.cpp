@@ -16,6 +16,7 @@
  */
 
 #include "rooms/RoomManager.h"
+#include "rooms/RoomPackages.h"
 
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -387,6 +388,18 @@ void RoomManager::checkBuildRoom(GameMap* gameMap, RoomType type, const InputMan
     factory.checkBuildRoom(gameMap, inputManager, inputCommand);
 }
 
+//! \brief True when the room can be built: its room package is there or it needs none (RoomPackages). A refused
+//! room is logged.
+bool RoomManager::isRoomPackageAvailable(RoomType type)
+{
+    if(RoomPackages::isRoomAvailable(type))
+        return true;
+
+    OD_LOG_WRN("Room " + RoomPackages::getPackageRoomName(type) + " cannot be built: its room package is missing");
+    return false;
+}
+
+//! \brief Builds a room a player placed; a room whose room package is missing builds nothing and returns false.
 bool RoomManager::buildRoom(GameMap* gameMap, RoomType type, Player* player, ODPacket& packet)
 {
     std::vector<const RoomFactory*>& factories = getFactories();
@@ -396,6 +409,9 @@ bool RoomManager::buildRoom(GameMap* gameMap, RoomType type, Player* player, ODP
         OD_LOG_ERR("type=" + Helper::toString(index) + ", factories.size=" + Helper::toString(factories.size()));
         return false;
     }
+
+    if(!isRoomPackageAvailable(type))
+        return false;
 
     const RoomFactory& factory = *factories[index];
     return factory.buildRoom(gameMap, player, packet);
@@ -415,8 +431,8 @@ void RoomManager::checkBuildRoomEditor(GameMap* gameMap, RoomType type, const In
     factory.checkBuildRoomEditor(gameMap, inputManager, inputCommand);
 }
 
-//! \brief Builds a room the editor placed; a type outside the factories or without a factory builds nothing and
-//! returns false.
+//! \brief Builds a room the editor placed; a type outside the factories, without a factory or whose room package is
+//! missing builds nothing and returns false.
 bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& packet)
 {
     std::vector<const RoomFactory*>& factories = getFactories();
@@ -427,6 +443,9 @@ bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& pac
         return false;
     }
 
+    if(!isRoomPackageAvailable(type))
+        return false;
+
     // A type without a registered factory has nothing to build
     if(factories[index] == nullptr)
     {
@@ -436,6 +455,18 @@ bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& pac
 
     const RoomFactory& factory = *factories[index];
     return factory.buildRoomEditor(gameMap, packet);
+}
+
+//! \brief Deletes a room that was read from a level but never added to the game map. Reading the room already made
+//! it the covering building of its tiles; they are released first, so no tile keeps a pointer to the deleted room.
+void RoomManager::discardUnaddedRoom(Room* room)
+{
+    for(Tile* tile : room->getCoveredTiles())
+    {
+        if(tile->getCoveringBuilding() == room)
+            tile->setCoveringBuilding(nullptr);
+    }
+    delete room;
 }
 
 //! \brief Reads a room of a saved game; a room that could not be read gives no room.
@@ -465,12 +496,13 @@ Room* RoomManager::getRoomFromStream(GameMap* gameMap, std::istream& is)
     {
         // A room that could not be read has no seat or tiles to be added to the map with
         OD_LOG_ERR("Could not read the room " + room->getName() + " of type=" + Helper::toString(index));
-        delete room;
+        discardUnaddedRoom(room);
         return nullptr;
     }
     return room;
 }
 
+//! \brief Builds a room on the given tiles; a room whose room package is missing builds nothing and returns false.
 bool RoomManager::buildRoomOnTiles(GameMap* gameMap, RoomType type, Player* player, const std::vector<Tile*>& tiles, bool noFee)
 {
     std::vector<const RoomFactory*>& factories = getFactories();
@@ -480,6 +512,9 @@ bool RoomManager::buildRoomOnTiles(GameMap* gameMap, RoomType type, Player* play
         OD_LOG_ERR("type=" + Helper::toString(index) + ", factories.size=" + Helper::toString(factories.size()));
         return false;
     }
+
+    if(!isRoomPackageAvailable(type))
+        return false;
 
     const RoomFactory& factory = *factories[index];
     return factory.buildRoomOnTiles(gameMap, player, tiles, noFee);

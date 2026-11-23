@@ -6,10 +6,11 @@ switch of ODServer::processClientNotifications, the console command rule, the ho
 seat configuration, the bounds of notifyTileRevealed, the nickname and chat limits, the turn barrier without
 playerless sockets, the editor checks of the draggable tile container, the range checks of the enum reads (network
 and game enums), the packet reads that stop a command when they fail, and the bounds of counts, names, lists and
-rectangles sent by clients, and the startGameRefused answer (reasons wrongState, notHost, seatsIncomplete) to a start
-the server does not carry out. The fixed values (20 letters, 512 bytes, the command groups, the last enum values,
-the 3 refusal reasons 0 to 2, the 7 asserted setNick reads, the count and name limits) were counted once for this
-branch.
+rectangles sent by clients, the startGameRefused answer (reasons wrongState, notHost, seatsIncomplete) to a start
+the server does not carry out, and the room package list of hello (at most 64 names of at most 64 bytes): a client
+that lacks a room package of the server is refused with clientRejected and the missing names. The fixed values (20
+letters, 512 bytes, the command groups, the last enum values, the 3 refusal reasons 0 to 2, the 7 asserted setNick
+reads, the count and name limits) were counted once for this branch.
 Nothing is compiled and the game is not started; the integration build compiles the code and runs the Boost test
 00-ServerGuards, which tests the guard functions themselves.
 
@@ -158,7 +159,7 @@ notification_names = [re.sub(r"//.*", "", line).strip().rstrip(",") for line in 
 notification_names = [name for name in notification_names if name]
 check(notification_names[-2:] == ["setHandCooldown", "startGameRefused"],
       "startGameRefused is appended last: " + repr(notification_names[-2:]))
-check('WIRE_SCHEMA_SUFFIX = " / wire-5";' in PACKET_H, "the wire suffix is wire-5 since startGameRefused")
+check('WIRE_SCHEMA_SUFFIX = " / wire-6";' in PACKET_H, "the wire suffix is wire-6 since the room package lists")
 check("void sendStartGameRefused(ODSocketClient* clientSocket, StartGameRefusal::Reason reason);" in SERVER_H,
       "the refusal sender is declared")
 refusal_sender = block(SERVER, "void ODServer::sendStartGameRefused", "void ODServer::printConsoleMsg")
@@ -174,6 +175,28 @@ check(len(refused) == 5 and refused == sorted(refused),
       "seatConfigurationSet answers wrong state, not the host and incomplete seats before it starts the game")
 check(set_case.count("sendStartGameRefused(") == 3 and set_case.count("break;") >= 3,
       "every refusal of seatConfigurationSet is answered once")
+
+# ------------------------------------------------------------------------------------------------ room packages
+PACKAGE_CHECK = read("source/network/ContentPackageCheck.h")
+check("MAX_PACKAGES = 64;" in PACKAGE_CHECK and "MAX_NAME_BYTES = 64;" in PACKAGE_CHECK,
+      "the room package lists hold at most 64 names of at most 64 bytes")
+reader = block(PACKAGE_CHECK, "bool readList(", "template<typename Packet>")
+check("!isCountAllowed(count)" in reader and "!isNameAllowed(name)" in reader, "readList bounds the count and names")
+hello = case(SERVER, "hello")
+order = [hello.index(text) if text in hello else -1 for text in [
+    "NetworkProtocol::WIRE_SCHEMA_SUFFIX",
+    "if(!ContentPackageCheck::readList(packetReceived, clientPackages))",
+    "ContentPackageCheck::findMissing(serverPackages,",
+    "packetRefused << ServerNotificationType::clientRejected;",
+    "ContentPackageCheck::writeList(packetRefused, missingPackages);",
+    "clientSocket->send(packetRefused);",
+    "packet << ServerNotificationType::loadLevel;",
+    "ContentPackageCheck::writeList(packet, serverPackages);"]]
+check(-1 not in order and order == sorted(order),
+      "hello checks the version, then the room packages, refuses a client that lacks one and sends the server's")
+check("RoomPackages::getAvailablePackageNames()" in hello, "the server compares with its found room packages")
+check(set_case.count("ContentPackageCheck::writeList(packetSend, std::vector<std::string>());") == 1,
+      "clientRejected of the seat configuration names no missing package")
 
 # ------------------------------------------------------------------------------------------------ handlers
 revealed = case(SERVER, "notifyTileRevealed")

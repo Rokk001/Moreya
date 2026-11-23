@@ -61,6 +61,10 @@ public:
     //! \param shaderLanguageVersion The shader language version to use.
     void setupOgreResources(uint16_t shaderLanguageVersion);
 
+    //! \brief Adds the asset folders (models, material scripts, textures, particles) of every found room package
+    //! (see RoomPackages) to the Graphics resource group.
+    void addRoomPackageResources();
+
     /*! \brief check if a filename has a specific extension
      *  \param filename The filename, like "filename.ext"
      *  \param ending   The extension, like ".ext"

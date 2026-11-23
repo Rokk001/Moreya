@@ -34,6 +34,18 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[2]
+import sys
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(ROOT, 'Tavern')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(ROOT, relative)
 # Fixed counts and bounds measured from the native serializer round trip.
 MESHES = {
     'Innkeeper': (46676, 33291,
@@ -345,7 +357,7 @@ def deserialize(name, directory):
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     target = directory / (name + '.xml')
     subprocess.run([converter, '-q', '-log', str(target) + '.log',
-                    str(ROOT / 'models' / name), str(target)],
+                    str(room_file('models/' + name)), str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                    stderr=subprocess.PIPE, timeout=120, check=True)
     return target
@@ -423,7 +435,7 @@ def check_innkeeper_budget(mesh):
     assert counts == INNKEEPER_TRIANGLES, ('innkeeper triangles per material', counts)
     total = sum(counts.values())
     assert INNKEEPER_BUDGET[0] <= total <= INNKEEPER_BUDGET[1], ('innkeeper outside the triangle budget', total)
-    with (ROOT / 'models' / 'Innkeeper.mesh').open('rb') as stream:
+    with (room_file('models/Innkeeper.mesh')).open('rb') as stream:
         digest = hashlib.sha256(stream.read()).hexdigest()
     assert digest == INNKEEPER_SHA256, 'models/Innkeeper.mesh differs from the reviewed export'
 
@@ -448,12 +460,12 @@ def check_innkeeper_inside(mesh):
 
 # Colour of every triangle: its material's colour atlas at the triangle's UV centre (Ogre v runs downwards).
 def triangle_colours(mesh):
-    script = (ROOT / 'materials/scripts/TavernObjects.material').read_text(encoding='utf-8')
+    script = room_file('materials/scripts/TavernObjects.material').read_text(encoding='utf-8')
     colours, triangles = [], []
     for material in sorted(mesh['faces']):
         block = re.search(r'^material ' + material + r'\s*\n\{.*?^}', script, re.M | re.S).group()
         texture = re.search(r'texture\s+(\S+Color\.png)', block).group(1)
-        image = np.asarray(Image.open(ROOT / 'materials/textures/tavern' / texture).convert('RGB'), dtype=np.float64)
+        image = np.asarray(Image.open(room_file('materials/textures/tavern/' + texture)).convert('RGB'), dtype=np.float64)
         tri = np.array(mesh['faces'][material], dtype=np.int64)
         uv = mesh['uvs'][tri].mean(1)
         h, w = image.shape[:2]
@@ -531,8 +543,8 @@ def check_innkeeper_render(mesh):
 
 # Verify material references, atlas dimensions and the licensing of every new texture.
 def check_atlases():
-    script = (ROOT / 'materials/scripts/TavernObjects.material').read_text(encoding='utf-8')
-    credits = (ROOT / 'CREDITS').read_text(encoding='utf-8')
+    script = room_file('materials/scripts/TavernObjects.material').read_text(encoding='utf-8')
+    credits = room_packages.credits_text(ROOT)
     for material, size in ATLASES.items():
         block = re.search(r'^material ' + material + r'\s*\n\{.*?^}', script, re.M | re.S)
         assert block and 'normal_map tangent_space' in block.group(), material
@@ -540,7 +552,7 @@ def check_atlases():
             filename = material + 'Approved' + kind + '.png'
             relative = 'materials/textures/tavern/' + filename
             assert 'texture ' + filename in block.group(), filename
-            with (ROOT / relative).open('rb') as stream:
+            with room_file(relative).open('rb') as stream:
                 header = stream.read(33)
             assert header[:8] == b'\x89PNG\r\n\x1a\n', filename
             assert struct.unpack('>II', header[16:24]) == (size, size), filename
@@ -560,8 +572,12 @@ def check_counter_navigation_bounds():
 
 # Exercise the native assets, navigation footprint and existing innkeeper animation contracts.
 def main():
-    check_atlases()
     check_counter_navigation_bounds()
+    if not ROOM_ASSETS:
+        print('check_tavern_approved_models: navigation bounds ok (tavern room package not present: its meshes, rig and '
+              'atlases not checked)')
+        return
+    check_atlases()
     started = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix='tavern-assets-') as temporary:
         directory = Path(temporary)

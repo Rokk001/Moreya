@@ -53,6 +53,7 @@
 
 #include "utils/LogManager.h"
 #include "utils/Helper.h"
+#include "rooms/RoomPackages.h"
 
 #include <boost/program_options.hpp>
 
@@ -656,6 +657,8 @@ void ResourceManager::setupOgreResources(uint16_t shaderLanguageVersion)
         }
     }
 
+    addRoomPackageResources();
+
     // Adds the correct GLSL shader path depending on the GPU capacity
     Ogre::GpuProgramManager& gpuProgramManager = Ogre::GpuProgramManager::getSingleton();
     Ogre::ResourceGroupManager& resourceGroupManager = Ogre::ResourceGroupManager::getSingleton();
@@ -671,6 +674,28 @@ void ResourceManager::setupOgreResources(uint16_t shaderLanguageVersion)
         else
         {
             resourceGroupManager.addResourceLocation(mGameDataPath + "materials/RTShaderLib/GLSL/120", "FileSystem", "Graphics");
+        }
+    }
+}
+
+//! \brief Adds the asset folders of every found room package to the Graphics group, the same folders as the game
+//! data lists in resources.cfg (models, material scripts, textures and particles); a folder the package does not
+//! have is skipped.
+void ResourceManager::addRoomPackageResources()
+{
+    static const char* const graphicsFolders[] = {"models", "materials/scripts", "materials/textures", "particles"};
+    Ogre::ResourceGroupManager& resourceGroupManager = Ogre::ResourceGroupManager::getSingleton();
+    for(const std::string& package : RoomPackages::getPackageDirectories())
+    {
+        for(const char* folder : graphicsFolders)
+        {
+            const std::string location = package + "/" + folder;
+            boost::system::error_code error;
+            if(!boost::filesystem::is_directory(location, error))
+                continue;
+            OD_LOG_INF("Resource in section: Graphics Type: FileSystem Path: " + location + " (room package)");
+            // Recursive, so the subfolders of the textures (materials/textures/tavern) are found like in the game data
+            resourceGroupManager.addResourceLocation(location, "FileSystem", "Graphics", true);
         }
     }
 }

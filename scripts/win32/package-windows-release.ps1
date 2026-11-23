@@ -7,9 +7,10 @@
 #            (default build\windows of this worktree)
 #   -OutDir  folder for the game folder and the zip archive (default out\package of this worktree);
 #            the game folder and the zip must not exist yet.
-#   -Content checkout of the private campaign content repository (the Steam build); the wing packages of its
-#            packages folder at its HEAD are added to levels\campaign next to the wing 1 package. Without it the
-#            package holds the public game: wing 1 playable, wings 2 to 6 locked.
+#   -Content checkout of the private campaign content repository (the Steam build); the wing packages and room
+#            packages of its packages folder at its HEAD are added to levels\campaign next to the wing 1 package.
+#            Without it the package holds the public game: wing 1 playable, wings 2 to 6 locked, the packaged rooms
+#            unavailable.
 #
 # Follows the WIN32 install rules of CMakeLists.txt (exe, OGRE/CEGUI/SFML/OIS libraries and the MSVC runtime,
 # plugins.cfg, resources.cfg, the game data folders and the documents), the runtime list of
@@ -61,7 +62,7 @@ if ($LASTEXITCODE -ne 0) { throw 'git archive failed' }
 & tar -xf $tar -C $Out
 if ($LASTEXITCODE -ne 0) { throw 'tar extract failed' }
 Remove-Item -LiteralPath $tar
-# Campaign content packages of the private content repository (committed content of its HEAD only)
+# Content packages of the private content repository (committed content of its HEAD only): wings and rooms
 if ($Content) {
     $contentTar = Join-Path $OutDir "$name-content.tar"
     & git -C (Resolve-Path -LiteralPath $Content).Path archive --format=tar -o $contentTar HEAD packages

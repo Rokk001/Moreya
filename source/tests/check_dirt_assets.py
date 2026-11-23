@@ -14,6 +14,11 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
 from assets_src import assets_src_dir, resolve  # noqa: E402
+import room_packages  # noqa: E402
+
+# The toilet seat, the toilet floors and the toilet sounds come from the toilet room package; without the package only
+# the other dirt assets are checked
+TOILET = room_packages.has_room(root, 'Toilet')
 
 # Width and height of a pile texture
 PILE_TEXTURE_SIZE = 64
@@ -43,8 +48,9 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
         types[fields['Name']] = fields['MeshName']
 assert len(types) == 35, len(types)
 
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
-credits = read('CREDITS')
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for folder in [root] + room_packages.package_roots(root)
+                    for p in (folder / 'materials' / 'scripts').glob('*.material'))
+credits = room_packages.credits_text(root)
 
 # 1. Pile models and textures: one per creature type, a material each, 64 x 64 textures
 for name in types:
@@ -69,9 +75,11 @@ assert len(list((root / 'materials' / 'textures').glob('Pile_*.png'))) == 35, 'e
 for name, source in [('BloodStain', 'assets-src/dirt/BloodStain.blend'), ('DirtStage1', 'assets-src/dirt/DirtStage1.blend'),
                      ('DirtStage2', 'assets-src/dirt/DirtStage2.blend'), ('DirtStage3', 'assets-src/dirt/DirtStage3.blend'),
                      ('ToiletSeat', 'assets-src/rooms/ToiletSeat.blend')]:
-    assert (root / 'models' / (name + '.mesh')).is_file(), name + '.mesh missing'
-    assert (root / 'materials' / 'textures' / (name + '.png')).is_file(), name + '.png missing'
     assert resolve(root, source).is_file(), source + ' missing'
+    if name == 'ToiletSeat' and not TOILET:
+        continue
+    assert resolve(root, 'models/' + name + '.mesh').is_file(), name + '.mesh missing'
+    assert resolve(root, 'materials/textures/' + name + '.png').is_file(), name + '.png missing'
     assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
 
 # 3. Particle, icon and the sounds
@@ -81,7 +89,9 @@ assert 'name="ToiletButton"' in imageset, 'icon ToiletButton missing in ODIcons.
 assert (root / 'gui' / 'ODIcons.png').is_file()
 for sound in ['Creatures/Default/Relieve/FxRelieve01.ogg', 'Creatures/Default/Clean/FxClean01.ogg',
               'Rooms/Toilet/Flush/FxToiletFlush01.ogg', 'Rooms/Toilet/Drip/FxToiletDrip01.ogg']:
-    assert (root / 'sounds' / 'Spatial' / sound).is_file(), 'sounds/Spatial/' + sound + ' missing'
+    if sound.startswith('Rooms/Toilet/') and not TOILET:
+        continue
+    assert resolve(root, 'sounds/Spatial/' + sound).is_file(), 'sounds/Spatial/' + sound + ' missing'
 ambience = read('config/roomAmbience.cfg')
 assert 'ToiletDrip' in ambience, 'roomAmbience.cfg has no toilet entry'
 
@@ -129,25 +139,29 @@ files = ['models/Pile_Orc.mesh', 'assets-src/dirt/Pile_Orc.blend', 'materials/te
          'sounds/Spatial/Creatures/Default/Relieve/FxRelieve01.ogg', 'sounds/Spatial/Creatures/Default/Clean/FxClean01.ogg',
          'sounds/Spatial/Rooms/Toilet/Flush/FxToiletFlush01.ogg', 'sounds/Spatial/Rooms/Toilet/Drip/FxToiletDrip01.ogg']
 for path in files:
+    # The rows of the toilet seat and its source stand in the CREDITS of the content repository
+    if room_packages.is_missing_packaged(root, path) or (not TOILET and 'ToiletSeat' in path):
+        continue
     assert credited(path), 'CREDITS has no row for ' + path
 assert re.search(r'^gui/ODIcons\.png \(ToiletButton\)', credits, re.M), 'CREDITS row for the toilet icon'
 for skeleton in sorted(set(skeletons.values())):
     assert re.search(r'^models/' + re.escape(skeleton) + r' \(clip', credits, re.M | re.I), 'CREDITS has no row for the clip in ' + skeleton
-# The floor and wall pieces of the toilet room
-for mask in range(16):
+# The floor and wall pieces of the toilet room (toilet room package)
+for mask in range(16 if TOILET else 0):
     name = 'Toilet' + format(mask, '04b')
-    assert (root / 'materials' / 'textures' / (name + '.png')).is_file(), name + '.png missing'
+    assert resolve(root, 'materials/textures/' + name + '.png').is_file(), name + '.png missing'
 # The credits must hold a row that names exactly the toilet floor pattern and its normal maps (no looser fallback), and
 # every piece and normal map must be covered by a pattern of such a row
 toilet_row = [line for line in credit_lines if line.startswith('materials/textures/Toilet????.png')]
-assert len(toilet_row) == 1, 'CREDITS needs exactly one row that starts with the pattern materials/textures/Toilet????.png'
-assert 'materials/textures/Toilet????Normal.png' in toilet_row[0].split('  ')[0], 'the toilet row must also name the Normal variants'
-toilet_patterns = [part.strip() for part in re.split(r'\s{2,}', toilet_row[0].strip())[0].split(',')]
-for mask in range(16):
-    for suffix in ('', 'Normal'):
-        piece = 'materials/textures/Toilet' + format(mask, '04b') + suffix + '.png'
-        assert (root / piece).is_file(), piece + ' missing'
-        assert any(fnmatch.fnmatchcase(piece.lower(), pattern.lower()) for pattern in toilet_patterns), 'the toilet row does not cover ' + piece
-assert credited('materials/scripts/ToiletFloor.material'), 'CREDITS has no row for the toilet floor material'
+assert len(toilet_row) == (1 if TOILET else 0), 'CREDITS needs exactly one row that starts with the pattern materials/textures/Toilet????.png'
+if TOILET:
+    assert 'materials/textures/Toilet????Normal.png' in toilet_row[0].split('  ')[0], 'the toilet row must also name the Normal variants'
+    toilet_patterns = [part.strip() for part in re.split(r'\s{2,}', toilet_row[0].strip())[0].split(',')]
+    for mask in range(16):
+        for suffix in ('', 'Normal'):
+            piece = 'materials/textures/Toilet' + format(mask, '04b') + suffix + '.png'
+            assert resolve(root, piece).is_file(), piece + ' missing'
+            assert any(fnmatch.fnmatchcase(piece.lower(), pattern.lower()) for pattern in toilet_patterns), 'the toilet row does not cover ' + piece
+    assert credited('materials/scripts/ToiletFloor.material'), 'CREDITS has no row for the toilet floor material'
 
-print('dirt assets ok')
+print('dirt assets ok' + ('' if TOILET else ' (toilet room package not present: its seat, floors and sounds not checked)'))

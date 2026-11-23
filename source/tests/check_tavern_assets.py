@@ -49,6 +49,16 @@ import zlib
 root = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
+import room_packages  # noqa: E402
+
+#: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
+#: side is checked
+ROOM_ASSETS = room_packages.has_room(root, 'Tavern')
+
+
+def room_file(relative):
+    """A file of the game data, or of the room package when it moved there."""
+    return room_packages.resolve(root, relative)
 from assets_src import assets_src_dir, resolve  # noqa: E402
 
 # The nine clips every creature skeleton gets, in the order of the design
@@ -149,80 +159,82 @@ def creature_types():
     return types
 
 
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
-credits = read('CREDITS')
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+credits = room_packages.credits_text(root)
 
 # 1. Models: mesh, Blender source, material, the innkeeper's skeleton
 MODELS = {'TavernCounter': 'assets-src/rooms/tavern/TavernCounter.blend', 'Innkeeper': 'assets-src/rooms/tavern/Innkeeper.blend',
           'TavernKeg': 'assets-src/rooms/tavern/TavernKeg.blend', 'TavernTable': 'assets-src/rooms/tavern/TavernTable.blend',
           'TavernMug': 'assets-src/rooms/tavern/TavernMug.blend', 'Vomit': 'assets-src/dirt/Vomit.blend'}
-for name, source in MODELS.items():
-    mesh = root / 'models' / (name + '.mesh')
-    assert mesh.is_file() and mesh.stat().st_size > 0, 'models/' + name + '.mesh missing'
-    assert resolve(root, source).is_file(), source + ' missing'
-mesh_material_names = {'TavernCounter': ('TavernCounterWood', 'TavernRail', 'TavernSign'), 'TavernKeg': ('TavernKegWood', 'TavernIron', 'TavernBrass'),
-                       'TavernTable': ('TavernStone', 'TavernTableWood'), 'TavernMug': ('TavernWood', 'TavernFoam'),
-                       'Innkeeper': ('TavernCloth', 'TavernHood', 'TavernSkin'), 'Vomit': ('TavernVomit',)}
-for name, used in mesh_material_names.items():
-    data = (root / 'models' / (name + '.mesh')).read_bytes()
-    assert any(m.encode('ascii') in data for m in used), 'models/' + name + '.mesh uses none of ' + ', '.join(used)
-# Owner check 664 (build 0.7.3.37): the counter is built from its own plank atlas (not the wave-striped shared
-# TavernWood); its foot rail, sign rim and bell use the polished, slightly self-lit TavernRail; the plate uses TavernSign
-counter = (root / 'models' / 'TavernCounter.mesh').read_bytes()
-for used in ('TavernCounterWood', 'TavernRail', 'TavernSign'):
-    assert re.search(rb'(?<![A-Za-z])' + used.encode('ascii') + rb'(?![A-Za-z])', counter), 'models/TavernCounter.mesh needs the material ' + used
-assert not re.search(rb'(?<![A-Za-z])TavernWood(?![A-Za-z])', counter), 'models/TavernCounter.mesh must not use the striped TavernWood'
-rail = re.search(r'^material TavernRail\b.*?^}', materials, re.M | re.S)
-assert rail and re.search(r'^\s*emissive\s+0*\.0*[1-9]', rail.group(0), re.M), 'TavernRail needs its self-light so the rail reads from the room camera'
-innkeeper = (root / 'models' / 'Innkeeper.mesh').read_bytes()
-for used in ('TavernHood', 'TavernSkin', 'TavernCloth'):
-    assert used.encode('ascii') in innkeeper, 'models/Innkeeper.mesh needs the material ' + used
-assert b'Innkeeper.skeleton' in (root / 'models' / 'Innkeeper.mesh').read_bytes(), 'the innkeeper mesh needs its skeleton'
-innkeeper_skeleton = (root / 'models' / 'Innkeeper.skeleton').read_bytes()
-for clip in INNKEEPER_CLIPS:
-    assert (clip + '\n').encode('ascii') in innkeeper_skeleton, 'Innkeeper.skeleton has no clip ' + clip
-# Owner check 710 (build 0.7.3.41): the counter read as a black box with a yellow edge and the innkeeper as a dark
-# faceless figure. A vertical face shows at about 0.7 x its texture value in the tavern light, so the planks, the robe,
-# the hide and the apron need a minimum brightness (build 41: 37, 28, 62, 107), and the rail must not glare yellow
-# (build 41: texture 169, emissive 0.22 0.16 0.06).
-for name, low in (('TavernCounterWood', 55), ('TavernHood', 45), ('TavernSkin', 85), ('TavernCloth', 130)):
-    value = png_mean_luminance('materials/textures/tavern/' + name + '.png')
-    assert value >= low, '%s.png is too dark for the tavern light (mean %.0f, needs %d)' % (name, value, low)
-value = png_mean_luminance('materials/textures/tavern/TavernRail.png')
-assert value <= 145, 'TavernRail.png glares yellow (mean %.0f, at most 145): aged brass, not a bright yellow edge' % value
-emissive = re.search(r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', rail.group(0), re.M)
-assert emissive and max(float(x) for x in emissive.groups()) <= 0.12, 'TavernRail self-light at most 0.12 (a stronger glow reads as a yellow edge)'
+if ROOM_ASSETS:
+    for name, source in MODELS.items():
+        mesh = room_file('models/' + name + '.mesh')
+        assert mesh.is_file() and mesh.stat().st_size > 0, 'models/' + name + '.mesh missing'
+        assert resolve(root, source).is_file(), source + ' missing'
+    mesh_material_names = {'TavernCounter': ('TavernCounterWood', 'TavernRail', 'TavernSign'), 'TavernKeg': ('TavernKegWood', 'TavernIron', 'TavernBrass'),
+                           'TavernTable': ('TavernStone', 'TavernTableWood'), 'TavernMug': ('TavernWood', 'TavernFoam'),
+                           'Innkeeper': ('TavernCloth', 'TavernHood', 'TavernSkin'), 'Vomit': ('TavernVomit',)}
+    for name, used in mesh_material_names.items():
+        data = (room_file('models/' + name + '.mesh')).read_bytes()
+        assert any(m.encode('ascii') in data for m in used), 'models/' + name + '.mesh uses none of ' + ', '.join(used)
+    # Owner check 664 (build 0.7.3.37): the counter is built from its own plank atlas (not the wave-striped shared
+    # TavernWood); its foot rail, sign rim and bell use the polished, slightly self-lit TavernRail; the plate uses TavernSign
+    counter = (room_file('models/TavernCounter.mesh')).read_bytes()
+    for used in ('TavernCounterWood', 'TavernRail', 'TavernSign'):
+        assert re.search(rb'(?<![A-Za-z])' + used.encode('ascii') + rb'(?![A-Za-z])', counter), 'models/TavernCounter.mesh needs the material ' + used
+    assert not re.search(rb'(?<![A-Za-z])TavernWood(?![A-Za-z])', counter), 'models/TavernCounter.mesh must not use the striped TavernWood'
+    rail = re.search(r'^material TavernRail\b.*?^}', materials, re.M | re.S)
+    assert rail and re.search(r'^\s*emissive\s+0*\.0*[1-9]', rail.group(0), re.M), 'TavernRail needs its self-light so the rail reads from the room camera'
+    innkeeper = (room_file('models/Innkeeper.mesh')).read_bytes()
+    for used in ('TavernHood', 'TavernSkin', 'TavernCloth'):
+        assert used.encode('ascii') in innkeeper, 'models/Innkeeper.mesh needs the material ' + used
+    assert b'Innkeeper.skeleton' in (room_file('models/Innkeeper.mesh')).read_bytes(), 'the innkeeper mesh needs its skeleton'
+    innkeeper_skeleton = (room_file('models/Innkeeper.skeleton')).read_bytes()
+    for clip in INNKEEPER_CLIPS:
+        assert (clip + '\n').encode('ascii') in innkeeper_skeleton, 'Innkeeper.skeleton has no clip ' + clip
+    # Owner check 710 (build 0.7.3.41): the counter read as a black box with a yellow edge and the innkeeper as a dark
+    # faceless figure. A vertical face shows at about 0.7 x its texture value in the tavern light, so the planks, the robe,
+    # the hide and the apron need a minimum brightness (build 41: 37, 28, 62, 107), and the rail must not glare yellow
+    # (build 41: texture 169, emissive 0.22 0.16 0.06).
+    for name, low in (('TavernCounterWood', 55), ('TavernHood', 45), ('TavernSkin', 85), ('TavernCloth', 130)):
+        value = png_mean_luminance('materials/textures/tavern/' + name + '.png')
+        assert value >= low, '%s.png is too dark for the tavern light (mean %.0f, needs %d)' % (name, value, low)
+    value = png_mean_luminance('materials/textures/tavern/TavernRail.png')
+    assert value <= 145, 'TavernRail.png glares yellow (mean %.0f, at most 145): aged brass, not a bright yellow edge' % value
+    emissive = re.search(r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', rail.group(0), re.M)
+    assert emissive and max(float(x) for x in emissive.groups()) <= 0.12, 'TavernRail self-light at most 0.12 (a stronger glow reads as a yellow edge)'
 
-# 2. Materials and textures
-# The table and the keg have their own wood baked onto their UV layouts (INGAME-QS-11 K8)
-for name in ('TavernTableWood', 'TavernKegWood'):
-    assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
-    for suffix in ('', 'Normal'):
-        assert png_size('materials/textures/tavern/' + name + suffix + '.png') == (1024, 1024), name + suffix + ' texture size'
-for name in ('TavernWood', 'TavernBrass', 'TavernStone', 'TavernIron', 'TavernCloth', 'TavernHood', 'TavernSkin', 'TavernFoam',
-             'TavernSign', 'TavernVomit', 'TavernCounterWood', 'TavernRail'):
-    assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
-    size = OBJECT_TEXTURE_SIZES.get(name, OBJECT_TEXTURE_SIZE)
-    assert png_size('materials/textures/tavern/' + name + '.png') == (size, size), name + ' texture size'
-for name in ('TavernFloor', 'TavernWall'):
-    assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
-    for suffix in ('', 'Normal'):
-        assert png_size('materials/textures/tavern/' + name + suffix + '.png')[0] > 0, name + suffix + '.png missing'
-assert re.search(r'^material TavernDuelBirds\b', materials, re.M), 'material TavernDuelBirds missing'
-assert png_size('materials/textures/tavern/DuelBird.png') == (BIRD_ATLAS_SIZE, BIRD_ATLAS_SIZE), 'bird atlas size'
-assert (assets_src_dir(root) / 'rooms' / 'tavern' / 'DuelBird.png').is_file(), 'bird source missing'
+    # 2. Materials and textures
+    # The table and the keg have their own wood baked onto their UV layouts (INGAME-QS-11 K8)
+    for name in ('TavernTableWood', 'TavernKegWood'):
+        assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
+        for suffix in ('', 'Normal'):
+            assert png_size('materials/textures/tavern/' + name + suffix + '.png') == (1024, 1024), name + suffix + ' texture size'
+    for name in ('TavernWood', 'TavernBrass', 'TavernStone', 'TavernIron', 'TavernCloth', 'TavernHood', 'TavernSkin', 'TavernFoam',
+                 'TavernSign', 'TavernVomit', 'TavernCounterWood', 'TavernRail'):
+        assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
+        size = OBJECT_TEXTURE_SIZES.get(name, OBJECT_TEXTURE_SIZE)
+        assert png_size('materials/textures/tavern/' + name + '.png') == (size, size), name + ' texture size'
+    for name in ('TavernFloor', 'TavernWall'):
+        assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
+        for suffix in ('', 'Normal'):
+            assert png_size('materials/textures/tavern/' + name + suffix + '.png')[0] > 0, name + suffix + '.png missing'
+    assert re.search(r'^material TavernDuelBirds\b', materials, re.M), 'material TavernDuelBirds missing'
+    assert png_size('materials/textures/tavern/DuelBird.png') == (BIRD_ATLAS_SIZE, BIRD_ATLAS_SIZE), 'bird atlas size'
+    assert (assets_src_dir(root) / 'rooms' / 'tavern' / 'DuelBird.png').is_file(), 'bird source missing'
 
 # 3. Icons: the painted sources of the two buttons
 for icon in ('TavernButton', 'BeerButton'):
     assert png_size('assets-src/gui/icons/tiles/' + icon + '.png') == (ICON_SOURCE_SIZE, ICON_SOURCE_SIZE), icon + ' source size'
 
 # 4. Particles: each defined once in all particle files, the materials exist
-all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'particles').glob('*.particle'))
-for system in ('TavernSmoke', 'DuelBirds'):
-    assert len(re.findall(r'^particle_system ' + system + r'\s*$', all_particles, re.M)) == 1, 'particle ' + system + ' must be defined exactly once'
-tavern_particles = read('particles/Tavern.particle')
-for used in re.findall(r'^\s*material\s+(\S+)', tavern_particles, re.M):
-    assert re.search(r'^material ' + used + r'\b', materials, re.M), 'particle material ' + used + ' missing'
+all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'particles', '*.particle'))
+if ROOM_ASSETS:
+    for system in ('TavernSmoke', 'DuelBirds'):
+        assert len(re.findall(r'^particle_system ' + system + r'\s*$', all_particles, re.M)) == 1, 'particle ' + system + ' must be defined exactly once'
+    tavern_particles = read('particles/Tavern.particle')
+    for used in re.findall(r'^\s*material\s+(\S+)', tavern_particles, re.M):
+        assert re.search(r'^material ' + used + r'\b', materials, re.M), 'particle material ' + used + ' missing'
 ambience = read('config/roomAmbience.cfg')
 assert 'System      TavernSmoke' in ambience and 'Match       TavernCounter' in ambience, 'the counter smoke is wired in roomAmbience.cfg'
 assert 'DuelBirds' in read('source/render/RenderManager.cpp'), 'the bird particle is attached by the render code'
@@ -231,7 +243,9 @@ assert 'DuelBirds' in read('source/render/RenderManager.cpp'), 'the bird particl
 for sound in ('sounds/Rooms/Tavern/Pour.ogg', 'sounds/Rooms/Tavern/Murmur.ogg', 'sounds/Rooms/Tavern/Clink.ogg',
               'sounds/Creatures/Default/Slap.ogg', 'sounds/Creatures/Default/Cheer.ogg',
               'sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg', 'sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg'):
-    assert (root / sound).is_file(), sound + ' missing'
+    if room_packages.is_missing_packaged(root, sound):
+        continue
+    assert room_file(sound).is_file(), sound + ' missing'
     assert vorbis_format(sound) == (SOUND_CHANNELS, SOUND_RATE), sound + ' must be mono 22050 Hz Vorbis, found ' + str(vorbis_format(sound))
 for family in ('Rooms/Tavern/Murmur', 'Rooms/Tavern/Clink'):
     assert 'Family      ' + family in ambience, 'roomAmbience.cfg needs the family ' + family
@@ -248,14 +262,14 @@ types = creature_types()
 assert len(types) == 35, len(types)
 skeletons = {}
 for name, mesh in types.items():
-    data = (root / 'models' / mesh).read_bytes()
+    data = (room_file('models/' + mesh)).read_bytes()
     found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', data)
     assert found, mesh + ' has no skeleton'
     skeletons[name] = found[0].decode('ascii') + '.skeleton'
 unique_skeletons = sorted(set(skeletons.values()))
 assert len(unique_skeletons) == 32, 'the 35 types use 32 skeletons, found ' + str(len(unique_skeletons))
 for skeleton in unique_skeletons:
-    data = (root / 'models' / skeleton).read_bytes()
+    data = (room_file('models/' + skeleton)).read_bytes()
     for clip in TAVERN_CLIPS:
         assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
 
@@ -271,7 +285,7 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creature
         visiting.add(skeletons[name_field.group(1)])
 assert len(visiting) == VISITING_SKELETONS, 'the types that visit the tavern use 30 skeletons, found ' + str(len(visiting))
 for skeleton in sorted(visiting):
-    data = (root / 'models' / skeleton).read_bytes()
+    data = (room_file('models/' + skeleton)).read_bytes()
     for clip in SEAT_CLIPS:
         assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
 
@@ -306,6 +320,9 @@ files += ['sounds/Rooms/Tavern/Pour.ogg', 'sounds/Rooms/Tavern/Murmur.ogg', 'sou
           'sounds/Creatures/Default/Slap.ogg', 'sounds/Creatures/Default/Cheer.ogg',
           'sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg', 'sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg']
 for path in files:
+    # The rows of the tavern package and of its sources stand in the CREDITS of the content repository
+    if room_packages.is_missing_packaged(root, path) or (not ROOM_ASSETS and path.startswith('assets-src/rooms/tavern/')):
+        continue
     assert credited(path), 'CREDITS has no row for ' + path
 for skeleton in unique_skeletons:
     assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Drink, Slap, ArmWrestle, Dice, KnockedOut, GetUp, Stagger, Vomit, Hangover tracks\)',
@@ -314,12 +331,16 @@ for skeleton in sorted(visiting):
     assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice, SitSlumped tracks\)',
                      credits, re.M), 'CREDITS has no row for the seated clips in ' + skeleton
 # Every sound row names a source address and the licence CC0 (the recordings are real, never generated)
-for sound in ('Pour', 'Murmur', 'Clink', 'Slap', 'Cheer'):
+for sound in ('Pour', 'Murmur', 'Clink', 'Slap', 'Cheer') if ROOM_ASSETS else ('Slap', 'Cheer'):
     row = [l for l in credits.splitlines() if re.search(r'/' + sound + r'\.ogg\s', l)]
     assert row, 'CREDITS has no row for ' + sound + '.ogg'
     for line in row:
         assert 'https://freesound.org/' in line and 'CC0' in line, sound + ' row needs a source address and CC0: ' + line[:80]
 
+
+if not ROOM_ASSETS:
+    print('tavern assets ok (tavern room package not present: its models, textures, particles, sounds and game light not checked)')
+    sys.exit(0)
 
 # 8. Game light (INGAME-QS-11 K8): every texture of the tavern models' materials, sampled where the surfaces map onto it
 import numpy as np  # noqa: E402
@@ -368,7 +389,7 @@ def material_textures(name):
 def mesh_geometry(name, work):
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     source = Path(work) / (name + '.mesh')
-    source.write_bytes((root / 'models' / (name + '.mesh')).read_bytes())
+    source.write_bytes((room_file('models/' + name + '.mesh')).read_bytes())
     target = Path(work) / (name + '.mesh.xml')
     subprocess.run([converter, '-q', str(source), str(target)], check=True, capture_output=True)
     tree = ET.parse(str(target)).getroot()
@@ -397,13 +418,13 @@ def surface_texels(positions, uvs, faces, texture):
     r1, r2 = np.sqrt(rng.random(SAMPLES)), rng.random(SAMPLES)
     w = np.stack([1 - r1, r1 * (1 - r2), r1 * r2], 1)
     uv = uvs[faces[pick, 0]] * w[:, :1] + uvs[faces[pick, 1]] * w[:, 1:2] + uvs[faces[pick, 2]] * w[:, 2:]
-    image = np.asarray(Image.open(str(root / 'materials' / 'textures' / 'tavern' / texture)).convert('RGB')).astype(float)
+    image = np.asarray(Image.open(str(room_file('materials/textures/tavern/' + texture))).convert('RGB')).astype(float)
     height, width = image.shape[:2]
     return image[(np.mod(uv[:, 1], 1.0) * height).astype(int) % height, (np.mod(uv[:, 0], 1.0) * width).astype(int) % width]
 
 
 light_start = time.monotonic()
-floor_texels = np.asarray(Image.open(str(root / 'materials' / 'textures' / 'tavern' / FLOOR_TEXTURE)).convert('RGB')).astype(float)
+floor_texels = np.asarray(Image.open(str(room_file('materials/textures/tavern/' + FLOOR_TEXTURE))).convert('RGB')).astype(float)
 floor_shown = (floor_texels @ LUMA).mean() * FLOOR_LIGHT
 seen = {}
 with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
@@ -435,7 +456,7 @@ with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
                 assert luma.mean() >= BARKEEPER_FLOORS[material], '%s used texels are too dark (mean %.0f, needs %d)' % (
                     where, luma.mean(), BARKEEPER_FLOORS[material])
             if material in NORMAL_MAPPED:
-                assert len(textures) >= 2 and (root / 'materials' / 'textures' / 'tavern' / textures[1]).is_file(), where + ' needs its normal map'
+                assert len(textures) >= 2 and room_file('materials/textures/tavern/' + textures[1]).is_file(), where + ' needs its normal map'
             seen[material] = shown
 for material in ('TavernCounterWood', 'TavernRail', 'TavernSign', 'TavernSkin', 'TavernHood', 'TavernCloth', 'TavernTableWood',
                  'TavernKegWood', 'TavernWood', 'TavernStone', 'TavernIron', 'TavernBrass', 'TavernFoam'):

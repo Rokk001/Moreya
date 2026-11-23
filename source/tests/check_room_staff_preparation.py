@@ -20,8 +20,18 @@ nothing and starts no game.
 """
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import room_packages  # noqa: E402
+
+
+def mesh_exists(name):
+    """True when the mesh is in models/ of the game data or of a present room package; a mesh of a room package that is
+    not present counts as there (only the list and the code are checked then)."""
+    relative = 'models/' + name
+    return room_packages.asset(ROOT, relative) is not None or room_packages.is_missing_packaged(ROOT, relative)
 
 
 def read(path):
@@ -71,7 +81,7 @@ def check(render_manager, objects):
     names = listed(objects)
     for name in expected:
         assert name + '.mesh' in names, name
-        assert (ROOT / 'models' / (name + '.mesh')).is_file(), name
+        assert mesh_exists(name + '.mesh'), name
 
     init = block(render_manager, 'void RenderManager::initGameRenderer(')
     assert init.count('prepareGameObjectResources();') == 1

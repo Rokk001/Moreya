@@ -242,6 +242,9 @@ class SelectionTests(unittest.TestCase):
         for result in (7, 0):
             process_queries.unlink(missing_ok=True)
             counter.write_text('16')
+            # Both probe stubs have the same size and may share an mtime second, so cached bytecode of
+            # the previous stub would still be valid for Python; drop it so each pass runs its own stub.
+            shutil.rmtree(self.repo / 'scripts/__pycache__', ignore_errors=True)
             self.write('scripts/run-campaign-load-tests.py',
                        'import json, subprocess, sys\nfrom pathlib import Path\n'
                        '# Exercise the real wait helper through the locked runner process probe.\n'
