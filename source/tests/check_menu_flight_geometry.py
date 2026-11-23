@@ -221,12 +221,16 @@ def main():
         if len(tri) == 0:
             continue
         world[name] = (tri[:, 0], tri[:, 1], tri[:, 2], tri.min(axis=1), tri.max(axis=1))
+    # The box of every entity: only the samples inside it (plus CLEARANCE) are tested against its triangles.
+    boxes = {name: (parts[3].min(axis=0) - CLEARANCE, parts[4].max(axis=0) + CLEARANCE)
+             for name, parts in world.items()}
     failures = []
     for label, points in routes(poses, flights):
         samples = catmull_rom(points, SAMPLES_PER_SEGMENT)
         worst = {}
-        for sample in samples:
-            for name, (a, b, c, low, high) in world.items():
+        for name, (a, b, c, low, high) in world.items():
+            inside = np.all((boxes[name][0] <= samples) & (samples <= boxes[name][1]), axis=1)
+            for sample in samples[inside]:
                 near = np.all(low - CLEARANCE <= sample, axis=1) & np.all(sample <= high + CLEARANCE, axis=1)
                 if not near.any():
                     continue
