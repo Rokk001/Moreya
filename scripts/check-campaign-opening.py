@@ -4,9 +4,10 @@
 For every level the state at the START of the game is checked (no trigger has fired yet):
 
 1. Enemy walk path. The sources of the enemy team are the creatures of other teams and of
-   the neutral seat 0, the script spawns of other teams and of seat 0 (the spawn action of
-   every trigger, whatever its conditions: a spawn that comes later in the game lands on the
-   map of the start just as well, so it must be sealed like a placed creature), their
+   the neutral seat 0, the script spawns of other teams and of seat 0 (on the levels of
+   STRICT_LEVELS the spawn action of every trigger, whatever its conditions: a spawn that
+   comes later in the game lands on the map of the start just as well, so it must be sealed
+   like a placed creature; on every other level only the spawns at the level start), their
    wave portals, their portals and their dungeon temples. For every source the walk path
    to the dungeon temple of the human seat is measured (4-neighbourhood, like the game):
    only over tiles that can be walked right now (open dirt, claimed or built tiles, rooms,
@@ -22,7 +23,7 @@ For every level the state at the START of the game is checked (no trigger has fi
    A tile that is rock at the start and opened later by a trigger therefore separates, as
    it should. A spawn of a trigger that waits for the level start is named "start spawn",
    any other one "spawn". The shortest path that may also cross solid dirt, gold and gem
-   tiles (and the water and lava the source walks) is only reported (shortest_dig_path) and
+   tiles (and, on STRICT_LEVELS, the water and lava the source walks) is only reported (shortest_dig_path) and
    has no threshold. Levels outside the campaign (skirmish, realms) are exempt from this part.
    Exception: the Moreya gate of a story level in gate mode is no enemy source at the start,
    because nothing comes through it before its countdown ends. Gate mode means: the level
@@ -45,8 +46,9 @@ For every level the state at the START of the game is checked (no trigger has fi
    --safe-radius N). The seat of the human player must be able to build up before it has
    to fight. The zone is every tile that is at most SAFE_RADIUS tiles away, over walkable
    and diggable tiles (dirt, gold, gem, rooms, doors; rock blocks), from the dungeon heart,
-   from the nearest portal or from the dig path between the two. Water and lava are passed
-   like in rule 1, by the movement of the enemy that is tested: a creature or spawn by its
+   from the nearest portal or from the dig path between the two. On STRICT_LEVELS water and
+   lava are passed like in rule 1 (elsewhere they block), by the movement of the enemy that
+   is tested: a creature or spawn by its
    classes, a trap, door or room by the classes its seat's faction brings (WorkerClass and
    SpawnPool), a wave portal by those plus the classes of its waves and of its raid members.
    The dig path to the portal is the keeper's and is measured over diggable tiles only, as
@@ -62,11 +64,12 @@ For every level the state at the START of the game is checked (no trigger has fi
 4. Portal start of the wing 1 levels (WING1_PORTALS, fixed values per level). The keeper must
    be able to build up before he is attacked: the level has a portal of the seat or an
    unclaimed one (seat 0) that the keeper reaches from the heart by digging and claiming
-   (dirt, gold, gem, rooms and doors not of another team, fewest tiles to dig; the water and
-   lava that the classes of the keeper's faction walk are walked, not dug) without
-   touching a tile an enemy can walk to; its first tile and the number of tiles to dig are
-   the expected ones. Once that path is dug, no enemy source of rule 1 (every spawn of a
-   trigger of another team or of seat 0 included) can walk to the heart,
+   (dirt, gold, gem, rooms and doors not of another team, fewest tiles to dig; on
+   STRICT_LEVELS the water and lava that the classes of the keeper's faction walk are walked,
+   not dug) without touching a tile an enemy can walk to; its first tile and the number of
+   tiles to dig are the expected ones. Once that path is dug, no enemy source of rule 1 (on
+   STRICT_LEVELS every spawn of a trigger of another team or of seat 0 included, elsewhere
+   also the spawns of triggers that wait only for time) can walk to the heart,
    the portal, the path or the open tiles joined to them, and no trap or room of another team
    and no trap of seat 0 lies on those tiles (a door is no trap; the Moreya gate in gate mode
    is allowed, its raid comes as designed). A tunneller among those sources (a class with a
@@ -79,6 +82,19 @@ For every level the state at the START of the game is checked (no trigger has fi
 
 Tiles that the level file does not list are treated like the game does: full dirt
 (fullness 100), diggable but not walkable until dug. This applies to every rule above.
+
+Scope of the stricter wing 1 measurement (owner decision: wing 1 only for now). Only the
+levels of STRICT_LEVELS (the wing 1 levels Brackenford, Coldwell, Ravensledge and Mossgate)
+are measured with these parts:
+- rule 1 walk-tests the spawn of every trigger, not only the level start spawns;
+- shortest_dig_path, the rule 3 safe zone and the keeper's dig path of rule 4 pass water and
+  lava by the movement of the creatures concerned;
+- rule 4 takes every trigger spawn as a source.
+Every other level is measured as before this change: rule 1 walk-tests only level start
+spawns, shortest_dig_path and the rule 3 zone treat water and lava as walls, and rule 4 adds
+only the spawns of triggers that wait for time. Open item: the levels of wings 2 to 6 are not
+yet measured by the stricter rules (some of them fail them) and are to be moved to the strict
+measurement once their maps are fixed.
 
 Output is one line per level (PASS or FAIL, file, numbers). Levels listed in
 scripts/check-campaign-opening.allowlist report FAIL but do not change the exit code
@@ -123,6 +139,10 @@ WING1_PORTALS = {
     "Mossgate.level": ((30, 29), 0, ("Goblin",)),
 }
 
+# Levels measured by the stricter wing 1 rules (see the docstring, "Scope"); every other level is
+# measured as before. Fixed: the four wing 1 levels.
+STRICT_LEVELS = ("Brackenford.level", "Coldwell.level", "Ravensledge.level", "Mossgate.level")
+
 TILE_DIRT = 1
 TILE_GOLD = 2
 TILE_ROCK = 3
@@ -165,6 +185,7 @@ class Level(object):
         self.raid = None         # the [Raid] section: {"gate": (x, y), "seat": id, "countdown": text}
         self.owners = {}         # (x, y) -> seat id of the tiles that name one (claimed floor or wall)
         self.blocked = []        # (seatId, class name) of the "Block" lines of the [Triggers] section
+        self.strict = False      # measured by the stricter wing 1 rules (see STRICT_LEVELS)
 
 
 def to_int(text):
@@ -600,8 +621,9 @@ def is_start_enemy(level, seat_id, owner):
 def enemy_sources(level, seat_id, raid_default=None, movement=None):
     """Return (name, tile, (walks water, walks lava)) for every place where enemies of the
     seat appear: other teams' temples, portals and wave portals, the creatures of other teams
-    and of seat 0 and the script spawns of other teams and of seat 0 (every trigger; a spawn
-    of a level start trigger is named "start spawn", any other "spawn"). The Moreya gate in
+    and of seat 0 and the script spawns of other teams and of seat 0 (every trigger on a strict
+    level, only level start triggers on any other; a spawn of a level start trigger is named
+    "start spawn", any other "spawn"). The Moreya gate in
     gate mode is no source at the start. movement is the table of load_movement (None: read
     from the repository)."""
     if movement is None:
@@ -637,10 +659,10 @@ def enemy_sources(level, seat_id, raid_default=None, movement=None):
             sources.append(("creature of seat %d at %d,%d (%s)" % (owner, x, y, name), (x, y),
                             class_moves(movement, name, faction)))
     for number, (trigger, owner, x, y, _) in enumerate(level.spawns):
-        if is_start_enemy(level, seat_id, owner):
+        start = is_start_trigger(level, level.spawn_triggers[number])
+        if is_start_enemy(level, seat_id, owner) and (start or level.strict):
             names = level.spawn_classes[number]
             faction = level.seats.get(owner, {}).get("faction")
-            start = is_start_trigger(level, level.spawn_triggers[number])
             sources.append(("%sspawn %s of seat %d at %d,%d (%s)" % (
                 "start " if start else "", trigger, owner, x, y, " ".join(names)), (x, y),
                 classes_moves(movement, names, faction)))
@@ -651,7 +673,8 @@ def check_enemy_distance(level, seat_id, raid_default=None, movement=None):
     """Check how close enemies are to the seat's heart; return (reasons, shortest distance).
     raid_default is RaidCountdownSeconds for a level whose raid countdown is "-"; movement
     is the table of load_movement (None: read from the repository). Each source walks the
-    water and lava tiles its classes can walk, on the walk path and on the dig path."""
+    water and lava tiles its classes can walk on the walk path, and on a strict level also on
+    the dig path (elsewhere the dig path treats water and lava as walls)."""
     walkable, passable, _ = build_grids(level)
     hearts = heart_tiles(level, seat_id)
     walks = {}
@@ -663,7 +686,8 @@ def check_enemy_distance(level, seat_id, raid_default=None, movement=None):
         if moves not in walks:
             walks[moves] = bfs(hearts, with_liquids(level, walkable, moves), level.width,
                                level.height)
-            digs[moves] = bfs(hearts, with_liquids(level, passable, moves), level.width,
+            dig_moves = moves if level.strict else (False, False)
+            digs[moves] = bfs(hearts, with_liquids(level, passable, dig_moves), level.width,
                               level.height)
         walk = walks[moves]
         if pos in walk:
@@ -837,15 +861,18 @@ def safe_zone(level, seat_id, radius, moves=(False, False)):
 
 
 def check_safe_zone(level, seat_id, radius, movement=None):
-    """Returns (violations, portal_text); violations are (kind, text) tuples. Every enemy is
-    tested in the zone of its own water and lava movement (movement: the table of
-    load_movement, None: read from the repository)."""
+    """Returns (violations, portal_text); violations are (kind, text) tuples. On a strict level
+    every enemy is tested in the zone of its own water and lava movement (movement: the table
+    of load_movement, None: read from the repository); on any other level water and lava
+    block the zone for every enemy."""
     if movement is None:
         movement = load_movement(repo_root())
     zones = {}
 
     def zone_for(moves):
         """The safe zone for an enemy with the given (walks water, walks lava)."""
+        if not level.strict:
+            moves = (False, False)
         if moves not in zones:
             zones[moves] = safe_zone(level, seat_id, radius, moves)
         return zones[moves][0]
@@ -1139,11 +1166,21 @@ def check_portal_start(level, seat_id, expected, raid_default=None, movement=Non
         return owner in level.seats and owner != seat_id and owner != 0 \
             and level.seats[owner].get("teamId") != team
 
-    # every spawn of another team or of seat 0 is a source of rule 1 already, whatever its trigger
+    # on a strict level every spawn of another team or of seat 0 is a source of rule 1 already,
+    # whatever its trigger; elsewhere the spawns of triggers that wait only for time are added
     sources = list(enemy_sources(level, seat_id, raid_default, movement))
+    if not level.strict:
+        for number, (trigger, owner, x, y, _) in enumerate(level.spawns):
+            if is_start_enemy(level, seat_id, owner) \
+                    and not is_start_trigger(level, level.spawn_triggers[number]) \
+                    and is_time_trigger(level, level.spawn_triggers[number]):
+                faction = level.seats.get(owner, {}).get("faction")
+                sources.append(("spawn %s of seat %d at %d,%d" % (trigger, owner, x, y), (x, y),
+                                classes_moves(movement, level.spawn_classes[number], faction)))
+    # the keeper walks the water and lava of its faction's classes only on a strict level
     keeper_faction = level.seats[seat_id].get("faction")
     keeper_moves = classes_moves(movement, faction_classes(movement, keeper_faction),
-                                 keeper_faction)
+                                 keeper_faction) if level.strict else (False, False)
     keeper_walk = with_liquids(level, walkable, keeper_moves)
 
     def allowed_for(moves, base):
@@ -1238,16 +1275,23 @@ def check_portal_start(level, seat_id, expected, raid_default=None, movement=Non
     return reasons, text
 
 
+def is_strict_level(path):
+    """True when the level file is one of STRICT_LEVELS (measured by the stricter wing 1 rules)."""
+    return os.path.basename(path) in STRICT_LEVELS
+
+
 def check_level(path, campaign_index, radius=SAFE_RADIUS, full=False, raid_default=None,
-                movement=None):
+                movement=None, strict=None):
     """Returns (status, reasons, numbers, violations). raid_default is RaidCountdownSeconds
     for a raid countdown "-" (None: read from config/global.cfg of the repository);
-    movement is the water and lava table of load_movement (None: read from the repository)."""
+    movement is the water and lava table of load_movement (None: read from the repository).
+    strict selects the stricter wing 1 measurement (None: by the file name, STRICT_LEVELS)."""
     if raid_default is None:
         raid_default = default_raid_countdown(repo_root())
     level = parse_level(path)
     if level is None:
         return "SKIP", ["no tiles"], "", []
+    level.strict = is_strict_level(path) if strict is None else strict
     seat_id = human_seat(level)
     safe_seats = [i for i in player_seats(level) if heart_tiles(level, i)]
     if not safe_seats:
@@ -1507,9 +1551,9 @@ def self_test():
         synthetic_level(sparse_ok, 60, 4, 1, False, portal_x=70, spawn_x=30, omit_dirt=True)
         synthetic_level(sparse_rock, 60, 4, 1, False, rock_wall_x=66, spawn_x=70,
                         omit_dirt=True)
-        # Rule 3 passes water and lava by the movement of the tested enemy: a column of water
-        # keeps no Knight out of the zone, a column of lava keeps the Knight out but not a
-        # CaveHornet.
+        # Rule 3 on a strict level passes water and lava by the movement of the tested enemy: a
+        # column of water keeps no Knight out of the zone, a column of lava keeps the Knight out
+        # but not a CaveHornet. On any other level both columns keep every enemy out (as before).
         safe_water = os.path.join(directory, "safe_water.level")
         safe_lava = os.path.join(directory, "safe_lava.level")
         safe_lava_hornet = os.path.join(directory, "safe_lava_hornet.level")
@@ -1523,9 +1567,7 @@ def self_test():
                         (touching, 5, "FAIL"), (safe_ok, 5, "PASS"), (safe_far, 5, "PASS"),
                         (safe_spawn, 5, "FAIL"), (safe_trap, 5, "FAIL"), (safe_rock, 5, "PASS"),
                         (safe_neutral, 5, "PASS"), (sparse_spawn, 5, "FAIL"),
-                        (sparse_ok, 5, "PASS"), (sparse_rock, 5, "PASS"),
-                        (safe_water, 5, "FAIL"), (safe_lava, 5, "PASS"),
-                        (safe_lava_hornet, 5, "FAIL")]
+                        (sparse_ok, 5, "PASS"), (sparse_rock, 5, "PASS")]
         ok = True
         for path, index, expected in expectations:
             status, reasons, numbers, _ = check_level(path, index, movement=SELF_TEST_MOVEMENT)
@@ -1552,10 +1594,27 @@ def self_test():
         status, reasons, _, _ = check_level(sparse_spawn, 5, movement=SELF_TEST_MOVEMENT)
         if not any("enemy spawn" in r for r in reasons):
             ok = False
-        for path in (safe_water, safe_lava_hornet):
-            status, reasons, _, _ = check_level(path, 5, movement=SELF_TEST_MOVEMENT)
-            if not any("enemy spawn" in r for r in reasons):
-                ok = False
+        # (path, expected status on a strict level, expected status on any other level)
+        zone_cases = [(safe_water, "FAIL", "PASS"), (safe_lava, "PASS", "PASS"),
+                      (safe_lava_hornet, "FAIL", "PASS")]
+        for path, expected_strict, expected_main in zone_cases:
+            for strict, expected in ((True, expected_strict), (False, expected_main)):
+                status, reasons, _, _ = check_level(path, 5, movement=SELF_TEST_MOVEMENT,
+                                                    strict=strict)
+                print("%s (expected %s, %s) %s | %s" % (
+                    status, expected, "strict" if strict else "main", os.path.basename(path),
+                    "; ".join(reasons)))
+                if status != expected:
+                    ok = False
+                if expected == "FAIL" and not any("enemy spawn" in r for r in reasons):
+                    ok = False
+        # the strict measurement is chosen by the file name: the wing 1 levels only
+        if not (is_strict_level(os.path.join("wing1", "Brackenford.level"))
+                and is_strict_level("Mossgate.level")
+                and not is_strict_level(os.path.join("wing3", "CrowshotGallery.level"))
+                and not is_strict_level("safe_water.level")):
+            print("FAIL strict level selection")
+            ok = False
         # The Moreya gate in gate mode is no enemy source at the start; anything else that
         # walks to the heart still is: a gate with waves, a raid without countdown, a wave
         # portal without [Raid] section or apart from its Gate tile, a creature on the path.
@@ -1591,9 +1650,11 @@ def self_test():
         if not any("wave portal of seat 2" in r for r in reasons):
             ok = False
         # Water and lava are walked per class (Knight: water only, CaveHornet: water and
-        # lava), the neutral seat 0 is an enemy, and the spawn of every trigger is a source:
-        # a "time 0" one as "start spawn", a later or region one as "spawn". Each case:
-        # (name, options, expected status, text the walk reason must contain or None).
+        # lava), the neutral seat 0 is an enemy, and on a strict level the spawn of every
+        # trigger is a source: a "time 0" one as "start spawn", a later or region one as
+        # "spawn". Each case: (name, options, expected status, text the walk reason must
+        # contain or None) on a strict level; every case also runs on a non-strict level with
+        # the same expectation, except those of main_walk (only start spawns count there).
         corridor = {"enemy_x": 40, "corridor_to": 40}
         start = {"enemy_x": 70, "corridor_to": 40, "spawn_x": 40}
         walk_cases = [
@@ -1628,29 +1689,42 @@ def self_test():
              "spawn ambush of seat 2 at 40,10 (Knight)"),
             ("later_spawn_lava", dict(start, spawn_time=5, liquid_x=30, liquid_type=TILE_LAVA),
              "PASS", None)]
-        for name, options, expected, text in walk_cases:
+        main_walk = {"later_spawn": ("PASS", None), "region_spawn": ("PASS", None),
+                     "later_spawn_water": ("PASS", None)}
+        for name, options, expected_strict, text_strict in walk_cases:
             path = os.path.join(directory, name + ".level")
             synthetic_level(path, 14, options.pop("enemy_x"), 1, False, **options)
-            status, reasons, numbers, _ = check_level(path, 5, movement=SELF_TEST_MOVEMENT)
-            print("%s (expected %s) %s | %s" % (status, expected, name, "; ".join(reasons)))
-            if status != expected:
-                ok = False
-            if text is not None and not any("walk to the heart" in r and text in r
-                                            for r in reasons):
-                ok = False
-        # shortest_dig_path crosses a full column of the liquid the source walks (heart edge
-        # at x 16, Knight at x 40: 24 tiles, fixed) and stops at one it does not walk or rock.
-        dig_cases = [("dig_water", TILE_WATER, "shortest_dig_path=24 "),
-                     ("dig_lava", TILE_LAVA, "shortest_dig_path=none "),
-                     ("dig_rock", TILE_ROCK, "shortest_dig_path=none ")]
-        for name, wall_type, text in dig_cases:
+            expected_main, text_main = main_walk.get(name, (expected_strict, text_strict))
+            for strict, expected, text in ((True, expected_strict, text_strict),
+                                           (False, expected_main, text_main)):
+                status, reasons, numbers, _ = check_level(path, 5, movement=SELF_TEST_MOVEMENT,
+                                                          strict=strict)
+                print("%s (expected %s, %s) %s | %s" % (status, expected,
+                                                        "strict" if strict else "main", name,
+                                                        "; ".join(reasons)))
+                if status != expected:
+                    ok = False
+                if text is not None and not any("walk to the heart" in r and text in r
+                                                for r in reasons):
+                    ok = False
+        # shortest_dig_path on a strict level crosses a full column of the liquid the source
+        # walks (heart edge at x 16, Knight at x 40: 24 tiles, fixed) and stops at one it does
+        # not walk or rock; on any other level every liquid column stops it (none). Each case:
+        # (name, column type, text on a strict level, text on any other level).
+        dig_cases = [("dig_water", TILE_WATER, "shortest_dig_path=24 ", "shortest_dig_path=none "),
+                     ("dig_lava", TILE_LAVA, "shortest_dig_path=none ", "shortest_dig_path=none "),
+                     ("dig_rock", TILE_ROCK, "shortest_dig_path=none ", "shortest_dig_path=none ")]
+        for name, wall_type, text_strict, text_main in dig_cases:
             path = os.path.join(directory, name + ".level")
             synthetic_level(path, 14, 40, 1, False, rock_wall_x=30, wall_type=wall_type)
-            status, reasons, numbers, _ = check_level(path, 5, movement=SELF_TEST_MOVEMENT)
-            print("%s (expected PASS, %s) %s | %s | %s" % (status, text.strip(), name, numbers,
-                                                            "; ".join(reasons)))
-            if status != "PASS" or text not in numbers:
-                ok = False
+            for strict, text in ((True, text_strict), (False, text_main)):
+                status, reasons, numbers, _ = check_level(path, 5, movement=SELF_TEST_MOVEMENT,
+                                                          strict=strict)
+                print("%s (expected PASS, %s, %s) %s | %s | %s" % (
+                    status, text.strip(), "strict" if strict else "main", name, numbers,
+                    "; ".join(reasons)))
+                if status != "PASS" or text not in numbers:
+                    ok = False
         ok = portal_start_self_test(directory) and ok
         print("self-test %s" % ("passed" if ok else "FAILED"))
         return 0 if ok else 1
@@ -1675,8 +1749,9 @@ def portal_start_self_test(directory):
     sealed level passes; an enemy on an open corridor to the heart, an enemy pocket that the
     portal touches, an enemy trap on the portal, a spawn of a time trigger at the heart, a
     missing portal, a blocked fighter, a wrong expected portal tile or dig count and a tunneller
-    behind dirt fail; the same tunneller behind a rock wall passes. A water tile on the way is
-    walked by the keeper's classes, not dug: 6 tiles to dig instead of 7."""
+    behind dirt fail; the same tunneller behind a rock wall passes (all measured as on a
+    non-strict level). On a strict level a water tile on the way is walked by the keeper's
+    classes, not dug: 6 tiles to dig instead of 7; on any other level it stays 7."""
     ok = True
     expected = ((60, 9), 7, ("Goblin",))
     cases = [
@@ -1699,15 +1774,18 @@ def portal_start_self_test(directory):
          "tunneller(s) dig into"),
         ("portal_tunneller_rock", {"portal_x": 60, "enemy_class": "Digger", "rock_wall_x": 20},
          None, expected, "PASS", None),
-        ("portal_water", {"portal_x": 60, "liquid_x": 55}, None, ((60, 9), 6, ("Goblin",)),
-         "PASS", None),
-        ("portal_water_dug", {"portal_x": 60, "liquid_x": 55}, None, expected, "FAIL",
-         "expected 7")]
+        ("portal_water", {"portal_x": 60, "liquid_x": 55, "strict": True}, None,
+         ((60, 9), 6, ("Goblin",)), "PASS", None),
+        ("portal_water_dug", {"portal_x": 60, "liquid_x": 55, "strict": True}, None, expected,
+         "FAIL", "expected 7"),
+        ("portal_water_main", {"portal_x": 60, "liquid_x": 55}, None, expected, "PASS", None)]
     for name, options, block, wanted, status_expected, text in cases:
         path = os.path.join(directory, name + ".level")
         enemy_x = options.pop("enemy_x", 4)
+        strict = options.pop("strict", False)
         synthetic_level(path, 50, enemy_x, 1, False, **options)
         level = parse_level(path)
+        level.strict = strict
         level.seats[1]["faction"] = "Keeper"
         if block is not None:
             level.blocked.append((1, block))
