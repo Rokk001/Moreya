@@ -45,6 +45,14 @@ int32_t Skill::getNeededSkillPoints(uint32_t level) const
         ConfigManager::getSingleton().getResearchCostFactorLevel3()));
 }
 
+//! \brief Returns the research cost of the level; a withheld free level one costs the full tier cost.
+int32_t Skill::getNeededSkillPoints(uint32_t level, bool levelOneWithheld) const
+{
+    if((level <= 1) && levelOneWithheld)
+        return mNeededSkillPoints;
+    return getNeededSkillPoints(level);
+}
+
 bool Skill::canBeSkilled(const std::vector<SkillType>& skillsDone, const std::vector<SkillType>& skillsNotAllowed) const
 {
     for(const Skill* skill : mSkillDepends)

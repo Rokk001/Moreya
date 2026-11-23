@@ -4,7 +4,8 @@
 Every story level of the wing packages must have the Moreya gate at its fixed tile (the central tile of the only hero
 portal room, owned by the raid seat), a [Raid] section whose groups have the fixed sizes of the structure table, the
 named leader(s) of the structure table, members with a fixed skill template each, the attacked keeper as target, a
-treasury of that keeper, a main goal completed by "Cond raid defeated", exactly its fixed main goals and victory
+treasury of that keeper (on Brackenford, Coldwell and Ravensledge: no keeper room besides the heart, the former room
+tiles claimable floor, a treasury buildable from the start that the raid plunders by room type), a main goal completed by "Cond raid defeated", exactly its fixed main goals and victory
 triggers, every victory requiring "Cond raid defeated" and the reached state of every main goal (RA9), and no more creatures or spawns for the keeper than the level had before the rebuild. Heartstone shards are
 found (brought home) in exactly Coldwell, Greywater and Saltmere; the stone to a bonus level is found in exactly the
 first story level of its wing. Bonus levels have no raid, no shard, no discovery and no kept minion.
@@ -119,8 +120,20 @@ TEMPLATES = frozenset((
     "Marksman", "Hunter", "Skirmisher", "Destroyer", "Healer", "Hexer",
 ))
 
+# Wing 1 rooms plan WR9: on these story maps the keeper starts with no room besides the dungeon heart and builds every
+# treasury himself; the raid plunders the treasuries he built (MAP2). Fixed per map: the tiles of the keeper rooms
+# removed from the map, which are claimable floor now (dug, owned by no seat), counted once on feature/raid-campaign-r17
+# (TreasuryRaidRoute on all three maps, Prison1 on Ravensledge).
+BUILT_TREASURY_MAPS = {
+    "Brackenford": tuple((x, y) for x in range(10, 13) for y in range(31, 34)),
+    "Coldwell": tuple((x, y) for x in range(15, 18) for y in range(10, 13)),
+    "Ravensledge": tuple((x, y) for x in range(41, 44) for y in range(56, 59)) +
+    tuple((x, y) for x in range(43, 46) for y in range(52, 54)),
+}
+
 PORTAL_WAVE_ROOM = 10
 TREASURY_ROOM = 3
+DUNGEON_TEMPLE_ROOM = 1
 RAID_ACTIONS = ("raidmember", "raidleader", "raidopen", "raidcountdown")
 
 
@@ -316,6 +329,46 @@ def check_raid(name, text, human, gate, sizes, fixed_leaders, leader_names):
     return raid_seat
 
 
+def seat_skills(text, human, block):
+    """Returns the skill names of the section [block] of the seat of the human keeper."""
+    for seat_block in re.findall(r"\[Seat\](.*?)\[/Seat\]", section(text, "Seats") or "", re.S):
+        if re.search(r"^seatId\s+%d\s*$" % human, seat_block, re.M):
+            found = re.search(r"\[%s\](.*?)\[/%s\]" % (block, block), seat_block, re.S)
+            return set(found.group(1).split()) if found else set()
+    return set()
+
+
+def check_built_treasury(name, text, human, tiles):
+    """WR9: the keeper owns no room besides the dungeon heart, the tiles of the removed keeper rooms are claimable
+    floor, the keeper can build a treasury from the start, and the raid plunders the treasuries of the keeper by room
+    type, so it plunders the treasuries he built (MAP2)."""
+    keeper_rooms = [(kind, room) for kind, room, seat, _ in rooms(text) if seat == human]
+    check(keeper_rooms == [(DUNGEON_TEMPLE_ROOM, "DungeonTemple1")],
+          name + ": the keeper must own no room besides the dungeon heart at the start, found %s" % keeper_rooms)
+    listed = {}
+    for fields in rows(section(text, "Tiles")):
+        if len(fields) >= 4 and fields[0].isdigit() and fields[1].isdigit():
+            listed[int(fields[0]), int(fields[1])] = fields[2:]
+    for x, y in tiles:
+        check(listed.get((x, y)) == ["1", "0"],
+              name + ": the former keeper room tile %d,%d must be claimable floor (dug, no owner), found %s"
+              % (x, y, listed.get((x, y))))
+    room_tiles = set(tile for _, _, _, fields in rooms(text) for tile in fields)
+    check(not (room_tiles & set(tiles)), name + ": a former keeper room tile still belongs to a room")
+    skills = read("config/skills.cfg")
+    free = skills[skills.index("[FreeLevelOne]"):skills.index("[/FreeLevelOne]")].split()
+    check("roomTreasury" not in seat_skills(text, human, "SkillNotAllowed") and
+          "roomTreasury" not in seat_skills(text, human, "SkillNotFree") and
+          ("roomTreasury" in free or "roomTreasury" in seat_skills(text, human, "SkillDone")),
+          name + ": the keeper must be able to build a treasury from the start")
+    manager = read("source/game/RaidManager.cpp")
+    start = manager.index("std::vector<Room*> RaidManager::plunderableRooms() const")
+    plunderable = manager[start:manager.index("\n}\n", start)]
+    check("RoomType::treasury" in plunderable and "mGameMap.getRoomsByType(type)" in plunderable and
+          "getName()" not in plunderable,
+          name + ": the raid must plunder every treasury of the keeper by its room type, the built ones included")
+
+
 def check_victory(name, text, human):
     """Checks the main goal 'raid defeated' and that every victory of the keeper requires the defeated raid and the
     reached state of every main goal of the level (RA9), with the fixed main goals and victory triggers."""
@@ -365,8 +418,11 @@ def main():
         if human is None:
             continue
         check_raid(name, text, human, gate, sizes, fixed_leaders, leader_names)
-        check(any(room[0] == TREASURY_ROOM and room[2] == human for room in rooms(text)),
-              name + ": the keeper needs a treasury the raid can plunder")
+        if name in BUILT_TREASURY_MAPS:
+            check_built_treasury(name, text, human, BUILT_TREASURY_MAPS[name])
+        else:
+            check(any(room[0] == TREASURY_ROOM and room[2] == human for room in rooms(text)),
+                  name + ": the keeper needs a treasury the raid can plunder")
         check_victory(name, text, human)
         placed, spawned = keeper_creatures(text, human)
         before = KEEPER_BEFORE[name]

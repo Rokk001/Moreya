@@ -1383,8 +1383,31 @@ bool Seat::importSeatFromStream(std::istream& is)
         str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
         str == "[SpellCooldowns]" || str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]" ||
         str == "[ResearchRemainder]" || str == "[WorkerJobs]" || str == "[PleasureRoomSettings]" || str == "[RevealedTiles]" ||
-        str == "[HandCooldown]")
+        str == "[HandCooldown]" || str == "[SkillNotFree]")
     {
+    // Optional: the free level one skills the level withholds from the seat; older levels and saves have none
+    if(str == "[SkillNotFree]")
+    {
+        while(true)
+        {
+            if(!(is >> str))
+            {
+                OD_LOG_INF("WARNING: [SkillNotFree] of seat id=" + Helper::toString(mId) + " has no end");
+                return false;
+            }
+            if(str == "[/SkillNotFree]")
+                break;
+
+            const SkillType type = Skills::fromString(str);
+            if(type == SkillType::nullSkillType)
+                return false;
+            if(std::find(mSkillNotFree.begin(), mSkillNotFree.end(), type) == mSkillNotFree.end())
+                mSkillNotFree.push_back(type);
+        }
+        if(!(is >> str))
+            return false;
+        continue;
+    }
     // Optional: the seconds left of the hand cooldown of a campaign level (HL1); older saves have no cooldown
     if(str == "[HandCooldown]")
     {
@@ -1883,6 +1906,15 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     }
     os << "[/SkillDone]" << std::endl;
 
+    // The withheld free level one skills are written only when the level has any, like the levels that list them
+    if(!mSkillNotFree.empty())
+    {
+        os << "[SkillNotFree]" << std::endl;
+        for(SkillType type : mSkillNotFree)
+            os << Skills::toString(type) << std::endl;
+        os << "[/SkillNotFree]" << std::endl;
+    }
+
     os << "[ResearchProgress]\n" << mSkillPoints << "\t" << mSkillDone.size() << "\n";
     for(SkillType type : mSkillDone)
         os << Skills::toString(type) << "\t" << getSkillLevel(type) << "\n";
@@ -2112,6 +2144,22 @@ bool Seat::isSkillNotAllowed(SkillType type) const
     return std::find(mSkillNotAllowed.begin(), mSkillNotAllowed.end(), type) != mSkillNotAllowed.end();
 }
 
+//! \brief Returns true if the level withholds the free level one start of the skill ([SkillNotFree])
+bool Seat::isSkillNotFree(SkillType type) const
+{
+    return std::find(mSkillNotFree.begin(), mSkillNotFree.end(), type) != mSkillNotFree.end();
+}
+
+//! \brief Research points needed to raise the skill to the given level; a withheld free level one skill pays its
+//! full level 1 cost. Returns 0 for an unknown skill.
+int32_t Seat::getSkillCost(SkillType type, uint32_t level) const
+{
+    const Skill* skill = SkillManager::getSkill(type);
+    if(skill == nullptr)
+        return 0;
+    return skill->getNeededSkillPoints(level, isSkillNotFree(type));
+}
+
 void Seat::setSkillAvailability(SkillType type, bool allowed, bool done)
 {
     mSkillDone.erase(std::remove(mSkillDone.begin(), mSkillDone.end(), type), mSkillDone.end());
@@ -2222,7 +2270,7 @@ void Seat::addFreeLevelOneSkills(std::vector<SkillType>& skills) const
     {
         const SkillType type = static_cast<SkillType>(index);
         const Skill* skill = SkillManager::getSkill(type);
-        if((skill == nullptr) || !skill->isFreeLevelOne() || isSkillNotAllowed(type))
+        if((skill == nullptr) || !skill->isFreeLevelOne() || isSkillNotAllowed(type) || isSkillNotFree(type))
             continue;
         if(std::find(skills.begin(), skills.end(), type) != skills.end())
             continue;
@@ -2371,7 +2419,7 @@ void Seat::addSkillPoints(int32_t points)
     while(mCurrentSkill != nullptr)
     {
         const SkillType type = mCurrentSkill->getType();
-        const int32_t cost = mCurrentSkill->getNeededSkillPoints(getSkillLevel(type) + 1);
+        const int32_t cost = getSkillCost(type, getSkillLevel(type) + 1);
         if(mSkillPoints < cost)
         {
             mCurrentSkillType = type;
@@ -2459,7 +2507,7 @@ void Seat::setNextSkill(SkillType skilledType)
     }
 
     mCurrentSkillType = mCurrentSkill->getType();
-    const int32_t cost = mCurrentSkill->getNeededSkillPoints(getSkillLevel(skillType) + 1);
+    const int32_t cost = getSkillCost(skillType, getSkillLevel(skillType) + 1);
     mCurrentSkillProgress = cost > 0 ? std::min(1.0f, static_cast<float>(mSkillPoints) / cost) : 0.0f;
 }
 
