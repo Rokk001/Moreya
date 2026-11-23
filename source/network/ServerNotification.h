@@ -257,7 +257,13 @@ enum class ServerNotificationType
     //! \brief The server does not start the game the receiving client asked for with seatConfigurationSet:
     //! + int32_t reason (StartGameRefusal::Reason). Sent only to the client that asked.
     //! Appended after setHandCooldown so that no existing numeric value changes.
-    startGameRefused
+    startGameRefused,
+    //! The skill bar of the possession view, sent to the human player that possesses a creature when the
+    //! possession starts, every turn and after a skill key: + uint32_t count (at most PossessionBarRules::MAX_SLOTS),
+    //! then per key slot string icon image, double turns of recovery left, double turns of the whole recovery,
+    //! bool usable (the creature has the mana). Appended after startGameRefused so that no existing numeric value
+    //! changes.
+    possessionSkillBar
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

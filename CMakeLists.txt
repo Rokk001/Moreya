@@ -529,6 +529,7 @@ set(OD_SOURCEFILES
     ${SRC}/modes/MenuModeReplay.cpp
     ${SRC}/modes/MenuModeSkirmish.cpp
     ${SRC}/modes/ModeManager.cpp
+    ${SRC}/modes/PossessionBarRules.cpp
     ${SRC}/modes/SFMLToOISListener.cpp
     ${SRC}/modes/SettingsWindow.cpp
 

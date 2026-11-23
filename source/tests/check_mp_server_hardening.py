@@ -157,7 +157,7 @@ check("LAST_REASON = Reason::wrongState;" in REFUSAL, "LAST_REASON is the last r
 notification_body = re.search(r"enum class ServerNotificationType\s*\{(.*?)\};", SERVER_NOTIFICATION_H, re.S).group(1)
 notification_names = [re.sub(r"//.*", "", line).strip().rstrip(",") for line in notification_body.split("\n")]
 notification_names = [name for name in notification_names if name]
-check(notification_names[-2:] == ["setHandCooldown", "startGameRefused"],
+check(notification_names[-3:] == ["setHandCooldown", "startGameRefused", "possessionSkillBar"],
       "startGameRefused is appended last: " + repr(notification_names[-2:]))
 check('WIRE_SCHEMA_SUFFIX = " / wire-6";' in PACKET_H, "the wire suffix is wire-6 since the room package lists")
 check("void sendStartGameRefused(ODSocketClient* clientSocket, StartGameRefusal::Reason reason);" in SERVER_H,

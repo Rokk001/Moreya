@@ -64,6 +64,7 @@
 #include <OgreRenderSystem.h>
 #include <OgreRoot.h>
 #include <OgreSceneManager.h>
+#include <OgreStringConverter.h>
 #include <OgreViewport.h>
 #include <Overlay/OgreOverlaySystem.h>
 
@@ -179,6 +180,14 @@ void ODFrameListener::windowResized(Ogre::RenderWindow* rw)
             static_cast<float> (width), static_cast<float> (height)));
 }
 
+//! \brief Requests the exit for the X button and keeps the window: destroying it here would take the rendering context
+//! that the shutdown still needs to release meshes, buffers and textures, and the process would end with a crash.
+bool ODFrameListener::windowClosing(Ogre::RenderWindow*)
+{
+    requestExit();
+    return false;
+}
+
 void ODFrameListener::windowClosed(Ogre::RenderWindow*)
 {
     // Stop the render loop: we are about to destroy the mode manager, which
@@ -204,6 +213,18 @@ ODFrameListener::~ODFrameListener()
 void ODFrameListener::requestExit()
 {
     mExitRequested = true;
+}
+
+//! \brief Lets a new Win32 render window send its messages through Ogre's window events, so the X button reaches
+//! windowClosed() and ends the game; Ogre's render windows use the default window procedure unless one is given.
+void ODFrameListener::addWindowEventProcedure(Ogre::NameValuePairList& miscParams)
+{
+#if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
+    miscParams["windowProc"] = Ogre::StringConverter::toString(
+        reinterpret_cast<size_t>(&Ogre::WindowEventUtilities::_WndProc));
+#else
+    (void)miscParams;
+#endif
 }
 
 void ODFrameListener::requestRenderWindowRecreation(
@@ -274,6 +295,8 @@ void ODFrameListener::applyPendingRenderWindowRecreation()
         description.name = "OpenDungeonsLiveSettings" + Helper::toString(++mRenderWindowSequence);
         description.miscParams["title"] = mPrimaryWindow->getName();
         description.miscParams["hidden"] = "true";
+        // The replacement window must also report the X button, like the primary window
+        addWindowEventProcedure(description.miscParams);
         if(!description.useFullScreen && !previousWasFullScreen)
         {
             description.miscParams["left"] = Helper::toString(previousLeft);

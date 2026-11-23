@@ -289,6 +289,26 @@ const std::string POSSESSION_CROSSHAIR_TEXT = "PossessionCrosshair";
 const std::string POSSESSION_CROSSHAIR_SYMBOL = "+";
 const float POSSESSION_CROSSHAIR_HEIGHT_SHARE = 0.04f;
 const float POSSESSION_CROSSHAIR_MIN_HEIGHT = 16.0f;
+//! \brief The windows of the skill bar of the possession view (possession view A): the bar, its stone and iron frame,
+//! the slots (name + slot index) with their recovery and key, and the plate at the right end that names Esc
+const char* const POSSESSION_BAR_WINDOW = "PossessionBar";
+const char* const POSSESSION_BAR_FRAME = "Frame";
+const char* const POSSESSION_BAR_SLOT = "Slot";
+const char* const POSSESSION_BAR_RECOVERY = "Recovery";
+const char* const POSSESSION_BAR_KEY = "Key";
+const char* const POSSESSION_BAR_EXIT_PLATE = "ExitPlate";
+//! \brief Text of the exit plate: Esc is the only way out of the creature
+const char* const POSSESSION_BAR_EXIT_TEXT = "Leave   Esc";
+//! \brief The bar is made of the stone of the keeper's screen, darkened to the black iron of the game bar
+const char* const POSSESSION_BAR_SURFACE = "ODHudSurface/Stone";
+const char* const POSSESSION_BAR_SURFACE_COLOUR = "FF5A5652";
+//! \brief Colour of the key under a slot
+const char* const POSSESSION_BAR_KEY_COLOUR = "tl:FFF9DAB0 tr:FFF9DAB0 bl:FFF9DAB0 br:FFF9DAB0";
+//! \brief The recovery of a slot looks like the recovery of a spell button of the game bar
+const char* const POSSESSION_BAR_RECOVERY_IMAGE = "OpenDungeonsSkin/SelectionBrush";
+const char* const POSSESSION_BAR_RECOVERY_ALPHA = "0.2";
+//! \brief Icon of a slot whose image is not defined
+const char* const POSSESSION_BAR_GENERAL_ICON = "OpenDungeonsIcons/SkillIcon";
 //! \brief Squared length below which the possession movement direction counts as "not moving"
 const float POSSESSION_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
 //! \brief Dot product of the old and the new movement direction below which the direction counts as changed
@@ -5958,6 +5978,7 @@ void GameMode::enterPossessionView()
 
     TextRenderer::getSingleton().addTextBox(POSSESSION_CROSSHAIR_TEXT, POSSESSION_CROSSHAIR_SYMBOL, 0.0f, 0.0f,
         POSSESSION_CROSSHAIR_MIN_HEIGHT, POSSESSION_CROSSHAIR_MIN_HEIGHT, Ogre::ColourValue::White);
+    createPossessionBar();
     refreshPossessionView();
 }
 
@@ -5978,6 +5999,10 @@ void GameMode::refreshPossessionView()
         // The defeat sequence has its own windows, they are never hidden
         if ((child == mDefeatTint) || (child == mDefeatFade) || (child == mDefeatSubtitle) ||
             (child == mDefeatCameraMarker) || (child == mDefeatDebriefing))
+            continue;
+
+        // The skill bar belongs to the possession view
+        if (child == mPossessionBar)
             continue;
 
         child->hide();
@@ -6005,6 +6030,8 @@ void GameMode::refreshPossessionView()
     // A character of the font is about half as wide as it is high
     textRenderer.moveText(POSSESSION_CROSSHAIR_TEXT, (width - crosshairHeight * 0.5f) * 0.5f,
         (height - crosshairHeight) * 0.5f);
+
+    refreshPossessionBar();
 }
 
 //! \brief Ends the possession view: the hidden root windows, the keeper hand, the pointer, the indicators over the
@@ -6029,6 +6056,8 @@ void GameMode::leavePossessionView()
     mPossessionViewCreatureName.clear();
 
     TextRenderer::getSingleton().removeTextBox(POSSESSION_CROSSHAIR_TEXT);
+    destroyPossessionBar();
+    mPossessionBarSlots.clear();
     mModeManager->getInputManager().setPossessionMouseLock(false);
 
     CreatureOverlayStatus::setAllSuppressed(false);
@@ -6041,6 +6070,138 @@ void GameMode::leavePossessionView()
             renderManager.rrToggleHandSelectorVisibility();
         CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
     }
+}
+
+void GameMode::setPossessionSkillBar(const std::vector<PossessionBarRules::Slot>& slots)
+{
+    mPossessionBarSlots = slots;
+    if (mPossessionBarSlots.size() > PossessionBarRules::MAX_SLOTS)
+        mPossessionBarSlots.resize(PossessionBarRules::MAX_SLOTS);
+}
+
+void GameMode::createPossessionBar()
+{
+    destroyPossessionBar();
+
+    CEGUI::WindowManager& windowManager = CEGUI::WindowManager::getSingleton();
+    const CEGUI::URect fullArea(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0), CEGUI::UDim(1, 0));
+    mPossessionBar = windowManager.createWindow("DefaultWindow", POSSESSION_BAR_WINDOW);
+    mPossessionBar->setArea(fullArea);
+    mPossessionBar->setMousePassThroughEnabled(true);
+    mPossessionBar->setRiseOnClickEnabled(false);
+    mRootWindow->addChild(mPossessionBar);
+
+    // The iron bar behind the slots
+    CEGUI::Window* frame = windowManager.createWindow("OD/StaticImage", POSSESSION_BAR_FRAME);
+    frame->setProperty("Image", POSSESSION_BAR_SURFACE);
+    frame->setProperty("ImageColours", POSSESSION_BAR_SURFACE_COLOUR);
+    frame->setProperty("HorzFormatting", "Tiled");
+    frame->setProperty("VertFormatting", "Tiled");
+    frame->setProperty("FrameEnabled", "True");
+    frame->setProperty("BackgroundEnabled", "False");
+    frame->setMousePassThroughEnabled(true);
+    mPossessionBar->addChild(frame);
+
+    // One slot per skill key: the button of the game bar with the skill's icon, its recovery like a spell button and
+    // its key in the lower right corner. The mouse only turns the view, so the slots are not clicked
+    for (uint32_t index = 0; index < PossessionBarRules::MAX_SLOTS; ++index)
+    {
+        CEGUI::Window* slot = windowManager.createWindow("OD/GameTabButton",
+            POSSESSION_BAR_SLOT + Helper::toString(index));
+        slot->setProperty("NormalImage", POSSESSION_BAR_GENERAL_ICON);
+        slot->setMousePassThroughEnabled(true);
+        slot->setVisible(false);
+
+        CEGUI::Window* recovery = windowManager.createWindow("OD/ProgressBar", POSSESSION_BAR_RECOVERY);
+        recovery->setArea(fullArea);
+        recovery->setProperty("VerticalProgress", "True");
+        recovery->setProperty("Alpha", POSSESSION_BAR_RECOVERY_ALPHA);
+        recovery->setProperty("ProgressImage", POSSESSION_BAR_RECOVERY_IMAGE);
+        recovery->setMousePassThroughEnabled(true);
+        recovery->setVisible(false);
+        slot->addChild(recovery);
+
+        CEGUI::Window* key = windowManager.createWindow("OD/StaticText", POSSESSION_BAR_KEY);
+        key->setArea(fullArea);
+        key->setProperty("FrameEnabled", "False");
+        key->setProperty("BackgroundEnabled", "False");
+        key->setProperty("HorzFormatting", "RightAligned");
+        key->setProperty("VertFormatting", "BottomAligned");
+        key->setProperty("TextColours", POSSESSION_BAR_KEY_COLOUR);
+        key->setText(PossessionBarRules::keyLabel(index));
+        key->setMousePassThroughEnabled(true);
+        slot->addChild(key);
+
+        mPossessionBar->addChild(slot);
+    }
+
+    // The plate at the right end tells that Esc leaves the creature
+    CEGUI::Window* plate = windowManager.createWindow("OD/MenuPlate", POSSESSION_BAR_EXIT_PLATE);
+    plate->setText(POSSESSION_BAR_EXIT_TEXT);
+    plate->setMousePassThroughEnabled(true);
+    mPossessionBar->addChild(plate);
+}
+
+void GameMode::refreshPossessionBar()
+{
+    if (mPossessionBar == nullptr)
+        return;
+
+    Ogre::RenderWindow* window = ODFrameListener::getSingleton().getRenderWindow();
+    const float width = static_cast<float>(window->getWidth());
+    const float height = static_cast<float>(window->getHeight());
+    const uint32_t count = static_cast<uint32_t>(mPossessionBarSlots.size());
+    const PossessionBarRules::Layout layout = PossessionBarRules::computeLayout(count, width, height,
+        mModeManager->getGui().getLayoutScale());
+
+    CEGUI::Window* frame = mPossessionBar->getChild(POSSESSION_BAR_FRAME);
+    frame->setArea(CEGUI::URect(CEGUI::UDim(0, layout.mLeft), CEGUI::UDim(0, layout.mTop),
+        CEGUI::UDim(0, layout.mLeft + layout.mSlotsWidth), CEGUI::UDim(0, layout.mTop + layout.mHeight)));
+    frame->setVisible(count > 0);
+
+    CEGUI::ImageManager& imageManager = CEGUI::ImageManager::getSingleton();
+    for (uint32_t index = 0; index < PossessionBarRules::MAX_SLOTS; ++index)
+    {
+        CEGUI::Window* slot = mPossessionBar->getChild(POSSESSION_BAR_SLOT + Helper::toString(index));
+        if (index >= count)
+        {
+            slot->setVisible(false);
+            continue;
+        }
+
+        const PossessionBarRules::Slot& data = mPossessionBarSlots[index];
+        const float left = PossessionBarRules::slotLeft(layout, index);
+        const float top = layout.mTop + layout.mGap;
+        slot->setArea(CEGUI::URect(CEGUI::UDim(0, left), CEGUI::UDim(0, top),
+            CEGUI::UDim(0, left + layout.mSlotSize), CEGUI::UDim(0, top + layout.mSlotSize)));
+        slot->setVisible(true);
+
+        const std::string icon = imageManager.isDefined(data.mIcon) ? data.mIcon :
+            std::string(POSSESSION_BAR_GENERAL_ICON);
+        if (slot->getProperty("NormalImage") != icon)
+            slot->setProperty("NormalImage", icon);
+        // A skill the creature has no mana for is shown like a disabled button of the game bar
+        slot->setEnabled(data.mUsable);
+
+        CEGUI::ProgressBar* recovery = static_cast<CEGUI::ProgressBar*>(slot->getChild(POSSESSION_BAR_RECOVERY));
+        const float share = PossessionBarRules::recoveryShare(data);
+        recovery->setVisible(share > 0.0f);
+        recovery->setProgress(share);
+    }
+
+    CEGUI::Window* plate = mPossessionBar->getChild(POSSESSION_BAR_EXIT_PLATE);
+    const float plateLeft = layout.mLeft + layout.mSlotsWidth + layout.mGap;
+    plate->setArea(CEGUI::URect(CEGUI::UDim(0, plateLeft), CEGUI::UDim(0, layout.mTop),
+        CEGUI::UDim(0, plateLeft + layout.mPlateWidth), CEGUI::UDim(0, layout.mTop + layout.mHeight)));
+}
+
+void GameMode::destroyPossessionBar()
+{
+    if (mPossessionBar == nullptr)
+        return;
+
+    CEGUI::WindowManager::getSingleton().destroyWindow(mPossessionBar);
+    mPossessionBar = nullptr;
 }
 
 //! \brief Re-evaluates the selected action and its contextual item or terrain information.

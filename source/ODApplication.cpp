@@ -80,6 +80,35 @@
 #include <exception>
 #include <pybind11/embed.h>
 
+//! \brief Catches the X button of the primary window while the game is still loading, before the frame listener exists.
+//! The window is only hidden and kept: Ogre would otherwise destroy it together with the rendering context that the
+//! rest of the loading and the shutdown need. The main loop then ends the game on the path of the quit button.
+class StartupWindowCloseListener : public Ogre::WindowEventListener
+{
+public:
+    StartupWindowCloseListener() :
+        mCloseRequested(false)
+    {
+    }
+
+    //! \brief Hides the window, remembers the request and returns false so that Ogre keeps the window.
+    virtual bool windowClosing(Ogre::RenderWindow* renderWindow) override
+    {
+        mCloseRequested = true;
+        renderWindow->setHidden(true);
+        return false;
+    }
+
+    //! \brief True once the X button of the window has been pressed.
+    bool isCloseRequested() const
+    {
+        return mCloseRequested;
+    }
+
+private:
+    bool mCloseRequested;
+};
+
 //! \brief Starts the game: resources, renderer, GUI, the text boxes (debug messages, pointer text, hand cooldown) and
 //! the main loop, or one of the headless tools selected by the options.
 void ODApplication::startGame(boost::program_options::variables_map& options)
@@ -250,11 +279,16 @@ void ODApplication::startClient()
     const bool fullscreen = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes" && sf::VideoMode({w, h}).isValid();
 #else
     const bool fullscreen = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes";
+    // The X button must reach ODFrameListener::windowClosed(), otherwise the game runs on without a window
+    ODFrameListener::addWindowEventProcedure(misc);
 #endif
     OD_LOG_INF("Creating window: with resolution " + Helper::toString(w) + " " + Helper::toString(h));
     Ogre::RenderWindow* renderWindow = ogreRoot.createRenderWindow(windowTitle, w, h,
         fullscreen, &misc);
     Ogre::WindowEventUtilities::_addRenderWindow(renderWindow);
+    // The loading screen pumps the window messages; the X button must not destroy the window while the game loads
+    StartupWindowCloseListener startupCloseListener;
+    Ogre::WindowEventUtilities::addWindowEventListener(renderWindow, &startupCloseListener);
 
     // The loading picture and its existing text font precede the first draw.
     Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
@@ -394,6 +428,9 @@ void ODApplication::startClient()
             }
             if(RunLevelTest::isFinished())
                 frameListener.requestExit();
+            // The X button was pressed while the game was still loading
+            if(startupCloseListener.isCloseRequested())
+                frameListener.requestExit();
             if(menuTestElapsed(menuTestStart, menuTestSeconds))
                 frameListener.requestExit();
             // The window close handler of the frame listener also requests the exit and drops the mode manager: a frame
@@ -420,6 +457,9 @@ void ODApplication::startClient()
             Ogre::WindowEventUtilities::messagePump();
 
             if(RunLevelTest::isFinished())
+                frameListener.requestExit();
+            // The X button was pressed while the game was still loading
+            if(startupCloseListener.isCloseRequested())
                 frameListener.requestExit();
             if(menuTestElapsed(menuTestStart, menuTestSeconds))
                 frameListener.requestExit();
@@ -460,6 +500,7 @@ void ODApplication::startClient()
     {
         clientError = std::current_exception();
     }
+    Ogre::WindowEventUtilities::removeWindowEventListener(renderWindow, &startupCloseListener);
 #if OGRE_VERSION > 0x10A00
     Ogre::MaterialManager::getSingleton().removeListener(sgListener);
     delete sgListener;
