@@ -8,6 +8,13 @@ screen, their submeshes get own materials:
 
     python tools/menu_rename_mesh_materials.py <mesh> <old material>=<new material> [...]
 
+The shipped menu meshes were renamed with (one command per mesh):
+
+    models/MenuMoreyaForecourt.mesh MenuStone=MenuRuinStone MenuChippedStone=MenuRuinChippedStone
+        MenuCarvedStone=MenuRuinCarvedStone MenuWetStone=MenuRuinPaving
+    models/MenuMoreyaPortal.mesh MenuChippedStone=MenuRuinChippedStone MenuCarvedStone=MenuRuinCarvedStone
+    models/MenuHallForecourtArch.mesh MenuChippedStone=MenuRuinChippedStone MenuCarvedStone=MenuRuinCarvedStone
+
 Only the material name at the start of each submesh chunk (0x4000) is replaced; the lengths of that chunk and of the
 mesh chunk (0x3000) grow or shrink by the difference. Names not listed stay. The file is rewritten in place.
 """
