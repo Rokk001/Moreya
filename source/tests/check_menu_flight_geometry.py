@@ -2,7 +2,8 @@
 """Checks that no main menu camera flight passes through scene geometry (no compile needed).
 
 The flights of config/mainmenuscene.cfg (outward routes and their reversed return routes)
-are sampled the same way RenderSceneMenu::samplePath does (Catmull-Rom through the waypoints)
+are sampled the same way RenderSceneMenu::samplePath does (Catmull-Rom through the waypoints);
+a FlightFrom route starts at its start place and returns through it to the overview
 and every sample is tested against the triangles of every AddEntity mesh at its configured
 position. A sample closer than CLEARANCE to a triangle fails the check.
 """
@@ -23,6 +24,8 @@ DECAL_MATERIALS = ("MenuEmberCrack", "MenuLavaCrack", "MenuGateEyes")
 SAMPLES_PER_SEGMENT = 80
 #: Triangles narrower than this many tiles are crack lines, not solid geometry.
 MIN_SLIVER_HEIGHT = 0.05
+#: Start places of the FlightFrom routes of the configuration ({flight: place}), filled by parse_config.
+FLIGHT_STARTS = {}
 
 
 def chunks(data, offset, end):
@@ -113,20 +116,35 @@ def parse_config():
             poses[words[1]] = np.array([float(v) for v in words[2:5]])
         elif words[0] == "Flight":
             flights[words[1]] = words[3:]
+        elif words[0] == "FlightFrom":
+            flights[words[1]] = words[4:]
+            FLIGHT_STARTS[words[1]] = words[2]
     return entities, poses, flights
 
 
+def outward_chain(name, flights):
+    """Returns the pose names from the overview to a place, through the start place of a FlightFrom route."""
+    start = FLIGHT_STARTS.get(name)
+    if start is None:
+        return ["overview"] + flights[name]
+    return outward_chain(start, flights) + flights[name]
+
+
 def routes(poses, flights):
-    """Yields (label, list of positions) for each outward flight, return flight and the arrival."""
+    """Yields (label, list of positions) for each outward flight, return flight and the arrival.
+
+    A FlightFrom route flies from its start place; its return runs back through that place to the overview.
+    """
     for name, waypoints in flights.items():
         if name == "overview":
             continue
         if name == "arrival":
             yield name, [poses["arrival"]] + [poses[w] for w in waypoints]
             continue
-        outward = ["overview"] + waypoints
+        chain = outward_chain(name, flights)
+        outward = [FLIGHT_STARTS[name]] + waypoints if name in FLIGHT_STARTS else chain
         yield name + " out", [poses[w] for w in outward]
-        yield name + " back", [poses[w] for w in reversed(outward)]
+        yield name + " back", [poses[w] for w in reversed(chain)]
 
 
 def catmull_rom(points, per_segment):

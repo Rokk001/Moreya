@@ -50,7 +50,8 @@ public:
     //! Used to call the corresponding Gui Sheet.
     void activate() final override;
 
-    //! \brief Fits a visible debriefing after screen or UI-scale changes
+    //! \brief Fits a visible debriefing after screen or UI-scale changes and starts the chosen level once the camera
+    //! has flown into the portal
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
 
     //! \brief Reads the campaign definition and the saved progress from disk.
@@ -72,6 +73,10 @@ private:
     std::vector<CampaignCaveState> mCaveStates;
     //! Level of the open briefing, or the number of levels if none
     size_t mBriefingLevel;
+    //! Level started once the camera has flown from the table into the green portal
+    size_t mPortalLevel;
+    //! True while the camera flies into the green portal to start mPortalLevel
+    bool mPortalFlight;
     //! Screen dimensions and GUI scale used by the last debriefing fit.
     CEGUI::Vector2f mDebriefingScreen;
     float mDebriefingScale;
@@ -123,8 +128,11 @@ private:
     void hideBriefing();
     //! \brief Shows or hides the map of Moreya and the controls below it
     void setMapVisible(bool visible);
-    //! \brief Starts the server and the client for a campaign level
-    void startLevel(size_t index);
+    //! \brief Tells whether a campaign level can be started (unlocked, its file present and unchanged); otherwise
+    //! writes the reason into the status text
+    bool canStartLevel(size_t index);
+    //! \brief Starts the server and the client for a campaign level; returns false and shows the reason when it fails
+    bool startLevel(size_t index);
 
     //! \brief The mouse moves over the map: the cave below it is highlighted and named in the tooltip
     bool mapMoved(const CEGUI::EventArgs& e);

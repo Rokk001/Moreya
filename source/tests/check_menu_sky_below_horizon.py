@@ -163,7 +163,18 @@ def parse_config():
             poses[words[1]] = (np.array(values[:3]), values[3:6])
         elif words[0] == "Flight":
             flights[words[1]] = words[3:]
+        elif words[0] == "FlightFrom":
+            # A route that starts at another place: its start place goes first (see views)
+            flights[words[1]] = ["@" + words[2]] + words[4:]
     return entities, poses, flights
+
+
+def outward_chain(name, flights):
+    """Returns the pose names from the overview to a place, through the start place of a FlightFrom route."""
+    waypoints = flights[name]
+    if waypoints and waypoints[0].startswith("@"):
+        return outward_chain(waypoints[0][1:], flights) + waypoints[1:]
+    return ["overview"] + waypoints
 
 
 def quaternion(axis, degrees):
@@ -235,9 +246,11 @@ def views(poses, flights):
         if name == "arrival":
             routes.append(("flight arrival", ["arrival"] + waypoints))
             continue
-        outward = ["overview"] + waypoints
+        chain = outward_chain(name, flights)
+        # A FlightFrom route flies from its start place and returns through it to the overview
+        outward = [waypoints[0][1:]] + waypoints[1:] if waypoints and waypoints[0].startswith("@") else chain
         routes.append(("flight " + name + " out", outward))
-        routes.append(("flight " + name + " back", list(reversed(outward))))
+        routes.append(("flight " + name + " back", list(reversed(chain))))
     # A return route runs the same curve backwards, so its samples repeat the outward ones and are rendered once.
     seen = set()
     for label, names in routes:

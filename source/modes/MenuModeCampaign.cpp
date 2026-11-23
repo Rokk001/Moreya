@@ -107,6 +107,10 @@ const std::string WORLD_IMAGE_PREFIX = "CampaignWorld/";
 //! Name prefix of every window created on the map
 const std::string WORLD_WINDOW_PREFIX = "CampaignWorld_";
 const std::string CAMPAIGN_TITLE = "Moreya";
+//! Menu places of the camera: the campaign table and the green portal at the far end of the forecourt, into which the
+//! camera flies before a campaign level is loaded (config/mainmenuscene.cfg)
+const std::string PLACE_CAMPAIGN = "campaign";
+const std::string PLACE_PORTAL = "portal";
 
 //! Size of the tooltip window and its distance from the mouse, in design pixels of the 1024 x 768 layout; the
 //! window is scaled with the layout (screen size and UI scale) and never larger than the map
@@ -318,6 +322,8 @@ MenuModeCampaign::MenuModeCampaign(ModeManager* modeManager):
     mHoverWindow(nullptr),
     mTooltip(nullptr),
     mBriefingLevel(0),
+    mPortalLevel(0),
+    mPortalFlight(false),
     mDebriefingScale(0.0f),
     mCampaignEnd(false)
 {
@@ -422,6 +428,9 @@ void MenuModeCampaign::activate()
     Campaign& campaign = Campaign::getSingleton();
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
     window->getChild(CMP_TEXT_LOADING)->setText("");
+    // The sheet was hidden for the flight into the portal before the last level was loaded
+    window->setVisible(true);
+    mPortalFlight = false;
 
     // Debriefing of the level that was played last
     mResultText.clear();
@@ -880,10 +889,17 @@ void MenuModeCampaign::fillProgressPanel()
         Helper::toString(percent) + "%");
 }
 
-//! \brief Fits a visible debriefing after display or UI-scale changes.
+//! \brief Fits a visible debriefing after display or UI-scale changes. Once the camera has arrived in the green
+//! portal the chosen level is loaded, so its loading screen comes only then; if it cannot be started the map comes
+//! back with the reason.
 void MenuModeCampaign::onFrameStarted(const Ogre::FrameEvent&)
 {
     fitDebriefingPanel();
+    if(!mPortalFlight || ODFrameListener::getSingleton().isMainMenuFlightActive())
+        return;
+    mPortalFlight = false;
+    if(!startLevel(mPortalLevel))
+        getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu)->setVisible(true);
 }
 
 //! \brief Converts the screen position into map pixels and finds the visible cave whose marker is there.
@@ -1165,11 +1181,27 @@ void MenuModeCampaign::setMapVisible(bool visible)
     sheet->getChild(CMP_BUTTON_BACK)->setVisible(visible);
 }
 
+//! \brief Starts the level of the open briefing: the map is hidden and the camera turns from the table and flies
+//! across the forecourt into the green portal; onFrameStarted loads the level once it is there. Without the menu scene
+//! at the table the level is started at once.
 bool MenuModeCampaign::briefingStartPressed(const CEGUI::EventArgs&)
 {
     size_t level = mBriefingLevel;
-    if(level < Campaign::getSingleton().getNumLevels())
-        startLevel(level);
+    Campaign& campaign = Campaign::getSingleton();
+    if((level >= campaign.getNumLevels()) || mPortalFlight)
+        return true;
+    if(!canStartLevel(level))
+        return true;
+    ODFrameListener& listener = ODFrameListener::getSingleton();
+    if((listener.getMainMenuPlace() == PLACE_CAMPAIGN) && listener.flyMainMenuTo(PLACE_PORTAL))
+    {
+        hideBriefing();
+        getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu)->setVisible(false);
+        mPortalLevel = level;
+        mPortalFlight = true;
+        return true;
+    }
+    startLevel(level);
     return true;
 }
 
@@ -1182,8 +1214,8 @@ bool MenuModeCampaign::briefingClosePressed(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Starts a campaign level; a locked, missing or changed shipped level is refused with a message.
-void MenuModeCampaign::startLevel(size_t index)
+//! \brief Refuses a locked, missing or changed shipped level with a message in the status text.
+bool MenuModeCampaign::canStartLevel(size_t index)
 {
     Campaign& campaign = Campaign::getSingleton();
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
@@ -1192,7 +1224,7 @@ void MenuModeCampaign::startLevel(size_t index)
     if(!campaign.isUnlocked(index))
     {
         statusText->setText("This level is locked. Complete the previous levels first.");
-        return;
+        return false;
     }
 
     std::string level = CampaignPackages::getLevelFile(campaign.getLevel(index),
@@ -1201,7 +1233,7 @@ void MenuModeCampaign::startLevel(size_t index)
     {
         OD_LOG_ERR("Campaign level not found: " + level);
         statusText->setText("ERROR: Campaign level file not found.");
-        return;
+        return false;
     }
 
     // A changed shipped level is rejected with its reason (the server start checks it again)
@@ -1209,8 +1241,24 @@ void MenuModeCampaign::startLevel(size_t index)
     if(!MapHandler::checkOfficialLevel(level, false, rejection))
     {
         statusText->setText(rejection);
-        return;
+        return false;
     }
+    return true;
+}
+
+//! \brief Starts a campaign level; a locked, missing or changed shipped level is refused with a message. Returns
+//! false when the level could not be started.
+bool MenuModeCampaign::startLevel(size_t index)
+{
+    Campaign& campaign = Campaign::getSingleton();
+    CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
+    CEGUI::Window* statusText = mainWin->getChild(CMP_TEXT_LOADING);
+
+    if(!canStartLevel(index))
+        return false;
+
+    std::string level = CampaignPackages::getLevelFile(campaign.getLevel(index),
+        ResourceManager::getSingleton().getGameDataPath());
 
     hideBriefing();
     statusText->setText("Loading...");
@@ -1226,7 +1274,7 @@ void MenuModeCampaign::startLevel(size_t index)
         OD_LOG_ERR("Could not start server for campaign game !!!");
         statusText->setText("ERROR: Could not start server for campaign game !!!");
         campaign.stopCampaign();
-        return;
+        return false;
     }
 
     int port = ODServer::getSingleton().getNetworkPort();
@@ -1238,8 +1286,9 @@ void MenuModeCampaign::startLevel(size_t index)
         OD_LOG_ERR("Could not connect to server for campaign game !!!");
         statusText->setText("Error: Couldn't connect to local server!");
         campaign.stopCampaign();
-        return;
+        return false;
     }
+    return true;
 }
 
 //! \brief Leaves the campaign for the main menu; the campaign end message is closed with it.
