@@ -40,6 +40,10 @@ textures and the binary meshes under models/ and asserts:
   it and at least one more frame of the flight show the middle of the fire unhidden;
 - no glowing material forms a flat slab in the rear yard behind the forecourt (largest flat connected patch at most
   MAX_FLAT_GLOW);
+- the forecourt, the portal and the frame of the hall opening are a dark, weathered ruin (menu UX plan M8): their stone
+  and paving use only the ruin materials RUIN_MATERIALS (none of the scene's shared stone materials SHARED_STONE),
+  whose textures are darker than the fortress stone (mean luminance at most MAX_RUIN_LUMINANCE of 255), whose diffuse
+  colour stays at most MAX_RUIN_DIFFUSE and whose specular colour at most MAX_RUIN_SPECULAR (no pale or glossy stone);
 - the files of the entrance (table, forecourt, frame, portal, fire textures) have CREDITS entries.
 
 Sky and horizon elements (Backdrop, BloodMoon, HorizonCrows, VolcanicRuins) are neither ground nor occluders.
@@ -123,8 +127,8 @@ MIN_FIRE_WIDTH = 4.5
 MIN_FIRE_HEIGHT = 7.0
 #: Share of the bright texels of the fire texture that must be green (green above twice red and twice blue).
 GREEN_SHARE = 0.95
-#: The stone of the arch and the pillars, the glowing coals of the fire bowls.
-STONE_MATERIALS = ("MenuChippedStone", "MenuCarvedStone")
+#: The stone of the arch and the pillars (the dark ruin stone of the forecourt), the glowing coals of the fire bowls.
+STONE_MATERIALS = ("MenuRuinChippedStone", "MenuRuinCarvedStone")
 BOWL_MATERIAL = "MenuEmber"
 #: The particle systems of the portal: green flames in the opening, orange flames over the bowls; an emitter lies at
 #: most BOWL_REACH from the middle of a bowl's coals (horizontally) and up to BOWL_LIFT above them.
@@ -143,6 +147,13 @@ GLOW_SLAB_MATERIALS = ("MenuEmber", "MenuFlame", "MenuFlameCore")
 YARD = (-9.0, 9.0, 61.5, 72.0)
 MAX_FLAT_GLOW = 0.1
 SKY = ("Backdrop", "BloodMoon", "HorizonCrows", "VolcanicRuins")
+#: The ruin materials of the forecourt, the portal and the frame of the hall opening, the shared stone materials of the
+#: scene they replace there, and the limits of their texture brightness, diffuse and specular colour.
+RUIN_MATERIALS = ("MenuRuinStone", "MenuRuinChippedStone", "MenuRuinCarvedStone", "MenuRuinPaving")
+SHARED_STONE = ("MenuStone", "MenuChippedStone", "MenuCarvedStone", "MenuWetStone")
+MAX_RUIN_LUMINANCE = 45.0
+MAX_RUIN_DIFFUSE = 0.6
+MAX_RUIN_SPECULAR = 0.05
 
 #: Vertical field of view of the menu camera at 16:9 (REFERENCE_ASPECT) and the checked aspect ratios.
 FOV_Y = 45.0
@@ -704,10 +715,35 @@ def main():
             if largest > MAX_FLAT_GLOW:
                 failures.append("%s has a flat %s patch of %.2f m2 in the rear yard (at most %.2f)"
                                 % (name, material, largest, MAX_FLAT_GLOW))
+    # The forecourt, the portal and the frame of the hall opening are a dark ruin, no pale or glossy stone.
+    scene_materials = open(os.path.join(ROOT, "materials", "scripts", "MenuScene.material"), encoding="utf-8").read()
+    for mesh in (FORECOURT_MESH, PORTAL_MESH, ARCH_MESH):
+        used = set(submeshes(os.path.join(flight.MODELS, mesh)))
+        if used & set(SHARED_STONE) or not used & set(RUIN_MATERIALS):
+            failures.append("%s uses the shared stone %s instead of the ruin materials"
+                            % (mesh, sorted(used & set(SHARED_STONE))))
+    for material in RUIN_MATERIALS:
+        if "material %s " % material not in scene_materials:
+            failures.append("MenuScene.material has no %s" % material)
+            continue
+        block = scene_materials.split("material %s " % material, 1)[1].split("\nmaterial ", 1)[0]
+        diffuse = re.search(r"\bdiffuse\s+(\S+)\s+(\S+)\s+(\S+)", block)
+        specular = re.search(r"\bspecular\s+(\S+)\s+(\S+)\s+(\S+)", block)
+        if (diffuse is None or max(float(value) for value in diffuse.groups()) > MAX_RUIN_DIFFUSE
+                or specular is None or max(float(value) for value in specular.groups()) > MAX_RUIN_SPECULAR):
+            failures.append("%s is too pale or glossy (diffuse at most %.2f, specular at most %.2f)"
+                            % (material, MAX_RUIN_DIFFUSE, MAX_RUIN_SPECULAR))
+    for texture in ("MenuRuinStone.png", "MenuRuinPaving.png"):
+        colours = np.asarray(Image.open(os.path.join(ROOT, "materials", "textures", "menu", texture)).convert("RGB"),
+                             dtype=float)
+        luminance = (colours @ np.array([0.299, 0.587, 0.114])).mean()
+        if luminance > MAX_RUIN_LUMINANCE:
+            failures.append("%s is too light (mean luminance %.1f, at most %.1f)" % (texture, luminance,
+                                                                                    MAX_RUIN_LUMINANCE))
     # CREDITS.
     credits = open(os.path.join(ROOT, "CREDITS"), encoding="utf-8").read()
     for name in (TABLE_MESH, FORECOURT_MESH, ARCH_MESH, PORTAL_MESH, "MenuMoreyaPortalFire.png",
-                 "MenuMoreyaPortalFireShade.png"):
+                 "MenuMoreyaPortalFireShade.png", "MenuRuinStone.png", "MenuRuinPaving.png"):
         if name not in credits:
             failures.append("CREDITS has no entry for " + name)
 
