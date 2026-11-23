@@ -180,6 +180,14 @@ void ODFrameListener::windowResized(Ogre::RenderWindow* rw)
             static_cast<float> (width), static_cast<float> (height)));
 }
 
+//! \brief Requests the exit for the X button and keeps the window: destroying it here would take the rendering context
+//! that the shutdown still needs to release meshes, buffers and textures, and the process would end with a crash.
+bool ODFrameListener::windowClosing(Ogre::RenderWindow*)
+{
+    requestExit();
+    return false;
+}
+
 void ODFrameListener::windowClosed(Ogre::RenderWindow*)
 {
     // Stop the render loop: we are about to destroy the mode manager, which

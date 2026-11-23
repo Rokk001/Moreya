@@ -41,6 +41,8 @@ LOADED_LEVELS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'LOADED
 ALWAYS_LOADED = os.path.join('levels', 'campaign', 'wing1', 'Mossgate.level')
 # Fixed time limit of the load test in seconds (56 levels need well over 1 hour)
 LOAD_TEST_TIMEOUT = 10800
+# Time limit in seconds for run-window-close-test.py: two game starts, each bounded by its own start and exit limits
+WINDOW_CLOSE_TEST_TIMEOUT = 900
 # Time limit in seconds for check-level-similarity.py (it grows with the number of level files)
 SLOW_SCRIPT_TIMEOUT = 1800
 VCVARS = os.path.join(VS_PATH, 'VC', 'Auxiliary', 'Build', 'vcvars64.bat')
@@ -318,7 +320,7 @@ def main():
     checks = list(stages) + ['runner-prerequisites'] + [rel.replace('\\','/') for rel, _ in jobs]
     checks += ['load:' + level for level in selected]
     if load_required:
-        checks += ['deploy-readiness']
+        checks += ['deploy-readiness', 'window-close']
     global LAST_SESSION
     session = events.Session(repo, args.out, checks, events.build_artifacts(Path(repo)))
     LAST_SESSION = session
@@ -408,6 +410,23 @@ def main():
                 code,out,secs=125,str(error),0
         session.result('deploy-readiness',int(code),out)
         record('deploy readiness %s %ds' % ('ok' if code==0 else 'FAIL exit '+str(code),secs))
+        red += int(code!=0)
+    # The X button of the built game, pressed while it loads and in the main menu, must end it with exit code 0.
+    if load_required:
+        total += 1
+        if prerequisite:
+            code,out,secs=125,prerequisite,0
+        else:
+            try:
+                code,out,secs=run_script(repo,'scripts/run-window-close-test.py',['--exe',executable],
+                    WINDOW_CLOSE_TEST_TIMEOUT,env)
+            except (OSError,RuntimeError,subprocess.SubprocessError) as error:
+                code,out,secs=125,str(error),0
+        session.result('window-close',int(code),out)
+        record('window close %s %ds' % ('ok' if code==0 else 'FAIL exit '+str(code),secs))
+        if code != 0:
+            for line in out.splitlines()[-TAIL_LINES:]:
+                record('    ' + line)
         red += int(code!=0)
     code=session.finish()
     red=sum(value!=0 for value in session.results.values())
