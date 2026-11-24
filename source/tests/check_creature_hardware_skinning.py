@@ -7,6 +7,9 @@ An entity is skinned on the GPU only when the first pass of ALL its sub entity m
 includes skeletal animation, and a hardware skinned entity needs a skinning shadow caster, otherwise its shadow
 would show the bind pose. This check follows that chain: shader, material scripts, the shadow caster, the meshes
 that use the creature materials, the contour pass and the Wyvern metal part.
+
+Material scripts and models are read from the public tree and the content packages (scripts/content_packages.py);
+without the content the skinning shadow caster is named as not checked.
 """
 from pathlib import Path
 import re
@@ -14,10 +17,14 @@ import struct
 import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+HAS_CONTENT = content_packages.has_content(repo)
 
 
+# The text of a repository file or of a game data file of the public tree or a content package.
 def read(path):
-    return (repo / path).read_text(encoding='utf-8')
+    return content_packages.read_text(repo, path)
 
 
 # The bone matrices are 3 vec4 per bone
@@ -33,7 +40,7 @@ assert 'viewProjectionMatrix' in vert and 'uniform    mat4 projectionMatrix' not
 assert 'uniform    mat4 worldMatrix' in vert and 'P = (worldMatrix * vec4(P, 1.0)).xyz;' in vert, 'the skinned position is not moved into world space'
 assert 'uniform    mat4 lightMatrix' in vert and 'lightMatrix * vec4(P, 1.0)' in vert, 'the shadow coordinate must use the skinned position'
 
-materials = sorted((repo / 'materials/scripts/Creatures').glob('*.material'))
+materials = content_packages.data_glob(repo, 'materials/scripts/Creatures', '*.material')
 assert len(materials) >= 33
 creature_material_names = set()
 for path in materials:
@@ -55,11 +62,14 @@ for path in materials:
     casters = len(re.findall(r'^\s*shadow_caster_material\s+CreatureShadowCaster\s*$', text, re.M))
     assert techniques == casters == len(names), '%s: every technique needs the skinning shadow caster' % path.name
 
-# The skinning shadow caster
-skinning = read('materials/scripts/CreatureSkinning.material')
-caster_program = re.search(r'vertex_program\s+CreatureShadowCasterVertexShader\s+glsl\s*\{(.*?)\n\}', skinning, re.S).group(1)
-assert 'includes_skeletal_animation true' in caster_program and 'world_matrix_array_3x4' in caster_program
-assert 'shadow_caster_material' not in skinning.split('material CreatureShadowCaster')[1], 'the caster must not point to itself'
+# The skinning shadow caster (its material script lies in the content package core-models)
+if content_packages.data_file(repo, 'materials/scripts/CreatureSkinning.material') is None and not HAS_CONTENT:
+    content_packages.unchecked('check_creature_hardware_skinning', ['materials/scripts/CreatureSkinning.material'])
+else:
+    skinning = read('materials/scripts/CreatureSkinning.material')
+    caster_program = re.search(r'vertex_program\s+CreatureShadowCasterVertexShader\s+glsl\s*\{(.*?)\n\}', skinning, re.S).group(1)
+    assert 'includes_skeletal_animation true' in caster_program and 'world_matrix_array_3x4' in caster_program
+    assert 'shadow_caster_material' not in skinning.split('material CreatureShadowCaster')[1], 'the caster must not point to itself'
 caster = read('shaders/CreatureShadowCaster.vert')
 assert 'blendWeights' in caster and 'blendIndices' in caster and 'boneMatrices[768]' in caster
 assert 'boneMatrices[768]' in vert
@@ -98,7 +108,8 @@ def submesh_materials(path):
 
 
 checked = 0
-for mesh in sorted((repo / 'models').glob('*.mesh')):
+meshes = content_packages.data_glob(repo, 'models', '*.mesh')
+for mesh in meshes:
     skeletal, mats = submesh_materials(mesh)
     if not skeletal or not any(m in creature_material_names for m in mats):
         continue
@@ -111,8 +122,8 @@ for mesh in sorted((repo / 'models').glob('*.mesh')):
 assert checked >= 30, checked
 
 # The bone matrices of the largest skeleton must fit in the uniform array (3 vec4 per bone, 1 index per used bone)
-for skeleton in (repo / 'models').glob('*.skeleton'):
-    if skeleton.stem + '.mesh' not in [m.name for m in (repo / 'models').glob('*.mesh')]:
+for skeleton in content_packages.data_glob(repo, 'models', '*.skeleton'):
+    if skeleton.stem + '.mesh' not in [m.name for m in meshes]:
         continue
     bones = skeleton.read_bytes().count(b'\x00\x30\x0a\x00\x00\x00') + 1
     if skeleton.stem in ('RunelordDwarf', 'NatureMonster', 'Cultist', 'Monk'):

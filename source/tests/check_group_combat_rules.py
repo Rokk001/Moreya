@@ -9,6 +9,9 @@ rule. Nothing is compiled and the game is not started; the integration build com
 
 Usage: python -I source/tests/check_group_combat_rules.py
 Exit 0 and "group combat rules ok" when every item holds.
+
+config/creatureSkills.cfg is content (core-config package, found through scripts/content_packages.py); without it the
+roles of the templates and the aggro skill check of that table are named as not checked.
 """
 import math
 import os
@@ -17,6 +20,9 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
 START = time.perf_counter()
 FAILURES = []
 
@@ -55,7 +61,9 @@ CREATURE = read("source/entities/Creature.cpp")
 FIGHT = read("source/creatureaction/CreatureActionFight.cpp")
 ATTACK = read("source/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp")
 GLOBAL_CFG = read("config/global.cfg")
-SKILLS_CFG = read("config/creatureSkills.cfg")
+#: The skill templates (core-config package), None without the content
+SKILLS_CFG = (content_packages.read_text(ROOT, "config/creatureSkills.cfg")
+              if content_packages.data_file(ROOT, "config/creatureSkills.cfg") else None)
 
 
 def group_block_words(key):
@@ -113,12 +121,13 @@ EXPECTED_ROLES = {
 EXPECTED_UNCHOSEN = {"blocker": MELEE, "blitzer": MELEE, "flanker": MELEE, "archer": RANGED, "caster": RANGED,
                      "none": MELEE}
 
-computed = {}
-for group, name, primary in templates():
-    if group == "worker":
-        continue
-    computed[(group, name)] = role_of(group, True, primary)
-check(computed == EXPECTED_ROLES, "G3: role of every fighter template " + repr(computed))
+if SKILLS_CFG is not None:
+    computed = {}
+    for group, name, primary in templates():
+        if group == "worker":
+            continue
+        computed[(group, name)] = role_of(group, True, primary)
+    check(computed == EXPECTED_ROLES, "G3: role of every fighter template " + repr(computed))
 for group, expected in EXPECTED_UNCHOSEN.items():
     check(role_of(group, False, "") == expected, "G3: role without template for " + group)
 
@@ -245,7 +254,8 @@ check("getCombatGroups().getFightTarget(creature)" in handle_fight and "enemyPri
 # The aggro is a rule of target choice: no new skill
 for path in ("source/game/CombatGroupRules.cpp", "source/game/CombatGroupManager.cpp"):
     check("CreatureSkill" not in read(path).replace("CreatureSkillTree", ""), "G5: no skill in " + path)
-check(not re.search(r"^Kind\s+(TAUNT|AGGRO)", SKILLS_CFG, re.M), "G5: no aggro skill in creatureSkills.cfg")
+if SKILLS_CFG is not None:
+    check(not re.search(r"^Kind\s+(TAUNT|AGGRO)", SKILLS_CFG, re.M), "G5: no aggro skill in creatureSkills.cfg")
 
 # ------------------------------------------------------------------------------------------------ G6 formation
 
@@ -362,6 +372,8 @@ check("getRetreatTile(creature)" in retreat and "isAtGatheringTile(creature, *ga
 check("retreatFinished(arrived" in update_group and "GroupRetreatCooldownSeconds" in update_group,
       "G7: the group gathers again and the next retreat waits for the cooldown")
 
+if SKILLS_CFG is None:
+    content_packages.unchecked("check_group_combat_rules", ["config/creatureSkills.cfg"])
 elapsed = time.perf_counter() - START
 print('ODP_TEST_PHASE {"name":"rules","seconds":%.3f}' % elapsed)
 if FAILURES:

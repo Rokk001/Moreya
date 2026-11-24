@@ -18,11 +18,18 @@ What is checked
 
 Calls (from the repository root):
   python source/tests/check_spa_config.py            plain file checks, no compiler, no game
+
+config/ai.cfg and config/social-texts.cfg are game data of the content packages (scripts/content_packages.py): they are
+read from the public tree or from the content packages. Without the content the room plan of ai.cfg and the posts are
+named as not checked.
 """
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 # Returns the text of a repository file.
@@ -42,6 +49,15 @@ def block_values(text, tag):
     return values
 
 
+# Returns the text of a game data file from the public tree or a content package; None when it is not found and the
+# content is not present (then it is named as not checked).
+def read_data(path):
+    if content_packages.data_file(root, path) is None and not content_packages.has_content(root):
+        content_packages.unchecked('check_spa_config', [path])
+        return None
+    return content_packages.read_text(root, path)
+
+
 # Asserts that a comment line "# <key> " (header documentation) exists in the text.
 def assert_documented(text, key, where):
     assert re.search(r'^#\s*' + re.escape(key) + r'\s', text, re.M), key + ' is not documented in the header of ' + where
@@ -50,7 +66,8 @@ def assert_documented(text, key, where):
 rooms_cfg = read('config/rooms.cfg')
 global_cfg = read('config/global.cfg')
 skills_cfg = read('config/skills.cfg')
-social_cfg = read('config/social-texts.cfg')
+social_cfg = read_data('config/social-texts.cfg')
+ai_cfg = read_data('config/ai.cfg')
 skill_manager = read('source/game/SkillManager.cpp')
 keeper_ai = read('source/ai/KeeperAI.cpp')
 
@@ -123,19 +140,25 @@ assert skill_manager.index('"BeerButton"') < skill_manager.index('"SpaButton"') 
 # 4. The AI builds the spa directly after the tavern
 wanted = re.search(r'wantedBuildings = \{(.*?)\};', keeper_ai, re.S).group(1)
 order = re.findall(r'RoomType::(\w+)', wanted)
-# The compiled room order and the [RoomPlan] order of ai.cfg are the same whole list of the plan
-plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', read('config/ai.cfg'), re.M | re.S).group(1)
-plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
+# The whole list of the plan, fixed for this branch
+PLAN = ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture']
 compiled_names = re.findall(r'"(\w+)"', re.search(r'wantedBuildingKeys = \{(.*?)\};', keeper_ai, re.S).group(1))
-assert plan_names == ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture'], plan_names
-assert compiled_names == plan_names, compiled_names
-assert plan_names.index('spa') == 18 and plan_names.count('spa') == 1
+assert compiled_names == PLAN, compiled_names
+assert compiled_names.index('spa') == 18 and compiled_names.count('spa') == 1
+if ai_cfg is not None:
+    # The compiled room order and the [RoomPlan] order of ai.cfg are the same whole list of the plan
+    plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', ai_cfg, re.M | re.S).group(1)
+    plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
+    assert plan_names == PLAN, plan_names
+    assert compiled_names == plan_names, compiled_names
+    assert plan_names.index('spa') == 18 and plan_names.count('spa') == 1
 
 # 5. The six texts of the post "relaxed"
-texts = re.findall(r'^Post\trelaxed\t\*\t(.+)$', social_cfg, re.M)
-assert texts == [
-    'Mud bath done. I am a new monster.', 'The pool attendant whistled at me. Worth it.',
-    'Hot mud, warm heart. Back to work.', 'Jumped from the board. Best splash of the week.',
-    'My hangover drowned in the mud.', 'Relaxed. Do not talk to me about the payday.'], texts
+if social_cfg is not None:
+    texts = re.findall(r'^Post\trelaxed\t\*\t(.+)$', social_cfg, re.M)
+    assert texts == [
+        'Mud bath done. I am a new monster.', 'The pool attendant whistled at me. Worth it.',
+        'Hot mud, warm heart. Back to work.', 'Jumped from the board. Best splash of the week.',
+        'My hangover drowned in the mud.', 'Relaxed. Do not talk to me about the payday.'], texts
 
 print('spa config ok')

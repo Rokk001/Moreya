@@ -21,22 +21,35 @@ post kind also had only one small HUD icon instead of a picture of what happened
 5. No other window changes through the book: the frame and title images, the caption formatting and the titlebar
    height of the shared looks OD/FrameWindow and OD/GameTitlebar come from properties whose defaults are exactly what
    the looks drew before, and no layout sets them any more (the Room Manager dropped its copy of the book frame too).
+
+The book layout, the Room Manager layout and the two atlases are content (core-gui package, found through
+scripts/content_packages.py). Without the content the source mapping of part 1, the shared looks of parts 4 and 5 and
+the public layouts are checked; the parts that need the content files are named as not checked.
 """
 from pathlib import Path
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 import numpy as np
 from PIL import Image
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The content files of the book, the Room Manager and the two atlases (core-gui package)
+CONTENT_FILES = ('gui/WindowSocial.layout', 'gui/DungeonbookIcons.imageset', 'gui/DungeonbookIcons.png',
+                 'gui/ODMenuTemplate.imageset', 'gui/ODMenuTemplate.png', 'gui/WindowRoomManager.layout')
+missing_content = [name for name in CONTENT_FILES if content_packages.data_file(repo, name) is None]
 social = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
-layout_text = (repo / 'gui/WindowSocial.layout').read_text(encoding='utf-8')
-book = ET.fromstring(layout_text).find('Window')
-imageset = ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot()
-images = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height'))
-          for i in imageset.findall('Image')}
-atlas = Image.open(repo / 'gui' / imageset.get('imagefile')).convert('RGBA')
+if not missing_content:
+    layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
+    book = ET.fromstring(layout_text).find('Window')
+    imageset = ET.parse(content_packages.resolve(repo, 'gui/DungeonbookIcons.imageset')).getroot()
+    images = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height'))
+              for i in imageset.findall('Image')}
+    atlas = Image.open(content_packages.resolve(repo, 'gui/' + imageset.get('imagefile'))).convert('RGBA')
 
 
 def function_body(text, signature):
@@ -60,8 +73,9 @@ room_cases = re.findall(r'case RoomType::(\w+):', rooms_fn)
 assert sorted(room_cases) == sorted(room_types), ('every room has a scene', set(room_types) ^ set(room_cases))
 names = set(re.findall(r'"(\w+)"', picture + rooms_fn))
 assert names and all(n.startswith('Post') for n in names), names
-for name in names:
-    assert name in images, name + ' is not in DungeonbookIcons.imageset'
+if not missing_content:
+    for name in names:
+        assert name in images, name + ' is not in DungeonbookIcons.imageset'
 assert len(names) >= 20, ('the post kinds need many different scenes', len(names))
 
 
@@ -84,21 +98,22 @@ assert 'FighterButton' not in picture + rooms_fn + finder, 'the crossed-swords H
 print('1. %d post kinds and %d rooms mapped to %d painted scenes (fight, level up, food, dig, gold, ...)' % (
     len(categories), len(room_types), len(names)))
 
-# 2. The scenes are real, distinct 2:1 paintings
-pixels = {}
-for name in sorted(names):
-    x, y, w, h = images[name]
-    assert w == 2 * h and h >= 192, (name, w, h)
-    assert x + w <= atlas.size[0] and y + h <= atlas.size[1], name + ' lies outside the png'
-    crop = np.asarray(atlas.crop((x, y, x + w, y + h)), np.float32)
-    assert crop[..., 3].min() == 255, name + ' has transparent pixels'
-    assert crop[..., :3].std() > 25, name + ' is flat, not a painting'
-    pixels[name] = crop[::4, ::4, :3]
-ordered = sorted(pixels)
-for i, a in enumerate(ordered):
-    for b in ordered[i + 1:]:
-        assert np.abs(pixels[a] - pixels[b]).mean() > 12, ('two scenes are the same picture', a, b)
-print('2. %d scenes are distinct 2:1 paintings in %s' % (len(names), imageset.get('imagefile')))
+if not missing_content:
+    # 2. The scenes are real, distinct 2:1 paintings
+    pixels = {}
+    for name in sorted(names):
+        x, y, w, h = images[name]
+        assert w == 2 * h and h >= 192, (name, w, h)
+        assert x + w <= atlas.size[0] and y + h <= atlas.size[1], name + ' lies outside the png'
+        crop = np.asarray(atlas.crop((x, y, x + w, y + h)), np.float32)
+        assert crop[..., 3].min() == 255, name + ' has transparent pixels'
+        assert crop[..., :3].std() > 25, name + ' is flat, not a painting'
+        pixels[name] = crop[::4, ::4, :3]
+    ordered = sorted(pixels)
+    for i, a in enumerate(ordered):
+        for b in ordered[i + 1:]:
+            assert np.abs(pixels[a] - pixels[b]).mean() > 12, ('two scenes are the same picture', a, b)
+    print('2. %d scenes are distinct 2:1 paintings in %s' % (len(names), imageset.get('imagefile')))
 
 
 # 3. The pictures fill their frame
@@ -114,31 +129,34 @@ def find(path):
     return element
 
 
-frames = ['%s/FeedRows/Row%d/Picture' % (page, row) for page in ('HomePage', 'FeedPage') for row in range(3)]
-frames += ['ProfilePage/PostThumb%d' % i for i in range(6)]
-for path in frames:
-    clip = find(path + '/Clip')
-    image = props(find(path + '/Clip/Image'))
-    assert clip.get('type') == 'DefaultWindow' and image.get('ClippedByParent', 'True') == 'True', path
-    assert (image['AspectMode'], image['AspectRatio']) == ('Expand', '2'), (path, 'the scene fills its frame')
-    assert image['Area'] == '{{0,0},{0,0},{1,0},{1,0}}' and image.get('HorizontalAlignment') == 'Centre', path
-    area = [float(v) for v in re.findall(r'\{(-?[0-9.]+),0\}', props(clip)['Area'])]
-    assert 0 < area[0] < 0.05 and 0.95 < area[2] < 1, (path, 'the scene stays inside the frame line')
-    assert find(path).find("Window[@name='Image']") is None, path + ' still has the old small icon window'
+if not missing_content:
+    frames = ['%s/FeedRows/Row%d/Picture' % (page, row) for page in ('HomePage', 'FeedPage') for row in range(3)]
+    frames += ['ProfilePage/PostThumb%d' % i for i in range(6)]
+    for path in frames:
+        clip = find(path + '/Clip')
+        image = props(find(path + '/Clip/Image'))
+        assert clip.get('type') == 'DefaultWindow' and image.get('ClippedByParent', 'True') == 'True', path
+        assert (image['AspectMode'], image['AspectRatio']) == ('Expand', '2'), (path, 'the scene fills its frame')
+        assert image['Area'] == '{{0,0},{0,0},{1,0},{1,0}}' and image.get('HorizontalAlignment') == 'Centre', path
+        area = [float(v) for v in re.findall(r'\{(-?[0-9.]+),0\}', props(clip)['Area'])]
+        assert 0 < area[0] < 0.05 and 0.95 < area[2] < 1, (path, 'the scene stays inside the frame line')
+        assert find(path).find("Window[@name='Image']") is None, path + ' still has the old small icon window'
 assert 'setImage(picture->getChild("Clip/Image"), findPostPicture(post));' in social
 assert 'setImage(thumb->getChild("Clip/Image"), findPostPicture(*it));' in social
-print('3. %d post pictures fill their frame (Clip, Expand 2:1, centred)' % len(frames))
+if not missing_content:
+    print('3. %d post pictures fill their frame (Clip, Expand 2:1, centred)' % len(frames))
 
 # 4. The window frame of the chosen menu sheet with its centred title, as every in-game window (the ornate iron frame
 # and the 20 point title of the concepts are replaced)
 FRAME_PARTS = ('TopLeft', 'TopRight', 'BottomLeft', 'BottomRight', 'Top', 'Left', 'Right', 'Bottom')
-root = props(book)
-assert root['Text'] == 'Dungeonbook'
-assert book.get('type') == 'OD/SheetWindow', 'the book uses the window frame of the menu sheet'
-for part in FRAME_PARTS:
-    assert 'Frame%sImage' % part not in root, part + ' of the ornate frame is still set'
-assert 'TitlebarFont' not in root, 'the title uses the font of the sheet title'
-assert book.find("AutoWindow[@namePath='__auto_titlebar__']") is None, 'the title band of the ornate frame is still set'
+if not missing_content:
+    root = props(book)
+    assert root['Text'] == 'Dungeonbook'
+    assert book.get('type') == 'OD/SheetWindow', 'the book uses the window frame of the menu sheet'
+    for part in FRAME_PARTS:
+        assert 'Frame%sImage' % part not in root, part + ' of the ornate frame is still set'
+    assert 'TitlebarFont' not in root, 'the title uses the font of the sheet title'
+    assert book.find("AutoWindow[@namePath='__auto_titlebar__']") is None, 'the title band of the ornate frame is still set'
 sheet_skin = ET.parse(repo / 'gui/OD.looknfeel').getroot()
 sheet_look = sheet_skin.find("WidgetLook[@name='OD/SheetWindow']")
 assert sheet_look.find("Child[@nameSuffix='__auto_titlebar__']").get('type') == 'OD/SheetTitlebar'
@@ -149,21 +167,22 @@ drawn = [component.find('Image').get('name') for component in
          sheet_look.find("ImagerySection[@name='sheet_frame']").findall('ImageryComponent')]
 for part in FRAME_PARTS:
     assert 'ODMenuTemplate/Frame' + part in drawn, part + ' of the sheet frame is not drawn'
-sheet_set = ET.parse(repo / 'gui/ODMenuTemplate.imageset').getroot()
-sheet_images = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height'))
-                for i in sheet_set.findall('Image')}
-T = sheet_images['FrameLeft'][2]
-assert sheet_images['FrameRight'][2] == T and sheet_images['FrameTop'][3] == sheet_images['FrameBottom'][3]
-# the sheet frame scales with the layout (1.5625 sheet pixels per design pixel, Gui.cpp) and is visible at 1920x1200
-assert T / 1.5625 * min(1920 / 1024.0, 1200 / 768.0) >= 16, 'the iron frame is visible at 1920x1200 (at least 16 px)'
-sheet_atlas = Image.open(repo / 'gui' / sheet_set.get('imagefile')).convert('RGBA')
-x, y, w, h = sheet_images['FrameTop']
-band = np.asarray(sheet_atlas.crop((x, y, x + w, y + h)), np.float32)
-solid = band[..., 3] > 200
-luma = band[..., :3] @ np.array([0.299, 0.587, 0.114])
-assert solid.mean() > 0.4 and luma[solid].mean() < 110, 'dark iron rail'
-assert luma[solid].std() > 8, 'the rail is painted, not flat'
-print('4. window frame of the menu sheet (%d px rails at 1920x1200, painted dark iron), centred title on the book' % T)
+if not missing_content:
+    sheet_set = ET.parse(content_packages.resolve(repo, 'gui/ODMenuTemplate.imageset')).getroot()
+    sheet_images = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height'))
+                    for i in sheet_set.findall('Image')}
+    T = sheet_images['FrameLeft'][2]
+    assert sheet_images['FrameRight'][2] == T and sheet_images['FrameTop'][3] == sheet_images['FrameBottom'][3]
+    # the sheet frame scales with the layout (1.5625 sheet pixels per design pixel, Gui.cpp) and is visible at 1920x1200
+    assert T / 1.5625 * min(1920 / 1024.0, 1200 / 768.0) >= 16, 'the iron frame is visible at 1920x1200 (at least 16 px)'
+    sheet_atlas = Image.open(content_packages.resolve(repo, 'gui/' + sheet_set.get('imagefile'))).convert('RGBA')
+    x, y, w, h = sheet_images['FrameTop']
+    band = np.asarray(sheet_atlas.crop((x, y, x + w, y + h)), np.float32)
+    solid = band[..., 3] > 200
+    luma = band[..., :3] @ np.array([0.299, 0.587, 0.114])
+    assert solid.mean() > 0.4 and luma[solid].mean() < 110, 'dark iron rail'
+    assert luma[solid].std() > 8, 'the rail is painted, not flat'
+    print('4. window frame of the menu sheet (%d px rails at 1920x1200, painted dark iron), centred title on the book' % T)
 
 # 5. Every other window keeps its frame and title
 skin = ET.parse(repo / 'gui/OD.looknfeel').getroot()
@@ -219,11 +238,13 @@ room_manager_overrides = {
 }
 # The Room Manager had a copy of these overrides of the book; both now use the frame of the menu sheet and no layout
 # sets a property of the old frame or title band any more.
-room_manager = ET.parse(repo / 'gui/WindowRoomManager.layout').getroot()
-room_manager_properties = {node.get('name'): node.get('value') for node in room_manager.iter('Property')}
-assert room_manager.find('Window').get('type') == 'OD/SheetWindow', 'the Room Manager uses the frame of the menu sheet'
-assert not set(room_manager_overrides) & set(room_manager_properties), 'Room Manager still sets the ornate frame'
-for other in sorted((repo / 'gui').glob('*.layout')):
+if not missing_content:
+    room_manager = ET.parse(content_packages.resolve(repo, 'gui/WindowRoomManager.layout')).getroot()
+    room_manager_properties = {node.get('name'): node.get('value') for node in room_manager.iter('Property')}
+    assert room_manager.find('Window').get('type') == 'OD/SheetWindow', 'the Room Manager uses the frame of the menu sheet'
+    assert not set(room_manager_overrides) & set(room_manager_properties), 'Room Manager still sets the ornate frame'
+# Every layout of the public tree and of the content packages
+for other in content_packages.data_glob(repo, 'gui', '*.layout'):
     text = other.read_text(encoding='utf-8', errors='replace')
     for name in new_props:
         assert 'name="%s"' % name not in text, (other.name, 'sets', name)
@@ -260,4 +281,5 @@ for width in (400.0, 1100.0, 3960.0):
         centred = evaluate(area.find("Dim[@type='Width']")[0], width, top_left, True)
         assert abs((width - (left + centred)) - left) < 1e-6, 'the centred title sits in the middle of the window'
 print('5. other windows unchanged: shared looks default to their old images, caption area and title height')
+content_packages.unchecked('check_dungeonbook_post_pictures', missing_content)
 print('check_dungeonbook_post_pictures ok')

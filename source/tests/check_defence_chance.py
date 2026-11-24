@@ -1,7 +1,8 @@
 """Creature accuracy and one configured avoidance: table values, one-roll ordering, shield requirements,
 melee and missile wiring, hitResult results and existing client compatibility.
 Pure Python wiring check, compiles nothing. With --probe it compiles source/entities/DefenceChance.h with cl and
-checks the same table in C++ (not part of the normal run)."""
+checks the same table in C++ (not part of the normal run). config/creatureReactions.cfg lies in the content package
+core-config (scripts/content_packages.py); without the content its reactions are named as not checked."""
 from pathlib import Path
 import re
 import subprocess
@@ -9,11 +10,13 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
-# Read production inputs without modifying their config or source.
+# Read production inputs without modifying their config or source (game data of the public tree or a content package).
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Extract a function for checks of the actual runtime path.
@@ -226,21 +229,25 @@ for result_name, defender, attacker in (('dodged', 'BlowDodged', 'BlowMissed'), 
 missed_case = handler[handler.index('case static_cast<int32_t>(CosmeticHitResult::missed)'):]
 missed_case = missed_case[:missed_case.index('break;')]
 assert 'attacker->getName(), "BlowMissed"' in missed_case and 'target->getName()' not in missed_case
-reactions_cfg = read('config/creatureReactions.cfg')
-for name in ('BlowDodged', 'BlowMissed', 'BlowParried', 'BlowDeflected'):
-    match = re.search(r'\[Event\]\s*\n\s+Name\s+' + name + r'\s*\n(.*?)\[/Event\]', reactions_cfg, re.S)
-    assert match, name
-    variants = match.group(1).count('[Variant]')
-    assert variants >= (3 if name == 'BlowDodged' else 2), (name, variants)
-assert 'ReactionSparks' in re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
+# The reactions lie in the content package core-config
+if not content_packages.has_content(root):
+    content_packages.unchecked('check_defence_chance', ['config/creatureReactions.cfg blow reactions'])
+else:
+    reactions_cfg = read('config/creatureReactions.cfg')
+    for name in ('BlowDodged', 'BlowMissed', 'BlowParried', 'BlowDeflected'):
+        match = re.search(r'\[Event\]\s*\n\s+Name\s+' + name + r'\s*\n(.*?)\[/Event\]', reactions_cfg, re.S)
+        assert match, name
+        variants = match.group(1).count('[Variant]')
+        assert variants >= (3 if name == 'BlowDodged' else 2), (name, variants)
+    assert 'ReactionSparks' in re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
 
-# The parrying defender raises its weapon with an own clip where the skeleton has one; the sparks and the small movement stay as
-# the fall back for the creatures without it
-parried = re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
-assert parried.count('Clip    WeaponParry') == parried.count('[Variant]') >= 2
-assert 'Motion' in parried and 'Effect  ReactionSparks' in parried
+    # The parrying defender raises its weapon with an own clip where the skeleton has one; the sparks and the small movement stay as
+    # the fall back for the creatures without it
+    parried = re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
+    assert parried.count('Clip    WeaponParry') == parried.count('[Variant]') >= 2
+    assert 'Motion' in parried and 'Effect  ReactionSparks' in parried
 for skeleton in ('Adventurer', 'Cultist', 'Dwarf2', 'Gnome', 'Goblin', 'Knight', 'LavaSpawn', 'Monk', 'NatureMonster', 'Orc', 'RunelordDwarf'):
-    data = (root / 'models' / (skeleton + '.skeleton')).read_bytes()
+    data = content_packages.resolve(root, 'models/' + skeleton + '.skeleton').read_bytes()
     assert b'WeaponParry' in data and b'Idle' in data and b'Attack1' in data, skeleton
 
 # The Goblin's built-in knife is explicitly a dagger even though it attaches no mesh.
@@ -257,7 +264,7 @@ equipment = re.search(r'\[Equipment\]\s*\n\s+Name\s+Knife\s*\n(.*?)\[/Equipment\
 knife_mesh = re.search(r'MeshName\s+(\S+)', equipment).group(1)
 # the knife is a submesh of the Goblin model, so the weapon attaches no mesh of its own
 assert knife_mesh == 'none'
-assert b'GoblinKnife' in (root / 'models' / 'Goblin.mesh').read_bytes()
+assert b'GoblinKnife' in content_packages.resolve(root, 'models/Goblin.mesh').read_bytes()
 assert mirror_is_parry_weapon('dagger')
 # no shield, so the parry chance is the weapon one: level 1 and level 10 as in the table above
 assert abs(parry_chance(1, mirror_is_parry_weapon('dagger'), *PARRY) - 3.5) < 1e-9

@@ -1,12 +1,19 @@
-"""Check that the in-game background uses its shipped rock texture."""
+"""Check that the in-game background uses its shipped rock texture.
+
+The texture lies in the content packages (scripts/content_packages.py); without the content the material and the
+renderer are checked and the texture is named as not checked.
+"""
 from pathlib import Path
 import re
+import sys
 
 from PIL import Image, ImageStat
 
 repo = Path(__file__).resolve().parents[2]
-material = (repo / "materials/scripts/Background.material").read_text()
-texture = repo / "materials/textures/WorldRock.png"
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+material = content_packages.read_text(repo, "materials/scripts/Background.material")
+texture = content_packages.data_file(repo, "materials/textures/WorldRock.png")
 
 assert re.search(r"\btexture\s+WorldRock\.png\b", material), "Background must use WorldRock.png"
 assert re.search(r"\btex_address_mode\s+wrap\b", material), "Background texture must wrap"
@@ -19,14 +26,18 @@ assert re.search(r"\bemissive\s+0\.25\s+0\.25\s+0\.25\s+1\.0\b", material), \
 # Eight by five repeats give square 240px patches at the reference 1920x1200 viewport.
 assert re.search(r"\bscale\s+0\.125\s+0\.2\b", material), \
     "Background rock structure must not be minified into the old 26-by-15 repeats"
-assert texture.is_file(), "WorldRock.png is missing"
-with Image.open(texture) as image:
-    assert image.format == "PNG" and image.size == (1024, 1024), "WorldRock.png must be a 1024x1024 PNG"
-    # Broad rock relief must survive tile-sized minification instead of averaging to flat brown.
-    rock = image.convert("L")
-    coarse_rock = rock.resize((32, 32), Image.Resampling.BOX)
-    assert ImageStat.Stat(coarse_rock).stddev[0] >= ImageStat.Stat(rock).stddev[0] * 0.25, \
-        "WorldRock.png must retain broad rock contrast when fine gravel is filtered out"
+if texture is None and not content_packages.has_content(repo):
+    content_packages.unchecked("check_world_background", ["materials/textures/WorldRock.png"])
+else:
+    assert texture is not None, "WorldRock.png is missing"
+    assert texture.is_file(), "WorldRock.png is missing"
+    with Image.open(texture) as image:
+        assert image.format == "PNG" and image.size == (1024, 1024), "WorldRock.png must be a 1024x1024 PNG"
+        # Broad rock relief must survive tile-sized minification instead of averaging to flat brown.
+        rock = image.convert("L")
+        coarse_rock = rock.resize((32, 32), Image.Resampling.BOX)
+        assert ImageStat.Stat(coarse_rock).stddev[0] >= ImageStat.Stat(rock).stddev[0] * 0.25, \
+            "WorldRock.png must retain broad rock contrast when fine gravel is filtered out"
 
 assert re.search(r"\bdepth_write\s+off\b", material), "Background must not obscure world geometry"
 

@@ -11,6 +11,7 @@ import struct
 repo = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
@@ -19,8 +20,9 @@ ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.asset(repo, relative) or (repo / relative)
+    """A file of the game data: the public file, else the file of a content package (scripts/content_packages.py), else
+    of the room package when it moved there."""
+    return content_packages.data_file(repo, relative) or room_packages.asset(repo, relative) or (repo / relative)
 APPARATUS_MESHES = ("ManaStill", "GhostPress", "SoulForge")
 STATES = ("Working", "Idle", "Locked")
 
@@ -190,7 +192,9 @@ def client_creation():
 def visible_size():
     bounds_source = read("source/gamemap/RoomObjectBounds.h")
     scale_rule = body(bounds_source, "inline FurnitureScale furnitureScale(")
-    materials = "".join(path.read_text(encoding="utf-8") for path in (repo / "materials/scripts").glob("*.material"))
+    # The material scripts of the public tree and of the content and room packages
+    materials = "".join(path.read_text(encoding="utf-8")
+                        for path in content_packages.data_glob(repo, "materials/scripts", "*.material"))
     for name in APPARATUS_MESHES:
         # Kept at their authored size by the renderer, as in mockup A
         assert re.search(r'name == "' + name + r'"', scale_rule), (name, "authored size")

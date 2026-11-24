@@ -15,6 +15,9 @@ every supported window from 5:4 to 16:9.
 
 Options: --dump <folder> writes one mask image per view (grey = scenery, blue = sky above the horizon,
 red = sky below the horizon); --only <view label prefix> renders only matching views.
+
+The meshes and MenuScene.material live in content packages (found through scripts/content_packages.py); without the
+content the check names them as not checked and renders nothing.
 """
 import argparse
 import math
@@ -27,9 +30,13 @@ import time
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
 CONFIG = os.path.join(ROOT, "config", "mainmenuscene.cfg")
 MODELS = os.path.join(ROOT, "models")
-MATERIALS = os.path.join(ROOT, "materials", "scripts", "MenuScene.material")
+#: The menu scene materials of the public tree or of a content package
+MATERIALS = str(content_packages.resolve(ROOT, "materials/scripts/MenuScene.material"))
 #: Atmosphere materials: they are the sky, never scenery (MenuCloud draws nothing, see MenuSky.frag).
 SKY_MATERIALS = ("MenuSky", "MenuHorizonGlow", "MenuHorizonDark", "MenuCloud")
 #: Glowing cracks and eyes are painted onto other surfaces; they never close a gap on their own.
@@ -267,6 +274,21 @@ def views(poses, flights):
             yield "%s %.2f" % (label, step / float(steps)), position, orientation
 
 
+def model_path(mesh):
+    """Returns the mesh file of models/ of the public tree or of a content package (else the path below models/)."""
+    return str(content_packages.resolve(ROOT, "models/" + mesh))
+
+
+def missing_content():
+    """Returns the scene files (MenuScene.material and the meshes of the AddEntity lines) that are not present because
+    the content is not present; empty with the content."""
+    if content_packages.has_content(ROOT):
+        return []
+    entities, _, _ = parse_config()
+    needed = ["materials/scripts/MenuScene.material"] + ["models/" + mesh for mesh in sorted(set(m for m, _ in entities))]
+    return [relative for relative in needed if content_packages.data_file(ROOT, relative) is None]
+
+
 def load_scene():
     """Returns the world triangles (n, 3, 3) of the scene that can cover the sky and their double-sided flags."""
     flags = material_flags(open(MATERIALS, encoding="utf-8").read())
@@ -276,7 +298,7 @@ def load_scene():
     double = []
     for mesh, position in entities:
         if mesh not in cache:
-            vertices, faces, materials = load_mesh(os.path.join(MODELS, mesh))
+            vertices, faces, materials = load_mesh(model_path(mesh))
             keep = np.array([m not in SKY_MATERIALS and m not in DECAL_MATERIALS and not flags.get(m, (False, False))[0]
                              for m in materials], dtype=bool)
             sided = np.array([flags.get(m, (False, False))[1] for m in materials], dtype=bool)
@@ -443,6 +465,10 @@ def main():
     parser.add_argument("--dump", help="folder for one mask image per view")
     parser.add_argument("--only", default="", help="render only views whose label starts with this text")
     args = parser.parse_args()
+    missing = missing_content()
+    if missing:
+        content_packages.unchecked("check_menu_sky_below_horizon", missing)
+        return 0
     started = time.monotonic()
     triangles, double, poses, flights = load_scene()
     triangles, double, starts, centres, radii = group_chunks(triangles, double)

@@ -3,6 +3,10 @@
 The runtime probe includes the real navigation header and fixes the expected eight
 types, room counts and selection transitions. Use --source-only to check the GUI
 contracts without compiling the small standalone probe.
+
+The Room Manager window, its eight pages, the Dungeonbook layout and the font are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages. Without the content
+their contracts are named as not checked; the code contracts, the HUD layout and the probe (it needs no data file) run.
 """
 from pathlib import Path
 import os
@@ -15,6 +19,28 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+PAGE_KINDS = ('Ghost', 'Merchant', 'Tavern', 'Spa', 'Infirmary', 'Alchemy', 'Casino', 'Workshop')
+#: The game data files of the window contracts; they lie in the public tree or in a content package
+DATA_FILES = (('gui/WindowRoomManager.layout', 'gui/WindowSocial.layout', 'gui/fonts/SourceSerif4-Semibold.ttf')
+              + tuple('gui/RoomManager' + kind + 'Page.layout' for kind in PAGE_KINDS))
+
+
+def data(path):
+    """Path of a game data file from the public tree or a content package."""
+    return content_packages.resolve(ROOT, path)
+
+
+def data_present():
+    """True when the window contracts can be checked: all data files are found or the content is present (then a
+    missing one fails as before); else names them as not checked."""
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    if not missing or content_packages.has_content(ROOT):
+        return True
+    content_packages.unchecked('check_room_manager_navigation', missing)
+    return False
 
 
 def read(path):
@@ -99,8 +125,8 @@ def check_page_bounds(manager):
             client_h = height * scale - (0.75 * rail_top + 13 * 4 / 3 * 1.35 * font_scale + 4) - rail_top
             page_w = (page_area[4] - page_area[0]) * client_w + (page_area[5] - page_area[1]) * scale
             page_h = (page_area[6] - page_area[2]) * client_h + (page_area[7] - page_area[3]) * scale
-            for kind in ('Ghost', 'Merchant', 'Tavern', 'Spa', 'Infirmary', 'Alchemy', 'Casino', 'Workshop'):
-                page = ET.parse(ROOT / ('gui/RoomManager' + kind + 'Page.layout')).getroot().find('Window')
+            for kind in PAGE_KINDS:
+                page = ET.parse(data('gui/RoomManager' + kind + 'Page.layout')).getroot().find('Window')
                 assert page.get('type') == 'DefaultWindow', kind + ' is an embedded page'
                 for child in page.findall('Window'):
                     bounds = numbers(props(child)['Area'])
@@ -240,23 +266,25 @@ if '--runtime-only' in sys.argv:
     sys.exit(0)
 
 # The GUI contracts below bind the tested state to actual input handlers and layouts.
-layout = ET.parse(ROOT / 'gui/WindowRoomManager.layout').getroot().find('Window')
-assert layout.get('name') == 'RoomManagerWindow' and layout.get('type') == 'OD/SheetWindow'
-assert props(layout)['Text'] == 'Room Manager'
-assert props(layout)['Visible'] == 'False'
-check_page_bounds(layout)
-rows = layout.find("Window[@name='Rows']")
-assert rows is not None
-assert len(rows.findall('Window')) == 8, 'fixed eight room-type row slots'
-book = ET.parse(ROOT / 'gui/WindowSocial.layout').getroot().find('Window')
-book_row = book.find("Window[@name='HomePage']/Window[@name='ListRows']/Window[@name='Row0']")
-for row in rows.findall('Window'):
-    assert props(row.find("Window[@name='Highlight']")) == props(book_row.find("Window[@name='Highlight']")), 'Dungeonbook selection highlight'
-    assert props(row.find("Window[@name='Name']"))['Font'] == props(book_row.find("Window[@name='Name']"))['Font'], 'Dungeonbook row font'
-    height = re.findall(r'-?\d+(?:\.\d+)?', props(row)['Area'])
-    assert float(height[7]) - float(height[3]) == 66, 'Dungeonbook design row height'
-    assert row.find("Window[@name='Icon']") is not None and row.find("Window[@name='Button']") is not None
-assert len(list(layout.iter('LayoutImport'))) == 8, 'eight room pages inside shared frame'
+window_data = data_present()
+if window_data:
+    layout = ET.parse(data('gui/WindowRoomManager.layout')).getroot().find('Window')
+    assert layout.get('name') == 'RoomManagerWindow' and layout.get('type') == 'OD/SheetWindow'
+    assert props(layout)['Text'] == 'Room Manager'
+    assert props(layout)['Visible'] == 'False'
+    check_page_bounds(layout)
+    rows = layout.find("Window[@name='Rows']")
+    assert rows is not None
+    assert len(rows.findall('Window')) == 8, 'fixed eight room-type row slots'
+    book = ET.parse(data('gui/WindowSocial.layout')).getroot().find('Window')
+    book_row = book.find("Window[@name='HomePage']/Window[@name='ListRows']/Window[@name='Row0']")
+    for row in rows.findall('Window'):
+        assert props(row.find("Window[@name='Highlight']")) == props(book_row.find("Window[@name='Highlight']")), 'Dungeonbook selection highlight'
+        assert props(row.find("Window[@name='Name']"))['Font'] == props(book_row.find("Window[@name='Name']"))['Font'], 'Dungeonbook row font'
+        height = re.findall(r'-?\d+(?:\.\d+)?', props(row)['Area'])
+        assert float(height[7]) - float(height[3]) == 66, 'Dungeonbook design row height'
+        assert row.find("Window[@name='Icon']") is not None and row.find("Window[@name='Button']") is not None
+    assert len(list(layout.iter('LayoutImport'))) == 8, 'eight room pages inside shared frame'
 hud = ET.parse(ROOT / 'gui/ModeGame.layout').getroot()
 windows = {node.get('name'): node for node in hud.iter('Window')}
 button = windows['RoomManagerButton']
@@ -264,10 +292,12 @@ assert props(button)['TooltipText'] == 'Room Manager'
 # The HUD button shows its own Room Manager icon, not the Rooms tab icon (INGAME-QS-10 K12b).
 assert props(button)['NormalImage'] == 'NavigationRoomManager/Icon'
 assert props(button)['Visible'] == 'False'
-assert unicode_glyph(ROOT / 'gui/fonts/SourceSerif4-Semibold.ttf', 0x2022) == 508, 'tracked dot glyph'
+if window_data:
+    assert unicode_glyph(data('gui/fonts/SourceSerif4-Semibold.ttf'), 0x2022) == 508, 'tracked dot glyph'
 assert props(button.find("Window[@name='Dot']"))['Text'] == '\u2022', 'HUD uses the covered circular bullet'
-for row in rows.findall('Window'):
-    assert props(row.find("Window[@name='Dot']"))['Text'] == '\u2022', 'rows use the covered circular bullet'
+if window_data:
+    for row in rows.findall('Window'):
+        assert props(row.find("Window[@name='Dot']"))['Text'] == '\u2022', 'rows use the covered circular bullet'
 for removed in ('ProductionButton', 'InfirmaryButton', 'MerchantButton', 'GhostHuntersButton', 'LabButton'):
     assert removed not in windows, removed
 imports = [node.get('filename') for node in hud.iter('LayoutImport')]

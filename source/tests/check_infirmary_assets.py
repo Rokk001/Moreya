@@ -1,4 +1,7 @@
-"""Inspect shipped infirmary assets, their registration and licences without compiling."""
+"""Inspect shipped infirmary assets, their registration and licences without compiling.
+
+The room ambience table config/roomAmbience.cfg lives in a content package (found through scripts/content_packages.py);
+without the content the check names the chant loop as not checked and checks everything else."""
 from pathlib import Path
 import importlib.util
 import json
@@ -11,6 +14,7 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
 import room_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 #: The assets of the infirmary come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
@@ -23,9 +27,12 @@ def room_file(relative):
 from assets_src import assets_src_dir, resolve  # noqa: E402
 
 
-# Read one registered text asset with consistent Unicode handling.
+# Read one registered text asset with consistent Unicode handling (an asset source from ODP_ASSETS_SRC, else the game
+# data file of the public tree or of a content or room package).
 def read(path):
-    return resolve(repo, path).read_text(encoding="utf-8")
+    if path.startswith("assets-src/"):
+        return resolve(repo, path).read_text(encoding="utf-8")
+    return content_packages.resolve(repo, path).read_text(encoding="utf-8")
 
 
 # Verify referenced assets exist and have their own source/licence entry.
@@ -107,13 +114,17 @@ def main():
         assert resolve(repo, path).read_bytes().startswith(b"OggS"), path
         row = next(line for line in credits.splitlines() if path in line)
         assert "CC0" in row and "https://freesound.org/" in row, path
-    ambience = read("config/roomAmbience.cfg")
-    entries = re.findall(r"\[Effect\](.*?)\[/Effect\]", ambience, re.S)
-    chants = [entry for entry in entries if re.search(r"^\s*Name\s+InfirmaryChant\s*$", entry, re.M)]
-    assert len(chants) == 1, "missing or duplicate registered chant loop"
-    block = chants[0]
-    for pattern in (r"Match\s+InfirmaryShaman", r"Kind\s+Sound", r"Family\s+Rooms/Infirmary/Chant", r"Loop\s+yes"):
-        assert re.search(pattern, block), pattern
+    # The chant loop stands in the room ambience table of a content package
+    if content_packages.data_file(repo, "config/roomAmbience.cfg") is None and not content_packages.has_content(repo):
+        content_packages.unchecked("check_infirmary_assets", ["InfirmaryChant loop of config/roomAmbience.cfg"])
+    else:
+        ambience = read("config/roomAmbience.cfg")
+        entries = re.findall(r"\[Effect\](.*?)\[/Effect\]", ambience, re.S)
+        chants = [entry for entry in entries if re.search(r"^\s*Name\s+InfirmaryChant\s*$", entry, re.M)]
+        assert len(chants) == 1, "missing or duplicate registered chant loop"
+        block = chants[0]
+        for pattern in (r"Match\s+InfirmaryShaman", r"Kind\s+Sound", r"Family\s+Rooms/Infirmary/Chant", r"Loop\s+yes"):
+            assert re.search(pattern, block), pattern
     if ROOM_ASSETS:
         clips()
     bounds = read("source/gamemap/RoomObjectBounds.h")

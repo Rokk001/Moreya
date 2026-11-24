@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Pure check (nothing compiled, nothing started): a badly hurt creature walks with the clip WalkHurt when the
 skeleton has it (else Walk), CarryWalk wins over it, the entity state stays Walk (same speed factors), the clip is
-switched when the health stage crosses the threshold, and the E15 HurtWalk reaction adds no second limp on top."""
+switched when the health stage crosses the threshold, and the E15 HurtWalk reaction adds no second limp on top.
+The reaction table config/creatureReactions.cfg lives in a content package; without the content the check names that
+part as not checked and checks the source wiring."""
 import re
+import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 def read(path):
     return (root / path).read_text(encoding='utf-8').replace('\r\n', '\n')
@@ -15,7 +20,6 @@ creature_h = read('source/entities/Creature.h')
 creature = read('source/entities/Creature.cpp')
 render = read('source/render/RenderManager.cpp')
 reactions = read('source/render/CreatureReactions.cpp')
-cfg = read('config/creatureReactions.cfg')
 
 assert 'walk_hurt_anim = "WalkHurt"' in movable_h
 
@@ -53,7 +57,12 @@ assert 'rrSetObjectAnimationState(this, EntityAnimation::walk_anim, true)' in up
 # E15 HurtWalk: the limp motion is skipped while WalkHurt plays, the emote stays, the event is unchanged
 assert '(event.mName == "HurtWalk")' in reactions
 assert 'walk_hurt_anim' in reactions and '!playsHurtWalk' in reactions
-event = re.search(r'Name\s+HurtWalk\b(.*?)\[/Event\]', cfg, re.S).group(1)
-assert re.search(r'Emote\s+Sweat', event) and re.search(r'Motion\s+shake', event) and re.search(r'Motion\s+hop', event)
-assert 'Clip ' not in event
+cfg_file = content_packages.data_file(root, 'config/creatureReactions.cfg')
+if cfg_file is None:
+    content_packages.unchecked('check_hurt_walk_clip', ['HurtWalk event of config/creatureReactions.cfg'])
+else:
+    cfg = cfg_file.read_text(encoding='utf-8').replace('\r\n', '\n')
+    event = re.search(r'Name\s+HurtWalk\b(.*?)\[/Event\]', cfg, re.S).group(1)
+    assert re.search(r'Emote\s+Sweat', event) and re.search(r'Motion\s+shake', event) and re.search(r'Motion\s+hop', event)
+    assert 'Clip ' not in event
 print('check_hurt_walk_clip: ok')

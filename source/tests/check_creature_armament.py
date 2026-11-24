@@ -1,9 +1,17 @@
-"""Static armament config, asset, skeleton and production-source checks; compiles nothing."""
+"""Static armament config, asset, skeleton and production-source checks; compiles nothing.
+
+Models, skeletons, materials and textures are found in the public tree or the content packages
+(scripts/content_packages.py), their CREDITS rows in the public CREDITS or in the CREDITS of the content repository;
+without the content the files that lie in a package and their rows are named as not checked."""
 from pathlib import Path
 import re
 import struct
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 ASSIGNMENTS = {
     'Orc': 'BasicAxeOrc', 'Troll': 'Club', 'PitDemon': 'Trident', 'Cultist': 'RitualDagger',
     'Gnome': 'Wand', 'Adventurer': 'BasicSword', 'Skeleton': 'BasicSword', 'Dwarf1': 'HandAxe',
@@ -47,6 +55,14 @@ NEW_WEAPONS = {'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1, 'Wand':
 # Read a tracked production input without invoking any asset tools.
 def read(path):
     return (ROOT / path).read_text(encoding='utf-8')
+
+
+# The file of a game data path in the public tree or a content package; None only when the content is not present.
+def data(path):
+    found = content_packages.data_file(ROOT, path)
+    if found is None and content_packages.has_content(ROOT):
+        return ROOT / path  # the content is present, so a missing file fails
+    return found
 
 
 # Parse named equipment or creature definitions, ignoring comments and nested skill rows.
@@ -150,7 +166,11 @@ def check_creatures(creatures, equipment):
                 assert weapon in equipment, (name, weapon)
                 assert equipment[weapon]['Hands'] != '2' or held.count('none') == 1, (name, held)
     for name, (filename, parent_name) in PARENTS.items():
-        bones, parents = skeleton_bones(ROOT / 'models' / (filename + '.skeleton'))
+        skeleton = data('models/' + filename + '.skeleton')
+        if skeleton is None:
+            content_packages.unchecked('check_creature_armament', ['models/' + filename + '.skeleton mount'])
+            continue
+        bones, parents = skeleton_bones(skeleton)
         mounts = [handle for handle, (bone_name, _) in bones.items() if bone_name == 'Weapon_R']
         assert len(mounts) == 1, name
         assert bones[parents[mounts[0]]][0] == parent_name, (name, parent_name)
@@ -165,18 +185,29 @@ def check_assets():
               'tools/gen_armament_weapons.py', 'tools/gen_scaled_weapons.py', 'tools/add_weapon_bones.py',
               'tools/blender-assets/armament_blend.py', 'tools/blender-assets/armament_preview.py',
               'source/tests/check_creature_armament.py']
+    # The rows of the files of the content packages lie in the CREDITS of the content repository
     credits = read('CREDITS')
+    content = campaign_packages.content_repository(ROOT)
+    if content is not None and (content / 'CREDITS').is_file():
+        credits += '\n' + (content / 'CREDITS').read_text(encoding='utf-8')
+    absent = []
     for path in paths:
-        assert (ROOT / path).is_file(), path
+        if data(path) is None:
+            absent.append(path)  # a file of a content package and its row are not checked without the content
+            continue
+        assert data(path).is_file(), path
         assert re.search(r'^' + re.escape(path) + r'\s+', credits, re.M), 'Missing credit: ' + path
-    material = read('materials/scripts/ArmamentWeapons.material')
+    if absent:
+        content_packages.unchecked('check_creature_armament', absent)
+        return
+    material = data('materials/scripts/ArmamentWeapons.material').read_text(encoding='utf-8')
     assert re.search(r'^material\s+ArmamentWeapons\s*$', material, re.M)
     assert re.search(r'\btexture\s+ArmamentWeaponsSurface\.png\b', material)
-    texture = (ROOT / 'materials/textures/ArmamentWeaponsSurface.png').read_bytes()
+    texture = data('materials/textures/ArmamentWeaponsSurface.png').read_bytes()
     assert texture[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>II', texture[16:24]) == (64, 64)
     for name in NEW_WEAPONS:
-        assert b'ArmamentWeapons' in (ROOT / 'models' / (name + '.mesh')).read_bytes(), name
-    assert b'StaffLich.skeleton' in (ROOT / 'models/StaffLich.mesh').read_bytes()
+        assert b'ArmamentWeapons' in data('models/' + name + '.mesh').read_bytes(), name
+    assert b'StaffLich.skeleton' in data('models/StaffLich.mesh').read_bytes()
 
 
 # Check actual client/server type mappings, serialization and the creature-only timing compensation path.

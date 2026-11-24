@@ -6,6 +6,9 @@ are sampled the same way RenderSceneMenu::samplePath does (Catmull-Rom through t
 a FlightFrom route starts at its start place and returns through it to the overview
 and every sample is tested against the triangles of every AddEntity mesh at its configured
 position. A sample closer than CLEARANCE to a triangle fails the check.
+
+The meshes are read from the public tree and from the content packages (scripts/content_packages.py); without the
+content the clearance to a mesh that moved into a content package is named as not checked.
 """
 import math
 import os
@@ -17,6 +20,8 @@ import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 CONFIG = os.path.join(ROOT, "config", "mainmenuscene.cfg")
 MODELS = os.path.join(ROOT, "models")
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
 #: Smallest allowed distance in tiles between the camera and any triangle (the gate portcullis slot between two bars is 0.29 wide).
 CLEARANCE = 0.08
 #: Glowing crack and eye materials are painted onto surfaces and are no obstacle.
@@ -205,9 +210,15 @@ def main():
     entities, poses, flights = parse_config()
     meshes = {}
     world = {}
+    missing = []
     for name, (mesh, position) in entities.items():
+        relative = "models/" + mesh.replace(".mesh", "") + ".mesh"
         if mesh not in meshes:
-            meshes[mesh] = load_mesh(os.path.join(MODELS, mesh.replace(".mesh", "") + ".mesh"))
+            if content_packages.data_file(ROOT, relative) is None and not content_packages.has_content(ROOT):
+                if relative not in missing:
+                    missing.append(relative)
+                continue
+            meshes[mesh] = load_mesh(str(content_packages.resolve(ROOT, relative)))
         vertices, triangles = meshes[mesh]
         if len(triangles) == 0:
             continue
@@ -221,6 +232,7 @@ def main():
         if len(tri) == 0:
             continue
         world[name] = (tri[:, 0], tri[:, 1], tri[:, 2], tri.min(axis=1), tri.max(axis=1))
+    content_packages.unchecked("check_menu_flight_geometry", ["clearance to " + relative for relative in missing])
     # The box of every entity: only the samples inside it (plus CLEARANCE) are tested against its triangles.
     boxes = {name: (parts[3].min(axis=0) - CLEARANCE, parts[4].max(axis=0) + CLEARANCE)
              for name, parts in world.items()}

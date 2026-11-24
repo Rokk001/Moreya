@@ -10,17 +10,27 @@ Checked here:
 2. The four quality frames exist in gui/ODIcons.imageset and config/items.cfg names their colours; with Pillow present
    the frame pictures are measured: Poor and Common grey to white, Rare blue, Epic purple.
 3. Every inventory slot of the book has the picture, the symbol and the quality frame windows.
+
+config/items.cfg and the book layout are content (core-config and core-gui packages, found through
+scripts/content_packages.py); without them the code and the public quality frames are checked and the colour note of
+items.cfg and the slot windows of the book are named as not checked.
 """
 from pathlib import Path
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
 creature = (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 social = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
-items_cfg = (repo / 'config/items.cfg').read_text(encoding='utf-8')
+missing_content = content_packages.unchecked('check_dungeonbook_slot_look_918', [
+    name for name in ('config/items.cfg', 'gui/WindowSocial.layout') if content_packages.data_file(repo, name) is None])
+items_cfg = None if missing_content else content_packages.read_text(repo, 'config/items.cfg')
 imageset = (repo / 'gui/ODIcons.imageset').read_text(encoding='utf-8')
-book = ET.fromstring((repo / 'gui/WindowSocial.layout').read_text(encoding='utf-8')).find('Window')
+book = None if missing_content else ET.fromstring(content_packages.read_text(repo, 'gui/WindowSocial.layout')).find('Window')
 
 
 def function_of(text, signature):
@@ -50,7 +60,8 @@ assert 'frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(
 assert 'Creature::fillItemSlotWindows(creature, slots, true);' in function_of(social, 'void SocialWindow::refreshInventory(')
 
 # 2. The quality frames
-assert 'Quality colours: Poor grey, Common white, Rare blue, Epic purple' in items_cfg
+if items_cfg is not None:
+    assert 'Quality colours: Poor grey, Common white, Rare blue, Epic purple' in items_cfg
 frames = {}
 for quality in ('Poor', 'Common', 'Rare', 'Epic'):
     found = re.search(r'<Image height="(\d+)" name="ItemFrame%s" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />' % quality,
@@ -78,11 +89,12 @@ if Image is not None:
     assert b > g + 30 and r > g + 20, 'Epic frame is purple'
 
 # 3. The slot windows of the book
-page = [w for w in book.findall('Window') if w.get('name') == 'InventoryPage'][0]
-for slot in range(13):
-    box = [w for w in page.findall('Window') if w.get('name') == 'SlotBox%d' % slot][0]
-    picture = [w for w in box.findall('Window') if w.get('name') == 'Slot%d' % slot][0]
-    names = [w.get('name') for w in picture.findall('Window')]
-    assert 'SlotType' in names and 'QualityFrame' in names, slot
+if book is not None:
+    page = [w for w in book.findall('Window') if w.get('name') == 'InventoryPage'][0]
+    for slot in range(13):
+        box = [w for w in page.findall('Window') if w.get('name') == 'SlotBox%d' % slot][0]
+        picture = [w for w in box.findall('Window') if w.get('name') == 'Slot%d' % slot][0]
+        names = [w.get('name') for w in picture.findall('Window')]
+        assert 'SlotType' in names and 'QualityFrame' in names, slot
 
 print('check_dungeonbook_slot_look_918: OK')

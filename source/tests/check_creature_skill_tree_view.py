@@ -14,6 +14,10 @@ Expected: 5 test cases, 0 failures; 13 skill buttons on the Skills page of gui/W
 
 Calls (from the repository root):
   python source/tests/check_creature_skill_tree_view.py
+
+The skill catalog (core-config) and the book layout (core-gui) are found through scripts/content_packages.py;
+without the content the test cases (nothing is compiled) and the layout checks are named as not checked and the
+source wiring is still checked.
 """
 from pathlib import Path
 import os
@@ -24,6 +28,9 @@ import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+HAS_CONTENT = content_packages.has_content(repo)
 
 # Test cases of test_CreatureSkillTreeView.cpp and skill buttons of the Skills page (tier 4 and 4 x 3)
 EXPECTED_CASES = 5
@@ -136,7 +143,7 @@ def run_test_cases():
             line = prefix + 'cl ' + flags + ' ' + ' '.join('"%s"' % s for s in sources)
             subprocess.run(line, shell=True, check=True, stdout=subprocess.DEVNULL)
         environment = dict(os.environ)
-        environment['OD_TEST_CREATURE_SKILLS_FILE'] = str(repo / 'config/creatureSkills.cfg')
+        environment['OD_TEST_CREATURE_SKILLS_FILE'] = str(content_packages.resolve(repo, 'config/creatureSkills.cfg'))
         # Windows application control may block a freshly built program (WinError 4551); the runner repeats the
         # whole check, including compilation.
         result = subprocess.run([str(exe)], env=environment, capture_output=True, text=True)
@@ -144,45 +151,54 @@ def run_test_cases():
 
 
 def read(path):
-    """Returns the text of a repository file."""
-    return (repo / path).read_text(encoding='utf-8')
+    """Returns the text of a repository file or of a game data file of the public tree or a content package."""
+    return content_packages.read_text(repo, path)
 
 
-code, output = run_test_cases()
-print(output.strip())
-if code != 0 or ('%d cases, 0 failures' % EXPECTED_CASES) not in output:
-    errors.append('test cases: expected %d cases with 0 failures' % EXPECTED_CASES)
+# The test cases run on the skill catalog of the content package core-config; without it nothing is compiled
+if not HAS_CONTENT:
+    content_packages.unchecked('check_creature_skill_tree_view', ['test cases on config/creatureSkills.cfg'])
+else:
+    code, output = run_test_cases()
+    print(output.strip())
+    if code != 0 or ('%d cases, 0 failures' % EXPECTED_CASES) not in output:
+        errors.append('test cases: expected %d cases with 0 failures' % EXPECTED_CASES)
 
-book = read('gui/WindowSocial.layout')
-page = re.search(r'<Window type="DefaultWindow" name="SkillsPage">(.*?)\n        </Window>', book, re.S)
-layout = page.group(1) if page else ''
-if not page:
-    errors.append('gui/WindowSocial.layout: the Skills page is missing')
-buttons = re.findall(r'type="OD/ResearchButton" name="([^"]+)"', layout)
-expected = ['TierFour'] + ['Column%dTier%d' % (c, t) for c in range(4) for t in (3, 2, 1)]
-if len(buttons) != EXPECTED_BUTTONS or sorted(buttons) != sorted(expected):
-    errors.append('gui/WindowSocial.layout SkillsPage: expected the %d skill buttons %s' % (EXPECTED_BUTTONS, expected))
-for name in expected:
-    for suffix in ('Bar', 'Rank'):
-        if 'name="%s%s"' % (name, suffix) not in layout:
-            errors.append('gui/WindowSocial.layout SkillsPage: %s%s missing' % (name, suffix))
-for column in range(4):
-    if 'name="Column%dTitle"' % column not in layout:
-        errors.append('gui/WindowSocial.layout SkillsPage: Column%dTitle missing' % column)
+# The book layout lies in the content package core-gui
+book = read('gui/WindowSocial.layout') if HAS_CONTENT else None
+if book is None:
+    content_packages.unchecked('check_creature_skill_tree_view', ['gui/WindowSocial.layout Skills page and navigation bar'])
+else:
+    page = re.search(r'<Window type="DefaultWindow" name="SkillsPage">(.*?)\n        </Window>', book, re.S)
+    layout = page.group(1) if page else ''
+    if not page:
+        errors.append('gui/WindowSocial.layout: the Skills page is missing')
+    buttons = re.findall(r'type="OD/ResearchButton" name="([^"]+)"', layout)
+    expected = ['TierFour'] + ['Column%dTier%d' % (c, t) for c in range(4) for t in (3, 2, 1)]
+    if len(buttons) != EXPECTED_BUTTONS or sorted(buttons) != sorted(expected):
+        errors.append('gui/WindowSocial.layout SkillsPage: expected the %d skill buttons %s' % (EXPECTED_BUTTONS, expected))
+    for name in expected:
+        for suffix in ('Bar', 'Rank'):
+            if 'name="%s%s"' % (name, suffix) not in layout:
+                errors.append('gui/WindowSocial.layout SkillsPage: %s%s missing' % (name, suffix))
+    for column in range(4):
+        if 'name="Column%dTitle"' % column not in layout:
+            errors.append('gui/WindowSocial.layout SkillsPage: Column%dTitle missing' % column)
 # INGAME-QS-12 K7: no separate window opens for the skill tree
-if (repo / 'gui/WindowCreatureSkillTree.layout').exists() or 'WindowCreatureSkillTree' in read('gui/ModeGame.layout'):
+if content_packages.data_file(repo, 'gui/WindowCreatureSkillTree.layout') is not None or 'WindowCreatureSkillTree' in read('gui/ModeGame.layout'):
     errors.append('the separate skill tree window still exists; the skill tree is a page of the Dungeonbook')
 
 # Plan INGAME-QS-11 K4: the skill tree opens from the fifth button "Skills" of the navigation bar of the book, no page
 # holds a skill tree button any more
-for layout_path in sorted((repo / 'gui').glob('*.layout')):
+for layout_path in content_packages.data_glob(repo, 'gui', '*.layout'):
     if 'SkillTreeButton' in layout_path.read_text(encoding='utf-8', errors='replace'):
         errors.append('gui/%s: a page holds a SkillTreeButton' % layout_path.name)
-nav = re.search(r'<Window type="DefaultWindow" name="NavBar">(.*?)\n        </Window>', book, re.S)
-nav_buttons = re.findall(r'<Window type="OD/Button" name="(Nav[A-Za-z]+)">', nav.group(1)) if nav else []
-if nav_buttons != ['NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills']:
-    errors.append('gui/WindowSocial.layout: the navigation bar must hold Feed, Profile, Values, Inventory, Skills: %s'
-                  % nav_buttons)
+if book is not None:
+    nav = re.search(r'<Window type="DefaultWindow" name="NavBar">(.*?)\n        </Window>', book, re.S)
+    nav_buttons = re.findall(r'<Window type="OD/Button" name="(Nav[A-Za-z]+)">', nav.group(1)) if nav else []
+    if nav_buttons != ['NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills']:
+        errors.append('gui/WindowSocial.layout: the navigation bar must hold Feed, Profile, Values, Inventory, Skills: %s'
+                      % nav_buttons)
 
 social = read('source/render/SocialWindow.cpp')
 for needle in ('NAV_SKILLS_BUTTON = "NavSkills"', 'NAV_SKILLS_BUTTON), CEGUI::PushButton::EventClicked,',

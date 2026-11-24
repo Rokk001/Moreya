@@ -3,6 +3,10 @@
 Run in the Windows developer environment; uses a hidden isolated Ogre window,
 not the game or a manual QA session.
 Pass --combat-blood to run the same cutout/fade checks on the blood material.
+
+The material scripts and textures may lie in the content and room packages (scripts/content_packages.py): the probe
+gets the shader, texture and script folders of the public tree and of every package on its command line. Without the
+material script the probe is not compiled and the check names it as not checked.
 """
 from pathlib import Path
 import os
@@ -11,6 +15,9 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
 prefix = Path(os.environ["CMAKE_PREFIX_PATH"])
 probe = r'''
 #include <Ogre.h>
@@ -18,17 +25,26 @@ probe = r'''
 #include <Bites/OgreSGTechniqueResolverListener.h>
 #include <iostream>
 #include <functional>
+#include <string>
+#include <vector>
 int main(int argc,char** argv){try{
  Ogre::Root root("","","feather.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
  Ogre::NameValuePairList options;options["hidden"]="true";options["vsync"]="false";
  Ogre::RenderWindow* window=root.createRenderWindow("Feather check",128,128,false,&options);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
- std::string repo=argv[1],prefix=argv[2];
- for(const std::string& path:{repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})
+ std::string prefix=argv[2];
+ // argv[3..]: "graphics=<folder>" (shaders and textures of the public tree and the packages) and "scripts=<folder>"
+ std::vector<std::string> graphics,scripts;
+ for(int i=3;i<argc;++i){std::string arg=argv[i];
+  if(arg.compare(0,9,"graphics=")==0)graphics.push_back(arg.substr(9));
+  else if(arg.compare(0,8,"scripts=")==0)scripts.push_back(arg.substr(8));}
+ graphics.push_back(prefix+"/Media/Main");graphics.push_back(prefix+"/Media/RTShaderLib");
+ for(const std::string& path:graphics)
   groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
- groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");
+ for(const std::string& path:scripts)
+  groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::MaterialManager& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("ChickenFeathers.material","Graphics"),"Graphics");
  Ogre::RTShader::ShaderGenerator* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
  Ogre::SceneManager* scene=root.createSceneManager();shaders->addSceneManager(scene);
@@ -54,8 +70,17 @@ int main(int argc,char** argv){try{
  std::cout<<"CHECKS="<<checks<<" FAILURES=0\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<"\n";return 1;}}
 '''
+material_script = "ChickenFeathers.material"
 if "--combat-blood" in sys.argv:
+    material_script = "CombatImpact.material"
     probe = probe.replace("ChickenFeathers.material", "CombatImpact.material").replace('"ChickenFeathers"', '"CombatBlood"')
+if content_packages.data_file(root, "materials/scripts/" + material_script) is None:
+    content_packages.unchecked("check_feather_material", ["materials/scripts/" + material_script + " (render probe)"])
+    sys.exit(0)
+# The folders of the public tree first, then those of every content and room package, as the game adds them
+folders = ["graphics=" + str(folder) for folder in
+           content_packages.data_folders(root, "shaders") + content_packages.data_folders(root, "materials/textures")]
+folders += ["scripts=" + str(folder) for folder in content_packages.data_folders(root, "materials/scripts")]
 
 with tempfile.TemporaryDirectory(prefix="feather-material-") as directory:
     work = Path(directory)
@@ -65,7 +90,7 @@ with tempfile.TemporaryDirectory(prefix="feather-material-") as directory:
     subprocess.run(["cl", "/nologo", "/EHsc", "/MD", "/std:c++17", f"/I{prefix / 'include/OGRE'}",
                     f"/I{prefix / 'include/OGRE/RTShaderSystem'}", str(cpp), f"/Fe:{executable}",
                     "/link", f"/LIBPATH:{prefix / 'lib'}", "OgreMain.lib", "OgreRTShaderSystem.lib", "OgreBites.lib"], cwd=work, check=True)
-    result = subprocess.run([str(executable), str(root), str(prefix)], cwd=work, capture_output=True, text=True)
+    result = subprocess.run([str(executable), str(root), str(prefix)] + folders, cwd=work, capture_output=True, text=True)
     print("\n".join(line for line in result.stdout.splitlines() if "CHECKS=" in line))
     if result.returncode:
         print(result.stderr)

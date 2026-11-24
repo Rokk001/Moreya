@@ -1,10 +1,18 @@
-"""Static staged checks for both remaining campaign key doors; no game or compilation."""
+"""Static staged checks for both remaining campaign key doors; no game or compilation.
+
+Ebonrook and Mirewatch are levels of a campaign wing package (scripts/campaign_packages.py); without the content their
+door stages are named as not checked and only the code side is checked.
+"""
 from pathlib import Path
 import hashlib
 import re
+import sys
 import check_campaign_playability as campaign
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / "scripts"))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 # The third digest covers the gold and gem tile lines. It was updated for the gold seam densities and added gold tiles of BALANCE-GOLD-PLAN section 9 (a density column on 125 Ebonrook and 150 Mirewatch gold tiles; positions, types and fullness are unchanged). Rooms and creatures digests are unchanged.
 BASELINE = {'Ebonrook': ('84261b3c15e22d90f49c31b69b74c84a61912e60f2e4cc0483f990e40a3beced', '52a1e6110a62dcdd3b4507d35c821f6ea5d48c0fd15c72f65f98e45ce2309d67', '3a799bca47a5a25786e33bae56ba42e55202470e8bb4033cdf43d1dea937e50d'), 'Mirewatch': ('80fbd9f452b093b21a9f8d3ac1754b78aa178578956e3464042567a79f312ded', '386e45eba2a2cb2ba4325782ddb9695f22ab9bd92ec424769f5b06c815cde248', '32e97f7d4cb5e7ae5fc7ecb8aef0fa354312c1f2d84be3e7ca9942c4a46af26b')}
 
@@ -17,7 +25,11 @@ def body(text, signature):
 
 # Validate immutable inputs and both closed/open stages of the approved door geometry.
 def check_map(name, bounds, door, front, owner, key, event, observer, expected_count, inside):
-    text = (root / "levels/campaign" / (name + ".level")).read_text(encoding="utf-8")
+    level_file = campaign_packages.level_path(root, name)
+    if not level_file.is_file() and not content_packages.has_content(root):
+        content_packages.unchecked("check_remaining_key_doors", ["levels/campaign/" + name + ".level"])
+        return
+    text = level_file.read_text(encoding="utf-8")
     level = campaign.parse_level(text)
     digest = lambda value: hashlib.sha256(value.encode()).hexdigest()
     minerals = "\n".join(line.strip() for line in campaign.section(text, "Tiles").splitlines()

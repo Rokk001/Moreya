@@ -19,8 +19,10 @@ a room that needs no package is always available, a wing package names no room, 
 the found packages are named sorted, and the room packages of a server limit the available rooms until the limit is
 removed (a room of the client that the server lacks is unavailable, the names of the found packages stay).
 Runtime part, when the built game build/windows/moreya.exe exists: the game plays levels/skirmish/TestSpa.level (a
-tavern and a spa) with the load test parameters (--run-level, 1 second) without MOREYA_CONTENT_DIR, so no room package
-is found; the run must pass and the log must show both rooms left out.
+tavern and a spa) with the load test parameters (--run-level, 1 second) with a content folder that holds only the
+required content packages (scripts/content_packages.py, linked from the content folder), so the game starts but no
+room package is found; the run must pass and the log must show both rooms left out. Without the content packages the
+game cannot start (it says the content is missing): the runtime part is then named as not checked.
 
 Usage: python source/tests/check_room_packages.py
 """
@@ -38,6 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: Files of each room package, counted once for this branch (Package.cfg included)
@@ -74,6 +77,26 @@ def body(source, signature):
         if depth == 0:
             return source[start:index + 1]
     return source[start:]
+
+
+def link_folder(link, target):
+    """Links a folder to another folder (a directory junction on Windows, else a symbolic link)."""
+    if os.name == "nt":
+        subprocess.run(["cmd", "/d", "/c", "mklink", "/J", str(link), str(target)], check=True,
+                       capture_output=True, stdin=subprocess.DEVNULL)
+    else:
+        os.symlink(str(target), str(link), target_is_directory=True)
+
+
+def required_content_only(folder):
+    """Fills a folder with links to the required content packages only (no room package); returns False when a
+    required content package is not present."""
+    found = content_packages.packages(ROOT)
+    if content_packages.missing_packages(ROOT):
+        return False
+    for name in content_packages.REQUIRED_PACKAGES:
+        link_folder(Path(folder) / found[name].name, found[name])
+    return True
 
 
 def phase(name, started):
@@ -327,22 +350,35 @@ if shutil.which("cl") and not failures:
 
 # Runtime: a level with a tavern and a spa loads without the room packages
 runtime_note = "not run: the built game %s is missing" % EXECUTABLE.relative_to(ROOT)
-if EXECUTABLE.is_file() and not failures:
+if EXECUTABLE.is_file() and not failures and not content_packages.has_content(ROOT):
+    runtime_note = "not run: " + ", ".join(content_packages.unchecked(
+        "check_room_packages", ["runtime part (the game needs the content packages)"]))
+elif EXECUTABLE.is_file() and not failures:
     started = time.monotonic()
-    environment = dict(os.environ)
-    environment[campaign_packages.CONTENT_VARIABLE] = ""
+    # A content folder with the required content packages but without any room package
+    content_folder = tempfile.mkdtemp(prefix="od-content-without-rooms-")
+    required_content_only(content_folder)
+    environment = content_packages.game_environment(ROOT)
+    environment[campaign_packages.CONTENT_VARIABLE] = content_folder
     app_data = tempfile.mkdtemp(prefix="od-no-room-packages-")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
     try:
-        result = subprocess.run([str(EXECUTABLE), "--run-level", str(ROOT / RUNTIME_LEVEL), "--seconds",
-                                 str(PROBE_SECONDS), "--appData", app_data, "--port", str(port)],
+        result = subprocess.run([str(EXECUTABLE), "--run-level", str(content_packages.resolve(ROOT, RUNTIME_LEVEL)),
+                                 "--seconds", str(PROBE_SECONDS), "--appData", app_data, "--port", str(port)],
                                 cwd=str(EXECUTABLE.parent), env=environment, capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=PROBE_TIMEOUT, stdin=subprocess.DEVNULL)
         logs = "".join(path.read_text(encoding="utf-8", errors="replace") for path in Path(app_data).rglob("*.log"))
     finally:
         shutil.rmtree(app_data, ignore_errors=True)
+        # Removes the links only (a junction is removed like an empty folder), never the linked packages
+        for link in Path(content_folder).iterdir():
+            if os.name == "nt":
+                os.rmdir(str(link))
+            else:
+                link.unlink()
+        os.rmdir(content_folder)
     phase("runtime", started)
     output = result.stdout + result.stderr + logs
     check(result.returncode == 0 and "PASS " + Path(RUNTIME_LEVEL).name in output,

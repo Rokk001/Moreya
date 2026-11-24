@@ -5,6 +5,8 @@ start and no build needed.
 
 The first sections cover the gold system code; the last section runs the gold density rebalance tool of the levels
 (--check against its base commit) and compares its per-level summary with the expected table.
+The density textures and their CREDITS row lie in the content packages and in the CREDITS of the content repository
+(scripts/content_packages.py); without the content they are named as not checked.
 """
 from pathlib import Path
 import re
@@ -13,6 +15,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 TIMEOUT_SECONDS = 600
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
 
 
 def read(path):
@@ -236,7 +241,11 @@ for name, texture in (('Gold50', 'Gold50'), ('Gold150', 'Gold150')):
     assert 'texture %s.png' % texture in block and 'texture %sNormal.png' % texture in block
     assert 'vertex_program_ref myVertexShader' in block and 'fragment_program_ref myFragmentShader' in block
 for texture in ('Gold50', 'Gold50Normal', 'Gold150', 'Gold150Normal'):
-    assert (ROOT / 'materials' / 'textures' / (texture + '.png')).is_file(), texture
+    found = content_packages.data_file(ROOT, 'materials/textures/' + texture + '.png')
+    if found is None and not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_world_balance_gold', ['materials/textures/' + texture + '.png'])
+        continue
+    assert found is not None and found.is_file(), texture
 render = read('source/render/RenderManager.cpp')
 assert 'if((density == Tile::GOLD_DENSITY_LOW) || (density == Tile::GOLD_DENSITY_HIGH))' in render
 assert 'tileMeshEnt->setMaterialName(goldWallMaterialName(tile.getGoldDensity(), nt == NodeType::MDTC_NODE));' in render
@@ -247,9 +256,17 @@ credits = read('CREDITS')
 lines = credits.splitlines()
 gold_line = [i for i, line in enumerate(lines) if line.startswith('-> Gold{,Normal}.png')]
 assert len(gold_line) == 1
-assert lines[gold_line[0] + 1].startswith('-> Gold{50,150}{,Normal}.png')
-assert 'OD Team' in lines[gold_line[0] + 1] and 'CC0' in lines[gold_line[0] + 1]
-assert 'tools/dungeon-palette/generate_claimed_gold.py' in lines[gold_line[0] + 1]
+# The row of the density textures moved with them into the CREDITS of the content repository, where it names the
+# textures by their path (in the public CREDITS it was "-> Gold{50,150}{,Normal}.png" below the row of Gold.png)
+if not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_world_balance_gold', ['CREDITS row of Gold{50,150}{,Normal}.png'])
+else:
+    density_rows = [line for line in room_packages.credits_text(ROOT).splitlines()
+                    if line.startswith('materials/textures/Gold{50,150}{,Normal}.png')]
+    assert len(density_rows) == 1, density_rows
+    # CC0, or "All rights reserved" (the licence of the content repository) for the row of the content CREDITS
+    assert 'OD Team' in density_rows[0] and room_packages.licence_ok(ROOT, density_rows[0], 'CC0'), density_rows[0]
+    assert 'tools/dungeon-palette/generate_claimed_gold.py' in density_rows[0]
 
 result = subprocess.run([sys.executable, str(ROOT / 'tools' / 'dungeon-palette' / 'generate_claimed_gold.py'), '--check'],
                         cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,

@@ -1,11 +1,17 @@
 """The cosmetic event hitResult: what a blow or shot really did, shown by the clients only from the event.
 
 Pure source wiring checks (no compiler, no game): kind list and order, the emitters on the server, the
-negotiation and the old clients and servers, the client handlers, the configuration keys."""
+negotiation and the old clients and servers, the client handlers, the configuration keys.
+
+config/creatureReactions.cfg is content (core-config package, found through scripts/content_packages.py); without it
+the reaction events of that table are named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -35,7 +41,9 @@ visuals = read('source/render/CreatureWeaponVisuals.cpp')
 visuals_h = read('source/render/CreatureWeaponVisuals.h')
 combat = read('source/render/CreatureCombatReactions.cpp')
 combat_h = read('source/render/CreatureCombatReactions.h')
-reactions_cfg = read('config/creatureReactions.cfg')
+#: The reaction table (core-config package), None without the content
+reactions_cfg = (content_packages.read_text(root, 'config/creatureReactions.cfg')
+                 if content_packages.data_file(root, 'config/creatureReactions.cfg') else None)
 server = read('source/network/ODServer.cpp')
 client = read('source/network/ODClient.cpp')
 
@@ -150,8 +158,11 @@ note = function_body(combat, 'void CreatureCombatReactions::noteHitEvent(')
 assert 'strong ? 1 : 0' in note and 'scheduleHit(' in note and 'static void noteHitEvent(' in combat_h
 # The health steps still drive the stagger without an event (spells, traps and older servers)
 assert 'void CreatureCombatReactions::noteHealth(' in combat
-for event_name in ('BlowDodged', 'BlowMissed', 'BlowGlanced'):
-    assert 'Name        ' + event_name in reactions_cfg, event_name
-assert 'HitStrongShare' in reactions_cfg
+if reactions_cfg is None:
+    content_packages.unchecked('check_hit_event', ['config/creatureReactions.cfg'])
+else:
+    for event_name in ('BlowDodged', 'BlowMissed', 'BlowGlanced'):
+        assert 'Name        ' + event_name in reactions_cfg, event_name
+    assert 'HitStrongShare' in reactions_cfg
 
 print('check_hit_event: ok')

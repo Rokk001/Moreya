@@ -1,12 +1,17 @@
 """Slower walk of a badly hurt creature (30 percent by default), server and clients at the same speed.
 
 Pure source wiring checks (no compiler, no game): values in the configuration, one shared rule on the
-health stage both sides know, no new network message, the walk clip keeps up and is not slowed twice."""
+health stage both sides know, no new network message, the walk clip keeps up and is not slowed twice.
+The reaction table config/creatureReactions.cfg lives in a content package; without the content the check names its
+part as not checked."""
 from pathlib import Path
 import math
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -26,7 +31,7 @@ creature = read('source/entities/Creature.cpp')
 creature_h = read('source/entities/Creature.h')
 movable = read('source/entities/MovableGameEntity.cpp')
 render = read('source/render/RenderManager.cpp')
-reactions_cfg = read('config/creatureReactions.cfg')
+reactions_file = content_packages.data_file(root, 'config/creatureReactions.cfg')
 
 # Values: documented and set in the configuration, read with a default and a limit
 for key, value in (('LowHealthWalkSpeedFactor', 0.7), ('LowHealthWalkThresholdPercent', 50.0)):
@@ -85,7 +90,11 @@ assert movable.count('getClientPoseSpeedFactor()') == 1
 assert 'getLowHealthWalk' not in render and 'getLowHealthWalk' not in movable   # the renderer does not scale it again
 
 # Matching clip: the normal walk clip at that speed plus the existing hurt walk reaction (E15)
-assert re.search(r'Name\s+HurtWalk\b', reactions_cfg) and re.search(r'Name\s+Limp\b', reactions_cfg)
+if reactions_file is None:
+    content_packages.unchecked('check_low_health_walk', ['HurtWalk and Limp events of config/creatureReactions.cfg'])
+else:
+    reactions_cfg = reactions_file.read_text(encoding='utf-8')
+    assert re.search(r'Name\s+HurtWalk\b', reactions_cfg) and re.search(r'Name\s+Limp\b', reactions_cfg)
 
 # Optional factor per creature type: parsed, copied, sent to the clients, saved, documented, absent = global value
 definition = read('source/entities/CreatureDefinition.cpp')

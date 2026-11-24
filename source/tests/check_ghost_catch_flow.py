@@ -438,8 +438,8 @@ def png_luminance(path):
 # Bodies of all material definitions in the shipped material scripts, by material name.
 def material_scripts():
     found = {}
-    for script in [path for base in [repo] + room_packages.package_roots(repo)
-                   for path in (base / "materials" / "scripts").glob("*.material")]:
+    # The material scripts of the public tree and of every content and room package (scripts/room_packages.glob_files)
+    for script in room_packages.glob_files(repo, "materials/scripts", "*.material"):
         text = script.read_text(encoding="utf-8")
         for match in re.finditer(r"^material (\w+)\b[^\n]*\n\{(.*?)^\}", text, re.M | re.S):
             found[match.group(1)] = match.group(2)

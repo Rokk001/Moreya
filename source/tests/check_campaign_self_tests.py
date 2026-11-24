@@ -8,7 +8,8 @@ mode does not count). The check runner starts every script without arguments, so
 would never run and could fall behind the levels unnoticed.
 
 Usage: python -I source/tests/check_campaign_self_tests.py
-Exit 0 and "campaign self-tests ok" when both self-tests pass.
+Exit 0 and "campaign self-tests ok" when both self-tests pass. Without the content (scripts/content_packages.py) a
+self-test that names the campaign levels as not checked counts as not checked, and its line is shown.
 """
 import json
 import os
@@ -17,6 +18,11 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
+#: The marker of a part that a check could not check because the content is not present (content_packages.unchecked)
+NOT_CHECKED = "content not present, not checked"
 # The two self-tests and the line each prints when it passes
 SELF_TESTS = (
     ("scripts/check-campaign-opening.py", "self-test passed"),
@@ -34,6 +40,12 @@ def run_self_test(script, passed_line):
                             errors="replace", timeout=TIMEOUT_SECONDS)
     name = os.path.basename(script)
     print('ODP_TEST_PHASE ' + json.dumps({"name": name, "seconds": round(time.monotonic() - start, 3)}))
+    if result.returncode == 0 and NOT_CHECKED in result.stdout and not content_packages.has_content(ROOT):
+        # Without the content the self-test has no levels to break: show its line instead of failing
+        for line in result.stdout.splitlines():
+            if NOT_CHECKED in line:
+                print(line)
+        return None
     if result.returncode != 0 or passed_line not in result.stdout:
         tail = "\n".join((result.stdout + result.stderr).splitlines()[-15:])
         return "%s --self-test failed (exit %d):\n%s" % (script, result.returncode, tail)

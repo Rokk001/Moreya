@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Undead rules: Skeleton and Lich are never knocked out, leave no corpse, blood or ghost, cannot be carried,
 taken by the crypt or raised, vanish after DeathVanishSeconds (the Skeleton leaves its bone pile, the Lich fires its
-beetle effect at death), and the renderer keeps their own Die clip. Static source and config scan, no compiling."""
+beetle effect at death), and the renderer keeps their own Die clip. Static source and config scan, no compiling.
+config/roomAmbienceSpells.cfg lies in the content packages (scripts/content_packages.py); without the content its
+effect is named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 UNDEAD = {'Skeleton': ('5.0', '1', None), 'Lich': ('5.0', None, 'LichBeetles')}
 
 
@@ -113,8 +118,12 @@ def main():
     client = read('source/network/ODClient.cpp')
     assert 'triggerEvent("SpellFx" + family.substr(Spell::SPELL_EFFECT_PREFIX.size())' in client, \
         'the client does not turn spell effect families into SpellFx events'
-    assert re.search(r'^\s*Event\s+SpellFxLichBeetles\s*$', read('config/roomAmbienceSpells.cfg'), re.M), \
-        'the client has no effect for SpellFxLichBeetles'
+    spells = content_packages.data_file(ROOT, 'config/roomAmbienceSpells.cfg')
+    if spells is None:
+        content_packages.unchecked('check_undead_rules', ['config/roomAmbienceSpells.cfg'])
+    else:
+        assert re.search(r'^\s*Event\s+SpellFxLichBeetles\s*$', spells.read_text(encoding='utf-8'), re.M), \
+            'the client has no effect for SpellFxLichBeetles'
     print('undead rules ok')
 
 

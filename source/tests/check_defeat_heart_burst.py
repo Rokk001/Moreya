@@ -14,14 +14,21 @@ Two parts:
    checks count changed, warm and green pixels against a picture of the empty floor, and check that nothing
    the sequence created is left in the scene or in the resource managers after the end and after an early stop
    (the destructor path).
+The models, materials, shaders and particle scripts are the folders of the public tree and of the content packages
+(scripts/content_packages.py), given to the render probe on its command line. Without the content the script checks
+and the render part are named as not checked; the pure part and the wiring still run.
 """
 from pathlib import Path
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+HAS_CONTENT = content_packages.has_content(repo)
 deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 render_manager = (repo / 'source/render/RenderManager.cpp').read_text()
@@ -383,7 +390,6 @@ int main(int argc, char** argv)
 {
     try
     {
-    const std::string repo = argv[1];
     const std::string prefix = argv[2];
     gOut = argv[3];
     Ogre::LogManager* logs = new Ogre::LogManager();
@@ -400,9 +406,9 @@ int main(int argc, char** argv)
     gWindow = gRoot->createRenderWindow("DefeatHeartBurst", WIDTH, HEIGHT, false, &options);
     Ogre::ResourceGroupManager& groups = Ogre::ResourceGroupManager::getSingleton();
     groups.createResourceGroup("Graphics");
-    const char* dirs[5] = {"models", "materials/textures", "materials/scripts", "shaders", "particles"};
-    for(int i = 0; i < 5; ++i)
-        groups.addResourceLocation(repo + "/" + dirs[i], "FileSystem", "Graphics", true);
+    // The data folders of the public tree and of the content packages follow the output folder
+    for(int i = 4; i < argc; ++i)
+        groups.addResourceLocation(argv[i], "FileSystem", "Graphics", true);
     groups.addResourceLocation(prefix + "/Media/Main", "FileSystem", "OgreInternal");
     groups.addResourceLocation(prefix + "/Media/RTShaderLib", "FileSystem", "Graphics");
     Ogre::RTShader::ShaderGenerator::initialize();
@@ -606,29 +612,37 @@ assert 'rrCreateFreeParticleEffect' not in start, 'the burst effects start at th
 assert 'stopDefeatEffects();' in function(game_mode, 'GameMode::~GameMode(')
 assert 'stopDefeatEffects();' in function(game_mode, 'void GameMode::onDefeatSequenceFinished(')
 print('WIRING OK: the start creates the heart copy, the end and the destructor remove every object')
-particles = (repo / 'particles/HeartExplosion.particle').read_text()
-for system in ('HeartExplosion', 'HeartExplosionFlash', 'HeartExplosionSparks', 'HeartExplosionSmoke'):
-    assert 'particle_system ' + system + '\n' in particles, system
-assert particles.count('{') == particles.count('}')
-for emitter in re.findall(r'emitter \w+\s*\{[^}]*\}', particles):
-    assert 'duration' in emitter, 'every burst emitter stops by itself'
-# Area emitters default to a size of 100 in every direction; the swirl ring once had no depth and spread its
-# particles over 100 units up and down, so almost none were in the picture
-for script in ('HeartExplosion.particle', 'DefeatSwirl.particle'):
-    text = (repo / 'particles' / script).read_text()
-    for emitter in re.findall(r'emitter (?:Box|Ellipsoid|Ring|Cylinder|HollowEllipsoid)\s*\{[^}]*\}', text):
-        for size in ('width', 'height', 'depth'):
-            assert re.search(r'^\s*' + size + r'\s', emitter, re.MULTILINE), script + ': area emitter without ' + size
-materials = (repo / 'materials/scripts/DefeatSequence.material').read_text()
-for texture in re.findall(r'texture (\S+)', materials):
-    assert (repo / 'materials/textures' / texture).is_file(), texture
-print('SCRIPTS OK: four burst systems, every emitter has a duration, the new materials use existing textures')
+# The particle scripts and the material lie in the content package core-models
+if not HAS_CONTENT:
+    content_packages.unchecked('check_defeat_heart_burst', ['particles/HeartExplosion.particle',
+                                                            'particles/DefeatSwirl.particle',
+                                                            'materials/scripts/DefeatSequence.material'])
+else:
+    particles = content_packages.read_text(repo, 'particles/HeartExplosion.particle', None)
+    for system in ('HeartExplosion', 'HeartExplosionFlash', 'HeartExplosionSparks', 'HeartExplosionSmoke'):
+        assert 'particle_system ' + system + '\n' in particles, system
+    assert particles.count('{') == particles.count('}')
+    for emitter in re.findall(r'emitter \w+\s*\{[^}]*\}', particles):
+        assert 'duration' in emitter, 'every burst emitter stops by itself'
+    # Area emitters default to a size of 100 in every direction; the swirl ring once had no depth and spread its
+    # particles over 100 units up and down, so almost none were in the picture
+    for script in ('HeartExplosion.particle', 'DefeatSwirl.particle'):
+        text = content_packages.read_text(repo, 'particles/' + script, None)
+        for emitter in re.findall(r'emitter (?:Box|Ellipsoid|Ring|Cylinder|HollowEllipsoid)\s*\{[^}]*\}', text):
+            for size in ('width', 'height', 'depth'):
+                assert re.search(r'^\s*' + size + r'\s', emitter, re.MULTILINE), script + ': area emitter without ' + size
+    materials = content_packages.read_text(repo, 'materials/scripts/DefeatSequence.material', None)
+    for texture in re.findall(r'texture (\S+)', materials):
+        assert content_packages.data_file(repo, 'materials/textures/' + texture) is not None, texture
+    print('SCRIPTS OK: four burst systems, every emitter has a duration, the new materials use existing textures')
 code = burst_header_path.read_text() + pure + render
 assert re.search(r'\bauto\b', code) is None and '[&]' not in code and '[=]' not in code
 print('STYLE OK: no auto and no lambda in the new code and in the fixture')
-for path in (Path(__file__), burst_header_path, repo / 'particles/HeartExplosion.particle',
-             repo / 'materials/scripts/DefeatSequence.material', repo / 'source/modes/GameMode.cpp',
-             repo / 'source/modes/GameMode.h', repo / 'source/render/RenderManager.cpp', repo / 'source/render/RenderManager.h'):
+# The content files are checked with the content
+content_files = ([content_packages.resolve(repo, 'particles/HeartExplosion.particle'),
+                  content_packages.resolve(repo, 'materials/scripts/DefeatSequence.material')] if HAS_CONTENT else [])
+for path in [Path(__file__), burst_header_path, repo / 'source/modes/GameMode.cpp',
+             repo / 'source/modes/GameMode.h', repo / 'source/render/RenderManager.cpp', repo / 'source/render/RenderManager.h'] + content_files:
     bad = [b for b in path.read_bytes() if b < 32 and b not in (9, 10, 13)]
     assert not bad, path
 print('BYTES OK: no stray control characters')
@@ -653,10 +667,19 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-burst-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(repo / 'source'), 'pure.cpp', '/Fepure.exe'],
                    cwd=work, check=True)
     run('pure.exe', [], work)
+    # The render part reads the models, materials, shaders and particle scripts of the content: without it nothing
+    # more is compiled
+    if not HAS_CONTENT:
+        content_packages.unchecked('check_defeat_heart_burst', ['render probe'])
+        sys.exit(0)
     (work / 'render.cpp').write_text(render)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(deps / 'install/include/OGRE'),
                     '/I', str(deps / 'install/include/OGRE/RTShaderSystem'), '/I', str(repo / 'source'),
                     'render.cpp', '/Ferender.exe', '/link', '/LIBPATH:' + str(deps / 'install/lib'),
                     'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'],
                    cwd=work, check=True)
-    run('render.exe', [str(repo).replace('\\', '/'), str(deps / 'install').replace('\\', '/'), str(out).replace('\\', '/')], work)
+    # The resource folders: each folder of the public tree and the same folder of every content package
+    folders = [folder.resolve().as_posix() for relative in ('models', 'materials/textures', 'materials/scripts', 'shaders', 'particles')
+               for folder in content_packages.data_folders(repo, relative)]
+    run('render.exe', [str(repo).replace('\\', '/'), str(deps / 'install').replace('\\', '/'), str(out).replace('\\', '/')] + folders,
+        work)

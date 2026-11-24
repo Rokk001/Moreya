@@ -3,7 +3,10 @@
 Pure source wiring checks (no compiler, no game): server authority, configuration with defaults, the two new
 cosmetic event kinds appended to the network format, saves of the hatchery that still load, and the client side.
 The probe of the pure step rules in HeartHealthRing.h is compiled and run only with --probe (needs the MSVC
-compiler on the path)."""
+compiler on the path).
+
+The two room ambience tables are content (core-config package, found through scripts/content_packages.py); without them
+their grain effects are named as not checked."""
 from pathlib import Path
 import re
 import subprocess
@@ -11,6 +14,12 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The room ambience tables of the grain effects (core-config package)
+AMBIENCE_TABLES = ('config/roomAmbienceProduction.cfg', 'config/roomAmbienceDeferred.cfg')
+missing_content = [name for name in AMBIENCE_TABLES if content_packages.data_file(root, name) is None]
 
 
 def read(path):
@@ -39,8 +48,8 @@ hatchery_h = read('source/rooms/RoomHatchery.h')
 ambience = read('source/render/RoomAmbience.cpp')
 ambience_h = read('source/render/RoomAmbience.h')
 extras = read('source/render/RoomAmbienceExtras.cpp')
-ambience_cfg = read('config/roomAmbienceProduction.cfg')
-deferred_cfg = read('config/roomAmbienceDeferred.cfg')
+ambience_cfg = None if missing_content else content_packages.read_text(root, 'config/roomAmbienceProduction.cfg')
+deferred_cfg = None if missing_content else content_packages.read_text(root, 'config/roomAmbienceDeferred.cfg')
 
 # Network format: the new kinds are appended after the last one (numbers never change), the range test follows
 kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class CosmeticEventType')[1].split('};')[0], re.M)
@@ -126,9 +135,12 @@ assert 'if(roomIt == mGrainRooms.end())' in level and 'return 0;' in level, 'unk
 assert 'getGrainLevel(tile) < static_cast<int32_t>(effect.mGrainMin)' in ambience
 assert 'mGrainRooms.clear();' in ambience
 assert 'GrainPecked' in function_body(ambience, 'void RoomAmbience::notifyHatcheryGrain(')
-for min_level in (1, 2, 3):
-    assert re.search(r'^\s+GrainMin\s+' + str(min_level) + r'\s*$', ambience_cfg, re.M), min_level
-assert re.search(r'^\s+Event\s+GrainPecked\s*$', deferred_cfg, re.M)
+if missing_content:
+    content_packages.unchecked('check_heart_stage_grain', missing_content)
+else:
+    for min_level in (1, 2, 3):
+        assert re.search(r'^\s+GrainMin\s+' + str(min_level) + r'\s*$', ambience_cfg, re.M), min_level
+    assert re.search(r'^\s+Event\s+GrainPecked\s*$', deferred_cfg, re.M)
 assert 'key == "GrainMin"' in read('source/render/RoomAmbienceConfig.cpp')
 
 # Batch 13b, part 1: the grain grows back at one constant speed. The regrowth reads only the config value and

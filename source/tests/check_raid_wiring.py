@@ -8,6 +8,10 @@ section, the place of the raid panel at every screen size and UI scale) and the 
 and the test level are checked for the statements that implement them. Nothing is compiled and the game is not
 started; the integration build compiles and runs the code.
 
+Most skirmish and multiplayer levels and the picture set RaidHud live in content packages (found through
+scripts/content_packages.py): the levels are read from the public folders and the package folders. Without the content
+the check names the levels of the packages and the picture set as not checked.
+
 Usage: python -I source/tests/check_raid_wiring.py
 Exit 0 and "raid wiring ok" when every item holds.
 """
@@ -18,8 +22,12 @@ import time
 import xml.etree.ElementTree as ElementTree
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
 START = time.perf_counter()
 FAILURES = []
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(relative):
@@ -117,11 +125,16 @@ check("mRaid->clear();" in function(GAME_MAP, "void GameMap::clearAll()"), "RA10
 misc = function(GAME_MAP, "unsigned long int GameMap::doMiscUpkeep(")
 check(misc.index("mRaid->update();") < misc.index("mCombatGroups->update();") < misc.index("ge->doUpkeep()"),
       "the raid runs before the combat groups and the creatures")
+if not WITH_CONTENT:
+    content_packages.unchecked("check_raid_wiring", ["the skirmish and multiplayer levels of the content packages"])
 for folder in ("levels/skirmish", "levels/multiplayer"):
-    for name in sorted(os.listdir(os.path.join(ROOT, folder))):
-        if not name.endswith(".level") or name == "TestRaid.level":
+    # the levels of the public folder and of the content packages
+    for path in content_packages.data_glob(ROOT, folder, "*.level"):
+        name = path.name
+        if name == "TestRaid.level":
             continue
-        text = read(folder + "/" + name)
+        with open(str(path), encoding="utf-8") as handle:
+            text = handle.read()
         check("[Raid]" not in text and "raidopen" not in text and "raidcountdown" not in text,
               "C8: " + folder + "/" + name + " has no raid, so skirmish and multiplayer stay as they are")
 
@@ -357,10 +370,13 @@ check(windows["Countdown"].get("type") == "OD/MenuPlate" and (raid_icon is None 
 countdown_props = dict((p.get("name"), p.get("value")) for p in windows["Countdown"].findall("Property"))
 check(countdown_props.get("Text") == "" and countdown_props.get("TooltipText"),
       "K14: the countdown window holds no words of its own and has a tooltip")
-imageset = ElementTree.parse(os.path.join(ROOT, "gui", "RaidHud.imageset")).getroot()
-check(sorted(i.get("name") for i in imageset.findall("Image")) == ["GateOpen", "RaidBanner"]
-      and os.path.exists(os.path.join(ROOT, "gui", imageset.get("imagefile"))),
-      "G11: the two pictures exist under their final image names")
+if content_packages.data_file(ROOT, "gui/RaidHud.imageset") is None and not WITH_CONTENT:
+    content_packages.unchecked("check_raid_wiring", ["gui/RaidHud.imageset and its pictures"])
+else:
+    imageset = ElementTree.parse(str(content_packages.resolve(ROOT, "gui/RaidHud.imageset"))).getroot()
+    check(sorted(i.get("name") for i in imageset.findall("Image")) == ["GateOpen", "RaidBanner"]
+          and content_packages.data_file(ROOT, "gui/" + imageset.get("imagefile")) is not None,
+          "G11: the two pictures exist under their final image names")
 check('name="RaidHud"' in open(os.path.join(ROOT, "gui", "ODSkin.scheme"), encoding="utf-8").read(),
       "G11: the picture set is registered in the scheme")
 raid_root = [w for w in root.find("Window").findall("Window") if w.get("name") == "RaidPanel"]

@@ -8,6 +8,11 @@ it, that the kind Mark is wired from the config to the code, that every texture 
 CREDITS entry, that the lasting looks on creatures have their particle systems, that the aura of a possessed
 creature lasts until the possession ends and is ended on the server and on the client, and that the limits
 of the effects are set.
+
+The room ambience configs, the spell materials, particle scripts and textures are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages. Without the content
+the data part is named as not checked; the code and the generators are checked. The CREDITS rows of the moved files
+are in the CREDITS of the content repository and are checked with the content.
 """
 
 import os
@@ -15,12 +20,33 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The game data files the check reads; they lie in the public tree or in a content package
+DATA_FILES = ("config/roomAmbienceSpells.cfg", "config/roomAmbienceSpellsFx.cfg", "config/roomAmbience.cfg",
+              "materials/scripts/RoomAmbienceSpells.material", "particles/RoomAmbienceSpells.particle",
+              "particles/RoomAmbienceSpellsExtra.particle")
 
 
 def read(*parts):
-    """Returns the text of a file below the repository root."""
-    with open(os.path.join(ROOT, *parts), encoding="utf-8", errors="replace") as handle:
+    """Returns the text of a file below the repository root (game data from the public tree or a content package)."""
+    with open(str(content_packages.resolve(ROOT, "/".join(parts))), encoding="utf-8", errors="replace") as handle:
         return handle.read()
+
+
+def data_present():
+    """True when the game data can be checked: all files are found or the content is present (then a missing one
+    fails as before); else names the data part as not checked."""
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    if not missing or content_packages.has_content(ROOT):
+        return True
+    content_packages.unchecked("check_spell_cosmetics", missing + ["the spell textures"])
+    return False
+
+
+DATA = data_present()
 
 
 problems = []
@@ -30,14 +56,14 @@ spell_dir = os.path.join(ROOT, "source", "spells")
 spell_code = "".join(read("source", "spells", name) for name in sorted(os.listdir(spell_dir)) if name.endswith(".cpp"))
 spell_code += read("source", "creatureeffect", "CreatureEffectDefector.cpp") + \
     read("source", "creatureeffect", "CreatureEffectHexenHen.cpp")
-cfg = read("config", "roomAmbienceSpells.cfg") + read("config", "roomAmbienceSpellsFx.cfg")
+cfg = read("config", "roomAmbienceSpells.cfg") + read("config", "roomAmbienceSpellsFx.cfg") if DATA else ""
 events = set(re.findall(r"^\s*Event\s+(\S+)", cfg, re.M))
 reported = set("SpellFx" + name for name in re.findall(r'fireSpellEffect\([^;]*?"(\w+)"\s*,\s*"[^"]*"\s*(?:,[^;]*)?\)', spell_code))
 for effect in ("Summon", "Champion", "CallToWar", "Explosion", "Strength", "Weak", "EyeEvil", "Gold", "Lightning",
                "Tremor", "Defector", "Hen", "Inferno", "InfernoHit", "Possess"):
     if "SpellFx" + effect not in reported:
         problems.append("no spell reports the effect %s" % effect)
-    if "SpellFx" + effect not in events:
+    if DATA and "SpellFx" + effect not in events:
         problems.append("the config has no effect for SpellFx%s" % effect)
 
 # 2. Mark is wired
@@ -56,23 +82,25 @@ for needle in ("AmbienceKind::mark", "mMarks.push_back", "getMaxMarks()", "updat
 stop = ambience[ambience.index("void RoomAmbience::stopAll"):ambience.index("void RoomAmbience::update(")]
 if "mMarks.clear()" not in stop:
     problems.append("stopAll does not remove the marks")
-for kind in ("Shake", "Mark"):
-    if not re.search(r"^\s*Kind\s+%s\s*$" % kind, cfg, re.M):
-        problems.append("no %s effect in the spell config" % kind)
+if DATA:
+    for kind in ("Shake", "Mark"):
+        if not re.search(r"^\s*Kind\s+%s\s*$" % kind, cfg, re.M):
+            problems.append("no %s effect in the spell config" % kind)
 
 # 3. Textures, materials and credits
-materials = read("materials", "scripts", "RoomAmbienceSpells.material")
-credits = read("CREDITS")
-particles = read("particles", "RoomAmbienceSpells.particle") + read("particles", "RoomAmbienceSpellsExtra.particle")
+materials = read("materials", "scripts", "RoomAmbienceSpells.material") if DATA else ""
+# The CREDITS of the public tree and of the content repository
+credits = room_packages.credits_text(ROOT)
+particles = read("particles", "RoomAmbienceSpells.particle") + read("particles", "RoomAmbienceSpellsExtra.particle") if DATA else ""
 textures = ("RoomAmbRing", "RoomAmbRingRunes", "RoomAmbRingDust", "RoomAmbMarkScorch", "RoomAmbMarkCracks", "RoomAmbMarkBolt")
 for name in textures:
-    if not os.path.exists(os.path.join(ROOT, "materials", "textures", name + ".png")):
+    if DATA and content_packages.data_file(ROOT, "materials/textures/" + name + ".png") is None:
         problems.append("texture %s.png is missing" % name)
-    if not re.search(r"material %s\b" % name, materials) or ("texture %s.png" % name) not in materials:
+    if DATA and (not re.search(r"material %s\b" % name, materials) or ("texture %s.png" % name) not in materials):
         problems.append("material %s is missing or has another texture" % name)
-    if ("materials/textures/%s.png" % name) not in credits:
+    if DATA and ("materials/textures/%s.png" % name) not in credits:
         problems.append("CREDITS has no entry for %s.png" % name)
-    if ("material        %s" % name) not in particles:
+    if DATA and ("material        %s" % name) not in particles:
         problems.append("no particle system uses %s" % name)
 generator = read("tools", "gen_spell_marks.py")
 for name in textures:
@@ -84,14 +112,15 @@ for name in ("RoomAmbCoin", "RoomAmbFeather", "RoomAmbGrain", "RoomAmbSwirl"):
         problems.append("tools/gen_room_ambience_art.py does not draw %s" % name)
 
 # 4. Every system that an effect or a creature effect names exists
-systems = set(re.findall(r"^particle_system\s+(\S+)", particles, re.M))
-for system in re.findall(r"^\s*System\s+(\S+)", cfg, re.M):
-    if system not in systems and not os.path.exists(os.path.join(ROOT, "particles", system + ".particle")):
-        problems.append("particle system %s is missing" % system)
-for script in ("SpellCreatureDefector", "SpellCreatureHexenHen", "SpellCreatureInferno", "SpellCreatureChampion",
-               "SpellCreatureArrival", "SpellCreaturePossess"):
-    if script not in systems:
-        problems.append("the lasting look %s has no particle system" % script)
+if DATA:
+    systems = set(re.findall(r"^particle_system\s+(\S+)", particles, re.M))
+    for system in re.findall(r"^\s*System\s+(\S+)", cfg, re.M):
+        if system not in systems and content_packages.data_file(ROOT, "particles/" + system + ".particle") is None:
+            problems.append("particle system %s is missing" % system)
+    for script in ("SpellCreatureDefector", "SpellCreatureHexenHen", "SpellCreatureInferno", "SpellCreatureChampion",
+                   "SpellCreatureArrival", "SpellCreaturePossess"):
+        if script not in systems:
+            problems.append("the lasting look %s has no particle system" % script)
 
 # 5. The aura of a possessed creature lasts until the possession ends
 spell_possess = read("source", "spells", "SpellPossess.cpp")
@@ -117,11 +146,12 @@ if "rrEntityRemoveParticleEffect" not in part or "getIsOnServerMap()" not in par
     problems.append("endParticleEffectsByScript must remove on the client and let the server effect run out")
 
 # 6. Limits
-settings = read("config", "roomAmbience.cfg")
-if not re.search(r"^\s*MaxOneShots\s+16\s*$", settings, re.M):
-    problems.append("MaxOneShots is not 16")
-if not re.search(r"^\s*MaxMarks\s+\d+\s*$", settings, re.M):
-    problems.append("MaxMarks is not set")
+if DATA:
+    settings = read("config", "roomAmbience.cfg")
+    if not re.search(r"^\s*MaxOneShots\s+16\s*$", settings, re.M):
+        problems.append("MaxOneShots is not 16")
+    if not re.search(r"^\s*MaxMarks\s+\d+\s*$", settings, re.M):
+        problems.append("MaxMarks is not set")
 
 if problems:
     for problem in problems:

@@ -14,7 +14,9 @@ nothing, a thin three-bolt beam with sparks only in its first 0.1 s).
 Owner decision 865: the beam hits the ghost itself, its chest below the head (GhostBeamAimShare of the height of the
 ghost's world bounds), never the trap under it; the trap opens first and only then is the ghost weakened and pulled in,
 over the rest of the beam step. These parts fail on base 6c97ae45c (beam end at the ghost position + 0.4, the ghost
-shrinking from the first moment of the beam while the lid still opened)."""
+shrinking from the first moment of the beam while the lid still opened).
+GhostParticles.material and ChickenFeathers.particle are content (core-models and room packages, found through
+scripts/content_packages.py); without them the beam material and the spark quota are named as not checked."""
 from pathlib import Path
 import math
 import re
@@ -24,6 +26,7 @@ repo = Path(__file__).resolve().parents[2]
 import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
@@ -32,14 +35,16 @@ ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.asset(repo, relative) or (repo / relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(repo, relative)
 from assets_src import resolve  # noqa: E402
 
 
 # Read a tracked source using the repository root rather than the caller's directory.
 def read(path):
-    return resolve(repo, path).read_text(encoding="utf-8")
+    if path.startswith("assets-src"):
+        return resolve(repo, path).read_text(encoding="utf-8")
+    return content_packages.read_text(repo, path)
 
 
 # Return a complete brace-delimited body that starts at the signature.
@@ -178,8 +183,11 @@ def trap_source():
         "scene->destroyBillboardChain(mGhostTrapCone);mGhostTrapCone=nullptr;", "scene->destroySceneNode(mGhostTrapNode);mGhostTrapNode=nullptr;",
         "scene->destroyBillboardSet(mGhostBeamImpact);mGhostBeamImpact=nullptr;", "mGhostLidShown=0.0;")
     # The green-white of the beam: the same colours as the GhostBeam bolts and the GhostGlow material's green
-    material = read("materials/scripts/GhostParticles.material")
-    assert re.search(r"material GhostBeam\s*\{[^}]*scene_blend src_alpha one", material, re.S), "additive beam material"
+    if content_packages.data_file(repo, "materials/scripts/GhostParticles.material") is None:
+        content_packages.unchecked("check_ghost_trap_beam", ["materials/scripts/GhostParticles.material"])
+    else:
+        material = read("materials/scripts/GhostParticles.material")
+        assert re.search(r"material GhostBeam\s*\{[^}]*scene_blend src_alpha one", material, re.S), "additive beam material"
     # The bang plays when the snap step starts, which is when the lid slams
     hunt = read("source/creatureaction/CreatureActionHuntGhost.cpp")
     ordered(hunt, "snap step and bang together", "mTurns-=duration;mBeamTarget.clear();mState=10;",
@@ -352,9 +360,13 @@ def beam(values):
     # Frame budget per beaming hunter: chain elements, two impact billboards and the spark quota
     chains = 2 + values["GhostBeamBolts"] + values["GhostBeamBolts"] * values["GhostBeamBranches"]
     billboards = chains * (values["GhostBeamSegments"] + 1) + 2
-    quota = int(re.search(r"particle_system GhostBeam\s*\{[^}]*?quota (\d+)", read("particles/ChickenFeathers.particle"), re.S).group(1))
-    assert (chains, billboards, quota) == (14, 156, 64), (chains, billboards, quota)
-    assert billboards + quota <= 250, "no visible frame drop: at most 250 quads per beaming hunter"
+    if content_packages.data_file(repo, "particles/ChickenFeathers.particle") is None:
+        assert (chains, billboards) == (14, 156), (chains, billboards)
+        content_packages.unchecked("check_ghost_trap_beam", ["particles/ChickenFeathers.particle (spark quota)"])
+    else:
+        quota = int(re.search(r"particle_system GhostBeam\s*\{[^}]*?quota (\d+)", read("particles/ChickenFeathers.particle"), re.S).group(1))
+        assert (chains, billboards, quota) == (14, 156, 64), (chains, billboards, quota)
+        assert billboards + quota <= 250, "no visible frame drop: at most 250 quads per beaming hunter"
     # Re-shapes per second stay low: 20, each one rewrites the 156 chain elements once
     assert round(1.0 / values["GhostBeamFlickerSeconds"]) == 20
     print("stronger beam: core, 4 bolts with 2 forks, glow, tip sparks, impact glow within 220 quads (156 billboards and 64 sparks): ok")

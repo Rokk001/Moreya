@@ -1,9 +1,16 @@
-"""Check declared ghost, corpse, crystal, research and job values without compiling."""
+"""Check declared ghost, corpse, crystal, research and job values without compiling.
+
+config/ai.cfg is content (core-config package, found through scripts/content_packages.py); without it the room plan
+of ai.cfg is named as not checked.
+"""
 from pathlib import Path
 import math
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 # Read a tracked source using the repository root rather than the caller's directory.
 def read(path):
@@ -81,12 +88,16 @@ def main():
     assert not re.search(r'^\s*roomCrypt\s+RotTime\b', skills, re.M)
     ai = read('source/ai/KeeperAI.cpp')
     # The compiled room order and the [RoomPlan] order of ai.cfg are the same whole list of the plan
-    plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', read('config/ai.cfg'), re.M | re.S).group(1)
-    plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
-    compiled_names = re.findall(r'"(\w+)"', re.search(r'wantedBuildingKeys = \{(.*?)\};', ai, re.S).group(1))
-    assert plan_names == ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture'], plan_names
-    assert compiled_names == plan_names, compiled_names
-    assert plan_names.index('ghostroom') == 17 and plan_names.index('crypt') == 19
+    if content_packages.data_file(repo, 'config/ai.cfg') is not None:
+        plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', content_packages.read_text(repo, 'config/ai.cfg'),
+                                 re.M | re.S).group(1)
+        plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
+        compiled_names = re.findall(r'"(\w+)"', re.search(r'wantedBuildingKeys = \{(.*?)\};', ai, re.S).group(1))
+        assert plan_names == ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture'], plan_names
+        assert compiled_names == plan_names, compiled_names
+        assert plan_names.index('ghostroom') == 17 and plan_names.index('crypt') == 19
+    else:
+        content_packages.unchecked('check_ghost_config', ['config/ai.cfg (room plan)'])
     creatures = {}
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
         match = re.search(r'^\s*Name\s+(\S+)', block, re.M)

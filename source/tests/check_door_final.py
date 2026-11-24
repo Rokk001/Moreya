@@ -6,6 +6,10 @@
 Checks that every door model links to its own skeleton with the right clips, that the closed secret door gets
 a wall material for players who are not allied with its owner, that the barricade collapse takes the length of its
 clip from the skeleton, and that the sold sounds exist, are used by the config and are in CREDITS.
+
+The door models, their material, the trap effects and the sold sounds lie in the content packages, their rows in the
+CREDITS of the content repository (scripts/content_packages.py); without the content those parts are named as not
+checked and the code is still checked.
 """
 
 import glob
@@ -14,16 +18,25 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
+HAS_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(*parts, binary=False):
-    """Returns the content of a file below the repository root, as bytes when binary is true."""
-    with open(os.path.join(ROOT, *parts), "rb" if binary else "r", **({} if binary else {"encoding": "utf-8"})) as handle:
+    """Returns the content of a file below the repository root or of a game data file of a content package, as bytes
+    when binary is true."""
+    with open(content_packages.resolve(ROOT, "/".join(parts)), "rb" if binary else "r",
+              **({} if binary else {"encoding": "utf-8"})) as handle:
         return handle.read()
 
 
 problems = []
+# The rows of the public tree and, with the content, of the content repository
 credits = read("CREDITS")
+if HAS_CONTENT:
+    credits += "\n" + read(str(campaign_packages.content_repository(ROOT) / "CREDITS"))
 
 DOORS = {
     "DoorIronbound": (b"Open", b"Close", b"Destroyed"),
@@ -32,22 +45,25 @@ DOORS = {
     "DoorRune": (b"Open", b"Close", b"Destroyed"),
     "DoorBarricade": (b"Collapse", b"Destroyed"),
 }
-for name, clips in DOORS.items():
-    mesh = read("models", name + ".mesh", binary=True)
-    if (name + ".skeleton").encode() not in mesh:
-        problems.append("%s.mesh does not link to its own skeleton" % name)
-    if b"WoodenDoor.skeleton" in mesh:
-        problems.append("%s.mesh still uses the shared wooden door skeleton" % name)
-    skeleton_path = os.path.join(ROOT, "models", name + ".skeleton")
-    if not os.path.exists(skeleton_path):
-        problems.append("models/%s.skeleton is missing" % name)
-        continue
-    skeleton = read("models", name + ".skeleton", binary=True)
-    for clip in clips:
-        if clip not in skeleton:
-            problems.append("%s.skeleton lacks the clip %s" % (name, clip.decode()))
-    if "models/%s.skeleton" % name not in credits:
-        problems.append("models/%s.skeleton is not in CREDITS" % name)
+if not HAS_CONTENT:
+    content_packages.unchecked("check_door_final", ["door models and skeletons of the content"])
+else:
+    for name, clips in DOORS.items():
+        mesh = read("models", name + ".mesh", binary=True)
+        if (name + ".skeleton").encode() not in mesh:
+            problems.append("%s.mesh does not link to its own skeleton" % name)
+        if b"WoodenDoor.skeleton" in mesh:
+            problems.append("%s.mesh still uses the shared wooden door skeleton" % name)
+        skeleton_path = content_packages.resolve(ROOT, "models/" + name + ".skeleton")
+        if not os.path.exists(skeleton_path):
+            problems.append("models/%s.skeleton is missing" % name)
+            continue
+        skeleton = read("models", name + ".skeleton", binary=True)
+        for clip in clips:
+            if clip not in skeleton:
+                problems.append("%s.skeleton lacks the clip %s" % (name, clip.decode()))
+        if "models/%s.skeleton" % name not in credits:
+            problems.append("models/%s.skeleton is not in CREDITS" % name)
 if "tools/blender-assets/door_skeletons.py" not in credits:
     problems.append("door_skeletons.py is not in CREDITS")
 if b"Collapse" not in read("models", "WoodenDoor.skeleton", binary=True):
@@ -64,7 +80,7 @@ for client_file in (("source", "render", "RenderManager.cpp"), ("source", "rende
         ("source", "entities", "DoorEntity.cpp")):
     if "rrUpdateSecretDoorLook" in read(*client_file):
         problems.append(client_file[-1] + " paints a wall look over the secret door of a seat that discovered it")
-if "DoorSecretWall" in read("materials", "scripts", "DoorTypes.material"):
+if HAS_CONTENT and "DoorSecretWall" in read("materials", "scripts", "DoorTypes.material"):
     problems.append("DoorTypes.material has a wall look for the secret door")
 
 # The collapse takes its length from the clip
@@ -91,22 +107,27 @@ if "std::string mClip;" not in read("source", "render", "RoomAmbience.h"):
     problems.append("Collapse does not remember its clip")
 
 # The glint of a secret door is shown to its keeper only (it must not give the door away to the enemy)
-config = read("config", "roomAmbienceTraps.cfg")
-# (the lock glow and the opening and closing sounds too; the hit dust and the wrecking stay for everybody)
-for secret_effect in ("SecretDoorGlint", "SecretDoorDust", "SecretDoorLockGlow", "DoorSecretOpenSound", "DoorSecretCloseSound"):
-    found = re.search(r"Name\s+" + secret_effect + r"\s(.*?)\[/Effect\]", config, re.S)
-    if found is None or not re.search(r"^\s*OwnerOnly\s+yes\s*$", found.group(1), re.M):
-        problems.append("the effect " + secret_effect + " is not OwnerOnly")
-for open_effect in ("DoorLockGlow", "DoorHitDust", "DoorSecretHitSound", "DoorSecretBreakSound", "SecretDoorRevealed"):
-    found = re.search(r"Name\s+" + open_effect + r"\s(.*?)\[/Effect\]", config, re.S)
-    if found is not None and re.search(r"^\s*OwnerOnly\s", found.group(1), re.M):
-        problems.append("the effect " + open_effect + " must stay visible to everybody")
-lock = re.search(r"Name\s+DoorLockGlow\s(.*?)\[/Effect\]", config, re.S)
-if lock is None or "trap:DoorSecret" in lock.group(1) or "trap:DoorRuned" not in lock.group(1):
-    problems.append("DoorLockGlow must keep the other doors and not the secret door")
-split = re.search(r"Name\s+SecretDoorLockGlow\s(.*?)\[/Effect\]", config, re.S)
-if split is None or "Match       trap:DoorSecret\n" not in split.group(1) or "When        Locked" not in split.group(1):
-    problems.append("SecretDoorLockGlow is not the locked glow of the secret door")
+# (the trap effects lie in the content package core-config)
+config = read("config", "roomAmbienceTraps.cfg") if HAS_CONTENT else None
+if config is None:
+    content_packages.unchecked("check_door_final", ["config/roomAmbienceTraps.cfg door effects and sold sounds",
+                                                    "materials/scripts/DoorTypes.material"])
+else:
+    # (the lock glow and the opening and closing sounds too; the hit dust and the wrecking stay for everybody)
+    for secret_effect in ("SecretDoorGlint", "SecretDoorDust", "SecretDoorLockGlow", "DoorSecretOpenSound", "DoorSecretCloseSound"):
+        found = re.search(r"Name\s+" + secret_effect + r"\s(.*?)\[/Effect\]", config, re.S)
+        if found is None or not re.search(r"^\s*OwnerOnly\s+yes\s*$", found.group(1), re.M):
+            problems.append("the effect " + secret_effect + " is not OwnerOnly")
+    for open_effect in ("DoorLockGlow", "DoorHitDust", "DoorSecretHitSound", "DoorSecretBreakSound", "SecretDoorRevealed"):
+        found = re.search(r"Name\s+" + open_effect + r"\s(.*?)\[/Effect\]", config, re.S)
+        if found is not None and re.search(r"^\s*OwnerOnly\s", found.group(1), re.M):
+            problems.append("the effect " + open_effect + " must stay visible to everybody")
+    lock = re.search(r"Name\s+DoorLockGlow\s(.*?)\[/Effect\]", config, re.S)
+    if lock is None or "trap:DoorSecret" in lock.group(1) or "trap:DoorRuned" not in lock.group(1):
+        problems.append("DoorLockGlow must keep the other doors and not the secret door")
+    split = re.search(r"Name\s+SecretDoorLockGlow\s(.*?)\[/Effect\]", config, re.S)
+    if split is None or "Match       trap:DoorSecret\n" not in split.group(1) or "When        Locked" not in split.group(1):
+        problems.append("SecretDoorLockGlow is not the locked glow of the secret door")
 ambience = read("source", "render", "RoomAmbience.cpp")
 if "effect.mOwnerOnly" not in ambience or "entity->getSeat() != localPlayer->getSeat()" not in ambience:
     problems.append("scanObjects does not filter OwnerOnly effects by the seat")
@@ -119,21 +140,22 @@ if "effect.mOwnerOnly" not in read("source", "render", "RoomAmbienceConfig.cpp")
     problems.append("the config parser does not read OwnerOnly")
 
 # The sold sounds
-for family, names in (("Doors/Door/Sold", "DoorWooden"), ("Traps/Trap/Sold", "Spike")):
-    block = re.search(r"\[Effect\]((?:(?!\[/Effect\]).)*?Family\s+%s\s(?:(?!\[/Effect\]).)*)\[/Effect\]" % re.escape(family), config, re.S)
-    if block is None:
-        problems.append("no effect with the family " + family)
-        continue
-    text = block.group(1)
-    if "Event       TrapSold" not in text or "Kind        Sound" not in text or names not in text:
-        problems.append("the effect of %s is not a sound for TrapSold of %s" % (family, names))
-    ogg = "sounds/Spatial/%s/Fx%sSold01.ogg" % (family, family.split("/")[1])
-    if not os.path.exists(os.path.join(ROOT, *ogg.split("/"))):
-        problems.append("sound file %s is missing" % ogg)
-    elif ogg not in credits:
-        problems.append("sound file %s is not in CREDITS" % ogg)
-    elif read(*ogg.split("/"), binary=True)[:4] != b"OggS":
-        problems.append("%s is not an Ogg file" % ogg)
+if config is not None:
+    for family, names in (("Doors/Door/Sold", "DoorWooden"), ("Traps/Trap/Sold", "Spike")):
+        block = re.search(r"\[Effect\]((?:(?!\[/Effect\]).)*?Family\s+%s\s(?:(?!\[/Effect\]).)*)\[/Effect\]" % re.escape(family), config, re.S)
+        if block is None:
+            problems.append("no effect with the family " + family)
+            continue
+        text = block.group(1)
+        if "Event       TrapSold" not in text or "Kind        Sound" not in text or names not in text:
+            problems.append("the effect of %s is not a sound for TrapSold of %s" % (family, names))
+        ogg = "sounds/Spatial/%s/Fx%sSold01.ogg" % (family, family.split("/")[1])
+        if content_packages.data_file(ROOT, ogg) is None:
+            problems.append("sound file %s is missing" % ogg)
+        elif ogg not in credits:
+            problems.append("sound file %s is not in CREDITS" % ogg)
+        elif read(*ogg.split("/"), binary=True)[:4] != b"OggS":
+            problems.append("%s is not an Ogg file" % ogg)
 generator = read("tools", "gen_trap_door_sounds.py")
 for text in ('("Door", "Sold", door_sold)', '("Trap", "Sold", trap_sold)'):
     if text not in generator:

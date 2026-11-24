@@ -9,6 +9,11 @@ code, that the bolt mesh, its material and texture exist with CREDITS entries, t
 spell effects with the prefix "SpellFx/" and the client starts the matching events, that the end of the defector
 and hen spells and of a possession is shown, that heal, haste, defense and slow raise their own events with
 config effects, and that the hand spark is only sent for a spell the server accepted.
+
+The bolt mesh, the spell material, textures and configs are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages, their CREDITS rows from
+the CREDITS of the public tree and of the content repository. Without the content the data part is named as not
+checked; the code is checked.
 """
 
 import os
@@ -16,12 +21,32 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The game data files the check reads; they lie in the public tree or in a content package
+DATA_FILES = ("models/SpellBolt.mesh", "materials/scripts/RoomAmbienceSpells.material", "config/roomAmbienceSpellsFx.cfg",
+              "config/roomAmbienceSpells.cfg", "config/roomAmbienceFixEffects.cfg", "config/roomAmbience.cfg")
 
 
 def read(*parts):
-    """Returns the text of a file below the repository root."""
-    with open(os.path.join(ROOT, *parts), encoding="utf-8", errors="replace") as handle:
+    """Returns the text of a file below the repository root (game data from the public tree or a content package)."""
+    with open(str(content_packages.resolve(ROOT, "/".join(parts))), encoding="utf-8", errors="replace") as handle:
         return handle.read()
+
+
+def data_present():
+    """True when the game data can be checked: all files are found or the content is present (then a missing one
+    fails as before); else names the data part as not checked."""
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    if not missing or content_packages.has_content(ROOT):
+        return True
+    content_packages.unchecked("check_spell_effects", missing + ["the spell textures and their CREDITS rows"])
+    return False
+
+
+DATA = data_present()
 
 
 problems = []
@@ -60,27 +85,29 @@ if update.index("triggerEvent(arrival.first") < update.index("it = mFlights.eras
     problems.append("Land events must be raised after the loop over the flights (the list changes)")
 
 # 3. Bolt mesh, material, texture, rings, credits
-credits = read("CREDITS")
-if not os.path.exists(os.path.join(ROOT, "models", "SpellBolt.mesh")):
-    problems.append("models/SpellBolt.mesh is missing")
-material = read("materials", "scripts", "RoomAmbienceSpells.material")
-for name, texture in (("SpellBolt", "SpellBolt.png"), ("RoomAmbRing", "RoomAmbRing.png"),
-                      ("RoomAmbRingRunes", "RoomAmbRingRunes.png")):
-    if not re.search(r"^material %s\b" % name, material, re.M) or ("texture %s" % texture) not in material:
-        problems.append("material %s is missing or has another texture" % name)
-    if not os.path.exists(os.path.join(ROOT, "materials", "textures", texture)):
-        problems.append("%s is missing" % texture)
-for needle in ("models/SpellBolt.mesh", "materials/textures/SpellBolt.png", "tools/gen_spell_bolt.py",
-               "tools/blender-assets/spell_bolt.py", "particles/RoomAmbienceSpellsExtra.particle",
-               "materials/textures/RoomAmbRing.png", "materials/textures/RoomAmbRingRunes.png", "tools/gen_spell_marks.py"):
-    if needle not in credits:
-        problems.append("CREDITS has no entry for %s" % needle)
-with open(os.path.join(ROOT, "models", "SpellBolt.mesh"), "rb") as handle:
-    if b"SpellBolt" not in handle.read():
-        problems.append("SpellBolt.mesh does not name the material SpellBolt")
-for line in credits.splitlines():
-    if line.startswith("models/SpellBolt.mesh") and "AI-generated" not in line:
-        problems.append("the bolt mesh must be marked AI-generated")
+if DATA:
+    # The CREDITS of the public tree and of the content repository
+    credits = room_packages.credits_text(ROOT)
+    if content_packages.data_file(ROOT, "models/SpellBolt.mesh") is None:
+        problems.append("models/SpellBolt.mesh is missing")
+    material = read("materials", "scripts", "RoomAmbienceSpells.material")
+    for name, texture in (("SpellBolt", "SpellBolt.png"), ("RoomAmbRing", "RoomAmbRing.png"),
+                          ("RoomAmbRingRunes", "RoomAmbRingRunes.png")):
+        if not re.search(r"^material %s\b" % name, material, re.M) or ("texture %s" % texture) not in material:
+            problems.append("material %s is missing or has another texture" % name)
+        if content_packages.data_file(ROOT, "materials/textures/" + texture) is None:
+            problems.append("%s is missing" % texture)
+    for needle in ("models/SpellBolt.mesh", "materials/textures/SpellBolt.png", "tools/gen_spell_bolt.py",
+                   "tools/blender-assets/spell_bolt.py", "particles/RoomAmbienceSpellsExtra.particle",
+                   "materials/textures/RoomAmbRing.png", "materials/textures/RoomAmbRingRunes.png", "tools/gen_spell_marks.py"):
+        if needle not in credits:
+            problems.append("CREDITS has no entry for %s" % needle)
+    with open(str(content_packages.resolve(ROOT, "models/SpellBolt.mesh")), "rb") as handle:
+        if b"SpellBolt" not in handle.read():
+            problems.append("SpellBolt.mesh does not name the material SpellBolt")
+    for line in credits.splitlines():
+        if line.startswith("models/SpellBolt.mesh") and "AI-generated" not in line:
+            problems.append("the bolt mesh must be marked AI-generated")
 
 # 4. The server reports the effects with the prefix SpellFx/, the client starts the events
 spell_h = read("source", "spells", "Spell.h")
@@ -111,20 +138,21 @@ server_code += read("source", "creatureeffect", "CreatureEffectHexenHen.cpp") + 
 for effect in ("Heal", "Haste", "Defense", "Slow", "Lightning", "Explosion", "Inferno", "DefectorEnd", "HenEnd"):
     if 'fireSpellEffect(' not in server_code or ('"%s"' % effect) not in server_code:
         problems.append("the server does not raise the spell effect %s" % effect)
-fx_cfg = read("config", "roomAmbienceSpellsFx.cfg")
-cfg_all = fx_cfg + read("config", "roomAmbienceSpells.cfg") + read("config", "roomAmbienceFixEffects.cfg")
-for event in ("Heal", "Haste", "Defense", "Slow"):
-    block = re.compile(r"Event\s+SpellFx" + event + r"\s*\n\s*Kind\s+Particle\s*\n\s*System\s+(\S+)")
-    if len(set(block.findall(cfg_all))) < 3:
-        problems.append("SpellFx%s has less than 3 particle effects (cast marker, area, impact)" % event)
-for event in ("SpellFxLightning", "SpellFxExplosion", "SpellFxInferno"):
-    if not re.search(r"Event\s+%s\s*\n\s*Kind\s+(Beam|Projectile)" % event, fx_cfg):
-        problems.append("%s has no beam or projectile" % event)
-if not re.search(r"Land\s+SpellFxExplosionLand", fx_cfg) or not re.search(r"Event\s+SpellFxExplosionLand", cfg_all):
-    problems.append("explosion projectile has no landing event with effects")
-for event in ("SpellFxDefectorEnd", "SpellFxHenEnd", "SpellFxPossessLost", "SpellFxPossessEnd", "SpellFxHandCast"):
-    if event not in cfg_all:
-        problems.append("config has no effect for %s" % event)
+if DATA:
+    fx_cfg = read("config", "roomAmbienceSpellsFx.cfg")
+    cfg_all = fx_cfg + read("config", "roomAmbienceSpells.cfg") + read("config", "roomAmbienceFixEffects.cfg")
+    for event in ("Heal", "Haste", "Defense", "Slow"):
+        block = re.compile(r"Event\s+SpellFx" + event + r"\s*\n\s*Kind\s+Particle\s*\n\s*System\s+(\S+)")
+        if len(set(block.findall(cfg_all))) < 3:
+            problems.append("SpellFx%s has less than 3 particle effects (cast marker, area, impact)" % event)
+    for event in ("SpellFxLightning", "SpellFxExplosion", "SpellFxInferno"):
+        if not re.search(r"Event\s+%s\s*\n\s*Kind\s+(Beam|Projectile)" % event, fx_cfg):
+            problems.append("%s has no beam or projectile" % event)
+    if not re.search(r"Land\s+SpellFxExplosionLand", fx_cfg) or not re.search(r"Event\s+SpellFxExplosionLand", cfg_all):
+        problems.append("explosion projectile has no landing event with effects")
+    for event in ("SpellFxDefectorEnd", "SpellFxHenEnd", "SpellFxPossessLost", "SpellFxPossessEnd", "SpellFxHandCast"):
+        if event not in cfg_all:
+            problems.append("config has no effect for %s" % event)
 
 defector = read("source", "creatureeffect", "CreatureEffectDefector.cpp")
 if 'fireSpellEffect(*posTile, "DefectorEnd"' not in defector or "changeSeat(originalSeat)" not in defector:
@@ -144,12 +172,13 @@ if end.index("triggerEvent(") > end.index("setPossessedCreatureName"):
     problems.append("the effect must be raised before the possessed name is cleared")
 
 # 7. Settings
-settings = read("config", "roomAmbience.cfg")
-if not re.search(r"^\s*MaxFlights\s+\d+\s*$", settings, re.M):
-    problems.append("MaxFlights is not set")
-for name in ("roomAmbienceSpells.cfg", "roomAmbienceSpellsFx.cfg"):
-    if name not in settings:
-        problems.append("roomAmbience.cfg does not include %s" % name)
+if DATA:
+    settings = read("config", "roomAmbience.cfg")
+    if not re.search(r"^\s*MaxFlights\s+\d+\s*$", settings, re.M):
+        problems.append("MaxFlights is not set")
+    for name in ("roomAmbienceSpells.cfg", "roomAmbienceSpellsFx.cfg"):
+        if name not in settings:
+            problems.append("roomAmbience.cfg does not include %s" % name)
 
 if problems:
     for problem in problems:

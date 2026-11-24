@@ -2,15 +2,27 @@
 
 Pure source wiring checks (no compiler, no game): server authority, configuration, one worker per
 tile, save compatibility (optional trailing field), the action in the worker's idle choice, the
-client reactions for reload, door lift and door placement."""
+client reactions for reload, door lift and door placement.
+config/creatureReactions.cfg lies in the content packages (scripts/content_packages.py); without the content its
+events are named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
+    """The text of a file below the repository root."""
     return (root / path).read_text(encoding='utf-8')
+
+
+def content(path):
+    """The text of a game data file of the public tree or of a content package, or None without the content."""
+    found = content_packages.data_file(root, path)
+    return None if found is None else found.read_text(encoding='utf-8')
 
 
 def function_body(source, signature):
@@ -20,7 +32,9 @@ def function_body(source, signature):
 
 
 traps_cfg = read('config/traps.cfg')
-reactions_cfg = read('config/creatureReactions.cfg')
+reactions_cfg = content('config/creatureReactions.cfg')
+if reactions_cfg is None:
+    content_packages.unchecked('check_trap_reload', ['config/creatureReactions.cfg'])
 trap = read('source/traps/Trap.cpp')
 trap_h = read('source/traps/Trap.h')
 action = read('source/creatureaction/CreatureActionReloadTrap.cpp')
@@ -118,7 +132,7 @@ assert 'getNbNeededCraftedTrap' in function_body(trap, 'bool Trap::hasCarryEntit
 # Client: reload while working on a trap tile, lift and placement of doors, all events exist
 for name in ('TrapReload', 'PickDoor', 'DoorPlace'):
     assert '"' + name + '"' in worker, name
-    assert re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
+    assert reactions_cfg is None or re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
 assert 'GameEntityType::trap' in function_body(worker, 'void WorkerReactions::showDigHit(')
 assert 'isDoorType(' in function_body(worker, 'void WorkerReactions::noteCarry(')
 assert 'isDoorType(' in function_body(worker, 'void WorkerReactions::noteRelease(')

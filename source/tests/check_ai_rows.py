@@ -1,8 +1,14 @@
-"""Check catalogue row comments in their owning functions and configuration."""
+"""Check catalogue row comments in their owning functions and configuration.
+
+config/ai.cfg lies in the content package core-config; without the content the configuration part is named as not
+checked and the code part runs."""
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages
 ANCHORS = {
     "A01": ("source/ai/AiEconomy.cpp", "ECON::digQueueWatch"),
     "A02": ("source/ai/AiEconomy.cpp", "ECON::claimWatch"),
@@ -153,22 +159,27 @@ def function_body(text, signature):
 
 PROBABILITY_KEYS = ['Pi', 'FocusFire', 'MistakeBaseRoutine', 'MistakeBaseRule', 'MistakeBaseComplex', 'MistakeBaseUnfamiliar', 'MistakeBaseRare', 'MistakeMin', 'MistakeMax', 'HealCastChance', 'PoorDefenceShuffleChance', 'RawHitFactor']
 
-config = (repo / "config/ai.cfg").read_text(encoding="utf-8")
-seen_probabilities = set()
-for section in ("KeeperAILevels", "KeeperAI"):
-    contents = config.split("[" + section + "]", 1)[1].split("[/" + section + "]", 1)[0]
-    for line in contents.splitlines():
-        fields = line.split("#", 1)[0].split()
-        if fields and fields[0] in PROBABILITY_KEYS:
-            assert fields[0] not in seen_probabilities, fields[0]
-            seen_probabilities.add(fields[0])
-            assert len(fields) == (6 if section == "KeeperAILevels" else 2), fields[0]
-            assert all(0 < float(value) < 1 for value in fields[1:]), fields[0]
-assert seen_probabilities == set(PROBABILITY_KEYS), "missing probability key"
-row_section = config.split("[RowClasses]", 1)[1].split("[/RowClasses]", 1)[0]
-row_ids = [line.split()[0] for line in row_section.splitlines() if line.strip() and not line.lstrip().startswith("#")]
-assert len(row_ids) == len(set(row_ids)), "duplicate row class"
-assert set(row_ids) == set(ANCHORS), "row classes differ from catalogue"
+# The AI configuration of the content, None when the content is not present.
+config_file = content_packages.data_file(repo, "config/ai.cfg")
+if config_file is None:
+    content_packages.unchecked("check_ai_rows", ["config/ai.cfg probabilities and row classes"])
+else:
+    config = config_file.read_text(encoding="utf-8")
+    seen_probabilities = set()
+    for section in ("KeeperAILevels", "KeeperAI"):
+        contents = config.split("[" + section + "]", 1)[1].split("[/" + section + "]", 1)[0]
+        for line in contents.splitlines():
+            fields = line.split("#", 1)[0].split()
+            if fields and fields[0] in PROBABILITY_KEYS:
+                assert fields[0] not in seen_probabilities, fields[0]
+                seen_probabilities.add(fields[0])
+                assert len(fields) == (6 if section == "KeeperAILevels" else 2), fields[0]
+                assert all(0 < float(value) < 1 for value in fields[1:]), fields[0]
+    assert seen_probabilities == set(PROBABILITY_KEYS), "missing probability key"
+    row_section = config.split("[RowClasses]", 1)[1].split("[/RowClasses]", 1)[0]
+    row_ids = [line.split()[0] for line in row_section.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+    assert len(row_ids) == len(set(row_ids)), "duplicate row class"
+    assert set(row_ids) == set(ANCHORS), "row classes differ from catalogue"
 for row, (path, signature) in ANCHORS.items():
     text = (repo / path).read_text(encoding="utf-8")
     assert re.search(r"// AI row " + row + r"\b", function_body(text, signature)), f"{row}: missing in {signature}"

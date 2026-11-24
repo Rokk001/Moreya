@@ -1,25 +1,49 @@
-"""Check worker job wiring, documentation, and removal of old worker shares."""
+"""Check worker job wiring, documentation, and removal of old worker shares.
+
+The design documents lie in docs/design of the content repository (scripts/campaign_packages.py); without the content
+they are named as not checked."""
 from pathlib import Path
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 # Read one repository file for the wiring assertions.
 def read(path):
     return (root / path).read_text(encoding='utf-8')
+
+
+# The file of a design document (docs/development/...) in docs/design of the content repository, or None without the
+# content.
+def design_doc(path):
+    content = campaign_packages.content_repository(root)
+    if content is None:
+        content_packages.unchecked('check_worker_job_allocation_wiring', [path])
+        return None
+    return content / 'docs' / 'design' / path
 
 old_keys = ('CleaningWorkerSharePercent', 'TrapReloadWorkerSharePercent',
             'WorkerCarryFirstMaxShare', 'WorkerClaimWallFirstMinShare')
 for path in ('config/global.cfg', 'config/traps.cfg', 'source/game/Player.cpp',
              'source/utils/ConfigManager.cpp', 'source/utils/ConfigManager.h',
              'docs/development/DIRT.md'):
-    text = read(path)
+    if path.startswith('docs/'):
+        doc = design_doc(path)
+        if doc is None:
+            continue
+        text = doc.read_text(encoding='utf-8')
+    else:
+        text = read(path)
     for key in old_keys:
         assert key not in text, (path, key)
 
 creature = read('source/entities/Creature.cpp')
 assert 'getWorkerJob()' in creature
 assert 'CreatureActionReloadTrap::tryStart' in creature
-assert (root / 'docs/development/WORKER-JOBS.md').is_file()
+worker_jobs = design_doc('docs/development/WORKER-JOBS.md')
+assert worker_jobs is None or worker_jobs.is_file()
 assert '* Workers: workers spread over the jobs and targets instead of crowding one task, carry knocked-out creatures and corpses first, and the library credits research points directly.' in read('RELEASE-NOTES.md')
 allocator = read('source/game/WorkerAllocation.cpp')
 for exclusion in ('!creature->isAlive()', 'creature->isInHand()', 'creature->isKo()',

@@ -1,11 +1,17 @@
 """Chicken gift for a creature that is not hungry and the slower walk of a tired creature.
 
 Pure source wiring checks (no compiler, no game): server authority, configuration, saving with
-old saves still loading, no new network message."""
+old saves still loading, no new network message.
+
+config/creatureReactions.cfg is content (core-config package, found through scripts/content_packages.py); without it
+the sniff and gift events of that table are named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -139,13 +145,16 @@ assert 'Gift' not in eat and 'sniff' not in eat       # the hatchery meal stays 
 assert 'if((anim == EntityAnimation::sniff_anim) && (dropCreature != nullptr))' in render
 reactions = read('source/render/CreatureReactions.cpp')
 assert 'clip == EntityAnimation::sniff_anim' in reactions and '"ChickenSniff"' in reactions
-cfg_reactions = read('config/creatureReactions.cfg')
-sniff_event = cfg_reactions[cfg_reactions.index('Name        ChickenSniff'):cfg_reactions.index('Name        ChickenGift')]
-assert 'Name    SniffAndShrug' in sniff_event
-gift_event = cfg_reactions[cfg_reactions.index('Name        ChickenGift'):]
-gift_event = gift_event[:gift_event.index('[/Event]')]
-assert 'SniffAndShrug' not in gift_event               # the sniffing is shown once, not again after the meal
-assert cfg_reactions.count('Name    SniffAndShrug') == 1
+if content_packages.data_file(root, 'config/creatureReactions.cfg') is not None:
+    cfg_reactions = content_packages.read_text(root, 'config/creatureReactions.cfg')
+    sniff_event = cfg_reactions[cfg_reactions.index('Name        ChickenSniff'):cfg_reactions.index('Name        ChickenGift')]
+    assert 'Name    SniffAndShrug' in sniff_event
+    gift_event = cfg_reactions[cfg_reactions.index('Name        ChickenGift'):]
+    gift_event = gift_event[:gift_event.index('[/Event]')]
+    assert 'SniffAndShrug' not in gift_event               # the sniffing is shown once, not again after the meal
+    assert cfg_reactions.count('Name    SniffAndShrug') == 1
+else:
+    content_packages.unchecked('check_gift_chicken_tired_walk', ['config/creatureReactions.cfg'])
 assert 'cosmetic' not in sniff_meal.lower()            # no new network message: the clip name is the existing animation message
 
 # Batch 13n: the chicken meal (E05) is grab, hold in front of the mouth, exactly two bites, struggling, gone after the second bite

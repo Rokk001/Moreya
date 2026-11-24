@@ -6,6 +6,10 @@
 Checks the low health flare of the dungeon heart (condition, wiring, thresholds that get stronger), the casino
 win and loss effects (events raised by the client, handled in the config, sounds with CREDITS entries), and the
 cheering of the arena (spectator scan, config values, event and sound). No network value may have changed.
+
+The config files and the sounds are game data of the content packages (scripts/content_packages.py): they are read
+from the public tree or from the content packages, their CREDITS rows from the CREDITS of the public tree and of the
+content repository. Without the content the check checks the code and names the data part as not checked.
 """
 
 import os
@@ -13,12 +17,30 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
 problems = []
+#: The game data files the check reads; they lie in the public tree or in a content package
+DATA_FILES = ("config/roomAmbienceRoomFx.cfg", "config/roomAmbienceCoreObjects.cfg", "config/roomAmbienceDeferred.cfg",
+              "config/creatureReactions.cfg")
 
 
 def read(*parts):
-    with open(os.path.join(ROOT, *parts), encoding="utf-8") as handle:
+    """Returns the text of a file below the repository root (game data from the public tree or a content package)."""
+    with open(str(content_packages.resolve(ROOT, "/".join(parts))), encoding="utf-8") as handle:
         return handle.read()
+
+
+def data_present():
+    """True when the game data can be checked: all files are found or the content is present (then a missing one
+    fails as before); else names the data part as not checked."""
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    if not missing or content_packages.has_content(ROOT):
+        return True
+    content_packages.unchecked("check_room_effects_final", missing + ["the sounds of the room effects"])
+    return False
 
 
 def need(condition, text):
@@ -49,8 +71,10 @@ ambience_h = read("source", "render", "RoomAmbience.h")
 config_h = read("source", "render", "RoomAmbienceConfig.h")
 config_cpp = read("source", "render", "RoomAmbienceConfig.cpp")
 reactions_cpp = read("source", "render", "CreatureReactions.cpp")
-credits = read("CREDITS")
-fx = effects(("config", "roomAmbienceRoomFx.cfg"))
+# The CREDITS of the public tree and of the content repository (the rows of the moved sounds stand there)
+credits = room_packages.credits_text(ROOT)
+DATA = data_present()
+fx = effects(("config", "roomAmbienceRoomFx.cfg")) if DATA else []
 
 # --- heart: low health
 need("lowHealth" in config_h and "mBelow" in config_h, "AmbienceWhen::lowHealth or mBelow missing")
@@ -59,21 +83,22 @@ need("AmbienceWhen::lowHealth" in ambience_cpp and "isLocalHeartBelow" in ambien
      "the scan does not use the low health condition")
 need("getHeartBadge()" in ambience_cpp and "mFraction" in ambience_cpp, "the heart health is not read from the heart badge")
 need("getSeat() != localPlayer->getSeat()" in ambience_cpp, "only the heart of the local keeper may use the badge")
-heart = [e for e in fx if e.get("When") == ["LowHealth"]]
-need(len(heart) >= 4, "too few low health heart effects")
-for e in heart:
-    need(e.get("Match") == ["DungeonTempleObject"], "%s: low health effect not on the heart" % e["Name"][0])
-limits = sorted(set(float(e["Below"][0]) for e in heart))
-need(len(limits) >= 3, "the low health flare needs at least three levels")
-need(all(0.0 < v < 0.5 for v in limits), "low health levels must be below half health")
-particles = [e for e in heart if e.get("Kind") == ["Particle"]]
-need(len(set(e["System"][0] for e in particles)) == len(particles), "every flare level needs its own particle system")
-pulses = sorted((float(e["Below"][0]), float(e["Amount"][0])) for e in heart if e.get("Kind") == ["Motion"])
-need(len(pulses) >= 2 and pulses[0][1] > pulses[-1][1], "the pulse must be stronger at lower health")
-need(any(e.get("Reduced") == ["yes"] for e in heart), "no low health effect in the mode reduced")
-# the old effect of the heart stays
-core = effects(("config", "roomAmbienceCoreObjects.cfg"))
-need(any(e["Name"] == ["HeartFlare"] and e.get("When") == ["Occupied"] for e in core), "HeartFlare must stay as it was")
+if DATA:
+    heart = [e for e in fx if e.get("When") == ["LowHealth"]]
+    need(len(heart) >= 4, "too few low health heart effects")
+    for e in heart:
+        need(e.get("Match") == ["DungeonTempleObject"], "%s: low health effect not on the heart" % e["Name"][0])
+    limits = sorted(set(float(e["Below"][0]) for e in heart))
+    need(len(limits) >= 3, "the low health flare needs at least three levels")
+    need(all(0.0 < v < 0.5 for v in limits), "low health levels must be below half health")
+    particles = [e for e in heart if e.get("Kind") == ["Particle"]]
+    need(len(set(e["System"][0] for e in particles)) == len(particles), "every flare level needs its own particle system")
+    pulses = sorted((float(e["Below"][0]), float(e["Amount"][0])) for e in heart if e.get("Kind") == ["Motion"])
+    need(len(pulses) >= 2 and pulses[0][1] > pulses[-1][1], "the pulse must be stronger at lower health")
+    need(any(e.get("Reduced") == ["yes"] for e in heart), "no low health effect in the mode reduced")
+    # the old effect of the heart stays
+    core = effects(("config", "roomAmbienceCoreObjects.cfg"))
+    need(any(e["Name"] == ["HeartFlare"] and e.get("When") == ["Occupied"] for e in core), "HeartFlare must stay as it was")
 
 # --- casino
 # The server tells the result (a small cosmetic event); the clients show the win and the loss only on it
@@ -92,15 +117,16 @@ need('event.is(CosmeticEventType::casinoResult)' in client_cpp and '"CasinoWin"'
 need('"CasinoWin"' not in ambience_cpp and '"CasinoLoss"' not in ambience_cpp and "CASINO_OPPONENT_RADIUS" not in ambience_cpp,
      "the casino is still detected by an animation")
 need("mAttacking" not in ambience_h and "attack_anim" not in ambience_cpp, "the attack animation is still read for the casino")
-for event in ("CasinoWin", "CasinoLoss"):
-    mine = [e for e in fx if e.get("Event") == [event]]
-    need(any(e.get("Kind") == ["Particle"] for e in mine), "%s has no particle effect" % event)
-    need(any(e.get("Kind") == ["Sound"] for e in mine), "%s has no sound" % event)
-    need(all(e.get("Match") == ["casinoRoom"] for e in mine), "%s must be limited to the casino" % event)
-need(any(e.get("Event") == ["CasinoLoss"] and e.get("System") == ["RoomAmbCasinoLossSmoke"] for e in fx),
-     "the loss needs the grey smoke")
-need(any(e.get("Event") == ["CasinoWin"] and e.get("System") == ["RoomAmbCasinoWinCoins"] for e in fx),
-     "the win needs the coin fountain")
+if DATA:
+    for event in ("CasinoWin", "CasinoLoss"):
+        mine = [e for e in fx if e.get("Event") == [event]]
+        need(any(e.get("Kind") == ["Particle"] for e in mine), "%s has no particle effect" % event)
+        need(any(e.get("Kind") == ["Sound"] for e in mine), "%s has no sound" % event)
+        need(all(e.get("Match") == ["casinoRoom"] for e in mine), "%s must be limited to the casino" % event)
+    need(any(e.get("Event") == ["CasinoLoss"] and e.get("System") == ["RoomAmbCasinoLossSmoke"] for e in fx),
+         "the loss needs the grey smoke")
+    need(any(e.get("Event") == ["CasinoWin"] and e.get("System") == ["RoomAmbCasinoWinCoins"] for e in fx),
+         "the win needs the coin fountain")
 
 # --- arena
 need("scanArenaSpectators" in reactions_cpp and '"ArenaSpectator"' in reactions_cpp and '"ArenaCheer"' in reactions_cpp,
@@ -110,35 +136,40 @@ need("nbFighting < 2" in reactions_cpp, "cheering needs a bout of at least two f
 config_cpp_text = read("source", "render", "CreatureReactionConfig.cpp")
 need("ArenaSpectatorInterval" in config_cpp_text, "ArenaSpectatorInterval is not read")
 need("ArenaCheerPause" in config_cpp_text, "ArenaCheerPause is not read")
-reactions_cfg = read("config", "creatureReactions.cfg")
-need(re.search(r"^\s*ArenaSpectatorInterval\s+\S+", reactions_cfg, re.M) is not None, "ArenaSpectatorInterval not in config")
-need(re.search(r"^\s*ArenaCheerPause\s+\S+", reactions_cfg, re.M) is not None, "ArenaCheerPause not in config")
-need(re.search(r"Name\s+ArenaSpectator\b", reactions_cfg) is not None, "no ArenaSpectator event in the reactions config")
-cheer = [e for e in fx if e.get("Event") == ["ArenaCheer"]]
-need(any(e.get("Kind") == ["Particle"] for e in cheer), "ArenaCheer has no particles")
-need(any(e.get("Kind") == ["Sound"] for e in cheer), "ArenaCheer has no sound")
+if DATA:
+    reactions_cfg = read("config", "creatureReactions.cfg")
+    need(re.search(r"^\s*ArenaSpectatorInterval\s+\S+", reactions_cfg, re.M) is not None, "ArenaSpectatorInterval not in config")
+    need(re.search(r"^\s*ArenaCheerPause\s+\S+", reactions_cfg, re.M) is not None, "ArenaCheerPause not in config")
+    need(re.search(r"Name\s+ArenaSpectator\b", reactions_cfg) is not None, "no ArenaSpectator event in the reactions config")
+    cheer = [e for e in fx if e.get("Event") == ["ArenaCheer"]]
+    need(any(e.get("Kind") == ["Particle"] for e in cheer), "ArenaCheer has no particles")
+    need(any(e.get("Kind") == ["Sound"] for e in cheer), "ArenaCheer has no sound")
 
 # --- heart: the low health is heard, casino result gives emotes
 extras = read("source", "render", "RoomAmbienceExtras.cpp")
 need("HEART_LOW_FRACTION = 0.35" in extras and '"HeartLowBeat"' in extras, "the low heart health raises no HeartLowBeat")
-beat = [e for e in effects(("config", "roomAmbienceDeferred.cfg")) if e.get("Event") == ["HeartLowBeat"]]
-need(any(e.get("Kind") == ["Sound"] for e in beat), "HeartLowBeat has no sound")
+if DATA:
+    beat = [e for e in effects(("config", "roomAmbienceDeferred.cfg")) if e.get("Event") == ["HeartLowBeat"]]
+    need(any(e.get("Kind") == ["Sound"] for e in beat), "HeartLowBeat has no sound")
 reactions = read("source", "render", "CreatureReactions.cpp")
 need('event.is(CosmeticEventType::casinoResult)' in reactions and '"CasinoWin"' in reactions and '"CasinoLoss"' in reactions,
      "the casino result gives no emotes")
-cfg = read("config", "creatureReactions.cfg")
-need("Name        CasinoWin" in cfg and "Name        CasinoLoss" in cfg, "no CasinoWin/CasinoLoss reaction events")
+if DATA:
+    cfg = read("config", "creatureReactions.cfg")
+    need("Name        CasinoWin" in cfg and "Name        CasinoLoss" in cfg, "no CasinoWin/CasinoLoss reaction events")
 
 # --- sounds and credits
-families = set(e["Family"][0] for e in fx if e.get("Kind") == ["Sound"])
-need(families == {"Rooms/Casino/Win", "Rooms/Casino/Loss", "Rooms/Arena/Cheer"}, "unexpected sound families %s" % families)
-for family in families:
-    folder = os.path.join(ROOT, "sounds", "Spatial", *family.split("/"))
-    oggs = [f for f in os.listdir(folder) if f.endswith(".ogg")] if os.path.isdir(folder) else []
-    need(len(oggs) >= 1, "no sound in %s" % family)
-    for ogg in oggs:
-        need(os.path.getsize(os.path.join(folder, ogg)) > 1000, "%s is nearly empty" % ogg)
-        need("sounds/Spatial/%s/%s" % (family, ogg) in credits, "no CREDITS entry for %s/%s" % (family, ogg))
+if DATA:
+    families = set(e["Family"][0] for e in fx if e.get("Kind") == ["Sound"])
+    need(families == {"Rooms/Casino/Win", "Rooms/Casino/Loss", "Rooms/Arena/Cheer"}, "unexpected sound families %s" % families)
+    for family in families:
+        # The sound folder of the public tree and of every content package
+        oggs = content_packages.data_glob(ROOT, "sounds/Spatial/" + family, "*.ogg")
+        need(len(oggs) >= 1, "no sound in %s" % family)
+        for path in oggs:
+            ogg = path.name
+            need(os.path.getsize(str(path)) > 1000, "%s is nearly empty" % ogg)
+            need("sounds/Spatial/%s/%s" % (family, ogg) in credits, "no CREDITS entry for %s/%s" % (family, ogg))
 need("tools/gen_room_effect_sounds.py" in credits, "no CREDITS entry for the sound script")
 need(re.search(r"^tools/gen_room_effect_sounds\.py\s+OD Team", credits, re.M) is not None, "script entry without author")
 

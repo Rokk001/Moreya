@@ -17,6 +17,10 @@ config/preparedobjects.cfg (whole mechanism: check_game_object_preparation.py). 
 
 Fixed values of this branch: 4 staff meshes (Innkeeper, Merchant, PoolAttendant, InfirmaryShaman). The check compiles
 nothing and starts no game.
+
+config/preparedobjects.cfg and the meshes are game data of the content packages (scripts/content_packages.py): they are
+read from the public tree or from the content packages. Without the content the list and the meshes are named as not
+checked; the code contract and its source mutations still run.
 """
 from pathlib import Path
 import re
@@ -24,14 +28,19 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+
+#: The list of the prepared objects, a game data file of the public tree or of a content package
+OBJECTS = 'config/preparedobjects.cfg'
 
 
 def mesh_exists(name):
-    """True when the mesh is in models/ of the game data or of a present room package; a mesh of a room package that is
-    not present counts as there (only the list and the code are checked then)."""
+    """True when the mesh is in models/ of the game data, of a content package or of a present room package; a mesh of a
+    room package that is not present counts as there (only the list and the code are checked then)."""
     relative = 'models/' + name
-    return room_packages.asset(ROOT, relative) is not None or room_packages.is_missing_packaged(ROOT, relative)
+    return (content_packages.data_file(ROOT, relative) is not None or room_packages.asset(ROOT, relative) is not None
+            or room_packages.is_missing_packaged(ROOT, relative))
 
 
 def read(path):
@@ -75,13 +84,15 @@ def listed(text):
 
 
 def check(render_manager, objects):
-    """Asserts the staff part of the preparation on the given RenderManager.cpp and preparedobjects.cfg texts."""
+    """Asserts the staff part of the preparation on the given RenderManager.cpp and preparedobjects.cfg texts; with
+    objects None (the content is not present) the list and the meshes are not checked."""
     expected = staff_meshes()
     assert len(expected) == 4, expected
-    names = listed(objects)
-    for name in expected:
-        assert name + '.mesh' in names, name
-        assert mesh_exists(name + '.mesh'), name
+    if objects is not None:
+        names = listed(objects)
+        for name in expected:
+            assert name + '.mesh' in names, name
+            assert mesh_exists(name + '.mesh'), name
 
     init = block(render_manager, 'void RenderManager::initGameRenderer(')
     assert init.count('prepareGameObjectResources();') == 1
@@ -105,14 +116,16 @@ def check(render_manager, objects):
 
 
 def mutations(render_manager, objects):
-    """Each wrong preparation must be rejected by the contract."""
+    """Each wrong preparation must be rejected by the contract; with objects None the mutation of the list is left
+    out (the content is not present)."""
     wrong = [
         (render_manager.replace('    prepareGameObjectResources();\n', '', 1), objects),
-        (render_manager, objects.replace('Innkeeper.mesh\n', '', 1)),
         (render_manager.replace('            useShaderSkinning(entity);\n', '', 1), objects),
         (render_manager.replace('        if(entity != nullptr)\n            mSceneManager->destroyEntity(entity);\n', '', 1),
          objects),
     ]
+    if objects is not None:
+        wrong.insert(1, (render_manager, objects.replace('Innkeeper.mesh\n', '', 1)))
     for index, (source, config) in enumerate(wrong):
         assert (source, config) != (render_manager, objects), index
         try:
@@ -125,10 +138,17 @@ def mutations(render_manager, objects):
 def main():
     """Runs the contract on the production source and the rejected mutations."""
     render_manager = read('source/render/RenderManager.cpp')
-    objects = read('config/preparedobjects.cfg')
+    objects = None
+    if content_packages.data_file(ROOT, OBJECTS) is not None or content_packages.has_content(ROOT):
+        objects = content_packages.read_text(ROOT, OBJECTS)
+    else:
+        content_packages.unchecked('check_room_staff_preparation', [OBJECTS, 'the staff meshes'])
     check(render_manager, objects)
     mutations(render_manager, objects)
-    print('room staff preparation passes the checks (4 meshes)')
+    if objects is None:
+        print('room staff preparation passes the code checks (list and meshes not checked)')
+    else:
+        print('room staff preparation passes the checks (4 meshes)')
 
 
 if __name__ == '__main__':

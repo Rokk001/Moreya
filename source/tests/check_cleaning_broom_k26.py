@@ -30,6 +30,9 @@ Three parts:
 Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 328 triangles (limit 600), Clean 1.6 s,
 44 clips in Kobold.skeleton and 53 in Dwarf1.skeleton, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
 The probe compiles with cl, so it runs in the compile phase of the integration; `--no-compile` runs the other parts.
+Without --assets the models, materials and textures are read from the public tree or the content packages
+(scripts/content_packages.py); without the content the broom (core-models) is named as not checked and the rigs are
+checked without it.
 
 Call (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
     python source/tests/check_cleaning_broom_k26.py [--no-compile] [--assets <folder with models/ and materials/>]
@@ -48,7 +51,9 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
-ASSETS = Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+ASSETS =Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
 BROOM_SHARE = 0.88
 CLIP_COUNTS = {'Kobold': 44, 'Dwarf1': 53}
 fails = []
@@ -78,9 +83,17 @@ def body(source, signature):
     return source[start:end]
 
 
+def asset(relative):
+    """Returns the path of a shipped asset: below --assets when given, else in the public tree or a content package
+    (scripts/content_packages.py); a path that does not exist when the asset is missing."""
+    if ASSETS != ROOT:
+        return ASSETS / relative
+    return content_packages.resolve(ROOT, relative)
+
+
 def convert(name):
     """Converts a shipped binary mesh or skeleton to Ogre XML and returns its parsed root, None if it is missing."""
-    source = ASSETS / 'models' / name
+    source = asset('models/' + name)
     if not source.exists():
         return None
     target = work / (name + '.xml')
@@ -219,7 +232,10 @@ def triangles(mesh_root):
 MOUNT = (math.cos(math.radians(-45.0)), math.sin(math.radians(-45.0)), 0.0, 0.0)
 broom = convert('CleaningBroom.mesh')
 broom_info = {}
-if broom is None:
+if broom is None and ASSETS == ROOT and not content_packages.has_content(ROOT):
+    # The broom lies in the content package core-models: without the content the rigs are checked without it
+    content_packages.unchecked('check_cleaning_broom_k26', ['models/CleaningBroom.mesh, its material and texture'])
+elif broom is None:
     fail('assets: models/CleaningBroom.mesh is missing (a worker has no broom to clean with)')
 else:
     points = positions(broom)
@@ -235,8 +251,8 @@ else:
     materials = sorted({s.get('material') for s in broom.iter('submesh')})
     if materials != ['CleaningBroom', 'CleaningBroom/Twigs']:
         fail('assets: broom materials are %s' % materials)
-    material_text = (ASSETS / 'materials' / 'scripts' / 'CleaningBroom.material').read_text(encoding='utf-8') \
-        if (ASSETS / 'materials' / 'scripts' / 'CleaningBroom.material').exists() else ''
+    material_text = asset('materials/scripts/CleaningBroom.material').read_text(encoding='utf-8') \
+        if asset('materials/scripts/CleaningBroom.material').exists() else ''
     for name in ('CleaningBroom', 'CleaningBroom/Twigs'):
         block = re.search(r'^material ' + re.escape(name) + r'\b[^\n]*\n\{.*?^\}', material_text, re.M | re.S)
         if block is None:
@@ -246,7 +262,7 @@ else:
             fail('assets: material %s has no CleaningBroom.png texture' % name)
         if not re.search(r'specular 0(\.0)? 0(\.0)? 0(\.0)?', block.group(0)):
             fail('assets: material %s shines (specular must be 0)' % name)
-    texture = ASSETS / 'materials' / 'textures' / 'CleaningBroom.png'
+    texture = asset('materials/textures/CleaningBroom.png')
     if not texture.exists():
         fail('assets: materials/textures/CleaningBroom.png is missing')
     else:

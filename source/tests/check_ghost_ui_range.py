@@ -20,15 +20,26 @@ aspect ratios 640x4320 and 7680x480) and 5 user scales
   text box covers a clickable control or another caption.
 Fixed values counted once on this branch (after the U1 rebuild of the page after its chosen mockup: connector lines,
 vessel cover, chosen-product frames): 27 windows on the page, 4 clickable controls, 6 captions, 60 cases.
+
+The layouts, the menu sheet imageset and the fonts are content (core-gui package, found through
+scripts/content_packages.py). Without them the captions the production refresh writes are checked and the 60 cases are
+named as not checked.
 """
 from itertools import combinations, product
 from pathlib import Path
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 from PIL import ImageFont
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The content files the screen cases measure (core-gui package)
+CONTENT_FILES = ('gui/WindowRoomManager.layout', 'gui/RoomManagerGhostPage.layout', 'gui/ODMenuTemplate.imageset',
+                 'gui/fonts/MedievalSharp-8.font')
 SCREENS = ((640, 480), (640, 4320), (800, 600), (1024, 768), (1280, 720), (1366, 768), (1920, 1080), (2560, 1440),
            (3440, 1440), (3840, 2160), (7680, 480), (7680, 4320))
 SCALES = (.8, .9, 1., 1.1, 1.2)
@@ -39,8 +50,8 @@ CAPTION_COUNT = 6
 
 
 def read(path):
-    """Reads tracked production input without depending on the current directory."""
-    return (REPO / path).read_text(encoding='utf-8')
+    """Reads tracked production input without depending on the current directory (public tree, else content package)."""
+    return content_packages.read_text(REPO, path)
 
 
 def props(node):
@@ -79,10 +90,10 @@ class Font:
 
     def __init__(self, name):
         """Opens the TrueType file of a CEGUI font definition."""
-        spec = ET.parse(REPO / 'gui/fonts' / (name + '.font')).getroot()
+        spec = ET.parse(content_packages.resolve(REPO, 'gui/fonts/' + name + '.font')).getroot()
         self.points = float(spec.get('size'))
         assert (spec.get('nativeHorzRes'), spec.get('nativeVertRes')) == ('800', '600'), name
-        self.face = ImageFont.truetype(str(REPO / 'gui/fonts' / spec.get('filename')), 1024)
+        self.face = ImageFont.truetype(str(content_packages.resolve(REPO, 'gui/fonts/' + spec.get('filename'))), 1024)
         self.line = self.face.font.height / 1024.0
 
     def pixels(self, font_scale):
@@ -120,12 +131,12 @@ def walk(node, path=''):
 
 def frame_contract():
     """Reads the frame, border and title data the model uses from the shipped files."""
-    manager = ET.parse(REPO / 'gui/WindowRoomManager.layout').getroot().find('Window')
+    manager = ET.parse(content_packages.resolve(REPO, 'gui/WindowRoomManager.layout')).getroot().find('Window')
     frame = props(manager)
     (fx0, fox0), (fy0, foy0), (fx1, fox1), (fy1, foy1) = udims(frame['Area'])
     assert (fx0, fy0, fx1, fy1) == (.5, .5, .5, .5), 'a centred frame of fixed design size'
     assert manager.get('type') == 'OD/SheetWindow', 'the Room Manager uses the window frame of the menu sheet'
-    images = ET.parse(REPO / 'gui/ODMenuTemplate.imageset').getroot()
+    images = ET.parse(content_packages.resolve(REPO, 'gui/ODMenuTemplate.imageset')).getroot()
     sizes = {i.get('name'): (float(i.get('width')), float(i.get('height'))) for i in images.findall('Image')}
     looks = read('gui/OD.looknfeel')
     look = looks[looks.index('<WidgetLook name="OD/SheetWindow">'):]
@@ -139,7 +150,7 @@ def frame_contract():
     assert 'initialValue="%s" name="TitlebarFont"' % title_font in look, 'the title font is the font of the title height'
     assert 'TitlebarFont' not in frame, 'the title font of the sheet title is fixed'
     pages = {n.get('name'): n for n in manager.iter('Window')}['Pages']
-    checkbox = ET.parse(REPO / 'gui/ODSkin.imageset').getroot().find("Image[@name='CheckboxNormal']")
+    checkbox = ET.parse(content_packages.resolve(REPO, 'gui/ODSkin.imageset')).getroot().find("Image[@name='CheckboxNormal']")
     gui = read('source/render/Gui.cpp')
     skin_density = float(re.search(r'SKIN_IMAGE_PIXEL_DENSITY = ([\d.]+)f;', gui).group(1))
     sheet_density = float(re.search(r'MENU_SHEET_IMAGE_PIXEL_DENSITY = ([\d.]+)f;', gui).group(1))
@@ -181,7 +192,7 @@ def captions():
 def check():
     """Runs the 60 screen and scale cases on the ghost page."""
     contract = frame_contract()
-    root = ET.parse(REPO / 'gui/RoomManagerGhostPage.layout').getroot().find('Window')
+    root = ET.parse(content_packages.resolve(REPO, 'gui/RoomManagerGhostPage.layout')).getroot().find('Window')
     assert root.get('name') == 'GhostPage' and props(root)['Area'] == '{{0,0},{0,0},{1,0},{1,0}}'
     windows = walk(root)
     assert len(windows) + 1 == PAGE_WINDOWS, len(windows) + 1
@@ -247,7 +258,13 @@ def check():
 
 
 def main():
-    """Runs the fixed-scope range check of the ghost room page."""
+    """Runs the fixed-scope range check of the ghost room page; without the content only the captions of the code."""
+    missing = [name for name in CONTENT_FILES if content_packages.data_file(REPO, name) is None]
+    if missing:
+        captions()
+        content_packages.unchecked('check_ghost_ui_range', missing)
+        print('ghost UI range: captions of the production refresh: ok')
+        return
     cases = check()
     print('ghost UI range: Room Manager ghost page, %d windows, %d clickable, %d captions, %d screen/scale cases: ok'
           % (PAGE_WINDOWS, CLICKABLE_COUNT, CAPTION_COUNT, cases))

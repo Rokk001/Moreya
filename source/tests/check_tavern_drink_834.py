@@ -35,6 +35,9 @@ What is checked (python only, no compiler, no game)
 Call from the repository root (the model parts need OgreXMLConverter on the PATH or in OGRE_XML_CONVERTER and are
 skipped with a note otherwise):
   python source/tests/check_tavern_drink_834.py
+
+The creature meshes and skeletons are game data of the content packages (scripts/content_packages.py): they are read
+from the public tree or from the content packages. Without the content the model parts are named as not checked.
 """
 import math
 import os
@@ -49,7 +52,9 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+sys.path.insert(0, str(ROOT / 'scripts'))
 from asset_check_timing import prepare, profile_check
+import content_packages  # noqa: E402
 
 TURNS_PER_SECOND = 1.4
 BEER_SECONDS = 30
@@ -168,7 +173,7 @@ def visiting_meshes():
 
 
 def skeleton_of(mesh):
-    return re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (ROOT / 'models' / mesh).read_bytes())[0].decode('ascii')
+    return re.findall(rb'([A-Za-z0-9_]+)\.skeleton', content_packages.resolve(ROOT, 'models/' + mesh).read_bytes())[0].decode('ascii')
 
 
 def quaternion_matrix(q):
@@ -938,8 +943,13 @@ def main():
     check_chain_and_game()
     check_lying_code()
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
+    # The mug (tavern room package) and the visiting meshes that are not found while the content is not present
+    missing = [mesh for mesh in ['TavernMug.mesh'] + visiting_meshes()
+               if content_packages.data_file(ROOT, 'models/' + mesh) is None]
     if shutil.which(converter) is None and not Path(converter).is_file():
         print('models skipped: no OgreXMLConverter')
+    elif missing and not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_tavern_drink_834', ['the model parts (mug and visiting creatures)'] + missing)
     else:
         out = ROOT / 'out' / 'tavern-drink-834'
         out.mkdir(parents=True, exist_ok=True)

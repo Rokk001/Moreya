@@ -23,6 +23,10 @@ Now RenderManager::prepareGameObjectResources loads every mesh listed in config/
 
 Fixed values of this branch: 221 listed meshes. Part 4 compiles with cl, so it runs in the compile phase of the
 integration only (--no-probe skips it).
+
+config/preparedobjects.cfg and the meshes are content (core-config, core-models and room packages, found through
+scripts/content_packages.py). Without the content the wiring and the code part of the rejected stalls are checked;
+coverage, the listed stall objects and the probe are named as not checked.
 """
 from pathlib import Path
 import importlib.util
@@ -33,14 +37,18 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+
+#: The list of the prepared meshes (core-config package)
+PREPARED_OBJECTS = 'config/preparedobjects.cfg'
 
 
 def mesh_exists(name):
-    """True when the mesh is in models/ of the game data or of a present room package; a mesh of a room package that is
-    not present counts as there (only the list and the code are checked then)."""
+    """True when the mesh is in models/ of the game data, of a content package or of a present room package; a mesh of
+    a room package that is not present counts as there (only the list and the code are checked then)."""
     relative = 'models/' + name
-    return room_packages.asset(ROOT, relative) is not None or room_packages.is_missing_packaged(ROOT, relative)
+    return content_packages.data_file(ROOT, relative) is not None or room_packages.is_missing_packaged(ROOT, relative)
 LISTED = 223
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
@@ -66,7 +74,7 @@ def block(source, signature):
 def listed():
     """Returns the mesh names of config/preparedobjects.cfg in file order, comments removed."""
     names = []
-    for line in read('config/preparedobjects.cfg').splitlines():
+    for line in content_packages.read_text(ROOT, PREPARED_OBJECTS).splitlines():
         words = line.split('#', 1)[0].split()
         if words:
             names.append(words[0])
@@ -107,14 +115,16 @@ def coverage():
         assert figure in names, figure
 
 
-def rejected_stalls(render_manager):
+def rejected_stalls(render_manager, with_list=True):
     """The first-use work of the two stalls the owner rejected in build 61 (367.97 ms in the minute to 18:44:39,
     780.06 ms in the minute to 18:45:39 of 2026-11-11) is done during the map load: the first BloodStain and the first
     GoblinBed of that session are listed objects, and the contour and hover copies created then (Kobold green, Roach
-    red, "couldn't find ... cloning") are made for every configured creature and every seat before play."""
-    names = listed()
-    for figure in ('BloodStain.mesh', 'GoblinBed.mesh'):
-        assert figure in names, figure
+    red, "couldn't find ... cloning") are made for every configured creature and every seat before play. Without the
+    content (with_list False) the listed objects are not checked, only the code."""
+    if with_list:
+        names = listed()
+        for figure in ('BloodStain.mesh', 'GoblinBed.mesh'):
+            assert figure in names, figure
     creatures = block(render_manager, 'void RenderManager::prepareGameCreatureResources(')
     assert 'ConfigManager::getSingleton().getCreatureDefinitions()' in creatures
     assert 'prepareOutlinerMaterials(materialName, gameMap);' in creatures
@@ -182,7 +192,8 @@ def probe(render_manager):
     """Part 3: compiles the production list reader against the real config file and compares the names."""
     reader = block(render_manager, 'static std::vector<std::string> readPreparedObjectMeshes()')
     constant = 'static const std::string PREPARED_OBJECTS_FILE = "preparedobjects.cfg";'
-    config = (ROOT / 'config').as_posix() + '/'
+    # The config folder that holds the list (public tree or content package)
+    config = content_packages.resolve(ROOT, PREPARED_OBJECTS).parent.as_posix() + '/'
     vcvars = Path('C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Auxiliary/Build/vcvars64.bat')
     with tempfile.TemporaryDirectory() as directory:
         directory = Path(directory)
@@ -205,8 +216,15 @@ def probe(render_manager):
 
 
 def main():
-    """Runs coverage and wiring, then the compiled reader probe unless --no-probe is given."""
+    """Runs coverage and wiring, then the compiled reader probe unless --no-probe is given; without the content only
+    the code parts run and the rest is named as not checked."""
     render_manager = read('source/render/RenderManager.cpp')
+    if content_packages.data_file(ROOT, PREPARED_OBJECTS) is None:
+        wiring(render_manager)
+        rejected_stalls(render_manager, with_list=False)
+        content_packages.unchecked('check_game_object_preparation', [PREPARED_OBJECTS + ' (coverage, stall objects, probe)'])
+        print('game object preparation: wiring ok')
+        return
     coverage()
     wiring(render_manager)
     rejected_stalls(render_manager)

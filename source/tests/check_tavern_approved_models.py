@@ -12,6 +12,10 @@ inside of hood, sleeves and apron stays drawn with back faces culled. Checked he
                 two-sided Lambert light, back faces culled like the game) differs from the stored render of the
                 innkeeper before the reduction by a mean of at most RENDER_MAX_MEAN_DIFFERENCE per channel and covers
                 its silhouette by at least RENDER_MIN_SILHOUETTE_OVERLAP (intersection over union)
+
+The tavern meshes and atlases come from the tavern room package, TavernObjects.material from the content packages
+(scripts/content_packages.py); without the tavern room package only the navigation bounds are checked and the rest is
+named as not checked.
 """
 
 from array import array
@@ -36,6 +40,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
@@ -44,8 +49,8 @@ ROOM_ASSETS = room_packages.has_room(ROOT, 'Tavern')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.resolve(ROOT, relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(ROOT, relative)
 # Fixed counts and bounds measured from the native serializer round trip.
 MESHES = {
     'Innkeeper': (46676, 33291,

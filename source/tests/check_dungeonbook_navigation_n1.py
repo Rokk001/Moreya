@@ -1,17 +1,20 @@
-"""Check Dungeonbook navigation wiring and the six existing visual asset blobs."""
+"""Check Dungeonbook navigation wiring and the six existing visual asset blobs.
+
+The layout and the six assets are content (core-gui package, found through scripts/content_packages.py); without the
+content the source wiring is checked and the layout and asset part is named as not checked.
+"""
 from pathlib import Path
 import hashlib
 import json
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
 source = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
-book = ET.parse(repo / 'gui/WindowSocial.layout').getroot().find('Window')
-home = book.find("Window[@name='HomePage']")
-# The filter is a drop-down built from the parts of the chosen menu sheet (INGAME-QS-12 K8; OD/Combobox before)
-assert home.find("Window[@name='Filter']").get('type') == 'OD/SheetCombobox'
-assert home.find("Window[@name='Filter']/Property[@name='ReadOnly']").get('value') == 'True'
 assert all(label in source for label in ('"All", "Zivs", "Fighters", "Unhappy"',))
 
 def body(signature):
@@ -31,6 +34,19 @@ assert 'showPage(Page::Home)' in body('bool SocialWindow::onFilterClicked(')
 assert 'mWindow->getChild("HomePage")->setVisible(page == Page::Home);' in body('void SocialWindow::showPage(')
 assert 'setVisible(page != Page::Home)' in body('void SocialWindow::showPage(')
 assert 'if(!all && (it->mCreature != mSelectedCreature))' in body('void SocialWindow::rebuildFeed()')
+ASSETS = ('DungeonbookIcons.png', 'DungeonbookIcons.imageset', 'DungeonbookFrame.png', 'DungeonbookFrame.imageset',
+          'DungeonbookPage.png', 'DungeonbookPage.imageset')
+missing = [name for name in ['gui/WindowSocial.layout'] + ['gui/' + name for name in ASSETS]
+           if content_packages.data_file(repo, name) is None]
+if missing:
+    content_packages.unchecked('check_dungeonbook_navigation_n1', missing)
+    print('Dungeonbook navigation wiring: OK (layout and visual assets not checked)')
+    sys.exit(0)
+book = ET.parse(content_packages.resolve(repo, 'gui/WindowSocial.layout')).getroot().find('Window')
+home = book.find("Window[@name='HomePage']")
+# The filter is a drop-down built from the parts of the chosen menu sheet (INGAME-QS-12 K8; OD/Combobox before)
+assert home.find("Window[@name='Filter']").get('type') == 'OD/SheetCombobox'
+assert home.find("Window[@name='Filter']/Property[@name='ReadOnly']").get('value') == 'True'
 for name in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills'):
     assert book.find("Window[@name='NavBar']/Window[@name='%s']" % name) is not None
 # A post of the start page opens its creature; the feed of one creature holds no button (plan INGAME-QS-11 K4)
@@ -109,7 +125,7 @@ expected = {
     'DungeonbookPage.imageset': 'c1003912e3e5c1037805e6ef1311d527eef393d1',
 }
 for name, digest in expected.items():
-    data = (repo / 'gui' / name).read_bytes()
+    data = content_packages.resolve(repo, 'gui/' + name).read_bytes()
     if name.endswith('.imageset'):
         data = data.replace(b'\r\n', b'\n')
     assert hashlib.sha1(('blob %d\0' % len(data)).encode() + data).hexdigest() == digest, name

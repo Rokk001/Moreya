@@ -1,4 +1,9 @@
-"""Exercise production low-nest elevation and renderer lifecycle without a game."""
+"""Exercise production low-nest elevation and renderer lifecycle without a game.
+
+The preview (--render) reads the meshes and textures from the public tree and from the models and materials/textures
+folders of the content and room packages (scripts/content_packages.py); without the files it needs the preview is
+named as not checked.
+"""
 from pathlib import Path
 import os
 import re
@@ -7,6 +12,12 @@ import subprocess
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The files the preview loads
+PREVIEW_FILES = ('models/Kobold.mesh', 'models/GoblinBed.mesh', 'materials/textures/Kobold.png',
+                 'materials/textures/GoblinBed.png')
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 step_max = re.search(r'^\s*BedStepMaxHeight\s+(\S+)', (repo / 'config/global.cfg').read_text(), re.M)[1]
@@ -19,6 +30,7 @@ probe = r'''
 #include "gamemap/RoomObjectStep.h"
 #include "render/TreasuryCreatureRules.h"
 #include <set>
+#include <vector>
 #include <iostream>
 struct ConfigManager {static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}double getBedStepMaxHeight()const{return STEP_MAX;}};
 enum class GameEntityType {buildingObject,creature};
@@ -45,13 +57,15 @@ struct RenderManager {
  void updateCreatureStep(Creature*);void treasuryCreatureStep(Creature*,const Ogre::Vector3&,float,int){}void cancelTreasuryPour(Creature*){}float getTreasuryPourRise(Creature*) const{return 0;}void cancelCreatureStep(Creature* = nullptr);
 };
 static float toiletSeatLift(METHODS
-void renderPreview(const std::string& repo,const std::string& prefix){
+//! \brief Renders the traversal preview; folders are the models and texture folders of the content and room packages.
+void renderPreview(const std::string& repo,const std::string& prefix,const std::vector<std::string>& folders){
  Ogre::Root root("","","low-step-preview.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
  Ogre::NameValuePairList options;options["hidden"]="true";options["vsync"]="false";
  auto* window=root.createRenderWindow("Low nest traversal",640,360,false,&options);
  auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  for(const std::string& path:{repo+"/models",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})groups.addResourceLocation(path,"FileSystem","Graphics",true);
+ for(const std::string& path:folders)groups.addResourceLocation(path,"FileSystem","Graphics",true);
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  auto& materials=Ogre::MaterialManager::getSingleton();auto* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
  OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
@@ -120,7 +134,7 @@ int main(int argc,char** argv){
  creature.level=1;creature.pos={5.35f,5,0};creature.direction={0,1,0};renderer.updateCreatureStep(&creature);
  check(creatureNode.getPosition().z==0,"walking parallel through a free strip does not trigger a step");
  creature.mesh="CaveHornet.mesh";creature.pos={4.8f,5,0};renderer.updateCreatureStep(&creature);check(creatureNode.getPosition().z==0,"flying animation is not lifted as if it had ground feet");
- if(argc>1)renderPreview(argv[1],argv[2]);
+ if(argc>2)renderPreview(argv[1],argv[2],std::vector<std::string>(argv+3,argv+argc));
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''.replace('METHODS', methods).replace('STEP_MAX', step_max)
@@ -130,7 +144,17 @@ with tempfile.TemporaryDirectory(prefix='odp-low-step-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', f'/I{prefix / "include/OGRE/RTShaderSystem"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'], cwd=work, check=True)
-    result = subprocess.run([str(work / 'check.exe')] + ([str(repo), str(prefix)] if '--render' in sys.argv else []), cwd=work, capture_output=True, text=True)
+    # The preview gets the models and texture folders of the content and room packages besides the public ones
+    preview = []
+    if '--render' in sys.argv:
+        missing_preview = [name for name in PREVIEW_FILES if content_packages.data_file(repo, name) is None]
+        if missing_preview:
+            content_packages.unchecked('check_low_bed_step', ['preview (' + ', '.join(missing_preview) + ')'])
+        else:
+            preview = [str(repo), str(prefix)] + [str(folder) for relative in ('models', 'materials/textures')
+                                                  for folder in content_packages.data_folders(repo, relative)
+                                                  if folder != repo / relative]
+    result = subprocess.run([str(work / 'check.exe')] + preview, cwd=work, capture_output=True, text=True)
     print('\n'.join(line for line in result.stdout.splitlines() if not line.startswith('GL_EXTENSIONS') and any(tag in line for tag in ('FAIL ', 'CHECKS=', 'Error', 'error'))))
     if result.returncode:
         print(result.stderr)

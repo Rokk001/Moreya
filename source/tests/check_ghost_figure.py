@@ -19,14 +19,24 @@ Screenshot ODscreenshot_2026-11-09_153144_17 showed a flat spiky green heap on t
 4. The blood stain is not from the ghost: the dying creature leaves a blood DirtPile in its death turn (GHOSTS-PLAN 5.2:
    "turn 0 unchanged (items, blood, owner told)"), and its ghost rises from the same spot (GHOSTS-PLAN D1). Undead leave
    neither blood nor a ghost. GhostEntity creates no dirt pile.
+
+Ghost.mesh and Ghost.skeleton are content (core-models package, found through scripts/content_packages.py); without
+them the mesh and clip part of point 2 is named as not checked and the code parts run.
 """
 from pathlib import Path
 import importlib.util
 import math
 import re
 import struct
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The content files of the mesh and clip part (core-models package)
+GHOST_FILES = ('models/Ghost.mesh', 'models/Ghost.skeleton')
+missing_content = [name for name in GHOST_FILES if content_packages.data_file(repo, name) is None]
 
 
 def read(path):
@@ -62,36 +72,39 @@ assert 'if(renderedMovableEntity->getObjectType() == GameEntityType::ghostEntity
     in generic.replace('\r\n', '\n'), 'GhostGlow only on ghosts'
 
 # --- 2. Authored and animated upright, never laid down ---------------------------------------------------------------------
-spec = importlib.util.spec_from_file_location('ghost_mesh_reader', repo / 'source/tests/check_ghost_apparatus_visible.py')
-reader = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(reader)
-mesh = reader.read_mesh('Ghost')
-low = mesh['bounds'][:3]
-high = mesh['bounds'][3:6]
-assert high[2] - low[2] > 1.2, 'a standing figure about 1.35 tall'
-assert mesh['skeleton'] == 'Ghost.skeleton'
-# The hooded body stands above the floor in front (y < 0), the torn hem trails behind it
-front = [p for p in mesh['positions'] if p[1] < 0.0]
-assert min(p[2] for p in front) > 0.1 and max(p[2] for p in front) > 1.1, 'an upright body, not a heap'
-spec = importlib.util.spec_from_file_location('ghost_chunks', repo / 'tools/blender-assets/splice_animation_chunks.py')
-chunks_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(chunks_module)
-_, chunks = chunks_module.chunks((repo / 'models/Ghost.skeleton').read_bytes())
-clips = {name: data for kind, name, data in chunks if kind == chunks_module.ANIMATION}
-assert {'Idle', 'Walk'} <= set(clips), set(clips)
-for clip, data in clips.items():
-    _, tracks = chunks_module.animation_children(data)
-    for kind, bone, track in tracks:
-        if kind != 0x4100:
-            continue
-        position = 8
-        while position < len(track):
-            _, size = struct.unpack_from('<HI', track, position)
-            # key frame: time, then the rotation quaternion x y z w
-            w = struct.unpack_from('<5f', track, position + 6)[4]
-            turn = math.degrees(2 * math.acos(min(1.0, abs(w))))
-            assert turn <= 30.0, ('no lying pose in the ghost clips', clip, bone, turn)
-            position += size
+if not missing_content:
+    spec = importlib.util.spec_from_file_location('ghost_mesh_reader', repo / 'source/tests/check_ghost_apparatus_visible.py')
+    reader = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(reader)
+    mesh = reader.read_mesh('Ghost')
+    low = mesh['bounds'][:3]
+    high = mesh['bounds'][3:6]
+    assert high[2] - low[2] > 1.2, 'a standing figure about 1.35 tall'
+    assert mesh['skeleton'] == 'Ghost.skeleton'
+    # The hooded body stands above the floor in front (y < 0), the torn hem trails behind it
+    front = [p for p in mesh['positions'] if p[1] < 0.0]
+    assert min(p[2] for p in front) > 0.1 and max(p[2] for p in front) > 1.1, 'an upright body, not a heap'
+    spec = importlib.util.spec_from_file_location('ghost_chunks', repo / 'tools/blender-assets/splice_animation_chunks.py')
+    chunks_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(chunks_module)
+    _, chunks = chunks_module.chunks(content_packages.resolve(repo, 'models/Ghost.skeleton').read_bytes())
+    clips = {name: data for kind, name, data in chunks if kind == chunks_module.ANIMATION}
+    assert {'Idle', 'Walk'} <= set(clips), set(clips)
+    for clip, data in clips.items():
+        _, tracks = chunks_module.animation_children(data)
+        for kind, bone, track in tracks:
+            if kind != 0x4100:
+                continue
+            position = 8
+            while position < len(track):
+                _, size = struct.unpack_from('<HI', track, position)
+                # key frame: time, then the rotation quaternion x y z w
+                w = struct.unpack_from('<5f', track, position + 6)[4]
+                turn = math.degrees(2 * math.acos(min(1.0, abs(w))))
+                assert turn <= 30.0, ('no lying pose in the ghost clips', clip, bone, turn)
+                position += size
+else:
+    content_packages.unchecked('check_ghost_figure', missing_content)
 movable = sources['source/entities/MovableGameEntity.cpp']
 assert movable.count('setWalkDirection(Ogre::Vector3(walkDirection.x * facing,walkDirection.y * facing,0));') == 2, \
     'the ghost turns flat while it floats'

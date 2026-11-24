@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Check serialized loop closure and complete skinned chicken wings without compiling the game."""
+"""Check serialized loop closure and complete skinned chicken wings without compiling the game.
+
+The models lie in the content packages (core-models and the room packages) and are found through
+scripts/content_packages.py. Without the content the synthetic serializer controls run and the model part is named as
+not checked."""
 import math
 import os
 from pathlib import Path
@@ -13,7 +17,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
-import room_packages  # noqa: E402  (room models are read from their room package)
+import content_packages  # noqa: E402  (models are read from the content and room packages)
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'tools/blender-assets'))
 import author_chicken_wings as wings
@@ -28,7 +32,7 @@ import retime_animation_chunk as retiming
 def export(name, out, return_tree=True):
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     target = out / (name + '.xml')
-    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(room_packages.resolve(ROOT, 'models/' + name)),
+    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(content_packages.resolve(ROOT, 'models/' + name)),
                     str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
     return ET.parse(target).getroot() if return_tree else None
@@ -203,7 +207,7 @@ def check_held_loop():
 
 # Verify retiming preserves all transforms, unrelated chunks and identity, and rejects missing clips.
 def check_retiming():
-    data = (ROOT / 'models/Chicken.skeleton').read_bytes()
+    data = content_packages.resolve(ROOT, 'models/Chicken.skeleton').read_bytes()
     assert retiming.retime(data, 'Lay', 7.0) == data
     changed = retiming.retime(data, 'Lay', 14.0)
     original_header, original = binary.chunks(data)
@@ -241,8 +245,17 @@ def check_retiming():
         raise AssertionError('A missing retiming clip was accepted')
 
 
-# Check actual serialized assets and the non-destructive animation replacement helper.
+# Check actual serialized assets and the non-destructive animation replacement helper; without the content only the
+# synthetic controls run and the model part is named as not checked.
 def main():
+    if not content_packages.has_content(ROOT):
+        check_splice()
+        check_track_splice()
+        check_held_loop()
+        check_velocity_controls()
+        content_packages.unchecked('check_animation_assets', ['serialized loops, wing skinning and retiming of the models'])
+        print('Preservation and velocity controls passed.')
+        return
     out = ROOT / 'out/animation-assets'
     out.mkdir(parents=True, exist_ok=True)
     chicken = None
@@ -258,7 +271,7 @@ def main():
                 keys = list(track.find('keyframes'))
                 assert float(keys[-1].get('time')) <= float(clip.get('length')) + 1e-6
                 matching_keys(keys[0], keys[-1])
-        check_loop_velocity(ROOT / 'models' / (name + '.skeleton'), clips)
+        check_loop_velocity(content_packages.resolve(ROOT, 'models/' + name + '.skeleton'), clips)
         if name == 'Chicken':
             chicken = skeleton
             for name_clip in wings.FLIGHT_CLIPS:
@@ -275,7 +288,7 @@ def main():
                   for track in clip.find('tracks') if track.get('bone') == 'Weapon_L')
     matching_keys(list(socket.find('keyframes'))[0], list(socket.find('keyframes'))[-1])
     bone = int(bone_ids(wizard)['Weapon_L'])
-    check_loop_velocity(ROOT / 'models/Wizard.skeleton', ('Idle',), {bone})
+    check_loop_velocity(content_packages.resolve(ROOT, 'models/Wizard.skeleton'), ('Idle',), {bone})
     check_splice()
     check_track_splice()
     check_held_loop()

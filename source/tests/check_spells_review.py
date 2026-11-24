@@ -10,6 +10,11 @@ time, the plague damage, its infection of own, allied and enemy creatures, the c
 creature to a free cot, that workers and the champion never get sick, the walls Break Wall takes and refuses, the reveal
 of every tile of the clicked keeper, the research nodes and effects, the 24 buttons of the spells tab, the sounds and
 looks, the saving and loading of every running effect and the AI rows. Every expected value is written out here.
+
+The spell particle script, config/roomAmbienceSpells.cfg and config/ai.cfg are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages, the CREDITS rows from
+the CREDITS of the public tree and of the content repository. Without the content these parts are named as not
+checked; the code, spells.cfg, skills.cfg and the layouts are checked.
 """
 
 import math
@@ -19,13 +24,34 @@ import sys
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
 problems = []
+#: The game data files the check reads; they lie in the public tree or in a content package
+DATA_FILES = ("particles/RoomAmbienceSpells.particle", "config/roomAmbienceSpells.cfg", "config/ai.cfg")
 
 
 def read(*parts):
-    """Returns the text of a file below the repository root."""
-    with open(os.path.join(ROOT, *parts), encoding="utf-8", errors="replace") as handle:
+    """Returns the text of a file below the repository root (game data from the public tree or a content package)."""
+    with open(str(content_packages.resolve(ROOT, "/".join(parts))), encoding="utf-8", errors="replace") as handle:
         return handle.read()
+
+
+def data_present():
+    """True when the game data can be checked: all files are found or the content is present (then a missing one
+    fails as before); else names the data part as not checked."""
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    if not missing or content_packages.has_content(ROOT):
+        return True
+    content_packages.unchecked("check_spells_review", missing + ["the CREDITS rows of the plague look and the recordings"])
+    return False
+
+
+DATA = data_present()
+# The CREDITS of the public tree and of the content repository
+CREDITS = room_packages.credits_text(ROOT)
 
 
 def body(text, signature):
@@ -295,12 +321,13 @@ need("infirmary->canAdmitSick(creature)" in search and "->admitSick(creature)" i
      "findBestPath(" in search, "the sick creature walks to the nearest infirmary with a free cot and is admitted")
 need("hasCarryEntitySpot" not in search, "KO sick creatures are carried in by the workers as today")
 need('const std::string Creature::PLAGUE_SCRIPT = "SpellCreaturePlague";' in creature_cpp, "the plague look script")
-particles = read("particles", "RoomAmbienceSpells.particle")
-look = particles[particles.index("particle_system SpellCreaturePlague"):]
-look = look[:look.index("\n}") + 2]
-colours = [tuple(float(v) for v in m) for m in re.findall(r"colour\w*\s+([\d.]+) ([\d.]+) ([\d.]+)", look)]
-need(colours and all(g > r and g > b for r, g, b in colours), "the plague look is green")
-need("particles/RoomAmbienceSpells.particle (SpellCreaturePlague)" in read("CREDITS"), "CREDITS names the plague look")
+if DATA:
+    particles = read("particles", "RoomAmbienceSpells.particle")
+    look = particles[particles.index("particle_system SpellCreaturePlague"):]
+    look = look[:look.index("\n}") + 2]
+    colours = [tuple(float(v) for v in m) for m in re.findall(r"colour\w*\s+([\d.]+) ([\d.]+) ([\d.]+)", look)]
+    need(colours and all(g > r and g > b for r, g, b in colours), "the plague look is green")
+    need("particles/RoomAmbienceSpells.particle (SpellCreaturePlague)" in CREDITS, "CREDITS names the plague look")
 
 # ---------------------------------------------------------------------------------------------------------------------
 # N5 Break Wall
@@ -401,31 +428,35 @@ need("mSpellType == SpellType::revealEnemy) ?\n            \" mana\"" in cost, "
 LOOKS = {"SpellCurse": ("Weak", "Curse"), "SpellBlessing": ("Strength", "Boost"), "SpellInvisibility": ("", "Dark"),
          "SpellPlague": ("", "Curse"), "SpellBreakWall": ("Tremor", "TremorImpact"),
          "SpellRevealEnemy": ("", "EyeEvilCast")}
-credits = read("CREDITS")
+credits = CREDITS
 for cls, (effect, family) in LOOKS.items():
     need('"%s", "%s", gameMap, player->getSeat())' % (effect, family) in sources[cls], "%s plays %s" % (cls, family))
-    need("sounds/Spatial/Spells/%s/Fx%s01.ogg" % (family, family) in credits, "the recording %s is credited" % family)
+    if DATA:
+        need("sounds/Spatial/Spells/%s/Fx%s01.ogg" % (family, family) in credits, "the recording %s is credited" % family)
 spell_cpp = read("source", "spells", "Spell.cpp")
 need("if(effectName.empty())\n            continue;" in body(spell_cpp, "void Spell::fireSpellEffect("),
      "a spell without a look of its own plays only its sound")
-ambience = read("config", "roomAmbienceSpells.cfg")
-for event in ("SpellFxWeak", "SpellFxStrength", "SpellFxTremor"):
-    need(re.search(r"Event\s+%s\b" % event, ambience) is not None, "the reused look %s exists" % event)
+if DATA:
+    ambience = read("config", "roomAmbienceSpells.cfg")
+    for event in ("SpellFxWeak", "SpellFxStrength", "SpellFxTremor"):
+        need(re.search(r"Event\s+%s\b" % event, ambience) is not None, "the reused look %s exists" % event)
 
 # ---------------------------------------------------------------------------------------------------------------------
 # N9 AI rows and decisions
-ai_cfg = read("config", "ai.cfg")
-rows = ai_cfg[ai_cfg.index("[RowClasses]"):ai_cfg.index("[/RowClasses]")]
+ai_cfg = read("config", "ai.cfg") if DATA else None
+rows = ai_cfg[ai_cfg.index("[RowClasses]"):ai_cfg.index("[/RowClasses]")] if DATA else None
 ai_spells = read("source", "ai", "AiSpells.cpp")
 ROWS = {"E21": "castCurse", "E22": "castBlessing", "E23": "castInvisibility", "E24": "castPlague",
         "E25": "castBreakWall", "E26": "castRevealEnemy"}
 for row, function in ROWS.items():
-    need(re.search(r"^\s*%s\s+complex\s+1\s*$" % row, rows, re.M) is not None, "row %s is complex" % row)
+    if DATA:
+        need(re.search(r"^\s*%s\s+complex\s+1\s*$" % row, rows, re.M) is not None, "row %s is complex" % row)
     need("// AI row %s" % row in body(ai_spells, "bool SPELL::%s(" % function), "SPELL::%s carries row %s" % (function, row))
     need('{"%s", "complex", "1"}' % row in read("source", "utils", "ConfigManager.cpp"), "compiled default of %s" % row)
-ai_values = config_values(ai_cfg, "KeeperAI")
-for key, value in (("PlagueMinEnemies", "3"), ("PlagueEnemyRadius", "2"), ("PlagueOwnClearRadius", "3")):
-    need(ai_values.get(key) == value, "ai.cfg %s is %s" % (key, value))
+if DATA:
+    ai_values = config_values(ai_cfg, "KeeperAI")
+    for key, value in (("PlagueMinEnemies", "3"), ("PlagueEnemyRadius", "2"), ("PlagueOwnClearRadius", "3")):
+        need(ai_values.get(key) == value, "ai.cfg %s is %s" % (key, value))
 need("creature->getLevel() > target->getLevel()" in body(ai_spells, "bool SPELL::castCurse(") and
      "hasMoodEffect(creature, SpellCurse::MOOD_EFFECT_NAME)" in body(ai_spells, "bool SPELL::castCurse("),
      "Curse: the visible enemy of the highest level that is not cursed")

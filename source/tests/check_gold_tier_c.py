@@ -1,8 +1,14 @@
 """Wiring checks for the tier C gold visuals: workers climbing and tipping over the heap while pouring,
-and the gold dust over completely filled treasuries (client only, no compiler needed)."""
+and the gold dust over completely filled treasuries (client only, no compiler needed).
+
+particles/TreasuryCoins.particle is content (treasury room package, found through scripts/content_packages.py);
+without it the particle systems of the dust are named as not checked."""
 from pathlib import Path
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -12,7 +18,9 @@ def read(path):
 render = read('source/render/RenderManager.cpp')
 rules = read('source/render/TreasuryCreatureRules.h')
 mesh = read('source/render/TreasuryGoldMesh.cpp')
-particles = read('particles/TreasuryCoins.particle')
+#: The dust particle systems (treasury room package), None without the content
+PARTICLES = 'particles/TreasuryCoins.particle'
+particles = content_packages.read_text(repo, PARTICLES) if content_packages.data_file(repo, PARTICLES) else None
 
 # Pour motion: render node only, started by the deposit message, reset when it ends or is cancelled.
 assert 'startTreasuryPour(tile, level)' in render
@@ -37,8 +45,9 @@ assert b'ClimbGold' in skeleton and b'PourGold' in skeleton
 assert 'updateTreasuryDust(timeSinceLastFrame)' in render
 assert 'dustBudget(TreasuryGoldMesh::getDetail())' in render
 assert 'collectFullPiles' in render and 'TreasuryGoldLayer::maxLevel' in mesh
-assert 'particle_system TreasuryGoldDust' in particles
-assert 'ReactionParticleSpark' in particles.split('particle_system TreasuryGoldDust')[1]
+if particles is not None:
+    assert 'particle_system TreasuryGoldDust' in particles
+    assert 'ReactionParticleSpark' in particles.split('particle_system TreasuryGoldDust')[1]
 
 # Portal dust: the existing dust effect and budget, started from the dust timer, only for the local keeper's
 # portals when rich; the threshold values live in the rules header.
@@ -65,8 +74,9 @@ assert '"TreasuryHeartDust"' in heart and 'heartDustHeight' in heart
 assert 'startTreasuryHeartDust();' in render.split('void RenderManager::updateTreasuryDust')[1].split('collectFullPiles')[0]
 assert 'void startTreasuryHeartDust();' in read('source/render/RenderManager.h')
 assert 'heartDustHeight' in rules
-assert 'particle_system TreasuryHeartDust' in particles
-assert 'ReactionParticleSpark' in particles.split('particle_system TreasuryHeartDust')[1].split('particle_system')[0]
+if particles is not None:
+    assert 'particle_system TreasuryHeartDust' in particles
+    assert 'ReactionParticleSpark' in particles.split('particle_system TreasuryHeartDust')[1].split('particle_system')[0]
 
 # Thief gold: one trailing field in the creature packets (new and update), written and read at the end,
 # only sent again when the amount changed; the client sack follows it. The old heap guess is gone.
@@ -86,4 +96,6 @@ assert 'rrRefreshCreatureGoldSack(curCreature)' in render
 for gone in ('startTreasuryThiefSack', 'updateTreasuryThiefSacks', 'thiefSackTime'):
     assert gone not in render and gone not in rules, gone
 assert 'getMeshNameForGold(creature->getGoldStolen())' in render
+if particles is None:
+    content_packages.unchecked('check_gold_tier_c', [PARTICLES])
 print('ok')
