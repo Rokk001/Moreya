@@ -154,6 +154,20 @@ BOOST_AUTO_TEST_CASE(test_EditorSaveTarget)
     BOOST_CHECK(OfficialLevels::mayEditorOpen(false, false));
 }
 
+//! Checks that the maps of the first game that stay as fixtures of the checks are hidden from every list, and that
+//! the own levels, wing levels and the own test levels are not.
+BOOST_AUTO_TEST_CASE(test_HiddenFixtureLevels)
+{
+    BOOST_CHECK(OfficialLevels::isHiddenFixtureKey("skirmish/StoneKeep.level"));
+    BOOST_CHECK(OfficialLevels::isHiddenFixtureKey("multiplayer/aa.level"));
+    BOOST_CHECK(OfficialLevels::isHiddenFixtureKey("campaign/Campaign1.level"));
+    BOOST_CHECK(!OfficialLevels::isHiddenFixtureKey("skirmish/TestRaid.level"));
+    BOOST_CHECK(!OfficialLevels::isHiddenFixtureKey("skirmish/TestSpa.level"));
+    BOOST_CHECK(!OfficialLevels::isHiddenFixtureKey("skirmish/TestTavern.level"));
+    BOOST_CHECK(!OfficialLevels::isHiddenFixtureKey("campaign/wing1/Mossgate.level"));
+    BOOST_CHECK(!OfficialLevels::isHiddenFixtureKey("multiplayer/FourWinds.level"));
+}
+
 //! Checks that the checksums compiled into the build match every shipped level of the repository.
 BOOST_AUTO_TEST_CASE(test_BuildChecksumsMatchRepositoryLevels)
 {

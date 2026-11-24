@@ -64,18 +64,12 @@ SMALL_LEVEL_EXCEPTIONS = [
     "ab.level",
     "Sandbox.level",
     "SandboxEverything.level",
-    "TestSingleplayerSmallPassability.level",
-    "TestWeaponsShowcase.level",
 ]
 # Own test levels without a source: a placement match against any other level is mostly
 # chance for these tiny setups, so the placement check is not applied to them. Reworked
 # levels that have a source never appear here and always get the full check.
 PLACEMENT_EXCEPTIONS = [  # own test levels without a source
-    "TestMultiplayerSmall1v1.level",
     "ab.level",
-    "TestModelsFair.level",
-    "TestSingleplayerSmallPassability.level",
-    "TestWeaponsShowcase.level",
 ]
 PLACEMENT_DISTANCE = 2.0
 DECOY_JITTER = 6.0

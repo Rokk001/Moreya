@@ -1352,11 +1352,11 @@ def read_allowlist(root):
 
 
 def all_level_files(root):
-    """Return all .level files below the levels folder, except the template."""
+    """Return all .level files below the levels folder."""
     result = []
     for folder, _, names in os.walk(os.path.join(root, "levels")):
         for name in sorted(names):
-            if name.endswith(".level") and name != "template.level":
+            if name.endswith(".level"):
                 result.append(os.path.join(folder, name))
     return sorted(result)
 

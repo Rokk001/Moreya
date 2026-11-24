@@ -7,7 +7,7 @@ Requirements checked (each reported on its own, expected values are fixed):
   P1  the build computes the checksums of all shipped levels at every build and compiles them into the game: the CMake
       script covers the three folders, a custom target without output (it runs at every build) rewrites the generated
       source of the build directory, the game depends on it and lists the source; no checksum file is in the
-      repository. The script is run with cmake: 78 entries, each the SHA-256 of the level without carriage returns
+      repository. The script is run with cmake: 73 entries, each the SHA-256 of the level without carriage returns
       (compared with hashlib), an unchanged folder does not rewrite the output, a changed level does
   P2  a changed shipped level is rejected with a message when it is loaded, an unchanged one loads (compiled probe on
       OfficialLevels.cpp with a changed copy; static wiring in readGameMapFromFile and the single player menus)
@@ -38,8 +38,8 @@ repo = Path(__file__).resolve().parents[2]
 started = time.monotonic()
 failures = []
 
-# Number of shipped levels of the branch (41 skirmish, 22 multiplayer, 15 campaign), counted once
-EXPECTED_LEVEL_COUNT = 78
+# Number of shipped levels of the branch (38 skirmish, 20 multiplayer, 15 campaign), counted once
+EXPECTED_LEVEL_COUNT = 73
 DEPS = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path(os.environ.get('USERPROFILE', '.')) / 'build-deps')))
 CMAKE = Path(os.environ.get('ODP_CMAKE', str(DEPS / 'tools' / 'cmake-4.4.1-windows-x86_64' / 'bin' / 'cmake.exe')))
 OFFICIAL_FOLDERS = ('skirmish', 'multiplayer', 'campaign')
@@ -500,6 +500,33 @@ for path in tracked:
     if re.search(r'EditOfficialLevels|OD_DEVELOPER_MODE|developer[ -]mode|Developer-Modus', text, re.I):
         mentions.append(path)
 check(not mentions, 'P7 tracked texts (docs, README, layouts, ...) do not mention the hidden options: %s' % mentions)
+
+# ---------------------------------------------------------------- P8 hidden fixtures (static)
+# The maps of the first game that only checks use: kept in the repository, offered by no list of the game.
+# Fixed list, counted once: 8 skirmish, 9 multiplayer, 4 campaign = 21.
+HIDDEN_FIXTURES = [
+    'skirmish/DuelToDeath.level', 'skirmish/FallingKeeper.level', 'skirmish/ForgottenTreasures.level',
+    'skirmish/StoneKeep.level', 'skirmish/TestLegacy.level', 'skirmish/TestLegacyNoScripts.level',
+    'skirmish/TestSingleplayerSmall.level', 'skirmish/TestSingleplayerSmallEmpty.level',
+    'multiplayer/Angel.level', 'multiplayer/GreedOrMight.level', 'multiplayer/RuinsOfTheConfluent.level',
+    'multiplayer/ScreamInTheDark.level', 'multiplayer/TheBridge.level',
+    'multiplayer/TestMultiplayerSmallAlliance.level', 'multiplayer/TestMultiplayerSmallFreeForAll.level',
+    'multiplayer/aa.level', 'multiplayer/ab.level',
+    'campaign/Bonus1.level', 'campaign/Campaign1.level', 'campaign/Campaign2.level', 'campaign/Campaign3.level',
+]
+check(len(HIDDEN_FIXTURES) == 21, 'P8 the list of hidden fixtures has 21 entries')
+check(all(key in expected_keys for key in HIDDEN_FIXTURES),
+      'P8 every hidden fixture is still a shipped level of the repository')
+check(all(('"%s"' % key) in official_cpp_raw for key in HIDDEN_FIXTURES),
+      'P8 OfficialLevels.cpp names all 21 hidden fixtures')
+fill_hidden = function(maphandler, 'bool fillLevelFilesList(')
+check('isHiddenFixtureLevelPath(' in fill_hidden,
+      'P8 fillLevelFilesList leaves the hidden fixtures out of the skirmish, multiplayer and editor load lists')
+check('isHiddenFixtureLevelPath(' in editor,
+      'P8 the file browser of the editor leaves the hidden fixtures out')
+for own in ('skirmish/TestRaid.level', 'skirmish/TestSpa.level', 'skirmish/TestTavern.level'):
+    check(own not in HIDDEN_FIXTURES and ('"%s"' % own) not in official_cpp_raw,
+          'P8 the own test level %s is not hidden' % own)
 
 shutil.rmtree(work, ignore_errors=True)
 if failures:
