@@ -54,6 +54,8 @@
 #include "utils/LogManager.h"
 #include "utils/Helper.h"
 #include "rooms/RoomPackages.h"
+#include "utils/ContentPackages.h"
+#include "game/CampaignPackages.h"
 
 #include <boost/program_options.hpp>
 
@@ -208,6 +210,11 @@ void ResourceManager::setupDataPath(boost::program_options::variables_map& optio
     mSoundPath = mGameDataPath + SOUNDSUBPATH;
     mMusicPath = mGameDataPath + MUSICSUBPATH;
     mLanguagePath = mGameDataPath + LANGUAGESUBPATH;
+
+    // The content packages are known before the options are read, so that a level named by an option is found in its
+    // package; ODApplication logs them and refuses the start when some are missing (ContentPackages::discover)
+    ContentPackages::setPackages(mGameDataPath,
+        ContentPackages::findPackages(CampaignPackages::getPackageFolders(mGameDataPath)));
 }
 
 bool ResourceManager::takeOverOldUserFolder(const std::string& oldPath, const std::string& newPath)
@@ -456,7 +463,9 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
     if(itOption != options.end())
     {
         mServerMode = true;
-        std::string filePath = getGameLevelPathMultiplayer() + itOption->second.as<std::string>();
+        // The official multiplayer levels lie in the content packages
+        std::string filePath = ContentPackages::resolveFile(getGameLevelPathMultiplayer()
+            + itOption->second.as<std::string>());
         boost::filesystem::path level(filePath);
         if(!boost::filesystem::exists(level))
         {
@@ -651,8 +660,7 @@ void ResourceManager::setupOgreResources(uint16_t shaderLanguageVersion)
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
                     Ogre::String(std::string(mMacBundlePath) + archName), typeName, secName, false);
 #else
-            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-                    archName, typeName, secName, false);
+            addGameDataResourceLocation(archName, typeName, secName);
 #endif
         }
     }
@@ -675,6 +683,30 @@ void ResourceManager::setupOgreResources(uint16_t shaderLanguageVersion)
         {
             resourceGroupManager.addResourceLocation(mGameDataPath + "materials/RTShaderLib/GLSL/120", "FileSystem", "Graphics");
         }
+    }
+}
+
+//! \brief Adds a location of resources.cfg: the folder of the game data when it is there and the folder at the same
+//! relative path of every found content package that has it, so that a folder whose files moved into a content package
+//! is found there. A location outside the game data (the Ogre media) is added as it is.
+void ResourceManager::addGameDataResourceLocation(const std::string& location, const std::string& type,
+    const std::string& group)
+{
+    Ogre::ResourceGroupManager& resourceGroupManager = Ogre::ResourceGroupManager::getSingleton();
+    const std::vector<std::string> folders = ContentPackages::getDataFolders(location);
+    if(folders.size() == 1)
+    {
+        resourceGroupManager.addResourceLocation(location, type, group, false);
+        return;
+    }
+    for(const std::string& folder : folders)
+    {
+        boost::system::error_code error;
+        if(!boost::filesystem::is_directory(folder, error))
+            continue;
+        if(folder != location)
+            OD_LOG_INF("Resource in section: " + group + " Type: " + type + " Path: " + folder + " (content package)");
+        resourceGroupManager.addResourceLocation(folder, type, group, false);
     }
 }
 

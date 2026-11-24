@@ -16,6 +16,7 @@
  */
 
 #include "social/SocialData.h"
+#include "utils/ContentPackages.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -141,7 +142,8 @@ bool SocialData::loadFromDirectory(const std::string& directory)
 
 bool SocialData::loadNamesFile(const std::string& path)
 {
-    std::ifstream file(path.c_str());
+    // The table may lie in a content package (ContentPackages::resolveFile)
+    std::ifstream file(ContentPackages::resolveFile(path).c_str());
     if(!file.is_open())
     {
         clearNames();
@@ -154,7 +156,8 @@ bool SocialData::loadNamesFile(const std::string& path)
 
 bool SocialData::loadTextsFile(const std::string& path)
 {
-    std::ifstream file(path.c_str());
+    // The table may lie in a content package (ContentPackages::resolveFile)
+    std::ifstream file(ContentPackages::resolveFile(path).c_str());
     if(!file.is_open())
     {
         clearTexts();

@@ -20,6 +20,7 @@
  */
 
 #include "render/FrameStallTrace.h"
+#include "utils/ContentPackages.h"
 #include "render/RenderManager.h"
 #include "ODApplication.h"
 #include "render/GroundShadowCameraSetup.h"
@@ -4845,7 +4846,9 @@ static const std::string PREPARED_OBJECTS_FILE = "preparedobjects.cfg";
 static std::vector<std::string> readPreparedObjectMeshes()
 {
     std::vector<std::string> meshNames;
-    std::ifstream file((ResourceManager::getSingleton().getConfigPath() + PREPARED_OBJECTS_FILE).c_str());
+    // The list may lie in a content package (ContentPackages::resolveFile)
+    std::ifstream file(ContentPackages::resolveFile(ResourceManager::getSingleton().getConfigPath()
+        + PREPARED_OBJECTS_FILE).c_str());
     if(!file.is_open())
     {
         OD_LOG_WRN("Cannot read " + PREPARED_OBJECTS_FILE + ": objects load when they first appear");

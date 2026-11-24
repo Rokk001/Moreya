@@ -10,6 +10,7 @@
 #include "render/DungeonbookQuirks.h"
 #include "render/PortraitCatalog.h"
 #include "render/PortraitCatalogRegistry.h"
+#include "utils/ContentPackages.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
@@ -102,8 +103,9 @@ PictureState& getState()
         root = "materials/portraits/whole";
 
     bool isAbsolute = (root.size() > 1) && ((root[1] == ':') || (root[0] == '/') || (root[0] == '\\'));
+    // The portraits may lie in a content package (ContentPackages::resolveFolder)
     if(!isAbsolute)
-        root = ResourceManager::getSingleton().getGameDataPath() + root;
+        root = ContentPackages::resolveFolder(ResourceManager::getSingleton().getGameDataPath() + root);
 
     state.mRegistry.setAssetRoot(root);
 

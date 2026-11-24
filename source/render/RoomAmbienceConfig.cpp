@@ -16,6 +16,7 @@
  */
 
 #include "render/RoomAmbienceConfig.h"
+#include "utils/ContentPackages.h"
 
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -141,7 +142,7 @@ bool RoomAmbienceConfig::loadFile(const std::string& fileName, bool included)
     if(included)
     {
         // A missing included file is not an error: it only means that part is not installed
-        std::ifstream probe(fileName.c_str());
+        std::ifstream probe(ContentPackages::resolveFile(fileName).c_str());
         if(!probe.good())
         {
             OD_LOG_INF("Room ambience file not present, skipped: " + fileName);

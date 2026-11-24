@@ -4,6 +4,7 @@
  */
 
 #include "render/DungeonbookQuirks.h"
+#include "utils/ContentPackages.h"
 
 #include "game/CreatureAppearance.h"
 #include "render/PortraitCatalog.h"
@@ -51,7 +52,8 @@ bool DungeonbookQuirks::loadFromFile(const std::string& path)
 {
     mTexts.clear();
     mWarnings.clear();
-    std::ifstream file(path.c_str());
+    // The table may lie in a content package (ContentPackages::resolveFile)
+    std::ifstream file(ContentPackages::resolveFile(path).c_str());
     if(!file.is_open())
     {
         mWarnings.push_back(path + ": cannot open the Dungeonbook quirks, no remarks are shown");

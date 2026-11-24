@@ -33,6 +33,7 @@
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "sound/MusicPlayer.h"
+#include "utils/ContentPackages.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -582,7 +583,8 @@ bool MenuModeCampaign::loadWorld()
         return true;
 
     std::string directory = ResourceManager::getSingleton().getGameDataPath() + WORLD_DIRECTORY;
-    std::ifstream definition((directory + WORLD_DEFINITION_FILE).c_str());
+    // The campaign map may lie in a content package (ContentPackages::resolveFile)
+    std::ifstream definition(ContentPackages::resolveFile(directory + WORLD_DEFINITION_FILE).c_str());
     if(!definition.is_open() || !mWorld.importDefinition(definition))
     {
         OD_LOG_ERR("Could not read the campaign map of Moreya " + directory + WORLD_DEFINITION_FILE);
@@ -605,7 +607,8 @@ CEGUI::Image* MenuModeCampaign::loadWorldImage(const std::string& file, const st
     int width = 0;
     int height = 0;
     std::vector<uint8_t> rgba;
-    std::string path = ResourceManager::getSingleton().getGameDataPath() + WORLD_DIRECTORY + file;
+    std::string path = ContentPackages::resolveFile(ResourceManager::getSingleton().getGameDataPath() + WORLD_DIRECTORY
+        + file);
     if(!packageDirectory.empty())
     {
         boost::filesystem::path packagePath = boost::filesystem::path(packageDirectory) / file;

@@ -21,6 +21,7 @@
  */
 
 #include "utils/Helper.h"
+#include "utils/ContentPackages.h"
 
 #include "utils/LogManager.h"
 
@@ -172,8 +173,9 @@ namespace Helper
     //! \return false if the file could not be opened.
     bool readFile(const std::string& fileName, std::stringstream& stream, bool withoutComments)
     {
-        // Try to open the input file for reading and throw an error if we can't.
-        std::ifstream baseLevelFile(fileName.c_str(), std::ifstream::in);
+        // Try to open the input file for reading and throw an error if we can't. A file of the game data may lie in a
+        // content package (ContentPackages::resolveFile).
+        std::ifstream baseLevelFile(ContentPackages::resolveFile(fileName).c_str(), std::ifstream::in);
         if (!baseLevelFile.good())
         {
             OD_LOG_WRN("File not found=" + fileName);

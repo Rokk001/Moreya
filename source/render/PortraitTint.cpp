@@ -4,6 +4,7 @@
  */
 
 #include "render/PortraitTint.h"
+#include "utils/ContentPackages.h"
 
 #include "social/SocialRng.h"
 
@@ -278,7 +279,8 @@ bool PortraitTint::loadFromFile(const std::string& path)
     mPortraits.clear();
     mErrors.clear();
     mSource = path;
-    std::ifstream file(path.c_str());
+    // The table may lie in a content package (ContentPackages::resolveFile)
+    std::ifstream file(ContentPackages::resolveFile(path).c_str());
     if(!file.is_open())
     {
         addError(0, "cannot open the portrait tint file, portraits stay unchanged");
