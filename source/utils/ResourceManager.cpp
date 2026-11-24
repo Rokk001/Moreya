@@ -812,7 +812,7 @@ void ResourceManager::buildCommandOptions(boost::program_options::options_descri
     ;
 #ifdef OD_NET_HELPER_RELAY
     desc.add_options()
-        ("net-helper", boost::program_options::value<std::string>(), "Starts the given relay helper program for lobby multiplayer (see docs/development/NETWORK-TRANSPORT.md)")
+        ("net-helper", boost::program_options::value<std::string>(), "Starts the given relay helper program for lobby multiplayer (see the design document NETWORK-TRANSPORT.md of the content repository)")
     ;
 #endif
 }

@@ -1,6 +1,6 @@
 """Check the spell mana costs, cooldowns and the worker price rule.
 
-The costs use one own scale (mana cap 200,000, whole mana prices of the rebalance, see docs/development/VALUE-SCALES.md):
+The costs use one own scale (mana cap 200,000, whole mana prices of the rebalance, see the design document VALUE-SCALES.md of the content repository):
 Summon worker 1,400 per step, Call to war 14,200, Heal 13,200, Eye of evil 4,600, Lightning 6,600,
 Tremor 27,600, Defector 12,850, Hexen hen 2,650, Inferno 138,750, Create gold
 8,850, Possess 450, Summon champion 108,000 plus 2,250 per second. The worker price grows by one base price per worker above

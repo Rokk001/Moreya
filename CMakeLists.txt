@@ -61,7 +61,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 option(OD_ENABLE_WARNINGS "Compile the game with all standard warnings enabled" ON)
 option(OD_TREAT_WARNINGS_AS_ERRORS "Treat any warning seen while compiling as errors." ON)
 option(OD_USE_SFML_WINDOW "Use SFML for window and input handling" OFF)
-# Lobby multiplayer through a separate helper process (docs/development/NETWORK-TRANSPORT.md); off by default
+# Lobby multiplayer through a separate helper process (the design document NETWORK-TRANSPORT.md of the content repository); off by default
 option(OD_NET_HELPER_RELAY "Build the lobby and relay transport through a separate helper process" OFF)
 # Map development builds: a changed shipped level still loads outside of multiplayer; off for every release build
 option(OD_DEVELOPER_MODE "Load changed shipped levels outside of multiplayer (map development builds only)" OFF)

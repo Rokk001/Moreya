@@ -393,7 +393,7 @@ void ODApplication::startClient()
         LoadingScreen::presentStartup(LoadingScreen::startupFraction(5.0f));
 
 #ifdef OD_NET_HELPER_RELAY
-        // Lobby multiplayer through the relay helper (docs/development/NETWORK-TRANSPORT.md). It is set up before the
+        // Lobby multiplayer through the relay helper (the design document NETWORK-TRANSPORT.md of the content repository). It is set up before the
         // server and the client, whose connections it carries; the handshake finishes in the background.
         HelperRelayProcess helperRelay;
         if(!resMgr.getNetHelperPath().empty() && helperRelay.start(resMgr.getNetHelperPath(), std::vector<std::string>()))
