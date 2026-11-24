@@ -1,4 +1,10 @@
-"""Select deployment probes from immutable commits and a successful deployment receipt."""
+"""Select deployment probes from immutable commits and a successful deployment receipt.
+
+The selection reads only the public Git history. In the current layout the public tree holds no campaign: the agreed
+basis level Mossgate lies in the wing 1 content package and keeps its former public path as its name in the
+selection; the load runners find it through scripts/campaign_packages.py (level_file) and fail loudly when the content
+packages are missing.
+"""
 import argparse
 from datetime import datetime, timezone
 import hashlib
@@ -8,7 +14,8 @@ import re
 import subprocess
 import sys
 
-# The agreed basis level: Mossgate in the public wing 1 package, or at its former path in older commits
+# The agreed basis level: Mossgate in the public wing 1 package, or at its former path in older commits; in a commit
+# without a public campaign the name of the first entry stands for Mossgate of the wing 1 content package
 SMOKES = ('levels/campaign/wing1/Mossgate.level', 'levels/campaign/Mossgate.level')
 # The former single campaign definition; the campaign now comes from the Package.cfg of each wing package folder
 CAMPAIGN = 'levels/campaign/Campaign.cfg'
@@ -31,12 +38,15 @@ def commit(repo, value):
 
 
 # The campaign definitions of a commit: the Package.cfg of every public wing package (its levels lie in its folder),
-# or the former levels/campaign/Campaign.cfg of an older commit (levels below levels/). Pairs of (text, folder).
+# or the former levels/campaign/Campaign.cfg of an older commit (levels below levels/). Pairs of (text, folder); none
+# for a commit without a public campaign (every wing in the content packages).
 def definitions(repo, revision):
     tracked = git(repo, 'ls-tree', '-r', '--name-only', revision, '--', 'levels/campaign').splitlines()
     packages = sorted(name for name in tracked if PACKAGE_DEFINITION.match(name))
     if packages:
         return [(git(repo, 'show', revision + ':' + name), name.rsplit('/', 1)[0] + '/') for name in packages]
+    if CAMPAIGN not in tracked:
+        return []
     return [(git(repo, 'show', revision + ':' + CAMPAIGN), None)]
 
 
@@ -84,12 +94,18 @@ def select(repo, base, tip, full=False):
     commit(repo, tip)
     current = entries(repo, tip)
     if full:
+        if not current:
+            raise RuntimeError('The public tree holds no campaign; the full campaign test reads the content packages '
+                               '(run-campaign-load-tests.py --all-campaign)')
         return dict.fromkeys(current, 'explicit full campaign requested')
     commit(repo, base)
     changed = git(repo, 'diff', '--name-only', '-z', '--no-renames', base, tip, '--', 'levels').split('\0')
     tracked = set(git(repo, 'ls-tree', '-r', '--name-only', tip, '--', 'levels').splitlines())
     smoke = next((name for name in SMOKES if name in tracked), SMOKES[0])
-    selected = {smoke: 'agreed basis level (owner decision 99)'}
+    # Without a public campaign Mossgate comes with the wing 1 content package; the load runner checks that it is there
+    content_smoke = smoke not in tracked and not definitions(repo, tip)
+    selected = {smoke: 'agreed basis level (owner decision 99)'
+                + (', from the wing 1 content package' if content_smoke else '')}
     definition_changed = False
     for name in changed:
         if name.endswith('.level') and name in tracked:
@@ -110,7 +126,7 @@ def select(repo, base, tip, full=False):
             if previous.get(name) != value or neighborhood != old_neighbors:
                 selected.setdefault(name, 'shared Campaign.cfg entry or sequence changed')
     for name in selected:
-        if name not in tracked:
+        if name not in tracked and not (content_smoke and name == smoke):
             raise RuntimeError('Selected level missing from outgoing commit: ' + name)
     return selected
 

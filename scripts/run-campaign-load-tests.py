@@ -4,6 +4,11 @@ Run with --executable <game> --output <worktree output directory> and either
 --base-file <captured integration range> or --all-campaign while the game
 is closed. This exercises the timed win probe (all main goals set as reached, then the win; the
 victory message and the campaign map with the next level must appear), not natural playability.
+
+The game gets the content packages through MOREYA_CONTENT_DIR (scripts/content_packages.py: game_environment). The
+smoke level Mossgate lies in the wing 1 content package; a selected level that moved into a content package is found
+there by its path below the repository (scripts/campaign_packages.py: level_file). Without the content packages a
+selected level is missing or the game quits with exit code 7: the probe fails loudly and names the missing content.
 """
 import argparse
 import ctypes
@@ -30,14 +35,38 @@ def probe_environment():
     return environment
 
 
+# A helper module of this folder, loaded by path so that isolated Python finds it.
+def script_module(name):
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(name + '.py'))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
 # The helper module for the campaign wing packages, loaded by path so that isolated Python finds it.
 def packages_module():
-    if 'campaign_packages' not in sys.modules:
-        spec = importlib.util.spec_from_file_location('campaign_packages', Path(__file__).with_name('campaign_packages.py'))
-        module = importlib.util.module_from_spec(spec)
-        sys.modules['campaign_packages'] = module
-        spec.loader.exec_module(module)
-    return sys.modules['campaign_packages']
+    return script_module('campaign_packages')
+
+
+# The helper module for the content packages (with the wing and room package modules it imports).
+def content_module():
+    packages_module()
+    script_module('room_packages')
+    return script_module('content_packages')
+
+
+# The file of a selected repository-relative level (public tree, content package or wing package), else an error that
+# names the missing content packages: a load probe never passes without the content.
+def selected_level(repo, name):
+    content_module()
+    found = packages_module().level_file(repo, name)
+    if found is None:
+        missing = content_module().missing_packages(repo)
+        raise RuntimeError('Selected level is missing: ' + str(name)
+                           + ('; content packages missing: ' + ', '.join(missing) if missing else ''))
+    return found
 
 
 # Read only real campaign entries of the wing packages (with the content packages when present), in campaign order.
@@ -107,16 +136,20 @@ def integration_levels(repo, base_file):
     git_output(repo, 'merge-base', '--is-ancestor', base, tip)
     changed = git_output(repo, 'diff', '--name-only', '-z', '--no-renames',
                          '--diff-filter=AM', base, tip, '--', 'levels')
-    # Mossgate of the public wing 1 package, or at its former path in a tree of an older layout
+    # Mossgate of the public wing 1 package, or at its former path in a tree of an older layout; in the current layout
+    # (no public campaign) Mossgate of the wing 1 content package
     smoke = next((name for name in ('levels/campaign/wing1/Mossgate.level', 'levels/campaign/Mossgate.level')
                   if (repo / name).is_file()), 'levels/campaign/wing1/Mossgate.level')
     names = [smoke]
     names.extend(name for name in changed.split('\0')
                  if name.endswith('.level') and name not in names)
-    levels = [repo / name for name in names]
-    for level in levels:
-        if not level.is_file():
-            raise RuntimeError('Selected level is missing: ' + str(level))
+    if packages_module().has_public_campaign(repo):
+        levels = [repo / name for name in names]
+        for level in levels:
+            if not level.is_file():
+                raise RuntimeError('Selected level is missing: ' + str(level))
+    else:
+        levels = [selected_level(repo, name) for name in names]
     print('Integration load range: ' + base + '..' + tip, flush=True)
     return levels
 
@@ -138,7 +171,7 @@ def deployment_levels(repo, manifest):
     print('Deploy load range: ' + str(saved['base']) + ' -> ' + saved['tip'], flush=True)
     for name, reason in levels.items():
         print('SELECT ' + name + ': ' + reason, flush=True)
-    return [repo / name for name in levels]
+    return [selected_level(repo, name) for name in levels]
 
 
 # Run selected maps once, retaining logs and real process exit codes.
@@ -171,7 +204,7 @@ def main():
         parser.error('No configured campaign maps found')
     args.output.mkdir(parents=True, exist_ok=True)
     # The game finds the content packages through MOREYA_CONTENT_DIR when they are present
-    environment = packages_module().game_environment(repo, probe_environment())
+    environment = content_module().game_environment(repo, probe_environment())
     port = available_server_port()
     failed = 0
     for level in levels:
@@ -194,6 +227,8 @@ def main():
             passed = (result.returncode == 0 and goals
                       and re.search(success, log, re.MULTILINE))
             status = 'PASS' if passed else 'FAIL exit=' + str(result.returncode)
+            if result.returncode == content_module().MISSING_CONTENT_EXIT_CODE:
+                status += ' (content missing)'
         except subprocess.TimeoutExpired as error:
             log = ((error.stdout or b'') + (error.stderr or b'')).decode('utf-8', errors='replace')
             passed = False

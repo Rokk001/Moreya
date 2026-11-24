@@ -1,11 +1,12 @@
 """Wing packages of the campaign for the check scripts, the load tests and the tools.
 
 The campaign is read from wing packages: a folder with a Package.cfg (the [Level] entries of one wing, in the format
-the game reads) and the level files of the wing. Wing 1 comes with the public tree in levels/campaign/wing1/; the
-packages of the other wings come from the private content repository (its packages/ folder). The content folder is
-the folder named by the environment variable MOREYA_CONTENT_DIR (an empty value means: no content), else the folder
-packages/ of a Moreya-Content checkout next to this repository. Without content packages every helper works on the
-public packages alone, so the public tree is checked on its own.
+the game reads) and the level files of the wing. The public tree holds no wing: the packages of all six wings
+(wing 1 included) come from the private content repository (its packages/ folder); levels/campaign/ of the public
+tree is still searched for packages like the game does, but holds none. The content folder is the folder named by the
+environment variable MOREYA_CONTENT_DIR (an empty value means: no content), else the folder packages/ of a
+Moreya-Content checkout next to this repository. Without content packages every helper works on the public tree
+alone: no campaign level is present then, so the public tree is checked on its own.
 
 The campaign name of a level (File=campaign/<name>.level) stays the name of progress files, saves and level scripts;
 the level file of that name lies in the folder of its package. This module holds no campaign content.
@@ -19,9 +20,10 @@ PUBLIC_FOLDER = 'levels/campaign'
 DEFINITION_FILE = 'Package.cfg'
 CONTENT_CHECKOUT = 'Moreya-Content'
 NUM_WINGS = 6
-#: The levels of the public package (wing 1) in campaign order, fixed for this branch: the checks expect exactly these
-#: without content packages
-PUBLIC_LEVELS = ('Brackenford', 'Coldwell', 'Ravensledge', 'Mossgate')
+#: The campaign levels of the public tree in campaign order, fixed for this branch: the checks expect exactly these
+#: without content packages. Empty: every wing (wing 1 included) lies in the content packages, so without content no
+#: campaign level is public.
+PUBLIC_LEVELS = ()
 #: Text the campaign map shows for a wing whose package is missing
 MISSING_WING_TEXT = 'Coming in Early Access'
 
@@ -119,8 +121,10 @@ def definition_text(repo, with_content=True):
 
 
 # The file of a level: a campaign name (campaign/<name>.level) or a bare level name resolves to the level file of
-# its package; any other name is relative to the levels/ folder of the repository.
+# its package; any other name is relative to the levels/ folder of the repository, or of a content package that has it
+# (a dropped map moved there, scripts/content_packages.py); else the path below the repository (reported missing).
 def level_path(repo, name):
+    import content_packages
     repo = Path(repo)
     file = name if name.endswith('.level') else name + '.level'
     if '/' not in file:
@@ -128,7 +132,32 @@ def level_path(repo, name):
     for entry in entries(repo):
         if entry['File'] == file:
             return entry['_path']
-    return repo / 'levels' / file
+    return content_packages.resolve(repo, 'levels/' + file)
+
+
+# The file of a repository-relative level path as the load tests name a level: the file of the public tree, else the
+# file of the same path in a content package, else for a level below levels/campaign/ (a wing level named by its
+# former public path, e.g. levels/campaign/wing1/Mossgate.level) the level file of its wing package; None when the
+# level is not present (no content).
+def level_file(repo, relative):
+    import content_packages
+    relative = str(relative).replace('\\', '/')
+    found = content_packages.data_file(repo, relative)
+    if found is not None:
+        return found
+    if relative.startswith(PUBLIC_FOLDER + '/') and relative.endswith('.level'):
+        name = 'campaign/' + relative.rsplit('/', 1)[-1]
+        for entry in entries(repo):
+            if entry['File'] == name and entry['_path'].is_file():
+                return entry['_path']
+    return None
+
+
+# True when the public tree of a repository still holds a campaign of its own (a public wing package or the former
+# levels/campaign/Campaign.cfg); the current layout has none, every wing comes with the content packages.
+def has_public_campaign(repo):
+    repo = Path(repo)
+    return (repo / PUBLIC_FOLDER / 'Campaign.cfg').is_file() or bool(packages(repo, with_content=False))
 
 
 # The text of a level file (see level_path).
@@ -142,11 +171,16 @@ def missing_wings(repo, with_content=True):
     return [wing for wing in range(1, NUM_WINGS + 1) if wing not in present]
 
 
-# Every level file of the campaign and the dropped maps of levels/campaign/, the files a full level check covers.
+# Every level file of the campaign and the dropped maps of levels/campaign/, the files a full level check covers. The
+# dropped maps are those of the public folder and, with content, those of levels/campaign/ in the content packages.
 def all_level_files(repo, with_content=True):
     repo = Path(repo)
     files = [entry['_path'] for entry in entries(repo, with_content)]
-    files += sorted((repo / PUBLIC_FOLDER).glob('*.level'))
+    if with_content:
+        import content_packages
+        files += content_packages.data_glob(repo, PUBLIC_FOLDER, '*.level')
+    else:
+        files += sorted((repo / PUBLIC_FOLDER).glob('*.level'))
     return files
 
 
@@ -165,7 +199,8 @@ def guild_of(entry):
 
 
 # The file of a campaign image (preview, banner, portrait) as the game finds it: in the package folder when it
-# lies there (the private packages bring their own images), else in gui/campaign of the repository.
+# lies there (the wing packages bring their own images), else in gui/campaign of the repository (empty in the public
+# tree now; the path is still returned, so a check reports a missing image by that path).
 def image_path(repo, package, relative):
     if package is not None and (Path(package) / relative).is_file():
         return Path(package) / relative
@@ -205,7 +240,7 @@ def display_path(repo, path):
 
 
 # The level names (file stems) a check covers: every name of its table with content packages, else the names of
-# the public package.
+# the public tree (PUBLIC_LEVELS, none now).
 def checked_names(repo, names):
     if has_content(repo):
         return list(names)

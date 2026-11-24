@@ -258,16 +258,21 @@ def apply_result(level, result):
 # Lists the level files below the root, minus the excluded names, as (name, file): the name is the path with "/"
 # separators. A level of a campaign wing package (scripts/campaign_packages.py; wing 1 in levels/campaign/wing1/,
 # wings 2 to 6 in the content repository when it is present) keeps its former name levels/campaign/<level>.level,
-# the name it has at the base commit.
+# the name it has at the base commit. A level of a content package (scripts/content_packages.py, levels/<folder>/ of the
+# package) keeps its name levels/<folder>/<level>.level; without the content only the public levels are listed.
 def level_paths(root):
     sys.path.insert(0, str(root / "scripts"))
     import campaign_packages
+    import content_packages
     paths = []
-    for path in sorted(root.glob("levels/*/*.level")):
-        name = path.relative_to(root).as_posix()
-        if any(excluded in name for excluded in EXCLUDED_NAMES):
-            continue
-        paths.append((name, path))
+    names = set()
+    for folder in content_packages.data_folders(root, "levels"):
+        for path in sorted(folder.glob("*/*.level")):
+            name = "levels/" + path.relative_to(folder).as_posix()
+            if name in names or any(excluded in name for excluded in EXCLUDED_NAMES):
+                continue
+            names.add(name)
+            paths.append((name, path))
     for entry in campaign_packages.entries(root):
         name = "levels/" + entry["File"]
         if not any(excluded in name for excluded in EXCLUDED_NAMES):
