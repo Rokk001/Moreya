@@ -16,7 +16,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Effects the config file must contain
-EXPECTED = ("DormitoryLanternPool", "DormitoryMotes", "DormitoryBedCreak", "DormitorySleepZ", "DormitoryBreathing", "TempleIncense", "TempleLightShaft", "TempleFloorRune", "TemplePrayerMotes", "PrisonDrip", "PrisonFlies", "PrisonSkullGlint", "PrisonBarsDust", "PrisonDoorOpen", "TortureCoals", "TortureCreak", "TortureChains", "TortureFrameTurns", "TortureSteam", "TortureSparks", "CryptMist", "CryptGraveLight", "CryptStatueGlimmer", "CryptWisp", "ArenaShieldsSway", "ArenaShieldGlint", "ArenaSand", "ArenaFightDust", "ArenaShieldsRattle", "ArenaBanners", "CryptRevivalLight")
+EXPECTED = ("DormitoryLanternPool", "DormitoryMotes", "DormitoryBedCreak", "DormitorySleepZ", "DormitoryBreathing", "TempleIncense", "TempleLightShaft", "TempleFloorRune", "TemplePrayerMotes", "PrisonDrip", "PrisonFlies", "PrisonSkullGlint", "PrisonBarsDust", "PrisonDoorOpen", "TortureCoals", "TortureCreak", "TortureChains", "TortureFrameTurns", "TortureDeviceWorks", "TortureSteam", "TortureSparks", "CryptMist", "CryptGraveLight", "CryptStatueGlimmer", "CryptWisp", "ArenaShieldsSway", "ArenaShieldGlint", "ArenaSand", "ArenaFightDust", "ArenaShieldsRattle", "ArenaBanners", "CryptRevivalLight")
 # Files below the repository root that the group brings
 FILES = ("particles/RoomAmbienceCare.particle", "materials/scripts/RoomAmbienceCare.material", "materials/textures/RoomAmbZ.png", "models/ArenaBanner.mesh", "models/PrisonDoor.mesh", "models/PrisonDoor.skeleton")
 # Meshes that need a CREDITS line
