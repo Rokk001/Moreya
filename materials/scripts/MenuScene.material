@@ -142,7 +142,7 @@ material MenuCloth : RTSS/NormalMapping_MultiPass
     }
 }
 
-// Glowing coal bed of the braziers and the forge: dark lumps with glowing cracks (tools/gen_menu_ember_texture.py),
+// Glowing coal bed of the braziers and the forge: dark lumps with glowing cracks (tools/gen_menu_ember_texture.py (private tools repository)),
 // so the ember seen from above is no flat orange surface; the texture multiplies the lit and emissive ember colour.
 material MenuEmber
 {
@@ -500,7 +500,7 @@ material MenuWaterStain : MenuStone
 
 // The forecourt behind the campaign hall, its portal into Moreya and the frame of the hall opening are an abandoned
 // ruin: dark, grimy and weathered stone (MenuRuinStone.png, aged from MenuFortressStone.png by
-// tools/gen_menu_ruin_stone.py) on the same relief, which the fire bowls light without a pale or polished shine.
+// tools/gen_menu_ruin_stone.py (private tools repository)) on the same relief, which the fire bowls light without a pale or polished shine.
 material MenuRuinStone : RTSS/NormalMapping_MultiPass
 {
     technique
@@ -565,7 +565,7 @@ material MenuRuinPaving : RTSS/NormalMapping_MultiPass
 }
 
 // The campaign hall is an abandoned castle hall: its floor is worn, dirty, matt flagstones with grime and debris and
-// its walls rough masonry with damp stains and soot (tools/gen_menu_hall_textures.py), each clearly unlike the other
+// its walls rough masonry with damp stains and soot (tools/gen_menu_hall_textures.py (private tools repository)), each clearly unlike the other
 // and unlike the stone of the table, so floor, walls and table do not melt into one mass. The floor has its own planar
 // texture coordinates (tools/menu_hall_floor_walls.py): one tile every 4 units, the flagstones square to the hall.
 material MenuHallFloor : RTSS/NormalMapping_MultiPass

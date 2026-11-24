@@ -8571,7 +8571,7 @@
     </WidgetLook>
     <!-- Scrollbar of the chosen menu sheet (variant-2.png, beside the list of the load screen): the iron rail with the
          up arrow box on top, the down arrow box at the bottom and the copper thumb, cut from the sheet by
-         tools/make_menu_template.py. Arrow boxes and thumb keep the proportions of the sheet at any width. The sheet
+         tools/make_menu_template.py (private tools repository). Arrow boxes and thumb keep the proportions of the sheet at any width. The sheet
          paints one state of these parts, so hovered and pressed parts look the same; a disabled bar is greyed. -->
     <WidgetLook name="OD/SheetScrollbarThumb">
         <Property name="VertFree" value="True" />

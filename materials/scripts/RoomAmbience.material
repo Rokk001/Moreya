@@ -97,7 +97,7 @@ material RoomAmbWeb
 }
 
 // Textured, lit grave vermin that crawl out of a Lich that burst (models LichBeetle, LichMaggot, LichWorm; textures painted by
-// tools/gen_lich_vermin_textures.py).
+// tools/gen_lich_vermin_textures.py (private tools repository)).
 material LichVerminShell
 {
     technique

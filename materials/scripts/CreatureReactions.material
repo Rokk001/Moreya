@@ -1,5 +1,5 @@
 // Emote icons shown above a creature and sprites of the creature reaction particles.
-// The images are drawn by tools/gen_creature_reaction_art.py
+// The images are drawn by tools/gen_creature_reaction_art.py (private tools repository)
 
 material CreatureEmote_Exclamation
 {
@@ -454,7 +454,7 @@ material CreatureEmote_Exit
     }
 }
 
-// Small props of the bored creatures (balls, a coin, pebbles, ...), drawn as sprites by tools/gen_creature_reaction_art.py
+// Small props of the bored creatures (balls, a coin, pebbles, ...), drawn as sprites by tools/gen_creature_reaction_art.py (private tools repository)
 
 material CreatureProp_Ball
 {

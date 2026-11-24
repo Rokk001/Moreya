@@ -127,7 +127,7 @@ material DungeonHeartCritical
 
 // The pedestal under the heart (submesh "Pedestal"). It used the temple material "Stacheln", whose texture has
 // baked-in white highlight blobs and whose spherical environment map layer sparkled on top of the lit surface.
-// This material uses a cleaned dark stone texture (tools/heart-textures/generate_pedestal_texture.py), no
+// This material uses a cleaned dark stone texture (tools/heart-textures/generate_pedestal_texture.py (private tools repository)), no
 // environment map and only a faint specular term. The name has as many characters as "Stacheln", so the meshes
 // could be re-pointed at it byte for byte.
 material Obsidian
