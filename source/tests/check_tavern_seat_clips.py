@@ -73,7 +73,9 @@ def stool_meshes():
     return set(re.findall(r'\{ "([^"]+)", [0-9]+, ', room.split('TAVERN_STOOL_BODIES[] =')[1].split('};')[0]))
 
 
-# Returns the skeleton names of the creature types with a tavern line other than 0 0, and their mesh names.
+# Returns the skeleton names of the creature types with a tavern line other than 0 0, and their mesh names. The
+# creature meshes are game data of the content packages (scripts/content_packages.py); main() calls this only with the
+# content present.
 def visitors():
     found = {}
     configuration = content_packages.read_text(ROOT, 'config/creatures.cfg')
@@ -82,7 +84,7 @@ def visitors():
         tavern = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
         if (mesh is None) or (tavern is None) or (float(tavern.group(1)) <= 0.0 and float(tavern.group(2)) <= 0.0):
             continue
-        data = (ROOT / 'models' / mesh.group(1)).read_bytes()
+        data = content_packages.resolve(ROOT, 'models/' + mesh.group(1)).read_bytes()
         skeleton = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', data)[0].decode('ascii')
         found.setdefault(skeleton, mesh.group(1))
     return found

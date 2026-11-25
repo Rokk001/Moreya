@@ -66,7 +66,11 @@ assert 'getClassName()' in raised and '"CryptSpawnClass"' in raised
 take = read('source/entities/Creature.cpp')
 take = take[take.index('bool Creature::takeCorpse()'):take.index('bool Creature::reviveFromCorpse')]
 assert 'RoomType::crypt' in take and take.index('RoomType::crypt') < take.index('mDeathCounter = std::numeric_limits')
-assert b'Stretch' in (repo / 'models/lich.skeleton').read_bytes()
+# The lich skeleton is game data of the content package creatures: without the content it is named as not checked.
+if content_packages.data_file(repo, 'models/lich.skeleton') is None and not content_packages.has_content(repo):
+    content_packages.unchecked('check_crypt_findings_x1', ['models/lich.skeleton (Stretch)'])
+else:
+    assert b'Stretch' in content_packages.resolve(repo, 'models/lich.skeleton').read_bytes()
 
 # 1, 2 and the effects of 5: the room ambience effects lie in the content package core-config
 if not content_packages.has_content(repo):
