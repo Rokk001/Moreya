@@ -18,8 +18,10 @@ at <ODP_ASSETS_SRC>/ingame-qs-9/d1/variant-2.png. Static check, no game and no c
    overlaps no other control; the load screen controls lie on the panel at the places of the sheet.
 
 The atlas, imagesets, layouts and fonts largely live in content packages (found through scripts/content_packages.py);
-every gui file is read from the public tree or a content package. Without the content the check names the gui files it
-cannot read as not checked and stops before the pixel, look and screen parts (they need the atlas and the layouts).
+every gui file is read from the public tree or a content package, a mixed interface file (layouts, OD.looknfeel,
+ODSkin.scheme, imagesets, fonts) and config/mainmenuscene.cfg joined with their own rows (content_packages.read_text).
+Without the content the check names the gui files it cannot read as not checked and stops before the pixel, look and
+screen parts (they need the atlas and the layouts).
 """
 from pathlib import Path
 import re
@@ -42,20 +44,27 @@ def gui_file(name):
     return content_packages.resolve(repo, 'gui/' + str(name))
 
 
+def gui_xml(name):
+    """The root element of an XML file of gui/ as the game reads it (a mixed file joined with its own rows)."""
+    return ET.fromstring(content_packages.read_text(repo, 'gui/' + str(name)))
+
+
 #: The gui files the check reads besides the menu layouts (the layouts are listed in MENU_LAYOUTS below)
 GUI_FILES = ('ODMenuTemplate.png', 'ODMenuTemplate.imageset', 'OD.looknfeel', 'ODSkin.scheme', 'ODSkin.imageset',
              'ODGameWindow.imageset')
 GUI_MISSING = [name for name in GUI_FILES if content_packages.data_file(repo, 'gui/' + name) is None]
-if GUI_MISSING and not content_packages.has_content(repo):
+# Without the content the mixed interface files lack their own rows, so the parts that read them are not checked either
+if not content_packages.has_content(repo):
     content_packages.unchecked('check_menu_button_template', ['gui/' + name for name in GUI_MISSING] +
-                               ['the pixel, look, screen and size parts that need them'])
+                               ['the mixed interface files and config/mainmenuscene.cfg',
+                                'the pixel, look, screen and size parts that need them'])
     sys.exit(0)
 SHEET = assets_src_dir(repo) / 'ingame-qs-9/d1/variant-2.png'
 assert SHEET.is_file(), 'chosen menu sheet missing: %s' % SHEET
 sheet = np.asarray(Image.open(SHEET).convert('RGB')).astype(np.int32)
 assert sheet.shape == (1200, 1920, 3), sheet.shape
 atlas = np.asarray(Image.open(gui_file('ODMenuTemplate.png')).convert('RGBA')).astype(np.int32)
-imageset = ET.parse(str(gui_file('ODMenuTemplate.imageset'))).getroot()
+imageset = gui_xml('ODMenuTemplate.imageset')
 assert imageset.get('name') == 'ODMenuTemplate' and imageset.get('imagefile') == 'ODMenuTemplate.png'
 pieces = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height')) for i in imageset.findall('Image')}
 
@@ -175,7 +184,7 @@ x, y, w, h = pieces['LoadRowSelected']
 assert np.abs(atlas[y:y + h, x:x + w, :3] - sheet[484:524, 1272:1792]).mean() < 0.5, 'selected row is not the sheet row'
 
 # ------------------------------------------------------------------------------------------------ 2. looks
-look_text = gui_file('OD.looknfeel').read_text(encoding='utf-8')
+look_text = content_packages.read_text(repo, 'gui/OD.looknfeel')
 looks = {wl.get('name'): wl for wl in ET.fromstring(look_text).findall('WidgetLook')}
 
 
@@ -225,7 +234,7 @@ for state, template_state in EXPECTED_STATES.items():
                                                   'Pushed' if state == 'Pushed' else 'Hover')):
         expected = sorted('ODMenuTemplate/Compact' + chosen + n for n in ('LeftCap', 'Fill', 'RightCap'))
         assert sorted(state_images('OD/MenuFilterButton', prefix + state)) == expected, ('filter', prefix + state)
-scheme = gui_file('ODSkin.scheme').read_text(encoding='utf-8')
+scheme = content_packages.read_text(repo, 'gui/ODSkin.scheme')
 for window_type, target in (('OD/MenuTextButton', 'CEGUI/PushButton'), ('OD/MenuCompactButton', 'CEGUI/PushButton'),
                             ('OD/MenuFilterButton', 'CEGUI/RadioButton'), ('OD/LoadListbox', 'CEGUI/Listbox')):
     assert re.search(r'lookNFeel="%s" renderer="[^"]+" targetType="%s" windowType="%s"' % (window_type, target, window_type),
@@ -250,7 +259,7 @@ EXPECTED_BUTTONS = {'MenuMain.layout': 7, 'WindowCampaignSubMenu.layout': 4, 'Wi
                     'MenuEditorNew.layout': 2, 'WindowSettings.layout': 2, 'WindowApplyChanges.layout': 2}
 button_targets = set(re.findall(r'targetType="CEGUI/(?:PushButton|RadioButton)" windowType="([^"]+)"', scheme)) | {'OD/IconButton'}
 for layout in MENU_LAYOUTS:
-    windows = list(ET.parse(str(gui_file(layout))).getroot().iter('Window'))
+    windows = list(gui_xml(layout).iter('Window'))
     buttons = [w for w in windows if w.get('type') in button_targets]
     other = [w.get('name') for w in buttons if w.get('type') not in TEMPLATE_TYPES]
     assert not other, '%s: buttons without the menu template: %s' % (layout, other)
@@ -272,12 +281,14 @@ CONTROLS = TEMPLATE_TYPES + ('OD/Editbox', 'OD/Combobox', 'OD/Checkbox', 'OD/Men
 fonts = {}
 # the fonts of the public gui/fonts and of the content packages
 for font_file in content_packages.data_glob(repo, 'gui/fonts', '*.font'):
-    spec = ET.parse(str(font_file)).getroot()
+    if '.own.' in font_file.name:
+        continue   # the own rows of a font are part of its joined file
+    spec = ET.fromstring(content_packages.read_text(repo, content_packages.relative_path(repo, font_file)))
     fonts[spec.get('name')] = (ImageFont.truetype(str(gui_file('fonts/' + spec.get('filename'))), 1024),
                                float(spec.get('size')) * (96.0 / 72.0) / 1024.0)
-skin_set = ET.parse(str(gui_file('ODSkin.imageset'))).getroot()
+skin_set = gui_xml('ODSkin.imageset')
 skin = {i.get('name'): (float(i.get('width')), float(i.get('height'))) for i in skin_set.findall('Image')}
-game_set = ET.parse(str(gui_file('ODGameWindow.imageset'))).getroot()
+game_set = gui_xml('ODGameWindow.imageset')
 game_window = {i.get('name'): (float(i.get('width')), float(i.get('height'))) for i in game_set.findall('Image')}
 
 
@@ -298,7 +309,7 @@ class Node:
             if child.tag == 'Window':
                 self.children.append(Node(child, self, layout))
             elif child.tag == 'LayoutImport':
-                for imported in ET.parse(str(gui_file(child.get('filename')))).getroot().findall('Window'):
+                for imported in gui_xml(child.get('filename')).findall('Window'):
                     self.children.append(Node(imported, self, child.get('filename')))
 
     def font(self):
@@ -446,7 +457,7 @@ BELOW_THE_WINDOW = {('MenuLoad.layout', 'MapDescriptionText')}
 # 0.5 and 3 above the ground; its centre x is -0.0375. The column centre may be at most 2 screen pixels beside it.
 ENTRANCE_LOCAL = (-0.0375, -3.0, 1.75)
 ENTRANCE_TOLERANCE = 2.0
-scene_cfg = (repo / 'config/mainmenuscene.cfg').read_text(encoding='utf-8')
+scene_cfg = content_packages.read_text(repo, 'config/mainmenuscene.cfg')
 camera_code = (repo / 'source/camera/CameraManager.cpp').read_text(encoding='utf-8')
 OVERVIEW_POSE = [float(v) for v in re.search(r'(?m)^Pose overview ([-\d. ]+)$', scene_cfg)[1].split()]
 GATE_POSITION = [float(v) for v in re.search(r'(?m)^AddEntity Gate MenuGate\.mesh ([-\d. ]+)$', scene_cfg)[1].split()]
@@ -476,7 +487,7 @@ def entrance_screen_x(screen):
 
 checked = 0
 for layout in MENU_LAYOUTS:
-    roots = [Node(w, None, layout) for w in ET.parse(str(gui_file(layout))).getroot().findall('Window')]
+    roots = [Node(w, None, layout) for w in gui_xml(layout).findall('Window')]
     for screen in SCREENS:
         for user in USER_SCALES:
             placed = []
@@ -574,7 +585,7 @@ for layout in MENU_LAYOUTS:
     if layout == 'MenuMain.layout' or layout.endswith('SubMenu.layout') or layout in ('WindowSettings.layout',
                                                                                      'WindowApplyChanges.layout'):
         continue
-    names = {w.get('name') for w in ET.parse(str(gui_file(layout))).getroot().iter('Window')}
+    names = {w.get('name') for w in gui_xml(layout).iter('Window')}
     # a window of its own sheet: the main menu sheet with its buttons is replaced while it is shown
     assert not names & set(MAIN_BUTTONS), layout + ' shows main menu buttons'
     assert re.search(r'mSheets\[\w+\] = +wmgr->loadLayoutFromFile\("%s"\)' % re.escape(layout), gui_code), layout + ' is no sheet'
@@ -637,7 +648,7 @@ for state in looks['OD/SheetWindow'].findall('StateImagery'):
     assert {'ODMenuTemplate/FrameTopLeft', 'ODMenuTemplate/FrameBottomRight', 'ODMenuTemplate/FrameInterior'} <= drawn, state.get('name')
 for layout in MENU_LAYOUTS:
     if layout.startswith('Menu'):
-        assert any(w.get('type') == 'OD/ScreenBorder' for w in ET.parse(str(gui_file(layout))).getroot().iter('Window')), \
+        assert any(w.get('type') == 'OD/ScreenBorder' for w in gui_xml(layout).iter('Window')), \
             layout + ' lacks the screen border of the sheet'
 print('MENU BUTTON TEMPLATE OK: 4 states and the compact form match the chosen sheet; %d menu screens; '
       '%d button placements at 3 screens x 2 UI scales; %d menu windows framed and centred; main menu column as on the sheet'

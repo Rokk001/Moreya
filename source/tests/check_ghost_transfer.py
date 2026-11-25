@@ -32,10 +32,14 @@ repo = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(repo / 'scripts'))
 import room_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
 ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+#: True when the content packages are present: rooms.cfg and skills.cfg are mixed tables whose own rows come from them;
+#: without them the parts that need their values are named as not checked
+CONTENT = content_packages.has_content(repo)
 
 
 def room_file(relative):
@@ -63,32 +67,35 @@ def has(text, rule, *fragments):
 
 
 # 1. The config key with its doc line; the other durations stay as they were (fixed values)
-rooms = read('config/rooms.cfg')
-match = re.search(r'^(#[^\n]*\n)+GhostTransferSeconds 20\s*$', rooms, re.M)
-assert match and 'delivery point' in match.group(0) and 'decision 845' in match.group(0), 'GhostTransferSeconds 20 with doc line'
-values = dict(re.findall(r'^(Ghost\w+)\s+([-\d.]+)\s*$', rooms, re.M))
-fixed = {'GhostBoxThrowSeconds': '2', 'GhostBeamSeconds': '16', 'GhostBoxSnapSeconds': '2', 'GhostRiseSeconds': '1.5',
-         'GhostDissolveSeconds': '1.5', 'GhostTransferSeconds': '20'}
-for key, value in fixed.items():
-    assert values.get(key) == value, (key, values.get(key), value)
-transfer_seconds = float(values['GhostTransferSeconds'])
-lid_open = float(values['GhostLidOpenSeconds'])
-# Decision 894: the put-in under a two-line documentation; the hand reach and height of the old device are gone
-rows = rooms.splitlines()
-# Decision 936 point 3: the put-in lasts two seconds so that the hand placement can be seen
-assert values.get('GhostPutInSeconds') == '2'
-assert 'GhostDeliveryHandReach' not in values and 'GhostDeliveryHeight' not in values, 'the old device keys are gone'
-put_in_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ['GhostPutInSeconds'])
-put_in_doc = ' '.join(rows[put_in_row - 2:put_in_row])
-assert all(row.startswith('#') for row in rows[put_in_row - 2:put_in_row]), 'two documentation lines over GhostPutInSeconds'
-assert all(word in put_in_doc for word in ('put-in', 'sets', 'shut', 'trap seat', 'decision 936')), 'the put-in doc lines describe the motion'
-# Decision 936 point 2: the visible pick-up of the trap from the floor, with its doc lines
-assert values.get('GhostPickUpSeconds') == '2' and values.get('GhostPickUpReach') == '0.3', 'pick-up time and reach'
-pick_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ['GhostPickUpSeconds'])
-pick_doc = ' '.join(rows[pick_row - 2:pick_row])
-assert all(row.startswith('#') for row in rows[pick_row - 2:pick_row]) and 'bends down' in pick_doc and 'decision 936' in pick_doc
-assert rows[pick_row + 1].split()[:1] == ['GhostPickUpReach']
-put_in = float(values['GhostPutInSeconds'])
+if CONTENT:
+    rooms = content_packages.read_text(repo, 'config/rooms.cfg')
+    match = re.search(r'^(#[^\n]*\n)+GhostTransferSeconds 20\s*$', rooms, re.M)
+    assert match and 'delivery point' in match.group(0) and 'decision 845' in match.group(0), 'GhostTransferSeconds 20 with doc line'
+    values = dict(re.findall(r'^(Ghost\w+)\s+([-\d.]+)\s*$', rooms, re.M))
+    fixed = {'GhostBoxThrowSeconds': '2', 'GhostBeamSeconds': '16', 'GhostBoxSnapSeconds': '2', 'GhostRiseSeconds': '1.5',
+             'GhostDissolveSeconds': '1.5', 'GhostTransferSeconds': '20'}
+    for key, value in fixed.items():
+        assert values.get(key) == value, (key, values.get(key), value)
+    transfer_seconds = float(values['GhostTransferSeconds'])
+    lid_open = float(values['GhostLidOpenSeconds'])
+    # Decision 894: the put-in under a two-line documentation; the hand reach and height of the old device are gone
+    rows = rooms.splitlines()
+    # Decision 936 point 3: the put-in lasts two seconds so that the hand placement can be seen
+    assert values.get('GhostPutInSeconds') == '2'
+    assert 'GhostDeliveryHandReach' not in values and 'GhostDeliveryHeight' not in values, 'the old device keys are gone'
+    put_in_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ['GhostPutInSeconds'])
+    put_in_doc = ' '.join(rows[put_in_row - 2:put_in_row])
+    assert all(row.startswith('#') for row in rows[put_in_row - 2:put_in_row]), 'two documentation lines over GhostPutInSeconds'
+    assert all(word in put_in_doc for word in ('put-in', 'sets', 'shut', 'trap seat', 'decision 936')), 'the put-in doc lines describe the motion'
+    # Decision 936 point 2: the visible pick-up of the trap from the floor, with its doc lines
+    assert values.get('GhostPickUpSeconds') == '2' and values.get('GhostPickUpReach') == '0.3', 'pick-up time and reach'
+    pick_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ['GhostPickUpSeconds'])
+    pick_doc = ' '.join(rows[pick_row - 2:pick_row])
+    assert all(row.startswith('#') for row in rows[pick_row - 2:pick_row]) and 'bends down' in pick_doc and 'decision 936' in pick_doc
+    assert rows[pick_row + 1].split()[:1] == ['GhostPickUpReach']
+    put_in = float(values['GhostPutInSeconds'])
+else:
+    content_packages.unchecked('check_ghost_transfer', ['durations, put-in and pick-up of config/rooms.cfg'])
 
 # 2. The server: fixed duration, teleport into the socket, saved clock
 action = read('source/creatureaction/CreatureActionHuntGhost.cpp')
@@ -100,7 +107,8 @@ has(read('source/game/SkillManager.cpp'), 'research base: the transfer and the b
     '{SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostTransferSeconds", "GhostBeamSeconds"}')
 # The hunter efficiency shortens only the beam (getBeamSeconds), never the transfer
 assert 'getBeamSeconds' not in body(action, 'double CreatureActionHuntGhost::getTransferTurns() const')
-assert 'GhostEmptyTurns' not in values, 'replaced by GhostTransferSeconds'
+if CONTENT:
+    assert 'GhostEmptyTurns' not in values, 'replaced by GhostTransferSeconds'
 state6 = action[action.index('    if(mState==6)\n'):action.index('    if(mState==7)\n')]
 has(state6, 'transfer at the delivery point', 'const Ogre::Vector3 socket=RoomGhostRoom::getTrapSocketPosition(*mEmptyAnchor);',
     'if(poured!=nullptr && poured->getPosition()!=socket) poured->teleport(socket);', 'const double duration=getTransferTurns();',
@@ -285,8 +293,9 @@ def ghost_at(share, device, mouth):
 
 
 turns_per_second = float(re.search(r'double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp')).group(1))
-duration = transfer_seconds * turns_per_second
-assert abs(duration - 28.0) < 1e-9, duration
+if CONTENT:
+    duration = transfer_seconds * turns_per_second
+    assert abs(duration - 28.0) < 1e-9, duration
 surface = surface_height
 mouth = (0.5, 0.5, surface)
 for x, y in [(0, 0)]:
@@ -305,72 +314,76 @@ for x, y in [(0, 0)]:
     end = ghost_at(1.0, device, mouth)
     assert end[0] < 1e-9 and end[3] < surface and math.hypot(end[1] - 0.5, end[2] - 0.5) <= 0.11, ('ends faded in the ectoplasm', end)
     assert ghost_at(0.9, device, mouth)[3] < ghost_at(0.5, device, mouth)[3] < ghost_at(0.1, device, mouth)[3]
-    # Decision 936 point 4, smooth: the flow of 18 s drawn at 60 frames a second has no jump and no sudden change of
-    # speed; it circles with one even angular speed from the end of the ease-in until it is sucked in
-    frames = int((transfer_seconds - put_in) * 60)
-    points = [ghost_at(i / frames, device, mouth) for i in range(frames + 1)]
-    speeds = [math.dist(points[i][1:4], points[i + 1][1:4]) * 60 for i in range(frames)]
-    assert max(speeds) < 2.0, ('no jump', max(speeds))
-    assert max(abs(speeds[i + 1] - speeds[i]) * 60 for i in range(frames - 1)) < 3.0, 'no sudden change of speed'
-    middle = speeds[frames // 5:frames * 7 // 10]
-    assert max(middle) < 1.6 * min(middle), ('an even speed on the circle', min(middle), max(middle))
-    angles = [math.atan2(p[2] - 0.5, p[1] - 0.5) for p in points]
-    steps = [(angles[i + 1] - angles[i] + math.pi) % (2 * math.pi) - math.pi for i in range(frames)]
-    even_steps = steps[int(frames * path_constants['EASE_IN']) + 2:int(frames * 0.99)]
-    assert max(even_steps) - min(even_steps) < 1e-6, 'one even angular speed'
-    # (the last frame ends in the middle, where no angle is left)
-    assert abs(sum(steps[:-1]) / (2 * math.pi) - path_constants['TURNS']) < 0.01, 'five turns'
-# The put-in comes first and the whole delivery keeps the transfer time: 20, 16 and 13.3 s by the research
-for seconds in (20.0, 16.0, 20.0 * 0.667):
-    for t_step in range(0, int(seconds * 100) + 1):
-        t_now = t_step / 100.0
-        inserted = max(0.0, min(1.0, t_now / put_in))
-        share = 0.0 if inserted < 1.0 else max(0.0, (t_now - put_in) / (seconds - put_in))
-        if t_now < put_in:
-            assert share == 0.0, ('the ghost waits in the shut trap until it is put in', t_now)
-        if t_now < put_in:
-            assert inserted < 1.0, ('the trap goes into the seat over the put-in', t_now)
-    # At the end of the transfer time (the server's clock) the ghost has fully flowed in, not before the put-in is over
-    assert share == 1.0 and t_now == seconds or abs(t_now - seconds) < 0.01 and abs(share - 1.0) < 0.01 / (seconds - put_in), \
-        ('the ghost has fully flowed in at the end of the transfer time', seconds, t_now, share)
-    assert all(max(0.0, (k / 100.0 - put_in) / (seconds - put_in)) < 1.0 for k in range(0, int(seconds * 100) - 1)), \
-        'not fully in before the transfer time is over'
+    if CONTENT:
+        # Decision 936 point 4, smooth: the flow of 18 s drawn at 60 frames a second has no jump and no sudden change of
+        # speed; it circles with one even angular speed from the end of the ease-in until it is sucked in
+        frames = int((transfer_seconds - put_in) * 60)
+        points = [ghost_at(i / frames, device, mouth) for i in range(frames + 1)]
+        speeds = [math.dist(points[i][1:4], points[i + 1][1:4]) * 60 for i in range(frames)]
+        assert max(speeds) < 2.0, ('no jump', max(speeds))
+        assert max(abs(speeds[i + 1] - speeds[i]) * 60 for i in range(frames - 1)) < 3.0, 'no sudden change of speed'
+        middle = speeds[frames // 5:frames * 7 // 10]
+        assert max(middle) < 1.6 * min(middle), ('an even speed on the circle', min(middle), max(middle))
+        angles = [math.atan2(p[2] - 0.5, p[1] - 0.5) for p in points]
+        steps = [(angles[i + 1] - angles[i] + math.pi) % (2 * math.pi) - math.pi for i in range(frames)]
+        even_steps = steps[int(frames * path_constants['EASE_IN']) + 2:int(frames * 0.99)]
+        assert max(even_steps) - min(even_steps) < 1e-6, 'one even angular speed'
+        # (the last frame ends in the middle, where no angle is left)
+        assert abs(sum(steps[:-1]) / (2 * math.pi) - path_constants['TURNS']) < 0.01, 'five turns'
+if CONTENT:
+    # The put-in comes first and the whole delivery keeps the transfer time: 20, 16 and 13.3 s by the research
+    for seconds in (20.0, 16.0, 20.0 * 0.667):
+        for t_step in range(0, int(seconds * 100) + 1):
+            t_now = t_step / 100.0
+            inserted = max(0.0, min(1.0, t_now / put_in))
+            share = 0.0 if inserted < 1.0 else max(0.0, (t_now - put_in) / (seconds - put_in))
+            if t_now < put_in:
+                assert share == 0.0, ('the ghost waits in the shut trap until it is put in', t_now)
+            if t_now < put_in:
+                assert inserted < 1.0, ('the trap goes into the seat over the put-in', t_now)
+        # At the end of the transfer time (the server's clock) the ghost has fully flowed in, not before the put-in is over
+        assert share == 1.0 and t_now == seconds or abs(t_now - seconds) < 0.01 and abs(share - 1.0) < 0.01 / (seconds - put_in), \
+            ('the ghost has fully flowed in at the end of the transfer time', seconds, t_now, share)
+        assert all(max(0.0, (k / 100.0 - put_in) / (seconds - put_in)) < 1.0 for k in range(0, int(seconds * 100) - 1)), \
+            'not fully in before the transfer time is over'
 
-# 5b. Decision 936 point 4, the root cause of the stutter: the server sends the transfer share only once a turn (1.4
-# times a second). The old client chased it (6/s): the ghost jumped after every turn and nearly stopped before the
-# next. The client flow clock runs every frame, the server share only corrects it within half the speed of time.
-flow = transfer_seconds - put_in
-old_shown, new_clock, correction, seen, frame_seconds = 0.0, 0.0, 0.0, 0.0, 1.0 / 60.0
-old_steps, new_steps = [], []
-for frame_index in range(1, int(flow * 60)):
-    now = frame_index * frame_seconds
-    server = math.floor(now * turns_per_second) / turns_per_second
-    previous_old, previous_new = old_shown, new_clock
-    old_shown += (server / flow - old_shown) * min(1.0, frame_seconds * 6.0)
-    new_clock += frame_seconds
-    if server != seen:
-        seen = server
-        error = server - new_clock
-        correction = 0.0 if abs(error) > 1.5 else error
-        new_clock = server if abs(error) > 1.5 else new_clock
-    step = max(-0.5 * frame_seconds, min(0.5 * frame_seconds, correction * min(1.0, frame_seconds)))
-    new_clock += step
-    correction -= step
-    if now > 2.0:
-        old_steps.append(old_shown - previous_old)
-        new_steps.append(new_clock - previous_new)
-assert max(old_steps) > 8 * min(old_steps), 'the old chase jerked (premise of the fix)'
-assert min(new_steps) >= 0.5 * frame_seconds - 1e-12 and max(new_steps) <= 1.5 * frame_seconds + 1e-12, 'never stops, never jumps'
-assert max(abs(new_steps[i + 1] - new_steps[i]) for i in range(len(new_steps) - 1)) < 0.02 * frame_seconds, 'no sudden change'
-assert abs(new_clock - (int(flow * 60) - 1) * frame_seconds) < 1.0, 'stays with the server clock'
+    # 5b. Decision 936 point 4, the root cause of the stutter: the server sends the transfer share only once a turn (1.4
+    # times a second). The old client chased it (6/s): the ghost jumped after every turn and nearly stopped before the
+    # next. The client flow clock runs every frame, the server share only corrects it within half the speed of time.
+    flow = transfer_seconds - put_in
+    old_shown, new_clock, correction, seen, frame_seconds = 0.0, 0.0, 0.0, 0.0, 1.0 / 60.0
+    old_steps, new_steps = [], []
+    for frame_index in range(1, int(flow * 60)):
+        now = frame_index * frame_seconds
+        server = math.floor(now * turns_per_second) / turns_per_second
+        previous_old, previous_new = old_shown, new_clock
+        old_shown += (server / flow - old_shown) * min(1.0, frame_seconds * 6.0)
+        new_clock += frame_seconds
+        if server != seen:
+            seen = server
+            error = server - new_clock
+            correction = 0.0 if abs(error) > 1.5 else error
+            new_clock = server if abs(error) > 1.5 else new_clock
+        step = max(-0.5 * frame_seconds, min(0.5 * frame_seconds, correction * min(1.0, frame_seconds)))
+        new_clock += step
+        correction -= step
+        if now > 2.0:
+            old_steps.append(old_shown - previous_old)
+            new_steps.append(new_clock - previous_new)
+    assert max(old_steps) > 8 * min(old_steps), 'the old chase jerked (premise of the fix)'
+    assert min(new_steps) >= 0.5 * frame_seconds - 1e-12 and max(new_steps) <= 1.5 * frame_seconds + 1e-12, 'never stops, never jumps'
+    assert max(abs(new_steps[i + 1] - new_steps[i]) for i in range(len(new_steps) - 1)) < 0.02 * frame_seconds, 'no sudden change'
+    assert abs(new_clock - (int(flow * 60) - 1) * frame_seconds) < 1.0, 'stays with the server clock'
 
-# 6. A loaded game resumes the remaining time: the saved clock k leaves duration - k turns
-for saved in (0.0, 7.0, 27.0):
-    turns, left = saved, 0
-    while turns < duration:
-        turns += 1.0
-        left += 1
-    assert left == math.ceil(duration - saved), (saved, left)
+    # 6. A loaded game resumes the remaining time: the saved clock k leaves duration - k turns
+    for saved in (0.0, 7.0, 27.0):
+        turns, left = saved, 0
+        while turns < duration:
+            turns += 1.0
+            left += 1
+        assert left == math.ceil(duration - saved), (saved, left)
+else:
+    content_packages.unchecked('check_ghost_transfer', ['smooth flow, put-in timing, client flow clock and resumed time (values of config/rooms.cfg)'])
 
 # 7. Decisions 855 and 857: only the CatchTime research shortens the transfer (20 s, 16 s, 13.3 s); hunter efficiency
 # does not. The transfer clock runs one turn per game turn for every hunter, nothing in its time reads an efficiency.
@@ -391,8 +404,12 @@ transfer_share = refresh[refresh.index('else if(boxMode==5)'):]
 transfer_share = transfer_share[:transfer_share.index('break;')]
 assert 'fficiency' not in transfer_share and 'getCaptureTurns' not in transfer_share, \
     'the client share of the transfer does not read the hunter efficiency or the beam time'
-catch_time = re.search(r'^\s*roomGhostRoom\s+CatchTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', read('config/skills.cfg'), re.M)
-assert catch_time, 'CatchTime research line'
-seconds_by_level = [transfer_seconds * float(f) for f in catch_time.groups()]
-assert [round(s, 1) for s in seconds_by_level] == [20.0, 16.0, 13.3], seconds_by_level
+# The CatchTime research line is an own row of config/skills.cfg
+if CONTENT:
+    catch_time = re.search(r'^\s*roomGhostRoom\s+CatchTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', content_packages.read_text(repo, 'config/skills.cfg'), re.M)
+    assert catch_time, 'CatchTime research line'
+    seconds_by_level = [transfer_seconds * float(f) for f in catch_time.groups()]
+    assert [round(s, 1) for s in seconds_by_level] == [20.0, 16.0, 13.3], seconds_by_level
+else:
+    content_packages.unchecked('check_ghost_transfer', ['CatchTime research line of config/skills.cfg'])
 print('ghost transfer: trap seat of the cauldron, hunter walks to its side, put-in, trap shut, 20 s, visible, resumed, CatchTime only: ok')

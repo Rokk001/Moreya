@@ -16,13 +16,16 @@ and the close button beside it). It checks the outcome:
    window lies on the screen and every control lies inside the client area of the sheet frame of its window, and no
    fixed caption is cut (geometry and font measurement of check_window_content_fit.py, which models the sheet frame).
 
-Many layouts and the font files live in content packages (found through scripts/content_packages.py). Without the
-content the check names every layout it could not read and the fit part as not checked, checks the public layouts
-and the code, and leaves out the counts over all layouts (they need every layout); with the content every count runs.
+Many layouts and the font files live in content packages (found through scripts/content_packages.py); the other
+interface files (layouts, OD.looknfeel, ODSkin.scheme, fonts) are mixed files that are read joined with their own rows
+from the content, as the game reads them. Without the content the check names every layout it could not read and the
+fit part as not checked, checks the public layouts without own rows and the code, and leaves out the counts over all
+layouts (they need every layout); with the content every count runs.
 """
 from pathlib import Path
 import re
 import sys
+import tempfile
 import time
 import xml.etree.ElementTree as ET
 
@@ -35,13 +38,23 @@ import content_packages  # noqa: E402
 WITH_CONTENT = content_packages.has_content(repo)
 # Layouts and parts that need the content and are not checked because it is not present
 not_checked = []
+#: Folder of the joined copies of the mixed interface files (removed when the check ends)
+JOINED = tempfile.TemporaryDirectory(prefix='odp-ingame-frame-')
 
 
 def gui_file(name):
-    """A file of gui/ from the public tree or a content package, or None when the content is not present."""
+    """A file of gui/ from the public tree or a content package, or None when the content is not present. A mixed file
+    (with own rows markers) is a copy joined with its own rows from the content; without the content it is None."""
     found = content_packages.data_file(repo, 'gui/' + name)
     if found is None and WITH_CONTENT:
         return gui / name   # fails below as before: the content is present but the file is missing
+    if found is not None and '#@own ' in found.read_text(encoding='utf-8'):
+        if WITH_CONTENT:
+            joined = Path(JOINED.name) / name
+            joined.parent.mkdir(parents=True, exist_ok=True)
+            joined.write_bytes(content_packages.read_text(repo, 'gui/' + name).encode('utf-8'))
+            return joined
+        found = None
     if found is None and name not in not_checked:
         not_checked.append(name)
     return found
@@ -84,10 +97,14 @@ assert 'WindowCreatureSkillTree.layout' not in INGAME and \
     'the skill tree is a page of the Dungeonbook, no window of its own (INGAME-QS-12 K7)'
 
 # ------------------------------------------------------------------------------------------------ looks
-skin = ET.parse(str(gui_file('OD.looknfeel'))).getroot()
-looks = {look.get('name'): look for look in skin.findall('WidgetLook')}
-scheme = ET.parse(str(gui_file('ODSkin.scheme'))).getroot()
-mapping = {m.get('windowType'): (m.get('lookNFeel'), m.get('targetType')) for m in scheme.findall('FalagardMapping')}
+# Without the content the look and the scheme are not there (named as not checked): no look and no mapping
+skin_file = gui_file('OD.looknfeel')
+skin = ET.parse(str(skin_file)).getroot() if skin_file is not None else None
+looks = {look.get('name'): look for look in skin.findall('WidgetLook')} if skin is not None else {}
+scheme_file = gui_file('ODSkin.scheme')
+scheme = ET.parse(str(scheme_file)).getroot() if scheme_file is not None else None
+mapping = ({m.get('windowType'): (m.get('lookNFeel'), m.get('targetType')) for m in scheme.findall('FalagardMapping')}
+           if scheme is not None else {})
 
 
 def find_section(look, name):
@@ -138,11 +155,12 @@ def check_sheet_frame(look, states, what):
     assert not old, (what, look, 'draws an old frame', old)
 
 
-sheet_title = looks['OD/SheetWindow'].find("Child[@nameSuffix='__auto_titlebar__']")
-assert sheet_title.get('type') == 'OD/SheetTitlebar'
-caption = looks['OD/SheetTitlebar'].find(".//ImagerySection[@name='caption']/TextComponent")
-assert caption.find('HorzFormat').get('type') == 'CentreAligned', 'the sheet title is centred'
-assert 'OD/MenuTextButton' in {s.get('look') for s in looks['OD/SheetTitlebar'].iter('Section')}, 'the title glows'
+if skin is not None:
+    sheet_title = looks['OD/SheetWindow'].find("Child[@nameSuffix='__auto_titlebar__']")
+    assert sheet_title.get('type') == 'OD/SheetTitlebar'
+    caption = looks['OD/SheetTitlebar'].find(".//ImagerySection[@name='caption']/TextComponent")
+    assert caption.find('HorzFormat').get('type') == 'CentreAligned', 'the sheet title is centred'
+    assert 'OD/MenuTextButton' in {s.get('look') for s in looks['OD/SheetTitlebar'].iter('Section')}, 'the title glows'
 
 
 def props(window):
@@ -213,9 +231,11 @@ for branch, what in ((menu_branch, 'main menu'), (game_branch, 'game')):
                  'CEGUI::UDim(0.5f, MENU_WINDOW_HALF_WIDTH)', 'CEGUI::UDim(0.5f, MENU_WINDOW_HALF_HEIGHT)'):
         assert part in branch, (what, 'settings page is not centred', part)
 assert 'OD/GameSettingsWindow' not in game_branch, 'the old full width game page'
-load = ET.parse(str(gui_file('MenuLoad.layout'))).getroot()
-panel = [w for w in load.iter('Window') if w.get('name') == 'LoadPanel']
-assert panel and props(panel[0])['Image'] == 'ODMenuTemplate/LoadPanel', 'the save browser shows the sheet panel'
+load_file = gui_file('MenuLoad.layout')
+if load_file is not None:
+    load = ET.parse(str(load_file)).getroot()
+    panel = [w for w in load.iter('Window') if w.get('name') == 'LoadPanel']
+    assert panel and props(panel[0])['Image'] == 'ODMenuTemplate/LoadPanel', 'the save browser shows the sheet panel'
 load_mode = (repo / 'source/modes/MenuModeLoad.cpp').read_text(encoding='utf-8')
 assert 'LoadPanel' not in load_mode or 'LoadPanel")->hide' not in load_mode, 'the panel is hidden in the game'
 print('2. settings page of the game centred in the sheet frame, save browser shows the sheet panel')
@@ -242,8 +262,13 @@ print('3. %d answer buttons of %d dialogs are menu template buttons' % (
 # the in-game layouts at three UI scales.
 # The font model measures with the font files of gui/fonts and walks every layout; without the content they are not all
 # there.
-FONT_FILES_MISSING = [font.name for font in sorted((gui / 'fonts').glob('*.font'))
-                      if not (gui / 'fonts' / ET.parse(str(font)).getroot().get('filename')).is_file()]
+if WITH_CONTENT:
+    FONT_FILES_MISSING = [font.name for font in sorted((gui / 'fonts').glob('*.font'))
+                          if not (gui / 'fonts' / ET.parse(str(gui_file('fonts/' + font.name))).getroot()
+                                  .get('filename')).is_file()]
+else:
+    # without the content the mixed font files cannot be read: every font counts as missing
+    FONT_FILES_MISSING = [font.name for font in sorted((gui / 'fonts').glob('*.font'))]
 if FONT_FILES_MISSING and not WITH_CONTENT:
     not_checked.append('4. fit of the in-game windows (font files of ' + ', '.join(FONT_FILES_MISSING) + ')')
 else:

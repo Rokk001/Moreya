@@ -349,6 +349,11 @@ def beam(values):
         "bounds.getMinimum().z+share*bounds.getSize().z")
     assert "0.4f" not in aim and "GhostBox" not in aim, "no fixed offset and nothing of the trap in the aim"
     assert "setNumberOfChains(3)" not in update and "0.025f,fraction" not in update, "the thin three-bolt beam is gone"
+    # Without the content (values None) the beam values of config/rooms.cfg are not there: the code part only
+    if values is None:
+        content_packages.unchecked("check_ghost_trap_beam", ["beam values and frame budget of config/rooms.cfg"])
+        print("stronger beam: code ok")
+        return
     # Clearly more intense than the base beam (3 bolts of 0.025, jitter 0.08, re-shaped every 0.1 s, 35 sparks per s
     # for 0.1 s only)
     assert values["GhostBeamBolts"] >= 4 and values["GhostBeamBranches"] >= 1
@@ -372,11 +377,18 @@ def beam(values):
     print("stronger beam: core, 4 bolts with 2 forks, glow, tip sparks, impact glow within 220 quads (156 billboards and 64 sparks): ok")
 
 
+# Runs every part; without the content the parts that need the own rows of config/rooms.cfg are named as not checked.
 def main():
-    values = config_values()
+    values = None
+    if content_packages.has_content(repo):
+        values = config_values()
+    else:
+        content_packages.unchecked("check_ghost_trap_beam", ["trap and beam keys of config/rooms.cfg with their "
+                                                             "documentation lines", "trap timeline"])
     ghost_source()
     trap_source()
-    timeline(values)
+    if values is not None:
+        timeline(values)
     if ROOM_ASSETS:
         box_mesh()
     else:

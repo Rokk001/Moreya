@@ -99,7 +99,8 @@ def statements(text):
 
 
 # --- the ghost in the beam: GhostEntity::updateLook ------------------------------------------------------------------
-config = dict(re.findall(r'^(\w+)\s+([-0-9.]+)\s*$', read('config/rooms.cfg'), re.M))
+# config/rooms.cfg is a mixed table: read as the game reads it, with its own rows from the content
+config = dict(re.findall(r'^(\w+)\s+([-0-9.]+)\s*$', content_packages.read_text(repo, 'config/rooms.cfg'), re.M))
 look = body(read('source/entities/GhostEntity.cpp'), 'void GhostEntity::updateLook()')
 look = look[:look.index('node->setPosition(')]
 height = float(re.search(r'float height = ([0-9.]+)f;', look).group(1))

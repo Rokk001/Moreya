@@ -26,7 +26,10 @@ def function_body(source, signature):
 
 event_h = read('source/network/CosmeticEvent.h')
 event_cpp = read('source/network/CosmeticEvent.cpp')
-global_cfg = read('config/global.cfg')
+# config/global.cfg is a mixed table: as the game reads it only with its own rows from the content, else None
+global_cfg = content_packages.read_text(root, 'config/global.cfg') if content_packages.has_content(root) else None
+if global_cfg is None:
+    content_packages.unchecked('check_hit_event', ['hit values of config/global.cfg'])
 config_cpp = read('source/utils/ConfigManager.cpp')
 config_h = read('source/utils/ConfigManager.h')
 creature = read('source/entities/Creature.cpp')
@@ -114,7 +117,8 @@ assert 'CosmeticEventType::hitResult' not in client, 'the generic handler takes 
 # Configuration: documented in global.cfg, read with a default, limited
 for key, default, member in (('HitEvents', '1', 'mHitEvents(true)'), ('HitGlanceShare', '0.34', 'mHitGlanceShare(DEFAULT_HIT_GLANCE_SHARE)'),
                              ('HitStrongShare', '0.15', 'mHitStrongShare(DEFAULT_HIT_STRONG_SHARE)')):
-    assert re.search(r'^# .*\n(?:# .*\n)?\s+' + key + r'\t' + re.escape(default) + r'\s*$', global_cfg, re.M), key
+    if global_cfg is not None:
+        assert re.search(r'^# .*\n(?:# .*\n)?\s+' + key + r'\t' + re.escape(default) + r'\s*$', global_cfg, re.M), key
     assert 'nextParam == "' + key + '"' in config_cpp, key
     assert member in config_cpp, key
 assert 'std::max(HitShareMin, std::min(HitGlanceShareMax, mHitGlanceShare))' in config_h

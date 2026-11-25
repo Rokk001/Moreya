@@ -346,7 +346,7 @@ def in_view(eye, rotation, point, aspect):
 def poses():
     """Returns the camera poses {name: [x, y, z, rx, ry, rz]} of the [MenuCamera] section."""
     result = {}
-    for line in open(flight.CONFIG, encoding="utf-8"):
+    for line in flight.config_text().splitlines():
         words = line.split()
         if len(words) == 8 and words[0] == "Pose":
             result[words[1]] = [float(value) for value in words[2:]]
@@ -447,7 +447,7 @@ def visible_frames(all_poses, aspect, points, occluders, bounds, extra=None):
 
 def campaign_section():
     """Returns {kind: [names]} of the [MenuCampaignScene] section of config/mainmenuscene.cfg."""
-    text = open(flight.CONFIG, encoding="utf-8").read()
+    text = flight.config_text()
     if "[MenuCampaignScene]" not in text:
         return {}
     body = text.split("[MenuCampaignScene]", 1)[1].split("[/MenuCampaignScene]", 1)[0]
@@ -459,9 +459,31 @@ def campaign_section():
     return result
 
 
+def code_failures():
+    """Returns a failure for every piece of RenderSceneMenu.cpp that reads the campaign scene section and is missing."""
+    failures = []
+    code = open(MENU_CODE, encoding="utf-8").read()
+    for needle in ('"[MenuCampaignScene]"', "showCampaignScene(renderManager, false);", "updateCampaignScene(renderManager);",
+                   'CAMPAIGN_PLACE = "campaign"'):
+        if needle not in code:
+            failures.append("RenderSceneMenu.cpp no longer reads the campaign scene section (%s)" % needle)
+    return failures
+
+
 def main():
-    """Runs every assertion and prints each failure; returns 1 on a failure. Without the content the scene files are
-    named as not checked and the configuration, the code and the CREDITS entries are checked."""
+    """Runs every assertion and prints each failure; returns 1 on a failure. config/mainmenuscene.cfg is a mixed table
+    read joined with its own rows from the content (check_menu_flight_geometry.config_text); without the content the
+    configuration and the scene files are named as not checked and the code and the CREDITS entries are checked."""
+    if not content_packages.has_content(ROOT):
+        failures = code_failures() + credit_failures()
+        for line in failures:
+            print("FAIL " + line)
+        content_packages.unchecked("check_menu_moreya_entrance", ["configuration of config/mainmenuscene.cfg",
+                                                                  "scene files (meshes, materials, textures, particles)"])
+        if failures:
+            return 1
+        print("OK (code and CREDITS only)")
+        return 0
     failures = []
     entities, _, _ = flight.parse_config()
     all_poses = poses()
@@ -474,7 +496,7 @@ def main():
     for name in CAMPAIGN_SCENE:
         if name not in entities:
             failures.append("the scene has no entity %s" % name)
-    lights = set(re.findall(r"(?m)^AddPointLight (\S+)", open(flight.CONFIG, encoding="utf-8").read()))
+    lights = set(re.findall(r"(?m)^AddPointLight (\S+)", flight.config_text()))
     for name in CAMPAIGN_LIGHTS:
         if name not in lights:
             failures.append("the scene has no light %s" % name)
@@ -483,13 +505,9 @@ def main():
         if found != digest:
             failures.append("the scene mesh %s changed (SHA-1 %s, was %s)" % (mesh, found, digest))
     section = campaign_section()
-    if "[MenuCampaignScene]" not in open(flight.CONFIG, encoding="utf-8").read() or any(section.values()):
+    if "[MenuCampaignScene]" not in flight.config_text() or any(section.values()):
         failures.append("[MenuCampaignScene] must be present and switch nothing, has %s" % section)
-    code = open(MENU_CODE, encoding="utf-8").read()
-    for needle in ('"[MenuCampaignScene]"', "showCampaignScene(renderManager, false);", "updateCampaignScene(renderManager);",
-                   'CAMPAIGN_PLACE = "campaign"'):
-        if needle not in code:
-            failures.append("RenderSceneMenu.cpp no longer reads the campaign scene section (%s)" % needle)
+    failures += code_failures()
     entities = {name: value for name, value in entities.items() if name not in section.get("Hide", [])}
     for name, mesh in ((PORTAL, PORTAL_MESH), (TABLE, TABLE_MESH), (HALL, HALL_MESH), (FORECOURT, FORECOURT_MESH),
                        (ARCH, ARCH_MESH)):
@@ -679,7 +697,7 @@ def main():
 
     # The particle effects: green flames in the opening, orange flames over the two bowls in front of the fire.
     effects = set(re.findall(r"(?m)^AddParticleEffect %s (\S+)" % PORTAL,
-                             open(flight.CONFIG, encoding="utf-8").read()))
+                             flight.config_text()))
     if effects != {GREEN_FIRE, BOWL_FIRE}:
         failures.append("the portal carries the particle effects %s, need %s and %s"
                         % (sorted(effects), GREEN_FIRE, BOWL_FIRE))

@@ -1,7 +1,8 @@
 """Exercise editor tab geometry with CEGUI and the production look and layout.
 
 The probe loads the scheme, imagesets and fonts of the gui folder of the public tree merged with the gui folders of the
-content packages (scripts/content_packages.py; a public file wins, as in the game). Without the content the scheme
+content packages (scripts/content_packages.py; a public file wins, as in the game); a mixed interface file is given to
+the probe joined with its own rows (content_packages.read_text), as the game reads it. Without the content the scheme
 cannot be loaded, so the probe is not compiled and the check names it as not checked.
 """
 from pathlib import Path
@@ -141,6 +142,14 @@ with tempfile.TemporaryDirectory(prefix='odp-editor-headers-') as directory:
     # The gui folders of the packages first, the public one last, so a public file wins as in the game
     for gui_folder in reversed(content_packages.data_folders(repo, 'gui')):
         shutil.copytree(gui_folder, gui_resources, dirs_exist_ok=True)
+    # The mixed interface files as the game reads them: the public file joined with its own rows from the content
+    for resource in sorted(gui_resources.rglob('*')):
+        relative = 'gui/' + resource.relative_to(gui_resources).as_posix()
+        if resource.is_file() and '.own.' not in resource.name and resource.suffix in ('.layout', '.looknfeel',
+                                                                                         '.scheme', '.imageset', '.font'):
+            if '#@own ' not in resource.read_text(encoding='utf-8'):
+                continue
+            resource.write_bytes(content_packages.read_text(repo, relative).encode('utf-8'))
     for resource_directory in ('gui/RoomCentreArtwork', 'gui/RoomCentreIcons'):
         for resource in content_packages.data_glob(repo, resource_directory):
             shutil.copy2(resource, gui_resources / resource.name)

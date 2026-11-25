@@ -3,8 +3,14 @@ from pathlib import Path
 import re
 import struct
 import math
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present: config/tilesets.cfg is a mixed table whose own rows come from them
+CONTENT = content_packages.has_content(ROOT)
 
 
 # Read actual OGRE position buffers without a converter, compiler or renderer.
@@ -220,11 +226,14 @@ def verify(sources):
     assert 'if(!tile->getEverVisible() || tile->isFullTile())' in picking
     assert 'wall->getWorldBoundingBox(true).getMaximum().z' in picking
     # All 16 adjacency masks use ordinary earth materials and meshes, hence identical vertex heights.
-    earth = sources['tileset'].split('[dirtFull]', 1)[1].split('[/dirtFull]', 1)[0]
-    assert all(mask in earth for mask in (f'{i:04b}' for i in range(16)))
-    entries = re.findall(r'(Dirt_[^\s]+\.mesh)\s+(\w+)\s+([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)', earth)
-    assert entries and all(material == 'Dirt' and float(rx) == 0 and float(ry) == 0 for _, material, rx, ry, _ in entries)
-    assert all((ROOT / 'models' / name).exists() for name, *_ in entries)
+    # Without the content (sources['tileset'] is None) the joined tileset is not there: no entries.
+    entries = None
+    if sources['tileset'] is not None:
+        earth = sources['tileset'].split('[dirtFull]', 1)[1].split('[/dirtFull]', 1)[0]
+        assert all(mask in earth for mask in (f'{i:04b}' for i in range(16)))
+        entries = re.findall(r'(Dirt_[^\s]+\.mesh)\s+(\w+)\s+([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)', earth)
+        assert entries and all(material == 'Dirt' and float(rx) == 0 and float(ry) == 0 for _, material, rx, ry, _ in entries)
+        assert all((ROOT / 'models' / name).exists() for name, *_ in entries)
     verify_view_edges(sources, entries)
 
 
@@ -240,12 +249,14 @@ def farthest_screen_corner(height, tilt, aspect):
 
 
 # Tiles at the screen edges stay drawn, and past the map edge the screen shows never-seen earth walls.
+# The earth wall entries are None without the content: the wall top is then not compared with the earth meshes.
 def verify_view_edges(sources, entries):
     culling = sources['culling']
     # Culling keeps every tile with a visible part: the footprint covers the highest wall top and a half tile diagonal.
     wall_top = float(re.search(r'WALL_TOP_HEIGHT = ([0-9.]+);', culling).group(1))
-    assert wall_top >= max(p[2] for name, *_ in entries for p in positions(ROOT / 'models' / name)), \
-        'culling footprint must reach the highest earth wall top'
+    if entries is not None:
+        assert wall_top >= max(p[2] for name, *_ in entries for p in positions(ROOT / 'models' / name)), \
+            'culling footprint must reach the highest earth wall top'
     assert float(re.search(r'TILE_HALF_DIAGONAL = ([0-9.]+);', culling).group(1)) >= math.sqrt(0.5), \
         'culling margin must keep the centre of every partly visible tile inside'
     footprint = function(culling, 'std::vector<Ogre::Vector3> CullingManager::computeCullingFootprint(')
@@ -273,16 +284,23 @@ def verify_view_edges(sources, entries):
 sources = {key: (ROOT / path).read_text(encoding='utf-8') for key, path in {
     'map': 'source/gamemap/GameMap.cpp', 'links': 'source/gamemap/TileSet.cpp',
     'render': 'source/render/RenderManager.cpp', 'tile': 'source/entities/Tile.cpp', 'picker': 'source/render/ODFrameListener.cpp',
-    'tileset': 'config/tilesets.cfg', 'culling': 'source/camera/CullingManager.cpp',
+    'culling': 'source/camera/CullingManager.cpp',
     'camera': 'source/camera/CameraManager.cpp', 'camera_h': 'source/camera/CameraManager.h'}.items()}
+# The tileset as the game reads it, with its own rows from the content; None without the content
+sources['tileset'] = content_packages.read_text(ROOT, 'config/tilesets.cfg') if CONTENT else None
 verify(sources)
-edges = earth_edges(sources['tileset'])
-try:
-    earth_edges(sources['tileset'], offset=0.1)
-except AssertionError:
-    pass
+edges = 0
+if CONTENT:
+    edges = earth_edges(sources['tileset'])
+    try:
+        earth_edges(sources['tileset'], offset=0.1)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError('raised marked-earth edge mutation accepted')
 else:
-    raise AssertionError('raised marked-earth edge mutation accepted')
+    content_packages.unchecked('check_fog_earth_geometry', ['earth edges and masks of config/tilesets.cfg',
+                                                            'wall top height against the earth meshes'])
 # Each former visual mismatch and each client/server secrecy regression must fail independently.
 mutations = [
     ('map', 'getTile(ii,jj)->createMesh(mNodeType);', 'if(getTile(ii,jj)->getEverVisible()) getTile(ii,jj)->createMesh(mNodeType);'),
@@ -303,6 +321,9 @@ mutations = [
     ('render', 'colourizeEntity(entity, nullptr, false, false);', 'colourizeEntity(entity, nullptr, false, true);'),
     ('render', 'const int WORLD_BORDER_TILES = 19;', 'const int WORLD_BORDER_TILES = 12;'),
 ]
+# Without the content the wall top is not compared with the earth meshes, so its mutation cannot be rejected
+if not CONTENT:
+    mutations = [mutation for mutation in mutations if mutation[1] != 'WALL_TOP_HEIGHT = 1.55;']
 for key, old, new in mutations:
     assert old in sources[key], old
     candidate = dict(sources)

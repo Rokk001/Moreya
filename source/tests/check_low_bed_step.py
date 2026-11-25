@@ -2,7 +2,8 @@
 
 The preview (--render) reads the meshes and textures from the public tree and from the models and materials/textures
 folders of the content and room packages (scripts/content_packages.py); without the files it needs the preview is
-named as not checked.
+named as not checked. BedStepMaxHeight comes from config/global.cfg joined with its own rows from the content; without
+the content the probe is named as not checked.
 """
 from pathlib import Path
 import os
@@ -18,9 +19,12 @@ import content_packages  # noqa: E402
 #: The files the preview loads
 PREVIEW_FILES = ('models/Kobold.mesh', 'models/GoblinBed.mesh', 'materials/textures/Kobold.png',
                  'materials/textures/GoblinBed.png')
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_low_bed_step', ['probe (BedStepMaxHeight of config/global.cfg)'])
+    sys.exit(0)
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
-step_max = re.search(r'^\s*BedStepMaxHeight\s+(\S+)', (repo / 'config/global.cfg').read_text(), re.M)[1]
+step_max = re.search(r'^\s*BedStepMaxHeight\s+(\S+)', content_packages.read_text(repo, 'config/global.cfg'), re.M)[1]
 # The production text from the toilet seat lift helper (called by updateCreatureStep) up to the next renderer method.
 methods = renderer.split('static float toiletSeatLift(', 1)[1].split('\nvoid RenderManager::rrMoveMapLightFlicker(', 1)[0]
 probe = r'''

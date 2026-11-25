@@ -3,19 +3,28 @@
 # calculates the places for some layouts and checks that no nest overlaps a coop, its apron or a wall edge, that the
 # places keep their distance and do not depend on the order of the tiles, and that the port and the header agree.
 # Also checks the wiring in the server code, the client and the config (text checks only).
+# config/rooms.cfg is a mixed table read with its own rows from the content (scripts/content_packages.py); without the
+# content its keys are named as not checked.
 import itertools
 import math
 import re
+import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+#: True when the content packages are present (the own rows of config/rooms.cfg come from them)
+CONTENT = content_packages.has_content(root)
 header = (root / 'source/rooms/HatcheryNestField.h').read_text()
 room_cpp = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 room_h = (root / 'source/rooms/RoomHatchery.h').read_text()
 coop_h = (root / 'source/rooms/HatcheryCoopHouse.h').read_text()
 bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
 looks = (root / 'source/render/RenderManagerChickens.cpp').read_text()
-config = (root / 'config/rooms.cfg').read_text()
+config = content_packages.read_text(root, 'config/rooms.cfg')
+if not CONTENT:
+    content_packages.unchecked('check_hatchery_nest_field', ['nest, path and feather keys of config/rooms.cfg'])
 
 MASK = 0xFFFFFFFF
 DEFAULTS = {'mTilesPerNest': 3, 'mMaxNests': 16, 'mEdge': 0.25, 'mCoopClearance': 0.45, 'mLaneLength': 1.0,
@@ -251,7 +260,9 @@ assert 'entrance = true;' in entr and entr.index('isAlliedSeat(seat)') < entr.in
 assert 'getFullness() > 0.0' in entr
 assert 'also when it is locked' in room_h
 for key in ('HatcheryNestPathHalfWidth', 'HatcheryNestPathClearance'):
-    assert key in room_cpp and key in config, key
+    assert key in room_cpp, key
+    if CONTENT:
+        assert key in config, key
 
 # The port and the header agree: same defaults, same footprint of the coop (the table of the object bounds), same hash
 for key, value in DEFAULTS.items():
@@ -276,7 +287,9 @@ assert 'mCentralActiveSpotTiles' in room_cpp[room_cpp.index('RoomHatchery::getNe
 assert 'HatcheryNestField::fingerprint' in room_cpp and 'HatcheryNestField::compute' in room_cpp
 for key in ('HatcheryNestTilesPerNest', 'HatcheryNestMax', 'HatcheryNestEdge', 'HatcheryNestCoopClearance',
             'HatcheryNestLaneLength', 'HatcheryNestLaneHalfWidth', 'HatcheryNestLaneClearance', 'HatcheryNestSpacing'):
-    assert key in room_cpp and key in config, key
+    assert key in room_cpp, key
+    if CONTENT:
+        assert key in config, key
 assert 'nestEggSpot' not in coop_h and 'eggsPerNest' not in coop_h
 assert 'nestEggSpot' not in room_cpp and 'eggsPerNest' not in room_cpp
 
@@ -296,7 +309,9 @@ assert 'static_cast<uint32_t>(feathers.size())' in send and send.index('places.s
 assert 'computeFeathers' in header and 'mFeatherPlaces' in room_h
 for key in ('HatcheryFeatherTilesPerPlace', 'HatcheryFeatherMin', 'HatcheryFeatherMax', 'HatcheryFeatherNestClearance',
             'HatcheryFeatherSpacing'):
-    assert key in room_cpp and ('# ' + key) in config and ('    ' + key + '\t') in config, key
+    assert key in room_cpp, key
+    if CONTENT:
+        assert ('# ' + key) in config and ('    ' + key + '\t') in config, key
 for key in ('mTilesPerFeather(6)', 'mMinFeathers(2)', 'mMaxFeathers(8)', 'mFeatherNestClearance(0.5)', 'mFeatherSpacing(0.9)'):
     assert key in header, key
 assert 'ServerNotificationType::hatcheryNests' in send and 'getIsHuman()' in send and 'getPlayers()' in send

@@ -1,14 +1,25 @@
-"""Render a moving production magic projectile for 60 frames in a hidden Ogre window."""
+"""Render a moving production magic projectile for 60 frames in a hidden Ogre window.
+
+The caster speeds come from config/creatures.cfg joined with its own rows from the content
+(scripts/content_packages.py); without the content the probe is named as not checked.
+"""
 from pathlib import Path
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_magic_projectile', ['probe (magic missile speeds of config/creatures.cfg)'])
+    sys.exit(0)
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 turn_rate = float(re.search(r'double ODApplication::turnsPerSecond = ([0-9.]+)', (repo / 'source/ODApplication.cpp').read_text())[1])
-missile_speeds = {float(value) for value in re.findall(r'MissileLaunch[^\n]*\bnone\s+MissileMagic\s+([0-9.]+)', (repo / 'config/creatures.cfg').read_text())}
+missile_speeds = {float(value) for value in re.findall(r'MissileLaunch[^\n]*\bnone\s+MissileMagic\s+([0-9.]+)', content_packages.read_text(repo, 'config/creatures.cfg'))}
 assert missile_speeds, 'no caster with a magic missile is configured'
 # Every configured caster speed is exercised, in world units per second
 flight_speeds = [speed * turn_rate for speed in sorted(missile_speeds)]

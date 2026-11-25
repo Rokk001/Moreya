@@ -55,5 +55,6 @@ assert 'FoodCall' not in room and 'Hatchery/FoodCall' not in room, 'the rooster 
 for source_file in (root / 'source').rglob('*'):
     if source_file.suffix in ('.cpp', '.h') and 'FoodCall' in source_file.read_text(errors='ignore'):
         raise AssertionError('FoodCall still used in ' + str(source_file))
-assert 'FoodCall' not in (root / 'config/rooms.cfg').read_text()
+# config/rooms.cfg as the game reads it (with its own rows when the content is present, else its public rows)
+assert 'FoodCall' not in content_packages.read_text(root, 'config/rooms.cfg')
 print('hatchery sounds ok')

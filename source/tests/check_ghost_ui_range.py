@@ -22,8 +22,9 @@ Fixed values counted once on this branch (after the U1 rebuild of the page after
 vessel cover, chosen-product frames): 27 windows on the page, 4 clickable controls, 6 captions, 60 cases.
 
 The layouts, the menu sheet imageset and the fonts are content (core-gui package, found through
-scripts/content_packages.py). Without them the captions the production refresh writes are checked and the 60 cases are
-named as not checked.
+scripts/content_packages.py); the mixed files (ODSkin.imageset, OD.looknfeel, the fonts, rooms.cfg, skills.cfg) are read
+joined with their own rows (content_packages.read_text). Without the content the code of the captions the production
+refresh writes is checked and the caption values and the 60 cases are named as not checked.
 """
 from itertools import combinations, product
 from pathlib import Path
@@ -90,7 +91,7 @@ class Font:
 
     def __init__(self, name):
         """Opens the TrueType file of a CEGUI font definition."""
-        spec = ET.parse(content_packages.resolve(REPO, 'gui/fonts/' + name + '.font')).getroot()
+        spec = ET.fromstring(read('gui/fonts/' + name + '.font'))
         self.points = float(spec.get('size'))
         assert (spec.get('nativeHorzRes'), spec.get('nativeVertRes')) == ('800', '600'), name
         self.face = ImageFont.truetype(str(content_packages.resolve(REPO, 'gui/fonts/' + spec.get('filename'))), 1024)
@@ -150,7 +151,7 @@ def frame_contract():
     assert 'initialValue="%s" name="TitlebarFont"' % title_font in look, 'the title font is the font of the title height'
     assert 'TitlebarFont' not in frame, 'the title font of the sheet title is fixed'
     pages = {n.get('name'): n for n in manager.iter('Window')}['Pages']
-    checkbox = ET.parse(content_packages.resolve(REPO, 'gui/ODSkin.imageset')).getroot().find("Image[@name='CheckboxNormal']")
+    checkbox = ET.fromstring(read('gui/ODSkin.imageset')).find("Image[@name='CheckboxNormal']")
     gui = read('source/render/Gui.cpp')
     skin_density = float(re.search(r'SKIN_IMAGE_PIXEL_DENSITY = ([\d.]+)f;', gui).group(1))
     sheet_density = float(re.search(r'MENU_SHEET_IMAGE_PIXEL_DENSITY = ([\d.]+)f;', gui).group(1))
@@ -163,8 +164,9 @@ def frame_contract():
             'checkbox_inset': float(checkbox.get('width')) / skin_density}
 
 
-def captions():
-    """Every text the page can show, per control: layout texts and the values the production refresh writes."""
+def captions(with_values=True):
+    """Every text the page can show, per control: layout texts and the values the production refresh writes. Without
+    the values (no content: rooms.cfg and skills.cfg lack their own rows) only the code of the refresh is checked."""
     game = read('source/modes/GameMode.cpp')
     refresh = game[game.index('void GameMode::refreshGhostRoomWindow()'):]
     refresh = refresh[:refresh.index('\n}\n')]
@@ -175,6 +177,9 @@ def captions():
     assert 'text << std::fixed << std::setprecision(1) << perEctoplasm;' in refresh
     assert 'page->getChild("GhostBarText")->setText(text.str());' in refresh
     assert 'const double progress = perEctoplasm > 0.0 ? std::fmod(seat->getEctoplasmLevels(), perEctoplasm) : 0.0;' in refresh
+    assert 'Helper::toString(config.getRoomConfigDouble("GhostEctoplasmPerCrystal")) + " : 1"' in refresh
+    if not with_values:
+        return None
     base = float(re.search(r'^GhostLevelsPerEctoplasm\s+([\d.]+)', read('config/rooms.cfg'), re.M).group(1))
     research = re.search(r'^\s*roomGhostRoom\s+EctoplasmLevels\s+mul\s+([\d.\s]+)$', read('config/skills.cfg'), re.M)
     texts = {'GhostBarText': []}
@@ -184,7 +189,6 @@ def captions():
         target = '%d' % int(per + 0.5) if whole else '%.1f' % per
         texts['GhostBarText'] += ['%d / %s' % (k, target) for k in range(int(per + 1e-9) + 1)]
     crystal = float(re.search(r'^GhostEctoplasmPerCrystal\s+([\d.]+)', read('config/rooms.cfg'), re.M).group(1))
-    assert 'Helper::toString(config.getRoomConfigDouble("GhostEctoplasmPerCrystal")) + " : 1"' in refresh
     texts['Ratio2'] = ['%.6g : 1' % crystal]
     return texts
 
@@ -260,8 +264,10 @@ def check():
 def main():
     """Runs the fixed-scope range check of the ghost room page; without the content only the captions of the code."""
     missing = [name for name in CONTENT_FILES if content_packages.data_file(REPO, name) is None]
+    if not content_packages.has_content(REPO):
+        missing += ['caption values of config/rooms.cfg and config/skills.cfg']
     if missing:
-        captions()
+        captions(with_values=False)
         content_packages.unchecked('check_ghost_ui_range', missing)
         print('ghost UI range: captions of the production refresh: ok')
         return

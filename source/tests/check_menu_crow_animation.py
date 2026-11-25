@@ -74,34 +74,38 @@ for clip in CLIPS:
     assert '"' + clip + '"' in generator, clip
 
 # The scene file must place every crow and drive it through the whole take-off, flight and landing sequence.
-groups = re.findall(r'\[RenderSceneGroup\]\n(.*?)\n\[/RenderSceneGroup\]', cfg, re.S)
-for crow in CROWS:
-    assert re.search(r'^AddEntity ' + crow + r' Menu' + crow + r'\.mesh ', cfg, re.M), crow
-    own = [g for g in groups if re.search(r'^AnimationTime ' + crow + ' Watch', g, re.M)]
-    assert len(own) == 1, crow
-    lines = [line for line in own[0].split('\n') if line and not line.startswith('#')]
-    assert lines[0] == '*Repeat', crow
-    names = [line.split()[0] for line in lines[1:]]
-    assert names == ['AnimationTime', 'AnimationOnce', 'TurnEntity', 'MoveEntity', 'PosEntity', 'Wait', 'PosEntity',
-                     'MoveEntity', 'AnimationOnce', 'PosEntity', 'TurnEntity'], (crow, names)
-    assert lines[11].split()[2] == 'Watch'
-    watch = float(lines[1].split()[3])
-    assert watch > 0 and watch % 8 == 0, (crow, 'Watch time must be a whole number of 8 s loops')
-    assert lines[2].split()[2] == 'TakeOff' and lines[9].split()[2] == 'Land'
-    out = lines[4].split()
-    inbound = lines[8].split()
-    assert out[2] == 'Flap' and inbound[2] == 'FlapIn'
-    speed = float(out[3])
-    assert speed == float(inbound[3])
-    # Four beats of 0.5 s per eighteen tiles: the inbound flight must end on the Flap start pose, where Land begins.
-    start = [float(v) for v in lines[7].split()[2:5]]
-    perch = [float(v) for v in inbound[4:7]]
-    distance = math.dist(start, perch)
-    beats = distance / speed / 0.5
-    assert abs(beats - round(beats)) < 0.02, (crow, distance, beats)
-    # The landing returns to the exact perch the entity was placed at.
-    place = re.search(r'^AddEntity ' + crow + r' \S+ (\S+) (\S+) (\S+)', cfg, re.M)
-    assert all(abs(float(a) - b) < 1e-6 for a, b in zip(place.groups(), perch)), crow
-    # The hidden waiting position is below the ground and the flight keeps the same heading while it rises.
-    assert float(lines[5].split()[4]) < -100
+# config/mainmenuscene.cfg is a mixed table: the crows are only complete with its own rows from the content.
+if WITH_CONTENT:
+    groups = re.findall(r'\[RenderSceneGroup\]\n(.*?)\n\[/RenderSceneGroup\]', cfg, re.S)
+    for crow in CROWS:
+        assert re.search(r'^AddEntity ' + crow + r' Menu' + crow + r'\.mesh ', cfg, re.M), crow
+        own = [g for g in groups if re.search(r'^AnimationTime ' + crow + ' Watch', g, re.M)]
+        assert len(own) == 1, crow
+        lines = [line for line in own[0].split('\n') if line and not line.startswith('#')]
+        assert lines[0] == '*Repeat', crow
+        names = [line.split()[0] for line in lines[1:]]
+        assert names == ['AnimationTime', 'AnimationOnce', 'TurnEntity', 'MoveEntity', 'PosEntity', 'Wait', 'PosEntity',
+                         'MoveEntity', 'AnimationOnce', 'PosEntity', 'TurnEntity'], (crow, names)
+        assert lines[11].split()[2] == 'Watch'
+        watch = float(lines[1].split()[3])
+        assert watch > 0 and watch % 8 == 0, (crow, 'Watch time must be a whole number of 8 s loops')
+        assert lines[2].split()[2] == 'TakeOff' and lines[9].split()[2] == 'Land'
+        out = lines[4].split()
+        inbound = lines[8].split()
+        assert out[2] == 'Flap' and inbound[2] == 'FlapIn'
+        speed = float(out[3])
+        assert speed == float(inbound[3])
+        # Four beats of 0.5 s per eighteen tiles: the inbound flight must end on the Flap start pose, where Land begins.
+        start = [float(v) for v in lines[7].split()[2:5]]
+        perch = [float(v) for v in inbound[4:7]]
+        distance = math.dist(start, perch)
+        beats = distance / speed / 0.5
+        assert abs(beats - round(beats)) < 0.02, (crow, distance, beats)
+        # The landing returns to the exact perch the entity was placed at.
+        place = re.search(r'^AddEntity ' + crow + r' \S+ (\S+) (\S+) (\S+)', cfg, re.M)
+        assert all(abs(float(a) - b) < 1e-6 for a, b in zip(place.groups(), perch)), crow
+        # The hidden waiting position is below the ground and the flight keeps the same heading while it rises.
+        assert float(lines[5].split()[4]) < -100
+else:
+    content_packages.unchecked('check_menu_crow_animation', ['crow flights of config/mainmenuscene.cfg'])
 print('menu crow animation passes the checks')
