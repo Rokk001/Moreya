@@ -16,7 +16,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Effects the config file must contain
-EXPECTED = ("CasinoRouletteTurns", "CasinoChipsGlint", "CasinoTapGlow", "CasinoLights", "CasinoRouletteBusy", "CasinoTableCoins", "CasinoSmoke", "CasinoTapDrip", "GuardRoomLight", "GuardRoomMotes", "GuardRoomGlints", "GuardRoomOnDuty", "WaveSwirl", "WaveGlow", "WaveSparks", "WaveOccupied", "GoldSeamGlint", "GemSeamGlint", "FinishedBookGlow", "FinishedBookRunes", "GiftBoxGlow", "GiftBoxGlint")
+EXPECTED = ("CasinoRouletteTurns", "CasinoChipsGlint", "CasinoSlotLampLeft", "CasinoSlotLampRight", "CasinoSlotPulls", "CasinoLights", "CasinoRouletteBusy", "CasinoTableCoins", "CasinoSmoke", "CasinoSlotBusy", "GuardRoomLight", "GuardRoomMotes", "GuardRoomGlints", "GuardRoomOnDuty", "WaveSwirl", "WaveGlow", "WaveSparks", "WaveOccupied", "GoldSeamGlint", "GemSeamGlint", "FinishedBookGlow", "FinishedBookRunes", "GiftBoxGlow", "GiftBoxGlint")
 # Files below the repository root that the group brings
 FILES = ("particles/RoomAmbienceOther.particle",)
 # Meshes that need a CREDITS line
