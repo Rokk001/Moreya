@@ -21,6 +21,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
@@ -40,8 +41,12 @@ vector, rotation, sample_track, points_for = (helpers[name] for name in
 
 
 def read(name):
+    """The CREDITS of both repositories, a mixed table with its own rows of the content, else a file of the game data
+    or of the room package."""
     if name == 'CREDITS':
         return room_packages.credits_text(ROOT)
+    if name.startswith('config/'):
+        return content_packages.read_text(ROOT, name)
     return room_file(name).read_text(encoding='utf-8')
 
 

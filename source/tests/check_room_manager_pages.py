@@ -282,15 +282,16 @@ def check_payer(page, name, helper, switch='PayerButton'):
 
 def check_page_data(images, placeholders, pages):
     """Assert the frame, the artwork and the elements, look and fit of every page; fills the images, the placeholder
-    pictures and the pages and returns the number of fitted screen cases."""
+    pictures and the pages and returns the number of fitted screen cases. The scheme and the imagesets are read with
+    their own rows of the content (scripts/content_packages.py)."""
     manager = ET.parse(data('gui/WindowRoomManager.layout')).getroot().find('Window')
     assert manager.get('type') == 'OD/SheetWindow', 'the Room Manager uses the window frame of the menu sheet'
     assert props(manager)['Area'] == '{{0.5,-%g},{0.5,-%g},{0.5,%g},{0.5,%g}}' % (
         WINDOW_W / 2, WINDOW_H / 2, WINDOW_W / 2, WINDOW_H / 2), 'fixed frame design dimensions'
     manager_windows = windows(manager)
-    scheme = ET.parse(data('gui/ODSkin.scheme')).getroot()
+    scheme = ET.fromstring(content_packages.read_text(ROOT, 'gui/ODSkin.scheme'))
     for entry in scheme.findall('Imageset'):
-        root = ET.parse(data('gui/' + entry.get('filename'))).getroot()
+        root = ET.fromstring(content_packages.read_text(ROOT, 'gui/' + entry.get('filename')))
         for picture in root.findall('Image'):
             images[root.get('name') + '/' + picture.get('name')] = (root, picture)
     for name, (filename, size, placeholder) in ARTWORK.items():

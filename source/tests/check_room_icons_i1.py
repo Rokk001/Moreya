@@ -53,7 +53,8 @@ ROOM_CENTRE = (
 def check_mappings():
     """Check the 24 icon files, their imagesets and that each PNG resolves in one GUI folder only. The icons and the
     imagesets are game data: they are read from the public tree or from the content packages (the game registers each
-    [GUI] folder of the public tree and of every content package); without the content this part is not checked."""
+    [GUI] folder of the public tree and of every content package), the scheme with its own rows of the content; without
+    the content this part is not checked."""
     icon_folders = content_packages.data_folders(ROOT, 'gui/RoomCentreIcons')
     icon_paths = content_packages.data_glob(ROOT, 'gui/RoomCentreIcons', '*.png')
     if not icon_paths and not content_packages.has_content(ROOT):
@@ -68,7 +69,7 @@ def check_mappings():
     assert 'gui/RoomCentreIcons' in gui_names, 'icon folder is a GUI resource location'
     # Every [GUI] location of the public tree and the same folder of every content package
     gui_folders = [folder for name in gui_names for folder in content_packages.data_folders(ROOT, name)]
-    scheme = ET.parse(content_packages.resolve(ROOT, 'gui/ODSkin.scheme')).getroot()
+    scheme = ET.fromstring(content_packages.read_text(ROOT, 'gui/ODSkin.scheme'))
     imagesets = {node.get('name'): node.get('filename') for node in scheme.findall('Imageset')}
     distinct_pixels = set()
     for button, (filename, image_ref) in MAPPINGS.items():
@@ -94,8 +95,9 @@ def check_mappings():
 
 
 def main():
-    """Check all 24 room icon mappings and the in-game/editor presentation points; without the content the icon files
-    and their imagesets are named as not checked."""
+    """Check all 24 room icon mappings and the in-game/editor presentation points; the layouts are read with their own
+    rows of the content (scripts/content_packages.py); without the content the icon files, their imagesets and the
+    layouts are named as not checked."""
     assert len(MAPPINGS) == 24, 'fixed inventory contains 24 room icons'
     mapped = check_mappings()
 
@@ -106,23 +108,25 @@ def main():
         if button != 'DestroyRoomButton']
     assert arranged_buttons == list(BUILD_BAR), 'build bar contains exactly the 23 mapped room buttons'
 
-    rooms = ET.parse(ROOT / 'gui' / 'WindowTabRooms.layout').getroot()
-    room_buttons = {node.get('name'): node for node in rooms.iter('Window') if node.get('name') in MAPPINGS}
-    assert len(room_buttons) == 24, 'all 23 build buttons and editor TempleButton exist'
-    for button in BUILD_BAR:
-        assert room_buttons[button].find("Property[@name='NormalImage']").get('value') == MAPPINGS[button][1], \
-            button + ': in-game build bar uses the selected icon'
-    assert room_buttons['TempleButton'].find("Property[@name='NormalImage']").get('value') == MAPPINGS['TempleButton'][1], \
-        'editor TempleButton uses the selected temple icon'
+    if content_packages.has_content(ROOT):
+        rooms = ET.fromstring(content_packages.read_text(ROOT, 'gui/WindowTabRooms.layout'))
+        room_buttons = {node.get('name'): node for node in rooms.iter('Window') if node.get('name') in MAPPINGS}
+        assert len(room_buttons) == 24, 'all 23 build buttons and editor TempleButton exist'
+        for button in BUILD_BAR:
+            assert room_buttons[button].find("Property[@name='NormalImage']").get('value') == MAPPINGS[button][1], \
+                button + ': in-game build bar uses the selected icon'
+        assert room_buttons['TempleButton'].find("Property[@name='NormalImage']").get('value') == MAPPINGS['TempleButton'][1], \
+            'editor TempleButton uses the selected temple icon'
     editor = (ROOT / 'source' / 'modes' / 'EditorMode.cpp').read_text(encoding='utf-8')
     assert 'getChild(Gui::BUTTON_TEMPLE)->show()' in editor, 'TempleButton is shown in the editor'
 
-    research = ET.parse(ROOT / 'gui' / 'WindowSkillTree.layout').getroot()
-    research_buttons = {node.get('name'): node for node in research.iter('Window') if node.get('name') in MAPPINGS}
-    assert len(research_buttons) == 23, 'research tree contains all 23 in-game room buttons'
-    for button in BUILD_BAR:
-        assert research_buttons[button].find("Property[@name='ButtonImage']").get('value') == MAPPINGS[button][1], \
-            button + ': research tree uses the selected icon'
+    if content_packages.has_content(ROOT):
+        research = ET.fromstring(content_packages.read_text(ROOT, 'gui/WindowSkillTree.layout'))
+        research_buttons = {node.get('name'): node for node in research.iter('Window') if node.get('name') in MAPPINGS}
+        assert len(research_buttons) == 23, 'research tree contains all 23 in-game room buttons'
+        for button in BUILD_BAR:
+            assert research_buttons[button].find("Property[@name='ButtonImage']").get('value') == MAPPINGS[button][1], \
+                button + ': research tree uses the selected icon'
 
     manager = (ROOT / 'source' / 'modes' / 'GameModeRoomManager.cpp').read_text(encoding='utf-8')
     icon_array = re.search(r'ROOM_ICONS\[\]\s*=\s*\{(.*?)\};', manager, re.S)
@@ -137,9 +141,14 @@ def main():
     assert 'if(counts[index] == 0)\n            continue;' in runtime, 'runtime skips unowned room types without shifting their icon index'
     assert 'row->getChild("Icon")->setProperty("Image", ROOM_ICONS[index])' in runtime, \
         'runtime assigns each visible row the icon at its fixed room type index'
-    traps = (ROOT / 'gui' / 'WindowTabTraps.layout').read_text(encoding='utf-8')
-    assert "image='" + MAPPINGS['WorkshopButton'][1] + "'" in traps, 'workshop room icon use in traps tab is replaced'
+    if content_packages.has_content(ROOT):
+        traps = content_packages.read_text(ROOT, 'gui/WindowTabTraps.layout')
+        assert "image='" + MAPPINGS['WorkshopButton'][1] + "'" in traps, 'workshop room icon use in traps tab is replaced'
 
+    if not content_packages.has_content(ROOT):
+        # the room, research and trap layouts are whole only with their own rows of the content (core-gui)
+        content_packages.unchecked(CHECK, ['icons of gui/WindowTabRooms.layout, gui/WindowSkillTree.layout and '
+                                           'gui/WindowTabTraps.layout (own rows)'])
     if mapped:
         print('DONE mappings=24 build-bar=23 distinct=23 editor-temple=PASS room-centre=8')
     else:

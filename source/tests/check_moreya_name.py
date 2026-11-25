@@ -77,8 +77,9 @@ def check(condition, message):
 
 
 def read(relative):
-    """Text of a repository file, or of the game data file of a content package when it moved there."""
-    return content_packages.resolve(ROOT, relative).read_text(encoding='utf-8')
+    """Text of a repository file, or of the game data file of a content package when it moved there; a mixed table
+    or interface file comes with its own rows of the content (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, relative)
 
 
 def tracked(*paths):

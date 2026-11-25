@@ -11,7 +11,8 @@
 
 The star imageset and its picture are game data of the content packages (scripts/content_packages.py): they are read
 from the public tree or from the content packages, their CREDITS row from the CREDITS of the public tree and of the
-content repository. Without the content they and their CREDITS row are named as not checked; the scheme and the code are
+content repository. The scheme and the looks are read with their own rows of the content package core-gui. Without the
+content the star files, their CREDITS row, the scheme entry and the hover look are named as not checked; the code is
 checked.
 """
 import re
@@ -30,8 +31,8 @@ STAR_FILES = ('gui/SkillRankStar.imageset', 'gui/SkillRankStar.png')
 
 
 def read(relative):
-    """Returns the text of a file of the repository."""
-    return (ROOT / relative).read_text(encoding='utf-8')
+    """Returns the text of a file of the repository; a mixed interface file comes with its own rows of the content."""
+    return content_packages.read_text(ROOT, relative)
 
 
 def check(condition, message):
@@ -66,14 +67,18 @@ if content_packages.has_content(ROOT) or all(content_packages.data_file(ROOT, pa
                     room_packages.credits_text(ROOT), re.MULTILINE) is not None, 'CREDITS entry of the star, marked AI-generated')
 else:
     content_packages.unchecked('check_skill_rank_stars', STAR_FILES + ('the CREDITS entry of the star',))
-check(read('gui/ODSkin.scheme').count('<Imageset filename="SkillRankStar.imageset" name="SkillRankStar" />') == 1,
-      'the scheme loads the star once')
+if content_packages.has_content(ROOT):
+    check(read('gui/ODSkin.scheme').count('<Imageset filename="SkillRankStar.imageset" name="SkillRankStar" />') == 1,
+          'the scheme loads the star once')
 
-look = read('gui/OD.looknfeel')
-research = look[look.index('<WidgetLook name="OD/ResearchButton"'):]
-research = research[:research.index('</WidgetLook>')]
-check('<StateImagery name="Hover"><Layer><Section section="research" /><Section section="research_hover" /></Layer>'
-      '</StateImagery>' in research, 'hover keeps the field and lays the focus over it')
+    look = read('gui/OD.looknfeel')
+    research = look[look.index('<WidgetLook name="OD/ResearchButton"'):]
+    research = research[:research.index('</WidgetLook>')]
+    check('<StateImagery name="Hover"><Layer><Section section="research" /><Section section="research_hover" /></Layer>'
+          '</StateImagery>' in research, 'hover keeps the field and lays the focus over it')
+else:
+    content_packages.unchecked('check_skill_rank_stars', ['scheme entry and hover look (own rows of gui/ODSkin.scheme '
+                                                          'and gui/OD.looknfeel)'])
 
 game = read('source/modes/GameMode.cpp')
 check('static const std::string RESEARCH_FRAME_COLOUR_SILVER = "FFCDD3DC";' in game and

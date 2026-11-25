@@ -83,9 +83,12 @@ SOUND_CHANNELS = 1
 SOUND_RATE = 22050
 
 
-# Returns the text of a repository file.
+# Returns the text of a repository file (an asset source from the asset source folder); a mixed table or interface file
+# comes with its own rows of the content.
 def read(path):
-    return resolve(root, path).read_text(encoding='utf-8', errors='replace')
+    if str(path).startswith('assets-src/'):
+        return resolve(root, path).read_text(encoding='utf-8', errors='replace')
+    return content_packages.read_text(root, path)
 
 
 # Returns (width, height) of a PNG file from its header.
@@ -236,9 +239,14 @@ assert 'SPA_STEAM_EFFECT = "SpaSteam"' in room_h and 'SPA_SPLASH_EFFECT = "SpaMu
 # 5. Icon: the painted source, its slot and its imageset entry
 assert png_size('assets-src/gui/icons/tiles/SpaButton.png') == (ICON_SOURCE_SIZE, ICON_SOURCE_SIZE), 'SpaButton source size'
 assert '"SpaButton"' in read('assets-src/gui/icons/slots.json') or 'SpaButton' in read('assets-src/gui/icons/slots.json'), 'SpaButton has a slot'
-assert len(re.findall(r'<Image [^>]*name="SpaButton"', read('gui/ODIcons.imageset'))) == 1, 'SpaButton has one imageset entry'
-assert 'OpenDungeonsIcons/SpaButton' in read('gui/WindowTabRooms.layout') or 'SpaButton' in read('gui/WindowTabRooms.layout')
-assert 'SpaButton' in read('gui/WindowSkillTree.layout'), 'the research tree shows the button'
+if content_packages.has_content(root):
+    assert len(re.findall(r'<Image [^>]*name="SpaButton"', read('gui/ODIcons.imageset'))) == 1, 'SpaButton has one imageset entry'
+    assert 'OpenDungeonsIcons/SpaButton' in read('gui/WindowTabRooms.layout') or 'SpaButton' in read('gui/WindowTabRooms.layout')
+    assert 'SpaButton' in read('gui/WindowSkillTree.layout'), 'the research tree shows the button'
+else:
+    # the icon atlas entry and the layouts are own rows of the content package core-gui
+    content_packages.unchecked('check_spa_assets', ['SpaButton entries of gui/ODIcons.imageset, '
+                                                    'gui/WindowTabRooms.layout and gui/WindowSkillTree.layout'])
 
 # 6. Sounds: the three files as mono 22050 Hz Vorbis, the families, the ambience entry
 ambience = read('config/roomAmbience.cfg') if present('the bubbling loop of the ambience', ['config/roomAmbience.cfg']) else None
@@ -257,7 +265,11 @@ assert sound_check.returncode == 0, 'check_sound_sources.py failed:\n' + sound_c
 
 # 7. The bath clips in every skeleton a creature type uses (binary skeleton: the clip names end with a line feed)
 types = creature_types()
-assert len(types) == 35, len(types)
+# the 35 creature types need the own rows of config/creatures.cfg (content package core-config)
+if content_packages.has_content(root):
+    assert len(types) == 35, len(types)
+else:
+    content_packages.unchecked('check_spa_assets', ['number of creature types (own rows of config/creatures.cfg)'])
 unique_skeletons = []
 if present('the bath clips of the creature skeletons', sorted(set('models/' + mesh for mesh in types.values()))):
     skeletons = {}

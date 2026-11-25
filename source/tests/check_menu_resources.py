@@ -19,7 +19,8 @@ prefix such as "menu/Name.png" is never found and the layer renders blank.
 The engine also adds the same folders of every content package (ResourceManager::addGameDataResourceLocation), so a
 folder of the Graphics section stands for the public folder and the folders of the found content packages, and the
 scripts, meshes and textures are read from there (scripts/content_packages.py). Without the content the check names
-the scene parts as not checked and checks the code, the configuration and the public menu layouts.
+the scene parts and the menu entries (the menu layouts are whole only with their own rows of the content package
+core-gui) as not checked and checks the code.
 """
 from pathlib import Path
 import math
@@ -91,7 +92,7 @@ def defined_materials(root):
 # Return the mesh names of every AddEntity command of the menu scene description.
 def scene_meshes(root):
     meshes = []
-    for line in (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8").splitlines():
+    for line in content_packages.read_text(root, "config/mainmenuscene.cfg").splitlines():
         parts = line.split()
         if len(parts) >= 3 and parts[0] == "AddEntity":
             meshes.append(parts[2])
@@ -324,7 +325,7 @@ def check_menu_surface_passes(root):
 # Validate every configured menu effect and prevent dense bowl smoke from replacing sparks.
 def check_menu_particles(root, folders):
     systems = script_blocks(data_path(root, "particles/MenuScene.particle").read_text(encoding="utf-8"), "particle_system")
-    config = (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
+    config = content_packages.read_text(root, "config/mainmenuscene.cfg")
     configured = re.findall(r"(?m)^AddParticleEffect\s+(\S+)\s+(\S+)", config)
     materials = {}
     for path in material_scripts(root):
@@ -369,7 +370,7 @@ def check_menu_particles(root, folders):
 
 # Keep the authored light falloff/exposure and local ambient loading separate from the game lighting.
 def check_menu_lighting(root):
-    config = (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
+    config = content_packages.read_text(root, "config/mainmenuscene.cfg")
     preview = (root / "tools/blender-assets/menu_scene_assembly.py").read_text(encoding="utf-8")
     exposure = float(re.search(r"view_settings\.exposure = ([0-9.]+)", preview).group(1))
     gain = 2 ** exposure
@@ -471,7 +472,7 @@ def check_menu_lighting(root):
 # One multiplayer entry leads to four differently named actions; the load dialog opens directly from the main menu.
 def check_menu_entries(root):
     def buttons(layout):
-        tree = ElementTree.parse(str(data_path(root, "gui/" + layout))).getroot()
+        tree = ElementTree.fromstring(content_packages.read_text(root, "gui/" + layout))
         return {window.get("name"): next(prop.get("value") for prop in window.findall("Property") if prop.get("name") == "Text")
                 for window in tree.iter("Window") if window.get("type") == "OD/MenuTextButton"}
     source = (root / "source/modes/MenuModeMain.cpp").read_text(encoding="utf-8")
@@ -486,7 +487,7 @@ def check_menu_entries(root):
     for name, (_, constant, mode) in actions.items():
         assert f'{constant} = "{name}"' in source and f"multiplayerWin->getChild({constant}),\n                           AbstractModeManager::ModeType::{mode}" in source, name + " must keep its network path"
     for layout in ("MenuMain.layout", "WindowMultiplayerSubMenu.layout"):
-        tree = ElementTree.parse(str(data_path(root, "gui/" + layout))).getroot()
+        tree = ElementTree.fromstring(content_packages.read_text(root, "gui/" + layout))
         rows = []
         for window in tree.iter("Window"):
             if window.get("type") != "OD/MenuTextButton":
@@ -534,8 +535,8 @@ def check_flight_frame_log(root):
     print("OK: every menu flight logs mean and maximum frame times")
 
 
-# Fail when a menu scene texture, material, mesh or skeleton cannot be resolved (without the content: the code, the
-# configuration and the public layouts only).
+# Fail when a menu scene texture, material, mesh or skeleton cannot be resolved (without the content: the code only;
+# the menu layouts and the scene configuration are whole only with their own rows).
 def main():
     root = Path(__file__).resolve().parents[2]
     folders = graphics_folders(root)
@@ -544,10 +545,11 @@ def main():
                    "materials/textures/menu/MenuTitle.png")
     missing_content = [name for name in scene_files if content_packages.data_file(root, name) is None]
     if missing_content and not content_packages.has_content(root):
-        check_menu_entries(root)
+        # the menu layouts are whole only with their own rows of the content (core-gui)
         check_flight_frame_log(root)
         content_packages.unchecked("check_menu_resources", missing_content + [
-            "sky programs, surface passes, particles, lighting, texture references, meshes and materials"])
+            "sky programs, surface passes, particles, lighting, texture references, meshes and materials",
+            "menu entries (own rows of gui/MenuMain.layout and gui/WindowMultiplayerSubMenu.layout)"])
         return
     check_sky_programs(root, folders)
     check_menu_surface_passes(root)

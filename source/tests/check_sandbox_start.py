@@ -27,7 +27,7 @@ else:
     content_packages.unchecked("check_sandbox_start", LEVELS)
 header = (root / "source/gamemap/SandboxMode.h").read_text(encoding="utf-8")
 code = (root / "source/gamemap/SandboxMode.cpp").read_text(encoding="utf-8")
-rooms_cfg = (root / "config/rooms.cfg").read_text(encoding="utf-8")
+rooms_cfg = content_packages.read_text(root, "config/rooms.cfg")
 failures = []
 
 
@@ -65,9 +65,13 @@ check(set(order) | set(start) >= {"roomLibrary", "roomWorkshop", "roomPrison", "
 if LEVELS_PRESENT:
     check(set(order) <= set(skills_done(everything)), "SandboxEverything.level must give every room of the unlock order")
 
-# Room i comes after (i + 1) times the interval, a config key with a positive value
-match = re.search(r"^\s*SandboxRoomUnlockIntervalSeconds\s+(\d+(?:\.\d+)?)\s*$", rooms_cfg, re.M)
-check(match is not None and float(match.group(1)) > 0, "rooms.cfg needs a positive SandboxRoomUnlockIntervalSeconds")
+# Room i comes after (i + 1) times the interval, a config key with a positive value (an own row of rooms.cfg, present
+# only with the content package core-config)
+if content_packages.has_content(root):
+    match = re.search(r"^\s*SandboxRoomUnlockIntervalSeconds\s+(\d+(?:\.\d+)?)\s*$", rooms_cfg, re.M)
+    check(match is not None and float(match.group(1)) > 0, "rooms.cfg needs a positive SandboxRoomUnlockIntervalSeconds")
+else:
+    content_packages.unchecked("check_sandbox_start", ["SandboxRoomUnlockIntervalSeconds (own row of config/rooms.cfg)"])
 check('"SandboxRoomUnlockIntervalSeconds"' in code, "SandboxMode.cpp does not read SandboxRoomUnlockIntervalSeconds")
 check("(static_cast<double>(index) + 1.0) * interval" in code, "the unlock time must be (index + 1) times the interval")
 

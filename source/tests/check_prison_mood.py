@@ -2,8 +2,14 @@
 """Check prisoner wake health, needs and captivity mood."""
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(ROOT)
 prison = (ROOT / 'source/rooms/RoomPrison.cpp').read_text(encoding='utf-8')
 creature = (ROOT / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 mood = (ROOT / 'source/creaturemood/CreatureMoodManager.cpp').read_text(encoding='utf-8')
@@ -17,7 +23,10 @@ assert re.search(r'void addPrisonMood\(double points\)\s*\{\s*changeStoredMood\(
 assert re.search(r'void addTortureMood\(double points\)\s*\{\s*changeStoredMood\(points\);', header)
 assert re.search(r'double Creature::getEffectiveMood\(\) const\s*\{\s*if\(isInContainment\(\)\)\s*return mStoredMood;', creature)
 assert 'getPrisonMood' not in mood and 'getTortureMood' not in mood
-rooms = (ROOT / 'config/rooms.cfg').read_text(encoding='utf-8')
-assert re.search(r'^\s*PrisonMoodPerSecond\s+-0\.9333\s*$', rooms, re.M)
-assert re.search(r'^\s*TortureMoodPerSecond\s+-10\.5024\s*$', rooms, re.M)
+if WITH_CONTENT:
+    rooms = content_packages.read_text(ROOT, 'config/rooms.cfg')
+    assert re.search(r'^\s*PrisonMoodPerSecond\s+-0\.9333\s*$', rooms, re.M)
+    assert re.search(r'^\s*TortureMoodPerSecond\s+-10\.5024\s*$', rooms, re.M)
+if not WITH_CONTENT:
+    content_packages.unchecked('check_prison_mood', ['prison and torture mood values (own rows of config/rooms.cfg)'])
 print('prison mood ok')

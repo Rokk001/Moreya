@@ -105,9 +105,11 @@ MENU_REFERENCE_ASPECT = 16.0 / 9.0
 
 
 def read(relative):
-    """Returns a repository text file, a game data file from the public tree or a content package."""
+    """Returns a repository text file, a game data file from the public tree or a content package; a mixed table or
+    interface file comes with its own rows of the content (scripts/content_packages.py)."""
     with open(data(relative), encoding="utf-8", errors="replace") as handle:
-        return handle.read()
+        text = handle.read()
+    return content_packages.read_text(ROOT, relative) if "#@own " in text else text
 
 
 def data(relative):
@@ -118,6 +120,15 @@ def data(relative):
 def missing_data(relative):
     """True when a game data file is not found and the content is not present (then it cannot be checked)."""
     return content_packages.data_file(ROOT, relative) is None and not content_packages.has_content(ROOT)
+
+
+def missing_own_rows(relative):
+    """True when a game data file is a mixed table or interface file and the content is not present: its own rows
+    (content packages core-config and core-gui) are missing, so the texts of those rows cannot be checked."""
+    if content_packages.has_content(ROOT) or content_packages.data_file(ROOT, relative) is None:
+        return False
+    with open(data(relative), encoding="utf-8", errors="replace") as handle:
+        return "#@own " in handle.read()
 
 
 #: Game data folders of a content package besides its levels; their configs and layouts are checked with the public
@@ -551,7 +562,7 @@ def check_ziv_names(failures):
         "source/spells/SpellPlague.cpp": ('"Zivs and champions never get sick."',),
     }
     for path, texts in shown.items():
-        if missing_data(path):
+        if missing_data(path) or missing_own_rows(path):
             content_packages.unchecked(CHECK, [path])
             continue
         text = read(path)
@@ -568,6 +579,9 @@ def check_ziv_names(failures):
         "config/factions.cfg": ("WorkerClass\tKobold",),
     }
     for path, texts in kept.items():
+        if missing_own_rows(path):
+            content_packages.unchecked(CHECK, [path + " (own rows)"])
+            continue
         text = read(path)
         for expected in texts:
             if expected not in text:

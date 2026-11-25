@@ -149,9 +149,9 @@ def check(condition, message):
 
 
 def read(relative):
-    """Returns the text of a file of the repository with Unix line ends."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
-        return handle.read().replace("\r\n", "\n")
+    """Returns the text of a file of the repository with Unix line ends; a mixed table comes with its own rows of the
+    content (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, relative).replace("\r\n", "\n")
 
 
 def section(text, name):

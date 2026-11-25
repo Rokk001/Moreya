@@ -7,6 +7,8 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from probe_config_stub import config_manager_stub
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
+import content_packages  # noqa: E402
 
 repo = Path(__file__).resolve().parents[2]
 launch_source = (repo / 'source/creatureskill/CreatureSkillMissileLaunch.cpp').read_text()
@@ -196,7 +198,11 @@ int main(){int checks=0,failures=0;std::function<void(bool,const char*)> check=[
 }
 '''.replace('VISIBILITY', visibility).replace('LAUNCH', launch).replace('ORIGIN_METHODS', origin_methods)
 damage_scale = 'inline void scale(' + damage_source.split('inline void scale(', 1)[1].split('\n}\n', 1)[0] + '\n}'
-probe = probe.replace('DAMAGE_SCALE', damage_scale).replace('CONFIG_STUB', config_manager_stub(repo))
+probe = probe.replace('DAMAGE_SCALE', damage_scale)
+# The config stub carries the growth keys of config/global.cfg, own rows of the content package core-config
+WITH_CONTENT = content_packages.has_content(repo)
+if WITH_CONTENT:
+    probe = probe.replace('CONFIG_STUB', config_manager_stub(repo))
 
 # Source validation runs without compiling; the optional fixture retains the runtime assertions.
 ordering = ('missile->setCreatureDamageRange(', 'missile->setCreatureShot(', 'missile->addToGameMap();',
@@ -213,6 +219,10 @@ assert 'mMagicalDamageMin >> mMagicalDamageMax' in one_hit
 assert 'mElementDamageMin >> mElementDamageMax' in one_hit
 if '--probe' not in sys.argv:
     print('Source checks passed; compiled probe requires --probe')
+    raise SystemExit(0)
+if not WITH_CONTENT:
+    content_packages.unchecked('check_missile_launch_visibility',
+                               ['compiled probe (its growth keys are own rows of config/global.cfg)'])
     raise SystemExit(0)
 
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])

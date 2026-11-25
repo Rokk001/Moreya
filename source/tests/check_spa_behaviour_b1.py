@@ -48,7 +48,12 @@ import time
 
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+
+#: The attendant values of config/rooms.cfg are own rows of the content package core-config: the values and the probe
+#: built with them are checked only with the content
+WITH_CONTENT = content_packages.has_content(root)
 
 #: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
@@ -62,8 +67,8 @@ started = time.monotonic()
 
 
 def read(path):
-    """Returns the text of a repository file."""
-    return (root / path).read_text(encoding='utf-8')
+    """Returns the text of a repository file; a mixed table comes with its own rows of the content."""
+    return content_packages.read_text(root, path)
 
 
 def body(text, signature):
@@ -152,11 +157,12 @@ log = body(attendant_cpp, 'void PoolAttendantEntity::setState(')
 assert 'OD_LOG_INF("PoolAttendant " + getName() + " phase=" + PoolAttendantStateNames::toString(state) + " outing="' in log
 assert re.search(r'^\s*mState = ', attendant_cpp.replace(log, ''), re.M) is None, 'every change of the phase goes through setState'
 assert 'case PoolAttendantState::walkingRound:' in body(attendant_cpp, 'void PoolAttendantEntity::restoreFromSave(')
-config = dict(re.findall(r'^\s+(SpaAttendant\w+|PoolAttendantClipSeconds)\t+([0-9.]+)', rooms_cfg, re.M))
-# Fixed values of the answer to Q8 ("every 120 to 180 s as today") and of the acts
-assert config['SpaAttendantCannonballMinSeconds'] == '120' and config['SpaAttendantCannonballMaxSeconds'] == '180', config
-assert config['SpaAttendantActMinSeconds'] == '10' and config['SpaAttendantActMaxSeconds'] == '20', config
-assert config['PoolAttendantClipSeconds'] == '2', config
+if WITH_CONTENT:
+    config = dict(re.findall(r'^\s+(SpaAttendant\w+|PoolAttendantClipSeconds)\t+([0-9.]+)', rooms_cfg, re.M))
+    # Fixed values of the answer to Q8 ("every 120 to 180 s as today") and of the acts
+    assert config['SpaAttendantCannonballMinSeconds'] == '120' and config['SpaAttendantCannonballMaxSeconds'] == '180', config
+    assert config['SpaAttendantActMinSeconds'] == '10' and config['SpaAttendantActMaxSeconds'] == '20', config
+    assert config['PoolAttendantClipSeconds'] == '2', config
 turns_per_second = float(line(read('source/ODApplication.cpp'), r'^double ODApplication::turnsPerSecond = ([0-9.]+);$'))
 
 # ---- The rim the lift has to clear: the real mesh and its footprint ------------------------------------------------
@@ -168,6 +174,12 @@ assert abs(rim_top - 0.3) < 1e-4 and abs(rim_near + 0.575) < 1e-6 and abs(rim_fa
 
 if '--no-compile' in sys.argv:
     print('spa behaviour B1 source checks ok; compiled probe deferred explicitly (--no-compile)')
+    print('ODP_TEST_PHASE {"name":"source","seconds":%.3f}' % (time.monotonic() - started))
+    sys.exit(0)
+if not WITH_CONTENT:
+    content_packages.unchecked('check_spa_behaviour_b1', ['attendant values of config/rooms.cfg (own rows)',
+                                                          'compiled probe built with them'])
+    print('spa behaviour B1 source checks ok')
     print('ODP_TEST_PHASE {"name":"source","seconds":%.3f}' % (time.monotonic() - started))
     sys.exit(0)
 

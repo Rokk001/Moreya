@@ -180,7 +180,7 @@ atlas_file = content_packages.resolve(repo, 'gui/ODNavigation.png')
 imageset_file = content_packages.resolve(repo, 'gui/ODNavigation.imageset')
 
 # Verify the painted ring and the actual minimap-relative layout before any native compilation.
-layout = ET.parse(str(content_packages.resolve(repo, 'gui/ModeGame.layout'))).getroot()
+layout = ET.fromstring(content_packages.read_text(repo, 'gui/ModeGame.layout'))  # with its own rows of the content
 entries = {n.get('name'): n.attrib for n in ET.parse(str(imageset_file)).getroot().findall('Image')}
 with Image.open(atlas_file) as atlas_image:
     atlas = atlas_image.convert('RGBA')

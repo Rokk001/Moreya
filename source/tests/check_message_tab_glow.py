@@ -18,14 +18,21 @@ compile phase of the integration only.
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The picture entry of ODIcons.imageset and the tab look of OD.looknfeel are own rows of the content (core-gui)
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(path):
-    """Returns the text of a repository file."""
-    return (ROOT / path).read_text(encoding='utf-8')
+    """Returns the text of a repository file; a mixed interface file comes with its own rows of the content
+    (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, path)
 
 
 def block(source, signature):
@@ -48,25 +55,29 @@ update = block(game_mode, 'void GameMode::updateEventMessageIndicator(float elap
 # The tab picture must be one complete painted cell of the icon atlas.
 image = re.search(r'MESSAGE_TAB_IMAGE = "OpenDungeonsIcons/(\w+)";', constants)
 assert image, 'message tab picture'
-entry = re.search(r'<Image height="(\d+)" name="' + image.group(1) + r'" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />',
-                  read('gui/ODIcons.imageset'))
-assert entry, image.group(1)
-from PIL import Image  # noqa: E402
-height, width, x, y = (int(v) for v in entry.groups())
-cell = Image.open(ROOT / 'gui/ODIcons.png').convert('RGBA').crop((x, y, x + width, y + height))
-alpha = cell.getchannel('A')
-assert sum(1 for a in alpha.getdata() if a > 200) > 0.9 * width * height, 'tab picture not opaque'
+if WITH_CONTENT:
+    entry = re.search(r'<Image height="(\d+)" name="' + image.group(1) + r'" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />',
+                      read('gui/ODIcons.imageset'))
+    assert entry, image.group(1)
+    from PIL import Image  # noqa: E402
+    height, width, x, y = (int(v) for v in entry.groups())
+    cell = Image.open(ROOT / 'gui/ODIcons.png').convert('RGBA').crop((x, y, x + width, y + height))
+    alpha = cell.getchannel('A')
+    assert sum(1 for a in alpha.getdata() if a > 200) > 0.9 * width * height, 'tab picture not opaque'
 
-# The glow is drawn by the SelectionColour layer of the tab look in its normal state.
-looknfeel = read('gui/OD.looknfeel')
-look = looknfeel[looknfeel.index('<WidgetLook name="OD/GameTabButton">'):]
-look = look[:look.index('</WidgetLook>')]
-selected = look[look.index('<ImagerySection name="selected">'):]
-selected = selected[:selected.index('</ImagerySection>')]
-assert '<ColourRectProperty name="SelectionColour" />' in selected
-normal = look[look.index('<StateImagery name="Normal">'):]
-normal = normal[:normal.index('</StateImagery>')]
-assert '<Section section="selected" />' in normal
+    # The glow is drawn by the SelectionColour layer of the tab look in its normal state.
+    looknfeel = read('gui/OD.looknfeel')
+    look = looknfeel[looknfeel.index('<WidgetLook name="OD/GameTabButton">'):]
+    look = look[:look.index('</WidgetLook>')]
+    selected = look[look.index('<ImagerySection name="selected">'):]
+    selected = selected[:selected.index('</ImagerySection>')]
+    assert '<ColourRectProperty name="SelectionColour" />' in selected
+    normal = look[look.index('<StateImagery name="Normal">'):]
+    normal = normal[:normal.index('</StateImagery>')]
+    assert '<Section section="selected" />' in normal
+else:
+    content_packages.unchecked('check_message_tab_glow', ['message tab picture entry of gui/ODIcons.imageset and tab '
+                                                          'look of gui/OD.looknfeel (own rows)'])
 
 PREAMBLE = r'''
 #include <algorithm>

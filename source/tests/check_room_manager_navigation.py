@@ -22,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
 
+#: The HUD and options layouts are whole only with their own rows of the content (core-gui)
+WITH_CONTENT = content_packages.has_content(ROOT)
 PAGE_KINDS = ('Ghost', 'Merchant', 'Tavern', 'Spa', 'Infirmary', 'Alchemy', 'Casino', 'Workshop')
 #: The game data files of the window contracts; they lie in the public tree or in a content package
 DATA_FILES = (('gui/WindowRoomManager.layout', 'gui/WindowSocial.layout', 'gui/fonts/SourceSerif4-Semibold.ttf')
@@ -285,25 +287,28 @@ if window_data:
         assert float(height[7]) - float(height[3]) == 66, 'Dungeonbook design row height'
         assert row.find("Window[@name='Icon']") is not None and row.find("Window[@name='Button']") is not None
     assert len(list(layout.iter('LayoutImport'))) == 8, 'eight room pages inside shared frame'
-hud = ET.parse(ROOT / 'gui/ModeGame.layout').getroot()
-windows = {node.get('name'): node for node in hud.iter('Window')}
-button = windows['RoomManagerButton']
-assert props(button)['TooltipText'] == 'Room Manager'
-# The HUD button shows its own Room Manager icon, not the Rooms tab icon (INGAME-QS-10 K12b).
-assert props(button)['NormalImage'] == 'NavigationRoomManager/Icon'
-assert props(button)['Visible'] == 'False'
+if WITH_CONTENT:
+    hud = ET.fromstring(content_packages.read_text(ROOT, 'gui/ModeGame.layout'))
+    windows = {node.get('name'): node for node in hud.iter('Window')}
+    button = windows['RoomManagerButton']
+    assert props(button)['TooltipText'] == 'Room Manager'
+    # The HUD button shows its own Room Manager icon, not the Rooms tab icon (INGAME-QS-10 K12b).
+    assert props(button)['NormalImage'] == 'NavigationRoomManager/Icon'
+    assert props(button)['Visible'] == 'False'
 if window_data:
     assert unicode_glyph(data('gui/fonts/SourceSerif4-Semibold.ttf'), 0x2022) == 508, 'tracked dot glyph'
-assert props(button.find("Window[@name='Dot']"))['Text'] == '\u2022', 'HUD uses the covered circular bullet'
+if WITH_CONTENT:
+    assert props(button.find("Window[@name='Dot']"))['Text'] == '\u2022', 'HUD uses the covered circular bullet'
 if window_data:
     for row in rows.findall('Window'):
         assert props(row.find("Window[@name='Dot']"))['Text'] == '\u2022', 'rows use the covered circular bullet'
-for removed in ('ProductionButton', 'InfirmaryButton', 'MerchantButton', 'GhostHuntersButton', 'LabButton'):
-    assert removed not in windows, removed
-imports = [node.get('filename') for node in hud.iter('LayoutImport')]
-for removed in ('Production', 'Infirmary', 'Merchant', 'GhostRoom', 'AlchemyLab', 'Tavern', 'Spa', 'CasinoPayout'):
-    assert 'Window' + removed + '.layout' not in imports
-assert 'WindowRoomManager.layout' in imports
+if WITH_CONTENT:
+    for removed in ('ProductionButton', 'InfirmaryButton', 'MerchantButton', 'GhostHuntersButton', 'LabButton'):
+        assert removed not in windows, removed
+    imports = [node.get('filename') for node in hud.iter('LayoutImport')]
+    for removed in ('Production', 'Infirmary', 'Merchant', 'GhostRoom', 'AlchemyLab', 'Tavern', 'Spa', 'CasinoPayout'):
+        assert 'Window' + removed + '.layout' not in imports
+    assert 'WindowRoomManager.layout' in imports
 game = read('source/modes/GameMode.cpp')
 nav = read('source/modes/GameModeRoomManager.cpp')
 all_code = game + nav + read('source/modes/GameModeMerchant.cpp') + read('source/modes/GameModeAlchemy.cpp')
@@ -337,8 +342,13 @@ assert 'row->setVisible(counts[index] > 0)' in refresh, 'only owned types appear
 assert 'mRoomManagerNavigation.updateOwned(counts)' in refresh and 'closeRoomManager()' in refresh
 assert 'RoomManagerButton' in body(nav, 'void GameMode::initializeRoomManager(')
 assert '&GameMode::toggleRoomManager' in body(nav, 'void GameMode::initializeRoomManager(')
-options = ET.parse(ROOT / 'gui/WindowGameOptions.layout').getroot()
-assert options.find(".//Window[@name='ProductionButton']") is None and 'GameOptionsWindow/ProductionButton' not in game
+if WITH_CONTENT:
+    options = ET.fromstring(content_packages.read_text(ROOT, 'gui/WindowGameOptions.layout'))
+    assert options.find(".//Window[@name='ProductionButton']") is None and 'GameOptionsWindow/ProductionButton' not in game
+else:
+    assert 'GameOptionsWindow/ProductionButton' not in game
+    content_packages.unchecked('check_room_manager_navigation', [
+        'HUD button and options window (own rows of gui/ModeGame.layout and gui/WindowGameOptions.layout)'])
 assert 'initializeRoomManager();' in game and 'refreshRoomManager();' in body(game, 'void GameMode::onFrameStarted(')
 print('Room Manager navigation source contracts passed')
 if '--source-only' not in sys.argv:
