@@ -1,7 +1,7 @@
 """Own rows of the mixed files: the public files keep the upstream rows, the own rows come from the content.
 
 The mixed files are the upstream data tables of config/ and the upstream interface files of gui/ (layouts,
-OD.looknfeel, ODSkin.scheme, the imagesets and fonts) with rows the project wrote itself.
+OD.looknfeel, ODSkin.scheme and fonts; the imagesets ODIcons and ODSkin lie whole in the package gui-skin) with rows the project wrote itself.
 
 Static part, always:
   * Helper::readFile puts the own rows in place of the marker lines (ContentPackages::mergeOwnRows) and logs a
@@ -67,9 +67,7 @@ OWN_ROW_TABLES = {
     'gui/MenuSkirmish.layout': 16,
     'gui/ModeEditor.layout': 27,
     'gui/ModeGame.layout': 54,
-    'gui/OD.looknfeel': 792,
-    'gui/ODIcons.imageset': 1,
-    'gui/ODSkin.imageset': 1,
+    'gui/OD.looknfeel': 814,
     'gui/ODSkin.scheme': 9,
     'gui/WidgetsTest.layout': 1,
     'gui/WindowApplyChanges.layout': 4,

@@ -40,7 +40,11 @@ const char* const REQUIRED_PACKAGES[] =
     "core-models",
     "core-portraits",
     "core-sounds",
+    "doors",
+    "effects",
+    "equipment",
     "gui-skin",
+    "items",
     "room-arena",
     "room-casino",
     "room-crypt",
@@ -58,6 +62,7 @@ const char* const REQUIRED_PACKAGES[] =
     "room-wooden-bridge",
     "room-workshop",
     "terrain",
+    "traps",
 };
 
 //! True once the game refused to start because content packages are missing

@@ -24,13 +24,13 @@ import room_packages
 DEFINITION_FILE = campaign_packages.DEFINITION_FILE
 CONTENT_KEY = 'Content'
 #: The content packages the game needs, sorted; fixed for this branch, the same table as REQUIRED_PACKAGES in
-#: source/utils/ContentPackages.cpp (25 packages)
+#: source/utils/ContentPackages.cpp (30 packages)
 REQUIRED_PACKAGES = (
-    'core-config', 'core-gui', 'core-levels', 'core-menu', 'core-models', 'core-portraits', 'core-sounds',
-    'gui-skin', 'room-arena', 'room-casino', 'room-crypt', 'room-dormitory', 'room-dungeon-temple', 'room-hatchery',
-    'room-library', 'room-portal', 'room-portal-wave', 'room-prison', 'room-stone-bridge', 'room-torture',
-    'room-training-hall', 'room-treasury', 'room-wooden-bridge', 'room-workshop',
-    'terrain',
+    'core-config', 'core-gui', 'core-levels', 'core-menu', 'core-models', 'core-portraits', 'core-sounds', 'doors',
+    'effects', 'equipment', 'gui-skin', 'items', 'room-arena', 'room-casino', 'room-crypt', 'room-dormitory',
+    'room-dungeon-temple', 'room-hatchery', 'room-library', 'room-portal', 'room-portal-wave', 'room-prison',
+    'room-stone-bridge', 'room-torture', 'room-training-hall', 'room-treasury', 'room-wooden-bridge',
+    'room-workshop', 'terrain', 'traps',
 )
 #: Exit code of the game when it quits because content packages are missing (ContentPackages::MISSING_CONTENT_EXIT_CODE)
 MISSING_CONTENT_EXIT_CODE = 7
