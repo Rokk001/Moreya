@@ -1855,7 +1855,12 @@ public:
         const CEGUI::String group = resourceGroup.empty() ? getDefaultResourceGroup() : resourceGroup;
         const Ogre::String ogreGroup = group.empty() ? Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME
             : Ogre::String(group.c_str());
-        if(!Ogre::ResourceGroupManager::getSingleton().resourceExists(ogreGroup, ownFileName.c_str()))
+        // The Ogre resource provider also opens a file of another resource group (the interface files lie in the
+        // group GUI while the default group of CEGUI is the Ogre default group), so the own rows file is looked up the
+        // same way: in the group first, then in every group.
+        Ogre::ResourceGroupManager& groups = Ogre::ResourceGroupManager::getSingleton();
+        if(!groups.resourceExists(ogreGroup, ownFileName.c_str())
+            && !groups.resourceExistsInAnyGroup(ownFileName.c_str()))
         {
             OD_LOG_WRN("No own rows file for the interface file " + fileName);
             return;
