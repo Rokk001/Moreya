@@ -15,8 +15,9 @@ repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
 import room_packages  # noqa: E402
-#: The wall decorations the probe measures besides the catalog rows
-WALL_DECORATIONS = ('WeaponShield1.mesh', 'WeaponShield2.mesh')
+#: The wall decorations the probe measures besides the catalog rows (the arena shields of the equipment package and
+#: the own shields of the training hall)
+WALL_DECORATIONS = ('WeaponShield1.mesh', 'WeaponShield2.mesh', 'TrainingHallShield1.mesh', 'TrainingHallShield2.mesh')
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 catalog = (repo / 'source/gamemap/RoomObjectBounds.h').read_text()
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
@@ -162,7 +163,7 @@ int main(int argc,char** argv){try{
    ++checks;if(scale.x!=1||scale.y!=1){++failures;std::cout<<"FAIL unchanged object "<<name<<'\n';}
   }
  // These decorations are attached high on a wall, not standing on the floor.
- for(const char* name:{"WeaponShield1.mesh","WeaponShield2.mesh"}){
+ for(const char* name:{"WeaponShield1.mesh","WeaponShield2.mesh","TrainingHallShield1.mesh","TrainingHallShield2.mesh"}){
   const Ogre::MeshPtr mesh=Ogre::MeshManager::getSingleton().load(name,"Graphics");++checks;
   if(mesh->getBounds().getMinimum().z<.8f){++failures;std::cout<<"FAIL wall decoration now occupies ground\n";}
  }

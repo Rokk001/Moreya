@@ -52,7 +52,9 @@ def mesh_exists(name):
             or room_packages.is_missing_packaged(ROOT, relative))
 # 219 since the four classic gold stack meshes left the list (counted on the branch; was 223): floor and carried
 # gold are code-built heaps and sacks, the GoldstackLv names are only sizes
-LISTED = 219
+# 221 since the training hall has its own wall shields TrainingHallShield1 and 2 next to the WeaponShield meshes
+# of the arena (counted on the integration branch; was 219)
+LISTED = 221
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
