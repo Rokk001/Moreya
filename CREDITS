@@ -32,7 +32,6 @@ assets-src/gui/icons/tiles/*.png        AI-generated with Codex  GPLv3+         
 assets-src/gui/icons/navigation/*.png   AI-generated with Codex  GPLv3+                  Existing navigation sprites assembled from painted icon and skin sources, 2026-10-25
 assets-src/gui/icons/tiles/TavernButton.png AI-generated with Codex GPLv3+                 Original painted foaming wooden tankard source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+                  Original painted beer keg and brass tap source, 256x256, 2026-10-25
-ODMainMenuButtons.imageset             Bertram                 GPLv3+
 ODSkin.scheme                          OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
 assets-src/gui/skin/frames.png          AI-generated with Codex  GPLv3+                  Original painted frame-state source sheet, 2026-10-24
 assets-src/gui/skin/stone.png           AI-generated with Codex  GPLv3+                  Original painted dark stone source, 2026-10-24

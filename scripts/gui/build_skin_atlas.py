@@ -14,6 +14,19 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(ROOT / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
+
+import os  # noqa: E402
+
+
+# The skin and icon atlases live in the content packages (gui-skin, core-gui), not in the public gui folder.
+def content_gui(package):
+    """gui folder of a content package; MOREYA_CONTENT_DIR must name the packages folder."""
+    base = os.environ.get("MOREYA_CONTENT_DIR")
+    if not base:
+        raise SystemExit("MOREYA_CONTENT_DIR must point to the content packages folder")
+    return Path(base) / package / "gui"
+
+
 SOURCES = assets_src_dir(ROOT) / "gui/skin"
 SCALE = 4
 STATES = {"Hover": 1, "Pushed": 2, "Disabled": 3}
@@ -253,7 +266,7 @@ def main():
     atlas = Image.new("RGBA", (2048, 2048))
     for name, tile in tiles.items():
         atlas.paste(tile, positions[name])
-    atlas.save(ROOT / "gui/ODSkin.png")
+    atlas.save(content_gui("gui-skin") / "ODSkin.png")
     imageset = ET.Element("Imageset", autoScaled="true", imagefile="ODSkin.png", name="OpenDungeonsSkin",
                           nativeHorzRes="3200", nativeVertRes="2400", version="2")
     for name, entry in definitions.items():
@@ -266,13 +279,13 @@ def main():
                 attrs[offset] = str(int(entry[offset]) * SCALE)
         ET.SubElement(imageset, "Image", attrs)
     ET.indent(imageset, space="    ")
-    ET.ElementTree(imageset).write(ROOT / "gui/ODSkin.imageset", encoding="utf-8", xml_declaration=True)
-    Image.open(SOURCES / "stone.png").convert("RGBA").resize((3548, 1774), Image.Resampling.LANCZOS).save(ROOT / "gui/ODHudSurface.png")
+    ET.ElementTree(imageset).write(content_gui("gui-skin") / "ODSkin.imageset", encoding="utf-8", xml_declaration=True)
+    Image.open(SOURCES / "stone.png").convert("RGBA").resize((3548, 1774), Image.Resampling.LANCZOS).save(content_gui("core-gui") / "ODHudSurface.png")
     hud = ET.Element("Imageset", autoScaled="true", imagefile="ODHudSurface.png", name="ODHudSurface",
                      nativeHorzRes="2048", nativeVertRes="1536", version="2")
     ET.SubElement(hud, "Image", name="Stone", xPos="0", yPos="0", width="3548", height="1774")
     ET.indent(hud, space="    ")
-    ET.ElementTree(hud).write(ROOT / "gui/ODHudSurface.imageset", encoding="utf-8", xml_declaration=True)
+    ET.ElementTree(hud).write(content_gui("core-gui") / "ODHudSurface.imageset", encoding="utf-8", xml_declaration=True)
     print(f"Painted skin: {len(definitions)} named images, 2048x2048; HUD Stone: 3548x1774")
 
 
