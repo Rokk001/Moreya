@@ -326,7 +326,6 @@ textures/
 -> T4SwordGood                         GESY                    CC-BY                   https://sketchfab.com/models/c2b290ab390f41609362cba70d367bc0
 -> Tentacle{Albine,Green,Normal}.png
 -> TentacleBed*.png                    West                    CC0                     http://forum.freegamedev.net/viewtopic.php?p=60091#p60091
--> TortureObject                       Danimal, Nobiax         CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59239#p59239
 -> TrainingDummy1*.png
 -> TrainingDummy2*.png                 Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59239#p59239
 -> TrainingDummy3*.png                 P0ss                    CC-BY 3.0               http://forum.freegamedev.net/viewtopic.php?p=59351#p59351
@@ -495,7 +494,6 @@ TentacleBed.mesh                       Eugeneloza              CC0              
 TentacleBed.skeleton                    OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of TentacleBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py, original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Tentacle*.*                            Skorpio                 CC-BY-SA 3.0, GPLv3+
 Tileset                                Skorpio, Danimal        CC-BY-SA 3.0            http://opengameart.org/content/3d-dungeon-tileset
-TortureObject                          Danimal, Nobiax         CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59239#p59239
 TrainingDummy1.*, Trainingdummy1.skeleton                       Aaron Eads              CC-BY 3.0               http://forum.freegamedev.net/viewtopic.php?p=59058#p59058
 TrainingDummy2.*                       Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?f=38&t=5528&p=59348#p59239
 TrainingDummy3.*                       Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59351#p59351
@@ -519,7 +517,7 @@ DungeonHeartObject{Healthy,Damaged,Critical}.mesh/.skeleton  Mario              
 FenceCorner.mesh, FenceStraight.mesh   AI-generated with Claude Code  GPLv3+            Rebuilt 2026-11-17 (the 2023 picket fence by Tomasz Luchowski replaced): coarse prison bars of thick forged iron with two straps, built by script in Blender, source PrisonCage_A5.blend kept outside Git
 FogOfWarCloud2.mesh, FogOfWarDirt.mesh Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 Rocklava.mesh                          Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
-Room.mesh, TortureGround.mesh          hwoarangmy              CC-BY-SA 3.0            Added 2015 (first commit)
+Room.mesh                              hwoarangmy              CC-BY-SA 3.0            Added 2015 (first commit)
 DungeonTempleObject.mesh               Yohann Ferreira (upstream import)GPLv3+                  First commit is the upstream import
 MysteryBox.skeleton, WoodenDoor.skeletonDanimal                 CC-BY-SA 3.0            Same author as the matching .mesh row
 
