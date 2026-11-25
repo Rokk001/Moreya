@@ -38,8 +38,12 @@ assert 'pourClimbClip = "ClimbGold"' in rules and 'pourTipClip = "PourGold"' in 
 assert 'pourClipPhase' in rules and 'pourClipTime' in rules
 assert 'TreasuryCreatureRules::pourClipTime' in render and 'newPour.mEntity = entity' in render
 assert 'it->mEntity == nullptr' in render
-skeleton = (repo / 'models/Kobold.skeleton').read_bytes()
-assert b'ClimbGold' in skeleton and b'PourGold' in skeleton
+# The Kobold skeleton is game data of the content package creatures: without the content it is named as not checked.
+if content_packages.data_file(repo, 'models/Kobold.skeleton') is None and not content_packages.has_content(repo):
+    content_packages.unchecked('check_gold_tier_c', ['models/Kobold.skeleton (ClimbGold, PourGold)'])
+else:
+    skeleton = content_packages.resolve(repo, 'models/Kobold.skeleton').read_bytes()
+    assert b'ClimbGold' in skeleton and b'PourGold' in skeleton
 
 # Dust: same effect list, view test and detail option, own budget per room, only full piles.
 assert 'updateTreasuryDust(timeSinceLastFrame)' in render
