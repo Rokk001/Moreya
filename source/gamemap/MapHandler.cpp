@@ -234,8 +234,19 @@ bool isLevelFileExtension(const std::string& extension)
     return (extension == LEVEL_EXTENSION) || (extension == USER_MAP_EXTENSION);
 }
 
+//! \brief Tells whether a file is a shipped level that only the checks use and no list of the game offers. The level
+//! may lie in the game data or in a content package (getGameLevelsRootOf).
+bool isHiddenFixtureLevelPath(const std::string& fileName)
+{
+    std::string key;
+    if(!OfficialLevels::getOfficialKey(fileName, getGameLevelsRootOf(fileName), key))
+        return false;
+    return OfficialLevels::isHiddenFixtureKey(key);
+}
+
 //! \brief Lists the files of both level extensions of a folder; for a folder of the game data also the same folder of
-//! every content package (the shipped levels lie in the content packages). False when none of the folders exists.
+//! every content package (the shipped levels lie in the content packages). Shipped fixtures of the checks are left
+//! out. False when none of the folders exists.
 bool fillLevelFilesList(const std::string& path, std::vector<std::string>& listFiles)
 {
     bool listed = false;
@@ -245,6 +256,14 @@ bool fillLevelFilesList(const std::string& path, std::vector<std::string>& listF
             continue;
         Helper::fillFilesList(folder, listFiles, USER_MAP_EXTENSION);
         listed = true;
+    }
+    std::vector<std::string>::iterator it = listFiles.begin();
+    while(it != listFiles.end())
+    {
+        if(isHiddenFixtureLevelPath(*it))
+            it = listFiles.erase(it);
+        else
+            ++it;
     }
     return listed;
 }

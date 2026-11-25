@@ -81,8 +81,6 @@ multiplayer/
 -> GreedOrMight.level                  OD Team                 GPLv3+
 -> RuinsOfTheConfluent.level           OD Team                 GPLv3+
 -> ScreamInTheDark.level               OD Team                 GPLv3+
--> TestBigMap.level                    OD Team                 GPLv3+
--> TestMultiplayerSmall1v1.level       OD Team                 GPLv3+
 -> TestMultiplayerSmallAlliance.level  OD Team                 GPLv3+
 -> TestMultiplayerSmallFreeForAll.level OD Team                GPLv3+
 -> TheBridge.level                     OD Team                 GPLv3+
@@ -107,16 +105,13 @@ skirmish/
 -> TestCleaning.level                  OD Team                 GPLv3+
 -> TestLegacy.level                    OD Team                 GPLv3+
 -> TestLevelScripting.level            OD Team                 GPLv3+
--> TestModelsFair.level                OD Team                 GPLv3+
 -> TestRegionScripting.level           OD Team                 GPLv3+
 -> TestSingleplayerSmall.level        OD Team                 GPLv3+
 -> TestSingleplayerSmallEmpty.level    OD Team                 GPLv3+
--> TestSingleplayerSmallPassability.level OD Team              GPLv3+
 -> TestSpa.level                       OD Team                 GPLv3+
 -> TestTavern.level                    OD Team                 GPLv3+
 -> TestTavernNone.level                OD Team                 GPLv3+
 
-template.level                         OD Team                 GPLv3+
 -> CrownofEmbers.level                 Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
 -> EmberBasin.level                    Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
 -> FourWinds.level                     Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)

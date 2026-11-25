@@ -1371,8 +1371,8 @@ def read_allowlist(root):
 
 
 def all_level_files(root):
-    """Return all .level files below the levels folder of the public tree and of the content packages, except the
-    template, and the levels of the wing packages (they lay below levels/campaign/ of the public tree before)."""
+    """Return all .level files below the levels folder of the public tree and of the content packages, and the
+    levels of the wing packages (they lay below levels/campaign/ of the public tree before)."""
     sys.path.insert(0, os.path.join(root, "scripts"))
     import campaign_packages
     import content_packages
@@ -1380,7 +1380,7 @@ def all_level_files(root):
     for levels in content_packages.data_folders(root, "levels"):
         for folder, _, names in os.walk(str(levels)):
             for name in sorted(names):
-                if name.endswith(".level") and name != "template.level":
+                if name.endswith(".level"):
                     result.append(os.path.join(folder, name))
     for path in campaign_packages.all_level_files(root):
         if str(path) not in result:
