@@ -159,7 +159,7 @@ def parse_config():
     entities = []
     poses = {}
     flights = {}
-    for line in open(CONFIG, encoding="utf-8"):
+    for line in content_packages.read_text(ROOT, "config/mainmenuscene.cfg").splitlines():
         words = line.split()
         if not words or words[0].startswith("#"):
             continue

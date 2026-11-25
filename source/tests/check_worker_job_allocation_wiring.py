@@ -10,9 +10,10 @@ sys.path.insert(0, str(root / 'scripts'))
 import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
 
-# Read one repository file for the wiring assertions.
+# Read one repository file for the wiring assertions; a mixed table of config/ comes joined with its own rows of the
+# content.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # The file of a design document (docs/development/...) in docs/design of the content repository, or None without the
@@ -24,6 +25,9 @@ def design_doc(path):
         return None
     return content / 'docs' / 'design' / path
 
+if not content_packages.has_content(root):
+    content_packages.unchecked('check_worker_job_allocation_wiring', ['own rows of config/global.cfg and '
+                                                                      'config/traps.cfg'])
 old_keys = ('CleaningWorkerSharePercent', 'TrapReloadWorkerSharePercent',
             'WorkerCarryFirstMaxShare', 'WorkerClaimWallFirstMinShare')
 for path in ('config/global.cfg', 'config/traps.cfg', 'source/game/Player.cpp',

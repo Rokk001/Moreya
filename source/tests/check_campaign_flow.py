@@ -21,9 +21,15 @@ def read(path):
 
 
 def read_data(path):
-    """A game data file from the public tree or a content package as text, None without content."""
+    """A game data file from the public tree or a content package as text, None without content. A mixed interface
+    file (gui/ModeGame.layout, gui/ODSkin.scheme, ...) comes with its own rows from the content packages; without the
+    content its own rows are missing, so it counts as not present as well."""
     found = content_packages.data_file(repo, path)
-    return found.read_text(encoding='utf-8') if found else None
+    if not found:
+        return None
+    if not content_packages.has_content(repo) and '<!--#@own ' in found.read_text(encoding='utf-8'):
+        return None
+    return content_packages.read_text(repo, path)
 
 
 layout = read_data('gui/WindowCampaignSubMenu.layout')

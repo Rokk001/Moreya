@@ -2,8 +2,11 @@
 """Check that allied arena knockouts have a positive timer and a configured recovery."""
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 source = (ROOT / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 arena = source.split('if(arenaFight)', 1)[1].split('else', 1)[0]
 # Decision 857: the loser lies ArenaKnockOutSeconds and then gets up for CreatureGetUpSeconds (rounded up to turns)
@@ -23,8 +26,12 @@ assert 'KO_SAVE_OPEN' in loaded and 'KO_SAVE_CLOSE' in loaded
 assert 'mKoTurnCounter' in loaded and 'mArenaKnockOut' in loaded
 assert len(re.findall(r'\bmKoTurnCounter\s*\(0\)', source)) == 2
 assert len(re.findall(r'\bmArenaKnockOut\s*\(false\)', source)) == 2
-rooms = (ROOT / 'config/rooms.cfg').read_text(encoding='utf-8')
-for key, value in (('ArenaKnockOutSeconds', 30), ('ArenaGetUpHpShare', 0.35)):
-    match = re.search(r'^\s*' + key + r'\s+(\S+)', rooms, re.M)
-    assert match and float(match.group(1)) == value, key
+# The values are own rows of rooms.cfg (content package core-config); without the content they are not checked
+if content_packages.has_content(ROOT):
+    rooms = content_packages.read_text(ROOT, 'config/rooms.cfg')
+    for key, value in (('ArenaKnockOutSeconds', 30), ('ArenaGetUpHpShare', 0.35)):
+        match = re.search(r'^\s*' + key + r'\s+(\S+)', rooms, re.M)
+        assert match and float(match.group(1)) == value, key
+else:
+    content_packages.unchecked('check_arena_knockout', ['config/rooms.cfg ArenaKnockOutSeconds, ArenaGetUpHpShare'])
 print('arena knockout ok')

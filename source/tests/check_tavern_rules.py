@@ -40,11 +40,16 @@ import tempfile
 import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The mixed tables come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
 
 
-# Returns the text of a repository file.
+# Returns the text of a repository file; a mixed table of config/ comes joined with its own rows of the content.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Returns the text of a function from its first line up to its closing brace (a brace in column 0).
@@ -276,7 +281,8 @@ for text in (mood_thirst_cpp, mood_hunger_cpp):
 creatures_cfg = read('config/creatures.cfg')
 hunger_lines = re.findall(r'^\s*Hunger\s+(\S.*?)\s*$', creatures_cfg, re.M)
 thirst_lines = re.findall(r'^\s*Thirst\s+(\S.*?)\s*$', creatures_cfg, re.M)
-assert hunger_lines and hunger_lines == thirst_lines, 'the Thirst line of every type has the same numbers as its Hunger line'
+if WITH_CONTENT:
+    assert hunger_lines and hunger_lines == thirst_lines, 'the Thirst line of every type has the same numbers as its Hunger line'
 # Games end without effects on a fight, a flight, a knock-out, a pick-up
 disturbed = extract(room_cpp, 'bool RoomTavern::isGuestDisturbed(')
 for token in ('isKo()', 'isBeingDragged()', 'CreatureActionType::fight', 'CreatureActionType::flee'):
@@ -317,18 +323,24 @@ assert 'hasOpenCreatureSpot(&creature)' in read('source/creatureaction/CreatureA
 assert 'TavernLeisureCooldownTurns' in extract(creature_cpp, 'void Creature::startTavernCooldown(')
 assert '--mTavernCooldownTurns' in extract(creature_cpp, 'void Creature::upkeepTavernState(')
 assert 'TAVERN_COOLDOWN_SAVE_OPEN << " " << mTavernCooldownTurns' in creature_cpp and 'setTavernCooldownTurns(loadedCooldown)' in creature_cpp, 'cooldown saved and loaded'
-assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 'TavernLeisureCooldownTurns is 600 in rooms.cfg'
+if WITH_CONTENT:
+    assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 'TavernLeisureCooldownTurns is 600 in rooms.cfg'
 
 # ---- Probe -------------------------------------------------------------------------------------------------------
-tavern = block_values(global_cfg, 'Tavern')
-rooms = block_values(rooms_cfg, 'Rooms')
-config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax',
-    'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving', 'CreatureGetUpSeconds', 'TavernSlapSecondsMin', 'TavernSlapSecondsMax',
-    'TavernSlapPauseSecondsMin', 'TavernSlapPauseSecondsMax')]
-config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
-effect_line = re.search(r'^\s*tavernBeer\s+PortalCooldown\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
-assert effect_line is not None, 'the portal cooldown effect line is missing'
-effect_table = ', '.join(effect_line.groups())
+if WITH_CONTENT:
+    tavern = block_values(global_cfg, 'Tavern')
+    rooms = block_values(rooms_cfg, 'Rooms')
+    config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax',
+        'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving', 'CreatureGetUpSeconds', 'TavernSlapSecondsMin', 'TavernSlapSecondsMax',
+        'TavernSlapPauseSecondsMin', 'TavernSlapPauseSecondsMax')]
+    config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
+    effect_line = re.search(r'^\s*tavernBeer\s+PortalCooldown\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
+    assert effect_line is not None, 'the portal cooldown effect line is missing'
+    effect_table = ', '.join(effect_line.groups())
+else:
+    # Without the content the probe is generated without the values (it is not compiled, see below)
+    config_table = ''
+    effect_table = ''
 
 probe = r'''
 #include <algorithm>
@@ -1295,6 +1307,13 @@ replacements = {
 for token, text in replacements.items():
     assert token in probe, token
     probe = probe.replace(token, text)
+
+# Without the content the values of the probe are not present: the source wiring is checked, the probe is not run.
+if not WITH_CONTENT:
+    content_packages.unchecked('check_tavern_rules', ['own rows of config/global.cfg [Tavern], config/rooms.cfg, '
+                                                      'config/skills.cfg and config/creatures.cfg', 'the rules probe'])
+    print('tavern rules ok')
+    sys.exit(0)
 
 # Source checks and probe generation can run while the plan forbids compilation.
 if '--source-only' in sys.argv:

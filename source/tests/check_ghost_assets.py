@@ -38,9 +38,11 @@ def data_path(path):
         return resolve(repo, path)
     return content_packages.resolve(repo, path)
 
-# Read one shipped text asset.
+# Read one shipped text asset; a mixed table or interface file comes joined with its own rows from the content.
 def read(path):
-    return data_path(path).read_text(encoding='utf-8')
+    if str(path).startswith('assets-src'):
+        return data_path(path).read_text(encoding='utf-8')
+    return content_packages.read_text(repo, path)
 
 # Require a concrete asset and its own source/licence credit.
 def credited(path, credits):
@@ -406,7 +408,7 @@ def main():
         rows = credited(path,credits)
         assert room_file(path).read_bytes().startswith(b'OggS'), path
         assert any('CC0' in row and 'https://freesound.org/' in row for row in rows), path
-    imageset = ET.parse(data_path('gui/ODIcons.imageset')).getroot()
+    imageset = ET.fromstring(read('gui/ODIcons.imageset'))
     icon = imageset.find("Image[@name='GhostRoomButton']")
     assert icon is not None
     with Image.open(data_path('gui/'+imageset.get('imagefile'))) as atlas, Image.open(assets_src_dir(repo) / 'gui/icons/tiles/GhostRoomButton.png') as source:

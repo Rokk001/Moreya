@@ -2,40 +2,51 @@
 
 The spell costs 108,000 mana and the champion then costs 2,250 mana per second after a free period of
 price / drain = 48 seconds. The champion is the only creature that cannot be hurt. The spell is not
-researchable, the complete campaign Heartstone unlocks it."""
+researchable, the complete campaign Heartstone unlocks it.
+
+The spell values, the creature definition, the icon and the two layouts are own rows of the content packages core-config
+and core-gui (scripts/content_packages.py); without the content they are named as not checked and the code is
+checked."""
 from pathlib import Path
 import re
 import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the tables and layouts come with their own rows)
+WITH_CONTENT = content_packages.has_content(repo)
 
 
 def read(path):
-    return (repo / path).read_text(encoding="utf-8")
+    """The text of a repository file or game data file; a mixed table or interface file comes with its own rows."""
+    return content_packages.read_text(repo, path)
 
 
 # Spell values and the free period derived from them
-spells = read("config/spells.cfg")
-section = spells[spells.rindex("[Spells]"):spells.rindex("[/Spells]")]
-values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", section, re.M))
-price = float(values["SummonChampionPrice"])
-drain = float(values["SummonChampionDrainPerSecond"])
-assert (price, drain) == (108000.0, 2250.0), "price and drain per second"
-assert price / drain == 48.0, "free period of 48 seconds"
-assert values["SummonChampionCooldown"] == "840"
+if WITH_CONTENT:
+    spells = read("config/spells.cfg")
+    section = spells[spells.rindex("[Spells]"):spells.rindex("[/Spells]")]
+    values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", section, re.M))
+    price = float(values["SummonChampionPrice"])
+    drain = float(values["SummonChampionDrainPerSecond"])
+    assert (price, drain) == (108000.0, 2250.0), "price and drain per second"
+    assert price / drain == 48.0, "free period of 48 seconds"
+    assert values["SummonChampionCooldown"] == "840"
 
-# The creature definition
-creatures = read("config/creatures.cfg")
-blocks = re.findall(r"^\[Creature\]\n(.*?)^\[/Creature\]", creatures, re.M | re.S)
-champions = [b for b in blocks if re.search(r"^\s+Champion\s+1\s*$", b, re.M)]
-assert len(champions) == 1, "exactly one creature definition is the champion"
-champion = champions[0]
-assert re.search(r"^\s+Name\s+Champion\s*$", champion, re.M), "the spell looks the class up by this name"
-for key in ("WakefulnessLost/Turn", "HungerGrowth/Turn", "FeeBase"):
-    assert re.search(rf"^\s+{re.escape(key)}\s+0\s*$", champion, re.M), f"the champion has no {key}"
-assert "Melee" in champion and "AttackEnemy" in champion
-assert "FleeWhenWeak" not in champion and "LeaveDungeonWhenFurious" not in champion, "the champion never runs away"
+    # The creature definition
+    creatures = read("config/creatures.cfg")
+    blocks = re.findall(r"^\[Creature\]\n(.*?)^\[/Creature\]", creatures, re.M | re.S)
+    champions = [b for b in blocks if re.search(r"^\s+Champion\s+1\s*$", b, re.M)]
+    assert len(champions) == 1, "exactly one creature definition is the champion"
+    champion = champions[0]
+    assert re.search(r"^\s+Name\s+Champion\s*$", champion, re.M), "the spell looks the class up by this name"
+    for key in ("WakefulnessLost/Turn", "HungerGrowth/Turn", "FeeBase"):
+        assert re.search(rf"^\s+{re.escape(key)}\s+0\s*$", champion, re.M), f"the champion has no {key}"
+    assert "Melee" in champion and "AttackEnemy" in champion
+    assert "FleeWhenWeak" not in champion and "LeaveDungeonWhenFurious" not in champion, "the champion never runs away"
 faction = read("config/factions.cfg")
 assert "Champion" not in faction, "no portal attracts the champion"
 
@@ -86,13 +97,18 @@ assert champion_wings == (["4", "5", "6"] if campaign_packages.has_content(repo)
     "Summon champion from wing 4 on"
 
 # The buttons exist in both windows, the tree node stays hidden
-spells_tab = ET.parse(repo / "gui/WindowTabSpells.layout").find('.//Window[@name="SummonChampionButton"]')
-assert spells_tab is not None
-tree = ET.parse(repo / "gui/WindowSkillTree.layout").find('.//Window[@name="SummonChampionButton"]')
-assert tree.find('Property[@name="Visible"]').get("value") == "False", "no tree node for a reward"
-spells_page = ET.parse(repo / "gui/WindowSkillTree.layout").find('.//Window[@name="Spells"]')
-assert spells_page.find('.//Window[@name="SummonChampionButton"]') is not None, "the hidden node stands in the Spells page"
+if WITH_CONTENT:
+    spells_tab = ET.ElementTree(ET.fromstring(content_packages.read_text(repo, "gui/WindowTabSpells.layout"))).find('.//Window[@name="SummonChampionButton"]')
+    assert spells_tab is not None
+    tree = ET.ElementTree(ET.fromstring(content_packages.read_text(repo, "gui/WindowSkillTree.layout"))).find('.//Window[@name="SummonChampionButton"]')
+    assert tree.find('Property[@name="Visible"]').get("value") == "False", "no tree node for a reward"
+    spells_page = ET.ElementTree(ET.fromstring(content_packages.read_text(repo, "gui/WindowSkillTree.layout"))).find('.//Window[@name="Spells"]')
+    assert spells_page.find('.//Window[@name="SummonChampionButton"]') is not None, "the hidden node stands in the Spells page"
 assert 'new SkillDefSpell(TREE_PREFIX_SPELLS, "SummonChampionButton"' in manager, "its path prefix is the Spells tab"
-assert 'name="SummonChampionButton"' in read("gui/ODIcons.imageset")
+if WITH_CONTENT:
+    assert 'name="SummonChampionButton"' in read("gui/ODIcons.imageset")
 assert '"SummonChampionButton"' in read("source/render/Gui.cpp")
+if not WITH_CONTENT:
+    content_packages.unchecked("check_summon_champion", ["spell values, champion definition, buttons and icon (own rows "
+                                                         "of config/spells.cfg, config/creatures.cfg and the gui files)"])
 print("summon champion checks passed")

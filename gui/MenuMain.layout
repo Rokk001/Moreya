@@ -2,79 +2,49 @@
 
 <GUILayout version="4" >
     <Window type="DefaultWindow" name="Root" >
-        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+<!--#@own 1-->
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-        <!-- Iron border of the chosen menu sheet around the whole screen. -->
-        <Window type="OD/ScreenBorder" name="ScreenBorder" >
-            <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+<!--#@own 2-->
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
-            <Property name="Visible" value="False" />
-            <Property name="Area" value="{{0.5,-166.5},{0,32},{0.5,166.5},{0,143}}" />
+<!--#@own 3-->
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            <Property name="MinSize" value="{{0,333},{0,111}}" />
+<!--#@own 4-->
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="VersionText" >
-            <Property name="Area" value="{{0,28},{1,-50},{0,228},{1,-28}}" />
+<!--#@own 5-->
             <Property name="Text" value="Undefined" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <!-- One message for the player shown when the menu opens, such as a lost server connection (MenuModeMain::activate). -->
-        <Window type="OD/StaticText" name="NoticeText" >
-            <Property name="Visible" value="False" />
-            <Property name="Area" value="{{0.5,-320},{0,30},{0.5,320},{0,62}}" />
-            <Property name="Text" value="" />
+<!--#@own 6-->
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
-            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+<!--#@own 7-->
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
 
-        <Window type="OD/MenuTextButton" name="StartCampaignButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.499224,-118.8},{0.5,-151.7},{0.499224,118.8},{0.5,-94.8}}" />
-            <Property name="Text" value="Campaign" />
+<!--#@own 8-->
         </Window>
-        <Window type="OD/MenuTextButton" name="StartSkirmishButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.499224,-118.8},{0.5,-95.4},{0.499224,118.8},{0.5,-38.5}}" />
-            <Property name="Text" value="Skirmish" />
+<!--#@own 9-->
         </Window>
-        <Window type="OD/MenuTextButton" name="MultiplayerModeButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.499224,-118.8},{0.5,-40.3},{0.499224,118.8},{0.5,16.6}}" />
-            <Property name="Text" value="Multiplayer" />
+<!--#@own 10-->
         </Window>
-        <Window type="OD/MenuTextButton" name="LoadGameButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.499224,-118.8},{0.5,14.7},{0.499224,118.8},{0.5,71.6}}" />
-            <Property name="Text" value="Load Game" />
+<!--#@own 11-->
         </Window>
-        <Window type="OD/MenuTextButton" name="MapEditorButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.499224,-118.8},{0.5,70.4},{0.499224,118.8},{0.5,127.3}}" />
-            <Property name="Text" value="Map Editor" />
+<!--#@own 12-->
         </Window>
-        <Window type="OD/MenuTextButton" name="SettingsButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.499224,-118.8},{0.5,124.8},{0.499224,118.8},{0.5,181.7}}" />
-            <Property name="Text" value="Settings" />
+<!--#@own 13-->
         </Window>
-        <Window type="OD/MenuTextButton" name="QuitButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.499224,-118.8},{0.5,183},{0.499224,118.8},{0.5,239.9}}" />
-            <Property name="Text" value="Quit" />
-        </Window>
-        <LayoutImport type="DefaultWindow" filename="WindowCampaignSubMenu.layout" name="CampaignSubMenuMenuImport" />
+<!--#@own 14-->
         <LayoutImport type="DefaultWindow" filename="WindowSkirmishSubMenu.layout" name="SkirmishSubMenuMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowMultiplayerSubMenu.layout" name="MultiplayerSubMenuMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowEditorSubMenu.layout" name="EditorSubMenuMenuImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowSettingsSubMenu.layout" name="SettingsSubMenuMenuImport" />
+<!--#@own 15-->
     </Window>
 </GUILayout>

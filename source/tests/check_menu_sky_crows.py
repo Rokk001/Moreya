@@ -93,7 +93,7 @@ def missing_content(entities):
 
 def parse_scene():
     """Returns (entities {name: (mesh, position)}, scene groups [[command words]], poses, flights)."""
-    text = open(CONFIG, encoding="utf-8").read().replace("\r\n", "\n")
+    text = content_packages.read_text(ROOT, "config/mainmenuscene.cfg").replace("\r\n", "\n")
     entities = {}
     groups = []
     for body in re.findall(r"\[RenderSceneGroup\]\n(.*?)\n\[/RenderSceneGroup\]", text, re.S):
@@ -457,15 +457,18 @@ def main():
     failures = []
     if re.search(r"(?m)^AddParticleEffect\s+\S+\s+MenuCrowSwarm\b", text):
         failures.append("the sprite swarm MenuCrowSwarm is still placed: its sprites appear and fade inside the sky")
+    # The flying crow entities are own rows of the scene configuration: present only with the content
+    with_content = content_packages.has_content(ROOT)
     missing = [name for name in SKY_CROWS if name not in entities]
-    if missing:
+    if missing and with_content:
         failures.append("no flying crow entity " + ", ".join(missing))
     # Without the content only the scene commands above are checked
     absent = missing_content(entities)
     if absent:
         for line in failures:
             print("FAIL " + line)
-        content_packages.unchecked("check_menu_sky_crows", absent)
+        content_packages.unchecked("check_menu_sky_crows", absent + ([] if with_content else [
+            "flying crow entities (own rows of config/mainmenuscene.cfg)"]))
         return 1 if failures else 0
     views = camera_views(poses, flights)
     overview = [(label, position, axes) for label, position, axes in views if label == "pose overview"]

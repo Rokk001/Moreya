@@ -110,7 +110,15 @@ STOOL_TABLE_HALF_WIDTH = 0.323
 # Decision 901(2) applies to every creature: a short limb, a held mug or a path cut short by furniture is a failed cycle.
 
 
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py); without it
+#: the values of the drink, the chain and the game are not checked, their code is
+WITH_CONTENT = content_packages.has_content(ROOT)
+
+
+# Returns the text of a repository file; a mixed table of config/ comes joined with its own rows of the content.
 def read(path):
+    if path.startswith('config/'):
+        return content_packages.read_text(ROOT, path)
     return (ROOT / path).read_text(encoding='utf-8', errors='replace')
 
 
@@ -400,12 +408,13 @@ def check_drink_cycle(assets):
 
 # 2. A beer lasts 30 seconds and water lasts 10 seconds (decision 866)
 def check_duration():
-    tavern = block_values(read('config/global.cfg'), 'Tavern')
-    assert float(tavern['BeerDrinkTurns']) == round(BEER_SECONDS * TURNS_PER_SECOND) == 42, 'a beer lasts 30 s'
-    assert float(tavern['WaterDrinkTurns']) == WATER_TURNS == round(10 * TURNS_PER_SECOND), 'a water lasts 10 s'
-    assert float(tavern['DrinkTurns']) == 4, 'vomiting and pouring keep DrinkTurns 4'
-    assert re.search(r'^# WaterDrinkTurns\s+\S', read('config/global.cfg'), re.M), 'WaterDrinkTurns is not documented'
-    assert re.search(r'^# BeerDrinkTurns\s+\S', read('config/global.cfg'), re.M), 'BeerDrinkTurns is not documented'
+    if WITH_CONTENT:
+        tavern = block_values(read('config/global.cfg'), 'Tavern')
+        assert float(tavern['BeerDrinkTurns']) == round(BEER_SECONDS * TURNS_PER_SECOND) == 42, 'a beer lasts 30 s'
+        assert float(tavern['WaterDrinkTurns']) == WATER_TURNS == round(10 * TURNS_PER_SECOND), 'a water lasts 10 s'
+        assert float(tavern['DrinkTurns']) == 4, 'vomiting and pouring keep DrinkTurns 4'
+        assert re.search(r'^# WaterDrinkTurns\s+\S', read('config/global.cfg'), re.M), 'WaterDrinkTurns is not documented'
+        assert re.search(r'^# BeerDrinkTurns\s+\S', read('config/global.cfg'), re.M), 'BeerDrinkTurns is not documented'
     room = read('source/rooms/RoomTavern.cpp')
     turns = extract(room, 'int32_t RoomTavern::nextDrinkTurns(')
     assert 'getTavernValue(beer ? "BeerDrinkTurns" : "WaterDrinkTurns")' in turns and 'servesBeer()' in turns
@@ -419,28 +428,32 @@ def check_duration():
     assert 'setAnimationState' not in drinking and 'showSpotState' not in drinking
     use = extract(room, 'bool RoomTavern::useRoom(')
     assert re.search(r'default:\s*// drinking, game, ko and getUp are run by doUpkeep\s*return false;', use)
-    print('duration ok: beer %d turns (%d s), water %d turns' % (int(float(tavern['BeerDrinkTurns'])), BEER_SECONDS, WATER_TURNS))
+    if WITH_CONTENT:
+        print('duration ok: beer %d turns (%d s), water %d turns' % (int(float(tavern['BeerDrinkTurns'])), BEER_SECONDS, WATER_TURNS))
 
 
 # 3. The drink chain (D16) and the game (D5)
 def check_chain_and_game():
-    tavern = block_values(read('config/global.cfg'), 'Tavern')
-    rooms = block_values(read('config/rooms.cfg'), 'Rooms')
-    first, most, halving = float(tavern['NextDrinkPercent']), int(float(tavern['MaxDrinksPerVisit'])), float(rooms['TavernDrinkChainHalving'])
+    if WITH_CONTENT:
+        tavern = block_values(read('config/global.cfg'), 'Tavern')
+        rooms = block_values(read('config/rooms.cfg'), 'Rooms')
+        first, most, halving = float(tavern['NextDrinkPercent']), int(float(tavern['MaxDrinksPerVisit'])), float(rooms['TavernDrinkChainHalving'])
     room = read('source/rooms/RoomTavern.cpp')
     finish = extract(room, 'void RoomTavern::finishDrink(')
     assert 'spot.mDrinks < static_cast<uint32_t>(getTavernValue("MaxDrinksPerVisit"))' in finish
     assert 'getTavernValue("NextDrinkPercent") /' in finish and '"TavernDrinkChainHalving", 2.0), static_cast<double>(spot.mDrinks - 1))' in finish
-    chances = [first / halving ** (n - 1) for n in range(1, most)]
-    assert chances == [50.0, 25.0, 12.5, 6.25] and most == 5, chances
-    mean = 1.0
-    stay = 1.0
-    for chance in chances:
-        stay *= chance / 100.0
-        mean += stay
-    assert abs(mean - 1.6416) < 0.0001, mean
+    if WITH_CONTENT:
+        chances = [first / halving ** (n - 1) for n in range(1, most)]
+        assert chances == [50.0, 25.0, 12.5, 6.25] and most == 5, chances
+        mean = 1.0
+        stay = 1.0
+        for chance in chances:
+            stay *= chance / 100.0
+            mean += stay
+        assert abs(mean - 1.6416) < 0.0001, mean
     # The game after the last drink
-    assert float(tavern['GameChancePercent']) == 50.0
+    if WITH_CONTENT:
+        assert float(tavern['GameChancePercent']) == 50.0
     assert finish.index('getTavernValue("GameChancePercent")') > finish.index('setSpotDone(spot, DONE_WAIT_TURNS);')
     start = extract(room, 'void RoomTavern::tryStartGame(')
     assert '(other->second.mState != TavernGuestState::done) || (other->second.mTurnsLeft <= 0)' in start
@@ -462,12 +475,13 @@ def check_chain_and_game():
             if a_turns > 0 and not (wait_for_mate and mate_drinks):
                 a_turns -= 1
         return False
-    delays = range(0, int(float(tavern['BeerDrinkTurns'])))
-    old = sum(game_after(d, False) for d in delays) / len(delays)
-    new = sum(game_after(d, True) for d in delays) / len(delays)
-    assert new == 1.0 and old < 0.1, (old, new)
-    print('chain ok: %s percent, at most %d, %.2f drinks per visit; a wish for a game finds the drinking partner %d%% '
-          '(before %d%%)' % (', '.join('%g' % c for c in chances), most, mean, round(100 * new), round(100 * old)))
+    if WITH_CONTENT:
+        delays = range(0, int(float(tavern['BeerDrinkTurns'])))
+        old = sum(game_after(d, False) for d in delays) / len(delays)
+        new = sum(game_after(d, True) for d in delays) / len(delays)
+        assert new == 1.0 and old < 0.1, (old, new)
+        print('chain ok: %s percent, at most %d, %.2f drinks per visit; a wish for a game finds the drinking partner %d%% '
+              '(before %d%%)' % (', '.join('%g' % c for c in chances), most, mean, round(100 * new), round(100 * old)))
 
 
 # 4. No guest lies in or through a table
@@ -942,7 +956,10 @@ def main():
     check_duration()
     check_chain_and_game()
     check_lying_code()
-    converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
+    if not WITH_CONTENT:
+        content_packages.unchecked('check_tavern_drink_834', ['drink, chain and game values of the own rows of '
+                                                              'config/global.cfg [Tavern] and config/rooms.cfg'])
+    converter =os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     # The mug (tavern room package) and the visiting meshes that are not found while the content is not present
     missing = [mesh for mesh in ['TavernMug.mesh'] + visiting_meshes()
                if content_packages.data_file(ROOT, 'models/' + mesh) is None]

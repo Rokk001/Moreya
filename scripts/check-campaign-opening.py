@@ -112,6 +112,7 @@ the content packages (scripts/content_packages.py) and the levels of every wing 
 (by default at most MAX_EXAMPLES examples per kind). A summary block ends the output.
 """
 
+import io
 import os
 import shutil
 import sys
@@ -455,12 +456,21 @@ def heart_tiles(level, seat_id):
     return tiles
 
 
+def open_table(root, path):
+    """Open a data table below root for reading as the game reads it: a mixed table (config/global.cfg, ...) with
+    its own rows from the content packages in place of its marker lines (scripts/content_packages.py)."""
+    sys.path.insert(0, os.path.join(root, "scripts"))
+    import content_packages
+    relative = os.path.relpath(path, root).replace(os.sep, "/")
+    return io.StringIO(content_packages.read_text(root, relative))
+
+
 def default_raid_countdown(root):
     """Return RaidCountdownSeconds of config/global.cfg below root, or None if it is not set."""
     path = os.path.join(root, "config", "global.cfg")
     if not os.path.isfile(path):
         return None
-    with open(path, "r", encoding="utf-8", errors="replace") as handle:
+    with open_table(root, path) as handle:
         for line in handle:
             fields = line.split("#", 1)[0].split()
             if len(fields) >= 2 and fields[0] == "RaidCountdownSeconds":
@@ -482,7 +492,7 @@ def load_movement(root):
     path = os.path.join(root, "config", "creatures.cfg")
     if os.path.isfile(path):
         current = None
-        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        with open_table(root, path) as handle:
             for line in handle:
                 fields = line.split("#", 1)[0].split()
                 if len(fields) < 2:
@@ -997,7 +1007,7 @@ def load_spawn_conditions(root):
         return table
     current = None
     in_condition = False
-    with open(path, "r", encoding="utf-8", errors="replace") as handle:
+    with open_table(root, path) as handle:
         for line in handle:
             fields = line.split("#", 1)[0].split()
             if not fields:

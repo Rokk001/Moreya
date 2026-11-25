@@ -17,6 +17,8 @@ import numpy as np
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
 ATLAS = os.path.join(ROOT, "gui", "ODSkin.png")
 IMAGESET = os.path.join(ROOT, "gui", "ODSkin.imageset")
 
@@ -241,8 +243,9 @@ def to_uint8(img):
     return np.clip(np.round(img), 0, 255).astype(np.uint8)
 
 
+# Reads the image positions of gui/ODSkin.imageset, joined with its own rows of the content packages.
 def read_imageset():
-    text = open(IMAGESET, encoding="utf-8").read()
+    text = content_packages.read_text(ROOT, "gui/ODSkin.imageset")
     rects = {}
     for m in re.finditer(r'<Image height="(\d+)" name="([^"]+)" width="(\d+)" xPos="(\d+)" yPos="(\d+)"', text):
         rects[m.group(2)] = (int(m.group(4)), int(m.group(5)), int(m.group(3)), int(m.group(1)))

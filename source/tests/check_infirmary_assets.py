@@ -28,11 +28,11 @@ from assets_src import assets_src_dir, resolve  # noqa: E402
 
 
 # Read one registered text asset with consistent Unicode handling (an asset source from ODP_ASSETS_SRC, else the game
-# data file of the public tree or of a content or room package).
+# data file of the public tree or of a content or room package; a mixed file joined with its own rows from the content).
 def read(path):
     if path.startswith("assets-src/"):
         return resolve(repo, path).read_text(encoding="utf-8")
-    return content_packages.resolve(repo, path).read_text(encoding="utf-8")
+    return content_packages.read_text(repo, path)
 
 
 # Verify referenced assets exist and have their own source/licence entry.
@@ -96,10 +96,16 @@ def main():
     if ROOM_ASSETS:
         floor = read("materials/scripts/InfirmaryFloor.material")
         assert "InfirmaryFloor.png" in floor and "InfirmaryFloorNormal.png" in floor
-    tiles = read("config/tilesets.cfg")
-    assert re.search(r"^\s*infirmaryRoom\s+infirmaryRoom\s*$", tiles, re.M)
-    block = tiles.split("[infirmaryRoom]", 1)[1].split("[/infirmaryRoom]", 1)[0]
-    assert "InfirmaryFloor" in block and "TortureFloor" not in block
+    # config/tilesets.cfg and gui/ODIcons.imageset are mixed files: complete only with their own rows from the content
+    content = content_packages.has_content(repo)
+    if content:
+        tiles = read("config/tilesets.cfg")
+        assert re.search(r"^\s*infirmaryRoom\s+infirmaryRoom\s*$", tiles, re.M)
+        block = tiles.split("[infirmaryRoom]", 1)[1].split("[/infirmaryRoom]", 1)[0]
+        assert "InfirmaryFloor" in block and "TortureFloor" not in block
+    else:
+        content_packages.unchecked("check_infirmary_assets", ["infirmaryRoom of config/tilesets.cfg",
+                                                              "InfirmaryButton of gui/ODIcons.imageset"])
     # The heal glow stands in the particle script of the infirmary package
     if ROOM_ASSETS:
         particle = read("particles/Infirmary.particle")
@@ -140,23 +146,24 @@ def main():
     seam_block = generator.split("SEAM_CHECK_ROOMS =", 1)[1].split(")", 1)[0]
     assert "'infirmary'" in seam_block
     floor_seam()
-    imageset = ET.parse(repo / "gui/ODIcons.imageset").getroot()
-    image = imageset.find("Image[@name='InfirmaryButton']")
-    assert image is not None, "missing logical atlas image: OpenDungeonsIcons/InfirmaryButton"
-    # The existing painted atlas builder doubles the logical slot coordinates and dimensions.
-    slot = next(entry for entry in json.loads(read("assets-src/gui/icons/slots.json"))
-                if entry["name"] == "InfirmaryButton")
-    assert (int(slot["width"]), int(slot["height"])) == (128, 128)
-    icon_width, icon_height = int(image.get("width")), int(image.get("height"))
-    assert (icon_width, icon_height) == (int(slot["width"]) * 2, int(slot["height"]) * 2)
-    assert (int(image.get("xPos")), int(image.get("yPos"))) == (int(slot["xPos"]) * 2, int(slot["yPos"]) * 2)
-    source = (assets_src_dir(repo) / "gui/icons" / slot["source"]).read_bytes()
-    assert source[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
-    assert struct.unpack_from(">II", source, 16) == (icon_width, icon_height)
-    atlas = (repo / "gui" / imageset.get("imagefile")).read_bytes()
-    assert atlas[:8] == b"\x89PNG\r\n\x1a\n", "icon atlas must be a PNG"
-    width, height = struct.unpack_from(">II", atlas, 16)
-    assert int(image.get("xPos")) + icon_width <= width and int(image.get("yPos")) + icon_height <= height
+    if content:
+        imageset = ET.fromstring(read("gui/ODIcons.imageset"))
+        image = imageset.find("Image[@name='InfirmaryButton']")
+        assert image is not None, "missing logical atlas image: OpenDungeonsIcons/InfirmaryButton"
+        # The existing painted atlas builder doubles the logical slot coordinates and dimensions.
+        slot = next(entry for entry in json.loads(read("assets-src/gui/icons/slots.json"))
+                    if entry["name"] == "InfirmaryButton")
+        assert (int(slot["width"]), int(slot["height"])) == (128, 128)
+        icon_width, icon_height = int(image.get("width")), int(image.get("height"))
+        assert (icon_width, icon_height) == (int(slot["width"]) * 2, int(slot["height"]) * 2)
+        assert (int(image.get("xPos")), int(image.get("yPos"))) == (int(slot["xPos"]) * 2, int(slot["yPos"]) * 2)
+        source = (assets_src_dir(repo) / "gui/icons" / slot["source"]).read_bytes()
+        assert source[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
+        assert struct.unpack_from(">II", source, 16) == (icon_width, icon_height)
+        atlas = (repo / "gui" / imageset.get("imagefile")).read_bytes()
+        assert atlas[:8] == b"\x89PNG\r\n\x1a\n", "icon atlas must be a PNG"
+        width, height = struct.unpack_from(">II", atlas, 16)
+        assert int(image.get("xPos")) + icon_width <= width and int(image.get("yPos")) + icon_height <= height
     print("infirmary assets: ok" + ("" if ROOM_ASSETS else " (infirmary package not present: its assets not checked)"))
 
 

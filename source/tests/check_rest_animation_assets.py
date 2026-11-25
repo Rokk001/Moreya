@@ -73,7 +73,7 @@ def main():
     source = (ROOT / 'source/render/CreatureReactions.cpp').read_text(encoding='utf-8')
     share = float(re.search(r'ARTICULATED_TRANSITION_SHARE = ([0-9.]+);', source).group(1))
     assert share == author.TRANSITION_SHARE
-    configuration = (ROOT / 'config/creatures.cfg').read_text(encoding='utf-8')
+    configuration = content_packages.read_text(ROOT, 'config/creatures.cfg')
     meshes = sorted(set(re.findall(r'^\s*MeshName\s+(\S+\.mesh)\s*$', configuration, re.MULTILINE)))
     missing = [relative for relative in ['config/creatureReactions.cfg'] + ['models/' + mesh for mesh in meshes]
                if content_packages.data_file(ROOT, relative) is None]

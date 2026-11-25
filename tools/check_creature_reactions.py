@@ -118,13 +118,12 @@ def is_number(text):
 
 
 def creature_names():
-    """Returns the names of all creatures of config/creatures.cfg."""
+    """Returns the names of all creatures of config/creatures.cfg (joined with its own rows of the content)."""
     names = set()
-    with open(data_path("config", "creatures.cfg"), encoding="utf-8") as handle:
-        for raw in handle:
-            words = raw.split("#", 1)[0].split()
-            if len(words) >= 2 and words[0] == "Name":
-                names.add(words[1])
+    for raw in content_packages.read_text(ROOT, "config/creatures.cfg").splitlines():
+        words = raw.split("#", 1)[0].split()
+        if len(words) >= 2 and words[0] == "Name":
+            names.add(words[1])
     return names
 
 

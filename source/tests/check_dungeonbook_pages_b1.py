@@ -59,7 +59,8 @@ weapon_cpp = (repo / 'source/entities/Weapon.cpp').read_text(encoding='utf-8')
 lines_h = (repo / 'source/entities/ItemValueLines.h').read_text(encoding='utf-8')
 placement_h = (repo / 'source/render/ItemTooltipPlacement.h').read_text(encoding='utf-8')
 layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
-look_text = (gui_dir / 'OD.looknfeel').read_text(encoding='utf-8')
+# The mixed interface files and data tables are read as the game reads them, with their own rows from the content
+look_text = content_packages.read_text(repo, 'gui/OD.looknfeel')
 
 DESIGN_W, DESIGN_H = 1024.0, 768.0
 FONT_W, FONT_H = 800.0, 600.0
@@ -81,9 +82,19 @@ def udims(value):
 
 
 # ------------------------------------------------------------------------------------------------ fonts and images
+# Parses an interface file of the public tree or a package as the game reads it (a mixed file joined with its own
+# rows); None for the own rows file of a mixed file, which is no interface file of its own.
+def parse_interface_file(path):
+    if '.own.' in path.name:
+        return None
+    return ET.fromstring(content_packages.read_text(repo, content_packages.relative_path(repo, path)))
+
+
 fonts = {}
 for font_file in content_packages.data_glob(repo, 'gui/fonts', '*.font'):
-    spec = ET.parse(font_file).getroot()
+    spec = parse_interface_file(font_file)
+    if spec is None:
+        continue
     face = ImageFont.truetype(str(content_packages.resolve(repo, 'gui/fonts/' + spec.get('filename'))), 1024)
     fonts[spec.get('name')] = (face, float(spec.get('size')) * (96.0 / 72.0) / 1024.0)
 DENSITY = {'OpenDungeonsSkin/': float(re.search(r'SKIN_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
@@ -91,7 +102,9 @@ DENSITY = {'OpenDungeonsSkin/': float(re.search(r'SKIN_IMAGE_PIXEL_DENSITY = ([0
            'ODMenuTemplate/': float(re.search(r'MENU_SHEET_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1])}
 imagesets = {}
 for imageset_file in content_packages.data_glob(repo, 'gui', '*.imageset'):
-    root = ET.parse(imageset_file).getroot()
+    root = parse_interface_file(imageset_file)
+    if root is None:
+        continue
     imagesets[root.get('name')] = {i.get('name'): (float(i.get('width')), float(i.get('height')), float(i.get('xPos')),
                                                    float(i.get('yPos'))) for i in root.findall('Image')}
     imagesets[root.get('name')]['__file__'] = root.get('imagefile')
@@ -311,7 +324,7 @@ for key in ('Experience', 'HitPoints', 'Gold', 'SightRadius', 'Potions', 'Invent
     DYNAMIC['ValuesPage/%sValue' % key] = NUMBERS + PAIRS + ['-', '4 / 4']
 # The Skills page (INGAME-QS-12 K7): every path name of config/creatureSkills.cfg as a column title, every rank text of
 # a skill ("rank/most ranks" of CreatureSkillTreeView barText; SkillRanksPerSkill of config/global.cfg, 1 for tier 4)
-max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', (repo / 'config/global.cfg').read_text(encoding='utf-8'),
+max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', content_packages.read_text(repo, 'config/global.cfg'),
                          re.M).group(1))
 SKILL_NODES = ['TierFour'] + ['Column%dTier%d' % (c, t) for c in range(4) for t in (3, 2, 1)]
 for column in range(4):
@@ -584,7 +597,7 @@ check(back_node.props.get('NonClient') == 'True' and back_node.props.get('Visibl
       'the back arrow is a hidden NonClient child of the book')
 
 # ------------------------------------------------------------------------------------------------ 6. the item tooltip
-equipment_text = (repo / 'config/equipments.cfg').read_text(encoding='utf-8')
+equipment_text = content_packages.read_text(repo, 'config/equipments.cfg')
 equipment_text = equipment_text[equipment_text.rindex('[EquipmentDefinitions]'):]
 blocks = re.findall(r'\[Equipment\](.*?)\[/Equipment\]', equipment_text, re.S)
 check(len(blocks) >= 30, 'equipment blocks are read')

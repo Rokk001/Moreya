@@ -2,9 +2,12 @@
 redemption on a heart drop, and the remaining-mana transfer on a single player defeat."""
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -449,8 +452,13 @@ assert seat_data_cpp.count('mManaOneOffPerSecond') == 5, 'the one-off field is s
 assert 'mManaOneOffPending += mana;' in function(seat, 'bool Seat::takeMana('), 'every spell, trap and drain cost counts as one-off mana'
 
 assert 'mMaxManaPerSeat(200000.0)' in read('source/utils/ConfigManager.cpp')
-cfg_lines = [l.strip() for l in read('config/global.cfg').splitlines() if l.strip().startswith('MaxManaPerSeat')]
-assert any('200000' in l for l in cfg_lines), 'the stored maximum is 200000 in the config'
+# config/global.cfg is a mixed table: as the game reads it only with its own rows from the content
+if content_packages.has_content(repo):
+    cfg_lines = [l.strip() for l in content_packages.read_text(repo, 'config/global.cfg').splitlines()
+                 if l.strip().startswith('MaxManaPerSeat')]
+    assert any('200000' in l for l in cfg_lines), 'the stored maximum is 200000 in the config'
+else:
+    content_packages.unchecked('check_heart_mana', ['MaxManaPerSeat of config/global.cfg'])
 
 game_mode = read('source/modes/GameMode.cpp')
 assert 'getManaIncomePerSecond()' in game_mode and 'getManaUpkeepPerSecond()' in game_mode and 'getManaOneOffPerSecond()' in game_mode, \

@@ -13,10 +13,13 @@ root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'scripts'))
 import content_packages  # noqa: E402
 
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
+
 
 def read(path):
-    """The text of a file below the repository root."""
-    return (root / path).read_text(encoding='utf-8')
+    """The text of a file below the repository root; a mixed table of config/ comes joined with its own rows."""
+    return content_packages.read_text(root, path)
 
 
 def content(path):
@@ -55,18 +58,25 @@ number_keys = ['DormitoryWoundedCarryEnemyRadius', 'DormitoryWoundedCarryMaxTurn
 for removed in ('DormitoryWoundedCarryRadius', 'DormitoryWoundedCarryPriority',
                 'DormitoryWoundedCarryCooldown', 'DormitoryWoundedKoDeathCooldown', 'DormitoryWoundedCarryTempKo'):
     assert removed not in rooms_cfg + creature + carry
-assert 'DormitoryWoundedCarryHpPercent' in rooms_cfg and 'DormitoryWoundedCarryHpPercent' in creature
+assert 'DormitoryWoundedCarryHpPercent' in creature
+if WITH_CONTENT:
+    assert 'DormitoryWoundedCarryHpPercent' in rooms_cfg
+else:
+    content_packages.unchecked('check_wounded_bed_carry', ['wounded carry keys and clips (own rows of '
+                                                           'config/rooms.cfg)'])
 for key in number_keys:
-    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t[\d.]+', rooms_cfg, re.M), key + ' not set'
+    if WITH_CONTENT:
+        assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t[\d.]+', rooms_cfg, re.M), key + ' not set'
     assert re.search(r'getRoomConfigDoubleOrDefault\(\s*"' + key + '"', creature + carry), key + ' not read'
 
 # The clip names are in the code and in the configuration, the fallbacks too
 clip_keys = {'DormitoryWoundedDragWorkerClip': 'Drag', 'DormitoryWoundedDragCreatureClip': 'Dragged',
              'DormitoryWoundedDragWorkerFallbackClip': 'Walk', 'DormitoryWoundedDragCreatureFallbackClip': 'Die'}
 for key, value in clip_keys.items():
-    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t' + value + r'\s*$', rooms_cfg, re.M), key + ' not set to ' + value
+    if WITH_CONTENT:
+        assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t' + value + r'\s*$', rooms_cfg, re.M), key + ' not set to ' + value
     assert '"' + key + '"' in render, key + ' not read by the renderer'
 assert 'drag_anim = "Drag"' in movable_h and 'dragged_anim = "Dragged"' in movable_h
 assert 'std::string ConfigManager::getRoomConfigStringOrDefault(' in config_manager

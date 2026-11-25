@@ -8,7 +8,9 @@ and every sample is tested against the triangles of every AddEntity mesh at its 
 position. A sample closer than CLEARANCE to a triangle fails the check.
 
 The meshes are read from the public tree and from the content packages (scripts/content_packages.py); without the
-content the clearance to a mesh that moved into a content package is named as not checked.
+content the clearance to a mesh that moved into a content package is named as not checked. config/mainmenuscene.cfg is
+a mixed table read joined with its own rows from the content (config_text); without the content its flights and
+entities are not complete, so the clearance check is named as not checked.
 """
 import math
 import os
@@ -106,12 +108,17 @@ def load_mesh(path):
     return np.array(vertices, dtype=np.float64), np.array(triangles, dtype=np.int64)
 
 
+def config_text():
+    """Returns the text of config/mainmenuscene.cfg as the game reads it (joined with its own rows from the content)."""
+    return content_packages.read_text(ROOT, "config/mainmenuscene.cfg")
+
+
 def parse_config():
     """Returns (entities {name: (mesh, position)}, poses {name: position}, flights {name: waypoints})."""
     entities = {}
     poses = {}
     flights = {}
-    for line in open(CONFIG, encoding="utf-8"):
+    for line in config_text().splitlines():
         words = line.split()
         if not words or words[0].startswith("#"):
             continue
@@ -207,6 +214,11 @@ def distance_point_triangles(point, a, b, c):
 
 
 def main():
+    """Tests every sampled flight against the triangles of every placed mesh; without the content the scene table is
+    not complete and the check is named as not checked."""
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked("check_menu_flight_geometry", ["flights and entities of config/mainmenuscene.cfg"])
+        return 0
     entities, poses, flights = parse_config()
     meshes = {}
     world = {}

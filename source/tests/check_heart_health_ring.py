@@ -12,6 +12,8 @@ from combat_heart_checks import check_heart_configuration, configure_heart_probe
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(name):
@@ -28,7 +30,8 @@ client_header = read('source/network/ODClient.h')
 game_mode = read('source/modes/GameMode.cpp')
 notification_header = read('source/network/ServerNotification.h')
 notification_source = read('source/network/ServerNotification.cpp')
-layout = read('gui/ModeGame.layout')
+# The layout is a mixed file: as the game reads it only with its own rows from the content, else None
+layout = content_packages.read_text(repo, 'gui/ModeGame.layout') if content_packages.has_content(repo) else None
 rules = repo / 'source/game/HeartHealthRing.h'
 
 
@@ -591,10 +594,13 @@ assert 'getChild(Gui::DISPLAY_MANA)->getChild("Icon")->subscribeEvent(' in game_
 assert 'void updateHeartBadge(float healthFraction, bool underAttack);' in gui_header
 assert 'ODServer::getSingleton().queueServerNotification(serverNotification);\n\n        notifyHeartHealth(gameMap, sock, player);' in server
 # Badge geometry and the resource strip are untouched; the heart badge says what it shows
-assert layout.count('OpenDungeonsIcons/ManaBadge') == 1 and layout.count('OpenDungeonsIcons/GoldBadge') == 1
-assert layout.count('<Property name="TooltipText" value="Your Mana" />') == 1
-assert layout.count('<Property name="TooltipText" value="Dungeon heart health bar" />') == 1
-assert '{{0,-4},{0,-2},{0,60},{0,62}}' in layout
+if layout is not None:
+    assert layout.count('OpenDungeonsIcons/ManaBadge') == 1 and layout.count('OpenDungeonsIcons/GoldBadge') == 1
+    assert layout.count('<Property name="TooltipText" value="Your Mana" />') == 1
+    assert layout.count('<Property name="TooltipText" value="Dungeon heart health bar" />') == 1
+    assert '{{0,-4},{0,-2},{0,60},{0,62}}' in layout
+else:
+    content_packages.unchecked('check_heart_health_ring', ['badges of gui/ModeGame.layout'])
 created = function(gui, 'void createNavigationImages(')
 assert 'drawBadgePixels(pixels, badge, 1.0f, false);' in created
 assert 'badgeImage.setArea(CEGUI::Rectf(0, 0, badgeSize, badgeSize));' in created

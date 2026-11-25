@@ -5,14 +5,21 @@ The expected tree is written out here independently of the source. Nothing is co
 Usage: python source/tests/check_world_balance_tree.py
 """
 import re
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(repo)
 
 
 def read(path):
-    return (repo / path).read_text(encoding="utf-8")
+    """The text of a repository file; a mixed file of config/ or gui/ comes joined with its own rows of the content."""
+    return content_packages.read_text(repo, path)
 
 
 # (tab, tier, skill type, research button, parents) in row order, as the tree shows them
@@ -147,34 +154,35 @@ for tab, tier, name, button, parent_list in EXPECTED:
 
 # ---------------------------------------------------------------------------------------------
 # 2. skills.cfg: the 64 entries with the tier costs and the free level one block
-cfg = read("config/skills.cfg")
-body = re.sub(r"#[^\r\n]*", "", cfg)
-skills_block = body[body.index("[Skills]") + len("[Skills]"):body.index("[/Skills]")].split()
-assert len(skills_block) % 2 == 0
-costs = {}
-# The research cost factors and tab shares of the levels II and III live in global.cfg.
-TUNING = {"ResearchCostFactorLevel2": 2.0, "ResearchCostFactorLevel3": 4.0,
-          "ResearchLevel2TabShare": 0.5, "ResearchLevel3TabShare": 1.0}
-tuning = dict((key, float(value)) for key, value in re.findall(
-    r'^\s*(ResearchCostFactorLevel[23]|ResearchLevel[23]TabShare)\s+(\S+)',
-    read("config/global.cfg"), re.M))
-for index in range(0, len(skills_block), 2):
-    assert skills_block[index] not in costs, "duplicate entry " + skills_block[index]
-    costs[skills_block[index]] = int(skills_block[index + 1])
-assert tuning == TUNING, "the research cost factors and tab shares: %s" % tuning
-assert "spellSummonChampion" not in costs, "the reward skill has no entry"
-assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 64 entries"
-for tab, tier, name, button, parent_list in EXPECTED:
-    assert costs[name] == TIER_COST[tier], "%s costs the tier %d value" % (name, tier)
-free_block = body[body.index("[FreeLevelOne]") + len("[FreeLevelOne]"):body.index("[/FreeLevelOne]")].split()
-assert sorted(free_block) == sorted(FREE_LEVEL_ONE), "[FreeLevelOne] lists the five starting entries"
-assert body.index("[/Skills]") < body.index("[FreeLevelOne]"), "the free block follows the cost block"
+if WITH_CONTENT:
+    cfg = read("config/skills.cfg")
+    body = re.sub(r"#[^\r\n]*", "", cfg)
+    skills_block = body[body.index("[Skills]") + len("[Skills]"):body.index("[/Skills]")].split()
+    assert len(skills_block) % 2 == 0
+    costs = {}
+    # The research cost factors and tab shares of the levels II and III live in global.cfg.
+    TUNING = {"ResearchCostFactorLevel2": 2.0, "ResearchCostFactorLevel3": 4.0,
+              "ResearchLevel2TabShare": 0.5, "ResearchLevel3TabShare": 1.0}
+    tuning = dict((key, float(value)) for key, value in re.findall(
+        r'^\s*(ResearchCostFactorLevel[23]|ResearchLevel[23]TabShare)\s+(\S+)',
+        read("config/global.cfg"), re.M))
+    for index in range(0, len(skills_block), 2):
+        assert skills_block[index] not in costs, "duplicate entry " + skills_block[index]
+        costs[skills_block[index]] = int(skills_block[index + 1])
+    assert tuning == TUNING, "the research cost factors and tab shares: %s" % tuning
+    assert "spellSummonChampion" not in costs, "the reward skill has no entry"
+    assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 64 entries"
+    for tab, tier, name, button, parent_list in EXPECTED:
+        assert costs[name] == TIER_COST[tier], "%s costs the tier %d value" % (name, tier)
+    free_block = body[body.index("[FreeLevelOne]") + len("[FreeLevelOne]"):body.index("[/FreeLevelOne]")].split()
+    assert sorted(free_block) == sorted(FREE_LEVEL_ONE), "[FreeLevelOne] lists the five starting entries"
+    assert body.index("[/Skills]") < body.index("[FreeLevelOne]"), "the free block follows the cost block"
 
-totals = {"Rooms": 0, "Traps": 0, "Spells": 0}
-for tab, tier, name, button, parent_list in EXPECTED:
-    value = costs[name]
-    totals[tab] += (0 if name in FREE_LEVEL_ONE else value) + 2 * value + 4 * value
-assert totals == TAB_TOTALS, "all levels together: %s" % totals
+    totals = {"Rooms": 0, "Traps": 0, "Spells": 0}
+    for tab, tier, name, button, parent_list in EXPECTED:
+        value = costs[name]
+        totals[tab] += (0 if name in FREE_LEVEL_ONE else value) + 2 * value + 4 * value
+    assert totals == TAB_TOTALS, "all levels together: %s" % totals
 
 # The cost rules of the Skill class
 skill_cpp = read("source/game/Skill.cpp")
@@ -232,48 +240,49 @@ assert "EventShortNoticeType::aboutSkills" in notice[:notice.index("\n}\n")]
 
 # ---------------------------------------------------------------------------------------------
 # 4. The research tree window: one tab control, three pages, every button in the page of its tab
-layout = ET.parse(repo / "gui/WindowSkillTree.layout")
-skills_window = layout.find('.//Window[@name="Skills"]')
-assert skills_window.find('Property[@name="Area"]').get("value") == "{{0,20},{0,38},{1,-20},{1,-64}}", "Skills keeps its area"
-assert skills_window.find("Window") is not None and len(skills_window.findall("Window")) == 1, "Skills holds only the tab control"
-tabs = skills_window.find('Window[@name="SkillTabs"]')
-assert tabs.get("type") == "OD/TabControl"
-assert tabs.find('Property[@name="Area"]').get("value") == "{{0,4},{0,4},{1,-4},{1,-4}}"
-assert tabs.find('Property[@name="TabHeight"]').get("value") == "{0,30}"
-assert tabs.find('Property[@name="RiseOnClickEnabled"]').get("value") == "False"
-pages = tabs.findall("Window")
-assert [p.get("name") for p in pages] == ["Rooms", "Traps", "Spells"]
-for page_window in pages:
-    assert page_window.get("type") == "DefaultWindow"
-    assert page_window.find('Property[@name="Area"]').get("value") == "{{0,0},{0,0},{1,0},{1,0}}"
-    tab = page_window.get("name")
-    assert page_window.find('Property[@name="Text"]').get("value") == TAB_TITLES[tab]
-    names = [w.get("name") for w in page_window.findall("Window")]
-    expected_names = [entry[3] for entry in EXPECTED if entry[0] == tab]
-    if tab == "Spells":
-        expected_names.append("SummonChampionButton")
-    assert sorted(names) == sorted(expected_names), "buttons of the %s page" % tab
-for window in tabs.iter("Window"):
-    assert window.get("name") not in ("AttackSkills", "TacticSkills", "MagicSkills")
-text = read("gui/WindowSkillTree.layout")
-assert "SelectionBrush" not in text and "FrameColours" not in text
-imageset = read("gui/ODIcons.imageset")
-for name, (button, title, tab) in KEEPERS.items():
-    node = next(w for w in tabs.iter("Window") if w.get("name") == button)
-    assert node.get("type") == "OD/ResearchButton"
-    assert node.find('Property[@name="ButtonImage"]').get("value") == "OpenDungeonsIcons/" + button
-    assert node.find('Property[@name="TooltipText"]').get("value") == title
-    bar = node.find('Window[@name="%sProgressBar"]' % button)
-    assert bar is not None and bar.get("type") == "OD/ProgressBar", "progress bar child of " + button
-    assert 'name="%s"' % button in imageset, "icon of " + button
-cells = {"DominionButton": (512, 1152), "HeartFortitudeButton": (640, 1152), "HeartMendingButton": (768, 1152), "ManaFlowButton": (896, 1152)}
-icon_images = ET.fromstring(imageset)
-for button, (x, y) in cells.items():
-    # The painted atlas doubles source coordinates, retaining each original logical cell.
-    nodes = icon_images.findall('Image[@name="%s"]' % button)
-    assert len(nodes) == 1, "unique icon of " + button
-    assert tuple(int(nodes[0].get(key)) for key in ('xPos', 'yPos', 'width', 'height')) == \
-        (x * 2, y * 2, 256, 256), "doubled cell of " + button
+if WITH_CONTENT:
+    layout = ET.ElementTree(ET.fromstring(read("gui/WindowSkillTree.layout")))
+    skills_window = layout.find('.//Window[@name="Skills"]')
+    assert skills_window.find('Property[@name="Area"]').get("value") == "{{0,20},{0,38},{1,-20},{1,-64}}", "Skills keeps its area"
+    assert skills_window.find("Window") is not None and len(skills_window.findall("Window")) == 1, "Skills holds only the tab control"
+    tabs = skills_window.find('Window[@name="SkillTabs"]')
+    assert tabs.get("type") == "OD/TabControl"
+    assert tabs.find('Property[@name="Area"]').get("value") == "{{0,4},{0,4},{1,-4},{1,-4}}"
+    assert tabs.find('Property[@name="TabHeight"]').get("value") == "{0,30}"
+    assert tabs.find('Property[@name="RiseOnClickEnabled"]').get("value") == "False"
+    pages = tabs.findall("Window")
+    assert [p.get("name") for p in pages] == ["Rooms", "Traps", "Spells"]
+    for page_window in pages:
+        assert page_window.get("type") == "DefaultWindow"
+        assert page_window.find('Property[@name="Area"]').get("value") == "{{0,0},{0,0},{1,0},{1,0}}"
+        tab = page_window.get("name")
+        assert page_window.find('Property[@name="Text"]').get("value") == TAB_TITLES[tab]
+        names = [w.get("name") for w in page_window.findall("Window")]
+        expected_names = [entry[3] for entry in EXPECTED if entry[0] == tab]
+        if tab == "Spells":
+            expected_names.append("SummonChampionButton")
+        assert sorted(names) == sorted(expected_names), "buttons of the %s page" % tab
+    for window in tabs.iter("Window"):
+        assert window.get("name") not in ("AttackSkills", "TacticSkills", "MagicSkills")
+    text = read("gui/WindowSkillTree.layout")
+    assert "SelectionBrush" not in text and "FrameColours" not in text
+    imageset = read("gui/ODIcons.imageset")
+    for name, (button, title, tab) in KEEPERS.items():
+        node = next(w for w in tabs.iter("Window") if w.get("name") == button)
+        assert node.get("type") == "OD/ResearchButton"
+        assert node.find('Property[@name="ButtonImage"]').get("value") == "OpenDungeonsIcons/" + button
+        assert node.find('Property[@name="TooltipText"]').get("value") == title
+        bar = node.find('Window[@name="%sProgressBar"]' % button)
+        assert bar is not None and bar.get("type") == "OD/ProgressBar", "progress bar child of " + button
+        assert 'name="%s"' % button in imageset, "icon of " + button
+    cells = {"DominionButton": (512, 1152), "HeartFortitudeButton": (640, 1152), "HeartMendingButton": (768, 1152), "ManaFlowButton": (896, 1152)}
+    icon_images = ET.fromstring(imageset)
+    for button, (x, y) in cells.items():
+        # The painted atlas doubles source coordinates, retaining each original logical cell.
+        nodes = icon_images.findall('Image[@name="%s"]' % button)
+        assert len(nodes) == 1, "unique icon of " + button
+        assert tuple(int(nodes[0].get(key)) for key in ('xPos', 'yPos', 'width', 'height')) == \
+            (x * 2, y * 2, 256, 256), "doubled cell of " + button
 motifs = read("tools/forged_motifs.py")
 last_four = re.findall(r'^    "(\w+)": _slot\(m_\w+, "(\w+)"\),', motifs, re.M)[-14:-10]
 assert last_four == [("DominionButton", "room"), ("HeartFortitudeButton", "trap"), ("HeartMendingButton", "trap"),
@@ -304,4 +313,8 @@ assert "OD_LOG_WRN(" in set_tree and "continue;" in set_tree, "an invalid entry 
 assert "canResearchLevel" in manager and "canResearchLevel" in game, "client buttons and AI use the same function"
 assert "if(!mGameMap->isSandbox())" in seat and "addFreeLevelOneSkills(skills);" in seat, "not applied in sandbox mode"
 assert "one of them" not in read("source/game/Skill.h"), "the stale parent comment is gone"
+if not WITH_CONTENT:
+    content_packages.unchecked("check_world_balance_tree", ["costs and free entries of config/skills.cfg",
+                                                            "research factors of config/global.cfg",
+                                                            "gui/WindowSkillTree.layout", "gui/ODIcons.imageset"])
 print("research tree checks passed")

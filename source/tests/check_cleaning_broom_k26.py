@@ -360,7 +360,10 @@ combat = read('source/render/CreatureCombatReactions.cpp')
 search = read('source/creatureaction/CreatureActionSearchDirtToClean.cpp')
 targets = read('source/game/WorkerTargets.cpp')
 room = read('source/rooms/Room.cpp')
-global_cfg = read('config/global.cfg')
+# global.cfg as the game reads it: the [Dirt] block is an own row block of the content package core-config; without
+# the content its values (and the probe that runs with them) are named as not checked
+global_cfg = content_packages.read_text(ROOT, 'config/global.cfg')
+dirt_values = content_packages.has_content(ROOT)
 
 if not re.search(r'inline bool holdsBroom\(const std::string& clip\)\s*\{\s*return clip == clean_anim;', animation):
     fail('wiring: EntityAnimation::holdsBroom is not the Clean clip')
@@ -398,15 +401,18 @@ for text, signature in ((search, 'static Tile* findDirtiestReachableTile('), (se
         fail('wiring: %s does not use isFloorDirtToClean' % signature)
     if 'DirtStage3At' in part or 'CleanRoomFromStage' in part or 'getDirtStage()' in part or 'getDirt() > 0.0' in part:
         fail('wiring: %s still uses an old cleaning limit' % signature)
-dirt_block = re.search(r'^\[Dirt\]\s*$(.*?)^\[/Dirt\]', global_cfg, re.M | re.S).group(1)
-if not re.search(r'^\s*CleanTileFromStage\s+1\s*$', dirt_block, re.M):
-    fail('wiring: global.cfg [Dirt] does not set CleanTileFromStage 1')
+if dirt_values:
+    dirt_block = re.search(r'^\[Dirt\]\s*$(.*?)^\[/Dirt\]', global_cfg, re.M | re.S).group(1)
+    if not re.search(r'^\s*CleanTileFromStage\s+1\s*$', dirt_block, re.M):
+        fail('wiring: global.cfg [Dirt] does not set CleanTileFromStage 1')
+else:
+    content_packages.unchecked('check_cleaning_broom_k26', ['config/global.cfg [Dirt] values', 'probe with them'])
 if 'CleanRoomFromStage' in global_cfg:
     fail('wiring: the old key CleanRoomFromStage is still in global.cfg')
 
 # ================================================================================================ probe
-probe_note = 'skipped (--no-compile)'
-if '--no-compile' not in sys.argv:
+probe_note = 'skipped (--no-compile)' if dirt_values else 'skipped (no content)'
+if '--no-compile' not in sys.argv and dirt_values:
     values = {}
     for line in dirt_block.splitlines():
         words = line.split()

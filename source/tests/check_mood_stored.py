@@ -1,14 +1,24 @@
 """Stored creature mood (cases range, start, no_lair, solved, sensitivity, dirt, hated, slap, charisma, captive,
 save_load, old_save, ai_keeper). Nothing is compiled: the values come from the shipped configuration, the rules are
-worked out here with the same formulas as the sources, and the source wiring is pinned by tokens."""
+worked out here with the same formulas as the sources, and the source wiring is pinned by tokens.
+
+The mood values of config/global.cfg and config/creatures.cfg are own rows of the content (core-config); without the
+content the values and the rules worked out with them are named as not checked and the source wiring is checked."""
 import re
+import sys
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the configuration comes with its own rows)
+WITH_CONTENT = content_packages.has_content(repo)
 
 
 def read(path):
-    return (repo / path).read_text(encoding="utf-8").replace("\r\n", "\n")
+    """The text of a repository file with LF line ends; a mixed table comes with its own rows of the content."""
+    return content_packages.read_text(repo, path).replace("\r\n", "\n")
 
 
 def key(text, name):
@@ -28,9 +38,10 @@ creature_cpp = read("source/entities/Creature.cpp")
 creature_h = read("source/entities/Creature.h")
 manager = read("source/creaturemood/CreatureMoodManager.cpp")
 
-MAX = key(glob, "CreatureBaseMood")
-HAPPY, NEUTRAL, UPSET, ANGRY = (key(glob, "CreatureMoodHappy"), key(glob, "CreatureMoodUpset"),
-                                key(glob, "CreatureMoodAngry"), key(glob, "CreatureMoodFurious"))
+if WITH_CONTENT:
+    MAX = key(glob, "CreatureBaseMood")
+    HAPPY, NEUTRAL, UPSET, ANGRY = (key(glob, "CreatureMoodHappy"), key(glob, "CreatureMoodUpset"),
+                                    key(glob, "CreatureMoodAngry"), key(glob, "CreatureMoodFurious"))
 
 
 def level(mood):
@@ -67,31 +78,33 @@ def sensitivity(block):
 
 
 # range and start: the level bounds sit inside 0..max, a new creature starts at the maximum
-check((HAPPY, NEUTRAL, UPSET, ANGRY) == (1200, 1000, 500, 100) and MAX == 1500, "level ranges")
-check(clamp(-5000) == 0 and clamp(99999) == MAX and clamp(99999, 200) == MAX + 200, "range")
-check(level(MAX) == "Happy" and level(0) == "Furious" and level(99.9) == "Furious" and level(100) == "Angry", "levels")
+if WITH_CONTENT:
+    check((HAPPY, NEUTRAL, UPSET, ANGRY) == (1200, 1000, 500, 100) and MAX == 1500, "level ranges")
+    check(clamp(-5000) == 0 and clamp(99999) == MAX and clamp(99999, 200) == MAX + 200, "range")
+    check(level(MAX) == "Happy" and level(0) == "Furious" and level(99.9) == "Furious" and level(100) == "Angry", "levels")
 check("mStoredMood              (ConfigManager::getSingleton().getCreatureBaseMood())" in creature_cpp, "start at the maximum")
 check("std::max(0.0, std::min(static_cast<double>(ConfigManager::getSingleton().getCreatureBaseMood())" in creature_cpp,
       "range clamp in the creature")
 
 # no_lair, solved, sensitivity
-wizard = creature_block("Wizard")
-jump, fall, reward = modifier(wizard, "NoLair")
-check((jump, fall, reward) == (-300.0, -1.1905, 300.0), "NoLair line")
-sens = sensitivity(wizard)
-check(sens == 1.0, "Wizard sensitivity")
-mood = MAX + jump * sens
-check(mood == 1200 and level(mood) == "Happy", "no_lair jump to 1200")
-turns = 0
-while level(mood) != "Upset":
-    mood += fall * sens
-    turns += 1
-check(abs(turns - 168) <= 1, "Upset after about 168 turns, got " + str(turns))
-check(clamp(900 + reward * sens) == 1200, "solved: the lair comes back at 900")
-rat, dragon = creature_block("Rat"), creature_block("Dragon")
-check(sensitivity(rat) == 0.8 and sensitivity(dragon) == 1.25, "type sensitivities")
-check(modifier(rat, "NoLair")[0] * sensitivity(rat) == -240.0 and modifier(dragon, "NoLair")[0] * sensitivity(dragon) == -375.0,
-      "sensitivity jumps -240 / -375")
+if WITH_CONTENT:
+    wizard = creature_block("Wizard")
+    jump, fall, reward = modifier(wizard, "NoLair")
+    check((jump, fall, reward) == (-300.0, -1.1905, 300.0), "NoLair line")
+    sens = sensitivity(wizard)
+    check(sens == 1.0, "Wizard sensitivity")
+    mood = MAX + jump * sens
+    check(mood == 1200 and level(mood) == "Happy", "no_lair jump to 1200")
+    turns = 0
+    while level(mood) != "Upset":
+        mood += fall * sens
+        turns += 1
+    check(abs(turns - 168) <= 1, "Upset after about 168 turns, got " + str(turns))
+    check(clamp(900 + reward * sens) == 1200, "solved: the lair comes back at 900")
+    rat, dragon = creature_block("Rat"), creature_block("Dragon")
+    check(sensitivity(rat) == 0.8 and sensitivity(dragon) == 1.25, "type sensitivities")
+    check(modifier(rat, "NoLair")[0] * sensitivity(rat) == -240.0 and modifier(dragon, "NoLair")[0] * sensitivity(dragon) == -375.0,
+          "sensitivity jumps -240 / -375")
 for token in ("changeStoredMoodBySensitivity(mood->getJump() * (amount - previous))",
               "changeStoredMoodBySensitivity(mood->getReward() * (previous - amount))",
               "changeStoredMoodBySensitivity(mood->getFall() * turns)",
@@ -99,25 +112,29 @@ for token in ("changeStoredMoodBySensitivity(mood->getJump() * (amount - previou
     check(token in creature_cpp, token)
 
 # dirt: stage 3 for 84 turns, then cleaned from stage 3
-cleanliness = key(wizard, "Cleanliness")
-check(cleanliness == 1.5, "Wizard Cleanliness")
-fall3 = key(glob, "DirtMoodFallPerTurnStage3")
-check(abs(fall3 * cleanliness * 84 - (-7.5)) < 0.1, "dirt fall in one minute")
-check(key(glob, "DirtCleanedMoodStage3") * cleanliness == 75.0, "dirt cleaning reward")
+if WITH_CONTENT:
+    cleanliness = key(wizard, "Cleanliness")
+    check(cleanliness == 1.5, "Wizard Cleanliness")
+    fall3 = key(glob, "DirtMoodFallPerTurnStage3")
+    check(abs(fall3 * cleanliness * 84 - (-7.5)) < 0.1, "dirt fall in one minute")
+    check(key(glob, "DirtCleanedMoodStage3") * cleanliness == 75.0, "dirt cleaning reward")
 
 # hated company: 84 turns near a creature
-check(abs(modifier(wizard, "HatedCompany")[0] * 84 - (-10.0)) < 0.01, "hated: -10 in a minute, no jump")
-check("HatedCompany" in creatures and modifier(wizard, "HatedCompany").__len__() == 1, "hated has only a fall")
+if WITH_CONTENT:
+    check(abs(modifier(wizard, "HatedCompany")[0] * 84 - (-10.0)) < 0.01, "hated: -10 in a minute, no jump")
+    check("HatedCompany" in creatures and modifier(wizard, "HatedCompany").__len__() == 1, "hated has only a fall")
 
 # slap
-slap = modifier(wizard, "Slapped")
-check(slap[2] == -100.0 and slap[1] == 10.0, "slap -100, at most 10 slaps")
+if WITH_CONTENT:
+    slap = modifier(wizard, "Slapped")
+    check(slap[2] == -100.0 and slap[1] == 10.0, "slap -100, at most 10 slaps")
 check("getNbRecentSlaps(slapped->getDurationTurns()) < slapped->getMaxSlaps()" in creature_cpp, "slap limit")
 
 # charisma: effective mood is the stored mood plus the Charisma, the floor follows from the stored minimum 0
 check("return mStoredMood + std::max(0.0, getItemEffect(\"Charisma\"));" in creature_cpp, "charisma adds to the effective mood")
-check(MAX + 200 == 1700 and 0 + 200 == 200, "charisma 200: maximum 1700, never below 200")
-check(level(0 + 200) == "Angry", "charisma wearer can still be angry")
+if WITH_CONTENT:
+    check(MAX + 200 == 1700 and 0 + 200 == 200, "charisma 200: maximum 1700, never below 200")
+    check(level(0 + 200) == "Angry", "charisma wearer can still be angry")
 
 # captive: no charisma floor, conversion and betrayal in the Furious range
 check("if(isInContainment())\n        return mStoredMood;" in creature_cpp, "captive has no charisma floor")
@@ -143,9 +160,10 @@ def old_map(v):
     return 0.0
 
 
-check(abs(old_map(-500) - 299.7) < 0.05 and level(old_map(-500)) == "Angry", "old save -500")
-check(old_map(-2500) == 0.0 and old_map(1300) == 1300 and old_map(1800) == MAX, "old save -2500 / high")
-check(abs(old_map(0) - 500) < 1e-9 and abs(old_map(999) - 999) < 1e-9, "old save Upset range")
+if WITH_CONTENT:
+    check(abs(old_map(-500) - 299.7) < 0.05 and level(old_map(-500)) == "Angry", "old save -500")
+    check(old_map(-2500) == 0.0 and old_map(1300) == 1300 and old_map(1800) == MAX, "old save -2500 / high")
+    check(abs(old_map(0) - 500) < 1e-9 and abs(old_map(999) - 999) < 1e-9, "old save Upset range")
 for token in ("return furious + (oldMood - oldAngryFrom) / (oldUpsetFrom - 1.0 - oldAngryFrom) * (angry - 1.0 - furious);",
               "return (oldMood - oldFuriousFrom) / (oldAngryFrom - oldFuriousFrom) * (furious - 1.0);"):
     check(token in manager, token)
@@ -161,4 +179,8 @@ check("[MoodCounters]" in creature_cpp and "mNbTurnsOutOfWork" in creature_cpp[c
       and "mSlapTurns" in creature_cpp[creature_cpp.index("MOOD_COUNTERS_SAVE_OPEN"):], "mood counters are saved")
 check("getLegacyMoodConfigDouble(\"NoLair\")" not in read("source/creaturemood/CreatureMoodManager.cpp"),
       "an old save does not count a missing lair (a level creature must start at the maximum)")
+if not WITH_CONTENT:
+    content_packages.unchecked("check_mood_stored", [
+        "mood values and type modifiers (own rows of config/global.cfg and config/creatures.cfg)",
+        "range, no_lair, solved, sensitivity, dirt, hated, slap, charisma and old_save values worked out with them"])
 print("CHECKS OK")

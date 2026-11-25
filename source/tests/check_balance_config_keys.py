@@ -191,12 +191,19 @@ def read(path):
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-# Reads a configuration file of the public tree or of a content package; None when the content is not present.
+# Reads a configuration file of the public tree or of a content package as the game reads it (a mixed table with
+# its own rows from the content packages); None when the content is not present.
 def read_data(path):
     found = content_packages.data_file(ROOT, path)
     if found is None and content_packages.has_content(ROOT):
         found = ROOT / path  # the content is present, so a missing file fails
-    return None if found is None else found.read_text(encoding="utf-8")
+    return None if found is None else content_packages.read_text(ROOT, path)
+
+
+# True when the text is a mixed table whose own rows are not there (marker lines left, the content is not present):
+# a key that is not in its public rows cannot be decided.
+def lacks_own_rows(text):
+    return not content_packages.has_content(ROOT) and re.search(r'^#@own \d+\s*$', text, re.M) is not None
 
 
 # Compares scalar or curve values without discarding fractions.
@@ -214,9 +221,12 @@ def numbers_equal(actual, expected):
 def main():
     problems = []
     unchecked = []
+    global_cfg = read_data("config/global.cfg")
     for key in ("WorkerCarryFirstMaxShare", "WorkerClaimWallFirstMinShare"):
-        if key in read("config/global.cfg") or key in read("source/utils/ConfigManager.cpp"):
+        if key in global_cfg or key in read("source/utils/ConfigManager.cpp"):
             problems.append(f"Removed worker share {key} is still configured")
+    if lacks_own_rows(global_cfg):
+        unchecked.append("config/global.cfg own rows without the removed worker shares")
     manager = read("source/utils/ConfigManager.cpp")
     manager_header = read("source/utils/ConfigManager.h")
     tree = read("source/creatureskill/CreatureSkillTree.cpp")
@@ -227,7 +237,9 @@ def main():
             unchecked.append(f"{config_file} {key}")
         else:
             match = re.search(r'^\s*' + re.escape(key) + r'\s+([^\n]+)', config, re.M)
-            if match is None or not numbers_equal(match.group(1), expected):
+            if match is None and lacks_own_rows(config):
+                unchecked.append(f"{config_file} {key}")
+            elif match is None or not numbers_equal(match.group(1), expected):
                 problems.append(f"M{item}: {key} is absent or differs from {expected}")
         if item == 29:
             reader = read("source/rooms/Room.cpp" if config_file.endswith("rooms.cfg") else "source/traps/Trap.cpp")

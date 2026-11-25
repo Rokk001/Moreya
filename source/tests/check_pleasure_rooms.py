@@ -22,16 +22,26 @@ What is checked
 
 Calls (from the repository root):
   python source/tests/check_pleasure_rooms.py       plain file checks, no compiler, no game
+
+The values of rooms.cfg and global.cfg are own rows of the content (content package core-config); without the content
+the values and the model worked out with them are named as not checked and the source wiring is checked.
 """
 import math
 import re
+import sys
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(repo)
 
 
 def read(path):
-    return (repo / path).read_text(encoding="utf-8").replace("\r\n", "\n")
+    """The text of a repository file with LF line ends; a mixed table comes with its own rows of the content."""
+    return content_packages.read_text(repo, path).replace("\r\n", "\n")
 
 
 def block(text, tag):
@@ -60,8 +70,9 @@ def near(a, b, message, eps=1e-6):
 
 glob = read("config/global.cfg")
 rooms_cfg = read("config/rooms.cfg")
-rooms = block(rooms_cfg, "Rooms")
-tavern = block(glob, "Tavern")
+if WITH_CONTENT:
+    rooms = block(rooms_cfg, "Rooms")
+    tavern = block(glob, "Tavern")
 creature_cpp = read("source/entities/Creature.cpp")
 creature_h = read("source/entities/Creature.h")
 spa_cpp = read("source/rooms/RoomSpa.cpp")
@@ -74,7 +85,8 @@ search_job_cpp = read("source/creatureaction/CreatureActionSearchJob.cpp")
 gift_cpp = read("source/giftboxes/GiftBoxBonus.cpp")
 pleasure_h = read("source/creaturemood/CreatureMoodPleasure.h")
 
-MAX_MOOD = float(re.search(r"(?m)^\s*CreatureBaseMood\s+(\S+)", glob).group(1))
+# the maximum is an own row of global.cfg: without the content the model below is not run
+MAX_MOOD = float(re.search(r"(?m)^\s*CreatureBaseMood\s+(\S+)", glob).group(1)) if WITH_CONTENT else None
 TURNS_PER_SECOND = 1.4
 
 # ---- Values (Global Constraint 13: every value is a documented config key) ------------------------------------------------
@@ -86,15 +98,16 @@ VALUES = {
     "PitMoodSpectator": 14.0, "PitMoodSolitary": -11.0, "PitMoodVictor": 250.0,
     "MakeUnhappyMoodJump": -200.0, "MakeUnhappyMoodFall": -300.0, "MakeUnhappyTurns": 504.0,
 }
-for key, value in VALUES.items():
-    check(key in rooms, key + " missing in rooms.cfg [Rooms]")
-    near(float(rooms[key]), value, key)
-    check(re.search(r"(?m)^#\s*" + key + r"\s", rooms_cfg), key + " has no documentation line in rooms.cfg")
-TAVERN_VALUES = {"BeerMood": 25.0, "NoCoinMood": -8.33, "HangoverMood": -16.67, "GameWinnerMood": 33.33,
-                 "GameLoserMood": -16.67, "GameSpectatorMood": 16.67, "GameUnderdogMoodPerLevel": 8.3333,
-                 "GameUnderdogMoodMax": 83.3333}
-for key, value in TAVERN_VALUES.items():
-    near(float(tavern[key]), value, key)
+if WITH_CONTENT:
+    for key, value in VALUES.items():
+        check(key in rooms, key + " missing in rooms.cfg [Rooms]")
+        near(float(rooms[key]), value, key)
+        check(re.search(r"(?m)^#\s*" + key + r"\s", rooms_cfg), key + " has no documentation line in rooms.cfg")
+    TAVERN_VALUES = {"BeerMood": 25.0, "NoCoinMood": -8.33, "HangoverMood": -16.67, "GameWinnerMood": 33.33,
+                     "GameLoserMood": -16.67, "GameSpectatorMood": 16.67, "GameUnderdogMoodPerLevel": 8.3333,
+                     "GameUnderdogMoodMax": 83.3333}
+    for key, value in TAVERN_VALUES.items():
+        near(float(tavern[key]), value, key)
 for gone in ("BeerMoodTurns", "NoCoinMoodTurns"):
     check(gone not in glob, gone + " must be removed with its documentation")
 for gone in ("SpaMoodDecayPerTurn", "SpaMoodMax", "CasinoMoodDecay", "CasinoMoodMax", "PitMoodDecay", "PitMoodMax",
@@ -102,12 +115,13 @@ for gone in ("SpaMoodDecayPerTurn", "SpaMoodMax", "CasinoMoodDecay", "CasinoMood
     check(gone not in rooms_cfg, gone + " must stay removed")
 
 # 50 + 42 x (150 / 42) fills the visit limit; the visit and the buff make the 300 of the design (D6)
-near(rooms_f := float(rooms["SpaMoodJump"]) + float(rooms["SpaMoodPerTurn"]) * float(rooms["SpaBathTurns"]), 200.0, "bath fills the limit")
-near(float(rooms["SpaBathTurns"]) / TURNS_PER_SECOND, 30.0, "bath: 30 seated seconds")
-near(float(rooms["SpaMoodPerTurn"]) * 42.0, 150.0, "bath: 150 over 42 seated turns")
-near(float(rooms["PleasureVisitMax"]) + float(rooms["PleasureBuffMood"]), 300.0, "visit plus buff")
-# 10.5 per turn is the 14.7 per second of the casino at 1.4 turns per second
-near(float(rooms["CasinoMoodSmiles"]) / TURNS_PER_SECOND, float(rooms["TemplePrayerReliefPerTurn"]), "casino rate per turn")
+if WITH_CONTENT:
+    near(rooms_f := float(rooms["SpaMoodJump"]) + float(rooms["SpaMoodPerTurn"]) * float(rooms["SpaBathTurns"]), 200.0, "bath fills the limit")
+    near(float(rooms["SpaBathTurns"]) / TURNS_PER_SECOND, 30.0, "bath: 30 seated seconds")
+    near(float(rooms["SpaMoodPerTurn"]) * 42.0, 150.0, "bath: 150 over 42 seated turns")
+    near(float(rooms["PleasureVisitMax"]) + float(rooms["PleasureBuffMood"]), 300.0, "visit plus buff")
+    # 10.5 per turn is the 14.7 per second of the casino at 1.4 turns per second
+    near(float(rooms["CasinoMoodSmiles"]) / TURNS_PER_SECOND, float(rooms["TemplePrayerReliefPerTurn"]), "casino rate per turn")
 
 
 # ---- A small model of Creature.cpp: visit, buff, locks, effects, special boxes ---------------------------------------------
@@ -228,51 +242,52 @@ def bath(c, relax_turns=252.0):
 
 
 # ---- bath ------------------------------------------------------------------------------------------------------------------
-c = Creature(stored=500.0)
-c.begin(Creature.SPA)
-c.add_pleasure(Creature.SPA, float(rooms["SpaMoodJump"]))
-near(c.stored, 550.0, "bath: the jump when it starts")
-# The penultimate turn must not finish the visit early or reach its mood cap.
-c = Creature(stored=500.0)
-c.begin(Creature.SPA)
-c.add_pleasure(Creature.SPA, float(rooms["SpaMoodJump"]))
-for _ in range(41):
+if WITH_CONTENT:
+    c = Creature(stored=500.0)
+    c.begin(Creature.SPA)
+    c.add_pleasure(Creature.SPA, float(rooms["SpaMoodJump"]))
+    near(c.stored, 550.0, "bath: the jump when it starts")
+    # The penultimate turn must not finish the visit early or reach its mood cap.
+    c = Creature(stored=500.0)
+    c.begin(Creature.SPA)
+    c.add_pleasure(Creature.SPA, float(rooms["SpaMoodJump"]))
+    for _ in range(41):
+        c.add_pleasure(Creature.SPA, float(rooms["SpaMoodPerTurn"]))
+    near(c.stored, 696.4285714285714, "bath: mood after 41 seated turns")
+    check(not c.full(Creature.SPA), "bath: the visit is not full one turn early")
     c.add_pleasure(Creature.SPA, float(rooms["SpaMoodPerTurn"]))
-near(c.stored, 696.4285714285714, "bath: mood after 41 seated turns")
-check(not c.full(Creature.SPA), "bath: the visit is not full one turn early")
-c.add_pleasure(Creature.SPA, float(rooms["SpaMoodPerTurn"]))
-near(c.stored, 700.0, "bath: the final seated turn fills the visit")
-check(c.full(Creature.SPA), "bath: the visit is full after 42 seated turns")
-c = Creature(stored=500.0)
-check(bath(c) == 42, "the bath lasts exactly 42 seated turns")
-near(c.stored, 700.0, "bath: 200 inside the room after 42 seated turns")
-check(c.visit_kind == -1, "the visit ends with the bath")
-check(len(c.effects) == 1 and c.effects[0][0] == "Relaxed", "the buff Relaxed starts at the end of the bath")
-near(c.effects[0][1] * c.effects[0][2], 100.0, "the buff gives 100 in total")
-near(c.effects[0][2], float(rooms["SpaRelaxTurns"]), "the buff runs over SpaRelaxTurns")
-near(c.relax, float(rooms["SpaRelaxTurns"]), "the spa lock is the relaxation")
-for _ in range(252):
-    c.turn()
-near(c.stored, 800.0, "bath: 500 + 50 + 150 + 100 = 800, a gain of 300")
-check(not c.effects and c.relax == 0, "the buff and the lock are over after 252 turns")
-# the research lengthens buff and lock together (RelaxTime x1.4)
-c = Creature(stored=500.0)
-bath(c, 252.0 * 1.4)
-near(c.effects[0][2], 352.8, "research level 3: buff over 352.8 turns")
-near(c.relax, 352.8, "research level 3: the lock lasts as long")
-# a bath that is broken off after ten turns keeps its mood and, as every visit that gained mood, gives buff and lock
-c = Creature(stored=500.0)
-c.begin(Creature.SPA)
-c.add_pleasure(Creature.SPA, 50.0)
-for _ in range(10):
-    c.add_pleasure(Creature.SPA, float(rooms["SpaMoodPerTurn"]))
-c.finish(Creature.SPA, 252.0, 252.0, False)
-near(c.stored, 585.7142857142857, "broken bath: 50 plus ten seated turns stays")
-check(c.has_buff() and c.relax == 252.0, "broken bath: buff and lock as after a bath that gained mood")
-c = Creature(stored=500.0)
-c.begin(Creature.SPA)
-c.finish(Creature.SPA, 252.0, 252.0, False)
-check(not c.has_buff() and c.relax == 0, "a visit that gained nothing gives no buff and no lock")
+    near(c.stored, 700.0, "bath: the final seated turn fills the visit")
+    check(c.full(Creature.SPA), "bath: the visit is full after 42 seated turns")
+    c = Creature(stored=500.0)
+    check(bath(c) == 42, "the bath lasts exactly 42 seated turns")
+    near(c.stored, 700.0, "bath: 200 inside the room after 42 seated turns")
+    check(c.visit_kind == -1, "the visit ends with the bath")
+    check(len(c.effects) == 1 and c.effects[0][0] == "Relaxed", "the buff Relaxed starts at the end of the bath")
+    near(c.effects[0][1] * c.effects[0][2], 100.0, "the buff gives 100 in total")
+    near(c.effects[0][2], float(rooms["SpaRelaxTurns"]), "the buff runs over SpaRelaxTurns")
+    near(c.relax, float(rooms["SpaRelaxTurns"]), "the spa lock is the relaxation")
+    for _ in range(252):
+        c.turn()
+    near(c.stored, 800.0, "bath: 500 + 50 + 150 + 100 = 800, a gain of 300")
+    check(not c.effects and c.relax == 0, "the buff and the lock are over after 252 turns")
+    # the research lengthens buff and lock together (RelaxTime x1.4)
+    c = Creature(stored=500.0)
+    bath(c, 252.0 * 1.4)
+    near(c.effects[0][2], 352.8, "research level 3: buff over 352.8 turns")
+    near(c.relax, 352.8, "research level 3: the lock lasts as long")
+    # a bath that is broken off after ten turns keeps its mood and, as every visit that gained mood, gives buff and lock
+    c = Creature(stored=500.0)
+    c.begin(Creature.SPA)
+    c.add_pleasure(Creature.SPA, 50.0)
+    for _ in range(10):
+        c.add_pleasure(Creature.SPA, float(rooms["SpaMoodPerTurn"]))
+    c.finish(Creature.SPA, 252.0, 252.0, False)
+    near(c.stored, 585.7142857142857, "broken bath: 50 plus ten seated turns stays")
+    check(c.has_buff() and c.relax == 252.0, "broken bath: buff and lock as after a bath that gained mood")
+    c = Creature(stored=500.0)
+    c.begin(Creature.SPA)
+    c.finish(Creature.SPA, 252.0, 252.0, False)
+    check(not c.has_buff() and c.relax == 0, "a visit that gained nothing gives no buff and no lock")
 
 # the source: SpaMoodJump when the bath starts, the buff and the lock at its end, broken baths end the visit
 start_bath = extract(spa_cpp, "void RoomSpa::startBath(")
@@ -283,18 +298,19 @@ check("finishBrokenVisit(" in extract(spa_cpp, "void RoomSpa::abortDisturbedBath
 check("addSpaMood(moodPerTurn)" in extract(spa_cpp, "void RoomSpa::upkeepBathers("), "the bath adds SpaMoodPerTurn per turn")
 
 # ---- buff_blocks -----------------------------------------------------------------------------------------------------------
-c = Creature(stored=600.0)       # Upset
-check(all(c.can_use(k) for k in range(5)), "control: an Upset creature without buff and locks may use every pleasure room")
-c.add_effect("Pleasure", 100.0, 252.0)
-check(not any(c.can_use(k) for k in range(5)), "a running pleasure buff keeps the creature from every pleasure room")
-c.begin(Creature.CASINO)
-before = c.stored
-c.add_pleasure(Creature.CASINO, 10.5)
-near(c.stored, before, "no room gives new mood while the buff runs")
-c.add_effect("MakeUnhappy", -300.0, 504.0)
-c2 = Creature()
-c2.add_effect("MakeUnhappy", -300.0, 504.0)
-check(all(c2.can_use(k) for k in range(5)), "a debuff is no pleasure buff")
+if WITH_CONTENT:
+    c = Creature(stored=600.0)       # Upset
+    check(all(c.can_use(k) for k in range(5)), "control: an Upset creature without buff and locks may use every pleasure room")
+    c.add_effect("Pleasure", 100.0, 252.0)
+    check(not any(c.can_use(k) for k in range(5)), "a running pleasure buff keeps the creature from every pleasure room")
+    c.begin(Creature.CASINO)
+    before = c.stored
+    c.add_pleasure(Creature.CASINO, 10.5)
+    near(c.stored, before, "no room gives new mood while the buff runs")
+    c.add_effect("MakeUnhappy", -300.0, 504.0)
+    c2 = Creature()
+    c2.add_effect("MakeUnhappy", -300.0, 504.0)
+    check(all(c2.can_use(k) for k in range(5)), "a debuff is no pleasure buff")
 # wiring: every way into a pleasure room asks the creature
 check("canUsePleasureRoom(PleasureRoomKind::spa)" in extract(spa_cpp, "bool RoomSpa::canAccept("), "spa canAccept")
 check("canUsePleasureRoom(PleasureRoomKind::spa)" in extract(creature_cpp, "bool Creature::wantsSpaBath("), "wantsSpaBath")
@@ -312,29 +328,30 @@ check(job.index("creature.isTired()") < job.index("pleasureRooms") and job.index
       "needs before pleasure rooms")
 
 # ---- locks -----------------------------------------------------------------------------------------------------------------
-LOCK_KEYS = {Creature.TAVERN: "TavernLeisureCooldownTurns", Creature.CASINO: "CasinoVisitLockTurns",
-             Creature.TEMPLE: "TempleVisitLockTurns", Creature.ARENA: "ArenaVisitLockTurns"}
-for kind, key in LOCK_KEYS.items():
-    c = Creature()
-    c.begin(kind)
-    c.add_pleasure(kind, 30.0)
-    c.finish_default(kind, False)
-    check(c.has_buff(), "a visit that gained mood starts the buff")
-    near(c.lock_turns(kind), 600.0, key + ": the room is closed for 600 turns")
-    check(all(c.lock_turns(other) == 0 for other in range(5) if other != kind), "each lock blocks only its own room")
-    for _ in range(252):
+if WITH_CONTENT:
+    LOCK_KEYS = {Creature.TAVERN: "TavernLeisureCooldownTurns", Creature.CASINO: "CasinoVisitLockTurns",
+                 Creature.TEMPLE: "TempleVisitLockTurns", Creature.ARENA: "ArenaVisitLockTurns"}
+    for kind, key in LOCK_KEYS.items():
+        c = Creature()
+        c.begin(kind)
+        c.add_pleasure(kind, 30.0)
+        c.finish_default(kind, False)
+        check(c.has_buff(), "a visit that gained mood starts the buff")
+        near(c.lock_turns(kind), 600.0, key + ": the room is closed for 600 turns")
+        check(all(c.lock_turns(other) == 0 for other in range(5) if other != kind), "each lock blocks only its own room")
+        for _ in range(252):
+            c.turn()
+        check(not c.has_buff(), "the buff is over after 252 turns")
+        check(not c.can_use(kind), "after the buff the room is still closed")
+        check(all(c.can_use(other) for other in range(5) if other != kind), "the other rooms are open again")
+        for _ in range(600 - 252 - 1):
+            c.turn()
+        check(not c.can_use(kind), "one turn before the end the room is closed")
         c.turn()
-    check(not c.has_buff(), "the buff is over after 252 turns")
-    check(not c.can_use(kind), "after the buff the room is still closed")
-    check(all(c.can_use(other) for other in range(5) if other != kind), "the other rooms are open again")
-    for _ in range(600 - 252 - 1):
-        c.turn()
-    check(not c.can_use(kind), "one turn before the end the room is closed")
-    c.turn()
-    check(c.can_use(kind) and c.lock_turns(kind) == 0, "after 600 turns the room is open")
-near(float(rooms["SpaRelaxTurns"]), 252.0, "the spa lock is 252 turns")
-for key in LOCK_KEYS.values():
-    check(re.search(r"(?m)^\s+" + key + r"\s+600\s*$", rooms_cfg), key + " is 600 in rooms.cfg")
+        check(c.can_use(kind) and c.lock_turns(kind) == 0, "after 600 turns the room is open")
+    near(float(rooms["SpaRelaxTurns"]), 252.0, "the spa lock is 252 turns")
+    for key in LOCK_KEYS.values():
+        check(re.search(r"(?m)^\s+" + key + r"\s+600\s*$", rooms_cfg), key + " is 600 in rooms.cfg")
 # wiring of the end of each visit
 check("finishPleasureVisit(PleasureRoomKind::tavern, true)" in extract(tavern_cpp, "void RoomTavern::removeCreatureUsingRoom("), "tavern visit end")
 check("finishPleasureVisit(PleasureRoomKind::casino, getPayout() == CasinoPayout::money)" in extract(casino_cpp, "void RoomCasino::removeCreatureUsingRoom("), "casino visit end")
@@ -351,25 +368,26 @@ get_lock = extract(creature_cpp, "double Creature::getRoomLockTurns(")
 check("return mRelaxTurns;" in get_lock and "mTavernCooldownTurns" in get_lock and "mRoomLockTurns.find" in get_lock, "spa lock, tavern lock, the others")
 
 # ---- make_unhappy ----------------------------------------------------------------------------------------------------------
-c = Creature(stored=1500.0)
-c.make_unhappy()
-near(c.stored, 1300.0, "Make Unhappy: -200 at once")
-check(len(c.effects) == 1, "and a debuff")
-near(c.effects[0][1] * c.effects[0][2], -300.0, "-300 in total")
-near(c.effects[0][2], 504.0, "over 504 turns")
-for _ in range(168):
-    c.turn()
-near(c.stored, 1300.0 - 168 * 300.0 / 504.0, "after 168 turns the debuff took 100")
-second = c.stored
-c.make_unhappy()
-near(c.stored, second - 200.0, "the second box acts fully: -200 again")
-check(len(c.effects) == 2, "a second debuff runs next to the first")
-for _ in range(504):
-    c.turn()
-near(c.stored, max(0.0, second - 200.0 - (504 - 168) * 300.0 / 504.0 - 300.0), "both debuffs run to their end (not below 0)")
-c = Creature(stored=100.0)
-c.make_unhappy()
-check(c.stored == 0.0, "the stored mood does not go below 0")
+if WITH_CONTENT:
+    c = Creature(stored=1500.0)
+    c.make_unhappy()
+    near(c.stored, 1300.0, "Make Unhappy: -200 at once")
+    check(len(c.effects) == 1, "and a debuff")
+    near(c.effects[0][1] * c.effects[0][2], -300.0, "-300 in total")
+    near(c.effects[0][2], 504.0, "over 504 turns")
+    for _ in range(168):
+        c.turn()
+    near(c.stored, 1300.0 - 168 * 300.0 / 504.0, "after 168 turns the debuff took 100")
+    second = c.stored
+    c.make_unhappy()
+    near(c.stored, second - 200.0, "the second box acts fully: -200 again")
+    check(len(c.effects) == 2, "a second debuff runs next to the first")
+    for _ in range(504):
+        c.turn()
+    near(c.stored, max(0.0, second - 200.0 - (504 - 168) * 300.0 / 504.0 - 300.0), "both debuffs run to their end (not below 0)")
+    c = Creature(stored=100.0)
+    c.make_unhappy()
+    check(c.stored == 0.0, "the stored mood does not go below 0")
 make_unhappy = extract(creature_cpp, "void Creature::makeUnhappy(")
 check('getRoomConfigDouble("MakeUnhappyMoodJump")' in make_unhappy and 'addMoodEffect("MakeUnhappy"' in make_unhappy and
       '"MakeUnhappyMoodFall"' in make_unhappy and '"MakeUnhappyTurns"' in make_unhappy, "makeUnhappy uses the three keys")
@@ -377,15 +395,17 @@ box = gift_cpp[gift_cpp.index("case GiftBoxType::makeUnhappy:\n        {"):]
 box = box[:box.index("case GiftBoxType::killCreatures")]
 check("isRogueSeat()" in box and "isAlliedSeat(seat)" in box and "creature->makeUnhappy()" in box and "isAlive()" in box,
       "every living enemy creature, allied and rogue excepted")
-check("MakeUnhappyMoodJump" in rooms_cfg and "every box acts fully" in rooms_cfg, "documented: every box acts fully")
+if WITH_CONTENT:
+    check("MakeUnhappyMoodJump" in rooms_cfg and "every box acts fully" in rooms_cfg, "documented: every box acts fully")
 
 # ---- make_happy (the mood part; the leave clock and the rampage belong to the leave package) --------------------------------
-c = Creature(stored=50.0)
-c.add_effect("MakeUnhappy", -300.0, 504.0)
-c.add_effect("Pleasure", 100.0, 252.0)
-c.make_happy()
-near(c.stored, MAX_MOOD, "Make Happy: the stored mood is the maximum")
-check(len(c.effects) == 2, "running effects keep running")
+if WITH_CONTENT:
+    c = Creature(stored=50.0)
+    c.add_effect("MakeUnhappy", -300.0, 504.0)
+    c.add_effect("Pleasure", 100.0, 252.0)
+    c.make_happy()
+    near(c.stored, MAX_MOOD, "Make Happy: the stored mood is the maximum")
+    check(len(c.effects) == 2, "running effects keep running")
 remove = extract(creature_cpp, "void Creature::removeAnnoyance(")
 check("setStoredMood(ConfigManager::getSingleton().getCreatureBaseMood())" in remove and "mMoodEffects" not in remove,
       "removeAnnoyance sets the maximum and leaves the effects alone")
@@ -407,48 +427,51 @@ finish_drink = extract(tavern_cpp, "void RoomTavern::finishDrink(")
 check("isPleasureVisitFull(PleasureRoomKind::tavern)" in finish_drink and finish_drink.index("isPleasureVisitFull") < finish_drink.index("MaxDrinksPerVisit"),
       "a tavern leisure visit that gained PleasureVisitMax ends before the next drink or game")
 # a drink visit: no visit is running, the beer is a plain event of BeerMood, no buff and no lock
-c = Creature(stored=800.0, thirst=90.0)
-check(c.visit_kind == -1, "a drink visit starts no pleasure visit")
-for _ in range(5):
-    c.event(float(tavern["BeerMood"]))
-c.finish_default(Creature.TAVERN, True)
-near(c.stored, 925.0, "five beers of a drink visit give 5 x 25, outside the limit")
-check(not c.has_buff() and c.lock_turns(Creature.TAVERN) == 0, "a drink visit gives no pleasure buff and no lock")
+if WITH_CONTENT:
+    c = Creature(stored=800.0, thirst=90.0)
+    check(c.visit_kind == -1, "a drink visit starts no pleasure visit")
+    for _ in range(5):
+        c.event(float(tavern["BeerMood"]))
+    c.finish_default(Creature.TAVERN, True)
+    near(c.stored, 925.0, "five beers of a drink visit give 5 x 25, outside the limit")
+    check(not c.has_buff() and c.lock_turns(Creature.TAVERN) == 0, "a drink visit gives no pleasure buff and no lock")
 add_tavern = extract(creature_cpp, "void Creature::addTavernMood(")
 check("mPleasureVisitKind == static_cast<int32_t>(PleasureRoomKind::tavern)" in add_tavern and "applyMoodEvent(points, false)" in add_tavern,
       "beer counts toward the limit only inside a leisure visit")
 # a thirsty creature enters the tavern while locked and while buffed: the room asks only the creature that is not thirsty
-c = Creature(stored=800.0, thirst=90.0)
-c.add_effect("Pleasure", 100.0, 252.0)
-c.tavern_cooldown = 500
-check(not c.can_use(Creature.TAVERN), "control: the lock and the buff close the tavern for leisure")
-thirsty_may_enter = c.thirst >= float(tavern["ThirstSeek"]) or c.can_use(Creature.TAVERN)
-check(thirsty_may_enter, "a thirsty creature may enter")
+if WITH_CONTENT:
+    c = Creature(stored=800.0, thirst=90.0)
+    c.add_effect("Pleasure", 100.0, 252.0)
+    c.tavern_cooldown = 500
+    check(not c.can_use(Creature.TAVERN), "control: the lock and the buff close the tavern for leisure")
+    thirsty_may_enter = c.thirst >= float(tavern["ThirstSeek"]) or c.can_use(Creature.TAVERN)
+    check(thirsty_may_enter, "a thirsty creature may enter")
 
 # ---- E8: the visit ends at the limit, every visit that gained mood gives the full buff -------------------------------------
-c = Creature(stored=500.0)
-c.begin(Creature.CASINO)
-turns = 0
-per_turn = float(rooms["CasinoMoodSmiles"]) / TURNS_PER_SECOND
-while not c.full(Creature.CASINO):
-    c.add_pleasure(Creature.CASINO, per_turn)
-    turns += 1
-check(turns == 20, "the casino fills the limit in 20 turns (19.05 turns of 10.5)")
-near(c.stored, 700.0, "200 inside the room")
-c.finish_default(Creature.CASINO, False)
-near(c.effects[0][1] * c.effects[0][2], 100.0, "the full buff, however long the visit was")
-c = Creature(stored=500.0)
-c.begin(Creature.TEMPLE)
-c.add_pleasure(Creature.TEMPLE, 1.0)
-c.finish_default(Creature.TEMPLE, False)
-near(c.effects[0][1] * c.effects[0][2], 100.0, "a visit that gained one point gives the full buff")
-check(c.stored == 501.0, "and only that point")
-c = Creature(stored=1400.0)
-c.begin(Creature.TEMPLE)
-for _ in range(30):
-    c.add_pleasure(Creature.TEMPLE, 10.5)
-near(c.stored, 1500.0, "the stored mood stays within the maximum")
-check(c.full(Creature.TEMPLE) is False or c.visit_gain <= 200.0, "the gain counts what the room gave, not what the maximum took")
+if WITH_CONTENT:
+    c = Creature(stored=500.0)
+    c.begin(Creature.CASINO)
+    turns = 0
+    per_turn = float(rooms["CasinoMoodSmiles"]) / TURNS_PER_SECOND
+    while not c.full(Creature.CASINO):
+        c.add_pleasure(Creature.CASINO, per_turn)
+        turns += 1
+    check(turns == 20, "the casino fills the limit in 20 turns (19.05 turns of 10.5)")
+    near(c.stored, 700.0, "200 inside the room")
+    c.finish_default(Creature.CASINO, False)
+    near(c.effects[0][1] * c.effects[0][2], 100.0, "the full buff, however long the visit was")
+    c = Creature(stored=500.0)
+    c.begin(Creature.TEMPLE)
+    c.add_pleasure(Creature.TEMPLE, 1.0)
+    c.finish_default(Creature.TEMPLE, False)
+    near(c.effects[0][1] * c.effects[0][2], 100.0, "a visit that gained one point gives the full buff")
+    check(c.stored == 501.0, "and only that point")
+    c = Creature(stored=1400.0)
+    c.begin(Creature.TEMPLE)
+    for _ in range(30):
+        c.add_pleasure(Creature.TEMPLE, 10.5)
+    near(c.stored, 1500.0, "the stored mood stays within the maximum")
+    check(c.full(Creature.TEMPLE) is False or c.visit_gain <= 200.0, "the gain counts what the room gave, not what the maximum took")
 # an Upset creature leaves at Neutral: that end is the one of today (the use of the room pops its action)
 check("creature.getMoodValue() <= CreatureMoodLevel::Neutral" in use_room_cpp, "an Upset creature leaves a pleasure room at Neutral")
 visit_end = use_room_cpp[use_room_cpp.index("isPleasureVisitFull(PleasureRoomKind::casino)") - 200:]
@@ -469,59 +492,63 @@ spectator = extract(creature_cpp, "void Creature::addPitSpectatorMood(")
 check("beginPleasureVisit(PleasureRoomKind::arena)" in spectator and "finishPleasureVisit(PleasureRoomKind::arena, false)" in spectator,
       "watching is a visit that ends when the limit is reached")
 check("ARENA_WATCH_GRACE_TURNS" in spectator and "finishPleasureVisit(PleasureRoomKind::arena, false)" in upkeep, "and when the creature stopped watching")
-c = Creature(stored=600.0)
-spectated = 0
-while c.can_use(Creature.ARENA) and spectated < 100:
-    if c.visit_kind != Creature.ARENA:
-        c.begin(Creature.ARENA)
-    c.add_pleasure(Creature.ARENA, float(rooms["PitMoodSpectator"]) / TURNS_PER_SECOND)
-    spectated += 1
-    if c.full(Creature.ARENA):
-        c.finish_default(Creature.ARENA, False)
-check(spectated == 20, "a spectator is full after 20 turns of 10 (200 / 10)")
-near(c.stored, 800.0, "200 from watching")
-check(c.has_buff() and c.lock_turns(Creature.ARENA) == 600.0, "the buff and the arena lock follow")
-before = c.stored
-c.event(float(rooms["PitMoodVictor"]))
-near(c.stored, before + 250.0, "the victor bonus is outside the limit and the lock")
+if WITH_CONTENT:
+    c = Creature(stored=600.0)
+    spectated = 0
+    while c.can_use(Creature.ARENA) and spectated < 100:
+        if c.visit_kind != Creature.ARENA:
+            c.begin(Creature.ARENA)
+        c.add_pleasure(Creature.ARENA, float(rooms["PitMoodSpectator"]) / TURNS_PER_SECOND)
+        spectated += 1
+        if c.full(Creature.ARENA):
+            c.finish_default(Creature.ARENA, False)
+    check(spectated == 20, "a spectator is full after 20 turns of 10 (200 / 10)")
+    near(c.stored, 800.0, "200 from watching")
+    check(c.has_buff() and c.lock_turns(Creature.ARENA) == 600.0, "the buff and the arena lock follow")
+    before = c.stored
+    c.event(float(rooms["PitMoodVictor"]))
+    near(c.stored, before + 250.0, "the victor bonus is outside the limit and the lock")
 # Upset creatures still do not use the arena for their mood (today's rule)
 check("roomType == RoomType::arena" in use_room_cpp or "RoomType::arena ||" in use_room_cpp, "Upset creatures do not train in the arena")
 
 # ---- E10: tavern -----------------------------------------------------------------------------------------------------------
-c = Creature(stored=600.0)
-c.begin(Creature.TAVERN)
-for _ in range(5):
+if WITH_CONTENT:
+    c = Creature(stored=600.0)
+    c.begin(Creature.TAVERN)
+    for _ in range(5):
+        c.add_pleasure(Creature.TAVERN, float(tavern["BeerMood"]))
+    near(c.stored, 725.0, "five beers of a leisure visit")
+    c.add_pleasure(Creature.TAVERN, float(tavern["GameUnderdogMoodMax"]))
+    near(c.stored, 800.0, "the game win is cut at the 200 of the visit")
+    c = Creature(stored=600.0)
+    c.begin(Creature.TAVERN)
+    c.add_pleasure(Creature.TAVERN, float(tavern["NoCoinMood"]))
+    near(c.visit_gain, -8.33, "no coin lowers what the visit gained")
     c.add_pleasure(Creature.TAVERN, float(tavern["BeerMood"]))
-near(c.stored, 725.0, "five beers of a leisure visit")
-c.add_pleasure(Creature.TAVERN, float(tavern["GameUnderdogMoodMax"]))
-near(c.stored, 800.0, "the game win is cut at the 200 of the visit")
-c = Creature(stored=600.0)
-c.begin(Creature.TAVERN)
-c.add_pleasure(Creature.TAVERN, float(tavern["NoCoinMood"]))
-near(c.visit_gain, -8.33, "no coin lowers what the visit gained")
-c.add_pleasure(Creature.TAVERN, float(tavern["BeerMood"]))
-near(c.visit_gain, 16.67, "and the next beer counts on from there")
-check(float(tavern["GameUnderdogMoodPerLevel"]) == 8.3333 and float(tavern["GameUnderdogMoodMax"]) == 83.3333, "underdog values (today x 0.25)")
+    near(c.visit_gain, 16.67, "and the next beer counts on from there")
+    check(float(tavern["GameUnderdogMoodPerLevel"]) == 8.3333 and float(tavern["GameUnderdogMoodMax"]) == 83.3333, "underdog values (today x 0.25)")
 check("addTavernMood(getTavernValue(\"BeerMood\"))" in tavern_cpp and "addTavernMood(getTavernValue(\"NoCoinMood\"))" in tavern_cpp, "beer and no coin")
 check("addTavernMood(winnerMood)" in tavern_cpp and "addTavernMood(getTavernValue(\"GameLoserMood\"))" in tavern_cpp and
       "addTavernMood(getTavernValue(\"GameSpectatorMood\"))" in tavern_cpp, "games")
 check("BeerMoodTurns" not in tavern_cpp and "NoCoinMoodTurns" not in tavern_cpp, "no code reads the removed keys")
 check("void addTavernMood(double points);" in creature_h, "addTavernMood takes only the mood")
 # a leisure visit ends with the buff and the lock, also without mood, so the job search does not send the guest back in at once
-c = Creature(stored=600.0)
-c.begin(Creature.TAVERN)
-c.finish_default(Creature.TAVERN, True)
-check(not c.has_buff() and c.lock_turns(Creature.TAVERN) == 600.0, "an empty leisure visit still closes the tavern")
+if WITH_CONTENT:
+    c = Creature(stored=600.0)
+    c.begin(Creature.TAVERN)
+    c.finish_default(Creature.TAVERN, True)
+    check(not c.has_buff() and c.lock_turns(Creature.TAVERN) == 600.0, "an empty leisure visit still closes the tavern")
 
 # ---- E11: casino in mode Money ---------------------------------------------------------------------------------------------
-c = Creature(stored=900.0)
-c.begin(Creature.CASINO)
-for _ in range(100):
-    c.add_pleasure(Creature.CASINO, float(rooms["CasinoMoodMoney"]) / TURNS_PER_SECOND)
-check(c.stored < 900.0, "the loss per second applies")
-c.finish_default(Creature.CASINO, True)
-check(not c.has_buff(), "a visit in mode Money gives no pleasure buff")
-near(c.lock_turns(Creature.CASINO), 600.0, "but starts the lock")
+if WITH_CONTENT:
+    c = Creature(stored=900.0)
+    c.begin(Creature.CASINO)
+    for _ in range(100):
+        c.add_pleasure(Creature.CASINO, float(rooms["CasinoMoodMoney"]) / TURNS_PER_SECOND)
+    check(c.stored < 900.0, "the loss per second applies")
+    c.finish_default(Creature.CASINO, True)
+    check(not c.has_buff(), "a visit in mode Money gives no pleasure buff")
+    near(c.lock_turns(Creature.CASINO), 600.0, "but starts the lock")
 check("getPayout() == CasinoPayout::money" in extract(casino_cpp, "void RoomCasino::removeCreatureUsingRoom("), "the casino passes the mode")
 check("CasinoPayout::money" in search_job_cpp and "continue;" in search_job_cpp[search_job_cpp.index("CasinoPayout::money"):][:80],
       "Upset creatures do not look for a casino in mode Money")
@@ -549,19 +576,20 @@ def read_locks(c, text):
         c.locks[{"Casino": 2, "Temple": 3, "Arena": 4}[words[5 + 2 * index]]] = float(words[6 + 2 * index])
 
 
-c = Creature(stored=640.0)
-c.begin(Creature.CASINO)
-c.add_pleasure(Creature.CASINO, 63.0)
-c.locks = {Creature.TEMPLE: 411.0, Creature.ARENA: 12.5}
-c.relax = 30.0
-c.tavern_cooldown = 77
-c.add_effect("Pleasure", 100.0, 252.0)
-text = write_locks(c)
-d = Creature()
-read_locks(d, text)
-check((d.visit_kind, d.visit_gain, d.watch_turns) == (Creature.CASINO, 63.0, 0), "the running visit loads one to one")
-check(d.locks == {Creature.TEMPLE: 411.0, Creature.ARENA: 12.5}, "the locks of temple and arena load one to one with their turns")
-check(write_locks(Creature()) == "", "nothing to keep: no block (old saves have none)")
+if WITH_CONTENT:
+    c = Creature(stored=640.0)
+    c.begin(Creature.CASINO)
+    c.add_pleasure(Creature.CASINO, 63.0)
+    c.locks = {Creature.TEMPLE: 411.0, Creature.ARENA: 12.5}
+    c.relax = 30.0
+    c.tavern_cooldown = 77
+    c.add_effect("Pleasure", 100.0, 252.0)
+    text = write_locks(c)
+    d = Creature()
+    read_locks(d, text)
+    check((d.visit_kind, d.visit_gain, d.watch_turns) == (Creature.CASINO, 63.0, 0), "the running visit loads one to one")
+    check(d.locks == {Creature.TEMPLE: 411.0, Creature.ARENA: 12.5}, "the locks of temple and arena load one to one with their turns")
+    check(write_locks(Creature()) == "", "nothing to keep: no block (old saves have none)")
 # the other locks and the buff have their own saved places
 check("TAVERN_COOLDOWN_SAVE_OPEN << \" \" << mTavernCooldownTurns" in creature_cpp, "the tavern lock is saved")
 check("SPA_SAVE_OPEN << \" \" << mSpaMood << \" \" << mRelaxTurns" in creature_cpp, "the spa lock (the relaxation) is saved")
@@ -590,4 +618,8 @@ for member in ("double          mPleasureVisitGain;", "int32_t         mPleasure
 effects = extract(creature_cpp, "static std::string getProfileEffectsText(")
 check("relaxedEffect" in effects and "(relaxTurns > 0.0) && !relaxedEffect" in effects, "Relaxed is not listed twice")
 
+if not WITH_CONTENT:
+    content_packages.unchecked("check_pleasure_rooms", [
+        "values of rooms.cfg [Rooms] and global.cfg [Tavern] (own rows)",
+        "bath, buff_blocks, locks, make_unhappy, make_happy, E7-E11 and save worked out with the model"])
 print("pleasure rooms ok")

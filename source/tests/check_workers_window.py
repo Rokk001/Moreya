@@ -23,9 +23,16 @@ import content_packages  # noqa: E402
 sys.dont_write_bytecode = True
 
 
+#: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(repo)
+
+
 def read(path):
-    """Return the text of a tracked file (a game data file also from the content packages)."""
-    return (content_packages.data_file(repo, path) or resolve(repo, path)).read_text(encoding='utf-8')
+    """Return the text of a tracked file (a game data file also from the content packages); a mixed file of config/ or
+    gui/ comes joined with its own rows of the content."""
+    if content_packages.data_file(repo, path) is not None:
+        return content_packages.read_text(repo, path)
+    return resolve(repo, path).read_text(encoding='utf-8')
 
 
 NUMBER = r'(-?\d+(?:\.\d+)?)'
@@ -42,8 +49,14 @@ def props(window):
     return {p.get('name'): p.get('value') for p in window.findall('Property')}
 
 
-imageset = ET.parse(repo / 'gui/ODIcons.imageset').getroot()
-atlas = {image.get('name') for image in imageset.findall('Image')}
+if WITH_CONTENT:
+    imageset = ET.fromstring(read('gui/ODIcons.imageset'))
+    atlas = {image.get('name') for image in imageset.findall('Image')}
+else:
+    atlas = None
+    content_packages.unchecked('check_workers_window', ['gui/ODIcons.imageset', 'HUD button and icon row (own rows of '
+                                                        'gui/ModeGame.layout)', 'WorkerDefaultPriority of '
+                                                        'config/global.cfg'])
 code = read('source/render/WorkersWindow.cpp')
 #: The files of the content packages the layout parts of the check need
 LAYOUT_FILES = ('gui/WindowWorkers.layout', 'gui/fonts/SourceSerif4-Semibold.ttf')
@@ -158,36 +171,37 @@ if LAYOUT:
                 assert size >= 8, node.get('name') + ' has a font too small to read'
 
 # --- HUD button (D9, D10): a painted icon of its own in the icon row above the minimap, like the other icon buttons
-hud = ET.parse(repo / 'gui/ModeGame.layout').getroot()
-imports = [n.get('filename') for n in hud.iter('LayoutImport')]
-assert 'WindowWorkers.layout' in imports
-button = None
-icon_row = {}
-for node in hud.iter('Window'):
-    if node.get('name') == 'WorkersButton':
-        button = node
-    if node.get('name') in ('SocialButton', 'InfirmaryButton', 'MerchantButton'):
-        icon_row[node.get('name')] = node
-assert button is not None, 'HUD button WorkersButton is missing'
-assert button.get('type') == 'OD/GameTabButton', 'the HUD button is an icon button like the others'
-button_props = props(button)
-assert button_props['TooltipText'] == 'Zivs (J)'
-assert button_props['NormalImage'] == 'OpenDungeonsIcons/WorkersButton'
-assert 'HoverImage' not in button_props and 'PushedImage' not in button_props and 'Text' not in button_props,     'the icon button draws no text and no old hud pictures'
-assert button_props.get('NavigationFrame') == 'True' and button_props.get('AlwaysOnTop') == 'True'
-assert 'J' in button_props.get('ContextHelp', '') or 'ContextHelp' in {u.get('name') for u in button.findall('UserString')}
-button_area = udims(button_props['Area'])
-assert button_area[1][0] == 1 and button_area[3][0] == 1, 'the button sits in the bottom bar'
-button_box = (button_area[0][1], button_area[1][1], button_area[2][1], button_area[3][1])
-assert button_box[2] - button_box[0] == 40 and button_box[3] - button_box[1] == 40, 'the same 40 pixel icon size as its row'
-for other_name, other in icon_row.items():
-    other_area = udims(props(other)['Area'])
-    other_box = (other_area[0][1], other_area[1][1], other_area[2][1], other_area[3][1])
-    assert (other_box[3] - other_box[1]) == 40
-    assert other_box[1] == button_box[1], 'the Workers icon is in the same row as ' + other_name
-    assert other_box[2] <= button_box[0] or button_box[2] <= other_box[0], 'the Workers icon covers ' + other_name
-for atlas_name in ('WorkersButton',):
-    assert atlas_name in atlas
+if WITH_CONTENT:
+    hud = ET.fromstring(read('gui/ModeGame.layout'))
+    imports = [n.get('filename') for n in hud.iter('LayoutImport')]
+    assert 'WindowWorkers.layout' in imports
+    button = None
+    icon_row = {}
+    for node in hud.iter('Window'):
+        if node.get('name') == 'WorkersButton':
+            button = node
+        if node.get('name') in ('SocialButton', 'InfirmaryButton', 'MerchantButton'):
+            icon_row[node.get('name')] = node
+    assert button is not None, 'HUD button WorkersButton is missing'
+    assert button.get('type') == 'OD/GameTabButton', 'the HUD button is an icon button like the others'
+    button_props = props(button)
+    assert button_props['TooltipText'] == 'Zivs (J)'
+    assert button_props['NormalImage'] == 'OpenDungeonsIcons/WorkersButton'
+    assert 'HoverImage' not in button_props and 'PushedImage' not in button_props and 'Text' not in button_props,     'the icon button draws no text and no old hud pictures'
+    assert button_props.get('NavigationFrame') == 'True' and button_props.get('AlwaysOnTop') == 'True'
+    assert 'J' in button_props.get('ContextHelp', '') or 'ContextHelp' in {u.get('name') for u in button.findall('UserString')}
+    button_area = udims(button_props['Area'])
+    assert button_area[1][0] == 1 and button_area[3][0] == 1, 'the button sits in the bottom bar'
+    button_box = (button_area[0][1], button_area[1][1], button_area[2][1], button_area[3][1])
+    assert button_box[2] - button_box[0] == 40 and button_box[3] - button_box[1] == 40, 'the same 40 pixel icon size as its row'
+    for other_name, other in icon_row.items():
+        other_area = udims(props(other)['Area'])
+        other_box = (other_area[0][1], other_area[1][1], other_area[2][1], other_area[3][1])
+        assert (other_box[3] - other_box[1]) == 40
+        assert other_box[1] == button_box[1], 'the Workers icon is in the same row as ' + other_name
+        assert other_box[2] <= button_box[0] or button_box[2] <= other_box[0], 'the Workers icon covers ' + other_name
+    for atlas_name in ('WorkersButton',):
+        assert atlas_name in atlas
 # The old text button pictures are no longer used by any layout or by the window code
 assert 'WorkersHud' not in read('gui/ModeGame.layout') + (read('gui/WindowWorkers.layout') if LAYOUT else '') + code, 'old text button pictures'
 
@@ -227,11 +241,12 @@ assert 'seat->getWorkerJobCounts()' in code and '"Working: "' in code
 assert 'seat->getFreeWorkers()' in code
 
 # --- Automatic takes its order from WorkerDefaultPriority (D3)
-config = read('config/global.cfg')
-line = re.search(r'^\s*WorkerDefaultPriority\s+(.+)$', config, re.M).group(1).split()
-job_ids = {'dig': 0, 'claimGround': 1, 'claimWall': 2, 'carry': 3, 'clean': 4, 'reload': 5}
-default_priority = [job_ids[name] for name in line]
-assert default_priority == [3, 0, 1, 2, 4, 5], default_priority
+if WITH_CONTENT:
+    config = read('config/global.cfg')
+    line = re.search(r'^\s*WorkerDefaultPriority\s+(.+)$', config, re.M).group(1).split()
+    job_ids = {'dig': 0, 'claimGround': 1, 'claimWall': 2, 'carry': 3, 'clean': 4, 'reload': 5}
+    default_priority = [job_ids[name] for name in line]
+    assert default_priority == [3, 0, 1, 2, 4, 5], default_priority
 header = read('source/game/WorkerJobs.h')
 assert 'enum class WorkerJob : uint32_t { dig, claimGround, claimWall, carry, clean, reload, none };' in header
 assert 'enum class WorkerFreeMode : uint32_t { automatic, priority };' in header
@@ -275,7 +290,8 @@ for fragment in ('from >= N || to >= N || from == to', 'order[i] = order[i + 1];
 DIG, CLAIM_GROUND, CLAIM_WALL, CARRY, CLEAN, RELOAD = range(6)
 keeper_list = [DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND, CLAIM_WALL]
 # automatic_view: the keeper's own list is kept but the tablets follow the predefined priority
-assert display_order(0, keeper_list) == [CARRY, DIG, CLAIM_GROUND, CLAIM_WALL, CLEAN, RELOAD]
+if WITH_CONTENT:
+    assert display_order(0, keeper_list) == [CARRY, DIG, CLAIM_GROUND, CLAIM_WALL, CLEAN, RELOAD]
 assert display_order(1, keeper_list) == [DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND, CLAIM_WALL]
 # move_up: Clean (III) up gives Clean on II and Carry on III
 moved = list(keeper_list)
@@ -442,33 +458,35 @@ if LAYOUT:
                     check_tree(node, rect, scale, screen_w, screen_h, user, {})
 
 # --- the icon sits in the icon row directly above the minimap, next to the other icons (owner check of build 28)
-row_boxes = {}
-for node in hud.iter('Window'):
-    node_props = props(node)
-    if node.get('type') == 'OD/GameTabButton' and 'Area' in node_props:
-        box = udims(node_props['Area'])
-        if box[1][0] == 1 and box[1][1] == -224:
-            row_boxes[node.get('name')] = box[0][1]
-assert button_box[0] == row_boxes['WorkersButton'] and button_box[1] == -224
-# The icons of the row stand on a 48 unit grid starting at the minimap edge; every slot is used once
-assert sorted(row_boxes.values()) == list(range(4, 4 + 48 * len(row_boxes), 48)), row_boxes
-assert len(set(row_boxes.values())) == len(row_boxes), 'two icons share a slot'
-# Room Manager replaces the old production and separate room buttons. Its optional slot
-# is compacted at runtime so Workers always follows the visible Dungeonbook icon.
-assert {name: row_boxes[name] for name in ('GoalsButton', 'ResearchButton', 'RoomManagerButton',
-                                         'SocialButton', 'WorkersButton', 'SandboxButton')} == {
-    'GoalsButton': 4, 'ResearchButton': 52, 'RoomManagerButton': 100,
-    'SocialButton': 148, 'WorkersButton': 196, 'SandboxButton': 244}
-assert 'ProductionButton' not in row_boxes
-assert all(name not in row_boxes for name in ('MerchantButton', 'LabButton', 'InfirmaryButton', 'GhostHuntersButton'))
+if WITH_CONTENT:
+    row_boxes = {}
+    for node in hud.iter('Window'):
+        node_props = props(node)
+        if node.get('type') == 'OD/GameTabButton' and 'Area' in node_props:
+            box = udims(node_props['Area'])
+            if box[1][0] == 1 and box[1][1] == -224:
+                row_boxes[node.get('name')] = box[0][1]
+    assert button_box[0] == row_boxes['WorkersButton'] and button_box[1] == -224
+    # The icons of the row stand on a 48 unit grid starting at the minimap edge; every slot is used once
+    assert sorted(row_boxes.values()) == list(range(4, 4 + 48 * len(row_boxes), 48)), row_boxes
+    assert len(set(row_boxes.values())) == len(row_boxes), 'two icons share a slot'
+    # Room Manager replaces the old production and separate room buttons. Its optional slot
+    # is compacted at runtime so Workers always follows the visible Dungeonbook icon.
+    assert {name: row_boxes[name] for name in ('GoalsButton', 'ResearchButton', 'RoomManagerButton',
+                                             'SocialButton', 'WorkersButton', 'SandboxButton')} == {
+        'GoalsButton': 4, 'ResearchButton': 52, 'RoomManagerButton': 100,
+        'SocialButton': 148, 'WorkersButton': 196, 'SandboxButton': 244}
+    assert 'ProductionButton' not in row_boxes
+    assert all(name not in row_boxes for name in ('MerchantButton', 'LabButton', 'InfirmaryButton', 'GhostHuntersButton'))
 arrange = read('source/render/Gui.cpp')
 assert 'void layoutNavigationButtons(CEGUI::Window* root)' in arrange
 assert 'if(!button->isVisible())' in arrange
 assert 'button->setArea(CEGUI::URect(x, first.d_min.d_y, x + side, first.d_max.d_y));' in arrange
 assert 'CEGUI::Window::EventShown, CEGUI::Event::Subscriber(&navigationVisibilityChanged)' in arrange
 assert 'CEGUI::Window::EventHidden, CEGUI::Event::Subscriber(&navigationVisibilityChanged)' in arrange
-# It stays left of the control panel toggle that ends the row and well inside the minimap column of the bottom bar
-assert button_box[2] <= 400, 'the Workers icon is not floating towards the middle of the screen'
+if WITH_CONTENT:
+    # It stays left of the control panel toggle that ends the row and well inside the minimap column of the bottom bar
+    assert button_box[2] <= 400, 'the Workers icon is not floating towards the middle of the screen'
 
 if LAYOUT:
     # --- pictures dominate, texts stay small (owner check of build 29): measured at every screen size and UI scale

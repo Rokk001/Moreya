@@ -1,15 +1,25 @@
-"""Run production research-button and dependency rendering against installed CEGUI."""
+"""Run production research-button and dependency rendering against installed CEGUI.
+
+The probe reads the GUI folders from a copy in its temporary folder in which the mixed interface files (ODSkin.scheme,
+WindowSkillTree.layout, OD.looknfeel, ...) are joined with their own rows of the content package core-gui, as the game
+reads them (scripts/content_packages.py). Without the content those files are not whole: the probe is compiled but not
+run and the run is named as not checked.
+"""
 from pathlib import Path
 import argparse
 import os
 import re
+import shutil
 import subprocess
+import sys
 import tempfile
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--render', action='store_true', help='Save an isolated Ogre/CEGUI graph preview without launching the game')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 manager = (repo / 'source/game/SkillManager.cpp').read_text()
@@ -55,7 +65,30 @@ initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}, %d, 
 initializers += '\n' + '\n'.join('SkillManager::order.push_back(SkillType::%s);' % key for key in order)
 # The probe registers exactly the GUI folders the game reads from resources.cfg.in, non-recursively like ResourceManager.
 gui_section = (repo / 'cmake/config/resources.cfg.in').read_text().split('[GUI]', 1)[1].split('[', 1)[0]
-gui_folders = ','.join('"%s"' % line.split('=', 1)[1].strip() for line in gui_section.splitlines() if line.startswith('FileSystem='))
+gui_paths = [line.split('=', 1)[1].strip() for line in gui_section.splitlines() if line.startswith('FileSystem=')]
+gui_folders = ','.join('"%s"' % path for path in gui_paths)
+
+
+def joined_gui_folders(base):
+    """Copies the files of the GUI folders (non-recursive) below base; a mixed interface file is written joined with
+    its own rows of the content (content_packages.read_text), every other file is copied unchanged."""
+    for path in gui_paths:
+        target = base / path
+        target.mkdir(parents=True, exist_ok=True)
+        source = repo / path
+        if not source.is_dir():
+            continue
+        for file in source.iterdir():
+            if not file.is_file():
+                continue
+            mixed = file.suffix in ('.layout', '.looknfeel', '.scheme', '.imageset', '.font') and \
+                '#@own ' in file.read_text(encoding='utf-8')
+            if mixed:
+                (target / file.name).write_text(content_packages.read_text(repo, path + '/' + file.name), encoding='utf-8')
+            else:
+                shutil.copyfile(file, target / file.name)
+
+
 probe = r'''
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/RendererModules/Null/Renderer.h>
@@ -117,7 +150,7 @@ METHODS
 int main(int argc,char** argv){try{
  Ogre::Root ogre("","","research-tree-Ogre.log");ogre.loadPlugin(std::string(argv[2])+"/bin/Codec_STBI");
  auto& resources=Ogre::ResourceGroupManager::getSingleton();
- for(const char* path:{GUI_FOLDERS})resources.addResourceLocation(std::string(argv[1])+"/"+path,"FileSystem","GUI");
+ for(const char* path:{GUI_FOLDERS})resources.addResourceLocation(std::string(argv[3])+"/"+path,"FileSystem","GUI");
  CEGUI::OgreResourceProvider provider;provider.setDefaultResourceGroup("GUI");CEGUI::OgreImageCodec codec;codec.setImageFileDataType("png");
  auto& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));
  auto& system=CEGUI::System::create(renderer,&provider,nullptr,&codec,nullptr,"","research-tree-CEGUI.log");
@@ -380,4 +413,10 @@ with tempfile.TemporaryDirectory(prefix='odp-research-tree-') as directory:
         f'/I{repo / "source"}', f'/I{prefix / "include/cegui-0"}', f'/I{cegui_source / "include"}', f'/I{prefix / "include/OGRE"}', f'/I{prefix / "include/OGRE/RTShaderSystem"}',
         'check.cpp', *[str(cegui_source / 'src/RendererModules/Null' / (name+'.cpp')) for name in ('Renderer','GeometryBuffer','Texture','TextureTarget')],
         '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'CEGUIBase-0.lib', 'CEGUIOgreRenderer-0.lib', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'], cwd=work, check=True)
-    subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work, check=True)
+    if content_packages.has_content(repo):
+        # argv[3]: the GUI folders with the joined interface files
+        joined_gui_folders(work / 'gui-data')
+        subprocess.run([str(work / 'check.exe'), str(repo), str(prefix), str(work / 'gui-data')], cwd=work, check=True)
+    else:
+        content_packages.unchecked('check_research_tree_ui', ['probe run on the interface files (own rows of '
+                                                               'gui/ODSkin.scheme, gui/WindowSkillTree.layout, ...)'])

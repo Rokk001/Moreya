@@ -4,77 +4,58 @@
     <Window type="DefaultWindow" name="MenuEditorLoad" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-        <!-- Iron border of the chosen menu sheet around the whole screen. -->
-        <Window type="OD/ScreenBorder" name="ScreenBorder" >
+<!--#@own 1-->
             <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
-        </Window>
+<!--#@own 2-->
         <Window type="OD/StaticText" name="LoadingText" >
-            <Property name="Area" value="{{0.5,-396},{0.5,214},{0.5,30},{0.5,268}}" />
+<!--#@own 3-->
             <Property name="Text" value="Loading..." />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
-            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+<!--#@own 4-->
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
-            <Property name="Visible" value="False" />
+<!--#@own 5-->
             <Property name="Area" value="{{0.5,-320},{0,52},{0.5,320},{0,191}}" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="VersionText" >
-            <Property name="Area" value="{{0,28},{1,-50},{0,228},{1,-28}}" />
+<!--#@own 6-->
             <Property name="Text" value="undefined" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/MenuSelectionWindow" name="LevelWindowFrame" >
+<!--#@own 7-->
              <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
             <Property name="Text" value="Please choose a Level..." />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="SizingEnabled" value="False" />
-            <Property name="DragMovingEnabled" value="False" />
+<!--#@own 8-->
             <Property name="MousePassThroughEnabled" value="True" />
-            <!-- Window frame of the chosen menu sheet behind the controls of this window (K34). -->
-            <Window type="OD/SheetPanel" name="WindowPanel" >
-                <Property name="Area" value="{{0.5,-420},{0.5,-290},{0.5,420},{0.5,290}}" />
+<!--#@own 9-->
                 <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
-            <Window type="OD/MenuTitle" name="PageTitle">
-                <Property name="Font" value="MedievalSharp-20" />
-                <Property name="Area" value="{{0.5,-390},{0.5,-275},{0.5,390},{0.5,-215}}" />
-                <Property name="Text" value="Load Map" />
-                <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
+<!--#@own 10-->
             <Window type="OD/Combobox" name="LevelTypeSelect" >
-                <Property name="Area" value="{{0.5,-396},{0.5,-226},{0.5,-110},{0.5,-106}}" />
+<!--#@own 11-->
                 <Property name="ReadOnly" value="True" />
             </Window>
-            <Window type="OD/SheetListbox" name="LevelSelect" >
-                <Property name="Area" value="{{0.5,-396},{0.5,-184},{0.5,40},{0.5,206}}" />
-                <Property name="ForceVertScrollbar" value="False" />
+<!--#@own 12-->
                 <Property name="Sort" value="True" />
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
-                <Property name="Area" value="{{0.5,60},{0.5,-184},{0.5,396},{0.5,206}}" />
+<!--#@own 13-->
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
-            <Window type="OD/MenuTextButton" name="BackButton" >
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.5,50},{0.5,214},{0.5,218},{0.5,268}}" />
-                <Property name="Text" value="Back" />
+<!--#@own 14-->
             </Window>
-            <Window type="OD/MenuTextButton" name="LaunchEditorButton" >
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.5,228},{0.5,214},{0.5,396},{0.5,268}}" />
-                <Property name="Text" value="Confirm" />
+<!--#@own 15-->
             </Window>
         </Window>
     </Window>

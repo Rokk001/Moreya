@@ -22,12 +22,19 @@ The probe needs the MSVC compiler on the path (run it in a Visual Studio develop
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
+# The text of a repository file; a data table of config/ as the game reads it, with its own rows from the content
+# packages (scripts/content_packages.py).
 def read(path):
+    if path.startswith('config/'):
+        return content_packages.read_text(root, path)
     return (root / path).read_text(encoding='utf-8')
 
 
@@ -102,6 +109,14 @@ for path in ('RoomCrypt', 'RoomTreasury', 'RoomPortal', 'RoomPortalWave', 'RoomD
     candidate = root / 'source' / 'rooms' / (path + '.cpp')
     if candidate.exists():
         assert 'getDirtOutputFactor' not in candidate.read_text(encoding='utf-8'), path + ' has no output effect'
+# The [Dirt] block of global.cfg and the dirt values of rooms.cfg are own rows of the content package core-config:
+# without the content they and the probe that runs with them are named as not checked
+if not content_packages.has_content(root):
+    content_packages.unchecked('check_dirt_rules', ['config/rooms.cfg dirt keys', 'config/global.cfg [Dirt] values',
+                                                    'probe with them'])
+    print('dirt rules ok')
+    sys.exit(0)
+
 # Every per-room dirt key of rooms.cfg is used by a room or an action
 rooms_values = block_values(read('config/rooms.cfg'), 'Rooms')
 sources = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'source').rglob('*.cpp'))

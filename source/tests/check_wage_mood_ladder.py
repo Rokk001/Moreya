@@ -4,11 +4,14 @@ one fall per turn while any wage is missed, a reward per wage paid); they no lon
 leave. Nothing is compiled."""
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-# Read project files relative to this check.
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+# Read project files relative to this check; a mixed table of config/ comes joined with its own rows of the content.
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8')
+    return content_packages.read_text(ROOT, path)
 
 fee = read('source/creaturemood/CreatureMoodFee.cpp')
 hp = read('source/creaturemood/CreatureMoodHpLoss.cpp')
@@ -62,4 +65,7 @@ mood += fall * 84
 assert abs(mood - (600.0 - 0.8929 * 84)) < 1e-9
 mood += reward * 3
 assert abs(mood - (1500.0 - 0.8929 * 84)) < 1e-9
+if not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_wage_mood_ladder', ['Fee and HpLoss lines (own rows of config/creatures.cfg)',
+                                                          'own rows of config/global.cfg'])
 print('wage mood ladder ok')

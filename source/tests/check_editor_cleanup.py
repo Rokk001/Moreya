@@ -16,7 +16,12 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
 failures = []
+#: True when the content packages are present: the layouts are read joined with their own rows
+CONTENT = content_packages.has_content(repo)
 
 # Fixed expected values
 EXPECTED_SAVE_TITLE = 'Save Level'
@@ -29,6 +34,11 @@ EXPECTED_UNINSTALL_FUNCTIONS = ['uninstallCreaturesMenuButtons', 'uninstallRecen
 def read(path):
     """Returns the text of a repository file."""
     return (repo / path).read_text(encoding='utf-8')
+
+
+def read_data(path):
+    """Returns the text of a game data file as the game reads it (with its own rows from the content)."""
+    return content_packages.read_text(repo, path)
 
 
 def check(condition, message):
@@ -48,18 +58,21 @@ def function_body(text, signature):
 
 
 # C1 and C2: the save dialog
-save = ET.parse(repo / 'gui/EditorSave.layout').getroot()
-frame = [w for w in save.iter('Window') if w.get('name') == 'LevelWindowFrame'][0]
-props = dict((p.get('name'), p.get('value')) for p in frame.findall('Property'))
-check(props.get('Text') == EXPECTED_SAVE_TITLE, 'C1 the save dialog title is "%s" (found "%s")'
-      % (EXPECTED_SAVE_TITLE, props.get('Text')))
-numbers = [float(n) for n in re.findall(r'-?\d+(?:\.\d+)?', props['Area'])]
-area = (numbers[5] - numbers[1], numbers[7] - numbers[3])      # {{0.5,x1},{0.5,y1},{0.5,x2},{0.5,y2}}
-min_numbers = [float(n) for n in re.findall(r'-?\d+(?:\.\d+)?', props['MinSize'])]
-min_size = (min_numbers[1], min_numbers[3])
-check(area == EXPECTED_SAVE_AREA, 'C2 the save dialog area is %s (found %s)' % (EXPECTED_SAVE_AREA, area))
-check(min_size[0] <= area[0] and min_size[1] <= area[1],
-      'C2 MinSize %s of the save dialog is not larger than its area %s' % (min_size, area))
+if CONTENT:
+    save = ET.fromstring(read_data('gui/EditorSave.layout'))
+    frame = [w for w in save.iter('Window') if w.get('name') == 'LevelWindowFrame'][0]
+    props = dict((p.get('name'), p.get('value')) for p in frame.findall('Property'))
+    check(props.get('Text') == EXPECTED_SAVE_TITLE, 'C1 the save dialog title is "%s" (found "%s")'
+          % (EXPECTED_SAVE_TITLE, props.get('Text')))
+    numbers = [float(n) for n in re.findall(r'-?\d+(?:\.\d+)?', props['Area'])]
+    area = (numbers[5] - numbers[1], numbers[7] - numbers[3])      # {{0.5,x1},{0.5,y1},{0.5,x2},{0.5,y2}}
+    min_numbers = [float(n) for n in re.findall(r'-?\d+(?:\.\d+)?', props['MinSize'])]
+    min_size = (min_numbers[1], min_numbers[3])
+    check(area == EXPECTED_SAVE_AREA, 'C2 the save dialog area is %s (found %s)' % (EXPECTED_SAVE_AREA, area))
+    check(min_size[0] <= area[0] and min_size[1] <= area[1],
+          'C2 MinSize %s of the save dialog is not larger than its area %s' % (min_size, area))
+else:
+    content_packages.unchecked('check_editor_cleanup', ['C1 and C2 the save dialog of EditorSave.layout'])
 
 editor = read('source/modes/EditorMode.cpp')
 editor_h = read('source/modes/EditorMode.h')
@@ -93,13 +106,19 @@ check('mConsole->flushConsoleOutput()' in function_body(base, 'void GameEditorMo
       'C5 the main thread flushes the console output every frame')
 
 # C6: Rotate, About and the three "Not implemented yet" entries are gone (F3)
-layout = read('gui/ModeEditor.layout')
-options = read('gui/WindowEditorOptions.layout')
-for name in ('Rotate', 'About'):
-    check('name="%s"' % name not in layout, 'C6 the editor menu has no %s entry' % name)
-check('Not implemented yet' not in options, 'C6 the editor options window has no "Not implemented yet" entry')
-for name in ('NewLevelButton', 'LoadLevelButton', 'LevelPropertiesButton'):
-    check(name not in options and name not in editor, 'C6 %s is gone from layout and code' % name)
+if CONTENT:
+    layout = read_data('gui/ModeEditor.layout')
+    options = read_data('gui/WindowEditorOptions.layout')
+    for name in ('Rotate', 'About'):
+        check('name="%s"' % name not in layout, 'C6 the editor menu has no %s entry' % name)
+    check('Not implemented yet' not in options, 'C6 the editor options window has no "Not implemented yet" entry')
+    for name in ('NewLevelButton', 'LoadLevelButton', 'LevelPropertiesButton'):
+        check(name not in options and name not in editor, 'C6 %s is gone from layout and code' % name)
+else:
+    for name in ('NewLevelButton', 'LoadLevelButton', 'LevelPropertiesButton'):
+        check(name not in editor, 'C6 %s is gone from the code' % name)
+    content_packages.unchecked('check_editor_cleanup', ['C6 the entries of ModeEditor.layout and '
+                                                        'WindowEditorOptions.layout'])
 check('"Rotate"' not in editor and '"About"' not in editor, 'C6 no handler subscribes to Rotate or About')
 
 # C7: no spell leftovers
@@ -122,7 +141,6 @@ for constant in re.findall(r'Gui::(EDM_\w+)', load):
         used.add(constants[constant])
 for literal in re.findall(r'getChild\("([^"]+)"\)', load):
     used.add(literal)
-load_layout = ET.parse(repo / 'gui/MenuEditorLoad.layout').getroot()
 paths = set()
 
 
@@ -134,11 +152,15 @@ def collect(node, prefix):
         collect(child, full + '/')
 
 
-collect(load_layout.find('Window'), '')
-missing = sorted(p for p in used if p not in paths)
-check(len(used) == 7 and not missing,
-      'C8 every widget of MenuModeEditorLoad exists in MenuEditorLoad.layout (%d used, missing: %s)'
-      % (len(used), missing))
+if CONTENT:
+    load_layout = ET.fromstring(read_data('gui/MenuEditorLoad.layout'))
+    collect(load_layout.find('Window'), '')
+    missing = sorted(p for p in used if p not in paths)
+    check(len(used) == 7 and not missing,
+          'C8 every widget of MenuModeEditorLoad exists in MenuEditorLoad.layout (%d used, missing: %s)'
+          % (len(used), missing))
+else:
+    content_packages.unchecked('check_editor_cleanup', ['C8 the widgets of MenuEditorLoad.layout'])
 
 # C9: the bar layout check no longer looks at a spells page
 bar = read('source/tests/check_editor_bar_layout.py')
@@ -193,16 +215,20 @@ int main()
             check(run.returncode == 0, 'C10 11 wave cases give the expected spawnable result ' + run.stdout.strip())
 
 # C11: check_editor_headers.py reports a missing cl clearly
-headers = repo / 'source/tests/check_editor_headers.py'
-empty = tempfile.mkdtemp(prefix='odp-nopath-')
-env = dict(os.environ)
-env['PATH'] = empty
-run = subprocess.run([sys.executable, str(headers)], env=env, capture_output=True, text=True,
-                     stdin=subprocess.DEVNULL, timeout=120)
-shutil.rmtree(empty, ignore_errors=True)
-output = run.stdout + run.stderr
-check(run.returncode != 0 and 'vcvars64' in output and 'Traceback' not in output,
-      'C11 check_editor_headers.py without cl on the path fails with a message naming vcvars64, no traceback')
+# Without the content check_editor_headers.py names its probe as not checked before it looks for cl
+if CONTENT:
+    headers = repo / 'source/tests/check_editor_headers.py'
+    empty = tempfile.mkdtemp(prefix='odp-nopath-')
+    env = dict(os.environ)
+    env['PATH'] = empty
+    run = subprocess.run([sys.executable, str(headers)], env=env, capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL, timeout=120)
+    shutil.rmtree(empty, ignore_errors=True)
+    output = run.stdout + run.stderr
+    check(run.returncode != 0 and 'vcvars64' in output and 'Traceback' not in output,
+          'C11 check_editor_headers.py without cl on the path fails with a message naming vcvars64, no traceback')
+else:
+    content_packages.unchecked('check_editor_cleanup', ['C11 the missing cl message of check_editor_headers.py'])
 
 # D1-D5: small deferred items
 loading = read('source/render/LoadingScreen.cpp')

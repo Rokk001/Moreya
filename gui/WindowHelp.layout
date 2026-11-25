@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/SheetWindow" name="GameHelpWindow" >
-        <Property name="Area" value="{{0.2,-16},{0.12,10},{0.8,16},{0.82,25}}" />
+<!--#@own 1-->
         <Property name="AlwaysOnTop" value="True" />
         <Property name="SizingEnabled" value="False" />
         <Property name="Text" value="Dungeon Management 101 for unruly minions" />

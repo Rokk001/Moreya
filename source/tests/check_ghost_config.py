@@ -1,7 +1,8 @@
 """Check declared ghost, corpse, crystal, research and job values without compiling.
 
 config/ai.cfg is content (core-config package, found through scripts/content_packages.py); without it the room plan
-of ai.cfg is named as not checked.
+of ai.cfg is named as not checked. global.cfg, rooms.cfg, traps.cfg, skills.cfg and creatures.cfg are mixed tables read
+with their own rows from the content (content_packages.read_text); without the content only the code is checked.
 """
 from pathlib import Path
 import math
@@ -12,9 +13,10 @@ repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
 
-# Read a tracked source using the repository root rather than the caller's directory.
+# Read a tracked source using the repository root rather than the caller's directory; a mixed data table comes with
+# its own rows from the content, as the game reads it.
 def read(path):
-    return (repo / path).read_text(encoding="utf-8")
+    return content_packages.read_text(repo, path)
 
 # Parse numeric configuration rows while rejecting duplicate declarations.
 def numbers(path):
@@ -30,8 +32,27 @@ def numbers(path):
             result[row[0]] = value
     return result
 
-# Check every decided value, exact jobs, research mapping and fear membership.
+# Check the research mapping of SkillManager and the fear flag of the creature definition (code only).
+def code_part():
+    manager = read('source/game/SkillManager.cpp')
+    for skill,effect,key in [('roomGhostRoom','EctoplasmLevels','GhostLevelsPerEctoplasm'),
+            ('roomGhostRoom','BoxCapacity','GhostBoxCapacity'),('roomGhostRoom','BeamRange','GhostBeamRange'),
+            ('roomGhostRoom','CatchTime',r'GhostTransferSeconds",\s*"GhostBeamSeconds'),('roomGhostRoom','RevivePrice','GhostReviveMana'),
+            ('roomCrypt','LichCorpses','CryptCorpsesPerLich'),('roomCrypt','LichLevel','CryptLichLevelBonus')]:
+        assert re.search(r'SkillType::'+skill+r'\s*,\s*"'+effect+r'"\s*,\s*ResearchBaseSource::rooms\s*,\s*"'+key+r'"',manager), (effect,key)
+
+    definition = read('source/entities/CreatureDefinition.cpp')
+    assert 'AfraidOfGhosts' in definition and 'mAfraidOfGhosts' in definition
+
+
+# Check every decided value, exact jobs, research mapping and fear membership; without the content the code only.
 def main():
+    code_part()
+    if not content_packages.has_content(repo):
+        content_packages.unchecked('check_ghost_config', ['values of config/global.cfg, rooms.cfg, traps.cfg, skills.cfg '
+                                                          'and creatures.cfg', 'config/ai.cfg (room plan)'])
+        print('ghost configuration: ok')
+        return
     global_values = numbers("config/global.cfg")
     room = numbers("config/rooms.cfg")
     expected = {"GhostLifetimeSeconds":344.4444,"GhostFloatSpeed":.36,"GhostWanderRadius":8,
@@ -141,15 +162,6 @@ def main():
                     actual[name] = float(row[2])
         assert all(actual.get(name)==efficiency for name,efficiency in expected_types.items()), (room_name,actual)
         # All other pre-existing affinities are explicitly retained, including side jobs.
-    manager = read('source/game/SkillManager.cpp')
-    for skill,effect,key in [('roomGhostRoom','EctoplasmLevels','GhostLevelsPerEctoplasm'),
-            ('roomGhostRoom','BoxCapacity','GhostBoxCapacity'),('roomGhostRoom','BeamRange','GhostBeamRange'),
-            ('roomGhostRoom','CatchTime',r'GhostTransferSeconds",\s*"GhostBeamSeconds'),('roomGhostRoom','RevivePrice','GhostReviveMana'),
-            ('roomCrypt','LichCorpses','CryptCorpsesPerLich'),('roomCrypt','LichLevel','CryptLichLevelBonus')]:
-        assert re.search(r'SkillType::'+skill+r'\s*,\s*"'+effect+r'"\s*,\s*ResearchBaseSource::rooms\s*,\s*"'+key+r'"',manager), (effect,key)
-
-    definition = read('source/entities/CreatureDefinition.cpp')
-    assert 'AfraidOfGhosts' in definition and 'mAfraidOfGhosts' in definition
     print('ghost configuration: ok')
 
 if __name__ == '__main__':

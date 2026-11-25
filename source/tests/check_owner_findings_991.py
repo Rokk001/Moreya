@@ -11,19 +11,29 @@
 Fixed values of this branch: 24 room visuals; Kobold and DwarfWorker GroundMoveSpeed 1.35 and GroundSpeed/Level
 0.01815; placeholder worker GroundMoveSpeed 1.0; DormitoryWoundedDragWorkerSpeedFactor 0.6,
 DormitoryWoundedDragFollowSpeedFactor 1.3, DormitoryWoundedDragGap 0.9; CreatureGetUpSeconds 6; 1.4 turns per second.
+
+These values are own rows of config/rooms.cfg and config/creatures.cfg (content package core-config); without the
+content they and the replay of the follow are named as not checked.
 """
 from pathlib import Path
 import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8')
+    """Returns the text of a repository file; a mixed table comes with its own rows of the content."""
+    return content_packages.read_text(ROOT, path)
 
 
 def body(source, signature):
@@ -75,15 +85,16 @@ assert 'getDragWorkerSpeedFactor()' in dragged and 'DormitoryWoundedDragFollowSp
 
 placeholder = re.search(r'double\s+moveSpeedGround\s*=\s*([\d.]+)', read('source/entities/CreatureDefinition.h'))
 assert placeholder and float(placeholder.group(1)) == 1.0, 'placeholder worker ground speed'
-drag_factor = config_value(rooms_cfg, 'DormitoryWoundedDragWorkerSpeedFactor')
-follow_factor = config_value(rooms_cfg, 'DormitoryWoundedDragFollowSpeedFactor')
-gap = config_value(rooms_cfg, 'DormitoryWoundedDragGap')
-assert (drag_factor, follow_factor, gap) == (0.6, 1.3, 0.9), (drag_factor, follow_factor, gap)
-workers = {}
-for name in ('Kobold', 'DwarfWorker'):
-    block = creature_block(creatures_cfg, name)
-    workers[name] = (config_value(block, 'GroundMoveSpeed'), config_value(block, 'GroundSpeed/Level'))
-    assert workers[name] == (1.35, 0.01815), (name, workers[name])
+if WITH_CONTENT:
+    drag_factor = config_value(rooms_cfg, 'DormitoryWoundedDragWorkerSpeedFactor')
+    follow_factor = config_value(rooms_cfg, 'DormitoryWoundedDragFollowSpeedFactor')
+    gap = config_value(rooms_cfg, 'DormitoryWoundedDragGap')
+    assert (drag_factor, follow_factor, gap) == (0.6, 1.3, 0.9), (drag_factor, follow_factor, gap)
+    workers = {}
+    for name in ('Kobold', 'DwarfWorker'):
+        block = creature_block(creatures_cfg, name)
+        workers[name] = (config_value(block, 'GroundMoveSpeed'), config_value(block, 'GroundSpeed/Level'))
+        assert workers[name] == (1.35, 0.01815), (name, workers[name])
 
 
 def trailing_distance(worker_ground, body_ground, path_tiles=20.0, step=0.05):
@@ -103,15 +114,16 @@ def trailing_distance(worker_ground, body_ground, path_tiles=20.0, step=0.05):
     return largest
 
 
-for name, (ground, per_level) in workers.items():
-    for level in range(1, 31):
-        worker_ground = ground + per_level * (level - 1)
-        fixed = trailing_distance(worker_ground, max(1.0, worker_ground))
-        assert fixed <= gap + 0.06, (name, level, fixed)
-# Before the fix the body slid at the placeholder speed (1.0): a level 10 Kobold left it 3.7 tiles behind after a
-# way of 20 tiles, the three tiles the owner saw; the fixed follow keeps it at the gap
-old = trailing_distance(workers['Kobold'][0] + workers['Kobold'][1] * 9, 1.0)
-assert old > 3.0, old
+if WITH_CONTENT:
+    for name, (ground, per_level) in workers.items():
+        for level in range(1, 31):
+            worker_ground = ground + per_level * (level - 1)
+            fixed = trailing_distance(worker_ground, max(1.0, worker_ground))
+            assert fixed <= gap + 0.06, (name, level, fixed)
+    # Before the fix the body slid at the placeholder speed (1.0): a level 10 Kobold left it 3.7 tiles behind after a
+    # way of 20 tiles, the three tiles the owner saw; the fixed follow keeps it at the gap
+    old = trailing_distance(workers['Kobold'][0] + workers['Kobold'][1] * 9, 1.0)
+    assert old > 3.0, old
 
 # The animated hand contact of the pulled body stays (decision 892 follow-up): leg in the worker's hand
 render = read('source/render/RenderManager.cpp')
@@ -128,7 +140,8 @@ restore = body(creature, 'void Creature::restoreEntityState()')
 assert re.search(r'getAnimationStateName\(\) == EntityAnimation::die_anim &&\s*getAnimationTime\(\) >= '
                  r'LOADED_LYING_CLIP_SECONDS\)\s*RenderManager::getSingleton\(\)\.rrSettleCreatureFall\(this\);', restore)
 assert re.search(r'static const double LOADED_LYING_CLIP_SECONDS = 1000\.0;', creature)
-assert config_value(rooms_cfg, 'CreatureGetUpSeconds') == 6.0
+if WITH_CONTENT:
+    assert config_value(rooms_cfg, 'CreatureGetUpSeconds') == 6.0
 turns = re.search(r'double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp'))
 assert turns and float(turns.group(1)) == 1.4
 
@@ -303,4 +316,8 @@ colour = body(minimap, 'MiniMap::TileColour MiniMap::colourFromTile(')
 assert 'MiniMapColours::terrainColour(visual, owner != nullptr, (owner != nullptr) && owner->isRogueSeat(),' in colour
 terrain = body(strip_comments(read('source/gamemap/MiniMapColours.cpp')), 'MiniMapTileColour MiniMapColours::terrainColour(')
 assert 'if(room && (!hasOwner || rogueOwner))' in terrain and 'result.animated = true;' in terrain
+if not WITH_CONTENT:
+    content_packages.unchecked('check_owner_findings_991', [
+        'drag and get-up values and worker speeds (own rows of config/rooms.cfg and config/creatures.cfg)',
+        'replay of the follow of the pulled body'])
 print('owner findings 991 ok')

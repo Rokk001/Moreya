@@ -15,9 +15,12 @@ the badge texture the way Gui.cpp does, and then:
 
 The game data folders the probe reads (gui, fonts, schemas, loading textures, models, materials, particles, shaders)
 come from the public tree and from the content packages (scripts/content_packages.py): the probe gets every existing
-folder in the environment variable ODP_DATA_FOLDERS ("relative=absolute" entries separated by ";"). Without the files
-the probe needs (the painted navigation atlas, for the optional renders all content packages) the probe is not compiled
-and the check names it as not checked after its static part.
+folder in the environment variable ODP_DATA_FOLDERS ("relative=absolute" entries separated by ";"). The mixed files
+(the interface files of gui and gui/fonts, config/mainmenuscene.cfg) are given to the probe joined with their own rows
+(content_packages.read_text), as the game reads them: the public gui folders are replaced by joined copies and the
+probe reads the menu scene table from a temporary repository folder. Without the files the probe needs (the painted
+navigation atlas, for the optional renders all content packages) the probe is not compiled and the check names it as
+not checked after its static part.
 """
 from pathlib import Path
 import argparse
@@ -905,8 +908,40 @@ if missing_content:
     content_packages.unchecked('check_heart_badge_texture', missing_content)
     sys.exit(0)
 
+#: The public data folders that hold mixed interface files, replaced by joined copies for the probe
+JOINED_FOLDERS = ('gui', 'gui/fonts')
+
+
+def joined_copy(work, relative):
+    """Copies the files of a public data folder into the probe folder, the mixed files joined with their own rows."""
+    target = work / 'joined' / relative
+    target.mkdir(parents=True, exist_ok=True)
+    for source in (repo / relative).iterdir():
+        if source.is_file():
+            if '#@own ' in source.read_bytes().decode('utf-8', errors='replace'):
+                text = content_packages.read_text(repo, relative + '/' + source.name)
+                (target / source.name).write_bytes(text.encode('utf-8'))
+            else:
+                shutil.copyfile(source, target / source.name)
+    return target
+
+
+def probe_folders(work, relative):
+    """The folders of a game data folder for the probe: the public one (a joined copy for JOINED_FOLDERS), then the
+    packages."""
+    folders = content_packages.data_folders(repo, relative)
+    if relative in JOINED_FOLDERS and folders and folders[0] == repo / relative:
+        folders = [joined_copy(work, relative)] + folders[1:]
+    return folders
+
+
 with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
     work = Path(directory)
+    # The repository folder of the probe: it reads config/mainmenuscene.cfg there, joined with its own rows
+    probe_repository = work / 'repository'
+    (probe_repository / 'config').mkdir(parents=True)
+    (probe_repository / 'config/mainmenuscene.cfg').write_bytes(
+        content_packages.read_text(repo, 'config/mainmenuscene.cfg').encode('utf-8'))
     (work / 'check.cpp').write_text(probe)
     if args.loading_screens:
         args.loading_output.mkdir(parents=True, exist_ok=True)
@@ -922,10 +957,10 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
     environment['PATH'] = str(deps / 'install/bin') + os.pathsep + environment.get('PATH', '')
     # Every existing game data folder of the public tree and of the content packages, as "relative=absolute"
     environment['ODP_DATA_FOLDERS'] = ';'.join('%s=%s' % (relative, folder.as_posix()) for relative in DATA_FOLDERS
-                                               for folder in content_packages.data_folders(repo, relative))
+                                               for folder in probe_folders(work, relative))
     # Windows application control errors must reach the runner without restarting this executable.
     # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
-    command = [str(work / 'check.exe'), (deps / 'install').as_posix(), repo.as_posix()]
+    command = [str(work / 'check.exe'), (deps / 'install').as_posix(), probe_repository.as_posix()]
     if args.loading_screens:
         command.append(args.loading_output.resolve().as_posix())
     if args.menu_scene:

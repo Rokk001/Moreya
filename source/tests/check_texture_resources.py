@@ -36,15 +36,26 @@ def main():
             match = re.match(r'^\s*texture\s+(\S+)', line)
             if match:
                 references.append((material.name, number, match.group(1).strip('"')))
+    unchecked_imagesets = []
     for imageset in content_packages.data_glob(ROOT, 'gui', '*.imageset'):
-        root = ET.parse(imageset).getroot()
+        # The own rows file of a mixed imageset (gui/ODIcons.own.imageset) is joined into its imageset, not read alone
+        if imageset.name.endswith('.own.imageset'):
+            continue
+        relative = content_packages.relative_path(ROOT, imageset)
+        text = content_packages.read_text(ROOT, relative)
+        # Without the content a mixed imageset holds only its upstream rows and marker comments: not checked
+        if '<!--#@own ' in text and not content_packages.has_content(ROOT):
+            unchecked_imagesets.append(relative)
+            continue
+        root = ET.fromstring(text)
         for element in root.iter():
             if 'Imagefile' in element.attrib:
-                references.append((content_packages.relative_path(ROOT, imageset), 0, element.attrib['Imagefile']))
+                references.append((relative, 0, element.attrib['Imagefile']))
     missing = [(source, line, name) for source, line, name in references
                if not any((folder / name).is_file() for folder in folders) and not packaged_elsewhere(name)]
     if not content_packages.has_content(ROOT):
-        content_packages.unchecked('check_texture_resources', sorted(set(name for _, _, name in missing)))
+        content_packages.unchecked('check_texture_resources', unchecked_imagesets +
+                                   sorted(set(name for _, _, name in missing)))
         missing = []
     for source, line, name in missing:
         print(f'{source}:{line}: missing registered texture {name}')

@@ -8,6 +8,8 @@ import re
 import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / "scripts"))
+import content_packages  # noqa: E402
 failures = []
 
 
@@ -17,7 +19,11 @@ def check(condition, message):
         failures.append(message)
 
 
-tilesets = (root / "config/tilesets.cfg").read_text(encoding="utf-8")
+# tilesets.cfg as the game reads it, with its own rows from the content packages; without the content the own earth
+# rows are not there and only the public rows are checked
+tilesets = content_packages.read_text(root, "config/tilesets.cfg")
+if not content_packages.has_content(root):
+    content_packages.unchecked("check_dark_earth_only", ["config/tilesets.cfg own earth rows"])
 earth_materials = set()
 for block in ("dirtGround", "dirtFull"):
     body = tilesets.split("[" + block + "]", 1)[1].split("[/" + block + "]", 1)[0]

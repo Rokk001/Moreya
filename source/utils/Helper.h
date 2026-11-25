@@ -121,6 +121,8 @@ namespace Helper
                            const std::string& fileExtension);
 
     //! \brief opens the file fileName and adds the uncommented lines to the stream.
+    //! The file may lie in a content package; the own rows of a mixed data table are put in place of its marker
+    //! lines (ContentPackages::mergeOwnRows).
     //! Returns true is the file could be open and false if an error occurs
     bool readFile(const std::string& fileName, std::stringstream& stream, bool withoutComments);
 

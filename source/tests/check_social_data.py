@@ -51,7 +51,7 @@ def read_lines(path):
 
 
 # ---- creature classes ----
-creatures = (repo / 'config/creatures.cfg').read_text(encoding='utf-8')
+creatures = content_packages.read_text(repo, 'config/creatures.cfg')  # with its own rows of the content
 classes = re.findall(r'\[Creature\]\s*Name\s+(\S+)', creatures)
 jobs = re.findall(r'\[Creature\]\s*Name\s+\S+\s*\[Stats\]\s*CreatureJob\s+(\S+)', creatures)
 check(len(classes) >= 30, 'too few creature classes found in creatures.cfg')

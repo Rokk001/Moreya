@@ -1,37 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="DefaultWindow" name="SkirmishSubMenuWindow" >
-        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-        <Property name="Visible" value="False" />
-        <!-- Window frame of the chosen menu sheet behind the controls of this window (K34). -->
-        <Window type="OD/SheetPanel" name="WindowPanel" >
-            <Property name="Area" value="{{0.5,-180},{0.5,-170},{0.5,180},{0.5,102}}" />
+<!--#@own 1-->
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
-        <Window type="OD/MenuTitle" name="Title" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,-154},{0.5,160},{0.5,-106}}" />
-            <Property name="Text" value="Skirmish" />
+<!--#@own 2-->
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
-        <Window type="OD/MenuTextButton" name="StartSkirmishButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.5,-140},{0.5,-100},{0.5,140},{0.5,-46}}" />
-            <Property name="Text" value="Start Skirmish" />
-        </Window>
-        <Window type="OD/MenuTextButton" name="StartSandboxButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.5,-140},{0.5,-44},{0.5,140},{0.5,10}}" />
-            <Property name="Text" value="Sandbox" />
-        </Window>
-        <Window type="OD/MenuTextButton" name="BackButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Text" value="Back" />
-            <Property name="Area" value="{{0.5,-85},{0.5,24},{0.5,85},{0.5,78}}" />
+<!--#@own 3-->
         </Window>
     </Window>
 </GUILayout>

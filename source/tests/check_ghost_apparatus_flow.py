@@ -8,8 +8,14 @@ the shipped config, so a change of the source or the config that breaks the way 
 from pathlib import Path
 import math
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present: config/rooms.cfg is a mixed table whose own rows come from them
+CONTENT = content_packages.has_content(repo)
 
 
 # Read a tracked source using the repository root rather than the caller's directory.
@@ -34,9 +40,9 @@ def has(text, step, *fragments):
         assert fragment in text, (step, fragment)
 
 
-# Read one numeric key of a config file.
+# Read one numeric key of a config file as the game reads it (a mixed table with its own rows from the content).
 def scalar(path, key):
-    rows = re.findall(r"^\s*" + re.escape(key) + r"\s+([-+0-9.eE]+)\s*$", read(path), re.M)
+    rows = re.findall(r"^\s*" + re.escape(key) + r"\s+([-+0-9.eE]+)\s*$", content_packages.read_text(repo, path), re.M)
     assert len(rows) == 1, (key, rows)
     return float(rows[0])
 
@@ -55,8 +61,9 @@ ROOM = read("source/rooms/RoomGhostRoom.cpp")
 KINDS = {name: int(value) for name, value in re.findall(r"(\w+)\s*=\s*(\d+)",
     re.search(r"enum class GhostProduct : uint32_t \{([^}]*)\};", read("source/game/SeatData.h")).group(1))}
 NAMES = {value: name for name, value in KINDS.items()}
-TURNS = scalar("config/rooms.cfg", "GhostApparatusTurns")
-PER_CRYSTAL = scalar("config/rooms.cfg", "GhostEctoplasmPerCrystal")
+# The work values of the shipped config; None without the content (the flows then are not followed)
+TURNS = scalar("config/rooms.cfg", "GhostApparatusTurns") if CONTENT else None
+PER_CRYSTAL = scalar("config/rooms.cfg", "GhostEctoplasmPerCrystal") if CONTENT else None
 
 
 def unlock_level(kind):
@@ -453,9 +460,20 @@ def locked():
     print("locked apparatus takes no ectoplasm: ok")
 
 
-# Run the normal flows, busy queues, interrupted deliveries and save compatibility scenarios.
+# Run the normal flows, busy queues, interrupted deliveries and save compatibility scenarios. Without the content the
+# flows need the work values of config/rooms.cfg: only the kinds, the apparatus looks and the unlock levels are checked.
 def main():
     assert set(KINDS) == {"mana", "research", "crystal"}, KINDS
+    if not CONTENT:
+        for kind in ("mana", "research", "crystal"):
+            mesh = EXPECTED[kind][0]
+            assert apparatus_mesh(kind) == mesh, (kind, "apparatus look", apparatus_mesh(kind), mesh)
+            level = unlock_level(kind)
+            assert level == {"mana": 1, "research": 2, "crystal": 3}[kind], (kind, level)
+        content_packages.unchecked("check_ghost_apparatus_flow", ["item flows, busy queues, interrupted deliveries, old "
+                                                                  "saves and locked apparatus (values of config/rooms.cfg)"])
+        print("ghost apparatus flow: ok")
+        return
     for kind in ("mana", "research", "crystal"):
         follow(kind)
     busy()

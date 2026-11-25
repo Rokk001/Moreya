@@ -2,7 +2,9 @@
 """Check configured combat values, source paths and deterministic combat comparisons without compiling.
 
 Without the content (scripts/content_packages.py) the world simulation, which needs config/creatureSkills.cfg, is named
-as not checked.
+as not checked. The data tables of config/ are read as the game reads them, with their own rows from the content
+packages; without the content those rows (the creatures, their values and the configured coefficients) are not there,
+so only the source part runs and every other part is named as not checked.
 """
 
 import csv
@@ -66,8 +68,11 @@ STAT_KEYS = ("MinHP", "Heal/Turn", "SleepHeal", "AttackRating", "DefenseRating")
 RANGE_KEYS = ("PhyMin", "PhyMax", "MagMin", "MagMax", "EleMin", "EleMax")
 
 
-# Read production text for explicit source wiring assertions.
+# Read production text for explicit source wiring assertions; a data table of config/ comes with its own rows from
+# the content packages (scripts/content_packages.py).
 def read(path):
+    if path.startswith("config/"):
+        return content_packages.read_text(ROOT, path)
     return (ROOT / path).read_text(encoding="utf-8")
 
 
@@ -192,7 +197,8 @@ def check_sources():
     for key in ("HitChanceScale", "HitChanceMin", "HitChanceMax"):
         assert "get" + key + "()" in hit
     # The scale and the bounds of the hit chance are global.cfg keys
-    for key, value in (("HitChanceScale", "200"), ("HitChanceMin", "5"), ("HitChanceMax", "95")):
+    for key, value in ((("HitChanceScale", "200"), ("HitChanceMin", "5"), ("HitChanceMax", "95"))
+                       if content_packages.has_content(ROOT) else ()):
         assert re.search(r"^\s*" + key + r"\s+" + value + r"\s*$", read("config/global.cfg"), re.M), key
     defence = function(creature, "DefenceChance::Outcome Creature::rollMeleeDefence(")
     for needle in ("getMeleeDodgeParry()", "getIsOnServerMap()", "isKo()", "mIsInHand", "mIsBeingDragged", "isPossessed()",
@@ -396,6 +402,14 @@ def check_world_simulation(roster):
 # Execute the checks as pure Python; production C++ is inspected, never compiled.
 # Report actual setup and simulation phases without altering any case or threshold.
 def main():
+    if not content_packages.has_content(ROOT):
+        # The creature rows and the configured values are own rows of the content package core-config
+        check_sources()
+        content_packages.unchecked('check_combat_rebalance', ['values', 'curves', 'buildings', 'other-damage',
+                                                              'simulation', 'world-simulation',
+                                                              'config/global.cfg HitChance* rows'])
+        print("check_combat_rebalance: ok")
+        return
     started = time.perf_counter()
     roster = Roster(ROOT)
     print('ODP_TEST_PHASE ' + json.dumps({'name': 'roster-setup', 'seconds': time.perf_counter() - started}), flush=True)

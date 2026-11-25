@@ -698,6 +698,10 @@ def probe_shim():
 
 def run_probe(require, source=PROBE, config=FIXTURE):
     compiler = shutil.which('cl')
+    # The probe shim takes the skill tree values of global.cfg, own rows of the content package core-config
+    if not HAS_CONTENT:
+        content_packages.unchecked('check_creature_skill_trees', ['compiled probe (global.cfg skill tree values)'])
+        return None
     if compiler is None:
         assert not require, '--probe needs the compiler (cl) in the PATH'
         print('compiled probe not run (no cl in the PATH)')
@@ -836,7 +840,12 @@ def check_sources():
         for block in ('[Skill]', '[TierFour]', '[Template]'):
             assert block in cfg
     assert 'loadCreatureSkills' in config_manager and 'mCreatureSkillTree.load(' in config_manager
-    assert 'creatureSkills.cfg' in config_manager and 'CreatureSkills' in text('config/global.cfg')
+    assert 'creatureSkills.cfg' in config_manager
+    # The CreatureSkills row is an own row of global.cfg (content package core-config)
+    if HAS_CONTENT:
+        assert 'CreatureSkills' in text('config/global.cfg')
+    else:
+        content_packages.unchecked('check_creature_skill_trees', ['config/global.cfg CreatureSkills row'])
     example = FIXTURE.read_text(encoding='utf-8')
     assert '[/Skill]' in example and '[/TierFour]' in example and '[/Template]' in example
 
@@ -1086,7 +1095,9 @@ def check_type_keys(skills, tiers):
 
 
 def check_removed_lines():
-    """Section 7.7: the skill lists keep Melee and the MissileLaunch lines; the Champion keeps every line."""
+    """Section 7.7: the skill lists keep Melee and the MissileLaunch lines; the Champion keeps every line. Without the
+    content the creature rows of creatures.cfg are own rows that are not there: the lists of its public rows are
+    checked and the per-type lines are named as not checked."""
     for relative in ['config/creatures.cfg'] + level_files():
         for name, entries in creature_blocks(relative).items():
             for keys, skill_lines in entries:
@@ -1098,17 +1109,20 @@ def check_removed_lines():
                     assert line_name in KEPT_LINES, (relative, name, line_name)
                 assert names.count('Melee') <= 1, (relative, name)
                 assert names.count('MissileLaunch') <= 1, (relative, name)
-    creatures = creature_blocks('config/creatures.cfg')
-    # The Champion keeps every line it has (Melee and its Explosion), the Explosion line is not removed
-    assert sorted(t[0] for t in creatures['Champion'][0][1]) == ['Explosion', 'Melee']
-    # Casters and archers keep their first MissileLaunch, the Dragon its second attack line (a MissileLaunch after
-    # Melee), everything else has none
-    for name, (group, family, pre, tier_four) in EXPECTED_TYPES.items():
-        shots = [t[0] for t in creatures[name][0][1]].count('MissileLaunch')
-        if group in ('caster', 'archer', 'blitzer'):
-            assert shots == 1, name
-        else:
-            assert shots == 0, name
+    if HAS_CONTENT:
+        creatures = creature_blocks('config/creatures.cfg')
+        # The Champion keeps every line it has (Melee and its Explosion), the Explosion line is not removed
+        assert sorted(t[0] for t in creatures['Champion'][0][1]) == ['Explosion', 'Melee']
+        # Casters and archers keep their first MissileLaunch, the Dragon its second attack line (a MissileLaunch after
+        # Melee), everything else has none
+        for name, (group, family, pre, tier_four) in EXPECTED_TYPES.items():
+            shots = [t[0] for t in creatures[name][0][1]].count('MissileLaunch')
+            if group in ('caster', 'archer', 'blitzer'):
+                assert shots == 1, name
+            else:
+                assert shots == 0, name
+    else:
+        content_packages.unchecked('check_creature_skill_trees', ['config/creatures.cfg per-type skill lines'])
 
 
 def check_content():

@@ -125,8 +125,13 @@ plan = plan[:plan.index('\n}\n')]
 for needle in ('HatcheryFleeReach', 'isFreeWanderPoint(goal', 'isSegmentInRoom(from, goal)', 'goal.distance(threat) < distanceNow + gain'):
     assert needle in plan, needle
 # no longer than the old hop to a neighbour tile (at most 1.5 along and 0.5 across)
-reach = float(re.search(r'^[ \t]+HatcheryFleeReach[ \t]+([0-9.]+)', read('config/rooms.cfg'), re.M).group(1))
-assert 0.0 < reach <= (1.5 ** 2 + 0.5 ** 2) ** 0.5
+# HatcheryFleeReach is an own row of rooms.cfg (content package core-config); without the content it is not checked
+if content_packages.has_content(root):
+    reach = float(re.search(r'^[ \t]+HatcheryFleeReach[ \t]+([0-9.]+)', content_packages.read_text(root, 'config/rooms.cfg'),
+                            re.M).group(1))
+    assert 0.0 < reach <= (1.5 ** 2 + 0.5 ** 2) ** 0.5
+else:
+    content_packages.unchecked('check_chicken_flight', ['config/rooms.cfg HatcheryFleeReach'])
 # Not saved: the stream format is unchanged
 assert 'mFlight' not in cpp[cpp.index('void ChickenEntity::exportToStream'):]
 

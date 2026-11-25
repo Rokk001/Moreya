@@ -4,6 +4,8 @@
 # The chicken meshes, skeletons, materials and the production ambience table are content (hatchery room package and
 # core content packages, found through scripts/content_packages.py) and their CREDITS rows stand in the CREDITS of the
 # content repository; without the content the code side is checked and the asset part is named as not checked.
+# config/rooms.cfg is a mixed table read with its own rows from the content (content_packages.read_text); without the
+# content its keys are named as not checked, the absence of old keys is checked on its public rows.
 from pathlib import Path
 import sys
 
@@ -36,7 +38,11 @@ room = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 render = (root / 'source/render/RenderManager.cpp').read_text()
 looks = (root / 'source/render/RenderManagerChickens.cpp').read_text()
 pose = (root / 'source/entities/ChickenPose.h').read_text()
-config = (root / 'config/rooms.cfg').read_text()
+#: True when the content packages are present (the own rows of config/rooms.cfg come from them)
+TABLES = content_packages.has_content(root)
+config = content_packages.read_text(root, 'config/rooms.cfg')
+if not TABLES:
+    content_packages.unchecked('check_hatchery_visuals', ['hatchery keys and values of config/rooms.cfg'])
 cmake = (root / 'CMakeLists.txt').read_text()
 # The public CREDITS plus the CREDITS of the content repository when the packages are present
 credits = room_packages.credits_text(root)
@@ -94,9 +100,13 @@ assert 'RenderManagerChickens.cpp' in cmake and 'HatcheryRooster.cpp' in cmake
 for key in ('HatcheryRoosterCrowMin', 'HatcheryRoosterCrowMax',
             'HatcheryRoosterChasePercent',
             'HatcheryRoosterGuardRadius', 'HatcheryCoopRoofHeight', 'HatcheryChickGap'):
-    assert key in config and key in room, key
+    assert key in room, key
+    if TABLES:
+        assert key in config, key
 for key in ('HatcheryChickScale', 'HatcheryRoosterScale'):
-    assert key in config and key in looks, key
+    assert key in looks, key
+    if TABLES:
+        assert key in config, key
 
 # Every material the code asks for exists and the new assets have a credit.
 if CONTENT:
@@ -177,11 +187,15 @@ for call in ('ChickenPose::flutter', 'ChickenPose::scratch', 'scatterTo', 'colle
     assert call in flock, call
 assert 'CreatureActionType::eatChicken' in body(room, 'void RoomHatchery::collectHungry')
 for key in ('HatcheryScatterRadius', 'HatcheryScatterTurns', 'HatcheryFlutterPercent', 'HatcheryScratchPercent'):
-    assert key in config and key in room, key
+    assert key in room, key
+    if TABLES:
+        assert key in config, key
 assert 'ChickenPose::scratch' in looks and 'ChickenPose::flutter' in looks
 assert 'fireProtest' in body(chicken, 'void ChickenEntity::pickup')
 # Eggs and chicks dropped outside a hatchery are lost
-assert 'HatcheryYoungLostTurns' in chickUpkeep and 'HatcheryYoungLostTurns' in config
+assert 'HatcheryYoungLostTurns' in chickUpkeep
+if TABLES:
+    assert 'HatcheryYoungLostTurns' in config
 
 # Coop mesh with door clip and roof lookout, and the real hen clips Lay and Flutter (text checks only)
 coop_h = (root / 'source/rooms/HatcheryCoopHouse.h').read_text()
@@ -239,7 +253,8 @@ assert 'hasAnimation("Tread")' in update and '{"Mount", "Tread", "Dismount"}' in
 clips = (root / 'tools/blender-assets/hatchery_clips.py').read_text()
 for line in ('MOUNT_SECONDS = 0.4', 'TREAD_SECONDS = 0.55', 'DISMOUNT_SECONDS = 0.4', 'DUCK_SECONDS = 1.9', 'TREAD_CYCLES = 2'):
     assert line in clips, line
-assert 'HatcheryLookMountClimbSeconds	0.4' in config and 'HatcheryLookMountSeconds	1.9' in config
+if TABLES:
+    assert 'HatcheryLookMountClimbSeconds	0.4' in config and 'HatcheryLookMountSeconds	1.9' in config
 # With the Duck clip the procedural duck of the hen (HatcheryLookMountCrouch) is not added again
 assert 'look.mMountCrouch > 0.0f) && look.mEntity->getSkeleton()->hasAnimation("Duck")' in update
 assert 'ChickenPose::isOneShotClip(clip)' in hook and 'hasAnimation(clip)' in hook
@@ -301,10 +316,14 @@ if CONTENT:
         for tag in ('translate', 'rotate'):
             assert first.find(tag).attrib == second.find(tag).attrib, (track.get('bone'), tag)
 # The rooster that guards the flock pecks (Pick clip and a lunge of the head)
-assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks and 'HatcheryLookGuardPeckSpeed' in config
+assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks
+if TABLES:
+    assert 'HatcheryLookGuardPeckSpeed' in config
 # the rooster protests in the hand: pose, clip and look
 assert 'ChickenPose::protest' in body(chicken, 'void ChickenEntity::pickup') and 'protest)' in pose
-assert 'values.mProtestPuff' in looks and 'HatcheryLookProtestRoll' in config
+assert 'values.mProtestPuff' in looks
+if TABLES:
+    assert 'HatcheryLookProtestRoll' in config
 # Floor nests are not gated by client Room objects, coop presence or animal population.
 decor = body(looks, 'const bool check = mCoopDecorTimer')
 assert 'updateNestFields();' in decor and 'getCoveringRoom' not in decor

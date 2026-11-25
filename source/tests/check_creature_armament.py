@@ -52,8 +52,11 @@ PARENTS = {
 NEW_WEAPONS = {'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1, 'Wand': 2}
 
 
-# Read a tracked production input without invoking any asset tools.
+# Read a tracked production input without invoking any asset tools; a data table of config/ comes with its own rows
+# from the content packages, as the game reads it.
 def read(path):
+    if path.startswith('config/'):
+        return content_packages.read_text(ROOT, path)
     return (ROOT / path).read_text(encoding='utf-8')
 
 
@@ -262,10 +265,15 @@ def check_source():
 
 # Run all static checks with clear failures while leaving build and runtime verification separate.
 def main():
-    equipment = definitions(read('config/equipments.cfg'), 'Equipment')
-    creatures = definitions(read('config/creatures.cfg'), 'Creature')
-    check_equipment(equipment)
-    check_creatures(creatures, equipment)
+    # The equipment and creature rows are own rows of the content package core-config; without the content the
+    # assignments, types and hands are named as not checked
+    if content_packages.has_content(ROOT):
+        equipment = definitions(read('config/equipments.cfg'), 'Equipment')
+        creatures = definitions(read('config/creatures.cfg'), 'Creature')
+        check_equipment(equipment)
+        check_creatures(creatures, equipment)
+    else:
+        content_packages.unchecked('check_creature_armament', ['config/equipments.cfg and config/creatures.cfg rows'])
     check_assets()
     check_source()
     print('PASS: creature armament assignments, types, hands, skeleton mounts, assets, credits and source wiring')

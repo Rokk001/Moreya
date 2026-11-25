@@ -58,7 +58,10 @@ def check(condition, message):
         FAILURES.append(message)
 
 
-GLOBAL_CFG = read("config/global.cfg")
+#: True when the content packages are present: global.cfg and ODSkin.scheme are mixed files whose own rows come from them
+CONTENT = content_packages.has_content(ROOT)
+#: config/global.cfg as the game reads it, with its own rows from the content
+GLOBAL_CFG = content_packages.read_text(ROOT, "config/global.cfg")
 CONFIG_MANAGER = read("source/utils/ConfigManager.cpp")
 CONFIG_MANAGER_H = read("source/utils/ConfigManager.h")
 RULES_H = read("source/game/HandLimitRules.h")
@@ -81,19 +84,22 @@ EXPECTED_KEYS = {
     "HandLimitFighters": ("1", False),
     "HandLimitCooldownSeconds": ("60", False),
 }
-block = re.search(r"^\[HandLimit\]\n(.*?)^\[/HandLimit\]", GLOBAL_CFG, re.M | re.S)
-check(block is not None, "V1: global.cfg has a [HandLimit] block")
-values = dict(re.findall(r"^\s+(\w+)\t(\S+)$", block.group(1), re.M)) if block else {}
-check(values == {key: value for key, (value, _) in EXPECTED_KEYS.items()}, "V1: [HandLimit] keys " + repr(values))
-for key, (_, simulated) in EXPECTED_KEYS.items():
-    doc = re.search(r"^# " + key + r" +(.+)$", GLOBAL_CFG, re.M)
-    check(doc is not None, "V1: documentation line of " + key)
-    if doc is not None:
-        marked = "PLACEHOLDER: set by simulation R3C" in doc.group(1)
-        check(marked == simulated, "C5: placeholder mark of " + key + " (the simulation R3C sets the cooldown)")
-header = GLOBAL_CFG[:GLOBAL_CFG.index("[HandLimit]")].rsplit("[/Raid]", 1)[1]
-check("campaign level" in header and "Zivs" in header and "Skirmish and" in header and "multiplayer" in header,
-      "V1: the block comment names the campaign, the Zivs and skirmish and multiplayer")
+if CONTENT:
+    block = re.search(r"^\[HandLimit\]\n(.*?)^\[/HandLimit\]", GLOBAL_CFG, re.M | re.S)
+    check(block is not None, "V1: global.cfg has a [HandLimit] block")
+    values = dict(re.findall(r"^\s+(\w+)\t(\S+)$", block.group(1), re.M)) if block else {}
+    check(values == {key: value for key, (value, _) in EXPECTED_KEYS.items()}, "V1: [HandLimit] keys " + repr(values))
+    for key, (_, simulated) in EXPECTED_KEYS.items():
+        doc = re.search(r"^# " + key + r" +(.+)$", GLOBAL_CFG, re.M)
+        check(doc is not None, "V1: documentation line of " + key)
+        if doc is not None:
+            marked = "PLACEHOLDER: set by simulation R3C" in doc.group(1)
+            check(marked == simulated, "C5: placeholder mark of " + key + " (the simulation R3C sets the cooldown)")
+    header = GLOBAL_CFG[:GLOBAL_CFG.index("[HandLimit]")].rsplit("[/Raid]", 1)[1]
+    check("campaign level" in header and "Zivs" in header and "Skirmish and" in header and "multiplayer" in header,
+          "V1: the block comment names the campaign, the Zivs and skirmish and multiplayer")
+else:
+    content_packages.unchecked("check_hand_limit", ["V1 and C5 the [HandLimit] block of config/global.cfg"])
 check('nextParam == "[HandLimit]"' in function(CONFIG_MANAGER, "bool ConfigManager::loadGlobalConfig("),
       "V1: global.cfg reads the [HandLimit] block")
 check('readGlobalNumberBlock(configFile, "[/HandLimit]", mHandLimitConfig)' in CONFIG_MANAGER,
@@ -489,8 +495,11 @@ check("ServerNotificationType::chatServer" in refused and "displayText" not in r
       and "case ServerNotificationType::chatServer:" in client and "addEventMessage(new EventMessage(evtMsg, type));" in client,
       "K5: the refusal message appears in the message line only")
 # G11: the crossed-out hand is a text-free placeholder under its final image name
-check('filename="HandCooldown.imageset" name="HandCooldown"' in read("gui/ODSkin.scheme"),
-      "G11: the scheme loads the imageset")
+if CONTENT:
+    check('filename="HandCooldown.imageset" name="HandCooldown"' in content_packages.read_text(ROOT, "gui/ODSkin.scheme"),
+          "G11: the scheme loads the imageset")
+else:
+    content_packages.unchecked("check_hand_limit", ["G11 the imageset entry of gui/ODSkin.scheme"])
 HAND_FILES = ("gui/HandCooldown.imageset", "gui/HandCooldownIcon.png")
 if content_packages.unchecked("check_hand_limit", [name for name in HAND_FILES
                                                    if content_packages.data_file(ROOT, name) is None]) == []:

@@ -30,9 +30,9 @@ for path in (repo / 'source/rooms').glob('*.cpp'):
     for constant in re.findall(r'new (?:BuildingObject|PersistentObject)\(\w+(?:\(\))?, \*this, RoomObjectPath::(\w+)', path.read_text()):
         required.add(mesh_constants[constant])
 assert 'ToiletSeat' in required, 'the toilet seats of RoomToilet must be found as room furniture'
-required.update(re.findall(r'^\s*BedMeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M))
+required.update(re.findall(r'^\s*BedMeshName\s+(\S+)', content_packages.read_text(repo, 'config/creatures.cfg'), re.M))
 bed_dimensions = set()
-for creature in (repo / 'config/creatures.cfg').read_text().split('[Creature]')[1:]:
+for creature in content_packages.read_text(repo, 'config/creatures.cfg').split('[Creature]')[1:]:
     creature = creature.split('[/Creature]', 1)[0]
     bed = re.search(r'^\s*BedMeshName\s+(\S+)', creature, re.M)
     dimensions = re.search(r'^\s*BedDim\s+(\d+)\s+(\d+)', creature, re.M)

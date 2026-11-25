@@ -43,6 +43,22 @@ def read(path):
     return path.read_text(encoding='utf-8-sig')
 
 
+def read_data(root, path):
+    """Read a data file as the game reads it: a mixed table below root (config/creatures.cfg, ...) comes with its own
+    rows from the content packages in place of its marker lines (scripts/content_packages.py)."""
+    try:
+        relative = path.relative_to(root).as_posix()
+    except ValueError:
+        return read(path)
+    return content_packages.read_text(root, relative, encoding='utf-8-sig')
+
+
+def is_own_rows_file(path):
+    """True for the own rows file of a mixed table (config/creatures.own.cfg); its rows are read joined into the
+    table itself (read_data), not as a table of their own."""
+    return Path(path).stem.endswith('.own')
+
+
 def without_comments(text):
     """Remove C++ comments while preserving strings, offsets and line numbers."""
     pattern = re.compile(STRING + r'|//[^\n]*|/\*.*?\*/', re.S)
@@ -165,9 +181,11 @@ def data_references(root):
                    {p for p in (root / 'levels').rglob('*') if p.is_file() and p.suffix in {'.level', '.cfg'}} |
                    set(campaign_packages.content_files(root, ('.level', '.cfg'))))
     for path in paths:
+        if is_own_rows_file(path):
+            continue
         relative = campaign_packages.display_path(root, path)
         sections = []
-        for line_no, original in enumerate(read(path).splitlines(), 1):
+        for line_no, original in enumerate(read_data(root, path).splitlines(), 1):
             line = original.split('#', 1)[0].strip()
             if not line:
                 continue
@@ -477,7 +495,7 @@ def finite_name_references(root):
         prefix = match[1]
         for path in (list((root / 'config').rglob('*.cfg')) + list((root / 'levels').rglob('*.level'))
                      + campaign_packages.content_files(root, ('.level',))):
-            content = read(path)
+            content = read_data(root, path)
             for creature in re.finditer(r'\[Creature\](.*?)\[/Creature\]', content, re.S):
                 name = re.search(r'^\s*Name\s+(\S+)', creature[1], re.M)
                 if name:

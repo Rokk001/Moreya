@@ -27,7 +27,8 @@ def check(condition, message):
 
 
 def read(path):
-    return (repo / path).read_text(encoding='utf-8', errors='replace')
+    """The text of a repository file; a mixed interface file comes with its own rows of the content."""
+    return content_packages.read_text(repo, path)
 
 
 def read_data(path):
@@ -97,21 +98,26 @@ if layout is not None:
           'the navigation bar of one creature spans the width of the book')
     check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')
 
-hud = read('gui/ModeGame.layout')
-check('filename="WindowSocial.layout"' in hud, 'window not imported')
-button = hud[hud.index('name="SocialButton"'):]
-button = button[:button.index('</Window>')]
-check('{{0,148},{1,-224},{0,188},{1,-184}}' in button, 'button is not in the free slot')
-check('ContextHelp' in button and 'TooltipText' in button, 'tooltip and context help')
-# The button shows the Dungeonbook icon of its own imageset (INGAME-QS-10 K12b); the imageset is registered in the
-# scheme and defines the image the button names.
-icon = re.search(r'NormalImage" value="(\w+)/(\w+)"', button)
-check(icon is not None and icon[1] == 'NavigationDungeonbook', 'button uses the Dungeonbook icon')
-check('<Imageset filename="NavigationDungeonbook.imageset" name="NavigationDungeonbook" />' in read('gui/ODSkin.scheme'),
-      'Dungeonbook imageset registered')
-dungeonbook_icons = read_data('gui/NavigationDungeonbook.imageset')
-if dungeonbook_icons is not None:
-    check('name="%s"' % icon[2] in dungeonbook_icons, 'button icon must exist')
+if content_packages.has_content(repo):
+    hud = read('gui/ModeGame.layout')
+    check('filename="WindowSocial.layout"' in hud, 'window not imported')
+    button = hud[hud.index('name="SocialButton"'):]
+    button = button[:button.index('</Window>')]
+    check('{{0,148},{1,-224},{0,188},{1,-184}}' in button, 'button is not in the free slot')
+    check('ContextHelp' in button and 'TooltipText' in button, 'tooltip and context help')
+    # The button shows the Dungeonbook icon of its own imageset (INGAME-QS-10 K12b); the imageset is registered in the
+    # scheme and defines the image the button names.
+    icon = re.search(r'NormalImage" value="(\w+)/(\w+)"', button)
+    check(icon is not None and icon[1] == 'NavigationDungeonbook', 'button uses the Dungeonbook icon')
+    check('<Imageset filename="NavigationDungeonbook.imageset" name="NavigationDungeonbook" />' in read('gui/ODSkin.scheme'),
+          'Dungeonbook imageset registered')
+    dungeonbook_icons = read_data('gui/NavigationDungeonbook.imageset')
+    if dungeonbook_icons is not None:
+        check('name="%s"' % icon[2] in dungeonbook_icons, 'button icon must exist')
+else:
+    # gui/ModeGame.layout and gui/ODSkin.scheme are whole only with their own rows of the content (core-gui)
+    content_packages.unchecked('check_social_window', ['HUD button and scheme entry (own rows of gui/ModeGame.layout '
+                                                       'and gui/ODSkin.scheme)'])
 
 gamemode = read('source/modes/GameMode.cpp')
 check(gamemode.count('case OIS::KC_B:') == 1, 'one B case in GameMode')

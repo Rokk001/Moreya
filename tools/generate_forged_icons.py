@@ -28,6 +28,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from assets_src import assets_src_dir  # noqa: E402
+import config_own_rows  # noqa: E402
+import content_packages  # noqa: E402
+import tempfile  # noqa: E402
 ATLAS = os.path.join(ROOT, "gui", "ODIcons.png")
 IMAGESET = os.path.join(ROOT, "gui", "ODIcons.imageset")
 
@@ -79,8 +82,9 @@ PLAY_ROW = ("PlayIcon",)   # after the seven terrain swatches of the second row
 
 
 def read_swatches():
-    """The terrain swatches are photographs and stay as they are: cut them from the current atlas."""
-    text = open(IMAGESET, encoding="utf-8").read()
+    """The terrain swatches are photographs and stay as they are: cut them from the current atlas (the imageset is
+    joined with its own rows of the content packages, scripts/content_packages.py)."""
+    text = content_packages.read_text(ROOT, "gui/ODIcons.imageset")
     atlas = Image.open(ATLAS).convert("RGBA")
     tiles = {}
     for name in SWATCHES:
@@ -125,8 +129,13 @@ def build_atlas():
     for name, w, h, x, y in entries:
         lines.append('    <Image height="%d" name="%s" width="%d" xPos="%d" yPos="%d" />' % (h, name, w, x, y))
     lines.append("</Imageset>")
-    with open(IMAGESET, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(lines) + "\n")
+    # The imageset is a mixed interface file: the full text is split into the public file and the own rows file of the
+    # content package core-gui (scripts/config_own_rows.py), never written joined over the public file
+    with tempfile.TemporaryDirectory() as folder:
+        full = os.path.join(folder, "ODIcons.imageset")
+        with open(full, "w", encoding="utf-8", newline="\n") as f:
+            f.write("\n".join(lines) + "\n")
+        config_own_rows.split_full(ROOT, full, "gui/ODIcons.imageset")
     print("wrote %d images to %s" % (len(entries), ATLAS))
 
 

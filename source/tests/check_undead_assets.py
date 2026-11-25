@@ -102,7 +102,13 @@ def main():
                                                   ROOT / 'tools/blender-assets/splice_animation_chunks.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    creatures = read('config/creatures.cfg')
+    # The DeathVanishSeconds rows are own rows of config/creatures.cfg (content package core-config)
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_undead_assets', ['DeathVanishSeconds and the Die clips (own rows of '
+                                                           'config/creatures.cfg)'])
+        print('undead assets ok')
+        return
+    creatures = content_packages.read_text(ROOT, 'config/creatures.cfg')
     for creature, skeleton, seconds in (('Skeleton', 'skeleton.skeleton', 5.0), ('Lich', 'lich.skeleton', 5.0)):
         match = re.search(r'^\s*DeathVanishSeconds\s+(\S+)', creature_block(creatures, creature), re.M)
         assert match and float(match.group(1)) == seconds, creature + ' DeathVanishSeconds must be ' + str(seconds)

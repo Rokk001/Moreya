@@ -3,8 +3,11 @@
 One section per mechanic, in the order they were added.
 """
 from pathlib import Path
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -59,7 +62,12 @@ assert 'type == "countdown"' in script and 'os << "countdown' in script and 'key
 assert 'case LevelScriptActionType::waveCountdown:' in runner and 'setScriptWaveCountdown(' in runner
 assert 'type == "wavecountdown"' in script and 'os << "wavecountdown' in script and 'key == "WaveCountdown"' in script
 assert 'mWaveCountdownSeconds' in read('source/network/ODClient.cpp') and 'mWaveCountdownToSend' in read('source/gamemap/GameMap.cpp')
-assert 'WaveCountdownDisplay' in read('source/modes/GameMode.cpp') and 'WaveCountdownDisplay' in read('gui/ModeGame.layout')
+assert 'WaveCountdownDisplay' in read('source/modes/GameMode.cpp')
+# The display is an own row of gui/ModeGame.layout (content package core-gui); without the content it is not checked
+if content_packages.has_content(repo):
+    assert 'WaveCountdownDisplay' in content_packages.read_text(repo, 'gui/ModeGame.layout')
+else:
+    content_packages.unchecked('check_campaign_mechanics', ['gui/ModeGame.layout WaveCountdownDisplay'])
 assert 'startPossession(' in runner and 'newCreature->setName(' in runner
 assert 'isPortalOff(getSeat()->getId())' in read('source/rooms/RoomPortal.cpp')
 assert 'isCreatureBlocked(getId()' in read('source/game/Seat.cpp')

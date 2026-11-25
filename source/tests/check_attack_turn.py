@@ -4,8 +4,11 @@ Pure source wiring checks (no compiler, no game): kind and number, server emitte
 client handler, delayed clip start, configuration keys. The damage and its timing on the server stay untouched."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -29,7 +32,11 @@ render_h = read('source/render/RenderManager.h')
 client = read('source/network/ODClient.cpp')
 config_cpp = read('source/utils/ConfigManager.cpp')
 config_h = read('source/utils/ConfigManager.h')
-global_cfg = read('config/global.cfg')
+# global.cfg as the game reads it: the AttackTurn* rows are own rows of the content package core-config
+global_cfg = content_packages.read_text(root, 'config/global.cfg')
+global_values = content_packages.has_content(root)
+if not global_values:
+    content_packages.unchecked('check_attack_turn', ['config/global.cfg AttackTurn* rows'])
 
 # Kind: appended behind hitResult (17); 15 and 16 are the casino result and the keeper wealth
 enum_body = event_h.split('enum class CosmeticEventType')[1].split('};')[0]
@@ -95,7 +102,7 @@ assert 'getIsOnServerMap()' in state.split('mBlowStartDelay = 0.0;')[0]
 # Configuration: documented in global.cfg, read with a default, limited
 for key, default, member in (('AttackTurnEvents', '1', 'mAttackTurnEvents(true)'), ('AttackTurnSpeed', '540', 'mAttackTurnSpeed(DEFAULT_ATTACK_TURN_SPEED)'),
                              ('AttackTurnMaxDelay', '0.25', 'mAttackTurnMaxDelay(DEFAULT_ATTACK_TURN_MAX_DELAY)')):
-    assert re.search(r'^# .*\n(?:# .*\n)?\s+' + key + r'\t' + re.escape(default) + r'\s*$', global_cfg, re.M), key
+    assert not global_values or re.search(r'^# .*\n(?:# .*\n)?\s+' + key + r'\t' + re.escape(default) + r'\s*$', global_cfg, re.M), key
     assert 'nextParam == "' + key + '"' in config_cpp, key
     assert member in config_cpp, key
 assert 'std::max(AttackTurnSpeedMin, std::min(AttackTurnSpeedMax, mAttackTurnSpeed))' in config_h

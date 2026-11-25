@@ -4,6 +4,7 @@ import argparse
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -14,14 +15,23 @@ args = parser.parse_args()
 assert args.frames > 0
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
-models = set(re.findall(r'^\s*MeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M))
+# creatures.cfg as the game reads it: most creature rows are own rows of the content package core-config; without the
+# content the model catalog cannot be compared and the probe is not run
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_creature_walking_bounds', ['config/creatures.cfg MeshName/BedMeshName rows',
+                                                                 'walking bounds probe'])
+    sys.exit(0)
+creatures_cfg = content_packages.read_text(repo, 'config/creatures.cfg')
+models = set(re.findall(r'^\s*MeshName\s+(\S+)', creatures_cfg, re.M))
 catalog = set(re.findall(r'\{"([^"\n]+\.mesh)"', (repo / 'source/gamemap/RoomObjectBounds.h').read_text()))
 assert models == catalog, f'Walking bounds catalog mismatch: {models ^ catalog}'
 assert args.bone_profile is None or args.bone_profile in catalog
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 bed_support = renderer.split('Ogre::Vector3 getBedSupportPoint(', 1)[1].split('\nbool needsCreatureDropFallback(', 1)[0]
-bed_names = sorted(set(re.findall(r'^\s*BedMeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M)))
+bed_names = sorted(set(re.findall(r'^\s*BedMeshName\s+(\S+)', creatures_cfg, re.M)))
 bed_names = sorted(set(bed_names) | {name for name in re.findall(r'\{"([^"\n]+)"',
     (repo / 'source/gamemap/RoomObjectBounds.h').read_text()) if name.endswith(('Bed', 'Coffin'))})
 leg_names = {}

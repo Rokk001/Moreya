@@ -21,7 +21,8 @@ Calls (from the repository root):
 
 config/ai.cfg and config/social-texts.cfg are game data of the content packages (scripts/content_packages.py): they are
 read from the public tree or from the content packages. Without the content the room plan of ai.cfg and the posts are
-named as not checked.
+named as not checked. config/rooms.cfg, config/global.cfg and config/skills.cfg are read with their own rows of the
+content package core-config; without the content their spa values are named as not checked and the code is checked.
 """
 from pathlib import Path
 import re
@@ -31,10 +32,13 @@ root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'scripts'))
 import content_packages  # noqa: E402
 
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(root)
 
-# Returns the text of a repository file.
+
+# Returns the text of a repository file; a mixed table comes with its own rows of the content.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Returns the key -> value words of the first block [tag]...[/tag] of a text (comments skipped).
@@ -71,8 +75,9 @@ ai_cfg = read_data('config/ai.cfg')
 skill_manager = read('source/game/SkillManager.cpp')
 keeper_ai = read('source/ai/KeeperAI.cpp')
 
-rooms = block_values(rooms_cfg, 'Rooms')
-tavern = block_values(global_cfg, 'Tavern')
+if WITH_CONTENT:
+    rooms = block_values(rooms_cfg, 'Rooms')
+    tavern = block_values(global_cfg, 'Tavern')
 
 # 1. Every Spa key with the value of the design (section 4 of the design)
 SPA = {
@@ -83,52 +88,53 @@ SPA = {
     'SpaAttendantCannonballMaxSeconds': '180', 'SpaCannonballChance': '0.25', 'SpaJumpTurns': '2',
     'SpaJumpHeight': '1.0',
 }
-found = sorted(k for k in rooms if k.startswith('Spa'))
-assert found == sorted(SPA), 'the Spa keys of rooms.cfg are not the design keys: ' + ', '.join(found)
-for key, value in SPA.items():
-    assert float(rooms[key]) == float(value), key + ' is ' + rooms[key] + ', the design says ' + value
-    if key != 'SpaHP':
+if WITH_CONTENT:
+    found = sorted(k for k in rooms if k.startswith('Spa'))
+    assert found == sorted(SPA), 'the Spa keys of rooms.cfg are not the design keys: ' + ', '.join(found)
+    for key, value in SPA.items():
+        assert float(rooms[key]) == float(value), key + ' is ' + rooms[key] + ', the design says ' + value
+        if key != 'SpaHP':
+            assert_documented(rooms_cfg, key, 'rooms.cfg')
+    # The tile hit points are documented by the generic <RoomName>HP line and named in the SpaCostPerTile line
+    assert re.search(r'^#\s*<RoomName>HP\s', rooms_cfg, re.M) and 'the tile hit points are SpaHP' in rooms_cfg
+    # The price of a bath has no own key: the beer price is read
+    assert 'SpaBathPrice' not in rooms and 'SpaPrice' not in rooms, 'the bath costs BeerPrice, no own price key'
+    assert float(tavern['BeerPrice']) == 5.0, 'BeerPrice is 5 gold'
+
+    # 2. The values that derive from existing keys still equal them
+    assert abs(float(rooms['SpaBathTurns']) / 1.4 - 30.0) < 1e-12, 'decision 904: 30 seconds seated'
+    # SpaMoodMax and SpaMoodDecayPerTurn are gone (the mood is added to the stored mood); one bath gives 150 mood points
+    bath_mood = float(rooms['SpaMoodPerTurn']) * float(rooms['SpaBathTurns'])
+    assert round(bath_mood, 1) == 150.0, 'SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath'
+    # The jump when the bath starts and the turns of the bath fill the visit limit; the buff after it makes the 300 of the design
+    assert round(float(rooms['SpaMoodJump']) + bath_mood, 1) == float(rooms['PleasureVisitMax']) == 200.0, 'SpaMoodJump + bath = PleasureVisitMax 200'
+    assert float(rooms['PleasureBuffMood']) == 100.0 and float(rooms['PleasureVisitMax']) + float(rooms['PleasureBuffMood']) == 300.0
+    for key in ('PleasureVisitMax', 'PleasureBuffMood', 'CasinoVisitLockTurns', 'TempleVisitLockTurns', 'ArenaVisitLockTurns'):
         assert_documented(rooms_cfg, key, 'rooms.cfg')
-# The tile hit points are documented by the generic <RoomName>HP line and named in the SpaCostPerTile line
-assert re.search(r'^#\s*<RoomName>HP\s', rooms_cfg, re.M) and 'the tile hit points are SpaHP' in rooms_cfg
-# The price of a bath has no own key: the beer price is read
-assert 'SpaBathPrice' not in rooms and 'SpaPrice' not in rooms, 'the bath costs BeerPrice, no own price key'
-assert float(tavern['BeerPrice']) == 5.0, 'BeerPrice is 5 gold'
+    assert float(rooms['SpaRelaxTurns']) == float(tavern['HangoverTurns']), 'SpaRelaxTurns = HangoverTurns'
+    factor = 1.0 + 14.2857 / float(rooms['SpaRelaxTurns'])
+    assert round(factor, 4) == float(rooms['SpaRelaxWorkFactor']), 'decision 904 preserves the previous work bonus'
+    assert float(rooms['SpaCostPerTile']) == float(rooms['CasinoCostPerTile'])
+    assert float(rooms['SpaHP']) == float(rooms['CasinoHP'])
+    # The dirt formula: class high 1.6154, occupancy 0.557, nine pool spots of a 25 tile room, one use per bath turn plus one
+    use_rate = 9.0 / (14.2857 + 1.0)
+    dirt = 1.6154 / (0.557 * use_rate)
+    assert round(dirt, 4) == round(float(rooms['SpaDirtPerBath']), 4), 'SpaDirtPerBath by the dirt formula: ' + str(round(dirt, 4))
+    # The jump timings are ordered ranges
+    assert float(rooms['SpaAttendantActMinSeconds']) <= float(rooms['SpaAttendantActMaxSeconds'])
+    assert float(rooms['SpaAttendantCannonballMinSeconds']) <= float(rooms['SpaAttendantCannonballMaxSeconds'])
+    assert 0.0 <= float(rooms['SpaCannonballChance']) <= 1.0
 
-# 2. The values that derive from existing keys still equal them
-assert abs(float(rooms['SpaBathTurns']) / 1.4 - 30.0) < 1e-12, 'decision 904: 30 seconds seated'
-# SpaMoodMax and SpaMoodDecayPerTurn are gone (the mood is added to the stored mood); one bath gives 150 mood points
-bath_mood = float(rooms['SpaMoodPerTurn']) * float(rooms['SpaBathTurns'])
-assert round(bath_mood, 1) == 150.0, 'SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath'
-# The jump when the bath starts and the turns of the bath fill the visit limit; the buff after it makes the 300 of the design
-assert round(float(rooms['SpaMoodJump']) + bath_mood, 1) == float(rooms['PleasureVisitMax']) == 200.0, 'SpaMoodJump + bath = PleasureVisitMax 200'
-assert float(rooms['PleasureBuffMood']) == 100.0 and float(rooms['PleasureVisitMax']) + float(rooms['PleasureBuffMood']) == 300.0
-for key in ('PleasureVisitMax', 'PleasureBuffMood', 'CasinoVisitLockTurns', 'TempleVisitLockTurns', 'ArenaVisitLockTurns'):
-    assert_documented(rooms_cfg, key, 'rooms.cfg')
-assert float(rooms['SpaRelaxTurns']) == float(tavern['HangoverTurns']), 'SpaRelaxTurns = HangoverTurns'
-factor = 1.0 + 14.2857 / float(rooms['SpaRelaxTurns'])
-assert round(factor, 4) == float(rooms['SpaRelaxWorkFactor']), 'decision 904 preserves the previous work bonus'
-assert float(rooms['SpaCostPerTile']) == float(rooms['CasinoCostPerTile'])
-assert float(rooms['SpaHP']) == float(rooms['CasinoHP'])
-# The dirt formula: class high 1.6154, occupancy 0.557, nine pool spots of a 25 tile room, one use per bath turn plus one
-use_rate = 9.0 / (14.2857 + 1.0)
-dirt = 1.6154 / (0.557 * use_rate)
-assert round(dirt, 4) == round(float(rooms['SpaDirtPerBath']), 4), 'SpaDirtPerBath by the dirt formula: ' + str(round(dirt, 4))
-# The jump timings are ordered ranges
-assert float(rooms['SpaAttendantActMinSeconds']) <= float(rooms['SpaAttendantActMaxSeconds'])
-assert float(rooms['SpaAttendantCannonballMinSeconds']) <= float(rooms['SpaAttendantCannonballMaxSeconds'])
-assert 0.0 <= float(rooms['SpaCannonballChance']) <= 1.0
-
-# 3. Research: entry and cost in skills.cfg, the effect line, the entry of the tree and the base line
-skills = block_values(skills_cfg, 'Skills')
-assert skills.get('roomSpa') == '250', 'roomSpa costs 250 (tier II)'
-assert skills['roomSpa'] == skills['roomCasino'], 'tier II rooms cost the same'
-assert_documented(skills_cfg, 'roomSpa', 'skills.cfg')
-effect = re.search(r'^\s*roomSpa\s+RelaxTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
-assert effect is not None and effect.groups() == ('1.0', '1.2', '1.4'), 'effect line roomSpa RelaxTime mul 1.0 1.2 1.4'
-assert re.search(r'^#\s+RelaxTime\b', skills_cfg, re.M), 'RelaxTime is documented in the header of skills.cfg'
-relax_levels = [float(rooms['SpaRelaxTurns']) * float(g) for g in effect.groups()]
-assert [round(v, 1) for v in relax_levels] == [252.0, 302.4, 352.8], relax_levels
+    # 3. Research: entry and cost in skills.cfg, the effect line, the entry of the tree and the base line
+    skills = block_values(skills_cfg, 'Skills')
+    assert skills.get('roomSpa') == '250', 'roomSpa costs 250 (tier II)'
+    assert skills['roomSpa'] == skills['roomCasino'], 'tier II rooms cost the same'
+    assert_documented(skills_cfg, 'roomSpa', 'skills.cfg')
+    effect = re.search(r'^\s*roomSpa\s+RelaxTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
+    assert effect is not None and effect.groups() == ('1.0', '1.2', '1.4'), 'effect line roomSpa RelaxTime mul 1.0 1.2 1.4'
+    assert re.search(r'^#\s+RelaxTime\b', skills_cfg, re.M), 'RelaxTime is documented in the header of skills.cfg'
+    relax_levels = [float(rooms['SpaRelaxTurns']) * float(g) for g in effect.groups()]
+    assert [round(v, 1) for v in relax_levels] == [252.0, 302.4, 352.8], relax_levels
 assert re.search(r'createSkill\(mSkills, SkillType::roomSpa, std::vector<SkillType>\{SkillType::roomTavern\}\)', skill_manager)
 assert re.search(r'new SkillDefRoom\(TREE_PREFIX_ROOMS, "SpaButton", skill, 2, RoomType::spa\)', skill_manager)
 assert '{SkillType::roomSpa, "RelaxTime", ResearchBaseSource::rooms, "SpaRelaxTurns", ""}' in skill_manager
@@ -161,4 +167,7 @@ if social_cfg is not None:
         'Hot mud, warm heart. Back to work.', 'Jumped from the board. Best splash of the week.',
         'My hangover drowned in the mud.', 'Relaxed. Do not talk to me about the payday.'], texts
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_spa_config', ['spa values and research entry (own rows of config/rooms.cfg, '
+                                                    'config/global.cfg and config/skills.cfg)'])
 print('spa config ok')

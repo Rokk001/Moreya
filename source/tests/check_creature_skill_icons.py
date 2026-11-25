@@ -8,8 +8,9 @@ Calls (from the repository root):
   python source/tests/check_creature_skill_icons.py   plain file checks, no compiler, no game
 
 The skill catalog, the imageset and the picture lie in the content packages (scripts/content_packages.py); without
-the content they and their CREDITS rows (CREDITS of the content repository) are named as not checked and the scheme
-is still checked.
+the content they and their CREDITS rows (CREDITS of the content repository) are named as not checked. The scheme
+loads the imageset in one of its own rows (content package core-gui), so without the content it is named as not checked
+as well.
 """
 from pathlib import Path
 import re
@@ -94,9 +95,12 @@ else:
         if name not in ids:
             errors.append('image %s is no skill id of config/creatureSkills.cfg' % name)
 
-scheme = ET.fromstring(read('gui/ODSkin.scheme'))
-if scheme.find("Imageset[@filename='CreatureSkillIcons.imageset'][@name='CreatureSkillIcons']") is None:
-    errors.append('gui/ODSkin.scheme does not load CreatureSkillIcons.imageset')
+if content_packages.has_content(root):
+    scheme = ET.fromstring(read('gui/ODSkin.scheme'))
+    if scheme.find("Imageset[@filename='CreatureSkillIcons.imageset'][@name='CreatureSkillIcons']") is None:
+        errors.append('gui/ODSkin.scheme does not load CreatureSkillIcons.imageset')
+else:
+    content_packages.unchecked('check_creature_skill_icons', ['gui/ODSkin.scheme own rows (CreatureSkillIcons.imageset)'])
 
 # The rows of the picture and the imageset lie in the CREDITS of the content repository, with the files
 if content_packages.has_content(root):

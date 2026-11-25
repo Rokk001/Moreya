@@ -41,8 +41,14 @@ client = read('source/network/ODClient.cpp')
 client_h = read('source/network/ODClient.h')
 config_h = read('source/utils/ConfigManager.h')
 config_cpp = read('source/utils/ConfigManager.cpp')
-global_cfg = read('config/global.cfg')
-rooms_cfg = read('config/rooms.cfg')
+# config/global.cfg and config/rooms.cfg are mixed tables: as the game reads them only with their own rows from the
+# content, else None
+if content_packages.has_content(root):
+    global_cfg = content_packages.read_text(root, 'config/global.cfg')
+    rooms_cfg = content_packages.read_text(root, 'config/rooms.cfg')
+else:
+    global_cfg = rooms_cfg = None
+    content_packages.unchecked('check_heart_stage_grain', ['values of config/global.cfg and config/rooms.cfg'])
 hatchery = read('source/rooms/RoomHatchery.cpp')
 hatchery_h = read('source/rooms/RoomHatchery.h')
 ambience = read('source/render/RoomAmbience.cpp')
@@ -66,7 +72,8 @@ for name in ('heartHealthStage', 'hatcheryGrain', 'roomTakeover'):
 
 # Heart steps: server decides, only for cosmetic-event clients, own and allied hearts always, others when seen
 for key, default in (('HeartHealthStages', '5'), ('HeartHealthStageEvents', '1')):
-    assert re.search(r'^# .*\n\s+' + key + r'\t' + default + r'\s*$', global_cfg, re.M), key
+    if global_cfg is not None:
+        assert re.search(r'^# .*\n\s+' + key + r'\t' + default + r'\s*$', global_cfg, re.M), key
     assert 'nextParam == "' + key + '"' in config_cpp, key
 assert 'mHeartHealthStages(5)' in config_cpp and 'mHeartHealthStageEvents(true)' in config_cpp
 assert 'std::max(2, std::min(20, mHeartHealthStages))' in config_h
@@ -100,8 +107,9 @@ assert 'HEART_RATE_RADIUS' in rate and 'return best;' in rate
 grain_keys = {'HatcheryGrainReaction': '1', 'HatcheryGrainLevels': '3', 'HatcheryGrainEatPercent': '30',
               'HatcheryGrainRegrowPermille': '8', 'HatcheryGrainSyncTurns': '2', 'HatcheryGrainResyncTurns': '14'}
 for key, value in grain_keys.items():
-    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t' + value + r'\s*$', rooms_cfg, re.M), key + ' not set'
+    if rooms_cfg is not None:
+        assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t' + value + r'\s*$', rooms_cfg, re.M), key + ' not set'
     assert '"' + key + '", ' + value + '.0)' in hatchery, key + ' needs the same default in the source'
 
 # Server authority: hens take grain when they scratch, it grows back, nothing else about the hens changes
@@ -149,7 +157,8 @@ for forbidden in ('getCare(', 'isLit(', 'getResearchValue', 'collectEnemies(', '
     assert forbidden not in update, 'regrowth must not depend on ' + forbidden
 assert update.count('Random::Uint(0, 999) < regrowPermille') == 1 and update.count('++it->second;') == 1
 assert hatchery.count('getRoomConfigDoubleOrDefault("HatcheryGrainRegrowPermille"') == 1, 'one place reads the regrowth rate'
-assert re.search(r'^# HatcheryGrainRegrowPermille .*it does not depend on care, light, research', rooms_cfg, re.M)
+if rooms_cfg is not None:
+    assert re.search(r'^# HatcheryGrainRegrowPermille .*it does not depend on care, light, research', rooms_cfg, re.M)
 
 # Batch 13b, part 3: every peck of a hen takes grain, whatever pose or clip it is. All "Pick" animations of a hen
 # and the scratch pose go through ChickenEntity::peckGround / RoomHatchery::henPecks, with one peck rhythm per hen
@@ -164,7 +173,8 @@ assert 'peckGround(currentHatchery);' in function_body(chicken, 'void ChickenEnt
 start_peck = function_body(chicken, 'bool ChickenEntity::startPeck(')
 assert 'mKind != ChickenKind::hen' in start_peck and 'mPeckWait > 0' in start_peck
 assert '"HatcheryPeckIntervalTurns", 6.0)' in start_peck
-assert re.search(r'^# HatcheryPeckIntervalTurns\s', rooms_cfg, re.M) and re.search(r'^    HatcheryPeckIntervalTurns\t6\s*$', rooms_cfg, re.M)
+if rooms_cfg is not None:
+    assert re.search(r'^# HatcheryPeckIntervalTurns\s', rooms_cfg, re.M) and re.search(r'^    HatcheryPeckIntervalTurns\t6\s*$', rooms_cfg, re.M)
 assert chicken.count('mPeckWait(0)') == 2 and 'if(mPeckWait > 0)\n        --mPeckWait;' in chicken
 peck_ground = function_body(chicken, 'void ChickenEntity::peckGround(')
 assert 'RoomType::hatchery' in peck_ground and 'henPecks(*this)' in peck_ground

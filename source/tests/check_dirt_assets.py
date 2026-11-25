@@ -40,8 +40,12 @@ def data_path(path):
     return content_packages.resolve(root, path)
 
 
+# The text of a file (see data_path); a game data file as the game reads it, a mixed table or interface file with its
+# own rows from the content packages.
 def read(path):
-    return data_path(path).read_text(encoding='utf-8')
+    if str(path).replace('\\', '/').startswith('assets-src/'):
+        return data_path(path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Returns (width, height) of a PNG file from its header.
@@ -62,7 +66,11 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
             fields.setdefault(words[0], words[1])
     if 'Name' in fields:
         types[fields['Name']] = fields['MeshName']
-assert len(types) == 35, len(types)
+# Most creature rows are own rows of the content package core-config: without the content only the public rows count
+if HAS_CONTENT:
+    assert len(types) == 35, len(types)
+else:
+    content_packages.unchecked('check_dirt_assets', ['config/creatures.cfg own creature rows'])
 
 materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for folder in [root] + content_packages.package_roots(root)
                     for p in (folder / 'materials' / 'scripts').glob('*.material'))
@@ -113,8 +121,12 @@ if not HAS_CONTENT:
     content_packages.unchecked('check_dirt_assets', ['particles/DirtFlies.particle', 'dirt sounds', 'config/roomAmbience.cfg'])
 else:
     assert re.search(r'^particle_system DirtFlies\b', read('particles/DirtFlies.particle'), re.M), 'particle DirtFlies missing'
-imageset = read('gui/ODIcons.imageset')
-assert 'name="ToiletButton"' in imageset, 'icon ToiletButton missing in ODIcons.imageset'
+# The icons of gui/ODIcons.imageset are own rows of the content package core-gui
+if HAS_CONTENT:
+    imageset = read('gui/ODIcons.imageset')
+    assert 'name="ToiletButton"' in imageset, 'icon ToiletButton missing in ODIcons.imageset'
+else:
+    content_packages.unchecked('check_dirt_assets', ['gui/ODIcons.imageset ToiletButton'])
 assert (root / 'gui' / 'ODIcons.png').is_file()
 for sound in ['Creatures/Default/Relieve/FxRelieve01.ogg', 'Creatures/Default/Clean/FxClean01.ogg',
               'Rooms/Toilet/Flush/FxToiletFlush01.ogg', 'Rooms/Toilet/Drip/FxToiletDrip01.ogg']:

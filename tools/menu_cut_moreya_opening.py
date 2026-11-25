@@ -36,6 +36,8 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
 #: The boxes cut out of the entities' meshes, in scene coordinates (x min, x max, y min, y max, z min, z max).
 STAIRWELL = (-3.0, 3.0, 31.0, 37.0, -0.95, 0.3)
 HALL_BACK_OPENING = (-4.0, 4.0, 29.0, 30.5, 0.12, 4.2)
@@ -124,9 +126,10 @@ def convert(source, target):
 
 
 def entity_positions():
-    """Returns {entity: (mesh, (x, y, z))} of the AddEntity lines of config/mainmenuscene.cfg."""
+    """Returns {entity: (mesh, (x, y, z))} of the AddEntity lines of config/mainmenuscene.cfg (joined with its own rows
+    of the content packages)."""
     result = {}
-    for line in (ROOT / "config" / "mainmenuscene.cfg").read_text(encoding="utf-8").splitlines():
+    for line in content_packages.read_text(ROOT, "config/mainmenuscene.cfg").splitlines():
         words = line.split()
         if len(words) == 6 and words[0] == "AddEntity":
             result[words[1]] = (words[2], tuple(float(value) for value in words[3:6]))

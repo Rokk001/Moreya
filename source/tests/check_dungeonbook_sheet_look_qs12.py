@@ -53,8 +53,12 @@ social_cpp = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8
 creature_cpp = (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 frame_cpp = (repo / 'source/render/ODFrameListener.cpp').read_text(encoding='utf-8')
 mode_cpp = (repo / 'source/modes/ModeManager.cpp').read_text(encoding='utf-8')
-looks = {look.get('name'): look for look in ET.parse(gui_dir / 'OD.looknfeel').getroot().findall('WidgetLook')}
-scheme = (gui_dir / 'ODSkin.scheme').read_text(encoding='utf-8')
+# OD.looknfeel and ODSkin.scheme as the game reads them, with their own rows from the content package core-gui;
+# without the content the looks are not there (parts 2 and 3, which use them, are named as not checked)
+looks = ({look.get('name'): look for look in
+          ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel')).findall('WidgetLook')}
+         if content_packages.has_content(repo) else {})
+scheme = content_packages.read_text(repo, 'gui/ODSkin.scheme')
 failures = []
 
 
@@ -226,7 +230,7 @@ plain = run(True, on_label, FRAMES)
 check(plain and abs((plain[0] - ENTER) / 60.0 - CEGUI_HOVER) <= 1.0 / 60.0 + 1e-9,
       'a plain tooltip keeps the hover time of CEGUI')
 
-if missing_content:
+if missing_content or not content_packages.has_content(repo):
     # Parts 2 and 3 measure the layout and the atlas of the content
     content_packages.unchecked('check_dungeonbook_sheet_look_qs12', missing_content)
     for failure in failures:

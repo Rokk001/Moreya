@@ -1,6 +1,8 @@
 """Historical short-cycle nest-wait record and source contract, not C++ execution.
 The approved longer life stages intentionally change production; the old record is not a current yield claim.
 The original source contract is checked at its pinned pre-cadence revision; current cadence is checked separately.
+config/rooms.cfg is a mixed table read with its own rows from the content (scripts/content_packages.py); without the
+content its hatchery values are named as not checked.
 """
 from pathlib import Path
 import hashlib
@@ -8,8 +10,11 @@ import itertools
 import json
 import re
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT/'scripts'))
+import content_packages  # noqa: E402
 RECORD = ROOT/'source/tests/fixtures/hatchery_nest_parity.json'
 ACCEPTANCE = 'akzeptiert von Mario 2026-10-08'
 EXCEPTIONS = {
@@ -42,12 +47,15 @@ assert not allowed(dict(accepted, diff=3.0)), 'rounding cannot disguise a differ
 record = json.loads(RECORD.read_text())
 assert record['turns'] == 84000
 assert record['settings'] == dict(min=3, max=9, factor='0.6516666667', hatch=2, grow=4)
-config = (ROOT/'config/rooms.cfg').read_text()
-for name, value in [('HatcheryLayMin','3'), ('HatcheryLayMax','9'), ('HatcheryLayFactor','0.6516666667'),
-                    ('HatcheryHatchTurns','42'), ('HatcheryGrowTurns','84'), ('HatcheryLayShowTurns','7'),
-                    ('HatcheryNestArrive','0.3')]:
-    match = re.search(r'^\s*'+name+r'\s+(\S+)', config, re.M)
-    assert match and match.group(1) == value, name
+if content_packages.has_content(ROOT):
+    config = content_packages.read_text(ROOT, 'config/rooms.cfg')
+    for name, value in [('HatcheryLayMin','3'), ('HatcheryLayMax','9'), ('HatcheryLayFactor','0.6516666667'),
+                        ('HatcheryHatchTurns','42'), ('HatcheryGrowTurns','84'), ('HatcheryLayShowTurns','7'),
+                        ('HatcheryNestArrive','0.3')]:
+        match = re.search(r'^\s*'+name+r'\s+(\S+)', config, re.M)
+        assert match and match.group(1) == value, name
+else:
+    content_packages.unchecked('check_hatchery_nest_parity', ['hatchery values of config/rooms.cfg'])
 
 # Function slices preserve nesting/interval provenance without binding unrelated rooster functions.
 def section(text, name):

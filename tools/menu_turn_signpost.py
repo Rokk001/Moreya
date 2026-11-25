@@ -50,8 +50,11 @@ def converter():
 
 
 def scene_position(repo, entity):
-    """Returns the (x, y, z) position of an AddEntity line of the menu scene."""
-    for line in (repo / "config/mainmenuscene.cfg").read_text(encoding="utf-8").splitlines():
+    """Returns the (x, y, z) position of an AddEntity line of the menu scene (config/mainmenuscene.cfg joined with its
+    own rows of the content packages, scripts/content_packages.py)."""
+    sys.path.insert(0, str(Path(repo) / "scripts"))
+    import content_packages
+    for line in content_packages.read_text(Path(repo), "config/mainmenuscene.cfg").splitlines():
         words = line.split()
         if len(words) >= 6 and words[0] == "AddEntity" and words[1] == entity:
             return numpy.array([float(value) for value in words[3:6]])

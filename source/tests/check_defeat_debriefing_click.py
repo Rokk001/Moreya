@@ -18,6 +18,7 @@ layout lies in the content package core-gui. Without the content the layout chec
 are named as not checked and the source wiring is still checked.
 """
 from pathlib import Path
+import atexit
 import os
 import re
 import shutil
@@ -43,9 +44,31 @@ layout_path = (content_packages.resolve(repo, 'gui/WindowDefeatDebriefing.layout
 # Register the game's GUI locations non-recursively, as ResourceManager does: each folder of the public tree and the
 # same folder of every content package (ResourceManager::addGameDataResourceLocation)
 gui_section = (repo / 'cmake/config/resources.cfg.in').read_text().split('[GUI]', 1)[1].split('[', 1)[0]
+gui_relatives = [line.split('=', 1)[1].strip() for line in gui_section.splitlines() if line.startswith('FileSystem=')]
+
+
+def joined_gui_folder(relatives):
+    """A temporary folder with the joined text (content_packages.read_text) of every mixed interface file of the GUI
+    folders of the public tree (ODSkin.scheme, OD.looknfeel, the fonts, ...). The game joins their own rows in its
+    resource provider; the probe registers this folder first, so the first match of a name is the joined file."""
+    folder = Path(tempfile.mkdtemp(prefix='odp-defeat-click-gui-'))
+    atexit.register(shutil.rmtree, str(folder), True)
+    for relative in relatives:
+        public = repo / relative
+        if not public.is_dir():
+            continue
+        for path in sorted(public.iterdir()):
+            if path.is_file() and b'<!--#@own ' in path.read_bytes():
+                text = content_packages.read_text(repo, relative + '/' + path.name)
+                (folder / path.name).write_bytes(text.encode('utf-8'))
+    return folder
+
+
+# With the content the mixed interface files are loaded joined, as the game loads them
+joined_folders = [joined_gui_folder(gui_relatives)] if content_packages.has_content(repo) else []
 gui_folders = ','.join('"%s"' % folder.resolve().as_posix()
-                       for line in gui_section.splitlines() if line.startswith('FileSystem=')
-                       for folder in content_packages.data_folders(repo, line.split('=', 1)[1].strip()))
+                       for folder in joined_folders + [folder for relative in gui_relatives
+                                                        for folder in content_packages.data_folders(repo, relative)])
 
 
 def function(text, signature):

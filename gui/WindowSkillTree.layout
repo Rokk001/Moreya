@@ -1,25 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/SheetWindow" name="SkillTreeWindow" >
-        <Property name="Area" value="{{0.5,-396},{0.5,-375},{0.5,396},{0.5,375}}" />
+<!--#@own 1-->
         <Property name="Text" value="Skill Tree" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/StaticImage" name="Skills" >
-            <Property name="Area" value="{{0,20},{0,38},{1,-20},{1,-64}}" />
+<!--#@own 2-->
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            <Window type="OD/TabControl" name="SkillTabs" >
-                <Property name="Area" value="{{0,4},{0,4},{1,-4},{1,-4}}" />
-                <Property name="TabHeight" value="{0,30}" />
-                <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="DefaultWindow" name="Rooms" >
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-                    <Property name="Text" value="Rooms" />
+<!--#@own 3-->
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                    <Property name="RiseOnClickEnabled" value="False" />
-                    <Window type="OD/ResearchButton" name="TreasuryButton" >
+<!--#@own 4-->
                         <Property name="Area" value="{{0.2,-25},{0,15},{0.2,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconTreasury/Icon" />
+<!--#@own 5-->
                         <Property name="TooltipText" value="Room: Treasury" />
                         <Window type="OD/ProgressBar" name="TreasuryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -30,13 +22,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 6-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="DormitoryButton" >
+<!--#@own 7-->
                         <Property name="Area" value="{{0.8,-25},{0,15},{0.8,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconDormitory/Icon" />
+<!--#@own 8-->
                         <Property name="TooltipText" value="Room: Dormitory" />
                         <Window type="OD/ProgressBar" name="DormitoryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -47,13 +39,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 9-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="HatcheryButton" >
+<!--#@own 10-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconHatchery/Icon" />
+<!--#@own 11-->
                         <Property name="TooltipText" value="Room: Hatchery" />
                         <Window type="OD/ProgressBar" name="HatcheryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -64,15 +56,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 12-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="InfirmaryButton" >
+<!--#@own 13-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconInfirmary/Icon" />
-                        <Property name="TooltipText" value="Room: Infirmary" />
-                        <Window type="OD/ProgressBar" name="InfirmaryButtonProgressBar" >
+<!--#@own 14-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -81,13 +71,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 15-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="LibraryButton" >
+<!--#@own 16-->
                         <Property name="Area" value="{{0.7,-25},{0,15},{0.7,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconLibrary/Icon" />
+<!--#@own 17-->
                         <Property name="TooltipText" value="Room: Library" />
                         <Window type="OD/ProgressBar" name="LibraryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -98,15 +88,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 18-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="TavernButton" >
+<!--#@own 19-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconTavern/Icon" />
-                        <Property name="TooltipText" value="Room: Tavern" />
-                        <Window type="OD/ProgressBar" name="TavernButtonProgressBar" >
+<!--#@own 20-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -115,13 +103,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 21-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="TrainingHallButton" >
+<!--#@own 22-->
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconTrainingHall/Icon" />
+<!--#@own 23-->
                         <Property name="TooltipText" value="Room: Training Hall" />
                         <Window type="OD/ProgressBar" name="TrainingHallButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -132,13 +120,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 24-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="WorkshopButton" >
+<!--#@own 25-->
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconWorkshop/Icon" />
+<!--#@own 26-->
                         <Property name="TooltipText" value="Room: Workshop" />
                         <Window type="OD/ProgressBar" name="WorkshopButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -149,13 +137,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 27-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="WoodenBridgeButton" >
+<!--#@own 28-->
                         <Property name="Area" value="{{0.7,-25},{0,15},{0.7,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconWoodenBridge/Icon" />
+<!--#@own 29-->
                         <Property name="TooltipText" value="Room: Wooden bridge" />
                         <Window type="OD/ProgressBar" name="WoodenBridgeButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -166,15 +154,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 30-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="GuardRoomButton" >
+<!--#@own 31-->
                         <Property name="Area" value="{{0.5,-25},{0,75},{0.5,25},{0,125}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconGuardRoom/Icon" />
-                        <Property name="TooltipText" value="Room: Guard room" />
-                        <Window type="OD/ProgressBar" name="GuardRoomButtonProgressBar" >
+<!--#@own 32-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -183,15 +169,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 33-->
                             <Property name="ReversedProgress" value="True" />
-                        </Window>
-                    </Window>
-                    <Window type="OD/ResearchButton" name="ToiletButton" >
+<!--#@own 34-->
                         <Property name="Area" value="{{0.5,-25},{0,75},{0.5,25},{0,125}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconToilet/Icon" />
-                        <Property name="TooltipText" value="Room: Toilet" />
-                        <Window type="OD/ProgressBar" name="ToiletButtonProgressBar" >
+<!--#@own 35-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -200,13 +182,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 36-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CasinoButton" >
+<!--#@own 37-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconCasino/Icon" />
+<!--#@own 38-->
                         <Property name="TooltipText" value="Room: Casino" />
                         <Window type="OD/ProgressBar" name="CasinoButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -217,15 +199,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 39-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="BeerButton" >
+<!--#@own 40-->
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/BeerButton" />
-                        <Property name="TooltipText" value="Tavern: Beer" />
-                        <Window type="OD/ProgressBar" name="BeerButtonProgressBar" >
+<!--#@own 41-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -234,15 +214,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 42-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="SpaButton" >
-                        <Property name="Area" value="{{0.4,-25},{0,15},{0.4,25},{0,65}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconSpa/Icon" />
-                        <Property name="TooltipText" value="Room: Lava spa" />
-                        <Window type="OD/ProgressBar" name="SpaButtonProgressBar" >
+<!--#@own 43-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -251,13 +227,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 44-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="ArenaButton" >
+<!--#@own 45-->
                         <Property name="Area" value="{{0.5,-25},{0,135},{0.5,25},{0,185}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconArena/Icon" />
+<!--#@own 46-->
                         <Property name="TooltipText" value="Room: Arena" />
                         <Window type="OD/ProgressBar" name="ArenaButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -268,13 +244,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 47-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="PrisonButton" >
+<!--#@own 48-->
                         <Property name="Area" value="{{0.8,-25},{0,75},{0.8,25},{0,125}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconPrison/Icon" />
+<!--#@own 49-->
                         <Property name="TooltipText" value="Room: Prison" />
                         <Window type="OD/ProgressBar" name="PrisonButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -285,13 +261,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 50-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CryptButton" >
+<!--#@own 51-->
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconCrypt/Icon" />
+<!--#@own 52-->
                         <Property name="TooltipText" value="Room: Crypt" />
                         <Window type="OD/ProgressBar" name="CryptButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -302,15 +278,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 53-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="GhostRoomButton" >
+<!--#@own 54-->
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconGhostRoom/Icon" />
-                        <Property name="TooltipText" value="Room: Ghost room" />
-                        <Window type="OD/ProgressBar" name="GhostRoomButtonProgressBar" >
+<!--#@own 55-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -319,13 +293,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 56-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="StoneBridgeButton" >
+<!--#@own 57-->
                         <Property name="Area" value="{{0.2,-25},{0,135},{0.2,25},{0,185}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconStoneBridge/Icon" />
+<!--#@own 58-->
                         <Property name="TooltipText" value="Room: Stone bridge" />
                         <Window type="OD/ProgressBar" name="StoneBridgeButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -336,13 +310,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 59-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="TortureButton" >
+<!--#@own 60-->
                         <Property name="Area" value="{{0.5,-25},{0,195},{0.5,25},{0,245}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconTortureChamber/Icon" />
+<!--#@own 61-->
                         <Property name="TooltipText" value="Room: Torture" />
                         <Window type="OD/ProgressBar" name="TortureButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -353,15 +327,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 62-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="PrayerTempleButton" >
-                        <Property name="Area" value="{{0.89,-25},{0,195},{0.89,25},{0,245}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconPrayerTemple/Icon" />
-                        <Property name="TooltipText" value="Room: Temple" />
-                        <Window type="OD/ProgressBar" name="PrayerTempleButtonProgressBar" >
+<!--#@own 63-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -370,15 +340,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 64-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="DominionButton" >
+<!--#@own 65-->
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/DominionButton" />
-                        <Property name="TooltipText" value="Keeper: Dominion" />
-                        <Window type="OD/ProgressBar" name="DominionButtonProgressBar" >
+<!--#@own 66-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -387,15 +355,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 67-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="MerchantButton" >
+<!--#@own 68-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconMerchant/Icon" />
-                        <Property name="TooltipText" value="Room: Merchant" />
-                        <Window type="OD/ProgressBar" name="MerchantButtonProgressBar" >
+<!--#@own 69-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -404,15 +370,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 70-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="HerbGardenButton" >
+<!--#@own 71-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconHerbGarden/Icon" />
-                        <Property name="TooltipText" value="Room: Herb Garden" />
-                        <Window type="OD/ProgressBar" name="HerbGardenButtonProgressBar" >
+<!--#@own 72-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -421,15 +385,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 73-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="AlchemyLabButton" >
+<!--#@own 74-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="RoomCentreIconAlchemyLab/Icon" />
-                        <Property name="TooltipText" value="Room: Alchemy Lab" />
-                        <Window type="OD/ProgressBar" name="AlchemyLabButtonProgressBar" >
+<!--#@own 75-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -438,17 +400,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 76-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                </Window>
-                <Window type="DefaultWindow" name="Traps" >
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-                    <Property name="Text" value="Traps and doors" />
+<!--#@own 77-->
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                    <Property name="RiseOnClickEnabled" value="False" />
-                    <Window type="OD/ResearchButton" name="WoodenDoorTrapButton" >
+<!--#@own 78-->
                         <Property name="Area" value="{{0.8,-25},{0,75},{0.8,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/WoodenDoorTrapButton" />
                         <Property name="TooltipText" value="Trap: Wooden door" />
@@ -461,12 +419,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 79-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="SpikeTrapButton" >
-                        <Property name="Area" value="{{0.305,-25},{0,135},{0.305,25},{0,185}}" />
+<!--#@own 80-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/SpikeTrapButton" />
                         <Property name="TooltipText" value="Trap: Spike trap" />
                         <Window type="OD/ProgressBar" name="SpikeTrapButtonProgressBar" >
@@ -478,12 +435,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 81-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CannonButton" >
-                        <Property name="Area" value="{{0.11,-25},{0,135},{0.11,25},{0,185}}" />
+<!--#@own 82-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CannonButton" />
                         <Property name="TooltipText" value="Trap: Cannon" />
                         <Window type="OD/ProgressBar" name="CannonButtonProgressBar" >
@@ -495,15 +451,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 83-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="AlarmTrapButton" >
-                        <Property name="Area" value="{{0.11,-25},{0,195},{0.11,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/AlarmTrapButton" />
-                        <Property name="TooltipText" value="Trap: Alarm trap" />
-                        <Window type="OD/ProgressBar" name="AlarmTrapButtonProgressBar" >
+<!--#@own 84-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -512,15 +464,12 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 85-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
-                    </Window>
-                    <Window type="OD/ResearchButton" name="IronboundDoorTrapButton" >
+<!--#@own 86-->
                         <Property name="Area" value="{{0.5,-25},{0,135},{0.5,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/IronboundDoorTrapButton" />
-                        <Property name="TooltipText" value="Trap: Ironbound door" />
-                        <Window type="OD/ProgressBar" name="IronboundDoorTrapButtonProgressBar" >
+<!--#@own 87-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -529,15 +478,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 88-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="BarricadeTrapButton" >
-                        <Property name="Area" value="{{0.695,-25},{0,135},{0.695,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/BarricadeTrapButton" />
-                        <Property name="TooltipText" value="Trap: Barricade" />
-                        <Window type="OD/ProgressBar" name="BarricadeTrapButtonProgressBar" >
+<!--#@own 89-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -546,15 +491,10 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 90-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
-                    </Window>
-                    <Window type="OD/ResearchButton" name="GasTrapButton" >
-                        <Property name="Area" value="{{0.734,-25},{0,195},{0.734,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/GasTrapButton" />
-                        <Property name="TooltipText" value="Trap: Gas trap" />
-                        <Window type="OD/ProgressBar" name="GasTrapButtonProgressBar" >
+<!--#@own 91-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -563,12 +503,10 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 92-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
-                    </Window>
-                    <Window type="OD/ResearchButton" name="BoulderTrapButton" >
-                        <Property name="Area" value="{{0.266,-25},{0,195},{0.266,25},{0,245}}" />
+<!--#@own 93-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/BoulderTrapButton" />
                         <Property name="TooltipText" value="Trap: Boulder trap" />
                         <Window type="OD/ProgressBar" name="BoulderTrapButtonProgressBar" >
@@ -580,15 +518,10 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 94-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
-                    </Window>
-                    <Window type="OD/ResearchButton" name="WatchBannerTrapButton" >
-                        <Property name="Area" value="{{0.89,-25},{0,195},{0.89,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/WatchBannerTrapButton" />
-                        <Property name="TooltipText" value="Trap: Watch banner" />
-                        <Window type="OD/ProgressBar" name="WatchBannerTrapButtonProgressBar" >
+<!--#@own 95-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -597,15 +530,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 96-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="FearTrapButton" >
-                        <Property name="Area" value="{{0.422,-25},{0,195},{0.422,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/FearTrapButton" />
-                        <Property name="TooltipText" value="Trap: Fear trap" />
-                        <Window type="OD/ProgressBar" name="FearTrapButtonProgressBar" >
+<!--#@own 97-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -614,15 +543,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 98-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="SteelDoorTrapButton" >
-                        <Property name="Area" value="{{0.578,-25},{0,195},{0.578,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/SteelDoorTrapButton" />
-                        <Property name="TooltipText" value="Trap: Steel door" />
-                        <Window type="OD/ProgressBar" name="SteelDoorTrapButtonProgressBar" >
+<!--#@own 99-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -631,15 +556,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 100-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="SecretDoorTrapButton" >
-                        <Property name="Area" value="{{0.89,-25},{0,135},{0.89,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/SecretDoorTrapButton" />
-                        <Property name="TooltipText" value="Trap: Secret door" />
-                        <Window type="OD/ProgressBar" name="SecretDoorTrapButtonProgressBar" >
+<!--#@own 101-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -648,15 +569,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 102-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="LightningTrapButton" >
-                        <Property name="Area" value="{{0.5,-25},{0,255},{0.5,25},{0,305}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/LightningTrapButton" />
-                        <Property name="TooltipText" value="Trap: Lightning trap" />
-                        <Window type="OD/ProgressBar" name="LightningTrapButtonProgressBar" >
+<!--#@own 103-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -665,15 +582,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 104-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="TriggerTrapButton" >
-                        <Property name="Area" value="{{0.5,-25},{0,375},{0.5,25},{0,425}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/TriggerTrapButton" />
-                        <Property name="TooltipText" value="Trap: Trigger trap" />
-                        <Window type="OD/ProgressBar" name="TriggerTrapButtonProgressBar" >
+<!--#@own 105-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -682,15 +595,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 106-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="FireburstTrapButton" >
-                        <Property name="Area" value="{{0.5,-25},{0,315},{0.5,25},{0,365}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/FireburstTrapButton" />
-                        <Property name="TooltipText" value="Trap: Fireburst trap" />
-                        <Window type="OD/ProgressBar" name="FireburstTrapButtonProgressBar" >
+<!--#@own 107-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -699,15 +608,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 108-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="RunedDoorTrapButton" >
-                        <Property name="Area" value="{{0.8,-25},{0,255},{0.8,25},{0,305}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/RunedDoorTrapButton" />
-                        <Property name="TooltipText" value="Trap: Runed door" />
-                        <Window type="OD/ProgressBar" name="RunedDoorTrapButtonProgressBar" >
+<!--#@own 109-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -716,15 +621,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 110-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="FreezeTrapButton" >
-                        <Property name="Area" value="{{0.8,-25},{0,315},{0.8,25},{0,365}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/FreezeTrapButton" />
-                        <Property name="TooltipText" value="Trap: Freeze trap" />
-                        <Window type="OD/ProgressBar" name="FreezeTrapButtonProgressBar" >
+<!--#@own 111-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -733,15 +634,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 112-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="HeartFortitudeButton" >
+<!--#@own 113-->
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/HeartFortitudeButton" />
-                        <Property name="TooltipText" value="Keeper: Heart Fortitude" />
-                        <Window type="OD/ProgressBar" name="HeartFortitudeButtonProgressBar" >
+<!--#@own 114-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -750,15 +649,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 115-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="HeartMendingButton" >
+<!--#@own 116-->
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/HeartMendingButton" />
-                        <Property name="TooltipText" value="Keeper: Heart Mending" />
-                        <Window type="OD/ProgressBar" name="HeartMendingButtonProgressBar" >
+<!--#@own 117-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -767,15 +664,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 118-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="FineToolsButton" >
+<!--#@own 119-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/FineToolsButton" />
-                        <Property name="TooltipText" value="Workshop: Fine Tools (cracks Rare item boxes)" />
-                        <Window type="OD/ProgressBar" name="FineToolsButtonProgressBar" >
+<!--#@own 120-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -784,15 +679,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 121-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="MasterToolsButton" >
+<!--#@own 122-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/MasterToolsButton" />
-                        <Property name="TooltipText" value="Workshop: Master Tools (cracks Epic item boxes)" />
-                        <Window type="OD/ProgressBar" name="MasterToolsButtonProgressBar" >
+<!--#@own 123-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -801,20 +694,17 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 124-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
                 </Window>
-                <Window type="DefaultWindow" name="Spells" >
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-                    <Property name="Text" value="Spells" />
+<!--#@own 125-->
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                    <Property name="RiseOnClickEnabled" value="False" />
-                    <Window type="OD/ResearchButton" name="SummonWorkerButton" >
+<!--#@own 126-->
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/SummonWorkerButton" />
-                        <Property name="TooltipText" value="Spell: Summon Ziv" />
+<!--#@own 127-->
                         <Window type="OD/ProgressBar" name="SummonWorkerButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
@@ -824,11 +714,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 128-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CreatureHealButton" >
+<!--#@own 129-->
                         <Property name="Area" value="{{0.5,-25},{0,75},{0.5,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureHealButton" />
                         <Property name="TooltipText" value="Spell: Creature Heal" />
@@ -841,11 +731,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 130-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CreatureHasteButton" >
+<!--#@own 131-->
                         <Property name="Area" value="{{0.2,-25},{0,135},{0.2,25},{0,185}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureHasteButton" />
                         <Property name="TooltipText" value="Spell: Haste creature" />
@@ -858,11 +748,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 132-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="SpellEyeEvilButton" >
+<!--#@own 133-->
                         <Property name="Area" value="{{0.8,-25},{0,75},{0.8,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/SpellEyeEvilButton" />
                         <Property name="TooltipText" value="Spell: Temporary gives vision on tiles" />
@@ -875,11 +765,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 134-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CreatureDefenseButton" >
+<!--#@own 135-->
                         <Property name="Area" value="{{0.5,-25},{0,135},{0.5,25},{0,185}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureDefenseButton" />
                         <Property name="TooltipText" value="Spell: Increase defense creature" />
@@ -892,12 +782,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 136-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CreatureStrengthButton" >
-                        <Property name="Area" value="{{0.11,-25},{0,195},{0.11,25},{0,245}}" />
+<!--#@own 137-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureStrengthButton" />
                         <Property name="TooltipText" value="Spell: Increase creature strength" />
                         <Window type="OD/ProgressBar" name="CreatureStrengthButtonProgressBar" >
@@ -909,11 +798,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 138-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CallToWarButton" >
+<!--#@own 139-->
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CallToWarButton" />
                         <Property name="TooltipText" value="Spell: Call to War" />
@@ -926,11 +815,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 140-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CreatureSlowButton" >
+<!--#@own 141-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureSlowButton" />
                         <Property name="TooltipText" value="Spell: Decrease creature speed" />
@@ -943,15 +832,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 142-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="LightningButton" >
-                        <Property name="Area" value="{{0.2,-25},{0,195},{0.2,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/LightningButton" />
-                        <Property name="TooltipText" value="Spell: Lightning" />
-                        <Window type="OD/ProgressBar" name="LightningButtonProgressBar" >
+<!--#@own 143-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -960,12 +845,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 144-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CreatureWeakButton" >
-                        <Property name="Area" value="{{0.734,-25},{0,195},{0.734,25},{0,245}}" />
+<!--#@own 145-->
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureWeakButton" />
                         <Property name="TooltipText" value="Spell: Decrease creature strength" />
                         <Window type="OD/ProgressBar" name="CreatureWeakButtonProgressBar" >
@@ -977,11 +861,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 146-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CreatureExplosionButton" >
+<!--#@own 147-->
                         <Property name="Area" value="{{0.5,-25},{0,75},{0.5,25},{0,125}}" />
                         <Property name="ButtonImage" value="OpenDungeonsIcons/CreatureExplosionButton" />
                         <Property name="TooltipText" value="Spell: Creature Explosion" />
@@ -994,15 +878,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 148-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="PossessButton" >
-                        <Property name="Area" value="{{0.578,-25},{0,195},{0.578,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/PossessButton" />
-                        <Property name="TooltipText" value="Spell: Possess a creature" />
-                        <Window type="OD/ProgressBar" name="PossessButtonProgressBar" >
+<!--#@own 149-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1011,15 +891,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 150-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="CreateGoldButton" >
-                        <Property name="Area" value="{{0.266,-25},{0,195},{0.266,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/CreateGoldButton" />
-                        <Property name="TooltipText" value="Spell: Create Gold" />
-                        <Window type="OD/ProgressBar" name="CreateGoldButtonProgressBar" >
+<!--#@own 151-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1028,15 +904,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 152-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="TremorButton" >
-                        <Property name="Area" value="{{0.8,-25},{0,195},{0.8,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/TremorButton" />
-                        <Property name="TooltipText" value="Spell: Tremor" />
-                        <Window type="OD/ProgressBar" name="TremorButtonProgressBar" >
+<!--#@own 153-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1045,15 +917,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 154-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="InfernoButton" >
-                        <Property name="Area" value="{{0.422,-25},{0,195},{0.422,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/InfernoButton" />
-                        <Property name="TooltipText" value="Spell: Inferno" />
-                        <Window type="OD/ProgressBar" name="InfernoButtonProgressBar" >
+<!--#@own 155-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1062,15 +930,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 156-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="DefectorButton" >
-                        <Property name="Area" value="{{0.2,-25},{0,255},{0.2,25},{0,305}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/DefectorButton" />
-                        <Property name="TooltipText" value="Spell: Defector" />
-                        <Window type="OD/ProgressBar" name="DefectorButtonProgressBar" >
+<!--#@own 157-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1079,15 +943,11 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 158-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="HexenHenButton" >
-                        <Property name="Area" value="{{0.2,-25},{0,315},{0.2,25},{0,365}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/HexenHenButton" />
-                        <Property name="TooltipText" value="Spell: Hexen Hen" />
-                        <Window type="OD/ProgressBar" name="HexenHenButtonProgressBar" >
+<!--#@own 159-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1096,17 +956,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 160-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <!-- The six spells of the spells review show their own painted icons;
-                         the position of every node is computed from its tier (GameMode::refreshSkillConnections) -->
-                    <Window type="OD/ResearchButton" name="CurseButton" >
+<!--#@own 161-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/CurseButton" />
-                        <Property name="TooltipText" value="Spell: Curse" />
-                        <Window type="OD/ProgressBar" name="CurseButtonProgressBar" >
+<!--#@own 162-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1115,15 +971,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 163-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="BlessingButton" >
+<!--#@own 164-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/BlessingButton" />
-                        <Property name="TooltipText" value="Spell: Blessing" />
-                        <Window type="OD/ProgressBar" name="BlessingButtonProgressBar" >
+<!--#@own 165-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1132,15 +986,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 166-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="InvisibilityButton" >
+<!--#@own 167-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/InvisibilityButton" />
-                        <Property name="TooltipText" value="Spell: Invisibility" />
-                        <Window type="OD/ProgressBar" name="InvisibilityButtonProgressBar" >
+<!--#@own 168-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1149,15 +1001,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 169-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="PlagueButton" >
+<!--#@own 170-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/PlagueButton" />
-                        <Property name="TooltipText" value="Spell: Plague" />
-                        <Window type="OD/ProgressBar" name="PlagueButtonProgressBar" >
+<!--#@own 171-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1166,15 +1016,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 172-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="BreakWallButton" >
+<!--#@own 173-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/BreakWallButton" />
-                        <Property name="TooltipText" value="Spell: Break Wall" />
-                        <Window type="OD/ProgressBar" name="BreakWallButtonProgressBar" >
+<!--#@own 174-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1183,15 +1031,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 175-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="RevealEnemyButton" >
+<!--#@own 176-->
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/RevealEnemyButton" />
-                        <Property name="TooltipText" value="Spell: Reveal Enemy" />
-                        <Window type="OD/ProgressBar" name="RevealEnemyButtonProgressBar" >
+<!--#@own 177-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1200,15 +1046,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 178-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="ManaFlowButton" >
+<!--#@own 179-->
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/ManaFlowButton" />
-                        <Property name="TooltipText" value="Keeper: Mana Flow" />
-                        <Window type="OD/ProgressBar" name="ManaFlowButtonProgressBar" >
+<!--#@own 180-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1217,15 +1061,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 181-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="SunthornButton" >
+<!--#@own 182-->
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/SunthornButton" />
-                        <Property name="TooltipText" value="Garden: Sunthorn Cultivation (grows the golden herb)" />
-                        <Window type="OD/ProgressBar" name="SunthornButtonProgressBar" >
+<!--#@own 183-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1234,16 +1076,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 184-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
-                    <Window type="OD/ResearchButton" name="SummonChampionButton" >
-                        <Property name="Area" value="{{0.2,-25},{0,195},{0.2,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/SummonChampionButton" />
-                        <Property name="TooltipText" value="Spell: Summon champion" />
+<!--#@own 185-->
                         <Property name="Visible" value="False" />
-                        <Window type="OD/ProgressBar" name="SummonChampionButtonProgressBar" >
+<!--#@own 186-->
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />
@@ -1252,13 +1091,13 @@
                             <Property name="Visible" value="False" />
                             <Property name="VerticalProgress" value="True" />
                             <Property name="Alpha" value="0.2" />
-                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+<!--#@own 187-->
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
                 </Window>
             </Window>
-        </Window>
+<!--#@own 188-->
         <Window type="OD/Button" name="AutoFill" >
             <Property name="Area" value="{{0,20},{1,-50},{0,120},{1,-20}}" />
             <Property name="Text" value="Auto Fill" />
@@ -1269,18 +1108,10 @@
             <Property name="Text" value="Unselect All" />
             <Property name="TooltipText" value="Unselect all pending skills in the tree" />
         </Window>
-        <Window type="OD/MenuSymbolButton" name="CancelButton" >
-            <Property name="Area" value="{{1,-100},{1,-46},{1,-62},{1,-8}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
-            <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
+<!--#@own 189-->
             <Property name="TooltipText" value="Do not save modifications to the skill tree" />
         </Window>
-        <Window type="OD/MenuSymbolButton" name="ApplyButton" >
-            <Property name="Area" value="{{1,-54},{1,-46},{1,-16},{1,-8}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
-            <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />
-            <Property name="PushedImage" value="OpenDungeonsIcons/CheckIcon" />
+<!--#@own 190-->
             <Property name="TooltipText" value="Save modifications to the skill tree" />
         </Window>
     </Window>

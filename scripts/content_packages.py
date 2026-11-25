@@ -109,9 +109,15 @@ def resolve(repo, relative):
     return data_file(repo, relative) or (Path(repo) / str(relative).replace('\\', '/'))
 
 
-# The text of a game data file (see resolve).
+# The text of a game data file (see resolve). A mixed data table (config/global.cfg, ...) comes with its own rows from
+# the content packages in place of its marker lines, as the game reads it (scripts/config_own_rows.py); without the
+# content it is the public table alone, whose markers are comments.
 def read_text(repo, relative, encoding='utf-8'):
-    return resolve(repo, relative).read_text(encoding=encoding)
+    text = resolve(repo, relative).read_text(encoding=encoding)
+    if '#@own ' not in text:
+        return text
+    import config_own_rows
+    return config_own_rows.joined_text(repo, str(relative).replace('\\', '/'), text)
 
 
 # The existing folders of a game data folder: the public folder and the same folder of every found content and room

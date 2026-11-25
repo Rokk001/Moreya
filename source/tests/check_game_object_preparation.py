@@ -89,7 +89,9 @@ def referenced():
     assets = references.inventory(ROOT)
     refs = (references.data_references(ROOT) | references.cpp_references(ROOT, assets)
             | references.finite_name_references(ROOT))
-    creatures = set(re.findall(r'^\s*MeshName\s+(\S+)', read('config/creatures.cfg'), re.M))
+    # config/creatures.cfg is a mixed table: read as the game reads it, with its own rows from the content
+    creatures = set(re.findall(r'^\s*MeshName\s+(\S+)', content_packages.read_text(ROOT, 'config/creatures.cfg'),
+                               re.M))
     pile_prefix = re.search(r'PILE_MESH_PREFIX = "([^"]+)";', read('source/entities/DirtPileEntity.cpp')).group(1)
     names = set()
     for ref in refs:

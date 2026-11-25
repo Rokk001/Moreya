@@ -18,6 +18,8 @@ import xml.etree.ElementTree as ET
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
+#: The mixed interface files come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(repo)
 gui_cpp = (repo / 'source/render/Gui.cpp').read_text(encoding='utf-8', errors='replace')
 has_fit = 'getWindowFitFactor' in gui_cpp and 'layoutScale * getWindowFitFactor(window)' in gui_cpp
 
@@ -31,6 +33,31 @@ UDIM = r'\{' + NUMBER + ',' + NUMBER + r'\}'
 def gui_file(name):
     """The file of a gui path in the public tree or in a content package, or None when it is not present."""
     return content_packages.data_file(repo, 'gui/' + name)
+
+
+def gui_root(name):
+    """The parsed root of a gui file; a mixed interface file comes joined with its own rows of the content."""
+    return ET.fromstring(content_packages.read_text(repo, 'gui/' + name))
+
+
+def is_own_rows_file(path):
+    """True for the own rows file of a mixed interface file (gui/ModeGame.own.layout): it is joined, not read alone."""
+    return Path(path).stem.endswith('.own')
+
+
+#: The mixed layouts whose own rows are not present (only without the content), named once as not checked
+partial_layouts = set()
+
+
+def is_partial(name):
+    """True when a mixed gui layout lacks its own rows because the content is not present (named as not checked)."""
+    path = gui_file(name)
+    if WITH_CONTENT or path is None or '<!--#@own ' not in path.read_text(encoding='utf-8'):
+        return False
+    if name not in partial_layouts:
+        partial_layouts.add(name)
+        content_packages.unchecked('check_window_fit_screen', ['gui/' + name + ' (own rows)'])
+    return True
 
 
 def moved_layout(name):
@@ -76,7 +103,7 @@ def collect(path, windows, seen):
     Windows that fill their parent completely and the imported layouts are walked through; the first
     window below them that does not fill the parent is a window to check, its children are not.
     """
-    root = ET.parse(content_packages.resolve(repo, 'gui/' + path)).getroot()
+    root = gui_root(path)
     for window in root.findall('Window'):
         walk(window, path, windows, seen)
 
@@ -89,7 +116,7 @@ def walk(window, path, windows, seen):
                 walk(child, path, windows, seen)
             elif child.tag == 'LayoutImport':
                 imported = child.get('filename')
-                if imported not in seen and gui_file(imported) is not None:
+                if imported not in seen and gui_file(imported) is not None and not is_partial(imported):
                     collect(imported, windows, seen | {imported})
         return
     extent = window_extent(window)
@@ -112,39 +139,41 @@ def fit_factor(extent, screen_w, screen_h, scale):
 
 windows = []
 for layout in content_packages.data_glob(repo, 'gui', '*.layout'):
-    collect(layout.name, windows, {layout.name})
+    if not is_own_rows_file(layout) and not is_partial(layout.name):
+        collect(layout.name, windows, {layout.name})
 # The same window can be reached through several layouts (imports); report it once
 windows = sorted(set((p, n, e) for p, n, e in windows))
 assert windows, 'no windows found in the layouts'
 
 # The existing Game/Editor quit confirmation stays centred and uses the opaque reskin panel.
-quit_window = ET.parse(repo / 'gui' / 'WindowQuit.layout').getroot().find('Window')
-quit_properties = {p.get('name'): p.get('value') for p in quit_window.findall('Property')}
-quit_area = udims(quit_properties['Area'])
-# every in-game window uses the window frame of the chosen menu sheet (check_ingame_window_frame.py)
-assert quit_window.get('type') == 'OD/SheetWindow'
-assert float(quit_properties['Alpha']) == 1.0, 'quit confirmation must be opaque'
-assert len(quit_area) == 4
-assert all(abs(quit_area[axis][0] + quit_area[axis + 2][0] - 1.0) < 0.00001
-           and quit_area[axis][1] == -quit_area[axis + 2][1] for axis in (0, 1)), 'quit confirmation must be centred'
-assert {child.get('name') for child in quit_window.findall('Window')} == {'YesOption', 'NoOption', 'SaveReplayCheckbox'}
+if WITH_CONTENT:
+    quit_window = gui_root('WindowQuit.layout').find('Window')
+    quit_properties = {p.get('name'): p.get('value') for p in quit_window.findall('Property')}
+    quit_area = udims(quit_properties['Area'])
+    # every in-game window uses the window frame of the chosen menu sheet (check_ingame_window_frame.py)
+    assert quit_window.get('type') == 'OD/SheetWindow'
+    assert float(quit_properties['Alpha']) == 1.0, 'quit confirmation must be opaque'
+    assert len(quit_area) == 4
+    assert all(abs(quit_area[axis][0] + quit_area[axis + 2][0] - 1.0) < 0.00001
+               and quit_area[axis][1] == -quit_area[axis + 2][1] for axis in (0, 1)), 'quit confirmation must be centred'
+    assert {child.get('name') for child in quit_window.findall('Window')} == {'YesOption', 'NoOption', 'SaveReplayCheckbox'}
 
-# The replay checkbox must stay below both confirmation buttons at every tested scale.
-quit_children = {child.get('name'): udims(child.find("Property[@name='Area']").get('value'))
-                 for child in quit_window.findall('Window')}
-for screen_w, screen_h in SCREENS:
-    for user_scale in USER_SCALES:
-        scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user_scale
-        extent = window_extent(quit_window)
-        effective_scale = scale * fit_factor(extent, screen_w, screen_h, scale)
-        # A frame's client area cannot be taller than its outer window.
-        height = extent[1][0] * screen_h + extent[1][1] * effective_scale
-        checkbox_top = quit_children['SaveReplayCheckbox'][1]
-        for name in ('YesOption', 'NoOption'):
-            button_bottom = quit_children[name][3]
-            for client_height in (0, height):
-                assert checkbox_top[0] * client_height + checkbox_top[1] * effective_scale >= (
-                    button_bottom[0] * client_height + button_bottom[1] * effective_scale), (name, screen_w, screen_h, user_scale)
+    # The replay checkbox must stay below both confirmation buttons at every tested scale.
+    quit_children = {child.get('name'): udims(child.find("Property[@name='Area']").get('value'))
+                     for child in quit_window.findall('Window')}
+    for screen_w, screen_h in SCREENS:
+        for user_scale in USER_SCALES:
+            scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user_scale
+            extent = window_extent(quit_window)
+            effective_scale = scale * fit_factor(extent, screen_w, screen_h, scale)
+            # A frame's client area cannot be taller than its outer window.
+            height = extent[1][0] * screen_h + extent[1][1] * effective_scale
+            checkbox_top = quit_children['SaveReplayCheckbox'][1]
+            for name in ('YesOption', 'NoOption'):
+                button_bottom = quit_children[name][3]
+                for client_height in (0, height):
+                    assert checkbox_top[0] * client_height + checkbox_top[1] * effective_scale >= (
+                        button_bottom[0] * client_height + button_bottom[1] * effective_scale), (name, screen_w, screen_h, user_scale)
 
 too_large = []
 for screen_w, screen_h in SCREENS:
@@ -169,43 +198,49 @@ print('window fit screen check ok (%d windows, %d screen/scale combinations)' % 
     len(windows), len(SCREENS) * len(USER_SCALES)))
 
 # Shared reskin title/close sizing and framed content must use the same usable rectangle.
-skin = ET.parse(repo / 'gui/OD.looknfeel').getroot()
-frame = skin.find("WidgetLook[@name='OD/FrameWindow']")
-assert frame.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-10'
-client = frame.find("NamedArea[@name='ClientWithTitleWithFrame']/Area")
-assert len(client.findall('Dim')) == 4, 'frame contents need a clipped inner rectangle'
-# The title bar is the top of the single frame: no second top edge below it, contents start right under it.
-client_top = client.find("Dim[@type='TopEdge']")
-assert len(client_top) == 1 and client_top[0].tag == 'WidgetDim' and client_top[0].get('widget') == '__auto_titlebar__',     'frame contents must start directly below the title bar'
-for section_name in ('withtitle_frame', 'withtitle_frame_disabled'):
-    section = frame.find(".//ImagerySection[@name='%s']/FrameComponent" % section_name)
-    parts = {image.get('component') for image in section.findall('Image') + section.findall('ImageProperty')}
-    assert {'LeftEdge', 'RightEdge', 'BottomEdge'} <= parts, section_name + ' lost its side or bottom edge'
-    assert not parts & {'TopEdge', 'TopLeftCorner', 'TopRightCorner'}, section_name + ' draws a second top frame'
-# The window frame of the chosen menu sheet that every in-game window uses now follows the same rules: one title font,
-# contents directly below the title, which sits on the single top rail (no second top rail below it), side and bottom
-# rails drawn, and a close button as high and wide as the title.
-sheet_frame = skin.find("WidgetLook[@name='OD/SheetWindow']")
-assert sheet_frame.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-13'
-sheet_client = sheet_frame.find("NamedArea[@name='ClientWithTitleWithFrame']/Area")
-assert len(sheet_client.findall('Dim')) == 4, 'sheet frame contents need a clipped inner rectangle'
-sheet_top = sheet_client.find("Dim[@type='TopEdge']")
-assert len(sheet_top) == 1 and sheet_top[0].tag == 'WidgetDim' and sheet_top[0].get('widget') == '__auto_titlebar__', \
-    'sheet frame contents must start directly below the title bar'
-rails = [component.find('Image').get('name') for component in
-         sheet_frame.find("ImagerySection[@name='sheet_frame']").findall('ImageryComponent')]
-assert {'ODMenuTemplate/FrameLeft', 'ODMenuTemplate/FrameRight', 'ODMenuTemplate/FrameBottom'} <= set(rails), \
-    'the sheet frame lost its side or bottom rail'
-assert rails.count('ODMenuTemplate/FrameTop') == 1, 'the sheet frame draws a second top rail'
-title_top = sheet_frame.find("Child[@nameSuffix='__auto_titlebar__']/Area/Dim[@type='TopEdge']")
-assert title_top.find('OperatorDim/ImageDim').get('name') == 'ODMenuTemplate/FrameTop', 'the title sits on the top rail'
-sheet_close = sheet_frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
-for dimension in ('Width', 'Height'):
-    node = sheet_close.find("Dim[@type='%s']/WidgetDim" % dimension)
-    assert node is not None and node.get('widget') == '__auto_titlebar__' and node.get('dimension') == 'Height'
+if WITH_CONTENT:
+    skin = gui_root('OD.looknfeel')
+    frame = skin.find("WidgetLook[@name='OD/FrameWindow']")
+    assert frame.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-10'
+    client = frame.find("NamedArea[@name='ClientWithTitleWithFrame']/Area")
+    assert len(client.findall('Dim')) == 4, 'frame contents need a clipped inner rectangle'
+    # The title bar is the top of the single frame: no second top edge below it, contents start right under it.
+    client_top = client.find("Dim[@type='TopEdge']")
+    assert len(client_top) == 1 and client_top[0].tag == 'WidgetDim' and client_top[0].get('widget') == '__auto_titlebar__',     'frame contents must start directly below the title bar'
+    for section_name in ('withtitle_frame', 'withtitle_frame_disabled'):
+        section = frame.find(".//ImagerySection[@name='%s']/FrameComponent" % section_name)
+        parts = {image.get('component') for image in section.findall('Image') + section.findall('ImageProperty')}
+        assert {'LeftEdge', 'RightEdge', 'BottomEdge'} <= parts, section_name + ' lost its side or bottom edge'
+        assert not parts & {'TopEdge', 'TopLeftCorner', 'TopRightCorner'}, section_name + ' draws a second top frame'
+    # The window frame of the chosen menu sheet that every in-game window uses now follows the same rules: one title font,
+    # contents directly below the title, which sits on the single top rail (no second top rail below it), side and bottom
+    # rails drawn, and a close button as high and wide as the title.
+    sheet_frame = skin.find("WidgetLook[@name='OD/SheetWindow']")
+    assert sheet_frame.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-13'
+    sheet_client = sheet_frame.find("NamedArea[@name='ClientWithTitleWithFrame']/Area")
+    assert len(sheet_client.findall('Dim')) == 4, 'sheet frame contents need a clipped inner rectangle'
+    sheet_top = sheet_client.find("Dim[@type='TopEdge']")
+    assert len(sheet_top) == 1 and sheet_top[0].tag == 'WidgetDim' and sheet_top[0].get('widget') == '__auto_titlebar__', \
+        'sheet frame contents must start directly below the title bar'
+    rails = [component.find('Image').get('name') for component in
+             sheet_frame.find("ImagerySection[@name='sheet_frame']").findall('ImageryComponent')]
+    assert {'ODMenuTemplate/FrameLeft', 'ODMenuTemplate/FrameRight', 'ODMenuTemplate/FrameBottom'} <= set(rails), \
+        'the sheet frame lost its side or bottom rail'
+    assert rails.count('ODMenuTemplate/FrameTop') == 1, 'the sheet frame draws a second top rail'
+    title_top = sheet_frame.find("Child[@nameSuffix='__auto_titlebar__']/Area/Dim[@type='TopEdge']")
+    assert title_top.find('OperatorDim/ImageDim').get('name') == 'ODMenuTemplate/FrameTop', 'the title sits on the top rail'
+    sheet_close = sheet_frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
+    for dimension in ('Width', 'Height'):
+        node = sheet_close.find("Dim[@type='%s']/WidgetDim" % dimension)
+        assert node is not None and node.get('widget') == '__auto_titlebar__' and node.get('dimension') == 'Height'
 # The old creature window is gone (a creature's information opens in the Dungeonbook); the Dungeonbook is the framed
 # window whose contents are checked against the shared client rectangle: its start page begins at the looknfeel client
 # origin and its creature pages end above the navigation bar at the bottom.
+if not WITH_CONTENT:
+    content_packages.unchecked('check_window_fit_screen', ['quit confirmation (gui/WindowQuit.layout)',
+                                                           'frames and list insets (gui/OD.looknfeel)',
+                                                           'goals button (gui/ModeGame.layout)',
+                                                           'options page (gui/WindowGameOptions.layout)'])
 assert gui_file('WindowCreatureProfile.layout') is None, 'the old creature window layout is removed'
 social_root = moved_layout('WindowSocial.layout')
 if social_root is not None:
@@ -220,18 +255,19 @@ if social_root is not None:
             assert area[0] == (0, 0) and area[1] == (0, 0), name + ' must start at the looknfeel client origin'
         else:
             assert area[3][0] <= nav_top and area[3][1] == 0, name + ' must end above the navigation bar'
-close = frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
-for dimension in ('Width', 'Height'):
-    node = close.find("Dim[@type='%s']/WidgetDim" % dimension)
-    assert node is not None and node.get('widget') == '__auto_titlebar__' and node.get('dimension') == 'Height'
-listbox = skin.find("WidgetLook[@name='OD/Listbox']")
-for name in ('ItemRenderingArea', 'ItemRenderingAreaHScroll', 'ItemRenderingAreaVScroll', 'ItemRenderingAreaHVScroll'):
-    for edge in ('LeftEdge', 'TopEdge'):
-        dim = listbox.find("NamedArea[@name='%s']/Area/Dim[@type='%s']" % (name, edge))
-        assert len(dim) == 1 and len(dim[0]) == 2, 'the frame and list padding must be summed inside one operator'
-hud = ET.parse(repo / 'gui/ModeGame.layout').getroot()
-assert hud.find(".//Window[@name='ObjectivesButton']") is None, 'the duplicate eye button is removed'
-assert hud.find(".//Window[@name='GoalsButton']") is not None, 'the scroll goals button remains'
+if WITH_CONTENT:
+    close = frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
+    for dimension in ('Width', 'Height'):
+        node = close.find("Dim[@type='%s']/WidgetDim" % dimension)
+        assert node is not None and node.get('widget') == '__auto_titlebar__' and node.get('dimension') == 'Height'
+    listbox = skin.find("WidgetLook[@name='OD/Listbox']")
+    for name in ('ItemRenderingArea', 'ItemRenderingAreaHScroll', 'ItemRenderingAreaVScroll', 'ItemRenderingAreaHVScroll'):
+        for edge in ('LeftEdge', 'TopEdge'):
+            dim = listbox.find("NamedArea[@name='%s']/Area/Dim[@type='%s']" % (name, edge))
+            assert len(dim) == 1 and len(dim[0]) == 2, 'the frame and list padding must be summed inside one operator'
+    hud = gui_root('ModeGame.layout')
+    assert hud.find(".//Window[@name='ObjectivesButton']") is None, 'the duplicate eye button is removed'
+    assert hud.find(".//Window[@name='GoalsButton']") is not None, 'the scroll goals button remains'
 assert 'guiSheet->getChild("ObjectivesButton")' not in (repo / 'source/modes/GameMode.cpp').read_text()
 event_root = moved_layout('WindowGameEvent.layout')
 game_text = (repo / 'source/modes/GameMode.cpp').read_text(encoding='utf-8', errors='replace')
@@ -259,9 +295,10 @@ assert 'textHeight + 8.0f * lineHeight' in game_text, 'button row follows font s
 print('shared title, close button, list insets, event field and single goals entry verified')
 
 # The options page fits its two existing button groups into a screen-limited window.
-options_layout = ET.parse(repo / 'gui/WindowGameOptions.layout').getroot().find('Window')
-# The layout holds the window of the six entries of the options page: 134 + 6 x 66 = 530 design pixels (INGAME-QS-11 K7)
-assert window_extent(options_layout)[1] == (0.0, 530.0)
+if WITH_CONTENT:
+    options_layout = gui_root('WindowGameOptions.layout').find('Window')
+    # The layout holds the window of the six entries of the options page: 134 + 6 x 66 = 530 design pixels (INGAME-QS-11 K7)
+    assert window_extent(options_layout)[1] == (0.0, 530.0)
 # 134 design pixels of frame, title rail, bottom rail and margins, a row of 66 design pixels per menu template button,
 # limited to 95 % of the screen height
 assert 'const float height = std::min(0.95f, (134.0f + 66.0f * entries.size())' in game_text

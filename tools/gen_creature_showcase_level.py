@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
 OUT = ROOT / "levels" / "skirmish" / "TestCreatureShowcase.level"
 
 COLUMNS = 5
@@ -37,8 +39,9 @@ SKILLS = [
 ]
 
 
+# Reads the creature types of config/creatures.cfg, joined with its own rows of the content packages.
 def read_creatures():
-    text = (ROOT / "config" / "creatures.cfg").read_text(encoding="utf-8")
+    text = content_packages.read_text(ROOT, "config/creatures.cfg")
     result = []
     for block in re.findall(r"\[Creature\](.*?)\[/Creature\]", text, re.S):
         def value(key):

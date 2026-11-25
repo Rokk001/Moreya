@@ -128,10 +128,11 @@ def load_mesh(path):
 
 
 def parse_config(path=CONFIG):
-    """Returns (entities [(name, mesh, position)], poses {name: (position, rotation degrees)})."""
+    """Returns (entities [(name, mesh, position)], poses {name: (position, rotation degrees)}); the configuration is
+    read with its own rows of the content (scripts/content_packages.py)."""
     entities = []
     poses = {}
-    for line in open(path, encoding="utf-8"):
+    for line in content_packages.read_text(ROOT, os.path.relpath(path, ROOT)).splitlines():
         words = line.split()
         if not words or words[0].startswith("#"):
             continue

@@ -157,7 +157,14 @@ if not missing_content:
         assert 'Frame%sImage' % part not in root, part + ' of the ornate frame is still set'
     assert 'TitlebarFont' not in root, 'the title uses the font of the sheet title'
     assert book.find("AutoWindow[@namePath='__auto_titlebar__']") is None, 'the title band of the ornate frame is still set'
-sheet_skin = ET.parse(repo / 'gui/OD.looknfeel').getroot()
+# gui/OD.looknfeel as the game reads it: its looks are own rows of the content package core-gui; without the content
+# the looks of sections 4 and 5 are not there and are named as not checked
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_dungeonbook_post_pictures',
+                               missing_content + ['gui/OD.looknfeel own rows (sheet, frame and title looks)'])
+    print('check_dungeonbook_post_pictures ok')
+    sys.exit(0)
+sheet_skin = ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel'))
 sheet_look = sheet_skin.find("WidgetLook[@name='OD/SheetWindow']")
 assert sheet_look.find("Child[@nameSuffix='__auto_titlebar__']").get('type') == 'OD/SheetTitlebar'
 sheet_title = sheet_skin.find("WidgetLook[@name='OD/SheetTitlebar']")
@@ -185,7 +192,7 @@ if not missing_content:
     print('4. window frame of the menu sheet (%d px rails at 1920x1200, painted dark iron), centred title on the book' % T)
 
 # 5. Every other window keeps its frame and title
-skin = ET.parse(repo / 'gui/OD.looknfeel').getroot()
+skin = ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel'))
 frame_look = skin.find("WidgetLook[@name='OD/FrameWindow']")
 title_look = skin.find("WidgetLook[@name='OD/GameTitlebar']")
 

@@ -129,28 +129,32 @@ else:
     texture = re.search(r"^\s+texture\s+(\S+)", material, re.M)[1]
     assert content_packages.data_file(repo, "materials/textures/" + texture) is not None, texture
 
-# Types that have an ability from level 1 carry it as their pre-skill
-pre_skills = {"CaveHornet": "VRM_1", "Kobold": "WRK_C1", "DwarfWorker": "WRK_C1", "Slime": "WLD_1", "Dragon": "DRK_1",
-              "DarkElf": "ARC_A2", "Elf": "ARC_A3", "Lich": "UND_1"}
-for creature, skill_id in pre_skills.items():
-    assert re.search(rf"^\s+PreSkill\s+{skill_id}$", blocks[creature], re.M), f"{creature} has pre-skill {skill_id}"
+# The creature rows are own rows of creatures.cfg (content package core-config); without the content they are not checked
+if content_packages.has_content(repo):
+    # Types that have an ability from level 1 carry it as their pre-skill
+    pre_skills = {"CaveHornet": "VRM_1", "Kobold": "WRK_C1", "DwarfWorker": "WRK_C1", "Slime": "WLD_1", "Dragon": "DRK_1",
+                  "DarkElf": "ARC_A2", "Elf": "ARC_A3", "Lich": "UND_1"}
+    for creature, skill_id in pre_skills.items():
+        assert re.search(rf"^\s+PreSkill\s+{skill_id}$", blocks[creature], re.M), f"{creature} has pre-skill {skill_id}"
 
-# The Elf and the DarkElf reach the other bow ability through the Bow path; the undead types have the skeleton skills
-for creature in ("Elf", "DarkElf"):
-    assert re.search(r"^\s+SkillGroup\s+archer$", blocks[creature], re.M), creature
-for creature in ("Lich", "Skeleton"):
-    assert re.search(r"^\s+SkillFamily\s+undead$", blocks[creature], re.M), creature
+    # The Elf and the DarkElf reach the other bow ability through the Bow path; the undead types have the skeleton skills
+    for creature in ("Elf", "DarkElf"):
+        assert re.search(r"^\s+SkillGroup\s+archer$", blocks[creature], re.M), creature
+    for creature in ("Lich", "Skeleton"):
+        assert re.search(r"^\s+SkillFamily\s+undead$", blocks[creature], re.M), creature
 
-# The Dragon keeps its second attack line (the slow, strong missile) and has no ability lines in its list
-dragon = blocks["Dragon"]
-section = dragon[dragon.index("[CreatureSkills]"):dragon.index("[/CreatureSkills]")]
-lines = [l.strip() for l in section.splitlines()[1:] if l.strip()]
-missile_lines = [i for i, l in enumerate(lines) if not l.startswith("#") and l.split()[0] == "MissileLaunch"]
-assert len(missile_lines) == 1 and "none\tMissileMagic\t1.7" in lines[missile_lines[0]]
-comment = lines[missile_lines[0] - 1]
-assert comment.startswith("#"), "the Dragon missile has a column comment"
-assert len(comment.lstrip("# ").split()) == len(lines[missile_lines[0]].split()), "the Dragon missile column count"
-for name in abilities:
-    assert not re.search(rf"^\s+{name}\t", dragon, re.M), f"the Dragon list no longer has {name}"
+    # The Dragon keeps its second attack line (the slow, strong missile) and has no ability lines in its list
+    dragon = blocks["Dragon"]
+    section = dragon[dragon.index("[CreatureSkills]"):dragon.index("[/CreatureSkills]")]
+    lines = [l.strip() for l in section.splitlines()[1:] if l.strip()]
+    missile_lines = [i for i, l in enumerate(lines) if not l.startswith("#") and l.split()[0] == "MissileLaunch"]
+    assert len(missile_lines) == 1 and "none\tMissileMagic\t1.7" in lines[missile_lines[0]]
+    comment = lines[missile_lines[0] - 1]
+    assert comment.startswith("#"), "the Dragon missile has a column comment"
+    assert len(comment.lstrip("# ").split()) == len(lines[missile_lines[0]].split()), "the Dragon missile column count"
+    for name in abilities:
+        assert not re.search(rf"^\s+{name}\t", dragon, re.M), f"the Dragon list no longer has {name}"
+else:
+    content_packages.unchecked("check_creature_abilities_rest", ["config/creatures.cfg pre-skills, skill groups and the Dragon list"])
 
 print("ok")

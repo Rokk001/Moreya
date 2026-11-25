@@ -14,9 +14,9 @@ import content_packages  # noqa: E402
 UNDEAD = {'Skeleton': ('5.0', '1', None), 'Lich': ('5.0', None, 'LichBeetles')}
 
 
-# Read one file of the repository.
+# Read one file of the repository; a mixed table of config/ comes joined with its own rows of the content.
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8')
+    return content_packages.read_text(ROOT, path)
 
 
 # Return the body of a C++ function from its signature up to the closing brace at column 0.
@@ -33,22 +33,26 @@ def key_value(block, key):
 
 # Run every undead rule and stop at the first one that is broken.
 def main():
-    creatures = read('config/creatures.cfg')
-    blocks = {}
-    for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures, re.S):
-        name = key_value(block, 'Name')
-        if name is not None:
-            blocks[name] = block
-    for name, block in blocks.items():
-        if name in UNDEAD:
-            seconds, pile, effect = UNDEAD[name]
-            assert key_value(block, 'Undead') == '1', name + ' must carry Undead 1'
-            assert key_value(block, 'DeathVanishSeconds') == seconds, name + ' DeathVanishSeconds must be ' + seconds
-            assert key_value(block, 'DeathVanishPile') == pile, name + ' DeathVanishPile must be ' + str(pile)
-            assert key_value(block, 'DeathVanishEffect') == effect, name + ' DeathVanishEffect must be ' + str(effect)
-        else:
-            for key in ('Undead', 'DeathVanishSeconds', 'DeathVanishPile', 'DeathVanishEffect'):
-                assert key_value(block, key) in (None, '0'), name + ' must not carry ' + key
+    if content_packages.has_content(ROOT):
+        creatures = read('config/creatures.cfg')
+        blocks = {}
+        for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures, re.S):
+            name = key_value(block, 'Name')
+            if name is not None:
+                blocks[name] = block
+        for name, block in blocks.items():
+            if name in UNDEAD:
+                seconds, pile, effect = UNDEAD[name]
+                assert key_value(block, 'Undead') == '1', name + ' must carry Undead 1'
+                assert key_value(block, 'DeathVanishSeconds') == seconds, name + ' DeathVanishSeconds must be ' + seconds
+                assert key_value(block, 'DeathVanishPile') == pile, name + ' DeathVanishPile must be ' + str(pile)
+                assert key_value(block, 'DeathVanishEffect') == effect, name + ' DeathVanishEffect must be ' + str(effect)
+            else:
+                for key in ('Undead', 'DeathVanishSeconds', 'DeathVanishPile', 'DeathVanishEffect'):
+                    assert key_value(block, key) in (None, '0'), name + ' must not carry ' + key
+    else:
+        content_packages.unchecked('check_undead_rules', ['undead keys of the creature types (own rows of '
+                                                          'config/creatures.cfg)'])
 
     definition_h = read('source/entities/CreatureDefinition.h')
     definition_cpp = read('source/entities/CreatureDefinition.cpp')

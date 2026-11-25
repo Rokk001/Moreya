@@ -60,7 +60,12 @@ def check(condition, message):
 
 # Config keys: every key read by the code is in rooms.cfg, with the default of the code
 config_cpp = read("source", "rooms", "WallTorchConfig.cpp")
-rooms_cfg = read("config", "rooms.cfg")
+# rooms.cfg as the game reads it: its own rows (the torch values) come from the content packages; without the
+# content the values are named as not checked
+rooms_cfg = content_packages.read_text(ROOT, "config/rooms.cfg")
+rooms_values = content_packages.has_content(ROOT)
+if not rooms_values:
+    not_present.append("config/rooms.cfg own rows (WallTorch*, HatcheryCareLightRadius values)")
 # The defaults are named constants (DEFAULT_TORCH_*) in WallTorchConfig.h and WallTorches.h
 constants = dict(re.findall(r"const\s+(?:double|float|uint32_t|int32_t)\s+(\w+)\s*=\s*([0-9.]+)f?;",
                             read("source", "rooms", "WallTorchConfig.h") + read("source", "rooms", "WallTorches.h")))
@@ -69,7 +74,7 @@ for key, default in re.findall(r'read(?:Count|Clamped)\("(WallTorch\w+)",\s*([A-
     check(default in constants or re.match(r"^[0-9.]+$", default), "WallTorchConfig: unknown default " + default)
     reads.append((key, constants.get(default, default)))
 check(len(reads) >= 12, "WallTorchConfig reads fewer than 12 keys")
-for key, default in reads:
+for key, default in (reads if rooms_values else []):
     match = re.search(r"^\s*%s\s+([0-9.]+)\s*$" % key, rooms_cfg, re.M)
     check(match is not None, "config/rooms.cfg has no value for " + key)
     if match is not None:
@@ -79,7 +84,7 @@ for key in ("WallTorchRoomSideDivisor", "WallTorchCorridorSpacing", "WallTorchMi
             "WallTorchActiveLightsReduced", "WallTorchSoundLoops", "WallTorchLightRadius", "WallTorchLightIntensity",
             "WallTorchFlickerStrength", "WallTorchFlickerSpeed"):
     check(key in dict(reads), "WallTorchConfig does not read " + key)
-check("HatcheryCareLightRadius" in rooms_cfg, "HatcheryCareLightRadius is missing in rooms.cfg")
+check(not rooms_values or "HatcheryCareLightRadius" in rooms_cfg, "HatcheryCareLightRadius is missing in rooms.cfg")
 
 # Server: the list is computed by the placement and sent after the visible tiles
 game_map = read("source", "gamemap", "GameMap.cpp")

@@ -21,7 +21,11 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 #: The assets of the toilet come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
@@ -35,6 +39,9 @@ START = time.monotonic()
 
 
 def read(path):
+    """The text of a game file; a mixed table of config/ comes joined with its own rows of the content."""
+    if path.startswith('config/'):
+        return content_packages.read_text(ROOT, path)
     return room_file(path).read_text(encoding='utf-8', errors='replace')
 
 
@@ -180,27 +187,30 @@ assert 'startSquat(true, facing);' in seat_turn and 'mPhase = Phase::leave;' in 
 assert 'path.push_back(place);' in body(use, 'bool CreatureActionUseToilet::walkOntoSeat(RoomToilet& room)')
 
 # 5. The urge values of the toilet plan: the threshold after about 9.5 minutes of urge growth, 4 chickens to the threshold
-dirt = dict(re.findall(r'^\s+(\w+)\t([-.\d]+)\s*$', re.search(r'^\[Dirt\]$(.*?)^\[/Dirt\]$', read('config/global.cfg'),
-                                                                 re.M | re.S).group(1), re.M))
-tavern = dict(re.findall(r'^\s+(\w+)\t([-.\d]+)\s*$', re.search(r'^\[Tavern\]$(.*?)^\[/Tavern\]$', read('config/global.cfg'),
-                                                                   re.M | re.S).group(1), re.M))
-turns_per_second = float(re.search(r'double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp')).group(1))
-assert float(dirt['UrgePerChicken']) == 20.0 and float(tavern['UrgeFromWater']) == 15.0
-assert math.ceil(float(dirt['UrgeSeek']) / float(dirt['UrgePerChicken'])) == 4
-assert (float(dirt['ToiletUseSecondsMin']), float(dirt['ToiletUseSecondsMax'])) == (10.0, 30.0)
-growing = 0
-for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
-    fields = dict(line.split()[:2] for line in block.splitlines() if len(line.split()) >= 2 and not line.split()[0].startswith('#'))
-    if 'Name' not in fields:
-        continue  # the empty [Creature] [/Creature] pair of the file header
-    growth = float(fields.get('UrgeGrowth/Turn', '0'))
-    if float(fields['HungerGrowth/Turn']) == 0.0:
-        assert growth == 0.0, fields.get('Name')
-        continue
-    growing += 1
-    minutes = float(dirt['UrgeSeek']) / growth / turns_per_second / 60.0
-    assert 9.0 <= minutes <= 10.0, '%s reaches the toilet threshold after %.1f minutes' % (fields.get('Name'), minutes)
-assert growing == 30, growing
+if WITH_CONTENT:
+    dirt = dict(re.findall(r'^\s+(\w+)\t([-.\d]+)\s*$', re.search(r'^\[Dirt\]$(.*?)^\[/Dirt\]$', read('config/global.cfg'),
+                                                                     re.M | re.S).group(1), re.M))
+    tavern = dict(re.findall(r'^\s+(\w+)\t([-.\d]+)\s*$', re.search(r'^\[Tavern\]$(.*?)^\[/Tavern\]$', read('config/global.cfg'),
+                                                                       re.M | re.S).group(1), re.M))
+    turns_per_second = float(re.search(r'double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp')).group(1))
+    assert float(dirt['UrgePerChicken']) == 20.0 and float(tavern['UrgeFromWater']) == 15.0
+    assert math.ceil(float(dirt['UrgeSeek']) / float(dirt['UrgePerChicken'])) == 4
+    assert (float(dirt['ToiletUseSecondsMin']), float(dirt['ToiletUseSecondsMax'])) == (10.0, 30.0)
+    growing = 0
+    for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
+        fields = dict(line.split()[:2] for line in block.splitlines() if len(line.split()) >= 2 and not line.split()[0].startswith('#'))
+        if 'Name' not in fields:
+            continue  # the empty [Creature] [/Creature] pair of the file header
+        growth = float(fields.get('UrgeGrowth/Turn', '0'))
+        if float(fields['HungerGrowth/Turn']) == 0.0:
+            assert growth == 0.0, fields.get('Name')
+            continue
+        growing += 1
+        minutes = float(dirt['UrgeSeek']) / growth / turns_per_second / 60.0
+        assert 9.0 <= minutes <= 10.0, '%s reaches the toilet threshold after %.1f minutes' % (fields.get('Name'), minutes)
+    assert growing == 30, growing
+else:
+    content_packages.unchecked('check_toilet_k25', ['urge values (own rows of config/global.cfg and config/creatures.cfg)'])
 
 # 6. The probe: the layout and the use time compiled from the headers the game uses
 PROBE = r'''

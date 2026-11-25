@@ -39,8 +39,14 @@ def room_file(relative):
 from assets_src import assets_src_dir, resolve  # noqa: E402
 
 
-# Returns the text of a repository file.
+#: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
+
+
+# Returns the text of a repository file; a mixed file of config/ or gui/ comes joined with its own rows of the content.
 def read(path):
+    if path.startswith(('config/', 'gui/')):
+        return content_packages.read_text(root, path)
     return resolve(root, path).read_text(encoding='utf-8')
 
 
@@ -91,34 +97,36 @@ for name in ('rooms/RoomTavern.cpp', 'entities/InnkeeperEntity.cpp', 'creatureac
     assert '${SRC}/' + name in cmake, name + ' missing in CMakeLists.txt'
 
 # 3. Tileset: mapping line and a block with the 16 corner combinations with existing materials
-tilesets = read('config/tilesets.cfg')
-assert re.search(r'^\s*tavernRoom tavernRoom\s*$', tilesets, re.M), 'tileset link line missing'
-block = re.search(r'\[tavernRoom\](.*?)\[/tavernRoom\]', tilesets, re.S)
-assert block is not None, '[tavernRoom] block missing'
-lines = [l.split() for l in block.group(1).splitlines() if l.strip()]
-assert [l[0] for l in lines] == ['%04d' % int(format(i, 'b')) for i in range(16)], 'the block needs the 16 masks 0000-1111'
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
-for words in lines:
-    # Floor, wainscot and mug shelf are painted into the 16 floor pieces (one material per mask)
-    assert words[1] == 'Room.mesh' and words[2] == 'Tavern' + words[0], words
-    assert room_packages.is_missing_packaged_name(root, words[2]) or \
-        re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
+if WITH_CONTENT:
+    tilesets = read('config/tilesets.cfg')
+    assert re.search(r'^\s*tavernRoom tavernRoom\s*$', tilesets, re.M), 'tileset link line missing'
+    block = re.search(r'\[tavernRoom\](.*?)\[/tavernRoom\]', tilesets, re.S)
+    assert block is not None, '[tavernRoom] block missing'
+    lines = [l.split() for l in block.group(1).splitlines() if l.strip()]
+    assert [l[0] for l in lines] == ['%04d' % int(format(i, 'b')) for i in range(16)], 'the block needs the 16 masks 0000-1111'
+    materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+    for words in lines:
+        # Floor, wainscot and mug shelf are painted into the 16 floor pieces (one material per mask)
+        assert words[1] == 'Room.mesh' and words[2] == 'Tavern' + words[0], words
+        assert room_packages.is_missing_packaged_name(root, words[2]) or \
+            re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
 
 # 4. Buttons: action bar (hidden by default, after the hatchery) and research tree with the icons of the room and Beer
-rooms_layout = read('gui/WindowTabRooms.layout')
-skill_layout = read('gui/WindowSkillTree.layout')
-button = re.search(r'name="TavernButton" >(.*?)</Window>', rooms_layout, re.S)
-assert button is not None, 'TavernButton missing in WindowTabRooms.layout'
-assert 'RoomCentreIconTavern/Icon' in button.group(1) and '"Visible" value="False"' in button.group(1)
-research = re.search(r'name="TavernButton" >(.*?)<Window type="OD/ProgressBar" name="TavernButtonProgressBar"', skill_layout, re.S)
-assert research is not None, 'TavernButton missing in WindowSkillTree.layout'
-assert 'RoomCentreIconTavern/Icon' in research.group(1) and 'Room: Tavern' in research.group(1)
-beer = re.search(r'name="BeerButton" >(.*?)<Window type="OD/ProgressBar" name="BeerButtonProgressBar"', skill_layout, re.S)
-assert beer is not None, 'BeerButton missing in WindowSkillTree.layout'
-assert 'OpenDungeonsIcons/BeerButton' in beer.group(1) and 'Tavern: Beer' in beer.group(1)
-for layout, names in ((rooms_layout, ('TavernButton',)), (skill_layout, ('TavernButton', 'BeerButton'))):
-    for name in names:
-        assert layout.count('name="' + name + '"') == 1, name + ' must exist once per layout'
+if WITH_CONTENT:
+    rooms_layout = read('gui/WindowTabRooms.layout')
+    skill_layout = read('gui/WindowSkillTree.layout')
+    button = re.search(r'name="TavernButton" >(.*?)</Window>', rooms_layout, re.S)
+    assert button is not None, 'TavernButton missing in WindowTabRooms.layout'
+    assert 'RoomCentreIconTavern/Icon' in button.group(1) and '"Visible" value="False"' in button.group(1)
+    research = re.search(r'name="TavernButton" >(.*?)<Window type="OD/ProgressBar" name="TavernButtonProgressBar"', skill_layout, re.S)
+    assert research is not None, 'TavernButton missing in WindowSkillTree.layout'
+    assert 'RoomCentreIconTavern/Icon' in research.group(1) and 'Room: Tavern' in research.group(1)
+    beer = re.search(r'name="BeerButton" >(.*?)<Window type="OD/ProgressBar" name="BeerButtonProgressBar"', skill_layout, re.S)
+    assert beer is not None, 'BeerButton missing in WindowSkillTree.layout'
+    assert 'OpenDungeonsIcons/BeerButton' in beer.group(1) and 'Tavern: Beer' in beer.group(1)
+    for layout, names in ((rooms_layout, ('TavernButton',)), (skill_layout, ('TavernButton', 'BeerButton'))):
+        for name in names:
+            assert layout.count('name="' + name + '"') == 1, name + ' must exist once per layout'
 # The painted sources of the two icons exist (the atlas entries are pinned by check_forged_icons.py)
 for icon in ('TavernButton', 'BeerButton'):
     assert (assets_src_dir(root) / 'gui' / 'icons' / 'tiles' / (icon + '.png')).exists(), 'icon source ' + icon + ' missing'
@@ -146,9 +154,10 @@ assert portal.count('getResearchedCooldown(getSeat(),') == 2, 'both portal bound
 skirmish_hits = [p for p in (root / 'source').rglob('*.cpp') if 'SkillType::tavernBeer' in p.read_text(encoding='utf-8', errors='replace')
                  and 'itemPageName' in p.read_text(encoding='utf-8', errors='replace')]
 assert skirmish_hits, 'the skirmish settings must put tavernBeer on the Rooms page'
-skills_cfg = read('config/skills.cfg')
-free_block = re.search(r'^\[FreeLevelOne\]\s*$(.*?)^\[/FreeLevelOne\]', skills_cfg, re.M | re.S).group(1)
-assert 'roomTavern' in free_block.split(), 'roomTavern is a free entry at the start'
+if WITH_CONTENT:
+    skills_cfg = read('config/skills.cfg')
+    free_block = re.search(r'^\[FreeLevelOne\]\s*$(.*?)^\[/FreeLevelOne\]', skills_cfg, re.M | re.S).group(1)
+    assert 'roomTavern' in free_block.split(), 'roomTavern is a free entry at the start'
 
 # 6. AI: the keeper AI builds the tavern directly after the hatchery
 ai = read('source/ai/KeeperAI.cpp')
@@ -192,4 +201,8 @@ payer_default = extract(seat_cpp, 'TavernPayer Seat::getTavernPayer(')
 assert 'getIsHuman()' in payer_default and 'TavernPayer::creature' in payer_default, 'computer keepers let the creatures pay'
 assert 'setTavernPayer' not in setup, 'building a tavern preserves the keeper setting'
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_tavern_room', ['own rows of config/tilesets.cfg [tavernRoom]',
+                                                     'gui/WindowTabRooms.layout', 'gui/WindowSkillTree.layout',
+                                                     'config/skills.cfg [FreeLevelOne]'])
 print('tavern room ok')

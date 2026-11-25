@@ -124,7 +124,8 @@ def texture_detail(group, material):
 
 
 # --- K3: hose and wires ----------------------------------------------------------------------------------------------
-config = dict(re.findall(r'^(\w+)\s+(\S+)\s*$', read('config/rooms.cfg'), re.M))
+# config/rooms.cfg is a mixed table: read as the game reads it, with its own rows from the content
+config = dict(re.findall(r'^(\w+)\s+(\S+)\s*$', content_packages.read_text(repo, 'config/rooms.cfg'), re.M))
 
 
 def colour(key):
@@ -352,9 +353,11 @@ def main():
     building = read('source/entities/BuildingObject.cpp')
     for name in ('GhostHose', 'GhostHoseWire', 'GhostBrass', 'GhostIron', 'GhostCauldronEctoplasm'):
         assert resolve(name, OGRE_DEFAULT_GROUP) == 'BaseWhite', (name, 'Ogre default group loads no material scripts')
-    if not content_packages.has_content(repo) and 'GhostHoseWire' not in materials_in('Graphics'):
-        # The hose materials are content (core-models package); without it only the code side above is checked
-        content_packages.unchecked('check_ghost_hose_outlet_materials', ['hose and outlet materials (Ghost.material)'])
+    if not content_packages.has_content(repo):
+        # The hose materials are content (core-models package) and the hose colours are own rows of config/rooms.cfg;
+        # without the content only the code side above is checked
+        content_packages.unchecked('check_ghost_hose_outlet_materials', ['hose and outlet materials (Ghost.material)',
+                                                                         'hose colours of config/rooms.cfg'])
         return
     check_hose(creature)
     if not ROOM_ASSETS:

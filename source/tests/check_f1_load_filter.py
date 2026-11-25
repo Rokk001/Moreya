@@ -1,24 +1,33 @@
 """Check the unified load screen wiring and exercise real save classification."""
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+
 load = (ROOT / "source/modes/MenuModeLoad.cpp").read_text(encoding="utf-8")
-layout = ET.parse(ROOT / "gui/MenuLoad.layout")
 assert '"Campaign", "Skirmish", "Sandbox", "Replays"' in load
-assert len(layout.findall('.//Window[@name="KindFilter"]')) == 1
-assert 'name="Sort" value="False"' in (ROOT / "gui/MenuLoad.layout").read_text()
 assert 'visibleLoadEntries(collectLoadEntries()' in load
 assert 'openingLoadKind(collectLoadEntries())' in load
-# The filter is the row of four template buttons of the chosen load screen sheet, one radio group (INGAME-QS-10 K14).
-filters = layout.findall('.//Window[@name="KindFilter"]/Window')
-assert [w.get('type') for w in filters] == ['OD/MenuFilterButton'] * 4
-assert [w.get('name') for w in filters] == ['FilterCampaign', 'FilterSkirmish', 'FilterSandbox', 'FilterReplays']
-for w in filters:
-    props = {p.get('name'): p.get('value') for p in w.findall('Property')}
-    assert props['Text'] == w.get('name')[len('Filter'):] and props['GroupID'] == '1', w.get('name')
+# The layout is a mixed file: as the game reads it only with its own rows from the content
+if content_packages.has_content(ROOT):
+    layout_text = content_packages.read_text(ROOT, "gui/MenuLoad.layout")
+    layout = ET.ElementTree(ET.fromstring(layout_text))
+    assert len(layout.findall('.//Window[@name="KindFilter"]')) == 1
+    assert 'name="Sort" value="False"' in layout_text
+    # The filter is the row of four template buttons of the chosen load screen sheet, one radio group (INGAME-QS-10 K14).
+    filters = layout.findall('.//Window[@name="KindFilter"]/Window')
+    assert [w.get('type') for w in filters] == ['OD/MenuFilterButton'] * 4
+    assert [w.get('name') for w in filters] == ['FilterCampaign', 'FilterSkirmish', 'FilterSandbox', 'FilterReplays']
+    for w in filters:
+        props = {p.get('name'): p.get('value') for p in w.findall('Property')}
+        assert props['Text'] == w.get('name')[len('Filter'):] and props['GroupID'] == '1', w.get('name')
+else:
+    content_packages.unchecked("check_f1_load_filter", ["the kind filter of gui/MenuLoad.layout"])
 assert 'getFilterButton(sheet, newestKind)->setSelected(true)' in load
 assert '"LevelWindowFrame/KindFilter/Filter") + LOAD_FILTER_NAMES[kind]' in load
 assert 'if(levelSelectList->getSelectedCount() == 0)' in load

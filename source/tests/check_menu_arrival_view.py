@@ -4,13 +4,24 @@
 from pathlib import Path
 import sys
 
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+
 
 def main():
-    """Check the authored arrival poses keep the overview horizon throughout the flight."""
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2] / "config/mainmenuscene.cfg"
+    """Check the authored arrival poses keep the overview horizon throughout the flight. A given file is read as it is;
+    config/mainmenuscene.cfg is a mixed table, read joined with its own rows from the content (not checked without)."""
+    if len(sys.argv) > 1:
+        text = Path(sys.argv[1]).read_text(encoding="utf-8")
+    elif content_packages.has_content(ROOT):
+        text = content_packages.read_text(ROOT, "config/mainmenuscene.cfg")
+    else:
+        content_packages.unchecked("check_menu_arrival_view", ["arrival poses of config/mainmenuscene.cfg"])
+        return
     poses = {}
     flights = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         words = line.split()
         if words and words[0] == "Pose":
             poses[words[1]] = tuple(float(value) for value in words[2:])

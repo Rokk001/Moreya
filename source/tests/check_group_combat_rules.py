@@ -60,7 +60,10 @@ MANAGER = read("source/game/CombatGroupManager.cpp")
 CREATURE = read("source/entities/Creature.cpp")
 FIGHT = read("source/creatureaction/CreatureActionFight.cpp")
 ATTACK = read("source/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp")
-GLOBAL_CFG = read("config/global.cfg")
+#: True when the content packages are present: config/global.cfg is a mixed table whose own rows come from them
+CONTENT = content_packages.has_content(ROOT)
+#: config/global.cfg as the game reads it, with its own rows from the content
+GLOBAL_CFG = content_packages.read_text(ROOT, "config/global.cfg")
 #: The skill templates (core-config package), None without the content
 SKILLS_CFG = (content_packages.read_text(ROOT, "config/creatureSkills.cfg")
               if content_packages.data_file(ROOT, "config/creatureSkills.cfg") else None)
@@ -78,9 +81,10 @@ def group_block_words(key):
 
 # ------------------------------------------------------------------------------------------------ G3 roles
 TANK, MELEE, RANGED, HEALER = "tank", "melee", "ranged", "healer"
-TANK_PATHS = group_block_words("GroupTankPaths")
-HEALER_PATHS = group_block_words("GroupHealerPaths")
-RANGED_GROUPS = group_block_words("GroupRangedSkillGroups")
+# The [GroupCombat] block of global.cfg holds own rows: without the content its values are not there
+TANK_PATHS = group_block_words("GroupTankPaths") if CONTENT else None
+HEALER_PATHS = group_block_words("GroupHealerPaths") if CONTENT else None
+RANGED_GROUPS = group_block_words("GroupRangedSkillGroups") if CONTENT else None
 
 
 def role_of(skill_group, has_template, primary):
@@ -128,8 +132,9 @@ if SKILLS_CFG is not None:
             continue
         computed[(group, name)] = role_of(group, True, primary)
     check(computed == EXPECTED_ROLES, "G3: role of every fighter template " + repr(computed))
-for group, expected in EXPECTED_UNCHOSEN.items():
-    check(role_of(group, False, "") == expected, "G3: role without template for " + group)
+if CONTENT:
+    for group, expected in EXPECTED_UNCHOSEN.items():
+        check(role_of(group, False, "") == expected, "G3: role without template for " + group)
 
 role_body = function(RULES, "Role roleOf(")
 check(role_body.index("mTankPaths") < role_body.index("mHealerPaths") < role_body.index("mRangedSkillGroups"),
@@ -223,11 +228,12 @@ def choose_aggro(attacking, near, adjacent):
     return close[0][1] if close else ""
 
 
-ADJACENT = int(float(group_block_words("GroupAggroAdjacentTiles")[0]))
-check(ADJACENT == 1, "G5: next to a tank means the eight neighbour tiles (GroupAggroAdjacentTiles 1)")
-check(choose_aggro("Guard1", [("Guard2", 1)], ADJACENT) == "Guard1", "G5: the tank that hit the member wins")
-check(choose_aggro("", [("Guard2", 1), ("Guard3", 1)], ADJACENT) == "Guard2", "G5: next to a tank: that tank")
-check(choose_aggro("", [("Guard2", 2)], ADJACENT) == "", "G5: a tank two tiles away draws no aggro")
+if CONTENT:
+    ADJACENT = int(float(group_block_words("GroupAggroAdjacentTiles")[0]))
+    check(ADJACENT == 1, "G5: next to a tank means the eight neighbour tiles (GroupAggroAdjacentTiles 1)")
+    check(choose_aggro("Guard1", [("Guard2", 1)], ADJACENT) == "Guard1", "G5: the tank that hit the member wins")
+    check(choose_aggro("", [("Guard2", 1), ("Guard3", 1)], ADJACENT) == "Guard2", "G5: next to a tank: that tank")
+    check(choose_aggro("", [("Guard2", 2)], ADJACENT) == "", "G5: a tank two tiles away draws no aggro")
 
 
 def fight_target(aggro, shared):
@@ -346,10 +352,11 @@ def should_retreat(hp, max_hp, enemy, share):
     return enemy and max_hp > 0 and hp / max_hp < share
 
 
-SHARE = float(group_block_words("GroupRetreatHealthShare")[0])
-check(should_retreat(SHARE * 100 - 1, 100, True, SHARE), "G7: below the share with an enemy in sight: retreat")
-check(not should_retreat(SHARE * 100 + 1, 100, True, SHARE), "G7: above the share: no retreat")
-check(not should_retreat(0, 100, False, SHARE), "G7: no enemy in sight: no retreat")
+if CONTENT:
+    SHARE = float(group_block_words("GroupRetreatHealthShare")[0])
+    check(should_retreat(SHARE * 100 - 1, 100, True, SHARE), "G7: below the share with an enemy in sight: retreat")
+    check(not should_retreat(SHARE * 100 + 1, 100, True, SHARE), "G7: above the share: no retreat")
+    check(not should_retreat(0, 100, False, SHARE), "G7: no enemy in sight: no retreat")
 
 find_retreat = function(MANAGER, "bool CombatGroupManager::findRetreatTile(")
 check(find_retreat.index("doorOptions") < find_retreat.index("roomOptions"), "G7: doors before rooms")
@@ -374,6 +381,9 @@ check("retreatFinished(arrived" in update_group and "GroupRetreatCooldownSeconds
 
 if SKILLS_CFG is None:
     content_packages.unchecked("check_group_combat_rules", ["config/creatureSkills.cfg"])
+if not CONTENT:
+    content_packages.unchecked("check_group_combat_rules", ["G3 roles without template, G5 aggro distance and G7 "
+                                                            "retreat share of the [GroupCombat] block of config/global.cfg"])
 elapsed = time.perf_counter() - START
 print('ODP_TEST_PHASE {"name":"rules","seconds":%.3f}' % elapsed)
 if FAILURES:

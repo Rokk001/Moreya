@@ -1,11 +1,20 @@
-"""Exercise the browser's production look switch with installed CEGUI."""
+"""Exercise the browser's production look switch with installed CEGUI.
+
+The probe reads the GUI folders of a temporary copy: the files of the public tree and of the content packages (a public
+file wins, as in the game), the mixed interface files joined with their own rows (scripts/content_packages.py). Without
+the content the scheme cannot be loaded, so the probe is named as not checked.
+"""
 from pathlib import Path
 import os
+import shutil
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
-prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
 source = (repo / 'source/modes/MenuModeLoad.cpp').read_text()
 start = source.index('    sheet->getChild("LevelWindowFrame")->setLookNFeel(')
 block = source[start:source.index('    if(mInGame)', start)]
@@ -48,12 +57,39 @@ int main(int argc,char** argv){try{
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
 '''.replace('BLOCK', block)
 probe = probe.replace('GUI_FOLDERS', gui_folders)
+
+
+def copy_gui_folders(target):
+    """Copies the files of every GUI folder (not recursive) as the game finds them below target: package files first,
+    the public file last so it wins, and every mixed interface file joined with its own rows."""
+    for line in gui_section.splitlines():
+        if not line.startswith('FileSystem='):
+            continue
+        folder = line.split('=', 1)[1].strip()
+        (target / folder).mkdir(parents=True, exist_ok=True)
+        for source_folder in reversed(content_packages.data_folders(repo, folder)):
+            for path in source_folder.iterdir():
+                if path.is_file() and '.own.' not in path.name:
+                    shutil.copy2(path, target / folder / path.name)
+        for path in (target / folder).iterdir():
+            if path.suffix in ('.layout', '.looknfeel', '.scheme', '.imageset', '.font'):
+                if '#@own ' in path.read_text(encoding='utf-8'):
+                    path.write_bytes(content_packages.read_text(repo, folder + '/' + path.name).encode('utf-8'))
+
+
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_load_menu_readability', ['CEGUI probe (content packages: %s)'
+                                                               % ', '.join(content_packages.missing_packages(repo))])
+    sys.exit(0)
+prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 with tempfile.TemporaryDirectory(prefix='odp-load-menu-') as directory:
     work = Path(directory)
+    data = work / 'data'
+    copy_gui_folders(data)
     (work / 'check.cpp').write_text(probe)
     cegui = prefix.parent / 'src/cegui/cegui'
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/DCEGUINULLRENDERER_EXPORTS',
         f'/I{prefix / "include/cegui-0"}', f'/I{cegui / "include"}', f'/I{prefix / "include/OGRE"}',
         'check.cpp', *[str(cegui / 'src/RendererModules/Null' / (name+'.cpp')) for name in ('Renderer','GeometryBuffer','Texture','TextureTarget')],
         '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'CEGUIBase-0.lib', 'CEGUIOgreRenderer-0.lib', 'OgreMain.lib'], cwd=work, check=True)
-    subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work, check=True)
+    subprocess.run([str(work / 'check.exe'), str(data), str(prefix)], cwd=work, check=True)

@@ -8,6 +8,8 @@ from combat_heart_checks import check_heart_configuration, configure_heart_probe
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -56,7 +58,12 @@ mesh_name = function(treasury_object, 'const char* TreasuryObject::getMeshNameFo
 # The ring is part of the heart: the capacity per tile is the config key DungeonHeartGoldPerTile (1000), no treasury
 # skill involved.
 assert 'treasuryTileCapacity' not in temple and 'getRoomConfigDoubleOrDefault("DungeonHeartGoldPerTile", 1000.0)' in temple
-assert ['DungeonHeartGoldPerTile', '1000'] in [line.split() for line in (repo / 'config/rooms.cfg').read_text(encoding='utf-8').splitlines()]
+# config/rooms.cfg is a mixed table: as the game reads it only with its own rows from the content
+if content_packages.has_content(repo):
+    assert ['DungeonHeartGoldPerTile', '1000'] in [line.split() for line in
+                                                   content_packages.read_text(repo, 'config/rooms.cfg').splitlines()]
+else:
+    content_packages.unchecked('check_heart_treasury_ring', ['DungeonHeartGoldPerTile of config/rooms.cfg'])
 assert 'static const int HEART_CORE_RADIUS = 1;' in temple
 assert 'dx >= -HEART_CORE_RADIUS && dx <= HEART_CORE_RADIUS' in temple
 assert 'center = getCentralTile();' in temple
