@@ -270,7 +270,6 @@ textures/
 -> KnightStatue.png                    Yughues                 CC0                     http://forum.freegamedev.net/viewtopic.php?p=60771#p6071
 -> Kobold.png
 -> Kreator*.png
--> Lamp*.png                           Nobiax                  CC0                     http://forum.freegamedev.net/viewtopic.php?
 -> Lava.png
 -> LavaSpawn*.png                      piacenti                CC-BY-SA 3.0            http://opengameart.org/content/lava-spawn-animated
 -> Library.png                         Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59058#p59058 (library room tile texture, added with the library room by Danimal; not AI generated)
@@ -415,7 +414,6 @@ Kobold.skeleton (clips ClimbGold, PourGold) OD Team            GPLv3+           
 Dwarf1.skeleton (clips ClimbGold, PourGold) OD Team            GPLv3+                  The same two worker clips for the dwarf worker, AI-generated with a Blender script (tools/blender-assets/dwarf_gold_clips.py, authored in Blender, original work)
 tools/blender-assets/*                 OD Team                 GPLv3+                  Blender scripts (Ogre XML import/export, pose helper, clip builders), original work, AI-generated
 Kreatur.*                              Skorpio                 CC-BY-SA 3.0, GPLv3+
-Lamp.mesh                              Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59621#p59621
 Lava*.mesh                             Skorpio                 CC-BY-SA 3.0, GPLv3+
 LavaSpawn.*                            piacenti, hwoarangmy, Gabriel Verdon, Katarzyna Zalecka
                                                                CC-BY-SA 3.0            http://opengameart.org/content/lava-spawn-animated
