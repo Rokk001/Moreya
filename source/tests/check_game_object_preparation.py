@@ -48,8 +48,11 @@ def mesh_exists(name):
     """True when the mesh is in models/ of the game data, of a content package or of a present room package; a mesh of
     a room package that is not present counts as there (only the list and the code are checked then)."""
     relative = 'models/' + name
-    return content_packages.data_file(ROOT, relative) is not None or room_packages.is_missing_packaged(ROOT, relative)
-LISTED = 223
+    return (content_packages.data_file(ROOT, relative) is not None or room_packages.asset(ROOT, relative) is not None
+            or room_packages.is_missing_packaged(ROOT, relative))
+# 219 since the four classic gold stack meshes left the list (counted on the branch; was 223): floor and carried
+# gold are code-built heaps and sacks, the GoldstackLv names are only sizes
+LISTED = 219
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
@@ -113,7 +116,7 @@ def coverage():
         assert mesh_exists(name), name
     missing = sorted(referenced() - set(names))
     assert not missing, 'object meshes not prepared: %s' % missing
-    for figure in ('ChickenEgg.mesh', 'Innkeeper.mesh', 'TavernCounter.mesh', 'SmallSpider.mesh', 'GoldstackLv1.mesh'):
+    for figure in ('ChickenEgg.mesh', 'Innkeeper.mesh', 'TavernCounter.mesh', 'SmallSpider.mesh'):
         assert figure in names, figure
 
 

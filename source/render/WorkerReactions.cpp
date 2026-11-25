@@ -29,6 +29,7 @@
 #include "gamemap/GameMap.h"
 #include "network/CosmeticEvent.h"
 #include "render/CreatureReactions.h"
+#include "render/LooseGoldMesh.h"
 #include "render/RenderManager.h"
 #include "render/WorkerExtras.h"
 #include "rooms/Room.h"
@@ -966,7 +967,13 @@ void WorkerReactions::updateGoldBody(CreatureReactions& reactions, Creature* wor
         return;
 
     Ogre::Entity* workerEntity = sceneManager->getEntity(workerEntityName);
-    std::string meshName = "GoldstackLv" + Helper::toString(level) + ".mesh";
+    // The gold on the back is the coin sack of LooseGoldMesh (the heap when the treasury detail leaves the sack
+    // out); the classic stack name only selects its size
+    const std::string stackName = "GoldstackLv" + Helper::toString(level);
+    std::string goldMesh = LooseGoldMesh::prepareSack(sceneManager, stackName);
+    if(goldMesh.empty())
+        goldMesh = LooseGoldMesh::prepareHeap(sceneManager, stackName);
+    std::string meshName = goldMesh + ".mesh";
     Ogre::Entity* goldEntity = sceneManager->createEntity(entityName, meshName);
     goldEntity->setCastShadows(false);
     goldEntity->setVisible(visible);
