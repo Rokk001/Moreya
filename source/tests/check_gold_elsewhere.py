@@ -16,11 +16,17 @@ render = read('source/render/RenderManager.cpp')
 loose = read('source/render/LooseGoldMesh.cpp')
 header = read('source/render/LooseGoldMesh.h')
 
-# Floor gold becomes a heap, carried gold a sack, both only while the treasury detail is not off.
+# Floor gold becomes a heap at every treasury detail (the classic stack meshes no longer exist), carried gold a
+# sack only while the treasury detail is not off: one detail test left, in prepareSack (fixed value 1, was 2).
 assert 'LooseGoldMesh::prepareHeap(mSceneManager, meshName)' in render
 assert 'GameEntityType::treasuryObject' in render
 assert 'LooseGoldMesh::prepareSack(mSceneManager, carried->getMeshName())' in render
-assert loose.count('TreasuryGoldMesh::Detail::off') == 2
+assert loose.count('TreasuryGoldMesh::Detail::off') == 1
+# The gold a worker carries on its back is the sack (or the heap while the sack is off), never a stack mesh.
+workers = read('source/render/WorkerReactions.cpp')
+assert 'LooseGoldMesh::prepareSack(sceneManager, stackName)' in workers
+assert 'LooseGoldMesh::prepareHeap(sceneManager, stackName)' in workers
+assert '"GoldstackLv" + Helper::toString(level) + ".mesh"' not in workers
 # The sack and its visibility swap are undone when the gold is put down and when the object goes away.
 assert '_sack' in render and render.count('"_sack"') >= 3
 assert 'carriedEnt->setVisible(true)' in render

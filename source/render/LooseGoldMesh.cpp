@@ -217,8 +217,9 @@ int sizeFromStackName(const std::string& meshName)
 
 std::string prepareHeap(Ogre::SceneManager* sceneManager, const std::string& meshName)
 {
+    // The heap is drawn at every treasury detail: the classic stack meshes no longer exist
     const int size = sizeFromStackName(meshName);
-    if(size == 0 || TreasuryGoldMesh::getDetail() == TreasuryGoldMesh::Detail::off)
+    if(size == 0)
         return meshName;
 
     const std::string name = HeapPrefix + static_cast<char>('0' + size);

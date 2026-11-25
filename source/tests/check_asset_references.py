@@ -522,9 +522,26 @@ def missing_references(root, refs, assets):
             found = ref.name in names
         if not found and packaged_elsewhere(root, ref):
             continue
+        if not found and loose_gold_size(root, ref):
+            continue
         if not found:
             missing.append(ref)
     return missing
+
+
+def loose_gold_size(root, ref):
+    """True for a classic gold stack name (GoldstackLv1..4) while LooseGoldMesh still builds the heap of that size at
+    run time: the name is only a size there is no mesh file of. A name outside the sizes, or a LooseGoldMesh that no
+    longer maps the prefix to a built mesh, stays missing."""
+    match = re.fullmatch(r'GoldstackLv(\d+)\.mesh', ref.name) if ref.kind == 'mesh' else None
+    loose = root / 'source/render/LooseGoldMesh.cpp'
+    header = root / 'source/render/LooseGoldMesh.h'
+    if not match or not loose.is_file() or not header.is_file():
+        return False
+    text = read(loose)
+    sizes = re.search(r'sizeCount\s*=\s*(\d+)', read(header))
+    return ('StackPrefix = "GoldstackLv"' in text and 'convertToMesh(resourceName' in text and sizes is not None
+            and 1 <= int(match[1]) <= int(sizes[1]))
 
 
 def packaged_elsewhere(root, ref):

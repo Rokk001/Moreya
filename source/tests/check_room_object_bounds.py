@@ -33,6 +33,21 @@ for creature in (repo / 'config/creatures.cfg').read_text().split('[Creature]')[
         bed_dimensions.add((bed[1], *size))
 required.update(re.findall(r'return "(Goldstack[^"]+)"', (repo / 'source/entities/TreasuryObject.cpp').read_text()))
 assert required <= names, f'Missing room furniture: {sorted(required - names)}'
+# The four classic gold stack names are only sizes now: gold on the floor and carried gold are code-built heaps and
+# sacks (LooseGoldMesh), the heart ring draws piles, and no mesh of these names exists to be measured. Their catalog
+# rows keep the navigation footprint of the heart ring and are held at the fixed values they had when they were
+# measured from the old meshes.
+GOLD_STACK_ROWS = {
+    'GoldstackLv1': ('-.197478', '-.175391', '.186379', '.185685'),
+    'GoldstackLv2': ('-.185184', '-.182552', '.185553', '.182552'),
+    'GoldstackLv3': ('-.331379', '-.301391', '.290679', '.182552'),
+    'GoldstackLv4': ('-.331379', '-.301391', '.290679', '.282221'),
+}
+gold_rows = {name: values for name, *values in re.findall(
+    r'\{"(GoldstackLv\d)",\s*([-.\d]+)f,\s*([-.\d]+)f,\s*([-.\d]+)f,\s*([-.\d]+)f\}', catalog)}
+gold_rows = {name: tuple(values) for name, values in gold_rows.items()}
+assert gold_rows == GOLD_STACK_ROWS, f'gold stack catalog rows changed: {gold_rows}'
+assert not any((repo / 'models' / (name + '.mesh')).exists() for name in GOLD_STACK_ROWS)
 probe = r'''
 #include <Ogre.h>
 #include "gamemap/RoomObjectBounds.h"
@@ -160,6 +175,8 @@ with tempfile.TemporaryDirectory(prefix='odp-room-bounds-') as directory:
                               if relative.endswith('.mesh') and room_packages.is_missing_packaged(repo, relative)))
     if missing:
         print('room packages not present, their meshes are not measured: ' + missing.replace(';', ' '))
+    # The gold stack rows have no mesh (see GOLD_STACK_ROWS above); they are checked by value instead
+    missing = ';'.join(filter(None, [missing] + sorted(GOLD_STACK_ROWS)))
     result = subprocess.run([str(work / 'check.exe'), str(repo), folders, missing], cwd=work, capture_output=True,
                             text=True)
     print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
