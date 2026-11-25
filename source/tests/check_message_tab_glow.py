@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
 
-#: The picture entry of ODIcons.imageset and the tab look of OD.looknfeel are own rows of the content (core-gui)
+#: The tab look of OD.looknfeel is an own row of the content (core-gui)
 WITH_CONTENT = content_packages.has_content(ROOT)
 
 
@@ -52,19 +52,23 @@ glow_function = block(game_mode, 'static std::string messageTabGlowColour(')
 constants = game_mode[constants_start:game_mode.index(glow_function)] + glow_function
 update = block(game_mode, 'void GameMode::updateEventMessageIndicator(float elapsed)')
 
-# The tab picture must be one complete painted cell of the icon atlas.
+# The tab picture must be one complete painted cell of the icon atlas (a content package).
+ATLAS_PRESENT = all(content_packages.data_file(ROOT, name) is not None for name in ('gui/ODIcons.imageset', 'gui/ODIcons.png'))
+if not ATLAS_PRESENT:
+    content_packages.unchecked('check_message_tab_glow', ['gui/ODIcons.imageset', 'gui/ODIcons.png'])
 image = re.search(r'MESSAGE_TAB_IMAGE = "OpenDungeonsIcons/(\w+)";', constants)
 assert image, 'message tab picture'
-if WITH_CONTENT:
+if ATLAS_PRESENT:
     entry = re.search(r'<Image height="(\d+)" name="' + image.group(1) + r'" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />',
                       read('gui/ODIcons.imageset'))
     assert entry, image.group(1)
     from PIL import Image  # noqa: E402
     height, width, x, y = (int(v) for v in entry.groups())
-    cell = Image.open(ROOT / 'gui/ODIcons.png').convert('RGBA').crop((x, y, x + width, y + height))
+    cell = Image.open(content_packages.resolve(ROOT, 'gui/ODIcons.png')).convert('RGBA').crop((x, y, x + width, y + height))
     alpha = cell.getchannel('A')
     assert sum(1 for a in alpha.getdata() if a > 200) > 0.9 * width * height, 'tab picture not opaque'
 
+if WITH_CONTENT:
     # The glow is drawn by the SelectionColour layer of the tab look in its normal state.
     looknfeel = read('gui/OD.looknfeel')
     look = looknfeel[looknfeel.index('<WidgetLook name="OD/GameTabButton">'):]
@@ -76,8 +80,7 @@ if WITH_CONTENT:
     normal = normal[:normal.index('</StateImagery>')]
     assert '<Section section="selected" />' in normal
 else:
-    content_packages.unchecked('check_message_tab_glow', ['message tab picture entry of gui/ODIcons.imageset and tab '
-                                                          'look of gui/OD.looknfeel (own rows)'])
+    content_packages.unchecked('check_message_tab_glow', ['tab look of gui/OD.looknfeel (own rows)'])
 
 PREAMBLE = r'''
 #include <algorithm>

@@ -29,7 +29,7 @@ import content_packages  # noqa: E402  (scripts/ is on the path through the menu
 TEXT = "Moreya"
 #: The game data files the check reads
 CONTENT_FILES = ("models/MenuMoreyaSignpost.mesh", "materials/scripts/MenuSignpost.material",
-                 "materials/textures/menu/MenuMoreyaSignpostBoard.png", "gui/fonts/MedievalSharp-Bold.ttf")
+                 "materials/textures/menu/MenuMoreyaSignpostBoard.png", "gui/fonts/SourceSerif4-Semibold.ttf")
 
 
 def data_path(relative):
@@ -54,7 +54,7 @@ def check(failures):
     height, width = rgb.shape[:2]
     sys.path.insert(0, os.path.join(ROOT, "tools"))
     import gen_menu_signpost_lettering as lettering
-    mask = lettering.letter_mask(data_path("gui/fonts/MedievalSharp-Bold.ttf"), width, height, TEXT)
+    mask = lettering.letter_mask(data_path("gui/fonts/SourceSerif4-Semibold.ttf"), width, height, TEXT)
     rows = np.arange(height)[:, None] / float(height)
     columns = np.arange(width)[None, :] / float(width)
     rim = np.asarray(Image.fromarray((mask * 255).astype(np.uint8), "L").filter(

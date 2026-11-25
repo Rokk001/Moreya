@@ -25,22 +25,27 @@ repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import content_packages  # noqa: E402
 
-# OD.looknfeel, ODIcons.imageset, ODSkin.scheme and ODSkin.imageset are mixed files: as the game reads them only with
-# their own rows from the content; without it they are None and their parts are named as not checked
+# OD.looknfeel and ODSkin.scheme are mixed files: as the game reads them only with their own rows from the content;
+# without it they are None and their parts are named as not checked
 CONTENT = content_packages.has_content(repo)
 look = content_packages.read_text(repo, 'gui/OD.looknfeel') if CONTENT else None
 if CONTENT:
     ET.fromstring(look)
 else:
     content_packages.unchecked('check_item_card_tooltip_1026', ['the look OD/ItemTooltip of gui/OD.looknfeel',
-                                                                'the images of gui/ODSkin.imageset and gui/ODIcons.imageset',
                                                                 'the fonts of gui/ODSkin.scheme'])
 item = (repo / 'source/entities/ItemInstance.cpp').read_text()
 header = (repo / 'source/entities/ItemInstance.h').read_text()
 gui = (repo / 'source/render/Gui.cpp').read_text()
 creature = (repo / 'source/entities/Creature.cpp').read_text()
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
-icons = content_packages.read_text(repo, 'gui/ODIcons.imageset') if CONTENT else None
+# The icon and skin atlases lie whole in content packages (found through scripts/content_packages.py); without them
+# they are None and their parts are named as not checked
+ATLAS_FILES = ['gui/ODIcons.imageset', 'gui/ODSkin.imageset']
+ATLAS_PRESENT = all(content_packages.data_file(repo, name) is not None for name in ATLAS_FILES)
+if not ATLAS_PRESENT:
+    content_packages.unchecked('check_item_card_tooltip_1026', ATLAS_FILES)
+icons = content_packages.read_text(repo, 'gui/ODIcons.imageset') if ATLAS_PRESENT else None
 fonts = content_packages.read_text(repo, 'gui/ODSkin.scheme') if CONTENT else None
 
 
@@ -65,9 +70,10 @@ if CONTENT:
     assert 'CentreAligned' not in widget
     assert widget.count('<StateImagery') == 2, 'Enabled and Disabled'
     # the look only uses images that exist: the skin images of the imageset and the frame square Gui creates before it loads
-    imageset = content_packages.read_text(repo, 'gui/ODSkin.imageset')
-    for name in set(re.findall(r'name="OpenDungeonsSkin/(Tooltip[A-Za-z]+)"', widget)):
-        assert 'name="%s"' % name in imageset, name
+    if ATLAS_PRESENT:
+        imageset = content_packages.read_text(repo, 'gui/ODSkin.imageset')
+        for name in set(re.findall(r'name="OpenDungeonsSkin/(Tooltip[A-Za-z]+)"', widget)):
+            assert 'name="%s"' % name in imageset, name
 assert gui.index('createItemTooltipFrameImage();') < gui.index('createFromFile("ODSkin.scheme")')
 
 # 2. The text
@@ -77,7 +83,7 @@ for font in ('MedievalSharp-13', 'MedievalSharp-10') if CONTENT else ():
     assert 'name="%s"' % font in fonts, font
 assert text.index('getDisplayName(map)') < text.index('qualityName(mQuality)') < text.index('GoldCoin') < text.index('itemNumber(getPrice(map))')
 assert "OpenDungeonsIcons/GoldCoin" in text
-assert not CONTENT or 'name="GoldCoin"' in icons
+assert icons is None or 'name="GoldCoin"' in icons
 assert 'image-size' in text and 'coinSize' in text
 assert 'QUALITY_COLOURS' in text, 'name and quality in the quality colour'
 assert 'mBonuses' in text and 'mEffects' in text and 'bonusName(bonus.first)' in text and 'getLevelMin(map)' in text

@@ -131,6 +131,11 @@ def resolutions(root, nodes, row):
 
 # The painted icon: its own atlas cell, a copy of its 256 pixel tile, the iron frame of the row tiles, a green-white trap glow.
 def icon():
+    # The icon atlas lies in a content package (found through scripts/content_packages.py)
+    atlas_files = ["gui/ODIcons.imageset", "gui/ODIcons.png"]
+    if any(content_packages.data_file(repo, name) is None for name in atlas_files):
+        content_packages.unchecked("check_ghost_hunters_button", atlas_files)
+        return
     imageset = content_packages.read_text(repo, "gui/ODIcons.imageset")
     entry = re.search(r'<Image height="(\d+)" name="GhostHuntersButton" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />', imageset)
     assert entry and entry.groups() == ("256", "256", "1280", "4352"), entry and entry.groups()
@@ -138,7 +143,7 @@ def icon():
     x, y = 1280, 4352
     tile = Image.open(assets_src_dir(repo) / "gui/icons/tiles/GhostHuntersButton.png").convert("RGBA")
     assert tile.size == (256, 256)
-    atlas = Image.open(repo / "gui/ODIcons.png").convert("RGBA")
+    atlas = Image.open(content_packages.resolve(repo, "gui/ODIcons.png")).convert("RGBA")
     assert atlas.crop((x, y, x + 256, y + 256)).tobytes() == tile.tobytes(), "the atlas cell is the painted tile"
     # No other imageset entry shares the cell
     for other in re.finditer(r'name="(\w+)" width="(\d+)" xPos="(\d+)" yPos="(\d+)"', imageset):

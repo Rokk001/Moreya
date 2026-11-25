@@ -49,17 +49,18 @@ def props(window):
     return {p.get('name'): p.get('value') for p in window.findall('Property')}
 
 
-if WITH_CONTENT:
-    imageset = ET.fromstring(read('gui/ODIcons.imageset'))
+# The icon atlas lies in a content package; without it the picture checks are named as not checked (LAYOUT_FILES)
+ICON_IMAGESET = 'gui/ODIcons.imageset'
+atlas = set()
+if content_packages.data_file(repo, ICON_IMAGESET) is not None:
+    imageset = ET.fromstring(read(ICON_IMAGESET))
     atlas = {image.get('name') for image in imageset.findall('Image')}
-else:
-    atlas = None
-    content_packages.unchecked('check_workers_window', ['gui/ODIcons.imageset', 'HUD button and icon row (own rows of '
-                                                        'gui/ModeGame.layout)', 'WorkerDefaultPriority of '
-                                                        'config/global.cfg'])
+if not WITH_CONTENT:
+    content_packages.unchecked('check_workers_window', ['HUD button and icon row (own rows of gui/ModeGame.layout)',
+                                                        'WorkerDefaultPriority of config/global.cfg'])
 code = read('source/render/WorkersWindow.cpp')
 #: The files of the content packages the layout parts of the check need
-LAYOUT_FILES = ('gui/WindowWorkers.layout', 'gui/fonts/SourceSerif4-Semibold.ttf')
+LAYOUT_FILES = ('gui/WindowWorkers.layout', 'gui/fonts/SourceSerif4-Semibold.ttf', ICON_IMAGESET)
 LAYOUT = all(content_packages.data_file(repo, path) is not None for path in LAYOUT_FILES)
 if not LAYOUT:
     content_packages.unchecked('check_workers_window', [path for path in LAYOUT_FILES
@@ -201,7 +202,7 @@ if WITH_CONTENT:
         assert other_box[1] == button_box[1], 'the Workers icon is in the same row as ' + other_name
         assert other_box[2] <= button_box[0] or button_box[2] <= other_box[0], 'the Workers icon covers ' + other_name
     for atlas_name in ('WorkersButton',):
-        assert atlas_name in atlas
+        assert atlas_name in atlas or not LAYOUT
 # The old text button pictures are no longer used by any layout or by the window code
 assert 'WorkersHud' not in read('gui/ModeGame.layout') + (read('gui/WindowWorkers.layout') if LAYOUT else '') + code, 'old text button pictures'
 

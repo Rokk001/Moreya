@@ -1,6 +1,7 @@
 """Check type-neutral marking of unexplored tiles and the fog-surface mark. Text check, no game start."""
 from pathlib import Path
 import math
+import sys
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -23,6 +24,14 @@ assert 'mPlayer->markTilesForDigging(false, std::vector<Tile*>(1, tile), false)'
 render = read('source/render/RenderManager.cpp')
 # Ordinary earth replaces the separate marked fog manager; require exact shared geometry and marks.
 import runpy
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+# The earth meshes lie in a content package; without them the mesh checks below are named as not checked
+EARTH_MESHES = ['models/Dirt_fl_0000.mesh', 'models/Dirt_fl_1111.mesh']
+if any(content_packages.data_file(repo, name) is None for name in EARTH_MESHES):
+    content_packages.unchecked('check_unexplored_marks', EARTH_MESHES)
+    print('check_unexplored_marks: OK (without the earth meshes)')
+    sys.exit(0)
 earth_contract = runpy.run_path(str(repo / 'source/tests/check_fog_earth_geometry.py'), run_name='__fog_contract__')
 assert 'mInstanceManagerMarkedFog' not in render and 'mInstanceManagerDirt' not in render
 assert 'colourizeEntity(tileMeshEnt, seatColor, isMarked, vision)' in render
@@ -51,7 +60,7 @@ assert 'static const float PREVIEW_BORDER_INNER_HALF = 0.44f;' in render
 # The strict companion additionally checks all full-earth variants against each other.
 assert 'createMarkedFogMesh' not in render
 assert '"FogOfWarDirt.mesh"' not in render and '"FogOfWarMarked.mesh"' not in render
-vertices = earth_contract['positions'](repo / 'models/Dirt_fl_1111.mesh')
+vertices = earth_contract['positions'](content_packages.resolve(repo, 'models/Dirt_fl_1111.mesh'))
 height = max(p[2] for p in vertices)
 corners = list({tuple(round(value, 4) for value in p) for p in vertices
                 if abs(abs(p[0]) - 0.5) < 0.0001 and abs(abs(p[1]) - 0.5) < 0.0001

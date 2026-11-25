@@ -5,9 +5,10 @@ has a body, and retain its own painted source motif. Frost, stone and creature e
 their approved material colours rather than the previous uniformly warm procedural palette.
 
 The layouts are scanned in the public tree and in the content packages (scripts/content_packages.py); the moved
-WindowGameEvent.layout and SquareSelector.material are content. The imagesets, OD.looknfeel, ODSkin.scheme and most
-layouts are mixed files that are read joined with their own rows from the content (content_packages.read_text).
-Without the content only the code assertions run; the atlas, skin and layout checks are named as not checked.
+WindowGameEvent.layout and SquareSelector.material are content. OD.looknfeel, ODSkin.scheme and most
+layouts are mixed files that are read joined with their own rows from the content (content_packages.read_text); the
+icon and skin atlases (gui/ODIcons.*, gui/ODSkin.*) lie whole in a content package. Without the content only the code
+assertions run; the atlas, skin and layout checks are named as not checked.
 """
 from pathlib import Path
 import re
@@ -24,6 +25,8 @@ import content_packages  # noqa: E402
 
 #: Every layout of the public tree and of the content packages (the own rows files are part of their joined layout)
 LAYOUTS = [layout for layout in content_packages.data_glob(repo, 'gui', '*.layout') if '.own.' not in layout.name]
+# The icon and skin atlases lie in content packages; without them nothing of the atlas can be checked
+ATLAS_FILES = ['gui/ODIcons.imageset', 'gui/ODIcons.png', 'gui/ODSkin.imageset', 'gui/ODSkin.png']
 
 
 def read_gui(path):
@@ -41,9 +44,12 @@ for f in ('source/entities/Creature.cpp', 'source/entities/Tile.cpp', 'source/ga
           'source/network/ChatEventMessage.cpp'):
     code = (repo / f).read_text()
     assert 'CCBBBBFF' not in code and "colour='FFFFFFFF'" not in code, f + ' has a cold or hard white text colour'
-if not content_packages.has_content(repo):
-    content_packages.unchecked('check_forged_icons', ['icon atlas and gui/ODIcons.imageset', 'skin of gui/ODSkin.imageset',
-                                                      'layouts, gui/OD.looknfeel and gui/ODSkin.scheme'])
+missing_atlas = [name for name in ATLAS_FILES if content_packages.data_file(repo, name) is None]
+if not content_packages.has_content(repo) or missing_atlas:
+    content_packages.unchecked('check_forged_icons', missing_atlas)
+    if not content_packages.has_content(repo):
+        content_packages.unchecked('check_forged_icons', ['icon atlas and gui/ODIcons.imageset', 'skin of gui/ODSkin.imageset',
+                                                          'layouts, gui/OD.looknfeel and gui/ODSkin.scheme'])
     print('FORGED ICONS OK: code checked, content not present')
     sys.exit(0)
 text = content_packages.read_text(repo, 'gui/ODIcons.imageset')
@@ -51,7 +57,7 @@ icon_images = ET.fromstring(text)
 rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
          for node in icon_images.findall('Image')}
 assert len(rects) == len(icon_images.findall('Image')), 'unique image names'
-atlas = np.array(Image.open(repo / 'gui/ODIcons.png').convert('RGBA'), dtype=np.float32)
+atlas = np.array(Image.open(content_packages.resolve(repo, 'gui/ODIcons.png')).convert('RGBA'), dtype=np.float32)
 used = set()
 for layout in LAYOUTS:
     used |= set(re.findall(r'OpenDungeonsIcons/([A-Za-z0-9_]+)', read_gui(layout)))
@@ -104,7 +110,7 @@ for name in squares:
     assert (w, h) == (256, 256) and (a > 200).mean() > 0.6, name + ' has no painted square body'
     inner = atlas[y + h // 4:y + 3 * h // 4, x + w // 4:x + 3 * w // 4, :3]
     assert inner.std(axis=(0, 1)).max() > 12, name + ' has no motif in the tile'
-skin = np.array(Image.open(repo / 'gui/ODSkin.png').convert('RGBA'), dtype=np.float32)
+skin = np.array(Image.open(content_packages.resolve(repo, 'gui/ODSkin.png')).convert('RGBA'), dtype=np.float32)
 skin_set = content_packages.read_text(repo, 'gui/ODSkin.imageset')
 skin_images = ET.fromstring(skin_set)
 skin_rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 'width', 'height'))

@@ -16,7 +16,7 @@ chipped edges, splits along the grain that run through the letters, and paint th
 clean or bright. --clean writes the earlier clean planks with bone white paint instead.
 
 The letters keep clear of the two iron straps at the back end (u up to about 0.2) and of the arrow tip; their font is
-gui/fonts/MedievalSharp-Bold.ttf, the menu font. The result is deterministic (fixed random seed).
+gui/fonts/SourceSerif4-Semibold.ttf, the menu font. The result is deterministic (fixed random seed).
 
 Run from anywhere: python tools/gen_menu_signpost_lettering.py [<repo>]
 
@@ -178,7 +178,7 @@ def main():
     colour = load_rgb(folder / "MenuSignpostBoard.png")
     normal = load_rgb(folder / "MenuSignpostBoardNormal.png")
     height, width = colour.shape[:2]
-    mask = letter_mask(repo / "gui/fonts/MedievalSharp-Bold.ttf", width, height, arguments.text)
+    mask = letter_mask(repo / "gui/fonts/SourceSerif4-Semibold.ttf", width, height, arguments.text)
     rng = numpy.random.default_rng(4711)
     if arguments.clean:
         lettered, carved = lettered_board(colour, normal, mask, rng)

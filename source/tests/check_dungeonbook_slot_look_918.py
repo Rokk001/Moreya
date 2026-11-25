@@ -11,9 +11,9 @@ Checked here:
    the frame pictures are measured: Poor and Common grey to white, Rare blue, Epic purple.
 3. Every inventory slot of the book has the picture, the symbol and the quality frame windows.
 
-config/items.cfg and the book layout are content (core-config and core-gui packages, found through
-scripts/content_packages.py); without them the code and the public quality frames are checked and the colour note of
-items.cfg and the slot windows of the book are named as not checked.
+config/items.cfg and the book layout are content (core-config and core-gui packages), the icon atlas lies whole in a
+content package (all found through scripts/content_packages.py); without them the code is checked and the colour note
+of items.cfg, the slot windows of the book and the quality frames are named as not checked.
 """
 from pathlib import Path
 import re
@@ -29,11 +29,9 @@ social = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
 missing_content = content_packages.unchecked('check_dungeonbook_slot_look_918', [
     name for name in ('config/items.cfg', 'gui/WindowSocial.layout') if content_packages.data_file(repo, name) is None])
 items_cfg = None if missing_content else content_packages.read_text(repo, 'config/items.cfg')
-# gui/ODIcons.imageset as the game reads it: its images are own rows of the content package core-gui (None without
-# the content: the quality frames are then named as not checked)
-imageset = content_packages.read_text(repo, 'gui/ODIcons.imageset') if content_packages.has_content(repo) else None
-if imageset is None:
-    content_packages.unchecked('check_dungeonbook_slot_look_918', ['gui/ODIcons.imageset quality frames'])
+# gui/ODIcons.imageset as the game reads it: it lies whole in a content package (None without the content: the
+# quality frames are then named as not checked)
+imageset = content_packages.read_text(repo, 'gui/ODIcons.imageset') if content_packages.data_file(repo, 'gui/ODIcons.imageset') else None
 book = None if missing_content else ET.fromstring(content_packages.read_text(repo, 'gui/WindowSocial.layout')).find('Window')
 
 
@@ -63,7 +61,10 @@ assert 'frame->setVisible(item != nullptr);' in fill
 assert 'frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(item->mQuality));' in fill
 assert 'Creature::fillItemSlotWindows(creature, slots, true);' in function_of(social, 'void SocialWindow::refreshInventory(')
 
-# 2. The quality frames
+# 2. The quality frames (the icon atlas lies in a content package)
+if imageset is None or content_packages.data_file(repo, 'gui/ODIcons.png') is None:
+    content_packages.unchecked('check_dungeonbook_slot_look_918', ['gui/ODIcons.imageset', 'gui/ODIcons.png'])
+    imageset = None
 if items_cfg is not None:
     assert 'Quality colours: Poor grey, Common white, Rare blue, Epic purple' in items_cfg
 if imageset is not None:
@@ -78,7 +79,7 @@ if imageset is not None:
     except ImportError:
         Image = None
     if Image is not None:
-        atlas = Image.open(repo / 'gui/ODIcons.png').convert('RGBA')
+        atlas = Image.open(content_packages.resolve(repo, 'gui/ODIcons.png')).convert('RGBA')
         average = {}
         for quality, (height, width, x, y) in frames.items():
             pixels = [p for p in atlas.crop((x, y, x + width, y + height)).getdata() if p[3] > 200 and max(p[:3]) > 80]

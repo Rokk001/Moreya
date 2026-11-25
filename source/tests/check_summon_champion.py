@@ -4,9 +4,9 @@ The spell costs 108,000 mana and the champion then costs 2,250 mana per second a
 price / drain = 48 seconds. The champion is the only creature that cannot be hurt. The spell is not
 researchable, the complete campaign Heartstone unlocks it.
 
-The spell values, the creature definition, the icon and the two layouts are own rows of the content packages core-config
-and core-gui (scripts/content_packages.py); without the content they are named as not checked and the code is
-checked."""
+The spell values, the creature definition and the two layouts are own rows of the content packages core-config and
+core-gui, the icon atlas lies whole in a content package (scripts/content_packages.py); without the content they are
+named as not checked and the code is checked."""
 from pathlib import Path
 import re
 import sys
@@ -105,10 +105,13 @@ if WITH_CONTENT:
     spells_page = ET.ElementTree(ET.fromstring(content_packages.read_text(repo, "gui/WindowSkillTree.layout"))).find('.//Window[@name="Spells"]')
     assert spells_page.find('.//Window[@name="SummonChampionButton"]') is not None, "the hidden node stands in the Spells page"
 assert 'new SkillDefSpell(TREE_PREFIX_SPELLS, "SummonChampionButton"' in manager, "its path prefix is the Spells tab"
-if WITH_CONTENT:
-    assert 'name="SummonChampionButton"' in read("gui/ODIcons.imageset")
+# The icon atlas lies in a content package (found through scripts/content_packages.py)
+if content_packages.data_file(repo, "gui/ODIcons.imageset") is None:
+    content_packages.unchecked("check_summon_champion", ["gui/ODIcons.imageset"])
+else:
+    assert 'name="SummonChampionButton"' in content_packages.read_text(repo, "gui/ODIcons.imageset")
 assert '"SummonChampionButton"' in read("source/render/Gui.cpp")
 if not WITH_CONTENT:
-    content_packages.unchecked("check_summon_champion", ["spell values, champion definition, buttons and icon (own rows "
+    content_packages.unchecked("check_summon_champion", ["spell values, champion definition and buttons (own rows "
                                                          "of config/spells.cfg, config/creatures.cfg and the gui files)"])
 print("summon champion checks passed")

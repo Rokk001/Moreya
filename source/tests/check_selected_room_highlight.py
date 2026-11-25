@@ -1,7 +1,7 @@
 """Execute the room-selection feedback block and verify its existing look states.
 
-gui/OD.looknfeel and gui/ODSkin.imageset are read with their own rows of the content package core-gui
-(scripts/content_packages.py); without the content the look states are named as not checked.
+gui/OD.looknfeel is read with its own rows of the content package core-gui, the skin atlas lies whole in a content
+package (scripts/content_packages.py); without the content the look states are named as not checked.
 """
 from pathlib import Path
 import subprocess
@@ -17,12 +17,18 @@ import content_packages  # noqa: E402
 source = (repo / 'source/modes/GameMode.cpp').read_text()
 start = source.index('    SkillManager::listAllRooms([&]', source.index('void GameMode::refreshActionFeedback'))
 block = source[start:source.index('    const bool prohibited', start)]
-if content_packages.has_content(repo):
+# The skin atlas lies in a content package (found through scripts/content_packages.py)
+skin_missing = [name for name in ('gui/ODSkin.imageset', 'gui/ODSkin.png') if content_packages.data_file(repo, name) is None]
+if skin_missing:
+    content_packages.unchecked('check_selected_room_highlight', skin_missing)
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_selected_room_highlight', ['look states of gui/OD.looknfeel (own rows)'])
+elif not skin_missing:
     looks = ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel'))
     look = looks.find("WidgetLook[@name='OD/GameTabButton']")
     skin = ET.fromstring(content_packages.read_text(repo, 'gui/ODSkin.imageset'))
     # Selection feedback must remain visible in each state, regardless of private imagery-section names.
-    with Image.open(repo / 'gui' / skin.attrib['imagefile']) as atlas:
+    with Image.open(content_packages.resolve(repo, 'gui/' + skin.attrib['imagefile'])) as atlas:
         pixels = atlas.convert('RGBA')
         for state in ('Normal', 'Hover', 'Pushed', 'PushedOff'):
             state_imagery = look.find(f"StateImagery[@name='{state}']")
@@ -47,9 +53,6 @@ if content_packages.has_content(repo):
                 left, top, width, height = (int(image.attrib[key]) for key in ('xPos', 'yPos', 'width', 'height'))
                 assert width > 0 and height > 0, image_name
                 assert pixels.crop((left, top, left + width, top + height)).getchannel('A').getextrema()[1] > 0, image_name
-else:
-    content_packages.unchecked('check_selected_room_highlight', ['look states of gui/OD.looknfeel and '
-                                                                 'gui/ODSkin.imageset (own rows)'])
 probe = r'''
 #include <iostream>
 #include <map>

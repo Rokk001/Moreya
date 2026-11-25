@@ -630,19 +630,20 @@ print('WIRING OK: the statistics area is a scrollable pane and the debriefing bu
 # The CEGUI arrow of this game is fully transparent: without the keeper hand the debriefing had no visible
 # pointer at all, which looked like a blocked mouse
 from PIL import Image
-# gui/ODSkin.imageset as the game reads it: its images are own rows of the content package core-gui
-if content_packages.has_content(repo):
+# The skin atlas gui/ODSkin.imageset and gui/ODSkin.png lies whole in a content package (found through
+# scripts/content_packages.py)
+if content_packages.data_file(repo, 'gui/ODSkin.imageset') is None or content_packages.data_file(repo, 'gui/ODSkin.png') is None:
+    content_packages.unchecked('check_defeat_debriefing', ['gui/ODSkin.imageset', 'gui/ODSkin.png'])
+else:
     skin = ElementTree.fromstring(content_packages.read_text(repo, 'gui/ODSkin.imageset'))
     arrow = skin.find("Image[@name='MouseArrow']")
     assert arrow is not None
     height, width, left, top = (int(arrow.attrib[key]) for key in ('height', 'width', 'xPos', 'yPos'))
-    arrow_pixels = Image.open(repo / 'gui/ODSkin.png').convert('RGBA').crop((left, top, left + width, top + height))
+    arrow_pixels = Image.open(content_packages.resolve(repo, 'gui/ODSkin.png')).convert('RGBA').crop((left, top, left + width, top + height))
     assert max(pixel[3] for pixel in arrow_pixels.getdata()) == 0, 'the arrow became visible: the hand may not be needed any more'
     show = function(game_mode, 'void GameMode::showDefeatDebriefing(')
     assert 'rrToggleHandSelectorVisibility()' in show and 'isKeeperHandVisible()' in show
     print('WIRING OK: the CEGUI arrow is transparent, so the debriefing brings the keeper hand back as the pointer')
-else:
-    content_packages.unchecked('check_defeat_debriefing', ['gui/ODSkin.imageset MouseArrow'])
 if layout_path is not None:
     for needed in ('Panel/Title', 'Panel/PlayerName', 'Panel/Outcome', 'Panel/Elapsed', 'Panel/StatisticsArea', 'Panel/ConfirmButton'):
         assert needed in names, needed

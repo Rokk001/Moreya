@@ -26,22 +26,13 @@ Name                                   Author                  License          
 ------------------------------------------------------------------------------------------------------------------------
 OD.project                             Bertram                 GPLv3+                  CEED Project file.
 OD.looknfeel                           OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
-ODBackgrounds.imageset                 OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
-ODBackgrounds.png                      OD Team                 CC-BY-SA 3.0
-ODIcons.imageset                       Mario                   GPLv3+                  Existing slots doubled and additional painted symbols assembled by scripts/gui/build_icon_atlas.py
-ODIcons.png                            AI-generated with Codex  GPLv3+                  Painted for this project (2026-10-25), assembled by scripts/gui/build_icon_atlas.py
 assets-src/gui/icons/icons-*.png        AI-generated with Codex  GPLv3+                  Seven original painted icon source sheets, 2026-10-25
 assets-src/gui/icons/overrides/*.png     AI-generated with Codex  GPLv3+                  Complete lantern silhouette and isolated heart without baked health-ring segments, 2026-10-25
 assets-src/gui/icons/tiles/*.png        AI-generated with Codex  GPLv3+                  Individual existing icon slots extracted from icons-*.png by scripts/gui/build_icon_atlas.py
 assets-src/gui/icons/navigation/*.png   AI-generated with Codex  GPLv3+                  Existing navigation sprites assembled from painted icon and skin sources, 2026-10-25
 assets-src/gui/icons/tiles/TavernButton.png AI-generated with Codex GPLv3+                 Original painted foaming wooden tankard source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+                  Original painted beer keg and brass tap source, 256x256, 2026-10-25
-ODMainMenuBackground.imageset          Bertram                 GPLv3+
-ODMainMenuBackground.png               Vagner                  CC-BY-SA 3.0            http://opengameart.org/content/mammon-angel-of-darkness
 ODMainMenuButtons.imageset             Bertram                 GPLv3+
-ODMainMenuButtons.png                  Mario                   GPLv3+                  Drawn from scratch by tools/generate_forged_skin.py (private tools repository) (procedural, no source pixels)
-ODSkin.imageset                        OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
-ODSkin.png                             AI-generated with Codex  GPLv3+                  Painted for this project (2026-10-24), regenerated 2026-10-25 by scripts/gui/build_skin_atlas.py; original transparent default cursor preserved for the 3D hand
 ODSkin.scheme                          OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
 assets-src/gui/skin/frames.png          AI-generated with Codex  GPLv3+                  Original painted frame-state source sheet, 2026-10-24
 assets-src/gui/skin/stone.png           AI-generated with Codex  GPLv3+                  Original painted dark stone source, 2026-10-24
@@ -53,8 +44,6 @@ assets-src/gui/skin/control-*.png       AI-generated with Codex  GPLv3+         
 *.layout                               OD Team                 MIT                     CEGUI files based on the TaharezLook gui sample - http://cegui.org.uk
 
 fonts/
--> LiberationSans-Bold.ttf             Red Hat                 OFL (Open Font License) https://fedorahosted.org/liberation-fonts/
--> MedievalSharp-Bold.ttf              wmk69 (wmk69@o2.pl)     OFL (Open Font License) http://openfontlibrary.org/en/font/medievalsharp
 -> SourceSerif4-Semibold.ttf           Adobe                   SIL OFL 1.1             Source Serif 4 Semibold 4.005R, unmodified static TrueType; readable book serif for the in-game UI. https://github.com/adobe-fonts/source-serif/tree/4.005R/TTF
 -> SourceSerif4-LICENSE.md             Adobe                   SIL OFL 1.1             Original copyright and font licence: https://github.com/adobe-fonts/source-serif/blob/4.005R/LICENSE.md
 -> *.font                              OD Team                 GPLv3+
@@ -147,13 +136,10 @@ textures/
 -> Basicsword                          YD                      CC0                     http://opengameart.org/content/shield-sword
 -> BedBlanket.png                   OD Plus project     CC0                     tools/room-objects/generate_beds.py (private tools repository) (original, procedural)
 -> BedWood.png                      OD Plus project     CC0                     tools/room-objects/generate_beds.py (private tools repository) (original, procedural)
--> Black.png                           Public domain, too simple to be licensed
 -> Cavehornet*.png                     Skorpio                 CC-BY-SA 3.0, GPLv3+
 -> ChickenCoop*.png                    Dm3d                    CC-BY-SA 3.0            http://opengameart.org/content/chicken-coop (ChickenCoop.png recoloured by tools/room-objects/restyle_chicken_coop.py (private tools repository))
 -> Claimed*.png
 -> Claimed.png, ClaimedNormal.png         OD Team                 CC0                     Replaced by tools/dungeon-palette/generate_claimed_gold.py (procedural)
--> ClaimedWall*.png                    Nobiax, Danimal         CC-BY-SA 3.0            http://opengameart.org/users/danimal
--> ConcreteDirty*.png                  Sindwiller              CC-BY-SA 3.0            http://opengameart.org/content/dirty-concrete-floor-00
 -> CreatureOverlay*.png                hwoarangmy              CC-BY-SA 3.0
 -> CreatureOverlayHealthStage*.png, CreatureOverlayManaStage*.png    hwoarangmy    CC-BY-SA 3.0    Derived from CreatureOverlay0..7.png for separate life and mana segments.
 -> ManaRing*.png                       hwoarangmy              CC-BY-SA 3.0            Derived from the segments of CreatureOverlay*.png (ManaRing4 built from CreatureOverlay3 without its last segment)
@@ -170,19 +156,15 @@ textures/
 -> Dwarf*.png
 -> DarkElf*.png                        Contmike, Danimal       CC-BY-SA 3.0
 -> Elf*.png                            Contmike, Danimal       CC-BY-SA 3.0
--> EnvmapCity.png
--> EnvmapMetal.png
 -> Farm*.png
 -> FlyingSkull*.png                    piacenti                CC0                     http://opengameart.org/content/skull-prop
 -> Forge*.png                          Nobiax                  CC0                     http://forum.freegamedev.net/viewtopic.php?p=59714#p59714
 -> forest-monster-*.png                CDmir                   CC0                     http://opengameart.org/content/forest-monster
 -> Foundry*.png                        Daniel74, Nobiax        CC0                     http://forum.freegamedev.net/viewtopic.php?p=59775#p59775
--> Gems.png                            Dirt.png's author, Akien , Danimal
 -> GemsNormal.png                      Dirt.png's author, Akien , Danimal
 -> Gnome.png
 -> Goblin{,Normal}.png                 xGhostx7                CC0                     http://www.blendswap.com/blends/view/72394
 -> GoblinKnife*.png                    Wind astella            CC-BY 3.0               http://opengameart.org/content/wind-weapon-pack-1
--> GoldGround.png                      Dirt.png's author, Akien
 -> Gold{,Normal}.png                     OD Team                 CC0                     Replaced by tools/dungeon-palette/generate_claimed_gold.py (procedural)
 -> GemNormal.png                        (the former GoldNormal.png, unchanged; used by GemFull)
 -> Hammock*.png                        Luke.RUSTLTD, Nobiax    CC0                     http://forum.freegamedev.net/viewtopic.php?p=59983#p59983
@@ -191,18 +173,14 @@ textures/
 -> Knight.png
 -> Kobold.png
 -> Kreator*.png
--> Lava.png
 -> LavaSpawn*.png                      piacenti                CC-BY-SA 3.0            http://opengameart.org/content/lava-spawn-animated
 -> Library*.png
 -> Lizardman{,Normal}.png
 -> Monk*.png                           CDmir                   CC0                     http://opengameart.org/content/monk-animated
 -> Orc{,Normal}.png
--> Panels_Diffuse.png                  The Ogre 3D Team        MIT                     https://github.com/OGRECave/ogre - Samples/Media/materials/textures
--> Panels_Normal_Tangent.png           The Ogre 3D Team        MIT                     https://github.com/OGRECave/ogre - Samples/Media/materials/textures
 -> PitDemon*.png
 -> Rat*.png                            CDmir                   CC0                     http://opengameart.org/content/evil-giant-rat
 -> Roach*.png                          Danimal, Atmostatic     CC-BY-SA 3.0            http://opengameart.org/content/roach-game-ready-and-animated
--> Rock.png                            Yughues                 CC0                     http://opengameart.org/users/yughues
 -> RunelordDwarf*.png
 -> Scarab*.png
 -> Slime.png                           Grefuntor               CC-BY 3.0, CC-BY-SA 3.0, GPL 2.0+ - http://opengameart.org/content/slime-mold
@@ -212,18 +190,11 @@ textures/
 -> Tentacle{Albine,Green,Normal}.png
 -> Treasury*.png
 -> Troll{,Normal,Rock}.png
--> Water.png
--> White.png                           Public domain, too simple to be licensed
 -> Wizard.png
 -> Wyvern*.png
 -> *Normal.png                                                                         Normal maps carry the author and licence of the colour texture they belong to, unless listed below
--> Channel0.png, Channel1.png          Tomasz Luchowski        GPLv3+                  Added 2021/2022 (first commit)
 -> ClaimedMask.png, ClaimedWallMask.pngoyvindln                GPLv3+                  Added 2015 (first commit)
 -> DungeonClaimedWallMask*.png         Danimal                 CC-BY-SA 3.0            http://opengameart.org/users/danimal
--> GemsGround.png                      Danimal                 CC-BY-SA 3.0            Added 2015 (first commit)
--> Steel*.png                          Tomasz Luchowski        GPLv3+                  Added 2023 (first commit)
--> white.bmp                           Tomasz Luchowski        GPLv3+                  Added 2022 (first commit); too simple to be protected
--> UniversalNormal.png                 Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 -> undead_color.png                    hwoarangmy              CC-BY-SA 3.0            Added 2015 (first commit)
 -> Kreatur*.png                        Yohann Ferreira (upstream import)GPLv3+                  First commit is the upstream import
 -> NatureMonster*.png                  Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
@@ -243,14 +214,12 @@ Basicsword                             YD                      CC0              
 Bed.skeleton                            OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of Bed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py (private tools repository), original work); the mesh was re-exported with skin weights, shape and textures unchanged
 Bow.*                                  YD                      CC0                     http://opengameart.org/content/archery-set
 CaveHornet.*                           Skorpio, Danimal        CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59058#p59058
-Claimed_*.mesh                         Skorpio                 CC-BY-SA 3.0, GPLv3+
 Cre_vision_indicator.mesh              Andrew Buck             CC-BY-SA 3.0
 Crossbow.*                             Lamoot                  CC-BY 3.0               http://opengameart.org/content/low-poly-crossbow
 Cultist.mesh                           Danimal,Dread Knight,Katarzyna Zalecka                 CC-BY-SA 3.0                     http://opengameart.org/content/dark-priest
 Defender.*                             Konstantin Maystrenko - Concept  CC-BY 3.0      http://forum.freegamedev.net/viewtopic.php?p=61450#p61450
                                        AnthonyMyers - Modeller
                                        Danimal - Retopo/Rigging/Animation
-Dirt*.mesh                             Skorpio                 CC-BY-SA 3.0, GPLv3+
 Dormitory.mesh                         Skorpio                 CC-BY-SA 3.0, GPLv3+
 Dragon.*                               Andrew Buck, Skorpio    CC-BY-SA 3.0, GPLv3+
 DragonBed.skeleton                      OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of DragonBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py (private tools repository), original work); the mesh was re-exported with skin weights, shape and textures unchanged
@@ -280,7 +249,6 @@ Kobold.skeleton (clips ClimbGold, PourGold) OD Team            GPLv3+           
 Dwarf1.skeleton (clips ClimbGold, PourGold) OD Team            GPLv3+                  The same two worker clips for the dwarf worker, AI-generated with a Blender script (tools/blender-assets/dwarf_gold_clips.py (private tools repository), authored in Blender, original work)
 tools/blender-assets/*                 OD Team                 GPLv3+                  Blender scripts (Ogre XML import/export, pose helper, clip builders), original work, AI-generated
 Kreatur.*                              Skorpio                 CC-BY-SA 3.0, GPLv3+
-Lava*.mesh                             Skorpio                 CC-BY-SA 3.0, GPLv3+
 LavaSpawn.*                            piacenti, hwoarangmy, Gabriel Verdon, Katarzyna Zalecka
                                                                CC-BY-SA 3.0            http://opengameart.org/content/lava-spawn-animated
 Lich.*                                 SummoningWars           CC-BY-SA 3.0            http://sumwars.org
@@ -302,7 +270,6 @@ Slime.*                                Grefuntor, D3dm         CC-BY 3.0, CC-BY-
 SmallSpider.*                          Skorpio                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=60887#p60851
 Spider.*                               DennisH2010, Danimal    CC-BY 3.0               http://www.blendswap.com/blends/view/26798 - http://forum.freegamedev.net/viewtopic.php?p=60530#p60530
 SpiderBed.mesh                      OD Plus project     CC0                     tools/room-objects/generate_beds.py (private tools repository) (original, procedural)
-SquareSelector.mesh                    OD Team                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59066#p59066
 Staff.*                                Skorpio                 CC-BY-SA 3.0, GPLv3+
 StoneCoffin.skeleton                    OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of StoneCoffin.mesh, AI-generated with a Blender script (tools/blender-assets/crypt_rig.py (private tools repository), original work); the mesh was re-exported with skin weights, shape and textures unchanged
 TentacleBed.skeleton                    OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of TentacleBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py (private tools repository), original work); the mesh was re-exported with skin weights, shape and textures unchanged
@@ -311,13 +278,10 @@ Tileset                                Skorpio, Danimal        CC-BY-SA 3.0     
 Troll.*                                Dm3d                    CC-BY-SA 3.0            http://opengameart.org/content/rock-golem
 TrollBed.skeleton                       OD Team                 GPLv3+                  Skeleton and clips Sleep and Wake of TrollBed.mesh, AI-generated with a Blender script (tools/blender-assets/bed_rig.py (private tools repository), original work); the mesh was re-exported with skin weights, shape and textures unchanged
 TrollRock.mesh                         Dm3d                    CC-BY-SA 3.0            http://opengameart.org/content/rock-golem
-Water*                                 Skorpio                 CC-BY-SA 3.0, GPLv3+
 Wizard.*                               Skorpio                 CC-BY-SA 3.0, GPLv3+
 Wyvern.*                               Andrew Buck, Skorpio    CC-BY-SA 3.0, GPLv3+
 Cultist.skeleton, DarkElf.*, Elf.*     Danimal                 CC-BY-SA 3.0            First commit 2015/2016
 FenceCorner.mesh, FenceStraight.mesh   AI-generated with Claude Code  GPLv3+            Rebuilt 2026-11-17 (the 2023 picket fence by Tomasz Luchowski replaced): coarse prison bars of thick forged iron with two straps, built by script in Blender, source PrisonCage_A5.blend kept outside Git
-FogOfWarCloud2.mesh, FogOfWarDirt.mesh Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
-Rocklava.mesh                          Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 
 
 =====================================================
