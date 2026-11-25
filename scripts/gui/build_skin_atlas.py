@@ -221,6 +221,50 @@ def render_tile(name, size, stone):
     return frame.crop(box).resize(size, Image.Resampling.LANCZOS)
 
 
+# Two small opaque fills with their own atlas size (not multiples of the skin density): LineFill (code draws the lines of
+# the research tree with it) and SelectionFill (list selection). SelectionFill is the selected row of the sheet; LineFill has
+# no picture on the sheet and keeps the earlier own image (linefill.png in the source folder).
+def plain_fills():
+    row = Image.open(SOURCES / ("selection.png" if SHEET_SKIN else "stone.png")).convert("RGB").convert("RGBA")
+    line = Image.open(SOURCES / "linefill.png").convert("RGBA")
+    return {"LineFill": line.resize((6, 6), Image.Resampling.LANCZOS),
+            "SelectionFill": row.resize((48, 12), Image.Resampling.LANCZOS)}
+
+
+# Image names with a state suffix that are not slots of their own (see main()).
+KEPT_STATE_NAMES = (
+    "ButtonBottomHighlight__Hover",
+    "ButtonBottomHighlight__Pushed",
+    "ButtonBottomPushed__Pushed",
+    "ButtonLeftHighlight__Hover",
+    "ButtonLeftHighlight__Pushed",
+    "ButtonLeftPushed__Pushed",
+    "ButtonRightHighlight__Hover",
+    "ButtonRightHighlight__Pushed",
+    "ButtonRightPushed__Pushed",
+    "ButtonTopHighlight__Hover",
+    "ButtonTopHighlight__Pushed",
+    "ButtonTopPushed__Pushed",
+    "MiniVertScrollBarSegment__Disabled",
+    "MiniVertScrollDownNormal__Disabled",
+    "MiniVertScrollThumbBottomHover__Hover",
+    "MiniVertScrollThumbBottomNormal__Disabled",
+    "MiniVertScrollThumbBottomNormal__Pushed",
+    "MiniVertScrollThumbMiddleHover__Hover",
+    "MiniVertScrollThumbMiddleNormal__Disabled",
+    "MiniVertScrollThumbMiddleNormal__Pushed",
+    "MiniVertScrollThumbTopHover__Hover",
+    "MiniVertScrollThumbTopNormal__Disabled",
+    "MiniVertScrollThumbTopNormal__Pushed",
+    "MiniVertScrollUpNormal__Disabled",
+    "WindowBottomEdge__Disabled",
+    "WindowLeftEdge__Disabled",
+    "WindowRightEdge__Disabled",
+    "WindowTopEdge__Disabled",
+    "WindowTopEdge__Edge2__Disabled",
+)
+
+
 # Place all rectangles in a deterministic skyline, sharing identical source recipes.
 def pack_tiles(tiles):
     skyline = [(0, 0, 2048)]
@@ -284,6 +328,10 @@ def main():
     for name in sorted(set(re.findall(r"OpenDungeonsSkin/([A-Za-z0-9_]+)", look))):
         if "__" in name:
             definitions[name] = dict(definitions[name.split("__", 1)[0]], name=name)
+    # state images that layouts, looks of other branches or code may draw: they exist whether or not the current look file
+    # names them, so that no look change can remove an image from the skin
+    for name in KEPT_STATE_NAMES:
+        definitions[name] = dict(definitions[name.split("__", 1)[0]], name=name)
     for name, dimension in (("OrbRing", 256), ("MinimapRing", 512)):
         definitions[name] = {"name": name, "width": str(dimension // SCALE), "height": str(dimension // SCALE)}
     stone = seamless_stone()
@@ -303,6 +351,8 @@ def main():
         else:
             recipes[recipe] = name
             tiles[name] = render_tile(name, size, stone)
+    extra = plain_fills()
+    tiles.update(extra)
     positions = pack_tiles(tiles)
     atlas = Image.new("RGBA", (2048, ATLAS_H))
     for name, tile in tiles.items():
@@ -319,6 +369,10 @@ def main():
             if offset in entry:
                 attrs[offset] = str(int(entry[offset]) * SCALE)
         ET.SubElement(imageset, "Image", attrs)
+    for name, tile in extra.items():
+        x, y = positions[name]
+        ET.SubElement(imageset, "Image", {"name": name, "xPos": str(x), "yPos": str(y),
+                                          "width": str(tile.width), "height": str(tile.height)})
     ET.indent(imageset, space="    ")
     ET.ElementTree(imageset).write(content_gui("gui-skin") / "ODSkin.imageset", encoding="utf-8", xml_declaration=True)
     Image.open(SOURCES / "stone.png").convert("RGBA").resize((3548, 1774), Image.Resampling.LANCZOS).save(content_gui("core-gui") / "ODHudSurface.png")
