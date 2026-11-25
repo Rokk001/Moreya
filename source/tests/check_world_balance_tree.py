@@ -5,10 +5,13 @@ The expected tree is written out here independently of the source. Nothing is co
 Usage: python source/tests/check_world_balance_tree.py
 """
 import re
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -257,7 +260,11 @@ for window in tabs.iter("Window"):
     assert window.get("name") not in ("AttackSkills", "TacticSkills", "MagicSkills")
 text = read("gui/WindowSkillTree.layout")
 assert "SelectionBrush" not in text and "FrameColours" not in text
-imageset = read("gui/ODIcons.imageset")
+# The icon atlas lies in a content package (found through scripts/content_packages.py)
+imageset = (content_packages.read_text(repo, "gui/ODIcons.imageset")
+            if content_packages.data_file(repo, "gui/ODIcons.imageset") is not None else None)
+if imageset is None:
+    content_packages.unchecked("check_world_balance_tree", ["gui/ODIcons.imageset"])
 for name, (button, title, tab) in KEEPERS.items():
     node = next(w for w in tabs.iter("Window") if w.get("name") == button)
     assert node.get("type") == "OD/ResearchButton"
@@ -265,10 +272,10 @@ for name, (button, title, tab) in KEEPERS.items():
     assert node.find('Property[@name="TooltipText"]').get("value") == title
     bar = node.find('Window[@name="%sProgressBar"]' % button)
     assert bar is not None and bar.get("type") == "OD/ProgressBar", "progress bar child of " + button
-    assert 'name="%s"' % button in imageset, "icon of " + button
+    assert imageset is None or 'name="%s"' % button in imageset, "icon of " + button
 cells = {"DominionButton": (512, 1152), "HeartFortitudeButton": (640, 1152), "HeartMendingButton": (768, 1152), "ManaFlowButton": (896, 1152)}
-icon_images = ET.fromstring(imageset)
-for button, (x, y) in cells.items():
+icon_images = ET.fromstring(imageset) if imageset is not None else None
+for button, (x, y) in (cells.items() if imageset is not None else ()):
     # The painted atlas doubles source coordinates, retaining each original logical cell.
     nodes = icon_images.findall('Image[@name="%s"]' % button)
     assert len(nodes) == 1, "unique icon of " + button

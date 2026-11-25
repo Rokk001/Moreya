@@ -30,7 +30,7 @@ import room_packages  # noqa: E402
 
 problems = []
 #: The game data files the check reads; they lie in the public tree or in a content package
-DATA_FILES = ("particles/RoomAmbienceSpells.particle", "config/roomAmbienceSpells.cfg", "config/ai.cfg")
+DATA_FILES = ("particles/RoomAmbienceSpells.particle", "config/roomAmbienceSpells.cfg", "config/ai.cfg", "gui/ODIcons.imageset")
 
 
 def read(*parts):
@@ -391,9 +391,11 @@ for skill, parent, button, tier, spell, points in NODES:
 ICONS = {"CurseButton": "CurseButton", "BlessingButton": "BlessingButton",
          "InvisibilityButton": "InvisibilityButton", "PlagueButton": "PlagueButton",
          "BreakWallButton": "BreakWallButton", "RevealEnemyButton": "RevealEnemyButton"}
-icon_names = [i.get("name") for i in ET.parse(os.path.join(ROOT, "gui", "ODIcons.imageset")).getroot().findall("Image")]
-for icon in ICONS.values():
-    need(icon_names.count(icon) == 1, "gui/ODIcons.imageset has the icon %s once" % icon)
+# (the icon atlas lies in a content package)
+if DATA:
+    icon_names = [i.get("name") for i in ET.parse(str(content_packages.resolve(ROOT, "gui/ODIcons.imageset"))).getroot().findall("Image")]
+    for icon in ICONS.values():
+        need(icon_names.count(icon) == 1, "gui/ODIcons.imageset has the icon %s once" % icon)
 bar = ET.parse(os.path.join(ROOT, "gui", "WindowTabSpells.layout")).getroot().find("Window")
 bar_buttons = [w for w in bar.findall("Window") if w.get("type") == "OD/GameTabButton"]
 need(len(bar_buttons) == 24, "the spells tab holds 24 buttons: %d" % len(bar_buttons))

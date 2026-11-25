@@ -1,20 +1,28 @@
 """Execute the room-selection feedback block and verify its existing look states."""
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
 from PIL import Image
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 source = (repo / 'source/modes/GameMode.cpp').read_text()
 start = source.index('    SkillManager::listAllRooms([&]', source.index('void GameMode::refreshActionFeedback'))
 block = source[start:source.index('    const bool prohibited', start)]
 looks = ET.parse(repo / 'gui/OD.looknfeel').getroot()
 look = looks.find("WidgetLook[@name='OD/GameTabButton']")
-skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
+# The skin atlas lies in a content package (found through scripts/content_packages.py)
+if content_packages.data_file(repo, 'gui/ODSkin.imageset') is None or content_packages.data_file(repo, 'gui/ODSkin.png') is None:
+    content_packages.unchecked('check_selected_room_highlight', ['gui/ODSkin.imageset', 'gui/ODSkin.png'])
+    print('check_selected_room_highlight: OK (without the skin atlas)')
+    sys.exit(0)
+skin = ET.parse(content_packages.resolve(repo, 'gui/ODSkin.imageset')).getroot()
 # Selection feedback must remain visible in each state, regardless of private imagery-section names.
-with Image.open(repo / 'gui' / skin.attrib['imagefile']) as atlas:
+with Image.open(content_packages.resolve(repo, 'gui/' + skin.attrib['imagefile'])) as atlas:
     pixels = atlas.convert('RGBA')
     for state in ('Normal', 'Hover', 'Pushed', 'PushedOff'):
         state_imagery = look.find(f"StateImagery[@name='{state}']")

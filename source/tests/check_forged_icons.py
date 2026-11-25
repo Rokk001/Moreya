@@ -23,12 +23,18 @@ import content_packages  # noqa: E402
 
 #: Every layout of the public tree and of the content packages
 LAYOUTS = content_packages.data_glob(repo, 'gui', '*.layout')
-text = (repo / 'gui/ODIcons.imageset').read_text()
+# The icon and skin atlases lie in content packages; without them nothing of the atlas can be checked
+ATLAS_FILES = ['gui/ODIcons.imageset', 'gui/ODIcons.png', 'gui/ODSkin.imageset', 'gui/ODSkin.png']
+if any(content_packages.data_file(repo, name) is None for name in ATLAS_FILES):
+    content_packages.unchecked('check_forged_icons', [name for name in ATLAS_FILES if content_packages.data_file(repo, name) is None])
+    print('FORGED ICONS: atlas content not present, nothing checked')
+    sys.exit(0)
+text = content_packages.read_text(repo, 'gui/ODIcons.imageset')
 icon_images = ET.fromstring(text)
 rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
          for node in icon_images.findall('Image')}
 assert len(rects) == len(icon_images.findall('Image')), 'unique image names'
-atlas = np.array(Image.open(repo / 'gui/ODIcons.png').convert('RGBA'), dtype=np.float32)
+atlas = np.array(Image.open(content_packages.resolve(repo, 'gui/ODIcons.png')).convert('RGBA'), dtype=np.float32)
 used = set()
 for layout in LAYOUTS:
     used |= set(re.findall(r'OpenDungeonsIcons/([A-Za-z0-9_]+)', layout.read_text()))
@@ -81,8 +87,8 @@ for name in squares:
     assert (w, h) == (256, 256) and (a > 200).mean() > 0.6, name + ' has no painted square body'
     inner = atlas[y + h // 4:y + 3 * h // 4, x + w // 4:x + 3 * w // 4, :3]
     assert inner.std(axis=(0, 1)).max() > 12, name + ' has no motif in the tile'
-skin = np.array(Image.open(repo / 'gui/ODSkin.png').convert('RGBA'), dtype=np.float32)
-skin_set = (repo / 'gui/ODSkin.imageset').read_text()
+skin = np.array(Image.open(content_packages.resolve(repo, 'gui/ODSkin.png')).convert('RGBA'), dtype=np.float32)
+skin_set = content_packages.read_text(repo, 'gui/ODSkin.imageset')
 skin_images = ET.fromstring(skin_set)
 skin_rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
               for node in skin_images.findall('Image')}

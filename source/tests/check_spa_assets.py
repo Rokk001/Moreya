@@ -236,7 +236,11 @@ assert 'SPA_STEAM_EFFECT = "SpaSteam"' in room_h and 'SPA_SPLASH_EFFECT = "SpaMu
 # 5. Icon: the painted source, its slot and its imageset entry
 assert png_size('assets-src/gui/icons/tiles/SpaButton.png') == (ICON_SOURCE_SIZE, ICON_SOURCE_SIZE), 'SpaButton source size'
 assert '"SpaButton"' in read('assets-src/gui/icons/slots.json') or 'SpaButton' in read('assets-src/gui/icons/slots.json'), 'SpaButton has a slot'
-assert len(re.findall(r'<Image [^>]*name="SpaButton"', read('gui/ODIcons.imageset'))) == 1, 'SpaButton has one imageset entry'
+# The icon atlas lies in a content package (found through scripts/content_packages.py)
+if content_packages.data_file(root, 'gui/ODIcons.imageset') is None:
+    content_packages.unchecked('check_spa_assets', ['gui/ODIcons.imageset'])
+else:
+    assert len(re.findall(r'<Image [^>]*name="SpaButton"', content_packages.read_text(root, 'gui/ODIcons.imageset'))) == 1, 'SpaButton has one imageset entry'
 assert 'OpenDungeonsIcons/SpaButton' in read('gui/WindowTabRooms.layout') or 'SpaButton' in read('gui/WindowTabRooms.layout')
 assert 'SpaButton' in read('gui/WindowSkillTree.layout'), 'the research tree shows the button'
 

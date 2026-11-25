@@ -64,7 +64,7 @@ MIN_TURN_FROM_X_DEGREES = 30.0
 #: (u from the back end, v from the upper edge). The flaked paint (texels brighter than PAINT_LUMINANCE) lies inside
 #: the carved letters and still spans at least MIN_PAINT_SPAN of their width and height.
 LETTER_BOX = (0.215, 0.17, 0.86, 0.83)
-LETTERS = (0.221, 0.371, 0.856, 0.627)
+LETTERS = (0.218, 0.342, 0.856, 0.656)
 LETTER_TOLERANCE = 0.004
 PAINT_LUMINANCE = 60.0
 MIN_PAINT_SPAN = 0.9
@@ -322,7 +322,7 @@ def check_scene(failures):
     height, width = lettered.shape[:2]
     sys.path.insert(0, os.path.join(ROOT, "tools"))
     import gen_menu_signpost_lettering as lettering
-    mask = lettering.letter_mask(data("gui/fonts/MedievalSharp-Bold.ttf"), width, height)
+    mask = lettering.letter_mask(data("gui/fonts/SourceSerif4-Semibold.ttf"), width, height)
     rows = np.arange(height)[:, None] / float(height)
     columns = np.arange(width)[None, :] / float(width)
     rim = np.asarray(Image.fromarray((mask * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(LETTER_RIM_PIXELS)),

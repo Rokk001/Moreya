@@ -113,9 +113,13 @@ if not HAS_CONTENT:
     content_packages.unchecked('check_dirt_assets', ['particles/DirtFlies.particle', 'dirt sounds', 'config/roomAmbience.cfg'])
 else:
     assert re.search(r'^particle_system DirtFlies\b', read('particles/DirtFlies.particle'), re.M), 'particle DirtFlies missing'
-imageset = read('gui/ODIcons.imageset')
-assert 'name="ToiletButton"' in imageset, 'icon ToiletButton missing in ODIcons.imageset'
-assert (root / 'gui' / 'ODIcons.png').is_file()
+# The icon atlas lies in a content package
+if not HAS_CONTENT:
+    content_packages.unchecked('check_dirt_assets', ['gui/ODIcons.imageset', 'gui/ODIcons.png'])
+else:
+    imageset = read('gui/ODIcons.imageset')
+    assert 'name="ToiletButton"' in imageset, 'icon ToiletButton missing in ODIcons.imageset'
+    assert data_path('gui/ODIcons.png').is_file()
 for sound in ['Creatures/Default/Relieve/FxRelieve01.ogg', 'Creatures/Default/Clean/FxClean01.ogg',
               'Rooms/Toilet/Flush/FxToiletFlush01.ogg', 'Rooms/Toilet/Drip/FxToiletDrip01.ogg']:
     if (sound.startswith('Rooms/Toilet/') and not TOILET) or not HAS_CONTENT:

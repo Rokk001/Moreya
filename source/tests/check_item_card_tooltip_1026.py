@@ -18,9 +18,12 @@ Checked here:
 """
 from pathlib import Path
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 look = (repo / 'gui/OD.looknfeel').read_text()
 ET.fromstring(look)
 item = (repo / 'source/entities/ItemInstance.cpp').read_text()
@@ -28,7 +31,13 @@ header = (repo / 'source/entities/ItemInstance.h').read_text()
 gui = (repo / 'source/render/Gui.cpp').read_text()
 creature = (repo / 'source/entities/Creature.cpp').read_text()
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
-icons = (repo / 'gui/ODIcons.imageset').read_text()
+# The icon and skin atlases lie in content packages (found through scripts/content_packages.py)
+ATLAS_FILES = ['gui/ODIcons.imageset', 'gui/ODSkin.imageset']
+if any(content_packages.data_file(repo, name) is None for name in ATLAS_FILES):
+    content_packages.unchecked('check_item_card_tooltip_1026', ATLAS_FILES)
+    print('check_item_card_tooltip_1026: OK (without the atlas content)')
+    sys.exit(0)
+icons = content_packages.read_text(repo, 'gui/ODIcons.imageset')
 fonts = (repo / 'gui/ODSkin.scheme').read_text()
 
 
@@ -52,7 +61,7 @@ assert '<HorzFormat type="LeftAligned" />' in label and '<VertFormat type="TopAl
 assert 'CentreAligned' not in widget
 assert widget.count('<StateImagery') == 2, 'Enabled and Disabled'
 # the look only uses images that exist: the skin images of the imageset and the frame square Gui creates before it loads
-imageset = (repo / 'gui/ODSkin.imageset').read_text()
+imageset = content_packages.read_text(repo, 'gui/ODSkin.imageset')
 for name in set(re.findall(r'name="OpenDungeonsSkin/(Tooltip[A-Za-z]+)"', widget)):
     assert 'name="%s"' % name in imageset, name
 assert gui.index('createItemTooltipFrameImage();') < gui.index('createFromFile("ODSkin.scheme")')

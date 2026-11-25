@@ -79,6 +79,7 @@ assert "return mLevels[index].mChampion;" in campaign_state, "only in the levels
 # The Package.cfg texts of the wing packages; wings 4 to 6 come from the content repository
 sys.path.insert(0, str(repo / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 definition = campaign_packages.definition_text(repo)
 champion_wings = sorted(set(re.search(r"^Wing=(\d)$", block, re.M).group(1)
                             for block in definition.split("\n[Level]\n")[1:] if "\nChampion=1\n" in block))
@@ -93,6 +94,10 @@ assert tree.find('Property[@name="Visible"]').get("value") == "False", "no tree 
 spells_page = ET.parse(repo / "gui/WindowSkillTree.layout").find('.//Window[@name="Spells"]')
 assert spells_page.find('.//Window[@name="SummonChampionButton"]') is not None, "the hidden node stands in the Spells page"
 assert 'new SkillDefSpell(TREE_PREFIX_SPELLS, "SummonChampionButton"' in manager, "its path prefix is the Spells tab"
-assert 'name="SummonChampionButton"' in read("gui/ODIcons.imageset")
+# The icon atlas lies in a content package (found through scripts/content_packages.py)
+if content_packages.data_file(repo, "gui/ODIcons.imageset") is None:
+    content_packages.unchecked("check_summon_champion", ["gui/ODIcons.imageset"])
+else:
+    assert 'name="SummonChampionButton"' in content_packages.read_text(repo, "gui/ODIcons.imageset")
 assert '"SummonChampionButton"' in read("source/render/Gui.cpp")
 print("summon champion checks passed")

@@ -630,11 +630,16 @@ print('WIRING OK: the statistics area is a scrollable pane and the debriefing bu
 # The CEGUI arrow of this game is fully transparent: without the keeper hand the debriefing had no visible
 # pointer at all, which looked like a blocked mouse
 from PIL import Image
-skin = ElementTree.parse(repo / 'gui/ODSkin.imageset').getroot()
+# The skin atlas lies in a content package (found through scripts/content_packages.py)
+if content_packages.data_file(repo, 'gui/ODSkin.imageset') is None or content_packages.data_file(repo, 'gui/ODSkin.png') is None:
+    content_packages.unchecked('check_defeat_debriefing', ['gui/ODSkin.imageset', 'gui/ODSkin.png'])
+    print('check_defeat_debriefing: OK (without the skin atlas)')
+    sys.exit(0)
+skin = ElementTree.parse(content_packages.resolve(repo, 'gui/ODSkin.imageset')).getroot()
 arrow = skin.find("Image[@name='MouseArrow']")
 assert arrow is not None
 height, width, left, top = (int(arrow.attrib[key]) for key in ('height', 'width', 'xPos', 'yPos'))
-arrow_pixels = Image.open(repo / 'gui/ODSkin.png').convert('RGBA').crop((left, top, left + width, top + height))
+arrow_pixels = Image.open(content_packages.resolve(repo, 'gui/ODSkin.png')).convert('RGBA').crop((left, top, left + width, top + height))
 assert max(pixel[3] for pixel in arrow_pixels.getdata()) == 0, 'the arrow became visible: the hand may not be needed any more'
 show = function(game_mode, 'void GameMode::showDefeatDebriefing(')
 assert 'rrToggleHandSelectorVisibility()' in show and 'isKeeperHandVisible()' in show

@@ -140,7 +140,11 @@ def main():
     seam_block = generator.split("SEAM_CHECK_ROOMS =", 1)[1].split(")", 1)[0]
     assert "'infirmary'" in seam_block
     floor_seam()
-    imageset = ET.parse(repo / "gui/ODIcons.imageset").getroot()
+    # The icon atlas lies in a content package
+    if content_packages.data_file(repo, "gui/ODIcons.imageset") is None or content_packages.data_file(repo, "gui/ODIcons.png") is None:
+        content_packages.unchecked("check_infirmary_assets", ["gui/ODIcons.imageset", "gui/ODIcons.png"])
+        return
+    imageset = ET.parse(content_packages.resolve(repo, "gui/ODIcons.imageset")).getroot()
     image = imageset.find("Image[@name='InfirmaryButton']")
     assert image is not None, "missing logical atlas image: OpenDungeonsIcons/InfirmaryButton"
     # The existing painted atlas builder doubles the logical slot coordinates and dimensions.
@@ -153,7 +157,7 @@ def main():
     source = (assets_src_dir(repo) / "gui/icons" / slot["source"]).read_bytes()
     assert source[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
     assert struct.unpack_from(">II", source, 16) == (icon_width, icon_height)
-    atlas = (repo / "gui" / imageset.get("imagefile")).read_bytes()
+    atlas = content_packages.resolve(repo, "gui/" + imageset.get("imagefile")).read_bytes()
     assert atlas[:8] == b"\x89PNG\r\n\x1a\n", "icon atlas must be a PNG"
     width, height = struct.unpack_from(">II", atlas, 16)
     assert int(image.get("xPos")) + icon_width <= width and int(image.get("yPos")) + icon_height <= height

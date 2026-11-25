@@ -18,9 +18,12 @@ compile phase of the integration only.
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -45,15 +48,19 @@ glow_function = block(game_mode, 'static std::string messageTabGlowColour(')
 constants = game_mode[constants_start:game_mode.index(glow_function)] + glow_function
 update = block(game_mode, 'void GameMode::updateEventMessageIndicator(float elapsed)')
 
-# The tab picture must be one complete painted cell of the icon atlas.
+# The tab picture must be one complete painted cell of the icon atlas (a content package).
+if content_packages.data_file(ROOT, 'gui/ODIcons.imageset') is None or content_packages.data_file(ROOT, 'gui/ODIcons.png') is None:
+    content_packages.unchecked('check_message_tab_glow', ['gui/ODIcons.imageset', 'gui/ODIcons.png'])
+    print('check_message_tab_glow: OK (without the icon atlas)')
+    sys.exit(0)
 image = re.search(r'MESSAGE_TAB_IMAGE = "OpenDungeonsIcons/(\w+)";', constants)
 assert image, 'message tab picture'
 entry = re.search(r'<Image height="(\d+)" name="' + image.group(1) + r'" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />',
-                  read('gui/ODIcons.imageset'))
+                  content_packages.read_text(ROOT, 'gui/ODIcons.imageset'))
 assert entry, image.group(1)
 from PIL import Image  # noqa: E402
 height, width, x, y = (int(v) for v in entry.groups())
-cell = Image.open(ROOT / 'gui/ODIcons.png').convert('RGBA').crop((x, y, x + width, y + height))
+cell = Image.open(content_packages.resolve(ROOT, 'gui/ODIcons.png')).convert('RGBA').crop((x, y, x + width, y + height))
 alpha = cell.getchannel('A')
 assert sum(1 for a in alpha.getdata() if a > 200) > 0.9 * width * height, 'tab picture not opaque'
 

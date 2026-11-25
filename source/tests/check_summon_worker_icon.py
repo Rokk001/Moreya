@@ -10,6 +10,7 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
+import content_packages  # noqa: E402
 gui = (repo / 'source/render/Gui.cpp').read_text()
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 
@@ -33,10 +34,15 @@ for filename, prop in [('WindowTabSpells.layout', 'NormalImage'), ('WindowSkillT
     button = ET.parse(repo / 'gui' / filename).find('.//Window[@name="SummonWorkerButton"]')
     assert button.find(f'Property[@name="{prop}"]').get('value') == 'OpenDungeonsIcons/SummonWorkerButton'
 assert 'createSummonWorkerIcon' not in gui and 'colourNavigationAtlas' not in gui
-images = ET.parse(repo / 'gui/ODIcons.imageset').findall('Image[@name="SummonWorkerButton"]')
+# The icon atlas lies in a content package (found through scripts/content_packages.py)
+if content_packages.data_file(repo, 'gui/ODIcons.imageset') is None or content_packages.data_file(repo, 'gui/ODIcons.png') is None:
+    content_packages.unchecked('check_summon_worker_icon', ['gui/ODIcons.imageset', 'gui/ODIcons.png'])
+    print('SUMMON ICON OK (without the icon atlas)')
+    sys.exit(0)
+images = ET.parse(content_packages.resolve(repo, 'gui/ODIcons.imageset')).findall('Image[@name="SummonWorkerButton"]')
 assert len(images) == 1, 'one registered summon worker icon'
 x, y, w, h = (int(images[0].get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
-tile = np.array(Image.open(repo / 'gui/ODIcons.png').convert('RGBA'), dtype=np.float32)[y:y + h, x:x + w]
+tile = np.array(Image.open(content_packages.resolve(repo, 'gui/ODIcons.png')).convert('RGBA'), dtype=np.float32)[y:y + h, x:x + w]
 opaque = tile[..., 3] > 200
 assert (x, y, w, h) == (1536, 1280, 256, 256), 'same logical slot at double source resolution'
 assert opaque.sum() > 0.6 * w * h, 'painted worker tile has a visible body'

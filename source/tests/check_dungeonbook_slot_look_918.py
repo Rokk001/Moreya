@@ -29,7 +29,7 @@ social = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
 missing_content = content_packages.unchecked('check_dungeonbook_slot_look_918', [
     name for name in ('config/items.cfg', 'gui/WindowSocial.layout') if content_packages.data_file(repo, name) is None])
 items_cfg = None if missing_content else content_packages.read_text(repo, 'config/items.cfg')
-imageset = (repo / 'gui/ODIcons.imageset').read_text(encoding='utf-8')
+imageset = content_packages.read_text(repo, 'gui/ODIcons.imageset') if content_packages.data_file(repo, 'gui/ODIcons.imageset') else None
 book = None if missing_content else ET.fromstring(content_packages.read_text(repo, 'gui/WindowSocial.layout')).find('Window')
 
 
@@ -59,7 +59,11 @@ assert 'frame->setVisible(item != nullptr);' in fill
 assert 'frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(item->mQuality));' in fill
 assert 'Creature::fillItemSlotWindows(creature, slots, true);' in function_of(social, 'void SocialWindow::refreshInventory(')
 
-# 2. The quality frames
+# 2. The quality frames (the icon atlas lies in a content package)
+if imageset is None or content_packages.data_file(repo, 'gui/ODIcons.png') is None:
+    content_packages.unchecked('check_dungeonbook_slot_look_918', ['gui/ODIcons.imageset', 'gui/ODIcons.png'])
+    print('check_dungeonbook_slot_look_918: OK (without the icon atlas)')
+    sys.exit(0)
 if items_cfg is not None:
     assert 'Quality colours: Poor grey, Common white, Rare blue, Epic purple' in items_cfg
 frames = {}
@@ -73,7 +77,7 @@ try:
 except ImportError:
     Image = None
 if Image is not None:
-    atlas = Image.open(repo / 'gui/ODIcons.png').convert('RGBA')
+    atlas = Image.open(content_packages.resolve(repo, 'gui/ODIcons.png')).convert('RGBA')
     average = {}
     for quality, (height, width, x, y) in frames.items():
         pixels = [p for p in atlas.crop((x, y, x + width, y + height)).getdata() if p[3] > 200 and max(p[:3]) > 80]
