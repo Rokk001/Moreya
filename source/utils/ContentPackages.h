@@ -203,17 +203,21 @@ namespace ContentPackages
         return folder;
     }
 
-    //! Prefix of a marker line of a mixed data table and of a block line of its own rows file
+    //! Text of a marker line of a mixed data table and of a block line of its own rows file, before its number
     const std::string OWN_ROWS_MARKER = "#@own ";
+    //! Start and end of the XML comment around a marker in a mixed interface file (layout, looknfeel, scheme, ...)
+    const std::string OWN_ROWS_XML_START = "<!--";
+    const std::string OWN_ROWS_XML_END = "-->";
 
     //! \brief The path of the own rows file of a mixed data table: ".own" before the extension of the table
-    //! (config/global.cfg gives config/global.own.cfg).
+    //! (config/global.cfg gives config/global.own.cfg, gui/ModeGame.layout gives gui/ModeGame.own.layout).
     //!
     //! A mixed data table is an upstream table with rows the project wrote itself. Its public file keeps the upstream
-    //! rows and has a marker line "#@own <n>" where a run of own rows was; the own rows lie in the own rows file of a
-    //! content package, one block per marker: a line "#@own <n>" and the rows up to the next such line. Lines before
-    //! the first block are its header. Helper::readFile puts every block in place of its marker (mergeOwnRows), so
-    //! the game reads the whole table; scripts/config_own_rows.py does the same for the checks.
+    //! rows and has a marker line "#@own <n>" (in an interface file the XML comment "<!--#@own <n>-->") where a run of
+    //! own rows was; the own rows lie in the own rows file of a content package, one block per marker: a marker line
+    //! of the same number and the rows up to the next marker line. Lines before the first block are its header.
+    //! Helper::readFile and the interface resource provider of Gui put every block in place of its marker
+    //! (joinOwnRows), so the game reads the whole table; scripts/config_own_rows.py does the same for the checks.
     inline std::string getOwnRowsPath(const std::string& path)
     {
         const std::string::size_type slash = path.find_last_of("/\\");
@@ -223,12 +227,20 @@ namespace ContentPackages
         return path.substr(0, dot) + ".own" + path.substr(dot);
     }
 
-    //! \brief The number of a marker line "#@own <n>" (spaces at its end allowed), or -1 when the line is none.
+    //! \brief The number of a marker line "#@own <n>" or "<!--#@own <n>-->" (spaces and a carriage return at its end
+    //! allowed), or -1 when the line is none.
     inline int getOwnRowsMarker(const std::string& line)
     {
-        if(line.compare(0, OWN_ROWS_MARKER.size(), OWN_ROWS_MARKER) != 0)
+        std::string::size_type index = 0;
+        bool isXml = false;
+        if(line.compare(0, OWN_ROWS_XML_START.size(), OWN_ROWS_XML_START) == 0)
+        {
+            isXml = true;
+            index = OWN_ROWS_XML_START.size();
+        }
+        if(line.compare(index, OWN_ROWS_MARKER.size(), OWN_ROWS_MARKER) != 0)
             return -1;
-        std::string::size_type index = OWN_ROWS_MARKER.size();
+        index += OWN_ROWS_MARKER.size();
         int number = 0;
         bool hasDigit = false;
         while((index < line.size()) && (line[index] >= '0') && (line[index] <= '9'))
@@ -237,6 +249,12 @@ namespace ContentPackages
             hasDigit = true;
             ++index;
         }
+        if(isXml)
+        {
+            if(line.compare(index, OWN_ROWS_XML_END.size(), OWN_ROWS_XML_END) != 0)
+                return -1;
+            index += OWN_ROWS_XML_END.size();
+        }
         while((index < line.size()) && ((line[index] == ' ') || (line[index] == '\t') || (line[index] == '\r')))
             ++index;
         if(!hasDigit || (index != line.size()))
@@ -244,16 +262,24 @@ namespace ContentPackages
         return number;
     }
 
-    //! \brief Reads the blocks of the own rows file of the table (found like every game data file, resolveFile) into
-    //! blocks, by marker number. Line ends lose their carriage return. Returns false when there is no own rows file.
-    inline bool readOwnRows(const std::string& tablePath, std::map<int, std::vector<std::string> >& blocks)
+    //! \brief True when one of the lines is a marker line.
+    inline bool hasOwnRowsMarker(const std::vector<std::string>& lines)
     {
-        std::ifstream file(resolveFile(getOwnRowsPath(tablePath)).c_str(), std::ifstream::in);
-        if(!file.good())
-            return false;
+        for(std::vector<std::string>::const_iterator it = lines.begin(); it != lines.end(); ++it)
+        {
+            if(getOwnRowsMarker(*it) >= 0)
+                return true;
+        }
+        return false;
+    }
+
+    //! \brief Reads the blocks of an own rows file from the stream into blocks, by marker number. Line ends lose their
+    //! carriage return.
+    inline void parseOwnRows(std::istream& stream, std::map<int, std::vector<std::string> >& blocks)
+    {
         std::vector<std::string>* current = NULL;
         std::string line;
-        while(std::getline(file, line))
+        while(std::getline(stream, line))
         {
             if(!line.empty() && (line[line.size() - 1] == '\r'))
                 line.erase(line.size() - 1);
@@ -267,32 +293,24 @@ namespace ContentPackages
             if(current != NULL)
                 current->push_back(line);
         }
+    }
+
+    //! \brief Reads the blocks of the own rows file of the table (found like every game data file, resolveFile) into
+    //! blocks, by marker number. Returns false when there is no own rows file.
+    inline bool readOwnRows(const std::string& tablePath, std::map<int, std::vector<std::string> >& blocks)
+    {
+        std::ifstream file(resolveFile(getOwnRowsPath(tablePath)).c_str(), std::ifstream::in);
+        if(!file.good())
+            return false;
+        parseOwnRows(file, blocks);
         return true;
     }
 
-    //! \brief Puts the block of the own rows file in place of every marker line of the table lines. Returns the
-    //! numbers of the markers without a block in missing and of the blocks without a marker in unused; both stay
-    //! empty when the table has no markers. Without an own rows file (no content) the lines stay as they are, with
-    //! the markers as comments, and hasOwnRows is false.
-    inline void mergeOwnRows(const std::string& tablePath, std::vector<std::string>& lines, bool& hasOwnRows,
+    //! \brief Puts the block of blocks in place of every marker line of the lines. Returns the numbers of the markers
+    //! without a block in missing and of the blocks without a marker in unused.
+    inline void joinOwnRows(std::vector<std::string>& lines, const std::map<int, std::vector<std::string> >& blocks,
         std::vector<int>& missing, std::vector<int>& unused)
     {
-        hasOwnRows = false;
-        bool hasMarker = false;
-        for(std::vector<std::string>::const_iterator it = lines.begin(); it != lines.end(); ++it)
-        {
-            if(getOwnRowsMarker(*it) >= 0)
-            {
-                hasMarker = true;
-                break;
-            }
-        }
-        if(!hasMarker)
-            return;
-        std::map<int, std::vector<std::string> > blocks;
-        if(!readOwnRows(tablePath, blocks))
-            return;
-        hasOwnRows = true;
         std::map<int, bool> used;
         std::vector<std::string> merged;
         for(std::vector<std::string>::const_iterator it = lines.begin(); it != lines.end(); ++it)
@@ -318,6 +336,23 @@ namespace ContentPackages
                 unused.push_back(it->first);
         }
         lines.swap(merged);
+    }
+
+    //! \brief Puts the block of the own rows file of the table in place of every marker line of the table lines
+    //! (joinOwnRows). Returns the numbers of the markers without a block in missing and of the blocks without a marker
+    //! in unused; both stay empty when the table has no markers. Without an own rows file (no content) the lines stay
+    //! as they are, with the markers as comments, and hasOwnRows is false.
+    inline void mergeOwnRows(const std::string& tablePath, std::vector<std::string>& lines, bool& hasOwnRows,
+        std::vector<int>& missing, std::vector<int>& unused)
+    {
+        hasOwnRows = false;
+        if(!hasOwnRowsMarker(lines))
+            return;
+        std::map<int, std::vector<std::string> > blocks;
+        if(!readOwnRows(tablePath, blocks))
+            return;
+        hasOwnRows = true;
+        joinOwnRows(lines, blocks, missing, unused);
     }
 }
 

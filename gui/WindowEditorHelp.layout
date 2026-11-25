@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/SheetWindow" name="EditorHelpWindow" >
-        <Property name="Area" value="{{0.5,-230},{0.5,-240},{0.5,230},{0.5,240}}" />
+<!--#@own 1-->
         <Property name="Text" value="Editor Controls" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/StaticText" name="HelpText" >

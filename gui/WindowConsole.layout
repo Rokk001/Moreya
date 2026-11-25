@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/SheetWindow" name="ConsoleWindow" >
-        <Property name="Area" value="{{0,0},{0,0},{1,0},{0.5,50}}" />
+<!--#@own 1-->
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Window type="OD/Listbox" name="ConsoleHistoryWindow" >
             <Property name="InheritsAlpha" value="false" />

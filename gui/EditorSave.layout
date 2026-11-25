@@ -11,11 +11,9 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/SheetWindow" name="LevelWindowFrame" >
-            <Property name="Area" value="{{0.5,-290},{0.5,-267},{0.5,290},{0.5,268}}" />
-            <Property name="Text" value="Save Level" />
+<!--#@own 1-->
             <Property name="MaxSize" value="{{0,1000},{0,1000}}" />
-            <Property name="MinSize" value="{{0,580},{0,535}}" />
+<!--#@own 2-->
             <Property name="AlwaysOnTop" value="True" />
 
             <Window type="OD/Editbox" name="FilePath" >
@@ -24,30 +22,26 @@
             <Window type="OD/Editbox" name="FileName" >
                 <Property name="Area" value="{{0,20},{0,80},{1.0,-25},{0,115}}" />
             </Window>            
-            <Window type="OD/SheetListbox" name="LevelSelect" >
+<!--#@own 3-->
                 <Property name="Area" value="{{0,15},{0,120},{1,-20},{0.75,0}}" />
                 <Property name="ForceVertScrollbar" value="True" />
                 <Property name="Sort" value="True" />
             </Window>
-            <Window type="OD/MenuTextButton" name="BackButton" >
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.5,-199},{0.75,0},{0.5,-35},{0.75,54}}" />
+<!--#@own 4-->
                 <Property name="Text" value="Back" />
             </Window>
             <Window type="OD/Checkbox" name="OnlyLevel" >
-                <Property name="Area" value="{{0.5,-199},{0.75,85},{0.5,-5},{0.75,108}}" />      
+<!--#@own 5-->
                 <Property name="Text" value="Show Only Level Files" />
                 <Property name="TooltipText" value="Filter by the extension *.level" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Selected" value="True" />
             </Window>
-            <Window type="OD/MenuTextButton" name="SaveButton" >
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.5,12},{0.75,0},{0.5,176},{0.75,54}}" />
+<!--#@own 6-->
                 <Property name="Text" value="Save" />
             </Window>
             <Window type="OD/Checkbox" name="HiddenFiles" >
-                <Property name="Area" value="{{0.5,12},{0.75,85},{0.5,200},{0.75,108}}" />      
+<!--#@own 7-->
                 <Property name="Text" value="Show Hidden Files" />
                 <Property name="TooltipText" value="Whether to show hidden files" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />

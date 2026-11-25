@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/SheetWindow" name="ObjectivesWindow" >
-        <Property name="Area" value="{{0.5,-316},{0.5,-245},{0.5,316},{0.5,245}}" />
-        <Property name="Text" value="Goals" />
+<!--#@own 1-->
 
         <Window type="OD/StaticText" name="ObjectivesText" >
-            <Property name="Area" value="{{0.02,0},{0.02,0},{0.98,0},{0.98,0}}" />
-            <Property name="Text" value="Goals" />
+<!--#@own 2-->
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="VertFormatting" value="TopAligned" />
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-            <Property name="VertScrollbar" value="False" />
-            <Property name="Font" value="MedievalSharp-10" />
+<!--#@own 3-->
         </Window>
     </Window>
 </GUILayout>

@@ -201,18 +201,11 @@ namespace Helper
         baseLevelFile.close();
 
         // A mixed data table gets its own rows from the content packages in place of its marker lines
-        // (ContentPackages::mergeOwnRows); the last line read above stays the last line.
-        std::string lastLine;
-        if(!lines.empty())
-        {
-            lastLine = lines.back();
-            lines.pop_back();
-        }
+        // (ContentPackages::mergeOwnRows).
         bool hasOwnRows = false;
         std::vector<int> missing;
         std::vector<int> unused;
         ContentPackages::mergeOwnRows(fileName, lines, hasOwnRows, missing, unused);
-        lines.push_back(lastLine);
         for(std::vector<int>::const_iterator it = missing.begin(); it != missing.end(); ++it)
             OD_LOG_ERR("Own rows block #@own " + toString(*it) + " is missing for " + fileName);
         for(std::vector<int>::const_iterator it = unused.begin(); it != unused.end(); ++it)

@@ -4,91 +4,71 @@
     <Window type="DefaultWindow" name="Root" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-        <!-- Iron border of the chosen menu sheet around the whole screen. -->
-        <Window type="OD/ScreenBorder" name="ScreenBorder" >
+<!--#@own 1-->
             <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
             <Property name="MousePassThroughEnabled" value="True" />
-        </Window>
+<!--#@own 2-->
         <Window type="OD/StaticText" name="LoadingText" >
-            <Property name="Area" value="{{0.5,-296},{0.5,-24},{0.5,296},{0.5,30}}" />
+<!--#@own 3-->
             <Property name="Text" value="Loading..." />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
-            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+<!--#@own 4-->
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
-            <Property name="Visible" value="False" />
+<!--#@own 5-->
             <Property name="Area" value="{{0.5,-320},{0,52},{0.5,320},{0,191}}" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="VersionText" >
-            <Property name="Area" value="{{0,28},{1,-50},{0,228},{1,-28}}" />
+<!--#@own 6-->
             <Property name="Text" value="undefined" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/MenuSelectionWindow" name="LevelWindowFrame" >
+<!--#@own 7-->
             <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
             <Property name="Text" value="Join Game..." />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="SizingEnabled" value="False" />
-            <Property name="DragMovingEnabled" value="False" />
+<!--#@own 8-->
             <Property name="MousePassThroughEnabled" value="True" />
-            <!-- Window frame of the chosen menu sheet behind the controls of this window (K34). -->
-            <Window type="OD/SheetPanel" name="WindowPanel" >
-                <Property name="Area" value="{{0.5,-320},{0.5,-170},{0.5,320},{0.5,170}}" />
+<!--#@own 9-->
                 <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
-            <Window type="OD/MenuTitle" name="PageTitle">
-                <Property name="Font" value="MedievalSharp-20" />
-                <Property name="Area" value="{{0.5,-290},{0.5,-154},{0.5,290},{0.5,-108}}" />
+<!--#@own 10-->
                 <Property name="Text" value="Join Game" />
-                <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
-            <Window type="OD/MenuTextButton" name="BackButton" >
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.5,-50},{0.5,92},{0.5,116},{0.5,146}}" />
-                <Property name="Text" value="Back" />
+<!--#@own 11-->
             </Window>
             <Window type="OD/StaticText" name="IpText" >
-                <Property name="Area" value="{{0.5,10},{0.5,-100},{0.5,296},{0.5,-74}}" />
+<!--#@own 12-->
                 <Property name="Text" value="Server IP:" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Editbox" name="IpEdit" >
-                <Property name="Area" value="{{0.5,10},{0.5,-70},{0.5,296},{0.5,-34}}" />
+<!--#@own 13-->
             </Window>
             <Window type="OD/StaticText" name="NickText" >
-                <Property name="Area" value="{{0.5,-296},{0.5,-100},{0.5,-10},{0.5,-74}}" />
+<!--#@own 14-->
                 <Property name="Text" value="Nickname:" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Editbox" name="NickEdit" >
-                <Property name="Area" value="{{0.5,-296},{0.5,-70},{0.5,-10},{0.5,-34}}" />
+<!--#@own 15-->
             </Window>
-            <!-- Optional server port; the menu fills in the NetworkPort of the configuration. -->
-            <Window type="OD/StaticText" name="PortText" >
-                <Property name="Area" value="{{0.5,10},{0.5,-26},{0.5,296},{0.5,0}}" />
-                <Property name="Text" value="Server port:" />
+<!--#@own 16-->
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
-            <Window type="OD/Editbox" name="PortEdit" >
-                <Property name="Area" value="{{0.5,10},{0.5,4},{0.5,150},{0.5,40}}" />
-                <Property name="MaxTextLength" value="5" />
-            </Window>
-            <Window type="OD/MenuTextButton" name="ClientButton" >
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="Area" value="{{0.5,126},{0.5,92},{0.5,296},{0.5,146}}" />
+<!--#@own 17-->
                 <Property name="Text" value="Join Game" />
             </Window>
         </Window>

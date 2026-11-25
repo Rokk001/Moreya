@@ -41,11 +41,34 @@ MARKER = '#@own '
 OWN_AUTHORS = ('Mario',)
 # The content package that holds the own rows files
 OWN_ROWS_PACKAGE = 'core-config'
+# The content package that holds the own rows files of the interface files of gui/
+OWN_GUI_PACKAGE = 'core-gui'
+# The extensions of the interface files (XML) whose markers are XML comments "<!--#@own <n>-->"
+XML_EXTENSIONS = ('.layout', '.looknfeel', '.scheme', '.imageset', '.font')
 # The header of every own rows file
 HEADER = ('# Own rows of {table} (content of Moreya, all rights reserved). Each block "#@own <n>" holds the rows\n'
           '# that belong at the marker line "#@own <n>" of the public table (scripts/config_own_rows.py).\n')
+XML_HEADER = ('<!-- Own rows of {table} (content of Moreya, all rights reserved). Each block "#@own <n>" in an XML\n'
+              '     comment holds the rows that belong at the marker line of the public file\n'
+              '     (scripts/config_own_rows.py). -->\n')
 
 _MARKER_LINE = re.compile(r'^#@own (\d+)\s*$')
+_XML_MARKER_LINE = re.compile(r'^<!--#@own (\d+)-->\s*$')
+
+
+def is_xml(table):
+    """True when the table is an interface file whose markers are XML comments."""
+    return str(table).lower().endswith(XML_EXTENSIONS)
+
+
+def marker_text(table, number):
+    """The marker line of a block of the table, without line end."""
+    return ('<!--' + MARKER + str(number) + '-->') if is_xml(table) else (MARKER + str(number))
+
+
+def own_rows_package(table):
+    """The content package of the own rows file of a table."""
+    return OWN_GUI_PACKAGE if str(table).replace('\\', '/').startswith('gui/') else OWN_ROWS_PACKAGE
 
 
 def own_rows_path(table):
@@ -57,7 +80,8 @@ def own_rows_path(table):
 
 def marker_number(line):
     """The number of a marker line, or None."""
-    match = _MARKER_LINE.match(line.rstrip('\r\n'))
+    line = line.rstrip('\r\n')
+    match = _MARKER_LINE.match(line) or _XML_MARKER_LINE.match(line)
     return int(match.group(1)) if match else None
 
 
@@ -132,16 +156,16 @@ def joined_text(repo, table, public_text=None):
 
 
 def _blocks_text(table, blocks):
-    out = [HEADER.format(table=table)]
+    out = [(XML_HEADER if is_xml(table) else HEADER).format(table=table)]
     for number, block in enumerate(blocks, 1):
-        out.append(MARKER + str(number) + '\n')
+        out.append(marker_text(table, number) + '\n')
         out.extend(line + '\n' for line in block)
     return ''.join(out)
 
 
-def split_lines(lines, own_flags):
-    """Splits lines by their own flags into the public lines (with markers) and the blocks. Blank lines go with the
-    own lines only when they lie between two own lines."""
+def split_lines(lines, own_flags, table=''):
+    """Splits lines by their own flags into the public lines (with the markers of the table) and the blocks. Blank
+    lines go with the own lines only when they lie between two own lines."""
     flags = list(own_flags)
     count = len(lines)
     index = 0
@@ -165,7 +189,7 @@ def split_lines(lines, own_flags):
                 block.append(lines[index])
                 index += 1
             blocks.append(block)
-            public.append(MARKER + str(len(blocks)))
+            public.append(marker_text(table, len(blocks)))
         else:
             public.append(lines[index])
             index += 1
@@ -186,10 +210,10 @@ def blame_own_flags(repo, table):
     return flags
 
 
-def committed_lines(repo, table):
-    text = subprocess.run(['git', 'show', 'HEAD:' + table], cwd=str(repo), check=True,
-                          capture_output=True).stdout.decode('utf-8')
-    return text.replace('\r\n', '\n').split('\n')[:-1] if text.endswith('\n') else text.replace('\r\n', '\n').split('\n')
+def committed_text(repo, table):
+    """The committed table (HEAD) with LF line ends."""
+    return subprocess.run(['git', 'show', 'HEAD:' + table], cwd=str(repo), check=True,
+                          capture_output=True).stdout.decode('utf-8').replace('\r\n', '\n')
 
 
 def _write(path, text, crlf):
@@ -203,32 +227,34 @@ def _uses_crlf(path):
 
 
 def own_rows_target(repo, table):
-    """Where the own rows file of a table is written: the existing file, else the core-config package."""
+    """Where the own rows file of a table is written: the existing file, else the package of the table."""
     existing = own_rows_file(repo, table)
     if existing is not None:
         return existing
     for root in content_packages.package_roots(repo):
-        if Path(root).name == OWN_ROWS_PACKAGE:
+        if Path(root).name == own_rows_package(table):
             return Path(root) / own_rows_path(table)
-    raise SystemExit('the content package %s was not found (MOREYA_CONTENT_DIR)' % OWN_ROWS_PACKAGE)
+    raise SystemExit('the content package %s was not found (MOREYA_CONTENT_DIR)' % own_rows_package(table))
 
 
 def blame_split(repo, table):
-    lines = committed_lines(repo, table)
+    text = committed_text(repo, table)
+    lines = text.splitlines()
     flags = blame_own_flags(repo, table)
     if len(flags) != len(lines):
         raise SystemExit('%s: git blame gave %d lines, the file has %d' % (table, len(flags), len(lines)))
-    public, blocks = split_lines(lines, flags)
+    public, blocks = split_lines(lines, flags, table)
     public_path = Path(repo) / table
     crlf = _uses_crlf(public_path)
-    _write(public_path, '\n'.join(public) + '\n', crlf)
+    _write(public_path, '\n'.join(public) + ('\n' if text.endswith('\n') else ''), crlf)
     target = own_rows_target(repo, table)
     _write(target, _blocks_text(table, blocks), crlf)
     return len(blocks), sum(len(b) for b in blocks)
 
 
 def split_full(repo, full_path, table):
-    full = Path(full_path).read_text(encoding='utf-8').splitlines()
+    full_text = Path(full_path).read_text(encoding='utf-8')
+    full = full_text.splitlines()
     public_path = Path(repo) / table
     current = [line for line in public_path.read_text(encoding='utf-8').splitlines() if marker_number(line) is None]
     matcher = difflib.SequenceMatcher(None, current, full, autojunk=False)
@@ -236,9 +262,9 @@ def split_full(repo, full_path, table):
     for block in matcher.get_matching_blocks():
         for offset in range(block.size):
             flags[block.b + offset] = False
-    public, blocks = split_lines(full, flags)
+    public, blocks = split_lines(full, flags, table)
     crlf = _uses_crlf(public_path)
-    _write(public_path, '\n'.join(public) + '\n', crlf)
+    _write(public_path, '\n'.join(public) + ('\n' if full_text.endswith('\n') else ''), crlf)
     _write(own_rows_target(repo, table), _blocks_text(table, blocks), crlf)
     return len(blocks), sum(len(b) for b in blocks)
 

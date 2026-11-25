@@ -1,27 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/SheetWindow" name="ConfirmExit" >
-        <Property name="Area" value="{{0.5,-300},{0.3,-25},{0.5,300},{0.7,25}}" />
+<!--#@own 1-->
         <Property name="Text" value="Do you really want to leave the underworld?" />
-        <Property name="Alpha" value="1" />
+<!--#@own 2-->
         <Property name="AlwaysOnTop" value="True" />
-        <Window type="OD/MenuTextButton" name="YesOption" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.3,-85},{0.6,-54},{0.3,85},{0.6,0}}" />
+<!--#@own 3-->
             <Property name="Text" value="Yes" />
             <Property name="TooltipText" value="Confirm exit" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
-        <Window type="OD/MenuTextButton" name="NoOption" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.7,-85},{0.6,-54},{0.7,85},{0.6,0}}" />
+<!--#@own 4-->
             <Property name="Text" value="No" />
             <Property name="TooltipText" value="Cancel exit" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/Checkbox" name="SaveReplayCheckbox" >
-            <Property name="Area" value="{{0.5,-120},{0.68,0},{0.5,120},{0.82,0}}" />
+<!--#@own 5-->
             <Property name="Text" value="Save the game replay?" />
         </Window>
     </Window>
