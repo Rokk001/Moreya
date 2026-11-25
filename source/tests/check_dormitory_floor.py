@@ -28,10 +28,15 @@ probe = r'''
 #include <OgreHighLevelGpuProgramManager.h>
 #include <cmath>
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <vector>
 int gChecks=0,gFailures=0;
 void check(bool ok,const std::string& why){++gChecks;if(!ok){++gFailures;std::cerr<<"FAIL "<<why<<'\n';}}
 struct Variant{int mask;const char* material;float rotation;};
+//! \brief The parts of a list joined with ';'.
+static std::vector<std::string> splitList(const std::string& text){std::vector<std::string> parts;std::istringstream in(text);
+ std::string part;while(std::getline(in,part,';'))if(!part.empty())parts.push_back(part);return parts;}
 int main(int argc,char** argv){try{
  Ogre::Root root("","","dormitory.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
@@ -42,7 +47,10 @@ int main(int argc,char** argv){try{
  const std::string locations[]={repo+"/models",repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main"};
  for(int i=0;i<4;++i)
   groups.addResourceLocation(locations[i],"FileSystem","Graphics");
+ // The same data folders of the content packages (the floor tile mesh lies in a room package)
+ for(const std::string& folder:splitList(argc>3?argv[3]:""))groups.addResourceLocation(folder,"FileSystem","Graphics");
  groups.initialiseAllResourceGroups();groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");
+ for(const std::string& folder:splitList(argc>4?argv[4]:""))groups.addResourceLocation(folder,"FileSystem","Graphics");
  Ogre::MaterialManager& materials=Ogre::MaterialManager::getSingleton();
  const char* const scripts[]={MATERIAL_FILES};
  for(size_t i=0;i<sizeof(scripts)/sizeof(scripts[0]);++i)
@@ -108,6 +116,16 @@ int main(int argc,char** argv){try{
 '''
 probe = probe.replace('MATERIAL_FILES', ','.join('"%s.material"' % material for material in sorted({material for _, material, _ in tiles})))
 probe = probe.replace('VARIANTS', ','.join('{%d,"%s",%sf}' % (mask, material, rotation) for mask, material, rotation in tiles))
+
+
+# The package folders the probe adds behind the public ones: models, shaders and textures before the groups are
+# initialised, material scripts after them, like the public folders
+def package_folders(*relatives):
+    """The data folders of the content packages for the given public folders, joined with ';'."""
+    return ';'.join(str(folder) for relative in relatives for folder in content_packages.data_folders(repo, relative)
+                    if folder != repo / relative)
+
+
 out = repo / 'build/dormitory-floor-check'
 out.mkdir(parents=True, exist_ok=True)
 (out / 'check.cpp').write_text(probe)
@@ -116,7 +134,9 @@ with (out / 'compile.log').open('w') as log:
                     'check.cpp', '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'],
                    cwd=out, stdout=log, stderr=subprocess.STDOUT, check=True)
 with (out / 'result.log').open('w') as log:
-    result = subprocess.run([str(out / 'check.exe'), str(repo), str(prefix)], cwd=out, stdout=log, stderr=subprocess.STDOUT)
+    result = subprocess.run([str(out / 'check.exe'), str(repo), str(prefix),
+                             package_folders('models', 'shaders', 'materials/textures'),
+                             package_folders('materials/scripts')], cwd=out, stdout=log, stderr=subprocess.STDOUT)
 log = (out / 'result.log').read_text(errors='replace')
 print('\n'.join(line for line in log.splitlines() if re.search(r'^FAIL|^CHECKS=|Error:|error:', line)))
 assert 'Error: ScriptCompiler' not in log, log

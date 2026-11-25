@@ -29,6 +29,8 @@ probe = r'''
 #include <Bites/OgreSGTechniqueResolverListener.h>
 #include <iostream>
 #include <functional>
+#include <sstream>
+#include <vector>
 int main(int argc,char** argv){try{
  Ogre::Root root("","","magic-projectile.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");root.loadPlugin("Plugin_ParticleFX");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
@@ -36,9 +38,12 @@ int main(int argc,char** argv){try{
  Ogre::RenderWindow* window=root.createRenderWindow("Projectile check",256,128,false,&options);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  std::string repo=argv[1],prefix=argv[2];
+ std::vector<std::string> extra;{std::istringstream in(argc>4?argv[4]:"");std::string part;while(std::getline(in,part,';'))if(!part.empty())extra.push_back(part);}
  for(const std::string& path:{repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");groups.addResourceLocation(repo+"/particles","FileSystem","Graphics");
+ // The data folders of the content packages (the missile material, particle script and flame textures lie in a package)
+ for(const std::string& path:extra)groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::MaterialManager& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("MissileMagic.material","Graphics"),"Graphics");
  Ogre::ScriptCompilerManager::getSingleton().parseScript(groups.openResource("MissileMagic.particle","Graphics"),"Graphics");
  Ogre::RTShader::ShaderGenerator* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
@@ -68,6 +73,9 @@ int main(int argc,char** argv){try{
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
 '''.replace('FLIGHT_SPEED', 'std::stof(argv[3])')
+# The package folders the probe adds behind the public ones; the missile lies in the effects package
+extra = ';'.join(str(folder) for relative in ('materials/textures', 'materials/scripts', 'particles')
+                 for folder in content_packages.data_folders(repo, relative) if folder != repo / relative)
 with tempfile.TemporaryDirectory(prefix='odp-magic-projectile-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
@@ -76,7 +84,7 @@ with tempfile.TemporaryDirectory(prefix='odp-magic-projectile-') as directory:
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'], cwd=work, check=True)
     for flight_speed in flight_speeds:
         print('flight speed %.3f' % flight_speed)
-        result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix), str(flight_speed)],
+        result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix), str(flight_speed), extra],
                                 cwd=work, capture_output=True, text=True)
         print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
         if result.returncode:

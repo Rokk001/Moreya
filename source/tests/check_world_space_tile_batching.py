@@ -16,6 +16,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: Room-shader material scripts of each room package, counted once for this branch: without the package they are not
@@ -24,8 +25,8 @@ PACKAGED_ROOM_SHADER_MATERIALS = {'GhostRoom': 1, 'Infirmary': 1, 'Spa': 1, 'Tav
 
 
 def material_folders():
-    """The materials folder of the game data and of every room package that is present."""
-    return [ROOT / 'materials'] + [package / 'materials' for package in room_packages.package_roots(ROOT)]
+    """The materials folder of the game data and of every content and room package that is present."""
+    return content_packages.data_folders(ROOT, 'materials')
 
 
 def missing_room_shader_materials():
