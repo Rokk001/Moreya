@@ -3514,7 +3514,7 @@ const std::string DEFEAT_HEART_ENTITY = "DefeatHeart_entity";
 const std::string DEFEAT_HEART_MESH = "DungeonHeartObjectCritical.mesh";
 const std::string DEFEAT_HEART_MATERIAL_PREFIX = "DefeatHeart_";
 const std::string DEFEAT_SHARD_MESH = "DefeatHeartShard";
-//! The heart's metal shell, so that the rubble reads as pieces of the heart
+//! The bark of the heart's root pedestal, so that the rubble reads as pieces of it
 const std::string DEFEAT_SHARD_MATERIAL = "Stacheln";
 //! Red the heart glows in just before it bursts (above 1, so that it outshines the orange core)
 const Ogre::ColourValue DEFEAT_HEART_HOT_COLOUR(1.6f, 0.1f, 0.02f);
@@ -3530,42 +3530,111 @@ void addDefeatShardTriangle(Ogre::ManualObject* object, const Ogre::Vector3& a, 
 {
     const Ogre::Vector3 normal = (b - a).crossProduct(c - a).normalisedCopy();
     const Ogre::Vector3 corners[3] = {a, b, c};
-    // The texture covers a square of this side length, centred on the shard
+    // The texture covers a square of this side length, centred on the shard; its fibres run along the piece (x)
     const float textureSize = 0.6f;
     for(int i = 0; i < 3; ++i)
     {
         object->position(corners[i]);
         object->normal(normal);
-        object->textureCoord(corners[i].x / textureSize + 0.5f, corners[i].y / textureSize + 0.5f);
+        object->textureCoord(corners[i].y / textureSize + 0.5f, corners[i].x / textureSize + 0.5f);
     }
 }
 
-//! A flat, irregular five-sided slab about 0.65 wide and 0.07 thick, its lower face a little smaller
+//! A point of the bark piece: column along the piece (0 .. columns), row across it (0 .. rows), on the outer
+//! (upper) or the inner (lower) face. The piece is long along x, arched along its length, its edges curled up like
+//! bark, with fibre ridges along the length; its outline is irregular and narrows to ragged ends.
+Ogre::Vector3 defeatShardPoint(int column, int row, bool outer)
+{
+    const int columns = 8;
+    const int rows = 6;
+    const float halfLength = 0.34f;
+    const float halfThickness = 0.02f;
+    const float along = -1.0f + 2.0f * static_cast<float>(column) / static_cast<float>(columns);
+    const float across = -1.0f + 2.0f * static_cast<float>(row) / static_cast<float>(rows);
+    // ragged ends: the end columns reach a little more or less far on each row
+    const float ragged = (column == 0 || column == columns) ? 0.93f + 0.07f * Ogre::Math::Sin(static_cast<float>(row) * 2.3f) : 1.0f;
+    const float x = halfLength * along * ragged;
+    const float halfWidth = (0.03f + 0.10f * (1.0f - along * along)) * (1.0f + 0.15f * Ogre::Math::Sin(along * 7.0f + 1.0f));
+    const float y = halfWidth * across;
+    // arched along the length, curled up at the edges, with fibre ridges along the length
+    const float arch = 0.05f * (1.0f - along * along);
+    const float curl = 0.035f * across * across;
+    const float fibre = outer ? 0.006f * Ogre::Math::Sin(static_cast<float>(row) * 2.9f + along * 1.5f) : 0.0f;
+    const float z = arch + curl + fibre + (outer ? halfThickness : -halfThickness);
+    return Ogre::Vector3(x, y, z);
+}
+
+//! An elongated, curved piece of root bark about 0.68 long, up to 0.29 wide and 0.04 thick (reaching at most 0.341
+//! from its centre), so the rubble of the heart breaks off as pieces of its root pedestal
 void createDefeatShardMesh(Ogre::SceneManager* sceneManager)
 {
-    const float angles[5] = {0.0f, 75.0f, 150.0f, 220.0f, 290.0f};
-    const float radii[5] = {0.32f, 0.22f, 0.36f, 0.19f, 0.28f};
-    const float halfThickness = 0.035f;
-    // The lower face is this much smaller than the upper one
-    const float bottomScale = 0.8f;
-    Ogre::Vector3 top[5];
-    Ogre::Vector3 bottom[5];
-    for(int i = 0; i < 5; ++i)
-    {
-        const float x = radii[i] * Ogre::Math::Cos(Ogre::Degree(angles[i]));
-        const float y = radii[i] * Ogre::Math::Sin(Ogre::Degree(angles[i]));
-        top[i] = Ogre::Vector3(x, y, halfThickness);
-        bottom[i] = Ogre::Vector3(bottomScale * x, bottomScale * y, -halfThickness);
-    }
+    const int columns = 8;
+    const int rows = 6;
     Ogre::ManualObject* object = sceneManager->createManualObject();
     object->begin(DEFEAT_SHARD_MATERIAL, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-    for(int i = 0; i < 5; ++i)
+    for(int column = 0; column < columns; ++column)
     {
-        const int next = (i + 1) % 5;
-        addDefeatShardTriangle(object, Ogre::Vector3(0.0f, 0.0f, halfThickness), top[i], top[next]);
-        addDefeatShardTriangle(object, Ogre::Vector3(0.0f, 0.0f, -halfThickness), bottom[next], bottom[i]);
-        addDefeatShardTriangle(object, top[i], bottom[i], bottom[next]);
-        addDefeatShardTriangle(object, top[i], bottom[next], top[next]);
+        for(int row = 0; row < rows; ++row)
+        {
+            // outer face (seen from above) and inner face (seen from below)
+            const Ogre::Vector3 a = defeatShardPoint(column, row, true);
+            const Ogre::Vector3 b = defeatShardPoint(column + 1, row, true);
+            const Ogre::Vector3 c = defeatShardPoint(column + 1, row + 1, true);
+            const Ogre::Vector3 d = defeatShardPoint(column, row + 1, true);
+            addDefeatShardTriangle(object, a, b, c);
+            addDefeatShardTriangle(object, a, c, d);
+            const Ogre::Vector3 e = defeatShardPoint(column, row, false);
+            const Ogre::Vector3 f = defeatShardPoint(column + 1, row, false);
+            const Ogre::Vector3 g = defeatShardPoint(column + 1, row + 1, false);
+            const Ogre::Vector3 h = defeatShardPoint(column, row + 1, false);
+            addDefeatShardTriangle(object, e, g, f);
+            addDefeatShardTriangle(object, e, h, g);
+        }
+    }
+    // the broken edges: along both long sides and across both ends
+    for(int column = 0; column < columns; ++column)
+    {
+        const int sides[2] = {0, rows};
+        for(int s = 0; s < 2; ++s)
+        {
+            const int row = sides[s];
+            const Ogre::Vector3 a = defeatShardPoint(column, row, true);
+            const Ogre::Vector3 b = defeatShardPoint(column + 1, row, true);
+            const Ogre::Vector3 c = defeatShardPoint(column + 1, row, false);
+            const Ogre::Vector3 d = defeatShardPoint(column, row, false);
+            if(row == 0)
+            {
+                addDefeatShardTriangle(object, a, d, c);
+                addDefeatShardTriangle(object, a, c, b);
+            }
+            else
+            {
+                addDefeatShardTriangle(object, a, b, c);
+                addDefeatShardTriangle(object, a, c, d);
+            }
+        }
+    }
+    for(int row = 0; row < rows; ++row)
+    {
+        const int ends[2] = {0, columns};
+        for(int s = 0; s < 2; ++s)
+        {
+            const int column = ends[s];
+            const Ogre::Vector3 a = defeatShardPoint(column, row, true);
+            const Ogre::Vector3 b = defeatShardPoint(column, row + 1, true);
+            const Ogre::Vector3 c = defeatShardPoint(column, row + 1, false);
+            const Ogre::Vector3 d = defeatShardPoint(column, row, false);
+            if(column == 0)
+            {
+                addDefeatShardTriangle(object, a, b, c);
+                addDefeatShardTriangle(object, a, c, d);
+            }
+            else
+            {
+                addDefeatShardTriangle(object, a, d, c);
+                addDefeatShardTriangle(object, a, c, b);
+            }
+        }
     }
     object->end();
     object->convertToMesh(DEFEAT_SHARD_MESH, "Graphics");
