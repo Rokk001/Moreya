@@ -3,10 +3,18 @@ from pathlib import Path
 import os
 import re
 import subprocess
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+# The dormitory tiles are own rows of tilesets.cfg (content package core-config); without the content the sixteen
+# masks are not there and the render probe is not run
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_dormitory_floor', ['config/tilesets.cfg [dormitoryRoom] tiles', 'render probe'])
+    sys.exit(0)
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
-section = (repo / 'config/tilesets.cfg').read_text().split('[dormitoryRoom]', 1)[1].split('[/dormitoryRoom]', 1)[0]
+section = content_packages.read_text(repo, 'config/tilesets.cfg').split('[dormitoryRoom]', 1)[1].split('[/dormitoryRoom]', 1)[0]
 tiles = []
 for line in section.splitlines():
     fields = line.split()

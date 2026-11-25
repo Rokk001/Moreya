@@ -337,7 +337,10 @@ check("CEGUI::UDim(x / mapWidth, 0)" in function(mode, "void MenuModeCampaign::s
 if HAS_DATA:
     fonts = {}
     for font_file in content_packages.data_glob(root, "gui/fonts", "*.font"):
-        spec = ET.parse(font_file).getroot()
+        # The own rows file of a mixed font (gui/fonts/<name>.own.font) is no font; the font is read joined
+        if font_file.name.endswith(".own.font"):
+            continue
+        spec = ET.fromstring(content_packages.read_text(root, content_packages.relative_path(root, font_file)))
         fonts[spec.get("name")] = (data("gui/fonts/" + spec.get("filename")), float(spec.get("size")))
 
 
@@ -524,7 +527,8 @@ if HAS_DATA:
 
 # ------------------------------------------------------------------------------------------------ CM5: campaign hall
 if HAS_DATA:
-    scene = data("config/mainmenuscene.cfg").read_text(encoding="utf-8")
+    # The scene as the game reads it: config/mainmenuscene.cfg with its own rows from the content packages
+    scene = content_packages.read_text(root, "config/mainmenuscene.cfg")
     # The hall with the stone table is the open hall of the whole scene (menu UX plan M1)
     check(re.search(r"(?m)^AddEntity CampaignHallOpen MenuCampaignHallOpen\.mesh ", scene) is not None,
           "the campaign hall stays")

@@ -19,6 +19,14 @@ def read(path):
     return content_packages.read_text(root, path)
 
 
+# The values of the data tables (global.cfg, creatures.cfg, equipments.cfg) are own rows of the content package
+# core-config; without the content they are named as not checked and the code is checked alone
+HAS_VALUES = content_packages.has_content(root)
+if not HAS_VALUES:
+    content_packages.unchecked('check_defence_chance', ['config/global.cfg hit and avoidance values',
+                                                        'config/creatures.cfg Goblin', 'config/equipments.cfg Knife'])
+
+
 # Extract a function for checks of the actual runtime path.
 def function_body(source, signature):
     start = source.index(signature)
@@ -98,7 +106,7 @@ assert 'std::max(minChance, std::min(maxChance, chance))' in hit
 assert 'ConfigManager' not in hit
 # The scale and the bounds are global.cfg keys
 for key, value in (('HitChanceScale', '200'), ('HitChanceMin', '5'), ('HitChanceMax', '95')):
-    assert re.search(r'^\s*' + key + r'\s+' + value + r'\s*$', read('config/global.cfg'), re.M), key
+    assert not HAS_VALUES or re.search(r'^\s*' + key + r'\s+' + value + r'\s*$', read('config/global.cfg'), re.M), key
 
 # Client reactions and server avoidance both use the configured equipment type.
 client_kinds = function_body(read('source/render/CreatureCombatReactions.cpp'), 'std::string weaponKind(')
@@ -118,11 +126,11 @@ KEYS = (('DodgeBase', '10.5', 'mDodgeBase(10.5)', 100), ('DodgePerLevel', '0', '
         ('ParryPerLevel', '0', 'mParryPerLevel(0.0)', 10), ('ParryMax', '15', 'mParryMax(15.0)', 100),
         ('ShieldBlockBase', '21', 'mShieldBlockBase(21.0)', 100), ('ShieldBlockPerLevel', '0', 'mShieldBlockPerLevel(0.0)', 10),
         ('ShieldBlockMax', '25', 'mShieldBlockMax(25.0)', 100))
-assert re.search(r'^# .*\n(?:# .*\n)?\s+MeleeDodgeParry\t1\s*$', global_cfg, re.M), 'MeleeDodgeParry'
+assert not HAS_VALUES or re.search(r'^# .*\n(?:# .*\n)?\s+MeleeDodgeParry\t1\s*$', global_cfg, re.M), 'MeleeDodgeParry'
 assert 'nextParam == "MeleeDodgeParry"' in config_cpp and 'mMeleeDodgeParry(true)' in config_cpp
 assert 'inline bool getMeleeDodgeParry() const' in config_h
 for key, value, member, limit in KEYS:
-    assert re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg, re.M), key
+    assert not HAS_VALUES or re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg, re.M), key
     assert 'nextParam == "' + key + '"' in config_cpp and member in config_cpp, key
     limit_name = 'ChanceMax' if limit == 100 else 'ChancePerLevelMax'
     assert 'std::max(ChanceMin, std::min(%s, m%s))' % (limit_name, key) in config_h, key
@@ -256,20 +264,21 @@ def mirror_is_parry_weapon(weapon_type):
     return weapon_type in ('sword', 'axe', 'dagger', 'club', 'mace', 'hammer', 'scepter', 'spear', 'polearm')
 
 
-creatures_cfg = read('config/creatures.cfg')
-goblin = re.search(r'\[Creature\]\s*\n\s+Name\s+Goblin\s*\n(.*?)\[/Creature\]', creatures_cfg, re.S).group(1)
-assert re.search(r'^\s+WeaponSpawnR\s+Knife\s*$', goblin, re.M)
-assert not re.search(r'^\s+WeaponSpawnL\s+(?!none)\S+', goblin, re.M)
-equipment = re.search(r'\[Equipment\]\s*\n\s+Name\s+Knife\s*\n(.*?)\[/Equipment\]', read('config/equipments.cfg'), re.S).group(1)
-knife_mesh = re.search(r'MeshName\s+(\S+)', equipment).group(1)
-# the knife is a submesh of the Goblin model, so the weapon attaches no mesh of its own
-assert knife_mesh == 'none'
-assert b'GoblinKnife' in content_packages.resolve(root, 'models/Goblin.mesh').read_bytes()
+if HAS_VALUES:
+    creatures_cfg = read('config/creatures.cfg')
+    goblin = re.search(r'\[Creature\]\s*\n\s+Name\s+Goblin\s*\n(.*?)\[/Creature\]', creatures_cfg, re.S).group(1)
+    assert re.search(r'^\s+WeaponSpawnR\s+Knife\s*$', goblin, re.M)
+    assert not re.search(r'^\s+WeaponSpawnL\s+(?!none)\S+', goblin, re.M)
+    equipment = re.search(r'\[Equipment\]\s*\n\s+Name\s+Knife\s*\n(.*?)\[/Equipment\]', read('config/equipments.cfg'), re.S).group(1)
+    knife_mesh = re.search(r'MeshName\s+(\S+)', equipment).group(1)
+    # the knife is a submesh of the Goblin model, so the weapon attaches no mesh of its own
+    assert knife_mesh == 'none'
+    assert b'GoblinKnife' in content_packages.resolve(root, 'models/Goblin.mesh').read_bytes()
 assert mirror_is_parry_weapon('dagger')
 # no shield, so the parry chance is the weapon one: level 1 and level 10 as in the table above
 assert abs(parry_chance(1, mirror_is_parry_weapon('dagger'), *PARRY) - 3.5) < 1e-9
 assert abs(parry_chance(10, mirror_is_parry_weapon('dagger'), *PARRY) - 8.0) < 1e-9
-for stat in ('PhysicalDefense', 'MagicalDefense', 'ElementDefense'):
+for stat in (('PhysicalDefense', 'MagicalDefense', 'ElementDefense') if HAS_VALUES else ()):
     assert re.search(r'^\s+' + stat + r'\s+0\s*$', equipment, re.M), stat
 
 

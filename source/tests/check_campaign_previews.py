@@ -240,7 +240,8 @@ def compact_goal_fit_errors(root):
                 ("ObjectivesText", runtime_lines,
                  (548 * scale, 370 * scale))):
                 font_name = properties[name]["Font"]
-                definition = ET.parse(content_packages.resolve(root, "gui/fonts/" + font_name + ".font")).getroot()
+                # The font as the game reads it (a mixed font with its own rows from the content packages)
+                definition = ET.fromstring(content_packages.read_text(root, "gui/fonts/" + font_name + ".font"))
                 font = ImageFont.truetype(str(content_packages.resolve(root, "gui/fonts/" + definition.get("filename"))), math.ceil(float(definition.get("size")) * 96 / 72 * font_scale))
                 used_height = 0
                 for icon_width, line in lines:

@@ -31,8 +31,13 @@ def main():
     creatures = blocks("config/creatures.cfg", "Creature")
     weapons = {field(b, "Name"): b for b in blocks("config/equipments.cfg", "Equipment")}
     defaults = {field(b, "WeaponSpawn" + hand) for b in creatures for hand in ("R", "L")} - {"none"}
-    assert len(creatures) == 35, len(creatures)
-    assert len(defaults) == 19, defaults
+    # The creature and equipment rows are own rows of the content package core-config (read joined by blocks());
+    # without the content only the public rows are there and the counts are named as not checked
+    if content_packages.has_content(ROOT):
+        assert len(creatures) == 35, len(creatures)
+        assert len(defaults) == 19, defaults
+    else:
+        content_packages.unchecked("check_dungeonbook_defaults_922", ["config/creatures.cfg 35 classes, 19 defaults"])
     # The item catalogue and the item atlas lie in the content packages (core-config, core-gui)
     if not content_packages.has_content(ROOT):
         content_packages.unchecked("check_dungeonbook_defaults_922", ["config/items.cfg", "gui/Items.imageset coverage"])

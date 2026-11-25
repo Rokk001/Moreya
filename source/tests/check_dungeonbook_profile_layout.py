@@ -66,7 +66,8 @@ assert 'type="OD/Listbox"' not in social_layout
 
 font_files = {}
 for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-12', 'MedievalSharp-13', 'MedievalSharp-20'):
-    spec = ET.parse(content_packages.resolve(repo, 'gui/fonts/' + name + '.font')).getroot()
+    # the font as the game reads it (a mixed font with its own rows from the content packages)
+    spec = ET.fromstring(content_packages.read_text(repo, 'gui/fonts/' + name + '.font'))
     font_files[name] = (ImageFont.truetype(str(content_packages.resolve(repo, 'gui/fonts/' + spec.get('filename'))), 1024),
                         float(spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0)
 
@@ -207,7 +208,7 @@ icon_names = {i.get('name') for i in icons.findall('Image')}
 for value in re.findall(r'value="DungeonbookIcons/(\w+)"', social_layout) + re.findall(r'"DungeonbookIcons/(\w+)"', social):
     assert value in icon_names, value
 assert content_packages.data_file(repo, 'gui/' + icons.get('imagefile')) is not None
-scheme = ET.parse(repo / 'gui/ODSkin.scheme').getroot()
+scheme = ET.fromstring(content_packages.read_text(repo, 'gui/ODSkin.scheme'))
 assert scheme.find("Imageset[@filename='DungeonbookIcons.imageset'][@name='DungeonbookIcons']") is not None
 assert scheme.find("Imageset[@filename='DungeonbookFrame.imageset'][@name='DungeonbookFrame']") is not None
 # The row of the moved atlas stands in the CREDITS of the content repository (public CREDITS plus that one)
@@ -431,7 +432,7 @@ assert 'fillProfilePage(' not in social and 'fillProfilePage(' not in creature_t
 # pixels do not depend on the resolution); Gui::getWindowFitFactor shrinks a window larger than the screen together
 # with its children but not the fonts, so the texts are compared with the shrunk boxes.
 # The title is the sheet title (OD/SheetTitlebar): one line of the 13 point title font of OD/SheetWindow.
-sheet_look = ET.parse(repo / 'gui/OD.looknfeel').getroot().find("WidgetLook[@name='OD/SheetWindow']")
+sheet_look = ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel')).find("WidgetLook[@name='OD/SheetWindow']")
 assert sheet_look.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-13'
 TITLE_LINE = line_height('MedievalSharp-13')
 need = {}

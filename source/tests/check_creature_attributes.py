@@ -3,7 +3,9 @@
 Part A: the [Stats] fields of creatures.cfg, the equipment fields, the global.cfg keys, the attribute level formulas
 and the places that use the attribute level instead of the creature level. Other parts are added by later packages.
 Game data of the content packages (levels, the creature reactions, the critical hit recording) is found through
-scripts/content_packages.py; without the content those parts are named as not checked.
+scripts/content_packages.py; without the content those parts are named as not checked. The data tables of config/ are
+read as the game reads them, with their own rows from the content packages; without the content the values and header
+rows of the attribute model are own rows that are not there, so only the code parts are checked.
 """
 from pathlib import Path
 import glob
@@ -50,7 +52,12 @@ def config_value(source, key):
 
 
 # ---- global.cfg keys (section 3 and the named keys of section 1) with their documented values
-global_cfg = text('config/global.cfg')
+global_cfg = content_packages.read_text(root, 'config/global.cfg')
+# The own rows of the data tables (values, header rows) are only there with the content
+HAS_VALUES = content_packages.has_content(root)
+if not HAS_VALUES:
+    content_packages.unchecked('check_creature_attributes', ['config/global.cfg, config/creatures.cfg and '
+                                                             'config/equipments.cfg own rows', 'parts H, B and E'])
 config_manager_h = text('source/utils/ConfigManager.h')
 config_manager_cpp = text('source/utils/ConfigManager.cpp')
 GLOBAL_KEYS = {
@@ -62,17 +69,18 @@ GLOBAL_KEYS = {
     'SkillHealAreaMinCreatures': '2', 'GoldCarryPerStrength': '0.01',
 }
 for key, value in GLOBAL_KEYS.items():
-    assert config_value(global_cfg, key) == value, (key, value)
+    assert not HAS_VALUES or config_value(global_cfg, key) == value, (key, value)
     assert 'nextParam == "' + key + '"' in config_manager_cpp, key
     assert '(global.cfg ' + key + ')' in config_manager_h, key
     assert '(' + key + ' in global.cfg)' in config_manager_h, key
 # Every key stands inside the commented block that explains the attribute model
-block = global_cfg[global_cfg.index('# Creature attributes, mana'):]
-for key in GLOBAL_KEYS:
-    assert key in block, key
+if HAS_VALUES:
+    block = global_cfg[global_cfg.index('# Creature attributes, mana'):]
+    for key in GLOBAL_KEYS:
+        assert key in block, key
 
 # ---- creatures.cfg [Stats] fields: documented in the header, parsed, written, streamed, defaulted
-creatures_cfg = text('config/creatures.cfg')
+creatures_cfg = content_packages.read_text(root, 'config/creatures.cfg')
 definition_cpp = text('source/entities/CreatureDefinition.cpp')
 definition_h = text('source/entities/CreatureDefinition.h')
 header = creatures_cfg
@@ -82,7 +90,7 @@ NUMERIC = {'Strength': '20.0', 'Dexterity': '20.0', 'Life': '20.0', 'Mana': '20.
 TEXT = ('SkillGroup', 'SkillFamily', 'PreSkill', 'TierFourSkill')
 for key in list(NUMERIC) + list(TEXT):
     member = 'm' + key
-    assert re.search(r'^# ' + key + r'\b', header, re.M), 'header documents ' + key
+    assert not HAS_VALUES or re.search(r'^# ' + key + r'\b', header, re.M), 'header documents ' + key
     assert 'nextParam == "' + key + '"' in definition_cpp, 'parse ' + key
     assert 'file << "    ' + key + BS + 't"' in definition_cpp, 'definition diff ' + key
     assert 'os << c->' + member + ';' in definition_cpp, 'stream export ' + key
@@ -102,12 +110,12 @@ assert export_tail == import_tail and len(export_tail) == 15, (export_tail, impo
 assert 1 + 2 + 1 + 1 == 5
 
 # ---- equipments.cfg fields
-equipments_cfg = text('config/equipments.cfg')
+equipments_cfg = content_packages.read_text(root, 'config/equipments.cfg')
 weapon_cpp = text('source/entities/Weapon.cpp')
 weapon_h = text('source/entities/Weapon.h')
 for key in ('Strength', 'Dexterity', 'Life', 'Mana', 'CritChance'):
     member = 'm' + key
-    assert re.search(r'^# ' + key + r'\b', equipments_cfg, re.M), 'equipment header documents ' + key
+    assert not HAS_VALUES or re.search(r'^# ' + key + r'\b', equipments_cfg, re.M), 'equipment header documents ' + key
     assert 'nextParam == "' + key + '"' in weapon_cpp, key
     assert 'file << "    ' + key + BS + 't"' in weapon_cpp, key
     assert 'os << weapon->' + member + ';' in weapon_cpp and 'is >> weapon->' + member + ')' in weapon_cpp, key
@@ -153,8 +161,9 @@ def multiplier_at(level, kind):
     return float(level)
 
 
-assert config_value(global_cfg, 'CreatureDamageGrowth') == '0.221' and config_value(global_cfg, 'CreatureDamageExponent') == '1.167'
-assert config_value(global_cfg, 'CreatureHpGrowthPerLevel') == '0.018'
+assert not HAS_VALUES or (config_value(global_cfg, 'CreatureDamageGrowth') == '0.221'
+                           and config_value(global_cfg, 'CreatureDamageExponent') == '1.167')
+assert not HAS_VALUES or config_value(global_cfg, 'CreatureHpGrowthPerLevel') == '0.018'
 for per_level_set in ((1, 2, 1, 1), (2, 1, 1, 1), (0, 3, 1, 1), (0, 1, 2, 2)):
     for level in (1, 10, 30):
         for per_level in per_level_set:
@@ -354,7 +363,7 @@ def check_part_h():
                                                                  sorted(set(LEVEL_FILE_CLASSES) - found_classes)])
 
     # ---- Heart (section 9): values, share record and the conversion of old saves
-    rooms_cfg = text('config/rooms.cfg')
+    rooms_cfg = content_packages.read_text(root, 'config/rooms.cfg')
     assert float(config_value(rooms_cfg, 'DungeonHeartHP')) == HEART_HP
     assert float(config_value(rooms_cfg, 'DungeonHeartHealPerSecond')) == HEART_HEAL_PER_SECOND
     # The same share of the health per second as before: 2.5 of 10000
@@ -395,7 +404,8 @@ def check_part_h():
     print('check_creature_attributes (part H): ok')
 
 
-check_part_h()
+if HAS_VALUES:
+    check_part_h()
 
 print('check_creature_attributes (part A): ok')
 
@@ -490,7 +500,7 @@ def check_mana_part_b():
     assert mana_cost_model('caster', 'MissileLaunch', True, False, 100, caster_shot, second_shot) == 0.0
     # The cost classes of the real type lists: casters pay per first shot, only the Dragon has a second shot
     weapon_types = {}
-    for block in config_blocks(text('config/equipments.cfg'), 'Equipment'):
+    for block in config_blocks(equipments_cfg, 'Equipment'):
         weapon_types[first_value(block, 'Name')] = first_value(block, 'WeaponType')
     caster_types, second_line_types, bow_types = set(), set(), set()
     for block in config_blocks(creatures_cfg, 'Creature'):
@@ -579,7 +589,8 @@ def check_mana_part_b():
     assert creature.count('mMana                    (0.0)') == 2, 'both constructors initialise the mana'
 
 
-check_mana_part_b()
+if HAS_VALUES:
+    check_mana_part_b()
 print('check_creature_attributes (part B, mana): ok')
 
 def check_part_e():
@@ -749,7 +760,8 @@ def check_part_e():
 
 
 import math
-check_part_e()
+if HAS_VALUES:
+    check_part_e()
 
 # Check client overlays and profile displays while keeping HUD styling separate from creature mana tint.
 def check_part_g():
@@ -795,9 +807,13 @@ def check_part_g():
     channels = [int(re.search(name + r' = (\d+)\.0f', status)[1]) for name in ('MANA_COLOUR_RED', 'MANA_COLOUR_GREEN', 'MANA_COLOUR_BLUE')]
     assert channels[2] == 255 and channels[0] < 64 and channels[1] < 128, 'strong blue'
     # The painted HUD uses ivory text.
-    hud = ET.fromstring(text('gui/ModeGame.layout'))
-    mana_display = hud.find('.//Window[@name="ManaDisplay"]')
-    assert mana_display.find('Property[@name="TextColours"]').get('value') == 'FFF0E2C0', 'ivory HUD mana number'
+    # gui/ModeGame.layout as the game reads it; its own rows (the painted HUD) are only there with the content
+    if HAS_VALUES:
+        hud = ET.fromstring(content_packages.read_text(root, 'gui/ModeGame.layout'))
+        mana_display = hud.find('.//Window[@name="ManaDisplay"]')
+        assert mana_display.find('Property[@name="TextColours"]').get('value') == 'FFF0E2C0', 'ivory HUD mana number'
+    else:
+        content_packages.unchecked('check_creature_attributes', ['gui/ModeGame.layout ManaDisplay'])
     progress = function(status, 'void CreatureOverlayStatus::updateProgress(')
     assert 'getCurrentMana() / maxMana' in progress and 'Helper::toString(manaStage)' in progress
     assert 'setVerticalBand(' not in progress and 'displayOverlay(manaId, hasMana ? -1 : 0)' in progress

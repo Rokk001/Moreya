@@ -28,8 +28,9 @@ def function(source, signature):
     return source[start:end]
 
 
+# creatures.cfg as the game reads it (its own rows from the content packages)
 models = sorted(set(re.findall(r'^\s*MeshName\s+(\S+)',
-                              (repo / 'config/creatures.cfg').read_text(), re.M)))
+                              content_packages.read_text(repo, 'config/creatures.cfg'), re.M)))
 probe = r'''
 #include <Ogre.h>
 #include <OgreDefaultHardwareBufferManager.h>

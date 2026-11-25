@@ -20,6 +20,8 @@ import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 failures = []
 
 
@@ -66,8 +68,12 @@ base = read('source/modes/GameEditorModeBase.cpp')
 base_h = read('source/modes/GameEditorModeBase.h')
 server = read('source/network/ODServer.cpp')
 menu_new = read('source/modes/MenuModeEditorNew.cpp')
-layout = raw('gui/ModeEditor.layout')
-new_layout = raw('gui/EditorNew.layout')
+# The editor layouts as the game reads them, with their own rows from the content package core-gui; without the
+# content the own rows (the LevelMessageText field) are not there and B8 of the layout is named as not checked
+layout = content_packages.read_text(repo, 'gui/ModeEditor.layout')
+new_layout = content_packages.read_text(repo, 'gui/EditorNew.layout')
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_editor_behaviour', ['gui/EditorNew.layout LevelMessageText (B8)'])
 
 # B1
 check('MirrorX' not in layout, 'B1 ModeEditor.layout has no MirrorX menu entry')
@@ -195,7 +201,7 @@ check(re.search(r'getChild\("LevelWindowFrame/BackButton"\)->subscribeEvent\(\s*
       'B7 EditorMode closes the New dialog with its Back button')
 
 # B8
-check('type="OD/StaticText" name="LevelMessageText"' in new_layout,
+check(not content_packages.has_content(repo) or 'type="OD/StaticText" name="LevelMessageText"' in new_layout,
       'B8 EditorNew.layout has a LevelMessageText static text')
 check(re.search(r'LevelTypeText"\)\s*->\s*setText', launch) is None and 'LevelMessageText' in launch,
       'B8 launchNewLevelPressed writes its messages to LevelMessageText, not to the "Level Type:" label')

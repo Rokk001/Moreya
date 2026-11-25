@@ -14,6 +14,9 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(ROOT / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
+import config_own_rows  # noqa: E402
+import content_packages  # noqa: E402
+import tempfile  # noqa: E402
 SOURCES = assets_src_dir(ROOT) / "gui/skin"
 SCALE = 4
 STATES = {"Hover": 1, "Pushed": 2, "Disabled": 3}
@@ -200,6 +203,20 @@ def pack_tiles(tiles):
     return placements
 
 
+# Write an XML tree to a file of the repository. A mixed interface file (one with own rows markers, see
+# scripts/config_own_rows.py) is written in full to a temporary file and split into its public file and its own rows
+# file of the content package, so the public file never holds the own rows.
+def write_tree(tree, path):
+    path = Path(path)
+    if not path.is_file() or not config_own_rows.markers(path.read_text(encoding="utf-8")):
+        tree.write(path, encoding="utf-8", xml_declaration=True)
+        return
+    with tempfile.TemporaryDirectory() as folder:
+        full = Path(folder) / path.name
+        tree.write(full, encoding="utf-8", xml_declaration=True)
+        config_own_rows.split_full(ROOT, full, path.relative_to(ROOT).as_posix())
+
+
 # Build the atlas, image rectangles and doubled HUD surface from committed source PNGs.
 def main():
     extract_tiles()
@@ -226,7 +243,8 @@ def main():
         name = entry["name"]
         if frame_recipe(name)[1] in ("Top", "Bottom", "Left", "Right") and glyph_index(name) is None:
             definitions[name + "__Edge2"] = dict(entry, name=name + "__Edge2")
-    look = (ROOT / "gui/OD.looknfeel").read_text(encoding="utf-8")
+    # OD.looknfeel as the game reads it, with its own rows from the content packages
+    look = content_packages.read_text(ROOT, "gui/OD.looknfeel")
     for name in sorted(set(re.findall(r"OpenDungeonsSkin/([A-Za-z0-9_]+)", look))):
         if "__" in name:
             definitions[name] = dict(definitions[name.split("__", 1)[0]], name=name)
@@ -266,7 +284,7 @@ def main():
                 attrs[offset] = str(int(entry[offset]) * SCALE)
         ET.SubElement(imageset, "Image", attrs)
     ET.indent(imageset, space="    ")
-    ET.ElementTree(imageset).write(ROOT / "gui/ODSkin.imageset", encoding="utf-8", xml_declaration=True)
+    write_tree(ET.ElementTree(imageset), ROOT / "gui/ODSkin.imageset")
     Image.open(SOURCES / "stone.png").convert("RGBA").resize((3548, 1774), Image.Resampling.LANCZOS).save(ROOT / "gui/ODHudSurface.png")
     hud = ET.Element("Imageset", autoScaled="true", imagefile="ODHudSurface.png", name="ODHudSurface",
                      nativeHorzRes="2048", nativeVertRes="1536", version="2")

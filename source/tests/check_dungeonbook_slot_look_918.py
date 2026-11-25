@@ -29,7 +29,11 @@ social = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
 missing_content = content_packages.unchecked('check_dungeonbook_slot_look_918', [
     name for name in ('config/items.cfg', 'gui/WindowSocial.layout') if content_packages.data_file(repo, name) is None])
 items_cfg = None if missing_content else content_packages.read_text(repo, 'config/items.cfg')
-imageset = (repo / 'gui/ODIcons.imageset').read_text(encoding='utf-8')
+# gui/ODIcons.imageset as the game reads it: its images are own rows of the content package core-gui (None without
+# the content: the quality frames are then named as not checked)
+imageset = content_packages.read_text(repo, 'gui/ODIcons.imageset') if content_packages.has_content(repo) else None
+if imageset is None:
+    content_packages.unchecked('check_dungeonbook_slot_look_918', ['gui/ODIcons.imageset quality frames'])
 book = None if missing_content else ET.fromstring(content_packages.read_text(repo, 'gui/WindowSocial.layout')).find('Window')
 
 
@@ -62,31 +66,32 @@ assert 'Creature::fillItemSlotWindows(creature, slots, true);' in function_of(so
 # 2. The quality frames
 if items_cfg is not None:
     assert 'Quality colours: Poor grey, Common white, Rare blue, Epic purple' in items_cfg
-frames = {}
-for quality in ('Poor', 'Common', 'Rare', 'Epic'):
-    found = re.search(r'<Image height="(\d+)" name="ItemFrame%s" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />' % quality,
-                      imageset)
-    assert found, 'ItemFrame' + quality
-    frames[quality] = tuple(int(v) for v in found.groups())
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
-if Image is not None:
-    atlas = Image.open(repo / 'gui/ODIcons.png').convert('RGBA')
-    average = {}
-    for quality, (height, width, x, y) in frames.items():
-        pixels = [p for p in atlas.crop((x, y, x + width, y + height)).getdata() if p[3] > 200 and max(p[:3]) > 80]
-        assert pixels, quality
-        average[quality] = tuple(sum(p[i] for p in pixels) / len(pixels) for i in range(3))
-    for quality in ('Poor', 'Common'):
-        r, g, b = average[quality]
-        assert max(r, g, b) - min(r, g, b) < 25, quality + ' frame is grey to white'
-    assert average['Common'][0] > average['Poor'][0], 'Common is lighter than Poor'
-    r, g, b = average['Rare']
-    assert b > r + 40 and b > g + 30, 'Rare frame is blue'
-    r, g, b = average['Epic']
-    assert b > g + 30 and r > g + 20, 'Epic frame is purple'
+if imageset is not None:
+    frames = {}
+    for quality in ('Poor', 'Common', 'Rare', 'Epic'):
+        found = re.search(r'<Image height="(\d+)" name="ItemFrame%s" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />' % quality,
+                          imageset)
+        assert found, 'ItemFrame' + quality
+        frames[quality] = tuple(int(v) for v in found.groups())
+    try:
+        from PIL import Image
+    except ImportError:
+        Image = None
+    if Image is not None:
+        atlas = Image.open(repo / 'gui/ODIcons.png').convert('RGBA')
+        average = {}
+        for quality, (height, width, x, y) in frames.items():
+            pixels = [p for p in atlas.crop((x, y, x + width, y + height)).getdata() if p[3] > 200 and max(p[:3]) > 80]
+            assert pixels, quality
+            average[quality] = tuple(sum(p[i] for p in pixels) / len(pixels) for i in range(3))
+        for quality in ('Poor', 'Common'):
+            r, g, b = average[quality]
+            assert max(r, g, b) - min(r, g, b) < 25, quality + ' frame is grey to white'
+        assert average['Common'][0] > average['Poor'][0], 'Common is lighter than Poor'
+        r, g, b = average['Rare']
+        assert b > r + 40 and b > g + 30, 'Rare frame is blue'
+        r, g, b = average['Epic']
+        assert b > g + 30 and r > g + 20, 'Epic frame is purple'
 
 # 3. The slot windows of the book
 if book is not None:

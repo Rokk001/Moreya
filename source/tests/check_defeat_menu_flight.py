@@ -40,10 +40,16 @@ def function(text, signature):
 
 def imagesets():
     """Every image of the real imagesets of the public tree and the content packages as 'Set/Image': (picture file, x, y,
-    width, height)."""
+    width, height). A mixed imageset (gui/ODIcons.imageset, ...) is read joined with its own rows, as the game reads
+    it; its own rows file is no imageset, and without the content a mixed imageset is not there (its rows are own)."""
     found = {}
     for path in content_packages.data_glob(repo, 'gui', '*.imageset'):
-        root = ElementTree.parse(path).getroot()
+        if path.name.endswith('.own.imageset'):
+            continue
+        text = content_packages.read_text(repo, content_packages.relative_path(repo, path))
+        if '<!--#@own ' in text:
+            continue
+        root = ElementTree.fromstring(text)
         for image in root.findall('Image'):
             found[root.get('name') + '/' + image.get('name')] = (
                 content_packages.resolve(repo, 'gui/' + root.get('imagefile')), int(image.get('xPos')), int(image.get('yPos')),
@@ -260,15 +266,19 @@ assert 'createWindow("OD/StaticImage", "DefeatCameraMarker")' in create
 assert 'setText("CAM")' not in create
 marker = re.search(r'^const std::string DEFEAT_CAMERA_MARKER_IMAGE = "([^"]+)";$', game_mode, re.MULTILINE)
 assert marker and 'setProperty("Image", DEFEAT_CAMERA_MARKER_IMAGE)' in create
-assert marker.group(1) in images, marker.group(1)
-picture, x, y, width, height = images[marker.group(1)]
-pixels = Image.open(picture).convert('RGBA')
-assert x + width <= pixels.width and y + height <= pixels.height
-assert pixels.crop((x, y, x + width, y + height)).getchannel('A').getbbox() is not None, 'the camera icon is empty'
-for name, (other, ox, oy, ow, oh) in images.items():
-    if name != marker.group(1) and other == picture:
-        assert x + width <= ox or ox + ow <= x or y + height <= oy or oy + oh <= y, 'overlaps ' + name
-print('CAMERA OK: the marker is an image window with', marker.group(1), 'and that image is a non-empty cell that overlaps no other image')
+# The icon imageset is an own rows file of the content package core-gui
+if HAS_CONTENT:
+    assert marker.group(1) in images, marker.group(1)
+    picture, x, y, width, height = images[marker.group(1)]
+    pixels = Image.open(picture).convert('RGBA')
+    assert x + width <= pixels.width and y + height <= pixels.height
+    assert pixels.crop((x, y, x + width, y + height)).getchannel('A').getbbox() is not None, 'the camera icon is empty'
+    for name, (other, ox, oy, ow, oh) in images.items():
+        if name != marker.group(1) and other == picture:
+            assert x + width <= ox or ox + ow <= x or y + height <= oy or oy + oh <= y, 'overlaps ' + name
+    print('CAMERA OK: the marker is an image window with', marker.group(1), 'and that image is a non-empty cell that overlaps no other image')
+else:
+    content_packages.unchecked('check_defeat_menu_flight', ['gui/ODIcons.imageset camera marker image'])
 
 # The layout only names images the imagesets have, and uses the stone surface
 # (the layout lies in the content package core-gui)
@@ -286,7 +296,7 @@ else:
     types = {window.get('name'): window.get('type') for window in layout.iter('Window')}
     # the panel is a message window in the frame of the menu sheet like every in-game window
     assert types['Background'] == 'OD/StaticImage' and types['Panel'] == 'OD/SheetPanel'
-    scheme = (gui / 'ODSkin.scheme').read_text()
+    scheme = content_packages.read_text(repo, 'gui/ODSkin.scheme')
     assert 'windowType="OD/StaticImage"' in scheme and 'ODHudSurface.imageset' in scheme
     for needed in ('Panel/Title', 'Panel/PlayerName', 'Panel/Outcome', 'Panel/Elapsed', 'Panel/StatisticsArea', 'Panel/ConfirmButton'):
         node = layout.find('Window')

@@ -653,7 +653,7 @@ def cinder_seam_errors(level):
 # Check every fixed tower room tile for eventual worker access and enemy-room claimability.
 def mirewatch_errors(level):
     errors = []
-    configured_modes = re.findall(r"^\s*RoomsClaimableByEnemies\s+(\S+)", (ROOT / "config/rooms.cfg").read_text(encoding="utf-8"), re.M)
+    configured_modes = re.findall(r"^\s*RoomsClaimableByEnemies\s+(\S+)", content_packages.read_text(ROOT, "config/rooms.cfg"), re.M)
     if configured_modes != ["1"]:
         errors.append("room takeover configuration differs from reviewed claimable mode 1")
     area, _ = reachable(timed_openings(level))
@@ -905,7 +905,7 @@ def grouped_goal_errors(text, level_name):
         if shooting:
             rows = [row.split() for _, row in lines(section(text, "Creatures"))]
             shooter = next((row for row in rows if row[1] == shooting["shooter"]), None)
-            definitions = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            definitions = content_packages.read_text(ROOT, "config/creatures.cfg")
             definition = re.search(r"\[Creature\]\s*Name\s+" + re.escape(shooting["class"]) + r"\b(.*?)\[/Creature\]", definitions, re.S)
             skill = next((row.split() for _, row in lines(definition[1]) if row.startswith("MissileLaunch")), None)
             if (shooter is None or shooter[6] != shooting["class"] or int(shooter[7]) != shooting["level"]
@@ -1000,7 +1000,7 @@ def grouped_goal_errors(text, level_name):
             if dorm[:2] != (2, level["human"]) or hatch[:2] != (8, level["human"]):
                 errors.append("original supply rooms changed ownership or type")
             creature_rows = {row.split()[1]: row.split() for _, row in lines(section(text, "Creatures"))}
-            definitions = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            definitions = content_packages.read_text(ROOT, "config/creatures.cfg")
             occupied_beds = set()
             for bed in supply["beds"]:
                 row = creature_rows.get(bed["creature"])
@@ -1021,7 +1021,7 @@ def grouped_goal_errors(text, level_name):
                                       if name not in (supply["dormitory"], supply["hatchery"])))
             if len(supply["beds"]) != supply.get("resident_count", 9) or occupied_beds & hatch_tiles or additions - area or additions & other_rooms or c - a < 2 or d - b < 2:
                 errors.append("supply expansion is blocked or lacks the required beds and a coop site")
-            config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
+            config = content_packages.read_text(ROOT, "config/rooms.cfg")
             bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
             food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
             cost = len(occupied_beds - dorm[2]) * bed_cost + len(hatch_tiles - hatch[2]) * food_cost
@@ -1049,11 +1049,11 @@ def grouped_goal_errors(text, level_name):
                 errors.append("insufficient reachable regional mining reserve")
         setup = review.get("setup")
         if setup:
-            config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
+            config = content_packages.read_text(ROOT, "config/rooms.cfg")
             bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
             food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
             cost = setup["bed_tiles"] * bed_cost + setup["hatchery_tiles"] * food_cost
-            creatures = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            creatures = content_packages.read_text(ROOT, "config/creatures.cfg")
             creature = re.search(r"\[Creature\]\s*Name\s+" + setup["bed_class"] + r"\b(.*?)\[/Creature\]", creatures, re.S)[1]
             dimensions = list(map(int, re.search(r"BedDim\s+(\d+)\s+(\d+)", creature).groups()))
             if dimensions != setup["bed_dimensions"] or cost != setup["cost"] or int(level["seats"][level["human"]]["gold"]) != setup["starting_gold"] or cost > setup["starting_gold"]:
