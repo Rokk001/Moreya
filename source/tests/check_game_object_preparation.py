@@ -168,6 +168,9 @@ PROBE_PREAMBLE = r'''
 #include <string>
 #include <vector>
 
+// The production reader looks the list up through ContentPackages::resolveFile (header-only lookup part)
+#include "utils/ContentPackages.h"
+
 #define OD_LOG_WRN(_message) std::printf("%s\n", (std::string("") + _message).c_str())
 struct ResourceManager
 {
@@ -213,7 +216,7 @@ def probe(render_manager):
         batch = directory / 'run.cmd'
         batch.write_text(
             f'@echo off\ncall "{vcvars}" >nul\n'
-            f'cl /nologo /EHsc /std:c++14 "{cpp}" /Fe:"{directory / "probe.exe"}" '
+            f'cl /nologo /EHsc /std:c++14 /I"{ROOT / 'source'}" "{cpp}" /Fe:"{directory / "probe.exe"}" '
             f'/Fo:"{directory / "probe.obj"}"\n'
             'if errorlevel 1 exit /b 1\n'
             f'"{directory / "probe.exe"}" "{expected}"\nexit /b %errorlevel%\n',

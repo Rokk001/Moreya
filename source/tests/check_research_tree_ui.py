@@ -70,17 +70,13 @@ gui_folders = ','.join('"%s"' % path for path in gui_paths)
 
 
 def joined_gui_folders(base):
-    """Copies the files of the GUI folders (non-recursive) below base; a mixed interface file is written joined with
-    its own rows of the content (content_packages.read_text), every other file is copied unchanged."""
+    """Copies the files of the GUI folders (non-recursive) of the public tree and of the content packages
+    (content_packages.data_glob, a file of the public tree first) below base; a mixed interface file is written joined
+    with its own rows of the content (content_packages.read_text), every other file is copied unchanged."""
     for path in gui_paths:
         target = base / path
         target.mkdir(parents=True, exist_ok=True)
-        source = repo / path
-        if not source.is_dir():
-            continue
-        for file in source.iterdir():
-            if not file.is_file():
-                continue
+        for file in content_packages.data_glob(repo, path):
             mixed = file.suffix in ('.layout', '.looknfeel', '.scheme', '.imageset', '.font') and \
                 '#@own ' in file.read_text(encoding='utf-8')
             if mixed:

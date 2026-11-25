@@ -43,9 +43,13 @@ probe = r'''
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
+// The production reader finds files and own rows through the header-only lookup part of ContentPackages
+#include "utils/ContentPackages.h"
 #define OD_LOG_WRN(message) ((void)0)
+#define OD_LOG_ERR(message) ((void)0)
 namespace ODApplication { const std::string VERSIONSTRING="OpenDungeons_Version:VERSION.1"; const std::string VERSION="VERSION"; }
-namespace Helper { READER }
+namespace Helper { std::string toString(int value) { return std::to_string(value); } READER }
 void setLoadError(const std::string&) {}
 HELPERFUNCTION
 bool load(std::stringstream& levelFile) { const std::string fileName="probe"; std::string nextParam; LOAD return true; }
@@ -84,6 +88,6 @@ with tempfile.TemporaryDirectory(prefix="map-version-") as directory:
     cpp = work / "check.cpp"
     cpp.write_text(probe, encoding="utf-8")
     executable = work / "check.exe"
-    subprocess.run(["cl", "/nologo", "/EHsc", "/std:c++17", str(cpp), f"/Fe:{executable}"],
+    subprocess.run(["cl", "/nologo", "/EHsc", "/std:c++17", f"/I{root / 'source'}", str(cpp), f"/Fe:{executable}"],
                    cwd=work, check=True)
     subprocess.run([str(executable), str(root / "levels/skirmish/TestItemsPotions.level"), *args.save], check=True)

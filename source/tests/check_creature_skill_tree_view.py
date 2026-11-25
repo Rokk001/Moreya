@@ -64,6 +64,9 @@ struct ShimAbort {};
 #define BOOST_REQUIRE(cond) SHIM_CHECK((cond), #cond, true)
 #define BOOST_CHECK_EQUAL(a, b) SHIM_CHECK((a) == (b), #a " == " #b, false)
 #define BOOST_REQUIRE_EQUAL(a, b) SHIM_CHECK((a) == (b), #a " == " #b, true)
+// The message forms report the given message (used when the config is looked up in the content packages)
+#define BOOST_CHECK_MESSAGE(cond, message) SHIM_CHECK((cond), message, false)
+#define BOOST_REQUIRE_MESSAGE(cond, message) SHIM_CHECK((cond), message, true)
 '''
 
 main = r'''
@@ -138,9 +141,16 @@ def run_test_cases():
             vcvars = find_vcvars()
             assert shutil.which('cl') is not None or vcvars is not None, 'no C++ compiler found (cl or vcvars64.bat)'
             prefix = '' if shutil.which('cl') else 'call "%s" >nul 2>&1 && ' % vcvars
-            flags = '/nologo /EHsc /std:c++17 /FI"%s" /Fe"%s" /Fo"%s/" /I"%s" /I"%s"' % (
+            flags = '/nologo /EHsc /MD /std:c++17 /FI"%s" /Fe"%s" /Fo"%s/" /I"%s" /I"%s"' % (
                 tmp / 'config_shim.h', exe, tmp.as_posix(), tmp, repo / 'source')
-            line = prefix + 'cl ' + flags + ' ' + ' '.join('"%s"' % s for s in sources)
+            # The test file finds the content packages with boost::filesystem: the Boost headers and libraries of the
+            # build dependencies (the library is linked automatically by the Boost headers)
+            deps = Path(os.environ.get('OD_DEPS_ROOT') or Path.home() / 'build-deps') / 'install'
+            boost_include = sorted((deps / 'include').glob('boost-*'))
+            assert boost_include, 'no Boost headers in ' + str(deps / 'include')
+            flags += ' /I"%s"' % boost_include[-1]
+            line = (prefix + 'cl ' + flags + ' ' + ' '.join('"%s"' % s for s in sources)
+                    + ' /link /LIBPATH:"%s"' % (deps / 'lib'))
             subprocess.run(line, shell=True, check=True, stdout=subprocess.DEVNULL)
         environment = dict(os.environ)
         environment['OD_TEST_CREATURE_SKILLS_FILE'] = str(content_packages.resolve(repo, 'config/creatureSkills.cfg'))
