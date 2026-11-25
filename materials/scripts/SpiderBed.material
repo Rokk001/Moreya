@@ -1,4 +1,4 @@
-// SpiderBed: procedural bed, see tools/room-objects/generate_beds.py
+// SpiderBed: procedural bed, see tools/room-objects/generate_beds.py (private tools repository)
 import RTSS/PerPixel_SinglePass from "RTShaderSystem.material"
 material SpiderBedFrame : RTSS/PerPixel_SinglePass
 {

@@ -1,4 +1,4 @@
-// Chick and rooster: the hen material with the recoloured textures (tools/hatchery/gen_chicken_variants.py)
+// Chick and rooster: the hen material with the recoloured textures (tools/hatchery/gen_chicken_variants.py (private tools repository))
 import RTSS/NormalMapping_MultiPass from "RTShaderSystem.material"
 material ChickenChick : RTSS/NormalMapping_MultiPass
 {

@@ -2398,6 +2398,7 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 178-->
+            </FrameComponent>
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -2418,27 +2419,6 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 180-->
-            </FrameComponent>
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-                <VertFormatProperty name="VertImageFormatting" />
-                <HorzFormatProperty name="HorzImageFormatting" />
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 181-->
-            <FrameComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 182-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -2517,12 +2497,12 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 183-->
+<!--#@own 181-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 184-->
+<!--#@own 182-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -2530,7 +2510,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 185-->
+<!--#@own 183-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -2579,21 +2559,31 @@
         </StateImagery>
         <StateImagery name="Hover">
             <Layer>
-<!--#@own 186-->
+<!--#@own 184-->
             </Layer>
         </StateImagery>
         <StateImagery name="Pushed">
             <Layer>
-<!--#@own 187-->
+<!--#@own 185-->
             </Layer>
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 188-->
+<!--#@own 186-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
+<!--#@own 187-->
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1.0" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1.0" type="Height" /></Dim>
+                </Area>
+<!--#@own 188-->
+            </FrameComponent>
+        </ImagerySection>
 <!--#@own 189-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -2612,16 +2602,6 @@
                     <Dim type="Height"><UnifiedDim scale="1.0" type="Height" /></Dim>
                 </Area>
 <!--#@own 192-->
-            </FrameComponent>
-        </ImagerySection>
-<!--#@own 193-->
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1.0" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1.0" type="Height" /></Dim>
-                </Area>
-<!--#@own 194-->
     </WidgetLook>
 
     <WidgetLook name="OD/HorizontalScrollbar">
@@ -2694,24 +2674,24 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 195-->
+<!--#@own 193-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 196-->
+<!--#@own 194-->
             <ImageryComponent>
                 <Area>
-<!--#@own 197-->
+<!--#@own 195-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="RightEdge">
                         <OperatorDim op="Subtract"><UnifiedDim scale="1.0" type="RightEdge" />
-<!--#@own 198-->
+<!--#@own 196-->
                             </OperatorDim>
                         </Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1.0" type="BottomEdge" /></Dim>
                 </Area>
-<!--#@own 199-->
+<!--#@own 197-->
                 <VertFormat type="CentreAligned" />
                 <HorzFormat type="Stretched" />
             </ImageryComponent>
@@ -2754,21 +2734,31 @@
         </StateImagery>
         <StateImagery name="Hover">
             <Layer>
-<!--#@own 200-->
+<!--#@own 198-->
             </Layer>
         </StateImagery>
         <StateImagery name="Pushed">
             <Layer>
-<!--#@own 201-->
+<!--#@own 199-->
             </Layer>
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 202-->
+<!--#@own 200-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
+<!--#@own 201-->
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1.0" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1.0" type="Height" /></Dim>
+                </Area>
+<!--#@own 202-->
+            </FrameComponent>
+        </ImagerySection>
 <!--#@own 203-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -2787,16 +2777,6 @@
                     <Dim type="Height"><UnifiedDim scale="1.0" type="Height" /></Dim>
                 </Area>
 <!--#@own 206-->
-            </FrameComponent>
-        </ImagerySection>
-<!--#@own 207-->
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1.0" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1.0" type="Height" /></Dim>
-                </Area>
-<!--#@own 208-->
     </WidgetLook>
 
     <WidgetLook name="OD/VerticalScrollbar">
@@ -2871,21 +2851,21 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 209-->
+<!--#@own 207-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 210-->
+<!--#@own 208-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 211-->
+<!--#@own 209-->
                     <Dim type="RightEdge"><UnifiedDim scale="1.0" type="RightEdge" /></Dim>
                     <Dim type="BottomEdge">
                         <OperatorDim op="Subtract">
                             <UnifiedDim scale="1.0" type="BottomEdge" />
-<!--#@own 212-->
+<!--#@own 210-->
                 <VertFormat type="Stretched" />
                 <HorzFormat type="CentreAligned" />
             </ImageryComponent>
@@ -2893,12 +2873,12 @@
     </WidgetLook>
 
     <WidgetLook name="OD/Listbox">
-<!--#@own 213-->
+<!--#@own 211-->
         <NamedArea name="ItemRenderingArea">
             <Area>
-<!--#@own 214-->
+<!--#@own 212-->
                 </Dim>
-<!--#@own 215-->
+<!--#@own 213-->
                 </Dim>
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
@@ -2916,9 +2896,9 @@
         </NamedArea>
         <NamedArea name="ItemRenderingAreaHScroll">
             <Area>
-<!--#@own 216-->
+<!--#@own 214-->
                 </Dim>
-<!--#@own 217-->
+<!--#@own 215-->
                 </Dim>
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
@@ -2935,9 +2915,9 @@
         </NamedArea>
         <NamedArea name="ItemRenderingAreaVScroll">
             <Area>
-<!--#@own 218-->
+<!--#@own 216-->
                 </Dim>
-<!--#@own 219-->
+<!--#@own 217-->
                 </Dim>
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
@@ -2954,9 +2934,9 @@
         </NamedArea>
         <NamedArea name="ItemRenderingAreaHVScroll">
             <Area>
-<!--#@own 220-->
+<!--#@own 218-->
                 </Dim>
-<!--#@own 221-->
+<!--#@own 219-->
                 </Dim>
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
@@ -3003,7 +2983,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/WindowTopRight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/WindowBottomLeft" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/WindowBottomRight" />
-<!--#@own 222-->
+<!--#@own 220-->
                 <Image component="Background" name="OpenDungeonsSkin/ClientBrush" />
             </FrameComponent>
         </ImagerySection>
@@ -3014,12 +2994,12 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 223-->
+<!--#@own 221-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 224-->
+<!--#@own 222-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3027,7 +3007,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 225-->
+<!--#@own 223-->
 
     <WidgetLook name="OD/ComboDropList">
         <NamedArea name="ItemRenderingArea">
@@ -3138,12 +3118,12 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 226-->
+<!--#@own 224-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 227-->
+<!--#@own 225-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3151,13 +3131,13 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 228-->
+<!--#@own 226-->
     </WidgetLook>
 
     <WidgetLook name="OD/ComboEditbox">
-<!--#@own 229-->
+<!--#@own 227-->
         <PropertyDefinition initialValue="FF000000" name="SelectedTextColour" redrawOnWrite="true" />
-<!--#@own 230-->
+<!--#@own 228-->
         <Property name="MouseCursorImage" value="OpenDungeonsSkin/MouseArrow" />
         <NamedArea name="TextArea">
             <Area>
@@ -3175,11 +3155,11 @@
                     <Dim type="Width"><UnifiedDim scale="1.0" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1.0" type="Height" /></Dim>
                 </Area>
-<!--#@own 231-->
+<!--#@own 229-->
                 <Image component="Background" name="OpenDungeonsSkin/ComboboxEditBackground" />
                 <Image component="TopLeftCorner" name="OpenDungeonsSkin/ComboboxEditTopLeft" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ComboboxEditBottomLeft" />
-<!--#@own 232-->
+<!--#@own 230-->
                 <Image component="Background" name="OpenDungeonsSkin/ComboboxEditBackground" />
             </FrameComponent>
         </ImagerySection>
@@ -3221,7 +3201,7 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 233-->
+<!--#@own 231-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
@@ -3240,19 +3220,19 @@
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 234-->
+<!--#@own 232-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1.0" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1.0" type="Height" /></Dim>
                 </Area>
-<!--#@own 235-->
+<!--#@own 233-->
     </WidgetLook>
 
     <WidgetLook name="OD/ComboBoxButton">
         <Property name="WantsMultiClickEvents" value="False" />
-<!--#@own 236-->
+<!--#@own 234-->
         <PropertyDefinition initialValue="CentreAligned" name="VertLabelFormatting" />
         <PropertyDefinition initialValue="CentreAligned" name="HorzLabelFormatting" />
         <PropertyDefinition initialValue="" name="NormalImage" redrawOnWrite="true" />
@@ -3373,7 +3353,7 @@
         </StateImagery>
         <StateImagery name="Hover">
             <Layer>
-<!--#@own 237-->
+<!--#@own 235-->
                 <Section section="label">
                     <ColourProperty name="HoverTextColour" />
                 </Section>
@@ -3381,7 +3361,7 @@
         </StateImagery>
         <StateImagery name="Pushed">
             <Layer>
-<!--#@own 238-->
+<!--#@own 236-->
                 <Section section="label">
                     <ColourProperty name="PushedTextColour" />
                 </Section>
@@ -3389,7 +3369,7 @@
         </StateImagery>
         <StateImagery name="PushedOff">
             <Layer>
-<!--#@own 239-->
+<!--#@own 237-->
                 <Section section="label">
                     <ColourProperty name="HoverTextColour" />
                 </Section>
@@ -3397,7 +3377,7 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 240-->
+<!--#@own 238-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
                 <Section section="label">
@@ -3405,7 +3385,7 @@
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 241-->
+<!--#@own 239-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3413,7 +3393,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 242-->
+<!--#@own 240-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3426,7 +3406,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 243-->
+<!--#@own 241-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3434,7 +3414,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 244-->
+<!--#@own 242-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -3448,7 +3428,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 245-->
+<!--#@own 243-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3456,7 +3436,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 246-->
+<!--#@own 244-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3469,7 +3449,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 247-->
+<!--#@own 245-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3477,7 +3457,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 248-->
+<!--#@own 246-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -3495,9 +3475,9 @@
 
 
     <WidgetLook name="OD/Combobox">
-<!--#@own 249-->
+<!--#@own 247-->
         <PropertyLinkDefinition initialValue="FF000000" name="SelectedEditTextColour" targetProperty="SelectedTextColour" widget="__auto_editbox__" />
-<!--#@own 250-->
+<!--#@own 248-->
         <Child nameSuffix="__auto_editbox__" type="OD/ComboEditbox">
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3595,7 +3575,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/StaticTopRight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/StaticBottomLeft" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/StaticBottomRight" />
-<!--#@own 251-->
+<!--#@own 249-->
                 <ColourRectProperty name="FrameColours" />
             </FrameComponent>
         </ImagerySection>
@@ -3639,7 +3619,7 @@
                 <HorzFormat type="Stretched" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 252-->
+<!--#@own 250-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3647,31 +3627,31 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 253-->
+<!--#@own 251-->
                 <ColourRectProperty name="FrameColours" />
             </FrameComponent>
         </ImagerySection>
-<!--#@own 254-->
+<!--#@own 252-->
             <ImageryComponent>
                 <Area>
-<!--#@own 255-->
+<!--#@own 253-->
                     <Dim type="RightEdge">
                         <OperatorDim op="Subtract">
                             <UnifiedDim scale="1" type="RightEdge" />
-<!--#@own 256-->
+<!--#@own 254-->
                         </OperatorDim>
                     </Dim>
                     <Dim type="BottomEdge">
                         <OperatorDim op="Subtract">
                             <UnifiedDim scale="1" type="BottomEdge" />
-<!--#@own 257-->
+<!--#@own 255-->
 
                 <Colours bottomLeft="FFFFFFFF" bottomRight="FFFFFFFF" topLeft="FFFFFFFF" topRight="FFFFFFFF" />
                 <VertFormat type="Stretched" />
                 <HorzFormat type="Stretched" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 258-->
+<!--#@own 256-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -3679,7 +3659,7 @@
                     <Dim type="RightEdge"><UnifiedDim scale="1" type="RightEdge" /></Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
-<!--#@own 259-->
+<!--#@own 257-->
 
                 <Colours bottomLeft="FFFFFFFF" bottomRight="FFFFFFFF" topLeft="FFFFFFFF" topRight="FFFFFFFF" />
                 <VertFormat type="Stretched" />
@@ -3741,7 +3721,7 @@
         </StateImagery>
         <StateImagery name="DisabledFrame">
             <Layer>
-<!--#@own 260-->
+<!--#@own 258-->
             </Layer>
         </StateImagery>
         <StateImagery name="WithFrameEnabledBackground">
@@ -3751,7 +3731,7 @@
         </StateImagery>
         <StateImagery name="WithFrameDisabledBackground">
             <Layer>
-<!--#@own 261-->
+<!--#@own 259-->
             </Layer>
         </StateImagery>
         <StateImagery name="NoFrameEnabledBackground">
@@ -3761,7 +3741,7 @@
         </StateImagery>
         <StateImagery name="NoFrameDisabledBackground">
             <Layer>
-<!--#@own 262-->
+<!--#@own 260-->
             </Layer>
         </StateImagery>
         <StateImagery name="WithFrameImage">
@@ -3781,7 +3761,7 @@
         <PropertyDefinition initialValue="tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF" name="BackgroundColours" redrawOnWrite="true" />
         <Property name="FrameEnabled" value="True" />
         <Property name="BackgroundEnabled" value="True" />
-<!--#@own 263-->
+<!--#@own 261-->
         <NamedArea name="WithFrameTextRenderArea">
             <Area>
                 <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsSkin/StaticLeft" /></Dim>
@@ -3919,7 +3899,7 @@
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 264-->
+<!--#@own 262-->
                 <Dim type="Height"><UnifiedDim offset="-12" scale="1" type="Height" /></Dim>
             </Area>
             <HorzAlignment type="RightAligned" />
@@ -3933,7 +3913,7 @@
         </StateImagery>
         <StateImagery name="DisabledFrame">
             <Layer>
-<!--#@own 265-->
+<!--#@own 263-->
             </Layer>
         </StateImagery>
         <StateImagery name="WithFrameEnabledBackground">
@@ -3943,7 +3923,7 @@
         </StateImagery>
         <StateImagery name="WithFrameDisabledBackground">
             <Layer>
-<!--#@own 266-->
+<!--#@own 264-->
             </Layer>
         </StateImagery>
         <StateImagery name="NoFrameEnabledBackground">
@@ -3953,7 +3933,7 @@
         </StateImagery>
         <StateImagery name="NoFrameDisabledBackground">
             <Layer>
-<!--#@own 267-->
+<!--#@own 265-->
             </Layer>
         </StateImagery>
     </WidgetLook>
@@ -4072,14 +4052,14 @@
         <StateImagery name="Hover">
             <Layer>
                 <Section section="segment_hover" />
-<!--#@own 268-->
+<!--#@own 266-->
             </Layer>
         </StateImagery>
         <StateImagery name="SplitterHover">
             <Layer>
-<!--#@own 269-->
+<!--#@own 267-->
                 <Section section="splitter_hover" />
-<!--#@own 270-->
+<!--#@own 268-->
             </Layer>
         </StateImagery>
         <StateImagery clipped="false" name="DragGhost">
@@ -4121,18 +4101,18 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
+<!--#@own 269-->
+                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
+                </Section>
+<!--#@own 270-->
+                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
+                </Section>
 <!--#@own 271-->
-                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
-                </Section>
-<!--#@own 272-->
-                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
-                </Section>
-<!--#@own 273-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 274-->
+<!--#@own 272-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -4140,15 +4120,15 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 275-->
+<!--#@own 273-->
                 <VertFormat type="Stretched" />
                 <HorzFormat type="RightAligned" />
             </ImageryComponent>
-<!--#@own 276-->
+<!--#@own 274-->
                 <Area>
                     <Dim type="LeftEdge">
                         <OperatorDim op="Add">
-<!--#@own 277-->
+<!--#@own 275-->
                             <AbsoluteDim value="5" />
                         </OperatorDim>
                     </Dim>
@@ -4159,24 +4139,24 @@
                 <VertFormat type="CentreAligned" />
             </TextComponent>
         </ImagerySection>
+<!--#@own 276-->
+            <Colours bottomLeft="FFDDDDDD" bottomRight="FFDDDDDD" topLeft="FFDDDDDD" topRight="FFDDDDDD" />
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="RightEdge">
+                        <OperatorDim op="Subtract">
+                            <UnifiedDim scale="1" type="RightEdge" />
+<!--#@own 277-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 278-->
-            <Colours bottomLeft="FFDDDDDD" bottomRight="FFDDDDDD" topLeft="FFDDDDDD" topRight="FFDDDDDD" />
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="RightEdge">
-                        <OperatorDim op="Subtract">
-                            <UnifiedDim scale="1" type="RightEdge" />
+                <VertFormat type="Stretched" />
+                <HorzFormat type="Stretched" />
+            </ImageryComponent>
+        </ImagerySection>
 <!--#@own 279-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 280-->
-                <VertFormat type="Stretched" />
-                <HorzFormat type="Stretched" />
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 281-->
             <Colours bottomLeft="FFDDDDDD" bottomRight="FFDDDDDD" topLeft="FFDDDDDD" topRight="FFDDDDDD" />
             <ImageryComponent>
                 <Area>
@@ -4185,15 +4165,15 @@
                     <Dim type="RightEdge">
                         <OperatorDim op="Subtract">
                             <UnifiedDim scale="1" type="RightEdge" />
-<!--#@own 282-->
+<!--#@own 280-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 283-->
+<!--#@own 281-->
                 <VertFormat type="Stretched" />
                 <HorzFormat type="Stretched" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 284-->
+<!--#@own 282-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -4201,15 +4181,15 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 285-->
+<!--#@own 283-->
                 <VertFormat type="Stretched" />
                 <HorzFormat type="RightAligned" />
             </ImageryComponent>
-<!--#@own 286-->
+<!--#@own 284-->
                 <Area>
                     <Dim type="LeftEdge">
                         <OperatorDim op="Add">
-<!--#@own 287-->
+<!--#@own 285-->
                             <AbsoluteDim value="5" />
                         </OperatorDim>
                     </Dim>
@@ -4358,12 +4338,12 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 288-->
+<!--#@own 286-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 289-->
+<!--#@own 287-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -4371,13 +4351,13 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 290-->
+<!--#@own 288-->
     </WidgetLook>
 
     <WidgetLook name="OD/MultiLineEditbox">
-<!--#@own 291-->
+<!--#@own 289-->
         <PropertyDefinition initialValue="FF000000" name="SelectedTextColour" redrawOnWrite="true" />
-<!--#@own 292-->
+<!--#@own 290-->
         <PropertyDefinition redrawOnWrite="true" initialValue="tl:00FF0000 tr:00FF0000 bl:00FF0000 br:00FF0000" type="ColourRect" name="ImageColours"/>
         <Property name="MouseCursorImage" value="OpenDungeonsSkin/MouseTextBar" />
         <Property name="SelectionBrushImage" value="OpenDungeonsSkin/SelectionBrush" />
@@ -4477,7 +4457,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/MultiLineEditBoxTopRight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/MultiLineEditBoxBottomLeft" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/MultiLineEditBoxBottomRight" />
-<!--#@own 293-->
+<!--#@own 291-->
                 <Image component="Background" name="OpenDungeonsSkin/MultiLineEditBoxMiddle" />
             </FrameComponent>
         </ImagerySection>
@@ -4507,12 +4487,12 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 294-->
+<!--#@own 292-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 295-->
+<!--#@own 293-->
     </WidgetLook>
 
     <WidgetLook name="OD/Tooltip">
@@ -4571,7 +4551,7 @@
                         </OperatorDim>
                     </Dim>
                 </Area>
-<!--#@own 296-->
+<!--#@own 294-->
                 <VertFormat type="CentreAligned" />
                 <HorzFormat type="CentreAligned" />
             </TextComponent>
@@ -4584,10 +4564,10 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 297-->
+<!--#@own 295-->
             </Layer>
         </StateImagery>
-<!--#@own 298-->
+<!--#@own 296-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -4595,44 +4575,44 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 299-->
+<!--#@own 297-->
             </FrameComponent>
         </ImagerySection>
-<!--#@own 300-->
+<!--#@own 298-->
                     <Dim type="RightEdge">
                         <OperatorDim op="Subtract">
                             <UnifiedDim scale="1" type="RightEdge" />
-<!--#@own 301-->
+<!--#@own 299-->
                         </OperatorDim>
                     </Dim>
                     <Dim type="BottomEdge">
                         <OperatorDim op="Subtract">
                             <UnifiedDim scale="1" type="BottomEdge" />
-<!--#@own 302-->
+<!--#@own 300-->
                         </OperatorDim>
                     </Dim>
                 </Area>
-<!--#@own 303-->
+<!--#@own 301-->
                 <VertFormat type="CentreAligned" />
                 <HorzFormat type="CentreAligned" />
             </TextComponent>
         </ImagerySection>
     </WidgetLook>
 
-<!--#@own 304-->
+<!--#@own 302-->
         <NamedArea name="TextArea">
             <Area>
-<!--#@own 305-->
+<!--#@own 303-->
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="RightEdge" />
-<!--#@own 306-->
+<!--#@own 304-->
                     </OperatorDim>
                 </Dim>
                 <Dim type="BottomEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="BottomEdge" />
-<!--#@own 307-->
+<!--#@own 305-->
         <ImagerySection name="background">
             <FrameComponent>
                 <Area>
@@ -4642,7 +4622,7 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
                 <Image component="Background" name="OpenDungeonsSkin/TooltipMiddle" />
-<!--#@own 308-->
+<!--#@own 306-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -4650,38 +4630,38 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 309-->
+<!--#@own 307-->
         <ImagerySection name="label">
             <TextComponent>
             <Area>
-<!--#@own 310-->
+<!--#@own 308-->
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="RightEdge" />
-<!--#@own 311-->
+<!--#@own 309-->
                     </OperatorDim>
                 </Dim>
                 <Dim type="BottomEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="BottomEdge" />
-<!--#@own 312-->
+<!--#@own 310-->
                 <VertFormat type="TopAligned" />
                 <HorzFormat type="LeftAligned" />
             </TextComponent>
         </ImagerySection>
         <StateImagery name="Enabled">
             <Layer>
-<!--#@own 313-->
+<!--#@own 311-->
                 <Section section="label" />
             </Layer>
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 314-->
+<!--#@own 312-->
                 <Section section="label" />
             </Layer>
         </StateImagery>
-<!--#@own 315-->
+<!--#@own 313-->
 
     <WidgetLook name="OD/ScrollablePane">
         <NamedArea name="ViewableArea">
@@ -4759,10 +4739,10 @@
     </WidgetLook>
 
     <WidgetLook name="OD/TabButton">
-<!--#@own 316-->
+<!--#@own 314-->
             <ImageryComponent>
                 <Area>
-<!--#@own 317-->
+<!--#@own 315-->
             </ImageryComponent>
         </ImagerySection>
         <ImagerySection name="label">
@@ -4883,6 +4863,16 @@
         </ImagerySection>
         <StateImagery name="TopNormal">
             <Layer>
+<!--#@own 316-->
+                    <ColourProperty name="NormalTextColour" />
+                </Section>
+<!--#@own 317-->
+                    <ColourProperty name="NormalTextColour" />
+                </Section>
+            </Layer>
+        </StateImagery>
+        <StateImagery name="BottomNormal">
+            <Layer>
 <!--#@own 318-->
                     <ColourProperty name="NormalTextColour" />
                 </Section>
@@ -4891,17 +4881,17 @@
                 </Section>
             </Layer>
         </StateImagery>
-        <StateImagery name="BottomNormal">
+        <StateImagery name="TopHover">
             <Layer>
 <!--#@own 320-->
-                    <ColourProperty name="NormalTextColour" />
+                    <ColourProperty name="HoverTextColour" />
                 </Section>
 <!--#@own 321-->
-                    <ColourProperty name="NormalTextColour" />
+                    <ColourProperty name="HoverTextColour" />
                 </Section>
             </Layer>
         </StateImagery>
-        <StateImagery name="TopHover">
+        <StateImagery name="BottomHover">
             <Layer>
 <!--#@own 322-->
                     <ColourProperty name="HoverTextColour" />
@@ -4911,25 +4901,25 @@
                 </Section>
             </Layer>
         </StateImagery>
-        <StateImagery name="BottomHover">
-            <Layer>
 <!--#@own 324-->
-                    <ColourProperty name="HoverTextColour" />
-                </Section>
-<!--#@own 325-->
-                    <ColourProperty name="HoverTextColour" />
-                </Section>
-            </Layer>
-        </StateImagery>
-<!--#@own 326-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="3" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="3" /></Dim>
-<!--#@own 327-->
+<!--#@own 325-->
             </ImageryComponent>
         </ImagerySection>
         <StateImagery name="TopSelected">
+            <Layer>
+<!--#@own 326-->
+                    <ColourProperty name="SelectedTextColour" />
+                </Section>
+<!--#@own 327-->
+                    <ColourProperty name="SelectedTextColour" />
+                </Section>
+            </Layer>
+        </StateImagery>
+        <StateImagery name="BottomSelected">
             <Layer>
 <!--#@own 328-->
                     <ColourProperty name="SelectedTextColour" />
@@ -4939,17 +4929,17 @@
                 </Section>
             </Layer>
         </StateImagery>
-        <StateImagery name="BottomSelected">
+        <StateImagery name="TopPushed">
             <Layer>
 <!--#@own 330-->
-                    <ColourProperty name="SelectedTextColour" />
+                    <ColourProperty name="PushedTextColour" />
                 </Section>
 <!--#@own 331-->
-                    <ColourProperty name="SelectedTextColour" />
+                    <ColourProperty name="PushedTextColour" />
                 </Section>
             </Layer>
         </StateImagery>
-        <StateImagery name="TopPushed">
+        <StateImagery name="BottomPushed">
             <Layer>
 <!--#@own 332-->
                     <ColourProperty name="PushedTextColour" />
@@ -4959,42 +4949,45 @@
                 </Section>
             </Layer>
         </StateImagery>
-        <StateImagery name="BottomPushed">
-            <Layer>
-<!--#@own 334-->
-                    <ColourProperty name="PushedTextColour" />
-                </Section>
-<!--#@own 335-->
-                    <ColourProperty name="PushedTextColour" />
-                </Section>
-            </Layer>
-        </StateImagery>
         <StateImagery name="TopDisabled">
             <Layer>
-<!--#@own 336-->
+<!--#@own 334-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
-<!--#@own 337-->
+<!--#@own 335-->
                     <ColourProperty name="DisabledTextColour" />
                 </Section>
-<!--#@own 338-->
+<!--#@own 336-->
                     <ColourProperty name="DisabledTextColour" />
                 </Section>
             </Layer>
         </StateImagery>
         <StateImagery name="BottomDisabled">
             <Layer>
-<!--#@own 339-->
+<!--#@own 337-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
-<!--#@own 340-->
+<!--#@own 338-->
                     <ColourProperty name="DisabledTextColour" />
                 </Section>
-<!--#@own 341-->
+<!--#@own 339-->
                     <ColourProperty name="DisabledTextColour" />
                 </Section>
             </Layer>
         </StateImagery>
+<!--#@own 340-->
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 341-->
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </FrameComponent>
+        </ImagerySection>
 <!--#@own 342-->
             <FrameComponent>
                 <Area>
@@ -5004,8 +4997,6 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 343-->
-                <VertFormat type="Tiled" />
-                <HorzFormat type="Tiled" />
             </FrameComponent>
         </ImagerySection>
 <!--#@own 344-->
@@ -5016,30 +5007,10 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 345-->
-            <FrameComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 346-->
-                <VertFormat type="Tiled" />
-                <HorzFormat type="Tiled" />
-            </FrameComponent>
-        </ImagerySection>
-<!--#@own 347-->
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 348-->
     </WidgetLook>
 
     <WidgetLook name="OD/TabContentPane">
-<!--#@own 349-->
+<!--#@own 346-->
         <PropertyDefinition initialValue="0" layoutOnWrite="true" name="EnableTop" redrawOnWrite="true" />
         <PropertyDefinition initialValue="0" layoutOnWrite="true" name="EnableBottom" redrawOnWrite="true" />
         <ImagerySection name="normal">
@@ -5060,33 +5031,33 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/TabContentPaneUpperRight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/TabContentPaneLowerLeft" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/TabContentPaneLowerRight" />
-<!--#@own 350-->
+<!--#@own 347-->
                 <Image component="Background" name="OpenDungeonsSkin/TabContentPaneMiddle" />
             </FrameComponent>
         </ImagerySection>
-<!--#@own 351-->
+<!--#@own 348-->
             </ImageryComponent>
         </ImagerySection>
         <StateImagery name="Enabled">
             <Layer>
-<!--#@own 352-->
+<!--#@own 349-->
             </Layer>
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 353-->
+<!--#@own 350-->
                     <Colours bottomLeft="507F7F7F" bottomRight="507F7F7F" topLeft="507F7F7F" topRight="507F7F7F" />
                 </Section>
-<!--#@own 354-->
+<!--#@own 351-->
             </Layer>
         </StateImagery>
-<!--#@own 355-->
+<!--#@own 352-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge">
                         <OperatorDim op="Multiply">
-<!--#@own 356-->
+<!--#@own 353-->
                             <PropertyDim name="EnableTop" />
                         </OperatorDim>
                     </Dim>
@@ -5094,7 +5065,7 @@
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="Height" />
                     </Dim>
                 </Area>
-<!--#@own 357-->
+<!--#@own 354-->
     </WidgetLook>
 
     <WidgetLook name="OD/TabButtonPane">
@@ -5204,7 +5175,7 @@
     </WidgetLook>
 
     <WidgetLook name="OD/MenuItem">
-<!--#@own 358-->
+<!--#@own 355-->
         <PropertyDefinition initialValue="FFFFFFFF" name="HoverColour" redrawOnWrite="true" />
         <PropertyDefinition initialValue="FFFFFFFF" name="PushedColour" redrawOnWrite="true" />
         <PropertyDefinition initialValue="FFFFFFFF" name="OpenedColour" redrawOnWrite="true" />
@@ -5349,20 +5320,20 @@
         </StateImagery>
         <StateImagery name="EnabledHover">
             <Layer>
-<!--#@own 359-->
+<!--#@own 356-->
                     <ColourProperty name="HoverColour" />
                 </Section>
-<!--#@own 360-->
+<!--#@own 357-->
                     <ColourProperty name="NormalTextColour" />
                 </Section>
             </Layer>
         </StateImagery>
         <StateImagery name="EnabledPushed">
             <Layer>
-<!--#@own 361-->
+<!--#@own 358-->
                     <ColourProperty name="PushedColour" />
                 </Section>
-<!--#@own 362-->
+<!--#@own 359-->
                     <ColourProperty name="NormalTextColour" />
                 </Section>
             </Layer>
@@ -5379,37 +5350,37 @@
         </StateImagery>
         <StateImagery name="DisabledNormal">
             <Layer>
-<!--#@own 363-->
+<!--#@own 360-->
                     <ColourProperty name="DisabledTextColour" />
                 </Section>
             </Layer>
         </StateImagery>
         <StateImagery name="DisabledHover">
             <Layer>
-<!--#@own 364-->
+<!--#@own 361-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
-<!--#@own 365-->
+<!--#@own 362-->
                     <ColourProperty name="DisabledTextColour" />
                 </Section>
             </Layer>
         </StateImagery>
         <StateImagery name="DisabledPushed">
             <Layer>
-<!--#@own 366-->
+<!--#@own 363-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
-<!--#@own 367-->
+<!--#@own 364-->
                     <ColourProperty name="DisabledTextColour" />
                 </Section>
             </Layer>
         </StateImagery>
         <StateImagery name="DisabledPopupOpen">
             <Layer>
-<!--#@own 368-->
+<!--#@own 365-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
-<!--#@own 369-->
+<!--#@own 366-->
                     <ColourProperty name="DisabledTextColour" />
                 </Section>
             </Layer>
@@ -5424,7 +5395,7 @@
                 <Section section="popup_arrow_left" />
             </Layer>
         </StateImagery>
-<!--#@own 370-->
+<!--#@own 367-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -5432,26 +5403,26 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 371-->
+<!--#@own 368-->
             </FrameComponent>
         </ImagerySection>
-<!--#@own 372-->
+<!--#@own 369-->
                     <Dim type="RightEdge">
                         <OperatorDim op="Subtract">
                             <UnifiedDim scale="1" type="RightEdge" />
-<!--#@own 373-->
+<!--#@own 370-->
                         </OperatorDim>
                     </Dim>
                     <Dim type="BottomEdge">
                         <OperatorDim op="Subtract">
                             <UnifiedDim scale="1" type="BottomEdge" />
-<!--#@own 374-->
+<!--#@own 371-->
                 </Area>
                 <VertFormat type="CentreAligned" />
                 <HorzFormat type="LeftAligned" />
             </TextComponent>
         </ImagerySection>
-<!--#@own 375-->
+<!--#@own 372-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -5459,8 +5430,24 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 376-->
+<!--#@own 373-->
             </FrameComponent>
+        </ImagerySection>
+<!--#@own 374-->
+                    <Dim type="RightEdge">
+                        <OperatorDim op="Subtract">
+                            <UnifiedDim scale="1" type="RightEdge" />
+<!--#@own 375-->
+                        </OperatorDim>
+                    </Dim>
+                    <Dim type="BottomEdge">
+                        <OperatorDim op="Subtract">
+                            <UnifiedDim scale="1" type="BottomEdge" />
+<!--#@own 376-->
+                </Area>
+                <VertFormat type="CentreAligned" />
+                <HorzFormat type="LeftAligned" />
+            </TextComponent>
         </ImagerySection>
 <!--#@own 377-->
                     <Dim type="RightEdge">
@@ -5479,22 +5466,6 @@
             </TextComponent>
         </ImagerySection>
 <!--#@own 380-->
-                    <Dim type="RightEdge">
-                        <OperatorDim op="Subtract">
-                            <UnifiedDim scale="1" type="RightEdge" />
-<!--#@own 381-->
-                        </OperatorDim>
-                    </Dim>
-                    <Dim type="BottomEdge">
-                        <OperatorDim op="Subtract">
-                            <UnifiedDim scale="1" type="BottomEdge" />
-<!--#@own 382-->
-                </Area>
-                <VertFormat type="CentreAligned" />
-                <HorzFormat type="LeftAligned" />
-            </TextComponent>
-        </ImagerySection>
-<!--#@own 383-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -5502,7 +5473,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 384-->
+<!--#@own 381-->
     </WidgetLook>
 
     <WidgetLook name="OD/PopupMenu">
@@ -5554,7 +5525,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/PopupMenuFrameTopRight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/PopupMenuFrameBottomLeft" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/PopupMenuFrameBottomRight" />
-<!--#@own 385-->
+<!--#@own 382-->
                 <Image component="Background" name="OpenDungeonsSkin/PopupMenuFrameMiddle" />
             </FrameComponent>
         </ImagerySection>
@@ -5567,12 +5538,12 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 386-->
+<!--#@own 383-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 387-->
+<!--#@own 384-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -5580,7 +5551,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 388-->
+<!--#@own 385-->
     </WidgetLook>
 
     <WidgetLook name="OD/Menubar">
@@ -5648,12 +5619,12 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 389-->
+<!--#@own 386-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 390-->
+<!--#@own 387-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -5661,12 +5632,12 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 391-->
+<!--#@own 388-->
     </WidgetLook>
 
     <WidgetLook name="OD/ImageButton">
         <Property name="WantsMultiClickEvents" value="False" />
-<!--#@own 392-->
+<!--#@own 389-->
         <PropertyDefinition initialValue="CentreAligned" name="VertLabelFormatting" />
         <PropertyDefinition initialValue="CentreAligned" name="HorzLabelFormatting" />
         <PropertyDefinition initialValue="" name="ButtonImage" redrawOnWrite="true" />
@@ -5702,7 +5673,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightNormal" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftNormal" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightNormal" />
-<!--#@own 393-->
+<!--#@own 390-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddleNormal" />
             </FrameComponent>
             <ImageryComponent>
@@ -5742,7 +5713,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightHighlight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftHighlight" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightHighlight" />
-<!--#@own 394-->
+<!--#@own 391-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddleHighlight" />
             </FrameComponent>
             <ImageryComponent>
@@ -5793,7 +5764,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightPushed" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftPushed" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightPushed" />
-<!--#@own 395-->
+<!--#@own 392-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddlePushed" />
             </FrameComponent>
             <ImageryComponent>
@@ -5842,7 +5813,7 @@
         </StateImagery>
         <StateImagery name="Hover">
             <Layer>
-<!--#@own 396-->
+<!--#@own 393-->
                 <Section section="label">
                     <ColourProperty name="HoverTextColour" />
                 </Section>
@@ -5850,7 +5821,7 @@
         </StateImagery>
         <StateImagery name="Pushed">
             <Layer>
-<!--#@own 397-->
+<!--#@own 394-->
                 <Section section="label">
                     <ColourProperty name="PushedTextColour" />
                 </Section>
@@ -5858,7 +5829,7 @@
         </StateImagery>
         <StateImagery name="PushedOff">
             <Layer>
-<!--#@own 398-->
+<!--#@own 395-->
                 <Section section="label">
                     <ColourProperty name="HoverTextColour" />
                 </Section>
@@ -5866,7 +5837,7 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 399-->
+<!--#@own 396-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
                 <Section section="label">
@@ -5874,7 +5845,7 @@
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 400-->
+<!--#@own 397-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -5882,7 +5853,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 401-->
+<!--#@own 398-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -5920,7 +5891,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 402-->
+<!--#@own 399-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -5928,7 +5899,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 403-->
+<!--#@own 400-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -5966,7 +5937,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 404-->
+<!--#@own 401-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -5974,7 +5945,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 405-->
+<!--#@own 402-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -6012,7 +5983,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 406-->
+<!--#@own 403-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6020,7 +5991,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 407-->
+<!--#@own 404-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -6046,13 +6017,13 @@
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
-<!--#@own 408-->
+<!--#@own 405-->
     </WidgetLook>
 
-<!--#@own 409-->
+<!--#@own 406-->
     <WidgetLook name="OD/IconButton">
         <Property name="WantsMultiClickEvents" value="False" />
-<!--#@own 410-->
+<!--#@own 407-->
         <PropertyDefinition initialValue="CentreAligned" name="VertLabelFormatting" />
         <PropertyDefinition initialValue="CentreAligned" name="HorzLabelFormatting" />
         <PropertyDefinition initialValue="" name="IconImage" redrawOnWrite="true" />
@@ -6086,7 +6057,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightNormal" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftNormal" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightNormal" />
-<!--#@own 411-->
+<!--#@own 408-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddleNormal" />
             </FrameComponent>
             <ImageryComponent>
@@ -6114,7 +6085,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightHighlight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftHighlight" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightHighlight" />
-<!--#@own 412-->
+<!--#@own 409-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddleHighlight" />
             </FrameComponent>
             <ImageryComponent>
@@ -6153,7 +6124,7 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightPushed" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftPushed" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightPushed" />
-<!--#@own 413-->
+<!--#@own 410-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddlePushed" />
             </FrameComponent>
             <ImageryComponent>
@@ -6190,7 +6161,7 @@
         </StateImagery>
         <StateImagery name="Hover">
             <Layer>
-<!--#@own 414-->
+<!--#@own 411-->
                 <Section section="label">
                     <ColourProperty name="HoverTextColour" />
                 </Section>
@@ -6198,7 +6169,7 @@
         </StateImagery>
         <StateImagery name="Pushed">
             <Layer>
-<!--#@own 415-->
+<!--#@own 412-->
                 <Section section="label">
                     <ColourProperty name="PushedTextColour" />
                 </Section>
@@ -6206,7 +6177,7 @@
         </StateImagery>
         <StateImagery name="PushedOff">
             <Layer>
-<!--#@own 416-->
+<!--#@own 413-->
                 <Section section="label">
                     <ColourProperty name="HoverTextColour" />
                 </Section>
@@ -6214,7 +6185,7 @@
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 417-->
+<!--#@own 414-->
                     <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
                 </Section>
                 <Section section="label">
@@ -6222,7 +6193,7 @@
                 </Section>
             </Layer>
         </StateImagery>
-<!--#@own 418-->
+<!--#@own 415-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6230,7 +6201,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 419-->
+<!--#@own 416-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -6256,7 +6227,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 420-->
+<!--#@own 417-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6264,7 +6235,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 421-->
+<!--#@own 418-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -6290,7 +6261,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 422-->
+<!--#@own 419-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6298,7 +6269,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 423-->
+<!--#@own 420-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -6324,7 +6295,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 424-->
+<!--#@own 421-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6332,7 +6303,7 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 425-->
+<!--#@own 422-->
             </FrameComponent>
             <ImageryComponent>
                 <Area>
@@ -6346,20 +6317,20 @@
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
-<!--#@own 426-->
+<!--#@own 423-->
     </WidgetLook>
 
     <WidgetLook name="OD/GameTabButton">
-<!--#@own 427-->
+<!--#@own 424-->
         <Property name="WantsMultiClickEvents" value="False" />
         <PropertyDefinition initialValue="" name="NormalImage" redrawOnWrite="true" />
-<!--#@own 428-->
+<!--#@own 425-->
         <PropertyDefinition initialValue="OpenDungeonsSkin/ButtonHoverEffect" name="HoverImage" redrawOnWrite="true" />
         <PropertyDefinition initialValue="OpenDungeonsSkin/ButtonPushedEffect" name="PushedImage" redrawOnWrite="true" />
         <PropertyDefinition initialValue="OpenDungeonsSkin/ButtonDisabledEffect" name="DisabledImage" redrawOnWrite="true" />
         <PropertyDefinition initialValue="Stretched" name="VertImageFormatting" redrawOnWrite="true" />
         <PropertyDefinition initialValue="Stretched" name="HorzImageFormatting" redrawOnWrite="true" />
-<!--#@own 429-->
+<!--#@own 426-->
         <ImagerySection name="background">
             <ImageryComponent>
                 <Area>
@@ -6382,12 +6353,12 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
                 <ImageProperty name="NormalImage" />
-<!--#@own 430-->
+<!--#@own 427-->
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 431-->
+<!--#@own 428-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6395,12 +6366,12 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 432-->
+<!--#@own 429-->
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 433-->
+<!--#@own 430-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6470,7 +6441,7 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 434-->
+<!--#@own 431-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6478,12 +6449,24 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 435-->
+<!--#@own 432-->
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
         <StateImagery name="Normal">
+            <Layer priority="0">
+<!--#@own 433-->
+            </Layer>
+            <Layer priority="1">
+                <Section section="normal" />
+<!--#@own 434-->
+            </Layer>
+            <Layer priority="2">
+<!--#@own 435-->
+            </Layer>
+        </StateImagery>
+        <StateImagery name="Hover">
             <Layer priority="0">
 <!--#@own 436-->
             </Layer>
@@ -6494,9 +6477,12 @@
             <Layer priority="2">
 <!--#@own 438-->
             </Layer>
+            <Layer priority="3">
+                <Section section="hover" />
+            </Layer>
 <!--#@own 439-->
         </StateImagery>
-        <StateImagery name="Hover">
+        <StateImagery name="Pushed">
             <Layer priority="0">
 <!--#@own 440-->
             </Layer>
@@ -6508,11 +6494,11 @@
 <!--#@own 442-->
             </Layer>
             <Layer priority="3">
-                <Section section="hover" />
+                <Section section="pushed" />
             </Layer>
 <!--#@own 443-->
         </StateImagery>
-        <StateImagery name="Pushed">
+        <StateImagery name="PushedOff">
             <Layer priority="0">
 <!--#@own 444-->
             </Layer>
@@ -6524,11 +6510,11 @@
 <!--#@own 446-->
             </Layer>
             <Layer priority="3">
-                <Section section="pushed" />
+                <Section section="hover" />
             </Layer>
 <!--#@own 447-->
         </StateImagery>
-        <StateImagery name="PushedOff">
+        <StateImagery name="Disabled">
             <Layer priority="0">
 <!--#@own 448-->
             </Layer>
@@ -6540,27 +6526,11 @@
 <!--#@own 450-->
             </Layer>
             <Layer priority="3">
-                <Section section="hover" />
+                <Section section="disabled" />
             </Layer>
 <!--#@own 451-->
         </StateImagery>
-        <StateImagery name="Disabled">
-            <Layer priority="0">
 <!--#@own 452-->
-            </Layer>
-            <Layer priority="1">
-                <Section section="normal" />
-<!--#@own 453-->
-            </Layer>
-            <Layer priority="2">
-<!--#@own 454-->
-            </Layer>
-            <Layer priority="3">
-                <Section section="disabled" />
-            </Layer>
-<!--#@own 455-->
-        </StateImagery>
-<!--#@own 456-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6568,13 +6538,42 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 457-->
+<!--#@own 453-->
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 458-->
+<!--#@own 454-->
             <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 455-->
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 456-->
+                <VertFormatProperty name="VertImageFormatting" />
+                <HorzFormatProperty name="HorzImageFormatting" />
+            </ImageryComponent>
+        </ImagerySection>
+<!--#@own 457-->
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 458-->
+            <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
@@ -6582,20 +6581,20 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 459-->
-            <ImageryComponent>
+                <VertFormatProperty name="VertImageFormatting" />
+                <HorzFormatProperty name="HorzImageFormatting" />
+            </ImageryComponent>
+        </ImagerySection>
+<!--#@own 460-->
+            <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 460-->
-                <VertFormatProperty name="VertImageFormatting" />
-                <HorzFormatProperty name="HorzImageFormatting" />
-            </ImageryComponent>
-        </ImagerySection>
 <!--#@own 461-->
-            <FrameComponent>
+            <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
@@ -6603,6 +6602,11 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 462-->
+                <VertFormatProperty name="VertImageFormatting" />
+                <HorzFormatProperty name="HorzImageFormatting" />
+            </ImageryComponent>
+        </ImagerySection>
+<!--#@own 463-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -6610,19 +6614,11 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 463-->
+<!--#@own 464-->
                 <VertFormatProperty name="VertImageFormatting" />
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 464-->
-            <FrameComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
 <!--#@own 465-->
             <ImageryComponent>
                 <Area>
@@ -6675,56 +6671,55 @@
                 <HorzFormatProperty name="HorzImageFormatting" />
             </ImageryComponent>
         </ImagerySection>
+    </WidgetLook>
+
 <!--#@own 473-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+        <NamedArea name="WithFrameTextRenderArea">
+            <Area>
 <!--#@own 474-->
-                <VertFormatProperty name="VertImageFormatting" />
-                <HorzFormatProperty name="HorzImageFormatting" />
-            </ImageryComponent>
-        </ImagerySection>
+                <Dim type="TopEdge"><ImageDim dimension="Height" name="OpenDungeonsSkin/StaticTop" /></Dim>
 <!--#@own 475-->
             <ImageryComponent>
                 <Area>
+<!--#@own 476-->
+                </Area>
+                <Image name="OpenDungeonsSkin/SelectionBrush" />
+<!--#@own 477-->
+            </ImageryComponent>
+        </ImagerySection>
+<!--#@own 478-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 479-->
+            </ImageryComponent>
+        </ImagerySection>
+<!--#@own 480-->
+            <ImageryComponent>
+                <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 476-->
-                <VertFormatProperty name="VertImageFormatting" />
-                <HorzFormatProperty name="HorzImageFormatting" />
-            </ImageryComponent>
-        </ImagerySection>
-    </WidgetLook>
-
-<!--#@own 477-->
-        <NamedArea name="WithFrameTextRenderArea">
-            <Area>
-<!--#@own 478-->
-                <Dim type="TopEdge"><ImageDim dimension="Height" name="OpenDungeonsSkin/StaticTop" /></Dim>
-<!--#@own 479-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 480-->
-                </Area>
-                <Image name="OpenDungeonsSkin/SelectionBrush" />
 <!--#@own 481-->
+                <VertFormat type="Stretched" />
+                <HorzFormat type="Stretched" />
             </ImageryComponent>
         </ImagerySection>
 <!--#@own 482-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 483-->
+                <VertFormat type="Stretched" />
+                <HorzFormat type="Stretched" />
             </ImageryComponent>
         </ImagerySection>
 <!--#@own 484-->
-            <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
@@ -6737,71 +6732,46 @@
             </ImageryComponent>
         </ImagerySection>
 <!--#@own 486-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 487-->
-                <VertFormat type="Stretched" />
-                <HorzFormat type="Stretched" />
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 488-->
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 489-->
-                <VertFormat type="Stretched" />
-                <HorzFormat type="Stretched" />
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 490-->
                 <ImageProperty name="NormalImage" />
                 <VertFormat type="Stretched" />
                 <HorzFormat type="Stretched" />
             </ImageryComponent>
         </ImagerySection>
         <StateImagery name="Normal">
-<!--#@own 491-->
+<!--#@own 487-->
         </StateImagery>
         <StateImagery name="Hover">
             <Layer>
-<!--#@own 492-->
+<!--#@own 488-->
             </Layer>
         </StateImagery>
         <StateImagery name="Pushed">
             <Layer>
-<!--#@own 493-->
+<!--#@own 489-->
             </Layer>
         </StateImagery>
         <StateImagery name="PushedOff">
-<!--#@own 494-->
+<!--#@own 490-->
         </StateImagery>
         <StateImagery name="Disabled">
             <Layer>
-<!--#@own 495-->
+<!--#@own 491-->
         </StateImagery>
     </WidgetLook>
-<!--#@own 496-->
+<!--#@own 492-->
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 497-->
+<!--#@own 493-->
                 <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
             </Area>
             <HorzAlignment type="RightAligned" />
         </Child>
-<!--#@own 498-->
+<!--#@own 494-->
         <ImagerySection name="label">
             <TextComponent>
                 <Area>
-<!--#@own 499-->
+<!--#@own 495-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="RightEdge"><UnifiedDim scale="1" type="RightEdge" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
@@ -6810,6 +6780,22 @@
                 <HorzFormatProperty name="HorzLabelFormatting" />
             </TextComponent>
         </ImagerySection>
+<!--#@own 496-->
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 497-->
+                <VertFormat type="CentreAligned" />
+                <HorzFormat type="CentreAligned" />
+            </TextComponent>
+<!--#@own 498-->
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 499-->
+                <VertFormat type="CentreAligned" />
+                <HorzFormat type="CentreAligned" />
+            </TextComponent>
 <!--#@own 500-->
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
@@ -6922,218 +6908,202 @@
                 <VertFormat type="CentreAligned" />
                 <HorzFormat type="CentreAligned" />
             </TextComponent>
-<!--#@own 528-->
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 529-->
-                <VertFormat type="CentreAligned" />
-                <HorzFormat type="CentreAligned" />
-            </TextComponent>
-<!--#@own 530-->
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 531-->
-                <VertFormat type="CentreAligned" />
-                <HorzFormat type="CentreAligned" />
-            </TextComponent>
         </ImagerySection>
-<!--#@own 532-->
+<!--#@own 528-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 529-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 530-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 531-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 532-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 533-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+            <ImageryComponent>
+                <Area>
 <!--#@own 534-->
-            <ImageryComponent>
-                <Area>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 535-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 536-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+            <ImageryComponent>
+                <Area>
 <!--#@own 537-->
-            <ImageryComponent>
-                <Area>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 538-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 539-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 540-->
+<!--#@own 539-->
             <ImageryComponent>
                 <Area>
-<!--#@own 541-->
+<!--#@own 540-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 542-->
+<!--#@own 541-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
+<!--#@own 542-->
+            </ImageryComponent>
+        </ImagerySection>
 <!--#@own 543-->
             <ImageryComponent>
                 <Area>
-<!--#@own 544-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 545-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 546-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 547-->
-            <ImageryComponent>
-                <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 544-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 545-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 546-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 547-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 548-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+            <ImageryComponent>
+                <Area>
 <!--#@own 549-->
-            <ImageryComponent>
-                <Area>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 550-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 551-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+            <ImageryComponent>
+                <Area>
 <!--#@own 552-->
-            <ImageryComponent>
-                <Area>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 553-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 554-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 555-->
+<!--#@own 554-->
             <ImageryComponent>
                 <Area>
-<!--#@own 556-->
+<!--#@own 555-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 557-->
+<!--#@own 556-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
+<!--#@own 557-->
+            </ImageryComponent>
+        </ImagerySection>
 <!--#@own 558-->
             <ImageryComponent>
                 <Area>
-<!--#@own 559-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 560-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 561-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 562-->
-            <ImageryComponent>
-                <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 559-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 560-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 561-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 562-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 563-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+            <ImageryComponent>
+                <Area>
 <!--#@own 564-->
-            <ImageryComponent>
-                <Area>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 565-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 566-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+            <ImageryComponent>
+                <Area>
 <!--#@own 567-->
-            <ImageryComponent>
-                <Area>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 568-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 569-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 570-->
+<!--#@own 569-->
             <ImageryComponent>
                 <Area>
-<!--#@own 571-->
+<!--#@own 570-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 572-->
+<!--#@own 571-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
+<!--#@own 572-->
+            </ImageryComponent>
+        </ImagerySection>
 <!--#@own 573-->
             <ImageryComponent>
                 <Area>
-<!--#@own 574-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 575-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 576-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 577-->
-            <ImageryComponent>
-                <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 574-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 575-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 576-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 577-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 578-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+            <ImageryComponent>
+                <Area>
 <!--#@own 579-->
-            <ImageryComponent>
-                <Area>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 580-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
 <!--#@own 581-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
+            <ImageryComponent>
+                <Area>
 <!--#@own 582-->
-            <ImageryComponent>
-                <Area>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 583-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 584-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 585-->
+<!--#@own 584-->
             <ImageryComponent>
                 <Area>
-<!--#@own 586-->
+<!--#@own 585-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 587-->
+<!--#@own 586-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
+<!--#@own 587-->
+            </ImageryComponent>
+        </ImagerySection>
 <!--#@own 588-->
-            <ImageryComponent>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <ImagerySection name="caption">
+            <TextComponent>
                 <Area>
 <!--#@own 589-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                </Area>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
 <!--#@own 590-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-<!--#@own 591-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 592-->
-                <VertFormatProperty name="VertLabelFormatting" />
-                <HorzFormatProperty name="HorzLabelFormatting" />
-            </TextComponent>
-        </ImagerySection>
-        <ImagerySection name="caption">
-            <TextComponent>
-                <Area>
-<!--#@own 593-->
-                </Area>
-                <VertFormatProperty name="VertLabelFormatting" />
-                <HorzFormatProperty name="HorzLabelFormatting" />
-            </TextComponent>
-        </ImagerySection>
-<!--#@own 594-->
         <PropertyDefinition initialValue="" name="IconImage" redrawOnWrite="true" />
-<!--#@own 595-->
+<!--#@own 591-->
                 </Area>
                 <ImageProperty name="IconImage" />
-<!--#@own 596-->
+<!--#@own 592-->
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 597-->
+<!--#@own 593-->
                 <VertFormatProperty name="VertLabelFormatting" />
                 <HorzFormatProperty name="HorzLabelFormatting" />
             </TextComponent>
@@ -7141,67 +7111,79 @@
         <ImagerySection name="caption">
             <TextComponent>
                 <Area>
-<!--#@own 598-->
+<!--#@own 594-->
                 </Area>
                 <VertFormatProperty name="VertLabelFormatting" />
                 <HorzFormatProperty name="HorzLabelFormatting" />
             </TextComponent>
         </ImagerySection>
-<!--#@own 599-->
+<!--#@own 595-->
         <NamedArea name="ClientWithTitleWithFrame">
-<!--#@own 600-->
+<!--#@own 596-->
         </NamedArea>
         <NamedArea name="ClientWithTitleNoFrame">
             <Area>
-<!--#@own 601-->
+<!--#@own 597-->
             </Area>
         </NamedArea>
         <NamedArea name="ClientNoTitleWithFrame">
             <Area>
-<!--#@own 602-->
+<!--#@own 598-->
             </Area>
         </NamedArea>
         <NamedArea name="ClientNoTitleNoFrame">
             <Area>
-<!--#@own 603-->
+<!--#@own 599-->
             </Area>
             <Property name="AlwaysOnTop" value="False" />
             <Property name="WantsMultiClickEvents" value="False" />
-<!--#@own 604-->
+<!--#@own 600-->
         </Child>
         <Child nameSuffix="__auto_closebutton__" type="OD/SystemButton">
             <Area>
-<!--#@own 605-->
+<!--#@own 601-->
             </Area>
-<!--#@own 606-->
+<!--#@own 602-->
             <Property name="AlwaysOnTop" value="True" />
             <Property name="NormalImage" value="OpenDungeonsSkin/CloseButtonNormal" />
             <Property name="HoverImage" value="OpenDungeonsSkin/CloseButtonHover" />
             <Property name="PushedImage" value="OpenDungeonsSkin/CloseButtonPressed" />
         </Child>
+<!--#@own 603-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 604-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 605-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 606-->
+            <ImageryComponent>
+                <Area>
 <!--#@own 607-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 608-->
             <ImageryComponent>
                 <Area>
 <!--#@own 609-->
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 610-->
             <ImageryComponent>
                 <Area>
 <!--#@own 611-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 612-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 613-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 614-->
             <ImageryComponent>
                 <Area>
@@ -7210,19 +7192,7 @@
 <!--#@own 616-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 617-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 618-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 619-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 620-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 621-->
         <ImagerySection name="caption">
             <TextComponent>
                 <Area>
@@ -7236,76 +7206,71 @@
                 <HorzFormat type="CentreAligned" />
             </TextComponent>
         </ImagerySection>
-<!--#@own 622-->
+<!--#@own 618-->
         <NamedArea name="WithFrameTextRenderArea">
             <Area>
+<!--#@own 619-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 620-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 621-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 622-->
+            <ImageryComponent>
+                <Area>
 <!--#@own 623-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 624-->
             <ImageryComponent>
                 <Area>
 <!--#@own 625-->
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 626-->
             <ImageryComponent>
                 <Area>
 <!--#@own 627-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 628-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 629-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 630-->
-            <ImageryComponent>
-                <Area>
+            </ImageryComponent>
+        </ImagerySection>
 <!--#@own 631-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+        <Property name="VertFree" value="True" />
 <!--#@own 632-->
-            <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
 <!--#@own 633-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 634-->
-            </ImageryComponent>
-        </ImagerySection>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
 <!--#@own 635-->
-        <Property name="VertFree" value="True" />
-<!--#@own 636-->
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-<!--#@own 637-->
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 638-->
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-<!--#@own 639-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 640-->
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-<!--#@own 641-->
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 642-->
+<!--#@own 636-->
         <Property name="VerticalScrollbar" value="True" />
         <NamedArea name="ThumbTrackArea">
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 643-->
+<!--#@own 637-->
                 <Dim type="RightEdge"><UnifiedDim scale="1" type="RightEdge" /></Dim>
-<!--#@own 644-->
+<!--#@own 638-->
             </Area>
         </NamedArea>
         <Child nameSuffix="__auto_incbtn__" type="OD/InvisibleButton">
@@ -7313,37 +7278,57 @@
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-<!--#@own 645-->
+<!--#@own 639-->
             </Area>
             <VertAlignment type="BottomAligned" />
-<!--#@own 646-->
+<!--#@own 640-->
         </Child>
         <Child nameSuffix="__auto_decbtn__" type="OD/InvisibleButton">
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-<!--#@own 647-->
+<!--#@own 641-->
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 648-->
+<!--#@own 642-->
                 <Dim type="Height"><UnifiedDim scale="0.1" type="Height" /></Dim>
             </Area>
             <Property name="MinSize" value="{{0,0},{0,25}}" />
         </Child>
-<!--#@own 649-->
+<!--#@own 643-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 650-->
+<!--#@own 644-->
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-<!--#@own 651-->
+<!--#@own 645-->
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 652-->
+<!--#@own 646-->
         <NamedArea name="TextArea">
+<!--#@own 647-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 648-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 649-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 650-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 651-->
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 652-->
+            <ImageryComponent>
+                <Area>
 <!--#@own 653-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 654-->
             <ImageryComponent>
                 <Area>
@@ -7352,49 +7337,49 @@
 <!--#@own 656-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 657-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 658-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 659-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 660-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 661-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 662-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 663-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 664-->
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 665-->
+<!--#@own 659-->
         <NamedArea name="ItemRenderingArea">
-<!--#@own 666-->
+<!--#@own 660-->
         </NamedArea>
         <NamedArea name="ItemRenderingAreaVScroll">
-<!--#@own 667-->
+<!--#@own 661-->
         </NamedArea>
         <NamedArea name="ItemRenderingAreaHScroll">
-<!--#@own 668-->
+<!--#@own 662-->
         </NamedArea>
         <NamedArea name="ItemRenderingAreaHVScroll">
-<!--#@own 669-->
+<!--#@own 663-->
             <HorzAlignment type="RightAligned" />
+<!--#@own 664-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 665-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 666-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 667-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 668-->
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 669-->
+            <ImageryComponent>
+                <Area>
 <!--#@own 670-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 671-->
             <ImageryComponent>
                 <Area>
@@ -7403,59 +7388,59 @@
 <!--#@own 673-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 674-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 675-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 676-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 677-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 678-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 679-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 680-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 681-->
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 682-->
+<!--#@own 676-->
         <PropertyLinkDefinition initialValue="FF000000" name="SelectedEditTextColour" targetProperty="SelectedTextColour" widget="__auto_editbox__" />
-<!--#@own 683-->
+<!--#@own 677-->
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 684-->
+<!--#@own 678-->
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_editbox__" /></Dim>
                 <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                 <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
             </Area>
-<!--#@own 685-->
+<!--#@own 679-->
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 686-->
+<!--#@own 680-->
                 <Dim type="Height"><WidgetDim dimension="Height" widget="__auto_editbox__" /></Dim>
             </Area>
             <HorzAlignment type="RightAligned" />
-<!--#@own 687-->
+<!--#@own 681-->
         </Child>
         <StateImagery name="Enabled" />
         <StateImagery name="Disabled" />
     </WidgetLook>
+<!--#@own 682-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 683-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 684-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 685-->
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 686-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 687-->
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 688-->
             <ImageryComponent>
                 <Area>
@@ -7464,56 +7449,55 @@
 <!--#@own 690-->
             <ImageryComponent>
                 <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 691-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 692-->
             <ImageryComponent>
                 <Area>
 <!--#@own 693-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 694-->
             <ImageryComponent>
                 <Area>
 <!--#@own 695-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+            </ImageryComponent>
+        </ImagerySection>
 <!--#@own 696-->
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+        <PropertyDefinition initialValue="CentreAligned" name="VertLabelFormatting" />
+        <PropertyDefinition initialValue="CentreAligned" name="HorzLabelFormatting" />
 <!--#@own 697-->
             <ImageryComponent>
                 <Area>
-<!--#@own 698-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 699-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 700-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 701-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 702-->
-        <PropertyDefinition initialValue="CentreAligned" name="VertLabelFormatting" />
-        <PropertyDefinition initialValue="CentreAligned" name="HorzLabelFormatting" />
-<!--#@own 703-->
-            <ImageryComponent>
-                <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 698-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 699-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 700-->
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 701-->
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+<!--#@own 702-->
+            <ImageryComponent>
+                <Area>
+<!--#@own 703-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 704-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 705-->
+            </ImageryComponent>
+        </ImagerySection>
+<!--#@own 706-->
             <ImageryComponent>
                 <Area>
-<!--#@own 706-->
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 707-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
@@ -7527,20 +7511,20 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 711-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 712-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 712-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 713-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 714-->
+            </ImageryComponent>
+        </ImagerySection>
+<!--#@own 715-->
             <ImageryComponent>
                 <Area>
-<!--#@own 715-->
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 716-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
@@ -7554,20 +7538,20 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 720-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 721-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 721-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 722-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 723-->
+            </ImageryComponent>
+        </ImagerySection>
+<!--#@own 724-->
             <ImageryComponent>
                 <Area>
-<!--#@own 724-->
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 725-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
@@ -7581,87 +7565,68 @@
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 729-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 730-->
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+<!--#@own 730-->
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 731-->
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
 <!--#@own 732-->
-            <ImageryComponent>
-                <Area>
+            </ImageryComponent>
+        </ImagerySection>
 <!--#@own 733-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
+        <ImagerySection name="caption">
+            <TextComponent>
+                <Area>
 <!--#@own 734-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
+                <VertFormatProperty name="VertLabelFormatting" />
+                <HorzFormatProperty name="HorzLabelFormatting" />
+            </TextComponent>
+        </ImagerySection>
 <!--#@own 735-->
+        <PropertyDefinition initialValue="" name="ButtonImage" redrawOnWrite="true" />
+<!--#@own 736-->
             <ImageryComponent>
                 <Area>
-<!--#@own 736-->
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
 <!--#@own 737-->
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
+                <ImageProperty name="ButtonImage" />
 <!--#@own 738-->
             </ImageryComponent>
         </ImagerySection>
 <!--#@own 739-->
-                <VertFormatProperty name="VertLabelFormatting" />
-                <HorzFormatProperty name="HorzLabelFormatting" />
             </TextComponent>
         </ImagerySection>
         <ImagerySection name="caption">
             <TextComponent>
-                <Area>
 <!--#@own 740-->
-                </Area>
-                <VertFormatProperty name="VertLabelFormatting" />
-                <HorzFormatProperty name="HorzLabelFormatting" />
             </TextComponent>
         </ImagerySection>
 <!--#@own 741-->
-        <PropertyDefinition initialValue="" name="ButtonImage" redrawOnWrite="true" />
-<!--#@own 742-->
-            <ImageryComponent>
-                <Area>
-<!--#@own 743-->
-                </Area>
-                <ImageProperty name="ButtonImage" />
-<!--#@own 744-->
-            </ImageryComponent>
-        </ImagerySection>
-<!--#@own 745-->
-            </TextComponent>
-        </ImagerySection>
-        <ImagerySection name="caption">
-            <TextComponent>
-<!--#@own 746-->
-            </TextComponent>
-        </ImagerySection>
-<!--#@own 747-->
         <Property name="WantsMultiClickEvents" value="False" />
-<!--#@own 748-->
+<!--#@own 742-->
         <PropertyDefinition initialValue="CentreAligned" name="VertLabelFormatting" />
         <PropertyDefinition initialValue="CentreAligned" name="HorzLabelFormatting" />
-<!--#@own 749-->
+<!--#@own 743-->
         <StateImagery name="Enabled" />
         <StateImagery name="Disabled" />
-<!--#@own 750-->
+<!--#@own 744-->
         <Property name="FrameEnabled" value="False" />
         <Property name="BackgroundEnabled" value="False" />
         <Property name="HorzFormatting" value="CentreAligned" />
-<!--#@own 751-->
+<!--#@own 745-->
         <StateImagery name="Enabled">
             <Layer>
-<!--#@own 752-->
+<!--#@own 746-->
         </StateImagery>
     </WidgetLook>
-<!--#@own 753-->
+<!--#@own 747-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -7670,10 +7635,10 @@
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
                 <Image name="OpenDungeonsSkin/SelectionBrush" />
-<!--#@own 754-->
+<!--#@own 748-->
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 755-->
+<!--#@own 749-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -7681,24 +7646,24 @@
                     <Dim type="RightEdge"><UnifiedDim scale="1" type="RightEdge" /></Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
-<!--#@own 756-->
+<!--#@own 750-->
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 757-->
+<!--#@own 751-->
         <StateImagery name="Enabled" />
         <StateImagery name="Disabled" />
     </WidgetLook>
 
-<!--#@own 758-->
+<!--#@own 752-->
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="2" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 759-->
+<!--#@own 753-->
                 <Dim type="Height"><UnifiedDim scale="0.1" type="Height" /></Dim>
             </Area>
             <Property name="MinSize" value="{{0,0},{0,25}}" />
         </Child>
-<!--#@own 760-->
+<!--#@own 754-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
@@ -7709,30 +7674,27 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/VerticalSliderTopRight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/VerticalSliderBottomLeft" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/VerticalSliderBottomRight" />
-<!--#@own 761-->
+<!--#@own 755-->
 
             </FrameComponent>
             </ImagerySection>
-<!--#@own 762-->
+<!--#@own 756-->
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 763-->
-            </Area>
-            <HorzAlignment type="RightAligned" />
-<!--#@own 764-->
+<!--#@own 757-->
             </Area>
             <HorzAlignment type="RightAligned" />
         </Child>
-<!--#@own 765-->
+<!--#@own 758-->
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_listheader__" /></Dim>
-<!--#@own 766-->
+<!--#@own 759-->
             </Area>
             <HorzAlignment type="RightAligned" />
         </Child>
-<!--#@own 767-->
+<!--#@own 760-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
@@ -7743,9 +7705,9 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightNormal" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftNormal" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightNormal" />
-<!--#@own 768-->
+<!--#@own 761-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddleNormal" />
-<!--#@own 769-->
+<!--#@own 762-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
@@ -7756,9 +7718,9 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightHighlight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftHighlight" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightHighlight" />
-<!--#@own 770-->
+<!--#@own 763-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddleHighlight" />
-<!--#@own 771-->
+<!--#@own 764-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
@@ -7769,35 +7731,35 @@
                 <Image component="TopRightCorner" name="OpenDungeonsSkin/ButtonTopRightPushed" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/ButtonBottomLeftPushed" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/ButtonBottomRightPushed" />
-<!--#@own 772-->
+<!--#@own 765-->
                 <Image component="Background" name="OpenDungeonsSkin/ButtonMiddlePushed" />
-<!--#@own 773-->
+<!--#@own 766-->
                 </Area>
                 <ImageProperty name="NormalImage" />
-<!--#@own 774-->
+<!--#@own 767-->
                 </Area>
                 <ImageProperty name="HoverImage" />
-<!--#@own 775-->
+<!--#@own 768-->
                 </Area>
                 <ImageProperty name="PushedImage" />
-<!--#@own 776-->
+<!--#@own 769-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 777-->
+<!--#@own 770-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 778-->
+<!--#@own 771-->
         <NamedArea name="WithFrameTextRenderArea">
             <Area>
-<!--#@own 779-->
+<!--#@own 772-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -7805,12 +7767,12 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 780-->
+<!--#@own 773-->
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
             </FrameComponent>
         </ImagerySection>
-<!--#@own 781-->
+<!--#@own 774-->
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -7818,19 +7780,19 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 782-->
+<!--#@own 775-->
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
-<!--#@own 783-->
+<!--#@own 776-->
             <Image name="OpenDungeonsSkin/SelectionBrush" />
-<!--#@own 784-->
+<!--#@own 777-->
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-<!--#@own 785-->
+<!--#@own 778-->
                 <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
             </Area>
-<!--#@own 786-->
+<!--#@own 779-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
@@ -7845,14 +7807,14 @@
                 <Image component="RightEdge" name="OpenDungeonsSkin/HorizontalSliderRight" />
                 <Image component="BottomEdge" name="OpenDungeonsSkin/HorizontalSliderBottom" />
                 <Image component="TopEdge" name="OpenDungeonsSkin/HorizontalSliderTop" />
-<!--#@own 787-->
+<!--#@own 780-->
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-<!--#@own 788-->
+<!--#@own 781-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -7861,12 +7823,12 @@
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
                 <Image name="OpenDungeonsSkin/SelectionBrush" />
-<!--#@own 789-->
+<!--#@own 782-->
                 <VertFormat type="Stretched" />
                 <HorzFormat type="Stretched" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 790-->
+<!--#@own 783-->
             <ImageryComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
@@ -7874,11 +7836,11 @@
                     <Dim type="RightEdge"><UnifiedDim scale="1" type="RightEdge" /></Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
-<!--#@own 791-->
+<!--#@own 784-->
                 <VertFormat type="Stretched" />
                 <HorzFormat type="Stretched" />
             </ImageryComponent>
         </ImagerySection>
-<!--#@own 792-->
+<!--#@own 785-->
 
 </Falagard>
