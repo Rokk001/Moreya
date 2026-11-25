@@ -19,9 +19,13 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
+#: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(ROOT)
+
 
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8')
+    """The text of a repository file; a mixed file of config/ or gui/ comes joined with its own rows of the content."""
+    return content_packages.read_text(ROOT, path)
 
 
 def function_body(text, signature):
@@ -39,10 +43,11 @@ def config_value(text, name):
 # Config: gold per seam tile and per step, cheer share, worker carry capacity
 # ---------------------------------------------------------------------------------------------------------------------
 global_cfg = read('config/global.cfg')
-assert config_value(global_cfg, 'GoldPerSeamTile') == 3000
-assert config_value(global_cfg, 'GoldPerDigStep') == 25
-assert config_value(global_cfg, 'GemGoldPerDigStep') == 16.67
-assert config_value(global_cfg, 'WorkerCheerGoldShare') == 0.35
+if WITH_CONTENT:
+    assert config_value(global_cfg, 'GoldPerSeamTile') == 3000
+    assert config_value(global_cfg, 'GoldPerDigStep') == 25
+    assert config_value(global_cfg, 'GemGoldPerDigStep') == 16.67
+    assert config_value(global_cfg, 'WorkerCheerGoldShare') == 0.35
 assert 'DigCoefGold' not in global_cfg and 'DigCoefGem' not in global_cfg
 config_manager = read('source/utils/ConfigManager.cpp')
 config_header = read('source/utils/ConfigManager.h')
@@ -52,10 +57,11 @@ assert 'DigCoefGold' not in config_manager and 'DigCoefGem' not in config_manage
 assert 'DigCoefGold' not in config_header and 'DigCoefGem' not in config_header
 
 creatures_cfg = read('config/creatures.cfg')
-for worker in ('Kobold', 'DwarfWorker'):
-    block = re.search(r'\[Creature\]\s*\n\s*Name\s+' + worker + r'\b.*?\[/Creature\]', creatures_cfg, re.S)
-    assert block is not None, worker
-    assert re.search(r'^\s*MaxGoldCarryable\s+100\s*$', block.group(0), re.M), worker + ' must carry 100 gold'
+if WITH_CONTENT:
+    for worker in ('Kobold', 'DwarfWorker'):
+        block = re.search(r'\[Creature\]\s*\n\s*Name\s+' + worker + r'\b.*?\[/Creature\]', creatures_cfg, re.S)
+        assert block is not None, worker
+        assert re.search(r'^\s*MaxGoldCarryable\s+100\s*$', block.group(0), re.M), worker + ' must carry 100 gold'
 assert not re.search(r'MaxGoldCarryable\s+1500', creatures_cfg)
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -211,14 +217,15 @@ assert editor.index('"    T - switch between full and empty tiles"') < editor.in
 assert 'mCurrentGoldDensity(Tile::GOLD_DENSITY_DEFAULT)' in editor
 assert 'EDITOR_GOLD_DENSITY = "HorizontalPipe/GoldDensityDisplay"' in read('source/render/Gui.cpp')
 assert 'static const std::string EDITOR_GOLD_DENSITY;' in read('source/render/Gui.h')
-layout = read('gui/ModeEditor.layout')
-density_window = layout[layout.index('name="GoldDensityDisplay"'):]
-density_window = density_window[:density_window.index('name="PositionDisplay"')]
-assert '{{0,210},{0,-3.5},{0,405},{0,28.5}}' in density_window            # FullnessDisplay x (5) + 205
-assert 'Gold density (G): 100%' in density_window
-# The three windows right of it are moved by the same 205 px so that nothing overlaps
-assert '{{0,415},{0,0},{0,615},{0,25}}' in layout and '{{0,635},{0,0},{0,765},{0,25}}' in layout
-assert '{{0,775},{0,0},{0,1005},{0,25}}' in layout
+if WITH_CONTENT:
+    layout = read('gui/ModeEditor.layout')
+    density_window = layout[layout.index('name="GoldDensityDisplay"'):]
+    density_window = density_window[:density_window.index('name="PositionDisplay"')]
+    assert '{{0,210},{0,-3.5},{0,405},{0,28.5}}' in density_window            # FullnessDisplay x (5) + 205
+    assert 'Gold density (G): 100%' in density_window
+    # The three windows right of it are moved by the same 205 px so that nothing overlaps
+    assert '{{0,415},{0,0},{0,615},{0,25}}' in layout and '{{0,635},{0,0},{0,765},{0,25}}' in layout
+    assert '{{0,775},{0,0},{0,1005},{0,25}}' in layout
 
 
 def next_density(density):
@@ -389,4 +396,8 @@ assert sorted(found_levels) == sorted(EXPECTED_LEVELS), sorted(set(found_levels)
 for level_name, expected in EXPECTED_LEVELS.items():
     assert found_levels[level_name] == expected, (level_name, found_levels[level_name], expected)
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_world_balance_gold', ['gold values of config/global.cfg', 'worker carry '
+                                                            'capacity of config/creatures.cfg', 'gold density window '
+                                                            'of gui/ModeEditor.layout'])
 print('Gold balance: config, density, mining, fractions, capacity, format, network, editor, look, levels passed')

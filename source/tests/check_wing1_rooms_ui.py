@@ -28,6 +28,11 @@ import time
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
+#: The mixed interface files come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(ROOT)
 START = time.perf_counter()
 FAILURES = []
 
@@ -59,9 +64,9 @@ PROBE_SKIRMISH_CASES = 4
 
 
 def read(relative):
-    """Returns the text of a file of the repository."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
-        return handle.read()
+    """Returns the text of a file of the repository; a mixed interface file of gui/ comes joined with its own rows of the
+    content."""
+    return content_packages.read_text(ROOT, relative)
 
 
 def function(source, signature):
@@ -91,9 +96,10 @@ def main():
     header = read("source/modes/GameMode.h")
 
     # Image contract and its loading: the scheme loads the imageset with the other imagesets of the game
-    scheme = ET.fromstring(read("gui/ODSkin.scheme"))
-    imagesets = [(node.get("filename"), node.get("name")) for node in scheme.iter("Imageset")]
-    check(imagesets.count((IMAGESET_FILE, IMAGESET_NAME)) == 1, "ODSkin.scheme loads SkillLockMarks.imageset once")
+    if WITH_CONTENT:
+        scheme = ET.fromstring(read("gui/ODSkin.scheme"))
+        imagesets = [(node.get("filename"), node.get("name")) for node in scheme.iter("Imageset")]
+        check(imagesets.count((IMAGESET_FILE, IMAGESET_NAME)) == 1, "ODSkin.scheme loads SkillLockMarks.imageset once")
     check('static const std::string RESEARCH_LOCK_IMAGE = "' + PADLOCK + '";' in game, "padlock image name")
     check('static const std::string NAVIGATION_PLACEHOLDER_IMAGE = "' + PLACEHOLDER + '";' in game,
           "question mark image name")
@@ -182,72 +188,79 @@ def main():
 
     # WR10, tree: the padlock in the icon area (inside the tile frame), right after the icon and under the state badge,
     # relative size (640x480 to 8K, UI scale 80-120 %)
-    look = read("gui/OD.looknfeel").replace("\r\n", "\n")
-    research = look[look.index('<WidgetLook name="OD/ResearchButton"'):]
-    research = research[:research.index("</WidgetLook>")]
-    check('<PropertyDefinition name="LockImage" initialValue="" redrawOnWrite="true" />' in research,
-          "OD/ResearchButton defines the padlock property, empty by default")
-    components = re.findall(r'<ImageryComponent>(?:(?!</ImageryComponent>).)*</ImageryComponent>', research)
-    icon_area = ('<Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge">'
-                 '<UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" />'
-                 '</Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area>')
-    lock_positions = [i for i, component in enumerate(components) if '<ImageProperty name="LockImage" />' in component]
-    check(len(lock_positions) == 3, "the padlock is drawn in the normal, pushed and disabled look of the field")
-    for position in lock_positions:
-        component = components[position]
-        check(position > 0 and '<ImageProperty name="ButtonImage" />' in components[position - 1],
-              "the padlock is drawn right over the icon")
-        check(icon_area in component and position > 0 and icon_area in components[position - 1],
-              "the padlock covers exactly the icon area inside the tile frame")
-        check("AbsoluteDim" not in component and '<VertFormat type="Stretched" />' in component and
-              '<HorzFormat type="Stretched" />' in component,
-              "the padlock scales with the field at every screen size and UI scale")
-    sections = re.findall(r'<ImagerySection name="research(?:_pushed|_disabled)?">.*?</ImagerySection>', research,
-                          re.S)
-    check(len(sections) == 3, "the field has its normal, pushed and disabled look")
-    for section in sections:
-        check('name="LockImage"' in section and 'name="StateImage"' in section and
-              section.index('name="LockImage"') < section.index('name="StateImage"'),
-              "the queue and research badges stay visible over the padlock")
+    if WITH_CONTENT:
+        look = read("gui/OD.looknfeel").replace("\r\n", "\n")
+        research = look[look.index('<WidgetLook name="OD/ResearchButton"'):]
+        research = research[:research.index("</WidgetLook>")]
+        check('<PropertyDefinition name="LockImage" initialValue="" redrawOnWrite="true" />' in research,
+              "OD/ResearchButton defines the padlock property, empty by default")
+        components = re.findall(r'<ImageryComponent>(?:(?!</ImageryComponent>).)*</ImageryComponent>', research)
+        icon_area = ('<Area><Dim type="LeftEdge"><UnifiedDim scale="0.1" type="Width" /></Dim><Dim type="TopEdge">'
+                     '<UnifiedDim scale="0.1" type="Height" /></Dim><Dim type="Width"><UnifiedDim scale="0.8" type="Width" />'
+                     '</Dim><Dim type="Height"><UnifiedDim scale="0.8" type="Height" /></Dim></Area>')
+        lock_positions = [i for i, component in enumerate(components) if '<ImageProperty name="LockImage" />' in component]
+        check(len(lock_positions) == 3, "the padlock is drawn in the normal, pushed and disabled look of the field")
+        for position in lock_positions:
+            component = components[position]
+            check(position > 0 and '<ImageProperty name="ButtonImage" />' in components[position - 1],
+                  "the padlock is drawn right over the icon")
+            check(icon_area in component and position > 0 and icon_area in components[position - 1],
+                  "the padlock covers exactly the icon area inside the tile frame")
+            check("AbsoluteDim" not in component and '<VertFormat type="Stretched" />' in component and
+                  '<HorzFormat type="Stretched" />' in component,
+                  "the padlock scales with the field at every screen size and UI scale")
+        sections = re.findall(r'<ImagerySection name="research(?:_pushed|_disabled)?">.*?</ImagerySection>', research,
+                              re.S)
+        check(len(sections) == 3, "the field has its normal, pushed and disabled look")
+        for section in sections:
+            check('name="LockImage"' in section and 'name="StateImage"' in section and
+                  section.index('name="LockImage"') < section.index('name="StateImage"'),
+                  "the queue and research badges stay visible over the padlock")
 
-    # WR10, navigation: the mark between the icon and the frame in every state, relative size
-    tab_button = look[look.index('<WidgetLook name="OD/GameTabButton">'):]
-    tab_button = tab_button[:tab_button.index("</WidgetLook>")]
-    check('<PropertyDefinition initialValue="" name="MarkImage" redrawOnWrite="true" />' in tab_button and
-          '<PropertyDefinition initialValue="FFFFFFFF" name="IconColour" redrawOnWrite="true" />' in tab_button,
-          "OD/GameTabButton defines the mark, empty by default, and the icon colour, white by default")
-    normal = re.search(r'<ImagerySection name="normal">.*?</ImagerySection>', tab_button, re.S).group(0)
-    check('<ImageProperty name="NormalImage" />' in normal and '<ColourRectProperty name="IconColour" />' in normal,
-          "the icon is drawn in the icon colour")
-    mark = re.search(r'<ImagerySection name="mark">.*?</ImagerySection>', tab_button, re.S)
-    check(mark is not None and '<ImageProperty name="MarkImage" />' in mark.group(0) and
-          '<Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>' in mark.group(0) and
-          '<Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>' in mark.group(0) and
-          '<VertFormatProperty name="VertImageFormatting" />' in mark.group(0) and
-          '<HorzFormatProperty name="HorzImageFormatting" />' in mark.group(0),
-          "the mark covers the icon area and scales with the button")
-    states = re.findall(r'<StateImagery name="(\w+)">(.*?)</StateImagery>', tab_button, re.S)
-    check(sorted(name for name, _ in states) == ["Disabled", "Hover", "Normal", "Pushed", "PushedOff"],
-          "the navigation button has its five states")
-    for name, state in states:
-        check('<Layer priority="1">\n                <Section section="normal" />\n'
-              '                <Section section="mark" />\n            </Layer>' in state,
-              "WR10: the mark is drawn over the icon in the " + name + " state")
-        check('<Layer priority="2">' in state and state.index('section="mark"') < state.index('<Layer priority="2">'),
-              "WR10: the frame of the " + name + " state is drawn over the mark")
-    check('<PropertyDefinition initialValue="Stretched" name="VertImageFormatting" redrawOnWrite="true" />' in tab_button
-          and '<PropertyDefinition initialValue="Stretched" name="HorzImageFormatting" redrawOnWrite="true" />'
-          in tab_button, "the marks fill the navigation button at every screen size and UI scale")
+        # WR10, navigation: the mark between the icon and the frame in every state, relative size
+        tab_button = look[look.index('<WidgetLook name="OD/GameTabButton">'):]
+        tab_button = tab_button[:tab_button.index("</WidgetLook>")]
+        check('<PropertyDefinition initialValue="" name="MarkImage" redrawOnWrite="true" />' in tab_button and
+              '<PropertyDefinition initialValue="FFFFFFFF" name="IconColour" redrawOnWrite="true" />' in tab_button,
+              "OD/GameTabButton defines the mark, empty by default, and the icon colour, white by default")
+        normal = re.search(r'<ImagerySection name="normal">.*?</ImagerySection>', tab_button, re.S).group(0)
+        check('<ImageProperty name="NormalImage" />' in normal and '<ColourRectProperty name="IconColour" />' in normal,
+              "the icon is drawn in the icon colour")
+        mark = re.search(r'<ImagerySection name="mark">.*?</ImagerySection>', tab_button, re.S)
+        check(mark is not None and '<ImageProperty name="MarkImage" />' in mark.group(0) and
+              '<Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>' in mark.group(0) and
+              '<Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>' in mark.group(0) and
+              '<VertFormatProperty name="VertImageFormatting" />' in mark.group(0) and
+              '<HorzFormatProperty name="HorzImageFormatting" />' in mark.group(0),
+              "the mark covers the icon area and scales with the button")
+        states = re.findall(r'<StateImagery name="(\w+)">(.*?)</StateImagery>', tab_button, re.S)
+        check(sorted(name for name, _ in states) == ["Disabled", "Hover", "Normal", "Pushed", "PushedOff"],
+              "the navigation button has its five states")
+        for name, state in states:
+            check('<Layer priority="1">\n                <Section section="normal" />\n'
+                  '                <Section section="mark" />\n            </Layer>' in state,
+                  "WR10: the mark is drawn over the icon in the " + name + " state")
+            check('<Layer priority="2">' in state and state.index('section="mark"') < state.index('<Layer priority="2">'),
+                  "WR10: the frame of the " + name + " state is drawn over the mark")
+        check('<PropertyDefinition initialValue="Stretched" name="VertImageFormatting" redrawOnWrite="true" />' in tab_button
+              and '<PropertyDefinition initialValue="Stretched" name="HorzImageFormatting" redrawOnWrite="true" />'
+              in tab_button, "the marks fill the navigation button at every screen size and UI scale")
 
     # Navigation buttons: each room, spell, trap and door button has its real icon in the layout
-    for layout, names in (("gui/WindowTabRooms.layout", ROOM_BUTTONS), ("gui/WindowTabTraps.layout", TRAP_BUTTONS),
-                          ("gui/WindowTabSpells.layout", SPELL_BUTTONS)):
-        tree = ET.fromstring(read(layout))
-        for name in names:
-            button = tree.find(".//Window[@name='" + name + "']")
-            image = None if button is None else button.find("Property[@name='NormalImage']")
-            check(button is not None and button.get("type") == "OD/GameTabButton" and image is not None and
-                  image.get("value"), layout + ": " + name + " has its real icon")
+    if WITH_CONTENT:
+        for layout, names in (("gui/WindowTabRooms.layout", ROOM_BUTTONS), ("gui/WindowTabTraps.layout", TRAP_BUTTONS),
+                              ("gui/WindowTabSpells.layout", SPELL_BUTTONS)):
+            tree = ET.fromstring(read(layout))
+            for name in names:
+                button = tree.find(".//Window[@name='" + name + "']")
+                image = None if button is None else button.find("Property[@name='NormalImage']")
+                check(button is not None and button.get("type") == "OD/GameTabButton" and image is not None and
+                      image.get("value"), layout + ": " + name + " has its real icon")
+
+    if not WITH_CONTENT:
+        content_packages.unchecked("check_wing1_rooms_ui", ["gui/ODSkin.scheme", "gui/OD.looknfeel",
+                                                            "gui/WindowTabRooms.layout", "gui/WindowTabTraps.layout",
+                                                            "gui/WindowTabSpells.layout"])
 
     # The compiled probe of the research tree plays the campaign and skirmish cases
     probe = read("source/tests/check_research_tree_ui.py")

@@ -12,6 +12,8 @@ import statistics
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
 sys.path.insert(0, str(ROOT / "tools/balance"))
 import combat_sim
 from combat_sim import Roster, fight_group
@@ -80,9 +82,10 @@ LEVEL_OLD_MINHP = {"DragonBoss": "102.5", "BossDragon": "71.75", "VeteranScarab"
 PARRY_AFTER = {"10.5": "15", "5.25": "7.5"}
 
 
-# Read production text for explicit source assertions.
+# Read production text for explicit source assertions; a mixed table of config/ comes joined with its own rows of the
+# content (scripts/content_packages.py).
 def read(path):
-    return (ROOT / path).read_text(encoding="utf-8")
+    return content_packages.read_text(ROOT, path)
 
 
 # Extract a complete production function with balanced braces.
@@ -257,6 +260,14 @@ def check_fights(roster):
 
 # Execute all checks.
 def main():
+    # The creature, equipment and global values are own rows of the mixed tables (content package core-config)
+    if not content_packages.has_content(ROOT):
+        check_sources()
+        content_packages.unchecked("check_world_balance_creatures", [
+            "creature table, level classes, curves, avoidance and fights (own rows of config/creatures.cfg, "
+            "config/equipments.cfg and config/global.cfg)"])
+        print("check_world_balance_creatures: ok")
+        return
     roster = Roster(ROOT)
     check_creature_table(roster)
     check_level_classes()

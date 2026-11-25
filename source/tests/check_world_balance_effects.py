@@ -5,13 +5,20 @@ The expected lines are written out here independently of the config. Nothing is 
 Usage: python source/tests/check_world_balance_effects.py
 """
 import re
+import sys
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(repo)
 
 
 def read(path):
-    return (repo / path).read_text(encoding="utf-8")
+    """The text of a repository file; a mixed table of config/ comes joined with its own rows of the content."""
+    return content_packages.read_text(repo, path)
 
 
 def calls(text, name):
@@ -110,54 +117,63 @@ EXPECTED = [
 assert len(EXPECTED) == 82, "the effect table has 82 lines (rows with several skill types count once per skill type)"
 
 # --- skills.cfg: the [ResearchEffects] block -------------------------------------------------------------------------
-skills_cfg = read("config/skills.cfg")
-block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
-lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
-assert len(lines) == 82, "one line per effect: %d" % len(lines)
-for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
-    assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
-assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
-skill_names = set(re.findall(r"^\s+([A-Za-z]+)\t\d+\s*$", skills_cfg[:skills_cfg.index("\n[/Skills]\n")], re.M))
-assert len(skill_names) == 71
-assert {line[0] for line in lines} <= skill_names, "every line names one of the 71 skills"
-header = skills_cfg[:skills_cfg.index("\n[Skills]\n")]
-assert "[ResearchEffects]" in header and "mul" in header and "add" in header and "dev" in header, "the modes are documented"
-for effect in sorted({line[1] for line in lines}):
-    assert re.search(r"\b%s\b" % effect, header), "effect %s is documented in the header" % effect
+if WITH_CONTENT:
+    skills_cfg = read("config/skills.cfg")
+    block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
+    lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
+    assert len(lines) == 82, "one line per effect: %d" % len(lines)
+    for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
+        assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
+    assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
+    skill_names = set(re.findall(r"^\s+([A-Za-z]+)\t\d+\s*$", skills_cfg[:skills_cfg.index("\n[/Skills]\n")], re.M))
+    assert len(skill_names) == 71
+    assert {line[0] for line in lines} <= skill_names, "every line names one of the 71 skills"
+    header = skills_cfg[:skills_cfg.index("\n[Skills]\n")]
+    assert "[ResearchEffects]" in header and "mul" in header and "add" in header and "dev" in header, "the modes are documented"
+    for effect in sorted({line[1] for line in lines}):
+        assert re.search(r"\b%s\b" % effect, header), "effect %s is documented in the header" % effect
+
+else:
+    # Without the content the code is checked against the fixed effect table instead of the [ResearchEffects] lines
+    lines = [list(line) for line in EXPECTED]
+    content_packages.unchecked("check_world_balance_effects", ["[ResearchEffects] of config/skills.cfg",
+                                                               "moved values of config/rooms.cfg, config/traps.cfg "
+                                                               "and config/global.cfg"])
 
 # --- config values that moved out of the code ------------------------------------------------------------------------
-rooms_cfg = read("config/rooms.cfg")
-traps_cfg = read("config/traps.cfg")
-global_cfg = read("config/global.cfg")
+if WITH_CONTENT:
+    rooms_cfg = read("config/rooms.cfg")
+    traps_cfg = read("config/traps.cfg")
+    global_cfg = read("config/global.cfg")
 
 
-def value(text, key):
-    matches = re.findall(r"^\s+%s\s+(\S+)\s*$" % key, text, re.M)
-    assert len(matches) == 1, "%s must be set once" % key
-    return float(matches[0])
+    def value(text, key):
+        matches = re.findall(r"^\s+%s\s+(\S+)\s*$" % key, text, re.M)
+        assert len(matches) == 1, "%s must be set once" % key
+        return float(matches[0])
 
 
-def documented(text, key):
-    return re.search(r"^#\s*%s\s+\(" % key, text, re.M) is not None
+    def documented(text, key):
+        return re.search(r"^#\s*%s\s+\(" % key, text, re.M) is not None
 
 
-for key, expected in (("TreasuryGoldPerTile", 1000), ("DormitoryWakefulnessPerTurn", 1.5), ("PrisonSkeletonLevelBonus", 0),
-                      ("DungeonHeartHealPerSecond", 3.775), ("DungeonHeartManaPerSecond", 30)):
-    assert value(rooms_cfg, key) == expected, key
-    assert documented(rooms_cfg, key), "%s is documented in the header of rooms.cfg" % key
-assert value(global_cfg, "CreaturesPerPortal") == 5
-assert re.search(r"^#.*CreaturesPerPortal", global_cfg, re.M), "CreaturesPerPortal is documented"
-assert value(traps_cfg, "TriggerRadius") == 1
-assert documented(traps_cfg, "TriggerRadius")
-doors = {"WoodenDoorHP": 200, "IronboundDoorHP": 600, "SteelDoorHP": 800, "BarricadeDoorHP": 300, "SecretDoorHP": 300,
-         "RunedDoorHP": 1200}
-for key, expected in doors.items():
-    assert value(traps_cfg, key) == expected, key
-assert value(traps_cfg, "RunedDoorRegenPerTurn") == 1.4
-assert abs(1.4 / 1200 - 0.07 / 60) < 1e-12, "the runed door regenerates the same share of its health as before"
-# Expected (plan): a level 1 wooden door holds 368 health, a level 1 cannon shot does 92 to 138 damage
-assert abs(doors["WoodenDoorHP"] * 1.840 - 368) < 1e-9
-assert round(value(traps_cfg, "CannonDamagePerHitMin") * 4.50) == 92 and round(value(traps_cfg, "CannonDamagePerHitMax") * 4.50) == 138
+    for key, expected in (("TreasuryGoldPerTile", 1000), ("DormitoryWakefulnessPerTurn", 1.5), ("PrisonSkeletonLevelBonus", 0),
+                          ("DungeonHeartHealPerSecond", 3.775), ("DungeonHeartManaPerSecond", 30)):
+        assert value(rooms_cfg, key) == expected, key
+        assert documented(rooms_cfg, key), "%s is documented in the header of rooms.cfg" % key
+    assert value(global_cfg, "CreaturesPerPortal") == 5
+    assert re.search(r"^#.*CreaturesPerPortal", global_cfg, re.M), "CreaturesPerPortal is documented"
+    assert value(traps_cfg, "TriggerRadius") == 1
+    assert documented(traps_cfg, "TriggerRadius")
+    doors = {"WoodenDoorHP": 200, "IronboundDoorHP": 600, "SteelDoorHP": 800, "BarricadeDoorHP": 300, "SecretDoorHP": 300,
+             "RunedDoorHP": 1200}
+    for key, expected in doors.items():
+        assert value(traps_cfg, key) == expected, key
+    assert value(traps_cfg, "RunedDoorRegenPerTurn") == 1.4
+    assert abs(1.4 / 1200 - 0.07 / 60) < 1e-12, "the runed door regenerates the same share of its health as before"
+    # Expected (plan): a level 1 wooden door holds 368 health, a level 1 cannon shot does 92 to 138 damage
+    assert abs(doors["WoodenDoorHP"] * 1.840 - 368) < 1e-9
+    assert round(value(traps_cfg, "CannonDamagePerHitMin") * 4.50) == 92 and round(value(traps_cfg, "CannonDamagePerHitMax") * 4.50) == 138
 
 # --- the mechanism ---------------------------------------------------------------------------------------------------
 manager = read("source/game/SkillManager.cpp")

@@ -16,10 +16,13 @@ root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'scripts'))
 import content_packages  # noqa: E402
 
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
+
 
 def read(path):
-    """The text of a file below the repository root."""
-    return (root / path).read_text(encoding='utf-8')
+    """The text of a file below the repository root; a mixed table of config/ comes joined with its own rows."""
+    return content_packages.read_text(root, path)
 
 
 def content(path):
@@ -79,18 +82,19 @@ def weapon_kind(weapon_type):
 STRIKE_KINDS = ('Sword', 'Axe', 'Hammer', 'Spear', 'Dagger')
 
 equipment_mesh = {}
-for block in parse_blocks(read('config/equipments.cfg'), 'Equipment'):
-    weapon_type = field(block, 'WeaponType')
-    if weapon_type is None:
-        mesh = field(block, 'MeshName').lower()
-        weapon_type = 'sword'
-        for kind, words in (('shield', ('shield',)), ('bow', ('bow',)), ('axe', ('axe',)),
-                            ('hammer', ('hammer', 'mace')), ('spear', ('spear', 'lance', 'pike')),
-                            ('dagger', ('dagger', 'knife')), ('staff', ('staff', 'wand'))):
-            if any(word in mesh for word in words):
-                weapon_type = kind
-                break
-    equipment_mesh[field(block, 'Name')] = weapon_type
+if WITH_CONTENT:
+    for block in parse_blocks(read('config/equipments.cfg'), 'Equipment'):
+        weapon_type = field(block, 'WeaponType')
+        if weapon_type is None:
+            mesh = field(block, 'MeshName').lower()
+            weapon_type = 'sword'
+            for kind, words in (('shield', ('shield',)), ('bow', ('bow',)), ('axe', ('axe',)),
+                                ('hammer', ('hammer', 'mace')), ('spear', ('spear', 'lance', 'pike')),
+                                ('dagger', ('dagger', 'knife')), ('staff', ('staff', 'wand'))):
+                if any(word in mesh for word in words):
+                    weapon_type = kind
+                    break
+        equipment_mesh[field(block, 'Name')] = weapon_type
 
 
 # Check that both carried types can strike.
@@ -124,13 +128,15 @@ creatures = {}
 for block in fixture:
     creatures[field(block, 'Name')] = (field(block, 'WeaponSpawnL'), field(block, 'WeaponSpawnR'))
 assert creatures['TestTwoSwords'] == ('BasicSword', 'BasicSword')
-assert two_attack_weapons(*creatures['TestTwoSwords'])
-assert not two_attack_weapons(*creatures['TestSwordShield']), 'sword and shield is no two weapon creature'
-assert not two_attack_weapons(*creatures['TestBowOnly']), 'a bow is no strike weapon'
+if WITH_CONTENT:
+    assert two_attack_weapons(*creatures['TestTwoSwords'])
+    assert not two_attack_weapons(*creatures['TestSwordShield']), 'sword and shield is no two weapon creature'
+    assert not two_attack_weapons(*creatures['TestBowOnly']), 'a bow is no strike weapon'
 assert weapon_kind('crossbow') == 'Bow'
-assert not two_attack_weapons('Crossbow', 'BasicSword'), 'a crossbow cannot be a strike weapon'
-assert not two_attack_weapons('BasicSword', 'Crossbow'), 'a crossbow cannot be a strike weapon'
-assert not two_attack_weapons(*creatures['TestOneSword']), 'one sword is one weapon'
+if WITH_CONTENT:
+    assert not two_attack_weapons('Crossbow', 'BasicSword'), 'a crossbow cannot be a strike weapon'
+    assert not two_attack_weapons('BasicSword', 'Crossbow'), 'a crossbow cannot be a strike weapon'
+    assert not two_attack_weapons(*creatures['TestOneSword']), 'one sword is one weapon'
 for name in creatures:
     # config and levels of the public tree and of the content packages
     for folder in content_packages.data_folders(root, 'config') + content_packages.data_folders(root, 'levels') + \
@@ -154,9 +160,10 @@ assert irregular != [i % 2 == 1 for i in range(32)], 'the irregular mode is not 
 
 # Existing creatures: nobody changes (no creature of the game carries two attack weapons today, so nobody
 # takes the new path; sword and shield, bow and crossbow creatures stay as they were)
-game = parse_blocks(read('config/creatures.cfg'), 'Creature')
-dual = [field(b, 'Name') for b in game if two_attack_weapons(field(b, 'WeaponSpawnL'), field(b, 'WeaponSpawnR'))]
-assert dual == [], 'a creature of the game has two attack weapons now: ' + str(dual)
+if WITH_CONTENT:
+    game = parse_blocks(read('config/creatures.cfg'), 'Creature')
+    dual = [field(b, 'Name') for b in game if two_attack_weapons(field(b, 'WeaponSpawnL'), field(b, 'WeaponSpawnR'))]
+    assert dual == [], 'a creature of the game has two attack weapons now: ' + str(dual)
 
 # Wiring: combat reactions, render manager, config
 reactions = read('source/render/CreatureCombatReactions.cpp')
@@ -271,4 +278,7 @@ int main()
         sys.stdout.write(result.stdout)
         assert result.returncode == 0, 'probe failed'
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_two_weapons', ['weapon kinds of the equipment and the creatures of the game '
+                                                     '(own rows of config/equipments.cfg and config/creatures.cfg)'])
 print('two weapons: ok')

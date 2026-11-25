@@ -38,6 +38,8 @@ import sys
 import time
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "scripts"))
+import config_own_rows  # noqa: E402
 TEMPLATE = REPO / "levels" / "skirmish" / "TestRaid.level"
 TURNS_PER_SECOND = 1.4
 
@@ -401,8 +403,10 @@ def link(target, name):
 
 
 def patch_global(path, overrides):
-    """Replaces the values of the given 'Section.Key' entries in global.cfg; fails on an unknown key."""
-    text = path.read_text(encoding="utf-8")
+    """Replaces the values of the given 'Section.Key' entries in the work copy of global.cfg; fails on an unknown key.
+    The copy is first joined with the own rows of the content packages (scripts/config_own_rows.py), so the keys of the
+    own rows can be replaced too; the game reads a table without marker lines as it is."""
+    text = config_own_rows.joined_text(REPO, "config/global.cfg", path.read_text(encoding="utf-8"))
     for full_key, value in overrides.items():
         section, key = full_key.split(".")
         block = re.search(r"\[%s\](.*?)\[/%s\]" % (section, section), text, re.S)

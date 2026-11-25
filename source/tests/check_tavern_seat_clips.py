@@ -76,7 +76,7 @@ def stool_meshes():
 # Returns the skeleton names of the creature types with a tavern line other than 0 0, and their mesh names.
 def visitors():
     found = {}
-    configuration = (ROOT / 'config' / 'creatures.cfg').read_text(encoding='utf-8', errors='replace')
+    configuration = content_packages.read_text(ROOT, 'config/creatures.cfg')
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', configuration, re.S):
         mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)
         tavern = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
@@ -424,10 +424,14 @@ def check_weapons_hidden():
 @profile_check
 def main():
     check_weapons_hidden()
+    # The Tavern lines of the visitors are own rows of config/creatures.cfg (content package core-config)
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_tavern_seat_clips', ['visitors and seat clips (own rows of config/creatures.cfg)'])
+        return
     found = visitors()
     assert len(found) == VISITING_SKELETONS, len(found)
     assert 'Kobold' not in found and 'skeleton' not in found, 'workers and the Skeleton do not visit the tavern'
-    configuration = (ROOT / 'config' / 'creatures.cfg').read_text(encoding='utf-8', errors='replace')
+    configuration = content_packages.read_text(ROOT, 'config/creatures.cfg')
     large = set()
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', configuration, re.S):
         mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)

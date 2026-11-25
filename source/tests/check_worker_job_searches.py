@@ -1,9 +1,13 @@
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-# Read a project source file for the non-compiling checks.
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+# Read a project source file for the non-compiling checks; a mixed table of config/ comes joined with its own rows of
+# the content.
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8')
+    return content_packages.read_text(ROOT, path)
 
 searches = {
     'CreatureActionSearchTileToDig.cpp': 'WorkerJob::dig',
@@ -49,6 +53,8 @@ assert 'WorkerTargetKind::pile' in clean and 'WorkerTargetKind::room' in clean a
 reload = read('source/creatureaction/CreatureActionReloadTrap.cpp')
 assert 'TrapReloadSearchRadius' not in reload
 assert 'TrapReloadSearchRadius' not in read('config/traps.cfg')
+if not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_worker_job_searches', ['own rows of config/traps.cfg'])
 creature = read('source/entities/Creature.cpp')
 drop = creature.split('void Creature::drop(const Ogre::Vector3& v)', 1)[1].split('// Fighters', 1)[0]
 assert 'CreatureActionSearchEntityToCarry>(*this, true)' in drop

@@ -5,17 +5,26 @@ The integrator must still verify simultaneous digging in the running game.
 """
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
 
+# Returns the text of a repository file; a mixed table of config/ comes joined with its own rows of the content.
 def read(path):
-    return (ROOT / path).read_text(encoding="utf-8")
+    return content_packages.read_text(ROOT, path)
 
 def value(config, name):
     return float(re.search(r"^\s*" + re.escape(name) + r"\s+([\d.]+)", config, re.M).group(1))
 
 config = read("config/global.cfg")
-assert value(config, "NbWorkersDigSameFaceTile") == 3
+# The key is an own row of config/global.cfg (content package core-config)
+if content_packages.has_content(ROOT):
+    assert value(config, "NbWorkersDigSameFaceTile") == 3
+else:
+    content_packages.unchecked("check_wall_dig_workers", ["NbWorkersDigSameFaceTile, GoldPerSeamTile, GoldPerDigStep "
+                                                          "and GemGoldPerDigStep of config/global.cfg with the yield cases"])
 assert "mNbWorkersDigSameFaceTile(3)" in read("source/utils/ConfigManager.cpp")
 tile = read("source/entities/Tile.cpp")
 header = read("source/entities/Tile.h")
@@ -80,9 +89,10 @@ assert "digCoefGold" not in dig and "digCoefGem" not in dig
 assert "digRateScaled = mFullness" in tile
 assert "double Tile::digOutGold(double stepFactor)" in tile
 assert "return remaining;" in tile[tile.index("double Tile::digOutGold(double stepFactor)"):]
-assert value(config, "GoldPerSeamTile") == 3000
-assert value(config, "GoldPerDigStep") == 25
-assert value(config, "GemGoldPerDigStep") == 16.67
+if content_packages.has_content(ROOT):
+    assert value(config, "GoldPerSeamTile") == 3000
+    assert value(config, "GoldPerDigStep") == 25
+    assert value(config, "GemGoldPerDigStep") == 16.67
 
 
 def mine_gold_tile(density, skirmish=100):
@@ -101,29 +111,30 @@ def mine_gold_tile(density, skirmish=100):
     return paid
 
 
-for density in (50, 100, 150):
-    paid = mine_gold_tile(density)
-    assert len(paid) == 120
-    assert abs(sum(paid) - 3000.0 * density / 100.0) < 0.01
-assert abs(sum(mine_gold_tile(100, 50)) - 1500.0) < 0.01
-# Three workers share a tile: every step is paid to the worker that made it, the sum is the tile gold
-carried = [0, 0, 0]
-remainder = [0.0, 0.0, 0.0]
-for index, amount in enumerate(mine_gold_tile(150)):
-    worker = index % 3
-    remainder[worker] += amount
-    whole = int(remainder[worker])
-    remainder[worker] -= whole
-    carried[worker] += whole
-assert abs(sum(carried) + sum(remainder) - 4500.0) < 0.01
-# A gem step pays 16.67 whatever the worker level; three steps carry 50 and keep a fraction
-gem_remainder, gem_carried = 0.0, 0
-for _ in range(3):
-    gem_remainder += value(config, "GemGoldPerDigStep")
-    whole = int(gem_remainder)
-    gem_remainder -= whole
-    gem_carried += whole
-assert gem_carried == 50 and 0.0 < gem_remainder < 1.0
+if content_packages.has_content(ROOT):
+    for density in (50, 100, 150):
+        paid = mine_gold_tile(density)
+        assert len(paid) == 120
+        assert abs(sum(paid) - 3000.0 * density / 100.0) < 0.01
+    assert abs(sum(mine_gold_tile(100, 50)) - 1500.0) < 0.01
+    # Three workers share a tile: every step is paid to the worker that made it, the sum is the tile gold
+    carried = [0, 0, 0]
+    remainder = [0.0, 0.0, 0.0]
+    for index, amount in enumerate(mine_gold_tile(150)):
+        worker = index % 3
+        remainder[worker] += amount
+        whole = int(remainder[worker])
+        remainder[worker] -= whole
+        carried[worker] += whole
+    assert abs(sum(carried) + sum(remainder) - 4500.0) < 0.01
+    # A gem step pays 16.67 whatever the worker level; three steps carry 50 and keep a fraction
+    gem_remainder, gem_carried = 0.0, 0
+    for _ in range(3):
+        gem_remainder += value(config, "GemGoldPerDigStep")
+        whole = int(gem_remainder)
+        gem_remainder -= whole
+        gem_carried += whole
+    assert gem_carried == 50 and 0.0 < gem_remainder < 1.0
 movement = read("source/entities/MovableGameEntity.cpp")
 assert "ServerNotificationType::animatedObjectSetWalkPath" in movement
 assert "serverNotification->mPacket << v" in movement

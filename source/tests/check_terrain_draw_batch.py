@@ -10,8 +10,11 @@ from pathlib import Path
 import math
 import re
 import runpy
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 
 
 # Extract a complete C++ body, including nested conditions, for lifecycle ordering checks.
@@ -97,7 +100,12 @@ def check_geometry():
     # Dirt's shadow transform is world-to-shadow, so a new batch world matrix cannot change it.
     material = (ROOT / 'materials/scripts/Dirt.material').read_text()
     assert 'param_named_auto lightMatrix texture_viewproj_matrix 0' in material
-    tileset = (ROOT / 'config/tilesets.cfg').read_text().split('[dirtFull]', 1)[1].split('[/dirtFull]', 1)[0]
+    # The earth entries of [dirtFull] are own rows of config/tilesets.cfg (content package core-config)
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_terrain_draw_batch', ['vertex transforms of the [dirtFull] earth meshes '
+                                                                '(own rows of config/tilesets.cfg)'])
+        return 0
+    tileset = content_packages.read_text(ROOT, 'config/tilesets.cfg').split('[dirtFull]', 1)[1].split('[/dirtFull]', 1)[0]
     entries = re.findall(r'(Dirt_[^\s]+\.mesh)\s+Dirt\s+[0-9.-]+\s+[0-9.-]+\s+[0-9.-]+', tileset)
     assert entries
     checked = 0

@@ -1,19 +1,31 @@
 """Shared source checks and configured-health stubs for optional heart probes."""
 
+from pathlib import Path
 import re
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def check_heart_configuration(repo):
-    """Verify configured health and its unchanged independent building damage path."""
-    rooms = (repo / 'config/rooms.cfg').read_text()
-    values = re.findall(r'^\s*DungeonHeartHP\s+(\S+)', rooms, re.M)
-    assert len(values) == 1 and float(values[0]) == 15100.0, 'configured heart health'
+    """Verify configured health and its unchanged independent building damage path; the values of config/rooms.cfg
+    are own rows of the content (joined by content_packages.read_text) and named as not checked without it."""
+    with_content = content_packages.has_content(repo)
+    rooms = content_packages.read_text(repo, 'config/rooms.cfg')
+    if with_content:
+        values = re.findall(r'^\s*DungeonHeartHP\s+(\S+)', rooms, re.M)
+        assert len(values) == 1 and float(values[0]) == 15100.0, 'configured heart health'
+    else:
+        content_packages.unchecked('check_heart_configuration', ['DungeonHeartHP, DungeonHeartHealPerSecond and '
+                                                                 'PortalHP of config/rooms.cfg'])
     source = (repo / 'source/rooms/RoomDungeonTemple.cpp').read_text()
     assert '#include "utils/ConfigManager.h"' in source, 'heart configuration requires its complete declaration'
     assert 'getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0)' in source
     # The heal rate and the research of the heart health and healing come from the configuration and skills.cfg
-    values = re.findall(r'^\s*DungeonHeartHealPerSecond\s+(\S+)', rooms, re.M)
-    assert len(values) == 1 and float(values[0]) == 3.775, 'configured heart healing'
+    if with_content:
+        values = re.findall(r'^\s*DungeonHeartHealPerSecond\s+(\S+)', rooms, re.M)
+        assert len(values) == 1 and float(values[0]) == 3.775, 'configured heart healing'
     assert 'getRoomConfigDouble("DungeonHeartHealPerSecond")' in source
     assert 'HEART_HEAL_PER_SECOND' not in source
     assert 'ResearchEffect::HeartHP' in source and 'ResearchEffect::HeartHeal' in source
@@ -26,8 +38,8 @@ def check_heart_configuration(repo):
     building = (repo / 'source/entities/Building.cpp').read_text()
     # The tile hit points are configured, with the original building fallback retained.
     assert 'Building::DEFAULT_TILE_HP = 10.0' in building
-    rooms = (repo / 'config/rooms.cfg').read_text()
-    assert re.search(r'^\s*PortalHP\s+10(?:\.0)?\s*$', rooms, re.M)
+    if with_content:
+        assert re.search(r'^\s*PortalHP\s+10(?:\.0)?\s*$', rooms, re.M)
 
 
 def configure_heart_probe(probe):

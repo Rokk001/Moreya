@@ -16,8 +16,8 @@ import room_packages  # noqa: E402
 
 
 def read(path):
-    """The text of a file below the repository root."""
-    return (repo / path).read_text(encoding='utf-8')
+    """The text of a file below the repository root; a mixed file of gui/ comes joined with its own rows."""
+    return content_packages.read_text(repo, path)
 
 
 treasury = read('source/rooms/RoomTreasury.cpp')
@@ -36,7 +36,11 @@ assert 'The piles next to the removed tile lose a neighbour' in treasury
 assert 'TreasuryGoldMesh::prepareMesh(mSceneManager, meshName, pileFar)' in render
 assert 'classicMeshForLevel' not in mesh and 'const bool reduced = (currentDetail != Detail::full)' in mesh
 assert 'TREASURY_DETAIL' in read('source/utils/ConfigManager.h')
-assert 'TreasuryDetail' in read('gui/WindowSettings.layout')
+# The option row is an own row of gui/WindowSettings.layout (content package core-gui)
+if content_packages.has_content(repo):
+    assert 'TreasuryDetail' in read('gui/WindowSettings.layout')
+else:
+    content_packages.unchecked('check_treasury_gold_layer', ['TreasuryDetail of gui/WindowSettings.layout'])
 if content_packages.data_file(repo, 'materials/scripts/TreasuryGoldPile.material') is None and \
         not content_packages.has_content(repo):
     content_packages.unchecked('check_treasury_gold_layer', ['materials/scripts/TreasuryGoldPile.material',

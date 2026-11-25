@@ -19,19 +19,41 @@ import content_packages  # noqa: E402
 DATA_PATH = re.compile(r'"/((?:config|gui|models|materials|levels|sounds|particles)/[\w./-]+\.\w+)"')
 
 
-def data_roots_environment():
-    """Environment of a probe: ODP_DATA_ROOTS names the repository, then every content and room package folder."""
+def data_roots_environment(data_root=None):
+    """Environment of a probe: ODP_DATA_ROOTS names the data root of the probe (the folder of the joined mixed tables,
+    see joined_data_root) when there is one, then the repository, then every content and room package folder."""
     environment = dict(os.environ)
-    environment["ODP_DATA_ROOTS"] = "|".join([str(ROOT)] + [str(root) for root in content_packages.package_roots(ROOT)])
+    roots = ([str(data_root)] if data_root is not None else []) + [str(ROOT)]
+    environment["ODP_DATA_ROOTS"] = "|".join(roots + [str(root) for root in content_packages.package_roots(ROOT)])
     return environment
+
+
+def mixed_tables():
+    """The mixed data tables of config/: public tables with marker lines "#@own <n>" whose own rows lie in the content
+    package core-config (scripts/config_own_rows.py)."""
+    return ['config/' + path.name for path in sorted((ROOT / 'config').glob('*.cfg'))
+            if '#@own ' in path.read_text(encoding='utf-8')]
 
 
 def missing_data(probe):
     """The game data files a probe reads that are not present (only without the content; with it a missing file
-    fails the probe)."""
+    fails the probe); a mixed table the probe reads counts as not present without the content, its own rows are."""
     if content_packages.has_content(ROOT):
         return []
-    return [path for path in sorted(set(DATA_PATH.findall(probe))) if content_packages.data_file(ROOT, path) is None]
+    missing = [path for path in sorted(set(DATA_PATH.findall(probe))) if content_packages.data_file(ROOT, path) is None]
+    return missing + [path + ' (own rows)' for path in mixed_tables() if '"' + Path(path).name + '"' in probe or
+                      '"/' + path + '"' in probe]
+
+
+def joined_data_root(folder):
+    """Writes the joined text of every mixed table of config/ (with its own rows, as the game reads it) below the
+    folder and returns the folder: a probe gets it as its data root, every other file it reads comes from the
+    repository and the packages through ODP_DATA_ROOTS."""
+    for table in mixed_tables():
+        target = folder / table
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content_packages.read_text(ROOT, table), encoding='utf-8', newline='')
+    return folder
 
 
 def source(name):
@@ -75,8 +97,11 @@ def compile_and_run(name, probe, optimize=False):
     subprocess.run(command, cwd=output, stdin=subprocess.DEVNULL, check=True, timeout=600)
     print('ODP_TEST_PHASE ' + json.dumps({'name': name + ':compile', 'seconds': time.perf_counter() - started}), flush=True)
     started = time.perf_counter()
-    subprocess.run([str(executable), str(ROOT)], cwd=ROOT, stdin=subprocess.DEVNULL, check=True, timeout=600,
-                   env=data_roots_environment())
+    # The probe reads the mixed tables joined with their own rows from its data root, every other file from the
+    # repository and the packages
+    data_root = joined_data_root(output / "data")
+    subprocess.run([str(executable), str(data_root)], cwd=ROOT, stdin=subprocess.DEVNULL, check=True, timeout=600,
+                   env=data_roots_environment(data_root))
     print('ODP_TEST_PHASE ' + json.dumps({'name': name + ':execute', 'seconds': time.perf_counter() - started}), flush=True)
 
 

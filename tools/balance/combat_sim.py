@@ -33,9 +33,14 @@ def data_path(root, relative):
     return content_packages.resolve(root, relative)
 
 
-# Read named configuration blocks, ignoring comments and section delimiters.
-def definitions(path, section, tag):
-    text = path.read_text(encoding="utf-8")
+# The text of a game data file below the given repository (see data_path); a mixed table of config/ comes joined with
+# its own rows of the content packages (scripts/content_packages.py).
+def data_text(root, relative):
+    return content_packages.read_text(root, relative)
+
+
+# Read named configuration blocks of a table text, ignoring comments and section delimiters.
+def definitions(text, section, tag):
     text = text[text.rindex("[" + section + "]"):]
     result = {}
     for block in re.findall(r"\[" + tag + r"\](.*?)\[/" + tag + r"\]", text, re.S):
@@ -100,10 +105,10 @@ class Roster:
     # Cache current definitions without using an external statistics snapshot.
     def __init__(self, root):
         self.root = Path(root)
-        self.creatures = definitions(data_path(self.root, "config/creatures.cfg"), "CreatureDefinitions", "Creature")
-        self.equipment = definitions(data_path(self.root, "config/equipments.cfg"), "EquipmentDefinitions", "Equipment")
+        self.creatures = definitions(data_text(self.root, "config/creatures.cfg"), "CreatureDefinitions", "Creature")
+        self.equipment = definitions(data_text(self.root, "config/equipments.cfg"), "EquipmentDefinitions", "Equipment")
         self.global_values = {}
-        for line in data_path(self.root, "config/global.cfg").read_text(encoding="utf-8").splitlines():
+        for line in data_text(self.root, "config/global.cfg").splitlines():
             words = line.split()
             if len(words) == 2 and not words[0].startswith("#"):
                 self.global_values[words[0]] = words[1]

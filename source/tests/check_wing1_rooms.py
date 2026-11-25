@@ -90,9 +90,9 @@ def check(condition, message):
 
 
 def read(relative):
-    """Returns the text of a file of the repository with Unix line ends."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
-        return handle.read().replace("\r\n", "\n")
+    """Returns the text of a file of the repository with Unix line ends; a mixed table of config/ comes joined with its
+    own rows of the content (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, relative).replace("\r\n", "\n")
 
 
 def wing1_level(name):
@@ -273,9 +273,14 @@ def check_winnable(name, text, built):
 
 def check_engine():
     """Items 2 and 3: the Tavern stays free elsewhere and the engine applies [SkillNotFree]."""
-    skills = read("config/skills.cfg")
-    free = block(skills, "FreeLevelOne").split()
-    check("roomTavern" in free, "the Tavern must stay a free level one entry of config/skills.cfg")
+    # [FreeLevelOne] is an own row block of config/skills.cfg (content package core-config)
+    if content_packages.has_content(ROOT):
+        skills = read("config/skills.cfg")
+        free = block(skills, "FreeLevelOne").split()
+        check("roomTavern" in free, "the Tavern must stay a free level one entry of config/skills.cfg")
+    else:
+        free = []
+        content_packages.unchecked("check_wing1_rooms", ["[FreeLevelOne] of config/skills.cfg"])
     # The levels/ folder of the public tree and of every content package (the wing 1 package lies outside of them)
     for levels in content_packages.data_folders(ROOT, "levels"):
         for folder, _, names in os.walk(str(levels)):

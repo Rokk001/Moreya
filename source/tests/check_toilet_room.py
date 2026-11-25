@@ -25,8 +25,13 @@ def room_file(relative):
     return content_packages.resolve(root, relative)
 
 
+#: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
+
+
 def read(path):
-    return room_file(path).read_text(encoding='utf-8')
+    """The text of a game file (see room_file); a mixed file of config/ or gui/ comes joined with its own rows."""
+    return content_packages.read_text(root, path)
 
 
 # Returns the identifiers of an enum (comments and "= value" skipped), in order.
@@ -76,14 +81,15 @@ assert tile_cpp.count('case TileVisual::toiletRoom:') >= 4, 'toiletRoom is missi
 assert 'return "toiletRoom";' in tile_cpp
 
 # 4. Tileset: mapping line and a block with the 16 corner combinations
-tilesets = read('config/tilesets.cfg')
-assert re.search(r'^\s*toiletRoom toiletRoom\s*$', tilesets, re.M), 'tileset link line missing'
-block = re.search(r'\[toiletRoom\](.*?)\[/toiletRoom\]', tilesets, re.S)
-assert block is not None, '[toiletRoom] block missing'
-lines = [l.split() for l in block.group(1).splitlines() if l.strip()]
-assert [l[0] for l in lines] == ['%04d' % int(format(i, 'b')) for i in range(16)], 'the block needs the 16 masks 0000-1111'
-for words in lines:
-    assert words[1] == 'Room.mesh' and words[2] == 'Toilet' + words[0], words
+if WITH_CONTENT:
+    tilesets = read('config/tilesets.cfg')
+    assert re.search(r'^\s*toiletRoom toiletRoom\s*$', tilesets, re.M), 'tileset link line missing'
+    block = re.search(r'\[toiletRoom\](.*?)\[/toiletRoom\]', tilesets, re.S)
+    assert block is not None, '[toiletRoom] block missing'
+    lines = [l.split() for l in block.group(1).splitlines() if l.strip()]
+    assert [l[0] for l in lines] == ['%04d' % int(format(i, 'b')) for i in range(16)], 'the block needs the 16 masks 0000-1111'
+    for words in lines:
+        assert words[1] == 'Room.mesh' and words[2] == 'Toilet' + words[0], words
 # Every visual block must be consumed by the sequential loader in the shipped file order.
 config_manager = read('source/utils/ConfigManager.cpp')
 tileset_loader = config_manager[config_manager.index('bool ConfigManager::loadTilesets('):
@@ -92,32 +98,36 @@ loaded_visuals = re.findall(r'loadTilesetValues\(defFile, TileVisual::(\w+),', t
 assert len(loaded_visuals) == len(set(loaded_visuals)), 'duplicate tileset loader visual'
 assert set(loaded_visuals) == set(visuals[:-1]), 'tileset loader must consume every TileVisual exactly once'
 assert loaded_visuals[-8:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom', 'infirmaryRoom', 'ghostRoom', 'spaRoom']
-for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
-    block_order = re.findall(r'^\s*\[(\w+)\]\s*$', tileset, re.M)
-    block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]
-    assert block_order == loaded_visuals, 'tileset blocks must match the sequential ConfigManager loader order'
+if WITH_CONTENT:
+    for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
+        block_order = re.findall(r'^\s*\[(\w+)\]\s*$', tileset, re.M)
+        block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]
+        assert block_order == loaded_visuals, 'tileset blocks must match the sequential ConfigManager loader order'
 # The materials of the pieces exist
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
-for words in lines:
-    assert room_packages.is_missing_packaged_name(root, words[2]) or \
-        re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
+if WITH_CONTENT:
+    materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+    for words in lines:
+        assert room_packages.is_missing_packaged_name(root, words[2]) or \
+            re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
 
 # 5. Buttons: action bar (hidden by default, positioned like the others) and research tree, same icon
-rooms_layout = read('gui/WindowTabRooms.layout')
-skill_layout = read('gui/WindowSkillTree.layout')
-button = re.search(r'name="ToiletButton" >(.*?)</Window>', rooms_layout, re.S)
-assert button is not None, 'ToiletButton missing in WindowTabRooms.layout'
-assert 'RoomCentreIconToilet/Icon' in button.group(1) and '"Visible" value="False"' in button.group(1)
-research = re.search(r'name="ToiletButton" >(.*?)<Window type="OD/ProgressBar" name="ToiletButtonProgressBar"', skill_layout, re.S)
-assert research is not None, 'ToiletButton missing in WindowSkillTree.layout'
-assert 'RoomCentreIconToilet/Icon' in research.group(1) and 'Room: Toilet' in research.group(1)
-assert 'name="ToiletButton"' in read('gui/ODIcons.imageset') or 'ToiletButton' in read('gui/ODIcons.imageset')
+if WITH_CONTENT:
+    rooms_layout = read('gui/WindowTabRooms.layout')
+    skill_layout = read('gui/WindowSkillTree.layout')
+    button = re.search(r'name="ToiletButton" >(.*?)</Window>', rooms_layout, re.S)
+    assert button is not None, 'ToiletButton missing in WindowTabRooms.layout'
+    assert 'RoomCentreIconToilet/Icon' in button.group(1) and '"Visible" value="False"' in button.group(1)
+    research = re.search(r'name="ToiletButton" >(.*?)<Window type="OD/ProgressBar" name="ToiletButtonProgressBar"', skill_layout, re.S)
+    assert research is not None, 'ToiletButton missing in WindowSkillTree.layout'
+    assert 'RoomCentreIconToilet/Icon' in research.group(1) and 'Room: Toilet' in research.group(1)
+    assert 'name="ToiletButton"' in read('gui/ODIcons.imageset') or 'ToiletButton' in read('gui/ODIcons.imageset')
 gui_cpp = read('source/render/Gui.cpp')
 arrange = gui_cpp[gui_cpp.index('void Gui::arrangeRoomButtons('):]
 arrange = arrange[:arrange.index('\n}\n')]
 assert '"DormitoryButton", "ToiletButton", "HatcheryButton"' in arrange, 'the toilet button follows the dormitory in the action bar'
 # Button names are unique per layout file
-assert rooms_layout.count('name="ToiletButton"') == 1 and skill_layout.count('name="ToiletButton"') == 1
+if WITH_CONTENT:
+    assert rooms_layout.count('name="ToiletButton"') == 1 and skill_layout.count('name="ToiletButton"') == 1
 
 # 6. Research: preserve the published toilet skill id before the appended equipment research (tier II).
 skill_type = read('source/game/SkillType.h')
@@ -136,14 +146,15 @@ registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomToilet') == 1
 # 65 entries and the six spells of the spells review
 assert len(registered) == 71, 'the combined research tree has 71 entries, found ' + str(len(registered))
-skills_cfg = read('config/skills.cfg')
-assert re.search(r'^    roomToilet\t250\s*$', skills_cfg, re.M), 'roomToilet costs 250 (tier II)'
-# No research effect line for the toilet
-effects = re.search(r'\[ResearchEffects\](.*?)\[/ResearchEffects\]', skills_cfg, re.S).group(1)
-assert 'roomToilet' not in effects, 'the toilet has no research effect'
-# The cost block names every entry; the tab totals are pinned by check_world_balance_tree.py
-cost_block = re.search(r'^\[Skills\]\s*$(.*?)^\[/Skills\]', skills_cfg, re.M | re.S).group(1)
-assert 'roomToilet' in [line.split()[0] for line in cost_block.splitlines() if line.split() and not line.startswith('#')]
+if WITH_CONTENT:
+    skills_cfg = read('config/skills.cfg')
+    assert re.search(r'^    roomToilet\t250\s*$', skills_cfg, re.M), 'roomToilet costs 250 (tier II)'
+    # No research effect line for the toilet
+    effects = re.search(r'\[ResearchEffects\](.*?)\[/ResearchEffects\]', skills_cfg, re.S).group(1)
+    assert 'roomToilet' not in effects, 'the toilet has no research effect'
+    # The cost block names every entry; the tab totals are pinned by check_world_balance_tree.py
+    cost_block = re.search(r'^\[Skills\]\s*$(.*?)^\[/Skills\]', skills_cfg, re.M | re.S).group(1)
+    assert 'roomToilet' in [line.split()[0] for line in cost_block.splitlines() if line.split() and not line.startswith('#')]
 
 # 7. AI: the keeper AI builds the toilet directly after the dormitory
 ai = read('source/ai/KeeperAI.cpp')
@@ -176,4 +187,8 @@ assert 'RoomClean' not in game_mode and 'mCleanRoomName' not in game_mode
 pile_hover = game_mode[game_mode.index('static std::string getDirtPileHoverText'):game_mode.index('static std::string getRoomDirtHoverText')]
 assert 'social::SocialGenerator::displayClassName(' in pile_hover, 'the pile hover names the creature class readably'
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_toilet_room', ['own rows of config/tilesets.cfg [toiletRoom] and the block order',
+                                                     'gui/WindowTabRooms.layout', 'gui/WindowSkillTree.layout',
+                                                     'gui/ODIcons.imageset', 'config/skills.cfg'])
 print('toilet room ok')
