@@ -121,7 +121,11 @@ assert (bar[..., 3] > 200).mean() > 0.6 and bar[..., :3].std() > 2, 'painted iro
 game = content_packages.read_text(repo, 'gui/ModeGame.layout')
 assert game.count('OpenDungeonsSkin/ForgedBar') == 2 and 'FFB98B56' not in game
 # The approved bar is a chipped painted iron edge, replacing the old repeated vent segments.
-bar_source = Image.open(assets_src_dir(repo) / 'gui/skin/frame-0-0.png').convert('RGBA')
+# The skin atlas is built from the folder cut from the chosen in-game sheet (scripts/gui/build_skin_atlas.py).
+skin_sources = assets_src_dir(repo) / 'content-split/cs10-terrain-gui/skin-v2'
+if not skin_sources.is_dir():
+    skin_sources = assets_src_dir(repo) / 'gui/skin'
+bar_source = Image.open(skin_sources / 'frame-0-0.png').convert('RGBA')
 assert np.array_equal(bar, np.array(bar_source.crop((0, 0, 512, 88)).resize((w, h), Image.Resampling.LANCZOS)))
 # Research tiles: material states instead of flat colour squares.
 # Return the actual registered skin rectangle, independent of XML attribute order.

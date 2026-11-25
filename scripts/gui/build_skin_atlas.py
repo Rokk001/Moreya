@@ -14,10 +14,32 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(ROOT / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
-import config_own_rows  # noqa: E402
 import content_packages  # noqa: E402
-import tempfile  # noqa: E402
+
+import os  # noqa: E402
+
+
+# The skin and icon atlases live in the content packages (gui-skin, core-gui), not in the public gui folder.
+def content_gui(package):
+    """gui folder of a content package; MOREYA_CONTENT_DIR must name the packages folder."""
+    base = os.environ.get("MOREYA_CONTENT_DIR")
+    if not base:
+        raise SystemExit("MOREYA_CONTENT_DIR must point to the content packages folder")
+    return Path(base) / package / "gui"
+
+
 SOURCES = assets_src_dir(ROOT) / "gui/skin"
+# The skin follows the chosen in-game sheet: its source folder is cut from that sheet (tools/content-split/cs10-gui/
+# make_skin_v2.py in Moreya-Internal) and has frame families 4 (tabs) and 5 (scrollbar thumb) and the plates scroll-up,
+# scroll-down, thumb and selection. MOREYA_SKIN_SRC overrides the folder.
+SKIN_V2 = assets_src_dir(ROOT) / "content-split/cs10-terrain-gui/skin-v2"
+if os.environ.get("MOREYA_SKIN_SRC"):
+    SKIN_V2 = Path(os.environ["MOREYA_SKIN_SRC"])
+SHEET_SKIN = SKIN_V2.is_dir()
+# the sheet skin paints every state of the button, tab and thumb centres: the atlas is taller (2048 x 2560)
+ATLAS_H = 2560 if SHEET_SKIN else 2048
+if SHEET_SKIN:
+    SOURCES = SKIN_V2
 SCALE = 4
 STATES = {"Hover": 1, "Pushed": 2, "Disabled": 3}
 PIECES = {
@@ -31,6 +53,8 @@ PIECES = {
 
 # Split the generated grid into separately committed frame and glyph source tiles.
 def extract_tiles():
+    if SHEET_SKIN:
+        return
     for filename, prefix in (("frames.png", "frame"), ("glyphs.png", "glyph")):
         sheet = Image.open(SOURCES / filename).convert("RGBA")
         for row in range(4):
@@ -65,6 +89,10 @@ def image_state(name):
 def frame_recipe(name):
     name = name.split("__", 1)[0]
     family = 3 if any(x in name for x in ("Button", "Thumb", "ResearchTile", "Checkbox", "IconSlot")) else 2
+    if SHEET_SKIN and "TabButton" in name:
+        family = 4
+    if SHEET_SKIN and "Thumb" in name:
+        family = 5
     if name.startswith(("Window", "TitleBar", "SysArea", "Menu", "PopupMenuFrame")):
         family = 1
     if name.startswith(("Forged", "HorizontalPipe", "VerticalPipe", "HudPlate")):
@@ -126,6 +154,28 @@ def render_tile(name, size, stone):
     family, piece = frame_recipe(base)
     frame = Image.open(SOURCES / f"frame-{family}-{state}.png").convert("RGBA")
     glyph = glyph_index(base)
+    if SHEET_SKIN and base == "SelectionBrush":
+        return Image.open(SOURCES / "selection.png").convert("RGBA").resize(size, Image.Resampling.LANCZOS)
+    if SHEET_SKIN and "Thumb" in base and base.startswith(("MiniVert", "MiniHorz", "VertScroll", "HorzScroll")):
+        # the sheet's scrollbar thumb: end caps are its ends, the middle a short strip, the whole is the thumb itself
+        thumb = Image.open(SOURCES / "thumb.png").convert("RGBA")
+        if "Horz" in base:
+            thumb = thumb.transpose(Image.Transpose.ROTATE_90)
+        length = thumb.height if "Vert" in base else thumb.width
+        cut = {"Top": (0, 0.25), "Left": (0, 0.25), "Bottom": (0.75, 1.0), "Right": (0.75, 1.0), "Middle": (0.40, 0.50)}
+        for word, (lo, hi) in cut.items():
+            if word in base.replace("Thumb", "", 1):
+                lo, hi = int(length * lo), int(length * hi)
+                box = (0, lo, thumb.width, hi) if "Vert" in base else (lo, 0, hi, thumb.height)
+                thumb = thumb.crop(box)
+                break
+        return thumb.resize(size, Image.Resampling.LANCZOS)
+    if SHEET_SKIN and glyph in (4, 5, 6, 7) and "Thumb" not in base and base != "MouseArrow":
+        # the scroll arrows are the plates of the sheet; left and right are the up plate turned
+        up = Image.open(SOURCES / "scroll-up.png").convert("RGBA")
+        plate = {4: up, 5: Image.open(SOURCES / "scroll-down.png").convert("RGBA"),
+                 6: up.transpose(Image.Transpose.ROTATE_90), 7: up.transpose(Image.Transpose.ROTATE_270)}[glyph]
+        return plate.resize(size, Image.Resampling.LANCZOS)
     if glyph is not None:
         sprite = Image.open(SOURCES / f"glyph-{glyph // 4}-{glyph % 4}.png").convert("RGBA")
         control = None
@@ -150,6 +200,8 @@ def render_tile(name, size, stone):
         return sprite.resize(size, Image.Resampling.LANCZOS)
     if base in ("ButtonFrame", "ButtonHoverEffect", "ButtonPushedEffect", "ButtonDisabledEffect") or base.startswith("ResearchTile"):
         frame.paste((0, 0, 0, 0), PIECES["Middle"])
+    if piece == "Middle" and SHEET_SKIN and family in (3, 4, 5):
+        return frame.crop(PIECES["Middle"]).resize(size, Image.Resampling.LANCZOS)
     if piece == "Middle" and not base.startswith(("TitleBar", "SysArea")):
         return stone.resize(size, Image.Resampling.LANCZOS)
     if base.startswith("TitleBar") or base.startswith("SysArea"):
@@ -185,10 +237,10 @@ def pack_tiles(tiles):
                 top = max(top, skyline[end][1])
                 span += skyline[end][2]
                 end += 1
-            if span >= width and top + height <= 2048:
+            if span >= width and top + height <= ATLAS_H:
                 candidates.append((top + height, x, index, top))
         if not candidates:
-            raise ValueError(f"Painted atlas exceeds 2048x2048 at {name}")
+            raise ValueError(f"Painted atlas exceeds 2048x{ATLAS_H} at {name}")
         _, x, index, y = min(candidates)
         right = x + width
         remainder = []
@@ -201,20 +253,6 @@ def pack_tiles(tiles):
         skyline = sorted(remainder)
         placements[name] = (x, y)
     return placements
-
-
-# Write an XML tree to a file of the repository. A mixed interface file (one with own rows markers, see
-# scripts/config_own_rows.py) is written in full to a temporary file and split into its public file and its own rows
-# file of the content package, so the public file never holds the own rows.
-def write_tree(tree, path):
-    path = Path(path)
-    if not path.is_file() or not config_own_rows.markers(path.read_text(encoding="utf-8")):
-        tree.write(path, encoding="utf-8", xml_declaration=True)
-        return
-    with tempfile.TemporaryDirectory() as folder:
-        full = Path(folder) / path.name
-        tree.write(full, encoding="utf-8", xml_declaration=True)
-        config_own_rows.split_full(ROOT, full, path.relative_to(ROOT).as_posix())
 
 
 # Build the atlas, image rectangles and doubled HUD surface from committed source PNGs.
@@ -257,7 +295,7 @@ def main():
         recipe = (frame_recipe(name), image_state(name), glyph_index(name.split("__", 1)[0]), size, "__Edge2" in name)
         base = name.split("__", 1)[0]
         # Shared seamless centres need one rectangle per size, while painted rims retain their states.
-        if frame_recipe(name)[1] == "Middle" and glyph_index(base) is None and not base.startswith(("TitleBar", "SysArea")):
+        if frame_recipe(name)[1] == "Middle" and glyph_index(base) is None and not base.startswith(("TitleBar", "SysArea"))                 and not (SHEET_SKIN and frame_recipe(name)[0] in (3, 4, 5)):
             recipe = ("stone", size)
         # Whole frames have different compositing semantics, so retain their names.
         if base in ("ButtonFrame", "ButtonHoverEffect", "ButtonPushedEffect", "ButtonDisabledEffect", "ForgedBar") or base.startswith(("TitleBar", "SysArea", "ResearchTile")):
@@ -268,10 +306,10 @@ def main():
             recipes[recipe] = name
             tiles[name] = render_tile(name, size, stone)
     positions = pack_tiles(tiles)
-    atlas = Image.new("RGBA", (2048, 2048))
+    atlas = Image.new("RGBA", (2048, ATLAS_H))
     for name, tile in tiles.items():
         atlas.paste(tile, positions[name])
-    atlas.save(ROOT / "gui/ODSkin.png")
+    atlas.save(content_gui("gui-skin") / "ODSkin.png")
     imageset = ET.Element("Imageset", autoScaled="true", imagefile="ODSkin.png", name="OpenDungeonsSkin",
                           nativeHorzRes="3200", nativeVertRes="2400", version="2")
     for name, entry in definitions.items():
@@ -284,14 +322,14 @@ def main():
                 attrs[offset] = str(int(entry[offset]) * SCALE)
         ET.SubElement(imageset, "Image", attrs)
     ET.indent(imageset, space="    ")
-    write_tree(ET.ElementTree(imageset), ROOT / "gui/ODSkin.imageset")
-    Image.open(SOURCES / "stone.png").convert("RGBA").resize((3548, 1774), Image.Resampling.LANCZOS).save(ROOT / "gui/ODHudSurface.png")
+    ET.ElementTree(imageset).write(content_gui("gui-skin") / "ODSkin.imageset", encoding="utf-8", xml_declaration=True)
+    Image.open(SOURCES / "stone.png").convert("RGBA").resize((3548, 1774), Image.Resampling.LANCZOS).save(content_gui("core-gui") / "ODHudSurface.png")
     hud = ET.Element("Imageset", autoScaled="true", imagefile="ODHudSurface.png", name="ODHudSurface",
                      nativeHorzRes="2048", nativeVertRes="1536", version="2")
     ET.SubElement(hud, "Image", name="Stone", xPos="0", yPos="0", width="3548", height="1774")
     ET.indent(hud, space="    ")
-    ET.ElementTree(hud).write(ROOT / "gui/ODHudSurface.imageset", encoding="utf-8", xml_declaration=True)
-    print(f"Painted skin: {len(definitions)} named images, 2048x2048; HUD Stone: 3548x1774")
+    ET.ElementTree(hud).write(content_gui("core-gui") / "ODHudSurface.imageset", encoding="utf-8", xml_declaration=True)
+    print(f"Painted skin: {len(definitions)} named images, 2048x{ATLAS_H}; HUD Stone: 3548x1774")
 
 
 if __name__ == "__main__":

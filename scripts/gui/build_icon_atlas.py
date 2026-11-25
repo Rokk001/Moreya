@@ -14,8 +14,19 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(ROOT / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
-import config_own_rows  # noqa: E402
-import tempfile  # noqa: E402
+
+import os  # noqa: E402
+
+
+# The skin and icon atlases live in the content packages (gui-skin, core-gui), not in the public gui folder.
+def content_gui(package):
+    """gui folder of a content package; MOREYA_CONTENT_DIR must name the packages folder."""
+    base = os.environ.get("MOREYA_CONTENT_DIR")
+    if not base:
+        raise SystemExit("MOREYA_CONTENT_DIR must point to the content packages folder")
+    return Path(base) / package / "gui"
+
+
 SOURCE = assets_src_dir(ROOT) / "gui/icons"
 SKIN = assets_src_dir(ROOT) / "gui/skin"
 NAVIGATION_RECTS = {
@@ -100,21 +111,7 @@ def write_imageset(path, imagefile, name, entries):
     for attrs in entries:
         ET.SubElement(root, "Image", attrs)
     ET.indent(root, space="    ")
-    write_tree(ET.ElementTree(root), path)
-
-
-# Write an XML tree to a file of the repository. A mixed interface file (one with own rows markers, see
-# scripts/config_own_rows.py) is written in full to a temporary file and split into its public file and its own rows
-# file of the content package, so the public file never holds the own rows.
-def write_tree(tree, path):
-    path = Path(path)
-    if not path.is_file() or not config_own_rows.markers(path.read_text(encoding="utf-8")):
-        tree.write(path, encoding="utf-8", xml_declaration=True)
-        return
-    with tempfile.TemporaryDirectory() as folder:
-        full = Path(folder) / path.name
-        tree.write(full, encoding="utf-8", xml_declaration=True)
-        config_own_rows.split_full(ROOT, full, path.relative_to(ROOT).as_posix())
+    ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
 
 
 # Rebuild original grid slots and painted sources, retaining the integrated navigation ring and states.
@@ -152,14 +149,14 @@ def main():
             tile.save(tile_path)
         atlas.paste(tile, (int(attrs["xPos"]), int(attrs["yPos"])))
         entries.append(attrs)
-    atlas.save(ROOT / "gui/ODIcons.png")
-    write_imageset(ROOT / "gui/ODIcons.imageset", "ODIcons.png", "OpenDungeonsIcons", entries)
+    atlas.save(content_gui("gui-skin") / "ODIcons.png")
+    write_imageset(content_gui("gui-skin") / "ODIcons.imageset", "ODIcons.png", "OpenDungeonsIcons", entries)
 
     navigation = Image.new("RGBA", (2048, 2048))
     ring = Image.open(SKIN / "glyph-3-3.png").convert("RGBA")
     ring = ring.crop(ring.getbbox())
     # Preserve the integrated ring painting and its matching interaction patches.
-    painted_navigation = Image.open(ROOT / "gui/ODNavigation.png").convert("RGBA")
+    painted_navigation = Image.open(content_gui("core-gui") / "ODNavigation.png").convert("RGBA")
     sprites = {"MiniMapRim": painted_navigation.crop((0, 0, 768, 768))}
     source_names = ("ManaBadge", "GoldBadge", "NavHelp", "NavSell", "NavOptions", "MapZoom", "MiniMapNorth")
     for index, name in enumerate(source_names):
@@ -186,8 +183,8 @@ def main():
         sprite.save(SOURCE / "navigation" / (name + ".png"))
         navigation.paste(sprite, (x, y))
         nav_entries.append({"name": name, "xPos": str(x), "yPos": str(y), "width": str(width), "height": str(height)})
-    navigation.save(ROOT / "gui/ODNavigation.png")
-    write_imageset(ROOT / "gui/ODNavigation.imageset", "ODNavigation.png", "OpenDungeonsNavigation", nav_entries)
+    navigation.save(content_gui("core-gui") / "ODNavigation.png")
+    write_imageset(content_gui("core-gui") / "ODNavigation.imageset", "ODNavigation.png", "OpenDungeonsNavigation", nav_entries)
     print(f"Painted icons: {len(slots)} slots at {atlas_width}x{atlas_height}; navigation: {len(sprites)} sprites at 2048x2048")
 
 
