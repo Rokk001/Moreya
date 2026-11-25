@@ -7,8 +7,9 @@ Requirements checked (each reported on its own, expected values are fixed):
   P1  the build computes the checksums of all shipped levels at every build and compiles them into the game: the CMake
       script covers the three folders, a custom target without output (it runs at every build) rewrites the generated
       source of the build directory, the game depends on it and lists the source; no checksum file is in the
-      repository. The script is run with cmake: 73 entries, each the SHA-256 of the level without carriage returns
-      (compared with hashlib), an unchanged folder does not rewrite the output, a changed level does
+      repository. The script is run with cmake: 56 entries with the content (32 without), each the SHA-256 of the
+      level without carriage returns (compared with hashlib), an unchanged folder does not rewrite the output, a
+      changed level does
   P2  a changed shipped level is rejected with a message when it is loaded, an unchanged one loads (compiled probe on
       OfficialLevels.cpp with a changed copy; static wiring in readGameMapFromFile and the single player menus)
   P3  the multiplayer host never starts a changed shipped level and shows a message (static wiring; probe: also a
@@ -48,8 +49,8 @@ started = time.monotonic()
 failures = []
 
 WITH_CONTENT = content_packages.has_content(repo)
-# Number of shipped levels of the branch (38 skirmish, 20 multiplayer, 15 campaign), counted once
-ALL_LEVEL_COUNT = 73
+# Number of shipped levels of the branch (32 skirmish, 9 multiplayer, 15 campaign), counted once
+ALL_LEVEL_COUNT = 56
 # Number of shipped levels of the public tree (19 skirmish, 9 multiplayer, 4 campaign), counted once
 PUBLIC_LEVEL_COUNT = 32
 EXPECTED_LEVEL_COUNT = ALL_LEVEL_COUNT if WITH_CONTENT else PUBLIC_LEVEL_COUNT
