@@ -2,16 +2,21 @@
 
 Pure source wiring check: the settings in config/creatureReactions.cfg, the choice of the pulling hand bone (also
 against the real skeleton files of the Elf and the DarkElf), the release at the moment of the projectile start, a reload
-that is never longer than the time between the shots, clean up and the fallback without a hand bone."""
+that is never longer than the time between the shots, clean up and the fallback without a hand bone.
+config/creatureReactions.cfg lies in the content package core-config; without the content its settings are named as
+not checked and the code wiring is still checked."""
 from pathlib import Path
 import re
 import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
+# The text of a repository file or of a game data file of the public tree or a content package.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 def function_body(source, signature):
@@ -23,7 +28,10 @@ def function_body(source, signature):
 cpp = read('source/render/CreatureWeaponVisuals.cpp')
 config_h = read('source/render/CreatureReactionConfig.h')
 config_cpp = read('source/render/CreatureReactionConfig.cpp')
-cfg = read('config/creatureReactions.cfg')
+# The reaction settings lie in the content package core-config (None without the content)
+cfg = read('config/creatureReactions.cfg') if content_packages.has_content(root) else None
+if cfg is None:
+    content_packages.unchecked('check_crossbow_arrow', ['config/creatureReactions.cfg settings and header'])
 tool = read('tools/check_creature_reactions.py')
 
 # 1. Settings: cfg value, cfg header text, parser, default, getter, check script
@@ -43,12 +51,14 @@ for constant, value in (('DEFAULT_ARROW_FOLLOWS_HAND', 'true'), ('DEFAULT_ARROW_
                         ('DEFAULT_ARROW_RELOAD_TIME', '0.45'), ('DEFAULT_CROSSBOW_RELOAD_TIME', '1.1'),
                         ('DEFAULT_CROSSBOW_RELOAD_JOLT', '5.0')):
     assert re.search(constant + r' = ' + re.escape(value) + ';', config_cpp), constant
-settings_start = cfg.rindex('[Settings]')
-settings = cfg[settings_start:cfg.index('[/Settings]', settings_start)]
-header = cfg[:settings_start]
+if cfg is not None:
+    settings_start = cfg.rindex('[Settings]')
+    settings = cfg[settings_start:cfg.index('[/Settings]', settings_start)]
+    header = cfg[:settings_start]
 for key, (default, getter) in KEYS.items():
-    assert re.search(r'^\s+%s\s+\S' % key, settings, re.M), 'cfg value missing: ' + key
-    assert re.search(r'^#\s+%s\s' % key, header, re.M), 'cfg header does not explain ' + key
+    if cfg is not None:
+        assert re.search(r'^\s+%s\s+\S' % key, settings, re.M), 'cfg value missing: ' + key
+        assert re.search(r'^#\s+%s\s' % key, header, re.M), 'cfg header does not explain ' + key
     assert 'words[0] == "%s"' % key in config_cpp, 'parser misses ' + key
     assert default in config_cpp, 'default missing: ' + key
     assert getter in config_h, 'getter missing: ' + getter
@@ -81,7 +91,7 @@ def find_pull_hand(bones, mount_bone):
 
 
 def skeleton_bones(name):
-    data = (root / 'models' / (name + '.skeleton')).read_bytes()
+    data = content_packages.resolve(root, 'models/' + name + '.skeleton').read_bytes()
     return set(m.decode() for m in re.findall(rb'Weapon_[LR]|LeftHand|RightHand', data))
 
 

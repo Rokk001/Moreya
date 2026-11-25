@@ -1,11 +1,20 @@
 """Check the gold shown outside the treasury: a coin heap for gold on the floor, a sack for gold carried
 by a worker, brighter veins in the walls, and the wiring of these into the renderer. Also runs the render
-budget count (no game start needed)."""
+budget count (no game start needed).
+
+The sack material and texture are content (core-models package, found through scripts/content_packages.py) and their
+CREDITS row stands in the CREDITS of the content repository; without the content they are named as not checked."""
 from pathlib import Path
 import subprocess
 import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The content files of the sack (core-models package)
+SACK_FILES = ('materials/scripts/GoldSack.material', 'materials/textures/GoldSack.png')
 
 
 def read(path):
@@ -29,10 +38,15 @@ assert 'sizeCount = 4' in header
 assert 'GoldstackLv' in loose
 assert 'GoldstackLv1' in read('source/entities/TreasuryObject.cpp')
 # Assets: material, texture, generator, credits, build.
-assert 'material GoldSack' in read('materials/scripts/GoldSack.material')
-assert (repo / 'materials/textures/GoldSack.png').exists()
+missing_content = [name for name in SACK_FILES if content_packages.data_file(repo, name) is None]
+if not missing_content:
+    assert 'material GoldSack' in content_packages.read_text(repo, 'materials/scripts/GoldSack.material')
+    assert content_packages.data_file(repo, 'materials/textures/GoldSack.png').exists()
+    # The row of a moved asset stands in the CREDITS of the content repository (public CREDITS plus that one)
+    assert 'GoldSack.png' in room_packages.credits_text(repo)
+else:
+    content_packages.unchecked('check_gold_elsewhere', missing_content)
 assert (repo / 'tools/treasury-gold/generate_gold_sack.py').exists()
-assert 'GoldSack.png' in read('CREDITS')
 assert 'LooseGoldMesh.cpp' in read('CMakeLists.txt')
 # Veins: brighter gold wall shader with a glint, brighter gem material.
 frag = read('shaders/GoldDistortion.frag')

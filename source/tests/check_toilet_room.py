@@ -2,6 +2,9 @@
 
 Calls (from the repository root):
   python source/tests/check_toilet_room.py            plain file checks, no compiler, no game
+
+The room plan of config/ai.cfg lies in the content packages (scripts/content_packages.py); without the content the
+compiled plan is checked against the fixed list and the ai.cfg part is named as not checked.
 """
 from pathlib import Path
 import re
@@ -9,6 +12,7 @@ import re
 root = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the toilet come from its room package (scripts/room_packages.py); without the package only the code
@@ -17,8 +21,8 @@ ROOM_ASSETS = room_packages.has_room(root, 'Toilet')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.resolve(root, relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(root, relative)
 
 
 def read(path):
@@ -147,12 +151,18 @@ wanted = ai[ai.index('static const std::vector<RoomType> wantedBuildings = {'):]
 wanted = wanted[:wanted.index('};')]
 order = re.findall(r'RoomType::(\w+)', wanted)
 # The compiled room order and the [RoomPlan] order of ai.cfg are the same whole list of the plan
-plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', read('config/ai.cfg'), re.M | re.S).group(1)
-plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
+PLAN = ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture']
 compiled_names = re.findall(r'"(\w+)"', re.search(r'wantedBuildingKeys = \{(.*?)\};', ai, re.S).group(1))
-assert plan_names == ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture'], plan_names
-assert compiled_names == plan_names, compiled_names
-assert plan_names.index('toilet') == 8 and plan_names.count('toilet') == 1
+assert compiled_names == PLAN, compiled_names
+ai_cfg = content_packages.data_file(root, 'config/ai.cfg')
+if ai_cfg is None:
+    content_packages.unchecked('check_toilet_room', ['config/ai.cfg room plan'])
+else:
+    plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', ai_cfg.read_text(encoding='utf-8'), re.M | re.S).group(1)
+    plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
+    assert plan_names == PLAN, plan_names
+    assert compiled_names == plan_names, compiled_names
+    assert plan_names.index('toilet') == 8 and plan_names.count('toilet') == 1
 
 # 8. Research tree order: the toilet entry follows the casino entry in the tier II row
 assert registered.index('roomCasino') + 1 == registered.index('roomToilet'), 'the toilet follows the casino in the tree'

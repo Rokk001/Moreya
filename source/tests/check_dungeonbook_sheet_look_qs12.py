@@ -24,6 +24,9 @@ skill with its rank inside the page and no cut text at 640x480, 1024x768, 1920x1
    the opened list at every screen and UI scale.
 
 Needs the chosen sheet at <ODP_ASSETS_SRC>/ingame-qs-9/d1/variant-2.png (like check_menu_button_template.py).
+
+The book layout and the menu sheet atlas are content (core-gui package, found through scripts/content_packages.py).
+Without the content part 1 (code and tooltip model) is checked and parts 2 and 3 are named as not checked.
 """
 from pathlib import Path
 import re
@@ -38,6 +41,11 @@ START = time.monotonic()
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
+import content_packages  # noqa: E402
+
+#: The content files of parts 2 and 3 (core-gui package)
+CONTENT_FILES = ('gui/WindowSocial.layout', 'gui/ODMenuTemplate.png', 'gui/ODMenuTemplate.imageset')
+missing_content = [name for name in CONTENT_FILES if content_packages.data_file(repo, name) is None]
 
 gui_dir = repo / 'gui'
 gui_cpp = (repo / 'source/render/Gui.cpp').read_text(encoding='utf-8')
@@ -45,7 +53,6 @@ social_cpp = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8
 creature_cpp = (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 frame_cpp = (repo / 'source/render/ODFrameListener.cpp').read_text(encoding='utf-8')
 mode_cpp = (repo / 'source/modes/ModeManager.cpp').read_text(encoding='utf-8')
-layout = ET.parse(gui_dir / 'WindowSocial.layout').getroot().find('Window')
 looks = {look.get('name'): look for look in ET.parse(gui_dir / 'OD.looknfeel').getroot().findall('WidgetLook')}
 scheme = (gui_dir / 'ODSkin.scheme').read_text(encoding='utf-8')
 failures = []
@@ -219,13 +226,24 @@ plain = run(True, on_label, FRAMES)
 check(plain and abs((plain[0] - ENTER) / 60.0 - CEGUI_HOVER) <= 1.0 / 60.0 + 1e-9,
       'a plain tooltip keeps the hover time of CEGUI')
 
+if missing_content:
+    # Parts 2 and 3 measure the layout and the atlas of the content
+    content_packages.unchecked('check_dungeonbook_sheet_look_qs12', missing_content)
+    for failure in failures:
+        print('FAIL ' + failure)
+    print('ODP_TEST_PHASE {"name":"check","seconds":%.2f}' % (time.monotonic() - START))
+    print('Dungeonbook QS-12 B1: item card drawn in frame %s of entering; %d failures' % (
+        shown[0] - ENTER if shown else None, len(failures)))
+    sys.exit(1 if failures else 0)
+layout = ET.parse(content_packages.resolve(repo, 'gui/WindowSocial.layout')).getroot().find('Window')
+
 # ------------------------------------------------------------------------------------------------ 2. K9 scrollbars
 SHEET = assets_src_dir(repo) / 'ingame-qs-9/d1/variant-2.png'
 assert SHEET.is_file(), 'chosen menu sheet missing: %s' % SHEET
 sheet = np.asarray(Image.open(SHEET).convert('RGB')).astype(np.int32)
-atlas = np.asarray(Image.open(gui_dir / 'ODMenuTemplate.png').convert('RGBA')).astype(np.int32)
+atlas = np.asarray(Image.open(content_packages.resolve(repo, 'gui/ODMenuTemplate.png')).convert('RGBA')).astype(np.int32)
 pieces = {i.get('name'): tuple(int(i.get(k)) for k in ('xPos', 'yPos', 'width', 'height'))
-          for i in ET.parse(gui_dir / 'ODMenuTemplate.imageset').getroot().findall('Image')}
+          for i in ET.parse(content_packages.resolve(repo, 'gui/ODMenuTemplate.imageset')).getroot().findall('Image')}
 # The scrollbar of the list of the load screen on the sheet (measured once on variant-2.png): the up and down arrow
 # boxes, an empty piece of the rail below the thumb and the thumb (top end, middle, bottom end)
 ON_SHEET = {'ScrollUp': (1795, 455, 1842, 496), 'ScrollDown': (1795, 829, 1842, 870),

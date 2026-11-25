@@ -1,15 +1,31 @@
 #!/usr/bin/env python3
 # Checks the hatchery animal sounds: the files exist, have a CREDITS entry, and the server plays every family.
+# The sounds are content (hatchery room package, found through scripts/content_packages.py) and their CREDITS rows stand
+# in the CREDITS of the content repository; without the content the sound files are named as not checked.
 from pathlib import Path
+import sys
 
 root = Path(__file__).resolve().parents[2]
-credits = (root / 'CREDITS').read_text()
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+# The public CREDITS plus the CREDITS of the content repository when the packages are present
+credits = room_packages.credits_text(root)
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text() if (root / 'source/rooms/RoomHatchery.cpp').exists() else ''
 
 families = ('Crow', 'Protest', 'Cluck', 'Peep', 'EggCrack')
-for family in families:
-    folder = root / 'sounds/Spatial/Rooms/Hatchery' / family
-    files = sorted(folder.glob('*.ogg'))
+#: True when the hatchery sounds are in the public tree or in a content or room package
+SOUNDS_PRESENT = bool(content_packages.data_folders(root, 'sounds/Spatial/Rooms/Hatchery'))
+if not SOUNDS_PRESENT:
+    content_packages.unchecked('check_hatchery_sounds', ['sounds/Spatial/Rooms/Hatchery'])
+for family in families if SOUNDS_PRESENT else ():
+    # The sounds of the family in the public tree and in every package
+    files = content_packages.data_glob(root, 'sounds/Spatial/Rooms/Hatchery/' + family, '*.ogg')
+    if not files and not content_packages.has_content(root):
+        # Without the content only the families that stayed in the public tree are checked
+        content_packages.unchecked('check_hatchery_sounds', ['sounds/Spatial/Rooms/Hatchery/' + family])
+        continue
     assert len(files) >= 2, family
     for ogg in files:
         assert ogg.stat().st_size > 1000, ogg
@@ -31,7 +47,8 @@ assert room.count('fireAnimalSound(*rooster, "Hatchery/Crow")') == 1, 'the roof 
 assert 'fireAnimalSound(*winner, "Hatchery/Crow")' in room, 'the winner of a fight crows'
 # the rooster no longer calls the hens: the food call sound is gone for good (files, credits, generator, code)
 gen = (root / 'tools/hatchery/gen_hatchery_sounds.py').read_text()
-assert not (root / 'sounds/Spatial/Rooms/Hatchery/FoodCall').exists(), 'FoodCall files are removed'
+# Absent from the public tree and from every package
+assert content_packages.data_file(root, 'sounds/Spatial/Rooms/Hatchery/FoodCall') is None, 'FoodCall files are removed'
 assert 'FoodCall' not in credits, 'no credits entry for the food call'
 assert 'FoodCall' not in gen and 'make_food_call' not in gen, 'the generator no longer makes the food call'
 assert 'FoodCall' not in room and 'Hatchery/FoodCall' not in room, 'the rooster does not call the hens'

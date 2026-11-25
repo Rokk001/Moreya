@@ -55,6 +55,7 @@
 #include "spells/Spell.h"
 #include "traps/Trap.h"
 #include "traps/TrapManager.h"
+#include "utils/ContentPackages.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -206,6 +207,20 @@ std::string getGameLevelsRoot()
     return ResourceManager::getSingleton().getGameDataPath() + "levels";
 }
 
+//! \brief The shipped level folder that holds the file: the levels folder of the game data or of the content package
+//! the file lies in; the levels folder of the game data for a file of neither.
+std::string getGameLevelsRootOf(const std::string& fileName)
+{
+    const std::vector<std::string> roots = ContentPackages::getDataFolders(getGameLevelsRoot());
+    for(const std::string& root : roots)
+    {
+        std::string key;
+        if(OfficialLevels::getOfficialKey(fileName, root, key))
+            return root;
+    }
+    return getGameLevelsRoot();
+}
+
 //! \brief The file name of a path for messages.
 std::string getShownFileName(const std::string& fileName)
 {
@@ -219,19 +234,26 @@ bool isLevelFileExtension(const std::string& extension)
     return (extension == LEVEL_EXTENSION) || (extension == USER_MAP_EXTENSION);
 }
 
-//! \brief Lists the files of both level extensions of a folder.
+//! \brief Lists the files of both level extensions of a folder; for a folder of the game data also the same folder of
+//! every content package (the shipped levels lie in the content packages). False when none of the folders exists.
 bool fillLevelFilesList(const std::string& path, std::vector<std::string>& listFiles)
 {
-    if(!Helper::fillFilesList(path, listFiles, LEVEL_EXTENSION))
-        return false;
-    return Helper::fillFilesList(path, listFiles, USER_MAP_EXTENSION);
+    bool listed = false;
+    for(const std::string& folder : ContentPackages::getDataFolders(path))
+    {
+        if(!Helper::fillFilesList(folder, listFiles, LEVEL_EXTENSION))
+            continue;
+        Helper::fillFilesList(folder, listFiles, USER_MAP_EXTENSION);
+        listed = true;
+    }
+    return listed;
 }
 
 //! \brief Tests the path against the shipped level folders of the game data.
 bool isOfficialLevelPath(const std::string& fileName)
 {
     std::string key;
-    return OfficialLevels::getOfficialKey(fileName, getGameLevelsRoot(), key);
+    return OfficialLevels::getOfficialKey(fileName, getGameLevelsRootOf(fileName), key);
 }
 
 //! \brief Reads the hidden option; it is off when missing.
@@ -250,7 +272,7 @@ bool isEditOfficialLevelsEnabled()
 bool checkOfficialLevel(const std::string& fileName, bool multiplayer, std::string& message)
 {
     message.clear();
-    const OfficialLevels::Verdict verdict = OfficialLevels::verifyLevelFile(fileName, getGameLevelsRoot(),
+    const OfficialLevels::Verdict verdict = OfficialLevels::verifyLevelFile(fileName, getGameLevelsRootOf(fileName),
         OfficialLevelChecksums::ENTRIES, OfficialLevelChecksums::ENTRY_COUNT);
     if(OfficialLevels::mayLoad(verdict, multiplayer))
     {
@@ -285,7 +307,7 @@ OfficialLevels::EditorSaveTarget resolveEditorSaveTarget(const std::string& targ
     bool editOfficialLevels)
 {
     ResourceManager& resources = ResourceManager::getSingleton();
-    return OfficialLevels::resolveEditorSaveTarget(target, saveAs, getGameLevelsRoot(), editOfficialLevels,
+    return OfficialLevels::resolveEditorSaveTarget(target, saveAs, getGameLevelsRootOf(target), editOfficialLevels,
         resources.getUserLevelPathSkirmish(), resources.getUserLevelPathMultiplayer());
 }
 

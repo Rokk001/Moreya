@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-"""Check the complete loading-picture set against the production selector."""
+"""Check the complete loading-picture set against the production selector.
+
+The loading pictures and the ring textures (materials/textures/loading) live in a content package (found through
+scripts/content_packages.py); the set is counted over the public folder and the package folders. Without the content
+the check names the pictures and textures as not checked and checks the code."""
 from pathlib import Path
 import re
 import struct
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import content_packages  # noqa: E402
 
 
 # Read JPEG frame dimensions without requiring an optional image package.
@@ -28,7 +36,8 @@ def jpeg_dimensions(path):
     raise AssertionError(f"missing JPEG dimensions: {path}")
 
 
-# Verify every named selector entry, every asset and the requested total size limit.
+# Verify every named selector entry, every asset and the requested total size limit (the assets only when the content
+# is present).
 def main():
     root = Path(__file__).resolve().parents[2]
     source = (root / "source/render/LoadingScreen.cpp").read_text(encoding="utf-8")
@@ -36,14 +45,19 @@ def main():
     names = re.findall(r'"(loading_\d{2}\.jpg)"', table)
     expected = [f"loading_{number:02d}.jpg" for number in range(1, 26)]
     assert names == expected, "selector must reference exactly the 25 loading pictures"
-    folder = root / "materials/textures/loading"
-    assert sorted(path.name for path in folder.glob("*.jpg")) == expected, "loading picture set is incomplete"
+    # the pictures of the public folder and of the content packages
+    pictures = {path.name: path for path in content_packages.data_glob(root, "materials/textures/loading", "*.jpg")}
+    with_pictures = bool(pictures) or content_packages.has_content(root)
     total = 0
-    for name in names:
-        path = folder / name
-        assert jpeg_dimensions(path) == (1920, 1080), f"wrong dimensions: {name}"
-        total += path.stat().st_size
-    assert total < 25_000_000, f"loading picture set exceeds 25 MB: {total}"
+    if with_pictures:
+        assert sorted(pictures) == expected, "loading picture set is incomplete"
+        for name in names:
+            path = pictures[name]
+            assert jpeg_dimensions(path) == (1920, 1080), f"wrong dimensions: {name}"
+            total += path.stat().st_size
+        assert total < 25_000_000, f"loading picture set exceeds 25 MB: {total}"
+    else:
+        content_packages.unchecked("check_loading_screens", ["the 25 loading pictures of materials/textures/loading"])
     resources = (root / "cmake/config/resources.cfg.in").read_text(encoding="utf-8")
     assert "FileSystem=materials/textures/loading" in resources, "loading images must be discoverable by Ogre"
     application = (root / "source/ODApplication.cpp").read_text(encoding="utf-8")
@@ -53,7 +67,10 @@ def main():
     shaders = application.index("if (!Ogre::RTShader::ShaderGenerator::initialize())")
     shown = application.index("renderWindow->setHidden(false);")
     assert startup < shown < resources < shaders, "show the first picture before full resource setup and RTSS"
-    assert application.index('"materials/textures/loading", "FileSystem", "StartupLoading"') < startup, "register only the picture folder before drawing"
+    # The picture folders (game data and content packages) and the font folders are registered before drawing
+    folders = application.split("static std::vector<std::string> getStartupLoadingFolders(", 1)[1].split("\n}\n", 1)[0]
+    assert '{"materials/textures/loading", "gui/fonts"}' in folders and "ContentPackages::getDataFolders(" in folders, "register only the picture folder before drawing"
+    assert application.index('addResourceLocation(folder, "FileSystem", "StartupLoading")') < startup, "register only the picture folder before drawing"
     assert startup < application.index("renderWindow->setVisible(true);", startup), "present the loading picture before showing the native window"
     constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& overlaySystem)", 1)[1].split("float LoadingScreen::startupFraction(", 1)[0]
     assert "selectLoadingImage();" in constructor and "update();" in constructor and "window.update();" in constructor, "startup must present the shared picture mechanism"
@@ -103,10 +120,13 @@ def main():
     assert "OpenDungeons " not in source and "Open Dungeons" not in application and 'windowTitle = "OpenDungeons' not in application, "no old name in the visible loading texts"
     assert 'destroyLoadingIndicator("StartupLoading")' in source and 'destroyLoadingIndicator("Graphics")' in source, "ring and text must be released on both paths"
     assert "loadingText->setAlpha(0.0f);" in source, "the small widget text must not draw over the large text"
-    ring_png = (root / "materials/textures/loading/loading_ring.png").read_bytes()
-    assert ring_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", ring_png, 16) == (256, 256), "ring texture missing or wrong size"
-    track_png = (root / "materials/textures/loading/loading_ring_empty.png").read_bytes()
-    assert track_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", track_png, 16) == (256, 256), "empty ring texture missing or wrong size"
+    if with_pictures:
+        ring_png = content_packages.resolve(root, "materials/textures/loading/loading_ring.png").read_bytes()
+        assert ring_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", ring_png, 16) == (256, 256), "ring texture missing or wrong size"
+        track_png = content_packages.resolve(root, "materials/textures/loading/loading_ring_empty.png").read_bytes()
+        assert track_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", track_png, 16) == (256, 256), "empty ring texture missing or wrong size"
+    else:
+        content_packages.unchecked("check_loading_screens", ["loading_ring.png and loading_ring_empty.png"])
     # D-4 variant 1: thick thorned iron ring, gap-free ember fill, bottom centre with the text directly above.
     generator = (root / "tools/make_loading_ring.py").read_text(encoding="utf-8")
     band = (float(re.search(r"BAND_INNER = ([0-9.]+)", generator).group(1)), float(re.search(r"BAND_OUTER = ([0-9.]+)", generator).group(1)))

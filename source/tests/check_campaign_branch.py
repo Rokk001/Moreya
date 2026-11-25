@@ -4,7 +4,9 @@ The campaign is one straight sequence of 18 story levels in 6 wings: every story
 needs all story levels before it, no level is an optional sister of another, and the
 former branch maps Mirewatch and Dunmarrow are no longer listed. Run from any directory.
 It does not start a game. The levels come from the wing packages (scripts/campaign_packages.py); the kept
-maps of the former branches belong to the content packages and are checked when they are present.
+maps of the former branches belong to the content packages and are checked when they are present. The map of
+Moreya (gui/campaign/campaign-world.json) is a file of the content packages (scripts/content_packages.py); without
+content its part is named as not checked.
 """
 from pathlib import Path
 import json
@@ -14,12 +16,15 @@ import sys
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 campaign_cpp = (root / "source/game/Campaign.cpp").read_text(encoding="utf-8")
 campaign_h = (root / "source/game/Campaign.h").read_text(encoding="utf-8")
 mode = (root / "source/modes/MenuModeCampaign.cpp").read_text(encoding="utf-8")
 # The Package.cfg texts of all wing packages in campaign order
 definition = campaign_packages.definition_text(root)
-world = json.loads((root / "gui/campaign/campaign-world.json").read_text(encoding="utf-8"))
+# The map of Moreya from the public tree or a content package, None without content
+world_file = content_packages.data_file(root, "gui/campaign/campaign-world.json")
+world = json.loads(world_file.read_text(encoding="utf-8")) if world_file else None
 failures = []
 
 
@@ -62,15 +67,19 @@ check("if(!mCompleted[i] && !mLevels[i].mBonus)" in current and "sister" not in 
 
 # The map of Moreya has replaced the old world map: one straight line of 18 level caves in 6 wings, the story levels
 # of the definition in their order, and its progress counts each defeated story level of the 18
-story = [level for wing in world["wings"] for level in wing["levels"]]
-check("provinces" not in world, "the world map must not list provinces any more")
-check(len(story) == 18, "the map of Moreya must list 18 level caves")
-# The caves of a wing show the story levels of its package in their order: every package has 3 of them
-for wing in world["wings"]:
-    number = str(wing["wing"])
-    package_story = [entry for entry in entries if entry.get("Wing") == number and "Bonus" not in entry]
-    check(len(package_story) in (0, len(wing["levels"])),
-          "the package of wing %s must have one story level per cave, without a branch" % number)
+if world is not None:
+    story = [level for wing in world["wings"] for level in wing["levels"]]
+    check("provinces" not in world, "the world map must not list provinces any more")
+    check(len(story) == 18, "the map of Moreya must list 18 level caves")
+    # The caves of a wing show the story levels of its package in their order: every package has 3 of them
+    for wing in world["wings"]:
+        number = str(wing["wing"])
+        package_story = [entry for entry in entries if entry.get("Wing") == number and "Bonus" not in entry]
+        check(len(package_story) in (0, len(wing["levels"])),
+              "the package of wing %s must have one story level per cave, without a branch" % number)
+else:
+    check(not content_packages.has_content(root), "gui/campaign/campaign-world.json is missing although the content is present")
+    content_packages.unchecked("campaign branch", ["gui/campaign/campaign-world.json"])
 check("mCaveStates[i] == CampaignCaveState::defeated" in mode and "++levelsDefeated;" in mode,
       "progress must count each defeated story level")
 check("++levelTotal;" in mode and "levelsDefeated * PERCENT_FULL / levelTotal" in mode,

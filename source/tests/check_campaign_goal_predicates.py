@@ -73,7 +73,7 @@ for level in campaign_packages.all_level_files(root):
                 for dependency in writers.get((line[2], line[3]), []):
                     assert dependency < index, str(level) + ': late presentation dependency for ' + name
 # The army observer runs before Kingsfall's only victory; the court victories courtTaken and collectWin were removed
-# with Prince Aurel's court goal (he leads the raid now) and must stay removed.
+# with the court goal of its prince (he leads the raid now) and must stay removed.
 # Kingsfall belongs to the wing 5 content package and is checked when it is present.
 if campaign_packages.has_content(root):
     kingsfall = campaign_packages.read_level(root, 'Kingsfall')

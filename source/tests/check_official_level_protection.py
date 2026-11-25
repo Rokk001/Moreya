@@ -23,7 +23,12 @@ Requirements checked (each reported on its own, expected values are fixed):
   P7  the developer option and the hidden option are not mentioned in tracked texts other than code
   P8  the checksums of the build match every shipped level of the repository, also through a folder junction as in a
       run-in-place build directory, so the level of the load test loads (probe with the generated table)
-It compiles one probe twice with cl, runs cmake twice in script mode and starts no game."""
+It compiles one probe twice with cl, runs cmake twice in script mode and starts no game.
+
+Most shipped levels moved to the content packages (scripts/content_packages.py, scripts/campaign_packages.py): the
+levels below levels/<folder> of the content packages and the levels of wing 1 (formerly levels/campaign/wing1). With
+the content present the shipped levels are the public ones plus those (78 in all, keys as before); without the content
+only the 37 public levels are checked and the content levels are named as not checked."""
 from pathlib import Path
 import hashlib
 import os
@@ -35,11 +40,22 @@ import tempfile
 import time
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
+
 started = time.monotonic()
 failures = []
 
+WITH_CONTENT = content_packages.has_content(repo)
 # Number of shipped levels of the branch (41 skirmish, 22 multiplayer, 15 campaign), counted once
-EXPECTED_LEVEL_COUNT = 78
+ALL_LEVEL_COUNT = 78
+# Number of shipped levels of the public tree (22 skirmish, 11 multiplayer, 4 campaign), counted once
+PUBLIC_LEVEL_COUNT = 37
+EXPECTED_LEVEL_COUNT = ALL_LEVEL_COUNT if WITH_CONTENT else PUBLIC_LEVEL_COUNT
+if not WITH_CONTENT:
+    content_packages.unchecked('check_official_level_protection',
+                               ['%d shipped levels of the content packages' % (ALL_LEVEL_COUNT - PUBLIC_LEVEL_COUNT)])
 DEPS = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path(os.environ.get('USERPROFILE', '.')) / 'build-deps')))
 CMAKE = Path(os.environ.get('ODP_CMAKE', str(DEPS / 'tools' / 'cmake-4.4.1-windows-x86_64' / 'bin' / 'cmake.exe')))
 OFFICIAL_FOLDERS = ('skirmish', 'multiplayer', 'campaign')
@@ -85,11 +101,23 @@ def before(text, first, second):
     return a != -1 and b != -1 and a < b
 
 
+def shipped_level_files():
+    """The .level files of the three shipped folders as {path below levels/: file}: the public levels, the levels of
+    the same folders in the content packages and the levels of wing 1 (keys below campaign/wing1/ as before)."""
+    files = {}
+    for folder in OFFICIAL_FOLDERS:
+        for base in content_packages.data_folders(repo, 'levels/' + folder):
+            for path in sorted(base.rglob('*.level')):
+                files.setdefault(folder + '/' + path.relative_to(base).as_posix(), path)
+    for entry in campaign_packages.entries(repo):
+        if entry.get('Wing') == '1' and not entry['_public'] and entry['_path'].is_file():
+            files.setdefault('campaign/wing1/' + entry['_path'].name, entry['_path'])
+    return files
+
+
 def shipped_levels():
-    """The tracked .level files of the three shipped folders (paths below levels/)."""
-    listed = subprocess.run(['git', '-C', str(repo), 'ls-files', 'levels'], capture_output=True, text=True).stdout
-    return sorted(p[len('levels/'):] for p in listed.splitlines()
-                  if p.endswith('.level') and p.split('/')[1] in OFFICIAL_FOLDERS)
+    """The paths below levels/ of the shipped levels (see shipped_level_files)."""
+    return sorted(shipped_level_files())
 
 
 def level_hash(data):
@@ -146,7 +174,8 @@ check(holders == ['cmake/GenerateOfficialLevelChecksums.cmake'] or not script,
 # ---------------------------------------------------------------- P1 (cmake run)
 work = Path(tempfile.mkdtemp(prefix='odp-official-'))
 generated = work / 'generated' / 'OfficialLevelChecksums.cpp'
-expected_keys = shipped_levels()
+level_files = shipped_level_files()
+expected_keys = sorted(level_files)
 check(len(expected_keys) == EXPECTED_LEVEL_COUNT,
       'P1 the branch has %d shipped levels (found %d)' % (EXPECTED_LEVEL_COUNT, len(expected_keys)))
 ok, output = run_generator(repo / 'levels', generated)
@@ -157,7 +186,7 @@ check(ok and 'const std::size_t ENTRY_COUNT = %d;' % EXPECTED_LEVEL_COUNT in gen
       'P1 ENTRY_COUNT of the generated source is %d' % EXPECTED_LEVEL_COUNT)
 check(ok and sorted(k for k, _ in entries) == expected_keys,
       'P1 the keys of the generated source are the paths of the shipped levels below levels/')
-wrong = [k for k, h in entries if h != level_hash((repo / 'levels' / k).read_bytes())]
+wrong = [k for k, h in entries if h != level_hash(level_files.get(k, repo / 'levels' / k).read_bytes())]
 check(ok and not wrong, 'P1 every checksum is the SHA-256 without carriage returns; wrong: %s' % wrong[:5])
 if ok:
     stamp = generated.stat().st_mtime_ns
@@ -167,7 +196,7 @@ if ok:
     copy = work / 'levels'
     for key in expected_keys:
         (copy / key).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(repo / 'levels' / key, copy / key)
+        shutil.copyfile(level_files[key], copy / key)
     changed_key = 'skirmish/' + Path(next(k for k in expected_keys if k.startswith('skirmish/'))).name
     (copy / changed_key).write_bytes((copy / changed_key).read_bytes() + b'# changed\n')
     copied = work / 'copy' / 'OfficialLevelChecksums.cpp'
@@ -351,7 +380,7 @@ check('multi=0' in developer_out and 'multi=0' in release_out,
       'P3 a changed shipped level is rejected in multiplayer in every build')
 
 # P8: the generated table against the repository levels, directly and through a junction like a build directory
-repo_levels = [repo / 'levels' / k for k in expected_keys]
+repo_levels = [level_files[k] for k in expected_keys]
 direct_ok, direct_out = run(release, fixture, 'table', repo / 'levels', *repo_levels) if release else (False, '')
 check(direct_ok and 'count=%d unchanged=%d' % (EXPECTED_LEVEL_COUNT, EXPECTED_LEVEL_COUNT) in direct_out,
       'P8 every shipped level matches the checksum of the build: ' + direct_out[-600:])

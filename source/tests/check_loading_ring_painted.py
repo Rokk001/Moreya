@@ -10,6 +10,8 @@
 3. The widened band is closed: at every heading (0.5 degree steps) at least 22 of the 24 band pixels are opaque.
 
 Fixed values of this branch: 256x256 textures, band 78 to 102 px. No compile, no game.
+The textures live in a content package (found through scripts/content_packages.py); without the content the check
+reads the band of the tool and names the comparisons as not checked.
 """
 from pathlib import Path
 import math
@@ -24,6 +26,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
+import content_packages  # noqa: E402
 
 tool = (ROOT / 'tools/make_loading_ring.py').read_text(encoding='utf-8')
 
@@ -39,12 +42,17 @@ centre = constant('SOURCE_CENTRE')
 scale = constant('SOURCE_THORN_TIP')[0] / constant('TEXTURE_THORN_TIP')[0]
 band = (constant('BAND_INNER')[0], constant('BAND_OUTER')[0])
 assert band == (78.0, 102.0), band
+TEXTURES = ('loading_ring.png', 'loading_ring_empty.png')
+if not content_packages.has_content(ROOT) and \
+        any(content_packages.data_file(ROOT, 'materials/textures/loading/' + name) is None for name in TEXTURES):
+    content_packages.unchecked('check_loading_ring_painted', ['the painted cut-out, thorns and band of ' + ' and '.join(TEXTURES)])
+    sys.exit(0)
 source_path = assets_src_dir(ROOT) / 'gui/loading/loading-ring-painted.png'
 assert source_path.exists(), 'painted source missing: %s' % source_path
 painting = np.asarray(Image.open(source_path).convert('RGB'), dtype=float)
-folder = ROOT / 'materials/textures/loading'
-committed = {name: np.asarray(Image.open(folder / name).convert('RGBA'), dtype=int)
-             for name in ('loading_ring.png', 'loading_ring_empty.png')}
+committed = {name: np.asarray(Image.open(content_packages.resolve(ROOT, 'materials/textures/loading/' + name))
+                              .convert('RGBA'), dtype=int)
+             for name in TEXTURES}
 
 # 1. Reproducible from the painting
 with tempfile.TemporaryDirectory() as directory:

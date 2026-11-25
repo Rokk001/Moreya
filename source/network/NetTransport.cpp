@@ -19,7 +19,7 @@
 #include "network/TcpNetTransport.h"
 
 // The helper relay backend is built only with the CMake option OD_NET_HELPER_RELAY, which is off by default
-// (see docs/development/NETWORK-TRANSPORT.md).
+// (see the design document NETWORK-TRANSPORT.md of the content repository).
 #ifdef OD_NET_HELPER_RELAY
 #include "network/HelperRelayProcess.h"
 #include "network/HelperRelayTransport.h"

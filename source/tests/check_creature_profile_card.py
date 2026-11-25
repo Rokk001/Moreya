@@ -7,11 +7,17 @@ deleted by the owner on 2026-11-18 once the Dungeonbook showed its own profile a
 K1, measured by check_dungeonbook_pages_b1.py). Checked here: both are gone, the item slots keep their slot symbols
 (Creature::fillItemSlotWindows, used by the inventory page of the book), the handle is never the internal name and the
 middle click picks along the pointer ray.
+
+The removed layouts must be absent from the public tree and from every content package; the slot symbols and the book
+layout lie in the content package core-gui and are named as not checked without the content.
 """
 from pathlib import Path
+import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 gui = (repo / 'source/render/Gui.cpp').read_text()
 gui_header = (repo / 'source/render/Gui.h').read_text()
 creature = (repo / 'source/entities/Creature.cpp').read_text()
@@ -19,8 +25,8 @@ creature_header = (repo / 'source/entities/Creature.h').read_text()
 social_cpp = (repo / 'source/render/SocialWindow.cpp').read_text()
 
 # The old creature card and the shared profile page are gone
-assert not (repo / 'gui/WindowCreatureProfile.layout').exists(), 'the old creature card layout is removed'
-assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists(), 'the shared profile page is removed'
+assert content_packages.data_file(repo, 'gui/WindowCreatureProfile.layout') is None, 'the old creature card layout is removed'
+assert content_packages.data_file(repo, 'gui/WindowCreatureProfilePage.layout') is None, 'the shared profile page is removed'
 assert 'WindowCreatureProfile.layout' not in gui and 'createCreatureProfileWindow' not in gui, 'the card is still created'
 for gone in ('createCreatureProfilePage', 'layoutCreatureProfilePage', 'layoutProfileTextRow', 'applyProfileScroll',
              'onProfileWheel', 'onProfileScrolled', 'mProfileBaseAreas', 'ProfileScrollbar'):
@@ -33,11 +39,14 @@ for gone in ('createStatsWindow', 'destroyStatsWindow', 'updateStatsWindow', 'mS
 assert 'fillProfilePage(' not in social_cpp and 'createCreatureProfilePage(' not in social_cpp
 
 # The item slots keep their painted slot symbols (the inventory page of the book has 13 of them)
-slot_types = ET.parse(repo / 'gui/SlotTypes.imageset').getroot()
-assert {image.attrib['name'] for image in slot_types.findall('Image')} == {'Head', 'Hand', 'Armour', 'Boots', 'Ring', 'Potion', 'Bag'}
-book = ET.parse(repo / 'gui/WindowSocial.layout').getroot().find('Window')
-inventory = book.find("Window[@name='InventoryPage']")
-assert len([w for w in inventory.iter('Window') if w.get('name') == 'SlotType']) == 13
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_creature_profile_card', ['gui/SlotTypes.imageset', 'gui/WindowSocial.layout'])
+else:
+    slot_types = ET.parse(content_packages.resolve(repo, 'gui/SlotTypes.imageset')).getroot()
+    assert {image.attrib['name'] for image in slot_types.findall('Image')} == {'Head', 'Hand', 'Armour', 'Boots', 'Ring', 'Potion', 'Bag'}
+    book = ET.parse(content_packages.resolve(repo, 'gui/WindowSocial.layout')).getroot().find('Window')
+    inventory = book.find("Window[@name='InventoryPage']")
+    assert len([w for w in inventory.iter('Window') if w.get('name') == 'SlotType']) == 13
 assert 'slotType->setVisible(item == nullptr)' in creature
 assert '"Hand", "Hand", "Head", "Armour", "Boots", "Ring"' in creature
 assert '"Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"' in creature

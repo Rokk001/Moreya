@@ -30,6 +30,7 @@
 #endif
 
 #include "utils/RaidSimulation.h"
+#include "utils/ContentPackages.h"
 #include "utils/ResourceManager.h"
 #include "utils/RunLevelTest.h"
 #include "utils/StackTracePrint.h"
@@ -87,6 +88,22 @@ int main(int argc, char** argv)
         }
         ODApplication od;
         od.startGame(options);
+        if(ContentPackages::isStartRefused())
+        {
+            // The content packages are missing: tell the player and quit. A headless run (server, level test, raid
+            // simulation) writes the message to the error output only.
+            const std::string message = ContentPackages::getMissingContentMessage(
+                ContentPackages::getMissingPackages());
+            std::cerr << message << std::endl;
+#if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
+            const bool headless = (options.count("server") > 0) || (options.count("servercustom") > 0)
+                || (options.count("serversave") > 0) || (options.count("run-level") > 0)
+                || (options.count("raid-sim") > 0);
+            if(!headless)
+                MessageBox(0, message.c_str(), "Moreya", MB_OK | MB_ICONERROR | MB_TASKMODAL);
+#endif
+            return ContentPackages::MISSING_CONTENT_EXIT_CODE;
+        }
     }
     catch (CEGUI::Exception& e)
     {

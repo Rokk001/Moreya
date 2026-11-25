@@ -12,16 +12,23 @@ This check links the installed CEGUI and Ogre libraries, renders with the Null r
 real GameMode functions that build the defeat windows, open the debriefing, hide the interface each frame,
 route the mouse and handle the confirm button. They are cut out of GameMode.cpp by signature; the game
 objects they touch (client, map, mode manager) are small mocks.
+
+The GUI locations are the folders of the public tree and of the content packages (scripts/content_packages.py); the
+layout lies in the content package core-gui. Without the content the layout checks and the probe (nothing is compiled)
+are named as not checked and the source wiring is still checked.
 """
 from pathlib import Path
 import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ElementTree
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
 cegui_include = deps / 'install/include/cegui-0'
 cegui_lib = deps / 'install/lib'
@@ -30,11 +37,15 @@ null_include = deps / 'src/cegui/cegui/include/CEGUI/RendererModules/Null'
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 mode_manager = (repo / 'source/modes/ModeManager.h').read_text()
 mode_manager_source = (repo / 'source/modes/ModeManager.cpp').read_text()
-layout_path = repo / 'gui/WindowDefeatDebriefing.layout'
-# Register the game's GUI locations non-recursively, as ResourceManager does.
+# The real layout of the debriefing; None when the content is not present
+layout_path = (content_packages.resolve(repo, 'gui/WindowDefeatDebriefing.layout') if content_packages.has_content(repo)
+               else content_packages.data_file(repo, 'gui/WindowDefeatDebriefing.layout'))
+# Register the game's GUI locations non-recursively, as ResourceManager does: each folder of the public tree and the
+# same folder of every content package (ResourceManager::addGameDataResourceLocation)
 gui_section = (repo / 'cmake/config/resources.cfg.in').read_text().split('[GUI]', 1)[1].split('[', 1)[0]
-gui_folders = ','.join('"%s"' % (repo / line.split('=', 1)[1].strip()).as_posix()
-                       for line in gui_section.splitlines() if line.startswith('FileSystem='))
+gui_folders = ','.join('"%s"' % folder.resolve().as_posix()
+                       for line in gui_section.splitlines() if line.startswith('FileSystem=')
+                       for folder in content_packages.data_folders(repo, line.split('=', 1)[1].strip()))
 
 
 def function(text, signature):
@@ -444,14 +455,17 @@ for marker, text in (
     probe = probe.replace(marker, text)
 
 # Static checks on the production sources.
-root = ElementTree.parse(layout_path).getroot().find('Window')
-children = root.findall('Window')
-names = [child.get('name') for child in children]
-assert names.index('Background') < names.index('Panel')
-background = children[names.index('Background')]
-properties = {prop.get('name'): prop.get('value') for prop in background.findall('Property')}
-assert properties['Area'] == '{{0,0},{0,0},{1,0},{1,0}}' and properties.get('RiseOnClickEnabled') == 'False'
-print('LAYOUT OK: the full screen stone below the panel does not rise when clicked')
+if layout_path is None:
+    content_packages.unchecked('check_defeat_debriefing_click', ['gui/WindowDefeatDebriefing.layout', 'compiled probe'])
+else:
+    root = ElementTree.parse(layout_path).getroot().find('Window')
+    children = root.findall('Window')
+    names = [child.get('name') for child in children]
+    assert names.index('Background') < names.index('Panel')
+    background = children[names.index('Background')]
+    properties = {prop.get('name'): prop.get('value') for prop in background.findall('Property')}
+    assert properties['Area'] == '{{0,0},{0,0},{1,0},{1,0}}' and properties.get('RiseOnClickEnabled') == 'False'
+    print('LAYOUT OK: the full screen stone below the panel does not rise when clicked')
 # The confirm handler only requests; the mode is changed at the start of the next ModeManager::update
 confirm = function(game_mode, 'bool GameMode::onClickDefeatDebriefingConfirm(')
 assert 'requestMainMenuWithSkirmishSubMenu();' in confirm and 'MENU_CAMPAIGN' in confirm and 'destroy' not in confirm and 'delete' not in confirm
@@ -462,9 +476,13 @@ print('WIRING OK: the button only sets requests, the mode change runs on the nex
 assert re.search(r'\bauto\b', probe) is None
 print('STYLE OK: no auto in the fixture')
 for path in (Path(__file__), layout_path):
+    if path is None:
+        continue  # the layout of the content package
     bad = [b for b in path.read_bytes() if b < 32 and b not in (9, 10, 13)]
     assert not bad, path
 print('BYTES OK: no stray control characters')
+if layout_path is None:
+    sys.exit(0)  # the probe loads the layout
 
 with tempfile.TemporaryDirectory(prefix='odp-defeat-click-') as directory:
     work = Path(directory)

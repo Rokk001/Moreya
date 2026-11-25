@@ -1,8 +1,9 @@
 """Static checks of the campaign structure of Moreya; compiles nothing and never starts a game.
 
-The campaign is read from its wing packages (scripts/campaign_packages.py): wing 1 from the public tree, wings 2 to 6
-from the content repository with their fixed rows; without it the public package is checked alone and wings 2 to 6
-must be missing.
+The campaign is read from its wing packages (scripts/campaign_packages.py): the public tree holds no wing, wings 1 to 6
+come from the content repository with their fixed rows (wing 1 here, wings 2 to 6 in its check data); without it the
+code is checked alone, wings 1 to 6 must be missing and the data parts that need the packages or the dropped maps
+(scripts/content_packages.py) are named as not checked.
 
 The wing packages list exactly 18 story levels (6 wings x 3) in the fixed order and one bonus level
 per wing; the Heartstone has 3 shards in level 2 of wings 1 to 3; Summon champion comes from wing 4
@@ -23,34 +24,28 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 # Fixed expected structure: (file, wing, title, bonus, shard); Summon champion in wings 4 to 6, every bonus level
-# unlocks one Epic, one Rare and one Common item. The rows of wing 1 (public package); the content repository
-# adds the 20 rows of wings 2 to 6 (checks/campaign_wings.json).
-EXPECTED = [
-    ('campaign/Brackenford.level', '1', 'Mold Pit', False, False),
-    ('campaign/Coldwell.level', '1', 'Drowned Larder', False, True),
-    ('campaign/Ravensledge.level', '1', 'Rat Warren', False, False),
-    ('campaign/Mossgate.level', '1', 'The Forgotten Pit', True, False),
-]
+# unlocks one Epic, one Rare and one Common item. The public tree holds no wing: the 24 rows of wings 1 to 6 come from
+# the content repository (checks/campaign_wings.json).
+EXPECTED = []
 CHAMPION_WINGS = ("4", "5", "6")
 UNLOCK = "Epic Rare Common"
 DROPPED = ("Dunmarrow", "Mirewatch", "Wolfscar", "Thornreach", "Stormhaven", "Silverdeep", "Ebonrook")
 # Fixed raid of every story level: (file, Warden key, leaders, guild, origin, raid size) as the briefing names them;
-# the raids of wing 1 here, those of wings 2 to 6 in the content repository
-RAIDS = [
-    ('campaign/Brackenford.level', 'Elsa Brack', ('Elsa Brack',), 'Mud Fists', 'Brackenford', 'one group of five'),
-    ('campaign/Coldwell.level', 'Hugo Cole', ('Hugo Cole',), 'Iron Latch', 'Coldwell', 'one group of five'),
-    ('campaign/Ravensledge.level', 'Rolf Scarrow', ('Rolf Scarrow',), 'Grey Fang', 'Wolfscar', 'one raid of ten'),
-]
-# The content rows; without content packages wings 2 to 6 must be missing and the public package is checked alone
+# the raids of wings 1 to 6 come from the content repository
+RAIDS = []
+# The content rows; without content packages wings 1 to 6 must be missing and the public tree has no level
 CONTENT = campaign_packages.content_data(ROOT, "campaign_wings")
 if CONTENT is not None:
     EXPECTED += [tuple(row) for row in CONTENT["expected"]]
     RAIDS += [(row[0], row[1], tuple(row[2]), row[3], row[4], row[5]) for row in CONTENT["raids"]]
-# Counts of the whole campaign, and of the public package alone (wing 1)
-STORY_LEVELS, BONUS_LEVELS, SHARDS = (18, 6, 3) if CONTENT is not None else (3, 1, 1)
-WINGS = "123456" if CONTENT is not None else "1"
+else:
+    content_packages.unchecked("campaign wings", ["the structure and raid rows of the wings"])
+# Counts of the whole campaign, and of the public tree alone (no wing)
+STORY_LEVELS, BONUS_LEVELS, SHARDS = (18, 6, 3) if CONTENT is not None else (0, 0, 0)
+WINGS = "123456" if CONTENT is not None else ""
 # Names of the old provinces and trials that no level title may carry any more
 OLD_TITLE_NAMES = ("Brackenford", "Coldwell", "Ravensledge", "Mossgate", "Tinmoor", "Greywater", "Highcairn", "Lanternhill",
                    "Saltmere", "Hollin Fen", "HollinFen", "Cinderhollow", "Ashcombe", "Ironbridge", "Bellwick", "Goldspire",
@@ -91,8 +86,8 @@ def body(source, signature):
 
 # The Package.cfg texts of all wing packages in campaign order
 definition = campaign_packages.definition_text(ROOT)
-check(CONTENT is not None or campaign_packages.missing_wings(ROOT) == [2, 3, 4, 5, 6],
-      "without content packages wings 2 to 6 must be missing")
+check(CONTENT is not None or campaign_packages.missing_wings(ROOT) == [1, 2, 3, 4, 5, 6],
+      "without content packages wings 1 to 6 must be missing")
 # Comment lines may name the section markers; only the setting lines count
 settings_text = "\n".join(line for line in definition.split("\n") if not line.startswith("#"))
 check(not settings_text.split("[Level]", 1)[0].strip(), "a Package.cfg has settings outside of the [Level] entries")
@@ -124,14 +119,23 @@ for wing in WINGS:
     bonus = [e for e in entries if e.get("Wing") == wing and e.get("Bonus") == "1"]
     check(len(story) == 3 and len(bonus) == 1, "wing " + wing + " needs 3 story levels and 1 bonus level")
 
-# MAP6: the dropped maps are no longer listed, their files stay
+# MAP6: the dropped maps are no longer listed, their files stay (in the public tree or the content packages)
+not_present = []
 for name in DROPPED:
     check("campaign/" + name + ".level" not in [e.get("File") for e in entries], name + " must be dropped")
-    check((ROOT / "levels/campaign" / (name + ".level")).is_file(), name + ".level must stay in the repository")
+    if content_packages.has_content(ROOT):
+        check(content_packages.data_file(ROOT, "levels/campaign/" + name + ".level") is not None,
+              name + ".level must stay in the repository")
+    elif content_packages.data_file(ROOT, "levels/campaign/" + name + ".level") is None:
+        not_present.append("levels/campaign/" + name + ".level")
+content_packages.unchecked("campaign wings", not_present)
 
 # CS3, CS6: the champion and unlock keys are documented in the file
-for key in ("Wing", "Bonus", "Shard", "Champion", "Unlock"):
-    check(re.search(r"^# " + key + " ", definition, re.M) is not None, key + " needs a documentation line")
+if definition.strip() or CONTENT is not None:
+    for key in ("Wing", "Bonus", "Shard", "Champion", "Unlock"):
+        check(re.search(r"^# " + key + " ", definition, re.M) is not None, key + " needs a documentation line")
+else:
+    content_packages.unchecked("campaign wings", ["the documentation lines of the Package.cfg files"])
 check(sum(1 for e in entries if e.get("Shard") == "1") == SHARDS, "the Heartstone needs %d shards here" % SHARDS)
 
 # Loader and progression: wings, shards, settings; no provinces, branches or bonus Heartstone pieces

@@ -37,7 +37,7 @@
  * - NetTransportKind::helperRelay: lobby and relay through a separate helper process that the game
  *   starts and talks to over a pipe (HelperPipeProtocol.h, HelperRelayProcess.h, HelperRelayTransport.h). Built
  *   only with the CMake option OD_NET_HELPER_RELAY (off by default) and used once a helper process is set up
- *   with --net-helper; see docs/development/NETWORK-TRANSPORT.md.
+ *   with --net-helper; see the design document NETWORK-TRANSPORT.md of the content repository.
  */
 
 #include <cstdint>

@@ -10,12 +10,21 @@ the ghost is above the trap opening, stops at the first frame the whole body is 
 the box snaps shut. The old predicate (target only) is executed too and must keep firing after entry, so the check
 tells the delivered behaviour from the lost one. Fixed values counted once on this branch: 5 updateLook quantities,
 3 ghostAboveTrap exits, entry between capture share 0.94 and 0.96 with the shipped mesh and values.
+
+Ghost.mesh is content (core-models package, found through scripts/content_packages.py). Without it the production
+predicates are read and their fixed cases without a mesh are run; the beam step over the mesh is named as not checked.
 """
 from pathlib import Path
 import importlib.util
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the shipped ghost mesh is in the public tree or in a content package
+GHOST_MESH = content_packages.data_file(repo, 'models/Ghost.mesh') is not None
 
 
 def read(path):
@@ -113,11 +122,12 @@ def ghost_top(capture_progress, floor, mesh_top):
     return floor + values['sink'] + values['scale'] * mesh_top
 
 
-spec = importlib.util.spec_from_file_location('ghost_meshes', repo / 'source/tests/check_ghost_apparatus_visible.py')
-meshes = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(meshes)
-mesh_bottom, mesh_top = meshes.read_mesh('Ghost')['bounds'][2], meshes.read_mesh('Ghost')['bounds'][5]
-assert mesh_top > 0.0 > mesh_bottom - 1.0, (mesh_bottom, mesh_top)
+if GHOST_MESH:
+    spec = importlib.util.spec_from_file_location('ghost_meshes', repo / 'source/tests/check_ghost_apparatus_visible.py')
+    meshes = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(meshes)
+    mesh_bottom, mesh_top = meshes.read_mesh('Ghost')['bounds'][2], meshes.read_mesh('Ghost')['bounds'][5]
+    assert mesh_top > 0.0 > mesh_bottom - 1.0, (mesh_bottom, mesh_top)
 ghost = read('source/entities/GhostEntity.cpp')
 assert 'setMeshName("Ghost");' in ghost and 'mPosition.z = 0.0f;' in ghost, 'every ghost is the Ghost mesh on the floor'
 
@@ -179,35 +189,40 @@ def frame(capture, floor, expression=beaming_expression, box_mode=3, state='beam
 
 
 # --- the outcome over the whole beam step ----------------------------------------------------------------------------
-SAMPLES = 1000
-for floor in (0.0, 1.0, 5.0):
-    previous = True
-    stopped_at = None
-    for step in range(SAMPLES + 1):
-        capture = step / SAMPLES
-        beaming, reset, torn_down, top = frame(capture, floor)
-        assert beaming == (top > floor), (floor, capture, top, 'the cannon fires exactly while the ghost shows above the trap')
-        assert reset == (not beaming), 'the Beam clip goes back to Idle the frame the cannon stops'
-        assert torn_down == (not beaming), 'sound, sparks, glow and lightning end with the beam'
-        assert previous or not beaming, (floor, capture, 'the cannon never resumes during the rest of the pull')
-        if not beaming and stopped_at is None:
-            stopped_at = capture
-        previous = beaming
-    assert frame(0.0, floor)[0], 'the cannon fires at the start of the beam step'
-    assert stopped_at is not None and 0.94 < stopped_at < 0.96, (floor, stopped_at, 'stops at entry, before the snap')
-    # The trap is still open at that moment: the server ends the beam step only at a capture share of 1
-    assert stopped_at < 1.0
-    # The old predicate kept the cannon on the ghost for the whole step, also after the ghost was inside the trap.
-    assert frame(stopped_at, floor, expression='target!=nullptr')[0], 'the lost behaviour is told apart'
+if GHOST_MESH:
+    SAMPLES = 1000
+    for floor in (0.0, 1.0, 5.0):
+        previous = True
+        stopped_at = None
+        for step in range(SAMPLES + 1):
+            capture = step / SAMPLES
+            beaming, reset, torn_down, top = frame(capture, floor)
+            assert beaming == (top > floor), (floor, capture, top, 'the cannon fires exactly while the ghost shows above the trap')
+            assert reset == (not beaming), 'the Beam clip goes back to Idle the frame the cannon stops'
+            assert torn_down == (not beaming), 'sound, sparks, glow and lightning end with the beam'
+            assert previous or not beaming, (floor, capture, 'the cannon never resumes during the rest of the pull')
+            if not beaming and stopped_at is None:
+                stopped_at = capture
+            previous = beaming
+        assert frame(0.0, floor)[0], 'the cannon fires at the start of the beam step'
+        assert stopped_at is not None and 0.94 < stopped_at < 0.96, (floor, stopped_at, 'stops at entry, before the snap')
+        # The trap is still open at that moment: the server ends the beam step only at a capture share of 1
+        assert stopped_at < 1.0
+        # The old predicate kept the cannon on the ghost for the whole step, also after the ghost was inside the trap.
+        assert frame(stopped_at, floor, expression='target!=nullptr')[0], 'the lost behaviour is told apart'
 
-# No other moment of the hunt shows the cannon firing: no target, another box state, a ghost that is no longer beamed.
-for capture in (0.0, 0.5, 0.9):
-    assert not frame(capture, 0.0, has_target=False)[0]
-    for box_mode in (0, 1, 2, 4, 5, 6, 7):
-        assert not frame(capture, 0.0, box_mode=box_mode)[0], box_mode
-    for state in ('rising', 'floating', 'boxed', 'dissolving'):
-        assert not frame(capture, 0.0, state=state)[0], state
+    # No other moment of the hunt shows the cannon firing: no target, another box state, a ghost that is no longer beamed.
+    for capture in (0.0, 0.5, 0.9):
+        assert not frame(capture, 0.0, has_target=False)[0]
+        for box_mode in (0, 1, 2, 4, 5, 6, 7):
+            assert not frame(capture, 0.0, box_mode=box_mode)[0], box_mode
+        for state in ('rising', 'floating', 'boxed', 'dissolving'):
+            assert not frame(capture, 0.0, state=state)[0], state
 # A ghost without a drawn body yet keeps the cannon on it (the trap lies below it); invalid bounds do too.
 assert ghost_above_trap({'state': 'beamed', 'has_entity': False, 'finite': True, 'top': 0.0, 'floor': 0.0})
 assert ghost_above_trap({'state': 'beamed', 'has_entity': True, 'finite': False, 'top': -1.0, 'floor': 0.0})
-print('ghost cannon stops at trap entry: 3 floors x 1001 frames, clip and effects follow, old predicate told apart: ok')
+if not GHOST_MESH:
+    content_packages.unchecked('check_ghost_cannon_stop', ['models/Ghost.mesh (beam step over the mesh)'])
+    print('ghost cannon predicates read, fixed cases without a mesh: ok')
+else:
+    print('ghost cannon stops at trap entry: 3 floors x 1001 frames, clip and effects follow, old predicate told apart: ok')

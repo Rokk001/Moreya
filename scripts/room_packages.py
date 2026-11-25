@@ -298,7 +298,8 @@ def has_content(repo):
 
 
 # The file of a room asset: the public file when the public tree has it, else the file of a found room package (of the
-# given room, or of any room), else None.
+# given room, or of any room), else None. Without a given room a file that moved into a content package
+# (scripts/content_packages.py, for example a mesh of core-models that a room uses) is found there as well.
 def asset(repo, relative, room=None):
     repo = Path(repo)
     relative = str(relative).replace('\\', '/')
@@ -311,6 +312,12 @@ def asset(repo, relative, room=None):
         candidate = folder / relative
         if candidate.exists():
             return candidate
+    if room is None:
+        import content_packages
+        for folder in content_packages.packages(repo).values():
+            candidate = folder / relative
+            if candidate.exists():
+                return candidate
     return None
 
 
@@ -388,11 +395,16 @@ def licence_ok(repo, row, public_licence):
     return 'All rights reserved' in row and row in content_credit_rows(repo)
 
 
-# The files of a glob pattern below a relative folder of the public tree and of every present room package (the game
-# loads the scripts and textures of both alike).
+# The files of a glob pattern below a relative folder of the public tree, of every present room package and of every
+# present content package (scripts/content_packages.py; the game loads the scripts and textures of all alike).
 def glob_files(repo, folder, pattern):
+    import content_packages
     repo = Path(repo)
-    return [path for root in [repo] + package_roots(repo) for path in sorted((root / folder).glob(pattern))]
+    roots = []
+    for root in [repo] + package_roots(repo) + list(content_packages.packages(repo).values()):
+        if root not in roots:
+            roots.append(root)   # a room package that is also a content package is read once
+    return [path for root in roots for path in sorted((root / folder).glob(pattern))]
 
 
 # Every file below a relative folder of the public tree and of the found room packages, as {relative path: file}.

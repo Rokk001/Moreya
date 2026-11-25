@@ -2,6 +2,8 @@
 
 Part A: the [Stats] fields of creatures.cfg, the equipment fields, the global.cfg keys, the attribute level formulas
 and the places that use the attribute level instead of the creature level. Other parts are added by later packages.
+Game data of the content packages (levels, the creature reactions, the critical hit recording) is found through
+scripts/content_packages.py; without the content those parts are named as not checked.
 """
 from pathlib import Path
 import glob
@@ -12,6 +14,7 @@ import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 sys.path.insert(0, str(root / 'tools/balance'))
 from combat_sim import combat_stat, multiplier
 
@@ -20,6 +23,13 @@ BS = chr(92)
 
 def text(relative):
     return (root / relative).read_text(encoding='utf-8')
+
+
+# The text of a game data file of the public tree or a content package; None only when the content is not present.
+def data_text(relative):
+    if content_packages.data_file(root, relative) is None and not content_packages.has_content(root):
+        return None
+    return content_packages.read_text(root, relative)
 
 
 def function(source, signature):
@@ -335,7 +345,13 @@ def check_part_h():
             assert mesh == base, (name, mesh, base)
             check_values(name, stats, group_of[base], group_of[base], family_of[base], PRE_SKILLS.get(base, 'none'), 'T4_' + base)
             found_classes.add(name)
-    assert found_classes == set(LEVEL_FILE_CLASSES), found_classes
+    if content_packages.has_content(root):
+        assert found_classes == set(LEVEL_FILE_CLASSES), found_classes
+    else:
+        # The levels of the content package core-levels carry the other level-file classes
+        assert found_classes <= set(LEVEL_FILE_CLASSES), found_classes
+        content_packages.unchecked('check_creature_attributes', ['level-file creature ' + name for name in
+                                                                 sorted(set(LEVEL_FILE_CLASSES) - found_classes)])
 
     # ---- Heart (section 9): values, share record and the conversion of old saves
     rooms_cfg = text('config/rooms.cfg')
@@ -748,7 +764,8 @@ def check_part_g():
     event_h = text('source/network/CosmeticEvent.h')
     gui = text('source/render/Gui.cpp')
     social = text('source/render/SocialWindow.cpp')
-    reactions = text('config/creatureReactions.cfg')
+    # The reactions and the critical hit recording lie in the content packages (None without the content)
+    reactions = data_text('config/creatureReactions.cfg')
     credits = text('CREDITS')
 
     # ---- 6.7 the offset mechanism: the drawing moves, the next child still centres on the unshifted box
@@ -798,17 +815,27 @@ def check_part_g():
     assert 'showCriticalFeedback(reactions, target, attacker);' in case
     assert 'noteHitEvent(reactions, attacker, target' in case, 'a critical hit flinches like a hit'
     assert 'damage' not in feedback.lower(), 'no damage number'
-    event = reactions[reactions.index('Name        CriticalHit'):]
-    event = event[:event.index('[/Event]')]
-    assert 'Effect  ReactionSparks' in event
-    for forbidden in ('Clip', 'Fallback', 'Emote', 'Motion'):
-        assert forbidden not in event, 'no new animation or picture: ' + forbidden
+    if reactions is None:
+        content_packages.unchecked('check_creature_attributes', ['config/creatureReactions.cfg CriticalHit'])
+    else:
+        event = reactions[reactions.index('Name        CriticalHit'):]
+        event = event[:event.index('[/Event]')]
+        assert 'Effect  ReactionSparks' in event
+        for forbidden in ('Clip', 'Fallback', 'Emote', 'Motion'):
+            assert forbidden not in event, 'no new animation or picture: ' + forbidden
 
     # ---- 8.6 the sound file and its CREDITS row
-    sound = root / 'sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg'
-    assert sound.is_file() and sound.stat().st_size > 0
-    assert 'sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg' in credits
-    assert 'opengameart.org/content/37-hitspunches' in credits, 'real recording with source URL'
+    sound = content_packages.data_file(root, 'sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg')
+    if sound is None and not content_packages.has_content(root):
+        content_packages.unchecked('check_creature_attributes',
+                                   ['sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg and its CREDITS row'])
+    else:
+        assert sound is not None and sound.is_file() and sound.stat().st_size > 0
+        # The row of the recording lies in the CREDITS of the content repository
+        content = campaign_packages.content_repository(root)
+        credits += '\n' + (content / 'CREDITS').read_text(encoding='utf-8') if content is not None else ''
+        assert 'sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg' in credits
+        assert 'opengameart.org/content/37-hitspunches' in credits, 'real recording with source URL'
     assert not (root / 'tools/gen_critical_hit_sound.py').exists(), 'no generator any more'
 
     # ---- 11 the stats text: after "Level:" the attributes, critical chance, mana, path and skills

@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 # Static checks of the server side chicken life cycle wiring (the rules themselves are covered by
 # the 00-HatcheryCycle unit test).
+# config/roomAmbienceDeferred.cfg and particles/ChickenEggShell.particle are content (core-config and hatchery room
+# packages, found through scripts/content_packages.py); without them their parts are named as not checked.
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 chicken_h = (root / 'source/entities/ChickenEntity.h').read_text()
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text()
@@ -63,8 +68,11 @@ assert 'hasTorchOn' not in ambience_cpp and 'torchShift' not in ambience_cpp
 lit = body(room_cpp, 'bool RoomHatchery::isLit')
 assert 'getSeat' not in lit and 'isAlliedSeat' not in lit and 'getMapLights' in lit
 assert 'WallTorches::hasTorchWithin(getGameMap()->getWallTorches()' in lit
-ambience_cfg = (root / 'config/roomAmbienceDeferred.cfg').read_text()
-assert 'Torch       yes' not in ambience_cfg
+if content_packages.data_file(root, 'config/roomAmbienceDeferred.cfg') is None:
+    content_packages.unchecked('check_hatchery_life_cycle', ['config/roomAmbienceDeferred.cfg'])
+else:
+    ambience_cfg = content_packages.resolve(root, 'config/roomAmbienceDeferred.cfg').read_text()
+    assert 'Torch       yes' not in ambience_cfg
 assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, false)' in room_cpp
 hatching = room_cpp[room_cpp.index('// Eggs hatch while'):room_cpp.index('// Chicks grow up')]
 assert 'enemy->getPositionTile() == egg->getPositionTile()' in hatching
@@ -186,9 +194,12 @@ fx = body(room_cpp, 'void RoomHatchery::fireEggTrample')
 assert 'HatcheryFx/EggTrample' in fx and 'ServerNotificationType::playSpatialSound' in fx
 assert 'HatcheryFx/EggTrample' in client and 'rrEggTrampled' in client
 assert 'void RenderManager::rrEggTrampled' in render and '"ChickenEggTrample"' in render
-particles = (root / 'particles/ChickenEggShell.particle').read_text()
-trample = particles[particles.index('particle_system ChickenEggTrample'):]
-assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
+if content_packages.data_file(root, 'particles/ChickenEggShell.particle') is None:
+    content_packages.unchecked('check_hatchery_life_cycle', ['particles/ChickenEggShell.particle'])
+else:
+    particles = content_packages.resolve(root, 'particles/ChickenEggShell.particle').read_text()
+    trample = particles[particles.index('particle_system ChickenEggTrample'):]
+    assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
 assert 'enum class ServerNotificationType' in notif and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', notif[notif.index('enum class ServerNotificationType'):notif.index('};')], re.M)[-17:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown', 'startGameRefused', 'possessionSkillBar']
 print('hatchery nest egg and trample checks passed')
 

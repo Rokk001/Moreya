@@ -8,22 +8,40 @@ It tests the delivered assets, not constants:
 - every surface material of the crow (plumage, legs, bill) is textured with visible surface detail.
 Fixed values counted once on fix/ingame-qs-10-a8 (16 411 or 16 412 triangles per crow, throat reach 0.225, lowest body
 feather 0.110; today's meshes of e64239497: 52 216 triangles, 0.184, 0.157).
+The material, the textures and the crow meshes live in content packages (found through scripts/content_packages.py);
+without the content the check names them as not checked and starts no converter.
 """
 from pathlib import Path
 import os
 import re
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 import numpy as np
 from PIL import Image
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The game data files the check reads
+CONTENT_FILES = (['materials/scripts/MenuScene.material'] +
+                 ['materials/textures/menu/' + name for name in ('MenuCrowFeather.png', 'MenuCrowHorn.png', 'MenuCrowBill.png')] +
+                 ['models/MenuCrow' + crow + suffix for crow in 'ABCD' for suffix in ('.mesh', '.skeleton')])
+missing = [relative for relative in CONTENT_FILES if content_packages.data_file(root, relative) is None]
+if missing and not content_packages.has_content(root):
+    content_packages.unchecked('check_menu_crow_look', missing)
+    sys.exit(0)
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 output = root / 'out/menu-crow-look'
 output.mkdir(parents=True, exist_ok=True)
-scene = (root / 'materials/scripts/MenuScene.material').read_text(encoding='utf-8')
-textures = root / 'materials/textures/menu'
+scene = content_packages.read_text(root, 'materials/scripts/MenuScene.material')
+
+
+def texture(name):
+    """The menu texture of the public tree or of a content package."""
+    return content_packages.resolve(root, 'materials/textures/menu/' + name)
 
 
 def material_block(name):
@@ -48,7 +66,7 @@ assert 'MenuCrowHorn.png' in material_block('MenuCrowBeak')
 assert 'MenuCrowBill.png' in material_block('MenuCrowBill')
 
 # Feather atlas: four cells, dark warm colour, ragged margins, closed centre.
-atlas, opaque, mean, detail = luminance_detail(textures / 'MenuCrowFeather.png')
+atlas, opaque, mean, detail = luminance_detail(texture('MenuCrowFeather.png'))
 height, width = opaque.shape
 assert 18.0 <= mean <= 40.0, ('plumage must stay dark', mean)
 assert detail >= 4.0, ('plumage needs visible barb and sheen detail', detail)
@@ -67,14 +85,14 @@ for index in range(4):
     changes = int(np.count_nonzero(margin[1:] != margin[:-1]))
     assert changes >= 6, (index, 'margin is not ragged', changes)
 for name in ('MenuCrowHorn.png', 'MenuCrowBill.png'):
-    _, _, mean, detail = luminance_detail(textures / name)
+    _, _, mean, detail = luminance_detail(texture(name))
     assert 20.0 <= mean <= 70.0, (name, 'horn must stay dark', mean)
     assert detail >= 1.5, (name, 'horn needs visible surface detail', detail)
 
 # Meshes: triangle budget, materials, shaggy plumage.
 for crow in 'ABCD':
-    mesh = root / ('models/MenuCrow' + crow + '.mesh')
-    skeleton = root / ('models/MenuCrow' + crow + '.skeleton')
+    mesh = content_packages.resolve(root, 'models/MenuCrow' + crow + '.mesh')
+    skeleton = content_packages.resolve(root, 'models/MenuCrow' + crow + '.skeleton')
     mesh_xml = output / (crow + '.mesh.xml')
     skeleton_xml = output / (crow + '.skeleton.xml')
     for source, target in ((mesh, mesh_xml), (skeleton, skeleton_xml)):

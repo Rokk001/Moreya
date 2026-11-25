@@ -2,9 +2,11 @@
 """Check campaign preview assets without compiling or starting the game.
 
 Run with --self-test to exercise malformed assets entirely in memory. The levels come from the campaign wing packages
-(scripts/campaign_packages.py): all 24 with the content repository, the 4 of wing 1 without it. The image
-specification of a public level lies in materials/campaign-previews/, that of a content level in docs/previews/ of
-the content repository.
+(scripts/campaign_packages.py): all 24 with the content repository, none without it (the public tree holds no wing).
+The image specification of a public level lies in materials/campaign-previews/, that of a content level in
+docs/previews/ of the content repository (wing 1: docs/design/materials/campaign-previews/, where its former public
+specifications moved). The layouts and fonts are files of the content packages (scripts/content_packages.py); without
+content the layout parts are named as not checked and the code parts of the self-test still run.
 """
 import argparse
 from io import BytesIO
@@ -19,9 +21,14 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 
-# 18 story levels and 6 bonus levels in 6 wings; the public package alone has 3 story levels and 1 bonus level
-EXPECTED_LEVELS = 24 if campaign_packages.has_content(Path(__file__).resolve().parents[2]) else 4
+# 18 story levels and 6 bonus levels in 6 wings; the public tree alone has no campaign level
+EXPECTED_LEVELS = 24 if campaign_packages.has_content(Path(__file__).resolve().parents[2]) else 0
+#: Folders of the content repository with the image specifications of the content levels
+CONTENT_SPECIFICATIONS = ("docs/previews", "docs/design/materials/campaign-previews")
+#: The game data files the layout parts need (content packages)
+LAYOUT_FILES = ("gui/MenuCampaign.layout", "gui/WindowObjectives.layout")
 PREVIEW_WIDTH = 640
 PREVIEW_HEIGHT = 360
 MAX_PREVIEW_BYTES = 400 * 1024
@@ -189,8 +196,8 @@ def compact_goal_fit_errors(root):
     from PIL import ImageFont
     import math
     errors = []
-    layout = ET.fromstring((root / "gui/MenuCampaign.layout").read_text(encoding="utf-8"))
-    hud = ET.fromstring((root / "gui/WindowObjectives.layout").read_text(encoding="utf-8"))
+    layout = ET.fromstring(content_packages.read_text(root, "gui/MenuCampaign.layout"))
+    hud = ET.fromstring(content_packages.read_text(root, "gui/WindowObjectives.layout"))
     properties = {}
     for tree, name in ((layout, "BriefingGoals"), (hud, "ObjectivesText")):
         window = tree.find(".//Window[@name='%s']" % name)
@@ -233,8 +240,8 @@ def compact_goal_fit_errors(root):
                 ("ObjectivesText", runtime_lines,
                  (548 * scale, 370 * scale))):
                 font_name = properties[name]["Font"]
-                definition = ET.parse(root / ("gui/fonts/" + font_name + ".font")).getroot()
-                font = ImageFont.truetype(str(root / "gui/fonts" / definition.get("filename")), math.ceil(float(definition.get("size")) * 96 / 72 * font_scale))
+                definition = ET.parse(content_packages.resolve(root, "gui/fonts/" + font_name + ".font")).getroot()
+                font = ImageFont.truetype(str(content_packages.resolve(root, "gui/fonts/" + definition.get("filename"))), math.ceil(float(definition.get("size")) * 96 / 72 * font_scale))
                 used_height = 0
                 for icon_width, line in lines:
                     rows = 1
@@ -277,11 +284,18 @@ def check_repository(root):
             failures.append(province + ": missing image " + preview)
         else:
             failures.extend(province + ": " + error for error in png_errors(image.read_bytes()))
-        specifications = (root / "materials/campaign-previews" if fields["_public"]
-                          else campaign_packages.content_repository(root) / "docs/previews")
-        if not (specifications / (Path(preview).stem + ".md")).is_file():
+        specifications = ([root / "materials/campaign-previews"] if fields["_public"]
+                          else [campaign_packages.content_repository(root) / folder
+                                for folder in CONTENT_SPECIFICATIONS])
+        if not any((folder / (Path(preview).stem + ".md")).is_file() for folder in specifications):
             failures.append(province + ": missing image specification")
-    layout = ET.fromstring((root / "gui/MenuCampaign.layout").read_text(encoding="utf-8"))
+    missing = [name for name in LAYOUT_FILES if content_packages.data_file(root, name) is None]
+    if missing:
+        if content_packages.has_content(root):
+            return failures + ["content files missing although the content is present: " + ", ".join(missing)]
+        content_packages.unchecked("campaign previews", missing)
+        return failures
+    layout = ET.fromstring(content_packages.read_text(root, "gui/MenuCampaign.layout"))
     if not any(window.get("name") == "BriefingImage" and window.get("type") == "OD/StaticImage"
                for window in layout.iter("Window")):
         failures.append("layout is missing the OD/StaticImage BriefingImage window")
@@ -320,7 +334,12 @@ def self_test():
     assert read_levels("# [Level] starts each campaign entry.\n[Level]\nProvince=T01\nPreview=previews/T01.png\n[/Level]\n") == [{"Province": "T01", "Preview": "previews/T01.png"}]
     assert read_levels("[Level]\n[/Level]\n") == [{}], "empty real level hidden"
     root = Path(__file__).resolve().parents[2]
-    layout_text = (root / "gui/MenuCampaign.layout").read_text(encoding="utf-8")
+    if content_packages.data_file(root, "gui/MenuCampaign.layout") is None:
+        assert not content_packages.has_content(root), "gui/MenuCampaign.layout missing although the content is present"
+        content_packages.unchecked("campaign preview self-test", ["gui/MenuCampaign.layout"])
+        print("campaign preview checker self-tests passed")
+        return
+    layout_text = content_packages.read_text(root, "gui/MenuCampaign.layout")
     mode = (root / "source/modes/MenuModeCampaign.cpp").read_text(encoding="utf-8")
     gui = (root / "source/render/Gui.cpp").read_text(encoding="utf-8")
     assert not briefing_layout_errors(ET.fromstring(layout_text), mode, gui)

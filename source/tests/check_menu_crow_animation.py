@@ -1,14 +1,25 @@
-"""Check the main menu crows: wing-beat clips exist in the skeletons and the menu scene uses them. No compile, no game."""
+"""Check the main menu crows: wing-beat clips exist in the skeletons and the menu scene uses them. No compile, no game.
+
+The crow meshes and skeletons and their CREDITS row are content (core-menu package and the CREDITS of the content
+repository, scripts/content_packages.py); without the content they are named as not checked.
+"""
 from pathlib import Path
 import math
 import re
 import os
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
-cfg = (root / 'config/mainmenuscene.cfg').read_text(encoding='utf-8').replace('\r\n', '\n')
-credits = (root / 'CREDITS').read_text(encoding='utf-8')
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+WITH_CONTENT = content_packages.has_content(root)
+cfg = content_packages.read_text(root, 'config/mainmenuscene.cfg').replace('\r\n', '\n')
+# the public CREDITS plus the CREDITS of the content repository when the content is present
+credits = room_packages.credits_text(root)
 generator = (root / 'tools/blender-assets/menu_scene_models.py').read_text(encoding='utf-8')
 
 CLIPS = ('Watch', 'Flap', 'FlapIn', 'TakeOff', 'Land')
@@ -21,8 +32,11 @@ converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 
 # Ogre binary serialisation writes strings null-free and newline terminated.
 for crow in CROWS:
-    mesh = root / ('models/Menu' + crow + '.mesh')
-    skeleton = root / ('models/Menu' + crow + '.skeleton')
+    mesh = content_packages.resolve(root, 'models/Menu' + crow + '.mesh')
+    skeleton = content_packages.resolve(root, 'models/Menu' + crow + '.skeleton')
+    if not WITH_CONTENT and not (mesh.is_file() and skeleton.is_file()):
+        content_packages.unchecked('check_menu_crow_animation', ['models/Menu' + crow + '.mesh and .skeleton'])
+        continue
     assert mesh.is_file() and skeleton.is_file(), crow
     data = skeleton.read_bytes()
     for name in CLIPS + BONES:
@@ -52,7 +66,10 @@ for crow in CROWS:
             angles = [float(r.get('angle')) * float(r.find('axis').get('z')) for r in track.findall('./keyframes/keyframe/rotate')]
             assert max(angles) - min(angles) >= math.radians(80), (crow, clip, wing, angles)
     
-assert 'Own work, created with Blender (AI-assisted)' in credits
+if WITH_CONTENT or 'Own work, created with Blender (AI-assisted)' in credits:
+    assert 'Own work, created with Blender (AI-assisted)' in credits
+else:
+    content_packages.unchecked('check_menu_crow_animation', ['CREDITS row of the crows'])
 for clip in CLIPS:
     assert '"' + clip + '"' in generator, clip
 

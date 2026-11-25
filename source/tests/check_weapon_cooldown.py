@@ -3,7 +3,9 @@ building damage keeps the base columns, and the level formula is in place.
 
 Static source check (no compiler, no game): the config field, its loader/writer/packet, the choice of the
 weapon value for melee (larger of two, definition value without a weapon), the level formula and the recovery clock.
-Run with --table to print the per creature table (weapons, damage, cooldown before/after, level 30)."""
+Run with --table to print the per creature table (weapons, damage, cooldown before/after, level 30).
+Models and config/creatureSkills.cfg are found in the public tree or in the content packages
+(scripts/content_packages.py); without the content a moved one is named as not checked."""
 from pathlib import Path
 import re
 import subprocess
@@ -12,12 +14,25 @@ import sys
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 # State the damage and cooldown values are compared with (integration state before the weapon cooldown work)
 BASE_COMMIT = 'cdaa5856d'
 
 
 def read(path):
+    """The text of a file below the repository root."""
     return (root / path).read_text(encoding='utf-8')
+
+
+def data(path):
+    """The file of a game data path in the public tree or in a content package; None (named as not checked) when
+    the content is not present, while a file missing although the content is present fails the check."""
+    found = content_packages.data_file(root, path)
+    if found is None and not content_packages.has_content(root):
+        content_packages.unchecked('check_weapon_cooldown', [path])
+        return None
+    assert found is not None, path + ' is missing'
+    return found
 
 
 def read_base(path):
@@ -28,6 +43,21 @@ def function_body(source, signature):
     start = source.index(signature)
     end = source.index('\n}\n', start)
     return source[start:end]
+
+
+# The level files: below levels/ of the public tree and of the content packages, and the level and campaign files of
+# the wing and room packages (the data tables a content package moved out of config/ or materials/ are no level files).
+def level_files():
+    files = list((root / 'levels').rglob('*')) + content_packages.data_glob(root, 'levels', '*', True)
+    for path in campaign_packages.content_files(root, ('.level', '.cfg')):
+        # A file below levels/ of a content package is in the list already
+        if content_packages.relative_path(root, path).split('/')[0] not in DATA_TABLE_FOLDERS + ('levels',):
+            files.append(path)
+    return files
+
+
+#: The folders of the game data whose files are no level files (they moved from the public tree into content packages)
+DATA_TABLE_FOLDERS = ('config', 'materials', 'gui', 'models', 'particles', 'sounds')
 
 
 # ---------------------------------------------------------------- config parsing
@@ -263,12 +293,14 @@ for name, carrier in EXPECTED_MODEL_WEAPONS.items():
     assert equipments[name]['mesh'] == 'none', name
     assert creatures[carrier]['weapons'] == [name], (carrier, creatures[carrier]['weapons'])
 assert equipments['Pickaxe']['mesh'] == 'DwarfPick.mesh'
-assert (root / 'models' / 'DwarfPick.mesh').is_file()
+dwarf_pick = data('models/DwarfPick.mesh')
+assert dwarf_pick is None or dwarf_pick.is_file()
 assert creatures['DwarfWorker']['weapons'] == ['Pickaxe']
 # Evidence from the models: the knife and the Defender weapon are parts of their meshes, the kobold has a pick bone
-assert b'GoblinKnife' in (root / 'models' / 'Goblin.mesh').read_bytes()
-assert b'DefenderWeapon' in (root / 'models' / 'Defender.mesh').read_bytes()
-assert b'Pick' in (root / 'models' / 'Kobold.skeleton').read_bytes()
+for path, part in (('models/Goblin.mesh', b'GoblinKnife'), ('models/Defender.mesh', b'DefenderWeapon'),
+                   ('models/Kobold.skeleton', b'Pick')):
+    model = data(path)
+    assert model is None or part in model.read_bytes(), (path, part)
 for name, item in equipments.items():
     if item['mesh'] == 'none':
         assert name in EXPECTED_MODEL_WEAPONS, name + ' has no mesh but is not a model weapon'
@@ -287,7 +319,7 @@ for name, item in equipments.items():
 for weapon_name, carrier in WEAK_PARRY_WEAPONS.items():
     carriers = [n for n, c in creatures.items() if weapon_name in c['weapons']]
     assert carriers == [carrier], (weapon_name, carriers)
-    for level_file in list((root / 'levels').rglob('*')) + campaign_packages.content_files(root, ('.level', '.cfg')):
+    for level_file in level_files():
         if level_file.is_file() and level_file.suffix in ('.level', '.cfg', '.txt'):
             assert weapon_name not in level_file.read_text(encoding='utf-8', errors='ignore'), (weapon_name, level_file)
 # The shield values and the fallback values stay in global.cfg unchanged
@@ -319,8 +351,9 @@ for (name, skill), expected in EXPECTED_COOLDOWN.items():
     assert name in creatures and skill in creatures[name]['skills'], (name, skill)
     assert cooldown_of(creatures[name], equipments, skill) == expected, \
         (name, skill, cooldown_of(creatures[name], equipments, skill), expected)
-tree_config = read('config/creatureSkills.cfg')
-for skill_id, expected in EXPECTED_TREE_COOLDOWN.items():
+tree_file = data('config/creatureSkills.cfg')
+tree_config = None if tree_file is None else tree_file.read_text(encoding='utf-8')
+for skill_id, expected in EXPECTED_TREE_COOLDOWN.items() if tree_config is not None else ():
     tree_block = re.search(r'^Id\s+' + skill_id + r'\s*$(.*?)^\[/Skill\]', tree_config, re.M | re.S).group(1)
     assert re.search(r'^Cooldown\s+' + expected + r'\s*$', tree_block, re.M), (skill_id, expected)
 # A creature with weapons has the weapon cooldown in its melee row too, so both sources agree

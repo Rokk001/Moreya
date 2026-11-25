@@ -14,6 +14,8 @@ import re
 import sys
 
 REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+sys.path.insert(0, os.path.join(REPO, 'scripts'))
+import content_packages  # noqa: E402
 
 # Budget
 # A full pile carries up to 16 coins (6 triangles each), 4 gems (8) and 8 spilled coins (4) on top of its round
@@ -38,7 +40,8 @@ MAX_GLOW_LIGHTS = 32
 
 
 def read(path):
-    with open(os.path.join(REPO, path), encoding='utf-8') as handle:
+    """Text of a file of the repository, or of a game data file of a content package (scripts/content_packages.py)"""
+    with open(str(content_packages.resolve(REPO, path)), encoding='utf-8') as handle:
         return handle.read()
 
 
@@ -115,7 +118,11 @@ def main():
 
     # Particle systems: none of the gold visuals of this part may add one
     new_particles = 0
+    # The sack material is content (core-models package); without the content it is named as not checked
     for name in ('source/render/LooseGoldMesh.cpp', 'materials/scripts/GoldSack.material'):
+        if content_packages.data_file(REPO, name) is None and not content_packages.has_content(REPO):
+            content_packages.unchecked('check_gold_budget', [name])
+            continue
         new_particles += len(re.findall(r'ParticleSystem|particle_system', read(name)))
     limit(new_particles <= MAX_NEW_PARTICLE_SYSTEMS, 'gold elsewhere added %d particle systems' % new_particles)
 

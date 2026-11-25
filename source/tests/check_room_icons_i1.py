@@ -7,6 +7,10 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+CHECK = 'check_room_icons_i1'
 MAPPINGS = {
     'AlchemyLabButton': ('alchemy-lab.png', 'RoomCentreIconAlchemyLab/Icon'),
     'ArenaButton': ('arena.png', 'RoomCentreIconArena/Icon'),
@@ -46,30 +50,38 @@ ROOM_CENTRE = (
 )
 
 
-def main():
-    """Check all 24 room icon mappings and the in-game/editor presentation points."""
-    assert len(MAPPINGS) == 24, 'fixed inventory contains 24 room icons'
-    icon_root = ROOT / 'gui' / 'RoomCentreIcons'
-    icon_names = {path.name for path in icon_root.glob('*.png')}
+def check_mappings():
+    """Check the 24 icon files, their imagesets and that each PNG resolves in one GUI folder only. The icons and the
+    imagesets are game data: they are read from the public tree or from the content packages (the game registers each
+    [GUI] folder of the public tree and of every content package); without the content this part is not checked."""
+    icon_folders = content_packages.data_folders(ROOT, 'gui/RoomCentreIcons')
+    icon_paths = content_packages.data_glob(ROOT, 'gui/RoomCentreIcons', '*.png')
+    if not icon_paths and not content_packages.has_content(ROOT):
+        content_packages.unchecked(CHECK, ['gui/RoomCentreIcons', 'the room icon imagesets'])
+        return False
+    icon_names = {path.name for path in icon_paths}
     assert icon_names == {value[0] for value in MAPPINGS.values()}, 'all 24 chosen A1 files are mapped once'
 
     # The game registers each [GUI] folder non-recursively, so an imagefile must be a bare name in exactly one of them.
     gui_section = (ROOT / 'cmake/config/resources.cfg.in').read_text(encoding='utf-8').split('[GUI]', 1)[1].split('[', 1)[0]
-    gui_folders = [ROOT / line.split('=', 1)[1].strip() for line in gui_section.splitlines() if line.startswith('FileSystem=')]
-    assert icon_root in gui_folders, 'icon folder is a GUI resource location'
-    scheme = ET.parse(ROOT / 'gui' / 'ODSkin.scheme').getroot()
+    gui_names = [line.split('=', 1)[1].strip() for line in gui_section.splitlines() if line.startswith('FileSystem=')]
+    assert 'gui/RoomCentreIcons' in gui_names, 'icon folder is a GUI resource location'
+    # Every [GUI] location of the public tree and the same folder of every content package
+    gui_folders = [folder for name in gui_names for folder in content_packages.data_folders(ROOT, name)]
+    scheme = ET.parse(content_packages.resolve(ROOT, 'gui/ODSkin.scheme')).getroot()
     imagesets = {node.get('name'): node.get('filename') for node in scheme.findall('Imageset')}
     distinct_pixels = set()
     for button, (filename, image_ref) in MAPPINGS.items():
         imageset_name, image_name = image_ref.split('/', 1)
         assert imageset_name in imagesets, button + ': imageset registered in ODSkin.scheme'
-        imageset_path = ROOT / 'gui' / imagesets[imageset_name]
+        imageset_path = content_packages.resolve(ROOT, 'gui/' + imagesets[imageset_name])
         imageset = ET.parse(imageset_path).getroot()
         assert imageset.get('imagefile') == filename, button + ': selected A1 PNG is the source'
-        assert [folder for folder in gui_folders if (folder / filename).is_file()] == [icon_root], button + ': PNG resolves only in the icon folder'
+        resolving = [folder for folder in gui_folders if (folder / filename).is_file()]
+        assert len(resolving) == 1 and resolving[0] in icon_folders, button + ': PNG resolves only in the icon folder'
         image = imageset.find("Image[@name='" + image_name + "']")
         assert image is not None, button + ': mapped CEGUI image exists'
-        picture_path = icon_root / filename
+        picture_path = resolving[0] / filename
         with Image.open(picture_path) as picture:
             picture.load()
             digest = sha256(picture.convert('RGBA').tobytes()).hexdigest()
@@ -78,6 +90,14 @@ def main():
                 distinct_pixels.add(digest)
         print('PASS mapping ' + button + ' -> ' + filename + ' -> ' + image_ref)
     assert len(distinct_pixels) == 23, '23 in-game build bar icons are pixel-distinct'
+    return True
+
+
+def main():
+    """Check all 24 room icon mappings and the in-game/editor presentation points; without the content the icon files
+    and their imagesets are named as not checked."""
+    assert len(MAPPINGS) == 24, 'fixed inventory contains 24 room icons'
+    mapped = check_mappings()
 
     gui_source = (ROOT / 'source' / 'render' / 'Gui.cpp').read_text(encoding='utf-8')
     arrange = re.search(r'void Gui::arrangeRoomButtons\(CEGUI::Window\* rooms\)(.*?)\n\}', gui_source, re.S)
@@ -120,7 +140,10 @@ def main():
     traps = (ROOT / 'gui' / 'WindowTabTraps.layout').read_text(encoding='utf-8')
     assert "image='" + MAPPINGS['WorkshopButton'][1] + "'" in traps, 'workshop room icon use in traps tab is replaced'
 
-    print('DONE mappings=24 build-bar=23 distinct=23 editor-temple=PASS room-centre=8')
+    if mapped:
+        print('DONE mappings=24 build-bar=23 distinct=23 editor-temple=PASS room-centre=8')
+    else:
+        print('DONE mappings=not checked build-bar=23 editor-temple=PASS room-centre=8')
     return 0
 
 

@@ -25,6 +25,10 @@ commands of every crow (AddEntity, ResizeEntity, PosEntity, MoveEntity, Wait) an
 
 Fixed values counted once on fix/ingame-qs-12-m2b (six crows; the old scene has no flying crow and the sprite swarm).
 Options: --report prints per crow and view where it is seen.
+
+The meshes, skeletons and MenuScene.material live in content packages (found through scripts/content_packages.py);
+without the content the check checks the scene commands of the configuration and names the rest as not checked (no
+converter is started).
 """
 import argparse
 import math
@@ -40,11 +44,13 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import check_menu_sky_below_horizon as sky  # noqa: E402  (shared mesh reader, poses and flight sampling)
+import content_packages  # noqa: E402  (scripts/ is on the path through the menu scene check)
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 CONFIG = os.path.join(ROOT, "config", "mainmenuscene.cfg")
 MODELS = os.path.join(ROOT, "models")
-MATERIALS = os.path.join(ROOT, "materials", "scripts", "MenuScene.material")
+#: The menu scene materials of the public tree or of a content package
+MATERIALS = str(content_packages.resolve(ROOT, "materials/scripts/MenuScene.material"))
 OUTPUT = os.path.join(ROOT, "out", "menu-sky-crows")
 CONVERTER = os.environ.get("OGRE_XML_CONVERTER", "OgreXMLConverter")
 #: The flying crows of the moon sky (counted once: six).
@@ -67,6 +73,22 @@ MIN_TIP_STROKE = 0.5
 MAX_TURN_DEGREES = 8.0
 #: Margin added to the crow's bounding sphere (world units) for the out-of-frame and behind-scenery tests.
 SPHERE_MARGIN = 0.25
+
+
+def model_path(name):
+    """Returns the mesh or skeleton file of models/ of the public tree or of a content package."""
+    return str(content_packages.resolve(ROOT, "models/" + name))
+
+
+def missing_content(entities):
+    """Returns the scene files (MenuScene.material, the meshes of the entities, the skeletons of the flying crows) that
+    are not present because the content is not present; empty with the content."""
+    if content_packages.has_content(ROOT):
+        return []
+    needed = ["materials/scripts/MenuScene.material"]
+    needed += ["models/" + mesh for mesh in sorted(set(mesh for mesh, _ in entities.values()))]
+    needed += ["models/" + os.path.splitext(entities[name][0])[0] + ".skeleton" for name in SKY_CROWS if name in entities]
+    return [relative for relative in needed if content_packages.data_file(ROOT, relative) is None]
 
 
 def parse_scene():
@@ -188,7 +210,7 @@ class Occluders:
             if name in NOT_OCCLUDERS:
                 continue
             if mesh not in cache:
-                vertices, faces, materials = sky.load_mesh(os.path.join(MODELS, mesh))
+                vertices, faces, materials = sky.load_mesh(model_path(mesh))
                 materials = np.array(materials)
                 blended = np.array([flags.get(m, (False, False))[0] for m in materials], dtype=bool)
                 sky_part = np.isin(materials, sky.SKY_MATERIALS)
@@ -304,8 +326,8 @@ class Skin:
         os.makedirs(OUTPUT, exist_ok=True)
         mesh_xml = os.path.join(OUTPUT, stem + ".mesh.xml")
         skeleton_xml = os.path.join(OUTPUT, stem + ".skeleton.xml")
-        convert(os.path.join(MODELS, mesh), mesh_xml)
-        convert(os.path.join(MODELS, stem + ".skeleton"), skeleton_xml)
+        convert(model_path(mesh), mesh_xml)
+        convert(model_path(stem + ".skeleton"), skeleton_xml)
         geometry = ET.parse(mesh_xml).getroot()
         rig = ET.parse(skeleton_xml).getroot()
         self.vertices = np.array([[float(p.get(k)) for k in "xyz"] for p in
@@ -438,6 +460,13 @@ def main():
     missing = [name for name in SKY_CROWS if name not in entities]
     if missing:
         failures.append("no flying crow entity " + ", ".join(missing))
+    # Without the content only the scene commands above are checked
+    absent = missing_content(entities)
+    if absent:
+        for line in failures:
+            print("FAIL " + line)
+        content_packages.unchecked("check_menu_sky_crows", absent)
+        return 1 if failures else 0
     views = camera_views(poses, flights)
     overview = [(label, position, axes) for label, position, axes in views if label == "pose overview"]
     occluders = Occluders(entities)

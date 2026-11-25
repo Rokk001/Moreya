@@ -1,16 +1,23 @@
-"""Validate the equipment catalogue, prices and actual creature weapon compatibility."""
+"""Validate the equipment catalogue, prices and actual creature weapon compatibility.
+
+The catalogue config/items.cfg lives in a content package (found through scripts/content_packages.py); without the
+content the check names the catalogue as not checked and passes."""
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
 KINDS = {"Damage%", "MaxHP%", "CritChance", "Defense%", "AttackRating%", "DefenseRating%",
          "MoveSpeed%", "Avoid", "Cooldown%", "DamageAttribute", "Life", "Mana", "ManaCost%",
          "Wakefulness%", "Dig%", "Claim%", "Carry%"}
 
 
 def read(name):
-    """Read a repository input without discarding its Unicode display names."""
-    return (ROOT / name).read_text(encoding="utf-8")
+    """Read a repository input (the public file, else the file of a content package) without discarding its Unicode
+    display names."""
+    return content_packages.read_text(ROOT, name)
 
 
 def blocks(text, tag):
@@ -32,7 +39,11 @@ def value(block, key):
 
 
 def main():
-    """Assert every prescribed catalogue count, quality, range, price and weapon class."""
+    """Assert every prescribed catalogue count, quality, range, price and weapon class (the catalogue is named as not
+    checked when the content is not present)."""
+    if content_packages.data_file(ROOT, "config/items.cfg") is None:
+        content_packages.unchecked("check_items_cfg", ["config/items.cfg"])
+        return
     items = blocks(read("config/items.cfg"), "Item")
     assert len(items) == 187, "expected five Poor and 182 path lines"
     equipment = {value(block, "Name"): block for block in blocks(read("config/equipments.cfg"), "Equipment")}

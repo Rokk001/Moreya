@@ -37,6 +37,10 @@ hard-coded here; a wrong value is refused by the server (wire check in ODServer.
 Without --exe the check runs only the static part: the protocol enum names and the wire suffix must exist in the
 sources. The normal runner (check_relationship_state_load_headless.py, no arguments) calls static_protocol_check().
 
+The game needs its content packages (scripts/content_packages.py): the runtime part gives the game the content folder
+(MOREYA_CONTENT_DIR); without the content the game would only report the missing content and quit, so the runtime part
+names itself as not checked and is not started.
+
 Usage:
   check_relationship_state_seats_runtime.py --exe PATH --version X.Y.Z.N [--save PATH] [--seconds 30] [--port 31231]
   check_relationship_state_seats_runtime.py                       (static part only)
@@ -58,6 +62,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_relationship_state_load_headless as load  # noqa: E402  (same folder: shared checks and constants)
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import room_packages  # noqa: E402  (the packaged room names the test client names in its hello)
+import content_packages  # noqa: E402  (the content folder the game needs)
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parent
@@ -232,7 +237,8 @@ def runtime_check(exe, save, seconds, entries, existing, is_fixture, port, versi
     process = subprocess.Popen([str(exe), "--appData", str(appdata), "--port", str(port),
                                 "--serversave", save.name],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                               cwd=str(exe.parent))  # the game reads ./config and ./assets from its own folder
+                               cwd=str(exe.parent),  # the game reads ./config and ./assets from its own folder
+                               env=content_packages.game_environment(SRC.parent))  # and its content packages
     failures = []
     received = []
     sock = connect(port, time.time() + 60, process)
@@ -356,6 +362,12 @@ def run_with_exe(exe_arg, save_arg, seconds, port, version):
         print("FAILED static: " + failure)
     if failures:
         return 1
+    # Without its content packages the game quits at once (exit code 7, "content missing"): nothing to check at runtime
+    if not content_packages.has_content(SRC.parent):
+        content_packages.unchecked("check_relationship_state_seats_runtime",
+                                   ["the runtime load of %s (missing: %s)"
+                                    % (save.name, ", ".join(content_packages.missing_packages(SRC.parent)))])
+        return 0
 
     result = runtime_check(exe, save, seconds, entries, existing, is_fixture, port, version)
     if result is None:

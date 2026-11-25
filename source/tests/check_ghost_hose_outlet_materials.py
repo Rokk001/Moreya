@@ -27,6 +27,7 @@ from PIL import Image, ImageStat
 repo = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
@@ -58,7 +59,8 @@ def body(text, signature):
 
 # --- resource groups and the materials they load ---------------------------------------------------------------------
 def groups():
-    """Maps each resource group of the shipped resources.cfg template to its directories."""
+    """Maps each resource group of the shipped resources.cfg template to its directories: each listed folder and, as
+    ResourceManager::addGameDataResourceLocation adds them, the same folder of every found content package."""
     result, current = {}, None
     for line in read('cmake/config/resources.cfg.in').splitlines():
         line = line.strip()
@@ -66,7 +68,10 @@ def groups():
             current = line[1:-1]
             result[current] = []
         elif line.startswith('FileSystem=') and '@' not in line:
-            result[current].append(repo / line[len('FileSystem='):])
+            relative = line[len('FileSystem='):]
+            result[current].append(repo / relative)
+            result[current].extend(package / relative for package in content_packages.packages(repo).values()
+                                   if (package / relative).is_dir())
     return result
 
 
@@ -347,6 +352,10 @@ def main():
     building = read('source/entities/BuildingObject.cpp')
     for name in ('GhostHose', 'GhostHoseWire', 'GhostBrass', 'GhostIron', 'GhostCauldronEctoplasm'):
         assert resolve(name, OGRE_DEFAULT_GROUP) == 'BaseWhite', (name, 'Ogre default group loads no material scripts')
+    if not content_packages.has_content(repo) and 'GhostHoseWire' not in materials_in('Graphics'):
+        # The hose materials are content (core-models package); without it only the code side above is checked
+        content_packages.unchecked('check_ghost_hose_outlet_materials', ['hose and outlet materials (Ghost.material)'])
+        return
     check_hose(creature)
     if not ROOM_ASSETS:
         # The outlet uses the cauldron mesh and textures of the ghost room package

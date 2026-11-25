@@ -3,6 +3,10 @@
 Every icon named in the layouts must exist in the imageset inside the atlas, be opaque where it
 has a body, and retain its own painted source motif. Frost, stone and creature emblems need
 their approved material colours rather than the previous uniformly warm procedural palette.
+
+The layouts are scanned in the public tree and in the content packages (scripts/content_packages.py); the moved
+WindowGameEvent.layout and SquareSelector.material are content. Without the content their two checks are named as not
+checked and the layout scans cover the public layouts.
 """
 from pathlib import Path
 import re
@@ -15,6 +19,10 @@ repo = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
+import content_packages  # noqa: E402
+
+#: Every layout of the public tree and of the content packages
+LAYOUTS = content_packages.data_glob(repo, 'gui', '*.layout')
 text = (repo / 'gui/ODIcons.imageset').read_text()
 icon_images = ET.fromstring(text)
 rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
@@ -22,7 +30,7 @@ rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 
 assert len(rects) == len(icon_images.findall('Image')), 'unique image names'
 atlas = np.array(Image.open(repo / 'gui/ODIcons.png').convert('RGBA'), dtype=np.float32)
 used = set()
-for layout in (repo / 'gui').glob('*.layout'):
+for layout in LAYOUTS:
     used |= set(re.findall(r'OpenDungeonsIcons/([A-Za-z0-9_]+)', layout.read_text()))
 runtime = {'GoldBadge', 'ManaBadge', 'NavHelp', 'NavSell', 'NavOptions', 'MapZoom', 'MiniMapRim', 'MiniMapNorth', 'CampaignMap'}
 runtime |= {n for n in used if n.startswith('MiniMapCorner')}
@@ -115,18 +123,25 @@ assert 'ResearchBackgroundColour' not in look and 'ResearchBackgroundColour' not
 for n in ('Locked', 'Learned', 'Working', 'Queued'):
     assert 'OpenDungeonsSkin/ResearchTile' + n in game_code, n
 assert 'ResearchTileFocus' in look and 'OD/EventPanel' in scheme
+missing_content = []
 for f in ('WindowGameEvent.layout', 'WindowEvent.layout'):
-    assert 'type="OD/EventPanel" name="GameEventText"' in (repo / 'gui' / f).read_text(), f
+    if content_packages.data_file(repo, 'gui/' + f) is None:
+        missing_content.append('gui/' + f)
+        continue
+    assert 'type="OD/EventPanel" name="GameEventText"' in content_packages.read_text(repo, 'gui/' + f), f
 sym = look[look.index('<WidgetLook name="OD/MenuSymbolButton"'):]
 sym = sym[:sym.index('</WidgetLook>')]
 assert all(s in sym for s in ('plate_normal', 'plate_hover', 'plate_pushed', 'ButtonTopLeftHighlight', 'ButtonTopLeftPushed')),     'symbol buttons sit on forged plates with hover and pressed'
 tree = (repo / 'gui/WindowSkillTree.layout').read_text()
 assert 'FrameColours' not in tree and 'SelectionBrush' not in tree, 'skill tree columns use no flat tints'
-material = (repo / 'materials/scripts/SquareSelector.material').read_text()
-assert 'material SquareSelector' in material and 'emissive 1.0 0.70' in material
+if content_packages.data_file(repo, 'materials/scripts/SquareSelector.material') is None:
+    missing_content.append('materials/scripts/SquareSelector.material')
+else:
+    material = content_packages.read_text(repo, 'materials/scripts/SquareSelector.material')
+    assert 'material SquareSelector' in material and 'emissive 1.0 0.70' in material
 assert 'setMaterialName("SquareSelector")' in (repo / 'source/render/RenderManager.cpp').read_text()
 # Third pass: one symbol style for every close and confirm button, iron scrollbars and list frames in the menus, warm text.
-for layout in (repo / 'gui').glob('*.layout'):
+for layout in LAYOUTS:
     body = layout.read_text()
     assert 'OpenDungeonsSkin/CloseButton' not in body, layout.name + ' still uses the old close button image with its own frame'
     for button in re.finditer(r'<Window type="OD/MenuSymbolButton"[^>]*>(.*?)</Window>', body, re.S):
@@ -146,4 +161,5 @@ for f in ('source/entities/Creature.cpp', 'source/entities/Tile.cpp', 'source/ga
           'source/network/ChatEventMessage.cpp'):
     code = (repo / f).read_text()
     assert 'CCBBBBFF' not in code and "colour='FFFFFFFF'" not in code, f + ' has a cold or hard white text colour'
+content_packages.unchecked('check_forged_icons', missing_content)
 print('FORGED ICONS OK: %d icons checked, %d square tiles' % (checked, len(squares)))

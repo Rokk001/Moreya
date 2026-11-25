@@ -45,13 +45,14 @@ The campaign tells of the guilds that try to plunder the dungeon of Moreya.
 - When every guild is defeated the campaign is complete. Defeated levels can be
   played again from the campaign map, or a new campaign can be started.
 
-The campaign is loaded from content packages, one per wing. This repository
-holds the package of wing 1 (`levels/campaign/wing1/`, three story levels and
-its bonus chamber). The packages of wings 2 to 6 come with the Steam build;
-further wings arrive by update as new packages. Without a package the game
-runs completely and shows that wing on the campaign map as locked, "Coming in
-Early Access". A build from this repository finds additional packages in the
-folder named by the environment variable `MOREYA_CONTENT_DIR`.
+The content of the game (models, textures, interface art, portraits, sounds,
+levels, data tables and the campaign, one package per wing) is not part of
+this repository. It comes as content packages with the Steam build of Moreya;
+further wings arrive by update as new packages. This repository holds the game
+code: it builds and its checks pass on their own, but a game started without
+the content packages tells that the content is missing and quits. A build from
+this repository finds the content packages in the folder named by the
+environment variable `MOREYA_CONTENT_DIR`.
 
 ### Other ways to play
 
@@ -109,7 +110,7 @@ scripts/unix/build-linux.sh <prefix>
 config/          - Game config files
 dist/            - Icons and desktop entry files
 gui/             - CEGUI files and GUI images
-levels/          - Game levels, including the wing 1 package of the campaign
+levels/          - Test levels of the checks (the game levels are content packages)
 licenses/        - License files used for game data and code
 materials/       - Materials (model texturing scripts and textures)
 models/          - Model files
@@ -135,13 +136,14 @@ CMakeLists.txt   - CMake script for the build
 ### License
 
 The source code is licensed under the GNU General Public License version 3 or
-later. The art assets are covered by their respective licenses, listed in the
-CREDITS file; see LICENSE.md and the licenses folder.
+later. The art assets in this repository are covered by their respective
+licenses, listed in the CREDITS file; see LICENSE.md and the licenses folder.
 
-The campaign contents have licenses of their own and are not covered by the
-GPL: wing 1 (`levels/campaign/wing1/`) is all rights reserved, viewing and
-playing are allowed, redistributing it or distributing changed versions is
-not (see `levels/campaign/wing1/LICENSE.txt`). Wings 2 to 6 are not part of
-this repository.
+The content of Moreya (the content packages that come with the Steam build,
+including every wing of the campaign) is not part of this repository and not
+covered by the GPL: it is all rights reserved, except the third-party files in
+it, which keep their own licenses and credits. Versions of files that were
+published earlier in the history of this repository keep the license they were
+published with.
 
 Moreya is based on the source code of the open source projects OpenDungeons and OpenDungeonsPlus.

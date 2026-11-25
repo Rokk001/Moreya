@@ -3,14 +3,28 @@ researched, the other rooms become available one after the other, every trap and
 spells are researched in the library.
 
 Run from any directory. It does not start a game.
+
+The two sandbox levels are game data of the content packages (scripts/content_packages.py): they are read from the
+public tree or from the content packages. Without the content the level checks are named as not checked; the code and
+config checks run.
 """
 from pathlib import Path
 import re
 import sys
 
 root = Path(__file__).resolve().parents[2]
-sandbox = (root / "levels/skirmish/Sandbox.level").read_text(encoding="utf-8")
-everything = (root / "levels/skirmish/SandboxEverything.level").read_text(encoding="utf-8")
+sys.path.insert(0, str(root / "scripts"))
+import content_packages  # noqa: E402
+
+LEVELS = ("levels/skirmish/Sandbox.level", "levels/skirmish/SandboxEverything.level")
+# The levels are checked when they are found or the content is present (then a missing one fails as before)
+LEVELS_PRESENT = (content_packages.has_content(root)
+                  or all(content_packages.data_file(root, level) is not None for level in LEVELS))
+if LEVELS_PRESENT:
+    sandbox = content_packages.read_text(root, LEVELS[0])
+    everything = content_packages.read_text(root, LEVELS[1])
+else:
+    content_packages.unchecked("check_sandbox_start", LEVELS)
 header = (root / "source/gamemap/SandboxMode.h").read_text(encoding="utf-8")
 code = (root / "source/gamemap/SandboxMode.cpp").read_text(encoding="utf-8")
 rooms_cfg = (root / "config/rooms.cfg").read_text(encoding="utf-8")
@@ -28,9 +42,12 @@ def skills_done(level):
     return [line.strip() for line in block.splitlines()[1:] if line.strip()]
 
 
-start = skills_done(sandbox)
-check(start == ["roomTreasury", "roomDormitory", "roomHatchery", "spellSummonWorker"],
-      "Sandbox.level must start with Treasury, Dormitory, Hatchery and the worker summon spell only: %s" % start)
+# The start rooms of Sandbox.level (fixed for this branch; the same list when the level is not present)
+start = ["roomTreasury", "roomDormitory", "roomHatchery", "spellSummonWorker"]
+if LEVELS_PRESENT:
+    start = skills_done(sandbox)
+    check(start == ["roomTreasury", "roomDormitory", "roomHatchery", "spellSummonWorker"],
+          "Sandbox.level must start with Treasury, Dormitory, Hatchery and the worker summon spell only: %s" % start)
 
 # The unlock order of the code
 order_block = code[code.index("ROOM_UNLOCKS["):]
@@ -45,7 +62,8 @@ check(set(order) | set(start) >= {"roomLibrary", "roomWorkshop", "roomPrison", "
       "a base room is neither a start room nor in the unlock order")
 
 # The variant with everything available has no room left to unlock and no room timer to wait for
-check(set(order) <= set(skills_done(everything)), "SandboxEverything.level must give every room of the unlock order")
+if LEVELS_PRESENT:
+    check(set(order) <= set(skills_done(everything)), "SandboxEverything.level must give every room of the unlock order")
 
 # Room i comes after (i + 1) times the interval, a config key with a positive value
 match = re.search(r"^\s*SandboxRoomUnlockIntervalSeconds\s+(\d+(?:\.\d+)?)\s*$", rooms_cfg, re.M)

@@ -6,6 +6,8 @@
 Reads the mesh name of every trap in source/traps/Trap*.cpp (and of every door type in TrapDoor.cpp), checks that no
 two types share a mesh, that the .mesh file exists, that all its materials are defined in a material script and that
 the own meshes are listed in CREDITS. The guard banner keeps its banner mesh.
+The meshes and material scripts lie in the content packages (scripts/content_packages.py); without the content the
+mesh names of the code are checked and the mesh files are named as not checked.
 """
 
 import glob
@@ -14,7 +16,12 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
 problems = []
+#: True when the content packages are present: the mesh files are checked only then
+CONTENT = content_packages.has_content(ROOT)
 
 TRAPS = {
     "Cannon": "Cannon",
@@ -33,13 +40,25 @@ DOORS = ("WoodenDoor", "DoorIronbound", "DoorSteel", "DoorBarricade", "DoorSecre
 
 
 def read(*parts, binary=False):
+    """Returns the text or bytes of a file below the repository root."""
     with open(os.path.join(ROOT, *parts), "rb" if binary else "r", **({} if binary else {"encoding": "utf-8"})) as handle:
         return handle.read()
 
 
-credits = read("CREDITS")
-material_text = "".join(read("materials", "scripts", os.path.basename(p))
-                        for p in glob.glob(os.path.join(ROOT, "materials", "scripts", "*.material")))
+def mesh_file(mesh):
+    """The .mesh file of the public tree or of a content package, or None when it is not there."""
+    return content_packages.data_file(ROOT, "models/" + mesh + ".mesh")
+
+
+def mesh_missing(mesh):
+    """True when a .mesh file is missing although the content is present (without the content it is not checked)."""
+    return CONTENT and mesh_file(mesh) is None
+
+
+# The public CREDITS and, with the content, the CREDITS of the content repository (rows of moved files)
+credits = room_packages.credits_text(ROOT)
+material_text = "".join(p.read_text(encoding="utf-8")
+                        for p in content_packages.data_glob(ROOT, "materials/scripts", "*.material"))
 defined = set(re.findall(r"^\s*material\s+(\S+)", material_text, re.M))
 
 seen = {}
@@ -55,11 +74,13 @@ for trap, expected in TRAPS.items():
     if mesh in seen:
         problems.append("Trap%s shares the mesh %s with Trap%s" % (trap, mesh, seen[mesh]))
     seen[mesh] = trap
-    path = os.path.join(ROOT, "models", mesh + ".mesh")
-    if not os.path.exists(path):
+    if not CONTENT:
+        continue
+    path = mesh_file(mesh)
+    if path is None:
         problems.append("models/%s.mesh is missing" % mesh)
         continue
-    data = read("models", mesh + ".mesh", binary=True)
+    data = path.read_bytes()
     # own static meshes (the ones made by trap_meshes.py) use materials of TrapTypes.material
     if mesh.endswith("Trap") and mesh != "Spiketrap":
         used = [m for m in defined if m.startswith("Trap") and m.encode() in data]
@@ -75,13 +96,15 @@ door_meshes = re.findall(r'static const std::string mesh\w+ = "([^"]+)";', door_
 if sorted(door_meshes) != sorted(DOORS):
     problems.append("TrapDoor.cpp mesh names %s differ from %s" % (sorted(door_meshes), sorted(DOORS)))
 for mesh in DOORS:
-    if not os.path.exists(os.path.join(ROOT, "models", mesh + ".mesh")):
+    if mesh_missing(mesh):
         problems.append("models/%s.mesh is missing" % mesh)
 
 for name in ("AlarmTrap", "FearTrap", "GasTrap", "LightningTrap", "FireburstTrap", "FrostTrap", "TriggerTrap"):
-    if not os.path.exists(os.path.join(ROOT, "models", name + ".mesh")):
+    if mesh_missing(name):
         problems.append("models/%s.mesh is missing" % name)
 
+if not CONTENT:
+    content_packages.unchecked("check_trap_meshes", ["trap and door mesh files", "materials/scripts", "their CREDITS rows"])
 if problems:
     print("check_trap_meshes: %d problem(s)" % len(problems))
     for line in problems:

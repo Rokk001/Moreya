@@ -105,9 +105,10 @@ Usage:
   check-campaign-opening.py [--no-allowlist] [--safe-radius N] [--full] [--all] [<file> ...]
   check-campaign-opening.py --self-test
 
-Without files all levels of the campaign wing packages are checked (scripts/campaign_packages.py: wing 1 in
-levels/campaign/wing1/, wings 2 to 6 from the content repository when it is present); --all checks every
-level file below levels/ (campaign, skirmish, multiplayer). --full lists every violation
+Without files all levels of the campaign wing packages are checked (scripts/campaign_packages.py: wings 1 to 6
+from the content repository; the public tree holds no wing, so without content no level is checked and the check
+says so); --all checks every level file below levels/ (campaign, skirmish, multiplayer) of the public tree and of
+the content packages (scripts/content_packages.py) and the levels of every wing package. --full lists every violation
 (by default at most MAX_EXAMPLES examples per kind). A summary block ends the output.
 """
 
@@ -129,15 +130,23 @@ SAFE_RADIUS = 20
 MAX_EXAMPLES = 5
 # Rule 4, portal start of the wing 1 levels (fixed, counted once on the levels):
 # level file -> (first tile of the portal the keeper claims, tiles to dig from the heart to it,
-# fighter classes the portal can bring). Brackenford (Mold Pit): the portal lies next to the heart and is
+# fighter classes the portal can bring). Brackenford: the portal lies next to the heart and is
 # reached without digging (wing 1 rooms plan WR5, counted on the level on feature/raid-campaign-r17; counted
 # again on fix/wing1-level1-no-river with water walked by the keeper's classes: all values unchanged).
-WING1_PORTALS = {
-    "Brackenford.level": ((13, 38), 0, ("Cultist", "Goblin")),
-    "Coldwell.level": ((9, 2), 2, ("Cultist", "Goblin")),
-    "Ravensledge.level": ((28, 51), 0, ("Cultist", "DarkElf")),
-    "Mossgate.level": ((30, 29), 0, ("Goblin",)),
-}
+# The wing 1 levels are content: the rows lie in checks/campaign_opening.json of the content repository
+# (scripts/campaign_packages.py: content_data); without content there are no wing 1 levels to check.
+def load_wing1_portals():
+    """The fixed portal start rows of the wing 1 levels from the content check data, empty without content."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+    import campaign_packages
+    data = campaign_packages.content_data(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                          "campaign_opening")
+    if data is None:
+        return {}
+    return {name: (tuple(row[0]), row[1], tuple(row[2])) for name, row in data["wing1_portals"].items()}
+
+
+WING1_PORTALS = load_wing1_portals()
 
 # Levels measured by the stricter wing 1 rules (see the docstring, "Scope"); every other level is
 # measured as before. Fixed: the four wing 1 levels.
@@ -1352,12 +1361,20 @@ def read_allowlist(root):
 
 
 def all_level_files(root):
-    """Return all .level files below the levels folder, except the template."""
+    """Return all .level files below the levels folder of the public tree and of the content packages, except the
+    template, and the levels of the wing packages (they lay below levels/campaign/ of the public tree before)."""
+    sys.path.insert(0, os.path.join(root, "scripts"))
+    import campaign_packages
+    import content_packages
     result = []
-    for folder, _, names in os.walk(os.path.join(root, "levels")):
-        for name in sorted(names):
-            if name.endswith(".level") and name != "template.level":
-                result.append(os.path.join(folder, name))
+    for levels in content_packages.data_folders(root, "levels"):
+        for folder, _, names in os.walk(str(levels)):
+            for name in sorted(names):
+                if name.endswith(".level") and name != "template.level":
+                    result.append(os.path.join(folder, name))
+    for path in campaign_packages.all_level_files(root):
+        if str(path) not in result:
+            result.append(str(path))
     return sorted(result)
 
 
@@ -1825,6 +1842,13 @@ def main(argv):
         order[os.path.normcase(os.path.abspath(path))] = number
     if not files:
         files = all_level_files(root) if "--all" in argv else campaign_files(root)
+        if not files:
+            # The public tree holds no campaign level: without the content packages nothing is checked
+            import content_packages
+            if content_packages.has_content(root):
+                print("FAIL: no campaign level found although the content is present")
+                return 1
+            content_packages.unchecked("check-campaign-opening", ["the levels of the wing packages"])
     return run(files, root, use_allowlist, order, radius, full)
 
 

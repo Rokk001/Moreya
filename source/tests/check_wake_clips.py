@@ -9,6 +9,8 @@ crypt objects: Sleep as a loop and Wake once; creatures: Stretch once), that the
 path or an animation state on the server and sends nothing over the network. Then runs the same checks on texts
 with one thing taken away each (a counter test): every one of them must be found, otherwise the check itself is
 wrong and fails.
+The room ambience configs lie in the content packages (scripts/content_packages.py); without the content the code
+part and its counter tests run and the config part is named as not checked.
 """
 
 import os
@@ -16,9 +18,15 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+#: The texts of load() that come from the content packages
+CONTENT_TEXTS = {"clips": "config/roomAmbienceWakeClips.cfg", "main": "config/roomAmbience.cfg",
+                 "gaps": "config/roomAmbienceGaps.cfg"}
 
 
 def read(*parts):
+    """Returns the text of a file below the repository root."""
     with open(os.path.join(ROOT, *parts), encoding="utf-8") as handle:
         return handle.read()
 
@@ -46,8 +54,9 @@ CRYPT_OBJECTS = ["StoneCoffin", "KnightCoffin", "KnightStatue", "KnightStatue2"]
 CRYPT_ALL = set(CRYPT_OBJECTS)
 
 
-def run_checks(texts):
-    """Returns the list of problems found in the given texts (a dictionary name -> text)."""
+def run_checks(texts, content=True):
+    """Returns the list of problems found in the given texts (a dictionary name -> text); without the content the
+    config texts are not checked."""
     problems = []
 
     def need(condition, text):
@@ -64,49 +73,50 @@ def run_checks(texts):
     render_cpp = texts["render_cpp"]
     checker = texts["checker"]
 
-    need("Include roomAmbienceWakeClips.cfg" in main_cfg, "roomAmbienceWakeClips.cfg is not included")
+    if content:
+        need("Include roomAmbienceWakeClips.cfg" in main_cfg, "roomAmbienceWakeClips.cfg is not included")
 
-    # --- the effects and their clip names
-    def effect(name):
-        found = cfg.get(name)
-        need(found is not None, "effect %s is missing" % name)
-        return found or {}
+        # --- the effects and their clip names
+        def effect(name):
+            found = cfg.get(name)
+            need(found is not None, "effect %s is missing" % name)
+            return found or {}
 
-    bed = effect("DormitoryBedSleepClip")
-    need(bed.get("Kind") == ["Clip"] and bed.get("Clips") == ["Sleep"], "the bed sleeps with the clip Sleep")
-    need(bed.get("Loop") == ["yes"] and bed.get("When") == ["Sleeping"], "the bed clip loops while a creature sleeps")
-    need(set(bed.get("Match", [])) == {"*Bed", "Hammock"}, "the bed clip matches the beds (*Bed Hammock)")
+        bed = effect("DormitoryBedSleepClip")
+        need(bed.get("Kind") == ["Clip"] and bed.get("Clips") == ["Sleep"], "the bed sleeps with the clip Sleep")
+        need(bed.get("Loop") == ["yes"] and bed.get("When") == ["Sleeping"], "the bed clip loops while a creature sleeps")
+        need(set(bed.get("Match", [])) == {"*Bed", "Hammock"}, "the bed clip matches the beds (*Bed Hammock)")
 
-    wake = effect("DormitoryWakeBedClip")
-    need(wake.get("Target") == ["Event"] and wake.get("Event") == ["CreatureWoke"], "the bed wakes on CreatureWoke")
-    need(wake.get("Kind") == ["Clip"] and wake.get("Clips") == ["Wake"], "the bed wakes with the clip Wake")
-    need(set(wake.get("Object", [])) == {"*Bed", "Hammock"}, "the wake clip is played on the beds")
-    need("Amount" in wake and "Loop" not in wake, "the wake clip needs a radius and plays once")
+        wake = effect("DormitoryWakeBedClip")
+        need(wake.get("Target") == ["Event"] and wake.get("Event") == ["CreatureWoke"], "the bed wakes on CreatureWoke")
+        need(wake.get("Kind") == ["Clip"] and wake.get("Clips") == ["Wake"], "the bed wakes with the clip Wake")
+        need(set(wake.get("Object", [])) == {"*Bed", "Hammock"}, "the wake clip is played on the beds")
+        need("Amount" in wake and "Loop" not in wake, "the wake clip needs a radius and plays once")
 
-    stretch = effect("DormitoryWakeStretch")
-    need(stretch.get("Event") == ["CreatureWoke"], "the stretch starts on CreatureWoke, with the bed")
-    need(stretch.get("Kind") == ["CreatureClip"] and stretch.get("Clips") == ["Stretch"],
-         "the creature stretches with the clip Stretch")
+        stretch = effect("DormitoryWakeStretch")
+        need(stretch.get("Event") == ["CreatureWoke"], "the stretch starts on CreatureWoke, with the bed")
+        need(stretch.get("Kind") == ["CreatureClip"] and stretch.get("Clips") == ["Stretch"],
+             "the creature stretches with the clip Stretch")
 
-    need("CryptSleepClip" not in cfg, "the crypt objects stand still: no looping Sleep clip (X1, decision 826)")
+        need("CryptSleepClip" not in cfg, "the crypt objects stand still: no looping Sleep clip (X1, decision 826)")
 
-    raised = effect("CryptWakeClip")
-    need(raised.get("Event") == ["CryptRaised"] and raised.get("Clips") == ["Wake"], "the crypt wakes with Wake on CryptRaised")
-    need(set(raised.get("Object", [])) == CRYPT_ALL, "the crypt wake clip is played on the coffins and the statues")
+        raised = effect("CryptWakeClip")
+        need(raised.get("Event") == ["CryptRaised"] and raised.get("Clips") == ["Wake"], "the crypt wakes with Wake on CryptRaised")
+        need(set(raised.get("Object", [])) == CRYPT_ALL, "the crypt wake clip is played on the coffins and the statues")
 
-    # The wake events are the ones of the effects that already exist
-    need(effect("DormitoryWakeBedClip").get("Match") == ["dormitoryRoom"], "the wake clip belongs to the dormitory")
-    gaps = texts["gaps"]
-    need("Name        DormitoryWakeBlanket" in gaps and "Name        DormitoryWakeLight" in gaps,
-         "the effects DormitoryWakeBlanket and DormitoryWakeLight must stay")
-    for name in ("DormitoryBedSleepClip", "DormitoryWakeBedClip", "DormitoryWakeStretch", "CryptWakeClip"):
-        need(cfg.get(name, {}).get("Reduced") == ["yes"], "%s is also shown in the mode reduced" % name)
+        # The wake events are the ones of the effects that already exist
+        need(effect("DormitoryWakeBedClip").get("Match") == ["dormitoryRoom"], "the wake clip belongs to the dormitory")
+        gaps = texts["gaps"]
+        need("Name        DormitoryWakeBlanket" in gaps and "Name        DormitoryWakeLight" in gaps,
+             "the effects DormitoryWakeBlanket and DormitoryWakeLight must stay")
+        for name in ("DormitoryBedSleepClip", "DormitoryWakeBedClip", "DormitoryWakeStretch", "CryptWakeClip"):
+            need(cfg.get(name, {}).get("Reduced") == ["yes"], "%s is also shown in the mode reduced" % name)
 
     # --- the format is known to the code and to the config check
     for word in ("Object", "Loop", "Sleeping", "CreatureClip"):
         need('"%s"' % word in config_cpp, "RoomAmbienceConfig.cpp does not read %s" % word)
         need(word in checker, "tools/check_room_ambience.py does not know %s" % word)
-        need(word in main_cfg, "config/roomAmbience.cfg does not describe %s" % word)
+        need(not content or word in main_cfg, "config/roomAmbience.cfg does not describe %s" % word)
     need("creatureClip" in config_h and "sleeping" in config_h and "mObjects" in config_h and "mLoop" in config_h,
          "RoomAmbienceConfig.h lacks the new members")
 
@@ -133,11 +143,23 @@ def run_checks(texts):
     return problems
 
 
+def content_text(relative):
+    """Returns the text of a game data file of the public tree or of a content package, or "" without the content."""
+    path = content_packages.data_file(ROOT, relative)
+    return "" if path is None else path.read_text(encoding="utf-8")
+
+
+def has_content():
+    """True when every config text of the check is present."""
+    return all(content_packages.data_file(ROOT, relative) is not None for relative in CONTENT_TEXTS.values())
+
+
 def load():
+    """Returns the texts of the check by name (the config texts are empty without the content)."""
     return {
-        "clips": read("config", "roomAmbienceWakeClips.cfg"),
-        "main": read("config", "roomAmbience.cfg"),
-        "gaps": read("config", "roomAmbienceGaps.cfg"),
+        "clips": content_text(CONTENT_TEXTS["clips"]),
+        "main": content_text(CONTENT_TEXTS["main"]),
+        "gaps": content_text(CONTENT_TEXTS["gaps"]),
         "source": read("source", "render", "RoomAmbience.cpp"),
         "header": read("source", "render", "RoomAmbience.h"),
         "config_h": read("source", "render", "RoomAmbienceConfig.h"),
@@ -169,10 +191,14 @@ def mutations():
 
 
 def main():
+    """Runs the checks and the counter tests; without the content only those of the code."""
+    content = has_content()
+    if not content:
+        content_packages.unchecked("check_wake_clips", sorted(CONTENT_TEXTS.values()))
     texts = load()
     for key in texts:
         texts[key] = texts[key].replace("\r\n", "\n")
-    problems = run_checks(texts)
+    problems = run_checks(texts, content)
     if problems:
         for problem in problems:
             print("PROBLEM:", problem)
@@ -181,6 +207,8 @@ def main():
     # The counter test: a text that is wrong must be found
     failed = False
     for label, (key, old, new) in mutations():
+        if not content and key in CONTENT_TEXTS:
+            continue
         changed = dict(texts)
         if old not in changed[key]:
             print("PROBLEM: counter test %s: the text to change is not there" % label)
@@ -188,7 +216,7 @@ def main():
             continue
         changed[key] = changed[key].replace(old, new)
         try:
-            found = run_checks(changed)
+            found = run_checks(changed, content)
         except ValueError:
             # A part of the code that the check cuts out is gone: found as well
             found = ["part of the code missing"]

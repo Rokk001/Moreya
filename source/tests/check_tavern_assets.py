@@ -37,6 +37,11 @@ What is checked
 Calls (from the repository root):
   python source/tests/check_tavern_assets.py            file checks, no compiler, no game; the game light section
                                                          needs OGRE_XML_CONVERTER (full path of OgreXMLConverter.exe)
+
+The tavern assets come from the tavern room package; the mug, the shared material and particle scripts, the room
+ambience config and the moved sounds are game data of the content packages (scripts/content_packages.py), read from the
+public tree or from the content packages, with their CREDITS rows in the CREDITS of the content repository. Without the
+content these parts are named as not checked.
 """
 from pathlib import Path
 import fnmatch
@@ -49,6 +54,7 @@ import zlib
 root = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
@@ -57,9 +63,24 @@ ROOM_ASSETS = room_packages.has_room(root, 'Tavern')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.resolve(root, relative)
-from assets_src import assets_src_dir, resolve  # noqa: E402
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(root, relative)
+from assets_src import assets_src_dir, resolve as assets_resolve  # noqa: E402
+
+
+# A path below assets-src through ODP_ASSETS_SRC, any other path as a game data file of the public tree or a content or
+# room package.
+def resolve(repo, relative):
+    if str(relative).startswith('assets-src'):
+        return assets_resolve(repo, relative)
+    return content_packages.resolve(repo, relative)
+
+
+# True when a game data file is not found while the content is not present: it cannot be checked then (an assets-src
+# path is never such a file).
+def missing_content(relative):
+    return (not str(relative).startswith('assets-src') and content_packages.data_file(root, relative) is None
+            and not content_packages.has_content(root))
 
 # The nine clips every creature skeleton gets, in the order of the design
 TAVERN_CLIPS = ['Drink', 'Slap', 'ArmWrestle', 'Dice', 'KnockedOut', 'GetUp', 'Stagger', 'Vomit', 'Hangover']
@@ -159,7 +180,7 @@ def creature_types():
     return types
 
 
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in content_packages.data_glob(root, 'materials/scripts', '*.material'))
 credits = room_packages.credits_text(root)
 
 # 1. Models: mesh, Blender source, material, the innkeeper's skeleton
@@ -228,15 +249,19 @@ for icon in ('TavernButton', 'BeerButton'):
     assert png_size('assets-src/gui/icons/tiles/' + icon + '.png') == (ICON_SOURCE_SIZE, ICON_SOURCE_SIZE), icon + ' source size'
 
 # 4. Particles: each defined once in all particle files, the materials exist
-all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'particles', '*.particle'))
+all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in content_packages.data_glob(root, 'particles', '*.particle'))
 if ROOM_ASSETS:
     for system in ('TavernSmoke', 'DuelBirds'):
         assert len(re.findall(r'^particle_system ' + system + r'\s*$', all_particles, re.M)) == 1, 'particle ' + system + ' must be defined exactly once'
     tavern_particles = read('particles/Tavern.particle')
     for used in re.findall(r'^\s*material\s+(\S+)', tavern_particles, re.M):
         assert re.search(r'^material ' + used + r'\b', materials, re.M), 'particle material ' + used + ' missing'
-ambience = read('config/roomAmbience.cfg')
-assert 'System      TavernSmoke' in ambience and 'Match       TavernCounter' in ambience, 'the counter smoke is wired in roomAmbience.cfg'
+ambience = None
+if missing_content('config/roomAmbience.cfg'):
+    content_packages.unchecked('check_tavern_assets', ['config/roomAmbience.cfg'])
+else:
+    ambience = read('config/roomAmbience.cfg')
+    assert 'System      TavernSmoke' in ambience and 'Match       TavernCounter' in ambience, 'the counter smoke is wired in roomAmbience.cfg'
 assert 'DuelBirds' in read('source/render/RenderManager.cpp'), 'the bird particle is attached by the render code'
 
 # 5. Sounds: the five files as mono 22050 Hz Vorbis, the two ambience families, the ambience entries
@@ -245,11 +270,15 @@ for sound in ('sounds/Rooms/Tavern/Pour.ogg', 'sounds/Rooms/Tavern/Murmur.ogg', 
               'sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg', 'sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg'):
     if room_packages.is_missing_packaged(root, sound):
         continue
+    if missing_content(sound):
+        content_packages.unchecked('check_tavern_assets', [sound])
+        continue
     assert room_file(sound).is_file(), sound + ' missing'
     assert vorbis_format(sound) == (SOUND_CHANNELS, SOUND_RATE), sound + ' must be mono 22050 Hz Vorbis, found ' + str(vorbis_format(sound))
-for family in ('Rooms/Tavern/Murmur', 'Rooms/Tavern/Clink'):
+for family in ('Rooms/Tavern/Murmur', 'Rooms/Tavern/Clink') if ambience is not None else ():
     assert 'Family      ' + family in ambience, 'roomAmbience.cfg needs the family ' + family
-assert 'Loop        yes' in ambience[ambience.index('Name        TavernMurmur'):], 'the murmur is a loop'
+if ambience is not None:
+    assert 'Loop        yes' in ambience[ambience.index('Name        TavernMurmur'):], 'the murmur is a loop'
 sound_check = subprocess.run([sys.executable, str(root / 'scripts' / 'check_sound_sources.py')], capture_output=True, text=True, cwd=str(root))
 assert sound_check.returncode == 0, 'check_sound_sources.py failed:\n' + sound_check.stdout + sound_check.stderr
 
@@ -323,6 +352,12 @@ for path in files:
     # The rows of the tavern package and of its sources stand in the CREDITS of the content repository
     if room_packages.is_missing_packaged(root, path) or (not ROOM_ASSETS and path.startswith('assets-src/rooms/tavern/')):
         continue
+    # The rows of the moved files of the content packages and of their Blender sources stand in the CREDITS of the
+    # content repository
+    if missing_content(path) or any(path == source and missing_content('models/' + name + '.mesh')
+                                    for name, source in MODELS.items()):
+        content_packages.unchecked('check_tavern_assets', ['the CREDITS row of ' + path])
+        continue
     assert credited(path), 'CREDITS has no row for ' + path
 for skeleton in unique_skeletons:
     assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Drink, Slap, ArmWrestle, Dice, KnockedOut, GetUp, Stagger, Vomit, Hangover tracks\)',
@@ -332,6 +367,9 @@ for skeleton in sorted(visiting):
                      credits, re.M), 'CREDITS has no row for the seated clips in ' + skeleton
 # Every sound row names a source address and the licence CC0 (the recordings are real, never generated)
 for sound in ('Pour', 'Murmur', 'Clink', 'Slap', 'Cheer') if ROOM_ASSETS else ('Slap', 'Cheer'):
+    if sound in ('Slap', 'Cheer') and missing_content('sounds/Creatures/Default/' + sound + '.ogg'):
+        content_packages.unchecked('check_tavern_assets', ['the CREDITS row of ' + sound + '.ogg'])
+        continue
     row = [l for l in credits.splitlines() if re.search(r'/' + sound + r'\.ogg\s', l)]
     assert row, 'CREDITS has no row for ' + sound + '.ogg'
     for line in row:

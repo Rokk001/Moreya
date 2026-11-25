@@ -1,4 +1,9 @@
-"""Verify the navigation catalog against the shipped Ogre room meshes."""
+"""Verify the navigation catalog against the shipped Ogre room meshes.
+
+The meshes are read from the public models folder and from the models folders of the content and room packages
+(scripts/content_packages.py). Without the content the rows whose mesh moved into a content package are named and left
+out; without the wall decoration meshes the probe is named as not checked.
+"""
 from pathlib import Path
 import os
 import re
@@ -8,7 +13,10 @@ import tempfile
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+#: The wall decorations the probe measures besides the catalog rows
+WALL_DECORATIONS = ('WeaponShield1.mesh', 'WeaponShield2.mesh')
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 catalog = (repo / 'source/gamemap/RoomObjectBounds.h').read_text()
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
@@ -48,7 +56,7 @@ int main(int argc,char** argv){try{
  Ogre::NameValuePairList opts;opts["hidden"]="true";root.createRenderWindow("Bounds",64,64,false,&opts);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);
- // The models folders of the room packages that are present, and the meshes of the room packages that are not
+ // The models folders of the content and room packages that are present, and the meshes of the packages that are not
  for(const std::string& folder:splitList(argv[2]))groups.addResourceLocation(folder,"FileSystem","Graphics",true);
  const std::vector<std::string> missing=splitList(argv[3]);const std::set<std::string> skipped(missing.begin(),missing.end());
  groups.initialiseAllResourceGroups();
@@ -153,16 +161,25 @@ with tempfile.TemporaryDirectory(prefix='odp-room-bounds-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
-    # The meshes of a room package are read from the package; without the package its rows are left out
-    folders = ';'.join(str(folder / 'models') for folder in room_packages.packages(repo).values()
-                       if (folder / 'models').is_dir())
-    missing = ';'.join(sorted(Path(relative).stem for relative in room_packages.ASSET_ROOMS
-                              if relative.endswith('.mesh') and room_packages.is_missing_packaged(repo, relative)))
+    # The meshes of a content or room package are read from the package (the models folders of every present content
+    # and room package, scripts/content_packages.py); without the package its rows are left out
+    folders = ';'.join(str(folder) for folder in content_packages.data_folders(repo, 'models')
+                       if folder != repo / 'models')
+    missing_meshes = set(Path(relative).stem for relative in room_packages.ASSET_ROOMS
+                         if relative.endswith('.mesh') and room_packages.is_missing_packaged(repo, relative))
+    if not content_packages.has_content(repo):
+        # Without the content the catalog rows whose mesh moved into a content package are not measured
+        missing_meshes.update(name for name in names if content_packages.data_file(repo, 'models/' + name + '.mesh') is None)
+    missing = ';'.join(sorted(missing_meshes))
     if missing:
         print('room packages not present, their meshes are not measured: ' + missing.replace(';', ' '))
-    result = subprocess.run([str(work / 'check.exe'), str(repo), folders, missing], cwd=work, capture_output=True,
-                            text=True)
-    print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
-    if result.returncode:
-        print(result.stderr)
-        result.check_returncode()
+    wall_meshes = [name for name in WALL_DECORATIONS if content_packages.data_file(repo, 'models/' + name) is None]
+    if wall_meshes and not content_packages.has_content(repo):
+        content_packages.unchecked('check_room_object_bounds', ['mesh bounds (' + ', '.join(wall_meshes) + ')'])
+    else:
+        result = subprocess.run([str(work / 'check.exe'), str(repo), folders, missing], cwd=work, capture_output=True,
+                                text=True)
+        print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
+        if result.returncode:
+            print(result.stderr)
+            result.check_returncode()

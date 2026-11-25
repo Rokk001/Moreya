@@ -1,9 +1,35 @@
 #!/usr/bin/env python3
 # Static checks of the hatchery visuals and the rooster behaviour wiring (the decisions of the rooster are
 # covered by the 00-HatcheryCycle unit test, the looks only show in the game).
+# The chicken meshes, skeletons, materials and the production ambience table are content (hatchery room package and
+# core content packages, found through scripts/content_packages.py) and their CREDITS rows stand in the CREDITS of the
+# content repository; without the content the code side is checked and the asset part is named as not checked.
 from pathlib import Path
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The content files of the asset part
+CONTENT_FILES = ('materials/scripts/ChickenHatchery.material', 'materials/scripts/ChickenBreeds.material',
+                 'materials/scripts/ChickenNest.material', 'materials/textures/ChickenNest.png',
+                 'models/ChickenEgg.mesh', 'models/ChickenEggCracked.mesh', 'models/ChickenChick.mesh',
+                 'models/ChickenRooster.mesh', 'models/Chicken.skeleton', 'models/ChickenCoopHouse.mesh',
+                 'models/ChickenCoopHouse.skeleton', 'models/ChickenNest.mesh', 'models/ChickenCoop.mesh',
+                 'config/roomAmbienceProduction.cfg')
+missing_content = content_packages.unchecked('check_hatchery_visuals', [
+    name for name in CONTENT_FILES if content_packages.data_file(root, name) is None])
+#: True when every content file of the asset part is present
+CONTENT = not missing_content
+
+
+def model(name):
+    """A file of models/ in the public tree or in a content or room package."""
+    return content_packages.resolve(root, 'models/' + name)
+
+
 chicken_h = (root / 'source/entities/ChickenEntity.h').read_text()
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text()
@@ -12,8 +38,9 @@ looks = (root / 'source/render/RenderManagerChickens.cpp').read_text()
 pose = (root / 'source/entities/ChickenPose.h').read_text()
 config = (root / 'config/rooms.cfg').read_text()
 cmake = (root / 'CMakeLists.txt').read_text()
-credits = (root / 'CREDITS').read_text()
-materials = (root / 'materials/scripts/ChickenHatchery.material').read_text()
+# The public CREDITS plus the CREDITS of the content repository when the packages are present
+credits = room_packages.credits_text(root)
+materials = content_packages.read_text(root, 'materials/scripts/ChickenHatchery.material') if CONTENT else None
 
 
 def body(text, start):
@@ -72,21 +99,23 @@ for key in ('HatcheryChickScale', 'HatcheryRoosterScale'):
     assert key in config and key in looks, key
 
 # Every material the code asks for exists and the new assets have a credit.
-for name in ('ChickenEgg', 'ChickenEggInside', 'ChickenStraw', 'ChickenRoosterComb', 'ChickenRoosterTail', 'ChickenFeatherDecor', 'ChickenEggShell'):
-    assert 'material %s\n' % name in materials, name
+if CONTENT:
+    for name in ('ChickenEgg', 'ChickenEggInside', 'ChickenStraw', 'ChickenRoosterComb', 'ChickenRoosterTail', 'ChickenFeatherDecor', 'ChickenEggShell'):
+        assert 'material %s\n' % name in materials, name
 for name in ('ChickenStraw', 'ChickenFeatherDecor', 'ChickenEggShell'):
     assert '"%s"' % name in looks, name
 # The code asks for the egg meshes (the egg by the kind, the cracked one by the hatch look)
 assert 'return "ChickenEgg"' in chicken, 'the code no longer asks for the egg mesh'
 assert 'MeshEggCracked = "ChickenEggCracked"' in looks, 'the code no longer asks for the cracked egg mesh'
-assert 'particles/ChickenEggShell.particle' in credits and 'ChickenHatchery.material' in credits
+if CONTENT:
+    assert 'particles/ChickenEggShell.particle' in credits and 'ChickenHatchery.material' in credits
 
 # The egg, chick and rooster are meshes made in Blender (shared hen skeleton with the clips Peep, Run, Crow, Hatch).
-models = root / 'models'
 
 # All material scripts: every material a mesh uses must be defined there (a missing definition fails the check)
 import re
-material_text = ''.join(f.read_text() for f in sorted((root / 'materials/scripts').glob('*.material')))
+# The material scripts of the public tree and of every content and room package
+material_text = ''.join(f.read_text() for f in content_packages.data_glob(root, 'materials/scripts', '*.material'))
 
 
 def material_block(name):
@@ -110,20 +139,21 @@ def assert_matt(name):
 
 
 # The egg, chick and rooster are meshes made in Blender (shared hen skeleton with the clips Peep, Run, Crow, Hatch).
-for mesh, names in (('ChickenEgg', ('ChickenEgg', 'ChickenStraw')), ('ChickenEggCracked', ('ChickenEggInside',)),
-                    ('ChickenChick', ('ChickenChick', 'Chicken.skeleton')),
-                    ('ChickenRooster', ('ChickenRooster', 'ChickenRoosterComb', 'ChickenRoosterTail', 'Chicken.skeleton'))):
-    data = (models / (mesh + '.mesh')).read_bytes()
-    for name in names:
-        assert name.encode() in data, (mesh, name)
-    assert mesh + '.mesh' in credits, mesh
-for name in ('ChickenEgg', 'ChickenStraw', 'ChickenEggInside'):
-    material_block(name)
-skeleton = (models / 'Chicken.skeleton').read_bytes()
-for clip in (b'Peep', b'Run', b'Crow', b'Hatch', b'Walk', b'Idle'):
-    assert clip in skeleton, clip
-breeds = (root / 'materials/scripts/ChickenBreeds.material').read_text()
-assert 'material ChickenChick' in breeds and 'material ChickenRooster' in breeds
+if CONTENT:
+    for mesh, names in (('ChickenEgg', ('ChickenEgg', 'ChickenStraw')), ('ChickenEggCracked', ('ChickenEggInside',)),
+                        ('ChickenChick', ('ChickenChick', 'Chicken.skeleton')),
+                        ('ChickenRooster', ('ChickenRooster', 'ChickenRoosterComb', 'ChickenRoosterTail', 'Chicken.skeleton'))):
+        data = model(mesh + '.mesh').read_bytes()
+        for name in names:
+            assert name.encode() in data, (mesh, name)
+        assert mesh + '.mesh' in credits, mesh
+    for name in ('ChickenEgg', 'ChickenStraw', 'ChickenEggInside'):
+        material_block(name)
+    skeleton = model('Chicken.skeleton').read_bytes()
+    for clip in (b'Peep', b'Run', b'Crow', b'Hatch', b'Walk', b'Idle'):
+        assert clip in skeleton, clip
+    breeds = content_packages.read_text(root, 'materials/scripts/ChickenBreeds.material')
+    assert 'material ChickenChick' in breeds and 'material ChickenRooster' in breeds
 assert '"ChickenChick"' in chicken and '"ChickenRooster"' in chicken
 assert 'ChickenPose::skeletonClip' in hook and 'hatchClip' in body(chicken, 'void ChickenEntity::setKindFromServer')
 assert 'ChickenEggCracked' in looks
@@ -163,27 +193,29 @@ assert 'HatcheryCoopHouse::meshName' in body(room, 'BuildingObject* RoomHatchery
 assert 'HatcheryCoopHouse::roofPerchHeight' in room and 'HatcheryCoopHouse::roofPerchOffset' in room
 assert 'ChickenCoop"' not in room
 assert render.count('HatcheryCoopHouse::isCoopMesh') == 2
-coop_mesh = (models / 'ChickenCoopHouse.mesh').read_bytes()
-assert b'ChickenCoopHouse.skeleton' in coop_mesh and b'ChickenCoop' in coop_mesh
-# The straw inside the coop is the matt material ChickenCoopStraw (it replaced ChickenStraw): the mesh uses it and it is defined
-assert b'ChickenCoopStraw' in coop_mesh, 'the coop mesh does not use ChickenCoopStraw'
-assert_matt('ChickenCoopStraw')
-# The straw nest: material and texture exist, the mesh uses the material, the material is matt, the code asks for the mesh
-assert (root / 'materials/scripts/ChickenNest.material').exists()
-assert (root / 'materials/textures/ChickenNest.png').exists()
-nest_mesh = (models / 'ChickenNest.mesh').read_bytes()
-assert b'ChickenNest' in nest_mesh, 'ChickenNest.mesh does not refer to the material ChickenNest'
-assert 'texture ChickenNest.png' in material_block('ChickenNest')
-assert_matt('ChickenNest')
 assert 'MeshNest = "ChickenNest"' in looks and 'MeshNest + ".mesh"' in looks, 'the code does not ask for ChickenNest.mesh'
-coop_skeleton = (models / 'ChickenCoopHouse.skeleton').read_bytes()
-for name in (b'Root', b'Door', b'Lookout', b'Idle'):
-    assert name in coop_skeleton, name
-assert (models / 'ChickenCoop.mesh').exists()
+if CONTENT:
+    coop_mesh = model('ChickenCoopHouse.mesh').read_bytes()
+    assert b'ChickenCoopHouse.skeleton' in coop_mesh and b'ChickenCoop' in coop_mesh
+    # The straw inside the coop is the matt material ChickenCoopStraw (it replaced ChickenStraw): the mesh uses it and it is defined
+    assert b'ChickenCoopStraw' in coop_mesh, 'the coop mesh does not use ChickenCoopStraw'
+    assert_matt('ChickenCoopStraw')
+    # The straw nest: material and texture exist, the mesh uses the material, the material is matt, the code asks for the mesh
+    assert content_packages.data_file(root, 'materials/scripts/ChickenNest.material') is not None
+    assert content_packages.data_file(root, 'materials/textures/ChickenNest.png') is not None
+    nest_mesh = model('ChickenNest.mesh').read_bytes()
+    assert b'ChickenNest' in nest_mesh, 'ChickenNest.mesh does not refer to the material ChickenNest'
+    assert 'texture ChickenNest.png' in material_block('ChickenNest')
+    assert_matt('ChickenNest')
+    coop_skeleton = model('ChickenCoopHouse.skeleton').read_bytes()
+    for name in (b'Root', b'Door', b'Lookout', b'Idle'):
+        assert name in coop_skeleton, name
+    assert model('ChickenCoop.mesh').exists()
 bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
 assert '{"ChickenCoopHouse", -.203275f, -.4f, .796725f, .4f}' in bounds
-assert 'ChickenCoop ChickenCoopHouse' in (root / 'config/roomAmbienceProduction.cfg').read_text()
-assert 'ChickenCoopHouse.mesh' in credits and 'ChickenCoopHouse.skeleton' in credits and 'clips Lay, Flutter' in credits
+if CONTENT:
+    assert 'ChickenCoop ChickenCoopHouse' in content_packages.read_text(root, 'config/roomAmbienceProduction.cfg')
+    assert 'ChickenCoopHouse.mesh' in credits and 'ChickenCoopHouse.skeleton' in credits and 'clips Lay, Flutter' in credits
 # The door of the coop swings with the animal that comes out, the old mesh shakes as before
 assert 'mDoor' in looks and 'HatcheryCoopHouse::doorClip' in body(looks, 'void RenderManager::rrCreateCoopDecor')
 assert 'mDoor->setEnabled(true)' in body(looks, 'void RenderManager::rrSetChickenPose')
@@ -192,11 +224,13 @@ assert 'mDoor->addTime' in body(looks, 'void RenderManager::updateChickenLooks')
 assert 'mNest' not in body(looks, 'void RenderManager::rrDestroyCoopDecor'), 'the nests belong to the hatchery, not to a coop'
 # Hen clips: used when the skeleton has them, procedural motion stays as fallback
 for name in (b'Lay', b'Flutter', b'Peep', b'Run', b'Crow', b'Hatch', b'Die', b'Pick', b'Paw', b'Sleep', b'Walk', b'Idle'):
-    assert name in skeleton, name
+    if CONTENT:
+        assert name in skeleton, name
 assert 'return "Lay"' in pose and 'return "Flutter"' in pose and 'isOneShotClip' in pose
 # Mating clips: the rooster plays Mount, Tread (looped) and Dismount by the phase of the pose, the hen ducks, once
 for name in (b'MountCycle', b'Mount', b'Tread', b'Dismount', b'Duck'):
-    assert name in skeleton, name
+    if CONTENT:
+        assert name in skeleton, name
 assert 'return "Mount"' in pose and 'return "Duck"' in pose and '(clip == "Mount")' in pose and '(clip == "Dismount")' in pose
 assert '(clip == "Tread")' not in pose
 update = body(looks, 'void RenderManager::updateChickenLooks')
@@ -220,14 +254,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
-assert shutil.which('OgreXMLConverter') is not None, 'OgreXMLConverter must be on the PATH (the skeleton frame check must run)'
-if True:
+if CONTENT:
+    assert shutil.which('OgreXMLConverter') is not None, 'OgreXMLConverter must be on the PATH (the skeleton frame check must run)'
     sys.path.insert(0, str(root / 'tools/blender-assets'))
     import chicken_frame_fix as frame_fix
     import xml.etree.ElementTree as ET
     with tempfile.TemporaryDirectory() as tmp:
         out_xml = str(Path(tmp) / 'Chicken.xml')
-        subprocess.check_call(['OgreXMLConverter', '-q', str(models / 'Chicken.skeleton'), out_xml],
+        subprocess.check_call(['OgreXMLConverter', '-q', str(model('Chicken.skeleton')), out_xml],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         skeleton_xml = ET.parse(out_xml).getroot()
     assert len(frame_fix.structure(skeleton_xml)[0]) == frame_fix.BONE_COUNT
@@ -243,7 +277,7 @@ if True:
                            ('ChickenCoopHouse', {'ChickenCoop', 'ChickenCoopStraw'})):
         with tempfile.TemporaryDirectory() as tmp:
             mesh_xml = str(Path(tmp) / (mesh + '.xml'))
-            subprocess.check_call(['OgreXMLConverter', '-q', str(models / (mesh + '.mesh')), mesh_xml],
+            subprocess.check_call(['OgreXMLConverter', '-q', str(model(mesh + '.mesh')), mesh_xml],
                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             used = set(sm.get('material') for sm in ET.parse(mesh_xml).getroot().iter('submesh'))
         assert expected <= used, (mesh, expected, used)

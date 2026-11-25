@@ -73,15 +73,17 @@ import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'scripts'))
 import room_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 #: The assets of the merchant come from its room package (scripts/room_packages.py); without the package only the code
-#: side is checked
+#: side is checked. The shared props and their materials (ItemProps, ItemIron) come from the content packages
+#: (scripts/content_packages.py), which are present together with the room packages.
 ROOM_ASSETS = room_packages.has_room(root, 'Merchant')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.resolve(root, relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(root, relative)
 
 if not ROOM_ASSETS:
     print('merchant assets: not checked, the merchant room package is not present (the check measures its assets only)')
@@ -191,7 +193,10 @@ def png_size(path):
     return struct.unpack('>II', data[16:24])
 
 
-materials_text = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+# the material scripts of the public tree, of the content packages and of the room packages
+materials_text = ''.join(p.read_text(encoding='utf-8', errors='replace')
+                         for base in [root] + content_packages.package_roots(root)
+                         for p in sorted((base / 'materials/scripts').glob('*.material')))
 
 
 def material_block(name):
@@ -211,7 +216,7 @@ def material_diffuse(name):
 
 
 def texture_exists(tex):
-    return any(path for base in [root] + room_packages.package_roots(root) for path in (base / 'materials' / 'textures').rglob(tex))
+    return any(path for base in [root] + content_packages.package_roots(root) for path in (base / 'materials' / 'textures').rglob(tex))
 
 
 # Returns (mean luminance, mean red, mean green, mean blue, luminance standard deviation), 0..255, of an 8-bit grey,

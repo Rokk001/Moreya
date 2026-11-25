@@ -1,22 +1,36 @@
 #!/usr/bin/env python3
-"""Checks that the Champion fights at level 30, hits as configured and shows a crown instead of a level."""
+"""Checks that the Champion fights at level 30, hits as configured and shows a crown instead of a level.
+
+The crown pictures, its material and its imageset lie in the content packages (scripts/content_packages.py); without
+the content the config, the script, the scheme and the code are checked and the crown files and their CREDITS rows
+(in the CREDITS of the content repository, by their paths) are named as not checked.
+"""
 
 import re
 import struct
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+#: The crown files of the content packages
+CROWN_FILES = ("materials/textures/ChampionCrown.png", "gui/ChampionCrownIcon.png",
+               "materials/scripts/ChampionCrown.material", "gui/ChampionCrown.imageset")
+#: True when the crown files are present (they are checked only then)
+CROWN = all(content_packages.data_file(ROOT, path) is not None for path in CROWN_FILES)
 
 
 def read(path):
-    """Returns the text of a repository file."""
-    return (ROOT / path).read_text(encoding="utf-8")
+    """Returns the text of a repository file (a game data file also from the content packages)."""
+    return content_packages.resolve(ROOT, path).read_text(encoding="utf-8")
 
 
 def png_size(path):
     """Returns (width, height, colour type) of a png file."""
-    data = (ROOT / path).read_bytes()
+    data = content_packages.resolve(ROOT, path).read_bytes()
     assert data[:8] == b"\x89PNG\r\n\x1a\n", path + " is no png"
     width, height = struct.unpack(">II", data[16:24])
     return width, height, data[25]
@@ -73,29 +87,38 @@ for text in ("(8, 52), (8, 22), (20, 36), (32, 14), (44, 36), (56, 22), (56, 52)
              "((20, 44), (32, 44), (44, 44))", "JEWEL_RADIUS = 4", "CROWN_OUTLINE_WIDTH = 3",
              "materials", "ChampionCrown.png", "ChampionCrownIcon.png"):
     assert text in script, text
-for path in ("materials/textures/ChampionCrown.png", "gui/ChampionCrownIcon.png"):
-    assert png_size(path) == (64, 64, 6), path + " is a 64x64 RGBA picture"
-assert (ROOT / "materials/textures/ChampionCrown.png").read_bytes() == \
-    (ROOT / "gui/ChampionCrownIcon.png").read_bytes(), "both names hold the same picture"
+if not CROWN:
+    content_packages.unchecked("check_world_balance_champion", [path for path in CROWN_FILES
+                                                                if content_packages.data_file(ROOT, path) is None])
+else:
+    for path in ("materials/textures/ChampionCrown.png", "gui/ChampionCrownIcon.png"):
+        assert png_size(path) == (64, 64, 6), path + " is a 64x64 RGBA picture"
+    assert content_packages.resolve(ROOT, "materials/textures/ChampionCrown.png").read_bytes() == \
+        content_packages.resolve(ROOT, "gui/ChampionCrownIcon.png").read_bytes(), "both names hold the same picture"
 
 # Material, imageset, scheme and credits
-material = read("materials/scripts/ChampionCrown.material")
-assert "material ChampionCrown" in material and "texture ChampionCrown.png" in material
-assert "scene_blend alpha_blend" in material
+if CROWN:
+    material = read("materials/scripts/ChampionCrown.material")
+    assert "material ChampionCrown" in material and "texture ChampionCrown.png" in material
+    assert "scene_blend alpha_blend" in material
 assert "ChampionCrown" not in read("materials/scripts/CreatureOverlayStatus.material")
-imageset = read("gui/ChampionCrown.imageset")
-assert 'imagefile="ChampionCrownIcon.png" name="ChampionCrown"' in imageset
-assert '<Image height="64" name="Crown" width="64" xPos="0" yPos="0" />' in imageset
+if CROWN:
+    imageset = read("gui/ChampionCrown.imageset")
+    assert 'imagefile="ChampionCrownIcon.png" name="ChampionCrown"' in imageset
+    assert '<Image height="64" name="Crown" width="64" xPos="0" yPos="0" />' in imageset
 scheme = ET.fromstring(read("gui/ODSkin.scheme"))
 image_sets = scheme.findall('Imageset')
 icons = [i for i, node in enumerate(image_sets) if node.get('name') == 'OpenDungeonsIcons']
 crown = [i for i, node in enumerate(image_sets) if node.get('name') == 'ChampionCrown']
 assert len(icons) == len(crown) == 1 and icons[0] < crown[0], "crown registered once after the icon set"
 assert image_sets[crown[0]].get('filename') == 'ChampionCrown.imageset', "crown imageset binding"
-credits = read("CREDITS")
-for text in ("-> ChampionCrown.png", "ChampionCrownIcon.png", "ChampionCrown.imageset"):
-    assert text in credits, text
-assert credits.count("tools/gen_champion_crown.py") == 2
+# The rows of the crown files moved with them into the CREDITS of the content repository, where a row names the file by
+# its path (the texture row was "-> ChampionCrown.png" below its folder heading in the public CREDITS)
+credits = room_packages.credits_text(ROOT)
+if CROWN:
+    for text in ("materials/textures/ChampionCrown.png", "gui/ChampionCrownIcon.png", "gui/ChampionCrown.imageset"):
+        assert text in credits, text
+    assert credits.count("tools/gen_champion_crown.py") == 2
 
 # Overhead overlay: the crown child sits between recovery and status and is created before the first health update
 overlay = read("source/render/CreatureOverlayStatus.cpp")

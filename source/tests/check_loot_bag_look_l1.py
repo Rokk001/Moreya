@@ -15,6 +15,10 @@ Plan INGAME-QS-12 K10 and K11 (package L1). Checked here:
    info bar; the world card is the same card as the Dungeonbook's (same text, same look, same quality colour, same
    placement function as the default tooltip, no hover time).
 5. CREDITS has the entries of the texture and the re-projected mesh.
+
+The material script, the texture and the mesh live in content packages (found through scripts/content_packages.py).
+The CREDITS rows of the moved files stand in the CREDITS of the content repository (room_packages.credits_text).
+Without the content the check names parts 1, 3 and 5 as not checked and checks the code.
 """
 from pathlib import Path
 import os
@@ -24,7 +28,14 @@ import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
 fails = []
+WITH_CONTENT = content_packages.has_content(repo)
+# Parts that need the content and are not checked because it is not present
+not_checked = []
 
 
 def fail(text):
@@ -43,6 +54,17 @@ def read(path):
     return (repo / path).read_text(encoding='utf-8')
 
 
+def data_path(relative):
+    """The game data file of the public tree or of a content package; None when the content is not present (with the
+    content present the path below the repository, so that a missing file still fails)."""
+    found = content_packages.data_file(repo, relative)
+    if found is None and WITH_CONTENT:
+        return repo / relative
+    if found is None:
+        not_checked.append(relative)
+    return found
+
+
 def body(source, signature):
     """Returns the text from the signature to the end of its braces block."""
     start = source.index(signature)
@@ -55,12 +77,14 @@ def body(source, signature):
 
 
 # 1. The material and its texture
-material = read('materials/scripts/ItemProps.material')
-bag = body(material, 'material ItemBag\n') if 'material ItemBag\n' in material else body(material, 'material ItemBag\r\n')
-check(re.search(r'texture_unit\s*\{[^}]*texture ItemBagCloth\.png', bag) is not None, 'ItemBag material has the texture')
-check('colour_op' not in bag and 'lighting off' not in bag, 'the texture is modulated by the quality colour')
-sealed = body(material, 'material ItemBagSealed')
-check('texture_unit' not in sealed and '0.5500 0.0600 0.0400' in sealed, 'the sealed variant keeps its plain wax colour')
+material_path = data_path('materials/scripts/ItemProps.material')
+if material_path is not None:
+    material = material_path.read_text(encoding='utf-8')
+    bag = body(material, 'material ItemBag\n') if 'material ItemBag\n' in material else body(material, 'material ItemBag\r\n')
+    check(re.search(r'texture_unit\s*\{[^}]*texture ItemBagCloth\.png', bag) is not None, 'ItemBag material has the texture')
+    check('colour_op' not in bag and 'lighting off' not in bag, 'the texture is modulated by the quality colour')
+    sealed = body(material, 'material ItemBagSealed')
+    check('texture_unit' not in sealed and '0.5500 0.0600 0.0400' in sealed, 'the sealed variant keeps its plain wax colour')
 
 QUALITY_TINTS = [(138 / 255.0,) * 3, (1.0, 1.0, 1.0), (62 / 255.0, 123 / 255.0, 1.0), (166 / 255.0, 77 / 255.0, 1.0)]
 render = read('source/render/RenderManager.cpp')
@@ -77,8 +101,8 @@ try:
 except ImportError:
     Image = None
     fail('Pillow and numpy are needed for the texture check')
-if Image is not None:
-    texture_path = repo / 'materials/textures/ItemBagCloth.png'
+texture_path = data_path('materials/textures/ItemBagCloth.png') if Image is not None else None
+if texture_path is not None:
     check(texture_path.is_file(), 'texture file exists')
     if texture_path.is_file():
         image = Image.open(texture_path).convert('RGB')
@@ -108,12 +132,16 @@ if Image is not None:
 
 # 3. The mesh UVs
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
+mesh_path = data_path('models/ItemBag.mesh')
 with tempfile.TemporaryDirectory(prefix='itembag_') as directory:
     work = Path(directory)
     try:
-        subprocess.run([converter, '-q', str(repo / 'models/ItemBag.mesh'), str(work / 'bag.xml')], check=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        xml = (work / 'bag.xml').read_text()
+        if mesh_path is None:
+            xml = None   # the content is not present: named as not checked below
+        else:
+            subprocess.run([converter, '-q', str(mesh_path), str(work / 'bag.xml')], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            xml = (work / 'bag.xml').read_text()
     except (OSError, subprocess.CalledProcessError):
         xml = None
         print('NOTE: OgreXMLConverter not found, the UV part of the mesh check was not run')
@@ -189,11 +217,16 @@ check('createWindow("OD/Tooltip"' in maker and 'setLookNFeel(ITEM_TOOLTIP_LOOK)'
 check('setMousePassThroughEnabled(true)' in maker, 'the card never takes the pointer from the world')
 
 # 5. Credits
-credits = read('CREDITS')
-texture_line = [l for l in credits.splitlines() if l.startswith('materials/textures/ItemBagCloth.png')]
-check(len(texture_line) == 1 and 'AI-generated' in texture_line[0], 'CREDITS entry of the texture marks it AI-generated')
-check('models/ItemBag.mesh' in credits and 'Rebuilt 2026-11-21' in credits, 'CREDITS entry of the re-projected mesh')
+# the public CREDITS and, with the content, the CREDITS of the content repository (the rows of the moved files)
+if WITH_CONTENT or content_packages.data_file(repo, 'models/ItemBag.mesh') is not None:
+    credits = room_packages.credits_text(repo)
+    texture_line = [l for l in credits.splitlines() if l.startswith('materials/textures/ItemBagCloth.png')]
+    check(len(texture_line) == 1 and 'AI-generated' in texture_line[0], 'CREDITS entry of the texture marks it AI-generated')
+    check('models/ItemBag.mesh' in credits and 'Rebuilt 2026-11-21' in credits, 'CREDITS entry of the re-projected mesh')
+else:
+    not_checked.append('the CREDITS entries of the texture and the mesh')
 
+content_packages.unchecked('check_loot_bag_look_l1', not_checked)
 if fails:
     print('\n'.join('FAIL: ' + f for f in fails))
     sys.exit(1)

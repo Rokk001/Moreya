@@ -23,6 +23,9 @@ What is checked (fixed values of this branch, counted once)
 
 Calls (from the repository root; needs OgreXMLConverter on the PATH or in OGRE_XML_CONVERTER, no compiler, no game):
   python source/tests/check_tavern_seat_clips.py
+
+Without the content (scripts/content_packages.py) the mug of the drinking clips is not present: the clips are then
+named as not checked after the configuration side.
 """
 from pathlib import Path
 import re
@@ -34,6 +37,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 from asset_check_timing import prepare, preparation, profile_check
 import author_tavern_seats as seats
 import check_tavern_drink_834 as drink
@@ -430,6 +435,10 @@ def main():
         if mesh and bed and int(bed.group(1)) >= 2 and int(bed.group(2)) >= 2 and mesh.group(1) in found.values():
             large.add(next(key for key, value in found.items() if value == mesh.group(1)))
     assert large == set(seats.LARGE_MODELS), ('large models', sorted(large))
+    # The mug is content (core-models package, scripts/content_packages.py); without it the clips are not checked
+    if content_packages.data_file(ROOT, 'models/' + seats.MUG_MESH) is None and not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_tavern_seat_clips', ['seat clips with models/' + seats.MUG_MESH])
+        return
     out = ROOT / 'out' / 'tavern-seat-clips'
     out.mkdir(parents=True, exist_ok=True)
     assets = SeatAssets(out, clip_names=None)

@@ -3,7 +3,10 @@
 Pure source wiring checks (no compiler, no game): server authority, configuration with defaults,
 the guard and price rules in Room, their use in Tile (both the search check and the dance), the
 client reactions. The probe of the two pure rules in RoomClaim.h is compiled and run only with
---probe (needs the MSVC compiler on the path)."""
+--probe (needs the MSVC compiler on the path).
+
+config/creatureReactions.cfg is game data of the content packages (scripts/content_packages.py): it is read from the
+public tree or from the content packages. Without the content its reaction events are named as not checked."""
 from pathlib import Path
 import re
 import subprocess
@@ -11,6 +14,8 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -24,7 +29,12 @@ def function_body(source, signature):
 
 
 rooms_cfg = read('config/rooms.cfg')
-reactions_cfg = read('config/creatureReactions.cfg')
+# The reactions config of the public tree or of a content package; None when the content is not present
+reactions_cfg = None
+if content_packages.data_file(root, 'config/creatureReactions.cfg') is not None or content_packages.has_content(root):
+    reactions_cfg = content_packages.read_text(root, 'config/creatureReactions.cfg')
+else:
+    content_packages.unchecked('check_room_takeover', ['config/creatureReactions.cfg'])
 room = read('source/rooms/Room.cpp')
 room_h = read('source/rooms/Room.h')
 claim_h = read('source/rooms/RoomClaim.h')
@@ -188,7 +198,8 @@ assert 'sServerTellsTakeover = false' in function_body(worker, 'void WorkerReact
 # Client: reactions while dancing on a tile of an enemy room and when the tile is ours
 for name in ('TakeoverWork', 'TakeoverDone'):
     assert '"' + name + '"' in worker, name
-    assert re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
+    if reactions_cfg is not None:
+        assert re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
 claim = function_body(worker, 'void WorkerReactions::showClaim(')
 assert 'getIsRoom()' in claim and 'isAlliedSeat(tileOwner)' in claim and 'mTakeoverTile = tile' in claim
 tick = function_body(worker, 'void WorkerReactions::tickWorker(')

@@ -1,13 +1,28 @@
 """Wiring checks for the finer treasury gold visuals: coins and gems on the piles, overflow at the edges, scattered
 coins on bare floors, glow and sparkle, dent and rolling coins, thieves carrying gold, the dungeon heart ring drawn
-as piles. Client only, within the 'Treasury detail' option and its budgets (no compiler needed)."""
+as piles. Client only, within the 'Treasury detail' option and its budgets (no compiler needed).
+The particle and material scripts lie in the content packages (scripts/content_packages.py); without the content
+the code part is checked and the script part is named as not checked."""
 from pathlib import Path
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
+    """The text of a file below the repository root."""
     return (repo / path).read_text(encoding='utf-8')
+
+
+def content(path):
+    """The text of a game data file of the public tree or of a content package, or None without the content."""
+    found = content_packages.data_file(repo, path)
+    if found is None:
+        content_packages.unchecked('check_treasury_gold_detail', [path])
+        return None
+    return found.read_text(encoding='utf-8')
 
 
 render = read('source/render/RenderManager.cpp')
@@ -16,11 +31,11 @@ mesh = read('source/render/TreasuryGoldMesh.cpp')
 rules = read('source/render/TreasuryCreatureRules.h')
 layer = read('source/rooms/TreasuryGoldLayer.h')
 treasury = read('source/rooms/RoomTreasury.cpp')
-particles = read('particles/TreasuryCoins.particle')
-material = read('materials/scripts/TreasuryGoldPile.material')
+particles = content('particles/TreasuryCoins.particle')
+material = content('materials/scripts/TreasuryGoldPile.material')
 
 # Coins, gems and spilled coins: a second mesh section, only at the full detail, derived from the pile name alone.
-assert 'material TreasuryGoldDetail' in material and 'ambient vertexcolour' in material
+assert material is None or ('material TreasuryGoldDetail' in material and 'ambient vertexcolour' in material)
 assert 'DetailMaterial' in mesh and 'buildPileMesh(sceneManager, name + ".mesh", shape, reduced ? ReducedRings : FullRings, !reduced)' in mesh
 for name in ('topCoinCount', 'gemCount', 'edgeOpen', 'spillCoinsPerEdge', 'hasFloorScatter', 'levelForClassicName', 'glowWeight'):
     assert name in layer and name in mesh + render + treasury
@@ -52,11 +67,12 @@ assert 'getMeshNameForGold' not in temple.split('void RoomDungeonTemple::updateT
 
 # Look of the gold: a metal sheen from the lights only (no self-lighting, no additive blending), moderate specular,
 # a gentle glow light, and a ring pile that runs out on the floor inside its tile.
-assert 'emissive' not in material.replace('no emissive term', '')
-assert 'scene_blend' not in material
-for line in material.splitlines():
-    if line.strip().startswith('specular'):
-        assert float(line.split()[1]) <= 0.6, line
+if material is not None:
+    assert 'emissive' not in material.replace('no emissive term', '')
+    assert 'scene_blend' not in material
+    for line in material.splitlines():
+        if line.strip().startswith('specular'):
+            assert float(line.split()[1]) <= 0.6, line
 ring = mesh.split('std::string pileNameForClassicStack')[1].split('int registerPile')[0]
 assert 'mCorner[i] = level' not in ring and 'mCorner' not in ring
 assert 'float height = peak * bump;' in layer and 'rest * std::sqrt(rest)' in layer
@@ -70,10 +86,11 @@ assert 'CoinDome' in mesh and 'CoinRimShade' in mesh and 'CoinRound' in mesh
 assert 'TopCoinRadius = 0.06f' in mesh and 'GemSize = 0.04f' in mesh
 
 # Rain over the whole tile, sliding, rolling and sparkling coins.
-pour = particles.split('particle_system TreasuryCoinPour')[1].split('particle_system')[0]
-assert 'emitter Box' in pour
+if particles is not None:
+    pour = particles.split('particle_system TreasuryCoinPour')[1].split('particle_system')[0]
+    assert 'emitter Box' in pour
 for name in ('TreasuryCoinSlide', 'TreasuryCoinRoll', 'TreasuryGlint'):
-    assert 'particle_system ' + name in particles
+    assert particles is None or 'particle_system ' + name in particles
     assert '"' + name + '"' in render
 
 # Dent and rolling coins on a pile that loses gold, growth on a pile that gains it (from the pile name only).

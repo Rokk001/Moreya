@@ -4,11 +4,19 @@ The window is a fixed size OD/SheetWindow (the frame of the menu sheet) imported
 scaling like the other windows), it closes with its cross and with Escape (closeTopWindow), the
 hotkey B is used only once, and the posts come only from client side events that are guarded so they
 cost nothing while the feed is not running.
+
+gui/WindowSocial.layout and gui/NavigationDungeonbook.imageset are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages. Without the content
+their checks are named as not checked; the HUD layout, the scheme and the code are checked.
 """
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
 checks = 0
 
 
@@ -22,62 +30,72 @@ def read(path):
     return (repo / path).read_text(encoding='utf-8', errors='replace')
 
 
-layout = read('gui/WindowSocial.layout')
-check('name="SocialWindow"' in layout and 'type="OD/SheetWindow"' in layout, 'frame window of the menu sheet')
-check('<Property name="SizingEnabled" value="False" />' in layout, 'the window must not be resizable')
-m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
-check(m is not None, 'a fixed size centred area is expected')
-width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
-check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
-check('name="Visible" value="False"' in layout, 'hidden by default')
-for name in ('HomePage', 'CreaturesLabel', 'Filter', 'ListRows',
-             'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'QuoteText', 'PostThumb0', 'ValuesPage',
-             'InventoryPage', 'Header', 'BackButton', 'PrevButton', 'NextButton', 'NavBar', 'NavFeed', 'NavProfile',
-             'NavValues', 'NavInventory', 'NavSkills', 'SkillsPage'):
-    check('name="%s"' % name in layout, name)
-check('OpenProfileButton' not in layout, 'the profile opens in the book, not in a window')
-# The start page has the list on the left and the feed of all creatures on the right, inside the shared frame client.
-import xml.etree.ElementTree as ET
-social_root = ET.fromstring(layout).find('Window')
+def read_data(path):
+    """The text of a game data file from the public tree or a content package; None when it is not found and the
+    content is not present (then it is named as not checked)."""
+    if content_packages.data_file(repo, path) is None and not content_packages.has_content(repo):
+        content_packages.unchecked('check_social_window', [path])
+        return None
+    return content_packages.resolve(repo, path).read_text(encoding='utf-8', errors='replace')
 
 
-def area(name):
-    """Return the relative coordinates of a named social-window child."""
-    window = social_root.find(".//Window[@name='%s']" % name)
-    value = window.find("Property[@name='Area']").get('value')
-    dims = re.findall(r'\{(-?[0-9.]+),(-?[0-9.]+)\}', value)
-    check(len(dims) == 4 and all(float(offset) == 0 for _, offset in dims), name + ' scales with its client')
-    return [float(scale) for scale, _ in dims]
+layout = read_data('gui/WindowSocial.layout')
+if layout is not None:
+    check('name="SocialWindow"' in layout and 'type="OD/SheetWindow"' in layout, 'frame window of the menu sheet')
+    check('<Property name="SizingEnabled" value="False" />' in layout, 'the window must not be resizable')
+    m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
+    check(m is not None, 'a fixed size centred area is expected')
+    width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
+    check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
+    check('name="Visible" value="False"' in layout, 'hidden by default')
+    for name in ('HomePage', 'CreaturesLabel', 'Filter', 'ListRows',
+                 'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'QuoteText', 'PostThumb0', 'ValuesPage',
+                 'InventoryPage', 'Header', 'BackButton', 'PrevButton', 'NextButton', 'NavBar', 'NavFeed', 'NavProfile',
+                 'NavValues', 'NavInventory', 'NavSkills', 'SkillsPage'):
+        check('name="%s"' % name in layout, name)
+    check('OpenProfileButton' not in layout, 'the profile opens in the book, not in a window')
+    # The start page has the list on the left and the feed of all creatures on the right, inside the shared frame client.
+    import xml.etree.ElementTree as ET
+    social_root = ET.fromstring(layout).find('Window')
 
 
-list_area = area('ListRows')
-feed = area('FeedRows')
-check(feed[0] > list_area[2], 'the feed must not overlap the list')
-check(area('ListScroll')[0] >= list_area[2] and area('ListScroll')[2] <= feed[0], 'the list scrollbar sits between')
-# The feed column keeps the original minimum text-column width (light frame of at most 16 design pixels per side).
-check((width - 2 * 16) * (feed[2] - feed[0]) >= 400, 'the feed needs about 400 design pixels')
-pages = [w.get('name') for w in social_root.findall('Window')]
-# The five pages of one creature follow the start page in the order of the navigation bar; the Skills page is the
-# skill tree of the creature inside the book (INGAME-QS-12 K7)
-check(pages[:6] == ['HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage', 'SkillsPage'], pages)
-for page in pages[1:6] + ['Header']:
-    own = social_root.find("Window[@name='%s']" % page).findall('Property')
-    check(any(p.get('name') == 'Visible' and p.get('value') == 'False' for p in own),
-          page + ' is hidden until a creature is opened')
-filter_window = social_root.find("Window[@name='HomePage']/Window[@name='Filter']")
-check(filter_window.get('type') == 'OD/SheetCombobox', 'filter is a dropdown of the menu sheet (INGAME-QS-12 K8)')
-check(filter_window.find("Property[@name='ReadOnly']").get('value') == 'True', 'filter selects a fixed entry')
-check(area('CreaturesLabel')[2] == area('Filter')[0], 'dropdown sits beside the roster heading')
-check(not any('name="Filter%s"' % name in layout for name in ('All', 'Workers', 'Fighters', 'Unhappy')),
-      'old filter buttons are replaced')
-nav_areas = [area(n) for n in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills')]
-check(all(abs((a[2] - a[0]) - (nav_areas[0][2] - nav_areas[0][0])) < 1e-6 for a in nav_areas), 'equal navigation widths')
-check(area('NavBar')[1] >= max(area(p)[3] for p in pages[1:6]) - 1e-6,
-      'the navigation bar sits below the selected creature pages')
-# The pages of one creature replace the start page (plan INGAME-QS-11 K3): the bar spans the whole client width
-check(area('NavBar')[0] <= area('ListPanel')[0] + 0.01 and area('NavBar')[2] >= area('FeedPanel')[2] - 0.01,
-      'the navigation bar of one creature spans the width of the book')
-check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')
+    def area(name):
+        """Return the relative coordinates of a named social-window child."""
+        window = social_root.find(".//Window[@name='%s']" % name)
+        value = window.find("Property[@name='Area']").get('value')
+        dims = re.findall(r'\{(-?[0-9.]+),(-?[0-9.]+)\}', value)
+        check(len(dims) == 4 and all(float(offset) == 0 for _, offset in dims), name + ' scales with its client')
+        return [float(scale) for scale, _ in dims]
+
+
+    list_area = area('ListRows')
+    feed = area('FeedRows')
+    check(feed[0] > list_area[2], 'the feed must not overlap the list')
+    check(area('ListScroll')[0] >= list_area[2] and area('ListScroll')[2] <= feed[0], 'the list scrollbar sits between')
+    # The feed column keeps the original minimum text-column width (light frame of at most 16 design pixels per side).
+    check((width - 2 * 16) * (feed[2] - feed[0]) >= 400, 'the feed needs about 400 design pixels')
+    pages = [w.get('name') for w in social_root.findall('Window')]
+    # The five pages of one creature follow the start page in the order of the navigation bar; the Skills page is the
+    # skill tree of the creature inside the book (INGAME-QS-12 K7)
+    check(pages[:6] == ['HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage', 'SkillsPage'], pages)
+    for page in pages[1:6] + ['Header']:
+        own = social_root.find("Window[@name='%s']" % page).findall('Property')
+        check(any(p.get('name') == 'Visible' and p.get('value') == 'False' for p in own),
+              page + ' is hidden until a creature is opened')
+    filter_window = social_root.find("Window[@name='HomePage']/Window[@name='Filter']")
+    check(filter_window.get('type') == 'OD/SheetCombobox', 'filter is a dropdown of the menu sheet (INGAME-QS-12 K8)')
+    check(filter_window.find("Property[@name='ReadOnly']").get('value') == 'True', 'filter selects a fixed entry')
+    check(area('CreaturesLabel')[2] == area('Filter')[0], 'dropdown sits beside the roster heading')
+    check(not any('name="Filter%s"' % name in layout for name in ('All', 'Workers', 'Fighters', 'Unhappy')),
+          'old filter buttons are replaced')
+    nav_areas = [area(n) for n in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory', 'NavSkills')]
+    check(all(abs((a[2] - a[0]) - (nav_areas[0][2] - nav_areas[0][0])) < 1e-6 for a in nav_areas), 'equal navigation widths')
+    check(area('NavBar')[1] >= max(area(p)[3] for p in pages[1:6]) - 1e-6,
+          'the navigation bar sits below the selected creature pages')
+    # The pages of one creature replace the start page (plan INGAME-QS-11 K3): the bar spans the whole client width
+    check(area('NavBar')[0] <= area('ListPanel')[0] + 0.01 and area('NavBar')[2] >= area('FeedPanel')[2] - 0.01,
+          'the navigation bar of one creature spans the width of the book')
+    check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')
 
 hud = read('gui/ModeGame.layout')
 check('filename="WindowSocial.layout"' in hud, 'window not imported')
@@ -91,7 +109,9 @@ icon = re.search(r'NormalImage" value="(\w+)/(\w+)"', button)
 check(icon is not None and icon[1] == 'NavigationDungeonbook', 'button uses the Dungeonbook icon')
 check('<Imageset filename="NavigationDungeonbook.imageset" name="NavigationDungeonbook" />' in read('gui/ODSkin.scheme'),
       'Dungeonbook imageset registered')
-check('name="%s"' % icon[2] in read('gui/NavigationDungeonbook.imageset'), 'button icon must exist')
+dungeonbook_icons = read_data('gui/NavigationDungeonbook.imageset')
+if dungeonbook_icons is not None:
+    check('name="%s"' % icon[2] in dungeonbook_icons, 'button icon must exist')
 
 gamemode = read('source/modes/GameMode.cpp')
 check(gamemode.count('case OIS::KC_B:') == 1, 'one B case in GameMode')
@@ -175,11 +195,12 @@ for handler in ('onNavClicked', 'onBackClicked', 'onPreviousClicked', 'onNextCli
 check('SocialWindow::onLinkClicked' in window and '&SocialWindow::onLinkClicked' in window,
       'the posts of the start page select a creature')
 # The shared creature profile page with its friend and foe links was deleted (owner decision 2026-11-18)
-check(not (repo / 'gui/WindowCreatureProfilePage.layout').exists() and '"OwnPostsText"' not in window,
+# The deleted page is in neither the public tree nor a content package
+check(content_packages.data_file(repo, 'gui/WindowCreatureProfilePage.layout') is None and '"OwnPostsText"' not in window,
       'the shared profile page is gone; the posts column of the book shows the recent posts')
 check('MAX_OWN_POSTS = 6' in window and '(rows < MAX_OWN_POSTS)' in window,
       'the six recent posts remain available as pictures (book-variant-2)')
-check('LinkButton' not in layout + window + gamemode, 'the friend and foe buttons below the profile are gone')
+check('LinkButton' not in (layout or '') + window + gamemode, 'the friend and foe buttons below the profile are gone')
 # Decision 732 for the list, the feeds and the head; only the profile page shortens a text that is longer than its
 # place with "..." (plan INGAME-QS-11 K1, setFittedText and the name line of refreshProfile)
 profile_start = window.index('void SocialWindow::refreshProfile(')
@@ -192,13 +213,14 @@ check('getHorzScrollbar' not in window and 'elideToWidth' not in window and 'fit
       'long names of the list, the feeds and the head are not shortened (decision 732), no horizontal scrollbar')
 check('setFullText(header->getChild("NameText"), profile.getFullName());' in window,
       'the head shows the whole name (it holds the widest one, check_dungeonbook_profile_layout.py)')
-for name in ('CreaturesLabel', 'Name', 'Head', 'Text'):
-    windows = social_root.findall(".//Window[@name='%s']" % name)
-    check(windows, name)
-    for part in windows:
-        formatting = part.find("Property[@name='HorzFormatting']")
-        check(formatting is not None and formatting.get('value').startswith('WordWrap'),
-              name + ' word wraps its whole text (check_dungeonbook_profile_layout.py measures the longest one)')
+if layout is not None:
+    for name in ('CreaturesLabel', 'Name', 'Head', 'Text'):
+        windows = social_root.findall(".//Window[@name='%s']" % name)
+        check(windows, name)
+        for part in windows:
+            formatting = part.find("Property[@name='HorzFormatting']")
+            check(formatting is not None and formatting.get('value').startswith('WordWrap'),
+                  name + ' word wraps its whole text (check_dungeonbook_profile_layout.py measures the longest one)')
 check('EventMouseDoubleClick' not in window, 'no double click window')
 selection = window[window.index('bool SocialWindow::onListRowClicked'):]
 selection = selection[:selection.index('\n}\n')]

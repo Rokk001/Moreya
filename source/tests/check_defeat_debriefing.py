@@ -3,20 +3,27 @@
 DefeatSequence.h is compiled as it is. The GameMode functions that open the debriefing and handle its button, the
 guard at the top of the input handlers and the two hand-over functions of ModeManager.h are cut out of the production
 sources by signature and compiled against small mocks. The mocked window tree is generated from the real layout file.
+The layout lies in the content package core-gui (scripts/content_packages.py); without the content the layout checks
+and the probe (nothing is compiled) are named as not checked and the source wiring is still checked.
 """
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ElementTree
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 sequence_header = (repo / 'source/modes/DefeatSequence.h').read_text()
 table_header = (repo / 'source/modes/DebriefingTable.h').read_text()
 mode_manager = (repo / 'source/modes/ModeManager.h').read_text()
 menu_main = (repo / 'source/modes/MenuModeMain.cpp').read_text()
-layout_path = repo / 'gui/WindowDefeatDebriefing.layout'
+# The real layout of the debriefing; None when the content is not present
+layout_path = (content_packages.resolve(repo, 'gui/WindowDefeatDebriefing.layout') if content_packages.has_content(repo)
+               else content_packages.data_file(repo, 'gui/WindowDefeatDebriefing.layout'))
 
 
 def function(text, signature):
@@ -70,7 +77,7 @@ def layout_windows():
     return found
 
 
-windows = layout_windows()
+windows = layout_windows() if layout_path is not None else []
 
 probe = r'''
 #include <cmath>
@@ -614,7 +621,10 @@ assert 'child == mDefeatDebriefing' in function(game_mode, 'void GameMode::hideI
 assert 'destroyDefeatWindows();' in function(game_mode, 'GameMode::~GameMode(')
 print('WIRING OK: the main menu consumes the hand-over, the debriefing stays visible and is destroyed with the mode')
 names = [path for path, _ in windows]
-assert 'type="OD/MenuScrollablePane" name="StatisticsArea"' in layout_path.read_text()
+if layout_path is None:
+    content_packages.unchecked('check_defeat_debriefing', ['gui/WindowDefeatDebriefing.layout windows', 'compiled probe'])
+else:
+    assert 'type="OD/MenuScrollablePane" name="StatisticsArea"' in layout_path.read_text()
 assert 'buildDebriefingTable(statistics)' in function(game_mode, 'void GameMode::showDefeatDebriefing(')
 print('WIRING OK: the statistics area is a scrollable pane and the debriefing builds the table from the received statistics')
 # The CEGUI arrow of this game is fully transparent: without the keeper hand the debriefing had no visible
@@ -629,17 +639,22 @@ assert max(pixel[3] for pixel in arrow_pixels.getdata()) == 0, 'the arrow became
 show = function(game_mode, 'void GameMode::showDefeatDebriefing(')
 assert 'rrToggleHandSelectorVisibility()' in show and 'isKeeperHandVisible()' in show
 print('WIRING OK: the CEGUI arrow is transparent, so the debriefing brings the keeper hand back as the pointer')
-for needed in ('Panel/Title', 'Panel/PlayerName', 'Panel/Outcome', 'Panel/Elapsed', 'Panel/StatisticsArea', 'Panel/ConfirmButton'):
-    assert needed in names, needed
-assert 'OpenDungeonsIcons/CheckIcon' in layout_path.read_text()
+if layout_path is not None:
+    for needed in ('Panel/Title', 'Panel/PlayerName', 'Panel/Outcome', 'Panel/Elapsed', 'Panel/StatisticsArea', 'Panel/ConfirmButton'):
+        assert needed in names, needed
+    assert 'OpenDungeonsIcons/CheckIcon' in layout_path.read_text()
 assert re.search(r'\bauto\b', probe) is None and re.search(r'\bauto\b', sequence_header) is None
 assert re.search(r'\bauto\b', table_header) is None and re.search(r'\bauto\b', function(game_mode, 'void GameMode::fillDefeatStatistics(')) is None
 print('STYLE OK: no auto in the new code or in the fixture')
 for path in (layout_path, Path(__file__), repo / 'source/modes/DefeatSequence.h', repo / 'source/modes/DebriefingTable.h', repo / 'source/modes/GameMode.cpp',
              repo / 'source/modes/GameMode.h', repo / 'source/modes/ModeManager.h', repo / 'source/modes/MenuModeMain.cpp'):
+    if path is None:
+        continue  # the layout of the content package
     bad = [b for b in path.read_bytes() if b < 32 and b not in (9, 10, 13)]
     assert not bad, path
 print('BYTES OK: no stray control characters')
+if layout_path is None:
+    sys.exit(0)  # the probe needs the window tree of the layout
 
 with tempfile.TemporaryDirectory(prefix='odp-defeat-debriefing-') as directory:
     work = Path(directory)

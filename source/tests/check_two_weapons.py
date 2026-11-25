@@ -2,7 +2,10 @@
 
 Pure source wiring check (no compiler, no game): client side only, no server, timing, damage or network
 involvement, values in config/creatureReactions.cfg, creatures with one weapon (or a shield) unchanged.
-The pure rules in TwoWeaponStrike.h are compiled and run only with --probe (needs the MSVC compiler on the path)."""
+The pure rules in TwoWeaponStrike.h are compiled and run only with --probe (needs the MSVC compiler on the path).
+The config files, levels and skeletons are found in the public tree and in the content packages
+(scripts/content_packages.py); without the content a moved one is named as not checked (the probe needs only the
+source headers)."""
 from pathlib import Path
 import re
 import subprocess
@@ -10,10 +13,24 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
+    """The text of a file below the repository root."""
     return (root / path).read_text(encoding='utf-8')
+
+
+def content(path):
+    """The file of a game data path in the public tree or in a content package; None (named as not checked) when the
+    content is not present, while a file missing although the content is present fails the check."""
+    found = content_packages.data_file(root, path)
+    if found is None and not content_packages.has_content(root):
+        content_packages.unchecked('check_two_weapons', [path])
+        return None
+    assert found is not None, path + ' is missing'
+    return found
 
 
 def function_body(source, signature):
@@ -115,8 +132,10 @@ assert not two_attack_weapons('Crossbow', 'BasicSword'), 'a crossbow cannot be a
 assert not two_attack_weapons('BasicSword', 'Crossbow'), 'a crossbow cannot be a strike weapon'
 assert not two_attack_weapons(*creatures['TestOneSword']), 'one sword is one weapon'
 for name in creatures:
-    for path in ('config', 'levels', 'source'):
-        for file in (root / path).rglob('*'):
+    # config and levels of the public tree and of the content packages
+    for folder in content_packages.data_folders(root, 'config') + content_packages.data_folders(root, 'levels') + \
+            [root / 'source']:
+        for file in folder.rglob('*'):
             if file.is_file() and file.suffix in ('.cfg', '.level', '.cpp', '.h') and file.name != Path(fixture_path).name:
                 assert name not in file.read_text(encoding='utf-8', errors='ignore'), name + ' is used in ' + str(file)
 
@@ -177,7 +196,10 @@ assert render.count('mCreatureLastBlowLeft.erase(curCreature);') == 1 and render
 # The mirrored clips exist in the skeletons of the humanoid sword/axe bearers (new clip only, Attack1 stays)
 MIRRORED = ('Adventurer', 'Cultist', 'Dwarf1', 'Dwarf2', 'Gnome', 'Goblin', 'Knight', 'Monk', 'Orc', 'RunelordDwarf')
 for skeleton in MIRRORED:
-    data = (root / 'models' / (skeleton + '.skeleton')).read_bytes()
+    skeleton_file = content('models/' + skeleton + '.skeleton')
+    if skeleton_file is None:
+        continue
+    data = skeleton_file.read_bytes()
     for needed in (b'Attack1Left', b'Attack1', b'Weapon_L', b'Weapon_R'):
         assert needed in data, skeleton + ' has no ' + needed.decode()
 for bone in ('arm_l', 'upper_arm.l', 'upperarm_l', 'forearm_l', 'forearm.l'):
@@ -193,10 +215,11 @@ for text in (header, carries, variants):
         assert forbidden not in text, forbidden
 
 # Config: documented, set in the cfg, read with a default, accepted by the format check
-cfg = read('config/creatureReactions.cfg')
+cfg_file = content('config/creatureReactions.cfg')
+cfg = None if cfg_file is None else cfg_file.read_text(encoding='utf-8')
 for key in ('TwoWeaponMode', 'TwoWeaponArmStrength'):
-    assert re.search(r'^#   ' + key + r'\s', cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\s+\d', cfg, re.M), key + ' not set'
+    assert cfg is None or re.search(r'^#   ' + key + r'\s', cfg, re.M), key + ' not documented'
+    assert cfg is None or re.search(r'^    ' + key + r'\s+\d', cfg, re.M), key + ' not set'
     assert '"' + key + '"' in read('source/render/CreatureReactionConfig.cpp'), key + ' not read'
     assert '"' + key + '"' in read('tools/check_creature_reactions.py'), key + ' not allowed by the format check'
 config_cpp = read('source/render/CreatureReactionConfig.cpp')

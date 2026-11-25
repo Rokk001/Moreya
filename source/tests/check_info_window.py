@@ -26,25 +26,51 @@ In-game options menu (F10, INGAME-QS-11 K7, T-O1). Static check, no game and no 
    the KO setting of the player information window is a check box on the Game page of the settings window that shows
    the seat value and sends a change to the server, which sets the seat (Creature.cpp reads it when a creature is
    defeated).
+
+Some layouts and imagesets (gui/WindowStats.layout, gui/WindowSettingsNavigation.layout, gui/WindowUserCameras.layout,
+the imagesets of the symbols) live in content packages (found through scripts/content_packages.py). Without the content
+the check names the parts that need them as not checked and checks the code and the public layouts; the button count
+of the opened windows is then the fixed count of the public layouts.
 """
 from pathlib import Path
 import re
+import sys
 import time
 import xml.etree.ElementTree as ET
 
 STARTED = time.monotonic()
 repo = Path(__file__).resolve().parents[2]
-layout = (repo / 'gui/WindowStats.layout').read_text()
-assert 'name="StatsWindow"' in layout and 'type="OD/SheetWindow"' in layout, 'the window frame of the menu sheet'
-assert '<Property name="SizingEnabled" value="False" />' in layout, 'the window must not be resizable'
-m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
-assert m, 'a fixed size centred area is expected'
-width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
-assert width >= 480 and height >= 440, (width, height)
-for prop in ('Font" value="MedievalSharp-8', 'VertFormatting" value="TopAligned', 'HorzFormatting" value="WordWrapLeftAligned',
-             'FrameEnabled" value="False'):
-    assert prop in layout, prop
-assert 'VertScrollbar' not in layout, 'no scrolling wanted'
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+WITH_CONTENT = content_packages.has_content(repo)
+# Parts that need the content and are not checked because it is not present
+not_checked = []
+
+
+def gui_file(name):
+    """A file of gui/ from the public tree or a content package, or None when the content is not present."""
+    found = content_packages.data_file(repo, 'gui/' + name)
+    if found is None and WITH_CONTENT:
+        return repo / 'gui' / name   # fails below as before: the content is present but the file is missing
+    return found
+
+
+stats_file = gui_file('WindowStats.layout')
+if stats_file is None:
+    not_checked.append('gui/WindowStats.layout')
+else:
+    layout = stats_file.read_text()
+    assert 'name="StatsWindow"' in layout and 'type="OD/SheetWindow"' in layout, 'the window frame of the menu sheet'
+    assert '<Property name="SizingEnabled" value="False" />' in layout, 'the window must not be resizable'
+    m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
+    assert m, 'a fixed size centred area is expected'
+    width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
+    assert width >= 480 and height >= 440, (width, height)
+    for prop in ('Font" value="MedievalSharp-8', 'VertFormatting" value="TopAligned', 'HorzFormatting" value="WordWrapLeftAligned',
+                 'FrameEnabled" value="False'):
+        assert prop in layout, prop
+    assert 'VertScrollbar' not in layout, 'no scrolling wanted'
 for name in ('Creature', 'Tile'):
     text = (repo / 'source/entities' / (name + '.cpp')).read_text()
     # Only the tile opens an information window; the creature opens none (its information is in the Dungeonbook)
@@ -77,7 +103,7 @@ def props(window):
     return {p.get('name'): p.get('value') for p in window.findall('Property')}
 
 
-scheme = ET.parse(gui / 'ODSkin.scheme').getroot()
+scheme = ET.parse(str(gui_file('ODSkin.scheme'))).getroot()
 targets = {m.get('windowType'): m.get('targetType') for m in scheme.findall('FalagardMapping')}
 BUTTON_TARGETS = ('CEGUI/PushButton', 'CEGUI/RadioButton')
 # The button looks of the main menu: the template of the chosen menu sheet in its full, compact and filter forms, and
@@ -97,7 +123,7 @@ ACTIONS = {'SaveGameButton': 'saveGame', 'LoadGameButton': 'loadGame', 'Settings
            'QuitGameButton': 'showQuitMenuFromOptions', 'ExitGameButton': 'showExitApplicationFromOptions',
            'RestartLevelButton': 'showRestartLevelFromOptions', 'BackButton': 'showOptionsWindow'}
 REMOVED = ('ObjectivesButton', 'SkillButton', 'ProductionButton', 'PlayerSettingsButton', 'UserCamerasButton')
-options_root = ET.parse(gui / 'WindowGameOptions.layout').getroot()
+options_root = ET.parse(str(gui_file('WindowGameOptions.layout'))).getroot()
 options_window = options_root.find('Window')
 assert options_window.get('name') == 'GameOptionsWindow' and options_window.get('type') == 'OD/SheetWindow'
 entries = {w.get('name'): w for w in options_window.findall('Window')}
@@ -130,17 +156,21 @@ for gone in ('showObjectivesFromOptions', 'showSkillFromOptions', 'showTrapProdu
 print('1. options window: %d entries of K7 with their actions, %d entries removed' % (len(entries), len(REMOVED)))
 
 # 2. Look: every entry is the menu template button with its symbol, drawn in every state.
-assert 'OD/IconButton' not in (gui / 'WindowGameOptions.layout').read_text(encoding='utf-8'), 'the old icon button look is left'
+assert 'OD/IconButton' not in gui_file('WindowGameOptions.layout').read_text(encoding='utf-8'), 'the old icon button look is left'
 imagesets = {}
-for imageset_file in gui.glob('*.imageset'):
-    root = ET.parse(imageset_file).getroot()
+# the imagesets of the public tree and of the content packages
+for imageset_file in content_packages.data_glob(repo, 'gui', '*.imageset'):
+    root = ET.parse(str(imageset_file)).getroot()
     imagesets[root.get('name')] = {i.get('name') for i in root.findall('Image')}
 for name, window in entries.items():
     assert window.get('type') == ICON_LOOK, (name, window.get('type'))
     icon = props(window).get('IconImage', '')
     imageset, _, image = icon.partition('/')
+    if imageset not in imagesets and not WITH_CONTENT:
+        not_checked.append('symbol ' + icon)
+        continue
     assert image in imagesets.get(imageset, set()), (name, 'symbol missing', icon)
-looks = {wl.get('name'): wl for wl in ET.parse(gui / 'OD.looknfeel').getroot().findall('WidgetLook')}
+looks = {wl.get('name'): wl for wl in ET.parse(str(gui_file('OD.looknfeel'))).getroot().findall('WidgetLook')}
 assert looks[ICON_LOOK].get('inherits') == 'OD/MenuTextButton', 'the symbol button is not the menu template button'
 
 
@@ -202,29 +232,46 @@ assert 'new MenuModeLoad(mModeManager, true)' in body(game, 'bool GameMode::load
 assert 'mSheets[loadSavedGameMenu] =  wmgr->loadLayoutFromFile("MenuLoad.layout")' in (repo / 'source/render/Gui.cpp').read_text(encoding='utf-8')
 assert 'getChild(Gui::EXIT_CONFIRMATION_POPUP)' in body(game, 'void GameMode::popupExit(')
 assert 'getChild("GameHelpWindow")' in body(game, 'bool GameMode::showHelpWindow(')
+# counted once on this branch: navigation 7, settings 2, apply popup 2, user cameras 4, load screen 7, exit 2, help 0
+OPENED_BUTTONS = {'WindowSettingsNavigation.layout': 7, 'WindowSettings.layout': 2, 'WindowApplyChanges.layout': 2,
+                  'WindowUserCameras.layout': 4, 'MenuLoad.layout': 7, 'WindowQuit.layout': 2, 'WindowHelp.layout': 0}
 opened_buttons = 0
+expected_buttons = 0
 for opened_layout, window_name in OPENED.items():
-    windows = list(ET.parse(gui / opened_layout).getroot().iter('Window'))
+    opened_file = gui_file(opened_layout)
+    if opened_file is None:
+        not_checked.append('gui/' + opened_layout)
+        continue
+    expected_buttons += OPENED_BUTTONS[opened_layout]
+    windows = list(ET.parse(str(opened_file)).getroot().iter('Window'))
     assert window_name in {w.get('name') for w in windows}, (opened_layout, window_name)
-    assert 'OD/IconButton' not in (gui / opened_layout).read_text(encoding='utf-8'), opened_layout + ' keeps the old look'
+    assert 'OD/IconButton' not in opened_file.read_text(encoding='utf-8'), opened_layout + ' keeps the old look'
     for window in windows:
         if targets.get(window.get('type')) in BUTTON_TARGETS:
             opened_buttons += 1
             assert window.get('type') in MENU_LOOKS and 'LookNFeel' not in props(window), \
                 (opened_layout, window.get('name'), window.get('type'), 'is not a main menu button')
-# counted once on this branch: navigation 7, settings 2, apply popup 2, user cameras 4, load screen 7, exit 2, help 0
-assert opened_buttons == 24, opened_buttons
+# all of them with the content present (24), else the fixed counts of the public layouts
+assert expected_buttons == 24 or not WITH_CONTENT, expected_buttons
+assert opened_buttons == expected_buttons, (opened_buttons, expected_buttons)
 print('2. %d option entries and %d buttons of %d opened windows are main menu buttons, symbol in every state' % (
     len(entries), opened_buttons, len(OPENED)))
 
 # 3. Sizes, with the formulas of GameMode::setOptionsPage and the frame and font model of check_window_content_fit.py.
-fit_source = (repo / 'source/tests/check_window_content_fit.py').read_text(encoding='utf-8')
-marker = '\nall_problems = {}\n'
-assert marker in fit_source
-namespace = {'__file__': str(repo / 'source/tests/check_window_content_fit.py'), '__name__': 'content_fit'}
-exec(compile(fit_source[:fit_source.index(marker)], 'check_window_content_fit.py', 'exec'), namespace)
-assert namespace['text_area'] is not None and ICON_LOOK in namespace['MENU_SYMBOL_CAPTION'], 'the font model lacks the symbol button'
-assert abs(namespace['MENU_SYMBOL_CAPTION'][ICON_LOOK][0] - CAPTION_LEFT) < 1e-6, 'font model and look place the caption differently'
+# The font model measures with the font files of gui/fonts; without the content they are not all there.
+FONT_FILES_MISSING = [font.name for font in sorted((repo / 'gui/fonts').glob('*.font'))
+                      if not (repo / 'gui/fonts' / ET.parse(str(font)).getroot().get('filename')).is_file()]
+namespace = None
+if FONT_FILES_MISSING and not WITH_CONTENT:
+    not_checked.append('3. sizes of the options window (font files of ' + ', '.join(FONT_FILES_MISSING) + ')')
+else:
+    fit_source = (repo / 'source/tests/check_window_content_fit.py').read_text(encoding='utf-8')
+    marker = '\nall_problems = {}\n'
+    assert marker in fit_source
+    namespace = {'__file__': str(repo / 'source/tests/check_window_content_fit.py'), '__name__': 'content_fit'}
+    exec(compile(fit_source[:fit_source.index(marker)], 'check_window_content_fit.py', 'exec'), namespace)
+    assert namespace['text_area'] is not None and ICON_LOOK in namespace['MENU_SYMBOL_CAPTION'], 'the font model lacks the symbol button'
+    assert abs(namespace['MENU_SYMBOL_CAPTION'][ICON_LOOK][0] - CAPTION_LEFT) < 1e-6, 'font model and look place the caption differently'
 
 
 def find_node(nodes, name):
@@ -238,75 +285,80 @@ def find_node(nodes, name):
     return None
 
 
-window_node = find_node(namespace['sheets'], 'GameOptionsWindow')
-assert window_node is not None
-entry_nodes = {child.name: child for child in window_node.children}
-number = r'([0-9.]+)f'
-height_rule = re.search(r'std::min\(' + number + r', \(' + number + r' \+ ' + number +
-                        r' \* entries\.size\(\)\) \* gui\.getLayoutScale\(\) / display\.d_height\)', page)
-step_rule = re.search(r'const float step = ' + number + r' / entries\.size\(\);', page)
-top_rule = re.search(r'const float top = ' + number + r' \+ step \* i;', page)
-button_rule = re.search(r'CEGUI::UDim\(top \+ step \* ' + number + r' / ' + number + r', 0\)', page)
-side_rule = re.search(r'CEGUI::UDim\(0\.5f, -(\d+)\), CEGUI::UDim\(0\.5f - height / 2\.0f, 0\)', page)
-inset_rule = re.search(r'CEGUI::URect\(CEGUI::UDim\(0, (\d+)\), CEGUI::UDim\(top, 0\),\s*CEGUI::UDim\(1, -(\d+)\)', page)
-assert height_rule and step_rule and top_rule and button_rule and side_rule and inset_rule, 'setOptionsPage changed its form'
-LIMIT, FRAME, ROW = (float(v) for v in height_rule.groups())
-STEP, TOP = float(step_rule[1]), float(top_rule[1])
-BUTTON = float(button_rule[1]) / float(button_rule[2])
-HALF_WIDTH, INSET = float(side_rule[1]), float(inset_rule[1])
-assert float(inset_rule[2]) == INSET
-SCREENS = ((640, 480), (1024, 768), (1920, 1200), (7680, 4320))
-USER_SCALES = (0.8, 1.0, 1.2)
-TOLERANCE = namespace['TOLERANCE']
-KNOB_TOP, KNOB_BOTTOM = 8.5 / 120.0, 7.5 / 120.0  # the knobs of the template stand above and below the plate
-# narrowest symbol button: both caps, the centre knob piece and the symbol with its gap before the caption
-MIN_WIDTH = 2 * 0.516667 + 0.466667 + (CAPTION_LEFT - SYMBOL_LEFT)
-cases = 0
-for screen in SCREENS:
-    for user in USER_SCALES:
-        s = min(screen[0] / namespace['DESIGN_W'], screen[1] / namespace['DESIGN_H']) * user
-        for page_name, names in (('options', OPTIONS_PAGE), ('options without saving', OPTIONS_PAGE[2:]),
-                                 ('End Game', END_GAME_PAGE)):
-            where = '%s page at %dx%d %d%%' % (page_name, screen[0], screen[1], round(user * 100))
-            fraction = min(LIMIT, (FRAME + ROW * len(names)) * s / screen[1])
-            rect = (screen[0] / 2.0 - HALF_WIDTH * s, screen[1] * (0.5 - fraction / 2.0),
-                    screen[0] / 2.0 + HALF_WIDTH * s, screen[1] * (0.5 + fraction / 2.0))
-            assert rect[0] >= -TOLERANCE and rect[1] >= -TOLERANCE and rect[2] <= screen[0] + TOLERANCE \
-                and rect[3] <= screen[1] + TOLERANCE, where + ': the window leaves the screen'
-            client = namespace['client_rect'](window_node, rect, screen, user, s)
-            step = STEP / len(names)
-            plates = []
-            for index, name in enumerate(names):
-                node = entry_nodes[name]
-                top = TOP + step * index
-                box = (client[0] + INSET * s, client[1] + top * (client[3] - client[1]),
-                       client[2] - INSET * s, client[1] + (top + step * BUTTON) * (client[3] - client[1]))
-                here = '%s: %s' % (where, name)
-                h = box[3] - box[1]
-                assert box[0] >= client[0] - TOLERANCE and box[1] >= client[1] - TOLERANCE and \
-                    box[2] <= client[2] + TOLERANCE and box[3] <= client[3] + TOLERANCE, here + ' leaves the window frame'
-                assert box[2] - box[0] >= MIN_WIDTH * h - TOLERANCE, here + ' is narrower than its caps and symbol'
-                symbol_box = (box[0] + SYMBOL_LEFT * h, box[1] + SYMBOL_TOP * h,
-                              box[0] + (SYMBOL_LEFT + SYMBOL_SIZE) * h, box[1] + (SYMBOL_TOP + SYMBOL_SIZE) * h)
-                text_box = namespace['text_area'](node, box, screen, user, s)
-                assert symbol_box[2] <= text_box[0] + TOLERANCE and symbol_box[0] >= box[0] and \
-                    symbol_box[3] <= box[3], here + ': the symbol is not on the planks left of the caption'
-                assert symbol_box[2] - symbol_box[0] >= 8.0, here + ': the symbol is too small to be seen'
-                problems = []
-                namespace['check_text'](node, box, screen, user, s, problems)
-                assert not problems, (here, problems)
-                plates.append((box[1] + KNOB_TOP * h, box[3] - KNOB_BOTTOM * h))
-                cases += 1
-            for upper, lower in zip(plates, plates[1:]):
-                assert upper[1] <= lower[0] + TOLERANCE, where + ': two entries overlap'
-            # the window height fits its entries: below the last entry no room for another one
-            last_bottom = client[1] + (TOP + step * (len(names) - 1) + step * BUTTON) * (client[3] - client[1])
-            assert client[3] - last_bottom < step * (client[3] - client[1]), where + ': the window is higher than its entries'
-print('3. %d entry placements at %d screens x %d UI scales on the three pages: on the screen, inside the frame, '
-      'symbol left of an uncut caption' % (cases, len(SCREENS), len(USER_SCALES)))
+# Without the content check_window_content_fit leaves out the sheets that need a moved font, image set or layout; the
+# options window is then named as not checked. With the content it must be there.
+window_node = find_node(namespace['sheets'], 'GameOptionsWindow') if namespace is not None else None
+if namespace is not None and window_node is None and not WITH_CONTENT:
+    not_checked.append('3. sizes of the options window (its sheet needs content files)')
+elif namespace is not None:
+    assert window_node is not None
+    entry_nodes = {child.name: child for child in window_node.children}
+    number = r'([0-9.]+)f'
+    height_rule = re.search(r'std::min\(' + number + r', \(' + number + r' \+ ' + number +
+                            r' \* entries\.size\(\)\) \* gui\.getLayoutScale\(\) / display\.d_height\)', page)
+    step_rule = re.search(r'const float step = ' + number + r' / entries\.size\(\);', page)
+    top_rule = re.search(r'const float top = ' + number + r' \+ step \* i;', page)
+    button_rule = re.search(r'CEGUI::UDim\(top \+ step \* ' + number + r' / ' + number + r', 0\)', page)
+    side_rule = re.search(r'CEGUI::UDim\(0\.5f, -(\d+)\), CEGUI::UDim\(0\.5f - height / 2\.0f, 0\)', page)
+    inset_rule = re.search(r'CEGUI::URect\(CEGUI::UDim\(0, (\d+)\), CEGUI::UDim\(top, 0\),\s*CEGUI::UDim\(1, -(\d+)\)', page)
+    assert height_rule and step_rule and top_rule and button_rule and side_rule and inset_rule, 'setOptionsPage changed its form'
+    LIMIT, FRAME, ROW = (float(v) for v in height_rule.groups())
+    STEP, TOP = float(step_rule[1]), float(top_rule[1])
+    BUTTON = float(button_rule[1]) / float(button_rule[2])
+    HALF_WIDTH, INSET = float(side_rule[1]), float(inset_rule[1])
+    assert float(inset_rule[2]) == INSET
+    SCREENS = ((640, 480), (1024, 768), (1920, 1200), (7680, 4320))
+    USER_SCALES = (0.8, 1.0, 1.2)
+    TOLERANCE = namespace['TOLERANCE']
+    KNOB_TOP, KNOB_BOTTOM = 8.5 / 120.0, 7.5 / 120.0  # the knobs of the template stand above and below the plate
+    # narrowest symbol button: both caps, the centre knob piece and the symbol with its gap before the caption
+    MIN_WIDTH = 2 * 0.516667 + 0.466667 + (CAPTION_LEFT - SYMBOL_LEFT)
+    cases = 0
+    for screen in SCREENS:
+        for user in USER_SCALES:
+            s = min(screen[0] / namespace['DESIGN_W'], screen[1] / namespace['DESIGN_H']) * user
+            for page_name, names in (('options', OPTIONS_PAGE), ('options without saving', OPTIONS_PAGE[2:]),
+                                     ('End Game', END_GAME_PAGE)):
+                where = '%s page at %dx%d %d%%' % (page_name, screen[0], screen[1], round(user * 100))
+                fraction = min(LIMIT, (FRAME + ROW * len(names)) * s / screen[1])
+                rect = (screen[0] / 2.0 - HALF_WIDTH * s, screen[1] * (0.5 - fraction / 2.0),
+                        screen[0] / 2.0 + HALF_WIDTH * s, screen[1] * (0.5 + fraction / 2.0))
+                assert rect[0] >= -TOLERANCE and rect[1] >= -TOLERANCE and rect[2] <= screen[0] + TOLERANCE \
+                    and rect[3] <= screen[1] + TOLERANCE, where + ': the window leaves the screen'
+                client = namespace['client_rect'](window_node, rect, screen, user, s)
+                step = STEP / len(names)
+                plates = []
+                for index, name in enumerate(names):
+                    node = entry_nodes[name]
+                    top = TOP + step * index
+                    box = (client[0] + INSET * s, client[1] + top * (client[3] - client[1]),
+                           client[2] - INSET * s, client[1] + (top + step * BUTTON) * (client[3] - client[1]))
+                    here = '%s: %s' % (where, name)
+                    h = box[3] - box[1]
+                    assert box[0] >= client[0] - TOLERANCE and box[1] >= client[1] - TOLERANCE and \
+                        box[2] <= client[2] + TOLERANCE and box[3] <= client[3] + TOLERANCE, here + ' leaves the window frame'
+                    assert box[2] - box[0] >= MIN_WIDTH * h - TOLERANCE, here + ' is narrower than its caps and symbol'
+                    symbol_box = (box[0] + SYMBOL_LEFT * h, box[1] + SYMBOL_TOP * h,
+                                  box[0] + (SYMBOL_LEFT + SYMBOL_SIZE) * h, box[1] + (SYMBOL_TOP + SYMBOL_SIZE) * h)
+                    text_box = namespace['text_area'](node, box, screen, user, s)
+                    assert symbol_box[2] <= text_box[0] + TOLERANCE and symbol_box[0] >= box[0] and \
+                        symbol_box[3] <= box[3], here + ': the symbol is not on the planks left of the caption'
+                    assert symbol_box[2] - symbol_box[0] >= 8.0, here + ': the symbol is too small to be seen'
+                    problems = []
+                    namespace['check_text'](node, box, screen, user, s, problems)
+                    assert not problems, (here, problems)
+                    plates.append((box[1] + KNOB_TOP * h, box[3] - KNOB_BOTTOM * h))
+                    cases += 1
+                for upper, lower in zip(plates, plates[1:]):
+                    assert upper[1] <= lower[0] + TOLERANCE, where + ': two entries overlap'
+                # the window height fits its entries: below the last entry no room for another one
+                last_bottom = client[1] + (TOP + step * (len(names) - 1) + step * BUTTON) * (client[3] - client[1])
+                assert client[3] - last_bottom < step * (client[3] - client[1]), where + ': the window is higher than its entries'
+    print('3. %d entry placements at %d screens x %d UI scales on the three pages: on the screen, inside the frame, '
+          'symbol left of an uncut caption' % (cases, len(SCREENS), len(USER_SCALES)))
 
 # 4. Moved entries stay reachable.
-hud = {w.get('name'): w for w in ET.parse(gui / 'ModeGame.layout').getroot().iter('Window')}
+hud = {w.get('name'): w for w in ET.parse(str(gui_file('ModeGame.layout'))).getroot().iter('Window')}
 for button, handler, window in (('GoalsButton', 'toggleObjectivesWindow', 'ObjectivesWindow'),
                                 ('ResearchButton', 'toggleSkillWindow', 'SkillTreeWindow')):
     assert button in hud and props(hud[button]).get('Visible') != 'False', button + ' is not on the game bar'
@@ -318,16 +370,22 @@ initialize = body(navigation_code, 'void GameMode::initializeRoomManager(')
 assert 'getChild("RoomManagerButton")->subscribeEvent(' in initialize and '&GameMode::toggleRoomManager' in initialize
 assert 'case RoomType::workshop: requestTrapProductionQueue(); break;' in body(navigation_code, 'void GameMode::refreshRoomManager(')
 assert '"WorkshopPage"' in navigation_code, 'the workshop page is not a page of the Room Manager'
-navigation = {w.get('name'): w for w in ET.parse(gui / 'WindowSettingsNavigation.layout').getroot().iter('Window')}
-assert props(navigation['Cameras']).get('Text') == 'Define User Cameras'
+navigation_file = gui_file('WindowSettingsNavigation.layout')
+if navigation_file is None:
+    not_checked.append('Cameras, Video, Audio, Input and Game buttons of gui/WindowSettingsNavigation.layout')
+    navigation = None
+else:
+    navigation = {w.get('name'): w for w in ET.parse(str(navigation_file)).getroot().iter('Window')}
+    assert props(navigation['Cameras']).get('Text') == 'Define User Cameras'
 assert re.search(r'getChild\("Cameras"\)->subscribeEvent\(CEGUI::PushButton::EventClicked,\s*'
                  r'CEGUI::Event::Subscriber\(&GameMode::openSettingsNavigationCameras, this\)\)',
                  body(game, 'void GameMode::initializeSettingsNavigation(')), 'Define User Cameras is not connected'
-for name in ('Video', 'Audio', 'Input', 'Game'):
+for name in ('Video', 'Audio', 'Input', 'Game') if navigation is not None else ():
     assert name in navigation, name
-assert not (gui / 'WindowPlayerSettings.layout').exists(), 'the player information window is left'
-assert 'WindowPlayerSettings.layout' not in (gui / 'ModeGame.layout').read_text(encoding='utf-8')
-settings_layout = ET.parse(gui / 'WindowSettings.layout').getroot()
+# absent from the public tree and from every content package
+assert content_packages.data_file(repo, 'gui/WindowPlayerSettings.layout') is None, 'the player information window is left'
+assert 'WindowPlayerSettings.layout' not in gui_file('ModeGame.layout').read_text(encoding='utf-8')
+settings_layout = ET.parse(str(gui_file('WindowSettings.layout'))).getroot()
 game_page = [w for w in settings_layout.iter('Window') if w.get('name') == 'GameSP'][0]
 ko = [w for w in game_page.findall('Window') if w.get('name') == 'KOCreatureCheckbox']
 assert ko and ko[0].get('type') == 'OD/Checkbox' and props(ko[0])['Text'] == 'KO enemy creatures instead of killing', \
@@ -354,5 +412,6 @@ handled = server[server.index('case ClientNotificationType::askSetPlayerSettings
 assert 'packetReceived >> koCreatures' in handled and 'setPlayerSettings(koCreatures)' in handled, 'the server ignores it'
 assert 'getSeat()->getKoCreatures()' in (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8'), 'KO has no effect'
 print('4. Objectives, Skill and Production on the game bar; user cameras and the KO setting in the settings')
+content_packages.unchecked('check_info_window', not_checked)
 print('ODP_TEST_PHASE {"name":"check","seconds":%.2f}' % (time.monotonic() - STARTED))
 print('ok')

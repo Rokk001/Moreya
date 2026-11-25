@@ -6,13 +6,23 @@ The probe records the resource group of every outlet section and the texture
 coordinates of every vertex: each section is looked up in the Graphics group and
 every triangle covers texture area, so no part of the outlet is drawn white or flat.
 No game build, window or screenshot is needed.
+
+Ghost.material and the hose shaders are content (core-models package, found through scripts/content_packages.py);
+without them the shader chain is named as not checked and the code parts and the probe of production code run.
 """
 from pathlib import Path
 import importlib.util
 import re
+import sys
 import time
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The material script and the shader files of the hose (core-models package)
+SHADER_FILES = ("materials/scripts/Ghost.material", "materials/scripts/GhostHose.vert",
+                "materials/scripts/GhostHose.frag", "materials/scripts/GhostHoseWire.frag")
 spec = importlib.util.spec_from_file_location("ghost_rules", Path(__file__).with_name("check_ghost_rules.py"))
 rules = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(rules)
@@ -20,31 +30,35 @@ spec.loader.exec_module(rules)
 
 # Require the exact authored shader chain so generated unlit passes cannot silently replace the vertex colours.
 def shaders():
-    material = rules.read("materials/scripts/Ghost.material")
+    # The code side: the viewport scheme, the colours of the hose and the resource folder of the scripts
+    assert "mViewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);" in rules.read("source/render/RenderManager.cpp")
+    shape = rules.function(rules.read("source/entities/Creature.cpp"), "static void shapeGhostHose(")
+    assert "hose.colour(shadeGhostHose(look.mWires[wire],normal,look.mGlow));" in shape
+    assert "hose.textureCoord(0.0f,share);" in shape
+    assert "FileSystem=materials/scripts" in rules.read("cmake/config/resources.cfg.in")
+    missing = [name for name in SHADER_FILES if content_packages.data_file(repo, name) is None]
+    if content_packages.unchecked("check_ghost_output_presentation", missing):
+        return
+    material = content_packages.read_text(repo, "materials/scripts/Ghost.material")
     for name, fragment in (("GhostHose", "GhostHoseFragment"), ("GhostHoseWire", "GhostHoseWireFragment")):
         block = re.search(r"^material " + name + r"\s*\n\{(.*?)^\}", material, re.M | re.S).group(1)
         assert "vertex_program_ref GhostHoseVertex" in block, (name, "missing colour vertex shader")
         assert "fragment_program_ref " + fragment in block, (name, "missing colour fragment shader")
         assert "lighting off" in block
         assert "scheme ShaderGeneratorDefaultScheme" in block, (name, "game viewport must select authored colours directly")
-    assert "mViewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);" in rules.read("source/render/RenderManager.cpp")
     for program, filename in (("GhostHoseVertex", "GhostHose.vert"), ("GhostHoseFragment", "GhostHose.frag"),
                               ("GhostHoseWireFragment", "GhostHoseWire.frag")):
         assert re.search(r"(?:vertex|fragment)_program " + program + r" glsl\s*\{\s*source " + re.escape(filename), material)
-        assert (repo / "materials/scripts" / filename).is_file()
-    vertex = rules.read("materials/scripts/GhostHose.vert")
-    rubber = rules.read("materials/scripts/GhostHose.frag")
-    wire = rules.read("materials/scripts/GhostHoseWire.frag")
+        assert content_packages.resolve(repo, "materials/scripts/" + filename).is_file()
+    vertex = content_packages.read_text(repo, "materials/scripts/GhostHose.vert")
+    rubber = content_packages.read_text(repo, "materials/scripts/GhostHose.frag")
+    wire = content_packages.read_text(repo, "materials/scripts/GhostHoseWire.frag")
     for expected in ("layout(location = 3) in vec4 colour;", "hoseColour = colour;", "gl_Position = worldViewProj * vertex;"):
         assert expected in vertex
     assert "texture(rubberMap, hoseUV).rgb * hoseColour.rgb" in rubber
     assert "fragColour = vec4(hoseColour.rgb, 1.0);" in wire
     assert "param_named_auto worldViewProj worldviewproj_matrix" in material
     assert "param_named rubberMap int 0" in material
-    shape = rules.function(rules.read("source/entities/Creature.cpp"), "static void shapeGhostHose(")
-    assert "hose.colour(shadeGhostHose(look.mWires[wire],normal,look.mGlow));" in shape
-    assert "hose.textureCoord(0.0f,share);" in shape
-    assert "FileSystem=materials/scripts" in rules.read("cmake/config/resources.cfg.in")
 
 
 # Keep the permanent outlet independent of the fill height, and release it on reload, sale and destruction.

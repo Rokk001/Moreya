@@ -1,4 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<Imageset version="2" name="RoomArtworkPayerSwitch" imagefile="payer-switch.png" autoScaled="false" nativeHorzRes="1024" nativeVertRes="768">
-    <Image name="Image" xPos="0" yPos="0" width="128" height="64" />
-</Imageset>

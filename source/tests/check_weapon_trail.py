@@ -2,15 +2,27 @@
 
 Pure source wiring check (no compiler, no game): client side and cosmetic only, started from the hit result the
 server reported (never guessed), only in the option 'full', limited by a budget, values in
-config/creatureReactions.cfg, removed with the creature."""
+config/creatureReactions.cfg, removed with the creature.
+The config and the material script lie in the content packages (scripts/content_packages.py); without the content
+the code part is checked and the content part is named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
+    """The text of a file below the repository root."""
     return (root / path).read_text(encoding='utf-8')
+
+
+def content(path):
+    """The text of a game data file of the public tree or of a content package, or None without the content."""
+    found = content_packages.data_file(root, path)
+    return None if found is None else found.read_text(encoding='utf-8')
 
 
 def function_body(source, signature):
@@ -25,7 +37,9 @@ combat = read('source/render/CreatureCombatReactions.cpp')
 render = read('source/render/RenderManager.cpp')
 config_h = read('source/render/CreatureReactionConfig.h')
 config_cpp = read('source/render/CreatureReactionConfig.cpp')
-cfg = read('config/creatureReactions.cfg')
+cfg = content('config/creatureReactions.cfg')
+if cfg is None:
+    content_packages.unchecked('check_weapon_trail', ['config/creatureReactions.cfg'])
 checker = read('tools/check_creature_reactions.py')
 
 # New files in the build, no new asset (the existing alpha-weighted additive glow material is used)
@@ -34,11 +48,14 @@ for name in ('noteStrongBlow', 'update', 'removeCreature', 'stopAll'):
     assert re.search(r'\b' + name + r'\(', trail_h), name + ' not declared'
 material = trail[trail.index('TRAIL_MATERIAL = "') + len('TRAIL_MATERIAL = "'):]
 material = material[:material.index('"')]
-assert re.search(r'^material ' + material + r'\s*$', read('materials/scripts/CreatureReactions.material'), re.M), material
-glow = read('materials/scripts/CreatureReactions.material')
-glow = glow[glow.index('material ' + material):]
-glow = glow[:glow.index('\n}\n')]
-assert 'scene_blend src_alpha one' in glow and 'depth_write off' in glow and 'diffuse vertexcolour' in glow
+glow = content('materials/scripts/CreatureReactions.material')
+if glow is None:
+    content_packages.unchecked('check_weapon_trail', ['materials/scripts/CreatureReactions.material'])
+else:
+    assert re.search(r'^material ' + material + r'\s*$', glow, re.M), material
+    glow = glow[glow.index('material ' + material):]
+    glow = glow[:glow.index('\n}\n')]
+    assert 'scene_blend src_alpha one' in glow and 'depth_write off' in glow and 'diffuse vertexcolour' in glow
 
 # Config: documented, set, read with a default and limits, accepted by the format check
 keys = {'WeaponTrail': 'mWeaponTrail(DEFAULT_WEAPON_TRAIL)', 'WeaponTrailLife': 'mWeaponTrailLife(DEFAULT_WEAPON_TRAIL_LIFE)',
@@ -52,15 +69,15 @@ for constant, value in (('DEFAULT_WEAPON_TRAIL', 'true'), ('DEFAULT_WEAPON_TRAIL
                         ('DEFAULT_WEAPON_TRAIL_MAX', '4')):
     assert re.search(constant + r' = ' + re.escape(value) + ';', config_cpp), constant
 for key, default in keys.items():
-    assert re.search(r'^#   ' + key + r'\s', cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\s+[\d.]', cfg, re.M), key + ' not set'
+    assert cfg is None or re.search(r'^#   ' + key + r'\s', cfg, re.M), key + ' not documented'
+    assert cfg is None or re.search(r'^    ' + key + r'\s+[\d.]', cfg, re.M), key + ' not set'
     assert '"' + key + '"' in config_cpp, key + ' not read'
     assert '"' + key + '"' in checker, key + ' not allowed by the format check'
     assert default in config_cpp, key + ' has no default'
 for limit in ('std::max(0.05, std::min(2.0, mWeaponTrailLife))', 'std::max(0.01, std::min(1.0, mWeaponTrailWidth))',
               'std::max(0.1, std::min(10.0, mWeaponTrailLength))', 'std::min<uint32_t>(16, mWeaponTrailMax)'):
     assert limit in config_h, limit
-assert 'HitStrongShare' in cfg, 'the strong threshold stays HitStrongShare'
+assert cfg is None or 'HitStrongShare' in cfg, 'the strong threshold stays HitStrongShare'
 assert 'getHitStrongShare' not in trail, 'the trail does not change the strong threshold'
 
 # The streak is only started from a strong melee hit that the server reported

@@ -1,14 +1,22 @@
 """Exercise the treasury gold layer: fill steps, the pile names that carry the level to the clients
 (old names keep working), rounded pile footprints, and the wiring of the server,
-the renderer and the 'Treasury detail' option."""
+the renderer and the 'Treasury detail' option.
+The pile material, its texture and their CREDITS row lie in the content packages and in the CREDITS of the content
+repository (scripts/content_packages.py); without the content they are named as not checked. The compiled probe needs
+only the source headers."""
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
 
 
 def read(path):
+    """The text of a file below the repository root."""
     return (repo / path).read_text(encoding='utf-8')
 
 
@@ -29,9 +37,16 @@ assert 'TreasuryGoldMesh::prepareMesh(mSceneManager, meshName, pileFar)' in rend
 assert 'classicMeshForLevel' not in mesh and 'const bool reduced = (currentDetail != Detail::full)' in mesh
 assert 'TREASURY_DETAIL' in read('source/utils/ConfigManager.h')
 assert 'TreasuryDetail' in read('gui/WindowSettings.layout')
-assert 'TreasuryGoldPile' in read('materials/scripts/TreasuryGoldPile.material')
-assert (repo / 'materials/textures/TreasuryGoldPile.png').exists()
-assert 'TreasuryGoldPile.png' in read('CREDITS')
+if content_packages.data_file(repo, 'materials/scripts/TreasuryGoldPile.material') is None and \
+        not content_packages.has_content(repo):
+    content_packages.unchecked('check_treasury_gold_layer', ['materials/scripts/TreasuryGoldPile.material',
+                                                             'materials/textures/TreasuryGoldPile.png',
+                                                             'its CREDITS row'])
+else:
+    assert 'TreasuryGoldPile' in content_packages.read_text(repo, 'materials/scripts/TreasuryGoldPile.material')
+    assert content_packages.data_file(repo, 'materials/textures/TreasuryGoldPile.png') is not None
+    # The row of the moved texture stands in the CREDITS of the content repository
+    assert 'TreasuryGoldPile.png' in room_packages.credits_text(repo)
 assert 'TreasuryGoldMesh.cpp' in read('CMakeLists.txt')
 assert 'addBand(surface, 1 + (rings - 1) * PileSectors, 1 + rings * PileSectors)' not in mesh
 assert 'buildRoundSurface(shape, divisions, dent, roundSurface)' in mesh

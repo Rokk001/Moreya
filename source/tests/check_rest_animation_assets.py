@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Check every configured creature's serialized joint-based rest poses without compiling the game."""
+"""Check every configured creature's serialized joint-based rest poses without compiling the game.
+
+The creature meshes, skeletons and config/creatureReactions.cfg live in content packages (found through
+scripts/content_packages.py); without the content the check counts the configured meshes and names the rest poses as
+not checked (no converter is started)."""
 import math
 from pathlib import Path
 import re
@@ -11,6 +15,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 from asset_check_timing import prepare, profile_check
 import author_rest_poses as author
 import fix_walk_feet as feet
@@ -60,7 +66,8 @@ def rest_track_names(skeleton, skeleton_name, weighted):
     return required
 
 
-# Verify actual configured mesh coverage, native deforming-track coverage and passive mounts, partial strengths and both return poses.
+# Verify actual configured mesh coverage, native deforming-track coverage and passive mounts, partial strengths and both return poses
+# (only the configured mesh count when the content is not present).
 @profile_check
 def main():
     source = (ROOT / 'source/render/CreatureReactions.cpp').read_text(encoding='utf-8')
@@ -68,7 +75,14 @@ def main():
     assert share == author.TRANSITION_SHARE
     configuration = (ROOT / 'config/creatures.cfg').read_text(encoding='utf-8')
     meshes = sorted(set(re.findall(r'^\s*MeshName\s+(\S+\.mesh)\s*$', configuration, re.MULTILINE)))
-    reactions = (ROOT / 'config/creatureReactions.cfg').read_text(encoding='utf-8')
+    missing = [relative for relative in ['config/creatureReactions.cfg'] + ['models/' + mesh for mesh in meshes]
+               if content_packages.data_file(ROOT, relative) is None]
+    if missing and not content_packages.has_content(ROOT):
+        assert len(meshes) == 33
+        content_packages.unchecked('check_rest_animation_assets',
+                                   ['rest poses of the 33 configured meshes (missing: %s)' % ', '.join(missing)])
+        return
+    reactions = content_packages.read_text(ROOT, 'config/creatureReactions.cfg')
     out = ROOT / 'out/rest-animation-assets'
     out.mkdir(parents=True, exist_ok=True)
     skeletons = {}
@@ -76,7 +90,7 @@ def main():
     for mesh_name in meshes:
         mesh_xml = prepare(export, mesh_name, out)
         skeleton_name = mesh_xml.find('skeletonlink').get('name')
-        assert (ROOT / 'models' / skeleton_name).is_file(), skeleton_name
+        assert content_packages.data_file(ROOT, 'models/' + skeleton_name) is not None, skeleton_name
         if skeleton_name not in skeletons:
             prepare(export, skeleton_name, out, return_tree=False)
             skeletons[skeleton_name] = prepare(feet.Skel, str(out / (skeleton_name + '.xml')))

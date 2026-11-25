@@ -20,6 +20,9 @@ DETAIL_MATERIALS (flames, glowing windows, eyes, lava and ember cracks, webs, th
 connected patch of such a detail must stay below DETAIL_MAX_AREA square metres.
 
 Options: --report lists every floating part with its model, bounds, triangle count and materials.
+
+The meshes and material scripts live in content packages (found through scripts/content_packages.py); without the
+content the check names them as not checked.
 """
 import argparse
 import os
@@ -31,10 +34,14 @@ import time
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
 CONFIG = os.path.join(ROOT, "config", "mainmenuscene.cfg")
 MODELS = os.path.join(ROOT, "models")
-MATERIAL_SCRIPTS = [os.path.join(ROOT, "materials", "scripts", name)
-                    for name in ("MenuScene.material", "MenuSignpost.material", "MenuMoreyaPortal.material")]
+#: The material scripts of the menu, from the public tree or a content package
+MATERIAL_NAMES = ("MenuScene.material", "MenuSignpost.material", "MenuMoreyaPortal.material")
+MATERIAL_SCRIPTS = [str(content_packages.resolve(ROOT, "materials/scripts/" + name)) for name in MATERIAL_NAMES]
 #: Sky and horizon elements that belong in the air (INGAME-QS-12 K1) and the crows flying in the sky (K17).
 SKY_ENTITIES = ("Backdrop", "BloodMoon", "HorizonCrows", "VolcanicRuins",
                 "SkyCrow1", "SkyCrow2", "SkyCrow3", "SkyCrow4", "SkyCrow5", "SkyCrow6")
@@ -253,6 +260,22 @@ def terrain_heights(triangles, cell):
     return origin, cell, heights
 
 
+def model_path(mesh):
+    """Returns the mesh file of models/ of the public tree or of a content package (else the path below models/)."""
+    return str(content_packages.resolve(ROOT, "models/" + mesh))
+
+
+def missing_content():
+    """Returns the scene files (material scripts and the meshes of the AddEntity lines) that are not present because the
+    content is not present; empty with the content."""
+    if content_packages.has_content(ROOT):
+        return []
+    entities, _ = parse_config()
+    needed = ["materials/scripts/" + name for name in MATERIAL_NAMES]
+    needed += ["models/" + mesh for mesh in sorted(set(mesh for _, mesh, _ in entities))]
+    return [relative for relative in needed if content_packages.data_file(ROOT, relative) is None]
+
+
 def load_scene():
     """Returns the scene as (entity names, triangles (n, 3, 3), materials (n), entity index (n), part index (n))."""
     entities, _ = parse_config()
@@ -267,7 +290,7 @@ def load_scene():
         if name in SKY_ENTITIES:
             continue
         if mesh not in cache:
-            cache[mesh] = load_mesh(os.path.join(MODELS, mesh))
+            cache[mesh] = load_mesh(model_path(mesh))
         submeshes = cache[mesh]
         if not submeshes:
             continue
@@ -378,6 +401,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--report", action="store_true", help="list every floating part")
     options = parser.parse_args()
+    missing = missing_content()
+    if missing:
+        content_packages.unchecked("check_menu_scene_grounded", missing)
+        return 0
     start = time.monotonic()
     scene = load_scene()
     names, triangles, materials, entity, part = scene

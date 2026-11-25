@@ -1,11 +1,30 @@
 """Check that the temple sacrifice works as documented: no mana and no research points
 for a sacrifice, a queue of the last three sacrifices, the first matching recipe wins and
-the level of a new creature is the rounded down average of the inputs."""
+the level of a new creature is the rounded down average of the inputs.
+
+The design document moved into the content repository (docs/design/<old path>, scripts/campaign_packages.py); without
+the content it is named as not checked."""
 from pathlib import Path
 import itertools
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
+
+DESIGN_DOC = "docs/development/TEMPLE-SACRIFICE.md"
+
+
+def design_doc():
+    """The design document in the public tree, else in docs/design/ of the content repository, else None."""
+    if (repo / DESIGN_DOC).exists():
+        return repo / DESIGN_DOC
+    content = campaign_packages.content_repository(repo)
+    if content is not None and (content / "docs" / "design" / DESIGN_DOC).exists():
+        return content / "docs" / "design" / DESIGN_DOC
+    return None
 
 
 def read(path):
@@ -73,5 +92,8 @@ for recipe in old_recipes:
 # a sacrifice that matches nothing gives nothing, a leftover does not hide the next recipe
 assert sacrifice(["Rat"]) is None and sacrifice(["Orc", "Rat", "Rat"]) == "LavaSpawn"
 
-assert (repo / "docs/development/TEMPLE-SACRIFICE.md").exists()
+if design_doc() is None and not content_packages.has_content(repo):
+    content_packages.unchecked("check_temple_sacrifice", [DESIGN_DOC])
+else:
+    assert design_doc() is not None, DESIGN_DOC + " is missing"
 print("CHECKS OK")

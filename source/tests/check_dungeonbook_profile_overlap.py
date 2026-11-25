@@ -5,13 +5,25 @@ INGAME-QS-11 K1): portrait, name and handle line, the labels and values of the t
 the column rule and the posts column do not overlap (texts that replace each other aside); the portrait and the table
 are left of the posts. The part about the bar row and the handle line of the shared creature profile page was removed
 with that page (owner decision 2026-11-18); the book has no health or experience bar (book-variant-2).
+
+The layout is content (core-gui package, found through scripts/content_packages.py); without it the removed shared page
+is still checked absent and the profile page is named as not checked.
 """
 from pathlib import Path
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
-assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists(), 'the shared profile page was deleted'
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+# Absent from the public tree and from every content package
+assert content_packages.data_file(repo, 'gui/WindowCreatureProfilePage.layout') is None, \
+    'the shared profile page was deleted'
+if content_packages.data_file(repo, 'gui/WindowSocial.layout') is None:
+    content_packages.unchecked('check_dungeonbook_profile_overlap', ['gui/WindowSocial.layout'])
+    sys.exit(0)
 
 
 def overlap(a, b):
@@ -20,7 +32,7 @@ def overlap(a, b):
 
 
 # 1. The book's profile page (WindowSocial.layout), boxes as fractions of the frame client
-social_layout = (repo / 'gui/WindowSocial.layout').read_text()
+social_layout = content_packages.read_text(repo, 'gui/WindowSocial.layout')
 book = ET.fromstring(social_layout).find('Window')
 size = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', social_layout)
 book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])

@@ -16,6 +16,10 @@ owns, and passes after the main menu has started 120 frames. A run passes only w
 says the main menu was reached. A crash, a destroyed camera on a target, a timeout or a missing line is a failure.
 It refuses to run while another moreya.exe is running, so a game the owner plays is never touched.
 
+The game needs its content packages (scripts/content_packages.py): the runtime part gives the game the content folder
+(MOREYA_CONTENT_DIR) and finds the moved levels there; without the content the game would only report the missing
+content and quit (exit code 7), so the runtime part names itself as not checked and starts nothing.
+
 The runtime part is not started by the check runner: CLAUDE.md allows exactly one load test per integration, and this
 part starts the game four times. Run it once on a build that contains the change:
   python -I source/tests/check_return_to_main_menu.py --exe build/windows/moreya.exe
@@ -42,6 +46,9 @@ import time
 
 REPO = Path(__file__).resolve().parents[2]
 SOURCE = REPO / 'source'
+sys.path.insert(0, str(REPO / 'scripts'))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 # Game kinds of K5 with their fixed level and scenario. TestInfirmary is the level of the crash session.
 KINDS = (
@@ -202,16 +209,19 @@ def run_kind(exe, kind, level, scenario, seconds):
     the editor kind opens an own copy of the level (.mmap) in the temporary app data folder."""
     appdata = tempfile.mkdtemp(prefix='od-return-menu-')
     limit = RUN_LIMIT_BASE_SECONDS + 2 * seconds
-    level_file = REPO / level
+    # the level of the public tree, of a content package or of its wing package
+    level_source = campaign_packages.level_file(REPO, level) or (REPO / level)
+    level_file = level_source
     if scenario == 'editor-return-to-menu':
         level_file = Path(appdata) / (Path(level).stem + '.mmap')
-        shutil.copyfile(str(REPO / level), str(level_file))
+        shutil.copyfile(str(level_source), str(level_file))
     command = [str(exe), '--run-level', str(level_file), '--seconds', str(seconds), '--scenario', scenario,
                '--appData', appdata, '--port', str(free_port())]
     started = time.monotonic()
     try:
         completed = subprocess.run(command, cwd=str(exe.parent), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                   universal_newlines=True, errors='replace', timeout=limit)
+                                   universal_newlines=True, errors='replace', timeout=limit,
+                                   env=content_packages.game_environment(REPO))
         code = completed.returncode
         output = completed.stdout or ''
     except subprocess.TimeoutExpired as expired:
@@ -234,6 +244,11 @@ def run_kind(exe, kind, level, scenario, seconds):
 
 
 def runtime_check(exe, seconds):
+    """Runs every game kind; without the content packages names the runtime part as not checked and starts nothing."""
+    if not content_packages.has_content(REPO):
+        content_packages.unchecked('check_return_to_main_menu', ['the runtime part (%d game kinds; missing: %s)' % (
+            len(KINDS), ', '.join(content_packages.missing_packages(REPO)))])
+        return 0
     if game_running():
         print('FAIL: another moreya.exe is running; the runtime part is not started')
         return 1

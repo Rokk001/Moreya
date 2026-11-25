@@ -1,18 +1,32 @@
 #!/usr/bin/env python3
 """Undead death assets: the Lich vermin effects (3D animated models with a Crawl clip), their materials and credits exist, the
 Skeleton bone heap uses the original skeleton material, and the Die clips of both creatures last exactly as long as the
-DeathVanishSeconds of their creatures.cfg block (binary animation chunk scan, no compiling, no rendering)."""
+DeathVanishSeconds of their creatures.cfg block (binary animation chunk scan, no compiling, no rendering).
+The effect config, the vermin models, the material script and the bone heap lie in the content packages
+(scripts/content_packages.py), the CREDITS rows of the moved files in the CREDITS of the content repository; without
+the content the Die clips and the public CREDITS rows are checked and the content part is named as not checked."""
 from pathlib import Path
 import importlib.util
 import re
 import struct
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+#: The files of the content packages this check reads
+CONTENT_FILES = ('config/roomAmbienceSpells.cfg', 'materials/scripts/RoomAmbience.material', 'models/Pile_Skeleton.mesh')
 
 
 # Read one shipped text file of the repository.
 def read(path):
     return (ROOT / path).read_text(encoding='utf-8')
+
+
+# Return the file of a game data path: the public file, else the file of a content package (see content_packages).
+def data_path(path):
+    return content_packages.resolve(ROOT, path)
 
 
 # Return the [Creature] block of one creature type in creatures.cfg.
@@ -25,23 +39,32 @@ def creature_block(creatures, name):
 
 # Return the length in seconds of one animation clip of a binary OGRE skeleton.
 def clip_length(module, skeleton, clip):
-    _, blocks = module.chunks((ROOT / 'models' / skeleton).read_bytes())
+    _, blocks = module.chunks(data_path('models/' + skeleton).read_bytes())
     animations = {name: data for kind, name, data in blocks if kind == module.ANIMATION}
     assert clip in animations, skeleton + ' has no ' + clip + ' clip'
     data = animations[clip]
     return struct.unpack_from('<f', data, data.index(b'\n', 6) + 1)[0]
 
 
-# Run every undead asset requirement and stop at the first one that is missing.
+# Run every undead asset requirement and stop at the first one that is missing; without the content the parts that
+# need its files are named as not checked.
 def main():
-    events = read('config/roomAmbienceSpells.cfg')
-    materials = read('materials/scripts/RoomAmbience.material')
-    credits = read('CREDITS')
+    content = all(content_packages.data_file(ROOT, path) is not None for path in CONTENT_FILES)
+    if not content:
+        content_packages.unchecked('check_undead_assets', [path for path in CONTENT_FILES
+                                                           if content_packages.data_file(ROOT, path) is None] +
+                                   ['vermin models'])
+    events = data_path('config/roomAmbienceSpells.cfg').read_text(encoding='utf-8') if content else ''
+    materials = data_path('materials/scripts/RoomAmbience.material').read_text(encoding='utf-8') if content else ''
+    # The public CREDITS and, with the content, the CREDITS of the content repository (rows of moved files)
+    credits = room_packages.credits_text(ROOT)
     amounts = 0
     # Three crawl effects bring the real 3D vermin (animated models with a Crawl clip) out of the Lich that burst
     for name, mesh, matnames in (('LichBeetlesSwarm', 'LichBeetle', ('LichVerminShell', 'LichVerminLeg')),
                                  ('LichBeetlesMediumSwarm', 'LichMaggot', ('LichVerminMaggot',)),
                                  ('LichBeetlesLargeSwarm', 'LichWorm', ('LichVerminWorm',))):
+        if not content:
+            continue
         effect = None
         for block in re.findall(r'\[Effect\](.*?)\[/Effect\]', events, re.S):
             if re.search(r'^\s*Name\s+' + name + r'\s*$', block, re.M):
@@ -55,23 +78,25 @@ def main():
         amounts += int(re.search(r'^\s*Amount\s+(\d+)\s*$', effect, re.M).group(1))
         assert 'Kind        Particle' not in effect and 'System' not in effect, name + ' must not be a 2D particle effect'
         for ext in ('.mesh', '.skeleton'):
-            path = ROOT / 'models' / (mesh + ext)
+            path = data_path('models/' + mesh + ext)
             assert path.is_file() and path.stat().st_size > 0, 'models/' + mesh + ext + ' is missing'
-        assert b'Crawl' in (ROOT / 'models' / (mesh + '.skeleton')).read_bytes(), mesh + ' has no Crawl clip'
+        assert b'Crawl' in data_path('models/' + mesh + '.skeleton').read_bytes(), mesh + ' has no Crawl clip'
         for matname in matnames:
             assert 'material ' + matname in materials, 'RoomAmbience.material has no material ' + matname
-            assert matname.encode() in (ROOT / 'models' / (mesh + '.mesh')).read_bytes(), mesh + ' does not use ' + matname
+            assert matname.encode() in data_path('models/' + mesh + '.mesh').read_bytes(), mesh + ' does not use ' + matname
         assert 'models/' + mesh + '.mesh' in credits, 'CREDITS has no row for models/' + mesh + '.mesh'
-    assert 5 <= amounts <= 10, 'the Lich must release 5 to 10 vermin, not ' + str(amounts)
-    assert 'LichVerminShell' in credits, 'CREDITS has no row for the vermin materials'
+    assert not content or 5 <= amounts <= 10, 'the Lich must release 5 to 10 vermin, not ' + str(amounts)
+    assert not content or 'LichVerminShell' in credits, 'CREDITS has no row for the vermin materials'
     assert 'LichBeetleModel' not in materials and 'LichBeetle.png' not in materials, 'the 2D beetle materials must be gone'
 
     for entry in ('models/skeleton.skeleton (new Die clip)', 'models/lich.skeleton (new Die clip)',
                   'models/Pile_Skeleton.mesh (bone heap)', 'materials/textures/Pile_Skeleton.png'):
-        assert entry in credits, 'CREDITS has no entry ' + entry
+        # The rows of the bone heap moved with its files into the CREDITS of the content repository
+        assert entry in credits or (not content and 'Pile_Skeleton' in entry), 'CREDITS has no entry ' + entry
 
-    pile = (ROOT / 'models/Pile_Skeleton.mesh').read_bytes()
-    assert b'undead' in pile, 'models/Pile_Skeleton.mesh must use the skeleton material'
+    if content:
+        pile = data_path('models/Pile_Skeleton.mesh').read_bytes()
+        assert b'undead' in pile, 'models/Pile_Skeleton.mesh must use the skeleton material'
 
     spec = importlib.util.spec_from_file_location('undead_skeleton_chunks',
                                                   ROOT / 'tools/blender-assets/splice_animation_chunks.py')

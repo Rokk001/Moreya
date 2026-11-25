@@ -3,6 +3,9 @@
 Reads the shipped meshes/skeleton through OgreXMLConverter; no compiler or game.
 Checks 49 Sit samples and shoulder skinning, bold props, both joined surface axes,
 opaque scrolling gloss, bubble animation wiring and deterministic sprite output.
+
+The spa assets come from the spa room package, config/roomAmbience.cfg from the content packages
+(scripts/content_packages.py); without the spa package the check names itself as not checked.
 """
 from pathlib import Path
 import math
@@ -17,6 +20,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
@@ -25,8 +29,8 @@ ROOM_ASSETS = room_packages.has_room(ROOT, 'Spa')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.resolve(ROOT, relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(ROOT, relative)
 CONVERTER = Path(os.environ.get('OGRE_XML_CONVERTER', str(Path.home() / 'build-deps/install/bin/OgreXMLConverter.exe')))
 
 

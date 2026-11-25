@@ -11,6 +11,10 @@
 3. A clearly visible textured hose connects the backpack with the cannon and follows the hunter and the cannon (hose
    shaping every frame, dynamic tube, material GhostHose with the ribbed rubber texture).
 Fixed values measured once on this branch: 4 setAnimationState calls with a direction in the hunt, 128 rings and 8 sides.
+
+The hunter skeletons, Ghost.material and GhostPackRubber.png are content (core-models package, found through
+scripts/content_packages.py). Without them the code and config parts run; the skeleton clips, the material blocks and
+the texture are named as not checked (the mean of the texture then is the value measured once, as without Pillow).
 """
 from pathlib import Path
 import importlib.util
@@ -18,8 +22,15 @@ import math
 import random
 import re
 import struct
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The content files that are not present (named as not checked at the end)
+missing_content = []
 
 
 def read(path):
@@ -151,7 +162,11 @@ for creature in ('PitDemon', 'Troll', 'Skeleton', 'RunelordDwarf', 'Knight', 'De
     block = next(b for b in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S)
                  if re.search(r'^\s*Name\s+' + creature + r'\s*$', b, re.M))
     mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)[1]
-    _, chunks = chunks_module.chunks((repo / 'models' / (mesh.removesuffix('.mesh') + '.skeleton')).read_bytes())
+    skeleton = 'models/' + mesh.removesuffix('.mesh') + '.skeleton'
+    if content_packages.data_file(repo, skeleton) is None:
+        missing_content.append(skeleton)
+        continue
+    _, chunks = chunks_module.chunks(content_packages.resolve(repo, skeleton).read_bytes())
     clips = {name: data for kind, name, data in chunks if kind == chunks_module.ANIMATION}
     for clip in ('Empty', 'Throw', 'Beam'):
         _, tracks = chunks_module.animation_children(clips[clip])
@@ -349,7 +364,11 @@ for _ in range(5000):
     assert dot(barrel, unit(direction)) > 1 - 1e-9
 
 # --- 3. The hose from the backpack to the cannon ---------------------------------------------------------------------------
-ghost_material = read('materials/scripts/Ghost.material')
+#: True when Ghost.material is in the public tree or in a content package
+GHOST_MATERIAL = content_packages.data_file(repo, 'materials/scripts/Ghost.material') is not None
+ghost_material = content_packages.read_text(repo, 'materials/scripts/Ghost.material') if GHOST_MATERIAL else None
+if not GHOST_MATERIAL:
+    missing_content.append('materials/scripts/Ghost.material')
 
 
 def material_block(name):
@@ -357,10 +376,16 @@ def material_block(name):
     return body(ghost_material[start:], 'material ' + name + '\n')
 
 
-has(material_block('GhostHose'), 'a textured material', 'texture GhostPackRubber.png')
-texture = repo / 'materials/textures/GhostPackRubber.png'
-assert texture.is_file() and texture.stat().st_size > 1000, 'the hose texture exists'
-assert any('materials/textures/GhostPackRubber.png' in row and 'rubber' in row for row in read('CREDITS').splitlines()), 'credited texture'
+if GHOST_MATERIAL:
+    has(material_block('GhostHose'), 'a textured material', 'texture GhostPackRubber.png')
+texture = content_packages.data_file(repo, 'materials/textures/GhostPackRubber.png')
+if texture is None:
+    missing_content.append('materials/textures/GhostPackRubber.png')
+else:
+    assert texture.is_file() and texture.stat().st_size > 1000, 'the hose texture exists'
+    # The row of a moved asset stands in the CREDITS of the content repository (public CREDITS plus that one)
+    assert any('materials/textures/GhostPackRubber.png' in row and 'rubber' in row
+               for row in room_packages.credits_text(repo).splitlines()), 'credited texture'
 shape = body(creature_source, 'static void shapeGhostHose(')
 has(creature_source, 'fixed vertex count', 'static const size_t GHOST_HOSE_RINGS=128;', 'static const size_t GHOST_HOSE_SIDES=8;')
 has(shape, 'a tube along a cubic curve with sag, rebuilt in place', 'hose.begin("GhostHose",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");',
@@ -429,11 +454,12 @@ assert sum(abs(value - 1) < 1e-12 for value in profile) == 33
 assert sum(abs(value - 0.72) < 1e-12 for value in profile) == 32
 # Decision 998: the hose read white in the room light (screenshots 2026-11-09 152945_8 and 153036_15). Hose and wires are
 # unlit vertex colours now, so the room light cannot wash them out.
-for name in ('GhostHose', 'GhostHoseWire'):
-    block = material_block(name)
-    has(block, 'unlit vertex colours', 'lighting off', 'ambient vertexcolour', 'diffuse vertexcolour', 'cull_hardware none')
-    assert 'specular' not in block and 'emissive' not in block
-assert 'texture' not in material_block('GhostHoseWire'), 'plain bright wire colours'
+if GHOST_MATERIAL:
+    for name in ('GhostHose', 'GhostHoseWire'):
+        block = material_block(name)
+        has(block, 'unlit vertex colours', 'lighting off', 'ambient vertexcolour', 'diffuse vertexcolour', 'cull_hardware none')
+        assert 'specular' not in block and 'emissive' not in block
+    assert 'texture' not in material_block('GhostHoseWire'), 'plain bright wire colours'
 has(visuals, 'steel fittings created once and transformed every frame',
     'scene->createEntity(name,"GhostHoseCoupling.mesh")',
     'coupling->setPosition(end==0?port:rear);',
@@ -514,6 +540,8 @@ assert 0.4 <= glow < 1.0, 'shaded so the wires read as round, but always bright'
 # The hose under the wires no longer reads white: tint x mean rubber texture, fully lit, stays dark
 try:
     from PIL import Image
+    if texture is None:
+        raise ImportError('the texture is content and not present')
     pixels = Image.open(texture).convert('RGB').resize((64, 64))
     mean = [sum(p[i] for p in pixels.getdata()) / (64 * 64 * 255.0) for i in range(3)]
 except ImportError:
@@ -601,6 +629,8 @@ for rgb in wires + [hose_tint]:
         assert max(shaded) <= 1.0
     if rgb is not hose_tint:
         assert min(rgb) * 1.0 <= 0.2, 'no wire is white or grey'
-assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', read('config/rooms.cfg') + shape + material_block('GhostHoseWire')), \
+wire_block = material_block('GhostHoseWire') if GHOST_MATERIAL else ''
+assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', read('config/rooms.cfg') + shape + wire_block), \
     'no names of other games or films'
+content_packages.unchecked('check_ghost_hunter_pose', missing_content)
 print('ghost hunter pose, cannon aim, hose and wires: ok')

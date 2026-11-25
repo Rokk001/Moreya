@@ -1,4 +1,8 @@
-"""Preserve seeded outcomes and error propagation while removing repeated test work."""
+"""Preserve seeded outcomes and error propagation while removing repeated test work.
+
+The skill scheduler test needs config/creatureSkills.cfg, a file of the core-config content package
+(scripts/content_packages.py); without the content it is named as not checked and skipped.
+"""
 import importlib.util
 from pathlib import Path
 import random
@@ -13,6 +17,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/balance'))
 import combat_sim as combat
 import item_probe_support as items
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 
 
 # Load chase definitions without executing the full 144,000-case script during unit checks.
@@ -69,6 +75,10 @@ class SimulationRuntimeTests(unittest.TestCase):
 
     # Skills retain critical rolls, casts, healing, stuns and all per-fight results across every matrix case.
     def test_skill_scheduler_equivalence(self):
+        if content_packages.data_file(ROOT, 'config/creatureSkills.cfg') is None and \
+                not content_packages.has_content(ROOT):
+            content_packages.unchecked('check_simulation_runtime', ['skill scheduler equivalence (config/creatureSkills.cfg)'])
+            self.skipTest('content not present')
         roster = combat.Roster(ROOT)
         world = combat.World(roster)
         for level, template in combat.CASES_MATRIX:

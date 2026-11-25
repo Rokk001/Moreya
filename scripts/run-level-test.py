@@ -13,6 +13,12 @@ map with the next level) and exits with a code:
     3  error during the run (error logged, exception, game ended without result)
     4  no victory (player seat defeated, win not reported)
     5  timeout (the watchdog of the game ended a hanging run)
+    7  content missing (the game found no content packages; MOREYA_CONTENT_DIR names them)
+
+The game gets the content packages through MOREYA_CONTENT_DIR (scripts/content_packages.py: game_environment). A
+level file given on the command line that moved into a content package is found there by its path below the
+repository (scripts/content_packages.py: data_file). Without the content packages every level fails with "content
+missing": a load test never passes without the content.
 
 The game also prints "FRAMETIME frames=<n> avg_ms=<x>" before its result line; the script prints that line
 after the level's result line (the result line itself is unchanged).
@@ -23,7 +29,7 @@ if all levels passed.
 
 Usage:
     python scripts/run-level-test.py --exe build/windows/Release/moreya.exe
-    python scripts/run-level-test.py --exe ... --seconds 60 levels/campaign/wing1/Mossgate.level
+    python scripts/run-level-test.py --exe ... --seconds 60 levels/skirmish/TestCleaning.level
     python scripts/run-level-test.py --exe ... --markdown   # result paragraph as markdown
     python scripts/run-level-test.py --exe ... --port 31301   # own server port, for parallel instances
 """
@@ -43,6 +49,7 @@ import time
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 CODE_NAMES = {
     0: "PASS",
@@ -51,6 +58,7 @@ CODE_NAMES = {
     3: "error during the run",
     4: "no victory",
     5: "timeout",
+    content_packages.MISSING_CONTENT_EXIT_CODE: "content missing",
 }
 
 
@@ -61,7 +69,19 @@ def campaign_levels():
 
 def game_environment():
     """Environment of a game process: MOREYA_CONTENT_DIR names the content packages when they are present."""
-    return campaign_packages.game_environment(REPO)
+    return content_packages.game_environment(REPO)
+
+
+def resolve_level(level):
+    """The absolute file of a level argument: the file itself when it exists, else the file of the same path below the
+    repository in a content package or the level of a wing package named by its former public path (a level that moved
+    there, see campaign_packages.level_file), else the path unchanged (the game reports it)."""
+    path = os.path.abspath(level)
+    if os.path.exists(path):
+        return path
+    relative = os.path.relpath(path, REPO) if path.startswith(os.path.abspath(REPO) + os.sep) else level
+    found = campaign_packages.level_file(REPO, relative.replace(os.sep, "/"))
+    return str(found) if found is not None else path
 
 
 FRAME_LINE = re.compile(r"^FRAMETIME frames=(\d+) avg_ms=([0-9.eE+-]+)")
@@ -168,6 +188,8 @@ def run_menu_test(exe, seconds, port=None):
     resource_errors = find_resource_errors(os.path.join(os.path.dirname(os.path.abspath(exe)), "Ogre.log"))
     if code is None:
         return False, "FAIL %s : timeout: the script killed the game after %d s" % (MENU_TEST_NAME, limit)
+    if code == content_packages.MISSING_CONTENT_EXIT_CODE:
+        return False, "FAIL %s : content missing: exit code %d" % (MENU_TEST_NAME, code)
     if code != 0:
         return False, "FAIL %s : crash: exit code %d" % (MENU_TEST_NAME, code)
     if frames <= 0:
@@ -258,7 +280,12 @@ def main():
     if not os.path.exists(exe):
         print("exe not found: " + exe)
         return 2
-    levels = [os.path.abspath(level) for level in args.levels] or campaign_levels()
+    levels = [resolve_level(level) for level in args.levels] or campaign_levels()
+    if not levels:
+        # Without the content packages there is no campaign level: a load test never passes on nothing
+        print("FAIL: no level to test; content packages missing: %s"
+              % (", ".join(content_packages.missing_packages(REPO)) or "none"))
+        return 1
 
     # The main menu is tested once per run, before the levels (its own PASS/FAIL line, not counted as a level)
     menu_passed = True

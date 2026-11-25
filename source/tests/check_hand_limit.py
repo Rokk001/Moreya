@@ -12,6 +12,9 @@ code and runs the Boost test 00-HandLimitRules.
 
 Usage: python -I source/tests/check_hand_limit.py
 Exit 0 and "hand limit ok" when every item holds.
+
+The HandCooldown imageset and picture are content (core-gui package, found through scripts/content_packages.py) and
+their CREDITS rows stand in the CREDITS of the content repository; without the content they are named as not checked.
 """
 import math
 import os
@@ -20,6 +23,10 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
 START = time.perf_counter()
 FAILURES = []
 
@@ -482,14 +489,19 @@ check("ServerNotificationType::chatServer" in refused and "displayText" not in r
       and "case ServerNotificationType::chatServer:" in client and "addEventMessage(new EventMessage(evtMsg, type));" in client,
       "K5: the refusal message appears in the message line only")
 # G11: the crossed-out hand is a text-free placeholder under its final image name
-imageset = read("gui/HandCooldown.imageset")
-check('name="HandCooldown"' in imageset and 'name="NoPickup"' in imageset and 'imagefile="HandCooldownIcon.png"' in imageset,
-      "G11: the imageset HandCooldown/NoPickup exists")
-check(os.path.getsize(os.path.join(ROOT, "gui", "HandCooldownIcon.png")) > 100, "G11: the picture file exists")
 check('filename="HandCooldown.imageset" name="HandCooldown"' in read("gui/ODSkin.scheme"),
       "G11: the scheme loads the imageset")
-check("HandCooldownIcon.png" in read("CREDITS") and "HandCooldown.imageset" in read("CREDITS"),
-      "G11: the picture and the imageset have CREDITS entries")
+HAND_FILES = ("gui/HandCooldown.imageset", "gui/HandCooldownIcon.png")
+if content_packages.unchecked("check_hand_limit", [name for name in HAND_FILES
+                                                   if content_packages.data_file(ROOT, name) is None]) == []:
+    imageset = content_packages.read_text(ROOT, "gui/HandCooldown.imageset")
+    check('name="HandCooldown"' in imageset and 'name="NoPickup"' in imageset and 'imagefile="HandCooldownIcon.png"' in imageset,
+          "G11: the imageset HandCooldown/NoPickup exists")
+    check(os.path.getsize(content_packages.resolve(ROOT, "gui/HandCooldownIcon.png")) > 100, "G11: the picture file exists")
+    # The rows of moved assets stand in the CREDITS of the content repository (public CREDITS plus that one)
+    credits = room_packages.credits_text(ROOT)
+    check("HandCooldownIcon.png" in credits and "HandCooldown.imageset" in credits,
+          "G11: the picture and the imageset have CREDITS entries")
 
 # ------------------------------------------------------------------------------------------------ build and tests
 check("${SRC}/game/HandLimitRules.cpp" in CMAKE, "C2: HandLimitRules.cpp is in the source list of the game")

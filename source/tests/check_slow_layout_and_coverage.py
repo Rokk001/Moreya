@@ -1,4 +1,7 @@
-"""Check exact font-cache keys and one-pass Git diff equivalence, including failure paths."""
+"""Check exact font-cache keys and one-pass Git diff equivalence, including failure paths.
+
+The load phase test runs on a public test level (levels/skirmish/TestCleaning.level), so it needs no content package.
+"""
 import ast
 import contextlib
 from functools import lru_cache
@@ -129,7 +132,8 @@ class LoadPhaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             exe = Path(directory) / 'fixture.exe'
             exe.touch()
-            level = str(ROOT / 'levels/campaign/Mossgate.level')
+            # A public test level: a campaign level moved into a content package and is found there by the runner
+            level = str(ROOT / 'levels/skirmish/TestCleaning.level')
             for menu_ok, level_ok in ((True, True), (False, True), (True, False)):
                 output = io.StringIO()
                 with patch.object(sys, 'argv', ['runner', '--exe', str(exe), '--port', '31419', level]), \
@@ -143,7 +147,7 @@ class LoadPhaseTests(unittest.TestCase):
                 phases = [json.loads(line[len('ODP_TEST_PHASE '):]) for line in output.getvalue().splitlines()
                           if line.startswith('ODP_TEST_PHASE ')]
                 self.assertEqual(phases, [{'name': 'menu', 'seconds': 2},
-                                          {'name': 'level:Mossgate.level', 'seconds': 8}])
+                                          {'name': 'level:TestCleaning.level', 'seconds': 8}])
 
 
 if __name__ == '__main__':

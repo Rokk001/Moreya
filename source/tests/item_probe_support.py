@@ -1,11 +1,37 @@
-"""Shared production-source extraction and world fixtures for the two item C++ checks."""
+"""Shared production-source extraction and world fixtures for the two item C++ checks.
+
+The probes read game data files below the repository path they get on the command line; a file that moved into a
+content package is found there through ODP_DATA_ROOTS (the repository and the package folders of
+scripts/content_packages.py, separated by "|"). Without the content a probe that reads a moved file is not compiled
+and the file is named as not checked."""
 from pathlib import Path
+import os
 import re
 import subprocess
 import json
+import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+#: A game data path a probe reads below the repository path (a string literal "/config/items.cfg" of the probe)
+DATA_PATH = re.compile(r'"/((?:config|gui|models|materials|levels|sounds|particles)/[\w./-]+\.\w+)"')
+
+
+def data_roots_environment():
+    """Environment of a probe: ODP_DATA_ROOTS names the repository, then every content and room package folder."""
+    environment = dict(os.environ)
+    environment["ODP_DATA_ROOTS"] = "|".join([str(ROOT)] + [str(root) for root in content_packages.package_roots(ROOT)])
+    return environment
+
+
+def missing_data(probe):
+    """The game data files a probe reads that are not present (only without the content; with it a missing file
+    fails the probe)."""
+    if content_packages.has_content(ROOT):
+        return []
+    return [path for path in sorted(set(DATA_PATH.findall(probe))) if content_packages.data_file(ROOT, path) is None]
 
 
 def source(name):
@@ -31,7 +57,12 @@ def cpp(name):
 
 # Report preparation and execution separately; optimization never defines NDEBUG or removes checks.
 def compile_and_run(name, probe, optimize=False):
-    """Compile and run a bounded standalone probe only when this check is explicitly executed."""
+    """Compile and run a bounded standalone probe only when this check is explicitly executed; without the content a
+    probe that reads a moved game data file is named as not checked instead."""
+    missing = missing_data(probe)
+    if missing:
+        content_packages.unchecked(name, missing)
+        return
     started = time.perf_counter()
     output = ROOT / "out" / name
     output.mkdir(parents=True, exist_ok=True)
@@ -44,7 +75,8 @@ def compile_and_run(name, probe, optimize=False):
     subprocess.run(command, cwd=output, stdin=subprocess.DEVNULL, check=True, timeout=600)
     print('ODP_TEST_PHASE ' + json.dumps({'name': name + ':compile', 'seconds': time.perf_counter() - started}), flush=True)
     started = time.perf_counter()
-    subprocess.run([str(executable), str(ROOT)], cwd=ROOT, stdin=subprocess.DEVNULL, check=True, timeout=600)
+    subprocess.run([str(executable), str(ROOT)], cwd=ROOT, stdin=subprocess.DEVNULL, check=True, timeout=600,
+                   env=data_roots_environment())
     print('ODP_TEST_PHASE ' + json.dumps({'name': name + ':execute', 'seconds': time.perf_counter() - started}), flush=True)
 
 
@@ -60,6 +92,7 @@ static const uint32_t MAX_LEVEL = 30;
 #include <algorithm>
 #include <cmath>
 #include <cctype>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -235,9 +268,21 @@ bool exists(const std::string&) { return true; }
 }
 //! \brief Fails a real gameplay invariant with its precise case label.
 void check(bool valid,const std::string& label) { if(!valid) throw std::runtime_error(label); }
-//! \brief Reads a config with comments removed before using the actual parsers.
+//! \brief Returns the file of a game data path: the path when it exists, else the same path below the first content
+//! package folder that has it; ODP_DATA_ROOTS names the repository and then the package folders, separated by '|'.
+std::string dataFile(const std::string& path) {
+    std::ifstream direct(path); if(direct.good()) return path;
+    const char* value=std::getenv("ODP_DATA_ROOTS"); if(value==nullptr) return path;
+    std::vector<std::string> roots; std::stringstream list(value); std::string entry;
+    while(std::getline(list,entry,'|')) if(!entry.empty()) roots.push_back(entry);
+    if(roots.empty()||path.compare(0,roots[0].size(),roots[0])!=0) return path;
+    const std::string relative=path.substr(roots[0].size());
+    for(size_t i=1;i<roots.size();++i) { std::ifstream packaged(roots[i]+relative); if(packaged.good()) return roots[i]+relative; }
+    return path;
+}
+//! \brief Reads a config with comments removed before using the actual parsers (a moved file from its content package).
 std::string cleanFile(const std::string& path) {
-    std::ifstream file(path); check(bool(file),path); std::string line,result;
+    std::ifstream file(dataFile(path)); check(bool(file),path); std::string line,result;
     while(std::getline(file,line)) { const size_t comment=line.find('#'); if(comment!=std::string::npos) line.erase(comment); result+=line+"\n"; } return result;
 }
 //! \brief Loads real supplied definitions and numeric settings for both probes.

@@ -9,12 +9,18 @@ and its contour were drawn around the map origin instead of at the creature, and
 
 This check requires that the game keeps OGRE's object space bones, and that every authored program that reads the
 bone array also binds world_matrix and moves the skinned position (and directions) into world space with it.
+
+The material scripts are read from the public tree and from the content and room packages (scripts/content_packages.py);
+without the content the count of the programs is named as not checked (most creature materials are content).
 """
 from pathlib import Path
 import os
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -78,7 +84,7 @@ assert 'vec2 dir = (viewMatrix * (worldMatrix * vec4(N, 0.0))).xy;' in read('sha
 
 # Every material program that binds the bone array also binds the world matrix.
 programs = 0
-for path in (repo / 'materials').rglob('*.material'):
+for path in content_packages.data_glob(repo, 'materials', '*.material', recursive=True):
     text = path.read_text(encoding='utf-8')
     for name, body in re.findall(r'vertex_program\s+(\S+)\s+glsl\s*\{(.*?)\n\s*\}\s*\n\s*\}', text, re.S):
         if 'world_matrix_array_3x4' not in body:
@@ -88,7 +94,10 @@ for path in (repo / 'materials').rglob('*.material'):
         assert re.search(r'param_named_auto\s+worldMatrix\s+world_matrix\s*$', body, re.M), \
             '%s: %s reads object space bones without the world matrix' % (path.name, name)
 # 33 creature material files, the skinning shadow caster and the skinned metal
-assert programs >= 35, programs
+if content_packages.has_content(repo):
+    assert programs >= 35, programs
+else:
+    content_packages.unchecked('check_skinned_bones_object_space', ['count of the skinned programs (%d public)' % programs])
 
 # The contour pass built in code binds the world matrix next to the bones.
 render = read('source/render/RenderManager.cpp')

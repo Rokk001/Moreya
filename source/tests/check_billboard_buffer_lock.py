@@ -6,14 +6,18 @@ OGRE already locks the dynamic billboard buffer with HBL_DISCARD, but GL3PlusHar
 buffer with glBufferData(NULL) and then maps it synchronised, and the Intel Arc driver waits anyway. The fix is an
 OGRE patch that maps the orphaned storage with GL_MAP_UNSYNCHRONIZED_BIT. The look is the same: the same bytes
 reach the GPU, only the wait is gone. The patch is applied by install-ogre-prereq.ps1 and needs a rebuild of OGRE.
+The menu particle script is read from the content packages; without the content it is named as not checked.
 """
 from pathlib import Path
 import base64
 import hashlib
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 patch_path = repo / 'scripts/win32/patches/ogre14-discard-lock-unsynchronized.patch'
 install = (repo / 'scripts/win32/install-ogre-prereq.ps1').read_text(encoding='utf-8')
 fixture = base64.b64decode((repo / 'source/tests/fixtures/ogre/OgreGL3PlusHardwareBuffer.cpp.b64').read_bytes())
@@ -66,6 +70,11 @@ assert 'apply --recount --reverse --check $taskDiscardLockPatch' in install
 assert 'apply --recount $taskDiscardLockPatch' in install
 assert install.index('$taskDiscardLockPatch') < install.index('$taskOptions'), 'the patch must be applied before OGRE is configured and built'
 
-# the particle scripts and the game code are not part of this cause: the look stays as it is
-assert 'billboard_type' in (repo / 'particles/MenuScene.particle').read_text(encoding='utf-8')
+# the particle scripts and the game code are not part of this cause: the look stays as it is (the menu particle script
+# lies in a content package and is named as not checked without the content)
+menu_particle = content_packages.data_file(repo, 'particles/MenuScene.particle')
+if menu_particle is None and not content_packages.has_content(repo):
+    content_packages.unchecked('check_billboard_buffer_lock', ['particles/MenuScene.particle'])
+else:
+    assert 'billboard_type' in content_packages.read_text(repo, 'particles/MenuScene.particle')
 print('ok')

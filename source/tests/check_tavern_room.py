@@ -25,6 +25,7 @@ root = Path(__file__).resolve().parents[2]
 import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
@@ -172,6 +173,11 @@ assert 'entry.second->getMeshName() == TAVERN_TABLE_MESH' in tables, 'seats exis
 drinking_tiles = extract(room_cpp, 'uint32_t RoomTavern::getNbDrinkingTiles()')
 assert 'nbTiles - 1' in drinking_tiles
 for mesh in ('TavernCounter', 'TavernKeg', 'TavernTable', 'Innkeeper', 'TavernMug', 'Vomit'):
+    # A mesh of a content package (TavernMug: core-models) is named as not checked without the content
+    if not content_packages.has_content(root) and content_packages.data_file(root, 'models/' + mesh + '.mesh') is None \
+            and not room_packages.is_missing_packaged(root, 'models/' + mesh + '.mesh'):
+        content_packages.unchecked('check_tavern_room', ['models/' + mesh + '.mesh'])
+        continue
     assert room_packages.is_missing_packaged(root, 'models/' + mesh + '.mesh') or \
         room_file('models/' + mesh + '.mesh').exists(), 'models/' + mesh + '.mesh missing'
 
