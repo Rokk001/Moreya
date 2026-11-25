@@ -38,9 +38,12 @@ ROOM_NAMES = tuple(room[0] for room in ROOMS)
 
 
 #: The files of every room package besides its Package.cfg, at their relative paths, fixed for this branch (the inventory
-#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 319 files
+#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 323 files
 PACKAGED_ASSETS = {
-    'GuardRoom': (),
+    'GuardRoom': (
+        'materials/scripts/Dojo.material', 'materials/textures/Dojo.png', 'materials/textures/DojoNormal.png',
+        'models/Dojo.mesh',
+    ),
     'Temple': (
         'sounds/Spatial/Rooms/Temple/Gong/Gong01.ogg',
     ),
@@ -214,6 +217,7 @@ PACKAGED_ASSETS = {
 #: The Ogre materials and particle systems that the scripts of a room package define, fixed for this branch: a check
 #: that resolves names does not find them without the package
 PACKAGED_MATERIALS = {
+    'GuardRoom': ('Dojo',),
     'GhostRoom': ('GhostRoomFloor',),
     'Infirmary': ('InfirmaryFloor', 'InfirmaryObjectWood', 'InfirmaryObjectStone', 'InfirmaryObjectCloth',
                   'InfirmaryObjectIron', 'InfirmaryObjectStraw', 'InfirmaryObjectBone', 'InfirmaryObjectHerb',

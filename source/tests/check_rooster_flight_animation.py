@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-"""Non-compiling flight wiring, continuous trajectory and authored skeleton checks."""
+"""Non-compiling flight wiring, continuous trajectory and authored skeleton checks.
+
+The hen skeleton is content (hatchery room package, found through scripts/content_packages.py); without the content
+the wiring and the trajectory are checked and the skeleton part is named as not checked.
+"""
 import math
 import os
 from pathlib import Path
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 pose = (root / 'source/entities/ChickenPose.h').read_text()
 client = (root / 'source/network/ODClient.cpp').read_text()
@@ -42,12 +49,17 @@ for turns in (1, 4, 8):
     down = [1 - x for x in samples]
     assert down[0] == 1 and down[-1] == 0
 
+# The skeleton part needs the content; with the content present a missing skeleton fails the conversion
+if content_packages.unchecked('check_rooster_flight_animation',
+                              [] if content_packages.has_content(root) else ['models/Chicken.skeleton']):
+    print('rooster flight animation checks passed (wiring and trajectory)')
+    sys.exit(0)
 out = root / 'out/rooster-flight'
 out.mkdir(parents=True, exist_ok=True)
 # Converter executable: set OGRE_XML_CONVERTER to its full path, otherwise it is looked up on the PATH.
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 subprocess.run([converter, '-q', '-log', str(out / 'skeleton-check.log'),
-                str(root / 'models/Chicken.skeleton'), str(out / 'Chicken.skeleton.xml')],
+                str(content_packages.resolve(root, 'models/Chicken.skeleton')), str(out / 'Chicken.skeleton.xml')],
                check=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60)
 skel = ET.parse(out / 'Chicken.skeleton.xml').getroot()
 anims = {a.get('name'): a for a in skel.find('animations')}

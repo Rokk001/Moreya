@@ -9,7 +9,7 @@ Static part, always:
     room out and keeps loading (MapHandler), the ghost room equipment and saved capture boxes and herb bundles need
     their packages, the asset folders and sounds of found packages are loaded (ResourceManager, SoundEffectsManager)
     and the packages are found at startup (ODApplication);
-  * the public tree holds none of the 319 packaged room assets (PACKAGED_ASSETS of scripts/room_packages.py, fixed for
+  * the public tree holds none of the 323 packaged room assets (PACKAGED_ASSETS of scripts/room_packages.py, fixed for
     this branch);
   * with the content present: every package of the content repository has its Package.cfg naming its room and exactly
     the files of PACKAGED_ASSETS.
@@ -20,7 +20,8 @@ the found packages are named sorted, and the room packages of a server limit the
 removed (a room of the client that the server lacks is unavailable, the names of the found packages stay).
 Runtime part, when the built game build/windows/moreya.exe exists: the game plays levels/skirmish/TestSpa.level (a
 tavern and a spa) with the load test parameters (--run-level, 1 second) with a content folder that holds only the
-required content packages (scripts/content_packages.py, linked from the content folder), so the game starts but no
+required content packages (scripts/content_packages.py) and the wing packages of the campaign (the public tree has no
+campaign of its own any more, scripts/campaign_packages.py), linked from the content folder, so the game starts but no
 room package is found; the run must pass and the log must show both rooms left out. Without the content packages the
 game cannot start (it says the content is missing): the runtime part is then named as not checked.
 
@@ -44,7 +45,7 @@ import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: Files of each room package, counted once for this branch (Package.cfg included)
-PACKAGE_FILES = {"GuardRoom": 1, "Temple": 2, "Toilet": 39, "Merchant": 35, "HerbGarden": 22, "AlchemyLab": 9,
+PACKAGE_FILES = {"GuardRoom": 5, "Temple": 2, "Toilet": 39, "Merchant": 35, "HerbGarden": 22, "AlchemyLab": 9,
                  "Tavern": 84, "Infirmary": 32, "GhostRoom": 80, "Spa": 25}
 #: The level of the runtime part and the packaged rooms it holds
 RUNTIME_LEVEL = "levels/skirmish/TestSpa.level"
@@ -89,13 +90,17 @@ def link_folder(link, target):
 
 
 def required_content_only(folder):
-    """Fills a folder with links to the required content packages only (no room package); returns False when a
+    """Fills a folder with links to the required content packages and the wing packages of the content only (no room
+    package; without a wing package the game logs that it cannot read a campaign package); returns False when a
     required content package is not present."""
     found = content_packages.packages(ROOT)
     if content_packages.missing_packages(ROOT):
         return False
     for name in content_packages.REQUIRED_PACKAGES:
         link_folder(Path(folder) / found[name].name, found[name])
+    for wing_folder, _, public, _ in campaign_packages.packages(ROOT):
+        if not public:
+            link_folder(Path(folder) / wing_folder.name, wing_folder)
     return True
 
 
@@ -105,8 +110,8 @@ def phase(name, started):
 
 
 started = time.monotonic()
-check(len(room_packages.ROOMS) == 10 and sum(PACKAGE_FILES.values()) == 329,
-      "ten packaged rooms with 329 package files are fixed for this branch")
+check(len(room_packages.ROOMS) == 10 and sum(PACKAGE_FILES.values()) == 333,
+      "ten packaged rooms with 333 package files are fixed for this branch")
 check(all(len(room_packages.PACKAGED_ASSETS[name]) + 1 == PACKAGE_FILES[name] for name in room_packages.ROOM_NAMES),
       "PACKAGED_ASSETS of room_packages.py must list the package files of this branch")
 
@@ -355,7 +360,7 @@ if EXECUTABLE.is_file() and not failures and not content_packages.has_content(RO
         "check_room_packages", ["runtime part (the game needs the content packages)"]))
 elif EXECUTABLE.is_file() and not failures:
     started = time.monotonic()
-    # A content folder with the required content packages but without any room package
+    # A content folder with the required content packages and the wing packages but without any room package
     content_folder = tempfile.mkdtemp(prefix="od-content-without-rooms-")
     required_content_only(content_folder)
     environment = content_packages.game_environment(ROOT)
@@ -391,5 +396,5 @@ elif EXECUTABLE.is_file() and not failures:
 if failures:
     print("\n".join(failures).encode("ascii", "replace").decode("ascii"))
     sys.exit(1)
-print("room packages: 10 packaged rooms, gates in place, 319 packaged assets absent from the public tree; %s; %s; %s: PASS"
+print("room packages: 10 packaged rooms, gates in place, 323 packaged assets absent from the public tree; %s; %s; %s: PASS"
       % (content_note, probe_note, runtime_note))

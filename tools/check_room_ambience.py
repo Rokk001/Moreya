@@ -251,6 +251,28 @@ def mesh_exists(name):
     return exists_any("models", name + ".mesh")
 
 
+# Gold outside the treasury keeps the classic stack names of the server (GoldstackLv1 .. GoldstackLv<sizeCount>,
+# source/render/LooseGoldMesh.h); the client draws them with heap meshes built at run time, so there is no mesh file of
+# that name. An object effect matches the name the server sends (RoomAmbience::getObjectEffects).
+_loose_gold_names = []
+
+
+def loose_gold_names():
+    """The classic stack names that the client draws with run-time meshes (read from LooseGoldMesh.h and .cpp)."""
+    if not _loose_gold_names:
+        with open(os.path.join(ROOT, "source", "render", "LooseGoldMesh.h"), encoding="utf-8") as handle:
+            sizes = int(re.search(r"sizeCount = (\d+);", handle.read()).group(1))
+        with open(os.path.join(ROOT, "source", "render", "LooseGoldMesh.cpp"), encoding="utf-8") as handle:
+            prefix = re.search(r'StackPrefix = "(\w+)";', handle.read()).group(1)
+        _loose_gold_names.extend("%s%d" % (prefix, size) for size in range(1, sizes + 1))
+    return _loose_gold_names
+
+
+def object_mesh_exists(name):
+    """True when an object effect can match the mesh name: a mesh file or a stack name drawn with a run-time mesh."""
+    return mesh_exists(name) or name in loose_gold_names()
+
+
 # The piles of a treasury are meshes built at run time from their names (source/rooms/TreasuryGoldLayer.h):
 # TreasuryGold_<level>_<four corner levels>_<variant>. A pattern with a trailing "*" matches a name that starts
 # with it, as in the game.
@@ -545,7 +567,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                     problems.append("%s: %s doubles the sliding coins that the client starts on piles of level %d and up"
                                     % (where, system, pile_setting("slideLevel")))
         elif target == "Object":
-            if "*" not in match and not mesh_exists(match):
+            if "*" not in match and not object_mesh_exists(match):
                 problems.append("%s: no mesh %s" % (where, match))
             elif "*" in match:
                 pattern = match.replace("*", "")

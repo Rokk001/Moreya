@@ -229,7 +229,12 @@ bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
 assert '{"ChickenCoopHouse", -.203275f, -.4f, .796725f, .4f}' in bounds
 if CONTENT:
     assert 'ChickenCoop ChickenCoopHouse' in content_packages.read_text(root, 'config/roomAmbienceProduction.cfg')
-    assert 'ChickenCoopHouse.mesh' in credits and 'ChickenCoopHouse.skeleton' in credits and 'clips Lay, Flutter' in credits
+    assert 'ChickenCoopHouse.mesh' in credits and 'ChickenCoopHouse.skeleton' in credits
+    # The hen clips Lay and Flutter are named in the CREDITS row of the hen skeleton (the own rig of the hatchery
+    # package names its clips in one list instead of the former row "Chicken.skeleton (clips Lay, Flutter)")
+    skeleton_rows = [row for row in credits.splitlines() if row.startswith('models/Chicken.skeleton')]
+    assert skeleton_rows, 'no CREDITS row of models/Chicken.skeleton'
+    assert any(' Lay,' in row and ' Flutter,' in row for row in skeleton_rows), 'the hen clips Lay and Flutter have no CREDITS row'
 # The door of the coop swings with the animal that comes out, the old mesh shakes as before
 assert 'mDoor' in looks and 'HatcheryCoopHouse::doorClip' in body(looks, 'void RenderManager::rrCreateCoopDecor')
 assert 'mDoor->setEnabled(true)' in body(looks, 'void RenderManager::rrSetChickenPose')

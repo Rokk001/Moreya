@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-"""Non-compiling checks of the rooster's coop-clear flight and mounting alignment."""
+"""Non-compiling checks of the rooster's coop-clear flight and mounting alignment.
+
+The coop and rooster meshes are content (hatchery room package, found through scripts/content_packages.py); without
+the content the code side is checked and the mesh part is named as not checked.
+"""
 import math
 import os
 from pathlib import Path
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 looks = (root / 'source/render/RenderManagerChickens.cpp').read_text()
@@ -47,13 +54,24 @@ def flight(a, b, t, clearance):
     return p
 
 
+# Use the actual coop bounds and the existing generic furniture scaling.
+furniture = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
+assert 'float width = furnitureFootprint, depth = furnitureFootprint;' in furniture
+# the named furniture footprint keeps the value 0.6 tiles
+assert 'constexpr float furnitureFootprint = 0.6f;' in furniture
+# The mesh part needs the content; with the content present a missing mesh fails the conversion
+if content_packages.unchecked('check_rooster_pose_alignment',
+                              [] if content_packages.has_content(root) else
+                              ['models/ChickenCoopHouse.mesh', 'models/ChickenRooster.mesh']):
+    print('rooster coop-clear flight and mounting alignment checks passed (code side)')
+    sys.exit(0)
 out = root / 'out/rooster-flight'
 out.mkdir(parents=True, exist_ok=True)
 # Converter executable: set OGRE_XML_CONVERTER to its full path, otherwise it is looked up on the PATH.
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 for name in ('ChickenCoopHouse', 'ChickenRooster'):
     subprocess.run([converter, '-q', '-log', str(out / (name + '-alignment.log')),
-                    str(root / ('models/' + name + '.mesh')), str(out / (name + '.mesh.xml'))],
+                    str(content_packages.resolve(root, 'models/' + name + '.mesh')), str(out / (name + '.mesh.xml'))],
                    check=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60)
 coop = ET.parse(out / 'ChickenCoopHouse.mesh.xml').getroot()
 rooster = ET.parse(out / 'ChickenRooster.mesh.xml').getroot()
@@ -65,11 +83,7 @@ clearance = 0.4 * scale
 # Base mesh tail and body fit inside the same expanded horizontal footprint for every heading.
 radius = max(math.hypot(float(p.get('x')), float(p.get('y'))) for p in rooster.iter('position')) * scale
 assert radius < clearance
-# Use the actual coop bounds and the existing generic furniture scaling.
-furniture = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
-assert 'float width = furnitureFootprint, depth = furnitureFootprint;' in furniture
-# the named furniture footprint keeps the value 0.6 tiles
-assert 'constexpr float furnitureFootprint = 0.6f;' in furniture
+# Use the actual coop bounds and the existing generic furniture scaling (checked on RoomObjectBounds.h above).
 factor = min(1.0, 0.6 / (max(p[0] for p in points) - min(p[0] for p in points)),
              0.6 / (max(p[1] for p in points) - min(p[1] for p in points)))
 min_x = min(p[0] for p in points) * factor
