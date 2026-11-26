@@ -110,7 +110,8 @@ def check_geometry():
     assert entries
     checked = 0
     for name in sorted(set(entries)):
-        for point in earth['positions'](ROOT / 'models' / name):
+        # The earth meshes lie in the terrain content package since CS10
+        for point in earth['positions'](content_packages.resolve(ROOT, 'models/' + name)):
             for x, y, degrees in [(-7, 3, 0), (0, 0, 90), (12, -4, 180), (3, 5, 270)]:
                 angle = math.radians(degrees)
                 c, s = math.cos(angle), math.sin(angle)
@@ -123,8 +124,9 @@ def check_geometry():
                 assert border['deform'](original, shader, shared) == border['deform'](baked, shader, shared)
                 # Identical world position also preserves the active worldTileUV input.
                 checked += 1
-    # Fixed once from the committed earth meshes: 10,394 vertices, four transforms each.
-    assert checked == 41576
+    # Fixed once from the committed earth meshes: 10,368 vertices, four transforms each (10,394 before the calmer
+    # rock wall meshes of CS10, approved by Mario).
+    assert checked == 41472
     return checked
 
 
