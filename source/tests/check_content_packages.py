@@ -1,7 +1,7 @@
 """Content packages: the content of the game lies in content packages; without them the game says so and quits.
 
 Static part, always:
-  * source/utils/ContentPackages.cpp names exactly the 30 required content packages of scripts/content_packages.py
+  * source/utils/ContentPackages.cpp names exactly the 31 required content packages of scripts/content_packages.py
     (REQUIRED_PACKAGES, fixed for this branch) and finds them in the folders of the wing packages;
   * the gates exist: ODApplication refuses the start when a required package is missing, main shows the message
     (a message box unless the run is headless) and returns exit code 7; every game data lookup falls back to the
@@ -78,8 +78,8 @@ def check_static():
     table = packages_cpp[packages_cpp.index('REQUIRED_PACKAGES[] ='):]
     table = table[:table.index('};')]
     names = tuple(re.findall(r'"([a-z0-9-]+)"', table))
-    check(names == content_packages.REQUIRED_PACKAGES, 'ContentPackages.cpp names the 30 required packages')
-    check(len(content_packages.REQUIRED_PACKAGES) == 30, 'scripts/content_packages.py names 30 required packages')
+    check(names == content_packages.REQUIRED_PACKAGES, 'ContentPackages.cpp names the 31 required packages')
+    check(len(content_packages.REQUIRED_PACKAGES) == 31, 'scripts/content_packages.py names 31 required packages')
     check(list(names) == sorted(names), 'the required packages are sorted')
     check('CampaignPackages::getPackageFolders(gameDataPath)' in body(packages_cpp, 'void ContentPackages::discover('),
           'the packages are found in the folders of the wing packages')

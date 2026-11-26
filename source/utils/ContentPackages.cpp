@@ -40,6 +40,7 @@ const char* const REQUIRED_PACKAGES[] =
     "core-models",
     "core-portraits",
     "core-sounds",
+    "creatures",
     "doors",
     "effects",
     "equipment",
