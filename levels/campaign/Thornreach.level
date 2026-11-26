@@ -5998,24 +5998,24 @@ ProtectDungeonTemple	NULL
 5	ThornWorkerD2	Kobold.mesh	90	63	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Briar2_1	Orc.mesh	11	11	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Briar2_2	Troll.mesh	12	9	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Briar2_3	Spider.mesh	11	8	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Briar2_3	Ghoul.mesh	11	8	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Briar2_4	Goblin.mesh	10	9	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Briar2_5	Rat.mesh	12	14	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Briar2_5	Banshee.mesh	12	14	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Briar3_1	Orc.mesh	12	64	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Briar3_2	Troll.mesh	16	62	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Briar3_3	Spider.mesh	4	64	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Briar3_3	Ghoul.mesh	4	64	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Briar3_4	Goblin.mesh	13	65	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Briar3_5	Roach.mesh	5	66	0	Roach	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Briar3_5	Witch.mesh	5	66	0	Witch	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Briar4_1	Orc.mesh	87	14	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Briar4_2	Troll.mesh	97	11	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-4	Briar4_3	Spider.mesh	88	10	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+4	Briar4_3	Ghoul.mesh	88	10	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Briar4_4	Goblin.mesh	97	14	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-4	Briar4_5	Rat.mesh	92	20	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+4	Briar4_5	Banshee.mesh	92	20	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Briar5_1	Orc.mesh	89	61	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Briar5_2	Troll.mesh	90	65	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-5	Briar5_3	Spider.mesh	86	59	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+5	Briar5_3	Ghoul.mesh	86	59	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Briar5_4	Goblin.mesh	92	61	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-5	Briar5_5	Roach.mesh	93	64	0	Roach	3	0	max	100	0	0	none	none	nullSkillType	none	0
+5	Briar5_5	Witch.mesh	93	64	0	Witch	3	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -6048,8 +6048,8 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 Block	1	CaveHornet
-Block	1	Rat
-Block	1	Roach
+Block	1	Banshee
+Block	1	Witch
 Block	1	Goblin
 Block	1	LizardMan
 Block	1	Orc
@@ -6094,7 +6094,7 @@ Cond	region	1	Clearing
 Action	message	1	The middle clearing is the crossing of every road. The keepers have seen you and will start to move against each other too.
 Action	reveal	1	Hedge3
 Action	reveal	1	Hedge4
-Action	spawn	1	52	33	1	Orc:3	Goblin:3	Spider:3
+Action	spawn	1	52	33	1	Orc:3	Goblin:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	wellFound
@@ -6116,7 +6116,7 @@ Mode	once
 Cond	region	1	NorthWest
 Action	message	1	The north-west keeper has joined hands with the north-east keeper. They share a pact until you fall.
 Action	alliance	2	4	make
-Action	spawn	4	27	11	1	Troll:3	Orc:3	Spider:3	Goblin:3
+Action	spawn	4	27	11	1	Troll:3	Orc:3	Ghoul:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	allianceSouth
@@ -6124,7 +6124,7 @@ Mode	once
 Cond	region	1	SouthWest
 Action	message	1	The south-west keeper and the south-east keeper are allied against you.
 Action	alliance	3	5	make
-Action	spawn	5	27	62	1	Troll:3	Orc:3	Spider:3	Goblin:3
+Action	spawn	5	27	62	1	Troll:3	Orc:3	Ghoul:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	hunt1
@@ -6132,7 +6132,7 @@ Mode	once
 Cond	time	260
 Action	message	1	Thorn hunters are riding out of the north-west.
 Action	terrain	28	29	28	29	path
-Action	spawn	2	31	29	1	Orc:2	Goblin:2	Spider:2
+Action	spawn	2	31	29	1	Orc:2	Goblin:2	Ghoul:2
 [/Trigger]
 [Trigger]
 Name	hunt2
@@ -6140,56 +6140,56 @@ Mode	once
 Cond	time	560
 Action	message	1	A pack from the south-east is crossing the maze.
 Action	terrain	28	44	28	44	path
-Action	spawn	5	30	44	1	Orc:2	Spider:2	Troll:2
+Action	spawn	5	30	44	1	Orc:2	Ghoul:2	Troll:2
 [/Trigger]
 [Trigger]
 Name	hunt3
 Mode	once
 Cond	time	900
 Action	message	1	The north-east keeper sends hounds.
-Action	spawn	4	31	29	1	Goblin:3	Orc:3	Spider:2
+Action	spawn	4	31	29	1	Goblin:3	Orc:3	Ghoul:2
 [/Trigger]
 [Trigger]
 Name	hunt4
 Mode	once
 Cond	time	1300
 Action	message	1	Wolves from the south-west are in the hedges.
-Action	spawn	3	30	44	1	Troll:3	Orc:3	Spider:3
+Action	spawn	3	30	44	1	Troll:3	Orc:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	hunt5
 Mode	once
 Cond	time	1750
 Action	message	1	Two keepers have joined their packs against you.
-Action	spawn	2	31	29	1	Orc:3	Troll:3	Goblin:3	Spider:3
+Action	spawn	2	31	29	1	Orc:3	Troll:3	Goblin:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	hunt6
 Mode	once
 Cond	time	2250
 Action	message	1	The thorn guard marches in force.
-Action	spawn	5	30	44	1	Troll:3	Orc:3	Orc:3	Spider:3
+Action	spawn	5	30	44	1	Troll:3	Orc:3	Orc:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	hunt7
 Mode	once
 Cond	time	2800
 Action	message	1	The last reserves of the north-east are coming.
-Action	spawn	4	31	29	1	Troll:4	Orc:3	Goblin:3	Spider:3	Orc:3
+Action	spawn	4	31	29	1	Troll:4	Orc:3	Goblin:3	Ghoul:3	Orc:3
 [/Trigger]
 [Trigger]
 Name	hunt8
 Mode	once
 Cond	time	3400
 Action	message	1	Cassia Thorne has called every keeper to arms.
-Action	spawn	3	30	44	1	Troll:4	Troll:3	Orc:4	Spider:3	Goblin:3
+Action	spawn	3	30	44	1	Troll:4	Troll:3	Orc:4	Ghoul:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	hunt9
 Mode	once
 Cond	time	4100
 Action	message	1	The final pack is on the road.
-Action	spawn	2	31	29	1	Troll:4	Troll:4	Orc:4	Spider:4	Goblin:3
+Action	spawn	2	31	29	1	Troll:4	Troll:4	Orc:4	Ghoul:4	Goblin:3
 [/Trigger]
 [Trigger]
 Name	goalHeartSafe3BeforeKeepersGoneGoal

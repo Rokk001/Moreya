@@ -8004,7 +8004,7 @@ SpawnTurnMax	-1
 Wizard	7
 Knight	10
 Adventurer	5
-Dwarf1	3
+Hunter	3
 DwarfWorker	1
 [/Creatures]
 [/Wave]
@@ -8120,17 +8120,17 @@ DwarfWorker	1
 0	Dragon8	Dragon.mesh	29	31	0	Dragon	10	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Dragon9	Dragon.mesh	36	24	0	Dragon	10	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Dragon10	Dragon.mesh	19	26	0	Dragon	10	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine11	TentacleAlbine.mesh	64	58	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine12	TentacleAlbine.mesh	61	58	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine13	TentacleAlbine.mesh	109	123	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine14	TentacleAlbine.mesh	107	125	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine15	TentacleAlbine.mesh	103	110	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine16	TentacleAlbine.mesh	102	118	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine17	TentacleAlbine.mesh	105	94	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine18	TentacleAlbine.mesh	105	103	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine19	TentacleAlbine.mesh	104	76	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine20	TentacleAlbine.mesh	104	84	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleAlbine21	TentacleAlbine.mesh	106	58	0	TentacleAlbine	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine11	CrystalGolem.mesh	64	58	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine12	CrystalGolem.mesh	61	58	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine13	CrystalGolem.mesh	109	123	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine14	CrystalGolem.mesh	107	125	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine15	CrystalGolem.mesh	103	110	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine16	CrystalGolem.mesh	102	118	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine17	CrystalGolem.mesh	105	94	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine18	CrystalGolem.mesh	105	103	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine19	CrystalGolem.mesh	104	76	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine20	CrystalGolem.mesh	104	84	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleAlbine21	CrystalGolem.mesh	106	58	0	CrystalGolem	15	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]

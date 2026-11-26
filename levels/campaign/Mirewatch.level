@@ -5662,17 +5662,17 @@ ProtectDungeonTemple	NULL
 3	WatchC1	Elf.mesh	27	70	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchC2	Adventurer.mesh	27	81	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchC3	Monk.mesh	28	72	0	Monk	2	0	max	100	0	0	none	none	nullSkillType	none	0
-3	WatchC4	Dwarf1.mesh	27	75	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	WatchC4	Hunter.mesh	27	75	0	Hunter	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchD1	Adventurer.mesh	69	78	0	Adventurer	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchD2	Monk.mesh	79	82	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	WatchD3	Dwarf1.mesh	81	83	0	Dwarf1	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	WatchD3	Hunter.mesh	81	83	0	Hunter	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchD4	Dwarf2.mesh	75	86	0	Dwarf2	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchD5	Knight.mesh	71	78	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchE1	Monk.mesh	20	41	0	Monk	2	0	max	100	0	0	none	none	nullSkillType	none	0
-3	WatchE2	Dwarf1.mesh	24	47	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	WatchE2	Hunter.mesh	24	47	0	Hunter	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchE3	Dwarf2.mesh	26	48	0	Dwarf2	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchE4	Knight.mesh	22	44	0	Knight	2	0	max	100	0	0	none	none	nullSkillType	none	0
-3	WatchF1	Dwarf1.mesh	71	49	0	Dwarf1	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	WatchF1	Hunter.mesh	71	49	0	Hunter	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchF2	Dwarf2.mesh	69	52	0	Dwarf2	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchF3	Knight.mesh	72	51	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchF4	Elf.mesh	77	48	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -5683,8 +5683,8 @@ ProtectDungeonTemple	NULL
 3	WatchG4	Adventurer.mesh	53	21	0	Adventurer	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	WatchG5	Monk.mesh	41	21	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	NookStray1	Goblin.mesh	13	89	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NookStray2	Spider.mesh	13	90	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NookStray3	Rat.mesh	13	88	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Ghoul.mesh	13	90	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Banshee.mesh	13	88	0	Banshee	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -5718,8 +5718,8 @@ ProtectDungeonTemple	NULL
 [Triggers]
 Region	FenwickWatchroomDoorFront	96	20	96	20
 Block	1	CaveHornet
-Block	1	Rat
-Block	1	Roach
+Block	1	Banshee
+Block	1	Witch
 Block	1	Goblin
 Block	1	LizardMan
 Block	1	Orc

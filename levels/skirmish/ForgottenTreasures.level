@@ -3444,19 +3444,19 @@ ProtectDungeonTemple	NULL
 0	Dragon9	Dragon.mesh	37	32	0	Dragon	12	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Dragon10	Dragon.mesh	54	37	0	Dragon	12	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Dragon11	Dragon.mesh	44	53	0	Dragon	12	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime12	Slime.mesh	67	4	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime13	Slime.mesh	61	9	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime14	Slime.mesh	58	13	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime15	Slime.mesh	12	40	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime16	Slime.mesh	17	34	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime17	Slime.mesh	22	29	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime18	Slime.mesh	88	44	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime19	Slime.mesh	88	38	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime20	Slime.mesh	90	33	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime21	Slime.mesh	98	45	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime22	Slime.mesh	98	40	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime23	Slime.mesh	44	66	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Slime24	Slime.mesh	39	64	0	Slime	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime12	Banshee.mesh	67	4	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime13	Banshee.mesh	61	9	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime14	Banshee.mesh	58	13	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime15	Banshee.mesh	12	40	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime16	Banshee.mesh	17	34	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime17	Banshee.mesh	22	29	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime18	Banshee.mesh	88	44	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime19	Banshee.mesh	88	38	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime20	Banshee.mesh	90	33	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime21	Banshee.mesh	98	45	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime22	Banshee.mesh	98	40	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime23	Banshee.mesh	44	66	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Slime24	Banshee.mesh	39	64	0	Banshee	19	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]

@@ -210,7 +210,7 @@ ProtectDungeonTemple	NULL
 
 [Creatures]
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-1	Water	Slime	2	2	0	Slime	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Water	Banshee	2	2	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Knight1	Knight.mesh	0	6	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Knight3	Knight.mesh	8	0	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Knight4	Knight.mesh	6	4	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0

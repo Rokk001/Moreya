@@ -6799,11 +6799,11 @@ ProtectDungeonTemple	NULL
 2	Gnome2	Gnome	192	229	0	Gnome	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Goblin3	Goblin	183	229	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
 5	PitDemon5	PitDemon	210	236	0	PitDemon	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Spider6	Spider	198	231	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Spider6	Ghoul	198	231	0	Ghoul	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	CaveHornet1	CaveHornet	198	231	0	CaveHornet	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Wizard7	Wizard	190	229	0	Wizard	1	0	max	100	0	0	Staff	none	nullSkillType	none	0
-3	TentacleAlbine8	TentacleAlbine	186	229	0	TentacleAlbine	1	0	max	100	0	0	none	none	nullSkillType	none	0
-4	TentacleGreen9	TentacleGreen	203	230	0	TentacleGreen	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	TentacleAlbine8	CrystalGolem	186	229	0	CrystalGolem	1	0	max	100	0	0	none	none	nullSkillType	none	0
+4	TentacleGreen9	Cyclops	203	230	0	Cyclops	1	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Troll10	Troll	209	231	0	Troll	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Troll11	Troll	193	214	0	Troll	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
 1	Knight_c1	Knight	198	233	0	Knight	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
@@ -6817,7 +6817,7 @@ ProtectDungeonTemple	NULL
 1	Kobold_007	Kobold	193	218	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Mage	Wizard	193	213	0	Wizard	1	0	max	100	0	0	Staff	none	nullSkillType	none	0
 1	Wiz	Wizard	193	213	0	Wizard	1	0	max	100	0	0	Staff	none	nullSkillType	none	0
-1	King	NatureMonster	191	216	0	NatureMonster	1	0	max	100	0	0	Roundshield	Staff	nullSkillType	none	0
+1	King	Paladin	191	216	0	Paladin	1	0	max	100	0	0	Roundshield	Staff	nullSkillType	none	0
 1	Knight_005	Knight	229	138	0	Knight	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
 1	Knight_004	Knight	196	200	0	Knight	1	0	max	100	0	0	Longsword	none	nullSkillType	none	0
 1	Knight_006	Knight	199	204	0	Knight	1	0	max	100	0	0	Longsword	Sabre	nullSkillType	none	0
@@ -6828,26 +6828,26 @@ ProtectDungeonTemple	NULL
 1	Dragon_002	Dragon	191	193	0	Dragon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Dragon_003	Dragon	193	204	0	Dragon	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Dragon_004	Dragon	196	214	0	Dragon	5	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Wyvern_001	Wyvern	177	90	0	Wyvern	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Wyvern_002	Wyvern	186	85	0	Wyvern	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Wyvern_003	Wyvern	183	105	0	Wyvern	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Dwarf1_001	Dwarf1	201	192	0	Dwarf1	1	0	max	100	0	0	Roundshield	Sabre	nullSkillType	none	0
+1	Wyvern_001	Werewolf	177	90	0	Werewolf	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Wyvern_002	Werewolf	186	85	0	Werewolf	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Wyvern_003	Werewolf	183	105	0	Werewolf	1	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Dwarf1_001	Hunter	201	192	0	Hunter	1	0	max	100	0	0	Roundshield	Sabre	nullSkillType	none	0
 2	Dwarf2_001	Dwarf2	206	168	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	RunelordDwarf_001	RunelordDwarf	213	157	0	RunelordDwarf	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Dwarf2_002	Dwarf2	214	141	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	RunelordDwarf_002	RunelordDwarf	212	143	0	RunelordDwarf	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	RunelordDwarf_003	RunelordDwarf	213	213	0	RunelordDwarf	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Dwarf2_003	Dwarf2	202	191	0	Dwarf2	1	0	max	100	0	0	none	Longsword	nullSkillType	none	0
-2	Dwarf1_002	Dwarf1	201	192	0	Dwarf1	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
+2	Dwarf1_002	Hunter	201	192	0	Hunter	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
 3	LizardMan_002	Lizardman	206	172	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Kre	Kreatur	215	216	0	Kreatur	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Kre	Minotaur	215	216	0	Minotaur	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Orc_001	Orc	203	199	0	Orc	1	0	max	100	0	0	none	Longsword	nullSkillType	none	0
 2	Orc_002	Orc	207	212	0	Orc	1	0	max	100	0	0	none	Longsword	nullSkillType	none	0
-3	Kreatur_001	Kreatur	155	110	0	Kreatur	1	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Kreatur_002	Kreatur	159	112	0	Kreatur	1	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Kreatur_003	Kreatur	158	103	0	Kreatur	1	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Kreatur_004	Kreatur	156	106	0	Kreatur	1	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Kreatur_005	Kreatur	163	112	0	Kreatur	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Kreatur_001	Minotaur	155	110	0	Minotaur	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Kreatur_002	Minotaur	159	112	0	Minotaur	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Kreatur_003	Minotaur	158	103	0	Minotaur	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Kreatur_004	Minotaur	156	106	0	Minotaur	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Kreatur_005	Minotaur	163	112	0	Minotaur	1	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]

@@ -4708,34 +4708,34 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker3	Kobold.mesh	30	99	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Pack2_1	Orc.mesh	9	10	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Pack2_2	Orc.mesh	18	17	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Pack2_3	Spider.mesh	6	15	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Pack2_3	Ghoul.mesh	6	15	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Pack2_4	Goblin.mesh	14	7	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Pack2_5	Goblin.mesh	4	16	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Pack2_6	Troll.mesh	10	21	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	HunterWorker2_1	Kobold.mesh	8	13	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	HunterWorker2_2	Kobold.mesh	15	17	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Pack3_1	Orc.mesh	61	8	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Pack3_2	Spider.mesh	52	14	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Pack3_3	Spider.mesh	61	7	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Pack3_2	Ghoul.mesh	52	14	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Pack3_3	Ghoul.mesh	61	7	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Pack3_4	Goblin.mesh	51	18	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Pack3_5	Troll.mesh	62	13	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Pack3_6	Rat.mesh	65	11	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Pack3_6	Banshee.mesh	65	11	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	HunterWorker3_1	Kobold.mesh	61	13	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	HunterWorker3_2	Kobold.mesh	55	13	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Pack4_1	Orc.mesh	13	58	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Pack4_2	Goblin.mesh	13	58	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-4	Pack4_3	Spider.mesh	19	59	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+4	Pack4_3	Ghoul.mesh	19	59	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Pack4_4	Troll.mesh	12	56	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Pack4_5	Orc.mesh	18	59	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
-4	Pack4_6	Rat.mesh	9	53	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+4	Pack4_6	Banshee.mesh	9	53	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	HunterWorker4_1	Kobold.mesh	9	57	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 4	HunterWorker4_2	Kobold.mesh	17	59	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Pack5_1	Orc.mesh	53	57	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Pack5_2	Goblin.mesh	57	58	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-5	Pack5_3	Spider.mesh	57	52	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+5	Pack5_3	Ghoul.mesh	57	52	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Pack5_4	Troll.mesh	58	61	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Pack5_5	Goblin.mesh	52	52	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-5	Pack5_6	Rat.mesh	63	56	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+5	Pack5_6	Banshee.mesh	63	56	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	HunterWorker5_1	Kobold.mesh	58	49	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 5	HunterWorker5_2	Kobold.mesh	57	51	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
@@ -4770,8 +4770,8 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 Block	1	CaveHornet
-Block	1	Rat
-Block	1	Roach
+Block	1	Banshee
+Block	1	Witch
 Block	1	Goblin
 Block	1	LizardMan
 Block	1	Orc
@@ -4810,14 +4810,14 @@ Name	denSeen
 Mode	once
 Cond	region	1	Wolfden
 Action	message	1	This is the wolf den, rich in gold and open on every side. Hold it and the hunters lose their middle.
-Action	spawn	1	35	90	1	Orc:3	Troll:3	Spider:3
+Action	spawn	1	35	90	1	Orc:3	Troll:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	westHold
 Mode	once
 Cond	region	1	WestHold
 Action	message	1	You are in the west hold. The hunter has called the pack and his ally in the north-east is already marching to help.
-Action	spawn	3	12	50	1	Orc:3	Troll:3	Goblin:3	Spider:3
+Action	spawn	3	12	50	1	Orc:3	Troll:3	Goblin:3	Ghoul:3
 Action	alliance	3	4	make
 [/Trigger]
 [Trigger]
@@ -4825,7 +4825,7 @@ Name	eastHold
 Mode	once
 Cond	region	1	EastHold
 Action	message	1	You are in the east hold. The hunter in the north-west is sending his pack across the ravine.
-Action	spawn	2	52	50	1	Orc:3	Troll:3	Goblin:3	Spider:3
+Action	spawn	2	52	50	1	Orc:3	Troll:3	Goblin:3	Ghoul:3
 Action	alliance	2	5	make
 [/Trigger]
 [Trigger]
@@ -4850,28 +4850,28 @@ Name	pack1
 Mode	once
 Cond	time	240
 Action	message	1	Hunters are riding out of the north-west.
-Action	spawn	2	35	26	1	Goblin:2	Orc:2	Spider:2
+Action	spawn	2	35	26	1	Goblin:2	Orc:2	Ghoul:2
 [/Trigger]
 [Trigger]
 Name	pack2
 Mode	once
 Cond	time	600
 Action	message	1	A pack is running down from the east hold.
-Action	spawn	5	52	50	1	Orc:2	Goblin:2	Spider:2	Troll:2
+Action	spawn	5	52	50	1	Orc:2	Goblin:2	Ghoul:2	Troll:2
 [/Trigger]
 [Trigger]
 Name	pack3
 Mode	once
 Cond	time	1000
 Action	message	1	The north-east keeper has sent hounds.
-Action	spawn	3	35	26	1	Orc:3	Spider:2	Goblin:2
+Action	spawn	3	35	26	1	Orc:3	Ghoul:2	Goblin:2
 [/Trigger]
 [Trigger]
 Name	pack4
 Mode	once
 Cond	time	1400
 Action	message	1	Wolves are streaming out of the west hold.
-Action	spawn	4	12	50	1	Troll:3	Orc:3	Spider:3
+Action	spawn	4	12	50	1	Troll:3	Orc:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	pack5
@@ -4879,28 +4879,28 @@ Mode	once
 Cond	time	1900
 Action	message	1	Two hunters have joined their packs against you.
 Action	alliance	2	3	make
-Action	spawn	2	22	68	1	Orc:3	Troll:3	Goblin:3	Spider:3
+Action	spawn	2	22	68	1	Orc:3	Troll:3	Goblin:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	pack6
 Mode	once
 Cond	time	2400
 Action	message	1	The packs of the north-east are marching south.
-Action	spawn	3	44	67	1	Troll:3	Orc:3	Orc:3	Spider:3
+Action	spawn	3	44	67	1	Troll:3	Orc:3	Orc:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	pack7
 Mode	once
 Cond	time	3000
 Action	message	1	The east keeper has loosed everything he has.
-Action	spawn	5	52	50	1	Troll:4	Orc:3	Goblin:3	Spider:3	Orc:3
+Action	spawn	5	52	50	1	Troll:4	Orc:3	Goblin:3	Ghoul:3	Orc:3
 [/Trigger]
 [Trigger]
 Name	pack8
 Mode	once
 Cond	time	3700
 Action	message	1	The last hunters are coming for your heart.
-Action	spawn	4	52	50	1	Troll:4	Troll:3	Orc:4	Spider:3	Goblin:3
+Action	spawn	4	52	50	1	Troll:4	Troll:3	Orc:4	Ghoul:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	goalHeartSafe3BeforeHuntersGoneGoal

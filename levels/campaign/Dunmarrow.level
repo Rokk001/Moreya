@@ -3815,15 +3815,15 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker3	Kobold.mesh	66	119	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DuneKeeper1	Goblin.mesh	64	114	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DuneKeeper2	Goblin.mesh	70	112	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DuneKeeper3	Spider.mesh	67	120	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DuneKeeper4	Rat.mesh	66	112	0	Rat	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	DuneKeeper3	Ghoul.mesh	67	120	0	Ghoul	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	DuneKeeper4	Banshee.mesh	66	112	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	YsoldeDunn	Knight.mesh	18	12	0	Knight	5	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DunnGuard1	Knight.mesh	14	14	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DunnGuard2	Elf.mesh	22	12	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DunnGuard3	Monk.mesh	11	11	0	Monk	2	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DunnGuard4	Dwarf2.mesh	24	15	0	Dwarf2	2	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DuneWatch1	Adventurer.mesh	57	42	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
-2	DuneWatch2	Dwarf1.mesh	28	26	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
+2	DuneWatch2	Hunter.mesh	28	26	0	Hunter	2	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DuneWatch3	Adventurer.mesh	60	72	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DuneWatch4	Elf.mesh	20	82	0	Elf	2	0	max	100	0	0	none	none	nullSkillType	none	0
 2	DuneWatch5	Monk.mesh	76	38	0	Monk	2	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -3859,10 +3859,10 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 Block	1	CaveHornet
-Block	1	Rat
-Block	1	Roach
+Block	1	Banshee
+Block	1	Witch
 Block	1	Goblin
-Block	1	LavaSpawn
+Block	1	Butcher
 Block	1	LizardMan
 Block	1	Orc
 Region	SouthDunes	20	102	52	118
@@ -3950,7 +3950,7 @@ Name	sandwave1
 Mode	once
 Cond	time	300
 Action	message	1	A column of riders is coming over the southern dunes.
-Action	spawn	2	40	110	1	Adventurer:2	Dwarf1:2	Elf:2
+Action	spawn	2	40	110	1	Adventurer:2	Hunter:2	Elf:2
 [/Trigger]
 [Trigger]
 Name	sandwave2
@@ -4034,7 +4034,7 @@ Name	oasisHeld
 Mode	once
 Cond	claimed	1	Oasis	40
 Action	message	1	The oasis is ours. A wandering spider has smelled the water and comes to serve you.
-Action	generate	1	Spider:1
+Action	generate	1	Ghoul:1
 [/Trigger]
 
 
