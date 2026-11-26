@@ -38,7 +38,7 @@ probe = r'''
 #include <iostream>
 struct ConfigManager {static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}double getBedStepMaxHeight()const{return STEP_MAX;}};
 enum class GameEntityType {buildingObject,creature};
-namespace EntityAnimation {static const std::string relieve_anim="Relieve";}
+namespace EntityAnimation {static const std::string relieve_anim="Relieve";static const std::string relieve_pit_anim="RelievePit";}
 struct RenderedMovableEntity {
  Ogre::SceneNode* node;std::string mesh="GoblinBed";Ogre::Vector3 pos;float angle=0;
  GameEntityType getObjectType(){return GameEntityType::buildingObject;}

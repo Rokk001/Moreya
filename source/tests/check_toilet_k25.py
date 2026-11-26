@@ -1,9 +1,11 @@
 """Toilet room after INGAME-QS-10 K25: textured stone seats with a hole and a wooden lid, solid seats in rows along the
-walls with a free lane, a seated use of 10 to 30 s in the Relieve clip and the urge values of the toilet plan.
+walls with a free lane, a use of 10 to 30 s on the seat in the RelievePit clip (standing over the hole with half bent
+knees; a skeleton without it plays Relieve) while the floor squat stays Relieve, and the urge values of the toilet plan.
 
 Calls (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
-  python source/tests/check_toilet_k25.py               file checks and the compiled probe of the layout rules (cl)
-  python source/tests/check_toilet_k25.py --no-compile  file checks only; the probe is left to the build
+  python source/tests/check_toilet_k25.py               file checks and the compiled probes of the layout rules and of
+                                                        the seat clip (startSquat, toiletSeatLift, clip fallback) (cl)
+  python source/tests/check_toilet_k25.py --no-compile  file checks only; the probes are left to the build
 """
 import ast
 import math
@@ -168,9 +170,13 @@ assert 'Toilet' not in steppable, 'nobody steps over a seat'
 render = read('source/render/RenderManager.cpp')
 lift = body(render, 'static float toiletSeatLift(Creature* creature)')
 assert 'EntityAnimation::relieve_anim' in lift and 'RoomObjectPath::onToiletSeat(' in lift and 'toiletSeatTop' in lift
+assert 'EntityAnimation::relieve_pit_anim' in lift, 'the seat lift also holds for the RelievePit clip'
 step = body(render, 'void RenderManager::updateCreatureStep(Creature* creature)')
 assert 'toiletSeatLift(creature)' in step and 'std::max(lift, seatLift)' in step
-assert 'if((animation == EntityAnimation::relieve_anim) || (mSteppingCreatures.count(dropCreature) != 0))' in render
+assert ('if((animation == EntityAnimation::relieve_pit_anim) || (animation == EntityAnimation::relieve_anim) ||\n'
+        '           (mSteppingCreatures.count(dropCreature) != 0))') in render
+animation_h = read('source/entities/MovableGameEntity.h')
+assert 'relieve_anim = "Relieve";' in animation_h and 'relieve_pit_anim = "RelievePit";' in animation_h
 
 # 4. The room places the seats by the layout and the use walks onto the seat, sits a random 10 to 30 s and steps off
 room = read('source/rooms/RoomToilet.cpp')
@@ -180,7 +186,7 @@ assert 'room->getSeatStagingPoints(creature, tile).empty()' in body(room, 'Tile*
 use = read('source/creatureaction/CreatureActionUseToilet.cpp')
 squat = body(use, 'void CreatureActionUseToilet::startSquat(bool onSeat, const Ogre::Vector2& facing)')
 for needle in ('"ToiletUseSecondsMin"', '"ToiletUseSecondsMax"', 'Random::Double(0.0, 1.0)', 'ToiletLayout::useTurns(',
-               'ODApplication::turnsPerSecond', 'EntityAnimation::relieve_anim'):
+               'ODApplication::turnsPerSecond', 'EntityAnimation::relieve_anim', 'EntityAnimation::relieve_pit_anim'):
     assert needle in squat, needle
 seat_turn = body(use, 'bool CreatureActionUseToilet::handleSeat(')
 assert 'startSquat(true, facing);' in seat_turn and 'mPhase = Phase::leave;' in seat_turn and 'mStagingPoint' in seat_turn
@@ -301,19 +307,169 @@ int main()
 }
 '''
 
+# 7. The probe of the seat clip, compiled from the production text: startSquat picks RelievePit on a seat and Relieve on
+# the floor, toiletSeatLift lifts both clips onto the seat and no other, and the clip fallback of the renderer turns a
+# missing RelievePit into Relieve and a missing Relieve into Idle
+animation_block = animation_h[animation_h.index('namespace EntityAnimation\n{'):]
+animation_block = animation_block[:animation_block.index('\n};') + 4]
+fallback_start = render.index('    // Handle the case where this entity does not have the requested animation.\n')
+fallback_loop = render[fallback_start:render.index('\n    if (!objectEntity->getSkeleton()->hasAnimation(anim))\n        return;',
+                                                   fallback_start)]
+PIT_PROBE = r'''
+#include "rooms/ToiletLayout.h"
+#include "gamemap/RoomObjectBounds.h"
+#include <cstdio>
+#include <set>
+#include <string>
+#include <vector>
+namespace Ogre
+{
+    struct Vector2 { float x; float y; Vector2(float a, float b) : x(a), y(b) {} };
+    struct Vector3 { float x; float y; float z; Vector3(float a, float b, float c) : x(a), y(b), z(c) {} };
+}
+ANIMATION_BLOCK
+static int failures = 0;
+static void expect(bool ok, const char* what) { if(!ok) { ++failures; std::printf("FAIL %s\n", what); } }
+// The configuration and the helpers startSquat reads
+struct ConfigManager
+{
+    static ConfigManager& getSingleton() { static ConfigManager manager; return manager; }
+    double getDirtConfigDouble(const std::string& name) const
+    { return name == "ToiletUseSecondsMin" ? 10.0 : (name == "ToiletUseSecondsMax" ? 30.0 : 6.0); }
+};
+namespace Random { double Double(double min, double max) { return (min + max) / 2.0; } }
+namespace ODApplication { static const double turnsPerSecond = 1.4; }
+enum class CreatureSound { Relieve };
+enum class GameEntityType { buildingObject, creature };
+struct RenderedMovableEntity
+{
+    GameEntityType mType; std::string mMesh; Ogre::Vector3 mPosition; double mAngle;
+    GameEntityType getObjectType() const { return mType; }
+    const std::string& getMeshName() const { return mMesh; }
+    const Ogre::Vector3& getPosition() const { return mPosition; }
+    double getRotationAngle() const { return mAngle; }
+};
+struct GameMap
+{
+    std::vector<RenderedMovableEntity*> mObjects;
+    const std::vector<RenderedMovableEntity*>& getRenderedMovableEntities() const { return mObjects; }
+};
+// The creature records the clip it is told to play
+struct Creature
+{
+    std::string mClip; std::string mClearClip; bool mMoving; bool mAlive; Ogre::Vector3 mPosition; GameMap* mMap;
+    int mSounds;
+    Creature() : mMoving(false), mAlive(true), mPosition(0.0f, 0.0f, 0.0f), mMap(nullptr), mSounds(0) {}
+    bool isMoving() const { return mMoving; }
+    bool isAlive() const { return mAlive; }
+    void clearDestinations(const std::string& clip, bool, bool) { mClearClip = clip; mMoving = false; }
+    void setAnimationState(const std::string& clip, bool, const Ogre::Vector3&, bool) { mClip = clip; }
+    void fireCreatureSound(CreatureSound) { ++mSounds; }
+    const std::string& getAnimationStateName() const { return mClip; }
+    const Ogre::Vector3& getPosition() const { return mPosition; }
+    GameMap* getGameMap() const { return mMap; }
+};
+class CreatureActionUseToilet
+{
+public:
+    enum class Phase { approach, mount, squat, leave };
+    explicit CreatureActionUseToilet(Creature& creature) : mCreature(creature), mPhase(Phase::approach), mTurnsLeft(0) {}
+    void startSquat(bool onSeat, const Ogre::Vector2& facing);
+    Creature& mCreature; Phase mPhase; int32_t mTurnsLeft;
+};
+SQUAT_BODY
+LIFT_BODY
+// The skeleton of the creature, only its clip names
+struct Skeleton
+{
+    std::set<std::string> mClips;
+    bool hasAnimation(const std::string& clip) const { return mClips.count(clip) != 0; }
+};
+struct Entity
+{
+    Skeleton mSkeleton;
+    const Skeleton* getSkeleton() const { return &mSkeleton; }
+};
+// The clip the renderer plays for a requested clip on a skeleton with these clips; empty when it plays nothing
+static std::string shownClip(const std::set<std::string>& clips, const std::string& requested)
+{
+    Entity entity; entity.mSkeleton.mClips = clips; const Entity* objectEntity = &entity;
+    std::string anim = requested;
+FALLBACK_LOOP
+    if (!objectEntity->getSkeleton()->hasAnimation(anim))
+        return std::string();
+    return anim;
+}
+int main()
+{
+    // startSquat: on a seat RelievePit (also as the clip of the stopped walk), on the floor Relieve
+    Creature seated; seated.mMoving = true;
+    CreatureActionUseToilet onSeat(seated);
+    onSeat.startSquat(true, Ogre::Vector2(0.0f, 1.0f));
+    expect(seated.mClip == "RelievePit" && seated.mClearClip == "RelievePit", "a seat plays RelievePit");
+    expect(onSeat.mPhase == CreatureActionUseToilet::Phase::squat && onSeat.mTurnsLeft == 28 && seated.mSounds == 1,
+        "the seat use keeps its random 10 to 30 s and its sound");
+    Creature floor; floor.mMoving = true;
+    CreatureActionUseToilet onFloor(floor);
+    onFloor.startSquat(false, Ogre::Vector2(1.0f, 0.0f));
+    expect(floor.mClip == "Relieve" && floor.mClearClip == "Relieve", "the floor plays Relieve");
+    expect(onFloor.mTurnsLeft == 6 && floor.mSounds == 1, "the floor squat keeps ToiletUseTurns and its sound");
+
+    // toiletSeatLift: the seat top for RelievePit and Relieve on the seat; nothing for another clip, off the seat,
+    // while walking or when dead
+    GameMap map;
+    RenderedMovableEntity seat = { GameEntityType::buildingObject, RoomObjectPath::TOILET_SEAT_MESH, Ogre::Vector3(5.0f, 7.0f, 0.0f), 0.0 };
+    RenderedMovableEntity chair = { GameEntityType::buildingObject, "Chair", Ogre::Vector3(9.0f, 7.0f, 0.0f), 0.0 };
+    map.mObjects.push_back(&chair);
+    map.mObjects.push_back(&seat);
+    Creature user; user.mMap = &map; user.mPosition = Ogre::Vector3(5.0f, 7.0f + RoomObjectPath::toiletSeatPlaceY, 0.0f);
+    user.mClip = "RelievePit";
+    expect(toiletSeatLift(&user) == RoomObjectPath::toiletSeatTop, "RelievePit on the seat is drawn on the seat top");
+    user.mClip = "Relieve";
+    expect(toiletSeatLift(&user) == RoomObjectPath::toiletSeatTop, "Relieve on the seat is drawn on the seat top");
+    user.mClip = "Idle";
+    expect(toiletSeatLift(&user) == 0.0f, "another clip on the seat is not lifted");
+    user.mClip = "RelievePit"; user.mMoving = true;
+    expect(toiletSeatLift(&user) == 0.0f, "walking onto the seat is not lifted");
+    user.mMoving = false; user.mAlive = false;
+    expect(toiletSeatLift(&user) == 0.0f, "a dead creature is not lifted");
+    user.mAlive = true; user.mPosition = Ogre::Vector3(5.0f, 6.4f, 0.0f);
+    expect(toiletSeatLift(&user) == 0.0f, "RelievePit off the seat is not lifted");
+
+    // The clip fallback of the renderer
+    std::set<std::string> all; all.insert("Idle"); all.insert("Relieve"); all.insert("RelievePit");
+    std::set<std::string> squatOnly; squatOnly.insert("Idle"); squatOnly.insert("Relieve");
+    std::set<std::string> idleOnly; idleOnly.insert("Idle");
+    expect(shownClip(all, "RelievePit") == "RelievePit", "a skeleton with RelievePit plays it");
+    expect(shownClip(squatOnly, "RelievePit") == "Relieve", "a skeleton without RelievePit plays Relieve");
+    expect(shownClip(idleOnly, "RelievePit") == "Idle", "a skeleton without both plays Idle");
+    expect(shownClip(all, "Relieve") == "Relieve" && shownClip(idleOnly, "Relieve") == "Idle", "the floor squat as before");
+    std::printf("PIT CHECKS FAILURES=%d\n", failures);
+    return failures == 0 ? 0 : 1;
+}
+'''.replace('ANIMATION_BLOCK', animation_block).replace('FALLBACK_LOOP', fallback_loop).replace(
+    'SQUAT_BODY', squat).replace('LIFT_BODY', lift)
+
 if '--no-compile' not in sys.argv:
     vcvars = Path('C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Auxiliary/Build/vcvars64.bat')
     with tempfile.TemporaryDirectory(prefix='toilet_k25_probe_') as directory:
         directory = Path(directory)
         cpp = directory / 'probe.cpp'
         cpp.write_text(PROBE, encoding='utf-8')
+        pit_cpp = directory / 'pit_probe.cpp'
+        pit_cpp.write_text(PIT_PROBE, encoding='utf-8')
         batch = directory / 'run.cmd'
+        # Both probes are compiled and run with one setup of the compiler
         batch.write_text(
             f'@echo off\ncall "{vcvars}" >nul\n'
             f'cl /nologo /EHsc /std:c++14 /I"{ROOT / "source"}" "{cpp}" /Fe:"{directory / "probe.exe"}" '
             f'/Fo:"{directory / "probe.obj"}"\n'
             'if errorlevel 1 exit /b 1\n'
-            f'"{directory / "probe.exe"}"\nexit /b %errorlevel%\n', encoding='utf-8')
+            f'cl /nologo /EHsc /std:c++14 /I"{ROOT / "source"}" "{pit_cpp}" /Fe:"{directory / "pit_probe.exe"}" '
+            f'/Fo:"{directory / "pit_probe.obj"}"\n'
+            'if errorlevel 1 exit /b 1\n'
+            f'"{directory / "probe.exe"}"\nif errorlevel 1 exit /b 1\n'
+            f'"{directory / "pit_probe.exe"}"\nexit /b %errorlevel%\n', encoding='utf-8')
         subprocess.run(['cmd', '/d', '/c', str(batch)], cwd=directory, check=True)
 else:
     print('toilet layout probe deferred explicitly (--no-compile)')
