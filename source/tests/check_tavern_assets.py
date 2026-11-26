@@ -89,6 +89,9 @@ SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitD
 VISITING_SKELETONS = 31
 # The clips of the innkeeper figure
 INNKEEPER_CLIPS = ['Idle', 'Pour', 'Cheer']
+# The material of the approved CS10a innkeeper figure, its script and texture folder (content package creatures)
+INNKEEPER_MATERIALS = ('InnkeeperMeshy',)
+FIGURE_MATERIALS = {'InnkeeperMeshy': ('materials/scripts/Creatures/InnkeeperMeshy.material', 'materials/textures/')}
 # Size of the object textures, of the painted icon sources and of the bird atlas; wood, iron and stone were repainted
 # larger for INGAME-QS-11 K8 (the table maps its whole stone top onto one texture)
 OBJECT_TEXTURE_SIZE = 128
@@ -197,7 +200,7 @@ if ROOM_ASSETS:
         assert resolve(root, source).is_file(), source + ' missing'
     mesh_material_names = {'TavernCounter': ('TavernCounterWood', 'TavernRail', 'TavernSign'), 'TavernKeg': ('TavernKegWood', 'TavernIron', 'TavernBrass'),
                            'TavernTable': ('TavernStone', 'TavernTableWood'), 'TavernMug': ('TavernWood', 'TavernFoam'),
-                           'Innkeeper': ('TavernCloth', 'TavernHood', 'TavernSkin'), 'Vomit': ('TavernVomit',)}
+                           'Innkeeper': ('InnkeeperMeshy',), 'Vomit': ('TavernVomit',)}
     for name, used in mesh_material_names.items():
         data = (room_file('models/' + name + '.mesh')).read_bytes()
         assert any(m.encode('ascii') in data for m in used), 'models/' + name + '.mesh uses none of ' + ', '.join(used)
@@ -209,8 +212,10 @@ if ROOM_ASSETS:
     assert not re.search(rb'(?<![A-Za-z])TavernWood(?![A-Za-z])', counter), 'models/TavernCounter.mesh must not use the striped TavernWood'
     rail = re.search(r'^material TavernRail\b.*?^}', materials, re.M | re.S)
     assert rail and re.search(r'^\s*emissive\s+0*\.0*[1-9]', rail.group(0), re.M), 'TavernRail needs its self-light so the rail reads from the room camera'
+    # Since CS10a the innkeeper is the approved Meshy figure with one material and one colour texture (before: the
+    # tavern materials TavernHood, TavernSkin and TavernCloth)
     innkeeper = (room_file('models/Innkeeper.mesh')).read_bytes()
-    for used in ('TavernHood', 'TavernSkin', 'TavernCloth'):
+    for used in INNKEEPER_MATERIALS:
         assert used.encode('ascii') in innkeeper, 'models/Innkeeper.mesh needs the material ' + used
     assert b'Innkeeper.skeleton' in (room_file('models/Innkeeper.mesh')).read_bytes(), 'the innkeeper mesh needs its skeleton'
     innkeeper_skeleton = (room_file('models/Innkeeper.skeleton')).read_bytes()
@@ -426,9 +431,11 @@ SAMPLES = 40000
 LUMA = np.array([0.299, 0.587, 0.114])
 
 
-# Returns the texture names of a material (colour first, then the normal map) from the material scripts.
+# Returns the texture names of a material (colour first, then the normal map) from the material scripts (the figure
+# materials of FIGURE_MATERIALS from their own script).
 def material_textures(name):
-    block = re.search(r'^material ' + name + r'\b.*?^}', materials, re.M | re.S)
+    text = room_file(FIGURE_MATERIALS[name][0]).read_text(encoding='utf-8') if name in FIGURE_MATERIALS else materials
+    block = re.search(r'^material ' + name + r'\b.*?^}', text, re.M | re.S)
     assert block, 'material ' + name + ' missing'
     return re.findall(r'^\s*texture\s+(\S+)', block.group(0), re.M)
 
@@ -458,7 +465,8 @@ def mesh_geometry(name, work):
 
 
 # Returns the texels a surface shows: SAMPLES points spread evenly over the area of its faces (seeded, nearest texel).
-def surface_texels(positions, uvs, faces, texture):
+# The texture lies in the tavern texture folder, or in the folder of its figure material.
+def surface_texels(positions, uvs, faces, texture, folder='materials/textures/tavern/'):
     a, b, c = positions[faces[:, 0]], positions[faces[:, 1]], positions[faces[:, 2]]
     area = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
     rng = np.random.default_rng(1)
@@ -466,7 +474,7 @@ def surface_texels(positions, uvs, faces, texture):
     r1, r2 = np.sqrt(rng.random(SAMPLES)), rng.random(SAMPLES)
     w = np.stack([1 - r1, r1 * (1 - r2), r1 * r2], 1)
     uv = uvs[faces[pick, 0]] * w[:, :1] + uvs[faces[pick, 1]] * w[:, 1:2] + uvs[faces[pick, 2]] * w[:, 2:]
-    image = np.asarray(Image.open(str(room_file('materials/textures/tavern/' + texture))).convert('RGB')).astype(float)
+    image = np.asarray(Image.open(str(room_file(folder + texture))).convert('RGB')).astype(float)
     height, width = image.shape[:2]
     return image[(np.mod(uv[:, 1], 1.0) * height).astype(int) % height, (np.mod(uv[:, 0], 1.0) * width).astype(int) % width]
 
@@ -480,7 +488,8 @@ with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
         positions, uvs, faces = mesh_geometry(model, work)
         for material, rows in faces.items():
             textures = material_textures(material)
-            texels = surface_texels(positions, uvs, rows, textures[0])
+            texels = surface_texels(positions, uvs, rows, textures[0],
+                                    FIGURE_MATERIALS.get(material, (None, 'materials/textures/tavern/'))[1])
             luma = texels @ LUMA
             top = texels.max(1)
             saturation = np.where(top > 0, (top - texels.min(1)) / np.maximum(top, 1e-6), 0.0).mean()
@@ -506,7 +515,7 @@ with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
             if material in NORMAL_MAPPED:
                 assert len(textures) >= 2 and room_file('materials/textures/tavern/' + textures[1]).is_file(), where + ' needs its normal map'
             seen[material] = shown
-for material in ('TavernCounterWood', 'TavernRail', 'TavernSign', 'TavernSkin', 'TavernHood', 'TavernCloth', 'TavernTableWood',
+for material in ('TavernCounterWood', 'TavernRail', 'TavernSign', 'InnkeeperMeshy', 'TavernTableWood',
                  'TavernKegWood', 'TavernWood', 'TavernStone', 'TavernIron', 'TavernBrass', 'TavernFoam'):
     assert material in seen, 'no tavern model uses ' + material
 print('ODP_TEST_PHASE {"name":"game-light","seconds":%.2f}' % (time.monotonic() - light_start))

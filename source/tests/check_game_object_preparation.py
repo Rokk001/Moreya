@@ -216,7 +216,7 @@ def probe(render_manager):
         batch = directory / 'run.cmd'
         batch.write_text(
             f'@echo off\ncall "{vcvars}" >nul\n'
-            f'cl /nologo /EHsc /std:c++14 /I"{ROOT / 'source'}" "{cpp}" /Fe:"{directory / "probe.exe"}" '
+            f'cl /nologo /EHsc /std:c++14 /I"{ROOT / "source"}" "{cpp}" /Fe:"{directory / "probe.exe"}" '
             f'/Fo:"{directory / "probe.obj"}"\n'
             'if errorlevel 1 exit /b 1\n'
             f'"{directory / "probe.exe"}" "{expected}"\nexit /b %errorlevel%\n',

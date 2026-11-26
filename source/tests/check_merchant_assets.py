@@ -643,7 +643,11 @@ def check_legacy_figure():
 # look is pinned by the byte-exact atlases and its geometry, skinning, own node position and motions by the exact native
 # contract (fixed counts, hashes, clips, arm swing, clasped hands, visible coin, opaque hands). The look contract above
 # belongs to the variant-1 texture layout and runs only for a figure with that layout; the native contract always runs.
-if b'MerchantApproved' in room_file('models/Merchant.mesh').read_bytes():
+# Since CS10a (2026-11-26) the merchant is the approved Meshy figure (one material MerchantMeshy): the furniture part
+# below runs for it as well, and merchant_meshy_asset_contract.py takes over the native contract, formally adapted to
+# its single material and its rig.
+MESHY_FIGURE = b'MerchantMeshy' in room_file('models/Merchant.mesh').read_bytes()
+if MESHY_FIGURE or b'MerchantApproved' in room_file('models/Merchant.mesh').read_bytes():
     credits = room_packages.credits_text(root)
     patterns = [re.split(r'\s{2,}|\t', line.strip())[0] for line in credits.splitlines() if line.strip()]
     for texture in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares', 'MerchantLantern'):
@@ -659,8 +663,12 @@ if b'MerchantApproved' in room_file('models/Merchant.mesh').read_bytes():
     assert value <= MAX_CLOTH_LUMINANCE, 'MerchantTableCloth.png is a light beige cloth (mean %.0f)' % value
 else:
     check_legacy_figure()
-from merchant_approved_asset_contract import verify_merchant_contract
-verify_merchant_contract(root, work)
+if MESHY_FIGURE:
+    from merchant_meshy_asset_contract import verify_meshy_merchant_contract
+    verify_meshy_merchant_contract(root, work)
+else:
+    from merchant_approved_asset_contract import verify_merchant_contract
+    verify_merchant_contract(root, work)
 
 # 9. Furniture bounds equal RoomObjectBounds.h
 for name in FURNITURE:
