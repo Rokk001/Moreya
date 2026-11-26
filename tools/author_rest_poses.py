@@ -78,11 +78,26 @@ def influence_weight(influence):
     return influence[1]
 
 
+# Leg chains (top to tip) of the shared 24-bone humanoid rig of the Meshy figures, for figures whose rig table still
+# names the bones of their former skeleton.
+MESHY_FEET = {'feet': [{'units': [{'chain': ['LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase']}]},
+                       {'units': [{'chain': ['RightUpLeg', 'RightLeg', 'RightFoot', 'RightToeBase']}]}]}
+
+
 # Measure final visible sole clearance independently of the IK solver's earlier effector residual.
 def sole_lift(skeleton, original, posed, weights, height, name):
+    """Largest lift of the visible sole vertices above their rest height, relative to the figure height (None for a
+    figure without feet in the rig tables). A rig table that names bones the skeleton does not have is replaced by the
+    leg chains of the Meshy rig when the skeleton has those; any other mismatch stops the check."""
     config = RIGS.get(name)
     if config is None:
         return None
+    named = {bone for foot in config['feet'] for unit in foot['units'] for bone in unit['chain']}
+    named |= {bone for foot in config['feet'] for vertex in foot.get('sole', []) for bone in vertex['w']}
+    if not named <= set(skeleton.idx):
+        meshy = {bone for foot in MESHY_FEET['feet'] for unit in foot['units'] for bone in unit['chain']}
+        assert meshy <= set(skeleton.idx), (name, 'rig table names missing bones', sorted(named - set(skeleton.idx)))
+        config = MESHY_FEET
     worst = 0.0
     for foot in config['feet']:
         bones = {skeleton.idx[bone] for unit in foot['units'] for bone in unit['chain']}
