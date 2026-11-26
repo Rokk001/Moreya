@@ -108,7 +108,8 @@ def vorbis_format(path):
     return channels, rate
 
 
-# Returns the creature types of creatures.cfg: name -> mesh name
+# Returns the creature types of creatures.cfg: name -> mesh name. Without the content a type whose MeshName row is an
+# own row of the content (Dwarf1, Dragon) is left out; with the content the count of 35 types is asserted.
 def creature_types():
     types = {}
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
@@ -117,7 +118,7 @@ def creature_types():
             words = line.split()
             if len(words) >= 2 and not words[0].startswith('#'):
                 fields.setdefault(words[0], words[1])
-        if 'Name' in fields:
+        if 'Name' in fields and 'MeshName' in fields:
             types[fields['Name']] = fields['MeshName']
     return types
 
@@ -282,7 +283,8 @@ if present('the bath clips of the creature skeletons', sorted(set('models/' + me
         assert found, mesh + ' has no skeleton'
         skeletons[name] = found[0].decode('ascii') + '.skeleton'
     unique_skeletons = sorted(set(skeletons.values()))
-    assert len(unique_skeletons) == 32, 'the 35 types use 32 skeletons, found ' + str(len(unique_skeletons))
+    # 35 since every figure of the creatures package has its own skeleton (counted on the branch; was 32)
+    assert len(unique_skeletons) == 35, 'the 35 types use 35 skeletons, found ' + str(len(unique_skeletons))
     for skeleton in unique_skeletons:
         data = (room_file('models/' + skeleton)).read_bytes()
         for clip in BATH_CLIPS:
@@ -321,6 +323,11 @@ for path in files:
     # The rows of the spa package and of its sources stand in the CREDITS of the content repository
     if room_packages.is_missing_packaged(root, path) or (not ROOM_ASSETS and path.startswith('assets-src/rooms/spa/Spa')) or \
             (not ROOM_ASSETS and path == 'assets-src/rooms/spa/PoolAttendant.blend'):
+        continue
+    # The pool attendant figure lies in the creatures content package; its rows stand in the CREDITS of the content
+    # repository
+    if path in ('models/PoolAttendant.mesh', 'models/PoolAttendant.skeleton') and not content_packages.has_content(root):
+        content_packages.unchecked('check_spa_assets', ['the CREDITS row of ' + path])
         continue
     assert credited(path), 'CREDITS has no row for ' + path
 assert not ROOM_ASSETS or ('particles/Spa.particle (SpaSteam)' in credits and 'particles/Spa.particle (SpaMudSplash)' in credits)

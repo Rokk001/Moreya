@@ -81,9 +81,10 @@ if not missing_content:
     high = mesh['bounds'][3:6]
     assert high[2] - low[2] > 1.2, 'a standing figure about 1.35 tall'
     assert mesh['skeleton'] == 'Ghost.skeleton'
-    # The hooded body stands above the floor in front (y < 0), the torn hem trails behind it
+    # The hooded body stands above the floor in front (y < 0), the torn hem trails behind it. The lowest front vertex
+    # of the creatures package ghost is at 0.089 (0.1 on the former model).
     front = [p for p in mesh['positions'] if p[1] < 0.0]
-    assert min(p[2] for p in front) > 0.1 and max(p[2] for p in front) > 1.1, 'an upright body, not a heap'
+    assert min(p[2] for p in front) > 0.08 and max(p[2] for p in front) > 1.1, 'an upright body, not a heap'
     spec = importlib.util.spec_from_file_location('ghost_chunks', repo / 'tools/blender-assets/splice_animation_chunks.py')
     chunks_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(chunks_module)

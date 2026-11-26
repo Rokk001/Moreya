@@ -15,7 +15,7 @@ What is checked
               the ambience entries name them; scripts/check_sound_sources.py is green
   clips       Drink, Slap, ArmWrestle, Dice, KnockedOut, GetUp, Stagger, Vomit and Hangover in every skeleton a creature
               type uses (the clip names are listed once, the client asks for them in EntityAnimation)
-  seat clips  Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped once in each of the 30 skeletons
+  seat clips  Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped once in each of the 31 skeletons
               of the types that visit the tavern (their poses are measured by check_tavern_seat_clips.py)
   credits     every file above has a CREDITS row, every changed skeleton has a row for its new clips
   game light  (INGAME-QS-11 K8, "alles nur noch schwarz") every texture the materials of the six tavern models use, sampled
@@ -86,7 +86,7 @@ def missing_content(relative):
 TAVERN_CLIPS = ['Drink', 'Slap', 'ArmWrestle', 'Dice', 'KnockedOut', 'GetUp', 'Stagger', 'Vomit', 'Hangover']
 # The seven seated clips of every skeleton of a type that visits the tavern, and the number of those skeletons
 SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitDice', 'SitSlumped']
-VISITING_SKELETONS = 30
+VISITING_SKELETONS = 31
 # The clips of the innkeeper figure
 INNKEEPER_CLIPS = ['Idle', 'Pour', 'Cheer']
 # Size of the object textures, of the painted icon sources and of the bird atlas; wood, iron and stone were repainted
@@ -300,7 +300,7 @@ if content_packages.has_content(root):
         assert found, mesh + ' has no skeleton'
         skeletons[name] = found[0].decode('ascii') + '.skeleton'
     unique_skeletons = sorted(set(skeletons.values()))
-    assert len(unique_skeletons) == 32, 'the 35 types use 32 skeletons, found ' + str(len(unique_skeletons))
+    assert len(unique_skeletons) == 35, 'the 35 types use 35 skeletons, found ' + str(len(unique_skeletons))
     for skeleton in unique_skeletons:
         data = (room_file('models/' + skeleton)).read_bytes()
         for clip in TAVERN_CLIPS:
@@ -321,7 +321,7 @@ if content_packages.has_content(root):
         tavern_line = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
         if name_field and tavern_line and (float(tavern_line.group(1)) > 0.0 or float(tavern_line.group(2)) > 0.0):
             visiting.add(skeletons[name_field.group(1)])
-    assert len(visiting) == VISITING_SKELETONS, 'the types that visit the tavern use 30 skeletons, found ' + str(len(visiting))
+    assert len(visiting) == VISITING_SKELETONS, 'the types that visit the tavern use 31 skeletons, found ' + str(len(visiting))
     for skeleton in sorted(visiting):
         data = (room_file('models/' + skeleton)).read_bytes()
         for clip in SEAT_CLIPS:

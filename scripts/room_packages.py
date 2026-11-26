@@ -38,7 +38,8 @@ ROOM_NAMES = tuple(room[0] for room in ROOMS)
 
 
 #: The files of every room package besides its Package.cfg, at their relative paths, fixed for this branch (the inventory
-#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 323 files
+#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 315 files (323 before the meshes and
+#: skeletons of the merchant, innkeeper, shaman and pool attendant moved into the creatures content package)
 PACKAGED_ASSETS = {
     'GuardRoom': (
         'materials/scripts/Dojo.material', 'materials/textures/Dojo.png', 'materials/textures/DojoNormal.png',
@@ -82,7 +83,7 @@ PACKAGED_ASSETS = {
         'materials/textures/MerchantLinenApprovedColor.png', 'materials/textures/MerchantLinenApprovedNormal.png',
         'materials/textures/MerchantRobeApprovedColor.png', 'materials/textures/MerchantRobeApprovedNormal.png',
         'materials/textures/MerchantTableCloth.png', 'materials/textures/MerchantTableWood.png',
-        'materials/textures/MerchantWares.png', 'models/Merchant.mesh', 'models/Merchant.skeleton',
+        'materials/textures/MerchantWares.png',
         'models/MerchantShelf.mesh', 'models/SalesTable.mesh', 'sounds/Spatial/Rooms/Merchant/Deal/FxDeal01.ogg',
         'sounds/Spatial/Rooms/Merchant/Giggle/FxGiggle01.ogg', 'sounds/Spatial/Rooms/Merchant/Haggle/FxHaggle01.ogg',
     ),
@@ -140,7 +141,7 @@ PACKAGED_ASSETS = {
         'materials/textures/tavern/TavernStoneNormal.png', 'materials/textures/tavern/TavernTableWood.png',
         'materials/textures/tavern/TavernTableWoodNormal.png', 'materials/textures/tavern/TavernWall.png',
         'materials/textures/tavern/TavernWallNormal.png', 'materials/textures/tavern/TavernWood.png',
-        'materials/textures/tavern/TavernWoodNormal.png', 'models/Innkeeper.mesh', 'models/Innkeeper.skeleton',
+        'materials/textures/tavern/TavernWoodNormal.png',
         'models/TavernCounter.mesh', 'models/TavernKeg.mesh', 'models/TavernStool.mesh',
         'models/TavernTable.mesh', 'particles/Tavern.particle', 'sounds/Rooms/Tavern/Clink.ogg',
         'sounds/Rooms/Tavern/Murmur.ogg', 'sounds/Rooms/Tavern/Pour.ogg',
@@ -157,7 +158,7 @@ PACKAGED_ASSETS = {
         'materials/textures/InfirmaryObjectSkin.png', 'materials/textures/InfirmaryObjectStone.png',
         'materials/textures/InfirmaryObjectStraw.png', 'materials/textures/InfirmaryObjectWood.png',
         'models/HerbShelf.mesh', 'models/InfirmaryCotLarge.mesh', 'models/InfirmaryCotMedium.mesh',
-        'models/InfirmaryCotSmall.mesh', 'models/InfirmaryShaman.mesh', 'models/InfirmaryShaman.skeleton',
+        'models/InfirmaryCotSmall.mesh',
         'models/InstrumentTable.mesh', 'models/MedicineCabinet.mesh', 'models/WashBasin.mesh',
         'particles/Infirmary.particle', 'sounds/Rooms/Infirmary/Admit.ogg', 'sounds/Rooms/Infirmary/Chant.ogg',
         'sounds/Rooms/Infirmary/Discharge.ogg', 'sounds/Rooms/Infirmary/Rattle.ogg',
@@ -208,7 +209,7 @@ PACKAGED_ASSETS = {
         'materials/textures/SpaAttendantTowel.png', 'materials/textures/SpaChairWood.png',
         'materials/textures/SpaFloor.png', 'materials/textures/SpaFloorNormal.png',
         'materials/textures/SpaLifebuoy.png', 'materials/textures/SpaMetalWorn.png', 'materials/textures/SpaMud.png',
-        'materials/textures/SpaMudBubble.png', 'models/PoolAttendant.mesh', 'models/PoolAttendant.skeleton',
+        'materials/textures/SpaMudBubble.png',
         'models/SpaChair.mesh', 'models/SpaMudPool.mesh', 'models/SpaPoolRim.mesh', 'models/SpaSpringboard.mesh',
         'particles/Spa.particle', 'sounds/Spatial/Rooms/Spa/Bubble/Bubble.ogg',
         'sounds/Spatial/Rooms/Spa/Splash/Splash.ogg', 'sounds/Spatial/Rooms/Spa/Whistle/Whistle.ogg',

@@ -42,12 +42,15 @@ EXPECTED_TYPES.update({name: ('hammer', 2) for name in ('T2HammerGood', 'T3Hamme
 EXPECTED_TYPES['HandAxe'] = ('axe', 1)
 EXPECTED_TYPES.update({name: ('shield', 1) for name in ('RustyShield', 'Roundshield', 'BasicShield')})
 EXPECTED_TYPES.update({f'T{tier}Shield{side}': ('shield', 1) for tier in (2, 3, 4) for side in ('Good', 'Evil')})
+# The skeleton file of each armed creature class (the skeleton of its MeshName in creatures.cfg; the class Dwarf1 uses
+# Jaeger.mesh) and the bone that holds its Weapon_R mount: the right hand bone RightHand of the 24-bone humanoid rig of
+# the content package creatures, the same for all twelve figures
 PARENTS = {
-    'Orc': ('Orc', 'hand_r'), 'Troll': ('Troll', 'arm.R'), 'Cultist': ('Cultist', 'hand.R'),
-    'Gnome': ('Gnome', 'hand_r'), 'Adventurer': ('Adventurer', 'Hand_R'),
-    'Dwarf1': ('Dwarf1', 'hand_r'), 'Dwarf2': ('Dwarf2', 'hand_r'), 'Wizard': ('Wizard', 'hand_r'),
-    'LizardMan': ('Lizardman', 'Hand_R'), 'Skeleton': ('skeleton', 'itemRightHand'),
-    'Lich': ('lich', 'itemRightHand'), 'PitDemon': ('PitDemon', 'Hand_R'),
+    'Orc': ('Orc', 'RightHand'), 'Troll': ('Troll', 'RightHand'), 'Cultist': ('Cultist', 'RightHand'),
+    'Gnome': ('Gnome', 'RightHand'), 'Adventurer': ('Adventurer', 'RightHand'),
+    'Dwarf1': ('Jaeger', 'RightHand'), 'Dwarf2': ('Dwarf2', 'RightHand'), 'Wizard': ('Wizard', 'RightHand'),
+    'LizardMan': ('Lizardman', 'RightHand'), 'Skeleton': ('skeleton', 'RightHand'),
+    'Lich': ('lich', 'RightHand'), 'PitDemon': ('PitDemon', 'RightHand'),
 }
 NEW_WEAPONS = {'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1, 'Wand': 2}
 

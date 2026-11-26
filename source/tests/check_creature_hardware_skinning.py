@@ -42,10 +42,20 @@ assert 'uniform    mat4 lightMatrix' in vert and 'lightMatrix * vec4(P, 1.0)' in
 
 materials = content_packages.data_glob(repo, 'materials/scripts/Creatures', '*.material')
 assert len(materials) >= 33
+# Material scripts of the Creatures folder that belong to a static prop without a skeleton (the content package
+# creatures holds the skull decoration beside the creature figures): such a material has no skinning program, and the
+# check of the meshes below proves that no skinned mesh uses it; fixed for this branch (1 script)
+STATIC_PROP_MATERIALS = {'SkullMeshy.material': ('SkullMeshy', 'Skull.mesh')}
+static_prop_material_names = set()
 creature_material_names = set()
 for path in materials:
     text = path.read_text(encoding='utf-8')
     names = re.findall(r'^material\s+(\S+)', text, re.M)
+    if path.name in STATIC_PROP_MATERIALS:
+        assert names == [STATIC_PROP_MATERIALS[path.name][0]], (path.name, names)
+        assert 'vertex_program' not in text and 'shadow_caster_material' not in text, path.name
+        static_prop_material_names.update(names)
+        continue
     creature_material_names.update(names)
     programs = re.findall(r'vertex_program\s+(\S+)\s+glsl\s*\{(.*?)\n\s*\}\s*\n', text, re.S)
     assert programs, path.name
@@ -108,9 +118,14 @@ def submesh_materials(path):
 
 
 checked = 0
+static_props = 0
 meshes = content_packages.data_glob(repo, 'models', '*.mesh')
 for mesh in meshes:
     skeletal, mats = submesh_materials(mesh)
+    # a static prop material is never used by a skinned mesh, and its prop mesh carries no skeleton
+    if any(m in static_prop_material_names for m in mats):
+        assert not skeletal, '%s is skinned but uses the static prop material %s' % (mesh.name, mats)
+        static_props += 1
     if not skeletal or not any(m in creature_material_names for m in mats):
         continue
     checked += 1
@@ -119,7 +134,13 @@ for mesh in meshes:
         assert others == ['ReflMetal'], (mesh.name, others)
     else:
         assert not others, '%s has sub entity materials without hardware skinning: %s' % (mesh.name, others)
-assert checked >= 30, checked
+# most skinned creature meshes lie in the content package creatures: without the content only the public ones are
+# checked one by one above and their number is named as not checked
+if HAS_CONTENT:
+    assert checked >= 30, checked
+else:
+    content_packages.unchecked('check_creature_hardware_skinning', ['at least 30 skinned creature meshes (%d public)' % checked])
+assert static_props == len(static_prop_material_names), (static_props, sorted(static_prop_material_names))
 
 # The bone matrices of the largest skeleton must fit in the uniform array (3 vec4 per bone, 1 index per used bone)
 for skeleton in content_packages.data_glob(repo, 'models', '*.skeleton'):

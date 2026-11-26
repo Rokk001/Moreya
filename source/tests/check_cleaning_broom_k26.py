@@ -31,8 +31,8 @@ Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 328
 44 clips in Kobold.skeleton and 53 in Dwarf1.skeleton, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
 The probe compiles with cl, so it runs in the compile phase of the integration; `--no-compile` runs the other parts.
 Without --assets the models, materials and textures are read from the public tree or the content packages
-(scripts/content_packages.py); without the content the broom (core-models) is named as not checked and the rigs are
-checked without it.
+(scripts/content_packages.py); without the content the broom (core-models) and the worker rigs (creatures) are named
+as not checked.
 
 Call (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
     python source/tests/check_cleaning_broom_k26.py [--no-compile] [--assets <folder with models/ and materials/>]
@@ -291,6 +291,13 @@ rig_info = {}
 for rig in ('Kobold', 'Dwarf1'):
     skeleton_root = convert(rig + '.skeleton')
     mesh_root = convert(rig + '.mesh')
+    if (skeleton_root is None or mesh_root is None) and ASSETS == ROOT and not content_packages.has_content(ROOT):
+        # The worker figures lie in the content package creatures: without the content their rigs are not checked
+        content_packages.unchecked('check_cleaning_broom_k26', ['models/' + rig + '.mesh and its skeleton (Clean clip)'])
+        continue
+    if skeleton_root is None or mesh_root is None:
+        fail('%s: models/%s.mesh or its skeleton is missing' % (rig, rig))
+        continue
     skeleton = Skeleton(skeleton_root)
     if len(skeleton.clips) != CLIP_COUNTS[rig]:
         fail('%s: %d clips, expected %d (no clip may go)' % (rig, len(skeleton.clips), CLIP_COUNTS[rig]))

@@ -254,9 +254,17 @@ else:
     parried = re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
     assert parried.count('Clip    WeaponParry') == parried.count('[Variant]') >= 2
     assert 'Motion' in parried and 'Effect  ReactionSparks' in parried
+# The skeletons of the creature figures lie in the content package creatures: without the content they are named as not
+# checked
+absent_skeletons = []
 for skeleton in ('Adventurer', 'Cultist', 'Dwarf2', 'Gnome', 'Goblin', 'Knight', 'LavaSpawn', 'Monk', 'NatureMonster', 'Orc', 'RunelordDwarf'):
+    skeleton_file = content_packages.data_file(root, 'models/' + skeleton + '.skeleton')
+    if skeleton_file is None and not content_packages.has_content(root):
+        absent_skeletons.append('models/' + skeleton + '.skeleton')
+        continue
     data = content_packages.resolve(root, 'models/' + skeleton + '.skeleton').read_bytes()
     assert b'WeaponParry' in data and b'Idle' in data and b'Attack1' in data, skeleton
+content_packages.unchecked('check_defence_chance', absent_skeletons)
 
 # The Goblin's built-in knife is explicitly a dagger even though it attaches no mesh.
 # Mirror the explicit server type set to verify its configured parry chance.

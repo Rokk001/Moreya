@@ -65,6 +65,10 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
         if len(words) >= 2 and not words[0].startswith('#'):
             fields.setdefault(words[0], words[1])
     if 'Name' in fields:
+        # the MeshName of a class can be an own row of the content package (Dwarf1, Champion): without the content
+        # such a class is left out and named as not checked below
+        if 'MeshName' not in fields and not HAS_CONTENT:
+            continue
         types[fields['Name']] = fields['MeshName']
 # Most creature rows are own rows of the content package core-config: without the content only the public rows count
 if HAS_CONTENT:
@@ -151,6 +155,9 @@ for name, skeleton in skeletons.items():
     clips = data_path('models/' + skeleton).read_bytes()
     assert b'Relieve\n' in clips, skeleton + ' of ' + name + ' has no Relieve clip'
 for name in ('Kobold', 'DwarfWorker'):
+    # a worker whose model lies in the content package creatures is already named as not checked above
+    if name not in skeletons and not HAS_CONTENT:
+        continue
     clips = data_path('models/' + skeletons[name]).read_bytes()
     assert b'Clean\n' in clips, skeletons[name] + ' of ' + name + ' has no Clean clip'
 # The clip names the client asks for

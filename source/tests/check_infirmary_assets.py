@@ -19,6 +19,8 @@ import content_packages  # noqa: E402
 #: The assets of the infirmary come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
 ROOM_ASSETS = room_packages.has_room(repo, 'Infirmary')
+#: The shaman figure lies in the creatures content package (no longer in the infirmary room package)
+SHAMAN_FILES = ("models/InfirmaryShaman.mesh", "models/InfirmaryShaman.skeleton")
 
 
 def room_file(relative):
@@ -40,11 +42,22 @@ def credited(path, credits):
     # Without the infirmary package its assets and their rows (in the content repository) are not there
     if not ROOM_ASSETS and (room_packages.is_packaged(path) or path.startswith("assets-src/rooms/infirmary/")):
         return
+    # Without the content the shaman figure of the creatures content package and its rows are not there
+    if path in SHAMAN_FILES and not content_packages.has_content(repo):
+        content_packages.unchecked("check_infirmary_assets", [path])
+        return
     asset = resolve(repo, path)
     assert asset.is_file() and asset.stat().st_size > 0, "missing asset: " + path
     rows = [line for line in credits.splitlines() if path in line]
     assert rows and any(room_packages.licence_ok(repo, line, "GPL") or "CC0" in line for line in rows), \
         "missing licence: " + path
+
+
+#: The stored clip lengths of the creatures package shaman (all 2.0 s on the former model; the game stretches the six
+#: pose clips to InfirmaryShamanAnimationSeconds). Idle from the build report; RattleShake and HerbSniff are not built
+#: yet and get their measured length when they are added.
+CLIP_SECONDS = {"Idle": 4.0, "Walk": 1.0416669845581055, "Chant": 2.25, "PotionTaste": 8.875,
+                "TripOverBucket": 2.5, "Dance": 7.75}
 
 
 # Parse animation chunks with the maintained Ogre chunk reader and check actual clip lengths.
@@ -59,7 +72,7 @@ def clips():
     assert set(animations) == expected, sorted(animations)
     for name, data in animations.items():
         duration = struct.unpack_from("<f", data, data.index(b"\n", 6) + 1)[0]
-        assert abs(duration - 2.0) < 1e-6, (name, duration)
+        assert name in CLIP_SECONDS and abs(duration - CLIP_SECONDS[name]) < 1e-6, (name, duration)
 
 
 # Run the floor generator's actual seam calculation in memory without rewriting any asset.

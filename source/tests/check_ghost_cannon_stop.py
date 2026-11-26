@@ -9,7 +9,8 @@ Over the whole beam step (1001 samples of the capture share, three floor heights
 the ghost is above the trap opening, stops at the first frame the whole body is inside, never resumes, and stops before
 the box snaps shut. The old predicate (target only) is executed too and must keep firing after entry, so the check
 tells the delivered behaviour from the lost one. Fixed values counted once on this branch: 5 updateLook quantities,
-3 ghostAboveTrap exits, entry between capture share 0.94 and 0.96 with the shipped mesh and values.
+3 ghostAboveTrap exits, entry between capture share 0.96 and 0.98 with the shipped mesh and values (measured 0.971 on
+the Ghost.mesh of the content package creatures, top 1.345; 0.94 to 0.96 on the former mesh).
 
 Ghost.mesh is content (core-models package, found through scripts/content_packages.py). Without it the production
 predicates are read and their fixed cases without a mesh are run; the beam step over the mesh is named as not checked.
@@ -206,7 +207,7 @@ if GHOST_MESH:
                 stopped_at = capture
             previous = beaming
         assert frame(0.0, floor)[0], 'the cannon fires at the start of the beam step'
-        assert stopped_at is not None and 0.94 < stopped_at < 0.96, (floor, stopped_at, 'stops at entry, before the snap')
+        assert stopped_at is not None and 0.96 < stopped_at < 0.98, (floor, stopped_at, 'stops at entry, before the snap')
         # The trap is still open at that moment: the server ends the beam step only at a capture share of 1
         assert stopped_at < 1.0
         # The old predicate kept the cannon on the ghost for the whole step, also after the ghost was inside the trap.

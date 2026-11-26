@@ -3,7 +3,7 @@
 starts and ends in the seat pose, the body rests on the bench or its feet and stays out of the furniture.
 
 What is checked (fixed values of this branch, counted once)
-  visitors   30 skeletons belong to the types whose Tavern line in creatures.cfg is not "0 0"
+  visitors   31 skeletons belong to the types whose Tavern line in creatures.cfg is not "0 0"
   clips      Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped; a bone without a track stays in its rest pose
   seam       the first and the last frame of a clip show the same pose, so that it loops and returns to the seat pose
   height     the pose of Sit reaches above the seat of the bench
@@ -47,7 +47,7 @@ import fix_walk_feet as feet
 from check_animation_assets import export
 
 SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitDice', 'SitSlumped']
-VISITING_SKELETONS = 30
+VISITING_SKELETONS = 31
 # A clip may reach this far into the table top (a hand or a tusk on its edge), in tiles
 MAX_TABLE_DEPTH = 0.04
 # Samples per clip: dense enough that a fast arm does not pass the table top between two of them
@@ -453,7 +453,7 @@ def main():
     tested = 0
     for name, mesh_name in sorted(found.items()):
         tested += check_skeleton(name, mesh_name, assets, stools, mounts)
-    assert tested == 210, tested
+    assert tested == 217, tested
     print('tavern seat clips ok:', tested, 'clips on', len(found), 'skeletons')
 
 

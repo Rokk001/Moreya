@@ -18,7 +18,8 @@ import room_packages  # noqa: E402
 CONTENT_FILES = ('materials/scripts/ChickenHatchery.material', 'materials/scripts/ChickenBreeds.material',
                  'materials/scripts/ChickenNest.material', 'materials/textures/ChickenNest.png',
                  'models/ChickenEgg.mesh', 'models/ChickenEggCracked.mesh', 'models/ChickenChick.mesh',
-                 'models/ChickenRooster.mesh', 'models/Chicken.skeleton', 'models/ChickenCoopHouse.mesh',
+                 'models/ChickenRooster.mesh', 'models/Chicken.skeleton', 'models/ChickenChick.skeleton',
+                 'models/ChickenRooster.skeleton', 'models/ChickenCoopHouse.mesh',
                  'models/ChickenCoopHouse.skeleton', 'models/ChickenNest.mesh', 'models/ChickenCoop.mesh',
                  'config/roomAmbienceProduction.cfg')
 missing_content = content_packages.unchecked('check_hatchery_visuals', [
@@ -124,8 +125,10 @@ if CONTENT:
 
 # All material scripts: every material a mesh uses must be defined there (a missing definition fails the check)
 import re
-# The material scripts of the public tree and of every content and room package
-material_text = ''.join(f.read_text() for f in content_packages.data_glob(root, 'materials/scripts', '*.material'))
+# The material scripts of the public tree and of every content and room package, with their subfolders (the creatures
+# package keeps its scripts in materials/scripts/Creatures)
+material_text = ''.join(f.read_text() for f in content_packages.data_glob(root, 'materials/scripts', '*.material',
+                                                                           recursive=True))
 
 
 def material_block(name):
@@ -148,20 +151,27 @@ def assert_matt(name):
         assert blue >= 0.4 * red, (name, key, 'yellow cast')
 
 
-# The egg, chick and rooster are meshes made in Blender (shared hen skeleton with the clips Peep, Run, Crow, Hatch).
+# The egg is a mesh made in Blender; the hen, chick and rooster of the creatures package each have an own skeleton and
+# one textured material (former meshes: the shared Chicken.skeleton and the rooster's comb and tail materials).
 if CONTENT:
     for mesh, names in (('ChickenEgg', ('ChickenEgg', 'ChickenStraw')), ('ChickenEggCracked', ('ChickenEggInside',)),
-                        ('ChickenChick', ('ChickenChick', 'Chicken.skeleton')),
-                        ('ChickenRooster', ('ChickenRooster', 'ChickenRoosterComb', 'ChickenRoosterTail', 'Chicken.skeleton'))):
+                        ('ChickenChick', ('ChickenChickMeshy', 'ChickenChick.skeleton')),
+                        ('ChickenRooster', ('ChickenRoosterMeshy', 'ChickenRooster.skeleton'))):
         data = model(mesh + '.mesh').read_bytes()
         for name in names:
             assert name.encode() in data, (mesh, name)
         assert mesh + '.mesh' in credits, mesh
-    for name in ('ChickenEgg', 'ChickenStraw', 'ChickenEggInside'):
+    for name in ('ChickenEgg', 'ChickenStraw', 'ChickenEggInside', 'ChickenChickMeshy', 'ChickenRoosterMeshy'):
         material_block(name)
+    # Every skeleton holds the clips its bird plays: the chick peeps while it stands, the rooster crows
+    for skeleton_name, clips in (('Chicken.skeleton', (b'Run', b'Hatch', b'Walk', b'Idle')),
+                                 ('ChickenChick.skeleton', (b'Peep', b'Run', b'Hatch', b'Walk', b'Idle')),
+                                 ('ChickenRooster.skeleton', (b'Crow', b'Run', b'Hatch', b'Walk', b'Idle'))):
+        skeleton = model(skeleton_name).read_bytes()
+        for clip in clips:
+            assert clip in skeleton, (skeleton_name, clip)
+    # The hen skeleton, for the hen clip checks below
     skeleton = model('Chicken.skeleton').read_bytes()
-    for clip in (b'Peep', b'Run', b'Crow', b'Hatch', b'Walk', b'Idle'):
-        assert clip in skeleton, clip
     breeds = content_packages.read_text(root, 'materials/scripts/ChickenBreeds.material')
     assert 'material ChickenChick' in breeds and 'material ChickenRooster' in breeds
 assert '"ChickenChick"' in chicken and '"ChickenRooster"' in chicken
@@ -241,15 +251,21 @@ assert 'mDoor->setEnabled(true)' in body(looks, 'void RenderManager::rrSetChicke
 assert 'mShake = lookSettings().mCoopShakeSeconds' in body(looks, 'void RenderManager::rrSetChickenPose')
 assert 'mDoor->addTime' in body(looks, 'void RenderManager::updateChickenLooks')
 assert 'mNest' not in body(looks, 'void RenderManager::rrDestroyCoopDecor'), 'the nests belong to the hatchery, not to a coop'
-# Hen clips: used when the skeleton has them, procedural motion stays as fallback
-for name in (b'Lay', b'Flutter', b'Peep', b'Run', b'Crow', b'Hatch', b'Die', b'Pick', b'Paw', b'Sleep', b'Walk', b'Idle'):
+#: The skeleton of each bird (the hen, chick and rooster of the creatures package have own skeletons; the former meshes
+#: shared Chicken.skeleton), for the clip checks below
+bird_skeletons = {bird: model(bird + '.skeleton').read_bytes() for bird in ('Chicken', 'ChickenChick', 'ChickenRooster')} \
+    if CONTENT else {}
+# Hen clips: used when the skeleton has them, procedural motion stays as fallback; the chick peeps, the rooster crows
+for bird, name in [('Chicken', clip) for clip in (b'Lay', b'Flutter', b'Run', b'Hatch', b'Die', b'Pick', b'Paw', b'Sleep',
+                                                  b'Walk', b'Idle')] + [('ChickenChick', b'Peep'), ('ChickenRooster', b'Crow')]:
     if CONTENT:
-        assert name in skeleton, name
+        assert name in bird_skeletons[bird], (bird, name)
 assert 'return "Lay"' in pose and 'return "Flutter"' in pose and 'isOneShotClip' in pose
 # Mating clips: the rooster plays Mount, Tread (looped) and Dismount by the phase of the pose, the hen ducks, once
-for name in (b'MountCycle', b'Mount', b'Tread', b'Dismount', b'Duck'):
+for bird, name in [('ChickenRooster', clip) for clip in (b'MountCycle', b'Mount', b'Tread', b'Dismount')] + \
+        [('Chicken', b'Duck')]:
     if CONTENT:
-        assert name in skeleton, name
+        assert name in bird_skeletons[bird], (bird, name)
 assert 'return "Mount"' in pose and 'return "Duck"' in pose and '(clip == "Mount")' in pose and '(clip == "Dismount")' in pose
 assert '(clip == "Tread")' not in pose
 update = body(looks, 'void RenderManager::updateChickenLooks')

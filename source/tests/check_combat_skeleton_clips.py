@@ -8,11 +8,16 @@ The skeletons of the weapon-carrying creatures hold the clips the combat reactio
 
 The file is read as bytes; a clip or bone name is stored in the Ogre skeleton file as plain text,
 so a name search is enough to see that the clip is in the file.
+
+The skeletons lie in the public tree or in a content package (the creature figures in the package creatures) and are
+found through scripts/content_packages.py; without the content the skeletons it holds are named as not checked.
 """
 import os
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, os.path.join(ROOT, 'scripts'))
+import content_packages  # noqa: E402  (skeletons are read from the public tree or the content packages)
 
 # Skeletons that carry the mirrored blow clip
 ATTACK_LEFT = ['Adventurer', 'Cultist', 'Dwarf1', 'Dwarf2', 'Gnome', 'Goblin', 'Knight', 'Monk', 'Orc', 'RunelordDwarf']
@@ -26,16 +31,26 @@ BASE_CLIPS = [b'Idle', b'Walk', b'Attack1']
 
 
 def read_skeleton(name):
-    """Returns the bytes of models/<name>.skeleton."""
-    path = os.path.join(ROOT, 'models', name + '.skeleton')
-    with open(path, 'rb') as handle:
+    """Returns the bytes of models/<name>.skeleton from the public tree or a content package, or None when the content
+    that holds it is not present."""
+    path = content_packages.data_file(ROOT, 'models/' + name + '.skeleton')
+    if path is None:
+        if content_packages.has_content(ROOT):
+            raise FileNotFoundError('models/' + name + '.skeleton')
+        return None
+    with open(str(path), 'rb') as handle:
         return handle.read()
 
 
 def main():
+    """Checks every skeleton of the combat set that is present and prints each failure; returns the exit code."""
     failures = []
+    missing = []
     for name in sorted(set(ATTACK_LEFT + WEAPON_PARRY + WEAPON_BONES)):
         data = read_skeleton(name)
+        if data is None:
+            missing.append(name + '.skeleton')
+            continue
         if not data.startswith(b'\x00\x10[Serializer_v1.80]'):
             failures.append(name + ': not an Ogre skeleton file (version 1.80)')
         for clip in BASE_CLIPS:
@@ -51,7 +66,9 @@ def main():
         for failure in failures:
             print('FAIL', failure)
         return 1
-    print('ok: %d skeletons carry the combat clips and weapon bones' % len(set(ATTACK_LEFT + WEAPON_PARRY + WEAPON_BONES)))
+    content_packages.unchecked('check_combat_skeleton_clips', missing)
+    print('ok: %d skeletons carry the combat clips and weapon bones'
+          % (len(set(ATTACK_LEFT + WEAPON_PARRY + WEAPON_BONES)) - len(missing)))
     return 0
 
 
