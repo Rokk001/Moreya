@@ -42,6 +42,7 @@ probe = r'''
 #include <Ogre.h>
 #include "gamemap/RoomObjectBounds.h"
 #include <iostream>
+#include <sstream>
 Ogre::Vector3 getBedSupportPoint(BED_SUPPORT
 Ogre::Bone* findBone(Ogre::Skeleton* skeleton,std::initializer_list<const char*> names){
  for(const auto* name:names)if(skeleton->hasBone(name))return skeleton->getBone(name);
@@ -108,14 +109,17 @@ int main(int argc,char** argv){try{
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
  Ogre::NameValuePairList opts;opts["hidden"]="true";root.createRenderWindow("Walking bounds",64,64,false,&opts);
  auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
- groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);groups.initialiseAllResourceGroups();
+ groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);
+ // The models folders of the content packages that are present (creatures, beds and furniture moved there)
+ {std::istringstream folders(argv[3]);std::string folder;while(std::getline(folders,folder,';'))if(!folder.empty())groups.addResourceLocation(folder,"FileSystem","Graphics",false);}
+ groups.initialiseAllResourceGroups();
  auto* scene=root.createSceneManager();int checks=0,failures=0;
  for(const auto& row:RoomObjectPath::meshBounds)if(std::isfinite(row.maxZ))furnitureTops.push_back(row.maxZ);
  std::sort(furnitureTops.begin(),furnitureTops.end());
  furnitureTops.erase(std::unique(furnitureTops.begin(),furnitureTops.end()),furnitureTops.end());
  for(float top:furnitureTops)heights.push_back(top);
  heightBounds.resize(heights.size());
- profile=argc>3;
+ profile=argc>4;
  const int frames=std::stoi(argv[2]);
  if(profile)for(const std::string name:{BED_NAMES}){
   const auto mesh=Ogre::MeshManager::getSingleton().load(name+".mesh","Graphics");
@@ -182,7 +186,11 @@ with tempfile.TemporaryDirectory(prefix='odp-walking-bounds-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
-    result = subprocess.run([str(work / 'check.exe'), str(repo), str(args.frames)] + (['profile'] if args.height_profile else []), cwd=work, capture_output=True, text=True)
+    # The meshes of the content packages are read from their models folders, not only from the public models folder
+    package_models = ';'.join(str(folder) for folder in content_packages.data_folders(repo, 'models')
+                              if folder != repo / 'models')
+    result = subprocess.run([str(work / 'check.exe'), str(repo), str(args.frames), package_models] +
+                            (['profile'] if args.height_profile else []), cwd=work, capture_output=True, text=True)
     print('\n'.join(line for line in result.stdout.splitlines() if any(marker in line for marker in ('CHECKS=', 'FAIL ', 'BODY_ROW ', 'FURNITURE_HEIGHT ', 'LEG_PROFILE ', 'DOMINANT_BONE '))))
     if result.returncode:
         if 'FAIL ' not in result.stdout:
