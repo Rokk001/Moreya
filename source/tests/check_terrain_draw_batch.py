@@ -124,9 +124,10 @@ def check_geometry():
                 assert border['deform'](original, shader, shared) == border['deform'](baked, shader, shared)
                 # Identical world position also preserves the active worldTileUV input.
                 checked += 1
-    # Fixed once from the committed earth meshes: 10,368 vertices, four transforms each (10,394 before the calmer
-    # rock wall meshes of CS10, approved by Mario).
-    assert checked == 41472
+    # Fixed once from the committed earth meshes: four transforms per vertex; 10,368 vertices before (10,394 before the calmer
+    # rock wall meshes of CS10, approved by Mario). 11,798 vertices since the side faces that close the gaps between
+    # neighbouring wall tiles are back (Mario 2026-11-26).
+    assert checked == 47192
     return checked
 
 
