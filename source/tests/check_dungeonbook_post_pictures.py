@@ -204,13 +204,17 @@ def definitions(look):
 fdefs, tdefs = definitions(frame_look), definitions(title_look)
 for part in FRAME_PARTS:
     d = fdefs['Frame%sImage' % part]
-    assert (d.get('type'), d.get('initialValue')) == ('Image', 'OpenDungeonsGameWindow/Frame' + part), part
+    # Mario 2026-11-26: every framed window shows the full frame of the menu sheet (was OpenDungeonsGameWindow/Frame*)
+    assert (d.get('type'), d.get('initialValue')) == ('Image', 'ODMenuTemplate/Frame' + part), part
+for part in ('Interior', 'TopKnob', 'BottomKnob'):
+    d = fdefs['Frame%sImage' % part]
+    assert (d.get('type'), d.get('initialValue')) == ('Image', 'ODMenuTemplate/Frame' + part), part
 title_defaults = {'TitleTopLeftImage': 'FrameTopLeft', 'TitleTopRightImage': 'FrameTopRight', 'TitleTopImage': 'FrameTop',
-                  'TitleLeftImage': 'FrameLeft', 'TitleRightImage': 'FrameRight', 'TitleRuleImage': 'TitleRule'}
+                  'TitleLeftImage': 'FrameLeft', 'TitleRightImage': 'FrameRight', 'TitleRuleImage': 'BorderTop'}
 for name, part in title_defaults.items():
-    assert (tdefs[name].get('type'), tdefs[name].get('initialValue')) == ('Image', 'OpenDungeonsGameWindow/' + part)
+    assert (tdefs[name].get('type'), tdefs[name].get('initialValue')) == ('Image', 'ODMenuTemplate/' + part)
 assert (tdefs['CaptionHorzFormatting'].get('initialValue'), tdefs['CaptionCentred'].get('initialValue')) == \
-    ('LeftAligned', 'false'), 'other captions stay left aligned in their old area'
+    ('CentreAligned', 'true'), 'captions are centred on the top rail of the menu sheet frame'
 for look, defs in ((frame_look, fdefs), (title_look, tdefs)):
     for node in look.iter():
         if node.tag in ('ImageProperty', 'ImagePropertyDim', 'HorzFormatProperty', 'PropertyDim') and \

@@ -67,7 +67,7 @@ OWN_ROW_TABLES = {
     'gui/MenuSkirmish.layout': 16,
     'gui/ModeEditor.layout': 27,
     'gui/ModeGame.layout': 54,
-    'gui/OD.looknfeel': 814,
+    'gui/OD.looknfeel': 806,
     'gui/ODSkin.scheme': 9,
     'gui/WidgetsTest.layout': 1,
     'gui/WindowApplyChanges.layout': 4,

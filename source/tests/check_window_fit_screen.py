@@ -207,11 +207,14 @@ if WITH_CONTENT:
     # The title bar is the top of the single frame: no second top edge below it, contents start right under it.
     client_top = client.find("Dim[@type='TopEdge']")
     assert len(client_top) == 1 and client_top[0].tag == 'WidgetDim' and client_top[0].get('widget') == '__auto_titlebar__',     'frame contents must start directly below the title bar'
+    # Since 2026-11-26 the window draws the menu sheet frame as separate imagery components (tiled rails, corners,
+    # knobs) with the title on its single top rail: side and bottom rails are present and there is exactly one top rail.
     for section_name in ('withtitle_frame', 'withtitle_frame_disabled'):
-        section = frame.find(".//ImagerySection[@name='%s']/FrameComponent" % section_name)
-        parts = {image.get('component') for image in section.findall('Image') + section.findall('ImageProperty')}
-        assert {'LeftEdge', 'RightEdge', 'BottomEdge'} <= parts, section_name + ' lost its side or bottom edge'
-        assert not parts & {'TopEdge', 'TopLeftCorner', 'TopRightCorner'}, section_name + ' draws a second top frame'
+        rails = [component.find('ImageProperty').get('name')
+                 for component in frame.find(".//ImagerySection[@name='%s']" % section_name).findall('ImageryComponent')]
+        assert {'FrameLeftImage', 'FrameRightImage', 'FrameBottomImage'} <= set(rails), \
+            section_name + ' lost its side or bottom edge'
+        assert rails.count('FrameTopImage') == 1, section_name + ' draws a second top frame'
     # The window frame of the chosen menu sheet that every in-game window uses now follows the same rules: one title font,
     # contents directly below the title, which sits on the single top rail (no second top rail below it), side and bottom
     # rails drawn, and a close button as high and wide as the title.

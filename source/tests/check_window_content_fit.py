@@ -284,8 +284,8 @@ def fit_factor(top, screen, user):
 
 
 def frame_images(node):
-    defaults = {'FrameLeftImage': 'OpenDungeonsGameWindow/FrameLeft', 'FrameRightImage': 'OpenDungeonsGameWindow/FrameRight',
-                'FrameBottomImage': 'OpenDungeonsGameWindow/FrameBottom', 'FrameTopImage': 'OpenDungeonsGameWindow/FrameTop'}
+    defaults = {'FrameLeftImage': 'ODMenuTemplate/FrameLeft', 'FrameRightImage': 'ODMenuTemplate/FrameRight',
+                'FrameBottomImage': 'ODMenuTemplate/FrameBottom', 'FrameTopImage': 'ODMenuTemplate/FrameTop'}
     return {key: node.props.get(key, default) for key, default in defaults.items()}
 
 
@@ -304,7 +304,9 @@ def client_rect(node, rect, screen, user, s):
         assert node.type == 'DefaultWindow' and 'documentWidth' not in gui_cpp, 'the values page must not scroll'
     if node.type in ('OD/FrameWindow',):
         images = frame_images(node)
-        return (x0 + image_size(images['FrameLeftImage'], screen, user)[0], y0 + title_height(node, screen, user),
+        # the title sits on the top rail (0.75 of its height below the window top), the contents start below the title
+        return (x0 + image_size(images['FrameLeftImage'], screen, user)[0],
+                y0 + 0.75 * image_size(images['FrameTopImage'], screen, user)[1] + title_height(node, screen, user),
                 x1 - image_size(images['FrameRightImage'], screen, user)[0],
                 y1 - image_size(images['FrameBottomImage'], screen, user)[1])
     if node.type == 'OD/SheetWindow':
