@@ -72,9 +72,10 @@ EXPECTED_KEYS = {
     "GroupFormationRowSpacing": ("1", False),
     "GroupFormationRowWidth": ("6", False),
     "GroupFormationTolerance": ("2", False),
-    "GroupTankPaths": ("Bulwark Protection", False),
-    "GroupHealerPaths": ("Healing", False),
-    "GroupRangedSkillGroups": ("archer caster", False),
+    "GroupTankSkillGroups": ("tank", False),
+    "GroupHealerSkillGroups": ("healer", False),
+    "GroupSupporterSkillGroups": ("supporter", False),
+    "GroupRangedSkillGroups": ("marksman mage", False),
 }
 PLACEHOLDER = "PLACEHOLDER: set by simulation R3"
 

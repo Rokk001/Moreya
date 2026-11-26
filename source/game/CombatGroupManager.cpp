@@ -292,18 +292,15 @@ void CombatGroupManager::rebuildMemberIndex()
     }
 }
 
-//! \brief Maps the template of the creature to its role with the role lists of the config.
+//! \brief Maps the skill group of the creature type to its role with the role lists of the config; the template the
+//! creature follows does not change the role.
 CombatGroupRules::Role CombatGroupManager::getRole(const Creature& creature) const
 {
     const CreatureDefinition* definition = creature.getDefinition();
     if(definition == nullptr)
         return CombatGroupRules::Role::melee;
 
-    const std::string& skillGroup = definition->getSkillGroup();
-    const CreatureSkillTree::TemplateDef* templ = ConfigManager::getSingleton().getCreatureSkillTree().findTemplate(
-        skillGroup, creature.getSkillBuild().mTemplate);
-    const std::string primaryPath = (templ != nullptr) ? templ->mPrimary : std::string();
-    return CombatGroupRules::roleOf(mRoleSettings, skillGroup, templ != nullptr, primaryPath);
+    return CombatGroupRules::roleOf(mRoleSettings, definition->getSkillGroup());
 }
 
 //! \brief Keeper seats: every seat except the neutral seat and the hero seats.
@@ -576,8 +573,9 @@ void CombatGroupManager::update()
         return;
 
     ConfigManager& config = ConfigManager::getSingleton();
-    mRoleSettings.mTankPaths = config.getGroupCombatConfigWords("GroupTankPaths");
-    mRoleSettings.mHealerPaths = config.getGroupCombatConfigWords("GroupHealerPaths");
+    mRoleSettings.mTankSkillGroups = config.getGroupCombatConfigWords("GroupTankSkillGroups");
+    mRoleSettings.mHealerSkillGroups = config.getGroupCombatConfigWords("GroupHealerSkillGroups");
+    mRoleSettings.mSupporterSkillGroups = config.getGroupCombatConfigWords("GroupSupporterSkillGroups");
     mRoleSettings.mRangedSkillGroups = config.getGroupCombatConfigWords("GroupRangedSkillGroups");
 
     // The aggro of a hit fades after its turns

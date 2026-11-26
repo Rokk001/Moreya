@@ -200,7 +200,7 @@ public:
     //! \brief True when the creature has arrived at the gathering tile of a retreat (GroupGatherRadius).
     bool isAtGatheringTile(const Creature& creature, const Tile& gathering) const;
 
-    //! \brief The role of a creature from the template it follows (rules of CombatGroupRules::roleOf with the
+    //! \brief The role of a creature from the skill group of its type (rules of CombatGroupRules::roleOf with the
     //! lists of the [GroupCombat] block of global.cfg, read at every update).
     CombatGroupRules::Role getRole(const Creature& creature) const;
 
