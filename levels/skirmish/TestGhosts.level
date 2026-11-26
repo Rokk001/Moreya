@@ -2782,16 +2782,16 @@ ProtectDungeonTemple	NULL
 1	Troll1	Troll.mesh	7	2	0	Troll	5	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Skeleton1	skeleton.mesh	10	4	0	Skeleton	5	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Goblin1	Goblin.mesh	15	3	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Spider1	Spider.mesh	19	5	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Rat1	Rat.mesh	21	2	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Spider1	Ghoul.mesh	19	5	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Rat1	Banshee.mesh	21	2	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Orc1	Orc.mesh	5	6	0	Orc	8	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Cultist1	Cultist.mesh	12	6	0	Cultist	6	0	1	100	0	0	none	none	nullSkillType	none	0
 1	Kobold1	Kobold.mesh	3	5	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Kobold2	Kobold.mesh	9	2	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Kobold3	Kobold.mesh	17	4	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Kobold4	Kobold.mesh	23	3	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
-2	EnemyRat1	Rat.mesh	6	20	0	Rat	1	0	1	100	0	0	none	none	nullSkillType	none	0
-2	EnemyRoach1	Roach.mesh	11	21	0	Roach	1	0	1	100	0	0	none	none	nullSkillType	none	0
+2	EnemyRat1	Banshee.mesh	6	20	0	Banshee	1	0	1	100	0	0	none	none	nullSkillType	none	0
+2	EnemyRoach1	Witch.mesh	11	21	0	Witch	1	0	1	100	0	0	none	none	nullSkillType	none	0
 2	EnemyOrc1	Orc.mesh	16	20	0	Orc	10	0	1	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 

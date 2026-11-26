@@ -4072,36 +4072,36 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker2	Kobold.mesh	52	92	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	54	90	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Harbourfolk2_1	Orc.mesh	13	11	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Harbourfolk2_2	Spider.mesh	18	15	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Harbourfolk2_2	Ghoul.mesh	18	15	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Harbourfolk2_3	Goblin.mesh	15	20	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Harbourfolk2_4	Troll.mesh	23	17	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Harbourfolk2_5	Rat.mesh	13	17	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Harbourfolk2_5	Banshee.mesh	13	17	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Docker2_1	Kobold.mesh	16	11	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Docker2_2	Kobold.mesh	12	20	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Harbourfolk3_1	Orc.mesh	47	13	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Harbourfolk3_2	Troll.mesh	49	12	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Harbourfolk3_3	Spider.mesh	46	19	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Harbourfolk3_3	Ghoul.mesh	46	19	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Harbourfolk3_4	Goblin.mesh	58	16	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Harbourfolk3_5	Rat.mesh	51	10	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Harbourfolk3_5	Banshee.mesh	51	10	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Docker3_1	Kobold.mesh	47	17	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Docker3_2	Kobold.mesh	58	14	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Harbourfolk4_1	Orc.mesh	11	59	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Harbourfolk4_2	Goblin.mesh	15	63	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Harbourfolk4_3	Troll.mesh	20	61	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-4	Harbourfolk4_4	Spider.mesh	15	61	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
-4	Harbourfolk4_5	Rat.mesh	19	55	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+4	Harbourfolk4_4	Ghoul.mesh	15	61	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
+4	Harbourfolk4_5	Banshee.mesh	19	55	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Docker4_1	Kobold.mesh	15	58	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Docker4_2	Kobold.mesh	19	62	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Harbourfolk5_1	Orc.mesh	49	57	0	Orc	3	0	max	100	0	0	none	none	nullSkillType	none	0
-5	Harbourfolk5_2	Spider.mesh	53	54	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+5	Harbourfolk5_2	Ghoul.mesh	53	54	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Harbourfolk5_3	Troll.mesh	53	62	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Harbourfolk5_4	Goblin.mesh	54	55	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-5	Harbourfolk5_5	Rat.mesh	58	52	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+5	Harbourfolk5_5	Banshee.mesh	58	52	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Docker5_1	Kobold.mesh	48	54	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Docker5_2	Kobold.mesh	59	61	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 0	NookStray1	Goblin.mesh	32	91	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NookStray2	Spider.mesh	31	91	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NookStray3	Rat.mesh	33	91	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Ghoul.mesh	31	91	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Banshee.mesh	33	91	0	Banshee	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -4134,8 +4134,8 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 Block	1	CaveHornet
-Block	1	Rat
-Block	1	Roach
+Block	1	Banshee
+Block	1	Witch
 Block	1	Goblin
 Block	1	LizardMan
 Block	1	Orc
@@ -4177,7 +4177,7 @@ Action	message	1	The east quay. Its keeper has called on the north-east cliff fo
 Action	alliance	3	5	make
 Action	portal	3	on
 Action	reveal	1	Basin
-Action	spawn	3	51	39	1	Orc:3	Troll:3	Spider:3	Goblin:3
+Action	spawn	3	51	39	1	Orc:3	Troll:3	Ghoul:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	dockEntered
@@ -4201,7 +4201,7 @@ Name	basinSeen
 Mode	once
 Cond	region	1	Basin
 Action	message	1	The harbour basin. Sea stacks stand in the water like teeth, and the keepers are watching from the banks.
-Action	spawn	1	50	79	1	Orc:3	Troll:3	Spider:3
+Action	spawn	1	50	79	1	Orc:3	Troll:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	northSpan
@@ -4239,28 +4239,28 @@ Name	tide1
 Mode	once
 Cond	time	500
 Action	message	1	A raiding party is landing at the north-west harbour.
-Action	spawn	2	22	22	1	Orc:2	Spider:2	Goblin:2
+Action	spawn	2	22	22	1	Orc:2	Ghoul:2	Goblin:2
 [/Trigger]
 [Trigger]
 Name	tide2
 Mode	once
 Cond	time	1900
 Action	message	1	The harbour keeper is sending a boarding party south.
-Action	spawn	2	20	64	1	Orc:3	Troll:3	Goblin:3	Spider:3
+Action	spawn	2	20	64	1	Orc:3	Troll:3	Goblin:3	Ghoul:3
 [/Trigger]
 [Trigger]
 Name	surf1
 Mode	once
 Cond	time	900
 Action	message	1	The cliff keeper is loosing a pack down the east road.
-Action	spawn	3	51	39	1	Troll:3	Orc:3	Spider:2
+Action	spawn	3	51	39	1	Troll:3	Orc:3	Ghoul:2
 [/Trigger]
 [Trigger]
 Name	surf2
 Mode	once
 Cond	time	2500
 Action	message	1	A heavy column marches out of the north-east.
-Action	spawn	3	51	39	1	Troll:3	Troll:3	Orc:3	Spider:3	Goblin:3
+Action	spawn	3	51	39	1	Troll:3	Troll:3	Orc:3	Ghoul:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	swell1
@@ -4274,21 +4274,21 @@ Name	swell2
 Mode	once
 Cond	time	3000
 Action	message	1	The west dock is emptying onto the road.
-Action	spawn	4	15	79	1	Troll:4	Orc:3	Spider:3	Goblin:3
+Action	spawn	4	15	79	1	Troll:4	Orc:3	Ghoul:3	Goblin:3
 [/Trigger]
 [Trigger]
 Name	gale1
 Mode	once
 Cond	time	700
 Action	message	1	The quay keeper is sending his packs south.
-Action	spawn	5	37	71	1	Orc:3	Troll:2	Spider:2
+Action	spawn	5	37	71	1	Orc:3	Troll:2	Ghoul:2
 [/Trigger]
 [Trigger]
 Name	gale2
 Mode	once
 Cond	time	2000
 Action	message	1	A storm of rats and spiders is coming off the quay.
-Action	spawn	5	37	71	1	Spider:3	Goblin:3	Orc:3	Troll:3
+Action	spawn	5	37	71	1	Ghoul:3	Goblin:3	Orc:3	Troll:3
 [/Trigger]
 [Trigger]
 Name	gale3

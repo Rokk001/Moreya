@@ -2443,8 +2443,8 @@ mana	0
 1	DefaultWorker2	Kobold.mesh	27	99	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	23	105	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker4	Kobold.mesh	21	96	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Stray1	LavaSpawn.mesh	40	56	0	LavaSpawn	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Stray2	LavaSpawn.mesh	6	30	0	LavaSpawn	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Stray1	Butcher.mesh	40	56	0	Butcher	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Stray2	Butcher.mesh	6	30	0	Butcher	2	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Stray3	Troll.mesh	40	78	0	Troll	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 

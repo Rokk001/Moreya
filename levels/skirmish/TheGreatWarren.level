@@ -5592,49 +5592,49 @@ ProtectDungeonTemple	NULL
 0	GoblinWild51	Goblin.mesh	74	5	0	Goblin	5	0	max	100	0	0	none	none	nullSkillType	none	0
 0	GnomeWild50	Gnome.mesh	74	6	0	Gnome	1	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	RatWild49	Rat.mesh	39	64	0	Rat	4	0	max	100	0	0	none	none	nullSkillType	none	0
-0	RatWild48	Rat.mesh	38	65	0	Rat	5	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild49	Banshee.mesh	39	64	0	Banshee	4	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild48	Banshee.mesh	38	65	0	Banshee	5	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	GoblinWild47	Goblin.mesh	38	64	0	Goblin	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	SlimeWild46	Slime.mesh	39	66	0	Slime	5	0	max	100	0	0	none	none	nullSkillType	none	0
+0	SlimeWild46	Banshee.mesh	39	66	0	Banshee	5	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	GnomeWild45	Gnome.mesh	88	35	0	Gnome	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	KoboldWild44	Kobold.mesh	87	36	0	Kobold	3	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	KoboldWild43	Kobold.mesh	88	36	0	Kobold	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	RoachWild42	Roach.mesh	12	53	0	Roach	5	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RoachWild42	Witch.mesh	12	53	0	Witch	5	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	SpiderWild41	Spider.mesh	12	54	0	Spider	5	0	max	100	0	0	none	none	nullSkillType	none	0
-0	SpiderWild40	Spider.mesh	11	54	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
+0	SpiderWild41	Ghoul.mesh	12	54	0	Ghoul	5	0	max	100	0	0	none	none	nullSkillType	none	0
+0	SpiderWild40	Ghoul.mesh	11	54	0	Ghoul	1	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	SkeletonWild39	skeleton.mesh	13	54	0	Skeleton	4	0	max	100	0	0	none	none	nullSkillType	none	0
-0	RatWild38	Rat.mesh	6	92	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild38	Banshee.mesh	6	92	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	GnomeWild37	Gnome.mesh	9	94	0	Gnome	4	0	max	100	0	0	none	none	nullSkillType	none	0
-0	RatWild36	Rat.mesh	75	65	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild36	Banshee.mesh	75	65	0	Banshee	2	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	KoboldWild35	Kobold.mesh	76	64	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
-0	RatWild34	Rat.mesh	75	64	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild34	Banshee.mesh	75	64	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	GnomeWild33	Gnome.mesh	12	69	0	Gnome	5	0	max	100	0	0	none	none	nullSkillType	none	0
 0	GnomeWild32	Gnome.mesh	13	70	0	Gnome	3	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	RatWild31	Rat.mesh	13	42	0	Rat	5	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild31	Banshee.mesh	13	42	0	Banshee	5	0	max	100	0	0	none	none	nullSkillType	none	0
 0	GoblinWild30	Goblin.mesh	12	42	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	GnomeWild29	Gnome.mesh	12	41	0	Gnome	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	RoachWild28	Roach.mesh	13	44	0	Roach	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RoachWild28	Witch.mesh	13	44	0	Witch	3	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	SpiderWild27	Spider.mesh	13	43	0	Spider	1	0	max	100	0	0	none	none	nullSkillType	none	0
-0	LavaSpawnWild26	LavaSpawn.mesh	69	13	0	LavaSpawn	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	SpiderWild27	Ghoul.mesh	13	43	0	Ghoul	1	0	max	100	0	0	none	none	nullSkillType	none	0
+0	LavaSpawnWild26	Butcher.mesh	69	13	0	Butcher	3	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	RatWild25	Rat.mesh	70	12	0	Rat	1	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild25	Banshee.mesh	70	12	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 0	GoblinWild24	Goblin.mesh	70	13	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	RatWild23	Rat.mesh	75	38	0	Rat	1	0	max	100	0	0	none	none	nullSkillType	none	0
-0	TentacleGreenWild22	TentacleGreen.mesh	76	39	0	TentacleGreen	1	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild23	Banshee.mesh	75	38	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleGreenWild22	Cyclops.mesh	76	39	0	Cyclops	1	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	TentacleGreenWild21	TentacleGreen.mesh	75	39	0	TentacleGreen	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleGreenWild21	Cyclops.mesh	75	39	0	Cyclops	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	GnomeWild20	Gnome.mesh	58	61	0	Gnome	1	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	GnomeWild19	Gnome.mesh	56	61	0	Gnome	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -5649,22 +5649,22 @@ ProtectDungeonTemple	NULL
 0	GoblinWild13	Goblin.mesh	46	56	0	Goblin	1	0	max	100	0	0	none	none	nullSkillType	none	0
 0	GnomeWild12	Gnome.mesh	46	55	0	Gnome	2	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	RatWild11	Rat.mesh	44	56	0	Rat	1	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild11	Banshee.mesh	44	56	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 0	GoblinWild10	Goblin.mesh	69	57	0	Goblin	4	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	GnomeWild9	Gnome.mesh	69	55	0	Gnome	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	RatWild8	Rat.mesh	48	60	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild8	Banshee.mesh	48	60	0	Banshee	2	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	GnomeWild7	Gnome.mesh	48	61	0	Gnome	5	0	max	100	0	0	none	none	nullSkillType	none	0
 0	GnomeWild6	Gnome.mesh	49	62	0	Gnome	3	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	RatWild5	Rat.mesh	50	61	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	RatWild5	Banshee.mesh	50	61	0	Banshee	2	0	max	100	0	0	none	none	nullSkillType	none	0
 0	LizardManWild4	Lizardman.mesh	41	75	0	LizardMan	5	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
 0	LizardManWild3	Lizardman.mesh	42	73	0	LizardMan	2	0	max	100	0	0	none	none	nullSkillType	none	0
 0	LizardManWild2	Lizardman.mesh	43	73	0	LizardMan	4	0	max	100	0	0	none	none	nullSkillType	none	0
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	TentacleGreenWild1	TentacleGreen.mesh	41	73	0	TentacleGreen	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	TentacleGreenWild1	Cyclops.mesh	41	73	0	Cyclops	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]

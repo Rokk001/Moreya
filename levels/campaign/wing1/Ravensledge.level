@@ -2227,7 +2227,7 @@ ProtectDungeonTemple	NULL
 3	YardWatch1	Adventurer.mesh	26	17	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	YardWatch2	Adventurer.mesh	36	18	0	Adventurer	2	0	max	100	0	0	none	none	nullSkillType	none	0
 3	BarrackMonk	Monk.mesh	9	19	0	Monk	2	0	max	100	0	0	none	none	nullSkillType	none	0
-3	ShelfHand	Dwarf1.mesh	14	36	0	Dwarf1	2	0	max	100	0	0	none	none	nullSkillType	none	0
+3	ShelfHand	Hunter.mesh	14	36	0	Hunter	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -2260,11 +2260,11 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 Block	1	CaveHornet
-Block	1	Spider
-Block	1	Rat
-Block	1	Roach
+Block	1	Ghoul
+Block	1	Banshee
+Block	1	Witch
 Block	1	Goblin
-Block	1	LavaSpawn
+Block	1	Butcher
 Block	1	LizardMan
 Block	1	Orc
 Block	1	PitDemon
@@ -2444,5 +2444,5 @@ Member	1	Elf	2	-	Skirmisher
 Member	1	Knight	2	-	Guardian
 Member	1	Monk	2	-	Guardian
 Member	1	Adventurer	2	-	Shade
-Member	1	Dwarf1	2	-	Berserker
+Member	1	Hunter	2	-	Berserker
 [/Raid]

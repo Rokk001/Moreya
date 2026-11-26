@@ -4541,28 +4541,28 @@ ProtectDungeonTemple	NULL
 1	DefaultWorker3	Kobold.mesh	64	16	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker4	Kobold.mesh	68	10	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Delver1	Troll.mesh	70	12	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Delver2	Spider.mesh	66	15	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Delver3	DarkElf.mesh	64	11	0	DarkElf	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Delver2	Ghoul.mesh	66	15	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Delver3	Banshee.mesh	64	11	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Delver4	Cultist.mesh	70	15	0	Cultist	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Delver5	Troll.mesh	68	8	0	Troll	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Delver6	Spider.mesh	62	10	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Delver6	Ghoul.mesh	62	10	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Silverguard2_1	Orc.mesh	10	47	0	Orc	5	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Silverguard2_2	Troll.mesh	16	51	0	Troll	5	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Silverguard2_3	Spider.mesh	13	57	0	Spider	5	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Silverguard2_3	Ghoul.mesh	13	57	0	Ghoul	5	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Silverguard2_4	Goblin.mesh	21	52	0	Goblin	5	0	max	100	0	0	none	none	nullSkillType	none	0
-2	Silverguard2_5	DarkElf.mesh	13	53	0	DarkElf	5	0	max	100	0	0	none	none	nullSkillType	none	0
+2	Silverguard2_5	Banshee.mesh	13	53	0	Banshee	5	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Miner2_1	Kobold.mesh	15	48	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Miner2_2	Kobold.mesh	10	57	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Silverguard3_1	Orc.mesh	67	81	0	Orc	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Silverguard3_2	Troll.mesh	70	80	0	Troll	5	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Silverguard3_3	Spider.mesh	64	86	0	Spider	5	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Silverguard3_3	Ghoul.mesh	64	86	0	Ghoul	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Silverguard3_4	Goblin.mesh	72	84	0	Goblin	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Silverguard3_5	Cultist.mesh	71	89	0	Cultist	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Miner3_1	Kobold.mesh	77	86	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Miner3_2	Kobold.mesh	79	84	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Silverguard4_1	Orc.mesh	12	102	0	Orc	5	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Silverguard4_2	Troll.mesh	24	101	0	Troll	5	0	max	100	0	0	none	none	nullSkillType	none	0
-4	Silverguard4_3	Spider.mesh	11	105	0	Spider	5	0	max	100	0	0	none	none	nullSkillType	none	0
+4	Silverguard4_3	Ghoul.mesh	11	105	0	Ghoul	5	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Silverguard4_4	Goblin.mesh	26	102	0	Goblin	5	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Silverguard4_5	Cultist.mesh	22	97	0	Cultist	5	0	max	100	0	0	none	none	nullSkillType	none	0
 4	Miner4_1	Kobold.mesh	21	106	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -4571,12 +4571,12 @@ ProtectDungeonTemple	NULL
 5	Bankwatch2	Elf.mesh	50	31	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Bankwatch3	Monk.mesh	60	67	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Bankwatch4	Adventurer.mesh	61	50	0	Adventurer	3	0	max	100	0	0	none	none	nullSkillType	none	0
-5	Bankwatch5	Dwarf1.mesh	12	88	0	Dwarf1	3	0	max	100	0	0	none	none	nullSkillType	none	0
+5	Bankwatch5	Hunter.mesh	12	88	0	Hunter	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	Bankwatch6	Knight.mesh	42	86	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
 5	DorianSilt	Knight.mesh	56	45	0	Knight	7	0	max	100	0	0	none	none	nullSkillType	none	0
 0	NookStray1	Goblin.mesh	32	37	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NookStray2	Spider.mesh	31	37	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NookStray3	Rat.mesh	33	37	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Ghoul.mesh	31	37	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Banshee.mesh	33	37	0	Banshee	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -4609,8 +4609,8 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 Block	1	CaveHornet
-Block	1	Rat
-Block	1	Roach
+Block	1	Banshee
+Block	1	Witch
 Block	1	Goblin
 Block	1	LizardMan
 Block	1	Orc
@@ -4672,7 +4672,7 @@ Cond	region	1	WestBank
 Action	message	1	The west bank. The nearest hold belongs to a keeper who has watched your lamps all the way down. Something is walled up in the north.
 Action	reveal	1	Rival2
 Action	reveal	1	Gallery
-Action	spawn	2	16	36	1	Orc:5	Troll:5	Spider:4
+Action	spawn	2	16	36	1	Orc:5	Troll:5	Ghoul:4
 [/Trigger]
 [Trigger]
 Name	galleryOpen
@@ -4705,7 +4705,7 @@ Mode	once
 Cond	region	1	LakeC
 Action	message	1	The last lake. The third keeper sits beyond its western bank, alone and angry.
 Action	reveal	1	Rival4
-Action	spawn	4	25	92	1	Orc:5	Troll:5	Cultist:5	Spider:4
+Action	spawn	4	25	92	1	Orc:5	Troll:5	Cultist:5	Ghoul:4
 [/Trigger]
 [Trigger]
 Name	vaultOpen

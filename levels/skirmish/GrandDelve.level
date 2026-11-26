@@ -2567,7 +2567,7 @@ mana	0
 1	DefaultWorker4	Kobold.mesh	10	73	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Stray1	Troll.mesh	26	50	0	Troll	2	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Stray2	Orc.mesh	56	64	0	Orc	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Stray3	Spider.mesh	46	12	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Stray3	Ghoul.mesh	46	12	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]

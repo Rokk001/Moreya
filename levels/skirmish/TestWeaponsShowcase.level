@@ -470,10 +470,10 @@ mana	100
 0	Elf33	Elf.mesh	24	19	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 0	Elf34	Elf.mesh	22	19	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 0	Elf35	Elf.mesh	20	19	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
-1	DarkElf36	DarkElf.mesh	26	10	0	DarkElf	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
-1	DarkElf37	DarkElf.mesh	24	10	0	DarkElf	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
-1	DarkElf38	DarkElf.mesh	22	10	0	DarkElf	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
-1	DarkElf39	DarkElf.mesh	20	10	0	DarkElf	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf36	Banshee.mesh	26	10	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf37	Banshee.mesh	24	10	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf38	Banshee.mesh	22	10	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf39	Banshee.mesh	20	10	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
 0	Wizard44	Wizard.mesh	26	17	0	Wizard	1	0	max	100	0	0	Staff	none	nullSkillType	none	0
 0	Wizard45	Wizard.mesh	24	17	0	Wizard	1	0	max	100	0	0	Staff	none	nullSkillType	none	0
 0	Wizard46	Wizard.mesh	22	17	0	Wizard	1	0	max	100	0	0	Staff	none	nullSkillType	none	0

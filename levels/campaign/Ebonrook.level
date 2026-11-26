@@ -5300,13 +5300,13 @@ ProtectDungeonTemple	NULL
 1	Rookhunter4	Troll.mesh	66	10	0	Troll	4	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Rookhunter5	Goblin.mesh	58	12	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Rookhunter6	Goblin.mesh	70	16	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Rookhunter7	Spider.mesh	64	10	0	Spider	4	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Rookhunter8	Spider.mesh	56	16	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Rookhunter7	Ghoul.mesh	64	10	0	Ghoul	4	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Rookhunter8	Ghoul.mesh	56	16	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Rookhunter9	Orc.mesh	72	14	0	Orc	4	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Rookhunter10	Troll.mesh	60	10	0	Troll	4	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Rookhunter11	Rat.mesh	64	17	0	Rat	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Rookhunter11	Banshee.mesh	64	17	0	Banshee	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Rookhunter12	Goblin.mesh	62	8	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Rookhunter13	Spider.mesh	67	9	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Rookhunter13	Ghoul.mesh	67	9	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Rookhunter14	Orc.mesh	58	18	0	Orc	4	0	max	100	0	0	none	none	nullSkillType	none	0
 2	SabineRook	Knight.mesh	30	98	0	Knight	7	0	max	100	0	0	none	none	nullSkillType	none	0
 2	NestGuard1	Knight.mesh	27	96	0	Knight	5	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -5321,7 +5321,7 @@ ProtectDungeonTemple	NULL
 3	Rookwatch3	Monk.mesh	100	79	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Rookwatch4	Adventurer.mesh	102	78	0	Adventurer	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Rookwatch5	Knight.mesh	61	98	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Rookwatch6	Dwarf1.mesh	64	104	0	Dwarf1	3	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Rookwatch6	Hunter.mesh	64	104	0	Hunter	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Rookwatch7	Elf.mesh	64	80	0	Elf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Rookwatch8	Knight.mesh	72	80	0	Knight	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Rookwatch9	Monk.mesh	112	101	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -5331,8 +5331,8 @@ ProtectDungeonTemple	NULL
 3	Rookwatch13	Dwarf2.mesh	64	43	0	Dwarf2	3	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Rookwatch14	Monk.mesh	11	47	0	Monk	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	NookStray1	Goblin.mesh	26	89	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NookStray2	Spider.mesh	26	88	0	Spider	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	NookStray3	Rat.mesh	25	89	0	Rat	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray2	Ghoul.mesh	26	88	0	Ghoul	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	NookStray3	Banshee.mesh	25	89	0	Banshee	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
@@ -5366,8 +5366,8 @@ ProtectDungeonTemple	NULL
 [Triggers]
 Region	RookHoardDoorFront	36	93	36	93
 Block	1	CaveHornet
-Block	1	Rat
-Block	1	Roach
+Block	1	Banshee
+Block	1	Witch
 Block	1	Goblin
 Block	1	LizardMan
 Block	1	Orc

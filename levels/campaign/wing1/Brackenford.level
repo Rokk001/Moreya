@@ -1411,12 +1411,12 @@ ProtectDungeonTemple	NULL
 
 [Triggers]
 Block	1	CaveHornet
-Block	1	Spider
-Block	1	Rat
-Block	1	Roach
-Block	1	LavaSpawn
+Block	1	Ghoul
+Block	1	Banshee
+Block	1	Witch
+Block	1	Butcher
 Block	1	LizardMan
-Block	1	DarkElf
+Block	1	Banshee
 Block	1	Orc
 Block	1	PitDemon
 Block	1	Troll

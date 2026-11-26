@@ -1851,7 +1851,7 @@ Member	1	Adventurer	3	-	-
 Member	1	Elf	3	-	Marksman
 Group	2	RaidTestLeaderTwo
 Member	2	Knight	5	RaidTestLeaderTwo	Guardian
-Member	2	Dwarf1	3	-	Berserker
+Member	2	Hunter	3	-	Berserker
 Member	2	Wizard	3	-	Healer
 Member	2	Wizard	3	-	Destroyer
 [/Raid]

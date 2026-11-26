@@ -2938,12 +2938,12 @@ mana	0
 1	DefaultWorker2	Kobold.mesh	21	14	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker3	Kobold.mesh	18	21	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	DefaultWorker4	Kobold.mesh	14	20	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Stray1	LavaSpawn.mesh	96	42	0	LavaSpawn	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Stray1	Butcher.mesh	96	42	0	Butcher	3	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Stray2	Troll.mesh	38	62	0	Troll	2	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Stray3	Orc.mesh	30	82	0	Orc	2	0	max	100	0	0	none	none	nullSkillType	none	0
 0	Stray4	Goblin.mesh	8	70	0	Goblin	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Stray5	Spider.mesh	14	46	0	Spider	2	0	max	100	0	0	none	none	nullSkillType	none	0
-0	Stray6	DarkElf.mesh	58	12	0	DarkElf	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Stray5	Ghoul.mesh	14	46	0	Ghoul	2	0	max	100	0	0	none	none	nullSkillType	none	0
+0	Stray6	Banshee.mesh	58	12	0	Banshee	2	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
