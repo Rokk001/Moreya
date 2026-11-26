@@ -30,7 +30,7 @@ import spa_attendant_render as render
 MATERIAL = 'PoolAttendantMeshy'
 SCRIPT = 'materials/scripts/Creatures/PoolAttendantMeshy.material'
 TEXTURE = 'materials/textures/PoolAttendantMeshy.png'
-# Filled once from the approved CS10a export (2026-11-26), never derived from the assets during a test.
+# Filled once from the approved CS10a export (2026-11-26; skeleton recounted on the rebuild with rest clips), never derived from the assets during a test.
 VERTICES = 8322
 TRIANGLES = 10025
 TRIANGLE_BUDGET = (9000, 35000)
@@ -38,7 +38,7 @@ MINIMUM = (-0.506374, -0.136942, 0.0)
 MAXIMUM = (0.506374, 0.136942, 0.980984)
 HASHES = {
     'models/PoolAttendant.mesh': '09fdb5196cd0ce66e46327305fcf1b83f2104fa817467af964954ae27977a85a',
-    'models/PoolAttendant.skeleton': 'cde85e7918ccc2713bb62bc6991cfcceb57683a6b130dab5eea0647b291aad17',
+    'models/PoolAttendant.skeleton': '78d97565f22c9f5a667cf24f5fe488552e8b577523782b5c9fc58dc015686344',
     TEXTURE: '3b1bd57732634572d3e46bbd45d474560b26576a9011ff8925ff9f8a722ab852',
 }
 # Elbows and knees with the bone below them (new rig names; former Forearm_R/Hand_R, Shin_R/Foot_R and left)
