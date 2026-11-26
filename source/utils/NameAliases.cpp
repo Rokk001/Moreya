@@ -63,6 +63,45 @@ const AliasEntry ALIASES[] =
     { 0x72e77dd3320fce48ULL, "RoomConvertClaimRate" },
     { 0xcabd9ef942198d29ULL, "manaWellGround" },
 };
+
+// Hash (see hashName) of a removed creature class and the class of its successor. Kept apart from ALIASES so that
+// only creature class names are mapped to a creature class.
+const AliasEntry CREATURE_CLASS_ALIASES[] =
+{
+    { 0x89f6be1960ff4c78ULL, "Banshee" },
+    { 0x2d9f61f3374744a8ULL, "Ghoul" },
+    { 0xc8f622466403f436ULL, "Witch" },
+    { 0x06c60ee0cc2939feULL, "Butcher" },
+    { 0xd492fe6ba7915f3bULL, "DarkElf" },
+    { 0x3c55031b39a7eb3eULL, "Hunter" },
+    { 0xe75ffbe9a99a68ccULL, "Paladin" },
+    { 0x9e417bb7b4c3bccfULL, "Priestess" },
+    { 0x0e0008a6a918a58aULL, "CrystalGolem" },
+    { 0x7153171d9afb2c02ULL, "Cyclops" },
+    { 0xa494741dbc7edaa5ULL, "Minotaur" },
+    { 0xcb5b3bd5f628d1ccULL, "Werewolf" },
+};
+
+// The class that left its side: a keeper-side or rogue creature of this class in a file written before the current
+// creature roster is loaded as SIDE_SUCCESSOR_CLASS; on the hero side it stays.
+const char* const SIDE_MOVED_CLASS = "DarkElf";
+const char* const SIDE_SUCCESSOR_CLASS = "Banshee";
+
+//! \brief Returns the new name of the entry whose hash is the hash of the name, the name itself when there is none.
+std::string lookUp(const AliasEntry* entries, std::size_t count, const std::string& name)
+{
+    if(name.empty())
+        return name;
+
+    uint64_t hash = hashName(name);
+    for(std::size_t i = 0; i < count; ++i)
+    {
+        if(entries[i].mOldNameHash == hash)
+            return entries[i].mNewName;
+    }
+
+    return name;
+}
 }
 
 uint64_t hashName(const std::string& name)
@@ -89,5 +128,21 @@ std::string resolve(const std::string& name)
     }
 
     return name;
+}
+
+//! \brief Looks the class name up in the table of the removed creature classes.
+std::string resolveCreatureClass(const std::string& className)
+{
+    return lookUp(CREATURE_CLASS_ALIASES, sizeof(CREATURE_CLASS_ALIASES) / sizeof(CREATURE_CLASS_ALIASES[0]),
+        className);
+}
+
+//! \brief The class that left its side becomes its successor on every side but the hero side.
+std::string resolveOldCreatureClassForSide(const std::string& className, bool heroSide)
+{
+    if(!heroSide && (className == SIDE_MOVED_CLASS))
+        return SIDE_SUCCESSOR_CLASS;
+
+    return className;
 }
 }

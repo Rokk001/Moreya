@@ -35,6 +35,22 @@ It is called at the points where such names are parsed:
 Shipped levels and configs use the current names directly, so the alias path is only taken for
 older data. Tileset files are not covered: their material names are shipped with the game.
 
+Removed creature classes have a table of their own (`CREATURE_CLASS_ALIASES`, same hash), so that
+only creature class names are mapped to a creature class. `NameAliases::resolveCreatureClass(name)`
+returns the class of the successor. It is used by:
+
+- `GameMap::getClassDescription` and `GameMap::resolveClassName` (every lookup of a class by its
+  name: creatures, ghosts, prisoners, portal waves, level scripts, raids), asked only when the map
+  has no class of that name,
+- `GameMap::getClassDescriptionForTuning` (the `[CreatureDefinitions]` tuning of an older level
+  tunes the successor),
+- `Creature::importFromStream` (the creature takes the class and the mesh of its successor).
+
+Levels and saved games carry the line `CreatureRoster` in their `[Info]` block. While the
+creatures of a file without it (written before the current roster) are read,
+`NameAliases::resolveOldCreatureClassForSide` also maps the class that moved to the hero side: a
+keeper-side or rogue creature of it loads as its successor, a hero-side one keeps its class.
+
 When a name is renamed in the future, add the hash of the old name (lowercase, FNV-1a, offset
 `14695981039346656037`, prime `1099511628211`) to the table, never the old name itself, and add the
 case to `source/tests/check_name_aliases.py`, which builds the old names from fragments.

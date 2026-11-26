@@ -200,6 +200,12 @@ namespace {
 //! \brief Key of the hidden option in the [Game] part of the user config file; no menu shows it.
 const std::string EDIT_OFFICIAL_LEVELS_KEY = "EditOfficialLevels";
 
+//! \brief Line of the [Info] block that marks a file written with the current creature roster; a file without it was
+//! written before, and its creatures are mapped by the side of their seat when they are read.
+const std::string CREATURE_ROSTER_INFO_KEY = "CreatureRoster\t";
+//! \brief The creature roster this game writes. A file with a lower number (or without the line) is older.
+const int CREATURE_ROSTER_VERSION = 1;
+
 //! \brief The folder of the game data that holds the shipped level folders.
 std::string getGameLevelsRoot()
 {
@@ -291,7 +297,8 @@ OfficialLevels::EditorSaveTarget resolveEditorSaveTarget(const std::string& targ
 
 //! \brief Loads map state and reports the failing section, retaining optional legacy sections. The optional
 //! [CombatGroups] section (raid registry and running combat groups) and the optional [Raid] section (gate, countdown
-//! and raid groups) come last. A shipped level is first compared with the checksum compiled into the game.
+//! and raid groups) come last. A shipped level is first compared with the checksum compiled into the game. The
+//! creatures of a file without the CreatureRoster line of the [Info] block are read as creatures of an older roster.
 bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool strictOfficialCheck)
 {
     lastLoadError.clear();
@@ -370,6 +377,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
     // option switched on with an empty table. The server overrides this for levels and the editor.
     gameMap.setRelationshipsEnabled(true);
 
+    // Files without a CreatureRoster line were written before the current creature roster
+    bool oldRosterFile = true;
+    gameMap.setLoadingOldRosterCreatures(false);
+
     // Read in the seats from the level file
     while (true)
     {
@@ -447,6 +458,12 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
         if (nextParam.compare(0, param.size(), param) == 0)
         {
             gameMap.setRelationshipsEnabled(nextParam.substr(param.size()) != "Off");
+            continue;
+        }
+
+        if (nextParam.compare(0, CREATURE_ROSTER_INFO_KEY.size(), CREATURE_ROSTER_INFO_KEY) == 0)
+        {
+            oldRosterFile = Helper::toInt(nextParam.substr(CREATURE_ROSTER_INFO_KEY.size())) < CREATURE_ROSTER_VERSION;
             continue;
         }
         if(gameMap.getSandboxMode().importInfoLine(nextParam))
@@ -827,10 +844,13 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
     }
 
     uint32_t nbCreatures = 0;
+    // The creatures of an older file are also mapped by the side of their seat (Creature::importFromStream)
+    gameMap.setLoadingOldRosterCreatures(oldRosterFile);
     while(true)
     {
         if(!levelFile.good())
         {
+            gameMap.setLoadingOldRosterCreatures(false);
             setLoadError("Unexpected end or invalid stream in [Creatures], file=" + fileName);
             return false;
         }
@@ -847,6 +867,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
         Creature* tempCreature = Creature::getCreatureFromStream(&gameMap, ss);
         if(tempCreature == nullptr)
         {
+            gameMap.setLoadingOldRosterCreatures(false);
             setLoadError("Creature number " + Helper::toString(nbCreatures + 1)
                 + " of the level could not be read (see the warning above for the reason), line=" + entire_line.substr(0, 120)
                 + ", file=" + fileName);
@@ -856,6 +877,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
         tempCreature->addToGameMap();
         ++nbCreatures;
     }
+    gameMap.setLoadingOldRosterCreatures(false);
     OD_LOG_INF("Loaded " + Helper::toString(nbCreatures) + " creatures in level");
 
     if(!readGameEntity(gameMap, "Spells", GameEntityType::spell, levelFile))
@@ -1301,6 +1323,7 @@ static void writeDirtSections(std::ostream& levelFile, GameMap& gameMap)
 //! \brief The raid registry and, in a saved game, the running combat groups are written last ([CombatGroups]),
 //! followed by the raid with, in a saved game, its running state ([Raid]).
 //! \brief Returns true only when the file was closed without an error, the flush of the last buffer included.
+//! \brief The [Info] block names the creature roster the file is written with (CreatureRoster).
 bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 {
     std::ofstream levelFile(fileName.c_str(), std::ifstream::out);
@@ -1331,6 +1354,8 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         levelFile << "Sandbox\t1" << std::endl;
         gameMap.getSandboxMode().exportInfo(levelFile);
     }
+    // Levels and saved games are written with the current creature roster
+    levelFile << CREATURE_ROSTER_INFO_KEY << CREATURE_ROSTER_VERSION << std::endl;
 
     // Only saved games record the option, levels written by the editor do not
     bool isGameSave = gameMap.isServerGameMap() && !gameMap.isInEditorMode();
