@@ -2426,7 +2426,7 @@ void RenderManager::triggerCompositor(const std::string& compositorName)
     Ogre::CompositorManager::getSingleton().setCompositorEnabled(mViewport, compositorName.c_str(), true);
 }
 
-//! rief Creates the scene: lights, the keeper hand with its poses, tools and idle props, and the hand overlay.
+//! \brief Creates the scene: lights, the keeper hand with its poses, tools and idle props, and the hand overlay.
 void RenderManager::createScene(Ogre::Viewport* nViewport)
 {
     OD_LOG_INF("Creating scene...");

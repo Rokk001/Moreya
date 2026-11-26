@@ -336,7 +336,7 @@ SCRIPT_LOCATIONS
                     "watch and yo-yo keep the empty hand angle for their entire duration");
                 if(choice==1&&i>0&&i<12) {
                     const auto* finger=hand->getSkeleton()->getBone("Index3");
-                    const auto anchor=finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.001542f,.009951f,-.000393f);
+                    const Ogre::Vector3 anchor=finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.001542f,.009951f,-.000393f);
                     const auto* data=r.mHandIdleProp->getSection(0)->getRenderOperation()->vertexData;
                     const auto* element=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
                     auto buffer=data->vertexBufferBinding->getBuffer(element->getSource());
