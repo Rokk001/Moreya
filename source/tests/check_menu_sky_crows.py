@@ -428,10 +428,13 @@ def wing_beat_problems(mesh, skin):
         return [mesh + ": skeleton has no Flap clip"]
     length = skin.clips["Flap"][0]
     times = np.linspace(0.0, length, 17)
-    span = skin.vertices[:, 0].max() - skin.vertices[:, 0].min()
-    left = int(np.argmin(skin.vertices[:, 0]))
-    right = int(np.argmax(skin.vertices[:, 0]))
     poses = [skin.pose("Flap", t) for t in times[:-1]] + [skin.pose("Flap", 0.0)]
+    # The wing tips are the outermost vertices at the widest moment of the beat: a crow may rest with folded wings
+    # (the crow figure of CS10a spreads them only in its flight clips), so the rest mesh does not show the tips.
+    widest = max(poses, key=lambda pose: pose[:, 0].max() - pose[:, 0].min())
+    span = widest[:, 0].max() - widest[:, 0].min()
+    left = int(np.argmin(widest[:, 0]))
+    right = int(np.argmax(widest[:, 0]))
     end_pose = skin.pose("Flap", length - 1e-4)
     for side, tip in (("left", left), ("right", right)):
         # Height of the tip over the body: the authoring mesh has its up axis along +Z.

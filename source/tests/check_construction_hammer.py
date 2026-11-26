@@ -150,7 +150,7 @@ TEXTURE_LOCATIONS
         resources.initialiseAllResourceGroups();
 SCRIPT_LOCATIONS
         auto& materials = Ogre::MaterialManager::getSingleton();
-        for(const char* name : {"Keeperhand.material", "HandTool.material", "BasicHammer.material"})
+        for(const char* name : {"KeeperhandMeshy.material", "HandTool.material", "BasicHammer.material"})
             materials.parseScript(resources.openResource(name, "Graphics"), "Graphics");
         auto* hammerPass = materials.getByName("HandTool/Hammer", "Graphics")->getTechnique(0)->getPass(0);
         check(hammerPass->getVertexColourTracking() == Ogre::TVC_NONE, "authored mesh needs no vertex colour stream");
@@ -187,7 +187,7 @@ SCRIPT_LOCATIONS
         check(r.mHandHammer->getMesh()->getName() == "BasicHammer.mesh", "existing hammer mesh reused");
         check(r.mHandHammer->getSubEntity(0)->getMaterialName() == "HandTool/Hammer", "isolated hand material");
         auto* attachment = static_cast<Ogre::TagPoint*>(r.mHandHammer->getParentNode());
-        check(attachment->getPosition().positionEquals(Ogre::Vector3(0,.030f,-.009f)), "shaft uses accepted grasp position");
+        check(attachment->getPosition().positionEquals(Ogre::Vector3(-.010930f,.027735f,.002928f)), "shaft uses accepted grasp position");
         const auto pickaxeOrientation=r.mHandPickaxe->getParentNode()->getOrientation();
         check((attachment->getOrientation()*Ogre::Vector3::UNIT_Z).positionEquals(
             pickaxeOrientation*Ogre::Vector3::UNIT_Y), "hammer shaft matches the pickaxe shaft angle");
@@ -336,7 +336,7 @@ SCRIPT_LOCATIONS
                     "watch and yo-yo keep the empty hand angle for their entire duration");
                 if(choice==1&&i>0&&i<12) {
                     const auto* finger=hand->getSkeleton()->getBone("Index3");
-                    const auto anchor=finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+                    const auto anchor=finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.001542f,.009951f,-.000393f);
                     const auto* data=r.mHandIdleProp->getSection(0)->getRenderOperation()->vertexData;
                     const auto* element=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
                     auto buffer=data->vertexBufferBinding->getBuffer(element->getSource());
@@ -357,7 +357,7 @@ SCRIPT_LOCATIONS
                     }
                     const auto* finger=hand->getSkeleton()->getBone("Index3");
                     return finger->_getDerivedPosition()+finger->_getDerivedOrientation()*
-                        Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+                        Ogre::Vector3(-.001542f,.009951f,-.000393f);
                 };
                 for(int cycle=0;cycle<3;++cycle) {
                     const auto release=sampleFinger(.6f+cycle);
@@ -420,7 +420,7 @@ probe = probe.replace('MODEL_LOCATIONS', locations('models')).replace('TEXTURE_L
 probe = probe.replace('SCRIPT_LOCATIONS', locations('materials/scripts'))
 # The fixture loads the hand, its tools and their materials; some lie in the content packages
 NEEDED = ('models/Keeperhand.mesh', 'models/BasicHammer.mesh', 'materials/textures/BasicHammer.png',
-          'materials/scripts/Keeperhand.material', 'materials/scripts/HandTool.material',
+          'materials/scripts/KeeperhandMeshy.material', 'materials/scripts/HandTool.material',
           'materials/scripts/BasicHammer.material')
 absent = [name for name in NEEDED if content_packages.data_file(root, name) is None]
 if absent and not content_packages.has_content(root):

@@ -507,8 +507,9 @@ void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
         hand->getSkeleton()->_updateTransforms();
     }
     const Ogre::Bone* index = hand->getSkeleton()->getBone("Index3");
-    // Centre of the distal fingertip cap in Keeperhand.mesh, in Index3 bind space.
-    const Ogre::Vector3 tipLocal(-0.000284253f, 0.0155774f, 0.000218656f);
+    // Centre of the distal fingertip cap in Keeperhand.mesh, in Index3 bind space (measured on the hand model of
+    // the creatures content package with Moreya-Internal tools/content-split/cs10a/hand_points.py).
+    const Ogre::Vector3 tipLocal(-0.001542f, 0.009951f, -0.000393f);
     const Ogre::Vector3 tip = index->_getDerivedPosition() +
         index->_getDerivedOrientation() * (index->_getDerivedScale() * tipLocal);
     model->setPosition(-(model->getOrientation() * tip) * weight);
@@ -748,7 +749,7 @@ void updateKeeperHandIdleProp(Ogre::Entity* hand, const Ogre::AnimationState* an
     {
         const Ogre::Bone* finger = hand->getSkeleton()->getBone("Index3");
         const Ogre::Vector3 anchor = finger->_getDerivedPosition() + finger->_getDerivedOrientation() *
-            Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+            Ogre::Vector3(-.001542f,.009951f,-.000393f);
         const Ogre::Quaternion view = hand->getParentSceneNode()->getOrientation().Inverse();
         const float cycle = getYoyoCycle(time);
         const float drop = .5f - .5f * std::cos(cycle * Ogre::Math::TWO_PI);
@@ -2425,6 +2426,7 @@ void RenderManager::triggerCompositor(const std::string& compositorName)
     Ogre::CompositorManager::getSingleton().setCompositorEnabled(mViewport, compositorName.c_str(), true);
 }
 
+//! rief Creates the scene: lights, the keeper hand with its poses, tools and idle props, and the hand overlay.
 void RenderManager::createScene(Ogre::Viewport* nViewport)
 {
     OD_LOG_INF("Creating scene...");
@@ -2501,8 +2503,9 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     addPickaxePrism(mHandPickaxe, {{0.042f,0.057f}, {0.085f,0.043f}, {0.05f,0.073f}},
         0.008f, Ogre::ColourValue::White, headSurface, metalArea);
     mHandPickaxe->end();
-    // The closed fingers wrap around the shaft across the palm, below its back. Both tools share this grip.
-    const Ogre::Vector3 toolGripOffset(0, 0.030f, -0.009f);
+    // The closed fingers wrap around the shaft across the palm, below its back. Both tools share this grip; the
+    // point lies in Hand2 bind space at the same place of the hand as on the former model (hand_points.py).
+    const Ogre::Vector3 toolGripOffset(-0.010930f, 0.027735f, 0.002928f);
     Ogre::TagPoint* toolGrip = keeperHandEnt->attachObjectToBone("Hand2", mHandPickaxe,
         Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_Z) *
         Ogre::Quaternion(Ogre::Degree(55.0f), Ogre::Vector3::UNIT_Y), toolGripOffset);
