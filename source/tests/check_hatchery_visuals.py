@@ -262,7 +262,8 @@ for bird, name in [('Chicken', clip) for clip in (b'Lay', b'Flutter', b'Run', b'
         assert name in bird_skeletons[bird], (bird, name)
 assert 'return "Lay"' in pose and 'return "Flutter"' in pose and 'isOneShotClip' in pose
 # Mating clips: the rooster plays Mount, Tread (looped) and Dismount by the phase of the pose, the hen ducks, once
-for bird, name in [('ChickenRooster', clip) for clip in (b'MountCycle', b'Mount', b'Tread', b'Dismount')] + \
+# (the former shared skeleton also held MountCycle, which the code never plays; the own rooster rig of CS10a has none)
+for bird, name in [('ChickenRooster', clip) for clip in (b'Mount', b'Tread', b'Dismount')] + \
         [('Chicken', b'Duck')]:
     if CONTENT:
         assert name in bird_skeletons[bird], (bird, name)
@@ -294,19 +295,29 @@ if CONTENT:
     assert shutil.which('OgreXMLConverter') is not None, 'OgreXMLConverter must be on the PATH (the skeleton frame check must run)'
     sys.path.insert(0, str(root / 'tools/blender-assets'))
     import chicken_frame_fix as frame_fix
+    #: Bones and clips of the hen's own rig (creatures package, CS10a)
+    HEN_BONES = ['pelvis', 'chest', 'neck', 'head', 'wing.L', 'wing2.L', 'wing.R', 'wing2.R', 'tail1', 'tail2',
+                 'thigh.L', 'shin.L', 'toe.L', 'thigh.R', 'shin.R', 'toe.R']
+    HEN_CLIPS = ['Die', 'Dismount', 'Duck', 'Flutter', 'Hatch', 'Idle', 'Lay', 'Mount', 'Paw', 'Pick', 'Run', 'Sleep',
+                 'Tread', 'Walk']
     import xml.etree.ElementTree as ET
     with tempfile.TemporaryDirectory() as tmp:
         out_xml = str(Path(tmp) / 'Chicken.xml')
         subprocess.check_call(['OgreXMLConverter', '-q', str(model('Chicken.skeleton')), out_xml],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         skeleton_xml = ET.parse(out_xml).getroot()
-    assert len(frame_fix.structure(skeleton_xml)[0]) == frame_fix.BONE_COUNT
-    assert frame_fix.structure(skeleton_xml)[2] == sorted(frame_fix.CLIP_NAMES)
-    lay_hip = frame_fix.track_values(skeleton_xml, 'Lay', 'Hip', 'z')
-    flutter_root = frame_fix.track_values(skeleton_xml, 'Flutter', 'Root', 'z')
-    assert abs(min(lay_hip) + 0.05) < 0.002, min(lay_hip)
-    assert abs(max(flutter_root) - 0.075) < 0.002, max(flutter_root)
-    assert max(abs(v) for v in frame_fix.track_values(skeleton_xml, 'Lay', 'Hip', 'y')) < 0.002
+    # The hen has its own rig since CS10a (16 bones, root pelvis; the former shared skeleton: 22 bones, root Root,
+    # hip Hip, 18 clips). Fixed values counted once on content/cs10a-hand-menu: Lay sinks the pelvis by 0.040 (the
+    # former hip by 0.050); Flutter keeps the root on the ground (Mario 2026-11-26: the hen does not fly; the former
+    # Flutter lifted the root by 0.075).
+    assert [name for _, name in frame_fix.structure(skeleton_xml)[0]] == HEN_BONES
+    assert frame_fix.structure(skeleton_xml)[2] == sorted(HEN_CLIPS)
+    lay_hip = frame_fix.track_values(skeleton_xml, 'Lay', 'pelvis', 'z')
+    assert abs(min(lay_hip) + 0.040) < 0.002, min(lay_hip)
+    for axis in 'xyz':
+        flutter_root = frame_fix.track_values(skeleton_xml, 'Flutter', 'pelvis', axis)
+        assert flutter_root and max(abs(v) for v in flutter_root) < 0.002, (axis, flutter_root)
+    assert max(abs(v) for v in frame_fix.track_values(skeleton_xml, 'Lay', 'pelvis', 'y')) < 0.002
     # The meshes name the materials they use (read from the converted meshes) and the materials are defined
     for mesh, expected in (('ChickenNest', {'ChickenNest'}), ('ChickenEgg', {'ChickenEgg', 'ChickenStraw'}),
                            ('ChickenEggCracked', {'ChickenEgg', 'ChickenEggInside', 'ChickenStraw'}),
@@ -329,13 +340,15 @@ if CONTENT:
     for track in lay.find('tracks').findall('track'):
         last_times.add(round(float(track.find('keyframes').findall('keyframe')[-1].get('time')), 3))
     assert last_times == {round(float(lay.get('length')), 3)}, last_times
-    # Idle starts on the pose of its second frame (the first frame used to be a one frame glitch with the hip sunk)
+    # Idle starts without a glitch (the former first frame had the hip sunk for one frame): on the own rig the loop
+    # begins at time 0 on exactly the pose it ends with, so it neither jumps at the start nor at the loop seam
     idle = [a for a in skeleton_xml.find('animations').findall('animation') if a.get('name') == 'Idle'][0]
     for track in idle.find('tracks').findall('track'):
-        first, second = track.find('keyframes').findall('keyframe')[:2]
+        keys = track.find('keyframes').findall('keyframe')
+        first, last = keys[0], keys[-1]
         assert first.get('time') == '0', track.get('bone')
         for tag in ('translate', 'rotate'):
-            assert first.find(tag).attrib == second.find(tag).attrib, (track.get('bone'), tag)
+            assert first.find(tag).attrib == last.find(tag).attrib, (track.get('bone'), tag)
 # The rooster that guards the flock pecks (Pick clip and a lunge of the head)
 assert 'if(name == guard)' in pose and 'values.mGuardPeckPitch' in looks
 if TABLES:
