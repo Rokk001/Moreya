@@ -81,7 +81,7 @@ static const MeshBounds meshBounds[] = {
     {"RangerBed", -.53459f, -.777014f, .534418f, .775852f, .805918f},
     {"Roulette", -.292486f, -.296162f, .292326f, .296652f},
     {"SalesTable", -.385f, -.36f, .385f, .36f},
-    {"Skull", -.205408f, -.216924f, .205408f, .460773f},
+    {"Skull", -.297278f, -.25493f, .296011f, .256646f},
     {"SpaChair", -.3f, -.3f, .3967f, .3072f},
     {"SpaMudPool", -.5f, -.5f, .5f, .5f},
     {"SpaPoolRim", -.575f, -.575f, .575f, -.425f},
