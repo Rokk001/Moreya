@@ -412,7 +412,7 @@ def check_duration():
         tavern = block_values(read('config/global.cfg'), 'Tavern')
         assert float(tavern['BeerDrinkTurns']) == round(BEER_SECONDS * TURNS_PER_SECOND) == 42, 'a beer lasts 30 s'
         assert float(tavern['WaterDrinkTurns']) == WATER_TURNS == round(10 * TURNS_PER_SECOND), 'a water lasts 10 s'
-        assert float(tavern['DrinkTurns']) == 4, 'vomiting and pouring keep DrinkTurns 4'
+        assert float(tavern['DrinkTurns']) == 4, 'vomiting keeps DrinkTurns 4'
         assert re.search(r'^# WaterDrinkTurns\s+\S', read('config/global.cfg'), re.M), 'WaterDrinkTurns is not documented'
         assert re.search(r'^# BeerDrinkTurns\s+\S', read('config/global.cfg'), re.M), 'BeerDrinkTurns is not documented'
     room = read('source/rooms/RoomTavern.cpp')

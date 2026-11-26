@@ -79,7 +79,7 @@ skills_cfg = read('config/skills.cfg')
 # 1. Every key of the [Tavern] block with the value of the design (sections 4 and 5 of the design)
 TAVERN = {
     'ThirstSeek': '80', 'UrgeFromBeer': '15', 'UrgeFromWater': '15', 'BeerPrice': '5', 'BeerMood': '25',
-    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'WaterDrinkTurns': '14', 'BeerDrinkTurns': '42', 'NextDrinkPercent': '50',
+    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'PourSeconds': '5.0', 'WaterDrinkTurns': '14', 'BeerDrinkTurns': '42', 'NextDrinkPercent': '50',
     'MaxDrinksPerVisit': '5', 'DrunkPerBeer': '25', 'DrunkDecayPerTurn': '0.5', 'StaggerAt': '50',
     'StaggerSpeedFactor': '0.5', 'VomitAt': '75', 'HangoverAt': '50', 'HangoverTurns': '252',
     'HangoverWorkFactor': '0.5', 'HangoverMood': '-16.67', 'GameChancePercent': '50', 'GameTurns': '8',

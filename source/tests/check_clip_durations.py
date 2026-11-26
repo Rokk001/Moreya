@@ -1,7 +1,7 @@
 """Decision 853: clips play their plan length in game seconds, not in game turns (a turn is 1/1.4 s).
 
 Pure text check, compiles nothing: the ClipSeconds keys with a doc line each, the clip update of MovableGameEntity, the
-6 s get-up of decision 857 (arena KO, tavern, render) after the 30 s lying time, the innkeeper Pour over DrinkTurns, the
+6 s get-up of decision 857 (arena KO, tavern, render) after the 30 s lying time, the innkeeper Pour over PourSeconds, the
 shaman and pool attendant overrides, and the slap clips of the slap duel stretched to the slap length the tavern draws
 (decision 856, setTimedAnimationState with the playing time sent to the clients)."""
 import math
@@ -115,8 +115,12 @@ if has_values:
     # The arena loser lies until the counter reaches the get-up turns: 30 s, then 6 s getting up
     assert abs((arena_counter - get_up_turns) / turns_per_second - 30.0) < 1e-9 and values['ArenaKnockOutSeconds'] == 30
 
-# Innkeeper Pour lasts the whole serving time, the shaman and the attendant clips their configured time
-assert re.search(r'clip == InnkeeperPose::pour\)\s*return [^;]*DRINK_TURNS_KEY[^;]*/ ODApplication::turnsPerSecond', innkeeper)
+# Innkeeper Pour lasts PourSeconds (5 s, its own value), the shaman and the attendant clips their configured time
+assert re.search(r'clip == InnkeeperPose::pour\)\s*return [^;]*getTavernConfigDouble\(POUR_SECONDS_KEY\);', innkeeper)
+assert 'static const std::string POUR_SECONDS_KEY = "PourSeconds";' in innkeeper
+assert re.search(r'mPourTurns = [^;]*POUR_SECONDS_KEY\)\s*\*\s*ODApplication::turnsPerSecond \+ 0\.5\)\);', innkeeper), 'the pour ends after PourSeconds'
+if has_values:
+    assert re.search(r'^\s*PourSeconds\s+5\.0\s*$', global_cfg, re.M), 'the innkeeper pours 5 s'
 assert 'InfirmaryShamanAnimationSeconds' in shaman.split('InfirmaryShamanEntity::getClipSeconds')[1][:500]
 assert 'PoolAttendantClipSeconds' in pool and 'CHAIR_SEAT_HEIGHT = 1.13;' in pool  # chair seat plate height of the integrated pool attendant rework (decision 837)
 print('clip duration checks passed')

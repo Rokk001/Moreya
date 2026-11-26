@@ -25,13 +25,15 @@
 #include "utils/LogManager.h"
 #include "ODApplication.h"
 
+#include <cmath>
+
 const std::string InnkeeperEntity::MESH_NAME = "Innkeeper";
 const uint32_t InnkeeperEntity::CHEER_TURNS = 2;
 
 //! \brief Name of the figure used for the unique entity name when the room name is empty.
 static const std::string INNKEEPER_FALLBACK_NAME = "Innkeeper";
-//! \brief Config key of the [Tavern] block with the turns a drink takes (and the pour clip plays).
-static const std::string DRINK_TURNS_KEY = "DrinkTurns";
+//! \brief Config key of the [Tavern] block with the game seconds the innkeeper pours a drink.
+static const std::string POUR_SECONDS_KEY = "PourSeconds";
 
 InnkeeperEntity::InnkeeperEntity(GameMap* gameMap, const std::string& roomName, Ogre::Real rotationAngle) :
     RenderedMovableEntity(gameMap, roomName.empty() ? INNKEEPER_FALLBACK_NAME : roomName + "_" + INNKEEPER_FALLBACK_NAME,
@@ -60,7 +62,7 @@ GameEntityType InnkeeperEntity::getObjectType() const
 double InnkeeperEntity::getClipSeconds(const std::string& clip) const
 {
     if(clip == InnkeeperPose::pour)
-        return ConfigManager::getSingleton().getTavernConfigDouble(DRINK_TURNS_KEY) / ODApplication::turnsPerSecond;
+        return ConfigManager::getSingleton().getTavernConfigDouble(POUR_SECONDS_KEY);
     return RenderedMovableEntity::getClipSeconds(clip);
 }
 
@@ -100,7 +102,9 @@ void InnkeeperEntity::removeFromRoom()
 
 void InnkeeperEntity::onDrink()
 {
-    mPourTurns = static_cast<uint32_t>(ConfigManager::getSingleton().getTavernConfigDouble(DRINK_TURNS_KEY));
+    // The pour lasts PourSeconds game seconds, counted in whole turns of the upkeep
+    mPourTurns = static_cast<uint32_t>(std::floor(ConfigManager::getSingleton().getTavernConfigDouble(POUR_SECONDS_KEY)
+        * ODApplication::turnsPerSecond + 0.5));
     mCheerTurns = 0;
     if(mPourTurns > 0)
         playPose(InnkeeperPose::pour);
