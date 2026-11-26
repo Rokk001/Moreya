@@ -126,8 +126,9 @@ def check_geometry():
                 checked += 1
     # Fixed once from the committed earth meshes: four transforms per vertex; 10,368 vertices before (10,394 before the calmer
     # rock wall meshes of CS10, approved by Mario). 11,798 vertices since the side faces that close the gaps between
-    # neighbouring wall tiles are back (Mario 2026-11-26).
-    assert checked == 47192
+    # neighbouring wall tiles are back (Mario 2026-11-26). 5,160 vertices since the walls are boxes with upright faces that
+    # meet in clean right angles (Mario 2026-11-26).
+    assert checked == 20640
     return checked
 
 

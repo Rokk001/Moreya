@@ -1,8 +1,8 @@
 """No open gaps between neighbouring rock wall tiles.
 
-Two wall tiles of one block share a border on which both are linked. Their top edges there may have different heights (one
-tile drops to the floor where an unlinked side of its own meets that border while the neighbour stays at full height). The
-difference must be closed by vertical faces (skirts) in the border plane, else the empty space shows through as a black
+Two wall tiles of one block share a border on which both are linked. Their top edges there must not differ in height (a
+tile dropping where an unlinked side of its own meets that border leaves a hole next to a neighbour at full height); any
+difference must at least be closed by vertical faces (skirts) in the border plane, else the empty space shows through as a black
 wedge. The check reads the real mesh files of the dirt wall tile set, turns them as the tile set says and tries every
 pair of tiles that can meet, in both directions. No compilation and no game start.
 
@@ -19,8 +19,10 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
 
 #: Places (a pair of tiles and a point on their shared border) where the two top edges differ in height, counted once
-#: from the committed earth meshes and tile set; every one of them must be closed
-DIFFERING_PLACES = 3360
+#: from the committed earth meshes and tile set; every one of them must be closed. None since the walls are boxes whose
+#: linked borders are at full height everywhere (3360 with the former sloped walls); a profile that drops towards a linked
+#: border again shows here
+DIFFERING_PLACES = 0
 #: Tolerance for a point lying in the border plane and for equal heights
 PLANE = 1e-4
 LEVEL = 2e-3
