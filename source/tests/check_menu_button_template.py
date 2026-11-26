@@ -359,8 +359,10 @@ def client(node, rect, screen, user, s):
         return (x0 + sheet_image('FrameLeft', screen, user)[0], y0 + top,
                 x1 - sheet_image('FrameRight', screen, user)[0], y1 - sheet_image('FrameBottom', screen, user)[1])
     if node.type == 'OD/FrameWindow':
-        return (x0 + game_window['FrameLeft'][0], y0 + line_height('MedievalSharp-10', screen, user) + 12.0,
-                x1 - game_window['FrameRight'][0], y1 - game_window['FrameBottom'][1])
+        # the menu sheet frame: the title on the top rail, the contents below it
+        return (x0 + sheet_image('FrameLeft', screen, user)[0],
+                y0 + 0.75 * sheet_image('FrameTop', screen, user)[1] + line_height('MedievalSharp-10', screen, user) + 12.0,
+                x1 - sheet_image('FrameRight', screen, user)[0], y1 - sheet_image('FrameBottom', screen, user)[1])
     return rect
 
 

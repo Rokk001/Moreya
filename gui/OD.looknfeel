@@ -1387,14 +1387,17 @@
         <PropertyLinkDefinition initialValue="MedievalSharp-10" name="TitlebarFont" targetProperty="Font" widget="__auto_titlebar__" />
         <!-- The frame images are properties so one window (the Dungeonbook) can have its own frame; the defaults are
              the shared frame of every other window -->
-        <PropertyDefinition name="FrameTopLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTopLeft" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="FrameTopRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTopRight" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="FrameBottomLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameBottomLeft" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="FrameBottomRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameBottomRight" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="FrameTopImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTop" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="FrameLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameLeft" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="FrameRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameRight" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="FrameBottomImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameBottom" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameTopLeftImage" type="Image" initialValue="ODMenuTemplate/FrameTopLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameTopRightImage" type="Image" initialValue="ODMenuTemplate/FrameTopRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameBottomLeftImage" type="Image" initialValue="ODMenuTemplate/FrameBottomLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameBottomRightImage" type="Image" initialValue="ODMenuTemplate/FrameBottomRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameTopImage" type="Image" initialValue="ODMenuTemplate/FrameTop" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameLeftImage" type="Image" initialValue="ODMenuTemplate/FrameLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameRightImage" type="Image" initialValue="ODMenuTemplate/FrameRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameBottomImage" type="Image" initialValue="ODMenuTemplate/FrameBottom" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameInteriorImage" type="Image" initialValue="ODMenuTemplate/FrameInterior" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameTopKnobImage" type="Image" initialValue="ODMenuTemplate/FrameTopKnob" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameBottomKnobImage" type="Image" initialValue="ODMenuTemplate/FrameBottomKnob" redrawOnWrite="true" layoutOnWrite="true" />
         <Property name="NSSizingCursorImage" value="OpenDungeonsSkin/MouseNoSoCursor" />
         <Property name="EWSizingCursorImage" value="OpenDungeonsSkin/MouseEsWeCursor" />
         <Property name="NWSESizingCursorImage" value="OpenDungeonsSkin/MouseNwSeCursor" />
@@ -1417,12 +1420,12 @@
         </NamedArea>
         <NamedArea name="ClientNoTitleWithFrame">
             <Area>
-                <Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim>
+                <Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /></Dim>
                 <Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopImage" /></Dim>
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="RightEdge" />
-                        <ImagePropertyDim dimension="Width" name="FrameTopRightImage" />
+                        <ImagePropertyDim dimension="Width" name="FrameRightImage" />
                     </OperatorDim>
                 </Dim>
                 <Dim type="BottomEdge">
@@ -1442,10 +1445,11 @@
             </Area>
         </NamedArea>
         <Child nameSuffix="__auto_titlebar__" type="OD/GameTitlebar">
+            <!-- The title sits on the top rail of the frame, between the side rails -->
             <Area>
-                <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                <Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameTopImage" /><AbsoluteDim value="0.75" /></OperatorDim></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameRightImage" /></OperatorDim></Dim>
                 <Dim type="Height">
                     <FontDim widget="__auto_titlebar__" padding="12" type="LineSpacing" />
                 </Dim>
@@ -1456,8 +1460,8 @@
         </Child>
         <Child nameSuffix="__auto_closebutton__" type="OD/SystemButton">
             <Area>
-                <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="LeftEdge" /><WidgetDim dimension="Height" widget="__auto_titlebar__" /></OperatorDim></Dim>
-                <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameRightImage" /></OperatorDim><WidgetDim dimension="Height" widget="__auto_titlebar__" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><WidgetDim dimension="TopEdge" widget="__auto_titlebar__" /></Dim>
                 <Dim type="Width"><WidgetDim dimension="Height" widget="__auto_titlebar__" /></Dim>
                 <Dim type="Height"><WidgetDim dimension="Height" widget="__auto_titlebar__" /></Dim>
             </Area>
@@ -1468,42 +1472,118 @@
             <Property name="PushedImage" value="OpenDungeonsGameWindow/CloseButtonPressed" />
         </Child>
         <ImagerySection name="withtitle_frame">
-            <FrameComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
-                </Area>
-                <ImageProperty component="BottomLeftCorner" name="FrameBottomLeftImage" />
-                <ImageProperty component="BottomRightCorner" name="FrameBottomRightImage" />
-                <ImageProperty component="LeftEdge" name="FrameLeftImage" />
-                <ImageProperty component="RightEdge" name="FrameRightImage" />
-                <ImageProperty component="BottomEdge" name="FrameBottomImage" />
-                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
-                <VertFormat type="Tiled" />
-                <HorzFormat type="Tiled" />
-            </FrameComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /><AbsoluteDim value="0.5" /></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameTopImage" /><AbsoluteDim value="0.5" /></OperatorDim></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameRightImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameBottomImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameInteriorImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></OperatorDim></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopImage" /></Dim></Area>
+                <ImageProperty name="FrameTopImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameBottomLeftImage" /></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></OperatorDim></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopLeftImage" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameLeftImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopRightImage" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameRightImage" /></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameRightImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopLeftImage" /></Dim></Area>
+                <ImageProperty name="FrameTopLeftImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopRightImage" /></Dim></Area>
+                <ImageProperty name="FrameTopRightImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomLeftImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomLeftImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomRightImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Multiply"><UnifiedDim scale="1" type="Width" /><AbsoluteDim value="0.5" /></OperatorDim><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameTopKnobImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopKnobImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopKnobImage" /></Dim></Area>
+                <ImageProperty name="FrameTopKnobImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Multiply"><UnifiedDim scale="1" type="Width" /><AbsoluteDim value="0.5" /></OperatorDim><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameBottomKnobImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomKnobImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomKnobImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomKnobImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomKnobImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
         </ImagerySection>
         <ImagerySection name="notitle_frame">
-            <FrameComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-                <ImageProperty component="TopLeftCorner" name="FrameTopLeftImage" />
-                <ImageProperty component="TopRightCorner" name="FrameTopRightImage" />
-                <ImageProperty component="BottomLeftCorner" name="FrameBottomLeftImage" />
-                <ImageProperty component="BottomRightCorner" name="FrameBottomRightImage" />
-                <ImageProperty component="LeftEdge" name="FrameLeftImage" />
-                <ImageProperty component="RightEdge" name="FrameRightImage" />
-                <ImageProperty component="BottomEdge" name="FrameBottomImage" />
-                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
-                <VertFormat type="Tiled" />
-                <HorzFormat type="Tiled" />
-            </FrameComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /><AbsoluteDim value="0.5" /></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameTopImage" /><AbsoluteDim value="0.5" /></OperatorDim></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameRightImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameBottomImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameInteriorImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></OperatorDim></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopImage" /></Dim></Area>
+                <ImageProperty name="FrameTopImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameBottomLeftImage" /></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></OperatorDim></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopLeftImage" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameLeftImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopRightImage" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameRightImage" /></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameRightImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopLeftImage" /></Dim></Area>
+                <ImageProperty name="FrameTopLeftImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopRightImage" /></Dim></Area>
+                <ImageProperty name="FrameTopRightImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomLeftImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomLeftImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomRightImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Multiply"><UnifiedDim scale="1" type="Width" /><AbsoluteDim value="0.5" /></OperatorDim><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameTopKnobImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopKnobImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopKnobImage" /></Dim></Area>
+                <ImageProperty name="FrameTopKnobImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Multiply"><UnifiedDim scale="1" type="Width" /><AbsoluteDim value="0.5" /></OperatorDim><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameBottomKnobImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomKnobImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomKnobImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomKnobImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomKnobImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
         </ImagerySection>
         <ImagerySection name="withtitle_noframe_client_area">
             <ImageryComponent>
@@ -1603,22 +1683,61 @@
             </Layer>
         </StateImagery>
             <ImagerySection name="withtitle_frame_disabled">
-            <FrameComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
-                </Area>
-                <ImageProperty component="BottomLeftCorner" name="FrameBottomLeftImage" />
-                <ImageProperty component="BottomRightCorner" name="FrameBottomRightImage" />
-                <ImageProperty component="LeftEdge" name="FrameLeftImage" />
-                <ImageProperty component="RightEdge" name="FrameRightImage" />
-                <ImageProperty component="BottomEdge" name="FrameBottomImage" />
-                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
-                <VertFormat type="Tiled" />
-                <HorzFormat type="Tiled" />
-            </FrameComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /><AbsoluteDim value="0.5" /></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameTopImage" /><AbsoluteDim value="0.5" /></OperatorDim></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameRightImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameBottomImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameInteriorImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></OperatorDim></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopImage" /></Dim></Area>
+                <ImageProperty name="FrameTopImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameBottomLeftImage" /></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></OperatorDim></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopLeftImage" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameLeftImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopRightImage" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameRightImage" /></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameRightImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopLeftImage" /></Dim></Area>
+                <ImageProperty name="FrameTopLeftImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopRightImage" /></Dim></Area>
+                <ImageProperty name="FrameTopRightImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomLeftImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomLeftImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomRightImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Multiply"><UnifiedDim scale="1" type="Width" /><AbsoluteDim value="0.5" /></OperatorDim><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameTopKnobImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopKnobImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopKnobImage" /></Dim></Area>
+                <ImageProperty name="FrameTopKnobImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Multiply"><UnifiedDim scale="1" type="Width" /><AbsoluteDim value="0.5" /></OperatorDim><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameBottomKnobImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomKnobImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomKnobImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomKnobImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomKnobImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
         </ImagerySection>
         <ImagerySection name="withtitle_noframe_client_area_disabled">
             <ImageryComponent>
@@ -1637,24 +1756,61 @@
             </ImageryComponent>
         </ImagerySection>
         <ImagerySection name="notitle_frame_disabled">
-            <FrameComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-                <ImageProperty component="TopLeftCorner" name="FrameTopLeftImage" />
-                <ImageProperty component="TopRightCorner" name="FrameTopRightImage" />
-                <ImageProperty component="BottomLeftCorner" name="FrameBottomLeftImage" />
-                <ImageProperty component="BottomRightCorner" name="FrameBottomRightImage" />
-                <ImageProperty component="LeftEdge" name="FrameLeftImage" />
-                <ImageProperty component="RightEdge" name="FrameRightImage" />
-                <ImageProperty component="BottomEdge" name="FrameBottomImage" />
-                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
-                <VertFormat type="Tiled" />
-                <HorzFormat type="Tiled" />
-            </FrameComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /><AbsoluteDim value="0.5" /></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameTopImage" /><AbsoluteDim value="0.5" /></OperatorDim></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameRightImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><OperatorDim op="Multiply"><ImagePropertyDim dimension="Height" name="FrameBottomImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameInteriorImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></OperatorDim></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopImage" /></Dim></Area>
+                <ImageProperty name="FrameTopImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameBottomLeftImage" /></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></OperatorDim></Dim><Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Tiled" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopLeftImage" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameLeftImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopRightImage" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameRightImage" /></Dim><Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></OperatorDim></Dim></Area>
+                <ImageProperty name="FrameRightImage" />
+                <VertFormat type="Tiled" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopLeftImage" /></Dim></Area>
+                <ImageProperty name="FrameTopLeftImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopRightImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopRightImage" /></Dim></Area>
+                <ImageProperty name="FrameTopRightImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomLeftImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomLeftImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomLeftImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Width" /><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomRightImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomRightImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomRightImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Multiply"><UnifiedDim scale="1" type="Width" /><AbsoluteDim value="0.5" /></OperatorDim><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameTopKnobImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="TopEdge"><AbsoluteDim value="0" /></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameTopKnobImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameTopKnobImage" /></Dim></Area>
+                <ImageProperty name="FrameTopKnobImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
+            <ImageryComponent>
+                <Area><Dim type="LeftEdge"><OperatorDim op="Subtract"><OperatorDim op="Multiply"><UnifiedDim scale="1" type="Width" /><AbsoluteDim value="0.5" /></OperatorDim><OperatorDim op="Multiply"><ImagePropertyDim dimension="Width" name="FrameBottomKnobImage" /><AbsoluteDim value="0.5" /></OperatorDim></OperatorDim></Dim><Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="Height" /><ImagePropertyDim dimension="Height" name="FrameBottomKnobImage" /></OperatorDim></Dim><Dim type="Width"><ImagePropertyDim dimension="Width" name="FrameBottomKnobImage" /></Dim><Dim type="Height"><ImagePropertyDim dimension="Height" name="FrameBottomKnobImage" /></Dim></Area>
+                <ImageProperty name="FrameBottomKnobImage" />
+                <VertFormat type="Stretched" /><HorzFormat type="Stretched" />
+            </ImageryComponent>
         </ImagerySection>
         <ImagerySection name="notitle_noframe_client_area_disabled">
             <ImageryComponent>
@@ -1675,44 +1831,18 @@
         <PropertyDefinition initialValue="FFD8CCB8" name="CaptionColour" redrawOnWrite="true" />
         <!-- Images and caption formatting are properties so one window (the Dungeonbook) can have its own title band;
              the defaults are the shared title band of every other window -->
-        <PropertyDefinition name="TitleTopLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTopLeft" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="TitleTopRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTopRight" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="TitleTopImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTop" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="TitleLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameLeft" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="TitleRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameRight" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="TitleRuleImage" type="Image" initialValue="OpenDungeonsGameWindow/TitleRule" redrawOnWrite="true" layoutOnWrite="true" />
-        <PropertyDefinition name="CaptionHorzFormatting" type="HorizontalTextFormatting" initialValue="LeftAligned" redrawOnWrite="true" />
+        <!-- The window behind the title draws the whole frame of the menu sheet, so the title bar paints only its caption; the
+             title images still give the caption its insets -->
+        <PropertyDefinition name="TitleTopLeftImage" type="Image" initialValue="ODMenuTemplate/FrameTopLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleTopRightImage" type="Image" initialValue="ODMenuTemplate/FrameTopRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleTopImage" type="Image" initialValue="ODMenuTemplate/FrameTop" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleLeftImage" type="Image" initialValue="ODMenuTemplate/FrameLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleRightImage" type="Image" initialValue="ODMenuTemplate/FrameRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleRuleImage" type="Image" initialValue="ODMenuTemplate/BorderTop" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="CaptionHorzFormatting" type="HorizontalTextFormatting" initialValue="CentreAligned" redrawOnWrite="true" />
         <!-- True: the caption area is symmetric (same inset left and right), so a centred caption sits in the middle -->
-        <PropertyDefinition name="CaptionCentred" type="bool" initialValue="false" redrawOnWrite="true" />
-        <ImagerySection name="main">
-            <FrameComponent>
-                <Area>
-                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
-                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
-                </Area>
-                <ImageProperty component="TopLeftCorner" name="TitleTopLeftImage" />
-                <ImageProperty component="TopRightCorner" name="TitleTopRightImage" />
-                <ImageProperty component="TopEdge" name="TitleTopImage" />
-                <ImageProperty component="LeftEdge" name="TitleLeftImage" />
-                <ImageProperty component="RightEdge" name="TitleRightImage" />
-                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
-                <VertFormat type="Tiled" />
-                <HorzFormat type="Tiled" />
-            </FrameComponent>
-            <ImageryComponent>
-                <Area>
-                    <Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="TitleLeftImage" /></Dim>
-                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImagePropertyDim dimension="Height" name="TitleRuleImage" /></OperatorDim></Dim>
-                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImagePropertyDim dimension="Width" name="TitleRightImage" /></OperatorDim></Dim>
-                    <Dim type="Height"><ImagePropertyDim dimension="Height" name="TitleRuleImage" /></Dim>
-                </Area>
-                <ImageProperty name="TitleRuleImage" />
-                <VertFormat type="Stretched" />
-                <HorzFormat type="Tiled" />
-            </ImageryComponent>
-        </ImagerySection>
+        <PropertyDefinition name="CaptionCentred" type="bool" initialValue="true" redrawOnWrite="true" />
+        <ImagerySection name="main" />
         <ImagerySection name="caption">
             <TextComponent>
                 <Area>
