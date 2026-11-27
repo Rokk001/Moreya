@@ -1253,6 +1253,13 @@ private:
     void updateFollowingClipProps();
     //! The clip props that follow a hand, by the entity name of their holder
     std::map<std::string, FollowingClipProp> mFollowingClipProps;
+    //! \brief Gives the tavern guest with that entity name the two dice of its dice outcome clip.
+    void attachDice(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton,
+        const std::string& clip);
+    //! \brief Moves the two dice of one guest: between its palms while it shakes them, on the table after the throw.
+    void placeDice(const std::string& objectName, const std::string& clip);
+    //! The guests that shake or have thrown dice: the clip they play, by their entity name
+    std::map<std::string, std::string> mDiceHolders;
     //! Clip a reaction currently shows on a creature, by creature name
     std::map<std::string, std::string> mReactionClips;
     //! Removes only the mug of a guest of a tavern, if the creature has one (the end of a seat blend out of a drink clip)

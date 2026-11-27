@@ -38,10 +38,10 @@ ROOM_NAMES = tuple(room[0] for room in ROOMS)
 
 
 #: The files of every room package besides its Package.cfg, at their relative paths, fixed for this branch (the inventory
-#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 327 files (323 before the meshes and
+#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 330 files (323 before the meshes and
 #: skeletons of the merchant, innkeeper, shaman and pool attendant moved into the creatures content package, 315 after
-#: it, 327 with the clip props: the innkeeper's jug in the tavern, the shaman's rattle, bucket and flask in the
-#: infirmary)
+#: it, 330 with the clip props: the innkeeper's jug and the dice in the tavern, the shaman's rattle, bucket and flask
+#: in the infirmary)
 PACKAGED_ASSETS = {
     'GuardRoom': (
         'materials/scripts/Dojo.material', 'materials/textures/Dojo.png', 'materials/textures/DojoNormal.png',
@@ -107,7 +107,8 @@ PACKAGED_ASSETS = {
     ),
     'Tavern': (
         'materials/scripts/TavernEffects.material', 'materials/scripts/TavernFloor.material',
-        'materials/scripts/TavernJug.material', 'materials/scripts/TavernWall.material',
+        'materials/scripts/TavernDie.material', 'materials/scripts/TavernJug.material',
+        'materials/scripts/TavernWall.material',
         'materials/textures/tavern/DuelBird.png',
         'materials/textures/tavern/Tavern0000.png', 'materials/textures/tavern/Tavern0000Normal.png',
         'materials/textures/tavern/Tavern0001.png', 'materials/textures/tavern/Tavern0001Normal.png',
@@ -131,7 +132,7 @@ PACKAGED_ASSETS = {
         'materials/textures/tavern/TavernCounterWoodApprovedColor.png',
         'materials/textures/tavern/TavernCounterWoodApprovedNormal.png', 'materials/textures/tavern/TavernFloor.png',
         'materials/textures/tavern/TavernFloorNormal.png', 'materials/textures/tavern/TavernFoam.png',
-        'materials/textures/tavern/TavernJug.png',
+        'materials/textures/tavern/TavernDie.png', 'materials/textures/tavern/TavernJug.png',
         'materials/textures/tavern/TavernHood.png', 'materials/textures/tavern/TavernHoodApprovedColor.png',
         'materials/textures/tavern/TavernHoodApprovedNormal.png', 'materials/textures/tavern/TavernIron.png',
         'materials/textures/tavern/TavernIronNormal.png', 'materials/textures/tavern/TavernKegWood.png',
@@ -146,7 +147,7 @@ PACKAGED_ASSETS = {
         'materials/textures/tavern/TavernTableWoodNormal.png', 'materials/textures/tavern/TavernWall.png',
         'materials/textures/tavern/TavernWallNormal.png', 'materials/textures/tavern/TavernWood.png',
         'materials/textures/tavern/TavernWoodNormal.png',
-        'models/TavernCounter.mesh', 'models/TavernJug.mesh', 'models/TavernKeg.mesh', 'models/TavernStool.mesh',
+        'models/TavernCounter.mesh', 'models/TavernDie.mesh', 'models/TavernJug.mesh', 'models/TavernKeg.mesh', 'models/TavernStool.mesh',
         'models/TavernTable.mesh', 'particles/Tavern.particle', 'sounds/Rooms/Tavern/Clink.ogg',
         'sounds/Rooms/Tavern/Murmur.ogg', 'sounds/Rooms/Tavern/Pour.ogg',
         'sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg', 'sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg',
@@ -241,7 +242,7 @@ PACKAGED_MATERIALS = {
             'SpaWhistle', 'SpaEyes', 'SpaLavaGlow', 'SpaAttendantSclera', 'SpaFloor'),
     'Tavern': ('TavernDuelBirds', 'TavernFloor', 'Tavern0000', 'Tavern0001', 'Tavern0010', 'Tavern0011', 'Tavern0100',
                'Tavern0101', 'Tavern0110', 'Tavern0111', 'Tavern1000', 'Tavern1001', 'Tavern1010', 'Tavern1011',
-               'Tavern1100', 'Tavern1101', 'Tavern1110', 'Tavern1111', 'TavernWall', 'TavernJug'),
+               'Tavern1100', 'Tavern1101', 'Tavern1110', 'Tavern1111', 'TavernWall', 'TavernJug', 'TavernDie'),
     'Toilet': ('Toilet0000', 'Toilet0001', 'Toilet0010', 'Toilet0011', 'Toilet0100', 'Toilet0101', 'Toilet0110',
                'Toilet0111', 'Toilet1000', 'Toilet1001', 'Toilet1010', 'Toilet1011', 'Toilet1100', 'Toilet1101',
                'Toilet1110', 'Toilet1111', 'ToiletSeat'),

@@ -4,7 +4,7 @@ tastes a potion from a flask (PotionTaste).
 Two parts, no compiler:
   wiring
       rrSetObjectAnimationState gives and takes the clip prop on every change into or out of RattleShake,
-      TripOverBucket and PotionTaste (isFigureClipWithProp names the clips); updateClipProp hands RattleShake to
+      TripOverBucket and PotionTaste (isClipWithProp names the clips); updateClipProp hands RattleShake to
       attachRattle, TripOverBucket to placeTripBucket and PotionTaste to attachFlask; the placement constants have the
       fixed values below.
   assets (OgreXMLConverter converts the shipped binaries)
@@ -283,13 +283,13 @@ constants = {
 for text, name in constants.items():
     if text not in source:
         fail('RenderManager.cpp: ' + name + ' missing (' + text + ')')
-figure_clips = re.search(r'bool isFigureClipWithProp\(const std::string& clip\)\s*\{[^}]*\}', source)
+figure_clips = re.search(r'bool isClipWithProp\(const std::string& clip\)\s*\{[^}]*\}', source)
 if figure_clips is None or 'EntityAnimation::rattle_shake_anim' not in figure_clips.group(0) or \
         'EntityAnimation::trip_over_bucket_anim' not in figure_clips.group(0) or \
         'EntityAnimation::potion_taste_anim' not in figure_clips.group(0):
-    fail('isFigureClipWithProp does not name RattleShake, TripOverBucket and PotionTaste')
-if not re.search(r'if\(isFigureClipWithProp\(anim\) \|\|\s*\(\(previousState != nullptr\) && '
-                 r'isFigureClipWithProp\(previousState->getAnimationName\(\)\)\)\)\s*updateClipProp\(objectName, anim\);',
+    fail('isClipWithProp does not name RattleShake, TripOverBucket and PotionTaste')
+if not re.search(r'if\(isClipWithProp\(anim\) \|\|\s*\(\(previousState != nullptr\) && '
+                 r'isClipWithProp\(previousState->getAnimationName\(\)\)\)\)\s*updateClipProp\(objectName, anim\);',
                  source):
     fail('rrSetObjectAnimationState does not give and take the figure clip props')
 for call, name in (('attachRattle(objectName, holder, *skeleton);', 'the rattle'),

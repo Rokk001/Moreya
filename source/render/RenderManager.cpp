@@ -267,6 +267,20 @@ const Ogre::Real FLASK_HEIGHT_SHARE = 0.12f;
 const Ogre::Vector3 FLASK_GRIP(0.0f, 0.0f, 0.22f);
 const Ogre::Real FLASK_PALM_REACH = 0.04f;
 const Ogre::Vector3 FLASK_MOUTH_SHIFT(0.0f, -0.10f, 0.04f);
+//! SitDiceWin and SitDiceLose of a tavern guest: two dice (the same mesh twice, this big in the model space of the guest,
+//! the mesh is 1 unit high) lie side by side this far apart between the palms of both hands (this share of the guest's
+//! height along the fingers from each hand bone) while the hands shake them, up to this share of the clip, the throw;
+//! then they lie on the table top straight before the guest, this far in front of it. The table top lies TAVERN_TABLE_TOP above
+//! the floor of the room (TavernTable.mesh), which is TAVERN_TABLE_TOP / level scale in the model space of the guest
+const std::string DIE_MESH = "TavernDie.mesh";
+const Ogre::Real DIE_SIZE = 0.05f;
+const Ogre::Real DICE_GAP = 0.07f;
+const Ogre::Real DICE_PALM_REACH = 0.05f;
+const Ogre::Real DICE_THROW_SHARE = 0.35f;
+const Ogre::Real DICE_TABLE_REACH = 0.2f;
+const Ogre::Real TAVERN_TABLE_TOP = 0.4425f;
+//! Suffix of the name of the second die and of its scene node
+const std::string SECOND_DIE_SUFFIX = "_2";
 
 //! \brief Position and orientation of a bone in model space at this share of the length of a clip, read from the tracks
 //! of the clip without touching the pose of the entity. False when the skeleton has no such bone or clip.
@@ -310,13 +324,14 @@ bool getMidClipBonePose(const Ogre::Skeleton& skeleton, const std::string& clip,
     return getClipBonePose(skeleton, clip, boneName, 0.5f, position, orientation);
 }
 
-//! \brief True for the clips of a room figure (not a creature) that show a clip prop: HerbSniff, RattleShake,
-//! TripOverBucket and PotionTaste of the infirmary shaman, Pour of the innkeeper.
-bool isFigureClipWithProp(const std::string& clip)
+//! \brief True for the clips that show a clip prop chosen by the clip alone: HerbSniff, RattleShake, TripOverBucket and
+//! PotionTaste of the infirmary shaman, Pour of the innkeeper and the dice outcome clips of a tavern guest.
+bool isClipWithProp(const std::string& clip)
 {
     return (clip == EntityAnimation::herb_sniff_anim) || (clip == EntityAnimation::rattle_shake_anim) ||
         (clip == EntityAnimation::trip_over_bucket_anim) || (clip == EntityAnimation::potion_taste_anim) ||
-        (clip == InnkeeperPose::pour);
+        (clip == InnkeeperPose::pour) || (clip == EntityAnimation::sit_dice_win_anim) ||
+        (clip == EntityAnimation::sit_dice_lose_anim);
 }
 
 //! \brief Rotation that puts the z axis of a mesh on the direction and its x axis as near to the hint as possible.
@@ -6448,9 +6463,10 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     curAnimatedObject->setAnimationState(animState);
 
     // The infirmary shaman holds her herbs while she smells at them and her rattle while she shakes it, and a bucket
-    // stands before her feet while she trips over it; the innkeeper holds his jug while he pours
-    if(isFigureClipWithProp(anim) ||
-       ((previousState != nullptr) && isFigureClipWithProp(previousState->getAnimationName())))
+    // stands before her feet while she trips over it; the innkeeper holds his jug while he pours; a tavern guest shakes
+    // and throws two dice in its dice outcome clips
+    if(isClipWithProp(anim) ||
+       ((previousState != nullptr) && isClipWithProp(previousState->getAnimationName())))
         updateClipProp(objectName, anim);
 
     // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table. A drinking
@@ -9371,6 +9387,16 @@ bool RenderManager::rrReactionHoldsProp(const Creature* creature) const
 void RenderManager::removeClipProp(const std::string& objectName)
 {
     mFollowingClipProps.erase(objectName);
+    mDiceHolders.erase(objectName);
+    const std::string secondDie = CLIP_PROP_PREFIX + objectName + SECOND_DIE_SUFFIX;
+    if(mSceneManager->hasEntity(secondDie))
+    {
+        Ogre::Entity* dieEntity = mSceneManager->getEntity(secondDie);
+        dieEntity->detachFromParent();
+        mSceneManager->destroyEntity(dieEntity);
+    }
+    if(mSceneManager->hasSceneNode(secondDie + CLIP_PROP_NODE_SUFFIX))
+        mSceneManager->destroySceneNode(secondDie + CLIP_PROP_NODE_SUFFIX);
     const std::string propName = CLIP_PROP_PREFIX + objectName;
     if(!mSceneManager->hasEntity(propName))
         return;
@@ -9516,6 +9542,90 @@ void RenderManager::updateFollowingClipProps()
     for(std::map<std::string, FollowingClipProp>::const_iterator it = mFollowingClipProps.begin();
         it != mFollowingClipProps.end(); ++it)
         placeFollowingClipProp(it->first, it->second);
+    for(std::map<std::string, std::string>::const_iterator it = mDiceHolders.begin(); it != mDiceHolders.end(); ++it)
+        placeDice(it->first, it->second);
+}
+
+//! Both dice hang on nodes of their own below the parent node of the guest (its model space) that placeDice moves in
+//! every frame.
+void RenderManager::attachDice(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton,
+    const std::string& clip)
+{
+    if(!skeleton.hasBone("LeftHand") || !skeleton.hasBone("RightHand") || !skeleton.hasAnimation(clip))
+    {
+        OD_LOG_WRN("No hands for the dice, skeleton=" + skeleton.getName());
+        return;
+    }
+
+    const std::string names[] = {CLIP_PROP_PREFIX + objectName, CLIP_PROP_PREFIX + objectName + SECOND_DIE_SUFFIX};
+    for(int i = 0; i < 2; ++i)
+    {
+        Ogre::Entity* dieEntity = mSceneManager->createEntity(names[i], DIE_MESH);
+        dieEntity->setQueryFlags(0);
+        const Ogre::Real scale = DIE_SIZE / dieEntity->getMesh()->getBounds().getSize().z;
+        Ogre::SceneNode* node = holder->getParentSceneNode()->createChildSceneNode(names[i] + CLIP_PROP_NODE_SUFFIX);
+        node->setScale(scale, scale, scale);
+        node->attachObject(dieEntity);
+    }
+    mDiceHolders[objectName] = clip;
+    placeDice(objectName, clip);
+}
+
+//! The hand bones hold the pose of the last rendered frame. Before the throw the dice lie side by side between the palms,
+//! under their middle; after it they lie on the table top before the guest, the second one turned to show other faces.
+void RenderManager::placeDice(const std::string& objectName, const std::string& clip)
+{
+    const std::string firstName = CLIP_PROP_PREFIX + objectName;
+    const std::string secondName = firstName + SECOND_DIE_SUFFIX;
+    if(!mSceneManager->hasEntity(objectName) || !mSceneManager->hasSceneNode(firstName + CLIP_PROP_NODE_SUFFIX) ||
+       !mSceneManager->hasSceneNode(secondName + CLIP_PROP_NODE_SUFFIX))
+        return;
+
+    Ogre::Entity* holder = mSceneManager->getEntity(objectName);
+    Ogre::Skeleton* skeleton = holder->getSkeleton();
+    Ogre::AnimationStateSet* states = holder->getAllAnimationStates();
+    if((skeleton == nullptr) || (states == nullptr) || !states->hasAnimationState(clip) || (holder->getParentSceneNode() == nullptr))
+        return;
+
+    const Ogre::AnimationState* state = states->getAnimationState(clip);
+    const Ogre::Real share = (state->getLength() > 0.0f) ? state->getTimePosition() / state->getLength() : 0.0f;
+    const Ogre::Real height = holder->getMesh()->getBounds().getSize().z;
+    const Ogre::Bone* leftHand = skeleton->getBone("LeftHand");
+    const Ogre::Bone* rightHand = skeleton->getBone("RightHand");
+    const Ogre::Vector3 reach(0.0f, DICE_PALM_REACH * height, 0.0f);
+    const Ogre::Vector3 leftPalm = leftHand->_getDerivedPosition() + leftHand->_getDerivedOrientation() * reach;
+    const Ogre::Vector3 rightPalm = rightHand->_getDerivedPosition() + rightHand->_getDerivedOrientation() * reach;
+
+    Ogre::Vector3 first;
+    Ogre::Vector3 second;
+    if(share < DICE_THROW_SHARE)
+    {
+        const Ogre::Vector3 centre = (leftPalm + rightPalm) * 0.5f - Ogre::Vector3(0.0f, 0.0f, 0.5f * DIE_SIZE);
+        Ogre::Vector3 across = rightPalm - leftPalm;
+        across.z = 0.0f;
+        if(across.squaredLength() < 1e-8f)
+            across = Ogre::Vector3::UNIT_X;
+        across.normalise();
+        first = centre - across * (0.5f * DICE_GAP);
+        second = centre + across * (0.5f * DICE_GAP);
+    }
+    else
+    {
+        const Ogre::Real levelScale = holder->getParentSceneNode()->getScale().z;
+        const Ogre::Vector3 spot(0.0f, -DICE_TABLE_REACH,
+            TAVERN_TABLE_TOP / ((levelScale > 0.0f) ? levelScale : 1.0f));
+        first = spot - Ogre::Vector3(0.5f * DICE_GAP, 0.0f, 0.0f);
+        second = spot + Ogre::Vector3(0.5f * DICE_GAP, -0.3f * DICE_GAP, 0.0f);
+    }
+
+    // The second die is turned on its side, so the two show different faces; it is lifted by half a die to stay on its base
+    const Ogre::Quaternion turned = Ogre::Quaternion(Ogre::Degree(90.0f), Ogre::Vector3::UNIT_X) *
+        Ogre::Quaternion(Ogre::Degree(35.0f), Ogre::Vector3::UNIT_Z);
+    Ogre::SceneNode* firstNode = mSceneManager->getSceneNode(firstName + CLIP_PROP_NODE_SUFFIX);
+    Ogre::SceneNode* secondNode = mSceneManager->getSceneNode(secondName + CLIP_PROP_NODE_SUFFIX);
+    firstNode->setPosition(first);
+    secondNode->setPosition(second + Ogre::Vector3(0.0f, 0.0f, 0.5f * DIE_SIZE) - turned * Ogre::Vector3(0.0f, 0.0f, 0.5f * DIE_SIZE));
+    secondNode->setOrientation(turned);
 }
 
 //! Every prop is sized to the height of the mesh of its holder and placed from the pose in the middle of its clip. The
@@ -9539,6 +9649,8 @@ void RenderManager::updateClipProp(const std::string& objectName, const std::str
         meshName = TRIP_BUCKET_MESH;
     else if(clip == EntityAnimation::potion_taste_anim)
         meshName = FLASK_MESH;
+    else if((clip == EntityAnimation::sit_dice_win_anim) || (clip == EntityAnimation::sit_dice_lose_anim))
+        meshName = DIE_MESH;
     else
         return;
 
@@ -9569,6 +9681,11 @@ void RenderManager::updateClipProp(const std::string& objectName, const std::str
     if(clip == EntityAnimation::potion_taste_anim)
     {
         attachFlask(objectName, holder, *skeleton);
+        return;
+    }
+    if(meshName == DIE_MESH)
+    {
+        attachDice(objectName, holder, *skeleton, clip);
         return;
     }
 
