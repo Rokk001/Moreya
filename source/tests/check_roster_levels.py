@@ -4,12 +4,18 @@ Every .level file under levels/ is read. A removed class may not appear as a cre
 wave entry, a raid member, a Block trigger, a spawn or generate entry or a creature definition. A DarkElf may only
 belong to a hero seat; keeper-side and rogue (seat 0) DarkElfs are Banshees. The number of class uses per successor
 across all levels is a fixed value counted once after the successors were put in.
+
+When the content packages are present (scripts/campaign_packages.py), their level files are checked by the same
+rules against the fixed counts of the content repository (checks/roster_levels.json: successor uses, level files
+per successor and raid member templates); the fixed values below cover the levels of this repository alone.
 """
 from pathlib import Path
 import re
 import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import campaign_packages  # noqa: E402
 
 REMOVED = ("Rat", "Spider", "Roach", "LavaSpawn", "Slime", "Dwarf1", "NatureMonster", "Scarab",
            "TentacleAlbine", "TentacleGreen", "Kreatur", "Wyvern")
@@ -141,15 +147,34 @@ def removed_tokens(lines):
                 yield number, token
 
 
-def main():
-    """Run the level roster check and report every failure."""
-    errors = []
-    uses = dict((name, 0) for name in EXPECTED_USES)
-    files = dict((name, 0) for name in EXPECTED_USES)
-    levels = sorted((repo / "levels").rglob("*.level"))
-    assert levels, "no level files found"
+def raid_templates(lines):
+    """Yield the template of every raid Member line of a level (the last column, "-" for none)."""
+    stack = []
+    for line in lines:
+        text = line.strip()
+        match = SECTION_RE.match(text)
+        if match:
+            if match.group(1):
+                stack.pop()
+            else:
+                stack.append(match.group(2))
+            continue
+        fields = text.split()
+        if stack and stack[-1] == "Raid" and len(fields) >= 6 and fields[0] == "Member":
+            yield fields[5]
+
+
+def check_levels(levels, expected_uses, expected_files, place, errors, expected_templates=None):
+    """Check a set of level files against the removed classes, the DarkElf seat rule and fixed counts.
+
+    place names the level set in the count messages ("levels" or "content levels"); expected_templates, when given,
+    holds the fixed number of raid Member lines per template over the set.
+    """
+    uses = dict((name, 0) for name in expected_uses)
+    files = dict((name, 0) for name in expected_uses)
+    templates = {}
     for path in levels:
-        name = path.relative_to(repo).as_posix()
+        name = campaign_packages.display_path(repo, path)
         lines = path.read_text(encoding="utf-8").splitlines()
         factions = seat_factions(lines)
         seen = set()
@@ -166,16 +191,49 @@ def main():
             files[cls] += 1
         for number, token in removed_tokens(lines):
             errors.append("%s:%d names removed creature %s" % (name, number, token))
-    for cls in EXPECTED_USES:
-        if uses[cls] != EXPECTED_USES[cls]:
-            errors.append("%s used %d times in levels, expected %d" % (cls, uses[cls], EXPECTED_USES[cls]))
-        if files[cls] != EXPECTED_FILES[cls]:
-            errors.append("%s used in %d level files, expected %d" % (cls, files[cls], EXPECTED_FILES[cls]))
+        if expected_templates is not None:
+            for template in raid_templates(lines):
+                templates[template] = templates.get(template, 0) + 1
+    for cls in expected_uses:
+        if uses[cls] != expected_uses[cls]:
+            errors.append("%s used %d times in %s, expected %d" % (cls, uses[cls], place, expected_uses[cls]))
+        if files[cls] != expected_files[cls]:
+            errors.append("%s used in %d %s files, expected %d"
+                          % (cls, files[cls], place[:-1] if place.endswith("s") else place, expected_files[cls]))
+    if expected_templates is not None:
+        for template in sorted(set(templates) | set(expected_templates)):
+            if templates.get(template, 0) != expected_templates.get(template, 0):
+                errors.append("raid template %s used %d times in %s, expected %d"
+                              % (template, templates.get(template, 0), place, expected_templates.get(template, 0)))
+
+
+def main():
+    """Run the level roster check over this repository's levels and, when present, the content levels."""
+    errors = []
+    levels = sorted((repo / "levels").rglob("*.level"))
+    assert levels, "no level files found"
+    check_levels(levels, EXPECTED_USES, EXPECTED_FILES, "levels", errors)
+    content = campaign_packages.content_data(repo, "roster_levels")
+    content_levels = campaign_packages.content_files(repo, (".level",))
+    if content is not None:
+        if not content_levels:
+            errors.append("content present but no content level files found")
+        if set(content["uses"]) != set(EXPECTED_USES) or set(content["files"]) != set(EXPECTED_USES):
+            errors.append("content roster_levels.json must name exactly the successors %s"
+                          % ", ".join(sorted(EXPECTED_USES)))
+        else:
+            check_levels(content_levels, content["uses"], content["files"], "content levels", errors,
+                         content.get("raid_templates", {}))
     if errors:
         for error in errors:
             print("FAIL: " + error)
         return 1
-    print("OK: %d level files free of removed creature classes; successor counts match" % len(levels))
+    if content is None:
+        print("OK: %d level files free of removed creature classes; successor counts match (no content)"
+              % len(levels))
+    else:
+        print("OK: %d level files and %d content level files free of removed creature classes; successor and raid "
+              "template counts match" % (len(levels), len(content_levels)))
     return 0
 
 
