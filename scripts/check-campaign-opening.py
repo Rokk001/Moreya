@@ -132,10 +132,13 @@ MAX_EXAMPLES = 5
 # fighter classes the portal can bring). Brackenford (Mold Pit): the portal lies next to the heart and is
 # reached without digging (wing 1 rooms plan WR5, counted on the level on feature/raid-campaign-r17; counted
 # again on fix/wing1-level1-no-river with water walked by the keeper's classes: all values unchanged).
+# Fighter sets counted again on feature/creature-roster, where every portal creature needs only its required room:
+# the workshop is released on Brackenford, Coldwell and Mossgate (Goblin), the ghost room on Ravensledge, where the
+# Banshee follows the keeper DarkElf and the Troll comes with the prison that was already available.
 WING1_PORTALS = {
     "Brackenford.level": ((13, 38), 0, ("Cultist", "Goblin")),
     "Coldwell.level": ((9, 2), 2, ("Cultist", "Goblin")),
-    "Ravensledge.level": ((28, 51), 0, ("Cultist", "DarkElf")),
+    "Ravensledge.level": ((28, 51), 0, ("Banshee", "Cultist", "Troll")),
     "Mossgate.level": ((30, 29), 0, ("Goblin",)),
 }
 

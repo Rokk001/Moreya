@@ -40,7 +40,6 @@ roomBridgeStone
 roomBridgeWooden
 roomCasino
 roomCrypt
-roomGhostRoom
 roomHerbGarden
 roomInfirmary
 roomMerchant
@@ -2261,7 +2260,6 @@ ProtectDungeonTemple	NULL
 [Triggers]
 Block	1	CaveHornet
 Block	1	Ghoul
-Block	1	Banshee
 Block	1	Witch
 Block	1	Goblin
 Block	1	Butcher

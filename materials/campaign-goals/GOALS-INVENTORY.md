@@ -77,13 +77,13 @@ File: `levels/campaign/wing1/Brackenford.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1432 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
-| Script line 1433 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
-| Script line 1440 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
-| Script line 1449 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
-| Script line 1459 | `Action	objectiveid	1	brackenford-o05	Dig across the dry ford and clear the landing yard.` | yes |
-| Script line 1533 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
-| Script line 1631 | `Action	win	1` | yes |
+| Script line 1431 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
+| Script line 1432 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
+| Script line 1439 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
+| Script line 1448 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
+| Script line 1458 | `Action	objectiveid	1	brackenford-o05	Dig across the dry ford and clear the landing yard.` | yes |
+| Script line 1532 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
+| Script line 1630 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -235,11 +235,11 @@ File: `levels/campaign/wing1/Coldwell.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1536 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
-| Script line 1537 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
-| Script line 1545 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
-| Script line 1560 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
-| Script line 1675 | `Action	win	1` | yes |
+| Script line 1535 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
+| Script line 1536 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
+| Script line 1544 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
+| Script line 1559 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
+| Script line 1674 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -435,10 +435,10 @@ File: `levels/campaign/wing1/Mossgate.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 766 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
-| Script line 773 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
-| Script line 783 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
-| Script line 866 | `Action	win	1` | yes |
+| Script line 765 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
+| Script line 772 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
+| Script line 782 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
+| Script line 865 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -475,12 +475,12 @@ File: `levels/campaign/wing1/Ravensledge.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2282 | `Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.` | yes |
-| Script line 2283 | `Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.` | yes |
-| Script line 2298 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
-| Script line 2306 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
-| Script line 2317 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
-| Script line 2425 | `Action	win	1` | yes |
+| Script line 2280 | `Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.` | yes |
+| Script line 2281 | `Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.` | yes |
+| Script line 2296 | `Action	objectiveid	1	ravensledge-o03	Claim 80 tiles on the middle shelf.` | yes |
+| Script line 2304 | `Action	objectiveid	1	ravensledge-o04	Cross the upper chasm into the yard.` | yes |
+| Script line 2315 | `Action	objectiveid	1	ravensledge-o05	Break the keep's inner gate.` | yes |
+| Script line 2423 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -540,8 +540,8 @@ File: `levels/campaign/Silverdeep.level` (not listed in a campaign package).
 | optional | `silverdeep-extra-gallery`: Explore the hidden northwestern silver gallery. | `extraGallery`: Cond	region	1	Gallery |
 
 Possible route (static, not a playthrough):
-- First mine400actualgold and supply all6initialfighters with6realbeds and a coop; protect the heart. Delver1/5Troll2x2,Delver2/6Spider1x1,Delver3DarkElf1x2,Delver4Cultist1x2,total14bedfields.
-- Concrete bed layout:Delver1(62..63,14..15),Delver5(64..65,14..15),Delver3(62,16..17),Delver4(63,16..17),Delver2(64,16),Delver6(65,16). Uses original6dormfields plus8newfields,736gold. Extend existing hatchery(72..74,16..17)by row18for330gold. Total1066below actual400mined+700firstSilver gift=1100; no new reward or skipped initial supply.
+- First mine400actualgold and supply all6initialfighters with6realbeds and a coop; protect the heart. Delver1/5Troll2x2,Delver2/6Ghoul1x1,Delver3Banshee1x1,Delver4Cultist1x2,total13bedfields.
+- Concrete bed layout:Delver1(62..63,14..15),Delver5(64..65,14..15),Delver3(62,16),Delver4(63,16..17),Delver2(64,16),Delver6(65,16). Uses original6dormfields plus7newfields,644gold. Extend existing hatchery(72..74,16..17)by row18for330gold. Total974below actual400mined+700firstSilver gift=1100; no new reward or skipped initial supply.
 - Only after the setup milestone, physically cross all3lakes. LakeA west via original WoodenBridge1(22..42,30..31)OR added spanA row(22..42,29)after both setup and spanA. Accept both actual valid tracks. LakeB south via original WoodenBridge2(56..57,50..66),including the existing column reinforced by spanB. LakeC west via original WoodenBridge3(20..40,86..87),including spanC row86. No order between the three crossings is invented.
 - Each crossing uses one own living creature from one dry bank through the full rectangle to the opposite bank. Visits, mixed creatures and crossings before setup do not count. All original footprints, banks and exact added spanA terrain action remain checked/preserved.
 - Destroy actual rival hearts of seats2,3,4 and all remaining foes/portals. Optionally enter Gallery,66reachable open fields,retaining original1500gold reward. Preserve20torchwaves,pacts,vault alternatives and portal timing.
@@ -556,7 +556,6 @@ Static supply/source/bridge/bank evidence only; actual construction, movement ov
 | Trigger `mainLakes` | `Action	objectivestate	1	silverdeep-main-lakes	reached`; conditions: `Cond	flag	mainLake1	1; Cond	flag	mainLake2	1; Cond	flag	mainLake3	1` | yes |
 | Trigger `mainRivals` | `Action	objectivestate	1	silverdeep-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `extraGallery` | `Action	objectivestate	1	silverdeep-extra-gallery	reached`; conditions: `Cond	region	1	Gallery` | yes |
-| Objective mapping | supply bed dimensions or overlap differ: Delver3 | no: requires design decision |
 
 ## Stormhaven
 

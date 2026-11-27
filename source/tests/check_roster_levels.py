@@ -26,8 +26,11 @@ REMOVED = ("Rat", "Spider", "Roach", "LavaSpawn", "Slime", "Dwarf1", "NatureMons
 # became plain Priestesses (Mario 2026-11-27): uses 26 + 4 = 30, files 8 + 1 = 9.
 # Banshee counted again on feature/creature-roster-w5a after the duplicate "Block 1 Banshee" lines of Brackenford,
 # Coldwell and Mossgate (Rat and the keeper-side DarkElf both became the Banshee) were removed: 390 - 3 = 387.
+# Banshee counted again on feature/creature-roster after the "Block 1 Banshee" line of Ravensledge (a blocked Rat, while
+# the keeper-side DarkElf came) was removed so that the Banshee comes with the released ghost room (owner decision of
+# 2026-11-27): uses 387 - 1 = 386, files 41 - 1 = 40 (Ravensledge names no other Banshee).
 EXPECTED_USES = {
-    "Banshee": 387,
+    "Banshee": 386,
     "Ghoul": 189,
     "Witch": 70,
     "Butcher": 60,
@@ -41,7 +44,7 @@ EXPECTED_USES = {
     "Werewolf": 60,
 }
 EXPECTED_FILES = {
-    "Banshee": 41,
+    "Banshee": 40,
     "Ghoul": 37,
     "Witch": 24,
     "Butcher": 18,

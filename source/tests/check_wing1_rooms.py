@@ -48,14 +48,16 @@ ROOMS = ("roomAlchemyLab", "roomArena", "roomBridgeStone", "roomBridgeWooden", "
          "roomLibrary", "roomMerchant", "roomPrison", "roomSpa", "roomTavern", "roomTemple", "roomToilet",
          "roomTorture", "roomTrainingHall", "roomTreasury", "roomWorkshop")
 
-# WR1: the start rooms of every level; WR2: the researchable rooms per level; WR3: every other room is forbidden
+# WR1: the start rooms of every level; WR2: the researchable rooms per level; WR3: every other room is forbidden.
+# Counted again on feature/creature-roster: the required rooms of the portal creatures are released (owner decision
+# of 2026-11-27), the workshop on Brackenford, Coldwell and Mossgate and the ghost room on Ravensledge.
 START_ROOMS = ("roomDormitory", "roomHatchery", "roomLibrary", "roomTreasury")
 RESEARCH_ROOMS = {
-    "Brackenford": ("roomTavern", "roomTrainingHall"),
-    "Coldwell": ("roomSpa", "roomTavern", "roomToilet", "roomTrainingHall"),
-    "Ravensledge": ("roomGuardRoom", "roomPrison", "roomSpa", "roomTavern", "roomToilet", "roomTrainingHall",
-                    "roomWorkshop"),
-    "Mossgate": ("roomCasino", "roomSpa", "roomTavern", "roomToilet", "roomTrainingHall"),
+    "Brackenford": ("roomTavern", "roomTrainingHall", "roomWorkshop"),
+    "Coldwell": ("roomSpa", "roomTavern", "roomToilet", "roomTrainingHall", "roomWorkshop"),
+    "Ravensledge": ("roomGhostRoom", "roomGuardRoom", "roomPrison", "roomSpa", "roomTavern", "roomToilet",
+                    "roomTrainingHall", "roomWorkshop"),
+    "Mossgate": ("roomCasino", "roomSpa", "roomTavern", "roomToilet", "roomTrainingHall", "roomWorkshop"),
 }
 NOT_FREE = ("roomTavern",)
 
