@@ -16,13 +16,28 @@ page) in G:/Moreya-Internal/medien/ingame-qs-8/m1/.
    level, age and post texts are set in full and word wrap (decision 732), as do the names of the creature list.
 5. Sizes: pictures, post thumbnails and portraits keep a readable size at 640x480, 1920x1200 and 7680x4320 with the UI
    scale 80 % and 120 % (check_dungeonbook_profile_layout.py measures the texts of all pages at the same sizes).
+
+The layout and the icon imageset are content (core-gui package, found through scripts/content_packages.py); every part
+measures the layout, so without the content the removed shared page is checked absent and the rest is named as not
+checked.
 """
 from pathlib import Path
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
-layout_text = (repo / 'gui/WindowSocial.layout').read_text()
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+# Absent from the public tree and from every content package
+assert content_packages.data_file(repo, 'gui/WindowCreatureProfilePage.layout') is None
+missing_content = [name for name in ('gui/WindowSocial.layout', 'gui/DungeonbookIcons.imageset')
+                   if content_packages.data_file(repo, name) is None]
+if missing_content:
+    content_packages.unchecked('check_dungeonbook_rework_b1', missing_content)
+    sys.exit(0)
+layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
 book = ET.fromstring(layout_text).find('Window')
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
 header = (repo / 'source/render/SocialWindow.h').read_text()
@@ -106,7 +121,8 @@ for name in middle[1:]:
 for name in right:
     assert boxes['ProfilePage/' + name][0][0] >= boxes['ProfilePage/ColumnRule'][0][2] - 1e-9, name + ' right'
 # The book fills its own rows; no shared page with bars and links sits in it any more
-assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists() and 'SocialHolder' not in layout_text
+assert content_packages.data_file(repo, 'gui/WindowCreatureProfilePage.layout') is None and \
+    'SocialHolder' not in layout_text
 # The left column holds the portrait and below it the social lines of the creature (owner decision 2026-11-18:
 # likes, dislikes, friends, foe, buffs and debuffs, the remarks of the picture); nothing lies over the portrait
 left_column = [n for n in boxes if n.startswith('ProfilePage/') and n.count('/') == 1
@@ -184,7 +200,7 @@ finder = finder[:finder.index('\n}\n')]
 assert 'return findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false);' in finder, \
     'a post of an unknown kind shows the portrait of the creature'
 assert 'images.isDefined("DungeonbookIcons/" + name)' in finder, 'only shipped pictures are used'
-icons = {i.get('name') for i in ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot().findall('Image')}
+icons = {i.get('name') for i in ET.parse(content_packages.resolve(repo, 'gui/DungeonbookIcons.imageset')).getroot().findall('Image')}
 pictures = social[social.index('std::string roomPictureName('):social.index('//! \\brief Sets the whole plain text')]
 used = set(re.findall(r'return "(\w+)";', pictures)) | set(re.findall(r'\? "(\w+)"', pictures))
 assert used, 'no pictures found'

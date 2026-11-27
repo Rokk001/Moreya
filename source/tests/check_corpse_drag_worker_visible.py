@@ -3,6 +3,7 @@
 clip like the worker that pulls a wounded creature to its bed, and nothing in the dead-body hold hides or freezes
 the carrier (X1 rework 2)."""
 from pathlib import Path
+import sys
 
 root = Path(__file__).resolve().parents[2]
 action = (root / 'source/creatureaction/CreatureActionCarryEntity.cpp').read_text(encoding='utf-8')
@@ -15,9 +16,20 @@ external = drag.split('if(mExternalDrag)')[1].split('// A cot taken by hand')[0]
 assert 'mCreature.setDragDestination(mTileDest)' in external
 assert 'mCreature.setDestination(' not in external
 
-# the Drag clip exists for the worker skeletons and is chosen for a worker that pulls (not for the pulled body)
+# the Drag clip exists for the worker skeletons and is chosen for a worker that pulls (not for the pulled body); the
+# skeletons lie in the content package creatures (scripts/content_packages.py), without the content they are named as
+# not checked
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+missing = []
 for name in ('Kobold', 'Dwarf1'):
-    assert b'Drag' in (root / 'models' / (name + '.skeleton')).read_bytes(), name
+    skeleton = content_packages.data_file(root, 'models/' + name + '.skeleton')
+    if skeleton is None and not content_packages.has_content(root):
+        missing.append(name + '.skeleton')
+        continue
+    assert skeleton is not None, name
+    assert b'Drag' in skeleton.read_bytes(), name
+content_packages.unchecked('check_corpse_drag_worker_visible', missing)
 assert 'EntityAnimation::drag_anim' in render.split('std::string chooseDragClip')[1].split('freezeOnLastFrame = false')[1][:400]
 
 # the hold of dead bodies only applies to creatures that are not alive, a living carrier keeps its clip running

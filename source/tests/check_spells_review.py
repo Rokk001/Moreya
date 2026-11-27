@@ -10,6 +10,11 @@ time, the plague damage, its infection of own, allied and enemy creatures, the c
 creature to a free cot, that workers and the champion never get sick, the walls Break Wall takes and refuses, the reveal
 of every tile of the clicked keeper, the research nodes and effects, the 24 buttons of the spells tab, the sounds and
 looks, the saving and loading of every running effect and the AI rows. Every expected value is written out here.
+
+The spell particle script, config/roomAmbienceSpells.cfg and config/ai.cfg are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages, the CREDITS rows from
+the CREDITS of the public tree and of the content repository. Without the content these parts are named as not
+checked; the code, spells.cfg, skills.cfg and the layouts are checked.
 """
 
 import math
@@ -19,13 +24,37 @@ import sys
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
 problems = []
+#: The game data files the check reads; they lie in the public tree or in a content package
+DATA_FILES = ("particles/RoomAmbienceSpells.particle", "config/roomAmbienceSpells.cfg", "config/ai.cfg", "gui/ODIcons.imageset")
 
 
 def read(*parts):
-    """Returns the text of a file below the repository root."""
-    with open(os.path.join(ROOT, *parts), encoding="utf-8", errors="replace") as handle:
-        return handle.read()
+    """Returns the text of a file below the repository root (game data from the public tree or a content package; a
+    mixed table comes with its own rows of the content)."""
+    return content_packages.read_text(ROOT, "/".join(parts))
+
+
+def data_present():
+    """True when the game data can be checked: all files are found or the content is present (then a missing one
+    fails as before); else names the data part as not checked."""
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    if not missing or content_packages.has_content(ROOT):
+        return True
+    content_packages.unchecked("check_spells_review", missing + ["the CREDITS rows of the plague look and the recordings"])
+    return False
+
+
+DATA = data_present()
+#: The values of spells.cfg and skills.cfg and the icon, tab and tree layouts are own rows of the content packages
+#: core-config and core-gui: they are checked only with the content
+WITH_CONTENT = content_packages.has_content(ROOT)
+# The CREDITS of the public tree and of the content repository
+CREDITS = room_packages.credits_text(ROOT)
 
 
 def body(text, signature):
@@ -73,15 +102,16 @@ VALUES = {
     "RevealEnemyPrice": "100000", "RevealEnemyTurns": "7", "RevealEnemyCooldown": "300",
 }
 assert len(VALUES) == 23
-spells_cfg = read("config", "spells.cfg")
-spell_values = config_values(spells_cfg, "Spells")
-for key, value in VALUES.items():
-    need(spell_values.get(key) == value, "spells.cfg %s is %s, expected %s" % (key, spell_values.get(key), value))
-    need(re.search(r"^#\s*%s\s+\(" % key, spells_cfg, re.M) is not None, "spells.cfg has no documentation line for %s" % key)
-    if key.endswith("Price"):
-        need(int(value) % 50 == 0, "%s is not a whole number of 50 mana steps" % key)
-# The chance is a fraction, no percentage
-need(0.0 < float(spell_values["PlagueInfectChancePerTurn"]) < 1.0, "the infection chance is a fraction")
+if WITH_CONTENT:
+    spells_cfg = read("config", "spells.cfg")
+    spell_values = config_values(spells_cfg, "Spells")
+    for key, value in VALUES.items():
+        need(spell_values.get(key) == value, "spells.cfg %s is %s, expected %s" % (key, spell_values.get(key), value))
+        need(re.search(r"^#\s*%s\s+\(" % key, spells_cfg, re.M) is not None, "spells.cfg has no documentation line for %s" % key)
+        if key.endswith("Price"):
+            need(int(value) % 50 == 0, "%s is not a whole number of 50 mana steps" % key)
+    # The chance is a fraction, no percentage
+    need(0.0 < float(spell_values["PlagueInfectChancePerTurn"]) < 1.0, "the infection chance is a fraction")
 
 # ---------------------------------------------------------------------------------------------------------------------
 # The six spells are appended to the spell and skill enums and are built
@@ -155,9 +185,10 @@ need("ResearchEffect::MoodGain" in cast, "the blessing amounts follow MoodGain")
 need('const std::string SpellBlessing::MOOD_EFFECT_NAME = "Blessing";' in blessing, 'the mood effect is named "Blessing"')
 
 # Curse and blessing amounts at every research level (skills.cfg factors 1, 1.25, 1.5) and stacking
-skills_cfg = read("config", "skills.cfg")
-effects_block = skills_cfg[re.search(r"^\[ResearchEffects\]\s*$", skills_cfg, re.M).end():
-                           re.search(r"^\[/ResearchEffects\]\s*$", skills_cfg, re.M).start()]
+if WITH_CONTENT:
+    skills_cfg = read("config", "skills.cfg")
+    effects_block = skills_cfg[re.search(r"^\[ResearchEffects\]\s*$", skills_cfg, re.M).end():
+                               re.search(r"^\[/ResearchEffects\]\s*$", skills_cfg, re.M).start()]
 EFFECTS = {
     "spellCurse": ("MoodLoss", "mul", "1.0", "1.25", "1.5"),
     "spellBlessing": ("MoodGain", "mul", "1.0", "1.25", "1.5"),
@@ -166,22 +197,24 @@ EFFECTS = {
     "spellBreakWall": ("Price", "mul", "1.0", "0.9", "0.8"),
     "spellRevealEnemy": ("Duration", "mul", "1.0", "1.5", "2.0"),
 }
-factors = {}
-for skill, expected in EFFECTS.items():
-    lines = [line.split() for line in effects_block.splitlines() if line.split()[:1] == [skill]]
-    need(len(lines) == 1 and tuple(lines[0][1:]) == expected, "research effect of %s: %s" % (skill, lines))
-    factors[skill] = [1.0] + [float(value) for value in expected[2:]]
+if WITH_CONTENT:
+    factors = {}
+    for skill, expected in EFFECTS.items():
+        lines = [line.split() for line in effects_block.splitlines() if line.split()[:1] == [skill]]
+        need(len(lines) == 1 and tuple(lines[0][1:]) == expected, "research effect of %s: %s" % (skill, lines))
+        factors[skill] = [1.0] + [float(value) for value in expected[2:]]
 AMOUNTS = {  # research level: (jump, spread total) of curse and blessing
     "Curse": [(-200, -300), (-200, -300), (-250, -375), (-300, -450)],
     "Blessing": [(200, 300), (200, 300), (250, 375), (300, 450)],
 }
-for level in range(4):
-    for name, skill, jump_key, total_key in (("Curse", "spellCurse", "CurseMoodJump", "CurseMoodFall"),
-                                             ("Blessing", "spellBlessing", "BlessingMoodJump", "BlessingMoodRise")):
-        factor = factors[skill][level]
-        got = (float(spell_values[jump_key]) * factor, float(spell_values[total_key]) * factor)
-        need(all(math.isclose(a, b) for a, b in zip(got, AMOUNTS[name][level])),
-             "%s amounts at level %d: %s, expected %s" % (name, level, got, AMOUNTS[name][level]))
+if WITH_CONTENT:
+    for level in range(4):
+        for name, skill, jump_key, total_key in (("Curse", "spellCurse", "CurseMoodJump", "CurseMoodFall"),
+                                                 ("Blessing", "spellBlessing", "BlessingMoodJump", "BlessingMoodRise")):
+            factor = factors[skill][level]
+            got = (float(spell_values[jump_key]) * factor, float(spell_values[total_key]) * factor)
+            need(all(math.isclose(a, b) for a, b in zip(got, AMOUNTS[name][level])),
+                 "%s amounts at level %d: %s, expected %s" % (name, level, got, AMOUNTS[name][level]))
 add_effect = body(creature_cpp, "void Creature::addMoodEffect(")
 need("mMoodEffects.push_back(CreatureMoodEffect(name, totalPoints / turns, turns));" in add_effect and
      "effect.mName == name" not in add_effect, "every curse and blessing adds a mood effect of its own (they stack)")
@@ -264,9 +297,10 @@ need('config.getSpellConfigDouble("PlagueDamagePerTurn"), ResearchEffect::Damage
      "takeDamage(nullptr, damage, 0.0, 0.0, 0.0, myTile, false);" in damage, "PlagueDamagePerTurn every turn, normal death")
 need(upkeep.index("// The damage") > upkeep.index("// The infection"), "the infection runs before the damage")
 DAMAGE = [0.5, 0.5, 1.0, 2.0]  # per turn at research level 0 to 3
-for level in range(4):
-    need(math.isclose(float(spell_values["PlagueDamagePerTurn"]) * factors["spellPlague"][level], DAMAGE[level]),
-         "plague damage at level %d" % level)
+if WITH_CONTENT:
+    for level in range(4):
+        need(math.isclose(float(spell_values["PlagueDamagePerTurn"]) * factors["spellPlague"][level], DAMAGE[level]),
+             "plague damage at level %d" % level)
 # A level-1 rat (35.5 HP) dies in about 51 s at 1.4 turns per second
 need(round(35.5 / 0.5 / 1.4) == 51, "the plague time of the plan")
 admit = body(read("source", "rooms", "RoomInfirmary.cpp"), "bool RoomInfirmary::admit(")
@@ -295,12 +329,13 @@ need("infirmary->canAdmitSick(creature)" in search and "->admitSick(creature)" i
      "findBestPath(" in search, "the sick creature walks to the nearest infirmary with a free cot and is admitted")
 need("hasCarryEntitySpot" not in search, "KO sick creatures are carried in by the workers as today")
 need('const std::string Creature::PLAGUE_SCRIPT = "SpellCreaturePlague";' in creature_cpp, "the plague look script")
-particles = read("particles", "RoomAmbienceSpells.particle")
-look = particles[particles.index("particle_system SpellCreaturePlague"):]
-look = look[:look.index("\n}") + 2]
-colours = [tuple(float(v) for v in m) for m in re.findall(r"colour\w*\s+([\d.]+) ([\d.]+) ([\d.]+)", look)]
-need(colours and all(g > r and g > b for r, g, b in colours), "the plague look is green")
-need("particles/RoomAmbienceSpells.particle (SpellCreaturePlague)" in read("CREDITS"), "CREDITS names the plague look")
+if DATA:
+    particles = read("particles", "RoomAmbienceSpells.particle")
+    look = particles[particles.index("particle_system SpellCreaturePlague"):]
+    look = look[:look.index("\n}") + 2]
+    colours = [tuple(float(v) for v in m) for m in re.findall(r"colour\w*\s+([\d.]+) ([\d.]+) ([\d.]+)", look)]
+    need(colours and all(g > r and g > b for r, g, b in colours), "the plague look is green")
+    need("particles/RoomAmbienceSpells.particle (SpellCreaturePlague)" in CREDITS, "CREDITS names the plague look")
 
 # ---------------------------------------------------------------------------------------------------------------------
 # N5 Break Wall
@@ -318,9 +353,10 @@ need("tile->getSeat()->notifyTileClaimedByEnemy(tile);\n    tile->unclaimTile();
 tremor = read("source", "spells", "SpellTremor.cpp")
 need("tile->unclaimTile();" in tremor, "Tremor unclaims its walls the same way")
 PRICES = [3000, 3000, 2700, 2400]
-for level in range(4):
-    need(round(float(spell_values["BreakWallPrice"]) * factors["spellBreakWall"][level]) == PRICES[level],
-         "Break Wall price at level %d" % level)
+if WITH_CONTENT:
+    for level in range(4):
+        need(round(float(spell_values["BreakWallPrice"]) * factors["spellBreakWall"][level]) == PRICES[level],
+             "Break Wall price at level %d" % level)
 need("std::lround(SkillManager::getResearchValue(seat, SkillType::spellBreakWall," in wall, "the price follows Price")
 
 # N6 Reveal Enemy
@@ -336,9 +372,10 @@ need("getClaimedTiles(gameMap, tile->getSeat());" in cast and "player->getSeat()
      "the claimed tiles of the clicked keeper are shown to the caster")
 need('getSpellConfigDouble("RevealEnemyTurns"), ResearchEffect::Duration)' in cast, "RevealEnemyTurns follows Duration")
 TURNS = [7, 7, 11, 14]  # rounded half away from zero, as std::lround
-for level in range(4):
-    turns = float(spell_values["RevealEnemyTurns"]) * factors["spellRevealEnemy"][level]
-    need(int(math.floor(turns + 0.5)) == TURNS[level], "reveal turns at level %d" % level)
+if WITH_CONTENT:
+    for level in range(4):
+        turns = float(spell_values["RevealEnemyTurns"]) * factors["spellRevealEnemy"][level]
+        need(int(math.floor(turns + 0.5)) == TURNS[level], "reveal turns at level %d" % level)
 
 # ---------------------------------------------------------------------------------------------------------------------
 # N7 Research nodes, effects, buttons, icons and tooltips
@@ -351,42 +388,48 @@ NODES = [
     ("spellPlague", "spellCreatureWeak", "PlagueButton", 4, "plague", 1500),
     ("spellRevealEnemy", "spellEyeEvil", "RevealEnemyButton", 4, "revealEnemy", 1500),
 ]
-skill_points = config_values(skills_cfg, "Skills")
+if WITH_CONTENT:
+    skill_points = config_values(skills_cfg, "Skills")
 for skill, parent, button, tier, spell, points in NODES:
     need(("createSkill(mSkills, SkillType::%s, std::vector<SkillType>{SkillType::%s});\n"
           "    def = new SkillDefSpell(TREE_PREFIX_SPELLS, \"%s\", skill, %d, SpellType::%s);") %
          (skill, parent, button, tier, spell) in manager, "research node %s" % skill)
-    need(skill_points.get(skill) == str(points), "%s costs %d points" % (skill, points))
-    need(re.search(r"^#\s*%s\s+\(int\)" % skill, skills_cfg, re.M) is not None, "skills.cfg documents %s" % skill)
+    if WITH_CONTENT:
+        need(skill_points.get(skill) == str(points), "%s costs %d points" % (skill, points))
+        need(re.search(r"^#\s*%s\s+\(int\)" % skill, skills_cfg, re.M) is not None, "skills.cfg documents %s" % skill)
     need('{SkillType::%s, "%s", ResearchBaseSource::spells,' % (skill, EFFECTS[skill][0]) in manager,
          "the tooltip has a base value for %s" % skill)
 # Every one of the six spells shows its own painted icon of gui/ODIcons.png, named like its button
 ICONS = {"CurseButton": "CurseButton", "BlessingButton": "BlessingButton",
          "InvisibilityButton": "InvisibilityButton", "PlagueButton": "PlagueButton",
          "BreakWallButton": "BreakWallButton", "RevealEnemyButton": "RevealEnemyButton"}
-icon_names = [i.get("name") for i in ET.parse(os.path.join(ROOT, "gui", "ODIcons.imageset")).getroot().findall("Image")]
-for icon in ICONS.values():
-    need(icon_names.count(icon) == 1, "gui/ODIcons.imageset has the icon %s once" % icon)
-bar = ET.parse(os.path.join(ROOT, "gui", "WindowTabSpells.layout")).getroot().find("Window")
-bar_buttons = [w for w in bar.findall("Window") if w.get("type") == "OD/GameTabButton"]
-need(len(bar_buttons) == 24, "the spells tab holds 24 buttons: %d" % len(bar_buttons))
-tree = ET.parse(os.path.join(ROOT, "gui", "WindowSkillTree.layout")).getroot()
-spells_page = next(w for w in tree.iter("Window") if w.get("name") == "Spells")
-for button, icon in ICONS.items():
-    node = next((w for w in bar_buttons if w.get("name") == button), None)
-    need(node is not None and node.find('Property[@name="NormalImage"]').get("value") == "OpenDungeonsIcons/" + icon,
-         "the game bar button %s shows the icon of %s" % (button, icon))
-    need(node is not None and node.find('Window[@name="%sProgressBar"]' % button) is not None,
-         "the button %s has its cooldown bar" % button)
-    research = next((w for w in spells_page.findall("Window") if w.get("name") == button), None)
-    need(research is not None and research.get("type") == "OD/ResearchButton" and
-         research.find('Property[@name="ButtonImage"]').get("value") == "OpenDungeonsIcons/" + icon,
-         "the research node %s shows the icon of %s" % (button, icon))
+# (the icon atlas lies whole in a content package)
+if DATA:
+    icon_names = [i.get("name") for i in ET.fromstring(content_packages.read_text(ROOT, "gui/ODIcons.imageset")).findall("Image")]
+    for icon in ICONS.values():
+        need(icon_names.count(icon) == 1, "gui/ODIcons.imageset has the icon %s once" % icon)
+if WITH_CONTENT:
+    bar = ET.fromstring(content_packages.read_text(ROOT, "gui/WindowTabSpells.layout")).find("Window")
+    bar_buttons = [w for w in bar.findall("Window") if w.get("type") == "OD/GameTabButton"]
+    need(len(bar_buttons) == 24, "the spells tab holds 24 buttons: %d" % len(bar_buttons))
+    tree = ET.fromstring(content_packages.read_text(ROOT, "gui/WindowSkillTree.layout"))
+    spells_page = next(w for w in tree.iter("Window") if w.get("name") == "Spells")
+    for button, icon in ICONS.items():
+        node = next((w for w in bar_buttons if w.get("name") == button), None)
+        need(node is not None and node.find('Property[@name="NormalImage"]').get("value") == "OpenDungeonsIcons/" + icon,
+             "the game bar button %s shows the icon of %s" % (button, icon))
+        need(node is not None and node.find('Window[@name="%sProgressBar"]' % button) is not None,
+             "the button %s has its cooldown bar" % button)
+        research = next((w for w in spells_page.findall("Window") if w.get("name") == button), None)
+        need(research is not None and research.get("type") == "OD/ResearchButton" and
+             research.find('Property[@name="ButtonImage"]').get("value") == "OpenDungeonsIcons/" + icon,
+             "the research node %s shows the icon of %s" % (button, icon))
 gui = read("source", "render", "Gui.cpp")
 arrange = body(gui, "void Gui::arrangeSpellButtons(")
 names = re.findall(r'"(\w+Button)"', arrange)
 need(len(names) == 24 and len(set(names)) == 24, "the spells tab arranges 24 buttons: %d" % len(names))
-need(sorted(names) == sorted(w.get("name") for w in bar_buttons), "every button of the layout is arranged")
+if WITH_CONTENT:
+    need(sorted(names) == sorted(w.get("name") for w in bar_buttons), "every button of the layout is arranged")
 rooms = re.findall(r'"(\w+Button)"', body(gui, "void Gui::arrangeRoomButtons("))
 # Two rows of small buttons: 24 spells need the 12 columns the 23 rooms already use at every resolution and UI scale
 need(math.ceil(24 / 2.0) == math.ceil(len([n for n in rooms if n != "DestroyRoomButton"]) / 2.0) == 12,
@@ -401,31 +444,35 @@ need("mSpellType == SpellType::revealEnemy) ?\n            \" mana\"" in cost, "
 LOOKS = {"SpellCurse": ("Weak", "Curse"), "SpellBlessing": ("Strength", "Boost"), "SpellInvisibility": ("", "Dark"),
          "SpellPlague": ("", "Curse"), "SpellBreakWall": ("Tremor", "TremorImpact"),
          "SpellRevealEnemy": ("", "EyeEvilCast")}
-credits = read("CREDITS")
+credits = CREDITS
 for cls, (effect, family) in LOOKS.items():
     need('"%s", "%s", gameMap, player->getSeat())' % (effect, family) in sources[cls], "%s plays %s" % (cls, family))
-    need("sounds/Spatial/Spells/%s/Fx%s01.ogg" % (family, family) in credits, "the recording %s is credited" % family)
+    if DATA:
+        need("sounds/Spatial/Spells/%s/Fx%s01.ogg" % (family, family) in credits, "the recording %s is credited" % family)
 spell_cpp = read("source", "spells", "Spell.cpp")
 need("if(effectName.empty())\n            continue;" in body(spell_cpp, "void Spell::fireSpellEffect("),
      "a spell without a look of its own plays only its sound")
-ambience = read("config", "roomAmbienceSpells.cfg")
-for event in ("SpellFxWeak", "SpellFxStrength", "SpellFxTremor"):
-    need(re.search(r"Event\s+%s\b" % event, ambience) is not None, "the reused look %s exists" % event)
+if DATA:
+    ambience = read("config", "roomAmbienceSpells.cfg")
+    for event in ("SpellFxWeak", "SpellFxStrength", "SpellFxTremor"):
+        need(re.search(r"Event\s+%s\b" % event, ambience) is not None, "the reused look %s exists" % event)
 
 # ---------------------------------------------------------------------------------------------------------------------
 # N9 AI rows and decisions
-ai_cfg = read("config", "ai.cfg")
-rows = ai_cfg[ai_cfg.index("[RowClasses]"):ai_cfg.index("[/RowClasses]")]
+ai_cfg = read("config", "ai.cfg") if DATA else None
+rows = ai_cfg[ai_cfg.index("[RowClasses]"):ai_cfg.index("[/RowClasses]")] if DATA else None
 ai_spells = read("source", "ai", "AiSpells.cpp")
 ROWS = {"E21": "castCurse", "E22": "castBlessing", "E23": "castInvisibility", "E24": "castPlague",
         "E25": "castBreakWall", "E26": "castRevealEnemy"}
 for row, function in ROWS.items():
-    need(re.search(r"^\s*%s\s+complex\s+1\s*$" % row, rows, re.M) is not None, "row %s is complex" % row)
+    if DATA:
+        need(re.search(r"^\s*%s\s+complex\s+1\s*$" % row, rows, re.M) is not None, "row %s is complex" % row)
     need("// AI row %s" % row in body(ai_spells, "bool SPELL::%s(" % function), "SPELL::%s carries row %s" % (function, row))
     need('{"%s", "complex", "1"}' % row in read("source", "utils", "ConfigManager.cpp"), "compiled default of %s" % row)
-ai_values = config_values(ai_cfg, "KeeperAI")
-for key, value in (("PlagueMinEnemies", "3"), ("PlagueEnemyRadius", "2"), ("PlagueOwnClearRadius", "3")):
-    need(ai_values.get(key) == value, "ai.cfg %s is %s" % (key, value))
+if DATA:
+    ai_values = config_values(ai_cfg, "KeeperAI")
+    for key, value in (("PlagueMinEnemies", "3"), ("PlagueEnemyRadius", "2"), ("PlagueOwnClearRadius", "3")):
+        need(ai_values.get(key) == value, "ai.cfg %s is %s" % (key, value))
 need("creature->getLevel() > target->getLevel()" in body(ai_spells, "bool SPELL::castCurse(") and
      "hasMoodEffect(creature, SpellCurse::MOOD_EFFECT_NAME)" in body(ai_spells, "bool SPELL::castCurse("),
      "Curse: the visible enemy of the highest level that is not cursed")
@@ -478,6 +525,11 @@ need("mRevealedTiles.push_back(std::pair<Tile*, uint32_t>(tile, entry.second));"
 need("for(uint32_t i = 1; i < static_cast<uint32_t>(SpellType::nbSpells); ++i)" in seat_export,
      "the cooldowns of all 24 spells are saved")
 
+if not WITH_CONTENT:
+    content_packages.unchecked("check_spells_review", [
+        "spell values and research effects (own rows of config/spells.cfg and config/skills.cfg)",
+        "icons, game bar and research tree (own rows of gui/ODIcons.imageset, gui/WindowTabSpells.layout and "
+        "gui/WindowSkillTree.layout)"])
 if problems:
     for problem in problems:
         print("PROBLEM:", problem)

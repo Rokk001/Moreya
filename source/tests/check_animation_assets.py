@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Check serialized loop closure and complete skinned chicken wings without compiling the game."""
+"""Check serialized loop closure and complete skinned chicken wings without compiling the game.
+
+The models lie in the content packages (core-models and the room packages) and are found through
+scripts/content_packages.py. Without the content the synthetic serializer controls run and the model part is named as
+not checked.
+
+Since CS10a the hen and the rooster are own rigs (Meshy models with split-off wings on the bones wing.L/wing2.L and
+wing.R/wing2.R, each bird with its own skeleton) instead of the former shared skeleton with appended feather cards on
+Wing_L/Wing_R. The wing part checks the same purpose on them: the wing-beat clips of each bird really beat, and the
+wing parts of each mesh are complete, fully weighted and hang only on the wing bones of their side. The hen does not
+fly (only Flutter on the ground beats; her Mount, Tread and Dismount keep the wings nearly still). Fixed values counted
+once on content/cs10a-hand-menu: hen wing vertices 182 left / 172 right, rooster 137 / 144 (formerly 60 appended
+feather vertices per side on each bird)."""
 import math
 import os
 from pathlib import Path
@@ -13,10 +25,9 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
-import room_packages  # noqa: E402  (room models are read from their room package)
+import content_packages  # noqa: E402  (models are read from the content and room packages)
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'tools/blender-assets'))
-import author_chicken_wings as wings
 import gen_walk_hurt as rig
 import splice_animation_chunks as binary
 import author_loop_seams as loops
@@ -28,7 +39,7 @@ import retime_animation_chunk as retiming
 def export(name, out, return_tree=True):
     converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
     target = out / (name + '.xml')
-    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(room_packages.resolve(ROOT, 'models/' + name)),
+    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(content_packages.resolve(ROOT, 'models/' + name)),
                     str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60, check=True)
     return ET.parse(target).getroot() if return_tree else None
@@ -108,13 +119,13 @@ def bone_ids(skeleton):
     return {bone.get('name'): bone.get('id', str(index)) for index, bone in enumerate(skeleton.find('bones'))}
 
 
-# Verify append-only feather geometry, complete wing weights and every exported vertex channel.
-def check_wings(mesh, skeleton):
+# Verify the split-off wing parts of an own bird rig, complete weights and every exported vertex channel.
+# Formerly: append-only feather geometry on Wing_L/Wing_R; since CS10a the wing parts of the own rigs (see the header).
+def check_wings(mesh, skeleton, wing_vertices):
     bones = bone_ids(skeleton)
     geometry = mesh.find('sharedgeometry')
     count = int(geometry.get('vertexcount'))
-    added = wings.FEATHER_COUNT * 2 * 10
-    assert count > added
+    assert count > sum(wing_vertices.values())
     for buffer in geometry.findall('vertexbuffer'):
         assert len(buffer) == count
         for vertex in buffer:
@@ -123,9 +134,15 @@ def check_wings(mesh, skeleton):
     for assignment in mesh.find('boneassignments'):
         index = int(assignment.get('vertexindex'))
         assignments.setdefault(index, []).append((assignment.get('boneindex'), float(assignment.get('weight'))))
-    for offset in range(added):
-        expected = bones['Wing_L' if offset < added // 2 else 'Wing_R']
-        assert assignments[count - added + offset] == [(expected, 1.0)]
+    # every vertex is skinned with complete weights
+    assert sorted(assignments) == list(range(count))
+    for weights in assignments.values():
+        assert abs(sum(weight for _, weight in weights) - 1.0) < 1e-3
+    # the wing parts of each side hang only on that side's wing bones
+    for side, expected in wing_vertices.items():
+        side_bones = {bones['wing.' + side], bones['wing2.' + side]}
+        found = sum(1 for weights in assignments.values() if {bone for bone, _ in weights} <= side_bones)
+        assert found == expected, (side, 'wing vertices', found, expected)
     for submesh in mesh.find('submeshes'):
         faces = submesh.find('faces')
         assert len(faces) == int(faces.get('count'))
@@ -203,7 +220,7 @@ def check_held_loop():
 
 # Verify retiming preserves all transforms, unrelated chunks and identity, and rejects missing clips.
 def check_retiming():
-    data = (ROOT / 'models/Chicken.skeleton').read_bytes()
+    data = content_packages.resolve(ROOT, 'models/Chicken.skeleton').read_bytes()
     assert retiming.retime(data, 'Lay', 7.0) == data
     changed = retiming.retime(data, 'Lay', 14.0)
     original_header, original = binary.chunks(data)
@@ -241,11 +258,19 @@ def check_retiming():
         raise AssertionError('A missing retiming clip was accepted')
 
 
-# Check actual serialized assets and the non-destructive animation replacement helper.
+# Check actual serialized assets and the non-destructive animation replacement helper; without the content only the
+# synthetic controls run and the model part is named as not checked.
 def main():
+    if not content_packages.has_content(ROOT):
+        check_splice()
+        check_track_splice()
+        check_held_loop()
+        check_velocity_controls()
+        content_packages.unchecked('check_animation_assets', ['serialized loops, wing skinning and retiming of the models'])
+        print('Preservation and velocity controls passed.')
+        return
     out = ROOT / 'out/animation-assets'
     out.mkdir(parents=True, exist_ok=True)
-    chicken = None
     for name, clips in (('Chicken', ('Walk', 'Run', 'Idle')), ('CaveHornet', ('Walk', 'Idle')),
                         ('SmallSpider', ('Idle',)), ('Defender', ('Idle', 'Flee')), ('Spider', ('Flee',)),
                         ('Rat', ('Flee',)), ('Troll', ('Run',)), ('Goblin', ('Flee',)),
@@ -258,24 +283,27 @@ def main():
                 keys = list(track.find('keyframes'))
                 assert float(keys[-1].get('time')) <= float(clip.get('length')) + 1e-6
                 matching_keys(keys[0], keys[-1])
-        check_loop_velocity(ROOT / 'models' / (name + '.skeleton'), clips)
-        if name == 'Chicken':
-            chicken = skeleton
-            for name_clip in wings.FLIGHT_CLIPS:
-                clip = animations[name_clip]
-                tracks = {track.get('bone'): list(track.find('keyframes')) for track in clip.find('tracks')}
-                for bone in ('Wing_L', 'Wing_R'):
-                    angles = [float(key.find('rotate').get('angle')) for key in tracks[bone]]
-                    if name_clip != 'Tread':
-                        assert max(angles) - min(angles) > math.radians(30.0), (name_clip, bone)
-    for mesh in ('Chicken.mesh', 'ChickenRooster.mesh'):
-        check_wings(export(mesh, out), chicken)
+        check_loop_velocity(content_packages.resolve(ROOT, 'models/' + name + '.skeleton'), clips)
+    # Wing-beat clips of each own bird rig beat by more than 30 degrees (Tread, as before, only holds the wings).
+    for bird, beat_clips, wing_vertices in (('Chicken', ('Flutter',), {'L': 182, 'R': 172}),
+                                            ('ChickenRooster', ('RoofFlight', 'Flutter', 'Mount', 'Tread', 'Dismount'),
+                                             {'L': 137, 'R': 144})):
+        skeleton = export(bird + '.skeleton', out)
+        animations = {clip.get('name'): clip for clip in skeleton.find('animations')}
+        for name_clip in beat_clips:
+            clip = animations[name_clip]
+            tracks = {track.get('bone'): list(track.find('keyframes')) for track in clip.find('tracks')}
+            for bone in ('wing.L', 'wing.R'):
+                angles = [float(key.find('rotate').get('angle')) for key in tracks[bone]]
+                if name_clip != 'Tread':
+                    assert max(angles) - min(angles) > math.radians(30.0), (bird, name_clip, bone)
+        check_wings(export(bird + '.mesh', out), skeleton, wing_vertices)
     wizard = export('Wizard.skeleton', out)
     socket = next(track for clip in wizard.find('animations') if clip.get('name') == 'Idle'
                   for track in clip.find('tracks') if track.get('bone') == 'Weapon_L')
     matching_keys(list(socket.find('keyframes'))[0], list(socket.find('keyframes'))[-1])
     bone = int(bone_ids(wizard)['Weapon_L'])
-    check_loop_velocity(ROOT / 'models/Wizard.skeleton', ('Idle',), {bone})
+    check_loop_velocity(content_packages.resolve(ROOT, 'models/Wizard.skeleton'), ('Idle',), {bone})
     check_splice()
     check_track_splice()
     check_held_loop()

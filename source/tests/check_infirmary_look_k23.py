@@ -19,10 +19,13 @@ Outcome checks on the shipped files (OgreXMLConverter converts the binary meshes
               and a grey wool blanket, the blanket is draped (its top varies by >= 25 mm; today 16 mm) and hangs over the side rails
               (at the sides >= 30 mm below the top of the rails);
               each piece at most 20000 triangles.
-  shaman      10000 to 36000 triangles; his face (the eye sockets of the mask above the head joint) lies on the -Y side of the head
-              joint (its eye sockets lie there), the side the engine turns along the walking direction (RenderManager::rrOrientEntityToward); in the
-              Walk clip the foot that is off the ground moves along -Y (forward), each foot strides >= 0.08 tiles, and
-              each hand swings against the foot of its side (correlation <= -0.5). Clip names and 2 s lengths unchanged.
+  shaman      10000 to 36000 triangles; his texture passes the texture limits above and maps at least 300 texels per
+              tile; his face (the headfront joint of the rig, in front of the head joint; on the former model the eye
+              sockets of the mask above the head joint) lies on the -Y side of the head
+              joint (his face lies there), the side the engine turns along the walking direction (RenderManager::rrOrientEntityToward); in the
+              Walk clip the foot (the ankle joint LeftFoot / RightFoot) that is off the ground moves along -Y (forward),
+              each foot strides >= 0.08 tiles, and each hand swings against the foot of its side
+              (correlation <= -0.5). Clip names unchanged, clip lengths as in CLIP_SECONDS (2 s on the former model).
 Fixed expected values of this branch (counted once) are the thresholds above.
 
 Call (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
@@ -43,17 +46,26 @@ from PIL import Image, ImageFilter, ImageStat
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import room_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 # The infirmary assets lie in the infirmary room package (scripts/room_packages.py); this check measures only them
 INFIRMARY_PACKAGE = room_packages.package(ROOT, 'Infirmary')
 ASSETS = Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else (INFIRMARY_PACKAGE or ROOT)
+#: The shaman figure (mesh, skeleton, material and texture) lies in the creatures content package; with --assets it
+#: lies in the given folder
+SHAMAN = Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else \
+    content_packages.resolve(ROOT, 'models/InfirmaryShaman.mesh').parents[1]
 if '--assets' not in sys.argv and INFIRMARY_PACKAGE is None:
     print('infirmary look: not checked, the infirmary room package is not present (the check measures its assets only)')
     sys.exit(0)
 FURNITURE = ('InfirmaryCotSmall', 'InfirmaryCotMedium', 'InfirmaryCotLarge', 'MedicineCabinet', 'InstrumentTable',
              'WashBasin', 'HerbShelf')
 CLIPS = {'Idle', 'Walk', 'Chant', 'RattleShake', 'HerbSniff', 'PotionTaste', 'TripOverBucket', 'Dance'}
-SHIN_LENGTH = 0.107
+#: The clip lengths of the creatures package shaman (the game stretches the six pose clips to
+#: InfirmaryShamanAnimationSeconds). Idle from the build report; Chant, RattleShake, HerbSniff, PotionTaste and TripOverBucket
+#: are the clips approved on 2026-11-27 (Chant 4.0 s, PotionTaste and TripOverBucket 4.4 s, the other two 2.0 s).
+CLIP_SECONDS = {'Idle': 4.0, 'Walk': 1.04167, 'Chant': 4.0, 'PotionTaste': 4.4, 'TripOverBucket': 4.4, 'Dance': 7.75,
+                'RattleShake': 2.0, 'HerbSniff': 2.0}
 fails = []
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 work = Path(tempfile.mkdtemp(prefix='infirmary_look_'))
@@ -64,10 +76,12 @@ def fail(text):
     fails.append(text)
 
 
-def convert(name):
-    """Converts a shipped binary mesh or skeleton to Ogre XML and returns its parsed root."""
+def convert(name, models=None):
+    """Converts a shipped binary mesh or skeleton to Ogre XML and returns its parsed root (from models, else from the
+    models folder of ASSETS)."""
     target = work / (name + '.xml')
-    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(ASSETS / 'models' / name), str(target)],
+    source = (models or ASSETS / 'models') / name
+    subprocess.run([converter, '-q', '-log', str(target) + '.log', str(source), str(target)],
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=120, check=True)
     return ET.parse(target).getroot()
 
@@ -117,9 +131,19 @@ material_text = (ASSETS / 'materials/scripts/InfirmaryObjects.material').read_te
 texture_of = dict(re.findall(r'material\s+(\S+)\s*:[^{]*\{.*?texture\s+(\S+\.png)', material_text, re.S))
 if len(texture_of) != 12:
     fail('InfirmaryObjects.material must give each of the 12 materials its texture, found %d' % len(texture_of))
+texture_folder = {material: ASSETS / 'materials/textures' for material in texture_of}
+# The shaman's own material (one textured material of the creatures package) passes the same texture limits
+shaman_material = SHAMAN / 'materials/scripts/Creatures/InfirmaryShamanMeshy.material'
+shaman_textures = dict(re.findall(r'^material\s+(\S+)\s*\{.*?texture\s+(\S+\.png)',
+                                  shaman_material.read_text(encoding='utf-8'), re.S | re.M)) \
+    if shaman_material.exists() else {}
+if shaman_textures != {'InfirmaryShamanMeshy': 'InfirmaryShamanMeshy.png'}:
+    fail('InfirmaryShamanMeshy.material must give the shaman material its texture, found %s' % shaman_textures)
+texture_of.update(shaman_textures)
+texture_folder.update({material: SHAMAN / 'materials/textures' for material in shaman_textures})
 size_of = {}
 for material, texture in sorted(texture_of.items()):
-    img = Image.open(ASSETS / 'materials/textures' / texture).convert('RGB')
+    img = Image.open(texture_folder[material] / texture).convert('RGB')
     size_of[material] = min(img.size)
     lum = img.convert('L')
     std = ImageStat.Stat(lum).stddev[0]
@@ -238,7 +262,7 @@ def sample(keys, t):
     return keys[-1][1], keys[-1][2]
 
 
-skeleton = convert('InfirmaryShaman.skeleton')
+skeleton = convert('InfirmaryShaman.skeleton', SHAMAN / 'models')
 bones, parent = {}, {}
 for b in skeleton.find('bones'):
     p = b.find('position')
@@ -256,7 +280,8 @@ for anim in skeleton.find('animations'):
                          else (0.0, 0.0, 0.0), quat(k.find('rotate'))))
         tracks[tr.get('bone')] = keys
     clips[anim.get('name')] = (float(anim.get('length')), tracks)
-if set(clips) != CLIPS or any(abs(length - 2.0) > 1e-4 for length, _ in clips.values()):
+if set(clips) != CLIPS or any(n not in CLIP_SECONDS or abs(length - CLIP_SECONDS[n]) > 1e-4
+                              for n, (length, _) in clips.items()):
     fail('shaman clips changed: %s' % sorted((n, l) for n, (l, _) in clips.items()))
 
 
@@ -283,7 +308,7 @@ def point(bone, offset, tracks, t):
     return tuple(a + b for a, b in zip(p, qrot(q, offset)))
 
 
-shaman = submeshes(convert('InfirmaryShaman.mesh'))
+shaman = submeshes(convert('InfirmaryShaman.mesh', SHAMAN / 'models'))
 tris = sum(len(t) for parts in shaman.values() for _, _, t in parts)
 print('InfirmaryShaman %d triangles, densities %s' % (tris, ', '.join('%s %.0f' % (m[15:], texel_density(p, size_of.get(m, 0)))
                                                                       for m, p in sorted(shaman.items()))))
@@ -295,19 +320,19 @@ for material, parts in shaman.items():
     elif texel_density(parts, size_of[material]) < 300:
         fail('shaman %s maps only %.0f texels per tile' % (material, texel_density(parts, size_of[material])))
 head = point('Head', (0.0, 0.0, 0.0), None, 0.0)
-mask = [pos[i] for pos, _, t in shaman.get('InfirmaryObjectDark', []) for tri in t for i in tri if pos[i][2] > head[2]]
-if not mask:
-    fail('shaman has no eye sockets above the head joint')
+# The rig's headfront joint marks the face (one textured material: no separate mask material any more)
+if 'headfront' not in bones:
+    fail('shaman has no face joint (headfront) in front of the head joint')
 else:
-    face_y = sum(p[1] for p in mask) / len(mask) - head[1]
-    print('eye sockets %.3f tiles from the head joint along y (forward is -y)' % face_y)
+    face_y = point('headfront', (0.0, 0.0, 0.0), None, 0.0)[1] - head[1]
+    print('face joint %.3f tiles from the head joint along y (forward is -y)' % face_y)
     if face_y > -0.02:
-        fail('the shaman faces +Y; the engine walks him along -Y, so he walks backwards (eyes at %+.3f)' % face_y)
+        fail('the shaman faces +Y; the engine walks him along -Y, so he walks backwards (face at %+.3f)' % face_y)
 length, tracks = clips.get('Walk', (2.0, {}))
 steps = 96
-for side in ('L', 'R'):
-    feet = [point('Shin_' + side, (0.0, SHIN_LENGTH, 0.0), tracks, length * i / steps) for i in range(steps + 1)]
-    hands = [point('Hand_' + side, (0.0, 0.0, 0.0), tracks, length * i / steps) for i in range(steps + 1)]
+for side in ('Left', 'Right'):
+    feet = [point(side + 'Foot', (0.0, 0.0, 0.0), tracks, length * i / steps) for i in range(steps + 1)]
+    hands = [point(side + 'Hand', (0.0, 0.0, 0.0), tracks, length * i / steps) for i in range(steps + 1)]
     low = min(f[2] for f in feet)
     forward = backward = 0.0
     for a, b in zip(feet, feet[1:]):

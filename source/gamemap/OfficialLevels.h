@@ -77,6 +77,11 @@ namespace OfficialLevels
     //! \return False if the file is outside these folders.
     bool getOfficialKey(const std::string& filePath, const std::string& levelsRoot, std::string& key);
 
+    //! \brief Tells whether a shipped level is only a fixture of the checks: it stays in the repository, but no
+    //! list of the game offers it. The key is the path below levels/ with '/', e.g. "skirmish/StoneKeep.level".
+    //! On Windows the key is compared without regard to case, as the file system does.
+    bool isHiddenFixtureKey(const std::string& key);
+
     //! \brief Returns the checksum stored for key in the table, or nullptr. On Windows the key is compared without
     //! regard to case, as the file system does.
     const char* findChecksum(const std::string& key, const ChecksumEntry* entries, std::size_t count);

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Checks the configuration values, readers and removed constants of the balance settings.
 
-The table records the delivered settings once; no external plan or compiler is needed.
+The table records the delivered settings once; no external plan or compiler is needed. Configuration files of the
+content packages (config/relationships.cfg) are found through scripts/content_packages.py; without the content their
+shipped values are named as not checked and the readers are still checked.
 """
 
 from pathlib import Path
@@ -10,6 +12,8 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 
 # Item, config file, entity, key, shipped value, original reader anchor.
 SETTINGS = [
@@ -187,6 +191,21 @@ def read(path):
     return (ROOT / path).read_text(encoding="utf-8")
 
 
+# Reads a configuration file of the public tree or of a content package as the game reads it (a mixed table with
+# its own rows from the content packages); None when the content is not present.
+def read_data(path):
+    found = content_packages.data_file(ROOT, path)
+    if found is None and content_packages.has_content(ROOT):
+        found = ROOT / path  # the content is present, so a missing file fails
+    return None if found is None else content_packages.read_text(ROOT, path)
+
+
+# True when the text is a mixed table whose own rows are not there (marker lines left, the content is not present):
+# a key that is not in its public rows cannot be decided.
+def lacks_own_rows(text):
+    return not content_packages.has_content(ROOT) and re.search(r'^#@own \d+\s*$', text, re.M) is not None
+
+
 # Compares scalar or curve values without discarding fractions.
 def numbers_equal(actual, expected):
     try:
@@ -201,18 +220,27 @@ def numbers_equal(actual, expected):
 # Checks every table entry, its configuration reader and the original removed expression.
 def main():
     problems = []
+    unchecked = []
+    global_cfg = read_data("config/global.cfg")
     for key in ("WorkerCarryFirstMaxShare", "WorkerClaimWallFirstMinShare"):
-        if key in read("config/global.cfg") or key in read("source/utils/ConfigManager.cpp"):
+        if key in global_cfg or key in read("source/utils/ConfigManager.cpp"):
             problems.append(f"Removed worker share {key} is still configured")
+    if lacks_own_rows(global_cfg):
+        unchecked.append("config/global.cfg own rows without the removed worker shares")
     manager = read("source/utils/ConfigManager.cpp")
     manager_header = read("source/utils/ConfigManager.h")
     tree = read("source/creatureskill/CreatureSkillTree.cpp")
     for item, config_file, entity, key, expected, source_file in SETTINGS:
-        config = read(config_file)
+        config = read_data(config_file)
         source = read(source_file)
-        match = re.search(r'^\s*' + re.escape(key) + r'\s+([^\n]+)', config, re.M)
-        if match is None or not numbers_equal(match.group(1), expected):
-            problems.append(f"M{item}: {key} is absent or differs from {expected}")
+        if config is None:
+            unchecked.append(f"{config_file} {key}")
+        else:
+            match = re.search(r'^\s*' + re.escape(key) + r'\s+([^\n]+)', config, re.M)
+            if match is None and lacks_own_rows(config):
+                unchecked.append(f"{config_file} {key}")
+            elif match is None or not numbers_equal(match.group(1), expected):
+                problems.append(f"M{item}: {key} is absent or differs from {expected}")
         if item == 29:
             reader = read("source/rooms/Room.cpp" if config_file.endswith("rooms.cfg") else "source/traps/Trap.cpp")
             if (ROOM_HP_READER if config_file.endswith("rooms.cfg") else TRAP_HP_READER) not in reader:
@@ -266,6 +294,7 @@ def main():
     picks = tree[tree.index("std::vector<std::string> templatePicks("):tree.index("uint32_t nextDeviationDraw(")]
     if "getSkillTier2UnlockRanks()" not in picks or "getSkillTier3UnlockRanks()" not in picks:
         problems.append("M9: template pick order is not derived from both configured unlock ranks")
+    content_packages.unchecked("check_balance_config_keys", unchecked)
     if problems:
         print('\n'.join(problems))
         return 1

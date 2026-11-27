@@ -11,18 +11,22 @@ Now RenderManager::prepareGameObjectResources loads every mesh listed in config/
    extractor of check_asset_references.py (source/rooms, entities, traps, spells, render, modes, gamemap, utils and
    config/roomAmbience*.cfg, creatureSkills.cfg, equipments.cfg; menu meshes and the creature meshes of creatures.cfg,
    which prepareGameCreatureResources prepares, excluded) are all listed, every listed mesh exists in models/, no mesh is
-   listed twice, and the list has exactly 221 meshes (183 objects of the code and configs, 38 dirt piles of the
+   listed twice, and the list has exactly 227 meshes (189 objects of the code and configs, 38 dirt piles of the
    creature classes, DirtPileEntity::PILE_MESH_PREFIX). A new object mesh in the code without a list entry fails here.
 2. Wiring (no compiler): initGameRenderer prepares the objects after the creatures and before the game shaders; the
    preparation does the steps of rrCreateRenderedMovableEntity, never attaches its temporary entity, destroys it, and
    reports a mesh it cannot prepare instead of stopping the map load.
 3. Rejected stalls of build 61 (no compiler): BloodStain and GoblinBed, the first objects of the two rejected
    minutes, are listed, and the contour/hover copies made in those minutes are prepared for every creature and seat.
-4. Parsing (compiled probe of the production readPreparedObjectMeshes): the game reads exactly the 221 names from the
+4. Parsing (compiled probe of the production readPreparedObjectMeshes): the game reads exactly the 227 names from the
    real file, in file order, comments ignored.
 
-Fixed values of this branch: 221 listed meshes. Part 4 compiles with cl, so it runs in the compile phase of the
+Fixed values of this branch: 227 listed meshes. Part 4 compiles with cl, so it runs in the compile phase of the
 integration only (--no-probe skips it).
+
+config/preparedobjects.cfg and the meshes are content (core-config, core-models and room packages, found through
+scripts/content_packages.py). Without the content the wiring and the code part of the rejected stalls are checked;
+coverage, the listed stall objects and the probe are named as not checked.
 """
 from pathlib import Path
 import importlib.util
@@ -33,17 +37,28 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+
+#: The list of the prepared meshes (core-config package)
+PREPARED_OBJECTS = 'config/preparedobjects.cfg'
 
 
 def mesh_exists(name):
-    """True when the mesh is in models/ of the game data or of a present room package; a mesh of a room package that is
-    not present counts as there (only the list and the code are checked then)."""
+    """True when the mesh is in models/ of the game data, of a content package or of a present room package; a mesh of
+    a room package that is not present counts as there (only the list and the code are checked then)."""
     relative = 'models/' + name
-    return room_packages.asset(ROOT, relative) is not None or room_packages.is_missing_packaged(ROOT, relative)
-# Meshes listed in config/preparedobjects.cfg, counted once on the branch: 223 - 1 after Pile_VeteranScarab.mesh was
-# removed with the VeteranScarab class (Mario 2026-11-27).
-LISTED = 222
+    return (content_packages.data_file(ROOT, relative) is not None or room_packages.asset(ROOT, relative) is not None
+            or room_packages.is_missing_packaged(ROOT, relative))
+# 219 since the four classic gold stack meshes left the list (counted on the branch; was 223): floor and carried
+# gold are code-built heaps and sacks, the GoldstackLv names are only sizes
+# 221 since the training hall has its own wall shields TrainingHallShield1 and 2 next to the WeaponShield meshes
+# of the arena (counted on the integration branch; was 219)
+# 222 since every finished trap of the workshop shows the TrapCrate mesh (counted on the branch; was 221); 227 with
+# the clip props jug, die, flask, rattle and bucket (counted on the integration branch)
+# 226 since Pile_VeteranScarab.mesh was removed with the VeteranScarab class (Mario 2026-11-27; counted on
+# feature/creature-roster after the merge of main; was 227)
+LISTED = 226
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
@@ -68,7 +83,7 @@ def block(source, signature):
 def listed():
     """Returns the mesh names of config/preparedobjects.cfg in file order, comments removed."""
     names = []
-    for line in read('config/preparedobjects.cfg').splitlines():
+    for line in content_packages.read_text(ROOT, PREPARED_OBJECTS).splitlines():
         words = line.split('#', 1)[0].split()
         if words:
             names.append(words[0])
@@ -83,7 +98,9 @@ def referenced():
     assets = references.inventory(ROOT)
     refs = (references.data_references(ROOT) | references.cpp_references(ROOT, assets)
             | references.finite_name_references(ROOT))
-    creatures = set(re.findall(r'^\s*MeshName\s+(\S+)', read('config/creatures.cfg'), re.M))
+    # config/creatures.cfg is a mixed table: read as the game reads it, with its own rows from the content
+    creatures = set(re.findall(r'^\s*MeshName\s+(\S+)', content_packages.read_text(ROOT, 'config/creatures.cfg'),
+                               re.M))
     pile_prefix = re.search(r'PILE_MESH_PREFIX = "([^"]+)";', read('source/entities/DirtPileEntity.cpp')).group(1)
     names = set()
     for ref in refs:
@@ -105,18 +122,20 @@ def coverage():
         assert mesh_exists(name), name
     missing = sorted(referenced() - set(names))
     assert not missing, 'object meshes not prepared: %s' % missing
-    for figure in ('ChickenEgg.mesh', 'Innkeeper.mesh', 'TavernCounter.mesh', 'SmallSpider.mesh', 'GoldstackLv1.mesh'):
+    for figure in ('ChickenEgg.mesh', 'Innkeeper.mesh', 'TavernCounter.mesh', 'SmallSpider.mesh'):
         assert figure in names, figure
 
 
-def rejected_stalls(render_manager):
+def rejected_stalls(render_manager, with_list=True):
     """The first-use work of the two stalls the owner rejected in build 61 (367.97 ms in the minute to 18:44:39,
     780.06 ms in the minute to 18:45:39 of 2026-11-11) is done during the map load: the first BloodStain and the first
     GoblinBed of that session are listed objects, and the contour and hover copies created then (Kobold green, Roach
-    red, "couldn't find ... cloning") are made for every configured creature and every seat before play."""
-    names = listed()
-    for figure in ('BloodStain.mesh', 'GoblinBed.mesh'):
-        assert figure in names, figure
+    red, "couldn't find ... cloning") are made for every configured creature and every seat before play. Without the
+    content (with_list False) the listed objects are not checked, only the code."""
+    if with_list:
+        names = listed()
+        for figure in ('BloodStain.mesh', 'GoblinBed.mesh'):
+            assert figure in names, figure
     creatures = block(render_manager, 'void RenderManager::prepareGameCreatureResources(')
     assert 'ConfigManager::getSingleton().getCreatureDefinitions()' in creatures
     assert 'prepareOutlinerMaterials(materialName, gameMap);' in creatures
@@ -153,6 +172,9 @@ PROBE_PREAMBLE = r'''
 #include <string>
 #include <vector>
 
+// The production reader looks the list up through ContentPackages::resolveFile (header-only lookup part)
+#include "utils/ContentPackages.h"
+
 #define OD_LOG_WRN(_message) std::printf("%s\n", (std::string("") + _message).c_str())
 struct ResourceManager
 {
@@ -184,7 +206,8 @@ def probe(render_manager):
     """Part 3: compiles the production list reader against the real config file and compares the names."""
     reader = block(render_manager, 'static std::vector<std::string> readPreparedObjectMeshes()')
     constant = 'static const std::string PREPARED_OBJECTS_FILE = "preparedobjects.cfg";'
-    config = (ROOT / 'config').as_posix() + '/'
+    # The config folder that holds the list (public tree or content package)
+    config = content_packages.resolve(ROOT, PREPARED_OBJECTS).parent.as_posix() + '/'
     vcvars = Path('C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Auxiliary/Build/vcvars64.bat')
     with tempfile.TemporaryDirectory() as directory:
         directory = Path(directory)
@@ -197,7 +220,7 @@ def probe(render_manager):
         batch = directory / 'run.cmd'
         batch.write_text(
             f'@echo off\ncall "{vcvars}" >nul\n'
-            f'cl /nologo /EHsc /std:c++14 "{cpp}" /Fe:"{directory / "probe.exe"}" '
+            f'cl /nologo /EHsc /std:c++14 /I"{ROOT / "source"}" "{cpp}" /Fe:"{directory / "probe.exe"}" '
             f'/Fo:"{directory / "probe.obj"}"\n'
             'if errorlevel 1 exit /b 1\n'
             f'"{directory / "probe.exe"}" "{expected}"\nexit /b %errorlevel%\n',
@@ -207,8 +230,15 @@ def probe(render_manager):
 
 
 def main():
-    """Runs coverage and wiring, then the compiled reader probe unless --no-probe is given."""
+    """Runs coverage and wiring, then the compiled reader probe unless --no-probe is given; without the content only
+    the code parts run and the rest is named as not checked."""
     render_manager = read('source/render/RenderManager.cpp')
+    if content_packages.data_file(ROOT, PREPARED_OBJECTS) is None:
+        wiring(render_manager)
+        rejected_stalls(render_manager, with_list=False)
+        content_packages.unchecked('check_game_object_preparation', [PREPARED_OBJECTS + ' (coverage, stall objects, probe)'])
+        print('game object preparation: wiring ok')
+        return
     coverage()
     wiring(render_manager)
     rejected_stalls(render_manager)

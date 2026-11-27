@@ -12,10 +12,13 @@ import json
 import random
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 OLD_COMMIT = '6e3c91480'
 
 
@@ -47,7 +50,10 @@ HOLD_S = flight_constant('HOLD_STILL_SECONDS')
 TPS = float(re.search(r'double ODApplication::turnsPerSecond\s*=\s*([0-9.]+);', read('source/ODApplication.cpp')).group(1))
 CHICKEN_SPEED = float(re.search(r'getMoveSpeed\(\) const override\s*\{\s*return\s*([0-9.]+);', read('source/entities/ChickenEntity.h')).group(1))
 
-cfg_text = read('config/rooms.cfg')
+# rooms.cfg and creatures.cfg as the game reads them: the hatchery values and the speeds are own rows of the content
+# package core-config. Without the content the values are not there: the code is checked, the simulation is not run.
+cfg_text = content_packages.read_text(root, 'config/rooms.cfg')
+HAS_VALUES = content_packages.has_content(root)
 
 
 def cfg(key):
@@ -56,25 +62,26 @@ def cfg(key):
     return float(match.group(1))
 
 
-WANDER_PAUSE = cfg('HatcheryWanderPausePercent')
-WANDER_REACH = cfg('HatcheryWanderReach')
-WANDER_MINLEG = cfg('HatcheryWanderMinLeg')
-WANDER_EDGE = cfg('HatcheryWanderEdge')
-WANDER_ATTEMPTS = int(cfg('HatcheryWanderAttempts'))
-FLEE_REACH = cfg('HatcheryFleeReach')
-FLEE_MINLEG = cfg('HatcheryFleeMinLeg')
-FLEE_GAIN = cfg('HatcheryFleeGain')
-FLEE_SPREAD = math.radians(cfg('HatcheryFleeSpread'))
-FLEE_ATTEMPTS = int(cfg('HatcheryFleeAttempts'))
-SCATTER_RADIUS = cfg('HatcheryScatterRadius')
-SCATTER_TURNS = int(cfg('HatcheryScatterTurns'))
-SCATTER_ATTEMPTS = int(cfg('HatcheryScatterAttempts'))
-SCATTER_MARGIN = cfg('HatcheryScatterMargin')
+if HAS_VALUES:
+    WANDER_PAUSE = cfg('HatcheryWanderPausePercent')
+    WANDER_REACH = cfg('HatcheryWanderReach')
+    WANDER_MINLEG = cfg('HatcheryWanderMinLeg')
+    WANDER_EDGE = cfg('HatcheryWanderEdge')
+    WANDER_ATTEMPTS = int(cfg('HatcheryWanderAttempts'))
+    FLEE_REACH = cfg('HatcheryFleeReach')
+    FLEE_MINLEG = cfg('HatcheryFleeMinLeg')
+    FLEE_GAIN = cfg('HatcheryFleeGain')
+    FLEE_SPREAD = math.radians(cfg('HatcheryFleeSpread'))
+    FLEE_ATTEMPTS = int(cfg('HatcheryFleeAttempts'))
+    SCATTER_RADIUS = cfg('HatcheryScatterRadius')
+    SCATTER_TURNS = int(cfg('HatcheryScatterTurns'))
+    SCATTER_ATTEMPTS = int(cfg('HatcheryScatterAttempts'))
+    SCATTER_MARGIN = cfg('HatcheryScatterMargin')
 
-creatures = read('config/creatures.cfg')
-speeds = sorted(set(float(v) for v in re.findall(r'^[ \t]+GroundMoveSpeed[ \t]+([0-9.]+)', creatures, re.M)))
-assert speeds
-CREATURE_SPEEDS = [speeds[0], speeds[len(speeds) // 2], speeds[-1]]
+    creatures = content_packages.read_text(root, 'config/creatures.cfg')
+    speeds = sorted(set(float(v) for v in re.findall(r'^[ \t]+GroundMoveSpeed[ \t]+([0-9.]+)', creatures, re.M)))
+    assert speeds
+    CREATURE_SPEEDS = [speeds[0], speeds[len(speeds) // 2], speeds[-1]]
 
 nest_h = read('source/rooms/HatcheryNestField.h')
 COOP = [float(re.search(r'coop' + n + r'\s*=\s*(-?[0-9.]+);', nest_h).group(1)) for n in ('MinX', 'MaxX', 'MinY', 'MaxY')]
@@ -102,8 +109,9 @@ for needle in ('"HatcheryFleeReach", 1.2', '"HatcheryFleeMinLeg", 0.4', '"Hatche
                'RoomObjectPath::clearSegment(obstacles, from, goal, true) && isSegmentInRoom(from, goal)'):
     assert needle in plan, needle
 # the defaults in the code are the values of rooms.cfg
-for key, value in (('HatcheryFleeReach', FLEE_REACH), ('HatcheryFleeMinLeg', FLEE_MINLEG), ('HatcheryFleeGain', FLEE_GAIN),
-                   ('HatcheryFleeSpread', math.degrees(FLEE_SPREAD)), ('HatcheryFleeAttempts', FLEE_ATTEMPTS)):
+for key, value in ((('HatcheryFleeReach', FLEE_REACH), ('HatcheryFleeMinLeg', FLEE_MINLEG), ('HatcheryFleeGain', FLEE_GAIN),
+                    ('HatcheryFleeSpread', math.degrees(FLEE_SPREAD)), ('HatcheryFleeAttempts', FLEE_ATTEMPTS))
+                   if HAS_VALUES else ()):
     default = float(re.search(r'"' + key + r'",\s*([0-9.]+)', plan).group(1))
     assert abs(default - value) < 1e-9, key
 assert 'bool planFleePath(' in room_h
@@ -139,6 +147,13 @@ if old_cpp is not None:
                    'addTileToListIfPossible(posChickenX, posChickenY - 1', 'addTileToListIfPossible(posChickenX, posChickenY + 1',
                    'RoomObjectNavigation::standingPosition(', 'RoomObjectPath::clearSegment(obstacles, start, point, true)'):
         assert needle in old_collect, needle
+
+# Without the content the values of rooms.cfg and creatures.cfg are not there: the simulation is not run
+if not HAS_VALUES:
+    content_packages.unchecked('check_chicken_catch_time', ['config/rooms.cfg hatchery values',
+                                                            'config/creatures.cfg GroundMoveSpeed', 'catch time simulation'])
+    print('chicken catch time checks passed')
+    sys.exit(0)
 
 # ---------------------------------------------------------------- geometry
 Vec = tuple

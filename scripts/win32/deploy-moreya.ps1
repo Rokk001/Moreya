@@ -11,17 +11,18 @@
 #                    odp_deployment.py), else origin/main.
 #   -Repo            main checkout whose build\windows is the fixed folder; default the main checkout of the shared Git
 #                    directory of -ExeDir (the same folder odp_deployment.py probes).
-#   -Content         checkout of the private campaign content repository; default the parent of MOREYA_CONTENT_DIR when it
+#   -Content         checkout of the private content repository; default the parent of MOREYA_CONTENT_DIR when it
 #                    names a packages folder, else MOREYA_CONTENT_DIR itself, else Moreya-Content next to the main checkout.
-#                    An empty MOREYA_CONTENT_DIR deploys the public game without content packages.
+#                    The game does not start without its content packages (it quits with exit code 7), so an empty
+#                    MOREYA_CONTENT_DIR refuses the deploy before anything is changed.
 #   -CheckOnly       only checks the resources.cfg of -ExeDir; exit 0 = pass, nothing is changed.
 #   ODP_DEPLOY_EXPECTED_COMMIT (environment, set by odp_deployment.py): the deploy refuses a selection with another commit.
 #
 # What it does:
 #  1. checks out the selected commit (contained in -IntegrationRef) detached in build\current-worktree (data snapshot),
-#  2. installs the wing packages and room packages of the committed HEAD of the content repository into
-#     levels\campaign of the snapshot (next to the wing 1 package, as the release package does), replacing the
-#     packages of the previous deploy,
+#  2. installs the content, wing and room packages of the committed HEAD of the content repository (wing 1 included;
+#     the public tree holds no wing) into levels\campaign of the snapshot, where the game finds them as the release
+#     package does, replacing the packages of the previous deploy,
 #  3. backs up the old exe/cfgs of build\windows once and records the old junction targets (rollback),
 #  4. copies moreya.exe, its symbols, all DLLs, plugins.cfg and resources.cfg from -ExeDir to build\windows,
 #  5. points the data junctions of build\windows to build\current-worktree.
@@ -38,7 +39,8 @@ $ErrorActionPreference = 'Stop'
 $exeName = 'moreya.exe'
 $processName = 'moreya'
 $pdbName = 'moreya.pdb'
-# The agreed basis level: Mossgate in the public wing 1 package, or at its former path in older commits
+# The agreed basis level: Mossgate in the wing 1 package (a content package now, installed below levels\campaign in
+# step 2; the selection keeps its former public path as its name), or at its former path in older commits
 $smokeLevels = 'levels/campaign/wing1/Mossgate.level', 'levels/campaign/Mossgate.level'
 if (-not $CheckOnly) {
     if (-not $SelectionFile -or -not (Test-Path -LiteralPath $SelectionFile -PathType Leaf)) {
@@ -100,20 +102,20 @@ function Test-DeployResourceFolders {
     Write-Host "resources.cfg check passed: $cfg"
 }
 
-# The content repository to deploy, or $null when MOREYA_CONTENT_DIR is set and empty (public game only).
+# The content repository to deploy; an empty MOREYA_CONTENT_DIR is refused (the game does not start without content).
 function Get-ContentRepository {
     param([string]$Explicit, [Parameter(Mandatory = $true)][string]$MainCheckout)
     if ($Explicit) { return (Resolve-Path -LiteralPath $Explicit).Path }
     $variable = [Environment]::GetEnvironmentVariable('MOREYA_CONTENT_DIR')
     if ($null -ne $variable) {
-        if (-not $variable.Trim()) { return $null }
+        if (-not $variable.Trim()) { throw 'MOREYA_CONTENT_DIR is empty: the game needs its content packages (it quits with exit code 7 without them); pass -Content or name the content packages. Nothing was changed.' }
         $folder = (Resolve-Path -LiteralPath $variable.Trim()).Path
         if ((Split-Path -Leaf $folder) -eq 'packages') { return (Split-Path -Parent $folder) }
         return $folder
     }
     $candidate = Join-Path (Split-Path -Parent $MainCheckout) 'Moreya-Content'
     if (-not (Test-Path -LiteralPath (Join-Path $candidate 'packages') -PathType Container)) {
-        throw "Content repository not found at $candidate; pass -Content or set MOREYA_CONTENT_DIR (empty = public game only). Nothing was changed."
+        throw "Content repository not found at $candidate; pass -Content or set MOREYA_CONTENT_DIR. Nothing was changed."
     }
     return $candidate
 }
@@ -203,7 +205,7 @@ if (-not (Test-Path $current)) { Invoke-Git -C $Repo worktree add --detach $curr
 else { Invoke-Git -C $current checkout --detach $sha | Out-Null }
 Write-Host "data snapshot: $sha"
 
-# 2. wing and room packages next to the wing 1 package; a package folder that the snapshot tracks is never replaced
+# 2. content, wing and room packages below levels\campaign; a package folder that the snapshot tracks is never replaced
 foreach ($name in $contentNames) {
     if (Invoke-Git -C $current ls-files -- "levels/campaign/$name") { throw "Content package $name collides with a tracked folder of $sha." }
     $destination = Join-Path $campaign $name

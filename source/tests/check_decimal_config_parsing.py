@@ -12,6 +12,8 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
 
 
 def read(*parts):
@@ -89,9 +91,12 @@ if "getSpellConfigDouble(\"LightningStunTurns\")" not in lightning or "getTurnsS
 if not re.search(r"->stun\(\s*ConfigManager::getSingleton\(\)\.getSpellConfigDouble\(\"LightningStunTurns\"\)\s*\);", lightning):
     problems.append("SpellLightning must stun for the unrounded LightningStunTurns")
 
-# Portal and trap values really carry decimals in the shipped config
-rooms = read("config", "rooms.cfg")
-for key in KEYS["room"]:
+# Portal and trap values really carry decimals in the shipped config (rooms.cfg as the game reads it; the portal
+# cooldowns are own rows of the content package core-config, not checked without the content)
+rooms = content_packages.read_text(ROOT, "config/rooms.cfg")
+if not content_packages.has_content(ROOT):
+    content_packages.unchecked("check_decimal_config_parsing", ["rooms.cfg " + key for key in KEYS["room"]])
+for key in (KEYS["room"] if content_packages.has_content(ROOT) else []):
     if not re.search(r"^\s+" + key + r"\s+\d+\.\d+\s*$", rooms, re.M):
         problems.append("rooms.cfg " + key + " must carry its decimals")
 

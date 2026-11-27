@@ -3,7 +3,12 @@
 Pure source wiring checks (no compiler, no game): server authority, configuration with defaults,
 the guard and price rules in Room, their use in Tile (both the search check and the dance), the
 client reactions. The probe of the two pure rules in RoomClaim.h is compiled and run only with
---probe (needs the MSVC compiler on the path)."""
+--probe (needs the MSVC compiler on the path).
+
+config/creatureReactions.cfg is game data of the content packages (scripts/content_packages.py): it is read from the
+public tree or from the content packages. Without the content its reaction events are named as not checked.
+config/rooms.cfg is read with its own rows of the content package core-config; without the content its takeover values
+and their documentation are named as not checked."""
 from pathlib import Path
 import re
 import subprocess
@@ -11,10 +16,16 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(root)
 
 
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    """The text of a repository file; a mixed table comes with its own rows of the content."""
+    return content_packages.read_text(root, path)
 
 
 def function_body(source, signature):
@@ -24,7 +35,12 @@ def function_body(source, signature):
 
 
 rooms_cfg = read('config/rooms.cfg')
-reactions_cfg = read('config/creatureReactions.cfg')
+# The reactions config of the public tree or of a content package; None when the content is not present
+reactions_cfg = None
+if content_packages.data_file(root, 'config/creatureReactions.cfg') is not None or content_packages.has_content(root):
+    reactions_cfg = content_packages.read_text(root, 'config/creatureReactions.cfg')
+else:
+    content_packages.unchecked('check_room_takeover', ['config/creatureReactions.cfg'])
 room = read('source/rooms/Room.cpp')
 room_h = read('source/rooms/Room.h')
 claim_h = read('source/rooms/RoomClaim.h')
@@ -34,8 +50,9 @@ worker = read('source/render/WorkerReactions.cpp')
 # Configuration: documented, set, read with a default; the defaults keep the old behaviour except the guard
 defaults = {'RoomTakeoverGuardRadius': '5', 'RoomTakeoverCostPercent': '0'}
 for key, value in defaults.items():
-    assert re.search(r'^\s+' + key + r'\s+' + value + r'\s*$', rooms_cfg, re.M), key
-    assert re.search(r'^\s+# ' + key + r'\s', rooms_cfg, re.M), key + ' is not documented'
+    if WITH_CONTENT:
+        assert re.search(r'^\s+' + key + r'\s+' + value + r'\s*$', rooms_cfg, re.M), key
+        assert re.search(r'^\s+# ' + key + r'\s', rooms_cfg, re.M), key + ' is not documented'
     constant = {'RoomTakeoverGuardRadius': 'DEFAULT_ROOM_TAKEOVER_GUARD_RADIUS',
                 'RoomTakeoverCostPercent': 'DEFAULT_ROOM_TAKEOVER_COST_PERCENT'}[key]
     assert '"' + key + '", ' + constant + ')' in room, key + ' is read with its named default'
@@ -110,10 +127,12 @@ assert 'mClaimHealth = RoomClaim::readClaimPool(is, mClaimHealth)' in function_b
 assert 'inline void writeClaimPool(' in claim_h and 'inline double readClaimPool(' in claim_h
 assert 'Saved with the first tile' in room_h
 # One duration value in the config (no second key with the same meaning), documented with the pool formula
-assert len(re.findall(r'^\s+RoomConvertSecondsPerTile\s', rooms_cfg, re.M)) == 1, 'one set value'
-assert len(re.findall(r'^\s+# RoomConvertSecondsPerTile\s', rooms_cfg, re.M)) == 1, 'one documented value'
+if WITH_CONTENT:
+    assert len(re.findall(r'^\s+RoomConvertSecondsPerTile\s', rooms_cfg, re.M)) == 1, 'one set value'
+    assert len(re.findall(r'^\s+# RoomConvertSecondsPerTile\s', rooms_cfg, re.M)) == 1, 'one documented value'
 assert not re.search(r'RoomTakeover(Seconds|Turns)PerTile', rooms_cfg + room + room_h + claim_h), 'no double of RoomConvertSecondsPerTile'
-assert 'tiles times this value' in rooms_cfg and 'at once' in rooms_cfg
+if WITH_CONTENT:
+    assert 'tiles times this value' in rooms_cfg and 'at once' in rooms_cfg
 dance_room = function_body(room, 'void Room::claimForSeat(')
 assert 'numCoveredTiles()' in dance_room, 'the size of the pool is read at every dance'
 assert dance_room.index('mClaimHealth -=') < dance_room.index('changeOwner(seat)'), 'the whole room changes owner only after the pool is empty'
@@ -188,7 +207,8 @@ assert 'sServerTellsTakeover = false' in function_body(worker, 'void WorkerReact
 # Client: reactions while dancing on a tile of an enemy room and when the tile is ours
 for name in ('TakeoverWork', 'TakeoverDone'):
     assert '"' + name + '"' in worker, name
-    assert re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
+    if reactions_cfg is not None:
+        assert re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
 claim = function_body(worker, 'void WorkerReactions::showClaim(')
 assert 'getIsRoom()' in claim and 'isAlliedSeat(tileOwner)' in claim and 'mTakeoverTile = tile' in claim
 tick = function_body(worker, 'void WorkerReactions::tickWorker(')
@@ -234,4 +254,6 @@ int main()
         sys.stdout.write(result.stdout)
         assert result.returncode == 0, 'probe failed'
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_room_takeover', ['takeover and duration values of config/rooms.cfg (own rows)'])
 print('room takeover: ok')

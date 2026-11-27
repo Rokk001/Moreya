@@ -3,9 +3,12 @@ from pathlib import Path
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 arrow_scale = re.search(r'    if\(meshName == "ArrowProjectile"\)\n[^\n]+;', renderer)[0]
@@ -15,6 +18,8 @@ probe = r'''
 #include <Bites/OgreSGTechniqueResolverListener.h>
 #include <iostream>
 #include <functional>
+#include <sstream>
+#include <vector>
 int main(int argc,char** argv){try{
  Ogre::Root root("","","arrow.log");root.loadPlugin("RenderSystem_GL3Plus");root.loadPlugin("Codec_STBI");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
@@ -22,9 +27,12 @@ int main(int argc,char** argv){try{
  Ogre::RenderWindow* window=root.createRenderWindow("Arrow check",512,256,false,&options);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  const std::string repo=argv[1],prefix=argv[2];
+ std::vector<std::string> extra;{std::istringstream in(argc>3?argv[3]:"");std::string part;while(std::getline(in,part,';'))if(!part.empty())extra.push_back(part);}
  for(const std::string& path:{repo+"/models",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");
+ // The data folders of the content packages (the arrow lies in a package, plus the shared textures it reads)
+ for(const std::string& path:extra)groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::MaterialManager& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("ArrowProjectile.material","Graphics"),"Graphics");
  Ogre::RTShader::ShaderGenerator* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
  Ogre::SceneManager* scene=root.createSceneManager();shaders->addSceneManager(scene);scene->setAmbientLight(Ogre::ColourValue(.7,.7,.7));
@@ -54,13 +62,21 @@ int main(int argc,char** argv){try{
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
 '''.replace('ARROW_SCALE', arrow_scale)
+# The arrow mesh, material and sheet lie in a content package; without the content nothing can be rendered
+NEEDED = ('models/ArrowProjectile.mesh', 'materials/scripts/ArrowProjectile.material', 'materials/textures/ArrowProjectile.png')
+absent = [name for name in NEEDED if content_packages.data_file(repo, name) is None]
+if absent and not content_packages.has_content(repo):
+    content_packages.unchecked('check_arrow_projectile', ['render probe (needs %s)' % ', '.join(absent)])
+    raise SystemExit(0)
+extra = ';'.join(str(folder) for relative in ('models', 'materials/textures', 'materials/scripts')
+                 for folder in content_packages.data_folders(repo, relative) if folder != repo / relative)
 with tempfile.TemporaryDirectory(prefix='odp-arrow-projectile-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{prefix / "include/OGRE"}',
                     f'/I{prefix / "include/OGRE/RTShaderSystem"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'], cwd=work, check=True)
-    result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work, capture_output=True, text=True)
+    result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix), extra], cwd=work, capture_output=True, text=True)
     print('\n'.join(line for line in result.stdout.splitlines() if not line.startswith('GL_EXTENSIONS') and any(token in line for token in ('CHECKS=', 'FAIL ', 'ARROW_', 'Error', 'error'))))
     if result.returncode:
         print(result.stderr)

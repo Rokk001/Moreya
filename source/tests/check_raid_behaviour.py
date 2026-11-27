@@ -21,14 +21,18 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
 START = time.perf_counter()
 FAILURES = []
+#: The [Raid], [GroupCombat] and [Rooms] values are own rows of the content (core-config): checked only with the content
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(relative):
-    """Returns the text of a file of the repository."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
-        return handle.read()
+    """Returns the text of a file of the repository; a mixed table comes with its own rows of the content."""
+    return content_packages.read_text(ROOT, relative)
 
 
 def function(source, signature):
@@ -322,16 +326,17 @@ check("return mGameMap.getTile(mGateX, mGateY);" in function(MANAGER, "Tile* Rai
       "G7: the gate tile")
 
 # ------------------------------------------------------------------------------------------------ RA7 carry amount
-raid_cfg = block(GLOBAL_CFG, "Raid")
-gold_per_tile = float(block(ROOMS_CFG, "Rooms")["TreasuryGoldPerTile"][0]) if "[Rooms]" in ROOMS_CFG else None
-if gold_per_tile is None:
-    gold_per_tile = float(re.search(r"^\s+TreasuryGoldPerTile\s+(\d+)", ROOMS_CFG, re.M).group(1))
-check(gold_per_tile == 1000.0, "RA7: one treasury tile stores 1000 gold")
-check(raid_cfg.get("RaidCarryTilesSmall") == ["1"] and raid_cfg.get("RaidCarryTilesLarge") == ["2"],
-      "RA7/Q20.28: small 1 tile, large 2 tiles")
-# Roster change (CREATURE-ROSTER W4a): Paladin and Priestess take the place of their predecessors NatureMonster and Scarab
-check(raid_cfg.get("RaidLargeMemberClasses") == ["Paladin", "Defender", "Priestess"],
-      "Q20.28b: the large classes are Paladin, Defender and Priestess")
+if WITH_CONTENT:
+    raid_cfg = block(GLOBAL_CFG, "Raid")
+    gold_per_tile = float(block(ROOMS_CFG, "Rooms")["TreasuryGoldPerTile"][0]) if "[Rooms]" in ROOMS_CFG else None
+    if gold_per_tile is None:
+        gold_per_tile = float(re.search(r"^\s+TreasuryGoldPerTile\s+(\d+)", ROOMS_CFG, re.M).group(1))
+    check(gold_per_tile == 1000.0, "RA7: one treasury tile stores 1000 gold")
+    check(raid_cfg.get("RaidCarryTilesSmall") == ["1"] and raid_cfg.get("RaidCarryTilesLarge") == ["2"],
+          "RA7/Q20.28: small 1 tile, large 2 tiles")
+    # Roster change (CREATURE-ROSTER W4a): Paladin and Priestess take the place of their predecessors NatureMonster and Scarab
+    check(raid_cfg.get("RaidLargeMemberClasses") == ["Paladin", "Defender", "Priestess"],
+          "Q20.28b: the large classes are Paladin, Defender and Priestess")
 check("RaidPlunderGoldPerMember" not in GLOBAL_CFG and "RaidPlunderGoldPerMember" not in MANAGER,
       "RA7: the carry amount replaces RaidPlunderGoldPerMember")
 
@@ -348,15 +353,16 @@ def plunder(stored, carried, cap):
     return max(0.0, min(stored, cap - carried))
 
 
-EXPECTED_CAPACITY = {"Knight": 1000.0, "Wizard": 1000.0, "Elf": 1000.0, "Monk": 1000.0, "Paladin": 2000.0,
-                     "Defender": 2000.0, "Priestess": 2000.0}
-for name, expected in sorted(EXPECTED_CAPACITY.items()):
-    check(capacity(name) == expected, "RA7: " + name + " carries " + str(expected))
-# A small member at a full 3x3 treasury takes 1000, a large one 2000; a second treasury adds nothing when full
-check(plunder(9000.0, 0.0, capacity("Knight")) == 1000.0 and plunder(9000.0, 0.0, capacity("Priestess")) == 2000.0,
-      "RA7: the first treasury")
-check(plunder(9000.0, 1000.0, capacity("Knight")) == 0.0 and plunder(9000.0, 1000.0, capacity("Priestess")) == 1000.0,
-      "RA7: a member takes only what it can still carry")
+if WITH_CONTENT:
+    EXPECTED_CAPACITY = {"Knight": 1000.0, "Wizard": 1000.0, "Elf": 1000.0, "Monk": 1000.0, "Paladin": 2000.0,
+                         "Defender": 2000.0, "Priestess": 2000.0}
+    for name, expected in sorted(EXPECTED_CAPACITY.items()):
+        check(capacity(name) == expected, "RA7: " + name + " carries " + str(expected))
+    # A small member at a full 3x3 treasury takes 1000, a large one 2000; a second treasury adds nothing when full
+    check(plunder(9000.0, 0.0, capacity("Knight")) == 1000.0 and plunder(9000.0, 0.0, capacity("Priestess")) == 2000.0,
+          "RA7: the first treasury")
+    check(plunder(9000.0, 1000.0, capacity("Knight")) == 0.0 and plunder(9000.0, 1000.0, capacity("Priestess")) == 1000.0,
+          "RA7: a member takes only what it can still carry")
 check("std::find(largeClasses.begin(), largeClasses.end(), className) != largeClasses.end()" in
       function(RULES, "bool isLargeMember(") and "const double tiles = large ? largeTiles : smallTiles;" in
       function(RULES, "double carryCapacity(") and "return std::max(0.0, tiles * goldPerTile);" in
@@ -368,10 +374,11 @@ check('getRaidConfigWords("RaidLargeMemberClasses")' in cap_cpp and 'getRoomConf
 loader = function(CONFIG_MANAGER, "bool ConfigManager::loadGlobalRaidConfig(")
 check("std::getline(configFile, value);" in loader and "mRaidConfigWords[nextParam] = value;" in loader,
       "RA7: the [Raid] block keeps word lists")
-docs = re.split(r"(?m)^\[Raid\]\s*$", GLOBAL_CFG)[0].split("[/GroupCombat]")[1]
-for key in ("RaidCarryTilesSmall", "RaidCarryTilesLarge", "RaidLargeMemberClasses"):
-    lines = [line for line in docs.splitlines() if re.match(r"#\s+" + key + r"\s", line)]
-    check(len(lines) == 1 and "PLACEHOLDER" not in lines[0], "V1: " + key + " is documented as a rule value")
+if WITH_CONTENT:
+    docs = re.split(r"(?m)^\[Raid\]\s*$", GLOBAL_CFG)[0].split("[/GroupCombat]")[1]
+    for key in ("RaidCarryTilesSmall", "RaidCarryTilesLarge", "RaidLargeMemberClasses"):
+        lines = [line for line in docs.splitlines() if re.match(r"#\s+" + key + r"\s", line)]
+        check(len(lines) == 1 and "PLACEHOLDER" not in lines[0], "V1: " + key + " is documented as a rule value")
 
 # ------------------------------------------------------------------------------------------------ RA12 looting
 
@@ -485,11 +492,12 @@ def dissolves(members, raiders, distance):
     return not any((mx - rx) ** 2 + (my - ry) ** 2 <= distance * distance for mx, my in members for rx, ry in raiders)
 
 
-DISSOLVE = float(block(GLOBAL_CFG, "GroupCombat")["GroupDissolveDistance"][0])
-check(DISSOLVE == 24.0, "G8: the dissolving distance of this branch is 24")
-check(dissolves([(0, 0)], None, DISSOLVE), "G8: the group dissolves when its raid group is gone")
-check(dissolves([(0, 0)], [(25, 0)], DISSOLVE), "G8: ... or no raid member is within the distance")
-check(not dissolves([(0, 0)], [(24, 0)], DISSOLVE), "G8: a raid member at the distance keeps the group")
+if WITH_CONTENT:
+    DISSOLVE = float(block(GLOBAL_CFG, "GroupCombat")["GroupDissolveDistance"][0])
+    check(DISSOLVE == 24.0, "G8: the dissolving distance of this branch is 24")
+    check(dissolves([(0, 0)], None, DISSOLVE), "G8: the group dissolves when its raid group is gone")
+    check(dissolves([(0, 0)], [(25, 0)], DISSOLVE), "G8: ... or no raid member is within the distance")
+    check(not dissolves([(0, 0)], [(24, 0)], DISSOLVE), "G8: a raid member at the distance keeps the group")
 ended = function(GROUPS, "void CombatGroupManager::removeEndedGroups(")
 check('groupConfig("GroupDissolveDistance")' in ended and "raidIt != raid.end()" in ended and
       "ended = !raidNear;" in ended and "it = mGroups.erase(it);" in ended, "G8: the dissolving in the source")
@@ -502,6 +510,10 @@ check("if(member == leader)\n                continue;" in update_group and
       "CombatGroupRules::placePosition(static_cast<double>(leaderTile->getX())" in update_group,
       "G9: the members gather behind their leader")
 
+if not WITH_CONTENT:
+    content_packages.unchecked("check_raid_behaviour", [
+        "RA7 carry amounts and V1 documentation (own rows of config/global.cfg [Raid] and config/rooms.cfg)",
+        "G8 dissolving distance (own rows of config/global.cfg [GroupCombat])"])
 elapsed = time.perf_counter() - START
 print('ODP_TEST_PHASE {"name":"behaviour","seconds":%.3f}' % elapsed)
 if FAILURES:

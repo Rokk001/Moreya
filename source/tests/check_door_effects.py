@@ -7,6 +7,9 @@ Checks that the doors send their damage to the clients, that the client keeps th
 shows the remains of a destroyed door with the clip of its own skeleton (the barricade falls into a heap, every
 other door breaks), takes the length of the collapse from the clip, shows the effects of a secret door only to
 its keeper, and that every door type has the looks the config promises with particle systems that exist.
+
+The trap effects and the particle scripts lie in the content packages (scripts/content_packages.py); without the
+content the effects are named as not checked and the code is still checked.
 """
 
 import os
@@ -14,11 +17,14 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+HAS_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(*parts):
-    """Returns the text of a file below the repository root."""
-    with open(os.path.join(ROOT, *parts), encoding="utf-8") as handle:
+    """Returns the text of a file below the repository root or of a game data file of a content package."""
+    with open(content_packages.resolve(ROOT, "/".join(parts)), encoding="utf-8") as handle:
         return handle.read()
 
 
@@ -27,9 +33,9 @@ ambience = read("source", "render", "RoomAmbience.cpp")
 header = read("source", "render", "RoomAmbience.h")
 config_cpp = read("source", "render", "RoomAmbienceConfig.cpp")
 config_h = read("source", "render", "RoomAmbienceConfig.h")
-traps = read("config", "roomAmbienceTraps.cfg")
-particles = "".join(read("particles", name) for name in os.listdir(os.path.join(ROOT, "particles"))
-                    if name.startswith("RoomAmbience") and name.endswith(".particle"))
+# The trap effects and the room ambience particle scripts of the public tree and the content packages
+traps = read("config", "roomAmbienceTraps.cfg") if HAS_CONTENT else None
+particles = "".join(path.read_text(encoding="utf-8") for path in content_packages.data_glob(ROOT, "particles", "RoomAmbience*.particle"))
 
 # The server: every hit door tells the clients how much health it has left, a destroyed one says so
 door = read("source", "traps", "TrapDoor.cpp")
@@ -74,36 +80,39 @@ if "effect.mOwnerOnly" not in ambience or "entity->getSeat() != localPlayer->get
     problems.append("scanObjects does not filter OwnerOnly effects by the seat")
 
 # The effects
-effects = {}
-for block in re.findall(r"\[Effect\](.*?)\[/Effect\]", traps, re.S):
-    entry = {}
-    for line in block.splitlines():
-        words = line.split("#", 1)[0].split()
-        if len(words) >= 2:
-            entry[words[0]] = words[1:]
-    if "Name" in entry:
-        effects[entry["Name"][0]] = entry
+if traps is None:
+    content_packages.unchecked("check_door_effects", ["config/roomAmbienceTraps.cfg door effects", "particles/RoomAmbience*.particle"])
+else:
+    effects = {}
+    for block in re.findall(r"\[Effect\](.*?)\[/Effect\]", traps, re.S):
+        entry = {}
+        for line in block.splitlines():
+            words = line.split("#", 1)[0].split()
+            if len(words) >= 2:
+                entry[words[0]] = words[1:]
+        if "Name" in entry:
+            effects[entry["Name"][0]] = entry
 
-for name in ("SecretDoorGlint", "SecretDoorDust", "SecretDoorLockGlow"):
-    if effects.get(name, {}).get("OwnerOnly") != ["yes"]:
-        problems.append("the effect %s is not OwnerOnly (it would give the secret door away)" % name)
-for name in ("DoorHitSplinters", "DoorHitSparks", "DoorHitDust", "DoorHitRunes", "DoorHurtDust", "DoorWreckedDust",
-             "DoorWreckedSplinters", "DoorWreckedSparks"):
-    if effects.get(name, {}).get("Target") != ["Event"] or effects[name].get("OwnerOnly") is not None:
-        problems.append("%s must be an event for everybody" % name)
-shake = effects.get("DoorShake")
-if shake is None or shake.get("When") != ["Hit"] or shake.get("Kind") != ["Motion"]:
-    problems.append("DoorShake must be a motion while a door is hit")
-lock = effects.get("DoorLockGlow")
-if lock is None or lock.get("When") != ["Locked"]:
-    problems.append("DoorLockGlow must show while a door is locked")
-for door_type in ("DoorIronbound", "DoorSteel", "DoorBarricade", "DoorSecret", "DoorRuned"):
-    if not any(("trap:" + door_type) in effect.get("Match", []) for effect in effects.values()):
-        problems.append("%s has no look of its own" % door_type)
-for effect in effects.values():
-    system = effect.get("System", [None])[0]
-    if system is not None and not re.search(r"^particle_system %s\s*$" % re.escape(system), particles, re.M):
-        problems.append("particle system %s of %s is missing" % (system, effect["Name"][0]))
+    for name in ("SecretDoorGlint", "SecretDoorDust", "SecretDoorLockGlow"):
+        if effects.get(name, {}).get("OwnerOnly") != ["yes"]:
+            problems.append("the effect %s is not OwnerOnly (it would give the secret door away)" % name)
+    for name in ("DoorHitSplinters", "DoorHitSparks", "DoorHitDust", "DoorHitRunes", "DoorHurtDust", "DoorWreckedDust",
+                 "DoorWreckedSplinters", "DoorWreckedSparks"):
+        if effects.get(name, {}).get("Target") != ["Event"] or effects[name].get("OwnerOnly") is not None:
+            problems.append("%s must be an event for everybody" % name)
+    shake = effects.get("DoorShake")
+    if shake is None or shake.get("When") != ["Hit"] or shake.get("Kind") != ["Motion"]:
+        problems.append("DoorShake must be a motion while a door is hit")
+    lock = effects.get("DoorLockGlow")
+    if lock is None or lock.get("When") != ["Locked"]:
+        problems.append("DoorLockGlow must show while a door is locked")
+    for door_type in ("DoorIronbound", "DoorSteel", "DoorBarricade", "DoorSecret", "DoorRuned"):
+        if not any(("trap:" + door_type) in effect.get("Match", []) for effect in effects.values()):
+            problems.append("%s has no look of its own" % door_type)
+    for effect in effects.values():
+        system = effect.get("System", [None])[0]
+        if system is not None and not re.search(r"^particle_system %s\s*$" % re.escape(system), particles, re.M):
+            problems.append("particle system %s of %s is missing" % (system, effect["Name"][0]))
 
 if problems:
     for problem in problems:

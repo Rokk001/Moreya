@@ -10,7 +10,8 @@ The liquid in the cauldron mouth was one flat mint-green GhostEctoplasm disc wit
 - unchanged: the trap seat glow stays GhostEctoplasm (and every other apparatus keeps GhostEctoplasm), all positions,
   normals, bones and bounds, and the fill level path in BuildingObject.cpp (child node behind the window, height
   scaled by the fill fraction).
-Pure file inspection, nothing is compiled or rendered.
+Pure file inspection, nothing is compiled or rendered. Ghost.material is content (core-models package, found through
+scripts/content_packages.py); without it the material part is named as not checked.
 """
 from pathlib import Path
 import re
@@ -21,16 +22,19 @@ from PIL import Image
 repo = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
 ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+#: The ghost materials are content (core-models package, scripts/content_packages.py)
+GHOST_MATERIAL = content_packages.data_file(repo, 'materials/scripts/Ghost.material') is not None
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.asset(repo, relative) or (repo / relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(repo, relative)
 MATERIAL = 'GhostCauldronEctoplasm'
 
 
@@ -200,7 +204,10 @@ def fill_path():
 
 if ROOM_ASSETS:
     textures()
-material()
+if GHOST_MATERIAL:
+    material()
+else:
+    content_packages.unchecked('check_ghost_cauldron_ectoplasm', ['materials/scripts/Ghost.material'])
 if ROOM_ASSETS:
     meshes()
 else:

@@ -1,12 +1,20 @@
-"""Exercise the actual room-navigation integration with lightweight map fixtures."""
+"""Exercise the actual room-navigation integration with lightweight map fixtures.
+
+The probe takes BedStepMaxHeight of config/global.cfg and the beds of config/creatures.cfg joined with their own rows of
+the content package core-config (scripts/content_packages.py); BedStepMaxHeight is an own row, so without the content
+the probe is not built and is named as not checked.
+"""
 from pathlib import Path
 import argparse
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 source = (repo / 'source/gamemap/RoomObjectNavigation.cpp').read_text()
 source = re.sub(r'^#include[^\n]*\n', '', source, flags=re.M)
@@ -25,6 +33,10 @@ parser.add_argument('--saved-food-cases', action='store_true')
 parser.add_argument('--saved-beds', action='store_true', help='Include exact saved bed positions, rotations and configured dimensions')
 parser.add_argument('--source-ref')
 args = parser.parse_args()
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_room_object_navigation',
+                               ['room navigation probe (BedStepMaxHeight is an own row of config/global.cfg)'])
+    sys.exit(0)
 def read_source(relative):
     return (subprocess.check_output(['git', 'show', args.source_ref + ':' + relative], cwd=repo, text=True)
             if args.source_ref else (repo / relative).read_text())
@@ -495,7 +507,7 @@ int main(){
  CRYPT_DELIVERY
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
-'''.replace('STEP_MAX', re.search(r'^\s*BedStepMaxHeight\s+(\S+)', (repo / 'config/global.cfg').read_text(), re.M)[1]).replace('SOURCE', source).replace('FOOD_HANDLER', food_handler).replace('WORK_GATES', '\n'.join(work_gates))
+'''.replace('STEP_MAX', re.search(r'^\s*BedStepMaxHeight\s+(\S+)', content_packages.read_text(repo, 'config/global.cfg'), re.M)[1]).replace('SOURCE', source).replace('FOOD_HANDLER', food_handler).replace('WORK_GATES', '\n'.join(work_gates))
 probe = probe.replace('PACKED_BEDS', r'''
  {
   // A completely furnished room with two opposing doorways: an open-map
@@ -794,7 +806,7 @@ if args.saved_terrain:
             objects[(int(x), int(y))] = (mesh, angles[mesh], float(x), float(y) + offset)
     if args.saved_beds:
         bed_definitions = {}
-        for section in (repo / 'config/creatures.cfg').read_text().split('[Creature]')[1:]:
+        for section in content_packages.read_text(repo, 'config/creatures.cfg').split('[Creature]')[1:]:
             section = section.split('[/Creature]', 1)[0]
             mesh = re.search(r'^\s*MeshName\s+(\S+)', section, re.M)
             bed = re.search(r'^\s*BedMeshName\s+(\S+)', section, re.M)

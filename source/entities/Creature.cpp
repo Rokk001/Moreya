@@ -171,6 +171,7 @@
 #include "spells/Spell.h"
 #include "spells/SpellType.h"
 #include "traps/Trap.h"
+#include "utils/ContentPackages.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -311,8 +312,9 @@ PortraitCatalogRegistry& getAppearanceRegistry()
             root = "materials/portraits/whole";
 
         bool isAbsolute = (root.size() > 1) && ((root[1] == ':') || (root[0] == '/') || (root[0] == '\\'));
+        // The portraits may lie in a content package (ContentPackages::resolveFolder)
         if(!isAbsolute)
-            root = ResourceManager::getSingleton().getGameDataPath() + root;
+            root = ContentPackages::resolveFolder(ResourceManager::getSingleton().getGameDataPath() + root);
 
         registry.setAssetRoot(root);
     }

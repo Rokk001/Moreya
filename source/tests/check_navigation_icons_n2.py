@@ -5,6 +5,10 @@ imageset is registered in the scheme and whose picture resolves in exactly one G
 game loads are the chosen artwork, they carry real painted detail at 256 px (not an upscaled small picture), the motif
 fills the button, and at the size the button is drawn they look clearly different from the Rooms tab icon
 (NavigationRooms), the creature portrait (CreaturesIcon), each other and their neighbours in the row.
+
+The GUI files are read from the public tree and from the same folders of the content packages, as the game registers
+them (scripts/content_packages.py); a mixed interface file comes with its own rows of the content package core-gui.
+Without the content the icon comparison and the Rooms tab are named as not checked.
 """
 from pathlib import Path
 import re
@@ -19,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(ROOT / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
+import content_packages  # noqa: E402
 
 # Button name -> (image the button shows, chosen 1024 px artwork below <assets>/gui/navigation-icons).
 BUTTONS = {
@@ -43,17 +48,22 @@ def props(node):
 
 
 def gui_folders():
-    """Return the folders the game registers non-recursively in its [GUI] resource group."""
+    """Return the folders the game registers non-recursively in its [GUI] resource group: each public folder and the
+    same folder of every present content and room package (scripts/content_packages.py)."""
     text = (ROOT / 'cmake/config/resources.cfg.in').read_text(encoding='utf-8')
     section = text.split('[GUI]', 1)[1].split('[', 1)[0]
-    return [ROOT / line.split('=', 1)[1].strip() for line in section.splitlines() if line.startswith('FileSystem=')]
+    relatives = [line.split('=', 1)[1].strip() for line in section.splitlines() if line.startswith('FileSystem=')]
+    return [ROOT / relative for relative in relatives] + [
+        folder for relative in relatives for folder in content_packages.data_folders(ROOT, relative)
+        if folder != ROOT / relative]
 
 
 def load_image(reference, imagesets, folders):
-    """Resolve 'Imageset/Image' the way CEGUI does and return the RGBA pixels of that image."""
+    """Resolve 'Imageset/Image' the way CEGUI does and return the RGBA pixels of that image (the imageset is read with
+    its own rows of the content)."""
     imageset_name, image_name = reference.split('/', 1)
     assert imageset_name in imagesets, reference + ': imageset registered in ODSkin.scheme'
-    root = ET.parse(ROOT / 'gui' / imagesets[imageset_name]).getroot()
+    root = ET.fromstring(content_packages.read_text(ROOT, 'gui/' + imagesets[imageset_name]))
     assert root.get('name') == imageset_name, reference + ': imageset name matches the scheme'
     filename = root.get('imagefile')
     hits = [folder / filename for folder in folders if (folder / filename).is_file()]
@@ -103,13 +113,26 @@ def drawn_sizes():
     return sorted(sizes)
 
 
+def check_rooms_tab():
+    """The Rooms tab keeps its own icon; only the HUD button changed."""
+    tab = content_packages.read_text(ROOT, 'gui/WindowTabRooms.layout')
+    assert re.search(r'name="NavigationImage" value="OpenDungeonsIcons/NavigationRooms"', tab), 'Rooms tab icon unchanged'
+
+
 def main():
     """Run every T-N2 assertion and print one line per result."""
     start = time.monotonic()
-    scheme = ET.parse(ROOT / 'gui/ODSkin.scheme').getroot()
+    if not content_packages.has_content(ROOT):
+        # Without the content the HUD layout, the scheme, the icon imagesets and the Rooms tab are not whole (their own
+        # rows lie in the content package core-gui), so nothing of the icons can be compared
+        content_packages.unchecked('check_navigation_icons_n2', [
+            'icons of NavigationRoomManager, NavigationDungeonbook, OpenDungeonsIcons',
+            'Rooms tab icon (own rows of gui/WindowTabRooms.layout)'])
+        return
+    scheme = ET.fromstring(content_packages.read_text(ROOT, 'gui/ODSkin.scheme'))
     imagesets = {node.get('name'): node.get('filename') for node in scheme.findall('Imageset')}
     folders = gui_folders()
-    hud = ET.parse(ROOT / 'gui/ModeGame.layout').getroot()
+    hud = ET.fromstring(content_packages.read_text(ROOT, 'gui/ModeGame.layout'))
     windows = {node.get('name'): node for node in hud.iter('Window')}
     forbidden = {name: load_image('OpenDungeonsIcons/' + name, imagesets, folders) for name in FORBIDDEN}
     neighbours = {name: load_image(props(windows[name])['NormalImage'], imagesets, folders) for name in NEIGHBOURS}
@@ -142,9 +165,7 @@ def main():
     for size in sizes:
         d = difference(icons['RoomManagerButton'], icons['SocialButton'], size)
         assert d >= MIN_DIFFERENCE, 'Room Manager and Dungeonbook icons look alike at %d px (%.1f)' % (size, d)
-    # The Rooms tab keeps its own icon; only the HUD button changed.
-    tab = (ROOT / 'gui/WindowTabRooms.layout').read_text(encoding='utf-8')
-    assert re.search(r'name="NavigationImage" value="OpenDungeonsIcons/NavigationRooms"', tab), 'Rooms tab icon unchanged'
+    check_rooms_tab()
     print('ODP_TEST_PHASE {"name":"test","seconds":%.3f}' % (time.monotonic() - start))
     print('ok: Room Manager and Dungeonbook buttons show their own full-resolution icons')
 

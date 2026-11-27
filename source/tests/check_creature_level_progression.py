@@ -11,7 +11,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from probe_config_stub import config_manager_stub
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 source = (root / 'source/entities/Creature.cpp').read_text()
+# The creature rows (XP tables, stats) are own rows of creatures.cfg (content package core-config); without the content
+# the tables, the roster and the probe are named as not checked and the source checks run alone
+HAS_VALUES = content_packages.has_content(root)
+if not HAS_VALUES:
+    content_packages.unchecked('check_creature_level_progression', ['config/creatures.cfg XP tables and stats',
+                                                                    'roster levels', 'behavior probe'])
 
 
 # Extract production methods for source assertions and the optional integrator probe.
@@ -25,8 +33,8 @@ def function(text, signature):
     return text[start:end]
 
 
-config = (root / 'config/creatures.cfg').read_text()
-definitions = re.findall(r'\[Creature\](.*?)\[/Creature\]', config, re.S)
+config = content_packages.read_text(root, 'config/creatures.cfg')
+definitions = re.findall(r'\[Creature\](.*?)\[/Creature\]', config, re.S) if HAS_VALUES else []
 cases = []
 checks = 0
 for definition in definitions:
@@ -72,16 +80,17 @@ for needle in ('while(getLevel() < MAX_LEVEL)', '!std::isfinite(newXP) || newXP 
 receive = function(source, 'void Creature::receiveExp(')
 assert '!std::isfinite(experience) || experience < 0 || mLevel >= MAX_LEVEL' in receive
 assert 'mExp += experience * (1.0 + getItemEffect("Trainer") / 100.0);' in receive
-roster = Roster(root)
-for name in roster.fighters() + ['Kobold', 'DwarfWorker']:
-    fields = roster.creatures[name][0]
-    hp = defense = 0
-    for level in range(1, 31):
-        unit = roster.unit(name, level)
-        assert unit.hp > hp and unit.defense[0] >= defense, (name, level)
-        assert unit.hp >= roster.number(fields, 'MinHP') + (level - 1) * roster.number(fields, 'HP/Level')
-        assert multiplier(level, 'damage') >= 1
-        hp, defense = unit.hp, unit.defense[0]
+if HAS_VALUES:
+    roster = Roster(root)
+    for name in roster.fighters() + ['Kobold', 'DwarfWorker']:
+        fields = roster.creatures[name][0]
+        hp = defense = 0
+        for level in range(1, 31):
+            unit = roster.unit(name, level)
+            assert unit.hp > hp and unit.defense[0] >= defense, (name, level)
+            assert unit.hp >= roster.number(fields, 'MinHP') + (level - 1) * roster.number(fields, 'HP/Level')
+            assert multiplier(level, 'damage') >= 1
+            hp, defense = unit.hp, unit.defense[0]
 for old_hp in (0, -10, 40):
     new_max = combat_stat(100, 2, 30, 'hp')
     new_hp = min(new_max, old_hp * new_max / 100) if old_hp > 0 else old_hp
@@ -89,7 +98,7 @@ for old_hp in (0, -10, 40):
 assert combat_stat(100, 2, 0, 'hp') == 100
 assert combat_stat(100, 2, 999, 'hp') == combat_stat(100, 2, 30, 'hp')
 print(f'XP_TABLE_CHECKS={checks} SPECIES={len(cases)}; stat and level source checks passed')
-if '--probe' not in sys.argv:
+if '--probe' not in sys.argv or not HAS_VALUES:
     sys.exit(0)
 damage = ''
 for name, filename in [('melee', 'CreatureSkillMeleeFight.cpp'), ('ranged', 'CreatureSkillMissileLaunch.cpp')]:

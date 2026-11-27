@@ -1,23 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/SheetWindow" name="SettingsWindow" >
-        <Property name="Area" value="{{0.5,-416},{0.5,-275},{0.5,416},{0.5,275}}" />
+<!--#@own 1-->
         <Property name="Text" value="Settings" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />
-        <Window type="OD/MenuTextButton" name="CancelButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{1,-366},{1,-70},{1,-196},{1,-16}}" />
-            <Property name="Text" value="Cancel" />
+<!--#@own 2-->
         </Window>
-        <Window type="OD/MenuTextButton" name="ApplyButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{1,-186},{1,-70},{1,-16},{1,-16}}" />
-            <Property name="Text" value="Apply" />
+<!--#@own 3-->
         </Window>
         <Window type="OD/TabControl" name="MainTabControl" >
-            <Property name="Area" value="{{0,10},{0,32},{1,-10},{1,-70}}" />
+<!--#@own 4-->
             <Property name="TabHeight" value="{0,30}" />
             <Property name="RiseOnClickEnabled" value="False" />
             <Window type="DefaultWindow" name="Video" >
@@ -25,31 +18,29 @@
                 <Property name="Text" value="Video" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="OD/MenuScrollablePane" name="VideoSP" >
-                    <UserString name="VisibleControlExtent" value="true" />
-                    <Property name="ContentPaneAutoSized" value="False" />
+<!--#@own 5-->
                     <Property name="Area" value="{{0,0},{0,15},{1,0},{1,-5}}" />
                     <Window type="OD/StaticText" name="ResolutionText" >
-                        <Property name="Area" value="{{0,22},{0,20},{0,184},{0,46}}" />
+<!--#@own 6-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="Resolution:" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
                     <Window type="OD/Combobox" name="ResolutionCombobox" >
-                        <Property name="Area" value="{{0,22},{0,48},{0,166},{0,168}}" />
+<!--#@own 7-->
                         <Property name="ReadOnly" value="True" />
                     </Window>
                     <Window type="OD/Checkbox" name="FullscreenCheckbox" >
-                        <Property name="Area" value="{{0,202},{0,48},{0,312},{0,74}}" />
+<!--#@own 8-->
                         <Property name="Text" value="Fullscreen" />
                     </Window>
                     <Window type="OD/Checkbox" name="DynamicShadowsCheckbox" >
-                        <Property name="Area" value="{{0,322},{0,48},{0,502},{0,74}}" />
+<!--#@own 9-->
                         <Property name="Text" value="Dynamic Shadows" />
                     </Window>                   
                     <Window type="OD/StaticText" name="RendererText" >
-                        <Property name="Area" value="{{0,22},{0,88},{0,184},{0,114}}" />
+<!--#@own 10-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="Renderer*:" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -57,26 +48,22 @@
                         <Property name="TooltipText" value="* Needs a restart to be applied." />
                     </Window>
                     <Window type="OD/Combobox" name="RendererCombobox" >
-                        <Property name="Area" value="{{0,22},{0,116},{0,266},{0,236}}" />
+<!--#@own 11-->
                         <Property name="ReadOnly" value="True" />
                         <Property name="TooltipText" value="* Needs a restart to be applied." />
                     </Window>
                     <Window type="OD/Checkbox" name="VSyncCheckbox" >
-                        <Property name="Area" value="{{0,22},{0,156},{0,166},{0,182}}" />
-                        <Property name="Text" value="VSync" />
+<!--#@own 12-->
                     </Window>
-                    <Window type="OD/StaticText" name="UIScaleText" >
-                        <Property name="Area" value="{{0,22},{0,194},{0,184},{0,220}}" />
+<!--#@own 13-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="UI Scale:" />
+<!--#@own 14-->
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
-                    <Window type="OD/Combobox" name="UIScaleCombobox" >
-                        <Property name="Area" value="{{0,202},{0,190},{0,346},{0,310}}" />
+<!--#@own 15-->
                         <Property name="ReadOnly" value="True" />
-                        <Property name="TooltipText" value="Scales the interface immediately. Apply saves the setting." />
-                    </Window>
+<!--#@own 16-->
                 </Window>
             </Window>
             <Window type="DefaultWindow" name="Audio" >
@@ -85,37 +72,31 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="OD/MenuScrollablePane" name="AudioSP" >
-                    <UserString name="VisibleControlExtent" value="true" />
-                    <Property name="ContentPaneAutoSized" value="False" />
+<!--#@own 17-->
                     <Property name="Area" value="{{0,0},{0,15},{1,0},{1,-5}}" />
                     <Window type="OD/StaticText" name="MusicText" >
-                        <Property name="Area" value="{{0,32},{0,40},{0,220},{0,66}}" />
+<!--#@own 18-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="Music:" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
-                    <Window type="OD/SettingsSlider" name="MusicSlider" >
-                        <Property name="Area" value="{{0,32},{0,78},{1,-48},{0,104}}" />
+<!--#@own 19-->
                         <Property name="Text" value="" />
                         <Property name="VerticalSlider" value="False" />
                         <Property name="AutoRenderingSurface" value="True" />
                         <Property name="MaximumValue" value="100" />
                         <Property name="ClickStepSize" value="5" />
                     </Window>
-                    <Window type="OD/StaticText" name="RoomAmbienceText" >
-                        <Property name="Area" value="{{0,32},{0,210},{0,190},{0,230}}" />
+<!--#@own 20-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Room ambience:" />
+<!--#@own 21-->
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
-                    <Window type="OD/Combobox" name="RoomAmbience" >
-                        <Property name="Area" value="{{0,200},{0,210},{0,360},{0,290}}" />
+<!--#@own 22-->
                         <Property name="ReadOnly" value="True" />
-                        <Property name="TooltipText" value="full: dust, glow, sparks and moving objects in the rooms. reduced: only a few of them, close to the camera. off: no room ambience." />
-                    </Window>
+<!--#@own 23-->
                 </Window>
             </Window>
             <Window type="DefaultWindow" name="Input" >
@@ -124,34 +105,31 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="OD/MenuScrollablePane" name="InputSP" >
-                    <UserString name="VisibleControlExtent" value="true" />
-                    <Property name="ContentPaneAutoSized" value="False" />
+<!--#@own 24-->
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Window type="OD/Checkbox" name="KeyboardGrabCheckbox" >
-                        <Property name="Area" value="{{0,32},{0,40},{0,190},{0,66}}" />
+<!--#@own 25-->
                         <Property name="Text" value="Keyboard grab" />
-                        <Property name="TooltipText" value="When checked, the keyboard is grabbed and can't be used in other applications." />
+<!--#@own 26-->
                     </Window>
                     <Window type="OD/Checkbox" name="MouseGrabCheckbox" >
-                        <Property name="Area" value="{{0,32},{0,80},{0,190},{0,106}}" />
+<!--#@own 27-->
                         <Property name="Text" value="Mouse grab" />
-                        <Property name="TooltipText" value="When checked, the mouse is grabbed and can't be used in other applications." />
+<!--#@own 28-->
                     </Window>
                     <Window type="OD/Checkbox" name="AutoscrollCheckbox" >
-                        <Property name="Area" value="{{0,32},{0,120},{0,190},{0,146}}" />
+<!--#@own 29-->
                         <Property name="Text" value="Autoscroll" />
                         <Property name="TooltipText" value="When checked, if the mouse cousor is on the screen border it will make camera fly " />
                     </Window>
                     <Window type="OD/StaticText" name="PanSpeedText" >
-                        <Property name="Area" value="{{0,32},{0,160},{0,260},{0,186}}" />
+<!--#@own 30-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="Camera pan speed: 100%" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
-                    <Window type="OD/SettingsSlider" name="PanSpeedSlider" >
-                        <Property name="Area" value="{{0,32},{0,190},{0,327},{0,203}}" />
+<!--#@own 31-->
                         <Property name="Text" value="" />
                         <Property name="VerticalSlider" value="False" />
                         <Property name="AutoRenderingSurface" value="True" />
@@ -167,94 +145,77 @@
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="Visible" value="False" />
                 <Property name="RiseOnClickEnabled" value="False" />
-                <Window type="OD/MenuScrollablePane" name="GameSP" >
-                    <UserString name="VisibleControlExtent" value="true" />
-                    <Property name="ContentPaneAutoSized" value="False" />
+<!--#@own 32-->
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Window type="OD/StaticText" name="NicknameText" >
-                        <Property name="Area" value="{{0,32},{0,46},{0,190},{0,72}}" />
+<!--#@own 33-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="Nickname:" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
                     <Window type="OD/Editbox" name="NicknameEdit" >
-                        <Property name="Area" value="{{0,200},{0,40},{0,360},{0,80}}" />
+<!--#@own 34-->
                         <Property name="Text" value="" />
                     </Window>
                     <Window type="OD/StaticText" name="KeeperVoiceText" >
-                        <Property name="Area" value="{{0,32},{0,90},{0,190},{0,116}}" />
+<!--#@own 35-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="Keeper Voice:" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
                     <Window type="OD/Combobox" name="KeeperVoice" >
-                        <Property name="Area" value="{{0,200},{0,90},{0,360},{0,190}}" />
+<!--#@own 36-->
                         <Property name="ReadOnly" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="MinimapText" >
-                        <Property name="Area" value="{{0,32},{0,130},{0,190},{0,156}}" />
+<!--#@own 37-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="Minimap Type:" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
                     <Window type="OD/Combobox" name="MiniMapType" >
-                        <Property name="Area" value="{{0,200},{0,130},{0,360},{0,230}}" />
+<!--#@own 38-->
                         <Property name="ReadOnly" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="LightText" >
-                        <Property name="Area" value="{{0,32},{0,170},{0,220},{0,196}}" />
+<!--#@own 39-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
                         <Property name="Text" value="Ambient Light: +" />
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
-                    <Window type="OD/SettingsSlider" name="LightSlider" >
-                        <Property name="Area" value="{{0,32},{0,200},{0,327},{0,213}}" />
+<!--#@own 40-->
                         <Property name="Text" value="" />
                         <Property name="VerticalSlider" value="False" />
                         <Property name="AutoRenderingSurface" value="True" />
                         <Property name="MaximumValue" value="250" />
                         <Property name="ClickStepSize" value="5" />
                     </Window>
-                    <Window type="OD/StaticText" name="CreatureReactionsText" >
-                        <Property name="Area" value="{{0,32},{0,284},{0,190},{0,308}}" />
+<!--#@own 41-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Creature reactions:" />
+<!--#@own 42-->
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
-                    <Window type="OD/Combobox" name="CreatureReactions" >
-                        <Property name="Area" value="{{0,200},{0,284},{0,360},{0,364}}" />
+<!--#@own 43-->
                         <Property name="ReadOnly" value="True" />
-                        <Property name="TooltipText" value="full: emotes, effects and poses. reduced: emotes only. off: no creature reactions." />
-                    </Window>
-                    <Window type="OD/StaticText" name="TreasuryDetailText" >
-                        <Property name="Area" value="{{0,32},{0,378},{0,190},{0,402}}" />
+<!--#@own 44-->
                         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-                        <Property name="Text" value="Treasury detail:" />
+<!--#@own 45-->
                         <Property name="BackgroundEnabled" value="False" />
                         <Property name="FrameEnabled" value="False" />
                     </Window>
-                    <Window type="OD/Combobox" name="TreasuryDetail" >
-                        <Property name="Area" value="{{0,200},{0,378},{0,360},{0,458}}" />
+<!--#@own 46-->
                         <Property name="ReadOnly" value="True" />
-                        <Property name="TooltipText" value="full: gold piles that fill the treasury floor. reduced: simpler piles. off: the classic small gold stacks. Applies to treasuries drawn after the change." />
-                    </Window>
-                    <Window type="OD/Checkbox" name="BloodEffectsCheckbox" >
-                        <Property name="Area" value="{{0,32},{0,250},{1,-48},{0,276}}" />
-                        <Property name="Text" value="Blood effects" />
-                        <Property name="TooltipText" value="Show subtle blood effects when creatures are hit." />
-                    </Window>
-                    <!-- Setting of the keeper's seat, shown only in a running game (SettingsWindow::setKoCreaturesSetting). -->
+<!--#@own 47-->
                     <Window type="OD/Checkbox" name="KOCreatureCheckbox" >
-                        <Property name="Area" value="{{0,32},{0,418},{1,-48},{0,444}}" />
+<!--#@own 48-->
                         <Property name="Visible" value="False" />
                         <Property name="Text" value="KO enemy creatures instead of killing" />
-                        <Property name="TooltipText" value="Defeated enemy creatures are knocked out instead of killed. Your Zivs carry them to a prison with free space." />
-                    </Window>
+<!--#@own 49-->
                 </Window>
             </Window>
         </Window>

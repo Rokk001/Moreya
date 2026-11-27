@@ -6,6 +6,9 @@ window fits the screen at 640x480, 1024x768, 1920x1200 and 7680x4320 with UI sca
 uses relative areas inside, key J and the help line, the HUD button with its tooltip, the handling of a
 client without a keeper seat, Esc and the close button, the mode Automatic taking its order from
 WorkerDefaultPriority, the ordering rules (arrows, drag, plus and minus, carry order) and the release note.
+The window layout and its font lie in the content packages (scripts/content_packages.py); without the content the
+code, the HUD button, the ordering rules and the release note are checked and the layout parts are named as not
+checked.
 """
 from pathlib import Path
 import re
@@ -16,11 +19,19 @@ repo = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir, resolve  # noqa: E402
+import content_packages  # noqa: E402
 sys.dont_write_bytecode = True
 
 
+#: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(repo)
+
+
 def read(path):
-    """Return the text of a tracked file."""
+    """Return the text of a tracked file (a game data file also from the content packages); a mixed file of config/ or
+    gui/ comes joined with its own rows of the content."""
+    if content_packages.data_file(repo, path) is not None:
+        return content_packages.read_text(repo, path)
     return resolve(repo, path).read_text(encoding='utf-8')
 
 
@@ -38,147 +49,162 @@ def props(window):
     return {p.get('name'): p.get('value') for p in window.findall('Property')}
 
 
-layout_root = ET.fromstring(read('gui/WindowWorkers.layout'))
-window = layout_root.find('Window')
-assert window is not None and window.get('name') == 'WorkersWindow' and window.get('type') == 'OD/SheetWindow'
-assert props(window)['Text'] == 'Zivs', 'the window title is "Zivs"'
-assert props(window)['Visible'] == 'False', 'the window starts closed'
-
-
-def child(parent, name):
-    """The direct child window of the given name, which must exist."""
-    for node in parent.findall('Window'):
-        if node.get('name') == name:
-            return node
-    raise AssertionError('missing part ' + name + ' in ' + parent.get('name'))
-
-
-# --- all parts are present (D1, D2, D6, D7)
-for name in ('FreePanel', 'FreePortrait', 'FreeLabel', 'FreeCount', 'ModeAutomatic', 'ModePriority', 'PriorityPanel',
-             'PriorityLabel', 'PriorityUp', 'PriorityDown', 'DragHand', 'DragHint', 'CarryTitle', 'CarryUp',
-             'CarryDown', 'GoldPanel', 'GoldCoins', 'GoldLabel', 'GoldCheck'):
-    child(window, name)
-for mode in ('ModeAutomatic', 'ModePriority'):
-    for part in ('Hand', 'Label'):
-        child(child(window, mode), part)
-for rank in range(6):
-    tablet = child(window, 'Rank%d' % rank)
-    for part in ('Frame', 'Numeral', 'Figure', 'Name', 'Minus', 'Count', 'Plus'):
-        child(tablet, part)
-    assert props(child(tablet, 'Minus'))['Text'] == '-' and props(child(tablet, 'Plus'))['Text'] == '+'
-    child(window, 'Working%d' % rank)
-for entry in range(7):
-    frame = child(window, 'Carry%d' % entry)
-    for part in ('Frame', 'Number', 'Picture', 'Name'):
-        child(frame, part)
-texts = {'FreeLabel': 'Free Zivs', 'PriorityLabel': 'Priority order', 'DragHint': 'Drag to reorder',
-         'CarryTitle': 'Carry order', 'GoldLabel': 'Gold first (for digging)'}
-for name, text in texts.items():
-    assert props(child(window, name))['Text'] == text, name
-assert props(child(child(window, 'ModeAutomatic'), 'Label'))['Text'] == 'Automatic'
-assert props(child(child(window, 'ModePriority'), 'Label'))['Text'] == 'Priority list'
-
-# --- the pictures exist in the icon atlas (images)
-imageset = ET.parse(repo / 'gui/ODIcons.imageset').getroot()
-atlas = {image.get('name') for image in imageset.findall('Image')}
+# The icon atlas lies in a content package; without it the picture checks are named as not checked (LAYOUT_FILES)
+ICON_IMAGESET = 'gui/ODIcons.imageset'
+atlas = set()
+if content_packages.data_file(repo, ICON_IMAGESET) is not None:
+    imageset = ET.fromstring(read(ICON_IMAGESET))
+    atlas = {image.get('name') for image in imageset.findall('Image')}
+if not WITH_CONTENT:
+    content_packages.unchecked('check_workers_window', ['HUD button and icon row (own rows of gui/ModeGame.layout)',
+                                                        'WorkerDefaultPriority of config/global.cfg'])
 code = read('source/render/WorkersWindow.cpp')
-used = set(re.findall(r'OpenDungeonsIcons/(Worker\w+)', code + read('gui/WindowWorkers.layout') + read('gui/ModeGame.layout')))
-assert used, 'the window uses no painted pictures'
-# The arrow pictures are composed in the code from the direction and the state
-if 'WorkerArrow' in used:
-    used.discard('WorkerArrow')
-    used.update('WorkerArrow' + d + st for d in ('Up', 'Down') for st in ('Normal', 'Hover', 'Pressed', 'Disabled'))
-missing = sorted(name for name in used if name not in atlas)
-assert not missing, 'pictures not in the atlas: %s' % missing
-for name in ('WorkerJobDig', 'WorkerJobClaimGround', 'WorkerJobClaimWall', 'WorkerJobCarry', 'WorkerJobClean',
-             'WorkerJobReload', 'WorkerFreePortrait', 'WorkerCarryOwn', 'WorkerCarryEnemy', 'WorkerCarryCorpses',
-             'WorkerCarryGold', 'WorkerCarryItems', 'WorkerCarryGift', 'WorkerCarryTrapsDoors', 'WorkerHandInactive',
-             'WorkerHandActive', 'WorkerHandDrag', 'WorkerArrowUpNormal', 'WorkerArrowDownDisabled',
-             'WorkerCheckboxEmpty', 'WorkerCheckboxChecked', 'WorkerTabletNormal', 'WorkerTabletSelected',
-             'WorkerCarryFrameNormal', 'WorkerCarryFrameSelected', 'WorkersButton'):
-    assert name in used, 'picture not used: ' + name
+#: The files of the content packages the layout parts of the check need
+LAYOUT_FILES = ('gui/WindowWorkers.layout', 'gui/fonts/SourceSerif4-Semibold.ttf', ICON_IMAGESET)
+LAYOUT = all(content_packages.data_file(repo, path) is not None for path in LAYOUT_FILES)
+if not LAYOUT:
+    content_packages.unchecked('check_workers_window', [path for path in LAYOUT_FILES
+                                                        if content_packages.data_file(repo, path) is None])
+if LAYOUT:
+    layout_root = ET.fromstring(read('gui/WindowWorkers.layout'))
+    window = layout_root.find('Window')
+    assert window is not None and window.get('name') == 'WorkersWindow' and window.get('type') == 'OD/SheetWindow'
+    assert props(window)['Text'] == 'Zivs', 'the window title is "Zivs"'
+    assert props(window)['Visible'] == 'False', 'the window starts closed'
 
-# --- tablets fall in size from rank I to VI (D2)
-widths = []
-heights = []
-for rank in range(6):
-    v = udims(props(child(window, 'Rank%d' % rank))['Area'])
-    widths.append(v[2][0] - v[0][0])
-    heights.append(v[3][0] - v[1][0])
-assert all(widths[i] > widths[i + 1] for i in range(5)), widths
-assert all(heights[i] > heights[i + 1] for i in range(5)), heights
-lefts = [udims(props(child(window, 'Rank%d' % r))['Area'])[0][0] for r in range(6)]
-assert lefts == sorted(lefts), 'ranks run from left to right'
-for rank in range(5):
-    a = udims(props(child(window, 'Rank%d' % rank))['Area'])
-    b = udims(props(child(window, 'Rank%d' % (rank + 1)))['Area'])
-    assert a[2][0] <= b[0][0], 'tablets do not overlap'
-carry_lefts = [udims(props(child(window, 'Carry%d' % e))['Area'])[0][0] for e in range(7)]
-assert carry_lefts == sorted(carry_lefts), 'carry entries run from left to right'
 
-# --- the window fits the screen at every size and the content uses relative areas only (fit_screen)
-DESIGN_W, DESIGN_H = 1024.0, 768.0
-area = udims(props(window)['Area'])
-rel_w, off_w = area[2][0] - area[0][0], area[2][1] - area[0][1]
-rel_h, off_h = area[3][0] - area[1][0], area[3][1] - area[1][1]
-gui_cpp = read('source/render/Gui.cpp')
-assert 'layoutScale * getWindowFitFactor(window)' in gui_cpp
-for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
-    for user in (0.8, 1.0, 1.2):
-        scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user
-        factor = 1.0
-        if off_w * scale > 0 and rel_w < 1.0:
-            factor = min(factor, max(0.0, (1.0 - rel_w) * screen_w) / (off_w * scale))
-        if off_h * scale > 0 and rel_h < 1.0:
-            factor = min(factor, max(0.0, (1.0 - rel_h) * screen_h) / (off_h * scale))
-        width = rel_w * screen_w + off_w * scale * factor
-        height = rel_h * screen_h + off_h * scale * factor
-        assert width <= screen_w + 0.5 and height <= screen_h + 0.5, (screen_w, screen_h, user, width, height)
-        # The window is not shrunk by the fit factor, so its text keeps the size it was made for
-        assert factor >= 0.999, ('window shrinks below its text at', screen_w, screen_h, user)
-for node in window.iter('Window'):
-    if node is window:
-        continue
-    for name, value in props(node).items():
-        if name == 'Area':
-            assert all(offset == 0 for _s, offset in udims(value)), node.get('name') + ' uses a fixed pixel area'
-        if name == 'Font':
-            size = int(value.rsplit('-', 1)[1])
-            assert size >= 8, node.get('name') + ' has a font too small to read'
+    def child(parent, name):
+        """The direct child window of the given name, which must exist."""
+        for node in parent.findall('Window'):
+            if node.get('name') == name:
+                return node
+        raise AssertionError('missing part ' + name + ' in ' + parent.get('name'))
+
+
+    # --- all parts are present (D1, D2, D6, D7)
+    for name in ('FreePanel', 'FreePortrait', 'FreeLabel', 'FreeCount', 'ModeAutomatic', 'ModePriority', 'PriorityPanel',
+                 'PriorityLabel', 'PriorityUp', 'PriorityDown', 'DragHand', 'DragHint', 'CarryTitle', 'CarryUp',
+                 'CarryDown', 'GoldPanel', 'GoldCoins', 'GoldLabel', 'GoldCheck'):
+        child(window, name)
+    for mode in ('ModeAutomatic', 'ModePriority'):
+        for part in ('Hand', 'Label'):
+            child(child(window, mode), part)
+    for rank in range(6):
+        tablet = child(window, 'Rank%d' % rank)
+        for part in ('Frame', 'Numeral', 'Figure', 'Name', 'Minus', 'Count', 'Plus'):
+            child(tablet, part)
+        assert props(child(tablet, 'Minus'))['Text'] == '-' and props(child(tablet, 'Plus'))['Text'] == '+'
+        child(window, 'Working%d' % rank)
+    for entry in range(7):
+        frame = child(window, 'Carry%d' % entry)
+        for part in ('Frame', 'Number', 'Picture', 'Name'):
+            child(frame, part)
+    texts = {'FreeLabel': 'Free Zivs', 'PriorityLabel': 'Priority order', 'DragHint': 'Drag to reorder',
+             'CarryTitle': 'Carry order', 'GoldLabel': 'Gold first (for digging)'}
+    for name, text in texts.items():
+        assert props(child(window, name))['Text'] == text, name
+    assert props(child(child(window, 'ModeAutomatic'), 'Label'))['Text'] == 'Automatic'
+    assert props(child(child(window, 'ModePriority'), 'Label'))['Text'] == 'Priority list'
+
+    # --- the pictures exist in the icon atlas (images)
+    used = set(re.findall(r'OpenDungeonsIcons/(Worker\w+)', code + read('gui/WindowWorkers.layout') + read('gui/ModeGame.layout')))
+    assert used, 'the window uses no painted pictures'
+    # The arrow pictures are composed in the code from the direction and the state
+    if 'WorkerArrow' in used:
+        used.discard('WorkerArrow')
+        used.update('WorkerArrow' + d + st for d in ('Up', 'Down') for st in ('Normal', 'Hover', 'Pressed', 'Disabled'))
+    missing = sorted(name for name in used if name not in atlas)
+    assert not missing, 'pictures not in the atlas: %s' % missing
+    for name in ('WorkerJobDig', 'WorkerJobClaimGround', 'WorkerJobClaimWall', 'WorkerJobCarry', 'WorkerJobClean',
+                 'WorkerJobReload', 'WorkerFreePortrait', 'WorkerCarryOwn', 'WorkerCarryEnemy', 'WorkerCarryCorpses',
+                 'WorkerCarryGold', 'WorkerCarryItems', 'WorkerCarryGift', 'WorkerCarryTrapsDoors', 'WorkerHandInactive',
+                 'WorkerHandActive', 'WorkerHandDrag', 'WorkerArrowUpNormal', 'WorkerArrowDownDisabled',
+                 'WorkerCheckboxEmpty', 'WorkerCheckboxChecked', 'WorkerTabletNormal', 'WorkerTabletSelected',
+                 'WorkerCarryFrameNormal', 'WorkerCarryFrameSelected', 'WorkersButton'):
+        assert name in used, 'picture not used: ' + name
+
+    # --- tablets fall in size from rank I to VI (D2)
+    widths = []
+    heights = []
+    for rank in range(6):
+        v = udims(props(child(window, 'Rank%d' % rank))['Area'])
+        widths.append(v[2][0] - v[0][0])
+        heights.append(v[3][0] - v[1][0])
+    assert all(widths[i] > widths[i + 1] for i in range(5)), widths
+    assert all(heights[i] > heights[i + 1] for i in range(5)), heights
+    lefts = [udims(props(child(window, 'Rank%d' % r))['Area'])[0][0] for r in range(6)]
+    assert lefts == sorted(lefts), 'ranks run from left to right'
+    for rank in range(5):
+        a = udims(props(child(window, 'Rank%d' % rank))['Area'])
+        b = udims(props(child(window, 'Rank%d' % (rank + 1)))['Area'])
+        assert a[2][0] <= b[0][0], 'tablets do not overlap'
+    carry_lefts = [udims(props(child(window, 'Carry%d' % e))['Area'])[0][0] for e in range(7)]
+    assert carry_lefts == sorted(carry_lefts), 'carry entries run from left to right'
+
+    # --- the window fits the screen at every size and the content uses relative areas only (fit_screen)
+    DESIGN_W, DESIGN_H = 1024.0, 768.0
+    area = udims(props(window)['Area'])
+    rel_w, off_w = area[2][0] - area[0][0], area[2][1] - area[0][1]
+    rel_h, off_h = area[3][0] - area[1][0], area[3][1] - area[1][1]
+    gui_cpp = read('source/render/Gui.cpp')
+    assert 'layoutScale * getWindowFitFactor(window)' in gui_cpp
+    for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
+        for user in (0.8, 1.0, 1.2):
+            scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user
+            factor = 1.0
+            if off_w * scale > 0 and rel_w < 1.0:
+                factor = min(factor, max(0.0, (1.0 - rel_w) * screen_w) / (off_w * scale))
+            if off_h * scale > 0 and rel_h < 1.0:
+                factor = min(factor, max(0.0, (1.0 - rel_h) * screen_h) / (off_h * scale))
+            width = rel_w * screen_w + off_w * scale * factor
+            height = rel_h * screen_h + off_h * scale * factor
+            assert width <= screen_w + 0.5 and height <= screen_h + 0.5, (screen_w, screen_h, user, width, height)
+            # The window is not shrunk by the fit factor, so its text keeps the size it was made for
+            assert factor >= 0.999, ('window shrinks below its text at', screen_w, screen_h, user)
+    for node in window.iter('Window'):
+        if node is window:
+            continue
+        for name, value in props(node).items():
+            if name == 'Area':
+                assert all(offset == 0 for _s, offset in udims(value)), node.get('name') + ' uses a fixed pixel area'
+            if name == 'Font':
+                size = int(value.rsplit('-', 1)[1])
+                assert size >= 8, node.get('name') + ' has a font too small to read'
 
 # --- HUD button (D9, D10): a painted icon of its own in the icon row above the minimap, like the other icon buttons
-hud = ET.parse(repo / 'gui/ModeGame.layout').getroot()
-imports = [n.get('filename') for n in hud.iter('LayoutImport')]
-assert 'WindowWorkers.layout' in imports
-button = None
-icon_row = {}
-for node in hud.iter('Window'):
-    if node.get('name') == 'WorkersButton':
-        button = node
-    if node.get('name') in ('SocialButton', 'InfirmaryButton', 'MerchantButton'):
-        icon_row[node.get('name')] = node
-assert button is not None, 'HUD button WorkersButton is missing'
-assert button.get('type') == 'OD/GameTabButton', 'the HUD button is an icon button like the others'
-button_props = props(button)
-assert button_props['TooltipText'] == 'Zivs (J)'
-assert button_props['NormalImage'] == 'OpenDungeonsIcons/WorkersButton'
-assert 'HoverImage' not in button_props and 'PushedImage' not in button_props and 'Text' not in button_props,     'the icon button draws no text and no old hud pictures'
-assert button_props.get('NavigationFrame') == 'True' and button_props.get('AlwaysOnTop') == 'True'
-assert 'J' in button_props.get('ContextHelp', '') or 'ContextHelp' in {u.get('name') for u in button.findall('UserString')}
-button_area = udims(button_props['Area'])
-assert button_area[1][0] == 1 and button_area[3][0] == 1, 'the button sits in the bottom bar'
-button_box = (button_area[0][1], button_area[1][1], button_area[2][1], button_area[3][1])
-assert button_box[2] - button_box[0] == 40 and button_box[3] - button_box[1] == 40, 'the same 40 pixel icon size as its row'
-for other_name, other in icon_row.items():
-    other_area = udims(props(other)['Area'])
-    other_box = (other_area[0][1], other_area[1][1], other_area[2][1], other_area[3][1])
-    assert (other_box[3] - other_box[1]) == 40
-    assert other_box[1] == button_box[1], 'the Workers icon is in the same row as ' + other_name
-    assert other_box[2] <= button_box[0] or button_box[2] <= other_box[0], 'the Workers icon covers ' + other_name
-for atlas_name in ('WorkersButton',):
-    assert atlas_name in atlas
+if WITH_CONTENT:
+    hud = ET.fromstring(read('gui/ModeGame.layout'))
+    imports = [n.get('filename') for n in hud.iter('LayoutImport')]
+    assert 'WindowWorkers.layout' in imports
+    button = None
+    icon_row = {}
+    for node in hud.iter('Window'):
+        if node.get('name') == 'WorkersButton':
+            button = node
+        if node.get('name') in ('SocialButton', 'InfirmaryButton', 'MerchantButton'):
+            icon_row[node.get('name')] = node
+    assert button is not None, 'HUD button WorkersButton is missing'
+    assert button.get('type') == 'OD/GameTabButton', 'the HUD button is an icon button like the others'
+    button_props = props(button)
+    assert button_props['TooltipText'] == 'Zivs (J)'
+    assert button_props['NormalImage'] == 'OpenDungeonsIcons/WorkersButton'
+    assert 'HoverImage' not in button_props and 'PushedImage' not in button_props and 'Text' not in button_props,     'the icon button draws no text and no old hud pictures'
+    assert button_props.get('NavigationFrame') == 'True' and button_props.get('AlwaysOnTop') == 'True'
+    assert 'J' in button_props.get('ContextHelp', '') or 'ContextHelp' in {u.get('name') for u in button.findall('UserString')}
+    button_area = udims(button_props['Area'])
+    assert button_area[1][0] == 1 and button_area[3][0] == 1, 'the button sits in the bottom bar'
+    button_box = (button_area[0][1], button_area[1][1], button_area[2][1], button_area[3][1])
+    assert button_box[2] - button_box[0] == 40 and button_box[3] - button_box[1] == 40, 'the same 40 pixel icon size as its row'
+    for other_name, other in icon_row.items():
+        other_area = udims(props(other)['Area'])
+        other_box = (other_area[0][1], other_area[1][1], other_area[2][1], other_area[3][1])
+        assert (other_box[3] - other_box[1]) == 40
+        assert other_box[1] == button_box[1], 'the Workers icon is in the same row as ' + other_name
+        assert other_box[2] <= button_box[0] or button_box[2] <= other_box[0], 'the Workers icon covers ' + other_name
+    for atlas_name in ('WorkersButton',):
+        assert atlas_name in atlas or not LAYOUT
 # The old text button pictures are no longer used by any layout or by the window code
-assert 'WorkersHud' not in read('gui/ModeGame.layout') + read('gui/WindowWorkers.layout') + code, 'old text button pictures'
+assert 'WorkersHud' not in read('gui/ModeGame.layout') + (read('gui/WindowWorkers.layout') if LAYOUT else '') + code, 'old text button pictures'
 
 # --- key J, help line, seat handling, Esc (D9, D10)
 game = read('source/modes/GameMode.cpp')
@@ -216,11 +242,12 @@ assert 'seat->getWorkerJobCounts()' in code and '"Working: "' in code
 assert 'seat->getFreeWorkers()' in code
 
 # --- Automatic takes its order from WorkerDefaultPriority (D3)
-config = read('config/global.cfg')
-line = re.search(r'^\s*WorkerDefaultPriority\s+(.+)$', config, re.M).group(1).split()
-job_ids = {'dig': 0, 'claimGround': 1, 'claimWall': 2, 'carry': 3, 'clean': 4, 'reload': 5}
-default_priority = [job_ids[name] for name in line]
-assert default_priority == [3, 0, 1, 2, 4, 5], default_priority
+if WITH_CONTENT:
+    config = read('config/global.cfg')
+    line = re.search(r'^\s*WorkerDefaultPriority\s+(.+)$', config, re.M).group(1).split()
+    job_ids = {'dig': 0, 'claimGround': 1, 'claimWall': 2, 'carry': 3, 'clean': 4, 'reload': 5}
+    default_priority = [job_ids[name] for name in line]
+    assert default_priority == [3, 0, 1, 2, 4, 5], default_priority
 header = read('source/game/WorkerJobs.h')
 assert 'enum class WorkerJob : uint32_t { dig, claimGround, claimWall, carry, clean, reload, none };' in header
 assert 'enum class WorkerFreeMode : uint32_t { automatic, priority };' in header
@@ -264,7 +291,8 @@ for fragment in ('from >= N || to >= N || from == to', 'order[i] = order[i + 1];
 DIG, CLAIM_GROUND, CLAIM_WALL, CARRY, CLEAN, RELOAD = range(6)
 keeper_list = [DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND, CLAIM_WALL]
 # automatic_view: the keeper's own list is kept but the tablets follow the predefined priority
-assert display_order(0, keeper_list) == [CARRY, DIG, CLAIM_GROUND, CLAIM_WALL, CLEAN, RELOAD]
+if WITH_CONTENT:
+    assert display_order(0, keeper_list) == [CARRY, DIG, CLAIM_GROUND, CLAIM_WALL, CLEAN, RELOAD]
 assert display_order(1, keeper_list) == [DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND, CLAIM_WALL]
 # move_up: Clean (III) up gives Clean on II and Carry on III
 moved = list(keeper_list)
@@ -290,358 +318,362 @@ assert 'mSelectedJob = -1;' in refresh and 'WorkerArrow' in code and 'Disabled' 
 mode = code[code.index('bool WorkersWindow::onModeClicked'):code.index('int32_t WorkersWindow::getSlotId')]
 assert 'mSelectedJob = -1;' in mode, 'a switch of the mode clears the selection'
 
-# --- every text is fully readable at every screen size and UI scale (R2): measured with the font of the game
-from PIL import ImageFont
+if LAYOUT:
+    # --- every text is fully readable at every screen size and UI scale (R2): measured with the font of the game
+    from PIL import ImageFont
 
-FONT_FILE = str(repo / 'gui/fonts/SourceSerif4-Semibold.ttf')
-FONT_DESIGN_W, FONT_DESIGN_H = 800.0, 600.0
-# Frame of the window in layout pixels at the design size: left, top, right, bottom (measured in the game as
-# 34, 32, 34, 36 with the old frame). The window now has the frame of the chosen menu sheet (OD/SheetWindow): side
-# and bottom rails of 32 and 44 sheet pixels at 1.5625 sheet pixels per layout pixel, the title on the top rail from
-# three quarters of its 44 sheet pixels plus one 13 point line and 4 pixels (52.5 layout pixels at 1920x1200).
-FRAME = (32 / 1.5625, 52.5, 32 / 1.5625, 44 / 1.5625)
-_fonts = {}
-
-
-def text_font(size_px):
-    """The font of the game at a pixel size."""
-    key = round(size_px * 4)
-    if key not in _fonts:
-        _fonts[key] = ImageFont.truetype(FONT_FILE, max(1.0, key / 4.0))
-    return _fonts[key]
+    FONT_FILE = str(content_packages.resolve(repo, 'gui/fonts/SourceSerif4-Semibold.ttf'))
+    FONT_DESIGN_W, FONT_DESIGN_H = 800.0, 600.0
+    # Frame of the window in layout pixels at the design size: left, top, right, bottom (measured in the game as
+    # 34, 32, 34, 36 with the old frame). The window now has the frame of the chosen menu sheet (OD/SheetWindow): side
+    # and bottom rails of 32 and 44 sheet pixels at 1.5625 sheet pixels per layout pixel, the title on the top rail from
+    # three quarters of its 44 sheet pixels plus one 13 point line and 4 pixels (52.5 layout pixels at 1920x1200).
+    FRAME = (32 / 1.5625, 52.5, 32 / 1.5625, 44 / 1.5625)
+    _fonts = {}
 
 
-def wrap_lines(text, font, width):
-    """Greedy word wrap like the CEGUI word wrap formatting; returns the lines."""
-    lines = []
-    current = ''
-    for word in text.split(' '):
-        trial = word if not current else current + ' ' + word
-        if current and font.getlength(trial) > width:
-            lines.append(current)
-            current = word
+    def text_font(size_px):
+        """The font of the game at a pixel size."""
+        key = round(size_px * 4)
+        if key not in _fonts:
+            _fonts[key] = ImageFont.truetype(FONT_FILE, max(1.0, key / 4.0))
+        return _fonts[key]
+
+
+    def wrap_lines(text, font, width):
+        """Greedy word wrap like the CEGUI word wrap formatting; returns the lines."""
+        lines = []
+        current = ''
+        for word in text.split(' '):
+            trial = word if not current else current + ' ' + word
+            if current and font.getlength(trial) > width:
+                lines.append(current)
+                current = word
+            else:
+                current = trial
+        lines.append(current)
+        return lines
+
+
+    def child_rect(node, parent_rect, scale):
+        """Pixel rectangle (x, y, w, h) of a layout window inside its parent rectangle, with the aspect mode Shrink."""
+        values = udims(props(node)['Area'])
+        px, py, pw, ph = parent_rect
+        left = px + values[0][0] * pw + values[0][1] * scale
+        top = py + values[1][0] * ph + values[1][1] * scale
+        width = (values[2][0] - values[0][0]) * pw + (values[2][1] - values[0][1]) * scale
+        height = (values[3][0] - values[1][0]) * ph + (values[3][1] - values[1][1]) * scale
+        p = props(node)
+        if p.get('AspectMode') == 'Shrink':
+            ratio = float(p['AspectRatio'])
+            if width / height > ratio:
+                width = height * ratio
+            else:
+                height = width / ratio
+        return (left, top, width, height)
+
+
+    def window_rect(screen_w, screen_h, user):
+        """Client rectangle of the Workers window and the layout scale for a screen and a UI scale."""
+        scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user
+        outer = udims(props(window)['Area'])
+        width = (outer[2][0] - outer[0][0]) * screen_w + (outer[2][1] - outer[0][1]) * scale
+        height = (outer[3][0] - outer[1][0]) * screen_h + (outer[3][1] - outer[1][1]) * scale
+        left = outer[0][0] * screen_w + outer[0][1] * scale
+        top = outer[1][0] * screen_h + outer[1][1] * scale
+        left_edge, top_edge, right_edge, bottom_edge = (v * scale for v in FRAME)
+        return (left + left_edge, top + top_edge, width - left_edge - right_edge, height - top_edge - bottom_edge), scale
+
+
+    def font_pixels(node, screen_w, screen_h, user):
+        """Pixel size of the font of a layout window (size in points at 96 dpi, scaled like the game scales fonts)."""
+        size = int(props(node)['Font'].rsplit('-', 1)[1])
+        return size * 96.0 / 72.0 * min(screen_w / FONT_DESIGN_W, screen_h / FONT_DESIGN_H) * user
+
+
+    def check_text(node, text, rect, screen_w, screen_h, user, what):
+        """The text must fit the window: wrapped texts in their height, every line in the width."""
+        p = props(node)
+        if p.get('Font') is None or not text:
+            return
+        font = text_font(font_pixels(node, screen_w, screen_h, user))
+        ascent, descent = font.getmetrics()
+        line_height = ascent + descent
+        width = rect[2] * 0.94
+        if 'WordWrap' in p.get('HorzFormatting', ''):
+            lines = wrap_lines(text, font, width)
         else:
-            current = trial
-    lines.append(current)
-    return lines
+            lines = [text]
+        for line in lines:
+            assert font.getlength(line) <= width, ('text too wide', what, text, line, screen_w, screen_h, user,
+                                                   round(font.getlength(line)), round(width))
+        # What is painted: the lines one below the other, the last one as high as its ink (the glyphs, not the line box)
+        ink = max(font.getbbox(line)[3] - font.getbbox(line)[1] for line in lines)
+        painted = (len(lines) - 1) * line_height + ink
+        assert painted <= rect[3] * 0.98, ('text too high', what, text, len(lines), screen_w, screen_h, user,
+                                           round(painted), round(rect[3]))
 
 
-def child_rect(node, parent_rect, scale):
-    """Pixel rectangle (x, y, w, h) of a layout window inside its parent rectangle, with the aspect mode Shrink."""
-    values = udims(props(node)['Area'])
-    px, py, pw, ph = parent_rect
-    left = px + values[0][0] * pw + values[0][1] * scale
-    top = py + values[1][0] * ph + values[1][1] * scale
-    width = (values[2][0] - values[0][0]) * pw + (values[2][1] - values[0][1]) * scale
-    height = (values[3][0] - values[1][0]) * ph + (values[3][1] - values[1][1]) * scale
-    p = props(node)
-    if p.get('AspectMode') == 'Shrink':
-        ratio = float(p['AspectRatio'])
-        if width / height > ratio:
-            width = height * ratio
-        else:
-            height = width / ratio
-    return (left, top, width, height)
+    def check_tree(node, rect, scale, screen_w, screen_h, user, texts):
+        """Check the texts of all windows below a node; texts maps a window name to the list of possible texts."""
+        for sub in node.findall('Window'):
+            sub_rect = child_rect(sub, rect, scale)
+            name = sub.get('name')
+            possible = texts.get(name)
+            if possible is None:
+                own = props(sub).get('Text')
+                possible = [own] if own else []
+            if sub.get('type') == 'OD/StaticText' or name in ('Minus', 'Plus'):
+                for text in possible:
+                    check_text(sub, text, sub_rect, screen_w, screen_h, user, name)
+            check_tree(sub, sub_rect, scale, screen_w, screen_h, user, texts)
 
 
-def window_rect(screen_w, screen_h, user):
-    """Client rectangle of the Workers window and the layout scale for a screen and a UI scale."""
-    scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user
-    outer = udims(props(window)['Area'])
-    width = (outer[2][0] - outer[0][0]) * screen_w + (outer[2][1] - outer[0][1]) * scale
-    height = (outer[3][0] - outer[1][0]) * screen_h + (outer[3][1] - outer[1][1]) * scale
-    left = outer[0][0] * screen_w + outer[0][1] * scale
-    top = outer[1][0] * screen_h + outer[1][1] * scale
-    left_edge, top_edge, right_edge, bottom_edge = (v * scale for v in FRAME)
-    return (left + left_edge, top + top_edge, width - left_edge - right_edge, height - top_edge - bottom_edge), scale
-
-
-def font_pixels(node, screen_w, screen_h, user):
-    """Pixel size of the font of a layout window (size in points at 96 dpi, scaled like the game scales fonts)."""
-    size = int(props(node)['Font'].rsplit('-', 1)[1])
-    return size * 96.0 / 72.0 * min(screen_w / FONT_DESIGN_W, screen_h / FONT_DESIGN_H) * user
-
-
-def check_text(node, text, rect, screen_w, screen_h, user, what):
-    """The text must fit the window: wrapped texts in their height, every line in the width."""
-    p = props(node)
-    if p.get('Font') is None or not text:
-        return
-    font = text_font(font_pixels(node, screen_w, screen_h, user))
-    ascent, descent = font.getmetrics()
-    line_height = ascent + descent
-    width = rect[2] * 0.94
-    if 'WordWrap' in p.get('HorzFormatting', ''):
-        lines = wrap_lines(text, font, width)
-    else:
-        lines = [text]
-    for line in lines:
-        assert font.getlength(line) <= width, ('text too wide', what, text, line, screen_w, screen_h, user,
-                                               round(font.getlength(line)), round(width))
-    # What is painted: the lines one below the other, the last one as high as its ink (the glyphs, not the line box)
-    ink = max(font.getbbox(line)[3] - font.getbbox(line)[1] for line in lines)
-    painted = (len(lines) - 1) * line_height + ink
-    assert painted <= rect[3] * 0.98, ('text too high', what, text, len(lines), screen_w, screen_h, user,
-                                       round(painted), round(rect[3]))
-
-
-def check_tree(node, rect, scale, screen_w, screen_h, user, texts):
-    """Check the texts of all windows below a node; texts maps a window name to the list of possible texts."""
-    for sub in node.findall('Window'):
-        sub_rect = child_rect(sub, rect, scale)
-        name = sub.get('name')
-        possible = texts.get(name)
-        if possible is None:
-            own = props(sub).get('Text')
-            possible = [own] if own else []
-        if sub.get('type') == 'OD/StaticText' or name in ('Minus', 'Plus'):
-            for text in possible:
-                check_text(sub, text, sub_rect, screen_w, screen_h, user, name)
-        check_tree(sub, sub_rect, scale, screen_w, screen_h, user, texts)
-
-
-for screen_w, screen_h in ((640, 480), (800, 600), (1024, 768), (1366, 768), (1920, 1200), (7680, 4320)):
-    for user in (0.8, 1.0, 1.2):
-        client, scale = window_rect(screen_w, screen_h, user)
-        assert client[0] >= 0 and client[1] >= 0 and client[0] + client[2] <= screen_w + 0.5 and \
-            client[1] + client[3] <= screen_h + 0.5, 'window outside the screen'
-        for rank in range(6):
-            tablet = child(window, 'Rank%d' % rank)
-            rect = child_rect(tablet, client, scale)
-            local = {'Name': job_names, 'Count': ['0', '12', '99'], 'Numeral': ['I', 'II', 'III', 'IV', 'V', 'VI'][rank:rank + 1]}
-            check_tree(tablet, rect, scale, screen_w, screen_h, user, local)
-            working = child(window, 'Working%d' % rank)
-            check_text(working, 'Working: 99', child_rect(working, client, scale), screen_w, screen_h, user, 'Working')
-        for entry in range(7):
-            frame = child(window, 'Carry%d' % entry)
-            rect = child_rect(frame, client, scale)
-            check_tree(frame, rect, scale, screen_w, screen_h, user, {'Name': carry_names, 'Number': [str(entry + 1)]})
-        for node in window.findall('Window'):
-            name = node.get('name')
-            if (name.startswith(('Rank', 'Carry')) and name not in ('CarryTitle', 'CarryUp', 'CarryDown')) or \
-                    name.startswith('Working'):
-                continue
-            rect = child_rect(node, client, scale)
-            texts = {'FreeCount': ['0', '12', '99']}.get(name, [props(node).get('Text')] if props(node).get('Text') else [])
-            if node.get('type') == 'OD/StaticText':
-                for text in texts:
-                    check_text(node, text, rect, screen_w, screen_h, user, name)
-            if name in ('ModeAutomatic', 'ModePriority'):
-                check_tree(node, rect, scale, screen_w, screen_h, user, {})
+    for screen_w, screen_h in ((640, 480), (800, 600), (1024, 768), (1366, 768), (1920, 1200), (7680, 4320)):
+        for user in (0.8, 1.0, 1.2):
+            client, scale = window_rect(screen_w, screen_h, user)
+            assert client[0] >= 0 and client[1] >= 0 and client[0] + client[2] <= screen_w + 0.5 and \
+                client[1] + client[3] <= screen_h + 0.5, 'window outside the screen'
+            for rank in range(6):
+                tablet = child(window, 'Rank%d' % rank)
+                rect = child_rect(tablet, client, scale)
+                local = {'Name': job_names, 'Count': ['0', '12', '99'], 'Numeral': ['I', 'II', 'III', 'IV', 'V', 'VI'][rank:rank + 1]}
+                check_tree(tablet, rect, scale, screen_w, screen_h, user, local)
+                working = child(window, 'Working%d' % rank)
+                check_text(working, 'Working: 99', child_rect(working, client, scale), screen_w, screen_h, user, 'Working')
+            for entry in range(7):
+                frame = child(window, 'Carry%d' % entry)
+                rect = child_rect(frame, client, scale)
+                check_tree(frame, rect, scale, screen_w, screen_h, user, {'Name': carry_names, 'Number': [str(entry + 1)]})
+            for node in window.findall('Window'):
+                name = node.get('name')
+                if (name.startswith(('Rank', 'Carry')) and name not in ('CarryTitle', 'CarryUp', 'CarryDown')) or \
+                        name.startswith('Working'):
+                    continue
+                rect = child_rect(node, client, scale)
+                texts = {'FreeCount': ['0', '12', '99']}.get(name, [props(node).get('Text')] if props(node).get('Text') else [])
+                if node.get('type') == 'OD/StaticText':
+                    for text in texts:
+                        check_text(node, text, rect, screen_w, screen_h, user, name)
+                if name in ('ModeAutomatic', 'ModePriority'):
+                    check_tree(node, rect, scale, screen_w, screen_h, user, {})
 
 # --- the icon sits in the icon row directly above the minimap, next to the other icons (owner check of build 28)
-row_boxes = {}
-for node in hud.iter('Window'):
-    node_props = props(node)
-    if node.get('type') == 'OD/GameTabButton' and 'Area' in node_props:
-        box = udims(node_props['Area'])
-        if box[1][0] == 1 and box[1][1] == -224:
-            row_boxes[node.get('name')] = box[0][1]
-assert button_box[0] == row_boxes['WorkersButton'] and button_box[1] == -224
-# The icons of the row stand on a 48 unit grid starting at the minimap edge; every slot is used once
-assert sorted(row_boxes.values()) == list(range(4, 4 + 48 * len(row_boxes), 48)), row_boxes
-assert len(set(row_boxes.values())) == len(row_boxes), 'two icons share a slot'
-# Room Manager replaces the old production and separate room buttons. Its optional slot
-# is compacted at runtime so Workers always follows the visible Dungeonbook icon.
-assert {name: row_boxes[name] for name in ('GoalsButton', 'ResearchButton', 'RoomManagerButton',
-                                         'SocialButton', 'WorkersButton', 'SandboxButton')} == {
-    'GoalsButton': 4, 'ResearchButton': 52, 'RoomManagerButton': 100,
-    'SocialButton': 148, 'WorkersButton': 196, 'SandboxButton': 244}
-assert 'ProductionButton' not in row_boxes
-assert all(name not in row_boxes for name in ('MerchantButton', 'LabButton', 'InfirmaryButton', 'GhostHuntersButton'))
+if WITH_CONTENT:
+    row_boxes = {}
+    for node in hud.iter('Window'):
+        node_props = props(node)
+        if node.get('type') == 'OD/GameTabButton' and 'Area' in node_props:
+            box = udims(node_props['Area'])
+            if box[1][0] == 1 and box[1][1] == -224:
+                row_boxes[node.get('name')] = box[0][1]
+    assert button_box[0] == row_boxes['WorkersButton'] and button_box[1] == -224
+    # The icons of the row stand on a 48 unit grid starting at the minimap edge; every slot is used once
+    assert sorted(row_boxes.values()) == list(range(4, 4 + 48 * len(row_boxes), 48)), row_boxes
+    assert len(set(row_boxes.values())) == len(row_boxes), 'two icons share a slot'
+    # Room Manager replaces the old production and separate room buttons. Its optional slot
+    # is compacted at runtime so Workers always follows the visible Dungeonbook icon.
+    assert {name: row_boxes[name] for name in ('GoalsButton', 'ResearchButton', 'RoomManagerButton',
+                                             'SocialButton', 'WorkersButton', 'SandboxButton')} == {
+        'GoalsButton': 4, 'ResearchButton': 52, 'RoomManagerButton': 100,
+        'SocialButton': 148, 'WorkersButton': 196, 'SandboxButton': 244}
+    assert 'ProductionButton' not in row_boxes
+    assert all(name not in row_boxes for name in ('MerchantButton', 'LabButton', 'InfirmaryButton', 'GhostHuntersButton'))
 arrange = read('source/render/Gui.cpp')
 assert 'void layoutNavigationButtons(CEGUI::Window* root)' in arrange
 assert 'if(!button->isVisible())' in arrange
 assert 'button->setArea(CEGUI::URect(x, first.d_min.d_y, x + side, first.d_max.d_y));' in arrange
 assert 'CEGUI::Window::EventShown, CEGUI::Event::Subscriber(&navigationVisibilityChanged)' in arrange
 assert 'CEGUI::Window::EventHidden, CEGUI::Event::Subscriber(&navigationVisibilityChanged)' in arrange
-# It stays left of the control panel toggle that ends the row and well inside the minimap column of the bottom bar
-assert button_box[2] <= 400, 'the Workers icon is not floating towards the middle of the screen'
+if WITH_CONTENT:
+    # It stays left of the control panel toggle that ends the row and well inside the minimap column of the bottom bar
+    assert button_box[2] <= 400, 'the Workers icon is not floating towards the middle of the screen'
 
-# --- pictures dominate, texts stay small (owner check of build 29): measured at every screen size and UI scale
-for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
-    for user in (0.8, 1.0, 1.2):
-        client, scale = window_rect(screen_w, screen_h, user)
-        for rank in range(6):
-            tablet = child(window, 'Rank%d' % rank)
-            t_rect = child_rect(tablet, client, scale)
-            fig = child_rect(child(tablet, 'Figure'), t_rect, scale)
-            figure_side = min(fig[2], fig[3])
-            assert figure_side >= 0.80 * t_rect[2], ('the worker figure fills the tablet width', rank, figure_side, t_rect[2])
-            assert figure_side >= 0.42 * t_rect[3], ('the worker figure fills the tablet height', rank, figure_side, t_rect[3])
-            name_px = font_pixels(child(tablet, 'Name'), screen_w, screen_h, user)
-            assert figure_side >= 4.0 * name_px, ('the job name is small below the figure', rank, figure_side, name_px)
-            assert props(child(tablet, 'Name'))['Font'] == 'MedievalSharp-10', 'the job name is the second text size'
-            assert udims(props(child(tablet, 'Name'))['Area'])[3][0] > udims(props(child(tablet, 'Figure'))['Area'])[1][0], \
-                'the job name stands below the top of the figure'
-            assert props(child(tablet, 'Name'))['VertFormatting'] == 'BottomAligned', 'the name sits right above the buttons'
-        for entry in range(7):
-            frame = child(window, 'Carry%d' % entry)
-            c_rect = child_rect(frame, client, scale)
-            pic = child_rect(child(frame, 'Picture'), c_rect, scale)
-            picture_side = min(pic[2], pic[3])
-            assert picture_side >= 0.75 * c_rect[2], ('the carry picture fills its entry', entry, picture_side, c_rect[2])
-            assert picture_side >= 0.40 * c_rect[3], ('the carry picture fills its entry height', entry, picture_side, c_rect[3])
-            name_px = font_pixels(child(frame, 'Name'), screen_w, screen_h, user)
-            assert picture_side >= 5.0 * name_px, ('the carry name is small below the picture', entry, picture_side, name_px)
-# Window texts: no text is larger than in the mockup (small names and labels, the count of free workers the largest)
-text_limits = {'FreeCount': 13, 'CarryTitle': 12, 'FreeLabel': 10, 'PriorityLabel': 10, 'GoldLabel': 8, 'DragHint': 8}
-for node in window.findall('Window'):
-    name = node.get('name')
-    if name in text_limits:
-        assert int(props(node)['Font'].rsplit('-', 1)[1]) <= text_limits[name], (name, props(node)['Font'])
-    if name.startswith('Working'):
-        assert props(node)['Font'] == 'MedievalSharp-8', name + ' is a small text'
-    if name.startswith('Carry') and name[5:].isdigit():
-        assert props(child(node, 'Name'))['Font'] == 'MedievalSharp-8', 'the carry names are the small text size'
-for name in ('ModeAutomatic', 'ModePriority'):
-    assert props(child(child(window, name), 'Label'))['Font'] == 'MedievalSharp-10'
-for node in window.iter('Window'):
-    if 'Font' in props(node):
-        assert int(props(node)['Font'].rsplit('-', 1)[1]) <= 13, (node.get('name'), 'text larger than the mockup')
+if LAYOUT:
+    # --- pictures dominate, texts stay small (owner check of build 29): measured at every screen size and UI scale
+    for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
+        for user in (0.8, 1.0, 1.2):
+            client, scale = window_rect(screen_w, screen_h, user)
+            for rank in range(6):
+                tablet = child(window, 'Rank%d' % rank)
+                t_rect = child_rect(tablet, client, scale)
+                fig = child_rect(child(tablet, 'Figure'), t_rect, scale)
+                figure_side = min(fig[2], fig[3])
+                assert figure_side >= 0.80 * t_rect[2], ('the worker figure fills the tablet width', rank, figure_side, t_rect[2])
+                assert figure_side >= 0.42 * t_rect[3], ('the worker figure fills the tablet height', rank, figure_side, t_rect[3])
+                name_px = font_pixels(child(tablet, 'Name'), screen_w, screen_h, user)
+                assert figure_side >= 4.0 * name_px, ('the job name is small below the figure', rank, figure_side, name_px)
+                assert props(child(tablet, 'Name'))['Font'] == 'MedievalSharp-10', 'the job name is the second text size'
+                assert udims(props(child(tablet, 'Name'))['Area'])[3][0] > udims(props(child(tablet, 'Figure'))['Area'])[1][0], \
+                    'the job name stands below the top of the figure'
+                assert props(child(tablet, 'Name'))['VertFormatting'] == 'BottomAligned', 'the name sits right above the buttons'
+            for entry in range(7):
+                frame = child(window, 'Carry%d' % entry)
+                c_rect = child_rect(frame, client, scale)
+                pic = child_rect(child(frame, 'Picture'), c_rect, scale)
+                picture_side = min(pic[2], pic[3])
+                assert picture_side >= 0.75 * c_rect[2], ('the carry picture fills its entry', entry, picture_side, c_rect[2])
+                assert picture_side >= 0.40 * c_rect[3], ('the carry picture fills its entry height', entry, picture_side, c_rect[3])
+                name_px = font_pixels(child(frame, 'Name'), screen_w, screen_h, user)
+                assert picture_side >= 5.0 * name_px, ('the carry name is small below the picture', entry, picture_side, name_px)
+    # Window texts: no text is larger than in the mockup (small names and labels, the count of free workers the largest)
+    text_limits = {'FreeCount': 13, 'CarryTitle': 12, 'FreeLabel': 10, 'PriorityLabel': 10, 'GoldLabel': 8, 'DragHint': 8}
+    for node in window.findall('Window'):
+        name = node.get('name')
+        if name in text_limits:
+            assert int(props(node)['Font'].rsplit('-', 1)[1]) <= text_limits[name], (name, props(node)['Font'])
+        if name.startswith('Working'):
+            assert props(node)['Font'] == 'MedievalSharp-8', name + ' is a small text'
+        if name.startswith('Carry') and name[5:].isdigit():
+            assert props(child(node, 'Name'))['Font'] == 'MedievalSharp-8', 'the carry names are the small text size'
+    for name in ('ModeAutomatic', 'ModePriority'):
+        assert props(child(child(window, name), 'Label'))['Font'] == 'MedievalSharp-10'
+    for node in window.iter('Window'):
+        if 'Font' in props(node):
+            assert int(props(node)['Font'].rsplit('-', 1)[1]) <= 13, (node.get('name'), 'text larger than the mockup')
 
-# --- binding target sizes at 1920x1200 (owner decision 610, mockup variant-b-worker-colour.png), tolerance 10 percent
-from PIL import Image
-
-
-def visible_box(png):
-    """Width and height of the visible (not transparent) part of a 256 pixel picture, as fractions of the picture."""
-    image = Image.open(assets_src_dir(repo) / 'gui/icons/tiles' / (png + '.png')).convert('RGBA')
-    box = image.split()[3].point(lambda v: 255 if v > 40 else 0).getbbox()
-    return (box[2] - box[0]) / image.width, (box[3] - box[1]) / image.height
+    # --- binding target sizes at 1920x1200 (owner decision 610, mockup variant-b-worker-colour.png), tolerance 10 percent
+    from PIL import Image
 
 
-def cap_height(node, screen_w, screen_h, user):
-    """Pixel height of a capital letter of the font of a layout window."""
-    font = text_font(font_pixels(node, screen_w, screen_h, user))
-    box = font.getbbox('H')
-    return box[3] - box[1]
+    def visible_box(png):
+        """Width and height of the visible (not transparent) part of a 256 pixel picture, as fractions of the picture."""
+        image = Image.open(assets_src_dir(repo) / 'gui/icons/tiles' / (png + '.png')).convert('RGBA')
+        box = image.split()[3].point(lambda v: 255 if v > 40 else 0).getbbox()
+        return (box[2] - box[0]) / image.width, (box[3] - box[1]) / image.height
 
 
-TARGET_TOLERANCE = 0.10
-target_rows = []
+    def cap_height(node, screen_w, screen_h, user):
+        """Pixel height of a capital letter of the font of a layout window."""
+        font = text_font(font_pixels(node, screen_w, screen_h, user))
+        box = font.getbbox('H')
+        return box[3] - box[1]
 
 
-def target(item, expected, computed):
-    """Record an item and require every number of it to be within the tolerance of its target."""
-    target_rows.append((item, expected, computed))
-    for want, got in zip(expected, computed):
-        assert abs(got - want) <= TARGET_TOLERANCE * want, ('target missed', item, expected, computed)
+    TARGET_TOLERANCE = 0.10
+    target_rows = []
 
 
-client, scale = window_rect(1920, 1200, 1.0)
-outer = udims(props(window)['Area'])
-outer_w = (outer[2][0] - outer[0][0]) * 1920 + (outer[2][1] - outer[0][1]) * scale
-outer_h = (outer[3][0] - outer[1][0]) * 1200 + (outer[3][1] - outer[1][1]) * scale
-outer_x = outer[0][0] * 1920 + outer[0][1] * scale
-outer_y = outer[1][0] * 1200 + outer[1][1] * scale
-target('window', (1480, 940), (outer_w, outer_h))
-assert abs(outer_x + outer_w / 2 - 960) < 1 and abs(outer_y + outer_h / 2 - 600) < 1, 'the window is centred'
-tablet_names = ['I', 'II', 'III', 'IV', 'V', 'VI']
-tablet_targets = [(266, 387), (222, 345), (194, 313), (176, 290), (165, 270), (157, 254)]
-tablet_sizes = []
-for rank in range(6):
-    t_rect = child_rect(child(window, 'Rank%d' % rank), client, scale)
-    tablet_sizes.append((t_rect[2], t_rect[3]))
-    target('tablet ' + tablet_names[rank] + (' (rank in between)' if 0 < rank < 5 else ''), tablet_targets[rank], tablet_sizes[rank])
-for rank in range(5):
-    assert tablet_sizes[rank][0] > tablet_sizes[rank + 1][0] and tablet_sizes[rank][1] > tablet_sizes[rank + 1][1], 'falls by rank'
-# The worker figure: the visible part of its picture fills about 70 percent of the width of its tablet
-job_pictures = ['WorkerJobDig', 'WorkerJobClaimGround', 'WorkerJobClaimWall', 'WorkerJobCarry', 'WorkerJobClean', 'WorkerJobReload']
-visible_w = sum(visible_box(name)[0] for name in job_pictures) / len(job_pictures)
-fill = []
-for rank in range(6):
-    tablet = child(window, 'Rank%d' % rank)
-    t_rect = child_rect(tablet, client, scale)
-    fig = child_rect(child(tablet, 'Figure'), t_rect, scale)
-    fill.append(min(fig[2], fig[3]) * visible_w / t_rect[2])
-target('worker figure width / tablet width, rank I', (0.70,), (fill[0],))
-target('worker figure width / tablet width, rank VI', (0.70,), (fill[5],))
-assert all(abs(v - 0.70) <= 0.07 for v in fill), fill
-carry_pictures = ['WorkerCarryOwn', 'WorkerCarryEnemy', 'WorkerCarryCorpses', 'WorkerCarryGold', 'WorkerCarryItems',
-                  'WorkerCarryGift', 'WorkerCarryTrapsDoors']
-c_rect = child_rect(child(window, 'Carry0'), client, scale)
-target('carry entry', (169, 188), (c_rect[2], c_rect[3]))
-for entry in range(7):
-    entry_rect = child_rect(child(window, 'Carry%d' % entry), client, scale)
-    assert abs(entry_rect[2] - c_rect[2]) < 0.5 and abs(entry_rect[3] - c_rect[3]) < 0.5, 'all carry entries are equally large'
-pic = child_rect(child(child(window, 'Carry0'), 'Picture'), c_rect, scale)
-side = min(pic[2], pic[3])
-mean_w = sum(visible_box(name)[0] for name in carry_pictures) / len(carry_pictures)
-mean_h = sum(visible_box(name)[1] for name in carry_pictures) / len(carry_pictures)
-target('carry picture (mean visible part of the seven)', (110, 60), (side * mean_w, side * mean_h))
-job_cap = cap_height(child(child(window, 'Rank0'), 'Name'), 1920, 1200, 1.0)
-carry_cap = cap_height(child(child(window, 'Carry0'), 'Name'), 1920, 1200, 1.0)
-target('job name cap height', (17,), (job_cap,))
-target('carry name cap height', (15,), (carry_cap,))
-def painted(node, parent_rect, picture):
-    """Size in pixels of the visible part of the picture of a layout window (a button shows its normal picture)."""
-    rect = child_rect(node, parent_rect, scale)
-    fraction = visible_box(picture)
-    return (rect[2] * fraction[0], rect[3] * fraction[1])
+    def target(item, expected, computed):
+        """Record an item and require every number of it to be within the tolerance of its target."""
+        target_rows.append((item, expected, computed))
+        for want, got in zip(expected, computed):
+            assert abs(got - want) <= TARGET_TOLERANCE * want, ('target missed', item, expected, computed)
 
 
-# Owner check of build 31 (decision 622): the five elements that were too small, measured in the mockup (about 1215 pixels wide
-# window, 1480 here) and scaled by 1.218 to the 1920x1200 window; the size is that of the visible part of the picture
-target('priority arrow up (framed button)', (61, 59), painted(child(window, 'PriorityUp'), client, 'WorkerArrowUpNormal'))
-target('priority arrow down (framed button)', (61, 59), painted(child(window, 'PriorityDown'), client, 'WorkerArrowDownNormal'))
-target('carry arrow up (framed button)', (59, 61), painted(child(window, 'CarryUp'), client, 'WorkerArrowUpNormal'))
-target('carry arrow down (framed button)', (59, 61), painted(child(window, 'CarryDown'), client, 'WorkerArrowDownNormal'))
-target('gold pile of Gold first', (78, 57), painted(child(window, 'GoldCoins'), client, 'WorkerCarryGold'))
-target('free workers portrait (round frame)', (144, 144), painted(child(window, 'FreePortrait'), client, 'WorkerFreePortrait'))
-for mode in ('ModeAutomatic', 'ModePriority'):
-    mode_rect = child_rect(child(window, mode), client, scale)
-    target('hand symbol of ' + mode, (56, 54), painted(child(child(window, mode), 'Hand'), mode_rect, 'WorkerHandInactive'))
-target('title plaque', (305, 100), painted(child(window, 'TitlePlaque'), client, 'WorkersTitlePlaque'))
-assert props(child(window, 'TitlePlaque'))['Image'].endswith('WorkersTitlePlaque') and 'WorkersTitlePlaque' in atlas
-assert props(child(window, 'TitleText'))['Text'] == 'Zivs', 'the title stands on the plaque'
-plaque = child_rect(child(window, 'TitlePlaque'), client, scale)
-assert abs(plaque[0] + plaque[2] / 2 - (client[0] + client[2] / 2)) < 2, 'the plaque is centred on the window'
-# The arrows, the gold pile and the hands do not run into their neighbours
-up, down = (child_rect(child(window, n), client, scale) for n in ('PriorityUp', 'PriorityDown'))
-assert up[0] + up[2] <= down[0], 'the priority arrows do not overlap'
-carry_up, carry_down = (child_rect(child(window, n), client, scale) for n in ('CarryUp', 'CarryDown'))
-assert carry_up[1] + carry_up[3] <= carry_down[1], 'the carry arrows do not overlap'
-last_carry = child_rect(child(window, 'Carry6'), client, scale)
-gold_panel = child_rect(child(window, 'GoldPanel'), client, scale)
-assert last_carry[0] + last_carry[2] <= carry_up[0] and carry_up[0] + carry_up[2] <= gold_panel[0], 'the carry arrows sit between the entries and Gold first'
-for mode in ('ModeAutomatic', 'ModePriority'):
-    hand = udims(props(child(child(window, mode), 'Hand'))['Area'])
-    label = udims(props(child(child(window, mode), 'Label'))['Area'])
-    assert hand[2][0] <= label[0][0], 'the hand does not cover the label of ' + mode
-free_label = child_rect(child(window, 'FreeLabel'), client, scale)
-free_portrait = child_rect(child(window, 'FreePortrait'), client, scale)
-assert free_portrait[0] + free_portrait[2] <= free_label[0], 'the portrait does not cover the free workers text'
-for name in ('FreeLabel', 'PriorityLabel', 'DragHint', 'GoldLabel', 'CarryTitle', 'FreeCount'):
-    assert cap_height(child(window, name), 1920, 1200, 1.0) <= 23, (name, 'window text larger than in the mockup')
-assert cap_height(child(window, 'Working0'), 1920, 1200, 1.0) <= carry_cap + 1, 'the Working line is in the small text size'
-# The Working line sits below its tablet, centred under it
-for rank in range(6):
-    t_rect = child_rect(child(window, 'Rank%d' % rank), client, scale)
-    w_rect = child_rect(child(window, 'Working%d' % rank), client, scale)
-    assert w_rect[1] >= t_rect[1] + t_rect[3] - 1, 'Working line below its tablet'
-    assert abs((w_rect[0] + w_rect[2] / 2) - (t_rect[0] + t_rect[2] / 2)) < 2, 'Working line centred under its tablet'
-if '--table' in sys.argv:
-    for item, expected, computed in target_rows:
-        print('| %s | %s | %s |' % (item, ' x '.join('%g' % v for v in expected), ' x '.join('%.1f' % v for v in computed)))
+    client, scale = window_rect(1920, 1200, 1.0)
+    outer = udims(props(window)['Area'])
+    outer_w = (outer[2][0] - outer[0][0]) * 1920 + (outer[2][1] - outer[0][1]) * scale
+    outer_h = (outer[3][0] - outer[1][0]) * 1200 + (outer[3][1] - outer[1][1]) * scale
+    outer_x = outer[0][0] * 1920 + outer[0][1] * scale
+    outer_y = outer[1][0] * 1200 + outer[1][1] * scale
+    target('window', (1480, 940), (outer_w, outer_h))
+    assert abs(outer_x + outer_w / 2 - 960) < 1 and abs(outer_y + outer_h / 2 - 600) < 1, 'the window is centred'
+    tablet_names = ['I', 'II', 'III', 'IV', 'V', 'VI']
+    tablet_targets = [(266, 387), (222, 345), (194, 313), (176, 290), (165, 270), (157, 254)]
+    tablet_sizes = []
+    for rank in range(6):
+        t_rect = child_rect(child(window, 'Rank%d' % rank), client, scale)
+        tablet_sizes.append((t_rect[2], t_rect[3]))
+        target('tablet ' + tablet_names[rank] + (' (rank in between)' if 0 < rank < 5 else ''), tablet_targets[rank], tablet_sizes[rank])
+    for rank in range(5):
+        assert tablet_sizes[rank][0] > tablet_sizes[rank + 1][0] and tablet_sizes[rank][1] > tablet_sizes[rank + 1][1], 'falls by rank'
+    # The worker figure: the visible part of its picture fills about 70 percent of the width of its tablet
+    job_pictures = ['WorkerJobDig', 'WorkerJobClaimGround', 'WorkerJobClaimWall', 'WorkerJobCarry', 'WorkerJobClean', 'WorkerJobReload']
+    visible_w = sum(visible_box(name)[0] for name in job_pictures) / len(job_pictures)
+    fill = []
+    for rank in range(6):
+        tablet = child(window, 'Rank%d' % rank)
+        t_rect = child_rect(tablet, client, scale)
+        fig = child_rect(child(tablet, 'Figure'), t_rect, scale)
+        fill.append(min(fig[2], fig[3]) * visible_w / t_rect[2])
+    target('worker figure width / tablet width, rank I', (0.70,), (fill[0],))
+    target('worker figure width / tablet width, rank VI', (0.70,), (fill[5],))
+    assert all(abs(v - 0.70) <= 0.07 for v in fill), fill
+    carry_pictures = ['WorkerCarryOwn', 'WorkerCarryEnemy', 'WorkerCarryCorpses', 'WorkerCarryGold', 'WorkerCarryItems',
+                      'WorkerCarryGift', 'WorkerCarryTrapsDoors']
+    c_rect = child_rect(child(window, 'Carry0'), client, scale)
+    target('carry entry', (169, 188), (c_rect[2], c_rect[3]))
+    for entry in range(7):
+        entry_rect = child_rect(child(window, 'Carry%d' % entry), client, scale)
+        assert abs(entry_rect[2] - c_rect[2]) < 0.5 and abs(entry_rect[3] - c_rect[3]) < 0.5, 'all carry entries are equally large'
+    pic = child_rect(child(child(window, 'Carry0'), 'Picture'), c_rect, scale)
+    side = min(pic[2], pic[3])
+    mean_w = sum(visible_box(name)[0] for name in carry_pictures) / len(carry_pictures)
+    mean_h = sum(visible_box(name)[1] for name in carry_pictures) / len(carry_pictures)
+    target('carry picture (mean visible part of the seven)', (110, 60), (side * mean_w, side * mean_h))
+    job_cap = cap_height(child(child(window, 'Rank0'), 'Name'), 1920, 1200, 1.0)
+    carry_cap = cap_height(child(child(window, 'Carry0'), 'Name'), 1920, 1200, 1.0)
+    target('job name cap height', (17,), (job_cap,))
+    target('carry name cap height', (15,), (carry_cap,))
+    def painted(node, parent_rect, picture):
+        """Size in pixels of the visible part of the picture of a layout window (a button shows its normal picture)."""
+        rect = child_rect(node, parent_rect, scale)
+        fraction = visible_box(picture)
+        return (rect[2] * fraction[0], rect[3] * fraction[1])
 
-# --- the tick box "Gold first" is large and its ticked state differs clearly from the empty one (R3)
-for name in ('WorkerCheckboxEmpty', 'WorkerCheckboxChecked'):
-    assert imageset.find("Image[@name='%s']" % name).get('width') == '256', name + ' is the large picture'
-gold_check = child(window, 'GoldCheck')
-check_props = props(gold_check)
-assert check_props['NormalImage'].endswith('WorkerCheckboxEmpty')
-client, scale = window_rect(1024, 768, 1.0)
-box = child_rect(gold_check, client, scale)
-assert min(box[2], box[3]) >= 44, ('the tick box is too small', box)
-client, scale = window_rect(640, 480, 0.8)
-box = child_rect(gold_check, client, scale)
-assert min(box[2], box[3]) >= 20, ('the tick box is too small at 640x480', box)
-assert 'check->setProperty("NormalImage", checkImage);' in code and 'WorkerCheckboxChecked' in code
-assert 'getChild("GoldLabel")->setProperty("TextColours", settings.goldFirst != 0 ? COLOUR_LIT : COLOUR_NORMAL)' in code, \
-    'the ticked state also lights the label'
-for tile in ('WorkerCheckboxEmpty', 'WorkerCheckboxChecked'):
-    assert (assets_src_dir(repo) / 'gui/icons/tiles' / (tile + '.png')).exists()
+
+    # Owner check of build 31 (decision 622): the five elements that were too small, measured in the mockup (about 1215 pixels wide
+    # window, 1480 here) and scaled by 1.218 to the 1920x1200 window; the size is that of the visible part of the picture
+    target('priority arrow up (framed button)', (61, 59), painted(child(window, 'PriorityUp'), client, 'WorkerArrowUpNormal'))
+    target('priority arrow down (framed button)', (61, 59), painted(child(window, 'PriorityDown'), client, 'WorkerArrowDownNormal'))
+    target('carry arrow up (framed button)', (59, 61), painted(child(window, 'CarryUp'), client, 'WorkerArrowUpNormal'))
+    target('carry arrow down (framed button)', (59, 61), painted(child(window, 'CarryDown'), client, 'WorkerArrowDownNormal'))
+    target('gold pile of Gold first', (78, 57), painted(child(window, 'GoldCoins'), client, 'WorkerCarryGold'))
+    target('free workers portrait (round frame)', (144, 144), painted(child(window, 'FreePortrait'), client, 'WorkerFreePortrait'))
+    for mode in ('ModeAutomatic', 'ModePriority'):
+        mode_rect = child_rect(child(window, mode), client, scale)
+        target('hand symbol of ' + mode, (56, 54), painted(child(child(window, mode), 'Hand'), mode_rect, 'WorkerHandInactive'))
+    target('title plaque', (305, 100), painted(child(window, 'TitlePlaque'), client, 'WorkersTitlePlaque'))
+    assert props(child(window, 'TitlePlaque'))['Image'].endswith('WorkersTitlePlaque') and 'WorkersTitlePlaque' in atlas
+    assert props(child(window, 'TitleText'))['Text'] == 'Zivs', 'the title stands on the plaque'
+    plaque = child_rect(child(window, 'TitlePlaque'), client, scale)
+    assert abs(plaque[0] + plaque[2] / 2 - (client[0] + client[2] / 2)) < 2, 'the plaque is centred on the window'
+    # The arrows, the gold pile and the hands do not run into their neighbours
+    up, down = (child_rect(child(window, n), client, scale) for n in ('PriorityUp', 'PriorityDown'))
+    assert up[0] + up[2] <= down[0], 'the priority arrows do not overlap'
+    carry_up, carry_down = (child_rect(child(window, n), client, scale) for n in ('CarryUp', 'CarryDown'))
+    assert carry_up[1] + carry_up[3] <= carry_down[1], 'the carry arrows do not overlap'
+    last_carry = child_rect(child(window, 'Carry6'), client, scale)
+    gold_panel = child_rect(child(window, 'GoldPanel'), client, scale)
+    assert last_carry[0] + last_carry[2] <= carry_up[0] and carry_up[0] + carry_up[2] <= gold_panel[0], 'the carry arrows sit between the entries and Gold first'
+    for mode in ('ModeAutomatic', 'ModePriority'):
+        hand = udims(props(child(child(window, mode), 'Hand'))['Area'])
+        label = udims(props(child(child(window, mode), 'Label'))['Area'])
+        assert hand[2][0] <= label[0][0], 'the hand does not cover the label of ' + mode
+    free_label = child_rect(child(window, 'FreeLabel'), client, scale)
+    free_portrait = child_rect(child(window, 'FreePortrait'), client, scale)
+    assert free_portrait[0] + free_portrait[2] <= free_label[0], 'the portrait does not cover the free workers text'
+    for name in ('FreeLabel', 'PriorityLabel', 'DragHint', 'GoldLabel', 'CarryTitle', 'FreeCount'):
+        assert cap_height(child(window, name), 1920, 1200, 1.0) <= 23, (name, 'window text larger than in the mockup')
+    assert cap_height(child(window, 'Working0'), 1920, 1200, 1.0) <= carry_cap + 1, 'the Working line is in the small text size'
+    # The Working line sits below its tablet, centred under it
+    for rank in range(6):
+        t_rect = child_rect(child(window, 'Rank%d' % rank), client, scale)
+        w_rect = child_rect(child(window, 'Working%d' % rank), client, scale)
+        assert w_rect[1] >= t_rect[1] + t_rect[3] - 1, 'Working line below its tablet'
+        assert abs((w_rect[0] + w_rect[2] / 2) - (t_rect[0] + t_rect[2] / 2)) < 2, 'Working line centred under its tablet'
+    if '--table' in sys.argv:
+        for item, expected, computed in target_rows:
+            print('| %s | %s | %s |' % (item, ' x '.join('%g' % v for v in expected), ' x '.join('%.1f' % v for v in computed)))
+
+    # --- the tick box "Gold first" is large and its ticked state differs clearly from the empty one (R3)
+    for name in ('WorkerCheckboxEmpty', 'WorkerCheckboxChecked'):
+        assert imageset.find("Image[@name='%s']" % name).get('width') == '256', name + ' is the large picture'
+    gold_check = child(window, 'GoldCheck')
+    check_props = props(gold_check)
+    assert check_props['NormalImage'].endswith('WorkerCheckboxEmpty')
+    client, scale = window_rect(1024, 768, 1.0)
+    box = child_rect(gold_check, client, scale)
+    assert min(box[2], box[3]) >= 44, ('the tick box is too small', box)
+    client, scale = window_rect(640, 480, 0.8)
+    box = child_rect(gold_check, client, scale)
+    assert min(box[2], box[3]) >= 20, ('the tick box is too small at 640x480', box)
+    assert 'check->setProperty("NormalImage", checkImage);' in code and 'WorkerCheckboxChecked' in code
+    assert 'getChild("GoldLabel")->setProperty("TextColours", settings.goldFirst != 0 ? COLOUR_LIT : COLOUR_NORMAL)' in code, \
+        'the ticked state also lights the label'
+    for tile in ('WorkerCheckboxEmpty', 'WorkerCheckboxChecked'):
+        assert (assets_src_dir(repo) / 'gui/icons/tiles' / (tile + '.png')).exists()
 
 # --- dragging tablets and carry entries (R4): the event wiring, the layout properties and the drop mapping
 down_up = re.findall(r'subscribeEvent\(CEGUI::Window::EventMouseButton(Down|Up),\s*CEGUI::Event::Subscriber\(&WorkersWindow::(\w+), this\)\)',
@@ -654,18 +686,19 @@ drag = code[code.index('void WorkersWindow::finishDrag()'):code.index('bool Work
 assert 'getDefaultGUIContext().getMouseCursor().getPosition()' in drag and 'mouse.position' not in drag
 assert 'mDragTablet = -1;' in drag and 'mDragCarry = -1;' in drag, 'a drag ends once'
 assert 'findSlotAt("Rank", JOB_COUNT' in drag and 'findSlotAt("Carry", CARRY_COUNT' in drag
-# Slots are buttons (they hold the pointer while pressed) and everything painted on them lets the pointer through
-for slots, parts in (('Rank', ('Frame', 'Numeral', 'Figure', 'Name', 'Count')), ('Carry', ('Frame', 'Number', 'Picture', 'Name'))):
-    for index in range(6 if slots == 'Rank' else 7):
-        slot = child(window, '%s%d' % (slots, index))
-        assert slot.get('type') == 'OD/InvisibleButton', 'a slot is a button that holds the pointer'
-        assert 'MousePassThroughEnabled' not in props(slot) and props(slot).get('Enabled', 'True') == 'True'
-        for part in parts:
-            assert props(child(slot, part)).get('MousePassThroughEnabled') == 'True', (slots, index, part)
-for name in ('FreePanel', 'PriorityPanel', 'GoldPanel', 'GoldCoins', 'GoldLabel', 'DragHand', 'DragHint', 'CarryTitle'):
-    assert props(child(window, name)).get('MousePassThroughEnabled') == 'True', name + ' must not cover a slot'
-for index in range(6):
-    assert props(child(window, 'Working%d' % index)).get('MousePassThroughEnabled') == 'True'
+if LAYOUT:
+    # Slots are buttons (they hold the pointer while pressed) and everything painted on them lets the pointer through
+    for slots, parts in (('Rank', ('Frame', 'Numeral', 'Figure', 'Name', 'Count')), ('Carry', ('Frame', 'Number', 'Picture', 'Name'))):
+        for index in range(6 if slots == 'Rank' else 7):
+            slot = child(window, '%s%d' % (slots, index))
+            assert slot.get('type') == 'OD/InvisibleButton', 'a slot is a button that holds the pointer'
+            assert 'MousePassThroughEnabled' not in props(slot) and props(slot).get('Enabled', 'True') == 'True'
+            for part in parts:
+                assert props(child(slot, part)).get('MousePassThroughEnabled') == 'True', (slots, index, part)
+    for name in ('FreePanel', 'PriorityPanel', 'GoldPanel', 'GoldCoins', 'GoldLabel', 'DragHand', 'DragHint', 'CarryTitle'):
+        assert props(child(window, name)).get('MousePassThroughEnabled') == 'True', name + ' must not cover a slot'
+    for index in range(6):
+        assert props(child(window, 'Working%d' % index)).get('MousePassThroughEnabled') == 'True'
 
 
 def drop_slot(rects, x, y):
@@ -690,66 +723,68 @@ for fragment in ('const float tolerance = (bottom - top) * 0.25f;', 'if(y < top 
                  'if(x >= left && x < right)'):
     assert fragment in code, fragment
 
-for screen_w, screen_h, user in ((640, 480, 0.8), (1024, 768, 1.0), (1920, 1200, 1.2), (7680, 4320, 0.8)):
-    client, scale = window_rect(screen_w, screen_h, user)
-    for slots, count, order in (('Rank', 6, [DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND, CLAIM_WALL]),
-                                ('Carry', 7, [0, 1, 2, 3, 4, 5, 6])):
-        rects = []
-        for index in range(count):
-            x, y, w, h = child_rect(child(window, '%s%d' % (slots, index)), client, scale)
-            rects.append((x, y, x + w, y + h))
-        for source in range(count):
-            for target in range(count):
-                # release in the middle of the target and near its edges, still inside its column
-                for fx, fy in ((0.5, 0.5), (0.1, 0.1), (0.9, 0.9), (0.5, 1.15), (0.5, -0.15)):
-                    r = rects[target]
-                    px = r[0] + (r[2] - r[0]) * fx
-                    py = r[1] + (r[3] - r[1]) * fy
-                    assert drop_slot(rects, px, py) == target, (slots, source, target, fx, fy)
-                dragged = list(order)
-                moved = move_entry(dragged, source, drop_slot(rects, (rects[target][0] + rects[target][2]) / 2,
-                                                              (rects[target][1] + rects[target][3]) / 2))
-                assert moved == (source != target)
-                if source != target:
-                    assert dragged[target] == order[source], 'the dragged entry takes the place it is dropped on'
-        # between two slots a drop belongs to one of the two neighbours; far away it belongs to none
-        for index in range(count - 1):
-            gap = (rects[index][2] + rects[index + 1][0]) / 2
-            assert drop_slot(rects, gap - 0.01, (rects[index][1] + rects[index][3]) / 2) == index
-            assert drop_slot(rects, gap + 0.01, (rects[index][1] + rects[index][3]) / 2) == index + 1
-        row_top = min(r[1] for r in rects)
-        row_bottom = max(r[3] for r in rects)
-        assert drop_slot(rects, rects[0][0] + 1, row_top - (row_bottom - row_top)) == -1
-        assert drop_slot(rects, rects[0][0] + 1, row_bottom + (row_bottom - row_top)) == -1
-        assert drop_slot(rects, rects[-1][2] + (rects[-1][2] - rects[-1][0]), (row_top + row_bottom) / 2) == -1
-    # drag_tablet end to end: Claim wall (VI) dragged onto I
-    tablet_rects = []
-    for index in range(6):
-        x, y, w, h = child_rect(child(window, 'Rank%d' % index), client, scale)
-        tablet_rects.append((x, y, x + w, y + h))
-    start = list(keeper_list)
-    assert move_entry(start, 5, drop_slot(tablet_rects, (tablet_rects[0][0] + tablet_rects[0][2]) / 2,
-                                          (tablet_rects[0][1] + tablet_rects[0][3]) / 2))
-    assert start == [CLAIM_WALL, DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND]
+if LAYOUT:
+    for screen_w, screen_h, user in ((640, 480, 0.8), (1024, 768, 1.0), (1920, 1200, 1.2), (7680, 4320, 0.8)):
+        client, scale = window_rect(screen_w, screen_h, user)
+        for slots, count, order in (('Rank', 6, [DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND, CLAIM_WALL]),
+                                    ('Carry', 7, [0, 1, 2, 3, 4, 5, 6])):
+            rects = []
+            for index in range(count):
+                x, y, w, h = child_rect(child(window, '%s%d' % (slots, index)), client, scale)
+                rects.append((x, y, x + w, y + h))
+            for source in range(count):
+                for target in range(count):
+                    # release in the middle of the target and near its edges, still inside its column
+                    for fx, fy in ((0.5, 0.5), (0.1, 0.1), (0.9, 0.9), (0.5, 1.15), (0.5, -0.15)):
+                        r = rects[target]
+                        px = r[0] + (r[2] - r[0]) * fx
+                        py = r[1] + (r[3] - r[1]) * fy
+                        assert drop_slot(rects, px, py) == target, (slots, source, target, fx, fy)
+                    dragged = list(order)
+                    moved = move_entry(dragged, source, drop_slot(rects, (rects[target][0] + rects[target][2]) / 2,
+                                                                  (rects[target][1] + rects[target][3]) / 2))
+                    assert moved == (source != target)
+                    if source != target:
+                        assert dragged[target] == order[source], 'the dragged entry takes the place it is dropped on'
+            # between two slots a drop belongs to one of the two neighbours; far away it belongs to none
+            for index in range(count - 1):
+                gap = (rects[index][2] + rects[index + 1][0]) / 2
+                assert drop_slot(rects, gap - 0.01, (rects[index][1] + rects[index][3]) / 2) == index
+                assert drop_slot(rects, gap + 0.01, (rects[index][1] + rects[index][3]) / 2) == index + 1
+            row_top = min(r[1] for r in rects)
+            row_bottom = max(r[3] for r in rects)
+            assert drop_slot(rects, rects[0][0] + 1, row_top - (row_bottom - row_top)) == -1
+            assert drop_slot(rects, rects[0][0] + 1, row_bottom + (row_bottom - row_top)) == -1
+            assert drop_slot(rects, rects[-1][2] + (rects[-1][2] - rects[-1][0]), (row_top + row_bottom) / 2) == -1
+        # drag_tablet end to end: Claim wall (VI) dragged onto I
+        tablet_rects = []
+        for index in range(6):
+            x, y, w, h = child_rect(child(window, 'Rank%d' % index), client, scale)
+            tablet_rects.append((x, y, x + w, y + h))
+        start = list(keeper_list)
+        assert move_entry(start, 5, drop_slot(tablet_rects, (tablet_rects[0][0] + tablet_rects[0][2]) / 2,
+                                              (tablet_rects[0][1] + tablet_rects[0][3]) / 2))
+        assert start == [CLAIM_WALL, DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND]
 
 # --- drag feedback (decision 631): the copy follows the pointer, the original place is the drop target, the entries
 # slide into their places, and the keeper hand grabs while dragging
-for ghost_name, slot_name in (('DragGhostTablet', 'Rank0'), ('DragGhostCarry', 'Carry0')):
-    ghost = child(window, ghost_name)
-    ghost_props = props(ghost)
-    slot_props = props(child(window, slot_name))
-    assert ghost_props['Visible'] == 'False', 'the copy is hidden until a drag starts'
-    assert ghost_props['MousePassThroughEnabled'] == 'True', 'the copy never takes the pointer from the pressed entry'
-    assert ghost_props['Area'] == slot_props['Area'], 'the copy has the size of the entry it copies'
-    assert float(ghost_props['Alpha']) < 1.0, 'the copy is drawn slightly transparent'
-    for part in ('Frame', 'Figure'):
-        assert part in {n.get('name') for n in ghost.findall('Window')}
-        assert all(offset == 0 for _s, offset in udims(props(child(ghost, part))['Area'])), 'no fixed pixels in the copy'
-    assert props(child(ghost, 'Frame'))['Area'] == props(child(child(window, slot_name), 'Frame'))['Area']
-assert props(child(child(window, 'DragGhostTablet'), 'Figure'))['Area'] == \
-    props(child(child(window, 'Rank0'), 'Figure'))['Area']
-assert props(child(child(window, 'DragGhostCarry'), 'Figure'))['Area'] == \
-    props(child(child(window, 'Carry0'), 'Picture'))['Area']
+if LAYOUT:
+    for ghost_name, slot_name in (('DragGhostTablet', 'Rank0'), ('DragGhostCarry', 'Carry0')):
+        ghost = child(window, ghost_name)
+        ghost_props = props(ghost)
+        slot_props = props(child(window, slot_name))
+        assert ghost_props['Visible'] == 'False', 'the copy is hidden until a drag starts'
+        assert ghost_props['MousePassThroughEnabled'] == 'True', 'the copy never takes the pointer from the pressed entry'
+        assert ghost_props['Area'] == slot_props['Area'], 'the copy has the size of the entry it copies'
+        assert float(ghost_props['Alpha']) < 1.0, 'the copy is drawn slightly transparent'
+        for part in ('Frame', 'Figure'):
+            assert part in {n.get('name') for n in ghost.findall('Window')}
+            assert all(offset == 0 for _s, offset in udims(props(child(ghost, part))['Area'])), 'no fixed pixels in the copy'
+        assert props(child(ghost, 'Frame'))['Area'] == props(child(child(window, slot_name), 'Frame'))['Area']
+    assert props(child(child(window, 'DragGhostTablet'), 'Figure'))['Area'] == \
+        props(child(child(window, 'Rank0'), 'Figure'))['Area']
+    assert props(child(child(window, 'DragGhostCarry'), 'Figure'))['Area'] == \
+        props(child(child(window, 'Carry0'), 'Picture'))['Area']
 header_h = read('source/render/WorkersWindow.h')
 assert 'bool isDragging() const { return mDragTablet >= 0 || mDragCarry >= 0; }' in header_h
 assert '#include <chrono>' in header_h and 'std::chrono::steady_clock' in code

@@ -2,8 +2,19 @@
 
 This check compiles C++; do not execute it during a compilation-free feature window.
 Quality expectations interpolate the approved level-one and level-thirty endpoints exactly.
+The catalogue (config/items.cfg, config/potions.cfg) and the atlas gui/Items.imageset live in content packages (found
+through scripts/content_packages.py); without the content the rules probe is named as not checked and only the entity
+lookup probe runs. The probe reads the atlas from the path the check resolves for it.
 """
-from item_probe_support import catalogue_fixture, creature_fixture, compile_and_run, function, source
+import sys
+
+from item_probe_support import ROOT, catalogue_fixture, creature_fixture, compile_and_run, function, source
+
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
+
+#: The game data files the rules probe reads
+CONTENT_FILES = ("config/items.cfg", "config/potions.cfg", "gui/Items.imageset")
 
 
 # Exercise all actual catalogue and creature rules with fixed seeds and an optimized probe.
@@ -78,6 +89,13 @@ int main() {
                     "\n//! \\brief Runs the production entity lookup without changing its dispatch.\n" + lookup + lookup_checks)
     garden = function(source("source/rooms/RoomHerbGarden.cpp"), "bool RoomHerbGarden::hasOpenCreatureSpot(")
     lab = function(source("source/rooms/RoomAlchemyLab.cpp"), "bool RoomAlchemyLab::hasOpenCreatureSpot(")
+    missing = [name for name in CONTENT_FILES if content_packages.data_file(ROOT, name) is None]
+    if missing and not content_packages.has_content(ROOT):
+        content_packages.unchecked("check_item_rules", ["item-rules probe (" + ", ".join(missing) + ")"])
+        return
+    atlas_path = content_packages.resolve(ROOT, "gui/Items.imageset").as_posix()
+    atlas_constant = ("//! \\brief The item atlas of the public tree or of its content package.\n"
+                      "static const std::string ITEMS_ATLAS=\"" + atlas_path + "\";\n")
     affinity_rooms = r'''
 //! \brief Keeps bed availability independent of the actual production affinity gate.
 struct RoomHerbGarden:Room {
@@ -158,7 +176,7 @@ int main(int argc,char** argv) { try {
         const Weapon* equipment=ConfigManager::getSingleton().getWeapon(poor->mDefinitionId);
         check(imageLine!=nullptr&&imageLine->getWeaponClass()==equipment->getWeaponType()&&
             imageLine->getQuality(Quality::common).mAvailable,"Poor icon uses a path line of the spawn WeaponClass");
-        const std::string atlas=cleanFile(std::string(argv[1])+"/gui/Items.imageset");
+        const std::string atlas=cleanFile(ITEMS_ATLAS);
         check(atlas.find("name=\""+image+"\"")!=std::string::npos,"Poor icon exists in the actual atlas");
     }
     victim.mWeaponR=&sword; victim.mWeaponL=&shield;
@@ -205,7 +223,8 @@ int main(int argc,char** argv) { try {
 } catch(const std::exception& error) { std::cerr<<"FAIL: "<<error.what()<<"\n";return 1; }
 }
 '''
-    compile_and_run("item-rules", catalogue_fixture() + creature_fixture() + affinity_rooms + garden + lab + checks, optimize=True)
+    compile_and_run("item-rules", catalogue_fixture() + creature_fixture() + atlas_constant + affinity_rooms + garden + lab +
+                    checks, optimize=True)
 
 
 if __name__ == "__main__":

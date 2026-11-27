@@ -2,20 +2,15 @@
 
 <GUILayout version="4" >
     <Window type="DefaultWindow" name="Root" >
-            <Property name="Font" value="MedievalSharp-10" />
-        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+<!--#@own 1-->
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Window type="OD/StaticImage" name="HorizontalPipe" >
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,0},{0,0},{1,0},{0,48}}" />
-            <Property name="Image" value="OpenDungeonsSkin/ForgedBar" />
+<!--#@own 2-->
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="HorzFormatting" value="Tiled" />
-            <Window type="OD/ResourceDisplay" name="GoldDisplay" >
-                <Property name="TextColours" value="FFF0E2C0" />
-                <Property name="Area" value="{{0,204},{0,2},{0,400},{0,44}}" />
+<!--#@own 3-->
                 <Property name="Text" value="0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="TooltipText" value="Your Gold" />
@@ -23,20 +18,17 @@
                 <Property name="ClippedByParent" value="False" />
                 <Property name="VerticalAlignment" value="Centre" />
                 <Window type="OD/StaticImage" name="Icon" >
-                    <Property name="Area" value="{{0,-4},{0,-2},{0,60},{0,62}}" />
-                    <Property name="Image" value="OpenDungeonsIcons/GoldBadge" />
+<!--#@own 4-->
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
                     <Property name="TooltipText" value="Your Gold" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
-                    <Property name="VerticalAlignment" value="Top" />
+<!--#@own 5-->
                 </Window>
             </Window>
-            <Window type="OD/ResourceDisplay" name="ManaDisplay" >
-                <Property name="TextColours" value="FFF0E2C0" />
-                <Property name="Area" value="{{0,4},{0,2},{0,200},{0,44}}" />
+<!--#@own 6-->
                 <Property name="Text" value="0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="TooltipText" value="Your Mana" />
@@ -44,105 +36,56 @@
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="ClippedByParent" value="False" />
                 <Property name="VerticalAlignment" value="Centre" />
-                <Window type="OD/StaticText" name="Change">
-                    <Property name="Font" value="MedievalSharp-8" />
-                    <Property name="Area" value="{{0,64},{0,22},{1,-4},{0,42}}" />
-                    <Property name="Text" value="+0" />
-                    <Property name="TextColours" value="FFF0E2C0" />
-                    <Property name="HorzFormatting" value="LeftAligned" />
-                    <Property name="VertFormatting" value="CentreAligned" />
+<!--#@own 7-->
                     <Property name="FrameEnabled" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
-                    <Property name="MousePassThroughEnabled" value="True" />
+<!--#@own 8-->
                 </Window>
                 <Window type="OD/StaticImage" name="Icon" >
-                    <Property name="Area" value="{{0,-4},{0,-2},{0,60},{0,62}}" />
-                    <Property name="Image" value="OpenDungeonsIcons/ManaBadge" />
+<!--#@own 9-->
                     <Property name="MaxSize" value="{{1,0},{1,0}}" />
                     <Property name="AlwaysOnTop" value="True" />
-                    <Property name="TooltipText" value="Dungeon heart health bar" />
+<!--#@own 10-->
                     <Property name="FrameEnabled" value="False" />
                     <Property name="ClippedByParent" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
-                    <Property name="VerticalAlignment" value="Top" />
+<!--#@own 11-->
                 </Window>
             </Window>
-            <Window type="OD/StaticText" name="SandboxScoreDisplay" >
-                <Property name="Visible" value="False" />
-                <Property name="Area" value="{{1,-300},{0,6},{1,-190},{0,42}}" />
-                <Property name="Text" value="" />
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="TextColours" value="FFF6CB62" />
-                <Property name="TooltipText" value="Your score and the score of the realm" />
-                <Property name="HorzFormatting" value="CentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+<!--#@own 12-->
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            </Window>
-            <Window type="OD/StaticText" name="SandboxRoomDisplay" >
-                <Property name="Visible" value="False" />
-                <Property name="Area" value="{{1,-186},{0,6},{1,-6},{0,42}}" />
-                <Property name="Text" value="" />
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="TextColours" value="FFF6CB62" />
-                <Property name="TooltipText" value="The next room becomes available after this time" />
-                <Property name="HorzFormatting" value="CentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+<!--#@own 13-->
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            </Window>
-            <Window type="OD/StaticText" name="WaveCountdownDisplay" >
-                <Property name="Visible" value="False" />
-                <Property name="Area" value="{{0.5,-320},{0,6},{0.5,-110},{0,42}}" />
-                <Property name="Text" value="" />
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="TextColours" value="FFF6CB62" />
-                <Property name="TooltipText" value="Time left until the next hero wave" />
-                <Property name="HorzFormatting" value="CentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+<!--#@own 14-->
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            </Window>
-            <Window type="OD/StaticText" name="TimeLimitDisplay" >
-                <Property name="Visible" value="False" />
-                <Property name="Area" value="{{0.5,-100},{0,6},{0.5,100},{0,42}}" />
-                <Property name="Text" value="" />
-                <Property name="Font" value="MedievalSharp-20" />
-                <Property name="TextColours" value="FFF6CB62" />
-                <Property name="TooltipText" value="Time left until the level is lost" />
-                <Property name="HorzFormatting" value="CentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+<!--#@own 15-->
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            </Window>
-
-
-        </Window>
+<!--#@own 16-->
 
 
 
 
 
         <Window type="OD/StaticImage" name="MiniMap" >
-            <UserString name="AllowEdgeScrolling" value="true" />
+<!--#@own 17-->
             <Property name="RiseOnClickEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="FrameEnabled" value="False" />
-            <Property name="Area" value="{{0,8},{1,-184},{0,184},{1,-8}}" />
+<!--#@own 18-->
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="AlwaysOnTop" value="True" />
-        <UserString name="Circular" value="true" />
+<!--#@own 19-->
         </Window>
         <Window type="OD/TabControl" name="MainTabControl" >
-            <UserString name="NavigationFrame" value="true" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="TabTextPadding" value="{0,6}" />
-            <Property name="Area" value="{{0,188},{1,-184},{1,0},{1,0}}" />
-            <Property name="TabHeight" value="{0,52}" />
+<!--#@own 20-->
             <Property name="RiseOnClickEnabled" value="False" />
             <LayoutImport type="DefaultWindow" filename="WindowTabCreatures.layout" name="CreaturesImport" />
             <LayoutImport type="DefaultWindow" filename="WindowTabRooms.layout" name="RoomsImport" />
@@ -151,319 +94,86 @@
         </Window>
         <LayoutImport type="DefaultWindow" filename="WindowQuit.layout" name="QuitMenuImport" />
         <LayoutImport type="DefaultWindow" filename="WindowObjectives.layout" name="ObjectivesWindowImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowWorkers.layout" name="WorkersWindowImport" />
+<!--#@own 21-->
         <LayoutImport type="DefaultWindow" filename="WindowSkillTree.layout" name="SkillTreeWindowImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowRoomManager.layout" name="RoomManagerWindowImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowSocial.layout" name="SocialWindowImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowSandbox.layout" name="SandboxWindowImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowSandboxRealm.layout" name="SandboxRealmWindowImport" />
+<!--#@own 22-->
         <LayoutImport type="DefaultWindow" filename="WindowGameOptions.layout" name="GameOptionsMenuImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowSettingsNavigation.layout" name="SettingsNavigationImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowGameEvent.layout" name="EventWindowImport" />
+<!--#@own 23-->
         <LayoutImport type="DefaultWindow" filename="WindowChat.layout" name="ChatWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowHelp.layout" name="HelpWindowImport" />
 
 
-        <Window type="DefaultWindow" name="SpecialsPanel" >
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,8},{0,52},{0,536},{0,96}}" />
+<!--#@own 24-->
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
+<!--#@own 25-->
             <Property name="Visible" value="True" />
-            <Window type="OD/GameTabButton" name="Special1" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,0},{0,0},{0,40},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/ManaIcon" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special2" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,44},{0,0},{0,84},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/GoldCoin" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special3" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,88},{0,0},{0,128},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/SpellEyeEvilButton" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special4" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,132},{0,0},{0,172},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/CreaturesIcon" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special5" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,176},{0,0},{0,216},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/CreatureHealButton" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special6" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,220},{0,0},{0,260},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/IronboundDoorTrapButton" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special7" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,264},{0,0},{0,304},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/TremorButton" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special8" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,308},{0,0},{0,348},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/CreatureSlowButton" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special9" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,352},{0,0},{0,392},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/SummonWorkerButton" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special10" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,396},{0,0},{0,436},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special11" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,440},{0,0},{0,480},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-            <Window type="OD/GameTabButton" name="Special12" >
-                <UserString name="AllowEdgeScrolling" value="true" />
-                <Property name="Area" value="{{0,484},{0,0},{0,524},{0,40}}" />
-                <Property name="NormalImage" value="OpenDungeonsIcons/LightningButton" />
-                <Property name="InheritsAlpha" value="False" />
-                <Property name="Visible" value="False" />
-            </Window>
-        </Window>
-        <Window type="OD/StaticText" name="ContextInfo" >
-            <Property name="FrameEnabled" value="True" />
-            <Property name="BackgroundEnabled" value="True" />
-            <Property name="Area" value="{{0,404},{0,2},{1,-4},{0,44}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="TextParsingEnabled" value="False" />
-            <Property name="HorzFormatting" value="LeftAligned" />
-            <Window type="OD/StaticImage" name="ContextImage" >
-                <Property name="Area" value="{{0,0},{0,0},{0,64},{0,64}}" />
-                <Property name="Visible" value="False" />
+<!--#@own 26-->
                 <Property name="ClippedByParent" value="False" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
-                <Property name="MousePassThroughEnabled" value="True" />
-                <Window type="OD/StaticImage" name="QualityFrame" >
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+<!--#@own 27-->
                     <Property name="FrameEnabled" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
-                    <Property name="MousePassThroughEnabled" value="True" />
-                </Window>
-            </Window>
+<!--#@own 28-->
         </Window>
-<Window type="OD/MiniMapCornerButton" name="OptionsButton" >
-            <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner2" />
-            <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner2Hover" />
-            <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner2Pressed" />
-            <Property name="CornerIconArea" value="{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,0},{0,0},{0.25,0},{0.25,0}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/NavOptions" />
+<!--#@own 29-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Options" />
-            <UserString name="ContextHelp" value="Options (F10)" />
+<!--#@own 30-->
             <Property name="ClippedByParent" value="False" />
             <Property name="Visible" value="True" />
-            <UserString name="MiniMapArea" value="{{0.053385417,0},{0.696614583,0},{0.303385417,0},{0.946614583,0}}" />
+<!--#@own 31-->
         </Window>
-        <Window type="OD/MiniMapCornerButton" name="SellButton" >
-            <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner1" />
-            <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner1Hover" />
-            <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner1Pressed" />
-            <Property name="CornerIconArea" value="{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}" />
-            <Property name="NavigationFrame" value="True" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,0},{0,0},{0.25,0},{0.25,0}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/NavSell" />
+<!--#@own 32-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Sell" />
-            <UserString name="ContextHelp" value="Sell: select, then click a room tile, trap or door" />
-            <UserString name="MiniMapArea" value="{{0.696614583,0},{0.053385417,0},{0.946614583,0},{0.303385417,0}}" />
-        </Window>
-        <Window type="OD/GameTabButton" name="GoalsButton">
-            <Property name="Area" value="{{0,4},{1,-224},{0,44},{1,-184}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/ObjectivesIcon" />
-            <Property name="NavigationFrame" value="True" />
+<!--#@own 33-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Goals" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <UserString name="ContextHelp" value="Goals: show or hide the level objectives" />
-        </Window>
-        <Window type="OD/GameTabButton" name="RoomManagerButton">
-            <Property name="Area" value="{{0,100},{1,-224},{0,140},{1,-184}}" />
-            <Property name="NormalImage" value="NavigationRoomManager/Icon" />
-            <Property name="NavigationFrame" value="True" />
+<!--#@own 34-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Room Manager" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <UserString name="ContextHelp" value="Room Manager: rooms, settings and status" />
-            <Property name="Visible" value="False" />
-            <Window type="OD/StaticText" name="Dot">
-                <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
-                <Property name="Text" value="•" />
-                <Property name="Font" value="MedievalSharp-10" />
+<!--#@own 35-->
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
-                <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
-        </Window>
-        <Window type="OD/GameTabButton" name="SocialButton">
-            <Property name="Area" value="{{0,148},{1,-224},{0,188},{1,-184}}" />
-            <Property name="NormalImage" value="NavigationDungeonbook/Icon" />
-            <Property name="NavigationFrame" value="True" />
+<!--#@own 36-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Dungeonbook" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <UserString name="ContextHelp" value="Dungeonbook: creature profiles and what your minions are posting (B)" />
-        </Window>
-        <Window type="OD/GameTabButton" name="WorkersButton">
-            <Property name="Area" value="{{0,196},{1,-224},{0,236},{1,-184}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/WorkersButton" />
-            <Property name="NavigationFrame" value="True" />
+<!--#@own 37-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Zivs (J)" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <UserString name="ContextHelp" value="Zivs: fixed Zivs per job, free Zivs, priority and carry order (J)" />
-        </Window>
-        <Window type="OD/GameTabButton" name="SandboxButton">
-            <Property name="Area" value="{{0,244},{1,-224},{0,284},{1,-184}}" />
+<!--#@own 38-->
             <Property name="NormalImage" value="OpenDungeonsIcons/WavePortalButton" />
-            <Property name="NavigationFrame" value="True" />
+<!--#@own 39-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Sandbox" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <UserString name="ContextHelp" value="Sandbox: hero toolbox and hero invasions" />
-            <Property name="Visible" value="False" />
-        </Window>
-        <Window type="OD/GameTabButton" name="ResearchButton">
-            <Property name="Area" value="{{0,52},{1,-224},{0,92},{1,-184}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/SkillIcon" />
-            <Property name="NavigationFrame" value="True" />
+<!--#@own 40-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Skill" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <UserString name="ContextHelp" value="Skill: open the research tree and choose the next research" />
-        </Window>
-    <Window type="OD/GameTabButton" name="PanelToggleButton" >
-            <Property name="NavigationFrame" value="True" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,400},{1,-184},{0,432},{1,-132}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/NavigationPanel" />
-            <Property name="TooltipText" value="Control panel" />
-            <UserString name="ContextHelp" value="Hide / show control panel (G)" />
-        </Window>
-    <Window type="DefaultWindow" name="MessageQueue" >
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,436},{1,-184},{1,0},{1,-132}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
+<!--#@own 41-->
             <Property name="RiseOnClickEnabled" value="False" />
-            <Window type="OD/StaticImage" name="Rail">
-                <Property name="Area" value="{{0,0},{0.12,0},{1,0},{0.88,0}}" />
-                <Property name="Image" value="OpenDungeonsSkin/ForgedBar" />
+<!--#@own 42-->
                 <Property name="HorzFormatting" value="Tiled" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
-                <Property name="MousePassThroughEnabled" value="True" />
+<!--#@own 43-->
             </Window>
-            <Window type="OD/ResourceDisplay" name="Receiver">
-                <Property name="Area" value="{{1,-192},{0.12,0},{1,0},{0.88,0}}" />
+<!--#@own 44-->
                 <Property name="AlwaysOnTop" value="True" />
-                <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
+<!--#@own 45-->
         </Window>
-        <Window type="OD/StaticImage" name="HandActionIcon" >
-            <Property name="Area" value="{{0,0},{0,0},{0,50},{0,50}}" />
-            <Property name="Visible" value="False" />
+<!--#@own 46-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="MousePassThroughEnabled" value="True" />
+<!--#@own 47-->
             <Property name="ClippedByParent" value="False" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-        </Window>
-        <Window type="OD/MiniMapCornerButton" name="QueryButton" >
-            <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner0" />
-            <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner0Hover" />
-            <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner0Pressed" />
-            <Property name="CornerIconArea" value="{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}" />
-            <Property name="NavigationFrame" value="True" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,0},{0,0},{0.25,0},{0.25,0}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/NavHelp" />
+<!--#@own 48-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Query" />
-            <UserString name="ContextHelp" value="Query: select, then click a creature to view its information" />
-            <UserString name="MiniMapArea" value="{{0.053385417,0},{0.053385417,0},{0.303385417,0},{0.303385417,0}}" />
-        </Window>
-        <Window type="OD/MiniMapCornerButton" name="MiniMapZoomButton">
-            <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner3" />
-            <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner3Hover" />
-            <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner3Pressed" />
-            <Property name="CornerIconArea" value="{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}" />
-            <Property name="NavigationFrame" value="True" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,0},{0,0},{0.25,0},{0.25,0}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/MapZoom" />
+<!--#@own 49-->
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Minimap" />
-            <UserString name="ContextHelp" value="Minimap: left-click to zoom in, right-click to zoom out; M opens the map" />
-            <UserString name="MiniMapArea" value="{{0.696614583,0},{0.696614583,0},{0.946614583,0},{0.946614583,0}}" />
-        </Window>
-        <!-- The countdown of the raid and the button that opens the Moreya gate early (shown only in a level with a raid) -->
-        <Window type="DefaultWindow" name="RaidPanel" >
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{1,-308},{0,52},{1,-8},{0,96}}" />
+<!--#@own 50-->
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
-            <Property name="Visible" value="False" />
-            <Window type="OD/MenuPlate" name="Countdown" >
-                <Property name="Area" value="{{0,0},{0,0},{1,-56},{1,0}}" />
-                <Property name="Text" value="" />
-                <Property name="Font" value="MedievalSharp-13" />
-                <Property name="TooltipText" value="Time left until the raid comes through the Moreya gate" />
+<!--#@own 51-->
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            </Window>
-            <Window type="OD/StaticImage" name="RaidIcon" >
-                <Property name="Area" value="{{0,18},{0,5},{0,52},{1,-5}}" />
-                <Property name="Image" value="RaidHud/RaidBanner" />
-                <Property name="TooltipText" value="Time left until the raid comes through the Moreya gate" />
+<!--#@own 52-->
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            </Window>
-            <Window type="OD/MenuIconButton" name="OpenGateButton" >
-                <Property name="Area" value="{{1,-52},{0,4},{1,0},{1,-4}}" />
-                <Property name="ButtonImage" value="RaidHud/GateOpen" />
-                <Property name="TooltipText" value="Open the Moreya gate now: the raid comes at once" />
+<!--#@own 53-->
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
-            </Window>
-        </Window>
-        <LayoutImport type="DefaultWindow" filename="WindowMap.layout" name="MapImport" />
-        <LayoutImport type="DefaultWindow" filename="WindowUserCameras.layout" name="UserCamerasImport" />
+<!--#@own 54-->
     </Window>
 </GUILayout>

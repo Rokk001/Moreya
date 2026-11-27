@@ -1,7 +1,7 @@
 """Decision 853: clips play their plan length in game seconds, not in game turns (a turn is 1/1.4 s).
 
 Pure text check, compiles nothing: the ClipSeconds keys with a doc line each, the clip update of MovableGameEntity, the
-6 s get-up of decision 857 (arena KO, tavern, render) after the 30 s lying time, the innkeeper Pour over DrinkTurns, the
+6 s get-up of decision 857 (arena KO, tavern, render) after the 30 s lying time, the innkeeper Pour over PourSeconds, the
 shaman and pool attendant overrides, and the slap clips of the slap duel stretched to the slap length the tavern draws
 (decision 856, setTimedAnimationState with the playing time sent to the clients)."""
 import math
@@ -10,14 +10,19 @@ import re
 import sys
 
 root = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(name):
     return (root / name).read_text(encoding='utf-8')
 
 
-rooms_cfg = read('config/rooms.cfg')
-global_cfg = read('config/global.cfg')
+# rooms.cfg and global.cfg as the game reads them: the clip values are own rows of the content package core-config;
+# without the content they are named as not checked and the code is checked alone
+rooms_cfg = content_packages.read_text(root, 'config/rooms.cfg')
+global_cfg = content_packages.read_text(root, 'config/global.cfg')
+has_values = content_packages.has_content(root)
 movable = read('source/entities/MovableGameEntity.cpp')
 movable_h = read('source/entities/MovableGameEntity.h')
 creature = read('source/entities/Creature.cpp')
@@ -27,38 +32,43 @@ innkeeper = read('source/entities/InnkeeperEntity.cpp')
 shaman = read('source/entities/InfirmaryShamanEntity.cpp')
 pool = read('source/entities/PoolAttendantEntity.cpp')
 
-block = re.search(r'^\[Rooms\]\s*$(.*?)^\[/Rooms\]', rooms_cfg, re.M | re.S).group(1)
-values = {}
-for line in block.splitlines():
-    words = line.split()
-    if len(words) >= 2 and not words[0].startswith('#'):
-        try:
-            values[words[0]] = float(words[1])
-        except ValueError:
-            pass
+if has_values:
+    block = re.search(r'^\[Rooms\]\s*$(.*?)^\[/Rooms\]', rooms_cfg, re.M | re.S).group(1)
+    values = {}
+    for line in block.splitlines():
+        words = line.split()
+        if len(words) >= 2 and not words[0].startswith('#'):
+            try:
+                values[words[0]] = float(words[1])
+            except ValueError:
+                pass
 
-# The plan lengths in seconds. Decision 901: one calm sip of 5 s standing and seated (Drink and SitDrink), so a water of
-# 10 s is two sips and a beer of 30 s six (the independently authored clips each last 5 s)
-CLIPS = {'Scared': 1, 'Beam': 1, 'Throw': 1, 'Empty': 1, 'RubHands': 2, 'Drink': 5, 'SitDrink': 5, 'Dice': 2, 'ArmWrestle': 2,
-         'KnockedOut': 2, 'Vomit': 2, 'Hangover': 2}
-tavern_values = re.search(r'^\[Tavern\]\s*$(.*?)^\[/Tavern\]', global_cfg, re.M | re.S).group(1)
-for drink_key in ('WaterDrinkTurns', 'BeerDrinkTurns'):
-    drink_turns = float(re.search(r'^\s*' + drink_key + r'\s+(\S+)', tavern_values, re.M).group(1))
-    sips = drink_turns / 1.4 / CLIPS['Drink']
-    assert abs(sips - round(sips)) < 1e-9, drink_key + ' must be whole sips'
-for clip, seconds in CLIPS.items():
-    key = 'ClipSeconds' + clip
-    assert values.get(key) == seconds, key + ' must be ' + str(seconds)
-    assert key in rooms_cfg.split('[Rooms]')[0] or re.search(r'^#.*\b' + key + r'\b', rooms_cfg, re.M), key + ' needs a doc line'
-# No fixed key: the slap clips take the slap length drawn per slap; box arc, combat attacks and doors stay as they are
-for clip in ('Slap', 'SitSlap', 'SitSlapped', 'Attack1', 'Open', 'Close', 'Lid'):
-    assert 'ClipSeconds' + clip not in values, 'ClipSeconds' + clip + ' must not exist'
-assert values.get('PoolAttendantClipSeconds') == 2 and re.search(r'^#\s*PoolAttendantClipSeconds', rooms_cfg, re.M)
-# Decision 857: the get-up after a knock-out lasts 6 s (tavern and arena alike)
-assert values.get('CreatureGetUpSeconds') == 6 and re.search(r'^#\s*CreatureGetUpSeconds.*\b6\b', rooms_cfg, re.M)
-assert values.get('InfirmaryShamanAnimationSeconds') == 2
-# The 20 s transfer and CatchTime are untouched
-assert values.get('GhostTransferSeconds') == 20
+    # The plan lengths in seconds. Decision 901: one calm sip of 5 s standing and seated (Drink and SitDrink), so a water of
+    # 10 s is two sips and a beer of 30 s six (the independently authored clips each last 5 s)
+    CLIPS = {'Scared': 1, 'Beam': 1, 'Throw': 1, 'Empty': 1, 'RubHands': 2, 'Drink': 5, 'SitDrink': 5, 'Dice': 2, 'ArmWrestle': 2,
+             'KnockedOut': 2, 'Vomit': 2, 'Hangover': 2}
+    tavern_values = re.search(r'^\[Tavern\]\s*$(.*?)^\[/Tavern\]', global_cfg, re.M | re.S).group(1)
+    for drink_key in ('WaterDrinkTurns', 'BeerDrinkTurns'):
+        drink_turns = float(re.search(r'^\s*' + drink_key + r'\s+(\S+)', tavern_values, re.M).group(1))
+        sips = drink_turns / 1.4 / CLIPS['Drink']
+        assert abs(sips - round(sips)) < 1e-9, drink_key + ' must be whole sips'
+    for clip, seconds in CLIPS.items():
+        key = 'ClipSeconds' + clip
+        assert values.get(key) == seconds, key + ' must be ' + str(seconds)
+        assert key in rooms_cfg.split('[Rooms]')[0] or re.search(r'^#.*\b' + key + r'\b', rooms_cfg, re.M), key + ' needs a doc line'
+    # No fixed key: the slap clips take the slap length drawn per slap; box arc, combat attacks and doors stay as they are
+    for clip in ('Slap', 'SitSlap', 'SitSlapped', 'Attack1', 'Open', 'Close', 'Lid'):
+        assert 'ClipSeconds' + clip not in values, 'ClipSeconds' + clip + ' must not exist'
+    assert values.get('PoolAttendantClipSeconds') == 2 and re.search(r'^#\s*PoolAttendantClipSeconds', rooms_cfg, re.M)
+    # Decision 857: the get-up after a knock-out lasts 6 s (tavern and arena alike)
+    assert values.get('CreatureGetUpSeconds') == 6 and re.search(r'^#\s*CreatureGetUpSeconds.*\b6\b', rooms_cfg, re.M)
+    # Mario 2026-11-27: 4.5 s (was 2) so Chant 4 s, PotionTaste and TripOverBucket 4.4 s play at their own speed
+    assert values.get('InfirmaryShamanAnimationSeconds') == 4.5
+    # The 20 s transfer and CatchTime are untouched
+    assert values.get('GhostTransferSeconds') == 20
+else:
+    content_packages.unchecked('check_clip_durations', ['config/rooms.cfg [Rooms] clip values',
+                                                        'config/global.cfg [Tavern] drink turns'])
 
 # The clip update: the clip time runs in game seconds for a clip with ClipSeconds
 assert 'virtual double getClipSeconds(' in movable_h and '"ClipSeconds" + clip' in movable
@@ -99,14 +109,19 @@ assert re.search(r'mKoTurnCounter = ConfigManager::getSingleton\(\)\.getRoomConf
                  r'\+\s*std::ceil\(ConfigManager::getSingleton\(\)\.getRoomConfigDouble\("CreatureGetUpSeconds"\)\s*\*\s*ODApplication::turnsPerSecond\);', arena), \
     'the arena loser lies ArenaKnockOutSeconds and then gets up'
 turns_per_second = float(re.search(r'double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp')).group(1))
-get_up_turns = math.ceil(values['CreatureGetUpSeconds'] * turns_per_second)
-assert get_up_turns == 9 and 6.0 <= get_up_turns / turns_per_second < 6.0 + 1.0 / turns_per_second, 'the get-up lasts 6 s rounded up to whole turns'
-arena_counter = values['ArenaKnockOutSeconds'] * turns_per_second + get_up_turns
-# The arena loser lies until the counter reaches the get-up turns: 30 s, then 6 s getting up
-assert abs((arena_counter - get_up_turns) / turns_per_second - 30.0) < 1e-9 and values['ArenaKnockOutSeconds'] == 30
+if has_values:
+    get_up_turns = math.ceil(values['CreatureGetUpSeconds'] * turns_per_second)
+    assert get_up_turns == 9 and 6.0 <= get_up_turns / turns_per_second < 6.0 + 1.0 / turns_per_second, 'the get-up lasts 6 s rounded up to whole turns'
+    arena_counter = values['ArenaKnockOutSeconds'] * turns_per_second + get_up_turns
+    # The arena loser lies until the counter reaches the get-up turns: 30 s, then 6 s getting up
+    assert abs((arena_counter - get_up_turns) / turns_per_second - 30.0) < 1e-9 and values['ArenaKnockOutSeconds'] == 30
 
-# Innkeeper Pour lasts the whole serving time, the shaman and the attendant clips their configured time
-assert re.search(r'clip == InnkeeperPose::pour\)\s*return [^;]*DRINK_TURNS_KEY[^;]*/ ODApplication::turnsPerSecond', innkeeper)
+# Innkeeper Pour lasts PourSeconds (5 s, its own value), the shaman and the attendant clips their configured time
+assert re.search(r'clip == InnkeeperPose::pour\)\s*return [^;]*getTavernConfigDouble\(POUR_SECONDS_KEY\);', innkeeper)
+assert 'static const std::string POUR_SECONDS_KEY = "PourSeconds";' in innkeeper
+assert re.search(r'mPourTurns = [^;]*POUR_SECONDS_KEY\)\s*\*\s*ODApplication::turnsPerSecond \+ 0\.5\)\);', innkeeper), 'the pour ends after PourSeconds'
+if has_values:
+    assert re.search(r'^\s*PourSeconds\s+5\.0\s*$', global_cfg, re.M), 'the innkeeper pours 5 s'
 assert 'InfirmaryShamanAnimationSeconds' in shaman.split('InfirmaryShamanEntity::getClipSeconds')[1][:500]
 assert 'PoolAttendantClipSeconds' in pool and 'CHAIR_SEAT_HEIGHT = 1.13;' in pool  # chair seat plate height of the integrated pool attendant rework (decision 837)
 print('clip duration checks passed')

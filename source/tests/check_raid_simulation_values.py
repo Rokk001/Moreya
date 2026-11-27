@@ -25,6 +25,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 START = time.perf_counter()
 FAILURES = []
 
@@ -96,9 +97,9 @@ def check(condition, message):
 
 
 def read(relative):
-    """Returns the text of a file of the repository with Unix line ends."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
-        return handle.read().replace("\r\n", "\n")
+    """Returns the text of a file of the repository with Unix line ends; a mixed table comes with its own rows of the
+    content (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, relative).replace("\r\n", "\n")
 
 
 def block(text, name):
@@ -117,14 +118,19 @@ def block(text, name):
 
 def main():
     """Runs every item of the check and prints the result."""
-    cfg = read("config/global.cfg")
-    for name, expected in sorted(CONFIG.items()):
-        documentation, values = block(cfg, name)
-        marked = re.findall(r"(?m)^#\s+(\w+)\s.*PLACEHOLDER:", documentation)
-        check(not marked, "V1: [%s] keys still marked PLACEHOLDER: %s" % (name, marked))
-        check("PLACEHOLDER" not in documentation, "V1: the documentation of [%s] still names a placeholder" % name)
-        for key, value in sorted(expected.items()):
-            check(values.get(key) == value, "SIM1: [%s] %s must be %s, is %s" % (name, key, value, values.get(key)))
+    # The [GroupCombat], [Raid] and [HandLimit] blocks are own rows of config/global.cfg (content package core-config)
+    if content_packages.has_content(ROOT):
+        cfg = read("config/global.cfg")
+        for name, expected in sorted(CONFIG.items()):
+            documentation, values = block(cfg, name)
+            marked = re.findall(r"(?m)^#\s+(\w+)\s.*PLACEHOLDER:", documentation)
+            check(not marked, "V1: [%s] keys still marked PLACEHOLDER: %s" % (name, marked))
+            check("PLACEHOLDER" not in documentation, "V1: the documentation of [%s] still names a placeholder" % name)
+            for key, value in sorted(expected.items()):
+                check(values.get(key) == value, "SIM1: [%s] %s must be %s, is %s" % (name, key, value, values.get(key)))
+    else:
+        content_packages.unchecked("check_raid_simulation_values",
+                                   ["V1/SIM1 keys of [GroupCombat], [Raid] and [HandLimit] (own rows of config/global.cfg)"])
     # The levels of the wing packages present: all 18 story levels with the content repository, else wing 1
     for name in campaign_packages.checked_names(ROOT, sorted(LEVELS)):
         countdown, interval, escape, levels, healers = LEVELS[name]

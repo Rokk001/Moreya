@@ -4,6 +4,7 @@ import argparse
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -14,14 +15,23 @@ args = parser.parse_args()
 assert args.frames > 0
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
-models = set(re.findall(r'^\s*MeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M))
+# creatures.cfg as the game reads it: most creature rows are own rows of the content package core-config; without the
+# content the model catalog cannot be compared and the probe is not run
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_creature_walking_bounds', ['config/creatures.cfg MeshName/BedMeshName rows',
+                                                                 'walking bounds probe'])
+    sys.exit(0)
+creatures_cfg = content_packages.read_text(repo, 'config/creatures.cfg')
+models = set(re.findall(r'^\s*MeshName\s+(\S+)', creatures_cfg, re.M))
 catalog = set(re.findall(r'\{"([^"\n]+\.mesh)"', (repo / 'source/gamemap/RoomObjectBounds.h').read_text()))
 assert models == catalog, f'Walking bounds catalog mismatch: {models ^ catalog}'
 assert args.bone_profile is None or args.bone_profile in catalog
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 bed_support = renderer.split('Ogre::Vector3 getBedSupportPoint(', 1)[1].split('\nbool needsCreatureDropFallback(', 1)[0]
-bed_names = sorted(set(re.findall(r'^\s*BedMeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M)))
+bed_names = sorted(set(re.findall(r'^\s*BedMeshName\s+(\S+)', creatures_cfg, re.M)))
 bed_names = sorted(set(bed_names) | {name for name in re.findall(r'\{"([^"\n]+)"',
     (repo / 'source/gamemap/RoomObjectBounds.h').read_text()) if name.endswith(('Bed', 'Coffin'))})
 leg_names = {}
@@ -32,6 +42,7 @@ probe = r'''
 #include <Ogre.h>
 #include "gamemap/RoomObjectBounds.h"
 #include <iostream>
+#include <sstream>
 Ogre::Vector3 getBedSupportPoint(BED_SUPPORT
 Ogre::Bone* findBone(Ogre::Skeleton* skeleton,std::initializer_list<const char*> names){
  for(const auto* name:names)if(skeleton->hasBone(name))return skeleton->getBone(name);
@@ -45,11 +56,20 @@ std::vector<Ogre::AxisAlignedBox> heightBounds;
 bool profile=false;
 const std::string boneProfile="BONE_PROFILE";
 std::map<unsigned short,Ogre::AxisAlignedBox> boneBounds,lowBoneBounds;
+// The carried weapon part that the walking row leaves out (decision of the plan: the Defender keeps its walking radius
+// of 0.37 with the glaive, as the worker kept its rows): the mesh and the index of its first weapon submesh (the weapon
+// parts are appended after the body, the probe loads no material scripts, so the part is found by its index)
+const std::string WALKING_RADIUS_CARRIED_MESH="Defender.mesh";
+const unsigned WALKING_RADIUS_CARRIED_FIRST_SUB=1;
+// Largest XY distance of the skinned vertices of the current pose (body only); also fills the pose bounds and, over
+// every part, the height bands
 float radius(Ogre::Entity* entity){
  entity->addSoftwareAnimationRequest(false);entity->_updateAnimation();entity->removeSoftwareAnimationRequest(false);
  float result=0;poseBounds.setNull();
  for(unsigned sub=0;sub<entity->getNumSubEntities();++sub){
   auto* part=entity->getSubEntity(sub);
+  // A carried weapon part (the Defender's glaive) is not body: it stays out of the walking row, the body bands see it
+  const bool carried=entity->getMesh()->getName()==WALKING_RADIUS_CARRIED_MESH&&sub>=WALKING_RADIUS_CARRIED_FIRST_SUB;
   auto* data=part->getSubMesh()->useSharedVertices?entity->_getSkelAnimVertexData():part->_getSkelAnimVertexData();
   auto* position=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
   auto buffer=data->vertexBufferBinding->getBuffer(position->getSource());
@@ -57,7 +77,7 @@ float radius(Ogre::Entity* entity){
   auto* bytes=static_cast<unsigned char*>(lock.pData);
   for(size_t i=0;i<data->vertexCount;++i){
    float* vertex;position->baseVertexPointerToElement(bytes+(data->vertexStart+i)*buffer->getVertexSize(),&vertex);
-   result=std::max(result,std::hypot(vertex[0],vertex[1]));poseBounds.merge(Ogre::Vector3(vertex));
+   if(!carried){result=std::max(result,std::hypot(vertex[0],vertex[1]));poseBounds.merge(Ogre::Vector3(vertex));}
    if(entity->getMesh()->getName()==boneProfile){
     const auto& assignments=part->getSubMesh()->useSharedVertices?entity->getMesh()->getBoneAssignments():part->getSubMesh()->getBoneAssignments();
     const auto range=assignments.equal_range(i);auto strongest=range.second;
@@ -98,14 +118,17 @@ int main(int argc,char** argv){try{
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
  Ogre::NameValuePairList opts;opts["hidden"]="true";root.createRenderWindow("Walking bounds",64,64,false,&opts);
  auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
- groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);groups.initialiseAllResourceGroups();
+ groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);
+ // The models folders of the content packages that are present (creatures, beds and furniture moved there)
+ {std::istringstream folders(argv[3]);std::string folder;while(std::getline(folders,folder,';'))if(!folder.empty())groups.addResourceLocation(folder,"FileSystem","Graphics",false);}
+ groups.initialiseAllResourceGroups();
  auto* scene=root.createSceneManager();int checks=0,failures=0;
  for(const auto& row:RoomObjectPath::meshBounds)if(std::isfinite(row.maxZ))furnitureTops.push_back(row.maxZ);
  std::sort(furnitureTops.begin(),furnitureTops.end());
  furnitureTops.erase(std::unique(furnitureTops.begin(),furnitureTops.end()),furnitureTops.end());
  for(float top:furnitureTops)heights.push_back(top);
  heightBounds.resize(heights.size());
- profile=argc>3;
+ profile=argc>4;
  const int frames=std::stoi(argv[2]);
  if(profile)for(const std::string name:{BED_NAMES}){
   const auto mesh=Ogre::MeshManager::getSingleton().load(name+".mesh","Graphics");
@@ -172,7 +195,11 @@ with tempfile.TemporaryDirectory(prefix='odp-walking-bounds-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
-    result = subprocess.run([str(work / 'check.exe'), str(repo), str(args.frames)] + (['profile'] if args.height_profile else []), cwd=work, capture_output=True, text=True)
+    # The meshes of the content packages are read from their models folders, not only from the public models folder
+    package_models = ';'.join(str(folder) for folder in content_packages.data_folders(repo, 'models')
+                              if folder != repo / 'models')
+    result = subprocess.run([str(work / 'check.exe'), str(repo), str(args.frames), package_models] +
+                            (['profile'] if args.height_profile else []), cwd=work, capture_output=True, text=True)
     print('\n'.join(line for line in result.stdout.splitlines() if any(marker in line for marker in ('CHECKS=', 'FAIL ', 'BODY_ROW ', 'FURNITURE_HEIGHT ', 'LEG_PROFILE ', 'DOMINANT_BONE '))))
     if result.returncode:
         if 'FAIL ' not in result.stdout:

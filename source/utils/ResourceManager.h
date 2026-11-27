@@ -61,6 +61,10 @@ public:
     //! \param shaderLanguageVersion The shader language version to use.
     void setupOgreResources(uint16_t shaderLanguageVersion);
 
+    //! \brief Adds a resource location of resources.cfg from the game data and from every content package that has
+    //! the same folder; a folder the game data lacks is skipped.
+    void addGameDataResourceLocation(const std::string& location, const std::string& type, const std::string& group);
+
     //! \brief Adds the asset folders (models, material scripts, textures, particles) of every found room package
     //! (see RoomPackages) to the Graphics resource group.
     void addRoomPackageResources();

@@ -34,6 +34,11 @@ DOUBLE_UNDERFLOW = _EXACT.power(Decimal(2), -1075)
 WHITESPACE = " \t\n\v\f\r"
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / "scripts"))
+import content_packages  # noqa: E402
+
+#: The creature classes of config/creatures.cfg are whole only with its own rows of the content (core-config)
+WITH_CONTENT = content_packages.has_content(root)
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--dir", default=None)
 parser.add_argument("--verbose", action="store_true")
@@ -77,7 +82,7 @@ CREATURE_CLASS_HASHES = {int(h, 16): n for h, n in re.findall(ALIAS_PATTERN, cre
 tile_header = read_source("source/entities/Tile.h")
 VISUALS = [v for v in re.findall(r"\w+", re.search(r"enum class TileVisual\s*\{([^}]*)\}", tile_header).group(1))
            if v not in ("nullTileVisual", "countTileVisual")]
-creature_cfg = read_source("config/creatures.cfg")
+creature_cfg = content_packages.read_text(root, "config/creatures.cfg")  # joined with its own rows
 CLASSES = set(re.findall(r"^\s*Name\s+(\S+)", creature_cfg, re.M))
 ROOM_TYPE_MAX = 26
 TRAP_TYPE_MAX = 17
@@ -924,7 +929,7 @@ def read_creatures(s, save):
         if f[9] != "max" and not is_num(f[9]):
             fail("creature %d (%s): hit points '%s' invalid" % (n, f[1], f[9]))
         # a removed class of an older save is loaded as its successor
-        if f[6] not in CLASSES and creature_class(f[6]) not in CLASSES:
+        if WITH_CONTENT and f[6] not in CLASSES and creature_class(f[6]) not in CLASSES:
             fail("creature %d (%s): class %s is not in config/creatures.cfg (the loader has no definition)"
                  % (n, f[1], f[6]))
         x, y = float(f[3]), float(f[4])
@@ -1296,6 +1301,8 @@ for f in files:
     except Exception as e:  # a bug of this script must not hide the other saves
         bad += 1
         print("ERROR  %s: %s: %s" % (f.name, type(e).__name__, e))
+if not WITH_CONTENT:
+    content_packages.unchecked("check_save_games_load", ["creature classes of the saves (own rows of config/creatures.cfg)"])
 print("%d of %d saves would be refused" % (bad, len(files)))
 if bad:
     sys.exit(1)

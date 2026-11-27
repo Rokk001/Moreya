@@ -3,12 +3,19 @@
 copied, streamed and dumped like LowHealthWalkSpeedFactor, limited to 0.2 - 8.0, applied only to the client clip speed
 of the walk state (Walk, WalkHurt, CarryWalk), never to the move speed, divided by the creature scale, and set for every type that has feet on the ground."""
 import re
+import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
+
+# Returns the text of a repository file; a mixed table of config/ comes joined with its own rows of the content.
 def read(path):
-    return (root / path).read_text(encoding='utf-8').replace('\r\n', '\n')
+    return content_packages.read_text(root, path).replace('\r\n', '\n')
 
 definition = read('source/entities/CreatureDefinition.cpp')
 definition_h = read('source/entities/CreatureDefinition.h')
@@ -36,7 +43,9 @@ assert 'getCreatureLevelGrowthMax() * levelSteps / static_cast<double>(MAX_LEVEL
 config_h = read('source/utils/ConfigManager.h')
 config_cpp = read('source/utils/ConfigManager.cpp')
 assert 'std::max(0.0, std::min(1.0, mCreatureLevelGrowthMax))' in config_h and 'mCreatureLevelGrowthMax(0.10)' in config_cpp
-assert 'nextParam == "CreatureLevelGrowthMax"' in config_cpp and re.search(r'^\s+CreatureLevelGrowthMax\s+0\.10\s*$', read('config/global.cfg'), re.M)
+assert 'nextParam == "CreatureLevelGrowthMax"' in config_cpp
+if WITH_CONTENT:
+    assert re.search(r'^\s+CreatureLevelGrowthMax\s+0\.10\s*$', read('config/global.cfg'), re.M)
 assert 'static const uint32_t MAX_LEVEL = 30;' in definition_h
 assert '0.02' not in read('source/gamemap/RoomObjectNavigation.cpp') and '0.02' not in read('source/render/RenderManager.cpp').split('void RenderManager::rrScaleCreature')[1][:400]
 assert '//! \\brief Speed factor of the walk clips' in definition_h and '//! \\brief Optional (WalkClipRate)' in definition_h
@@ -44,22 +53,23 @@ assert 'getWalkClipRate' not in creature[:creature.index('double Creature::getCl
 assert 'getWalkClipRate' not in read('source/entities/MovableGameEntity.cpp')
 
 # Config: documented, the key is only in creature blocks, every value inside the limits and the computed types set
-assert re.search(r'^# WalkClipRate\s', creatures_cfg, re.M)
-rates = {}
-for match in re.finditer(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
-    body = match.group(1)
-    name = re.search(r'^\s*Name\s+(\S+)', body, re.M)
-    rate = re.search(r'^\s*WalkClipRate\s+(\S+)', body, re.M)
-    if name and rate:
-        rates[name.group(1)] = float(rate.group(1))
-for name, value in rates.items():
-    assert 0.2 <= value <= 8.0, (name, value)
-# Roster change (CREATURE-ROSTER W4a): the fliers and blobs left the roster; every new type has an explicit rate 1 until its model is measured
-no_feet = ('CaveHornet',)  # fliers: no planted foot, rate 1
-names = [m.group(1) for m in re.finditer(r'\[Creature\].*?^\s*Name\s+(\S+)', creatures_cfg, re.S | re.M)]
-assert len(names) == 36, len(names)
-for name in names:
-    assert (name in rates) != (name in no_feet), name
+if WITH_CONTENT:
+    assert re.search(r'^# WalkClipRate\s', creatures_cfg, re.M)
+    rates = {}
+    for match in re.finditer(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
+        body = match.group(1)
+        name = re.search(r'^\s*Name\s+(\S+)', body, re.M)
+        rate = re.search(r'^\s*WalkClipRate\s+(\S+)', body, re.M)
+        if name and rate:
+            rates[name.group(1)] = float(rate.group(1))
+    for name, value in rates.items():
+        assert 0.2 <= value <= 8.0, (name, value)
+    # Roster change (CREATURE-ROSTER W4a): the fliers and blobs left the roster; every new type has an explicit rate 1 until its model is measured
+    no_feet = ('CaveHornet',)  # fliers: no planted foot, rate 1
+    names = [m.group(1) for m in re.finditer(r'\[Creature\].*?^\s*Name\s+(\S+)', creatures_cfg, re.S | re.M)]
+    assert len(names) == 36, len(names)
+    for name in names:
+        assert (name in rates) != (name in no_feet), name
 # WalkHurtClipRate: own optional key for the clip WalkHurt only, fallback WalkClipRate, same limits, streamed right after WalkClipRate
 assert 'mWalkHurtClipRate (-1.0)' in definition and 'mWalkHurtClipRate(def.mWalkHurtClipRate)' in definition
 assert definition.index('os << c->mWalkClipRate;') < definition.index('os << c->mWalkHurtClipRate;')
@@ -81,11 +91,15 @@ assert 'playsHurtClip ? mDefinition->getWalkHurtClipRate() : mDefinition->getWal
 assert 'getWalkHurtClipRate' not in creature[:creature.index('double Creature::getClientPoseSpeedFactor')]
 assert 'getWalkHurtClipRate' not in read('source/entities/MovableGameEntity.cpp')
 # Header documentation of the cfg: key, limits and fallback chain; a value is optional and, when set, inside the limits
-assert re.search(r'^# WalkHurtClipRate\s', creatures_cfg, re.M)
-header = creatures_cfg[creatures_cfg.index('# WalkHurtClipRate'):][:900]
-assert '0.2 - 8.0' in header and 'Fallback chain' in header and 'else WalkClipRate' in header
-for match in re.finditer(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
-    hurt_rate = re.search(r'^\s*WalkHurtClipRate\s+(\S+)', match.group(1), re.M)
-    if hurt_rate:
-        assert 0.2 <= float(hurt_rate.group(1)) <= 8.0
+if WITH_CONTENT:
+    assert re.search(r'^# WalkHurtClipRate\s', creatures_cfg, re.M)
+    header = creatures_cfg[creatures_cfg.index('# WalkHurtClipRate'):][:900]
+    assert '0.2 - 8.0' in header and 'Fallback chain' in header and 'else WalkClipRate' in header
+    for match in re.finditer(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
+        hurt_rate = re.search(r'^\s*WalkHurtClipRate\s+(\S+)', match.group(1), re.M)
+        if hurt_rate:
+            assert 0.2 <= float(hurt_rate.group(1)) <= 8.0
+if not WITH_CONTENT:
+    content_packages.unchecked('check_walk_clip_rate', ['WalkClipRate and WalkHurtClipRate rows (own rows of '
+                                                        'config/creatures.cfg)', 'CreatureLevelGrowthMax of config/global.cfg'])
 print('check_walk_clip_rate: ok')

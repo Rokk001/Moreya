@@ -222,14 +222,38 @@ add_boost_test(00-DungeonbookMultiplayer
         LIBRARIES
         ${SFML_LIBRARIES})
 
-add_boost_test(00-WholePortraitJpeg
-        SOURCES
-        test_WholePortraitJpeg.cpp
-        LIBRARIES
-        ${OGRE_LIBRARIES})
-if(DEFINED 00-WholePortraitJpeg_TARGET_NAME)
-    target_compile_definitions(${00-WholePortraitJpeg_TARGET_NAME} PRIVATE
-        OD_WHOLE_PORTRAIT_SAMPLE="${CMAKE_SOURCE_DIR}/materials/portraits/whole/Elf.mesh/01.jpg")
+# The delivered sample portrait: in the public tree, else in a content package (the folder MOREYA_CONTENT_DIR of the
+# cache or of the environment, else the packages folder of a Moreya-Content checkout next to the repository, like
+# scripts/content_packages.py). Without the content the test is not built and is named as not checked.
+set(OD_WHOLE_PORTRAIT_RELATIVE "materials/portraits/whole/Elf.mesh/01.jpg")
+set(OD_WHOLE_PORTRAIT_SAMPLE_FILE "${CMAKE_SOURCE_DIR}/${OD_WHOLE_PORTRAIT_RELATIVE}")
+if(NOT EXISTS "${OD_WHOLE_PORTRAIT_SAMPLE_FILE}")
+    set(OD_TEST_CONTENT_DIR "${MOREYA_CONTENT_DIR}")
+    if(NOT OD_TEST_CONTENT_DIR)
+        set(OD_TEST_CONTENT_DIR "$ENV{MOREYA_CONTENT_DIR}")
+    endif()
+    if(NOT OD_TEST_CONTENT_DIR)
+        get_filename_component(OD_TEST_CONTENT_DIR "${CMAKE_SOURCE_DIR}/../Moreya-Content/packages" ABSOLUTE)
+    endif()
+    file(GLOB OD_WHOLE_PORTRAIT_CANDIDATES "${OD_TEST_CONTENT_DIR}/*/${OD_WHOLE_PORTRAIT_RELATIVE}")
+    list(SORT OD_WHOLE_PORTRAIT_CANDIDATES)
+    list(LENGTH OD_WHOLE_PORTRAIT_CANDIDATES OD_WHOLE_PORTRAIT_COUNT)
+    if(OD_WHOLE_PORTRAIT_COUNT GREATER 0)
+        list(GET OD_WHOLE_PORTRAIT_CANDIDATES 0 OD_WHOLE_PORTRAIT_SAMPLE_FILE)
+    endif()
+endif()
+if(EXISTS "${OD_WHOLE_PORTRAIT_SAMPLE_FILE}")
+    add_boost_test(00-WholePortraitJpeg
+            SOURCES
+            test_WholePortraitJpeg.cpp
+            LIBRARIES
+            ${OGRE_LIBRARIES})
+    if(DEFINED 00-WholePortraitJpeg_TARGET_NAME)
+        target_compile_definitions(${00-WholePortraitJpeg_TARGET_NAME} PRIVATE
+            OD_WHOLE_PORTRAIT_SAMPLE="${OD_WHOLE_PORTRAIT_SAMPLE_FILE}")
+    endif()
+else()
+    message(STATUS "00-WholePortraitJpeg: content not present, not checked: ${OD_WHOLE_PORTRAIT_RELATIVE}")
 endif()
 
 add_boost_test(00-RelationshipHooks

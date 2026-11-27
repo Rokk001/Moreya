@@ -63,6 +63,9 @@ sys.path.insert(0, HERE)
 import check_menu_flight_geometry as flight  # noqa: E402
 
 ROOT = flight.ROOT
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
 PORTAL, PORTAL_MESH = "MoreyaPortal", "MenuMoreyaPortal.mesh"
 TABLE, TABLE_MESH = "CampaignStoneTable", "MenuMapTableStone.mesh"
 HALL, HALL_MESH = "CampaignHallOpen", "MenuCampaignHallOpen.mesh"
@@ -162,6 +165,44 @@ REFERENCE_ASPECT = 16.0 / 9.0
 
 
 
+def data_path(*parts):
+    """Returns the game data file of the public tree or of a content package (else the path below the repository)."""
+    return str(content_packages.resolve(ROOT, "/".join(parts)))
+
+
+def model_path(mesh):
+    """Returns the mesh file of models/ of the public tree or of a content package."""
+    return data_path("models", mesh)
+
+
+def missing_content(entities):
+    """Returns the scene files (meshes of the entities and the kept meshes, materials, textures, particles) that are
+    not present because the content is not present; empty with the content."""
+    if content_packages.has_content(ROOT):
+        return []
+    needed = ["models/" + mesh for mesh in sorted(set(mesh for mesh, _ in entities.values()) | set(KEPT_MESHES))]
+    needed += ["materials/scripts/MenuScene.material", "materials/scripts/MenuMoreyaPortal.material",
+               "particles/MenuScene.particle", "materials/textures/menu/MenuMoreyaPortalFire.png",
+               "materials/textures/menu/MenuRuinStone.png", "materials/textures/menu/MenuRuinPaving.png"]
+    return [relative for relative in needed if content_packages.data_file(ROOT, relative) is None]
+
+
+def credit_failures():
+    """Returns a failure for every mesh and texture of the entrance without a CREDITS entry (the public CREDITS and,
+    with the content, the CREDITS of the content repository, where the rows of the moved files stand); without the
+    content the moved files are named as not checked."""
+    credits = room_packages.credits_text(ROOT)
+    failures = []
+    for name in (TABLE_MESH, FORECOURT_MESH, ARCH_MESH, PORTAL_MESH, "MenuMoreyaPortalFire.png",
+                 "MenuMoreyaPortalFireShade.png", "MenuRuinStone.png", "MenuRuinPaving.png"):
+        relative = ("models/" if name.endswith(".mesh") else "materials/textures/menu/") + name
+        if not content_packages.has_content(ROOT) and content_packages.data_file(ROOT, relative) is None:
+            content_packages.unchecked("check_menu_moreya_entrance", ["CREDITS entry of " + name])
+        elif name not in credits:
+            failures.append("CREDITS has no entry for " + name)
+    return failures
+
+
 def positions(data, start, end):
     """Returns the vertex positions (n, 3) of one Ogre geometry chunk, read straight from its vertex buffer."""
     count, = struct.unpack_from("<I", data, start)
@@ -222,7 +263,7 @@ def submeshes(path):
 
 def world_triangles(mesh, position):
     """Returns the triangles (n, 3, 3) of every submesh of a mesh at a scene position."""
-    parts = [vertices[triangles] for vertices, triangles in submeshes(os.path.join(flight.MODELS, mesh)).values()
+    parts = [vertices[triangles] for vertices, triangles in submeshes(model_path(mesh)).values()
              if len(triangles)]
     return np.concatenate(parts) + position
 
@@ -305,7 +346,7 @@ def in_view(eye, rotation, point, aspect):
 def poses():
     """Returns the camera poses {name: [x, y, z, rx, ry, rz]} of the [MenuCamera] section."""
     result = {}
-    for line in open(flight.CONFIG, encoding="utf-8"):
+    for line in flight.config_text().splitlines():
         words = line.split()
         if len(words) == 8 and words[0] == "Pose":
             result[words[1]] = [float(value) for value in words[2:]]
@@ -361,7 +402,7 @@ def flight_pose(all_poses, share):
 
 def particle_system(name):
     """Returns (emitter positions, emitter start colours) of one system of particles/MenuScene.particle."""
-    text = open(os.path.join(ROOT, "particles", "MenuScene.particle"), encoding="utf-8").read()
+    text = open(data_path("particles", "MenuScene.particle"), encoding="utf-8").read()
     block = text.split("particle_system %s\n" % name, 1)[1].split("\nparticle_system ", 1)[0]
     positions_found = [np.array([float(value) for value in found.split()])
                        for found in re.findall(r"\bposition\s+(\S+\s+\S+\s+\S+)", block)]
@@ -372,7 +413,7 @@ def particle_system(name):
 
 def material_block(name):
     """Returns the text of one material of materials/scripts/MenuMoreyaPortal.material."""
-    text = open(os.path.join(ROOT, "materials", "scripts", "MenuMoreyaPortal.material"), encoding="utf-8").read()
+    text = open(data_path("materials", "scripts", "MenuMoreyaPortal.material"), encoding="utf-8").read()
     return text.split("material %s\n" % name, 1)[1].split("\nmaterial ", 1)[0]
 
 
@@ -406,7 +447,7 @@ def visible_frames(all_poses, aspect, points, occluders, bounds, extra=None):
 
 def campaign_section():
     """Returns {kind: [names]} of the [MenuCampaignScene] section of config/mainmenuscene.cfg."""
-    text = open(flight.CONFIG, encoding="utf-8").read()
+    text = flight.config_text()
     if "[MenuCampaignScene]" not in text:
         return {}
     body = text.split("[MenuCampaignScene]", 1)[1].split("[/MenuCampaignScene]", 1)[0]
@@ -418,11 +459,35 @@ def campaign_section():
     return result
 
 
+def code_failures():
+    """Returns a failure for every piece of RenderSceneMenu.cpp that reads the campaign scene section and is missing."""
+    failures = []
+    code = open(MENU_CODE, encoding="utf-8").read()
+    for needle in ('"[MenuCampaignScene]"', "showCampaignScene(renderManager, false);", "updateCampaignScene(renderManager);",
+                   'CAMPAIGN_PLACE = "campaign"'):
+        if needle not in code:
+            failures.append("RenderSceneMenu.cpp no longer reads the campaign scene section (%s)" % needle)
+    return failures
+
+
 def main():
-    """Runs every assertion and prints each failure; returns 1 on a failure."""
+    """Runs every assertion and prints each failure; returns 1 on a failure. config/mainmenuscene.cfg is a mixed table
+    read joined with its own rows from the content (check_menu_flight_geometry.config_text); without the content the
+    configuration and the scene files are named as not checked and the code and the CREDITS entries are checked."""
+    if not content_packages.has_content(ROOT):
+        failures = code_failures() + credit_failures()
+        for line in failures:
+            print("FAIL " + line)
+        content_packages.unchecked("check_menu_moreya_entrance", ["configuration of config/mainmenuscene.cfg",
+                                                                  "scene files (meshes, materials, textures, particles)"])
+        if failures:
+            return 1
+        print("OK (code and CREDITS only)")
+        return 0
     failures = []
     entities, _, _ = flight.parse_config()
     all_poses = poses()
+    missing = missing_content(entities)
 
     # The campaign scene is the whole scene: the old start screen entities are gone and nothing is switched.
     for name in GONE_ENTITIES:
@@ -431,22 +496,18 @@ def main():
     for name in CAMPAIGN_SCENE:
         if name not in entities:
             failures.append("the scene has no entity %s" % name)
-    lights = set(re.findall(r"(?m)^AddPointLight (\S+)", open(flight.CONFIG, encoding="utf-8").read()))
+    lights = set(re.findall(r"(?m)^AddPointLight (\S+)", flight.config_text()))
     for name in CAMPAIGN_LIGHTS:
         if name not in lights:
             failures.append("the scene has no light %s" % name)
-    for mesh, digest in KEPT_MESHES.items():
-        found = hashlib.sha1(open(os.path.join(flight.MODELS, mesh), "rb").read()).hexdigest()[:16]
+    for mesh, digest in KEPT_MESHES.items() if not missing else ():
+        found = hashlib.sha1(open(model_path(mesh), "rb").read()).hexdigest()[:16]
         if found != digest:
             failures.append("the scene mesh %s changed (SHA-1 %s, was %s)" % (mesh, found, digest))
     section = campaign_section()
-    if "[MenuCampaignScene]" not in open(flight.CONFIG, encoding="utf-8").read() or any(section.values()):
+    if "[MenuCampaignScene]" not in flight.config_text() or any(section.values()):
         failures.append("[MenuCampaignScene] must be present and switch nothing, has %s" % section)
-    code = open(MENU_CODE, encoding="utf-8").read()
-    for needle in ('"[MenuCampaignScene]"', "showCampaignScene(renderManager, false);", "updateCampaignScene(renderManager);",
-                   'CAMPAIGN_PLACE = "campaign"'):
-        if needle not in code:
-            failures.append("RenderSceneMenu.cpp no longer reads the campaign scene section (%s)" % needle)
+    failures += code_failures()
     entities = {name: value for name, value in entities.items() if name not in section.get("Hide", [])}
     for name, mesh in ((PORTAL, PORTAL_MESH), (TABLE, TABLE_MESH), (HALL, HALL_MESH), (FORECOURT, FORECOURT_MESH),
                        (ARCH, ARCH_MESH)):
@@ -460,8 +521,20 @@ def main():
     if tuple(all_poses.get("campaign", ())) != CAMPAIGN_POSE:
         failures.append("Pose campaign changed to %s (stays %s)" % (all_poses.get("campaign"), CAMPAIGN_POSE))
 
+    # Without the content the scene files are not there: the configuration, the code and the CREDITS are checked
+    if missing:
+        failures += credit_failures()
+        for line in failures:
+            print("FAIL " + line)
+        content_packages.unchecked("check_menu_moreya_entrance", missing)
+        if failures:
+            return 1
+        print("OK (configuration, code and CREDITS only): %d former start screen entities gone, campaign scene of %d "
+              "entities and %d lights" % (len(GONE_ENTITIES), len(CAMPAIGN_SCENE), len(CAMPAIGN_LIGHTS)))
+        return 0
+
     origin = entities[PORTAL][1]
-    parts = submeshes(os.path.join(flight.MODELS, PORTAL_MESH))
+    parts = submeshes(model_path(PORTAL_MESH))
     if FIRE_MATERIAL not in parts or BOWL_MATERIAL not in parts:
         print("FAIL the portal mesh has no %s or no %s faces" % (FIRE_MATERIAL, BOWL_MATERIAL))
         return 1
@@ -476,7 +549,7 @@ def main():
     ground = np.concatenate(list(others.values()))
 
     # The table is weathered stone with moss, no wood, and carries the map.
-    table_parts = submeshes(os.path.join(flight.MODELS, TABLE_MESH))
+    table_parts = submeshes(model_path(TABLE_MESH))
     areas_by_material = {}
     for material, (vertices, triangles) in table_parts.items():
         corners = vertices[triangles]
@@ -546,7 +619,7 @@ def main():
                 failures.append("something stands or hangs over the path to the portal at (%.1f, %.1f)" % (x, y))
 
     # An overgrown ruin: moss, dead wood, rubble and fallen parts of both side walls.
-    court_parts = submeshes(os.path.join(flight.MODELS, FORECOURT_MESH))
+    court_parts = submeshes(model_path(FORECOURT_MESH))
 
     def total_area(material):
         """Returns the area of the forecourt faces of one material."""
@@ -615,7 +688,7 @@ def main():
     block = material_block(FIRE_MATERIAL)
     if "lighting off" not in block or "texture MenuMoreyaPortalFire.png" not in block or "scroll_anim" not in block:
         failures.append(FIRE_MATERIAL + " must ignore the scene lights and let MenuMoreyaPortalFire.png rise")
-    texture = np.asarray(Image.open(os.path.join(ROOT, "materials", "textures", "menu", "MenuMoreyaPortalFire.png"))
+    texture = np.asarray(Image.open(data_path("materials", "textures", "menu", "MenuMoreyaPortalFire.png"))
                          .convert("RGB"), dtype=float)
     bright = texture[texture.max(axis=2) > 60]
     green = ((bright[:, 1] > 2 * bright[:, 0]) & (bright[:, 1] > 2 * bright[:, 2])).mean() if len(bright) else 0.0
@@ -624,7 +697,7 @@ def main():
 
     # The particle effects: green flames in the opening, orange flames over the two bowls in front of the fire.
     effects = set(re.findall(r"(?m)^AddParticleEffect %s (\S+)" % PORTAL,
-                             open(flight.CONFIG, encoding="utf-8").read()))
+                             flight.config_text()))
     if effects != {GREEN_FIRE, BOWL_FIRE}:
         failures.append("the portal carries the particle effects %s, need %s and %s"
                         % (sorted(effects), GREEN_FIRE, BOWL_FIRE))
@@ -704,7 +777,7 @@ def main():
             failures.append("at aspect %.2f the gate_exit frame does not show the crown of the arch" % aspect)
     # No flat glowing slab in the rear yard: embers there are lumps, not a plane.
     for name, (mesh, position) in entities.items():
-        for material, (vertices, triangles) in submeshes(os.path.join(flight.MODELS, mesh)).items():
+        for material, (vertices, triangles) in submeshes(model_path(mesh)).items():
             if material not in GLOW_SLAB_MATERIALS or not len(triangles):
                 continue
             glowing = vertices[triangles] + position
@@ -716,9 +789,9 @@ def main():
                 failures.append("%s has a flat %s patch of %.2f m2 in the rear yard (at most %.2f)"
                                 % (name, material, largest, MAX_FLAT_GLOW))
     # The forecourt, the portal and the frame of the hall opening are a dark ruin, no pale or glossy stone.
-    scene_materials = open(os.path.join(ROOT, "materials", "scripts", "MenuScene.material"), encoding="utf-8").read()
+    scene_materials = open(data_path("materials", "scripts", "MenuScene.material"), encoding="utf-8").read()
     for mesh in (FORECOURT_MESH, PORTAL_MESH, ARCH_MESH):
-        used = set(submeshes(os.path.join(flight.MODELS, mesh)))
+        used = set(submeshes(model_path(mesh)))
         if used & set(SHARED_STONE) or not used & set(RUIN_MATERIALS):
             failures.append("%s uses the shared stone %s instead of the ruin materials"
                             % (mesh, sorted(used & set(SHARED_STONE))))
@@ -734,18 +807,14 @@ def main():
             failures.append("%s is too pale or glossy (diffuse at most %.2f, specular at most %.2f)"
                             % (material, MAX_RUIN_DIFFUSE, MAX_RUIN_SPECULAR))
     for texture in ("MenuRuinStone.png", "MenuRuinPaving.png"):
-        colours = np.asarray(Image.open(os.path.join(ROOT, "materials", "textures", "menu", texture)).convert("RGB"),
+        colours = np.asarray(Image.open(data_path("materials", "textures", "menu", texture)).convert("RGB"),
                              dtype=float)
         luminance = (colours @ np.array([0.299, 0.587, 0.114])).mean()
         if luminance > MAX_RUIN_LUMINANCE:
             failures.append("%s is too light (mean luminance %.1f, at most %.1f)" % (texture, luminance,
                                                                                     MAX_RUIN_LUMINANCE))
     # CREDITS.
-    credits = open(os.path.join(ROOT, "CREDITS"), encoding="utf-8").read()
-    for name in (TABLE_MESH, FORECOURT_MESH, ARCH_MESH, PORTAL_MESH, "MenuMoreyaPortalFire.png",
-                 "MenuMoreyaPortalFireShade.png", "MenuRuinStone.png", "MenuRuinPaving.png"):
-        if name not in credits:
-            failures.append("CREDITS has no entry for " + name)
+    failures += credit_failures()
 
     for line in failures:
         print("FAIL " + line)

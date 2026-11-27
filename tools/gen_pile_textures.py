@@ -147,13 +147,15 @@ def paint_blood():
 
 
 def creature_names():
-    """The creature type names listed in config/creatures.cfg (lines 'Name <type>' inside the definitions)."""
+    """The creature type names listed in config/creatures.cfg (lines 'Name <type>' inside the definitions), joined with
+    its own rows of the content packages (scripts/content_packages.py)."""
+    sys.path.insert(0, os.path.join(ROOT, 'scripts'))
+    import content_packages
     names = []
-    with open(os.path.join(ROOT, 'config', 'creatures.cfg'), encoding='utf-8') as handle:
-        for line in handle:
-            match = re.match(r'^\s+Name\s+(\S+)\s*$', line)
-            if match:
-                names.append(match.group(1))
+    for line in content_packages.read_text(ROOT, 'config/creatures.cfg').splitlines():
+        match = re.match(r'^\s+Name\s+(\S+)\s*$', line)
+        if match:
+            names.append(match.group(1))
     return names
 
 

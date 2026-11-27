@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Check level-scaled natural, bed and chicken healing."""
+"""Check level-scaled natural, bed and chicken healing.
+
+config/creatures.cfg and config/global.cfg are mixed tables read with their own rows from the content
+(scripts/content_packages.py); without the content their values are named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 creature = (ROOT / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 sleep = (ROOT / 'source/creatureaction/CreatureActionSleep.cpp').read_text(encoding='utf-8')
 eat = (ROOT / 'source/creatureaction/CreatureActionEatChicken.cpp').read_text(encoding='utf-8')
@@ -13,20 +19,25 @@ assert re.search(r'if\(getDefinition\(\)->isUndead\(\)\)\s*naturalHeal\s*\*=\s*.
 assert re.search(r'getSleepHeal\(\)\s*==\s*0\.0\s*\?\s*0\.0\s*:\s*creature.getMaxHp\(\)\s*/\s*\(.*?DormitoryFullHealSeconds', sleep, re.S)
 for source, subject in ((eat, 'creature'), (prison, 'nearest')):
     assert re.search(rf'{subject}(?:\.|->)getMaxHp\(\)\s*\*.*?HatcheryChickenHealSeconds.*?getNaturalFullHealSeconds\(\)', source, re.S)
-config = (ROOT / 'config/creatures.cfg').read_text(encoding='utf-8')
-assert len(re.findall(r'^\s*SleepHeal\s+0\s*$', config, re.M)) == 3
-assert not re.search(r'^\s*SleepHeal\s+2\.05\s*$', config, re.M)
-global_config = (ROOT / 'config/global.cfg').read_text(encoding='utf-8')
-seconds = float(re.search(r'^\s*NaturalFullHealSeconds\s+(\S+)', global_config, re.M).group(1))
-undead_factor = float(re.search(r'^\s*UndeadHealFactor\s+(\S+)', global_config, re.M).group(1))
-growth, exponent, hp_growth = (float(re.search(r'^\s*' + key + r'\s+(\S+)', global_config, re.M).group(1))
-                               for key in ('CreatureDamageGrowth', 'CreatureDamageExponent', 'CreatureHpGrowthPerLevel'))
 progression = (ROOT / 'source/entities/CreatureProgression.h').read_text(encoding='utf-8')
 assert 'CreatureProgression::combatStatAt(mMaxHP, mDefinition->getHpPerLevel(), getLifeLevel()' in creature
 assert 'base + (level - 1.0) * perLevel, base * multiplier(level)' in progression
 assert 'damageMultiplierAt(level) * (1.0 + ConfigManager::getSingleton().getCreatureHpGrowthPerLevel() * steps)' in progression
 assert 'config.getCreatureDamageGrowth() *' in progression and 'config.getCreatureDamageExponent()' in progression
 assert re.search(r'ODApplication::turnsPerSecond\s*=\s*1\.4\s*;', (ROOT / 'source/ODApplication.cpp').read_text(encoding='utf-8'))
+if not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_heal_by_level', ['healing values of config/creatures.cfg and config/global.cfg'])
+    print('level-scaled healing ok (code only)')
+    sys.exit(0)
+# The tables as the game reads them, with their own rows from the content
+config = content_packages.read_text(ROOT, 'config/creatures.cfg')
+assert len(re.findall(r'^\s*SleepHeal\s+0\s*$', config, re.M)) == 3
+assert not re.search(r'^\s*SleepHeal\s+2\.05\s*$', config, re.M)
+global_config = content_packages.read_text(ROOT, 'config/global.cfg')
+seconds = float(re.search(r'^\s*NaturalFullHealSeconds\s+(\S+)', global_config, re.M).group(1))
+undead_factor = float(re.search(r'^\s*UndeadHealFactor\s+(\S+)', global_config, re.M).group(1))
+growth, exponent, hp_growth = (float(re.search(r'^\s*' + key + r'\s+(\S+)', global_config, re.M).group(1))
+                               for key in ('CreatureDamageGrowth', 'CreatureDamageExponent', 'CreatureHpGrowthPerLevel'))
 blocks = re.findall(r'^\[Creature\]\s*$(.*?)^\[/Creature\]', config, re.M | re.S)
 assert blocks
 for block in blocks:

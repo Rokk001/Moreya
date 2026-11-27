@@ -665,9 +665,17 @@ def export(exporter, repo, private, obj):
     convert(repo, private, obj.name)
 
 
+def scene_text(repo):
+    """Returns config/mainmenuscene.cfg as the game reads it: joined with its own rows of the content packages
+    (scripts/content_packages.py)."""
+    sys.path.insert(0, str(Path(repo) / "scripts"))
+    import content_packages
+    return content_packages.read_text(Path(repo), "config/mainmenuscene.cfg")
+
+
 def scene_definitions(repo):
     """Returns the words of every command line of config/mainmenuscene.cfg."""
-    text = (Path(repo) / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
+    text = scene_text(repo)
     return [line.split() for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")]
 
 
@@ -733,7 +741,7 @@ def render_poses(repo, private, raid, exporter):
     sys.path.insert(0, str(Path(repo) / "tools/blender-assets"))
     import menu_scene_assembly as assembly
     definitions = scene_definitions(repo)
-    text = (Path(repo) / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
+    text = scene_text(repo)
     poses = {}
     ambient = (0.15, 0.18, 0.22)
     for line in text.splitlines():

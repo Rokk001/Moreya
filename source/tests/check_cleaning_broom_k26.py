@@ -3,18 +3,20 @@ irgendwie einen Besen nehmen und putzen"; answer to Q6 "Bei jedem Dreck").
 
 Three parts:
   assets (no compiler; OgreXMLConverter converts the shipped binaries)
-      The broom the game hangs on Weapon_R while a worker plays Clean (RenderManager: weapon mount, -90 degrees about x,
-      scale BROOM_SHARE x the height of the worker mesh) is posed with the real keyframes of the Clean clip of both worker
-      skeletons (Kobold, Dwarf1 for the dwarf worker), evaluated like the engine does (bind pose plus translate, times
-      rotate, times scale, down the bone hierarchy) at every key:
+      The broom the game keeps in both hands of a worker that plays Clean (RenderManager::placeCleaningBroom, width
+      BROOM_SHARE x the height of the worker mesh, length stretched to the floor) is posed with the real keyframes of the
+      Clean clip of both worker skeletons (Kobold, Dwarf1 for the dwarf worker), evaluated like the engine does (bind
+      pose plus translate, times rotate, times scale, down the bone hierarchy) at every key:
       - the twig tips sweep the floor: lowest broom point between -0.02 and +0.12 x height, on the floor (<= 0.01 x
         height) in at least 40 % of the keys, and while on the floor the tips travel sideways over at least 0.30 x height;
-      - both hands hold the handle: Weapon_L (the left fist) lies within 0.02 x height of the handle axis, above the
-        right hand (between 0.15 and 0.30 broom lengths up the handle from the right grip);
-      - the kobold's own pick (part of its model, Pick bone) is hidden for the whole clip (scale <= 0.01) and shown in
-        Idle, Walk, Dig and Claim (scale 1);
-      - clip list and the Clean length 1.6 s unchanged (Global Constraint 4);
-      - the broom: at most 600 triangles, two textured materials CleaningBroom and CleaningBroom/Twigs without
+      - both hands hold the handle: the right palm (the bind place of Weapon_R on its hand) within 0.040 x height of
+        the handle axis at its end (-0.04 to 0.0 x height along it), the left palm within 0.050 x height, 0.10 to 0.25 x
+        height further down; the end of the handle stays at least 0.06 x height under the head bone, clear of the face,
+        and the broom is shown in every key;
+      - a rig with its own pick (part of its model, Pick bone) hides it for the whole clip (scale <= 0.01) and shows it
+        in Idle, Walk, Dig and Claim (scale 1); the Meshy worker rigs have no Pick bone;
+      - clip count of each rig and the Clean length 3.967 s (the approved sweep, two strokes);
+      - the broom: at most 2500 triangles, two textured materials CleaningBroom and CleaningBroom/Twigs without
         specular, texture CleaningBroom.png 512 x 512 with surface detail (luminance std >= 6), dark dungeon look
         (STYLE-GUIDE.md: mean luminance 45-95, mean saturation <= 0.45, p99.5 channel <= 170).
   wiring (no compiler)
@@ -27,18 +29,24 @@ Three parts:
       Room::needsCleaning run with the [Dirt] values of global.cfg: a tile below DirtVisibleFrom is not cleaned, every
       visible stain (stage 1, 2, 3) is; a room whose mean is far below stage 2 but has one visible stain needs cleaning,
       a room with only invisible dirt does not, a prison never.
-Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 328 triangles (limit 600), Clean 1.6 s,
-44 clips in Kobold.skeleton and 53 in Dwarf1.skeleton, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
+Fixed expected values of this branch (counted once): BROOM_SHARE 0.75; the broom follows both hands (0.01 in front of
+the palms, end 0.022 below the upper palm, twig end 0.037 over the floor and at least 0.35 in front, all x height), broom 2404 triangles
+(limit 2500, 600 for the former primitive broom, raised for the approved Meshy broom), Clean 3.967 s, 45 clips in Kobold.skeleton and 53 in Dwarf1.skeleton, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
 The probe compiles with cl, so it runs in the compile phase of the integration; `--no-compile` runs the other parts.
+Without --assets the models, materials and textures are read from the public tree or the content packages
+(scripts/content_packages.py); without the content the broom (core-models) and the worker rigs (creatures) are named
+as not checked.
 
 Call (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
     python source/tests/check_cleaning_broom_k26.py [--no-compile] [--assets <folder with models/ and materials/>]
 """
 from pathlib import Path
+import atexit
 import json
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -48,12 +56,19 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
-ASSETS = Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
-BROOM_SHARE = 0.88
-CLIP_COUNTS = {'Kobold': 44, 'Dwarf1': 53}
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+ASSETS =Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
+BROOM_SHARE = 0.75
+# RenderManager::placeCleaningBroom, all as shares of the worker height
+BROOM_FORWARD, BROOM_END_DROP, BROOM_MIN_REACH, BROOM_TIP_HEIGHT, BROOM_MIN_HAND_STEP = 0.01, 0.022, 0.35, 0.037, 0.08
+CLIP_COUNTS = {'Kobold': 45, 'Dwarf1': 53}
+CLEAN_SECONDS = 119 / 30.0
 fails = []
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 work = Path(tempfile.mkdtemp(prefix='cleaning_broom_'))
+# The converted meshes are about 70 MB per run: remove them however the script ends (success, failure, exception)
+atexit.register(shutil.rmtree, str(work), ignore_errors=True)
 started = time.monotonic()
 
 
@@ -78,9 +93,17 @@ def body(source, signature):
     return source[start:end]
 
 
+def asset(relative):
+    """Returns the path of a shipped asset: below --assets when given, else in the public tree or a content package
+    (scripts/content_packages.py); a path that does not exist when the asset is missing."""
+    if ASSETS != ROOT:
+        return ASSETS / relative
+    return content_packages.resolve(ROOT, relative)
+
+
 def convert(name):
     """Converts a shipped binary mesh or skeleton to Ogre XML and returns its parsed root, None if it is missing."""
-    source = ASSETS / 'models' / name
+    source = asset('models/' + name)
     if not source.exists():
         return None
     target = work / (name + '.xml')
@@ -216,17 +239,19 @@ def triangles(mesh_root):
 
 
 # ================================================================================================ assets
-MOUNT = (math.cos(math.radians(-45.0)), math.sin(math.radians(-45.0)), 0.0, 0.0)
 broom = convert('CleaningBroom.mesh')
 broom_info = {}
-if broom is None:
+if broom is None and ASSETS == ROOT and not content_packages.has_content(ROOT):
+    # The broom lies in the content package core-models: without the content the rigs are checked without it
+    content_packages.unchecked('check_cleaning_broom_k26', ['models/CleaningBroom.mesh, its material and texture'])
+elif broom is None:
     fail('assets: models/CleaningBroom.mesh is missing (a worker has no broom to clean with)')
 else:
     points = positions(broom)
     tris = triangles(broom)
     broom_info['triangles'] = tris
-    if tris > 600:
-        fail('assets: the broom has %d triangles (at most 600)' % tris)
+    if tris > 2500:
+        fail('assets: the broom has %d triangles (at most 2500)' % tris)
     zs = [p[2] for p in points]
     broom_length = max(zs) - min(zs)
     # the handle axis: the vertices of the stick (|z| small part above the grip) are centred on x = y = 0
@@ -235,8 +260,8 @@ else:
     materials = sorted({s.get('material') for s in broom.iter('submesh')})
     if materials != ['CleaningBroom', 'CleaningBroom/Twigs']:
         fail('assets: broom materials are %s' % materials)
-    material_text = (ASSETS / 'materials' / 'scripts' / 'CleaningBroom.material').read_text(encoding='utf-8') \
-        if (ASSETS / 'materials' / 'scripts' / 'CleaningBroom.material').exists() else ''
+    material_text = asset('materials/scripts/CleaningBroom.material').read_text(encoding='utf-8') \
+        if asset('materials/scripts/CleaningBroom.material').exists() else ''
     for name in ('CleaningBroom', 'CleaningBroom/Twigs'):
         block = re.search(r'^material ' + re.escape(name) + r'\b[^\n]*\n\{.*?^\}', material_text, re.M | re.S)
         if block is None:
@@ -246,7 +271,7 @@ else:
             fail('assets: material %s has no CleaningBroom.png texture' % name)
         if not re.search(r'specular 0(\.0)? 0(\.0)? 0(\.0)?', block.group(0)):
             fail('assets: material %s shines (specular must be 0)' % name)
-    texture = ASSETS / 'materials' / 'textures' / 'CleaningBroom.png'
+    texture = asset('materials/textures/CleaningBroom.png')
     if not texture.exists():
         fail('assets: materials/textures/CleaningBroom.png is missing')
     else:
@@ -275,35 +300,70 @@ rig_info = {}
 for rig in ('Kobold', 'Dwarf1'):
     skeleton_root = convert(rig + '.skeleton')
     mesh_root = convert(rig + '.mesh')
+    if (skeleton_root is None or mesh_root is None) and ASSETS == ROOT and not content_packages.has_content(ROOT):
+        # The worker figures lie in the content package creatures: without the content their rigs are not checked
+        content_packages.unchecked('check_cleaning_broom_k26', ['models/' + rig + '.mesh and its skeleton (Clean clip)'])
+        continue
+    if skeleton_root is None or mesh_root is None:
+        fail('%s: models/%s.mesh or its skeleton is missing' % (rig, rig))
+        continue
     skeleton = Skeleton(skeleton_root)
     if len(skeleton.clips) != CLIP_COUNTS[rig]:
         fail('%s: %d clips, expected %d (no clip may go)' % (rig, len(skeleton.clips), CLIP_COUNTS[rig]))
     if 'Clean' not in skeleton.clips:
         fail('%s: no Clean clip' % rig)
         continue
-    if abs(skeleton.clips['Clean'][0] - 1.6) > 1e-4:
-        fail('%s: Clean lasts %.3f s, expected 1.6' % (rig, skeleton.clips['Clean'][0]))
+    if abs(skeleton.clips['Clean'][0] - CLEAN_SECONDS) > 1e-3:
+        fail('%s: Clean lasts %.3f s, expected %.3f' % (rig, skeleton.clips['Clean'][0], CLEAN_SECONDS))
+    has_pick = 'Pick' in skeleton.bones
     zs = [p[2] for p in positions(mesh_root)]
     height = max(zs) - min(zs)
-    scale = BROOM_SHARE * height
     info = {'height': round(height, 4), 'keys': 0, 'on_floor': 0}
     lows, floor_x, left_off, left_along, pick_scale = [], [], [], [], []
+    right_off, right_along, end_under_head, hidden = [], [], [], 0
     for t in skeleton.key_times('Clean'):
         world = skeleton.pose('Clean', t)
-        grip, orientation, _scale = world['Weapon_R']
-        tag = qmul(orientation, MOUNT)
-        axis = qrot(tag, (0.0, 0.0, 1.0))
+        # The palms: the bind places of the weapon bones, carried by the hand bones
+        palms = []
+        for weapon in ('Weapon_R', 'Weapon_L'):
+            hand_position, hand_turn, hand_scale = world[skeleton.parent[weapon]]
+            bind = skeleton.bones[weapon][0]
+            palms.append(add(hand_position, qrot(hand_turn, (bind[0] * hand_scale[0], bind[1] * hand_scale[1],
+                                                             bind[2] * hand_scale[2]))))
+        end = add(palms[0], (0.0, -BROOM_FORWARD * height, 0.0))
+        aim = add(palms[1], (0.0, -BROOM_FORWARD * height, 0.0))
+        step = end[2] - aim[2]
+        if step <= BROOM_MIN_HAND_STEP * height:
+            hidden += 1
+            continue
+        tip = add(end, mul(sub(aim, end), (end[2] - BROOM_TIP_HEIGHT * height) / step))
+        tip = (tip[0], min(tip[1], -BROOM_MIN_REACH * height), tip[2])
+        towards = sub(tip, end)
+        end = add(end, mul(towards, BROOM_END_DROP * height / length(towards)))
+        axis = mul(sub(tip, end), 1.0 / length(sub(tip, end)))
         if broom is not None:
-            placed = [add(grip, qrot(tag, mul(p, scale))) for p in points]
+            # as alignMeshAxes(axis, UNIT_X): mesh z along the handle, mesh x as near to the model x as possible
+            side = sub((1.0, 0.0, 0.0), mul(axis, axis[0]))
+            side = mul(side, 1.0 / length(side))
+            other = (axis[1] * side[2] - axis[2] * side[1], axis[2] * side[0] - axis[0] * side[2],
+                     axis[0] * side[1] - axis[1] * side[0])
+            lowest_z = min(p[2] for p in points)
+            stretch = length(sub(tip, end)) / (max(p[2] for p in points) - lowest_z)
+            width = BROOM_SHARE * height
+            origin = sub(end, mul(axis, lowest_z * stretch))
+            placed = [add(origin, add(add(mul(side, p[0] * width), mul(other, p[1] * width)), mul(axis, p[2] * stretch)))
+                      for p in points]
             low = min(placed, key=lambda p: p[2])
             lows.append(low[2] / height)
             if low[2] <= 0.01 * height:
                 floor_x.append(low[0] / height)
-        left = sub(world['Weapon_L'][0], grip)
-        along = dot(left, axis)
-        left_along.append(-along / scale)
-        left_off.append(length(sub(left, mul(axis, along))) / height)
-        if rig == 'Kobold':
+        for palm, off, along in ((palms[0], right_off, right_along), (palms[1], left_off, left_along)):
+            from_end = sub(palm, end)
+            at = dot(from_end, axis)
+            along.append(at / height)
+            off.append(length(sub(from_end, mul(axis, at))) / height)
+        end_under_head.append((world['Head'][0][2] - end[2]) / height)
+        if has_pick:
             pick_scale.append(max(world['Pick'][2]))
         info['keys'] += 1
     if broom is not None and lows:
@@ -318,13 +378,25 @@ for rig in ('Kobold', 'Dwarf1'):
         if not floor_x or max(floor_x) - min(floor_x) < 0.30:
             fail('%s: on the floor the twigs travel sideways over %.3f x height (at least 0.30)' %
                  (rig, (max(floor_x) - min(floor_x)) if floor_x else 0.0))
-    info.update({'left_off_max': round(max(left_off), 4), 'left_along': [round(min(left_along), 3), round(max(left_along), 3)]})
-    if max(left_off) > 0.02:
+    info.update({'left_off_max': round(max(left_off), 4), 'left_along': [round(min(left_along), 3), round(max(left_along), 3)],
+                 'right_off_max': round(max(right_off), 4), 'right_along': [round(min(right_along), 3), round(max(right_along), 3)],
+                 'end_under_head_min': round(min(end_under_head), 4), 'hidden_keys': hidden})
+    if hidden:
+        fail('%s: the broom is hidden in %d keys of Clean' % (rig, hidden))
+    if max(left_off) > 0.05:
         fail('%s: the left hand is %.3f x height away from the handle' % (rig, max(left_off)))
-    if min(left_along) < 0.15 or max(left_along) > 0.30:
-        fail('%s: the left hand holds the handle %.2f-%.2f broom lengths above the right one (0.15-0.30)' %
+    if max(right_off) > 0.04:
+        fail('%s: the right hand is %.3f x height away from the handle' % (rig, max(right_off)))
+    if min(right_along) < -0.04 or max(right_along) > 0.0:
+        fail('%s: the upper hand is not at the end of the handle (%.3f..%.3f x height)' %
+             (rig, min(right_along), max(right_along)))
+    if min(left_along) < 0.10 or max(left_along) > 0.25:
+        fail('%s: the left hand holds the handle %.2f-%.2f x height below its end (0.10-0.25)' %
              (rig, min(left_along), max(left_along)))
-    if rig == 'Kobold':
+    if min(end_under_head) < 0.06:
+        fail('%s: the end of the handle comes up to %.3f x height under the head bone (at least 0.06)' %
+             (rig, min(end_under_head)))
+    if has_pick:
         info['pick_scale_max'] = max(pick_scale)
         if max(pick_scale) > 0.01:
             fail('Kobold: its own pick shows while it sweeps (Pick scale %.3f)' % max(pick_scale))
@@ -344,21 +416,32 @@ combat = read('source/render/CreatureCombatReactions.cpp')
 search = read('source/creatureaction/CreatureActionSearchDirtToClean.cpp')
 targets = read('source/game/WorkerTargets.cpp')
 room = read('source/rooms/Room.cpp')
-global_cfg = read('config/global.cfg')
+# global.cfg as the game reads it: the [Dirt] block is an own row block of the content package core-config; without
+# the content its values (and the probe that runs with them) are named as not checked
+global_cfg = content_packages.read_text(ROOT, 'config/global.cfg')
+dirt_values = content_packages.has_content(ROOT)
 
 if not re.search(r'inline bool holdsBroom\(const std::string& clip\)\s*\{\s*return clip == clean_anim;', animation):
     fail('wiring: EntityAnimation::holdsBroom is not the Clean clip')
-if 'const Ogre::Real CLEANING_BROOM_HEIGHT_SHARE = %sf;' % BROOM_SHARE not in render:
-    fail('wiring: the broom is not sized to %s x the worker height' % BROOM_SHARE)
+for name, value in (('HEIGHT_SHARE', BROOM_SHARE), ('FORWARD', BROOM_FORWARD), ('MIN_REACH', BROOM_MIN_REACH),
+                    ('END_DROP', BROOM_END_DROP), ('TIP_HEIGHT', BROOM_TIP_HEIGHT), ('MIN_HAND_STEP', BROOM_MIN_HAND_STEP)):
+    if 'const Ogre::Real CLEANING_BROOM_%s = %sf;' % (name, value) not in render:
+        fail('wiring: CLEANING_BROOM_%s is not %s' % (name, value))
 update = body(render, 'void RenderManager::updateCreatureCleaningBroom(')
-for token, what in (('getWeaponMount(skeleton, "R", CLEANING_BROOM_MESH, mount)', 'the right hand weapon mount'),
-                    ('createEntity(broomName, CLEANING_BROOM_MESH)', 'the broom mesh'),
-                    ('CLEANING_BROOM_HEIGHT_SHARE * objectEntity->getMesh()->getBounds().getSize().z', 'the size'),
-                    ('grip->setInheritScale(false);', 'no rig scale'),
+for token, what in (('createEntity(broomName, CLEANING_BROOM_MESH)', 'the broom mesh'),
+                    ('createChildSceneNode(broomName + CLEANING_BROOM_NODE_SUFFIX)', 'a node of the creature for the broom'),
+                    ('placeCleaningBroom(objectName, creature->getName());', 'the broom put into the hands'),
                     ('mSceneManager->getEntity(toolName)->setVisible(!sweeping);', 'the worker tool hidden'),
                     ('removeCreatureCleaningBroom(creature);', 'the broom taken away after sweeping')):
     if token not in update:
         fail('wiring: updateCreatureCleaningBroom lacks ' + what)
+place = body(render, 'void RenderManager::placeCleaningBroom(')
+for token, what in (('getBone("RightHand")', 'the upper hand'), ('getBone("LeftHand")', 'the lower hand'),
+                    ('CLEANING_BROOM_HEIGHT_SHARE * objectEntity->getMesh()->getBounds().getSize().z', 'the size')):
+    if token not in place:
+        fail('wiring: placeCleaningBroom lacks ' + what)
+if 'updateCleaningBrooms();' not in body(render, 'void RenderManager::updateRenderAnimations('):
+    fail('wiring: the brooms do not follow the hands every frame')
 state = body(render, 'void RenderManager::rrSetObjectAnimationState(')
 if not re.search(r'EntityAnimation::holdsBroom\(anim\) != \(\(previousState != nullptr\) && '
                  r'EntityAnimation::holdsBroom\(previousState->getAnimationName\(\)\)\)\)\)\s*\{\s*'
@@ -382,15 +465,18 @@ for text, signature in ((search, 'static Tile* findDirtiestReachableTile('), (se
         fail('wiring: %s does not use isFloorDirtToClean' % signature)
     if 'DirtStage3At' in part or 'CleanRoomFromStage' in part or 'getDirtStage()' in part or 'getDirt() > 0.0' in part:
         fail('wiring: %s still uses an old cleaning limit' % signature)
-dirt_block = re.search(r'^\[Dirt\]\s*$(.*?)^\[/Dirt\]', global_cfg, re.M | re.S).group(1)
-if not re.search(r'^\s*CleanTileFromStage\s+1\s*$', dirt_block, re.M):
-    fail('wiring: global.cfg [Dirt] does not set CleanTileFromStage 1')
+if dirt_values:
+    dirt_block = re.search(r'^\[Dirt\]\s*$(.*?)^\[/Dirt\]', global_cfg, re.M | re.S).group(1)
+    if not re.search(r'^\s*CleanTileFromStage\s+1\s*$', dirt_block, re.M):
+        fail('wiring: global.cfg [Dirt] does not set CleanTileFromStage 1')
+else:
+    content_packages.unchecked('check_cleaning_broom_k26', ['config/global.cfg [Dirt] values', 'probe with them'])
 if 'CleanRoomFromStage' in global_cfg:
     fail('wiring: the old key CleanRoomFromStage is still in global.cfg')
 
 # ================================================================================================ probe
-probe_note = 'skipped (--no-compile)'
-if '--no-compile' not in sys.argv:
+probe_note = 'skipped (--no-compile)' if dirt_values else 'skipped (no content)'
+if '--no-compile' not in sys.argv and dirt_values:
     values = {}
     for line in dirt_block.splitlines():
         words = line.split()

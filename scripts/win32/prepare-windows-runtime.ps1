@@ -38,14 +38,29 @@ $taskResourceLines = @(foreach ($taskLine in Get-Content -LiteralPath $taskResou
         $taskLine
     }
 })
+# A resource folder of the game data may lie in a content package instead (the game mirrors every resources.cfg
+# location into the packages): the packages folder of MOREYA_CONTENT_DIR, else ..\Moreya-Content\packages beside
+# the repository, and the package folders below levels\campaign of the game data.
+$taskPackageRoots = @()
+$taskContentDir = $env:MOREYA_CONTENT_DIR
+if (-not $taskContentDir) { $taskContentDir = Join-Path (Split-Path -Parent $taskRepo) 'Moreya-Content\packages' }
+foreach ($taskRoot in @($taskContentDir, (Join-Path $taskBuild 'levels\campaign'))) {
+    if ($taskRoot -and (Test-Path -LiteralPath $taskRoot -PathType Container)) {
+        $taskPackageRoots += @(Get-ChildItem -LiteralPath $taskRoot -Directory | ForEach-Object { $_.FullName })
+    }
+}
 foreach ($taskLine in $taskResourceLines) {
     if ($taskLine -match '^FileSystem=(.+)$') {
         $taskResourcePath = $Matches[1]
+        $taskRelative = $null
         if (-not [System.IO.Path]::IsPathRooted($taskResourcePath)) {
+            $taskRelative = $taskResourcePath
             $taskResourcePath = Join-Path $taskBuild $taskResourcePath
         }
         if (-not (Test-Path -LiteralPath $taskResourcePath -PathType Container)) {
-            throw "Game resource directory is missing: $taskResourcePath"
+            $taskInPackage = $taskRelative -and @($taskPackageRoots | Where-Object {
+                Test-Path -LiteralPath (Join-Path $_ $taskRelative) -PathType Container }).Count -gt 0
+            if (-not $taskInPackage) { throw "Game resource directory is missing: $taskResourcePath" }
         }
     }
 }

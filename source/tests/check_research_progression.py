@@ -2,13 +2,21 @@
 
 Run in the maintained Windows developer environment; no game is launched.
 World/UI services are fixtures; research methods and wire codec are production code.
+
+The probe reads config/skills.cfg as the game does: joined with its own rows of the content package core-config
+(scripts/content_packages.py), written to the probe folder. Without the content the probe is compiled but not run on
+the table (its values are own rows) and the run is named as not checked.
 """
 from pathlib import Path
 import os
 import subprocess
+import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / "scripts"))
+import content_packages  # noqa: E402
+
 prefix = Path(os.environ["CMAKE_PREFIX_PATH"])
 
 
@@ -494,4 +502,10 @@ with tempfile.TemporaryDirectory(prefix="research-progression-") as directory:
         f"/Fe:{executable}", "/link", f"/LIBPATH:{prefix / 'lib'}",
         "OgreMain.lib", "sfml-network.lib", "sfml-system.lib"
     ], cwd=work, check=True)
-    subprocess.run([str(executable), str(root / "config/skills.cfg")], cwd=work, check=True)
+    if content_packages.has_content(root):
+        # the joined table, as the game reads it
+        skills = work / "skills.cfg"
+        skills.write_text(content_packages.read_text(root, "config/skills.cfg"), encoding="utf-8")
+        subprocess.run([str(executable), str(skills)], cwd=work, check=True)
+    else:
+        content_packages.unchecked("check_research_progression", ["probe run on config/skills.cfg (own rows)"])

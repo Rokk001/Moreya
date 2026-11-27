@@ -14,6 +14,11 @@ with WinError 4551 is run once more (it builds its test program anew, which is a
 
 Result file: one line per script ("<path> ok <s>s", "FAIL exit <n> <s>s" or "FAIL timeout"),
 the output tail of a red script indented below it, last line "DONE total=<n> red=<m>".
+
+The load test level Mossgate lies in the wing 1 content package (the public tree holds no campaign); a selected level
+is found through scripts/campaign_packages.py of the worktree (level_file), and run-level-test.py gives the game the
+content packages (MOREYA_CONTENT_DIR). Without the content packages a selected level is missing: its load check is red
+(exit 125) and names the missing content packages; a load test never passes without the content.
 """
 import argparse
 import ctypes
@@ -88,6 +93,36 @@ def record_loaded(passed, run):
     with open(LOADED_LEVELS, 'a', encoding='utf-8', newline='\n') as f:
         for path, digest in passed:
             f.write('| %s | %s | %s |\n' % (path.replace(os.sep, '/'), digest, run))
+
+
+# A helper module of the worktree's scripts folder, loaded by path (None when the worktree has no such file).
+def worktree_module(repo, name):
+    path = os.path.join(repo, 'scripts', name + '.py')
+    if name not in sys.modules:
+        if not os.path.isfile(path):
+            return None
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+# The file of a selected level and an error text: the plain path below the worktree, else the file the worktree's
+# package helpers find (a level of a wing or content package); without it (None) the text names the missing level
+# and the missing content packages.
+def selected_level_file(repo, level):
+    plain = os.path.join(repo, level)
+    if os.path.isfile(plain):
+        return plain, ''
+    error = 'Required level missing: ' + level
+    if not all(worktree_module(repo, name) for name in ('campaign_packages', 'room_packages', 'content_packages')):
+        return None, error
+    found = sys.modules['campaign_packages'].level_file(repo, level)
+    if found is not None:
+        return str(found), ''
+    missing = sys.modules['content_packages'].missing_packages(repo)
+    return None, error + ('; content packages missing: ' + ', '.join(missing) if missing else '')
 
 
 # Resolve changed level files strictly; invalid comparison references are prerequisite failures.
@@ -383,8 +418,9 @@ def main():
             prerequisite = 'Required load-test script missing: ' + load_test
     for level in selected:
         total += 1
-        if prerequisite or not os.path.isfile(os.path.join(repo,level)):
-            code,out,secs = 125, prerequisite or 'Required level missing: ' + level,0
+        level_file, missing_level = selected_level_file(repo, level) if not prerequisite else (None, '')
+        if prerequisite or level_file is None:
+            code,out,secs = 125, prerequisite or missing_level,0
         else:
             try:
                 code,out,secs = run_load_parallel(repo,load_test,executable,[level],env)

@@ -2,13 +2,19 @@
 """Pure check (nothing compiled, nothing started): a WhileWorking reaction can lay a named clip over the running work
 clip, the work clip keeps running through complementary blend weights (restored afterwards), and the exhaustion and trap reload events are
 hooked up to their clips. A creature that carries something walks with the clip CarryWalk (when the skeleton
-has it) instead of Walk, with the same speed factors."""
+has it) instead of Walk, with the same speed factors.
+config/creatureReactions.cfg lies in the content packages (scripts/content_packages.py); without the content its
+events are named as not checked."""
 import re
+import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 cpp = (root / 'source' / 'render' / 'CreatureReactions.cpp').read_text(encoding='utf-8')
-cfg = (root / 'config' / 'creatureReactions.cfg').read_text(encoding='utf-8')
+cfg_file = content_packages.data_file(root, 'config/creatureReactions.cfg')
+cfg = None if cfg_file is None else cfg_file.read_text(encoding='utf-8')
 
 # The gate in front of startClip: dying events never, WhileWorking events only when the variant names a clip
 assert re.search(r'clipAllowed\s*=\s*!event\.mDying\s*&&\s*\(!event\.mWhileWorking\s*\|\|\s*!variant\.mClip\.empty\(\)\)', cpp)
@@ -33,21 +39,24 @@ assert 'base->setTimePosition(' not in clip_code and 'base->addTime(' not in upd
 # Priority rule for a WhileWorking event stays
 assert 'event->mWhileWorking &&' in cpp and 'ReactionPriority::none' in cpp
 
-events = {}
-for match in re.finditer(r'\[Event\](.*?)\[/Event\]', cfg, re.S):
-    body = match.group(1)
-    name = re.search(r'Name\s+(\S+)', body).group(1)
-    events[name] = body
+if cfg is None:
+    content_packages.unchecked('check_work_clip_overlay', ['config/creatureReactions.cfg'])
+else:
+    events = {}
+    for match in re.finditer(r'\[Event\](.*?)\[/Event\]', cfg, re.S):
+        body = match.group(1)
+        name = re.search(r'Name\s+(\S+)', body).group(1)
+        events[name] = body
 
-# Read the configured named overlays without changing their event ordering.
-def variant_clips(name):
-    return re.findall(r'^\s*Clip\s+(\S+)', events[name], re.M)
+    # Read the configured named overlays without changing their event ordering.
+    def variant_clips(name):
+        return re.findall(r'^\s*Clip\s+(\S+)', events[name], re.M)
 
-for name, clips in (('DigExhausted', ('WipeBrow', 'Pant')), ('TrapReload', ('TrapReload',))):
-    assert re.search(r'^\s*WhileWorking\s+yes', events[name], re.M), name
-    assert variant_clips(name) == list(clips), (name, variant_clips(name))
-    # The old effect and emote parts stay
-    assert re.search(r'^\s*(Emote|Effect)\s', events[name], re.M), name
+    for name, clips in (('DigExhausted', ('WipeBrow', 'Pant')), ('TrapReload', ('TrapReload',))):
+        assert re.search(r'^\s*WhileWorking\s+yes', events[name], re.M), name
+        assert variant_clips(name) == list(clips), (name, variant_clips(name))
+        # The old effect and emote parts stay
+        assert re.search(r'^\s*(Emote|Effect)\s', events[name], re.M), name
 
 
 # Carrying walk: the clip is chosen where the Walk clip is applied, by the client side carry state

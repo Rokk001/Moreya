@@ -3,7 +3,7 @@
 starts and ends in the seat pose, the body rests on the bench or its feet and stays out of the furniture.
 
 What is checked (fixed values of this branch, counted once)
-  visitors   30 skeletons belong to the types whose Tavern line in creatures.cfg is not "0 0"
+  visitors   31 skeletons belong to the types whose Tavern line in creatures.cfg is not "0 0"
   clips      Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped; a bone without a track stays in its rest pose
   seam       the first and the last frame of a clip show the same pose, so that it loops and returns to the seat pose
   height     the pose of Sit reaches above the seat of the bench
@@ -23,6 +23,9 @@ What is checked (fixed values of this branch, counted once)
 
 Calls (from the repository root; needs OgreXMLConverter on the PATH or in OGRE_XML_CONVERTER, no compiler, no game):
   python source/tests/check_tavern_seat_clips.py
+
+Without the content (scripts/content_packages.py) the mug of the drinking clips is not present: the clips are then
+named as not checked after the configuration side.
 """
 from pathlib import Path
 import re
@@ -34,6 +37,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 from asset_check_timing import prepare, preparation, profile_check
 import author_tavern_seats as seats
 import check_tavern_drink_834 as drink
@@ -42,7 +47,7 @@ import fix_walk_feet as feet
 from check_animation_assets import export
 
 SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitDice', 'SitSlumped']
-VISITING_SKELETONS = 30
+VISITING_SKELETONS = 31
 # A clip may reach this far into the table top (a hand or a tusk on its edge), in tiles
 MAX_TABLE_DEPTH = 0.04
 # Samples per clip: dense enough that a fast arm does not pass the table top between two of them
@@ -68,16 +73,18 @@ def stool_meshes():
     return set(re.findall(r'\{ "([^"]+)", [0-9]+, ', room.split('TAVERN_STOOL_BODIES[] =')[1].split('};')[0]))
 
 
-# Returns the skeleton names of the creature types with a tavern line other than 0 0, and their mesh names.
+# Returns the skeleton names of the creature types with a tavern line other than 0 0, and their mesh names. The
+# creature meshes are game data of the content packages (scripts/content_packages.py); main() calls this only with the
+# content present.
 def visitors():
     found = {}
-    configuration = (ROOT / 'config' / 'creatures.cfg').read_text(encoding='utf-8', errors='replace')
+    configuration = content_packages.read_text(ROOT, 'config/creatures.cfg')
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', configuration, re.S):
         mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)
         tavern = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
         if (mesh is None) or (tavern is None) or (float(tavern.group(1)) <= 0.0 and float(tavern.group(2)) <= 0.0):
             continue
-        data = (ROOT / 'models' / mesh.group(1)).read_bytes()
+        data = content_packages.resolve(ROOT, 'models/' + mesh.group(1)).read_bytes()
         skeleton = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', data)[0].decode('ascii')
         found.setdefault(skeleton, mesh.group(1))
     return found
@@ -419,10 +426,14 @@ def check_weapons_hidden():
 @profile_check
 def main():
     check_weapons_hidden()
+    # The Tavern lines of the visitors are own rows of config/creatures.cfg (content package core-config)
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_tavern_seat_clips', ['visitors and seat clips (own rows of config/creatures.cfg)'])
+        return
     found = visitors()
     assert len(found) == VISITING_SKELETONS, len(found)
     assert 'Kobold' not in found and 'skeleton' not in found, 'workers and the Skeleton do not visit the tavern'
-    configuration = (ROOT / 'config' / 'creatures.cfg').read_text(encoding='utf-8', errors='replace')
+    configuration = content_packages.read_text(ROOT, 'config/creatures.cfg')
     large = set()
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', configuration, re.S):
         mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)
@@ -430,6 +441,10 @@ def main():
         if mesh and bed and int(bed.group(1)) >= 2 and int(bed.group(2)) >= 2 and mesh.group(1) in found.values():
             large.add(next(key for key, value in found.items() if value == mesh.group(1)))
     assert large == set(seats.LARGE_MODELS), ('large models', sorted(large))
+    # The mug is content (core-models package, scripts/content_packages.py); without it the clips are not checked
+    if content_packages.data_file(ROOT, 'models/' + seats.MUG_MESH) is None and not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_tavern_seat_clips', ['seat clips with models/' + seats.MUG_MESH])
+        return
     out = ROOT / 'out' / 'tavern-seat-clips'
     out.mkdir(parents=True, exist_ok=True)
     assets = SeatAssets(out, clip_names=None)
@@ -438,7 +453,7 @@ def main():
     tested = 0
     for name, mesh_name in sorted(found.items()):
         tested += check_skeleton(name, mesh_name, assets, stools, mounts)
-    assert tested == 210, tested
+    assert tested == 217, tested
     print('tavern seat clips ok:', tested, 'clips on', len(found), 'skeletons')
 
 

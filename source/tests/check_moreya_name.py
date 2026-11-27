@@ -19,6 +19,11 @@ Boost of the dependency folder and run on temporary folders: the old user data i
 excepted), the old folder stays unchanged, an existing new folder is never touched, a missing old folder creates
 nothing and a left-over partial copy of an interrupted start is replaced.
 
+Game data moved to the content packages (scripts/content_packages.py) is checked where it lies now: the data texts,
+the file names and the exit screen leftovers of the shipped folders are those of the public tree (tracked files that
+are still there) plus the files of the same folders in the found content packages. Without the content only the public
+tree is checked and the check names the package files as not checked.
+
 Fixed values: 7 allowed source literals, 7 ICO sizes, 6 PNG sizes, 5 take-over cases.
 Usage: python -I source/tests/check_moreya_name.py
 """
@@ -33,6 +38,9 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
 OLD = re.compile(r'open ?dungeons|\bodp\b', re.I)
 # Internal names that stay (code-internal, not shown to players): CEGUI image sets and scheme, the level file header.
 INTERNAL = re.compile(r'OpenDungeons(Icons|Skin|GameWindow|Navigation)\b/?|'
@@ -69,8 +77,9 @@ def check(condition, message):
 
 
 def read(relative):
-    """Text of a repository file."""
-    return (ROOT / relative).read_text(encoding='utf-8')
+    """Text of a repository file, or of the game data file of a content package when it moved there; a mixed table
+    or interface file comes with its own rows of the content (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, relative)
 
 
 def tracked(*paths):
@@ -78,6 +87,30 @@ def tracked(*paths):
     output = subprocess.run(['git', '-C', str(ROOT), 'ls-files', '--'] + list(paths), capture_output=True, text=True,
                             check=True).stdout
     return [line for line in output.splitlines() if line]
+
+
+def data_files(*folders):
+    """Files below the given game data folders: the tracked files of the public tree that are still there, then the
+    files of the same folders in the found content packages that the public tree does not have (relative paths)."""
+    public = [relative for relative in tracked(*folders) if (ROOT / relative).is_file()]
+    seen = set(public)
+    packaged = []
+    for folder in folders:
+        # the same folder of every found content package (the public folder is the first of data_folders)
+        for base in content_packages.data_folders(ROOT, folder)[1 if (ROOT / folder).is_dir() else 0:]:
+            for path in base.rglob('*'):
+                if not path.is_file():
+                    continue
+                relative = folder + '/' + path.relative_to(base).as_posix()
+                if relative in seen:
+                    continue
+                seen.add(relative)
+                packaged.append(relative)
+    return public + sorted(packaged)
+
+
+if not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_moreya_name', ['texts and file names of the game data in the content packages'])
 
 
 def old_name_lines(relative, text, allowed=None):
@@ -124,7 +157,7 @@ def ico_sizes(path):
 started = time.monotonic()
 
 # Player-facing data texts
-for relative in tracked('config', 'gui', 'levels', 'python', 'licenses', 'particles', 'shaders'):
+for relative in data_files('config', 'gui', 'levels', 'python', 'licenses', 'particles', 'shaders'):
     if relative.lower().endswith(BINARY_SUFFIXES):
         continue
     text = read(relative)
@@ -170,7 +203,7 @@ check(not OLD_LINKS.search(current), 'RELEASE-NOTES.md: link to the old project 
 check(notes.startswith('## Moreya Release Notes'), 'RELEASE-NOTES.md is titled Moreya')
 
 # File names of everything shipped or installed
-for relative in tracked(*SHIPPED_DIRS) + [p for p in tracked('.') if '/' not in p]:
+for relative in data_files(*SHIPPED_DIRS) + [p for p in tracked('.') if '/' not in p]:
     check(not OLD.search(relative), 'file name with an old name: ' + relative)
 
 # Package names, executable and window title
@@ -213,8 +246,8 @@ check('LOGFILENAME = "moreya.log"' in read('source/utils/ResourceManager.cpp'), 
 # Exit screen removed, Quit closes directly
 for gone in ('gui/Advertisment.layout', 'gui/ODAdvertisment.imageset', 'gui/ODAdvertisment.png',
              'source/modes/AdvertMode.cpp', 'source/modes/AdvertMode.h'):
-    check(not (ROOT / gone).exists(), gone + ' is removed')
-for relative in tracked('source', 'gui', 'CMakeLists.txt'):
+    check(not (ROOT / gone).exists() and content_packages.data_file(ROOT, gone) is None, gone + ' is removed')
+for relative in tracked('source', 'CMakeLists.txt') + data_files('gui'):
     if relative.startswith('source/tests/') or relative.lower().endswith(BINARY_SUFFIXES):
         continue
     text = read(relative)

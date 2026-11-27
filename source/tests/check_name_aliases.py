@@ -1,11 +1,20 @@
 """Check the alias table that lets savegames, levels and config files with older names keep loading:
 every old name (built here from fragments, so the old spelling is never written out) hashes to an entry of
 source/utils/NameAliases.cpp that points at the current name, unknown and current names are not in the table,
-and the parse points call NameAliases::resolve."""
+and the parse points call NameAliases::resolve.
+
+The keys with the new names are own rows of the data tables (content package core-config); without the content their
+use by the data is named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(repo)
 alias_src = (repo / "source/utils/NameAliases.cpp").read_text(encoding="utf-8")
 
 
@@ -63,19 +72,23 @@ for name in list(cases.values()) + ["Hatchery", "Wooden", "SteelDoorHP", "spellS
     assert fnv(name) not in table, f"{name!r} would be changed by resolve"
 
 # The new names are really used by the data
-spells = (repo / "config/spells.cfg").read_text(encoding="utf-8")
-traps = (repo / "config/traps.cfg").read_text(encoding="utf-8")
-skills = (repo / "config/skills.cfg").read_text(encoding="utf-8")
-glob = (repo / "config/global.cfg").read_text(encoding="utf-8")
-for key in ("DefectorPrice", "HexenHenPrice", "HexenHenCooldown"):
-    assert re.search(r"^\s+%s\t" % key, spells, re.M), f"spells.cfg lacks {key}"
-for key in ("WatchBannerCostPerTile", "IronboundDoorHP", "RunedDoorDamage"):
-    assert re.search(r"^\s+%s\t" % key, traps, re.M), f"traps.cfg lacks {key}"
-for key in ("spellDefector", "spellHexenHen", "trapWatchBanner", "trapDoorIronbound", "trapDoorRuned"):
-    assert re.search(r"^\s+%s\t" % key, skills, re.M), f"skills.cfg lacks {key}"
-assert re.search(r"^\s+ManaWellBonusPerTile\t", glob, re.M), "global.cfg lacks ManaWellBonusPerTile"
-rooms = (repo / "config/rooms.cfg").read_text(encoding="utf-8")
-assert re.search(r"^\s+RoomConvertClaimRate\t", rooms, re.M), "rooms.cfg lacks RoomConvertClaimRate"
+if WITH_CONTENT:
+    spells = content_packages.read_text(repo, "config/spells.cfg")
+    traps = content_packages.read_text(repo, "config/traps.cfg")
+    skills = content_packages.read_text(repo, "config/skills.cfg")
+    glob = content_packages.read_text(repo, "config/global.cfg")
+    for key in ("DefectorPrice", "HexenHenPrice", "HexenHenCooldown"):
+        assert re.search(r"^\s+%s\t" % key, spells, re.M), f"spells.cfg lacks {key}"
+    for key in ("WatchBannerCostPerTile", "IronboundDoorHP", "RunedDoorDamage"):
+        assert re.search(r"^\s+%s\t" % key, traps, re.M), f"traps.cfg lacks {key}"
+    for key in ("spellDefector", "spellHexenHen", "trapWatchBanner", "trapDoorIronbound", "trapDoorRuned"):
+        assert re.search(r"^\s+%s\t" % key, skills, re.M), f"skills.cfg lacks {key}"
+    assert re.search(r"^\s+ManaWellBonusPerTile\t", glob, re.M), "global.cfg lacks ManaWellBonusPerTile"
+    rooms = content_packages.read_text(repo, "config/rooms.cfg")
+    assert re.search(r"^\s+RoomConvertClaimRate\t", rooms, re.M), "rooms.cfg lacks RoomConvertClaimRate"
+else:
+    content_packages.unchecked("check_name_aliases", ["new names in the data (own rows of config/spells.cfg, traps.cfg, "
+                                                      "skills.cfg, global.cfg and rooms.cfg)"])
 
 # Parse points
 def count(path, text):

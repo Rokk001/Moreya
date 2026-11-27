@@ -6,6 +6,9 @@
 #include "BoostTestTargetConfig.h"
 #include "creatureskill/CreatureSkillTreeView.h"
 
+#include <boost/filesystem.hpp>
+
+#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <string>
@@ -15,8 +18,29 @@ using namespace CreatureSkillTree;
 
 namespace
 {
+//! \brief The folders of the content packages (subfolders with a Package.cfg) of the folder named by
+//! MOREYA_CONTENT_DIR, in name order; empty when the variable is not set, is empty or names no folder.
+std::vector<std::string> contentPackageFolders()
+{
+    std::vector<std::string> folders;
+    const char* variable = std::getenv("MOREYA_CONTENT_DIR");
+    if(variable == nullptr || std::string(variable).empty())
+        return folders;
+    boost::system::error_code error;
+    if(!boost::filesystem::is_directory(variable, error))
+        return folders;
+    for(boost::filesystem::directory_iterator it(variable, error);
+        !error && (it != boost::filesystem::directory_iterator()); it.increment(error))
+    {
+        if(boost::filesystem::is_regular_file(it->path() / "Package.cfg", error))
+            folders.push_back(it->path().string());
+    }
+    std::sort(folders.begin(), folders.end());
+    return folders;
+}
+
 //! \brief Loads config/creatureSkills.cfg: from OD_TEST_CREATURE_SKILLS_FILE, else from the working folder or one of
-//! its parent folders.
+//! its parent folders, else from a content package of MOREYA_CONTENT_DIR (the file moved into the content).
 bool loadConfig(SkillTreeConfig& config)
 {
     std::vector<std::string> candidates;
@@ -29,6 +53,9 @@ bool loadConfig(SkillTreeConfig& config)
         candidates.push_back(prefix + "config/creatureSkills.cfg");
         prefix += "../";
     }
+    const std::vector<std::string> packages = contentPackageFolders();
+    for(std::vector<std::string>::const_iterator it = packages.begin(); it != packages.end(); ++it)
+        candidates.push_back(*it + "/config/creatureSkills.cfg");
     for(std::vector<std::string>::const_iterator it = candidates.begin(); it != candidates.end(); ++it)
     {
         std::ifstream file(it->c_str());
@@ -37,6 +64,21 @@ bool loadConfig(SkillTreeConfig& config)
         std::string error;
         return config.load(file, error);
     }
+    return false;
+}
+
+//! \brief Loads the config for a test case. Without the content (no package in MOREYA_CONTENT_DIR) a config that is
+//! not found is reported as not checked and false is returned; with the content a missing config fails the test case.
+bool requireConfig(SkillTreeConfig& config)
+{
+    if(loadConfig(config))
+        return true;
+    if(contentPackageFolders().empty())
+    {
+        BOOST_CHECK_MESSAGE(true, "content not present, not checked: config/creatureSkills.cfg");
+        return false;
+    }
+    BOOST_REQUIRE_MESSAGE(false, "config/creatureSkills.cfg is missing although the content is present");
     return false;
 }
 
@@ -65,7 +107,8 @@ TypeInfo supporterType()
 BOOST_AUTO_TEST_CASE(orc_layout)
 {
     SkillTreeConfig config;
-    BOOST_REQUIRE(loadConfig(config));
+    if(!requireConfig(config))
+        return;
     SkillBuild build;
     const TreeView view = buildTreeView(config, orcType(), build, ViewRules());
     BOOST_REQUIRE_EQUAL(view.mColumns.size(), 4u);
@@ -87,7 +130,8 @@ BOOST_AUTO_TEST_CASE(orc_layout)
 BOOST_AUTO_TEST_CASE(orc_unlock_and_bars)
 {
     SkillTreeConfig config;
-    BOOST_REQUIRE(loadConfig(config));
+    if(!requireConfig(config))
+        return;
     SkillBuild build;
     build.mRanks["TNK_A1"] = 5;
     build.mRanks["TNK_A2"] = 1;
@@ -127,7 +171,8 @@ BOOST_AUTO_TEST_CASE(orc_unlock_and_bars)
 BOOST_AUTO_TEST_CASE(orc_template_highlight)
 {
     SkillTreeConfig config;
-    BOOST_REQUIRE(loadConfig(config));
+    if(!requireConfig(config))
+        return;
     SkillBuild build;
     TreeView view = buildTreeView(config, orcType(), build, ViewRules());
     for(std::size_t column = 0; column < view.mColumns.size(); ++column)
@@ -146,7 +191,8 @@ BOOST_AUTO_TEST_CASE(orc_template_highlight)
 BOOST_AUTO_TEST_CASE(orc_tooltips)
 {
     SkillTreeConfig config;
-    BOOST_REQUIRE(loadConfig(config));
+    if(!requireConfig(config))
+        return;
     SkillBuild build;
     build.mRanks["TNK_A1"] = 3;
     build.mRanks["TNK_A2"] = 2;
@@ -198,7 +244,8 @@ BOOST_AUTO_TEST_CASE(orc_tooltips)
 BOOST_AUTO_TEST_CASE(type_without_group_has_no_tree)
 {
     SkillTreeConfig config;
-    BOOST_REQUIRE(loadConfig(config));
+    if(!requireConfig(config))
+        return;
     TypeInfo champion;
     const TreeView view = buildTreeView(config, champion, SkillBuild(), ViewRules());
     BOOST_CHECK(view.mColumns.empty());

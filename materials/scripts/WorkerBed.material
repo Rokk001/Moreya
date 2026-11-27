@@ -1,4 +1,4 @@
-// WorkerBed: procedural bed, see tools/room-objects/generate_beds.py
+// WorkerBed: procedural bed, see tools/room-objects/generate_beds.py (private tools repository)
 import RTSS/PerPixel_SinglePass from "RTShaderSystem.material"
 material WorkerBedFrame : RTSS/PerPixel_SinglePass
 {

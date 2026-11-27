@@ -2,16 +2,26 @@
 """Leave clock, decision and rampage of the creature mood (cases wages, clock, decision, no_portal, rampage, rampage_ends,
 rogue_rule, make_happy (clock and rampage part), save_load (clock and rampage); edge rules E2, E3, E6). Nothing is compiled:
 the values come from the shipped configuration, the rules are worked out here with the same formulas as the sources, and the
-source wiring is pinned by tokens."""
+source wiring is pinned by tokens.
+
+The mood values of config/global.cfg and config/creatures.cfg are own rows of the content (core-config); without the
+content the values and the rules worked out with them are named as not checked and the source wiring is checked."""
 import random
 import re
+import sys
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the configuration comes with its own rows)
+WITH_CONTENT = content_packages.has_content(repo)
 
 
 def read(path):
-    return (repo / path).read_text(encoding="utf-8").replace("\r\n", "\n")
+    """The text of a repository file with LF line ends; a mixed table comes with its own rows of the content."""
+    return content_packages.read_text(repo, path).replace("\r\n", "\n")
 
 
 def check(cond, message):
@@ -52,21 +62,23 @@ definition_cpp = read("source/entities/CreatureDefinition.cpp")
 manager_cpp = read("source/utils/ConfigManager.cpp")
 
 # ---- values ------------------------------------------------------------------------------------------------------------------
-PAYDAY = key(glob, "TimePayDay")
-RESET_LEVEL = key(glob, "CreatureMoodAngry")
+if WITH_CONTENT:
+    PAYDAY = key(glob, "TimePayDay")
+    RESET_LEVEL = key(glob, "CreatureMoodAngry")
 TURNS_PER_SECOND = 1.4
 GAME_SECONDS_PER_TURN = 0.95 / TURNS_PER_SECOND
-rampage_block = re.search(r"\[Rampage\](.*?)\[/Rampage\]", glob, re.S).group(1)
-TILE_DAMAGE, HIT_TURNS, PILE_TURNS = (key(rampage_block, "RampageTileDamage"), key(rampage_block, "RampageHitTurns"),
-                                      key(rampage_block, "RampagePileTurns"))
-VICTIM = key(glob, "MoodRampageBrawlVictim")
-check(PAYDAY == 600 and RESET_LEVEL == 500, "the clock is one pay day, the reset level is 500")
-check((TILE_DAMAGE, HIT_TURNS, PILE_TURNS) == (5, 42, 168), "5 HP per 42 turns, a pile every 168 turns")
-check(VICTIM == -100, "a brawl victim loses 100")
-check(re.search(r"(?m)^# RampageTileDamage ", glob) and re.search(r"(?m)^# RampageHitTurns ", glob) and
-      re.search(r"(?m)^# RampagePileTurns ", glob), "the [Rampage] keys have a documentation line")
-check(re.search(r"(?m)^# Mood an own creature loses once when it was in a brawl with a rampaging creature", glob),
-      "MoodRampageBrawlVictim has a documentation line")
+if WITH_CONTENT:
+    rampage_block = re.search(r"\[Rampage\](.*?)\[/Rampage\]", glob, re.S).group(1)
+    TILE_DAMAGE, HIT_TURNS, PILE_TURNS = (key(rampage_block, "RampageTileDamage"), key(rampage_block, "RampageHitTurns"),
+                                          key(rampage_block, "RampagePileTurns"))
+    VICTIM = key(glob, "MoodRampageBrawlVictim")
+    check(PAYDAY == 600 and RESET_LEVEL == 500, "the clock is one pay day, the reset level is 500")
+    check((TILE_DAMAGE, HIT_TURNS, PILE_TURNS) == (5, 42, 168), "5 HP per 42 turns, a pile every 168 turns")
+    check(VICTIM == -100, "a brawl victim loses 100")
+    check(re.search(r"(?m)^# RampageTileDamage ", glob) and re.search(r"(?m)^# RampageHitTurns ", glob) and
+          re.search(r"(?m)^# RampagePileTurns ", glob), "the [Rampage] keys have a documentation line")
+    check(re.search(r"(?m)^# Mood an own creature loses once when it was in a brawl with a rampaging creature", glob),
+          "MoodRampageBrawlVictim has a documentation line")
 # the old rogue rule and the wage rules are gone
 for gone in ("NbTurnsFuriousMax", "UnpaidWagesLeave", "UnpaidWagesStopWork"):
     check(gone not in glob and gone not in manager_cpp, gone + " is gone")
@@ -77,17 +89,18 @@ check("mNbTurnFurious" not in creature_cpp and "mNbTurnFurious" not in creature_
 # ranged (marksman, mage) 50/15/35 (Roster change (CREATURE-ROSTER W4a): the role groups replace blocker, blitzer, flanker, archer, caster)
 CHANCES = {"tank": (35, 45, 20), "warrior": (35, 45, 20), "marksman": (50, 15, 35), "mage": (50, 15, 35)}
 typed = 0
-for block in re.findall(r"(?ms)^\[Creature\]\s*$(.*?)^\[/Creature\]", creatures):
-    if not re.search(r"(?m)^\s*MoodSensitivity\s", block):
-        continue
-    group = re.search(r"(?m)^\s*SkillGroup\s+(\S+)", block).group(1)
-    got = (key(block, "MoodLeaveChance"), key(block, "MoodRampageChance"), key(block, "MoodRogueChance"))
-    check(got == CHANCES.get(group, (50, 30, 20)), "chances of a " + group + " type: " + str(got))
-    check(sum(got) == 100, "the chances sum to 100")
-    typed += 1
-check(typed >= 30, "every type with mood has the three chances")
-check("MoodLeaveChance" in creatures and "MoodRampageChance" in creatures and "MoodRogueChance" in creatures and
-      re.search(r"(?m)^# MoodLeaveChance / MoodRampageChance / MoodRogueChance", creatures), "documented in creatures.cfg")
+if WITH_CONTENT:
+    for block in re.findall(r"(?ms)^\[Creature\]\s*$(.*?)^\[/Creature\]", creatures):
+        if not re.search(r"(?m)^\s*MoodSensitivity\s", block):
+            continue
+        group = re.search(r"(?m)^\s*SkillGroup\s+(\S+)", block).group(1)
+        got = (key(block, "MoodLeaveChance"), key(block, "MoodRampageChance"), key(block, "MoodRogueChance"))
+        check(got == CHANCES.get(group, (50, 30, 20)), "chances of a " + group + " type: " + str(got))
+        check(sum(got) == 100, "the chances sum to 100")
+        typed += 1
+    check(typed >= 30, "every type with mood has the three chances")
+    check("MoodLeaveChance" in creatures and "MoodRampageChance" in creatures and "MoodRogueChance" in creatures and
+          re.search(r"(?m)^# MoodLeaveChance / MoodRampageChance / MoodRogueChance", creatures), "documented in creatures.cfg")
 for token in ('nextParam == "MoodLeaveChance"', 'nextParam == "MoodRampageChance"', 'nextParam == "MoodRogueChance"',
               "os << c->mMoodLeaveChance;", "is >> c->mMoodLeaveChance;", "os << c->mMoodRogueChance;", "is >> c->mMoodRogueChance;"):
     check(token in definition_cpp, "CreatureDefinition: " + token)
@@ -190,48 +203,49 @@ class Creature:
 
 
 # clock: the mood reaches 0, a meal lifts it to 50, it falls back; the clock keeps running; at 500 it resets
-c = Creature(stored=0.0)
-c.turn()
-check(c.clock_running, "clock: it starts when the mood reaches 0")
-for _ in range(100):
+if WITH_CONTENT:
+    c = Creature(stored=0.0)
     c.turn()
-c.stored = 50.0
-for _ in range(100):
+    check(c.clock_running, "clock: it starts when the mood reaches 0")
+    for _ in range(100):
+        c.turn()
+    c.stored = 50.0
+    for _ in range(100):
+        c.turn()
+    check(c.clock_running and c.clock > 150 * GAME_SECONDS_PER_TURN, "clock: a meal that lifts the mood to 50 does not stop it")
+    c.stored = 0.0
+    for _ in range(100):
+        c.turn()
+    check(c.clock_running, "clock: it keeps running when the mood falls back")
+    c.stored = RESET_LEVEL
     c.turn()
-check(c.clock_running and c.clock > 150 * GAME_SECONDS_PER_TURN, "clock: a meal that lifts the mood to 50 does not stop it")
-c.stored = 0.0
-for _ in range(100):
+    check(not c.clock_running and c.clock == 0.0, "clock: at 500 it resets")
+    c.stored = 499.0
     c.turn()
-check(c.clock_running, "clock: it keeps running when the mood falls back")
-c.stored = RESET_LEVEL
-c.turn()
-check(not c.clock_running and c.clock == 0.0, "clock: at 500 it resets")
-c.stored = 499.0
-c.turn()
-check(not c.clock_running, "clock: it does not start above 0")
+    check(not c.clock_running, "clock: it does not start above 0")
 
-# the draw at TimePayDay: about 884 turns at 1.4 turns per second
-c = Creature(stored=0.0, chances=(50, 0, 50))
-turns = 0
-while not c.outcomes and turns < 5000:
-    c.turn()
-    turns += 1
-check(abs(turns - 885) <= 2, "clock: one pay day is about 884 turns, got " + str(turns))
+    # the draw at TimePayDay: about 884 turns at 1.4 turns per second
+    c = Creature(stored=0.0, chances=(50, 0, 50))
+    turns = 0
+    while not c.outcomes and turns < 5000:
+        c.turn()
+        turns += 1
+    check(abs(turns - 885) <= 2, "clock: one pay day is about 884 turns, got " + str(turns))
 
-# E2: pause while held in the hand, knocked out or possessed, then continue; a captive has no clock
-c = Creature(stored=0.0, chances=(100, 0, 0))
-c.turn()
-for _ in range(500):
+    # E2: pause while held in the hand, knocked out or possessed, then continue; a captive has no clock
+    c = Creature(stored=0.0, chances=(100, 0, 0))
     c.turn()
-before = c.clock
-c.paused = True
-for _ in range(1000):
-    c.turn()
-check(c.clock == before and not c.outcomes, "E2: the clock pauses while held, knocked out or possessed")
-c.paused = False
-while not c.outcomes:
-    c.turn()
-check(c.outcomes == ["leave"], "E2: it continues afterwards")
+    for _ in range(500):
+        c.turn()
+    before = c.clock
+    c.paused = True
+    for _ in range(1000):
+        c.turn()
+    check(c.clock == before and not c.outcomes, "E2: the clock pauses while held, knocked out or possessed")
+    c.paused = False
+    while not c.outcomes:
+        c.turn()
+    check(c.outcomes == ["leave"], "E2: it continues afterwards")
 body = extract(creature_cpp, "void Creature::upkeepMoodDecision()")
 check("const bool paused = mIsInHand || isKo() || isPossessed();" in body, "E2: held, knocked out or possessed pauses")
 check("getLastTurnSeconds()" in body and "getTimePayDay()" in body, "the clock counts game time up to TimePayDay")
@@ -241,12 +255,13 @@ captive = captive[:captive.index("// If we are not standing somewhere on the map
 check("stopMoodDecision();" in captive and "upkeepMoodDecision" not in captive, "E2: a captive has no leave clock")
 
 # decision: many draws for a brute type follow 35/45/20
-random.seed(14)
-counts = {"leave": 0, "rampage": 0, "rogue": 0}
-for _ in range(20000):
-    counts[Creature(chances=(35, 45, 20)).draw()] += 1
-for name, share in (("leave", 0.35), ("rampage", 0.45), ("rogue", 0.20)):
-    check(abs(counts[name] / 20000.0 - share) < 0.01, "decision: " + name + " follows its share")
+if WITH_CONTENT:
+    random.seed(14)
+    counts = {"leave": 0, "rampage": 0, "rogue": 0}
+    for _ in range(20000):
+        counts[Creature(chances=(35, 45, 20)).draw()] += 1
+    for name, share in (("leave", 0.35), ("rampage", 0.45), ("rogue", 0.20)):
+        check(abs(counts[name] / 20000.0 - share) < 0.01, "decision: " + name + " follows its share")
 draw = extract(creature_cpp, "void Creature::drawMoodDecision()")
 check("Random::Double(0.0, total)" in draw and "roll < leaveChance + rampageChance" in draw and
       "getMoodLeaveChance()" in draw and "getMoodRampageChance()" in draw and "getMoodRogueChance()" in draw,
@@ -258,10 +273,11 @@ check("leaveDungeon();" in draw and "reportLeavingToBestFriend();" in draw,
 check("mLeaveClockSeconds = 0.0;" in draw, "decision: a creature still at the bottom draws again one pay day later")
 
 # no_portal: the draw is "leave" and no own portal is reachable: it draws again
-c = Creature(chances=(50, 30, 20), portal=False)
-random.seed(3)
-results = [Creature(chances=(50, 30, 20), portal=False).draw() for _ in range(2000)]
-check("leave" not in results and set(results) <= {"rampage", "rogue"}, "no_portal: it draws again")
+if WITH_CONTENT:
+    c = Creature(chances=(50, 30, 20), portal=False)
+    random.seed(3)
+    results = [Creature(chances=(50, 30, 20), portal=False).draw() for _ in range(2000)]
+    check("leave" not in results and set(results) <= {"rampage", "rogue"}, "no_portal: it draws again")
 check("if(!hasReachableOwnPortal())" in draw and "continue;" in draw, "no_portal: a leave draw without a portal draws again")
 check("hasReachableOwnPortal()" in creature_cpp and "getReachableRooms(portals, myTile, this)" in creature_cpp,
       "no_portal: the portal is reachable by the rule of the leave action")
@@ -270,13 +286,14 @@ again = extract(creature_cpp, "void Creature::drawMoodDecisionAgain()")
 check("mLeavingByMood" in again and "drawMoodDecision();" in again, "no_portal: only a leave by the draw draws again")
 
 # E3: a creature walking to its portal turns back and stays when its mood reaches 500 on the way
-c = Creature(stored=0.0, chances=(100, 0, 0))
-c.turn()
-while not c.leaving:
+if WITH_CONTENT:
+    c = Creature(stored=0.0, chances=(100, 0, 0))
     c.turn()
-c.stored = RESET_LEVEL
-c.turn()
-check(not c.leaving and c.outcomes == ["leave", "stays"], "E3: it turns back and stays")
+    while not c.leaving:
+        c.turn()
+    c.stored = RESET_LEVEL
+    c.turn()
+    check(not c.leaving and c.outcomes == ["leave", "stays"], "E3: it turns back and stays")
 stop = extract(creature_cpp, "void Creature::stopMoodDecision()")
 check("mLeavingByMood" in stop and "isActionInList(CreatureActionType::leaveDungeon)" in stop and "clearActionQueue();" in stop,
       "E3: the walk to the portal is ended")
@@ -285,29 +302,30 @@ check("isLeavingByMood() && creature.isActionInList(CreatureActionType::leaveDun
 check("mLeavingByMood = true;" in draw and "leaveDungeon();" in draw, "only a leave by the draw can turn back")
 
 # rampage: one pay day, 5 HP per 42 turns on one tile, a pile every 168 turns, victim -100
-c = Creature(stored=0.0, chances=(0, 100, 0))
-c.draw()
-c.on_target = True
-turns = 0
-while len(c.outcomes) < 2 and turns < 5000:
+if WITH_CONTENT:
+    c = Creature(stored=0.0, chances=(0, 100, 0))
+    c.draw()
+    c.on_target = True
+    turns = 0
+    while len(c.outcomes) < 2 and turns < 5000:
+        c.turn()
+        turns += 1
+    check(c.outcomes[0] == "rampage", "rampage: the draw starts it")
+    expected_hits = int(turns // HIT_TURNS)
+    check(abs(c.hits - expected_hits) <= 1, "rampage: a hit every 42 turns, " + str(c.hits) + " in " + str(turns))
+    check(abs(c.piles - int(turns // PILE_TURNS)) <= 1, "rampage: a pile every 168 turns")
+    check(TILE_DAMAGE * c.hits > 0, "rampage: 5 HP per hit")
+    # the rampage ends after one pay day and the creature draws again (the mood is still below the Upset level)
+    check(c.outcomes[-1] in ("leave", "rampage", "rogue") and len(c.outcomes) == 2, "rampage: it draws again at the end")
+    # rampage_ends: the mood reaches 500 during the rampage: it ends at once and there is no new draw
+    c = Creature(stored=0.0, chances=(0, 100, 0))
+    c.draw()
+    for _ in range(100):
+        c.turn()
+    c.stored = RESET_LEVEL
     c.turn()
-    turns += 1
-check(c.outcomes[0] == "rampage", "rampage: the draw starts it")
-expected_hits = int(turns // HIT_TURNS)
-check(abs(c.hits - expected_hits) <= 1, "rampage: a hit every 42 turns, " + str(c.hits) + " in " + str(turns))
-check(abs(c.piles - int(turns // PILE_TURNS)) <= 1, "rampage: a pile every 168 turns")
-check(TILE_DAMAGE * c.hits > 0, "rampage: 5 HP per hit")
-# the rampage ends after one pay day and the creature draws again (the mood is still below the Upset level)
-check(c.outcomes[-1] in ("leave", "rampage", "rogue") and len(c.outcomes) == 2, "rampage: it draws again at the end")
-# rampage_ends: the mood reaches 500 during the rampage: it ends at once and there is no new draw
-c = Creature(stored=0.0, chances=(0, 100, 0))
-c.draw()
-for _ in range(100):
-    c.turn()
-c.stored = RESET_LEVEL
-c.turn()
-check(c.rampage_left == 0.0 and c.outcomes == ["rampage"], "rampage_ends: it ends at once, no new draw")
-check(not c.clock_running, "rampage_ends: the clock is reset")
+    check(c.rampage_left == 0.0 and c.outcomes == ["rampage"], "rampage_ends: it ends at once, no new draw")
+    check(not c.clock_running, "rampage_ends: the clock is reset")
 body = extract(creature_cpp, "void Creature::upkeepRampage()")
 check("getLastTurnSeconds()" in body and "endRampage();" in body and "drawMoodDecision();" in body,
       "rampage: one pay day, then it draws again")
@@ -376,23 +394,25 @@ check("mBrawlRampageVictim = true" in start_brawl and "opponent.canStartBrawl(ra
 check("MoodRampageBrawlVictim" in manager_cpp, "MoodRampageBrawlVictim is read from the configuration")
 
 # make_happy (clock and rampage part): the clock is reset and a rampage ends
-c = Creature(stored=50.0, chances=(0, 100, 0))
-c.clock_running = True
-c.clock = 300.0
-c.draw()
-c.stored = 1500.0
-c.stop()
-check(not c.clock_running and c.clock == 0.0 and c.rampage_left == 0.0, "make_happy: clock reset and rampage ended")
+if WITH_CONTENT:
+    c = Creature(stored=50.0, chances=(0, 100, 0))
+    c.clock_running = True
+    c.clock = 300.0
+    c.draw()
+    c.stored = 1500.0
+    c.stop()
+    check(not c.clock_running and c.clock == 0.0 and c.rampage_left == 0.0, "make_happy: clock reset and rampage ended")
 happy = extract(creature_cpp, "void Creature::removeAnnoyance()")
 check("stopMoodDecision();" in happy, "make_happy: removeAnnoyance resets the clock and ends the rampage")
 check("mLeaveClockRunning = false;" in stop and "mLeaveClockSeconds = 0.0;" in stop and "endRampage();" in stop,
       "stopMoodDecision resets the clock and ends the rampage")
 # Charisma put on resets a running clock and ends a rampage; worn Charisma keeps the mood above 0, so it never starts the clock
 check("charismaPutOn" in upkeep and "mCharismaSeen" in upkeep, "a Charisma item put on resets the clock and ends the rampage")
-c = Creature(stored=0.0, charisma=200.0)
-for _ in range(50):
-    c.turn()
-check(not c.clock_running, "charisma: worn it never starts the clock")
+if WITH_CONTENT:
+    c = Creature(stored=0.0, charisma=200.0)
+    for _ in range(50):
+        c.turn()
+    check(not c.clock_running, "charisma: worn it never starts the clock")
 
 # the new side: no clock, no rampage
 seat = extract(creature_cpp, "void Creature::changeSeat(")
@@ -434,4 +454,8 @@ resume = extract(creature_src, "void Creature::resumeBrawl(")
 check("isRampaging() != opponent->isRampaging()" in resume and "startBrawl(*opponent, rampage)" in resume,
       "a resumed brawl between a rampaging creature and another one is a rampage brawl")
 
+if not WITH_CONTENT:
+    content_packages.unchecked("check_mood_decision", [
+        "mood values and chances (own rows of config/global.cfg and config/creatures.cfg)",
+        "clock, decision, no_portal, E2, E3, rampage and make_happy rules worked out with them"])
 print("mood decision ok")

@@ -16,6 +16,11 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present: config/global.cfg is a mixed table whose own rows come from them
+CONTENT = content_packages.has_content(ROOT)
 START = time.perf_counter()
 FAILURES = []
 
@@ -54,7 +59,8 @@ MAP_HANDLER = read("source/gamemap/MapHandler.cpp")
 SCRIPT = read("source/gamemap/LevelScript.cpp")
 SCRIPT_H = read("source/gamemap/LevelScript.h")
 RUNNER = read("source/gamemap/LevelScriptRunner.cpp")
-GLOBAL_CFG = read("config/global.cfg")
+#: config/global.cfg as the game reads it, with its own rows from the content
+GLOBAL_CFG = content_packages.read_text(ROOT, "config/global.cfg")
 CONFIG_MANAGER = read("source/utils/ConfigManager.cpp")
 CMAKE = read("CMakeLists.txt")
 
@@ -79,19 +85,25 @@ EXPECTED_KEYS = {
 }
 PLACEHOLDER = "PLACEHOLDER: set by simulation R3"
 
-block = GLOBAL_CFG.split("[GroupCombat]")[1].split("[/GroupCombat]")[0]
-values = {}
-for line in block.splitlines():
-    words = line.split("#")[0].split()
-    if words:
-        values[words[0]] = " ".join(words[1:])
-check(values == {key: value for key, (value, _) in EXPECTED_KEYS.items()}, "V1: [GroupCombat] keys " + repr(values))
-documentation = GLOBAL_CFG.split("[GroupCombat]")[0]
-for key, (_, placeholder) in EXPECTED_KEYS.items():
-    lines = [line for line in documentation.splitlines() if re.match(r"#\s+" + key + r"\s", line)]
-    check(len(lines) == 1, "V1: one documentation line for " + key)
-    if lines:
-        check((PLACEHOLDER in lines[0]) == placeholder, "V1: placeholder mark of " + key)
+if CONTENT:
+    block = GLOBAL_CFG.split("[GroupCombat]")[1].split("[/GroupCombat]")[0]
+    values = {}
+    for line in block.splitlines():
+        words = line.split("#")[0].split()
+        if words:
+            values[words[0]] = " ".join(words[1:])
+    check(values == {key: value for key, (value, _) in EXPECTED_KEYS.items()}, "V1: [GroupCombat] keys " + repr(values))
+    documentation = GLOBAL_CFG.split("[GroupCombat]")[0]
+    for key, (_, placeholder) in EXPECTED_KEYS.items():
+        lines = [line for line in documentation.splitlines() if re.match(r"#\s+" + key + r"\s", line)]
+        check(len(lines) == 1, "V1: one documentation line for " + key)
+        if lines:
+            check((PLACEHOLDER in lines[0]) == placeholder, "V1: placeholder mark of " + key)
+else:
+    # Without the content the [GroupCombat] rows are not there: the models run with the expected values
+    values = {key: value for key, (value, _) in EXPECTED_KEYS.items()}
+    content_packages.unchecked("check_group_combat_wiring", ["V1 keys and documentation of the [GroupCombat] block "
+                                                             "of config/global.cfg"])
 
 read_keys = set(re.findall(r'groupConfig\("(\w+)"\)', MANAGER)) | \
     set(re.findall(r'getGroupCombatConfigWords\("(\w+)"\)', MANAGER))

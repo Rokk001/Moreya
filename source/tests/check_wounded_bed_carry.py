@@ -2,15 +2,30 @@
 
 Pure source wiring checks (no compiler, no game): server authority, configuration, one worker per creature,
 abort rules, ground pulling, movement, clip fallbacks, saved corpse identity and client reactions.
-Non-creature cargo remains carried."""
+Non-creature cargo remains carried.
+config/creatureReactions.cfg lies in the content packages (scripts/content_packages.py); without the content its
+events are named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
 
 
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    """The text of a file below the repository root; a mixed table of config/ comes joined with its own rows."""
+    return content_packages.read_text(root, path)
+
+
+def content(path):
+    """The text of a game data file of the public tree or of a content package, or None without the content."""
+    found = content_packages.data_file(root, path)
+    return None if found is None else found.read_text(encoding='utf-8')
 
 
 def function_body(source, signature):
@@ -20,7 +35,9 @@ def function_body(source, signature):
 
 
 rooms_cfg = read('config/rooms.cfg')
-reactions_cfg = read('config/creatureReactions.cfg')
+reactions_cfg = content('config/creatureReactions.cfg')
+if reactions_cfg is None:
+    content_packages.unchecked('check_wounded_bed_carry', ['config/creatureReactions.cfg'])
 creature = read('source/entities/Creature.cpp')
 creature_h = read('source/entities/Creature.h')
 entity_h = read('source/entities/GameEntity.h')
@@ -41,18 +58,25 @@ number_keys = ['DormitoryWoundedCarryEnemyRadius', 'DormitoryWoundedCarryMaxTurn
 for removed in ('DormitoryWoundedCarryRadius', 'DormitoryWoundedCarryPriority',
                 'DormitoryWoundedCarryCooldown', 'DormitoryWoundedKoDeathCooldown', 'DormitoryWoundedCarryTempKo'):
     assert removed not in rooms_cfg + creature + carry
-assert 'DormitoryWoundedCarryHpPercent' in rooms_cfg and 'DormitoryWoundedCarryHpPercent' in creature
+assert 'DormitoryWoundedCarryHpPercent' in creature
+if WITH_CONTENT:
+    assert 'DormitoryWoundedCarryHpPercent' in rooms_cfg
+else:
+    content_packages.unchecked('check_wounded_bed_carry', ['wounded carry keys and clips (own rows of '
+                                                           'config/rooms.cfg)'])
 for key in number_keys:
-    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t[\d.]+', rooms_cfg, re.M), key + ' not set'
+    if WITH_CONTENT:
+        assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t[\d.]+', rooms_cfg, re.M), key + ' not set'
     assert re.search(r'getRoomConfigDoubleOrDefault\(\s*"' + key + '"', creature + carry), key + ' not read'
 
 # The clip names are in the code and in the configuration, the fallbacks too
 clip_keys = {'DormitoryWoundedDragWorkerClip': 'Drag', 'DormitoryWoundedDragCreatureClip': 'Dragged',
              'DormitoryWoundedDragWorkerFallbackClip': 'Walk', 'DormitoryWoundedDragCreatureFallbackClip': 'Die'}
 for key, value in clip_keys.items():
-    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t' + value + r'\s*$', rooms_cfg, re.M), key + ' not set to ' + value
+    if WITH_CONTENT:
+        assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t' + value + r'\s*$', rooms_cfg, re.M), key + ' not set to ' + value
     assert '"' + key + '"' in render, key + ' not read by the renderer'
 assert 'drag_anim = "Drag"' in movable_h and 'dragged_anim = "Dragged"' in movable_h
 assert 'std::string ConfigManager::getRoomConfigStringOrDefault(' in config_manager
@@ -167,8 +191,8 @@ note = function_body(worker, 'void WorkerReactions::noteAnimation(')
 assert 'EntityAnimation::drag_anim' in note and 'EntityAnimation::dragged_anim' in note
 for name in ('DragWounded', 'DraggedGroan', 'PutWoundedDown'):
     assert '"' + name + '"' in worker, name
-    assert re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
-assert 'PickWounded' not in worker + reactions_cfg and 'LiftGently' not in reactions_cfg
+    assert reactions_cfg is None or re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
+assert 'PickWounded' not in worker + (reactions_cfg or '') and 'LiftGently' not in (reactions_cfg or '')
 assert 'isKoDeath()' not in function_body(worker, 'void WorkerReactions::noteCarry(')
 
 # Own bed only (a): the pulling target is the bed the hurt creature owns in the dormitory, never another free bed

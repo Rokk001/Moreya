@@ -8,6 +8,8 @@ only the source checks run, with --probe a missing compiler is an error.
 The content of config/creatureSkills.cfg (every skill row of the catalog, the tier four skills and the templates),
 the per-type keys and the removal of today's skill lines are checked by check_content() against expected values
 kept in this file; the rules themselves are checked with the small example config in source/tests/fixtures.
+config/creatureSkills.cfg lies in the content package core-config (scripts/content_packages.py); without the content
+the catalog checks and the probe on the real catalog are named as not checked, the rest runs.
 """
 from pathlib import Path
 import re
@@ -19,6 +21,8 @@ import tempfile
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
+HAS_CONTENT = content_packages.has_content(root)
 FIXTURE = root / 'source/tests/fixtures/creature_skills_example.cfg'
 BS = chr(92)
 
@@ -258,8 +262,9 @@ EXPECTED_TYPES = {
 }
 
 
+# The text of a repository file or of a game data file of the public tree or a content package.
 def text(relative):
-    return (root / relative).read_text(encoding='utf-8')
+    return content_packages.read_text(root, relative)
 
 
 # ---------------------------------------------------------------- Python model of the rules
@@ -729,6 +734,10 @@ def probe_shim():
 
 def run_probe(require, source=PROBE, config=FIXTURE):
     compiler = shutil.which('cl')
+    # The probe shim takes the skill tree values of global.cfg, own rows of the content package core-config
+    if not HAS_CONTENT:
+        content_packages.unchecked('check_creature_skill_trees', ['compiled probe (global.cfg skill tree values)'])
+        return None
     if compiler is None:
         assert not require, '--probe needs the compiler (cl) in the PATH'
         print('compiled probe not run (no cl in the PATH)')
@@ -855,16 +864,25 @@ def check_sources():
     cmake = text('CMakeLists.txt')
     config_manager = text('source/utils/ConfigManager.cpp')
 
-    # The loader: creatureSkills.cfg is read by the ConfigManager, the file exists with a documented header
-    cfg = text('config/creatureSkills.cfg')
-    for key in ('Id', 'Name', 'Kind', 'Group', 'Family', 'Path', 'Tier', 'Values', 'Mana', 'Cooldown', 'Duration',
-                'Radius', 'Range', 'BaseLine', 'Rank1', 'Rank3', 'Rank5', 'Properties', 'Creature', 'Value',
-                'Index', 'Primary', 'Alternative'):
-        assert re.search(r'^#\s+' + key + r'\s', cfg, re.M), key
-    for block in ('[Skill]', '[TierFour]', '[Template]'):
-        assert block in cfg
+    # The loader: creatureSkills.cfg is read by the ConfigManager, the file exists with a documented header (the file
+    # lies in the content package core-config)
+    if not HAS_CONTENT:
+        content_packages.unchecked('check_creature_skill_trees', ['config/creatureSkills.cfg header'])
+    else:
+        cfg = text('config/creatureSkills.cfg')
+        for key in ('Id', 'Name', 'Kind', 'Group', 'Family', 'Path', 'Tier', 'Values', 'Mana', 'Cooldown', 'Duration',
+                    'Radius', 'Range', 'BaseLine', 'Rank1', 'Rank3', 'Rank5', 'Properties', 'Creature', 'Value',
+                    'Index', 'Primary', 'Alternative'):
+            assert re.search(r'^#\s+' + key + r'\s', cfg, re.M), key
+        for block in ('[Skill]', '[TierFour]', '[Template]'):
+            assert block in cfg
     assert 'loadCreatureSkills' in config_manager and 'mCreatureSkillTree.load(' in config_manager
-    assert 'creatureSkills.cfg' in config_manager and 'CreatureSkills' in text('config/global.cfg')
+    assert 'creatureSkills.cfg' in config_manager
+    # The CreatureSkills row is an own row of global.cfg (content package core-config)
+    if HAS_CONTENT:
+        assert 'CreatureSkills' in text('config/global.cfg')
+    else:
+        content_packages.unchecked('check_creature_skill_trees', ['config/global.cfg CreatureSkills row'])
     example = FIXTURE.read_text(encoding='utf-8')
     assert '[/Skill]' in example and '[/TierFour]' in example and '[/Template]' in example
 
@@ -1169,7 +1187,9 @@ def check_type_keys(skills, tiers):
 
 
 def check_removed_lines():
-    """Section 7.7: the skill lists keep Melee and the MissileLaunch lines; the Champion keeps every line."""
+    """Section 7.7: the skill lists keep Melee and the MissileLaunch lines; the Champion keeps every line. Without the
+    content the creature rows of creatures.cfg are own rows that are not there: the lists of its public rows are
+    checked and the per-type lines are named as not checked."""
     for relative in ['config/creatures.cfg'] + level_files():
         for name, entries in creature_blocks(relative).items():
             for keys, skill_lines in entries:
@@ -1181,19 +1201,28 @@ def check_removed_lines():
                     assert line_name in KEPT_LINES, (relative, name, line_name)
                 assert names.count('Melee') <= 1, (relative, name)
                 assert names.count('MissileLaunch') <= 1, (relative, name)
-    creatures = creature_blocks('config/creatures.cfg')
-    # The Champion keeps every line it has (Melee and its Explosion), the Explosion line is not removed
-    assert sorted(t[0] for t in creatures['Champion'][0][1]) == ['Explosion', 'Melee']
-    # The shooters keep their first MissileLaunch, the Dragon its second attack line (a MissileLaunch after Melee),
-    # everything else has none
-    for name, (group, family, pre, tier_four) in EXPECTED_TYPES.items():
-        shots = [t[0] for t in creatures[name][0][1]].count('MissileLaunch')
-        assert shots == (1 if name in SHOOTERS else 0), name
+    if HAS_CONTENT:
+        creatures = creature_blocks('config/creatures.cfg')
+        # The Champion keeps every line it has (Melee and its Explosion), the Explosion line is not removed
+        assert sorted(t[0] for t in creatures['Champion'][0][1]) == ['Explosion', 'Melee']
+        # The shooters keep their first MissileLaunch, the Dragon its second attack line (a MissileLaunch after Melee),
+        # everything else has none
+        for name, (group, family, pre, tier_four) in EXPECTED_TYPES.items():
+            shots = [t[0] for t in creatures[name][0][1]].count('MissileLaunch')
+            assert shots == (1 if name in SHOOTERS else 0), name
+    else:
+        content_packages.unchecked('check_creature_skill_trees', ['config/creatures.cfg per-type skill lines'])
 
 
 def check_content():
     """The content of creatureSkills.cfg (every row of the catalog and the templates), the per-type keys and the
-    removed lines; the expected values are data of this check."""
+    removed lines; the expected values are data of this check. Without the content the catalog (core-config) is named
+    as not checked and only the removed lines of creatures.cfg and the public levels are checked."""
+    if not HAS_CONTENT:
+        content_packages.unchecked('check_creature_skill_trees', ['config/creatureSkills.cfg rows, tier four skills, '
+                                                                  'templates and per-type keys'])
+        check_removed_lines()
+        return
     blocks = parse_config_blocks('config/creatureSkills.cfg')
     check_skill_rows(blocks['Skill'])
     check_tier_four_rows(blocks['TierFour'], blocks['Skill'])
@@ -1211,9 +1240,13 @@ def main():
         if '--show' in sys.argv:
             print(chr(10).join(output))
         check_probe(output)
-    real_output = run_probe(require_probe, REAL_PROBE, root / 'config/creatureSkills.cfg')
-    if real_output is not None:
-        check_real_probe(real_output)
+    # The real catalog lies in the content package core-config: without the content its probe is not compiled
+    if not HAS_CONTENT:
+        content_packages.unchecked('check_creature_skill_trees', ['compiled probe on config/creatureSkills.cfg'])
+    else:
+        real_output = run_probe(require_probe, REAL_PROBE, content_packages.resolve(root, 'config/creatureSkills.cfg'))
+        if real_output is not None:
+            check_real_probe(real_output)
     print('check_creature_skill_trees: ok')
 
 

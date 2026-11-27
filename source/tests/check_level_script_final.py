@@ -7,8 +7,13 @@ that need the running game are connected, so a missing hook is found without pla
 """
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+#: True when the content packages are present: gui/ModeGame.layout is a mixed file whose own rows come from them
+CONTENT = content_packages.has_content(repo)
 
 
 def read(relative):
@@ -40,7 +45,7 @@ server_cpp = read('source/network/ServerNotification.cpp')
 client = read('source/network/ODClient.cpp')
 client_h = read('source/network/ODClient.h')
 game_mode = read('source/modes/GameMode.cpp')
-game_layout = read('gui/ModeGame.layout')
+game_layout = content_packages.read_text(repo, 'gui/ModeGame.layout') if CONTENT else None
 
 # make: the action unlocks the skill through the seat, as research does
 make = function(runner, 'void makeSkillAvailable(')
@@ -76,7 +81,10 @@ assert 'mTimeLimitSeconds' in handler
 assert 'getTimeLimitSeconds' in client_h
 assert 'mTimeLimitSeconds = -1;' in function(client, 'case ServerNotificationType::clientAccepted:') or 'mTimeLimitSeconds = -1;' in client
 assert 'getTimeLimitSeconds()' in game_mode and 'HorizontalPipe/TimeLimitDisplay' in game_mode
-assert 'name="TimeLimitDisplay"' in game_layout
+if CONTENT:
+    assert 'name="TimeLimitDisplay"' in game_layout
+else:
+    content_packages.unchecked('check_level_script_final', ['TimeLimitDisplay of gui/ModeGame.layout'])
 
 # creature event conditions: the counters are filled where the event happens
 creature = read('source/entities/Creature.cpp')

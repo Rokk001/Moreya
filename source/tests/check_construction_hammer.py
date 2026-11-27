@@ -2,14 +2,19 @@
 
 Run from the Windows compiler environment; this starts an isolated hidden render
 fixture, not a game session. Optional --compile-only prepares a blocked fixture.
+The fixture reads the models, textures and material scripts of the public tree and of the content packages
+(scripts/content_packages.py); without the content the fixture is named as not checked and nothing is compiled.
 """
 import argparse
 import os
 import re
 from pathlib import Path
 import subprocess
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--compile-only', action='store_true')
 parser.add_argument('--pickaxe-audit', action='store_true')
@@ -105,6 +110,9 @@ struct RenderManager {
     bool rrPlayIdleHandAnimation();
     void rrCancelIdleHandAnimation();
     void updateHand(float);
+    // The per-frame prop updates at the start of updateRenderAnimations have no props in this fixture
+    void updateCleaningBrooms() {}
+    void updateFollowingClipProps() {}
     Ogre::AnimationState* setEntityAnimation(Ogre::Entity*, const std::string&, bool);
     void createTools(Ogre::Entity* keeperHandEnt) { FACTORY }
 };
@@ -137,15 +145,15 @@ int main() {
         Ogre::NameValuePairList options; options["hidden"] = "true";
         auto* window = engine.createRenderWindow("ConstructionHammerCheck", 640, 640, false, &options);
         auto& resources = Ogre::ResourceGroupManager::getSingleton();
-        resources.addResourceLocation("../../models", "FileSystem", "Graphics");
-        resources.addResourceLocation("../../materials/textures", "FileSystem", "Graphics");
+MODEL_LOCATIONS
+TEXTURE_LOCATIONS
         resources.addResourceLocation("OGRE_PREFIX/Media/Main", "FileSystem", "OgreInternal");
         resources.addResourceLocation("OGRE_PREFIX/Media/RTShaderLib", "FileSystem", "Graphics");
         Ogre::RTShader::ShaderGenerator::initialize();
         resources.initialiseAllResourceGroups();
-        resources.addResourceLocation("../../materials/scripts", "FileSystem", "Graphics");
+SCRIPT_LOCATIONS
         auto& materials = Ogre::MaterialManager::getSingleton();
-        for(const char* name : {"Keeperhand.material", "HandTool.material", "BasicHammer.material"})
+        for(const char* name : {"KeeperhandMeshy.material", "HandTool.material", "BasicHammer.material"})
             materials.parseScript(resources.openResource(name, "Graphics"), "Graphics");
         auto* hammerPass = materials.getByName("HandTool/Hammer", "Graphics")->getTechnique(0)->getPass(0);
         check(hammerPass->getVertexColourTracking() == Ogre::TVC_NONE, "authored mesh needs no vertex colour stream");
@@ -182,7 +190,7 @@ int main() {
         check(r.mHandHammer->getMesh()->getName() == "BasicHammer.mesh", "existing hammer mesh reused");
         check(r.mHandHammer->getSubEntity(0)->getMaterialName() == "HandTool/Hammer", "isolated hand material");
         auto* attachment = static_cast<Ogre::TagPoint*>(r.mHandHammer->getParentNode());
-        check(attachment->getPosition().positionEquals(Ogre::Vector3(0,.030f,-.009f)), "shaft uses accepted grasp position");
+        check(attachment->getPosition().positionEquals(Ogre::Vector3(-.010930f,.027735f,.002928f)), "shaft uses accepted grasp position");
         const auto pickaxeOrientation=r.mHandPickaxe->getParentNode()->getOrientation();
         check((attachment->getOrientation()*Ogre::Vector3::UNIT_Z).positionEquals(
             pickaxeOrientation*Ogre::Vector3::UNIT_Y), "hammer shaft matches the pickaxe shaft angle");
@@ -331,7 +339,7 @@ int main() {
                     "watch and yo-yo keep the empty hand angle for their entire duration");
                 if(choice==1&&i>0&&i<12) {
                     const auto* finger=hand->getSkeleton()->getBone("Index3");
-                    const auto anchor=finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+                    const Ogre::Vector3 anchor=finger->_getDerivedPosition()+finger->_getDerivedOrientation()*Ogre::Vector3(-.001542f,.009951f,-.000393f);
                     const auto* data=r.mHandIdleProp->getSection(0)->getRenderOperation()->vertexData;
                     const auto* element=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
                     auto buffer=data->vertexBufferBinding->getBuffer(element->getSource());
@@ -352,7 +360,7 @@ int main() {
                     }
                     const auto* finger=hand->getSkeleton()->getBone("Index3");
                     return finger->_getDerivedPosition()+finger->_getDerivedOrientation()*
-                        Ogre::Vector3(-.000284253f,.0155774f,.000218656f);
+                        Ogre::Vector3(-.001542f,.009951f,-.000393f);
                 };
                 for(int cycle=0;cycle<3;++cycle) {
                     const auto release=sampleFinger(.6f+cycle);
@@ -403,6 +411,24 @@ int main() {
 probe = probe.replace('HELPERS', helpers).replace('FACTORY', factory).replace('METHODS', methods).replace('BUILDING', building)
 probe = probe.replace('PICKAXE_AUDIT', 'true' if args.pickaxe_audit else 'false')
 probe = probe.replace('IDLE_AUDIT', 'true' if args.idle_audit else 'false')
+
+
+def locations(relative):
+    """C++ lines that add a game data folder of the public tree and of every content and room package to Graphics."""
+    return '\n'.join('        resources.addResourceLocation("%s", "FileSystem", "Graphics");' % folder.resolve().as_posix()
+                     for folder in content_packages.data_folders(root, relative))
+
+
+probe = probe.replace('MODEL_LOCATIONS', locations('models')).replace('TEXTURE_LOCATIONS', locations('materials/textures'))
+probe = probe.replace('SCRIPT_LOCATIONS', locations('materials/scripts'))
+# The fixture loads the hand, its tools and their materials; some lie in the content packages
+NEEDED = ('models/Keeperhand.mesh', 'models/BasicHammer.mesh', 'materials/textures/BasicHammer.png',
+          'materials/scripts/KeeperhandMeshy.material', 'materials/scripts/HandTool.material',
+          'materials/scripts/BasicHammer.material')
+absent = [name for name in NEEDED if content_packages.data_file(root, name) is None]
+if absent and not content_packages.has_content(root):
+    content_packages.unchecked('check_construction_hammer', ['render fixture (needs %s)' % ', '.join(absent)])
+    raise SystemExit(0)
 out = root / 'build/construction-hammer-check'
 out.mkdir(parents=True, exist_ok=True)
 cpp = out / 'check.cpp'

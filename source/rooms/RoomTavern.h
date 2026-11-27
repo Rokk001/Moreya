@@ -98,6 +98,18 @@ enum class TavernSlapResult
     critical = 3
 };
 
+//! \brief The result of an arm wrestling or dice game, drawn when its last turns begin: the winner then plays its winner
+//! clip and the loser its loser clip until the game ends.
+enum class TavernGameOutcome
+{
+    //! Not drawn yet: both guests play the clip of the game.
+    open = 0,
+    //! The first guest wins.
+    firstWins = 1,
+    //! The second guest wins.
+    secondWins = 2
+};
+
 //! \brief Number of places of one bench of a tavern table: the table is two tiles long and four guests sit next to each
 //! other on each of its two benches.
 const uint32_t TAVERN_SEATS_PER_BENCH = 4;
@@ -217,7 +229,9 @@ struct RoomTavernGame
         mTurnsLeft(0),
         mSlapsTakenA(0),
         mSlapsTakenB(0),
-        mTurnIsA(true)
+        mTurnIsA(true),
+        mOutcome(TavernGameOutcome::open),
+        mUnderdogLevels(0)
     {}
 
     //! The game that is played.
@@ -240,6 +254,10 @@ struct RoomTavernGame
     bool mTurnIsA;
     //! The running slap or pause of a slap duel.
     RoomTavernDuelClock mDuelClock;
+    //! The drawn result of an arm wrestling or dice game (open until its last turns begin; a slap duel keeps it open).
+    TavernGameOutcome mOutcome;
+    //! Levels the drawn winner of an arm wrestling or dice game is below the loser (0 when it is not the weaker one).
+    uint32_t mUnderdogLevels;
 };
 
 //! \brief A guest place that was read from a saved room and waits for its creature (see RoomTavern::doUpkeep).
@@ -294,7 +312,9 @@ struct RoomTavernPendingGame
         mTurnsLeft(0),
         mSlapsTakenA(0),
         mSlapsTakenB(0),
-        mTurnIsA(true)
+        mTurnIsA(true),
+        mOutcome(TavernGameOutcome::open),
+        mUnderdogLevels(0)
     {}
 
     //! The game that was played.
@@ -317,6 +337,10 @@ struct RoomTavernPendingGame
     bool mTurnIsA;
     //! The running slap or pause of a slap duel (nothing runs in a save made before the duel clock).
     RoomTavernDuelClock mDuelClock;
+    //! The drawn result of an arm wrestling or dice game (open in a save made before the outcome clips).
+    TavernGameOutcome mOutcome;
+    //! Levels the drawn winner was below the loser.
+    uint32_t mUnderdogLevels;
 };
 
 //! \brief A room where creatures quench their thirst. The first tile of the room is the counter, where the innkeeper
@@ -683,9 +707,16 @@ private:
     //! \param seatB The seat of the other guest.
     void startGame(const RoomTavernSeat& seatA, const RoomTavernSeat& seatB);
 
-    //! \brief Plays one turn of an arm wrestling or dice game.
+    //! \brief Plays one turn of an arm wrestling or dice game. When its last GAME_OUTCOME_TURNS turns begin the winner
+    //! is drawn and both guests play their winner and loser clips; when no turn is left the game ends with that winner.
     //! \param it The game.
     void playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
+
+    //! \brief Shows one guest of an arm wrestling or dice game with a drawn result its winner or loser clip, stretched
+    //! to the turns the game has left and turned towards its opponent.
+    //! \param game The game; its result is drawn.
+    //! \param creature The guest (one of the two players).
+    void showGameOutcome(const RoomTavernGame& game, Creature* creature);
 
     //! \brief Plays one turn of a slap duel: a slap of 4 to 10 s (wind-up, slap, reaction) of the guest whose turn it
     //! is runs on, or the pause of 3 to 6 s after it; then the other guest slaps.

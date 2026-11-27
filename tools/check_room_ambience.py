@@ -10,6 +10,10 @@ checks the room rule: every room type has at least 3 idle effects and 1 operatio
 Exits with 1 and prints every problem if something is wrong.
 
     python tools/check_room_ambience.py --table    prints the count per room (idle | operation | files:lines)
+
+The config files, particle and material scripts and meshes are read from the public tree and from the content and room
+packages (scripts/content_packages.py). Without the content config/roomAmbience.cfg is not present: the check then says
+that it is not checked and exits with 0.
 """
 
 import glob
@@ -19,10 +23,18 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
-# The game data and the room packages that are present: the game adds their asset folders and sounds alike
-ROOTS = [ROOT] + [str(package) for package in room_packages.package_roots(ROOT)]
+# The game data and the content and room packages that are present: the game adds their asset folders and sounds alike
+ROOTS = [ROOT] + [str(package) for package in content_packages.package_roots(ROOT)]
+#: The main config file (core-config content package when it is not in the public tree)
+AMBIENCE_CONFIG = str(content_packages.resolve(ROOT, "config/roomAmbience.cfg"))
+
+
+def model_names():
+    """The file names of the models folders of the game data and of the content and room packages."""
+    return [path.name for path in content_packages.data_glob(ROOT, "models")]
 # Stand-in material of the particle systems of a room package that is not present (their names are known, their
 # scripts are not)
 PACKAGED_MATERIAL = "<room package not present>"
@@ -191,7 +203,7 @@ BILLBOARD_TYPES = ("point", "oriented_common", "oriented_self", "perpendicular_c
 
 def check_particle_files(problems):
     """Looks for misspelled keys in the particle files of the room ambience (OGRE only logs them when it loads them)."""
-    for path in sorted(glob.glob(os.path.join(ROOT, "particles", "RoomAmbience*.particle"))):
+    for path in sorted(glob_any("particles", "RoomAmbience*.particle")):
         base = os.path.basename(path)
         context = []
         pending = None
@@ -237,6 +249,28 @@ def check_particle_files(problems):
 
 def mesh_exists(name):
     return exists_any("models", name + ".mesh")
+
+
+# Gold outside the treasury keeps the classic stack names of the server (GoldstackLv1 .. GoldstackLv<sizeCount>,
+# source/render/LooseGoldMesh.h); the client draws them with heap meshes built at run time, so there is no mesh file of
+# that name. An object effect matches the name the server sends (RoomAmbience::getObjectEffects).
+_loose_gold_names = []
+
+
+def loose_gold_names():
+    """The classic stack names that the client draws with run-time meshes (read from LooseGoldMesh.h and .cpp)."""
+    if not _loose_gold_names:
+        with open(os.path.join(ROOT, "source", "render", "LooseGoldMesh.h"), encoding="utf-8") as handle:
+            sizes = int(re.search(r"sizeCount = (\d+);", handle.read()).group(1))
+        with open(os.path.join(ROOT, "source", "render", "LooseGoldMesh.cpp"), encoding="utf-8") as handle:
+            prefix = re.search(r'StackPrefix = "(\w+)";', handle.read()).group(1)
+        _loose_gold_names.extend("%s%d" % (prefix, size) for size in range(1, sizes + 1))
+    return _loose_gold_names
+
+
+def object_mesh_exists(name):
+    """True when an object effect can match the mesh name: a mesh file or a stack name drawn with a run-time mesh."""
+    return mesh_exists(name) or name in loose_gold_names()
 
 
 # The piles of a treasury are meshes built at run time from their names (source/rooms/TreasuryGoldLayer.h):
@@ -504,7 +538,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: no mesh %s" % (where, pattern))
         elif "*" in pattern:
             part = pattern.replace("*", "")
-            if not any(f.startswith(part) or f.endswith(part + ".mesh") for f in os.listdir(os.path.join(ROOT, "models"))):
+            if not any(f.startswith(part) or f.endswith(part + ".mesh") for f in model_names()):
                 problems.append("%s: wildcard %s matches no mesh" % (where, pattern))
     for key in ("Reduced", "NeedWall", "WallSide", "HeartRate", "OwnerOnly", "Loop"):
         if key in effect and effect[key][0] not in ("yes", "no", "true", "false", "1", "0"):
@@ -533,11 +567,11 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                     problems.append("%s: %s doubles the sliding coins that the client starts on piles of level %d and up"
                                     % (where, system, pile_setting("slideLevel")))
         elif target == "Object":
-            if "*" not in match and not mesh_exists(match):
+            if "*" not in match and not object_mesh_exists(match):
                 problems.append("%s: no mesh %s" % (where, match))
             elif "*" in match:
                 pattern = match.replace("*", "")
-                if not any(f.startswith(pattern) or f.endswith(pattern + ".mesh") for f in os.listdir(os.path.join(ROOT, "models"))):
+                if not any(f.startswith(pattern) or f.endswith(pattern + ".mesh") for f in model_names()):
                     problems.append("%s: wildcard %s matches no mesh" % (where, match))
         elif match.startswith("bridge:"):
             name = match[len("bridge:"):]
@@ -673,7 +707,7 @@ def count_rooms(effects):
 
 def check_room_rule(problems, table):
     effects = []
-    collect_effects(os.path.join(ROOT, "config", "roomAmbience.cfg"), effects)
+    collect_effects(AMBIENCE_CONFIG, effects)
     counts = count_rooms(effects)
     for room, (idle, operation) in counts.items():
         if table:
@@ -690,7 +724,10 @@ def check_room_rule(problems, table):
 def main():
     problems = []
     counts = {"effects": 0, "events": 0, "lands": [], "names": set()}
-    check_file(os.path.join(ROOT, "config", "roomAmbience.cfg"), problems, tile_visuals(), particle_systems(),
+    if not os.path.exists(AMBIENCE_CONFIG) and not content_packages.has_content(ROOT):
+        content_packages.unchecked("check_room_ambience", ["config/roomAmbience.cfg and the files it includes"])
+        return 0
+    check_file(AMBIENCE_CONFIG, problems, tile_visuals(), particle_systems(),
                materials(), counts)
     check_particle_files(problems)
     for where, land in counts["lands"]:

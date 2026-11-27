@@ -1,12 +1,16 @@
 """Check that a tortured enemy creature that dies gives away one not yet seen room
 of its owner instead of a timed disc around the dungeon heart."""
 from pathlib import Path
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
 
 
 def read(path):
-    return (repo / path).read_text(encoding="utf-8")
+    """The text of a repository file; a mixed table of config/ comes joined with its own rows of the content."""
+    return content_packages.read_text(repo, path)
 
 
 rooms = read("config/rooms.cfg")
@@ -21,4 +25,6 @@ assert "getCoveredTiles()" in body
 assert "revealTiles(roomToReveal->getCoveredTiles(), 1)" in body
 assert "dungeonTemple" not in body
 assert "if(creature->getHP() <= damage)" in torture
+if not content_packages.has_content(repo):
+    content_packages.unchecked("check_torture_reveals_room", ["own rows of config/rooms.cfg"])
 print("CHECKS OK")

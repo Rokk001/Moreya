@@ -53,8 +53,13 @@ namespace EntityAnimation
     static const std::string combat_attack_anim = "CombatAttack";
     static const std::string ranged_attack_anim = "RangedAttack";
     static const std::string eat_chicken_anim = "EatChicken";
-    //! A creature squats to relieve itself, on a toilet seat or on the floor (a skeleton without the clip plays Idle)
+    //! The former floor squat; nothing requests it any more, a skeleton without RelievePit still falls back to it
+    //! (a skeleton without the clip plays Idle)
     static const std::string relieve_anim = "Relieve";
+    //! A creature stands bent over with half bent knees and its hands on its thighs to relieve itself, over the hole
+    //! of a toilet seat or on the floor; a skeleton without the clip plays Relieve. The clip loops only the bent over
+    //! pose with its gentle pushes: the client blends the body down into it once and up out of it once (isBentOverClip).
+    static const std::string relieve_pit_anim = "RelievePit";
     //! A creature sits low in the mud bath; a skeleton without the clip plays Idle.
     static const std::string bathe_anim = "Bathe";
     //! A creature tucks into a cannonball jump; a skeleton without the clip plays Idle.
@@ -100,10 +105,30 @@ namespace EntityAnimation
     static const std::string sit_dice_anim = "SitDice";
     //! The seated loser of a slap duel with no free floor around it slumps on its seat (a skeleton without the clip plays Sit)
     static const std::string sit_slumped_anim = "SitSlumped";
+    //! The winner of an arm wrestling game in its last turns (a skeleton without the clip plays SitArmWrestle)
+    static const std::string armwrestle_win_anim = "ArmWrestleWin";
+    //! The loser of an arm wrestling game in its last turns (a skeleton without the clip plays SitArmWrestle)
+    static const std::string armwrestle_lose_anim = "ArmWrestleLose";
+    //! The seated winner of an arm wrestling game in its last turns (a skeleton without the clip plays SitArmWrestle, or
+    //! ArmWrestleWin when it has no seated clips)
+    static const std::string sit_armwrestle_win_anim = "SitArmWrestleWin";
+    //! The seated loser of an arm wrestling game in its last turns (a skeleton without the clip plays SitArmWrestle, or
+    //! ArmWrestleLose when it has no seated clips)
+    static const std::string sit_armwrestle_lose_anim = "SitArmWrestleLose";
+    //! The seated winner of a dice game in its last turns (a skeleton without the clip plays SitDice)
+    static const std::string sit_dice_win_anim = "SitDiceWin";
+    //! The seated loser of a dice game in its last turns (a skeleton without the clip plays SitDice)
+    static const std::string sit_dice_lose_anim = "SitDiceLose";
     //! \brief True for the seated tavern clips (Sit, SitDrink and the others).
     inline bool isSeatClip(const std::string& clip)
     {
         return clip.compare(0, sit_anim.size(), sit_anim) == 0;
+    }
+    //! \brief True for the clip that holds a creature bent over (RelievePit): it loops the bent over pose only, so the
+    //! client blends from the clip before into it and from it into the clip after it, like sitting down and getting up.
+    inline bool isBentOverClip(const std::string& clip)
+    {
+        return clip == relieve_pit_anim;
     }
     //! \brief True for the two clips in which a tavern guest drinks from its mug (Drink and SitDrink).
     inline bool isDrinkClip(const std::string& clip)
@@ -122,6 +147,19 @@ namespace EntityAnimation
     {
         return clip == clean_anim;
     }
+    //! Idle moments of a worker (cosmetic reaction clips, source/render/CreatureReactions.cpp): it sweeps the floor,
+    //! leans on its pick or whets a blade, each with that prop in its hands
+    static const std::string sweep_idle_anim = "Sweep";
+    static const std::string lean_anim = "Lean";
+    static const std::string sharpen_anim = "Sharpen";
+    //! The infirmary shaman smells at a bundle of herbs
+    static const std::string herb_sniff_anim = "HerbSniff";
+    //! The infirmary shaman shakes her rattle over a patient
+    static const std::string rattle_shake_anim = "RattleShake";
+    //! The infirmary shaman stumbles over a bucket and falls
+    static const std::string trip_over_bucket_anim = "TripOverBucket";
+    //! The infirmary shaman tastes a potion from a small flask
+    static const std::string potion_taste_anim = "PotionTaste";
     //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
     static const std::string scared_anim = "Scared";
     //! A hunter holds the capture nozzle forward; the client falls back to Attack when absent.

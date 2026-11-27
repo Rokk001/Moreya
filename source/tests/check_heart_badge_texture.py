@@ -12,6 +12,15 @@ the badge texture the way Gui.cpp does, and then:
 - runs the real Gui::updateHeartBadge, drawBadgePixels and painted composition, cut out of Gui.cpp by signature, and checks
   that the Ogre texture stays the same and that its pixels, read back from the texture, are the ring of
   the new health (and differ from the full ring).
+
+The game data folders the probe reads (gui, fonts, schemas, loading textures, models, materials, particles, shaders)
+come from the public tree and from the content packages (scripts/content_packages.py): the probe gets every existing
+folder in the environment variable ODP_DATA_FOLDERS ("relative=absolute" entries separated by ";"). The mixed files
+(the interface files of gui and gui/fonts, config/mainmenuscene.cfg) are given to the probe joined with their own rows
+(content_packages.read_text), as the game reads them: the public gui folders are replaced by joined copies and the
+probe reads the menu scene table from a temporary repository folder. Without the files the probe needs (the painted
+navigation atlas, for the optional renders all content packages) the probe is not compiled and the check names it as
+not checked after its static part.
 """
 from pathlib import Path
 import argparse
@@ -19,6 +28,7 @@ import os
 import shutil
 import re
 import subprocess
+import sys
 import tempfile
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -42,7 +52,13 @@ if args.loading_screens and args.menu_scene:
     parser.error('--loading-screens and --menu-scene render in separate runs; pass only one of them')
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
 deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
+#: The game data folders the probe adds as resource locations (each from the public tree and every content package)
+DATA_FOLDERS = ('gui', 'gui/fonts', 'gui/schemas', 'materials/textures/loading', 'models', 'materials/scripts',
+                'materials/textures', 'particles', 'shaders')
 gui = (repo / 'source/render/Gui.cpp').read_text()
 rules = repo / 'source/game/HeartHealthRing.h'
 
@@ -92,6 +108,24 @@ probe = r'''
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #include <Bites/OgreSGTechniqueResolverListener.h>
 #include "RULES_HEADER"
+#include <cstdlib>
+
+//! \brief The folders of a game data folder in the public tree and in the content packages, in that order, read from
+//! the "relative=absolute" entries of the environment variable ODP_DATA_FOLDERS.
+std::vector<std::string> dataFolders(const std::string& relative)
+{
+    std::vector<std::string> folders;
+    const char* list = std::getenv("ODP_DATA_FOLDERS");
+    std::stringstream entries(list == nullptr ? "" : list);
+    std::string entry;
+    while(std::getline(entries, entry, ';'))
+    {
+        const std::string::size_type separator = entry.find('=');
+        if(separator != std::string::npos && entry.substr(0, separator) == relative)
+            folders.push_back(entry.substr(separator + 1));
+    }
+    return folders;
+}
 
 BADGE_CODE
 UPDATE
@@ -145,7 +179,8 @@ int main(int argc, char** argv)
     Ogre::ResourceGroupManager& resources = Ogre::ResourceGroupManager::getSingleton();
     resources.addResourceLocation(prefix + "/Media/Main", "FileSystem", "OgreInternal");
     resources.addResourceLocation(prefix + "/Media/RTShaderLib", "FileSystem", "General");
-    resources.addResourceLocation(std::string(argv[2]) + "/gui", "FileSystem", "General");
+    for(const std::string& folder : dataFolders("gui"))
+        resources.addResourceLocation(folder, "FileSystem", "General");
     resources.initialiseAllResourceGroups();
     paintedNavigationAtlas.load(PAINTED_NAVIGATION_ATLAS, Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
     Ogre::RTShader::ShaderGenerator::initialize();
@@ -248,12 +283,13 @@ if args.loading_screens:
     const std::string repository = argv[2];
     const std::string output = argv[3];
     resources.createResourceGroup("Graphics");
-    resources.addResourceLocation(repository + "/materials/textures/loading", "FileSystem", "Graphics");
+    for(const std::string& folder : dataFolders("materials/textures/loading"))
+        resources.addResourceLocation(folder, "FileSystem", "Graphics");
     resources.initialiseResourceGroup("Graphics");
     resources.createResourceGroup("GUI");
-    resources.addResourceLocation(repository + "/gui", "FileSystem", "GUI");
-    resources.addResourceLocation(repository + "/gui/fonts", "FileSystem", "GUI");
-    resources.addResourceLocation(repository + "/gui/schemas", "FileSystem", "GUI");
+    for(const char* relative : {"gui", "gui/fonts", "gui/schemas"})
+        for(const std::string& folder : dataFolders(relative))
+            resources.addResourceLocation(folder, "FileSystem", "GUI");
     resources.initialiseResourceGroup("GUI");
     CEGUI::ImageManager::setImagesetDefaultResourceGroup("GUI");
     CEGUI::Font::setDefaultResourceGroup("GUI");
@@ -570,8 +606,9 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     const std::string repository = argv[2];
     const std::string output = argv[3];
     resources.createResourceGroup("Graphics");
-    for(const char* folder : {"models", "materials/scripts", "materials/textures", "particles", "shaders"})
-        resources.addResourceLocation(repository + "/" + folder, "FileSystem", "Graphics", true);
+    for(const char* relative : {"models", "materials/scripts", "materials/textures", "particles", "shaders"})
+        for(const std::string& folder : dataFolders(relative))
+            resources.addResourceLocation(folder, "FileSystem", "Graphics", true);
     resources.initialiseResourceGroup("Graphics");
     scene->setAmbientLight(Ogre::ColourValue(0.3f, 0.3f, 0.3f));
     Ogre::ParticleSystem::setDefaultNonVisibleUpdateTimeout(5);
@@ -863,8 +900,48 @@ print('STATIC OK: updateHeartBadge writes into the existing texture')
 for path in (Path(__file__), repo / 'source/render/Gui.cpp'):
     assert not [b for b in path.read_bytes() if b < 32 and b not in (9, 10, 13)], path
 
+# The probe needs the painted navigation atlas; the optional renders load the whole interface and the menu scene
+missing_content = [] if content_packages.data_file(repo, 'gui/ODNavigation.png') else ['gui/ODNavigation.png']
+if args.loading_screens or args.menu_scene:
+    missing_content += ['content package ' + name for name in content_packages.missing_packages(repo)]
+if missing_content:
+    content_packages.unchecked('check_heart_badge_texture', missing_content)
+    sys.exit(0)
+
+#: The public data folders that hold mixed interface files, replaced by joined copies for the probe
+JOINED_FOLDERS = ('gui', 'gui/fonts')
+
+
+def joined_copy(work, relative):
+    """Copies the files of a public data folder into the probe folder, the mixed files joined with their own rows."""
+    target = work / 'joined' / relative
+    target.mkdir(parents=True, exist_ok=True)
+    for source in (repo / relative).iterdir():
+        if source.is_file():
+            if '#@own ' in source.read_bytes().decode('utf-8', errors='replace'):
+                text = content_packages.read_text(repo, relative + '/' + source.name)
+                (target / source.name).write_bytes(text.encode('utf-8'))
+            else:
+                shutil.copyfile(source, target / source.name)
+    return target
+
+
+def probe_folders(work, relative):
+    """The folders of a game data folder for the probe: the public one (a joined copy for JOINED_FOLDERS), then the
+    packages."""
+    folders = content_packages.data_folders(repo, relative)
+    if relative in JOINED_FOLDERS and folders and folders[0] == repo / relative:
+        folders = [joined_copy(work, relative)] + folders[1:]
+    return folders
+
+
 with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
     work = Path(directory)
+    # The repository folder of the probe: it reads config/mainmenuscene.cfg there, joined with its own rows
+    probe_repository = work / 'repository'
+    (probe_repository / 'config').mkdir(parents=True)
+    (probe_repository / 'config/mainmenuscene.cfg').write_bytes(
+        content_packages.read_text(repo, 'config/mainmenuscene.cfg').encode('utf-8'))
     (work / 'check.cpp').write_text(probe)
     if args.loading_screens:
         args.loading_output.mkdir(parents=True, exist_ok=True)
@@ -878,9 +955,12 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
                    cwd=work, check=True, stdin=subprocess.DEVNULL, timeout=120)
     environment = dict(os.environ)
     environment['PATH'] = str(deps / 'install/bin') + os.pathsep + environment.get('PATH', '')
+    # Every existing game data folder of the public tree and of the content packages, as "relative=absolute"
+    environment['ODP_DATA_FOLDERS'] = ';'.join('%s=%s' % (relative, folder.as_posix()) for relative in DATA_FOLDERS
+                                               for folder in probe_folders(work, relative))
     # Windows application control errors must reach the runner without restarting this executable.
     # Propagate start errors: the check runner rebuilds the whole probe after WinError 4551.
-    command = [str(work / 'check.exe'), (deps / 'install').as_posix(), repo.as_posix()]
+    command = [str(work / 'check.exe'), (deps / 'install').as_posix(), probe_repository.as_posix()]
     if args.loading_screens:
         command.append(args.loading_output.resolve().as_posix())
     if args.menu_scene:

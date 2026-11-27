@@ -11,15 +11,26 @@ as final.
 
 This check does not compile. The companion page-events check executes production callbacks in FINAL; it supports
 --source-only while the plan is in progress.
+
+The Room Manager window, its pages, the imagesets and the artwork are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages. Without the content
+the page contracts are named as not checked and only the code contracts run.
 """
 from pathlib import Path
 import math
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The game data files the page contracts need first; they lie in the public tree or in a content package
+DATA_FILES = ('gui/WindowRoomManager.layout', 'gui/ODSkin.scheme', 'gui/RoomManagerGhostPage.layout')
 RESOLUTIONS = ((640, 480), (800, 600), (1024, 768), (1280, 720), (1366, 768), (1920, 1080), (1920, 1200),
                (2560, 1440), (3440, 1440), (3840, 2160), (7680, 4320))
 SCALES = (.8, .9, 1., 1.1, 1.2)
@@ -269,35 +280,35 @@ def check_payer(page, name, helper, switch='PayerButton'):
         assert coins[payer] is True and coins[other] is False, (name, keeper_pays, 'coin on the payer only')
 
 
-def main():
-    """Assert the fixed per-page contract, the state rules and production event/request routing."""
-    manager = ET.parse(ROOT / 'gui/WindowRoomManager.layout').getroot().find('Window')
+def check_page_data(images, placeholders, pages):
+    """Assert the frame, the artwork and the elements, look and fit of every page; fills the images, the placeholder
+    pictures and the pages and returns the number of fitted screen cases. The scheme and the imagesets are read with
+    their own rows of the content (scripts/content_packages.py)."""
+    manager = ET.parse(data('gui/WindowRoomManager.layout')).getroot().find('Window')
     assert manager.get('type') == 'OD/SheetWindow', 'the Room Manager uses the window frame of the menu sheet'
     assert props(manager)['Area'] == '{{0.5,-%g},{0.5,-%g},{0.5,%g},{0.5,%g}}' % (
         WINDOW_W / 2, WINDOW_H / 2, WINDOW_W / 2, WINDOW_H / 2), 'fixed frame design dimensions'
     manager_windows = windows(manager)
-    scheme = ET.parse(ROOT / 'gui/ODSkin.scheme').getroot()
-    images = {}
+    scheme = ET.fromstring(content_packages.read_text(ROOT, 'gui/ODSkin.scheme'))
     for entry in scheme.findall('Imageset'):
-        root = ET.parse(ROOT / 'gui' / entry.get('filename')).getroot()
+        root = ET.fromstring(content_packages.read_text(ROOT, 'gui/' + entry.get('filename')))
         for picture in root.findall('Image'):
             images[root.get('name') + '/' + picture.get('name')] = (root, picture)
-    placeholders = []
     for name, (filename, size, placeholder) in ARTWORK.items():
         root, picture = images[name + '/Image']
         assert root.get('imagefile') == filename, name
-        with Image.open(ROOT / 'gui/RoomCentreArtwork' / filename) as data:
-            assert data.size == size == (int(picture.get('width')), int(picture.get('height'))), (name, data.size)
-        credit = [row for row in (ROOT / 'CREDITS').read_text(encoding='utf-8').splitlines()
+        with Image.open(data('gui/RoomCentreArtwork/' + filename)) as artwork:
+            assert artwork.size == size == (int(picture.get('width')), int(picture.get('height'))), (name, artwork.size)
+        # The CREDITS of the public tree and of the content repository (the rows of the moved artwork stand there)
+        credit = [row for row in room_packages.credits_text(ROOT).splitlines()
                   if row.startswith('gui/RoomCentreArtwork/' + filename + ' ')]
         assert len(credit) == 1, (filename, 'one CREDITS row')
         assert ('placeholder until repainted' in credit[0]) == placeholder, (filename, 'placeholder marking')
         if placeholder:
             placeholders.append(filename)
-    pages = {}
     cases = 0
     for name, required in REQUIRED.items():
-        root = ET.parse(ROOT / ('gui/RoomManager' + name + 'Page.layout')).getroot().find('Window')
+        root = ET.parse(data('gui/RoomManager' + name + 'Page.layout')).getroot().find('Window')
         page = windows(root)
         pages[name] = page
         assert root.get('type') == 'DefaultWindow'
@@ -315,6 +326,34 @@ def main():
         cases += page_cases
         print('PASS %s elements, images and %d screen/scale cases' % (name, page_cases))
     assert cases == EXPECTED_SCREEN_CASES, cases
+    return cases
+
+
+def data(path):
+    """Path of a game data file from the public tree or a content package."""
+    return content_packages.resolve(ROOT, path)
+
+
+def data_present():
+    """True when the page contracts can be checked: the data files are found or the content is present (then a
+    missing one fails as before); else names them as not checked."""
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    if not missing or content_packages.has_content(ROOT):
+        return True
+    content_packages.unchecked('check_room_manager_pages', ['the Room Manager pages, imagesets and artwork'] + missing)
+    return False
+
+
+def main():
+    """Assert the fixed per-page contract, the state rules and production event/request routing; without the content
+    only the code contracts run."""
+    DATA = data_present()
+    images = {}
+    placeholders = []
+    pages = {}
+    cases = 0
+    if DATA:
+        cases = check_page_data(images, placeholders, pages)
     game = (ROOT / 'source/modes/GameMode.cpp').read_text()
     merchant = (ROOT / 'source/modes/GameModeMerchant.cpp').read_text()
     lab = (ROOT / 'source/modes/GameModeAlchemy.cpp').read_text()
@@ -322,15 +361,17 @@ def main():
     enum = {k: int(v) for k, v in re.findall(r'(\w+) = (\d+)', re.search(
         r'enum class GhostProduct : uint32_t \{([^}]*)\};', (ROOT / 'source/game/SeatData.h').read_text()).group(1))}
 
-    check_ghost(pages['Ghost'], game, enum)
-    assert pages['Ghost']['GhostReviveButton'].get('type') == 'OD/Checkbox'
-    print('PASS ghost connector lines, green active path, gold frame on the chosen product, vessel fill')
+    if DATA:
+        check_ghost(pages['Ghost'], game, enum)
+        assert pages['Ghost']['GhostReviveButton'].get('type') == 'OD/Checkbox'
+        print('PASS ghost connector lines, green active path, gold frame on the chosen product, vessel fill')
 
-    tavern = pages['Tavern']
-    assert props(tavern['BeerSlot/Beer'])['Image'] == 'RoomArtworkTavernBeer/Image', 'beer mug, not the barrel'
-    assert props(tavern['WaterSlot/Water'])['Image'] == 'RoomArtworkTavernWater/Image'
-    assert all('BeerButton' not in props(node).get('Image', '') for node in tavern.values()), 'no barrel'
-    check_payer(tavern, 'Tavern', helper)
+    if DATA:
+        tavern = pages['Tavern']
+        assert props(tavern['BeerSlot/Beer'])['Image'] == 'RoomArtworkTavernBeer/Image', 'beer mug, not the barrel'
+        assert props(tavern['WaterSlot/Water'])['Image'] == 'RoomArtworkTavernWater/Image'
+        assert all('BeerButton' not in props(node).get('Image', '') for node in tavern.values()), 'no barrel'
+        check_payer(tavern, 'Tavern', helper)
     body = function(game, 'void GameMode::setTavernWindowShown(')
     for researched in (True, False):
         state = {'beerResearched': researched}
@@ -340,57 +381,63 @@ def main():
         assert ternary(body, 'BeerSlot/BeerLock', state) is (not researched), 'locked beer shows the lock'
     print('PASS tavern mug, water, served drink (K11), medallions and switch on the line')
 
-    check_payer(pages['Spa'], 'Spa', helper, 'SpaPayerButton')
-    spa = pages['Spa']
-    ring = rel(spa, 'BathRing')
-    for inside in ('Bath', 'PriceCoin', 'SpaPriceText'):
-        contains(ring, rel(spa, inside), 'spa ' + inside + ' inside the bath ring')
-    near(rel(spa, 'KeeperLine')[0], rel(spa, 'KeeperRing')[2], 'spa keeper line')
-    near(rel(spa, 'KeeperLine')[2], ring[0], 'spa keeper line to the bath ring')
-    near(rel(spa, 'CreatureLine')[0], ring[2], 'spa creature line from the bath ring')
-    near(rel(spa, 'CreatureLine')[2], rel(spa, 'CreatureRing')[0], 'spa creature line')
-    assert rel(spa, 'SpaPayerButton')[1] >= ring[3], 'switch under the bath ring'
-    print('PASS spa bath ring with price and coin, lines, medallions, switch')
+    if DATA:
+        check_payer(pages['Spa'], 'Spa', helper, 'SpaPayerButton')
+        spa = pages['Spa']
+        ring = rel(spa, 'BathRing')
+        for inside in ('Bath', 'PriceCoin', 'SpaPriceText'):
+            contains(ring, rel(spa, inside), 'spa ' + inside + ' inside the bath ring')
+        near(rel(spa, 'KeeperLine')[0], rel(spa, 'KeeperRing')[2], 'spa keeper line')
+        near(rel(spa, 'KeeperLine')[2], ring[0], 'spa keeper line to the bath ring')
+        near(rel(spa, 'CreatureLine')[0], ring[2], 'spa creature line from the bath ring')
+        near(rel(spa, 'CreatureLine')[2], rel(spa, 'CreatureRing')[0], 'spa creature line')
+        assert rel(spa, 'SpaPayerButton')[1] >= ring[3], 'switch under the bath ring'
+        print('PASS spa bath ring with price and coin, lines, medallions, switch')
 
-    infirmary = pages['Infirmary']
-    check_payer(infirmary, 'Infirmary', helper)
-    panel = rel(infirmary, 'InnerPanel')
-    for inside in PAYER + ('PayerButton', 'HealHeart', 'HealLabel', 'HealButton', 'ThresholdLabel', 'Minus',
-                           'ThresholdValue', 'Plus'):
-        contains(panel, rel(infirmary, inside), 'infirmary ' + inside + ' inside the inner panel')
-    row = [rel(infirmary, item) for item in ('ThresholdLabel', 'Minus', 'ThresholdValue', 'Plus')]
-    assert all(a[2] <= b[0] + 1e-6 for a, b in zip(row, row[1:])), 'discharge controls left to right'
-    assert max(r[1] for r in row) < min(r[3] for r in row), 'discharge controls on one line'
-    assert props(infirmary['HealHeart'])['Image'] == 'RoomArtworkInfirmaryHeart/Image'
-    assert infirmary['HealButton'].get('type') == 'OD/Checkbox' and props(infirmary['HealButton'])['Text'] == ''
+    if DATA:
+        infirmary = pages['Infirmary']
+        check_payer(infirmary, 'Infirmary', helper)
+        panel = rel(infirmary, 'InnerPanel')
+        for inside in PAYER + ('PayerButton', 'HealHeart', 'HealLabel', 'HealButton', 'ThresholdLabel', 'Minus',
+                               'ThresholdValue', 'Plus'):
+            contains(panel, rel(infirmary, inside), 'infirmary ' + inside + ' inside the inner panel')
+        row = [rel(infirmary, item) for item in ('ThresholdLabel', 'Minus', 'ThresholdValue', 'Plus')]
+        assert all(a[2] <= b[0] + 1e-6 for a, b in zip(row, row[1:])), 'discharge controls left to right'
+        assert max(r[1] for r in row) < min(r[3] for r in row), 'discharge controls on one line'
+        assert props(infirmary['HealHeart'])['Image'] == 'RoomArtworkInfirmaryHeart/Image'
+        assert infirmary['HealButton'].get('type') == 'OD/Checkbox' and props(infirmary['HealButton'])['Text'] == ''
     assert 'item->setSuffix(roomManagerImage("OpenDungeonsIcons/HourglassIcon"), seconds);' in game
     assert 'getCreatureProfilePortraitImage' in game and 'maxHp <= 0.0' in game and 'std::ceil(remaining)' in game
     assert 'row, images, fraction, false, 0xFFB33030' in game
     print('PASS infirmary patients with portrait, bar and time, medallions, heart and tick box, one-line discharge')
 
-    merchant_page = pages['Merchant']
-    for button in ('ModeButton', 'ProfitButton'):
-        assert props(merchant_page[button + '/Box']).get('Visible', 'True') == 'True', 'empty tick box always shown'
-        assert props(merchant_page[button + '/Check']).get('Visible') == 'False'
-        contains((0, 0, 1, 1), rel(windows(merchant_page[button]), 'Box'), button)
+    if DATA:
+        merchant_page = pages['Merchant']
+        for button in ('ModeButton', 'ProfitButton'):
+            assert props(merchant_page[button + '/Box']).get('Visible', 'True') == 'True', 'empty tick box always shown'
+            assert props(merchant_page[button + '/Check']).get('Visible') == 'False'
+            contains((0, 0, 1, 1), rel(windows(merchant_page[button]), 'Box'), button)
+        for item in ('EmptyScales', 'EmptyCount'):
+            assert props(merchant_page[item]).get('Visible') == 'False'
+            contains(rel(merchant_page, 'StockList'), rel(merchant_page, item), item + ' over the empty slots')
+        assert props(merchant_page['EmptyCount'])['Text'] == '0'
     for item in ('EmptyScales', 'EmptyCount'):
-        assert props(merchant_page[item]).get('Visible') == 'False'
-        contains(rel(merchant_page, 'StockList'), rel(merchant_page, item), item + ' over the empty slots')
         assert 'MerchantPage/' + item + '")->setVisible(items.empty());' in merchant, item + ' follows the stock'
-    assert props(merchant_page['EmptyCount'])['Text'] == '0'
     print('PASS merchant tick boxes, margin, empty state, confirmation')
 
-    alchemy = pages['Alchemy']
-    for index in range(4):
-        contains(rel(alchemy, 'HerbPanel'), rel(alchemy, 'Herb%d' % index), 'herb in its panel')
-    contains(rel(alchemy, 'ModePanel'), rel(alchemy, 'ModeButton'), 'mode in its panel')
-    assert props(alchemy['ModeButton']).get('Text', '') == ''
+    if DATA:
+        alchemy = pages['Alchemy']
+        for index in range(4):
+            contains(rel(alchemy, 'HerbPanel'), rel(alchemy, 'Herb%d' % index), 'herb in its panel')
+        contains(rel(alchemy, 'ModePanel'), rel(alchemy, 'ModeButton'), 'mode in its panel')
+        assert props(alchemy['ModeButton']).get('Text', '') == ''
     body = function(lab, 'void GameMode::setLabModeShown(')
     assert '{"Auto", "Healing/mana", "Combat potions"}' in body and 'button->getChild("Label")->setText(labels[mode]);' in body
     assert '{{true, true, true}, {true, true, false}, {false, false, true}}' in body
     print('PASS alchemy framed rows, herb panel, Auto mode with potion pictures')
 
-    casino = pages['Casino']
+    if DATA:
+        casino = pages['Casino']
     body = function(game, 'void GameMode::setCasinoPayoutShown(')
     for level, chosen in ((1, 'CasinoPayoutButton'), (0, 'MoneyButton')):
         state = {'level': level, 'smiles': 1, 'money': 0}
@@ -398,29 +445,32 @@ def main():
             'static_cast<uint32_t>(CasinoPayout::money)', 'money')
         marks = {button: ternary(flat, button + '/Selected', state) for button in ('CasinoPayoutButton', 'MoneyButton')}
         assert marks == {'CasinoPayoutButton': chosen == 'CasinoPayoutButton', 'MoneyButton': chosen == 'MoneyButton'}
-    assert props(casino['CasinoPayoutButton'])['ID'] == '1' and props(casino['MoneyButton'])['ID'] == '0'
+    if DATA:
+        assert props(casino['CasinoPayoutButton'])['ID'] == '1' and props(casino['MoneyButton'])['ID'] == '0'
     print('PASS casino gold frame on the chosen picture only')
 
-    workshop = pages['Workshop']
-    for button, direction in (('MoveUp', 'Up'), ('MoveDown', 'Down')):
-        q = props(workshop[button])
-        assert workshop[button].get('type') == 'OD/InvisibleButton' and q['NormalImage'].endswith('WorkerArrow' + direction + 'Normal')
-        assert q['DisabledImage'].endswith('WorkerArrow' + direction + 'Disabled')
-        contains(rel(workshop, 'PriorityPanel'), rel(workshop, button), button)
+    if DATA:
+        workshop = pages['Workshop']
+        for button, direction in (('MoveUp', 'Up'), ('MoveDown', 'Down')):
+            q = props(workshop[button])
+            assert workshop[button].get('type') == 'OD/InvisibleButton' and q['NormalImage'].endswith('WorkerArrow' + direction + 'Normal')
+            assert q['DisabledImage'].endswith('WorkerArrow' + direction + 'Disabled')
+            contains(rel(workshop, 'PriorityPanel'), rel(workshop, button), button)
     assert 'new RoomManagerListItem(Helper::toString(index + 1),' in game, 'tile shows only its number'
     assert 'new RoomManagerListItem("", 0, pictures, progress);' in game, 'workshop rows: pictures and bar only'
     assert 'const float numberHeight = height * 0.26f;' in helper and 'drawFrame(' in helper
     print('PASS workshop framed rows, numbered priority tiles, arrow pictures')
 
-    for text in (game, merchant, lab):
-        for name, path in re.findall(r'RoomManagerWindow/Pages/(\w+)Page/([^"\n]+)"\)', text):
-            if path.endswith('/'):
-                continue
-            assert path in pages[name], (name, path, 'client refers to removed control')
-    for path in re.findall(r'page->getChild\("([^"]+)"\)', function(game, 'void GameMode::setTavernWindowShown(')):
-        assert path in pages['Tavern'], (path, 'tavern client control')
-    for path in re.findall(r'page->getChild\("([^"]+)"\)', function(game, 'void GameMode::refreshGhostRoomWindow(')):
-        assert path in pages['Ghost'], (path, 'ghost client control')
+    if DATA:
+        for text in (game, merchant, lab):
+            for name, path in re.findall(r'RoomManagerWindow/Pages/(\w+)Page/([^"\n]+)"\)', text):
+                if path.endswith('/'):
+                    continue
+                assert path in pages[name], (name, path, 'client refers to removed control')
+        for path in re.findall(r'page->getChild\("([^"]+)"\)', function(game, 'void GameMode::setTavernWindowShown(')):
+            assert path in pages['Tavern'], (path, 'tavern client control')
+        for path in re.findall(r'page->getChild\("([^"]+)"\)', function(game, 'void GameMode::refreshGhostRoomWindow(')):
+            assert path in pages['Ghost'], (path, 'ghost client control')
     for callback in ('confirmMerchantItem', 'cancelMerchantItem', 'buyMerchantItem', 'hoverMerchantItem',
                      'cycleMerchantMode', 'changeMerchantMargin'):
         assert '&GameMode::' + callback in merchant, callback + ' event disconnected'
@@ -442,15 +492,19 @@ def main():
     assert 'mTrapProductionData.orders[selected->getID()].name << earlier' in game
     assert 'order.name == selectedName' in game and 'roomManagerTrapImage(order.type)' in game
     assert 'static_cast<float>(workshop.points) / workshop.required' in game
-    for image in re.findall(r'"([A-Za-z]+(?:TrapButton|CannonButton))"', helper):
-        assert 'OpenDungeonsIcons/' + image in images, image + ' production icon'
+    if DATA:
+        for image in re.findall(r'"([A-Za-z]+(?:TrapButton|CannonButton))"', helper):
+            assert 'OpenDungeonsIcons/' + image in images, image + ' production icon'
     assert 'brush.render' in helper and 'std::min(1.0f, mProgress)' in helper
     server = (ROOT / 'source/rooms/RoomMerchant.cpp').read_text()
     assert 'RoomMerchant::sellToKeeper' in server and 'player.pickUpEntity(bag)' in server
     print('PASS production routes, stable item identity, locks, payer/payout, patients, brewing and priority')
     for filename in placeholders:
         print('PLACEHOLDER gui/RoomCentreArtwork/' + filename + ' (not final, repaint listed in the state file)')
-    print('DONE pages=8 screen_cases=%d red=0 placeholders=%d' % (cases, len(placeholders)))
+    if DATA:
+        print('DONE pages=8 screen_cases=%d red=0 placeholders=%d' % (cases, len(placeholders)))
+    else:
+        print('DONE code contracts; pages not checked (content not present)')
 
 
 if __name__ == '__main__':

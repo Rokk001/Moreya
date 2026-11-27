@@ -1,17 +1,25 @@
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
-# Read a tracked source file relative to the repository.
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+# Read a tracked source file relative to the repository; a mixed table of config/ comes joined with its own rows of the
+# content.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 config = read('config/global.cfg')
-for line in ('WorkerPriorityParts\t6 5 4 3 2 1', 'WorkerDefaultFixed\t0 0 0 0 0 0',
-             'WorkerDefaultFreeMode\tautomatic', 'WorkerDefaultPriority\tcarry dig claimGround claimWall clean reload',
-             'WorkerDefaultCarryOrder\townKnockedOut enemyKnockedOut corpse gold items giftBoxes trapsDoors',
-             'WorkerDefaultGoldFirst\t0', 'WorkerCleanTilesPerCleaner\t15'):
-    assert line in config, line
+# The worker keys are own rows of config/global.cfg (content package core-config)
+if content_packages.has_content(root):
+    for line in ('WorkerPriorityParts\t6 5 4 3 2 1', 'WorkerDefaultFixed\t0 0 0 0 0 0',
+                 'WorkerDefaultFreeMode\tautomatic', 'WorkerDefaultPriority\tcarry dig claimGround claimWall clean reload',
+                 'WorkerDefaultCarryOrder\townKnockedOut enemyKnockedOut corpse gold items giftBoxes trapsDoors',
+                 'WorkerDefaultGoldFirst\t0', 'WorkerCleanTilesPerCleaner\t15'):
+        assert line in config, line
+else:
+    content_packages.unchecked('check_worker_job_settings', ['worker defaults of config/global.cfg'])
 for key in ('WorkerPriorityParts', 'WorkerDefaultFixed', 'WorkerDefaultFreeMode', 'WorkerDefaultPriority',
             'WorkerDefaultCarryOrder', 'WorkerDefaultGoldFirst', 'WorkerCleanTilesPerCleaner'):
     assert key in read('source/utils/ConfigManager.cpp'), key

@@ -24,6 +24,7 @@ repo = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(repo / 'scripts'))
 import room_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
@@ -120,9 +121,13 @@ def rotation_to(a, b):
 
 
 # --- 1. The server: walk in front of the trap, turn to it, hold for the pick-up time -------------------------------------
-rooms = read('config/rooms.cfg')
-values = dict(re.findall(r'^(Ghost\w+)\s+([-\d.]+)\s*$', rooms, re.M))
-assert values['GhostPickUpSeconds'] == '2' and values['GhostPickUpReach'] == '0.3' and values['GhostPutInSeconds'] == '2'
+# config/rooms.cfg is a mixed table: its values are read with the own rows of the content, as the game reads it
+if content_packages.has_content(repo):
+    rooms = content_packages.read_text(repo, 'config/rooms.cfg')
+    values = dict(re.findall(r'^(Ghost\w+)\s+([-\d.]+)\s*$', rooms, re.M))
+    assert values['GhostPickUpSeconds'] == '2' and values['GhostPickUpReach'] == '0.3' and values['GhostPutInSeconds'] == '2'
+else:
+    content_packages.unchecked('check_ghost_pickup_pose', ['pick-up values of config/rooms.cfg'])
 action = read('source/creatureaction/CreatureActionHuntGhost.cpp')
 header = read('source/creatureaction/CreatureActionHuntGhost.h')
 hunt = body(action, 'bool CreatureActionHuntGhost::handleHunt()')

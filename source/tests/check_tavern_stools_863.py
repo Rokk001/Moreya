@@ -51,7 +51,11 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 #: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
@@ -99,6 +103,9 @@ LARGE_BENCH_PLACES = {'Troll.mesh': 4, 'PitDemon.mesh': 4, 'Dragon.mesh': 3}
 
 
 def read(path):
+    """The text of a game file; a mixed table of config/ comes joined with its own rows of the content."""
+    if path.startswith('config/'):
+        return content_packages.read_text(ROOT, path)
     return room_file(path).read_text(encoding='utf-8', errors='replace')
 
 
@@ -286,8 +293,9 @@ def seat_skills(level, seat_id):
 
 
 def check_drink_duration():
-    tavern = block_values(read('config/global.cfg'), 'Tavern')
-    assert int(tavern['DrinkTurns']) == 4 and int(tavern['WaterDrinkTurns']) == 14 and int(tavern['BeerDrinkTurns']) == 42 and int(tavern['BeerPrice']) == 5
+    if WITH_CONTENT:
+        tavern = block_values(read('config/global.cfg'), 'Tavern')
+        assert int(tavern['DrinkTurns']) == 4 and int(tavern['WaterDrinkTurns']) == 14 and int(tavern['BeerDrinkTurns']) == 42 and int(tavern['BeerPrice']) == 5
     room = read('source/rooms/RoomTavern.cpp')
     turns = extract(room, 'int32_t RoomTavern::nextDrinkTurns(')
     assert 'bool beer = servesBeer();' in turns and 'getTavernValue(beer ? "BeerDrinkTurns" : "WaterDrinkTurns")' in turns
@@ -351,12 +359,13 @@ def simulate_duel(rng, slaps, pauses):
 
 
 def check_duel():
-    text = read('config/rooms.cfg')
-    for key, value in (('TavernSlapSecondsMin', '4'), ('TavernSlapSecondsMax', '10'), ('TavernSlapPauseSecondsMin', '3'),
-                       ('TavernSlapPauseSecondsMax', '6'), ('CreatureGetUpSeconds', '6'), ('TavernDuelMaxTurnsFactor', '4')):
-        assert re.search(r'^\s*' + key + r'\s+' + value + r'\s*$', text, re.M), key
-    tavern = block_values(read('config/global.cfg'), 'Tavern')
-    assert int(tavern['DuelKoTurns']) == 42 and int(tavern['GameChancePercent']) == 50 and int(tavern['GameTurns']) == 8
+    if WITH_CONTENT:
+        text = read('config/rooms.cfg')
+        for key, value in (('TavernSlapSecondsMin', '4'), ('TavernSlapSecondsMax', '10'), ('TavernSlapPauseSecondsMin', '3'),
+                           ('TavernSlapPauseSecondsMax', '6'), ('CreatureGetUpSeconds', '6'), ('TavernDuelMaxTurnsFactor', '4')):
+            assert re.search(r'^\s*' + key + r'\s+' + value + r'\s*$', text, re.M), key
+        tavern = block_values(read('config/global.cfg'), 'Tavern')
+        assert int(tavern['DuelKoTurns']) == 42 and int(tavern['GameChancePercent']) == 50 and int(tavern['GameTurns']) == 8
     room = read('source/rooms/RoomTavern.cpp')
     # When a duel starts: after the last drink, with GameChancePercent, against a guest of the same keeper at the same
     # table that is done too; a slap duel is one of three games when beer is served
@@ -695,7 +704,11 @@ def main():
     check_duel()
     check_mug_table_frames()
     converter = os.environ.get('OGRE_XML_CONVERTER') or shutil.which('OgreXMLConverter') or shutil.which('OgreXMLConverter.exe')
-    if converter is None:
+    if not WITH_CONTENT:
+        content_packages.unchecked('check_tavern_stools_863', ['drink and duel values and the visitors of the own rows '
+                                                               'of config/global.cfg, config/rooms.cfg and '
+                                                               'config/creatures.cfg', 'models'])
+    elif converter is None:
         print('models skipped: OgreXMLConverter not found')
     elif not ROOM_ASSETS:
         print('models skipped: the tavern room package is not present')

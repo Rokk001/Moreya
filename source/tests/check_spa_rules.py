@@ -43,11 +43,17 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The spa values of the tables are own rows of the content package core-config: the probe built with them runs only
+#: with the content
+WITH_CONTENT = content_packages.has_content(root)
 
 
-# Returns the text of a repository file.
+# Returns the text of a repository file; a mixed table comes with its own rows of the content.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Returns the text of a function from its first line up to its closing brace (a brace in column 0).
@@ -143,20 +149,21 @@ assert 'creature.startJump(getBlockCentre(bather));' in room_cpp and 'SPA_SPLASH
 assert 'Rooms/Spa/Splash' in room_cpp
 
 # ---- Probe -------------------------------------------------------------------------------------------------------
-rooms = block_values(rooms_cfg, 'Rooms')
-tavern = block_values(global_cfg, 'Tavern')
-room_keys = ['SpaMoodJump', 'SpaMoodPerTurn', 'SpaBathTurns', 'SpaRelaxTurns', 'SpaRelaxWorkFactor',
-             'PleasureVisitMax', 'PleasureBuffMood', 'TavernLeisureCooldownTurns', 'CasinoVisitLockTurns',
-             'TempleVisitLockTurns', 'ArenaVisitLockTurns',
-             'SpaDirtPerBath', 'SpaMudTrailTiles', 'SpaJumpTurns', 'SpaJumpHeight', 'SpaCannonballChance']
-room_table = ',\n'.join('    {"%s", %s}' % (k, rooms[k]) for k in room_keys)
-tavern_table = ',\n'.join('    {"%s", %s}' % (k, tavern[k]) for k in ('BeerPrice', 'HangoverTurns'))
-effect_line = re.search(r'^\s*roomSpa\s+RelaxTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
-assert effect_line is not None, 'the relaxation effect line is missing'
-effect_table = ', '.join(effect_line.groups())
-base_mood_line = re.search(r'^\s*CreatureBaseMood\s+(\S+)\s*$', global_cfg, re.M)
-assert base_mood_line is not None, 'CreatureBaseMood is missing'
-base_mood = repr(float(base_mood_line.group(1)))
+if WITH_CONTENT:
+    rooms = block_values(rooms_cfg, 'Rooms')
+    tavern = block_values(global_cfg, 'Tavern')
+    room_keys = ['SpaMoodJump', 'SpaMoodPerTurn', 'SpaBathTurns', 'SpaRelaxTurns', 'SpaRelaxWorkFactor',
+                 'PleasureVisitMax', 'PleasureBuffMood', 'TavernLeisureCooldownTurns', 'CasinoVisitLockTurns',
+                 'TempleVisitLockTurns', 'ArenaVisitLockTurns',
+                 'SpaDirtPerBath', 'SpaMudTrailTiles', 'SpaJumpTurns', 'SpaJumpHeight', 'SpaCannonballChance']
+    room_table = ',\n'.join('    {"%s", %s}' % (k, rooms[k]) for k in room_keys)
+    tavern_table = ',\n'.join('    {"%s", %s}' % (k, tavern[k]) for k in ('BeerPrice', 'HangoverTurns'))
+    effect_line = re.search(r'^\s*roomSpa\s+RelaxTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
+    assert effect_line is not None, 'the relaxation effect line is missing'
+    effect_table = ', '.join(effect_line.groups())
+    base_mood_line = re.search(r'^\s*CreatureBaseMood\s+(\S+)\s*$', global_cfg, re.M)
+    assert base_mood_line is not None, 'CreatureBaseMood is missing'
+    base_mood = repr(float(base_mood_line.group(1)))
 
 probe = r'''
 #include <algorithm>
@@ -714,6 +721,11 @@ room_functions = '\n'.join(extract(room_cpp, h) for h in [
     'bool RoomSpa::isBatherDisturbed(', 'void RoomSpa::abortDisturbedBathers('])
 assert 'mCreatureDirt' not in room_functions and 'washed' not in room_functions, 'the cut-out room code never touches the creature dirt'
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_spa_rules', ['spa values (own rows of config/rooms.cfg, config/global.cfg and '
+                                                   'config/skills.cfg)', 'production probe built with them'])
+    print('spa rules source wiring checked')
+    sys.exit(0)
 relax_base = float(rooms['SpaRelaxTurns'])
 factors = [float(v) for v in effect_line.groups()]
 replacements = {

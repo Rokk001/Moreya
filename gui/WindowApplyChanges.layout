@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/SheetWindow" name="ConfirmRestart" >
-        <Property name="Area" value="{{0.5,-250},{0.5,-170},{0.5,250},{0.5,170}}" />
+<!--#@own 1-->
         <Property name="Text" value="Warning" />
         <Property name="Alpha" value="0.8" />
         <Property name="AlwaysOnTop" value="True" />
@@ -13,19 +12,12 @@
             <Property name="InheritsAlpha" value="False" />
             <Property Name="VertFormatting" Value="TopAligned" />
             <Property name="HorzFormatting" value="WordWrapCentered" />
-            <Property name="Area" value="{{0,25},{0,40},{1,-25},{1,-108}}" />
-            <Property name="Text" value="To actually apply this setting,&#0010;Moreya needs to be stopped now.&#0010;Do you want to apply this change now?" />
+<!--#@own 2-->
         </Window>
-        <Window type="OD/MenuTextButton" name="CancelButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{1,-366},{1,-70},{1,-196},{1,-16}}" />
-            <Property name="Text" value="Cancel" />
+<!--#@own 3-->
             <Property name="InheritsAlpha" value="False" />
         </Window>
-        <Window type="OD/MenuTextButton" name="ApplyButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{1,-186},{1,-70},{1,-16},{1,-16}}" />
-            <Property name="Text" value="Apply" />
+<!--#@own 4-->
             <Property name="InheritsAlpha" value="False" />
         </Window>
     </Window>

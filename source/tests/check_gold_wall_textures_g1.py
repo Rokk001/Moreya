@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """T-G1: the gold wall textures Gold.png, Gold50.png and Gold150.png show dark rock with gold ore in the style guide
 gold ore colour (about 150,120,30), not saturated yellow, and the three densities differ in their ore share.
-Fixed expected values; the ore pixels are measured in the committed textures."""
+Fixed expected values; the ore pixels are measured in the committed textures. The textures may be content
+(core-models package, found through scripts/content_packages.py); without them the check names them as not checked."""
 import pathlib
 import sys
 
@@ -9,7 +10,10 @@ import numpy as np
 from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-TEXTURES = ROOT / 'materials' / 'textures'
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+TEXTURES = 'materials/textures/'
 ORE_TARGET = np.array([150.0, 120.0, 30.0])
 ORE_COLOUR_TOLERANCE = 25.0       # per channel, mean of the ore pixels
 ORE_MAX_CHANNEL = 220             # no ore pixel brighter than this (no acid yellow)
@@ -18,9 +22,14 @@ ROCK_MAX_LUMINANCE = 70.0         # the rock stays dark
 SHARE_STEP = 0.05                 # each density has at least this much more ore than the next lower one
 ORE_SHARE_RANGES = {'Gold50': (0.08, 0.18), 'Gold': (0.20, 0.32), 'Gold150': (0.30, 0.45)}
 
+missing_content = [TEXTURES + name + '.png' for name in ('Gold50', 'Gold', 'Gold150')
+                   if content_packages.data_file(ROOT, TEXTURES + name + '.png') is None]
+if missing_content:
+    content_packages.unchecked('check_gold_wall_textures_g1', missing_content)
+    sys.exit(0)
 shares = {}
 for name in ('Gold50', 'Gold', 'Gold150'):
-    img = np.asarray(Image.open(TEXTURES / (name + '.png')).convert('RGB'), dtype=float)
+    img = np.asarray(Image.open(content_packages.resolve(ROOT, TEXTURES + name + '.png')).convert('RGB'), dtype=float)
     # ore pixels: clearly warmer than the neutral rock (red minus blue), the same test the gold shader uses
     ore = (img[..., 0] - img[..., 2]) > 0.28 * 255.0 * 0.5
     share = float(ore.mean())

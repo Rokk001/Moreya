@@ -2,10 +2,9 @@
 
 <GUILayout version="4" >
     <Window type="DefaultWindow" name="Spells" >
-        <UserString name="NavigationColour" value="FFE6D2BC" />
-        <UserString name="NavigationImage" value="OpenDungeonsIcons/NavigationSpells" />
+<!--#@own 1-->
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-        <Property name="Text" value="[image-size='w:40 h:40'][image='OpenDungeonsIcons/SpellsButton']" />
+<!--#@own 2-->
         <Property name="TooltipText" value="Spells" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
         <Property name="Visible" value="False" />
@@ -15,9 +14,9 @@
              which is only window width - 200 wide, at anything close to the
              minimum window size. -->
         <Window type="OD/GameTabButton" name="SummonWorkerButton" >
-            <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
+<!--#@own 3-->
             <Property name="NormalImage" value="OpenDungeonsIcons/SummonWorkerButton" />
-            <Property name="TooltipText" value="Summon a Ziv" />
+<!--#@own 4-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/ProgressBar" name="SummonWorkerButtonProgressBar" >
@@ -33,7 +32,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="CallToWarButton" >
-            <Property name="Area" value="{{0,76},{0,6},{0,128},{0,58}}" />
+<!--#@own 5-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CallToWarButton" />
             <Property name="TooltipText" value="Casts a spell that calls available creatures" />
             <Property name="InheritsAlpha" value="False" />
@@ -51,7 +50,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="CreatureHealButton" >
-            <Property name="Area" value="{{0,132},{0,6},{0,184},{0,58}}" />
+<!--#@own 6-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureHealButton" />
             <Property name="TooltipText" value="Casts a spell that heals owned creatures on allied tiles" />
             <Property name="InheritsAlpha" value="False" />
@@ -69,7 +68,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="CreatureExplosionButton" >
-            <Property name="Area" value="{{0,188},{0,6},{0,240},{0,58}}" />
+<!--#@own 7-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureExplosionButton" />
             <Property name="TooltipText" value="Casts a spell that damages enemy creatures on allied tiles" />
             <Property name="InheritsAlpha" value="False" />
@@ -87,7 +86,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="CreatureHasteButton" >
-            <Property name="Area" value="{{0,244},{0,6},{0,296},{0,58}}" />
+<!--#@own 8-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureHasteButton" />
             <Property name="TooltipText" value="Increases, target speed. Target: friendly creatures on claimed tiles" />
             <Property name="InheritsAlpha" value="False" />
@@ -105,7 +104,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="CreatureDefenseButton" >
-            <Property name="Area" value="{{0,300},{0,6},{0,352},{0,58}}" />
+<!--#@own 9-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureDefenseButton" />
             <Property name="TooltipText" value="Increases target physical defense. Target: friendly creatures on claimed tiles" />
             <Property name="InheritsAlpha" value="False" />
@@ -123,7 +122,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="CreatureSlowButton" >
-            <Property name="Area" value="{{0,356},{0,6},{0,408},{0,58}}" />
+<!--#@own 10-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureSlowButton" />
             <Property name="TooltipText" value="Decrease target speed. Target: enemy creatures on claimed tiles" />
             <Property name="InheritsAlpha" value="False" />
@@ -141,7 +140,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="CreatureStrengthButton" >
-            <Property name="Area" value="{{0,412},{0,6},{0,464},{0,58}}" />
+<!--#@own 11-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureStrengthButton" />
             <Property name="TooltipText" value="Increase target strength. Target: allied creatures on claimed tiles" />
             <Property name="InheritsAlpha" value="False" />
@@ -159,7 +158,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="CreatureWeakButton" >
-            <Property name="Area" value="{{0,468},{0,6},{0,520},{0,58}}" />
+<!--#@own 12-->
             <Property name="NormalImage" value="OpenDungeonsIcons/CreatureWeakButton" />
             <Property name="TooltipText" value="Decrease target strength. Target: enemy creatures on claimed tiles" />
             <Property name="InheritsAlpha" value="False" />
@@ -177,7 +176,7 @@
             </Window>
         </Window>
         <Window type="OD/GameTabButton" name="SpellEyeEvilButton" >
-            <Property name="Area" value="{{0,20},{0,62},{0,72},{0,114}}" />
+<!--#@own 13-->
             <Property name="NormalImage" value="OpenDungeonsIcons/SpellEyeEvilButton" />
             <Property name="TooltipText" value="Temporary gives vision on tiles without vision. Target: any tile" />
             <Property name="InheritsAlpha" value="False" />
@@ -194,13 +193,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="CreateGoldButton" >
-            <Property name="Area" value="{{0,300},{0,10},{0,340},{0,50}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CreateGoldButton" />
-            <Property name="TooltipText" value="Turns mana into a pile of gold. Target: claimed tile" />
+<!--#@own 14-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="CreateGoldButtonProgressBar" >
+<!--#@own 15-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -212,13 +208,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="LightningButton" >
-            <Property name="Area" value="{{0,300},{0,50},{0,340},{0,90}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/LightningButton" />
-            <Property name="TooltipText" value="Hurls a lightning bolt that damages and stuns an enemy creature. Target: enemy creature on claimed tiles" />
+<!--#@own 16-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="LightningButtonProgressBar" >
+<!--#@own 17-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -230,13 +223,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="TremorButton" >
-            <Property name="Area" value="{{0,340},{0,50},{0,380},{0,90}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/TremorButton" />
-            <Property name="TooltipText" value="Shakes the ground: damages and knocks down enemy creatures in the area and turns claimed enemy tiles back to dirt. Target: any tile" />
+<!--#@own 18-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="TremorButtonProgressBar" >
+<!--#@own 19-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -248,13 +238,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="HexenHenButton" >
-            <Property name="Area" value="{{0,300},{0,10},{0,340},{0,50}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/HexenHenButton" />
-            <Property name="TooltipText" value="Turns an enemy creature into a harmless chicken for a while. Target: enemy creature" />
+<!--#@own 20-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="HexenHenButtonProgressBar" >
+<!--#@own 21-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -266,13 +253,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="DefectorButton" >
-            <Property name="Area" value="{{0,340},{0,10},{0,380},{0,50}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/DefectorButton" />
-            <Property name="TooltipText" value="Turns an enemy creature on your claimed land to your side for a while. Only one creature at a time. Target: enemy creature" />
+<!--#@own 22-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="DefectorButtonProgressBar" >
+<!--#@own 23-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -284,13 +268,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="InfernoButton" >
-            <Property name="Area" value="{{0,380},{0,10},{0,420},{0,50}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/InfernoButton" />
-            <Property name="TooltipText" value="Sets enemy creatures around the target tile on fire for a few seconds. Target: any tile" />
+<!--#@own 24-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="InfernoButtonProgressBar" >
+<!--#@own 25-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -302,13 +283,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="PossessButton" >
-            <Property name="Area" value="{{0,420},{0,10},{0,460},{0,50}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/PossessButton" />
-            <Property name="TooltipText" value="Take control of one of your creatures. Costs mana while active. Target: owned creature" />
+<!--#@own 26-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="PossessButtonProgressBar" >
+<!--#@own 27-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -320,14 +298,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <!-- The six spells of the spells review show their own painted icons -->
-        <Window type="OD/GameTabButton" name="CurseButton" >
-            <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/CurseButton" />
-            <Property name="TooltipText" value="Lowers the mood of an enemy creature for a while. Target: visible enemy creature anywhere" />
+<!--#@own 28-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="CurseButtonProgressBar" >
+<!--#@own 29-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -339,13 +313,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="BlessingButton" >
-            <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/BlessingButton" />
-            <Property name="TooltipText" value="Raises the mood of one of your creatures for a while. Target: own creature anywhere" />
+<!--#@own 30-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="BlessingButtonProgressBar" >
+<!--#@own 31-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -357,13 +328,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="InvisibilityButton" >
-            <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/InvisibilityButton" />
-            <Property name="TooltipText" value="Makes one of your creatures invisible to the enemy until it attacks. Target: own creature anywhere" />
+<!--#@own 32-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="InvisibilityButtonProgressBar" >
+<!--#@own 33-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -375,13 +343,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="PlagueButton" >
-            <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/PlagueButton" />
-            <Property name="TooltipText" value="Makes an enemy creature sick: it loses health until an infirmary cures it and can infect the creatures around it. Target: visible enemy creature anywhere" />
+<!--#@own 34-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="PlagueButtonProgressBar" >
+<!--#@own 35-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -393,13 +358,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="BreakWallButton" >
-            <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/BreakWallButton" />
-            <Property name="TooltipText" value="Turns an enemy claimed wall back into earth that can be dug. Target: enemy claimed wall" />
+<!--#@own 36-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="BreakWallButtonProgressBar" >
+<!--#@own 37-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -411,13 +373,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="RevealEnemyButton" >
-            <Property name="Area" value="{{0,20},{0,6},{0,72},{0,58}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/RevealEnemyButton" />
-            <Property name="TooltipText" value="Shows every tile an enemy keeper has claimed for a few seconds. Target: visible enemy claimed tile" />
+<!--#@own 38-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="RevealEnemyButtonProgressBar" >
+<!--#@own 39-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />
@@ -429,13 +388,10 @@
                 <Property name="ProgressImage" value="OpenDungeonsSkin/SelectionBrush" />
             </Window>
         </Window>
-        <Window type="OD/GameTabButton" name="SummonChampionButton" >
-            <Property name="Area" value="{{0,460},{0,10},{0,500},{0,50}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/SummonChampionButton" />
-            <Property name="TooltipText" value="Summons a champion that cannot be hurt and charges at the enemies. Costs mana while it stays. Unlocked by the Heartstone. Target: your claimed tile" />
+<!--#@own 40-->
             <Property name="InheritsAlpha" value="False" />
             <Property name="Visible" value="False" />
-            <Window type="OD/ProgressBar" name="SummonChampionButtonProgressBar" >
+<!--#@own 41-->
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                 <Property name="InheritsTooltipText" value="True" />
                 <Property name="CurrentProgress" value="0.0" />

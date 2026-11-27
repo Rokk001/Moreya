@@ -1,8 +1,15 @@
-"""Chicken flight: decision (trigger, limits, cooldown), wiring and compatibility. Pure Python, compiles nothing."""
+"""Chicken flight: decision (trigger, limits, cooldown), wiring and compatibility. Pure Python, compiles nothing.
+
+The flight effect, its recordings and their CREDITS rows lie in the content (packages and CREDITS of the content
+repository); without the content they are named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -118,8 +125,13 @@ plan = plan[:plan.index('\n}\n')]
 for needle in ('HatcheryFleeReach', 'isFreeWanderPoint(goal', 'isSegmentInRoom(from, goal)', 'goal.distance(threat) < distanceNow + gain'):
     assert needle in plan, needle
 # no longer than the old hop to a neighbour tile (at most 1.5 along and 0.5 across)
-reach = float(re.search(r'^[ \t]+HatcheryFleeReach[ \t]+([0-9.]+)', read('config/rooms.cfg'), re.M).group(1))
-assert 0.0 < reach <= (1.5 ** 2 + 0.5 ** 2) ** 0.5
+# HatcheryFleeReach is an own row of rooms.cfg (content package core-config); without the content it is not checked
+if content_packages.has_content(root):
+    reach = float(re.search(r'^[ \t]+HatcheryFleeReach[ \t]+([0-9.]+)', content_packages.read_text(root, 'config/rooms.cfg'),
+                            re.M).group(1))
+    assert 0.0 < reach <= (1.5 ** 2 + 0.5 ** 2) ** 0.5
+else:
+    content_packages.unchecked('check_chicken_flight', ['config/rooms.cfg HatcheryFleeReach'])
 # Not saved: the stream format is unchanged
 assert 'mFlight' not in cpp[cpp.index('void ChickenEntity::exportToStream'):]
 
@@ -142,12 +154,18 @@ assert 'triggerEvent("ChickenFlee", event.mPosition, false)' in handler
 extras = read('source/render/RoomAmbienceExtras.cpp')
 assert 'supportsCosmeticEvents()' in extras
 
-# Effect: feathers, dust and a cluck sound that exists
-cfg = read('config/roomAmbienceDeferred.cfg')
-block = cfg[cfg.index('Name        ChickenFleeFeathers'):]
-block = block[:block.index('[/Effect]')]
-assert 'Event       ChickenFlee' in block and 'Sound       Rooms/Hatchery/Cluck' in block
-assert list((root / 'sounds/Spatial/Rooms/Hatchery/Cluck').glob('*.ogg'))
-assert 'Spatial/Rooms/Hatchery/Cluck/' in read('CREDITS')
+# Effect: feathers, dust and a cluck sound that exists (the effect and the recordings lie in the content packages)
+if not content_packages.has_content(root):
+    content_packages.unchecked('check_chicken_flight', ['config/roomAmbienceDeferred.cfg ChickenFleeFeathers',
+                                                        'sounds/Spatial/Rooms/Hatchery/Cluck and its CREDITS rows'])
+else:
+    cfg = content_packages.read_text(root, 'config/roomAmbienceDeferred.cfg')
+    block = cfg[cfg.index('Name        ChickenFleeFeathers'):]
+    block = block[:block.index('[/Effect]')]
+    assert 'Event       ChickenFlee' in block and 'Sound       Rooms/Hatchery/Cluck' in block
+    assert content_packages.data_glob(root, 'sounds/Spatial/Rooms/Hatchery/Cluck', '*.ogg')
+    # The rows of the recordings lie in the CREDITS of the content repository
+    content = campaign_packages.content_repository(root)
+    assert 'Spatial/Rooms/Hatchery/Cluck/' in read('CREDITS') + (content / 'CREDITS').read_text(encoding='utf-8')
 
 print('chicken flight checks passed')

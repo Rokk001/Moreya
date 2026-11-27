@@ -15,15 +15,49 @@ and the close button beside it). It checks the outcome:
 4. Fit. At 640x480, 1024x768, 1920x1200 and 7680x4320 (8K), each with the UI scale 80 %, 100 % and 120 %, every in-game
    window lies on the screen and every control lies inside the client area of the sheet frame of its window, and no
    fixed caption is cut (geometry and font measurement of check_window_content_fit.py, which models the sheet frame).
+
+Many layouts and the font files live in content packages (found through scripts/content_packages.py); the other
+interface files (layouts, OD.looknfeel, ODSkin.scheme, fonts) are mixed files that are read joined with their own rows
+from the content, as the game reads them. Without the content the check names every layout it could not read and the
+fit part as not checked, checks the public layouts without own rows and the code, and leaves out the counts over all
+layouts (they need every layout); with the content every count runs.
 """
 from pathlib import Path
 import re
+import sys
+import tempfile
 import time
 import xml.etree.ElementTree as ET
 
 STARTED = time.monotonic()
 repo = Path(__file__).resolve().parents[2]
 gui = repo / 'gui'
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+WITH_CONTENT = content_packages.has_content(repo)
+# Layouts and parts that need the content and are not checked because it is not present
+not_checked = []
+#: Folder of the joined copies of the mixed interface files (removed when the check ends)
+JOINED = tempfile.TemporaryDirectory(prefix='odp-ingame-frame-')
+
+
+def gui_file(name):
+    """A file of gui/ from the public tree or a content package, or None when the content is not present. A mixed file
+    (with own rows markers) is a copy joined with its own rows from the content; without the content it is None."""
+    found = content_packages.data_file(repo, 'gui/' + name)
+    if found is None and WITH_CONTENT:
+        return gui / name   # fails below as before: the content is present but the file is missing
+    if found is not None and '#@own ' in found.read_text(encoding='utf-8'):
+        if WITH_CONTENT:
+            joined = Path(JOINED.name) / name
+            joined.parent.mkdir(parents=True, exist_ok=True)
+            joined.write_bytes(content_packages.read_text(repo, 'gui/' + name).encode('utf-8'))
+            return joined
+        found = None
+    if found is None and name not in not_checked:
+        not_checked.append(name)
+    return found
 
 # ------------------------------------------------------------------------------------------------ in-game layouts
 # Layouts the code loads by name while a game or the editor runs (each must be loaded so in the source).
@@ -32,16 +66,20 @@ CODE_LOADED = {'WindowStats.layout': 'source/render/Gui.cpp', 'WindowConsole.lay
                'WindowSettings.layout': 'source/modes/SettingsWindow.cpp',
                'WindowApplyChanges.layout': 'source/modes/SettingsWindow.cpp'}
 # The shared creature profile page was deleted (owner decision 2026-11-18); nothing may load it any more
-assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists()
+assert content_packages.data_file(repo, 'gui/WindowCreatureProfilePage.layout') is None
 assert 'WindowCreatureProfilePage.layout' not in (repo / 'source/render/Gui.cpp').read_text(encoding='utf-8')
 for layout, source in CODE_LOADED.items():
     assert 'loadLayoutFromFile("%s")' % layout in (repo / source).read_text(encoding='utf-8'), (layout, source)
 
 
 def imports(layout, seen):
-    """The layout and every layout it imports, recursively."""
+    """The layout and every layout it imports, recursively (a layout that is not present without the content is named
+    as not checked and its own imports are not known)."""
     seen.add(layout)
-    for entry in ET.parse(gui / layout).getroot().iter('LayoutImport'):
+    found = gui_file(layout)
+    if found is None:
+        return seen
+    for entry in ET.parse(str(found)).getroot().iter('LayoutImport'):
         if entry.get('filename') not in seen:
             imports(entry.get('filename'), seen)
     return seen
@@ -53,15 +91,20 @@ INGAME = imports('ModeGame.layout', set()) | imports('ModeEditor.layout', set())
 # skill tree window of integration/all became the Skills page of the Dungeonbook with K7; 45 before INGAME-QS-11: the
 # player information window left the game with K7, its KO setting is on the Game page of the settings window, and the
 # shared creature profile page was deleted, owner decision 2026-11-18).
-assert len(INGAME) == 42, (len(INGAME), sorted(INGAME))
-assert 'WindowCreatureSkillTree.layout' not in INGAME and not (gui / 'WindowCreatureSkillTree.layout').exists(), \
+assert len(INGAME) == 42 or not WITH_CONTENT, (len(INGAME), sorted(INGAME))
+assert 'WindowCreatureSkillTree.layout' not in INGAME and \
+    content_packages.data_file(repo, 'gui/WindowCreatureSkillTree.layout') is None, \
     'the skill tree is a page of the Dungeonbook, no window of its own (INGAME-QS-12 K7)'
 
 # ------------------------------------------------------------------------------------------------ looks
-skin = ET.parse(gui / 'OD.looknfeel').getroot()
-looks = {look.get('name'): look for look in skin.findall('WidgetLook')}
-scheme = ET.parse(gui / 'ODSkin.scheme').getroot()
-mapping = {m.get('windowType'): (m.get('lookNFeel'), m.get('targetType')) for m in scheme.findall('FalagardMapping')}
+# Without the content the look and the scheme are not there (named as not checked): no look and no mapping
+skin_file = gui_file('OD.looknfeel')
+skin = ET.parse(str(skin_file)).getroot() if skin_file is not None else None
+looks = {look.get('name'): look for look in skin.findall('WidgetLook')} if skin is not None else {}
+scheme_file = gui_file('ODSkin.scheme')
+scheme = ET.parse(str(scheme_file)).getroot() if scheme_file is not None else None
+mapping = ({m.get('windowType'): (m.get('lookNFeel'), m.get('targetType')) for m in scheme.findall('FalagardMapping')}
+           if scheme is not None else {})
 
 
 def find_section(look, name):
@@ -112,11 +155,12 @@ def check_sheet_frame(look, states, what):
     assert not old, (what, look, 'draws an old frame', old)
 
 
-sheet_title = looks['OD/SheetWindow'].find("Child[@nameSuffix='__auto_titlebar__']")
-assert sheet_title.get('type') == 'OD/SheetTitlebar'
-caption = looks['OD/SheetTitlebar'].find(".//ImagerySection[@name='caption']/TextComponent")
-assert caption.find('HorzFormat').get('type') == 'CentreAligned', 'the sheet title is centred'
-assert 'OD/MenuTextButton' in {s.get('look') for s in looks['OD/SheetTitlebar'].iter('Section')}, 'the title glows'
+if skin is not None:
+    sheet_title = looks['OD/SheetWindow'].find("Child[@nameSuffix='__auto_titlebar__']")
+    assert sheet_title.get('type') == 'OD/SheetTitlebar'
+    caption = looks['OD/SheetTitlebar'].find(".//ImagerySection[@name='caption']/TextComponent")
+    assert caption.find('HorzFormat').get('type') == 'CentreAligned', 'the sheet title is centred'
+    assert 'OD/MenuTextButton' in {s.get('look') for s in looks['OD/SheetTitlebar'].iter('Section')}, 'the title glows'
 
 
 def props(window):
@@ -128,7 +172,10 @@ def props(window):
 frame_windows = []
 panels = []
 for layout in sorted(INGAME):
-    root = ET.parse(gui / layout).getroot()
+    found = gui_file(layout)
+    if found is None:
+        continue
+    root = ET.parse(str(found)).getroot()
     for window in root.iter('Window'):
         kind = window.get('type')
         look, target = mapping.get(kind, (None, None))
@@ -152,19 +199,25 @@ for layout in sorted(INGAME):
 # counted once per layout file; the player information window is gone; 25 before INGAME-QS-12, whose K7 made the
 # creature skill tree window a page of the Dungeonbook) and 3 panels (the message panels of game and editor, the
 # debriefing panel).
-assert len(frame_windows) == 24, (len(frame_windows), frame_windows)
-assert sorted(panels) == [('WindowDefeatDebriefing.layout', 'Panel'), ('WindowEvent.layout', 'GameEventText'),
-                          ('WindowGameEvent.layout', 'GameEventText')], panels
-# The windows the owner named are among them.
-named = {name for _layout, name in frame_windows}
-for window in ('RoomManagerWindow', 'SocialWindow', 'WorkersWindow', 'ObjectivesWindow', 'SkillTreeWindow',
-               'GameOptionsWindow', 'SettingsNavigationWindow', 'SettingsWindow', 'ConfirmExit', 'ConfirmLoad',
-               'ConfirmRestart', 'EditorOptionsWindow', 'EditorHelpWindow', 'EditorPortalWavesWindow',
-               'LevelWindowFrame'):
-    assert window in named, window
+# The counts and names over all layouts need every layout: with the content only.
+if WITH_CONTENT:
+    assert len(frame_windows) == 24, (len(frame_windows), frame_windows)
+    assert sorted(panels) == [('WindowDefeatDebriefing.layout', 'Panel'), ('WindowEvent.layout', 'GameEventText'),
+                              ('WindowGameEvent.layout', 'GameEventText')], panels
+    # The windows the owner named are among them.
+    named = {name for _layout, name in frame_windows}
+    for window in ('RoomManagerWindow', 'SocialWindow', 'WorkersWindow', 'ObjectivesWindow', 'SkillTreeWindow',
+                   'GameOptionsWindow', 'SettingsNavigationWindow', 'SettingsWindow', 'ConfirmExit', 'ConfirmLoad',
+                   'ConfirmRestart', 'EditorOptionsWindow', 'EditorHelpWindow', 'EditorPortalWavesWindow',
+                   'LevelWindowFrame'):
+        assert window in named, window
+else:
+    not_checked.append('counts of the frame windows (24), the panels and the named windows')
 # The Workers window shows its title on the painted plaque of its chosen mockup; the plaque sits on the top rail.
-workers = ET.parse(gui / 'WindowWorkers.layout').getroot().find('Window')
-assert [w for w in workers.findall('Window') if w.get('name') == 'TitlePlaque'], 'the Workers title plaque'
+workers_file = gui_file('WindowWorkers.layout')
+if workers_file is not None:
+    workers = ET.parse(str(workers_file)).getroot().find('Window')
+    assert [w for w in workers.findall('Window') if w.get('name') == 'TitlePlaque'], 'the Workers title plaque'
 print('1. %d in-game frame windows and %d panels draw the sheet frame, no old frame left' % (len(frame_windows),
                                                                                              len(panels)))
 
@@ -178,9 +231,11 @@ for branch, what in ((menu_branch, 'main menu'), (game_branch, 'game')):
                  'CEGUI::UDim(0.5f, MENU_WINDOW_HALF_WIDTH)', 'CEGUI::UDim(0.5f, MENU_WINDOW_HALF_HEIGHT)'):
         assert part in branch, (what, 'settings page is not centred', part)
 assert 'OD/GameSettingsWindow' not in game_branch, 'the old full width game page'
-load = ET.parse(gui / 'MenuLoad.layout').getroot()
-panel = [w for w in load.iter('Window') if w.get('name') == 'LoadPanel']
-assert panel and props(panel[0])['Image'] == 'ODMenuTemplate/LoadPanel', 'the save browser shows the sheet panel'
+load_file = gui_file('MenuLoad.layout')
+if load_file is not None:
+    load = ET.parse(str(load_file)).getroot()
+    panel = [w for w in load.iter('Window') if w.get('name') == 'LoadPanel']
+    assert panel and props(panel[0])['Image'] == 'ODMenuTemplate/LoadPanel', 'the save browser shows the sheet panel'
 load_mode = (repo / 'source/modes/MenuModeLoad.cpp').read_text(encoding='utf-8')
 assert 'LoadPanel' not in load_mode or 'LoadPanel")->hide' not in load_mode, 'the panel is hidden in the game'
 print('2. settings page of the game centred in the sheet frame, save browser shows the sheet panel')
@@ -193,7 +248,10 @@ ANSWER_BUTTONS = {'WindowQuit.layout': ('YesOption', 'NoOption'), 'LoadConfirm.l
                   'EditorLoad.layout': ('BackButton', 'LoadButton'), 'EditorSave.layout': ('BackButton', 'SaveButton'),
                   'EditorNew.layout': ('BackButton', 'LaunchNewLevel')}
 for layout, names in ANSWER_BUTTONS.items():
-    types = {w.get('name'): w.get('type') for w in ET.parse(gui / layout).getroot().iter('Window')}
+    found = gui_file(layout)
+    if found is None:
+        continue
+    types = {w.get('name'): w.get('type') for w in ET.parse(str(found)).getroot().iter('Window')}
     for name in names:
         assert types[name] == 'OD/MenuTextButton', (layout, name, types[name])
 print('3. %d answer buttons of %d dialogs are menu template buttons' % (
@@ -202,32 +260,45 @@ print('3. %d answer buttons of %d dialogs are menu template buttons' % (
 # ------------------------------------------------------------------------------------------------ 4. fit
 # The geometry, the frame model of OD/SheetWindow and the caption measurement of check_window_content_fit.py, run on
 # the in-game layouts at three UI scales.
-fit_source = (repo / 'source/tests/check_window_content_fit.py').read_text(encoding='utf-8')
-marker = '\nall_problems = {}\n'
-assert marker in fit_source and "if node.type == 'OD/SheetWindow':" in fit_source
-namespace = {'__file__': str(repo / 'source/tests/check_window_content_fit.py'), '__name__': 'content_fit'}
-exec(compile(fit_source[:fit_source.index(marker)], 'check_window_content_fit.py', 'exec'), namespace)
-SCREENS = [(640, 480), (1024, 768), (1920, 1200), (7680, 4320)]
-USER_SCALES = [0.8, 1.0, 1.2]
-faults = []
-cases = 0
-stats = {'windows': 0}
-for sheet in namespace['sheets']:
-    if sheet.layout not in INGAME:
-        continue
-    for screen in SCREENS:
-        for user in USER_SCALES:
-            problems = []
-            namespace['walk'](sheet, (0.0, 0.0, float(screen[0]), float(screen[1])),
-                              (0.0, 0.0, float(screen[0]), float(screen[1])), screen, user, 1.0, problems, stats)
-            cases += 1
-            for node, kind, got, limit in problems:
-                faults.append('%s %s at %dx%d %d%%: %s (%s vs %s)' % (node.layout, node.path, screen[0], screen[1],
-                                                                     round(user * 100), kind, got, limit))
-for fault in faults[:40]:
-    print('FAULT', fault)
-assert not faults, '%d in-game windows or controls do not fit' % len(faults)
-print('4. %d in-game sheets x %d screens x %d UI scales: %d window evaluations, everything inside its sheet frame' % (
-    cases // (len(SCREENS) * len(USER_SCALES)), len(SCREENS), len(USER_SCALES), stats['windows']))
+# The font model measures with the font files of gui/fonts and walks every layout; without the content they are not all
+# there.
+if WITH_CONTENT:
+    FONT_FILES_MISSING = [font.name for font in sorted((gui / 'fonts').glob('*.font'))
+                          if not (gui / 'fonts' / ET.parse(str(gui_file('fonts/' + font.name))).getroot()
+                                  .get('filename')).is_file()]
+else:
+    # without the content the mixed font files cannot be read: every font counts as missing
+    FONT_FILES_MISSING = [font.name for font in sorted((gui / 'fonts').glob('*.font'))]
+if FONT_FILES_MISSING and not WITH_CONTENT:
+    not_checked.append('4. fit of the in-game windows (font files of ' + ', '.join(FONT_FILES_MISSING) + ')')
+else:
+    fit_source = (repo / 'source/tests/check_window_content_fit.py').read_text(encoding='utf-8')
+    marker = '\nall_problems = {}\n'
+    assert marker in fit_source and "if node.type == 'OD/SheetWindow':" in fit_source
+    namespace = {'__file__': str(repo / 'source/tests/check_window_content_fit.py'), '__name__': 'content_fit'}
+    exec(compile(fit_source[:fit_source.index(marker)], 'check_window_content_fit.py', 'exec'), namespace)
+    SCREENS = [(640, 480), (1024, 768), (1920, 1200), (7680, 4320)]
+    USER_SCALES = [0.8, 1.0, 1.2]
+    faults = []
+    cases = 0
+    stats = {'windows': 0}
+    for sheet in namespace['sheets']:
+        if sheet.layout not in INGAME:
+            continue
+        for screen in SCREENS:
+            for user in USER_SCALES:
+                problems = []
+                namespace['walk'](sheet, (0.0, 0.0, float(screen[0]), float(screen[1])),
+                                  (0.0, 0.0, float(screen[0]), float(screen[1])), screen, user, 1.0, problems, stats)
+                cases += 1
+                for node, kind, got, limit in problems:
+                    faults.append('%s %s at %dx%d %d%%: %s (%s vs %s)' % (node.layout, node.path, screen[0], screen[1],
+                                                                         round(user * 100), kind, got, limit))
+    for fault in faults[:40]:
+        print('FAULT', fault)
+    assert not faults, '%d in-game windows or controls do not fit' % len(faults)
+    print('4. %d in-game sheets x %d screens x %d UI scales: %d window evaluations, everything inside its sheet frame' % (
+        cases // (len(SCREENS) * len(USER_SCALES)), len(SCREENS), len(USER_SCALES), stats['windows']))
+content_packages.unchecked('check_ingame_window_frame', not_checked)
 print('ODP_TEST_PHASE {"name":"check","seconds":%.2f}' % (time.monotonic() - STARTED))
 print('INGAME WINDOW FRAME OK')

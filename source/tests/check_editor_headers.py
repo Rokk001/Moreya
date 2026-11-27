@@ -1,4 +1,10 @@
-"""Exercise editor tab geometry with CEGUI and the production look and layout."""
+"""Exercise editor tab geometry with CEGUI and the production look and layout.
+
+The probe loads the scheme, imagesets and fonts of the gui folder of the public tree merged with the gui folders of the
+content packages (scripts/content_packages.py; a public file wins, as in the game); a mixed interface file is given to
+the probe joined with its own rows (content_packages.read_text), as the game reads it. Without the content the scheme
+cannot be loaded, so the probe is not compiled and the check names it as not checked.
+"""
 from pathlib import Path
 import os
 import shutil
@@ -7,6 +13,9 @@ import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
 deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
 null_source = deps / 'src/cegui/cegui/src/RendererModules/Null'
 null_include = deps / 'src/cegui/cegui/include/CEGUI/RendererModules/Null'
@@ -117,7 +126,12 @@ int main()
     }
     catch(const std::exception& error) { std::cerr << error.what() << std::endl; return 1; }
 }
-""".replace('@@SCALER@@', scaler).replace('@@FONTS@@', (repo / 'gui/fonts').as_posix() + '/')
+""".replace('@@SCALER@@', scaler)
+
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_editor_headers', ['CEGUI probe (content packages: %s)'
+                                                        % ', '.join(content_packages.missing_packages(repo))])
+    sys.exit(0)
 
 if shutil.which('cl') is None:
     sys.exit('check_editor_headers.py needs the MSVC compiler cl on the PATH: run it from a shell prepared with vcvars64.bat (VS Build Tools, VC/Auxiliary/Build).')
@@ -125,11 +139,20 @@ if shutil.which('cl') is None:
 with tempfile.TemporaryDirectory(prefix='odp-editor-headers-') as directory:
     work = Path(directory)
     gui_resources = work / 'gui'
-    shutil.copytree(repo / 'gui', gui_resources)
-    for resource_directory in (repo / 'gui/RoomCentreArtwork', repo / 'gui/RoomCentreIcons'):
-        for resource in resource_directory.iterdir():
-            if resource.is_file():
-                shutil.copy2(resource, gui_resources / resource.name)
+    # The gui folders of the packages first, the public one last, so a public file wins as in the game
+    for gui_folder in reversed(content_packages.data_folders(repo, 'gui')):
+        shutil.copytree(gui_folder, gui_resources, dirs_exist_ok=True)
+    # The mixed interface files as the game reads them: the public file joined with its own rows from the content
+    for resource in sorted(gui_resources.rglob('*')):
+        relative = 'gui/' + resource.relative_to(gui_resources).as_posix()
+        if resource.is_file() and '.own.' not in resource.name and resource.suffix in ('.layout', '.looknfeel',
+                                                                                         '.scheme', '.imageset', '.font'):
+            if '#@own ' not in resource.read_text(encoding='utf-8'):
+                continue
+            resource.write_bytes(content_packages.read_text(repo, relative).encode('utf-8'))
+    for resource_directory in ('gui/RoomCentreArtwork', 'gui/RoomCentreIcons'):
+        for resource in content_packages.data_glob(repo, resource_directory):
+            shutil.copy2(resource, gui_resources / resource.name)
     header_dir = work / 'CEGUI/RendererModules/Null'
     header_dir.mkdir(parents=True)
     for header in null_include.glob('*.h'):
@@ -139,7 +162,8 @@ with tempfile.TemporaryDirectory(prefix='odp-editor-headers-') as directory:
         shutil.copy(source, work / source.name)
         sources.append(source.name)
     shutil.copy(null_source / 'RenderTarget.inl', work / 'RenderTarget.inl')
-    probe = probe.replace('@@GUI@@', gui_resources.as_posix() + '/')
+    probe = probe.replace('@@GUI@@', gui_resources.as_posix() + '/').replace('@@FONTS@@',
+                                                                           (gui_resources / 'fonts').as_posix() + '/')
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING', '/DCEGUINULLRENDERER_EXPORTS',
                     '/I', str(work), '/I', str(deps / 'install/include/cegui-0'), 'check.cpp'] + sources +

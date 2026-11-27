@@ -38,9 +38,15 @@ ROOM_NAMES = tuple(room[0] for room in ROOMS)
 
 
 #: The files of every room package besides its Package.cfg, at their relative paths, fixed for this branch (the inventory
-#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 319 files
+#: of the content repository, docs/ROOM-PACKAGES.md, gives the reasons); 330 files (323 before the meshes and
+#: skeletons of the merchant, innkeeper, shaman and pool attendant moved into the creatures content package, 315 after
+#: it, 330 with the clip props: the innkeeper's jug and the dice in the tavern, the shaman's rattle, bucket and flask
+#: in the infirmary)
 PACKAGED_ASSETS = {
-    'GuardRoom': (),
+    'GuardRoom': (
+        'materials/scripts/Dojo.material', 'materials/textures/Dojo.png', 'materials/textures/DojoNormal.png',
+        'models/Dojo.mesh',
+    ),
     'Temple': (
         'sounds/Spatial/Rooms/Temple/Gong/Gong01.ogg',
     ),
@@ -79,7 +85,7 @@ PACKAGED_ASSETS = {
         'materials/textures/MerchantLinenApprovedColor.png', 'materials/textures/MerchantLinenApprovedNormal.png',
         'materials/textures/MerchantRobeApprovedColor.png', 'materials/textures/MerchantRobeApprovedNormal.png',
         'materials/textures/MerchantTableCloth.png', 'materials/textures/MerchantTableWood.png',
-        'materials/textures/MerchantWares.png', 'models/Merchant.mesh', 'models/Merchant.skeleton',
+        'materials/textures/MerchantWares.png',
         'models/MerchantShelf.mesh', 'models/SalesTable.mesh', 'sounds/Spatial/Rooms/Merchant/Deal/FxDeal01.ogg',
         'sounds/Spatial/Rooms/Merchant/Giggle/FxGiggle01.ogg', 'sounds/Spatial/Rooms/Merchant/Haggle/FxHaggle01.ogg',
     ),
@@ -101,7 +107,9 @@ PACKAGED_ASSETS = {
     ),
     'Tavern': (
         'materials/scripts/TavernEffects.material', 'materials/scripts/TavernFloor.material',
-        'materials/scripts/TavernWall.material', 'materials/textures/tavern/DuelBird.png',
+        'materials/scripts/TavernDie.material', 'materials/scripts/TavernJug.material',
+        'materials/scripts/TavernWall.material',
+        'materials/textures/tavern/DuelBird.png',
         'materials/textures/tavern/Tavern0000.png', 'materials/textures/tavern/Tavern0000Normal.png',
         'materials/textures/tavern/Tavern0001.png', 'materials/textures/tavern/Tavern0001Normal.png',
         'materials/textures/tavern/Tavern0010.png', 'materials/textures/tavern/Tavern0010Normal.png',
@@ -124,6 +132,7 @@ PACKAGED_ASSETS = {
         'materials/textures/tavern/TavernCounterWoodApprovedColor.png',
         'materials/textures/tavern/TavernCounterWoodApprovedNormal.png', 'materials/textures/tavern/TavernFloor.png',
         'materials/textures/tavern/TavernFloorNormal.png', 'materials/textures/tavern/TavernFoam.png',
+        'materials/textures/tavern/TavernDie.png', 'materials/textures/tavern/TavernJug.png',
         'materials/textures/tavern/TavernHood.png', 'materials/textures/tavern/TavernHoodApprovedColor.png',
         'materials/textures/tavern/TavernHoodApprovedNormal.png', 'materials/textures/tavern/TavernIron.png',
         'materials/textures/tavern/TavernIronNormal.png', 'materials/textures/tavern/TavernKegWood.png',
@@ -137,15 +146,18 @@ PACKAGED_ASSETS = {
         'materials/textures/tavern/TavernStoneNormal.png', 'materials/textures/tavern/TavernTableWood.png',
         'materials/textures/tavern/TavernTableWoodNormal.png', 'materials/textures/tavern/TavernWall.png',
         'materials/textures/tavern/TavernWallNormal.png', 'materials/textures/tavern/TavernWood.png',
-        'materials/textures/tavern/TavernWoodNormal.png', 'models/Innkeeper.mesh', 'models/Innkeeper.skeleton',
-        'models/TavernCounter.mesh', 'models/TavernKeg.mesh', 'models/TavernStool.mesh',
+        'materials/textures/tavern/TavernWoodNormal.png',
+        'models/TavernCounter.mesh', 'models/TavernDie.mesh', 'models/TavernJug.mesh', 'models/TavernKeg.mesh', 'models/TavernStool.mesh',
         'models/TavernTable.mesh', 'particles/Tavern.particle', 'sounds/Rooms/Tavern/Clink.ogg',
         'sounds/Rooms/Tavern/Murmur.ogg', 'sounds/Rooms/Tavern/Pour.ogg',
         'sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg', 'sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg',
         'sounds/Spatial/Rooms/Tavern/Pour/Pour.ogg',
     ),
     'Infirmary': (
-        'materials/scripts/InfirmaryFloor.material', 'materials/scripts/InfirmaryObjects.material',
+        'materials/scripts/InfirmaryBucket.material', 'materials/scripts/InfirmaryFlask.material',
+        'materials/scripts/InfirmaryFloor.material',
+        'materials/scripts/InfirmaryObjects.material', 'materials/scripts/InfirmaryRattle.material',
+        'materials/textures/InfirmaryBucket.png', 'materials/textures/InfirmaryFlask.png',
         'materials/textures/InfirmaryFloor.png', 'materials/textures/InfirmaryFloorNormal.png',
         'materials/textures/InfirmaryObjectBone.png', 'materials/textures/InfirmaryObjectBottle.png',
         'materials/textures/InfirmaryObjectCloth.png', 'materials/textures/InfirmaryObjectDark.png',
@@ -153,8 +165,9 @@ PACKAGED_ASSETS = {
         'materials/textures/InfirmaryObjectIron.png', 'materials/textures/InfirmaryObjectLeather.png',
         'materials/textures/InfirmaryObjectSkin.png', 'materials/textures/InfirmaryObjectStone.png',
         'materials/textures/InfirmaryObjectStraw.png', 'materials/textures/InfirmaryObjectWood.png',
-        'models/HerbShelf.mesh', 'models/InfirmaryCotLarge.mesh', 'models/InfirmaryCotMedium.mesh',
-        'models/InfirmaryCotSmall.mesh', 'models/InfirmaryShaman.mesh', 'models/InfirmaryShaman.skeleton',
+        'materials/textures/InfirmaryRattle.png',
+        'models/HerbShelf.mesh', 'models/InfirmaryBucket.mesh', 'models/InfirmaryCotLarge.mesh', 'models/InfirmaryFlask.mesh',
+        'models/InfirmaryCotMedium.mesh', 'models/InfirmaryCotSmall.mesh', 'models/InfirmaryRattle.mesh',
         'models/InstrumentTable.mesh', 'models/MedicineCabinet.mesh', 'models/WashBasin.mesh',
         'particles/Infirmary.particle', 'sounds/Rooms/Infirmary/Admit.ogg', 'sounds/Rooms/Infirmary/Chant.ogg',
         'sounds/Rooms/Infirmary/Discharge.ogg', 'sounds/Rooms/Infirmary/Rattle.ogg',
@@ -205,7 +218,7 @@ PACKAGED_ASSETS = {
         'materials/textures/SpaAttendantTowel.png', 'materials/textures/SpaChairWood.png',
         'materials/textures/SpaFloor.png', 'materials/textures/SpaFloorNormal.png',
         'materials/textures/SpaLifebuoy.png', 'materials/textures/SpaMetalWorn.png', 'materials/textures/SpaMud.png',
-        'materials/textures/SpaMudBubble.png', 'models/PoolAttendant.mesh', 'models/PoolAttendant.skeleton',
+        'materials/textures/SpaMudBubble.png',
         'models/SpaChair.mesh', 'models/SpaMudPool.mesh', 'models/SpaPoolRim.mesh', 'models/SpaSpringboard.mesh',
         'particles/Spa.particle', 'sounds/Spatial/Rooms/Spa/Bubble/Bubble.ogg',
         'sounds/Spatial/Rooms/Spa/Splash/Splash.ogg', 'sounds/Spatial/Rooms/Spa/Whistle/Whistle.ogg',
@@ -214,11 +227,12 @@ PACKAGED_ASSETS = {
 #: The Ogre materials and particle systems that the scripts of a room package define, fixed for this branch: a check
 #: that resolves names does not find them without the package
 PACKAGED_MATERIALS = {
+    'GuardRoom': ('Dojo',),
     'GhostRoom': ('GhostRoomFloor',),
     'Infirmary': ('InfirmaryFloor', 'InfirmaryObjectWood', 'InfirmaryObjectStone', 'InfirmaryObjectCloth',
                   'InfirmaryObjectIron', 'InfirmaryObjectStraw', 'InfirmaryObjectBone', 'InfirmaryObjectHerb',
                   'InfirmaryObjectBottle', 'InfirmaryObjectSkin', 'InfirmaryObjectLeather', 'InfirmaryObjectFeather',
-                  'InfirmaryObjectDark'),
+                  'InfirmaryObjectDark', 'InfirmaryRattle', 'InfirmaryBucket', 'InfirmaryFlask'),
     'Merchant': ('MerchantApprovedRobe', 'MerchantApprovedCloak', 'MerchantApprovedLinen', 'MerchantApprovedLeather',
                  'MerchantApprovedBrass', 'MerchantApprovedDetails', 'MerchantApprovedHair', 'MerchantApprovedHood',
                  'MerchantApprovedHide', 'MerchantApprovedGold', 'MerchantApprovedHideHand',
@@ -228,7 +242,7 @@ PACKAGED_MATERIALS = {
             'SpaWhistle', 'SpaEyes', 'SpaLavaGlow', 'SpaAttendantSclera', 'SpaFloor'),
     'Tavern': ('TavernDuelBirds', 'TavernFloor', 'Tavern0000', 'Tavern0001', 'Tavern0010', 'Tavern0011', 'Tavern0100',
                'Tavern0101', 'Tavern0110', 'Tavern0111', 'Tavern1000', 'Tavern1001', 'Tavern1010', 'Tavern1011',
-               'Tavern1100', 'Tavern1101', 'Tavern1110', 'Tavern1111', 'TavernWall'),
+               'Tavern1100', 'Tavern1101', 'Tavern1110', 'Tavern1111', 'TavernWall', 'TavernJug', 'TavernDie'),
     'Toilet': ('Toilet0000', 'Toilet0001', 'Toilet0010', 'Toilet0011', 'Toilet0100', 'Toilet0101', 'Toilet0110',
                'Toilet0111', 'Toilet1000', 'Toilet1001', 'Toilet1010', 'Toilet1011', 'Toilet1100', 'Toilet1101',
                'Toilet1110', 'Toilet1111', 'ToiletSeat'),
@@ -298,7 +312,8 @@ def has_content(repo):
 
 
 # The file of a room asset: the public file when the public tree has it, else the file of a found room package (of the
-# given room, or of any room), else None.
+# given room, or of any room), else None. Without a given room a file that moved into a content package
+# (scripts/content_packages.py, for example a mesh of core-models that a room uses) is found there as well.
 def asset(repo, relative, room=None):
     repo = Path(repo)
     relative = str(relative).replace('\\', '/')
@@ -311,6 +326,12 @@ def asset(repo, relative, room=None):
         candidate = folder / relative
         if candidate.exists():
             return candidate
+    if room is None:
+        import content_packages
+        for folder in content_packages.packages(repo).values():
+            candidate = folder / relative
+            if candidate.exists():
+                return candidate
     return None
 
 
@@ -388,11 +409,16 @@ def licence_ok(repo, row, public_licence):
     return 'All rights reserved' in row and row in content_credit_rows(repo)
 
 
-# The files of a glob pattern below a relative folder of the public tree and of every present room package (the game
-# loads the scripts and textures of both alike).
+# The files of a glob pattern below a relative folder of the public tree, of every present room package and of every
+# present content package (scripts/content_packages.py; the game loads the scripts and textures of all alike).
 def glob_files(repo, folder, pattern):
+    import content_packages
     repo = Path(repo)
-    return [path for root in [repo] + package_roots(repo) for path in sorted((root / folder).glob(pattern))]
+    roots = []
+    for root in [repo] + package_roots(repo) + list(content_packages.packages(repo).values()):
+        if root not in roots:
+            roots.append(root)   # a room package that is also a content package is read once
+    return [path for root in roots for path in sorted((root / folder).glob(pattern))]
 
 
 # Every file below a relative folder of the public tree and of the found room packages, as {relative path: file}.

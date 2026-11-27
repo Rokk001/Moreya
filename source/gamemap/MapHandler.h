@@ -119,6 +119,9 @@ namespace MapHandler
     //! \brief Tells whether a file lies inside one of the shipped level folders of the game data.
     bool isOfficialLevelPath(const std::string& fileName);
 
+    //! \brief Tells whether a file is a shipped level that only the checks use; no list of the game offers it.
+    bool isHiddenFixtureLevelPath(const std::string& fileName);
+
     //! \brief Tells whether the hidden option EditOfficialLevels of the user config file is on.
     bool isEditOfficialLevelsEnabled();
 

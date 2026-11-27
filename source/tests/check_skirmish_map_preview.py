@@ -15,7 +15,12 @@ import sys
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / "scripts"))
+import content_packages  # noqa: E402
+
 failures = []
+#: gui/MenuSkirmish.layout is whole only with its own rows of the content package core-gui
+WITH_CONTENT = content_packages.has_content(root)
 
 
 def check(condition, message):
@@ -25,8 +30,8 @@ def check(condition, message):
 
 
 def read(path):
-    """Returns the text of a repository file."""
-    return (root / path).read_text(encoding="utf-8")
+    """Returns the text of a repository file; a mixed interface file comes with its own rows of the content."""
+    return content_packages.read_text(root, path)
 
 
 def strip_comments(text):
@@ -124,63 +129,66 @@ check(ordered(boost_test, ['levelFiles("skirmish")', 'levelFiles("multiplayer")'
       "the Boost test must check every official level, its temples and that the pictures differ")
 
 # --- Layout: the free area above the level list, at every screen size ------------------------------------------
-layout = ET.fromstring(read("gui/MenuSkirmish.layout"))
-frame = None
-for window in layout.iter("Window"):
-    if window.get("name") == "LevelWindowFrame":
-        frame = window
-check(frame is not None, "LevelWindowFrame is missing")
+if WITH_CONTENT:
+    layout = ET.fromstring(read("gui/MenuSkirmish.layout"))
+    frame = None
+    for window in layout.iter("Window"):
+        if window.get("name") == "LevelWindowFrame":
+            frame = window
+    check(frame is not None, "LevelWindowFrame is missing")
 
 
-def properties(window):
-    """Returns the properties of a layout window as a dictionary."""
-    return {p.get("name"): p.get("value") for p in window.findall("Property")}
+    def properties(window):
+        """Returns the properties of a layout window as a dictionary."""
+        return {p.get("name"): p.get("value") for p in window.findall("Property")}
 
 
-def area(window):
-    """Returns the Area of a layout window as ((sx, ox), (sy, oy), (sx, ox), (sy, oy))."""
-    numbers = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", properties(window)["Area"])]
-    return [(numbers[i], numbers[i + 1]) for i in range(0, 8, 2)]
+    def area(window):
+        """Returns the Area of a layout window as ((sx, ox), (sy, oy), (sx, ox), (sy, oy))."""
+        numbers = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", properties(window)["Area"])]
+        return [(numbers[i], numbers[i + 1]) for i in range(0, 8, 2)]
 
 
-def rectangle(window, width, height):
-    """Returns the pixel rectangle (left, top, right, bottom) of a window of the full screen page."""
-    a = area(window)
-    return (a[0][0] * width + a[0][1], a[1][0] * height + a[1][1],
-            a[2][0] * width + a[2][1], a[3][0] * height + a[3][1])
+    def rectangle(window, width, height):
+        """Returns the pixel rectangle (left, top, right, bottom) of a window of the full screen page."""
+        a = area(window)
+        return (a[0][0] * width + a[0][1], a[1][0] * height + a[1][1],
+                a[2][0] * width + a[2][1], a[3][0] * height + a[3][1])
 
 
-children = {w.get("name"): w for w in frame.findall("Window")} if frame is not None else {}
-page = {w.get("name"): w for w in layout.find("Window").findall("Window")}
-preview_window = children.get("MapPreview")
-check(preview_window is not None, "the layout has no MapPreview window in LevelWindowFrame")
-if preview_window is not None:
-    props = properties(preview_window)
-    check(preview_window.get("type") == "OD/StaticImage", "the preview must be a static image")
-    check(props.get("Visible") == "False", "the preview must be hidden until a level is selected")
-    check(props.get("AspectMode") == "Shrink", "the preview must keep the shape of the map inside its area")
-    check(props.get("HorizontalAlignment") == "Centre", "the preview must be centred in the free area")
-    check(props.get("MousePassThroughEnabled") == "True", "the preview must not take the clicks of the page")
-    # The window frame of the page (INGAME-QS-10 K34) is the backdrop of the preview, not a control it may cover: the
-    # preview has to lie inside it instead.
-    frames = [children[n] for n in children if children[n].get("type") == "OD/SheetPanel"]
-    others = [children[n] for n in children if n not in ("MapPreview",) and children[n] not in frames]
-    others += [page[n] for n in ("VersionText", "LoadingText") if n in page]
-    for width, height in ((640, 480), (800, 600), (1024, 768), (1920, 1080), (3840, 2160), (7680, 4320)):
-        left, top, right, bottom = rectangle(preview_window, width, height)
-        check(0 <= left and right <= width and 0 <= top and bottom <= height,
-              "the preview area leaves the %dx%d screen" % (width, height))
-        check(bottom - top >= 120, "the preview is lower than 120 pixels at %dx%d" % (width, height))
-        for frame_window in frames:
-            f_left, f_top, f_right, f_bottom = rectangle(frame_window, width, height)
-            check(f_left <= left and right <= f_right and f_top <= top and bottom <= f_bottom,
-                  "the preview leaves the page window at %dx%d" % (width, height))
-        for other in others:
-            if properties(other).get("Visible") == "False":
-                continue
-            o_left, o_top, o_right, o_bottom = rectangle(other, width, height)
-            overlaps = left < o_right and o_left < right and top < o_bottom and o_top < bottom
-            check(not overlaps, "the preview overlaps %s at %dx%d" % (other.get("name"), width, height))
+    children = {w.get("name"): w for w in frame.findall("Window")} if frame is not None else {}
+    page = {w.get("name"): w for w in layout.find("Window").findall("Window")}
+    preview_window = children.get("MapPreview")
+    check(preview_window is not None, "the layout has no MapPreview window in LevelWindowFrame")
+    if preview_window is not None:
+        props = properties(preview_window)
+        check(preview_window.get("type") == "OD/StaticImage", "the preview must be a static image")
+        check(props.get("Visible") == "False", "the preview must be hidden until a level is selected")
+        check(props.get("AspectMode") == "Shrink", "the preview must keep the shape of the map inside its area")
+        check(props.get("HorizontalAlignment") == "Centre", "the preview must be centred in the free area")
+        check(props.get("MousePassThroughEnabled") == "True", "the preview must not take the clicks of the page")
+        # The window frame of the page (INGAME-QS-10 K34) is the backdrop of the preview, not a control it may cover: the
+        # preview has to lie inside it instead.
+        frames = [children[n] for n in children if children[n].get("type") == "OD/SheetPanel"]
+        others = [children[n] for n in children if n not in ("MapPreview",) and children[n] not in frames]
+        others += [page[n] for n in ("VersionText", "LoadingText") if n in page]
+        for width, height in ((640, 480), (800, 600), (1024, 768), (1920, 1080), (3840, 2160), (7680, 4320)):
+            left, top, right, bottom = rectangle(preview_window, width, height)
+            check(0 <= left and right <= width and 0 <= top and bottom <= height,
+                  "the preview area leaves the %dx%d screen" % (width, height))
+            check(bottom - top >= 120, "the preview is lower than 120 pixels at %dx%d" % (width, height))
+            for frame_window in frames:
+                f_left, f_top, f_right, f_bottom = rectangle(frame_window, width, height)
+                check(f_left <= left and right <= f_right and f_top <= top and bottom <= f_bottom,
+                      "the preview leaves the page window at %dx%d" % (width, height))
+            for other in others:
+                if properties(other).get("Visible") == "False":
+                    continue
+                o_left, o_top, o_right, o_bottom = rectangle(other, width, height)
+                overlaps = left < o_right and o_left < right and top < o_bottom and o_top < bottom
+                check(not overlaps, "the preview overlaps %s at %dx%d" % (other.get("name"), width, height))
+else:
+    content_packages.unchecked("check_skirmish_map_preview", ["preview area of gui/MenuSkirmish.layout (own rows)"])
 
 if failures:
     for failure in failures:

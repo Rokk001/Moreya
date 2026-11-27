@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Check the [Info] Description lines of the 24 campaign level files (no compile, no game start).
 
-The levels of wings 2 to 6 and their rows come from the content repository (scripts/campaign_packages.py); without
-it the 4 levels of the public package are checked.
+The levels of all six wings and their rows come from the content repository (scripts/campaign_packages.py); the
+public tree holds no wing, so without it no level is checked (named as not checked) and only the public part of the
+old warden table is.
 
 Every level file of the campaign has exactly one Description line in its [Info] block, written as one plain text line
 for the raid campaign: a story level names its dungeon title, the guild of its raid and the Moreya gate; a bonus level
@@ -19,28 +20,19 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import campaign_packages  # noqa: E402
 
-#: Story level file -> (dungeon title, guild of its raid): the 3 levels of the public package (wing 1); the
-#: content repository adds the 15 of wings 2 to 6 (checks/campaign_descriptions.json), 18 in campaign order.
-STORY = [
-    ('Brackenford', 'Mold Pit', 'Mud Fists'),
-    ('Coldwell', 'Drowned Larder', 'Iron Latch'),
-    ('Ravensledge', 'Wailing Ledges', 'Grey Fang'),
-]
-#: Bonus level file -> chamber title: the bonus level of wing 1; the content repository adds the 5 of wings 2 to 6.
-BONUS = [
-    ('Mossgate', 'The Forgotten Pit'),
-]
-#: The wardens of the former campaign (names without their titles), 31 entries: the 18 names the public tree
-#: may hold; the 13 names that are also paid campaign names come from the content repository.
+#: Story level file -> (dungeon title, guild of its raid): all 18 come from the content repository
+#: (checks/campaign_descriptions.json, wings 1 to 6 in campaign order); the public tree holds no wing.
+STORY = []
+#: Bonus level file -> chamber title: the 6 bonus levels come from the content repository.
+BONUS = []
+#: The wardens of the former campaign (names without their titles), 31 entries: the 15 names the public tree
+#: may hold; the 16 names that are also paid campaign names come from the content repository.
 OLD_WARDENS = [
     'Tobin Marsh',
-    'Elsa Brack',
-    'Hugo Cole',
     'Bram Tull',
     'Osric Vane',
     'Wren',
     'Ysolde Dunn',
-    'Rolf Scarrow',
     'Oswin',
     'Cassia Thorne',
     'Hald',
@@ -52,7 +44,7 @@ OLD_WARDENS = [
     'Aurel',
     'Castellan',
 ]
-#: The rows of the content packages; without them only the public package is checked and wings 2 to 6 must be missing
+#: The rows of the content packages; without them no level is checked and wings 1 to 6 must be missing
 CONTENT = campaign_packages.content_data(ROOT, "campaign_descriptions")
 if CONTENT is not None:
     STORY += [tuple(row) for row in CONTENT["story"]]
@@ -84,11 +76,13 @@ def main():
     """Checks every description and reports each failure."""
     started = time.monotonic()
     failures = []
-    expected = (18, 6, 31) if CONTENT is not None else (3, 1, 18)
+    expected = (18, 6, 31) if CONTENT is not None else (0, 0, 15)
     if (len(STORY), len(BONUS), len(OLD_WARDENS)) != expected:
         failures.append("the fixed tables must hold %d story levels, %d bonus levels and %d old wardens" % expected)
-    if CONTENT is None and campaign_packages.missing_wings(ROOT) != [2, 3, 4, 5, 6]:
-        failures.append("without content packages wings 2 to 6 must be missing")
+    if CONTENT is None and campaign_packages.missing_wings(ROOT) != [1, 2, 3, 4, 5, 6]:
+        failures.append("without content packages wings 1 to 6 must be missing")
+    if CONTENT is None:
+        print("campaign descriptions: content not present, not checked: the descriptions of the campaign levels")
     patterns = [(warden, pattern) for warden in OLD_WARDENS for pattern in names_of(warden)]
     entries = [(name, title, guild) for name, title, guild in STORY] + [(name, title, None) for name, title in BONUS]
     for name, title, guild in entries:

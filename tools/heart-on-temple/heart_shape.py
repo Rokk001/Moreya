@@ -3,7 +3,7 @@
 The heart is described as an implicit surface (a smooth union of blobs with grooves cut into it) that is
 star shaped around the origin, so every point of it is found by marching a ray from the origin. The same
 description gives the mesh (see generate_heart_geometry.py) and, per texel, the surface point of the
-texture (see tools/heart-textures/generate_heart_textures.py), so that veins, wounds and the geometry that
+texture (see tools/heart-textures/generate_heart_textures.py (private tools repository)), so that veins, wounds and the geometry that
 belongs to them sit at the same place.
 
 Coordinates: x is right, y points to the back (the camera looks along +y), z is up, unit is one tile.

@@ -1,4 +1,9 @@
-"""Verify the navigation catalog against the shipped Ogre room meshes."""
+"""Verify the navigation catalog against the shipped Ogre room meshes.
+
+The meshes are read from the public models folder and from the models folders of the content and room packages
+(scripts/content_packages.py). Without the content the rows whose mesh moved into a content package are named and left
+out; without the wall decoration meshes the probe is named as not checked.
+"""
 from pathlib import Path
 import os
 import re
@@ -8,7 +13,11 @@ import tempfile
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+#: The wall decorations the probe measures besides the catalog rows (the arena shields of the equipment package and
+#: the own shields of the training hall)
+WALL_DECORATIONS = ('WeaponShield1.mesh', 'WeaponShield2.mesh', 'TrainingHallShield1.mesh', 'TrainingHallShield2.mesh')
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 catalog = (repo / 'source/gamemap/RoomObjectBounds.h').read_text()
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
@@ -22,9 +31,9 @@ for path in (repo / 'source/rooms').glob('*.cpp'):
     for constant in re.findall(r'new (?:BuildingObject|PersistentObject)\(\w+(?:\(\))?, \*this, RoomObjectPath::(\w+)', path.read_text()):
         required.add(mesh_constants[constant])
 assert 'ToiletSeat' in required, 'the toilet seats of RoomToilet must be found as room furniture'
-required.update(re.findall(r'^\s*BedMeshName\s+(\S+)', (repo / 'config/creatures.cfg').read_text(), re.M))
+required.update(re.findall(r'^\s*BedMeshName\s+(\S+)', content_packages.read_text(repo, 'config/creatures.cfg'), re.M))
 bed_dimensions = set()
-for creature in (repo / 'config/creatures.cfg').read_text().split('[Creature]')[1:]:
+for creature in content_packages.read_text(repo, 'config/creatures.cfg').split('[Creature]')[1:]:
     creature = creature.split('[/Creature]', 1)[0]
     bed = re.search(r'^\s*BedMeshName\s+(\S+)', creature, re.M)
     dimensions = re.search(r'^\s*BedDim\s+(\d+)\s+(\d+)', creature, re.M)
@@ -33,6 +42,21 @@ for creature in (repo / 'config/creatures.cfg').read_text().split('[Creature]')[
         bed_dimensions.add((bed[1], *size))
 required.update(re.findall(r'return "(Goldstack[^"]+)"', (repo / 'source/entities/TreasuryObject.cpp').read_text()))
 assert required <= names, f'Missing room furniture: {sorted(required - names)}'
+# The four classic gold stack names are only sizes now: gold on the floor and carried gold are code-built heaps and
+# sacks (LooseGoldMesh), the heart ring draws piles, and no mesh of these names exists to be measured. Their catalog
+# rows keep the navigation footprint of the heart ring and are held at the fixed values they had when they were
+# measured from the old meshes.
+GOLD_STACK_ROWS = {
+    'GoldstackLv1': ('-.197478', '-.175391', '.186379', '.185685'),
+    'GoldstackLv2': ('-.185184', '-.182552', '.185553', '.182552'),
+    'GoldstackLv3': ('-.331379', '-.301391', '.290679', '.182552'),
+    'GoldstackLv4': ('-.331379', '-.301391', '.290679', '.282221'),
+}
+gold_rows = {name: values for name, *values in re.findall(
+    r'\{"(GoldstackLv\d)",\s*([-.\d]+)f,\s*([-.\d]+)f,\s*([-.\d]+)f,\s*([-.\d]+)f\}', catalog)}
+gold_rows = {name: tuple(values) for name, values in gold_rows.items()}
+assert gold_rows == GOLD_STACK_ROWS, f'gold stack catalog rows changed: {gold_rows}'
+assert not any((repo / 'models' / (name + '.mesh')).exists() for name in GOLD_STACK_ROWS)
 probe = r'''
 #include <Ogre.h>
 #include "gamemap/RoomObjectBounds.h"
@@ -48,7 +72,7 @@ int main(int argc,char** argv){try{
  Ogre::NameValuePairList opts;opts["hidden"]="true";root.createRenderWindow("Bounds",64,64,false,&opts);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);
- // The models folders of the room packages that are present, and the meshes of the room packages that are not
+ // The models folders of the content and room packages that are present, and the meshes of the packages that are not
  for(const std::string& folder:splitList(argv[2]))groups.addResourceLocation(folder,"FileSystem","Graphics",true);
  const std::vector<std::string> missing=splitList(argv[3]);const std::set<std::string> skipped(missing.begin(),missing.end());
  groups.initialiseAllResourceGroups();
@@ -139,7 +163,7 @@ int main(int argc,char** argv){try{
    ++checks;if(scale.x!=1||scale.y!=1){++failures;std::cout<<"FAIL unchanged object "<<name<<'\n';}
   }
  // These decorations are attached high on a wall, not standing on the floor.
- for(const char* name:{"WeaponShield1.mesh","WeaponShield2.mesh"}){
+ for(const char* name:{"WeaponShield1.mesh","WeaponShield2.mesh","TrainingHallShield1.mesh","TrainingHallShield2.mesh"}){
   const Ogre::MeshPtr mesh=Ogre::MeshManager::getSingleton().load(name,"Graphics");++checks;
   if(mesh->getBounds().getMinimum().z<.8f){++failures;std::cout<<"FAIL wall decoration now occupies ground\n";}
  }
@@ -153,16 +177,27 @@ with tempfile.TemporaryDirectory(prefix='odp-room-bounds-') as directory:
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
-    # The meshes of a room package are read from the package; without the package its rows are left out
-    folders = ';'.join(str(folder / 'models') for folder in room_packages.packages(repo).values()
-                       if (folder / 'models').is_dir())
-    missing = ';'.join(sorted(Path(relative).stem for relative in room_packages.ASSET_ROOMS
-                              if relative.endswith('.mesh') and room_packages.is_missing_packaged(repo, relative)))
+    # The meshes of a content or room package are read from the package (the models folders of every present content
+    # and room package, scripts/content_packages.py); without the package its rows are left out
+    folders = ';'.join(str(folder) for folder in content_packages.data_folders(repo, 'models')
+                       if folder != repo / 'models')
+    missing_meshes = set(Path(relative).stem for relative in room_packages.ASSET_ROOMS
+                         if relative.endswith('.mesh') and room_packages.is_missing_packaged(repo, relative))
+    if not content_packages.has_content(repo):
+        # Without the content the catalog rows whose mesh moved into a content package are not measured
+        missing_meshes.update(name for name in names if content_packages.data_file(repo, 'models/' + name + '.mesh') is None)
+    missing = ';'.join(sorted(missing_meshes))
     if missing:
         print('room packages not present, their meshes are not measured: ' + missing.replace(';', ' '))
-    result = subprocess.run([str(work / 'check.exe'), str(repo), folders, missing], cwd=work, capture_output=True,
-                            text=True)
-    print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
-    if result.returncode:
-        print(result.stderr)
-        result.check_returncode()
+    # The gold stack rows have no mesh (see GOLD_STACK_ROWS above); they are checked by value instead
+    missing = ';'.join(filter(None, [missing] + sorted(GOLD_STACK_ROWS)))
+    wall_meshes = [name for name in WALL_DECORATIONS if content_packages.data_file(repo, 'models/' + name) is None]
+    if wall_meshes and not content_packages.has_content(repo):
+        content_packages.unchecked('check_room_object_bounds', ['mesh bounds (' + ', '.join(wall_meshes) + ')'])
+    else:
+        result = subprocess.run([str(work / 'check.exe'), str(repo), folders, missing], cwd=work, capture_output=True,
+                                text=True)
+        print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
+        if result.returncode:
+            print(result.stderr)
+            result.check_returncode()

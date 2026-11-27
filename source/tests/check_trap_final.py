@@ -7,6 +7,8 @@ Checks that the config reader knows the kinds Roll and Turn and the keys Mesh an
 declarations in RoomAmbience.h match the definitions in the source, that the turn pauses after a shot and is
 undone by stopAll, that the effects exist in the trap config with the limits of tools/check_room_ambience.py,
 that the particle systems exist and that the guard banner still never fires.
+The trap config and the particle systems lie in the content packages (scripts/content_packages.py); without the
+content the code part is checked and the config part is named as not checked.
 """
 
 import os
@@ -14,11 +16,20 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
 
 
 def read(*parts):
+    """Returns the text of a file below the repository root."""
     with open(os.path.join(ROOT, *parts), encoding="utf-8") as handle:
         return handle.read()
+
+
+def content(*parts):
+    """Returns the text of a game data file of the public tree or of a content package, or None without the content."""
+    path = content_packages.data_file(ROOT, "/".join(parts))
+    return None if path is None else path.read_text(encoding="utf-8")
 
 
 problems = []
@@ -26,8 +37,12 @@ config_h = read("source", "render", "RoomAmbienceConfig.h")
 config_cpp = read("source", "render", "RoomAmbienceConfig.cpp")
 header = read("source", "render", "RoomAmbience.h")
 source = read("source", "render", "RoomAmbience.cpp")
-traps = read("config", "roomAmbienceTraps.cfg")
-particles = read("particles", "RoomAmbienceTraps.particle")
+traps = content("config", "roomAmbienceTraps.cfg")
+particles = content("particles", "RoomAmbienceTraps.particle")
+config_present = traps is not None and particles is not None
+if not config_present:
+    content_packages.unchecked("check_trap_final", ["config/roomAmbienceTraps.cfg", "particles/RoomAmbienceTraps.particle"])
+    traps, particles = traps or "", particles or ""
 checker = read("tools", "check_room_ambience.py")
 
 for word, name in (("Roll", "roll"), ("Turn", "turn")):
@@ -63,61 +78,63 @@ if fired.index("mTurretHoldUntil") > fired.index('triggerEvent("TrapFired"'):
     problems.append("the hold of the turn must be set before TrapFired is shown")
 
 effects = {}
-for block in re.findall(r"\[Effect\](.*?)\[/Effect\]", traps, re.S):
-    entry = {}
-    for line in block.splitlines():
-        words = line.split("#", 1)[0].split()
-        if len(words) >= 2:
-            entry[words[0]] = words[1:]
-    if "Name" in entry:
-        effects[entry["Name"][0]] = entry
+if config_present:
+    for block in re.findall(r"\[Effect\](.*?)\[/Effect\]", traps, re.S):
+        entry = {}
+        for line in block.splitlines():
+            words = line.split("#", 1)[0].split()
+            if len(words) >= 2:
+                entry[words[0]] = words[1:]
+        if "Name" in entry:
+            effects[entry["Name"][0]] = entry
 
-turn_effect = effects.get("CannonTurn")
-if turn_effect is None:
-    problems.append("effect CannonTurn missing")
-else:
-    if turn_effect.get("Match") != ["trap:Cannon"] or turn_effect.get("Kind") != ["Turn"] or turn_effect.get("Target") != ["Object"]:
-        problems.append("CannonTurn must be a Turn on trap:Cannon objects")
-    if not 0.0 < float(turn_effect["Speed"][0]) <= 45.0:
-        problems.append("the cannon must turn slowly")
-    if turn_effect.get("Reduced") != ["yes"]:
-        problems.append("the turn of the cannon should stay in the mode reduced")
+    turn_effect = effects.get("CannonTurn")
+    if turn_effect is None:
+        problems.append("effect CannonTurn missing")
+    else:
+        if turn_effect.get("Match") != ["trap:Cannon"] or turn_effect.get("Kind") != ["Turn"] or turn_effect.get("Target") != ["Object"]:
+            problems.append("CannonTurn must be a Turn on trap:Cannon objects")
+        if not 0.0 < float(turn_effect["Speed"][0]) <= 45.0:
+            problems.append("the cannon must turn slowly")
+        if turn_effect.get("Reduced") != ["yes"]:
+            problems.append("the turn of the cannon should stay in the mode reduced")
 
-# The real boulder is the server missile (TrapBoulder::shoot); the client must not roll a second one
-if "BoulderRoll" in effects:
-    problems.append("BoulderRoll would roll a second boulder next to the server missile")
-dust = effects.get("BoulderMissileDust")
-if dust is None:
-    problems.append("effect BoulderMissileDust missing")
-elif dust.get("Match") != ["trap:BoulderMoving"] or dust.get("Target") != ["Object"] or dust.get("Kind") != ["Particle"]:
-    problems.append("BoulderMissileDust must be a particle on moving boulders")
-burst = effects.get("BoulderLaunchBurst")
-if burst is None:
-    problems.append("effect BoulderLaunchBurst missing")
-elif burst.get("Match") != ["Boulder"] or burst.get("Event") != ["TrapFired"] or burst.get("Kind") != ["Particle"]:
-    problems.append("BoulderLaunchBurst must be a particle on the event TrapFired of Boulder")
-for effect in (dust, burst):
-    if effect is not None and not re.search(r"^particle_system %s\s*$" % re.escape(effect["System"][0]), particles, re.M):
-        problems.append("particle system %s missing" % effect["System"][0])
+    # The real boulder is the server missile (TrapBoulder::shoot); the client must not roll a second one
+    if "BoulderRoll" in effects:
+        problems.append("BoulderRoll would roll a second boulder next to the server missile")
+    dust = effects.get("BoulderMissileDust")
+    if dust is None:
+        problems.append("effect BoulderMissileDust missing")
+    elif dust.get("Match") != ["trap:BoulderMoving"] or dust.get("Target") != ["Object"] or dust.get("Kind") != ["Particle"]:
+        problems.append("BoulderMissileDust must be a particle on moving boulders")
+    burst = effects.get("BoulderLaunchBurst")
+    if burst is None:
+        problems.append("effect BoulderLaunchBurst missing")
+    elif burst.get("Match") != ["Boulder"] or burst.get("Event") != ["TrapFired"] or burst.get("Kind") != ["Particle"]:
+        problems.append("BoulderLaunchBurst must be a particle on the event TrapFired of Boulder")
+    for effect in (dust, burst):
+        if effect is not None and not re.search(r"^particle_system %s\s*$" % re.escape(effect["System"][0]), particles, re.M):
+            problems.append("particle system %s missing" % effect["System"][0])
 scan = read("source", "render", "RoomAmbience.cpp")
 if '"BoulderMoving"' not in scan or "GameEntityType::missileObject" not in scan or 'getMeshName() == "Boulder"' not in scan:
     problems.append("scanObjects does not give moving boulder missiles (mesh Boulder) the kind BoulderMoving")
 if '"MissileMoving"' in scan:
     problems.append("the kind MissileMoving would give the dust to cannonballs and the other missiles too")
 
-shake = effects.get("BoulderRollShake")
-if shake is None:
-    problems.append("effect BoulderRollShake missing")
-else:
-    if shake.get("Kind") != ["Shake"] or shake.get("Event") != ["TrapFired"] or shake.get("Match") != ["Boulder"]:
-        problems.append("BoulderRollShake must be a Shake on the event TrapFired of Boulder")
-    if float(shake["Amount"][0]) > 0.5 or float(shake["Duration"][0]) > 2.0:
-        problems.append("BoulderRollShake is too strong or too long")
+if config_present:
+    shake = effects.get("BoulderRollShake")
+    if shake is None:
+        problems.append("effect BoulderRollShake missing")
+    else:
+        if shake.get("Kind") != ["Shake"] or shake.get("Event") != ["TrapFired"] or shake.get("Match") != ["Boulder"]:
+            problems.append("BoulderRollShake must be a Shake on the event TrapFired of Boulder")
+        if float(shake["Amount"][0]) > 0.5 or float(shake["Duration"][0]) > 2.0:
+            problems.append("BoulderRollShake is too strong or too long")
 
-# The boulder keeps its sounds and particles from before
-for name in ("TrapBoulderFireSound", "TrapBoulderReloadSound", "TrapBoulderIdleSound", "BoulderEmptyNiche"):
-    if name not in effects:
-        problems.append("effect %s was removed" % name)
+    # The boulder keeps its sounds and particles from before
+    for name in ("TrapBoulderFireSound", "TrapBoulderReloadSound", "TrapBoulderIdleSound", "BoulderEmptyNiche"):
+        if name not in effects:
+            problems.append("effect %s was removed" % name)
 
 # The guard banner never fires, so it has no reload look and nothing was added for it
 banner = read("source", "traps", "TrapWatchBanner.h")

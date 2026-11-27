@@ -14,18 +14,22 @@
    full cost, save and load) is run by the compiled probe of source/tests/check_research_progression.py.
 4. WR6: start gold and every non-room skill entry of the keeper seat are the values of the levels before the change
    (counted once on feature/raid-campaign at f3dc7d946).
-5. WR5: on Brackenford (Mold Pit) the neutral portal is the fixed 3x3 room next to the heart; the keeper's workers
+5. WR5: on Brackenford the neutral portal is the fixed 3x3 room next to the heart; the keeper's workers
    walk from the heart to it without digging in the fixed number of steps, and no creature or trap of another seat
    stands on the open tiles joined to heart and portal.
 6. WR7: every room a trigger condition of a level waits for can be built by the keeper there, no condition waits for
    a keeper trap or door, the goal doors are destroyed by creatures (trapgone), the four crossings of Ravensledge lie
-   on its four neutral bridges (no bridge has to be built) and The Forgotten Pit keeps its fixed gold tiles to mine.
+   on its four neutral bridges (no bridge has to be built) and Mossgate keeps its fixed gold tiles to mine.
    The static winning paths of all four levels are checked by source/tests/check_campaign_playability.py, the
    sealing of the start by scripts/check-campaign-opening.py and the keeper rooms of WR9 by
    source/tests/check_raid_maps.py.
 
-All expected values are fixed here and were counted once on feature/raid-campaign-r17; nothing is derived from the
-files under test. The game is not started and nothing is compiled.
+All expected values are fixed (here, and the per-level rows of the wing 1 levels in checks/wing1_rooms.json of the
+content repository) and were counted once on feature/raid-campaign-r17; nothing is derived from the files under test. The game is not started and nothing is compiled.
+
+The wing 1 levels lie in the wing package and the other levels in the content packages (scripts/campaign_packages.py,
+scripts/content_packages.py); without the content the engine items run on the public levels and the wing 1 levels are
+named as not checked.
 
 Usage: python -I source/tests/check_wing1_rooms.py
 Exit 0 and "wing 1 rooms ok" when every item holds.
@@ -36,6 +40,9 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 START = time.perf_counter()
 FAILURES = []
 
@@ -50,59 +57,26 @@ ROOMS = ("roomAlchemyLab", "roomArena", "roomBridgeStone", "roomBridgeWooden", "
 
 # WR1: the start rooms of every level; WR2: the researchable rooms per level; WR3: every other room is forbidden.
 # Counted again on feature/creature-roster: the required rooms of the portal creatures are released (owner decision
-# of 2026-11-27), the workshop on Brackenford, Coldwell and Mossgate and the ghost room on Ravensledge.
+# of 2026-11-27; the released rooms per level are content rows, see WING1_ROWS below).
 START_ROOMS = ("roomDormitory", "roomHatchery", "roomLibrary", "roomTreasury")
-RESEARCH_ROOMS = {
-    "Brackenford": ("roomTavern", "roomTrainingHall", "roomWorkshop"),
-    "Coldwell": ("roomSpa", "roomTavern", "roomToilet", "roomTrainingHall", "roomWorkshop"),
-    "Ravensledge": ("roomGhostRoom", "roomGuardRoom", "roomPrison", "roomSpa", "roomTavern", "roomToilet",
-                    "roomTrainingHall", "roomWorkshop"),
-    "Mossgate": ("roomCasino", "roomSpa", "roomTavern", "roomToilet", "roomTrainingHall", "roomWorkshop"),
-}
 NOT_FREE = ("roomTavern",)
 
-# WR6: start gold and the non-room skill entries of the keeper seat before the change
-KEEPER_GOLD = {"Brackenford": 2500, "Coldwell": 2500, "Ravensledge": 400, "Mossgate": 0}
-FORBIDDEN_SPELLS = ("spellCallToWar", "spellCreateGold", "spellCreatureDefense", "spellCreatureExplosion",
-                    "spellCreatureHaste", "spellCreatureHeal", "spellCreatureSlow", "spellCreatureStrength",
-                    "spellCreatureWeak", "spellDefector", "spellEyeEvil", "spellHexenHen", "spellInferno",
-                    "spellPossess", "spellTremor")
-FORBIDDEN_TRAPS = ("trapAlarm", "trapBoulder", "trapCannon", "trapDoorIronbound", "trapDoorRuned", "trapDoorSecret",
-                   "trapDoorSteel", "trapDoorWooden", "trapFear", "trapFireburst", "trapFreeze", "trapGas",
-                   "trapLightning", "trapSpike", "trapTrigger")
-KEEPER_OTHER_SKILLS = {
-    "Brackenford": {
-        "SkillDone": (),
-        "SkillNotAllowed": FORBIDDEN_SPELLS + FORBIDDEN_TRAPS,
-        "SkillPending": ("spellLightning", "spellSummonWorker", "trapDoorBarricade", "trapWatchBanner"),
-    },
-    "Coldwell": {
-        "SkillDone": ("spellLightning", "spellSummonWorker", "trapCannon", "trapDoorWooden"),
-        "SkillNotAllowed": FORBIDDEN_SPELLS + tuple(trap for trap in FORBIDDEN_TRAPS
-                                                    if trap not in ("trapCannon", "trapDoorWooden")),
-        "SkillPending": ("trapDoorBarricade", "trapWatchBanner"),
-    },
-    "Ravensledge": {
-        "SkillDone": ("spellLightning", "spellPossess", "spellSummonWorker", "trapCannon", "trapDoorWooden"),
-        "SkillNotAllowed": tuple(spell for spell in FORBIDDEN_SPELLS if spell != "spellPossess") +
-        tuple(trap for trap in FORBIDDEN_TRAPS if trap not in ("trapCannon", "trapDoorWooden")),
-        "SkillPending": ("trapDoorBarricade", "trapWatchBanner"),
-    },
-    "Mossgate": {
-        "SkillDone": (),
-        "SkillNotAllowed": FORBIDDEN_SPELLS + ("spellLightning", "spellSummonWorker") + FORBIDDEN_TRAPS,
-        "SkillPending": ("trapDoorBarricade", "trapWatchBanner"),
-    },
-}
-
-# WR5: the neutral portal of Brackenford next to the heart and the shortest walk (steps) from a heart tile to it
-MOLD_PIT_PORTAL = tuple((x, y) for x in range(13, 16) for y in range(38, 41))
-MOLD_PIT_WALK_STEPS = 2
-
-# WR7: the neutral bridges and crossing regions of Ravensledge, the gold tiles of The Forgotten Pit
-RAVENSLEDGE_BRIDGES = ("WoodenBridge1", "WoodenBridge2", "WoodenBridge3", "WoodenBridge4")
-RAVENSLEDGE_CROSSINGS = ("CrossLowerWest", "CrossLowerEast", "CrossUpperWest", "CrossUpperEast")
-MOSSGATE_GOLD_TILES = 67
+# The fixed per-level rows of the wing 1 levels (WR2 researchable rooms, WR6 start gold and non-room skill entries of
+# the keeper seat before the change, WR5 the neutral portal of Brackenford next to the heart and the shortest walk in
+# steps from a heart tile to it, WR7 the neutral bridges and crossing regions of Ravensledge and the gold tiles of
+# Mossgate) are content: they lie in checks/wing1_rooms.json of the content repository (scripts/campaign_packages.py:
+# content_data), with the values counted once on feature/raid-campaign-r17 and at f3dc7d946; None without content.
+WING1_ROWS = campaign_packages.content_data(ROOT, "wing1_rooms")
+if WING1_ROWS is not None:
+    RESEARCH_ROOMS = {name: tuple(rooms) for name, rooms in WING1_ROWS["research_rooms"].items()}
+    KEEPER_GOLD = WING1_ROWS["keeper_gold"]
+    KEEPER_OTHER_SKILLS = {name: {section: tuple(entries) for section, entries in sections.items()}
+                           for name, sections in WING1_ROWS["keeper_other_skills"].items()}
+    MOLD_PIT_PORTAL = tuple(tuple(tile) for tile in WING1_ROWS["portal"])
+    MOLD_PIT_WALK_STEPS = WING1_ROWS["portal_walk_steps"]
+    RAVENSLEDGE_BRIDGES = tuple(WING1_ROWS["bridges"])
+    RAVENSLEDGE_CROSSINGS = tuple(WING1_ROWS["crossings"])
+    MOSSGATE_GOLD_TILES = WING1_ROWS["bonus_gold_tiles"]
 
 TILE_DIRT = 1
 TILE_GOLD = 2
@@ -118,9 +92,15 @@ def check(condition, message):
 
 
 def read(relative):
-    """Returns the text of a file of the repository with Unix line ends."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
-        return handle.read().replace("\r\n", "\n")
+    """Returns the text of a file of the repository with Unix line ends; a mixed table of config/ comes joined with its
+    own rows of the content (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, relative).replace("\r\n", "\n")
+
+
+def wing1_level(name):
+    """Returns the path of a wing 1 level in its wing package (or in the public tree), or None without the content."""
+    path = campaign_packages.level_path(ROOT, name)
+    return str(path) if os.path.isfile(str(path)) else None
 
 
 def block(text, name):
@@ -295,18 +275,25 @@ def check_winnable(name, text, built):
 
 def check_engine():
     """Items 2 and 3: the Tavern stays free elsewhere and the engine applies [SkillNotFree]."""
-    skills = read("config/skills.cfg")
-    free = block(skills, "FreeLevelOne").split()
-    check("roomTavern" in free, "the Tavern must stay a free level one entry of config/skills.cfg")
-    for folder, _, names in os.walk(os.path.join(ROOT, "levels")):
-        for file_name in names:
-            path = os.path.join(folder, file_name)
-            if not file_name.endswith(".level") or os.path.dirname(path) == os.path.join(ROOT, "levels", "campaign",
-                                                                                         "wing1"):
-                continue
-            with open(path, encoding="utf-8", errors="replace") as handle:
-                check("[SkillNotFree]" not in handle.read(), os.path.relpath(path, ROOT) +
-                      ": only the wing 1 levels withhold a free level one entry")
+    # [FreeLevelOne] is an own row block of config/skills.cfg (content package core-config)
+    if content_packages.has_content(ROOT):
+        skills = read("config/skills.cfg")
+        free = block(skills, "FreeLevelOne").split()
+        check("roomTavern" in free, "the Tavern must stay a free level one entry of config/skills.cfg")
+    else:
+        free = []
+        content_packages.unchecked("check_wing1_rooms", ["[FreeLevelOne] of config/skills.cfg"])
+    # The levels/ folder of the public tree and of every content package (the wing 1 package lies outside of them)
+    for levels in content_packages.data_folders(ROOT, "levels"):
+        for folder, _, names in os.walk(str(levels)):
+            for file_name in names:
+                path = os.path.join(folder, file_name)
+                if not file_name.endswith(".level") or os.path.dirname(path) == os.path.join(str(levels), "campaign",
+                                                                                             "wing1"):
+                    continue
+                with open(path, encoding="utf-8", errors="replace") as handle:
+                    check("[SkillNotFree]" not in handle.read(), content_packages.relative_path(ROOT, path) +
+                          ": only the wing 1 levels withhold a free level one entry")
     seat = read("source/game/Seat.cpp")
     check("!skill->isFreeLevelOne() || isSkillNotAllowed(type) || isSkillNotFree(type)" in seat,
           "the free level one start must skip a withheld entry")
@@ -332,8 +319,15 @@ def main():
     room_skills = re.findall(r"^\s*(room[A-Z]\w*),", read("source/game/SkillType.h"), re.M)
     check(sorted(room_skills) == sorted(ROOMS), "the room skills changed: %s" % sorted(room_skills))
     free = check_engine()
+    missing = [name for name in LEVELS if wing1_level(name) is None or WING1_ROWS is None]
+    check(not missing or not content_packages.has_content(ROOT), "wing 1 levels or rows missing although the content "
+          "is present: %s" % missing)
+    content_packages.unchecked("check_wing1_rooms", ["wing 1 level " + name for name in missing])
     for name in LEVELS:
-        text = read("levels/campaign/wing1/%s.level" % name)
+        if name in missing:
+            continue
+        with open(wing1_level(name), encoding="utf-8") as handle:
+            text = handle.read().replace("\r\n", "\n")
         check_rooms(name, text, free)
         check_unchanged(name, text)
         check_winnable(name, text, set(START_ROOMS) | set(RESEARCH_ROOMS[name]))

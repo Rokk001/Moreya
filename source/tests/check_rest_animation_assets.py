@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Check every configured creature's serialized joint-based rest poses without compiling the game."""
+"""Check every configured creature's serialized joint-based rest poses without compiling the game.
+
+The creature meshes, skeletons and config/creatureReactions.cfg live in content packages (found through
+scripts/content_packages.py); without the content the check counts the configured meshes and names the rest poses as
+not checked (no converter is started)."""
 import math
 from pathlib import Path
 import re
@@ -11,6 +15,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 from asset_check_timing import prepare, profile_check
 import author_rest_poses as author
 import fix_walk_feet as feet
@@ -29,10 +35,38 @@ def sample_time(progress, strength, length):
     return length * author.TRANSITION_SHARE * inverse
 
 
+#: Mario 2026-11-27: the cave hornet hovers in Idle and lands on the ground (z = 0) for AmbientSit and AmbientLie, so in
+#: these clips its lowest point goes from the idle hover down to the ground and back instead of keeping the idle height.
+LANDING = {'CaveHornet.skeleton'}
+#: The ground of a landing figure, the floor of its model space.
+GROUND = 0.0
+#: Floor contact bound per skeleton where the measured value of the approved pose is above MAX_CONTACT_ERROR_RATIO:
+#: the dwarf warrior's AmbientSit keeps its soles flat (sole lift 0.90 %) and the shin geometry then reaches 1.167 % of
+#: the height from the idle floor (coordinator decision 2026-11-27: the sole-flat variant, tolerance set to the measured
+#: value; 0.01 before).
+#: The dragon's AmbientSit and AmbientLie of the fix3 rig (approved by Mario 2026-11-27) set the body down onto the floor
+#: and reach 3.7 % of its height from the idle floor (measured once).
+FLOOR_TOLERANCE = {'Dwarf2.skeleton': 0.0117, 'Dragon.skeleton': 0.037}
+#: Sole lift bound of AmbientSit per skeleton where the approved pose lifts the soles: the dragon's keyframed sit of
+#: 2026-11-27 (approved by Mario) sits back on the haunches and tips the hind soles up by 16.7 % of its height (fix3
+#: rig of 2026-11-27; 12.5 % on the rig before).
+SOLE_TOLERANCE = {'Dragon.skeleton': 0.1674}
+
+
 # Reject floating or penetrating geometry, allowing the same contact bound plus serializer precision.
-def check_floor(points, floor, height):
+def check_floor(points, floor, height, tolerance=author.MAX_CONTACT_ERROR_RATIO):
     error = np.abs(points[:, :, 2].min(axis=1) - floor) / height
-    assert float(error.max()) <= author.MAX_CONTACT_ERROR_RATIO + 2e-5, ('floor contact', float(error.max()))
+    assert float(error.max()) <= tolerance + 2e-5, ('floor contact', float(error.max()))
+
+
+# A landing figure: never below the ground, never above its idle hover; in the hold it rests on the ground.
+def check_landing(points, hover, height, hold):
+    lowest = points[:, :, 2].min(axis=1)
+    bound = (author.MAX_CONTACT_ERROR_RATIO + 2e-5) * height
+    assert float(lowest.min()) >= GROUND - bound, ('landing below the ground', float(lowest.min()))
+    assert float(lowest.max()) <= hover + bound, ('landing above the hover', float(lowest.max()))
+    if hold:
+        assert float(np.abs(lowest - GROUND).max()) <= bound, ('hold not on the ground', float(np.abs(lowest - GROUND).max()))
 
 
 # Require every original rest track and keep unweighted mounts passive outside their exact authored clips.
@@ -41,15 +75,20 @@ def rest_track_names(skeleton, skeleton_name, weighted):
     required = set(skeleton.names)
     parent = {'skeleton.skeleton': 'itemRightHand', 'lich.skeleton': 'itemRightHand',
               'PitDemon.skeleton': 'Hand_R', 'Kreatur.skeleton': 'tentafr4_r', 'Scarab.skeleton': 'Bone.001_R.005'}.get(skeleton_name)
+    # The figures rebuilt on the shared Meshy rig hold their passive mount under the right hand of that rig; the native
+    # drinking attachment of the former Scarab rig (its two animated clips and its rest values) belongs to that rig only
+    meshy = all(bone in skeleton.idx for bone in ('Hips', 'LeftUpLeg', 'RightUpLeg', 'RightHand'))
+    if parent is not None and meshy:
+        parent = 'RightHand'
     if parent is not None:
         assert 'Weapon_R' in skeleton.idx, (skeleton_name, 'missing passive weapon mount')
         mount = skeleton.idx['Weapon_R']
         assert mount not in weighted, (skeleton_name, 'passive mount deforms creature')
         assert skeleton.names[skeleton.parent[mount]] == parent, (skeleton_name, 'wrong weapon parent')
         animated = {name for name, clip in skeleton.clips.items() if 'Weapon_R' in clip.tracks}
-        expected = {'Drink', 'SitDrink'} if skeleton_name == 'Scarab.skeleton' else set()
+        expected = {'Drink', 'SitDrink'} if skeleton_name == 'Scarab.skeleton' and not meshy else set()
         assert animated == expected, (skeleton_name, 'unexpected animated mount clips', animated)
-        if skeleton_name == 'Scarab.skeleton':
+        if skeleton_name == 'Scarab.skeleton' and not meshy:
             # Original native attachment: only the two drinking clips may move held items.
             assert np.allclose(skeleton.rest_pos[mount], (0.0, 0.0, 0.0), atol=1e-7, rtol=0.0)
             original_turn = np.array((0.6978285179755769, -0.5362445049233607,
@@ -60,15 +99,23 @@ def rest_track_names(skeleton, skeleton_name, weighted):
     return required
 
 
-# Verify actual configured mesh coverage, native deforming-track coverage and passive mounts, partial strengths and both return poses.
+# Verify actual configured mesh coverage, native deforming-track coverage and passive mounts, partial strengths and both return poses
+# (only the configured mesh count when the content is not present).
 @profile_check
 def main():
     source = (ROOT / 'source/render/CreatureReactions.cpp').read_text(encoding='utf-8')
     share = float(re.search(r'ARTICULATED_TRANSITION_SHARE = ([0-9.]+);', source).group(1))
     assert share == author.TRANSITION_SHARE
-    configuration = (ROOT / 'config/creatures.cfg').read_text(encoding='utf-8')
+    configuration = content_packages.read_text(ROOT, 'config/creatures.cfg')
     meshes = sorted(set(re.findall(r'^\s*MeshName\s+(\S+\.mesh)\s*$', configuration, re.MULTILINE)))
-    reactions = (ROOT / 'config/creatureReactions.cfg').read_text(encoding='utf-8')
+    missing = [relative for relative in ['config/creatureReactions.cfg'] + ['models/' + mesh for mesh in meshes]
+               if content_packages.data_file(ROOT, relative) is None]
+    if missing and not content_packages.has_content(ROOT):
+        assert len(meshes) == 33
+        content_packages.unchecked('check_rest_animation_assets',
+                                   ['rest poses of the 33 configured meshes (missing: %s)' % ', '.join(missing)])
+        return
+    reactions = content_packages.read_text(ROOT, 'config/creatureReactions.cfg')
     out = ROOT / 'out/rest-animation-assets'
     out.mkdir(parents=True, exist_ok=True)
     skeletons = {}
@@ -76,7 +123,7 @@ def main():
     for mesh_name in meshes:
         mesh_xml = prepare(export, mesh_name, out)
         skeleton_name = mesh_xml.find('skeletonlink').get('name')
-        assert (ROOT / 'models' / skeleton_name).is_file(), skeleton_name
+        assert content_packages.data_file(ROOT, 'models/' + skeleton_name) is not None, skeleton_name
         if skeleton_name not in skeletons:
             prepare(export, skeleton_name, out, return_tree=False)
             skeletons[skeleton_name] = prepare(feet.Skel, str(out / (skeleton_name + '.xml')))
@@ -110,19 +157,27 @@ def main():
                               for progress in (0.0, 0.03, 0.06, 0.1, 0.5, 0.9, 0.94, 0.97, 1.0)])
             local = skeleton.locals_at(clip, times)
             points = author.skin_vertices(skeleton, local, vertices, weights)
-            check_floor(points, floor, height)
+            tolerance = FLOOR_TOLERANCE.get(skeleton_name, author.MAX_CONTACT_ERROR_RATIO)
+            if skeleton_name in LANDING:
+                check_landing(points, floor, height, hold=False)
+            else:
+                check_floor(points, floor, height, tolerance)
             if name == 'AmbientSit':
                 reference_points = np.repeat(original, len(times), axis=0)
                 error = author.sole_lift(skeleton, reference_points, points, weights, height,
                                          Path(skeleton_name).stem)
-                assert error is None or error <= author.MAX_CONTACT_ERROR_RATIO + 2e-5, (mesh_name, error)
+                bound = SOLE_TOLERANCE.get(skeleton_name, author.MAX_CONTACT_ERROR_RATIO)
+                assert error is None or error <= bound + 2e-5, (mesh_name, error)
             middle = skeleton.locals_at(clip, np.array([length * 0.5]))
             living = author.skin_vertices(skeleton, skeleton.locals_at(clip, np.array([length * 0.35, length * 0.55])),
                                           vertices, weights)
             assert float(np.abs(living[1] - living[0]).max() / height) > 1e-5, (mesh_name, name, 'frozen rest hold')
             hold_times = np.linspace(length * 0.15, length * 0.85, 121)
             hold_points = author.skin_vertices(skeleton, skeleton.locals_at(clip, hold_times), vertices, weights)
-            check_floor(hold_points, floor, height)
+            if skeleton_name in LANDING:
+                check_landing(hold_points, floor, height, hold=True)
+            else:
+                check_floor(hold_points, floor, height, tolerance)
             hold_step = float(np.linalg.norm(np.diff(hold_points, axis=0), axis=2).max() / height)
             assert hold_step < author.BREATH_AMOUNT, (mesh_name, name, 'rest support jump', hold_step)
             articulated = False
@@ -142,8 +197,10 @@ def main():
             pass
         else:
             raise AssertionError('A floating-body negative control passed')
-    assert len(meshes) == 33 and len(skeletons) == 32
-    print('Checked', tested, 'serialized rest variants on all 33 configured meshes and 32 skeletons, including partial strengths.')
+    # 35 configured meshes with 35 skeletons since the creature figures of the content split (counted on the integration
+    # branch; 33 and 32 before)
+    assert len(meshes) == 35 and len(skeletons) == 35
+    print('Checked', tested, 'serialized rest variants on all 35 configured meshes and 35 skeletons, including partial strengths.')
 
 
 if __name__ == '__main__':

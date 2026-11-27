@@ -6,6 +6,9 @@
 Checks that the tags are balanced, that the values can be read, that the creatures of the groups and
 variants exist in config/creatures.cfg and that every emote and effect used has a material, a texture
 and a particle system. Exits with 1 and prints every problem if something is wrong.
+
+config/creatureReactions.cfg and most emote, prop and effect files are content (core-config and core-models packages,
+found through scripts/content_packages.py); without the content the check says that it is not checked and exits with 0.
 """
 
 import os
@@ -13,6 +16,18 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
+
+def data_path(*parts):
+    """The file of a game data path: the public file, else the file of a content or room package, else the public path."""
+    return str(content_packages.resolve(ROOT, "/".join(parts)))
+
+
+def data_exists(*parts):
+    """True when the game data file is in the public tree or in a content or room package."""
+    return content_packages.data_file(ROOT, "/".join(parts)) is not None
 PRIORITIES = ("death", "combat", "held", "event", "work", "mood", "ambient")
 JOBS = ("Fighter", "Worker")
 MOTIONS = ("hop", "shake", "squash", "spin", "turn", "look", "lookat", "sit", "lie", "startle", "lunge")
@@ -103,23 +118,21 @@ def is_number(text):
 
 
 def creature_names():
-    """Returns the names of all creatures of config/creatures.cfg."""
+    """Returns the names of all creatures of config/creatures.cfg (joined with its own rows of the content)."""
     names = set()
-    with open(os.path.join(ROOT, "config", "creatures.cfg"), encoding="utf-8") as handle:
-        for raw in handle:
-            words = raw.split("#", 1)[0].split()
-            if len(words) >= 2 and words[0] == "Name":
-                names.add(words[1])
+    for raw in content_packages.read_text(ROOT, "config/creatures.cfg").splitlines():
+        words = raw.split("#", 1)[0].split()
+        if len(words) >= 2 and words[0] == "Name":
+            names.add(words[1])
     return names
 
 
 def collect(pattern, directory, extension):
-    """Returns what the regular expression finds in all files of the directory with this extension."""
+    """Returns what the regular expression finds in all files with this extension of the directory, in the public tree
+    and in the content and room packages."""
     found = set()
-    for name in os.listdir(os.path.join(ROOT, directory)):
-        if not name.endswith(extension):
-            continue
-        with open(os.path.join(ROOT, directory, name), encoding="utf-8") as handle:
+    for path in content_packages.data_glob(ROOT, directory.replace(os.sep, "/"), "*" + extension):
+        with open(str(path), encoding="utf-8") as handle:
             found.update(re.findall(pattern, handle.read(), re.MULTILINE))
     return found
 
@@ -127,7 +140,10 @@ def collect(pattern, directory, extension):
 def main():
     """Checks the whole file, prints every problem and returns the exit code."""
     errors = []
-    lines = read_lines(os.path.join(ROOT, "config", "creatureReactions.cfg"))
+    if not data_exists("config", "creatureReactions.cfg") and not content_packages.has_content(ROOT):
+        content_packages.unchecked("check_creature_reactions", ["config/creatureReactions.cfg"])
+        return 0
+    lines = read_lines(data_path("config", "creatureReactions.cfg"))
     creatures = creature_names()
     materials = collect(r"^\s*material\s+(\S+)", os.path.join("materials", "scripts"), ".material")
     particles = collect(r"^\s*particle_system\s+(\S+)", "particles", ".particle")
@@ -319,7 +335,7 @@ def check_variant(key, words, variant, event, creatures, groups, materials, part
     if key in ("Emote", "LateEmote"):
         if "CreatureEmote_" + words[1] not in materials:
             error("%s: no material CreatureEmote_%s" % (where, words[1]))
-        elif not os.path.exists(os.path.join(ROOT, "materials", "textures", "CreatureEmote%s.png" % words[1])):
+        elif not data_exists("materials", "textures", "CreatureEmote%s.png" % words[1]):
             error("%s: no texture for emote %s" % (where, words[1]))
         if not all(is_number(w) for w in words[2:]):
             error("%s: %s times must be numbers" % (where, key))
@@ -332,11 +348,11 @@ def check_variant(key, words, variant, event, creatures, groups, materials, part
         if len(words) != 6 or words[1] not in PROPS or not all(is_number(w) for w in words[3:]):
             error("%s: Prop must be '<%s> <sprite> <count> <size> <seconds>'" % (where, "|".join(PROPS)))
         elif words[1] == "fall":
-            if not os.path.exists(os.path.join(ROOT, "models", words[2])):
+            if not data_exists("models", words[2]):
                 error("%s: no model %s for the prop" % (where, words[2]))
         elif "CreatureProp_" + words[2] not in materials:
             error("%s: no material CreatureProp_%s" % (where, words[2]))
-        elif not os.path.exists(os.path.join(ROOT, "materials", "textures", "CreatureProp%s.png" % words[2])):
+        elif not data_exists("materials", "textures", "CreatureProp%s.png" % words[2]):
             error("%s: no texture for prop %s" % (where, words[2]))
     if key == "Moods" and not all(w in ("happy", "neutral", "unhappy") for w in words[1:]):
         error("%s: Moods must be happy, neutral or unhappy" % where)

@@ -1,11 +1,22 @@
 """Chicken gift for a creature that is not hungry and the slower walk of a tired creature.
 
 Pure source wiring checks (no compiler, no game): server authority, configuration, saving with
-old saves still loading, no new network message."""
+old saves still loading, no new network message.
+
+config/creatureReactions.cfg is content (core-config package, found through scripts/content_packages.py); without it
+the sniff and gift events of that table are named as not checked. config/rooms.cfg and config/global.cfg are mixed
+tables read with their own rows from the content (content_packages.read_text); without the content their keys and
+values are named as not checked and the meal simulation runs with the defaults of the renderer."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the own rows of the mixed tables come from them)
+CONTENT = content_packages.has_content(root)
 
 
 def read(path):
@@ -18,8 +29,11 @@ def function_body(source, signature):
     return source[start:end]
 
 
-rooms_cfg = read('config/rooms.cfg')
-global_cfg = read('config/global.cfg')
+rooms_cfg = content_packages.read_text(root, 'config/rooms.cfg')
+global_cfg = content_packages.read_text(root, 'config/global.cfg')
+if not CONTENT:
+    content_packages.unchecked('check_gift_chicken_tired_walk', ['gift, tired walk, return and meal keys of '
+                                                                 'config/rooms.cfg and config/global.cfg'])
 chicken = read('source/entities/ChickenEntity.cpp')
 chicken_h = read('source/entities/ChickenEntity.h')
 action = read('source/creatureaction/CreatureActionEatChicken.cpp')
@@ -36,8 +50,9 @@ gift_keys = ['HatcheryGiftOfferTurns', 'HatcheryGiftOfferRadius', 'HatcheryGiftS
              'HatcheryGiftHungerPerChicken', 'HatcheryGiftHpRecoveredPerChicken',
              'HatcheryGiftCooldownMin', 'HatcheryGiftCooldownMax']
 for key in gift_keys:
-    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t\d+', rooms_cfg, re.M), key + ' not set'
+    if CONTENT:
+        assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t\d+', rooms_cfg, re.M), key + ' not set'
     assert re.search(r'getRoomConfigDoubleOrDefault\(\s*"' + key + '"', chicken + action), key + ' not read'
 
 # The offer: only a hen the keeper dropped outside a hatchery, server side, never in the editor
@@ -85,7 +100,8 @@ assert 'ServerNotificationType' not in offer + gift_meal + drop
 
 # Slower walk of a tired creature: both sides, same value, from the configuration
 for key in ('TiredWakefulness', 'TiredWalkSpeedFactor'):
-    assert re.search(r'^    ' + key + r'\t[\d.]+', global_cfg, re.M), key
+    if CONTENT:
+        assert re.search(r'^    ' + key + r'\t[\d.]+', global_cfg, re.M), key
     assert ('"' + key + '"') in config_cpp
 assert 'double getTiredWalkSpeedFactor() const' in config_h
 assert 'minTiredWalkSpeedFactor = 0.2;' in config_h and 'std::max(minTiredWalkSpeedFactor, std::min(1.0, mTiredWalkSpeedFactor))' in config_h
@@ -104,8 +120,9 @@ assert 'getTiredWalkSpeedFactor' not in render
 
 # Batch 13a: a chicken outside a hatchery walks back to one (dies only without a reachable one)
 for key in ('HatcheryReturnPathTiles', 'HatcheryReturnSearchTiles', 'HatcheryReturnRetryTurns', 'HatcheryReturnMaxTurns'):
-    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t\d+', rooms_cfg, re.M), key + ' not set'
+    if CONTENT:
+        assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t\d+', rooms_cfg, re.M), key + ' not set'
     assert re.search(r'getRoomConfigDoubleOrDefault\(\s*"' + key + '"', chicken), key + ' not read'
 assert 'const bool henMayReturn = (mKind == ChickenKind::hen) && (mGiftTurns == 0) && !mLockedEat;' in upkeep
 assert 'henMayReturn) && (currentHatchery == nullptr) && !mIsSlapped && runBackToHatchery(tile)' in upkeep
@@ -113,7 +130,8 @@ assert 'henMayReturn) && (currentHatchery == nullptr) && !mIsSlapped && runBackT
 # HatcheryAdultLostTurns)
 assert upkeep.index('runBackToHatchery(tile)') < upkeep.index('getRoomConfigDoubleOrDefault("HatcheryAdultLostTurns", 30.0)')
 assert 'NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE' not in chicken
-assert ['HatcheryAdultLostTurns', '30'] in [line.split() for line in (root / 'config/rooms.cfg').read_text(encoding='utf-8').splitlines()]
+if CONTENT:
+    assert ['HatcheryAdultLostTurns', '30'] in [line.split() for line in rooms_cfg.splitlines()]
 # the gift window and a chicken somebody is after are not interrupted; the offer goes first
 assert upkeep.index('runBackToHatchery(tile)') < upkeep.index('offerGift(*tile)')
 back = function_body(chicken, 'bool ChickenEntity::runBackToHatchery(')
@@ -139,22 +157,30 @@ assert 'Gift' not in eat and 'sniff' not in eat       # the hatchery meal stays 
 assert 'if((anim == EntityAnimation::sniff_anim) && (dropCreature != nullptr))' in render
 reactions = read('source/render/CreatureReactions.cpp')
 assert 'clip == EntityAnimation::sniff_anim' in reactions and '"ChickenSniff"' in reactions
-cfg_reactions = read('config/creatureReactions.cfg')
-sniff_event = cfg_reactions[cfg_reactions.index('Name        ChickenSniff'):cfg_reactions.index('Name        ChickenGift')]
-assert 'Name    SniffAndShrug' in sniff_event
-gift_event = cfg_reactions[cfg_reactions.index('Name        ChickenGift'):]
-gift_event = gift_event[:gift_event.index('[/Event]')]
-assert 'SniffAndShrug' not in gift_event               # the sniffing is shown once, not again after the meal
-assert cfg_reactions.count('Name    SniffAndShrug') == 1
+if content_packages.data_file(root, 'config/creatureReactions.cfg') is not None:
+    cfg_reactions = content_packages.read_text(root, 'config/creatureReactions.cfg')
+    sniff_event = cfg_reactions[cfg_reactions.index('Name        ChickenSniff'):cfg_reactions.index('Name        ChickenGift')]
+    assert 'Name    SniffAndShrug' in sniff_event
+    gift_event = cfg_reactions[cfg_reactions.index('Name        ChickenGift'):]
+    gift_event = gift_event[:gift_event.index('[/Event]')]
+    assert 'SniffAndShrug' not in gift_event               # the sniffing is shown once, not again after the meal
+    assert cfg_reactions.count('Name    SniffAndShrug') == 1
+else:
+    content_packages.unchecked('check_gift_chicken_tired_walk', ['config/creatureReactions.cfg'])
 assert 'cosmetic' not in sniff_meal.lower()            # no new network message: the clip name is the existing animation message
 
 # Batch 13n: the chicken meal (E05) is grab, hold in front of the mouth, exactly two bites, struggling, gone after the second bite
 import math
-meal_keys = {}
-for key in re.findall(r'^# (ChickenMeal\w+)\s', rooms_cfg, re.M):
-    meal_keys[key] = float(re.search(r'^    ' + key + r'\t([\d.]+)\s*$', rooms_cfg, re.M)[1])
-assert len(meal_keys) == 22, len(meal_keys)
 settings = function_body(render, 'ChickenMealSettings getChickenMealSettings()')
+meal_keys = {}
+if CONTENT:
+    for key in re.findall(r'^# (ChickenMeal\w+)\s', rooms_cfg, re.M):
+        meal_keys[key] = float(re.search(r'^    ' + key + r'\t([\d.]+)\s*$', rooms_cfg, re.M)[1])
+    assert len(meal_keys) == 22, len(meal_keys)
+else:
+    # Without the content the meal is simulated with the defaults the renderer reads (equal to the configuration)
+    for key, value in re.findall(r'getChickenMealValue\("(ChickenMeal\w+)", ([\d.]+)\)', settings):
+        meal_keys[key] = float(value)
 for key, value in meal_keys.items():
     read = re.search(r'getChickenMealValue\("' + key + r'", ([\d.]+)\)', settings)
     assert read is not None, key + ' not read by the renderer'
@@ -165,7 +191,8 @@ first_bite = grab + hold
 second_bite = first_bite + bite + pause
 total = second_bite + bite + swallow
 # the whole meal ends before the creature is allowed to do anything else (1.4 turns per second)
-assert total <= float(re.search(r'^    HatcheryCooldownChickenMin\t(\d+)', rooms_cfg, re.M)[1]) / 1.4, total
+if CONTENT:
+    assert total <= float(re.search(r'^    HatcheryCooldownChickenMin\t(\d+)', rooms_cfg, re.M)[1]) / 1.4, total
 assert 'meal.mTotal = meal.mSecondBite + meal.mBite + meal.mSwallow;' in settings
 assert 'meal.mFirstBite = meal.mGrab + meal.mHold;' in settings
 assert 'meal.mSecondBite = meal.mFirstBite + meal.mBite + meal.mPause;' in settings

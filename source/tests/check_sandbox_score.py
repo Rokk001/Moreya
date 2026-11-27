@@ -1,12 +1,15 @@
 """Static checks of the sandbox score, the bonus objectives and the realms.
 
-Run from any directory. It does not start a game.
+Run from any directory. It does not start a game. The realm levels are content (scripts/content_packages.py); without
+the content they are named as not checked.
 """
 from pathlib import Path
 import re
 import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 code = (root / "source/gamemap/SandboxMode.cpp").read_text(encoding="utf-8")
 header = (root / "source/gamemap/SandboxMode.h").read_text(encoding="utf-8")
 statistics = (root / "source/game/SeatStatistics.h").read_text(encoding="utf-8")
@@ -77,7 +80,11 @@ def rounded(value):
 
 
 for index, stem in enumerate(REALMS, start=1):
-    f = root / "levels/skirmish" / (stem + ".level")
+    # The realm levels are content (core-levels package, scripts/content_packages.py); without it they are not checked
+    f = content_packages.resolve(root, "levels/skirmish/" + stem + ".level")
+    if not f.is_file() and not content_packages.has_content(root):
+        content_packages.unchecked("check_sandbox_score", ["levels/skirmish/" + stem + ".level"])
+        continue
     text = f.read_text(encoding="utf-8")
     info = text[text.index("[Info]"):text.index("[/Info]")]
     lines = [l.rstrip("\r") for l in info.splitlines()]

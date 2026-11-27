@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
-"""Non-compiling flight wiring, continuous trajectory and authored skeleton checks."""
+"""Non-compiling flight wiring, continuous trajectory and authored skeleton checks.
+
+The rooster skeleton is content (creatures package, found through scripts/content_packages.py; the hen, chick and
+rooster of that package each have an own skeleton, the former meshes shared Chicken.skeleton); without the content
+the wiring and the trajectory are checked and the skeleton part is named as not checked.
+"""
 import math
 import os
 from pathlib import Path
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 pose = (root / 'source/entities/ChickenPose.h').read_text()
 client = (root / 'source/network/ODClient.cpp').read_text()
@@ -42,35 +50,47 @@ for turns in (1, 4, 8):
     down = [1 - x for x in samples]
     assert down[0] == 1 and down[-1] == 0
 
+# The skeleton part needs the content; with the content present a missing skeleton fails the conversion
+if content_packages.unchecked('check_rooster_flight_animation',
+                              [] if content_packages.has_content(root) else ['models/ChickenRooster.skeleton']):
+    print('rooster flight animation checks passed (wiring and trajectory)')
+    sys.exit(0)
 out = root / 'out/rooster-flight'
 out.mkdir(parents=True, exist_ok=True)
 # Converter executable: set OGRE_XML_CONVERTER to its full path, otherwise it is looked up on the PATH.
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 subprocess.run([converter, '-q', '-log', str(out / 'skeleton-check.log'),
-                str(root / 'models/Chicken.skeleton'), str(out / 'Chicken.skeleton.xml')],
+                str(content_packages.resolve(root, 'models/ChickenRooster.skeleton')),
+                str(out / 'ChickenRooster.skeleton.xml')],
                check=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, timeout=60)
-skel = ET.parse(out / 'Chicken.skeleton.xml').getroot()
+skel = ET.parse(out / 'ChickenRooster.skeleton.xml').getroot()
 anims = {a.get('name'): a for a in skel.find('animations')}
 clip = anims['RoofFlight']
 assert float(clip.get('length')) == 4.0
 tracks = {t.get('bone'): t.find('keyframes').findall('keyframe') for t in clip.find('tracks')}
-assert len(tracks) == 22
+# The key counts of the creatures package rooster, one per bone track (the former rig: 22 tracks of 193 keys each)
+KEYS = {'pelvis': 36, 'chest': 4, 'neck': 24, 'head': 4, 'wing.L': 91, 'wing2.L': 91, 'wing.R': 91, 'wing2.R': 91,
+        'tail1': 24, 'tail2': 24, 'tail3': 24, 'thigh.L': 46, 'shin.L': 46, 'toe.L': 33, 'thigh.R': 46, 'shin.R': 46,
+        'toe.R': 33}
+assert len(tracks) == 17 and set(tracks) == set(KEYS), sorted(tracks)
 for name, keys in tracks.items():
-    assert len(keys) == 193, (name, len(keys))
+    assert len(keys) == KEYS[name], (name, len(keys))
     assert float(keys[0].get('time')) == 0 and float(keys[-1].get('time')) == 4
-    # Flight clip has no root displacement: all world motion comes from the authoritative trajectory.
-    if name == 'Root':
+    # Flight clip has no root displacement: all world motion comes from the authoritative trajectory (the root bone
+    # is pelvis, Root on the former rig).
+    if name == 'pelvis':
         translations = [tuple(float(k.find('translate').get(a)) for a in ('x', 'y', 'z')) for k in keys]
         assert max(max(abs(x - y) for x, y in zip(v, translations[0])) for v in translations) < 1e-5
     assert ET.tostring(keys[0].find('translate')) == ET.tostring(keys[-1].find('translate')), name
     assert ET.tostring(keys[0].find('rotate')) == ET.tostring(keys[-1].find('rotate')), name
-# Wings keep changing across the full travel window, including after the old Flutter would have ended.
-for name in ('Shoulder_L', 'Shoulder_R'):
+# Wings keep changing across the full travel window, including after the old Flutter would have ended (the wing
+# bones wing.L and wing.R, Shoulder_L and Shoulder_R on the former rig).
+for name in ('wing.L', 'wing.R'):
     keys = tracks[name]
     rotations = [float(k.find('rotate').get('angle')) for k in keys]
     for a, b in ((0.15, 0.35), (0.35, 0.55), (0.55, 0.75), (0.75, 0.85)):
         values = [v for k, v in zip(keys, rotations) if a <= float(k.get('time')) / 4 <= b]
         assert max(values) - min(values) > 0.1, (name, a, b)
-# All original clips remain available to hens, chicks and roosters.
+# All original clips remain available to the rooster (the hen and chick skeletons: check_hatchery_visuals.py).
 assert {'Idle', 'Walk', 'Flutter', 'Lay', 'Crow', 'Mount', 'Tread', 'Dismount', 'Duck'} <= anims.keys()
 print('rooster flight animation checks passed')

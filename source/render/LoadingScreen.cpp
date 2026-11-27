@@ -453,7 +453,7 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& ov
         pass->getFragmentProgramParameters()->setNamedConstant("picture", 0);
         Ogre::FontPtr font = Ogre::FontManager::getSingleton().create("StartupLoadingFont", "StartupLoading");
         font->setType(Ogre::FT_TRUETYPE);
-        font->setSource("MedievalSharp-Bold.ttf");
+        font->setSource("SourceSerif4-Semibold.ttf");
         font->setTrueTypeSize(128);
         font->setTrueTypeResolution(72);
         font->addCodePointRange(Ogre::Font::CodePointRange(32, 126));
@@ -611,7 +611,7 @@ LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(f
             {
                 Ogre::FontPtr font = Ogre::FontManager::getSingleton().create(LOADING_FONT_NAME, "GUI");
                 font->setType(Ogre::FT_TRUETYPE);
-                font->setSource("MedievalSharp-Bold.ttf");
+                font->setSource("SourceSerif4-Semibold.ttf");
                 font->setTrueTypeSize(128);
                 font->setTrueTypeResolution(72);
                 font->addCodePointRange(Ogre::Font::CodePointRange(32, 126));

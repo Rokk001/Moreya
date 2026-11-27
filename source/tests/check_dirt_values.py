@@ -4,6 +4,9 @@ and everything is documented in the header of its config file.
 
 Calls (from the repository root):
   python source/tests/check_dirt_values.py            plain file checks, no compiler, no game
+
+The data tables are read as the game reads them, with their own rows from the content packages
+(scripts/content_packages.py); the dirt values are own rows, so without the content the check names them as not checked.
 """
 from pathlib import Path
 import re
@@ -11,10 +14,13 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
+# The text of a data table as the game reads it: with its own rows from the content packages.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Returns the key -> value words of the first block [tag]...[/tag] of a text (comments skipped).
@@ -33,6 +39,13 @@ def block_values(text, tag):
 def assert_documented(text, key, where):
     assert re.search(r'^#\s*' + re.escape(key) + r'\s', text, re.M), key + ' is not documented in the header of ' + where
 
+
+if not content_packages.has_content(root):
+    content_packages.unchecked('check_dirt_values', ['config/global.cfg [Dirt]', 'config/rooms.cfg dirt and toilet values',
+                                                     'config/creatures.cfg dirt factors', 'config/skills.cfg roomToilet',
+                                                     'tools/balance/dirt_values.py --check'])
+    print('dirt values ok')
+    sys.exit(0)
 
 global_cfg = read('config/global.cfg')
 rooms_cfg = read('config/rooms.cfg')

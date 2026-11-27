@@ -120,7 +120,12 @@ foreach ($line in $lines) {
     if ($line -match '^FileSystem=(.+)$') {
         $path = $Matches[1]
         if ([System.IO.Path]::IsPathRooted($path)) { throw "absolute path left in resources.cfg: $path" }
-        if (-not (Test-Path -LiteralPath (Join-Path $Out $path) -PathType Container)) { throw "resource folder missing: $path" }
+        # A folder whose files moved into the content packages lies in an installed package (levels\campaign\<package>)
+        $inPackage = @(Get-ChildItem -LiteralPath (Join-Path $Out 'levels\campaign') -Directory -ErrorAction SilentlyContinue |
+            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName $path) -PathType Container })
+        if (-not (Test-Path -LiteralPath (Join-Path $Out $path) -PathType Container) -and $inPackage.Count -eq 0) {
+            throw "resource folder missing: $path"
+        }
     }
 }
 

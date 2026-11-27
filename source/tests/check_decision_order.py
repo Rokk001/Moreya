@@ -2,8 +2,11 @@
 """Check work-first room selection, tie-breaking and configured idle decisions."""
 from pathlib import Path
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 search = (ROOT / 'source/creatureaction/CreatureActionSearchJob.cpp').read_text(encoding='utf-8')
 assert not re.search(r'Random::Int\(\s*0\s*,\s*100\s*\)\s*<\s*20', search)
 assert re.search(r'workRooms\.empty\(\)\s*\?\s*pleasureRooms\s*:\s*workRooms', search)
@@ -26,8 +29,13 @@ positions = [idle.index(token) for token in ordered]
 assert positions == sorted(positions), 'idle decisions are not in the required order'
 for key in ('FindHomeChance', 'SleepSeekWakefulnessMin', 'SleepSeekWakefulnessMax', 'StealGoldTryChance', 'TunnelTryChance', 'StealItemChancePerIdle'):
     assert 'get' + key + '()' in source, key
-config = (ROOT / 'config/creatures.cfg').read_text(encoding='utf-8')
-for block in re.findall(r'^\[Creature\]\s*$(.*?)^\[/Creature\]', config, re.M | re.S):
+# creatures.cfg as the game reads it: the room affinities are own rows of the content package core-config; without
+# the content they are named as not checked
+config = content_packages.read_text(ROOT, 'config/creatures.cfg')
+if not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_decision_order', ['config/creatures.cfg room affinities'])
+for block in (re.findall(r'^\[Creature\]\s*$(.*?)^\[/Creature\]', config, re.M | re.S)
+              if content_packages.has_content(ROOT) else []):
     match = re.search(r'^\s*\[RoomAffinity\]\s*$(.*?)^\s*\[/RoomAffinity\]', block, re.M | re.S)
     if not match:
         continue

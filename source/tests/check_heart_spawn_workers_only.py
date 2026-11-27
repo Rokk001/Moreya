@@ -6,11 +6,19 @@ no other GameMap function that touches the heart tile creates a creature.
 Level part: Brackenford and the first skirmish level place no non-worker
 creature at or next to a heart tile at start and no trigger spawns one there.
 Run with python -I.
+
+The levels are content (wing 1 and core-levels packages, found through scripts/campaign_packages.py and
+scripts/content_packages.py); the first skirmish level is taken over the public tree and the packages, and a level that
+is not present is named as not checked.
 """
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 NEAR = 3  # tiles (Chebyshev distance) counted as "next to the heart"
 WORKER_CLASS = "DefaultWorker"
 
@@ -66,8 +74,9 @@ def near(x, y, tiles):
     return any(max(abs(x - tx), abs(y - ty)) <= NEAR for tx, ty in tiles)
 
 
-def check_level(rel):
-    text = read(rel)
+def check_level(rel, path):
+    """Checks the level file at path (named rel in the messages): no non-worker at or next to a heart."""
+    text = path.read_text(encoding="utf-8")
     hearts = heart_tiles(text)
     assert hearts, f"{rel}: no heart room found"
     report = {"hearts": len(hearts), "near_workers": [], "script_spawns": []}
@@ -88,8 +97,19 @@ def check_level(rel):
     return report
 
 
-skirmish_first = sorted(p.name for p in (repo / "levels/skirmish").glob("*.level"))[0]
-for rel in ("levels/campaign/wing1/Brackenford.level", "levels/skirmish/" + skirmish_first):
-    print(rel, check_level(rel))
+# The first of the skirmish levels of the public tree and of the content packages; without the content packages the
+# first level of the whole set is not known, so the skirmish level is named as not checked
+levels = ["levels/campaign/wing1/Brackenford.level"]
+if content_packages.has_content(repo):
+    levels.append("levels/skirmish/" + content_packages.data_glob(repo, "levels/skirmish", "*.level")[0].name)
+else:
+    content_packages.unchecked("check_heart_spawn_workers_only", ["levels/skirmish (first skirmish level)"])
+for rel in levels:
+    # A wing level lies in its wing package under its own name, a skirmish level in the public tree or core-levels
+    path = campaign_packages.level_file(repo, rel)
+    if path is None:
+        content_packages.unchecked("check_heart_spawn_workers_only", [rel])
+        continue
+    print(rel, check_level(rel, path))
 
 print("check_heart_spawn_workers_only: ok")

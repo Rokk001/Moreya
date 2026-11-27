@@ -1,9 +1,13 @@
 """Toilet room after INGAME-QS-10 K25: textured stone seats with a hole and a wooden lid, solid seats in rows along the
-walls with a free lane, a seated use of 10 to 30 s in the Relieve clip and the urge values of the toilet plan.
+walls with a free lane, a use of 10 to 30 s on the seat in the RelievePit clip (standing over the hole with half bent
+knees; a skeleton without it plays Relieve), the same RelievePit motion on the floor without a toilet with the Relieved
+reaction there, the 1 s blend down into the looping RelievePit and up out of it, and the urge values of the toilet plan.
 
 Calls (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
-  python source/tests/check_toilet_k25.py               file checks and the compiled probe of the layout rules (cl)
-  python source/tests/check_toilet_k25.py --no-compile  file checks only; the probe is left to the build
+  python source/tests/check_toilet_k25.py               file checks and the compiled probes of the layout rules and of
+                                                        the seat clip (startSquat, toiletSeatLift, clip fallback, bend
+                                                        blend) (cl)
+  python source/tests/check_toilet_k25.py --no-compile  file checks only; the probes are left to the build
 """
 import ast
 import math
@@ -21,7 +25,11 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 #: The assets of the toilet come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
@@ -35,6 +43,9 @@ START = time.monotonic()
 
 
 def read(path):
+    """The text of a game file; a mixed table of config/ comes joined with its own rows of the content."""
+    if path.startswith('config/'):
+        return content_packages.read_text(ROOT, path)
     return room_file(path).read_text(encoding='utf-8', errors='replace')
 
 
@@ -161,9 +172,19 @@ assert 'Toilet' not in steppable, 'nobody steps over a seat'
 render = read('source/render/RenderManager.cpp')
 lift = body(render, 'static float toiletSeatLift(Creature* creature)')
 assert 'EntityAnimation::relieve_anim' in lift and 'RoomObjectPath::onToiletSeat(' in lift and 'toiletSeatTop' in lift
+assert 'EntityAnimation::relieve_pit_anim' in lift, 'the seat lift also holds for the RelievePit clip'
 step = body(render, 'void RenderManager::updateCreatureStep(Creature* creature)')
 assert 'toiletSeatLift(creature)' in step and 'std::max(lift, seatLift)' in step
-assert 'if((animation == EntityAnimation::relieve_anim) || (mSteppingCreatures.count(dropCreature) != 0))' in render
+assert ('if((animation == EntityAnimation::relieve_pit_anim) || (animation == EntityAnimation::relieve_anim) ||\n'
+        '           (mSteppingCreatures.count(dropCreature) != 0))') in render
+animation_h = read('source/entities/MovableGameEntity.h')
+assert 'relieve_anim = "Relieve";' in animation_h and 'relieve_pit_anim = "RelievePit";' in animation_h
+# RelievePit loops only the bent over pose: the renderer blends down into it and up out of it in 1 s
+assert ('    inline bool isBentOverClip(const std::string& clip)\n    {\n        return clip == relieve_pit_anim;\n    }\n'
+        in animation_h)
+assert re.search(r'^static const Ogre::Real CREATURE_BEND_BLEND_DURATION = 1\.0f;$', render, re.M)
+assert 'mCreatureSeatBlends.push_back({dropCreature, previousState, animState, 0.0f, duration});' in render
+assert 'const Ogre::Real phase = std::min(it->mElapsed / it->mDuration, 1.0f);' in render
 
 # 4. The room places the seats by the layout and the use walks onto the seat, sits a random 10 to 30 s and steps off
 room = read('source/rooms/RoomToilet.cpp')
@@ -173,34 +194,46 @@ assert 'room->getSeatStagingPoints(creature, tile).empty()' in body(room, 'Tile*
 use = read('source/creatureaction/CreatureActionUseToilet.cpp')
 squat = body(use, 'void CreatureActionUseToilet::startSquat(bool onSeat, const Ogre::Vector2& facing)')
 for needle in ('"ToiletUseSecondsMin"', '"ToiletUseSecondsMax"', 'Random::Double(0.0, 1.0)', 'ToiletLayout::useTurns(',
-               'ODApplication::turnsPerSecond', 'EntityAnimation::relieve_anim'):
+               'ODApplication::turnsPerSecond', 'EntityAnimation::relieve_pit_anim'):
     assert needle in squat, needle
+assert 'EntityAnimation::relieve_anim' not in squat, 'the floor plays the bent over RelievePit, the squat is dropped'
+# The Relieved reaction on the floor follows the RelievePit clip (noteRelief itself skips a toilet tile)
+reactions = read('source/render/CreatureReactions.cpp')
+assert ('    else if((clip == EntityAnimation::relieve_pit_anim) || (clip == EntityAnimation::relieve_anim))\n'
+        '    {\n'
+        '        // The bent over clip on the floor (RelievePit), or the former squat of an older server\n'
+        '        noteRelief(creature);\n') in reactions
+relief = body(reactions, 'void CreatureReactions::noteRelief(Creature* creature)')
+assert 'checkCoveringRoomType(RoomType::toilet)' in relief and 'queueReaction(creature, "Relieved"' in relief
 seat_turn = body(use, 'bool CreatureActionUseToilet::handleSeat(')
 assert 'startSquat(true, facing);' in seat_turn and 'mPhase = Phase::leave;' in seat_turn and 'mStagingPoint' in seat_turn
 assert 'path.push_back(place);' in body(use, 'bool CreatureActionUseToilet::walkOntoSeat(RoomToilet& room)')
 
 # 5. The urge values of the toilet plan: the threshold after about 9.5 minutes of urge growth, 4 chickens to the threshold
-dirt = dict(re.findall(r'^\s+(\w+)\t([-.\d]+)\s*$', re.search(r'^\[Dirt\]$(.*?)^\[/Dirt\]$', read('config/global.cfg'),
-                                                                 re.M | re.S).group(1), re.M))
-tavern = dict(re.findall(r'^\s+(\w+)\t([-.\d]+)\s*$', re.search(r'^\[Tavern\]$(.*?)^\[/Tavern\]$', read('config/global.cfg'),
-                                                                   re.M | re.S).group(1), re.M))
-turns_per_second = float(re.search(r'double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp')).group(1))
-assert float(dirt['UrgePerChicken']) == 20.0 and float(tavern['UrgeFromWater']) == 15.0
-assert math.ceil(float(dirt['UrgeSeek']) / float(dirt['UrgePerChicken'])) == 4
-assert (float(dirt['ToiletUseSecondsMin']), float(dirt['ToiletUseSecondsMax'])) == (10.0, 30.0)
-growing = 0
-for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
-    fields = dict(line.split()[:2] for line in block.splitlines() if len(line.split()) >= 2 and not line.split()[0].startswith('#'))
-    if 'Name' not in fields:
-        continue  # the empty [Creature] [/Creature] pair of the file header
-    growth = float(fields.get('UrgeGrowth/Turn', '0'))
-    if float(fields['HungerGrowth/Turn']) == 0.0:
-        assert growth == 0.0, fields.get('Name')
-        continue
-    growing += 1
-    minutes = float(dirt['UrgeSeek']) / growth / turns_per_second / 60.0
-    assert 9.0 <= minutes <= 10.0, '%s reaches the toilet threshold after %.1f minutes' % (fields.get('Name'), minutes)
-assert growing == 30, growing
+if WITH_CONTENT:
+    dirt = dict(re.findall(r'^\s+(\w+)\t([-.\d]+)\s*$', re.search(r'^\[Dirt\]$(.*?)^\[/Dirt\]$', read('config/global.cfg'),
+                                                                     re.M | re.S).group(1), re.M))
+    tavern = dict(re.findall(r'^\s+(\w+)\t([-.\d]+)\s*$', re.search(r'^\[Tavern\]$(.*?)^\[/Tavern\]$', read('config/global.cfg'),
+                                                                       re.M | re.S).group(1), re.M))
+    turns_per_second = float(re.search(r'double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp')).group(1))
+    assert float(dirt['UrgePerChicken']) == 20.0 and float(tavern['UrgeFromWater']) == 15.0
+    assert math.ceil(float(dirt['UrgeSeek']) / float(dirt['UrgePerChicken'])) == 4
+    assert (float(dirt['ToiletUseSecondsMin']), float(dirt['ToiletUseSecondsMax'])) == (10.0, 30.0)
+    growing = 0
+    for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
+        fields = dict(line.split()[:2] for line in block.splitlines() if len(line.split()) >= 2 and not line.split()[0].startswith('#'))
+        if 'Name' not in fields:
+            continue  # the empty [Creature] [/Creature] pair of the file header
+        growth = float(fields.get('UrgeGrowth/Turn', '0'))
+        if float(fields['HungerGrowth/Turn']) == 0.0:
+            assert growth == 0.0, fields.get('Name')
+            continue
+        growing += 1
+        minutes = float(dirt['UrgeSeek']) / growth / turns_per_second / 60.0
+        assert 9.0 <= minutes <= 10.0, '%s reaches the toilet threshold after %.1f minutes' % (fields.get('Name'), minutes)
+    assert growing == 30, growing
+else:
+    content_packages.unchecked('check_toilet_k25', ['urge values (own rows of config/global.cfg and config/creatures.cfg)'])
 
 # 6. The probe: the layout and the use time compiled from the headers the game uses
 PROBE = r'''
@@ -291,19 +324,205 @@ int main()
 }
 '''
 
+# 7. The probe of the seat clip, compiled from the production text: startSquat picks RelievePit on a seat and on the
+# floor, toiletSeatLift lifts both clips onto the seat and no other, and the clip fallback of the renderer turns a
+# missing RelievePit into Relieve and a missing Relieve into Idle; going into RelievePit and out of it blends in 1 s
+animation_block = animation_h[animation_h.index('namespace EntityAnimation\n{'):]
+animation_block = animation_block[:animation_block.index('\n};') + 4]
+fallback_start = render.index('    // Handle the case where this entity does not have the requested animation.\n')
+fallback_loop = render[fallback_start:render.index('\n    if (!objectEntity->getSkeleton()->hasAnimation(anim))\n        return;',
+                                                   fallback_start)]
+# The blend choice of rrSetObjectAnimationState: which clip change blends, and how long
+blend_start = render.index('    const bool seatChange = (previousState != nullptr) &&\n')
+blend_choice = render[blend_start:render.index('    if((dropCreature != nullptr) && (previousState != nullptr) && (previousState != animState)',
+                                               blend_start)]
+blend_duration = re.search(r'^        const Ogre::Real duration = .*;$', render[blend_start:], re.M).group(0)
+blend_constants = '\n'.join(re.search(r'^static const Ogre::Real %s = .*;$' % name, render, re.M).group(0)
+                            for name in ('CREATURE_SEAT_BLEND_DURATION', 'CREATURE_BEND_BLEND_DURATION'))
+PIT_PROBE = r'''
+#include "rooms/ToiletLayout.h"
+#include "gamemap/RoomObjectBounds.h"
+#include <cstdio>
+#include <set>
+#include <string>
+#include <vector>
+namespace Ogre
+{
+    typedef float Real;
+    struct Vector2 { float x; float y; Vector2(float a, float b) : x(a), y(b) {} };
+    struct Vector3 { float x; float y; float z; Vector3(float a, float b, float c) : x(a), y(b), z(c) {} };
+}
+ANIMATION_BLOCK
+BLEND_CONSTANTS
+// The clip a creature played before, only its name
+struct AnimationState
+{
+    std::string mName;
+    const std::string& getAnimationName() const { return mName; }
+};
+// The blend the renderer starts when a creature goes from the clip before to anim: its seconds, 0 for none
+static float blendSeconds(const std::string& before, const std::string& anim)
+{
+    AnimationState previous; previous.mName = before; const AnimationState* previousState = &previous;
+BLEND_CHOICE
+    if(!(seatChange || bendChange))
+        return 0.0f;
+DURATION_OF_BLEND
+    return duration;
+}
+static int failures = 0;
+static void expect(bool ok, const char* what) { if(!ok) { ++failures; std::printf("FAIL %s\n", what); } }
+// The configuration and the helpers startSquat reads
+struct ConfigManager
+{
+    static ConfigManager& getSingleton() { static ConfigManager manager; return manager; }
+    double getDirtConfigDouble(const std::string& name) const
+    { return name == "ToiletUseSecondsMin" ? 10.0 : (name == "ToiletUseSecondsMax" ? 30.0 : 6.0); }
+};
+namespace Random { double Double(double min, double max) { return (min + max) / 2.0; } }
+namespace ODApplication { static const double turnsPerSecond = 1.4; }
+enum class CreatureSound { Relieve };
+enum class GameEntityType { buildingObject, creature };
+struct RenderedMovableEntity
+{
+    GameEntityType mType; std::string mMesh; Ogre::Vector3 mPosition; double mAngle;
+    GameEntityType getObjectType() const { return mType; }
+    const std::string& getMeshName() const { return mMesh; }
+    const Ogre::Vector3& getPosition() const { return mPosition; }
+    double getRotationAngle() const { return mAngle; }
+};
+struct GameMap
+{
+    std::vector<RenderedMovableEntity*> mObjects;
+    const std::vector<RenderedMovableEntity*>& getRenderedMovableEntities() const { return mObjects; }
+};
+// The creature records the clip it is told to play
+struct Creature
+{
+    std::string mClip; std::string mClearClip; bool mMoving; bool mAlive; Ogre::Vector3 mPosition; GameMap* mMap;
+    int mSounds;
+    Creature() : mMoving(false), mAlive(true), mPosition(0.0f, 0.0f, 0.0f), mMap(nullptr), mSounds(0) {}
+    bool isMoving() const { return mMoving; }
+    bool isAlive() const { return mAlive; }
+    void clearDestinations(const std::string& clip, bool, bool) { mClearClip = clip; mMoving = false; }
+    void setAnimationState(const std::string& clip, bool, const Ogre::Vector3&, bool) { mClip = clip; }
+    void fireCreatureSound(CreatureSound) { ++mSounds; }
+    const std::string& getAnimationStateName() const { return mClip; }
+    const Ogre::Vector3& getPosition() const { return mPosition; }
+    GameMap* getGameMap() const { return mMap; }
+};
+class CreatureActionUseToilet
+{
+public:
+    enum class Phase { approach, mount, squat, leave };
+    explicit CreatureActionUseToilet(Creature& creature) : mCreature(creature), mPhase(Phase::approach), mTurnsLeft(0) {}
+    void startSquat(bool onSeat, const Ogre::Vector2& facing);
+    Creature& mCreature; Phase mPhase; int32_t mTurnsLeft;
+};
+SQUAT_BODY
+LIFT_BODY
+// The skeleton of the creature, only its clip names
+struct Skeleton
+{
+    std::set<std::string> mClips;
+    bool hasAnimation(const std::string& clip) const { return mClips.count(clip) != 0; }
+};
+struct Entity
+{
+    Skeleton mSkeleton;
+    const Skeleton* getSkeleton() const { return &mSkeleton; }
+};
+// The clip the renderer plays for a requested clip on a skeleton with these clips; empty when it plays nothing
+static std::string shownClip(const std::set<std::string>& clips, const std::string& requested)
+{
+    Entity entity; entity.mSkeleton.mClips = clips; const Entity* objectEntity = &entity;
+    std::string anim = requested;
+    // the loop flag of rrSetObjectAnimationState, which the tavern outcome fallbacks of the copied block set
+    bool loop = false; (void)loop;
+FALLBACK_LOOP
+    if (!objectEntity->getSkeleton()->hasAnimation(anim))
+        return std::string();
+    return anim;
+}
+int main()
+{
+    // startSquat: RelievePit on a seat and on the floor (also as the clip of the stopped walk)
+    Creature seated; seated.mMoving = true;
+    CreatureActionUseToilet onSeat(seated);
+    onSeat.startSquat(true, Ogre::Vector2(0.0f, 1.0f));
+    expect(seated.mClip == "RelievePit" && seated.mClearClip == "RelievePit", "a seat plays RelievePit");
+    expect(onSeat.mPhase == CreatureActionUseToilet::Phase::squat && onSeat.mTurnsLeft == 28 && seated.mSounds == 1,
+        "the seat use keeps its random 10 to 30 s and its sound");
+    Creature floor; floor.mMoving = true;
+    CreatureActionUseToilet onFloor(floor);
+    onFloor.startSquat(false, Ogre::Vector2(1.0f, 0.0f));
+    expect(floor.mClip == "RelievePit" && floor.mClearClip == "RelievePit", "the floor plays the bent over RelievePit");
+    expect(onFloor.mTurnsLeft == 6 && floor.mSounds == 1, "the floor squat keeps ToiletUseTurns and its sound");
+
+    // toiletSeatLift: the seat top for RelievePit and Relieve on the seat; nothing for another clip, off the seat,
+    // while walking or when dead
+    GameMap map;
+    RenderedMovableEntity seat = { GameEntityType::buildingObject, RoomObjectPath::TOILET_SEAT_MESH, Ogre::Vector3(5.0f, 7.0f, 0.0f), 0.0 };
+    RenderedMovableEntity chair = { GameEntityType::buildingObject, "Chair", Ogre::Vector3(9.0f, 7.0f, 0.0f), 0.0 };
+    map.mObjects.push_back(&chair);
+    map.mObjects.push_back(&seat);
+    Creature user; user.mMap = &map; user.mPosition = Ogre::Vector3(5.0f, 7.0f + RoomObjectPath::toiletSeatPlaceY, 0.0f);
+    user.mClip = "RelievePit";
+    expect(toiletSeatLift(&user) == RoomObjectPath::toiletSeatTop, "RelievePit on the seat is drawn on the seat top");
+    user.mClip = "Relieve";
+    expect(toiletSeatLift(&user) == RoomObjectPath::toiletSeatTop, "Relieve on the seat is drawn on the seat top");
+    user.mClip = "Idle";
+    expect(toiletSeatLift(&user) == 0.0f, "another clip on the seat is not lifted");
+    user.mClip = "RelievePit"; user.mMoving = true;
+    expect(toiletSeatLift(&user) == 0.0f, "walking onto the seat is not lifted");
+    user.mMoving = false; user.mAlive = false;
+    expect(toiletSeatLift(&user) == 0.0f, "a dead creature is not lifted");
+    user.mAlive = true; user.mPosition = Ogre::Vector3(5.0f, 6.4f, 0.0f);
+    expect(toiletSeatLift(&user) == 0.0f, "RelievePit off the seat is not lifted");
+
+    // The clip fallback of the renderer
+    std::set<std::string> all; all.insert("Idle"); all.insert("Relieve"); all.insert("RelievePit");
+    std::set<std::string> squatOnly; squatOnly.insert("Idle"); squatOnly.insert("Relieve");
+    std::set<std::string> idleOnly; idleOnly.insert("Idle");
+    expect(shownClip(all, "RelievePit") == "RelievePit", "a skeleton with RelievePit plays it");
+    expect(shownClip(squatOnly, "RelievePit") == "Relieve", "a skeleton without RelievePit plays Relieve");
+    expect(shownClip(idleOnly, "RelievePit") == "Idle", "a skeleton without both plays Idle");
+    expect(shownClip(all, "Relieve") == "Relieve" && shownClip(idleOnly, "Relieve") == "Idle", "the former squat as before");
+
+    // The looping RelievePit: the body bends down into it once and straightens up out of it once, each in 1 s;
+    // the seat blend keeps its 0.3 s and other clip changes do not blend
+    expect(blendSeconds("Idle", "RelievePit") == 1.0f && blendSeconds("Walk", "RelievePit") == 1.0f, "bending down blends in 1 s");
+    expect(blendSeconds("RelievePit", "Idle") == 1.0f && blendSeconds("RelievePit", "Walk") == 1.0f, "straightening up blends in 1 s");
+    expect(blendSeconds("RelievePit", "RelievePit") == 0.0f, "the loop itself does not blend");
+    expect(blendSeconds("Idle", "Sit") == 0.3f && blendSeconds("SitDrink", "Idle") == 0.3f, "the seat blend keeps 0.3 s");
+    expect(blendSeconds("Idle", "Walk") == 0.0f && blendSeconds("Relieve", "Idle") == 0.0f, "other clip changes do not blend");
+    std::printf("PIT CHECKS FAILURES=%d\n", failures);
+    return failures == 0 ? 0 : 1;
+}
+'''.replace('ANIMATION_BLOCK', animation_block).replace('FALLBACK_LOOP', fallback_loop).replace(
+    'SQUAT_BODY', squat).replace('LIFT_BODY', lift).replace('BLEND_CONSTANTS', blend_constants).replace(
+    'BLEND_CHOICE', blend_choice).replace('DURATION_OF_BLEND', blend_duration)
+
 if '--no-compile' not in sys.argv:
     vcvars = Path('C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Auxiliary/Build/vcvars64.bat')
     with tempfile.TemporaryDirectory(prefix='toilet_k25_probe_') as directory:
         directory = Path(directory)
         cpp = directory / 'probe.cpp'
         cpp.write_text(PROBE, encoding='utf-8')
+        pit_cpp = directory / 'pit_probe.cpp'
+        pit_cpp.write_text(PIT_PROBE, encoding='utf-8')
         batch = directory / 'run.cmd'
+        # Both probes are compiled and run with one setup of the compiler
         batch.write_text(
             f'@echo off\ncall "{vcvars}" >nul\n'
             f'cl /nologo /EHsc /std:c++14 /I"{ROOT / "source"}" "{cpp}" /Fe:"{directory / "probe.exe"}" '
             f'/Fo:"{directory / "probe.obj"}"\n'
             'if errorlevel 1 exit /b 1\n'
-            f'"{directory / "probe.exe"}"\nexit /b %errorlevel%\n', encoding='utf-8')
+            f'cl /nologo /EHsc /std:c++14 /I"{ROOT / "source"}" "{pit_cpp}" /Fe:"{directory / "pit_probe.exe"}" '
+            f'/Fo:"{directory / "pit_probe.obj"}"\n'
+            'if errorlevel 1 exit /b 1\n'
+            f'"{directory / "probe.exe"}"\nif errorlevel 1 exit /b 1\n'
+            f'"{directory / "pit_probe.exe"}"\nexit /b %errorlevel%\n', encoding='utf-8')
         subprocess.run(['cmd', '/d', '/c', str(batch)], cwd=directory, check=True)
 else:
     print('toilet layout probe deferred explicitly (--no-compile)')

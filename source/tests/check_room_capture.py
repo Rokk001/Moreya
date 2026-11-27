@@ -3,6 +3,10 @@
 The pool maths and the claim rule are compiled from the real header source/rooms/RoomClaim.h
 with the values of config/rooms.cfg; the wiring in Room.cpp, RoomPortal.cpp and the config is
 checked on the sources. Needs the MSVC compiler (cl) on the path, like check_level_statistics.py.
+
+The values of config/rooms.cfg and config/creatures.cfg are own rows of the content package core-config
+(scripts/content_packages.py); without the content the values and the probe built with them are named as not checked
+and the wiring is checked.
 """
 from pathlib import Path
 import re
@@ -11,10 +15,16 @@ import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(repo)
 
 
 def read(relative):
-    return (repo / relative).read_text(encoding='utf-8')
+    """The text of a repository file; a mixed table comes with its own rows of the content."""
+    return content_packages.read_text(repo, relative)
 
 
 def function(text, signature):
@@ -51,15 +61,16 @@ def config_value(key):
 
 
 # Configuration: the default behaviour
-check(config_value('RoomsClaimableByEnemies') == '1', 'RoomsClaimableByEnemies must be 1 (claimable and destructible)')
-check(config_value('RoomConvertSecondsPerTile') == '3.4014', 'an enemy room takes 3.4014 seconds per tile')
-check(config_value('RoomConvertNeutralSecondsPerTile') == '1.7007', 'a neutral room takes 1.7007 seconds per tile')
-creatures_cfg = read('config/creatures.cfg')
-imp_claim = re.search(r'^\s+ClaimRate\s+([0-9.]+)\s*$', creatures_cfg, re.M).group(1)
-check(config_value('RoomConvertClaimRate') == imp_claim,
-      'RoomConvertClaimRate must be the claim rate of the worker (' + imp_claim + ')')
-check(config_value('RoomRepairFactor') == '5.0', 'an own worker repairs 5 times faster than an enemy wears down (20000 against 4000)')
-check(config_value('PortalFirstSpawnSeconds') == '187.72607879924954', 'the first creature of a taken over portal comes after 187.7 seconds')
+if WITH_CONTENT:
+    check(config_value('RoomsClaimableByEnemies') == '1', 'RoomsClaimableByEnemies must be 1 (claimable and destructible)')
+    check(config_value('RoomConvertSecondsPerTile') == '3.4014', 'an enemy room takes 3.4014 seconds per tile')
+    check(config_value('RoomConvertNeutralSecondsPerTile') == '1.7007', 'a neutral room takes 1.7007 seconds per tile')
+    creatures_cfg = read('config/creatures.cfg')
+    imp_claim = re.search(r'^\s+ClaimRate\s+([0-9.]+)\s*$', creatures_cfg, re.M).group(1)
+    check(config_value('RoomConvertClaimRate') == imp_claim,
+          'RoomConvertClaimRate must be the claim rate of the worker (' + imp_claim + ')')
+    check(config_value('RoomRepairFactor') == '5.0', 'an own worker repairs 5 times faster than an enemy wears down (20000 against 4000)')
+    check(config_value('PortalFirstSpawnSeconds') == '187.72607879924954', 'the first creature of a taken over portal comes after 187.7 seconds')
 check('"RoomsClaimableByEnemies", DEFAULT_ROOMS_CLAIMABLE_BY_ENEMIES)' in room_source
       and 'static const double DEFAULT_ROOMS_CLAIMABLE_BY_ENEMIES = 1.0;' in room_source,
       'without the setting the default behaviour applies')
@@ -283,11 +294,12 @@ int main()
     return gFailures ? 1 : 0;
 }
 '''
-probe = (probe.replace('REFERENCE', config_value('RoomConvertClaimRate'))
-         .replace('NEUTRAL', config_value('RoomConvertNeutralSecondsPerTile'))
-         .replace('ENEMY', config_value('RoomConvertSecondsPerTile'))
-         .replace('REPAIR', config_value('RoomRepairFactor'))
-         .replace('TPS', turns_per_second))
+if WITH_CONTENT:
+    probe = (probe.replace('REFERENCE', config_value('RoomConvertClaimRate'))
+             .replace('NEUTRAL', config_value('RoomConvertNeutralSecondsPerTile'))
+             .replace('ENEMY', config_value('RoomConvertSecondsPerTile'))
+             .replace('REPAIR', config_value('RoomRepairFactor'))
+             .replace('TPS', turns_per_second))
 
 
 # Run the compiled fixture once; a WinError 4551 requires a fresh compilation by the runner.
@@ -305,8 +317,12 @@ def run_probe(code):
         return
 
 
-run_probe(probe)
+if WITH_CONTENT:
+    run_probe(probe)
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_room_capture', ['room capture values (own rows of config/rooms.cfg and '
+                                                      'config/creatures.cfg)', 'compiled probe of the pool maths'])
 if failures:
     for failure in failures:
         print('FAIL: ' + failure)

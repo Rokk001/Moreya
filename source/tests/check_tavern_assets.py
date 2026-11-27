@@ -15,7 +15,7 @@ What is checked
               the ambience entries name them; scripts/check_sound_sources.py is green
   clips       Drink, Slap, ArmWrestle, Dice, KnockedOut, GetUp, Stagger, Vomit and Hangover in every skeleton a creature
               type uses (the clip names are listed once, the client asks for them in EntityAnimation)
-  seat clips  Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped once in each of the 30 skeletons
+  seat clips  Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped once in each of the 31 skeletons
               of the types that visit the tavern (their poses are measured by check_tavern_seat_clips.py)
   credits     every file above has a CREDITS row, every changed skeleton has a row for its new clips
   game light  (INGAME-QS-11 K8, "alles nur noch schwarz") every texture the materials of the six tavern models use, sampled
@@ -37,6 +37,11 @@ What is checked
 Calls (from the repository root):
   python source/tests/check_tavern_assets.py            file checks, no compiler, no game; the game light section
                                                          needs OGRE_XML_CONVERTER (full path of OgreXMLConverter.exe)
+
+The tavern assets come from the tavern room package; the mug, the shared material and particle scripts, the room
+ambience config and the moved sounds are game data of the content packages (scripts/content_packages.py), read from the
+public tree or from the content packages, with their CREDITS rows in the CREDITS of the content repository. Without the
+content these parts are named as not checked.
 """
 from pathlib import Path
 import fnmatch
@@ -49,6 +54,7 @@ import zlib
 root = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the tavern come from its room package (scripts/room_packages.py); without the package only the code
@@ -57,17 +63,35 @@ ROOM_ASSETS = room_packages.has_room(root, 'Tavern')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.resolve(root, relative)
-from assets_src import assets_src_dir, resolve  # noqa: E402
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(root, relative)
+from assets_src import assets_src_dir, resolve as assets_resolve  # noqa: E402
+
+
+# A path below assets-src through ODP_ASSETS_SRC, any other path as a game data file of the public tree or a content or
+# room package.
+def resolve(repo, relative):
+    if str(relative).startswith('assets-src'):
+        return assets_resolve(repo, relative)
+    return content_packages.resolve(repo, relative)
+
+
+# True when a game data file is not found while the content is not present: it cannot be checked then (an assets-src
+# path is never such a file).
+def missing_content(relative):
+    return (not str(relative).startswith('assets-src') and content_packages.data_file(root, relative) is None
+            and not content_packages.has_content(root))
 
 # The nine clips every creature skeleton gets, in the order of the design
 TAVERN_CLIPS = ['Drink', 'Slap', 'ArmWrestle', 'Dice', 'KnockedOut', 'GetUp', 'Stagger', 'Vomit', 'Hangover']
 # The seven seated clips of every skeleton of a type that visits the tavern, and the number of those skeletons
 SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitDice', 'SitSlumped']
-VISITING_SKELETONS = 30
+VISITING_SKELETONS = 31
 # The clips of the innkeeper figure
 INNKEEPER_CLIPS = ['Idle', 'Pour', 'Cheer']
+# The material of the approved CS10a innkeeper figure, its script and texture folder (content package creatures)
+INNKEEPER_MATERIALS = ('InnkeeperMeshy',)
+FIGURE_MATERIALS = {'InnkeeperMeshy': ('materials/scripts/Creatures/InnkeeperMeshy.material', 'materials/textures/')}
 # Size of the object textures, of the painted icon sources and of the bird atlas; wood, iron and stone were repainted
 # larger for INGAME-QS-11 K8 (the table maps its whole stone top onto one texture)
 OBJECT_TEXTURE_SIZE = 128
@@ -79,9 +103,12 @@ SOUND_CHANNELS = 1
 SOUND_RATE = 22050
 
 
-# Returns the text of a repository file.
+# Returns the text of a repository file (an asset source from the asset source folder); a mixed table comes with its
+# own rows of the content.
 def read(path):
-    return resolve(root, path).read_text(encoding='utf-8', errors='replace')
+    if str(path).startswith('assets-src/'):
+        return resolve(root, path).read_text(encoding='utf-8', errors='replace')
+    return content_packages.read_text(root, path)
 
 
 # Returns (width, height) of a PNG file from its header.
@@ -159,7 +186,7 @@ def creature_types():
     return types
 
 
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in content_packages.data_glob(root, 'materials/scripts', '*.material'))
 credits = room_packages.credits_text(root)
 
 # 1. Models: mesh, Blender source, material, the innkeeper's skeleton
@@ -173,7 +200,7 @@ if ROOM_ASSETS:
         assert resolve(root, source).is_file(), source + ' missing'
     mesh_material_names = {'TavernCounter': ('TavernCounterWood', 'TavernRail', 'TavernSign'), 'TavernKeg': ('TavernKegWood', 'TavernIron', 'TavernBrass'),
                            'TavernTable': ('TavernStone', 'TavernTableWood'), 'TavernMug': ('TavernWood', 'TavernFoam'),
-                           'Innkeeper': ('TavernCloth', 'TavernHood', 'TavernSkin'), 'Vomit': ('TavernVomit',)}
+                           'Innkeeper': ('InnkeeperMeshy',), 'Vomit': ('TavernVomit',)}
     for name, used in mesh_material_names.items():
         data = (room_file('models/' + name + '.mesh')).read_bytes()
         assert any(m.encode('ascii') in data for m in used), 'models/' + name + '.mesh uses none of ' + ', '.join(used)
@@ -185,8 +212,10 @@ if ROOM_ASSETS:
     assert not re.search(rb'(?<![A-Za-z])TavernWood(?![A-Za-z])', counter), 'models/TavernCounter.mesh must not use the striped TavernWood'
     rail = re.search(r'^material TavernRail\b.*?^}', materials, re.M | re.S)
     assert rail and re.search(r'^\s*emissive\s+0*\.0*[1-9]', rail.group(0), re.M), 'TavernRail needs its self-light so the rail reads from the room camera'
+    # Since CS10a the innkeeper is the approved Meshy figure with one material and one colour texture (before: the
+    # tavern materials TavernHood, TavernSkin and TavernCloth)
     innkeeper = (room_file('models/Innkeeper.mesh')).read_bytes()
-    for used in ('TavernHood', 'TavernSkin', 'TavernCloth'):
+    for used in INNKEEPER_MATERIALS:
         assert used.encode('ascii') in innkeeper, 'models/Innkeeper.mesh needs the material ' + used
     assert b'Innkeeper.skeleton' in (room_file('models/Innkeeper.mesh')).read_bytes(), 'the innkeeper mesh needs its skeleton'
     innkeeper_skeleton = (room_file('models/Innkeeper.skeleton')).read_bytes()
@@ -228,15 +257,19 @@ for icon in ('TavernButton', 'BeerButton'):
     assert png_size('assets-src/gui/icons/tiles/' + icon + '.png') == (ICON_SOURCE_SIZE, ICON_SOURCE_SIZE), icon + ' source size'
 
 # 4. Particles: each defined once in all particle files, the materials exist
-all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'particles', '*.particle'))
+all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in content_packages.data_glob(root, 'particles', '*.particle'))
 if ROOM_ASSETS:
     for system in ('TavernSmoke', 'DuelBirds'):
         assert len(re.findall(r'^particle_system ' + system + r'\s*$', all_particles, re.M)) == 1, 'particle ' + system + ' must be defined exactly once'
     tavern_particles = read('particles/Tavern.particle')
     for used in re.findall(r'^\s*material\s+(\S+)', tavern_particles, re.M):
         assert re.search(r'^material ' + used + r'\b', materials, re.M), 'particle material ' + used + ' missing'
-ambience = read('config/roomAmbience.cfg')
-assert 'System      TavernSmoke' in ambience and 'Match       TavernCounter' in ambience, 'the counter smoke is wired in roomAmbience.cfg'
+ambience = None
+if missing_content('config/roomAmbience.cfg'):
+    content_packages.unchecked('check_tavern_assets', ['config/roomAmbience.cfg'])
+else:
+    ambience = read('config/roomAmbience.cfg')
+    assert 'System      TavernSmoke' in ambience and 'Match       TavernCounter' in ambience, 'the counter smoke is wired in roomAmbience.cfg'
 assert 'DuelBirds' in read('source/render/RenderManager.cpp'), 'the bird particle is attached by the render code'
 
 # 5. Sounds: the five files as mono 22050 Hz Vorbis, the two ambience families, the ambience entries
@@ -245,11 +278,15 @@ for sound in ('sounds/Rooms/Tavern/Pour.ogg', 'sounds/Rooms/Tavern/Murmur.ogg', 
               'sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg', 'sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg'):
     if room_packages.is_missing_packaged(root, sound):
         continue
+    if missing_content(sound):
+        content_packages.unchecked('check_tavern_assets', [sound])
+        continue
     assert room_file(sound).is_file(), sound + ' missing'
     assert vorbis_format(sound) == (SOUND_CHANNELS, SOUND_RATE), sound + ' must be mono 22050 Hz Vorbis, found ' + str(vorbis_format(sound))
-for family in ('Rooms/Tavern/Murmur', 'Rooms/Tavern/Clink'):
+for family in ('Rooms/Tavern/Murmur', 'Rooms/Tavern/Clink') if ambience is not None else ():
     assert 'Family      ' + family in ambience, 'roomAmbience.cfg needs the family ' + family
-assert 'Loop        yes' in ambience[ambience.index('Name        TavernMurmur'):], 'the murmur is a loop'
+if ambience is not None:
+    assert 'Loop        yes' in ambience[ambience.index('Name        TavernMurmur'):], 'the murmur is a loop'
 sound_check = subprocess.run([sys.executable, str(root / 'scripts' / 'check_sound_sources.py')], capture_output=True, text=True, cwd=str(root))
 assert sound_check.returncode == 0, 'check_sound_sources.py failed:\n' + sound_check.stdout + sound_check.stderr
 
@@ -258,37 +295,43 @@ animation_h = read('source/entities/MovableGameEntity.h')
 for token in ('drink_anim = "Drink"', 'armwrestle_anim = "ArmWrestle"', 'slap_anim = "Slap"', 'dice_anim = "Dice"', 'knockedout_anim = "KnockedOut"',
               'getup_anim = "GetUp"', 'stagger_anim = "Stagger"', 'vomit_anim = "Vomit"', 'hangover_anim = "Hangover"'):
     assert token in animation_h, 'EntityAnimation lacks ' + token
-types = creature_types()
-# 36 creature types since the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
-assert len(types) == 36, len(types)
-skeletons = {}
-for name, mesh in types.items():
-    data = (room_file('models/' + mesh)).read_bytes()
-    found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', data)
-    assert found, mesh + ' has no skeleton'
-    skeletons[name] = found[0].decode('ascii') + '.skeleton'
-unique_skeletons = sorted(set(skeletons.values()))
-assert len(unique_skeletons) == 32, 'the 35 types use 32 skeletons, found ' + str(len(unique_skeletons))
-for skeleton in unique_skeletons:
-    data = (room_file('models/' + skeleton)).read_bytes()
-    for clip in TAVERN_CLIPS:
-        assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
+if content_packages.has_content(root):
+    types = creature_types()
+    # 36 creature types since the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
+    assert len(types) == 36, len(types)
+    skeletons = {}
+    for name, mesh in types.items():
+        data = (room_file('models/' + mesh)).read_bytes()
+        found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', data)
+        assert found, mesh + ' has no skeleton'
+        skeletons[name] = found[0].decode('ascii') + '.skeleton'
+    unique_skeletons = sorted(set(skeletons.values()))
+    assert len(unique_skeletons) == 35, 'the 35 types use 35 skeletons, found ' + str(len(unique_skeletons))
+    for skeleton in unique_skeletons:
+        data = (room_file('models/' + skeleton)).read_bytes()
+        for clip in TAVERN_CLIPS:
+            assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
+else:
+    # the creature types are whole only with the own rows of config/creatures.cfg, their meshes lie in the content
+    content_packages.unchecked('check_tavern_assets', ['clips of the creature skeletons and their CREDITS rows '
+                                                       '(own rows of config/creatures.cfg)'])
 
 # The seated clips in every skeleton of a type that visits the tavern (its Tavern line is not 0 0)
 for token in ('sit_anim = "Sit"', 'sit_drink_anim = "SitDrink"', 'sit_slap_anim = "SitSlap"', 'sit_slapped_anim = "SitSlapped"',
               'sit_armwrestle_anim = "SitArmWrestle"', 'sit_dice_anim = "SitDice"', 'sit_slumped_anim = "SitSlumped"'):
     assert token in animation_h, 'EntityAnimation lacks ' + token
-visiting = set()
-for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
-    name_field = re.search(r'^\s*Name\s+(\S+)', block, re.M)
-    tavern_line = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
-    if name_field and tavern_line and (float(tavern_line.group(1)) > 0.0 or float(tavern_line.group(2)) > 0.0):
-        visiting.add(skeletons[name_field.group(1)])
-assert len(visiting) == VISITING_SKELETONS, 'the types that visit the tavern use 30 skeletons, found ' + str(len(visiting))
-for skeleton in sorted(visiting):
-    data = (room_file('models/' + skeleton)).read_bytes()
-    for clip in SEAT_CLIPS:
-        assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
+if content_packages.has_content(root):
+    visiting = set()
+    for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
+        name_field = re.search(r'^\s*Name\s+(\S+)', block, re.M)
+        tavern_line = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
+        if name_field and tavern_line and (float(tavern_line.group(1)) > 0.0 or float(tavern_line.group(2)) > 0.0):
+            visiting.add(skeletons[name_field.group(1)])
+    assert len(visiting) == VISITING_SKELETONS, 'the types that visit the tavern use 31 skeletons, found ' + str(len(visiting))
+    for skeleton in sorted(visiting):
+        data = (room_file('models/' + skeleton)).read_bytes()
+        for clip in SEAT_CLIPS:
+            assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
 
 # 7. CREDITS: a row for every file of the tavern assets and for every skeleton with new clips
 patterns = []
@@ -324,15 +367,25 @@ for path in files:
     # The rows of the tavern package and of its sources stand in the CREDITS of the content repository
     if room_packages.is_missing_packaged(root, path) or (not ROOM_ASSETS and path.startswith('assets-src/rooms/tavern/')):
         continue
+    # The rows of the moved files of the content packages and of their Blender sources stand in the CREDITS of the
+    # content repository
+    if missing_content(path) or any(path == source and missing_content('models/' + name + '.mesh')
+                                    for name, source in MODELS.items()):
+        content_packages.unchecked('check_tavern_assets', ['the CREDITS row of ' + path])
+        continue
     assert credited(path), 'CREDITS has no row for ' + path
-for skeleton in unique_skeletons:
-    assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Drink, Slap, ArmWrestle, Dice, KnockedOut, GetUp, Stagger, Vomit, Hangover tracks\)',
-                     credits, re.M | re.I), 'CREDITS has no row for the new clips in ' + skeleton
-for skeleton in sorted(visiting):
-    assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice, SitSlumped tracks\)',
-                     credits, re.M), 'CREDITS has no row for the seated clips in ' + skeleton
+if content_packages.has_content(root):
+    for skeleton in unique_skeletons:
+        assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Drink, Slap, ArmWrestle, Dice, KnockedOut, GetUp, Stagger, Vomit, Hangover tracks\)',
+                         credits, re.M | re.I), 'CREDITS has no row for the new clips in ' + skeleton
+    for skeleton in sorted(visiting):
+        assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice, SitSlumped tracks\)',
+                         credits, re.M), 'CREDITS has no row for the seated clips in ' + skeleton
 # Every sound row names a source address and the licence CC0 (the recordings are real, never generated)
 for sound in ('Pour', 'Murmur', 'Clink', 'Slap', 'Cheer') if ROOM_ASSETS else ('Slap', 'Cheer'):
+    if sound in ('Slap', 'Cheer') and missing_content('sounds/Creatures/Default/' + sound + '.ogg'):
+        content_packages.unchecked('check_tavern_assets', ['the CREDITS row of ' + sound + '.ogg'])
+        continue
     row = [l for l in credits.splitlines() if re.search(r'/' + sound + r'\.ogg\s', l)]
     assert row, 'CREDITS has no row for ' + sound + '.ogg'
     for line in row:
@@ -379,9 +432,11 @@ SAMPLES = 40000
 LUMA = np.array([0.299, 0.587, 0.114])
 
 
-# Returns the texture names of a material (colour first, then the normal map) from the material scripts.
+# Returns the texture names of a material (colour first, then the normal map) from the material scripts (the figure
+# materials of FIGURE_MATERIALS from their own script).
 def material_textures(name):
-    block = re.search(r'^material ' + name + r'\b.*?^}', materials, re.M | re.S)
+    text = room_file(FIGURE_MATERIALS[name][0]).read_text(encoding='utf-8') if name in FIGURE_MATERIALS else materials
+    block = re.search(r'^material ' + name + r'\b.*?^}', text, re.M | re.S)
     assert block, 'material ' + name + ' missing'
     return re.findall(r'^\s*texture\s+(\S+)', block.group(0), re.M)
 
@@ -411,7 +466,8 @@ def mesh_geometry(name, work):
 
 
 # Returns the texels a surface shows: SAMPLES points spread evenly over the area of its faces (seeded, nearest texel).
-def surface_texels(positions, uvs, faces, texture):
+# The texture lies in the tavern texture folder, or in the folder of its figure material.
+def surface_texels(positions, uvs, faces, texture, folder='materials/textures/tavern/'):
     a, b, c = positions[faces[:, 0]], positions[faces[:, 1]], positions[faces[:, 2]]
     area = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1)
     rng = np.random.default_rng(1)
@@ -419,7 +475,7 @@ def surface_texels(positions, uvs, faces, texture):
     r1, r2 = np.sqrt(rng.random(SAMPLES)), rng.random(SAMPLES)
     w = np.stack([1 - r1, r1 * (1 - r2), r1 * r2], 1)
     uv = uvs[faces[pick, 0]] * w[:, :1] + uvs[faces[pick, 1]] * w[:, 1:2] + uvs[faces[pick, 2]] * w[:, 2:]
-    image = np.asarray(Image.open(str(room_file('materials/textures/tavern/' + texture))).convert('RGB')).astype(float)
+    image = np.asarray(Image.open(str(room_file(folder + texture))).convert('RGB')).astype(float)
     height, width = image.shape[:2]
     return image[(np.mod(uv[:, 1], 1.0) * height).astype(int) % height, (np.mod(uv[:, 0], 1.0) * width).astype(int) % width]
 
@@ -433,7 +489,8 @@ with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
         positions, uvs, faces = mesh_geometry(model, work)
         for material, rows in faces.items():
             textures = material_textures(material)
-            texels = surface_texels(positions, uvs, rows, textures[0])
+            texels = surface_texels(positions, uvs, rows, textures[0],
+                                    FIGURE_MATERIALS.get(material, (None, 'materials/textures/tavern/'))[1])
             luma = texels @ LUMA
             top = texels.max(1)
             saturation = np.where(top > 0, (top - texels.min(1)) / np.maximum(top, 1e-6), 0.0).mean()
@@ -459,7 +516,7 @@ with tempfile.TemporaryDirectory(prefix='tavern_light_') as work:
             if material in NORMAL_MAPPED:
                 assert len(textures) >= 2 and room_file('materials/textures/tavern/' + textures[1]).is_file(), where + ' needs its normal map'
             seen[material] = shown
-for material in ('TavernCounterWood', 'TavernRail', 'TavernSign', 'TavernSkin', 'TavernHood', 'TavernCloth', 'TavernTableWood',
+for material in ('TavernCounterWood', 'TavernRail', 'TavernSign', 'InnkeeperMeshy', 'TavernTableWood',
                  'TavernKegWood', 'TavernWood', 'TavernStone', 'TavernIron', 'TavernBrass', 'TavernFoam'):
     assert material in seen, 'no tavern model uses ' + material
 print('ODP_TEST_PHASE {"name":"game-light","seconds":%.2f}' % (time.monotonic() - light_start))

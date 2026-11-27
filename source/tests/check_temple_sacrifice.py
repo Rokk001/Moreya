@@ -1,15 +1,35 @@
 """Check that the temple sacrifice works as documented: no mana and no research points
 for a sacrifice, a queue of the last three sacrifices, the first matching recipe wins and
-the level of a new creature is the rounded down average of the inputs."""
+the level of a new creature is the rounded down average of the inputs.
+
+The design document moved into the content repository (docs/design/<old path>, scripts/campaign_packages.py); without
+the content it is named as not checked."""
 from pathlib import Path
 import itertools
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
+
+DESIGN_DOC = "docs/development/TEMPLE-SACRIFICE.md"
+
+
+def design_doc():
+    """The design document in the public tree, else in docs/design/ of the content repository, else None."""
+    if (repo / DESIGN_DOC).exists():
+        return repo / DESIGN_DOC
+    content = campaign_packages.content_repository(repo)
+    if content is not None and (content / "docs" / "design" / DESIGN_DOC).exists():
+        return content / "docs" / "design" / DESIGN_DOC
+    return None
 
 
 def read(path):
-    return (repo / path).read_text(encoding="utf-8").replace("\r\n", "\n")
+    """The text of a repository file; a mixed table of config/ comes joined with its own rows of the content."""
+    return content_packages.read_text(repo, path).replace("\r\n", "\n")
 
 
 rooms = read("config/rooms.cfg")
@@ -26,54 +46,61 @@ assert "TEMPLE_SACRIFICE_QUEUE_SIZE = 3" in temple and "mSacrificed.erase(mSacri
 assert "totalLevel / static_cast<uint32_t>(inputs.size())" in sacrifice and "+ 1" not in sacrifice.split("averageLevel")[1][:40]
 assert "mTurnsSinceSacrifice" not in temple + header
 
-values = dict(re.findall(r"^\s+(TempleRecipe\w+)\s+(\S+)\s*$", rooms, re.M))
-count = int(values["TempleRecipeCount"])
-creatures = set(re.findall(r"^\s+Name\s+(\w+)\s*$", read("config/creatures.cfg"), re.M))
-for i in range(1, count + 1):
-    recipe = values[f"TempleRecipe{i}"]
-    inputs, result = recipe.split("=")
-    assert 1 <= len(inputs.split("+")) <= 3, recipe
-    for name in inputs.split("+"):
-        assert name in creatures, f"{recipe}: unknown creature {name}"
-    assert result in ("ManaBoost", "Workers") or result in creatures, recipe
-assert values["TempleRecipe1"] == "Elf+Elf=Orc"
-assert values["TempleRecipe2"] == "Gnome+Gnome+Gnome=ManaBoost"
-assert re.search(r"^\s+TempleWorkersGiven\s+10\s*$", rooms, re.M) and "TempleWorkersGiven" in temple
+if content_packages.has_content(repo):
+    values = dict(re.findall(r"^\s+(TempleRecipe\w+)\s+(\S+)\s*$", rooms, re.M))
+    count = int(values["TempleRecipeCount"])
+    creatures = set(re.findall(r"^\s+Name\s+(\w+)\s*$", read("config/creatures.cfg"), re.M))
+    for i in range(1, count + 1):
+        recipe = values[f"TempleRecipe{i}"]
+        inputs, result = recipe.split("=")
+        assert 1 <= len(inputs.split("+")) <= 3, recipe
+        for name in inputs.split("+"):
+            assert name in creatures, f"{recipe}: unknown creature {name}"
+        assert result in ("ManaBoost", "Workers") or result in creatures, recipe
+    assert values["TempleRecipe1"] == "Elf+Elf=Orc"
+    assert values["TempleRecipe2"] == "Gnome+Gnome+Gnome=ManaBoost"
+    assert re.search(r"^\s+TempleWorkersGiven\s+10\s*$", rooms, re.M) and "TempleWorkersGiven" in temple
 
-# The recipes that worked before the queue (12 creature and special recipes, the ones with
-# three inputs in any order) must all still resolve to the same result in the queue model:
-# the last three sacrifices, the first recipe that matches the newest ones wins.
-# Roster change (CREATURE-ROSTER W4a): a removed creature is replaced by its successor (Rat -> Banshee, LavaSpawn -> Butcher) and the
-# keeper-side Dark Elf by the Banshee (decisions D6, D20)
-old_recipes = [
-    "Lich+Lich=PitDemon", "Troll+Troll=Cultist", "Orc+Cultist+CaveHornet=Workers",
-    "Butcher+Butcher=LizardMan", "Elf+Elf=Orc", "Cultist+Cultist=Goblin",
-    "Banshee+Banshee=Butcher", "Skeleton+Skeleton=Banshee", "Orc+Orc=Lich", "PitDemon+PitDemon=Banshee",
-    "LizardMan+LizardMan=Skeleton", "Gnome+Gnome+Gnome=ManaBoost", "PitDemon+Banshee+Cultist=Workers",
-]
-table = [values[f"TempleRecipe{i}"].split("=") for i in range(1, count + 1)]
-table = [(inputs.split("+"), result) for inputs, result in table]
-
-
-def sacrifice(sequence):
-    queue = []
-    for name in sequence:
-        queue = (queue + [name])[-3:]
-        for inputs, result in table:
-            if len(inputs) <= len(queue) and queue[len(queue) - len(inputs):] == inputs:
-                queue = []
-                break
-        else:
-            result = None
-    return result
+    # The recipes that worked before the queue (12 creature and special recipes, the ones with
+    # three inputs in any order) must all still resolve to the same result in the queue model:
+    # the last three sacrifices, the first recipe that matches the newest ones wins.
+    # Roster change (CREATURE-ROSTER W4a): a removed creature is replaced by its successor (Rat -> Banshee, LavaSpawn -> Butcher) and the
+    # keeper-side Dark Elf by the Banshee (decisions D6, D20)
+    old_recipes = [
+        "Lich+Lich=PitDemon", "Troll+Troll=Cultist", "Orc+Cultist+CaveHornet=Workers",
+        "Butcher+Butcher=LizardMan", "Elf+Elf=Orc", "Cultist+Cultist=Goblin",
+        "Banshee+Banshee=Butcher", "Skeleton+Skeleton=Banshee", "Orc+Orc=Lich", "PitDemon+PitDemon=Banshee",
+        "LizardMan+LizardMan=Skeleton", "Gnome+Gnome+Gnome=ManaBoost", "PitDemon+Banshee+Cultist=Workers",
+    ]
+    table = [values[f"TempleRecipe{i}"].split("=") for i in range(1, count + 1)]
+    table = [(inputs.split("+"), result) for inputs, result in table]
 
 
-for recipe in old_recipes:
-    inputs, result = recipe.split("=")
-    for order in set(itertools.permutations(inputs.split("+"))):
-        assert sacrifice(order) == result, f"{recipe} does not resolve for the order {order}"
-# a sacrifice that matches nothing gives nothing, a leftover does not hide the next recipe
-assert sacrifice(["Banshee"]) is None and sacrifice(["Orc", "Banshee", "Banshee"]) == "Butcher"
+    def sacrifice(sequence):
+        queue = []
+        for name in sequence:
+            queue = (queue + [name])[-3:]
+            for inputs, result in table:
+                if len(inputs) <= len(queue) and queue[len(queue) - len(inputs):] == inputs:
+                    queue = []
+                    break
+            else:
+                result = None
+        return result
 
-assert (repo / "docs/development/TEMPLE-SACRIFICE.md").exists()
+
+    for recipe in old_recipes:
+        inputs, result = recipe.split("=")
+        for order in set(itertools.permutations(inputs.split("+"))):
+            assert sacrifice(order) == result, f"{recipe} does not resolve for the order {order}"
+    # a sacrifice that matches nothing gives nothing, a leftover does not hide the next recipe
+    assert sacrifice(["Banshee"]) is None and sacrifice(["Orc", "Banshee", "Banshee"]) == "Butcher"
+else:
+    content_packages.unchecked("check_temple_sacrifice", ["temple recipes (own rows of config/rooms.cfg and "
+                                                          "config/creatures.cfg)"])
+
+if design_doc() is None and not content_packages.has_content(repo):
+    content_packages.unchecked("check_temple_sacrifice", [DESIGN_DOC])
+else:
+    assert design_doc() is not None, DESIGN_DOC + " is missing"
 print("CHECKS OK")

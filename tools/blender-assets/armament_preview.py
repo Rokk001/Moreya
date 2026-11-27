@@ -12,12 +12,14 @@ from mathutils import Matrix, Vector, Quaternion
 from mathutils.bvhtree import BVHTree
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'scripts'))
+import content_packages
 import odp_ogre_io
 import wake_preview
 
-# Find the named definition and read its existing mesh and weapon fields.
-def definition(path, tag, name):
-    for block in path.read_text().split('['+tag+']')[1:]:
+# Find the named definition of a table text and read its existing mesh and weapon fields.
+def definition(text, tag, name):
+    for block in text.split('['+tag+']')[1:]:
         if re.search(r'^\s*Name\s+'+re.escape(name)+r'\s*$',block,re.M):
             return dict(re.findall(r'^\s*(MeshName|WeaponSpawnR|WeaponSpawnL)\s+(\S+)',block,re.M))
     raise ValueError('Missing definition '+name)
@@ -229,8 +231,9 @@ def main():
     repo,out,name=sys.argv[sys.argv.index('--')+1:]
     repo,out=Path(repo),Path(out)
     xml=out.parent/'xml'
-    creature=definition(repo/'config/creatures.cfg','Creature',name)
-    equipment=definition(repo/'config/equipments.cfg','Equipment',creature['WeaponSpawnR'])
+    # The mixed tables come joined with their own rows of the content packages (scripts/content_packages.py)
+    creature=definition(content_packages.read_text(repo,'config/creatures.cfg'),'Creature',name)
+    equipment=definition(content_packages.read_text(repo,'config/equipments.cfg'),'Equipment',creature['WeaponSpawnR'])
     if creature.get('WeaponSpawnL','none')!='none':
         raise ValueError('Preview assignment unexpectedly contains a left-hand item')
     mesh_xml=xml/(creature['MeshName']+'.xml')

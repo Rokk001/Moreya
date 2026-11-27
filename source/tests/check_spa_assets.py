@@ -24,6 +24,10 @@ What is checked
 
 Calls (from the repository root):
   python source/tests/check_spa_assets.py            file checks and the floor painter, no compiler, no game
+
+The torture floor, the creature models and skeletons, the room ambience config and the shared material and particle
+scripts are game data of the content packages (scripts/content_packages.py): they are read from the public tree or from
+the content packages. Without the content these parts are named as not checked.
 """
 from pathlib import Path
 import fnmatch
@@ -38,6 +42,7 @@ import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the spa come from its room package (scripts/room_packages.py); without the package only the code
@@ -46,9 +51,27 @@ ROOM_ASSETS = room_packages.has_room(root, 'Spa')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.resolve(root, relative)
-from assets_src import assets_src_dir, resolve  # noqa: E402
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(root, relative)
+from assets_src import assets_src_dir, resolve as assets_resolve  # noqa: E402
+
+
+# A path below assets-src through ODP_ASSETS_SRC, any other path as a game data file of the public tree or a content or
+# room package.
+def resolve(repo, relative):
+    if str(relative).replace('\\', '/').startswith('assets-src'):
+        return assets_resolve(repo, relative)
+    return content_packages.resolve(repo, relative)
+
+
+# True when the game data files can be checked: all are found or the content is present (then a missing one fails as
+# before); else names the part as not checked.
+def present(part, paths):
+    missing = [path for path in paths if content_packages.data_file(root, path) is None]
+    if not missing or content_packages.has_content(root):
+        return True
+    content_packages.unchecked('check_spa_assets', [part] + missing)
+    return False
 
 # The bath clips every creature skeleton gets and the clips of the pool attendant
 BATH_CLIPS = ['Bathe', 'Jump']
@@ -60,9 +83,12 @@ SOUND_CHANNELS = 1
 SOUND_RATE = 22050
 
 
-# Returns the text of a repository file.
+# Returns the text of a repository file (an asset source from the asset source folder); a mixed table or interface file
+# comes with its own rows of the content.
 def read(path):
-    return resolve(root, path).read_text(encoding='utf-8', errors='replace')
+    if str(path).startswith('assets-src/'):
+        return resolve(root, path).read_text(encoding='utf-8', errors='replace')
+    return content_packages.read_text(root, path)
 
 
 # Returns (width, height) of a PNG file from its header.
@@ -82,7 +108,8 @@ def vorbis_format(path):
     return channels, rate
 
 
-# Returns the creature types of creatures.cfg: name -> mesh name
+# Returns the creature types of creatures.cfg: name -> mesh name. Without the content a type whose MeshName row is an
+# own row of the content (Dwarf1, Dragon) is left out; with the content the count of 35 types is asserted.
 def creature_types():
     types = {}
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
@@ -91,7 +118,7 @@ def creature_types():
             words = line.split()
             if len(words) >= 2 and not words[0].startswith('#'):
                 fields.setdefault(words[0], words[1])
-        if 'Name' in fields:
+        if 'Name' in fields and 'MeshName' in fields:
             types[fields['Name']] = fields['MeshName']
     return types
 
@@ -103,7 +130,7 @@ def script_block(text, kind, name):
     return match.group(0)
 
 
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in content_packages.data_glob(root, 'materials/scripts', '*.material'))
 credits = room_packages.credits_text(root)
 spa_material = read('materials/scripts/Spa.material') if ROOM_ASSETS else ''
 
@@ -162,7 +189,7 @@ if ROOM_ASSETS:
     glow = script_block(spa_material, 'material', 'SpaLavaGlow')
     assert 'emissive' in glow and 'lighting off' in glow, 'the lava seam glows'
     for used in re.findall(r'^\s*texture\s+(\S+)', spa_material, re.M):
-        assert any(list((base / 'materials' / 'textures').rglob(used)) for base in [root] + room_packages.package_roots(root)), \
+        assert any(list((base / 'materials' / 'textures').rglob(used)) for base in [root] + content_packages.package_roots(root)), \
             'texture ' + used + ' of Spa.material is missing'
     torture = read('materials/scripts/TortureFloor.material')
     spa_floor = read('materials/scripts/SpaFloor.material')
@@ -194,7 +221,7 @@ with tempfile.TemporaryDirectory(prefix='odp-spa-floor-') as directory:
         assert (Path(directory) / name).read_bytes() == room_file('materials/textures/' + name).read_bytes(), name + ' differs from what the painter writes'
 
 # 4. Particles: each defined once, the values of the design, the order next to the template, the materials exist
-all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'particles', '*.particle'))
+all_particles = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in content_packages.data_glob(root, 'particles', '*.particle'))
 if ROOM_ASSETS:
     for system in ('SpaSteam', 'SpaMudSplash'):
         assert len(re.findall(r'^particle_system ' + system + r'\s*$', all_particles, re.M)) == 1, 'particle ' + system + ' must be defined exactly once'
@@ -213,46 +240,65 @@ assert 'SPA_STEAM_EFFECT = "SpaSteam"' in room_h and 'SPA_SPLASH_EFFECT = "SpaMu
 # 5. Icon: the painted source, its slot and its imageset entry
 assert png_size('assets-src/gui/icons/tiles/SpaButton.png') == (ICON_SOURCE_SIZE, ICON_SOURCE_SIZE), 'SpaButton source size'
 assert '"SpaButton"' in read('assets-src/gui/icons/slots.json') or 'SpaButton' in read('assets-src/gui/icons/slots.json'), 'SpaButton has a slot'
-assert len(re.findall(r'<Image [^>]*name="SpaButton"', read('gui/ODIcons.imageset'))) == 1, 'SpaButton has one imageset entry'
-assert 'OpenDungeonsIcons/SpaButton' in read('gui/WindowTabRooms.layout') or 'SpaButton' in read('gui/WindowTabRooms.layout')
-assert 'SpaButton' in read('gui/WindowSkillTree.layout'), 'the research tree shows the button'
+# The icon atlas lies in a content package (found through scripts/content_packages.py)
+if content_packages.data_file(root, 'gui/ODIcons.imageset') is None:
+    content_packages.unchecked('check_spa_assets', ['gui/ODIcons.imageset'])
+else:
+    assert len(re.findall(r'<Image [^>]*name="SpaButton"', content_packages.read_text(root, 'gui/ODIcons.imageset'))) == 1, 'SpaButton has one imageset entry'
+if content_packages.has_content(root):
+    assert 'OpenDungeonsIcons/SpaButton' in read('gui/WindowTabRooms.layout') or 'SpaButton' in read('gui/WindowTabRooms.layout')
+    assert 'SpaButton' in read('gui/WindowSkillTree.layout'), 'the research tree shows the button'
+else:
+    # the layouts are own rows of the content package core-gui
+    content_packages.unchecked('check_spa_assets', ['SpaButton entries of gui/WindowTabRooms.layout and '
+                                                    'gui/WindowSkillTree.layout'])
 
 # 6. Sounds: the three files as mono 22050 Hz Vorbis, the families, the ambience entry
-ambience = read('config/roomAmbience.cfg')
+ambience = read('config/roomAmbience.cfg') if present('the bubbling loop of the ambience', ['config/roomAmbience.cfg']) else None
 for family in ('Bubble', 'Whistle', 'Splash') if ROOM_ASSETS else ():
     sound = 'sounds/Spatial/Rooms/Spa/' + family + '/' + family + '.ogg'
     assert room_file(sound).is_file(), sound + ' missing'
     assert vorbis_format(sound) == (SOUND_CHANNELS, SOUND_RATE), sound + ' must be mono 22050 Hz Vorbis, found ' + str(vorbis_format(sound))
-bubble_effect = ambience[ambience.index('Name        SpaBubbleLoop'):]
-bubble_effect = bubble_effect[:bubble_effect.index('[/Effect]')]
-for line in ('Target      Object', 'Match       SpaMudPool', 'Kind        Sound', 'Family      Rooms/Spa/Bubble', 'Loop        yes'):
-    assert line in bubble_effect, 'the bubbling loop lacks the line ' + line
+if ambience is not None:
+    bubble_effect = ambience[ambience.index('Name        SpaBubbleLoop'):]
+    bubble_effect = bubble_effect[:bubble_effect.index('[/Effect]')]
+    for line in ('Target      Object', 'Match       SpaMudPool', 'Kind        Sound', 'Family      Rooms/Spa/Bubble', 'Loop        yes'):
+        assert line in bubble_effect, 'the bubbling loop lacks the line ' + line
 assert '"Rooms/Spa/Whistle"' in read('source/entities/PoolAttendantEntity.cpp') and '"Rooms/Spa/Splash"' in room_h
 sound_check = subprocess.run([sys.executable, str(root / 'scripts' / 'check_sound_sources.py')], capture_output=True, text=True, cwd=str(root))
 assert sound_check.returncode == 0, 'check_sound_sources.py failed:\n' + sound_check.stdout + sound_check.stderr
 
 # 7. The bath clips in every skeleton a creature type uses (binary skeleton: the clip names end with a line feed)
 types = creature_types()
-# 36 creature types since the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
-assert len(types) == 36, len(types)
-skeletons = {}
-for name, mesh in types.items():
-    found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (room_file('models/' + mesh)).read_bytes())
-    assert found, mesh + ' has no skeleton'
-    skeletons[name] = found[0].decode('ascii') + '.skeleton'
-unique_skeletons = sorted(set(skeletons.values()))
-assert len(unique_skeletons) == 32, 'the 35 types use 32 skeletons, found ' + str(len(unique_skeletons))
-for skeleton in unique_skeletons:
-    data = (room_file('models/' + skeleton)).read_bytes()
-    for clip in BATH_CLIPS:
-        assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
-    # The clips of the tavern and the older ones are still there
-    for clip in ('Idle', 'Walk', 'Drink', 'Hangover'):
-        assert (clip + '\n').encode('ascii') in data, skeleton + ' lost its clip ' + clip
-    assert (assets_src_dir(root) / 'rooms' / 'spa' / 'creatures' / (skeleton[:-len('.skeleton')] + '.blend')).is_file(), \
-        'no Blender source for ' + skeleton
-sources = sorted(p.name for p in (assets_src_dir(root) / 'rooms' / 'spa' / 'creatures').glob('*.blend'))
-assert len(sources) == 32, 'one Blender source per skeleton, found ' + str(len(sources))
+# the creature types need the own rows of config/creatures.cfg (content package core-config); 36 creature types since
+# the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
+if content_packages.has_content(root):
+    assert len(types) == 36, len(types)
+else:
+    content_packages.unchecked('check_spa_assets', ['number of creature types (own rows of config/creatures.cfg)'])
+unique_skeletons = []
+if present('the bath clips of the creature skeletons', sorted(set('models/' + mesh for mesh in types.values()))):
+    skeletons = {}
+    for name, mesh in types.items():
+        found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (room_file('models/' + mesh)).read_bytes())
+        assert found, mesh + ' has no skeleton'
+        skeletons[name] = found[0].decode('ascii') + '.skeleton'
+    unique_skeletons = sorted(set(skeletons.values()))
+    # 35 since every figure of the creatures package has its own skeleton (counted on the branch; was 32)
+    assert len(unique_skeletons) == 35, 'the 35 types use 35 skeletons, found ' + str(len(unique_skeletons))
+    for skeleton in unique_skeletons:
+        data = (room_file('models/' + skeleton)).read_bytes()
+        for clip in BATH_CLIPS:
+            assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
+        # The clips of the tavern and the older ones are still there
+        for clip in ('Idle', 'Walk', 'Drink', 'Hangover'):
+            assert (clip + '\n').encode('ascii') in data, skeleton + ' lost its clip ' + clip
+        assert (assets_src_dir(root) / 'rooms' / 'spa' / 'creatures' / (skeleton[:-len('.skeleton')] + '.blend')).is_file(), \
+            'no Blender source for ' + skeleton
+    sources = sorted(p.name for p in (assets_src_dir(root) / 'rooms' / 'spa' / 'creatures').glob('*.blend'))
+    # 35: one source per skeleton, the 35 skeletons above; the figures Jaeger, Schattenfuerst and TentacleAlbine of the
+    # creatures package got their rig sources (counted on the branch; was 32)
+    assert len(sources) == 35, 'one Blender source per skeleton, found ' + str(len(sources))
 
 # 8. CREDITS: a row for every file of the spa assets and for every skeleton with new clips
 patterns = []
@@ -280,6 +326,11 @@ for path in files:
     # The rows of the spa package and of its sources stand in the CREDITS of the content repository
     if room_packages.is_missing_packaged(root, path) or (not ROOM_ASSETS and path.startswith('assets-src/rooms/spa/Spa')) or \
             (not ROOM_ASSETS and path == 'assets-src/rooms/spa/PoolAttendant.blend'):
+        continue
+    # The pool attendant figure lies in the creatures content package; its rows stand in the CREDITS of the content
+    # repository
+    if path in ('models/PoolAttendant.mesh', 'models/PoolAttendant.skeleton') and not content_packages.has_content(root):
+        content_packages.unchecked('check_spa_assets', ['the CREDITS row of ' + path])
         continue
     assert credited(path), 'CREDITS has no row for ' + path
 assert not ROOM_ASSETS or ('particles/Spa.particle (SpaSteam)' in credits and 'particles/Spa.particle (SpaMudSplash)' in credits)

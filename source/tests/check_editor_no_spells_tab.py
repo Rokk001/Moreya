@@ -18,6 +18,8 @@ from pathlib import Path
 import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 SPELLS_IMPORT = 'filename="WindowTabSpells.layout"'
 # Spells tab imports: none in the editor, one in the game
@@ -32,17 +34,22 @@ def read(path):
     return (root / path).read_text(encoding='utf-8')
 
 
-editor_layout = read('gui/ModeEditor.layout')
-game_layout = read('gui/ModeGame.layout')
-if editor_layout.count(SPELLS_IMPORT) != EXPECTED_EDITOR_IMPORTS:
-    errors.append('gui/ModeEditor.layout: expected %d spells tab imports, found %d'
-                  % (EXPECTED_EDITOR_IMPORTS, editor_layout.count(SPELLS_IMPORT)))
-for tab in ('WindowTabRooms.layout', 'WindowTabTraps.layout', 'WindowTabCreatures.layout'):
-    if 'filename="%s"' % tab not in editor_layout:
-        errors.append('gui/ModeEditor.layout: %s is missing' % tab)
-if game_layout.count(SPELLS_IMPORT) != EXPECTED_GAME_IMPORTS:
-    errors.append('gui/ModeGame.layout: expected %d spells tab import, found %d'
-                  % (EXPECTED_GAME_IMPORTS, game_layout.count(SPELLS_IMPORT)))
+# The layouts are mixed files: as the game reads them only with their own rows from the content
+if content_packages.has_content(root):
+    editor_layout = content_packages.read_text(root, 'gui/ModeEditor.layout')
+    game_layout = content_packages.read_text(root, 'gui/ModeGame.layout')
+    if editor_layout.count(SPELLS_IMPORT) != EXPECTED_EDITOR_IMPORTS:
+        errors.append('gui/ModeEditor.layout: expected %d spells tab imports, found %d'
+                      % (EXPECTED_EDITOR_IMPORTS, editor_layout.count(SPELLS_IMPORT)))
+    for tab in ('WindowTabRooms.layout', 'WindowTabTraps.layout', 'WindowTabCreatures.layout'):
+        if 'filename="%s"' % tab not in editor_layout:
+            errors.append('gui/ModeEditor.layout: %s is missing' % tab)
+    if game_layout.count(SPELLS_IMPORT) != EXPECTED_GAME_IMPORTS:
+        errors.append('gui/ModeGame.layout: expected %d spells tab import, found %d'
+                      % (EXPECTED_GAME_IMPORTS, game_layout.count(SPELLS_IMPORT)))
+else:
+    content_packages.unchecked('check_editor_no_spells_tab', ['tab imports of gui/ModeEditor.layout and '
+                                                              'gui/ModeGame.layout'])
 
 gui = read('source/render/Gui.cpp')
 editor_pages = gui[gui.index('void Gui::arrangeEditorActionButtons('):]

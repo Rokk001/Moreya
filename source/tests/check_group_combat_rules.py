@@ -9,6 +9,9 @@ rule. Nothing is compiled and the game is not started; the integration build com
 
 Usage: python -I source/tests/check_group_combat_rules.py
 Exit 0 and "group combat rules ok" when every item holds.
+
+config/creatureSkills.cfg is content (core-config package, found through scripts/content_packages.py); without it the
+taunt and aggro skill checks of that table are named as not checked.
 """
 import math
 import os
@@ -17,6 +20,9 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
 START = time.perf_counter()
 FAILURES = []
 
@@ -54,8 +60,13 @@ MANAGER = read("source/game/CombatGroupManager.cpp")
 CREATURE = read("source/entities/Creature.cpp")
 FIGHT = read("source/creatureaction/CreatureActionFight.cpp")
 ATTACK = read("source/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp")
-GLOBAL_CFG = read("config/global.cfg")
-SKILLS_CFG = read("config/creatureSkills.cfg")
+#: True when the content packages are present: config/global.cfg is a mixed table whose own rows come from them
+CONTENT = content_packages.has_content(ROOT)
+#: config/global.cfg as the game reads it, with its own rows from the content
+GLOBAL_CFG = content_packages.read_text(ROOT, "config/global.cfg")
+#: The skill templates (core-config package), None without the content
+SKILLS_CFG = (content_packages.read_text(ROOT, "config/creatureSkills.cfg")
+              if content_packages.data_file(ROOT, "config/creatureSkills.cfg") else None)
 
 
 def group_block_words(key):
@@ -70,10 +81,11 @@ def group_block_words(key):
 
 # ------------------------------------------------------------------------------------------------ G3 roles
 TANK, MELEE, SUPPORTER, RANGED, HEALER = "tank", "melee", "supporter", "ranged", "healer"
-TANK_GROUPS = group_block_words("GroupTankSkillGroups")
-HEALER_GROUPS = group_block_words("GroupHealerSkillGroups")
-SUPPORTER_GROUPS = group_block_words("GroupSupporterSkillGroups")
-RANGED_GROUPS = group_block_words("GroupRangedSkillGroups")
+# The [GroupCombat] block of global.cfg holds own rows: without the content its values are not there
+TANK_GROUPS = group_block_words("GroupTankSkillGroups") if CONTENT else None
+HEALER_GROUPS = group_block_words("GroupHealerSkillGroups") if CONTENT else None
+SUPPORTER_GROUPS = group_block_words("GroupSupporterSkillGroups") if CONTENT else None
+RANGED_GROUPS = group_block_words("GroupRangedSkillGroups") if CONTENT else None
 
 
 def role_of(skill_group):
@@ -97,10 +109,11 @@ EXPECTED_GROUP_ROLES = {
     "tank": TANK, "healer": HEALER, "supporter": SUPPORTER, "warrior": MELEE, "skirmisher": MELEE,
     "marksman": RANGED, "mage": RANGED, "worker": MELEE, "none": MELEE, "": MELEE,
 }
-for group, expected in EXPECTED_GROUP_ROLES.items():
-    check(role_of(group) == expected, "G3: group-fight role of skill group " + repr(group))
-check(TANK_GROUPS == ["tank"] and HEALER_GROUPS == ["healer"] and SUPPORTER_GROUPS == ["supporter"] and
-      RANGED_GROUPS == ["marksman", "mage"], "G3: role lists of the [GroupCombat] block")
+if CONTENT:
+    for group, expected in EXPECTED_GROUP_ROLES.items():
+        check(role_of(group) == expected, "G3: group-fight role of skill group " + repr(group))
+    check(TANK_GROUPS == ["tank"] and HEALER_GROUPS == ["healer"] and SUPPORTER_GROUPS == ["supporter"] and
+          RANGED_GROUPS == ["marksman", "mage"], "G3: role lists of the [GroupCombat] block")
 
 role_body = function(RULES, "Role roleOf(")
 check(role_body.index("mTankSkillGroups") < role_body.index("mHealerSkillGroups") <
@@ -199,11 +212,12 @@ def choose_aggro(attacking, near, adjacent):
     return close[0][1] if close else ""
 
 
-ADJACENT = int(float(group_block_words("GroupAggroAdjacentTiles")[0]))
-check(ADJACENT == 1, "G5: next to a tank means the eight neighbour tiles (GroupAggroAdjacentTiles 1)")
-check(choose_aggro("Guard1", [("Guard2", 1)], ADJACENT) == "Guard1", "G5: the tank that hit the member wins")
-check(choose_aggro("", [("Guard2", 1), ("Guard3", 1)], ADJACENT) == "Guard2", "G5: next to a tank: that tank")
-check(choose_aggro("", [("Guard2", 2)], ADJACENT) == "", "G5: a tank two tiles away draws no aggro")
+if CONTENT:
+    ADJACENT = int(float(group_block_words("GroupAggroAdjacentTiles")[0]))
+    check(ADJACENT == 1, "G5: next to a tank means the eight neighbour tiles (GroupAggroAdjacentTiles 1)")
+    check(choose_aggro("Guard1", [("Guard2", 1)], ADJACENT) == "Guard1", "G5: the tank that hit the member wins")
+    check(choose_aggro("", [("Guard2", 1), ("Guard3", 1)], ADJACENT) == "Guard2", "G5: next to a tank: that tank")
+    check(choose_aggro("", [("Guard2", 2)], ADJACENT) == "", "G5: a tank two tiles away draws no aggro")
 
 
 def fight_target(aggro, shared):
@@ -232,15 +246,16 @@ for path in ("source/game/CombatGroupRules.cpp", "source/game/CombatGroupManager
     check("CreatureSkill" not in read(path).replace("CreatureSkillTree", ""), "G5: no skill in " + path)
 # The roster plan (D11, D25) adds one taunt skill: tier 1 of the tank path Ironclad, the pre-skill of every tank. It is
 # the only taunt and lives in the tank group; there is no other aggro skill kind.
-taunt_blocks = [block for block in re.findall(r"^\[Skill\]\s*$(.*?)^\[/Skill\]", SKILLS_CFG, re.M | re.S)
-                if re.search(r"^Kind\s+TAUNT\s*$", block, re.M)]
-check(len(taunt_blocks) == 1 and re.search(r"^Id\s+TNK_A1\s*$", taunt_blocks[0], re.M) and
-      re.search(r"^Group\s+tank\s*$", taunt_blocks[0], re.M) and re.search(r"^Path\s+Ironclad\s*$", taunt_blocks[0], re.M)
-      and re.search(r"^Tier\s+1\s*$", taunt_blocks[0], re.M),
-      "G5: the only taunt skill is TNK_A1, tier 1 of the tank path Ironclad")
-check(not re.search(r"^Kind\s+TAUNT", "\n".join(re.findall(r"^\[TierFour\]\s*$(.*?)^\[/TierFour\]", SKILLS_CFG,
-                                                              re.M | re.S)), re.M), "G5: no tier 4 taunt")
-check(not re.search(r"^Kind\s+AGGRO", SKILLS_CFG, re.M), "G5: no aggro skill kind in creatureSkills.cfg")
+if SKILLS_CFG is not None:
+    taunt_blocks = [block for block in re.findall(r"^\[Skill\]\s*$(.*?)^\[/Skill\]", SKILLS_CFG, re.M | re.S)
+                    if re.search(r"^Kind\s+TAUNT\s*$", block, re.M)]
+    check(len(taunt_blocks) == 1 and re.search(r"^Id\s+TNK_A1\s*$", taunt_blocks[0], re.M) and
+          re.search(r"^Group\s+tank\s*$", taunt_blocks[0], re.M) and re.search(r"^Path\s+Ironclad\s*$", taunt_blocks[0], re.M)
+          and re.search(r"^Tier\s+1\s*$", taunt_blocks[0], re.M),
+          "G5: the only taunt skill is TNK_A1, tier 1 of the tank path Ironclad")
+    check(not re.search(r"^Kind\s+TAUNT", "\n".join(re.findall(r"^\[TierFour\]\s*$(.*?)^\[/TierFour\]", SKILLS_CFG,
+                                                                  re.M | re.S)), re.M), "G5: no tier 4 taunt")
+    check(not re.search(r"^Kind\s+AGGRO", SKILLS_CFG, re.M), "G5: no aggro skill kind in creatureSkills.cfg")
 
 # ------------------------------------------------------------------------------------------------ G6 formation
 
@@ -340,10 +355,11 @@ def should_retreat(hp, max_hp, enemy, share):
     return enemy and max_hp > 0 and hp / max_hp < share
 
 
-SHARE = float(group_block_words("GroupRetreatHealthShare")[0])
-check(should_retreat(SHARE * 100 - 1, 100, True, SHARE), "G7: below the share with an enemy in sight: retreat")
-check(not should_retreat(SHARE * 100 + 1, 100, True, SHARE), "G7: above the share: no retreat")
-check(not should_retreat(0, 100, False, SHARE), "G7: no enemy in sight: no retreat")
+if CONTENT:
+    SHARE = float(group_block_words("GroupRetreatHealthShare")[0])
+    check(should_retreat(SHARE * 100 - 1, 100, True, SHARE), "G7: below the share with an enemy in sight: retreat")
+    check(not should_retreat(SHARE * 100 + 1, 100, True, SHARE), "G7: above the share: no retreat")
+    check(not should_retreat(0, 100, False, SHARE), "G7: no enemy in sight: no retreat")
 
 find_retreat = function(MANAGER, "bool CombatGroupManager::findRetreatTile(")
 check(find_retreat.index("doorOptions") < find_retreat.index("roomOptions"), "G7: doors before rooms")
@@ -366,6 +382,11 @@ check("getRetreatTile(creature)" in retreat and "isAtGatheringTile(creature, *ga
 check("retreatFinished(arrived" in update_group and "GroupRetreatCooldownSeconds" in update_group,
       "G7: the group gathers again and the next retreat waits for the cooldown")
 
+if SKILLS_CFG is None:
+    content_packages.unchecked("check_group_combat_rules", ["config/creatureSkills.cfg"])
+if not CONTENT:
+    content_packages.unchecked("check_group_combat_rules", ["G3 roles of the skill groups, G5 aggro distance and G7 "
+                                                            "retreat share of the [GroupCombat] block of config/global.cfg"])
 elapsed = time.perf_counter() - START
 print('ODP_TEST_PHASE {"name":"rules","seconds":%.3f}' % elapsed)
 if FAILURES:
