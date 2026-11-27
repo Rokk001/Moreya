@@ -95,10 +95,14 @@ def skeleton_bones(name):
     return set(m.decode() for m in re.findall(rb'Weapon_[LR]|LeftHand|RightHand', data))
 
 
-elf = skeleton_bones('Elf')
-dark_elf = skeleton_bones('DarkElf')
-assert find_pull_hand(elf, 'Weapon_L') == 'Weapon_R', 'Elf: bow in the left hand, the right hand pulls'
-assert find_pull_hand(dark_elf, 'LeftHand') in ('Weapon_R', 'RightHand'), 'DarkElf: crossbow on the left hand'
+# The skeletons lie in the content package creatures; without the content they are named as not checked
+if content_packages.has_content(root):
+    elf = skeleton_bones('Elf')
+    dark_elf = skeleton_bones('DarkElf')
+    assert find_pull_hand(elf, 'Weapon_L') == 'Weapon_R', 'Elf: bow in the left hand, the right hand pulls'
+    assert find_pull_hand(dark_elf, 'LeftHand') in ('Weapon_R', 'RightHand'), 'DarkElf: crossbow on the left hand'
+else:
+    content_packages.unchecked('check_crossbow_arrow', ['models/Elf.skeleton and models/DarkElf.skeleton hands'])
 assert find_pull_hand({'Weapon_R'}, 'Weapon_R') == '', 'the weapon bone is never its own pulling hand'
 assert find_pull_hand({'Body'}, 'Weapon_L') == '', 'no hand bone: fallback'
 assert find_pull_hand({'Weapon_L', 'LeftHand'}, 'Spine') == '', 'unknown side: fallback'

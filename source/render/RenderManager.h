@@ -316,6 +316,12 @@ public:
     //! \brief A worker whose model has no pick of its own and no weapon in the right hand carries a pickaxe model
     void rrCreateWorkerTool(Creature* curCreature);
     void rrDestroyWorkerTool(Creature* curCreature);
+
+    //! \brief Tells which clip a cosmetic reaction shows on top of the clip of a creature (empty when it has ended),
+    //! so that the creature holds the prop of that clip exactly as long as it plays.
+    void rrSetReactionClip(Creature* creature, const std::string& clip);
+    //! \brief True while a creature holds a prop for a reaction clip: its own weapons and tool are put away then.
+    bool rrReactionHoldsProp(const Creature* creature) const;
     void rrCreateMapLight(MapLight* curMapLight, bool displayVisual);
     void rrDestroyMapLight(MapLight* curMapLight);
     void rrDestroyMapLightVisualIndicator(MapLight* curMapLight);
@@ -1209,6 +1215,53 @@ private:
     //! Gives a worker that plays the sweeping clip the cleaning broom in its right hand and puts its own tool away; any
     //! other clip takes the broom away and gives the tool back (INGAME-QS-10 K26)
     void updateCreatureCleaningBroom(Creature* creature);
+
+    //! \brief Moves the broom of one sweeping worker with its two hands.
+    void placeCleaningBroom(const std::string& objectName, const std::string& creatureName);
+    //! \brief Moves every cleaning broom with the hands that hold it; once per frame.
+    void updateCleaningBrooms();
+    //! The sweeping workers, as entity name and creature name joined by '|'
+    std::set<std::string> mBroomHolders;
+
+    //! \brief Gives the figure with that entity name the prop of the clip (Lean, Sharpen, HerbSniff, the jug of the
+    //! innkeeper's Pour) and takes any other clip prop away.
+    void updateClipProp(const std::string& objectName, const std::string& clip);
+    //! \brief Removes the clip prop of the figure with that entity name, if it has one.
+    void removeClipProp(const std::string& objectName);
+
+    //! \brief Hold of a clip prop that follows its hand in every frame: the prop sits in the frame of the hand bone
+    //! with this offset and rotation, at this scale, and its base ring never goes below the rest height.
+    struct FollowingClipProp
+    {
+        std::string mBoneName;
+        Ogre::Vector3 mOffset;
+        Ogre::Quaternion mRotation;
+        Ogre::Real mScale;
+        Ogre::Real mRestHeight;
+    };
+    //! \brief Gives the infirmary shaman with that entity name the rattle of RattleShake in her right hand.
+    void attachRattle(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton);
+    //! \brief Gives the infirmary shaman with that entity name the flask of PotionTaste in her left hand.
+    void attachFlask(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton);
+    //! \brief Puts the bucket of TripOverBucket on the floor before the feet of the infirmary shaman.
+    void placeTripBucket(const std::string& objectName, Ogre::Entity* holder);
+    //! \brief Gives the innkeeper with that entity name the jug of the Pour clip in his left hand.
+    void attachPourJug(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton);
+    //! \brief Moves the clip prop of one figure with the hand that holds it.
+    void placeFollowingClipProp(const std::string& objectName, const FollowingClipProp& hold);
+    //! \brief Moves every following clip prop with its hand; once per frame.
+    void updateFollowingClipProps();
+    //! The clip props that follow a hand, by the entity name of their holder
+    std::map<std::string, FollowingClipProp> mFollowingClipProps;
+    //! \brief Gives the tavern guest with that entity name the two dice of its dice outcome clip.
+    void attachDice(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton,
+        const std::string& clip);
+    //! \brief Moves the two dice of one guest: between its palms while it shakes them, on the table after the throw.
+    void placeDice(const std::string& objectName, const std::string& clip);
+    //! The guests that shake or have thrown dice: the clip they play, by their entity name
+    std::map<std::string, std::string> mDiceHolders;
+    //! Clip a reaction currently shows on a creature, by creature name
+    std::map<std::string, std::string> mReactionClips;
     //! Removes only the mug of a guest of a tavern, if the creature has one (the end of a seat blend out of a drink clip)
     void removeCreatureTavernMug(Creature* creature);
     //! Gives the creature the props of the clip it plays (mug in the right hand for Drink, circling birds for
