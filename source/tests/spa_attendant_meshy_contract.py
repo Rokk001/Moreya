@@ -38,7 +38,7 @@ MINIMUM = (-0.506374, -0.136942, 0.0)
 MAXIMUM = (0.506374, 0.136942, 0.980984)
 HASHES = {
     'models/PoolAttendant.mesh': '09fdb5196cd0ce66e46327305fcf1b83f2104fa817467af964954ae27977a85a',
-    'models/PoolAttendant.skeleton': '05d31d703d216dc55a99bf7de686f2c259b29b1b5210c4c676acb433e0b9ba9e',
+    'models/PoolAttendant.skeleton': '7eb039f0d92205a21cd7fac61c1c82f0bff336abf9ab210e7e4786eb2d09d477',
     TEXTURE: '3b1bd57732634572d3e46bbd45d474560b26576a9011ff8925ff9f8a722ab852',
 }
 # Elbows and knees with the bone below them (new rig names; former Forearm_R/Hand_R, Shin_R/Foot_R and left)
