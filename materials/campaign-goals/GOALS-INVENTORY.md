@@ -77,13 +77,13 @@ File: `levels/campaign/wing1/Brackenford.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1433 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
-| Script line 1434 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
-| Script line 1441 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
-| Script line 1450 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
-| Script line 1460 | `Action	objectiveid	1	brackenford-o05	Dig across the dry ford and clear the landing yard.` | yes |
-| Script line 1534 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
-| Script line 1632 | `Action	win	1` | yes |
+| Script line 1432 | `Action	objectiveid	1	brackenford-o01	Defeat the raid and its leader.` | yes |
+| Script line 1433 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
+| Script line 1440 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
+| Script line 1449 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
+| Script line 1459 | `Action	objectiveid	1	brackenford-o05	Dig across the dry ford and clear the landing yard.` | yes |
+| Script line 1533 | `Action	objectiveid	1	brackenford-o06	Claim the keep.` | yes |
+| Script line 1631 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -235,11 +235,11 @@ File: `levels/campaign/wing1/Coldwell.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1537 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
-| Script line 1538 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
-| Script line 1546 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
-| Script line 1561 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
-| Script line 1676 | `Action	win	1` | yes |
+| Script line 1536 | `Action	objectiveid	1	coldwell-o01	Defeat the raid and its leader.` | yes |
+| Script line 1537 | `Action	objectiveid	1	coldwell-o02	Reach the well plaza and its gold deposit.` | yes |
+| Script line 1545 | `Action	objectiveid	1	coldwell-o03	Mine 600 gold beneath the plaza.` | yes |
+| Script line 1560 | `Action	objectiveid	1	coldwell-o04	Break the keep's north gate.` | yes |
+| Script line 1675 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -435,10 +435,10 @@ File: `levels/campaign/wing1/Mossgate.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 767 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
-| Script line 774 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
-| Script line 784 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
-| Script line 867 | `Action	win	1` | yes |
+| Script line 766 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
+| Script line 773 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
+| Script line 783 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
+| Script line 866 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -556,6 +556,7 @@ Static supply/source/bridge/bank evidence only; actual construction, movement ov
 | Trigger `mainLakes` | `Action	objectivestate	1	silverdeep-main-lakes	reached`; conditions: `Cond	flag	mainLake1	1; Cond	flag	mainLake2	1; Cond	flag	mainLake3	1` | yes |
 | Trigger `mainRivals` | `Action	objectivestate	1	silverdeep-main-rivals	reached`; conditions: `Cond	roomtiles	2	DungeonTemple	<=	0; Cond	roomtiles	3	DungeonTemple	<=	0; Cond	roomtiles	4	DungeonTemple	<=	0; Cond	goalmet	1	KillAllEnemies` | yes |
 | Trigger `extraGallery` | `Action	objectivestate	1	silverdeep-extra-gallery	reached`; conditions: `Cond	region	1	Gallery` | yes |
+| Objective mapping | supply bed dimensions or overlap differ: Delver3 | no: requires design decision |
 
 ## Stormhaven
 
