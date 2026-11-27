@@ -17,6 +17,7 @@
 
 #include "render/LooseGoldMesh.h"
 
+#include "render/GoldHeapLayout.h"
 #include "render/TreasuryGoldMesh.h"
 
 #include <OgreManualObject.h>
@@ -40,6 +41,10 @@ const int HeapSectors = 12;
 const float Pi = 3.14159265f;
 // Texture repeats per tile unit, so the coins stay small
 const float TextureRepeat = 2.0f;
+// Coins of a floor heap of size 1: so many more for each further size (our gold heap model)
+const int FirstCoins = 8;
+const int CoinsPerSize = 10;
+const float CoinRadius = 0.06f;
 
 //! Radius of a coin heap on the floor, in tile units
 float heapRadius(int size)
@@ -110,7 +115,23 @@ void buildHeapMesh(Ogre::SceneManager* sceneManager, const std::string& resource
 {
     Ogre::ManualObject* object = sceneManager->createManualObject();
     object->begin(CoinMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-    addHeap(object, Ogre::Vector3(0.0f, 0.0f, 0.004f), heapRadius(size), heapHeight(size), size);
+    const float radius = heapRadius(size);
+    const float peak = heapHeight(size);
+    // A flat bed under the coins of the model, which give the heap its shape
+    addHeap(object, Ogre::Vector3(0.0f, 0.0f, 0.004f), radius * 0.85f, peak * 0.75f, size);
+    const int count = FirstCoins + CoinsPerSize * (size - 1);
+    for(int i = 0; i < count; ++i)
+    {
+        const GoldHeapLayout::Coin& coin = GoldHeapLayout::coins[i];
+        const float reach = radius - 0.6f * CoinRadius;
+        const float t = std::sqrt(coin.mX * coin.mX + coin.mY * coin.mY) * reach / (radius * 0.85f);
+        const float height = heapSurface(peak * 0.75f, size, t, std::atan2(coin.mY, coin.mX));
+        Ogre::Vector3 up(coin.mLeanX + 0.5f * coin.mX * t, coin.mLeanY + 0.5f * coin.mY * t, 1.0f);
+        up.normalise();
+        TreasuryGoldMesh::addHeapCoin(object, coin.mX * reach, coin.mY * reach,
+            height + 0.014f + 0.002f * static_cast<float>(i % 5), up.x, up.y, up.z, CoinRadius,
+            2.4f * static_cast<float>(i));
+    }
     object->end();
     object->convertToMesh(resourceName, "Graphics");
     sceneManager->destroyManualObject(object);
