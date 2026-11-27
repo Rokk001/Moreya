@@ -40,7 +40,7 @@ namespace
 //! workshop. The trap shows its own model only once it is mounted (a Trap entity); a door keeps its own model.
 const std::string TRAP_CRATE_MESH = "TrapCrate";
 
-//! rief The mesh a finished trap of this type shows while it lies in the workshop or is carried: the crate for a trap,
+//! \brief The mesh a finished trap of this type shows while it lies in the workshop or is carried: the crate for a trap,
 //! the door itself for a door.
 const std::string& getCraftedTrapMesh(TrapType type)
 {
