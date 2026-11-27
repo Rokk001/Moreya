@@ -18,14 +18,17 @@ sys.path.insert(0, os.path.join(REPO, 'scripts'))
 import content_packages  # noqa: E402
 
 # Budget
-# A full pile carries up to 16 coins (6 triangles each), 4 gems (8) and 8 spilled coins (4) on top of its round
-# surface (a fan of 16 sectors with 2 rings, 48 triangles): 216 triangles. The limit was raised from 150 on purpose for the "sea of coins" of the plan. It
-# stays cheap because the piles of a room are one static batch (two draw calls), the coins only exist at the detail
-# full, and piles far from the camera use the reduced mesh (16 triangles).
-MAX_TRIANGLES_PER_PILE = 250
-MAX_TRIANGLES_PER_HEAP = 150
-MAX_TRIANGLES_PER_SACK = 400
-MAX_TRIANGLES_100_TILE_ROOM = 25000
+# A full pile is built of the solid coins of the gold heap model (8 corners, 24 triangles each): at most 49 coins
+# over a square pile, 8 on top, 4 spilled and 2 gems on its surface grid (72 triangles): 1576 triangles. The limit
+# was raised from 250 on purpose for the coins of the model. It stays cheap because the piles of a room are one static batch (two draw calls), the coins only exist at the detail
+# full, and piles far from the camera use the reduced mesh (at most 32 triangles).
+MAX_TRIANGLES_PER_PILE = 1600
+MAX_TRIANGLES_PER_HEAP = 1100
+# The coin pouch is a shipped Meshy model (was a built mesh of at most 400); only workers and thieves carry one
+MAX_TRIANGLES_PER_SACK = 3300
+# Triangles of each of the four pouch meshes GoldSack_1..4 (counted once)
+SACK_MESH_TRIANGLES = 3280
+MAX_TRIANGLES_100_TILE_ROOM = 160000
 # Draw calls: settled piles are drawn by one static batch per room (two materials per batch)
 MAX_DRAW_CALLS_100_TILE_ROOM = 2
 MAX_DRAW_CALLS_400_TILE_ROOM = 2
@@ -70,18 +73,23 @@ def main():
     reduced_rings = constant(pile, 'ReducedRings')
     # The round surface: a fan of one triangle per sector in the middle and a band of two triangles per sector
     # between each pair of rings. The outer ring is the irregular foot; there is no tile-border band.
-    full_surface_tris = sectors * (1 + 2 * (full_rings - 1))
-    reduced_surface_tris = sectors * (1 + 2 * (reduced_rings - 1))
-    full_surface_verts = 1 + sectors * full_rings
-    reduced_surface_verts = 1 + sectors * reduced_rings
+    # A square pile (full, joined to full neighbours) has a grid over its tile instead of the round surface
+    full_cells = max(4, min(full_rings * 3, 12))
+    reduced_cells = max(4, min(reduced_rings * 3, 12))
+    full_surface_tris = max(sectors * (1 + 2 * (full_rings - 1)), 2 * full_cells * full_cells)
+    reduced_surface_tris = max(sectors * (1 + 2 * (reduced_rings - 1)), 2 * reduced_cells * reduced_cells)
+    full_surface_verts = max(1 + sectors * full_rings, (full_cells + 1) * (full_cells + 1))
+    reduced_surface_verts = max(1 + sectors * reduced_rings, (reduced_cells + 1) * (reduced_cells + 1))
     heap_rings = constant(loose, 'HeapRings')
     heap_sectors = constant(loose, 'HeapSectors')
-    sack_sectors = constant(loose, 'SackSectors')
-    profile_count = constant(loose, 'ProfileCount')
 
     layer = read('source/rooms/TreasuryGoldLayer.h')
     coin_sides = constant(pile, 'CoinSides')
-    spill_sides = constant(pile, 'SpillSides')
+    heap_coin_sides = constant(pile, 'HeapCoinSides')
+    pile_coins = max(constant(pile, 'SquareCoinCells') ** 2, constant(pile, 'RoundCoins4'))
+    # A solid coin: its face and an edge of two triangles per corner
+    coin_tris = 3 * heap_coin_sides
+    coin_verts = 1 + 3 * heap_coin_sides
     gem_sides = constant(pile, 'GemSides')
     # A cut gem: a table fan, a crown of two triangles per side and a pavilion of one per side
     gem_faces = 4 * gem_sides
@@ -91,17 +99,19 @@ def main():
     max_spill_coins = 4 * int(setting(settings, 'spillCoinsFull'))
     scatter_coins = int(setting(settings, 'scatterCoins'))
 
-    # Coins on top, gems and spilled coins lie in a second section (a second draw call) of the full pile mesh
-    detail_tris = max_top_coins * coin_sides + max_gems * gem_faces + max_spill_coins * spill_sides
-    detail_verts = max_top_coins * (coin_sides + 1) + max_gems * gem_verts + max_spill_coins * (spill_sides + 1)
+    # The heap coins, the coins on top and the spilled coins lie in the pile section; the gems in a second section
+    # (a second draw call) of the full pile mesh
+    coins = pile_coins + max_top_coins + max_spill_coins
+    detail_tris = max_gems * gem_faces
+    detail_verts = max_gems * gem_verts
     scatter_tris = scatter_coins * coin_sides
 
-    pile_tris = {'full': full_surface_tris + detail_tris, 'reduced': reduced_surface_tris}
-    pile_verts = {'full': full_surface_verts + detail_verts, 'reduced': reduced_surface_verts}
-    heap_tris = 2 * heap_rings * heap_sectors
-    heap_verts = (heap_rings + 1) * heap_sectors
-    sack_tris = 2 * (profile_count - 1) * sack_sectors + heap_tris
-    sack_verts = profile_count * sack_sectors + heap_verts
+    pile_tris = {'full': full_surface_tris + coins * coin_tris + detail_tris, 'reduced': reduced_surface_tris}
+    pile_verts = {'full': full_surface_verts + coins * coin_verts + detail_verts, 'reduced': reduced_surface_verts}
+    loose_coins = constant(loose, 'FirstCoins') + 3 * constant(loose, 'CoinsPerSize')
+    heap_tris = 2 * heap_rings * heap_sectors + loose_coins * coin_tris
+    heap_verts = (heap_rings + 1) * heap_sectors + loose_coins * coin_verts
+    sack_tris = SACK_MESH_TRIANGLES
 
     failures = []
 
@@ -137,14 +147,14 @@ def main():
           'a room may show %d effects at once' % (splash + dust + ambient))
 
     print('mesh                 triangles  vertices')
-    print('pile (full)          %9d  %8d  (of that %d triangles of coins and gems in a second section)' % (
+    print('pile (full)          %9d  %8d  (of that %d triangles of gems in a second section)' % (
         pile_tris['full'], pile_verts['full'], detail_tris))
-    print('                     = %d surface + %d top coins * %d + %d gems * %d + %d spilled coins * %d' % (
-        full_surface_tris, max_top_coins, coin_sides, max_gems, gem_faces, max_spill_coins, spill_sides))
+    print('                     = %d surface + (%d heap + %d top + %d spilled coins) * %d + %d gems * %d' % (
+        full_surface_tris, pile_coins, max_top_coins, max_spill_coins, coin_tris, max_gems, gem_faces))
     print('empty tile scatter   %9d' % scatter_tris)
     print('pile (reduced)       %9d  %8d' % (pile_tris['reduced'], pile_verts['reduced']))
     print('floor heap           %9d  %8d' % (heap_tris, heap_verts))
-    print('carried sack         %9d  %8d' % (sack_tris, sack_verts))
+    print('carried sack         %9d  (shipped mesh)' % sack_tris)
     print()
     print('draw calls per room (a square room; before = one object per tile with a pile section and a coin/gem')
     print('section, after = one static batch per room)')

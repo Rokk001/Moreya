@@ -81,9 +81,9 @@ assert 'inline float pileRadius(' in layer and 'return 0.16f;' in layer and 'ret
 assert 'pileRadius(shape.mLevel) * (0.92f + 0.08f * std::sin(' in layer
 assert 'pileRadius(shape.mLevel)' in mesh.split('void addDetail')[1]
 assert '(0.5f * patch.mStrength)' in render.split('void RenderManager::setTreasuryGlowLight')[1].split('void RenderManager::destroyTreasuryGlowLight')[0]
-# Coins and gems stay readable: rounded coins with a lighter middle, a radius of at least 0.05 on top of the gold
+# Coins and gems stay readable: the coins of the heap model have a radius of 0.075; floor coins keep their rounded look
 assert 'CoinDome' in mesh and 'CoinRimShade' in mesh and 'CoinRound' in mesh
-assert 'TopCoinRadius = 0.06f' in mesh and 'GemSize = 0.04f' in mesh
+assert 'HeapCoinRadius = 0.075f' in mesh and 'GemSize = 0.04f' in mesh and 'void addHeapCoin(' in mesh
 
 # Rain over the whole tile, sliding, rolling and sparkling coins.
 if particles is not None:

@@ -1,5 +1,6 @@
 """Exercise the treasury gold layer: fill steps, the pile names that carry the level to the clients
-(old names keep working), rounded pile footprints, and the wiring of the server,
+(old names keep working), four heap sizes, full piles that
+join their full neighbours without a step, and the wiring of the server,
 the renderer and the 'Treasury detail' option.
 The pile material, its texture and their CREDITS row lie in the content packages and in the CREDITS of the content
 repository (scripts/content_packages.py); without the content they are named as not checked. The compiled probe needs
@@ -59,6 +60,7 @@ assert 'GoldstackLv1' in read('source/entities/TreasuryObject.cpp')
 
 probe = r"""
 #include "rooms/TreasuryGoldLayer.h"
+#include <cmath>
 #include <iostream>
 #include <set>
 
@@ -138,20 +140,41 @@ int main()
     sample.mLevel = 5;
     check(meshName(sample) == "TreasuryGold_5_0000_0", "name format is stable");
 
-    // Heights and footprints: taller and wider with more gold, with the tile border left bare
+    // Heights and footprints: four sizes, taller and wider with more gold; full neighbours join
     for(int level = 1; level <= maxLevel; ++level)
     {
         float center = heightAt(flatShape(level, 0), 0.5f, 0.5f);
         check(center > heightAt(PileShape(), 0.5f, 0.5f), "a pile is higher than the bare floor");
-        if(level > 1)
-            check(center > heightAt(flatShape(level - 1, 0), 0.5f, 0.5f), "each step is higher than the one below");
+        if(level > 1 && drawnLevel(level) != drawnLevel(level - 1))
+            check(center > heightAt(flatShape(level - 1, 0), 0.5f, 0.5f), "each size is higher than the one below");
     }
+    std::set<int> sizes;
+    for(int level = 1; level <= maxLevel; ++level)
+        sizes.insert(drawnLevel(level));
+    check(sizes.size() == 4, "the seven steps are drawn in four sizes");
+    check(drawnLevel(0) == 0 && drawnLevel(1) == 2 && drawnLevel(3) == 4 && drawnLevel(5) == 6 && drawnLevel(7) == 7,
+        "steps 1-2, 3-4, 5-6 and 7 share a size");
 
     check(pileRadius(1) < pileRadius(maxLevel), "a full pile has a wider footprint");
     check(pileRadius(maxLevel) < 0.5f, "a full pile stays inside its tile");
     PileShape full = flatShape(maxLevel, 0);
-    check(heightAt(full, 0.0f, 0.5f) < 0.01f && heightAt(full, 1.0f, 0.5f) < 0.01f,
-        "a full pile leaves both tile edges bare");
+    check(isSquare(full) && heightAt(full, 0.0f, 0.5f) > 0.15f && heightAt(full, 1.0f, 0.5f) > 0.15f,
+        "a full pile joined to full neighbours reaches both tile edges");
+    // Two neighbouring full tiles (the eastern one open to the east) meet without a step along their shared edge
+    PileShape east = flatShape(maxLevel, 2);
+    east.mCorner[1] = 0;
+    east.mCorner[2] = 0;
+    bool seamless = true;
+    for(int i = 0; i <= 10; ++i)
+        if(std::fabs(heightAt(full, 1.0f, i / 10.0f) - heightAt(east, 0.0f, i / 10.0f)) > 0.0001f)
+            seamless = false;
+    check(seamless, "full neighbours have the same height along their shared edge");
+    check(heightAt(east, 1.0f, 0.5f) < 0.01f, "the open edge of a joined pile lies on the floor");
+    PileShape lone;
+    lone.mLevel = maxLevel;
+    PileShape ring = full;
+    ring.mRing = true;
+    check(!isSquare(lone) && !isSquare(ring) && !isSquare(flatShape(6, 0)), "lone, ring and smaller piles stay round");
     check(heightAt(flatShape(1, 0), 0.75f, 0.5f) < 0.01f && heightAt(full, 0.75f, 0.5f) > 0.01f,
         "a small pile exposes floor that a full pile covers");
     check(pileRadiusAt(full, 1.0f, 0.5f) != pileRadiusAt(full, 0.5f, 1.0f),

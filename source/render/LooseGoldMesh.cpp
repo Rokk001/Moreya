@@ -17,6 +17,7 @@
 
 #include "render/LooseGoldMesh.h"
 
+#include "render/GoldHeapLayout.h"
 #include "render/TreasuryGoldMesh.h"
 
 #include <OgreManualObject.h>
@@ -31,7 +32,6 @@ namespace LooseGoldMesh
 namespace
 {
 const std::string CoinMaterial = "TreasuryGoldPile";
-const std::string SackMaterial = "GoldSack";
 const std::string StackPrefix = "GoldstackLv";
 const std::string HeapPrefix = "GoldHeap_";
 const std::string SackPrefix = "GoldSack_";
@@ -41,6 +41,10 @@ const int HeapSectors = 12;
 const float Pi = 3.14159265f;
 // Texture repeats per tile unit, so the coins stay small
 const float TextureRepeat = 2.0f;
+// Coins of a floor heap of size 1: so many more for each further size (our gold heap model)
+const int FirstCoins = 8;
+const int CoinsPerSize = 10;
+const float CoinRadius = 0.06f;
 
 //! Radius of a coin heap on the floor, in tile units
 float heapRadius(int size)
@@ -111,98 +115,28 @@ void buildHeapMesh(Ogre::SceneManager* sceneManager, const std::string& resource
 {
     Ogre::ManualObject* object = sceneManager->createManualObject();
     object->begin(CoinMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-    addHeap(object, Ogre::Vector3(0.0f, 0.0f, 0.004f), heapRadius(size), heapHeight(size), size);
+    const float radius = heapRadius(size);
+    const float peak = heapHeight(size);
+    // A flat bed under the coins of the model, which give the heap its shape
+    addHeap(object, Ogre::Vector3(0.0f, 0.0f, 0.004f), radius * 0.85f, peak * 0.75f, size);
+    const int count = FirstCoins + CoinsPerSize * (size - 1);
+    for(int i = 0; i < count; ++i)
+    {
+        const GoldHeapLayout::Coin& coin = GoldHeapLayout::coins[i];
+        const float reach = radius - 0.6f * CoinRadius;
+        const float t = std::sqrt(coin.mX * coin.mX + coin.mY * coin.mY) * reach / (radius * 0.85f);
+        const float height = heapSurface(peak * 0.75f, size, t, std::atan2(coin.mY, coin.mX));
+        Ogre::Vector3 up(coin.mLeanX + 0.5f * coin.mX * t, coin.mLeanY + 0.5f * coin.mY * t, 1.0f);
+        up.normalise();
+        TreasuryGoldMesh::addHeapCoin(object, coin.mX * reach, coin.mY * reach,
+            height + 0.014f + 0.002f * static_cast<float>(i % 5), up.x, up.y, up.z, CoinRadius,
+            2.4f * static_cast<float>(i));
+    }
     object->end();
     object->convertToMesh(resourceName, "Graphics");
     sceneManager->destroyManualObject(object);
 }
 
-//! Profile of the sack body: radius and height as a share of the sack radius and height
-struct ProfilePoint
-{
-    float mRadius;
-    float mHeight;
-};
-
-const int ProfileCount = 8;
-const ProfilePoint SackProfile[ProfileCount] =
-{
-    {0.00f, 0.00f},
-    {0.70f, 0.02f},
-    {1.00f, 0.22f},
-    {1.00f, 0.50f},
-    {0.80f, 0.72f},
-    {0.38f, 0.86f},
-    {0.30f, 0.90f},
-    {0.52f, 1.00f}
-};
-const int SackSectors = 10;
-
-//! Radius of a gold sack of the given size, in tile units
-float sackRadius(int size)
-{
-    return 0.07f + 0.025f * static_cast<float>(size);
-}
-
-//! Height of a gold sack of the given size, in tile units
-float sackHeight(int size)
-{
-    return 0.14f + 0.04f * static_cast<float>(size);
-}
-
-//! Builds the mesh of a gold sack of the given size, with the coins above its mouth, and registers it under the resource name
-void buildSackMesh(Ogre::SceneManager* sceneManager, const std::string& resourceName, int size)
-{
-    const float radius = sackRadius(size);
-    const float height = sackHeight(size);
-
-    Ogre::ManualObject* object = sceneManager->createManualObject();
-    object->begin(SackMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-    for(int p = 0; p < ProfileCount; ++p)
-    {
-        // Normal of the profile: perpendicular to the line to the next point
-        const int from = (p + 1 < ProfileCount) ? p : p - 1;
-        const float dr = (SackProfile[from + 1].mRadius - SackProfile[from].mRadius) * radius;
-        const float dh = (SackProfile[from + 1].mHeight - SackProfile[from].mHeight) * height;
-        const float length = std::sqrt(dr * dr + dh * dh);
-        const float normalRadius = (length > 0.0f) ? dh / length : 1.0f;
-        const float normalHeight = (length > 0.0f) ? -dr / length : 0.0f;
-
-        for(int sector = 0; sector < SackSectors; ++sector)
-        {
-            const float angle = 2.0f * Pi * static_cast<float>(sector) / static_cast<float>(SackSectors);
-            const float r = SackProfile[p].mRadius * radius;
-            object->position(std::cos(angle) * r, std::sin(angle) * r, SackProfile[p].mHeight * height);
-            Ogre::Vector3 normal(std::cos(angle) * normalRadius, std::sin(angle) * normalRadius, normalHeight);
-            normal.normalise();
-            object->normal(normal);
-            object->textureCoord(static_cast<float>(sector) / static_cast<float>(SackSectors) * 2.0f,
-                                 SackProfile[p].mHeight * 2.0f);
-        }
-    }
-    for(int p = 0; p + 1 < ProfileCount; ++p)
-    {
-        for(int sector = 0; sector < SackSectors; ++sector)
-        {
-            const int nextSector = (sector + 1) % SackSectors;
-            const int a = p * SackSectors + sector;
-            const int b = p * SackSectors + nextSector;
-            const int c = (p + 1) * SackSectors + nextSector;
-            const int d = (p + 1) * SackSectors + sector;
-            object->triangle(a, b, c);
-            object->triangle(a, c, d);
-        }
-    }
-    object->end();
-
-    // The coins that show above the mouth of the sack
-    object->begin(CoinMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-    addHeap(object, Ogre::Vector3(0.0f, 0.0f, height * 0.97f), radius * 0.5f, radius * 0.45f, size);
-    object->end();
-
-    object->convertToMesh(resourceName, "Graphics");
-    sceneManager->destroyManualObject(object);
-}
 }
 
 int sizeFromStackName(const std::string& meshName)
@@ -234,9 +168,7 @@ std::string prepareSack(Ogre::SceneManager* sceneManager, const std::string& mes
     if(size == 0 || TreasuryGoldMesh::getDetail() == TreasuryGoldMesh::Detail::off)
         return std::string();
 
-    const std::string name = SackPrefix + static_cast<char>('0' + size);
-    if(!Ogre::MeshManager::getSingleton().resourceExists(name + ".mesh", "Graphics"))
-        buildSackMesh(sceneManager, name + ".mesh", size);
-    return name;
+    // The coin pouches are shipped meshes (GoldSack_1..4, material GoldSack)
+    return SackPrefix + static_cast<char>('0' + size);
 }
 }
