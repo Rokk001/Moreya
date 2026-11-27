@@ -46,8 +46,10 @@ def clips(credits):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     creatures = read('config/creatures.cfg')
-    scared = ('Rat','Roach','Spider','CaveHornet','Goblin','Adventurer','Elf','Gnome','Dwarf1','Dwarf2')
-    hunters = ('PitDemon','Troll','Skeleton','RunelordDwarf','Knight','Defender')
+    # Roster change: Witch, Ghoul and Hunter take the fear of Roach, Spider and Dwarf1; the Banshee (successor of the
+    # Rat) is not afraid of ghosts and hunts them in the ghost room instead (as in check_ghost_config.py)
+    scared = ('Witch','Ghoul','CaveHornet','Goblin','Adventurer','Elf','Gnome','Hunter','Dwarf2')
+    hunters = ('PitDemon','Troll','Skeleton','RunelordDwarf','Knight','Defender','Banshee')
     for creature in scared+hunters:
         block = next(block for block in re.findall(r'\[Creature\](.*?)\[/Creature\]',creatures,re.S)
             if re.search(r'^\s*Name\s+'+creature+r'\s*$',block,re.M))

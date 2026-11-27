@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE(orc_tooltips)
     const std::vector<std::string>& tierFour = view.mTierFour.mTooltip;
     BOOST_REQUIRE_EQUAL(tierFour.size(), 4u);
     BOOST_CHECK_EQUAL(tierFour[0], std::string("Iron Will"));
-    BOOST_CHECK_EQUAL(tierFour[1], std::string("Effect: Defense (self) 20"));
+    BOOST_CHECK_EQUAL(tierFour[1], std::string("Effect: Defense (self) 39.862"));
     BOOST_CHECK_EQUAL(tierFour[2], std::string("Mana: 35"));
     BOOST_CHECK_EQUAL(tierFour[3], std::string("Cooldown: 140 turns"));
 }
