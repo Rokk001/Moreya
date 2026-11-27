@@ -39,12 +39,6 @@ enum class Detail
     off
 };
 
-//! \brief Adds one solid coin of the gold heap model to the open section of an object with the material
-//! TreasuryGoldPile: its middle (x, y, z), the direction its face looks (upX, upY, upZ, of length 1), its radius
-//! and the turn of its face.
-void addHeapCoin(Ogre::ManualObject* object, float x, float y, float z, float upX, float upY, float upZ,
-    float radius, float turn);
-
 //! \brief Reads the detail option text ("full", "reduced" or "off"); anything else means full.
 Detail detailFromString(const std::string& text);
 //! \brief The option text of the detail ("full", "reduced" or "off").
