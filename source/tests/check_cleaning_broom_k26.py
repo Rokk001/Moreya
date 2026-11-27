@@ -9,11 +9,13 @@ Three parts:
       rotate, times scale, down the bone hierarchy) at every key:
       - the twig tips sweep the floor: lowest broom point between -0.02 and +0.12 x height, on the floor (<= 0.01 x
         height) in at least 40 % of the keys, and while on the floor the tips travel sideways over at least 0.30 x height;
-      - both hands hold the handle: Weapon_L (the left fist) lies within 0.02 x height of the handle axis, above the
-        right hand (between 0.15 and 0.30 broom lengths up the handle from the right grip);
-      - the kobold's own pick (part of its model, Pick bone) is hidden for the whole clip (scale <= 0.01) and shown in
-        Idle, Walk, Dig and Claim (scale 1);
-      - clip list and the Clean length 1.6 s unchanged (Global Constraint 4);
+      - both hands hold the handle: the right fist (the bind place of Weapon_R on its hand; the clip may slide the
+        broom along its handle through that hand) and Weapon_L (the left fist) lie within 0.02 x height of the handle
+        axis, the right fist on the handle above the twigs, the left one below it (approved sweep of 2026-11-27: right
+        hand on top) between 0.15 and 0.30 broom lengths down the handle from the right fist;
+      - a rig with its own pick (part of its model, Pick bone) hides it for the whole clip (scale <= 0.01) and shows it
+        in Idle, Walk, Dig and Claim (scale 1); the Meshy worker rigs have no Pick bone;
+      - clip count of each rig and the Clean length 3.967 s (the approved sweep, two strokes);
       - the broom: at most 600 triangles, two textured materials CleaningBroom and CleaningBroom/Twigs without
         specular, texture CleaningBroom.png 512 x 512 with surface detail (luminance std >= 6), dark dungeon look
         (STYLE-GUIDE.md: mean luminance 45-95, mean saturation <= 0.45, p99.5 channel <= 170).
@@ -27,8 +29,8 @@ Three parts:
       Room::needsCleaning run with the [Dirt] values of global.cfg: a tile below DirtVisibleFrom is not cleaned, every
       visible stain (stage 1, 2, 3) is; a room whose mean is far below stage 2 but has one visible stain needs cleaning,
       a room with only invisible dirt does not, a prison never.
-Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 328 triangles (limit 600), Clean 1.6 s,
-44 clips in Kobold.skeleton and 53 in Dwarf1.skeleton, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
+Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 328 triangles (limit 600), Clean 3.967 s,
+44 clips in Kobold.skeleton and 50 in Dwarf1.skeleton, handle top 0.305 and twigs from 0.6 broom lengths, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
 The probe compiles with cl, so it runs in the compile phase of the integration; `--no-compile` runs the other parts.
 Without --assets the models, materials and textures are read from the public tree or the content packages
 (scripts/content_packages.py); without the content the broom (core-models) and the worker rigs (creatures) are named
@@ -55,7 +57,9 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
 ASSETS =Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
 BROOM_SHARE = 0.88
-CLIP_COUNTS = {'Kobold': 44, 'Dwarf1': 53}
+CLIP_COUNTS = {'Kobold': 44, 'Dwarf1': 50}
+CLEAN_SECONDS = 119 / 30.0
+HANDLE_TOP, TWIGS_FROM = 0.305, 0.6
 fails = []
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 work = Path(tempfile.mkdtemp(prefix='cleaning_broom_'))
@@ -304,13 +308,15 @@ for rig in ('Kobold', 'Dwarf1'):
     if 'Clean' not in skeleton.clips:
         fail('%s: no Clean clip' % rig)
         continue
-    if abs(skeleton.clips['Clean'][0] - 1.6) > 1e-4:
-        fail('%s: Clean lasts %.3f s, expected 1.6' % (rig, skeleton.clips['Clean'][0]))
+    if abs(skeleton.clips['Clean'][0] - CLEAN_SECONDS) > 1e-3:
+        fail('%s: Clean lasts %.3f s, expected %.3f' % (rig, skeleton.clips['Clean'][0], CLEAN_SECONDS))
+    has_pick = 'Pick' in skeleton.bones
     zs = [p[2] for p in positions(mesh_root)]
     height = max(zs) - min(zs)
     scale = BROOM_SHARE * height
     info = {'height': round(height, 4), 'keys': 0, 'on_floor': 0}
     lows, floor_x, left_off, left_along, pick_scale = [], [], [], [], []
+    right_off, right_along = [], []
     for t in skeleton.key_times('Clean'):
         world = skeleton.pose('Clean', t)
         grip, orientation, _scale = world['Weapon_R']
@@ -322,11 +328,18 @@ for rig in ('Kobold', 'Dwarf1'):
             lows.append(low[2] / height)
             if low[2] <= 0.01 * height:
                 floor_x.append(low[0] / height)
+        hand_position, hand_turn, hand_scale = world[skeleton.parent['Weapon_R']]
+        bind = skeleton.bones['Weapon_R'][0]
+        fist = add(hand_position, qrot(hand_turn, (bind[0] * hand_scale[0], bind[1] * hand_scale[1], bind[2] * hand_scale[2])))
+        right = sub(fist, grip)
+        right_at = dot(right, axis)
+        right_along.append(right_at / scale)
+        right_off.append(length(sub(right, mul(axis, right_at))) / height)
         left = sub(world['Weapon_L'][0], grip)
         along = dot(left, axis)
-        left_along.append(-along / scale)
+        left_along.append((along - right_at) / scale)
         left_off.append(length(sub(left, mul(axis, along))) / height)
-        if rig == 'Kobold':
+        if has_pick:
             pick_scale.append(max(world['Pick'][2]))
         info['keys'] += 1
     if broom is not None and lows:
@@ -341,13 +354,19 @@ for rig in ('Kobold', 'Dwarf1'):
         if not floor_x or max(floor_x) - min(floor_x) < 0.30:
             fail('%s: on the floor the twigs travel sideways over %.3f x height (at least 0.30)' %
                  (rig, (max(floor_x) - min(floor_x)) if floor_x else 0.0))
-    info.update({'left_off_max': round(max(left_off), 4), 'left_along': [round(min(left_along), 3), round(max(left_along), 3)]})
+    info.update({'left_off_max': round(max(left_off), 4), 'left_along': [round(min(left_along), 3), round(max(left_along), 3)],
+                 'right_off_max': round(max(right_off), 4), 'right_along': [round(min(right_along), 3), round(max(right_along), 3)]})
     if max(left_off) > 0.02:
         fail('%s: the left hand is %.3f x height away from the handle' % (rig, max(left_off)))
+    if max(right_off) > 0.02:
+        fail('%s: the right hand is %.3f x height away from the handle' % (rig, max(right_off)))
+    if min(right_along) < -HANDLE_TOP or max(right_along) + max(left_along) > TWIGS_FROM:
+        fail('%s: a hand leaves the handle (right %.2f..%.2f, left %.2f below it; handle -%.3f..%.2f)' %
+             (rig, min(right_along), max(right_along), max(left_along), HANDLE_TOP, TWIGS_FROM))
     if min(left_along) < 0.15 or max(left_along) > 0.30:
-        fail('%s: the left hand holds the handle %.2f-%.2f broom lengths above the right one (0.15-0.30)' %
+        fail('%s: the left hand holds the handle %.2f-%.2f broom lengths below the right one (0.15-0.30)' %
              (rig, min(left_along), max(left_along)))
-    if rig == 'Kobold':
+    if has_pick:
         info['pick_scale_max'] = max(pick_scale)
         if max(pick_scale) > 0.01:
             fail('Kobold: its own pick shows while it sweeps (Pick scale %.3f)' % max(pick_scale))

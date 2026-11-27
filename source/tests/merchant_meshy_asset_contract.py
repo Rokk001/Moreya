@@ -53,11 +53,12 @@ MINIMUM = (-0.6352, -0.198587, 0.0)
 MAXIMUM = (0.651964, 0.170507, 1.29516)
 HASHES = {
     'models/Merchant.mesh': 'ebe09388bfb9b584e08da76c9ea4ded14e89f934eb4653b29d777b498a6f997c',
-    'models/Merchant.skeleton': '770d4c8b39e0806af8dacd5aaed4620f18e9e734e4a51344992025d5f162d742',
+    'models/Merchant.skeleton': '7d811fbd01866d106293fd938262c798284bbce141a24927b3f912bffa0a4d85',
     TEXTURE: '3f28d6fbff3a40e8404000b8fe6db7e8e0d1b444aa8fd32ae1da8d891399db4b',
 }
 # The clips the game plays for the merchant (unchanged from the merchant of 2026-11-15)
-CLIPS = approved.CLIPS
+# CountGold is the clip approved on 2026-11-27 (two coins in a 2.0 s loop); the other lengths stay as approved
+CLIPS = dict(approved.CLIPS, CountGold=2.0)
 BONES = ('Hips', 'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase', 'RightUpLeg', 'RightLeg', 'RightFoot',
          'RightToeBase', 'Spine02', 'Spine01', 'Spine', 'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'neck',
          'Head', 'head_end', 'headfront', 'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand')
