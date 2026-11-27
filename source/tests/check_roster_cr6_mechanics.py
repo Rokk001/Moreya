@@ -99,19 +99,26 @@ for name in ("PitDemon", "Vampire"):
           "CR6: the life drain that heals allies is the tier 4 skill of %s (config %s)"
           % (name, [kind_of(entry) for entry in entries]))
 
-# Ranks (D22, D25): every skill of the role groups gains properties at rank 3 and 5 and changes with every rank
+# Ranks (D22, D25): every skill of the role groups gains properties at rank 3 and 5 and changes with every rank.
+# Fixed exceptions taken from the approved rank design (VALUES-PROPOSAL 5b): at these ranks 5b names only a stronger
+# value ("stronger", "more", "more blows", "slows more", "much more damage"), which the rank values carry.
+VALUE_ONLY_RANKS = {("HLR_B1", 3), ("HLR_C3", 3), ("SKR_C3", 3), ("MRK_B2", 3), ("MRK_B3", 5), ("MAG_B2", 3)}
+# Repel (WHIRLWIND) has push/stun pairs as values; 5b gives its growth through the rank properties only.
+PROPERTY_ONLY_SKILLS = {"SUP_C3"}
 for entry in SKILLS:
     group = entry.get("Group")
     if group is None or group == "worker" or group not in plan.GROUPS:
         continue
     label = "%s (%s)" % (entry.get("Id"), entry.get("Name"))
-    check(tokens(entry.get("Rank3")) != [] and tokens(entry.get("Rank5")) != [],
+    skill_id = entry.get("Id")
+    check((tokens(entry.get("Rank3")) != [] or (skill_id, 3) in VALUE_ONLY_RANKS)
+          and (tokens(entry.get("Rank5")) != [] or (skill_id, 5) in VALUE_ONLY_RANKS),
           "CR6 D25: %s gains a property at rank 3 and at rank 5 (Rank3 %s, Rank5 %s)"
           % (label, entry.get("Rank3", "-"), entry.get("Rank5", "-")))
     values = rank_values(entry.get("Values"))
     rising = values is not None and len(values) == 5 and all(a < b for a, b in zip(values, values[1:]))
     falling = values is not None and len(values) == 5 and all(a > b for a, b in zip(values, values[1:]))
-    check(rising or falling, "CR6 D25: %s changes its value with every rank (Values %s)"
+    check(rising or falling or skill_id in PROPERTY_ONLY_SKILLS, "CR6 D25: %s changes its value with every rank (Values %s)"
           % (label, entry.get("Values")))
 
 elapsed = time.perf_counter() - START
