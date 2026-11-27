@@ -59,10 +59,12 @@ const std::string boneProfile="BONE_PROFILE";
 std::map<unsigned short,Ogre::AxisAlignedBox> boneBounds,lowBoneBounds;
 // The carried weapon part that the walking row leaves out (decision of the plan: the Defender keeps its walking radius
 // of 0.37 with the glaive, as the worker kept its rows; the long weapons of the roster follow it: the Hunter's spear, the
-// Shadow Lord's sword and the Paladin's mace keep the radius of their bodies): the meshes and the index of their first
+// Shadow Lord's sword, the Paladin's mace, the Minotaurus' double axe and the Cyclops' club keep the radius of
+// their bodies): the meshes and the index of their first
 // weapon submesh (the weapon parts are appended after the body, the probe loads no material scripts, so the part is
 // found by its index)
-const std::set<std::string> WALKING_RADIUS_CARRIED_MESHES={"Defender.mesh","Hunter.mesh","ShadowLord.mesh","Paladin.mesh"};
+const std::set<std::string> WALKING_RADIUS_CARRIED_MESHES={"Defender.mesh","Hunter.mesh","ShadowLord.mesh","Paladin.mesh",
+ "Minotaur.mesh","Cyclops.mesh"};
 const unsigned WALKING_RADIUS_CARRIED_FIRST_SUB=1;
 // Largest XY distance of the skinned vertices of the current pose (body only); also fills the pose bounds and, over
 // every part, the height bands
@@ -71,8 +73,8 @@ float radius(Ogre::Entity* entity){
  float result=0;poseBounds.setNull();
  for(unsigned sub=0;sub<entity->getNumSubEntities();++sub){
   auto* part=entity->getSubEntity(sub);
-  // A carried weapon part (the Defender's glaive, the Hunter's spear, the Shadow Lord's sword, the Paladin's mace) is
-  // not body: it stays out of the walking row, the body bands see it
+  // A carried weapon part (the Defender's glaive, the Hunter's spear, the Shadow Lord's sword, the Paladin's mace, the
+  // Minotaurus' double axe, the Cyclops' club) is not body: it stays out of the walking row, the body bands see it
   const bool carried=WALKING_RADIUS_CARRIED_MESHES.count(entity->getMesh()->getName())!=0&&
    sub>=WALKING_RADIUS_CARRIED_FIRST_SUB;
   auto* data=part->getSubMesh()->useSharedVertices?entity->_getSkelAnimVertexData():part->_getSkelAnimVertexData();
