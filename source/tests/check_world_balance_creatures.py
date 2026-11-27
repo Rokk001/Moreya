@@ -19,39 +19,39 @@ from combat_sim import Roster, fight_group
 # Creature table: type, FeeBase, FeePerLevel, MinHP, attack line, the six damage columns of that line
 # (phyMin phyMax magMin magMax eleMin eleMax) and the SkillDamageFactor of the type.
 TABLE = """
-Adventurer 50 8 35.5 Melee 0 0 0 0 6.21 8.52 1.0303
-Cultist 50 8 35.5 Melee 0 0 6.29 8.39 0 0 0.9773
-Ghoul 50 8 30.2 Melee 9 13 0 0 0 0 1.0478
-Gnome 50 8 35.5 MissileLaunch 0 0 0 0 6 8 1.0134
-Knight 50 8 35.5 Melee 0 0 5.61 7.5 0 0 0.9226
-Monk 50 8 35.5 Melee 0 0 0 0 5.49 7.34 0.9145
-Orc 50 8 35.5 Melee 0 0 0 0 6.67 9 0.8813
-CaveHornet 100 16 61.5 Melee 0 0 0 0 8 10.98 0.9498
-CrystalGolem 100 16 61.5 Melee 0 0 9 12 0 0 1.0282
-Cyclops 100 16 61.5 Melee 0 0 12 15 0 0 1.0304
-DarkElf 100 16 52.3 Melee 13.73 19.22 0 0 0 0 0.9845
-Elf 100 16 61.5 MissileLaunch 0 0 0 0 9.57 12.81 0.9741
-Gnoll 100 16 61.5 MissileLaunch 0 0 0 0 12 16 0.9653
-Goblin 100 16 61.5 Melee 9.16 12.22 0 0 0 0 1.061
-Hunter 100 16 61.5 Melee 9.61 13.73 0 0 0 0 1.0243
-Werewolf 100 16 61.5 Melee 0 0 8 11 0 0 0.9653
-Witch 100 16 61.5 MissileLaunch 0 0 11 15 0 0 0.9988
-Banshee 200 32 106.5 MissileLaunch 0 0 17.03 22.71 0 0 1.0191
-Dwarf2 200 32 106.5 Melee 18.43 24.59 0 0 0 0 0.9952
-Lich 200 32 106.5 MissileLaunch 0 0 21.91 25.21 0 0 1.036
-LizardMan 200 32 106.5 MissileLaunch 0 0 18.28 24.45 0 0 0.9614
-Minotaur 200 32 106.5 Melee 18 24 0 0 0 0 0.9699
-RunelordDwarf 200 32 106.5 Melee 16.02 21.31 0 0 0 0 0.9636
-Skeleton 200 32 106.5 Melee 13.62 20.46 0 0 0 0 0.9972
-Troll 200 32 106.5 Melee 17.42 23.52 0 0 0 0 0.9783
-Wizard 200 32 106.5 MissileLaunch 0 0 18.36 24.56 0 0 0.945
-Butcher 400 64 184.5 Melee 63.44 81.2 0 0 0 0 0.9125
-Defender 400 64 184.5 Melee 45.54 61.48 0 0 0 0 1.0575
-Dragon 400 64 184.5 Melee 0 0 0 0 32.07 43.29 0.6029
-Paladin 400 64 184.5 Melee 0 0 0 0 23 31 0.923
-PitDemon 400 64 184.5 Melee 0 0 52.76 71.24 0 0 0.9146
-Priestess 400 64 184.5 MissileLaunch 0 0 18 25 0 0 0.9075
-Vampire 400 64 184.5 MissileLaunch 0 0 43.14 55.82 0 0 1.036
+Adventurer 50 8 35.5 Melee 0 0 0 0 5.81 7.98 0.9645
+Cultist 50 8 35.5 Melee 0 0 5.67 7.56 0 0 0.8804
+Ghoul 50 8 30.2 Melee 6.32 9.13 0 0 0 0 0.7358
+Gnome 50 8 35.5 MissileLaunch 0 0 0 0 10.22 13.62 1.7255
+Knight 50 8 35.5 Melee 0 0 5.26 7.04 0 0 0.8656
+Monk 50 8 35.5 Melee 0 0 0 0 6.47 8.64 1.077
+Orc 50 8 35.5 Melee 0 0 0 0 5.99 8.08 0.7911
+CaveHornet 100 16 61.5 Melee 0 0 0 0 8.42 11.56 0.9999
+CrystalGolem 100 16 61.5 Melee 0 0 8.88 11.85 0 0 1.0149
+Cyclops 100 16 61.5 Melee 0 0 9.21 11.52 0 0 0.7911
+DarkElf 100 16 52.3 Melee 6.77 9.48 0 0 0 0 0.4855
+Elf 100 16 61.5 MissileLaunch 0 0 0 0 10.89 14.58 1.1088
+Gnoll 100 16 61.5 MissileLaunch 0 0 0 0 12.1 16.14 0.9736
+Goblin 100 16 61.5 Melee 8.82 11.77 0 0 0 0 1.0216
+Hunter 100 16 61.5 Melee 9.29 13.27 0 0 0 0 0.9902
+Werewolf 100 16 61.5 Melee 0 0 6.85 9.42 0 0 0.8267
+Witch 100 16 61.5 MissileLaunch 0 0 11.75 16.02 0 0 1.067
+Banshee 200 32 106.5 MissileLaunch 0 0 16.97 22.63 0 0 1.0155
+Dwarf2 200 32 106.5 Melee 12.44 16.59 0 0 0 0 0.6716
+Lich 200 32 106.5 MissileLaunch 0 0 20.88 24.02 0 0 0.9872
+LizardMan 200 32 106.5 MissileLaunch 0 0 15.48 20.7 0 0 0.814
+Minotaur 200 32 106.5 Melee 15.8 21.07 0 0 0 0 0.8515
+RunelordDwarf 200 32 106.5 Melee 18.43 24.52 0 0 0 0 1.1087
+Skeleton 200 32 106.5 Melee 13.34 20.05 0 0 0 0 0.9771
+Troll 200 32 106.5 Melee 12.43 16.78 0 0 0 0 0.6981
+Wizard 200 32 106.5 MissileLaunch 0 0 17.8 23.82 0 0 0.9164
+Butcher 400 64 184.5 Melee 57.97 74.2 0 0 0 0 0.8338
+Defender 400 64 184.5 Melee 36.86 49.76 0 0 0 0 0.8558
+Dragon 400 64 184.5 Melee 0 0 0 0 25.91 34.98 0.4871
+Paladin 400 64 184.5 Melee 0 0 0 0 32.2 43.4 1.2922
+PitDemon 400 64 184.5 Melee 0 0 46.97 63.42 0 0 0.8142
+Priestess 400 64 184.5 MissileLaunch 0 0 37.97 52.74 0 0 1.9144
+Vampire 400 64 184.5 MissileLaunch 0 0 45.53 58.91 0 0 1.0934
 """
 
 # Level-file creature classes with their own MinHP: file, class, MinHP, FeeBase, FeePerLevel, SkillDamageFactor and the
@@ -233,6 +233,14 @@ def check_sources():
     assert "appliesSkillDamageFactor() const override" not in read("source/creatureskill/CreatureSkillMissileLaunch.h")
 
 
+# Types the owner lets stand outside the wage rule (roster plan D24: the Paladin keeps little damage); they do not
+# enter the class means (roster change W6).
+CLASS_MEAN_EXCLUDED = ("Paladin",)
+# Copies at the lower level in the level rule (roster plan D24: a level-10 creature beats two level-5 creatures of its
+# kind surely, three only for some; before D24 the check used three copies with the same thresholds).
+LEVEL_RULE_COPIES = 2
+
+
 # One creature of twice the wage against two of half the wage, and the level-group criteria (procedure of the plan:
 # one generator, levels 1, 10, 30; classes 100, 200, 400; 200 fights per pairing).
 def check_fights(roster):
@@ -244,15 +252,16 @@ def check_fights(roster):
         units = {name: roster.unit(name, level) for name in names}
         for high in (100, 200, 400):
             shares = [fight_group(roster, units[first], units[second], 2, 200, rng)
-                      for first in names if wage[first] == high for second in names if wage[second] == high // 2]
+                      for first in names if wage[first] == high and first not in CLASS_MEAN_EXCLUDED
+                      for second in names if wage[second] == high // 2]
             means[(level, high)] = statistics.mean(shares)
             assert 0.35 <= means[(level, high)] <= 0.65, (level, high, means[(level, high)])
     for name in names:
-        share = fight_group(roster, roster.unit(name, 10), roster.unit(name, 5), 3, 200, rng)
-        assert share >= 0.5, (name, "level 10 against 3 x level 5", share)
+        share = fight_group(roster, roster.unit(name, 10), roster.unit(name, 5), LEVEL_RULE_COPIES, 200, rng)
+        assert share >= 0.5, (name, "level 10 against 2 x level 5", share)
     for name in names:
-        share = fight_group(roster, roster.unit(name, 30), roster.unit(name, 15), 3, 200, rng)
-        assert share >= 0.85, (name, "level 30 against 3 x level 15", share)
+        share = fight_group(roster, roster.unit(name, 30), roster.unit(name, 15), LEVEL_RULE_COPIES, 200, rng)
+        assert share >= 0.85, (name, "level 30 against 2 x level 15", share)
     print("class means " + json.dumps({"L%d/%d" % key: round(value, 3) for key, value in means.items()}))
 
 

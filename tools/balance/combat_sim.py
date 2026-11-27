@@ -301,8 +301,10 @@ def fight_group(roster, first, opponent, count, fights, rng):
     return wins / fights
 
 
-# Run seeded cross-type and level comparisons and return every measured result.
-def evaluate(roster, seed=1, fights=150, group_fights=60):
+# Run seeded cross-type and level comparisons and return every measured result. The level rule puts one creature of
+# level 10 (30) against copies of the same type at level 5 (15); the roster plan's decision D24 asks two copies of
+# every type (three only for some), so two is the default.
+def evaluate(roster, seed=1, fights=150, group_fights=60, copies=2):
     rng = random.Random(seed)
     names = roster.fighters()
     units = {name: roster.unit(name) for name in names}
@@ -321,8 +323,8 @@ def evaluate(roster, seed=1, fights=150, group_fights=60):
     levels = {}
     for name in names:
         levels[name] = {
-            "10_vs_3x5": fight_group(roster, roster.unit(name, 10), roster.unit(name, 5), 3, group_fights, rng),
-            "30_vs_3x15": fight_group(roster, roster.unit(name, 30), roster.unit(name, 15), 3, group_fights, rng),
+            "10_vs_%dx5" % copies: fight_group(roster, roster.unit(name, 10), roster.unit(name, 5), copies, group_fights, rng),
+            "30_vs_%dx15" % copies: fight_group(roster, roster.unit(name, 30), roster.unit(name, 15), copies, group_fights, rng),
             "1_vs_10": duel(roster, roster.unit(name, 1), roster.unit(name, 10), group_fights, rng),
             "5_vs_10": duel(roster, roster.unit(name, 5), roster.unit(name, 10), group_fights, rng),
         }
@@ -348,7 +350,19 @@ FIGHT_TURNS = {1: 18.0, 10: 20.0, 20: 22.0, 30: 25.0}
 CHANNEL_MAGICAL = 1
 ABSOLUTE = -1
 # Kinds that are cast again as soon as their effect has run out.
-REARM_ON_EXPIRE = ("BUFF_SELF StrengthChange", "BUFF_SELF Defense", "AURA_ALLY StrengthChange", "DEBUFF Weak")
+REARM_ON_EXPIRE = ("BUFF_SELF StrengthChange", "BUFF_SELF Defense", "AURA_ALLY StrengthChange", "DEBUFF Weak",
+                   "AURA_ALLY Defense", "BUFF_ALLY_Defense", "MARK")
+# Role kinds of the role skill groups that the 1-against-n fight turns into hit points per turn: a heal, a heal over
+# time or an absorb shield on an ally acts on the caster itself, because the caster is the only own creature in the
+# fight (the production skills count the caster among the allies).
+HEAL_KINDS = ("HEAL_SELF", "HEAL_ALLY", "HEAL_AREA", "HEAL_INSTANT", "HOT_AREA", "HOT_SELF", "SHIELD_ALLY", "SHIELD_AREA")
+# Defence buffs that act on the caster in that fight (the ally buff and the aura count the caster as well).
+DEFENSE_KINDS = ("BUFF_SELF Defense", "BUFF_ALLY_Defense", "AURA_ALLY Defense")
+# Damage over time kinds: Value damage in total per cast, absolute, scaled like the skill tree spells, never critical.
+DOT_KINDS = ("BLEED", "POISON", "CURSE_DOT", "BURN_DOT")
+# Groups whose MissileLaunch attack line pays ManaPerCasterShot (the spell-shooting groups, as Creature::getManaCost);
+# any other MissileLaunch first attack line pays ManaPerDragonSecondShot unless the creature carries a bow or crossbow.
+CASTER_SHOT_GROUPS = ("mage", "healer", "supporter")
 # The 0-based template indices and the cases of the per-type matrix (template -1 = no skills) and of the class means.
 TEMPLATES_PER_GROUP = (0, 1, 2)
 CASES_MATRIX = [(1, -1)] + [(level, template) for level in (10, 20, 30) for template in (0, 1, 2)]
@@ -497,7 +511,21 @@ class World:
         crit = (self.glob["CritChancePerDexterity"] * self.stat(name, "Dexterity")
                 + self.glob["CritChancePerLevel"] * (level - 1) + self.stat(name, "CritChanceBonus"))
         return SkillUnit(**values, crit=crit, mana_max=mana_max, regen=mana_max / (self.glob["ManaRefillSeconds"] * TURNS_PER_SECOND),
-                         cost=self.glob["ManaPerCasterShot"] if group == "caster" else 0.0)
+                         cost=self.shot_cost(name))
+
+    # Mana cost of one shot of the first attack line, as Creature::getManaCost: a melee line and the first shot of a
+    # creature with a bow or crossbow are free, the spell-shooting groups pay ManaPerCasterShot, every other shooter
+    # ManaPerDragonSecondShot.
+    def shot_cost(self, name):
+        if self.roster.attack(name)[0][0] != "MissileLaunch":
+            return 0.0
+        for hand in ("L", "R"):
+            item = self.field(name, "WeaponSpawn" + hand)
+            if item and self.roster.equipment[item][0].get("WeaponType", [""])[0] in ("bow", "crossbow"):
+                return 0.0
+        if self.field(name, "SkillGroup") in CASTER_SHOT_GROUPS:
+            return self.glob["ManaPerCasterShot"]
+        return self.glob["ManaPerDragonSecondShot"]
 
     # Ranks per skill id after the template's point order for the points a creature of this level has: pre-skill first,
     # then the primary path (tier 1, 2, 2, 3, then tier 1 to 5, 2 to 5, 3 to 5), then the family path (tier 1, 1, 2, 2, 3);
@@ -572,16 +600,17 @@ class World:
                 return FIGHT_TURNS[low] + (FIGHT_TURNS[high] - FIGHT_TURNS[low]) * (level - low) / (high - low)
         return FIGHT_TURNS[keys[-1]]
 
-    # Order key of a skill in a turn: tier four first, then heals, buffs and auras, debuffs, everything else.
+    # Order key of a skill in a turn: tier four first, then heals (heals over time and shields as well), buffs and
+    # auras, debuffs (curses and marks as well), everything else.
     @staticmethod
     def kind_order(kind, tier_four):
         if tier_four:
             return 0
-        if kind.startswith("HEAL"):
+        if kind in HEAL_KINDS:
             return 1
         if kind.startswith("BUFF") or kind.startswith("AURA"):
             return 2
-        if kind.startswith("DEBUFF"):
+        if kind.startswith("DEBUFF") or kind in ("CURSE_DOT", "MARK"):
             return 3
         return 4
 
@@ -589,14 +618,20 @@ class World:
     # passives change hit points, damage, critical chance, cooldown, ratings and avoidance; buffs, debuffs and stuns
     # become their average share of the fight; damage skills become casts per turn; heals and Drain become hit points
     # per turn. Mana limits how often each active skill is cast (see schedule).
+    # Role kinds: heals, heals over time and shields are hit points per turn (HEAL_KINDS), the ally defence buff and the
+    # defence aura a defence share (DEFENSE_KINDS), damage over time absolute casts without critical hits, MARK a
+    # damage share on the target, FLURRY melee blows on every target, CHAIN_LIGHTNING a guided bolt, PARRY_COUNTER a
+    # parry chance against melee blows and DRAIN_HEAL_ALLIES a share of the enemy's full health per turn that heals the
+    # caster (drain_share, resolved per opponent in skill_fight). TAUNT and HOLD only cost mana in a fight of one
+    # creature against copies that all attack it anyway; the rank properties (Rank3, Rank5) are not modelled.
     def apply(self, name, level, template, base, skills_on):
         ranks, ult = self.allocation(name, level, template, skills_on)
         group = self.field(name, "SkillGroup")
         u = replace(base)
-        dmgk = hpk = spellk = allk = ark = drk = cdk = 1.0
-        crit = avoid = defadd = manacost = 0.0
+        dmgk = hpk = spellk = allk = ark = drk = cdk = markk = 1.0
+        crit = avoid = defadd = manacost = parry = 0.0
         enemy_dmgk = 1.0
-        enemy_turnloss = strike_dpt = drain_dpt = heal_pt = 0.0
+        enemy_turnloss = strike_dpt = drain_dpt = heal_pt = drain_share = 0.0
         minhp = self.stat(name, "MinHP")
         dm = multiplier(level, "damage") * (minhp / self.glob["SkillSpellReferenceMinHP"])
         items = [(self.catalog.skills[skill_id], rank) for skill_id, rank in ranks.items()]
@@ -609,13 +644,16 @@ class World:
         for skill, rank in items:
             kind = skill["kind"]
             value = skill["values"][rank - 1]
+            if kind == "PARRY_COUNTER":
+                parry += value
+                continue
             if kind.startswith("PASSIVE"):
                 stat = kind.split()[1]
-                if stat == "dmg%" and group != "caster":
+                if stat == "dmg%" and group != "mage":
                     dmgk *= 1 + value / 100
                 elif stat == "spell%":
                     spellk *= 1 + value / 100
-                    if group == "caster":
+                    if group == "mage":
                         dmgk *= 1 + value / 100
                 elif stat == "alldmg%":
                     dmgk *= 1 + value / 100
@@ -656,31 +694,42 @@ class World:
         for slot, i in enumerate(order):
             sustain_of[i] = sustained[slot]
         casts = []
+        dots = []
+        flurries = []
         for (skill, kind, value, cooldown, duration, cost), sustain in zip(eff, sustain_of):
             uptime = min(1.0, duration / cooldown) * sustain
             if kind in ("BUFF_SELF StrengthChange", "AURA_ALLY StrengthChange"):
                 dmgk *= 1 + (value - 1) * uptime
-            elif kind == "BUFF_SELF Defense":
+            elif kind in DEFENSE_KINDS:
                 defadd += value * uptime
             elif kind == "DEBUFF Weak":
                 enemy_dmgk *= 1 - (1 - value) * uptime
-            elif kind in ("EXPLOSION", "HAILSTORM", "GASCLOUD", "GRENADE", "GUIDEDBOLT"):
+            elif kind == "MARK":
+                markk *= 1 + (value - 1) * uptime
+            elif kind in ("EXPLOSION", "HAILSTORM", "GASCLOUD", "GRENADE", "GUIDEDBOLT", "CHAIN_LIGHTNING"):
                 average, channel = self.cast_base(kind, skill["baseline"])
-                hit = SKILL_HIT if kind in ("GRENADE", "GUIDEDBOLT") else 1.0
+                hit = SKILL_HIT if kind in ("GRENADE", "GUIDEDBOLT", "CHAIN_LIGHTNING") else 1.0
                 area = kind in ("HAILSTORM", "GASCLOUD")
                 casts.append([average * value * dm, sustain / cooldown, channel, hit, area])
+            elif kind in DOT_KINDS:
+                dots.append([value * dm, sustain / cooldown, ABSOLUTE, 1.0, False])
+            elif kind == "FLURRY":
+                flurries.append((value[0] * sustain / cooldown, value[1]))
             elif kind == "STRIKE":
                 strike_dpt += (value - 1) * (sum(base.minimum) + sum(base.maximum)) / 2 / cooldown * sustain
             elif kind == "WHIRLWIND":
                 enemy_turnloss += value[1] / cooldown * sustain
             elif kind == "FREEZE":
                 enemy_turnloss += 28 * value / cooldown * sustain
-            elif kind.startswith("HEAL"):
+            elif kind in HEAL_KINDS:
                 heal_pt += value / 100 * minhp * multiplier(level, "damage") / cooldown * sustain
             elif kind == "DRAIN":
                 share = value / 100 * base.hp / cooldown * sustain
                 drain_dpt += share
                 heal_pt += share
+            elif kind == "DRAIN_HEAL_ALLIES":
+                drain_share += value / 100 / cooldown * sustain
+        dmgk *= markk
         u.hp *= hpk
         u.minimum = tuple(x * dmgk * attack_paid for x in u.minimum)
         u.maximum = tuple(x * dmgk * attack_paid for x in u.maximum)
@@ -691,14 +740,24 @@ class World:
         u.defense = tuple(x + defadd for x in u.defense)
         critk = 1 + u.crit / 100
         for cast in casts:
-            cast[0] *= spellk * allk * critk
-        extras = {"avoid": avoid, "enemy_dmgk": enemy_dmgk, "enemy_turnloss": min(0.6, enemy_turnloss),
-                  "extra_dpt": strike_dpt * critk + drain_dpt, "heal_pt": heal_pt, "casts": casts, "shot_rate": shot_rate}
+            cast[0] *= spellk * allk * critk * markk
+        for dot in dots:
+            dot[0] *= spellk * allk * markk
+        # A flurry strikes its blows with the own melee blow (damage passives, buffs and the mark included, no critical
+        # hit, no skill damage factor) on every target, with the defence of every channel and the skill hit chance.
+        melee_casts = [[(low + high) / 2 * factor, rate, channel, SKILL_HIT, True]
+                       for rate, factor in flurries
+                       for channel, (low, high) in enumerate(zip(u.minimum, u.maximum)) if high > 0]
+        extras = {"avoid": avoid, "parry": parry, "enemy_dmgk": enemy_dmgk, "enemy_turnloss": min(0.6, enemy_turnloss),
+                  "extra_dpt": strike_dpt * critk + drain_dpt, "heal_pt": heal_pt, "drain_share": drain_share,
+                  "casts": casts + dots,
+                  "melee_casts": melee_casts, "shot_rate": shot_rate}
         return u, extras
 
     # The fighter record of a type at a level with a template (0-based) or without skills (template < 0): the unit,
-    # its extras, the type's skill damage factor on the damage skills and the kept second missile attack as one more
-    # cast (magical, 75 percent hit chance, damage passives and critical chance of the creature, not the skill factor).
+    # its extras, the type's skill damage factor on the damage skills, the flurry blows (melee blows, not scaled by the
+    # skill factor) and the kept second missile attack as one more cast (magical, 75 percent hit chance, damage
+    # passives and critical chance of the creature, not the skill factor).
     def unit(self, name, level, template):
         key = (name, level, template)
         if key in self.cache:
@@ -711,6 +770,7 @@ class World:
         extras["casts"] = [list(cast) for cast in extras["casts"]]
         for cast in extras["casts"]:
             cast[0] *= factor
+        extras["casts"] += [list(cast) for cast in extras.pop("melee_casts")]
         shot = self.second_missile(name)
         if shot:
             average, _, channel = shot
@@ -733,11 +793,12 @@ def cast_hits(extras, targets):
 
 
 # Resolve one blow: hit roll, avoidance (plus the avoid passive of the defender), critical roll, then the defense of
-# every channel and the shared damage roll, then the attacker's weakening by the defender's debuffs.
+# every channel and the shared damage roll, then the attacker's weakening by the defender's debuffs. The parry chance
+# of a defender's PARRY_COUNTER adds to the avoidance of melee blows.
 def skill_blow(roster, attacker, target, target_extras, rng, crit_multiplier):
     if rng.random() * 100 >= hit_chance(attacker, target):
         return 0
-    if rng.random() * 100 < roster.avoidance_chance(target, attacker.melee) + target_extras["avoid"]:
+    if rng.random() * 100 < avoidance_with_skills(roster, attacker, target, target_extras):
         return 0
     factor = crit_multiplier if rng.random() * 100 < attacker.crit else 1.0
     low = sum(max(value * factor - defense, 0) for value, defense in zip(attacker.minimum, target.defense))
@@ -750,8 +811,15 @@ def prepare_skill_blow(roster, attacker, target, target_extras, crit_multiplier)
     ranges = tuple((sum(max(value * factor - defense, 0) for value, defense in zip(attacker.minimum, target.defense)),
                     sum(max(value * factor - defense, 0) for value, defense in zip(attacker.maximum, target.defense)))
                    for factor in (1.0, crit_multiplier))
-    return (hit_chance(attacker, target), roster.avoidance_chance(target, attacker.melee) + target_extras["avoid"],
+    return (hit_chance(attacker, target), avoidance_with_skills(roster, attacker, target, target_extras),
             attacker.crit, ranges, target_extras["enemy_dmgk"])
+
+
+# Avoidance of a blow in the attribute model: the configured avoidance, the avoid passive and, against melee blows,
+# the parry chance of a PARRY_COUNTER skill.
+def avoidance_with_skills(roster, attacker, target, target_extras):
+    parry = target_extras.get("parry", 0.0) if attacker.melee else 0.0
+    return roster.avoidance_chance(target, attacker.melee) + target_extras["avoid"] + parry
 
 
 # Keep miss, avoidance, critical and damage draws identical to the reference skill blow.
@@ -775,6 +843,11 @@ def skill_fight(roster, crit_multiplier, first, second, count, fights, rng, limi
     b_extras = second[1]
     first_blow = prepare_skill_blow(roster, first[0], second[0], b_extras, crit_multiplier)
     second_blow = prepare_skill_blow(roster, second[0], first[0], a_extras, crit_multiplier)
+    # A drain that heals allies takes its share of the full health of the enemy and heals the caster with it.
+    a_drain = a_extras.get("drain_share", 0.0) * second[0].hp
+    b_drain = b_extras.get("drain_share", 0.0) * first[0].hp
+    a_heal, b_heal = a_extras["heal_pt"] + a_drain, b_extras["heal_pt"] + b_drain
+    a_damage, b_damage = a_extras["extra_dpt"] + a_drain, b_extras["extra_dpt"] + b_drain
     for _ in range(fights):
         a = replace(first[0])
         full_a = a.hp
@@ -783,13 +856,13 @@ def skill_fight(roster, crit_multiplier, first, second, count, fights, rng, limi
         next_a = 0
         clocks = [0] * count
         for turn in range(1, limit + 1):
-            a.hp = min(full_a, a.hp + a_extras["heal_pt"])
+            a.hp = min(full_a, a.hp + a_heal)
             for b in opponents:
-                b.hp = min(full_b, b.hp + b_extras["heal_pt"])
-            opponents[0].hp -= a_extras["extra_dpt"]
+                b.hp = min(full_b, b.hp + b_heal)
+            opponents[0].hp -= a_damage
             cast_hits(a_extras, opponents)
             for b in opponents:
-                a.hp -= b_extras["extra_dpt"]
+                a.hp -= b_damage
                 cast_hits(b_extras, [a])
             if turn >= next_a:
                 if rng.random() >= b_extras["enemy_turnloss"]:
@@ -839,8 +912,9 @@ def world_roles(matrices):
 
 
 # Class means: for the wages 100, 200, 400 the share of the single creature against two of half the wage, all types
-# of the class together, one generator for all cases in the given order, 60 fights per pairing.
-def world_class_means(world, fights=60):
+# of the class together, one generator for all cases in the given order, 60 fights per pairing. The single creatures
+# named in exclude (types the owner lets stand outside the wage rule) do not enter the means.
+def world_class_means(world, fights=60, exclude=()):
     crit_multiplier = world.glob["CritDamageMultiplier"]
     rng = random.Random(31337)
     result = {}
@@ -850,14 +924,16 @@ def world_class_means(world, fights=60):
         for wage in (100, 200, 400):
             row[wage] = round(statistics.mean(
                 skill_fight(world.roster, crit_multiplier, units[a], units[b], 2, fights, rng)[0]
-                for a in world.names if world.wage[a] == wage for b in world.names if world.wage[b] == wage // 2), 3)
+                for a in world.names if world.wage[a] == wage and a not in exclude
+                for b in world.names if world.wage[b] == wage // 2), 3)
         result[(level, template)] = row
     return result
 
 
-# Rule 2 (level 10 against three at level 5, level 30 against three at level 15, mean of the three templates) and the
-# fight length of two equal creatures at levels 1, 10 and 30 (templates averaged), 100 fights each, one generator.
-def world_verify(world, fights=100):
+# Rule 2 (level 10 against copies at level 5, level 30 against copies at level 15, mean of the three templates; two
+# copies by the roster plan's decision D24, three only for some types) and the fight length of two equal creatures at
+# levels 1, 10 and 30 (templates averaged), 100 fights each, one generator.
+def world_verify(world, fights=100, copies=2):
     crit_multiplier = world.glob["CritDamageMultiplier"]
     rng = random.Random(424242)
     groups, lengths = {}, {}
@@ -865,8 +941,8 @@ def world_verify(world, fights=100):
         # One fight series of this type: the given level against the other level with a template and copies count.
         def fight_of(level, other, template, count):
             return skill_fight(world.roster, crit_multiplier, world.unit(name, level, template), world.unit(name, other, template), count, fights, rng)
-        wins10 = statistics.mean(fight_of(10, 5, t, 3)[0] for t in TEMPLATES_PER_GROUP)
-        wins30 = statistics.mean(fight_of(30, 15, t, 3)[0] for t in TEMPLATES_PER_GROUP)
+        wins10 = statistics.mean(fight_of(10, 5, t, copies)[0] for t in TEMPLATES_PER_GROUP)
+        wins30 = statistics.mean(fight_of(30, 15, t, copies)[0] for t in TEMPLATES_PER_GROUP)
         groups[name] = (round(wins10, 3), round(wins30, 3))
         turns1 = fight_of(1, 1, -1, 1)[1]
         turns10 = statistics.mean(fight_of(10, 10, t, 1)[1] for t in TEMPLATES_PER_GROUP)

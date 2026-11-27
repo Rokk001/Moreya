@@ -41,10 +41,35 @@ REPO = Path(__file__).resolve().parents[2]
 TEMPLATE = REPO / "levels" / "skirmish" / "TestRaid.level"
 TURNS_PER_SECOND = 1.4
 
-# The keeper's fighters of the keeper faction's spawn pool (config/factions.cfg), without the scouts (CaveHornet,
-# Goblin) and the worker: the reference keeper force cycles through them. The tiers of the pool are interleaved (tier
-# 1, 2, 3, 4, then again), so that a small force has every tier as well and only a force of ten or more has every class.
-KEEPER_POOL = ["Spider", "Roach", "LavaSpawn", "Orc", "Rat", "Cultist", "LizardMan", "PitDemon", "DarkElf", "Troll"]
+# The scouts of the keeper faction's spawn pool that the reference keeper force leaves out.
+KEEPER_SCOUTS = ("CaveHornet", "Goblin")
+
+
+def keeper_pool(repo=REPO):
+    """The keeper's fighters of the keeper faction's spawn pool (config/factions.cfg), without the scouts
+    (KEEPER_SCOUTS) and the worker, read from the configuration: the reference keeper force cycles through them. The
+    tiers of the pool (wage classes by FeeBase of config/creatures.cfg) are interleaved (tier 1, 2, 3, 4, then again),
+    so that a small force has every tier as well and only a force of ten or more has every class."""
+    factions = (repo / "config" / "factions.cfg").read_text(encoding="utf-8")
+    keeper = re.search(r"\[Faction\]\s*Name\s+Keeper\b(.*?)\[/Faction\]", factions, re.S).group(1)
+    pool = re.search(r"\[SpawnPool\](.*?)\[/SpawnPool\]", keeper, re.S).group(1)
+    names = [line.strip() for line in pool.splitlines()
+             if line.strip() and not line.strip().startswith("#") and line.strip() not in KEEPER_SCOUTS]
+    creatures = (repo / "config" / "creatures.cfg").read_text(encoding="utf-8")
+    fees = {}
+    for block in re.findall(r"\[Creature\](.*?)\[/Creature\]", creatures, re.S):
+        name = re.search(r"^\s*Name\s+(\S+)", block, re.M)
+        fee = re.search(r"^\s*FeeBase\s+(\S+)", block, re.M)
+        if name and fee:
+            fees.setdefault(name.group(1), float(fee.group(1)))
+    tiers = [[name for name in names if fees[name] == fee] for fee in sorted({fees[name] for name in names})]
+    result = []
+    for index in range(max(len(tier) for tier in tiers)):
+        result += [tier[index] for tier in tiers if index < len(tier)]
+    return result
+
+
+KEEPER_POOL = keeper_pool()
 
 # Raid members per role: class and fixed skill template (a template of the class's skill group; the group decides the
 # role in group fights). The healer slot is a Wizard with the Sparkcaller template: a mage cannot heal, so in the game
