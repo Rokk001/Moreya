@@ -29,7 +29,7 @@ class RoomToilet;
 class Tile;
 
 //! \brief A creature relieves itself. With a seat tile it reserves that seat of a toilet room, walks to a point in
-//! front of it, steps straight onto it, sits there in the Relieve clip for a random time between ToiletUseSecondsMin
+//! front of it, steps straight onto it, bends over the hole there in the RelievePit clip for a random time between ToiletUseSecondsMin
 //! and ToiletUseSecondsMax (drawn anew for every use), leaves the room a little dirtier and steps off to the point in
 //! front of the seat again. Without a seat tile (nullptr) it relieves
 //! itself where it stands and leaves a pile on the floor; in a treasury, the dungeon heart room or a temple it
@@ -103,7 +103,8 @@ private:
     RoomToilet* getSeatRoom() const;
 
     //! \brief Starts the squat: the animation (facing the given direction, if any) and the countdown, a random time
-    //! between ToiletUseSecondsMin and ToiletUseSecondsMax on a seat, ToiletUseTurns turns on the floor.
+    //! between ToiletUseSecondsMin and ToiletUseSecondsMax on a seat, ToiletUseTurns turns on the floor. On a seat the
+    //! creature plays RelievePit (standing over the hole with half bent knees), on the floor Relieve (crouching).
     void startSquat(bool onSeat, const Ogre::Vector2& facing);
 
     //! \brief Finds the nearest reachable tile that is not in an exempt room (nullptr if there is none).

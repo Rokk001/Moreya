@@ -5941,8 +5941,10 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         cancelCreatureSeatBlend(dropCreature);
         clearCreatureDecay(dropCreature);
         updateCreatureTavernProps(dropCreature, anim);
-        // Sitting down on a toilet seat (Relieve) or getting up from it changes the height the creature is drawn at
-        if((animation == EntityAnimation::relieve_anim) || (mSteppingCreatures.count(dropCreature) != 0))
+        // Stepping onto a toilet seat (RelievePit, or Relieve) or getting off it changes the height the creature is
+        // drawn at
+        if((animation == EntityAnimation::relieve_pit_anim) || (animation == EntityAnimation::relieve_anim) ||
+           (mSteppingCreatures.count(dropCreature) != 0))
             updateCreatureStep(dropCreature);
     }
     // The sniffing of a creature has no clip of its own: it stands (idle clip), the reaction shows the sniffing
@@ -6244,6 +6246,11 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         {
             // A hunter skeleton without the ghost hunting clips plays its attack clip
             anim = EntityAnimation::attack_anim;
+        }
+        else if (anim == EntityAnimation::relieve_pit_anim)
+        {
+            // A skeleton without the clip over the hole of a toilet seat squats as on the floor (then Idle)
+            anim = EntityAnimation::relieve_anim;
         }
         else if (anim == EntityAnimation::knockedout_anim)
         {
@@ -7244,12 +7251,14 @@ void RenderManager::rrMoveEntity(GameEntity* entity, const Ogre::Vector3& positi
         updateCreatureStep(static_cast<Creature*>(entity));
 }
 
-//! \brief Height a creature is drawn higher because it sits on a toilet seat: the seat top while it plays the Relieve
-//! clip, stands still and stands on the footprint of a seat; 0 otherwise (also while it walks onto or off the seat).
+//! \brief Height a creature is drawn higher because it uses a toilet seat: the seat top while it plays the RelievePit
+//! clip (or Relieve), stands still and stands on the footprint of a seat; 0 otherwise (also while
+//! it walks onto or off the seat).
 static float toiletSeatLift(Creature* creature)
 {
+    const std::string& clip = creature->getAnimationStateName();
     if(!creature->isAlive() || creature->isMoving() ||
-       (creature->getAnimationStateName() != EntityAnimation::relieve_anim))
+       ((clip != EntityAnimation::relieve_pit_anim) && (clip != EntityAnimation::relieve_anim)))
         return 0.0f;
 
     const Ogre::Vector3 position = creature->getPosition();

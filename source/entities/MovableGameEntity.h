@@ -53,8 +53,11 @@ namespace EntityAnimation
     static const std::string combat_attack_anim = "CombatAttack";
     static const std::string ranged_attack_anim = "RangedAttack";
     static const std::string eat_chicken_anim = "EatChicken";
-    //! A creature squats to relieve itself, on a toilet seat or on the floor (a skeleton without the clip plays Idle)
+    //! A creature squats on the floor to relieve itself, without a toilet (a skeleton without the clip plays Idle)
     static const std::string relieve_anim = "Relieve";
+    //! A creature stands over the hole of a toilet seat and bends with half bent knees; a skeleton without the clip
+    //! plays Relieve.
+    static const std::string relieve_pit_anim = "RelievePit";
     //! A creature sits low in the mud bath; a skeleton without the clip plays Idle.
     static const std::string bathe_anim = "Bathe";
     //! A creature tucks into a cannonball jump; a skeleton without the clip plays Idle.
