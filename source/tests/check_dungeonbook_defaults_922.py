@@ -27,7 +27,7 @@ def field(block, key, default="none"):
 
 
 def main():
-    """Verify 36 classes, 17 distinct defaults, real atlas entries and production tooltip probe generation."""
+    """Verify 36 classes, 24 distinct defaults, real atlas entries and production tooltip probe generation."""
     creatures = blocks("config/creatures.cfg", "Creature")
     weapons = {field(b, "Name"): b for b in blocks("config/equipments.cfg", "Equipment")}
     defaults = {field(b, "WeaponSpawn" + hand) for b in creatures for hand in ("R", "L")} - {"none"}
@@ -35,11 +35,13 @@ def main():
     # without the content only the public rows are there and the counts are named as not checked
     # Roster change (CREATURE-ROSTER W4a): 36 classes; BasicAxeOrc, Sabre, Wand and Crossbow are no default weapon any
     # more, BasicAxe and BasicHammer are (Minotaur, Runelord Dwarf)
+    # Hero weapons: the own entries AdventurerSword, KnightSword, KnightShield, PaladinShield, DwarfWarriorShield,
+    # DarkElfDagger, WizardStaff and PriestessStaff are defaults; RustySword is none any more
     if content_packages.has_content(ROOT):
         assert len(creatures) == 36, len(creatures)
-        assert len(defaults) == 17, defaults
+        assert len(defaults) == 24, defaults
     else:
-        content_packages.unchecked("check_dungeonbook_defaults_922", ["config/creatures.cfg 36 classes, 17 defaults"])
+        content_packages.unchecked("check_dungeonbook_defaults_922", ["config/creatures.cfg 36 classes, 24 defaults"])
     # The item catalogue and the item atlas lie in the content packages (core-config, core-gui)
     if not content_packages.has_content(ROOT):
         content_packages.unchecked("check_dungeonbook_defaults_922", ["config/items.cfg", "gui/Items.imageset coverage"])

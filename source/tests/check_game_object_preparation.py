@@ -58,7 +58,7 @@ def mesh_exists(name):
 # the clip props jug, die, flask, rattle and bucket (counted on the integration branch)
 # 226 since Pile_VeteranScarab.mesh was removed with the VeteranScarab class (Mario 2026-11-27; counted on
 # feature/creature-roster after the merge of main; was 227)
-LISTED = 226
+LISTED = 234
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
