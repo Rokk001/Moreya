@@ -1791,8 +1791,9 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     {
         noteDigging(creature);
     }
-    else if(clip == EntityAnimation::relieve_anim)
+    else if((clip == EntityAnimation::relieve_pit_anim) || (clip == EntityAnimation::relieve_anim))
     {
+        // The bent over clip on the floor (RelievePit), or the former squat of an older server
         noteRelief(creature);
     }
     else if(clip == EntityAnimation::sniff_anim)

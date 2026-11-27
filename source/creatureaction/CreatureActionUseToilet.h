@@ -104,7 +104,8 @@ private:
 
     //! \brief Starts the squat: the animation (facing the given direction, if any) and the countdown, a random time
     //! between ToiletUseSecondsMin and ToiletUseSecondsMax on a seat, ToiletUseTurns turns on the floor. On a seat the
-    //! creature plays RelievePit (standing over the hole with half bent knees), on the floor Relieve (crouching).
+    //! creature plays RelievePit (standing bent over the hole with half bent knees), on the floor the same RelievePit
+    //! motion without the toilet.
     void startSquat(bool onSeat, const Ogre::Vector2& facing);
 
     //! \brief Finds the nearest reachable tile that is not in an exempt room (nullptr if there is none).
