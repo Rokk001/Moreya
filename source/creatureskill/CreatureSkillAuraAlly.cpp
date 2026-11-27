@@ -21,6 +21,7 @@
 #include "utils/ConfigManager.h"
 
 #include "creatureaction/CreatureAction.h"
+#include "creatureeffect/CreatureEffectDefense.h"
 #include "creatureeffect/CreatureEffectProtection.h"
 #include "creatureeffect/CreatureEffectStrengthChange.h"
 #include "creatureskill/CreatureSkillManager.h"
@@ -67,7 +68,8 @@ bool CreatureSkillAuraAlly::canBeUsedBy(const Creature* creature) const
 
 //! \brief Strengthens the own creatures within the radius while the creature fights and at least one other own
 //! creature is within the radius. Rank properties: LARGER_RADIUS multiplies the radius, HASTE lets the allies attack
-//! with their cooldowns times its first number; AURA_LINGER and AURA_DOUBLE of the caster lengthen and double it.
+//! with their cooldowns times its first number, DEFENSE also gives them that much physical defence (MAGIC: as much
+//! magical and element defence too); AURA_LINGER and AURA_DOUBLE of the caster lengthen and double it.
 bool CreatureSkillAuraAlly::tryUseSupport(GameMap& gameMap, Creature* creature) const
 {
     if(!creature->isAlive())
@@ -83,7 +85,12 @@ bool CreatureSkillAuraAlly::tryUseSupport(GameMap& gameMap, Creature* creature) 
 
     double value = mEffectValue;
     double duration = mEffectDuration + creature->getSkillPropertyValue("AURA_LINGER", 0, 0.0);
-    creature->applyAuraDouble(value, duration, true);
+    const bool doubled = creature->applyAuraDouble(value, duration, true);
+    // The armour part of an aura on armour and damage (DEFENSE); AURA_DOUBLE doubles it with the damage part
+    double defense = getPropertyValue("DEFENSE", 0, 0.0);
+    if(doubled)
+        defense *= 2.0;
+    const double otherDefense = hasProperty("MAGIC") ? defense : 0.0;
     for(Creature* ally : allies)
     {
         CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(duration, value,
@@ -94,6 +101,13 @@ bool CreatureSkillAuraAlly::tryUseSupport(GameMap& gameMap, Creature* creature) 
         {
             ally->addCreatureEffect(new CreatureEffectProtection(duration, 1.0, getPropertyValue("HASTE", 0, 1.0),
                 false, false));
+        }
+        if(defense > 0.0)
+        {
+            CreatureEffectDefense* armour = new CreatureEffectDefense(duration, defense, otherDefense, otherDefense,
+                "SpellCreatureDefense");
+            tagEffect(armour);
+            ally->addCreatureEffect(armour);
         }
     }
 

@@ -6,6 +6,8 @@ config/creatureSkills.cfg and the other way round, and the creature hooks of CR7
 Compiled probe (needs cl in the PATH; with --probe a missing compiler is an error): CreatureSkillTree.cpp reads a
 small config with the keys Rank1, Rank3 and Rank5 and Properties, merges the properties per rank, refuses an unknown
 token and builds the skill line of every role kind. The expected values are fixed data of this check.
+Package W1b: the strength aura gives armour with DEFENSE (supporter tier 4), the blast of a GRENADE skill takes
+COOLDOWN_PER_HIT off its cooldown and IGNORE_DODGE lets a dodged shot land.
 """
 from pathlib import Path
 import re
@@ -26,6 +28,9 @@ ROLE_KINDS = {
     'DRAIN_HEAL_ALLIES': 'DrainHealAllies', 'CHAIN_LIGHTNING': 'ChainLightning', 'FLURRY': 'Flurry'}
 # Number of rank property tokens, counted once on the branch that introduced them
 PROPERTY_TOKEN_COUNT = 80
+# The supporter tier 4 auras on armour and damage (roster plan D16) and their properties, counted once (W1b)
+ARMOUR_AURAS = {'RunelordDwarf': 'Rune Circle', 'LizardMan': 'War Drums'}
+ARMOUR_AURA_PROPERTIES = 'DEFENSE 3'
 # The new effects of the role skills and the names they are saved under
 ROLE_EFFECTS = {'Taunt': 'Taunt', 'Mark': 'Mark', 'Hold': 'Hold', 'Protection': 'Protection', 'Shield': 'Shield',
                 'DamageOverTime': 'DamageOverTime', 'HealOverTime': 'HealOverTime'}
@@ -110,6 +115,19 @@ Range     2
 BaseLine  -
 Properties MANA_DRAIN 0.5
 [/TierFour]
+[TierFour]
+Creature  RunelordDwarf
+Name      Rune Circle
+Kind      AURA_ALLY_StrengthChange
+Value     1.2
+Cooldown  140
+Duration  20
+Mana      35
+Radius    5
+Range     -
+BaseLine  -
+Properties DEFENSE 3
+[/TierFour]
 '''
 
 # The same config with an unknown token in Rank3: the loader refuses it
@@ -160,10 +178,16 @@ int main(int argc, char** argv)
                       << std::endl;
         }
     }
-    const TierFourDef* tierFour = config.findTierFour("PitDemon");
-    std::cout << "line T4_PitDemon 1 : " << buildSkillLine(tierFour->mKind, tierFour->mValue, tierFour->mCooldown,
-        tierFour->mDuration, tierFour->mRadius, tierFour->mRange, tierFour->mBaseLine) << std::endl;
-    std::cout << "props T4_PitDemon 1 : " << describe(tierFour->mProperties) << std::endl;
+    const char* tierFourCreatures[] = {"PitDemon", "RunelordDwarf"};
+    for(size_t i = 0; i < 2; ++i)
+    {
+        const std::string creature = tierFourCreatures[i];
+        const TierFourDef* tierFour = config.findTierFour(creature);
+        std::cout << "line T4_" << creature << " 1 : " << buildSkillLine(tierFour->mKind, tierFour->mValue,
+            tierFour->mCooldown, tierFour->mDuration, tierFour->mRadius, tierFour->mRange, tierFour->mBaseLine)
+            << std::endl;
+        std::cout << "props T4_" << creature << " 1 : " << describe(tierFour->mProperties) << std::endl;
+    }
 
     SkillBuild build;
     build.mRanks["TNK_T2"] = 5;
@@ -201,6 +225,8 @@ EXPECTED = [
     'line MAG_L1 2 : ChainLightning 20 1 8 0 0 Bolt none 6 0 0 0 0 11 0 0 0 0 0 11 22',
     'line T4_PitDemon 1 : DrainHealAllies 40 0 0 2 4 0 8',
     'props T4_PitDemon 1 : MANA_DRAIN:0.5;',
+    'line T4_RunelordDwarf 1 : AuraAlly 140 0 0 5 20 1.2 2',
+    'props T4_RunelordDwarf 1 : DEFENSE:3;',
     'build STUN 2',
     'build MANA_DRAIN 0.5',
     'build AREA 0',
@@ -301,6 +327,56 @@ def check_sources():
     assert 'rebuildSkillProperties();' in function(creature, 'void Creature::rebuildTreeSkills(')
     melee = function(text('source/creatureskill/CreatureSkillMeleeFight.cpp'), 'bool CreatureSkillMeleeFight::tryUseFight(')
     assert 'rollSkillParry(parrySkill)' in melee and 'onSkillMeleeResult(' in melee
+    check_w1b_sources(creature)
+
+
+def check_w1b_sources(creature):
+    """W1b: the armour part of the strength aura, COOLDOWN_PER_HIT of a blast shot and IGNORE_DODGE of a shot."""
+    # The strength aura gives every ally the physical defence of DEFENSE (MAGIC: all three), doubled with the aura
+    aura = function(text('source/creatureskill/CreatureSkillAuraAlly.cpp'), 'bool CreatureSkillAuraAlly::tryUseSupport(')
+    assert 'const bool doubled = creature->applyAuraDouble(value, duration, true);' in aura
+    assert 'getPropertyValue("DEFENSE", 0, 0.0)' in aura and 'hasProperty("MAGIC") ? defense : 0.0' in aura
+    assert aura.index('applyAuraDouble(') < aura.index('defense *= 2.0;') < aura.index('for(Creature* ally : allies)')
+    assert 'new CreatureEffectDefense(duration, defense, otherDefense, otherDefense,' in aura and 'tagEffect(armour);' in aura
+    assert 'return true;' in function(creature, 'bool Creature::applyAuraDouble(')
+    # Both supporter tier 4 auras carry the armour property (fixed values of the branch)
+    blocks = re.findall(r'\[TierFour\](.*?)\[/TierFour\]', text('config/creatureSkills.cfg'), re.S)
+    found = {}
+    for block in blocks:
+        fields = dict(re.findall(r'^(\w+)[ \t]+(.*?)[ \t]*$', block, re.M))
+        if fields.get('Properties', '-').split()[0] == 'DEFENSE':
+            found[fields['Creature']] = (fields['Name'], fields['Kind'], fields['Properties'])
+    assert found == {creature_type: (name, 'AURA_ALLY_StrengthChange', ARMOUR_AURA_PROPERTIES)
+                     for creature_type, name in ARMOUR_AURAS.items()}, found
+
+    # The blast of a GRENADE skill names its skill; when it explodes its hits cut that cooldown
+    grenade = function(text('source/creatureskill/CreatureSkillGrenade.cpp'),
+                       'MissileOneHit* CreatureSkillGrenade::createMissile(')
+    assert 'creature->hasSkillProperty("COOLDOWN_PER_HIT")' in grenade
+    assert 'missile->setCooldownSkill(getTreeSkillId());' in grenade
+    blast = text('source/entities/MissileBlast.cpp')
+    explode = function(blast, 'void MissileBlast::explode(')
+    assert explode.index('hurt(creatureTile, creature);') < explode.index('++hits;') < explode.index('cutTreeSkillCooldown(')
+    assert 'static_cast<double>(hits) * shooter->getSkillPropertyValue("COOLDOWN_PER_HIT", 0, 0.0)' in explode
+    assert 'CooldownSkill' in function(blast, 'void MissileBlast::exportToStream(')
+    assert 'is.seekg(skillPosition);' in function(blast, 'bool MissileBlast::importFromStream(')
+    cut = function(creature, 'void Creature::cutTreeSkillCooldown(')
+    assert 'mSkillBeingUsed->getTreeSkillId() == treeSkillId' in cut and 'addSkillCooldownCut(turns);' in cut
+    assert 'skillData.mCooldown = std::max(0.0, skillData.mCooldown - turns);' in cut
+    attack = function(creature, 'void Creature::useAttack(')
+    assert (attack.index('mSkillBeingUsed = skillData.mSkill;') < attack.index('skillData.mSkill->tryUseFight(') <
+            attack.index('mSkillBeingUsed = nullptr;') < attack.index('applySkillTimerProperties('))
+
+    # IGNORE_DODGE of the shooter: a dodged shot still lands with the chance in percent, where the shot lands
+    one_hit = text('source/entities/MissileOneHit.cpp')
+    hurt = function(one_hit, 'void MissileOneHit::hurt(')
+    assert (hurt.index('rollMeleeDefence(true)') < hurt.index('defence == DefenceChance::dodged && rollIgnoreDodge()') <
+            hurt.index('fireHitDefended('))
+    ignore = function(one_hit, 'bool MissileOneHit::rollIgnoreDodge(')
+    assert 'getSkillPropertyValue("IGNORE_DODGE", 0, 0.0)' in ignore and 'Random::Double(0.0, 100.0) < chance' in ignore
+    header = cfg_header()
+    assert 'reserved' not in header[header.index('#   IGNORE_DODGE'):header.index('#   AURA_LINGER')]
+    assert 'GRENADE' in header[header.index('#   COOLDOWN_PER_HIT'):header.index('#   DOUBLE_CAST ')]
 
 
 def run_probe(require):

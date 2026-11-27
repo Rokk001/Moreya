@@ -804,12 +804,18 @@ public:
     //! \param value The value of the aura, changed in place.
     //! \param duration The turns of the aura, changed in place.
     //! \param factorValue True when the value is a factor around 1 (strength aura).
-    void applyAuraDouble(double& value, double& duration, bool factorValue);
+    //! \return True when the aura was doubled.
+    bool applyAuraDouble(double& value, double& duration, bool factorValue);
     //! \brief FREE_ON_LOW of the creature: the skill that is being cast costs no mana when the health share of the
     //! target is below the first number of the property.
     void waiveSkillManaWhenLow(const Creature& target);
     //! \brief Shortens the cooldown the skill that is being used gets by the turns (COOLDOWN_PER_HIT).
     void addSkillCooldownCut(double turns);
+    //! \brief Takes the turns off the cooldown of the skill of the skill tree with the id (COOLDOWN_PER_HIT of a blast
+    //! shot whose hits come when it explodes). While that skill is being used the turns go to its collected cut.
+    //! \param treeSkillId The id of the skill tree entry (e.g. MRK_C1).
+    //! \param turns The turns to take off; the cooldown does not drop below 0.
+    void cutTreeSkillCooldown(const std::string& treeSkillId, double turns);
 
     //! \brief Returns the living enemy creatures on the map within the radius in tiles of the position, nearest first.
     std::vector<Creature*> getEnemyCreaturesNear(const Ogre::Vector3& center, double radius) const;
@@ -2818,6 +2824,8 @@ private:
     bool mSkillManaWaived = false;
     //! \brief Turns taken off the cooldown of the skill that is being used (COOLDOWN_PER_HIT)
     double mSkillCooldownCut = 0.0;
+    //! \brief The attack skill whose tryUseFight is running (nullptr otherwise), for cutTreeSkillCooldown
+    const CreatureSkill* mSkillBeingUsed = nullptr;
     //! \brief The skill of the armed melee blow (nullptr when none or when it was armed without a skill)
     const CreatureSkill* mStrikeSkill = nullptr;
     //! \brief Melee blows dodged in a row since the last blow that landed (DODGE_TAUNT_RESET)

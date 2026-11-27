@@ -5915,14 +5915,15 @@ bool Creature::useOncePerFight(const std::string& key)
 }
 
 //! \brief Doubles the aura once per fight when the creature has AURA_DOUBLE; the doubled aura lasts the turns of the
-//! property.
-void Creature::applyAuraDouble(double& value, double& duration, bool factorValue)
+//! property. Returns true when it doubled the aura.
+bool Creature::applyAuraDouble(double& value, double& duration, bool factorValue)
 {
     if(!hasSkillProperty("AURA_DOUBLE") || !useOncePerFight("AURA_DOUBLE"))
-        return;
+        return false;
 
     value = factorValue ? (1.0 + 2.0 * (value - 1.0)) : (2.0 * value);
     duration = getSkillPropertyValue("AURA_DOUBLE", 0, duration);
+    return true;
 }
 
 //! \brief Waives the mana of the skill that is being cast when the target is below the share of FREE_ON_LOW.
@@ -5939,6 +5940,29 @@ void Creature::addSkillCooldownCut(double turns)
 {
     if(turns > 0.0)
         mSkillCooldownCut += turns;
+}
+
+//! \brief Takes the turns off the cooldown of the skill of the skill tree with the id; while that skill is being used
+//! (its shot exploded at once) the turns go to the cut it collects, which applySkillTimerProperties applies.
+void Creature::cutTreeSkillCooldown(const std::string& treeSkillId, double turns)
+{
+    if(turns <= 0.0 || treeSkillId.empty())
+        return;
+
+    if(mSkillBeingUsed != nullptr && mSkillBeingUsed->getTreeSkillId() == treeSkillId)
+    {
+        addSkillCooldownCut(turns);
+        return;
+    }
+
+    for(CreatureSkillData& skillData : mSkillData)
+    {
+        if(skillData.mSkill->getTreeSkillId() != treeSkillId)
+            continue;
+
+        skillData.mCooldown = std::max(0.0, skillData.mCooldown - turns);
+        return;
+    }
 }
 
 //! \brief The living, visible enemy creatures (other team) on the map within the radius of the position, nearest
@@ -9225,9 +9249,11 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     // The mana is paid when the shot or skill starts
     payManaFor(*skillData.mSkill);
 
-    // We use the skill
+    // We use the skill; a blast shot that explodes at once gives its COOLDOWN_PER_HIT to the collected cut
+    mSkillBeingUsed = skillData.mSkill;
     skillData.mSkill->tryUseFight(*getGameMap(), this, range,
         &entityAttack, &tileAttack, ko, notifyPlayerIfHit);
+    mSkillBeingUsed = nullptr;
     // The new timers are added, so the remainder of the last turn carries over (fractions are kept)
     skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
     skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);
