@@ -35,7 +35,7 @@ def main():
         "InfirmaryDischargeMaxPercent": 100, "InfirmaryDischargeStepPercent": 10,
         "InfirmaryDischargeDefaultPercent": 100,        "InfirmaryHealGlowTurns": 7, "InfirmaryShamanWalkMinSeconds": 8,
         "InfirmaryShamanWalkMaxSeconds": 15, "InfirmaryShamanPoseMinSeconds": 10,
-        "InfirmaryShamanPoseMaxSeconds": 20, "InfirmaryShamanAnimationSeconds": 2}
+        "InfirmaryShamanPoseMaxSeconds": 20, "InfirmaryShamanAnimationSeconds": 4.5}
     if "void Tile::addDirt(" in (repo / "source/entities/Tile.cpp").read_text(encoding="utf-8"):
         expected["InfirmaryDirtPerTreatment"] = 17.4
     for key, number in expected.items():

@@ -62,7 +62,8 @@ if has_values:
     assert values.get('PoolAttendantClipSeconds') == 2 and re.search(r'^#\s*PoolAttendantClipSeconds', rooms_cfg, re.M)
     # Decision 857: the get-up after a knock-out lasts 6 s (tavern and arena alike)
     assert values.get('CreatureGetUpSeconds') == 6 and re.search(r'^#\s*CreatureGetUpSeconds.*\b6\b', rooms_cfg, re.M)
-    assert values.get('InfirmaryShamanAnimationSeconds') == 2
+    # Mario 2026-11-27: 4.5 s (was 2) so Chant 4 s, PotionTaste and TripOverBucket 4.4 s play at their own speed
+    assert values.get('InfirmaryShamanAnimationSeconds') == 4.5
     # The 20 s transfer and CatchTime are untouched
     assert values.get('GhostTransferSeconds') == 20
 else:
