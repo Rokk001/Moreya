@@ -63,7 +63,7 @@ MESHES = {
 }
 ATLASES = {'TavernSkin': 2048, 'TavernHood': 2048, 'TavernCloth': 2048,
            'TavernCounterWood': 2048, 'TavernRail': 1024, 'TavernSign': 512}
-CLIPS = {'Idle': 4.0, 'Pour': 2.0, 'Cheer': 2.0}
+CLIPS = {'Idle': 4.0, 'Pour': 5.0, 'Cheer': 2.0}
 # Triangle budget of the innkeeper and the approved export of CS10a (Meshy smart topology, about 10000 triangles; the
 # owner budget of 2026-11-17 for the former two-layer figure was 20000 to 35000)
 INNKEEPER_BUDGET = (9000, 35000)
