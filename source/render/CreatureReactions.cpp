@@ -1141,6 +1141,7 @@ bool CreatureReactions::startClip(RunningReaction& reaction, Creature* creature,
     reaction.mClipStart = start;
     reaction.mClipEnd = end;
     reaction.mBaseClip = base->getAnimationName();
+    RenderManager::getSingleton().rrSetReactionClip(creature, clip);
 
     return true;
 }
@@ -1166,6 +1167,10 @@ void CreatureReactions::stopClip(RunningReaction& reaction, Creature* creature)
         if(base != nullptr)
             base->setWeight(1.0f);
     }
+
+    // The prop of the clip goes with it
+    if(creature != nullptr)
+        RenderManager::getSingleton().rrSetReactionClip(creature, std::string());
 
     reaction.mClip.clear();
 }
