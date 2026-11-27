@@ -80,6 +80,6 @@ import re
 bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text(encoding='utf-8')
 radii = dict(re.findall(r'\{"(\w+)\.mesh", (\.\d+)f, -', bounds.split('walkingRadii[]')[1]))
 kobold = float(radii['Kobold'])
-for big in ('Troll', 'Dragon', 'PitDemon', 'LavaSpawn', 'Kreatur'):
+for big in ('Troll', 'Dragon', 'PitDemon', 'CrystalGolem', 'lich'):
     assert float(radii[big]) + kobold + 0.1 > 0.9, big
 print('ok')
