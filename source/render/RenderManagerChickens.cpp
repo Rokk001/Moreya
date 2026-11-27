@@ -79,6 +79,8 @@ const float LOOK_PHASE_STEP = 0.37f;
 const float FEATHER_HEIGHT_HATCH_SHELL = 0.05f;
 //! \brief Height at which the shell pieces and yolk of a trampled egg start.
 const float FEATHER_HEIGHT_TRAMPLE_SHELL = 0.04f;
+//! The head bone of the hen, rooster and chick rigs; checked by source/tests/check_chicken_bones.py
+const std::string CHICKEN_HEAD_BONE = "head";
 //! \brief Height above the hen at which the feathers fly when she is mounted.
 const float FEATHER_HEIGHT_MOUNT = 0.2f;
 //! \brief Height of the feather cloud above the rooster when he has landed on a hen.
@@ -990,12 +992,24 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                     // He moves over her: the way from his place to hers in the frame of his node
                     Ogre::SceneNode* parent = look.mNode->getParentSceneNode();
                     Ogre::SceneNode* henParent = hen->second.mNode->getParentSceneNode();
-                    if((parent != nullptr) && (henParent != nullptr))
+                    const Ogre::SkeletonInstance* henRig = hen->second.mEntity->getSkeleton();
+                    const Ogre::SkeletonInstance* roosterRig = look.mEntity->getSkeleton();
+                    const bool heads = (henRig != nullptr) && (roosterRig != nullptr) &&
+                        henRig->hasBone(CHICKEN_HEAD_BONE) && roosterRig->hasBone(CHICKEN_HEAD_BONE);
+                    if((parent != nullptr) && (henParent != nullptr) && !heads)
+                    {
+                        // A model without a head bone: he moves over the middle of the hen
+                        shift = parent->convertWorldToLocalPosition(hen->second.mNode->_getDerivedPosition()) * on;
+                        shift.z = 0.0f;
+                    }
+                    else if((parent != nullptr) && (henParent != nullptr))
                     {
                         look.mEntity->_updateAnimation();
                         hen->second.mEntity->_updateAnimation();
-                        const Ogre::Vector3 henHead = hen->second.mEntity->getSkeleton()->getBone("Head")->_getDerivedPosition();
-                        const Ogre::Vector3 roosterHead = look.mEntity->getSkeleton()->getBone("Head")->_getDerivedPosition();
+                        const Ogre::Vector3 henHead =
+                            hen->second.mEntity->getSkeleton()->getBone(CHICKEN_HEAD_BONE)->_getDerivedPosition();
+                        const Ogre::Vector3 roosterHead =
+                            look.mEntity->getSkeleton()->getBone(CHICKEN_HEAD_BONE)->_getDerivedPosition();
                         const Ogre::Vector3 targetHead = parent->convertWorldToLocalPosition(
                             hen->second.mNode->convertLocalToWorldPosition(henHead));
                         const Ogre::Quaternion lean = Ogre::Quaternion(Ogre::Degree(pitch), Ogre::Vector3::UNIT_X);
