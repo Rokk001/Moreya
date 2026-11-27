@@ -1439,7 +1439,7 @@ DwarfWorker	1
     FeeBase	0
     MoodSensitivity	1
     FeePerLevel	0
-    SkillDamageFactor	0.6029
+    SkillDamageFactor	0.4871
     SleepHeal	1
     TurnsStunDropped	0
     WeaponSpawnL	none
@@ -1506,9 +1506,9 @@ DwarfWorker	1
     [/MoodModifiers]
     [CreatureSkills]
     # SkillName	CooldownNbTurns	WarmupNbTurns	RangeMax	RangePerLvl	LevelMin	MissileMesh	MissilePartScript	MissileSpeed	PhyAtk	PhyAtkPerLvl	MagAtk	MagAtkPerLvl	EleAtk	EleAtkPerLvl	PhyMin	PhyMax	MagMin	MagMax	EleMin	EleMax
-    MissileLaunch	10	2	6	0	1	Cannonball	MissileMagic	3	2	0.5	2	0.5	1	0.5	7.49	11.23	7.49	11.23	4.49	6.74
+    MissileLaunch	10	2	6	0	1	Cannonball	MissileMagic	3	2	0.5	2	0.5	1	0.5	6.05	9.07	6.05	9.07	3.63	5.45
     # SkillName	CooldownNbTurns	WarmupNbTurns	LevelMin	PhyAtk	PhyAtkPerLvl	MagAtk	MagAtkPerLvl	EleAtk	EleAtkPerLvl	PhyMin	PhyMax	MagMin	MagMax	EleMin	EleMax
-    Melee	5	1	1	12	0.2	0	0	0	0	36.51	54.75	0	0	0	0
+    Melee	5	1	1	12	0.2	0	0	0	0	29.5	44.23	0	0	0	0
     [/CreatureSkills]
     [CreatureBehaviours]
     # BehaviourName	WeakCoef

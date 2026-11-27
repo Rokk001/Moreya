@@ -55,11 +55,13 @@ Vampire 400 64 184.5 MissileLaunch 0 0 45.53 58.91 0 0 1.0934
 """
 
 # Level-file creature classes with their own MinHP: file, class, MinHP, FeeBase, FeePerLevel, SkillDamageFactor and the
-# multiplier that was applied to every damage column of every Melee and MissileLaunch line of the class.
+# multiplier that was applied to every damage column of every Melee and MissileLaunch line of the class. The classes
+# follow the Dragon, whose mesh they use: its SkillDamageFactor 0.4871 and the multiplier 2.1890 x 0.4871 / 0.6029 =
+# 1.7686 (rounded to 4 decimals), the first-estimate damage factor of the Dragon on top of the earlier 2.1890.
 LEVEL_CLASSES = (
-    ("levels/campaign/Bonus1.level", "DragonBoss", "153.8", "0", "0", "0.6029", "2.1890"),
-    ("levels/skirmish/TestSingleplayerSmall.level", "DragonBoss", "153.8", "0", "0", "0.6029", "2.1890"),
-    ("levels/multiplayer/GreedOrMight.level", "BossDragon", "107.6", "0", "0", "0.6029", "2.1890"),
+    ("levels/campaign/Bonus1.level", "DragonBoss", "153.8", "0", "0", "0.4871", "1.7686"),
+    ("levels/skirmish/TestSingleplayerSmall.level", "DragonBoss", "153.8", "0", "0", "0.4871", "1.7686"),
+    ("levels/multiplayer/GreedOrMight.level", "BossDragon", "107.6", "0", "0", "0.4871", "1.7686"),
 )
 
 # Six damage columns (min/max pairs) of the Melee and MissileLaunch lines of the level-file classes before the
