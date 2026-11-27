@@ -441,7 +441,8 @@ def mana_cost_model(group, skill_name, is_first_attack, carries_bow, manacost_pe
     """The cost rules of 6.3 as Creature::getSkillManaCost applies them."""
     if skill_name != 'MissileLaunch':
         return 0.0
-    if is_first_attack and carries_bow:
+    if is_first_attack and (carries_bow or group == 'marksman'):
+        # The weapon shot of a bow or crossbow and of a marksman (ranged fighter with weapons) is free
         return 0.0
     caster = is_first_attack
     if group != 'none':
@@ -502,17 +503,18 @@ def check_mana_part_b():
     assert mana_cost_model('warrior', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 5.0, 'level file lists the shot first'
     assert mana_cost_model('none', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
     assert mana_cost_model('marksman', 'MissileLaunch', True, True, 0, caster_shot, second_shot) == 0.0, 'bow shot is free'
-    assert mana_cost_model('marksman', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == second_shot, 'no marksman special rule'
+    assert mana_cost_model('marksman', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 0.0, 'marksman shot is free'
+    assert mana_cost_model('marksman', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == second_shot, 'only the first line'
     assert mana_cost_model('mage', 'Melee', True, False, 0, caster_shot, second_shot) == 0.0
     assert mana_cost_model('warrior', 'Explosion', False, False, 0, caster_shot, second_shot) == 0.0, 'Champion line is free'
     assert mana_cost_model('mage', 'MissileLaunch', True, False, 100, caster_shot, second_shot) == 0.0
     # The cost classes of the real type lists of the roster: the first shot without a bow (the casters of the mage,
-    # healer and supporter groups pay the caster rate, the marksmen Gnoll and Gnome the second-shot rate), only the
-    # Dragon has a second shot, only the Elf shoots a bow
+    # healer and supporter groups pay the caster rate; the marksmen Gnoll and Gnome shoot free like the bow, roster
+    # D14), only the Dragon has a second shot, only the Elf shoots a bow
     weapon_types = {}
     for block in config_blocks(text('config/equipments.cfg'), 'Equipment'):
         weapon_types[first_value(block, 'Name')] = first_value(block, 'WeaponType')
-    caster_types, second_line_types, bow_types = set(), set(), set()
+    caster_types, second_line_types, bow_types, marksman_types = set(), set(), set(), set()
     for block in config_blocks(creatures_cfg, 'Creature'):
         names = skill_names(block)
         attack_names = [name for name in names if name in ('Melee', 'MissileLaunch')]
@@ -525,10 +527,12 @@ def check_mana_part_b():
             second_line_types.add(type_name)
         elif has_bow:
             bow_types.add(type_name)
+        elif first_value(block, 'SkillGroup') == 'marksman':
+            marksman_types.add(type_name)
         else:
             caster_types.add(type_name)
-    assert caster_types == {'Banshee', 'Gnoll', 'Gnome', 'Lich', 'LizardMan', 'Priestess', 'Vampire', 'Witch',
-                            'Wizard'}, caster_types
+    assert caster_types == {'Banshee', 'Lich', 'LizardMan', 'Priestess', 'Vampire', 'Witch', 'Wizard'}, caster_types
+    assert marksman_types == {'Gnoll', 'Gnome'}, marksman_types
     assert second_line_types == {'Dragon'}, second_line_types
     assert bow_types == {'Elf'}, bow_types
     # A level-file Dragon lists the shot before the melee line: the cost follows its skill group, not the line order
@@ -539,7 +543,7 @@ def check_mana_part_b():
                 assert names == ['MissileLaunch', 'Melee'], level_name
     assert 'if(group != "none")' in cost and \
         'casterShot = (group == "mage" || group == "healer" || group == "supporter");' in cost and \
-        '"marksman"' not in cost, 'no special rule for a marksman without bow'
+        '(carriesBowOrCrossbow() || mDefinition->getSkillGroup() == "marksman")' in cost, 'the marksman shot is free'
 
     # 6.4 not enough mana: the skill is not used, as with a cooldown; 6.5 mana is subtracted when the skill starts
     assert 'bool Creature::hasManaFor(' in creature and 'return mMana >= getSkillManaCost(skill);' in creature

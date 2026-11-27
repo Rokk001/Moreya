@@ -22,7 +22,7 @@ TABLE = """
 Adventurer 50 8 35.5 Melee 0 0 0 0 5.81 7.98 0.9645
 Cultist 50 8 35.5 Melee 0 0 5.67 7.56 0 0 0.8804
 Ghoul 50 8 30.2 Melee 6.32 9.13 0 0 0 0 0.7358
-Gnome 50 8 35.5 MissileLaunch 0 0 0 0 10.22 13.62 1.7255
+Gnome 50 8 35.5 MissileLaunch 0 0 0 0 6.75 8.99 1.1388
 Knight 50 8 35.5 Melee 0 0 5.26 7.04 0 0 0.8656
 Monk 50 8 35.5 Melee 0 0 0 0 6.47 8.64 1.077
 Orc 50 8 35.5 Melee 0 0 0 0 5.99 8.08 0.7911
@@ -31,7 +31,7 @@ CrystalGolem 100 16 61.5 Melee 0 0 8.88 11.85 0 0 1.0149
 Cyclops 100 16 61.5 Melee 0 0 9.21 11.52 0 0 0.7911
 DarkElf 100 16 52.3 Melee 6.77 9.48 0 0 0 0 0.4855
 Elf 100 16 61.5 MissileLaunch 0 0 0 0 10.89 14.58 1.1088
-Gnoll 100 16 61.5 MissileLaunch 0 0 0 0 12.1 16.14 0.9736
+Gnoll 100 16 61.5 MissileLaunch 0 0 0 0 9.68 12.91 0.7789
 Goblin 100 16 61.5 Melee 8.82 11.77 0 0 0 0 1.0216
 Hunter 100 16 61.5 Melee 9.29 13.27 0 0 0 0 0.9902
 Werewolf 100 16 61.5 Melee 0 0 6.85 9.42 0 0 0.8267

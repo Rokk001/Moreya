@@ -52,8 +52,8 @@ RunelordDwarf 106.5 .080931 0 143 48 18.43 24.52 0 0 0 0 block
 Paladin 184.5 .140204 0 75 25 0 0 0 0 32.2 43.4 block
 Defender 184.5 .140204 0 264 88 36.86 49.76 0 0 0 0 parry
 Werewolf 61.5 .046735 0 391 130 0 0 6.85 9.42 0 0 dodge
-Gnoll 61.5 .046735 0 391 130 0 0 0 0 12.1 16.14 dodge
-Gnome 35.5 .026977 0 529 176 0 0 0 0 10.22 13.62 dodge
+Gnoll 61.5 .046735 0 391 130 0 0 0 0 9.68 12.91 dodge
+Gnome 35.5 .026977 0 529 176 0 0 0 0 6.75 8.99 dodge
 CrystalGolem 61.5 .046735 0 455 152 0 0 8.88 11.85 0 0 none
 Cyclops 61.5 .046735 0 452 151 0 0 9.21 11.52 0 0 none
 Dragon 184.5 .140204 0 270 90 0 0 0 0 25.91 34.98 none
@@ -333,10 +333,11 @@ TYPE_MEAN_RANGE = (0.28, 0.70)
 SINGLE_TEMPLATE_RANGE = (0.25, 0.72)
 # Types outside the wage rule bands (roster plan D24, see PLAIN_SPREAD_OUTSIDE), each with the range its measured
 # values lie in on the branch (counted once, roster change W6): the Paladin (little damage, as decided) for the level 1
-# and template means and the single templates; the Gnoll for the single templates (its Poisoner template at level 10
-# is stronger and its Barrager template at level 20 weaker than the band). The class means leave the Paladin out.
+# and template means and the single templates. The Gnoll, listed here for its single templates until its shots became
+# free and its damage was tuned again (roster D14), lies inside the band again (0.42-0.56). The class means leave the
+# Paladin out.
 TYPE_MEAN_OUTSIDE = {"Paladin": (0.05, 0.21)}
-SINGLE_TEMPLATE_OUTSIDE = {"Paladin": (0.03, 0.36), "Gnoll": (0.24, 0.75)}
+SINGLE_TEMPLATE_OUTSIDE = {"Paladin": (0.03, 0.36)}
 CLASS_MEAN_EXCLUDED = ("Paladin",)
 # Rule 2 with two copies at the lower level (roster plan D24; before D24 three copies with the same thresholds).
 RULE_TWO_COPIES = 2

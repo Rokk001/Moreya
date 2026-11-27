@@ -6818,7 +6818,9 @@ double Creature::getManaCost(double baseCost) const
 //! \brief Returns the mana the skill costs this creature now: the rank cost of a skill of the skill tree, the shot cost
 //! of a caster's (mage, healer or supporter group) first MissileLaunch or of a second MissileLaunch line like the
 //! Dragon's (all with manacost%), 0 for
-//! every free attack. FREE_AREA_CAST and MANA_DISCOUNT of the passives lower the cost of skill tree skills.
+//! every free attack (Melee, the first MissileLaunch of a creature with a bow or crossbow and the first MissileLaunch
+//! of the marksman group, the ranged fighters with weapons). FREE_AREA_CAST and MANA_DISCOUNT of the passives lower
+//! the cost of skill tree skills.
 //! \param skill The skill or attack line to price.
 double Creature::getSkillManaCost(const CreatureSkill& skill) const
 {
@@ -6839,8 +6841,10 @@ double Creature::getSkillManaCost(const CreatureSkill& skill) const
     if(skill.getSkillName() != "MissileLaunch")
         return 0.0;
 
+    // The first line of a creature with a bow or crossbow and of a marksman (the ranged fighters with weapons, who
+    // shoot without mana like the bow) is a free weapon shot
     const bool firstAttack = mDefinition->isFirstAttackSkill(&skill);
-    if(firstAttack && carriesBowOrCrossbow())
+    if(firstAttack && (carriesBowOrCrossbow() || mDefinition->getSkillGroup() == "marksman"))
         return 0.0;
 
     // The shot of a caster costs the caster rate. A type with a skill group is
