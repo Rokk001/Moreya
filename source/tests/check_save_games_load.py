@@ -68,7 +68,12 @@ GAME_HEADER = "OpenDungeons_Version:" + (GAME_VERSION.group(1) if GAME_VERSION e
 skill_source = read_source("source/game/SkillType.cpp")
 SKILLS = set(re.findall(r'return "(\w+)";', skill_source.split("std::string toString(SkillType type)")[1]))
 alias_source = read_source("source/utils/NameAliases.cpp")
-ALIAS_HASHES = {int(h, 16): n for h, n in re.findall(r'\{\s*(0x[0-9a-fA-F]+)ULL,\s*"(\w+)"\s*\}', alias_source)}
+# NameAliases.cpp holds two tables: ALIASES (NameAliases::resolve) and after it CREATURE_CLASS_ALIASES (the removed
+# creature classes and their successors, NameAliases::resolveCreatureClass); each mirror reads only its own table.
+alias_table, _, creature_class_table = alias_source.partition("CREATURE_CLASS_ALIASES[]")
+ALIAS_PATTERN = r'\{\s*(0x[0-9a-fA-F]+)ULL,\s*"(\w+)"\s*\}'
+ALIAS_HASHES = {int(h, 16): n for h, n in re.findall(ALIAS_PATTERN, alias_table)}
+CREATURE_CLASS_HASHES = {int(h, 16): n for h, n in re.findall(ALIAS_PATTERN, creature_class_table)}
 tile_header = read_source("source/entities/Tile.h")
 VISUALS = [v for v in re.findall(r"\w+", re.search(r"enum class TileVisual\s*\{([^}]*)\}", tile_header).group(1))
            if v not in ("nullTileVisual", "countTileVisual")]
@@ -78,13 +83,26 @@ ROOM_TYPE_MAX = 26
 TRAP_TYPE_MAX = 17
 
 
-def alias(name):
-    """Mirror of NameAliases::resolve."""
+def name_hash(name):
+    """Mirror of NameAliases::hashName (FNV-1a over the lower-case bytes)."""
     h = 14695981039346656037
     for ch in name:
         h ^= ord(ch.lower()) & 0xFF
         h = (h * 1099511628211) & 0xFFFFFFFFFFFFFFFF
-    return ALIAS_HASHES.get(h, name)
+    return h
+
+
+def alias(name):
+    """Mirror of NameAliases::resolve."""
+    return ALIAS_HASHES.get(name_hash(name), name)
+
+
+def creature_class(name):
+    """Mirror of NameAliases::resolveCreatureClass: a removed creature class gives its successor (GameMap looks up
+    the class of a loaded creature this way), every other name stays."""
+    if not name:
+        return name
+    return CREATURE_CLASS_HASHES.get(name_hash(name), name)
 
 
 class LoadFailure(Exception):
@@ -905,7 +923,8 @@ def read_creatures(s, save):
                 fail("creature %d (%s): field %d is not a number: '%s'" % (n, f[1], idx + 1, f[idx]))
         if f[9] != "max" and not is_num(f[9]):
             fail("creature %d (%s): hit points '%s' invalid" % (n, f[1], f[9]))
-        if f[6] not in CLASSES:
+        # a removed class of an older save is loaded as its successor
+        if f[6] not in CLASSES and creature_class(f[6]) not in CLASSES:
             fail("creature %d (%s): class %s is not in config/creatures.cfg (the loader has no definition)"
                  % (n, f[1], f[6]))
         x, y = float(f[3]), float(f[4])

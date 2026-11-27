@@ -259,7 +259,8 @@ for token in ('drink_anim = "Drink"', 'armwrestle_anim = "ArmWrestle"', 'slap_an
               'getup_anim = "GetUp"', 'stagger_anim = "Stagger"', 'vomit_anim = "Vomit"', 'hangover_anim = "Hangover"'):
     assert token in animation_h, 'EntityAnimation lacks ' + token
 types = creature_types()
-assert len(types) == 35, len(types)
+# 36 creature types since the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
+assert len(types) == 36, len(types)
 skeletons = {}
 for name, mesh in types.items():
     data = (room_file('models/' + mesh)).read_bytes()

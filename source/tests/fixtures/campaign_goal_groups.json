@@ -1183,7 +1183,7 @@
       ],
       "oasisHeld": [
         "Action\tmessage\t1\tThe oasis is ours. A wandering spider has smelled the water and comes to serve you.",
-        "Action\tgenerate\t1\tSpider:1"
+        "Action\tgenerate\t1\tGhoul:1"
       ]
     },
     "reachability": {
@@ -1748,7 +1748,7 @@
       ],
       "denSeen": [
         "Action\tmessage\t1\tThis is the wolf den, rich in gold and open on every side. Hold it and the hunters lose their middle.",
-        "Action\tspawn\t1\t35\t90\t1\tOrc:3\tTroll:3\tSpider:3"
+        "Action\tspawn\t1\t35\t90\t1\tOrc:3\tTroll:3\tGhoul:3"
       ],
       "denWell": [
         "Action\tmessage\t1\tYour claim on the den has opened a spring of mana in the middle of it. Claim it and your spells come faster.",
@@ -2277,7 +2277,7 @@
         "Action\tmessage\t1\tThe middle clearing is the crossing of every road. The keepers have seen you and will start to move against each other too.",
         "Action\treveal\t1\tHedge3",
         "Action\treveal\t1\tHedge4",
-        "Action\tspawn\t1\t52\t33\t1\tOrc:3\tGoblin:3\tSpider:3"
+        "Action\tspawn\t1\t52\t33\t1\tOrc:3\tGoblin:3\tGhoul:3"
       ],
       "mined1": [
         "Action\tmessage\t1\tThe seams are paying. Iron doors will keep the keepers out of your halls."
@@ -2285,12 +2285,12 @@
       "allianceNorth": [
         "Action\tmessage\t1\tThe north-west keeper has joined hands with the north-east keeper. They share a pact until you fall.",
         "Action\talliance\t2\t4\tmake",
-        "Action\tspawn\t4\t27\t11\t1\tTroll:3\tOrc:3\tSpider:3\tGoblin:3"
+        "Action\tspawn\t4\t27\t11\t1\tTroll:3\tOrc:3\tGhoul:3\tGoblin:3"
       ],
       "allianceSouth": [
         "Action\tmessage\t1\tThe south-west keeper and the south-east keeper are allied against you.",
         "Action\talliance\t3\t5\tmake",
-        "Action\tspawn\t5\t27\t62\t1\tTroll:3\tOrc:3\tSpider:3\tGoblin:3"
+        "Action\tspawn\t5\t27\t62\t1\tTroll:3\tOrc:3\tGhoul:3\tGoblin:3"
       ],
       "pactSplit": [
         "Action\tmessage\t1\tThe pacts have cracked. The north-east keeper has left the north-west keeper and sworn to the south-east keeper instead.",
@@ -2304,40 +2304,40 @@
       "hunt1": [
         "Action\tmessage\t1\tThorn hunters are riding out of the north-west.",
         "Action\tterrain\t28\t29\t28\t29\tpath",
-        "Action\tspawn\t2\t31\t29\t1\tOrc:2\tGoblin:2\tSpider:2"
+        "Action\tspawn\t2\t31\t29\t1\tOrc:2\tGoblin:2\tGhoul:2"
       ],
       "hunt2": [
         "Action\tmessage\t1\tA pack from the south-east is crossing the maze.",
         "Action\tterrain\t28\t44\t28\t44\tpath",
-        "Action\tspawn\t5\t30\t44\t1\tOrc:2\tSpider:2\tTroll:2"
+        "Action\tspawn\t5\t30\t44\t1\tOrc:2\tGhoul:2\tTroll:2"
       ],
       "hunt3": [
         "Action\tmessage\t1\tThe north-east keeper sends hounds.",
-        "Action\tspawn\t4\t31\t29\t1\tGoblin:3\tOrc:3\tSpider:2"
+        "Action\tspawn\t4\t31\t29\t1\tGoblin:3\tOrc:3\tGhoul:2"
       ],
       "hunt4": [
         "Action\tmessage\t1\tWolves from the south-west are in the hedges.",
-        "Action\tspawn\t3\t30\t44\t1\tTroll:3\tOrc:3\tSpider:3"
+        "Action\tspawn\t3\t30\t44\t1\tTroll:3\tOrc:3\tGhoul:3"
       ],
       "hunt5": [
         "Action\tmessage\t1\tTwo keepers have joined their packs against you.",
-        "Action\tspawn\t2\t31\t29\t1\tOrc:3\tTroll:3\tGoblin:3\tSpider:3"
+        "Action\tspawn\t2\t31\t29\t1\tOrc:3\tTroll:3\tGoblin:3\tGhoul:3"
       ],
       "hunt6": [
         "Action\tmessage\t1\tThe thorn guard marches in force.",
-        "Action\tspawn\t5\t30\t44\t1\tTroll:3\tOrc:3\tOrc:3\tSpider:3"
+        "Action\tspawn\t5\t30\t44\t1\tTroll:3\tOrc:3\tOrc:3\tGhoul:3"
       ],
       "hunt7": [
         "Action\tmessage\t1\tThe last reserves of the north-east are coming.",
-        "Action\tspawn\t4\t31\t29\t1\tTroll:4\tOrc:3\tGoblin:3\tSpider:3\tOrc:3"
+        "Action\tspawn\t4\t31\t29\t1\tTroll:4\tOrc:3\tGoblin:3\tGhoul:3\tOrc:3"
       ],
       "hunt8": [
         "Action\tmessage\t1\tCassia Thorne has called every keeper to arms.",
-        "Action\tspawn\t3\t30\t44\t1\tTroll:4\tTroll:3\tOrc:4\tSpider:3\tGoblin:3"
+        "Action\tspawn\t3\t30\t44\t1\tTroll:4\tTroll:3\tOrc:4\tGhoul:3\tGoblin:3"
       ],
       "hunt9": [
         "Action\tmessage\t1\tThe final pack is on the road.",
-        "Action\tspawn\t2\t31\t29\t1\tTroll:4\tTroll:4\tOrc:4\tSpider:4\tGoblin:3"
+        "Action\tspawn\t2\t31\t29\t1\tTroll:4\tTroll:4\tOrc:4\tGhoul:4\tGoblin:3"
       ]
     },
     "reachability": {
@@ -2734,7 +2734,7 @@
         "Action\talliance\t3\t5\tmake",
         "Action\tportal\t3\ton",
         "Action\treveal\t1\tBasin",
-        "Action\tspawn\t3\t51\t39\t1\tOrc:3\tTroll:3\tSpider:3\tGoblin:3"
+        "Action\tspawn\t3\t51\t39\t1\tOrc:3\tTroll:3\tGhoul:3\tGoblin:3"
       ],
       "dockEntered": [
         "Action\tmessage\t1\tThe west dock. The keeper here has sent a runner across the south span to the quay.",
@@ -2749,7 +2749,7 @@
       ],
       "basinSeen": [
         "Action\tmessage\t1\tThe harbour basin. Sea stacks stand in the water like teeth, and the keepers are watching from the banks.",
-        "Action\tspawn\t1\t50\t79\t1\tOrc:3\tTroll:3\tSpider:3"
+        "Action\tspawn\t1\t50\t79\t1\tOrc:3\tTroll:3\tGhoul:3"
       ],
       "northSpan": [
         "Action\tmessage\t1\tThe north span. The two northern keepers are now at your back door and at each other.",
@@ -2772,19 +2772,19 @@
       ],
       "tide1": [
         "Action\tmessage\t1\tA raiding party is landing at the north-west harbour.",
-        "Action\tspawn\t2\t22\t22\t1\tOrc:2\tSpider:2\tGoblin:2"
+        "Action\tspawn\t2\t22\t22\t1\tOrc:2\tGhoul:2\tGoblin:2"
       ],
       "tide2": [
         "Action\tmessage\t1\tThe harbour keeper is sending a boarding party south.",
-        "Action\tspawn\t2\t20\t64\t1\tOrc:3\tTroll:3\tGoblin:3\tSpider:3"
+        "Action\tspawn\t2\t20\t64\t1\tOrc:3\tTroll:3\tGoblin:3\tGhoul:3"
       ],
       "surf1": [
         "Action\tmessage\t1\tThe cliff keeper is loosing a pack down the east road.",
-        "Action\tspawn\t3\t51\t39\t1\tTroll:3\tOrc:3\tSpider:2"
+        "Action\tspawn\t3\t51\t39\t1\tTroll:3\tOrc:3\tGhoul:2"
       ],
       "surf2": [
         "Action\tmessage\t1\tA heavy column marches out of the north-east.",
-        "Action\tspawn\t3\t51\t39\t1\tTroll:3\tTroll:3\tOrc:3\tSpider:3\tGoblin:3"
+        "Action\tspawn\t3\t51\t39\t1\tTroll:3\tTroll:3\tOrc:3\tGhoul:3\tGoblin:3"
       ],
       "swell1": [
         "Action\tmessage\t1\tThe dock keeper has called every deckhand.",
@@ -2792,15 +2792,15 @@
       ],
       "swell2": [
         "Action\tmessage\t1\tThe west dock is emptying onto the road.",
-        "Action\tspawn\t4\t15\t79\t1\tTroll:4\tOrc:3\tSpider:3\tGoblin:3"
+        "Action\tspawn\t4\t15\t79\t1\tTroll:4\tOrc:3\tGhoul:3\tGoblin:3"
       ],
       "gale1": [
         "Action\tmessage\t1\tThe quay keeper is sending his packs south.",
-        "Action\tspawn\t5\t37\t71\t1\tOrc:3\tTroll:2\tSpider:2"
+        "Action\tspawn\t5\t37\t71\t1\tOrc:3\tTroll:2\tGhoul:2"
       ],
       "gale2": [
         "Action\tmessage\t1\tA storm of rats and spiders is coming off the quay.",
-        "Action\tspawn\t5\t37\t71\t1\tSpider:3\tGoblin:3\tOrc:3\tTroll:3"
+        "Action\tspawn\t5\t37\t71\t1\tGhoul:3\tGoblin:3\tOrc:3\tTroll:3"
       ],
       "gale3": [
         "Action\tmessage\t1\tThe east quay has thrown its last guard against you.",
@@ -4818,7 +4818,7 @@
         "Action\tmessage\t1\tThe west bank. The nearest hold belongs to a keeper who has watched your lamps all the way down. Something is walled up in the north.",
         "Action\treveal\t1\tRival2",
         "Action\treveal\t1\tGallery",
-        "Action\tspawn\t2\t16\t36\t1\tOrc:5\tTroll:5\tSpider:4"
+        "Action\tspawn\t2\t16\t36\t1\tOrc:5\tTroll:5\tGhoul:4"
       ],
       "galleryOpen": [
         "Action\tmessage\t1\tA hidden gallery, its walls lined with silver. The first miners kept it for themselves.",
@@ -4839,7 +4839,7 @@
       "lakeC": [
         "Action\tmessage\t1\tThe last lake. The third keeper sits beyond its western bank, alone and angry.",
         "Action\treveal\t1\tRival4",
-        "Action\tspawn\t4\t25\t92\t1\tOrc:5\tTroll:5\tCultist:5\tSpider:4"
+        "Action\tspawn\t4\t25\t92\t1\tOrc:5\tTroll:5\tCultist:5\tGhoul:4"
       ],
       "vaultOpen": [
         "Action\tmessage\t1\tThe silver vault of the warden. Your treasury will need a bigger room.",

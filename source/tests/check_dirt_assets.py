@@ -46,7 +46,8 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
             fields.setdefault(words[0], words[1])
     if 'Name' in fields:
         types[fields['Name']] = fields['MeshName']
-assert len(types) == 35, len(types)
+# 36 creature types since the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
+assert len(types) == 36, len(types)
 
 materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for folder in [root] + room_packages.package_roots(root)
                     for p in (folder / 'materials' / 'scripts').glob('*.material'))

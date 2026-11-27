@@ -6,7 +6,10 @@ import check_campaign_playability as campaign
 
 root = Path(__file__).resolve().parents[2]
 # The third digest covers the gold and gem tile lines. It was updated for the gold seam densities and added gold tiles of BALANCE-GOLD-PLAN section 9 (a density column on 125 Ebonrook and 150 Mirewatch gold tiles; positions, types and fullness are unchanged). Rooms and creatures digests are unchanged.
-BASELINE = {'Ebonrook': ('84261b3c15e22d90f49c31b69b74c84a61912e60f2e4cc0483f990e40a3beced', '52a1e6110a62dcdd3b4507d35c821f6ea5d48c0fd15c72f65f98e45ce2309d67', '3a799bca47a5a25786e33bae56ba42e55202470e8bb4033cdf43d1dea937e50d'), 'Mirewatch': ('80fbd9f452b093b21a9f8d3ac1754b78aa178578956e3464042567a79f312ded', '386e45eba2a2cb2ba4325782ddb9695f22ab9bd92ec424769f5b06c815cde248', '32e97f7d4cb5e7ae5fc7ecb8aef0fa354312c1f2d84be3e7ca9942c4a46af26b')}
+# The creatures digests were counted again on feature/creature-roster-w5a after the creature roster change: only the
+# classes and meshes of removed creatures became their successors (Ebonrook 6 rows, Mirewatch 6 rows); positions,
+# seats, levels and every other field are unchanged. The rooms and minerals digests are unchanged.
+BASELINE = {'Ebonrook': ('84261b3c15e22d90f49c31b69b74c84a61912e60f2e4cc0483f990e40a3beced', 'e6d5c2c8938d7fc2dbe0840003be4658db523f562cbdabd82d455badf277ce1f', '3a799bca47a5a25786e33bae56ba42e55202470e8bb4033cdf43d1dea937e50d'), 'Mirewatch': ('80fbd9f452b093b21a9f8d3ac1754b78aa178578956e3464042567a79f312ded', 'e70ea9068e13f881dccdae1b7985241e7138755be052100dca4f9a6bfdde1f87', '32e97f7d4cb5e7ae5fc7ecb8aef0fa354312c1f2d84be3e7ca9942c4a46af26b')}
 
 GOLD_REWARDS = {'Ebonrook': [('firstCoin', 'Action\tgold\t1\t800'), ('westMarch', 'Action\tgold\t1\t700'), ('sealed', 'Action\tgold\t1\t1500'), ('kills', 'Action\tgold\t1\t1000'), ('scoutPossessed', 'Action\tgold\t1\t600'), ('rookHoardOpened', 'Action\tgold\t1\t1500')], 'Mirewatch': [('firstCoin', 'Action\tgold\t1\t600'), ('towerA', 'Action\tgold\t1\t500'), ('scoutTowerC', 'Action\tgold\t1\t400')]}
 

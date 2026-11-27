@@ -16,8 +16,10 @@ REMOVED = ("Rat", "Spider", "Roach", "LavaSpawn", "Slime", "Dwarf1", "NatureMons
 
 # Class uses per successor over all levels (creature lines, wave entries, raid members, Block triggers, spawn and
 # generate entries) and the number of level files that use it, counted once on the branch after the swap.
+# Banshee counted again on feature/creature-roster-w5a after the duplicate "Block 1 Banshee" lines of Brackenford,
+# Coldwell and Mossgate (Rat and the keeper-side DarkElf both became the Banshee) were removed: 390 - 3 = 387.
 EXPECTED_USES = {
-    "Banshee": 390,
+    "Banshee": 387,
     "Ghoul": 189,
     "Witch": 70,
     "Butcher": 60,

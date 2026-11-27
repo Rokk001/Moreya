@@ -233,7 +233,8 @@ assert sound_check.returncode == 0, 'check_sound_sources.py failed:\n' + sound_c
 
 # 7. The bath clips in every skeleton a creature type uses (binary skeleton: the clip names end with a line feed)
 types = creature_types()
-assert len(types) == 35, len(types)
+# 36 creature types since the creature roster change (13 hero, 15 keeper, 7 rogue and the Champion)
+assert len(types) == 36, len(types)
 skeletons = {}
 for name, mesh in types.items():
     found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (room_file('models/' + mesh)).read_bytes())
