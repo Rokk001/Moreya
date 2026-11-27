@@ -130,14 +130,14 @@ int main(int argc,char** argv) { try {
             check(std::abs(item->getPrice(&map)-(spec.mPrice+spec.mPricePerBonus*item->mBonuses.size()))<1e-9,"actual rolled item price");
         }
     }
-    const ItemDefinition* primary=map.getItemDefinition("BLK_A_Head"); const ItemDefinition* alternate=map.getItemDefinition("BLK_B_Head");
+    const ItemDefinition* primary=map.getItemDefinition("BLK_B_Head"); const ItemDefinition* alternate=map.getItemDefinition("FLK_C_Head");
     check(primary!=nullptr&&alternate!=nullptr,"real rating catalogue lines");
     Creature wearer(&map,&seat); wearer.mLevel=30;
     std::unique_ptr<ItemInstance> own=ItemInstance::create(*primary,Quality::common),other=ItemInstance::create(*alternate,Quality::common);
     own->mBonuses={{"Damage%",10}}; other->mBonuses=own->mBonuses;
     check(wearer.rateItem(*own)>wearer.rateItem(*other),"actual rating prefers primary path for identical bonuses");
-    std::unique_ptr<ItemInstance> first=map.rollItem(Quality::epic,"head","","Arms");
-    std::unique_ptr<ItemInstance> second=map.rollItem(Quality::epic,"head","","Arms");
+    std::unique_ptr<ItemInstance> first=map.rollItem(Quality::epic,"head","","Slayer");
+    std::unique_ptr<ItemInstance> second=map.rollItem(Quality::epic,"head","","Slayer");
     check(first.get()!=nullptr&&second.get()!=nullptr&&first->mQuality==Quality::epic&&first->mEpicSerial>0,"first unique Epic");
     check(second->mQuality==Quality::rare&&second->mDefinitionId==first->mDefinitionId,"registered Epic line falls back to Rare");
     Creature victim(&map,&seat); victim.mEquipment[2]=ItemInstance::create(*primary,Quality::common);

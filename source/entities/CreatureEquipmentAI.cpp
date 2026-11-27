@@ -61,6 +61,20 @@ void dropDeathItem(Creature& creature, std::unique_ptr<ItemInstance> item)
     if((bag != nullptr) && creature.getIsOnServerMap())
         creature.getGameMap()->getRaid().registerFallenDrop(creature, *bag);
 }
+
+//! \brief True when the item path is a family path of the given skill family.
+//! \details A family path can be named differently from its family id (blood -> Bloodbound), so the path names come
+//! from the skill tree configuration.
+bool isFamilyItemPath(const CreatureSkillTree::SkillTreeConfig& tree, const std::string& family, const std::string& path)
+{
+    CreatureSkillTree::TypeInfo familyType;
+    familyType.mFamily = family;
+    const std::vector<std::string> familyPaths = tree.getPathNames(familyType);
+    for(const std::string& familyPath : familyPaths)
+        if(sameItemPath(path, familyPath))
+            return true;
+    return false;
+}
 }
 
 //! \brief Resolves body slots or the matching spawn-weapon hand without allowing new weapon classes.
@@ -99,6 +113,7 @@ bool Creature::isItemEquippable(const ItemInstance& item) const
 }
 
 //! \brief Scores equipment bonuses and marks worthwhile crystals as wanted.
+//! \details The primary template path weighs most, then the family path, then the other paths of the own group.
 double Creature::rateItem(const ItemInstance& item) const
 {
     if(item.mSoulCrystal)
@@ -113,7 +128,7 @@ double Creature::rateItem(const ItemInstance& item) const
     double pathWeight = 0.3;
     if(templ != nullptr && sameItemPath(definition->getPath(), templ->mPrimary))
         pathWeight = 1.0;
-    else if(sameItemPath(definition->getPath(), mDefinition->getSkillFamily()))
+    else if(isFamilyItemPath(tree, mDefinition->getSkillFamily(), definition->getPath()))
         pathWeight = 0.8;
     else if(definition->getGroup() == mDefinition->getSkillGroup())
         pathWeight = 0.5;
