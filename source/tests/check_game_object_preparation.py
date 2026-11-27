@@ -11,17 +11,17 @@ Now RenderManager::prepareGameObjectResources loads every mesh listed in config/
    extractor of check_asset_references.py (source/rooms, entities, traps, spells, render, modes, gamemap, utils and
    config/roomAmbience*.cfg, creatureSkills.cfg, equipments.cfg; menu meshes and the creature meshes of creatures.cfg,
    which prepareGameCreatureResources prepares, excluded) are all listed, every listed mesh exists in models/, no mesh is
-   listed twice, and the list has exactly 221 meshes (183 objects of the code and configs, 38 dirt piles of the
+   listed twice, and the list has exactly 222 meshes (184 objects of the code and configs, 38 dirt piles of the
    creature classes, DirtPileEntity::PILE_MESH_PREFIX). A new object mesh in the code without a list entry fails here.
 2. Wiring (no compiler): initGameRenderer prepares the objects after the creatures and before the game shaders; the
    preparation does the steps of rrCreateRenderedMovableEntity, never attaches its temporary entity, destroys it, and
    reports a mesh it cannot prepare instead of stopping the map load.
 3. Rejected stalls of build 61 (no compiler): BloodStain and GoblinBed, the first objects of the two rejected
    minutes, are listed, and the contour/hover copies made in those minutes are prepared for every creature and seat.
-4. Parsing (compiled probe of the production readPreparedObjectMeshes): the game reads exactly the 221 names from the
+4. Parsing (compiled probe of the production readPreparedObjectMeshes): the game reads exactly the 222 names from the
    real file, in file order, comments ignored.
 
-Fixed values of this branch: 221 listed meshes. Part 4 compiles with cl, so it runs in the compile phase of the
+Fixed values of this branch: 222 listed meshes. Part 4 compiles with cl, so it runs in the compile phase of the
 integration only (--no-probe skips it).
 
 config/preparedobjects.cfg and the meshes are content (core-config, core-models and room packages, found through
@@ -54,7 +54,8 @@ def mesh_exists(name):
 # gold are code-built heaps and sacks, the GoldstackLv names are only sizes
 # 221 since the training hall has its own wall shields TrainingHallShield1 and 2 next to the WeaponShield meshes
 # of the arena (counted on the integration branch; was 219)
-LISTED = 221
+# 222 since every finished trap of the workshop shows the TrapCrate mesh (counted on the branch; was 221)
+LISTED = 222
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
