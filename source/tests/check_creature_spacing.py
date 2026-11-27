@@ -246,7 +246,7 @@ def spread(width, height, origin, own, peers, floor=None, room=None):
     return best, visited, paths
 
 
-large = tuple(float(v) for v in next(m for m in models if m[0] == "LavaSpawn.mesh")[2:])
+large = tuple(float(v) for v in next(m for m in models if m[0] == "Dragon.mesh")[2:])
 origin = (3, 3)
 crowd = [((3.+x, 3.+y), large) for x, y in itertools.product(range(-1, 2), repeat=2)]
 old_local = [((pos[0]-3, pos[1]-3), peer) for pos, peer in crowd]
