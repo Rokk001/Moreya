@@ -71,7 +71,9 @@ bool CreatureSkillStrike::tryUseSupport(GameMap& gameMap, Creature* creature) co
     if(creature->isStrikeArmed())
         return false;
 
-    creature->armStrike(mMultiplier);
+    // The blow remembers the skill, so that it can act on the rank properties (STUN, KNOCK_DOWN, BONUS_VS_BACKLINE,
+    // RESET_ON_KILL) when it lands
+    creature->armStrike(mMultiplier, this);
 
     for(Tile* tile : creature->getCoveredTiles())
     {

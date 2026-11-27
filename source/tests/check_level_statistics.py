@@ -220,6 +220,9 @@ struct Creature : public GameEntity
     void reportFightParticipants(Creature&) {}
     void reportDeathToFriends(GameEntity*) {}
     double getRelationshipRageFactor(const Seat*) const { return 1.0; }
+    // The role skill rules act on the server only; the fixture runs the non-server path and leaves the damage as is
+    double applySkillDamageRules(GameEntity*, double damage) { return damage; }
+    void spreadDamageOverTimeOnDeath() {}
     std::map<std::string, int64_t> mRecentAttackers;
     std::vector<std::string> mCaptors;
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage,

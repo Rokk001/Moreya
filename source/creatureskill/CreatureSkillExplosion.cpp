@@ -18,6 +18,7 @@
 #include "creatureskill/CreatureSkillExplosion.h"
 
 #include "creatureeffect/CreatureEffectExplosion.h"
+#include "creatureeffect/CreatureEffectStrengthChange.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -29,6 +30,7 @@
 #include "utils/LogManager.h"
 
 #include <istream>
+#include <vector>
 
 const std::string CreatureSkillExplosionName = "Explosion";
 
@@ -69,6 +71,8 @@ bool CreatureSkillExplosion::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Puts the blast on the attacked creature; the rank properties AREA, LARGER_RADIUS, WEAKEN, FEAR and
+//! BURNING_GROUND widen it and the target bonuses of the caster scale it per creature hit.
 bool CreatureSkillExplosion::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -89,12 +93,45 @@ bool CreatureSkillExplosion::tryUseFight(GameMap& gameMap, Creature* creature, f
     const bool critical = creature->rollCritical();
     if(critical)
         damageFactor *= ConfigManager::getSingleton().getCritDamageMultiplier();
-    CreatureEffectExplosion* effect = new CreatureEffectExplosion(mEffectDuration, mEffectValue * damageFactor,
-        "SpellCreatureExplosion");
-    effect->setDamageMin(mEffectValueMin * damageFactor);
-    attackedCreature->addCreatureEffect(effect);
+
+    // Rank property AREA: every enemy within its radius (times LARGER_RADIUS) of the target is hit too
+    std::vector<Creature*> targets;
+    targets.push_back(attackedCreature);
+    if(hasProperty("AREA"))
+    {
+        const std::vector<Creature*> nearby = creature->getEnemyCreaturesNear(attackedCreature->getPosition(),
+            getPropertyValue("AREA", 0, 0.0) * getPropertyValue("LARGER_RADIUS", 0, 1.0));
+        for(Creature* enemy : nearby)
+        {
+            if(enemy != attackedCreature && !enemy->rollAreaDodge())
+                targets.push_back(enemy);
+        }
+    }
+
+    for(Creature* target : targets)
+    {
+        const double targetFactor = damageFactor * creature->getSkillTargetDamageFactor(*target, this);
+        CreatureEffectExplosion* effect = new CreatureEffectExplosion(mEffectDuration, mEffectValue * targetFactor,
+            "SpellCreatureExplosion");
+        effect->setDamageMin(mEffectValueMin * targetFactor);
+        target->addCreatureEffect(effect);
+        // Rank properties WEAKEN (factor, turns) and FEAR (turns) on every creature hit
+        if(hasProperty("WEAKEN"))
+        {
+            CreatureEffectStrengthChange* weaken = new CreatureEffectStrengthChange(
+                getPropertyValue("WEAKEN", 1, mEffectDuration), getPropertyValue("WEAKEN", 0, 1.0), "SpellCreatureWeak");
+            tagEffect(weaken);
+            target->addCreatureEffect(weaken);
+        }
+        if(hasProperty("FEAR"))
+            target->fleeFromSkill(*creature, getPropertyValue("FEAR", 0, 0.0));
+    }
     if(critical)
         attackedCreature->fireCriticalSpell(creature->getName());
+
+    // Rank property BURNING_GROUND: the ground around the target burns (damage per turn, turns, radius)
+    if(hasProperty("BURNING_GROUND"))
+        creature->addSkillBurningGround(*this, attackedTile);
 
     return true;
 }

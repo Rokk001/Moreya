@@ -19,6 +19,7 @@
 #include "creatureskill/CreatureSkillAreaDamage.h"
 
 #include "creatureeffect/CreatureEffectAreaDamage.h"
+#include "creatureeffect/CreatureEffectSpeedChange.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -28,6 +29,7 @@
 #include "utils/LogManager.h"
 
 #include <istream>
+#include <vector>
 
 const std::string CreatureSkillGasCloudName = "GasCloud";
 const std::string CreatureSkillHailStormName = "HailStorm";
@@ -77,6 +79,7 @@ bool CreatureSkillAreaDamage::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Puts the zone around the tile of the target; the rank properties LONGER, LARGER_RADIUS and SLOW tune it.
 bool CreatureSkillAreaDamage::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -92,10 +95,28 @@ bool CreatureSkillAreaDamage::tryUseFight(GameMap& gameMap, Creature* creature, 
     // A skill of the skill tree also scales with the level, the health tier and the spell passives of the creature
     if(isTreeSkill())
         damageFactor *= creature->getTreeSpellDamageFactor();
-    CreatureEffectAreaDamage* effect = new CreatureEffectAreaDamage(static_cast<int32_t>(mNbTurns),
-        attackedTile->getX(), attackedTile->getY(), mRadius, mDamagePerTurn * damageFactor, mParticleScript);
+    // Rank properties: LONGER multiplies the turns of the zone, LARGER_RADIUS its radius
+    const double nbTurns = static_cast<double>(mNbTurns) * getPropertyValue("LONGER", 0, 1.0);
+    const double radius = mRadius * getPropertyValue("LARGER_RADIUS", 0, 1.0);
+    CreatureEffectAreaDamage* effect = new CreatureEffectAreaDamage(static_cast<int32_t>(nbTurns),
+        attackedTile->getX(), attackedTile->getY(), radius, mDamagePerTurn * damageFactor, mParticleScript);
     effect->setDamageMin(mDamagePerTurnMin * damageFactor);
     creature->addCreatureEffect(effect);
+
+    // Rank property SLOW: the enemies within the zone when it starts are slowed (factor, turns)
+    if(hasProperty("SLOW"))
+    {
+        const Ogre::Vector3 center(static_cast<Ogre::Real>(attackedTile->getX()),
+            static_cast<Ogre::Real>(attackedTile->getY()), 0.0f);
+        const std::vector<Creature*> enemies = creature->getEnemyCreaturesNear(center, radius);
+        for(Creature* enemy : enemies)
+        {
+            CreatureEffectSpeedChange* slow = new CreatureEffectSpeedChange(getPropertyValue("SLOW", 1, nbTurns),
+                getPropertyValue("SLOW", 0, 1.0), "SpellCreatureSlow");
+            tagEffect(slow);
+            enemy->addCreatureEffect(slow);
+        }
+    }
 
     return true;
 }

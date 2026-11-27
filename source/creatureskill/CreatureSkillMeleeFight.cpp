@@ -71,7 +71,8 @@ bool CreatureSkillMeleeFight::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
-//! \brief Resolves hits with weapon recovery and equipment effects, including structure damage bonuses.
+//! \brief Resolves hits with weapon recovery and equipment effects, including structure damage bonuses, and the rank
+//! properties of the skill tree (skill parry, target bonuses, critical hit properties, armed strike properties).
 bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -109,6 +110,10 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
     // Whether the blow is a critical hit: rolled once after the hit roll and the avoidance, never for a blow that
     // missed or was avoided
     bool critical = false;
+    // The armed blow of a STRIKE skill and the parry of a PARRY_COUNTER skill of the target, for their rank
+    // properties after the blow (Creature::onSkillMeleeResult)
+    const CreatureSkill* strikeSkill = nullptr;
+    const CreatureSkill* parrySkill = nullptr;
     if(attackedObject->getObjectType() != GameEntityType::creature)
     {
         const double itemFactor = ItemEffects::targetDamageFactor(*creature, *attackedObject);
@@ -131,6 +136,9 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
         missed = !target->rollAttackHit(creature->getAttackRating(), creature->getLevel(), creature->isPossessed());
         if(!missed)
             defence = target->rollMeleeDefence(false);
+        // A blow that would land may still be parried by a PARRY_COUNTER skill of the target
+        if(!missed && defence == DefenceChance::none && target->rollSkillParry(parrySkill))
+            defence = DefenceChance::parried;
         if(!missed && defence == DefenceChance::none)
         {
             double phyMin = mPhyMin, phyMax = mPhyMax;
@@ -147,18 +155,31 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
             eleMin *= itemFactor;
             eleMax *= itemFactor;
             // An armed blow of a skill multiplies the damage before the defense; blows against buildings keep it
+            strikeSkill = creature->consumeStrikeSkill();
             const double strikeFactor = creature->consumeStrikeMultiplier();
-            phyMin *= strikeFactor;
-            phyMax *= strikeFactor;
-            magMin *= strikeFactor;
-            magMax *= strikeFactor;
-            eleMin *= strikeFactor;
-            eleMax *= strikeFactor;
-            // A critical hit multiplies every damage value before the defense of the target is subtracted
-            critical = creature->rollCritical();
+            // The target bonuses of the rank properties (of the creature and of the armed skill) multiply it as well
+            const double targetFactor = strikeFactor * creature->getSkillTargetDamageFactor(*target, strikeSkill);
+            phyMin *= targetFactor;
+            phyMax *= targetFactor;
+            magMin *= targetFactor;
+            magMax *= targetFactor;
+            eleMin *= targetFactor;
+            eleMax *= targetFactor;
+            // A critical hit multiplies every damage value before the defense of the target is subtracted; CRIT_BEHIND
+            // makes a blow from behind critical and CRIT_DAMAGE adds its factor
+            critical = creature->rollCritical() || creature->isSkillCriticalFromBehind(*target);
             if(critical)
+            {
                 CombatDamage::applyCriticalToRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,
                     creature->getItemEffect("Executioner"));
+                const double critFactor = creature->getSkillPropertyValue("CRIT_DAMAGE", 0, 1.0);
+                phyMin *= critFactor;
+                phyMax *= critFactor;
+                magMin *= critFactor;
+                magMax *= critFactor;
+                eleMin *= critFactor;
+                eleMax *= critFactor;
+            }
             uint32_t weaponCooldown = 0;
             const Weapon* weapons[] = {creature->getWeaponL(), creature->getWeaponR()};
             for(const Weapon* weapon : weapons)
@@ -200,6 +221,9 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
         Creature* target = static_cast<Creature*>(attackedObject);
         if(!missed && defence == DefenceChance::none)
             ItemEffects::onHit(*creature, *target, damageDone, true, retaliationPercent);
+        // The rank properties that act after the blow: dodges, parry and counter, critical hits, the armed strike
+        if(!missed)
+            creature->onSkillMeleeResult(*target, defence, critical, damageDone, strikeSkill, parrySkill);
         if(!missed)
             target->fireCombatImpact(hasWeapon(creature) && hasWeapon(target),
                 damageDone > 0.0, creature->getPosition());

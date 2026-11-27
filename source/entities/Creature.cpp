@@ -70,6 +70,13 @@
 #include "creaturebehaviour/CreatureBehaviourFleeWhenWeak.h"
 #include "creaturebehaviour/CreatureBehaviourFleeWhenOutmatched.h"
 #include "creatureeffect/CreatureEffect.h"
+#include "creatureeffect/CreatureEffectAreaDamage.h"
+#include "creatureeffect/CreatureEffectCombat.h"
+#include "creatureeffect/CreatureEffectDamageOverTime.h"
+#include "creatureeffect/CreatureEffectDefense.h"
+#include "creatureeffect/CreatureEffectHealOverTime.h"
+#include "creatureeffect/CreatureEffectShield.h"
+#include "creatureeffect/CreatureEffectSpeedChange.h"
 #include "creatureeffect/CreatureEffectDigTile.h"
 #include "creatureeffect/CreatureEffectManager.h"
 #include "creatureeffect/CreatureEffectSlap.h"
@@ -81,6 +88,8 @@
 #include "creatureskill/CreatureSkillManager.h"
 #include "creatureskill/CreatureSkillMeleeFight.h"
 #include "creatureskill/CreatureSkillMissileLaunch.h"
+#include "creatureskill/CreatureSkillRole.h"
+#include "entities/MissileOneHit.h"
 
 
 #include "entities/ChickenEntity.h"
@@ -331,6 +340,10 @@ static const std::string TREE_KIND_BUFF = "BUFF_SELF_";
 static const std::string TREE_KIND_AURA = "AURA_ALLY_";
 static const std::string TREE_KIND_STRIKE = "STRIKE";
 static const std::string TREE_KIND_DEBUFF = "DEBUFF_";
+//! \brief Prefix of the passive kinds, whose rank properties act on the whole creature.
+static const std::string TREE_KIND_PASSIVE = "PASSIVE_";
+//! \brief Rank property of a passive that gives the creature a short defence boost of its own (DefenseSelf line).
+static const std::string TREE_PROPERTY_DEFENSE_BOOST = "DEFENSE_BOOST";
 //! \brief Text of a type key that means the type has no such skill entry.
 static const std::string SKILL_KEY_NONE = "none";
 //! \brief Names of the effects whose strength, speed or defense factor stacks with other sources.
@@ -362,6 +375,88 @@ static bool isStackingEffect(const CreatureEffect& effect)
     return name == EFFECT_NAME_STRENGTH || name == EFFECT_NAME_SPEED || name == EFFECT_NAME_DEFENSE ||
         name == "Bleed" || name == "Potion";
 }
+}
+
+namespace
+{
+//! \brief Orders creatures found by getEnemyCreaturesNear by their squared distance.
+bool compareSkillDistance(const std::pair<double, Creature*>& first, const std::pair<double, Creature*>& second)
+{
+    return first.first < second.first;
+}
+
+//! \brief Tells whether a skill heals or strengthens allies or the creature itself: a cast of it in a fight gives the
+//! experience of an attack (CR7).
+bool isHealOrStrengthenSkill(const CreatureSkill& skill)
+{
+    static const char* const NAMES[] =
+    {
+        "HealSelf", "HealAlly", "HealArea", "HealInstant", "HotArea", "HotSelf", "AuraAlly", "AuraAllyDefense",
+        "BuffAllyDefense", "ShieldAlly", "ShieldArea", "StrengthSelf", "DefenseSelf", "HasteSelf"
+    };
+    const std::string& name = skill.getSkillName();
+    for(size_t i = 0; i < sizeof(NAMES) / sizeof(NAMES[0]); ++i)
+    {
+        if(name == NAMES[i])
+            return true;
+    }
+    return false;
+}
+
+//! \brief Tells whether a skill heals (the DOUBLE_CAST_ONCE property acts on heals only).
+bool isHealSkill(const CreatureSkill& skill)
+{
+    const std::string& name = skill.getSkillName();
+    return (name == "HealSelf") || (name == "HealAlly") || (name == "HealArea") || (name == "HealInstant") ||
+        (name == "HotArea") || (name == "HotSelf");
+}
+
+//! \brief Tells whether a skill puts damage over time on its target (FREE_ON_DEBUFFED acts on these).
+bool isDamageOverTimeSkill(const CreatureSkill& skill)
+{
+    const std::string& name = skill.getSkillName();
+    return (name == "Bleed") || (name == "Poison") || (name == "CurseDot") || (name == "BurnDot");
+}
+
+//! \brief Tells whether a skill hits an area (FREE_AREA_CAST acts on these).
+bool isAreaSkill(const CreatureSkill& skill)
+{
+    const std::string& name = skill.getSkillName();
+    return (name == "Flurry") || (name == "Whirlwind") || (name == "Grenade") || (name == "Explosion") ||
+        (name == "HailStorm") || (name == "GasCloud");
+}
+
+//! \brief Tells whether a skill is a single target spell (MANA_DISCOUNT acts on these).
+bool isSingleTargetSpell(const CreatureSkill& skill)
+{
+    const std::string& name = skill.getSkillName();
+    return (name == "GuidedBolt") || (name == "ChainLightning") || (name == "Freeze") || (name == "Drain") ||
+        (name == "Weak") || (name == "Slow") || isDamageOverTimeSkill(skill);
+}
+
+//! \brief A number of a property of the skill when it has the property, else of the passive skills of the creature.
+double skillOrCreatureProperty(const Creature& creature, const CreatureSkill* skill, const std::string& token,
+    size_t index, double fallback)
+{
+    if(skill != nullptr && skill->hasProperty(token))
+        return skill->getPropertyValue(token, index, fallback);
+    return creature.getSkillPropertyValue(token, index, fallback);
+}
+
+//! \brief True when the skill or the passive skills of the creature have the property.
+bool hasSkillOrCreatureProperty(const Creature& creature, const CreatureSkill* skill, const std::string& token)
+{
+    return (skill != nullptr && skill->hasProperty(token)) || creature.hasSkillProperty(token);
+}
+
+//! \brief True while a melee counter blow of a PARRY_COUNTER skill is dealt (no counter of a counter).
+static bool sSkillCounterRunning = false;
+//! \brief True while damage is thrown back by REFLECT (no reflection of a reflection).
+static bool sSkillReflectRunning = false;
+//! \brief The smallest squared horizontal distance that still gives a usable push direction (as the whirlwind).
+static const float SKILL_MIN_PUSH_SQUARED_LENGTH = 0.0001f;
+//! \brief Squared length below which a facing or a direction counts as none.
+static const float SKILL_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
 }
 
 //! \brief Lowest ratio between the speed of the tile under a creature and its ground speed (see getTileSpeedRatio)
@@ -2847,9 +2942,10 @@ void Creature::setHP(double nHP)
     computeCreatureOverlayHealthValue();
 }
 
+//! \brief Heals the hit points, times the heal factor of the running role skill effects (HEAL_REDUCTION).
 void Creature::heal(double hp)
 {
-    mHp = std::min(mHp + hp, mMaxHP);
+    mHp = std::min(mHp + hp * getSkillHealReceivedFactor(), mMaxHP);
 
     computeCreatureOverlayHealthValue();
 }
@@ -3033,7 +3129,8 @@ void Creature::dropCarriedEquipment()
 //! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
 //! Spaces authoritative standing bodies and interrupts activities for urgent needs. Runs the plague of a sick
 //! creature and sends it to a free infirmary cot. A member of a combat group follows its group, a fleeing raid leader
-//! runs to the gate.
+//! runs to the gate. A heal or strengthening cast in a fight gives the experience of an attack (CR7), and the rank
+//! properties of the skill tree that act every turn (REGEN, DASH, CHASE, Hold) run here.
 void Creature::doUpkeep()
 {
     upkeepGhostHunt();
@@ -3665,8 +3762,14 @@ void Creature::doUpkeep()
         if(!hasManaFor(*skillData.mSkill))
             continue;
 
+        // A skill may waive its mana (FREE_ON_LOW) or shorten its cooldown (COOLDOWN_PER_HIT) while it is used
+        mSkillManaWaived = false;
+        mSkillCooldownCut = 0.0;
         if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
+        {
+            mSkillManaWaived = false;
             continue;
+        }
 
         // The mana is paid when the skill starts
         payManaFor(*skillData.mSkill);
@@ -3674,6 +3777,11 @@ void Creature::doUpkeep()
         // The new cooldown and warmup are added, so the remainder of the last turn carries over
         skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
         skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
+        // The rank properties FASTER_CAST, COOLDOWN_PER_HIT and DOUBLE_CAST_ONCE shorten the new timers
+        applySkillTimerProperties(skillData, skillData.mSkill->getCooldownNbTurns(), true);
+        // CR7: a heal or a strengthening cast in a fight gives the experience of an attack of the creature
+        if(isHealOrStrengthenSkill(*skillData.mSkill) && isActionInList(CreatureActionType::fight))
+            receiveExp(getSkillCastExperience());
         // Successful self-casts use the same recovery display as attacks.
         mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
         mAttackRecoveryTurns = mAttackRecoveryDuration;
@@ -3683,6 +3791,14 @@ void Creature::doUpkeep()
         if(skillData.mWarmup > 0.0)
             isWarmUp = true;
     }
+
+    // Rank properties of the passive skills that act every turn of a fight: REGEN heals the share of the maximum
+    // hit points (percent), DASH and CHASE give speed bursts. A held creature (Hold) stops walking.
+    if(hasSkillProperty("REGEN") && isActionInList(CreatureActionType::fight) && isHurt())
+        heal(getMaxHp() * getSkillPropertyValue("REGEN", 0, 0.0) / 100.0);
+    upkeepSkillMovement();
+    if(isRooted() && isMoving())
+        clearDestinations(EntityAnimation::idle_anim, true, true);
 
     // If a warmup is active, we do nothing
     if(isWarmUp)
@@ -4235,6 +4351,8 @@ bool Creature::handleIdleAction()
 }
 
 //! \brief Selects existing combat targets and attack tiles, preferring legal body-free stances before crowded fallback.
+//! A taunted creature tries the taunting tank first, else a creature tries an enemy its side marked (FOCUS_TARGET);
+//! a held creature (Hold) only attacks from where it stands.
 bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
         Tile*& attackedTile, Tile*& positionTile, CreatureSkillData*& creatureSkillData)
 {
@@ -4243,6 +4361,40 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
     {
         OD_LOG_ERR("name=" + getName() + ", position=" + Helper::toString(getPosition()));
         return false;
+    }
+
+    // A taunted creature attacks the tank that taunts it, else a creature prefers an enemy marked by its own side
+    // (FOCUS_TARGET), as long as it can attack that one; otherwise it chooses as below
+    if(!mSearchingForcedTarget && getIsOnServerMap())
+    {
+        GameEntity* forced = getTaunter();
+        for(std::vector<GameEntity*>::const_iterator it = listObjects.begin();
+            forced == nullptr && it != listObjects.end(); ++it)
+        {
+            if((*it)->getObjectType() != GameEntityType::creature)
+                continue;
+            const std::vector<CreatureEffectCombat*> effects = static_cast<Creature*>(*it)->getRunningCombatEffects();
+            for(CreatureEffectCombat* effect : effects)
+            {
+                Seat* focusSeat = (effect->getFocusSeatId() < 0) ? nullptr :
+                    getGameMap()->getSeatById(effect->getFocusSeatId());
+                if(focusSeat != nullptr && getSeat() != nullptr && getSeat()->isAlliedSeat(focusSeat))
+                {
+                    forced = *it;
+                    break;
+                }
+            }
+        }
+        if(forced != nullptr)
+        {
+            mSearchingForcedTarget = true;
+            const std::vector<GameEntity*> forcedList(1, forced);
+            const bool found = searchBestTargetInList(forcedList, tilesFilter, attackedEntity, attackedTile,
+                positionTile, creatureSkillData);
+            mSearchingForcedTarget = false;
+            if(found)
+                return true;
+        }
     }
 
     GameEntity* entityFlee = nullptr;
@@ -4350,6 +4502,10 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
              if(RoomObjectNavigation::separate(*this, standing))
                  continue;
         }
+
+        // A creature held in place (Hold) attacks only what it reaches from where it stands
+        if(isRooted())
+            continue;
 
         // We check if we can attack from somewhere. To do that, we check
         // from the target point of view if there is a tile with visibility within range
@@ -4914,9 +5070,13 @@ double Creature::getCritChance() const
         mDefinition->getCritChanceBonus() + getSkillPassive("crit") + getEquipmentCritChance();
 }
 
-//! \brief Rolls one critical hit against the critical chance; a chance of 0 or less never rolls.
+//! \brief Rolls one critical hit against the critical chance; a chance of 0 or less never rolls, and neither does a
+//! blow of a skill that cannot be critical (FLURRY without CAN_CRIT).
 bool Creature::rollCritical() const
 {
+    if(mSkillCriticalBlocked)
+        return false;
+
     const double chance = getCritChance();
     if(chance <= 0.0)
         return false;
@@ -5376,6 +5536,10 @@ void Creature::rebuildTreeSkills()
     for(CreatureSkill* skill : mTreeSkills)
         delete skill;
     mTreeSkills.clear();
+    // The armed blow may point to a skill that was just deleted
+    mStrikeSkill = nullptr;
+    // The properties of the passive skills follow the new ranks
+    rebuildSkillProperties();
 
     const CreatureSkillTree::SkillTreeConfig& tree = ConfigManager::getSingleton().getCreatureSkillTree();
     std::vector<std::pair<uint32_t, CreatureSkillData> > sorted;
@@ -5397,6 +5561,9 @@ void Creature::rebuildTreeSkills()
             kind = tierFour->mKind;
         else if(def != nullptr)
             kind = def->mKind;
+        // The defence boost a passive gains with DEFENSE_BOOST is sorted as a self buff
+        if(kind.compare(0, TREE_KIND_PASSIVE.size(), TREE_KIND_PASSIVE) == 0)
+            kind = TREE_KIND_BUFF + "Defense";
 
         CreatureSkillData skillData(skill, getAppliedCooldownNbTurns(*skill), 0);
         skillData.mTreeSkillId = it->first;
@@ -5424,7 +5591,8 @@ void Creature::rebuildTreeSkills()
 }
 
 //! \brief Creates the active skill of a skill tree entry at the given rank from its table row (kind, rank value,
-//! cooldown, duration, radius, range and base line).
+//! cooldown, duration, radius, range and base line) and gives it the properties of its rank. A passive with the
+//! property DEFENSE_BOOST (defence, turns, cooldown, optional mana) gets a DefenseSelf skill of those numbers.
 //! \param skillId The id of the skill tree entry (a tier 4 id is T4_<type>).
 //! \param rank The rank (ignored for the tier 4 skill).
 //! \return The skill, nullptr when the entry is a passive or has no valid skill line. The caller owns the skill.
@@ -5433,6 +5601,7 @@ CreatureSkill* Creature::createTreeSkill(const std::string& skillId, uint32_t ra
     const CreatureSkillTree::SkillTreeConfig& tree = ConfigManager::getSingleton().getCreatureSkillTree();
     std::string line;
     double manaCost = 0.0;
+    std::vector<CreatureSkillTree::RankProperty> properties;
     const CreatureSkillTree::TierFourDef* tierFour = tree.findTierFourById(skillId);
     const CreatureSkillTree::SkillDef* def = tree.findSkill(skillId);
     if(tierFour != nullptr)
@@ -5440,6 +5609,7 @@ CreatureSkill* Creature::createTreeSkill(const std::string& skillId, uint32_t ra
         line = CreatureSkillTree::buildSkillLine(tierFour->mKind, tierFour->mValue, tierFour->mCooldown,
             tierFour->mDuration, tierFour->mRadius, tierFour->mRange, tierFour->mBaseLine);
         manaCost = tierFour->mMana.mValue;
+        properties = tierFour->mProperties;
     }
     else if(def != nullptr && rank > 0 && !def->mValues.empty())
     {
@@ -5448,6 +5618,23 @@ CreatureSkill* Creature::createTreeSkill(const std::string& skillId, uint32_t ra
             def->mRadius, def->mRange, def->mBaseLine, def->mMinAllies);
         if(index < def->mMana.size())
             manaCost = def->mMana[index];
+        properties = CreatureSkillTree::propertiesAtRank(*def, rank);
+        if(line.empty() && def->mKind.compare(0, TREE_KIND_PASSIVE.size(), TREE_KIND_PASSIVE) == 0)
+        {
+            for(std::vector<CreatureSkillTree::RankProperty>::const_iterator it = properties.begin();
+                it != properties.end(); ++it)
+            {
+                if(it->mToken != TREE_PROPERTY_DEFENSE_BOOST || it->mValues.size() < 3)
+                    continue;
+                // "DefenseSelf cooldown warmup LevelMin EffectDuration PhyDef MagDef EleDef"
+                std::ostringstream boost;
+                boost << "DefenseSelf " << it->mValues[2] << " 0 0 " << it->mValues[1] << " " << it->mValues[0]
+                    << " " << it->mValues[0] << " " << it->mValues[0];
+                line = boost.str();
+                manaCost = (it->mValues.size() > 3) ? it->mValues[3] : 0.0;
+                break;
+            }
+        }
     }
 
     if(line.empty())
@@ -5462,6 +5649,7 @@ CreatureSkill* Creature::createTreeSkill(const std::string& skillId, uint32_t ra
     }
 
     skill->setTreeSkill(skillId, manaCost);
+    skill->setTreeProperties(properties);
     return skill;
 }
 
@@ -5638,6 +5826,886 @@ void Creature::removeDefenseContribution(const CreatureEffect* source)
     updateDefenseModifier();
 }
 
+//! \brief Collects the running effects of the role skills; a used up effect (no turns left) does not count.
+std::vector<CreatureEffectCombat*> Creature::getRunningCombatEffects() const
+{
+    std::vector<CreatureEffectCombat*> effects;
+    if(!getIsOnServerMap())
+        return effects;
+
+    for(EntityParticleEffect* entityEffect : mEntityParticleEffects)
+    {
+        if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        CreatureEffect* effect = static_cast<CreatureParticleEffect*>(entityEffect)->mEffect;
+        if(effect->getNbTurnsEffect() <= 0.0)
+            continue;
+
+        CreatureEffectCombat* combat = dynamic_cast<CreatureEffectCombat*>(effect);
+        if(combat != nullptr)
+            effects.push_back(combat);
+    }
+    return effects;
+}
+
+//! \brief Collects the properties of the PASSIVE skills (and a PASSIVE tier 4 skill) at their ranks; the first skill
+//! (in the order of the ids) that has a token wins.
+void Creature::rebuildSkillProperties()
+{
+    mSkillProperties.clear();
+    const CreatureSkillTree::SkillTreeConfig& tree = ConfigManager::getSingleton().getCreatureSkillTree();
+    for(std::map<std::string, uint32_t>::const_iterator it = mSkillBuild.mRanks.begin();
+        it != mSkillBuild.mRanks.end(); ++it)
+    {
+        if(it->second == 0)
+            continue;
+
+        std::vector<CreatureSkillTree::RankProperty> properties;
+        const CreatureSkillTree::TierFourDef* tierFour = tree.findTierFourById(it->first);
+        const CreatureSkillTree::SkillDef* def = tree.findSkill(it->first);
+        if(tierFour != nullptr && tierFour->mKind.compare(0, TREE_KIND_PASSIVE.size(), TREE_KIND_PASSIVE) == 0)
+            properties = tierFour->mProperties;
+        else if(def != nullptr && def->mKind.compare(0, TREE_KIND_PASSIVE.size(), TREE_KIND_PASSIVE) == 0)
+            properties = CreatureSkillTree::propertiesAtRank(*def, it->second);
+
+        for(std::vector<CreatureSkillTree::RankProperty>::const_iterator property = properties.begin();
+            property != properties.end(); ++property)
+        {
+            if(mSkillProperties.find(property->mToken) == mSkillProperties.end())
+                mSkillProperties[property->mToken] = *property;
+        }
+    }
+}
+
+//! \brief Looks the property up among the properties of the passive skills.
+bool Creature::findSkillProperty(const std::string& token, CreatureSkillTree::RankProperty& found) const
+{
+    std::map<std::string, CreatureSkillTree::RankProperty>::const_iterator it = mSkillProperties.find(token);
+    if(it == mSkillProperties.end())
+        return false;
+    found = it->second;
+    return true;
+}
+
+//! \brief True when a passive skill of the creature has the property.
+bool Creature::hasSkillProperty(const std::string& token) const
+{
+    return mSkillProperties.find(token) != mSkillProperties.end();
+}
+
+//! \brief Returns a number of a property of the passive skills, the fallback when it is not there.
+double Creature::getSkillPropertyValue(const std::string& token, size_t index, double fallback) const
+{
+    std::map<std::string, CreatureSkillTree::RankProperty>::const_iterator it = mSkillProperties.find(token);
+    if(it == mSkillProperties.end() || index >= it->second.mValues.size())
+        return fallback;
+    return it->second.mValues[index];
+}
+
+//! \brief Remembers the key for the running fight; true when it was not used in it yet.
+bool Creature::useOncePerFight(const std::string& key)
+{
+    if(std::find(mSkillOncePerFight.begin(), mSkillOncePerFight.end(), key) != mSkillOncePerFight.end())
+        return false;
+    mSkillOncePerFight.push_back(key);
+    return true;
+}
+
+//! \brief Doubles the aura once per fight when the creature has AURA_DOUBLE; the doubled aura lasts the turns of the
+//! property.
+void Creature::applyAuraDouble(double& value, double& duration, bool factorValue)
+{
+    if(!hasSkillProperty("AURA_DOUBLE") || !useOncePerFight("AURA_DOUBLE"))
+        return;
+
+    value = factorValue ? (1.0 + 2.0 * (value - 1.0)) : (2.0 * value);
+    duration = getSkillPropertyValue("AURA_DOUBLE", 0, duration);
+}
+
+//! \brief Waives the mana of the skill that is being cast when the target is below the share of FREE_ON_LOW.
+void Creature::waiveSkillManaWhenLow(const Creature& target)
+{
+    if(!hasSkillProperty("FREE_ON_LOW") || target.getMaxHp() <= 0.0)
+        return;
+    if(target.getHP() / target.getMaxHp() < getSkillPropertyValue("FREE_ON_LOW", 0, 0.0))
+        mSkillManaWaived = true;
+}
+
+//! \brief Adds turns that are taken off the cooldown of the skill that is being used.
+void Creature::addSkillCooldownCut(double turns)
+{
+    if(turns > 0.0)
+        mSkillCooldownCut += turns;
+}
+
+//! \brief The living, visible enemy creatures (other team) on the map within the radius of the position, nearest
+//! first.
+std::vector<Creature*> Creature::getEnemyCreaturesNear(const Ogre::Vector3& center, double radius) const
+{
+    std::vector<Creature*> found;
+    if(getGameMap() == nullptr || getSeat() == nullptr || radius <= 0.0)
+        return found;
+
+    std::vector<std::pair<double, Creature*> > sorted;
+    const std::vector<Creature*>& creatures = getGameMap()->getCreatures();
+    for(Creature* other : creatures)
+    {
+        if(other == this || !other->isAlive() || !other->getIsOnMap() || other->getSeat() == nullptr)
+            continue;
+        if(getSeat()->isAlliedSeat(other->getSeat()) || other->isInvisible())
+            continue;
+
+        const double dx = other->getPosition().x - center.x;
+        const double dy = other->getPosition().y - center.y;
+        const double distanceSquared = dx * dx + dy * dy;
+        if(distanceSquared <= radius * radius)
+            sorted.push_back(std::make_pair(distanceSquared, other));
+    }
+    std::stable_sort(sorted.begin(), sorted.end(), compareSkillDistance);
+    for(size_t i = 0; i < sorted.size(); ++i)
+        found.push_back(sorted[i].second);
+    return found;
+}
+
+//! \brief Counts the running effects with the name and the source id.
+uint32_t Creature::countActiveEffects(const std::string& effectName, const std::string& sourceId) const
+{
+    uint32_t count = 0;
+    for(const EntityParticleEffect* entityEffect : mEntityParticleEffects)
+    {
+        if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureEffect* effect = static_cast<const CreatureParticleEffect*>(entityEffect)->mEffect;
+        if(effect->getEffectName() == effectName && effect->getSourceId() == sourceId &&
+           effect->getNbTurnsEffect() > 0.0)
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+//! \brief The living enemy that taunts the creature with the most turns left, nullptr if none.
+Creature* Creature::getTaunter() const
+{
+    Creature* taunter = nullptr;
+    double turnsLeft = 0.0;
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+    {
+        if(effect->getTaunterName().empty() || effect->getNbTurnsEffect() <= turnsLeft)
+            continue;
+
+        Creature* tank = getGameMap()->getCreature(effect->getTaunterName());
+        if(tank == nullptr || !tank->isAlive() || !tank->getIsOnMap() || tank->getSeat() == nullptr ||
+           getSeat() == nullptr || getSeat()->isAlliedSeat(tank->getSeat()))
+        {
+            continue;
+        }
+        taunter = tank;
+        turnsLeft = effect->getNbTurnsEffect();
+    }
+    return taunter;
+}
+
+//! \brief True while a running effect holds the creature in place.
+bool Creature::isRooted() const
+{
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+    {
+        if(effect->isRooted())
+            return true;
+    }
+    return false;
+}
+
+//! \brief True while a running effect makes the creature immune to control.
+bool Creature::isControlImmune() const
+{
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+    {
+        if(effect->isControlImmune())
+            return true;
+    }
+    return false;
+}
+
+//! \brief The product of the damage taken factors of the running effects.
+double Creature::getSkillDamageTakenFactor() const
+{
+    double factor = 1.0;
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+        factor *= effect->getDamageTakenFactor();
+    return factor;
+}
+
+//! \brief The product of the damage dealt factors of the running effects.
+double Creature::getSkillDamageDealtFactor() const
+{
+    double factor = 1.0;
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+        factor *= effect->getDamageDealtFactor();
+    return factor;
+}
+
+//! \brief The product of the heal factors of the running effects.
+double Creature::getSkillHealReceivedFactor() const
+{
+    double factor = 1.0;
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+        factor *= effect->getHealReceivedFactor();
+    return factor;
+}
+
+//! \brief The product of the attack cooldown factors of the running effects.
+double Creature::getSkillAttackCooldownFactor() const
+{
+    double factor = 1.0;
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+        factor *= effect->getAttackCooldownFactor();
+    return factor;
+}
+
+//! \brief The fighting own creature within the range with the lowest health share and no effect of the source.
+Creature* Creature::findWeakestFightingAlly(double range, const std::string& sourceId, const std::string& effectName,
+    bool includeSelf) const
+{
+    Creature* weakest = nullptr;
+    double weakestShare = 0.0;
+    const std::vector<Creature*> allies = getOwnCreaturesWithin(range);
+    for(Creature* ally : allies)
+    {
+        if((ally == this && !includeSelf) || ally->getMaxHp() <= 0.0 ||
+           !ally->isActionInList(CreatureActionType::fight))
+        {
+            continue;
+        }
+        if(!sourceId.empty() && ally->countActiveEffects(effectName, sourceId) > 0)
+            continue;
+
+        const double share = ally->getHP() / ally->getMaxHp();
+        if(weakest != nullptr && share >= weakestShare)
+            continue;
+        weakest = ally;
+        weakestShare = share;
+    }
+    return weakest;
+}
+
+//! \brief The own creature within the range with the lowest health share below the share.
+Creature* Creature::findWeakestHurtAlly(double range, double belowShare) const
+{
+    Creature* weakest = nullptr;
+    double weakestShare = belowShare;
+    const std::vector<Creature*> allies = getOwnCreaturesWithin(range);
+    for(Creature* ally : allies)
+    {
+        if(ally->getMaxHp() <= 0.0)
+            continue;
+
+        const double share = ally->getHP() / ally->getMaxHp();
+        if(share >= weakestShare)
+            continue;
+        weakest = ally;
+        weakestShare = share;
+    }
+    return weakest;
+}
+
+//! \brief Puts the absorb shield (and the defence of DEFENSE) of the skill on the target.
+void Creature::giveSkillShield(Creature& target, const CreatureSkill& skill, double percent, double duration)
+{
+    const double absorb = percent / 100.0 * getHealBase();
+    const double healOnBreak = skill.getPropertyValue("HEAL_ON_BREAK", 0, 0.0) / 100.0 * getHealBase();
+    CreatureEffectShield* shield = new CreatureEffectShield(duration, absorb, skill.getPropertyValue("REFLECT", 0, 0.0),
+        healOnBreak);
+    if(skill.isTreeSkill())
+        shield->setSourceId(skill.getTreeSkillId());
+    target.addCreatureEffect(shield);
+
+    if(skill.hasProperty("DEFENSE"))
+    {
+        const double defense = skill.getPropertyValue("DEFENSE", 0, 0.0);
+        CreatureEffectDefense* effect = new CreatureEffectDefense(duration, defense, defense, defense,
+            "SpellCreatureDefense");
+        if(skill.isTreeSkill())
+            effect->setSourceId(skill.getTreeSkillId());
+        target.addCreatureEffect(effect);
+    }
+
+    for(Tile* tile : target.getCoveredTiles())
+    {
+        Spell::fireSpellEffect(*tile, "Defense", "DefenseCast");
+    }
+}
+
+//! \brief Puts the heal over time of the skill on the target.
+void Creature::giveSkillHealOverTime(Creature& target, const CreatureSkill& skill, double percent, double duration)
+{
+    const double turns = std::max(1.0, duration);
+    CreatureEffectHealOverTime* effect = new CreatureEffectHealOverTime(turns,
+        percent / 100.0 * getHealBase() / turns, getName());
+    if(skill.hasProperty("MORE_ON_LOW"))
+    {
+        effect->setMoreOnLow(skill.getPropertyValue("MORE_ON_LOW", 0, 1.0),
+            skill.getPropertyValue("MORE_ON_LOW", 1, 0.0));
+    }
+    if(skill.hasProperty("BURST_ON_LOW"))
+    {
+        effect->setBurstOnLow(skill.getPropertyValue("BURST_ON_LOW", 0, 0.0) / 100.0 * getHealBase(),
+            skill.getPropertyValue("BURST_ON_LOW", 1, 0.0));
+    }
+    if(skill.hasProperty("EXTEND_ON_HIT"))
+        effect->setExtendOnHit(skill.getPropertyValue("EXTEND_ON_HIT", 0, 0.0));
+    if(skill.isTreeSkill())
+        effect->setSourceId(skill.getTreeSkillId());
+    target.addCreatureEffect(effect);
+
+    if(skill.hasProperty("CLEANSE") || skill.hasProperty("CLEANSE_ALL"))
+        target.cleanseDamageOverTime(skill.hasProperty("CLEANSE_ALL"));
+
+    for(Tile* tile : target.getCoveredTiles())
+    {
+        Spell::fireSpellEffect(*tile, "Heal", "HealCast");
+    }
+}
+
+//! \brief Ends the running bleeding (role skill and item) and poison; with curses also the curses.
+void Creature::cleanseDamageOverTime(bool curses)
+{
+    for(EntityParticleEffect* entityEffect : mEntityParticleEffects)
+    {
+        if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        CreatureParticleEffect* particle = static_cast<CreatureParticleEffect*>(entityEffect);
+        bool cleanse = (particle->mEffect->getEffectName() == "Bleed");
+        const CreatureEffectDamageOverTime* damage = dynamic_cast<const CreatureEffectDamageOverTime*>(particle->mEffect);
+        if(damage != nullptr)
+        {
+            cleanse = (damage->getKind() == CreatureEffectDamageOverTime::KIND_BLEED) ||
+                (damage->getKind() == CreatureEffectDamageOverTime::KIND_POISON) ||
+                (curses && damage->getKind() == CreatureEffectDamageOverTime::KIND_CURSE);
+        }
+        if(!cleanse)
+            continue;
+
+        // The effect ends at the next upkeep of the effects
+        particle->mEffect->mNbTurnsEffect = 0.0;
+        particle->mNbTurnsEffect = 0;
+        mNeedFireRefresh = true;
+    }
+}
+
+//! \brief Copies the running damage over time of the attacker to the allies of the creature within the radius.
+void Creature::spreadDamageOverTimeOf(const std::string& attackerName, double radius)
+{
+    if(radius <= 0.0)
+        return;
+
+    std::vector<const CreatureEffectDamageOverTime*> sources;
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+    {
+        const CreatureEffectDamageOverTime* damage = dynamic_cast<const CreatureEffectDamageOverTime*>(effect);
+        if(damage != nullptr && damage->getAttackerName() == attackerName)
+            sources.push_back(damage);
+    }
+    if(sources.empty())
+        return;
+
+    const std::vector<Creature*> allies = getOwnCreaturesWithin(radius);
+    for(Creature* ally : allies)
+    {
+        if(ally == this)
+            continue;
+        for(const CreatureEffectDamageOverTime* damage : sources)
+            ally->addCreatureEffect(damage->copyForSpread(0.0));
+    }
+}
+
+//! \brief Lets every damage over time with a jump radius jump to the nearest ally within that radius (server side).
+void Creature::spreadDamageOverTimeOnDeath()
+{
+    if(!getIsOnServerMap())
+        return;
+
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    for(CreatureEffectCombat* effect : effects)
+    {
+        const CreatureEffectDamageOverTime* damage = dynamic_cast<const CreatureEffectDamageOverTime*>(effect);
+        if(damage == nullptr || damage->getSpreadRadius() <= 0.0)
+            continue;
+
+        Creature* nearest = nullptr;
+        double nearestDistance = 0.0;
+        const std::vector<Creature*> allies = getOwnCreaturesWithin(damage->getSpreadRadius());
+        for(Creature* ally : allies)
+        {
+            if(ally == this)
+                continue;
+            const double distance = getPosition().squaredDistance(ally->getPosition());
+            if(nearest != nullptr && distance >= nearestDistance)
+                continue;
+            nearest = ally;
+            nearestDistance = distance;
+        }
+        if(nearest != nullptr)
+            nearest->addCreatureEffect(damage->copyForSpread(damage->getSpreadRadius()));
+    }
+}
+
+//! \brief True while a damage over time runs on the creature (role skills, item bleeding, burns).
+bool Creature::hasDamageOverTime() const
+{
+    for(const EntityParticleEffect* entityEffect : mEntityParticleEffects)
+    {
+        if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureEffect* effect = static_cast<const CreatureParticleEffect*>(entityEffect)->mEffect;
+        if(effect->getNbTurnsEffect() <= 0.0)
+            continue;
+        if(effect->getEffectName() == "DamageOverTime" || effect->getEffectName() == "Bleed" ||
+           effect->getEffectName() == "Burn")
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+//! \brief Moves mana from the target to the creature for MANA_DRAIN of the skill.
+void Creature::drainSkillMana(Creature& target, double damageDone, const CreatureSkill& skill)
+{
+    if(!skill.hasProperty("MANA_DRAIN") || damageDone <= 0.0)
+        return;
+
+    const double amount = std::min(target.mMana, skill.getPropertyValue("MANA_DRAIN", 0, 0.0) * damageDone);
+    if(amount <= 0.0)
+        return;
+    target.setCurrentMana(target.mMana - amount);
+    setCurrentMana(mMana + amount);
+}
+
+//! \brief The product of the target bonuses of the rank properties that apply to the target.
+double Creature::getSkillTargetDamageFactor(const Creature& target, const CreatureSkill* skill) const
+{
+    double factor = 1.0;
+    if(hasSkillOrCreatureProperty(*this, skill, "EXECUTE") && target.getMaxHp() > 0.0 &&
+       target.getHP() / target.getMaxHp() < skillOrCreatureProperty(*this, skill, "EXECUTE", 1, 0.0))
+    {
+        factor *= skillOrCreatureProperty(*this, skill, "EXECUTE", 0, 1.0);
+    }
+    if(hasSkillOrCreatureProperty(*this, skill, "BONUS_VS_DOT") && target.hasDamageOverTime())
+        factor *= skillOrCreatureProperty(*this, skill, "BONUS_VS_DOT", 0, 1.0);
+    if(hasSkillOrCreatureProperty(*this, skill, "BONUS_VS_SLOWED") && target.mSpeedModifier < 1.0)
+        factor *= skillOrCreatureProperty(*this, skill, "BONUS_VS_SLOWED", 0, 1.0);
+    if(hasSkillOrCreatureProperty(*this, skill, "BONUS_VS_FROZEN") && target.isFrozen())
+        factor *= skillOrCreatureProperty(*this, skill, "BONUS_VS_FROZEN", 0, 1.0);
+    if(hasSkillOrCreatureProperty(*this, skill, "BONUS_VS_FLEEING") && target.isActionInList(CreatureActionType::flee))
+        factor *= skillOrCreatureProperty(*this, skill, "BONUS_VS_FLEEING", 0, 1.0);
+    if(hasSkillOrCreatureProperty(*this, skill, "BONUS_VS_BACKLINE") && target.getDefinition() != nullptr)
+    {
+        // The healers and the ranged fighters stand behind the front (skill groups of the role system)
+        const std::string& group = target.getDefinition()->getSkillGroup();
+        if(group == "healer" || group == "marksman" || group == "mage")
+            factor *= skillOrCreatureProperty(*this, skill, "BONUS_VS_BACKLINE", 0, 1.0);
+    }
+    return factor;
+}
+
+//! \brief Deals one blow of the melee line of the creature with the factor; the armed strike stays armed.
+void Creature::skillMeleeBlow(Creature& target, double factor, bool canCrit, bool ko)
+{
+    const CreatureSkillMeleeFight* melee = nullptr;
+    for(const CreatureSkillData& skillData : mSkillData)
+    {
+        melee = dynamic_cast<const CreatureSkillMeleeFight*>(skillData.mSkill);
+        if(melee != nullptr && melee->canBeUsedBy(this))
+            break;
+        melee = nullptr;
+    }
+    if(melee == nullptr || target.getPositionTile() == nullptr || !target.isAlive())
+        return;
+
+    const double savedFactor = mStrikeMultiplier;
+    const CreatureSkill* savedSkill = mStrikeSkill;
+    mStrikeMultiplier = factor;
+    mStrikeSkill = nullptr;
+    mSkillCriticalBlocked = !canCrit;
+    melee->tryUseFight(*getGameMap(), this, 1.0f, &target, target.getPositionTile(), ko, false);
+    mSkillCriticalBlocked = false;
+    mStrikeMultiplier = savedFactor;
+    mStrikeSkill = savedSkill;
+}
+
+//! \brief Moves the target along the line from or to the creature until a wall or an impassable tile.
+bool Creature::pushSkillTarget(Creature& target, double tiles, bool towards)
+{
+    Tile* startTile = target.getPositionTile();
+    if(startTile == nullptr || tiles <= 0.0 || getGameMap() == nullptr)
+        return false;
+
+    Ogre::Vector3 direction = target.getPosition() - getPosition();
+    direction.z = 0.0f;
+    if(direction.squaredLength() < SKILL_MIN_PUSH_SQUARED_LENGTH)
+        return false;
+
+    const double distance = direction.length();
+    direction.normalise();
+    if(towards)
+    {
+        // A pulled creature stops in front of the creature
+        direction = -direction;
+        tiles = std::min(tiles, distance - 1.0);
+        if(tiles <= 0.0)
+            return false;
+    }
+
+    Tile* lastTile = startTile;
+    const double moveTiles = tiles * ItemEffects::remainingFactor(target, "Brace");
+    for(uint32_t i = 1; i <= moveTiles; ++i)
+    {
+        Ogre::Vector3 pos = target.getPosition() + (direction * static_cast<Ogre::Real>(i));
+        Tile* tile = getGameMap()->getTile(Helper::round(pos.x), Helper::round(pos.y));
+        if((tile == nullptr) || tile->isFullTile() || !target.canGoThroughTile(tile))
+            break;
+        lastTile = tile;
+    }
+    if(lastTile != startTile)
+        target.teleportTo(lastTile);
+    return true;
+}
+
+//! \brief Gives up the fight the creature runs now.
+void Creature::loseSkillFightTarget()
+{
+    if(!mActions.empty() && mActions.back()->getType() == CreatureActionType::fight)
+        popAction();
+}
+
+//! \brief Rolls the melee avoidance against an area skill when the creature has DODGE_AREA.
+bool Creature::rollAreaDodge() const
+{
+    if(!hasSkillProperty("DODGE_AREA"))
+        return false;
+    return rollMeleeDefence(false) != DefenceChance::none;
+}
+
+//! \brief Lets the creature flee from the tile of the source for the turns.
+void Creature::fleeFromSkill(const Creature& source, double turns)
+{
+    if(turns <= 0.0 || !isAlive() || isControlImmune() || source.getPositionTile() == nullptr)
+        return;
+    fleeFromTile(source.getPositionTile(), turns, true);
+}
+
+//! \brief Puts the burning zone of BURNING_GROUND around the tile; the zone is kept by the creature.
+void Creature::addSkillBurningGround(const CreatureSkill& skill, Tile* tile)
+{
+    if(tile == nullptr || !skill.hasProperty("BURNING_GROUND"))
+        return;
+
+    const double damage = skill.getPropertyValue("BURNING_GROUND", 0, 0.0) * getTreeSpellDamageFactor();
+    const double turns = skill.getPropertyValue("BURNING_GROUND", 1, 0.0);
+    const double radius = skill.getPropertyValue("BURNING_GROUND", 2, 0.0);
+    if(damage <= 0.0 || turns <= 0.0)
+        return;
+
+    addCreatureEffect(new CreatureEffectAreaDamage(turns, tile->getX(), tile->getY(), radius, damage, ""));
+}
+
+//! \brief Arms the next melee blow and remembers its skill.
+void Creature::armStrike(double factor, const CreatureSkill* skill)
+{
+    mStrikeMultiplier = factor;
+    mStrikeSkill = skill;
+}
+
+//! \brief Returns the skill of the armed blow and forgets it.
+const CreatureSkill* Creature::consumeStrikeSkill()
+{
+    const CreatureSkill* skill = mStrikeSkill;
+    mStrikeSkill = nullptr;
+    return skill;
+}
+
+//! \brief Rolls the chance (percent, the rank value) of the PARRY_COUNTER skill of the creature.
+bool Creature::rollSkillParry(const CreatureSkill*& parrySkill) const
+{
+    parrySkill = nullptr;
+    if(!getIsOnServerMap() || !isAlive() || isKo() || isPossessed())
+        return false;
+
+    for(const CreatureSkill* skill : mTreeSkills)
+    {
+        const CreatureSkillRole* parry = dynamic_cast<const CreatureSkillRole*>(skill);
+        if(parry == nullptr || skill->getSkillName() != "ParryCounter")
+            continue;
+        if(Random::Double(0.0, 100.0) >= parry->getValue())
+            return false;
+        parrySkill = skill;
+        return true;
+    }
+    return false;
+}
+
+//! \brief True when the creature has CRIT_BEHIND and stands behind the facing of the target.
+bool Creature::isSkillCriticalFromBehind(const Creature& target) const
+{
+    if(!hasSkillProperty("CRIT_BEHIND"))
+        return false;
+
+    Ogre::Vector3 facing = target.getWalkDirection();
+    facing.z = 0.0f;
+    Ogre::Vector3 toAttacker = getPosition() - target.getPosition();
+    toAttacker.z = 0.0f;
+    if(facing.squaredLength() < SKILL_MIN_DIRECTION_SQUARED_LENGTH ||
+       toAttacker.squaredLength() < SKILL_MIN_DIRECTION_SQUARED_LENGTH)
+    {
+        return false;
+    }
+    return facing.dotProduct(toAttacker) < 0.0f;
+}
+
+//! \brief The rank properties after a melee blow: DODGE_HASTE, DODGE_COOLDOWN and DODGE_TAUNT_RESET of the target that
+//! dodged, COUNTER and STUN of its parry skill, STAGGER, HASTE_ON_CRIT and SLOW_ON_CRIT of a critical hit, STUN,
+//! KNOCK_DOWN and RESET_ON_KILL of the armed strike.
+void Creature::onSkillMeleeResult(Creature& target, DefenceChance::Outcome defence, bool critical, double damageDone,
+    const CreatureSkill* strikeSkill, const CreatureSkill* parrySkill)
+{
+    if(defence == DefenceChance::dodged)
+    {
+        ++target.mSkillDodgesInRow;
+        const double haste = target.getSkillPropertyValue("DODGE_HASTE", 0, 0.0);
+        const double cut = target.getSkillPropertyValue("DODGE_COOLDOWN", 0, 0.0);
+        const double tauntDodges = target.getSkillPropertyValue("DODGE_TAUNT_RESET", 0, 0.0);
+        const bool resetTaunt = (tauntDodges > 0.0) && (static_cast<double>(target.mSkillDodgesInRow) >= tauntDodges);
+        for(CreatureSkillData& skillData : target.mSkillData)
+        {
+            if(haste > 0.0 && dynamic_cast<const CreatureSkillMeleeFight*>(skillData.mSkill) != nullptr)
+                skillData.mCooldown -= haste;
+            if(cut > 0.0)
+                skillData.mCooldown -= cut;
+            if(resetTaunt && skillData.mSkill->getSkillName() == "Taunt")
+                skillData.mCooldown = 0.0;
+        }
+        if(resetTaunt)
+            target.mSkillDodgesInRow = 0;
+    }
+    else if(defence == DefenceChance::none && damageDone > 0.0)
+        target.mSkillDodgesInRow = 0;
+
+    if(defence == DefenceChance::parried && parrySkill != nullptr && parrySkill->hasProperty("COUNTER") &&
+       !sSkillCounterRunning && target.isAlive() && isAlive())
+    {
+        sSkillCounterRunning = true;
+        target.skillMeleeBlow(*this, parrySkill->getPropertyValue("COUNTER", 0, 1.0), true, false);
+        if(parrySkill->hasProperty("STUN") && isAlive() && !isControlImmune())
+            stun(parrySkill->getPropertyValue("STUN", 0, 0.0));
+        sSkillCounterRunning = false;
+    }
+
+    if(critical && damageDone > 0.0 && target.isAlive())
+    {
+        if(hasSkillProperty("STAGGER") && !target.isControlImmune())
+            target.stun(getSkillPropertyValue("STAGGER", 0, 0.0));
+        if(hasSkillProperty("HASTE_ON_CRIT"))
+        {
+            CreatureEffectSpeedChange* haste = new CreatureEffectSpeedChange(
+                getSkillPropertyValue("HASTE_ON_CRIT", 1, 0.0), getSkillPropertyValue("HASTE_ON_CRIT", 0, 1.0), "");
+            haste->setSourceId("skill:HASTE_ON_CRIT");
+            addCreatureEffect(haste);
+        }
+        if(hasSkillProperty("SLOW_ON_CRIT"))
+        {
+            CreatureEffectSpeedChange* slow = new CreatureEffectSpeedChange(
+                getSkillPropertyValue("SLOW_ON_CRIT", 1, 0.0), getSkillPropertyValue("SLOW_ON_CRIT", 0, 1.0),
+                "SpellCreatureSlow");
+            slow->setSourceId("skill:SLOW_ON_CRIT");
+            target.addCreatureEffect(slow);
+        }
+    }
+
+    if(strikeSkill != nullptr && defence == DefenceChance::none && damageDone > 0.0)
+    {
+        const double stunTurns = std::max(strikeSkill->getPropertyValue("STUN", 0, 0.0),
+            strikeSkill->getPropertyValue("KNOCK_DOWN", 0, 0.0));
+        if(stunTurns > 0.0 && target.isAlive() && !target.isControlImmune())
+            target.stun(stunTurns);
+        if(!target.isAlive() && strikeSkill->hasProperty("RESET_ON_KILL"))
+        {
+            for(CreatureSkillData& skillData : mSkillData)
+            {
+                if(skillData.mSkill == strikeSkill)
+                    skillData.mCooldown = 0.0;
+            }
+        }
+    }
+}
+
+//! \brief SLOW_ON_CRIT and PIERCE of the shooter after a critical shot of it hit the target.
+void Creature::onSkillRangedCritical(Creature& target, double damageDone)
+{
+    if(hasSkillProperty("SLOW_ON_CRIT") && target.isAlive())
+    {
+        CreatureEffectSpeedChange* slow = new CreatureEffectSpeedChange(getSkillPropertyValue("SLOW_ON_CRIT", 1, 0.0),
+            getSkillPropertyValue("SLOW_ON_CRIT", 0, 1.0), "SpellCreatureSlow");
+        slow->setSourceId("skill:SLOW_ON_CRIT");
+        target.addCreatureEffect(slow);
+    }
+
+    if(hasSkillProperty("PIERCE") && damageDone > 0.0)
+    {
+        // The shot goes through: the enemy nearest the target within the radius of the property takes the same damage
+        const std::vector<Creature*> nearby = getEnemyCreaturesNear(target.getPosition(),
+            getSkillPropertyValue("PIERCE", 0, 0.0));
+        for(Creature* enemy : nearby)
+        {
+            if(enemy == &target)
+                continue;
+            enemy->takeDamage(this, damageDone, 0.0, 0.0, 0.0, enemy->getPositionTile(), false);
+            break;
+        }
+    }
+}
+
+//! \brief Gives the creature the mana of MANA_REFUND for one tick of its heal over time.
+void Creature::onSkillHealTick()
+{
+    if(hasSkillProperty("MANA_REFUND"))
+        setCurrentMana(mMana + getSkillPropertyValue("MANA_REFUND", 0, 0.0));
+}
+
+//! \brief Gives the creature the mana of MANA_REFUND_ON_KILL for a kill by its damage over time.
+void Creature::onSkillDamageOverTimeKill()
+{
+    if(hasSkillProperty("MANA_REFUND_ON_KILL"))
+        setCurrentMana(mMana + getSkillPropertyValue("MANA_REFUND_ON_KILL", 0, 0.0));
+}
+
+//! \brief The damage factors of the effects, the block, the shields with their reflect, the rescue from a deadly blow
+//! and the heals that a hit extends. The creature behind the damage is the attacker, or the shooter of a missile.
+double Creature::applySkillDamageRules(GameEntity* attacker, double damage)
+{
+    if(damage <= 0.0 || !getIsOnServerMap())
+        return damage;
+
+    Creature* source = nullptr;
+    if(attacker != nullptr && attacker->getObjectType() == GameEntityType::creature)
+        source = static_cast<Creature*>(attacker);
+    const MissileOneHit* shot = dynamic_cast<const MissileOneHit*>(attacker);
+    if(source == nullptr && shot != nullptr && !shot->getShooterName().empty())
+        source = getGameMap()->getCreature(shot->getShooterName());
+
+    damage *= getSkillDamageTakenFactor();
+    if(source != nullptr)
+        damage *= source->getSkillDamageDealtFactor();
+
+    // BLOCK: now and then a hit of a creature is blocked completely
+    if(source != nullptr && hasSkillProperty("BLOCK") &&
+       Random::Double(0.0, 100.0) < getSkillPropertyValue("BLOCK", 0, 0.0))
+    {
+        return 0.0;
+    }
+
+    const std::vector<CreatureEffectCombat*> effects = getRunningCombatEffects();
+    double reflected = 0.0;
+    for(CreatureEffectCombat* effect : effects)
+    {
+        CreatureEffectShield* shield = dynamic_cast<CreatureEffectShield*>(effect);
+        if(shield == nullptr || damage <= 0.0)
+            continue;
+        double absorbed = 0.0;
+        damage = shield->absorbDamage(*this, damage, absorbed);
+        reflected += absorbed * shield->getReflectShare();
+    }
+    // REFLECT of a passive: a share of the damage that gets through goes back as well
+    reflected += damage * getSkillPropertyValue("REFLECT", 0, 0.0);
+    if(source != nullptr && source != this && reflected > 0.0 && !sSkillReflectRunning)
+    {
+        sSkillReflectRunning = true;
+        source->takeDamage(this, reflected, 0.0, 0.0, 0.0, source->getPositionTile(), false);
+        sSkillReflectRunning = false;
+    }
+
+    if(damage <= 0.0)
+        return 0.0;
+
+    for(CreatureEffectCombat* effect : effects)
+    {
+        CreatureEffectHealOverTime* heal = dynamic_cast<CreatureEffectHealOverTime*>(effect);
+        if(heal != nullptr)
+            heal->notifyHit();
+    }
+
+    // SURVIVE_DEADLY: a protection of an ally's heal, else once per fight the passive, keeps the creature alive
+    if(mHp > 0.0 && damage >= mHp)
+    {
+        double keep = 0.0;
+        for(CreatureEffectCombat* effect : effects)
+        {
+            if(effect->consumeSurviveDeadly())
+            {
+                keep = 1.0;
+                break;
+            }
+        }
+        if(keep <= 0.0 && hasSkillProperty("SURVIVE_DEADLY") && useOncePerFight("SURVIVE_DEADLY"))
+            keep = std::max(1.0, getSkillPropertyValue("SURVIVE_DEADLY", 0, 0.0) * mMaxHP);
+        if(keep > 0.0)
+            damage = std::max(0.0, mHp - std::min(mHp, keep));
+    }
+    return damage;
+}
+
+//! \brief DASH (once per fight a speed burst: factor, turns) and CHASE (faster while an enemy in sight flees: factor)
+//! of the creature while it fights. A fight of the skill tree lasts while the creature has a fight action: without
+//! one the "once per fight" properties and the dodges in a row start again.
+void Creature::upkeepSkillMovement()
+{
+    if(!isActionInList(CreatureActionType::fight))
+    {
+        mSkillOncePerFight.clear();
+        mSkillDodgesInRow = 0;
+        return;
+    }
+
+    if(hasSkillProperty("DASH") && useOncePerFight("DASH"))
+    {
+        CreatureEffectSpeedChange* dash = new CreatureEffectSpeedChange(getSkillPropertyValue("DASH", 1, 0.0),
+            getSkillPropertyValue("DASH", 0, 1.0), "");
+        dash->setSourceId("skill:DASH");
+        addCreatureEffect(dash);
+    }
+
+    if(!hasSkillProperty("CHASE"))
+        return;
+    for(GameEntity* entity : mVisibleEnemyObjects)
+    {
+        if(entity->getObjectType() != GameEntityType::creature)
+            continue;
+        const Creature* enemy = static_cast<const Creature*>(entity);
+        if(!enemy->isAlive() || !enemy->isActionInList(CreatureActionType::flee))
+            continue;
+        // One turn at a time; the same source only refreshes the running burst
+        CreatureEffectSpeedChange* chase = new CreatureEffectSpeedChange(1.0, getSkillPropertyValue("CHASE", 0, 1.0),
+            "");
+        chase->setSourceId("skill:CHASE");
+        addCreatureEffect(chase);
+        return;
+    }
+}
+
 //! \brief Writes the skill state (template, ranks, seed, generator state, reset counters) for clients.
 void Creature::exportSkillBuildToPacket(ODPacket& os) const
 {
@@ -5723,13 +6791,22 @@ double Creature::getManaCost(double baseCost) const
 
 //! \brief Returns the mana the skill costs this creature now: the rank cost of a skill of the skill tree, the shot cost
 //! of a caster's first MissileLaunch or of a second MissileLaunch line like the Dragon's (all with manacost%), 0 for
-//! every free attack.
+//! every free attack. FREE_AREA_CAST and MANA_DISCOUNT of the passives lower the cost of skill tree skills.
 //! \param skill The skill or attack line to price.
 double Creature::getSkillManaCost(const CreatureSkill& skill) const
 {
-    // A skill of the skill tree costs its rank cost, whatever its kind (also a MissileLaunch or Grenade)
+    // A skill of the skill tree costs its rank cost, whatever its kind (also a MissileLaunch or Grenade). The rank
+    // properties of the passives: FREE_AREA_CAST makes the area skills free, MANA_DISCOUNT takes its share off the
+    // single target spells.
     if(skill.isTreeSkill())
-        return getManaCost(skill.getTreeManaCost());
+    {
+        if(hasSkillProperty("FREE_AREA_CAST") && isAreaSkill(skill))
+            return 0.0;
+        double cost = getManaCost(skill.getTreeManaCost());
+        if(isSingleTargetSpell(skill))
+            cost *= std::max(0.0, 1.0 - getSkillPropertyValue("MANA_DISCOUNT", 0, 0.0));
+        return cost;
+    }
 
     // Only the MissileLaunch attack lines cost mana per shot; Melee and the weapon shots of the first line are free
     if(skill.getSkillName() != "MissileLaunch")
@@ -5764,6 +6841,13 @@ bool Creature::hasManaFor(const CreatureSkill& skill) const
 //! \param skill The skill or attack line that starts.
 void Creature::payManaFor(const CreatureSkill& skill)
 {
+    // A skill whose mana a rank property waived (FREE_ON_LOW, FREE_ON_DEBUFFED) costs nothing this time
+    if(mSkillManaWaived)
+    {
+        mSkillManaWaived = false;
+        return;
+    }
+
     const double cost = getSkillManaCost(skill);
     if(cost <= 0.0)
         return;
@@ -5771,7 +6855,8 @@ void Creature::payManaFor(const CreatureSkill& skill)
     setCurrentMana(mMana - cost);
 }
 
-//! \brief Adds one turn of mana regeneration: max mana / (ManaRefillSeconds x turns per second), capped at max.
+//! \brief Adds one turn of mana regeneration: max mana / (ManaRefillSeconds x turns per second), capped at max; in a
+//! fight times the MANA_REGEN property of the passives.
 void Creature::regenerateMana()
 {
     const double maxMana = getMaxMana();
@@ -5791,7 +6876,10 @@ void Creature::regenerateMana()
     }
 
     const double itemFactor = 1.0 + (getItemEffect("Focus") + getItemEffect("ManaSpring")) / 100.0;
-    setCurrentMana(mMana + maxMana / refillTurns * itemFactor * getPotionFactor("ManaRegenChange"));
+    // Rank property MANA_REGEN of a passive: the mana returns its factor times faster during fights
+    const double skillFactor = isActionInList(CreatureActionType::fight) ?
+        getSkillPropertyValue("MANA_REGEN", 0, 1.0) : 1.0;
+    setCurrentMana(mMana + maxMana / refillTurns * itemFactor * getPotionFactor("ManaRegenChange") * skillFactor);
 }
 
 double Creature::getPhysicalDefense() const
@@ -7728,7 +8816,8 @@ static void addHitDirt(Tile* tile)
 }
 
 //! \brief Deals the damage of an attack after the defenses and counts the fight, the knockout and the death. On the
-//! server a hit of an enemy creature gives a combat group member the aggro of that creature when it is a tank.
+//! server a hit of an enemy creature gives a combat group member the aggro of that creature when it is a tank, and the
+//! role skill rules (applySkillDamageRules) change the damage before it reaches the hit points.
 double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko)
 {
@@ -7766,6 +8855,9 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     // A creature that grieves for a friend hits harder against the side that killed it
     if(creatureAttacking != nullptr)
         totalDamage *= creatureAttacking->getRelationshipRageFactor(getSeat());
+    // The role skill rules (marks, taunts, block, shields, reflect, the rescue from a deadly blow)
+    if(wasAlive)
+        totalDamage = applySkillDamageRules(attacker, totalDamage);
     double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
     if(getIsOnServerMap() && damageDone > 0.0)
@@ -7894,6 +8986,8 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         {
             recordScriptEvent(*this, "killed");
             recordScriptEvent(*this, "incapacitated");
+            // A damage over time with SPREAD_ON_DEATH jumps to an ally of the dead creature
+            spreadDamageOverTimeOnDeath();
         }
         fireEntityDead();
     }
@@ -7954,12 +9048,13 @@ bool isLevelScaledAttack(const CreatureSkill& skill)
         return true;
 
     const std::string& name = skill.getSkillName();
-    return (name == "MissileLaunch") || (name == "GuidedBolt") || (name == "Grenade");
+    return (name == "MissileLaunch") || (name == "GuidedBolt") || (name == "Grenade") || (name == "ChainLightning");
 }
 }
 
 //! \brief Gets the larger skill or weapon cooldown for melee, with level scaling for attacks. The cd% passives
-//! shorten the cooldown of the attack lines.
+//! shorten the cooldown of the attack lines, FASTER_CAST the cooldown of a skill tree skill and the HASTE of a running
+//! aura the cooldown of the attacks.
 double Creature::getAppliedCooldownNbTurns(const CreatureSkill& skill) const
 {
     uint32_t baseCooldown = skill.getCooldownNbTurns();
@@ -7980,15 +9075,64 @@ double Creature::getAppliedCooldownNbTurns(const CreatureSkill& skill) const
             baseCooldown = std::max(baseCooldown, weaponCooldown);
     }
 
+    // The rank property FASTER_CAST of a skill of the skill tree shortens its own cooldown
+    const double fasterCast = skill.getPropertyValue("FASTER_CAST", 0, 1.0);
     if(!isLevelScaledAttack(skill))
-        return baseCooldown;
+        return baseCooldown * fasterCast;
 
     // The cd% passives shorten the cooldown of the attack lines, to at least one turn
     double cooldown = CreatureProgression::cooldownAtLevel(baseCooldown, getLevel());
     const double cooldownPassive = getSkillPassive("cd%");
     if(cooldownPassive > 0.0 && cooldown > 0.0)
         cooldown = std::max(1.0, cooldown * (1.0 - cooldownPassive / 100.0));
-    return cooldown;
+    // The HASTE of a running aura lets the attacks come faster
+    return cooldown * fasterCast * getSkillAttackCooldownFactor();
+}
+
+//! \brief The experience of one heal or strengthening cast in a fight (CR7): the fight experience useAttack gives one
+//! attack of the creature (ArenaXpPerFightTurn times the recovery turns of the attack times the training hall
+//! research) for the first usable attack line, whose recovery is the larger of its warmup and its applied cooldown.
+//! The arena factors of useAttack are left out: a cast counts only in a fight (not in a friendly arena fight).
+double Creature::getSkillCastExperience() const
+{
+    double recoveryTurns = 0.0;
+    for(const CreatureSkillData& skillData : mSkillData)
+    {
+        if(!skillData.mTreeSkillId.empty() || !skillData.mSkill->canBeUsedBy(this) ||
+           !isLevelScaledAttack(*skillData.mSkill))
+        {
+            continue;
+        }
+        recoveryTurns = std::max(static_cast<double>(skillData.mSkill->getWarmupNbTurns()),
+            getAppliedCooldownNbTurns(*skillData.mSkill));
+        break;
+    }
+    return ConfigManager::getSingleton().getRoomConfigDouble("ArenaXpPerFightTurn") * recoveryTurns
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit);
+}
+
+//! \brief Shortens the timers a skill just got by its rank properties: FASTER_CAST (the warmup; for a support skill
+//! also the cooldown), COOLDOWN_PER_HIT (the cut the skill collected) and, for a heal in a fight, DOUBLE_CAST_ONCE of
+//! the creature (once per fight no cooldown).
+//! \param skillData The skill and its timers.
+//! \param addedCooldown The cooldown that was just added.
+//! \param support True for a skill used at the start of the turn (its cooldown is not the applied cooldown).
+void Creature::applySkillTimerProperties(CreatureSkillData& skillData, double addedCooldown, bool support)
+{
+    const double fasterCast = skillData.mSkill->getPropertyValue("FASTER_CAST", 0, 1.0);
+    skillData.mWarmup -= skillData.mSkill->getWarmupNbTurns() * (1.0 - fasterCast);
+    double cut = mSkillCooldownCut;
+    mSkillCooldownCut = 0.0;
+    if(support)
+    {
+        cut += addedCooldown * (1.0 - fasterCast);
+        if(isHealSkill(*skillData.mSkill) && isActionInList(CreatureActionType::fight) &&
+           hasSkillProperty("DOUBLE_CAST_ONCE") && useOncePerFight("DOUBLE_CAST_ONCE"))
+        {
+            cut = addedCooldown;
+        }
+    }
+    skillData.mCooldown -= std::max(0.0, std::min(cut, addedCooldown));
 }
 
 //! \brief Mean damage per second of the main attack line against an undefended target, without any roll.
@@ -8040,7 +9184,8 @@ double Creature::getRawDamagePerSecond() const
         * ODApplication::turnsPerSecond;
 }
 
-//! \brief Uses an attack skill on the target. An attack on an enemy ends the Invisibility spell of the attacker.
+//! \brief Uses an attack skill on the target. An attack on an enemy ends the Invisibility spell of the attacker. The
+//! rank properties FREE_ON_DEBUFFED, FASTER_CAST and COOLDOWN_PER_HIT change its mana and timers.
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit)
 {
@@ -8066,6 +9211,13 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     Tile* myTile = getPositionTile();
     float range = Pathfinding::distanceTile(*myTile, tileAttack);
 
+    // FREE_ON_DEBUFFED of the creature waives the mana of a damage over time on a target that already carries one;
+    // the skill may shorten its own cooldown while it is used (COOLDOWN_PER_HIT)
+    mSkillManaWaived = (entityAttack.getObjectType() == GameEntityType::creature) &&
+        hasSkillProperty("FREE_ON_DEBUFFED") && isDamageOverTimeSkill(*skillData.mSkill) &&
+        static_cast<Creature&>(entityAttack).hasDamageOverTime();
+    mSkillCooldownCut = 0.0;
+
     // The mana is paid when the shot or skill starts
     payManaFor(*skillData.mSkill);
 
@@ -8075,6 +9227,8 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     // The new timers are added, so the remainder of the last turn carries over (fractions are kept)
     skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
     skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);
+    // The rank properties FASTER_CAST (warmup; the cooldown already has it) and COOLDOWN_PER_HIT shorten them
+    applySkillTimerProperties(skillData, getAppliedCooldownNbTurns(*skillData.mSkill), false);
 
     // Both timers count down together; either can postpone the next attack.
     mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
@@ -9530,9 +10684,18 @@ void Creature::fireAttackTurn(const std::string& targetName, const Ogre::Vector3
     fireCosmeticEvent(event, false);
 }
 
+//! \brief Tells the clients how a blow or shot hit the creature. On the server a critical shot that did damage first
+//! lets the shooter act on its rank properties SLOW_ON_CRIT and PIERCE (the shot itself is resolved by the missile).
 void Creature::fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile,
     bool critical)
 {
+    if(missile && critical && damageDone > 0.0 && getIsOnServerMap() && !attackerName.empty())
+    {
+        Creature* shooter = getGameMap()->getCreature(attackerName);
+        if(shooter != nullptr)
+            shooter->onSkillRangedCritical(*this, damageDone);
+    }
+
     if(!ConfigManager::getSingleton().getHitEvents())
         return;
 

@@ -54,13 +54,15 @@ CreatureSkillGrenade* CreatureSkillGrenade::clone() const
     return new CreatureSkillGrenade(*this);
 }
 
+//! \brief Creates the blast missile with the blast radius of the line times LARGER_RADIUS.
 MissileOneHit* CreatureSkillGrenade::createMissile(GameMap& gameMap, Creature* creature,
         const Ogre::Vector3& direction, double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject,
         bool ko, bool notifyPlayerIfHit) const
 {
+    // Rank property LARGER_RADIUS multiplies the blast radius
     return new MissileBlast(&gameMap, creature->getSeat(), creature->getName(), mMissileMesh, mMissilePartScript,
         direction, mMissileSpeed, phyAtk, magAtk, eleAtk, attackedObject, false, ko, notifyPlayerIfHit,
-        mBlastRadius, false);
+        mBlastRadius * getPropertyValue("LARGER_RADIUS", 0, 1.0), false);
 }
 
 void CreatureSkillGrenade::getFormatString(std::string& format) const

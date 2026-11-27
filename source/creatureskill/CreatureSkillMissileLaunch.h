@@ -91,6 +91,11 @@ protected:
     virtual bool appliesSkillDamageFactor() const
     { return false; }
 
+    //! \brief Launches the extra shots of the JUMP_TARGETS and EXTRA_TARGETS properties at the enemies near the target
+    //! and puts the burning ground of BURNING_GROUND (skills of the skill tree only).
+    void launchExtraTargets(GameMap& gameMap, Creature* creature, GameEntity* attackedObject, Tile* attackedTile,
+        bool ko) const;
+
     //! \brief Creates the missile to launch. Skills based on MissileLaunch override it to launch another kind of missile
     virtual MissileOneHit* createMissile(GameMap& gameMap, Creature* creature, const Ogre::Vector3& direction,
         double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject, bool ko,

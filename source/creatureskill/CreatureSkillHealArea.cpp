@@ -83,6 +83,9 @@ bool CreatureSkillHealArea::tryUseSupport(GameMap& gameMap, Creature* creature) 
     for(Creature* ally : allies)
     {
         ally->heal(amount);
+        // Rank properties CLEANSE and CLEANSE_ALL remove damage over time from every healed creature
+        if(hasProperty("CLEANSE") || hasProperty("CLEANSE_ALL"))
+            ally->cleanseDamageOverTime(hasProperty("CLEANSE_ALL"));
         for(Tile* tile : ally->getCoveredTiles())
         {
             Spell::fireSpellEffect(*tile, "Heal", "HealCast");
