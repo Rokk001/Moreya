@@ -1241,9 +1241,9 @@ private:
     };
     //! \brief Gives the infirmary shaman with that entity name the rattle of RattleShake in her right hand.
     void attachRattle(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton);
-    //! \brief Gives the infirmary shaman with that entity name the flask of PotionTaste in her left hand.
+    //! \brief Hangs the flask of PotionTaste on the bone Flask of the infirmary shaman, which moves it through the clip.
     void attachFlask(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton);
-    //! \brief Puts the bucket of TripOverBucket on the floor before the feet of the infirmary shaman.
+    //! \brief Hangs the bucket of TripOverBucket on the bone Bucket of the infirmary shaman, which moves it through the clip.
     void placeTripBucket(const std::string& objectName, Ogre::Entity* holder);
     //! \brief Gives the innkeeper with that entity name the jug of the Pour clip in his left hand.
     void attachPourJug(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton);

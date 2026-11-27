@@ -16,20 +16,25 @@ Two parts, no compiler:
         RenderManager::attachRattle (pose in the middle of the clip): in the middle key its handle point lies in the palm
         and it points up and forwards (axis z >= 0.8, y < 0); while the arm is raised (right hand above 0.7 x height)
         the top of the rattle stays above the hand;
-      - the bucket stands on the floor at TRIP_BUCKET_SPOT, as high as TRIP_BUCKET_HEIGHT_SHARE x the height: at the
-        first key of TripOverBucket a foot is within 0.35 x height of its centre (it stands before her feet), and at no
-        key does a foot bone come within the bucket's radius of its centre;
-      - the flask is posed with the keys of PotionTaste, fixed to the left hand like RenderManager::attachFlask (pose in
-        the middle of the clip): in the middle its belly lies in the palm and the tip of its neck within 0.06 x height
-        of the mouth (the head bone shifted by FLASK_MOUTH_SHIFT), the neck pointing down to it.
+      - the bucket hangs without offset on the bone Bucket like RenderManager::placeTripBucket (a root bone, bind pose in
+        the origin without rotation), as high as TRIP_BUCKET_HEIGHT_SHARE x the height, and is posed with the keys of
+        TripOverBucket: at the first key it stands upright on the floor with a foot within 0.35 x height of its centre
+        (before her feet); at no key does it sink more than 0.01 x height below the floor; at the last key it lies on
+        its side (axis z at most 0.2) on the floor, away from her feet;
+      - the flask hangs without offset on the bone Flask like RenderManager::attachFlask (a root bone, bind pose in the
+        origin without rotation), as high as FLASK_HEIGHT_SHARE x the height, and is posed with the keys of
+        PotionTaste: it stands upright at the first key (at most 10 degrees), tips at most 50 degrees, its base stays
+        within 0.14 x height of the right hand bone at every key, and while she drinks the tip of its neck comes within
+        0.14 x height of the head bone.
 
 Fixed expected values of this branch (counted once): RATTLE_HEIGHT_SHARE 0.28, RATTLE_GRIP (0.14, 0, 0.2),
 RATTLE_PALM_REACH 0.05, RATTLE_DIRECTION (0, -0.5, 1), RattleShake 2 s; rattle 3204 triangles, bucket 2994 triangles
-(limit 4000 each); TRIP_BUCKET_HEIGHT_SHARE 0.25, TRIP_BUCKET_SPOT (0.17, 0.52, 0), bucket radius 0.125 x height,
-TripOverBucket 2.5 s, 61 keys; nearest foot at the first key 0.267 x height counted, closest foot over the clip 0.171
-counted; rattle top at least 0.021 x height above the raised hand counted (37 raised keys); FLASK_HEIGHT_SHARE 0.12,
-FLASK_GRIP (0, 0, 0.22), FLASK_PALM_REACH 0.04, FLASK_MOUTH_SHIFT (0, -0.10, 0.04), PotionTaste 8.875 s, flask 2986
-triangles, neck tip 0.0103 x height from the mouth counted.
+(limit 4000 each); TRIP_BUCKET_BONE Bucket, TRIP_BUCKET_HEIGHT_SHARE 0.12, bucket radius 0.06 x height,
+TripOverBucket 4.4 s, 221 keys; nearest foot at the first key 0.243 x height counted, nearest foot at the last key
+0.329 x height counted (at least 0.3), lowest bucket point over the clip -0.0001 x height counted; rattle top at least
+0.021 x height above the raised hand counted (37 raised keys); FLASK_BONE Flask, FLASK_HEIGHT_SHARE 0.075, PotionTaste
+4.4 s, 221 keys, flask 2986 triangles; flask tilt 0 degrees at the first key and 44.6 at most counted, base at most
+0.1277 x height from the right hand counted, neck tip 0.1303 x height from the head bone at the nearest counted.
 
 Without --assets the models, materials and textures are read from the public tree or the content packages
 (scripts/content_packages.py); without the content the props (room-infirmary) and the shaman (creatures) are named
@@ -61,20 +66,22 @@ RATTLE_SHARE = 0.28
 RATTLE_GRIP = (0.14, 0.0, 0.2)
 RATTLE_REACH = 0.05
 RATTLE_DIRECTION = (0.0, -0.5, 1.0)
-BUCKET_SHARE = 0.25
-BUCKET_SPOT = (0.17, 0.52, 0.0)
-BUCKET_RADIUS = 0.125
+BUCKET_SHARE = 0.12
+BUCKET_RADIUS = 0.06
+BUCKET_FLOOR_GAP = 0.01
+BUCKET_LYING_AXIS = 0.2
+BUCKET_LAST_FOOT = 0.3
 TRIANGLE_LIMIT = 4000
 RATTLE_SECONDS = 2.0
-TRIP_SECONDS = 2.5
+TRIP_SECONDS = 4.4
 FIRST_FOOT_REACH = 0.35
 RAISED_HAND = 0.7
-FLASK_SHARE = 0.12
-FLASK_GRIP = (0.0, 0.0, 0.22)
-FLASK_REACH = 0.04
-FLASK_MOUTH_SHIFT = (0.0, -0.10, 0.04)
-FLASK_SECONDS = 8.875
-FLASK_TIP_GAP = 0.06
+FLASK_SHARE = 0.075
+FLASK_SECONDS = 4.4
+FLASK_START_TILT = 10.0
+FLASK_MOST_TILT = 50.0
+FLASK_HAND_GAP = 0.14
+FLASK_TIP_GAP = 0.14
 fails = []
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 work = Path(tempfile.mkdtemp(prefix='shaman_props_'))
@@ -271,14 +278,13 @@ constants = {
     'RATTLE_PALM_REACH = 0.05f;': 'rattle palm reach 0.05',
     'RATTLE_DIRECTION(0.0f, -0.5f, 1.0f);': 'rattle direction (0, -0.5, 1)',
     'TRIP_BUCKET_MESH = "InfirmaryBucket.mesh";': 'bucket mesh InfirmaryBucket.mesh',
-    'TRIP_BUCKET_HEIGHT_SHARE = 0.25f;': 'bucket height share 0.25',
-    'TRIP_BUCKET_SPOT(0.17f, 0.52f, 0.0f);': 'bucket spot (0.17, 0.52, 0)',
+    'TRIP_BUCKET_BONE = "Bucket";': 'bucket on the bone Bucket',
+    'TRIP_BUCKET_HEIGHT_SHARE = 0.12f;': 'bucket height share 0.12',
+    'attachObjectToBone(TRIP_BUCKET_BONE, bucketEntity);': 'bucket hung on its bone without offset',
     'FLASK_MESH = "InfirmaryFlask.mesh";': 'flask mesh InfirmaryFlask.mesh',
-    'FLASK_BONE = "LeftHand";': 'flask in the left hand',
-    'FLASK_HEIGHT_SHARE = 0.12f;': 'flask height share 0.12',
-    'FLASK_GRIP(0.0f, 0.0f, 0.22f);': 'flask grip point (0, 0, 0.22)',
-    'FLASK_PALM_REACH = 0.04f;': 'flask palm reach 0.04',
-    'FLASK_MOUTH_SHIFT(0.0f, -0.10f, 0.04f);': 'flask mouth shift (0, -0.10, 0.04)',
+    'FLASK_BONE = "Flask";': 'flask on the bone Flask',
+    'FLASK_HEIGHT_SHARE = 0.075f;': 'flask height share 0.075',
+    'attachObjectToBone(FLASK_BONE, flaskEntity);': 'flask hung on its bone without offset',
 }
 for text, name in constants.items():
     if text not in source:
@@ -387,48 +393,78 @@ else:
             fail('RattleShake: the right hand is never raised above %.1f x height' % RAISED_HAND)
         elif min(t[1] for t in tops) <= 0.0:
             fail('RattleShake: the rattle hangs below the raised hand')
-    if 'TripOverBucket' in skeleton.clips and 'LeftFoot' in skeleton.bones and 'RightFoot' in skeleton.bones:
-        # ---- the bucket, placed like RenderManager::placeTripBucket
+    if 'TripOverBucket' in skeleton.clips and 'Bucket' not in skeleton.bones:
+        fail('InfirmaryShaman.skeleton: no bone Bucket for the bucket of TripOverBucket')
+    elif 'TripOverBucket' in skeleton.clips and 'LeftFoot' in skeleton.bones and 'RightFoot' in skeleton.bones:
+        # ---- the bucket, hung on the bone Bucket like RenderManager::placeTripBucket
+        bind_position, bind_turn = skeleton.bones['Bucket']
+        if 'Bucket' in skeleton.parent or length(bind_position) > 1e-6 or abs(abs(bind_turn[0]) - 1.0) > 1e-6:
+            fail('bone Bucket: expected a root bone with its bind pose in the origin without rotation')
         lo, hi = bounds['InfirmaryBucket']
-        radius = 0.5 * max(hi[0] - lo[0], hi[1] - lo[1]) * BUCKET_SHARE
-        spot = mul(BUCKET_SPOT, height)
+        scale = BUCKET_SHARE * height / (hi[2] - lo[2])
+        radius = 0.5 * max(hi[0] - lo[0], hi[1] - lo[1]) * scale / height
         if abs(radius - BUCKET_RADIUS) > 1e-3:
             fail('bucket radius %.4f x height, expected %.3f' % (radius, BUCKET_RADIUS))
         times = skeleton.key_times('TripOverBucket')
-        gaps = []
+        lows, axes, gaps = [], [], []
         for t in times:
             pose = skeleton.pose('TripOverBucket', t)
-            gaps.append(min(math.hypot(pose[f][0][0] - spot[0], pose[f][0][1] - spot[1]) for f in ('LeftFoot', 'RightFoot'))
-                        / height)
-        info['bucket'] = {'first_foot_gap': round(gaps[0], 3), 'closest_foot_gap': round(min(gaps), 3), 'keys': len(times)}
+            base, turn = pose['Bucket']
+            axis = qrot(turn, (0.0, 0.0, 1.0))
+            top = add(base, mul(axis, (hi[2] - lo[2]) * scale))
+            rim = radius * height * math.sqrt(max(0.0, 1.0 - axis[2] * axis[2]))
+            centre = add(base, mul(axis, 0.5 * (hi[2] - lo[2]) * scale))
+            lows.append(min(base[2], top[2]) - rim)
+            axes.append(axis[2])
+            gaps.append(min(math.hypot(pose[f][0][0] - centre[0], pose[f][0][1] - centre[1])
+                            for f in ('LeftFoot', 'RightFoot')) / height)
+        info['bucket'] = {'keys': len(times), 'first_foot_gap': round(gaps[0], 3), 'last_foot_gap': round(gaps[-1], 3),
+                          'lowest_point': round(min(lows) / height, 4), 'first_axis_z': round(axes[0], 3),
+                          'last_axis_z': round(axes[-1], 3), 'last_floor_gap': round(lows[-1] / height, 4)}
+        if axes[0] < 0.99 or abs(lows[0]) > BUCKET_FLOOR_GAP * height:
+            fail('TripOverBucket start: the bucket does not stand upright on the floor')
         if gaps[0] > FIRST_FOOT_REACH:
             fail('TripOverBucket start: the nearest foot is %.3f x height from the bucket, at most %.2f'
                  % (gaps[0], FIRST_FOOT_REACH))
-        if min(gaps) < BUCKET_RADIUS:
-            fail('TripOverBucket: a foot comes %.3f x height near the bucket centre, inside its radius %.3f'
-                 % (min(gaps), BUCKET_RADIUS))
-    if 'PotionTaste' in skeleton.clips and 'LeftHand' in skeleton.bones and 'Head' in skeleton.bones:
-        # ---- the flask, placed like RenderManager::attachFlask
-        middle = skeleton.pose('PotionTaste', 0.5 * skeleton.clips['PotionTaste'][0], interpolate=True)
-        hand, hand_turn = middle['LeftHand']
+        if min(lows) < -BUCKET_FLOOR_GAP * height:
+            fail('TripOverBucket: the bucket sinks %.4f x height below the floor' % (-min(lows) / height))
+        if abs(axes[-1]) > BUCKET_LYING_AXIS or abs(lows[-1]) > BUCKET_FLOOR_GAP * height:
+            fail('TripOverBucket end: the bucket does not lie on its side on the floor')
+        if gaps[-1] < BUCKET_LAST_FOOT:
+            fail('TripOverBucket end: the bucket lies %.3f x height from her feet, at least %.2f'
+                 % (gaps[-1], BUCKET_LAST_FOOT))
+    if 'PotionTaste' in skeleton.clips and 'Flask' not in skeleton.bones:
+        fail('InfirmaryShaman.skeleton: no bone Flask for the flask of PotionTaste')
+    elif 'PotionTaste' in skeleton.clips and 'RightHand' in skeleton.bones and 'Head' in skeleton.bones:
+        # ---- the flask, hung on the bone Flask like RenderManager::attachFlask
+        bind_position, bind_turn = skeleton.bones['Flask']
+        if 'Flask' in skeleton.parent or length(bind_position) > 1e-6 or abs(abs(bind_turn[0]) - 1.0) > 1e-6:
+            fail('bone Flask: expected a root bone with its bind pose in the origin without rotation')
         lo, hi = bounds['InfirmaryFlask']
         scale = FLASK_SHARE * height / (hi[2] - lo[2])
-        palm = add(hand, qrot(hand_turn, (0.0, FLASK_REACH * height, 0.0)))
-        mouth = add(middle['Head'][0], mul(FLASK_MOUTH_SHIFT, height))
-        wanted = qframe(sub(mouth, palm), (1.0, 0.0, 0.0))
-        origin = sub(palm, qrot(wanted, mul(FLASK_GRIP, scale)))
-        tip = add(origin, qrot(wanted, (0.0, 0.0, hi[2] * scale)))
-        grip = add(origin, qrot(wanted, mul(FLASK_GRIP, scale)))
-        axis = qrot(wanted, (0.0, 0.0, 1.0))
-        info['flask'] = {'tip_mouth_gap': round(length(sub(tip, mouth)) / height, 4), 'axis_mid': [round(v, 3) for v in axis],
-                         'grip_gap_mid': round(length(sub(grip, palm)) / height, 5)}
-        if length(sub(grip, palm)) > 1e-4 * height:
-            fail('PotionTaste middle: the belly of the flask is not in the palm')
-        if length(sub(tip, mouth)) > FLASK_TIP_GAP * height:
-            fail('PotionTaste middle: the neck of the flask ends %.4f x height from the mouth, at most %.2f'
-                 % (length(sub(tip, mouth)) / height, FLASK_TIP_GAP))
-        if axis[2] >= 0.0:
-            fail('PotionTaste middle: the neck of the flask points up, not down to the mouth')
+        hand_gaps, tip_gaps, tilts, lows = [], [], [], []
+        for t in skeleton.key_times('PotionTaste'):
+            pose = skeleton.pose('PotionTaste', t)
+            base, turn = pose['Flask']
+            axis = qrot(turn, (0.0, 0.0, 1.0))
+            tip = add(base, mul(axis, (hi[2] - lo[2]) * scale))
+            hand_gaps.append(length(sub(base, pose['RightHand'][0])) / height)
+            tip_gaps.append(length(sub(tip, pose['Head'][0])) / height)
+            tilts.append(math.degrees(math.acos(max(-1.0, min(1.0, axis[2])))))
+            lows.append(min(base[2], tip[2]) / height)
+        info['flask'] = {'keys': len(tilts), 'first_tilt': round(tilts[0], 1), 'largest_tilt': round(max(tilts), 1),
+                         'largest_hand_gap': round(max(hand_gaps), 4), 'nearest_tip_head_gap': round(min(tip_gaps), 4),
+                         'lowest_point': round(min(lows), 3)}
+        if tilts[0] > FLASK_START_TILT:
+            fail('PotionTaste start: the flask leans %.1f degrees, at most %.0f' % (tilts[0], FLASK_START_TILT))
+        if max(tilts) > FLASK_MOST_TILT:
+            fail('PotionTaste: the flask tips %.1f degrees, at most %.0f' % (max(tilts), FLASK_MOST_TILT))
+        if max(hand_gaps) > FLASK_HAND_GAP:
+            fail('PotionTaste: the flask base leaves the right hand by %.4f x height, at most %.2f'
+                 % (max(hand_gaps), FLASK_HAND_GAP))
+        if min(tip_gaps) > FLASK_TIP_GAP:
+            fail('PotionTaste: the neck of the flask comes no nearer than %.4f x height to the head bone, at most %.2f'
+                 % (min(tip_gaps), FLASK_TIP_GAP))
 assets_seconds = time.monotonic() - assets_started
 print('ODP_TEST_PHASE ' + json.dumps({'name': 'assets', 'seconds': round(assets_seconds, 3)}))
 print(json.dumps(info, indent=1))
