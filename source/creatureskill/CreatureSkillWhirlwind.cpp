@@ -76,7 +76,8 @@ bool CreatureSkillWhirlwind::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
-//! \brief Pushes the target through traversable tiles, reduced by its Brace equipment effect.
+//! \brief Pushes the target through traversable tiles, reduced by its Brace equipment effect. The rank properties
+//! PULL, STUN, KNOCK_DOWN, LOSE_TARGET, AREA and LARGER_RADIUS widen it.
 bool CreatureSkillWhirlwind::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {

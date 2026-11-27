@@ -3118,7 +3118,8 @@ void Creature::dropCarriedEquipment()
 //! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
 //! Spaces authoritative standing bodies and interrupts activities for urgent needs. Runs the plague of a sick
 //! creature and sends it to a free infirmary cot. A member of a combat group follows its group, a fleeing raid leader
-//! runs to the gate.
+//! runs to the gate. A heal or strengthening cast in a fight gives the experience of an attack (CR7), and the rank
+//! properties of the skill tree that act every turn (REGEN, DASH, CHASE, Hold) run here.
 void Creature::doUpkeep()
 {
     upkeepGhostHunt();
@@ -4339,6 +4340,8 @@ bool Creature::handleIdleAction()
 }
 
 //! \brief Selects existing combat targets and attack tiles, preferring legal body-free stances before crowded fallback.
+//! A taunted creature tries the taunting tank first, else a creature tries an enemy its side marked (FOCUS_TARGET);
+//! a held creature (Hold) only attacks from where it stands.
 bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
         Tile*& attackedTile, Tile*& positionTile, CreatureSkillData*& creatureSkillData)
 {
@@ -6777,7 +6780,7 @@ double Creature::getManaCost(double baseCost) const
 
 //! \brief Returns the mana the skill costs this creature now: the rank cost of a skill of the skill tree, the shot cost
 //! of a caster's first MissileLaunch or of a second MissileLaunch line like the Dragon's (all with manacost%), 0 for
-//! every free attack.
+//! every free attack. FREE_AREA_CAST and MANA_DISCOUNT of the passives lower the cost of skill tree skills.
 //! \param skill The skill or attack line to price.
 double Creature::getSkillManaCost(const CreatureSkill& skill) const
 {
@@ -9039,7 +9042,8 @@ bool isLevelScaledAttack(const CreatureSkill& skill)
 }
 
 //! \brief Gets the larger skill or weapon cooldown for melee, with level scaling for attacks. The cd% passives
-//! shorten the cooldown of the attack lines.
+//! shorten the cooldown of the attack lines, FASTER_CAST the cooldown of a skill tree skill and the HASTE of a running
+//! aura the cooldown of the attacks.
 double Creature::getAppliedCooldownNbTurns(const CreatureSkill& skill) const
 {
     uint32_t baseCooldown = skill.getCooldownNbTurns();
@@ -9169,7 +9173,8 @@ double Creature::getRawDamagePerSecond() const
         * ODApplication::turnsPerSecond;
 }
 
-//! \brief Uses an attack skill on the target. An attack on an enemy ends the Invisibility spell of the attacker.
+//! \brief Uses an attack skill on the target. An attack on an enemy ends the Invisibility spell of the attacker. The
+//! rank properties FREE_ON_DEBUFFED, FASTER_CAST and COOLDOWN_PER_HIT change its mana and timers.
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit)
 {
