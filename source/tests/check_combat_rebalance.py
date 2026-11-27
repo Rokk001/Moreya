@@ -20,7 +20,8 @@ from combat_sim import (CASES_MATRIX, TURNS_PER_SECOND, Roster, World, building_
                         world_verify)
 
 # Approved level-one roster: health, healing, sleep, ratings, six damage endpoints and avoidance (roster change
-# CREATURE-ROSTER W4a: the new roster with the first-estimate values of the roster plan, section 7).
+# CREATURE-ROSTER W4a: the new roster with the first-estimate values of the roster plan, section 7). The Vampire is
+# undead like its predecessor the Lich (D30/D38), so its healing reference carries the undead heal factor.
 EXPECTED = """
 Kobold 70 .05319375292565641 0 562 188 3.21 4.07 0.0 0.0 0.0 0.0 none
 DwarfWorker 70 .05319375292565641 0 562 188 3.21 4.07 0.0 0.0 0.0 0.0 none
@@ -37,7 +38,7 @@ Cultist 35.5 .026977 0 366 122 0 0 5.67 7.56 0 0 dodge
 CaveHornet 61.5 .046735 0 344 115 0 0 0 0 8.42 11.56 dodge
 Skeleton 106.5 .053954 0 439 146 13.34 20.05 0 0 0 0 none
 Lich 106.5 .053954 0 205 68 0 0 20.88 24.02 0 0 none
-Vampire 184.5 .140204 0 205 68 0 0 45.53 58.91 0 0 none
+Vampire 184.5 .093469 0 205 68 0 0 45.53 58.91 0 0 none
 Priestess 184.5 .140204 0 233 78 0 0 37.97 52.74 0 0 none
 Adventurer 35.5 .026977 0 356 119 0 0 0 0 5.81 7.98 dodge
 Monk 35.5 .026977 0 304 101 0 0 0 0 6.47 8.64 block
