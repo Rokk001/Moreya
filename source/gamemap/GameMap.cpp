@@ -82,6 +82,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/NameAliases.h"
 #include "utils/Random.h"
 #include "utils/ResourceManager.h"
 
@@ -1054,9 +1055,13 @@ void GameMap::queueEntityForDeletion(GameEntity *ge)
     mEntitiesToDelete.push_back(ge);
 }
 
-const CreatureDefinition* GameMap::getClassDescription(const string &className)
+//! \brief Returns the class description whose name is exactly the given name (the tuned one when the level tunes it),
+//! nullptr when there is none.
+static const CreatureDefinition* findClassDescriptionByName(
+    std::vector<std::pair<const CreatureDefinition*,CreatureDefinition*> >& classDescriptions,
+    const std::string& className)
 {
-    for (std::pair<const CreatureDefinition*,CreatureDefinition*>& def : mClassDescriptions)
+    for (std::pair<const CreatureDefinition*,CreatureDefinition*>& def : classDescriptions)
     {
         if (def.second != nullptr)
         {
@@ -1068,6 +1073,33 @@ const CreatureDefinition* GameMap::getClassDescription(const string &className)
     }
 
     return nullptr;
+}
+
+//! \brief Looks the class up by its name; a removed class that older files may still name gives its successor.
+const CreatureDefinition* GameMap::getClassDescription(const string &className)
+{
+    const CreatureDefinition* definition = findClassDescriptionByName(mClassDescriptions, className);
+    if(definition != nullptr)
+        return definition;
+
+    const std::string successor = NameAliases::resolveCreatureClass(className);
+    if(successor == className)
+        return nullptr;
+
+    return findClassDescriptionByName(mClassDescriptions, successor);
+}
+
+//! \brief The name itself for a class of this map, the successor of a removed class, else the name unchanged.
+std::string GameMap::resolveClassName(const std::string& className)
+{
+    if(findClassDescriptionByName(mClassDescriptions, className) != nullptr)
+        return className;
+
+    const std::string successor = NameAliases::resolveCreatureClass(className);
+    if((successor != className) && (findClassDescriptionByName(mClassDescriptions, successor) != nullptr))
+        return successor;
+
+    return className;
 }
 
 CreatureDefinition* GameMap::getClassDescriptionForTuning(const std::string& name)
@@ -1085,6 +1117,11 @@ CreatureDefinition* GameMap::getClassDescriptionForTuning(const std::string& nam
             return def.second;
         }
     }
+
+    // An older level that tunes a removed class tunes its successor
+    const std::string successor = resolveClassName(name);
+    if(successor != name)
+        return getClassDescriptionForTuning(successor);
 
     // It is a new definition
     CreatureDefinition* def = new CreatureDefinition(name);

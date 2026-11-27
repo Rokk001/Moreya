@@ -166,6 +166,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/NameAliases.h"
 #include "utils/Random.h"
 #include "utils/ResourceManager.h"
 
@@ -1372,7 +1373,9 @@ void Creature::exportToStream(std::ostream& os) const
 }
 
 //! \brief Reads legacy creature data with optional appearance, mana, skill state, item and possession data, and
-//! the optional [Plague] block of a sick creature.
+//! the optional [Plague] block of a sick creature. A removed class of an older savegame or level is loaded as its
+//! successor, and in a file written before the current creature roster a keeper-side or rogue creature of the class
+//! that moved to the hero side as that class's successor; the creature then takes the mesh of its new class.
 bool Creature::importFromStream(std::istream& is)
 {
     // Beware: A generic class name might be used here so we shouldn't use mDefinition
@@ -1386,6 +1389,22 @@ bool Creature::importFromStream(std::istream& is)
 
     if(!(is >> mDefinitionString))
         return false;
+    const std::string loadedClass = mDefinitionString;
+    mDefinitionString = getGameMap()->resolveClassName(mDefinitionString);
+    if(getGameMap()->isLoadingOldRosterCreatures() && (getSeat() != nullptr))
+    {
+        const bool heroSide = (getSeat()->getFaction() == "Hero");
+        const std::string sideClass = NameAliases::resolveOldCreatureClassForSide(mDefinitionString, heroSide);
+        if((sideClass != mDefinitionString) && (getGameMap()->getClassDescription(sideClass) != nullptr))
+            mDefinitionString = sideClass;
+    }
+    if(mDefinitionString != loadedClass)
+    {
+        const CreatureDefinition* successor = getGameMap()->getClassDescription(mDefinitionString);
+        if(successor != nullptr)
+            setMeshName(successor->getMeshName());
+        OD_LOG_INF("Creature " + getName() + " of an older file is loaded as " + mDefinitionString);
+    }
     if(!(is >> mLevel))
         return false;
     if(!(is >> mExp))

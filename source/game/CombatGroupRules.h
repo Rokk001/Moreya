@@ -30,40 +30,43 @@
 namespace CombatGroupRules
 {
 //! \brief The role of a group member. The order of the values is the order of the formation from the front: tanks,
-//! melee fighters, ranged fighters and casters, healers.
+//! melee fighters, supporters (in the middle of the group, so that their auras reach everyone), ranged fighters and
+//! casters, healers.
 enum class Role
 {
     tank = 0,
     melee = 1,
-    ranged = 2,
-    healer = 3
+    supporter = 2,
+    ranged = 3,
+    healer = 4
 };
 
 //! \brief The roles in the order of the formation from the front.
 std::vector<Role> formationOrder();
 
-//! \brief Returns the name of a role ("tank", "melee", "ranged", "healer").
+//! \brief Returns the name of a role ("tank", "melee", "supporter", "ranged", "healer").
 const char* roleName(Role role);
 
-//! \brief The config lists the role rule reads (GroupTankPaths, GroupHealerPaths, GroupRangedSkillGroups).
+//! \brief The config lists the role rule reads (GroupTankSkillGroups, GroupHealerSkillGroups,
+//! GroupSupporterSkillGroups, GroupRangedSkillGroups).
 struct RoleSettings
 {
-    //! \brief Primary paths of the templates that make a member a tank.
-    std::vector<std::string> mTankPaths;
-    //! \brief Primary paths of the templates that make a member a healer.
-    std::vector<std::string> mHealerPaths;
-    //! \brief Skill groups whose other templates (and whose creatures without a template) are ranged.
+    //! \brief Skill groups whose creatures are tanks.
+    std::vector<std::string> mTankSkillGroups;
+    //! \brief Skill groups whose creatures are healers.
+    std::vector<std::string> mHealerSkillGroups;
+    //! \brief Skill groups whose creatures are supporters.
+    std::vector<std::string> mSupporterSkillGroups;
+    //! \brief Skill groups whose creatures are ranged fighters or casters.
     std::vector<std::string> mRangedSkillGroups;
 };
 
-//! \brief The role of a creature from the skill template it follows: a template with a tank path as primary path is
-//! a tank, one with a healer path a healer; any other template of a ranged skill group is ranged, any other template
-//! melee. A creature without a template is ranged in a ranged skill group, otherwise melee.
+//! \brief The role of a creature from its skill group alone; the role is fixed per group and the template the
+//! creature follows does not change it. A tank skill group gives a tank, a healer skill group a healer, a supporter
+//! skill group a supporter, a ranged skill group a ranged fighter; every other skill group, and a creature without
+//! one, is a melee fighter.
 //! \param skillGroup The skill group of the creature type ("none" or empty when it has none).
-//! \param hasTemplate True when the creature follows a template.
-//! \param primaryPath The primary path of that template (ignored without a template).
-Role roleOf(const RoleSettings& settings, const std::string& skillGroup, bool hasTemplate,
-    const std::string& primaryPath);
+Role roleOf(const RoleSettings& settings, const std::string& skillGroup);
 
 //! \brief A member that can lead a group.
 struct LeaderCandidate
@@ -156,7 +159,8 @@ struct FormationPlace
     double mSide;
 };
 
-//! \brief The places of the formation: the roles in the formation order, each role starting a new row behind the
+//! \brief The places of the formation: the roles in the formation order (tanks, melee, supporters, ranged, healers),
+//! each role starting a new row behind the
 //! rows of the roles before it; inside a role the members in the order of their names, rowWidth places per row,
 //! every row centred behind the leader.
 std::vector<FormationPlace> formationPlaces(const std::vector<FormationMember>& members, uint32_t rowWidth);

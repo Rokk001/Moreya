@@ -71,6 +71,7 @@ std::vector<Role> formationOrder()
     std::vector<Role> order;
     order.push_back(Role::tank);
     order.push_back(Role::melee);
+    order.push_back(Role::supporter);
     order.push_back(Role::ranged);
     order.push_back(Role::healer);
     return order;
@@ -85,6 +86,8 @@ const char* roleName(Role role)
             return "tank";
         case Role::melee:
             return "melee";
+        case Role::supporter:
+            return "supporter";
         case Role::ranged:
             return "ranged";
         case Role::healer:
@@ -93,18 +96,15 @@ const char* roleName(Role role)
     return "melee";
 }
 
-//! \brief Maps the template of a creature to its role (tank and healer paths first, then the ranged skill groups).
-Role roleOf(const RoleSettings& settings, const std::string& skillGroup, bool hasTemplate,
-    const std::string& primaryPath)
+//! \brief Maps the skill group of a creature to its role (tank, healer, supporter and ranged groups, else melee).
+Role roleOf(const RoleSettings& settings, const std::string& skillGroup)
 {
-    if(hasTemplate)
-    {
-        if(contains(settings.mTankPaths, primaryPath))
-            return Role::tank;
-        if(contains(settings.mHealerPaths, primaryPath))
-            return Role::healer;
-    }
-
+    if(contains(settings.mTankSkillGroups, skillGroup))
+        return Role::tank;
+    if(contains(settings.mHealerSkillGroups, skillGroup))
+        return Role::healer;
+    if(contains(settings.mSupporterSkillGroups, skillGroup))
+        return Role::supporter;
     if(contains(settings.mRangedSkillGroups, skillGroup))
         return Role::ranged;
 

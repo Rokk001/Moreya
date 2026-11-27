@@ -23,17 +23,24 @@ namespace
 static const double PERCENT = 100.0;
 //! \brief Orders usable potions by the approved healing, group buff, and mana priorities.
 enum class PotionPriority { other, mana, groupBuff, healing };
+//! \brief The potion kind a skill group prefers at the merchant: strength for the tank and warrior groups, dexterity
+//! for the skirmisher and marksman groups, mana for the mage, healer and supporter groups, life for every other group
+//! (the workers and a creature without a skill group).
+std::string preferredPotionKind(const std::string& group)
+{
+    if(group == "tank" || group == "warrior") return "StrengthChange";
+    if(group == "skirmisher" || group == "marksman") return "DexterityChange";
+    if(group == "mage" || group == "healer" || group == "supporter") return "MaxManaChange";
+    return "MaxHPChange";
+}
+
 //! \brief Finds the priority of one potion for this wearer's group.
 PotionPriority potionPriority(const Creature& creature, const ItemInstance& item)
 {
     const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(item.mPotionId);
     if(potion == nullptr) return PotionPriority::other;
     if(potion->getKind() == "HealPercent") return PotionPriority::healing;
-    const std::string& group = creature.getDefinition()->getSkillGroup();
-    std::string buff = "MaxHPChange";
-    if(group == "blocker" || group == "blitzer") buff = "StrengthChange";
-    else if(group == "flanker" || group == "archer") buff = "DexterityChange";
-    else if(group == "caster") buff = "MaxManaChange";
+    const std::string buff = preferredPotionKind(creature.getDefinition()->getSkillGroup());
     if(potion->getKind() == buff) return PotionPriority::groupBuff;
     if(potion->getKind() == "ManaPercent") return PotionPriority::mana;
     return PotionPriority::other;

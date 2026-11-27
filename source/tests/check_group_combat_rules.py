@@ -69,66 +69,51 @@ def group_block_words(key):
 
 
 # ------------------------------------------------------------------------------------------------ G3 roles
-TANK, MELEE, RANGED, HEALER = "tank", "melee", "ranged", "healer"
-TANK_PATHS = group_block_words("GroupTankPaths")
-HEALER_PATHS = group_block_words("GroupHealerPaths")
+TANK, MELEE, SUPPORTER, RANGED, HEALER = "tank", "melee", "supporter", "ranged", "healer"
+TANK_GROUPS = group_block_words("GroupTankSkillGroups")
+HEALER_GROUPS = group_block_words("GroupHealerSkillGroups")
+SUPPORTER_GROUPS = group_block_words("GroupSupporterSkillGroups")
 RANGED_GROUPS = group_block_words("GroupRangedSkillGroups")
 
 
-def role_of(skill_group, has_template, primary):
-    """Model of CombatGroupRules::roleOf: tank and healer paths of the template, then the ranged skill groups."""
-    if has_template:
-        if primary in TANK_PATHS:
-            return TANK
-        if primary in HEALER_PATHS:
-            return HEALER
+def role_of(skill_group):
+    """Model of CombatGroupRules::roleOf: the role follows the skill group alone (tank, healer, supporter, ranged
+    groups, every other group melee)."""
+    if skill_group in TANK_GROUPS:
+        return TANK
+    if skill_group in HEALER_GROUPS:
+        return HEALER
+    if skill_group in SUPPORTER_GROUPS:
+        return SUPPORTER
     if skill_group in RANGED_GROUPS:
         return RANGED
     return MELEE
 
 
-def templates():
-    """The templates of config/creatureSkills.cfg as (group, name, primary path)."""
-    found = []
-    for block in re.findall(r"^\[Template\](.*?)^\[/Template\]", SKILLS_CFG, re.M | re.S):
-        values = {}
-        for line in block.strip().splitlines():
-            parts = line.split(None, 1)
-            if len(parts) == 2:
-                values[parts[0]] = parts[1].strip()
-        found.append((values["Group"], values["Name"], values["Primary"]))
-    return found
-
-
-# The role of every template of the fighters (plan G3), counted once from the plan: Guardian (Bulwark) and Protector
-# (Protection) tank, Healer (Healing) healer, the other archer and caster templates ranged, all others melee.
-EXPECTED_ROLES = {
-    ("blocker", "Berserker"): MELEE, ("blocker", "Guardian"): TANK, ("blocker", "Warlord"): MELEE,
-    ("blitzer", "Crusader"): MELEE, ("blitzer", "Protector"): TANK, ("blitzer", "Vanguard"): MELEE,
-    ("flanker", "Shade"): MELEE, ("flanker", "Venomist"): MELEE, ("flanker", "Dancer"): MELEE,
-    ("archer", "Marksman"): RANGED, ("archer", "Hunter"): RANGED, ("archer", "Skirmisher"): RANGED,
-    ("caster", "Destroyer"): RANGED, ("caster", "Healer"): HEALER, ("caster", "Hexer"): RANGED,
+# The group-fight role of every skill group (creature roster plan, CR4 and D26), counted once from the plan: the tank
+# group tanks, the healer group healers, the supporter group supporters, warrior and skirmisher melee, marksman and
+# mage ranged; the worker group and a creature without a skill group (the Shadow Lord) count as melee.
+EXPECTED_GROUP_ROLES = {
+    "tank": TANK, "healer": HEALER, "supporter": SUPPORTER, "warrior": MELEE, "skirmisher": MELEE,
+    "marksman": RANGED, "mage": RANGED, "worker": MELEE, "none": MELEE, "": MELEE,
 }
-# A creature without a template: ranged in the archer and caster groups, otherwise melee
-EXPECTED_UNCHOSEN = {"blocker": MELEE, "blitzer": MELEE, "flanker": MELEE, "archer": RANGED, "caster": RANGED,
-                     "none": MELEE}
-
-computed = {}
-for group, name, primary in templates():
-    if group == "worker":
-        continue
-    computed[(group, name)] = role_of(group, True, primary)
-check(computed == EXPECTED_ROLES, "G3: role of every fighter template " + repr(computed))
-for group, expected in EXPECTED_UNCHOSEN.items():
-    check(role_of(group, False, "") == expected, "G3: role without template for " + group)
+for group, expected in EXPECTED_GROUP_ROLES.items():
+    check(role_of(group) == expected, "G3: group-fight role of skill group " + repr(group))
+check(TANK_GROUPS == ["tank"] and HEALER_GROUPS == ["healer"] and SUPPORTER_GROUPS == ["supporter"] and
+      RANGED_GROUPS == ["marksman", "mage"], "G3: role lists of the [GroupCombat] block")
 
 role_body = function(RULES, "Role roleOf(")
-check(role_body.index("mTankPaths") < role_body.index("mHealerPaths") < role_body.index("mRangedSkillGroups"),
-      "G3: roleOf tests the tank paths, then the healer paths, then the ranged skill groups")
-check("if(hasTemplate)" in role_body and "return Role::melee;" in role_body, "G3: roleOf without template / melee")
+check(role_body.index("mTankSkillGroups") < role_body.index("mHealerSkillGroups") <
+      role_body.index("mSupporterSkillGroups") < role_body.index("mRangedSkillGroups"),
+      "G3: roleOf tests the tank, healer, supporter and ranged skill groups in this order")
+check("return Role::supporter;" in role_body and "return Role::melee;" in role_body, "G3: supporter / melee role")
+check("Role roleOf(const RoleSettings& settings, const std::string& skillGroup);" in RULES_H,
+      "G3: roleOf takes only the skill group (no template, no primary path)")
 get_role = function(MANAGER, "CombatGroupRules::Role CombatGroupManager::getRole(")
-check("findTemplate(" in get_role and "creature.getSkillBuild().mTemplate" in get_role and "mPrimary" in get_role,
-      "G3: the role is read from the template the creature follows (mTemplate)")
+check("roleOf(mRoleSettings, definition->getSkillGroup())" in get_role and "mTemplate" not in get_role and
+      "mPrimary" not in get_role, "G3: the role is read from the skill group, not from the template")
+for key in ("GroupTankSkillGroups", "GroupHealerSkillGroups", "GroupSupporterSkillGroups", "GroupRangedSkillGroups"):
+    check('getGroupCombatConfigWords("' + key + '")' in MANAGER, "G3: the manager reads " + key)
 
 # ------------------------------------------------------------------------------------------------ G2 leader
 
@@ -254,7 +239,7 @@ def formation_places(members, width):
     """Model of CombatGroupRules::formationPlaces: roles in order, each role in rows of width places."""
     places = {}
     row = 1
-    for role in (TANK, MELEE, RANGED, HEALER):
+    for role in (TANK, MELEE, SUPPORTER, RANGED, HEALER):
         of_role = sorted(name for name, member_role in members if member_role == role)
         for start in range(0, len(of_role), width):
             in_row = of_role[start:start + width]
@@ -274,13 +259,19 @@ def place_position(leader, facing, place, spacing):
             leader[1] - forward[1] * back + side[1] * place[1] * spacing)
 
 
-members = [("Tank1", TANK), ("Tank2", TANK), ("Melee1", MELEE), ("Range1", RANGED), ("Range2", RANGED),
-           ("Range3", RANGED), ("Range4", RANGED), ("Heal1", HEALER)]
+members = [("Tank1", TANK), ("Tank2", TANK), ("Melee1", MELEE), ("Support1", SUPPORTER), ("Support2", SUPPORTER),
+           ("Range1", RANGED), ("Range2", RANGED), ("Range3", RANGED), ("Range4", RANGED), ("Heal1", HEALER)]
 places = formation_places(members, 3)
-check(places == {"Tank1": (1, -0.5), "Tank2": (1, 0.5), "Melee1": (2, 0.0), "Range1": (3, -1.0), "Range2": (3, 0.0),
-                  "Range3": (3, 1.0), "Range4": (4, 0.0), "Heal1": (5, 0.0)}, "G6: formation rows " + repr(places))
-rows = {role: max(places[n][0] for n, r in members if r == role) for role in (TANK, MELEE, RANGED, HEALER)}
-check(rows[TANK] < rows[MELEE] < rows[RANGED] < rows[HEALER], "G6: tanks, melee, ranged, healers from the front")
+check(places == {"Tank1": (1, -0.5), "Tank2": (1, 0.5), "Melee1": (2, 0.0), "Support1": (3, -0.5),
+                  "Support2": (3, 0.5), "Range1": (4, -1.0), "Range2": (4, 0.0), "Range3": (4, 1.0), "Range4": (5, 0.0),
+                  "Heal1": (6, 0.0)}, "G6: formation rows " + repr(places))
+rows = {role: max(places[n][0] for n, r in members if r == role) for role in (TANK, MELEE, SUPPORTER, RANGED, HEALER)}
+check(rows[TANK] < rows[MELEE] < rows[SUPPORTER] < rows[RANGED] < rows[HEALER],
+      "G6: tanks, melee, supporters, ranged, healers from the front (D26)")
+# Without supporters the rows close up: no empty supporter row between melee and ranged
+places = formation_places([("Melee1", MELEE), ("Range1", RANGED)], 3)
+check(places == {"Melee1": (1, 0.0), "Range1": (2, 0.0)}, "G6: no empty row for a missing role " + repr(places))
+places = formation_places(members, 3)
 # The group faces +x: every place lies behind (smaller x than) the leader at 10,10
 for name, place in places.items():
     position = place_position((10.0, 10.0), (1.0, 0.0), place, 1.0)
@@ -289,8 +280,11 @@ check(place_position((10.0, 10.0), (0.0, 1.0), (2, 0.0), 1.0) == (10.0, 8.0), "G
 
 order_body = function(RULES, "std::vector<Role> formationOrder(")
 pushes = re.findall(r"order\.push_back\(Role::(\w+)\);", order_body)
-check(pushes == ["tank", "melee", "ranged", "healer"], "G6: formation order in the source " + repr(pushes))
-check(re.search(r"tank = 0,\s*melee = 1,\s*ranged = 2,\s*healer = 3", RULES_H) is not None, "G6: role order")
+check(pushes == ["tank", "melee", "supporter", "ranged", "healer"], "G6: formation order in the source " + repr(pushes))
+check(re.search(r"tank = 0,\s*melee = 1,\s*supporter = 2,\s*ranged = 3,\s*healer = 4", RULES_H) is not None,
+      "G6: role order")
+check('case Role::supporter:\n            return "supporter";' in function(RULES, "const char* roleName("),
+      "G6: the supporter role has its own name")
 check("leaderX - forwardX * back" in RULES and "leaderY - forwardY * back" in RULES, "G6: places behind the leader")
 check("formationPlaces(formationMembers" in update_group and "member == leader" in update_group,
       "G6: every member but the leader gets a place")
