@@ -55,10 +55,11 @@ def mesh_exists(name):
 # 221 since the training hall has its own wall shields TrainingHallShield1 and 2 next to the WeaponShield meshes
 # of the arena (counted on the integration branch; was 219)
 # 222 since every finished trap of the workshop shows the TrapCrate mesh (counted on the branch; was 221); 227 with
-# the clip props jug, die, flask, rattle and bucket (counted on the integration branch)
-# 226 since Pile_VeteranScarab.mesh was removed with the VeteranScarab class (Mario 2026-11-27; counted on
-# feature/creature-roster after the merge of main; was 227)
-LISTED = 226
+# the clip props jug, die, flask, rattle and bucket (counted on the integration branch); 229 with the own items
+# MinotaurAxe and CyclopsClub of the neutral creatures (counted on the branch)
+# 228 since Pile_VeteranScarab.mesh was removed with the VeteranScarab class (Mario 2026-11-27; counted on
+# feature/creature-roster after the merge of main; was 229)
+LISTED = 228
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
