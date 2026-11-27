@@ -180,7 +180,7 @@ const Ogre::Real CREATURE_TURN_INTERRUPT_TOLERANCE = 0.02f;
 const Ogre::Real CHICKEN_FEATHER_EFFECT_DURATION = 2.6f;
 //! Height above the corpse position at which its fly swarm hovers
 const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
-//! Mesh of the twig broom a worker holds in its right hand while it sweeps (Clean clip, INGAME-QS-10 K26). The handle
+//! Mesh of the twig broom a worker holds in both hands while it sweeps (Clean clip, INGAME-QS-10 K26). The handle
 //! runs along +z from its end, the lowest point of the mesh, to the twigs
 const std::string CLEANING_BROOM_MESH = "CleaningBroom.mesh";
 //! Prefix of the name of the broom entity of a worker
