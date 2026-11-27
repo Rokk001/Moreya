@@ -590,7 +590,8 @@ def check_models(out):
         tavern = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
         if mesh and tavern and (float(tavern.group(1)) > 0.0 or float(tavern.group(2)) > 0.0) and mesh.group(1) not in meshes:
             meshes.append(mesh.group(1))
-    assert len(meshes) == 31, len(meshes)
+    # 32 tavern visitor meshes, counted once after the roster change (12 removed creature meshes, 13 new ones)
+    assert len(meshes) == 32, len(meshes)
     posed = {}
     stool_names = set()
     for mesh in meshes:
