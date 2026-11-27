@@ -252,21 +252,19 @@ const Ogre::Real RATTLE_HEIGHT_SHARE = 0.28f;
 const Ogre::Vector3 RATTLE_GRIP(0.14f, 0.0f, 0.2f);
 const Ogre::Real RATTLE_PALM_REACH = 0.05f;
 const Ogre::Vector3 RATTLE_DIRECTION(0.0f, -0.5f, 1.0f);
-//! TripOverBucket: the bucket stands on the floor in front of the shaman's feet where the clip starts (shares of her
-//! height in her model space, she looks along -y), as high as this share of her height; it does not move with the clip
+//! TripOverBucket: the bucket hangs on the root bone Bucket of the shaman's skeleton, which carries it through the clip
+//! (it stands before her feet, her toe catches its rim, it tips over and rolls away); the bone sits in the middle of the
+//! bucket floor with its z axis from the floor to the opening, so the mesh (base at z = 0) hangs on it without offset,
+//! as high as this share of her height
 const std::string TRIP_BUCKET_MESH = "InfirmaryBucket.mesh";
-const Ogre::Real TRIP_BUCKET_HEIGHT_SHARE = 0.25f;
-const Ogre::Vector3 TRIP_BUCKET_SPOT(0.17f, 0.52f, 0.0f);
-//! PotionTaste: the left hand of the infirmary shaman holds the flask by its belly (this point in mesh units of the
-//! 1 unit high flask, base at z = 0) in its palm, this share of her height along the fingers from the hand bone; in the
-//! middle of the clip, when she drinks, the neck points from the palm to her mouth (the head bone shifted by this share
-//! of her height); the flask is as high as this share of her height
+const std::string TRIP_BUCKET_BONE = "Bucket";
+const Ogre::Real TRIP_BUCKET_HEIGHT_SHARE = 0.12f;
+//! PotionTaste: the flask hangs on the root bone Flask of the shaman's skeleton, which carries it through the clip (it
+//! sits on her palm and tips while she drinks); the bone sits in the middle of the flask base with its z axis from the
+//! base to the neck, so the mesh (base at z = 0) hangs on it without offset, as high as this share of her height
 const std::string FLASK_MESH = "InfirmaryFlask.mesh";
-const std::string FLASK_BONE = "LeftHand";
-const Ogre::Real FLASK_HEIGHT_SHARE = 0.12f;
-const Ogre::Vector3 FLASK_GRIP(0.0f, 0.0f, 0.22f);
-const Ogre::Real FLASK_PALM_REACH = 0.04f;
-const Ogre::Vector3 FLASK_MOUTH_SHIFT(0.0f, -0.10f, 0.04f);
+const std::string FLASK_BONE = "Flask";
+const Ogre::Real FLASK_HEIGHT_SHARE = 0.075f;
 //! SitDiceWin and SitDiceLose of a tavern guest: two dice (the same mesh twice, this big in the model space of the guest,
 //! the mesh is 1 unit high) lie side by side this far apart between the palms of both hands (this share of the guest's
 //! height along the fingers from each hand bone) while the hands shake them, up to this share of the clip, the throw;
@@ -9432,17 +9430,13 @@ void RenderManager::attachRattle(const std::string& objectName, Ogre::Entity* ho
     tag->setScale(scale, scale, scale);
 }
 
-//! The flask is fixed to the hand as it is in the middle of the clip: its belly in the palm, its neck at her mouth.
+//! The flask hangs on the bone Flask of the shaman, which moves it with the keys of PotionTaste: its base centre on the
+//! bone, its neck along the bone's z axis.
 void RenderManager::attachFlask(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton)
 {
-    Ogre::Vector3 handPosition;
-    Ogre::Quaternion handOrientation;
-    Ogre::Vector3 headPosition;
-    Ogre::Quaternion headOrientation;
-    if(!getMidClipBonePose(skeleton, EntityAnimation::potion_taste_anim, FLASK_BONE, handPosition, handOrientation) ||
-       !getMidClipBonePose(skeleton, EntityAnimation::potion_taste_anim, "Head", headPosition, headOrientation))
+    if(!skeleton.hasBone(FLASK_BONE))
     {
-        OD_LOG_WRN("No hand or head bone for the flask, skeleton=" + skeleton.getName());
+        OD_LOG_WRN("No flask bone for the flask, skeleton=" + skeleton.getName());
         return;
     }
 
@@ -9450,27 +9444,29 @@ void RenderManager::attachFlask(const std::string& objectName, Ogre::Entity* hol
     flaskEntity->setQueryFlags(0);
     const Ogre::Real height = holder->getMesh()->getBounds().getSize().z;
     const Ogre::Real scale = FLASK_HEIGHT_SHARE * height / flaskEntity->getMesh()->getBounds().getSize().z;
-    const Ogre::Vector3 palm = handPosition + handOrientation * Ogre::Vector3(0.0f, FLASK_PALM_REACH * height, 0.0f);
-    const Ogre::Quaternion wanted = alignMeshAxes(headPosition + FLASK_MOUTH_SHIFT * height - palm, Ogre::Vector3::UNIT_X);
-    const Ogre::Vector3 origin = palm - wanted * (FLASK_GRIP * scale);
-    Ogre::TagPoint* tag = holder->attachObjectToBone(FLASK_BONE, flaskEntity, handOrientation.Inverse() * wanted,
-        handOrientation.Inverse() * (origin - handPosition));
+    Ogre::TagPoint* tag = holder->attachObjectToBone(FLASK_BONE, flaskEntity);
     tag->setInheritScale(false);
     tag->setScale(scale, scale, scale);
 }
 
-//! The bucket stands upright on the floor of the shaman's model space, on a node of its own that the clip does not move.
+//! The bucket hangs on the bone Bucket of the shaman, which moves it with the keys of TripOverBucket: its floor centre on
+//! the bone, its axis along the bone's z axis.
 void RenderManager::placeTripBucket(const std::string& objectName, Ogre::Entity* holder)
 {
-    const std::string propName = CLIP_PROP_PREFIX + objectName;
-    Ogre::Entity* bucketEntity = mSceneManager->createEntity(propName, TRIP_BUCKET_MESH);
+    const Ogre::Skeleton* skeleton = holder->getSkeleton();
+    if((skeleton == nullptr) || !skeleton->hasBone(TRIP_BUCKET_BONE))
+    {
+        OD_LOG_WRN("No bucket bone for the bucket, object=" + objectName);
+        return;
+    }
+
+    Ogre::Entity* bucketEntity = mSceneManager->createEntity(CLIP_PROP_PREFIX + objectName, TRIP_BUCKET_MESH);
     bucketEntity->setQueryFlags(0);
     const Ogre::Real height = holder->getMesh()->getBounds().getSize().z;
     const Ogre::Real scale = TRIP_BUCKET_HEIGHT_SHARE * height / bucketEntity->getMesh()->getBounds().getSize().z;
-    Ogre::SceneNode* node = holder->getParentSceneNode()->createChildSceneNode(propName + CLIP_PROP_NODE_SUFFIX);
-    node->setPosition(TRIP_BUCKET_SPOT * height);
-    node->setScale(scale, scale, scale);
-    node->attachObject(bucketEntity);
+    Ogre::TagPoint* tag = holder->attachObjectToBone(TRIP_BUCKET_BONE, bucketEntity);
+    tag->setInheritScale(false);
+    tag->setScale(scale, scale, scale);
 }
 
 //! The jug is fixed to the hand as it is at the start of the clip: upright on the counter, its handle in the palm and its
