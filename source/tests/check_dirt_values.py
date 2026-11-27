@@ -107,15 +107,16 @@ assert dirt['TrailDirtPerTile'] == room_values['DormitoryDirtPerSleepTurn']
 #    and DirtFactor of the table
 FACTORS = {}
 for names, cleanliness, dirt_factor in [
-        ('Rat Roach Spider Slime CaveHornet Scarab', '0.25', '1.75'),
-        ('Orc Troll Goblin PitDemon LavaSpawn TentacleAlbine TentacleGreen Wyvern Kreatur LizardMan', '0.5', '1.5'),
-        ('Skeleton Lich', '0.5', '0.25'),
-        ('Kobold DwarfWorker Dwarf1 Dwarf2 RunelordDwarf Gnome Cultist Dragon NatureMonster Champion', '1', '1'),
+        # Roster change (CREATURE-ROSTER W4a): every new type has the row of its predecessor (the Vampire of the Lich)
+        ('Banshee Witch Ghoul CaveHornet Priestess', '0.25', '1.75'),
+        ('Orc Troll Goblin PitDemon Butcher CrystalGolem Cyclops Werewolf Gnoll Minotaur LizardMan', '0.5', '1.5'),
+        ('Skeleton Lich Vampire', '0.5', '0.25'),
+        ('Kobold DwarfWorker Hunter Dwarf2 RunelordDwarf Gnome Cultist Dragon Paladin Champion', '1', '1'),
         ('Adventurer Monk Knight Wizard Defender', '1.5', '0.75'),
         ('Elf DarkElf', '2', '0.5')]:
     for name in names.split():
         FACTORS[name] = (cleanliness, dirt_factor)
-assert len(FACTORS) == 35, len(FACTORS)
+assert len(FACTORS) == 36, len(FACTORS)
 seen = set()
 for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
     fields = {}

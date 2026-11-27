@@ -329,8 +329,9 @@ if gold_per_tile is None:
 check(gold_per_tile == 1000.0, "RA7: one treasury tile stores 1000 gold")
 check(raid_cfg.get("RaidCarryTilesSmall") == ["1"] and raid_cfg.get("RaidCarryTilesLarge") == ["2"],
       "RA7/Q20.28: small 1 tile, large 2 tiles")
-check(raid_cfg.get("RaidLargeMemberClasses") == ["NatureMonster", "Defender", "Scarab"],
-      "Q20.28b: the large classes are NatureMonster, Defender and Scarab")
+# Roster change (CREATURE-ROSTER W4a): Paladin and Priestess take the place of their predecessors NatureMonster and Scarab
+check(raid_cfg.get("RaidLargeMemberClasses") == ["Paladin", "Defender", "Priestess"],
+      "Q20.28b: the large classes are Paladin, Defender and Priestess")
 check("RaidPlunderGoldPerMember" not in GLOBAL_CFG and "RaidPlunderGoldPerMember" not in MANAGER,
       "RA7: the carry amount replaces RaidPlunderGoldPerMember")
 
@@ -347,14 +348,14 @@ def plunder(stored, carried, cap):
     return max(0.0, min(stored, cap - carried))
 
 
-EXPECTED_CAPACITY = {"Knight": 1000.0, "Wizard": 1000.0, "Elf": 1000.0, "Monk": 1000.0, "NatureMonster": 2000.0,
-                     "Defender": 2000.0, "Scarab": 2000.0}
+EXPECTED_CAPACITY = {"Knight": 1000.0, "Wizard": 1000.0, "Elf": 1000.0, "Monk": 1000.0, "Paladin": 2000.0,
+                     "Defender": 2000.0, "Priestess": 2000.0}
 for name, expected in sorted(EXPECTED_CAPACITY.items()):
     check(capacity(name) == expected, "RA7: " + name + " carries " + str(expected))
 # A small member at a full 3x3 treasury takes 1000, a large one 2000; a second treasury adds nothing when full
-check(plunder(9000.0, 0.0, capacity("Knight")) == 1000.0 and plunder(9000.0, 0.0, capacity("Scarab")) == 2000.0,
+check(plunder(9000.0, 0.0, capacity("Knight")) == 1000.0 and plunder(9000.0, 0.0, capacity("Priestess")) == 2000.0,
       "RA7: the first treasury")
-check(plunder(9000.0, 1000.0, capacity("Knight")) == 0.0 and plunder(9000.0, 1000.0, capacity("Scarab")) == 1000.0,
+check(plunder(9000.0, 1000.0, capacity("Knight")) == 0.0 and plunder(9000.0, 1000.0, capacity("Priestess")) == 1000.0,
       "RA7: a member takes only what it can still carry")
 check("std::find(largeClasses.begin(), largeClasses.end(), className) != largeClasses.end()" in
       function(RULES, "bool isLargeMember(") and "const double tiles = large ? largeTiles : smallTiles;" in

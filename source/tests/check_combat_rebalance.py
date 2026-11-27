@@ -19,42 +19,44 @@ from combat_sim import (CASES_MATRIX, TURNS_PER_SECOND, Roster, World, building_
                         evaluate, hit_chance, multiplier, world_class_means, world_matrix, world_roles, world_rule_one,
                         world_verify)
 
-# Approved level-one roster: health, healing, sleep, ratings, six damage endpoints and avoidance.
+# Approved level-one roster: health, healing, sleep, ratings, six damage endpoints and avoidance (roster change
+# CREATURE-ROSTER W4a: the new roster with the first-estimate values of the roster plan, section 7).
 EXPECTED = """
-Kobold 70 .05319375292565641 0 562 188 3.21 4.07 0 0 0 0 none
-DwarfWorker 70 .05319375292565641 0 562 188 3.21 4.07 0 0 0 0 none
-Rat 35.5 .026977 0 486 162 0 0 5.87 8.04 0 0 dodge
-Orc 184.5 .140204 0 247 82 0 0 0 0 48.03 64.85 none
-LavaSpawn 106.5 .080931 0 156 52 17.69 22.87 0 0 0 0 block
+Kobold 70 .05319375292565641 0 562 188 3.21 4.07 0.0 0.0 0.0 0.0 none
+DwarfWorker 70 .05319375292565641 0 562 188 3.21 4.07 0.0 0.0 0.0 0.0 none
+Banshee 106.5 .080930 0 486 162 0 0 17.03 22.71 0 0 dodge
+Orc 35.5 .026977 0 247 82 0 0 0 0 6.67 9 none
+Butcher 184.5 .140204 0 156 52 63.44 81.2 0 0 0 0 block
 LizardMan 106.5 .080931 0 364 121 0 0 18.28 24.45 0 0 none
 Goblin 61.5 .046735 0 109 36 9.16 12.22 0 0 0 0 parry
 PitDemon 184.5 .140204 0 223 74 0 0 52.76 71.24 0 0 none
-Roach 61.5 .046735 0 440 147 0 0 0 0 9.19 12.28 none
-Spider 35.5 .026977 0 402 134 7.19 9.85 0 0 0 0 none
-Troll 184.5 .140204 0 261 87 44.2 59.68 0 0 0 0 none
-Cultist 61.5 .046735 0 366 122 0 0 8.63 11.52 0 0 dodge
-CaveHornet 35.5 .026977 0 344 115 0 0 0 0 5.83 8 dodge
-Slime 35.5 .026977 0 500 167 0 0 5.26 7.22 0 0 dodge
+Witch 61.5 .046735 0 440 147 0 0 11 15 0 0 none
+Ghoul 30.2 .022949 0 402 134 9 13 0 0 0 0 none
+Troll 106.5 .080930 0 261 87 17.42 23.52 0 0 0 0 none
+Cultist 35.5 .026977 0 366 122 0 0 6.29 8.39 0 0 dodge
+CaveHornet 61.5 .046735 0 344 115 0 0 0 0 8 10.98 dodge
 Skeleton 106.5 .053954 0 439 146 13.62 20.46 0 0 0 0 none
 Lich 106.5 .053954 0 205 68 0 0 21.91 25.21 0 0 none
-Scarab 184.5 .140204 0 233 78 0 0 51.93 70.11 0 0 none
+Vampire 184.5 .140204 0 205 68 0 0 43.14 55.82 0 0 none
+Priestess 184.5 .140204 0 233 78 0 0 18 25 0 0 none
 Adventurer 35.5 .026977 0 356 119 0 0 0 0 6.21 8.52 dodge
-Monk 61.5 .046735 0 304 101 0 0 0 0 7.54 10.07 block
-Dwarf1 35.5 .026977 0 407 136 7.01 9.6 0 0 0 0 none
-Dwarf2 61.5 .046735 0 520 173 8.91 11.89 0 0 0 0 none
-Knight 61.5 .046735 0 389 130 0 0 7.7 10.29 0 0 block
+Monk 35.5 .026977 0 304 101 0 0 0 0 5.49 7.34 block
+Hunter 61.5 .046735 0 407 136 9.61 13.73 0 0 0 0 none
+Dwarf2 106.5 .080930 0 520 173 18.43 24.59 0 0 0 0 none
+Knight 35.5 .026977 0 389 130 0 0 5.61 7.5 0 0 block
 Wizard 106.5 .080931 0 341 114 0 0 18.36 24.56 0 0 none
-DarkElf 106.5 .080931 0 352 117 0 0 0 0 16.58 22.18 none
-Elf 106.5 .080931 0 397 132 0 0 0 0 19.8 26.5 none
+DarkElf 52.3 .039743 0 352 117 13.73 19.22 0 0 0 0 none
+Elf 61.5 .046735 0 397 132 0 0 0 0 9.57 12.81 none
 RunelordDwarf 106.5 .080931 0 143 48 16.02 21.31 0 0 0 0 block
-NatureMonster 184.5 .140204 0 75 25 0 0 0 0 38.46 51.93 block
+Paladin 184.5 .140204 0 75 25 0 0 0 0 23 31 block
 Defender 184.5 .140204 0 264 88 45.54 61.48 0 0 0 0 parry
-Wyvern 61.5 .046735 0 391 130 0 0 8.31 11.09 0 0 dodge
-Gnome 35.5 .026977 0 529 176 0 0 5.7 7.81 0 0 dodge
-TentacleAlbine 61.5 .046735 0 455 152 0 0 8.84 11.81 0 0 none
-TentacleGreen 61.5 .046735 0 452 151 0 0 8.88 11.86 0 0 none
+Werewolf 61.5 .046735 0 391 130 0 0 8 11 0 0 dodge
+Gnoll 61.5 .046735 0 391 130 0 0 0 0 12 16 dodge
+Gnome 35.5 .026977 0 529 176 0 0 0 0 6 8 dodge
+CrystalGolem 61.5 .046735 0 455 152 0 0 9 12 0 0 none
+Cyclops 61.5 .046735 0 452 151 0 0 12 15 0 0 none
 Dragon 184.5 .140204 0 270 90 0 0 0 0 32.07 43.29 none
-Kreatur 106.5 .080931 0 398 133 0 0 17.66 23.63 0 0 none
+Minotaur 106.5 .080931 0 398 133 18 24 0 0 0 0 none
 """
 STAT_KEYS = ("MinHP", "Heal/Turn", "SleepHeal", "AttackRating", "DefenseRating")
 RANGE_KEYS = ("PhyMin", "PhyMax", "MagMin", "MagMax", "EleMin", "EleMax")
@@ -105,7 +107,7 @@ def check_values(roster):
     for name in roster.fighters():
         turns = duel_turns(roster, roster.unit(name, 10), roster.unit(name, 10), 200, rng)
         assert 11.5 <= turns <= 40, (name, turns)
-    assert len(approved) == 34
+    assert len(approved) == 35
 
 
 # Verify the curves numerically and tie every coefficient to the production header.

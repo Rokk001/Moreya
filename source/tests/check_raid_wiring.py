@@ -75,7 +75,7 @@ EXPECTED_KEYS = {
     "RaidLeaderEscapeShare": ("0.25", False),
     "RaidCarryTilesSmall": ("1", False),
     "RaidCarryTilesLarge": ("2", False),
-    "RaidLargeMemberClasses": ("NatureMonster Defender Scarab", False),
+    "RaidLargeMemberClasses": ("Paladin Defender Priestess", False),
     "RaidPlunderDetourTiles": ("6", False),
     "RaidGateArrivalTiles": ("1", False),
     "RaidGatePortcullisSink": ("2.2", False),

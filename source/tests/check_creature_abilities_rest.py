@@ -114,15 +114,16 @@ for setting in ("lighting off", "scene_blend alpha_blend", "depth_write off", "d
 texture = re.search(r"^\s+texture\s+(\S+)", material, re.M)[1]
 assert (repo / "materials/textures" / texture).is_file(), texture
 
-# Types that have an ability from level 1 carry it as their pre-skill
-pre_skills = {"CaveHornet": "VRM_1", "Kobold": "WRK_C1", "DwarfWorker": "WRK_C1", "Slime": "WLD_1", "Dragon": "DRK_1",
-              "DarkElf": "ARC_A2", "Elf": "ARC_A3", "Lich": "UND_1"}
+# Types that have an ability from level 1 carry it as their pre-skill (Roster change (CREATURE-ROSTER W4a): the Elf keeps the blast
+# shot, now tier 1 of the Barrager path, the Dark Elf gets the critical hits of the skirmisher path Assassin)
+pre_skills = {"CaveHornet": "VRM_1", "Kobold": "WRK_C1", "DwarfWorker": "WRK_C1", "Dragon": "DRK_1",
+              "DarkElf": "SKR_A1", "Elf": "MRK_C1", "Lich": "UND_1"}
 for creature, skill_id in pre_skills.items():
     assert re.search(rf"^\s+PreSkill\s+{skill_id}$", blocks[creature], re.M), f"{creature} has pre-skill {skill_id}"
 
-# The Elf and the DarkElf reach the other bow ability through the Bow path; the undead types have the skeleton skills
-for creature in ("Elf", "DarkElf"):
-    assert re.search(r"^\s+SkillGroup\s+archer$", blocks[creature], re.M), creature
+# The Elf reaches the other bow abilities through the marksman paths; the undead types have the skeleton skills
+for creature in ("Elf",):
+    assert re.search(r"^\s+SkillGroup\s+marksman$", blocks[creature], re.M), creature
 for creature in ("Lich", "Skeleton"):
     assert re.search(r"^\s+SkillFamily\s+undead$", blocks[creature], re.M), creature
 

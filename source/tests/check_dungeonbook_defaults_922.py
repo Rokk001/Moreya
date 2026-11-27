@@ -23,13 +23,15 @@ def field(block, key, default="none"):
 
 
 def main():
-    """Verify 35 classes, 19 distinct defaults, real atlas entries and production tooltip probe generation."""
+    """Verify 36 classes, 17 distinct defaults, real atlas entries and production tooltip probe generation."""
     creatures = blocks("config/creatures.cfg", "Creature")
     weapons = {field(b, "Name"): b for b in blocks("config/equipments.cfg", "Equipment")}
     items = blocks("config/items.cfg", "Item")
     defaults = {field(b, "WeaponSpawn" + hand) for b in creatures for hand in ("R", "L")} - {"none"}
-    assert len(creatures) == 35, len(creatures)
-    assert len(defaults) == 19, defaults
+    # Roster change (CREATURE-ROSTER W4a): 36 classes; BasicAxeOrc, Sabre, Wand and Crossbow are no default weapon any
+    # more, BasicAxe and BasicHammer are (Minotaur, Runelord Dwarf)
+    assert len(creatures) == 36, len(creatures)
+    assert len(defaults) == 17, defaults
     atlas = {entry.get("name") for entry in ET.parse(ROOT / "gui/Items.imageset").getroot()}
     for name in sorted(defaults):
         kind = field(weapons[name], "WeaponType")
@@ -100,7 +102,7 @@ int main(int argc, char** argv) {
         output = ROOT / "out/dungeonbook-defaults-922/probe.cpp"
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(probe, encoding="utf-8")
-        print("decision 922: 35 classes, 19 defaults, atlas coverage passed; C++ probe emitted, not compiled")
+        print("decision 922: 36 classes, 17 defaults, atlas coverage passed; C++ probe emitted, not compiled")
     else:
         compile_and_run("dungeonbook-defaults-922", probe)
 

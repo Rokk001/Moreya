@@ -54,9 +54,10 @@ for match in re.finditer(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S)
         rates[name.group(1)] = float(rate.group(1))
 for name, value in rates.items():
     assert 0.2 <= value <= 8.0, (name, value)
-no_feet = ('LavaSpawn', 'CaveHornet', 'Slime', 'Wyvern', 'TentacleAlbine', 'TentacleGreen')  # blobs, fliers and gliders: no planted foot, rate 1
+# Roster change (CREATURE-ROSTER W4a): the fliers and blobs left the roster; every new type has an explicit rate 1 until its model is measured
+no_feet = ('CaveHornet',)  # fliers: no planted foot, rate 1
 names = [m.group(1) for m in re.finditer(r'\[Creature\].*?^\s*Name\s+(\S+)', creatures_cfg, re.S | re.M)]
-assert len(names) == 35, len(names)
+assert len(names) == 36, len(names)
 for name in names:
     assert (name in rates) != (name in no_feet), name
 # WalkHurtClipRate: own optional key for the clip WalkHurt only, fallback WalkClipRate, same limits, streamed right after WalkClipRate

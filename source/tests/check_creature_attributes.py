@@ -198,39 +198,59 @@ assert 'bool CreatureDefinition::isFirstAttackSkill(' in definition_cpp
 
 
 # ---- Part H: values per creature type (section 4) and the heart (section 9)
-# Group table of section 4: Str, Dex, Life, Mana, Str/L, Dex/L, Life/L, Mana/L, ManaPerPoint
+# Roster change (CREATURE-ROSTER W4a): the attribute values follow the mana pool and Str/Dex of the creature (roster plan
+# section 7), no longer the skill group; the role groups replace blocker, blitzer, flanker, archer and caster.
+# Attribute profiles: Str, Dex, Life, Mana, Str/L, Dex/L, Life/L, Mana/L, ManaPerPoint (mana pool at level 1 in the name)
 GROUP_VALUES = {
-    'blocker': (30.0, 20.0, 25.0, 10.0, 2.0, 1.0, 1.0, 1.0, 1.0),
-    'blitzer': (25.0, 20.0, 25.0, 26.6667, 2.0, 1.0, 1.0, 1.0, 1.5),
-    'flanker': (20.0, 20.0, 20.0, 25.0, 1.0, 2.0, 1.0, 1.0, 1.75),
-    'archer': (20.0, 25.0, 20.0, 15.0, 0.0, 3.0, 1.0, 1.0, 1.5),
-    'caster': (10.0, 25.0, 10.0, 35.0, 0.0, 1.0, 2.0, 2.0, 2.0),
+    'mana10': (30.0, 20.0, 25.0, 10.0, 2.0, 1.0, 1.0, 1.0, 1.0),
+    'mana40': (25.0, 20.0, 25.0, 26.6667, 2.0, 1.0, 1.0, 1.0, 1.5),
+    'mana44': (20.0, 20.0, 20.0, 25.0, 1.0, 2.0, 1.0, 1.0, 1.75),
+    'mana22': (20.0, 25.0, 20.0, 15.0, 0.0, 3.0, 1.0, 1.0, 1.5),
+    'mana70': (10.0, 25.0, 10.0, 35.0, 0.0, 1.0, 2.0, 2.0, 2.0),
+    'mana60': (20.0, 20.0, 20.0, 30.0, 1.0, 2.0, 1.0, 1.0, 2.0),
+    'mana70strong': (30.0, 20.0, 25.0, 35.0, 2.0, 1.0, 1.0, 1.0, 2.0),
     'worker': (15.0, 25.0, 15.0, 25.0, 1.0, 2.0, 1.0, 1.0, 2.0),
 }
+PROFILE_MEMBERS = {
+    'mana10': 'Knight Dwarf2 Troll Orc Skeleton Butcher Defender CrystalGolem Cyclops',
+    'mana40': 'Paladin PitDemon Minotaur Dragon',
+    'mana44': 'Adventurer Hunter DarkElf Goblin Ghoul CaveHornet Werewolf',
+    'mana22': 'Elf Gnoll Gnome',
+    'mana70': 'Priestess Vampire Cultist Wizard Lich Banshee Witch',
+    'mana60': 'RunelordDwarf LizardMan',
+    'mana70strong': 'Monk',
+    'worker': 'Kobold DwarfWorker',
+}
 GROUP_MEMBERS = {
-    'blocker': 'Orc LavaSpawn PitDemon Troll Skeleton Scarab Monk Dwarf1 Dwarf2 Knight RunelordDwarf NatureMonster Defender '
-               'TentacleAlbine TentacleGreen',
-    'blitzer': 'Dragon',
-    'flanker': 'Rat Goblin Roach Spider Cultist CaveHornet Slime Adventurer Wyvern Gnome',
-    'archer': 'DarkElf Elf',
-    'caster': 'LizardMan Lich Wizard Kreatur',
+    'tank': 'Knight Dwarf2 Paladin Troll Orc PitDemon CrystalGolem Cyclops',
+    'healer': 'Priestess Vampire Monk Cultist',
+    'supporter': 'RunelordDwarf LizardMan',
+    'warrior': 'Defender Skeleton Butcher Minotaur Dragon',
+    'skirmisher': 'Adventurer Hunter DarkElf Goblin Ghoul CaveHornet Werewolf',
+    'marksman': 'Elf Gnoll Gnome',
+    'mage': 'Wizard Lich Banshee Witch',
     'worker': 'Kobold DwarfWorker',
 }
 FAMILY_MEMBERS = {
-    'greenskin': 'Orc Troll Goblin', 'dwarf': 'Dwarf1 Dwarf2 RunelordDwarf', 'undead': 'Skeleton Lich',
-    'vermin': 'Rat Roach Spider CaveHornet Scarab', 'tentacle': 'TentacleAlbine TentacleGreen', 'demon': 'LavaSpawn PitDemon',
-    'elf': 'Elf DarkElf', 'human': 'Adventurer Monk Knight Defender', 'arcane': 'Cultist Wizard Gnome Kreatur',
-    'dragonkin': 'LizardMan Wyvern Dragon', 'wild': 'Slime NatureMonster', 'workfolk': 'Kobold DwarfWorker',
+    'greenskin': 'Orc Troll Goblin Butcher', 'dwarf': 'Dwarf2 RunelordDwarf', 'undead': 'Skeleton Lich Ghoul Banshee',
+    'vermin': 'CaveHornet', 'demon': 'PitDemon', 'elf': 'Elf DarkElf',
+    'human': 'Adventurer Monk Knight Defender Paladin Priestess Hunter', 'arcane': 'Wizard Gnome Witch',
+    'dragonkin': 'LizardMan Dragon', 'workfolk': 'Kobold DwarfWorker', 'blood': 'Vampire Cultist',
+    'beast': 'Minotaur Werewolf Gnoll', 'stone': 'CrystalGolem Cyclops',
 }
-PRE_SKILLS = {
-    'Lich': 'UND_1', 'Dragon': 'DRK_1', 'Slime': 'WLD_1', 'CaveHornet': 'VRM_1', 'Goblin': 'FLK_A2', 'Gnome': 'FLK_A2',
-    'Wizard': 'CST_B1', 'Elf': 'ARC_A3', 'DarkElf': 'ARC_A2', 'Kobold': 'WRK_C1', 'DwarfWorker': 'WRK_C1',
-}
+PRE_SKILLS = dict({name: 'TNK_A1' for name in GROUP_MEMBERS['tank'].split()}, **{
+    'Monk': 'HLR_A1', 'Cultist': 'HLR_A1', 'Priestess': 'HLR_B1', 'Vampire': 'HLR_B1', 'RunelordDwarf': 'SUP_A1',
+    'LizardMan': 'SUP_A1', 'DarkElf': 'SKR_A1', 'Goblin': 'SKR_A1', 'Elf': 'MRK_C1', 'Gnome': 'MRK_C1', 'Wizard': 'MAG_A1',
+    'Lich': 'UND_1', 'Dragon': 'DRK_1', 'CaveHornet': 'VRM_1', 'Kobold': 'WRK_C1', 'DwarfWorker': 'WRK_C1',
+})
+# Ghoul and Dark Elf: high damage with critical hits (roster plan section 7, first estimate)
+CRIT_BONUS = {'Ghoul': 10.0, 'DarkElf': 10.0}
 STAT_KEYS = ('Strength', 'Dexterity', 'Life', 'Mana', 'StrengthPerLevel', 'DexterityPerLevel', 'LifePerLevel', 'ManaPerLevel',
              'ManaPerPoint')
 CHAMPION_CRIT_BONUS = 15.0
 # Level-file creature classes use the values of the type whose mesh they use
-LEVEL_FILE_CLASSES = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Scarab'}
+# (the VeteranScarab of the levels follows its successor, the Priestess, when the levels change to the new roster)
+LEVEL_FILE_CLASSES = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Priestess'}
 HEART_HP = 15100.0
 HEART_HEAL_PER_SECOND = 3.775
 LEGACY_HEART_HEALTH_SCALE = 10000.0
@@ -263,12 +283,18 @@ def heart_health_after_load(marker, value, max_hp, research_factor):
 def check_part_h():
     """Values per creature type of section 4 (also in the level files) and the heart values and save markers of section 9."""
     creatures = stats_blocks(creatures_cfg)
-    assert len(creatures) == 35, len(creatures)
+    assert len(creatures) == 36, len(creatures)
     group_of = {}
     for group, members in GROUP_MEMBERS.items():
         for member in members.split():
             assert member not in group_of, member
             group_of[member] = group
+    profile_of = {}
+    for profile, members in PROFILE_MEMBERS.items():
+        for member in members.split():
+            assert member not in profile_of, member
+            profile_of[member] = profile
+    assert set(profile_of) == set(group_of), 'every type has an attribute profile'
     family_of = {}
     for family, members in FAMILY_MEMBERS.items():
         for member in members.split():
@@ -276,12 +302,12 @@ def check_part_h():
             family_of[member] = family
     assert set(group_of) | {'Champion'} == set(creatures), set(creatures) ^ (set(group_of) | {'Champion'})
     assert set(family_of) == set(group_of), 'every type has a family'
-    # Every group gives 5 attribute points per level
-    for group, values in GROUP_VALUES.items():
-        assert sum(values[4:8]) == 5.0, (group, values)
+    # Every attribute profile gives 5 attribute points per level
+    for profile, values in GROUP_VALUES.items():
+        assert sum(values[4:8]) == 5.0, (profile, values)
 
-    def check_values(name, stats, group, skill_group, family, pre_skill, tier_four):
-        wanted = GROUP_VALUES[group]
+    def check_values(name, stats, profile, skill_group, family, pre_skill, tier_four):
+        wanted = GROUP_VALUES[profile]
         for key, value in zip(STAT_KEYS, wanted):
             assert key in stats and abs(float(stats[key]) - value) < 1e-9, (name, key, stats.get(key), value)
         assert sum(float(stats[key]) for key in STAT_KEYS[4:8]) == 5.0, (name, 'points per level')
@@ -292,27 +318,32 @@ def check_part_h():
 
     for name, group in group_of.items():
         stats = creatures[name]
-        check_values(name, stats, group, group, family_of[name], PRE_SKILLS.get(name, 'none'), 'T4_' + name)
-        assert 'CritChanceBonus' not in stats, (name, 'only the Champion has a critical chance bonus')
+        check_values(name, stats, profile_of[name], group, family_of[name], PRE_SKILLS.get(name, 'none'), 'T4_' + name)
+        if name in CRIT_BONUS:
+            assert float(stats.get('CritChanceBonus', 0)) == CRIT_BONUS[name], (name, 'CritChanceBonus')
+        else:
+            assert 'CritChanceBonus' not in stats, (name, 'only the Champion, Ghoul and Dark Elf have a critical chance bonus')
         # The group follows the combat class and the job of the type
         combat_class = stats.get('CombatClass')
         if group == 'worker':
             assert stats['CreatureJob'] == 'Worker', name
         else:
             assert stats['CreatureJob'] == 'Fighter', name
-        if group == 'blitzer':
-            assert combat_class == 'Blitzer', name
-        elif group == 'flanker':
+        if group == 'tank':
+            assert combat_class == 'Blocker', name
+        elif group == 'warrior':
+            assert combat_class in ('Blocker', 'Blitzer'), name
+        elif group == 'skirmisher':
             assert combat_class == 'Flanker', name
-        elif group == 'blocker':
-            assert combat_class in ('Blocker', 'Support'), name
-        elif group in ('archer', 'caster'):
+        elif group in ('marksman', 'mage'):
             assert combat_class == 'Support', name
-        if group == 'archer':
-            assert 'Bow' in stats['_block'] or 'Crossbow' in stats['_block'], name
-    # Champion: blitzer attribute values, no skill tree, critical chance bonus 15
+        elif group in ('healer', 'supporter'):
+            assert combat_class in ('Blocker', 'Flanker', 'Support'), name
+        if group in ('marksman', 'mage'):
+            assert 'MissileLaunch' in stats['_block'], name
+    # Champion: the attribute values of mana pool 40, no skill tree, critical chance bonus 15
     champion = creatures['Champion']
-    check_values('Champion', champion, 'blitzer', 'none', 'none', 'none', 'none')
+    check_values('Champion', champion, 'mana40', 'none', 'none', 'none', 'none')
     assert float(champion['CritChanceBonus']) == CHAMPION_CRIT_BONUS
     # Worker hit points follow the rebalance (70)
     assert creatures['Kobold']['MinHP'] == '70' and creatures['DwarfWorker']['MinHP'] == '70'
@@ -333,7 +364,7 @@ def check_part_h():
             base = LEVEL_FILE_CLASSES[name]
             mesh = stats['MeshName'].split('.')[0]
             assert mesh == base, (name, mesh, base)
-            check_values(name, stats, group_of[base], group_of[base], family_of[base], PRE_SKILLS.get(base, 'none'), 'T4_' + base)
+            check_values(name, stats, profile_of[base], group_of[base], family_of[base], PRE_SKILLS.get(base, 'none'), 'T4_' + base)
             found_classes.add(name)
     assert found_classes == set(LEVEL_FILE_CLASSES), found_classes
 

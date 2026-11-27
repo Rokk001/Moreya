@@ -193,7 +193,7 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
         assert 'Thirst' not in moods, name + ' has no Hunger mood line, so it must not have a Thirst mood line'
         assert float(fields['ThirstGrowth/Turn']) == 0.0, name + ': ThirstGrowth/Turn must be an explicit 0 without a Hunger line'
         assert float(affinities['Tavern'][0]) == 0.0, name + ': Tavern likeness must be 0 without a Hunger line'
-assert len(seen) == 35 and len(set(seen)) == 35, 'expected 35 creature types, found ' + str(len(seen))
+assert len(seen) == 36 and len(set(seen)) == 36, 'expected 36 creature types, found ' + str(len(seen))
 assert sorted(without_hunger) == ['Champion', 'DwarfWorker', 'Kobold', 'Skeleton'], 'types without a Hunger line: ' + ', '.join(without_hunger)
 assert_documented(creatures_cfg, 'ThirstGrowth/Turn', 'creatures.cfg')
 assert re.search(r'^#.*\bThirst\b.*mood', creatures_cfg, re.M | re.I) or 'Thirst line' in creatures_cfg, 'creatures.cfg must document the Thirst mood line'
