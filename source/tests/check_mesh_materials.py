@@ -9,7 +9,7 @@ material is missing renders with the engine's white fallback and logs an error.
 A tile mesh of config/tilesets.cfg whose row names a material is drawn with that material, which must then exist;
 a row with '' keeps the mesh's own material.
 
-Fixed expected values of this branch (counted once): 478 meshes in the content packages, 17 tile meshes drawn with
+Fixed expected values of this branch (counted once): 483 meshes in the content packages, 17 tile meshes drawn with
 the material of their tile set row, no missing material.
 Without the content the packages are named as not checked.
 """
@@ -24,7 +24,7 @@ import content_packages  # noqa: E402
 
 HEADER, MESH, SUBMESH = 0x1000, 0x3000, 0x4000
 CHUNK = 6
-CONTENT_MESHES = 478
+CONTENT_MESHES = 483
 TILE_MESHES = 17
 #: materials the engine itself defines
 ENGINE_MATERIALS = {'BaseWhite', 'BaseWhiteNoLighting'}
