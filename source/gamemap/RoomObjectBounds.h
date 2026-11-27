@@ -314,7 +314,7 @@ static const WalkingRadius walkingRadii[] = {
     {"CaveHornet.mesh", .22f, -.206272f, -.205726f, .201423f, .181748f},
     {"Cultist.mesh", .43f, -.233058f, -.414932f, .250547f, .338655f},
     {"DarkElf.mesh", .31f, -.173718f, -.305002f, .184618f, .280192f},
-    {"Defender.mesh", 1.02f, -.397194f, -.884121f, .720204f, .337161f},
+    {"Defender.mesh", .37f, -.200715f, -.358058f, .219577f, .302f},
     {"Dragon.mesh", .89f, -.880177f, -.725322f, .880181f, .682325f},
     {"Dwarf1.mesh", .29f, -.168476f, -.278216f, .169836f, .223911f},
     {"Dwarf2.mesh", .32f, -.1975f, -.296764f, .194102f, .211289f},

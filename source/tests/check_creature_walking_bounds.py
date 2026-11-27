@@ -56,11 +56,20 @@ std::vector<Ogre::AxisAlignedBox> heightBounds;
 bool profile=false;
 const std::string boneProfile="BONE_PROFILE";
 std::map<unsigned short,Ogre::AxisAlignedBox> boneBounds,lowBoneBounds;
+// The carried weapon part that the walking row leaves out (decision of the plan: the Defender keeps its walking radius
+// of 0.37 with the glaive, as the worker kept its rows): the mesh and the index of its first weapon submesh (the weapon
+// parts are appended after the body, the probe loads no material scripts, so the part is found by its index)
+const std::string WALKING_RADIUS_CARRIED_MESH="Defender.mesh";
+const unsigned WALKING_RADIUS_CARRIED_FIRST_SUB=1;
+// Largest XY distance of the skinned vertices of the current pose (body only); also fills the pose bounds and, over
+// every part, the height bands
 float radius(Ogre::Entity* entity){
  entity->addSoftwareAnimationRequest(false);entity->_updateAnimation();entity->removeSoftwareAnimationRequest(false);
  float result=0;poseBounds.setNull();
  for(unsigned sub=0;sub<entity->getNumSubEntities();++sub){
   auto* part=entity->getSubEntity(sub);
+  // A carried weapon part (the Defender's glaive) is not body: it stays out of the walking row, the body bands see it
+  const bool carried=entity->getMesh()->getName()==WALKING_RADIUS_CARRIED_MESH&&sub>=WALKING_RADIUS_CARRIED_FIRST_SUB;
   auto* data=part->getSubMesh()->useSharedVertices?entity->_getSkelAnimVertexData():part->_getSkelAnimVertexData();
   auto* position=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
   auto buffer=data->vertexBufferBinding->getBuffer(position->getSource());
@@ -68,7 +77,7 @@ float radius(Ogre::Entity* entity){
   auto* bytes=static_cast<unsigned char*>(lock.pData);
   for(size_t i=0;i<data->vertexCount;++i){
    float* vertex;position->baseVertexPointerToElement(bytes+(data->vertexStart+i)*buffer->getVertexSize(),&vertex);
-   result=std::max(result,std::hypot(vertex[0],vertex[1]));poseBounds.merge(Ogre::Vector3(vertex));
+   if(!carried){result=std::max(result,std::hypot(vertex[0],vertex[1]));poseBounds.merge(Ogre::Vector3(vertex));}
    if(entity->getMesh()->getName()==boneProfile){
     const auto& assignments=part->getSubMesh()->useSharedVertices?entity->getMesh()->getBoneAssignments():part->getSubMesh()->getBoneAssignments();
     const auto range=assignments.equal_range(i);auto strongest=range.second;
