@@ -2422,7 +2422,8 @@ double Creature::getItemEffect(const std::string& id) const
     return sum;
 }
 
-//! \brief Converts level-equivalent equipment bonuses to the wearer's natural attribute points.
+//! \brief Converts level-equivalent equipment bonuses to the wearer's natural attribute points; the damage attribute
+//! goes to dexterity for the marksman and mage groups (the former archer and caster groups), else to strength.
 double Creature::getItemAttribute(const std::string& attribute) const
 {
     if(mDefinition == nullptr)
@@ -2432,7 +2433,7 @@ double Creature::getItemAttribute(const std::string& attribute) const
     if(attribute == "Mana")
         return getItemBonus("Mana") * mDefinition->getManaPerLevel();
     const std::string& group = mDefinition->getSkillGroup();
-    const bool dexterity = group == "archer" || group == "caster";
+    const bool dexterity = group == "marksman" || group == "mage";
     if(attribute == "Dexterity" && dexterity)
         return getItemBonus("DamageAttribute") * mDefinition->getDexterityPerLevel();
     if(attribute == "Strength" && !dexterity)
@@ -5123,7 +5124,8 @@ double Creature::getSkillPassive(const std::string& stat) const
     std::map<std::string, std::string>::const_iterator bonus = BONUS_STATS.find(stat);
     if(bonus != BONUS_STATS.end())
         sum += getItemBonus(bonus->second);
-    const bool caster = mDefinition != nullptr && mDefinition->getSkillGroup() == "caster";
+    // The mage group (the former caster group) gets the Damage% of its items on its spell damage
+    const bool caster = mDefinition != nullptr && mDefinition->getSkillGroup() == "mage";
     if((caster && stat == "spell%") || (!caster && stat == "dmg%"))
         sum += getItemBonus("Damage%");
     if(stat == "move%") sum += getItemEffect("SwiftStep");
@@ -6790,7 +6792,8 @@ double Creature::getManaCost(double baseCost) const
 }
 
 //! \brief Returns the mana the skill costs this creature now: the rank cost of a skill of the skill tree, the shot cost
-//! of a caster's first MissileLaunch or of a second MissileLaunch line like the Dragon's (all with manacost%), 0 for
+//! of a caster's (mage, healer or supporter group) first MissileLaunch or of a second MissileLaunch line like the
+//! Dragon's (all with manacost%), 0 for
 //! every free attack. FREE_AREA_CAST and MANA_DISCOUNT of the passives lower the cost of skill tree skills.
 //! \param skill The skill or attack line to price.
 double Creature::getSkillManaCost(const CreatureSkill& skill) const
@@ -6818,11 +6821,12 @@ double Creature::getSkillManaCost(const CreatureSkill& skill) const
 
     // The shot of a caster costs the caster rate. A type with a skill group is
     // told by its group, because a level file may list the Dragon's spell shot before its melee line; a type
-    // without a group is told by the line order: the first attack line is the spell shot.
+    // without a group is told by the line order: the first attack line is the spell shot. The casters are the
+    // spell-shooting groups that replaced the caster group: mage, healer and supporter.
     const std::string& group = mDefinition->getSkillGroup();
     bool casterShot = firstAttack;
     if(group != "none")
-        casterShot = (group == "caster");
+        casterShot = (group == "mage" || group == "healer" || group == "supporter");
 
     if(casterShot)
         return getManaCost(ConfigManager::getSingleton().getManaPerCasterShot());
