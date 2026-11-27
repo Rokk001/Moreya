@@ -34,6 +34,13 @@
 #include "utils/LogManager.h"
 
 #include <istream>
+#include <vector>
+
+namespace
+{
+//! \brief True while the extra shots of JUMP_TARGETS or EXTRA_TARGETS are launched (they launch none of their own)
+static bool sLaunchingExtraTargets = false;
+}
 
 const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 const std::string CreatureSkillMissileLaunchName = "MissileLaunch";
@@ -58,10 +65,11 @@ const std::string& CreatureSkillMissileLaunch::getSkillName() const
     return CreatureSkillMissileLaunchName;
 }
 
+//! \brief The range of the line at the level of the creature, times the LONGER_RANGE property of the creature.
 double CreatureSkillMissileLaunch::getRangeMax(const Creature* creature, GameEntity* entityAttack) const
 {
     double level = static_cast<double>(creature->getLevel());
-    return mRangeMax + (level * mRangePerLvl);
+    return (mRangeMax + (level * mRangePerLvl)) * creature->getSkillPropertyValue("LONGER_RANGE", 0, 1.0);
 }
 
 bool CreatureSkillMissileLaunch::canBeUsedBy(const Creature* creature) const
@@ -93,7 +101,42 @@ void CreatureSkillMissileLaunch::getCreatureDamageRange(const Creature& creature
     maxSum = phyMax + magMax + eleMax;
 }
 
-//! \brief Launches a projectile retaining shooter identity for its damage and equipment effects.
+//! \brief A skill of the skill tree with JUMP_TARGETS or EXTRA_TARGETS launches one more projectile at each of that many
+//! enemies nearest the target (within the second number in tiles, else within the range of the skill);
+//! BURNING_GROUND sets the ground around the target on fire.
+void CreatureSkillMissileLaunch::launchExtraTargets(GameMap& gameMap, Creature* creature, GameEntity* attackedObject,
+        Tile* attackedTile, bool ko) const
+{
+    if(!isTreeSkill() || attackedObject->getObjectType() != GameEntityType::creature)
+        return;
+
+    const std::string token = hasProperty("JUMP_TARGETS") ? "JUMP_TARGETS" : "EXTRA_TARGETS";
+    const uint32_t extra = static_cast<uint32_t>(getPropertyValue(token, 0, 0.0));
+    if(extra > 0)
+    {
+        const double radius = getPropertyValue(token, 1, getRangeMax(creature, attackedObject));
+        const std::vector<Creature*> nearby = creature->getEnemyCreaturesNear(attackedObject->getPosition(), radius);
+        uint32_t launched = 0;
+        // The extra shots do not launch extra shots of their own
+        sLaunchingExtraTargets = true;
+        for(Creature* enemy : nearby)
+        {
+            if(launched >= extra)
+                break;
+            if(enemy == attackedObject || enemy->getPositionTile() == nullptr)
+                continue;
+            tryUseFight(gameMap, creature, 0.0f, enemy, enemy->getPositionTile(), ko, false);
+            ++launched;
+        }
+        sLaunchingExtraTargets = false;
+    }
+
+    if(hasProperty("BURNING_GROUND"))
+        creature->addSkillBurningGround(*this, attackedTile);
+}
+
+//! \brief Launches a projectile retaining shooter identity for its damage and equipment effects; the target bonuses of
+//! the shooter scale its creature damage, and a skill of the skill tree may hit extra targets (launchExtraTargets).
 bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -150,6 +193,18 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
     const bool spellLine = isTreeSkill() || (!carriesBow && creature->getDefinition()->isFirstAttackSkill(this));
     CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax,
         damageLevel, spellLine ? "spell%" : "dmg%");
+    // The target bonuses of the shooter (EXECUTE, BONUS_VS_ and the other rank properties) scale the creature damage
+    if(attackedObject->getObjectType() == GameEntityType::creature)
+    {
+        const double targetFactor = creature->getSkillTargetDamageFactor(*static_cast<Creature*>(attackedObject),
+            this);
+        phyMin *= targetFactor;
+        phyMax *= targetFactor;
+        magMin *= targetFactor;
+        magMax *= targetFactor;
+        eleMin *= targetFactor;
+        eleMax *= targetFactor;
+    }
     missile->setCreatureDamageRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,
         creature->getModifierStrength());
     // The shot carries the critical chance of its shooter; it rolls it when it hits
@@ -182,6 +237,10 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
     // we can safely call the missile doUpkeep as we know the engine will not call it the turn
     // it has been added
     missile->doUpkeep();
+
+    // The rank properties of a skill of the skill tree: more targets and burning ground
+    if(!sLaunchingExtraTargets)
+        launchExtraTargets(gameMap, creature, attackedObject, attackedTile, ko);
 
     return true;
 }

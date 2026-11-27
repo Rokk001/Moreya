@@ -26,6 +26,7 @@
 #include "spells/Spell.h"
 
 #include <istream>
+#include <vector>
 
 const std::string CreatureSkillDefenseSelfName = "DefenseSelf";
 
@@ -74,6 +75,21 @@ bool CreatureSkillDefenseSelf::tryUseSupport(GameMap& gameMap, Creature* creatur
     CreatureEffectDefense* effect = new CreatureEffectDefense(mEffectDuration, mPhy, mMag, mEle, "SpellCreatureDefense");
     tagEffect(effect);
     creature->addCreatureEffect(effect);
+
+    // Rank property ALLIES_NEAR: the own creatures within its first number in tiles get the same defence
+    if(hasProperty("ALLIES_NEAR"))
+    {
+        const std::vector<Creature*> allies = creature->getOwnCreaturesWithin(getPropertyValue("ALLIES_NEAR", 0, 0.0));
+        for(Creature* ally : allies)
+        {
+            if(ally == creature)
+                continue;
+            CreatureEffectDefense* allyEffect = new CreatureEffectDefense(mEffectDuration, mPhy, mMag, mEle,
+                "SpellCreatureDefense");
+            tagEffect(allyEffect);
+            ally->addCreatureEffect(allyEffect);
+        }
+    }
 
     for(Tile* tile : creature->getCoveredTiles())
     {

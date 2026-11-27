@@ -18,6 +18,7 @@
 #include "creatureskill/CreatureSkillFreeze.h"
 
 #include "creatureeffect/CreatureEffectFrozen.h"
+#include "creatureeffect/CreatureEffectMark.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
@@ -70,6 +71,7 @@ bool CreatureSkillFreeze::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Freezes the attacked creature (not one that is immune to control), with the LONGER and SHATTER properties.
 bool CreatureSkillFreeze::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -80,8 +82,21 @@ bool CreatureSkillFreeze::tryUseFight(GameMap& gameMap, Creature* creature, floa
     }
 
     Creature* attackedCreature = static_cast<Creature*>(attackedObject);
-    CreatureEffectFrozen* effect = new CreatureEffectFrozen(mEffectDuration);
+    // A creature that is immune to control (CONTROL_IMMUNE) is not frozen
+    if(attackedCreature->isControlImmune())
+        return true;
+
+    // Rank properties: LONGER multiplies the turns, SHATTER makes the frozen creature take its damage times the first
+    // number while it is frozen
+    const double duration = mEffectDuration * getPropertyValue("LONGER", 0, 1.0);
+    CreatureEffectFrozen* effect = new CreatureEffectFrozen(duration);
     attackedCreature->addCreatureEffect(effect);
+    if(hasProperty("SHATTER"))
+    {
+        CreatureEffectMark* shatter = new CreatureEffectMark(duration, getPropertyValue("SHATTER", 0, 1.0), -1);
+        tagEffect(shatter);
+        attackedCreature->addCreatureEffect(shatter);
+    }
 
     return true;
 }

@@ -27,7 +27,9 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
 #include <istream>
+#include <vector>
 
 const std::string CreatureSkillWhirlwindName = "Whirlwind";
 
@@ -110,11 +112,40 @@ bool CreatureSkillWhirlwind::tryUseFight(GameMap& gameMap, Creature* creature, f
         lastTile = tile;
     }
 
-    if(lastTile != startTile)
+    // Rank property PULL: the target is pulled towards the caster instead of pushed away
+    if(hasProperty("PULL"))
+        creature->pushSkillTarget(*attackedCreature, getPropertyValue("PULL", 0, 0.0), true);
+    else if(lastTile != startTile)
         attackedCreature->teleportTo(lastTile);
 
-    // Creatures cannot act while the wind blows them
-    attackedCreature->stun(static_cast<int32_t>(mStunTurns));
+    // Creatures cannot act while the wind blows them; STUN and KNOCK_DOWN of the rank lengthen it, a creature that is
+    // immune to control (CONTROL_IMMUNE) is not stunned
+    const double stunTurns = std::max(static_cast<double>(mStunTurns), std::max(getPropertyValue("STUN", 0, 0.0),
+        getPropertyValue("KNOCK_DOWN", 0, 0.0)));
+    if(!attackedCreature->isControlImmune())
+        attackedCreature->stun(static_cast<int32_t>(stunTurns));
+    if(hasProperty("LOSE_TARGET"))
+        attackedCreature->loseSkillFightTarget();
+
+    // Rank property AREA: every other enemy within its radius (times LARGER_RADIUS) around the caster is blown too
+    if(hasProperty("AREA"))
+    {
+        const double radius = getPropertyValue("AREA", 0, 0.0) * getPropertyValue("LARGER_RADIUS", 0, 1.0);
+        const std::vector<Creature*> enemies = creature->getEnemyCreaturesNear(creature->getPosition(), radius);
+        for(Creature* enemy : enemies)
+        {
+            if(enemy == attackedCreature || enemy->rollAreaDodge())
+                continue;
+            if(hasProperty("PULL"))
+                creature->pushSkillTarget(*enemy, getPropertyValue("PULL", 0, 0.0), true);
+            else
+                creature->pushSkillTarget(*enemy, static_cast<double>(mPushTiles), false);
+            if(!enemy->isControlImmune())
+                enemy->stun(static_cast<int32_t>(stunTurns));
+            if(hasProperty("LOSE_TARGET"))
+                enemy->loseSkillFightTarget();
+        }
+    }
 
     return true;
 }

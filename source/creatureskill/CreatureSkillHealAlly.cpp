@@ -87,7 +87,12 @@ bool CreatureSkillHealAlly::tryUseSupport(GameMap& gameMap, Creature* creature) 
     if(weakest == nullptr)
         return false;
 
+    // Rank properties: FREE_ON_LOW of the caster waives the mana for a badly hurt ally, CLEANSE and CLEANSE_ALL
+    // remove damage over time from the healed creature
+    creature->waiveSkillManaWhenLow(*weakest);
     weakest->heal(mHealPercent / 100.0 * creature->getHealBase());
+    if(hasProperty("CLEANSE") || hasProperty("CLEANSE_ALL"))
+        weakest->cleanseDamageOverTime(hasProperty("CLEANSE_ALL"));
     for(Tile* tile : weakest->getCoveredTiles())
     {
         Spell::fireSpellEffect(*tile, "Heal", "HealCast");
