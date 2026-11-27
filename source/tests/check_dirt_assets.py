@@ -1,5 +1,5 @@
 """Dirt, cleaning and toilet assets: pile models and textures, stain and decal models, the toilet seat, icon, particle,
-sounds, the credits rows, and the Relieve / Clean clips in the creature skeletons.
+sounds, the credits rows, and the RelievePit / Relieve / Clean clips in the creature skeletons.
 
 Calls (from the repository root):
   python source/tests/check_dirt_assets.py            plain file checks, no compiler, no game
@@ -141,7 +141,8 @@ if HAS_CONTENT:
     ambience = read('config/roomAmbience.cfg')
     assert 'ToiletDrip' in ambience, 'roomAmbience.cfg has no toilet entry'
 
-# 4. Clips: every creature skeleton has Relieve, the worker skeletons also Clean (binary skeleton: names end with a line feed)
+# 4. Clips: the 26 humanoid creature types have RelievePit (bent over, on a seat and on the floor), the other creature
+# skeletons at least the Relieve clip the client falls back to; the worker skeletons also Clean (binary skeleton: names end with a line feed)
 skeletons = {}
 for name, mesh in types.items():
     if content_packages.data_file(root, 'models/' + mesh) is None and not HAS_CONTENT:
@@ -151,9 +152,16 @@ for name, mesh in types.items():
     found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', data)
     assert found, mesh + ' has no skeleton'
     skeletons[name] = found[0].decode('ascii') + '.skeleton'
+bent_over = set()
 for name, skeleton in skeletons.items():
     clips = data_path('models/' + skeleton).read_bytes()
-    assert b'Relieve\n' in clips, skeleton + ' of ' + name + ' has no Relieve clip'
+    if b'RelievePit\n' in clips:
+        bent_over.add(name)
+    else:
+        assert b'Relieve\n' in clips, skeleton + ' of ' + name + ' has neither RelievePit nor Relieve'
+if HAS_CONTENT:
+    assert len(bent_over) == 26, sorted(bent_over)
+    assert {'Kobold', 'DwarfWorker', 'Knight', 'Troll', 'Skeleton'} <= bent_over, sorted(bent_over)
 for name in ('Kobold', 'DwarfWorker'):
     # a worker whose model lies in the content package creatures is already named as not checked above
     if name not in skeletons and not HAS_CONTENT:
@@ -162,7 +170,7 @@ for name in ('Kobold', 'DwarfWorker'):
     assert b'Clean\n' in clips, skeletons[name] + ' of ' + name + ' has no Clean clip'
 # The clip names the client asks for
 animation_h = read('source/entities/MovableGameEntity.h')
-assert 'relieve_anim = "Relieve"' in animation_h and 'clean_anim = "Clean"' in animation_h
+assert 'relieve_pit_anim = "RelievePit"' in animation_h and 'clean_anim = "Clean"' in animation_h
 
 # 5. Credits rows in the same change: every file is covered by a row
 credit_lines = credits.splitlines()
