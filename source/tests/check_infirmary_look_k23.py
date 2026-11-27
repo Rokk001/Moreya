@@ -62,9 +62,9 @@ FURNITURE = ('InfirmaryCotSmall', 'InfirmaryCotMedium', 'InfirmaryCotLarge', 'Me
              'WashBasin', 'HerbShelf')
 CLIPS = {'Idle', 'Walk', 'Chant', 'RattleShake', 'HerbSniff', 'PotionTaste', 'TripOverBucket', 'Dance'}
 #: The clip lengths of the creatures package shaman (the game stretches the six pose clips to
-#: InfirmaryShamanAnimationSeconds). Idle from the build report; RattleShake and HerbSniff are the clips approved on
-#: 2026-11-27 (2.0 s).
-CLIP_SECONDS = {'Idle': 4.0, 'Walk': 1.04167, 'Chant': 2.25, 'PotionTaste': 8.875, 'TripOverBucket': 2.5, 'Dance': 7.75,
+#: InfirmaryShamanAnimationSeconds). Idle from the build report; Chant, RattleShake and HerbSniff are the clips approved on
+#: 2026-11-27 (Chant 4.0 s, the other two 2.0 s).
+CLIP_SECONDS = {'Idle': 4.0, 'Walk': 1.04167, 'Chant': 4.0, 'PotionTaste': 8.875, 'TripOverBucket': 2.5, 'Dance': 7.75,
                 'RattleShake': 2.0, 'HerbSniff': 2.0}
 fails = []
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
