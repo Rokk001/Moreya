@@ -16,7 +16,7 @@ Three parts:
       - a rig with its own pick (part of its model, Pick bone) hides it for the whole clip (scale <= 0.01) and shows it
         in Idle, Walk, Dig and Claim (scale 1); the Meshy worker rigs have no Pick bone;
       - clip count of each rig and the Clean length 3.967 s (the approved sweep, two strokes);
-      - the broom: at most 600 triangles, two textured materials CleaningBroom and CleaningBroom/Twigs without
+      - the broom: at most 2500 triangles, two textured materials CleaningBroom and CleaningBroom/Twigs without
         specular, texture CleaningBroom.png 512 x 512 with surface detail (luminance std >= 6), dark dungeon look
         (STYLE-GUIDE.md: mean luminance 45-95, mean saturation <= 0.45, p99.5 channel <= 170).
   wiring (no compiler)
@@ -29,7 +29,8 @@ Three parts:
       Room::needsCleaning run with the [Dirt] values of global.cfg: a tile below DirtVisibleFrom is not cleaned, every
       visible stain (stage 1, 2, 3) is; a room whose mean is far below stage 2 but has one visible stain needs cleaning,
       a room with only invisible dirt does not, a prison never.
-Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 328 triangles (limit 600), Clean 3.967 s,
+Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 2404 triangles (limit 2500, 600 for the former primitive broom, raised for the approved Meshy broom;
+Freigabe Mario 2026-11-26 (allgemein)), Clean 3.967 s,
 45 clips in Kobold.skeleton and 53 in Dwarf1.skeleton, handle top 0.305 and twigs from 0.6 broom lengths, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
 The probe compiles with cl, so it runs in the compile phase of the integration; `--no-compile` runs the other parts.
 Without --assets the models, materials and textures are read from the public tree or the content packages
@@ -245,8 +246,8 @@ else:
     points = positions(broom)
     tris = triangles(broom)
     broom_info['triangles'] = tris
-    if tris > 600:
-        fail('assets: the broom has %d triangles (at most 600)' % tris)
+    if tris > 2500:
+        fail('assets: the broom has %d triangles (at most 2500)' % tris)
     zs = [p[2] for p in points]
     broom_length = max(zs) - min(zs)
     # the handle axis: the vertices of the stick (|z| small part above the grip) are centred on x = y = 0
