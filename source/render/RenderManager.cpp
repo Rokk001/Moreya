@@ -3205,6 +3205,13 @@ Ogre::ParticleSystem* RenderManager::addEntityParticleEffectBoneMenu(const std::
     Ogre::ParticleSystem* particleSystem = mSceneManager->createParticleSystem(particleName, particleScript);
 
     Ogre::Entity* ent = mSceneManager->getEntity(entityName);
+    // The bone name comes from the menu scene: a model without it only loses the effect
+    if((ent->getSkeleton() == nullptr) || !ent->getSkeleton()->hasBone(boneName))
+    {
+        OD_LOG_WRN("No bone=" + boneName + " for the particle effect of entity=" + entityName);
+        mSceneManager->destroyParticleSystem(particleSystem);
+        return nullptr;
+    }
     ent->attachObjectToBone(boneName, particleSystem);
 
     return particleSystem;
