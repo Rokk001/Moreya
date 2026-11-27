@@ -54,9 +54,9 @@ def credited(path, credits):
 
 
 #: The stored clip lengths of the creatures package shaman (all 2.0 s on the former model; the game stretches the six
-#: pose clips to InfirmaryShamanAnimationSeconds). Idle from the build report; Chant, RattleShake and HerbSniff are the clips
-#: approved on 2026-11-27 (Chant 4.0 s, the other two 2.0 s).
-CLIP_SECONDS = {"Idle": 4.0, "Walk": 1.0416669845581055, "Chant": 4.0, "PotionTaste": 8.875,
+#: pose clips to InfirmaryShamanAnimationSeconds). Idle from the build report; Chant, RattleShake, HerbSniff and PotionTaste
+#: are the clips approved on 2026-11-27 (Chant 4.0 s, PotionTaste 4.4 s, the other two 2.0 s).
+CLIP_SECONDS = {"Idle": 4.0, "Walk": 1.0416669845581055, "Chant": 4.0, "PotionTaste": 4.400000095367432,
                 "TripOverBucket": 2.5, "Dance": 7.75, "RattleShake": 2.0, "HerbSniff": 2.0}
 
 
