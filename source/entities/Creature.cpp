@@ -5098,8 +5098,8 @@ double Creature::getDigFactor() const
     return 1.0 + getSkillPassive("dig%") / 100.0;
 }
 
-//! \brief Returns true if one of the held items has the weapon type bow or crossbow.
-bool Creature::carriesBowOrCrossbow() const
+//! \brief Returns true if one of the held items has the weapon type bow.
+bool Creature::carriesBow() const
 {
     const Weapon* weapons[] = {mWeaponL, mWeaponR};
     for(const Weapon* weapon : weapons)
@@ -5107,7 +5107,7 @@ bool Creature::carriesBowOrCrossbow() const
         if(weapon == nullptr)
             continue;
         const std::string weaponType = weapon->getWeaponType();
-        if(weaponType == "bow" || weaponType == "crossbow")
+        if(weaponType == "bow")
             return true;
     }
     return false;
@@ -6820,7 +6820,7 @@ double Creature::getManaCost(double baseCost) const
 //! \brief Returns the mana the skill costs this creature now: the rank cost of a skill of the skill tree, the shot cost
 //! of a caster's (mage, healer or supporter group) first MissileLaunch or of a second MissileLaunch line like the
 //! Dragon's (all with manacost%), 0 for
-//! every free attack (Melee, the first MissileLaunch of a creature with a bow or crossbow and the first MissileLaunch
+//! every free attack (Melee, the first MissileLaunch of a creature with a bow and the first MissileLaunch
 //! of the marksman group, the ranged fighters with weapons). FREE_AREA_CAST and MANA_DISCOUNT of the passives lower
 //! the cost of skill tree skills.
 //! \param skill The skill or attack line to price.
@@ -6843,10 +6843,10 @@ double Creature::getSkillManaCost(const CreatureSkill& skill) const
     if(skill.getSkillName() != "MissileLaunch")
         return 0.0;
 
-    // The first line of a creature with a bow or crossbow and of a marksman (the ranged fighters with weapons, who
+    // The first line of a creature with a bow and of a marksman (the ranged fighters with weapons, who
     // shoot without mana like the bow) is a free weapon shot
     const bool firstAttack = mDefinition->isFirstAttackSkill(&skill);
-    if(firstAttack && (carriesBowOrCrossbow() || mDefinition->getSkillGroup() == "marksman"))
+    if(firstAttack && (carriesBow() || mDefinition->getSkillGroup() == "marksman"))
         return 0.0;
 
     // The shot of a caster costs the caster rate. A type with a skill group is

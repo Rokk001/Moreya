@@ -160,7 +160,7 @@ std::string weaponKind(const Weapon* weapon)
 {
     const std::string type = weapon->getWeaponType();
     if(type == "shield") return "Shield";
-    if(type == "bow" || type == "crossbow") return "Bow";
+    if(type == "bow") return "Bow";
     if(type == "axe") return "Axe";
     if(type == "club" || type == "mace" || type == "hammer" || type == "scepter") return "Hammer";
     if(type == "spear" || type == "polearm" || type == "javelin") return "Spear";

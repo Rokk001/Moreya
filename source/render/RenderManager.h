@@ -300,8 +300,7 @@ public:
         Ogre::Quaternion mRotation;
     };
     //! Finds the bone of the given hand ("L" or "R") for a weapon mesh. Returns false if the skeleton has none.
-    //! A crossbow in the right hand of a skeleton that has no Weapon_L bone (the shape of the aim pose is the
-    //! one of a bow in the left hand) is mounted on the left hand bone with the offset and roll of the bow grip.
+    //! Every weapon mesh is mounted on the weapon bone Weapon_L or Weapon_R of its hand.
     static bool getWeaponMount(const Ogre::Skeleton* skeleton, const std::string& hand,
         const std::string& meshName, WeaponMount& mount);
     //! \brief Attaches the weapon model to the weapon bone of the creature for the given hand ("L" or "R").

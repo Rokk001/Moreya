@@ -621,9 +621,9 @@ public:
     //! \brief Returns the factor (1 + dig% / 100) of the dig% passives. It multiplies the dig rate on dirt and walls
     //! and the gold of a dig step on gold and gem walls; the experience of a dig step does not use it.
     double getDigFactor() const;
-    //! \brief Returns true if a carried item is a bow or a crossbow (its weapon type), which makes the
+    //! \brief Returns true if a carried item is a bow (its weapon type), which makes the
     //! missile attack lines of the creature use the Dexterity attribute level.
-    bool carriesBowOrCrossbow() const;
+    bool carriesBow() const;
     //! \brief Returns the summed value of all ranked passive skills for the given stat ("hp%", "ar%", "dr%", "dmg%",
     //! "spell%", "alldmg%", ...), 0 while the creature has no passive skill of that stat.
     //! \param stat The passive stat name.

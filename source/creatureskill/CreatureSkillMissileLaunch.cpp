@@ -91,7 +91,7 @@ void CreatureSkillMissileLaunch::getCreatureDamageRange(const Creature& creature
     double phyMin = mPhyMin * damageFactor, phyMax = mPhyMax * damageFactor;
     double magMin = mMagMin * damageFactor, magMax = mMagMax * damageFactor;
     double eleMin = mEleMin * damageFactor, eleMax = mEleMax * damageFactor;
-    const bool carriesBow = creature.carriesBowOrCrossbow();
+    const bool carriesBow = creature.carriesBow();
     const bool dexterityLine = carriesBow && getSkillName() != "Grenade" && !isTreeSkill();
     const double damageLevel = dexterityLine ? creature.getDexterityLevel() : static_cast<double>(creature.getLevel());
     const bool spellLine = isTreeSkill() || (!carriesBow && creature.getDefinition()->isFirstAttackSkill(this));
@@ -184,9 +184,9 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
     double phyMin = mPhyMin * damageFactor, phyMax = mPhyMax * damageFactor;
     double magMin = mMagMin * damageFactor, magMax = mMagMax * damageFactor;
     double eleMin = mEleMin * damageFactor, eleMax = mEleMax * damageFactor;
-    // Bow and crossbow lines (not the grenade) follow the Dexterity attribute level, every other line the creature
+    // Bow lines (not the grenade) follow the Dexterity attribute level, every other line the creature
     // level. The first attack line of a type without bow is its spell attack: spell% instead of dmg%.
-    const bool carriesBow = creature->carriesBowOrCrossbow();
+    const bool carriesBow = creature->carriesBow();
     const bool dexterityLine = carriesBow && getSkillName() != "Grenade" && !isTreeSkill();
     const double damageLevel = dexterityLine ? creature->getDexterityLevel() : static_cast<double>(creature->getLevel());
     // A skill of the skill tree counts as a spell: the creature level and the spell% passive

@@ -20,18 +20,18 @@ PATH_COUNTS = {
     ("supporter", "Empowerer"): 4, ("supporter", "Blighter"): 1,
     ("warrior", "Slayer"): 6, ("warrior", "Ravager"): 6, ("warrior", "Reaver"): 2,
     ("skirmisher", "Assassin"): 6, ("skirmisher", "Venomist"): 6, ("skirmisher", "Whirlwind"): 2,
-    ("marksman", "Sharpshooter"): 6, ("marksman", "Poisoner"): 6, ("marksman", "Barrager"): 6,
+    ("marksman", "Sharpshooter"): 5, ("marksman", "Poisoner"): 5, ("marksman", "Barrager"): 5,
     ("mage", "Pyromancer"): 5, ("mage", "Sparkcaller"): 5,
     ("worker", "Delving"): 5, ("worker", "Claiming"): 5, ("worker", "Survival"): 5,
     ("family", "Arcane"): 5, ("family", "Demon"): 5, ("family", "Greenskin"): 8, ("family", "Dwarf"): 6,
-    ("family", "Elf"): 6, ("family", "Human"): 6, ("family", "Undead"): 6, ("family", "Dragonkin"): 5,
+    ("family", "Elf"): 5, ("family", "Human"): 6, ("family", "Undead"): 6, ("family", "Dragonkin"): 5,
     ("family", "Workfolk"): 5, ("family", "Beastkin"): 4, ("family", "Stonekin"): 5, ("family", "Vermin"): 4,
     ("family", "Bloodbound"): 1,
 }
 # Weapon and shield lines whose WeaponClass no creature of their group or family spawns with (counted once on the
-# branch feature/drop-items-roster): crossbows are carried by no creature at all; the lines that named a class their path
-# does not carry moved to paths that carry it.
-UNWEARABLE = {"ARC_A_Crossbow", "ARC_B_Crossbow", "ARC_C_Crossbow", "ELF_Crossbow"}
+# branch feature/drop-items-roster): none, the lines that named a class their path does not carry moved to paths that
+# carry it and the wand and crossbow lines left the game.
+UNWEARABLE = set()
 
 
 def read(name):
@@ -65,7 +65,7 @@ def main():
         content_packages.unchecked("check_items_cfg", ["config/items.cfg"])
         return
     items = blocks(read("config/items.cfg"), "Item")
-    assert len(items) == 182, "expected five Poor and 177 path lines"
+    assert len(items) == 178, "expected five Poor and 173 path lines"
     equipment = {value(block, "Name"): block for block in blocks(read("config/equipments.cfg"), "Equipment")}
     creatures = blocks(read("config/creatures.cfg"), "Creature")
     effects_source = read("source/entities/ItemEffects.cpp")
@@ -131,11 +131,11 @@ def main():
             assert all(effect.split()[0] in effects for effect in actual_effects), item_id
             price = tuple(map(float, value(block, "Price").split()))
             assert price == {"Poor": (20,), "Common": (100,), "Rare": (300, 100), "Epic": (1500, 250)}[quality], item_id
-    assert len(poor) == 5 and len(paths) == 177 and len(displays) == 531
+    assert len(poor) == 5 and len(paths) == 173 and len(displays) == 519
     assert set(poor) == {"POOR_Head", "POOR_Armour", "POOR_Boots", "POOR_Ring", "POOR_Shield"}
     assert path_counts == PATH_COUNTS, sorted(set(path_counts.items()) ^ set(PATH_COUNTS.items()))
     assert unwearable == UNWEARABLE, sorted(unwearable ^ UNWEARABLE)
-    print("equipment catalogue: 182 lines, 531 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
+    print("equipment catalogue: 178 lines, 519 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
           " ranges/effects/prices/weapons passed" % (len(PATH_COUNTS), len(UNWEARABLE)))
 
 

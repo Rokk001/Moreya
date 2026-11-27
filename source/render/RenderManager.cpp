@@ -5536,26 +5536,8 @@ bool RenderManager::getWeaponMount(const Ogre::Skeleton* skeleton, const std::st
     Ogre::Quaternion rotationQuaternion;
     rotationQuaternion.FromAngleAxis(Ogre::Degree(-90.0), Ogre::Vector3(1.0, 0.0, 0.0));
 
-    std::string lowerMesh = meshName;
-    for(std::string::iterator it = lowerMesh.begin(); it != lowerMesh.end(); ++it)
-        *it = static_cast<char>(std::tolower(static_cast<unsigned char>(*it)));
-
-    if((hand.compare("R") == 0) && (lowerMesh.find("crossbow") != std::string::npos) &&
-       !skeleton->hasBone("Weapon_L") && skeleton->hasBone("LeftHand"))
-    {
-        // The aim pose of the attack clip holds the weapon with the left hand. The wrist of that hand is
-        // rolled about 65 degrees further than the one of the archer with a bow, so the model is rolled back
-        // by the same amount; the offset is the mirrored one of the Weapon_R bone.
-        const Ogre::Real CROSSBOW_LEFT_OFFSET_X = 0.0162f;
-        const Ogre::Real CROSSBOW_LEFT_OFFSET_Y = 0.033f;
-        const Ogre::Real CROSSBOW_LEFT_ROLL_DEGREES = 65.0f;
-        Ogre::Quaternion roll;
-        roll.FromAngleAxis(Ogre::Degree(CROSSBOW_LEFT_ROLL_DEGREES), Ogre::Vector3(0.0, 1.0, 0.0));
-        mount.mBoneName = "LeftHand";
-        mount.mOffset = Ogre::Vector3(CROSSBOW_LEFT_OFFSET_X, CROSSBOW_LEFT_OFFSET_Y, 0.0f);
-        mount.mRotation = roll * rotationQuaternion;
-        return true;
-    }
+    // Every weapon mesh sits on the weapon bone of its hand; the mesh name selects no special mount any more
+    static_cast<void>(meshName);
 
     mount.mBoneName = "Weapon_" + hand;
     mount.mOffset = Ogre::Vector3::ZERO;

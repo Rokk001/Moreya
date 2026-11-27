@@ -195,7 +195,6 @@ Bed.skeleton                            OD Team                 GPLv3+          
 Bow.*                                  YD                      CC0                     http://opengameart.org/content/archery-set
 CaveHornet.*                           Skorpio, Danimal        CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59058#p59058
 Cre_vision_indicator.mesh              Andrew Buck             CC-BY-SA 3.0
-Crossbow.*                             Lamoot                  CC-BY 3.0               http://opengameart.org/content/low-poly-crossbow
 Cultist.mesh                           Danimal,Dread Knight,Katarzyna Zalecka                 CC-BY-SA 3.0                     http://opengameart.org/content/dark-priest
 Defender.*                             Konstantin Maystrenko - Concept  CC-BY 3.0      http://forum.freegamedev.net/viewtopic.php?p=61450#p61450
                                        AnthonyMyers - Modeller
@@ -632,9 +631,6 @@ assets-src/items/StaffLich_epic.blend    Skorpio, OD Team    GPLv3+    Quality v
 assets-src/items/Bow_common.blend    YD, OD Team    GPLv3+    Quality variant based on the existing project Bow model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.
 assets-src/items/Bow_rare.blend    YD, OD Team    GPLv3+    Quality variant based on the existing project Bow model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.
 assets-src/items/Bow_epic.blend    YD, OD Team    GPLv3+    Quality variant based on the existing project Bow model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.
-assets-src/items/Crossbow_common.blend    Lamoot, OD Team    CC-BY 3.0    Quality variant based on the existing project Crossbow model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.
-assets-src/items/Crossbow_rare.blend    Lamoot, OD Team    CC-BY 3.0    Quality variant based on the existing project Crossbow model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.
-assets-src/items/Crossbow_epic.blend    Lamoot, OD Team    CC-BY 3.0    Quality variant based on the existing project Crossbow model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.
 assets-src/items/Roundshield_common.blend    Andrew Buck, Skorpio, OD Team    GPLv3+    Quality variant based on the existing project Roundshield model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.
 assets-src/items/Roundshield_rare.blend    Andrew Buck, Skorpio, OD Team    GPLv3+    Quality variant based on the existing project Roundshield model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.
 assets-src/items/Roundshield_epic.blend    Andrew Buck, Skorpio, OD Team    GPLv3+    Quality variant based on the existing project Roundshield model (original credit above); original added fittings and surface detail made in Blender, existing source geometry and mounting coordinates retained.

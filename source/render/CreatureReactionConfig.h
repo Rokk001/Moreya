@@ -403,7 +403,7 @@ public:
     inline double getArrowDrawTime() const
     { return std::max(0.1, mArrowDrawTime); }
 
-    //! Seconds after a shot until the next arrow or bolt is taken
+    //! Seconds after a shot until the next arrow is taken
     inline double getArrowRetakeGap() const
     { return std::max(0.0, mArrowRetakeGap); }
 
@@ -415,13 +415,6 @@ public:
     inline const Ogre::Vector3& getArrowHandOffset() const
     { return mArrowHandOffset; }
 
-    //! Seconds the visible reload of a crossbow takes
-    inline double getCrossbowReloadTime() const
-    { return std::max(0.1, mCrossbowReloadTime); }
-
-    //! Degrees the crossbow tips when the string is cocked
-    inline double getCrossbowReloadJolt() const
-    { return std::max(0.0, std::min(20.0, mCrossbowReloadJolt)); }
     //! True if a strong melee blow leaves a short bright streak along the weapon tip
     inline bool getWeaponTrail() const
     { return mWeaponTrail; }
@@ -518,8 +511,6 @@ private:
     double mArrowRetakeGap;
     double mArrowReloadTime;
     Ogre::Vector3 mArrowHandOffset;
-    double mCrossbowReloadTime;
-    double mCrossbowReloadJolt;
     bool mWeaponTrail;
     double mWeaponTrailLife;
     double mWeaponTrailWidth;

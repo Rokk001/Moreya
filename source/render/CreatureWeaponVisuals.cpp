@@ -57,14 +57,9 @@ const double TICK_INTERVAL = 0.25;
 const double THREAT_RADIUS = 10.0;
 //! The arrow stays on the string this long after a shot even without an enemy close by
 const double ARMED_AFTER_SHOT = 5.0;
-//! The gap after a shot, the reload and draw times, the pull distance and the jolt of the crossbow are settings
-//! of config/creatureReactions.cfg (ArrowRetakeGap, ArrowReloadTime, ArrowDrawTime, ArrowPullDistance,
-//! CrossbowReloadTime, CrossbowReloadJolt)
-//! The crossbow reload in shares of its duration: the bolt is taken out of the hand until the first share, slides
-//! onto the rail until the second, the string is cocked (the weapon tips) until the end
-const double BOLT_TAKEN_SHARE = 0.3;
-const double BOLT_ON_RAIL_SHARE = 0.7;
-//! A new arrow or bolt grows to its full size during this share of the time it needs
+//! The gap after a shot, the reload and draw times and the pull distance of the arrow are settings of
+//! config/creatureReactions.cfg (ArrowRetakeGap, ArrowReloadTime, ArrowDrawTime, ArrowPullDistance)
+//! A new arrow grows to its full size during this share of the time it needs
 const double ARROW_GROW_SHARE = 0.15;
 //! Shortest time the reload may be cut to when the shots follow each other quickly
 const double MIN_RELOAD = 0.05;
@@ -73,20 +68,14 @@ const double MIN_RELOAD = 0.05;
 //! the same way as the flying arrow (see RenderManager)
 const char* ARROW_MESH = "ArrowProjectile";
 const double ARROW_LENGTH_SCALE = 0.55;
-const double BOLT_LENGTH_SCALE = 0.4;
 const double ARROW_WIDTH_FACTOR = 3.0;
-//! Bow model: the string is at z = -0.09 and the arrow flies to +z. Crossbow model: the bolt lies on the rail,
-//! the prod is toward +z. The tail of the arrow mesh is at y = 0.265. These positions come from the vertex data
-//! of the models; they have not been checked on screen.
+//! Bow model: the string is at z = -0.09 and the arrow flies to +z. The tail of the arrow mesh is at y = 0.265.
+//! These positions come from the vertex data of the models; they have not been checked on screen.
 const double BOW_STRING_Z = -0.09;
-const double CROSSBOW_RAIL_Z = -0.05;
-const double CROSSBOW_RAIL_X = 0.025;
 const double ARROW_TAIL_Y = 0.265;
 //! Number of mount bone names tried on each side when a weapon looks for the bone of the other hand
 const uint32_t WEAPON_BONE_CANDIDATES = 7;
-//! Pi, for the half wave of the crossbow jolt
-const double PI_VALUE = 3.14159265358979323846;
-//! An arrow or bolt that has grown less than this share of its length stays hidden
+//! An arrow that has grown less than this share of its length stays hidden
 const double ARROW_VISIBLE_MIN_SHARE = 0.02;
 
 //! A blow with this share (per mille) of the damage or more is a strong one
@@ -124,16 +113,14 @@ std::string toLower(const std::string& text)
     return result;
 }
 
-//! The bow or crossbow of a creature
+//! The bow of a creature
 struct ShooterWeapon
 {
     ShooterWeapon() :
-        mCrossbow(false),
         mHand("L"),
         mMeshName()
     {}
 
-    bool mCrossbow;
     std::string mHand;
     std::string mMeshName;
 };
@@ -151,7 +138,6 @@ bool findShooterWeapon(const Creature* creature, ShooterWeapon& result)
         if(mesh.find("bow") == std::string::npos)
             continue;
 
-        result.mCrossbow = (mesh.find("crossbow") != std::string::npos);
         result.mHand = hands[i];
         result.mMeshName = weapons[i]->getMeshName();
         return true;
@@ -167,8 +153,6 @@ std::string weaponEntityName(const Creature* creature, const std::string& hand)
 struct Shooter
 {
     Shooter() :
-        mCrossbow(false),
-        mWeaponTilted(false),
         mMountOffset(Ogre::Vector3::ZERO),
         mMountRotation(Ogre::Quaternion::IDENTITY),
         mReleasedAt(-1000.0),
@@ -180,9 +164,6 @@ struct Shooter
     //! Bone that carries the weapon and the bone of the pulling hand (empty: no hand found, the arrow stays on the bow)
     std::string mMountBone;
     std::string mHandBone;
-    bool mCrossbow;
-    //! True while the crossbow is tipped by the jolt of the reload and must be set straight again
-    bool mWeaponTilted;
     //! Offset and rotation of the weapon model on its bone (the arrow sits in the frame of the model)
     Ogre::Vector3 mMountOffset;
     Ogre::Quaternion mMountRotation;
@@ -302,33 +283,16 @@ double smoothStep(double value)
     return clamped * clamped * (3.0 - 2.0 * clamped);
 }
 
-//! Seconds a new arrow or bolt needs: the setting, but never longer than the time between the last two shots
+//! Seconds a new arrow needs: the setting, but never longer than the time between the last two shots
 //! (less the gap) when that time is known
 double getReloadDuration(const CreatureReactions& reactions, const Shooter& shooter)
 {
     const CreatureReactionConfig& config = reactions.getConfig();
-    double duration = shooter.mCrossbow ? config.getCrossbowReloadTime() : config.getArrowReloadTime();
+    double duration = config.getArrowReloadTime();
     if(shooter.mShotInterval > 0.0)
         duration = std::min(duration, std::max(MIN_RELOAD, shooter.mShotInterval - config.getArrowRetakeGap()));
 
     return duration;
-}
-
-//! Sets the crossbow straight again after the jolt of the reload
-void straightenWeapon(Shooter& shooter)
-{
-    if(!shooter.mWeaponTilted)
-        return;
-
-    shooter.mWeaponTilted = false;
-    RenderManager* renderManager = RenderManager::getSingletonPtr();
-    if((renderManager == nullptr) || !renderManager->getSceneManager()->hasEntity(shooter.mWeaponName))
-        return;
-
-    Ogre::TagPoint* tagPoint = dynamic_cast<Ogre::TagPoint*>(
-        renderManager->getSceneManager()->getEntity(shooter.mWeaponName)->getParentNode());
-    if(tagPoint != nullptr)
-        tagPoint->setOrientation(shooter.mMountRotation);
 }
 
 void destroyArrow(const std::string& arrowName)
@@ -346,10 +310,9 @@ void destroyArrow(const std::string& arrowName)
     sceneManager->destroyEntity(arrow);
 }
 
-//! Removes the arrow or bolt of an archer and sets its weapon straight
+//! Removes the arrow of an archer
 void removeArrow(Shooter& shooter)
 {
-    straightenWeapon(shooter);
     destroyArrow(shooter.mArrowName);
     shooter.mArrowName.clear();
 }
@@ -399,7 +362,6 @@ bool createArrow(CreatureReactions& reactions, Creature* creature, const Shooter
     Ogre::Quaternion arrowRotation(Ogre::Degree(-90.0), Ogre::Vector3::UNIT_X);
     body->attachObjectToBone(mount.mBoneName, arrow, mount.mRotation * arrowRotation);
     shooter.mWeaponName = weaponEntityName(creature, weapon.mHand);
-    shooter.mCrossbow = weapon.mCrossbow;
     shooter.mMountBone = mount.mBoneName;
     shooter.mMountOffset = mount.mOffset;
     shooter.mMountRotation = mount.mRotation;
@@ -461,15 +423,14 @@ void placeArrow(CreatureReactions& reactions, Shooter& shooter)
     if(!weaponOut || (sinceShot < config.getArrowRetakeGap()))
     {
         arrow->setVisible(false);
-        straightenWeapon(shooter);
         return;
     }
 
-    // How far the new arrow has come (0 to 1) after it was taken from the quiver or the bolt was loaded
+    // How far the new arrow has come (0 to 1) after it was taken from the quiver
     double reloadTime = getReloadDuration(reactions, shooter);
     double sinceTaken = sinceShot - config.getArrowRetakeGap();
     double arrived = std::min(1.0, sinceTaken / reloadTime);
-    double lengthScale = shooter.mCrossbow ? BOLT_LENGTH_SCALE : ARROW_LENGTH_SCALE;
+    double lengthScale = ARROW_LENGTH_SCALE;
 
     Ogre::Vector3 handPosition;
     bool followsHand = getHandPosition(shooter, tagPoint->getParentEntity(), config.getArrowHandOffset(), handPosition);
@@ -477,79 +438,34 @@ void placeArrow(CreatureReactions& reactions, Shooter& shooter)
     // Where the tail of the arrow (the nock) is, and how much of the arrow is shown (0 to 1)
     Ogre::Vector3 nock;
     double shown = 1.0;
-    if(shooter.mCrossbow)
+    Ogre::Vector3 string = shooter.mMountOffset + shooter.mMountRotation *
+        Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(BOW_STRING_Z));
+    double drawn = smoothStep((sinceTaken - reloadTime) / config.getArrowDrawTime());
+    if(followsHand)
     {
-        Ogre::Vector3 rail = shooter.mMountOffset + shooter.mMountRotation *
-            Ogre::Vector3(static_cast<Ogre::Real>(CROSSBOW_RAIL_X), 0.0f, static_cast<Ogre::Real>(CROSSBOW_RAIL_Z));
-        if(followsHand)
+        if(arrived < 1.0)
         {
-            // Out of the hand (grows in), carried to the rail, then the string is cocked
-            if(arrived < BOLT_TAKEN_SHARE)
-            {
-                nock = handPosition;
-                shown = std::min(1.0, arrived / (BOLT_TAKEN_SHARE * ARROW_GROW_SHARE * 2.0));
-            }
-            else
-            {
-                double slide = smoothStep((arrived - BOLT_TAKEN_SHARE) / (BOLT_ON_RAIL_SHARE - BOLT_TAKEN_SHARE));
-                nock = handPosition + (rail - handPosition) * static_cast<Ogre::Real>(slide);
-            }
-        }
-        else
-        {
-            // No hand known: the bolt is pushed onto the rail from the side
+            // A new arrow comes from the hand to the string
+            nock = handPosition + (string - handPosition) * static_cast<Ogre::Real>(smoothStep(arrived));
             shown = std::min(1.0, arrived / ARROW_GROW_SHARE);
-            nock = rail + shooter.mMountRotation * Ogre::Vector3(0.0f, static_cast<Ogre::Real>((1.0 - arrived) * 0.12), 0.0f);
-        }
-
-        // The string is cocked at the end of the reload: the weapon tips for a moment
-        Ogre::TagPoint* weaponTag = sceneManager->hasEntity(shooter.mWeaponName) ?
-            dynamic_cast<Ogre::TagPoint*>(sceneManager->getEntity(shooter.mWeaponName)->getParentNode()) : nullptr;
-        if((weaponTag != nullptr) && (config.getCrossbowReloadJolt() > 0.0) &&
-           (arrived >= BOLT_ON_RAIL_SHARE) && (arrived < 1.0))
-        {
-            double phase = (arrived - BOLT_ON_RAIL_SHARE) / (1.0 - BOLT_ON_RAIL_SHARE);
-            double angle = config.getCrossbowReloadJolt() * std::sin(phase * PI_VALUE);
-            Ogre::Quaternion tilt(Ogre::Degree(static_cast<Ogre::Real>(angle)), Ogre::Vector3::UNIT_X);
-            weaponTag->setOrientation(shooter.mMountRotation * tilt);
-            shooter.mWeaponTilted = true;
         }
         else
         {
-            straightenWeapon(shooter);
+            // The hand draws the arrow back: toward where the hand is, never farther than the pull distance
+            Ogre::Vector3 toHand = handPosition - string;
+            double distance = toHand.length();
+            double pull = std::min(distance, config.getArrowPullDistance()) * drawn;
+            nock = string;
+            if(distance > 0.0001)
+                nock = string + toHand * static_cast<Ogre::Real>(pull / distance);
         }
     }
     else
     {
-        Ogre::Vector3 string = shooter.mMountOffset + shooter.mMountRotation *
-            Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(BOW_STRING_Z));
-        double drawn = smoothStep((sinceTaken - reloadTime) / config.getArrowDrawTime());
-        if(followsHand)
-        {
-            if(arrived < 1.0)
-            {
-                // A new arrow comes from the hand to the string
-                nock = handPosition + (string - handPosition) * static_cast<Ogre::Real>(smoothStep(arrived));
-                shown = std::min(1.0, arrived / ARROW_GROW_SHARE);
-            }
-            else
-            {
-                // The hand draws the arrow back: toward where the hand is, never farther than the pull distance
-                Ogre::Vector3 toHand = handPosition - string;
-                double distance = toHand.length();
-                double pull = std::min(distance, config.getArrowPullDistance()) * drawn;
-                nock = string;
-                if(distance > 0.0001)
-                    nock = string + toHand * static_cast<Ogre::Real>(pull / distance);
-            }
-        }
-        else
-        {
-            // No hand known: the arrow grows in on the string and the string is drawn straight back
-            shown = std::min(1.0, arrived / ARROW_GROW_SHARE);
-            nock = string - shooter.mMountRotation *
-                Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(drawn * config.getArrowPullDistance()));
-        }
+        // No hand known: the arrow grows in on the string and the string is drawn straight back
+        shown = std::min(1.0, arrived / ARROW_GROW_SHARE);
+        nock = string - shooter.mMountRotation *
+            Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(drawn * config.getArrowPullDistance()));
     }
 
     // The origin of the arrow mesh is the middle of its tail part: the tail sits on the nock
@@ -738,8 +654,6 @@ void noteShot(CreatureReactions& reactions, const CosmeticEvent& event)
         Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
         if(sceneManager->hasEntity(held.mArrowName))
             sceneManager->getEntity(held.mArrowName)->setVisible(false);
-
-        straightenWeapon(held);
     }
 }
 

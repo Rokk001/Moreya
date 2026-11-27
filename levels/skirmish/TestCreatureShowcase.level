@@ -2491,7 +2491,7 @@ spellEyeEvil
 1	Dwarf221	Dwarf2.mesh	5	8	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight22	Knight.mesh	6	8	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard23	Wizard.mesh	7	8	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf24	Banshee.mesh	8	8	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf24	Banshee.mesh	8	8	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf25	Elf.mesh	3	3	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf26	RunelordDwarf.mesh	4	3	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster27	Paladin.mesh	5	3	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2526,7 +2526,7 @@ spellEyeEvil
 1	Dwarf256	Dwarf2.mesh	17	4	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight57	Knight.mesh	11	5	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard58	Wizard.mesh	12	5	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf59	Banshee.mesh	13	5	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf59	Banshee.mesh	13	5	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf60	Elf.mesh	14	5	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf61	RunelordDwarf.mesh	15	5	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster62	Paladin.mesh	16	5	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2561,7 +2561,7 @@ spellEyeEvil
 1	Dwarf291	Dwarf2.mesh	26	4	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight92	Knight.mesh	20	5	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard93	Wizard.mesh	21	5	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf94	Banshee.mesh	22	5	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf94	Banshee.mesh	22	5	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf95	Elf.mesh	23	5	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf96	RunelordDwarf.mesh	24	5	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster97	Paladin.mesh	25	5	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2596,7 +2596,7 @@ spellEyeEvil
 1	Dwarf2126	Dwarf2.mesh	34	5	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight127	Knight.mesh	35	5	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard128	Wizard.mesh	29	6	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf129	Banshee.mesh	30	6	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf129	Banshee.mesh	30	6	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf130	Elf.mesh	34	6	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf131	RunelordDwarf.mesh	35	6	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster132	Paladin.mesh	29	7	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2631,7 +2631,7 @@ spellEyeEvil
 1	Dwarf2161	Dwarf2.mesh	44	4	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight162	Knight.mesh	38	5	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard163	Wizard.mesh	39	5	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf164	Banshee.mesh	40	5	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf164	Banshee.mesh	40	5	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf165	Elf.mesh	41	5	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf166	RunelordDwarf.mesh	42	5	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster167	Paladin.mesh	43	5	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2666,7 +2666,7 @@ spellEyeEvil
 1	Dwarf2196	Dwarf2.mesh	8	13	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight197	Knight.mesh	2	14	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard198	Wizard.mesh	3	14	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf199	Banshee.mesh	4	14	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf199	Banshee.mesh	4	14	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf200	Elf.mesh	5	14	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf201	RunelordDwarf.mesh	6	14	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster202	Paladin.mesh	7	14	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2701,7 +2701,7 @@ spellEyeEvil
 1	Dwarf2231	Dwarf2.mesh	17	13	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight232	Knight.mesh	11	14	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard233	Wizard.mesh	12	14	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf234	Banshee.mesh	13	14	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf234	Banshee.mesh	13	14	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf235	Elf.mesh	14	14	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf236	RunelordDwarf.mesh	15	14	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster237	Paladin.mesh	16	14	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2736,7 +2736,7 @@ spellEyeEvil
 1	Dwarf2266	Dwarf2.mesh	26	13	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight267	Knight.mesh	20	14	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard268	Wizard.mesh	21	14	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf269	Banshee.mesh	22	14	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf269	Banshee.mesh	22	14	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf270	Elf.mesh	23	14	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf271	RunelordDwarf.mesh	24	14	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster272	Paladin.mesh	25	14	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2771,7 +2771,7 @@ spellEyeEvil
 1	Dwarf2301	Dwarf2.mesh	35	13	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight302	Knight.mesh	29	14	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard303	Wizard.mesh	30	14	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf304	Banshee.mesh	31	14	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf304	Banshee.mesh	31	14	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf305	Elf.mesh	32	14	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf306	RunelordDwarf.mesh	33	14	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster307	Paladin.mesh	34	14	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2806,7 +2806,7 @@ spellEyeEvil
 1	Dwarf2336	Dwarf2.mesh	44	13	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight337	Knight.mesh	38	14	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard338	Wizard.mesh	39	14	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf339	Banshee.mesh	40	14	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf339	Banshee.mesh	40	14	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf340	Elf.mesh	41	14	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf341	RunelordDwarf.mesh	42	14	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster342	Paladin.mesh	43	14	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2841,7 +2841,7 @@ spellEyeEvil
 1	Dwarf2371	Dwarf2.mesh	8	22	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight372	Knight.mesh	2	23	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard373	Wizard.mesh	3	23	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf374	Banshee.mesh	4	23	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf374	Banshee.mesh	4	23	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf375	Elf.mesh	5	23	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf376	RunelordDwarf.mesh	6	23	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster377	Paladin.mesh	7	23	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2876,7 +2876,7 @@ spellEyeEvil
 1	Dwarf2406	Dwarf2.mesh	17	22	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight407	Knight.mesh	11	23	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard408	Wizard.mesh	12	23	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf409	Banshee.mesh	13	23	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf409	Banshee.mesh	13	23	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf410	Elf.mesh	14	23	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf411	RunelordDwarf.mesh	15	23	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster412	Paladin.mesh	16	23	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2911,7 +2911,7 @@ spellEyeEvil
 1	Dwarf2441	Dwarf2.mesh	26	22	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight442	Knight.mesh	20	23	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard443	Wizard.mesh	21	23	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf444	Banshee.mesh	22	23	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf444	Banshee.mesh	22	23	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf445	Elf.mesh	23	23	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf446	RunelordDwarf.mesh	24	23	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster447	Paladin.mesh	25	23	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2946,7 +2946,7 @@ spellEyeEvil
 1	Dwarf2476	Dwarf2.mesh	35	22	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight477	Knight.mesh	29	23	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard478	Wizard.mesh	30	23	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf479	Banshee.mesh	31	23	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf479	Banshee.mesh	31	23	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf480	Elf.mesh	32	23	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf481	RunelordDwarf.mesh	33	23	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster482	Paladin.mesh	34	23	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
@@ -2981,7 +2981,7 @@ spellEyeEvil
 1	Dwarf2511	Dwarf2.mesh	44	22	0	Dwarf2	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Knight512	Knight.mesh	38	23	0	Knight	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	Wizard513	Wizard.mesh	39	23	0	Wizard	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DarkElf514	Banshee.mesh	40	23	0	Banshee	1	0	max	100	0	0	none	Crossbow	nullSkillType	none	0
+1	DarkElf514	Banshee.mesh	40	23	0	Banshee	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Elf515	Elf.mesh	41	23	0	Elf	1	0	max	100	0	0	Bow	none	nullSkillType	none	0
 1	RunelordDwarf516	RunelordDwarf.mesh	42	23	0	RunelordDwarf	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0
 1	NatureMonster517	Paladin.mesh	43	23	0	Paladin	1	0	max	100	0	0	RustyShield	RustySword	nullSkillType	none	0

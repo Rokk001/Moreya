@@ -36,7 +36,7 @@ inline bool readEffectMinimum(std::istream& is, double& minimum)
 //! before any target defenses are subtracted. The passives (the given stat plus alldmg%) multiply the line damage only,
 //! not the weapon ranges.
 //! \param damageLevel The level of the curve: the Strength attribute level for melee, the Dexterity attribute level
-//! for bow and crossbow lines, the creature level for every other line.
+//! for bow lines, the creature level for every other line.
 //! \param passiveStat The damage passive stat of the line: "dmg%" or "spell%".
 inline void scale(const Creature& attacker, double& phyMin, double& phyMax,
     double& magMin, double& magMax, double& eleMin, double& eleMax, double damageLevel,

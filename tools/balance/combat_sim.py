@@ -376,7 +376,7 @@ DEFENSE_KINDS = ("BUFF_SELF Defense", "BUFF_ALLY_Defense", "AURA_ALLY Defense")
 # Damage over time kinds: Value damage in total per cast, absolute, scaled like the skill tree spells, never critical.
 DOT_KINDS = ("BLEED", "POISON", "CURSE_DOT", "BURN_DOT")
 # Groups whose MissileLaunch attack line pays ManaPerCasterShot (the spell-shooting groups, as Creature::getManaCost);
-# any other MissileLaunch first attack line pays ManaPerDragonSecondShot unless the creature carries a bow or crossbow
+# any other MissileLaunch first attack line pays ManaPerDragonSecondShot unless the creature carries a bow
 # or belongs to MARKSMAN_GROUP (the ranged fighters with weapons shoot without mana).
 CASTER_SHOT_GROUPS = ("mage", "healer", "supporter")
 MARKSMAN_GROUP = "marksman"
@@ -531,7 +531,7 @@ class World:
                          cost=self.shot_cost(name))
 
     # Mana cost of one shot of the first attack line, as Creature::getSkillManaCost: a melee line and the first shot of
-    # a creature with a bow or crossbow or of a marksman are free, the spell-shooting groups pay ManaPerCasterShot,
+    # a creature with a bow or of a marksman are free, the spell-shooting groups pay ManaPerCasterShot,
     # every other shooter ManaPerDragonSecondShot.
     def shot_cost(self, name):
         if self.roster.attack(name)[0][0] != "MissileLaunch":
@@ -540,7 +540,7 @@ class World:
             return 0.0
         for hand in ("L", "R"):
             item = self.field(name, "WeaponSpawn" + hand)
-            if item and self.roster.equipment[item][0].get("WeaponType", [""])[0] in ("bow", "crossbow"):
+            if item and self.roster.equipment[item][0].get("WeaponType", [""])[0] == "bow":
                 return 0.0
         if self.field(name, "SkillGroup") in CASTER_SHOT_GROUPS:
             return self.glob["ManaPerCasterShot"]

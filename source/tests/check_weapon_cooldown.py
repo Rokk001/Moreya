@@ -188,7 +188,7 @@ base_creatures = parse_creatures(read_base('config/creatures.cfg'))
 # Weapons: cooldown in turns (shields and other non-weapons have none)
 EXPECTED_WEAPON_COOLDOWN = {
     'ShortSword': 1, 'BasicHammer': 1, 'RustySword': 2, 'BasicSword': 2, 'Sabre': 2, 'Longsword': 3, 'BasicAxe': 3,
-    'Staff': 3, 'Bow': 2, 'Crossbow': 2, 'T2SwordGood': 2, 'T3SwordGood': 3, 'T4SwordGood': 3,
+    'Staff': 3, 'Bow': 2, 'T2SwordGood': 2, 'T3SwordGood': 3, 'T4SwordGood': 3,
     'T2HammerGood': 4, 'T3HammerGood': 5, 'T4HammerGood': 6,
     # weapons that belong to the model: knife and pick count as tools (1 turn), the Defender weapon follows its damage
     'Knife': 1, 'KoboldPick': 1, 'Pickaxe': 1, 'DefenderWeapon': 4,

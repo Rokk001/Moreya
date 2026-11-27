@@ -72,9 +72,6 @@ static const double DEFAULT_ARROW_PULL_DISTANCE = 0.12;
 static const double DEFAULT_ARROW_DRAW_TIME = 1.6;
 static const double DEFAULT_ARROW_RETAKE_GAP = 0.3;
 static const double DEFAULT_ARROW_RELOAD_TIME = 0.45;
-//! Default seconds of the crossbow reload and degrees the crossbow tips when the string is cocked
-static const double DEFAULT_CROSSBOW_RELOAD_TIME = 1.1;
-static const double DEFAULT_CROSSBOW_RELOAD_JOLT = 5.0;
 //! Default for the streak along the weapon tip of a strong melee blow
 static const bool DEFAULT_WEAPON_TRAIL = true;
 //! Default seconds until the streak has faded, its width, and the longest path of the weapon tip it shows
@@ -142,8 +139,6 @@ CreatureReactionConfig::CreatureReactionConfig() :
     mArrowRetakeGap(DEFAULT_ARROW_RETAKE_GAP),
     mArrowReloadTime(DEFAULT_ARROW_RELOAD_TIME),
     mArrowHandOffset(Ogre::Vector3::ZERO),
-    mCrossbowReloadTime(DEFAULT_CROSSBOW_RELOAD_TIME),
-    mCrossbowReloadJolt(DEFAULT_CROSSBOW_RELOAD_JOLT),
     mWeaponTrail(DEFAULT_WEAPON_TRAIL),
     mWeaponTrailLife(DEFAULT_WEAPON_TRAIL_LIFE),
     mWeaponTrailWidth(DEFAULT_WEAPON_TRAIL_WIDTH),
@@ -344,10 +339,6 @@ bool CreatureReactionConfig::loadSettings(std::istream& file)
             mArrowHandOffset = Ogre::Vector3(static_cast<Ogre::Real>(Helper::toDouble(words[1])),
                 static_cast<Ogre::Real>(Helper::toDouble(words[2])), static_cast<Ogre::Real>(Helper::toDouble(words[3])));
         }
-        else if(words[0] == "CrossbowReloadTime")
-            mCrossbowReloadTime = Helper::toDouble(words[1]);
-        else if(words[0] == "CrossbowReloadJolt")
-            mCrossbowReloadJolt = Helper::toDouble(words[1]);
         else if(words[0] == "WeaponTrail")
             mWeaponTrail = (Helper::toUInt32(words[1]) != 0);
         else if(words[0] == "WeaponTrailLife")
