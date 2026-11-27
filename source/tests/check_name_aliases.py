@@ -150,17 +150,29 @@ assert tuning.index("resolveClassName(name)") < tuning.index("new CreatureDefini
     "the tuning of a removed class must go to its successor"
 creature_src_cpp = (repo / "source/entities/Creature.cpp").read_text(encoding="utf-8")
 loader = creature_src_cpp.split("bool Creature::importFromStream(std::istream& is)", 1)[1].split("if(!(is >> mLevel))", 1)[0]
-assert "getGameMap()->resolveClassName(mDefinitionString)" in loader
-assert "isLoadingOldRosterCreatures()" in loader and 'getSeat()->getFaction() == "Hero"' in loader
-assert "NameAliases::resolveOldCreatureClassForSide(mDefinitionString, heroSide)" in loader
+assert "getGameMap()->resolveLoadedClassName(mDefinitionString, getSeat())" in loader
 assert "setMeshName(successor->getMeshName())" in loader, "a replaced creature takes the mesh of its new class"
+# The side rule of the seat is shared by the creature and the ghost loader
+loaded_class = game_map_src.split("std::string GameMap::resolveLoadedClassName(", 1)[1].split("\n}", 1)[0]
+assert loaded_class.index("resolveClassName(className)") < loaded_class.index("mLoadingOldRosterCreatures")
+assert 'seat->getFaction() == "Hero"' in loaded_class
+assert "NameAliases::resolveOldCreatureClassForSide(resolved, heroSide)" in loaded_class
+assert "getClassDescription(sideClass) != nullptr" in loaded_class, "the successor must be a class of the map"
+ghost_src = (repo / "source/entities/GhostEntity.cpp").read_text(encoding="utf-8")
+ghost_loader = ghost_src.split("bool GhostEntity::importFromStream(std::istream& stream)", 1)[1].split("\n}", 1)[0]
+assert ghost_loader.index("setSeat(getGameMap()->getSeatById(seatId));") < \
+    ghost_loader.index("mClassName = getGameMap()->resolveLoadedClassName(mClassName, getSeat());"), \
+    "a ghost of an older file gets the class of its successor, by the side of its seat"
 map_handler = (repo / "source/gamemap/MapHandler.cpp").read_text(encoding="utf-8")
 assert 'CREATURE_ROSTER_INFO_KEY = "CreatureRoster\\t"' in map_handler and "CREATURE_ROSTER_VERSION = 1;" in map_handler
 assert "levelFile << CREATURE_ROSTER_INFO_KEY << CREATURE_ROSTER_VERSION" in map_handler, "files carry the roster"
 creatures_block = map_handler.split("gameMap.setLoadingOldRosterCreatures(oldRosterFile);", 1)
 assert len(creatures_block) == 2 and "Creature::getCreatureFromStream(&gameMap, ss)" in creatures_block[1].split(
     "gameMap.setLoadingOldRosterCreatures(false);\n    OD_LOG_INF", 1)[0], "the side rule is on only for [Creatures]"
-assert map_handler.count("gameMap.setLoadingOldRosterCreatures(false);") == 4, "the side rule is switched off again"
+ghosts_block = map_handler.split("gameMap.setLoadingOldRosterCreatures(oldRosterFile);")
+assert len(ghosts_block) == 3 and 'readGameEntity(gameMap, "Ghosts", GameEntityType::ghostEntity, levelFile)' in \
+    ghosts_block[2].split("gameMap.setLoadingOldRosterCreatures(false);", 1)[0], "the side rule is on for [Ghosts]"
+assert map_handler.count("gameMap.setLoadingOldRosterCreatures(false);") == 5, "the side rule is switched off again"
 
 assert "utils/NameAliases.cpp" in (repo / "CMakeLists.txt").read_text(encoding="utf-8")
 assert (repo / "docs/development/NAME-ALIASES.md").is_file()

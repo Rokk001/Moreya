@@ -10,7 +10,13 @@ creatures of an old savegame written into a temporary folder: one creature of ev
 a keeper-owned, a rogue and a hero-owned DarkElf, and, as a file written with the current roster, a keeper-owned
 DarkElf again. The removed class names are built from fragments, so they are never written out in the repository.
 
-Expected (fixed, counted once from the contract of the roster): the 12 removed classes load as their successors, the
+The real class mapping of the ghost loader (GhostEntity::importFromStream) and GameMap::resolveLoadedClassName, which
+both loaders share, are cut out as well; the old file also holds ghosts of keeper, rogue and hero seats, and the
+current file a keeper and a rogue DarkElf ghost. Crypt and prison save only the names of their corpses and
+prisoners, which are creatures of [Creatures] with their own seat; the probe has one of each.
+
+Expected (fixed, counted once from the contract of the roster): 19 creatures and 6 ghosts in the old file, 2 of each in
+the current file; the 12 removed classes load as their successors, the
 keeper-owned and the rogue DarkElf of the old file as Banshee, the hero-owned DarkElf stays, the keeper-owned DarkElf
 of a current file stays, and a replaced creature takes the mesh of its new class.
 
@@ -83,20 +89,39 @@ OLD_FILE.append((0, "RogueElf", "DarkElf", "Banshee"))
 OLD_FILE.append((2, "HeroElf", "DarkElf", "DarkElf"))
 OLD_FILE.append((2, "HeroSuccessor", SUCCESSORS[4][0], "DarkElf"))
 OLD_FILE.append((1, "KeeperKnight", "Knight", "Knight"))
+# Crypt and prison save only the names of their corpses and prisoners; these are creatures of [Creatures] with their
+# own seat: a keeper's corpse in a crypt becomes Banshee, a hero prisoner stays DarkElf
+OLD_FILE.append((1, "CryptKeeperElf", "DarkElf", "Banshee"))
+OLD_FILE.append((2, "PrisonerHeroElf", "DarkElf", "DarkElf"))
 # A file written with the current roster keeps a keeper-owned DarkElf
 CURRENT_FILE = [(1, "KeeperElfNow", "DarkElf", "DarkElf"), (0, "RogueElfNow", "DarkElf", "DarkElf")]
-assert len(OLD_FILE) == 17 and len(CURRENT_FILE) == 2
+assert len(OLD_FILE) == 19 and len(CURRENT_FILE) == 2
+# The ghosts of the files ([Ghosts], seat of the dead creature): (seat, name, class, expected class after loading)
+OLD_GHOSTS = [
+    (1, "GhostKeeperElf", "DarkElf", "Banshee"), (0, "GhostRogueElf", "DarkElf", "Banshee"),
+    (2, "GhostHeroElf", "DarkElf", "DarkElf"), (1, "GhostKeeperRemoved", SUCCESSORS[1][0], "Ghoul"),
+    (1, "GhostKeeperSuccessorElf", SUCCESSORS[4][0], "Banshee"), (2, "GhostHeroSuccessorElf", SUCCESSORS[4][0], "DarkElf"),
+]
+CURRENT_GHOSTS = [(1, "GhostKeeperElfNow", "DarkElf", "DarkElf"), (0, "GhostRogueElfNow", "DarkElf", "DarkElf")]
+assert len(OLD_GHOSTS) == 6 and len(CURRENT_GHOSTS) == 2
 
 GAME_MAP = read("source/gamemap/GameMap.cpp")
 CREATURE = read("source/entities/Creature.cpp")
 find_function = function(GAME_MAP, "static const CreatureDefinition* findClassDescriptionByName(")
 lookup_function = function(GAME_MAP, "const CreatureDefinition* GameMap::getClassDescription(const string &className)")
 resolve_function = function(GAME_MAP, "std::string GameMap::resolveClassName(const std::string& className)")
+loaded_function = function(GAME_MAP, "std::string GameMap::resolveLoadedClassName(const std::string& className, "
+                                     "const Seat* seat)")
 loader = function(CREATURE, "bool Creature::importFromStream(std::istream& is)")
 start = loader.index("    const std::string loadedClass = mDefinitionString;")
 end = loader.index("is loaded as \" + mDefinitionString);", start)
 end = loader.index("}", end) + 1
 class_mapping = loader[start:end]
+GHOST = read("source/entities/GhostEntity.cpp")
+ghost_loader = function(GHOST, "bool GhostEntity::importFromStream(std::istream& stream)")
+start = ghost_loader.index("    const std::string loadedClass = mClassName;")
+end = ghost_loader.index("is kept as \" + mClassName);", start) + len("is kept as \" + mClassName);")
+ghost_mapping = ghost_loader[start:end]
 
 PROBE = r'''
 #include "utils/NameAliases.h"
@@ -139,6 +164,7 @@ class GameMap
 public:
     const CreatureDefinition* getClassDescription(const std::string& className);
     std::string resolveClassName(const std::string& className);
+    std::string resolveLoadedClassName(const std::string& className, const Seat* seat);
     bool isLoadingOldRosterCreatures() const { return mLoadingOldRosterCreatures; }
     std::vector<std::pair<const CreatureDefinition*,CreatureDefinition*> > mClassDescriptions;
     bool mLoadingOldRosterCreatures = false;
@@ -149,6 +175,27 @@ public:
 @LOOKUP@
 
 @RESOLVE@
+
+@LOADED@
+
+// Stand-in of the ghost with the fields the class mapping of the ghost loader uses
+class GhostEntity
+{
+public:
+    GhostEntity(GameMap* gameMap, Seat* seat, const std::string& name, const std::string& className) :
+        mGameMap(gameMap), mSeat(seat), mName(name), mClassName(className) {}
+    GameMap* getGameMap() const { return mGameMap; }
+    Seat* getSeat() const { return mSeat; }
+    // The class mapping of GhostEntity::importFromStream, cut out of the source
+    void mapClass()
+    {
+@GHOST@
+    }
+    GameMap* mGameMap;
+    Seat* mSeat;
+    std::string mName;
+    std::string mClassName;
+};
 
 // Stand-in of the creature with the fields the class mapping of the loader uses
 class Creature
@@ -209,12 +256,23 @@ int main(int argc, char** argv)
             creature.mapClass();
             std::cout << creature.mName << " " << creature.mDefinitionString << " " << creature.mMeshName << "\n";
         }
+        else if(word == "ghost")
+        {
+            int seat = 0;
+            std::string name;
+            std::string className;
+            input >> seat >> name >> className;
+            GhostEntity ghost(&gameMap, seats[seat], name, className);
+            ghost.mapClass();
+            std::cout << ghost.mName << " " << ghost.mClassName << " Ghost\n";
+        }
     }
     return 0;
 }
 '''
 PROBE = (PROBE.replace("@FIND@", find_function).replace("@LOOKUP@", lookup_function)
-         .replace("@RESOLVE@", resolve_function).replace("@MAPPING@", class_mapping))
+         .replace("@RESOLVE@", resolve_function).replace("@LOADED@", loaded_function)
+         .replace("@MAPPING@", class_mapping).replace("@GHOST@", ghost_mapping))
 
 
 def main():
@@ -228,8 +286,10 @@ def main():
         lines = ["class " + name for name in MAP_CLASSES]
         lines.append("file old")
         lines += ["creature %d %s %s" % entry[:3] for entry in OLD_FILE]
+        lines += ["ghost %d %s %s" % entry[:3] for entry in OLD_GHOSTS]
         lines.append("file current")
         lines += ["creature %d %s %s" % entry[:3] for entry in CURRENT_FILE]
+        lines += ["ghost %d %s %s" % entry[:3] for entry in CURRENT_GHOSTS]
         save = os.path.join(folder, "oldsave.txt")
         with open(save, "w", encoding="utf-8") as handle:
             handle.write("\n".join(lines) + "\n")
@@ -269,7 +329,13 @@ def main():
     found = set(loaded[name][0] for seat, name, old, _ in OLD_FILE if old not in MAP_CLASSES and seat == 1)
     if found != set(new if new != "DarkElf" else "Banshee" for _, new in SUCCESSORS):
         failures.append("successors found " + repr(sorted(found)))
-    if not re.search(r"getClassDescription\(sideClass\) != nullptr", class_mapping):
+    for seat, name, old, expected in OLD_GHOSTS + CURRENT_GHOSTS:
+        if name not in loaded:
+            failures.append("ghost " + name + " was not loaded")
+        elif loaded[name] != (expected, "Ghost"):
+            failures.append("ghost %s (%s, seat %s) is kept as %s, expected %s" % (name, "removed class" if old not in
+                            MAP_CLASSES else old, SEATS[seat], loaded[name][0], expected))
+    if not re.search(r"getClassDescription\(sideClass\) != nullptr", loaded_function):
         failures.append("the side successor is taken only when the map has its class")
 
     phase("old_save_successors", START)

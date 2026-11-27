@@ -166,7 +166,6 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
-#include "utils/NameAliases.h"
 #include "utils/Random.h"
 #include "utils/ResourceManager.h"
 
@@ -1390,14 +1389,7 @@ bool Creature::importFromStream(std::istream& is)
     if(!(is >> mDefinitionString))
         return false;
     const std::string loadedClass = mDefinitionString;
-    mDefinitionString = getGameMap()->resolveClassName(mDefinitionString);
-    if(getGameMap()->isLoadingOldRosterCreatures() && (getSeat() != nullptr))
-    {
-        const bool heroSide = (getSeat()->getFaction() == "Hero");
-        const std::string sideClass = NameAliases::resolveOldCreatureClassForSide(mDefinitionString, heroSide);
-        if((sideClass != mDefinitionString) && (getGameMap()->getClassDescription(sideClass) != nullptr))
-            mDefinitionString = sideClass;
-    }
+    mDefinitionString = getGameMap()->resolveLoadedClassName(mDefinitionString, getSeat());
     if(mDefinitionString != loadedClass)
     {
         const CreatureDefinition* successor = getGameMap()->getClassDescription(mDefinitionString);

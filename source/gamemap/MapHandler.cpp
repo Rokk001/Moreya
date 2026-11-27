@@ -298,7 +298,8 @@ OfficialLevels::EditorSaveTarget resolveEditorSaveTarget(const std::string& targ
 //! \brief Loads map state and reports the failing section, retaining optional legacy sections. The optional
 //! [CombatGroups] section (raid registry and running combat groups) and the optional [Raid] section (gate, countdown
 //! and raid groups) come last. A shipped level is first compared with the checksum compiled into the game. The
-//! creatures of a file without the CreatureRoster line of the [Info] block are read as creatures of an older roster.
+//! creatures and ghosts of a file without the CreatureRoster line of the [Info] block are read as those of an older
+//! roster.
 bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool strictOfficialCheck)
 {
     lastLoadError.clear();
@@ -918,7 +919,12 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap, bool str
     if(levelFile >> nextParam)
     {
         levelFile.seekg(ghostPosition);
-        if(nextParam == "[Ghosts]" && !readGameEntity(gameMap, "Ghosts", GameEntityType::ghostEntity, levelFile))
+        // The ghosts of an older file are mapped by the side of their seat like its creatures (GhostEntity)
+        gameMap.setLoadingOldRosterCreatures(oldRosterFile);
+        const bool ghostsRead = (nextParam != "[Ghosts]") ||
+            readGameEntity(gameMap, "Ghosts", GameEntityType::ghostEntity, levelFile);
+        gameMap.setLoadingOldRosterCreatures(false);
+        if(!ghostsRead)
         {
             setLoadError("Invalid Ghosts section, file=" + fileName);
             return false;
