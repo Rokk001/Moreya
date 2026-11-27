@@ -14,7 +14,8 @@ import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The content files of the sack (core-models package)
-SACK_FILES = ('materials/scripts/GoldSack.material', 'materials/textures/GoldSack.png')
+SACK_FILES = ('materials/scripts/GoldSack.material', 'materials/textures/GoldSackMeshy.png') + tuple(
+    'models/GoldSack_%d.mesh' % size for size in range(1, 5))
 
 
 def read(path):
@@ -43,16 +44,16 @@ assert 'carriedEnt->setVisible(true)' in render
 assert 'sizeCount = 4' in header
 assert 'GoldstackLv' in loose
 assert 'GoldstackLv1' in read('source/entities/TreasuryObject.cpp')
-# Assets: material, texture, generator, credits, build.
+# Assets: material, texture, the four pouch meshes, credits, build.
 missing_content = [name for name in SACK_FILES if content_packages.data_file(repo, name) is None]
 if not missing_content:
     assert 'material GoldSack' in content_packages.read_text(repo, 'materials/scripts/GoldSack.material')
-    assert content_packages.data_file(repo, 'materials/textures/GoldSack.png').exists()
+    assert 'texture GoldSackMeshy.png' in content_packages.read_text(repo, 'materials/scripts/GoldSack.material')
     # The row of a moved asset stands in the CREDITS of the content repository (public CREDITS plus that one)
-    assert 'GoldSack.png' in room_packages.credits_text(repo)
+    assert 'GoldSackMeshy.png' in room_packages.credits_text(repo)
+    assert all('GoldSack_%d.mesh' % size in room_packages.credits_text(repo) for size in range(1, 5))
 else:
     content_packages.unchecked('check_gold_elsewhere', missing_content)
-assert (repo / 'tools/treasury-gold/generate_gold_sack.py').exists()
 assert 'LooseGoldMesh.cpp' in read('CMakeLists.txt')
 # Veins: brighter gold wall shader with a glint, brighter gem material.
 frag = read('shaders/GoldDistortion.frag')

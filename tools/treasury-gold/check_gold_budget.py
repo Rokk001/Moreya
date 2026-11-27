@@ -24,7 +24,10 @@ import content_packages  # noqa: E402
 # full, and piles far from the camera use the reduced mesh (16 triangles).
 MAX_TRIANGLES_PER_PILE = 250
 MAX_TRIANGLES_PER_HEAP = 150
-MAX_TRIANGLES_PER_SACK = 400
+# The coin pouch is a shipped Meshy model (was a built mesh of at most 400); only workers and thieves carry one
+MAX_TRIANGLES_PER_SACK = 3300
+# Triangles of each of the four pouch meshes GoldSack_1..4 (counted once)
+SACK_MESH_TRIANGLES = 3280
 MAX_TRIANGLES_100_TILE_ROOM = 25000
 # Draw calls: settled piles are drawn by one static batch per room (two materials per batch)
 MAX_DRAW_CALLS_100_TILE_ROOM = 2
@@ -76,8 +79,6 @@ def main():
     reduced_surface_verts = 1 + sectors * reduced_rings
     heap_rings = constant(loose, 'HeapRings')
     heap_sectors = constant(loose, 'HeapSectors')
-    sack_sectors = constant(loose, 'SackSectors')
-    profile_count = constant(loose, 'ProfileCount')
 
     layer = read('source/rooms/TreasuryGoldLayer.h')
     coin_sides = constant(pile, 'CoinSides')
@@ -100,8 +101,7 @@ def main():
     pile_verts = {'full': full_surface_verts + detail_verts, 'reduced': reduced_surface_verts}
     heap_tris = 2 * heap_rings * heap_sectors
     heap_verts = (heap_rings + 1) * heap_sectors
-    sack_tris = 2 * (profile_count - 1) * sack_sectors + heap_tris
-    sack_verts = profile_count * sack_sectors + heap_verts
+    sack_tris = SACK_MESH_TRIANGLES
 
     failures = []
 
@@ -144,7 +144,7 @@ def main():
     print('empty tile scatter   %9d' % scatter_tris)
     print('pile (reduced)       %9d  %8d' % (pile_tris['reduced'], pile_verts['reduced']))
     print('floor heap           %9d  %8d' % (heap_tris, heap_verts))
-    print('carried sack         %9d  %8d' % (sack_tris, sack_verts))
+    print('carried sack         %9d  (shipped mesh)' % sack_tris)
     print()
     print('draw calls per room (a square room; before = one object per tile with a pile section and a coin/gem')
     print('section, after = one static batch per room)')
