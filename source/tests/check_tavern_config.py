@@ -26,13 +26,19 @@ Calls (from the repository root):
 """
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The mixed tables come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
 
 
-# Returns the text of a repository file.
+# Returns the text of a repository file; a mixed table of config/ comes joined with its own rows of the content.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Returns the key -> value words of the first block [tag]...[/tag] of a text (comments skipped).
@@ -73,7 +79,7 @@ skills_cfg = read('config/skills.cfg')
 # 1. Every key of the [Tavern] block with the value of the design (sections 4 and 5 of the design)
 TAVERN = {
     'ThirstSeek': '80', 'UrgeFromBeer': '15', 'UrgeFromWater': '15', 'BeerPrice': '5', 'BeerMood': '25',
-    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'WaterDrinkTurns': '14', 'BeerDrinkTurns': '42', 'NextDrinkPercent': '50',
+    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'PourSeconds': '5.0', 'WaterDrinkTurns': '14', 'BeerDrinkTurns': '42', 'NextDrinkPercent': '50',
     'MaxDrinksPerVisit': '5', 'DrunkPerBeer': '25', 'DrunkDecayPerTurn': '0.5', 'StaggerAt': '50',
     'StaggerSpeedFactor': '0.5', 'VomitAt': '75', 'HangoverAt': '50', 'HangoverTurns': '252',
     'HangoverWorkFactor': '0.5', 'HangoverMood': '-16.67', 'GameChancePercent': '50', 'GameTurns': '8',
@@ -83,26 +89,28 @@ TAVERN = {
     'SlapCritPerLevel': '0.25', 'SlapDuelLoseBelowHp': '30', 'DuelKoTurns': '42', 'GameWinnerXp': '2.86',
     'TavernNoticeSeconds': '60',
 }
-tavern = block_values(global_cfg, 'Tavern')
-for key, value in TAVERN.items():
-    assert tavern.get(key) == value, '[Tavern] ' + key + ' is ' + str(tavern.get(key)) + ', expected ' + value
-    assert_documented(global_cfg, key, 'global.cfg')
-extra = set(tavern) - set(TAVERN)
-assert not extra, '[Tavern] keys without a design value: ' + ', '.join(sorted(extra))
-# BeerMoodTurns and NoCoinMoodTurns are gone: the beer and the lack of coin are one-time events, nothing runs over turns
-for gone in ('BeerMoodTurns', 'NoCoinMoodTurns'):
-    assert gone not in tavern and gone not in global_cfg, gone + ' must be removed with its documentation'
+if WITH_CONTENT:
+    tavern = block_values(global_cfg, 'Tavern')
+    for key, value in TAVERN.items():
+        assert tavern.get(key) == value, '[Tavern] ' + key + ' is ' + str(tavern.get(key)) + ', expected ' + value
+        assert_documented(global_cfg, key, 'global.cfg')
+    extra = set(tavern) - set(TAVERN)
+    assert not extra, '[Tavern] keys without a design value: ' + ', '.join(sorted(extra))
+    # BeerMoodTurns and NoCoinMoodTurns are gone: the beer and the lack of coin are one-time events, nothing runs over turns
+    for gone in ('BeerMoodTurns', 'NoCoinMoodTurns'):
+        assert gone not in tavern and gone not in global_cfg, gone + ' must be removed with its documentation'
 # The turn values are the seconds of the design times the turns per second of the game (ODApplication::turnsPerSecond)
 turns_per_second_line = re.search(r'^double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp'), re.M)
 assert turns_per_second_line is not None, 'ODApplication::turnsPerSecond is missing'
 turns_per_second = float(turns_per_second_line.group(1))
 assert turns_per_second == 1.4, 'the design times assume 1.4 turns per second'
-# Decisions 835 and 866: one beer lasts 30 seconds and one water lasts 10 seconds
-for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30), ('BeerDrinkTurns', 30), ('WaterDrinkTurns', 10)):
-    assert round(seconds * turns_per_second) == float(tavern[key]), key + ' must be ' + str(seconds) + ' s x turnsPerSecond'
-# The loser of a slap duel lies 30 real seconds (TAVERN-PLAN D18, decision 854): DuelKoTurns turns of the room upkeep, one
-# upkeep per game turn, then the get-up of CreatureGetUpSeconds follows
-assert abs(float(tavern['DuelKoTurns']) / turns_per_second - 30.0) < 1e-9, 'DuelKoTurns must last exactly 30 s'
+if WITH_CONTENT:
+    # Decisions 835 and 866: one beer lasts 30 seconds and one water lasts 10 seconds
+    for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30), ('BeerDrinkTurns', 30), ('WaterDrinkTurns', 10)):
+        assert round(seconds * turns_per_second) == float(tavern[key]), key + ' must be ' + str(seconds) + ' s x turnsPerSecond'
+    # The loser of a slap duel lies 30 real seconds (TAVERN-PLAN D18, decision 854): DuelKoTurns turns of the room upkeep, one
+    # upkeep per game turn, then the get-up of CreatureGetUpSeconds follows
+    assert abs(float(tavern['DuelKoTurns']) / turns_per_second - 30.0) < 1e-9, 'DuelKoTurns must last exactly 30 s'
 room_source = read('source/rooms/RoomTavern.cpp')
 knock_out = room_source[room_source.index('void RoomTavern::knockOut('):room_source.index('bool RoomTavern::fallNextToBench(')]
 # Decision 897: the count starts one turn higher, because upkeepSpots counts the turn of the knock-out down right after
@@ -119,105 +127,108 @@ spots = room_source[room_source.index('void RoomTavern::upkeepSpots()'):room_sou
 ko_case = spots[spots.index('case TavernGuestState::ko:'):spots.index('case TavernGuestState::getUp:')]
 assert ko_case.count('--spot.mTurnsLeft;') == 1 and 'setSpotState(spot, TavernGuestState::getUp, getUpTurns());' in ko_case, \
     'the lying counts down one turn per upkeep and then the loser gets up'
-# The model of doUpkeep: in the turn of the knock-out upkeepGames sets DuelKoTurns + KNOCK_OUT_TURN and upkeepSpots counts
-# that turn down; every turn after it is one more turn lying, until the count reaches 0 and the get-up starts (decision
-# 897: 42 turns, 30 s; before, 41 turns, 29.3 s)
-left = int(tavern['DuelKoTurns']) + 1
-left -= 1
-lying = 0
-while True:
-    lying += 1
+if WITH_CONTENT:
+    # The model of doUpkeep: in the turn of the knock-out upkeepGames sets DuelKoTurns + KNOCK_OUT_TURN and upkeepSpots counts
+    # that turn down; every turn after it is one more turn lying, until the count reaches 0 and the get-up starts (decision
+    # 897: 42 turns, 30 s; before, 41 turns, 29.3 s)
+    left = int(tavern['DuelKoTurns']) + 1
     left -= 1
-    if left <= 0:
-        break
-assert lying == 42, lying
-assert abs(lying / turns_per_second - 30.0) < 1e-9, 'the loser lies 30 real seconds'
+    lying = 0
+    while True:
+        lying += 1
+        left -= 1
+        if left <= 0:
+            break
+    assert lying == 42, lying
+    assert abs(lying / turns_per_second - 30.0) < 1e-9, 'the loser lies 30 real seconds'
 
 # The slap duel (decisions 856 and 858): one slap 4 to 10 s, the pause after it 3 to 6 s, drawn anew every time
 rooms_values = block_values(rooms_cfg, 'Rooms')
 for key, value in (('TavernSlapSecondsMin', '4'), ('TavernSlapSecondsMax', '10'), ('TavernSlapPauseSecondsMin', '3'),
                    ('TavernSlapPauseSecondsMax', '6')):
-    assert rooms_values.get(key) == value, key + ' must be ' + value
-    assert re.search(r'^#\s*' + key + r'\s+\(double, seconds\)', rooms_cfg, re.M), key + ' needs a doc line in seconds'
+    if WITH_CONTENT:
+        assert rooms_values.get(key) == value, key + ' must be ' + value
+        assert re.search(r'^#\s*' + key + r'\s+\(double, seconds\)', rooms_cfg, re.M), key + ' needs a doc line in seconds'
     assert '"' + key + '"' in room_source, key + ' is read by RoomTavern.cpp'
 
-# 2. Values derived from other keys
-rooms = block_values(rooms_cfg, 'Rooms')
-assert rooms.get('TavernCostPerTile') == rooms.get('HatcheryCostPerTile') == '110', 'TavernCostPerTile must equal HatcheryCostPerTile'
-hp_values = {}
-for line in rooms_cfg.splitlines():
-    words = line.split()
-    if len(words) == 2 and words[0] in ('TavernHP', 'HatcheryHP'):
-        hp_values[words[0]] = words[1]
-assert hp_values.get('TavernHP') == hp_values.get('HatcheryHP') == '30', 'TavernHP must equal HatcheryHP'
-# A type without a wage (FeeBase 0) does not set the price: the cheapest creature that is paid does
-fee_bases = [float(v) for v in re.findall(r'^\s*FeeBase\s+(\S+)', creatures_cfg, re.M) if float(v) > 0]
-assert len(fee_bases) >= 30, 'FeeBase lines missing'
-assert float(tavern['BeerPrice']) == min(fee_bases) / 10, 'BeerPrice must be the smallest FeeBase / 10'
-assert float(tavern['GameWinnerXp']) == float(rooms['TrainHallXpPerAttack']), 'GameWinnerXp must equal TrainHallXpPerAttack'
-expected_dirt = round(0.8077 / (0.557 * 25 / (float(tavern['DrinkTurns']) + 1)), 4)
-assert float(rooms['TavernDirtPerDrink']) == expected_dirt, 'TavernDirtPerDrink is ' + rooms['TavernDirtPerDrink'] + ', expected ' + str(expected_dirt)
-for key in ('TavernCostPerTile', 'TavernDirtPerDrink'):
-    assert_documented(rooms_cfg, key, 'rooms.cfg')
-# TavernHP is named in the comment of TavernCostPerTile, like the other room hit points are named next to their cost
-assert re.search(r'^#.*TavernHP', rooms_cfg, re.M), 'TavernHP is not documented in the header of rooms.cfg'
-
-# 3. Per creature type
-seen = []
-with_hunger = []
-without_hunger = []
-for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
-    fields = {}
-    for line in block.splitlines():
+if WITH_CONTENT:
+    # 2. Values derived from other keys
+    rooms = block_values(rooms_cfg, 'Rooms')
+    assert rooms.get('TavernCostPerTile') == rooms.get('HatcheryCostPerTile') == '110', 'TavernCostPerTile must equal HatcheryCostPerTile'
+    hp_values = {}
+    for line in rooms_cfg.splitlines():
         words = line.split()
-        if len(words) >= 2 and not words[0].startswith('#'):
-            fields.setdefault(words[0], words[1])
-    name = fields.get('Name')
-    if name is None:
-        continue
-    seen.append(name)
-    moods = inner_lines(block, 'MoodModifiers')
-    affinities = inner_lines(block, 'RoomAffinity')
-    for room in ('Casino', 'Arena', 'Tavern'):
-        assert room in affinities and len(affinities[room]) >= 2, name + ': room affinity line ' + room + ' missing'
-    assert 'ThirstGrowth/Turn' in fields, name + ': ThirstGrowth/Turn missing (an explicit value is written for every type)'
-    if 'Hunger' in moods:
-        with_hunger.append(name)
-        assert moods.get('Thirst') == moods['Hunger'], name + ': Thirst mood line must equal the Hunger line'
-        assert fields['ThirstGrowth/Turn'] == fields['HungerGrowth/Turn'], name + ': ThirstGrowth/Turn must equal HungerGrowth/Turn'
-        assert affinities['Tavern'][0] == affinities['Casino'][0], name + ': Tavern likeness must equal the Casino likeness'
-        assert affinities['Tavern'][1] == '1.0', name + ': Tavern efficiency must be 1.0'
-    else:
-        # No hunger, no thirst: explicit 0 growth, no mood line, never visits a tavern
-        without_hunger.append(name)
-        assert 'Thirst' not in moods, name + ' has no Hunger mood line, so it must not have a Thirst mood line'
-        assert float(fields['ThirstGrowth/Turn']) == 0.0, name + ': ThirstGrowth/Turn must be an explicit 0 without a Hunger line'
-        assert float(affinities['Tavern'][0]) == 0.0, name + ': Tavern likeness must be 0 without a Hunger line'
-assert len(seen) == 35 and len(set(seen)) == 35, 'expected 35 creature types, found ' + str(len(seen))
-assert sorted(without_hunger) == ['Champion', 'DwarfWorker', 'Kobold', 'Skeleton'], 'types without a Hunger line: ' + ', '.join(without_hunger)
-assert_documented(creatures_cfg, 'ThirstGrowth/Turn', 'creatures.cfg')
-assert re.search(r'^#.*\bThirst\b.*mood', creatures_cfg, re.M | re.I) or 'Thirst line' in creatures_cfg, 'creatures.cfg must document the Thirst mood line'
-assert re.search(r'^#.*Tavern', creatures_cfg, re.M), 'creatures.cfg must document the Tavern affinity'
-assert re.search(r'^#.*no hunger.*no thirst|^#.*without (a )?Hunger', creatures_cfg, re.M | re.I), \
-    'creatures.cfg must document that a type without hunger has no thirst'
+        if len(words) == 2 and words[0] in ('TavernHP', 'HatcheryHP'):
+            hp_values[words[0]] = words[1]
+    assert hp_values.get('TavernHP') == hp_values.get('HatcheryHP') == '30', 'TavernHP must equal HatcheryHP'
+    # A type without a wage (FeeBase 0) does not set the price: the cheapest creature that is paid does
+    fee_bases = [float(v) for v in re.findall(r'^\s*FeeBase\s+(\S+)', creatures_cfg, re.M) if float(v) > 0]
+    assert len(fee_bases) >= 30, 'FeeBase lines missing'
+    assert float(tavern['BeerPrice']) == min(fee_bases) / 10, 'BeerPrice must be the smallest FeeBase / 10'
+    assert float(tavern['GameWinnerXp']) == float(rooms['TrainHallXpPerAttack']), 'GameWinnerXp must equal TrainHallXpPerAttack'
+    expected_dirt = round(0.8077 / (0.557 * 25 / (float(tavern['DrinkTurns']) + 1)), 4)
+    assert float(rooms['TavernDirtPerDrink']) == expected_dirt, 'TavernDirtPerDrink is ' + rooms['TavernDirtPerDrink'] + ', expected ' + str(expected_dirt)
+    for key in ('TavernCostPerTile', 'TavernDirtPerDrink'):
+        assert_documented(rooms_cfg, key, 'rooms.cfg')
+    # TavernHP is named in the comment of TavernCostPerTile, like the other room hit points are named next to their cost
+    assert re.search(r'^#.*TavernHP', rooms_cfg, re.M), 'TavernHP is not documented in the header of rooms.cfg'
 
-# 4. Research: costs, the free start entry and the one effect line of the portal cooldown
-skills = block_values(skills_cfg, 'Skills')
-assert skills.get('roomTavern') == '100' and skills.get('tavernBeer') == '250', 'skills.cfg costs of roomTavern / tavernBeer'
-assert skills['roomTavern'] == skills['roomHatchery'], 'the tavern costs like the hatchery'
-free_block = re.search(r'^\[FreeLevelOne\]\s*$(.*?)^\[/FreeLevelOne\]', skills_cfg, re.M | re.S)
-assert free_block is not None
-free = [w.split()[0] for w in free_block.group(1).splitlines() if w.split() and not w.split()[0].startswith('#')]
-assert 'roomTavern' in free and len(free) == 6, 'FreeLevelOne must hold 6 entries including roomTavern: ' + str(free)
-effects = block_values(skills_cfg, 'ResearchEffects')
-assert effects.get('tavernBeer') == 'PortalCooldown', 'ResearchEffects: tavernBeer PortalCooldown missing'
-effect_lines = [re.split(r'\s+', line.strip()) for line in skills_cfg.splitlines() if re.match(r'^\s*tavernBeer\s', line)]
-beer_effect_lines = [l for l in effect_lines if len(l) >= 3 and l[1] == 'PortalCooldown']
-assert len(beer_effect_lines) == 1, 'exactly one tavernBeer effect line is allowed'
-assert beer_effect_lines[0][2:] == ['mul', '1.0', '0.9', '0.8'], 'tavernBeer effect line must be: mul 1.0 0.9 0.8'
-assert not [l for l in effect_lines if l[0] == 'roomTavern'], 'roomTavern has no effect line'
-for key in ('roomTavern', 'tavernBeer'):
-    assert_documented(skills_cfg, key, 'skills.cfg')
+    # 3. Per creature type
+    seen = []
+    with_hunger = []
+    without_hunger = []
+    for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
+        fields = {}
+        for line in block.splitlines():
+            words = line.split()
+            if len(words) >= 2 and not words[0].startswith('#'):
+                fields.setdefault(words[0], words[1])
+        name = fields.get('Name')
+        if name is None:
+            continue
+        seen.append(name)
+        moods = inner_lines(block, 'MoodModifiers')
+        affinities = inner_lines(block, 'RoomAffinity')
+        for room in ('Casino', 'Arena', 'Tavern'):
+            assert room in affinities and len(affinities[room]) >= 2, name + ': room affinity line ' + room + ' missing'
+        assert 'ThirstGrowth/Turn' in fields, name + ': ThirstGrowth/Turn missing (an explicit value is written for every type)'
+        if 'Hunger' in moods:
+            with_hunger.append(name)
+            assert moods.get('Thirst') == moods['Hunger'], name + ': Thirst mood line must equal the Hunger line'
+            assert fields['ThirstGrowth/Turn'] == fields['HungerGrowth/Turn'], name + ': ThirstGrowth/Turn must equal HungerGrowth/Turn'
+            assert affinities['Tavern'][0] == affinities['Casino'][0], name + ': Tavern likeness must equal the Casino likeness'
+            assert affinities['Tavern'][1] == '1.0', name + ': Tavern efficiency must be 1.0'
+        else:
+            # No hunger, no thirst: explicit 0 growth, no mood line, never visits a tavern
+            without_hunger.append(name)
+            assert 'Thirst' not in moods, name + ' has no Hunger mood line, so it must not have a Thirst mood line'
+            assert float(fields['ThirstGrowth/Turn']) == 0.0, name + ': ThirstGrowth/Turn must be an explicit 0 without a Hunger line'
+            assert float(affinities['Tavern'][0]) == 0.0, name + ': Tavern likeness must be 0 without a Hunger line'
+    assert len(seen) == 35 and len(set(seen)) == 35, 'expected 35 creature types, found ' + str(len(seen))
+    assert sorted(without_hunger) == ['Champion', 'DwarfWorker', 'Kobold', 'Skeleton'], 'types without a Hunger line: ' + ', '.join(without_hunger)
+    assert_documented(creatures_cfg, 'ThirstGrowth/Turn', 'creatures.cfg')
+    assert re.search(r'^#.*\bThirst\b.*mood', creatures_cfg, re.M | re.I) or 'Thirst line' in creatures_cfg, 'creatures.cfg must document the Thirst mood line'
+    assert re.search(r'^#.*Tavern', creatures_cfg, re.M), 'creatures.cfg must document the Tavern affinity'
+    assert re.search(r'^#.*no hunger.*no thirst|^#.*without (a )?Hunger', creatures_cfg, re.M | re.I), \
+        'creatures.cfg must document that a type without hunger has no thirst'
+
+    # 4. Research: costs, the free start entry and the one effect line of the portal cooldown
+    skills = block_values(skills_cfg, 'Skills')
+    assert skills.get('roomTavern') == '100' and skills.get('tavernBeer') == '250', 'skills.cfg costs of roomTavern / tavernBeer'
+    assert skills['roomTavern'] == skills['roomHatchery'], 'the tavern costs like the hatchery'
+    free_block = re.search(r'^\[FreeLevelOne\]\s*$(.*?)^\[/FreeLevelOne\]', skills_cfg, re.M | re.S)
+    assert free_block is not None
+    free = [w.split()[0] for w in free_block.group(1).splitlines() if w.split() and not w.split()[0].startswith('#')]
+    assert 'roomTavern' in free and len(free) == 6, 'FreeLevelOne must hold 6 entries including roomTavern: ' + str(free)
+    effects = block_values(skills_cfg, 'ResearchEffects')
+    assert effects.get('tavernBeer') == 'PortalCooldown', 'ResearchEffects: tavernBeer PortalCooldown missing'
+    effect_lines = [re.split(r'\s+', line.strip()) for line in skills_cfg.splitlines() if re.match(r'^\s*tavernBeer\s', line)]
+    beer_effect_lines = [l for l in effect_lines if len(l) >= 3 and l[1] == 'PortalCooldown']
+    assert len(beer_effect_lines) == 1, 'exactly one tavernBeer effect line is allowed'
+    assert beer_effect_lines[0][2:] == ['mul', '1.0', '0.9', '0.8'], 'tavernBeer effect line must be: mul 1.0 0.9 0.8'
+    assert not [l for l in effect_lines if l[0] == 'roomTavern'], 'roomTavern has no effect line'
+    for key in ('roomTavern', 'tavernBeer'):
+        assert_documented(skills_cfg, key, 'skills.cfg')
 
 # Furniture density follows the room area: one table tile per four tiles (a table covers two, so one table per eight)
 # and one keg per six.
@@ -313,4 +324,7 @@ for width in range(3, 9):
                 (width, height, 'a keg stands at a wall')
             assert not any(abs(keg[0] - other[0]) + abs(keg[1] - other[1]) == 1 for other in kegs), (width, height, 'two kegs side by side')
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_tavern_config', ['own rows of config/global.cfg [Tavern]', 'config/rooms.cfg',
+                                                       'config/creatures.cfg', 'config/skills.cfg'])
 print('tavern config ok')

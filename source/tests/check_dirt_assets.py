@@ -1,8 +1,12 @@
 """Dirt, cleaning and toilet assets: pile models and textures, stain and decal models, the toilet seat, icon, particle,
-sounds, the credits rows, and the Relieve / Clean clips in the creature skeletons.
+sounds, the credits rows, and the RelievePit / Relieve / Clean clips in the creature skeletons.
 
 Calls (from the repository root):
   python source/tests/check_dirt_assets.py            plain file checks, no compiler, no game
+
+The game data is read from the public tree and the content packages (scripts/content_packages.py), the CREDITS rows from
+the public CREDITS and the CREDITS of the content repository. Without the content the parts that need the content are
+named as not checked; the asset sources, the public files and the code are still checked.
 """
 from pathlib import Path
 import fnmatch
@@ -14,7 +18,11 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(root / 'scripts'))
 from assets_src import assets_src_dir, resolve  # noqa: E402
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
+
+# The pile models, the stains, the particle, the sounds and the room ambience lie in the content packages
+HAS_CONTENT = content_packages.has_content(root)
 
 # The toilet seat, the toilet floors and the toilet sounds come from the toilet room package; without the package only
 # the other dirt assets are checked
@@ -24,13 +32,25 @@ TOILET = room_packages.has_room(root, 'Toilet')
 PILE_TEXTURE_SIZE = 64
 
 
+# The file of a path: an asset source below the asset sources folder, else the file of the public tree or of a content
+# or room package (a missing path below the repository).
+def data_path(path):
+    if str(path).replace('\\', '/').startswith('assets-src/'):
+        return resolve(root, path)
+    return content_packages.resolve(root, path)
+
+
+# The text of a file (see data_path); a game data file as the game reads it, a mixed table or interface file with its
+# own rows from the content packages.
 def read(path):
-    return resolve(root, path).read_text(encoding='utf-8')
+    if str(path).replace('\\', '/').startswith('assets-src/'):
+        return data_path(path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Returns (width, height) of a PNG file from its header.
 def png_size(path):
-    data = resolve(root, path).read_bytes()
+    data = data_path(path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     return struct.unpack('>II', data[16:24])
 
@@ -45,31 +65,46 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
         if len(words) >= 2 and not words[0].startswith('#'):
             fields.setdefault(words[0], words[1])
     if 'Name' in fields:
+        # the MeshName of a class can be an own row of the content package (Dwarf1, Champion): without the content
+        # such a class is left out and named as not checked below
+        if 'MeshName' not in fields and not HAS_CONTENT:
+            continue
         types[fields['Name']] = fields['MeshName']
-assert len(types) == 35, len(types)
+# Most creature rows are own rows of the content package core-config: without the content only the public rows count
+if HAS_CONTENT:
+    assert len(types) == 35, len(types)
+else:
+    content_packages.unchecked('check_dirt_assets', ['config/creatures.cfg own creature rows'])
 
-materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for folder in [root] + room_packages.package_roots(root)
+materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for folder in [root] + content_packages.package_roots(root)
                     for p in (folder / 'materials' / 'scripts').glob('*.material'))
 credits = room_packages.credits_text(root)
 
 # 1. Pile models and textures: one per creature type, a material each, 64 x 64 textures
+# The Blender sources of the piles (asset sources folder)
 for name in types:
-    assert (root / 'models' / ('Pile_' + name + '.mesh')).is_file(), 'models/Pile_' + name + '.mesh missing'
     assert (assets_src_dir(root) / 'dirt' / ('Pile_' + name + '.blend')).is_file(), 'assets-src/dirt/Pile_' + name + '.blend missing'
-    assert png_size('materials/textures/Pile_' + name + '.png') == (PILE_TEXTURE_SIZE, PILE_TEXTURE_SIZE), name + ' texture size'
-    assert re.search(r'^material Pile_' + name + r'\b', materials, re.M), 'material Pile_' + name + ' missing'
-# Level-specific classes keep their explicitly declared species mesh, including its unchanged pile geometry.
-pile_aliases = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Scarab'}
-expected_piles = {'Pile_' + name + '.mesh' for name in types} | {'Pile_' + name + '.mesh' for name in pile_aliases}
-assert {path.name for path in (root / 'models').glob('Pile_*.mesh')} == expected_piles, 'exactly 35 species piles and three declared-species aliases'
-for alias, original in pile_aliases.items():
-    original_bytes = (root / 'models' / ('Pile_' + original + '.mesh')).read_bytes()
-    assert (root / 'models' / ('Pile_' + alias + '.mesh')).read_bytes() == original_bytes, alias + ' changes the original geometry'
-    assert ('Pile_' + original + '\n').encode('ascii') in original_bytes, original + ' pile material is missing'
-    assert re.search(r'^material Pile_' + original + r'\b', materials, re.M), original + ' pile material has no definition'
-    alias_credit = next((line for line in credits.splitlines() if line.startswith('models/Pile_' + alias + '.mesh ')), '')
-    assert 'OD Team' in alias_credit and 'GPLv3+' in alias_credit and 'models/Pile_' + original + '.mesh' in alias_credit, alias + ' needs its own original-source credit'
-assert len(list((root / 'materials' / 'textures').glob('Pile_*.png'))) == 35, 'exactly 35 pile textures'
+if not HAS_CONTENT:
+    content_packages.unchecked('check_dirt_assets', ['pile models, textures and materials'])
+else:
+    for name in types:
+        assert content_packages.data_file(root, 'models/Pile_' + name + '.mesh') is not None, 'models/Pile_' + name + '.mesh missing'
+        assert png_size('materials/textures/Pile_' + name + '.png') == (PILE_TEXTURE_SIZE, PILE_TEXTURE_SIZE), name + ' texture size'
+        assert re.search(r'^material Pile_' + name + r'\b', materials, re.M), 'material Pile_' + name + ' missing'
+    # Level-specific classes keep their explicitly declared species mesh, including its unchanged pile geometry.
+    pile_aliases = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Scarab'}
+    expected_piles = {'Pile_' + name + '.mesh' for name in types} | {'Pile_' + name + '.mesh' for name in pile_aliases}
+    assert {path.name for path in content_packages.data_glob(root, 'models', 'Pile_*.mesh')} == expected_piles, 'exactly 35 species piles and three declared-species aliases'
+    for alias, original in pile_aliases.items():
+        original_bytes = data_path('models/Pile_' + original + '.mesh').read_bytes()
+        assert data_path('models/Pile_' + alias + '.mesh').read_bytes() == original_bytes, alias + ' changes the original geometry'
+        assert ('Pile_' + original + '\n').encode('ascii') in original_bytes, original + ' pile material is missing'
+        assert re.search(r'^material Pile_' + original + r'\b', materials, re.M), original + ' pile material has no definition'
+        alias_credit = next((line for line in credits.splitlines() if line.startswith('models/Pile_' + alias + '.mesh ')), '')
+        # GPLv3+ in the public CREDITS, "All rights reserved" for the row in the CREDITS of the content repository
+        assert 'OD Team' in alias_credit and room_packages.licence_ok(root, alias_credit, 'GPLv3+') and \
+            'models/Pile_' + original + '.mesh' in alias_credit, alias + ' needs its own original-source credit'
+    assert len(content_packages.data_glob(root, 'materials/textures', 'Pile_*.png')) == 35, 'exactly 35 pile textures'
 
 # 2. Stain, decals and the seat: model, texture, material, Blender source
 for name, source in [('BloodStain', 'assets-src/dirt/BloodStain.blend'), ('DirtStage1', 'assets-src/dirt/DirtStage1.blend'),
@@ -78,39 +113,64 @@ for name, source in [('BloodStain', 'assets-src/dirt/BloodStain.blend'), ('DirtS
     assert resolve(root, source).is_file(), source + ' missing'
     if name == 'ToiletSeat' and not TOILET:
         continue
-    assert resolve(root, 'models/' + name + '.mesh').is_file(), name + '.mesh missing'
-    assert resolve(root, 'materials/textures/' + name + '.png').is_file(), name + '.png missing'
+    if not HAS_CONTENT:
+        content_packages.unchecked('check_dirt_assets', ['models/' + name + '.mesh, its texture and material'])
+        continue
+    assert data_path('models/' + name + '.mesh').is_file(), name + '.mesh missing'
+    assert data_path('materials/textures/' + name + '.png').is_file(), name + '.png missing'
     assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
 
 # 3. Particle, icon and the sounds
-assert re.search(r'^particle_system DirtFlies\b', read('particles/DirtFlies.particle'), re.M), 'particle DirtFlies missing'
-imageset = read('gui/ODIcons.imageset')
-assert 'name="ToiletButton"' in imageset, 'icon ToiletButton missing in ODIcons.imageset'
-assert (root / 'gui' / 'ODIcons.png').is_file()
+if not HAS_CONTENT:
+    content_packages.unchecked('check_dirt_assets', ['particles/DirtFlies.particle', 'dirt sounds', 'config/roomAmbience.cfg'])
+else:
+    assert re.search(r'^particle_system DirtFlies\b', read('particles/DirtFlies.particle'), re.M), 'particle DirtFlies missing'
+# The icon atlas lies whole in a content package
+if not HAS_CONTENT:
+    content_packages.unchecked('check_dirt_assets', ['gui/ODIcons.imageset', 'gui/ODIcons.png'])
+else:
+    imageset = read('gui/ODIcons.imageset')
+    assert 'name="ToiletButton"' in imageset, 'icon ToiletButton missing in ODIcons.imageset'
+    assert data_path('gui/ODIcons.png').is_file()
 for sound in ['Creatures/Default/Relieve/FxRelieve01.ogg', 'Creatures/Default/Clean/FxClean01.ogg',
               'Rooms/Toilet/Flush/FxToiletFlush01.ogg', 'Rooms/Toilet/Drip/FxToiletDrip01.ogg']:
-    if sound.startswith('Rooms/Toilet/') and not TOILET:
+    if (sound.startswith('Rooms/Toilet/') and not TOILET) or not HAS_CONTENT:
         continue
-    assert resolve(root, 'sounds/Spatial/' + sound).is_file(), 'sounds/Spatial/' + sound + ' missing'
-ambience = read('config/roomAmbience.cfg')
-assert 'ToiletDrip' in ambience, 'roomAmbience.cfg has no toilet entry'
+    assert data_path('sounds/Spatial/' + sound).is_file(), 'sounds/Spatial/' + sound + ' missing'
+if HAS_CONTENT:
+    ambience = read('config/roomAmbience.cfg')
+    assert 'ToiletDrip' in ambience, 'roomAmbience.cfg has no toilet entry'
 
-# 4. Clips: every creature skeleton has Relieve, the worker skeletons also Clean (binary skeleton: names end with a line feed)
+# 4. Clips: the 26 humanoid creature types have RelievePit (bent over, on a seat and on the floor), the other creature
+# skeletons at least the Relieve clip the client falls back to; the worker skeletons also Clean (binary skeleton: names end with a line feed)
 skeletons = {}
 for name, mesh in types.items():
-    data = (root / 'models' / mesh).read_bytes()
+    if content_packages.data_file(root, 'models/' + mesh) is None and not HAS_CONTENT:
+        content_packages.unchecked('check_dirt_assets', ['clips of models/' + mesh])
+        continue
+    data = data_path('models/' + mesh).read_bytes()
     found = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', data)
     assert found, mesh + ' has no skeleton'
     skeletons[name] = found[0].decode('ascii') + '.skeleton'
+bent_over = set()
 for name, skeleton in skeletons.items():
-    clips = (root / 'models' / skeleton).read_bytes()
-    assert b'Relieve\n' in clips, skeleton + ' of ' + name + ' has no Relieve clip'
+    clips = data_path('models/' + skeleton).read_bytes()
+    if b'RelievePit\n' in clips:
+        bent_over.add(name)
+    else:
+        assert b'Relieve\n' in clips, skeleton + ' of ' + name + ' has neither RelievePit nor Relieve'
+if HAS_CONTENT:
+    assert len(bent_over) == 26, sorted(bent_over)
+    assert {'Kobold', 'DwarfWorker', 'Knight', 'Troll', 'Skeleton'} <= bent_over, sorted(bent_over)
 for name in ('Kobold', 'DwarfWorker'):
-    clips = (root / 'models' / skeletons[name]).read_bytes()
+    # a worker whose model lies in the content package creatures is already named as not checked above
+    if name not in skeletons and not HAS_CONTENT:
+        continue
+    clips = data_path('models/' + skeletons[name]).read_bytes()
     assert b'Clean\n' in clips, skeletons[name] + ' of ' + name + ' has no Clean clip'
 # The clip names the client asks for
 animation_h = read('source/entities/MovableGameEntity.h')
-assert 'relieve_anim = "Relieve"' in animation_h and 'clean_anim = "Clean"' in animation_h
+assert 'relieve_pit_anim = "RelievePit"' in animation_h and 'clean_anim = "Clean"' in animation_h
 
 # 5. Credits rows in the same change: every file is covered by a row
 credit_lines = credits.splitlines()
@@ -142,14 +202,27 @@ for path in files:
     # The rows of the toilet seat and its source stand in the CREDITS of the content repository
     if room_packages.is_missing_packaged(root, path) or (not TOILET and 'ToiletSeat' in path):
         continue
+    # The rows of the files of the content packages and of their asset sources stand in the CREDITS of the content
+    # repository: without the content a row that is not in the public CREDITS is not checked
+    if not HAS_CONTENT and not path.startswith('tools/') and not credited(path):
+        content_packages.unchecked('check_dirt_assets', ['CREDITS row of ' + path])
+        continue
     assert credited(path), 'CREDITS has no row for ' + path
 assert re.search(r'^gui/ODIcons\.png \(ToiletButton\)', credits, re.M), 'CREDITS row for the toilet icon'
 for skeleton in sorted(set(skeletons.values())):
-    assert re.search(r'^models/' + re.escape(skeleton) + r' \(clip', credits, re.M | re.I), 'CREDITS has no row for the clip in ' + skeleton
+    if not HAS_CONTENT and not re.search(r'^models/' + re.escape(skeleton) + r' \(clip', credits, re.M | re.I):
+        # the row may stand in the CREDITS of the content repository
+        content_packages.unchecked('check_dirt_assets', ['CREDITS row of the clip in models/' + skeleton])
+        continue
+    # The former rigs name the clip in a row of their own ("models/X.skeleton (clip Relieve)"); a figure of the Meshy
+    # rebuild names its relieve clip in the row of its skeleton
+    assert re.search(r'^models/' + re.escape(skeleton) + r' \(clip', credits, re.M | re.I) or \
+        re.search(r'^models/' + re.escape(skeleton) + r'\s.*\bRelieve(Pit)?\b', credits, re.M), \
+        'CREDITS has no row for the clip in ' + skeleton
 # The floor and wall pieces of the toilet room (toilet room package)
 for mask in range(16 if TOILET else 0):
     name = 'Toilet' + format(mask, '04b')
-    assert resolve(root, 'materials/textures/' + name + '.png').is_file(), name + '.png missing'
+    assert data_path('materials/textures/' + name + '.png').is_file(), name + '.png missing'
 # The credits must hold a row that names exactly the toilet floor pattern and its normal maps (no looser fallback), and
 # every piece and normal map must be covered by a pattern of such a row
 toilet_row = [line for line in credit_lines if line.startswith('materials/textures/Toilet????.png')]
@@ -160,7 +233,7 @@ if TOILET:
     for mask in range(16):
         for suffix in ('', 'Normal'):
             piece = 'materials/textures/Toilet' + format(mask, '04b') + suffix + '.png'
-            assert resolve(root, piece).is_file(), piece + ' missing'
+            assert data_path(piece).is_file(), piece + ' missing'
             assert any(fnmatch.fnmatchcase(piece.lower(), pattern.lower()) for pattern in toilet_patterns), 'the toilet row does not cover ' + piece
     assert credited('materials/scripts/ToiletFloor.material'), 'CREDITS has no row for the toilet floor material'
 

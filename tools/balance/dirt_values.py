@@ -29,6 +29,8 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 
 # Share of one worker's time that keeps the reference dungeon in balance
 REFERENCE_CLEANING_SHARE = 0.25
@@ -80,9 +82,15 @@ def round_half_up(value, decimals):
     return Decimal(repr(float(value))).quantize(Decimal(1).scaleb(-decimals), rounding=ROUND_HALF_UP)
 
 
+# Returns the text of a config file below the repository as the game reads it: a mixed table comes joined with its own
+# rows of the content packages (scripts/content_packages.py).
+def config_text(path):
+    return content_packages.read_text(ROOT, Path(path).relative_to(ROOT).as_posix())
+
+
 # Returns the text of the first block "[tag] ... [/tag]" of a config file as a dict key -> first value word.
 def read_block(path, tag):
-    text = path.read_text(encoding='utf-8')
+    text = config_text(path)
     match = re.search(r'^\[' + re.escape(tag) + r'\]\s*$(.*?)^\[/' + re.escape(tag) + r'\]', text, re.M | re.S)
     if match is None:
         raise SystemExit(str(path) + ': block [' + tag + '] missing')
@@ -96,7 +104,7 @@ def read_block(path, tag):
 
 # Returns the value of a key in the whole file (first occurrence) as a string.
 def read_key(path, key):
-    for line in path.read_text(encoding='utf-8').splitlines():
+    for line in config_text(path).splitlines():
         words = line.split()
         if len(words) >= 2 and words[0] == key:
             return words[1]
@@ -105,7 +113,7 @@ def read_key(path, key):
 
 # Returns the ClaimRate of the Kobold (the cleaning worker of the reference) from creatures.cfg.
 def read_claim_rate():
-    text = (ROOT / 'config' / 'creatures.cfg').read_text(encoding='utf-8')
+    text = config_text(ROOT / 'config' / 'creatures.cfg')
     match = re.search(r'\[Creature\]\s*Name\s+Kobold\b.*?ClaimRate\s+([0-9.]+)', text, re.S)
     if match is None:
         raise SystemExit('creatures.cfg: Kobold ClaimRate missing')

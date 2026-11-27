@@ -50,10 +50,14 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
 import room_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
 ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+#: True when the content packages are present: rooms.cfg, creatures.cfg and skills.cfg are mixed tables whose own rows
+#: come from them
+CONTENT = content_packages.has_content(repo)
 
 
 def room_file(relative):
@@ -65,6 +69,11 @@ from assets_src import resolve  # noqa: E402
 # Read a tracked source using the repository root rather than the caller's directory.
 def read(path):
     return resolve(repo, path).read_text(encoding="utf-8")
+
+
+# Read a data table as the game reads it: a mixed table comes with its own rows from the content.
+def read_config(path):
+    return content_packages.read_text(repo, path)
 
 
 # Return a complete brace-delimited body that starts at the signature.
@@ -204,7 +213,7 @@ def catch_order():
 # Numeric room configuration rows by key.
 def room_config():
     values = {}
-    for line in read("config/rooms.cfg").splitlines():
+    for line in read_config("config/rooms.cfg").splitlines():
         row = line.split("#", 1)[0].split()
         if len(row) == 2:
             try:
@@ -222,20 +231,6 @@ def code_only(text):
 # Owner decision 726: the catch takes 2 s throw + 16 s beam + 2 s snap, each step visible to its end; decisions 855 and
 # 857: the beam (only the beam) is shortened by the CatchTime research of the keeper and by the hunter efficiency.
 def catch_timing():
-    room = room_config()
-    durations = (room.get("GhostBoxThrowSeconds"), room.get("GhostBeamSeconds"), room.get("GhostBoxSnapSeconds"))
-    assert durations == (2, 16, 2), ("catch durations throw, beam, snap", durations)
-    assert "GhostBeamTurns" not in room, "the efficiency-scaled beam turns are replaced by GhostBeamSeconds"
-    rows = read("config/rooms.cfg").splitlines()
-    for key in ("GhostBoxThrowSeconds", "GhostBeamSeconds", "GhostBoxSnapSeconds"):
-        index = next(i for i, row in enumerate(rows) if row.split()[:1] == [key])
-        assert rows[index - 1].lstrip().startswith("#"), (key, "documentation line")
-    beam_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ["GhostBeamSeconds"])
-    beam_doc = " ".join(row.lstrip("# ") for row in rows[beam_row - 4:beam_row])
-    has(beam_doc, "the beam doc line explains the 16 s base and what shortens it",
-        "16 s at research level 1 and hunter efficiency 1", "CatchTime research factor", "divided by the")
-    catch_time = re.search(r"^\s*roomGhostRoom\s+CatchTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$", read("config/skills.cfg"), re.M)
-    assert catch_time and [float(value) for value in catch_time.groups()] == [1.0, 0.8, 0.667], "CatchTime 1.0/0.8/0.667"
     action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
     hunt = body(action, "bool CreatureActionHuntGhost::handleHunt()")
     capture = code_only(body(hunt, "    if(mState==2 || mState==3 || mState==10)"))
@@ -292,6 +287,25 @@ def catch_timing():
     assert 'mGhostThrowTurns*config.getRoomConfigDouble("GhostBeamSeconds")' not in update, "the client must not assume 16 s"
     header = read("source/creatureaction/CreatureActionHuntGhost.h")
     has(header, "the hunt documents the snap state", "10 the lying box snaps shut over the pulled-in ghost")
+    # The configured durations and their documentation lines need the joined tables of the content
+    if CONTENT:
+        room = room_config()
+        durations = (room.get("GhostBoxThrowSeconds"), room.get("GhostBeamSeconds"), room.get("GhostBoxSnapSeconds"))
+        assert durations == (2, 16, 2), ("catch durations throw, beam, snap", durations)
+        assert "GhostBeamTurns" not in room, "the efficiency-scaled beam turns are replaced by GhostBeamSeconds"
+        rows = read_config("config/rooms.cfg").splitlines()
+        for key in ("GhostBoxThrowSeconds", "GhostBeamSeconds", "GhostBoxSnapSeconds"):
+            index = next(i for i, row in enumerate(rows) if row.split()[:1] == [key])
+            assert rows[index - 1].lstrip().startswith("#"), (key, "documentation line")
+        beam_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ["GhostBeamSeconds"])
+        beam_doc = " ".join(row.lstrip("# ") for row in rows[beam_row - 4:beam_row])
+        has(beam_doc, "the beam doc line explains the 16 s base and what shortens it",
+            "16 s at research level 1 and hunter efficiency 1", "CatchTime research factor", "divided by the")
+        catch_time = re.search(r"^\s*roomGhostRoom\s+CatchTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$", read_config("config/skills.cfg"), re.M)
+        assert catch_time and [float(value) for value in catch_time.groups()] == [1.0, 0.8, 0.667], "CatchTime 1.0/0.8/0.667"
+    else:
+        content_packages.unchecked("check_ghost_catch_flow", ["catch durations of config/rooms.cfg and CatchTime of "
+                                                              "config/skills.cfg"])
     print("catch timing 2 s throw + 16 s x CatchTime / efficiency beam + 2 s snap: ok")
 
 
@@ -438,8 +452,8 @@ def png_luminance(path):
 # Bodies of all material definitions in the shipped material scripts, by material name.
 def material_scripts():
     found = {}
-    for script in [path for base in [repo] + room_packages.package_roots(repo)
-                   for path in (base / "materials" / "scripts").glob("*.material")]:
+    # The material scripts of the public tree and of every content and room package (scripts/room_packages.glob_files)
+    for script in room_packages.glob_files(repo, "materials/scripts", "*.material"):
         text = script.read_text(encoding="utf-8")
         for match in re.finditer(r"^material (\w+)\b[^\n]*\n\{(.*?)^\}", text, re.M | re.S):
             found[match.group(1)] = match.group(2)
@@ -499,7 +513,7 @@ def small_textured_box():
 # Hunter creature blocks of creatures.cfg: creature name, right and left spawn weapon, ghost room efficiency.
 def ghost_hunters():
     hunters = {}
-    for block in re.findall(r"^\s*\[Creature\]\s*$(.*?)^\s*\[/Creature\]", read("config/creatures.cfg"), re.M | re.S):
+    for block in re.findall(r"^\s*\[Creature\]\s*$(.*?)^\s*\[/Creature\]", read_config("config/creatures.cfg"), re.M | re.S):
         name = re.search(r"^\s*Name\s+(\S+)", block, re.M).group(1)
         ghost = re.search(r"^\s*GhostRoom\s+\S+\s+([0-9.]+)\s*$", block, re.M)
         if ghost and float(ghost.group(1)) > 0.0:
@@ -574,7 +588,7 @@ def beam_from_capture_cannon():
     has(hand, "cannon hand bones in order", "const char* names[]={" + ",".join('"%s"' % b for b in bones[:7]) + ",\n        " +
         ",".join('"%s"' % b for b in bones[7:]) + "};")
     blocks = {re.search(r"^\s*Name\s+(\S+)", block, re.M).group(1): block
-              for block in re.findall(r"^\s*\[Creature\]\s*$(.*?)^\s*\[/Creature\]", read("config/creatures.cfg"), re.M | re.S)}
+              for block in re.findall(r"^\s*\[Creature\]\s*$(.*?)^\s*\[/Creature\]", read_config("config/creatures.cfg"), re.M | re.S)}
     hunters = ghost_hunters()
     assert sorted(hunters) == ["Defender", "Knight", "PitDemon", "RunelordDwarf", "Skeleton", "Troll"], sorted(hunters)
     for name in hunters:
@@ -753,7 +767,26 @@ def decision_865_beam_and_trap_order():
     for chain in ("Ogre::Vector3 point=start+(end-start)*fraction;", "points[i]=start+(end-start)*fraction;",
                   "mGhostBeamImpact->getBillboard(0)->setPosition(end);"):
         assert chain in code, ("core, bolts and impact glow end on the ghost", chain)
-    rows = read("config/rooms.cfg").splitlines()
+    # Trap order: the phases on the client in the order of the catch
+    throw = update[update.index("if(mGhostBoxMode==1)"):update.index("else if(mGhostBoxMode==4)")]
+    shut = update[update.index("else if(mGhostBoxMode==6)"):update.index("            else\n            {\n                // The beam weakens")]
+    beam = update[update.index("            else\n            {\n                // The beam weakens"):update.index("// Only the snap rocks the box")]
+    has(throw, "shut until it lies under the ghost in beam range", "mGhostLidShown=0.0;")
+    has(shut, "shut for good once snapped, no light", "mGhostLidShown=0.0;", "mGhostCaptureShown=1.0;")
+    assert "lidTarget" not in shut and "trapLight" not in shut, "the shut trap never opens or shines again"
+    ordered(beam, "the lid opens first, only then is the ghost pulled in",
+        'lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));',
+        "const double pulled=beamSeconds>lidOpen?std::max(0.0,(beamed-lidOpen)/(beamSeconds-lidOpen)):mGhostThrowTurns;",
+        "mGhostCaptureShown+=(pulled-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")
+    has(beam, "the beam time of the hunter", "const double beamSeconds=CreatureActionHuntGhost::getBeamSeconds(*this);",
+        'const double lidOpen=config.getRoomConfigDouble("GhostLidOpenSeconds");')
+    action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
+    ordered(body(action, "uint32_t CreatureActionHuntGhost::getBoxVisualState() const"), "the waiting box is the shut phase",
+        "if(mState==3) return 3u;", "if(mState==10) return 4u;", "if(mState==9) return 6u;")
+    if not CONTENT:
+        content_packages.unchecked("check_ghost_catch_flow", ["GhostBeamAimShare and the lid replay of config/rooms.cfg"])
+        return
+    rows = read_config("config/rooms.cfg").splitlines()
     index = next(i for i, row in enumerate(rows) if row.split()[:1] == ["GhostBeamAimShare"])
     assert rows[index].split()[1] == "0.7" and rows[index - 1].lstrip().startswith("#"), "GhostBeamAimShare 0.7 with its doc line"
     doc = " ".join(row.lstrip("# ") for row in rows[index - 3:index])
@@ -774,22 +807,6 @@ def decision_865_beam_and_trap_order():
         assert bottom < hit < bottom + height, (capture, hit)
         if pull == 0.0:
             assert hit > 0.3 + 0.12, ("above the top of the trap on the floor while the ghost floats", capture, hit)
-    # Trap order: the phases on the client in the order of the catch
-    throw = update[update.index("if(mGhostBoxMode==1)"):update.index("else if(mGhostBoxMode==4)")]
-    shut = update[update.index("else if(mGhostBoxMode==6)"):update.index("            else\n            {\n                // The beam weakens")]
-    beam = update[update.index("            else\n            {\n                // The beam weakens"):update.index("// Only the snap rocks the box")]
-    has(throw, "shut until it lies under the ghost in beam range", "mGhostLidShown=0.0;")
-    has(shut, "shut for good once snapped, no light", "mGhostLidShown=0.0;", "mGhostCaptureShown=1.0;")
-    assert "lidTarget" not in shut and "trapLight" not in shut, "the shut trap never opens or shines again"
-    ordered(beam, "the lid opens first, only then is the ghost pulled in",
-        'lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));',
-        "const double pulled=beamSeconds>lidOpen?std::max(0.0,(beamed-lidOpen)/(beamSeconds-lidOpen)):mGhostThrowTurns;",
-        "mGhostCaptureShown+=(pulled-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")
-    has(beam, "the beam time of the hunter", "const double beamSeconds=CreatureActionHuntGhost::getBeamSeconds(*this);",
-        'const double lidOpen=config.getRoomConfigDouble("GhostLidOpenSeconds");')
-    action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
-    ordered(body(action, "uint32_t CreatureActionHuntGhost::getBoxVisualState() const"), "the waiting box is the shut phase",
-        "if(mState==3) return 3u;", "if(mState==10) return 4u;", "if(mState==9) return 6u;")
     # Replay the catch and the time after it in 10 ms steps for research levels and efficiencies: the lid and the pull
     lid_open, lid_snap = room["GhostLidOpenSeconds"], room["GhostLidSnapSeconds"]
     throw_s, snap_s = room["GhostBoxThrowSeconds"], room["GhostBoxSnapSeconds"]
@@ -828,8 +845,8 @@ def main():
     catch_order()
     catch_timing()
     alarm_lamps()
-    # These parts measure the meshes and textures of the ghost room package
-    if ROOM_ASSETS:
+    # These parts measure the meshes and textures of the ghost room package (and read creatures.cfg and rooms.cfg)
+    if ROOM_ASSETS and CONTENT:
         no_flat_panels()
         small_textured_box()
         beam_from_capture_cannon()

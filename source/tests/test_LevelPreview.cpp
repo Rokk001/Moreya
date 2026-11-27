@@ -25,6 +25,7 @@
 
 #include "boost/filesystem.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -195,17 +196,72 @@ std::vector<TempleRoom> readTemples(const std::string& fileName)
     return temples;
 }
 
-//! \brief Every level file of a folder of OD_LEVELS_DIR.
+//! \brief The folders of the content packages (subfolders with a Package.cfg) of the content folder, in name order: the
+//! folder named by MOREYA_CONTENT_DIR when it is set (empty for no content), else the packages folder of a
+//! Moreya-Content checkout next to the repository. Empty when the content is not present.
+std::vector<std::string> contentPackageFolders()
+{
+    std::vector<std::string> folders;
+    const char* variable = std::getenv("MOREYA_CONTENT_DIR");
+    const std::string content = (variable != nullptr) ? std::string(variable)
+        : std::string(OD_LEVELS_DIR) + "/../../Moreya-Content/packages";
+    boost::system::error_code error;
+    if(content.empty() || !boost::filesystem::is_directory(content, error))
+        return folders;
+    for(boost::filesystem::directory_iterator it(content, error);
+        !error && (it != boost::filesystem::directory_iterator()); it.increment(error))
+    {
+        if(boost::filesystem::is_regular_file(it->path() / "Package.cfg", error))
+            folders.push_back(it->path().string());
+    }
+    std::sort(folders.begin(), folders.end());
+    return folders;
+}
+
+//! \brief The levels/ folders of the game data: OD_LEVELS_DIR, then the levels/ folder of every content package.
+std::vector<std::string> levelRoots()
+{
+    std::vector<std::string> roots(1, std::string(OD_LEVELS_DIR));
+    const std::vector<std::string> packages = contentPackageFolders();
+    for(std::vector<std::string>::const_iterator it = packages.begin(); it != packages.end(); ++it)
+        roots.push_back(*it + "/levels");
+    return roots;
+}
+
+//! \brief Every level file of a folder of OD_LEVELS_DIR and of the same folder of the content packages, once per name.
 std::vector<std::string> levelFiles(const std::string& folder)
 {
     std::vector<std::string> files;
-    boost::filesystem::path path(std::string(OD_LEVELS_DIR) + "/" + folder);
-    for(boost::filesystem::directory_iterator it(path); it != boost::filesystem::directory_iterator(); ++it)
+    std::set<std::string> seen;
+    const std::vector<std::string> roots = levelRoots();
+    for(std::vector<std::string>::const_iterator root = roots.begin(); root != roots.end(); ++root)
     {
-        if(it->path().extension().string() == ".level")
-            files.push_back(folder + "/" + it->path().filename().string());
+        boost::filesystem::path path(*root + "/" + folder);
+        boost::system::error_code error;
+        if(!boost::filesystem::is_directory(path, error))
+            continue;
+        for(boost::filesystem::directory_iterator it(path); it != boost::filesystem::directory_iterator(); ++it)
+        {
+            const std::string file = folder + "/" + it->path().filename().string();
+            if(it->path().extension().string() == ".level" && seen.insert(file).second)
+                files.push_back(file);
+        }
     }
     return files;
+}
+
+//! \brief The path of a level file (folder/name.level): below OD_LEVELS_DIR when it is there, else below the levels/
+//! folder of the first content package that has it, else below OD_LEVELS_DIR (so that the test reports it missing).
+std::string levelPath(const std::string& file)
+{
+    const std::vector<std::string> roots = levelRoots();
+    for(std::vector<std::string>::const_iterator root = roots.begin(); root != roots.end(); ++root)
+    {
+        boost::system::error_code error;
+        if(boost::filesystem::is_regular_file(*root + "/" + file, error))
+            return *root + "/" + file;
+    }
+    return std::string(OD_LEVELS_DIR) + "/" + file;
 }
 }
 
@@ -334,14 +390,19 @@ BOOST_AUTO_TEST_CASE(test_unreadable_levels_have_no_preview)
 //! a preview with the shape of its map, every dungeon temple of the level shows on its own tiles in the temple
 //! colour of its seat (rooms of the rogue seat in red), and two levels give the same picture only when they share
 //! the same map: the same tiles and owners, with rooms that differ at most in a type of the same colour (fixed list
-//! of 9 pairs, counted once on this branch).
+//! of 9 pairs, counted once on this branch). The levels of the content packages are found through MOREYA_CONTENT_DIR;
+//! without the content the levels of the public tree are checked.
 BOOST_AUTO_TEST_CASE(test_every_official_level_shows_its_own_map)
 {
     std::vector<std::string> files = levelFiles("skirmish");
     const std::vector<std::string> multiplayer = levelFiles("multiplayer");
     files.insert(files.end(), multiplayer.begin(), multiplayer.end());
-    // 40 skirmish and 22 multiplayer levels were counted on this branch
-    BOOST_REQUIRE_GE(files.size(), 62u);
+    // Most of the official levels lie in the content packages; without them the levels of the public tree are checked
+    if(contentPackageFolders().empty())
+        BOOST_CHECK_MESSAGE(!files.empty(), "content not present, not checked: the levels of the content packages");
+    else
+        // 40 skirmish and 22 multiplayer levels were counted on this branch
+        BOOST_REQUIRE_GE(files.size(), 62u);
 
     std::set<std::pair<std::string, std::string>> sameMap;
     sameMap.insert(std::make_pair("multiplayer/TestMultiplayerSmallAlliance.level",
@@ -359,7 +420,7 @@ BOOST_AUTO_TEST_CASE(test_every_official_level_shows_its_own_map)
     std::map<std::string, std::vector<uint8_t>> pictures;
     for(const std::string& file : files)
     {
-        const std::string path = std::string(OD_LEVELS_DIR) + "/" + file;
+        const std::string path = levelPath(file);
         LevelPreview preview;
         BOOST_REQUIRE_MESSAGE(preview.loadFromFile(path), file);
         uint32_t width = 0;

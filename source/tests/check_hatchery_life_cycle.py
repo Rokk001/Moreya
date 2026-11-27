@@ -1,17 +1,28 @@
 #!/usr/bin/env python3
 # Static checks of the server side chicken life cycle wiring (the rules themselves are covered by
 # the 00-HatcheryCycle unit test).
+# config/roomAmbienceDeferred.cfg and particles/ChickenEggShell.particle are content (core-config and hatchery room
+# packages, found through scripts/content_packages.py); without them their parts are named as not checked.
+# config/rooms.cfg is a mixed table read with its own rows from the content (content_packages.read_text); without the
+# content its keys and values are named as not checked, the absence of old keys is checked on its public rows.
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+#: True when the content packages are present (the own rows of config/rooms.cfg come from them)
+CONTENT = content_packages.has_content(root)
 chicken_h = (root / 'source/entities/ChickenEntity.h').read_text()
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 food = (root / 'source/creatureaction/CreatureActionSearchFood.cpp').read_text()
 client = (root / 'source/network/ODClient.cpp').read_text()
 notif = (root / 'source/network/ServerNotification.h').read_text()
-config = (root / 'config/rooms.cfg').read_text()
+config = content_packages.read_text(root, 'config/rooms.cfg')
+if not CONTENT:
+    content_packages.unchecked('check_hatchery_life_cycle', ['keys and values of config/rooms.cfg'])
 
 
 # Return the selected production function for focused wiring assertions.
@@ -45,14 +56,16 @@ assert 'new ChickenEntity' not in doUpkeep
 # Values come from the config.
 for key in ('HatcheryLayMin', 'HatcheryLayMax', 'HatcheryHatchTurns', 'HatcheryGrowTurns',
             'HatcheryTilesPerChicken', 'HatcheryChickenSpawnRate'):
-    assert key in config and key in room, key
+    assert key in room, key
+    if CONTENT:
+        assert key in config, key
 
 print('hatchery life cycle checks passed')
 
 # Breeding needs care: room-wide calm affects laying; enemies pause hatching only on the egg tile.
 cycle = (root / 'source/rooms/HatcheryCycle.cpp').read_text()
 room_cpp = (root / 'source/rooms/RoomHatchery.cpp').read_text()
-cfg = (root / 'config/rooms.cfg').read_text()
+cfg = config
 assert 'carePercent' in cycle and 'canHatch' in cycle
 # The old room torches are gone: only the wall torches of the server light the hatchery
 assert not (root / 'source/rooms/RoomTorches.cpp').exists() and not (root / 'source/rooms/RoomTorches.h').exists()
@@ -63,20 +76,25 @@ assert 'hasTorchOn' not in ambience_cpp and 'torchShift' not in ambience_cpp
 lit = body(room_cpp, 'bool RoomHatchery::isLit')
 assert 'getSeat' not in lit and 'isAlliedSeat' not in lit and 'getMapLights' in lit
 assert 'WallTorches::hasTorchWithin(getGameMap()->getWallTorches()' in lit
-ambience_cfg = (root / 'config/roomAmbienceDeferred.cfg').read_text()
-assert 'Torch       yes' not in ambience_cfg
+if content_packages.data_file(root, 'config/roomAmbienceDeferred.cfg') is None:
+    content_packages.unchecked('check_hatchery_life_cycle', ['config/roomAmbienceDeferred.cfg'])
+else:
+    ambience_cfg = content_packages.resolve(root, 'config/roomAmbienceDeferred.cfg').read_text()
+    assert 'Torch       yes' not in ambience_cfg
 assert 'HatcheryCycle::withCare' in room_cpp and 'HatcheryCycle::canHatch(counts, false)' in room_cpp
 hatching = room_cpp[room_cpp.index('// Eggs hatch while'):room_cpp.index('// Chicks grow up')]
 assert 'enemy->getPositionTile() == egg->getPositionTile()' in hatching
 assert 'if(enemyOnTile)\n                continue;' in hatching
 assert hatching.index('if(enemyOnTile)') < hatching.index('egg->incrementAge()')
-assert 'HatcheryCareLightPercent' in cfg and 'HatcheryCareCalmPercent' in cfg and 'HatcheryCareLightRadius' in cfg
+if CONTENT:
+    assert 'HatcheryCareLightPercent' in cfg and 'HatcheryCareCalmPercent' in cfg and 'HatcheryCareLightRadius' in cfg
 assert 'HatcheryCareLayPercent' not in cfg and 'HatcheryTorchSpacing' not in cfg
 
 # Enemies trample eggs, own creatures never eat them
 cycle_h = (root / 'source/rooms/HatcheryCycle.h').read_text()
 assert 'tramples' in cycle_h and 'egg->trample(enemy)' in room_cpp
-assert 'HatcheryTramplePercent' in cfg and 'HatcheryTrampleRadius' in cfg
+if CONTENT:
+    assert 'HatcheryTramplePercent' in cfg and 'HatcheryTrampleRadius' in cfg
 assert 'bool ChickenEntity::trample' in chicken and 'ChickenKind::egg' in chicken[chicken.index('bool ChickenEntity::trample'):][:200]
 # only enemies are collected for trampling (allied seats are skipped)
 assert 'isAlliedSeat' in room_cpp[room_cpp.index('void RoomHatchery::collectEnemies'):][:600]
@@ -88,7 +106,9 @@ exp = room_cpp[room_cpp.index('void RoomHatchery::exportToStream'):][:300]
 assert 'HatcheryWaits' in exp and 'mCoopHenWait' in exp and 'mCoopRoosterWait' in exp
 imported = room_cpp[room_cpp.index('bool RoomHatchery::importFromStream'):][:900]
 assert 'seekg(pos)' in imported and 'HatcheryWaits' in imported
-assert 'coopHenCount' in room_cpp and 'HatcheryCoopBatch' in cfg
+assert 'coopHenCount' in room_cpp
+if CONTENT:
+    assert 'HatcheryCoopBatch' in cfg
 
 # The new rooster comes after the same wait as a hen (HatcheryChickenSpawnRate); the own rooster wait is gone,
 # the saved counter stays so that old saves still load
@@ -109,7 +129,8 @@ assert 'climbDown' in fight and 'fightContinues' in fight
 assert 'updateFight(roosters, settings, counts)' in room_cpp
 assert 'if(!oneRooster->isFighting())' in room_cpp
 for key in ('HatcheryFightTurns', 'HatcheryFightApproachTurns', 'HatcheryFightReach', 'HatcheryFightFeatherSeconds'):
-    assert key in config, key
+    if CONTENT:
+        assert key in config, key
 for key in ('HatcheryFightTurns', 'HatcheryFightApproachTurns', 'HatcheryFightReach'):
     assert key in room_cpp, key
 render = (root / 'source/render/RenderManagerChickens.cpp').read_text()
@@ -138,7 +159,8 @@ nest = body(room_cpp, 'bool RoomHatchery::findNestSpot')
 assert 'getNestPlaces()' in nest and 'HatcheryCycle::pickNestPlace(occupied, 1)' in nest
 assert 'squaredDistance' in nest, 'closest nest first'
 assert 'HatcheryNestEggs' in nest and 'HatcheryNestSameRadius' in nest
-assert 'HatcheryNestEggs' in cfg and 'HatcheryNestSameRadius' in cfg
+if CONTENT:
+    assert 'HatcheryNestEggs' in cfg and 'HatcheryNestSameRadius' in cfg
 assert 'nestCount' not in coop_h and 'nestCenter' not in coop_h, 'no seats in the coops'
 assert (root / 'source/rooms/HatcheryNestField.h').exists()
 lay = doUpkeep[doUpkeep.index('Reserve a nest before starting the trip'):doUpkeep.index('Eggs hatch while there is a rooster')]
@@ -159,7 +181,9 @@ assert 'setFollowTarget(it->mStand' in trips and 'hen == nullptr' in trips and '
 assert 'uint32_t HatcheryCycle::walkTurns' in cycle_cpp and 'bool HatcheryCycle::tripDue' in cycle_cpp and 'layDelay' not in cycle_cpp
 assert 'standingPosition' in body(room_cpp, 'bool RoomHatchery::getNestStandPoint')
 assert doUpkeep.index('updateNestTrips(hens, settings)') < doUpkeep.index('hen->countDownLay()') < doUpkeep.index('releasePendingEggs(layingSettings, eggs)')
-assert 'HatcheryNestWalkTurns' not in cfg and 'HatcheryNestArrive' in cfg and 'HatcheryLayFactor' in cfg and 'HatcheryLayFactor' in room_cpp
+assert 'HatcheryNestWalkTurns' not in cfg and 'HatcheryLayFactor' in room_cpp
+if CONTENT:
+    assert 'HatcheryNestArrive' in cfg and 'HatcheryLayFactor' in cfg
 # Incubation starts at actual laying; a late arrival cannot hatch a newly laid egg immediately.
 assert 'egg->setAge(0)' in body(room_cpp, 'void RoomHatchery::releasePendingEggs')
 assert 'const bool arrived = distance <= arrive;' in trips
@@ -186,9 +210,12 @@ fx = body(room_cpp, 'void RoomHatchery::fireEggTrample')
 assert 'HatcheryFx/EggTrample' in fx and 'ServerNotificationType::playSpatialSound' in fx
 assert 'HatcheryFx/EggTrample' in client and 'rrEggTrampled' in client
 assert 'void RenderManager::rrEggTrampled' in render and '"ChickenEggTrample"' in render
-particles = (root / 'particles/ChickenEggShell.particle').read_text()
-trample = particles[particles.index('particle_system ChickenEggTrample'):]
-assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
+if content_packages.data_file(root, 'particles/ChickenEggShell.particle') is None:
+    content_packages.unchecked('check_hatchery_life_cycle', ['particles/ChickenEggShell.particle'])
+else:
+    particles = content_packages.resolve(root, 'particles/ChickenEggShell.particle').read_text()
+    trample = particles[particles.index('particle_system ChickenEggTrample'):]
+    assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
 assert 'enum class ServerNotificationType' in notif and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', notif[notif.index('enum class ServerNotificationType'):notif.index('};')], re.M)[-17:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster', 'setHandCooldown', 'startGameRefused', 'possessionSkillBar']
 print('hatchery nest egg and trample checks passed')
 
@@ -217,7 +244,7 @@ for path in ('source/rooms/HatcheryRooster.h', 'source/rooms/HatcheryRooster.cpp
              'source/rooms/RoomHatchery.cpp', 'source/rooms/HatcheryCycle.h', 'source/rooms/HatcheryCycle.cpp',
              'source/entities/ChickenEntity.h', 'source/entities/ChickenEntity.cpp', 'source/entities/ChickenPose.h',
              'source/render/RenderManagerChickens.cpp', 'config/rooms.cfg', 'source/tests/test_HatcheryCycle.cpp'):
-    text = (root / path).read_text()
+    text = content_packages.read_text(root, path) if path.startswith('config/') else (root / path).read_text()
     for term in night_terms:
         assert term not in text, (path, term)
 assert 'night' not in room_cpp.lower() and 'night' not in rooster_cpp.lower() and 'HatcheryLookRoost' not in config
@@ -236,7 +263,9 @@ print('hatchery no day and night checks passed')
 
 # The hen shows herself laying: the egg appears after HatcheryLayShowTurns turns, a pending egg is saved and counted
 assert 'mLayShowTurns' in (root / 'source/rooms/HatcheryCycle.h').read_text()
-assert 'HatcheryLayShowTurns' in room_cpp and 'HatcheryLayShowTurns' in config
+assert 'HatcheryLayShowTurns' in room_cpp
+if CONTENT:
+    assert 'HatcheryLayShowTurns' in config
 laying = body(room_cpp, 'void RoomHatchery::doUpkeep')
 assert 'mPendingEggs.push_back(plan)' in laying
 assert 'releasePendingEggs(layingSettings, eggs)' in laying and 'if(pending.mDue)' in laying
@@ -345,8 +374,9 @@ defaults = (root / 'source/rooms/HatcheryCycle.h').read_text()
 for key, member, seconds in (('HatcheryLayShowTurns', 'mLayShowTurns', 5),
                              ('HatcheryHatchTurns', 'mHatchTurns', 30),
                              ('HatcheryGrowTurns', 'mGrowTurns', 60)):
-    turns = int(re.search(r'^\s*' + key + r'\s+(\d+)\s*$', config, re.MULTILINE).group(1))
     fallback = int(re.search(member + r'\((\d+)\)', defaults).group(1))
+    # Without the content the configured turns are not there: the fallback defaults are checked alone
+    turns = int(re.search(r'^\s*' + key + r'\s+(\d+)\s*$', config, re.MULTILINE).group(1)) if CONTENT else fallback
     assert turns == fallback and abs(turns / turn_rate - seconds) < 1e-9
     for speed in (0.5, 1.0, 2.0):
         assert abs(turns / (turn_rate * speed) - seconds / speed) < 1e-9

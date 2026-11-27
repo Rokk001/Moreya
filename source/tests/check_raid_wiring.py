@@ -8,6 +8,10 @@ section, the place of the raid panel at every screen size and UI scale) and the 
 and the test level are checked for the statements that implement them. Nothing is compiled and the game is not
 started; the integration build compiles and runs the code.
 
+Most skirmish and multiplayer levels and the picture set RaidHud live in content packages (found through
+scripts/content_packages.py): the levels are read from the public folders and the package folders. Without the content
+the check names the levels of the packages and the picture set as not checked.
+
 Usage: python -I source/tests/check_raid_wiring.py
 Exit 0 and "raid wiring ok" when every item holds.
 """
@@ -18,14 +22,18 @@ import time
 import xml.etree.ElementTree as ElementTree
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
 START = time.perf_counter()
 FAILURES = []
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(relative):
-    """Returns the text of a file of the repository."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
-        return handle.read()
+    """Returns the text of a file of the repository; a mixed table or interface file comes with its own rows of the
+    content (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, relative)
 
 
 def function(source, signature):
@@ -81,19 +89,20 @@ EXPECTED_KEYS = {
     "RaidGatePortcullisSink": ("2.2", False),
 }
 PLACEHOLDER = "PLACEHOLDER: set by simulation R3"
-block = re.split(r"(?m)^\[Raid\]\s*$", GLOBAL_CFG)[1].split("[/Raid]")[0]
-values = {}
-for line in block.splitlines():
-    words = line.split("#")[0].split()
-    if words:
-        values[words[0]] = " ".join(words[1:])
-check(values == {key: value for key, (value, _) in EXPECTED_KEYS.items()}, "V1: [Raid] keys " + repr(values))
-documentation = re.split(r"(?m)^\[Raid\]\s*$", GLOBAL_CFG)[0].split("[/GroupCombat]")[1]
-for key, (_, placeholder) in EXPECTED_KEYS.items():
-    lines = [line for line in documentation.splitlines() if re.match(r"#\s+" + key + r"\s", line)]
-    check(len(lines) == 1, "V1: one documentation line for " + key)
-    if lines:
-        check((PLACEHOLDER in lines[0]) == placeholder, "V1: placeholder mark of " + key)
+if WITH_CONTENT:
+    block = re.split(r"(?m)^\[Raid\]\s*$", GLOBAL_CFG)[1].split("[/Raid]")[0]
+    values = {}
+    for line in block.splitlines():
+        words = line.split("#")[0].split()
+        if words:
+            values[words[0]] = " ".join(words[1:])
+    check(values == {key: value for key, (value, _) in EXPECTED_KEYS.items()}, "V1: [Raid] keys " + repr(values))
+    documentation = re.split(r"(?m)^\[Raid\]\s*$", GLOBAL_CFG)[0].split("[/GroupCombat]")[1]
+    for key, (_, placeholder) in EXPECTED_KEYS.items():
+        lines = [line for line in documentation.splitlines() if re.match(r"#\s+" + key + r"\s", line)]
+        check(len(lines) == 1, "V1: one documentation line for " + key)
+        if lines:
+            check((PLACEHOLDER in lines[0]) == placeholder, "V1: placeholder mark of " + key)
 read_keys = set(re.findall(r'raidConfig\("(\w+)"\)', MANAGER)) | set(re.findall(r'getRaidConfigWords\("(\w+)"\)', MANAGER))
 check(read_keys == set(EXPECTED_KEYS), "V1: the code reads exactly the configured keys " + repr(sorted(read_keys)))
 # No fixed number in the code of the manager: only 0, 1, -1 (no value) and 17 (digits of a saved double)
@@ -117,11 +126,16 @@ check("mRaid->clear();" in function(GAME_MAP, "void GameMap::clearAll()"), "RA10
 misc = function(GAME_MAP, "unsigned long int GameMap::doMiscUpkeep(")
 check(misc.index("mRaid->update();") < misc.index("mCombatGroups->update();") < misc.index("ge->doUpkeep()"),
       "the raid runs before the combat groups and the creatures")
+if not WITH_CONTENT:
+    content_packages.unchecked("check_raid_wiring", ["the skirmish and multiplayer levels of the content packages"])
 for folder in ("levels/skirmish", "levels/multiplayer"):
-    for name in sorted(os.listdir(os.path.join(ROOT, folder))):
-        if not name.endswith(".level") or name == "TestRaid.level":
+    # the levels of the public folder and of the content packages
+    for path in content_packages.data_glob(ROOT, folder, "*.level"):
+        name = path.name
+        if name == "TestRaid.level":
             continue
-        text = read(folder + "/" + name)
+        with open(str(path), encoding="utf-8") as handle:
+            text = handle.read()
         check("[Raid]" not in text and "raidopen" not in text and "raidcountdown" not in text,
               "C8: " + folder + "/" + name + " has no raid, so skirmish and multiplayer stay as they are")
 
@@ -309,104 +323,113 @@ check('getChild("RaidPanel/OpenGateButton")' in GAME_MODE and "&GameMode::openRa
 design_width = float(re.search(r"const float LAYOUT_DESIGN_WIDTH = ([\d.]+)f;", GUI).group(1))
 design_height = float(re.search(r"const float LAYOUT_DESIGN_HEIGHT = ([\d.]+)f;", GUI).group(1))
 check((design_width, design_height) == (1024.0, 768.0), "C6: the layout is designed for 1024x768")
-root = ElementTree.fromstring(LAYOUT.encode("utf-8"))
+if WITH_CONTENT:
+    root = ElementTree.fromstring(LAYOUT.encode("utf-8"))
 
 
-def area_of(window):
-    """The Area property of a layout window as ((sx, ox), (sy, oy), (sx, ox), (sy, oy))."""
-    for prop in window.findall("Property"):
-        if prop.get("name") == "Area":
-            numbers = [float(x) for x in re.findall(r"-?[\d.]+", prop.get("value"))]
-            return ((numbers[0], numbers[1]), (numbers[2], numbers[3]), (numbers[4], numbers[5]), (numbers[6], numbers[7]))
-    raise AssertionError("no area of " + window.get("name"))
+    def area_of(window):
+        """The Area property of a layout window as ((sx, ox), (sy, oy), (sx, ox), (sy, oy))."""
+        for prop in window.findall("Property"):
+            if prop.get("name") == "Area":
+                numbers = [float(x) for x in re.findall(r"-?[\d.]+", prop.get("value"))]
+                return ((numbers[0], numbers[1]), (numbers[2], numbers[3]), (numbers[4], numbers[5]), (numbers[6], numbers[7]))
+        raise AssertionError("no area of " + window.get("name"))
 
 
-windows = {window.get("name"): window for window in root.iter("Window")}
-check("RaidPanel" in windows and "Countdown" in windows and "OpenGateButton" in windows, "C6: the raid panel exists")
-gate_button = windows.get("OpenGateButton")
-gate_props = dict((p.get("name"), p.get("value")) for p in gate_button.findall("Property")) if gate_button is not None else {}
-check(gate_button is not None and gate_button.get("type") == "OD/MenuIconButton" and gate_props.get("ButtonImage") == "RaidHud/GateOpen"
-      and not gate_props.get("Text") and gate_props.get("TooltipText"),
-      "K13: the gate button is the sheet plank button with only a picture, no text and a tooltip")
-raid_icon = windows.get("RaidIcon")
-icon_props = dict((p.get("name"), p.get("value")) for p in raid_icon.findall("Property")) if raid_icon is not None else {}
-check(raid_icon is not None and icon_props.get("Image") == "RaidHud/RaidBanner" and icon_props.get("TooltipText"),
-      "K14: the countdown shows the raid banner picture with a tooltip")
-K_LOOK = read("gui/OD.looknfeel")
-SCHEME = read("gui/ODSkin.scheme")
-icon_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuIconButton"'):]
-icon_look = icon_look[:icon_look.index("</WidgetLook>")]
-plate_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuPlate"'):]
-plate_look = plate_look[:plate_look.index("</WidgetLook>")]
-compact_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuCompactButton"'):]
-compact_look = compact_look[:compact_look.index("</WidgetLook>")]
-check('inherits="OD/MenuCompactButton"' in icon_look and all(
-      'StateImagery name="%s"' % state in icon_look for state in ("Normal", "Hover", "Pushed", "PushedOff", "Disabled"))
-      and all(("plate_" + state) in icon_look for state in ("normal", "hover", "pushed", "disabled"))
-      and 'ImageProperty name="ButtonImage"' in icon_look and "OpenDungeonsSkin/" not in icon_look,
-      "G12: the gate button look is the sheet plank plate with its four states, built only from the sheet parts")
-check("ODMenuTemplate/CompactNormalLeftCap" in compact_look and "ODMenuTemplate/CompactHoverFill" in compact_look
-      and "ODMenuTemplate/CompactPushedRightCap" in compact_look and "ODMenuTemplate/CompactDisabledFill" in compact_look,
-      "G12: the plank plate comes from the ODMenuTemplate images of the chosen sheet")
-check('look="OD/MenuCompactButton" section="plate_normal"' in plate_look and "OpenDungeonsSkin/" not in plate_look,
-      "G12: the countdown panel is the sheet plank plate")
-check('windowType="OD/MenuIconButton"' in SCHEME and 'windowType="OD/MenuPlate"' in SCHEME,
-      "G12: the two sheet looks are mapped in the scheme")
-check(windows["Countdown"].get("type") == "OD/MenuPlate" and (raid_icon is None or icon_props.get("FrameEnabled") == "False"),
-      "G12: the countdown window takes the sheet plate look, the picture sits on it without an old frame")
-countdown_props = dict((p.get("name"), p.get("value")) for p in windows["Countdown"].findall("Property"))
-check(countdown_props.get("Text") == "" and countdown_props.get("TooltipText"),
-      "K14: the countdown window holds no words of its own and has a tooltip")
-imageset = ElementTree.parse(os.path.join(ROOT, "gui", "RaidHud.imageset")).getroot()
-check(sorted(i.get("name") for i in imageset.findall("Image")) == ["GateOpen", "RaidBanner"]
-      and os.path.exists(os.path.join(ROOT, "gui", imageset.get("imagefile"))),
-      "G11: the two pictures exist under their final image names")
-check('name="RaidHud"' in open(os.path.join(ROOT, "gui", "ODSkin.scheme"), encoding="utf-8").read(),
-      "G11: the picture set is registered in the scheme")
-raid_root = [w for w in root.find("Window").findall("Window") if w.get("name") == "RaidPanel"]
-check(len(raid_root) == 1, "C6: the raid panel is a window of the root sheet")
+    windows = {window.get("name"): window for window in root.iter("Window")}
+    check("RaidPanel" in windows and "Countdown" in windows and "OpenGateButton" in windows, "C6: the raid panel exists")
+    gate_button = windows.get("OpenGateButton")
+    gate_props = dict((p.get("name"), p.get("value")) for p in gate_button.findall("Property")) if gate_button is not None else {}
+    check(gate_button is not None and gate_button.get("type") == "OD/MenuIconButton" and gate_props.get("ButtonImage") == "RaidHud/GateOpen"
+          and not gate_props.get("Text") and gate_props.get("TooltipText"),
+          "K13: the gate button is the sheet plank button with only a picture, no text and a tooltip")
+    raid_icon = windows.get("RaidIcon")
+    icon_props = dict((p.get("name"), p.get("value")) for p in raid_icon.findall("Property")) if raid_icon is not None else {}
+    check(raid_icon is not None and icon_props.get("Image") == "RaidHud/RaidBanner" and icon_props.get("TooltipText"),
+          "K14: the countdown shows the raid banner picture with a tooltip")
+    K_LOOK = read("gui/OD.looknfeel")
+    SCHEME = read("gui/ODSkin.scheme")
+    icon_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuIconButton"'):]
+    icon_look = icon_look[:icon_look.index("</WidgetLook>")]
+    plate_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuPlate"'):]
+    plate_look = plate_look[:plate_look.index("</WidgetLook>")]
+    compact_look = K_LOOK[K_LOOK.index('<WidgetLook name="OD/MenuCompactButton"'):]
+    compact_look = compact_look[:compact_look.index("</WidgetLook>")]
+    check('inherits="OD/MenuCompactButton"' in icon_look and all(
+          'StateImagery name="%s"' % state in icon_look for state in ("Normal", "Hover", "Pushed", "PushedOff", "Disabled"))
+          and all(("plate_" + state) in icon_look for state in ("normal", "hover", "pushed", "disabled"))
+          and 'ImageProperty name="ButtonImage"' in icon_look and "OpenDungeonsSkin/" not in icon_look,
+          "G12: the gate button look is the sheet plank plate with its four states, built only from the sheet parts")
+    check("ODMenuTemplate/CompactNormalLeftCap" in compact_look and "ODMenuTemplate/CompactHoverFill" in compact_look
+          and "ODMenuTemplate/CompactPushedRightCap" in compact_look and "ODMenuTemplate/CompactDisabledFill" in compact_look,
+          "G12: the plank plate comes from the ODMenuTemplate images of the chosen sheet")
+    check('look="OD/MenuCompactButton" section="plate_normal"' in plate_look and "OpenDungeonsSkin/" not in plate_look,
+          "G12: the countdown panel is the sheet plank plate")
+    check('windowType="OD/MenuIconButton"' in SCHEME and 'windowType="OD/MenuPlate"' in SCHEME,
+          "G12: the two sheet looks are mapped in the scheme")
+    check(windows["Countdown"].get("type") == "OD/MenuPlate" and (raid_icon is None or icon_props.get("FrameEnabled") == "False"),
+          "G12: the countdown window takes the sheet plate look, the picture sits on it without an old frame")
+    countdown_props = dict((p.get("name"), p.get("value")) for p in windows["Countdown"].findall("Property"))
+    check(countdown_props.get("Text") == "" and countdown_props.get("TooltipText"),
+          "K14: the countdown window holds no words of its own and has a tooltip")
+    if content_packages.data_file(ROOT, "gui/RaidHud.imageset") is None and not WITH_CONTENT:
+        content_packages.unchecked("check_raid_wiring", ["gui/RaidHud.imageset and its pictures"])
+    else:
+        imageset = ElementTree.parse(str(content_packages.resolve(ROOT, "gui/RaidHud.imageset"))).getroot()
+        check(sorted(i.get("name") for i in imageset.findall("Image")) == ["GateOpen", "RaidBanner"]
+              and content_packages.data_file(ROOT, "gui/" + imageset.get("imagefile")) is not None,
+              "G11: the two pictures exist under their final image names")
+    check('name="RaidHud"' in read("gui/ODSkin.scheme"),
+          "G11: the picture set is registered in the scheme")
+    raid_root = [w for w in root.find("Window").findall("Window") if w.get("name") == "RaidPanel"]
+    check(len(raid_root) == 1, "C6: the raid panel is a window of the root sheet")
 
 
-def rect(area, width, height, scale, parent=None):
-    """The screen rectangle (left, top, right, bottom) of an area at the given size and layout scale."""
-    px, py, pw, ph = parent if parent else (0.0, 0.0, width, height)
-    left = px + area[0][0] * pw + area[0][1] * scale
-    top = py + area[1][0] * ph + area[1][1] * scale
-    right = px + area[2][0] * pw + area[2][1] * scale
-    bottom = py + area[3][0] * ph + area[3][1] * scale
-    return left, top, right, bottom
+    def rect(area, width, height, scale, parent=None):
+        """The screen rectangle (left, top, right, bottom) of an area at the given size and layout scale."""
+        px, py, pw, ph = parent if parent else (0.0, 0.0, width, height)
+        left = px + area[0][0] * pw + area[0][1] * scale
+        top = py + area[1][0] * ph + area[1][1] * scale
+        right = px + area[2][0] * pw + area[2][1] * scale
+        bottom = py + area[3][0] * ph + area[3][1] * scale
+        return left, top, right, bottom
 
 
-def overlaps(first, second):
-    """True when the rectangles share an area."""
-    return first[0] < second[2] and second[0] < first[2] and first[1] < second[3] and second[1] < first[3]
+    def overlaps(first, second):
+        """True when the rectangles share an area."""
+        return first[0] < second[2] and second[0] < first[2] and first[1] < second[3] and second[1] < first[3]
 
 
-SCREENS = [(640, 480), (800, 600), (1024, 768), (1280, 720), (1280, 1024), (1366, 768), (1920, 1080), (2560, 1440),
-           (3440, 1440), (3840, 2160), (7680, 4320)]
-UI_SCALES = [0.8, 0.9, 1.0, 1.1, 1.2]
-if len(raid_root) == 1:
-    panel_area = area_of(windows["RaidPanel"])
-    for width, height in SCREENS:
-        for user in UI_SCALES:
-            scale = min(width / design_width, height / design_height) * user
-            panel = rect(panel_area, width, height, scale)
-            name = "%dx%d at %d %%" % (width, height, round(user * 100))
-            check(panel[0] >= 0 and panel[1] >= 0 and panel[2] <= width and panel[3] <= height,
-                  "C6: the raid panel stays on the screen at " + name)
-            check(panel[1] >= rect(area_of(windows["HorizontalPipe"]), width, height, scale)[3],
-                  "C6: the raid panel is below the top bar at " + name)
-            check(not overlaps(panel, rect(area_of(windows["SpecialsPanel"]), width, height, scale)),
-                  "C6: the raid panel leaves the specials free at " + name)
-            inner = (panel[0], panel[1], panel[2] - panel[0], panel[3] - panel[1])
-            text = rect(area_of(windows["Countdown"]), width, height, scale, inner)
-            button = rect(area_of(windows["OpenGateButton"]), width, height, scale, inner)
-            icon = rect(area_of(windows["RaidIcon"]), width, height, scale, inner)
-            check(not overlaps(text, button) and text[2] > text[0] and button[2] > button[0],
-                  "C6: countdown and button side by side at " + name)
-            check(icon[0] >= text[0] and icon[2] <= text[2] and icon[1] >= text[1] and icon[3] <= text[3] and not overlaps(icon, button)
-                  and icon[2] > icon[0] and not overlaps(text, button),
-                  "K14: the picture sits on the plate and the gate button does not overlap them at " + name)
+    SCREENS = [(640, 480), (800, 600), (1024, 768), (1280, 720), (1280, 1024), (1366, 768), (1920, 1080), (2560, 1440),
+               (3440, 1440), (3840, 2160), (7680, 4320)]
+    UI_SCALES = [0.8, 0.9, 1.0, 1.1, 1.2]
+    if len(raid_root) == 1:
+        panel_area = area_of(windows["RaidPanel"])
+        for width, height in SCREENS:
+            for user in UI_SCALES:
+                scale = min(width / design_width, height / design_height) * user
+                panel = rect(panel_area, width, height, scale)
+                name = "%dx%d at %d %%" % (width, height, round(user * 100))
+                check(panel[0] >= 0 and panel[1] >= 0 and panel[2] <= width and panel[3] <= height,
+                      "C6: the raid panel stays on the screen at " + name)
+                check(panel[1] >= rect(area_of(windows["HorizontalPipe"]), width, height, scale)[3],
+                      "C6: the raid panel is below the top bar at " + name)
+                check(not overlaps(panel, rect(area_of(windows["SpecialsPanel"]), width, height, scale)),
+                      "C6: the raid panel leaves the specials free at " + name)
+                inner = (panel[0], panel[1], panel[2] - panel[0], panel[3] - panel[1])
+                text = rect(area_of(windows["Countdown"]), width, height, scale, inner)
+                button = rect(area_of(windows["OpenGateButton"]), width, height, scale, inner)
+                icon = rect(area_of(windows["RaidIcon"]), width, height, scale, inner)
+                check(not overlaps(text, button) and text[2] > text[0] and button[2] > button[0],
+                      "C6: countdown and button side by side at " + name)
+                check(icon[0] >= text[0] and icon[2] <= text[2] and icon[1] >= text[1] and icon[3] <= text[3] and not overlaps(icon, button)
+                      and icon[2] > icon[0] and not overlaps(text, button),
+                      "K14: the picture sits on the plate and the gate button does not overlap them at " + name)
+else:
+    # gui/ModeGame.layout, gui/OD.looknfeel and gui/ODSkin.scheme are whole only with their own rows (core-gui)
+    content_packages.unchecked("check_raid_wiring", [
+        "V1 [Raid] keys and documentation (own rows of config/global.cfg)",
+        "raid panel, looks, scheme entry and pictures (own rows of gui/ModeGame.layout, gui/OD.looknfeel, gui/ODSkin.scheme)"])
 
 # ------------------------------------------------------------------------------------------------ test level (step 4)
 for word in ("Action\traidopen", "Action\traidcountdown\t", "Cond\traid\topen", "Cond\traid\tarrived\t1",

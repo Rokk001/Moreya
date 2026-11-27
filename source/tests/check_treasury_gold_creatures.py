@@ -1,13 +1,21 @@
 """Exercise the creature rules on the treasury gold (lift, deep gold, step spacing, splash budget per room
-and detail option) and the wiring of the renderer, the deposit effect, the particles and the sound."""
+and detail option) and the wiring of the renderer, the deposit effect, the particles and the sound.
+The particle script, the sounds and their CREDITS rows lie in the content packages and in the CREDITS of the content
+repository (scripts/content_packages.py); without the content they are named as not checked. The compiled probe needs
+only the source headers."""
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
 
 
 def read(path):
+    """The text of a file below the repository root."""
     return (repo / path).read_text(encoding='utf-8')
 
 
@@ -31,14 +39,21 @@ assert 'Rooms/Treasury/CoinStep' in render
 # Workers pouring gold: the client reacts to the existing deposit sound message, no new packet.
 assert 'rrTreasuryDeposit(gameMap, xPos, yPos)' in read('source/network/ODClient.cpp')
 assert 'TreasuryCoinSplash' in render and 'TreasuryCoinPour' in render
-particles = read('particles/TreasuryCoins.particle')
-assert 'particle_system TreasuryCoinSplash' in particles and 'particle_system TreasuryCoinPour' in particles
-assert 'material        ReactionParticleCoin' in particles
-# Assets are credited.
-credits = read('CREDITS')
-assert 'TreasuryCoins.particle' in credits and 'CoinStep*.ogg' in credits
-for number in (1, 2, 3):
-    assert (repo / ('sounds/Spatial/Rooms/Treasury/CoinStep/CoinStep%d.ogg' % number)).exists()
+particles_file = content_packages.data_file(repo, 'particles/TreasuryCoins.particle')
+if particles_file is None and not content_packages.has_content(repo):
+    content_packages.unchecked('check_treasury_gold_creatures', ['particles/TreasuryCoins.particle',
+                                                                 'sounds/Spatial/Rooms/Treasury/CoinStep',
+                                                                 'their CREDITS rows'])
+else:
+    particles = content_packages.read_text(repo, 'particles/TreasuryCoins.particle')
+    assert 'particle_system TreasuryCoinSplash' in particles and 'particle_system TreasuryCoinPour' in particles
+    assert 'material        ReactionParticleCoin' in particles
+    # Assets are credited (the rows of the moved files stand in the CREDITS of the content repository).
+    credits = room_packages.credits_text(repo)
+    assert 'TreasuryCoins.particle' in credits and 'CoinStep*.ogg' in credits
+    for number in (1, 2, 3):
+        assert content_packages.data_file(repo, 'sounds/Spatial/Rooms/Treasury/CoinStep/CoinStep%d.ogg' % number) \
+            is not None
 assert (repo / 'tools/treasury-gold/generate_coin_step.py').exists()
 
 probe = r"""

@@ -3,16 +3,37 @@
 Static check, no game needed. The parts about the shared creature profile page (order of its rows, its scrollbar and
 its reach in the book) were removed with that page (owner decision 2026-11-18); the book shows its own profile as
 book-variant-2 (plan INGAME-QS-11 K1), measured below and by check_dungeonbook_pages_b1.py.
+
+The layout, fonts, imagesets and social tables are content (core-gui and core-config packages, found through
+scripts/content_packages.py). Without the content the removed pages are checked absent from the public tree and Gui.cpp,
+and the measurement, which needs the content everywhere, is named as not checked.
 """
 from pathlib import Path
 from functools import lru_cache
 import re
+import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
 gui = (repo / 'source/render/Gui.cpp').read_text()
-assert not (repo / 'gui/WindowCreatureProfilePage.layout').exists(), 'the shared profile page was deleted'
+# Absent from the public tree and from every content package
+assert content_packages.data_file(repo, 'gui/WindowCreatureProfilePage.layout') is None, \
+    'the shared profile page was deleted'
 assert 'layoutCreatureProfilePage' not in gui and 'ProfileScrollbar' not in gui
+assert content_packages.data_file(repo, 'gui/WindowDungeonbookProfile.layout') is None, \
+    'the old profile page with its buttons is gone'
+#: The content files the measurement needs (core-gui and core-config packages)
+CONTENT_FILES = ('gui/WindowSocial.layout', 'gui/fonts/MedievalSharp-8.font', 'gui/ODMenuTemplate.imageset',
+                 'gui/DungeonbookIcons.imageset', 'gui/DungeonbookIcons.png', 'config/social-names.cfg',
+                 'config/social-texts.cfg', 'config/items.cfg', 'config/potions.cfg')
+missing_content = [name for name in CONTENT_FILES if content_packages.data_file(repo, name) is None]
+if missing_content:
+    content_packages.unchecked('check_dungeonbook_profile_layout', missing_content)
+    sys.exit(0)
 
 # Dungeonbook (gui/WindowSocial.layout), owner decisions 635, 636, 647 and 648: a start page with the creature list
 # (portrait, name, level, mood, filters All / Workers / Fighters / Unhappy) and the feed of all creatures, and the four
@@ -27,7 +48,7 @@ from PIL import ImageFont
 
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
 social_header = (repo / 'source/render/SocialWindow.h').read_text()
-social_layout = (repo / 'gui/WindowSocial.layout').read_text()
+social_layout = content_packages.read_text(repo, 'gui/WindowSocial.layout')
 book = ET.fromstring(social_layout).find('Window')
 size = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', social_layout)
 book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])
@@ -36,7 +57,6 @@ book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])
 # narrow enough that at 640x480 it is shrunk only to the screen height, so the pages keep the room for their texts
 assert (book_w, book_h) == (860, 648), (book_w, book_h)
 assert book.get('type') == 'OD/SheetWindow', 'the Dungeonbook uses the window frame of the menu sheet'
-assert not (repo / 'gui/WindowDungeonbookProfile.layout').exists(), 'the old profile page with its buttons is gone'
 for old in ('Attributes', 'Social profile', 'Statistics', 'Back', 'Show: all creatures', 'Posts of: everyone'):
     assert 'name="Text" value="%s"' % old not in social_layout, 'old button ' + old
 for old in ('FilterButton', 'FeedTab', 'ProfileTab', 'FeedModeButton', 'CreatureList', 'ProfilePane', 'SocialButton',
@@ -46,8 +66,9 @@ assert 'type="OD/Listbox"' not in social_layout
 
 font_files = {}
 for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-12', 'MedievalSharp-13', 'MedievalSharp-20'):
-    spec = ET.parse(repo / 'gui/fonts' / (name + '.font')).getroot()
-    font_files[name] = (ImageFont.truetype(str(repo / 'gui/fonts' / spec.get('filename')), 1024),
+    # the font as the game reads it (a mixed font with its own rows from the content packages)
+    spec = ET.fromstring(content_packages.read_text(repo, 'gui/fonts/' + name + '.font'))
+    font_files[name] = (ImageFont.truetype(str(content_packages.resolve(repo, 'gui/fonts/' + spec.get('filename'))), 1024),
                         float(spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0)
 
 
@@ -71,7 +92,7 @@ CLIENT_W, CLIENT_H = 828.0, 560.0
 # window frame of the chosen menu sheet (OD/SheetWindow, ODMenuTemplate imageset scaled with the layout scale by
 # Gui.cpp at 1.5625 sheet pixels per design pixel): its side and bottom rails are FRAME_SIDE / FRAME_BOTTOM design
 # pixels at every screen and UI scale, and no property of the old frame is left on the window.
-menu_sheet = ET.parse(repo / 'gui/ODMenuTemplate.imageset').getroot()
+menu_sheet = ET.parse(content_packages.resolve(repo, 'gui/ODMenuTemplate.imageset')).getroot()
 assert 'MENU_SHEET_IMAGE_PIXEL_DENSITY = 1.5625f' in gui
 FRAME_SIDE = max(float(menu_sheet.find("Image[@name='Frame%s']" % n).get('width')) for n in ('Left', 'Right')) / 1.5625
 FRAME_BOTTOM = float(menu_sheet.find("Image[@name='FrameBottom']").get('height')) / 1.5625
@@ -182,15 +203,16 @@ assert boxes['ValuesPage/CombatLabels'][1].find("Property[@name='Text']").get('v
 assert boxes['ValuesPage/DefenseLabels'][1].find("Property[@name='Text']").get('value').split(chr(10)) == [
     'Physical Defense', 'Magical Defense', 'Element Defense']
 assert boxes['ValuesPage/Portrait/Frame'][1].find("Property[@name='Image']").get('value') == 'DungeonbookFrame/Ring'
-icons = ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot()
+icons = ET.parse(content_packages.resolve(repo, 'gui/DungeonbookIcons.imageset')).getroot()
 icon_names = {i.get('name') for i in icons.findall('Image')}
 for value in re.findall(r'value="DungeonbookIcons/(\w+)"', social_layout) + re.findall(r'"DungeonbookIcons/(\w+)"', social):
     assert value in icon_names, value
-assert (repo / 'gui' / icons.get('imagefile')).is_file()
-scheme = ET.parse(repo / 'gui/ODSkin.scheme').getroot()
+assert content_packages.data_file(repo, 'gui/' + icons.get('imagefile')) is not None
+scheme = ET.fromstring(content_packages.read_text(repo, 'gui/ODSkin.scheme'))
 assert scheme.find("Imageset[@filename='DungeonbookIcons.imageset'][@name='DungeonbookIcons']") is not None
 assert scheme.find("Imageset[@filename='DungeonbookFrame.imageset'][@name='DungeonbookFrame']") is not None
-assert 'gui/DungeonbookIcons.png' in (repo / 'CREDITS').read_text()
+# The row of the moved atlas stands in the CREDITS of the content repository (public CREDITS plus that one)
+assert 'gui/DungeonbookIcons.png' in room_packages.credits_text(repo)
 
 # Code: real game data only, every value of today kept, rounded to at most two decimals (owner decision 830: no raw
 # float sums such as 51.59700000000005), and the slots filled by the creature code
@@ -410,7 +432,7 @@ assert 'fillProfilePage(' not in social and 'fillProfilePage(' not in creature_t
 # pixels do not depend on the resolution); Gui::getWindowFitFactor shrinks a window larger than the screen together
 # with its children but not the fonts, so the texts are compared with the shrunk boxes.
 # The title is the sheet title (OD/SheetTitlebar): one line of the 13 point title font of OD/SheetWindow.
-sheet_look = ET.parse(repo / 'gui/OD.looknfeel').getroot().find("WidgetLook[@name='OD/SheetWindow']")
+sheet_look = ET.fromstring(content_packages.read_text(repo, 'gui/OD.looknfeel')).find("WidgetLook[@name='OD/SheetWindow']")
 assert sheet_look.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-13'
 TITLE_LINE = line_height('MedievalSharp-13')
 need = {}
@@ -447,7 +469,7 @@ def wrap_lines(font, text, width):
 # post template of config/social-texts.cfg with each slot filled by its widest values (names, hometowns, jobs, likes,
 # dislikes, quirks, rooms of CreaturePosts::getRoomName, item names of items.cfg and potions.cfg, level 30).
 name_groups = []
-for line in (repo / 'config/social-names.cfg').read_text().split('\n'):
+for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\n'):
     cells = line.split('\t')
     if cells[0] == '[NameGroup]':
         name_groups.append({'given': [], 'last': [], 'home': []})
@@ -469,7 +491,7 @@ WIDEST_NAMES_8 = widest(full_names) + sorted(full_names, key=len)[-1:]
 WIDEST_NAMES_10 = widest(full_names, 'MedievalSharp-10') + sorted(full_names, key=len)[-1:]
 pools = {'job': [], 'like': [], 'dislike': [], 'quirk': []}
 templates = []
-for line in (repo / 'config/social-texts.cfg').read_text().split('\n'):
+for line in content_packages.read_text(repo, 'config/social-texts.cfg').split('\n'):
     cells = line.split('\t')
     if cells[0].lower() in pools:
         pools[cells[0].lower()].append(cells[-1])
@@ -478,7 +500,7 @@ for line in (repo / 'config/social-texts.cfg').read_text().split('\n'):
 assert len(templates) > 300 and all(pools.values()), 'post templates and slot pools are read'
 items = ['Soul crystal', 'Ectoplasm', 'Mana crystal', 'Research book']
 for cfg in ('items.cfg', 'potions.cfg'):
-    items += re.findall(r'^\s*Display\s+(.+?)\s*$', (repo / 'config' / cfg).read_text(), re.M)
+    items += re.findall(r'^\s*Display\s+(.+?)\s*$', content_packages.read_text(repo, 'config/' + cfg), re.M)
 posts_source = (repo / 'source/social/CreaturePosts.cpp').read_text()
 rooms = re.findall(r'return "([a-z ]+)";', posts_source[posts_source.index('CreaturePosts::getRoomName'):][:3000])
 assert len(items) > 50 and len(rooms) > 15, (len(items), len(rooms))
@@ -525,9 +547,9 @@ handles = ['@' + max((g for group in name_groups for g in group['given']), key=l
 require('ProfilePage/NameText', 'MedievalSharp-12', texts=WIDEST_NAMES_12, pad_w=0.0)
 for label in ('Age', 'Gender', 'Relationship', 'Origin', 'Job', 'Path', 'Skills'):
     require('ProfilePage/%sLabel' % label, 'MedievalSharp-8', texts=(label + ':',))
-age_jokes = [c for line in (repo / 'config/social-names.cfg').read_text().split('\n')
+age_jokes = [c for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\n')
              for c in line.split('\t')[1:] if line.startswith('AgeJoke') and c]
-relations = [line.split('\t')[-1] for line in (repo / 'config/social-texts.cfg').read_text().split('\n')
+relations = [line.split('\t')[-1] for line in content_packages.read_text(repo, 'config/social-texts.cfg').split('\n')
              if line.startswith('Relation\t')]
 require('ProfilePage/AgeValue', 'MedievalSharp-8', texts=tuple(age_jokes) + ('30',))
 require('ProfilePage/GenderValue', 'MedievalSharp-8', texts=('Female', 'Male', '-'))

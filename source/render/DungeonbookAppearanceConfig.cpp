@@ -4,6 +4,7 @@
  */
 
 #include "render/DungeonbookAppearanceConfig.h"
+#include "utils/ContentPackages.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -51,7 +52,8 @@ bool DungeonbookAppearanceConfig::loadFromFile(const std::string& path)
 {
     setDefaults();
     mWarnings.clear();
-    std::ifstream file(path.c_str());
+    // The table may lie in a content package (ContentPackages::resolveFile)
+    std::ifstream file(ContentPackages::resolveFile(path).c_str());
     if(!file.is_open())
     {
         mWarnings.push_back(path + ": cannot open the Dungeonbook appearance config, using defaults");

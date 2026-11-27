@@ -16,7 +16,11 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir, resolve  # noqa: E402
+import content_packages  # noqa: E402
 DESIGN_W, DESIGN_H = 1024.0, 768.0
+#: True when the content packages are present: ModeGame.layout and ODIcons.imageset are mixed interface files whose own
+#: rows come from them
+CONTENT = content_packages.has_content(repo)
 
 
 # Read a tracked source using the repository root rather than the caller's directory.
@@ -57,12 +61,16 @@ def udims(value):
     return [(float(a), float(b)) for a, b in re.findall(r"\{([-\d.]+),([-\d.]+)\}", value)]
 
 
-# The single manager replaces the separate room buttons at the original production slot.
-def layout_button():
+# The layout design size of the code is the one the row model below uses.
+def design_size():
     gui = read("source/render/Gui.cpp")
     assert float(re.search(r"LAYOUT_DESIGN_WIDTH = ([0-9.]+)f", gui)[1]) == DESIGN_W
     assert float(re.search(r"LAYOUT_DESIGN_HEIGHT = ([0-9.]+)f", gui)[1]) == DESIGN_H
-    root = ET.parse(repo / "gui/ModeGame.layout").getroot()
+
+
+# The single manager replaces the separate room buttons at the original production slot (the joined game layout).
+def layout_button():
+    root = ET.fromstring(content_packages.read_text(repo, "gui/ModeGame.layout"))
     nodes = {n.get("name"): n for n in root.iter("Window")}
     button = nodes["RoomManagerButton"]
     p = props(button)
@@ -123,14 +131,19 @@ def resolutions(root, nodes, row):
 
 # The painted icon: its own atlas cell, a copy of its 256 pixel tile, the iron frame of the row tiles, a green-white trap glow.
 def icon():
-    imageset = read("gui/ODIcons.imageset")
+    # The icon atlas lies in a content package (found through scripts/content_packages.py)
+    atlas_files = ["gui/ODIcons.imageset", "gui/ODIcons.png"]
+    if any(content_packages.data_file(repo, name) is None for name in atlas_files):
+        content_packages.unchecked("check_ghost_hunters_button", atlas_files)
+        return
+    imageset = content_packages.read_text(repo, "gui/ODIcons.imageset")
     entry = re.search(r'<Image height="(\d+)" name="GhostHuntersButton" width="(\d+)" xPos="(\d+)" yPos="(\d+)" />', imageset)
     assert entry and entry.groups() == ("256", "256", "1280", "4352"), entry and entry.groups()
     assert re.search(r'name="MerchantButton" width="256"', imageset), "same size as the merchant button"
     x, y = 1280, 4352
     tile = Image.open(assets_src_dir(repo) / "gui/icons/tiles/GhostHuntersButton.png").convert("RGBA")
     assert tile.size == (256, 256)
-    atlas = Image.open(repo / "gui/ODIcons.png").convert("RGBA")
+    atlas = Image.open(content_packages.resolve(repo, "gui/ODIcons.png")).convert("RGBA")
     assert atlas.crop((x, y, x + 256, y + 256)).tobytes() == tile.tobytes(), "the atlas cell is the painted tile"
     # No other imageset entry shares the cell
     for other in re.finditer(r'name="(\w+)" width="(\d+)" xPos="(\d+)" yPos="(\d+)"', imageset):
@@ -212,14 +225,18 @@ def game_code():
     print("ghost room tile click removed and own tiles known: ok")
 
 
-# One tooltip and context help line now describe the single room navigation entry point.
+# One tooltip and context help line now describe the single room navigation entry point (the tooltip only with the
+# content, which holds the own rows of the game layout).
 def merchant_and_tooltips():
-    root = ET.parse(repo / "gui/ModeGame.layout").getroot()
-    nodes = {n.get("name"): n for n in root.iter("Window")}
-    button = nodes["RoomManagerButton"]
-    assert props(button)["TooltipText"] == "Room Manager"
-    help_lines = {u.get("name"): u.get("value") for u in button.findall("UserString")}
-    assert help_lines.get("ContextHelp", "").startswith("Room Manager:")
+    if CONTENT:
+        root = ET.fromstring(content_packages.read_text(repo, "gui/ModeGame.layout"))
+        nodes = {n.get("name"): n for n in root.iter("Window")}
+        button = nodes["RoomManagerButton"]
+        assert props(button)["TooltipText"] == "Room Manager"
+        help_lines = {u.get("name"): u.get("value") for u in button.findall("UserString")}
+        assert help_lines.get("ContextHelp", "").startswith("Room Manager:")
+    else:
+        content_packages.unchecked("check_ghost_hunters_button", ["Room Manager tooltip of gui/ModeGame.layout"])
     assert "case ClientNotificationType::askMerchantWindow:" in read("source/network/ODServer.cpp")
     level = read("levels/skirmish/TestGhosts.level")
     assert re.search(r"\[Room\]\n20\tMerchant1\t1\t16\n", level)
@@ -259,9 +276,14 @@ def start_choice():
 
 
 def main():
-    root, nodes, row = layout_button()
-    resolutions(root, nodes, row)
-    icon()
+    design_size()
+    if CONTENT:
+        root, nodes, row = layout_button()
+        resolutions(root, nodes, row)
+        icon()
+    else:
+        content_packages.unchecked("check_ghost_hunters_button", ["navigation row of gui/ModeGame.layout",
+                                                                  "ghost hunters icon of gui/ODIcons.imageset"])
     game_code()
     merchant_and_tooltips()
     start_choice()

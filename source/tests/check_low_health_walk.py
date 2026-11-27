@@ -1,12 +1,18 @@
 """Slower walk of a badly hurt creature (30 percent by default), server and clients at the same speed.
 
 Pure source wiring checks (no compiler, no game): values in the configuration, one shared rule on the
-health stage both sides know, no new network message, the walk clip keeps up and is not slowed twice."""
+health stage both sides know, no new network message, the walk clip keeps up and is not slowed twice.
+The reaction table config/creatureReactions.cfg lives in a content package; config/global.cfg and config/creatures.cfg
+are mixed tables read joined with their own rows from the content. Without the content the check names those parts as
+not checked."""
 from pathlib import Path
 import math
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -19,20 +25,25 @@ def function_body(source, signature):
     return source[start:end]
 
 
-global_cfg = read('config/global.cfg')
+#: True when the content packages are present: the mixed tables are complete only with their own rows
+CONTENT = content_packages.has_content(root)
+global_cfg = content_packages.read_text(root, 'config/global.cfg') if CONTENT else None
 config_h = read('source/utils/ConfigManager.h')
 config_cpp = read('source/utils/ConfigManager.cpp')
 creature = read('source/entities/Creature.cpp')
 creature_h = read('source/entities/Creature.h')
 movable = read('source/entities/MovableGameEntity.cpp')
 render = read('source/render/RenderManager.cpp')
-reactions_cfg = read('config/creatureReactions.cfg')
+reactions_file = content_packages.data_file(root, 'config/creatureReactions.cfg')
 
 # Values: documented and set in the configuration, read with a default and a limit
 for key, value in (('LowHealthWalkSpeedFactor', 0.7), ('LowHealthWalkThresholdPercent', 50.0)):
-    assert re.search(r'^# .*\n    ' + key + r'\t[\d.]+', global_cfg, re.M), key + ' not documented and set'
-    assert float(re.search(r'^    ' + key + r'\t([\d.]+)', global_cfg, re.M)[1]) == value, key
+    if CONTENT:
+        assert re.search(r'^# .*\n    ' + key + r'\t[\d.]+', global_cfg, re.M), key + ' not documented and set'
+        assert float(re.search(r'^    ' + key + r'\t([\d.]+)', global_cfg, re.M)[1]) == value, key
     assert ('"' + key + '"') in config_cpp, key + ' not read'
+if not CONTENT:
+    content_packages.unchecked('check_low_health_walk', ['values of config/global.cfg'])
 assert 'mLowHealthWalkSpeedFactor(0.7)' in config_cpp and 'mLowHealthWalkThresholdPercent(50.0)' in config_cpp
 assert 'limitLowHealthWalkSpeedFactor(mLowHealthWalkSpeedFactor)' in config_h
 assert 'std::max(LOW_HEALTH_WALK_SPEED_FACTOR_MIN, std::min(LOW_HEALTH_WALK_SPEED_FACTOR_MAX, factor))' in config_h
@@ -85,12 +96,16 @@ assert movable.count('getClientPoseSpeedFactor()') == 1
 assert 'getLowHealthWalk' not in render and 'getLowHealthWalk' not in movable   # the renderer does not scale it again
 
 # Matching clip: the normal walk clip at that speed plus the existing hurt walk reaction (E15)
-assert re.search(r'Name\s+HurtWalk\b', reactions_cfg) and re.search(r'Name\s+Limp\b', reactions_cfg)
+if reactions_file is None:
+    content_packages.unchecked('check_low_health_walk', ['HurtWalk and Limp events of config/creatureReactions.cfg'])
+else:
+    reactions_cfg = reactions_file.read_text(encoding='utf-8')
+    assert re.search(r'Name\s+HurtWalk\b', reactions_cfg) and re.search(r'Name\s+Limp\b', reactions_cfg)
 
 # Optional factor per creature type: parsed, copied, sent to the clients, saved, documented, absent = global value
 definition = read('source/entities/CreatureDefinition.cpp')
 definition_h = read('source/entities/CreatureDefinition.h')
-creatures_cfg = read('config/creatures.cfg')
+creatures_cfg = content_packages.read_text(root, 'config/creatures.cfg') if CONTENT else None
 assert 'mLowHealthWalkSpeedFactor (-1.0)' in definition
 assert 'mLowHealthWalkSpeedFactor(def.mLowHealthWalkSpeedFactor)' in definition
 assert 'os << c->mLowHealthWalkSpeedFactor;' in definition and 'is >> c->mLowHealthWalkSpeedFactor;' in definition
@@ -98,8 +113,11 @@ assert definition.index('os << c->mUndead;') < definition.index('os << c->mLowHe
 assert definition.index('is >> c->mUndead;') < definition.index('is >> c->mLowHealthWalkSpeedFactor;')
 assert 'nextParam == "LowHealthWalkSpeedFactor"' in definition and '"    LowHealthWalkSpeedFactor' in definition
 assert 'double mLowHealthWalkSpeedFactor;' in definition_h and 'getLowHealthWalkSpeedFactor () const' in definition_h
-assert re.search(r'^# LowHealthWalkSpeedFactor \(Optional', creatures_cfg, re.M)
-assert not re.search(r'^\s+LowHealthWalkSpeedFactor\s', creatures_cfg, re.M), 'no value set yet'
+if CONTENT:
+    assert re.search(r'^# LowHealthWalkSpeedFactor \(Optional', creatures_cfg, re.M)
+    assert not re.search(r'^\s+LowHealthWalkSpeedFactor\s', creatures_cfg, re.M), 'no value set yet'
+else:
+    content_packages.unchecked('check_low_health_walk', ['LowHealthWalkSpeedFactor of config/creatures.cfg'])
 assert 'mDefinition->getLowHealthWalkSpeedFactor() >= 0.0' in rule
 assert 'std::max(0.2, std::min(1.0, mDefinition->getLowHealthWalkSpeedFactor()))' in rule
 assert rule.index('mDefinition->getLowHealthWalkSpeedFactor()') < rule.index('ConfigManager::getSingleton().getLowHealthWalkSpeedFactor()')

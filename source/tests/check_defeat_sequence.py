@@ -2,13 +2,18 @@
 
 DefeatSequence.h is compiled as it is. The GameMode member functions that drive the sequence are cut out of
 GameMode.cpp by signature and compiled against small mocks of CEGUI, the render manager and the game map.
+The particle scripts of the sequence are content (scripts/content_packages.py); without the content they are named as
+not checked.
 """
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 game_mode_header = (repo / 'source/modes/GameMode.h').read_text()
 sequence_header = (repo / 'source/modes/DefeatSequence.h').read_text()
@@ -450,8 +455,13 @@ assert 'mDefeatSequence.isHeartKnown()' in start and 'getCameraViewTarget()' in 
 assert 'onDefeatSequenceFinished' in game_mode_header
 assert 'startDefeatSequence(conquerorSeatId, heartTileX, heartTileY)' in client
 print('WIRING OK: camera controls blocked, frame update called, start is one-shot, unknown heart keeps the camera target')
+# The particle scripts are content (core-models package, scripts/content_packages.py); without it they are not checked
 for name in ('HeartExplosion', 'DefeatSwirl'):
-    script = (repo / ('particles/' + name + '.particle')).read_text()
+    particle_file = content_packages.data_file(repo, 'particles/' + name + '.particle')
+    if particle_file is None and not content_packages.has_content(repo):
+        content_packages.unchecked('check_defeat_sequence', ['particles/' + name + '.particle'])
+        continue
+    script = content_packages.resolve(repo, 'particles/' + name + '.particle').read_text()
     assert 'particle_system ' + name in script
 added = sequence_header + function(game_mode, 'void GameMode::startDefeatSequence(') + function(game_mode, 'void GameMode::updateDefeatSequence(')
 assert re.search(r'\bauto\b', added) is None

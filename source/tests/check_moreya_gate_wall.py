@@ -20,6 +20,9 @@ with a [Raid] section that ships in this repository the check holds, with values
 - the passage behind the bars (material MoreyaGateDepth) is textured stone with a faint green glow, not flat black.
 
 Nothing is derived from the files under test; the game is not started and nothing is compiled.
+The wing levels, the gate material and its texture live in content packages (found through scripts/content_packages.py
+and scripts/campaign_packages.py); without the content the check names them as not checked and checks the public test
+level and the code.
 
 Usage: python -I source/tests/check_moreya_gate_wall.py
 Exit 0 and "moreya gate wall ok" when every item holds.
@@ -31,8 +34,15 @@ import time
 from collections import deque
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
+
 START = time.perf_counter()
 FAILURES = []
+WITH_CONTENT = content_packages.has_content(ROOT)
+# Files that need the content and are not checked because it is not present
+NOT_CHECKED = []
 
 # Level file, gate tile, rotation in degrees, open side of the gate (front direction) and the route tile the raid
 # must reach from the gate, fixed on fix/ingame-ui-findings for the owner's decision of 2026-11-23.
@@ -61,6 +71,31 @@ def check(condition, message):
 def read(relative):
     """Returns the text of a file of the repository with Unix line ends."""
     with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
+        return handle.read().replace("\r\n", "\n")
+
+
+def data_file(relative):
+    """Returns the game data file (a level of the public tree or of its wing or content package, else any other data
+    file of the public tree or of a content package); None when the content is not present (with the content present
+    the path below the repository, so that a missing file still fails)."""
+    if relative.endswith(".level"):
+        found = campaign_packages.level_file(ROOT, relative)
+    else:
+        found = content_packages.data_file(ROOT, relative)
+    if found is None and WITH_CONTENT:
+        return os.path.join(ROOT, relative)
+    if found is None:
+        NOT_CHECKED.append(relative)
+        return None
+    return str(found)
+
+
+def read_data(relative):
+    """Returns the text of a game data file with Unix line ends, or None when the content is not present."""
+    path = data_file(relative)
+    if path is None:
+        return None
+    with open(path, encoding="utf-8") as handle:
         return handle.read().replace("\r\n", "\n")
 
 
@@ -104,7 +139,10 @@ def load_level(text):
 def check_level(path, gate_tile, rotation, front, route_tile):
     """Checks the gate niche, its rock surroundings and the raid route of one level."""
     name = os.path.basename(path)
-    size_x, size_y, tiles, rooms, gate, seats = load_level(read(path))
+    text = read_data(path)
+    if text is None:
+        return
+    size_x, size_y, tiles, rooms, gate, seats = load_level(text)
     check(gate is not None and seats is not None, name + ": the [Raid] section needs a Gate and a Seats line")
     if gate is None or seats is None:
         return
@@ -207,12 +245,14 @@ def check_code():
 
 def check_material():
     """The passage behind the bars is the fortress stone with a faint green glow, not flat black."""
-    text = read("materials/scripts/MoreyaGate.material")
+    text = read_data("materials/scripts/MoreyaGate.material")
+    if text is None:
+        return
     block = text[text.index("material MoreyaGateDepth"):]
     block = block[:block.index("\n}\n") + 2]
     check("texture MenuFortressStone.png" in block, "MoreyaGateDepth must show the fortress stone texture")
-    check(os.path.isfile(os.path.join(ROOT, "materials/textures/menu/MenuFortressStone.png")),
-          "the fortress stone texture must exist")
+    stone = data_file("materials/textures/menu/MenuFortressStone.png")
+    check(stone is None or os.path.isfile(stone), "the fortress stone texture must exist")
     check(re.search(r"\bdiffuse 0\.22 0\.26 0\.25 1\b", block) is not None and
           re.search(r"\bambient 0\.30 0\.34 0\.33 1\b", block) is not None,
           "MoreyaGateDepth must light its stone dimly (ambient 0.30 0.34 0.33, diffuse 0.22 0.26 0.25)")
@@ -227,6 +267,7 @@ def main():
     check_code()
     check_material()
     seconds = time.perf_counter() - START
+    content_packages.unchecked("check_moreya_gate_wall", NOT_CHECKED)
     print('ODP_TEST_PHASE {"name":"check","seconds":%.3f}' % seconds)
     for failure in FAILURES:
         print("FAIL " + failure)

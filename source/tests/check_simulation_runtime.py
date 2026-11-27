@@ -1,4 +1,10 @@
-"""Preserve seeded outcomes and error propagation while removing repeated test work."""
+"""Preserve seeded outcomes and error propagation while removing repeated test work.
+
+The skill scheduler test needs config/creatureSkills.cfg, a file of the core-config content package
+(scripts/content_packages.py); without the content it is named as not checked and skipped. The plain combat tests need
+the creature definitions and the chicken test the hatchery values: config/creatures.cfg and config/rooms.cfg are whole
+only with their own rows of the same package, so without the content these tests are named and skipped too.
+"""
 import importlib.util
 from pathlib import Path
 import random
@@ -13,6 +19,16 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/balance'))
 import combat_sim as combat
 import item_probe_support as items
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+
+# Skip a test that needs the own rows of the mixed data tables when the content packages are not present.
+def skip_without_content(test, name):
+    """Names the test as not checked and skips it when the content packages are not present."""
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_simulation_runtime', [name])
+        test.skipTest('content not present')
 
 
 # Load chase definitions without executing the full 144,000-case script during unit checks.
@@ -40,6 +56,7 @@ def uncached_positions(module, room, seed):
 class SimulationRuntimeTests(unittest.TestCase):
     # Prepared ordinary attacks must preserve miss, avoidance, damage and conditional draw counts.
     def test_plain_blow_equivalence(self):
+        skip_without_content(self, 'plain blow equivalence (own rows of config/creatures.cfg)')
         roster = combat.Roster(ROOT)
         names = roster.fighters()
         for index, name in enumerate(names):
@@ -53,6 +70,7 @@ class SimulationRuntimeTests(unittest.TestCase):
 
     # Every duel/group result remains identical when prepared arithmetic is replaced by the reference.
     def test_plain_scheduler_equivalence(self):
+        skip_without_content(self, 'plain scheduler equivalence (own rows of config/creatures.cfg)')
         roster = combat.Roster(ROOT)
         names = roster.fighters()
         for index, name in enumerate(names):
@@ -69,6 +87,10 @@ class SimulationRuntimeTests(unittest.TestCase):
 
     # Skills retain critical rolls, casts, healing, stuns and all per-fight results across every matrix case.
     def test_skill_scheduler_equivalence(self):
+        if content_packages.data_file(ROOT, 'config/creatureSkills.cfg') is None and \
+                not content_packages.has_content(ROOT):
+            content_packages.unchecked('check_simulation_runtime', ['skill scheduler equivalence (config/creatureSkills.cfg)'])
+            self.skipTest('content not present')
         roster = combat.Roster(ROOT)
         world = combat.World(roster)
         for level, template in combat.CASES_MATRIX:
@@ -87,6 +109,7 @@ class SimulationRuntimeTests(unittest.TestCase):
 
     # Reused positions match uncached placement and every selected chase result for every shape/kind/speed/logic.
     def test_chicken_placement_and_outcomes(self):
+        skip_without_content(self, 'chicken placement and outcomes (own rows of config/rooms.cfg)')
         chicken = chicken_definitions()
         for room in chicken.make_rooms():
             for seed in range(8):

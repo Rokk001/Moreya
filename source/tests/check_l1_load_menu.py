@@ -1,12 +1,16 @@
 """Check the saved-game entries, single-player restrictions and load-menu flights without compiling."""
 from pathlib import Path
+import sys
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / "scripts"))
+import content_packages  # noqa: E402
 def read(path):
     return (root / path).read_text(encoding="utf-8")
+# The window names of a layout as the game reads it (a mixed file joined with its own rows from the content).
 def names(path):
-    return {node.get("name") for node in ET.parse(root / path).iter("Window")}
+    return {node.get("name") for node in ET.fromstring(content_packages.read_text(root, path)).iter("Window")}
 def function(source, signature):
     start = source.index(signature)
     opening = source.index("{", start)
@@ -21,11 +25,16 @@ main = read("source/modes/MenuModeMain.cpp")
 game = read("source/modes/GameMode.cpp")
 manager = read("source/modes/ModeManager.cpp")
 load = read("source/modes/MenuModeLoad.cpp")
-assert "LoadGameButton" in names("gui/MenuMain.layout")
-assert "StartReplayButton" not in names("gui/MenuMain.layout")
-assert "LoadSkirmishButton" not in names("gui/WindowSkirmishSubMenu.layout")
-assert "LoadGameButton" in names("gui/WindowGameOptions.layout")
-assert "SaveGameButton" in names("gui/WindowGameOptions.layout")
+# The layouts are mixed files: their entries are only complete with the own rows of the content
+if content_packages.has_content(root):
+    assert "LoadGameButton" in names("gui/MenuMain.layout")
+    assert "StartReplayButton" not in names("gui/MenuMain.layout")
+    assert "LoadSkirmishButton" not in names("gui/WindowSkirmishSubMenu.layout")
+    assert "LoadGameButton" in names("gui/WindowGameOptions.layout")
+    assert "SaveGameButton" in names("gui/WindowGameOptions.layout")
+else:
+    content_packages.unchecked("check_l1_load_menu", ["entries of gui/MenuMain.layout, gui/WindowSkirmishSubMenu.layout "
+                                                      "and gui/WindowGameOptions.layout"])
 assert "KC_F8" not in game
 keys = function(game, "bool GameMode::keyPressedNormal(")
 assert "case OIS::KC_F5:" in keys and "saveGame();" in keys

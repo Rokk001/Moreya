@@ -9,7 +9,7 @@ Static part, always:
     room out and keeps loading (MapHandler), the ghost room equipment and saved capture boxes and herb bundles need
     their packages, the asset folders and sounds of found packages are loaded (ResourceManager, SoundEffectsManager)
     and the packages are found at startup (ODApplication);
-  * the public tree holds none of the 319 packaged room assets (PACKAGED_ASSETS of scripts/room_packages.py, fixed for
+  * the public tree holds none of the 330 packaged room assets (PACKAGED_ASSETS of scripts/room_packages.py, fixed for
     this branch);
   * with the content present: every package of the content repository has its Package.cfg naming its room and exactly
     the files of PACKAGED_ASSETS.
@@ -19,8 +19,11 @@ a room that needs no package is always available, a wing package names no room, 
 the found packages are named sorted, and the room packages of a server limit the available rooms until the limit is
 removed (a room of the client that the server lacks is unavailable, the names of the found packages stay).
 Runtime part, when the built game build/windows/moreya.exe exists: the game plays levels/skirmish/TestSpa.level (a
-tavern and a spa) with the load test parameters (--run-level, 1 second) without MOREYA_CONTENT_DIR, so no room package
-is found; the run must pass and the log must show both rooms left out.
+tavern and a spa) with the load test parameters (--run-level, 1 second) with a content folder that holds only the
+required content packages (scripts/content_packages.py) and the wing packages of the campaign (the public tree has no
+campaign of its own any more, scripts/campaign_packages.py), linked from the content folder, so the game starts but no
+room package is found; the run must pass and the log must show both rooms left out. Without the content packages the
+game cannot start (it says the content is missing): the runtime part is then named as not checked.
 
 Usage: python source/tests/check_room_packages.py
 """
@@ -38,11 +41,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: Files of each room package, counted once for this branch (Package.cfg included)
-PACKAGE_FILES = {"GuardRoom": 1, "Temple": 2, "Toilet": 39, "Merchant": 35, "HerbGarden": 22, "AlchemyLab": 9,
-                 "Tavern": 84, "Infirmary": 32, "GhostRoom": 80, "Spa": 25}
+#: (Merchant 35 -> 33, Tavern 84 -> 82, Infirmary 32 -> 30, Spa 25 -> 23 when the meshes and skeletons of their
+#: figures moved into the creatures content package; 333 -> 325 in all; Tavern 82 -> 88 and Infirmary 30 -> 39 with the
+#: clip props jug, dice, rattle, bucket and flask, 340 in all)
+PACKAGE_FILES = {"GuardRoom": 5, "Temple": 2, "Toilet": 39, "Merchant": 33, "HerbGarden": 22, "AlchemyLab": 9,
+                 "Tavern": 88, "Infirmary": 39, "GhostRoom": 80, "Spa": 23}
 #: The level of the runtime part and the packaged rooms it holds
 RUNTIME_LEVEL = "levels/skirmish/TestSpa.level"
 RUNTIME_ROOMS = ("Tavern", "Spa")
@@ -76,14 +83,38 @@ def body(source, signature):
     return source[start:]
 
 
+def link_folder(link, target):
+    """Links a folder to another folder (a directory junction on Windows, else a symbolic link)."""
+    if os.name == "nt":
+        subprocess.run(["cmd", "/d", "/c", "mklink", "/J", str(link), str(target)], check=True,
+                       capture_output=True, stdin=subprocess.DEVNULL)
+    else:
+        os.symlink(str(target), str(link), target_is_directory=True)
+
+
+def required_content_only(folder):
+    """Fills a folder with links to the required content packages and the wing packages of the content only (no room
+    package; without a wing package the game logs that it cannot read a campaign package); returns False when a
+    required content package is not present."""
+    found = content_packages.packages(ROOT)
+    if content_packages.missing_packages(ROOT):
+        return False
+    for name in content_packages.REQUIRED_PACKAGES:
+        link_folder(Path(folder) / found[name].name, found[name])
+    for wing_folder, _, public, _ in campaign_packages.packages(ROOT):
+        if not public:
+            link_folder(Path(folder) / wing_folder.name, wing_folder)
+    return True
+
+
 def phase(name, started):
     """Prints a phase measurement of this check."""
     print("ODP_TEST_PHASE " + json.dumps({"name": name, "seconds": round(time.monotonic() - started, 3)}), flush=True)
 
 
 started = time.monotonic()
-check(len(room_packages.ROOMS) == 10 and sum(PACKAGE_FILES.values()) == 329,
-      "ten packaged rooms with 329 package files are fixed for this branch")
+check(len(room_packages.ROOMS) == 10 and sum(PACKAGE_FILES.values()) == 340,
+      "ten packaged rooms with 340 package files are fixed for this branch")
 check(all(len(room_packages.PACKAGED_ASSETS[name]) + 1 == PACKAGE_FILES[name] for name in room_packages.ROOM_NAMES),
       "PACKAGED_ASSETS of room_packages.py must list the package files of this branch")
 
@@ -327,22 +358,35 @@ if shutil.which("cl") and not failures:
 
 # Runtime: a level with a tavern and a spa loads without the room packages
 runtime_note = "not run: the built game %s is missing" % EXECUTABLE.relative_to(ROOT)
-if EXECUTABLE.is_file() and not failures:
+if EXECUTABLE.is_file() and not failures and not content_packages.has_content(ROOT):
+    runtime_note = "not run: " + ", ".join(content_packages.unchecked(
+        "check_room_packages", ["runtime part (the game needs the content packages)"]))
+elif EXECUTABLE.is_file() and not failures:
     started = time.monotonic()
-    environment = dict(os.environ)
-    environment[campaign_packages.CONTENT_VARIABLE] = ""
+    # A content folder with the required content packages and the wing packages but without any room package
+    content_folder = tempfile.mkdtemp(prefix="od-content-without-rooms-")
+    required_content_only(content_folder)
+    environment = content_packages.game_environment(ROOT)
+    environment[campaign_packages.CONTENT_VARIABLE] = content_folder
     app_data = tempfile.mkdtemp(prefix="od-no-room-packages-")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
     try:
-        result = subprocess.run([str(EXECUTABLE), "--run-level", str(ROOT / RUNTIME_LEVEL), "--seconds",
-                                 str(PROBE_SECONDS), "--appData", app_data, "--port", str(port)],
+        result = subprocess.run([str(EXECUTABLE), "--run-level", str(content_packages.resolve(ROOT, RUNTIME_LEVEL)),
+                                 "--seconds", str(PROBE_SECONDS), "--appData", app_data, "--port", str(port)],
                                 cwd=str(EXECUTABLE.parent), env=environment, capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=PROBE_TIMEOUT, stdin=subprocess.DEVNULL)
         logs = "".join(path.read_text(encoding="utf-8", errors="replace") for path in Path(app_data).rglob("*.log"))
     finally:
         shutil.rmtree(app_data, ignore_errors=True)
+        # Removes the links only (a junction is removed like an empty folder), never the linked packages
+        for link in Path(content_folder).iterdir():
+            if os.name == "nt":
+                os.rmdir(str(link))
+            else:
+                link.unlink()
+        os.rmdir(content_folder)
     phase("runtime", started)
     output = result.stdout + result.stderr + logs
     check(result.returncode == 0 and "PASS " + Path(RUNTIME_LEVEL).name in output,
@@ -355,5 +399,5 @@ if EXECUTABLE.is_file() and not failures:
 if failures:
     print("\n".join(failures).encode("ascii", "replace").decode("ascii"))
     sys.exit(1)
-print("room packages: 10 packaged rooms, gates in place, 319 packaged assets absent from the public tree; %s; %s; %s: PASS"
+print("room packages: 10 packaged rooms, gates in place, 330 packaged assets absent from the public tree; %s; %s; %s: PASS"
       % (content_note, probe_note, runtime_note))

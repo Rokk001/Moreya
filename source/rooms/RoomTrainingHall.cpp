@@ -43,6 +43,16 @@
 #include <sstream>
 #include <set>
 
+namespace
+{
+//! Meshes of the two wall racks of the training hall (own meshes of the training hall package)
+const std::string TRAINING_SHIELD_1 = "TrainingHallShield1";
+const std::string TRAINING_SHIELD_2 = "TrainingHallShield2";
+//! Names of the wall racks in saves written before the training hall had its own shields
+const std::string LEGACY_SHIELD_1 = "WeaponShield1";
+const std::string LEGACY_SHIELD_2 = "WeaponShield2";
+}
+
 const std::string RoomTrainingHallName = "TrainingHall";
 const std::string RoomTrainingHallNameDisplay = "Training hall room";
 const RoomType RoomTrainingHall::mRoomType = RoomType::trainingHall;
@@ -191,25 +201,25 @@ BuildingObject* RoomTrainingHall::notifyActiveSpotCreated(ActiveSpotPlace place,
         case ActiveSpotPlace::activeSpotLeft:
         {
             x -= OFFSET_DUMMY;
-            std::string meshName = Random::Int(1, 2) > 1 ? "WeaponShield2" : "WeaponShield1";
+            std::string meshName = Random::Int(1, 2) > 1 ? TRAINING_SHIELD_2 : TRAINING_SHIELD_1;
             return new BuildingObject(getGameMap(), *this, meshName, tile, x, y, z, 90.0, false);
         }
         case ActiveSpotPlace::activeSpotRight:
         {
             x += OFFSET_DUMMY;
-            std::string meshName = Random::Int(1, 2) > 1 ? "WeaponShield2" : "WeaponShield1";
+            std::string meshName = Random::Int(1, 2) > 1 ? TRAINING_SHIELD_2 : TRAINING_SHIELD_1;
             return new BuildingObject(getGameMap(), *this, meshName, tile, x, y, z, 270.0, false);
         }
         case ActiveSpotPlace::activeSpotTop:
         {
             y += OFFSET_DUMMY;
-            std::string meshName = Random::Int(1, 2) > 1 ? "WeaponShield2" : "WeaponShield1";
+            std::string meshName = Random::Int(1, 2) > 1 ? TRAINING_SHIELD_2 : TRAINING_SHIELD_1;
             return new BuildingObject(getGameMap(), *this, meshName, tile, x, y, z, 0.0, false);
         }
         case ActiveSpotPlace::activeSpotBottom:
         {
             y -= OFFSET_DUMMY;
-            std::string meshName = Random::Int(1, 2) > 1 ? "WeaponShield2" : "WeaponShield1";
+            std::string meshName = Random::Int(1, 2) > 1 ? TRAINING_SHIELD_2 : TRAINING_SHIELD_1;
             return new BuildingObject(getGameMap(), *this, meshName, tile, x, y, z, 180.0, false);
         }
         default:
@@ -287,8 +297,8 @@ void RoomTrainingHall::exportTileDataToStream(std::ostream& os, Tile* tile, Tile
         return;
     os << "\tTrainingRack ";
     std::map<Tile*, BuildingObject*>::const_iterator it = mBuildingObjects.find(tile);
-    if(it == mBuildingObjects.end() || (it->second->getMeshName() != "WeaponShield1"
-        && it->second->getMeshName() != "WeaponShield2"))
+    if(it == mBuildingObjects.end() || (it->second->getMeshName() != TRAINING_SHIELD_1
+        && it->second->getMeshName() != TRAINING_SHIELD_2))
     {
         os << "none";
         return;
@@ -326,7 +336,12 @@ bool RoomTrainingHall::importTileDataFromStream(std::istream& is, Tile* tile, Ti
     mRestoringRackLayout = true;
     if(mesh == "none")
         return true;
-    if(mesh != "WeaponShield1" && mesh != "WeaponShield2")
+    // A save written before the training hall had its own shields names the shared wall shields
+    if(mesh == LEGACY_SHIELD_1)
+        mesh = TRAINING_SHIELD_1;
+    else if(mesh == LEGACY_SHIELD_2)
+        mesh = TRAINING_SHIELD_2;
+    if(mesh != TRAINING_SHIELD_1 && mesh != TRAINING_SHIELD_2)
         return false;
     Ogre::Vector3 position;
     Ogre::Real rotation;

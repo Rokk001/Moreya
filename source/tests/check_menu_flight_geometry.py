@@ -6,6 +6,11 @@ are sampled the same way RenderSceneMenu::samplePath does (Catmull-Rom through t
 a FlightFrom route starts at its start place and returns through it to the overview
 and every sample is tested against the triangles of every AddEntity mesh at its configured
 position. A sample closer than CLEARANCE to a triangle fails the check.
+
+The meshes are read from the public tree and from the content packages (scripts/content_packages.py); without the
+content the clearance to a mesh that moved into a content package is named as not checked. config/mainmenuscene.cfg is
+a mixed table read joined with its own rows from the content (config_text); without the content its flights and
+entities are not complete, so the clearance check is named as not checked.
 """
 import math
 import os
@@ -17,6 +22,8 @@ import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 CONFIG = os.path.join(ROOT, "config", "mainmenuscene.cfg")
 MODELS = os.path.join(ROOT, "models")
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
 #: Smallest allowed distance in tiles between the camera and any triangle (the gate portcullis slot between two bars is 0.29 wide).
 CLEARANCE = 0.08
 #: Glowing crack and eye materials are painted onto surfaces and are no obstacle.
@@ -101,12 +108,17 @@ def load_mesh(path):
     return np.array(vertices, dtype=np.float64), np.array(triangles, dtype=np.int64)
 
 
+def config_text():
+    """Returns the text of config/mainmenuscene.cfg as the game reads it (joined with its own rows from the content)."""
+    return content_packages.read_text(ROOT, "config/mainmenuscene.cfg")
+
+
 def parse_config():
     """Returns (entities {name: (mesh, position)}, poses {name: position}, flights {name: waypoints})."""
     entities = {}
     poses = {}
     flights = {}
-    for line in open(CONFIG, encoding="utf-8"):
+    for line in config_text().splitlines():
         words = line.split()
         if not words or words[0].startswith("#"):
             continue
@@ -202,12 +214,23 @@ def distance_point_triangles(point, a, b, c):
 
 
 def main():
+    """Tests every sampled flight against the triangles of every placed mesh; without the content the scene table is
+    not complete and the check is named as not checked."""
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked("check_menu_flight_geometry", ["flights and entities of config/mainmenuscene.cfg"])
+        return 0
     entities, poses, flights = parse_config()
     meshes = {}
     world = {}
+    missing = []
     for name, (mesh, position) in entities.items():
+        relative = "models/" + mesh.replace(".mesh", "") + ".mesh"
         if mesh not in meshes:
-            meshes[mesh] = load_mesh(os.path.join(MODELS, mesh.replace(".mesh", "") + ".mesh"))
+            if content_packages.data_file(ROOT, relative) is None and not content_packages.has_content(ROOT):
+                if relative not in missing:
+                    missing.append(relative)
+                continue
+            meshes[mesh] = load_mesh(str(content_packages.resolve(ROOT, relative)))
         vertices, triangles = meshes[mesh]
         if len(triangles) == 0:
             continue
@@ -221,6 +244,7 @@ def main():
         if len(tri) == 0:
             continue
         world[name] = (tri[:, 0], tri[:, 1], tri[:, 2], tri.min(axis=1), tri.max(axis=1))
+    content_packages.unchecked("check_menu_flight_geometry", ["clearance to " + relative for relative in missing])
     # The box of every entity: only the samples inside it (plus CLEARANCE) are tested against its triangles.
     boxes = {name: (parts[3].min(axis=0) - CLEARANCE, parts[4].max(axis=0) + CLEARANCE)
              for name, parts in world.items()}

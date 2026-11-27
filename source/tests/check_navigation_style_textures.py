@@ -23,6 +23,10 @@ procedural assertions remain a separate regression check, not a specification of
 
 With --preview DIRECTORY it also writes enlarged PNGs (needs PIL): every texture, and a mock-up of
 the minimap at the size of the 1920x1200 game (176 layout units at scale 1.7).
+
+The atlas ODNavigation.png and its imageset live in a content package (found through scripts/content_packages.py); the
+native probe gets the folder that holds the atlas (public gui/ or the gui/ of its package). Without the content the
+check runs its code assertions and names the painted checks and the native probe as not checked (nothing is compiled).
 """
 from pathlib import Path
 import argparse
@@ -30,6 +34,7 @@ import math
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
@@ -40,6 +45,9 @@ parser.add_argument('--preview', help='directory for enlarged preview PNGs')
 parser.add_argument('--painted-only', action='store_true', help='check integrated painting and layout without compiling the native probe')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
 source = (repo / 'source/render/Gui.cpp').read_text()
 prefix = Path(os.environ.get('CMAKE_PREFIX_PATH', str(Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps'))) / 'install')))
 
@@ -106,7 +114,8 @@ int main(int, char** argv)
     }
     Ogre::Root root("", "", directory + "/navigation-Ogre.log");
     root.loadPlugin(std::string(argv[3]) + "/bin/Codec_STBI");
-    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(std::string(argv[2]) + "/gui", "FileSystem", "General");
+    // argv[2] is the gui folder that holds the atlas: the public gui/ or the gui/ of its content package
+    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(std::string(argv[2]), "FileSystem", "General");
     paintedNavigationAtlas.load(PAINTED_NAVIGATION_ATLAS, Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
     dumpPainted(directory, "MiniMapRim", 0, 0, PAINTED_RIM_SIZE);
     dumpPainted(directory, "MiniMapNorth", PAINTED_BADGE_X, PAINTED_NORTH_Y, PAINTED_SYMBOL_SIZE);
@@ -155,10 +164,25 @@ def brightness(p):
     return p[0] + p[1] + p[2]
 
 
+# The gui files of the painted part, from the public tree or a content package
+NAVIGATION_FILES = ('gui/ModeGame.layout', 'gui/ODNavigation.imageset', 'gui/ODNavigation.png')
+missing_content = [name for name in NAVIGATION_FILES if content_packages.data_file(repo, name) is None]
+if missing_content and not content_packages.has_content(repo):
+    # Without the content: the code assertions only, no native probe
+    check('layoutMiniMapButtons(gameSheet->second);' in source and 'width * area.d_min.d_x.d_scale' in source,
+          'production scaling applies minimap-relative layout')
+    check('return x * x + y * y <= 1.0f;' in function('    bool isHit('), 'integrated plate centres accept clicks')
+    content_packages.unchecked('check_navigation_style_textures',
+                               missing_content + ['the painted checks and the native probe that need them'])
+    print('CODE CHECKS=%d FAILURES=%d (content not present: painted checks and native probe not run)' % (checks, failures))
+    raise SystemExit(1 if failures else 0)
+atlas_file = content_packages.resolve(repo, 'gui/ODNavigation.png')
+imageset_file = content_packages.resolve(repo, 'gui/ODNavigation.imageset')
+
 # Verify the painted ring and the actual minimap-relative layout before any native compilation.
-layout = ET.parse(repo / 'gui/ModeGame.layout').getroot()
-entries = {n.get('name'): n.attrib for n in ET.parse(repo / 'gui/ODNavigation.imageset').getroot().findall('Image')}
-with Image.open(repo / 'gui/ODNavigation.png') as atlas_image:
+layout = ET.fromstring(content_packages.read_text(repo, 'gui/ModeGame.layout'))  # with its own rows of the content
+entries = {n.get('name'): n.attrib for n in ET.parse(str(imageset_file)).getroot().findall('Image')}
+with Image.open(atlas_file) as atlas_image:
     atlas = atlas_image.convert('RGBA')
     ring = atlas.crop((0, 0, 768, 768))
     check(ring.getpixel((384, 384))[3] == 0, 'map opening remains transparent')
@@ -199,14 +223,14 @@ with tempfile.TemporaryDirectory(prefix='odp-navigation-style-') as directory:
                    stdout=subprocess.DEVNULL)
     environment = dict(os.environ)
     environment['PATH'] = str(prefix / 'bin') + os.pathsep + environment.get('PATH', '')
-    subprocess.run([str(work / 'check.exe'), str(work), str(repo), str(prefix)], check=True,
+    subprocess.run([str(work / 'check.exe'), str(work), str(atlas_file.parent), str(prefix)], check=True,
                    env=environment, stdin=subprocess.DEVNULL, timeout=180)
 
     # Real runtime sprites: native Ogre decoding and copying must match the registered PNG rectangles.
     painted = {}
-    entries = ET.parse(repo / 'gui/ODNavigation.imageset').getroot().findall('Image')
+    entries = ET.parse(str(imageset_file)).getroot().findall('Image')
     check(len(entries) == 20, 'all twenty painted runtime sprites are registered')
-    with Image.open(repo / 'gui/ODNavigation.png') as atlas:
+    with Image.open(atlas_file) as atlas:
         rgba = atlas.convert('RGBA')
         for entry in entries:
             name = entry.attrib['name']

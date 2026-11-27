@@ -318,7 +318,9 @@ bool playsSeatClip(const Creature* creature)
 void setWeaponsVisible(const Creature* creature, bool visible)
 {
     const Ogre::AnimationState* animState = creature->getAnimationState();
-    const bool sweeping = (animState != nullptr) && EntityAnimation::holdsBroom(animState->getAnimationName());
+    // A reaction clip with a prop in the hands (rrSetReactionClip) puts the weapons away as well
+    const bool sweeping = ((animState != nullptr) && EntityAnimation::holdsBroom(animState->getAnimationName())) ||
+        RenderManager::getSingleton().rrReactionHoldsProp(creature);
     Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
     const char* hands[2] = {"L", "R"};
     for(uint32_t i = 0; i < 2; ++i)

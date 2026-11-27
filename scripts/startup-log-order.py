@@ -16,7 +16,9 @@ Both logs must belong to the same start: the Ogre root is created in both within
 
 A start that writes both logs without touching the player's own logs:
     moreya.exe --menu-test 5 --appData <empty folder>
-(run in the folder of the executable; Ogre.log is written there, moreya.log into the --appData folder).
+(run in the folder of the executable; Ogre.log is written there, moreya.log into the --appData folder). The game needs
+its content packages: MOREYA_CONTENT_DIR names their folder (scripts/content_packages.py); without them it quits with
+exit code 7 before the menu and this script reports the missing proofs.
 
 Usage: python scripts/startup-log-order.py --game-log <moreya.log> --ogre-log <Ogre.log>
 Exit code 0 when all three proofs hold, 1 otherwise; every proof is printed with its log lines and times.

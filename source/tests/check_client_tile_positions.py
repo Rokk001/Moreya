@@ -4,13 +4,17 @@ The client builds its map with GameMap::createNewMap, which only constructs the 
 sets the positions afterwards, the client never did. Room effects placed at tile->getPosition() then all
 landed on tile 0,0, where the floor glows of the heart room stacked up into a permanent white-red disc.
 The soft glow sprite is white with its falloff in the alpha channel, so its blending must weight by alpha.
+The room ambience material lies in a content package; without the content its blending is named as not checked.
 """
 from pathlib import Path
 import argparse
 import re
 import subprocess
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--source-ref', help='Read production code from a Git revision for a before/after check')
 args = parser.parse_args()
@@ -20,6 +24,16 @@ def read_source(path):
     if args.source_ref:
         return subprocess.check_output(['git', 'show', f'{args.source_ref}:{path}'], cwd=repo, text=True)
     return (repo / path).read_text(encoding='utf-8')
+
+
+def read_data(path):
+    """Text of a game data file: from the Git revision with --source-ref, else from the public tree or a content
+    package; None when the file lies in a content package and the content is not present."""
+    if args.source_ref:
+        return read_source(path)
+    if content_packages.data_file(repo, path) is None and not content_packages.has_content(repo):
+        return None
+    return content_packages.read_text(repo, path)
 
 
 def block(text, start_marker):
@@ -60,11 +74,14 @@ if 'tile->getPosition()' not in scan:
     failures.append('scanTiles changed its tile position source; recheck this check')
 
 # The soft glow is white with the falloff in alpha: additive blending has to weight by alpha
-material = read_source('materials/scripts/RoomAmbience.material')
-glow = material[material.index('material RoomAmbGlow'):]
-glow = glow[:glow.index('\n}\n')]
-if 'scene_blend src_alpha one' not in glow:
-    failures.append('RoomAmbGlow ignores the alpha falloff of its white sprite (hard disc)')
+material = read_data('materials/scripts/RoomAmbience.material')
+if material is None:
+    content_packages.unchecked('check_client_tile_positions', ['materials/scripts/RoomAmbience.material RoomAmbGlow'])
+else:
+    glow = material[material.index('material RoomAmbGlow'):]
+    glow = glow[:glow.index('\n}\n')]
+    if 'scene_blend src_alpha one' not in glow:
+        failures.append('RoomAmbGlow ignores the alpha falloff of its white sprite (hard disc)')
 generator = (repo / 'tools/gen_room_ambience_art.py').read_text(encoding='utf-8')
 sprite = generator[generator.index('def sprite_glow(path):'):generator.index('def sprite_smoke(path):')]
 if 'radial(image, (255, 255, 255, 255)' not in sprite:

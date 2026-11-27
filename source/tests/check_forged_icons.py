@@ -3,6 +3,12 @@
 Every icon named in the layouts must exist in the imageset inside the atlas, be opaque where it
 has a body, and retain its own painted source motif. Frost, stone and creature emblems need
 their approved material colours rather than the previous uniformly warm procedural palette.
+
+The layouts are scanned in the public tree and in the content packages (scripts/content_packages.py); the moved
+WindowGameEvent.layout and SquareSelector.material are content. OD.looknfeel, ODSkin.scheme and most
+layouts are mixed files that are read joined with their own rows from the content (content_packages.read_text); the
+icon and skin atlases (gui/ODIcons.*, gui/ODSkin.*) lie whole in a content package. Without the content only the code
+assertions run; the atlas, skin and layout checks are named as not checked.
 """
 from pathlib import Path
 import re
@@ -15,15 +21,46 @@ repo = Path(__file__).resolve().parents[2]
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
-text = (repo / 'gui/ODIcons.imageset').read_text()
+import content_packages  # noqa: E402
+
+#: Every layout of the public tree and of the content packages (the own rows files are part of their joined layout)
+LAYOUTS = [layout for layout in content_packages.data_glob(repo, 'gui', '*.layout') if '.own.' not in layout.name]
+# The icon and skin atlases lie in content packages; without them nothing of the atlas can be checked
+ATLAS_FILES = ['gui/ODIcons.imageset', 'gui/ODIcons.png', 'gui/ODSkin.imageset', 'gui/ODSkin.png']
+
+
+def read_gui(path):
+    """Returns the text of an interface file as the game reads it (a mixed file joined with its own rows)."""
+    return content_packages.read_text(repo, content_packages.relative_path(repo, path))
+
+
+# The code part needs no content
+game_code = (repo / 'source/modes/GameMode.cpp').read_text()
+assert 'ResearchBackgroundColour' not in game_code
+for n in ('Locked', 'Learned', 'Working', 'Queued'):
+    assert 'OpenDungeonsSkin/ResearchTile' + n in game_code, n
+assert 'setMaterialName("SquareSelector")' in (repo / 'source/render/RenderManager.cpp').read_text()
+for f in ('source/entities/Creature.cpp', 'source/entities/Tile.cpp', 'source/gamemap/GameMap.cpp', 'source/modes/GameMode.cpp',
+          'source/network/ChatEventMessage.cpp'):
+    code = (repo / f).read_text()
+    assert 'CCBBBBFF' not in code and "colour='FFFFFFFF'" not in code, f + ' has a cold or hard white text colour'
+missing_atlas = [name for name in ATLAS_FILES if content_packages.data_file(repo, name) is None]
+if not content_packages.has_content(repo) or missing_atlas:
+    content_packages.unchecked('check_forged_icons', missing_atlas)
+    if not content_packages.has_content(repo):
+        content_packages.unchecked('check_forged_icons', ['icon atlas and gui/ODIcons.imageset', 'skin of gui/ODSkin.imageset',
+                                                          'layouts, gui/OD.looknfeel and gui/ODSkin.scheme'])
+    print('FORGED ICONS OK: code checked, content not present')
+    sys.exit(0)
+text = content_packages.read_text(repo, 'gui/ODIcons.imageset')
 icon_images = ET.fromstring(text)
 rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
          for node in icon_images.findall('Image')}
 assert len(rects) == len(icon_images.findall('Image')), 'unique image names'
-atlas = np.array(Image.open(repo / 'gui/ODIcons.png').convert('RGBA'), dtype=np.float32)
+atlas = np.array(Image.open(content_packages.resolve(repo, 'gui/ODIcons.png')).convert('RGBA'), dtype=np.float32)
 used = set()
-for layout in (repo / 'gui').glob('*.layout'):
-    used |= set(re.findall(r'OpenDungeonsIcons/([A-Za-z0-9_]+)', layout.read_text()))
+for layout in LAYOUTS:
+    used |= set(re.findall(r'OpenDungeonsIcons/([A-Za-z0-9_]+)', read_gui(layout)))
 runtime = {'GoldBadge', 'ManaBadge', 'NavHelp', 'NavSell', 'NavOptions', 'MapZoom', 'MiniMapRim', 'MiniMapNorth', 'CampaignMap'}
 runtime |= {n for n in used if n.startswith('MiniMapCorner')}
 for name in sorted(used - runtime):
@@ -73,18 +110,22 @@ for name in squares:
     assert (w, h) == (256, 256) and (a > 200).mean() > 0.6, name + ' has no painted square body'
     inner = atlas[y + h // 4:y + 3 * h // 4, x + w // 4:x + 3 * w // 4, :3]
     assert inner.std(axis=(0, 1)).max() > 12, name + ' has no motif in the tile'
-skin = np.array(Image.open(repo / 'gui/ODSkin.png').convert('RGBA'), dtype=np.float32)
-skin_set = (repo / 'gui/ODSkin.imageset').read_text()
+skin = np.array(Image.open(content_packages.resolve(repo, 'gui/ODSkin.png')).convert('RGBA'), dtype=np.float32)
+skin_set = content_packages.read_text(repo, 'gui/ODSkin.imageset')
 skin_images = ET.fromstring(skin_set)
 skin_rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
               for node in skin_images.findall('Image')}
 x, y, w, h = skin_rects['ForgedBar']
 bar = skin[y:y + h, x:x + w]
 assert (bar[..., 3] > 200).mean() > 0.6 and bar[..., :3].std() > 2, 'painted iron bar has a textured body'
-game = (repo / 'gui/ModeGame.layout').read_text()
+game = content_packages.read_text(repo, 'gui/ModeGame.layout')
 assert game.count('OpenDungeonsSkin/ForgedBar') == 2 and 'FFB98B56' not in game
 # The approved bar is a chipped painted iron edge, replacing the old repeated vent segments.
-bar_source = Image.open(assets_src_dir(repo) / 'gui/skin/frame-0-0.png').convert('RGBA')
+# The skin atlas is built from the folder cut from the chosen in-game sheet (scripts/gui/build_skin_atlas.py).
+skin_sources = assets_src_dir(repo) / 'content-split/cs10-terrain-gui/skin-v2'
+if not skin_sources.is_dir():
+    skin_sources = assets_src_dir(repo) / 'gui/skin'
+bar_source = Image.open(skin_sources / 'frame-0-0.png').convert('RGBA')
 assert np.array_equal(bar, np.array(bar_source.crop((0, 0, 512, 88)).resize((w, h), Image.Resampling.LANCZOS)))
 # Research tiles: material states instead of flat colour squares.
 # Return the actual registered skin rectangle, independent of XML attribute order.
@@ -108,26 +149,29 @@ for name in ('StaticBackdrop', 'EditBoxMiddle', 'ComboboxEditBackground', 'MenuM
     assert np.array_equal(inner[0], inner[-1]) and np.array_equal(inner[:, 0], inner[:, -1]), name + ' has a centre-tile seam'
     assert skin[y:y + th, x:x + tw, 3].min() == 255, name + ' centre is not opaque'
 # Layout and look'n'feel wiring of the states
-look = (repo / 'gui/OD.looknfeel').read_text()
-scheme = (repo / 'gui/ODSkin.scheme').read_text()
-game_code = (repo / 'source/modes/GameMode.cpp').read_text()
+look = content_packages.read_text(repo, 'gui/OD.looknfeel')
+scheme = content_packages.read_text(repo, 'gui/ODSkin.scheme')
 assert 'ResearchBackgroundColour' not in look and 'ResearchBackgroundColour' not in game_code
-for n in ('Locked', 'Learned', 'Working', 'Queued'):
-    assert 'OpenDungeonsSkin/ResearchTile' + n in game_code, n
 assert 'ResearchTileFocus' in look and 'OD/EventPanel' in scheme
+missing_content = []
 for f in ('WindowGameEvent.layout', 'WindowEvent.layout'):
-    assert 'type="OD/EventPanel" name="GameEventText"' in (repo / 'gui' / f).read_text(), f
+    if content_packages.data_file(repo, 'gui/' + f) is None:
+        missing_content.append('gui/' + f)
+        continue
+    assert 'type="OD/EventPanel" name="GameEventText"' in content_packages.read_text(repo, 'gui/' + f), f
 sym = look[look.index('<WidgetLook name="OD/MenuSymbolButton"'):]
 sym = sym[:sym.index('</WidgetLook>')]
 assert all(s in sym for s in ('plate_normal', 'plate_hover', 'plate_pushed', 'ButtonTopLeftHighlight', 'ButtonTopLeftPushed')),     'symbol buttons sit on forged plates with hover and pressed'
-tree = (repo / 'gui/WindowSkillTree.layout').read_text()
+tree = content_packages.read_text(repo, 'gui/WindowSkillTree.layout')
 assert 'FrameColours' not in tree and 'SelectionBrush' not in tree, 'skill tree columns use no flat tints'
-material = (repo / 'materials/scripts/SquareSelector.material').read_text()
-assert 'material SquareSelector' in material and 'emissive 1.0 0.70' in material
-assert 'setMaterialName("SquareSelector")' in (repo / 'source/render/RenderManager.cpp').read_text()
+if content_packages.data_file(repo, 'materials/scripts/SquareSelector.material') is None:
+    missing_content.append('materials/scripts/SquareSelector.material')
+else:
+    material = content_packages.read_text(repo, 'materials/scripts/SquareSelector.material')
+    assert 'material SquareSelector' in material and 'emissive 1.0 0.70' in material
 # Third pass: one symbol style for every close and confirm button, iron scrollbars and list frames in the menus, warm text.
-for layout in (repo / 'gui').glob('*.layout'):
-    body = layout.read_text()
+for layout in LAYOUTS:
+    body = read_gui(layout)
     assert 'OpenDungeonsSkin/CloseButton' not in body, layout.name + ' still uses the old close button image with its own frame'
     for button in re.finditer(r'<Window type="OD/MenuSymbolButton"[^>]*>(.*?)</Window>', body, re.S):
         assert set(re.findall(r'OpenDungeonsSkin/', button[1])) == set(), layout.name + ': symbol buttons use icon atlas images'
@@ -142,8 +186,5 @@ for name in ('OD/MenuListbox', 'OD/MenuMultiColumnList'):
     block = look_block(name)
     assert 'section="main"' in block, name + ' has the forged inset frame'
 assert 'FFE8DCC0' in look_block('OD/StaticText') and 'FFFFFFFF' not in look_block('OD/Tooltip').split('name="label"')[1].split('</TextComponent>')[0],     'labels and tooltips use the warm bone text colour'
-for f in ('source/entities/Creature.cpp', 'source/entities/Tile.cpp', 'source/gamemap/GameMap.cpp', 'source/modes/GameMode.cpp',
-          'source/network/ChatEventMessage.cpp'):
-    code = (repo / f).read_text()
-    assert 'CCBBBBFF' not in code and "colour='FFFFFFFF'" not in code, f + ' has a cold or hard white text colour'
+content_packages.unchecked('check_forged_icons', missing_content)
 print('FORGED ICONS OK: %d icons checked, %d square tiles' % (checked, len(squares)))

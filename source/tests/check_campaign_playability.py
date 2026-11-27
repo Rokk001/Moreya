@@ -6,6 +6,12 @@ allow dry ground and removable dirt/gold; full gems, rock, water, lava and forei
 claimed walls block. Existing bridges are traversable. Only terrain openings in
 once triggers gated solely by elapsed time are included; other script conditions
 are never presumed satisfied.
+
+The public tree holds no wing: the 24 campaign levels and the seven dropped maps come with the content packages
+(scripts/campaign_packages.py, scripts/content_packages.py); only the four legacy maps of levels/campaign/ stay public.
+Without content the level parts, the self-test and the goal inventories are named as not checked; with the content
+present every level, the self-test and both goal inventories (public levels and content levels, both kept in the
+content repository) are checked.
 """
 import argparse
 from collections import deque
@@ -19,13 +25,24 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 GROUP_KINDS = {"mainobjectiveid", "optionalobjectiveid", "conditionalobjectiveid"}
-# Reviewed goal groups: the public levels in the fixture, the levels of wings 2 to 6 in the content repository
+# Reviewed goal groups: the four public legacy maps in the fixture; the levels of wings 1 to 6 and the seven dropped
+# maps in the content repository (checks/campaign_goal_groups.json)
 GROUP_REVIEW = json.loads((ROOT / "source/tests/fixtures/campaign_goal_groups.json").read_text(encoding="utf-8"))
 GROUP_REVIEW.update(campaign_packages.content_data(ROOT, "campaign_goal_groups") or {})
-# The campaign lists 18 story levels and 6 bonus levels (6 wings of Moreya); the public package alone has wing 1
-# (3 story levels and 1 bonus level).
-CONFIGURED_LEVELS = 24 if campaign_packages.has_content(ROOT) else 4
+# The campaign lists 18 story levels and 6 bonus levels (6 wings of Moreya); the public tree alone has no wing.
+CONFIGURED_LEVELS = 24 if campaign_packages.has_content(ROOT) else 0
+#: The approved wording of the message that announces a found mission stone, and its first sentence: campaign text of
+#: the content (checks/campaign_playability.json of the content repository); None without content, where no level
+#: with a mission stone is present
+PLAYABILITY_TEXTS = campaign_packages.content_data(ROOT, "campaign_playability") or {}
+DISCOVERY_MESSAGE = PLAYABILITY_TEXTS.get("discovery_message")
+DISCOVERY_OPENING = PLAYABILITY_TEXTS.get("discovery_opening")
+#: The goal inventory of the public levels and that of the content levels, in the content repository (the former
+#: public inventory materials/campaign-goals/GOALS-INVENTORY.md moved there with the other design documents)
+PUBLIC_INVENTORY = "docs/design/materials/campaign-goals/GOALS-INVENTORY.md"
+CONTENT_INVENTORY = "docs/GOALS-INVENTORY.md"
 # Maps dropped from the campaign; their files stay and are still checked like configured levels.
 DROPPED_MAPS = ("Dunmarrow", "Mirewatch", "Wolfscar", "Thornreach", "Stormhaven", "Silverdeep", "Ebonrook")
 GOALS = {"KillAllEnemies", "ProtectDungeonTemple", "ProtectCreature", "ClaimNTiles", "MineNGold"}
@@ -34,47 +51,21 @@ REQUIRED = ("Info", "Seats", "Goals", "Tiles", "Rooms", "Traps", "Lights",
             "CraftedTraps", "SkillEntity", "GiftBoxEntity", "Missiles", "TreasuryObject", "Chickens")
 # Reviewed goal-bearing sentences (one-based), with their actual level checks.
 BRIEFING_MATCH = {
-    "Mossgate": {3: "no: mining and meadow claiming are not winning conditions", 4: "no: reeve elimination is checked; breaking the watch post separately is not"},
     "BoulderCourse": {3: "yes: mainHeart protects the heart and mainTrial requires courseDone with all four cups; the 600-second time limit and the 80-slap limit end the trial"},
     "CrowshotGallery": {3: "yes: actual owned creature projectile deaths for all 18 targets, a successful possessed shot, exact three waves and the original 420-second deadline"},
-    "Thornreach": {3: "no: enemy temples are checked; clearing ownership and maze progression are not independent goals"},
     "SkittleCavern": {3: "no: laneCleared checks opened lanes and no remaining guards, not whether boulders killed them"},
-    "Stormhaven": {3: "no: enemy temples are checked; stone-span control is not an independent goal"},
-    "Dunmarrow": {3: "yes: actual northbound tunnel use and camp arrival before the original 900-second departure deadline; actual Dunn death before escape, heart protection and remaining foes"},
-    "Mirewatch": {2: "no: digging/building order is not a winning condition", 3: "no: all tower ownership and both approaches are not independent winning goals", 4: "yes: KillAllEnemies includes the watcher"},
-    "Wolfscar": {3: "yes: actual bridge crossings of both ravines, ownership of all344original den floor fields, four rival temples gone, remaining enemy forces and own-heart protection"},
     "TwistingHalls": {3: "no: hallReached checks region presence; it does not independently require possession"},
-    "Silverdeep": {2: "no: mining/building are not independent goals", 3: "no: enemy temples are checked; building exactly three wooden spans is not a winning condition"},
-    "Ebonrook": {2: "no: mining and feeding are not winning conditions", 3: "no: enemy elimination is checked; the named route is not an independent goal"},
     "SwarmNight": {3: "yes: dawn at 780 seconds with ProtectDungeonTemple"},
 }
 # Only existing triggers that actually satisfy each objective may change its state.
 # None is an unresolved mapping, deliberately reported as an error instead of inferred at victory.
-# Main-goal observers now enforce these formerly unchecked Mossgate briefing duties.
-BRIEFING_MATCH["Mossgate"] = {
-    3: "yes: mainHeart protects the heart, mainMeadow requires 60 actually mined gold and 18 claimed Meadow tiles and mainWatch both watchmen and the actual reinforcements; chamberCleared wins after the three main goals"
-}
-
 BRIEFING_MATCH["TwistingHalls"] = {3: "yes: mainTrial requires the currently possessed own creature in ExitHall; the existing 900-second defeat remains active"}
 
-BRIEFING_MATCH["Thornreach"] = {3: "yes: all142original Clearing floor fields currently claimed, actual west-to-east maze crossing, own-heart protection and all four rival hearts plus remaining foes"}
-
 BRIEFING_MATCH["SkittleCavern"] = {3: "yes: all four original lanes opened and all ten guards actually killed by own boulders within the unchanged 540-second limit"}
-
-BRIEFING_MATCH["Stormhaven"] = {3: "yes: both actual stone bridges crossed in either direction and all20original bridge fields currently owned; own heart protected and all four rival temples plus remaining foes defeated"}
-
-BRIEFING_MATCH["Mirewatch"] = {2: "yes: actual two beds, hatchery coop and own-heart protection; the advice remains a hint", 3: "yes: all69original tower room fields currently claimed, actual east/north approach rooms and seals opened, TowerC visited in possession", 4: "yes: Mora actually killed in TowerH and remaining foes defeated"}
-
-BRIEFING_MATCH["Ebonrook"] = {2: "yes: 300actualgold,14realbeds,coop,own heart and actual southward crossing of any original northern river bridge", 3: "yes: both southern roads opened through preserved alternatives and actual possessed own scout in Hollow; Rook killed in Roots and all remaining foes"}
-
-BRIEFING_MATCH["Silverdeep"] = {2: "yes:400actualmining and actual supply for six fighters before crossings, with current own-heart protection", 3: "yes: actual crossings of all three lakes including both first-lake tracks, all three rival temples and remaining foes"}
 
 # Reviewed again after the raid rebuild and the new campaign texts: each story briefing names its guild, leader, raid
 # size and origin, then one sentence with the kept phase-1 main goals, the hidden stone or Heartstone shard where the
 # level has one, and the raid sentence.
-BRIEFING_MATCH["Brackenford"] = {3: "yes: mainHome checks the protected heart, two beds and a hatchery coop; mainGrove 22 claimed Grove tiles; mainFord the actual ford route, both ford guards and the landing reinforcements; mainKeep all 64 original Keep floor tiles", 4: "yes: entering Cellar creates the cellar-stone; only its actual delivery to the heart reveals Mossgate", 5: "yes: mainRaid requires the defeated raid with its leader ElsaBrack; the leader's escape through the gate loses the level by itself"}
-BRIEFING_MATCH["Coldwell"] = {3: "yes: mainHeart protects the heart; mainPlaza checks all 149 original Plaza floor tiles and 600 actual Undercroft mining gold; mainGate requires the north door gone", 4: "yes: entering Larder creates the larder-shard; only its actual delivery to the heart counts a Heartstone shard", 5: "yes: mainRaid requires the defeated raid with its leader HugoCole; the leader's escape through the gate loses the level by itself"}
-BRIEFING_MATCH["Ravensledge"] = {3: "yes: mainHeart protects the heart; mainShelf requires the actual lower crossing plus 80 Shelf tiles; mainGate the actual upper crossing and the inner gate gone", 4: "yes: mainRaid requires the defeated raid with its leader RolfScarrow; the leader's escape through the gate loses the level by itself"}
 BRIEFING_MATCH["Tinmoor"] = {3: "yes: mainHeart protects the heart; mainSeams requires 900 actual mining gold and possessed scouting; mainPosts tracks both exact posts with their watchmen and reinforcements", 4: "yes: voluntary discovery creates a floor stone beside the friendly creature; only actual worker delivery of that stone reveals CrowshotGallery", 5: "yes: mainRaid requires both defeated raid groups, the leader MerrinTay with the second; the leader's escape through the gate loses the level by itself"}
 BRIEFING_MATCH["Greywater"] = {3: "yes: mainHeart protects the heart; mainGold checks 600 actual mining gold; mainSiege requires a real river crossing and own creature damage to seat3 in Siege", 4: "yes: entering ChainVault creates the gallery-shard; only its actual delivery to the heart counts a Heartstone shard", 5: "yes: mainRaid requires both defeated raid groups, the leader CorwinGray with the second; the leader's escape through the gate loses the level by itself"}
 BRIEFING_MATCH["Highcairn"] = {3: "yes: real bed/coop, own heart, four terraces in their existing order and actual captain death with open hold", 4: "yes: mainRaid requires both defeated raids, the leader HildeCairn with the second; the leader's escape through the gate loses the level by itself"}
@@ -96,12 +87,6 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [None,
               None],
  'Bellwick': [('keeperHeartDown',), None, None, ('transept',)],
  'BoulderCourse': [('courseDone',)],
- 'Brackenford': [('raidDefeated',),
-                 ('bedsReady',),
-                 ('larderReady',),
-                 ('groveClaimed',),
-                 ('goalLandingCleared',),
-                 ('mainKeep',)],
  'Campaign1': [('goalClassicComplete',)],
  'Campaign2': [('goalClassicComplete',)],
  'Campaign3': [('goalClassicComplete',)],
@@ -110,10 +95,7 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [None,
                   None,
                   ('goalCraterAfterBridge',),
                   ('rivalHeartDown', 'rivalHeartFalls')],
- 'Coldwell': [('raidDefeated',), ('plazaReached',), ('goalUndercroft600',), ('courtBreached',)],
  'CrowshotGallery': [('galleryClear',)],
- 'Dunmarrow': [('wardenCaught',), ('barrowsEntered',), ('goalCampBeforeLoading', 'goalCampBeforeDeparture')],
- 'Ebonrook': [('wardenSlain',), ('crossed',), None, ('scoutPossessed',), ('wardenSlain',)],
  'Goldspire': [None, None, ('lowTown',), ('onRing',), None],
  'Greywater': [('raidDefeated',), ('firstCoin',), ('goalHeartSafe3BeforeRaidDefeated',), ('siegeSeen',)],
  'Highcairn': [('raidDefeated',),
@@ -130,23 +112,13 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [None,
                 ('goalRivalGateNorth', 'goalRivalGateSouth')],
  'Kingsfall': [('mainChampions',), None, ('goalArmyAtHeart',)],
  'Lanternhill': [('rivalHeartDown',), ('goalRingGroundPathOpened',), ('goalHeartSafe3BeforeRivalHeartDown',)],
- 'Mirewatch': [('watcherSlain',), None, ('goalNineTowerRoomsClaimed',), ('scoutTowerC',), ('watcherSlain',)],
- 'Mossgate': [None, ('firstGold',), ('meadowOurs',), ('goalWatchPostCleared',), None],
- 'Ravensledge': [('raidDefeated',),
-                 ('shelfHeld',),
-                 ('shelfHeld',),
-                 ('yardEntered',),
-                 ('goalInnerKeepEntered',)],
  'Saltmere': [None,
               ('firstSalt',),
               ('goalHeartSafe3BeforeAdmiralFalls',),
               ('flatHeld', 'portGatesTimeout'),
               None],
- 'Silverdeep': [('silverWonGoal',), ('goalSilverdeepAllSpans',), None],
  'SkittleCavern': [('laneCleared',)],
- 'Stormhaven': [('stormEndsGoal',), ('goalStormhavenBothSpans',), ('goalPactsPrevented',)],
  'SwarmNight': [('goalHeartSafe1BeforeDawn',), ('goalHeartSafe2BeforeDawn',)],
- 'Thornreach': [('keepersGoneGoal',), None, ('goalHeartSafe3BeforeKeepersGoneGoal',)],
  'Tinmoor': [('raidDefeated',),
              ('seamsFilled',),
              ('goalPostACleared',),
@@ -156,15 +128,13 @@ OBJECTIVE_TRIGGERS = {'Ashcombe': [None,
  'VarnsCrossing': [('crossingHeldGoal',),
                    ('goalHeartSafe2BeforeCrossingHeldGoal',),
                    ('goalQuarterThenFortress',)],
- 'Wolfscar': [('huntersGone', 'huntersGoneGoal'),
-              ('southCrossed',),
-              ('goalHeartSafe3BeforeHuntersGoneGoal',)],
  'Wraithwood': [('bothFallGoal',), ('bothFallGoal',), ('goalHeartSafe3BeforeBothFallGoal',)]}
-HINT_IDS = frozenset(['bellwick-o02', 'ebonrook-o03', 'goldspire-o02', 'mirewatch-o02', 'silverdeep-o03', 'thornreach-o02'])
+HINT_IDS = frozenset(['bellwick-o02', 'goldspire-o02'])
 # Objective IDs removed with the reeve of the bonus chamber Mossgate and with the warden, wave, escape and old stone
 # goals that the raid rebuild drops (the raid and its leader replace them); they must stay undeclared and keep their
-# numbers free so that the remaining IDs keep their saved states. Counted once on feature/raid-campaign-r5: 16 IDs.
-REMOVED_OBJECTIVE_IDS = frozenset(['mossgate-o01', 'mossgate-o05', 'ashcombe-o01', 'ashcombe-o03', 'bellwick-o03',
+# numbers free so that the remaining IDs keep their saved states. Counted once on feature/raid-campaign-r5: 16 IDs,
+# 14 here and the 2 of the bonus chamber Mossgate in the content check data (see CONTENT_ROWS below).
+REMOVED_OBJECTIVE_IDS = frozenset(['ashcombe-o01', 'ashcombe-o03', 'bellwick-o03',
                                    'cinderhollow-o03', 'goldspire-o01', 'goldspire-o05', 'highcairn-o04', 'highcairn-o05',
                                    'hollinfen-o01', 'hollinfen-o04', 'hollowmarkcitadel-o01', 'kingsfall-o02',
                                    'saltmere-o01', 'saltmere-o05'])
@@ -177,11 +147,6 @@ OBJECTIVE_REVIEW = {'bellwick-o02': ('naveGatesKills, naveGatesLate',
                   'Neither checks the end of the faithful attacks; later waves continue.',
                   'Use the existing gate-opening milestone only if holding the nave is meant to end there; '
                   'should that milestone complete this text?'),
- 'brackenford-o05': ('landingSeen',
-                     'The exact original initial guards and spawn origin are known; ford-bank crossing '
-                     'observations still need verified geometry.',
-                     'Implementation: observe the actual ford crossing, killed FordGuard1/2 and spawncleared '
-                     'landingSeen action1; no unrelated global kill counter.'),
  'campaign1-o01': ('none',
                    'All existing triggers are time hints, not goal completion.',
                    'Add a presentation-only completion trigger using the existing KillAllEnemies goal; may '
@@ -209,19 +174,6 @@ OBJECTIVE_REVIEW = {'bellwick-o02': ('naveGatesKills, naveGatesLate',
                       'Entering RivalCrater does not explicitly require dawn or crossing the lava bridge.',
                       'Use craterSeen as the crossing milestone if arrival is sufficient; should it complete '
                       'this objective?'),
- 'coldwell-o03': ('wellEmptied',
-                  'The600 threshold is explicit, but global mined gold does not attribute it to the block '
-                  'under the plaza.',
-                  'Implementation: add regional mining history for the verified under-plaza gold block, '
-                  'retaining exactly600 coins; do not relax it to global mining.'),
- 'dunmarrow-o03': ('campEntered',
-                   'Entering Camp does not check that the wagon departure timer has not expired.',
-                   'Use campEntered only if arrival alone is sufficient; must the existing wagon deadline '
-                   'also be required?'),
- 'ebonrook-o03': ('firstCoin',
-                  'Mining 300 gold does not check feeding the army from the glades.',
-                  'Use firstCoin for the mining part only; should feeding remain advice rather than a '
-                  'separately checked requirement?'),
  'goldspire-o02': ('firstCoin',
                    'Mining 500 gold does not check building an army; the text specifies no army size.',
                    'Use firstCoin only if building a force is advice; should this objective complete at the '
@@ -254,48 +206,6 @@ OBJECTIVE_REVIEW = {'bellwick-o02': ('naveGatesKills, naveGatesLate',
                      'Which exact tile coordinates are the required earth plugs? Recommend explicitly '
                      'identifying those existing tiles; never treat all full dirt in Ring as mandatory '
                      'digging.'),
- 'mirewatch-o02': ('firstCoin, hollowHeld',
-                   'Mining 400 gold or claiming 40 tiles of Hollow does not check building before marching.',
-                   'Use hollowHeld as the preparation milestone only if building and order are advice; '
-                   'should it complete this objective?'),
- 'mirewatch-o03': ('towerA, towerB, towerC, towerD, towerE, towerF, towerG, wardenSeen',
-                   'All eight tower regions are known, but taking a tower can mean mere entry or clearing '
-                   'and occupying it; no fixed visit order is stated.',
-                   'Should a tower count after own presence and zero enemies in its region? Recommend that '
-                   'cleared occupation for all eight, without inventing a fixed branch order.'),
- 'mossgate-o04': ('none',
-                  'yardAlarm plus3 global kills does not prove the actual watch-post guards were defeated.',
-                  'Observe the actual initial and triggered post defenders; do not substitute unrelated '
-                  'kills.'),
- 'ravensledge-o05': ('yardEntered',
-                     'Entering Yard does not check breaking the inner keep gate.',
-                     'Do not complete it on the yard approach; may an additional inside-keep presentation '
-                     'trigger be added?'),
- 'silverdeep-o02': ('spanA, spanB, spanC, southBank',
-                    'These are individual bank visits, with duplicate SouthBank conditions, not a combined '
-                    'three-bridge check.',
-                    'Prefer spanC as the last span milestone if arrival is sufficient; should that existing '
-                    'trigger complete this objective?'),
- 'silverdeep-o03': ('firstSilver',
-                    'Mining has an observable result, but the text defines neither the order meant by first '
-                    'nor a coin threshold;400 is merely a separate original milestone.',
-                    'Is this preparation advice, or a required first-action sequence? Recommend hint only if '
-                    'it is advice; otherwise define the prior event and required seam mining explicitly, '
-                    'without borrowing400.'),
- 'stormhaven-o02': ('spanSeen, northSpan',
-                    'Each checks one span region; neither checks crossing the inlet by the stone spans.',
-                    'Use northSpan as the final crossing milestone if arrival is sufficient; should it '
-                    'complete this objective?'),
- 'stormhaven-o03': ('tideTurns, tideTurns2',
-                    'The two future alliance makes occur at2200 and3300 seconds; the phrase does not specify '
-                    'how defeat of one pact participant counts as prevention.',
-                    'Does preventing each timed pact mean at least one participant must already be defeated '
-                    'when it would form? Recommend that concrete criterion rather than a generic victory '
-                    'milestone; initial alliances need explicit treatment.'),
- 'thornreach-o02': ('hedgeA, hedgeB, clearingSeen',
-                    'Region visits do not check digging and burning a path through the maze.',
-                    'Use clearingSeen as the route-end milestone if the travel method is advice; should it '
-                    'complete this objective?'),
  'tinmoor-o03': ('none',
                  'postAAlarm plus7 global kills does not prove defeat of the lower-post defenders.',
                  'Observe the exact PostA initial and triggered defenders.'),
@@ -317,17 +227,6 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa32
  'Bellwick/naveGatesLate': '19a266ae96382f14cdc2629ae7b76df0f1c0af1308564afef74ad5f564e4da11',
  'Bellwick/transept': 'b8dd598cef221a526a3e14566cc0c21315e63d25e9dcf7159ffc5ae473d12f9e',
  'BoulderCourse/courseDone': '1568e1b864d5e350c0ccf8d87fdba7f79a0d3c1bfe09b6b32ba50ea38f830ece',
- 'Brackenford/bedsReady': 'a753667474f8af0a9fefaeb6a9bd6a426c94e9dbf947f3654dafbfb333427e1d',
- 'Brackenford/goalFordEast1': '52594f52d76bb6de763749aa38a4371d651cafd3050acd041ed65ed4e9641652',
- 'Brackenford/goalFordEast2': '1e9035b14ea563b6fc3c26a6ea6480322f26340008b188f3c123865d0a5c8486',
- 'Brackenford/goalFordEast3': '15c49b410dd23e48b9c5667327056d3971715b1a59f652c9b3aa73179999c5a6',
- 'Brackenford/goalFordWest1': '588ee0e475f33df7a63458cc30a7555039d21bd932031a28b63615930a79a5ac',
- 'Brackenford/goalFordWest2': '0119b7cacd15b777788e9b79398cd741effbb61244828670f3e2114e0e856253',
- 'Brackenford/goalFordWest3': 'b755112eeb7ca685f80a4a8b93bfff1d9323fa3b7c57030aa12048adaef2e4f4',
- 'Brackenford/goalLandingCleared': '65bde3d69b3321e5e5370b3fe340581bc46d2ef4a619edf10d812b6e23938783',
- 'Brackenford/groveClaimed': '4876c136061a43ce924a55baa9dc20f30a00ee0f1b9cb9598ce1e5a9c1c8a031',
- 'Brackenford/larderReady': '562b2b930847e8f1fb6f9fe93dc680903ec501b0198b5d6696cce209c37aa637',
- 'Brackenford/villageOpen': 'f979ec5bfc4d35b4bb42bccfdf08eb59d408b8688e3fc3b31e8ec7d10506f5ef',
  'Campaign1/goalClassicComplete': '96473efcffb5efb40af72300b603f80aa89d0b62b4c4954fa2a7546f63e5581c',
  'Campaign2/goalClassicComplete': '96473efcffb5efb40af72300b603f80aa89d0b62b4c4954fa2a7546f63e5581c',
  'Campaign3/goalClassicComplete': '96473efcffb5efb40af72300b603f80aa89d0b62b4c4954fa2a7546f63e5581c',
@@ -338,20 +237,7 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa32
  'Cinderhollow/goalDawnBridgeCrossed': '05f90e1f8e74e92ee126418d8d02c528ef152fe4aff7e0f87c532bc0c3df4262',
  'Cinderhollow/rivalHeartDown': 'eba31bfc917f3b56b7e9fa9ac69de6e5c8e09905c38c588597d432f4758c6ede',
  'Cinderhollow/rivalHeartFalls': 'cf0d56503a48e929b99ec934c1eac832f8bd95fa4785533e96ed9cfd33233d06',
- 'Coldwell/courtBreached': '44ebb7a1fa5c16d2bc4cf4cfd4e82ec1ea98501c6839fb6190f50f6b51175f33',
- 'Coldwell/goalUndercroft600': '3998fc8dbd07fe00c625e156ff639e809b6d44933db162f7a9e0425ad8d86da4',
- 'Coldwell/plazaReached': 'b3c03fd9a567992624fe4dfaffb2bd550a0585faddb0875c6d59676e3472c48e',
- 'Coldwell/wellEmptied': '6591ba5aceeb629439c2b37862d24cadf5846841e8477f759af3d91288c59ad1',
  'CrowshotGallery/galleryClear': '70a36becadb693911641ad3bf0ea8bfcb986d9f6d515c0e1d89ee1ca6a9944e0',
- 'Dunmarrow/barrowsEntered': '085380acca4d034f15c91a10680450c59c2d33c9865fef70b3a793273eb2e149',
- 'Dunmarrow/goalCampBeforeDeparture': '5085e5ee9ca8e0f6a1a9a14a603abf28a3abd5623d0a39bf0b60554a5f03b36d',
- 'Dunmarrow/goalCampBeforeLoading': 'ba5e0e926b76ad3d7dcfbc068200752958f822daa72997d0fa4cab1d070f2b44',
- 'Dunmarrow/goalCampMissed': '0191ce1746a390ebbdd0d27957a9a3cee2e08d6d5c44a23c8a805deb892cea11',
- 'Dunmarrow/wardenCaught': 'f50e1bd028271d6808509e83e18a5ecf8d30c344d57b3b49c68b9e29e0734865',
- 'Dunmarrow/wardenEscaped': 'e624c6cc8fd2849cdc16f3d18df11a92436d2dcd0a89b4dd72a8e2c1c6a27b37',
- 'Ebonrook/crossed': 'f074e0ce94d380e77fed879ecdb320a5953d48adefdf66c63e4ec876a6998358',
- 'Ebonrook/scoutPossessed': '3b6089fe0ea54d0fb030187fcc8d905f38edcaaa1c6757938aaa4d0caced81cb',
- 'Ebonrook/wardenSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
  'Goldspire/lowTown': 'b0850f7040d983080895d0dde679743b6d2296c36ef4f248e7c3de5ec3c76dec',
  'Goldspire/onRing': '7f80618dff9ef40c3c8ba326475dea955da625c4cec0f63e159540e0716d0160',
  'Greywater/firstCoin': '6591ba5aceeb629439c2b37862d24cadf5846841e8477f759af3d91288c59ad1',
@@ -404,53 +290,17 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa32
  'Kingsfall/goalArmyAtHeart': '7c8a4ba84f0d124e4800c8880845249ba6320cf154888bea68bebff9d7718d8e',
  'Lanternhill/goalRingGroundPathOpened': 'aa3d2a4caeaed837e5a0e80db31473d02090c14136c8df98937757f61389f0fc',
  'Lanternhill/rivalHeartDown': 'ed8320ab6d956aaf16b9114d389d3684c7fae627fae78912220742ae53f94b87',
- 'Mirewatch/goalNineTowerRoomsClaimed': '84658f831313f77f8aac25816f828b1f3a0d8c541d2776dda77ccf139a4c215f',
- 'Mirewatch/scoutTowerC': '47716bb4d4cf382a3c8361ed7ea924e83aec55ebe50a73512cced36d5cfa45b6',
- 'Mirewatch/watcherSlain': '64247d08b33c60aecb9970aaa61cad974015e18496b97341fb463acf439130ca',
- 'Mossgate/firstGold': '4bb67357526e67e6cebc76c5f68d3724d44496fa4fa0af3b661369e6a7822232',
- 'Mossgate/goalWatchPostCleared': '43dd83a2b12c44e8787c1d4915efd8d681e068d24c09d2f6481c7997d2ada8eb',
- 'Mossgate/meadowOurs': 'dc24a3c61e63b2361437ecff16031829c4603c9cf3914b514de872c70ddb52e2',
- 'Ravensledge/goalInnerKeepEntered': '457a1424f47049320d2f987087e3ab9988b1f0b77713ad34334d036446c9556d',
- 'Ravensledge/shelfHeld': 'f3b5f12fb09cd6590ec8fe5d13f74cd7956b27e0a3bb9524b0a49ad2782cbef1',
- 'Ravensledge/yardEntered': '9f57851e1a5a3e3b77dca2af5a58970e607f4f71b73268c2872e00d8b9eac1db',
  'Saltmere/firstSalt': '44a33805891e8bde4816432f6122e61047c42e6a3206e750e684f084e0a8d625',
  'Saltmere/flatHeld': '013d7fc84c5e7c7c651d50bf9d20ed6116158743113badc7883dbbf4de2e0ce1',
  'Saltmere/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
  'Saltmere/goalHeartSafe3BeforeAdmiralFalls': '9ce58e2c16f4cadf0f062b96ccce4bed5d6475570bd17d6635eb680fa1d56c52',
  'Saltmere/portGatesTimeout': '461dcfa3ab8be3d790feeaaf6488d364908584efbd2cb9c4a0f0d4bebf5dc769',
- 'Silverdeep/goalSilverdeepAllSpans': '416b30b15daccc2cc8efa057efa6a346d0ff60d754b4050adf781186638dc5ec',
- 'Silverdeep/goalSilverdeepSpan1Path1After': '694e3bb32a4dad662193dfeb38ade55123d23d1197188182da6280353895482c',
- 'Silverdeep/goalSilverdeepSpan1Path1Before': '96b935a0794b0dc5b1ba4c55ca33a73790f881e813b8e9f2b64fe0b2d01a3b19',
- 'Silverdeep/goalSilverdeepSpan1Path1On': '4ab50e2d69d4786c084d5716621cffeef8b018ca74e427e6c72e03b7f6c46bcf',
- 'Silverdeep/goalSilverdeepSpan2Path1After': '0645a6ec87e0a448b9d2f5e5febea25308d57e5f446587f7717a79f4449017b4',
- 'Silverdeep/goalSilverdeepSpan2Path1Before': '56d1c9f369d900a668f10f5fc73772ae42a621cefed12d89940d945705ddc604',
- 'Silverdeep/goalSilverdeepSpan2Path1On': '20b9ed0914187570fe2c524aa2c798840159cbb0ae9d9dcf5ff67ef46b0675b7',
- 'Silverdeep/goalSilverdeepSpan3Path1After': '90da92e9fa34127a8999e8160db1843651f264d6c8aa28c8fcc78b7a816b4f9e',
- 'Silverdeep/goalSilverdeepSpan3Path1Before': 'a43faad731e81bf48223b03c4b0ab98d5b4aa076a9d31e5107ec95393aa1e428',
- 'Silverdeep/goalSilverdeepSpan3Path1On': '5e37dc7725947912515515e5458a9a5f55b3ba082d73fa723bdd0bffabbaf885',
- 'Silverdeep/silverWonGoal': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
  'SkittleCavern/laneCleared': '34ca017e8ab755fe28f0a2da2aa7a24fc0fb75e59cad21f923a1aa3631fbf231',
- 'Stormhaven/goalPactFormedDockEntered': 'd084ee2784204893d1414846b867a0379d4044c69495f226778d2b376fb970d5',
- 'Stormhaven/goalPactFormedQuayEntered': '87230c6693f552c4505a78931b3b8c58a0b780f005e81cc23ffe20ec5655f4ed',
- 'Stormhaven/goalPactFormedTideTurns': '991c221aa0af6dfc67b1113a43cf55140d476ecd1334a6ad973f9b5ed1e63258',
- 'Stormhaven/goalPactFormedTideTurns2': '347ef5b3961513b41663a471c08ee3acf0f256ad1175b84b112f1cce96751883',
- 'Stormhaven/goalPactsPrevented': 'c49c9154600141018a22f986cc085433756316fc81d6618b1efa8d80690df33c',
- 'Stormhaven/goalStormhavenBothSpans': '5f8a0e62609158e5664ac6198c877559380765760e138518a29639bfd98fc3a4',
- 'Stormhaven/goalStormhavenSpan1After': 'f0a4d6d018914b54708f42588df5157eaab85efba18c4b9e05110101b9188ba9',
- 'Stormhaven/goalStormhavenSpan1Before': '7869cf5e406b2a3a9ccaadf3bd98292b4dce4b58c4a506581fccb3205a7e34b3',
- 'Stormhaven/goalStormhavenSpan1On': 'db5c986a56c96dbd0ad1a29010db13c624abc5d2f96b839751d857897e22991e',
- 'Stormhaven/goalStormhavenSpan2After': '6ab2caa5531335587661040cd481fad096de9254ed2296efcb9b826dffb1c7a1',
- 'Stormhaven/goalStormhavenSpan2Before': 'e921a356dfc1d75bf0939271c6eafaaf0b943cb6df262fbcd8fde5be651fc2dc',
- 'Stormhaven/goalStormhavenSpan2On': 'd2fdfa00e0cd4c5de50ade73fd7065e6097ed95578b7fde1fab8023ec39e2c4a',
- 'Stormhaven/stormEndsGoal': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
  'SwarmNight/dawn': '2335939255b4fd381eca7f23b78c9b0d57725213bced5336b88fd8d105dfaf0e',
  'SwarmNight/goalHeartLost1': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
  'SwarmNight/goalHeartLost2': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
  'SwarmNight/goalHeartSafe1BeforeDawn': 'f6d3c776f37846a45c747396602ae53855e4ec5b9e8b52b8520d3df2aa7941a1',
  'SwarmNight/goalHeartSafe2BeforeDawn': 'f6d3c776f37846a45c747396602ae53855e4ec5b9e8b52b8520d3df2aa7941a1',
- 'Thornreach/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
- 'Thornreach/goalHeartSafe3BeforeKeepersGoneGoal': 'f70d95a26645ff48ff76d89a9f3b38d12dd2439cd3004c3c25249ef2caf53e5d',
- 'Thornreach/keepersGoneGoal': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
  'Tinmoor/goalPostACleared': '35637c4d1096ff9d216ab391a899d54ab046ff480f75b4e3f1bda65df5562634',
  'Tinmoor/goalPostBCleared': 'db69c69aa8f511f80d586503f111bea43cd33474fd295d4d2a80f353790f1df1',
  'Tinmoor/postACleared': 'dac3217efa10c0755d25613c88742aee86e44f9f96087c3fe996ec4d3e389fad',
@@ -461,11 +311,6 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa32
  'VarnsCrossing/goalHeartLost2': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
  'VarnsCrossing/goalHeartSafe2BeforeCrossingHeldGoal': 'f70d95a26645ff48ff76d89a9f3b38d12dd2439cd3004c3c25249ef2caf53e5d',
  'VarnsCrossing/goalQuarterThenFortress': '47574e68327b7f3c0a12d22636d5edf5baa3f388f4fde19dc086d24f648961d2',
- 'Wolfscar/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
- 'Wolfscar/goalHeartSafe3BeforeHuntersGoneGoal': 'f70d95a26645ff48ff76d89a9f3b38d12dd2439cd3004c3c25249ef2caf53e5d',
- 'Wolfscar/huntersGone': '817957baa91166588c3cf255cb0a0c3b1337b587953edcab61f720389de35680',
- 'Wolfscar/huntersGoneGoal': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
- 'Wolfscar/southCrossed': 'a8f87a6499f3f4999683baba47d5c312ff9e89caf3a9af1f46bd762a6510941b',
  'Wraithwood/bothFallGoal': '2a99324afebb946debdf455a762b0a3397ab53239aff6aa5c15a82d7ca0af1e6',
  'Wraithwood/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e',
  'Wraithwood/goalHeartSafe3BeforeBothFallGoal': 'f70d95a26645ff48ff76d89a9f3b38d12dd2439cd3004c3c25249ef2caf53e5d',
@@ -476,15 +321,24 @@ OBJECTIVE_CONDITIONS = {'Ashcombe/goalBasinCrossed': '07cc99cab3bb82610d65c2aa32
  'Lanternhill/goalHeartLost3': '65883912aaee2758fba63138f970f145b041ff9190c5a9b5c207577321079e3e'}
 
 # Fixed original enemy-room footprints: name, type, original owner, inclusive rectangle, tile count.
-MIREWATCH_ROOMS = (('GuardRoom1', 17, 3, (44, 106, 47, 107), 8),
- ('GuardRoom2', 17, 3, (86, 110, 88, 111), 6),
- ('Library1', 7, 3, (24, 78, 26, 79), 6),
- ('Arena1', 14, 3, (74, 82, 78, 84), 15),
- ('Library2', 7, 3, (20, 44, 22, 45), 6),
- ('Prison1', 11, 3, (68, 50, 69, 52), 6),
- ('Workshop1', 5, 3, (44, 24, 47, 25), 8),
- ('GuardRoom3', 17, 2, (94, 22, 97, 23), 8),
- ('Workshop2', 5, 2, (99, 18, 101, 19), 6))
+MIREWATCH_ROOMS = ()
+
+# The rows of the wing 1 levels and of the seven dropped maps (reviewed briefing sentences, objective triggers, hint
+# and removed objective IDs, reviewed non-matches, condition fingerprints and the enemy rooms of Mirewatch) are
+# content: they lie in checks/campaign_playability.json of the content repository with the values fixed above for
+# the other levels; without content no such level is present and they are not needed.
+CONTENT_ROWS = PLAYABILITY_TEXTS
+if CONTENT_ROWS:
+    BRIEFING_MATCH.update({name: {int(number): text for number, text in sentences.items()}
+                           for name, sentences in CONTENT_ROWS["briefing_match"].items()})
+    OBJECTIVE_TRIGGERS.update({name: [None if trigger is None else tuple(trigger) for trigger in triggers]
+                               for name, triggers in CONTENT_ROWS["objective_triggers"].items()})
+    HINT_IDS = HINT_IDS | frozenset(CONTENT_ROWS["hint_ids"])
+    REMOVED_OBJECTIVE_IDS = REMOVED_OBJECTIVE_IDS | frozenset(CONTENT_ROWS["removed_objective_ids"])
+    OBJECTIVE_REVIEW.update({identity: tuple(review) for identity, review in CONTENT_ROWS["objective_review"].items()})
+    OBJECTIVE_CONDITIONS.update(CONTENT_ROWS["objective_conditions"])
+    MIREWATCH_ROOMS = tuple((name, kind, owner, tuple(rectangle), count)
+                            for name, kind, owner, rectangle, count in CONTENT_ROWS["mirewatch_rooms"])
 CINDER_SEAMS = ((5, 55, 6, 58), (30, 72, 33, 73))
 LANTERN_CONNECTION = (13, 57, 40, 22)
 
@@ -799,7 +653,7 @@ def cinder_seam_errors(level):
 # Check every fixed tower room tile for eventual worker access and enemy-room claimability.
 def mirewatch_errors(level):
     errors = []
-    configured_modes = re.findall(r"^\s*RoomsClaimableByEnemies\s+(\S+)", (ROOT / "config/rooms.cfg").read_text(encoding="utf-8"), re.M)
+    configured_modes = re.findall(r"^\s*RoomsClaimableByEnemies\s+(\S+)", content_packages.read_text(ROOT, "config/rooms.cfg"), re.M)
     if configured_modes != ["1"]:
         errors.append("room takeover configuration differs from reviewed claimable mode 1")
     area, _ = reachable(timed_openings(level))
@@ -993,7 +847,7 @@ def grouped_goal_errors(text, level_name):
                     errors.append("friendly item source or destination is not reachable dry ground: " + identity)
             if not any(room[0] == 1 and room[2] == pickup["seat"] and target in room[3] for room in level["rooms"]):
                 errors.append("friendly mission item destination is not its own dungeon heart: " + identity)
-            if "Action\tmessage\t1\tA mysterious stone has been discovered. Bring it to your dungeon heart." not in rows:
+            if DISCOVERY_MESSAGE is None or "Action\tmessage\t1\t" + DISCOVERY_MESSAGE not in rows:
                 errors.append("friendly mission discovery message differs from approved wording: " + identity)
         # A delivery tile must be dry, reachable and inside the original consumer region.
         for identity, delivery in proof.get("mission_deliveries", {}).items():
@@ -1051,7 +905,7 @@ def grouped_goal_errors(text, level_name):
         if shooting:
             rows = [row.split() for _, row in lines(section(text, "Creatures"))]
             shooter = next((row for row in rows if row[1] == shooting["shooter"]), None)
-            definitions = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            definitions = content_packages.read_text(ROOT, "config/creatures.cfg")
             definition = re.search(r"\[Creature\]\s*Name\s+" + re.escape(shooting["class"]) + r"\b(.*?)\[/Creature\]", definitions, re.S)
             skill = next((row.split() for _, row in lines(definition[1]) if row.startswith("MissileLaunch")), None)
             if (shooter is None or shooter[6] != shooting["class"] or int(shooter[7]) != shooting["level"]
@@ -1146,7 +1000,7 @@ def grouped_goal_errors(text, level_name):
             if dorm[:2] != (2, level["human"]) or hatch[:2] != (8, level["human"]):
                 errors.append("original supply rooms changed ownership or type")
             creature_rows = {row.split()[1]: row.split() for _, row in lines(section(text, "Creatures"))}
-            definitions = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            definitions = content_packages.read_text(ROOT, "config/creatures.cfg")
             occupied_beds = set()
             for bed in supply["beds"]:
                 row = creature_rows.get(bed["creature"])
@@ -1167,7 +1021,7 @@ def grouped_goal_errors(text, level_name):
                                       if name not in (supply["dormitory"], supply["hatchery"])))
             if len(supply["beds"]) != supply.get("resident_count", 9) or occupied_beds & hatch_tiles or additions - area or additions & other_rooms or c - a < 2 or d - b < 2:
                 errors.append("supply expansion is blocked or lacks the required beds and a coop site")
-            config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
+            config = content_packages.read_text(ROOT, "config/rooms.cfg")
             bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
             food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
             cost = len(occupied_beds - dorm[2]) * bed_cost + len(hatch_tiles - hatch[2]) * food_cost
@@ -1195,11 +1049,11 @@ def grouped_goal_errors(text, level_name):
                 errors.append("insufficient reachable regional mining reserve")
         setup = review.get("setup")
         if setup:
-            config = (ROOT / "config/rooms.cfg").read_text(encoding="utf-8")
+            config = content_packages.read_text(ROOT, "config/rooms.cfg")
             bed_cost = int(re.search(r"^\s*DormitoryCostPerTile\s+(\d+)", config, re.M)[1])
             food_cost = int(re.search(r"^\s*HatcheryCostPerTile\s+(\d+)", config, re.M)[1])
             cost = setup["bed_tiles"] * bed_cost + setup["hatchery_tiles"] * food_cost
-            creatures = (ROOT / "config/creatures.cfg").read_text(encoding="utf-8")
+            creatures = content_packages.read_text(ROOT, "config/creatures.cfg")
             creature = re.search(r"\[Creature\]\s*Name\s+" + setup["bed_class"] + r"\b(.*?)\[/Creature\]", creatures, re.S)[1]
             dimensions = list(map(int, re.search(r"BedDim\s+(\d+)\s+(\d+)", creature).groups()))
             if dimensions != setup["bed_dimensions"] or cost != setup["cost"] or int(level["seats"][level["human"]]["gold"]) != setup["starting_gold"] or cost > setup["starting_gold"]:
@@ -2003,7 +1857,7 @@ def self_test(root):
                 (pickup["reward"], "Action\tmessage\t1\tNo reward.", "delivery or reward differs"),
                 ("Cond\tregion\t1\t" + pickup["region"] + "\n", "Cond\ttime\t0\n", "hidden discovery region"),
                 ("Region\t" + pickup["region"] + "\t", "Region\t" + pickup["region"] + "Moved\t0\t0\t0\t0\nRegion\t" + pickup["region"] + "Old\t", "hidden discovery region"),
-                ("A mysterious stone has been discovered.", "A stone lies here.", "approved wording")):
+                (DISCOVERY_OPENING, "A stone lies here.", "approved wording")):
             assert old in source, (map_name, old)
             assert any(expected in error for error in grouped_goal_errors(source.replace(old, new), map_name)), (map_name, expected)
     bearerless = json.loads(json.dumps(GROUP_REVIEW["Brackenford"]["reachability"]["mission_pickups"]["cellar-stone"]))
@@ -2035,23 +1889,42 @@ def self_test(root):
     print("campaign playability self-test passed")
 
 
+# The file of a level name (campaign, dropped or legacy map) in the public tree or a content or wing package, or None
+# when it is not present (no content).
+def present_level(name):
+    path = campaign_packages.level_path(ROOT, name)
+    return path if path.is_file() else None
+
+
 # Check every configured level and fail on errors or a stale goal inventory.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--write-inventory", action="store_true")
     args = parser.parse_args()
+    has_content = content_packages.has_content(ROOT)
+    not_present = []
     if args.self_test:
+        # The self-test reads the campaign levels and the dropped maps of the content packages
+        if present_level("Mossgate") is None and not has_content:
+            content_packages.unchecked("campaign playability self-test", ["the campaign levels"])
+            return 0
         self_test(ROOT)
         return 0
-    # The public inventory covers the public levels; the levels of the content packages have theirs in the content
-    # repository, so no paid text is written into the public tree
-    inventories = [(ROOT / "materials/campaign-goals/GOALS-INVENTORY.md",
-                    inventory(ROOT, campaign_packages.all_level_files(ROOT, with_content=False), ROOT))]
+    # Both inventories lie in the content repository: that of the public levels (the legacy maps of the public tree)
+    # and that of the levels of the content packages (the wings and the dropped maps), so no paid text is written into
+    # the public tree; without content they are not checked
+    inventories = []
     content = campaign_packages.content_repository(ROOT)
     if content is not None:
+        public_levels = campaign_packages.all_level_files(ROOT, with_content=False)
         private = [entry["_path"] for entry in campaign_entries(ROOT) if not entry["_public"]]
-        inventories.append((content / "docs/GOALS-INVENTORY.md", inventory(ROOT, private, content)))
+        private += [path for path in campaign_packages.all_level_files(ROOT)
+                    if path not in public_levels and path not in private]
+        inventories.append((content / PUBLIC_INVENTORY, inventory(ROOT, public_levels, ROOT)))
+        inventories.append((content / CONTENT_INVENTORY, inventory(ROOT, private, content)))
+    else:
+        not_present.append("the goal inventories")
     if args.write_inventory:
         for path, document in inventories:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -2068,6 +1941,9 @@ def main():
     configured_names = {Path(entry.get("File", "")).stem for entry in checked}
     for legacy_name in sorted(set(GROUP_REVIEW) - configured_names):
         legacy_path = campaign_packages.level_path(ROOT, legacy_name)
+        if not legacy_path.is_file() and not has_content:
+            not_present.append(legacy_path.name)
+            continue
         try:
             failures.extend("campaign/" + legacy_path.name + ": " + error
                             for error in grouped_goal_errors(legacy_path.read_text(encoding="utf-8"), legacy_name))
@@ -2076,6 +1952,9 @@ def main():
     for entry in checked:
         name = entry.get("File", "")
         path_level = campaign_packages.level_path(ROOT, name)
+        if not path_level.is_file() and not has_content:
+            not_present.append(path_level.name)
+            continue
         try:
             if not path_level.is_file():
                 raise ValueError("missing/invalid campaign level path")
@@ -2091,13 +1970,14 @@ def main():
         except (ValueError, IndexError, KeyError, OSError) as error:
             failures.append(name + ": " + str(error))
     configured = {entry.get("File") for entry in checked}
-    for legacy in sorted((ROOT / "levels/campaign").glob("*.level")):
+    for legacy in content_packages.data_glob(ROOT, "levels/campaign", "*.level"):
         if "campaign/" + legacy.name not in configured:
             failures.extend("campaign/" + legacy.name + ": " + error
                             for error in objective_errors(legacy.read_text(encoding="utf-8"), legacy.stem))
     for path, document in inventories:
         if not path.is_file() or path.read_text(encoding="utf-8") != document:
             failures.append("goal inventory %s is missing or stale; regenerate with --write-inventory" % path)
+    content_packages.unchecked("campaign playability", not_present)
     for error in failures:
         print(error)
     print("campaign playability: %d levels, %d errors" % (len(entries), len(failures)))

@@ -7,8 +7,9 @@ Requirements checked (each reported on its own, expected values are fixed):
   P1  the build computes the checksums of all shipped levels at every build and compiles them into the game: the CMake
       script covers the three folders, a custom target without output (it runs at every build) rewrites the generated
       source of the build directory, the game depends on it and lists the source; no checksum file is in the
-      repository. The script is run with cmake: 78 entries, each the SHA-256 of the level without carriage returns
-      (compared with hashlib), an unchanged folder does not rewrite the output, a changed level does
+      repository. The script is run with cmake: 56 entries with the content (32 without), each the SHA-256 of the
+      level without carriage returns (compared with hashlib), an unchanged folder does not rewrite the output, a
+      changed level does
   P2  a changed shipped level is rejected with a message when it is loaded, an unchanged one loads (compiled probe on
       OfficialLevels.cpp with a changed copy; static wiring in readGameMapFromFile and the single player menus)
   P3  the multiplayer host never starts a changed shipped level and shows a message (static wiring; probe: also a
@@ -23,7 +24,12 @@ Requirements checked (each reported on its own, expected values are fixed):
   P7  the developer option and the hidden option are not mentioned in tracked texts other than code
   P8  the checksums of the build match every shipped level of the repository, also through a folder junction as in a
       run-in-place build directory, so the level of the load test loads (probe with the generated table)
-It compiles one probe twice with cl, runs cmake twice in script mode and starts no game."""
+It compiles one probe twice with cl, runs cmake twice in script mode and starts no game.
+
+Most shipped levels moved to the content packages (scripts/content_packages.py, scripts/campaign_packages.py): the
+levels below levels/<folder> of the content packages and the levels of wing 1 (formerly levels/campaign/wing1). With
+the content present the shipped levels are the public ones plus those (78 in all, keys as before); without the content
+only the 37 public levels are checked and the content levels are named as not checked."""
 from pathlib import Path
 import hashlib
 import os
@@ -35,11 +41,22 @@ import tempfile
 import time
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
+
 started = time.monotonic()
 failures = []
 
-# Number of shipped levels of the branch (41 skirmish, 22 multiplayer, 15 campaign), counted once
-EXPECTED_LEVEL_COUNT = 78
+WITH_CONTENT = content_packages.has_content(repo)
+# Number of shipped levels of the branch (32 skirmish, 9 multiplayer, 15 campaign), counted once
+ALL_LEVEL_COUNT = 56
+# Number of shipped levels of the public tree (19 skirmish, 9 multiplayer, 4 campaign), counted once
+PUBLIC_LEVEL_COUNT = 32
+EXPECTED_LEVEL_COUNT = ALL_LEVEL_COUNT if WITH_CONTENT else PUBLIC_LEVEL_COUNT
+if not WITH_CONTENT:
+    content_packages.unchecked('check_official_level_protection',
+                               ['%d shipped levels of the content packages' % (ALL_LEVEL_COUNT - PUBLIC_LEVEL_COUNT)])
 DEPS = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path(os.environ.get('USERPROFILE', '.')) / 'build-deps')))
 CMAKE = Path(os.environ.get('ODP_CMAKE', str(DEPS / 'tools' / 'cmake-4.4.1-windows-x86_64' / 'bin' / 'cmake.exe')))
 OFFICIAL_FOLDERS = ('skirmish', 'multiplayer', 'campaign')
@@ -85,11 +102,23 @@ def before(text, first, second):
     return a != -1 and b != -1 and a < b
 
 
+def shipped_level_files():
+    """The .level files of the three shipped folders as {path below levels/: file}: the public levels, the levels of
+    the same folders in the content packages and the levels of wing 1 (keys below campaign/wing1/ as before)."""
+    files = {}
+    for folder in OFFICIAL_FOLDERS:
+        for base in content_packages.data_folders(repo, 'levels/' + folder):
+            for path in sorted(base.rglob('*.level')):
+                files.setdefault(folder + '/' + path.relative_to(base).as_posix(), path)
+    for entry in campaign_packages.entries(repo):
+        if entry.get('Wing') == '1' and not entry['_public'] and entry['_path'].is_file():
+            files.setdefault('campaign/wing1/' + entry['_path'].name, entry['_path'])
+    return files
+
+
 def shipped_levels():
-    """The tracked .level files of the three shipped folders (paths below levels/)."""
-    listed = subprocess.run(['git', '-C', str(repo), 'ls-files', 'levels'], capture_output=True, text=True).stdout
-    return sorted(p[len('levels/'):] for p in listed.splitlines()
-                  if p.endswith('.level') and p.split('/')[1] in OFFICIAL_FOLDERS)
+    """The paths below levels/ of the shipped levels (see shipped_level_files)."""
+    return sorted(shipped_level_files())
 
 
 def level_hash(data):
@@ -97,13 +126,17 @@ def level_hash(data):
     return hashlib.sha256(data.replace(b'\r', b'')).hexdigest()
 
 
-def run_generator(levels_dir, output):
-    """Runs the CMake script of the build; returns (ok, text)."""
+def run_generator(levels_dir, output, content=False):
+    """Runs the CMake script of the build; returns (ok, text). With content the shipped levels of the content
+    packages are added like the build does (-DCONTENT_DIR, the packages folder of MOREYA_CONTENT_DIR)."""
     script = repo / 'cmake' / 'GenerateOfficialLevelChecksums.cmake'
     if not script.is_file():
         return False, 'script missing'
-    run = subprocess.run([str(CMAKE), '-DLEVELS_DIR=' + str(levels_dir).replace('\\', '/'),
-                          '-DOUTPUT=' + str(output).replace('\\', '/'), '-P', str(script)],
+    arguments = [str(CMAKE), '-DLEVELS_DIR=' + str(levels_dir).replace('\\', '/')]
+    folder = campaign_packages.content_folder(repo) if content else None
+    if folder is not None:
+        arguments.append('-DCONTENT_DIR=' + str(folder).replace('\\', '/'))
+    run = subprocess.run(arguments + ['-DOUTPUT=' + str(output).replace('\\', '/'), '-P', str(script)],
                          capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=120)
     return run.returncode == 0, run.stdout + run.stderr
 
@@ -146,10 +179,11 @@ check(holders == ['cmake/GenerateOfficialLevelChecksums.cmake'] or not script,
 # ---------------------------------------------------------------- P1 (cmake run)
 work = Path(tempfile.mkdtemp(prefix='odp-official-'))
 generated = work / 'generated' / 'OfficialLevelChecksums.cpp'
-expected_keys = shipped_levels()
+level_files = shipped_level_files()
+expected_keys = sorted(level_files)
 check(len(expected_keys) == EXPECTED_LEVEL_COUNT,
       'P1 the branch has %d shipped levels (found %d)' % (EXPECTED_LEVEL_COUNT, len(expected_keys)))
-ok, output = run_generator(repo / 'levels', generated)
+ok, output = run_generator(repo / 'levels', generated, WITH_CONTENT)
 entries = parse_entries(generated.read_text(encoding='utf-8')) if ok and generated.is_file() else []
 check(ok and len(entries) == EXPECTED_LEVEL_COUNT,
       'P1 the script writes %d entries (got %d) %s' % (EXPECTED_LEVEL_COUNT, len(entries), output[:300]))
@@ -157,17 +191,17 @@ check(ok and 'const std::size_t ENTRY_COUNT = %d;' % EXPECTED_LEVEL_COUNT in gen
       'P1 ENTRY_COUNT of the generated source is %d' % EXPECTED_LEVEL_COUNT)
 check(ok and sorted(k for k, _ in entries) == expected_keys,
       'P1 the keys of the generated source are the paths of the shipped levels below levels/')
-wrong = [k for k, h in entries if h != level_hash((repo / 'levels' / k).read_bytes())]
+wrong = [k for k, h in entries if h != level_hash(level_files.get(k, repo / 'levels' / k).read_bytes())]
 check(ok and not wrong, 'P1 every checksum is the SHA-256 without carriage returns; wrong: %s' % wrong[:5])
 if ok:
     stamp = generated.stat().st_mtime_ns
     time.sleep(0.05)
-    run_generator(repo / 'levels', generated)
+    run_generator(repo / 'levels', generated, WITH_CONTENT)
     check(generated.stat().st_mtime_ns == stamp, 'P1 an unchanged levels folder does not rewrite the generated source')
     copy = work / 'levels'
     for key in expected_keys:
         (copy / key).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(repo / 'levels' / key, copy / key)
+        shutil.copyfile(level_files[key], copy / key)
     changed_key = 'skirmish/' + Path(next(k for k in expected_keys if k.startswith('skirmish/'))).name
     (copy / changed_key).write_bytes((copy / changed_key).read_bytes() + b'# changed\n')
     copied = work / 'copy' / 'OfficialLevelChecksums.cpp'
@@ -288,12 +322,21 @@ int main(int argc, char** argv)
     }
     else
     {
-        // P8: the generated table matches every shipped level, given as paths of the repository
+        // P8: the generated table matches every shipped level, given as paths of the repository; an argument
+        // "<levels folder>|<file>" names the levels folder of a level of a content package
         const std::string levels = argv[3];
         int unchanged = 0;
         for(int i = 4; i < argc; ++i)
         {
-            Verdict verdict = verifyLevelFile(argv[i], levels, OfficialLevelChecksums::ENTRIES,
+            std::string root = levels;
+            std::string file = argv[i];
+            const std::string::size_type bar = file.find('|');
+            if(bar != std::string::npos)
+            {
+                root = file.substr(0, bar);
+                file = file.substr(bar + 1);
+            }
+            Verdict verdict = verifyLevelFile(file, root, OfficialLevelChecksums::ENTRIES,
                 OfficialLevelChecksums::ENTRY_COUNT);
             expect(verdict == Verdict::Unchanged, std::string("generated table: ") + argv[i]);
             unchanged += (verdict == Verdict::Unchanged);
@@ -350,8 +393,27 @@ check('developer=1 single=1 multi=0' in developer_out,
 check('multi=0' in developer_out and 'multi=0' in release_out,
       'P3 a changed shipped level is rejected in multiplayer in every build')
 
-# P8: the generated table against the repository levels, directly and through a junction like a build directory
-repo_levels = [repo / 'levels' / k for k in expected_keys]
+# P8: the generated table against the repository levels, directly and through a junction like a build directory.
+# A level of a content package is given with the levels folder of its package ("<folder>|<file>"); a level of wing 1
+# lies directly in its package and is given from a copy below campaign/wing1/.
+def p8_arguments():
+    """The probe arguments of the shipped levels: public levels by path, package levels with their levels folder."""
+    arguments = []
+    for key in expected_keys:
+        path = level_files[key]
+        if path == repo / 'levels' / key:
+            arguments.append(str(path))
+        elif path.as_posix().endswith('/' + key):
+            arguments.append(path.as_posix()[:-len(key) - 1] + '|' + str(path))
+        else:
+            copy_root = work / 'wing-levels'
+            (copy_root / key).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, copy_root / key)
+            arguments.append(str(copy_root) + '|' + str(copy_root / key))
+    return arguments
+
+
+repo_levels = p8_arguments()
 direct_ok, direct_out = run(release, fixture, 'table', repo / 'levels', *repo_levels) if release else (False, '')
 check(direct_ok and 'count=%d unchanged=%d' % (EXPECTED_LEVEL_COUNT, EXPECTED_LEVEL_COUNT) in direct_out,
       'P8 every shipped level matches the checksum of the build: ' + direct_out[-600:])
@@ -450,9 +512,10 @@ check('static const std::string USER_MAP_EXTENSION = OfficialLevels::USER_MAP_EX
       and 'static const std::string LEVEL_EXTENSION = OfficialLevels::LEVEL_FILE_EXTENSION;' in maphandler_h,
       'P5 MapHandler.h has the shared constant USER_MAP_EXTENSION next to LEVEL_EXTENSION')
 fill = function(maphandler, 'bool fillLevelFilesList(')
-check('Helper::fillFilesList(path, listFiles, LEVEL_EXTENSION)' in fill
-      and 'Helper::fillFilesList(path, listFiles, USER_MAP_EXTENSION)' in fill,
-      'P5 fillLevelFilesList lists both extensions')
+check('Helper::fillFilesList(folder, listFiles, LEVEL_EXTENSION)' in fill
+      and 'Helper::fillFilesList(folder, listFiles, USER_MAP_EXTENSION)' in fill
+      and 'ContentPackages::getDataFolders(path)' in fill,
+      'P5 fillLevelFilesList lists both extensions in the folder and the same folder of every content package')
 for label, text in (('skirmish', skirmish), ('multiplayer', multiplayer), ('editor load', editor_load)):
     check('MapHandler::fillLevelFilesList(' in text and 'MapHandler::LEVEL_EXTENSION' not in text,
           'P5 the %s menu lists both extensions' % label)
@@ -500,6 +563,33 @@ for path in tracked:
     if re.search(r'EditOfficialLevels|OD_DEVELOPER_MODE|developer[ -]mode|Developer-Modus', text, re.I):
         mentions.append(path)
 check(not mentions, 'P7 tracked texts (docs, README, layouts, ...) do not mention the hidden options: %s' % mentions)
+
+# ---------------------------------------------------------------- P8 hidden fixtures (static)
+# The maps of the first game that only checks use: kept in the repository, offered by no list of the game.
+# Fixed list, counted once: 8 skirmish, 9 multiplayer, 4 campaign = 21.
+HIDDEN_FIXTURES = [
+    'skirmish/DuelToDeath.level', 'skirmish/FallingKeeper.level', 'skirmish/ForgottenTreasures.level',
+    'skirmish/StoneKeep.level', 'skirmish/TestLegacy.level', 'skirmish/TestLegacyNoScripts.level',
+    'skirmish/TestSingleplayerSmall.level', 'skirmish/TestSingleplayerSmallEmpty.level',
+    'multiplayer/Angel.level', 'multiplayer/GreedOrMight.level', 'multiplayer/RuinsOfTheConfluent.level',
+    'multiplayer/ScreamInTheDark.level', 'multiplayer/TheBridge.level',
+    'multiplayer/TestMultiplayerSmallAlliance.level', 'multiplayer/TestMultiplayerSmallFreeForAll.level',
+    'multiplayer/aa.level', 'multiplayer/ab.level',
+    'campaign/Bonus1.level', 'campaign/Campaign1.level', 'campaign/Campaign2.level', 'campaign/Campaign3.level',
+]
+check(len(HIDDEN_FIXTURES) == 21, 'P8 the list of hidden fixtures has 21 entries')
+check(all(key in expected_keys for key in HIDDEN_FIXTURES),
+      'P8 every hidden fixture is still a shipped level of the repository')
+check(all(('"%s"' % key) in official_cpp_raw for key in HIDDEN_FIXTURES),
+      'P8 OfficialLevels.cpp names all 21 hidden fixtures')
+fill_hidden = function(maphandler, 'bool fillLevelFilesList(')
+check('isHiddenFixtureLevelPath(' in fill_hidden,
+      'P8 fillLevelFilesList leaves the hidden fixtures out of the skirmish, multiplayer and editor load lists')
+check('isHiddenFixtureLevelPath(' in editor,
+      'P8 the file browser of the editor leaves the hidden fixtures out')
+for own in ('skirmish/TestRaid.level', 'skirmish/TestSpa.level', 'skirmish/TestTavern.level'):
+    check(own not in HIDDEN_FIXTURES and ('"%s"' % own) not in official_cpp_raw,
+          'P8 the own test level %s is not hidden' % own)
 
 shutil.rmtree(work, ignore_errors=True)
 if failures:

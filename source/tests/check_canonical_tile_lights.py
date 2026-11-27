@@ -18,22 +18,37 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: Room-shader material scripts of each room package, counted once for this branch: without the package they are not
 #: there, with it they are counted like the public ones
-PACKAGED_ROOM_SHADER_MATERIALS = {'GhostRoom': 1, 'Infirmary': 1, 'Spa': 1, 'Tavern': 2, 'Toilet': 1}
+PACKAGED_ROOM_SHADER_MATERIALS = {'GhostRoom': 1, 'GuardRoom': 1, 'Infirmary': 1, 'Spa': 1, 'Tavern': 2,
+                                  'Toilet': 1}
+#: Material scripts of the three tile families in the content packages, by package and family (counted once
+#: on the integration branch)
+PACKAGED_CONTENT_SHADER_MATERIALS = {'room-arena': {'Room': 1}, 'room-crypt': {'Room': 1},
+                                     'room-prison': {'Room': 1}, 'room-stone-bridge': {'ClaimedTile': 1},
+                                     'room-wooden-bridge': {'ClaimedTile': 1}}
 
 
 def material_folders():
-    """The materials folder of the game data and of every room package that is present."""
-    return [ROOT / 'materials'] + [package / 'materials' for package in room_packages.package_roots(ROOT)]
+    """The materials folder of the game data and of every content and room package that is present."""
+    return content_packages.data_folders(ROOT, 'materials')
 
 
 def missing_room_shader_materials():
-    """The room-shader material scripts of the room packages that are not present."""
-    return sum(count for room, count in PACKAGED_ROOM_SHADER_MATERIALS.items()
-               if not room_packages.has_room(ROOT, room))
+    """The room-shader material scripts of the room packages and of the content packages that are not present."""
+    return (sum(count for room, count in PACKAGED_ROOM_SHADER_MATERIALS.items()
+                if not room_packages.has_room(ROOT, room))
+            + missing_content_shader_materials('Room'))
+
+
+def missing_content_shader_materials(family):
+    """The material scripts of the family in the content packages that are not present."""
+    present = content_packages.packages(ROOT)
+    return sum(counts.get(family, 0) for package, counts in PACKAGED_CONTENT_SHADER_MATERIALS.items()
+               if package not in present)
 body = runpy.run_path(str(ROOT / 'source/tests/check_terrain_draw_batch.py'))['body']
 
 
@@ -85,7 +100,9 @@ def check_shaders():
             continue
         materials += 1
         assert re.findall(r'param_named_auto\s+\w+\s+light_casts_shadows\s+(\d+)', text) == ['0'], path.name
-    assert materials == 78 - missing_room_shader_materials(), materials
+    # 75 since the unused upstream ChickenCoop, Library and Workshop materials left the game (was 78)
+    assert materials == 75 - missing_room_shader_materials() - missing_content_shader_materials('ClaimedTile'), \
+        materials
     return materials
 
 

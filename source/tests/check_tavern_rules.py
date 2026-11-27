@@ -10,8 +10,8 @@ What is run (the function bodies are taken from the source files, not copied by 
                       below 75, a hangover of 252 turns after a sleep that started above 50 (not shortened, mood -16.67 once,
                       half work), the tavern mood as a one-time value on the stored mood (no timer; the carried old-save value
                       still counts down)
-  RoomTavern::servesBeer / payForBeer / finishDrink / tryStartGame / startGame / playContestTurn / playDuelTurn /
-  cheerSpectators / concludeGame / abortGame / abortDisturbedGuests / knockOut / upkeepSpots / addDrinkDirt
+  RoomTavern::servesBeer / payForBeer / finishDrink / tryStartGame / startGame / playContestTurn / showGameOutcome /
+  playDuelTurn / cheerSpectators / concludeGame / abortGame / abortDisturbedGuests / knockOut / upkeepSpots / addDrinkDirt
                       beer only with the research, both payment paths and their fallbacks to water, the drink chain
                       50 / 25 / 12.5 / 6.25 percent with the cap of five, the 50 percent game chance and the same table
                       rule, eight places per table (four per bench), a large creature takes the places its seated width
@@ -23,7 +23,10 @@ What is run (the function bodies are taken from the source files, not copied by 
                       the other guest; 10 HP per hit, critical chance 10 +- 0.25 per level, knock-out at a critical or
                       below 30 HP when the slap is over, HP never below 1, the limit in slaps), 42 turns (30 s) lying
                       then 9 turns (6 s) getting up, a fight, a flight, a knock-out or a pick-up ends a
-                      game without effects
+                      game without effects; arm wrestling and dice draw their winner when the last 3 turns of the 8
+                      begin (one roll, the same chances), then the winner plays SitArmWrestleWin / SitDiceWin and the
+                      loser SitArmWrestleLose / SitDiceLose once, both in the same turn over the 3 turns left (2.14 s),
+                      turned to each other, and the game ends with that winner after its last turn
   CreatureMoodThirst::getAmount        the same numbers as the hunger problem, for prisoners as for every seat creature
   RoomPortal getResearchedCooldown     the portal cooldown factors 1.0 / 0.9 / 0.8 per Beer level
 The values come from config/global.cfg [Tavern] and config/rooms.cfg. The source wiring (where thirst is sought, where the
@@ -40,11 +43,16 @@ import tempfile
 import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The mixed tables come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
 
 
-# Returns the text of a repository file.
+# Returns the text of a repository file; a mixed table of config/ comes joined with its own rows of the content.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
 
 
 # Returns the text of a function from its first line up to its closing brace (a brace in column 0).
@@ -230,6 +238,27 @@ assert re.search(r'if\(isLargeGuest\(\*creature\)\)\s*return false;', fall), 'a 
 assert 'if(!fallNextToBench(spot))' in extract(room_cpp, 'void RoomTavern::knockOut(')
 assert 'EntityAnimation::sit_slumped_anim' in extract(room_cpp, 'void RoomTavern::showSpotState(')
 
+# The winner and loser clips of arm wrestling and dice: a guest shown again during the last turns of its game plays its
+# outcome clip; a skeleton without it goes on with the looped game clip as before (a seated skeleton without
+# SitArmWrestleWin keeps SitArmWrestle, one without the seated clips plays ArmWrestleWin, then the game clip)
+assert 'showGameOutcome(game, creature);' in extract(room_cpp, 'void RoomTavern::showSpotState(')
+animation_h = read('source/entities/MovableGameEntity.h')
+for token in ('armwrestle_win_anim = "ArmWrestleWin"', 'armwrestle_lose_anim = "ArmWrestleLose"',
+              'sit_armwrestle_win_anim = "SitArmWrestleWin"', 'sit_armwrestle_lose_anim = "SitArmWrestleLose"',
+              'sit_dice_win_anim = "SitDiceWin"', 'sit_dice_lose_anim = "SitDiceLose"'):
+    assert token in animation_h, 'EntityAnimation lacks ' + token
+render_cpp = read('source/render/RenderManager.cpp')
+fallback = render_cpp[render_cpp.index('while (!objectEntity->getSkeleton()->hasAnimation(anim))'):]
+fallback = fallback[:fallback.index('if (!objectEntity->getSkeleton()->hasAnimation(anim))')]
+assert re.search(r'\(anim == EntityAnimation::sit_armwrestle_win_anim\) \|\| \(anim == EntityAnimation::sit_armwrestle_lose_anim\)\)\s*\{'
+                 r'.*?hasAnimation\(EntityAnimation::sit_armwrestle_anim\)\)\s*\{\s*anim = EntityAnimation::sit_armwrestle_anim;\s*loop = true;'
+                 r'\s*\}\s*else if \(anim == EntityAnimation::sit_armwrestle_win_anim\)\s*anim = EntityAnimation::armwrestle_win_anim;'
+                 r'\s*else\s*anim = EntityAnimation::armwrestle_lose_anim;', fallback, re.S), 'the seated arm wrestling outcome falls back'
+assert re.search(r'\(anim == EntityAnimation::armwrestle_win_anim\) \|\| \(anim == EntityAnimation::armwrestle_lose_anim\)\)\s*\{'
+                 r'[^}]*anim = EntityAnimation::sit_armwrestle_anim;\s*loop = true;', fallback), 'the standing arm wrestling outcome falls back'
+assert re.search(r'\(anim == EntityAnimation::sit_dice_win_anim\) \|\| \(anim == EntityAnimation::sit_dice_lose_anim\)\)\s*\{'
+                 r'[^}]*anim = EntityAnimation::sit_dice_anim;\s*loop = true;', fallback), 'the dice outcome falls back'
+
 portal_cpp = read('source/rooms/RoomPortal.cpp')
 mood_thirst_cpp = read('source/creaturemood/CreatureMoodThirst.cpp')
 mood_hunger_cpp = read('source/creaturemood/CreatureMoodHunger.cpp')
@@ -276,7 +305,8 @@ for text in (mood_thirst_cpp, mood_hunger_cpp):
 creatures_cfg = read('config/creatures.cfg')
 hunger_lines = re.findall(r'^\s*Hunger\s+(\S.*?)\s*$', creatures_cfg, re.M)
 thirst_lines = re.findall(r'^\s*Thirst\s+(\S.*?)\s*$', creatures_cfg, re.M)
-assert hunger_lines and hunger_lines == thirst_lines, 'the Thirst line of every type has the same numbers as its Hunger line'
+if WITH_CONTENT:
+    assert hunger_lines and hunger_lines == thirst_lines, 'the Thirst line of every type has the same numbers as its Hunger line'
 # Games end without effects on a fight, a flight, a knock-out, a pick-up
 disturbed = extract(room_cpp, 'bool RoomTavern::isGuestDisturbed(')
 for token in ('isKo()', 'isBeingDragged()', 'CreatureActionType::fight', 'CreatureActionType::flee'):
@@ -317,18 +347,24 @@ assert 'hasOpenCreatureSpot(&creature)' in read('source/creatureaction/CreatureA
 assert 'TavernLeisureCooldownTurns' in extract(creature_cpp, 'void Creature::startTavernCooldown(')
 assert '--mTavernCooldownTurns' in extract(creature_cpp, 'void Creature::upkeepTavernState(')
 assert 'TAVERN_COOLDOWN_SAVE_OPEN << " " << mTavernCooldownTurns' in creature_cpp and 'setTavernCooldownTurns(loadedCooldown)' in creature_cpp, 'cooldown saved and loaded'
-assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 'TavernLeisureCooldownTurns is 600 in rooms.cfg'
+if WITH_CONTENT:
+    assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 'TavernLeisureCooldownTurns is 600 in rooms.cfg'
 
 # ---- Probe -------------------------------------------------------------------------------------------------------
-tavern = block_values(global_cfg, 'Tavern')
-rooms = block_values(rooms_cfg, 'Rooms')
-config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax',
-    'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving', 'CreatureGetUpSeconds', 'TavernSlapSecondsMin', 'TavernSlapSecondsMax',
-    'TavernSlapPauseSecondsMin', 'TavernSlapPauseSecondsMax')]
-config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
-effect_line = re.search(r'^\s*tavernBeer\s+PortalCooldown\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
-assert effect_line is not None, 'the portal cooldown effect line is missing'
-effect_table = ', '.join(effect_line.groups())
+if WITH_CONTENT:
+    tavern = block_values(global_cfg, 'Tavern')
+    rooms = block_values(rooms_cfg, 'Rooms')
+    config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax',
+        'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving', 'CreatureGetUpSeconds', 'TavernSlapSecondsMin', 'TavernSlapSecondsMax',
+        'TavernSlapPauseSecondsMin', 'TavernSlapPauseSecondsMax')]
+    config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
+    effect_line = re.search(r'^\s*tavernBeer\s+PortalCooldown\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
+    assert effect_line is not None, 'the portal cooldown effect line is missing'
+    effect_table = ', '.join(effect_line.groups())
+else:
+    # Without the content the probe is generated without the values (it is not compiled, see below)
+    config_table = ''
+    effect_table = ''
 
 probe = r'''
 #include <algorithm>
@@ -405,9 +441,18 @@ static void loadConfig()
 enum class SkillType { tavernBeer, other };
 enum class CreatureActionType { fight, fightFriendly, flee, other };
 enum class ResearchEffect { PortalCooldown };
-struct EntityAnimation { static const std::string sit_slap_anim; static const std::string sit_slapped_anim; };
+struct EntityAnimation
+{
+    static const std::string sit_slap_anim; static const std::string sit_slapped_anim;
+    static const std::string sit_armwrestle_win_anim; static const std::string sit_armwrestle_lose_anim;
+    static const std::string sit_dice_win_anim; static const std::string sit_dice_lose_anim;
+};
 const std::string EntityAnimation::sit_slap_anim = "SitSlap";
 const std::string EntityAnimation::sit_slapped_anim = "SitSlapped";
+const std::string EntityAnimation::sit_armwrestle_win_anim = "SitArmWrestleWin";
+const std::string EntityAnimation::sit_armwrestle_lose_anim = "SitArmWrestleLose";
+const std::string EntityAnimation::sit_dice_win_anim = "SitDiceWin";
+const std::string EntityAnimation::sit_dice_lose_anim = "SitDiceLose";
 @@DRINKKIND@@
 enum class PleasureRoomKind { spa, tavern, casino, temple, arena };
 static const double THIRST_STATE_MAX = 100.0;
@@ -462,8 +507,9 @@ struct Creature
     double mUrge, mThirst, mTavernMood, mTavernMoodTurns, mDrunk, mHangoverTurns, mHp, mExp, mStoredMood;
     bool mVomited, mHangoverPending, mOnMap, mAlive, mKo, mDragged, mPossessed, mFighting, mFleeing, mHit;
     uint32_t mLevel; double mGold; int takeDamageCalls; int32_t mTavernCooldownTurns = 0; int32_t mPleasureVisitKind = -1;
-    //! The last clip with a playing time chosen at run time, its seconds and how many such clips were requested
-    std::string mLastClip; double mLastClipSeconds = 0.0; int timedClips = 0;
+    //! The last clip with a playing time chosen at run time, its seconds, whether it loops, where it faces and how many
+    //! such clips were requested
+    std::string mLastClip; double mLastClipSeconds = 0.0; int timedClips = 0; bool mLastClipLoop = true; Ogre::Vector3 mLastClipFacing;
     //! \brief Initializes the tavern creature with the production fractional gold balance.
     Creature(const std::string& name, CreatureDefinition* def, Seat* seat, uint32_t level)
       : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mUrge(0.0), mThirst(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mDrunk(0.0),
@@ -495,7 +541,7 @@ struct Creature
     const Ogre::Vector3& getPosition() const { return mPos; }
     void setAnimationState(const std::string& state, bool loop = true, const Ogre::Vector3& direction = Ogre::Vector3::ZERO, bool idle = true) {}
     void setTimedAnimationState(const std::string& state, double clipSeconds, bool loop, const Ogre::Vector3& direction, bool idle)
-    { mLastClip = state; mLastClipSeconds = clipSeconds; ++timedClips; }
+    { mLastClip = state; mLastClipSeconds = clipSeconds; mLastClipLoop = loop; mLastClipFacing = direction; ++timedClips; }
     //! \brief The one-time mood event of the real creature, reduced to its effect on the stored mood: 0 .. CreatureBaseMood.
     void applyMoodEvent(double points, bool sensitive)
     { mStoredMood = std::max(0.0, std::min(@@BASE_MOOD@@, mStoredMood + points)); }
@@ -584,6 +630,7 @@ public:
     void tryStartGame(const RoomTavernSeat& seat);
     void startGame(const RoomTavernSeat& seatA, const RoomTavernSeat& seatB);
     void playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
+    void showGameOutcome(const RoomTavernGame& game, Creature* creature);
     void playDuelTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
     void concludeGame(std::map<RoomTavernSeat, RoomTavernGame>::iterator it, Creature* winner, uint32_t underdogLevels);
     void abortGame(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
@@ -1020,6 +1067,62 @@ static void checkContest()
       expectNear(possessed->mStoredMood, START_MOOD, "a possessed creature does not cheer"); expectNear(off->mStoredMood, START_MOOD, "a creature off the map does not cheer"); }
 }
 
+// The last turns of arm wrestling and dice: the winner is drawn once when 3 of the 8 turns are left, then the winner and
+// the loser play their own clips, started in the same turn over the same time and turned to each other, and the game
+// ends with the drawn winner after its last turn
+static void checkContestOutcome()
+{
+    const double tps = ODApplication::turnsPerSecond;
+    expect(GAME_OUTCOME_TURNS == 3 && ConfigManager::getSingleton().values["GameTurns"] == 8.0, "the result shows in the last 3 of the 8 turns");
+    // Arm wrestling, level 12 against level 10: 44.9 lets the weaker one win
+    { Fixture f; Creature* a = f.guest("A", 2, 12, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
+      const RoomTavernSeat key = f.seatOf(a);
+      f.game(a, b, TavernGameKind::armWrestling, 8);
+      Random::script({ 44.9 }, {});
+      for(int turn = 0; turn < 4; ++turn) f.room.playContestTurn(f.room.mGames.find(key));
+      const RoomTavernGame& running = f.room.mGames.find(key)->second;
+      expect(running.mOutcome == TavernGameOutcome::open && running.mTurnsLeft == 4 && a->timedClips == 0 && b->timedClips == 0 && Random::doublePos == 0,
+             "with 4 turns left nothing is drawn and both play the game clip");
+      f.room.playContestTurn(f.room.mGames.find(key));
+      const RoomTavernGame& drawn = f.room.mGames.find(key)->second;
+      expect(drawn.mOutcome == TavernGameOutcome::secondWins && drawn.mUnderdogLevels == 2 && drawn.mTurnsLeft == 3 && Random::doublePos == 1,
+             "with 3 turns left the weaker one is drawn as the winner, 2 levels below");
+      expect(b->mLastClip == "SitArmWrestleWin" && a->mLastClip == "SitArmWrestleLose", "the winner plays SitArmWrestleWin, the loser SitArmWrestleLose");
+      expect(a->timedClips == 1 && b->timedClips == 1 && !a->mLastClipLoop && !b->mLastClipLoop, "both clips start once, in the same turn, and play once");
+      expectNear(a->mLastClipSeconds, 3.0 / tps, "the loser clip lasts the 3 turns left (2.14 s)");
+      expectNear(b->mLastClipSeconds, a->mLastClipSeconds, "the winner clip lasts exactly as long, so the arms meet");
+      expect(a->mLastClipFacing.x > 0.0f && b->mLastClipFacing.x < 0.0f, "both face each other");
+      expect(a->mExp == 0.0 && b->mExp == 0.0 && f.innkeeper.cheers == 0, "the game is not decided before its end");
+      f.room.playContestTurn(f.room.mGames.find(key)); f.room.playContestTurn(f.room.mGames.find(key));
+      expect(f.room.mGames.size() == 1 && a->timedClips == 1 && b->timedClips == 1 && Random::doublePos == 1, "the last turns draw nothing more and keep the clips");
+      f.room.playContestTurn(f.room.mGames.find(key));
+      expect(f.room.mGames.empty() && b->mExp == 5.72 && a->mExp == 0.0 && f.innkeeper.cheers == 1, "after the last turn the drawn winner gets double experience");
+      expectNear(b->mStoredMood, START_MOOD + 49.9966, "and the underdog mood");
+      expect(f.stateOf(a) == TavernGuestState::done && f.stateOf(b) == TavernGuestState::done, "then both are done as before"); }
+    // Dice at equal level: 45.1 lets the first guest win with normal values
+    { Fixture f; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
+      const RoomTavernSeat key = f.seatOf(a);
+      f.game(a, b, TavernGameKind::dice, 8);
+      Random::script({ 45.1 }, {});
+      for(int turn = 0; turn < 5; ++turn) f.room.playContestTurn(f.room.mGames.find(key));
+      const RoomTavernGame& drawn = f.room.mGames.find(key)->second;
+      expect(drawn.mOutcome == TavernGameOutcome::firstWins && drawn.mUnderdogLevels == 0, "dice: the first guest is drawn as the winner");
+      expect(a->mLastClip == "SitDiceWin" && b->mLastClip == "SitDiceLose", "dice: the winner plays SitDiceWin, the loser SitDiceLose");
+      expectNear(a->mLastClipSeconds, 3.0 / tps, "dice: the clips last the 3 turns left");
+      for(int turn = 0; turn < 3; ++turn) f.room.playContestTurn(f.room.mGames.find(key));
+      expect(f.room.mGames.empty() && a->mExp == 2.86 && b->mExp == 0.0, "dice: the drawn winner gets normal experience at the end"); }
+    // A game of a save made before the outcome clips with its last turn left draws in that turn and ends at once
+    { Fixture f; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
+      std::map<RoomTavernSeat, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::dice, 1);
+      Random::script({ 10.0 }, {}); f.room.playContestTurn(g);
+      expect(f.room.mGames.empty() && a->mExp == 2.86 && a->timedClips == 0 && b->timedClips == 0, "a result drawn in the last turn ends the game without outcome clips"); }
+    // A slap duel keeps its result open: its winner is decided by the slaps
+    { Fixture f; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
+      std::map<RoomTavernSeat, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::slapDuel, 2);
+      Random::script({}, {}); f.room.playDuelTurn(g);
+      expect(f.room.mGames.begin()->second.mOutcome == TavernGameOutcome::open, "a slap duel draws no outcome"); }
+}
+
 // Plays turns of the slap duel kept under the seat key until the game ends; returns the turns played
 static int runDuel(Fixture& f, const RoomTavernSeat& key, int turns)
 {
@@ -1220,6 +1323,7 @@ int main()
     checkGameStart();
     checkSeats();
     checkContest();
+    checkContestOutcome();
     checkDuel();
     checkKnockOutAndAbort();
     checkMoodAndPortal();
@@ -1242,7 +1346,7 @@ types_end = tavern_h.index('//! \\brief A room where creatures quench their thir
 room_types = tavern_h[types_start:types_end]
 constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) ' + name + r' = [^;]+;$') for name in (
     'TURN_EPSILON', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER',
-    'KNOCK_OUT_TURN'))
+    'KNOCK_OUT_TURN', 'GAME_OUTCOME_TURNS'))
 constants += '\n' + find_line(room_cpp, r'^const float TAVERN_SEAT_SPACING = [^;]+;$')
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
 helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'int32_t getUpTurns(', 'int32_t randomDuelTurns(', 'Ogre::Vector3 directionTo('])
@@ -1257,7 +1361,7 @@ room_functions = '\n'.join(extract(room_cpp, h) for h in [
     'bool RoomTavern::isStoolSeat(', 'bool RoomTavern::isFreeSeatFor(', 'bool RoomTavern::isPlaceBlockedByStool(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
     'void RoomTavern::setSpotState(', 'void RoomTavern::setSpotDone(', 'bool RoomTavern::isGuestDisturbed(', 'void RoomTavern::upkeepSpots(',
     'void RoomTavern::abortDisturbedGuests(', 'bool RoomTavern::payForBeer(', 'int32_t RoomTavern::nextDrinkTurns(', 'bool RoomTavern::hasDrinkingTableMate(', 'void RoomTavern::finishDrink(', 'void RoomTavern::tryStartGame(',
-    'void RoomTavern::startGame(', 'void RoomTavern::playContestTurn(', 'void RoomTavern::playDuelTurn(', 'void RoomTavern::cheerSpectators(',
+    'void RoomTavern::startGame(', 'void RoomTavern::playContestTurn(', 'void RoomTavern::showGameOutcome(', 'void RoomTavern::playDuelTurn(', 'void RoomTavern::cheerSpectators(',
     'void RoomTavern::concludeGame(', 'void RoomTavern::abortGame(', 'void RoomTavern::knockOut('])
 portal_function = extract(portal_cpp, 'static double getResearchedCooldown(')
 
@@ -1295,6 +1399,13 @@ replacements = {
 for token, text in replacements.items():
     assert token in probe, token
     probe = probe.replace(token, text)
+
+# Without the content the values of the probe are not present: the source wiring is checked, the probe is not run.
+if not WITH_CONTENT:
+    content_packages.unchecked('check_tavern_rules', ['own rows of config/global.cfg [Tavern], config/rooms.cfg, '
+                                                      'config/skills.cfg and config/creatures.cfg', 'the rules probe'])
+    print('tavern rules ok')
+    sys.exit(0)
 
 # Source checks and probe generation can run while the plan forbids compilation.
 if '--source-only' in sys.argv:

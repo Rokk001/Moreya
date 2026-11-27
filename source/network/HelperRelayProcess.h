@@ -35,7 +35,7 @@
  *   delivers them to a HelperLobbyObserver on the calling thread (the later lobby UI).
  *
  * When the helper exits or the stream breaks, every relayed peer reads as disconnected and the observer gets
- * onHelperExited; direct TCP keeps working. See docs/development/NETWORK-TRANSPORT.md.
+ * onHelperExited; direct TCP keeps working. See the design document NETWORK-TRANSPORT.md of the content repository.
  */
 
 #ifdef OD_NET_HELPER_RELAY

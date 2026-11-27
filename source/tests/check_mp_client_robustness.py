@@ -19,6 +19,11 @@ import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The menu layouts are whole only with their own rows of the content (core-gui)
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(relative):
@@ -326,10 +331,11 @@ assert 'toggleSubMenu(WINDOW_MULTIPLAYER);' in function(menu, 'void MenuModeMain
 # no path to it is left that could keep a pending sub-menu.
 assert 'ADVERTISMENT' not in function(menu, 'bool MenuModeMain::changeModeAfterFlight(')
 assert 'const std::string TEXT_NOTICE = "NoticeText";' in menu
-main_layout = ET.parse(ROOT / 'gui/MenuMain.layout').getroot()
-notice = [w for w in main_layout.iter('Window') if w.get('name') == 'NoticeText']
-assert len(notice) == 1 and notice[0].get('type') == 'OD/StaticText'
-assert {p.get('name'): p.get('value') for p in notice[0].findall('Property')}.get('Visible') == 'False'
+if WITH_CONTENT:
+    main_layout = ET.fromstring(content_packages.read_text(ROOT, 'gui/MenuMain.layout'))
+    notice = [w for w in main_layout.iter('Window') if w.get('name') == 'NoticeText']
+    assert len(notice) == 1 and notice[0].get('type') == 'OD/StaticText'
+    assert {p.get('name'): p.get('value') for p in notice[0].findall('Property')}.get('Visible') == 'False'
 print('MAIN MENU OK: hidden notice text, multiplayer sub-menu after the arrival flight')
 
 # 3. The defeat debriefing of a multiplayer game leads to the multiplayer sub-menu
@@ -369,15 +375,19 @@ assert pressed.index('MultiplayerClientRules::parsePort(') < pressed.index('INVA
     < pressed.index('ODClient::getSingleton().connect(ip, static_cast<int>(port)'), 'the port is checked before connecting'
 assert 'getNetworkPort()' in pressed and 'getNetworkPort()' in function(client_menu, 'void MenuModeMultiplayerClient::activate()')
 assert 'const std::string Gui::MPM_EDIT_PORT = "LevelWindowFrame/PortEdit";' in read('source/render/Gui.cpp')
-frame_window = [w for w in ET.parse(ROOT / 'gui/MenuMultiplayerClient.layout').getroot().iter('Window')
-                if w.get('name') == 'LevelWindowFrame'][0]
-children = {w.get('name'): w.get('type') for w in frame_window.findall('Window')}
-assert children.get('PortEdit') == 'OD/Editbox' and children.get('PortText') == 'OD/StaticText'
+if WITH_CONTENT:
+    frame_window = [w for w in ET.fromstring(content_packages.read_text(ROOT, 'gui/MenuMultiplayerClient.layout')).iter('Window')
+                    if w.get('name') == 'LevelWindowFrame'][0]
+    children = {w.get('name'): w.get('type') for w in frame_window.findall('Window')}
+    assert children.get('PortEdit') == 'OD/Editbox' and children.get('PortText') == 'OD/StaticText'
 print('JOIN MENU OK: optional port field, validated before connecting')
 
 assert re.search(r'\bauto\b', PROBE) is None and re.search(r'\bauto\b', read('source/network/MultiplayerClientRules.h')) is None
 assert re.search(r'\bauto\b', read('source/network/ContentPackageCheck.h')) is None
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_mp_client_robustness', [
+        'notice text of gui/MenuMain.layout and port field of gui/MenuMultiplayerClient.layout (own rows)'])
 if '--source-only' not in sys.argv:
     compile_probe()
 print('check_mp_client_robustness: ok')

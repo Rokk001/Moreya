@@ -30,7 +30,7 @@ class Tile;
 //! \brief The clips of the innkeeper (besides the idle clip every entity has).
 namespace InnkeeperPose
 {
-    //! The innkeeper pours a drink (plays for DrinkTurns turns).
+    //! The innkeeper pours a drink (plays for PourSeconds seconds).
     static const std::string pour = "Pour";
     //! The innkeeper cheers when a game in the tavern ends (plays for CHEER_TURNS turns).
     static const std::string cheer = "Cheer";
@@ -62,7 +62,7 @@ public:
     //! \brief Server side. Counts down the pour and cheer clips and goes back to the idle clip when they are over.
     virtual void doUpkeep() override;
 
-    //! \brief The Pour clip takes the whole serving time (DrinkTurns turns), the other clips keep the configured time.
+    //! \brief The Pour clip takes the whole pouring time (PourSeconds), the other clips keep the configured time.
     virtual double getClipSeconds(const std::string& clip) const override;
 
     //! \brief Server side. Puts a new innkeeper on the middle of the tile.
@@ -76,7 +76,7 @@ public:
     //! \brief Server side. Takes the figure off the map and deletes it. The caller must not use it afterwards.
     void removeFromRoom();
 
-    //! \brief Server side. A drink is served: the figure pours for DrinkTurns turns.
+    //! \brief Server side. A drink is served: the figure pours for PourSeconds seconds.
     void onDrink();
 
     //! \brief Server side. A game ended: the figure cheers for CHEER_TURNS turns.

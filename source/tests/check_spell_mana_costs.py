@@ -1,6 +1,6 @@
 """Check the spell mana costs, cooldowns and the worker price rule.
 
-The costs use one own scale (mana cap 200,000, whole mana prices of the rebalance, see docs/development/VALUE-SCALES.md):
+The costs use one own scale (mana cap 200,000, whole mana prices of the rebalance, see the design document VALUE-SCALES.md of the content repository):
 Summon worker 1,400 per step, Call to war 14,200, Heal 13,200, Eye of evil 4,600, Lightning 6,600,
 Tremor 27,600, Defector 12,850, Hexen hen 2,650, Inferno 138,750, Create gold
 8,850, Possess 450, Summon champion 108,000 plus 2,250 per second. The worker price grows by one base price per worker above
@@ -9,11 +9,17 @@ Haste 8,250, Defense 3,700, Slow 6,750, Strength 3,200 and Weak 3,000, each with
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
 
-config = (repo / "config/spells.cfg").read_text()
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(repo)
+
+config = content_packages.read_text(repo, "config/spells.cfg")
 section = config[config.rindex("[Spells]"):config.rindex("[/Spells]")]
 values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", section, re.M))
 
@@ -41,26 +47,28 @@ for key, value in values.items():
     if key.endswith("Price") or key == "SummonWorkerBasePrice":
         assert value.isdigit(), f"{key} is not a whole mana price"
         assert int(value) % 50 == 0, f"{key} is not a multiple of 50"
-for key, value in expected.items():
-    assert values.get(key) == value, f"{key} is {values.get(key)}, expected {value}"
+if WITH_CONTENT:
+    for key, value in expected.items():
+        assert values.get(key) == value, f"{key} is {values.get(key)}, expected {value}"
 assert "SummonWorkerNbFree" not in config, "the free-worker key is gone"
 assert "PossessDrainPerSecond" not in config, "the flat drain key is gone"
 
 # Possession: free for PossessFreeSeconds, then the drain per second of the creature type
-creatures = (repo / "config/creatures.cfg").read_text()
-blocks = re.findall(r"^\[Creature\]\n(.*?)^\[/Creature\]", creatures, re.M | re.S)
-assert blocks, "creature blocks found"
-costs = {}
-for block in blocks:
-    name = re.search(r"^\s+Name\s+(\w+)", block, re.M).group(1)
-    match = re.search(r"^\s+PossessManaCost\s+(\d+)\s*$", block, re.M)
-    assert match, f"{name} has no PossessManaCost"
-    costs[name] = int(match.group(1))
-for name in ("Kobold", "DwarfWorker"):
-    assert costs[name] == 0, f"{name} (worker) possesses for free"
-for name, value in {"Skeleton": 160, "Dwarf1": 40, "Dwarf2": 80, "Goblin": 80, "Troll": 320, "Monk": 80,
-                    "Wizard": 160, "DarkElf": 160, "Elf": 160, "Orc": 320, "Knight": 80, "Dragon": 320}.items():
-    assert costs[name] == value, f"{name} is {costs[name]}, expected {value}"
+creatures = content_packages.read_text(repo, "config/creatures.cfg")
+if WITH_CONTENT:
+    blocks = re.findall(r"^\[Creature\]\n(.*?)^\[/Creature\]", creatures, re.M | re.S)
+    assert blocks, "creature blocks found"
+    costs = {}
+    for block in blocks:
+        name = re.search(r"^\s+Name\s+(\w+)", block, re.M).group(1)
+        match = re.search(r"^\s+PossessManaCost\s+(\d+)\s*$", block, re.M)
+        assert match, f"{name} has no PossessManaCost"
+        costs[name] = int(match.group(1))
+    for name in ("Kobold", "DwarfWorker"):
+        assert costs[name] == 0, f"{name} (worker) possesses for free"
+    for name, value in {"Skeleton": 160, "Dwarf1": 40, "Dwarf2": 80, "Goblin": 80, "Troll": 320, "Monk": 80,
+                        "Wizard": 160, "DarkElf": 160, "Elf": 160, "Orc": 320, "Knight": 80, "Dragon": 320}.items():
+        assert costs[name] == value, f"{name} is {costs[name]}, expected {value}"
 action = (repo / "source/creatureaction/CreatureActionPossessed.cpp").read_text()
 assert "PossessFreeSeconds" in action and "getPossessManaCost" in action,     "the possession action uses the free period and the creature drain"
 assert "PossessDrainPerSecond" not in action
@@ -92,4 +100,6 @@ with tempfile.TemporaryDirectory(prefix="odp-spell-costs-") as directory:
     (work / "check.cpp").write_text(probe)
     subprocess.run(["cl", "/nologo", "/EHsc", "/MD", "/std:c++17", "check.cpp", "/Fecheck.exe"], cwd=work, check=True)
     subprocess.run([str(work / "check.exe")], cwd=work, check=True)
+if not WITH_CONTENT:
+    content_packages.unchecked("check_spell_mana_costs", ["spell prices and possession costs (own rows of config/spells.cfg and config/creatures.cfg)"])
 print("SPELL COSTS OK")

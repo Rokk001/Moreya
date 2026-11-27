@@ -73,15 +73,17 @@ import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'scripts'))
 import room_packages  # noqa: E402
+import content_packages  # noqa: E402
 
 #: The assets of the merchant come from its room package (scripts/room_packages.py); without the package only the code
-#: side is checked
+#: side is checked. The shared props and their materials (ItemProps, ItemIron) come from the content packages
+#: (scripts/content_packages.py), which are present together with the room packages.
 ROOM_ASSETS = room_packages.has_room(root, 'Merchant')
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.resolve(root, relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(root, relative)
 
 if not ROOM_ASSETS:
     print('merchant assets: not checked, the merchant room package is not present (the check measures its assets only)')
@@ -191,7 +193,10 @@ def png_size(path):
     return struct.unpack('>II', data[16:24])
 
 
-materials_text = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in room_packages.glob_files(root, 'materials/scripts', '*.material'))
+# the material scripts of the public tree, of the content packages and of the room packages
+materials_text = ''.join(p.read_text(encoding='utf-8', errors='replace')
+                         for base in [root] + content_packages.package_roots(root)
+                         for p in sorted((base / 'materials/scripts').glob('*.material')))
 
 
 def material_block(name):
@@ -211,7 +216,7 @@ def material_diffuse(name):
 
 
 def texture_exists(tex):
-    return any(path for base in [root] + room_packages.package_roots(root) for path in (base / 'materials' / 'textures').rglob(tex))
+    return any(path for base in [root] + content_packages.package_roots(root) for path in (base / 'materials' / 'textures').rglob(tex))
 
 
 # Returns (mean luminance, mean red, mean green, mean blue, luminance standard deviation), 0..255, of an 8-bit grey,
@@ -638,7 +643,11 @@ def check_legacy_figure():
 # look is pinned by the byte-exact atlases and its geometry, skinning, own node position and motions by the exact native
 # contract (fixed counts, hashes, clips, arm swing, clasped hands, visible coin, opaque hands). The look contract above
 # belongs to the variant-1 texture layout and runs only for a figure with that layout; the native contract always runs.
-if b'MerchantApproved' in room_file('models/Merchant.mesh').read_bytes():
+# Since CS10a (2026-11-26) the merchant is the approved Meshy figure (one material MerchantMeshy): the furniture part
+# below runs for it as well, and merchant_meshy_asset_contract.py takes over the native contract, formally adapted to
+# its single material and its rig.
+MESHY_FIGURE = b'MerchantMeshy' in room_file('models/Merchant.mesh').read_bytes()
+if MESHY_FIGURE or b'MerchantApproved' in room_file('models/Merchant.mesh').read_bytes():
     credits = room_packages.credits_text(root)
     patterns = [re.split(r'\s{2,}|\t', line.strip())[0] for line in credits.splitlines() if line.strip()]
     for texture in ('MerchantTableWood', 'MerchantTableCloth', 'MerchantWares', 'MerchantLantern'):
@@ -654,8 +663,12 @@ if b'MerchantApproved' in room_file('models/Merchant.mesh').read_bytes():
     assert value <= MAX_CLOTH_LUMINANCE, 'MerchantTableCloth.png is a light beige cloth (mean %.0f)' % value
 else:
     check_legacy_figure()
-from merchant_approved_asset_contract import verify_merchant_contract
-verify_merchant_contract(root, work)
+if MESHY_FIGURE:
+    from merchant_meshy_asset_contract import verify_meshy_merchant_contract
+    verify_meshy_merchant_contract(root, work)
+else:
+    from merchant_approved_asset_contract import verify_merchant_contract
+    verify_merchant_contract(root, work)
 
 # 9. Furniture bounds equal RoomObjectBounds.h
 for name in FURNITURE:

@@ -6,6 +6,10 @@
 Checks the config keys of config/rooms.cfg, the wiring server -> network -> client -> room ambience /
 wall torch view, the hatchery light check, the build entries, and that the old room torches are gone.
 The placement rules themselves are covered by the unit test 00-WallTorches.
+
+The particles, the material, the torch mesh, the room ambience table and the torch recording are files of the
+content packages (scripts/content_packages.py); without content their parts are named as not checked and the code
+parts are checked alone.
 """
 
 import os
@@ -15,10 +19,28 @@ import struct
 import math
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
 
 
 def read(*parts):
+    """A file of the repository as text."""
     with open(os.path.join(ROOT, *parts), encoding="utf-8") as handle:
+        return handle.read()
+
+
+# Game data files of the content packages that are not present (named as not checked at the end)
+not_present = []
+
+
+def read_data(*parts):
+    """A game data file (public tree or content package) as text, None when it is not present (no content)."""
+    found = content_packages.data_file(ROOT, "/".join(parts))
+    if found is None:
+        if "/".join(parts) not in not_present:
+            not_present.append("/".join(parts))
+        return None
+    with open(str(found), encoding="utf-8") as handle:
         return handle.read()
 
 
@@ -38,7 +60,12 @@ def check(condition, message):
 
 # Config keys: every key read by the code is in rooms.cfg, with the default of the code
 config_cpp = read("source", "rooms", "WallTorchConfig.cpp")
-rooms_cfg = read("config", "rooms.cfg")
+# rooms.cfg as the game reads it: its own rows (the torch values) come from the content packages; without the
+# content the values are named as not checked
+rooms_cfg = content_packages.read_text(ROOT, "config/rooms.cfg")
+rooms_values = content_packages.has_content(ROOT)
+if not rooms_values:
+    not_present.append("config/rooms.cfg own rows (WallTorch*, HatcheryCareLightRadius values)")
 # The defaults are named constants (DEFAULT_TORCH_*) in WallTorchConfig.h and WallTorches.h
 constants = dict(re.findall(r"const\s+(?:double|float|uint32_t|int32_t)\s+(\w+)\s*=\s*([0-9.]+)f?;",
                             read("source", "rooms", "WallTorchConfig.h") + read("source", "rooms", "WallTorches.h")))
@@ -47,7 +74,7 @@ for key, default in re.findall(r'read(?:Count|Clamped)\("(WallTorch\w+)",\s*([A-
     check(default in constants or re.match(r"^[0-9.]+$", default), "WallTorchConfig: unknown default " + default)
     reads.append((key, constants.get(default, default)))
 check(len(reads) >= 12, "WallTorchConfig reads fewer than 12 keys")
-for key, default in reads:
+for key, default in (reads if rooms_values else []):
     match = re.search(r"^\s*%s\s+([0-9.]+)\s*$" % key, rooms_cfg, re.M)
     check(match is not None, "config/rooms.cfg has no value for " + key)
     if match is not None:
@@ -57,7 +84,7 @@ for key in ("WallTorchRoomSideDivisor", "WallTorchCorridorSpacing", "WallTorchMi
             "WallTorchActiveLightsReduced", "WallTorchSoundLoops", "WallTorchLightRadius", "WallTorchLightIntensity",
             "WallTorchFlickerStrength", "WallTorchFlickerSpeed"):
     check(key in dict(reads), "WallTorchConfig does not read " + key)
-check("HatcheryCareLightRadius" in rooms_cfg, "HatcheryCareLightRadius is missing in rooms.cfg")
+check(not rooms_values or "HatcheryCareLightRadius" in rooms_cfg, "HatcheryCareLightRadius is missing in rooms.cfg")
 
 # Server: the list is computed by the placement and sent after the visible tiles
 game_map = read("source", "gamemap", "GameMap.cpp")
@@ -117,63 +144,69 @@ check("if(mWallTorchesDirty)" in update and "mWallTorchesDirty = false;" in upda
 check(game_map_cpp.count("updateWallTorches();") == 1, "updateWallTorches is called more than once per turn")
 view = read("source", "render", "WallTorchView.cpp")
 check("WallTorchConfig::load()" in view, "WallTorchView does not read WallTorchConfig")
+particle = read_data("particles", "RoomAmbienceDeferred.particle")
 for system in ("RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchGlow", "RoomAmbTorchSmoke"):
     check(system in view, "WallTorchView does not use " + system)
-    check(system in read("particles", "RoomAmbienceDeferred.particle"), "particle system %s is missing" % system)
-glow_particle = read("particles", "RoomAmbienceDeferred.particle")
-glow_particle = glow_particle[glow_particle.index("particle_system RoomAmbTorchGlow"):
-                              glow_particle.index("particle_system RoomAmbTorchSmoke")]
-check("material        RoomAmbGlow" in glow_particle, "the torch glow does not use the soft additive sprite")
-glow_material = read("materials", "scripts", "RoomAmbience.material")
-glow_material = glow_material[glow_material.index("material RoomAmbGlow"):glow_material.index("material RoomAmbSmoke")]
-check("scene_blend src_alpha one" in glow_material and "depth_write off" in glow_material,
-      "torch glow must use alpha-weighted additive blending without writing depth")
+    if particle is not None:
+        check(system in particle, "particle system %s is missing" % system)
+glow_particle = particle
+glow_material = read_data("materials", "scripts", "RoomAmbience.material")
+if glow_particle is not None and glow_material is not None:
+    glow_particle = glow_particle[glow_particle.index("particle_system RoomAmbTorchGlow"):
+                                  glow_particle.index("particle_system RoomAmbTorchSmoke")]
+    check("material        RoomAmbGlow" in glow_particle, "the torch glow does not use the soft additive sprite")
+    glow_material = glow_material[glow_material.index("material RoomAmbGlow"):glow_material.index("material RoomAmbSmoke")]
+    check("scene_blend src_alpha one" in glow_material and "depth_write off" in glow_material,
+          "torch glow must use alpha-weighted additive blending without writing depth")
 
-# The visible flame emitter must start at the actual mesh head, on all sides.
-# Read the shared position buffer directly; no converter, compiler or game needed.
-with open(os.path.join(ROOT, "models", "WallTorch.mesh"), "rb") as handle:
-    mesh = handle.read()
-vertices = []
-def mesh_chunks(start, end, count=0, binding=-1, stride=0):
-    while start + 6 <= end:
-        chunk, length = struct.unpack_from("<HI", mesh, start)
-        data, stop = start + 6, start + length
-        if length < 6 or stop > len(mesh):
-            raise ValueError("Invalid wall torch mesh chunk")
-        if chunk == 0x3000:
-            mesh_chunks(data + 1, stop)
-        elif chunk == 0x5000:
-            mesh_chunks(data + 4, stop, struct.unpack_from("<I", mesh, data)[0])
-        elif chunk == 0x5200:
-            binding, stride = struct.unpack_from("<HH", mesh, data)
-            mesh_chunks(data + 4, stop, count, binding, stride)
-        elif chunk == 0x5210 and binding == 0:
-            vertices.extend(struct.unpack_from("<fff", mesh, data + i * stride) for i in range(count))
-        start = stop
-mesh_chunks(mesh.index(b"\n") + 1, len(mesh))
-# The head's tilted top ring has the mesh's highest vertices; its center is the
-# midpoint of that ring's front/back and highest/lowest extrema.
-top = max(vertex[2] for vertex in vertices)
-head = [vertex for vertex in vertices if vertex[2] > top - 0.004]
-head_y = (min(vertex[1] for vertex in head) + max(vertex[1] for vertex in head)) / 2
-head_z = (min(vertex[2] for vertex in head) + max(vertex[2] for vertex in head)) / 2
-model_height = float(re.search(r"MODEL_HEIGHT = ([0-9.]+)", view).group(1))
-flame_offset = float(re.search(r"FLAME_WALL_OFFSET = ([0-9.]+)", view).group(1))
-heights = [float(number) for number in re.search(r"PART_HEIGHTS\[NB_PARTS\] = \{([^}]+)", view).group(1).split(",")]
-particle = read("particles", "RoomAmbienceDeferred.particle")
-flame = particle[particle.index("particle_system RoomAmbTorchFlame"):particle.index("particle_system RoomAmbTorchSmoke")]
-emitter = tuple(float(number) for number in re.search(r"position\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)", flame).groups())
-check("billboard_origin bottom_center" in flame, "torch flame is not anchored at its bottom")
-check(emitter == (0, 0, 0), "torch flame emitter adds an offset above the torch head")
-check(abs(flame_offset - head_y) < 0.00001, "flame forward offset does not match the torch head")
-check(abs(heights[1] - (model_height + head_z)) < 0.00001, "flame height does not match the torch head")
 check("position += torch.mDirection" in body(view, "void WallTorchView::createPart"), "flame offset does not follow wall side")
 check("std::atan2(-torch.mDirection.x, torch.mDirection.y)" in body(view, "bool WallTorchView::createModel"), "holder orientation does not follow wall side")
-for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
-    angle = math.atan2(-dx, dy)
-    rotated = (-math.sin(angle) * head_y, math.cos(angle) * head_y, model_height + head_z)
-    emitted = (dx * flame_offset, dy * flame_offset, heights[1])
-    check(all(abs(a - b) < 0.00001 for a, b in zip(rotated, emitted)), "flame misses head for wall side %s" % ((dx, dy),))
+# The visible flame emitter must start at the actual mesh head, on all sides.
+# Read the shared position buffer directly; no converter, compiler or game needed.
+mesh_file = content_packages.data_file(ROOT, "models/WallTorch.mesh")
+if mesh_file is None:
+    not_present.append("models/WallTorch.mesh")
+if mesh_file is not None and particle is not None:
+    with open(str(mesh_file), "rb") as handle:
+        mesh = handle.read()
+    vertices = []
+    def mesh_chunks(start, end, count=0, binding=-1, stride=0):
+        while start + 6 <= end:
+            chunk, length = struct.unpack_from("<HI", mesh, start)
+            data, stop = start + 6, start + length
+            if length < 6 or stop > len(mesh):
+                raise ValueError("Invalid wall torch mesh chunk")
+            if chunk == 0x3000:
+                mesh_chunks(data + 1, stop)
+            elif chunk == 0x5000:
+                mesh_chunks(data + 4, stop, struct.unpack_from("<I", mesh, data)[0])
+            elif chunk == 0x5200:
+                binding, stride = struct.unpack_from("<HH", mesh, data)
+                mesh_chunks(data + 4, stop, count, binding, stride)
+            elif chunk == 0x5210 and binding == 0:
+                vertices.extend(struct.unpack_from("<fff", mesh, data + i * stride) for i in range(count))
+            start = stop
+    mesh_chunks(mesh.index(b"\n") + 1, len(mesh))
+    # The head's tilted top ring has the mesh's highest vertices; its center is the
+    # midpoint of that ring's front/back and highest/lowest extrema.
+    top = max(vertex[2] for vertex in vertices)
+    head = [vertex for vertex in vertices if vertex[2] > top - 0.004]
+    head_y = (min(vertex[1] for vertex in head) + max(vertex[1] for vertex in head)) / 2
+    head_z = (min(vertex[2] for vertex in head) + max(vertex[2] for vertex in head)) / 2
+    model_height = float(re.search(r"MODEL_HEIGHT = ([0-9.]+)", view).group(1))
+    flame_offset = float(re.search(r"FLAME_WALL_OFFSET = ([0-9.]+)", view).group(1))
+    heights = [float(number) for number in re.search(r"PART_HEIGHTS\[NB_PARTS\] = \{([^}]+)", view).group(1).split(",")]
+    flame = particle[particle.index("particle_system RoomAmbTorchFlame"):particle.index("particle_system RoomAmbTorchSmoke")]
+    emitter = tuple(float(number) for number in re.search(r"position\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)", flame).groups())
+    check("billboard_origin bottom_center" in flame, "torch flame is not anchored at its bottom")
+    check(emitter == (0, 0, 0), "torch flame emitter adds an offset above the torch head")
+    check(abs(flame_offset - head_y) < 0.00001, "flame forward offset does not match the torch head")
+    check(abs(heights[1] - (model_height + head_z)) < 0.00001, "flame height does not match the torch head")
+    for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+        angle = math.atan2(-dx, dy)
+        rotated = (-math.sin(angle) * head_y, math.cos(angle) * head_y, model_height + head_z)
+        emitted = (dx * flame_offset, dy * flame_offset, heights[1])
+        check(all(abs(a - b) < 0.00001 for a, b in zip(rotated, emitted)), "flame misses head for wall side %s" % ((dx, dy),))
 
 refresh = body(view, "void WallTorchView::refresh")
 # Camera-height regression: torch visibility is measured on the floor, not in 3D from the camera.
@@ -233,9 +266,10 @@ for path in (("source", "rooms", "Room.h"), ("source", "rooms", "Room.cpp"), ("s
     text = read(*path) if isinstance(path, tuple) else read(path)
     for word in ("RoomTorches", "hasTorchOn", "isTorchSpot", "torchShift", "mTorch"):
         check(word not in text, "%s still mentions %s" % ("/".join(path) if isinstance(path, tuple) else path, word))
-check("Torch       yes" not in read("config", "roomAmbienceDeferred.cfg")
-      and "WallTorchBracket" not in read("config", "roomAmbienceDeferred.cfg"),
-      "roomAmbienceDeferred.cfg still has the old room torch effects")
+deferred = read_data("config", "roomAmbienceDeferred.cfg")
+if deferred is not None:
+    check("Torch       yes" not in deferred and "WallTorchBracket" not in deferred,
+          "roomAmbienceDeferred.cfg still has the old room torch effects")
 
 # Build entries
 cmake = read("CMakeLists.txt")
@@ -250,14 +284,22 @@ check("RoomTorches" not in tests_cmake, "source/tests/CMakeLists.txt still names
 sounds = read("source", "sound", "SoundEffectsManager.cpp")
 check("startSpatialLoop" in sounds and "stopSpatialLoop" in sounds and "setLooping(true)" in sounds,
       "SoundEffectsManager has no start/stop for positioned loops")
-check(os.path.exists(os.path.join(ROOT, "sounds", "Spatial", "Rooms", "Torch", "Loop", "FxWallTorchLoop01.ogg")),
-      "the torch loop recording is missing")
+TORCH_LOOP = "sounds/Spatial/Rooms/Torch/Loop/FxWallTorchLoop01.ogg"
+if content_packages.has_content(ROOT):
+    check(content_packages.data_file(ROOT, TORCH_LOOP) is not None, "the torch loop recording is missing")
+elif content_packages.data_file(ROOT, TORCH_LOOP) is None:
+    not_present.append(TORCH_LOOP)
 check('"Rooms/Torch/Loop"' in view and "startSpatialLoop(LOOP_FAMILY" in view and "mSettings.mSoundLoops" in view,
       "WallTorchView does not start the loop for the nearest torches")
 check("stopSound(torch);" in body(view, "void WallTorchView::destroyTorch")
       and "stopSound(torch);" in body(view, "void WallTorchView::refresh"),
       "the loop is not stopped when a torch is removed or hidden")
 check("destroyTorch(it->second);" in body(view, "void WallTorchView::stopAll"), "stopAll does not free the loops")
+# With the content present every content file must be there; without it the content parts are named as not checked
+if content_packages.has_content(ROOT):
+    check(not not_present, "content files missing although the content is present: " + ", ".join(not_present))
+else:
+    content_packages.unchecked("check_wall_torches", not_present)
 if problems:
     print("\n".join("PROBLEM: " + p for p in problems))
     sys.exit(1)

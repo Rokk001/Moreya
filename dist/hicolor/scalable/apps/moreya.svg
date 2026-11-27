@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Moreya application icon: the painted Moreya gate, shown from moreya.png beside this file. Written by tools/artwork/moreya-icon/build_painted_icon.py. -->
+<!-- Moreya application icon: the painted Moreya gate, shown from moreya.png beside this file. Written by tools/artwork/moreya-icon/build_painted_icon.py (private tools repository). -->
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
 <image width="256" height="256" href="moreya.png"/>
 </svg>

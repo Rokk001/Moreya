@@ -2,17 +2,21 @@
 
 --source-only checks catalogue/atlas coverage and emits the C++ probe without compiling.
 The default run compiles and executes the production parsers and presentation methods.
+The item catalogue and atlas lie in the content packages (scripts/content_packages.py); without the content their
+coverage is named as not checked and the probe is not compiled (item_probe_support.compile_and_run).
 """
 import re
 import sys
 import xml.etree.ElementTree as ET
 
 from item_probe_support import ROOT, catalogue_fixture, compile_and_run, function, source
+import content_packages  # noqa: E402  (scripts/ is on the path through item_probe_support)
 
 
 def blocks(name, tag):
-    """Read complete config blocks without treating examples in comments as definitions."""
-    text = re.sub(r"#[^\n]*", "", source(name))
+    """Read complete config blocks without treating examples in comments as definitions (of the public tree or of a
+    content package)."""
+    text = re.sub(r"#[^\n]*", "", content_packages.read_text(ROOT, name))
     return re.findall(r"\[" + tag + r"\](.*?)\[/" + tag + r"\]", text, re.S)
 
 
@@ -26,16 +30,25 @@ def main():
     """Verify 35 classes, 19 distinct defaults, real atlas entries and production tooltip probe generation."""
     creatures = blocks("config/creatures.cfg", "Creature")
     weapons = {field(b, "Name"): b for b in blocks("config/equipments.cfg", "Equipment")}
-    items = blocks("config/items.cfg", "Item")
     defaults = {field(b, "WeaponSpawn" + hand) for b in creatures for hand in ("R", "L")} - {"none"}
-    assert len(creatures) == 35, len(creatures)
-    assert len(defaults) == 19, defaults
-    atlas = {entry.get("name") for entry in ET.parse(ROOT / "gui/Items.imageset").getroot()}
-    for name in sorted(defaults):
-        kind = field(weapons[name], "WeaponType")
-        candidates = [b for b in items if field(b, "WeaponClass") == kind and "Name\tCommon" in b]
-        assert candidates, name
-        assert all(field(b, "Id") + "_base" in atlas for b in candidates), name
+    # The creature and equipment rows are own rows of the content package core-config (read joined by blocks());
+    # without the content only the public rows are there and the counts are named as not checked
+    if content_packages.has_content(ROOT):
+        assert len(creatures) == 35, len(creatures)
+        assert len(defaults) == 19, defaults
+    else:
+        content_packages.unchecked("check_dungeonbook_defaults_922", ["config/creatures.cfg 35 classes, 19 defaults"])
+    # The item catalogue and the item atlas lie in the content packages (core-config, core-gui)
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked("check_dungeonbook_defaults_922", ["config/items.cfg", "gui/Items.imageset coverage"])
+    else:
+        items = blocks("config/items.cfg", "Item")
+        atlas = {entry.get("name") for entry in ET.parse(content_packages.resolve(ROOT, "gui/Items.imageset")).getroot()}
+        for name in sorted(defaults):
+            kind = field(weapons[name], "WeaponType")
+            candidates = [b for b in items if field(b, "WeaponClass") == kind and "Name\tCommon" in b]
+            assert candidates, name
+            assert all(field(b, "Id") + "_base" in atlas for b in candidates), name
     fill = function(source("source/entities/Creature.cpp"), "void Creature::fillItemSlotWindows(")
     assert fill.index("item = creature->mEquipment[slot].get()") < fill.index("if(item == nullptr && slot < VISIBLE_ITEM_HAND_SLOTS)")
     assert "slot == 0 ? creature->mWeaponR : creature->mWeaponL" in fill
@@ -100,7 +113,8 @@ int main(int argc, char** argv) {
         output = ROOT / "out/dungeonbook-defaults-922/probe.cpp"
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(probe, encoding="utf-8")
-        print("decision 922: 35 classes, 19 defaults, atlas coverage passed; C++ probe emitted, not compiled")
+        coverage = "atlas coverage passed" if content_packages.has_content(ROOT) else "atlas coverage not checked"
+        print("decision 922: 35 classes, 19 defaults, " + coverage + "; C++ probe emitted, not compiled")
     else:
         compile_and_run("dungeonbook-defaults-922", probe)
 

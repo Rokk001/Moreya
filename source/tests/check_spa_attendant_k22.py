@@ -466,6 +466,46 @@ def verts(material):
     return np.unique(faces_by_material[material])
 
 
+# Since CS10a (2026-11-26) the pool attendant is the approved Meshy figure with one material on the shared humanoid rig;
+# spa_attendant_meshy_contract.py checks it with the parts of this check that apply to that layout (formally adapted).
+if set(faces_by_material) == {'PoolAttendantMeshy'}:
+    import spa_attendant_meshy_contract as meshy  # noqa: E402
+
+    def meshy_bind(name, result={}):
+        """World matrix of a bone in the bind pose."""
+        if name not in result:
+            local = np.eye(4)
+            local[:3, :3] = rotation(bones[name].find('rotation'))
+            local[:3, 3] = vector(bones[name].find('position'))
+            result[name] = meshy_bind(parents[name]) @ local if name in parents else local
+        return result[name]
+
+    chair_text = ''.join(p.read_text(encoding='utf-8', errors='replace')
+                         for p in room_packages.glob_files(ROOT, 'materials/scripts', '*.material'))
+    chair_uvs = geometry(chair.find('sharedgeometry'))[2]
+
+    def chair_detail(material):
+        """Spread of the texture values a chair surface shows and the share of distinct texture coordinates."""
+        block = re.search(r'^material ' + re.escape(material) + r'\b[^\n]*\n\{.*?^\}', chair_text, re.M | re.S)
+        assert block, material + ' is not defined'
+        name = re.search(r'^\s*texture\s+(\S+)', block.group(0), re.M)
+        assert name, material + ' has no texture'
+        image = np.asarray(Image.open(room_file('materials/textures/' + name.group(1))).convert('L'), dtype=float) / 255
+        corners = sorted({int(f.get(k)) for sub in chair.findall('submeshes/submesh') if sub.get('material') == material
+                          for f in sub.findall('faces/face') for k in ('v1', 'v2', 'v3')})
+        h, w = image.shape
+        coords = np.asarray(chair_uvs)[corners]
+        values = image[np.floor(coords[:, 1] * h).astype(int) % h, np.floor(coords[:, 0] * w).astype(int) % w]
+        return float(np.std(values)), len(np.unique(np.round(coords, 3), axis=0)) / len(coords)
+
+    report = meshy.verify(ROOT, room_file, read('CREDITS'), mesh, skeleton,
+                          {sub.get('material') for sub in chair.findall('submeshes/submesh')}, chair_detail,
+                          np.asarray(positions), np.asarray(uvs), faces_by_material, weights, parents,
+                          {name: meshy_bind(name) for name in bones})
+    print('check_spa_attendant_k22: ok (' + report + ')')
+    sys.exit(0)
+
+
 # ---- 1. The look: massive, hairy, pot-bellied ---------------------------------------------------------------------------
 for material in ('SpaSkin', 'SpaAttendantFace', 'SpaSuit', 'SpaHair', 'SpaBodyHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes',
                  'SpaBlood'):

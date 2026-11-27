@@ -2,15 +2,30 @@
 
 Pure source wiring checks (no compiler, no game): server authority, configuration, one worker per
 tile, save compatibility (optional trailing field), the action in the worker's idle choice, the
-client reactions for reload, door lift and door placement."""
+client reactions for reload, door lift and door placement.
+config/creatureReactions.cfg lies in the content packages (scripts/content_packages.py); without the content its
+events are named as not checked."""
 from pathlib import Path
 import re
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(root)
 
 
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    """The text of a file below the repository root; a mixed table of config/ comes joined with its own rows."""
+    return content_packages.read_text(root, path)
+
+
+def content(path):
+    """The text of a game data file of the public tree or of a content package, or None without the content."""
+    found = content_packages.data_file(root, path)
+    return None if found is None else found.read_text(encoding='utf-8')
 
 
 def function_body(source, signature):
@@ -20,7 +35,11 @@ def function_body(source, signature):
 
 
 traps_cfg = read('config/traps.cfg')
-reactions_cfg = read('config/creatureReactions.cfg')
+reactions_cfg = content('config/creatureReactions.cfg')
+if reactions_cfg is None:
+    content_packages.unchecked('check_trap_reload', ['config/creatureReactions.cfg'])
+if not WITH_CONTENT:
+    content_packages.unchecked('check_trap_reload', ['reload keys and prices (own rows of config/traps.cfg)'])
 trap = read('source/traps/Trap.cpp')
 trap_h = read('source/traps/Trap.h')
 action = read('source/creatureaction/CreatureActionReloadTrap.cpp')
@@ -37,24 +56,27 @@ keys = ['TrapReloadByWorkers', 'TrapReloadWorkTurns', 'TrapReloadCostDefault',
         'TrapReloadRetryTurns', 'TrapReloadExperience']
 player = read('source/game/Player.cpp')
 for key in keys:
-    assert re.search(r'^# ' + key + r'\s', traps_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t\d+', traps_cfg, re.M), key + ' not set'
+    if WITH_CONTENT:
+        assert re.search(r'^# ' + key + r'\s', traps_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t\d+', traps_cfg, re.M), key + ' not set'
     assert re.search(r'getTrapConfigDoubleOrDefault\(\s*"' + key + '"', trap + action + player), key + ' not read'
 assert 'getTrapConfigDoubleOrDefault' in config_h
 
 # The old percentage of the build price is gone; every trap type with shots has its own price in the configuration
 assert 'TrapReloadCostPercent' not in traps_cfg + trap + action + player
 price = function_body(trap, 'int32_t Trap::getReloadPrice()')
-doc_start = traps_cfg.index('# <Trap>ReloadCost')
-doc_block = traps_cfg[doc_start:traps_cfg.index('# TrapReloadRetryTurns')]
+if WITH_CONTENT:
+    doc_start = traps_cfg.index('# <Trap>ReloadCost')
+    doc_block = traps_cfg[doc_start:traps_cfg.index('# TrapReloadRetryTurns')]
 assert 'costPerTile' not in price
 type_keys = {'cannon': 'Cannon', 'spike': 'Spike', 'boulder': 'Boulder', 'fear': 'Fear', 'gas': 'Gas',
              'lightning': 'Lightning', 'fireburst': 'Fireburst', 'freeze': 'Freeze', 'watchBanner': 'WatchBanner',
              'alarm': 'Alarm', 'trigger': 'Trigger'}
 for trap_type, prefix in type_keys.items():
     key = prefix + 'ReloadCost'
-    assert prefix in doc_block, prefix + ' not documented'
-    assert re.search(r'^    ' + key + r'\t\d+', traps_cfg, re.M), key + ' not set'
+    if WITH_CONTENT:
+        assert prefix in doc_block, prefix + ' not documented'
+        assert re.search(r'^    ' + key + r'\t\d+', traps_cfg, re.M), key + ' not set'
     assert 'case TrapType::' + trap_type + ':' in price, trap_type + ' not priced'
     fallback = '467.2767084775086' if trap_type == 'gas' else 'defaultPrice'
     assert re.search(r'getTrapConfigDoubleOrDefault\("' + key + r'", ' + re.escape(fallback) + r'\)', price), key + ' not read'
@@ -63,10 +85,11 @@ for trap_type, prefix in type_keys.items():
 # a branch adds or removes one.
 shot_count_prefixes = ['Alarm', 'Boulder', 'Cannon', 'Fear', 'Fireburst', 'Freeze', 'Gas', 'Lightning', 'Spike',
                        'Trigger']
-found_prefixes = re.findall(r'^    (\w+)NbShootsBeforeDeactivation\t', traps_cfg, re.M)
-assert sorted(found_prefixes) == shot_count_prefixes, 'the trap types with a shot count differ from the expected list'
-for prefix in shot_count_prefixes:
-    assert re.search(r'^    ' + prefix + r'ReloadCost\t\d+', traps_cfg, re.M), prefix + ' has no reload price'
+if WITH_CONTENT:
+    found_prefixes = re.findall(r'^    (\w+)NbShootsBeforeDeactivation\t', traps_cfg, re.M)
+    assert sorted(found_prefixes) == shot_count_prefixes, 'the trap types with a shot count differ from the expected list'
+    for prefix in shot_count_prefixes:
+        assert re.search(r'^    ' + prefix + r'ReloadCost\t\d+', traps_cfg, re.M), prefix + ' has no reload price'
 
 # Reload jobs use the keeper's target allocation and the reload action counts its active worker.
 assert 'notifyWorkerAction(mCreature, getType())' in action.split('CreatureActionReloadTrap::~')[0]
@@ -118,7 +141,7 @@ assert 'getNbNeededCraftedTrap' in function_body(trap, 'bool Trap::hasCarryEntit
 # Client: reload while working on a trap tile, lift and placement of doors, all events exist
 for name in ('TrapReload', 'PickDoor', 'DoorPlace'):
     assert '"' + name + '"' in worker, name
-    assert re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
+    assert reactions_cfg is None or re.search(r'^\s*Name\s+' + name + r'\s*$', reactions_cfg, re.M), name
 assert 'GameEntityType::trap' in function_body(worker, 'void WorkerReactions::showDigHit(')
 assert 'isDoorType(' in function_body(worker, 'void WorkerReactions::noteCarry(')
 assert 'isDoorType(' in function_body(worker, 'void WorkerReactions::noteRelease(')

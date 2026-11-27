@@ -5,6 +5,8 @@ start and no build needed.
 
 The first sections cover the gold system code; the last section runs the gold density rebalance tool of the levels
 (--check against its base commit) and compares its per-level summary with the expected table.
+The density textures and their CREDITS row lie in the content packages and in the CREDITS of the content repository
+(scripts/content_packages.py); without the content they are named as not checked.
 """
 from pathlib import Path
 import re
@@ -13,10 +15,17 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 TIMEOUT_SECONDS = 600
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The mixed files of config/ and gui/ come with their own rows only with the content (scripts/content_packages.py)
+WITH_CONTENT = content_packages.has_content(ROOT)
 
 
 def read(path):
-    return (ROOT / path).read_text(encoding='utf-8')
+    """The text of a repository file; a mixed file of config/ or gui/ comes joined with its own rows of the content."""
+    return content_packages.read_text(ROOT, path)
 
 
 def function_body(text, signature):
@@ -34,10 +43,11 @@ def config_value(text, name):
 # Config: gold per seam tile and per step, cheer share, worker carry capacity
 # ---------------------------------------------------------------------------------------------------------------------
 global_cfg = read('config/global.cfg')
-assert config_value(global_cfg, 'GoldPerSeamTile') == 3000
-assert config_value(global_cfg, 'GoldPerDigStep') == 25
-assert config_value(global_cfg, 'GemGoldPerDigStep') == 16.67
-assert config_value(global_cfg, 'WorkerCheerGoldShare') == 0.35
+if WITH_CONTENT:
+    assert config_value(global_cfg, 'GoldPerSeamTile') == 3000
+    assert config_value(global_cfg, 'GoldPerDigStep') == 25
+    assert config_value(global_cfg, 'GemGoldPerDigStep') == 16.67
+    assert config_value(global_cfg, 'WorkerCheerGoldShare') == 0.35
 assert 'DigCoefGold' not in global_cfg and 'DigCoefGem' not in global_cfg
 config_manager = read('source/utils/ConfigManager.cpp')
 config_header = read('source/utils/ConfigManager.h')
@@ -47,10 +57,11 @@ assert 'DigCoefGold' not in config_manager and 'DigCoefGem' not in config_manage
 assert 'DigCoefGold' not in config_header and 'DigCoefGem' not in config_header
 
 creatures_cfg = read('config/creatures.cfg')
-for worker in ('Kobold', 'DwarfWorker'):
-    block = re.search(r'\[Creature\]\s*\n\s*Name\s+' + worker + r'\b.*?\[/Creature\]', creatures_cfg, re.S)
-    assert block is not None, worker
-    assert re.search(r'^\s*MaxGoldCarryable\s+100\s*$', block.group(0), re.M), worker + ' must carry 100 gold'
+if WITH_CONTENT:
+    for worker in ('Kobold', 'DwarfWorker'):
+        block = re.search(r'\[Creature\]\s*\n\s*Name\s+' + worker + r'\b.*?\[/Creature\]', creatures_cfg, re.S)
+        assert block is not None, worker
+        assert re.search(r'^\s*MaxGoldCarryable\s+100\s*$', block.group(0), re.M), worker + ' must carry 100 gold'
 assert not re.search(r'MaxGoldCarryable\s+1500', creatures_cfg)
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -206,14 +217,15 @@ assert editor.index('"    T - switch between full and empty tiles"') < editor.in
 assert 'mCurrentGoldDensity(Tile::GOLD_DENSITY_DEFAULT)' in editor
 assert 'EDITOR_GOLD_DENSITY = "HorizontalPipe/GoldDensityDisplay"' in read('source/render/Gui.cpp')
 assert 'static const std::string EDITOR_GOLD_DENSITY;' in read('source/render/Gui.h')
-layout = read('gui/ModeEditor.layout')
-density_window = layout[layout.index('name="GoldDensityDisplay"'):]
-density_window = density_window[:density_window.index('name="PositionDisplay"')]
-assert '{{0,210},{0,-3.5},{0,405},{0,28.5}}' in density_window            # FullnessDisplay x (5) + 205
-assert 'Gold density (G): 100%' in density_window
-# The three windows right of it are moved by the same 205 px so that nothing overlaps
-assert '{{0,415},{0,0},{0,615},{0,25}}' in layout and '{{0,635},{0,0},{0,765},{0,25}}' in layout
-assert '{{0,775},{0,0},{0,1005},{0,25}}' in layout
+if WITH_CONTENT:
+    layout = read('gui/ModeEditor.layout')
+    density_window = layout[layout.index('name="GoldDensityDisplay"'):]
+    density_window = density_window[:density_window.index('name="PositionDisplay"')]
+    assert '{{0,210},{0,-3.5},{0,405},{0,28.5}}' in density_window            # FullnessDisplay x (5) + 205
+    assert 'Gold density (G): 100%' in density_window
+    # The three windows right of it are moved by the same 205 px so that nothing overlaps
+    assert '{{0,415},{0,0},{0,615},{0,25}}' in layout and '{{0,635},{0,0},{0,765},{0,25}}' in layout
+    assert '{{0,775},{0,0},{0,1005},{0,25}}' in layout
 
 
 def next_density(density):
@@ -236,7 +248,11 @@ for name, texture in (('Gold50', 'Gold50'), ('Gold150', 'Gold150')):
     assert 'texture %s.png' % texture in block and 'texture %sNormal.png' % texture in block
     assert 'vertex_program_ref myVertexShader' in block and 'fragment_program_ref myFragmentShader' in block
 for texture in ('Gold50', 'Gold50Normal', 'Gold150', 'Gold150Normal'):
-    assert (ROOT / 'materials' / 'textures' / (texture + '.png')).is_file(), texture
+    found = content_packages.data_file(ROOT, 'materials/textures/' + texture + '.png')
+    if found is None and not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_world_balance_gold', ['materials/textures/' + texture + '.png'])
+        continue
+    assert found is not None and found.is_file(), texture
 render = read('source/render/RenderManager.cpp')
 assert 'if((density == Tile::GOLD_DENSITY_LOW) || (density == Tile::GOLD_DENSITY_HIGH))' in render
 assert 'tileMeshEnt->setMaterialName(goldWallMaterialName(tile.getGoldDensity(), nt == NodeType::MDTC_NODE));' in render
@@ -247,9 +263,17 @@ credits = read('CREDITS')
 lines = credits.splitlines()
 gold_line = [i for i, line in enumerate(lines) if line.startswith('-> Gold{,Normal}.png')]
 assert len(gold_line) == 1
-assert lines[gold_line[0] + 1].startswith('-> Gold{50,150}{,Normal}.png')
-assert 'OD Team' in lines[gold_line[0] + 1] and 'CC0' in lines[gold_line[0] + 1]
-assert 'tools/dungeon-palette/generate_claimed_gold.py' in lines[gold_line[0] + 1]
+# The row of the density textures moved with them into the CREDITS of the content repository, where it names the
+# textures by their path (in the public CREDITS it was "-> Gold{50,150}{,Normal}.png" below the row of Gold.png)
+if not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_world_balance_gold', ['CREDITS row of Gold{50,150}{,Normal}.png'])
+else:
+    density_rows = [line for line in room_packages.credits_text(ROOT).splitlines()
+                    if line.startswith('materials/textures/Gold{50,150}{,Normal}.png')]
+    assert len(density_rows) == 1, density_rows
+    # CC0, or "All rights reserved" (the licence of the content repository) for the row of the content CREDITS
+    assert 'OD Team' in density_rows[0] and room_packages.licence_ok(ROOT, density_rows[0], 'CC0'), density_rows[0]
+    assert 'tools/dungeon-palette/generate_claimed_gold.py' in density_rows[0]
 
 result = subprocess.run([sys.executable, str(ROOT / 'tools' / 'dungeon-palette' / 'generate_claimed_gold.py'), '--check'],
                         cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,
@@ -309,21 +333,10 @@ EXPECTED_LEVELS = {
     'levels/campaign/Wolfscar.level': ('5', '187', '300600', '0/0/334', '147'),
     'levels/campaign/Wraithwood.level': ('3', '134', '300000', '0/0/200', '66'),
     'levels/multiplayer/Angel.level': ('4', '2736', '2052000', '912/912/912', '0'),
-    'levels/multiplayer/CrownofEmbers.level': ('4', '1296', '972000', '432/432/432', '0'),
-    'levels/multiplayer/EmberBasin.level': ('4', '828', '621000', '276/276/276', '0'),
-    'levels/multiplayer/FourWinds.level': ('4', '1032', '774000', '344/344/344', '0'),
     'levels/multiplayer/GreedOrMight.level': ('3', '196', '300000', '0/0/200', '4'),
-    'levels/multiplayer/LongWinter.level': ('2', '960', '1440000', '320/320/320', '0'),
     'levels/multiplayer/RuinsOfTheConfluent.level': ('4', '171', '300375', '0/0/267', '96'),
     'levels/multiplayer/ScreamInTheDark.level': ('5', '372', '300000', '0/116/256', '0'),
-    'levels/multiplayer/SunkenHalls.level': ('2', '810', '1215000', '270/270/270', '0'),
     'levels/multiplayer/TheBridge.level': ('2', '255', '382500', '85/85/85', '0'),
-    'levels/multiplayer/TheBrokenSeal.level': ('2', '424', '635250', '142/141/141', '0'),
-    'levels/multiplayer/TheEightThrones.level': ('8', '1424', '533812', '475/475/474', '0'),
-    'levels/multiplayer/TheFourGates.level': ('4', '1312', '983625', '438/437/437', '0'),
-    'levels/multiplayer/TheIronCross.level': ('4', '884', '662625', '295/295/294', '0'),
-    'levels/multiplayer/TheSaltLake.level': ('2', '690', '1035000', '230/230/230', '0'),
-    'levels/multiplayer/TheShatteredRing.level': ('2', '906', '1359000', '302/302/302', '0'),
     'levels/skirmish/Barrackdeep.level': ('1', '75', '300000', '0/25/50', '0'),
     'levels/skirmish/DuelToDeath.level': ('2', '2386', '3578250', '796/795/795', '0'),
     'levels/skirmish/Embervault.level': ('1', '79', '300000', '0/37/42', '0'),
@@ -332,16 +345,10 @@ EXPECTED_LEVELS = {
     'levels/skirmish/FourThrones.level': ('4', '384', '300000', '96/160/128', '0'),
     'levels/skirmish/Gloomkeep.level': ('1', '171', '513000', '57/57/57', '0'),
     'levels/skirmish/GrandDelve.level': ('1', '74', '300000', '0/22/52', '0'),
-    'levels/skirmish/KingdomsFall.level': ('8', '1476', '553500', '492/492/492', '0'),
     'levels/skirmish/Lanternreach.level': ('1', '135', '405000', '45/45/45', '0'),
     'levels/skirmish/Quietcrag.level': ('1', '87', '300000', '3/55/29', '0'),
     'levels/skirmish/Splitstone.level': ('1', '157', '469500', '53/52/52', '0'),
     'levels/skirmish/StoneKeep.level': ('3', '698', '697500', '233/233/232', '0'),
-    'levels/skirmish/TheBreach.level': ('1', '533', '1597500', '178/178/177', '0'),
-    'levels/skirmish/TheEndlessTide.level': ('1', '1081', '3241500', '361/360/360', '0'),
-    'levels/skirmish/TheGreatWarren.level': ('4', '992', '743625', '331/331/330', '0'),
-    'levels/skirmish/TheLastGate.level': ('1', '932', '2794500', '311/311/310', '0'),
-    'levels/skirmish/ThievesGold.level': ('2', '864', '1296000', '288/288/288', '0'),
     'levels/skirmish/TriadDeeps.level': ('3', '552', '552000', '184/184/184', '0'),
     'levels/skirmish/TwinDelve.level': ('2', '124', '301500', '0/0/134', '10'),
     'levels/skirmish/Wyrmhollow.level': ('1', '508', '1522500', '170/169/169', '0'),
@@ -372,4 +379,8 @@ assert sorted(found_levels) == sorted(EXPECTED_LEVELS), sorted(set(found_levels)
 for level_name, expected in EXPECTED_LEVELS.items():
     assert found_levels[level_name] == expected, (level_name, found_levels[level_name], expected)
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_world_balance_gold', ['gold values of config/global.cfg', 'worker carry '
+                                                            'capacity of config/creatures.cfg', 'gold density window '
+                                                            'of gui/ModeEditor.layout'])
 print('Gold balance: config, density, mining, fractions, capacity, format, network, editor, look, levels passed')

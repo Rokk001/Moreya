@@ -15,17 +15,28 @@ The engine registers each folder of the Graphics section in cmake/config/resourc
 non-recursively (ResourceManager::setupOgreResources passes recursive=false), so a texture name
 is resolvable only if the file lies directly in one of the listed folders. A name with a folder
 prefix such as "menu/Name.png" is never found and the layer renders blank.
+
+The engine also adds the same folders of every content package (ResourceManager::addGameDataResourceLocation), so a
+folder of the Graphics section stands for the public folder and the folders of the found content packages, and the
+scripts, meshes and textures are read from there (scripts/content_packages.py). Without the content the check names
+the scene parts and the menu entries (the menu layouts are whole only with their own rows of the content package
+core-gui) as not checked and checks the code.
 """
 from pathlib import Path
 import math
 import re
 import struct
+import sys
 from xml.etree import ElementTree
 
 from PIL import Image
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import content_packages  # noqa: E402
 
-# Return the folders of the Graphics section of the resource list, relative to the repository.
+
+# Return the folders of the Graphics section of the resource list, relative to the repository, each followed by the same
+# folder of every found content package (the engine registers those too).
 def graphics_folders(root):
     folders = []
     in_graphics = False
@@ -37,14 +48,25 @@ def graphics_folders(root):
             value = line.split("=", 1)[1]
             if not value.startswith("@"):
                 folders.append(root / value)
+                folders.extend(folder for folder in content_packages.data_folders(root, value) if folder != root / value)
     return folders
+
+
+# Return the file of a game data path of the public tree or of a content package (else the path below the repository).
+def data_path(root, relative):
+    return content_packages.resolve(root, relative)
+
+
+# Return every material script of the public tree and of the content packages, sorted by relative path.
+def material_scripts(root, pattern="*.material"):
+    return content_packages.data_glob(root, "materials/scripts", pattern, recursive=True)
 
 
 # Collect (script, line number, texture name) for every texture reference in the scripts.
 def texture_references(root):
     pattern = re.compile(r"^\s*(?:.*\{\s*)?(?:texture|cubic_texture)\s+([^\s}]+\.(?:png|jpg|jpeg|tga|dds|bmp))", re.I)
     references = []
-    scripts = sorted((root / "materials/scripts").rglob("*.material")) + sorted((root / "particles").rglob("*.particle"))
+    scripts = material_scripts(root) + content_packages.data_glob(root, "particles", "*.particle", recursive=True)
     for script in scripts:
         for number, line in enumerate(script.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             if line.strip().startswith("//"):
@@ -59,7 +81,7 @@ def texture_references(root):
 def defined_materials(root):
     names = set()
     pattern = re.compile(r"^\s*material\s+([^\s:{]+)")
-    for script in (root / "materials/scripts").rglob("*.material"):
+    for script in material_scripts(root):
         for line in script.read_text(encoding="utf-8", errors="replace").splitlines():
             match = pattern.match(line)
             if match:
@@ -70,7 +92,7 @@ def defined_materials(root):
 # Return the mesh names of every AddEntity command of the menu scene description.
 def scene_meshes(root):
     meshes = []
-    for line in (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8").splitlines():
+    for line in content_packages.read_text(root, "config/mainmenuscene.cfg").splitlines():
         parts = line.split()
         if len(parts) >= 3 and parts[0] == "AddEntity":
             meshes.append(parts[2])
@@ -178,7 +200,7 @@ def mesh_index_problems(mesh_file):
 # pattern selects the material scripts to scan (default: all of them).
 def unlit_untextured_materials(root, pattern="*.material"):
     names = set()
-    for script in (root / "materials/scripts").rglob(pattern):
+    for script in material_scripts(root, pattern):
         text = "\n".join(l for l in script.read_text(encoding="utf-8", errors="replace").splitlines()
                          if not l.strip().startswith("//"))
         for match in re.finditer(r"\bmaterial\s+([^\s:{]+)[^{]*\{", text):
@@ -198,7 +220,7 @@ def unlit_untextured_materials(root, pattern="*.material"):
 def particle_materials(root):
     pattern = re.compile(r"^\s*material\s+(\S+)")
     names = set()
-    for line in (root / "particles/MenuScene.particle").read_text(encoding="utf-8", errors="replace").splitlines():
+    for line in data_path(root, "particles/MenuScene.particle").read_text(encoding="utf-8", errors="replace").splitlines():
         match = pattern.match(line)
         if match:
             names.add(match.group(1))
@@ -210,9 +232,8 @@ def missing_models_and_materials(root):
     problems = []
     defined = defined_materials(root)
     unlit = unlit_untextured_materials(root)
-    models = root / "models"
     for mesh in scene_meshes(root):
-        mesh_file = models / mesh
+        mesh_file = data_path(root, "models/" + mesh)
         if not mesh_file.is_file():
             problems.append(f"config/mainmenuscene.cfg: mesh {mesh} not found under models/")
             continue
@@ -222,7 +243,7 @@ def missing_models_and_materials(root):
                 problems.append(f"models/{mesh}: material {material} is lighting off without texture and the mesh part has no vertex colours (renders white)")
         for name in mesh_references(mesh_file):
             if name.endswith(".skeleton"):
-                if not (models / name).is_file():
+                if content_packages.data_file(root, "models/" + name) is None:
                     problems.append(f"models/{mesh}: skeleton {name} not found under models/")
             elif name not in defined and name + ".mesh" != mesh:
                 problems.append(f"models/{mesh}: material {name} is not defined in materials/scripts")
@@ -230,8 +251,8 @@ def missing_models_and_materials(root):
     # counts as without vertex colours and turns red when it is lighting off without a texture.
     used = set()
     for mesh in scene_meshes(root):
-        if (models / mesh).is_file():
-            used.update(mesh_vertex_colours(models / mesh).keys())
+        if data_path(root, "models/" + mesh).is_file():
+            used.update(mesh_vertex_colours(data_path(root, "models/" + mesh)).keys())
     for material in sorted(unlit_untextured_materials(root, "MenuScene.material")):
         if material not in used:
             problems.append(f"materials/scripts/MenuScene.material: material {material} is lighting off without texture and is not used by a mesh with vertex colours (renders red)")
@@ -243,7 +264,7 @@ def missing_models_and_materials(root):
 
 # Check that self-lit atmosphere bypasses fixed lighting and that its shader files are resolvable.
 def check_sky_programs(root, folders):
-    text = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
+    text = data_path(root, "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
     for program, filename in (("MenuSkyVertex", "MenuSky.vert"), ("MenuSkyFragment", "MenuSky.frag")):
         assert re.search(r"\b(?:vertex|fragment)_program\s+" + program + r"\s+glsl\s*\{[^}]*\bsource\s+" + re.escape(filename), text), program + " must name its shader source"
         assert any((folder / filename).is_file() for folder in folders), filename + " must resolve through Graphics resources"
@@ -280,7 +301,7 @@ def script_blocks(text, declaration):
 
 # Keep textured menu surfaces and inherited colour overrides in their normal-mapped lighting pass.
 def check_menu_surface_passes(root):
-    text = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
+    text = data_path(root, "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
     materials = script_blocks(text, "material")
     bases = {
         "MenuStone": "MenuFortressStoneNormal.png", "MenuIron": "MenuRustIronNormal.png",
@@ -303,11 +324,11 @@ def check_menu_surface_passes(root):
 
 # Validate every configured menu effect and prevent dense bowl smoke from replacing sparks.
 def check_menu_particles(root, folders):
-    systems = script_blocks((root / "particles/MenuScene.particle").read_text(encoding="utf-8"), "particle_system")
-    config = (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
+    systems = script_blocks(data_path(root, "particles/MenuScene.particle").read_text(encoding="utf-8"), "particle_system")
+    config = content_packages.read_text(root, "config/mainmenuscene.cfg")
     configured = re.findall(r"(?m)^AddParticleEffect\s+(\S+)\s+(\S+)", config)
     materials = {}
-    for path in (root / "materials/scripts").rglob("*.material"):
+    for path in material_scripts(root):
         materials.update(script_blocks(path.read_text(encoding="utf-8", errors="replace"), "material"))
     for name in sorted({system for entity, system in configured}):
         assert name in systems, name + " has no particle definition"
@@ -349,7 +370,7 @@ def check_menu_particles(root, folders):
 
 # Keep the authored light falloff/exposure and local ambient loading separate from the game lighting.
 def check_menu_lighting(root):
-    config = (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
+    config = content_packages.read_text(root, "config/mainmenuscene.cfg")
     preview = (root / "tools/blender-assets/menu_scene_assembly.py").read_text(encoding="utf-8")
     exposure = float(re.search(r"view_settings\.exposure = ([0-9.]+)", preview).group(1))
     gain = 2 ** exposure
@@ -368,7 +389,7 @@ def check_menu_lighting(root):
     assert all(24 <= value <= 32 for value in readable) and max(readable) - min(readable) <= 2, "unlit stone away from the overview must stay readable and neutral, got " + str(readable)
     fill_source = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
     assert "renderManager.setMenuAmbient(mMenuAmbient + (mFlightAmbient - mMenuAmbient) * mFlightFill);" in fill_source and "mFlightFill = 0.0f;" in fill_source, "the camera flight must blend the fill and the overview must start without it"
-    fog_source = (root / "particles/MenuScene.particle").read_text(encoding="utf-8")
+    fog_source = data_path(root, "particles/MenuScene.particle").read_text(encoding="utf-8")
     for system in ("MenuCourtyardFog", "MenuGraveMist"):
         fog = fog_source.split("particle_system " + system, 1)[1].split("\nparticle_system ", 1)[0]
         assert "RoomAmbSmoke" in fog and "ColourInterpolator" in fog and "colour0 0.235 0.11 0.016 0.0" in fog and "colour3 0.235 0.11 0.016 0.0" in fog, system + " must use the fog colour of the approved image and fade in and out"
@@ -402,10 +423,10 @@ def check_menu_lighting(root):
     green = {name for name, values in lights.items() if values[4] > values[3] * 1.5 and values[4] > values[5] * 1.5}
     assert green == {"SpireLight", "SpireSummitScatter"}, "green light belongs only to the spire and the right tower: " + str(sorted(green))
     # The title and its crest carry no green of their own.
-    crest = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8").split("material MenuTitleCrest", 1)[1].split("\nmaterial ", 1)[0]
+    crest = data_path(root, "materials/scripts/MenuScene.material").read_text(encoding="utf-8").split("material MenuTitleCrest", 1)[1].split("\nmaterial ", 1)[0]
     crest_red, crest_green, _ = [float(value) for value in re.search(r"emissive\s+(\S+)\s+(\S+)\s+(\S+)", crest).groups()]
     assert crest_green < crest_red, "the title crest must not glow green"
-    with Image.open(root / "materials/textures/menu/MenuTitle.png") as image:
+    with Image.open(data_path(root, "materials/textures/menu/MenuTitle.png")) as image:
         red_band, green_band, _, alpha_band = image.convert("RGBA").split()
     green_pixels = sum(1 for red_value, green_value, alpha in zip(red_band.tobytes(), green_band.tobytes(), alpha_band.tobytes()) if alpha > 96 and green_value > red_value)
     assert green_pixels == 0, "the title texture must not contain green: " + str(green_pixels)
@@ -451,7 +472,7 @@ def check_menu_lighting(root):
 # One multiplayer entry leads to four differently named actions; the load dialog opens directly from the main menu.
 def check_menu_entries(root):
     def buttons(layout):
-        tree = ElementTree.parse(root / "gui" / layout).getroot()
+        tree = ElementTree.fromstring(content_packages.read_text(root, "gui/" + layout))
         return {window.get("name"): next(prop.get("value") for prop in window.findall("Property") if prop.get("name") == "Text")
                 for window in tree.iter("Window") if window.get("type") == "OD/MenuTextButton"}
     source = (root / "source/modes/MenuModeMain.cpp").read_text(encoding="utf-8")
@@ -466,7 +487,7 @@ def check_menu_entries(root):
     for name, (_, constant, mode) in actions.items():
         assert f'{constant} = "{name}"' in source and f"multiplayerWin->getChild({constant}),\n                           AbstractModeManager::ModeType::{mode}" in source, name + " must keep its network path"
     for layout in ("MenuMain.layout", "WindowMultiplayerSubMenu.layout"):
-        tree = ElementTree.parse(root / "gui" / layout).getroot()
+        tree = ElementTree.fromstring(content_packages.read_text(root, "gui/" + layout))
         rows = []
         for window in tree.iter("Window"):
             if window.get("type") != "OD/MenuTextButton":
@@ -514,11 +535,22 @@ def check_flight_frame_log(root):
     print("OK: every menu flight logs mean and maximum frame times")
 
 
-# Fail when a menu scene texture, material, mesh or skeleton cannot be resolved.
+# Fail when a menu scene texture, material, mesh or skeleton cannot be resolved (without the content: the code only;
+# the menu layouts and the scene configuration are whole only with their own rows).
 def main():
     root = Path(__file__).resolve().parents[2]
     folders = graphics_folders(root)
     assert root / "materials/textures/menu" in folders, "menu textures folder must be listed in resources.cfg.in"
+    scene_files = ("materials/scripts/MenuScene.material", "particles/MenuScene.particle",
+                   "materials/textures/menu/MenuTitle.png")
+    missing_content = [name for name in scene_files if content_packages.data_file(root, name) is None]
+    if missing_content and not content_packages.has_content(root):
+        # the menu layouts are whole only with their own rows of the content (core-gui)
+        check_flight_frame_log(root)
+        content_packages.unchecked("check_menu_resources", missing_content + [
+            "sky programs, surface passes, particles, lighting, texture references, meshes and materials",
+            "menu entries (own rows of gui/MenuMain.layout and gui/WindowMultiplayerSubMenu.layout)"])
+        return
     check_sky_programs(root, folders)
     check_menu_surface_passes(root)
     check_menu_particles(root, folders)
@@ -532,7 +564,7 @@ def main():
         if script.name.startswith("MenuScene"):
             menu_count += 1
         if not resolved and script.name.startswith("MenuScene"):
-            missing.append(f"{script.relative_to(root)}:{number}: {name}")
+            missing.append(f"{content_packages.relative_path(root, script)}:{number}: {name}")
     assert menu_count > 0, "no menu scene texture references found"
     assert not missing, "menu scene textures not resolvable by the engine:\n  " + "\n  ".join(missing)
     problems = missing_models_and_materials(root)

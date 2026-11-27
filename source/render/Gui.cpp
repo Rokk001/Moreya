@@ -29,6 +29,8 @@
 #include "entities/ItemInstance.h"
 #include "sound/SoundEffectsManager.h"
 #include "utils/ConfigManager.h"
+#include "utils/ContentPackages.h"
+#include "utils/Helper.h"
 #include "utils/LogManager.h"
 
 #include <CEGUI/CEGUI.h>
@@ -54,6 +56,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <sstream>
 #include <functional>
 #include <string>
@@ -1819,6 +1822,77 @@ std::string scaleFormattedImageSizes(const CEGUI::String& ceguiText, float scale
 }
 }
 
+//! \brief The resource provider of the interface: the Ogre resource provider of CEGUI that also puts the own rows of
+//! a mixed interface file in place of its marker lines "<!--#@own <n>-->" (ContentPackages::joinOwnRows). The own rows
+//! file (ContentPackages::getOwnRowsPath, for example ModeGame.own.layout) lies in a content package and is found in
+//! the same resource group; without it the markers stay XML comments.
+class OwnRowsResourceProvider : public CEGUI::OgreResourceProvider
+{
+public:
+    //! \brief Loads the file like the Ogre resource provider and joins the own rows of a mixed interface file.
+    void loadRawDataContainer(const CEGUI::String& filename, CEGUI::RawDataContainer& output,
+        const CEGUI::String& resourceGroup) override
+    {
+        CEGUI::OgreResourceProvider::loadRawDataContainer(filename, output, resourceGroup);
+        const std::string text(reinterpret_cast<const char*>(output.getDataPtr()), output.getSize());
+        if(text.find(ContentPackages::OWN_ROWS_MARKER) == std::string::npos)
+            return;
+
+        std::vector<std::string> lines;
+        std::istringstream textStream(text);
+        std::string line;
+        while(std::getline(textStream, line))
+        {
+            if(!line.empty() && (line[line.size() - 1] == '\r'))
+                line.erase(line.size() - 1);
+            lines.push_back(line);
+        }
+        if(!ContentPackages::hasOwnRowsMarker(lines))
+            return;
+
+        const std::string fileName(filename.c_str());
+        const CEGUI::String ownFileName(ContentPackages::getOwnRowsPath(fileName).c_str());
+        const CEGUI::String group = resourceGroup.empty() ? getDefaultResourceGroup() : resourceGroup;
+        const Ogre::String ogreGroup = group.empty() ? Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME
+            : Ogre::String(group.c_str());
+        // The Ogre resource provider also opens a file of another resource group (the interface files lie in the
+        // group GUI while the default group of CEGUI is the Ogre default group), so the own rows file is looked up the
+        // same way: in the group first, then in every group.
+        Ogre::ResourceGroupManager& groups = Ogre::ResourceGroupManager::getSingleton();
+        if(!groups.resourceExists(ogreGroup, ownFileName.c_str())
+            && !groups.resourceExistsInAnyGroup(ownFileName.c_str()))
+        {
+            OD_LOG_WRN("No own rows file for the interface file " + fileName);
+            return;
+        }
+
+        CEGUI::RawDataContainer ownData;
+        CEGUI::OgreResourceProvider::loadRawDataContainer(ownFileName, ownData, resourceGroup);
+        std::istringstream ownStream(std::string(reinterpret_cast<const char*>(ownData.getDataPtr()),
+            ownData.getSize()));
+        CEGUI::OgreResourceProvider::unloadRawDataContainer(ownData);
+        std::map<int, std::vector<std::string> > blocks;
+        ContentPackages::parseOwnRows(ownStream, blocks);
+
+        std::vector<int> missing;
+        std::vector<int> unused;
+        ContentPackages::joinOwnRows(lines, blocks, missing, unused);
+        for(std::vector<int>::const_iterator it = missing.begin(); it != missing.end(); ++it)
+            OD_LOG_ERR("Own rows block #@own " + Helper::toString(*it) + " is missing for " + fileName);
+        for(std::vector<int>::const_iterator it = unused.begin(); it != unused.end(); ++it)
+            OD_LOG_ERR("Own rows block #@own " + Helper::toString(*it) + " has no marker in " + fileName);
+
+        std::string merged;
+        for(std::vector<std::string>::const_iterator it = lines.begin(); it != lines.end(); ++it)
+            merged += *it + "\n";
+        unsigned char* data = new unsigned char[merged.size()];
+        std::copy(merged.begin(), merged.end(), data);
+        CEGUI::OgreResourceProvider::unloadRawDataContainer(output);
+        output.setData(data);
+        output.setSize(merged.size());
+    }
+};
+
 //! \brief Loads and registers the GUI sheets, including immediate navigation visibility reflow.
 Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFileName, Ogre::RenderTarget &renderTarget)
   : mUserScale(1.0f),
@@ -1829,7 +1903,8 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     OD_LOG_INF("*** Initializing CEGUI ***");
     CEGUI::OgreRenderer& renderer = CEGUI::OgreRenderer::create(renderTarget);
     OD_LOG_INF("OgreRenderer created");
-    CEGUI::OgreResourceProvider& rp = CEGUI::OgreRenderer::createOgreResourceProvider();
+    // The provider joins the own rows of the mixed interface files; CEGUI::OgreRenderer::destroySystem deletes it
+    CEGUI::OgreResourceProvider& rp = *(new OwnRowsResourceProvider());
     OD_LOG_INF("OgreResourceProvider created");
     CEGUI::OgreImageCodec& ic = CEGUI::OgreRenderer::createOgreImageCodec();
     OD_LOG_INF("OgreImageCodec created");

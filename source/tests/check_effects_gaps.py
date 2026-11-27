@@ -8,6 +8,11 @@ client from what it already knows (no new network value), that the declarations 
 definitions, that every effect of config/roomAmbienceFixEffects.cfg exists with the right event, match and kind, that
 its particle systems and sounds exist and have CREDITS entries, and that the watch banner fires through the server (it
 calls the guards, then reloads: the flag flares, hangs and flies again).
+
+The room ambience tables, particle scripts, the banner model and the sounds are content (content and room packages,
+found through scripts/content_packages.py); the CREDITS rows of the sounds stand in the CREDITS of the content
+repository. Without the content the code and the public CREDITS are checked and the effect, model, particle and sound
+part with its CREDITS rows is named as not checked.
 """
 
 import glob
@@ -16,7 +21,15 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
 problems = []
+#: The content files of the effect part (core-config and core-models packages)
+CONTENT_FILES = ("config/roomAmbience.cfg", "config/roomAmbienceFixEffects.cfg", "models/WarBanner.mesh",
+                 "models/WarBanner.skeleton", "particles/RoomAmbienceFixEffects.particle")
+missing_content = [name for name in CONTENT_FILES if content_packages.data_file(ROOT, name) is None]
 
 
 def read(*parts):
@@ -33,7 +46,7 @@ def effects(path):
     """Returns the [Effect] blocks of a room ambience file as a dictionary name -> {key: words}."""
     result = {}
     current = None
-    for raw in read(*path).splitlines():
+    for raw in content_packages.read_text(ROOT, "/".join(path)).splitlines():
         words = raw.split("#", 1)[0].split()
         if not words:
             continue
@@ -55,15 +68,18 @@ render_cpp = read("source", "render", "RenderManager.cpp")
 banner = read("source", "traps", "TrapWatchBanner.cpp")
 banner_h = read("source", "traps", "TrapWatchBanner.h")
 notification = read("source", "network", "ServerNotification.h")
-credits = read("CREDITS")
-main_cfg = read("config", "roomAmbience.cfg")
-fx = effects(("config", "roomAmbienceFixEffects.cfg"))
-systems = {}
-for path in glob.glob(os.path.join(ROOT, "particles", "*.particle")):
-    for match in re.finditer(r"particle_system\s+(\S+)", open(path, encoding="utf-8").read()):
-        systems[match.group(1)] = os.path.basename(path)
+# The public CREDITS plus the CREDITS of the content repository when the packages are present
+credits = room_packages.credits_text(ROOT)
+if not missing_content:
+    main_cfg = content_packages.read_text(ROOT, "config/roomAmbience.cfg")
+    fx = effects(("config", "roomAmbienceFixEffects.cfg"))
+    systems = {}
+    # The particle scripts of the public tree and of every content and room package
+    for path in content_packages.data_glob(ROOT, "particles", "*.particle"):
+        for match in re.finditer(r"particle_system\s+(\S+)", open(path, encoding="utf-8").read()):
+            systems[match.group(1)] = os.path.basename(path)
 
-need("Include roomAmbienceFixEffects.cfg" in main_cfg, "roomAmbienceFixEffects.cfg is not included")
+    need("Include roomAmbienceFixEffects.cfg" in main_cfg, "roomAmbienceFixEffects.cfg is not included")
 
 # --- code: declared and defined, wired into the scan
 for decl in ("scanHeartHit", "noteHandCast"):
@@ -92,21 +108,23 @@ need("mPrisoner" in header and "mSeat" in header, "the creature snapshot must re
 # (clip Loop) while it is ready and hangs (clip Droop) while it reloads; the client does not guess the call any more
 need("scanBannerAlerts" not in source and "scanBannerAlerts" not in header and "mBannerAlertUntil" not in header,
      "the client must not guess the banner call, the server sends it")
-need('"WarBanner"' in banner and os.path.exists(os.path.join(ROOT, "models", "WarBanner.mesh")),
-     "the watch banner must use the flag mesh")
+need('"WarBanner"' in banner, "the watch banner must use the flag mesh")
+if not missing_content:
+    need(content_packages.data_file(ROOT, "models/WarBanner.mesh") is not None, "the watch banner must use the flag mesh")
 need("virtual bool shoot(Tile* tile) override\n    { return false; }" in banner_h.replace("\r\n", "\n"),
      "the watch banner shoots nothing, its call is its shot")
 need("fireTrapEffect(TrapEffectKind::fired, callingTile, 1.0)" in banner and "fireTrapEffect(TrapEffectKind::reloading, postTile, 1.0)" in banner
      and "fireTrapEffect(TrapEffectKind::ready, postTile, 1.0)" in banner, "the banner must tell the clients fired, reloading and ready")
 need(banner.index("fireTrapEffect(TrapEffectKind::fired") > banner.index("mNextDistressTurn = turn +") and "mReloading" in banner_h,
      "the call starts the reload")
-skeleton = open(os.path.join(ROOT, "models", "WarBanner.skeleton"), "rb").read()
-need(b"Loop" in skeleton, "WarBanner.skeleton has no clip Loop")
-need(b"Droop" in skeleton, "WarBanner.skeleton has no clip Droop")
 need("banner_droop_clip.py" in credits, "CREDITS has no entry for the Droop clip")
-need("WatchBannerWave" in fx and fx["WatchBannerWave"]["When"] == ["Ready"], "the flag only waves while the post is ready")
-need("WatchBannerDroop" in fx and fx["WatchBannerDroop"]["When"] == ["Reloading"] and fx["WatchBannerDroop"]["Clips"] == ["Droop"],
-     "the flag hangs while the post reloads")
+if not missing_content:
+    skeleton = content_packages.resolve(ROOT, "models/WarBanner.skeleton").read_bytes()
+    need(b"Loop" in skeleton, "WarBanner.skeleton has no clip Loop")
+    need(b"Droop" in skeleton, "WarBanner.skeleton has no clip Droop")
+    need("WatchBannerWave" in fx and fx["WatchBannerWave"]["When"] == ["Ready"], "the flag only waves while the post is ready")
+    need("WatchBannerDroop" in fx and fx["WatchBannerDroop"]["When"] == ["Reloading"] and fx["WatchBannerDroop"]["Clips"] == ["Droop"],
+         "the flag hangs while the post reloads")
 
 # --- hand: sent with the local cast, no network value
 server_code = read("source", "network", "ODServer.cpp")
@@ -159,55 +177,61 @@ EXPECTED = (
     ("RuneDoorFlicker", "Object", "trap:DoorRuned", "Motion"),
     ("SteelDoorDent", "Object", "trap:DoorSteel", "Motion"),
 )
-for name, target, wanted, kind in EXPECTED:
-    e = fx.get(name)
-    if e is None:
-        problems.append("effect %s missing" % name)
-        continue
-    need(e.get("Target") == [target], "%s: Target must be %s" % (name, target))
-    need(e.get("Kind") == [kind], "%s: Kind must be %s" % (name, kind))
-    if target == "Event":
-        need(e.get("Event") == [wanted], "%s: Event must be %s" % (name, wanted))
-    else:
-        need(wanted in e.get("Match", []), "%s: must match %s" % (name, wanted))
+if not missing_content:
+    for name, target, wanted, kind in EXPECTED:
+        e = fx.get(name)
+        if e is None:
+            problems.append("effect %s missing" % name)
+            continue
+        need(e.get("Target") == [target], "%s: Target must be %s" % (name, target))
+        need(e.get("Kind") == [kind], "%s: Kind must be %s" % (name, kind))
+        if target == "Event":
+            need(e.get("Event") == [wanted], "%s: Event must be %s" % (name, wanted))
+        else:
+            need(wanted in e.get("Match", []), "%s: must match %s" % (name, wanted))
 
-need(fx["HeartHitPulse"].get("When") == ["Hit"], "the heart pulse must run When Hit")
-need(fx["RuneDoorFlicker"].get("Motion") == ["Flicker"], "the rune door must flicker")
-need(fx["SteelDoorDent"].get("When") == ["Hit"], "the dent must run When Hit")
-need(fx["WatchBannerWave"].get("Clips") == ["Loop"], "the banner plays the clip Loop")
-need(fx["LightningTrapBolt"].get("Mesh") == ["SpellBolt"], "the lightning trap bolt uses the bolt mesh")
-need(fx["CannonMuzzleFlash"].get("Match") == ["Cannon"] and fx["CannonSmokeRing"].get("Match") == ["Cannon"],
-     "the muzzle effects belong to the cannon")
-need(fx["SpikeShootDust"].get("System") == ["RoomAmbHitDust"], "the spike dust is RoomAmbHitDust")
-need(fx["RuneDoorCracks"].get("Match") == ["DoorRuned"], "the cracks belong to the rune door")
-need(fx["SecretDoorOpenGlow"].get("System") == ["RoomAmbRevealGlow"], "the secret door opens with the reveal glow")
-for name in ("WaveSurgeLight", "WaveSurgeShockwave", "WaveSurgeShake", "WaveSurgeSound"):
-    need(fx[name].get("Match") == ["portalWaveRoom"], "%s must be limited to the wave portal" % name)
-need(any(e.get("Reduced") == ["yes"] for e in fx.values()), "no effect in the mode reduced")
-for e in fx.values():
-    system = e.get("System", [None])[0]
-    if system is not None:
-        need(system in systems, "%s: unknown particle system %s" % (e["Name"][0], system))
+    need(fx["HeartHitPulse"].get("When") == ["Hit"], "the heart pulse must run When Hit")
+    need(fx["RuneDoorFlicker"].get("Motion") == ["Flicker"], "the rune door must flicker")
+    need(fx["SteelDoorDent"].get("When") == ["Hit"], "the dent must run When Hit")
+    need(fx["WatchBannerWave"].get("Clips") == ["Loop"], "the banner plays the clip Loop")
+    need(fx["LightningTrapBolt"].get("Mesh") == ["SpellBolt"], "the lightning trap bolt uses the bolt mesh")
+    need(fx["CannonMuzzleFlash"].get("Match") == ["Cannon"] and fx["CannonSmokeRing"].get("Match") == ["Cannon"],
+         "the muzzle effects belong to the cannon")
+    need(fx["SpikeShootDust"].get("System") == ["RoomAmbHitDust"], "the spike dust is RoomAmbHitDust")
+    need(fx["RuneDoorCracks"].get("Match") == ["DoorRuned"], "the cracks belong to the rune door")
+    need(fx["SecretDoorOpenGlow"].get("System") == ["RoomAmbRevealGlow"], "the secret door opens with the reveal glow")
+    for name in ("WaveSurgeLight", "WaveSurgeShockwave", "WaveSurgeShake", "WaveSurgeSound"):
+        need(fx[name].get("Match") == ["portalWaveRoom"], "%s must be limited to the wave portal" % name)
+    need(any(e.get("Reduced") == ["yes"] for e in fx.values()), "no effect in the mode reduced")
+    for e in fx.values():
+        system = e.get("System", [None])[0]
+        if system is not None:
+            need(system in systems, "%s: unknown particle system %s" % (e["Name"][0], system))
 
-# --- new particle systems and sounds with CREDITS
-for system in ("RoomAmbHeartHitBurst", "RoomAmbWaveRumble", "RoomAmbWaveSurgeLight", "RoomAmbWaveShockRing",
-               "RoomAmbCryptEarth", "RoomAmbCryptClods", "RoomAmbCryptSpirit", "RoomAmbTortureFlash",
-               "RoomAmbTortureLinks", "RoomAmbCannonMuzzle", "RoomAmbCannonSmokeRing", "RoomAmbDoorRuneCracks",
-               "RoomAmbDoorRuneFlicker", "RoomAmbHandCastSpark"):
-    need(systems.get(system) == "RoomAmbienceFixEffects.particle", "particle system %s missing" % system)
+    # --- new particle systems and sounds with CREDITS
+    for system in ("RoomAmbHeartHitBurst", "RoomAmbWaveRumble", "RoomAmbWaveSurgeLight", "RoomAmbWaveShockRing",
+                   "RoomAmbCryptEarth", "RoomAmbCryptClods", "RoomAmbCryptSpirit", "RoomAmbTortureFlash",
+                   "RoomAmbTortureLinks", "RoomAmbCannonMuzzle", "RoomAmbCannonSmokeRing", "RoomAmbDoorRuneCracks",
+                   "RoomAmbDoorRuneFlicker", "RoomAmbHandCastSpark"):
+        need(systems.get(system) == "RoomAmbienceFixEffects.particle", "particle system %s missing" % system)
 for family, name in (("Prison/Clang", "FxPrisonClang01"), ("Torture/Shackles", "FxTortureShackles01"),
                      ("Crypt/Raise", "FxCryptRaise01"), ("WavePortal/Surge", "FxWavePortalSurge01"),
                      ("Heart/Hit", "FxHeartHit01")):
-    path = os.path.join(ROOT, "sounds", "Spatial", "Rooms", *family.split("/")) + os.sep + name + ".ogg"
-    need(os.path.exists(path) and os.path.getsize(path) > 1000, "sound %s missing" % family)
+    if missing_content:
+        continue
     need("sounds/Spatial/Rooms/%s/%s.ogg" % (family, name) in credits, "CREDITS entry for %s missing" % name)
+    # The sound of the public tree or of a content or room package
+    path = content_packages.data_file(ROOT, "sounds/Spatial/Rooms/%s/%s.ogg" % (family, name))
+    need(path is not None and os.path.getsize(path) > 1000, "sound %s missing" % family)
     need(any(e.get("Family") == ["Rooms/" + family] for e in fx.values()), "no effect plays Rooms/%s" % family)
-need(re.search(r"Real recording", credits[credits.index("FxHeartHit01"):credits.index("FxHeartHit01") + 400]) is not None,
-     "the new sounds must be marked as real recordings in CREDITS")
+if not missing_content:
+    need(re.search(r"Real recording", credits[credits.index("FxHeartHit01"):credits.index("FxHeartHit01") + 400]) is not None,
+         "the new sounds must be marked as real recordings in CREDITS")
 generator = read("tools", "gen_room_effect_sounds.py")
 for function in ("prison_clang", "torture_shackles", "crypt_raise", "wave_portal_surge", "heart_hit"):
     need("def %s(" % function in generator, "tools/gen_room_effect_sounds.py lacks %s" % function)
 
+content_packages.unchecked("check_effects_gaps", missing_content)
 if problems:
     for problem in problems:
         print("PROBLEM:", problem)

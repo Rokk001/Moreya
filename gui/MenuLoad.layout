@@ -4,107 +4,57 @@
     <Window type="DefaultWindow" name="Root" >
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="MaxSize" value="{{1,0},{1,0}}" />
-        <!-- Iron border of the chosen menu sheet around the whole screen. -->
-        <Window type="OD/ScreenBorder" name="ScreenBorder" >
+<!--#@own 1-->
             <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
-        </Window>
+<!--#@own 2-->
         <Window type="OD/StaticText" name="LoadingText" >
-            <Property name="Area" value="{{0.5,-212},{0.5,-300},{0.5,212},{0.5,-252}}" />
+<!--#@own 3-->
             <Property name="Text" value="Loading..." />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
-            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+<!--#@own 4-->
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticImage" name="WelcomeBanner" >
-            <Property name="Visible" value="False" />
+<!--#@own 5-->
             <Property name="Area" value="{{0.5,-320},{0,52},{0.5,320},{0,191}}" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="VersionText" >
-            <Property name="Area" value="{{0,28},{1,-50},{0,228},{1,-28}}" />
+<!--#@own 6-->
             <Property name="Text" value="undefined" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <!-- The load screen of the chosen menu sheet: one framed panel on the right with the four filter entries, the list
-             and Delete, Back and Confirm. The panel picture paints the frame, the list inset and the empty plank rows; the
-             controls sit at the places the sheet shows them (offsets measured from the panel, 424x496 design pixels). -->
-        <Window type="OD/MenuSelectionWindow" name="LevelWindowFrame" >
+<!--#@own 7-->
             <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
             <Property name="Text" value="Please choose a saved game..." />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="SizingEnabled" value="False" />
-            <Property name="DragMovingEnabled" value="False" />
+<!--#@own 8-->
             <Property name="MousePassThroughEnabled" value="True" />
-            <Window type="OD/StaticImage" name="LoadPanel" >
-                <Property name="Area" value="{{0.5,-212},{0.5,-248},{0.5,212},{0.5,248}}" />
-                <Property name="Image" value="ODMenuTemplate/LoadPanel" />
+<!--#@own 9-->
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
+<!--#@own 10-->
                 <Property name="MousePassThroughEnabled" value="True" />
-            </Window>
-            <Window type="DefaultWindow" name="KindFilter" >
-                <Property name="Area" value="{{0.5,-191.5},{0.5,-202.6},{0.5,196},{0.5,-159}}" />
-                <Property name="MousePassThroughEnabled" value="True" />
-                <Window type="OD/MenuFilterButton" name="FilterCampaign" >
-                    <Property name="Area" value="{{0,0},{0,0},{0.246,0},{1,0}}" />
-                    <Property name="Font" value="MedievalSharp-8" />
-                    <Property name="Text" value="Campaign" />
-                    <Property name="GroupID" value="1" />
-                </Window>
-                <Window type="OD/MenuFilterButton" name="FilterSkirmish" >
-                    <Property name="Area" value="{{0.2513,0},{0,0},{0.4973,0},{1,0}}" />
-                    <Property name="Font" value="MedievalSharp-8" />
-                    <Property name="Text" value="Skirmish" />
-                    <Property name="GroupID" value="1" />
-                </Window>
-                <Window type="OD/MenuFilterButton" name="FilterSandbox" >
-                    <Property name="Area" value="{{0.5027,0},{0,0},{0.7487,0},{1,0}}" />
-                    <Property name="Font" value="MedievalSharp-8" />
-                    <Property name="Text" value="Sandbox" />
-                    <Property name="GroupID" value="1" />
-                </Window>
-                <Window type="OD/MenuFilterButton" name="FilterReplays" >
-                    <Property name="Area" value="{{0.754,0},{0,0},{1,0},{1,0}}" />
-                    <Property name="Font" value="MedievalSharp-8" />
-                    <Property name="Text" value="Replays" />
-                    <Property name="GroupID" value="1" />
-                </Window>
-            </Window>
-            <Window type="OD/LoadListbox" name="SaveGameSelect" >
-                <Property name="Area" value="{{0.5,-180},{0.5,-137.9},{0.5,185.1},{0.5,127}}" />
-                <Property name="ForceVertScrollbar" value="False" />
-                <Property name="Sort" value="False" />
+<!--#@own 11-->
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
-                <Property name="LookNFeel" value="OD/MenuDescription" />
-                <Property name="VertScrollbar" value="True" />
-                <Property name="Area" value="{{0.5,-212},{0.5,252},{0.5,212},{0.5,318}}" />
+<!--#@own 12-->
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
-                <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+<!--#@own 13-->
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
-            <Window type="OD/MenuCompactButton" name="DeleteButton" >
-                <Property name="Area" value="{{0.5,-188.3},{0.5,153.3},{0.5,-69.2},{0.5,201.9}}" />
-                <Property name="Text" value="Delete" />
-                <Property name="Font" value="MedievalSharp-12" />
+<!--#@own 14-->
             </Window>
-            <Window type="OD/MenuCompactButton" name="BackButton" >
-                <Property name="Area" value="{{0.5,-58.9},{0.5,153.3},{0.5,55.7},{0.5,201.9}}" />
-                <Property name="Text" value="Back" />
-                <Property name="Font" value="MedievalSharp-12" />
+<!--#@own 15-->
             </Window>
-            <Window type="OD/MenuCompactButton" name="LaunchButton" >
-                <Property name="Area" value="{{0.5,66},{0.5,153.3},{0.5,192.1},{0.5,201.9}}" />
-                <Property name="Text" value="Confirm" />
-                <Property name="Font" value="MedievalSharp-12" />
+<!--#@own 16-->
             </Window>
         </Window>
     </Window>

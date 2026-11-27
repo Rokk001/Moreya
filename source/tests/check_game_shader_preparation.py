@@ -13,11 +13,17 @@ Owner check of build 61 (decisions 1072 and 1079): frames of 368 ms and 780 ms d
 3. The contour copy of a creature material for a seat colour and its brighter copy were made the first time a creature
    of that seat appeared or the hand was over it (18:43:59 Kobold green, 18:45:02 and 18:45:24 Roach red in the owner
    log). The first creature with a material now makes the copies for every seat.
+
+The material scripts are read from the public tree and from the content packages (scripts/content_packages.py); without
+the content a prefix whose materials all moved into a content package is named as not checked.
 """
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
 def read(path):
@@ -67,12 +73,16 @@ generated = function_body(render, 'void RenderManager::prepareGeneratedShaders(O
 assert generated.index('material.load()') < generated.index('createShaderBasedTechnique(material, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme)') \
     < generated.index('validateMaterial(scheme, material)')
 material_names = set()
-for path in (repo / 'materials').rglob('*.material'):
+# the material scripts of the public tree and of the content and room packages
+for path in content_packages.data_glob(repo, 'materials', '*.material', recursive=True):
     material_names.update(re.findall(r'^material\s+(\S+)', path.read_text(encoding='utf-8', errors='replace'), re.M))
 for array in ('GAME_OVERLAY_MATERIAL_PREFIXES', 'GAME_EFFECT_MATERIAL_PREFIXES'):
     prefixes = re.findall(r'"([^"]+)"', render.split(array + '[] = {')[1].split('}')[0])
     assert prefixes, array
     for prefix in prefixes:
+        if not content_packages.has_content(repo) and not any(name.startswith(prefix) for name in material_names):
+            content_packages.unchecked('check_game_shader_preparation', ['materials of ' + prefix])
+            continue
         assert any(name.startswith(prefix) for name in material_names), 'no material starts with ' + prefix
 # The emotes and badges are overlay materials, the others are drawn in the scene
 assert set(re.findall(r'"([^"]+)"', render.split('GAME_OVERLAY_MATERIAL_PREFIXES[] = {')[1].split('}')[0])) == \

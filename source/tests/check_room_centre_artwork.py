@@ -1,4 +1,9 @@
-"""Check the fixed room manager artwork inventory, native sizes, asset credits and the real painted detail of the room icons."""
+"""Check the fixed room manager artwork inventory, native sizes, asset credits and the real painted detail of the room icons.
+
+The artwork lives in a content package (found through scripts/content_packages.py) and its CREDITS rows stand in the
+CREDITS of the content repository under its licence (All rights reserved), as for the room packages
+(room_packages.licence_ok). Without the content the check names the artwork as not checked.
+"""
 
 from pathlib import Path
 import re
@@ -8,6 +13,9 @@ from PIL import Image, ImageChops, ImageStat
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
 EXPECTED_ASSETS = 31
 ICONS = (
     'alchemy-lab', 'arena', 'casino', 'crypt', 'dormitory', 'ghost-room',
@@ -45,8 +53,9 @@ PLACEHOLDER_ICONS = (
 
 
 def check_asset(relative, size, credits):
-    """Require a readable image at its fixed size and its own complete credit row."""
-    path = ROOT / relative
+    """Require a readable image at its fixed size and its own complete credit row (public licence GPLv3+, or All rights
+    reserved for a row of the CREDITS of the content repository)."""
+    path = content_packages.resolve(ROOT, relative)
     if not path.is_file():
         raise AssertionError('missing ' + relative)
     with Image.open(path) as picture:
@@ -55,8 +64,9 @@ def check_asset(relative, size, credits):
         picture.load()
     rows = [row for row in credits if row.split() and row.split()[0] == relative]
     assert len(rows) == 1, relative + ': exactly one CREDITS row'
+    licence = r'GPLv3\+' if rows[0] not in room_packages.content_credit_rows(ROOT) else r'All rights reserved'
     assert re.fullmatch(
-        re.escape(relative) + r'\s+AI-generated with Codex\s+GPLv3\+\s+'
+        re.escape(relative) + r'\s+AI-generated with Codex\s+' + licence + r'\s+'
         r'Painted for this project \(\d{4}-\d{2}-\d{2}\)', rows[0]
     ), relative + ': author, licence and source'
 
@@ -99,7 +109,7 @@ def check_icon_detail(relative):
 
     A listed placeholder icon must still fail the measure; it is reported as PLACEHOLDER and returns without failing.
     """
-    with Image.open(ROOT / relative) as picture:
+    with Image.open(content_packages.resolve(ROOT, relative)) as picture:
         picture = picture.convert('RGB')
     for size in CONTROL_SIZES:
         small = picture.resize((size, size), Image.LANCZOS)
@@ -117,14 +127,19 @@ def check_icon_detail(relative):
 
 
 def main():
-    """Check all 31 required files without hiding missing artwork behind passing icons."""
-    credits = (ROOT / 'CREDITS').read_text(encoding='utf-8').splitlines()
+    """Check all 31 required files without hiding missing artwork behind passing icons (artwork that is missing because
+    the content is not present is named as not checked)."""
+    credits = room_packages.credits_text(ROOT).splitlines()
     inventory = [('gui/RoomCentreIcons/' + name + '.png', (256, 256)) for name in ICONS]
     inventory.extend(('gui/RoomCentreArtwork/' + name, size) for name, size in ARTWORK)
     assert len(inventory) == EXPECTED_ASSETS, 'complete fixed artwork inventory'
     assert set(PLACEHOLDER_ICONS) <= set(ICONS), 'every placeholder is a room icon'
     failed = 0
+    not_checked = []
     for relative, size in inventory:
+        if content_packages.data_file(ROOT, relative) is None and not content_packages.has_content(ROOT):
+            not_checked.append(relative)
+            continue
         try:
             check_asset(relative, size, credits)
             print('PASS ' + relative)
@@ -133,6 +148,7 @@ def main():
         except (AssertionError, OSError) as error:
             print('FAIL ' + str(error))
             failed += 1
+    content_packages.unchecked('check_room_centre_artwork', not_checked)
     print('DONE total=%d red=%d placeholders=%d' % (EXPECTED_ASSETS, failed, len(PLACEHOLDER_ICONS)))
     return 1 if failed else 0
 

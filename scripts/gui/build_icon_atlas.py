@@ -14,6 +14,19 @@ import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(ROOT / 'scripts'))
 from assets_src import assets_src_dir  # noqa: E402
+
+import os  # noqa: E402
+
+
+# The skin and icon atlases live in the content packages (gui-skin, core-gui), not in the public gui folder.
+def content_gui(package):
+    """gui folder of a content package; MOREYA_CONTENT_DIR must name the packages folder."""
+    base = os.environ.get("MOREYA_CONTENT_DIR")
+    if not base:
+        raise SystemExit("MOREYA_CONTENT_DIR must point to the content packages folder")
+    return Path(base) / package / "gui"
+
+
 SOURCE = assets_src_dir(ROOT) / "gui/icons"
 SKIN = assets_src_dir(ROOT) / "gui/skin"
 NAVIGATION_RECTS = {
@@ -136,14 +149,14 @@ def main():
             tile.save(tile_path)
         atlas.paste(tile, (int(attrs["xPos"]), int(attrs["yPos"])))
         entries.append(attrs)
-    atlas.save(ROOT / "gui/ODIcons.png")
-    write_imageset(ROOT / "gui/ODIcons.imageset", "ODIcons.png", "OpenDungeonsIcons", entries)
+    atlas.save(content_gui("gui-skin") / "ODIcons.png")
+    write_imageset(content_gui("gui-skin") / "ODIcons.imageset", "ODIcons.png", "OpenDungeonsIcons", entries)
 
     navigation = Image.new("RGBA", (2048, 2048))
     ring = Image.open(SKIN / "glyph-3-3.png").convert("RGBA")
     ring = ring.crop(ring.getbbox())
     # Preserve the integrated ring painting and its matching interaction patches.
-    painted_navigation = Image.open(ROOT / "gui/ODNavigation.png").convert("RGBA")
+    painted_navigation = Image.open(content_gui("core-gui") / "ODNavigation.png").convert("RGBA")
     sprites = {"MiniMapRim": painted_navigation.crop((0, 0, 768, 768))}
     source_names = ("ManaBadge", "GoldBadge", "NavHelp", "NavSell", "NavOptions", "MapZoom", "MiniMapNorth")
     for index, name in enumerate(source_names):
@@ -170,8 +183,8 @@ def main():
         sprite.save(SOURCE / "navigation" / (name + ".png"))
         navigation.paste(sprite, (x, y))
         nav_entries.append({"name": name, "xPos": str(x), "yPos": str(y), "width": str(width), "height": str(height)})
-    navigation.save(ROOT / "gui/ODNavigation.png")
-    write_imageset(ROOT / "gui/ODNavigation.imageset", "ODNavigation.png", "OpenDungeonsNavigation", nav_entries)
+    navigation.save(content_gui("core-gui") / "ODNavigation.png")
+    write_imageset(content_gui("core-gui") / "ODNavigation.imageset", "ODNavigation.png", "OpenDungeonsNavigation", nav_entries)
     print(f"Painted icons: {len(slots)} slots at {atlas_width}x{atlas_height}; navigation: {len(sprites)} sprites at 2048x2048")
 
 

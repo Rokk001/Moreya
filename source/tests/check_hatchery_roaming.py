@@ -2,17 +2,26 @@
 # Checks the free roaming of the hatchery animals: hens, chicks and the rooster walk to free points anywhere in the
 # room (no step from tile to tile), the hens do not gather at the calling rooster, and the rooster sits on a roof only
 # to crow (jumps up for the crow after a random time, jumps down again afterwards).
+# config/rooms.cfg is a mixed table read with its own rows from the content (scripts/content_packages.py); without the
+# content its keys are named as not checked, the absence of old keys is checked on its public rows.
 import re
+import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+#: True when the content packages are present (the own rows of config/rooms.cfg come from them)
+CONTENT = content_packages.has_content(root)
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 chicken_h = (root / 'source/entities/ChickenEntity.h').read_text()
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 room_h = (root / 'source/rooms/RoomHatchery.h').read_text()
 rooster_h = (root / 'source/rooms/HatcheryRooster.h').read_text()
 rooster_cpp = (root / 'source/rooms/HatcheryRooster.cpp').read_text()
-config = (root / 'config/rooms.cfg').read_text()
+config = content_packages.read_text(root, 'config/rooms.cfg')
+if not CONTENT:
+    content_packages.unchecked('check_hatchery_roaming', ['crow and wander keys of config/rooms.cfg'])
 
 
 def body(text, signature):
@@ -79,7 +88,8 @@ assert hen_follow == ['                hen->setFollowTarget(it->mStand, EGG_FOLL
 assert 'perch' not in rooster_h and 'perch' not in rooster_cpp and 'RoosterMood::perch' not in room
 assert 'Perch' not in rooster_h and 'RoosterPerch' not in config and 'RoosterPerch' not in room
 assert 'RoosterMood::crow' in rooster_cpp and 'mSinceCrow >= context.mCrowInterval' in rooster_cpp
-assert 'HatcheryRoosterCrowMin' in config and 'HatcheryRoosterCrowMax' in config
+if CONTENT:
+    assert 'HatcheryRoosterCrowMin' in config and 'HatcheryRoosterCrowMax' in config
 begin = body(room, 'void RoomHatchery::beginRoosterMood(')
 assert 'bool roofMood = (plan.mMood == RoosterMood::crow);' in begin and 'climbDown(rooster)' in begin
 assert 'if(roostOnRoof(rooster, ChickenPose::crow))' in room, 'the crow pose only where he crows, not on the way'
@@ -93,7 +103,10 @@ assert room.count('roostOnRoof(rooster') == 1, 'the crow is the only reason for 
 # The numbers are settings with a comment in the config
 for key in ('HatcheryWanderPausePercent', 'HatcheryWanderReach', 'HatcheryWanderMinLeg', 'HatcheryWanderBend',
             'HatcheryWanderEdge', 'HatcheryWanderNestClearance', 'HatcheryWanderAttempts'):
-    assert re.search(r'^# ' + key + r'\s', config, re.M) and re.search(r'^\s+' + key + r'\s', config, re.M), key
+    if CONTENT:
+        assert re.search(r'^# ' + key + r'\s', config, re.M) and re.search(r'^\s+' + key + r'\s', config, re.M), key
     assert key in chicken or key in room, key
-assert '"HatcheryWanderEdge", 0.35' in room and re.search(r'HatcheryWanderEdge\s+0\.35', config)
+assert '"HatcheryWanderEdge", 0.35' in room
+if CONTENT:
+    assert re.search(r'HatcheryWanderEdge\s+0\.35', config)
 print('hatchery roaming checks passed')

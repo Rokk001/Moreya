@@ -12,15 +12,21 @@ Root causes (found by reading the code):
 5  Skeletons at crypt graves: CryptRaised and the revival light fired for any creature that appeared on a crypt tile, and
    Raise Dead could take a body that lay on a crypt tile. The event is only raised for CryptSpawnClass (Lich), the revival
    light follows that event, a body on a crypt tile cannot be taken for Raise Dead, and the lich stretches on rising.
+The room ambience effects lie in the content package core-config (scripts/content_packages.py); without the content
+they are named as not checked and the code is still checked.
 """
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 
 
+# The text of a repository file or of a game data file of the public tree or a content package, with LF line ends.
 def read(path):
-    return (repo / path).read_text(encoding='utf-8').replace('\r\n', '\n')
+    return content_packages.read_text(repo, path).replace('\r\n', '\n')
 
 
 def effect_names(text):
@@ -32,26 +38,8 @@ def effect(text, name):
     return text[start:text.index('[/Effect]', start)]
 
 
-clips = read('config/roomAmbienceWakeClips.cfg')
-care = read('config/roomAmbienceCare.cfg')
 crypt = read('source/rooms/RoomCrypt.cpp')
 rooms = read('config/rooms.cfg')
-
-# 1 nothing of the crypt moves by itself
-assert 'CryptSleepClip' not in effect_names(clips)
-assert 'CryptBonesRattle' not in effect_names(care)
-for text in (clips, care):
-    for name in effect_names(text):
-        body = effect(text, name)
-        if re.search(r'Match\s+.*(Coffin|KnightStatue)', body):
-            assert 'Kind        Motion' not in body, name
-            assert not ('Kind        Clip' in body and 'When        Always' in body), name
-wake = effect(clips, 'CryptWakeClip')
-assert 'Event       CryptRaised' in wake and 'Clips       Wake' in wake and 'Loop' not in wake
-
-# 2 no moving mound models on the crypt floor
-assert 'CryptGraveMound' not in effect_names(care)
-assert 'GraveMound' not in care
 
 # 3 only the standing statue
 stat = set(re.findall(r'new BuildingObject\(getGameMap\(\), \*this, "(Knight[A-Za-z0-9]*Statue[A-Za-z0-9]*|KnightStatue[A-Za-z0-9]*)"', crypt))
@@ -75,12 +63,41 @@ assert re.search(r'CryptSpawnClass\s+Lich', rooms) and re.search(r'PrisonSpawnCl
 ambience = read('source/render/RoomAmbience.cpp')
 raised = ambience[ambience.index('A creature of the class the crypt raises'):ambience.index('change.mEvent = "CryptRaised";')]
 assert 'getClassName()' in raised and '"CryptSpawnClass"' in raised
-assert 'Event       CryptRaised' in effect(care, 'CryptRevivalLight')
-assert 'CreatureArrived' not in effect(care, 'CryptRevivalLight')
 take = read('source/entities/Creature.cpp')
 take = take[take.index('bool Creature::takeCorpse()'):take.index('bool Creature::reviveFromCorpse')]
 assert 'RoomType::crypt' in take and take.index('RoomType::crypt') < take.index('mDeathCounter = std::numeric_limits')
-lich = effect(clips, 'CryptRaiseLichClip')
-assert 'Kind        CreatureClip' in lich and 'Event       CryptRaised' in lich
-assert b'Stretch' in (repo / 'models/lich.skeleton').read_bytes()
+# The lich skeleton is game data of the content package creatures: without the content it is named as not checked.
+if content_packages.data_file(repo, 'models/lich.skeleton') is None and not content_packages.has_content(repo):
+    content_packages.unchecked('check_crypt_findings_x1', ['models/lich.skeleton (Stretch)'])
+else:
+    assert b'Stretch' in content_packages.resolve(repo, 'models/lich.skeleton').read_bytes()
+
+# 1, 2 and the effects of 5: the room ambience effects lie in the content package core-config
+if not content_packages.has_content(repo):
+    content_packages.unchecked('check_crypt_findings_x1', ['config/roomAmbienceWakeClips.cfg', 'config/roomAmbienceCare.cfg'])
+else:
+    clips = read('config/roomAmbienceWakeClips.cfg')
+    care = read('config/roomAmbienceCare.cfg')
+
+    # 1 nothing of the crypt moves by itself
+    assert 'CryptSleepClip' not in effect_names(clips)
+    assert 'CryptBonesRattle' not in effect_names(care)
+    for text in (clips, care):
+        for name in effect_names(text):
+            body = effect(text, name)
+            if re.search(r'Match\s+.*(Coffin|KnightStatue)', body):
+                assert 'Kind        Motion' not in body, name
+                assert not ('Kind        Clip' in body and 'When        Always' in body), name
+    wake = effect(clips, 'CryptWakeClip')
+    assert 'Event       CryptRaised' in wake and 'Clips       Wake' in wake and 'Loop' not in wake
+
+    # 2 no moving mound models on the crypt floor
+    assert 'CryptGraveMound' not in effect_names(care)
+    assert 'GraveMound' not in care
+
+    # 5 the revival light and the rising clip of the lich follow the event of the liches
+    assert 'Event       CryptRaised' in effect(care, 'CryptRevivalLight')
+    assert 'CreatureArrived' not in effect(care, 'CryptRevivalLight')
+    lich = effect(clips, 'CryptRaiseLichClip')
+    assert 'Kind        CreatureClip' in lich and 'Event       CryptRaised' in lich
 print('ok')

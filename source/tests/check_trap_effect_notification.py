@@ -7,6 +7,8 @@ Checks that the trap notification keeps its position before timeLimit (campaign 
 so existing values stay unchanged), that packet fields are written and read in the same order, that the
 trap effect kinds only grew at the end, and that every event the client raises has a handler in the
 config and every event of the config is raised.
+The config lies in the content packages (scripts/content_packages.py); without the content the code part is checked
+and the config part is named as not checked.
 """
 
 import os
@@ -14,11 +16,20 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
 
 
 def read(*parts):
+    """Returns the text of a file below the repository root."""
     with open(os.path.join(ROOT, *parts), encoding="utf-8") as handle:
         return handle.read()
+
+
+def content(*parts):
+    """Returns the text of a game data file of the public tree or of a content package, or None without the content."""
+    path = content_packages.data_file(ROOT, "/".join(parts))
+    return None if path is None else path.read_text(encoding="utf-8")
 
 
 problems = []
@@ -67,10 +78,13 @@ door_entity = read("source", "entities", "DoorEntity.cpp")
 raised = set(re.findall(r'triggerEvent\("((?:Trap|Door)\w+)"', ambience + door_entity))
 # Events the scan of the entities raises (built, sold)
 raised |= set(re.findall(r'mEvent = "(Trap\w+)"', ambience))
-config = read("config", "roomAmbienceTraps.cfg")
-configured = set(re.findall(r"^\s*Event\s+((?:Trap|Door)\w+)", config, re.M))
-if raised != configured:
-    problems.append("events raised %s, events configured %s" % (sorted(raised), sorted(configured)))
+config = content("config", "roomAmbienceTraps.cfg")
+if config is None:
+    content_packages.unchecked("check_trap_effect_notification", ["config/roomAmbienceTraps.cfg"])
+else:
+    configured = set(re.findall(r"^\s*Event\s+((?:Trap|Door)\w+)", config, re.M))
+    if raised != configured:
+        problems.append("events raised %s, events configured %s" % (sorted(raised), sorted(configured)))
 
 # Reload state: sent once per change (not per turn), only for traps, and used by the client
 doup = trap_cpp[trap_cpp.index("void Trap::doUpkeep"):]
@@ -85,7 +99,7 @@ if "case 4:" not in ambience or "case 5:" not in ambience or "mReloadingUntil" n
 for word in ("AmbienceWhen::reloading", "AmbienceWhen::ready"):
     if word not in ambience:
         problems.append("the client does not use " + word)
-if "When        Reloading" not in config or "When        Ready" not in config:
+if config is not None and ("When        Reloading" not in config or "When        Ready" not in config):
     problems.append("the config has no effects for reloading and ready")
 
 door = read("source", "traps", "TrapDoor.cpp")

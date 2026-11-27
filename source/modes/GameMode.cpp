@@ -85,6 +85,7 @@
 #include "traps/Trap.h"
 #include "traps/TrapManager.h"
 #include "traps/TrapType.h"
+#include "utils/ContentPackages.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -3428,8 +3429,9 @@ bool GameMode::onSandboxNextRealm(const CEGUI::EventArgs&)
         return true;
 
     // The main menu starts the level once this mode has been left and the running server and client have been stopped
-    ODFrameListener::getSingleton().setPendingRestartLevel(ResourceManager::getSingleton().getGameDataPath()
-        + "levels/" + mSandboxNextLevel);
+    // The next realm may lie in a content package (ContentPackages::resolveFile)
+    ODFrameListener::getSingleton().setPendingRestartLevel(ContentPackages::resolveFile(
+        ResourceManager::getSingleton().getGameDataPath() + "levels/" + mSandboxNextLevel));
     mModeManager->requestMode(AbstractModeManager::MENU_MAIN);
     return true;
 }

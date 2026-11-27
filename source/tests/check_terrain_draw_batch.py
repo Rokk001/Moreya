@@ -10,8 +10,11 @@ from pathlib import Path
 import math
 import re
 import runpy
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 
 
 # Extract a complete C++ body, including nested conditions, for lifecycle ordering checks.
@@ -97,12 +100,18 @@ def check_geometry():
     # Dirt's shadow transform is world-to-shadow, so a new batch world matrix cannot change it.
     material = (ROOT / 'materials/scripts/Dirt.material').read_text()
     assert 'param_named_auto lightMatrix texture_viewproj_matrix 0' in material
-    tileset = (ROOT / 'config/tilesets.cfg').read_text().split('[dirtFull]', 1)[1].split('[/dirtFull]', 1)[0]
+    # The earth entries of [dirtFull] are own rows of config/tilesets.cfg (content package core-config)
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_terrain_draw_batch', ['vertex transforms of the [dirtFull] earth meshes '
+                                                                '(own rows of config/tilesets.cfg)'])
+        return 0
+    tileset = content_packages.read_text(ROOT, 'config/tilesets.cfg').split('[dirtFull]', 1)[1].split('[/dirtFull]', 1)[0]
     entries = re.findall(r'(Dirt_[^\s]+\.mesh)\s+Dirt\s+[0-9.-]+\s+[0-9.-]+\s+[0-9.-]+', tileset)
     assert entries
     checked = 0
     for name in sorted(set(entries)):
-        for point in earth['positions'](ROOT / 'models' / name):
+        # The earth meshes lie in the terrain content package since CS10
+        for point in earth['positions'](content_packages.resolve(ROOT, 'models/' + name)):
             for x, y, degrees in [(-7, 3, 0), (0, 0, 90), (12, -4, 180), (3, 5, 270)]:
                 angle = math.radians(degrees)
                 c, s = math.cos(angle), math.sin(angle)
@@ -115,8 +124,12 @@ def check_geometry():
                 assert border['deform'](original, shader, shared) == border['deform'](baked, shader, shared)
                 # Identical world position also preserves the active worldTileUV input.
                 checked += 1
-    # Fixed once from the committed earth meshes: 10,394 vertices, four transforms each.
-    assert checked == 41576
+    # Fixed once from the committed earth meshes: four transforms per vertex; 10,368 vertices before (10,394 before the calmer
+    # rock wall meshes of CS10, approved by Mario). 11,798 vertices since the side faces that close the gaps between
+    # neighbouring wall tiles are back (Mario 2026-11-26). 5,160 vertices since the walls are boxes with upright faces that
+    # meet in clean right angles (Mario 2026-11-26). 6,196 vertices since the outer corner edges of those boxes are slightly
+    # rounded (Mario 2026-11-27).
+    assert checked == 24784
     return checked
 
 

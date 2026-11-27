@@ -7,6 +7,11 @@ No compiler is needed. Checks the preserved network tail before the appended inf
 notifications (trapEffect still sits right before timeLimit), that the new kinds are wired from the config
 to the code, that the shake is only applied while a frame is rendered and taken away again, that every
 texture exists with a material and a CREDITS entry, and that every event of the config is raised.
+
+The spell configs, material, particle script and textures are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages, their CREDITS rows from
+the CREDITS of the public tree and of the content repository. Without the content the data part is named as not
+checked; the code is checked.
 """
 
 import os
@@ -14,11 +19,32 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The game data files the check reads; they lie in the public tree or in a content package
+DATA_FILES = ("config/roomAmbienceSpells.cfg", "materials/scripts/RoomAmbienceSpells.material",
+              "particles/RoomAmbienceSpells.particle", "config/roomAmbience.cfg")
 
 
 def read(*parts):
-    with open(os.path.join(ROOT, *parts), encoding="utf-8", errors="replace") as handle:
+    """Returns the text of a file below the repository root (game data from the public tree or a content package)."""
+    with open(str(content_packages.resolve(ROOT, "/".join(parts))), encoding="utf-8", errors="replace") as handle:
         return handle.read()
+
+
+def data_present():
+    """True when the game data can be checked: all files are found or the content is present (then a missing one
+    fails as before); else names the data part as not checked."""
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    if not missing or content_packages.has_content(ROOT):
+        return True
+    content_packages.unchecked("check_spell_tier_c", missing + ["the spell textures and their CREDITS rows"])
+    return False
+
+
+DATA = data_present()
 
 
 problems = []
@@ -77,48 +103,52 @@ if end.index("POSSESSION_END_EVENT") > end.index("setPossessedCreatureName"):
     problems.append("the effect must be raised before the possessed name is cleared")
 
 # 5. Config events, textures, materials, credits
-cfg = read("config", "roomAmbienceSpells.cfg")
+cfg = read("config", "roomAmbienceSpells.cfg") if DATA else ""
 events = set(re.findall(r"^\s*Event\s+(\S+)", cfg, re.M))
 raised = set("SpellFx" + name for name in re.findall(r'fireSpellEffect\([^;]*?"(\w+)"', "".join(
     read("source", "spells", f) for f in os.listdir(os.path.join(ROOT, "source", "spells")) if f.endswith(".cpp"))))
 raised.add("SpellFxPossessEnd")
 for event in ("SpellFxTremor", "SpellFxExplosion", "SpellFxInferno", "SpellFxLightning", "SpellFxPossessEnd"):
-    if event not in events:
+    if DATA and event not in events:
         problems.append("config has no effect for %s" % event)
     if event not in raised:
         problems.append("nothing raises %s" % event)
-for kind in ("Shake", "Mark"):
-    if not re.search(r"^\s*Kind\s+%s\s*$" % kind, cfg, re.M):
-        problems.append("no %s effect in the spell config" % kind)
+if DATA:
+    for kind in ("Shake", "Mark"):
+        if not re.search(r"^\s*Kind\s+%s\s*$" % kind, cfg, re.M):
+            problems.append("no %s effect in the spell config" % kind)
 
-materials = read("materials", "scripts", "RoomAmbienceSpells.material")
-credits = read("CREDITS")
-particles = read("particles", "RoomAmbienceSpells.particle")
-textures = ("RoomAmbRing", "RoomAmbRingRunes", "RoomAmbRingDust", "RoomAmbMarkScorch", "RoomAmbMarkCracks", "RoomAmbMarkBolt")
-for name in textures:
-    if not os.path.exists(os.path.join(ROOT, "materials", "textures", name + ".png")):
-        problems.append("texture %s.png is missing" % name)
-    if not re.search(r"material %s\b" % name, materials) or ("texture %s.png" % name) not in materials:
-        problems.append("material %s is missing or has another texture" % name)
-    if ("materials/textures/%s.png" % name) not in credits:
-        problems.append("CREDITS has no entry for %s.png" % name)
-    if ("material        %s" % name) not in particles:
-        problems.append("no particle system uses %s" % name)
-if "tools/gen_spell_marks.py" not in credits:
-    problems.append("CREDITS has no entry for tools/gen_spell_marks.py")
-# The ring textures are white where they are transparent: plain "add" ignores the alpha and draws a bright square
-for name in ("RoomAmbRing", "RoomAmbRingRunes"):
-    start = materials.find("material %s\n" % name)
-    block = materials[start:materials.find("\nmaterial ", start + 1)] if start >= 0 else ""
-    if "scene_blend src_alpha one" not in block:
-        problems.append("material %s has to blend with src_alpha one (no bright square)" % name)
+if DATA:
+    materials = read("materials", "scripts", "RoomAmbienceSpells.material")
+    # The CREDITS of the public tree and of the content repository
+    credits = room_packages.credits_text(ROOT)
+    particles = read("particles", "RoomAmbienceSpells.particle")
+    textures = ("RoomAmbRing", "RoomAmbRingRunes", "RoomAmbRingDust", "RoomAmbMarkScorch", "RoomAmbMarkCracks", "RoomAmbMarkBolt")
+    for name in textures:
+        if content_packages.data_file(ROOT, "materials/textures/" + name + ".png") is None:
+            problems.append("texture %s.png is missing" % name)
+        if not re.search(r"material %s\b" % name, materials) or ("texture %s.png" % name) not in materials:
+            problems.append("material %s is missing or has another texture" % name)
+        if ("materials/textures/%s.png" % name) not in credits:
+            problems.append("CREDITS has no entry for %s.png" % name)
+        if ("material        %s" % name) not in particles:
+            problems.append("no particle system uses %s" % name)
+    if "tools/gen_spell_marks.py" not in credits:
+        problems.append("CREDITS has no entry for tools/gen_spell_marks.py")
+    # The ring textures are white where they are transparent: plain "add" ignores the alpha and draws a bright square
+    for name in ("RoomAmbRing", "RoomAmbRingRunes"):
+        start = materials.find("material %s\n" % name)
+        block = materials[start:materials.find("\nmaterial ", start + 1)] if start >= 0 else ""
+        if "scene_blend src_alpha one" not in block:
+            problems.append("material %s has to blend with src_alpha one (no bright square)" % name)
 
 # 6. The limit of one-shot systems is unchanged and the marks have their own limit
-settings = read("config", "roomAmbience.cfg")
-if not re.search(r"^\s*MaxOneShots\s+16\s*$", settings, re.M):
-    problems.append("MaxOneShots is not 16")
-if not re.search(r"^\s*MaxMarks\s+\d+\s*$", settings, re.M):
-    problems.append("MaxMarks is not set")
+if DATA:
+    settings = read("config", "roomAmbience.cfg")
+    if not re.search(r"^\s*MaxOneShots\s+16\s*$", settings, re.M):
+        problems.append("MaxOneShots is not 16")
+    if not re.search(r"^\s*MaxMarks\s+\d+\s*$", settings, re.M):
+        problems.append("MaxMarks is not set")
 
 if problems:
     for problem in problems:

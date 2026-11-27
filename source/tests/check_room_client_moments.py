@@ -7,9 +7,12 @@ Checks that config/roomAmbienceDeferred.cfg is included by config/roomAmbience.c
 meant to have, that no effect name is used twice in the room ambience files, that the files and textures
 named below exist and (for meshes) have a CREDITS line. The generic checks of every config
 file (keys, meshes, particle systems, textures) are in tools/check_room_ambience.py.
+
+The ambience files and the texture live in content packages, the gong in the temple room package (found through
+scripts/content_packages.py). Without the content the check names those parts as not checked and checks the source
+wiring; with the content present a missing file is a problem as before.
 """
 
-import glob
 import os
 import re
 import sys
@@ -17,6 +20,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import room_packages  # noqa: E402
+import content_packages  # noqa: E402
 # Effects the config file must contain
 EXPECTED = ("TempleGongRing", "TempleBellSparks", "ConvertedFlash", "ConvertedRing", "ConvertedSparks", "HeartHurtPulse", "HeartHurtDrops", "HeartLowBeatSound")
 # Files below the repository root that the group brings
@@ -31,36 +35,63 @@ def read(*parts):
         return handle.read()
 
 
-problems = []
+def read_data(*parts):
+    """Returns the text of a game data file (public tree or content package), or None when it is not there."""
+    path = content_packages.data_file(ROOT, "/".join(parts))
+    if path is None:
+        return None
+    with open(str(path), encoding="utf-8", errors="replace") as handle:
+        return handle.read()
 
-if "Include roomAmbienceDeferred.cfg" not in read("config", "roomAmbience.cfg"):
-    problems.append("roomAmbience.cfg does not include roomAmbienceDeferred.cfg")
+
+problems = []
+# Parts that need the content and are not checked because it is not present
+not_checked = []
+with_content = content_packages.has_content(ROOT)
+
+ambience_cfg = read_data("config", "roomAmbience.cfg")
+deferred_cfg = read_data("config", "roomAmbienceDeferred.cfg")
+if (ambience_cfg is None or deferred_cfg is None) and not with_content:
+    not_checked.append("config/roomAmbience.cfg and config/roomAmbienceDeferred.cfg")
+    deferred_cfg = None
+else:
+    # With the content present a missing file fails here as before (read() of the public path)
+    ambience_cfg = ambience_cfg if ambience_cfg is not None else read("config", "roomAmbience.cfg")
+    deferred_cfg = deferred_cfg if deferred_cfg is not None else read("config", "roomAmbienceDeferred.cfg")
+    if "Include roomAmbienceDeferred.cfg" not in ambience_cfg:
+        problems.append("roomAmbience.cfg does not include roomAmbienceDeferred.cfg")
 
 names = []
-for block in re.findall(r"\[Effect\](.*?)\[/Effect\]", read("config", "roomAmbienceDeferred.cfg"), re.S):
+for block in re.findall(r"\[Effect\](.*?)\[/Effect\]", deferred_cfg or "", re.S):
     found = re.search(r"^\s*Name\s+(\S+)", block, re.M)
     if found is None:
         problems.append("an effect without a name in roomAmbienceDeferred.cfg")
     else:
         names.append(found.group(1))
-for name in EXPECTED:
+for name in EXPECTED if deferred_cfg is not None else ():
     if name not in names:
         problems.append("roomAmbienceDeferred.cfg lacks the effect %s" % name)
 
-# An effect name is used once in all room ambience files (the log and the check use it to tell effects apart)
+# An effect name is used once in all room ambience files (the log and the check use it to tell effects apart); the
+# files of the public tree and of the content packages
 seen = {}
-for path in sorted(glob.glob(os.path.join(ROOT, "config", "roomAmbience*.cfg"))):
-    for found in re.finditer(r"^\s*Name\s+(\S+)", open(path, encoding="utf-8", errors="replace").read(), re.M):
-        other = seen.setdefault(found.group(1), os.path.basename(path))
-        if other != os.path.basename(path):
-            problems.append("effect %s is in %s and in %s" % (found.group(1), other, os.path.basename(path)))
+for path in content_packages.data_glob(ROOT, "config", "roomAmbience*.cfg"):
+    for found in re.finditer(r"^\s*Name\s+(\S+)", open(str(path), encoding="utf-8", errors="replace").read(), re.M):
+        other = seen.setdefault(found.group(1), os.path.basename(str(path)))
+        if other != os.path.basename(str(path)):
+            problems.append("effect %s is in %s and in %s" % (found.group(1), other, os.path.basename(str(path))))
 
-# The gong comes from the temple room package: read there when the package is present, not checked without it
+# The gong comes from the temple room package: read there when the package is present, not checked without it; the
+# texture comes from a content package
 for path in FILES:
     if room_packages.is_missing_packaged(ROOT, path):
+        not_checked.append(path)
         continue
-    if room_packages.asset(ROOT, path) is None:
-        problems.append("missing file %s" % path)
+    if content_packages.data_file(ROOT, path) is None:
+        if with_content:
+            problems.append("missing file %s" % path)
+        else:
+            not_checked.append(path)
 
 credits = room_packages.credits_text(ROOT) if room_packages.has_room(ROOT, "Temple") else read("CREDITS")
 MESHES = tuple(mesh for mesh in MESHES if room_packages.has_room(ROOT, "Temple") or "Temple/Gong" not in mesh)
@@ -82,9 +113,10 @@ for needle in ('"TempleHealed"', '"ConvertedFlash"', '"HeartHurt"', '"HeartLowBe
     if needle not in extras:
         problems.append("RoomAmbienceExtras.cpp lacks %s" % needle)
 # The low beat is a sound of the heart hit
-if "Family      Rooms/Heart/Hit" not in read("config", "roomAmbienceDeferred.cfg"):
+if deferred_cfg is not None and "Family      Rooms/Heart/Hit" not in deferred_cfg:
     problems.append("the low beat does not use the sound of the heart hit")
 
+content_packages.unchecked("check_room_client_moments", not_checked)
 if problems:
     for problem in problems:
         print("PROBLEM:", problem)

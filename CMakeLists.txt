@@ -61,7 +61,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 option(OD_ENABLE_WARNINGS "Compile the game with all standard warnings enabled" ON)
 option(OD_TREAT_WARNINGS_AS_ERRORS "Treat any warning seen while compiling as errors." ON)
 option(OD_USE_SFML_WINDOW "Use SFML for window and input handling" OFF)
-# Lobby multiplayer through a separate helper process (docs/development/NETWORK-TRANSPORT.md); off by default
+# Lobby multiplayer through a separate helper process (the design document NETWORK-TRANSPORT.md of the content repository); off by default
 option(OD_NET_HELPER_RELAY "Build the lobby and relay transport through a separate helper process" OFF)
 # Map development builds: a changed shipped level still loads outside of multiplayer; off for every release build
 option(OD_DEVELOPER_MODE "Load changed shipped levels outside of multiplayer (map development builds only)" OFF)
@@ -705,6 +705,7 @@ set(OD_SOURCEFILES
     ${SRC}/traps/TrapType.cpp
 
     ${SRC}/utils/ConfigManager.cpp
+    ${SRC}/utils/ContentPackages.cpp
     ${SRC}/utils/FrameRateLimiter.cpp
     ${SRC}/utils/Helper.cpp
     ${SRC}/utils/LogManager.cpp
@@ -749,10 +750,21 @@ ENDIF ()
 # are computed from the levels folder at every build into a generated source of the build directory and compiled into
 # the game; the generated file is not part of the repository. It is written once at configure time so that the
 # project files can list it, and the target below rewrites it at every build when a level changed.
+# The shipped levels lie in the content packages as well: the packages folder of MOREYA_CONTENT_DIR (the cache option
+# of a release build, else the environment variable of a run-in-place build, else the packages folder of a
+# Moreya-Content checkout next to this repository) adds the levels/ folder of every content package and the levels of
+# the wing 1 package (keyed campaign/wing1/<file>, the path the installed package has below levels/).
+set(OD_LEVEL_CONTENT_DIR "${MOREYA_CONTENT_DIR}")
+if(NOT OD_LEVEL_CONTENT_DIR AND DEFINED ENV{MOREYA_CONTENT_DIR})
+    set(OD_LEVEL_CONTENT_DIR "$ENV{MOREYA_CONTENT_DIR}")
+endif()
+if(NOT OD_LEVEL_CONTENT_DIR AND IS_DIRECTORY "${CMAKE_SOURCE_DIR}/../Moreya-Content/packages")
+    set(OD_LEVEL_CONTENT_DIR "${CMAKE_SOURCE_DIR}/../Moreya-Content/packages")
+endif()
 set(OD_LEVEL_CHECKSUMS_SOURCE "${CMAKE_BINARY_DIR}/generated/OfficialLevelChecksums.cpp")
 set(OD_LEVEL_CHECKSUMS_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/GenerateOfficialLevelChecksums.cmake")
 execute_process(COMMAND ${CMAKE_COMMAND} "-DLEVELS_DIR=${CMAKE_SOURCE_DIR}/levels"
-                "-DOUTPUT=${OD_LEVEL_CHECKSUMS_SOURCE}" -P "${OD_LEVEL_CHECKSUMS_SCRIPT}"
+                "-DCONTENT_DIR=${OD_LEVEL_CONTENT_DIR}" "-DOUTPUT=${OD_LEVEL_CHECKSUMS_SOURCE}" -P "${OD_LEVEL_CHECKSUMS_SCRIPT}"
                 RESULT_VARIABLE OD_LEVEL_CHECKSUMS_RESULT)
 if(NOT OD_LEVEL_CHECKSUMS_RESULT EQUAL 0)
     message(FATAL_ERROR "Could not compute the checksums of the shipped levels")
@@ -894,7 +906,8 @@ endif()
 # A custom target without output runs at every build: it recomputes the checksums of the shipped levels before the
 # game is compiled (the generated source only changes, and is only recompiled, when a level changed)
 add_custom_target(od_official_level_checksums
-    COMMAND ${CMAKE_COMMAND} "-DLEVELS_DIR=${CMAKE_SOURCE_DIR}/levels" "-DOUTPUT=${OD_LEVEL_CHECKSUMS_SOURCE}"
+    COMMAND ${CMAKE_COMMAND} "-DLEVELS_DIR=${CMAKE_SOURCE_DIR}/levels" "-DCONTENT_DIR=${OD_LEVEL_CONTENT_DIR}"
+            "-DOUTPUT=${OD_LEVEL_CHECKSUMS_SOURCE}"
             -P "${OD_LEVEL_CHECKSUMS_SCRIPT}"
     BYPRODUCTS "${OD_LEVEL_CHECKSUMS_SOURCE}"
     COMMENT "Computing the checksums of the shipped levels"

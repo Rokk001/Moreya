@@ -19,6 +19,11 @@ Start screen (config/mainmenuscene.cfg, overview pose of the menu camera):
 Ziv name: no player-facing text calls the worker "Worker"/"Workers" (layouts, C++ string literals that are not log or
 assert messages, player-facing config texts, level and campaign texts); the identifiers stay as they are. Exception by
 the owner's decision: the display name "Dwarf Worker" of the hero class DwarfWorker stays (one exact config line).
+
+The menu meshes, materials and textures, the moved layouts and configs are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages, and the layouts and
+configs of the packages are searched like the public ones. Without the content the scene part and the texts of the
+moved files are named as not checked; the code and the public files are checked.
 """
 import os
 import math
@@ -32,6 +37,13 @@ from PIL import Image, ImageFilter
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_menu_sky_below_horizon as scene  # noqa: E402  (numpy mesh reader of the menu scene check)
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+
+CHECK = "check_start_screen_signpost_zivs"
+#: The game data of the scene part that lies in the public tree or in a content package
+SCENE_FILES = ("models/MenuSignpost.mesh", "models/MenuTitleCrest.mesh", "materials/scripts/MenuSignpost.material",
+               "materials/scripts/MenuScene.material", "materials/textures/menu/MenuSignpostBoardLettered.png")
 
 #: Placement of the signpost, chosen once on this branch (left front of the courtyard, foot on the paving, its board
 #: between the replay camera flight and the left brazier). Moved 1.3 m right and 2.4 m towards the camera on the
@@ -52,7 +64,7 @@ MIN_TURN_FROM_X_DEGREES = 30.0
 #: (u from the back end, v from the upper edge). The flaked paint (texels brighter than PAINT_LUMINANCE) lies inside
 #: the carved letters and still spans at least MIN_PAINT_SPAN of their width and height.
 LETTER_BOX = (0.215, 0.17, 0.86, 0.83)
-LETTERS = (0.221, 0.371, 0.856, 0.627)
+LETTERS = (0.218, 0.342, 0.856, 0.656)
 LETTER_TOLERANCE = 0.004
 PAINT_LUMINANCE = 60.0
 MIN_PAINT_SPAN = 0.9
@@ -93,9 +105,46 @@ MENU_REFERENCE_ASPECT = 16.0 / 9.0
 
 
 def read(relative):
-    """Returns a repository text file."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8", errors="replace") as handle:
-        return handle.read()
+    """Returns a repository text file, a game data file from the public tree or a content package; a mixed table or
+    interface file comes with its own rows of the content (scripts/content_packages.py)."""
+    with open(data(relative), encoding="utf-8", errors="replace") as handle:
+        text = handle.read()
+    return content_packages.read_text(ROOT, relative) if "#@own " in text else text
+
+
+def data(relative):
+    """Path of a game data file from the public tree or a content package (below the repository when not found)."""
+    return str(content_packages.resolve(ROOT, relative))
+
+
+def missing_data(relative):
+    """True when a game data file is not found and the content is not present (then it cannot be checked)."""
+    return content_packages.data_file(ROOT, relative) is None and not content_packages.has_content(ROOT)
+
+
+def missing_own_rows(relative):
+    """True when a game data file is a mixed table or interface file and the content is not present: its own rows
+    (content packages core-config and core-gui) are missing, so the texts of those rows cannot be checked."""
+    if content_packages.has_content(ROOT) or content_packages.data_file(ROOT, relative) is None:
+        return False
+    with open(data(relative), encoding="utf-8", errors="replace") as handle:
+        return "#@own " in handle.read()
+
+
+#: Game data folders of a content package besides its levels; their configs and layouts are checked with the public
+#: ones (config and gui parts), the others hold no level texts
+PACKAGE_DATA_FOLDERS = ("config", "gui", "materials", "models", "particles", "sounds")
+
+
+def content_level_walk(content):
+    """os.walk of the content folder without the game data folders of the packages, so it yields the files of the wing
+    and room packages and the levels of the content packages."""
+    walk = []
+    for folder, folders, files in os.walk(content):
+        if os.path.dirname(os.path.normpath(folder)) == os.path.normpath(content):
+            folders[:] = [name for name in folders if name not in PACKAGE_DATA_FOLDERS]
+        walk.append((folder, folders, files))
+    return walk
 
 
 def scene_lines():
@@ -215,7 +264,12 @@ def ray_hits(origin, direction, a, b, c):
 
 
 def check_scene(failures):
-    """Signpost placed once on the ground left of the gate, crest gone, lettering readable from the overview pose."""
+    """Signpost placed once on the ground left of the gate, crest gone, lettering readable from the overview pose;
+    without the content the scene is named as not checked."""
+    missing = [path for path in SCENE_FILES if missing_data(path)]
+    if missing:
+        content_packages.unchecked(CHECK, ["the signpost scene"] + missing)
+        return
     lines = scene_lines()
     entities = [line.split() for line in lines if line.startswith("AddEntity ")]
     signposts = [words for words in entities if words[2] == "MenuSignpost.mesh"]
@@ -224,16 +278,16 @@ def check_scene(failures):
         return
     if any(words[2] == "MenuTitleCrest.mesh" for words in entities):
         failures.append("the green title crest MenuTitleCrest.mesh is still placed in the menu scene")
-    if not os.path.isfile(os.path.join(ROOT, "models", "MenuTitleCrest.mesh")):
+    if content_packages.data_file(ROOT, "models/MenuTitleCrest.mesh") is None:
         failures.append("models/MenuTitleCrest.mesh must stay in the repository")
     origin = np.array([float(value) for value in signposts[0][3:6]])
     gate = [words for words in entities if words[1] == "Gate"][0]
     gate_position = np.array([float(value) for value in gate[3:6]])
 
     # Direction: the board points from the post at the gate, not along +X.
-    vertices, faces, materials = scene.load_mesh(os.path.join(ROOT, "models", "MenuSignpost.mesh"))
+    vertices, faces, materials = scene.load_mesh(data("models/MenuSignpost.mesh"))
     yaw, board_vertices = board_yaw(vertices, faces, materials)
-    gate_points = scene.load_mesh(os.path.join(ROOT, "models", gate[2]))[0][:, :2] + gate_position[:2]
+    gate_points = scene.load_mesh(data("models/" + gate[2]))[0][:, :2] + gate_position[:2]
     gate_angles = np.arctan2(gate_points[:, 1] - origin[1], gate_points[:, 0] - origin[0])
     if not gate_angles.min() <= yaw <= gate_angles.max():
         failures.append("the board points at %.1f degrees, outside the angle %.1f..%.1f the gate covers"
@@ -274,12 +328,12 @@ def check_scene(failures):
     post = material.split("material MenuSignpostWeatheredWood ", 1)[-1].split("\nmaterial ", 1)[0]
     if "texture MenuSignpostWeatheredWood.png" not in post:
         failures.append("MenuSignpostWeatheredWood does not use MenuSignpostWeatheredWood.png")
-    folder = os.path.join(ROOT, "materials", "textures", "menu")
+    folder = os.path.dirname(data("materials/textures/menu/MenuSignpostBoardLettered.png"))
     lettered = np.asarray(Image.open(os.path.join(folder, "MenuSignpostBoardLettered.png")).convert("RGB"), dtype=float)
     height, width = lettered.shape[:2]
     sys.path.insert(0, os.path.join(ROOT, "tools"))
     import gen_menu_signpost_lettering as lettering
-    mask = lettering.letter_mask(os.path.join(ROOT, "gui", "fonts", "MedievalSharp-Bold.ttf"), width, height)
+    mask = lettering.letter_mask(data("gui/fonts/SourceSerif4-Semibold.ttf"), width, height)
     rows = np.arange(height)[:, None] / float(height)
     columns = np.arange(width)[None, :] / float(width)
     rim = np.asarray(Image.fromarray((mask * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(LETTER_RIM_PIXELS)),
@@ -288,7 +342,7 @@ def check_scene(failures):
     open_wood = (~rim & (np.abs(rows - 1.0 / 3.0) > joint) & (np.abs(rows - 2.0 / 3.0) > joint)
                  & (rows > edge_v) & (rows < 1.0 - edge_v) & (columns > edge_u) & (columns < 1.0 - edge_u))
     luminance = check_weathered("the lettered board", lettered, failures, open_wood)
-    post_path = os.path.join(folder, "MenuSignpostWeatheredWood.png")
+    post_path = data("materials/textures/menu/MenuSignpostWeatheredWood.png")
     if os.path.isfile(post_path):
         check_weathered("the post wood", np.asarray(Image.open(post_path).convert("RGB"), dtype=float), failures)
     else:
@@ -360,7 +414,7 @@ def check_scene(failures):
         if words[2] == "MenuSignpost.mesh":
             continue
         if words[2] not in meshes:
-            meshes[words[2]] = scene.load_mesh(os.path.join(ROOT, "models", words[2]))
+            meshes[words[2]] = scene.load_mesh(data("models/" + words[2]))
         vertices, faces, materials = meshes[words[2]]
         if len(faces) == 0:
             continue
@@ -415,11 +469,9 @@ LITERAL = re.compile(r'"(?:[^"\\\n]|\\.)*"')
 
 def check_ziv_names(failures):
     """No player-facing Worker/Workers; the Ziv names are shown and the identifiers stay."""
-    # Layouts: texts, tooltips and context help.
-    gui = os.path.join(ROOT, "gui")
-    for name in sorted(os.listdir(gui)):
-        if not name.endswith(".layout"):
-            continue
+    # Layouts: texts, tooltips and context help (of the public tree and of the content packages).
+    for path in content_packages.data_glob(ROOT, "gui", "*.layout"):
+        name = path.name
         for number, line in enumerate(read("gui/" + name).splitlines(), 1):
             match = re.search(r'<(?:Property|UserString) name="(Text|TooltipText|ContextHelp|Tooltip)" value="([^"]*)"', line)
             if match and WORD.search(match.group(2)):
@@ -449,10 +501,9 @@ def check_ziv_names(failures):
             failures.append("%s: identifier %s expected %d times, found %d" % (key[0], key[1], count, found.get(key, 0)))
 
     # Config files: player-facing social texts and no other worker word outside identifiers and comments.
-    config = os.path.join(ROOT, "config")
-    for name in sorted(os.listdir(config)):
-        if not name.endswith(".cfg"):
-            continue
+    # The configs of the public tree and of the content packages
+    for path in content_packages.data_glob(ROOT, "config", "*.cfg"):
+        name = path.name
         relative = "config/" + name
         for number, line in enumerate(read(relative).splitlines(), 1):
             stripped = line.strip()
@@ -469,6 +520,9 @@ def check_ziv_names(failures):
             if WORD.search(stripped):
                 failures.append("%s:%d names the worker: %s" % (relative, number, stripped))
     for path, text in DECIDED_EXCEPTIONS:
+        if missing_data(path):
+            content_packages.unchecked(CHECK, [path])
+            continue
         count = [line.strip() for line in read(path).splitlines()].count(text)
         if count != 1:
             failures.append("%s: the decided line '%s' is there %d times, expected once" % (path, text, count))
@@ -479,7 +533,7 @@ def check_ziv_names(failures):
     sys.path.insert(0, os.path.join(ROOT, "scripts"))
     import campaign_packages
     content = campaign_packages.content_folder(ROOT)
-    walks = list(os.walk(levels)) + (list(os.walk(str(content))) if content is not None else [])
+    walks = list(os.walk(levels)) + (content_level_walk(str(content)) if content is not None else [])
     for folder, _, files in walks:
         for name in sorted(files):
             if not name.endswith((".level", ".cfg")):
@@ -508,6 +562,9 @@ def check_ziv_names(failures):
         "source/spells/SpellPlague.cpp": ('"Zivs and champions never get sick."',),
     }
     for path, texts in shown.items():
+        if missing_data(path) or missing_own_rows(path):
+            content_packages.unchecked(CHECK, [path])
+            continue
         text = read(path)
         for expected in texts:
             if expected not in text:
@@ -522,6 +579,9 @@ def check_ziv_names(failures):
         "config/factions.cfg": ("WorkerClass\tKobold",),
     }
     for path, texts in kept.items():
+        if missing_own_rows(path):
+            content_packages.unchecked(CHECK, [path + " (own rows)"])
+            continue
         text = read(path)
         for expected in texts:
             if expected not in text:

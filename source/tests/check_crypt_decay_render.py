@@ -2,10 +2,13 @@
 from pathlib import Path
 import os
 import subprocess
+import sys
 import tempfile
 from check_ghost_rules import function
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 (repo / 'build' / 'review-followups').mkdir(parents=True, exist_ok=True)
 source = (repo / 'source/render/RenderManager.cpp').read_text()
@@ -20,6 +23,8 @@ probe = r'''
 #include <Bites/OgreSGTechniqueResolverListener.h>
 #include <functional>
 #include <iostream>
+#include <sstream>
+#include <vector>
 int checks=0,failures=0;
 void check(bool value,const char* label){++checks;if(!value){++failures;std::cout<<"FAIL "<<label<<'\n';}}
 HELPER
@@ -41,6 +46,8 @@ int main(int argc,char** argv){try{
  Ogre::RenderWindow* window=root.createRenderWindow("CryptDecayPreview",960,540,false,&options);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  for(const char* dir:{"models","materials/textures","materials/scripts","shaders","particles"})groups.addResourceLocation(repo+"/"+dir,"FileSystem","Graphics",true);
+ // The same data folders of the content packages (the fly swarm and the shared normal map lie in packages)
+ {std::istringstream in(argc>3?argv[3]:"");std::string part;while(std::getline(in,part,';'))if(!part.empty())groups.addResourceLocation(part,"FileSystem","Graphics",true);}
  groups.addResourceLocation(prefix+"/Media/Main","FileSystem","OgreInternal");
  groups.addResourceLocation(prefix+"/Media/RTShaderLib","FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();Ogre::RTShader::ShaderGenerator* generator=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
@@ -140,6 +147,14 @@ int main(int argc,char** argv){try{
  Ogre::RTShader::ShaderGenerator::destroy();return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
 '''.replace('HELPER', helper).replace('CLEANUP', cleanup)
+# The fly swarm lies in a content package; without the content the render probe cannot run
+NEEDED = ('particles/CorpseDecay.particle', 'materials/scripts/CorpseFlies.material')
+absent = [name for name in NEEDED if content_packages.data_file(repo, name) is None]
+if absent and not content_packages.has_content(repo):
+    content_packages.unchecked('check_crypt_decay_render', ['render probe (needs %s)' % ', '.join(absent)])
+    raise SystemExit(0)
+extra = ';'.join(str(folder) for relative in ('models', 'materials/textures', 'materials/scripts', 'shaders', 'particles')
+                 for folder in content_packages.data_folders(repo, relative) if folder != repo / relative)
 with tempfile.TemporaryDirectory(prefix='odp-crypt-render-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
@@ -148,4 +163,4 @@ with tempfile.TemporaryDirectory(prefix='odp-crypt-render-') as directory:
                     'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreRTShaderSystem.lib',
                     'OgreBites.lib'], cwd=work, check=True)
-    subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work, check=True)
+    subprocess.run([str(work / 'check.exe'), str(repo), str(prefix), extra], cwd=work, check=True)

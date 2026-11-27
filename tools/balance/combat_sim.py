@@ -9,6 +9,10 @@ from pathlib import Path
 import random
 import re
 import statistics
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import content_packages  # noqa: E402
 
 CHANNELS = ("Physical", "Magical", "Element")
 MAX_LEVEL = 30
@@ -23,9 +27,20 @@ HP_GROWTH_PER_LEVEL = 0.018
 COOLDOWN_REDUCTION_PER_LEVEL = 0.0
 
 
-# Read named configuration blocks, ignoring comments and section delimiters.
-def definitions(path, section, tag):
-    text = path.read_text(encoding="utf-8")
+# The file of a game data path below the given repository: the public file, else the file of a content package
+# (scripts/content_packages.py), else the path below the repository.
+def data_path(root, relative):
+    return content_packages.resolve(root, relative)
+
+
+# The text of a game data file below the given repository (see data_path); a mixed table of config/ comes joined with
+# its own rows of the content packages (scripts/content_packages.py).
+def data_text(root, relative):
+    return content_packages.read_text(root, relative)
+
+
+# Read named configuration blocks of a table text, ignoring comments and section delimiters.
+def definitions(text, section, tag):
     text = text[text.rindex("[" + section + "]"):]
     result = {}
     for block in re.findall(r"\[" + tag + r"\](.*?)\[/" + tag + r"\]", text, re.S):
@@ -90,10 +105,10 @@ class Roster:
     # Cache current definitions without using an external statistics snapshot.
     def __init__(self, root):
         self.root = Path(root)
-        self.creatures = definitions(self.root / "config/creatures.cfg", "CreatureDefinitions", "Creature")
-        self.equipment = definitions(self.root / "config/equipments.cfg", "EquipmentDefinitions", "Equipment")
+        self.creatures = definitions(data_text(self.root, "config/creatures.cfg"), "CreatureDefinitions", "Creature")
+        self.equipment = definitions(data_text(self.root, "config/equipments.cfg"), "EquipmentDefinitions", "Equipment")
         self.global_values = {}
-        for line in (self.root / "config/global.cfg").read_text(encoding="utf-8").splitlines():
+        for line in data_text(self.root, "config/global.cfg").splitlines():
             words = line.split()
             if len(words) == 2 and not words[0].startswith("#"):
                 self.global_values[words[0]] = words[1]
@@ -400,9 +415,9 @@ def rank_cells(text):
 
 # Hold the skill catalog, the tier four skills and the templates of config/creatureSkills.cfg.
 class SkillCatalog:
-    # Parse the file below the given repository root.
+    # Parse the file below the given repository root (public tree or content package).
     def __init__(self, root):
-        text = (Path(root) / "config/creatureSkills.cfg").read_text(encoding="utf-8")
+        text = data_path(root, "config/creatureSkills.cfg").read_text(encoding="utf-8")
         self.skills = {}
         self.paths = {}
         self.families = {}

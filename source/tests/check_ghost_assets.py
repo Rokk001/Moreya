@@ -1,4 +1,9 @@
-"""Inspect original ghost assets and existing binary skeleton clips without compiling or rendering."""
+"""Inspect original ghost assets and existing binary skeleton clips without compiling or rendering.
+
+The ghost assets come from the ghost room package and the core content packages (scripts/room_packages.py,
+scripts/content_packages.py). Without them only the code side is checked; the two room ambience tables of the code side
+are content too and are named as not checked when absent.
+"""
 from pathlib import Path
 import importlib.util
 import hashlib
@@ -14,24 +19,34 @@ import sys
 sys.path.insert(0, str(repo / 'scripts'))
 from assets_src import assets_src_dir, resolve  # noqa: E402
 sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
-#: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
-#: side is checked
-ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+#: The assets of the ghost room come from its room package (scripts/room_packages.py) and the core content packages
+#: (scripts/content_packages.py); without them only the code side is checked
+ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom') and content_packages.has_content(repo)
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.asset(repo, relative) or (repo / relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(repo, relative)
 
-# Read one shipped text asset.
+
+def data_path(path):
+    """An asset source below ODP_ASSETS_SRC, else a game data file of the public tree or of a content or room package."""
+    if str(path).startswith('assets-src'):
+        return resolve(repo, path)
+    return content_packages.resolve(repo, path)
+
+# Read one shipped text asset; a mixed table or interface file comes joined with its own rows from the content.
 def read(path):
-    return resolve(repo, path).read_text(encoding='utf-8')
+    if str(path).startswith('assets-src'):
+        return data_path(path).read_text(encoding='utf-8')
+    return content_packages.read_text(repo, path)
 
 # Require a concrete asset and its own source/licence credit.
 def credited(path, credits):
-    asset = resolve(repo, path)
+    asset = data_path(path)
     assert asset.is_file() and asset.stat().st_size, path
     rows = [row for row in credits.splitlines() if path in row]
     # The rows of the room package stand in the CREDITS of the content repository under its licence
@@ -53,11 +68,16 @@ def clips(credits):
             if re.search(r'^\s*Name\s+'+creature+r'\s*$',block,re.M))
         mesh = re.search(r'^\s*MeshName\s+(\S+)',block,re.M)[1]
         skeleton = mesh.removesuffix('.mesh')+'.skeleton'
-        credited('models/'+skeleton, credits)
-        credited('assets-src/creatures/ghosts/'+skeleton.removesuffix('.skeleton')+'.blend', credits)
+        rows = credited('models/'+skeleton, credits)
+        # A figure of the Meshy rebuild takes its clips from the bought clip library (its skeleton row says so); only
+        # the own rigs keep their Blender source of the ghost clips
+        if not any('Meshy' in row for row in rows):
+            credited('assets-src/creatures/ghosts/'+skeleton.removesuffix('.skeleton')+'.blend', credits)
         _, chunks = module.chunks(room_file('models/'+skeleton).read_bytes())
         animations = {name:data for kind,name,data in chunks if kind==module.ANIMATION}
-        expected = ('Scared',) if creature in scared else ('Beam','Throw','Empty')
+        # Empty is never played (decision 936: the hunter's put-in is the generated reach pose over Idle; see
+        # check_ghost_hunter_pose), so the hunters carry Beam and Throw
+        expected = ('Scared',) if creature in scared else ('Beam','Throw')
         for name in expected:
             assert name in animations, (creature,name)
             data = animations[name]
@@ -166,6 +186,10 @@ def code_side():
     for name in ('ManaStill','GhostPress','SoulForge','GhostCauldron','GhostCauldronFill','CrystalBowl','GhostBell','GhostHook',
             'GhostHookEmpty','GhostWallGauges','GhostRack'):
         assert re.search(r'\{"'+name+r'"\s*,',bounds), name
+    tables = ('config/roomAmbience.cfg', 'config/roomAmbienceSpells.cfg')
+    if content_packages.unchecked('check_ghost_assets', [name for name in tables
+                                                         if content_packages.data_file(repo, name) is None]):
+        return
     assert 'Rooms/GhostRoom/Hum' in read('config/roomAmbience.cfg')
     events = read('config/roomAmbienceSpells.cfg')
     assert 'SpellFxWorkerVanish' in events and re.search(r'System\s+WorkerVanish\b',events)
@@ -174,7 +198,7 @@ def code_side():
 def main():
     if not ROOM_ASSETS:
         code_side()
-        print('ghost assets: ok (ghost room package not present: source side only)')
+        print('ghost assets: ok (ghost room or content packages not present: source side only)')
         return
     credits = room_packages.credits_text(repo)
     hose_coupling(credits)
@@ -237,7 +261,8 @@ def main():
     for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway',
             b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in still_skeleton, bone
-    assert b'ManaCrystal\n' in room_file('models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
+    # The mana crystal item is its blue Meshy model with its own material (ManaCrystal stays the material of the still)
+    assert b'ManaCrystalMeshy\n' in room_file('models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
     # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.
     for path in ('models/GhostPress.mesh','models/GhostPress.skeleton'):
         credited(path,credits)
@@ -389,18 +414,18 @@ def main():
         rows = credited(path,credits)
         assert room_file(path).read_bytes().startswith(b'OggS'), path
         assert any('CC0' in row and 'https://freesound.org/' in row for row in rows), path
-    imageset = ET.parse(repo/'gui/ODIcons.imageset').getroot()
+    imageset = ET.fromstring(read('gui/ODIcons.imageset'))
     icon = imageset.find("Image[@name='GhostRoomButton']")
     assert icon is not None
-    with Image.open(repo/'gui'/imageset.get('imagefile')) as atlas, Image.open(assets_src_dir(repo) / 'gui/icons/tiles/GhostRoomButton.png') as source:
+    with Image.open(data_path('gui/'+imageset.get('imagefile'))) as atlas, Image.open(assets_src_dir(repo) / 'gui/icons/tiles/GhostRoomButton.png') as source:
         x,y,w,h = (int(icon.get(key)) for key in ('xPos','yPos','width','height'))
         assert (w,h)==(128,128) and source.size==(256,256), 'native painted source and logical icon size'
         assert atlas.crop((x,y,x+w,y+h)).convert('RGBA').getbbox() is not None, 'painted icon atlas binding'
-    items = ET.parse(repo/'gui/Items.imageset').getroot()
+    items = ET.parse(data_path('gui/Items.imageset')).getroot()
     assert len(items.findall('Image'))==769, 'item atlas count'
     crystal = items.find("Image[@name='soul_crystal']")
     assert crystal is not None
-    with Image.open(repo/'gui'/items.get('imagefile')) as atlas, Image.open(repo/'gui/potions/soul_crystal.png') as source:
+    with Image.open(data_path('gui/'+items.get('imagefile'))) as atlas, Image.open(data_path('gui/potions/soul_crystal.png')) as source:
         x,y,w,h = (int(crystal.get(key)) for key in ('xPos','yPos','width','height'))
         assert (w,h)==(128,128) and atlas.crop((x,y,x+w,y+h)).convert('RGBA').tobytes()==source.convert('RGBA').tobytes(), 'crystal binding'
     generator = read('tools/room-floors/generate_room_floors.py')

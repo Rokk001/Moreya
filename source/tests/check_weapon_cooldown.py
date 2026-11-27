@@ -3,7 +3,9 @@ building damage keeps the base columns, and the level formula is in place.
 
 Static source check (no compiler, no game): the config field, its loader/writer/packet, the choice of the
 weapon value for melee (larger of two, definition value without a weapon), the level formula and the recovery clock.
-Run with --table to print the per creature table (weapons, damage, cooldown before/after, level 30)."""
+Run with --table to print the per creature table (weapons, damage, cooldown before/after, level 30).
+Models and config/creatureSkills.cfg are found in the public tree or in the content packages
+(scripts/content_packages.py); without the content a moved one is named as not checked."""
 from pathlib import Path
 import re
 import subprocess
@@ -12,12 +14,28 @@ import sys
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
+#: The mixed tables of config/ come with their own rows only with the content (scripts/content_packages.py); without
+#: it the values of the weapons and creatures are not checked, the code is
+WITH_CONTENT = content_packages.has_content(root)
 # State the damage and cooldown values are compared with (integration state before the weapon cooldown work)
 BASE_COMMIT = 'cdaa5856d'
 
 
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    """The text of a file below the repository root; a mixed table of config/ comes joined with its own rows."""
+    return content_packages.read_text(root, path)
+
+
+def data(path):
+    """The file of a game data path in the public tree or in a content package; None (named as not checked) when
+    the content is not present, while a file missing although the content is present fails the check."""
+    found = content_packages.data_file(root, path)
+    if found is None and not content_packages.has_content(root):
+        content_packages.unchecked('check_weapon_cooldown', [path])
+        return None
+    assert found is not None, path + ' is missing'
+    return found
 
 
 def read_base(path):
@@ -28,6 +46,21 @@ def function_body(source, signature):
     start = source.index(signature)
     end = source.index('\n}\n', start)
     return source[start:end]
+
+
+# The level files: below levels/ of the public tree and of the content packages, and the level and campaign files of
+# the wing and room packages (the data tables a content package moved out of config/ or materials/ are no level files).
+def level_files():
+    files = list((root / 'levels').rglob('*')) + content_packages.data_glob(root, 'levels', '*', True)
+    for path in campaign_packages.content_files(root, ('.level', '.cfg')):
+        # A file below levels/ of a content package is in the list already
+        if content_packages.relative_path(root, path).split('/')[0] not in DATA_TABLE_FOLDERS + ('levels',):
+            files.append(path)
+    return files
+
+
+#: The folders of the game data whose files are no level files (they moved from the public tree into content packages)
+DATA_TABLE_FOLDERS = ('config', 'materials', 'gui', 'models', 'particles', 'sounds')
 
 
 # ---------------------------------------------------------------- config parsing
@@ -137,8 +170,16 @@ def cooldown_of(creature, equipments, skill):
     return base
 
 
-equipments = parse_equipments(read('config/equipments.cfg'))
-creatures = parse_creatures(read('config/creatures.cfg'))
+if WITH_CONTENT:
+    equipments = parse_equipments(read('config/equipments.cfg'))
+    creatures = parse_creatures(read('config/creatures.cfg'))
+else:
+    equipments = {}
+    creatures = {}
+    content_packages.unchecked('check_weapon_cooldown', ['weapon cooldowns, parry values, creature cooldowns and '
+                                                         'damage (own rows of config/equipments.cfg, '
+                                                         'config/creatures.cfg and config/global.cfg)',
+                                                         'the combat simulator cases'])
 base_equipments = parse_equipments(read_base('config/equipments.cfg'))
 base_creatures = parse_creatures(read_base('config/creatures.cfg'))
 
@@ -239,140 +280,145 @@ if '--table' in sys.argv:
 
 # ---------------------------------------------------------------- weapon cooldown field
 
-weapon_names = []
-for name, item in equipments.items():
-    # an item counts as a shield when its name contains "shield" in any letter case
-    if 'shield' in name.lower():
-        assert item['cooldown'] is None, name + ' is not a weapon and must have no cooldown field'
-        assert item['damage'] == (0.0, 0.0, 0.0), name + ' deals damage, so it is not a plain shield'
-        continue
-    assert item['cooldown'] is not None, name + ' is a weapon and needs CooldownNbTurns'
-    assert item['cooldown'] > 0, name + ' needs a positive cooldown'
-    weapon_names.append(name)
-assert set(weapon_names) == set(EXPECTED_WEAPON_COOLDOWN), set(weapon_names) ^ set(EXPECTED_WEAPON_COOLDOWN)
-for name, expected in EXPECTED_WEAPON_COOLDOWN.items():
-    assert equipments[name]['cooldown'] == expected, (name, equipments[name]['cooldown'], expected)
-
-text = read('config/equipments.cfg')
-header = text[:text.rindex('[EquipmentDefinitions]')]
-assert 'CooldownNbTurns' in header and 'larger value' in header and 'non-weapons' in header
-assert '0.75 percent' in header and '"none"' in header
-
-# Every creature carries what its model shows: the model weapons attach nothing, the pickaxe is the dwarf tool
-for name, carrier in EXPECTED_MODEL_WEAPONS.items():
-    assert equipments[name]['mesh'] == 'none', name
-    assert creatures[carrier]['weapons'] == [name], (carrier, creatures[carrier]['weapons'])
-assert equipments['Pickaxe']['mesh'] == 'DwarfPick.mesh'
-assert (root / 'models' / 'DwarfPick.mesh').is_file()
-assert creatures['DwarfWorker']['weapons'] == ['Pickaxe']
-# Evidence from the models: the knife and the Defender weapon are parts of their meshes, the kobold has a pick bone
-assert b'GoblinKnife' in (root / 'models' / 'Goblin.mesh').read_bytes()
-assert b'DefenderWeapon' in (root / 'models' / 'Defender.mesh').read_bytes()
-assert b'Pick' in (root / 'models' / 'Kobold.skeleton').read_bytes()
-for name, item in equipments.items():
-    if item['mesh'] == 'none':
-        assert name in EXPECTED_MODEL_WEAPONS, name + ' has no mesh but is not a model weapon'
-# The goblin no longer carries the short sword (the knife replaces it)
-assert 'ShortSword' not in creatures['Goblin']['weapons']
-
-# ---------------------------------------------------------------- parry values per weapon
-
-for name, item in equipments.items():
-    if 'shield' in name.lower():
-        assert item['parry'] is None, name + ' is a shield and has no parry fields'
-        continue
-    expected = WEAK_PARRY if name in WEAK_PARRY_WEAPONS else GLOBAL_PARRY
-    assert item['parry'] == expected, (name, item['parry'], expected)
-# The weak values belong to weapons that only one creature carries (and no level file names them)
-for weapon_name, carrier in WEAK_PARRY_WEAPONS.items():
-    carriers = [n for n, c in creatures.items() if weapon_name in c['weapons']]
-    assert carriers == [carrier], (weapon_name, carriers)
-    for level_file in list((root / 'levels').rglob('*')) + campaign_packages.content_files(root, ('.level', '.cfg')):
-        if level_file.is_file() and level_file.suffix in ('.level', '.cfg', '.txt'):
-            assert weapon_name not in level_file.read_text(encoding='utf-8', errors='ignore'), (weapon_name, level_file)
-# The shield values and the fallback values stay in global.cfg unchanged
-global_cfg_text = read('config/global.cfg')
-for key, value in (('ParryBase', '10.5'), ('ParryPerLevel', '0'), ('ParryMax', '15'), ('ShieldBlockBase', '21'),
-                   ('ShieldBlockPerLevel', '0'), ('ShieldBlockMax', '25')):
-    assert re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg_text, re.M), key
-assert 'ParryBase' in header and 'ParryPerLevel' in header and 'ParryMax' in header and 'Shields have no parry' in header
-# Only the two configured parry types use weapon parry; other types have no weapon parry.
-for name, creature in creatures.items():
-    for level in (1, 10, 30):
-        now = parry_of(creature, equipments, level)
-        if creature['avoidance'] != 'parry':
-            expected = 0.0
-        elif any(w in WEAK_PARRY_WEAPONS for w in creature['weapons']):
-            expected = max(0.0, min(7.5, 5.25 + 0.0 * level))
-        elif creature['weapons'] == base_creatures[name]['weapons']:
-            expected = max(0.0, min(15.0, 10.5 + 0.0 * level))
-        else:
+if WITH_CONTENT:
+    weapon_names = []
+    for name, item in equipments.items():
+        # an item counts as a shield when its name contains "shield" in any letter case
+        if 'shield' in name.lower():
+            assert item['cooldown'] is None, name + ' is not a weapon and must have no cooldown field'
+            assert item['damage'] == (0.0, 0.0, 0.0), name + ' deals damage, so it is not a plain shield'
             continue
-        assert abs(now - expected) < 1e-9, (name, level, now, expected)
-assert abs(parry_of(creatures['Defender'], equipments, 1) - 5.25) < 1e-9
-assert abs(parry_of(creatures['Defender'], equipments, 30) - 5.25) < 1e-9
-assert abs(parry_of(creatures['Goblin'], equipments, 1) - 10.5) < 1e-9
+        assert item['cooldown'] is not None, name + ' is a weapon and needs CooldownNbTurns'
+        assert item['cooldown'] > 0, name + ' needs a positive cooldown'
+        weapon_names.append(name)
+    assert set(weapon_names) == set(EXPECTED_WEAPON_COOLDOWN), set(weapon_names) ^ set(EXPECTED_WEAPON_COOLDOWN)
+    for name, expected in EXPECTED_WEAPON_COOLDOWN.items():
+        assert equipments[name]['cooldown'] == expected, (name, equipments[name]['cooldown'], expected)
 
-# ---------------------------------------------------------------- cooldown values per creature skill
+    text = read('config/equipments.cfg')
+    header = text[:text.rindex('[EquipmentDefinitions]')]
+    assert 'CooldownNbTurns' in header and 'larger value' in header and 'non-weapons' in header
+    assert '0.75 percent' in header and '"none"' in header
 
-for (name, skill), expected in EXPECTED_COOLDOWN.items():
-    assert name in creatures and skill in creatures[name]['skills'], (name, skill)
-    assert cooldown_of(creatures[name], equipments, skill) == expected, \
-        (name, skill, cooldown_of(creatures[name], equipments, skill), expected)
-tree_config = read('config/creatureSkills.cfg')
-for skill_id, expected in EXPECTED_TREE_COOLDOWN.items():
-    tree_block = re.search(r'^Id\s+' + skill_id + r'\s*$(.*?)^\[/Skill\]', tree_config, re.M | re.S).group(1)
-    assert re.search(r'^Cooldown\s+' + expected + r'\s*$', tree_block, re.M), (skill_id, expected)
-# A creature with weapons has the weapon cooldown in its melee row too, so both sources agree
-for name, creature in creatures.items():
-    if creature['weapons'] and 'Melee' in creature['skills']:
-        assert int(creature['skills']['Melee'][0]) == cooldown_of(creature, equipments, 'Melee'), name
-# Non-damage skills retain timing; approved healing and area ranges replace their old values.
-for name, creature in creatures.items():
-    for skill, fields in creature['skills'].items():
-        if skill in DAMAGE_SKILLS:
+    # Every creature carries what its model shows: the model weapons attach nothing, the pickaxe is the dwarf tool
+    for name, carrier in EXPECTED_MODEL_WEAPONS.items():
+        assert equipments[name]['mesh'] == 'none', name
+        assert creatures[carrier]['weapons'] == [name], (carrier, creatures[carrier]['weapons'])
+    assert equipments['Pickaxe']['mesh'] == 'DwarfPick.mesh'
+    dwarf_pick = data('models/DwarfPick.mesh')
+    assert dwarf_pick is None or dwarf_pick.is_file()
+    assert creatures['DwarfWorker']['weapons'] == ['Pickaxe']
+    # Evidence from the models: the knife and the Defender weapon are parts of their meshes, the kobold has a pick bone
+    for path, part in (('models/Goblin.mesh', b'GoblinKnife'), ('models/Defender.mesh', b'DefenderWeapon'),
+                       ('models/Kobold.skeleton', b'Pick')):
+        model = data(path)
+        assert model is None or part in model.read_bytes(), (path, part)
+    for name, item in equipments.items():
+        if item['mesh'] == 'none':
+            assert name in EXPECTED_MODEL_WEAPONS, name + ' has no mesh but is not a model weapon'
+    # The goblin no longer carries the short sword (the knife replaces it)
+    assert 'ShortSword' not in creatures['Goblin']['weapons']
+
+    # ---------------------------------------------------------------- parry values per weapon
+
+    for name, item in equipments.items():
+        if 'shield' in name.lower():
+            assert item['parry'] is None, name + ' is a shield and has no parry fields'
             continue
-        previous = base_creatures[name]['skills'][skill]
-        if skill == 'HealSelf':
-            assert fields[:-1] == previous[:-1], (name, skill)
-            assert abs(float(fields[-1]) - float(previous[-1]) * 2.05) < 1e-9, (name, skill)
-        elif skill in ('Explosion', 'GasCloud', 'HailStorm'):
-            assert fields[:4] == previous[:4], (name, skill)
-            assert len(fields) == len(previous) + 1, (name, skill)
-        else:
-            assert fields == previous, (name, skill)
+        expected = WEAK_PARRY if name in WEAK_PARRY_WEAPONS else GLOBAL_PARRY
+        assert item['parry'] == expected, (name, item['parry'], expected)
+    # The weak values belong to weapons that only one creature carries (and no level file names them)
+    for weapon_name, carrier in WEAK_PARRY_WEAPONS.items():
+        carriers = [n for n, c in creatures.items() if weapon_name in c['weapons']]
+        assert carriers == [carrier], (weapon_name, carriers)
+        for level_file in level_files():
+            if level_file.is_file() and level_file.suffix in ('.level', '.cfg', '.txt'):
+                assert weapon_name not in level_file.read_text(encoding='utf-8', errors='ignore'), (weapon_name, level_file)
+    # The shield values and the fallback values stay in global.cfg unchanged
+    global_cfg_text = read('config/global.cfg')
+    for key, value in (('ParryBase', '10.5'), ('ParryPerLevel', '0'), ('ParryMax', '15'), ('ShieldBlockBase', '21'),
+                       ('ShieldBlockPerLevel', '0'), ('ShieldBlockMax', '25')):
+        assert re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg_text, re.M), key
+    assert 'ParryBase' in header and 'ParryPerLevel' in header and 'ParryMax' in header and 'Shields have no parry' in header
+    # Only the two configured parry types use weapon parry; other types have no weapon parry.
+    for name, creature in creatures.items():
+        for level in (1, 10, 30):
+            now = parry_of(creature, equipments, level)
+            if creature['avoidance'] != 'parry':
+                expected = 0.0
+            elif any(w in WEAK_PARRY_WEAPONS for w in creature['weapons']):
+                expected = max(0.0, min(7.5, 5.25 + 0.0 * level))
+            elif creature['weapons'] == base_creatures[name]['weapons']:
+                expected = max(0.0, min(15.0, 10.5 + 0.0 * level))
+            else:
+                continue
+            assert abs(now - expected) < 1e-9, (name, level, now, expected)
+    assert abs(parry_of(creatures['Defender'], equipments, 1) - 5.25) < 1e-9
+    assert abs(parry_of(creatures['Defender'], equipments, 30) - 5.25) < 1e-9
+    assert abs(parry_of(creatures['Goblin'], equipments, 1) - 10.5) < 1e-9
 
-# ---------------------------------------------------------------- retained building skill damage unchanged against the base state
+    # ---------------------------------------------------------------- cooldown values per creature skill
 
-assert set(creatures) == set(base_creatures)
-checked = 0
-for name, creature in creatures.items():
-    for skill in creature['skills']:
-        if skill not in DAMAGE_SKILLS:
-            continue
-        for level in range(1, 31):
-            before = per_damage_type(base_creatures[name], base_equipments, skill, level)
-            after = per_damage_type(creature, equipments, skill, level)
-            assert damage_values(creature, skill) == damage_values(base_creatures[name], skill), (name, skill)
-            old_items = [sum(base_equipments[w]['damage'][i] for w in base_creatures[name]['weapons']) for i in range(3)]
-            new_items = [sum(equipments[w]['damage'][i] for w in creature['weapons']) for i in range(3)]
-            for i, (b, a) in enumerate(zip(before, after)):
-                assert abs((a - b) - (new_items[i] - old_items[i])) < 1e-9, (name, skill, level, before, after)
-            checked += 1
-assert checked > 1000, checked
+    for (name, skill), expected in EXPECTED_COOLDOWN.items():
+        assert name in creatures and skill in creatures[name]['skills'], (name, skill)
+        assert cooldown_of(creatures[name], equipments, skill) == expected, \
+            (name, skill, cooldown_of(creatures[name], equipments, skill), expected)
+    tree_file = data('config/creatureSkills.cfg')
+    tree_config = None if tree_file is None else tree_file.read_text(encoding='utf-8')
+    for skill_id, expected in EXPECTED_TREE_COOLDOWN.items() if tree_config is not None else ():
+        tree_block = re.search(r'^Id\s+' + skill_id + r'\s*$(.*?)^\[/Skill\]', tree_config, re.M | re.S).group(1)
+        assert re.search(r'^Cooldown\s+' + expected + r'\s*$', tree_block, re.M), (skill_id, expected)
+    # A creature with weapons has the weapon cooldown in its melee row too, so both sources agree
+    for name, creature in creatures.items():
+        if creature['weapons'] and 'Melee' in creature['skills']:
+            assert int(creature['skills']['Melee'][0]) == cooldown_of(creature, equipments, 'Melee'), name
+    # Non-damage skills retain timing; approved healing and area ranges replace their old values.
+    for name, creature in creatures.items():
+        for skill, fields in creature['skills'].items():
+            if skill in DAMAGE_SKILLS:
+                continue
+            previous = base_creatures[name]['skills'][skill]
+            if skill == 'HealSelf':
+                assert fields[:-1] == previous[:-1], (name, skill)
+                assert abs(float(fields[-1]) - float(previous[-1]) * 2.05) < 1e-9, (name, skill)
+            elif skill in ('Explosion', 'GasCloud', 'HailStorm'):
+                assert fields[:4] == previous[:4], (name, skill)
+                assert len(fields) == len(previous) + 1, (name, skill)
+            else:
+                assert fields == previous, (name, skill)
 
-# Weapons with damage 0 are listed: as decided on 2026-10-19 their damage stays 0 and the creature base damage
-# stays unchanged; balancing the weapon damage follows later in a separate change
-zero_damage = sorted(n for n in weapon_names if sum(equipments[n]['damage']) == 0)
-if zero_damage:
-    print('note: weapon damage stays 0 as decided on 2026-10-19, balancing follows later in a separate change: '
-          + ', '.join(zero_damage))
+    # ---------------------------------------------------------------- retained building skill damage unchanged against the base state
+
+    assert set(creatures) == set(base_creatures)
+    checked = 0
+    for name, creature in creatures.items():
+        for skill in creature['skills']:
+            if skill not in DAMAGE_SKILLS:
+                continue
+            for level in range(1, 31):
+                before = per_damage_type(base_creatures[name], base_equipments, skill, level)
+                after = per_damage_type(creature, equipments, skill, level)
+                assert damage_values(creature, skill) == damage_values(base_creatures[name], skill), (name, skill)
+                old_items = [sum(base_equipments[w]['damage'][i] for w in base_creatures[name]['weapons']) for i in range(3)]
+                new_items = [sum(equipments[w]['damage'][i] for w in creature['weapons']) for i in range(3)]
+                for i, (b, a) in enumerate(zip(before, after)):
+                    assert abs((a - b) - (new_items[i] - old_items[i])) < 1e-9, (name, skill, level, before, after)
+                checked += 1
+    assert checked > 1000, checked
+
+    # Weapons with damage 0 are listed: as decided on 2026-10-19 their damage stays 0 and the creature base damage
+    # stays unchanged; balancing the weapon damage follows later in a separate change
+    zero_damage = sorted(n for n in weapon_names if sum(equipments[n]['damage']) == 0)
+    if zero_damage:
+        print('note: weapon damage stays 0 as decided on 2026-10-19, balancing follows later in a separate change: '
+              + ', '.join(zero_damage))
 
 # ---------------------------------------------------------------- level formula
 
 progression = read('source/entities/CreatureProgression.h')
 assert 'COOLDOWN_REDUCTION_PER_LEVEL' not in progression
-assert re.search(r'^\s+CooldownReductionPerLevel\t0\s*$', read('config/global.cfg'), re.M)
+if WITH_CONTENT:
+    assert re.search(r'^\s+CooldownReductionPerLevel\t0\s*$', read('config/global.cfg'), re.M)
 body = function_body(progression, 'inline double cooldownAtLevel(uint32_t baseTurns, uint32_t level)')
 assert '1.0 - ConfigManager::getSingleton().getCooldownReductionPerLevel() * (std::max(1u, level) - 1)' in body
 assert 'std::max(1.0, baseTurns * factor)' in body
@@ -481,27 +527,28 @@ for skill, weapon, expected in ((4, 2, 1.0), (2, 2, 1.0), (2, 4, 2.0), (3, 5, 5/
     assert factor == expected
     assert abs((10 * factor) / max(skill, weapon) - 10 / skill) < 1e-9
 
-# Exercise the production simulator with deliberately misleading mesh names and future slow weapons.
-sys.path.insert(0, str(root / 'tools/balance'))
-from combat_sim import Roster
-roster = Roster(root)
-name = 'Goblin'
-fields = roster.creatures[name][0]
-fields['WeaponSpawnR'] = ['Knife']
-fields['WeaponSpawnL'] = ['none']
-item = roster.equipment['Knife'][0]
-item['WeaponType'] = ['dagger']
-item['MeshName'] = ['misleading_staff.mesh']
-item['CooldownNbTurns'] = ['1']
-normal = roster.unit(name)
-assert normal.parry > 0
-skill_turns = float(roster.attack(name)[0][1])
-item['CooldownNbTurns'] = [str(skill_turns * 3)]
-slow = roster.unit(name)
-assert slow.cooldown == skill_turns * 3
-for before, after in zip(normal.minimum + normal.maximum, slow.minimum + slow.maximum):
-    assert abs(after - before * 3) < 1e-9
-item['WeaponType'] = ['tool']
-assert roster.unit(name).parry == 0
-item['WeaponType'] = ['shield']
-assert roster.unit(name).shield and roster.unit(name).parry == 0
+if WITH_CONTENT:
+    # Exercise the production simulator with deliberately misleading mesh names and future slow weapons.
+    sys.path.insert(0, str(root / 'tools/balance'))
+    from combat_sim import Roster
+    roster = Roster(root)
+    name = 'Goblin'
+    fields = roster.creatures[name][0]
+    fields['WeaponSpawnR'] = ['Knife']
+    fields['WeaponSpawnL'] = ['none']
+    item = roster.equipment['Knife'][0]
+    item['WeaponType'] = ['dagger']
+    item['MeshName'] = ['misleading_staff.mesh']
+    item['CooldownNbTurns'] = ['1']
+    normal = roster.unit(name)
+    assert normal.parry > 0
+    skill_turns = float(roster.attack(name)[0][1])
+    item['CooldownNbTurns'] = [str(skill_turns * 3)]
+    slow = roster.unit(name)
+    assert slow.cooldown == skill_turns * 3
+    for before, after in zip(normal.minimum + normal.maximum, slow.minimum + slow.maximum):
+        assert abs(after - before * 3) < 1e-9
+    item['WeaponType'] = ['tool']
+    assert roster.unit(name).parry == 0
+    item['WeaponType'] = ['shield']
+    assert roster.unit(name).shield and roster.unit(name).parry == 0

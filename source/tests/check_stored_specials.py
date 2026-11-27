@@ -1,15 +1,24 @@
 """Static checks of the special boxes: every box type has an editor button and a game button, a delivered
 special is kept for the player (not applied at once), the stored specials travel to the client and are saved
-with the seat. It does not start a game."""
+with the seat. It does not start a game.
+
+The editor and game layouts are read with their own rows of the content package core-gui (scripts/content_packages.py);
+without the content their box buttons are named as not checked."""
 from pathlib import Path
 import re
 import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the layouts come with their own rows)
+WITH_CONTENT = content_packages.has_content(repo)
 
 
 def read(relative):
-    return (repo / relative).read_text(encoding='utf-8')
+    """The text of a repository file; a mixed interface file comes with its own rows of the content."""
+    return content_packages.read_text(repo, relative)
 
 
 def function(text, signature):
@@ -47,7 +56,8 @@ editor_layout = read('gui/ModeEditor.layout')
 gui = read('source/render/Gui.cpp')
 for special in specials:
     check('askCreateGiftBox(GiftBoxType::%s)' % special in editor, 'the editor has a button action for %s' % special)
-check(len(re.findall(r'<Window\b[^>]*\bname="\w+BoxButton"\s*>', editor_layout)) == len(specials) + 1, 'the editor layout holds one box button per special')
+if WITH_CONTENT:
+    check(len(re.findall(r'<Window\b[^>]*\bname="\w+BoxButton"\s*>', editor_layout)) == len(specials) + 1, 'the editor layout holds one box button per special')
 check(len(re.findall(r'EDITOR_BOX_\w+_BUTTON = ', gui)) == len(specials), 'one editor box button path per special')
 check(len(re.findall(r'connectGuiAction\(Gui::EDITOR_BOX_', editor)) == len(specials), 'every editor box button is connected')
 
@@ -57,9 +67,10 @@ server = read('source/network/ODServer.cpp')
 create = server[server.index('case ClientNotificationType::editorCreateGiftBox:'):server.index('case ClientNotificationType::editorCreateGiftBox:') + 1200]
 check('GiftBoxType::skill' in create and 'GiftBoxType::nbTypes' in create, 'the server accepts every special box type of the editor')
 
-game_layout = read('gui/ModeGame.layout')
-buttons = re.findall(r'name="Special(\d+)"', game_layout)
-check(buttons == [str(i) for i in range(1, len(specials) + 1)], 'the game layout holds one special button per type, numbered by type: %s' % buttons)
+if WITH_CONTENT:
+    game_layout = read('gui/ModeGame.layout')
+    buttons = re.findall(r'name="Special(\d+)"', game_layout)
+    check(buttons == [str(i) for i in range(1, len(specials) + 1)], 'the game layout holds one special button per type, numbered by type: %s' % buttons)
 game_mode = read('source/modes/GameMode.cpp')
 check('askUseSpecial' in function(game_mode, 'bool GameMode::useSpecial('), 'a pressed special button asks the server to use it')
 check('refreshSpecialButtons();' in function(game_mode, 'void GameMode::onFrameStarted('), 'the special buttons follow the stored count every frame')
@@ -80,6 +91,9 @@ check('[StoredSpecials]' in function(seat, 'bool Seat::exportSeatToStream(')
 use = function(seat, 'bool Seat::useStoredSpecial(')
 check('GiftBoxBonus::applyBonus(' in use and 'erase(' in use, 'using a special applies it once and removes it')
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_stored_specials', ['box buttons of gui/ModeEditor.layout and gui/ModeGame.layout '
+                                                         '(own rows)'])
 if failures:
     for failure in failures:
         print('FAIL: ' + failure)

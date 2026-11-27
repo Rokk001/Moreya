@@ -3,8 +3,14 @@ hero chance and weights, item bag chance and saving (GHOST-APPARATUS-PLAN, decis
 ectoplasm lies as real items in front of the busy apparatus)."""
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present: config/rooms.cfg is a mixed table whose own rows come from them
+CONTENT = content_packages.has_content(repo)
 
 
 # Read a tracked source using the repository root rather than the caller's directory.
@@ -23,9 +29,9 @@ def body(text, signature):
     return text[start:end]
 
 
-# Read one numeric key of a config file.
+# Read one numeric key of a config file as the game reads it (a mixed table with its own rows from the content).
 def scalar(path, key):
-    rows = re.findall(r"^\s*" + re.escape(key) + r"\s+([-+0-9.eE]+)\s*$", read(path), re.M)
+    rows = re.findall(r"^\s*" + re.escape(key) + r"\s+([-+0-9.eE]+)\s*$", content_packages.read_text(repo, path), re.M)
     assert len(rows) == 1, (key, rows)
     return float(rows[0])
 
@@ -135,6 +141,9 @@ def work_time():
         "apparatus.workTurns-=1.0;", "if(apparatus.workTurns<=0.0)", "finishEctoplasm(kind);", "const bool unlocked=isApparatusUnlocked(*getSeat(),kind);",
         "\"Locked\"", "\"Working\"")
     has(room, "upkeep works every room", "    workApparatuses();")
+    if not CONTENT:
+        content_packages.unchecked("check_ghost_apparatus", ["GhostApparatusTurns and the work time model"])
+        return
     turns = scalar("config/rooms.cfg", "GhostApparatusTurns")
     assert turns == 5.5
     # The production rule, turn by turn: 40 ectoplasm delivered at once. The first goes in at once (the apparatus is
@@ -211,6 +220,9 @@ def hero_chance_and_weights():
         "\"GhostHeroProductWeightMana\"", "\"GhostHeroProductWeightBook\"", "\"GhostHeroProductWeightCrystal\"",
         "const double point = draw * (mana + book + crystal);", "if(point < mana) return ItemInstance::createGhostItem(GhostItem::manaCrystal);",
         "if(point < mana + book) return ItemInstance::createGhostItem(GhostItem::researchBook);", "return ItemInstance::createSoulCrystal();")
+    if not CONTENT:
+        content_packages.unchecked("check_ghost_apparatus", ["hero product weights and factor of config/rooms.cfg"])
+        return
     weights = [scalar("config/rooms.cfg", key) for key in
         ("GhostHeroProductWeightMana", "GhostHeroProductWeightBook", "GhostHeroProductWeightCrystal")]
     costs = [1.0, 1.0, scalar("config/rooms.cfg", "GhostEctoplasmPerCrystal")]
@@ -234,6 +246,9 @@ def box_chance():
         "if(draw < 1.0 / 3.0) return ItemInstance::createGhostItem(GhostItem::manaCrystal);",
         "if(draw < 2.0 / 3.0) return ItemInstance::createGhostItem(GhostItem::researchBook);", "return ItemInstance::createSoulCrystal();")
     assert "GhostProductBoxChance" not in read("source/giftboxes/GiftBoxItem.cpp"), "gift boxes keep their item"
+    if not CONTENT:
+        content_packages.unchecked("check_ghost_apparatus", ["GhostProductBoxChance of config/rooms.cfg"])
+        return
     assert scalar("config/rooms.cfg", "GhostProductBoxChance") == 0.05
     print("box chance: ok")
 

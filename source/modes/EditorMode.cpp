@@ -2493,6 +2493,9 @@ bool EditorMode::loadMenuFilePathTextChanged( const CEGUI::EventArgs& /*arg*/)
                             {
                                 continue;
                             }
+                            // The fixtures of the checks are never offered
+                            if(MapHandler::isHiddenFixtureLevelPath(xx.path().string()))
+                                continue;
                             addPathNameToList(xx, levelSelectList, CEGUI::Colour(1,0.64,0), nn);
                         }
                     

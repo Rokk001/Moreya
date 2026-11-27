@@ -38,6 +38,10 @@ Exclusions (each one is a documented limit of the game, not a layout fault, and 
 * the room, trap and spell buttons of the game and editor build bars (placed by Gui),
 * KNOWN_LIMITS: the developer widget gallery, which is not an in-game window; its
   findings are counted and printed, not hidden.
+
+Layouts, imagesets, fonts and font files that moved into the content packages are found there
+(scripts/content_packages.py). Without the content only the public layouts are checked: a public layout that imports a
+moved layout, or that needs a moved font or imageset, is named as not checked.
 """
 from pathlib import Path
 import re
@@ -48,6 +52,42 @@ from PIL import ImageFont
 
 repo = Path(__file__).resolve().parents[2]
 gui_dir = repo / 'gui'
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+WITH_CONTENT = content_packages.has_content(repo)
+
+
+def gui_file(name):
+    """The file of a gui/ path: the public file, else the file of a content package (scripts/content_packages.py)."""
+    return content_packages.resolve(repo, 'gui/' + name)
+
+
+def gui_root(name):
+    """The parsed XML of a gui/ file; a mixed interface file comes joined with its own rows of the content."""
+    return ET.fromstring(content_packages.read_text(repo, 'gui/' + name))
+
+
+def is_own_rows_file(path):
+    """True for the own rows file of a mixed interface file (gui/OD.own.looknfeel): it is joined, not read alone."""
+    return Path(path).stem.endswith('.own')
+
+
+#: The mixed interface files whose own rows are not present (only without the content); they are named as not checked
+partial_files = set()
+
+
+def is_partial(name):
+    """True when a mixed gui/ file lacks its own rows because the content is not present (it has marker lines only);
+    the file is then named as not checked like a file of the content."""
+    if WITH_CONTENT or not gui_file(name).is_file():
+        return False
+    if '<!--#@own ' not in gui_file(name).read_text(encoding='utf-8'):
+        return False
+    partial_files.add(name)
+    return True
+
+
 gui_cpp = (repo / 'source/render/Gui.cpp').read_text(encoding='utf-8', errors='replace')
 assert 'layoutScale * getWindowFitFactor(window)' in gui_cpp, 'Gui.cpp does not limit windows to the screen'
 
@@ -78,18 +118,26 @@ def udims(value):
 
 # ---------------------------------------------------------------------------------------------------- fonts and images
 fonts = {}
-for font_file in sorted((gui_dir / 'fonts').glob('*.font')):
-    spec = ET.parse(font_file).getroot()
-    face = ImageFont.truetype(str(gui_dir / 'fonts' / spec.get('filename')), 1024)
+for font_file in content_packages.data_glob(repo, 'gui/fonts', '*.font'):
+    if is_own_rows_file(font_file) or is_partial('fonts/' + font_file.name):
+        continue   # without the content the windows that use a partial font are named as not checked below
+    spec = gui_root('fonts/' + font_file.name)
+    font_path = gui_file('fonts/' + spec.get('filename'))
+    if not font_path.is_file() and not WITH_CONTENT:
+        continue   # a font file of the content: the windows that use the font are named as not checked below
+    face = ImageFont.truetype(str(font_path), 1024)
     # points to pixels at 96 dpi on the 800x600 design size, per font unit of the 1024 pixel measurement
     fonts[spec.get('name')] = (face, float(spec.get('size')) * (96.0 / 72.0) / 1024.0)
 DEFAULT_FONT = 'LiberationSans-10'  # the first font of ODSkin.scheme is the CEGUI default font
-assert re.search(r'<Font filename="LiberationSans-10.font"', (gui_dir / 'ODSkin.scheme').read_text()), 'default font moved'
+assert re.search(r'<Font filename="LiberationSans-10.font"', content_packages.read_text(repo, 'gui/ODSkin.scheme')), \
+    'default font moved'
 FRAME_TITLE_FONT = 'MedievalSharp-10'
 
 imagesets = {}
-for imageset_file in gui_dir.glob('*.imageset'):
-    root = ET.parse(imageset_file).getroot()
+for imageset_file in content_packages.data_glob(repo, 'gui', '*.imageset'):
+    if is_own_rows_file(imageset_file) or is_partial(imageset_file.name):
+        continue   # without the content the windows that use a partial image set are named as not checked below
+    root = gui_root(imageset_file.name)
     imagesets[root.get('name')] = (
         root.get('autoScaled'), float(root.get('nativeHorzRes', 0)), float(root.get('nativeVertRes', 0)),
         {i.get('name'): (float(i.get('width')), float(i.get('height'))) for i in root.findall('Image')})
@@ -152,7 +200,7 @@ class Node:
 
 def build(layout_name, parent, seen):
     """Parse a layout file below the given parent node; layouts imported by it are built below their window."""
-    root = ET.parse(gui_dir / layout_name).getroot()
+    root = gui_root(layout_name)
     nodes = []
     for window in root.findall('Window'):
         nodes.append(build_window(window, parent, layout_name, seen))
@@ -166,16 +214,22 @@ def build_window(element, parent, layout_name, seen):
             node.children.append(build_window(child, node, layout_name, seen))
         elif child.tag == 'LayoutImport':
             imported = child.get('filename')
-            assert (gui_dir / imported).exists(), imported
+            if not WITH_CONTENT and (not gui_file(imported).exists() or is_partial(imported)):
+                missing_imports.add(imported)   # a layout of the content: its importer is not checked
+                continue
+            assert gui_file(imported).exists(), imported
             assert imported not in seen, 'layout import cycle ' + imported
             node.children.extend(build(imported, node, seen | {imported}))
     return node
 
 
-layouts = sorted(p.name for p in gui_dir.glob('*.layout'))
+# Without the content a mixed layout without its own rows is named as not checked (is_partial)
+layouts = sorted(p.name for p in content_packages.data_glob(repo, 'gui', '*.layout')
+                 if not is_own_rows_file(p) and not is_partial(p.name))
+missing_imports = set()
 imported_by_somebody = set()
 for name in layouts:
-    for entry in ET.parse(gui_dir / name).getroot().iter('LayoutImport'):
+    for entry in gui_root(name).iter('LayoutImport'):
         imported_by_somebody.add(entry.get('filename'))
 # Every layout that nobody imports is a root of its own: a sheet (Mode*, Menu*) or a window the code loads by name
 sheets = []
@@ -194,6 +248,7 @@ def covered_layouts(nodes, out):
 
 covered = covered_layouts(sheets, set())
 assert covered == set(layouts), ('layouts not checked', sorted(set(layouts) - covered))
+
 
 # ---------------------------------------------------------------------------------------------------- geometry
 FRAME_TYPES = ('OD/FrameWindow', 'OD/MenuFrameWindow', 'OD/MenuSelectionWindow', 'OD/SheetWindow')
@@ -229,8 +284,8 @@ def fit_factor(top, screen, user):
 
 
 def frame_images(node):
-    defaults = {'FrameLeftImage': 'OpenDungeonsGameWindow/FrameLeft', 'FrameRightImage': 'OpenDungeonsGameWindow/FrameRight',
-                'FrameBottomImage': 'OpenDungeonsGameWindow/FrameBottom', 'FrameTopImage': 'OpenDungeonsGameWindow/FrameTop'}
+    defaults = {'FrameLeftImage': 'ODMenuTemplate/FrameLeft', 'FrameRightImage': 'ODMenuTemplate/FrameRight',
+                'FrameBottomImage': 'ODMenuTemplate/FrameBottom', 'FrameTopImage': 'ODMenuTemplate/FrameTop'}
     return {key: node.props.get(key, default) for key, default in defaults.items()}
 
 
@@ -249,7 +304,9 @@ def client_rect(node, rect, screen, user, s):
         assert node.type == 'DefaultWindow' and 'documentWidth' not in gui_cpp, 'the values page must not scroll'
     if node.type in ('OD/FrameWindow',):
         images = frame_images(node)
-        return (x0 + image_size(images['FrameLeftImage'], screen, user)[0], y0 + title_height(node, screen, user),
+        # the title sits on the top rail (0.75 of its height below the window top), the contents start below the title
+        return (x0 + image_size(images['FrameLeftImage'], screen, user)[0],
+                y0 + 0.75 * image_size(images['FrameTopImage'], screen, user)[1] + title_height(node, screen, user),
                 x1 - image_size(images['FrameRightImage'], screen, user)[0],
                 y1 - image_size(images['FrameBottomImage'], screen, user)[1])
     if node.type == 'OD/SheetWindow':
@@ -545,6 +602,39 @@ def walk(node, parent_client, parent_outer, screen, user, top_fit, problems, sta
     for child in node.children:
         walk(child, client, rect, screen, user, top_fit, problems, stats)
 
+
+
+def needs_missing_content(sheet):
+    """True when the windows of a sheet need a font or an image set that is not present (only without the content):
+    one evaluation of the sheet at the design size, with its findings and caption counts discarded."""
+    saved = (dict(tightest), dict(captions))
+    try:
+        walk(sheet, (0.0, 0.0, DESIGN_W, DESIGN_H), (0.0, 0.0, DESIGN_W, DESIGN_H), (int(DESIGN_W), int(DESIGN_H)), 1.0,
+             1.0, [], {'windows': 0})
+        return False
+    except KeyError:
+        return True
+    finally:
+        tightest.clear()
+        tightest.update(saved[0])
+        captions.clear()
+        captions.update(saved[1])
+
+
+# Without the content a sheet whose windows import a moved layout or need a moved font or image set is named as not
+# checked; with the content every sheet is checked.
+if not WITH_CONTENT:
+    incomplete = [sheet for sheet in sheets if sheet.layout in missing_imports or needs_missing_content(sheet)]
+    importers = set()
+    for name in layouts:
+        for entry in gui_root(name).iter('LayoutImport'):
+            if entry.get('filename') in missing_imports:
+                importers.add(name)
+    incomplete += [sheet for sheet in sheets if sheet not in incomplete and importers & covered_layouts([sheet], set())]
+    content_packages.unchecked('check_window_content_fit', sorted(set(sheet.layout for sheet in incomplete)) +
+                               sorted(missing_imports | partial_files))
+    sheets = [sheet for sheet in sheets if sheet not in incomplete]
+    layouts = [name for name in layouts if name in covered_layouts(sheets, set())]
 
 all_problems = {}
 stats = {'windows': 0}

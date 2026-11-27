@@ -880,7 +880,9 @@ def instantiate(name, position, prototypes, collection):
     return anchor
 
 
-# Seat explicitly marked feet, report every unsupported foot, and persist only a complete valid engine layout.
+# Seat explicitly marked feet, report every unsupported foot, and persist only a complete valid engine layout. The
+# configuration is a mixed table: it is edited joined with its own rows and written back through
+# config_own_rows.split_full, which keeps the upstream rows public and the own rows in the content package.
 def seat_configured_contacts(scene,definitions,collection,configuration):
     scene.frame_set(0)
     bpy.context.view_layer.update()
@@ -930,8 +932,13 @@ def seat_configured_contacts(scene,definitions,collection,configuration):
                 "final_foot_z":final_foot.z})
     assert not unsupported,"No authored support below the foot of: "+", ".join(unsupported)
     if corrected:
-        with configuration.open("r",encoding="utf-8",newline="") as source:
-            lines=source.read().splitlines(keepends=True)
+        import config_own_rows
+        import content_packages
+        import tempfile
+        repo=configuration.resolve().parents[1]
+        table=configuration.resolve().relative_to(repo).as_posix()
+        assert content_packages.has_content(repo),"the own rows of "+table+" are needed to write it back"
+        lines=content_packages.read_text(repo,table).splitlines(keepends=True)
         for index,line in enumerate(lines):
             words=line.split()
             if len(words)==6 and words[0]=="AddEntity" and words[1] in corrected:
@@ -939,7 +946,10 @@ def seat_configured_contacts(scene,definitions,collection,configuration):
                 match=re.match(r"(\s*AddEntity\s+\S+\s+\S+\s+\S+\s+\S+\s+)(\S+)(.*)",line.rstrip("\r\n"))
                 assert match is not None,words[1]
                 lines[index]=match.group(1)+corrected[words[1]]+match.group(3)+newline
-        configuration.write_text("".join(lines),encoding="utf-8",newline="")
+        with tempfile.TemporaryDirectory() as folder:
+            joined=Path(folder)/configuration.name
+            joined.write_text("".join(lines),encoding="utf-8",newline="")
+            config_own_rows.split_full(repo,joined,table)
     return report
 
 
@@ -1080,7 +1090,9 @@ def main():
     sources.hide_viewport = True
     instances = bpy.data.collections.new("Configured scene")
     scene.collection.children.link(instances)
-    definitions = [line.split() for line in (repo / "config/mainmenuscene.cfg").read_text().splitlines() if line.strip() and not line.lstrip().startswith("#")]
+    # The mixed table comes joined with its own rows of the content packages (scripts/content_packages.py)
+    import content_packages
+    definitions = [line.split() for line in content_packages.read_text(repo, "config/mainmenuscene.cfg").splitlines() if line.strip() and not line.lstrip().startswith("#")]
     entities = [words for words in definitions if words[0] == "AddEntity"]
     filenames = sorted({Path(words[2]).stem + ".blend" for words in entities})
     assert len(entities) >= 31, "The original fortress entities must remain in the expanded scene"

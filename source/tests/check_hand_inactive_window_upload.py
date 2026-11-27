@@ -31,7 +31,7 @@ def verify(source):
     fallback = block(body, 'else\n    {')[0]
     assert fallback.strip() == 'hand->_updateSkeleton();\n        hand->getSkeleton()->_updateTransforms();'
     assert body.index('hand->_updateSkeleton();') < body.index('getBone("Index3")')
-    assert 'const Ogre::Vector3 tipLocal(-0.000284253f, 0.0155774f, 0.000218656f);' in body
+    assert 'const Ogre::Vector3 tipLocal(-0.001542f, 0.009951f, -0.000393f);' in body
     assert 'index->_getDerivedOrientation() * (index->_getDerivedScale() * tipLocal)' in body
     assert 'model->setPosition(-(model->getOrientation() * tip) * weight);' in body
     assert 'model->setPosition(-(model->getOrientation() * (model->getScale() * face)));' in body

@@ -167,10 +167,38 @@ inline PileShape ringPileShape(int x, int y, const int (&around)[3][3])
     return shape;
 }
 
+//! The fill step whose size is drawn for a level: the heap comes in four sizes (steps 1-2, 3-4, 5-6 and 7)
+inline int drawnLevel(int level)
+{
+    if(level <= 0)
+        return 0;
+    if(level >= maxLevel)
+        return maxLevel;
+    return ((level + 1) / 2) * 2;
+}
+
+//! True for a full pile that joins at least one full neighbour: it covers its whole tile, so the heaps of a full
+//! treasury run into each other. A ring pile and a lone full pile stay round.
+inline bool isSquare(const PileShape& shape)
+{
+    if(shape.mRing || shape.mLevel < maxLevel)
+        return false;
+    for(int i = 0; i < 4; ++i)
+    {
+        if(shape.mCorner[i] >= maxLevel)
+            return true;
+    }
+    return false;
+}
+
+//! Height of a square pile at a corner shared with full tiles, as a share of the height of its middle
+static const float joinedEdgeShare = 0.55f;
+
 //! Radius (tile units, the tile is 1 wide) of the round heap of a pile: a little gold is a small heap in the middle
 //! of the tile; even a full tile leaves floor visible around its uneven edge
 inline float pileRadius(int level)
 {
+    level = drawnLevel(level);
     if(level <= 1)
         return 0.16f;
     if(level >= maxLevel)
@@ -187,11 +215,31 @@ inline float pileRadiusAt(const PileShape& shape, float u, float v)
 }
 
 //! Surface height of a pile at (u, v), both 0..1 across the tile (u towards +x, v towards +y).
-//! The heap rises from the middle of the tile and runs out flat at its irregular radius.
+//! The heap rises from the middle of the tile and runs out flat at its irregular radius. A square pile (isSquare)
+//! instead rises from the heights of its four corners: a corner shared by full tiles only stands joinedEdgeShare of
+//! the middle high, any other corner lies on the floor. Both tiles of a shared edge use the same two corners, so
+//! their surfaces meet without a step.
 inline float heightAt(const PileShape& shape, float u, float v)
 {
     if(shape.mLevel <= 0)
         return 0.0f;
+
+    if(isSquare(shape))
+    {
+        const float top = levelHeight(maxLevel);
+        const float x = u < 0.0f ? 0.0f : (u > 1.0f ? 1.0f : u);
+        const float y = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        // Corners: north-west, north-east, south-east, south-west (north is towards +y)
+        float corner[4];
+        for(int i = 0; i < 4; ++i)
+            corner[i] = shape.mCorner[i] >= maxLevel ? joinedEdgeShare * top : 0.0f;
+        const float north = corner[0] + (corner[1] - corner[0]) * x;
+        const float south = corner[3] + (corner[2] - corner[3]) * x;
+        const float base = south + (north - south) * y;
+        const float waveX = std::sin(3.1415927f * x);
+        const float waveY = std::sin(3.1415927f * y);
+        return base + (top - base) * waveX * waveX * waveY * waveY + 0.004f;
+    }
 
     // 1 in the middle, 0 at and beyond the radius of the heap (which never exceeds the tile edges)
     const float du = u - 0.5f;
@@ -203,16 +251,16 @@ inline float heightAt(const PileShape& shape, float u, float v)
         const float rest = 1.0f - ratio * ratio;
         bump = rest * std::sqrt(rest);
     }
-    const float peak = levelHeight(shape.mLevel);
+    const float peak = levelHeight(drawnLevel(shape.mLevel));
     // The rise starts flat at the foot of the heap.
     float height = peak * bump;
 
     // A few lumps, only on fuller piles, fading out towards the edges
-    if(shape.mLevel >= 3)
+    if(drawnLevel(shape.mLevel) >= 3)
     {
         const float phase = 1.7f * static_cast<float>(shape.mVariant);
         const float lumps = std::sin(9.0f * u + phase) * std::sin(8.0f * v + 2.0f * phase);
-        height += 0.005f * static_cast<float>(shape.mLevel) * bump * lumps;
+        height += 0.005f * static_cast<float>(drawnLevel(shape.mLevel)) * bump * lumps;
     }
 
     // Keep the layer a hair above the floor so it never flickers against it

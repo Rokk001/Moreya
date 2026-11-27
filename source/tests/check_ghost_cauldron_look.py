@@ -10,7 +10,8 @@ models/GhostCauldron.mesh uses exactly these seven materials (decision 998 point
 GhostCauldronEctoplasm, see check_ghost_cauldron_ectoplasm.py) and keeps its two-tile footprint (2.0 x 2.0 x 1.14,
 read from the mesh bounds chunk; the old 1.6 high mesh had the funnel);
 the client fill sits behind the new glass; the CREDITS line names the rework. Fixed values measured once on the
-export of this branch.
+export of this branch. Ghost.material is content (core-models package, found through scripts/content_packages.py);
+without it the material names of the mesh are named as not checked.
 """
 from pathlib import Path
 import re
@@ -20,16 +21,19 @@ repo = Path(__file__).resolve().parents[2]
 import sys
 # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
 sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The assets of the ghost room come from its room package (scripts/room_packages.py); without the package only the code
 #: side is checked
 ROOM_ASSETS = room_packages.has_room(repo, 'GhostRoom')
+#: The ghost materials are content (core-models package, scripts/content_packages.py)
+GHOST_MATERIAL = content_packages.data_file(repo, 'materials/scripts/Ghost.material') is not None
 
 
 def room_file(relative):
-    """A file of the game data, or of the room package when it moved there."""
-    return room_packages.asset(repo, relative) or (repo / relative)
+    """A file of the game data, or of the content or room package when it moved there."""
+    return content_packages.resolve(repo, relative)
 from assets_src import assets_src_dir  # noqa: E402
 
 generator = (assets_src_dir(repo) / 'rooms/ghostroom/create_models.py').read_text(encoding='utf-8')
@@ -60,9 +64,12 @@ if ROOM_ASSETS:
     assert [round(v, 2) for v in bounds[:6]] == [-1.0, -1.0, 0.0, 1.0, 1.0, 1.14], bounds
     assert b'GhostCauldron.skeleton' in mesh, 'the cauldron has the rig of the trap seat'
 
-    material_script = (repo / 'materials/scripts/Ghost.material').read_text(encoding='utf-8')
-    for name in materials:
-        assert re.search(r'^material ' + name + r'\s*$', material_script, re.M), name
+    if GHOST_MATERIAL:
+        material_script = content_packages.read_text(repo, 'materials/scripts/Ghost.material')
+        for name in materials:
+            assert re.search(r'^material ' + name + r'\s*$', material_script, re.M), name
+    else:
+        content_packages.unchecked('check_ghost_cauldron_look', ['materials/scripts/Ghost.material'])
 
 building = (repo / 'source/entities/BuildingObject.cpp').read_text(encoding='utf-8')
 assert 'createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.0f,0.74f,0.40f));' in building

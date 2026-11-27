@@ -622,6 +622,13 @@ def biped(S, body, head, leg, arm_l, arm_r, press=True, spine=None, phase=None, 
     return rig
 
 
+# Bones of the shared Meshy humanoid rig that the biped configuration needs (see config)
+MESHY_BIPED_BONES = ("Hips", "Head", "LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot",
+                     "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand")
+# Figures whose configuration lets both arms hang instead of pressing one to the body (press=False below)
+MESHY_HANGING_ARMS = ("Elf", "Defender", "Knight", "Monk", "NatureMonster", "RunelordDwarf", "Troll", "PitDemon")
+
+
 def lcabody(S, a, b):
     return [S.common_ancestor(a, b)]
 
@@ -636,6 +643,12 @@ def config(name, S):
 
     def hum(leg, head, armL, press=True, **kw):
         return [biped(S, lcabody(S, leg[0], head), head, leg, armL, mir(armL), press=press, **kw)]
+
+    # The figures rebuilt on the shared 24-bone Meshy rig: the entries below still name the bones of their former
+    # skeletons, so a skeleton with the Meshy bones takes the Meshy chains; the arm handling (press) of each figure stays.
+    if all(bone in S.parent for bone in MESHY_BIPED_BONES):
+        return hum(["LeftUpLeg", "LeftLeg", "LeftFoot"], "Head", ["LeftArm", "LeftForeArm", "LeftHand"],
+                   press=name not in MESHY_HANGING_ARMS)
 
     if name == "Adventurer":
         return hum(["Upperleg_L", "Lowerleg_L", "Feet_L"], "Head", ["Upperarm_L", "Forearm_L", "Hand_L"])

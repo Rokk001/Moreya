@@ -1,19 +1,26 @@
 """Exercise extracted production crystal rules, trades and real packet codecs.
 
 This check compiles bounded C++ fixtures. Run only after the feature completeness gate.
+
+The values of config/global.cfg, config/rooms.cfg and config/creatures.cfg are read with their own rows of the content
+package core-config (scripts/content_packages.py); every rule and the probe need them, so without the content the check
+is named as not checked.
 """
 from pathlib import Path
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+import content_packages  # noqa: E402
 
 
-# Read the current implementation independently of the caller's directory.
+# Read the current implementation independently of the caller's directory; a mixed table comes with its own rows.
 def read(path):
-    return (ROOT / path).read_text(encoding="utf-8")
+    return content_packages.read_text(ROOT, path)
 
 
 # Retain a complete production function, including its unchanged signature and body.
@@ -301,6 +308,10 @@ void fireSpellEffect(Tile&,const std::string&,const std::string&) {}}
 
 # Assemble all complete production bodies and the exact hero-only tail, without executing them here.
 def main():
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked("check_soul_crystal", ["soul crystal values and probe (own rows of config/global.cfg, "
+                                                          "config/rooms.cfg and config/creatures.cfg)"])
+        return
     global_cfg, rooms_cfg = read("config/global.cfg"), read("config/rooms.cfg")
     keys = ["SoulCrystalPrice", "SoulCrystalBreakBelow", "SoulCrystalNormalXpPerSecond", "SoulCrystalHeroRareStart",
         "SoulCrystalHeroRareEnd", "TimePayDay", "HeroItemBase", "HeroItemPerLevel", "MaxItemEffects"]

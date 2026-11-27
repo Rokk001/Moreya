@@ -15,6 +15,9 @@ phase-1 area per story map") and from the level files before the rebuild (keeper
 feature/raid-campaign-r5-d at a22f08005); nothing is derived from the files under test. The game is not started and
 nothing is compiled.
 
+Every wing level lives in a wing package of the content (scripts/campaign_packages.py); without the content the check
+names the levels it could not check.
+
 Usage: python -I source/tests/check_raid_maps.py
 Exit 0 and "raid maps ok" when every item holds.
 """
@@ -26,6 +29,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 START = time.perf_counter()
 FAILURES = []
 
@@ -145,9 +149,9 @@ def check(condition, message):
 
 
 def read(relative):
-    """Returns the text of a file of the repository with Unix line ends."""
-    with open(os.path.join(ROOT, relative), encoding="utf-8") as handle:
-        return handle.read().replace("\r\n", "\n")
+    """Returns the text of a file of the repository with Unix line ends; a mixed table comes with its own rows of the
+    content (scripts/content_packages.py)."""
+    return content_packages.read_text(ROOT, relative).replace("\r\n", "\n")
 
 
 def section(text, name):
@@ -406,6 +410,8 @@ def main():
     configured = re.findall(r"^File=campaign/(\w+)\.level\s*$", campaign, re.M)
     story_names = campaign_packages.checked_names(ROOT, [entry[0] for entry in STORY])
     bonus_names = campaign_packages.checked_names(ROOT, [entry[0] for entry in BONUS])
+    content_packages.unchecked("check_raid_maps", [entry[0] for entry in STORY + BONUS
+                                                   if entry[0] not in story_names + bonus_names])
     check(sorted(configured) == sorted(story_names + bonus_names),
           "the packages must list exactly the story and bonus levels of the structure table")
     discover_expected = {first: "campaign/%s.level" % bonus for bonus, first in BONUS}

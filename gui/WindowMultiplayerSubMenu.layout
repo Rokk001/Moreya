@@ -1,47 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="DefaultWindow" name="MultiplayerSubMenuWindow" >
-        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-        <Property name="Visible" value="False" />
-        <!-- Window frame of the chosen menu sheet behind the controls of this window (K34). -->
-        <Window type="OD/SheetPanel" name="WindowPanel" >
-            <Property name="Area" value="{{0.5,-180},{0.5,-170},{0.5,180},{0.5,214}}" />
-            <Property name="MousePassThroughEnabled" value="True" />
-        </Window>
-        <Window type="OD/MenuTitle" name="Title" >
-            <Property name="Font" value="MedievalSharp-20" />
-            <Property name="Area" value="{{0.5,-160},{0.5,-154},{0.5,160},{0.5,-106}}" />
-            <Property name="Text" value="Multiplayer" />
+<!--#@own 1-->
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-            <Property name="MousePassThroughEnabled" value="True" />
+<!--#@own 2-->
         </Window>
-        <Window type="OD/MenuTextButton" name="MasterServerHostButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.5,-140},{0.5,-100},{0.5,140},{0.5,-46}}" />
-            <Property name="Text" value="Host Online" />
+<!--#@own 3-->
         </Window>
-        <Window type="OD/MenuTextButton" name="MasterServerJoinButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.5,-140},{0.5,-44},{0.5,140},{0.5,10}}" />
-            <Property name="Text" value="Join Online" />
+<!--#@own 4-->
         </Window>
-        <Window type="OD/MenuTextButton" name="MultiplayerServerHostButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.5,-140},{0.5,12},{0.5,140},{0.5,66}}" />
-            <Property name="Text" value="Host via IP" />
-        </Window>
-        <Window type="OD/MenuTextButton" name="MultiplayerServerJoinButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Area" value="{{0.5,-140},{0.5,68},{0.5,140},{0.5,122}}" />
-            <Property name="Text" value="Join via IP" />
-        </Window>
-        <Window type="OD/MenuTextButton" name="BackButton" >
-            <Property name="Font" value="MedievalSharp-13" />
-            <Property name="Text" value="Back" />
-            <Property name="Area" value="{{0.5,-85},{0.5,136},{0.5,85},{0.5,190}}" />
+<!--#@own 5-->
         </Window>
     </Window>
 </GUILayout>

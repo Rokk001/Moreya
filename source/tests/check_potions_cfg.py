@@ -1,10 +1,20 @@
-"""Validate all potion recipes, growth inputs and their required atlas entries."""
+"""Validate all potion recipes, growth inputs and their required atlas entries.
+
+The recipes config/potions.cfg and the atlas gui/Items.imageset live in content packages (found through
+scripts/content_packages.py); without the content the check names them as not checked and passes."""
 import xml.etree.ElementTree as ET
 from check_items_cfg import ROOT, blocks, read, value
+import content_packages
 
 
 def main():
-    """Check exact potion counts and resource references without accepting a partial atlas."""
+    """Check exact potion counts and resource references without accepting a partial atlas (named as not checked when
+    the content is not present)."""
+    missing = [name for name in ("config/potions.cfg", "gui/Items.imageset")
+               if content_packages.data_file(ROOT, name) is None]
+    if missing:
+        content_packages.unchecked("check_potions_cfg", missing)
+        return
     text = read("config/potions.cfg")
     potions, herb_blocks = blocks(text, "Potion"), blocks(text, "Herb")
     assert len(potions) == 29 and len(herb_blocks) == 4
@@ -39,7 +49,7 @@ def main():
         image = value(potion, "Image")
         images.append(image)
     assert ids == {kind + "_" + size for kind in kinds for size in ("small", "medium", "large")} | {"lifespring", "thaw"}
-    atlas = ET.parse(ROOT / "gui/Items.imageset").getroot()
+    atlas = ET.parse(str(content_packages.resolve(ROOT, "gui/Items.imageset"))).getroot()
     assert atlas.get("name") == "ItemImages"
     atlas_names = {image.get("name") for image in atlas.iter("Image")}
     for image in images:

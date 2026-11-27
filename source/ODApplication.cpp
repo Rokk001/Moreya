@@ -43,6 +43,7 @@
 #include "utils/RaidSimulation.h"
 #include "utils/ResourceManager.h"
 #include "rooms/RoomPackages.h"
+#include "utils/ContentPackages.h"
 #include "utils/RunLevelTest.h"
 
 #include <OgreLogManager.h>
@@ -79,6 +80,24 @@
 #include <fstream>
 #include <exception>
 #include <pybind11/embed.h>
+
+//! \brief The existing folders of the loading pictures and of the fonts (materials/textures/loading and gui/fonts) in
+//! the game data and in the content packages, the picture folders first.
+static std::vector<std::string> getStartupLoadingFolders(const std::string& gameDataPath)
+{
+    std::vector<std::string> folders;
+    static const char* const relativeFolders[] = {"materials/textures/loading", "gui/fonts"};
+    for(const char* relative : relativeFolders)
+    {
+        for(const std::string& folder : ContentPackages::getDataFolders(gameDataPath + relative))
+        {
+            boost::system::error_code error;
+            if(boost::filesystem::is_directory(folder, error))
+                folders.push_back(folder);
+        }
+    }
+    return folders;
+}
 
 //! \brief Catches the X button of the primary window while the game is still loading, before the frame listener exists.
 //! The window is only hidden and kept: Ogre would otherwise destroy it together with the rendering context that the
@@ -125,7 +144,13 @@ void ODApplication::startGame(boost::program_options::variables_map& options)
     logMgr.setLevel(resMgr.getLogLevel());
     // The room packages decide which packaged rooms are available; every mode (game, server, tools) needs them
     RoomPackages::discover(resMgr.getGameDataPath());
-
+    // Without its content packages the game only tells that the content is missing (main shows the message) and quits
+    ContentPackages::discover(resMgr.getGameDataPath());
+    if(!ContentPackages::getMissingPackages().empty())
+    {
+        ContentPackages::setStartRefused(true);
+        return;
+    }
 
     try
     {
@@ -291,16 +316,19 @@ void ODApplication::startClient()
     Ogre::WindowEventUtilities::addWindowEventListener(renderWindow, &startupCloseListener);
 
     // The loading picture and its existing text font precede the first draw.
-    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-        resMgr.getGameDataPath() + "materials/textures/loading", "FileSystem", "StartupLoading");
-    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-        resMgr.getGameDataPath() + "gui/fonts", "FileSystem", "StartupLoading");
+    // Both folders may lie in the game data or in a content package (the loading pictures and the own fonts)
+    const std::vector<std::string> startupFolders = getStartupLoadingFolders(resMgr.getGameDataPath());
+    for(const std::string& folder : startupFolders)
+        Ogre::ResourceGroupManager::getSingleton().addResourceLocation(folder, "FileSystem", "StartupLoading");
     LoadingScreen startupLoading(*renderWindow, overlaySystem);
     // The startup font is loaded; the location must not stay in the group, because initialiseAllResourceGroups()
     // would otherwise parse ogrefonts.fontdef there and create the game fonts (Fonts/MedievalSharp) in a group that
     // is destroyed after startup, before RTSS has a technique for their materials.
-    Ogre::ResourceGroupManager::getSingleton().removeResourceLocation(
-        resMgr.getGameDataPath() + "gui/fonts", "StartupLoading");
+    for(const std::string& folder : startupFolders)
+    {
+        if(folder.find("gui/fonts") != std::string::npos)
+            Ogre::ResourceGroupManager::getSingleton().removeResourceLocation(folder, "StartupLoading");
+    }
 #ifdef OD_USE_SFML_WINDOW
     // Attach event handling after the picture exists; SFML never creates a visible blank window.
     sf::WindowHandle nativeHandle;
@@ -365,7 +393,7 @@ void ODApplication::startClient()
         LoadingScreen::presentStartup(LoadingScreen::startupFraction(5.0f));
 
 #ifdef OD_NET_HELPER_RELAY
-        // Lobby multiplayer through the relay helper (docs/development/NETWORK-TRANSPORT.md). It is set up before the
+        // Lobby multiplayer through the relay helper (the design document NETWORK-TRANSPORT.md of the content repository). It is set up before the
         // server and the client, whose connections it carries; the handshake finishes in the background.
         HelperRelayProcess helperRelay;
         if(!resMgr.getNetHelperPath().empty() && helperRelay.start(resMgr.getNetHelperPath(), std::vector<std::string>()))
@@ -388,7 +416,7 @@ void ODApplication::startClient()
         textRenderer.addTextBox(ODApplication::HAND_COOLDOWN_STRING, "",
                                     0, 0, 200, 50, Ogre::ColourValue(1.0f, 0.8f, 0.4f));
 
-        ODFrameListener frameListener(resMgr.getConfigPath() + "mainmenuscene.cfg",
+        ODFrameListener frameListener(ContentPackages::resolveFile(resMgr.getConfigPath() + "mainmenuscene.cfg"),
             renderWindow, &overlaySystem, &gui);
 
         ogreRoot.addFrameListener(&frameListener);

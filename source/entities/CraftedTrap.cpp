@@ -34,8 +34,26 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+//! Mesh of every finished trap that is not a door, from the workshop until it is mounted: the transport crate of the
+//! workshop. The trap shows its own model only once it is mounted (a Trap entity); a door keeps its own model.
+const std::string TRAP_CRATE_MESH = "TrapCrate";
+
+//! \brief The mesh a finished trap of this type shows while it lies in the workshop or is carried: the crate for a trap,
+//! the door itself for a door.
+const std::string& getCraftedTrapMesh(TrapType type)
+{
+    const bool door = (type == TrapType::doorWooden) || (type == TrapType::doorIronbound) ||
+        (type == TrapType::doorSteel) || (type == TrapType::doorBarricade) || (type == TrapType::doorSecret) ||
+        (type == TrapType::doorRuned);
+    return door ? TrapManager::getMeshFromTrapType(type) : TRAP_CRATE_MESH;
+}
+}
+
+//! A finished trap looks like the transport crate of the workshop (getCraftedTrapMesh); a finished door like the door.
 CraftedTrap::CraftedTrap(GameMap* gameMap, const std::string& workshopName, TrapType trapType) :
-    RenderedMovableEntity(gameMap, workshopName, TrapManager::getMeshFromTrapType(trapType), 0.0f, false),
+    RenderedMovableEntity(gameMap, workshopName, getCraftedTrapMesh(trapType), 0.0f, false),
     mTrapType(trapType)
 {
 }

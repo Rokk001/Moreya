@@ -11,6 +11,13 @@
 3. A clearly visible textured hose connects the backpack with the cannon and follows the hunter and the cannon (hose
    shaping every frame, dynamic tube, material GhostHose with the ribbed rubber texture).
 Fixed values measured once on this branch: 4 setAnimationState calls with a direction in the hunt, 128 rings and 8 sides.
+
+The hunter skeletons, Ghost.material and GhostPackRubber.png are content (core-models package, found through
+scripts/content_packages.py). Without them the code and config parts run; the skeleton clips, the material blocks and
+the texture are named as not checked (the mean of the texture then is the value measured once, as without Pillow).
+config/rooms.cfg and config/creatures.cfg are mixed tables read with their own rows from the content
+(content_packages.read_text); without the content the cannon and wire models that need their values are named as not
+checked, the code parts run.
 """
 from pathlib import Path
 import importlib.util
@@ -18,8 +25,17 @@ import math
 import random
 import re
 import struct
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
+
+#: The content files that are not present (named as not checked at the end)
+missing_content = []
+#: True when the content packages are present: rooms.cfg and creatures.cfg come with their own rows from them
+CONTENT = content_packages.has_content(repo)
 
 
 def read(path):
@@ -143,27 +159,41 @@ for _ in range(2000):
 assert max(tilt_after_turn(rng.uniform(0, 360), (rng.uniform(-2, 2), rng.uniform(-2, 2), 1.0)) for _ in range(200)) > 20, \
     'a direction with a height share would tilt him (the old fault)'
 
-# The skeleton clips of the six hunters hold no lying pose: no bone of the Empty, Throw or Beam clip turns past 50 degrees
-spec = importlib.util.spec_from_file_location('ghost_pose_chunks', repo / 'tools/blender-assets/splice_animation_chunks.py')
+# The skeleton clips of the six hunters hold no lying pose: no bone of the Throw or Beam clip turns past 50 degrees.
+# The Empty clip is not checked any more: since decision 936 the put-in is the generated reach pose over Idle, no game
+# code requests Empty (only the fallback of RenderManager maps it to Attack for a skeleton without it), and the clip was
+# dropped from the hunter skeletons as never played. The premise is checked here: no source file plays empty_anim.
+for path in sorted((repo / 'source').rglob('*.cpp')):
+    played = re.findall(r'setAnimationState\([^;]*empty_anim', code_only(path.read_text(encoding='utf-8', errors='replace')))
+    assert not played, ('no game code plays the Empty clip', path.name, played)
+spec =importlib.util.spec_from_file_location('ghost_pose_chunks', repo / 'tools/blender-assets/splice_animation_chunks.py')
 chunks_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(chunks_module)
-for creature in ('PitDemon', 'Troll', 'Skeleton', 'RunelordDwarf', 'Knight', 'Defender'):
-    block = next(b for b in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S)
-                 if re.search(r'^\s*Name\s+' + creature + r'\s*$', b, re.M))
-    mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)[1]
-    _, chunks = chunks_module.chunks((repo / 'models' / (mesh.removesuffix('.mesh') + '.skeleton')).read_bytes())
-    clips = {name: data for kind, name, data in chunks if kind == chunks_module.ANIMATION}
-    for clip in ('Empty', 'Throw', 'Beam'):
-        _, tracks = chunks_module.animation_children(clips[clip])
-        for kind, bone, track in tracks:
-            if kind != 0x4100:
-                continue
-            position = 8
-            while position < len(track):
-                _, size = struct.unpack_from('<HI', track, position)
-                angle = struct.unpack_from('<f', track, position + 10)[0]
-                assert abs(math.degrees(angle)) <= 50, (creature, clip, bone, math.degrees(angle))
-                position += size
+# The hunters' meshes are named in the joined creatures.cfg (own rows of the content)
+if CONTENT:
+    for creature in ('PitDemon', 'Troll', 'Skeleton', 'RunelordDwarf', 'Knight', 'Defender'):
+        block = next(b for b in re.findall(r'\[Creature\](.*?)\[/Creature\]', content_packages.read_text(repo, 'config/creatures.cfg'), re.S)
+                     if re.search(r'^\s*Name\s+' + creature + r'\s*$', b, re.M))
+        mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)[1]
+        skeleton = 'models/' + mesh.removesuffix('.mesh') + '.skeleton'
+        if content_packages.data_file(repo, skeleton) is None:
+            missing_content.append(skeleton)
+            continue
+        _, chunks = chunks_module.chunks(content_packages.resolve(repo, skeleton).read_bytes())
+        clips = {name: data for kind, name, data in chunks if kind == chunks_module.ANIMATION}
+        for clip in ('Throw', 'Beam'):
+            _, tracks = chunks_module.animation_children(clips[clip])
+            for kind, bone, track in tracks:
+                if kind != 0x4100:
+                    continue
+                position = 8
+                while position < len(track):
+                    _, size = struct.unpack_from('<HI', track, position)
+                    angle = struct.unpack_from('<f', track, position + 10)[0]
+                    assert abs(math.degrees(angle)) <= 50, (creature, clip, bone, math.degrees(angle))
+                    position += size
+else:
+    missing_content.append('config/creatures.cfg (hunter skeleton clips)')
 
 # --- 2. The cannon points at the ghost for the whole beam step, naturally (decisions 894 and 998) ------------------------
 creature_source = read('source/entities/Creature.cpp')
@@ -211,7 +241,8 @@ has(header, 'the mount and the shown direction are kept', 'Ogre::TagPoint* mGhos
     'Ogre::Vector3 mGhostCannonAim = Ogre::Vector3::ZERO;')
 clear_visuals = body(creature_source, 'void Creature::clearGhostHuntVisuals()')
 assert 'mGhostCaptureGrip=nullptr;' in clear_visuals and 'mGhostCannonAim=Ogre::Vector3::ZERO;' in clear_visuals
-rooms = read('config/rooms.cfg')
+# config/rooms.cfg as the game reads it, with its own rows from the content
+rooms = content_packages.read_text(repo, 'config/rooms.cfg')
 
 
 def config_value(key):
@@ -233,14 +264,18 @@ def documented(key):
     assert any(key.rstrip('0123456789') in line for line in block), ('doc line', key)
 
 
-max_down = float(config_value('GhostCannonMaxDownDegrees'))
-max_up = float(config_value('GhostCannonMaxUpDegrees'))
-aim_seconds = float(config_value('GhostCannonAimSeconds'))
-for key in ('GhostCannonMaxDownDegrees', 'GhostCannonMaxUpDegrees', 'GhostCannonAimSeconds'):
-    documented(key)
-assert 10 <= max_down <= 40, 'a natural downward range: the cannon never points steeply into the floor'
-assert 20 <= max_up <= 60 and 0 < aim_seconds <= 0.5, 'smooth but quick enough to follow the ghost'
+# The cannon pitch range and its smoothing are own rows of config/rooms.cfg
+if CONTENT:
+    max_down = float(config_value('GhostCannonMaxDownDegrees'))
+    max_up = float(config_value('GhostCannonMaxUpDegrees'))
+    aim_seconds = float(config_value('GhostCannonAimSeconds'))
+    for key in ('GhostCannonMaxDownDegrees', 'GhostCannonMaxUpDegrees', 'GhostCannonAimSeconds'):
+        documented(key)
+    assert 10 <= max_down <= 40, 'a natural downward range: the cannon never points steeply into the floor'
+    assert 20 <= max_up <= 60 and 0 < aim_seconds <= 0.5, 'smooth but quick enough to follow the ghost'
 
+else:
+    missing_content.append('config/rooms.cfg (cannon pitch range and smoothing)')
 
 def limit_pitch(direction, heading, down, up):
     """Model of limitGhostCannonPitch."""
@@ -283,73 +318,79 @@ def angle_between(a, b):
     return math.degrees(math.acos(max(-1.0, min(1.0, dot(unit(a), unit(b))))))
 
 
-# Model of the beam step of screenshot 2026-11-09: the ghost floats in front of the hunter at chest height, shrinks and
-# the open trap on the floor pulls it down to below the floor. The old direct aim turned the barrel steeply into the floor.
-frame = 1.0 / 60.0
-for _ in range(400):
-    grip = (0.0, 0.0, rng.uniform(0.35, 0.6))
-    heading = (0.0, -1.0, 0.0)
-    trap = (rng.uniform(-0.4, 0.4), rng.uniform(-1.0, -0.35), 0.0)
-    shown, previous_pitch = None, None
-    old_lowest = 90.0
-    steps = 600
-    for step in range(steps + 1):
-        share = step / steps
-        # chest height while beamed, pulled to 0.8 below the floor over the last quarter
-        height = 1.1 if share < 0.75 else 1.1 - (share - 0.75) / 0.25 * 1.9
-        ghost = (trap[0], trap[1], height)
-        direction = sub(ghost, grip)
-        before = shown
-        shown = aim_step(shown, direction, heading, frame)
-        pitch = pitch_of(shown)
-        assert -max_down - 1e-6 <= pitch <= max_up + 1e-6, ('never into the floor, never straight up', pitch)
-        if before is not None:
-            # no snap: one frame turns the barrel at most the smoothing share of the remaining yaw and pitch
-            wanted = limit_pitch(direction, heading, math.radians(max_down), math.radians(max_up))
-            yaw_gap = abs(math.degrees(math.remainder(math.atan2(wanted[1], wanted[0]) - math.atan2(before[1], before[0]),
-                                                      2 * math.pi)))
-            pitch_gap = abs(pitch_of(wanted) - pitch_of(before))
-            moved = angle_between(before, shown)
-            assert moved <= (yaw_gap + pitch_gap) * (1 - math.exp(-frame / aim_seconds)) + 1e-6
-            assert moved < 3.0, ('a smooth turn, never a jump', moved)
-        old_lowest = min(old_lowest, pitch_of(direction))
-    assert old_lowest < -max_down - 10, ('the direct aim would point into the floor', old_lowest)
-    # At the end the barrel rests at the lowest natural pitch, pointing the ghost's way
-    assert abs(pitch_of(shown) + max_down) < 0.5, pitch_of(shown)
-    assert dot(unit((shown[0], shown[1], 0.0)), unit((trap[0] - grip[0], trap[1] - grip[1], 0.0))) > 0.999
-# Within the natural range the barrel still ends up along the direction to the ghost
-for _ in range(500):
-    heading = unit((rng.uniform(-1, 1), rng.uniform(-1, 1), 0.0))
-    planar = mul(heading, rng.uniform(0.4, 2.0))
-    direction = (planar[0], planar[1], length(planar) * math.tan(math.radians(rng.uniform(-max_down + 1, max_up - 1))))
-    shown = aim_step(None, mul(heading, -1.0), heading, frame)
-    for _ in range(int(3 * aim_seconds / frame) * 4):
-        shown = aim_step(shown, direction, heading, frame)
-    assert angle_between(shown, direction) < 0.1, angle_between(shown, direction)
-# A ghost straight below the grip keeps the hunter's heading at the lowest natural pitch
-below = limit_pitch((0.0, 0.0, -1.0), (1.0, 0.0, 0.0), math.radians(max_down), math.radians(max_up))
-assert abs(pitch_of(below) + max_down) < 1e-9 and below[0] > 0.8
+# The cannon models need the pitch range and smoothing of config/rooms.cfg
+if CONTENT:
+    # Model of the beam step of screenshot 2026-11-09: the ghost floats in front of the hunter at chest height, shrinks and
+    # the open trap on the floor pulls it down to below the floor. The old direct aim turned the barrel steeply into the floor.
+    frame = 1.0 / 60.0
+    for _ in range(400):
+        grip = (0.0, 0.0, rng.uniform(0.35, 0.6))
+        heading = (0.0, -1.0, 0.0)
+        trap = (rng.uniform(-0.4, 0.4), rng.uniform(-1.0, -0.35), 0.0)
+        shown, previous_pitch = None, None
+        old_lowest = 90.0
+        steps = 600
+        for step in range(steps + 1):
+            share = step / steps
+            # chest height while beamed, pulled to 0.8 below the floor over the last quarter
+            height = 1.1 if share < 0.75 else 1.1 - (share - 0.75) / 0.25 * 1.9
+            ghost = (trap[0], trap[1], height)
+            direction = sub(ghost, grip)
+            before = shown
+            shown = aim_step(shown, direction, heading, frame)
+            pitch = pitch_of(shown)
+            assert -max_down - 1e-6 <= pitch <= max_up + 1e-6, ('never into the floor, never straight up', pitch)
+            if before is not None:
+                # no snap: one frame turns the barrel at most the smoothing share of the remaining yaw and pitch
+                wanted = limit_pitch(direction, heading, math.radians(max_down), math.radians(max_up))
+                yaw_gap = abs(math.degrees(math.remainder(math.atan2(wanted[1], wanted[0]) - math.atan2(before[1], before[0]),
+                                                          2 * math.pi)))
+                pitch_gap = abs(pitch_of(wanted) - pitch_of(before))
+                moved = angle_between(before, shown)
+                assert moved <= (yaw_gap + pitch_gap) * (1 - math.exp(-frame / aim_seconds)) + 1e-6
+                assert moved < 3.0, ('a smooth turn, never a jump', moved)
+            old_lowest = min(old_lowest, pitch_of(direction))
+        assert old_lowest < -max_down - 10, ('the direct aim would point into the floor', old_lowest)
+        # At the end the barrel rests at the lowest natural pitch, pointing the ghost's way
+        assert abs(pitch_of(shown) + max_down) < 0.5, pitch_of(shown)
+        assert dot(unit((shown[0], shown[1], 0.0)), unit((trap[0] - grip[0], trap[1] - grip[1], 0.0))) > 0.999
+    # Within the natural range the barrel still ends up along the direction to the ghost
+    for _ in range(500):
+        heading = unit((rng.uniform(-1, 1), rng.uniform(-1, 1), 0.0))
+        planar = mul(heading, rng.uniform(0.4, 2.0))
+        direction = (planar[0], planar[1], length(planar) * math.tan(math.radians(rng.uniform(-max_down + 1, max_up - 1))))
+        shown = aim_step(None, mul(heading, -1.0), heading, frame)
+        for _ in range(int(3 * aim_seconds / frame) * 4):
+            shown = aim_step(shown, direction, heading, frame)
+        assert angle_between(shown, direction) < 0.1, angle_between(shown, direction)
+    # A ghost straight below the grip keeps the hunter's heading at the lowest natural pitch
+    below = limit_pitch((0.0, 0.0, -1.0), (1.0, 0.0, 0.0), math.radians(max_down), math.radians(max_up))
+    assert abs(pitch_of(below) + max_down) < 1e-9 and below[0] > 0.8
 
-# Model: whatever the hand bone does, the barrel ends up along the shown direction
-for _ in range(5000):
-    node = random_quaternion(rng)
-    bone = random_quaternion(rng)
-    parent = qmul(node, bone)
-    grip = (rng.uniform(-3, 3), rng.uniform(-3, 3), rng.uniform(0.2, 1.0))
-    target = (rng.uniform(-3, 3), rng.uniform(-3, 3), rng.uniform(0.0, 1.5))
-    direction = limit_pitch(sub(target, grip), (0.0, -1.0, 0.0), math.radians(max_down), math.radians(max_up))
-    if length(sub(target, grip)) < 0.1:
-        continue
-    wanted = rotation_to((0, 0, 1), direction)
-    local = qmul(qinv(parent), wanted)
-    barrel = qrot(qmul(parent, local), (0, 0, 1))
-    error = length(sub(barrel, unit(direction)))
-    assert error < 1e-9, ('the barrel points along the shown direction', error)
-    # and so it never points backwards or slanted away from it
-    assert dot(barrel, unit(direction)) > 1 - 1e-9
+    # Model: whatever the hand bone does, the barrel ends up along the shown direction
+    for _ in range(5000):
+        node = random_quaternion(rng)
+        bone = random_quaternion(rng)
+        parent = qmul(node, bone)
+        grip = (rng.uniform(-3, 3), rng.uniform(-3, 3), rng.uniform(0.2, 1.0))
+        target = (rng.uniform(-3, 3), rng.uniform(-3, 3), rng.uniform(0.0, 1.5))
+        direction = limit_pitch(sub(target, grip), (0.0, -1.0, 0.0), math.radians(max_down), math.radians(max_up))
+        if length(sub(target, grip)) < 0.1:
+            continue
+        wanted = rotation_to((0, 0, 1), direction)
+        local = qmul(qinv(parent), wanted)
+        barrel = qrot(qmul(parent, local), (0, 0, 1))
+        error = length(sub(barrel, unit(direction)))
+        assert error < 1e-9, ('the barrel points along the shown direction', error)
+        # and so it never points backwards or slanted away from it
+        assert dot(barrel, unit(direction)) > 1 - 1e-9
 
 # --- 3. The hose from the backpack to the cannon ---------------------------------------------------------------------------
-ghost_material = read('materials/scripts/Ghost.material')
+#: True when Ghost.material is in the public tree or in a content package
+GHOST_MATERIAL = content_packages.data_file(repo, 'materials/scripts/Ghost.material') is not None
+ghost_material = content_packages.read_text(repo, 'materials/scripts/Ghost.material') if GHOST_MATERIAL else None
+if not GHOST_MATERIAL:
+    missing_content.append('materials/scripts/Ghost.material')
 
 
 def material_block(name):
@@ -357,10 +398,16 @@ def material_block(name):
     return body(ghost_material[start:], 'material ' + name + '\n')
 
 
-has(material_block('GhostHose'), 'a textured material', 'texture GhostPackRubber.png')
-texture = repo / 'materials/textures/GhostPackRubber.png'
-assert texture.is_file() and texture.stat().st_size > 1000, 'the hose texture exists'
-assert any('materials/textures/GhostPackRubber.png' in row and 'rubber' in row for row in read('CREDITS').splitlines()), 'credited texture'
+if GHOST_MATERIAL:
+    has(material_block('GhostHose'), 'a textured material', 'texture GhostPackRubber.png')
+texture = content_packages.data_file(repo, 'materials/textures/GhostPackRubber.png')
+if texture is None:
+    missing_content.append('materials/textures/GhostPackRubber.png')
+else:
+    assert texture.is_file() and texture.stat().st_size > 1000, 'the hose texture exists'
+    # The row of a moved asset stands in the CREDITS of the content repository (public CREDITS plus that one)
+    assert any('materials/textures/GhostPackRubber.png' in row and 'rubber' in row
+               for row in room_packages.credits_text(repo).splitlines()), 'credited texture'
 shape = body(creature_source, 'static void shapeGhostHose(')
 has(creature_source, 'fixed vertex count', 'static const size_t GHOST_HOSE_RINGS=128;', 'static const size_t GHOST_HOSE_SIDES=8;')
 has(shape, 'a tube along a cubic curve with sag, rebuilt in place', 'hose.begin("GhostHose",Ogre::RenderOperation::OT_TRIANGLE_LIST,"Graphics");',
@@ -429,11 +476,12 @@ assert sum(abs(value - 1) < 1e-12 for value in profile) == 33
 assert sum(abs(value - 0.72) < 1e-12 for value in profile) == 32
 # Decision 998: the hose read white in the room light (screenshots 2026-11-09 152945_8 and 153036_15). Hose and wires are
 # unlit vertex colours now, so the room light cannot wash them out.
-for name in ('GhostHose', 'GhostHoseWire'):
-    block = material_block(name)
-    has(block, 'unlit vertex colours', 'lighting off', 'ambient vertexcolour', 'diffuse vertexcolour', 'cull_hardware none')
-    assert 'specular' not in block and 'emissive' not in block
-assert 'texture' not in material_block('GhostHoseWire'), 'plain bright wire colours'
+if GHOST_MATERIAL:
+    for name in ('GhostHose', 'GhostHoseWire'):
+        block = material_block(name)
+        has(block, 'unlit vertex colours', 'lighting off', 'ambient vertexcolour', 'diffuse vertexcolour', 'cull_hardware none')
+        assert 'specular' not in block and 'emissive' not in block
+    assert 'texture' not in material_block('GhostHoseWire'), 'plain bright wire colours'
 has(visuals, 'steel fittings created once and transformed every frame',
     'scene->createEntity(name,"GhostHoseCoupling.mesh")',
     'coupling->setPosition(end==0?port:rear);',
@@ -480,6 +528,13 @@ def colour(key):
     return values
 
 
+# The wire and hose look are own rows of config/rooms.cfg: without the content only the names are checked
+if not CONTENT:
+    assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', rooms + shape), 'no names of other games or films'
+    missing_content.append('config/rooms.cfg (hose and wire look and the wire model)')
+    content_packages.unchecked('check_ghost_hunter_pose', missing_content)
+    print('ghost hunter pose, cannon aim, hose and wires: ok')
+    sys.exit(0)
 wire_count = int(config_value('GhostHoseWireCount'))
 wires = [colour('GhostHoseWireColour%d' % n) for n in range(1, wire_count + 1)]
 assert not re.search(r'^\s*GhostHoseWireColour%d\s' % (wire_count + 1), rooms, re.M), 'no unused wire colour'
@@ -514,6 +569,8 @@ assert 0.4 <= glow < 1.0, 'shaded so the wires read as round, but always bright'
 # The hose under the wires no longer reads white: tint x mean rubber texture, fully lit, stays dark
 try:
     from PIL import Image
+    if texture is None:
+        raise ImportError('the texture is content and not present')
     pixels = Image.open(texture).convert('RGB').resize((64, 64))
     mean = [sum(p[i] for p in pixels.getdata()) / (64 * 64 * 255.0) for i in range(3)]
 except ImportError:
@@ -601,6 +658,8 @@ for rgb in wires + [hose_tint]:
         assert max(shaded) <= 1.0
     if rgb is not hose_tint:
         assert min(rgb) * 1.0 <= 0.2, 'no wire is white or grey'
-assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', read('config/rooms.cfg') + shape + material_block('GhostHoseWire')), \
+wire_block = material_block('GhostHoseWire') if GHOST_MATERIAL else ''
+assert not re.search(r'(?i)ghostbust|proton|ecto-?1|slimer', rooms + shape + wire_block), \
     'no names of other games or films'
+content_packages.unchecked('check_ghost_hunter_pose', missing_content)
 print('ghost hunter pose, cannon aim, hose and wires: ok')

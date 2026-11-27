@@ -21,6 +21,7 @@
  */
 
 #include "utils/Helper.h"
+#include "utils/ContentPackages.h"
 
 #include "utils/LogManager.h"
 
@@ -172,8 +173,9 @@ namespace Helper
     //! \return false if the file could not be opened.
     bool readFile(const std::string& fileName, std::stringstream& stream, bool withoutComments)
     {
-        // Try to open the input file for reading and throw an error if we can't.
-        std::ifstream baseLevelFile(fileName.c_str(), std::ifstream::in);
+        // Try to open the input file for reading and throw an error if we can't. A file of the game data may lie in a
+        // content package (ContentPackages::resolveFile).
+        std::ifstream baseLevelFile(ContentPackages::resolveFile(fileName).c_str(), std::ifstream::in);
         if (!baseLevelFile.good())
         {
             OD_LOG_WRN("File not found=" + fileName);
@@ -182,6 +184,7 @@ namespace Helper
 
         // Read in the whole baseLevelFile, strip it of comments and feed it into
         // the stream.
+        std::vector<std::string> lines;
         std::string nextParam;
         while (baseLevelFile.good())
         {
@@ -192,16 +195,32 @@ namespace Helper
             if(!nextParam.empty() && (*nextParam.rbegin() == '\r'))
                 nextParam.erase(nextParam.size() - 1);
 
+            lines.push_back(nextParam);
+        }
+
+        baseLevelFile.close();
+
+        // A mixed data table gets its own rows from the content packages in place of its marker lines
+        // (ContentPackages::mergeOwnRows).
+        bool hasOwnRows = false;
+        std::vector<int> missing;
+        std::vector<int> unused;
+        ContentPackages::mergeOwnRows(fileName, lines, hasOwnRows, missing, unused);
+        for(std::vector<int>::const_iterator it = missing.begin(); it != missing.end(); ++it)
+            OD_LOG_ERR("Own rows block #@own " + toString(*it) + " is missing for " + fileName);
+        for(std::vector<int>::const_iterator it = unused.begin(); it != unused.end(); ++it)
+            OD_LOG_ERR("Own rows block #@own " + toString(*it) + " has no marker in " + fileName);
+
+        for(std::vector<std::string>::const_iterator it = lines.begin(); it != lines.end(); ++it)
+        {
             /* Find the first occurrence of the comment symbol on the
              * line and return everything before that character.
              */
             if(withoutComments)
-                stream << nextParam.substr(0, nextParam.find('#')) << "\n";
+                stream << it->substr(0, it->find('#')) << "\n";
             else
-                stream << nextParam << "\n";
+                stream << *it << "\n";
         }
-
-        baseLevelFile.close();
 
         return true;
     }

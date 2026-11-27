@@ -3,16 +3,22 @@
 MenuFlight.h is compiled as it is. MenuModeMain::onFrameStarted and the hand-over functions of ModeManager.h are cut out of
 the production sources and compiled against small mocks. The image names used by the layout and by GameMode.cpp are checked
 against the real imagesets and the icon picture.
+The imagesets, pictures and the layout are read from the public tree and the content packages
+(scripts/content_packages.py); without the content the layout checks are named as not checked.
 """
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ElementTree
 
 from PIL import Image
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+HAS_CONTENT = content_packages.has_content(repo)
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 mode_manager = (repo / 'source/modes/ModeManager.h').read_text()
 menu_main = (repo / 'source/modes/MenuModeMain.cpp').read_text()
@@ -33,13 +39,20 @@ def function(text, signature):
 
 
 def imagesets():
-    """Every image of the real imagesets as 'Set/Image': (picture file, x, y, width, height)."""
+    """Every image of the real imagesets of the public tree and the content packages as 'Set/Image': (picture file, x, y,
+    width, height). A mixed imageset (gui/ODIcons.imageset, ...) is read joined with its own rows, as the game reads
+    it; its own rows file is no imageset, and without the content a mixed imageset is not there (its rows are own)."""
     found = {}
-    for path in sorted(gui.glob('*.imageset')):
-        root = ElementTree.parse(path).getroot()
+    for path in content_packages.data_glob(repo, 'gui', '*.imageset'):
+        if path.name.endswith('.own.imageset'):
+            continue
+        text = content_packages.read_text(repo, content_packages.relative_path(repo, path))
+        if '<!--#@own ' in text:
+            continue
+        root = ElementTree.fromstring(text)
         for image in root.findall('Image'):
             found[root.get('name') + '/' + image.get('name')] = (
-                gui / root.get('imagefile'), int(image.get('xPos')), int(image.get('yPos')),
+                content_packages.resolve(repo, 'gui/' + root.get('imagefile')), int(image.get('xPos')), int(image.get('yPos')),
                 int(image.get('width')), int(image.get('height')))
     return found
 
@@ -253,37 +266,45 @@ assert 'createWindow("OD/StaticImage", "DefeatCameraMarker")' in create
 assert 'setText("CAM")' not in create
 marker = re.search(r'^const std::string DEFEAT_CAMERA_MARKER_IMAGE = "([^"]+)";$', game_mode, re.MULTILINE)
 assert marker and 'setProperty("Image", DEFEAT_CAMERA_MARKER_IMAGE)' in create
-assert marker.group(1) in images, marker.group(1)
-picture, x, y, width, height = images[marker.group(1)]
-pixels = Image.open(picture).convert('RGBA')
-assert x + width <= pixels.width and y + height <= pixels.height
-assert pixels.crop((x, y, x + width, y + height)).getchannel('A').getbbox() is not None, 'the camera icon is empty'
-for name, (other, ox, oy, ow, oh) in images.items():
-    if name != marker.group(1) and other == picture:
-        assert x + width <= ox or ox + ow <= x or y + height <= oy or oy + oh <= y, 'overlaps ' + name
-print('CAMERA OK: the marker is an image window with', marker.group(1), 'and that image is a non-empty cell that overlaps no other image')
+# The icon imageset is an own rows file of the content package core-gui
+if HAS_CONTENT:
+    assert marker.group(1) in images, marker.group(1)
+    picture, x, y, width, height = images[marker.group(1)]
+    pixels = Image.open(picture).convert('RGBA')
+    assert x + width <= pixels.width and y + height <= pixels.height
+    assert pixels.crop((x, y, x + width, y + height)).getchannel('A').getbbox() is not None, 'the camera icon is empty'
+    for name, (other, ox, oy, ow, oh) in images.items():
+        if name != marker.group(1) and other == picture:
+            assert x + width <= ox or ox + ow <= x or y + height <= oy or oy + oh <= y, 'overlaps ' + name
+    print('CAMERA OK: the marker is an image window with', marker.group(1), 'and that image is a non-empty cell that overlaps no other image')
+else:
+    content_packages.unchecked('check_defeat_menu_flight', ['gui/ODIcons.imageset camera marker image'])
 
 # The layout only names images the imagesets have, and uses the stone surface
-layout = ElementTree.parse(gui / 'WindowDefeatDebriefing.layout').getroot()
-used = []
-for window in layout.iter('Window'):
-    for prop in window.findall('Property'):
-        if prop.get('name') in ('Image', 'NormalImage', 'HoverImage', 'PushedImage'):
-            used.append(prop.get('value'))
-assert used and all(name in images for name in used), [name for name in used if name not in images]
-assert 'ODHudSurface/Stone' in used and 'OpenDungeonsIcons/CheckIcon' in used
-types = {window.get('name'): window.get('type') for window in layout.iter('Window')}
-# the panel is a message window in the frame of the menu sheet like every in-game window
-assert types['Background'] == 'OD/StaticImage' and types['Panel'] == 'OD/SheetPanel'
-scheme = (gui / 'ODSkin.scheme').read_text()
-assert 'windowType="OD/StaticImage"' in scheme and 'ODHudSurface.imageset' in scheme
-for needed in ('Panel/Title', 'Panel/PlayerName', 'Panel/Outcome', 'Panel/Elapsed', 'Panel/StatisticsArea', 'Panel/ConfirmButton'):
-    node = layout.find('Window')
-    for part in needed.split('/'):
-        found = [child for child in node.findall('Window') if child.get('name') == part]
-        assert found, needed
-        node = found[0]
-print('LAYOUT OK: every image name exists in the imagesets, the stone surface backs the screen and the panel, the table area and button remain')
+# (the layout lies in the content package core-gui)
+if not HAS_CONTENT:
+    content_packages.unchecked('check_defeat_menu_flight', ['gui/WindowDefeatDebriefing.layout images and windows'])
+else:
+    layout = ElementTree.parse(content_packages.resolve(repo, 'gui/WindowDefeatDebriefing.layout')).getroot()
+    used = []
+    for window in layout.iter('Window'):
+        for prop in window.findall('Property'):
+            if prop.get('name') in ('Image', 'NormalImage', 'HoverImage', 'PushedImage'):
+                used.append(prop.get('value'))
+    assert used and all(name in images for name in used), [name for name in used if name not in images]
+    assert 'ODHudSurface/Stone' in used and 'OpenDungeonsIcons/CheckIcon' in used
+    types = {window.get('name'): window.get('type') for window in layout.iter('Window')}
+    # the panel is a message window in the frame of the menu sheet like every in-game window
+    assert types['Background'] == 'OD/StaticImage' and types['Panel'] == 'OD/SheetPanel'
+    scheme = content_packages.read_text(repo, 'gui/ODSkin.scheme')
+    assert 'windowType="OD/StaticImage"' in scheme and 'ODHudSurface.imageset' in scheme
+    for needed in ('Panel/Title', 'Panel/PlayerName', 'Panel/Outcome', 'Panel/Elapsed', 'Panel/StatisticsArea', 'Panel/ConfirmButton'):
+        node = layout.find('Window')
+        for part in needed.split('/'):
+            found = [child for child in node.findall('Window') if child.get('name') == part]
+            assert found, needed
+            node = found[0]
+    print('LAYOUT OK: every image name exists in the imagesets, the stone surface backs the screen and the panel, the table area and button remain')
 
 # Wiring of the flight
 activate = function(menu_main, 'void MenuModeMain::activate(')
@@ -301,10 +322,12 @@ print('WIRING OK: configured 3D flights replace the picture zoom and the defeat 
 assert re.search(r'\bauto\b', probe) is None and re.search(r'\bauto\b', flight_header) is None
 assert re.search(r'\bauto\b', function(menu_main, 'void MenuModeMain::onFrameStarted(')) is None
 print('STYLE OK: no auto in the new code or in the fixture')
-for path in (Path(__file__), repo / 'source/render/MenuFlight.h', repo / 'source/renderscene/RenderSceneMenu.cpp', repo / 'source/renderscene/RenderSceneMenu.h',
+# The layout of the content package is checked with the content
+for path in [Path(__file__), repo / 'source/render/MenuFlight.h', repo / 'source/renderscene/RenderSceneMenu.cpp', repo / 'source/renderscene/RenderSceneMenu.h',
              repo / 'source/render/ODFrameListener.cpp', repo / 'source/render/ODFrameListener.h', repo / 'source/modes/MenuModeMain.cpp',
-             repo / 'source/modes/MenuModeMain.h', repo / 'source/modes/GameMode.cpp', repo / 'gui/WindowDefeatDebriefing.layout',
-             repo / 'gui/ODIcons.imageset'):
+             repo / 'source/modes/MenuModeMain.h', repo / 'source/modes/GameMode.cpp'] + (
+        [content_packages.resolve(repo, 'gui/ODIcons.imageset'),
+         content_packages.resolve(repo, 'gui/WindowDefeatDebriefing.layout')] if HAS_CONTENT else []):
     bad = [b for b in path.read_bytes() if b < 32 and b not in (9, 10, 13)]
     assert not bad, path
 print('BYTES OK: no stray control characters')

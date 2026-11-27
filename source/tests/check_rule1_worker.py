@@ -1,4 +1,9 @@
-"""Rule 1 of the combat balance: the worker survives the worst level-1 critical blow, also with items and potions."""
+"""Rule 1 of the combat balance: the worker survives the worst level-1 critical blow, also with items and potions.
+
+config/creatureSkills.cfg, config/items.cfg and config/potions.cfg are game data of the content packages
+(scripts/content_packages.py): they are read from the public tree or from the content packages. Without the content the
+check names the rule as not checked (every value of the rule needs these files).
+"""
 from pathlib import Path
 import math
 import re
@@ -6,12 +11,25 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/balance"))
+sys.path.insert(0, str(ROOT / "scripts"))
 from combat_sim import Roster, World
+import content_packages  # noqa: E402
+
+#: The game data files of the rule that may lie in a content package
+DATA_FILES = ("config/creatureSkills.cfg", "config/items.cfg", "config/potions.cfg")
 
 
-# Read a tracked file using the repository root rather than the caller's directory.
+# Read a game data or tracked file using the repository root rather than the caller's directory; a game data file comes
+# from the public tree or a content package.
 def read(path):
-    return (ROOT / path).read_text(encoding="utf-8")
+    return content_packages.read_text(ROOT, path)
+
+
+# The game data files of the rule that are not present while the content is not present (else an empty list: a missing
+# file then fails the check as before).
+def unchecked_data():
+    missing = [path for path in DATA_FILES if content_packages.data_file(ROOT, path) is None]
+    return [] if content_packages.has_content(ROOT) else missing
 
 
 # Return the largest Common damage bonus in items.cfg.
@@ -24,6 +42,11 @@ def common_weapon_damage_percent():
 
 # Check the worst critical blow of every eligible type and template against both workers.
 def main():
+    missing = unchecked_data()
+    if missing:
+        content_packages.unchecked("check_rule1_worker", ["rule 1 of the combat balance"] + missing)
+        print("rule 1 worker not checked: content not present")
+        return
     roster = Roster(ROOT)
     world = World(roster)
     worker = world.unit("Kobold", 1, -1)[0]

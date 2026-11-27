@@ -26,6 +26,10 @@ arrow in the title bar, at 640x480, 1920x1200 and 7680x4320 (and 1024x768) with 
    of the inventory page the tooltip lies right of and below the cursor where it fits, otherwise moved up or left only as
    far as needed; it is always on the screen and never overlaps the item.
 
+The layout, fonts, imagesets and social tables are content (core-gui and core-config packages, found through
+scripts/content_packages.py); without the content every measurement depends on them, so the check names the missing
+files as not checked and passes.
+
 Run with --table to print the per-element boxes (fractions of the page and pixels) used in the state file.
 """
 from pathlib import Path
@@ -36,6 +40,17 @@ import xml.etree.ElementTree as ET
 from PIL import Image, ImageFont
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The content files the whole check computes on (core-gui and core-config packages): without them nothing of the
+#: pages can be measured, so the check names them as not checked and passes
+CONTENT_FILES = ('gui/WindowSocial.layout', 'gui/ODMenuTemplate.imageset', 'gui/fonts/MedievalSharp-8.font',
+                 'config/social-names.cfg', 'config/social-texts.cfg', 'config/creatureSkills.cfg')
+missing_content = [name for name in CONTENT_FILES if content_packages.data_file(repo, name) is None]
+if missing_content:
+    content_packages.unchecked('check_dungeonbook_pages_b1', missing_content)
+    sys.exit(0)
 gui_dir = repo / 'gui'
 gui_cpp = (repo / 'source/render/Gui.cpp').read_text(encoding='utf-8')
 social_cpp = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
@@ -43,8 +58,9 @@ item_cpp = (repo / 'source/entities/ItemInstance.cpp').read_text(encoding='utf-8
 weapon_cpp = (repo / 'source/entities/Weapon.cpp').read_text(encoding='utf-8')
 lines_h = (repo / 'source/entities/ItemValueLines.h').read_text(encoding='utf-8')
 placement_h = (repo / 'source/render/ItemTooltipPlacement.h').read_text(encoding='utf-8')
-layout_text = (gui_dir / 'WindowSocial.layout').read_text(encoding='utf-8')
-look_text = (gui_dir / 'OD.looknfeel').read_text(encoding='utf-8')
+layout_text = content_packages.read_text(repo, 'gui/WindowSocial.layout')
+# The mixed interface files and data tables are read as the game reads them, with their own rows from the content
+look_text = content_packages.read_text(repo, 'gui/OD.looknfeel')
 
 DESIGN_W, DESIGN_H = 1024.0, 768.0
 FONT_W, FONT_H = 800.0, 600.0
@@ -66,17 +82,29 @@ def udims(value):
 
 
 # ------------------------------------------------------------------------------------------------ fonts and images
+# Parses an interface file of the public tree or a package as the game reads it (a mixed file joined with its own
+# rows); None for the own rows file of a mixed file, which is no interface file of its own.
+def parse_interface_file(path):
+    if '.own.' in path.name:
+        return None
+    return ET.fromstring(content_packages.read_text(repo, content_packages.relative_path(repo, path)))
+
+
 fonts = {}
-for font_file in sorted((gui_dir / 'fonts').glob('*.font')):
-    spec = ET.parse(font_file).getroot()
-    face = ImageFont.truetype(str(gui_dir / 'fonts' / spec.get('filename')), 1024)
+for font_file in content_packages.data_glob(repo, 'gui/fonts', '*.font'):
+    spec = parse_interface_file(font_file)
+    if spec is None:
+        continue
+    face = ImageFont.truetype(str(content_packages.resolve(repo, 'gui/fonts/' + spec.get('filename'))), 1024)
     fonts[spec.get('name')] = (face, float(spec.get('size')) * (96.0 / 72.0) / 1024.0)
 DENSITY = {'OpenDungeonsSkin/': float(re.search(r'SKIN_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
            'OpenDungeonsIcons/': float(re.search(r'ICON_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1]),
            'ODMenuTemplate/': float(re.search(r'MENU_SHEET_IMAGE_PIXEL_DENSITY = ([0-9.]+)f', gui_cpp)[1])}
 imagesets = {}
-for imageset_file in gui_dir.glob('*.imageset'):
-    root = ET.parse(imageset_file).getroot()
+for imageset_file in content_packages.data_glob(repo, 'gui', '*.imageset'):
+    root = parse_interface_file(imageset_file)
+    if root is None:
+        continue
     imagesets[root.get('name')] = {i.get('name'): (float(i.get('width')), float(i.get('height')), float(i.get('xPos')),
                                                    float(i.get('yPos'))) for i in root.findall('Image')}
     imagesets[root.get('name')]['__file__'] = root.get('imagefile')
@@ -213,7 +241,7 @@ def text_fits(node, text, box, screen, user):
 
 # The longest values the code fills in. Names: every given name with every surname or title (config/social-names.cfg)
 names, hometowns, age_jokes = [], [], []
-for line in (repo / 'config/social-names.cfg').read_text(encoding='utf-8').split('\n'):
+for line in content_packages.read_text(repo, 'config/social-names.cfg').split('\n'):
     cells = line.rstrip('\r').split('\t')
     if cells[0] == '[NameGroup]':
         names.append(([], []))
@@ -228,7 +256,7 @@ for line in (repo / 'config/social-names.cfg').read_text(encoding='utf-8').split
 full_names = [g + ((' ' + t) if t else '') for given, last in names for g in given for t in [''] + last]
 check(len(full_names) > 5000 and hometowns and age_jokes, 'names, hometowns and age jokes are read')
 texts = {'Relation': [], 'Job': [], 'Bio': []}
-for line in (repo / 'config/social-texts.cfg').read_text(encoding='utf-8').split('\n'):
+for line in content_packages.read_text(repo, 'config/social-texts.cfg').split('\n'):
     cells = line.rstrip('\r').split('\t')
     if cells[0] in texts:
         texts[cells[0]].append(cells[-1])
@@ -236,7 +264,7 @@ check(all(texts.values()), 'relations, jobs and bios are read')
 statuses = re.findall(r'return "([A-Za-z\' ]+)";', (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8')[
     (repo / 'source/social/CreaturePosts.cpp').read_text(encoding='utf-8').index('CreaturePosts::getRelationshipStatus'):][:600])
 check('Single' in statuses and 'In a relationship' in statuses, 'relationship statuses are read')
-paths = sorted(set(re.findall(r'^Path\s+(.+?)\s*$', (repo / 'config/creatureSkills.cfg').read_text(encoding='utf-8'), re.M)))
+paths = sorted(set(re.findall(r'^Path\s+(.+?)\s*$', content_packages.read_text(repo, 'config/creatureSkills.cfg'), re.M)))
 check(len(paths) >= 3, 'skill paths are read')
 handle_max = '@' + 'w' * 14 + '99'  # the handle: letters of the first name, at most 2 digits (Creature.cpp)
 check('PROFILE_HANDLE_NUMBER_COUNT' in (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8'), 'handle')
@@ -296,7 +324,7 @@ for key in ('Experience', 'HitPoints', 'Gold', 'SightRadius', 'Potions', 'Invent
     DYNAMIC['ValuesPage/%sValue' % key] = NUMBERS + PAIRS + ['-', '4 / 4']
 # The Skills page (INGAME-QS-12 K7): every path name of config/creatureSkills.cfg as a column title, every rank text of
 # a skill ("rank/most ranks" of CreatureSkillTreeView barText; SkillRanksPerSkill of config/global.cfg, 1 for tier 4)
-max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', (repo / 'config/global.cfg').read_text(encoding='utf-8'),
+max_rank = int(re.search(r'^\s*SkillRanksPerSkill\s+(\d+)', content_packages.read_text(repo, 'config/global.cfg'),
                          re.M).group(1))
 SKILL_NODES = ['TierFour'] + ['Column%dTier%d' % (c, t) for c in range(4) for t in (3, 2, 1)]
 for column in range(4):
@@ -393,7 +421,7 @@ for page_name in ('ProfilePage', 'ValuesPage', 'InventoryPage', 'SkillsPage'):
 feed = book.child('FeedPage')
 for node in feed.walk():
     check(node.type not in BUTTON_TYPES, node.path + ': no button on the feed of one creature (K4)')
-check(not any('SkillTreeButton' in path.read_text(encoding='utf-8') for path in gui_dir.glob('*.layout')),
+check(not any('SkillTreeButton' in path.read_text(encoding='utf-8') for path in content_packages.data_glob(repo, 'gui', '*.layout')),
       'the skill tree button of the profile page is removed (K4)')
 
 tightest = {}
@@ -569,7 +597,7 @@ check(back_node.props.get('NonClient') == 'True' and back_node.props.get('Visibl
       'the back arrow is a hidden NonClient child of the book')
 
 # ------------------------------------------------------------------------------------------------ 6. the item tooltip
-equipment_text = (repo / 'config/equipments.cfg').read_text(encoding='utf-8')
+equipment_text = content_packages.read_text(repo, 'config/equipments.cfg')
 equipment_text = equipment_text[equipment_text.rindex('[EquipmentDefinitions]'):]
 blocks = re.findall(r'\[Equipment\](.*?)\[/Equipment\]', equipment_text, re.S)
 check(len(blocks) >= 30, 'equipment blocks are read')
@@ -642,7 +670,7 @@ frame_pixels = int(re.search(r'ITEM_TOOLTIP_FRAME_PIXELS = (\d+);', gui_cpp)[1])
 frame_design = frame_pixels / DENSITY['OpenDungeonsIcons/']
 # The inner border of the window frame: the opaque columns of ODMenuTemplate/FrameLeft inside its darkest gap
 fl = imagesets['ODMenuTemplate']['FrameLeft']
-sheet = Image.open(gui_dir / imagesets['ODMenuTemplate']['__file__']).convert('RGBA')
+sheet = Image.open(content_packages.resolve(repo, 'gui/' + imagesets['ODMenuTemplate']['__file__'])).convert('RGBA')
 column_light = []
 for col in range(int(fl[0])):
     pixels = [sheet.getpixel((int(fl[2]) + col, int(fl[3]) + row)) for row in range(40, int(fl[1]) - 40, 4)]

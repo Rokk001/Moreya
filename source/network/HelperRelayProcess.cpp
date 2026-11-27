@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Compiled only with OD_NET_HELPER_RELAY (see HelperRelayProcess.h and docs/development/NETWORK-TRANSPORT.md).
+// Compiled only with OD_NET_HELPER_RELAY (see HelperRelayProcess.h and the design document NETWORK-TRANSPORT.md of the content repository).
 #ifdef OD_NET_HELPER_RELAY
 
 #include "network/HelperRelayProcess.h"

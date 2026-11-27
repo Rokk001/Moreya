@@ -3,9 +3,10 @@
 #
 # Usage: package-linux-release.sh <build-dir> <deps-prefix> <python-prefix> <output-dir>
 #
-# With MOREYA_CONTENT_DIR set to the packages folder of the private campaign content repository (the Steam
-# build), its wing packages and room packages are added to levels/campaign next to the wing 1 package; without it
-# the folder holds the public game (wing 1 playable, wings 2 to 6 locked, the packaged rooms unavailable).
+# With MOREYA_CONTENT_DIR set to the packages folder of the private content repository (the Steam build), its
+# content packages (models, textures, interface art, sounds, levels, data tables), wing packages (wing 1 included) and
+# room packages are added to levels/campaign, where the game finds them; without it the folder holds the public code
+# only, and the game tells the player that its content is missing and quits (exit code 7).
 #
 # The layout mirrors the Windows deployment: plugins.cfg, resources.cfg and the game data
 # folders sit side by side, so the game finds its data in the current folder. The game binary
@@ -42,7 +43,7 @@ strip --strip-unneeded "$GAME"
 for dir in config gui levels licenses materials models music particles python shaders sounds; do
     cp -a "$SRC_DIR/$dir" "$OUT/$dir"
 done
-# Content packages of the private content repository: wings 2 to 6 and the room packages
+# Content packages of the private content repository: the content packages, wings 1 to 6 and the room packages
 if [ -n "${MOREYA_CONTENT_DIR:-}" ]; then
     for package in "$MOREYA_CONTENT_DIR"/*/; do
         [ -f "$package/Package.cfg" ] && cp -a "$package" "$OUT/levels/campaign/"

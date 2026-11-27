@@ -8,6 +8,8 @@ Starts the built executable twice with its own --appData and sends the window th
 
 Each start passes only if the process then ends by itself with exit code 0 within its limit and its log reports no
 unhandled exception. A game that is still running after the limit is killed by this script and counts as a failure.
+The game gets the content packages through MOREYA_CONTENT_DIR (scripts/content_packages.py: game_environment);
+without them it quits with exit code 7 before X can be pressed, which fails the test and is named as content missing.
 
 Usage:
     python scripts/run-window-close-test.py --exe build/windows/moreya.exe
@@ -24,6 +26,10 @@ import sys
 import tempfile
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import content_packages  # noqa: E402
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WM_CLOSE = 0x0010
 LOADING_MARKER = "startup loading picture drawn"
 MENU_MARKER = "startup menu ready"
@@ -74,12 +80,16 @@ def run_case(exe, case):
     marker = LOADING_MARKER if case == "loading" else MENU_MARKER
     appdata = tempfile.mkdtemp(prefix="od-window-close-")
     process = subprocess.Popen([exe, "--appData", appdata], cwd=os.path.dirname(os.path.abspath(exe)),
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               env=content_packages.game_environment(REPO))
     started = time.monotonic()
     try:
         windows = []
         while time.monotonic() - started < START_LIMIT_SECONDS:
             if process.poll() is not None:
+                if process.returncode == content_packages.MISSING_CONTENT_EXIT_CODE:
+                    return False, "%s: the game ended with code %s before X was pressed: content missing (%s)" % (
+                        case, process.returncode, ", ".join(content_packages.missing_packages(REPO)) or "none")
                 return False, "%s: the game ended with code %s before X was pressed" % (case, process.returncode)
             if marker in read_log(appdata):
                 windows = visible_windows(process.pid)

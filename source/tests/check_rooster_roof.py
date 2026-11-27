@@ -3,13 +3,19 @@
 # there and crows (pose and sound) and jumps down again; he never stays up there (time limit, loading, pick up).
 import re
 from pathlib import Path
+import sys
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the data tables come with their own rows)
+WITH_CONTENT = content_packages.has_content(root)
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 room = (root / 'source/rooms/RoomHatchery.cpp').read_text()
 rooster_h = (root / 'source/rooms/HatcheryRooster.h').read_text()
 rooster_cpp = (root / 'source/rooms/HatcheryRooster.cpp').read_text()
-config = (root / 'config/rooms.cfg').read_text()
+config = content_packages.read_text(root, 'config/rooms.cfg')
 
 
 def body(text, signature):
@@ -19,9 +25,10 @@ def body(text, signature):
 
 # Random time from the config (with defaults), a crow lasts a limited number of turns
 assert 'static_cast<uint32_t>' in body(room, 'RoosterSettings RoomHatchery::getRoosterSettings(') or 'mCrowMin' in room
-for key in ('HatcheryRoosterCrowMin', 'HatcheryRoosterCrowMax', 'HatcheryRoosterCrowTurns', 'HatcheryCoopRoofHeight',
-            'HatcheryCoopPerchOffset'):
-    assert re.search(r'^# ' + key + r'\s', config, re.M) and re.search(r'^\s+' + key + r'\s', config, re.M), key
+if WITH_CONTENT:
+    for key in ('HatcheryRoosterCrowMin', 'HatcheryRoosterCrowMax', 'HatcheryRoosterCrowTurns', 'HatcheryCoopRoofHeight',
+                'HatcheryCoopPerchOffset'):
+        assert re.search(r'^# ' + key + r'\s', config, re.M) and re.search(r'^\s+' + key + r'\s', config, re.M), key
 assert 'Random::Uint(0, 1000)' in body(room, 'void RoomHatchery::beginRoosterMood(')
 assert 'mSinceCrow >= context.mCrowInterval' in rooster_cpp and 'settings.mCrowTurns' in rooster_cpp
 
@@ -34,10 +41,12 @@ assert 'getGroundSpot(*coopTile, approach)' in roost and 'rooster->walkToward(ap
 assert 'if(position.distance(approach) < mRoosterSettings.mHopDistance && RoomObjectPath::clearPoint(obstacles, position))' in roost, 'hop only from next to the coop'
 assert roost.index('if(position.distance(approach) < mRoosterSettings.mHopDistance && RoomObjectPath::clearPoint(obstacles, position))') < roost.index('rooster->hopToRoof('), 'up only after the arrival test'
 assert 'hopFromFar' not in room + (root / 'source/rooms/RoomHatchery.h').read_text()
-assert re.search(r'^\s+HatcheryRoosterHopDistance\s', config, re.M), 'distance for the hop from the config'
+if WITH_CONTENT:
+    assert re.search(r'^\s+HatcheryRoosterHopDistance\s', config, re.M), 'distance for the hop from the config'
 update_body = body(room, 'void RoomHatchery::updateRooster(')
 assert 'countApproachTurn()' in update_body and '"HatcheryRoosterApproachTurns", 15.0' in update_body, 'time limit on the way, from the config'
-assert re.search(r'^# HatcheryRoosterApproachTurns\s', config, re.M) and re.search(r'^\s+HatcheryRoosterApproachTurns\s+15$', config, re.M)
+if WITH_CONTENT:
+    assert re.search(r'^# HatcheryRoosterApproachTurns\s', config, re.M) and re.search(r'^\s+HatcheryRoosterApproachTurns\s+15$', config, re.M)
 assert 'resetApproachTurns()' in body(room, 'void RoomHatchery::beginRoosterMood(')
 limit_part = update_body[update_body.index('countApproachTurn()'):]
 assert 'setMood(RoosterMood::strut, 0)' in limit_part[:300] and 'setRoomDriven(false)' in limit_part[:300], 'he gives up the crow when the limit is over'
@@ -46,7 +55,8 @@ assert roost.count('setAnimationState(pose, true)') == 2, 'the crow pose never o
 # Landing right next to the coop (distance from the config)
 ground = body(room, 'bool RoomHatchery::getGroundSpot(')
 assert '"HatcheryRoosterLandReach", 1.0' in ground and 'spot.distance(coopCenter) <= reach' in ground
-assert re.search(r'^# HatcheryRoosterLandReach\s', config, re.M) and re.search(r'^\s+HatcheryRoosterLandReach\s+1$', config, re.M)
+if WITH_CONTENT:
+    assert re.search(r'^# HatcheryRoosterLandReach\s', config, re.M) and re.search(r'^\s+HatcheryRoosterLandReach\s+1$', config, re.M)
 nearest = body(room, 'Tile* RoomHatchery::getNearestCoop(')
 assert 'mCentralActiveSpotTiles' in nearest, 'only a coop of the own hatchery'
 assert 'RoosterMood::crow' in room and 'ChickenPose::crow' in room and 'Hatchery/Crow' in room
@@ -73,7 +83,8 @@ assert 'static const std::string flutter = "Flutter";' in pose_h
 start_hop = body(chicken, 'void ChickenEntity::startHop(')
 assert 'clearDestinations(ChickenPose::roofFlight, false, false)' in start_hop, 'complete flight pose on the way up and down'
 assert 'getRoomConfigDoubleOrDefault("HatcheryRoosterHopTurns", 4.0)' in start_hop and 'std::max(1.0' in start_hop, 'duration from the config, at least one turn'
-assert re.search(r'^# HatcheryRoosterHopTurns\s', config, re.M) and re.search(r'^\s+HatcheryRoosterHopTurns\s+4$', config, re.M)
+if WITH_CONTENT:
+    assert re.search(r'^# HatcheryRoosterHopTurns\s', config, re.M) and re.search(r'^\s+HatcheryRoosterHopTurns\s+4$', config, re.M)
 up = body(chicken, 'void ChickenEntity::hopToRoof(')
 dn = body(chicken, 'void ChickenEntity::hopDown(')
 assert 'startHop(' in up and 'startHop(' in dn and 'teleport(' not in up + dn, 'no instant change of place'
@@ -98,4 +109,6 @@ for text in (rooster_h, rooster_cpp, room):
     for needle in ('isNight', 'newDayCrowOwed', 'RoosterMood::sleep', 'RoosterMood::call', 'RoosterMood::lead'):
         assert needle not in text, needle
 
+if not WITH_CONTENT:
+    content_packages.unchecked('check_rooster_roof', ['rooster keys of config/rooms.cfg (own rows)'])
 print('rooster roof checks passed')

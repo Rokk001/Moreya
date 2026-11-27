@@ -1,11 +1,17 @@
-"""Exercise production corpse animation and crypt placement without starting the game."""
+"""Exercise production corpse animation and crypt placement without starting the game.
+
+The probe gets the fly script and the model folders of the public tree and of the content packages
+(scripts/content_packages.py) on its command line; without the content it is named as not checked and not compiled."""
 from pathlib import Path
 import os
 import re
 import subprocess
+import sys
 import tempfile
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / 'scripts'))
+import content_packages  # noqa: E402
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 crypt = (repo / 'source/rooms/RoomCrypt.cpp').read_text()
@@ -22,8 +28,9 @@ def function(source, signature):
     return source[start:end]
 
 
+# creatures.cfg as the game reads it (its own rows from the content packages)
 models = sorted(set(re.findall(r'^\s*MeshName\s+(\S+)',
-                              (repo / 'config/creatures.cfg').read_text(), re.M)))
+                              content_packages.read_text(repo, 'config/creatures.cfg'), re.M)))
 probe = r'''
 #include <Ogre.h>
 #include <OgreDefaultHardwareBufferManager.h>
@@ -131,7 +138,7 @@ int main(int argc,char** argv){try{
  Ogre::ParticleSystemManager::getSingleton()._initialise();
  root.loadPlugin(std::string(argv[2])+"/bin/Plugin_ParticleFX");
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
- groups.addResourceLocation(std::string(argv[1])+"/models","FileSystem","Graphics",true);
+ for(int folder=3;folder<argc;++folder)groups.addResourceLocation(argv[folder],"FileSystem","Graphics",true);
  groups.initialiseResourceGroup("Graphics");
  Ogre::SceneManager* scene=root.createSceneManager();
  for(const std::string model:{MODELS}){
@@ -162,7 +169,7 @@ int main(int argc,char** argv){try{
  }
  // Material rendering is verified by the installed-renderer fixture separately.
  Ogre::MaterialManager::getSingleton().create("CorpseFlies","Graphics");
- std::ifstream stream(std::string(argv[1])+"/particles/CorpseDecay.particle");
+ std::ifstream stream(argv[1]);
  Ogre::DataStreamPtr data(new Ogre::FileStreamDataStream("CorpseDecay.particle",&stream,false));
  Ogre::ScriptCompilerManager::getSingleton().parseScript(data,"Graphics");
  Ogre::ParticleSystem* effect=scene->createParticleSystem("corpse","CorpseDecay");
@@ -183,13 +190,22 @@ probe = probe.replace('ROOM_METHODS', '\n'.join(function(crypt, signature) for s
     'void RoomCrypt::notifyCarryingStateChanged(', 'void RoomCrypt::notifyActiveSpotRemoved(')))
 probe = probe.replace('OFFSETS', '\n'.join(re.findall(r'^.*const.*OFFSET_TILE_[XY].*;$', crypt, re.M)))
 probe = probe.replace('MODELS', ','.join('"' + model + '"' for model in models))
+# The probe reads the models of the public tree and of every content and room package, and the fly script
+model_folders = [str(folder) for folder in content_packages.data_folders(repo, 'models')]
+particle = content_packages.data_file(repo, 'particles/CorpseDecay.particle')
+absent = [model for model in models if content_packages.data_file(repo, 'models/' + model) is None]
+if (particle is None or absent) and not content_packages.has_content(repo):
+    content_packages.unchecked('check_crypt_corpse_decay', ['corpse decay probe (needs particles/CorpseDecay.particle and '
+                                                            '%d models of the content)' % len(absent)])
+    raise SystemExit(0)
+particle = content_packages.resolve(repo, 'particles/CorpseDecay.particle')
 with tempfile.TemporaryDirectory(prefix='odp-crypt-decay-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True, stdin=subprocess.DEVNULL, timeout=180)
-    result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work,
+    result = subprocess.run([str(work / 'check.exe'), str(particle), str(prefix)] + model_folders, cwd=work,
                             capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=180)
     print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
     if result.returncode:

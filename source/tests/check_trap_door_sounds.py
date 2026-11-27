@@ -7,6 +7,8 @@ Checks that every sound family of the config has a sound file, that every sound 
 used by the config and has a CREDITS line, that the config reader knows the new keys, that the declarations in the
 headers match the definitions in the sources, that doors report opening and closing, and that the sounds of a
 secret door are only heard by its keeper.
+The config and the sounds lie in the content packages (scripts/content_packages.py); without the content the code
+part is checked and the content part is named as not checked.
 """
 
 import glob
@@ -15,6 +17,9 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import content_packages  # noqa: E402
+import room_packages  # noqa: E402
 
 
 def read(*parts):
@@ -23,18 +28,28 @@ def read(*parts):
         return handle.read()
 
 
+def content(*parts):
+    """Returns the text of a game data file of the public tree or of a content package, or None without the content."""
+    path = content_packages.data_file(ROOT, "/".join(parts))
+    return None if path is None else path.read_text(encoding="utf-8")
+
+
 problems = []
-config = read("config", "roomAmbienceTraps.cfg")
+config = content("config", "roomAmbienceTraps.cfg")
+config_present = config is not None
+if not config_present:
+    content_packages.unchecked("check_trap_door_sounds", ["config/roomAmbienceTraps.cfg", "sounds/Spatial"])
+    config = ""
 families = set(re.findall(r"^\s*Family\s+(\S+)", config, re.M))
 for family in sorted(families):
-    folder = os.path.join(ROOT, "sounds", "Spatial", *family.split("/"))
-    if not glob.glob(os.path.join(folder, "*.ogg")):
+    if not content_packages.data_glob(ROOT, "sounds/Spatial/" + family, "*.ogg"):
         problems.append("no sound file for family %s" % family)
 
-credits = read("CREDITS")
+# The public CREDITS and, with the content, the CREDITS of the content repository (rows of moved files)
+credits = room_packages.credits_text(ROOT)
 for kind in ("Traps", "Doors"):
-    for path in sorted(glob.glob(os.path.join(ROOT, "sounds", "Spatial", kind, "*", "*", "*.ogg"))):
-        relative = os.path.relpath(path, ROOT).replace(os.sep, "/")
+    for path in content_packages.data_glob(ROOT, "sounds/Spatial/" + kind, "*/*/*.ogg"):
+        relative = content_packages.relative_path(ROOT, path)
         family = "/".join(relative.split("/")[2:5])
         # The shot of the cannon is a sound of the server, which has its own CREDITS entry
         if family == "Traps/Cannon/Fire":
@@ -47,42 +62,43 @@ for kind in ("Traps", "Doors"):
             if handle.read(4) != b"OggS":
                 problems.append("%s is not an Ogg file" % relative)
 
-# Every trap has a shot, an idle and a reload sound (the cannon fires with a sound of the server), the banner
-# has an idle and a call sound
-for name in ("Spike", "Boulder", "Alarm", "Fear", "Gas", "Lightning", "Fireburst", "Freeze", "Trigger"):
-    for role in ("Fire", "Idle", "Reload"):
-        if "Traps/%s/%s" % (name, role) not in families:
-            problems.append("trap %s has no %s sound in the config" % (name, role))
-for role in ("Idle", "Reload"):
-    if "Traps/Cannon/%s" % role not in families:
-        problems.append("the cannon has no %s sound in the config" % role)
-for role in ("Idle", "Fire"):
-    if "Traps/WatchBanner/%s" % role not in families:
-        problems.append("the watch banner has no %s sound in the config" % role)
-for name in ("Wooden", "Ironbound", "Steel", "Secret", "Runed"):
-    for role in ("Open", "Close", "Hit", "Break"):
-        if "Doors/%s/%s" % (name, role) not in families:
-            problems.append("door %s has no %s sound in the config" % (name, role))
-for role in ("Hit", "Break"):
-    if "Doors/Barricade/%s" % role not in families:
-        problems.append("barricade has no %s sound in the config" % role)
-for family in ("Doors/Door/Sold", "Traps/Trap/Sold"):
-    if family not in families:
-        problems.append("no sold sound %s in the config" % family)
+if config_present:
+    # Every trap has a shot, an idle and a reload sound (the cannon fires with a sound of the server), the banner
+    # has an idle and a call sound
+    for name in ("Spike", "Boulder", "Alarm", "Fear", "Gas", "Lightning", "Fireburst", "Freeze", "Trigger"):
+        for role in ("Fire", "Idle", "Reload"):
+            if "Traps/%s/%s" % (name, role) not in families:
+                problems.append("trap %s has no %s sound in the config" % (name, role))
+    for role in ("Idle", "Reload"):
+        if "Traps/Cannon/%s" % role not in families:
+            problems.append("the cannon has no %s sound in the config" % role)
+    for role in ("Idle", "Fire"):
+        if "Traps/WatchBanner/%s" % role not in families:
+            problems.append("the watch banner has no %s sound in the config" % role)
+    for name in ("Wooden", "Ironbound", "Steel", "Secret", "Runed"):
+        for role in ("Open", "Close", "Hit", "Break"):
+            if "Doors/%s/%s" % (name, role) not in families:
+                problems.append("door %s has no %s sound in the config" % (name, role))
+    for role in ("Hit", "Break"):
+        if "Doors/Barricade/%s" % role not in families:
+            problems.append("barricade has no %s sound in the config" % role)
+    for family in ("Doors/Door/Sold", "Traps/Trap/Sold"):
+        if family not in families:
+            problems.append("no sold sound %s in the config" % family)
 
-# The sounds of a secret door are heard by its keeper only (they would give the door away)
-effects = {}
-for block in re.findall(r"\[Effect\](.*?)\[/Effect\]", config, re.S):
-    entry = {}
-    for line in block.splitlines():
-        words = line.split("#", 1)[0].split()
-        if len(words) >= 2:
-            entry[words[0]] = words[1:]
-    if "Name" in entry:
-        effects[entry["Name"][0]] = entry
-for name in ("DoorSecretOpenSound", "DoorSecretCloseSound"):
-    if effects.get(name, {}).get("OwnerOnly") != ["yes"]:
-        problems.append("the effect %s is not OwnerOnly" % name)
+    # The sounds of a secret door are heard by its keeper only (they would give the door away)
+    effects = {}
+    for block in re.findall(r"\[Effect\](.*?)\[/Effect\]", config, re.S):
+        entry = {}
+        for line in block.splitlines():
+            words = line.split("#", 1)[0].split()
+            if len(words) >= 2:
+                entry[words[0]] = words[1:]
+        if "Name" in entry:
+            effects[entry["Name"][0]] = entry
+    for name in ("DoorSecretOpenSound", "DoorSecretCloseSound"):
+        if effects.get(name, {}).get("OwnerOnly") != ["yes"]:
+            problems.append("the effect %s is not OwnerOnly" % name)
 
 reader = read("source", "render", "RoomAmbienceConfig.cpp")
 for text in ('"Sound"', '"Family"', '"Delay"'):

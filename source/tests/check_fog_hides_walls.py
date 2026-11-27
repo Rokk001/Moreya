@@ -37,7 +37,14 @@ check(fogged < select.index("is already dug out") and fogged < select.index("ene
 # This strict companion verifies complete common creation/material/overlay blocks and rejects eleven
 # independent geometry, material, height, neighbour, server and preview regressions.
 import runpy
-runpy.run_path(str(root / "source/tests/check_fog_earth_geometry.py"), run_name="__fog_contract__")
+sys.path.insert(0, str(root / "scripts"))
+import content_packages  # noqa: E402
+# The earth meshes of the strict companion lie in a content package; without them it is named as not checked
+EARTH_MESHES = ["models/Dirt_fl_0000.mesh", "models/Dirt_fl_1111.mesh"]
+if any(content_packages.data_file(root, name) is None for name in EARTH_MESHES):
+    content_packages.unchecked("check_fog_hides_walls", EARTH_MESHES)
+else:
+    runpy.run_path(str(root / "source/tests/check_fog_earth_geometry.py"), run_name="__fog_contract__")
 check('"FogOfWarDirt.mesh"' not in render and '"FogOfWarMarked.mesh"' not in render,
       "a separate fog plane can conceal or clip known earth walls")
 check('createInstancedEntity("DirtInstanced")' not in render,

@@ -17,6 +17,7 @@ import sys
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo / 'scripts'))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 failures = []
 
 
@@ -95,8 +96,11 @@ for path in (sorted((repo / "levels").glob("*/*.level")) + sorted((repo / "level
             expect((fields[1], fields[2]) not in names, "%s: duplicate Block %s" % (path.name, fields))
             names.add((fields[1], fields[2]))
     expect(len(names) < len(pool), "%s: every type is blocked" % path.name)
-# At least 20 levels carry blocks with the content packages; the public tree alone has 11 (counted on this branch)
-expected_blocked = 20 if campaign_packages.has_content(repo) else 11
+# At least 20 levels carry blocks with the content packages; the public tree alone has none since every level with
+# blocks moved into a content package (counted on this branch), so without the content they are named as not checked
+expected_blocked = 20 if campaign_packages.has_content(repo) else 0
+if not campaign_packages.has_content(repo):
+    content_packages.unchecked("check_creature_type_blocks", ["Block lines of the campaign levels"])
 expect(blocked_levels >= expected_blocked, "expected the campaign levels to carry blocks, found %d" % blocked_levels)
 expect("Block" not in text("levels/skirmish/TestLegacy.level"), "legacy level changed")
 

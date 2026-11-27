@@ -23,6 +23,7 @@
 #include "utils/Random.h"
 #include "utils/LogManager.h"
 #include "rooms/RoomPackages.h"
+#include "utils/ContentPackages.h"
 #include "network/ODPacket.h"
 
 #include <OgreQuaternion.h>
@@ -118,16 +119,20 @@ void GameSound::play(float x, float y, float z)
 template<> SoundEffectsManager* Ogre::Singleton<SoundEffectsManager>::msSingleton = nullptr;
 
 //! \brief Loads the normal sound families and the named infirmary recordings, from the game data and from the sounds
-//! folder of every found room package (the same layout as the game data).
+//! folder of every found room package and content package (the same layout as the game data).
 SoundEffectsManager::SoundEffectsManager() :
     mNextLoopHandle(1)
 {
     const std::string& soundFolderPath = ResourceManager::getSingleton().getSoundPath();
     // We read the spatial sound directory
     readSounds(mSpatialSounds, soundFolderPath + "Spatial/", "", true);
-    // The sounds of the room packages lie in the same layout below the sounds folder of each package
+    // The sounds of the room packages and of the content packages lie in the same layout below the sounds folder of
+    // each package
     std::vector<std::string> packageSoundFolders;
-    for(const std::string& package : RoomPackages::getPackageDirectories())
+    std::vector<std::string> packages = RoomPackages::getPackageDirectories();
+    const std::vector<std::string> contentPackages = ContentPackages::getPackageDirectories();
+    packages.insert(packages.end(), contentPackages.begin(), contentPackages.end());
+    for(const std::string& package : packages)
     {
         const std::string packageSounds = package + "/sounds/";
         boost::system::error_code error;

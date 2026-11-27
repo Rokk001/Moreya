@@ -1,7 +1,8 @@
 """Creature accuracy and one configured avoidance: table values, one-roll ordering, shield requirements,
 melee and missile wiring, hitResult results and existing client compatibility.
 Pure Python wiring check, compiles nothing. With --probe it compiles source/entities/DefenceChance.h with cl and
-checks the same table in C++ (not part of the normal run)."""
+checks the same table in C++ (not part of the normal run). config/creatureReactions.cfg lies in the content package
+core-config (scripts/content_packages.py); without the content its reactions are named as not checked."""
 from pathlib import Path
 import re
 import subprocess
@@ -9,11 +10,21 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
 
 
-# Read production inputs without modifying their config or source.
+# Read production inputs without modifying their config or source (game data of the public tree or a content package).
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return content_packages.read_text(root, path)
+
+
+# The values of the data tables (global.cfg, creatures.cfg, equipments.cfg) are own rows of the content package
+# core-config; without the content they are named as not checked and the code is checked alone
+HAS_VALUES = content_packages.has_content(root)
+if not HAS_VALUES:
+    content_packages.unchecked('check_defence_chance', ['config/global.cfg hit and avoidance values',
+                                                        'config/creatures.cfg Goblin', 'config/equipments.cfg Knife'])
 
 
 # Extract a function for checks of the actual runtime path.
@@ -95,7 +106,7 @@ assert 'std::max(minChance, std::min(maxChance, chance))' in hit
 assert 'ConfigManager' not in hit
 # The scale and the bounds are global.cfg keys
 for key, value in (('HitChanceScale', '200'), ('HitChanceMin', '5'), ('HitChanceMax', '95')):
-    assert re.search(r'^\s*' + key + r'\s+' + value + r'\s*$', read('config/global.cfg'), re.M), key
+    assert not HAS_VALUES or re.search(r'^\s*' + key + r'\s+' + value + r'\s*$', read('config/global.cfg'), re.M), key
 
 # Client reactions and server avoidance both use the configured equipment type.
 client_kinds = function_body(read('source/render/CreatureCombatReactions.cpp'), 'std::string weaponKind(')
@@ -115,11 +126,11 @@ KEYS = (('DodgeBase', '10.5', 'mDodgeBase(10.5)', 100), ('DodgePerLevel', '0', '
         ('ParryPerLevel', '0', 'mParryPerLevel(0.0)', 10), ('ParryMax', '15', 'mParryMax(15.0)', 100),
         ('ShieldBlockBase', '21', 'mShieldBlockBase(21.0)', 100), ('ShieldBlockPerLevel', '0', 'mShieldBlockPerLevel(0.0)', 10),
         ('ShieldBlockMax', '25', 'mShieldBlockMax(25.0)', 100))
-assert re.search(r'^# .*\n(?:# .*\n)?\s+MeleeDodgeParry\t1\s*$', global_cfg, re.M), 'MeleeDodgeParry'
+assert not HAS_VALUES or re.search(r'^# .*\n(?:# .*\n)?\s+MeleeDodgeParry\t1\s*$', global_cfg, re.M), 'MeleeDodgeParry'
 assert 'nextParam == "MeleeDodgeParry"' in config_cpp and 'mMeleeDodgeParry(true)' in config_cpp
 assert 'inline bool getMeleeDodgeParry() const' in config_h
 for key, value, member, limit in KEYS:
-    assert re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg, re.M), key
+    assert not HAS_VALUES or re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg, re.M), key
     assert 'nextParam == "' + key + '"' in config_cpp and member in config_cpp, key
     limit_name = 'ChanceMax' if limit == 100 else 'ChancePerLevelMax'
     assert 'std::max(ChanceMin, std::min(%s, m%s))' % (limit_name, key) in config_h, key
@@ -226,22 +237,34 @@ for result_name, defender, attacker in (('dodged', 'BlowDodged', 'BlowMissed'), 
 missed_case = handler[handler.index('case static_cast<int32_t>(CosmeticHitResult::missed)'):]
 missed_case = missed_case[:missed_case.index('break;')]
 assert 'attacker->getName(), "BlowMissed"' in missed_case and 'target->getName()' not in missed_case
-reactions_cfg = read('config/creatureReactions.cfg')
-for name in ('BlowDodged', 'BlowMissed', 'BlowParried', 'BlowDeflected'):
-    match = re.search(r'\[Event\]\s*\n\s+Name\s+' + name + r'\s*\n(.*?)\[/Event\]', reactions_cfg, re.S)
-    assert match, name
-    variants = match.group(1).count('[Variant]')
-    assert variants >= (3 if name == 'BlowDodged' else 2), (name, variants)
-assert 'ReactionSparks' in re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
+# The reactions lie in the content package core-config
+if not content_packages.has_content(root):
+    content_packages.unchecked('check_defence_chance', ['config/creatureReactions.cfg blow reactions'])
+else:
+    reactions_cfg = read('config/creatureReactions.cfg')
+    for name in ('BlowDodged', 'BlowMissed', 'BlowParried', 'BlowDeflected'):
+        match = re.search(r'\[Event\]\s*\n\s+Name\s+' + name + r'\s*\n(.*?)\[/Event\]', reactions_cfg, re.S)
+        assert match, name
+        variants = match.group(1).count('[Variant]')
+        assert variants >= (3 if name == 'BlowDodged' else 2), (name, variants)
+    assert 'ReactionSparks' in re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
 
-# The parrying defender raises its weapon with an own clip where the skeleton has one; the sparks and the small movement stay as
-# the fall back for the creatures without it
-parried = re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
-assert parried.count('Clip    WeaponParry') == parried.count('[Variant]') >= 2
-assert 'Motion' in parried and 'Effect  ReactionSparks' in parried
+    # The parrying defender raises its weapon with an own clip where the skeleton has one; the sparks and the small movement stay as
+    # the fall back for the creatures without it
+    parried = re.search(r'Name\s+BlowParried\s*\n(.*?)\[/Event\]', reactions_cfg, re.S).group(1)
+    assert parried.count('Clip    WeaponParry') == parried.count('[Variant]') >= 2
+    assert 'Motion' in parried and 'Effect  ReactionSparks' in parried
+# The skeletons of the creature figures lie in the content package creatures: without the content they are named as not
+# checked
+absent_skeletons = []
 for skeleton in ('Adventurer', 'Cultist', 'Dwarf2', 'Gnome', 'Goblin', 'Knight', 'LavaSpawn', 'Monk', 'NatureMonster', 'Orc', 'RunelordDwarf'):
-    data = (root / 'models' / (skeleton + '.skeleton')).read_bytes()
+    skeleton_file = content_packages.data_file(root, 'models/' + skeleton + '.skeleton')
+    if skeleton_file is None and not content_packages.has_content(root):
+        absent_skeletons.append('models/' + skeleton + '.skeleton')
+        continue
+    data = content_packages.resolve(root, 'models/' + skeleton + '.skeleton').read_bytes()
     assert b'WeaponParry' in data and b'Idle' in data and b'Attack1' in data, skeleton
+content_packages.unchecked('check_defence_chance', absent_skeletons)
 
 # The Goblin's built-in knife is explicitly a dagger even though it attaches no mesh.
 # Mirror the explicit server type set to verify its configured parry chance.
@@ -249,20 +272,21 @@ def mirror_is_parry_weapon(weapon_type):
     return weapon_type in ('sword', 'axe', 'dagger', 'club', 'mace', 'hammer', 'scepter', 'spear', 'polearm')
 
 
-creatures_cfg = read('config/creatures.cfg')
-goblin = re.search(r'\[Creature\]\s*\n\s+Name\s+Goblin\s*\n(.*?)\[/Creature\]', creatures_cfg, re.S).group(1)
-assert re.search(r'^\s+WeaponSpawnR\s+Knife\s*$', goblin, re.M)
-assert not re.search(r'^\s+WeaponSpawnL\s+(?!none)\S+', goblin, re.M)
-equipment = re.search(r'\[Equipment\]\s*\n\s+Name\s+Knife\s*\n(.*?)\[/Equipment\]', read('config/equipments.cfg'), re.S).group(1)
-knife_mesh = re.search(r'MeshName\s+(\S+)', equipment).group(1)
-# the knife is a submesh of the Goblin model, so the weapon attaches no mesh of its own
-assert knife_mesh == 'none'
-assert b'GoblinKnife' in (root / 'models' / 'Goblin.mesh').read_bytes()
+if HAS_VALUES:
+    creatures_cfg = read('config/creatures.cfg')
+    goblin = re.search(r'\[Creature\]\s*\n\s+Name\s+Goblin\s*\n(.*?)\[/Creature\]', creatures_cfg, re.S).group(1)
+    assert re.search(r'^\s+WeaponSpawnR\s+Knife\s*$', goblin, re.M)
+    assert not re.search(r'^\s+WeaponSpawnL\s+(?!none)\S+', goblin, re.M)
+    equipment = re.search(r'\[Equipment\]\s*\n\s+Name\s+Knife\s*\n(.*?)\[/Equipment\]', read('config/equipments.cfg'), re.S).group(1)
+    knife_mesh = re.search(r'MeshName\s+(\S+)', equipment).group(1)
+    # the knife is a submesh of the Goblin model, so the weapon attaches no mesh of its own
+    assert knife_mesh == 'none'
+    assert b'GoblinKnife' in content_packages.resolve(root, 'models/Goblin.mesh').read_bytes()
 assert mirror_is_parry_weapon('dagger')
 # no shield, so the parry chance is the weapon one: level 1 and level 10 as in the table above
 assert abs(parry_chance(1, mirror_is_parry_weapon('dagger'), *PARRY) - 3.5) < 1e-9
 assert abs(parry_chance(10, mirror_is_parry_weapon('dagger'), *PARRY) - 8.0) < 1e-9
-for stat in ('PhysicalDefense', 'MagicalDefense', 'ElementDefense'):
+for stat in (('PhysicalDefense', 'MagicalDefense', 'ElementDefense') if HAS_VALUES else ()):
     assert re.search(r'^\s+' + stat + r'\s+0\s*$', equipment, re.M), stat
 
 

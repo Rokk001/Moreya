@@ -33,6 +33,32 @@ namespace
 //! \brief The shipped level folders below levels/.
 const char* const OFFICIAL_FOLDERS[] = {"skirmish", "multiplayer", "campaign"};
 
+//! \brief The shipped levels that only the checks use (maps of the first game): the game offers none of them in
+//! the skirmish, multiplayer, campaign or editor lists.
+const char* const HIDDEN_FIXTURES[] = {
+    "skirmish/DuelToDeath.level",
+    "skirmish/FallingKeeper.level",
+    "skirmish/ForgottenTreasures.level",
+    "skirmish/StoneKeep.level",
+    "skirmish/TestLegacy.level",
+    "skirmish/TestLegacyNoScripts.level",
+    "skirmish/TestSingleplayerSmall.level",
+    "skirmish/TestSingleplayerSmallEmpty.level",
+    "multiplayer/Angel.level",
+    "multiplayer/GreedOrMight.level",
+    "multiplayer/RuinsOfTheConfluent.level",
+    "multiplayer/ScreamInTheDark.level",
+    "multiplayer/TheBridge.level",
+    "multiplayer/TestMultiplayerSmallAlliance.level",
+    "multiplayer/TestMultiplayerSmallFreeForAll.level",
+    "multiplayer/aa.level",
+    "multiplayer/ab.level",
+    "campaign/Bonus1.level",
+    "campaign/Campaign1.level",
+    "campaign/Campaign2.level",
+    "campaign/Campaign3.level"
+};
+
 //! \brief Round constants of SHA-256 (FIPS 180-4).
 const uint32_t SHA256_K[64] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -224,6 +250,18 @@ bool getOfficialKey(const std::string& filePath, const std::string& levelsRoot, 
             break;
         names.push_back(folder.filename().string());
         folder = parent;
+    }
+    return false;
+}
+
+//! \brief Tells whether a shipped level is a fixture that no list of the game offers.
+bool isHiddenFixtureKey(const std::string& key)
+{
+    const std::size_t count = sizeof(HIDDEN_FIXTURES) / sizeof(HIDDEN_FIXTURES[0]);
+    for(std::size_t i = 0; i < count; ++i)
+    {
+        if(sameKey(key, HIDDEN_FIXTURES[i]))
+            return true;
     }
     return false;
 }

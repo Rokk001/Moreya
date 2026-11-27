@@ -1,8 +1,14 @@
-"""Check the AI configuration values and documented defaults."""
+"""Check the AI configuration values and documented defaults.
+
+config/ai.cfg lies in the content package core-config; without the content the check runs its code part and names the
+configuration part as not checked."""
 from pathlib import Path
 import re
+import sys
 
 repo = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(repo / "scripts"))
+import content_packages
 SINGLE = {'AiPollSeconds': '1', 'LookPeriod600': '600', 'ClickBudgetPerMinute': '202.5', 'ClickMinGap': '0.296', 'ClickWindowSeconds': '60', 'ActionLatencyMean': '0.72', 'ActionLatencySd': '0.217', 'PeriodicMinDelay': '5', 'SymptomScanFactor': '0.5', 'ReferenceScanPeriod': '60', 'LookPeriod60': '60', 'LookPeriod120': '120', 'LookFactorBuild': '0.35', 'LookFactorDormitory': '0.25', 'LookFactorTrap': '0.5', 'LookFactorSummon': '0.7', 'LookFactorPlan': '2', 'LookFactorScan': '1', 'FirstPlanSeconds': '600', 'FirstPlanJitterSeconds': '120', 'FightOverSeconds': '10', 'MistakeBaseRoutine': '0.02', 'MistakeBaseRule': '0.09', 'MistakeBaseComplex': '0.16', 'MistakeBaseUnfamiliar': '0.26', 'MistakeBaseRare': '0.55', 'MistakeMin': '0.004', 'MistakeMax': '0.85', 'MistakeTilesDormitory': '9', 'MistakeTilesHatchery': '9', 'MistakeTrapWantDivisor': '2', 'ReserveSlipStartMin': '0.2', 'ReserveSlipStartMax': '0.9', 'RestHpShareSlip': '0.3', 'DigWorkersSlip': '1', 'EarlyDigMultiplier': '0.3', 'SlapMistakePauseSeconds': '120', 'SlapMistakeBaseSeconds': '60', 'SlapMistakeDelayFactor': '2', 'SlapMistakeInterval1': '60', 'SlapMistakeInterval2': '90', 'SlapMistakeInterval3': '120', 'SlapMistakeInterval4': '180', 'SlapMistakeInterval5': '300', 'SlapMistakeMaxClicks': '60','MinerShareEarly': '0.6', 'MinerShareLate': '0.35', 'MinerShareSwitchMinute': '10', 'MarkedTilesPerWorker': '1', 'SummonManaFactor': '2', 'SummonIncomeMin': '40', 'SummonWorkersMax': '10', 'WalletReserveWindow': '60', 'CreateGoldManaReserve': '0.25', 'GoldShareBuild': '0.85', 'ManaShareSpend': '0.9', 'GoldShareTreasury2': '0.7', 'RoomGoldMargin': '300', 'BedsSpare': '1', 'DormitoryExtensionTiles': '25', 'HatcheryExtensionMinTiles': '9', 'HatcheryExtensionMaxTiles': '25', 'HatcheryTilesPerCreature': '1', 'TavernKeeperPaysFactor': '2', 'MerchantMarginMin': '10', 'MerchantMarginMax': '20', 'LabModeDefault': '1', 'InfirmaryDischargePercent': '100', 'GhostResearchShare': '0.7', 'GhostManaShare': '0.2', 'ReviveManaFactor': '2', 'BridgeMinShortcutTiles': '10', 'PlacementPointsPerWallSpot': '50', 'PlacementHandicapPerTileOffset': '20', 'PlacementFirstSpotTiles': '3', 'PlacementNextSpotTiles': '2', 'ResearchQueueEntries': '2', 'PossessLeaveHpShare': '0.3', 'HealBelow': '0.5', 'HealNeverAbove': '0.7', 'HealCastChance': '0.4', 'HasteFightSeconds': '20', 'EyeCastIntervalMinutes': '5', 'TremorMinTargets': '4', 'InfernoReserveCasts': '2', 'LightningManaReserve': '0.05', 'SpellManaReserve': '0.05', 'CastRecheckSeconds': '5', 'MinRecastSeconds': '3', 'CallToWarMinCreatures': '3', 'TrapTilesPerEntrance': '3', 'GasEveryNthTile': '3', 'TrapGoldMargin': '300', 'CannonManaPerTile': '2500', 'SpikeBehindDoorMinTiles': '3', 'SpikeBehindDoorMaxTiles': '6', 'CannonMaxDoorDistance': '15', 'BoulderCorridorMinTiles': '8', 'AlarmDistanceTiles': '6', 'MaxWaitingForCraft': '2', 'TrapPlanMinRooms': '9', 'PrisonWaitMinutes': '5', 'ExploreTunnelsPerDirection': '1', 'Leveltilesdig': '2', 'HeartDefenceAreaTiles': '5', 'AttackMinMinute': '20', 'AttackMinFighters': '5', 'AttackMinTrapTiles': '2', 'AttackDiggers': '3', 'EarlyDigMinute': '12', 'EarlyDigMinFighters': '3', 'DiggerCapShare': '0.5', 'DigActions': '4', 'DetourSigma': '0.5', 'TunnelProbeSeconds': '5', 'EnemyOutMinCreatures': '3', 'SecondWaveMinutes': '1', 'HeartPossessBelow': '0.6', 'RestHpShare': '0.8', 'AttackMinReady': '3', 'RestSecondsAfterAssault': '45', 'RaidGoldThreshold': '8000', 'RetreatCheckSeconds': '5', 'ContactTimeoutSeconds': '1800', 'ScoutCameraActions': '2', 'ReloadRetrySeconds': '30', 'PoorDefenceShuffleChance': '0.5', 'ChampionExtraSeconds': '30', 'PlagueMinEnemies': '3', 'PlagueEnemyRadius': '2', 'PlagueOwnClearRadius': '3', 'GroupShareMain': '0.55', 'GroupShareRaid': '0.3', 'GroupShareSingle': '0.7', 'GroupShareRaidTactic': '0.4', 'CounterArmyShare': '0.85', 'RaidTargetsSplit': '2', 'RaidTargetsRaid': '3', 'RawHitFactor': '0.9', 'StrengthRatioCap': '3', 'ScorePenaltyBase': '0.6', 'ScorePenaltyAllin': '1.0', 'ScorePenaltySingle': '0.49', 'ScorePenaltySplit': '0.72', 'ScorePenaltyRaid': '0.16', 'ScorePenaltyCounter': '0.72', 'ScorePenaltyCounterFactor': '0.3', 'BonusSplit': '0.2', 'BonusRaidBase': '1.0', 'BonusRaidGold': '0.4', 'BonusRaidGoldDivisor': '3000', 'BonusCounter': '0.7', 'WaitWeight': '1.0', 'TacticExponentClamp': '30', 'AdvFloor': '-4', 'AdvHpFloorShare': '0.1', 'EnemyHpFloorShare': '0.05', 'FightEstimateDamageShare': '0.88', 'EstimateSetupSeconds': '5', 'EstimateRoomTiles': '16', 'EstimateTileHp': '10', 'HeartHealMargin': '1.0', 'HeartBreakFallbackSeconds': '600', 'DoorTimeCap': '60', 'PotentialCastsMax': '40', 'PotentialCastPeriod': '4.5', 'PotentialCastsBase': '1', 'SpellPotentialEff': '0.7', 'TrapEff': '0.45', 'TrapPassSeconds': '4', 'TrapTargetsSpike': '1', 'TrapTargetsCannon': '1', 'TrapTargetsBoulder': '2', 'TrapTargetsGas': '2', 'TrapTargetsLightning': '1', 'TrapTargetsFireburst': '2', 'SpellTargetsLightning': '1', 'SpellTargetsExplosion': '1', 'SpellTargetsTremor': '4', 'SpellTargetsInferno': '2', 'EstimateNoSightingNoise': '0.6', 'EstimateGoldDefault': '5000', 'EstimateReadyFlipRate': '0.08'}
 PROBABILITY_KEYS = ['Pi', 'FocusFire', 'MistakeBaseRoutine', 'MistakeBaseRule', 'MistakeBaseComplex', 'MistakeBaseUnfamiliar', 'MistakeBaseRare', 'MistakeMin', 'MistakeMax', 'HealCastChance', 'PoorDefenceShuffleChance', 'RawHitFactor']
 ROOMS = [('treasury', 'treasury', '9'), ('dormitory', 'dormitory', '25'), ('hatchery', 'hatchery', '25'), ('tavern', 'tavern', '16'), ('library', 'library', '25'), ('training', 'trainingHall', '25'), ('workshop', 'workshop', '25'), ('casino', 'casino', '16'), ('toilet', 'toilet', '9'), ('treasury2', 'treasury', '25'), ('merchant', 'merchant', '16'), ('guard', 'guardRoom', '9'), ('herbgarden', 'herbGarden', '9'), ('arena', 'arena', '25'), ('prison', 'prison', '16'), ('alchemy', 'alchemyLab', '9'), ('infirmary', 'infirmary', '16'), ('ghostroom', 'ghostRoom', '16'), ('spa', 'spa', '16'), ('crypt', 'crypt', '16'), ('temple', 'temple', '25'), ('torture', 'torture', '16')]
@@ -57,32 +63,37 @@ for path in sorted((repo / "source/ai").glob("Ai*.cpp")):
             continue  # Bit mask of the action-text encoder, not a balance value.
         assert value not in {float(number) for number in SINGLE.values()}, f"{path.name}: balance literal {token.group()}"
 
-config = (repo / "config/ai.cfg").read_text(encoding="utf-8")
-single = section(config, "KeeperAI")
-assert len(single) == len(SINGLE), "single-value key count"
-assert {r[0] for r in single} == set(SINGLE), "single-value keys"
-for row in single:
-    assert len(row) == 2 and float(row[1]) == float(SINGLE[row[0]]), row[0]
-    assert re.search(r"^#\s*" + re.escape(row[0]) + r"\s*\([^\n]*default", config, re.M), row[0]
-for row in section(config, "KeeperAILevels"):
-    assert len(row) == 6 and re.search(r"^#\s*" + re.escape(row[0]) + r"\s*\([^\n]*defaults", config, re.M), row[0]
-assert section(config, "RoomPlan") == [[name, tiles] for name, _, tiles in ROOMS]
-assert [(r[0], int(r[1]), float(r[2])) for r in section(config, "Actions")] == [(n, int(c), float(t)) for n, c, t in ACTIONS]
-assert [(r[0], r[1], float(r[2])) for r in section(config, "RowClasses")] == [(n, c, float(m)) for n, c, m in CLASSES]
-levels = {r[0]: r[1:] for r in section(config, "KeeperAILevels")}
-assert levels["EnemyManaEstimate"] == ["own", "own", "own", "own", "observed"]
-for index in range(5):
-    assert abs(sum(float(levels["TacticPrior" + name][index]) for name in ("Allin", "Single", "Split", "Raid", "Counter")) - 1) < 1e-9
-for name in ("Rho", "Pi", "ClickShare", "AttackAdvantage", "FocusFire", "RetreatThreshold"):
-    values = list(map(float, levels[name]))
-    assert values == sorted(values), name
-for name in ("ScanPeriod", "MistakeMultiplier", "EstimateNoise", "TacticTemperature", "TunnelDetour"):
-    values = list(map(float, levels[name]))
-    assert values == sorted(values, reverse=True), name
-assert [float(a) * float(b) for a, b in zip(levels["Rho"], levels["Pi"])] == sorted(float(a) * float(b) for a, b in zip(levels["Rho"], levels["Pi"]))
-for name in PROBABILITY_KEYS:
-    matches = [row[1:] for group in (section(config, "KeeperAILevels"), single) for row in group if row[0] == name]
-    assert len(matches) == 1 and all(0 < float(v) < 1 for v in matches[0]), name
+# The AI configuration of the content, None when the content is not present.
+config_file = content_packages.data_file(repo, "config/ai.cfg")
+config = config_file.read_text(encoding="utf-8") if config_file is not None else None
+if config is None:
+    content_packages.unchecked("check_ai_config", ["config/ai.cfg"])
+else:
+    single = section(config, "KeeperAI")
+    assert len(single) == len(SINGLE), "single-value key count"
+    assert {r[0] for r in single} == set(SINGLE), "single-value keys"
+    for row in single:
+        assert len(row) == 2 and float(row[1]) == float(SINGLE[row[0]]), row[0]
+        assert re.search(r"^#\s*" + re.escape(row[0]) + r"\s*\([^\n]*default", config, re.M), row[0]
+    for row in section(config, "KeeperAILevels"):
+        assert len(row) == 6 and re.search(r"^#\s*" + re.escape(row[0]) + r"\s*\([^\n]*defaults", config, re.M), row[0]
+    assert section(config, "RoomPlan") == [[name, tiles] for name, _, tiles in ROOMS]
+    assert [(r[0], int(r[1]), float(r[2])) for r in section(config, "Actions")] == [(n, int(c), float(t)) for n, c, t in ACTIONS]
+    assert [(r[0], r[1], float(r[2])) for r in section(config, "RowClasses")] == [(n, c, float(m)) for n, c, m in CLASSES]
+    levels = {r[0]: r[1:] for r in section(config, "KeeperAILevels")}
+    assert levels["EnemyManaEstimate"] == ["own", "own", "own", "own", "observed"]
+    for index in range(5):
+        assert abs(sum(float(levels["TacticPrior" + name][index]) for name in ("Allin", "Single", "Split", "Raid", "Counter")) - 1) < 1e-9
+    for name in ("Rho", "Pi", "ClickShare", "AttackAdvantage", "FocusFire", "RetreatThreshold"):
+        values = list(map(float, levels[name]))
+        assert values == sorted(values), name
+    for name in ("ScanPeriod", "MistakeMultiplier", "EstimateNoise", "TacticTemperature", "TunnelDetour"):
+        values = list(map(float, levels[name]))
+        assert values == sorted(values, reverse=True), name
+    assert [float(a) * float(b) for a, b in zip(levels["Rho"], levels["Pi"])] == sorted(float(a) * float(b) for a, b in zip(levels["Rho"], levels["Pi"]))
+    for name in PROBABILITY_KEYS:
+        matches = [row[1:] for group in (section(config, "KeeperAILevels"), single) for row in group if row[0] == name]
+        assert len(matches) == 1 and all(0 < float(v) < 1 for v in matches[0]), name
 keeper = (repo / "source/ai/KeeperAI.cpp").read_text(encoding="utf-8")
 room_match = re.search(r"wantedBuildings\s*=\s*\{(.*?)\}", keeper, re.S)
 assert room_match and re.findall(r"RoomType::(\w+)", room_match.group(1)) == [room for _, room, _ in ROOMS]
@@ -99,20 +110,21 @@ def default_rows(name):
     assert match, name
     return [re.findall(r'"([^"\\]*)"', row) for row in re.findall(r"\{([^{}]*)\}", match.group(1))]
 
-for table, name in (("AI_LEVEL_DEFAULTS", "KeeperAILevels"),
-                    ("AI_CONFIG_DEFAULTS", "KeeperAI"),
-                    ("AI_ACTION_DEFAULTS", "Actions"),
-                    ("AI_ROW_CLASS_DEFAULTS", "RowClasses")):
-    compiled = default_rows(table)
-    configured = section(config, name)
-    assert len(compiled) == len(configured), table
-    for actual, expected in zip(compiled, configured):
-        assert len(actual) == len(expected), table
-        for a, b in zip(actual, expected):
-            try:
-                assert float(a) == float(b), (table, actual, expected)
-            except ValueError:
-                assert a == b, (table, actual, expected)
+if config is not None:
+    for table, name in (("AI_LEVEL_DEFAULTS", "KeeperAILevels"),
+                        ("AI_CONFIG_DEFAULTS", "KeeperAI"),
+                        ("AI_ACTION_DEFAULTS", "Actions"),
+                        ("AI_ROW_CLASS_DEFAULTS", "RowClasses")):
+        compiled = default_rows(table)
+        configured = section(config, name)
+        assert len(compiled) == len(configured), table
+        for actual, expected in zip(compiled, configured):
+            assert len(actual) == len(expected), table
+            for a, b in zip(actual, expected):
+                try:
+                    assert float(a) == float(b), (table, actual, expected)
+                except ValueError:
+                    assert a == b, (table, actual, expected)
 
 # Remove C++ comments while preserving strings used as configuration keys.
 def without_comments(text):
@@ -126,13 +138,14 @@ field_map = dict(re.findall(r'if\(key == "(\w+)"\) return &settings\.(\w+(?:\[\d
 war = without_comments((repo / "source/ai/AiWar.cpp").read_text(encoding="utf-8"))
 trap_table = re.search(r'TRAP_KINDS\[\d+\]\s*=\s*\{(.*?)\};', war, re.S)
 trap_prefixes = set(re.findall(r'\{TrapType::\w+,\s*"(\w+)"', trap_table.group(1))) if trap_table else set()
-for name in levels:
-    if name == "EnemyManaEstimate":
-        field = "enemyManaEstimate"
-    else:
-        assert name in field_map, name
-        field = field_map[name].split("[")[0]
-    assert re.search(r"\." + re.escape(field) + r"\b", decision_code), name
+if config is not None:
+    for name in levels:
+        if name == "EnemyManaEstimate":
+            field = "enemyManaEstimate"
+        else:
+            assert name in field_map, name
+            field = field_map[name].split("[")[0]
+        assert re.search(r"\." + re.escape(field) + r"\b", decision_code), name
 # Keys kept in ai.cfg on purpose although no decision reads them (decided: Tremor needs no minimum group, row E15).
 NOT_READ_BY_DECISION = {"TremorMinTargets"}
 for name in SINGLE:

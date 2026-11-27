@@ -1,6 +1,10 @@
 """Static checks of the skirmish Game settings (layout, seat page code and the packet layout).
 
 Run from any directory. It does not start a game.
+
+gui/MenuConfigureSeats.layout and config/rooms.cfg are read with their own rows of the content packages (core-gui,
+core-config; scripts/content_packages.py); without the content the layout and the reward weights are named as not
+checked and the code is checked.
 """
 from pathlib import Path
 import re
@@ -8,7 +12,13 @@ import sys
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
-layout = ET.fromstring((root / "gui/MenuConfigureSeats.layout").read_text(encoding="utf-8"))
+sys.path.insert(0, str(root / "scripts"))
+import content_packages  # noqa: E402
+
+#: True when the content packages are present (the layout and the table come with their own rows)
+WITH_CONTENT = content_packages.has_content(root)
+if WITH_CONTENT:
+    layout = ET.fromstring(content_packages.read_text(root, "gui/MenuConfigureSeats.layout"))
 mode = (root / "source/modes/MenuModeConfigureSeats.cpp").read_text(encoding="utf-8")
 server = (root / "source/network/ODServer.cpp").read_text(encoding="utf-8")
 failures = []
@@ -20,32 +30,33 @@ def check(condition, message):
         failures.append(message)
 
 
-windows = {w.get("name"): w for w in layout.iter("Window")}
+if WITH_CONTENT:
+    windows = {w.get("name"): w for w in layout.iter("Window")}
 
 
-def area(name):
-    """Returns the four (scale, offset) pairs of the Area property of a layout window."""
-    value = windows[name].find("Property[@name='Area']").get("value")
-    numbers = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", value)]
-    # {{sx,ox},{sy,oy},{sx,ox},{sy,oy}}
-    return [(numbers[i], numbers[i + 1]) for i in range(0, 8, 2)]
+    def area(name):
+        """Returns the four (scale, offset) pairs of the Area property of a layout window."""
+        value = windows[name].find("Property[@name='Area']").get("value")
+        numbers = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", value)]
+        # {{sx,ox},{sy,oy},{sx,ox},{sy,oy}}
+        return [(numbers[i], numbers[i + 1]) for i in range(0, 8, 2)]
 
 
-# Every window the seat page code looks up exists in the layout
-for constant in re.findall(r'const std::string (?:COMBOBOX|SPINNER)_\w+ = "(\w+)";', mode):
-    if constant.startswith("ComboPlayer") or constant.startswith("ComboTeam"):
-        continue
-    check(constant in windows, "missing in layout: " + constant)
-for name in ["GameSettingsWindow", "SettingsTabs", "General", "Creatures", "Rooms", "Spells", "Traps", "Doors",
-             "CreaturesSP", "RoomsSP", "SpellsSP", "TrapsSP", "DoorsSP", "CloseSettingsButton",
-             "GameSettingsButton", "BackButton", "LaunchGameButton"]:
-    check(name in windows, "missing in layout: " + name)
+    # Every window the seat page code looks up exists in the layout
+    for constant in re.findall(r'const std::string (?:COMBOBOX|SPINNER)_\w+ = "(\w+)";', mode):
+        if constant.startswith("ComboPlayer") or constant.startswith("ComboTeam"):
+            continue
+        check(constant in windows, "missing in layout: " + constant)
+    for name in ["GameSettingsWindow", "SettingsTabs", "General", "Creatures", "Rooms", "Spells", "Traps", "Doors",
+                 "CreaturesSP", "RoomsSP", "SpellsSP", "TrapsSP", "DoorsSP", "CloseSettingsButton",
+                 "GameSettingsButton", "BackButton", "LaunchGameButton"]:
+        check(name in windows, "missing in layout: " + name)
 
-# The three buttons of the seat page do not overlap (the drop-down lists of the settings are in their own window)
-buttons = sorted((area(n)[0][1], area(n)[2][1], n) for n in ["BackButton", "GameSettingsButton", "LaunchGameButton"])
-for first, second in zip(buttons, buttons[1:]):
-    check(first[1] <= second[0], first[2] + " overlaps " + second[2])
-check("ComboMaxCreatures" not in windows and "TextGoldDensity" in windows, "settings must be in the settings window")
+    # The three buttons of the seat page do not overlap (the drop-down lists of the settings are in their own window)
+    buttons = sorted((area(n)[0][1], area(n)[2][1], n) for n in ["BackButton", "GameSettingsButton", "LaunchGameButton"])
+    for first, second in zip(buttons, buttons[1:]):
+        check(first[1] <= second[0], first[2] + " overlaps " + second[2])
+    check("ComboMaxCreatures" not in windows and "TextGoldDensity" in windows, "settings must be in the settings window")
 check("Default (" not in mode, "the max creatures choices must be sorted, not a list that starts with Default")
 
 # The order of the values in the packet is the same on the server and on the client
@@ -127,15 +138,16 @@ check("loserSeat->getMana()" in reward_code and "addManaToSeat(-mana, loserSeat-
 # The random pool holds only types the gift box code can apply
 pool = re.search(r"HEART_REWARD_SPECIALS\[\] =\s*\{(.*?)\n\s*\};", temple, re.S).group(1)
 # The weights come from the room config; the code default of each key must match the shipped value
-rooms_cfg = (root / "config/rooms.cfg").read_text(encoding="utf-8")
+rooms_cfg = content_packages.read_text(root, "config/rooms.cfg")
 entries = re.findall(r'GiftBoxType::\w+, static_cast<int>\(ConfigManager::getSingleton\(\)\.getRoomConfigDoubleOrDefault\("(\w+)", ([\d.]+)\)\) \}', pool)
 weights = []
-for key, default in entries:
-    shipped = re.search(r"^\s*" + key + r"\s+([\d.]+)\s*$", rooms_cfg, re.M)
-    check(shipped is not None and float(shipped.group(1)) == float(default), key + " default must match rooms.cfg")
-    weights.append(int(float(shipped.group(1))) if shipped is not None else 0)
-check(len(weights) == 12 and sum(weights) == 100 and min(weights) >= 1, "the reward weights must add up to 100")
-check(all(w > 0 for w in weights), "every special of the reward pool needs a positive weight")
+if WITH_CONTENT:
+    for key, default in entries:
+        shipped = re.search(r"^\s*" + key + r"\s+([\d.]+)\s*$", rooms_cfg, re.M)
+        check(shipped is not None and float(shipped.group(1)) == float(default), key + " default must match rooms.cfg")
+        weights.append(int(float(shipped.group(1))) if shipped is not None else 0)
+    check(len(weights) == 12 and sum(weights) == 100 and min(weights) >= 1, "the reward weights must add up to 100")
+    check(all(w > 0 for w in weights), "every special of the reward pool needs a positive weight")
 # The reward is given when the heart dies, before the heart is announced as dead
 take_damage = temple[temple.index("double RoomDungeonTemple::takeHeartDamage"):]
 check("giveDestroyedHeartReward(" in take_damage, "the heart reward is not given when the heart is destroyed")
@@ -163,6 +175,9 @@ check(re.search(r"void Creature::removeAnnoyance\(\)\s*\{[^}]*setStoredMood\(Con
       "the special mood effects must act on the stored mood")
 check("mMoodPoints = getEffectiveMood();" in creature_cpp, "the stored mood must count in the mood points")
 
+if not WITH_CONTENT:
+    content_packages.unchecked("check_skirmish_settings", ["seat page layout (own rows of gui/MenuConfigureSeats.layout)",
+                                                           "heart reward weights (own rows of config/rooms.cfg)"])
 if failures:
     print("\n".join(failures))
     sys.exit(1)

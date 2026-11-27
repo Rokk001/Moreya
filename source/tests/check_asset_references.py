@@ -4,18 +4,24 @@ OGRE references use declared, case-sensitive names, not script filenames. Meshes
 are file resources; sounds use the folder families loaded by SoundEffectsManager.
 The check also follows literal C++ constants, wrapper calls and generated resource
 names. Run --self-test for the parser's positive and missing-resource fixtures.
+
+The assets are searched in the public tree and in the content and room packages (scripts/content_packages.py). Without
+the content a name that is in neither the public tree nor a present package cannot be decided: the check then names
+those references as not checked instead of failing; with the content every reference must resolve.
 """
 from dataclasses import dataclass
 from pathlib import Path
 import argparse
 import ast
 import json
+import os
 import re
 import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import campaign_packages  # noqa: E402
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 STRING = r'"(?:\\.|[^"\\])*"'
@@ -35,6 +41,22 @@ class Reference:
 def read(path):
     """Read the project's text resources without depending on the OS locale."""
     return path.read_text(encoding='utf-8-sig')
+
+
+def read_data(root, path):
+    """Read a data file as the game reads it: a mixed table below root (config/creatures.cfg, ...) comes with its own
+    rows from the content packages in place of its marker lines (scripts/content_packages.py)."""
+    try:
+        relative = path.relative_to(root).as_posix()
+    except ValueError:
+        return read(path)
+    return content_packages.read_text(root, relative, encoding='utf-8-sig')
+
+
+def is_own_rows_file(path):
+    """True for the own rows file of a mixed table (config/creatures.own.cfg); its rows are read joined into the
+    table itself (read_data), not as a table of their own."""
+    return Path(path).stem.endswith('.own')
 
 
 def without_comments(text):
@@ -80,8 +102,8 @@ def registered_flat_sound_families(root):
     paths = set(re.findall(
         r'const\s+std::string\s*&\s*(\w+)\s*=\s*'
         r'ResourceManager::getSingleton\(\)\.getSoundPath\(\)\s*;', text))
-    # The loader reads the flat recordings from the game data and from the room packages that are present
-    files = {p.relative_to(base / 'sounds').as_posix() for base in [root] + room_packages.package_roots(root)
+    # The loader reads the flat recordings from the game data and from the content and room packages that are present
+    files = {p.relative_to(base / 'sounds').as_posix() for base in [root] + content_packages.package_roots(root)
              for p in (base / 'sounds').rglob('*.ogg') if p.is_file()}
     families = set()
     arrays = re.finditer(r'(?:static\s+)?const\s+char\s*\*\s*(?:const\s+)?'
@@ -116,10 +138,10 @@ def registered_flat_sound_families(root):
 
 # Index the resources accepted by the production loaders.
 def inventory(root):
-    """Index logical script names, exact mesh filenames and loaded sound families, of the game data and of the room
-    packages that are present (the game adds their folders to the same resource group and sound families)."""
+    """Index logical script names, exact mesh filenames and loaded sound families, of the game data and of the content
+    and room packages that are present (the game adds their folders to the same resource group and sound families)."""
     assets = {'particle': set(), 'material': set(), 'mesh': set(), 'sound': set(), 'relative_sound': set()}
-    for base in [root] + room_packages.package_roots(root):
+    for base in [root] + content_packages.package_roots(root):
         for path in (base / 'particles').rglob('*.particle'):
             assets['particle'].update(script_names(path, 'particle'))
         for path in (base / 'materials').rglob('*.material'):
@@ -135,8 +157,10 @@ def inventory(root):
         declaration = re.search(r'DEFAULT_KEEPER_VOICE\s*=\s*"([^"]+)"', read(config_source))
         assert declaration, 'cannot resolve the keeper voice fallback'
         default_voice = declaration[1]
-    default = root / 'sounds/Relative' / default_voice
-    assets['relative_sound'] = {path.parent.relative_to(default).as_posix() for path in default.rglob('*.ogg')}
+    # The fallback voice of the public tree and of every package that carries recordings of it
+    assets['relative_sound'] = {path.parent.relative_to(default).as_posix()
+                                for default in content_packages.data_folders(root, 'sounds/Relative/' + default_voice)
+                                for path in default.rglob('*.ogg')}
     return assets
 
 
@@ -157,9 +181,11 @@ def data_references(root):
                    {p for p in (root / 'levels').rglob('*') if p.is_file() and p.suffix in {'.level', '.cfg'}} |
                    set(campaign_packages.content_files(root, ('.level', '.cfg'))))
     for path in paths:
+        if is_own_rows_file(path):
+            continue
         relative = campaign_packages.display_path(root, path)
         sections = []
-        for line_no, original in enumerate(read(path).splitlines(), 1):
+        for line_no, original in enumerate(read_data(root, path).splitlines(), 1):
             line = original.split('#', 1)[0].strip()
             if not line:
                 continue
@@ -469,7 +495,7 @@ def finite_name_references(root):
         prefix = match[1]
         for path in (list((root / 'config').rglob('*.cfg')) + list((root / 'levels').rglob('*.level'))
                      + campaign_packages.content_files(root, ('.level',))):
-            content = read(path)
+            content = read_data(root, path)
             for creature in re.finditer(r'\[Creature\](.*?)\[/Creature\]', content, re.S):
                 name = re.search(r'^\s*Name\s+(\S+)', creature[1], re.M)
                 if name:
@@ -508,7 +534,7 @@ def finite_name_references(root):
 def missing_references(root, refs, assets):
     """Return unresolved exact, case-sensitive names and file paths."""
     missing = []
-    sound_files = {p.relative_to(base / 'sounds').as_posix() for base in [root] + room_packages.package_roots(root)
+    sound_files = {p.relative_to(base / 'sounds').as_posix() for base in [root] + content_packages.package_roots(root)
                    for p in (base / 'sounds').rglob('*') if p.is_file()}
     music_files = {p.relative_to(root / 'music').as_posix() for p in (root / 'music').rglob('*') if p.is_file()}
     for ref in sorted(refs, key=lambda r: (r.path, r.line, r.kind, r.name)):
@@ -522,9 +548,26 @@ def missing_references(root, refs, assets):
             found = ref.name in names
         if not found and packaged_elsewhere(root, ref):
             continue
+        if not found and loose_gold_size(root, ref):
+            continue
         if not found:
             missing.append(ref)
     return missing
+
+
+def loose_gold_size(root, ref):
+    """True for a classic gold stack name (GoldstackLv1..4) while LooseGoldMesh still builds the heap of that size at
+    run time: the name is only a size there is no mesh file of. A name outside the sizes, or a LooseGoldMesh that no
+    longer maps the prefix to a built mesh, stays missing."""
+    match = re.fullmatch(r'GoldstackLv(\d+)\.mesh', ref.name) if ref.kind == 'mesh' else None
+    loose = root / 'source/render/LooseGoldMesh.cpp'
+    header = root / 'source/render/LooseGoldMesh.h'
+    if not match or not loose.is_file() or not header.is_file():
+        return False
+    text = read(loose)
+    sizes = re.search(r'sizeCount\s*=\s*(\d+)', read(header))
+    return ('StackPrefix = "GoldstackLv"' in text and 'convertToMesh(resourceName' in text and sizes is not None
+            and 1 <= int(match[1]) <= int(sizes[1]))
 
 
 def packaged_elsewhere(root, ref):
@@ -673,9 +716,23 @@ def main():
     parser.add_argument('--self-test', action='store_true')
     args = parser.parse_args()
     if args.self_test:
-        self_test()
+        # The fixtures stand alone: the content folder of the environment must not add its packages to them
+        saved = os.environ.get(campaign_packages.CONTENT_VARIABLE)
+        os.environ[campaign_packages.CONTENT_VARIABLE] = ''
+        try:
+            self_test()
+        finally:
+            if saved is None:
+                del os.environ[campaign_packages.CONTENT_VARIABLE]
+            else:
+                os.environ[campaign_packages.CONTENT_VARIABLE] = saved
         return 0
     refs, missing = audit(args.root)
+    if missing and not content_packages.has_content(args.root):
+        # Without the content an unresolved name may be an asset of a content package: name it, do not fail
+        content_packages.unchecked('check_asset_references', [f'{ref.kind} {ref.name}' for ref in missing])
+        print(f'Asset references: {len(refs) - len(missing)} checked, {len(missing)} not checked without the content')
+        return 0
     for ref in missing:
         print(f'{ref.path}:{ref.line}: missing {ref.kind}: {ref.name}')
     print(f'Asset references: {len(refs)} checked, {len(missing)} missing')

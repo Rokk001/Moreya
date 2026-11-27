@@ -9,16 +9,27 @@ its colour, alpha is ignored. Outcomes asserted for every angle:
 - the swirl itself is still there: at least 300 of the 64x64 texels add light above 40/255.
 The material must clamp the texture, so filtering never pulls colour from the opposite edge.
 No compile, no game.
+The material, the particle scripts and the texture live in content packages (found through
+scripts/content_packages.py); the particle scripts are read from the public particles/ and the package folders.
+Without the content the check names them as not checked.
 """
 from pathlib import Path
 import math
 import re
+import sys
 
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 
-material_text = (ROOT / 'materials/scripts/RoomAmbienceCoreObjects.material').read_text(encoding='utf-8')
+if content_packages.data_file(ROOT, 'materials/scripts/RoomAmbienceCoreObjects.material') is None and \
+        not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_portal_swirl_round', ['materials/scripts/RoomAmbienceCoreObjects.material',
+                                                            'the RoomAmbSwirl particle systems and texture'])
+    sys.exit(0)
+material_text = content_packages.read_text(ROOT, 'materials/scripts/RoomAmbienceCoreObjects.material')
 start = material_text.index('material RoomAmbSwirl')
 material = material_text[start:material_text.index('\nmaterial ', start + 1) if '\nmaterial ' in material_text[start + 1:]
                          else len(material_text)]
@@ -29,12 +40,19 @@ texture_name = re.search(r'texture\s+(\S+\.png)', material).group(1)
 
 # Every particle system using the material turns a square billboard.
 systems = 0
-for path in (ROOT / 'particles').glob('*.particle'):
+for path in content_packages.data_glob(ROOT, 'particles', '*.particle'):
     text = path.read_text(encoding='utf-8')
     systems += len(re.findall(r'material\s+RoomAmbSwirl\b', text))
-assert systems >= 1, 'no particle system draws the swirl'
+if systems == 0 and not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_portal_swirl_round', ['the RoomAmbSwirl particle systems'])
+else:
+    assert systems >= 1, 'no particle system draws the swirl'
+if content_packages.data_file(ROOT, 'materials/textures/' + texture_name) is None and \
+        not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_portal_swirl_round', ['materials/textures/' + texture_name])
+    sys.exit(0)
 
-image = Image.open(ROOT / 'materials/textures' / texture_name).convert('RGBA')
+image = Image.open(content_packages.resolve(ROOT, 'materials/textures/' + texture_name)).convert('RGBA')
 size = image.width
 assert image.width == image.height == 64, image.size
 pixels = image.load()

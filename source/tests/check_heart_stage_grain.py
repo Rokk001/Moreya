@@ -3,7 +3,10 @@
 Pure source wiring checks (no compiler, no game): server authority, configuration with defaults, the two new
 cosmetic event kinds appended to the network format, saves of the hatchery that still load, and the client side.
 The probe of the pure step rules in HeartHealthRing.h is compiled and run only with --probe (needs the MSVC
-compiler on the path)."""
+compiler on the path).
+
+The two room ambience tables are content (core-config package, found through scripts/content_packages.py); without them
+their grain effects are named as not checked."""
 from pathlib import Path
 import re
 import subprocess
@@ -11,6 +14,12 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+import content_packages  # noqa: E402
+
+#: The room ambience tables of the grain effects (core-config package)
+AMBIENCE_TABLES = ('config/roomAmbienceProduction.cfg', 'config/roomAmbienceDeferred.cfg')
+missing_content = [name for name in AMBIENCE_TABLES if content_packages.data_file(root, name) is None]
 
 
 def read(path):
@@ -32,15 +41,21 @@ client = read('source/network/ODClient.cpp')
 client_h = read('source/network/ODClient.h')
 config_h = read('source/utils/ConfigManager.h')
 config_cpp = read('source/utils/ConfigManager.cpp')
-global_cfg = read('config/global.cfg')
-rooms_cfg = read('config/rooms.cfg')
+# config/global.cfg and config/rooms.cfg are mixed tables: as the game reads them only with their own rows from the
+# content, else None
+if content_packages.has_content(root):
+    global_cfg = content_packages.read_text(root, 'config/global.cfg')
+    rooms_cfg = content_packages.read_text(root, 'config/rooms.cfg')
+else:
+    global_cfg = rooms_cfg = None
+    content_packages.unchecked('check_heart_stage_grain', ['values of config/global.cfg and config/rooms.cfg'])
 hatchery = read('source/rooms/RoomHatchery.cpp')
 hatchery_h = read('source/rooms/RoomHatchery.h')
 ambience = read('source/render/RoomAmbience.cpp')
 ambience_h = read('source/render/RoomAmbience.h')
 extras = read('source/render/RoomAmbienceExtras.cpp')
-ambience_cfg = read('config/roomAmbienceProduction.cfg')
-deferred_cfg = read('config/roomAmbienceDeferred.cfg')
+ambience_cfg = None if missing_content else content_packages.read_text(root, 'config/roomAmbienceProduction.cfg')
+deferred_cfg = None if missing_content else content_packages.read_text(root, 'config/roomAmbienceDeferred.cfg')
 
 # Network format: the new kinds are appended after the last one (numbers never change), the range test follows
 kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class CosmeticEventType')[1].split('};')[0], re.M)
@@ -57,7 +72,8 @@ for name in ('heartHealthStage', 'hatcheryGrain', 'roomTakeover'):
 
 # Heart steps: server decides, only for cosmetic-event clients, own and allied hearts always, others when seen
 for key, default in (('HeartHealthStages', '5'), ('HeartHealthStageEvents', '1')):
-    assert re.search(r'^# .*\n\s+' + key + r'\t' + default + r'\s*$', global_cfg, re.M), key
+    if global_cfg is not None:
+        assert re.search(r'^# .*\n\s+' + key + r'\t' + default + r'\s*$', global_cfg, re.M), key
     assert 'nextParam == "' + key + '"' in config_cpp, key
 assert 'mHeartHealthStages(5)' in config_cpp and 'mHeartHealthStageEvents(true)' in config_cpp
 assert 'std::max(2, std::min(20, mHeartHealthStages))' in config_h
@@ -91,8 +107,9 @@ assert 'HEART_RATE_RADIUS' in rate and 'return best;' in rate
 grain_keys = {'HatcheryGrainReaction': '1', 'HatcheryGrainLevels': '3', 'HatcheryGrainEatPercent': '30',
               'HatcheryGrainRegrowPermille': '8', 'HatcheryGrainSyncTurns': '2', 'HatcheryGrainResyncTurns': '14'}
 for key, value in grain_keys.items():
-    assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
-    assert re.search(r'^    ' + key + r'\t' + value + r'\s*$', rooms_cfg, re.M), key + ' not set'
+    if rooms_cfg is not None:
+        assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
+        assert re.search(r'^    ' + key + r'\t' + value + r'\s*$', rooms_cfg, re.M), key + ' not set'
     assert '"' + key + '", ' + value + '.0)' in hatchery, key + ' needs the same default in the source'
 
 # Server authority: hens take grain when they scratch, it grows back, nothing else about the hens changes
@@ -126,9 +143,12 @@ assert 'if(roomIt == mGrainRooms.end())' in level and 'return 0;' in level, 'unk
 assert 'getGrainLevel(tile) < static_cast<int32_t>(effect.mGrainMin)' in ambience
 assert 'mGrainRooms.clear();' in ambience
 assert 'GrainPecked' in function_body(ambience, 'void RoomAmbience::notifyHatcheryGrain(')
-for min_level in (1, 2, 3):
-    assert re.search(r'^\s+GrainMin\s+' + str(min_level) + r'\s*$', ambience_cfg, re.M), min_level
-assert re.search(r'^\s+Event\s+GrainPecked\s*$', deferred_cfg, re.M)
+if missing_content:
+    content_packages.unchecked('check_heart_stage_grain', missing_content)
+else:
+    for min_level in (1, 2, 3):
+        assert re.search(r'^\s+GrainMin\s+' + str(min_level) + r'\s*$', ambience_cfg, re.M), min_level
+    assert re.search(r'^\s+Event\s+GrainPecked\s*$', deferred_cfg, re.M)
 assert 'key == "GrainMin"' in read('source/render/RoomAmbienceConfig.cpp')
 
 # Batch 13b, part 1: the grain grows back at one constant speed. The regrowth reads only the config value and
@@ -137,7 +157,8 @@ for forbidden in ('getCare(', 'isLit(', 'getResearchValue', 'collectEnemies(', '
     assert forbidden not in update, 'regrowth must not depend on ' + forbidden
 assert update.count('Random::Uint(0, 999) < regrowPermille') == 1 and update.count('++it->second;') == 1
 assert hatchery.count('getRoomConfigDoubleOrDefault("HatcheryGrainRegrowPermille"') == 1, 'one place reads the regrowth rate'
-assert re.search(r'^# HatcheryGrainRegrowPermille .*it does not depend on care, light, research', rooms_cfg, re.M)
+if rooms_cfg is not None:
+    assert re.search(r'^# HatcheryGrainRegrowPermille .*it does not depend on care, light, research', rooms_cfg, re.M)
 
 # Batch 13b, part 3: every peck of a hen takes grain, whatever pose or clip it is. All "Pick" animations of a hen
 # and the scratch pose go through ChickenEntity::peckGround / RoomHatchery::henPecks, with one peck rhythm per hen
@@ -152,7 +173,8 @@ assert 'peckGround(currentHatchery);' in function_body(chicken, 'void ChickenEnt
 start_peck = function_body(chicken, 'bool ChickenEntity::startPeck(')
 assert 'mKind != ChickenKind::hen' in start_peck and 'mPeckWait > 0' in start_peck
 assert '"HatcheryPeckIntervalTurns", 6.0)' in start_peck
-assert re.search(r'^# HatcheryPeckIntervalTurns\s', rooms_cfg, re.M) and re.search(r'^    HatcheryPeckIntervalTurns\t6\s*$', rooms_cfg, re.M)
+if rooms_cfg is not None:
+    assert re.search(r'^# HatcheryPeckIntervalTurns\s', rooms_cfg, re.M) and re.search(r'^    HatcheryPeckIntervalTurns\t6\s*$', rooms_cfg, re.M)
 assert chicken.count('mPeckWait(0)') == 2 and 'if(mPeckWait > 0)\n        --mPeckWait;' in chicken
 peck_ground = function_body(chicken, 'void ChickenEntity::peckGround(')
 assert 'RoomType::hatchery' in peck_ground and 'henPecks(*this)' in peck_ground

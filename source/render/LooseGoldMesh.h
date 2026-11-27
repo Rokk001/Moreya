@@ -27,8 +27,10 @@ class SceneManager;
 
 //! \brief Client side meshes for gold outside the treasury: a small coin heap for gold lying on the
 //! floor and a sack with coins for gold carried by a worker. Both come in four sizes that follow the
-//! four classic stack meshes the server already names, so no new data is sent. The meshes are built
-//! here the first time they are needed. Nothing is changed when the treasury detail option is off.
+//! four classic stack names the server already sends (GoldstackLv1..4, names only: there are no
+//! meshes of that name any more), so no new data is sent. The heaps are built here the first time
+//! they are needed, from the coins of our gold heap model; the sacks are the shipped pouch meshes. The heap is drawn at every treasury detail; the sack is left out when the
+//! treasury detail option is off.
 namespace LooseGoldMesh
 {
 //! Number of sizes (1 = least gold)
@@ -37,13 +39,17 @@ static const int sizeCount = 4;
 //! Size 1..sizeCount of a classic stack mesh name ("GoldstackLv1".."GoldstackLv4"), 0 for any other name
 int sizeFromStackName(const std::string& meshName);
 
-//! Returns the name of the coin heap mesh for the stack mesh name (built on demand). Names that
-//! are not stack names, and the detail option "off", return the name unchanged.
+//! Returns the name of the coin heap mesh for the stack name (built on demand), at every treasury
+//! detail. Names that are not stack names are returned unchanged.
 std::string prepareHeap(Ogre::SceneManager* sceneManager, const std::string& meshName);
 
-//! Returns the name of the sack mesh for the stack mesh name (built on demand), or an empty string
+//! Returns the name of the shipped sack mesh for the stack mesh name, or an empty string
 //! when no sack is to be used (not a stack name, or the detail option is "off").
 std::string prepareSack(Ogre::SceneManager* sceneManager, const std::string& meshName);
+
+//! Returns the name of the shipped mesh of the gold load a digging worker carries on its back for the stack mesh name
+//! (GoldLoad_1..4, from a few coins to full), or an empty string whenever no sack is to be used (see prepareSack).
+std::string prepareLoad(Ogre::SceneManager* sceneManager, const std::string& meshName);
 }
 
 #endif // LOOSEGOLDMESH_H

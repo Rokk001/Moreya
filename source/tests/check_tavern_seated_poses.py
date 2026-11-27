@@ -11,8 +11,9 @@ for, across the table, and only without anything on top of them. What is checked
   rotation   a lie or turn motion is not taken back after someone else turned the creature (a walk step, a seat): a
              model of the node rotations shows that the old way left the creature tipped by up to 80 degrees and the
              new one leaves it upright and looking where the server said
-  innkeeper  in Idle, Pour and Cheer the head never hangs forward of the vertical, the hands and the jug rest on the
-             counter top instead of in it, and the body stays behind the back edge of the top (needs OgreXMLConverter
+  innkeeper  in Idle, Pour and Cheer the head never hangs forward of the vertical, the hands rest on the counter top
+             instead of in it, and the body stays behind the back edge of the top (the approved Meshy innkeeper of
+             2026-11-26 carries no jug) (needs OgreXMLConverter
              on the PATH or in OGRE_XML_CONVERTER; skipped with a note otherwise)
 
 Call from the repository root:
@@ -218,13 +219,15 @@ def check_innkeeper():
     assert abs(surface[:, :, 1].max() - COUNTER_TOP_BACK) <= 0.007, 'the counter top back edge moved'
     skeleton = feet.Skel(str(out / 'Innkeeper.skeleton.xml'))
     vertices, _, weights = rest.mesh_data(out / 'Innkeeper.mesh.xml')
-    limbs = {skeleton.idx[b] for b in ('UpperArm_R', 'Forearm_R', 'Hand_R', 'UpperArm_L', 'Forearm_L', 'Hand_L', 'Jug')}
+    # The arms of the shared Meshy rig of the approved innkeeper (formerly UpperArm/Forearm/Hand and the Jug bone)
+    limbs = {skeleton.idx[b] for b in ('RightArm', 'RightForeArm', 'RightHand', 'LeftArm', 'LeftForeArm', 'LeftHand')}
     body = np.array([sum(w for bone, w in row if bone not in limbs) >= 0.5 for row in weights])
     for clip in ('Idle', 'Pour', 'Cheer'):
         played = skeleton.clips[clip]
         times = np.linspace(0.0, played.length, 97)
         local = skeleton.locals_at(played, times)
-        up = skeleton.fk(local)[skeleton.idx['Head']][1][:, :, 2]
+        # The head bone of the Meshy rig points along its local y axis (the former rig along z)
+        up = skeleton.fk(local)[skeleton.idx['Head']][1][:, :, 1]
         forward = np.degrees(np.arctan2(-up[:, 1], up[:, 2]))
         assert forward.max() <= MAX_FORWARD_HEAD, (clip, 'the head hangs forward over the counter', forward.max())
         if clip == 'Idle':
@@ -239,7 +242,7 @@ def check_innkeeper():
                 (np.abs(x) < COUNTER_HALF_WIDTH)
             depth = np.where(inside, np.minimum.reduce([z - COUNTER_TOP_UNDERSIDE, COUNTER_TOP - z, COUNTER_TOP_BACK - y,
                                                         y - COUNTER_FRONT]), 0.0)
-            assert depth.max() <= MAX_TOP_DEPTH, (clip, 'a hand or the jug reaches into the counter top', float(depth.max()))
+            assert depth.max() <= MAX_TOP_DEPTH, (clip, 'a hand reaches into the counter top', float(depth.max()))
             low = body[None, :] & (z < COUNTER_TOP + 0.033)
             front = min(front, float(y[low].min()))
             assert front >= COUNTER_TOP_BACK - MAX_BODY_OVER_TOP, (clip, 'the body lies on the counter top', front)
