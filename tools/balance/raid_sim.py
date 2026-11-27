@@ -72,13 +72,13 @@ def keeper_pool(repo=REPO):
 KEEPER_POOL = keeper_pool()
 
 # Raid members per role: class and fixed skill template (a template of the class's skill group; the group decides the
-# role in group fights). The healer slot is a Wizard with the Sparkcaller template: a mage cannot heal, so in the game
-# it fights as a caster; the simulation still counts the slot as its healer (adjust_members()).
+# role in group fights). The healer slot is a class of the healer group with the Mender template (owner decision of
+# 2026-11-27): the Monk, the cheap healer (wage 50); a mage cannot heal any more.
 ROLE_MEMBER = {
     "tank": ("Knight", "Ironclad"),
     "melee": ("Hunter", "Assassin"),
     "ranged": ("Elf", "Sharpshooter"),
-    "healer": ("Wizard", "Sparkcaller"),
+    "healer": ("Monk", "Mender"),
     "caster": ("Wizard", "Pyromancer"),
 }
 
@@ -93,7 +93,8 @@ COMPOSITIONS = {
 }
 
 # Role emphasis of the guild of every story level (guild table of the raid plan): the primary roles, the secondary
-# roles ("tank with ranged") and the tank classes of the guild (heavy tanks: no Monks; many Monks: mostly Monks).
+# roles ("tank with ranged") and the tank classes of the guild (heavy tanks: Knights and Dwarf Warriors; the monk guild:
+# Knights only, its Monks heal).
 # Roles follow from the skill group of the fixed template (tank, healer, marksman: ranged, mage: caster, every other
 # group: melee; TEMPLATE_ROLES).
 GUILDS = {
@@ -117,15 +118,16 @@ GUILDS = {
     "HollowmarkCitadel": (("tank",), (), "tank"),
 }
 
-# Class and fixed template of the members of a role, taken in turn (the hero classes of the guild table: Knight, Dwarf
-# and Monk tanks, Adventurer melee, Elf ranged, Wizard caster and healer).
+# Class and fixed template of the members of a role, taken in turn (the hero classes of the guild table: Knight and Dwarf
+# Warrior tanks with Ironclad, Adventurer melee, Elf ranged, Wizard caster, Monk healer with Mender; owner decision of
+# 2026-11-27: tank slots are tanks, the healer slot a healer).
 ROLE_CLASSES = {
-    "tank": [("Knight", "Ironclad"), ("Dwarf2", "Ironclad"), ("Monk", "Mender")],
+    "tank": [("Knight", "Ironclad"), ("Dwarf2", "Ironclad")],
     "heavy": [("Knight", "Ironclad"), ("Dwarf2", "Ironclad")],
-    "monks": [("Monk", "Mender"), ("Monk", "Mender"), ("Knight", "Ironclad")],
+    "monks": [("Knight", "Ironclad")],
     "melee": [("Adventurer", "Assassin"), ("Hunter", "Assassin"), ("Adventurer", "Whirlwind"), ("Knight", "Ironclad")],
     "ranged": [("Elf", "Sharpshooter"), ("Elf", "Poisoner"), ("Elf", "Barrager")],
-    "healer": [("Wizard", "Sparkcaller")],
+    "healer": [("Monk", "Mender")],
     "caster": [("Wizard", "Pyromancer"), ("Wizard", "Witherer")],
 }
 
@@ -246,9 +248,10 @@ def campaign_members(level_name, text, member_level, leader_offset, share, heale
 
 def adjust_members(raid, shift, healers):
     """The level's own raid composition with every member level moved by shift (at least 1) and, with healers, that
-    many members of the healer slot (ROLE_MEMBER healer) in every group (RA11): members of the role that has the most members (tanks
-    only when no other role is left, never the named leader) become healers at their level, surplus healers become
-    melee members (ROLE_CLASSES melee, first class)."""
+    many healers in every group (RA11): members of the role that has the most members (tanks
+    only when no other role is left, never the named leader) become members of the healer slot (ROLE_MEMBER healer) at
+    their level, surplus healers become melee members (ROLE_CLASSES melee, first class). A healer is a member with a
+    template of the healer group (Monk or Priestess with Mender)."""
     lines = raid.split("\n")
     leaders = {}
     for line in lines:
@@ -266,10 +269,8 @@ def adjust_members(raid, shift, healers):
             members.setdefault(fields[1], []).append(index)
 
     def role(index):
-        """Role of a member line: the healer slot of ROLE_MEMBER, else the role of its template's skill group."""
+        """Role of a member line: the role of its template's skill group (TEMPLATE_ROLES, melee for the others)."""
         fields = lines[index].split("\t")
-        if (fields[2], fields[5]) == ROLE_MEMBER["healer"]:
-            return "healer"
         return TEMPLATE_ROLES.get(fields[5], "melee")
 
     if healers is not None:

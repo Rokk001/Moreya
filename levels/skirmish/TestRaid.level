@@ -1846,12 +1846,12 @@ Interval	90
 EscapeShare	-
 Group	1	RaidTestLeaderOne
 Member	1	Knight	4	RaidTestLeaderOne	Ironclad
-Member	1	Monk	3	-	Mender
+Member	1	Knight	3	-	Ironclad
 Member	1	Adventurer	3	-	-
 Member	1	Elf	3	-	Sharpshooter
 Group	2	RaidTestLeaderTwo
 Member	2	Knight	5	RaidTestLeaderTwo	Ironclad
 Member	2	Hunter	3	-	Assassin
-Member	2	Wizard	3	-	Sparkcaller
+Member	2	Monk	3	-	Mender
 Member	2	Wizard	3	-	Pyromancer
 [/Raid]
