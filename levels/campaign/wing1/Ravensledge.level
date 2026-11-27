@@ -2435,14 +2435,14 @@ Countdown	3600	3600	3600
 Interval	-
 EscapeShare	-
 Group	1	RolfScarrow
-Member	1	Elf	3	RolfScarrow	Marksman
-Member	1	Elf	2	-	Hunter
-Member	1	Elf	2	-	Skirmisher
-Member	1	Elf	2	-	Marksman
-Member	1	Elf	2	-	Hunter
-Member	1	Elf	2	-	Skirmisher
-Member	1	Knight	2	-	Guardian
-Member	1	Monk	2	-	Guardian
-Member	1	Adventurer	2	-	Shade
-Member	1	Hunter	2	-	Berserker
+Member	1	Elf	3	RolfScarrow	Sharpshooter
+Member	1	Elf	2	-	Poisoner
+Member	1	Elf	2	-	Barrager
+Member	1	Elf	2	-	Sharpshooter
+Member	1	Elf	2	-	Poisoner
+Member	1	Elf	2	-	Barrager
+Member	1	Knight	2	-	Ironclad
+Member	1	Monk	2	-	Mender
+Member	1	Adventurer	2	-	Assassin
+Member	1	Hunter	2	-	Assassin
 [/Raid]
