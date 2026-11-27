@@ -14,8 +14,8 @@ import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
 ASSIGNMENTS = {
     'Orc': 'BasicAxeOrc', 'Troll': 'Club', 'PitDemon': 'Trident', 'Cultist': 'RitualDagger',
-    'Gnome': 'Wand', 'Adventurer': 'BasicSword', 'Skeleton': 'BasicSword', 'Dwarf1': 'HandAxe',
-    'Dwarf2': 'BasicHammerDwarf2', 'Wizard': 'Staff', 'Lich': 'StaffLich', 'LizardMan': 'Staff',
+    'Gnome': 'Wand', 'Adventurer': 'BasicSword', 'Skeleton': 'SkeletonSword', 'Dwarf1': 'HandAxe',
+    'Dwarf2': 'BasicHammerDwarf2', 'Wizard': 'Staff', 'Lich': 'StaffLich', 'LizardMan': 'LizardManStaff',
 }
 UNCHANGED = {
     'Kobold': ('KoboldPick', 'none'), 'DwarfWorker': ('Pickaxe', 'none'),
@@ -28,10 +28,10 @@ UNCHANGED = {
 UNARMED = ('Rat', 'Spider', 'Roach', 'CaveHornet', 'Slime', 'Scarab', 'TentacleAlbine', 'TentacleGreen',
            'Wyvern', 'Dragon', 'Champion', 'Kreatur')
 TYPES = {
-    'sword': (('RustySword', 'BasicSword', 'ShortSword', 'Sabre', 'T2SwordGood'), 1),
+    'sword': (('RustySword', 'BasicSword', 'SkeletonSword', 'ShortSword', 'Sabre', 'T2SwordGood'), 1),
     'dagger': (('Knife', 'RitualDagger'), 1),
     'axe': (('BasicAxe', 'BasicAxeOrc'), 2),
-    'staff': (('Staff', 'StaffLich'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
+    'staff': (('Staff', 'StaffLich', 'LizardManStaff'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
     'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club',), 1), 'spear': (('Trident',), 2),
     'wand': (('Wand',), 1),
 }
@@ -53,6 +53,10 @@ PARENTS = {
     'Lich': ('lich', 'RightHand'), 'PitDemon': ('PitDemon', 'RightHand'),
 }
 NEW_WEAPONS = {'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1, 'Wand': 2}
+# The material each of these weapon models names: the shared surface, or the own material of the approved Meshy
+# weapon of its keeper creature that replaced the primitive model (club, trident, ritual dagger, 2026-11-27)
+WEAPON_MATERIALS = {'HandAxe': 'ArmamentWeapons', 'Club': 'ClubMeshy', 'Trident': 'TridentMeshy',
+                    'RitualDagger': 'RitualDaggerMeshy', 'Wand': 'ArmamentWeapons'}
 
 
 # Read a tracked production input without invoking any asset tools; a data table of config/ comes with its own rows
@@ -138,13 +142,14 @@ def check_equipment(equipment):
             assert float(item.get(field, '0')) == 0, (name, field)
         assert tuple(float(item[key]) for key in ('ParryBase', 'ParryPerLevel', 'ParryMax')) == (10.5, 0, 15), name
     for name in ('BasicSword', 'BasicAxe', 'BasicHammer', 'Staff', 'BasicAxeOrc',
-                 'BasicHammerDwarf2', 'StaffLich'):
+                 'BasicHammerDwarf2', 'StaffLich', 'LizardManStaff', 'SkeletonSword'):
         for field in ('PhysicalDamage', 'PhysicalDamageMin', 'MagicalDamage', 'MagicalDamageMin',
                       'ElementDamage', 'ElementDamageMin', 'PhysicalDefense', 'MagicalDefense', 'ElementDefense'):
             assert float(equipment[name][field]) == 0, (name, field)
     # The copies differ from their originals only in Name, MeshName and the name the player reads (DisplayName,
     # plan INGAME-QS-11 K6), which every equipment has
-    for name, original in (('BasicAxeOrc', 'BasicAxe'), ('BasicHammerDwarf2', 'BasicHammer'), ('StaffLich', 'Staff')):
+    for name, original in (('BasicAxeOrc', 'BasicAxe'), ('BasicHammerDwarf2', 'BasicHammer'), ('StaffLich', 'Staff'),
+                           ('LizardManStaff', 'Staff'), ('SkeletonSword', 'BasicSword')):
         expected = dict(equipment[original], Name=name, MeshName=name + '.mesh')
         expected.pop('DisplayName', None)
         copy = dict(equipment[name])
@@ -212,7 +217,7 @@ def check_assets():
     texture = data('materials/textures/ArmamentWeaponsSurface.png').read_bytes()
     assert texture[:8] == b'\x89PNG\r\n\x1a\n' and struct.unpack('>II', texture[16:24]) == (64, 64)
     for name in NEW_WEAPONS:
-        assert b'ArmamentWeapons' in data('models/' + name + '.mesh').read_bytes(), name
+        assert WEAPON_MATERIALS[name].encode('ascii') in data('models/' + name + '.mesh').read_bytes(), name
     assert b'StaffLich.skeleton' in data('models/StaffLich.mesh').read_bytes()
 
 
