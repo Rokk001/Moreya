@@ -30,7 +30,7 @@ import campaign_packages  # noqa: E402
 EXPECTED = [
     ('campaign/Brackenford.level', '1', 'Mold Pit', False, False),
     ('campaign/Coldwell.level', '1', 'Drowned Larder', False, True),
-    ('campaign/Ravensledge.level', '1', 'Rat Warren', False, False),
+    ('campaign/Ravensledge.level', '1', 'Wailing Ledges', False, False),
     ('campaign/Mossgate.level', '1', 'The Forgotten Pit', True, False),
 ]
 CHAMPION_WINGS = ("4", "5", "6")
