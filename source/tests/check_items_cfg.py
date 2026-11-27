@@ -12,26 +12,26 @@ import content_packages  # noqa: E402
 KINDS = {"Damage%", "MaxHP%", "CritChance", "Defense%", "AttackRating%", "DefenseRating%",
          "MoveSpeed%", "Avoid", "Cooldown%", "DamageAttribute", "Life", "Mana", "ManaCost%",
          "Wakefulness%", "Dig%", "Claim%", "Carry%"}
-# Path lines per (Group, Path) of the effect-based assignment to the new roster, counted once on the branch.
+# Path lines per (Group, Path) of the effect-based assignment to the new roster, counted once on the branch
+# feature/drop-items-roster after the moves of the drop items plan (20 lines to empty places, Iron Shield of Arms gone).
 PATH_COUNTS = {
-    ("tank", "Ironclad"): 19, ("tank", "Evader"): 5, ("tank", "Regenerator"): 4,
-    ("healer", "Renewer"): 5,
+    ("tank", "Ironclad"): 10, ("tank", "Evader"): 7, ("tank", "Regenerator"): 9,
+    ("healer", "Renewer"): 5, ("healer", "Warder"): 4,
     ("supporter", "Empowerer"): 4, ("supporter", "Blighter"): 1,
-    ("warrior", "Slayer"): 9, ("warrior", "Ravager"): 2, ("warrior", "Reaver"): 1,
-    ("skirmisher", "Assassin"): 10, ("skirmisher", "Venomist"): 6, ("skirmisher", "Whirlwind"): 1,
+    ("warrior", "Slayer"): 6, ("warrior", "Ravager"): 6, ("warrior", "Reaver"): 2,
+    ("skirmisher", "Assassin"): 6, ("skirmisher", "Venomist"): 6, ("skirmisher", "Whirlwind"): 2,
     ("marksman", "Sharpshooter"): 6, ("marksman", "Poisoner"): 6, ("marksman", "Barrager"): 6,
     ("mage", "Pyromancer"): 5, ("mage", "Sparkcaller"): 5,
     ("worker", "Delving"): 5, ("worker", "Claiming"): 5, ("worker", "Survival"): 5,
-    ("family", "Arcane"): 6, ("family", "Demon"): 7, ("family", "Greenskin"): 7, ("family", "Dwarf"): 8,
+    ("family", "Arcane"): 5, ("family", "Demon"): 5, ("family", "Greenskin"): 8, ("family", "Dwarf"): 6,
     ("family", "Elf"): 6, ("family", "Human"): 6, ("family", "Undead"): 6, ("family", "Dragonkin"): 5,
-    ("family", "Workfolk"): 5, ("family", "Beastkin"): 4, ("family", "Stonekin"): 4, ("family", "Vermin"): 4,
+    ("family", "Workfolk"): 5, ("family", "Beastkin"): 4, ("family", "Stonekin"): 5, ("family", "Vermin"): 4,
+    ("family", "Bloodbound"): 1,
 }
 # Weapon and shield lines whose WeaponClass no creature of their group or family spawns with (counted once on the
-# branch): crossbows are carried by no creature at all, the spear, club and hammer of BLK_A strengthen the
-# warrior group that carries none of them, and five family lines name a class their family does not carry.
-UNWEARABLE = {"ARC_A_Crossbow", "ARC_B_Crossbow", "ARC_C_Crossbow", "ELF_Crossbow",
-              "BLK_A_Spear", "BLK_A_Club", "BLK_A_Hammer",
-              "DMN_Shield", "DMN_Sword", "DWF_Axe", "DWF_Sword", "ARC_Dagger"}
+# branch feature/drop-items-roster): crossbows are carried by no creature at all; the lines that named a class their path
+# does not carry moved to paths that carry it.
+UNWEARABLE = {"ARC_A_Crossbow", "ARC_B_Crossbow", "ARC_C_Crossbow", "ELF_Crossbow"}
 
 
 def read(name):
@@ -65,7 +65,7 @@ def main():
         content_packages.unchecked("check_items_cfg", ["config/items.cfg"])
         return
     items = blocks(read("config/items.cfg"), "Item")
-    assert len(items) == 183, "expected five Poor and 178 path lines"
+    assert len(items) == 182, "expected five Poor and 177 path lines"
     equipment = {value(block, "Name"): block for block in blocks(read("config/equipments.cfg"), "Equipment")}
     creatures = blocks(read("config/creatures.cfg"), "Creature")
     effects_source = read("source/entities/ItemEffects.cpp")
@@ -131,11 +131,11 @@ def main():
             assert all(effect.split()[0] in effects for effect in actual_effects), item_id
             price = tuple(map(float, value(block, "Price").split()))
             assert price == {"Poor": (20,), "Common": (100,), "Rare": (300, 100), "Epic": (1500, 250)}[quality], item_id
-    assert len(poor) == 5 and len(paths) == 178 and len(displays) == 534
+    assert len(poor) == 5 and len(paths) == 177 and len(displays) == 531
     assert set(poor) == {"POOR_Head", "POOR_Armour", "POOR_Boots", "POOR_Ring", "POOR_Shield"}
     assert path_counts == PATH_COUNTS, sorted(set(path_counts.items()) ^ set(PATH_COUNTS.items()))
     assert unwearable == UNWEARABLE, sorted(unwearable ^ UNWEARABLE)
-    print("equipment catalogue: 183 lines, 534 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
+    print("equipment catalogue: 182 lines, 531 distinct path displays, %d group/family paths, %d unwearable weapon lines,"
           " ranges/effects/prices/weapons passed" % (len(PATH_COUNTS), len(UNWEARABLE)))
 
 
