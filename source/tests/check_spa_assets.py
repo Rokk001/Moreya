@@ -295,7 +295,9 @@ if present('the bath clips of the creature skeletons', sorted(set('models/' + me
         assert (assets_src_dir(root) / 'rooms' / 'spa' / 'creatures' / (skeleton[:-len('.skeleton')] + '.blend')).is_file(), \
             'no Blender source for ' + skeleton
     sources = sorted(p.name for p in (assets_src_dir(root) / 'rooms' / 'spa' / 'creatures').glob('*.blend'))
-    assert len(sources) == 32, 'one Blender source per skeleton, found ' + str(len(sources))
+    # 35: one source per skeleton, the 35 skeletons above; the figures Jaeger, Schattenfuerst and TentacleAlbine of the
+    # creatures package got their rig sources (counted on the branch; was 32)
+    assert len(sources) == 35, 'one Blender source per skeleton, found ' + str(len(sources))
 
 # 8. CREDITS: a row for every file of the spa assets and for every skeleton with new clips
 patterns = []
