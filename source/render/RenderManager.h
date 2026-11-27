@@ -1223,11 +1223,30 @@ private:
     //! The sweeping workers, as entity name and creature name joined by '|'
     std::set<std::string> mBroomHolders;
 
-    //! \brief Gives the figure with that entity name the prop of the clip (Lean, Sharpen, HerbSniff) and takes any
-    //! other clip prop away.
+    //! \brief Gives the figure with that entity name the prop of the clip (Lean, Sharpen, HerbSniff, the jug of the
+    //! innkeeper's Pour) and takes any other clip prop away.
     void updateClipProp(const std::string& objectName, const std::string& clip);
     //! \brief Removes the clip prop of the figure with that entity name, if it has one.
     void removeClipProp(const std::string& objectName);
+
+    //! \brief Hold of a clip prop that follows its hand in every frame: the prop sits in the frame of the hand bone
+    //! with this offset and rotation, at this scale, and its base ring never goes below the rest height.
+    struct FollowingClipProp
+    {
+        std::string mBoneName;
+        Ogre::Vector3 mOffset;
+        Ogre::Quaternion mRotation;
+        Ogre::Real mScale;
+        Ogre::Real mRestHeight;
+    };
+    //! \brief Gives the innkeeper with that entity name the jug of the Pour clip in his left hand.
+    void attachPourJug(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton);
+    //! \brief Moves the clip prop of one figure with the hand that holds it.
+    void placeFollowingClipProp(const std::string& objectName, const FollowingClipProp& hold);
+    //! \brief Moves every following clip prop with its hand; once per frame.
+    void updateFollowingClipProps();
+    //! The clip props that follow a hand, by the entity name of their holder
+    std::map<std::string, FollowingClipProp> mFollowingClipProps;
     //! Clip a reaction currently shows on a creature, by creature name
     std::map<std::string, std::string> mReactionClips;
     //! Removes only the mug of a guest of a tavern, if the creature has one (the end of a seat blend out of a drink clip)

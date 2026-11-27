@@ -39,6 +39,7 @@
 #include "entities/DoorEntity.h"
 #include "entities/GameEntity.h"
 #include "entities/GameEntityType.h"
+#include "entities/InnkeeperEntity.h"
 #include "entities/MapLight.h"
 #include "entities/MovableGameEntity.h"
 #include "entities/RenderedMovableEntity.h"
@@ -226,17 +227,32 @@ const Ogre::Vector3 SNIFF_HERB_SHIFT(0.0f, -0.02f, -0.045f);
 const Ogre::Vector3 SNIFF_HERB_DIRECTION(0.0f, 0.45f, 1.0f);
 //! The herbs are held this share of their length above the lower end of the stems
 const Ogre::Real SNIFF_HERB_GRIP_SHARE = 0.12f;
+//! Pour: the left hand of the innkeeper holds the tavern jug by the lower end of its handle. The handle point lies at
+//! these mesh units (the jug mesh is 1 unit high: handle on +x, spout on -x, base at z = 0), and the palm this share of the
+//! innkeeper's height along the fingers from the hand bone. At the start of the clip the jug stands upright, its spout
+//! towards the other hand; the rolling hand then tips it over the mug
+const std::string POUR_JUG_MESH = "TavernJug.mesh";
+const std::string POUR_JUG_BONE = "LeftHand";
+const Ogre::Real POUR_JUG_HEIGHT_SHARE = 0.17f;
+const Ogre::Vector3 POUR_JUG_GRIP(0.40f, 0.0f, 0.32f);
+const Ogre::Real POUR_JUG_PALM_REACH = 0.07f;
+//! The base ring of the jug (centre x, centre y, radius in mesh units) never goes below the counter top,
+//! which lies this share of the innkeeper's height above the floor (TavernCounter.mesh, 0.4125 of 0.7859)
+const Ogre::Vector3 POUR_JUG_BASE_RING(-0.09f, 0.0f, 0.365f);
+const Ogre::Real POUR_JUG_COUNTER_SHARE = 0.5248f;
+//! Points on the base ring that are tested against the counter top
+const int POUR_JUG_RING_POINTS = 12;
 
-//! \brief Position and orientation of a bone in model space in the middle of a clip, read from the tracks of the clip
-//! without touching the pose of the entity. False when the skeleton has no such bone or clip.
-bool getMidClipBonePose(const Ogre::Skeleton& skeleton, const std::string& clip, const std::string& boneName,
-    Ogre::Vector3& position, Ogre::Quaternion& orientation)
+//! \brief Position and orientation of a bone in model space at this share of the length of a clip, read from the tracks
+//! of the clip without touching the pose of the entity. False when the skeleton has no such bone or clip.
+bool getClipBonePose(const Ogre::Skeleton& skeleton, const std::string& clip, const std::string& boneName,
+    Ogre::Real timeShare, Ogre::Vector3& position, Ogre::Quaternion& orientation)
 {
     if(!skeleton.hasBone(boneName) || !skeleton.hasAnimation(clip))
         return false;
 
     const Ogre::Animation* animation = skeleton.getAnimation(clip);
-    const Ogre::Real time = 0.5f * animation->getLength();
+    const Ogre::Real time = timeShare * animation->getLength();
     std::vector<const Ogre::Bone*> chain;
     for(const Ogre::Node* node = skeleton.getBone(boneName); node != nullptr; node = node->getParent())
         chain.push_back(static_cast<const Ogre::Bone*>(node));
@@ -259,6 +275,14 @@ bool getMidClipBonePose(const Ogre::Skeleton& skeleton, const std::string& clip,
         orientation = orientation * localOrientation;
     }
     return true;
+}
+
+//! \brief Position and orientation of a bone in model space in the middle of a clip, read from the tracks of the clip
+//! without touching the pose of the entity. False when the skeleton has no such bone or clip.
+bool getMidClipBonePose(const Ogre::Skeleton& skeleton, const std::string& clip, const std::string& boneName,
+    Ogre::Vector3& position, Ogre::Quaternion& orientation)
+{
+    return getClipBonePose(skeleton, clip, boneName, 0.5f, position, orientation);
 }
 
 //! \brief Rotation that puts the z axis of a mesh on the direction and its x axis as near to the hint as possible.
@@ -3178,6 +3202,7 @@ const Ogre::Vector3& RenderManager::getMenuEntityScale(Ogre::SceneNode* node)
 void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
 {
     updateCleaningBrooms();
+    updateFollowingClipProps();
     for(const std::pair<Creature* const, std::vector<Ogre::MaterialPtr>>& corpse : mCreatureDecayMaterials)
     {
         Ogre::AnimationState* state = corpse.first->getAnimationState();
@@ -6388,9 +6413,10 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         animState->setTimePosition(animState->getLength());
     curAnimatedObject->setAnimationState(animState);
 
-    // The infirmary shaman holds her herbs while she smells at them
-    if((anim == EntityAnimation::herb_sniff_anim) ||
-       ((previousState != nullptr) && (previousState->getAnimationName() == EntityAnimation::herb_sniff_anim)))
+    // The infirmary shaman holds her herbs while she smells at them, the innkeeper his jug while he pours
+    if((anim == EntityAnimation::herb_sniff_anim) || (anim == InnkeeperPose::pour) ||
+       ((previousState != nullptr) && ((previousState->getAnimationName() == EntityAnimation::herb_sniff_anim) ||
+                                       (previousState->getAnimationName() == InnkeeperPose::pour))))
         updateClipProp(objectName, anim);
 
     // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table. A drinking
@@ -9310,6 +9336,7 @@ bool RenderManager::rrReactionHoldsProp(const Creature* creature) const
 
 void RenderManager::removeClipProp(const std::string& objectName)
 {
+    mFollowingClipProps.erase(objectName);
     const std::string propName = CLIP_PROP_PREFIX + objectName;
     if(!mSceneManager->hasEntity(propName))
         return;
@@ -9319,6 +9346,77 @@ void RenderManager::removeClipProp(const std::string& objectName)
     mSceneManager->destroyEntity(propEntity);
     if(mSceneManager->hasSceneNode(propName + CLIP_PROP_NODE_SUFFIX))
         mSceneManager->destroySceneNode(propName + CLIP_PROP_NODE_SUFFIX);
+}
+
+//! The jug is fixed to the hand as it is at the start of the clip: upright on the counter, its handle in the palm and its
+//! spout towards the other hand. It hangs on a node of the innkeeper that follows the hand in every frame.
+void RenderManager::attachPourJug(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton)
+{
+    Ogre::Vector3 handPosition;
+    Ogre::Quaternion handOrientation;
+    if(!getClipBonePose(skeleton, InnkeeperPose::pour, POUR_JUG_BONE, 0.0f, handPosition, handOrientation))
+    {
+        OD_LOG_WRN("No hand bone for the tavern jug, skeleton=" + skeleton.getName());
+        return;
+    }
+
+    const std::string propName = CLIP_PROP_PREFIX + objectName;
+    Ogre::Entity* jugEntity = mSceneManager->createEntity(propName, POUR_JUG_MESH);
+    jugEntity->setQueryFlags(0);
+    const Ogre::Real height = holder->getMesh()->getBounds().getSize().z;
+    const Ogre::Real scale = POUR_JUG_HEIGHT_SHARE * height / jugEntity->getMesh()->getBounds().getSize().z;
+    const Ogre::Vector3 palm = handPosition + handOrientation * Ogre::Vector3(0.0f, POUR_JUG_PALM_REACH * height, 0.0f);
+
+    FollowingClipProp hold;
+    hold.mBoneName = POUR_JUG_BONE;
+    hold.mRotation = handOrientation.Inverse();
+    hold.mOffset = handOrientation.Inverse() * (palm - POUR_JUG_GRIP * scale - handPosition);
+    hold.mScale = scale;
+    hold.mRestHeight = POUR_JUG_COUNTER_SHARE * height;
+
+    Ogre::SceneNode* node = holder->getParentSceneNode()->createChildSceneNode(propName + CLIP_PROP_NODE_SUFFIX);
+    node->attachObject(jugEntity);
+    mFollowingClipProps[objectName] = hold;
+    placeFollowingClipProp(objectName, hold);
+}
+
+//! The hand bone holds the pose of the last rendered frame. The prop is lifted by the deepest point of its base ring
+//! below the rest height, so the tipping jug slides up the palm instead of sinking into the counter.
+void RenderManager::placeFollowingClipProp(const std::string& objectName, const FollowingClipProp& hold)
+{
+    const std::string propName = CLIP_PROP_PREFIX + objectName;
+    if(!mSceneManager->hasEntity(objectName) || !mSceneManager->hasSceneNode(propName + CLIP_PROP_NODE_SUFFIX))
+        return;
+
+    Ogre::Skeleton* skeleton = mSceneManager->getEntity(objectName)->getSkeleton();
+    if((skeleton == nullptr) || !skeleton->hasBone(hold.mBoneName))
+        return;
+
+    const Ogre::Bone* hand = skeleton->getBone(hold.mBoneName);
+    const Ogre::Quaternion turn = hand->_getDerivedOrientation() * hold.mRotation;
+    Ogre::Vector3 origin = hand->_getDerivedPosition() + hand->_getDerivedOrientation() * hold.mOffset;
+    Ogre::Real lowest = origin.z;
+    for(int i = 0; i < POUR_JUG_RING_POINTS; ++i)
+    {
+        const Ogre::Real angle = Ogre::Math::TWO_PI * static_cast<Ogre::Real>(i) / static_cast<Ogre::Real>(POUR_JUG_RING_POINTS);
+        const Ogre::Vector3 point(POUR_JUG_BASE_RING.x + POUR_JUG_BASE_RING.z * Ogre::Math::Cos(angle),
+            POUR_JUG_BASE_RING.y + POUR_JUG_BASE_RING.z * Ogre::Math::Sin(angle), 0.0f);
+        lowest = std::min(lowest, (origin + turn * (point * hold.mScale)).z);
+    }
+    if(lowest < hold.mRestHeight)
+        origin.z += hold.mRestHeight - lowest;
+
+    Ogre::SceneNode* node = mSceneManager->getSceneNode(propName + CLIP_PROP_NODE_SUFFIX);
+    node->setPosition(origin);
+    node->setOrientation(turn);
+    node->setScale(hold.mScale, hold.mScale, hold.mScale);
+}
+
+void RenderManager::updateFollowingClipProps()
+{
+    for(std::map<std::string, FollowingClipProp>::const_iterator it = mFollowingClipProps.begin();
+        it != mFollowingClipProps.end(); ++it)
+        placeFollowingClipProp(it->first, it->second);
 }
 
 //! Every prop is sized to the height of the mesh of its holder and placed from the pose in the middle of its clip. The
@@ -9334,6 +9432,8 @@ void RenderManager::updateClipProp(const std::string& objectName, const std::str
         meshName = SHARPEN_SWORD_MESH;
     else if(clip == EntityAnimation::herb_sniff_anim)
         meshName = SNIFF_HERB_MESH;
+    else if(clip == InnkeeperPose::pour)
+        meshName = POUR_JUG_MESH;
     else
         return;
 
@@ -9345,6 +9445,12 @@ void RenderManager::updateClipProp(const std::string& objectName, const std::str
     Ogre::Skeleton* skeleton = holder->getSkeleton();
     if((skeleton == nullptr) || (holder->getParentSceneNode() == nullptr))
         return;
+
+    if(clip == InnkeeperPose::pour)
+    {
+        attachPourJug(objectName, holder, *skeleton);
+        return;
+    }
 
     // Bones that carry the prop, with their pose in the middle of the clip
     std::string boneName = "Weapon_L";

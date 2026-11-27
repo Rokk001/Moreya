@@ -110,6 +110,9 @@ struct RenderManager {
     bool rrPlayIdleHandAnimation();
     void rrCancelIdleHandAnimation();
     void updateHand(float);
+    // The per-frame prop updates at the start of updateRenderAnimations have no props in this fixture
+    void updateCleaningBrooms() {}
+    void updateFollowingClipProps() {}
     Ogre::AnimationState* setEntityAnimation(Ogre::Entity*, const std::string&, bool);
     void createTools(Ogre::Entity* keeperHandEnt) { FACTORY }
 };
