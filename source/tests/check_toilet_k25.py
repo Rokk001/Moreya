@@ -1,11 +1,12 @@
 """Toilet room after INGAME-QS-10 K25: textured stone seats with a hole and a wooden lid, solid seats in rows along the
 walls with a free lane, a use of 10 to 30 s on the seat in the RelievePit clip (standing over the hole with half bent
 knees; a skeleton without it plays Relieve), the same RelievePit motion on the floor without a toilet with the Relieved
-reaction there, and the urge values of the toilet plan.
+reaction there, the 1 s blend down into the looping RelievePit and up out of it, and the urge values of the toilet plan.
 
 Calls (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
   python source/tests/check_toilet_k25.py               file checks and the compiled probes of the layout rules and of
-                                                        the seat clip (startSquat, toiletSeatLift, clip fallback) (cl)
+                                                        the seat clip (startSquat, toiletSeatLift, clip fallback, bend
+                                                        blend) (cl)
   python source/tests/check_toilet_k25.py --no-compile  file checks only; the probes are left to the build
 """
 import ast
@@ -178,6 +179,12 @@ assert ('if((animation == EntityAnimation::relieve_pit_anim) || (animation == En
         '           (mSteppingCreatures.count(dropCreature) != 0))') in render
 animation_h = read('source/entities/MovableGameEntity.h')
 assert 'relieve_anim = "Relieve";' in animation_h and 'relieve_pit_anim = "RelievePit";' in animation_h
+# RelievePit loops only the bent over pose: the renderer blends down into it and up out of it in 1 s
+assert ('    inline bool isBentOverClip(const std::string& clip)\n    {\n        return clip == relieve_pit_anim;\n    }\n'
+        in animation_h)
+assert re.search(r'^static const Ogre::Real CREATURE_BEND_BLEND_DURATION = 1\.0f;$', render, re.M)
+assert 'mCreatureSeatBlends.push_back({dropCreature, previousState, animState, 0.0f, duration});' in render
+assert 'const Ogre::Real phase = std::min(it->mElapsed / it->mDuration, 1.0f);' in render
 
 # 4. The room places the seats by the layout and the use walks onto the seat, sits a random 10 to 30 s and steps off
 room = read('source/rooms/RoomToilet.cpp')
@@ -319,12 +326,19 @@ int main()
 
 # 7. The probe of the seat clip, compiled from the production text: startSquat picks RelievePit on a seat and on the
 # floor, toiletSeatLift lifts both clips onto the seat and no other, and the clip fallback of the renderer turns a
-# missing RelievePit into Relieve and a missing Relieve into Idle
+# missing RelievePit into Relieve and a missing Relieve into Idle; going into RelievePit and out of it blends in 1 s
 animation_block = animation_h[animation_h.index('namespace EntityAnimation\n{'):]
 animation_block = animation_block[:animation_block.index('\n};') + 4]
 fallback_start = render.index('    // Handle the case where this entity does not have the requested animation.\n')
 fallback_loop = render[fallback_start:render.index('\n    if (!objectEntity->getSkeleton()->hasAnimation(anim))\n        return;',
                                                    fallback_start)]
+# The blend choice of rrSetObjectAnimationState: which clip change blends, and how long
+blend_start = render.index('    const bool seatChange = (previousState != nullptr) &&\n')
+blend_choice = render[blend_start:render.index('    if((dropCreature != nullptr) && (previousState != nullptr) && (previousState != animState)',
+                                               blend_start)]
+blend_duration = re.search(r'^        const Ogre::Real duration = .*;$', render[blend_start:], re.M).group(0)
+blend_constants = '\n'.join(re.search(r'^static const Ogre::Real %s = .*;$' % name, render, re.M).group(0)
+                            for name in ('CREATURE_SEAT_BLEND_DURATION', 'CREATURE_BEND_BLEND_DURATION'))
 PIT_PROBE = r'''
 #include "rooms/ToiletLayout.h"
 #include "gamemap/RoomObjectBounds.h"
@@ -334,10 +348,28 @@ PIT_PROBE = r'''
 #include <vector>
 namespace Ogre
 {
+    typedef float Real;
     struct Vector2 { float x; float y; Vector2(float a, float b) : x(a), y(b) {} };
     struct Vector3 { float x; float y; float z; Vector3(float a, float b, float c) : x(a), y(b), z(c) {} };
 }
 ANIMATION_BLOCK
+BLEND_CONSTANTS
+// The clip a creature played before, only its name
+struct AnimationState
+{
+    std::string mName;
+    const std::string& getAnimationName() const { return mName; }
+};
+// The blend the renderer starts when a creature goes from the clip before to anim: its seconds, 0 for none
+static float blendSeconds(const std::string& before, const std::string& anim)
+{
+    AnimationState previous; previous.mName = before; const AnimationState* previousState = &previous;
+BLEND_CHOICE
+    if(!(seatChange || bendChange))
+        return 0.0f;
+DURATION_OF_BLEND
+    return duration;
+}
 static int failures = 0;
 static void expect(bool ok, const char* what) { if(!ok) { ++failures; std::printf("FAIL %s\n", what); } }
 // The configuration and the helpers startSquat reads
@@ -456,11 +488,20 @@ int main()
     expect(shownClip(squatOnly, "RelievePit") == "Relieve", "a skeleton without RelievePit plays Relieve");
     expect(shownClip(idleOnly, "RelievePit") == "Idle", "a skeleton without both plays Idle");
     expect(shownClip(all, "Relieve") == "Relieve" && shownClip(idleOnly, "Relieve") == "Idle", "the former squat as before");
+
+    // The looping RelievePit: the body bends down into it once and straightens up out of it once, each in 1 s;
+    // the seat blend keeps its 0.3 s and other clip changes do not blend
+    expect(blendSeconds("Idle", "RelievePit") == 1.0f && blendSeconds("Walk", "RelievePit") == 1.0f, "bending down blends in 1 s");
+    expect(blendSeconds("RelievePit", "Idle") == 1.0f && blendSeconds("RelievePit", "Walk") == 1.0f, "straightening up blends in 1 s");
+    expect(blendSeconds("RelievePit", "RelievePit") == 0.0f, "the loop itself does not blend");
+    expect(blendSeconds("Idle", "Sit") == 0.3f && blendSeconds("SitDrink", "Idle") == 0.3f, "the seat blend keeps 0.3 s");
+    expect(blendSeconds("Idle", "Walk") == 0.0f && blendSeconds("Relieve", "Idle") == 0.0f, "other clip changes do not blend");
     std::printf("PIT CHECKS FAILURES=%d\n", failures);
     return failures == 0 ? 0 : 1;
 }
 '''.replace('ANIMATION_BLOCK', animation_block).replace('FALLBACK_LOOP', fallback_loop).replace(
-    'SQUAT_BODY', squat).replace('LIFT_BODY', lift)
+    'SQUAT_BODY', squat).replace('LIFT_BODY', lift).replace('BLEND_CONSTANTS', blend_constants).replace(
+    'BLEND_CHOICE', blend_choice).replace('DURATION_OF_BLEND', blend_duration)
 
 if '--no-compile' not in sys.argv:
     vcvars = Path('C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/VC/Auxiliary/Build/vcvars64.bat')

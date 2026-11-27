@@ -162,6 +162,9 @@ static const Ogre::Real SLEEP_BED_CLEARANCE = 0.01f;
 static const Ogre::Real CREATURE_WAKE_BLEND_DURATION = 4.0f / 30.0f;
 //! Length of the blend between a seated tavern clip and any other clip, in seconds.
 static const Ogre::Real CREATURE_SEAT_BLEND_DURATION = 0.3f;
+//! Length of the blend into the bent over RelievePit clip and out of it, in seconds: the creature bends down once and
+//! straightens up once while the clip itself loops only the bent over pose.
+static const Ogre::Real CREATURE_BEND_BLEND_DURATION = 1.0f;
 
 //! Seconds a room construction burst stays in the scene. It is longer than the emitter
 //! duration plus the particle lifetime, so the last particles fade out before it is removed.
@@ -6315,14 +6318,20 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         CreatureCombatReactions::showWeaponsForClip(dropCreature);
     }
 
-    // Sitting down and getting up blend the body from the one pose into the other; the old clip holds still meanwhile
+    // Sitting down and getting up blend the body from the one pose into the other; the old clip holds still meanwhile.
+    // Bending over into the looping RelievePit and straightening up out of it blend the same way, slower
+    const bool seatChange = (previousState != nullptr) &&
+        (EntityAnimation::isSeatClip(previousState->getAnimationName()) != EntityAnimation::isSeatClip(anim));
+    const bool bendChange = (previousState != nullptr) &&
+        (EntityAnimation::isBentOverClip(previousState->getAnimationName()) != EntityAnimation::isBentOverClip(anim));
     if((dropCreature != nullptr) && (previousState != nullptr) && (previousState != animState) && !freezeOnLastFrame &&
-       (EntityAnimation::isSeatClip(previousState->getAnimationName()) != EntityAnimation::isSeatClip(anim)))
+       (seatChange || bendChange))
     {
         previousState->setEnabled(true);
         previousState->setWeight(1.0f);
         animState->setWeight(0.0f);
-        mCreatureSeatBlends.push_back({dropCreature, previousState, animState, 0.0f});
+        const Ogre::Real duration = bendChange ? CREATURE_BEND_BLEND_DURATION : CREATURE_SEAT_BLEND_DURATION;
+        mCreatureSeatBlends.push_back({dropCreature, previousState, animState, 0.0f, duration});
     }
 }
 
@@ -6359,7 +6368,7 @@ void RenderManager::updateCreatureSeatBlends(Ogre::Real timeSinceLastFrame)
         }
 
         it->mElapsed += timeSinceLastFrame;
-        const Ogre::Real phase = std::min(it->mElapsed / CREATURE_SEAT_BLEND_DURATION, 1.0f);
+        const Ogre::Real phase = std::min(it->mElapsed / it->mDuration, 1.0f);
         const Ogre::Real weight = phase * phase * (3.0f - 2.0f * phase);
         it->mFrom->setWeight(1.0f - weight);
         it->mTo->setWeight(weight);
