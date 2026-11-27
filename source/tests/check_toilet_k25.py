@@ -395,6 +395,8 @@ static std::string shownClip(const std::set<std::string>& clips, const std::stri
 {
     Entity entity; entity.mSkeleton.mClips = clips; const Entity* objectEntity = &entity;
     std::string anim = requested;
+    // the loop flag of rrSetObjectAnimationState, which the tavern outcome fallbacks of the copied block set
+    bool loop = false; (void)loop;
 FALLBACK_LOOP
     if (!objectEntity->getSkeleton()->hasAnimation(anim))
         return std::string();
