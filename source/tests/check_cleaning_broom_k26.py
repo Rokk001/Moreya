@@ -41,10 +41,12 @@ Call (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreX
     python source/tests/check_cleaning_broom_k26.py [--no-compile] [--assets <folder with models/ and materials/>]
 """
 from pathlib import Path
+import atexit
 import json
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -65,6 +67,8 @@ CLEAN_SECONDS = 119 / 30.0
 fails = []
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
 work = Path(tempfile.mkdtemp(prefix='cleaning_broom_'))
+# The converted meshes are about 70 MB per run: remove them however the script ends (success, failure, exception)
+atexit.register(shutil.rmtree, str(work), ignore_errors=True)
 started = time.monotonic()
 
 
