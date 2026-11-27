@@ -173,8 +173,9 @@ EXPECTED_COOLDOWN = {
     ('Vampire', 'MissileLaunch'): 3, ('Priestess', 'MissileLaunch'): 3, ('Gnoll', 'MissileLaunch'): 3,
     ('Gnome', 'MissileLaunch'): 3, ('Dragon', 'MissileLaunch'): 22,
 }
-# The GuidedBolt and Grenade lines of the archers are skills of the Bow path now (their cooldown in turns)
-EXPECTED_TREE_COOLDOWN = {'ARC_A2': '3', 'ARC_A3': '10'}
+# The GuidedBolt and Grenade lines of the marksmen are skills of the tree now (their cooldown in turns): Seeking Shot
+# (tier 3 of Sharpshooter) and Blast Shot (tier 1 of Barrager)
+EXPECTED_TREE_COOLDOWN = {'MRK_A3': '3', 'MRK_C1': '10'}
 
 
 # Parry values (percent) per weapon: the three weapons of the unskilled model carriers parry badly, all others keep the

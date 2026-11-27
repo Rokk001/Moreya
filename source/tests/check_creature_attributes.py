@@ -445,7 +445,8 @@ def mana_cost_model(group, skill_name, is_first_attack, carries_bow, manacost_pe
         return 0.0
     caster = is_first_attack
     if group != 'none':
-        caster = group == 'caster'
+        # The spell-shooting groups that replaced the caster group of before (roster plan section 5)
+        caster = group in ('mage', 'healer', 'supporter')
     base = caster_shot if caster else second_shot
     return base * max(0.0, 1.0 - manacost_percent / 100.0)
 
@@ -493,17 +494,21 @@ def check_mana_part_b():
     assert 'skill.getSkillName() != "MissileLaunch"' in cost, 'Melee and every other line is free here'
     manacost = function(creature, 'double Creature::getManaCost(double baseCost) const')
     assert 'getSkillPassive("manacost%")' in manacost and '1.0 - getSkillPassive("manacost%") / 100.0' in manacost
-    assert mana_cost_model('caster', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
-    assert mana_cost_model('caster', 'MissileLaunch', True, False, 30, caster_shot, second_shot) == 1.75
-    assert mana_cost_model('blitzer', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
-    assert mana_cost_model('blitzer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 5.0, 'level file lists the shot first'
+    assert mana_cost_model('mage', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
+    assert mana_cost_model('healer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
+    assert mana_cost_model('supporter', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
+    assert mana_cost_model('mage', 'MissileLaunch', True, False, 30, caster_shot, second_shot) == 1.75
+    assert mana_cost_model('warrior', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
+    assert mana_cost_model('warrior', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 5.0, 'level file lists the shot first'
     assert mana_cost_model('none', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
-    assert mana_cost_model('archer', 'MissileLaunch', True, True, 0, caster_shot, second_shot) == 0.0, 'bow shot is free'
-    assert mana_cost_model('archer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == second_shot, 'no archer special rule'
-    assert mana_cost_model('caster', 'Melee', True, False, 0, caster_shot, second_shot) == 0.0
-    assert mana_cost_model('blitzer', 'Explosion', False, False, 0, caster_shot, second_shot) == 0.0, 'Champion line is free'
-    assert mana_cost_model('caster', 'MissileLaunch', True, False, 100, caster_shot, second_shot) == 0.0
-    # The cost classes of the real type lists: casters pay per first shot, only the Dragon has a second shot
+    assert mana_cost_model('marksman', 'MissileLaunch', True, True, 0, caster_shot, second_shot) == 0.0, 'bow shot is free'
+    assert mana_cost_model('marksman', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == second_shot, 'no marksman special rule'
+    assert mana_cost_model('mage', 'Melee', True, False, 0, caster_shot, second_shot) == 0.0
+    assert mana_cost_model('warrior', 'Explosion', False, False, 0, caster_shot, second_shot) == 0.0, 'Champion line is free'
+    assert mana_cost_model('mage', 'MissileLaunch', True, False, 100, caster_shot, second_shot) == 0.0
+    # The cost classes of the real type lists of the roster: the first shot without a bow (the casters of the mage,
+    # healer and supporter groups pay the caster rate, the marksmen Gnoll and Gnome the second-shot rate), only the
+    # Dragon has a second shot, only the Elf shoots a bow
     weapon_types = {}
     for block in config_blocks(text('config/equipments.cfg'), 'Equipment'):
         weapon_types[first_value(block, 'Name')] = first_value(block, 'WeaponType')
@@ -522,16 +527,19 @@ def check_mana_part_b():
             bow_types.add(type_name)
         else:
             caster_types.add(type_name)
-    assert caster_types == {'LizardMan', 'Lich', 'Wizard', 'Kreatur'}, caster_types
+    assert caster_types == {'Banshee', 'Gnoll', 'Gnome', 'Lich', 'LizardMan', 'Priestess', 'Vampire', 'Witch',
+                            'Wizard'}, caster_types
     assert second_line_types == {'Dragon'}, second_line_types
-    assert bow_types == {'DarkElf', 'Elf'}, bow_types
+    assert bow_types == {'Elf'}, bow_types
     # A level-file Dragon lists the shot before the melee line: the cost follows its skill group, not the line order
     for level_name in ('levels/campaign/Bonus1.level', 'levels/skirmish/TestSingleplayerSmall.level'):
         for block in config_blocks(text(level_name), 'Creature'):
             if first_value(block, 'Name') == 'DragonBoss':
                 names = [name for name in skill_names(block) if name in ('Melee', 'MissileLaunch')]
                 assert names == ['MissileLaunch', 'Melee'], level_name
-    assert 'if(group != "none")' in cost and 'casterShot = (group == "caster");' in cost and '"archer"' not in cost, 'no special rule for an archer without bow'
+    assert 'if(group != "none")' in cost and \
+        'casterShot = (group == "mage" || group == "healer" || group == "supporter");' in cost and \
+        '"marksman"' not in cost, 'no special rule for a marksman without bow'
 
     # 6.4 not enough mana: the skill is not used, as with a cooldown; 6.5 mana is subtracted when the skill starts
     assert 'bool Creature::hasManaFor(' in creature and 'return mMana >= getSkillManaCost(skill);' in creature
