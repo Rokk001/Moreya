@@ -194,6 +194,9 @@ EXPECTED_WEAPON_COOLDOWN = {
     'Knife': 1, 'KoboldPick': 1, 'Pickaxe': 1, 'DefenderWeapon': 4,
     'HandAxe': 2, 'Club': 2, 'Trident': 4, 'RitualDagger': 1, 'Wand': 2,
     'BasicAxeOrc': 3, 'BasicHammerDwarf2': 1, 'StaffLich': 3,
+    # own entries of the heroes (look only): the cooldown of the entry each one copies
+    'AdventurerSword': 2, 'KnightSword': 2, 'DarkElfDagger': 1, 'WizardStaff': 3, 'PriestessStaff': 3,
+    'RunelordHammer': 1,
 }
 # Weapons that are part of the creature model and attach no mesh of their own
 EXPECTED_MODEL_WEAPONS = {'Knife': 'Goblin', 'KoboldPick': 'Kobold', 'DefenderWeapon': 'Defender'}

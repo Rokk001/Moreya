@@ -14,33 +14,41 @@ import campaign_packages  # noqa: E402
 import content_packages  # noqa: E402
 ASSIGNMENTS = {
     'Orc': 'BasicAxeOrc', 'Troll': 'Club', 'PitDemon': 'Trident', 'Cultist': 'RitualDagger',
-    'Gnome': 'Wand', 'Adventurer': 'BasicSword', 'Skeleton': 'BasicSword', 'Dwarf1': 'HandAxe',
-    'Dwarf2': 'BasicHammerDwarf2', 'Wizard': 'Staff', 'Lich': 'StaffLich', 'LizardMan': 'Staff',
+    'Gnome': 'Wand', 'Adventurer': 'AdventurerSword', 'Skeleton': 'BasicSword', 'Dwarf1': 'HandAxe',
+    'Dwarf2': 'BasicHammerDwarf2', 'Wizard': 'WizardStaff', 'Lich': 'StaffLich', 'LizardMan': 'Staff',
 }
 UNCHANGED = {
     'Kobold': ('KoboldPick', 'none'), 'DwarfWorker': ('Pickaxe', 'none'),
     'LavaSpawn': ('Sabre', 'RustyShield'), 'Goblin': ('Knife', 'none'),
-    'Monk': ('RustySword', 'RustyShield'), 'Knight': ('RustySword', 'RustyShield'),
+    'Monk': ('RustySword', 'RustyShield'), 'Knight': ('KnightSword', 'KnightShield'),
     'DarkElf': ('Crossbow', 'none'), 'Elf': ('none', 'Bow'),
-    'RunelordDwarf': ('RustySword', 'RustyShield'), 'NatureMonster': ('RustySword', 'RustyShield'),
+    'RunelordDwarf': ('RustySword', 'RustyShield'), 'NatureMonster': ('RustySword', 'PaladinShield'),
     'Defender': ('DefenderWeapon', 'none'),
 }
 UNARMED = ('Rat', 'Spider', 'Roach', 'CaveHornet', 'Slime', 'Scarab', 'TentacleAlbine', 'TentacleGreen',
            'Wyvern', 'Dragon', 'Champion', 'Kreatur')
+# Own entries of the heroes (look only) -> the entry each one copies, so a hero with an own weapon model carries the
+# values of today; DwarfWarriorShield, DarkElfDagger, PriestessStaff and RunelordHammer have no spawn row yet
+HERO_COPIES = {
+    'AdventurerSword': 'BasicSword', 'KnightSword': 'RustySword', 'KnightShield': 'RustyShield',
+    'PaladinShield': 'RustyShield', 'DwarfWarriorShield': 'RustyShield', 'DarkElfDagger': 'Knife',
+    'WizardStaff': 'Staff', 'PriestessStaff': 'Staff', 'RunelordHammer': 'BasicHammer',
+}
 TYPES = {
-    'sword': (('RustySword', 'BasicSword', 'ShortSword', 'Sabre', 'T2SwordGood'), 1),
-    'dagger': (('Knife', 'RitualDagger'), 1),
+    'sword': (('RustySword', 'BasicSword', 'ShortSword', 'Sabre', 'T2SwordGood', 'AdventurerSword', 'KnightSword'), 1),
+    'dagger': (('Knife', 'RitualDagger', 'DarkElfDagger'), 1),
     'axe': (('BasicAxe', 'BasicAxeOrc'), 2),
-    'staff': (('Staff', 'StaffLich'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
+    'staff': (('Staff', 'StaffLich', 'WizardStaff', 'PriestessStaff'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
     'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club',), 1), 'spear': (('Trident',), 2),
     'wand': (('Wand',), 1),
 }
 EXPECTED_TYPES = {name: (kind, hands) for kind, (names, hands) in TYPES.items() for name in names}
 EXPECTED_TYPES.update({name: ('sword', 2) for name in ('Longsword', 'T3SwordGood', 'T4SwordGood', 'DefenderWeapon')})
-EXPECTED_TYPES.update({name: ('hammer', 1) for name in ('BasicHammer', 'BasicHammerDwarf2')})
+EXPECTED_TYPES.update({name: ('hammer', 1) for name in ('BasicHammer', 'BasicHammerDwarf2', 'RunelordHammer')})
 EXPECTED_TYPES.update({name: ('hammer', 2) for name in ('T2HammerGood', 'T3HammerGood', 'T4HammerGood')})
 EXPECTED_TYPES['HandAxe'] = ('axe', 1)
-EXPECTED_TYPES.update({name: ('shield', 1) for name in ('RustyShield', 'Roundshield', 'BasicShield')})
+EXPECTED_TYPES.update({name: ('shield', 1) for name in ('RustyShield', 'Roundshield', 'BasicShield', 'KnightShield',
+                                                  'PaladinShield', 'DwarfWarriorShield')})
 EXPECTED_TYPES.update({f'T{tier}Shield{side}': ('shield', 1) for tier in (2, 3, 4) for side in ('Good', 'Evil')})
 # The skeleton file of each armed creature class (the skeleton of its MeshName in creatures.cfg; the class Dwarf1 uses
 # Jaeger.mesh) and the bone that holds its Weapon_R mount: the right hand bone RightHand of the 24-bone humanoid rig of
@@ -150,6 +158,12 @@ def check_equipment(equipment):
         copy = dict(equipment[name])
         copy.pop('DisplayName', None)
         assert copy == expected, (name, copy, expected)
+    for name, original in HERO_COPIES.items():
+        expected = dict(equipment[original], Name=name, MeshName=name + '.mesh')
+        expected.pop('DisplayName', None)
+        copy = dict(equipment[name])
+        copy.pop('DisplayName', None)
+        assert copy == expected, (name, copy, expected)
     display_names = re.findall(r'^\[Equipment\]\s*\n\s+Name\s+\S+\s*\n\s+DisplayName\s+\S',
                                read('config/equipments.cfg'), re.M)
     assert len(display_names) == len(equipment), ('every equipment has a DisplayName', len(display_names),
@@ -186,6 +200,7 @@ def check_creatures(creatures, equipment):
 def check_assets():
     paths = ['models/' + name + '.mesh' for name in NEW_WEAPONS]
     paths += ['models/' + name + '.mesh' for name in ('BasicAxeOrc', 'BasicHammerDwarf2', 'StaffLich')]
+    paths += ['models/' + name + '.mesh' for name in HERO_COPIES]
     paths += ['models/' + name + '.skeleton' for name in ('StaffLich', 'skeleton', 'lich', 'PitDemon')]
     paths += ['materials/scripts/ArmamentWeapons.material', 'materials/textures/ArmamentWeaponsSurface.png',
               'tools/gen_armament_weapons.py', 'tools/gen_scaled_weapons.py', 'tools/add_weapon_bones.py',
