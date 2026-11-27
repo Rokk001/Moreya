@@ -35,10 +35,35 @@ def sample_time(progress, strength, length):
     return length * author.TRANSITION_SHARE * inverse
 
 
+#: Mario 2026-11-27: the cave hornet hovers in Idle and lands on the ground (z = 0) for AmbientSit and AmbientLie, so in
+#: these clips its lowest point goes from the idle hover down to the ground and back instead of keeping the idle height.
+LANDING = {'CaveHornet.skeleton'}
+#: The ground of a landing figure, the floor of its model space.
+GROUND = 0.0
+#: Floor contact bound per skeleton where the measured value of the approved pose is above MAX_CONTACT_ERROR_RATIO:
+#: the dwarf warrior's AmbientSit keeps its soles flat (sole lift 0.90 %) and the shin geometry then reaches 1.167 % of
+#: the height from the idle floor (coordinator decision 2026-11-27: the sole-flat variant, tolerance set to the measured
+#: value; 0.01 before).
+FLOOR_TOLERANCE = {'Dwarf2.skeleton': 0.0117}
+#: Sole lift bound of AmbientSit per skeleton where the approved pose lifts the soles: the dragon's keyframed sit of
+#: 2026-11-27 (approved by Mario) sits back on the haunches and tips the hind soles up by 12.5 % of its height.
+SOLE_TOLERANCE = {'Dragon.skeleton': 0.1253}
+
+
 # Reject floating or penetrating geometry, allowing the same contact bound plus serializer precision.
-def check_floor(points, floor, height):
+def check_floor(points, floor, height, tolerance=author.MAX_CONTACT_ERROR_RATIO):
     error = np.abs(points[:, :, 2].min(axis=1) - floor) / height
-    assert float(error.max()) <= author.MAX_CONTACT_ERROR_RATIO + 2e-5, ('floor contact', float(error.max()))
+    assert float(error.max()) <= tolerance + 2e-5, ('floor contact', float(error.max()))
+
+
+# A landing figure: never below the ground, never above its idle hover; in the hold it rests on the ground.
+def check_landing(points, hover, height, hold):
+    lowest = points[:, :, 2].min(axis=1)
+    bound = (author.MAX_CONTACT_ERROR_RATIO + 2e-5) * height
+    assert float(lowest.min()) >= GROUND - bound, ('landing below the ground', float(lowest.min()))
+    assert float(lowest.max()) <= hover + bound, ('landing above the hover', float(lowest.max()))
+    if hold:
+        assert float(np.abs(lowest - GROUND).max()) <= bound, ('hold not on the ground', float(np.abs(lowest - GROUND).max()))
 
 
 # Require every original rest track and keep unweighted mounts passive outside their exact authored clips.
@@ -129,19 +154,27 @@ def main():
                               for progress in (0.0, 0.03, 0.06, 0.1, 0.5, 0.9, 0.94, 0.97, 1.0)])
             local = skeleton.locals_at(clip, times)
             points = author.skin_vertices(skeleton, local, vertices, weights)
-            check_floor(points, floor, height)
+            tolerance = FLOOR_TOLERANCE.get(skeleton_name, author.MAX_CONTACT_ERROR_RATIO)
+            if skeleton_name in LANDING:
+                check_landing(points, floor, height, hold=False)
+            else:
+                check_floor(points, floor, height, tolerance)
             if name == 'AmbientSit':
                 reference_points = np.repeat(original, len(times), axis=0)
                 error = author.sole_lift(skeleton, reference_points, points, weights, height,
                                          Path(skeleton_name).stem)
-                assert error is None or error <= author.MAX_CONTACT_ERROR_RATIO + 2e-5, (mesh_name, error)
+                bound = SOLE_TOLERANCE.get(skeleton_name, author.MAX_CONTACT_ERROR_RATIO)
+                assert error is None or error <= bound + 2e-5, (mesh_name, error)
             middle = skeleton.locals_at(clip, np.array([length * 0.5]))
             living = author.skin_vertices(skeleton, skeleton.locals_at(clip, np.array([length * 0.35, length * 0.55])),
                                           vertices, weights)
             assert float(np.abs(living[1] - living[0]).max() / height) > 1e-5, (mesh_name, name, 'frozen rest hold')
             hold_times = np.linspace(length * 0.15, length * 0.85, 121)
             hold_points = author.skin_vertices(skeleton, skeleton.locals_at(clip, hold_times), vertices, weights)
-            check_floor(hold_points, floor, height)
+            if skeleton_name in LANDING:
+                check_landing(hold_points, floor, height, hold=True)
+            else:
+                check_floor(hold_points, floor, height, tolerance)
             hold_step = float(np.linalg.norm(np.diff(hold_points, axis=0), axis=2).max() / height)
             assert hold_step < author.BREATH_AMOUNT, (mesh_name, name, 'rest support jump', hold_step)
             articulated = False
@@ -161,8 +194,10 @@ def main():
             pass
         else:
             raise AssertionError('A floating-body negative control passed')
-    assert len(meshes) == 33 and len(skeletons) == 32
-    print('Checked', tested, 'serialized rest variants on all 33 configured meshes and 32 skeletons, including partial strengths.')
+    # 35 configured meshes with 35 skeletons since the creature figures of the content split (counted on the integration
+    # branch; 33 and 32 before)
+    assert len(meshes) == 35 and len(skeletons) == 35
+    print('Checked', tested, 'serialized rest variants on all 35 configured meshes and 35 skeletons, including partial strengths.')
 
 
 if __name__ == '__main__':
