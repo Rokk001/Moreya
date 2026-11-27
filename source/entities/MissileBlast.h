@@ -54,6 +54,12 @@ public:
     //! \brief Called when the missile hits the entity it was aimed at; the missile is destroyed afterwards.
     virtual void hitTargetEntity(Tile* tile, GameEntity* entityTarget) override;
 
+    //! \brief Names the skill of the skill tree that launched the blast: when it explodes, every enemy hit takes the
+    //! COOLDOWN_PER_HIT of the shooter off the cooldown of that skill.
+    //! \param treeSkillId The id of the skill tree entry (empty: no cooldown cut).
+    void setCooldownSkill(const std::string& treeSkillId)
+    { mCooldownSkillId = treeSkillId; }
+
     //! \brief Creates a missile from the saved game stream
     static MissileBlast* getMissileBlastFromStream(GameMap* gameMap, std::istream& is);
     //! \brief Creates a missile from the network packet
@@ -78,6 +84,8 @@ private:
 
     double mBlastRadius;
     bool mHoming;
+    //! \brief Id of the skill tree entry whose cooldown the hits of the blast shorten (COOLDOWN_PER_HIT), or empty
+    std::string mCooldownSkillId;
 };
 
 #endif // MISSILEBLAST_H

@@ -106,6 +106,7 @@ void MissileBlast::explode(Tile* tile)
         return;
 
     const double radiusSquared = mBlastRadius * mBlastRadius;
+    uint32_t hits = 0;
     // We copy the list as dying creatures might be removed from the map
     std::vector<Creature*> creatures = getGameMap()->getCreatures();
     for(Creature* creature : creatures)
@@ -126,9 +127,21 @@ void MissileBlast::explode(Tile* tile)
             continue;
 
         hurt(creatureTile, creature);
+        ++hits;
         if(mNotifyPlayerIfHit)
             creature->notifyFightPlayer(creatureTile);
     }
+
+    // COOLDOWN_PER_HIT of the shooter: every enemy hit takes turns off the cooldown of the skill that launched it
+    if(hits == 0 || mCooldownSkillId.empty())
+        return;
+
+    Creature* shooter = getGameMap()->getCreature(mShooterName);
+    if(shooter == nullptr)
+        return;
+
+    shooter->cutTreeSkillCooldown(mCooldownSkillId,
+        static_cast<double>(hits) * shooter->getSkillPropertyValue("COOLDOWN_PER_HIT", 0, 0.0));
 }
 
 //! \brief Reads a blast missile from a saved line; a line that cannot be read gives no object.
@@ -156,8 +169,11 @@ void MissileBlast::exportToStream(std::ostream& os) const
     MissileOneHit::exportToStream(os);
     os << "\t" << mBlastRadius;
     os << "\t" << mHoming;
+    if(!mCooldownSkillId.empty())
+        os << "\tCooldownSkill\t" << mCooldownSkillId;
 }
 
+//! \brief Reads the missile; the skill whose cooldown the hits shorten is optional (saves from before it have none).
 bool MissileBlast::importFromStream(std::istream& is)
 {
     if(!MissileOneHit::importFromStream(is))
@@ -166,6 +182,19 @@ bool MissileBlast::importFromStream(std::istream& is)
         return false;
     if(!(is >> mHoming))
         return false;
+
+    const std::streampos skillPosition = is.tellg();
+    std::string marker;
+    if((is >> marker) && (marker == "CooldownSkill"))
+    {
+        if(!(is >> mCooldownSkillId))
+            return false;
+    }
+    else
+    {
+        is.clear();
+        is.seekg(skillPosition);
+    }
 
     return true;
 }
