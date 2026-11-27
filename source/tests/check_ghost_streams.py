@@ -13,7 +13,10 @@ from check_corpse_rules import corpse_fixture
 def stream_fixture():
     """Supply world services and unprimed streams for the production codecs and restore body."""
     code = '#include <iomanip>\n#include <limits>\n' + corpse_fixture()
-    code = code.replace('struct GameMap{', 'struct RenderedMovableEntity;struct GhostBoxEntity;\nstruct GameMap{GhostBoxEntity* pickupBox=nullptr;', 1)
+    # The class mapping of older files (resolveLoadedClassName) is checked by check_old_save_successors.py; here every
+    # class stays as saved
+    code = code.replace('struct GameMap{', 'struct RenderedMovableEntity;struct GhostBoxEntity;\nstruct GameMap{GhostBoxEntity* pickupBox=nullptr;'
+        'std::string resolveLoadedClassName(const std::string& className,const Seat*){return className;}', 1)
     code = code.replace('GhostEntity* getEntityFromTypeAndName(GameEntityType,const std::string& name);',
         'RenderedMovableEntity* getEntityFromTypeAndName(GameEntityType,const std::string& name);', 1)
     code = code.replace(function(code, 'GhostEntity* GameMap::getEntityFromTypeAndName('), '', 1)

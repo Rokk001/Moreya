@@ -1102,6 +1102,21 @@ std::string GameMap::resolveClassName(const std::string& className)
     return className;
 }
 
+//! \brief resolveClassName, then, while an older file is read, the side rule of the seat (keeper and rogue seats).
+std::string GameMap::resolveLoadedClassName(const std::string& className, const Seat* seat)
+{
+    const std::string resolved = resolveClassName(className);
+    if(!mLoadingOldRosterCreatures || (seat == nullptr))
+        return resolved;
+
+    const bool heroSide = (seat->getFaction() == "Hero");
+    const std::string sideClass = NameAliases::resolveOldCreatureClassForSide(resolved, heroSide);
+    if((sideClass != resolved) && (getClassDescription(sideClass) != nullptr))
+        return sideClass;
+
+    return resolved;
+}
+
 CreatureDefinition* GameMap::getClassDescriptionForTuning(const std::string& name)
 {
     for (std::pair<const CreatureDefinition*,CreatureDefinition*>& def : mClassDescriptions)

@@ -44,12 +44,15 @@ returns the class of the successor. It is used by:
   has no class of that name,
 - `GameMap::getClassDescriptionForTuning` (the `[CreatureDefinitions]` tuning of an older level
   tunes the successor),
-- `Creature::importFromStream` (the creature takes the class and the mesh of its successor).
+- `Creature::importFromStream` (the creature takes the class and the mesh of its successor),
+- `GhostEntity::importFromStream` (the ghost keeps the class of its successor).
 
 Levels and saved games carry the line `CreatureRoster` in their `[Info]` block. While the
-creatures of a file without it (written before the current roster) are read,
-`NameAliases::resolveOldCreatureClassForSide` also maps the class that moved to the hero side: a
-keeper-side or rogue creature of it loads as its successor, a hero-side one keeps its class.
+creatures and ghosts of a file without it (written before the current roster) are read,
+`GameMap::resolveLoadedClassName` also applies `NameAliases::resolveOldCreatureClassForSide` to the
+class that moved to the hero side: a keeper-side or rogue creature or ghost of it loads as its
+successor, a hero-side one keeps its class. Crypts and prisons save only the names of their
+corpses and prisoners, which are creatures of `[Creatures]` and follow the same rule.
 
 When a name is renamed in the future, add the hash of the old name (lowercase, FNV-1a, offset
 `14695981039346656037`, prime `1099511628211`) to the table, never the old name itself, and add the

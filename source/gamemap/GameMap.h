@@ -324,6 +324,12 @@ public:
     //! this map.
     std::string resolveClassName(const std::string& className);
 
+    //! \brief Returns the class name a creature or ghost of a savegame or level is loaded as: resolveClassName, and
+    //! while the loader reads a file written before the current creature roster also the side rule of its seat
+    //! (NameAliases::resolveOldCreatureClassForSide; a keeper-side or rogue record of the class that moved to the hero
+    //! side gets its successor when the map has that class).
+    std::string resolveLoadedClassName(const std::string& className, const Seat* seat);
+
     //! \brief Set by the level loader while it reads the creatures of a file written before the current creature
     //! roster (a file without the CreatureRoster line in its [Info] block): their classes are then also mapped by
     //! the side of their seat (NameAliases::resolveOldCreatureClassForSide).
