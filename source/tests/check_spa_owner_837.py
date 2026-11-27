@@ -5,7 +5,8 @@ of D-7-v2 and the spa plan). Python only: source text, the shipped binary meshes
    height of the tile over z whenever an entity enters a tile, so his seat height 1.13 was lost at the spawn (server) and at
    the first setPosition on the client. PoolAttendantEntity keeps its height. The chair also stood the wrong way (backrest
    and ladder to the pool): both chair and springboard face the pool now, the ladder is behind the chair, and a red and
-   white lifebuoy hangs at the chair (variant 1). Towel and whistle are part of his mesh and show once he sits on the seat.
+   white lifebuoy hangs at the chair (variant 1). Towel and whistle were part of his former mesh; the approved Meshy
+   attendant of 2026-11-26 is used as approved, without them (its look is checked by check_spa_attendant_k22.py).
 2  The mud was near black: SpaMud multiplied the dark ground texture Dirt.png by 0.4 0.25 0.13. It has its own painted hot
    liquid mud texture, a wet gloss and a faint lava warmth now; it stays opaque (the mud hides the bathers, plan D6).
 3  The white rectangles were the lava seams of rim pieces that stood on the inner edges of the pool tiles (the side angles
@@ -175,9 +176,10 @@ row = re.search(r'\{"SpaChair", ([-.0-9]+)f, ([-.0-9]+)f, ([-.0-9]+)f, ([-.0-9]+
 assert row and all(abs(float(a) - b) < 0.00002 for a, b in zip(row.groups(), (chair_bounds[0], chair_bounds[1],
                                                                             chair_bounds[3], chair_bounds[4]))), \
     'the SpaChair row of meshBounds must be the bounds of the mesh with the lifebuoy'
-# Towel and whistle are parts of his mesh
+# Towel and whistle were parts of his former mesh; the approved Meshy attendant (2026-11-26) has one material and no
+# extra parts, so the delivered mesh must be that model
 attendant_mesh = (room_file('models/PoolAttendant.mesh')).read_bytes()
-assert b'SpaLinen' in attendant_mesh and b'SpaWhistle' in attendant_mesh
+assert b'PoolAttendantMeshy' in attendant_mesh and b'SpaLinen' not in attendant_mesh, 'the approved Meshy attendant'
 assert (root / 'tools/spa-meshes/add_chair_lifebuoy.py').is_file()
 
 # ---- 2  The mud looks like hot liquid mud -------------------------------------------------------------------------------
