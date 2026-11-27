@@ -1,4 +1,4 @@
-"""The mana crystal, the soul crystal, the reward casket, the research tome and the trap crate are the Meshy models of their approved Codex
+"""The mana crystal, the soul crystal, the reward casket, the research tome, the herb bundle and the trap crate are the Meshy models of their approved Codex
 templates, at the size of the models they replace.
 
 Two parts, no compiler:
@@ -14,7 +14,8 @@ Two parts, no compiler:
 
 Fixed expected values of this branch (counted once): ManaCrystal 0.33 high (material ManaCrystalMeshy, 3038
 triangles), SoulCrystal 0.35 (SoulCrystalMeshy, 2991), MysteryBox 0.195 (MysteryBox, 3234), TrapCrate 0.30 (TrapCrate,
-3058), Grimoire 0.14 to 0.628 (Grimoire, 2715); limit 4000 triangles each.
+3058), Grimoire 0.14 to 0.628 (Grimoire, 2715), HerbBundle 0.018 to 0.38 (HerbBundleMeshy, 4047, texture 1024 x
+1024, drawn on both sides: its leaves are single cards); limit 4000 triangles each, 5000 for the herb bundle.
 
 Without --assets the models, materials and textures are read from the public tree or the content packages
 (scripts/content_packages.py); without the content the models are named as not checked.
@@ -47,9 +48,13 @@ MODELS = {
     'MysteryBox': ('MysteryBox', 'MysteryBox.material', 'MysteryBox.png', 0.195, 3234, 'MysteryBox.skeleton'),
     'TrapCrate': ('TrapCrate', 'TrapCrate.material', 'TrapCrate.png', 0.30, 3058, None),
     'Grimoire': ('Grimoire', 'Grimoire.material', 'Grimoire.png', 0.628, 2715, 'Grimoire.skeleton'),
+    'HerbBundle': ('HerbBundleMeshy', 'HerbBundle.material', 'HerbBundleMeshy.png', 0.38, 4047, None),
 }
+#: own triangle limit and texture size of a model, others 4000 and 512
+LIMITS = {'HerbBundle': 5000}
+SIZES = {'HerbBundle': 1024}
 #: lowest point of a model above the floor (the tome floats), and the bone index of the vertices of a rigged model
-BASE = {'Grimoire': 0.14}
+BASE = {'Grimoire': 0.14, 'HerbBundle': 0.018}
 BONE = {'MysteryBox': '0', 'Grimoire': '1'}
 TRIANGLE_LIMIT = 4000
 DOORS = ('doorWooden', 'doorIronbound', 'doorSteel', 'doorBarricade', 'doorSecret', 'doorRuned')
@@ -119,8 +124,9 @@ else:
         triangles = sum(1 for _ in root.iter('face'))
         materials = sorted({s.get('material') for s in root.iter('submesh')})
         info[name] = {'triangles': triangles, 'materials': materials, 'height': round(high - low, 4)}
-        if triangles > TRIANGLE_LIMIT or triangles != counted:
-            fail('%s.mesh: %d triangles, counted %d (limit %d)' % (name, triangles, counted, TRIANGLE_LIMIT))
+        limit = LIMITS.get(name, TRIANGLE_LIMIT)
+        if triangles > limit or triangles != counted:
+            fail('%s.mesh: %d triangles, counted %d (limit %d)' % (name, triangles, counted, limit))
         if materials != [material]:
             fail('%s.mesh: materials %s, expected %s' % (name, materials, material))
         base = BASE.get(name, 0.0)
@@ -145,8 +151,11 @@ else:
             fail('materials/textures/%s missing' % texture)
         else:
             with Image.open(texture_path) as image:
-                if image.size != (512, 512):
-                    fail('%s: %s, expected 512 x 512' % (texture, image.size))
+                size = SIZES.get(name, 512)
+                if image.size != (size, size):
+                    fail('%s: %s, expected %d x %d' % (texture, image.size, size, size))
+        if name in SIZES and block is not None and 'cull_hardware none' not in block.group(0):
+            fail('material %s is not drawn on both sides' % material)
     for old in ('MysteryBox', 'Grimoire'):
         script = asset('materials/scripts/%s.material' % old)
         if script.exists() and (old + 'Normal') in script.read_text(encoding='utf-8'):
