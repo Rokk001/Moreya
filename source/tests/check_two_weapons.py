@@ -133,11 +133,11 @@ for a, b in zip(irregular, irregular[1:]):
 assert longest <= 2, 'never more than two on a side in a row'
 assert irregular != [i % 2 == 1 for i in range(32)], 'the irregular mode is not the plain alternation'
 
-# Existing creatures: nobody changes (no creature of the game carries two attack weapons today, so nobody
-# takes the new path; sword and shield, bow and crossbow creatures stay as they were)
+# Existing creatures: only the Dark Elf carries two attack weapons (two daggers, Roster change (CREATURE-ROSTER W4a)); sword and
+# shield, bow and crossbow creatures stay as they were
 game = parse_blocks(read('config/creatures.cfg'), 'Creature')
 dual = [field(b, 'Name') for b in game if two_attack_weapons(field(b, 'WeaponSpawnL'), field(b, 'WeaponSpawnR'))]
-assert dual == [], 'a creature of the game has two attack weapons now: ' + str(dual)
+assert dual == ['DarkElf'], 'the creatures with two attack weapons are not the Dark Elf alone: ' + str(dual)
 
 # Wiring: combat reactions, render manager, config
 reactions = read('source/render/CreatureCombatReactions.cpp')

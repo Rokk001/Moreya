@@ -20,37 +20,38 @@ from combat_sim import Roster, fight_group
 # (phyMin phyMax magMin magMax eleMin eleMax) and the SkillDamageFactor of the type.
 TABLE = """
 Adventurer 50 8 35.5 Melee 0 0 0 0 6.21 8.52 1.0303
-CaveHornet 50 8 35.5 Melee 0 0 0 0 5.83 8 0.9498
-Dwarf1 50 8 35.5 Melee 7.01 9.6 0 0 0 0 1.0243
-Gnome 50 8 35.5 Melee 0 0 5.7 7.81 0 0 1.0134
-Rat 50 8 35.5 Melee 0 0 5.87 8.04 0 0 1.0191
-Slime 50 8 35.5 Melee 0 0 5.26 7.22 0 0 0.922
-Spider 50 8 35.5 Melee 7.19 9.85 0 0 0 0 1.0478
-Cultist 100 16 61.5 Melee 0 0 8.63 11.52 0 0 0.9773
-Dwarf2 100 16 61.5 Melee 8.91 11.89 0 0 0 0 0.9952
+Cultist 50 8 35.5 Melee 0 0 6.29 8.39 0 0 0.9773
+Ghoul 50 8 30.2 Melee 9 13 0 0 0 0 1.0478
+Gnome 50 8 35.5 MissileLaunch 0 0 0 0 6 8 1.0134
+Knight 50 8 35.5 Melee 0 0 5.61 7.5 0 0 0.9226
+Monk 50 8 35.5 Melee 0 0 0 0 5.49 7.34 0.9145
+Orc 50 8 35.5 Melee 0 0 0 0 6.67 9 0.8813
+CaveHornet 100 16 61.5 Melee 0 0 0 0 8 10.98 0.9498
+CrystalGolem 100 16 61.5 Melee 0 0 9 12 0 0 1.0282
+Cyclops 100 16 61.5 Melee 0 0 12 15 0 0 1.0304
+DarkElf 100 16 52.3 Melee 13.73 19.22 0 0 0 0 0.9845
+Elf 100 16 61.5 MissileLaunch 0 0 0 0 9.57 12.81 0.9741
+Gnoll 100 16 61.5 MissileLaunch 0 0 0 0 12 16 0.9653
 Goblin 100 16 61.5 Melee 9.16 12.22 0 0 0 0 1.061
-Knight 100 16 61.5 Melee 0 0 7.7 10.29 0 0 0.9226
-Monk 100 16 61.5 Melee 0 0 0 0 7.54 10.07 0.9145
-Roach 100 16 61.5 Melee 0 0 0 0 9.19 12.28 0.9988
-TentacleAlbine 100 16 61.5 Melee 0 0 8.84 11.81 0 0 1.0282
-TentacleGreen 100 16 61.5 Melee 0 0 8.88 11.86 0 0 1.0304
-Wyvern 100 16 61.5 Melee 0 0 8.31 11.09 0 0 0.9653
-DarkElf 200 32 106.5 MissileLaunch 0 0 0 0 16.58 22.18 0.9845
-Elf 200 32 106.5 MissileLaunch 0 0 0 0 19.8 26.5 0.9741
-Kreatur 200 32 106.5 MissileLaunch 0 0 17.66 23.63 0 0 0.9699
-LavaSpawn 200 32 106.5 Melee 17.69 22.87 0 0 0 0 0.9125
+Hunter 100 16 61.5 Melee 9.61 13.73 0 0 0 0 1.0243
+Werewolf 100 16 61.5 Melee 0 0 8 11 0 0 0.9653
+Witch 100 16 61.5 MissileLaunch 0 0 11 15 0 0 0.9988
+Banshee 200 32 106.5 MissileLaunch 0 0 17.03 22.71 0 0 1.0191
+Dwarf2 200 32 106.5 Melee 18.43 24.59 0 0 0 0 0.9952
 Lich 200 32 106.5 MissileLaunch 0 0 21.91 25.21 0 0 1.036
 LizardMan 200 32 106.5 MissileLaunch 0 0 18.28 24.45 0 0 0.9614
+Minotaur 200 32 106.5 Melee 18 24 0 0 0 0 0.9699
 RunelordDwarf 200 32 106.5 Melee 16.02 21.31 0 0 0 0 0.9636
 Skeleton 200 32 106.5 Melee 13.62 20.46 0 0 0 0 0.9972
+Troll 200 32 106.5 Melee 17.42 23.52 0 0 0 0 0.9783
 Wizard 200 32 106.5 MissileLaunch 0 0 18.36 24.56 0 0 0.945
+Butcher 400 64 184.5 Melee 63.44 81.2 0 0 0 0 0.9125
 Defender 400 64 184.5 Melee 45.54 61.48 0 0 0 0 1.0575
 Dragon 400 64 184.5 Melee 0 0 0 0 32.07 43.29 0.6029
-NatureMonster 400 64 184.5 Melee 0 0 0 0 38.46 51.93 0.923
-Orc 400 64 184.5 Melee 0 0 0 0 48.03 64.85 0.8813
+Paladin 400 64 184.5 Melee 0 0 0 0 23 31 0.923
 PitDemon 400 64 184.5 Melee 0 0 52.76 71.24 0 0 0.9146
-Scarab 400 64 184.5 Melee 0 0 51.93 70.11 0 0 0.9075
-Troll 400 64 184.5 Melee 44.2 59.68 0 0 0 0 0.9783
+Priestess 400 64 184.5 MissileLaunch 0 0 18 25 0 0 0.9075
+Vampire 400 64 184.5 MissileLaunch 0 0 43.14 55.82 0 0 1.036
 """
 
 # Level-file creature classes with their own MinHP: file, class, MinHP, FeeBase, FeePerLevel, SkillDamageFactor and the
@@ -115,7 +116,7 @@ def same(first, second):
 # The creature values of config/creatures.cfg equal the table (MinHP, fee, damage columns, SkillDamageFactor).
 def check_creature_table(roster):
     rows = table_rows()
-    assert len(rows) == 32
+    assert len(rows) == 33
     for name, row in rows.items():
         fields = roster.creatures[name][0]
         assert same(fields["MinHP"][0], row["min_hp"]), (name, "MinHP")

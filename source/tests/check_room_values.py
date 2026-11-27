@@ -49,7 +49,8 @@ assert "getNumActiveSpots() - mCreaturesSpots.size()" not in library
 assert "checkIfAvailableSpot" not in library, "library research does not depend on book storage"
 
 spawn = read("config/spawnconditions.cfg").replace("\r\n", "\n")
-for cls, line in (("Troll", "RoomTiles\tWorkshop\t9\t0"), ("DarkElf", "RoomTiles\tGuardRoom\t1\t0")):
+# Roster change (CREATURE-ROSTER W4a): the required room alone decides (decisions D27, D32)
+for cls, line in (("Troll", "RoomTiles\tPrison\t1\t0"), ("DarkElf", "RoomTiles\tCasino\t1\t0")):
     block = spawn[spawn.index(f"    CreatureClass\t{cls}\n"):]
     block = block[:block.index("[/SpawnCondition]")]
     assert line in block, f"{cls} spawn condition"
