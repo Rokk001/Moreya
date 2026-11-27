@@ -68,8 +68,11 @@ def clips(credits):
             if re.search(r'^\s*Name\s+'+creature+r'\s*$',block,re.M))
         mesh = re.search(r'^\s*MeshName\s+(\S+)',block,re.M)[1]
         skeleton = mesh.removesuffix('.mesh')+'.skeleton'
-        credited('models/'+skeleton, credits)
-        credited('assets-src/creatures/ghosts/'+skeleton.removesuffix('.skeleton')+'.blend', credits)
+        rows = credited('models/'+skeleton, credits)
+        # A figure of the Meshy rebuild takes its clips from the bought clip library (its skeleton row says so); only
+        # the own rigs keep their Blender source of the ghost clips
+        if not any('Meshy' in row for row in rows):
+            credited('assets-src/creatures/ghosts/'+skeleton.removesuffix('.skeleton')+'.blend', credits)
         _, chunks = module.chunks(room_file('models/'+skeleton).read_bytes())
         animations = {name:data for kind,name,data in chunks if kind==module.ANIMATION}
         expected = ('Scared',) if creature in scared else ('Beam','Throw','Empty')
