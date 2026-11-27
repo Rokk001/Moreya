@@ -53,10 +53,12 @@ namespace EntityAnimation
     static const std::string combat_attack_anim = "CombatAttack";
     static const std::string ranged_attack_anim = "RangedAttack";
     static const std::string eat_chicken_anim = "EatChicken";
-    //! A creature squats on the floor to relieve itself, without a toilet (a skeleton without the clip plays Idle)
+    //! The former floor squat; nothing requests it any more, a skeleton without RelievePit still falls back to it
+    //! (a skeleton without the clip plays Idle)
     static const std::string relieve_anim = "Relieve";
-    //! A creature stands over the hole of a toilet seat and bends with half bent knees; a skeleton without the clip
-    //! plays Relieve.
+    //! A creature stands bent over with half bent knees and its hands on its thighs to relieve itself, over the hole
+    //! of a toilet seat or on the floor; a skeleton without the clip plays Relieve. The clip loops only the bent over
+    //! pose with its gentle pushes: the client blends the body down into it once and up out of it once (isBentOverClip).
     static const std::string relieve_pit_anim = "RelievePit";
     //! A creature sits low in the mud bath; a skeleton without the clip plays Idle.
     static const std::string bathe_anim = "Bathe";
@@ -121,6 +123,12 @@ namespace EntityAnimation
     inline bool isSeatClip(const std::string& clip)
     {
         return clip.compare(0, sit_anim.size(), sit_anim) == 0;
+    }
+    //! \brief True for the clip that holds a creature bent over (RelievePit): it loops the bent over pose only, so the
+    //! client blends from the clip before into it and from it into the clip after it, like sitting down and getting up.
+    inline bool isBentOverClip(const std::string& clip)
+    {
+        return clip == relieve_pit_anim;
     }
     //! \brief True for the two clips in which a tavern guest drinks from its mug (Drink and SitDrink).
     inline bool isDrinkClip(const std::string& clip)

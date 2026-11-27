@@ -31,7 +31,7 @@ Three parts:
       a room with only invisible dirt does not, a prison never.
 Fixed expected values of this branch (counted once): BROOM_SHARE 0.75; the broom follows both hands (0.01 in front of
 the palms, end 0.022 below the upper palm, twig end 0.037 over the floor and at least 0.35 in front, all x height), broom 328 triangles
-(limit 600), Clean 3.967 s, 44 clips in Kobold.skeleton and 50 in Dwarf1.skeleton, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
+(limit 600), Clean 3.967 s, 45 clips in Kobold.skeleton and 53 in Dwarf1.skeleton, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
 The probe compiles with cl, so it runs in the compile phase of the integration; `--no-compile` runs the other parts.
 Without --assets the models, materials and textures are read from the public tree or the content packages
 (scripts/content_packages.py); without the content the broom (core-models) and the worker rigs (creatures) are named
@@ -60,7 +60,7 @@ ASSETS =Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv
 BROOM_SHARE = 0.75
 # RenderManager::placeCleaningBroom, all as shares of the worker height
 BROOM_FORWARD, BROOM_END_DROP, BROOM_MIN_REACH, BROOM_TIP_HEIGHT, BROOM_MIN_HAND_STEP = 0.01, 0.022, 0.35, 0.037, 0.08
-CLIP_COUNTS = {'Kobold': 44, 'Dwarf1': 50}
+CLIP_COUNTS = {'Kobold': 45, 'Dwarf1': 53}
 CLEAN_SECONDS = 119 / 30.0
 fails = []
 converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')

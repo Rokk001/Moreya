@@ -129,8 +129,8 @@ void CreatureActionUseToilet::startSquat(bool onSeat, const Ogre::Vector2& facin
     }
     else
         mTurnsLeft = static_cast<int32_t>(config.getDirtConfigDouble("ToiletUseTurns"));
-    // Over the hole of a seat the creature bends with half bent knees, on the floor it squats
-    const std::string& clip = onSeat ? EntityAnimation::relieve_pit_anim : EntityAnimation::relieve_anim;
+    // On a seat and on the floor the creature stands bent over with its hands on its thighs, the same motion
+    const std::string& clip = EntityAnimation::relieve_pit_anim;
     if(mCreature.isMoving())
         mCreature.clearDestinations(clip, true, false);
     mCreature.setAnimationState(clip, true, Ogre::Vector3(facing.x, facing.y, 0.0f), false);
