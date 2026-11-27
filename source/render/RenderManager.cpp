@@ -242,6 +242,21 @@ const Ogre::Vector3 POUR_JUG_BASE_RING(-0.09f, 0.0f, 0.365f);
 const Ogre::Real POUR_JUG_COUNTER_SHARE = 0.5248f;
 //! Points on the base ring that are tested against the counter top
 const int POUR_JUG_RING_POINTS = 12;
+//! RattleShake: the right hand of the infirmary shaman holds the rattle by its handle (this point in mesh units of the
+//! 1 unit high rattle, handle end at z = 0) in its palm, this share of her height along the fingers from the hand bone,
+//! the rattle as long as this share of her height and pointing up and forwards while she shakes it (pose in the middle
+//! of the clip)
+const std::string RATTLE_MESH = "InfirmaryRattle.mesh";
+const std::string RATTLE_BONE = "RightHand";
+const Ogre::Real RATTLE_HEIGHT_SHARE = 0.28f;
+const Ogre::Vector3 RATTLE_GRIP(0.14f, 0.0f, 0.2f);
+const Ogre::Real RATTLE_PALM_REACH = 0.05f;
+const Ogre::Vector3 RATTLE_DIRECTION(0.0f, -0.5f, 1.0f);
+//! TripOverBucket: the bucket stands on the floor in front of the shaman's feet where the clip starts (shares of her
+//! height in her model space, she looks along -y), as high as this share of her height; it does not move with the clip
+const std::string TRIP_BUCKET_MESH = "InfirmaryBucket.mesh";
+const Ogre::Real TRIP_BUCKET_HEIGHT_SHARE = 0.25f;
+const Ogre::Vector3 TRIP_BUCKET_SPOT(0.17f, 0.52f, 0.0f);
 
 //! \brief Position and orientation of a bone in model space at this share of the length of a clip, read from the tracks
 //! of the clip without touching the pose of the entity. False when the skeleton has no such bone or clip.
@@ -283,6 +298,14 @@ bool getMidClipBonePose(const Ogre::Skeleton& skeleton, const std::string& clip,
     Ogre::Vector3& position, Ogre::Quaternion& orientation)
 {
     return getClipBonePose(skeleton, clip, boneName, 0.5f, position, orientation);
+}
+
+//! \brief True for the clips of a room figure (not a creature) that show a clip prop: HerbSniff, RattleShake and
+//! TripOverBucket of the infirmary shaman, Pour of the innkeeper.
+bool isFigureClipWithProp(const std::string& clip)
+{
+    return (clip == EntityAnimation::herb_sniff_anim) || (clip == EntityAnimation::rattle_shake_anim) ||
+        (clip == EntityAnimation::trip_over_bucket_anim) || (clip == InnkeeperPose::pour);
 }
 
 //! \brief Rotation that puts the z axis of a mesh on the direction and its x axis as near to the hint as possible.
@@ -6413,10 +6436,10 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         animState->setTimePosition(animState->getLength());
     curAnimatedObject->setAnimationState(animState);
 
-    // The infirmary shaman holds her herbs while she smells at them, the innkeeper his jug while he pours
-    if((anim == EntityAnimation::herb_sniff_anim) || (anim == InnkeeperPose::pour) ||
-       ((previousState != nullptr) && ((previousState->getAnimationName() == EntityAnimation::herb_sniff_anim) ||
-                                       (previousState->getAnimationName() == InnkeeperPose::pour))))
+    // The infirmary shaman holds her herbs while she smells at them and her rattle while she shakes it, and a bucket
+    // stands before her feet while she trips over it; the innkeeper holds his jug while he pours
+    if(isFigureClipWithProp(anim) ||
+       ((previousState != nullptr) && isFigureClipWithProp(previousState->getAnimationName())))
         updateClipProp(objectName, anim);
 
     // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table. A drinking
@@ -9348,6 +9371,44 @@ void RenderManager::removeClipProp(const std::string& objectName)
         mSceneManager->destroySceneNode(propName + CLIP_PROP_NODE_SUFFIX);
 }
 
+//! The rattle is fixed to the hand as it is in the middle of the clip: its handle in the palm, the gourd up and forwards.
+void RenderManager::attachRattle(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton)
+{
+    Ogre::Vector3 handPosition;
+    Ogre::Quaternion handOrientation;
+    if(!getMidClipBonePose(skeleton, EntityAnimation::rattle_shake_anim, RATTLE_BONE, handPosition, handOrientation))
+    {
+        OD_LOG_WRN("No hand bone for the rattle, skeleton=" + skeleton.getName());
+        return;
+    }
+
+    Ogre::Entity* rattleEntity = mSceneManager->createEntity(CLIP_PROP_PREFIX + objectName, RATTLE_MESH);
+    rattleEntity->setQueryFlags(0);
+    const Ogre::Real height = holder->getMesh()->getBounds().getSize().z;
+    const Ogre::Real scale = RATTLE_HEIGHT_SHARE * height / rattleEntity->getMesh()->getBounds().getSize().z;
+    const Ogre::Quaternion wanted = alignMeshAxes(RATTLE_DIRECTION, Ogre::Vector3::UNIT_X);
+    const Ogre::Vector3 palm = handPosition + handOrientation * Ogre::Vector3(0.0f, RATTLE_PALM_REACH * height, 0.0f);
+    const Ogre::Vector3 origin = palm - wanted * (RATTLE_GRIP * scale);
+    Ogre::TagPoint* tag = holder->attachObjectToBone(RATTLE_BONE, rattleEntity, handOrientation.Inverse() * wanted,
+        handOrientation.Inverse() * (origin - handPosition));
+    tag->setInheritScale(false);
+    tag->setScale(scale, scale, scale);
+}
+
+//! The bucket stands upright on the floor of the shaman's model space, on a node of its own that the clip does not move.
+void RenderManager::placeTripBucket(const std::string& objectName, Ogre::Entity* holder)
+{
+    const std::string propName = CLIP_PROP_PREFIX + objectName;
+    Ogre::Entity* bucketEntity = mSceneManager->createEntity(propName, TRIP_BUCKET_MESH);
+    bucketEntity->setQueryFlags(0);
+    const Ogre::Real height = holder->getMesh()->getBounds().getSize().z;
+    const Ogre::Real scale = TRIP_BUCKET_HEIGHT_SHARE * height / bucketEntity->getMesh()->getBounds().getSize().z;
+    Ogre::SceneNode* node = holder->getParentSceneNode()->createChildSceneNode(propName + CLIP_PROP_NODE_SUFFIX);
+    node->setPosition(TRIP_BUCKET_SPOT * height);
+    node->setScale(scale, scale, scale);
+    node->attachObject(bucketEntity);
+}
+
 //! The jug is fixed to the hand as it is at the start of the clip: upright on the counter, its handle in the palm and its
 //! spout towards the other hand. It hangs on a node of the innkeeper that follows the hand in every frame.
 void RenderManager::attachPourJug(const std::string& objectName, Ogre::Entity* holder, const Ogre::Skeleton& skeleton)
@@ -9434,6 +9495,10 @@ void RenderManager::updateClipProp(const std::string& objectName, const std::str
         meshName = SNIFF_HERB_MESH;
     else if(clip == InnkeeperPose::pour)
         meshName = POUR_JUG_MESH;
+    else if(clip == EntityAnimation::rattle_shake_anim)
+        meshName = RATTLE_MESH;
+    else if(clip == EntityAnimation::trip_over_bucket_anim)
+        meshName = TRIP_BUCKET_MESH;
     else
         return;
 
@@ -9449,6 +9514,16 @@ void RenderManager::updateClipProp(const std::string& objectName, const std::str
     if(clip == InnkeeperPose::pour)
     {
         attachPourJug(objectName, holder, *skeleton);
+        return;
+    }
+    if(clip == EntityAnimation::trip_over_bucket_anim)
+    {
+        placeTripBucket(objectName, holder);
+        return;
+    }
+    if(clip == EntityAnimation::rattle_shake_anim)
+    {
+        attachRattle(objectName, holder, *skeleton);
         return;
     }
 

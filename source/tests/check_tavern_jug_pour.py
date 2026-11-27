@@ -219,9 +219,11 @@ constants = {
 for text, name in constants.items():
     if text not in source:
         fail('RenderManager.cpp: ' + name + ' missing (' + text + ')')
-hook = re.search(r'if\(\(anim == EntityAnimation::herb_sniff_anim\) \|\| \(anim == InnkeeperPose::pour\) \|\|.*?'
-                 r'updateClipProp\(objectName, anim\);', source, re.S)
-if hook is None or 'previousState->getAnimationName() == InnkeeperPose::pour' not in hook.group(0):
+hook = re.search(r'if\(isFigureClipWithProp\(anim\) \|\|\s*\(\(previousState != nullptr\) && '
+                 r'isFigureClipWithProp\(previousState->getAnimationName\(\)\)\)\)\s*updateClipProp\(objectName, anim\);',
+                 source)
+figure_clips = re.search(r'bool isFigureClipWithProp\(const std::string& clip\)\s*\{[^}]*\}', source)
+if hook is None or figure_clips is None or 'InnkeeperPose::pour' not in figure_clips.group(0):
     fail('rrSetObjectAnimationState does not give and take the jug on every change into or out of Pour')
 if not re.search(r'void RenderManager::updateRenderAnimations\(Ogre::Real timeSinceLastFrame\)\s*\{[^}]*'
                  r'updateFollowingClipProps\(\);', source):

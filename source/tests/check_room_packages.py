@@ -9,7 +9,7 @@ Static part, always:
     room out and keeps loading (MapHandler), the ghost room equipment and saved capture boxes and herb bundles need
     their packages, the asset folders and sounds of found packages are loaded (ResourceManager, SoundEffectsManager)
     and the packages are found at startup (ODApplication);
-  * the public tree holds none of the 315 packaged room assets (PACKAGED_ASSETS of scripts/room_packages.py, fixed for
+  * the public tree holds none of the 324 packaged room assets (PACKAGED_ASSETS of scripts/room_packages.py, fixed for
     this branch);
   * with the content present: every package of the content repository has its Package.cfg naming its room and exactly
     the files of PACKAGED_ASSETS.
@@ -46,9 +46,10 @@ import room_packages  # noqa: E402
 
 #: Files of each room package, counted once for this branch (Package.cfg included)
 #: (Merchant 35 -> 33, Tavern 84 -> 82, Infirmary 32 -> 30, Spa 25 -> 23 when the meshes and skeletons of their
-#: figures moved into the creatures content package; 333 -> 325 in all)
+#: figures moved into the creatures content package; 333 -> 325 in all; Tavern 82 -> 85 and Infirmary 30 -> 36 with the
+#: clip props jug, rattle and bucket, 334 in all)
 PACKAGE_FILES = {"GuardRoom": 5, "Temple": 2, "Toilet": 39, "Merchant": 33, "HerbGarden": 22, "AlchemyLab": 9,
-                 "Tavern": 82, "Infirmary": 30, "GhostRoom": 80, "Spa": 23}
+                 "Tavern": 85, "Infirmary": 36, "GhostRoom": 80, "Spa": 23}
 #: The level of the runtime part and the packaged rooms it holds
 RUNTIME_LEVEL = "levels/skirmish/TestSpa.level"
 RUNTIME_ROOMS = ("Tavern", "Spa")
@@ -112,8 +113,8 @@ def phase(name, started):
 
 
 started = time.monotonic()
-check(len(room_packages.ROOMS) == 10 and sum(PACKAGE_FILES.values()) == 325,
-      "ten packaged rooms with 325 package files are fixed for this branch")
+check(len(room_packages.ROOMS) == 10 and sum(PACKAGE_FILES.values()) == 334,
+      "ten packaged rooms with 334 package files are fixed for this branch")
 check(all(len(room_packages.PACKAGED_ASSETS[name]) + 1 == PACKAGE_FILES[name] for name in room_packages.ROOM_NAMES),
       "PACKAGED_ASSETS of room_packages.py must list the package files of this branch")
 
@@ -398,5 +399,5 @@ elif EXECUTABLE.is_file() and not failures:
 if failures:
     print("\n".join(failures).encode("ascii", "replace").decode("ascii"))
     sys.exit(1)
-print("room packages: 10 packaged rooms, gates in place, 315 packaged assets absent from the public tree; %s; %s; %s: PASS"
+print("room packages: 10 packaged rooms, gates in place, 324 packaged assets absent from the public tree; %s; %s; %s: PASS"
       % (content_note, probe_note, runtime_note))

@@ -154,6 +154,10 @@ namespace EntityAnimation
     static const std::string sharpen_anim = "Sharpen";
     //! The infirmary shaman smells at a bundle of herbs
     static const std::string herb_sniff_anim = "HerbSniff";
+    //! The infirmary shaman shakes her rattle over a patient
+    static const std::string rattle_shake_anim = "RattleShake";
+    //! The infirmary shaman stumbles over a bucket and falls
+    static const std::string trip_over_bucket_anim = "TripOverBucket";
     //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
     static const std::string scared_anim = "Scared";
     //! A hunter holds the capture nozzle forward; the client falls back to Attack when absent.
