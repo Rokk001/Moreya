@@ -30,7 +30,7 @@ Three parts:
       visible stain (stage 1, 2, 3) is; a room whose mean is far below stage 2 but has one visible stain needs cleaning,
       a room with only invisible dirt does not, a prison never.
 Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 328 triangles (limit 600), Clean 3.967 s,
-44 clips in Kobold.skeleton and 50 in Dwarf1.skeleton, handle top 0.305 and twigs from 0.6 broom lengths, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
+45 clips in Kobold.skeleton and 53 in Dwarf1.skeleton, handle top 0.305 and twigs from 0.6 broom lengths, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
 The probe compiles with cl, so it runs in the compile phase of the integration; `--no-compile` runs the other parts.
 Without --assets the models, materials and textures are read from the public tree or the content packages
 (scripts/content_packages.py); without the content the broom (core-models) and the worker rigs (creatures) are named
@@ -57,7 +57,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
 ASSETS =Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
 BROOM_SHARE = 0.88
-CLIP_COUNTS = {'Kobold': 44, 'Dwarf1': 50}
+CLIP_COUNTS = {'Kobold': 45, 'Dwarf1': 53}
 CLEAN_SECONDS = 119 / 30.0
 HANDLE_TOP, TWIGS_FROM = 0.305, 0.6
 fails = []
