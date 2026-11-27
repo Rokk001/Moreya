@@ -1,12 +1,13 @@
-"""Check the hairy pool attendant mesh (1057-1060 and 1070, restored by K22) and its acts.
+"""Check the pool attendant mesh and its acts (decisions 1057-1060 and 1070; the figure is the approved Meshy attendant of
+2026-11-26, which replaced the hairy mesh that K22 had restored).
 
 Reads the shipped models/PoolAttendant.mesh and .skeleton through OgreXMLConverter and the attendant code; no compiler, no
-game. Checks (1) the exact hairy mesh that K22 restored with its fitting skeleton (it replaces the mesh decision 1186 had
-put back) and its visible props, including towel, whistle, hair, body hair and moustache;
-(2) the Sit pose: knees bent and apart (no stiff legs), arms beside the
-belly (no intersection), body not twisted; (3) the clips: Whistle brings the whistle to the mouth, TowelWave holds the
-towel in the hand above the shoulder and waves it, Doze lets him sink sideways, Climb, Walk and Jump move; (4) the code:
-the acts, the whistle only with a bather and at the moment of the blow, the cannonball and its place.
+game. Checks (1) the exact approved mesh (the pinned hash of spa_attendant_meshy_contract.py) with its one Meshy material;
+the towel, whistle, hair, body hair and moustache were parts of the former mesh and are not part of the approved model;
+(2) the Sit pose: knees bent and apart (no stiff legs), arms beside the belly (no intersection), body not twisted; (3) the
+clips: Whistle brings the hand to the mouth, TowelWave raises the hand above the shoulder and waves it, Doze lets him sink
+sideways, Climb, Walk and Jump move; (4) the code: the acts, the whistle only with a bather and at the moment of the blow,
+the cannonball and its place. Bone names of the shared Meshy rig.
 """
 from hashlib import sha256
 from pathlib import Path
@@ -56,12 +57,14 @@ if not ROOM_ASSETS:
 
 
 
-# K22 restored the hairy mesh of decisions 1057-1060 and 1070 that fits the skeleton (decision 1186 had put back the older
-# mesh, whose joints sat beside the joints of this skeleton) and, after the owner findings of 2026-11-17, carries the head of
-# the attendant in the game today, volume body hair and a small whistle; check_spa_attendant_k22.py checks fit and look.
-assert sha256(room_file('models/PoolAttendant.mesh').read_bytes()).hexdigest() == (
-    '6b22bbb1da5fdb1292d38e37141b543a94f175dc04cecfaffb5e14de672c4403'
-), 'K22 restores the hairy attendant mesh that fits its skeleton'
+# K22 restored the hairy mesh of decisions 1057-1060 and 1070; the owner then approved the Meshy attendant (2026-11-26),
+# which replaces it as it is. The delivered mesh is that approved model (its hash is pinned once, in
+# spa_attendant_meshy_contract.py, which also checks its fit and look).
+meshy_contract = {'__file__': str(ROOT / 'source/tests/spa_attendant_meshy_contract.py')}
+exec(compile((ROOT / 'source/tests/spa_attendant_meshy_contract.py').read_text(encoding='utf-8'),
+             'spa_attendant_meshy_contract', 'exec'), meshy_contract)
+assert sha256(room_file('models/PoolAttendant.mesh').read_bytes()).hexdigest() == \
+    meshy_contract['HASHES']['models/PoolAttendant.mesh'], 'the approved Meshy attendant mesh'
 
 with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
     converted = {}
@@ -73,19 +76,24 @@ with tempfile.TemporaryDirectory(prefix='spa-1057-') as folder:
 mesh, skeleton = converted['PoolAttendant.mesh'], converted['PoolAttendant.skeleton']
 
 # ---- 1. The look -----------------------------------------------------------------------------------------------------
+# The approved model has one material; towel, whistle and hair were parts of the former mesh
 sub_by_material = {}
 for sub in mesh.findall('submeshes/submesh'):
     sub_by_material.setdefault(sub.get('material'), []).append(sub)
-for material in ('SpaSkin', 'SpaSuit', 'SpaHair', 'SpaBodyHair', 'SpaLinen', 'SpaWhistle', 'SpaEyes', 'SpaIronWorn'):
-    assert material in sub_by_material, 'the attendant needs the material ' + material
-faces = {m: sum(len(s.findall('faces/face')) for s in subs) for m, subs in sub_by_material.items()}
-assert faces['SpaLinen'] >= 300 and faces['SpaHair'] >= 1000, 'towel, hair and moustache stay'
-assert faces['SpaBodyHair'] >= 10000, 'full body hair'
+assert set(sub_by_material) == {meshy_contract['MATERIAL']}, 'the approved attendant has its one Meshy material'
 
-suit = points_for(mesh, 'SpaSuit')
-belly = suit[(suit[:, 2] > .42) & (suit[:, 2] < .6)]
-whistle = points_for(mesh, 'SpaWhistle')
-assert np.ptp(whistle[:, 0]) > .05 and np.ptp(whistle[:, 2]) > .095, 'whistle must read from the camera'
+# The belly: the body vertices (mostly on the hips and the spine) between 0.42 and 0.6
+# the bone handles: the id attribute when the converter writes one, else the order of the bones (handle order)
+bone_names_by_index = {(bone.get('id') or bone.get('handle') or str(index)): bone.get('name')
+                       for index, bone in enumerate(skeleton.findall('bones/bone'))}
+body_bones = {'Hips', 'Spine', 'Spine01', 'Spine02'}
+positions = np.array([[float(p.get(c)) for c in 'xyz'] for p in mesh.findall('sharedgeometry/vertexbuffer/vertex/position')])
+on_body = np.zeros(len(positions))
+for assignment in mesh.findall('boneassignments/vertexboneassignment'):
+    if bone_names_by_index.get(assignment.get('boneindex')) in body_bones:
+        on_body[int(assignment.get('vertexindex'))] += float(assignment.get('weight'))
+belly = positions[(on_body >= 0.5) & (positions[:, 2] > .42) & (positions[:, 2] < .6)]
+assert len(belly) > 50, 'the belly of the approved attendant'
 
 # ---- 2/3. The skeleton and its clips ---------------------------------------------------------------------------------
 bones = {bone.get('name'): bone for bone in skeleton.findall('bones/bone')}
@@ -125,60 +133,39 @@ def angle_between(a, b):
 
 for seconds in (0, .5, 1.0, 1.5):
     sit, matrices = pose('Sit', seconds)
-    for suffix, sign in (('_R', -1), ('_L', 1)):
-        thigh, shin, foot = sit['Thigh' + suffix], sit['Shin' + suffix], sit['Foot' + suffix]
+    for side, sign in (('Right', -1), ('Left', 1)):
+        thigh, shin, foot = sit[side + 'UpLeg'], sit[side + 'Leg'], sit[side + 'Foot']
         bend = angle_between(shin - thigh, foot - shin)
         assert bend > .45, 'sitting legs are not stiff: the knee bends (%.2f rad)' % bend
         assert sign * shin[0] > .14, 'the knees are apart'
-        elbow, wrist = sit['Forearm' + suffix], sit['Hand' + suffix]
-        # the arm hangs beside the belly: its inner edge (elbow 0.058 thick) stays outside the belly of the suit
+        elbow, wrist = sit[side + 'ForeArm'], sit[side + 'Hand']
+        # the arm hangs beside the belly: its inner edge (elbow 0.058 thick) stays outside the belly
         assert sign * elbow[0] - .058 > np.percentile(np.abs(belly[:, 0]), 98) - .002, 'the elbow is beside the belly, not in it'
         assert sign * wrist[0] - .04 > .22, 'the hand rests beside the belly, not in it'
-    assert abs(sit['Thigh_R'][0] + sit['Thigh_L'][0]) < .02 and abs(sit['Thigh_R'][1] - sit['Thigh_L'][1]) < .02, 'hips not twisted'
-    assert abs(sit['UpperArm_R'][2] - sit['UpperArm_L'][2]) < .03 and abs(sit['UpperArm_R'][1] - sit['UpperArm_L'][1]) < .03, \
+    assert abs(sit['RightUpLeg'][0] + sit['LeftUpLeg'][0]) < .02 and abs(sit['RightUpLeg'][1] - sit['LeftUpLeg'][1]) < .02, \
+        'hips not twisted'
+    assert abs(sit['RightArm'][2] - sit['LeftArm'][2]) < .03 and abs(sit['RightArm'][1] - sit['LeftArm'][1]) < .03, \
         'shoulders not twisted against the hips'
 
 sit0, sit0_matrices = pose('Sit', 0)
 
-
-def bind_matrix(name):
-    """World matrix of a bone in the bind pose."""
-    local = np.eye(4)
-    local[:3, :3] = rotation(bones[name].find('rotation'))
-    local[:3, 3] = vector(bones[name].find('position'))
-    return bind_matrix(parents[name]) @ local if name in parents else local
-
-
-# owner finding 3 (2026-11-17): the WhistleHang joint is the ring at the end of the cord; the whistle itself (the centre of
-# its vertices) is carried by that bone
-whistle_centre = np.append(points_for(mesh, 'SpaWhistle').mean(axis=0), 1)
-whistle_bind_inverse = np.linalg.inv(bind_matrix('WhistleHang'))
-
-
-def whistle_at(matrices):
-    """Centre of the whistle in a pose."""
-    return (matrices['WhistleHang'] @ whistle_bind_inverse @ whistle_centre)[:3]
-
-
+# Whistle: the approved model has no whistle part; the hand brings the whistle to the mouth, so the right hand comes to
+# the mouth (as the whistle did) and is far from it at rest
 for seconds in (.9, 1.05):
     whistle, whistle_matrices = pose('Whistle', seconds)
-    head = whistle['Head']
-    mouth_distance = np.linalg.norm(whistle_at(whistle_matrices) - (head + np.array([0, -.13, .05])))
-    assert mouth_distance < .12, 'Whistle: the whistle is at the mouth (%.3f)' % mouth_distance
-    assert np.linalg.norm(whistle['Hand_R'] - whistle_at(whistle_matrices)) < .14, 'Whistle: the whistle is in the hand'
-assert np.linalg.norm(whistle_at(sit0_matrices) - (sit0['Head'] + np.array([0, -.13, .05]))) > .2, \
-    'the whistle hangs on his chest at rest'
+    mouth_distance = np.linalg.norm(whistle['RightHand'] - (whistle['Head'] + np.array([0, -.13, .05])))
+    assert mouth_distance < .12 + .14, 'Whistle: the hand is at the mouth (%.3f)' % mouth_distance
+assert np.linalg.norm(sit0['RightHand'] - (sit0['Head'] + np.array([0, -.13, .05]))) > .2, \
+    'the hand does not rest at the mouth'
 
+# TowelWave: the approved model has no towel part; the right hand is above the shoulder and visibly waved
 towel0, _ = pose('TowelWave', .75)
 towel1, _ = pose('TowelWave', .95)
 towel2, _ = pose('TowelWave', 1.15)
 for towel in (towel0, towel1, towel2):
-    assert np.linalg.norm(towel['Towel'] - towel['Hand_R']) < .2, 'TowelWave: the towel is in his hand'
-    assert towel['Towel'][2] > towel['UpperArm_R'][2] + .1, 'TowelWave: the towel is above his shoulder'
-assert np.linalg.norm(towel0['Towel'] - towel1['Towel']) > .08 and np.linalg.norm(towel1['Towel'] - towel2['Towel']) > .08, \
-    'TowelWave: the towel is visibly waved'
-assert np.linalg.norm(towel0['TowelTip'] - towel1['TowelTip']) > .1, 'TowelWave: the end of the towel flaps'
-assert np.linalg.norm(sit0['Towel'] - sit0['Hand_R']) > .25, 'the towel lies on the shoulder at rest, not in the hand'
+    assert towel['RightHand'][2] > towel['RightArm'][2] + .1, 'TowelWave: the hand is above his shoulder'
+assert np.linalg.norm(towel0['RightHand'] - towel1['RightHand']) > .08 and \
+    np.linalg.norm(towel1['RightHand'] - towel2['RightHand']) > .08, 'TowelWave: the hand is visibly waved'
 
 doze, _ = pose('Doze', 1.3)
 assert sit0['Head'][2] - doze['Head'][2] > .02 and abs(doze['Head'][0] - sit0['Head'][0]) > .04, 'Doze: he sinks and slides sideways'
@@ -186,14 +173,16 @@ assert doze['Head'][1] < sit0['Head'][1] - .04, 'Doze: he slumps forward'
 
 climb0, _ = pose('Climb', 0)
 climb1, _ = pose('Climb', .5)
-assert abs(climb0['Hand_R'][2] - climb1['Hand_R'][2]) > .05 or abs(climb0['Hand_L'][2] - climb1['Hand_L'][2]) > .05, 'Climb moves the hands'
+assert abs(climb0['RightHand'][2] - climb1['RightHand'][2]) > .05 or abs(climb0['LeftHand'][2] - climb1['LeftHand'][2]) > .05, \
+    'Climb moves the hands'
 walk0, _ = pose('Walk', 0)
 walk1, _ = pose('Walk', .08)
-assert abs(walk0['Foot_R'][1] - walk1['Foot_R'][1]) > .02 or abs(walk0['Foot_R'][2] - walk1['Foot_R'][2]) > .02, 'Walk moves the feet'
+assert abs(walk0['RightFoot'][1] - walk1['RightFoot'][1]) > .02 or abs(walk0['RightFoot'][2] - walk1['RightFoot'][2]) > .02, \
+    'Walk moves the feet'
 jump0, _ = pose('Jump', 0)
 jump1, _ = pose('Jump', 1.0)
-assert np.linalg.norm(jump0['Foot_R'] - jump1['Foot_R']) > .15, 'Jump tucks the legs (cannonball)'
-assert jump1['Foot_R'][1] < jump1['Pelvis'][1] - .02 or jump1['Foot_R'][2] > jump1['Pelvis'][2] - .35, 'Jump: knees pulled up'
+assert np.linalg.norm(jump0['RightFoot'] - jump1['RightFoot']) > .15, 'Jump tucks the legs (cannonball)'
+assert jump1['RightFoot'][1] < jump1['Hips'][1] - .02 or jump1['RightFoot'][2] > jump1['Hips'][2] - .35, 'Jump: knees pulled up'
 
 # ---- 4. The code ------------------------------------------------------------------------------------------------------
 cpp = read('source/entities/PoolAttendantEntity.cpp')
@@ -208,11 +197,13 @@ rooms = read('config/rooms.cfg')
 for key, value in (('SpaAttendantActMinSeconds', '10'), ('SpaAttendantActMaxSeconds', '20'),
                    ('SpaAttendantCannonballMinSeconds', '120'), ('SpaAttendantCannonballMaxSeconds', '180')):
     assert re.search(r'^\s+' + key + r'\s+' + value + r'\s*$', rooms, re.M), key
-materials = read('materials/scripts/Spa.material')
+# the approved model's material has its own script in the creatures package (former: Spa.material)
 for material in sub_by_material:
-    assert re.search(r'^material ' + material + r' ', materials, re.M), material
+    materials = content_packages.read_text(ROOT, 'materials/scripts/Creatures/' + material + '.material')
+    assert re.search(r'^material ' + material + r'\b', materials, re.M), material
 credits = read('CREDITS')
-assert re.search(r'^models/PoolAttendant\.mesh .*decision 863', credits, re.M)
-assert re.search(r'^models/PoolAttendant\.skeleton .*1057-1060, 1070', credits, re.M)
+# the rows of the approved Meshy model (the rows of the former mesh, decisions 863 and 1057-1060, 1070, stay as history)
+assert re.search(r'^models/PoolAttendant\.mesh .*Meshy', credits, re.M)
+assert re.search(r'^models/PoolAttendant\.skeleton .*Meshy', credits, re.M)
 
-print('check_spa_owner_1057 ok: hairy attendant mesh, bent legs, arms beside the belly, readable acts')
+print('check_spa_owner_1057 ok: approved attendant mesh, bent legs, arms beside the belly, readable acts')

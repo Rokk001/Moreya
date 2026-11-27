@@ -47,15 +47,20 @@ def rest_track_names(skeleton, skeleton_name, weighted):
     required = set(skeleton.names)
     parent = {'skeleton.skeleton': 'itemRightHand', 'lich.skeleton': 'itemRightHand',
               'PitDemon.skeleton': 'Hand_R', 'Kreatur.skeleton': 'tentafr4_r', 'Scarab.skeleton': 'Bone.001_R.005'}.get(skeleton_name)
+    # The figures rebuilt on the shared Meshy rig hold their passive mount under the right hand of that rig; the native
+    # drinking attachment of the former Scarab rig (its two animated clips and its rest values) belongs to that rig only
+    meshy = all(bone in skeleton.idx for bone in ('Hips', 'LeftUpLeg', 'RightUpLeg', 'RightHand'))
+    if parent is not None and meshy:
+        parent = 'RightHand'
     if parent is not None:
         assert 'Weapon_R' in skeleton.idx, (skeleton_name, 'missing passive weapon mount')
         mount = skeleton.idx['Weapon_R']
         assert mount not in weighted, (skeleton_name, 'passive mount deforms creature')
         assert skeleton.names[skeleton.parent[mount]] == parent, (skeleton_name, 'wrong weapon parent')
         animated = {name for name, clip in skeleton.clips.items() if 'Weapon_R' in clip.tracks}
-        expected = {'Drink', 'SitDrink'} if skeleton_name == 'Scarab.skeleton' else set()
+        expected = {'Drink', 'SitDrink'} if skeleton_name == 'Scarab.skeleton' and not meshy else set()
         assert animated == expected, (skeleton_name, 'unexpected animated mount clips', animated)
-        if skeleton_name == 'Scarab.skeleton':
+        if skeleton_name == 'Scarab.skeleton' and not meshy:
             # Original native attachment: only the two drinking clips may move held items.
             assert np.allclose(skeleton.rest_pos[mount], (0.0, 0.0, 0.0), atol=1e-7, rtol=0.0)
             original_turn = np.array((0.6978285179755769, -0.5362445049233607,
