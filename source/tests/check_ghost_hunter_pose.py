@@ -159,8 +159,14 @@ for _ in range(2000):
 assert max(tilt_after_turn(rng.uniform(0, 360), (rng.uniform(-2, 2), rng.uniform(-2, 2), 1.0)) for _ in range(200)) > 20, \
     'a direction with a height share would tilt him (the old fault)'
 
-# The skeleton clips of the six hunters hold no lying pose: no bone of the Empty, Throw or Beam clip turns past 50 degrees
-spec = importlib.util.spec_from_file_location('ghost_pose_chunks', repo / 'tools/blender-assets/splice_animation_chunks.py')
+# The skeleton clips of the six hunters hold no lying pose: no bone of the Throw or Beam clip turns past 50 degrees.
+# The Empty clip is not checked any more: since decision 936 the put-in is the generated reach pose over Idle, no game
+# code requests Empty (only the fallback of RenderManager maps it to Attack for a skeleton without it), and the clip was
+# dropped from the hunter skeletons as never played. The premise is checked here: no source file plays empty_anim.
+for path in sorted((repo / 'source').rglob('*.cpp')):
+    played = re.findall(r'setAnimationState\([^;]*empty_anim', code_only(path.read_text(encoding='utf-8', errors='replace')))
+    assert not played, ('no game code plays the Empty clip', path.name, played)
+spec =importlib.util.spec_from_file_location('ghost_pose_chunks', repo / 'tools/blender-assets/splice_animation_chunks.py')
 chunks_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(chunks_module)
 # The hunters' meshes are named in the joined creatures.cfg (own rows of the content)
@@ -175,7 +181,7 @@ if CONTENT:
             continue
         _, chunks = chunks_module.chunks(content_packages.resolve(repo, skeleton).read_bytes())
         clips = {name: data for kind, name, data in chunks if kind == chunks_module.ANIMATION}
-        for clip in ('Empty', 'Throw', 'Beam'):
+        for clip in ('Throw', 'Beam'):
             _, tracks = chunks_module.animation_children(clips[clip])
             for kind, bone, track in tracks:
                 if kind != 0x4100:
