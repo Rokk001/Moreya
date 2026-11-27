@@ -32,9 +32,14 @@ assert 'LooseGoldMesh::prepareHeap(mSceneManager, meshName)' in render
 assert 'GameEntityType::treasuryObject' in render
 assert 'LooseGoldMesh::prepareSack(mSceneManager, carried->getMeshName())' in render
 assert loose.count('TreasuryGoldMesh::Detail::off') == 1
-# The gold a worker carries on its back is the sack (or the heap while the sack is off), never a stack mesh.
+# The gold a worker carries on its back is the load bundle (or the heap while the sacks are off), never a stack mesh.
 workers = read('source/render/WorkerReactions.cpp')
-assert 'LooseGoldMesh::prepareSack(sceneManager, stackName)' in workers
+assert 'LooseGoldMesh::prepareLoad(sceneManager, stackName)' in workers
+assert 'return LoadPrefix + static_cast<char>' in loose and 'prepareSack(sceneManager, meshName).empty()' in loose
+for name in ['models/GoldLoad_%d.mesh' % size for size in range(1, 5)] + ['materials/textures/GoldLoadMeshy.png']:
+    if content_packages.has_content(repo):
+        assert content_packages.data_file(repo, name) is not None, name
+        assert name in room_packages.credits_text(repo), name
 assert 'LooseGoldMesh::prepareHeap(sceneManager, stackName)' in workers
 assert '"GoldstackLv" + Helper::toString(level) + ".mesh"' not in workers
 # The sack and its visibility swap are undone when the gold is put down and when the object goes away.

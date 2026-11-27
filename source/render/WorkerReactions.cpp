@@ -37,6 +37,10 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 
+#include <OgreTagPoint.h>
+#include <OgreSkeletonInstance.h>
+#include <OgreMesh.h>
+#include <OgreBone.h>
 #include <OgreAnimationState.h>
 #include <OgreAxisAlignedBox.h>
 #include <OgreEntity.h>
@@ -86,7 +90,7 @@ const double SOURCE_MEMORY = 8.0;
 const double LOOT_MEMORY = 25.0;
 const double SOURCE_RADIUS = 3.0;
 //! The share of the width of a worker that the gold on its body takes
-const double GOLD_BODY_WIDTH = 0.6;
+const double GOLD_BODY_WIDTH = 0.45;
 //! How often a reaction that did not start is tried again, and for how long
 const double RETRY_INTERVAL = 0.7;
 const double RETRY_MAX = 4.0;
@@ -109,8 +113,17 @@ const float MIN_MODEL_WIDTH = 0.0001f;
 //! The least and the most the gold on the body is scaled
 const float GOLD_BODY_SCALE_MIN = 0.05f;
 const float GOLD_BODY_SCALE_MAX = 4.0f;
-//! The share of the height of a worker at which the lowest point of the gold on its back rests
+//! The share of the height of a worker at which the lowest point of the gold rests, for a figure without the bones below
 const float GOLD_BODY_TOP_SHARE = 0.92f;
+//! The hip bone that carries the gold on the back (it moves with the body but does not bend forward with it, so the
+//! load stays clear of the head while digging), and the shoulder bone below whose height the gold ends
+const std::string GOLD_BODY_BONE = "Hips";
+const std::string GOLD_BODY_SHOULDER_BONE = "LeftShoulder";
+//! The side of the gold towards the back lies this far behind the middle of the worker, as a share of the height of
+//! its shoulders
+const float GOLD_BODY_BACK_SHARE = 0.2f;
+//! The top of the gold lies at this share of the height of the shoulders
+const float GOLD_BODY_SHOULDER_SHARE = 0.85f;
 //! Seconds before the reaction to a worker action starts
 const double CLAIM_STOMP_DELAY = 0.4;
 const double WEAK_FIGHT_DELAY = 0.1;
@@ -124,6 +137,19 @@ const double TRAP_KNOCK_DELAY = 0.4;
 const double HASTY_DELAY = 1.0;
 
 const std::string GOLD_BODY_PREFIX = "WorkerGoldBody_";
+
+//! \brief Place and turn of a bone in the bind pose, in the space of the model (the bones carry no scale)
+void getBindPose(const Ogre::Bone& bone, Ogre::Vector3& position, Ogre::Quaternion& orientation)
+{
+    position = bone.getInitialPosition();
+    orientation = bone.getInitialOrientation();
+    for(const Ogre::Node* parent = bone.getParent(); parent != nullptr; parent = parent->getParent())
+    {
+        const Ogre::Bone* parentBone = static_cast<const Ogre::Bone*>(parent);
+        position = parentBone->getInitialPosition() + parentBone->getInitialOrientation() * position;
+        orientation = parentBone->getInitialOrientation() * orientation;
+    }
+}
 //! Seconds before the worker lets go of the creature it pulled
 const double PUT_WOUNDED_DOWN_DELAY = 0.2;
 
@@ -953,7 +979,9 @@ void WorkerReactions::updateGoldBody(CreatureReactions& reactions, Creature* wor
         return;
     }
 
-    if((state.mGoldLevel == level) && sceneManager->hasEntity(entityName))
+    // A load whose worker model was replaced hangs nowhere any more and is built again
+    if((state.mGoldLevel == level) && sceneManager->hasEntity(entityName)
+        && sceneManager->getEntity(entityName)->isAttached())
     {
         sceneManager->getEntity(entityName)->setVisible(visible);
         return;
@@ -967,10 +995,10 @@ void WorkerReactions::updateGoldBody(CreatureReactions& reactions, Creature* wor
         return;
 
     Ogre::Entity* workerEntity = sceneManager->getEntity(workerEntityName);
-    // The gold on the back is the coin sack of LooseGoldMesh (the heap when the treasury detail leaves the sack
-    // out); the classic stack name only selects its size
+    // The gold on the back is the load bundle of LooseGoldMesh (the heap when the treasury detail leaves the sacks
+    // out); the classic stack name only selects its fill level
     const std::string stackName = "GoldstackLv" + Helper::toString(level);
-    std::string goldMesh = LooseGoldMesh::prepareSack(sceneManager, stackName);
+    std::string goldMesh = LooseGoldMesh::prepareLoad(sceneManager, stackName);
     if(goldMesh.empty())
         goldMesh = LooseGoldMesh::prepareHeap(sceneManager, stackName);
     std::string meshName = goldMesh + ".mesh";
@@ -978,8 +1006,9 @@ void WorkerReactions::updateGoldBody(CreatureReactions& reactions, Creature* wor
     goldEntity->setCastShadows(false);
     goldEntity->setVisible(visible);
 
-    // The gold rests on the back of the worker: as wide as part of the body, its lowest point just inside the top
-    Ogre::AxisAlignedBox workerBox = workerEntity->getBoundingBox();
+    // The gold rests on the back of the worker: as wide as part of the body, behind it and below its
+    // shoulders, hanging on the hips so it follows the digging and walking body
+    const Ogre::AxisAlignedBox workerBox = workerEntity->getMesh()->getBounds();
     Ogre::AxisAlignedBox goldBox = goldEntity->getBoundingBox();
     Ogre::Real workerWidth = std::max(workerBox.getMaximum().x - workerBox.getMinimum().x,
         workerBox.getMaximum().y - workerBox.getMinimum().y);
@@ -991,7 +1020,28 @@ void WorkerReactions::updateGoldBody(CreatureReactions& reactions, Creature* wor
 
     scale = std::min(std::max(scale, GOLD_BODY_SCALE_MIN), GOLD_BODY_SCALE_MAX);
     Ogre::Vector3 goldCenter = (goldBox.getMaximum() + goldBox.getMinimum()) * 0.5f;
-    Ogre::Real top = workerBox.getMaximum().z * GOLD_BODY_TOP_SHARE;
+
+    Ogre::Skeleton* skeleton = workerEntity->getSkeleton();
+    if((skeleton != nullptr) && skeleton->hasBone(GOLD_BODY_BONE) && skeleton->hasBone(GOLD_BODY_SHOULDER_BONE))
+    {
+        Ogre::Vector3 bonePosition;
+        Ogre::Vector3 shoulder;
+        Ogre::Quaternion boneOrientation;
+        Ogre::Quaternion shoulderOrientation;
+        getBindPose(*skeleton->getBone(GOLD_BODY_BONE), bonePosition, boneOrientation);
+        getBindPose(*skeleton->getBone(GOLD_BODY_SHOULDER_BONE), shoulder, shoulderOrientation);
+        // Model space of the bind pose: the worker looks along -y, so its back is towards +y
+        const Ogre::Vector3 origin(-goldCenter.x * scale, GOLD_BODY_BACK_SHARE * shoulder.z - goldBox.getMinimum().y * scale,
+            GOLD_BODY_SHOULDER_SHARE * shoulder.z - goldBox.getMaximum().z * scale);
+        const Ogre::Quaternion toBone = boneOrientation.Inverse();
+        Ogre::TagPoint* tag = workerEntity->attachObjectToBone(GOLD_BODY_BONE, goldEntity, toBone,
+            toBone * (origin - bonePosition));
+        tag->setScale(scale, scale, scale);
+        state.mGoldLevel = level;
+        return;
+    }
+
+    const Ogre::Real top = workerBox.getMaximum().z * GOLD_BODY_TOP_SHARE;
 
     Ogre::SceneNode* node = parent->createChildSceneNode(entityName + "_node");
     node->attachObject(goldEntity);

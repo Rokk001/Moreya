@@ -35,6 +35,7 @@ const std::string CoinMaterial = "TreasuryGoldPile";
 const std::string StackPrefix = "GoldstackLv";
 const std::string HeapPrefix = "GoldHeap_";
 const std::string SackPrefix = "GoldSack_";
+const std::string LoadPrefix = "GoldLoad_";
 
 const int HeapRings = 5;
 const int HeapSectors = 12;
@@ -170,5 +171,14 @@ std::string prepareSack(Ogre::SceneManager* sceneManager, const std::string& mes
 
     // The coin pouches are shipped meshes (GoldSack_1..4, material GoldSack)
     return SackPrefix + static_cast<char>('0' + size);
+}
+
+std::string prepareLoad(Ogre::SceneManager* sceneManager, const std::string& meshName)
+{
+    // Left out together with the sack
+    if(prepareSack(sceneManager, meshName).empty())
+        return std::string();
+
+    return LoadPrefix + static_cast<char>('0' + sizeFromStackName(meshName));
 }
 }
