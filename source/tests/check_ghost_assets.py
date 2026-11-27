@@ -256,7 +256,8 @@ def main():
     for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway',
             b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in still_skeleton, bone
-    assert b'ManaCrystal\n' in room_file('models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
+    # The mana crystal item is its blue Meshy model with its own material (ManaCrystal stays the material of the still)
+    assert b'ManaCrystalMeshy\n' in room_file('models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
     # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.
     for path in ('models/GhostPress.mesh','models/GhostPress.skeleton'):
         credited(path,credits)
