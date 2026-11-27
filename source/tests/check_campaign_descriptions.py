@@ -24,7 +24,7 @@ import campaign_packages  # noqa: E402
 STORY = [
     ('Brackenford', 'Mold Pit', 'Mud Fists'),
     ('Coldwell', 'Drowned Larder', 'Iron Latch'),
-    ('Ravensledge', 'Rat Warren', 'Grey Fang'),
+    ('Ravensledge', 'Wailing Ledges', 'Grey Fang'),
 ]
 #: Bonus level file -> chamber title: the bonus level of wing 1; the content repository adds the 5 of wings 2 to 6.
 BONUS = [

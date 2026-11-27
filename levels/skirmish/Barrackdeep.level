@@ -2223,7 +2223,7 @@ Action	gold	1	250
 Name	kennel
 Mode	once
 Cond	region	1	KennelEast
-Action	message	1	Lava spawn and demons dwell in the east kennel. Keep them fed and they stay loyal.
+Action	message	1	Butchers and demons dwell in the east kennel. Keep them fed and they stay loyal.
 [/Trigger]
 [Trigger]
 Name	outpost

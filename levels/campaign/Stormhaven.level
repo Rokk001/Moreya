@@ -4287,7 +4287,7 @@ Action	spawn	5	37	71	1	Orc:3	Troll:2	Ghoul:2
 Name	gale2
 Mode	once
 Cond	time	2000
-Action	message	1	A storm of rats and spiders is coming off the quay.
+Action	message	1	A storm of banshees and ghouls is coming off the quay.
 Action	spawn	5	37	71	1	Ghoul:3	Goblin:3	Orc:3	Troll:3
 [/Trigger]
 [Trigger]

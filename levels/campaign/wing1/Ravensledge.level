@@ -2,7 +2,7 @@ OpenDungeons_Version:0.7.1  # The version of OpenDungeons which created this fil
 
 [Info]
 Name	Ravensledge
-Description	Rat Warren in the Rotting Cellars: cross both bridges, claim the shelves and break the inner gate before the Grey Fang send a raid of ten archers through the Moreya gate.
+Description	Wailing Ledges in the Rotting Cellars: cross both bridges, claim the shelves and break the inner gate before the Grey Fang send a raid of ten archers through the Moreya gate.
 Music	Searching_yd.ogg
 FightMusic	TheDarkAmulet_MP.ogg
 [/Info]
@@ -2278,7 +2278,7 @@ Region	EastGate	44	16	52	24
 Name	firstCall
 Mode	once
 Cond	time	3
-Action	message	1	The Rat Warren sits on three cliff shelves, my lord, and the chasms between them have only a few crossings. Archers watch every ledge, and the Grey Fang of Wolfscar are sharpening their arrows for the same crossings.
+Action	message	1	The Wailing Ledges sit on three cliff shelves, my lord, and the chasms between them have only a few crossings. Archers watch every ledge, and the Grey Fang of Wolfscar are sharpening their arrows for the same crossings.
 Action	objectiveid	1	ravensledge-o01	Defeat the raid and its leader.
 Action	objectiveid	1	ravensledge-o02	Cross the lower chasm to the middle shelf.
 [/Trigger]

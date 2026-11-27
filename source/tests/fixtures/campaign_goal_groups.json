@@ -1182,7 +1182,7 @@
         "Action\tsetflag\tgoalCampArrived\t1"
       ],
       "oasisHeld": [
-        "Action\tmessage\t1\tThe oasis is ours. A wandering spider has smelled the water and comes to serve you.",
+        "Action\tmessage\t1\tThe oasis is ours. A wandering ghoul has smelled the water and comes to serve you.",
         "Action\tgenerate\t1\tGhoul:1"
       ]
     },
@@ -1556,7 +1556,7 @@
       "Protect the heart. Start is (68,116); use an own living creature to walk north through any existing buried route: Barrows, WestBarrows or ShaftHead. Existing open routes span each whole region: Barrows (61,81)->(56,59), WestBarrows (17,91)->(25,71), ShaftHead (13,47)->(11,33); all exact steps are checked in the fixture.",
       "Reach Camp (4,4)-(28,22) either before highDunes starts the wagon timer, or while wagonClock is below 900 seconds. Existing goalCampBeforeLoading/goalCampBeforeDeparture set goalCampArrived. Arrival after 900 is a failed main requirement even if Dunn was already killed and wagonLeaves therefore never fired. No new shorter deadline or automatic loss is introduced.",
       "Dunn starts at (18,12). The original escape route through the shaft remains: (16,12);(14,19);(14,22);(12,26);(11,31);(10,36);(10,42);(12,47);(16,49);(18,51);(17,53). Kill her before the existing ExitShaft escape and defeat remaining enemies. Camp arrival before departure remains required; a later intercept cannot erase a missed camp objective.",
-      "Before final victory optionally claim 40 Oasis fields (46,88)-(66,100), with 253 potentially reachable fields. Existing oasisHeld spider generation is retained. Claim/remove Portal1 (75..77,87..89) as part of the original remaining-enemy rule.",
+      "Before final victory optionally claim 40 Oasis fields (46,88)-(66,100), with 253 potentially reachable fields. Existing oasisHeld ghoul generation is retained. Claim/remove Portal1 (75..77,87..89) as part of the original remaining-enemy rule.",
       "Victory narration waits for tunnel use, timely camp arrival, heart survival, actual Dunn death and enemy clearance. No story text or original departure/escape behavior is changed."
     ],
     "runtime_limit": "Only static source/open-route evidence; actual tunnel travel, the 900-second campaign route, combat and save/load require integrator/Mario runtime verification."
@@ -2799,7 +2799,7 @@
         "Action\tspawn\t5\t37\t71\t1\tOrc:3\tTroll:2\tGhoul:2"
       ],
       "gale2": [
-        "Action\tmessage\t1\tA storm of rats and spiders is coming off the quay.",
+        "Action\tmessage\t1\tA storm of banshees and ghouls is coming off the quay.",
         "Action\tspawn\t5\t37\t71\t1\tGhoul:3\tGoblin:3\tOrc:3\tTroll:3"
       ],
       "gale3": [

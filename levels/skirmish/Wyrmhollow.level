@@ -9606,7 +9606,7 @@ Action	gold	1	500
 Name	ash
 Mode	once
 Cond	region	1	Ashfall
-Action	message	1	An ash hall with a lake of lava. Lava spawn and demons keep to its shores.
+Action	message	1	An ash hall with a lake of lava. Butchers and demons keep to its shores.
 [/Trigger]
 [Trigger]
 Name	outpost
