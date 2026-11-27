@@ -42,8 +42,8 @@ probe = r'''
 #include <Ogre.h>
 #include "gamemap/RoomObjectBounds.h"
 #include <iostream>
-#include <set>
 #include <sstream>
+#include <set>
 Ogre::Vector3 getBedSupportPoint(BED_SUPPORT
 Ogre::Bone* findBone(Ogre::Skeleton* skeleton,std::initializer_list<const char*> names){
  for(const auto* name:names)if(skeleton->hasBone(name))return skeleton->getBone(name);
@@ -58,10 +58,11 @@ bool profile=false;
 const std::string boneProfile="BONE_PROFILE";
 std::map<unsigned short,Ogre::AxisAlignedBox> boneBounds,lowBoneBounds;
 // The carried weapon parts that the walking row leaves out (decision of the plan: the Defender keeps its walking radius
-// of 0.37 with the glaive, as the worker kept its rows; the same for Ziv's pick and the orc's shield, 2026-11-27): the
-// meshes and the index of their first weapon submesh (the weapon parts are appended after the body, the probe loads no
-// material scripts, so the part is found by its index)
-const std::set<std::string> WALKING_RADIUS_CARRIED_MESHES={"Defender.mesh","Kobold.mesh","Orc.mesh"};
+// of 0.37 with the glaive, as the worker kept its rows; the long weapons follow it: the Minotaurus' double axe on
+// Kreatur keeps the radius of its body, and so do Ziv's pick and the orc's shield, 2026-11-27): the meshes and the index
+// of their first weapon submesh (the weapon parts are appended after the body, the probe loads no material scripts, so
+// the part is found by its index)
+const std::set<std::string> WALKING_RADIUS_CARRIED_MESHES={"Defender.mesh","Kobold.mesh","Kreatur.mesh","Orc.mesh"};
 const unsigned WALKING_RADIUS_CARRIED_FIRST_SUB=1;
 // Largest XY distance of the skinned vertices of the current pose (body only); also fills the pose bounds and, over
 // every part, the height bands
@@ -70,9 +71,10 @@ float radius(Ogre::Entity* entity){
  float result=0;poseBounds.setNull();
  for(unsigned sub=0;sub<entity->getNumSubEntities();++sub){
   auto* part=entity->getSubEntity(sub);
-  // A carried weapon part (the Defender's glaive, Ziv's pick, the orc's shield) is not body: it stays out of the
-  // walking row, the body bands see it
-  const bool carried=WALKING_RADIUS_CARRIED_MESHES.count(entity->getMesh()->getName())>0&&sub>=WALKING_RADIUS_CARRIED_FIRST_SUB;
+  // A carried weapon part (the Defender's glaive, the Minotaurus' double axe, Ziv's pick, the orc's shield) is not body:
+  // it stays out of the walking row, the body bands see it
+  const bool carried=WALKING_RADIUS_CARRIED_MESHES.count(entity->getMesh()->getName())!=0&&
+   sub>=WALKING_RADIUS_CARRIED_FIRST_SUB;
   auto* data=part->getSubMesh()->useSharedVertices?entity->_getSkelAnimVertexData():part->_getSkelAnimVertexData();
   auto* position=data->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
   auto buffer=data->vertexBufferBinding->getBuffer(position->getSource());
