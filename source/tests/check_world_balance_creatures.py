@@ -60,7 +60,6 @@ LEVEL_CLASSES = (
     ("levels/campaign/Bonus1.level", "DragonBoss", "153.8", "0", "0", "0.6029", "2.1890"),
     ("levels/skirmish/TestSingleplayerSmall.level", "DragonBoss", "153.8", "0", "0", "0.6029", "2.1890"),
     ("levels/multiplayer/GreedOrMight.level", "BossDragon", "107.6", "0", "0", "0.6029", "2.1890"),
-    ("levels/multiplayer/RuinsOfTheConfluent.level", "VeteranScarab", "153.8", "300", "48", "0.9075", "3.5447"),
 )
 
 # Six damage columns (min/max pairs) of the Melee and MissileLaunch lines of the level-file classes before the
@@ -71,11 +70,10 @@ LEVEL_OLD_RANGES = {
     ("levels/skirmish/TestSingleplayerSmall.level", "DragonBoss"): (
         ("MissileLaunch", "3.42 5.13 3.42 5.13 2.05 3.08"), ("Melee", "16.68 25.01 0 0 0 0")),
     ("levels/multiplayer/GreedOrMight.level", "BossDragon"): (("Melee", "19.14 28.7 9.57 14.35 0 0"),),
-    ("levels/multiplayer/RuinsOfTheConfluent.level", "VeteranScarab"): (("Melee", "0 0 22.3 33.44 0 0"),),
 }
 
 # Level-file classes: MinHP before the change (the new value is MinHP x 1.5 rounded half up to 1 decimal).
-LEVEL_OLD_MINHP = {"DragonBoss": "102.5", "BossDragon": "71.75", "VeteranScarab": "102.5"}
+LEVEL_OLD_MINHP = {"DragonBoss": "102.5", "BossDragon": "71.75"}
 
 # Weapon parry values after the change: own ParryBase -> ParryMax (ParryBase = min(max, old base + 15 x old step)).
 PARRY_AFTER = {"10.5": "15", "5.25": "7.5"}

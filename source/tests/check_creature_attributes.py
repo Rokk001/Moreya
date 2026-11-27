@@ -249,8 +249,8 @@ STAT_KEYS = ('Strength', 'Dexterity', 'Life', 'Mana', 'StrengthPerLevel', 'Dexte
              'ManaPerPoint')
 CHAMPION_CRIT_BONUS = 15.0
 # Level-file creature classes use the values of the type whose mesh they use
-# (the VeteranScarab of the levels follows its successor, the Priestess, when the levels change to the new roster)
-LEVEL_FILE_CLASSES = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Priestess'}
+# (the VeteranScarab of RuinsOfTheConfluent was removed; its four creatures are plain Priestesses, Mario 2026-11-27)
+LEVEL_FILE_CLASSES = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon'}
 HEART_HP = 15100.0
 HEART_HEAL_PER_SECOND = 3.775
 LEGACY_HEART_HEALTH_SCALE = 10000.0

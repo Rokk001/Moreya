@@ -60,9 +60,10 @@ for name in types:
     assert png_size('materials/textures/Pile_' + name + '.png') == (PILE_TEXTURE_SIZE, PILE_TEXTURE_SIZE), name + ' texture size'
     assert re.search(r'^material Pile_' + name + r'\b', materials, re.M), 'material Pile_' + name + ' missing'
 # Level-specific classes keep their explicitly declared species mesh, including its unchanged pile geometry.
-pile_aliases = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Scarab'}
+# (the VeteranScarab class and its pile alias were removed with the roster change, Mario 2026-11-27)
+pile_aliases = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon'}
 expected_piles = {'Pile_' + name + '.mesh' for name in types} | {'Pile_' + name + '.mesh' for name in pile_aliases}
-assert {path.name for path in (root / 'models').glob('Pile_*.mesh')} == expected_piles, 'exactly 35 species piles and three declared-species aliases'
+assert {path.name for path in (root / 'models').glob('Pile_*.mesh')} == expected_piles, 'exactly 35 species piles and two declared-species aliases'
 for alias, original in pile_aliases.items():
     original_bytes = (root / 'models' / ('Pile_' + original + '.mesh')).read_bytes()
     assert (root / 'models' / ('Pile_' + alias + '.mesh')).read_bytes() == original_bytes, alias + ' changes the original geometry'

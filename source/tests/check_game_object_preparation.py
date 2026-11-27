@@ -41,7 +41,9 @@ def mesh_exists(name):
     not present counts as there (only the list and the code are checked then)."""
     relative = 'models/' + name
     return room_packages.asset(ROOT, relative) is not None or room_packages.is_missing_packaged(ROOT, relative)
-LISTED = 223
+# Meshes listed in config/preparedobjects.cfg, counted once on the branch: 223 - 1 after Pile_VeteranScarab.mesh was
+# removed with the VeteranScarab class (Mario 2026-11-27).
+LISTED = 222
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
