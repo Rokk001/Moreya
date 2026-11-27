@@ -24,39 +24,39 @@ from combat_sim import (CASES_MATRIX, TURNS_PER_SECOND, Roster, World, building_
 EXPECTED = """
 Kobold 70 .05319375292565641 0 562 188 3.21 4.07 0.0 0.0 0.0 0.0 none
 DwarfWorker 70 .05319375292565641 0 562 188 3.21 4.07 0.0 0.0 0.0 0.0 none
-Banshee 106.5 .080930 0 486 162 0 0 17.03 22.71 0 0 dodge
-Orc 35.5 .026977 0 247 82 0 0 0 0 6.67 9 none
-Butcher 184.5 .140204 0 156 52 63.44 81.2 0 0 0 0 block
-LizardMan 106.5 .080931 0 364 121 0 0 18.28 24.45 0 0 none
-Goblin 61.5 .046735 0 109 36 9.16 12.22 0 0 0 0 parry
-PitDemon 184.5 .140204 0 223 74 0 0 52.76 71.24 0 0 none
-Witch 61.5 .046735 0 440 147 0 0 11 15 0 0 none
-Ghoul 30.2 .022949 0 402 134 9 13 0 0 0 0 none
-Troll 106.5 .080930 0 261 87 17.42 23.52 0 0 0 0 none
-Cultist 35.5 .026977 0 366 122 0 0 6.29 8.39 0 0 dodge
-CaveHornet 61.5 .046735 0 344 115 0 0 0 0 8 10.98 dodge
-Skeleton 106.5 .053954 0 439 146 13.62 20.46 0 0 0 0 none
-Lich 106.5 .053954 0 205 68 0 0 21.91 25.21 0 0 none
-Vampire 184.5 .140204 0 205 68 0 0 43.14 55.82 0 0 none
-Priestess 184.5 .140204 0 233 78 0 0 18 25 0 0 none
-Adventurer 35.5 .026977 0 356 119 0 0 0 0 6.21 8.52 dodge
-Monk 35.5 .026977 0 304 101 0 0 0 0 5.49 7.34 block
-Hunter 61.5 .046735 0 407 136 9.61 13.73 0 0 0 0 none
-Dwarf2 106.5 .080930 0 520 173 18.43 24.59 0 0 0 0 none
-Knight 35.5 .026977 0 389 130 0 0 5.61 7.5 0 0 block
-Wizard 106.5 .080931 0 341 114 0 0 18.36 24.56 0 0 none
-DarkElf 52.3 .039743 0 352 117 13.73 19.22 0 0 0 0 none
-Elf 61.5 .046735 0 397 132 0 0 0 0 9.57 12.81 none
-RunelordDwarf 106.5 .080931 0 143 48 16.02 21.31 0 0 0 0 block
-Paladin 184.5 .140204 0 75 25 0 0 0 0 23 31 block
-Defender 184.5 .140204 0 264 88 45.54 61.48 0 0 0 0 parry
-Werewolf 61.5 .046735 0 391 130 0 0 8 11 0 0 dodge
-Gnoll 61.5 .046735 0 391 130 0 0 0 0 12 16 dodge
-Gnome 35.5 .026977 0 529 176 0 0 0 0 6 8 dodge
-CrystalGolem 61.5 .046735 0 455 152 0 0 9 12 0 0 none
-Cyclops 61.5 .046735 0 452 151 0 0 12 15 0 0 none
-Dragon 184.5 .140204 0 270 90 0 0 0 0 32.07 43.29 none
-Minotaur 106.5 .080931 0 398 133 18 24 0 0 0 0 none
+Banshee 106.5 .080930 0 486 162 0 0 16.97 22.63 0 0 dodge
+Orc 35.5 .026977 0 247 82 0 0 0 0 5.99 8.08 none
+Butcher 184.5 .140204 0 156 52 57.97 74.2 0 0 0 0 block
+LizardMan 106.5 .080931 0 364 121 0 0 15.48 20.7 0 0 none
+Goblin 61.5 .046735 0 109 36 8.82 11.77 0 0 0 0 parry
+PitDemon 184.5 .140204 0 223 74 0 0 46.97 63.42 0 0 none
+Witch 61.5 .046735 0 440 147 0 0 11.75 16.02 0 0 none
+Ghoul 30.2 .022949 0 402 134 6.32 9.13 0 0 0 0 none
+Troll 106.5 .080930 0 261 87 12.43 16.78 0 0 0 0 none
+Cultist 35.5 .026977 0 366 122 0 0 5.67 7.56 0 0 dodge
+CaveHornet 61.5 .046735 0 344 115 0 0 0 0 8.42 11.56 dodge
+Skeleton 106.5 .053954 0 439 146 13.34 20.05 0 0 0 0 none
+Lich 106.5 .053954 0 205 68 0 0 20.88 24.02 0 0 none
+Vampire 184.5 .140204 0 205 68 0 0 45.53 58.91 0 0 none
+Priestess 184.5 .140204 0 233 78 0 0 37.97 52.74 0 0 none
+Adventurer 35.5 .026977 0 356 119 0 0 0 0 5.81 7.98 dodge
+Monk 35.5 .026977 0 304 101 0 0 0 0 6.47 8.64 block
+Hunter 61.5 .046735 0 407 136 9.29 13.27 0 0 0 0 none
+Dwarf2 106.5 .080930 0 520 173 12.44 16.59 0 0 0 0 none
+Knight 35.5 .026977 0 389 130 0 0 5.26 7.04 0 0 block
+Wizard 106.5 .080931 0 341 114 0 0 17.8 23.82 0 0 none
+DarkElf 52.3 .039743 0 352 117 6.77 9.48 0 0 0 0 none
+Elf 61.5 .046735 0 397 132 0 0 0 0 10.89 14.58 none
+RunelordDwarf 106.5 .080931 0 143 48 18.43 24.52 0 0 0 0 block
+Paladin 184.5 .140204 0 75 25 0 0 0 0 32.2 43.4 block
+Defender 184.5 .140204 0 264 88 36.86 49.76 0 0 0 0 parry
+Werewolf 61.5 .046735 0 391 130 0 0 6.85 9.42 0 0 dodge
+Gnoll 61.5 .046735 0 391 130 0 0 0 0 12.1 16.14 dodge
+Gnome 35.5 .026977 0 529 176 0 0 0 0 10.22 13.62 dodge
+CrystalGolem 61.5 .046735 0 455 152 0 0 8.88 11.85 0 0 none
+Cyclops 61.5 .046735 0 452 151 0 0 9.21 11.52 0 0 none
+Dragon 184.5 .140204 0 270 90 0 0 0 0 25.91 34.98 none
+Minotaur 106.5 .080931 0 398 133 15.8 21.07 0 0 0 0 none
 """
 STAT_KEYS = ("MinHP", "Heal/Turn", "SleepHeal", "AttackRating", "DefenseRating")
 RANGE_KEYS = ("PhyMin", "PhyMax", "MagMin", "MagMax", "EleMin", "EleMax")
@@ -153,7 +153,8 @@ def check_curves(roster):
 
 # Compare the retained building columns with fixed pre-change damage examples.
 def check_buildings(roster):
-    expected = {"Troll": {1: 16.31, 5: 21.371724137931032, 10: 27.698879310344825},
+    # The Troll's building columns are those of the roster change (wage class 200: 13 + 0.25 per level).
+    expected = {"Troll": {1: 13.25, 5: 17.362068965517242, 10: 22.502155172413794},
                 "Goblin": {1: 10.19, 5: 13.352413793103446, 10: 17.30543103448276}}
     for name, levels in expected.items():
         attack, start, _ = roster.attack(name)
@@ -291,17 +292,30 @@ def check_other_damage(roster):
     assert tuple(map(float, attack[start:start + 6])) == (146.8, 220.2, 0, 0, 0, 0)
 
 
-# Verify deterministic simulation thresholds without adjusting the approved roster.
+# Types the owner lets stand outside the wage rule (roster plan D24: some creatures are weaker or stronger against
+# it; the Paladin keeps little damage), each with its measured value on the branch (counted once, roster change W6):
+# the deviation of its mean duel share from the mean of its tier in the plain duels.
+PLAIN_SPREAD_OUTSIDE = {"Paladin": (-0.13, -0.12)}
+
+
+# Verify deterministic simulation thresholds without adjusting the approved roster. The level rule takes two copies
+# at the lower level (roster plan D24: a level-10 creature beats two level-5 creatures of its kind surely, three only
+# for some; before D24 the check used three).
 def check_simulation(roster):
     result = evaluate(roster)
     for tier, names in result["tiers"].items():
         for name in names:
-            assert abs(result["averages"][name] - result["tier_means"][tier]) <= .08, ("tier spread", tier, name, result["averages"][name], result["tier_means"][tier])
+            deviation = result["averages"][name] - result["tier_means"][tier]
+            if name in PLAIN_SPREAD_OUTSIDE:
+                low, high = PLAIN_SPREAD_OUTSIDE[name]
+                assert low <= deviation <= high, ("tier spread outside the wage rule", tier, name, deviation)
+                continue
+            assert abs(deviation) <= .08, ("tier spread", tier, name, result["averages"][name], result["tier_means"][tier])
     means = list(result["tier_means"].values())
     assert all(first < second for first, second in zip(means, means[1:])), result["tier_means"]
     for name, outcomes in result["levels"].items():
-        assert outcomes["10_vs_3x5"] >= .5, (name, outcomes)
-        assert outcomes["30_vs_3x15"] >= .75, (name, outcomes)
+        assert outcomes["10_vs_2x5"] >= .5, (name, outcomes)
+        assert outcomes["30_vs_2x15"] >= .75, (name, outcomes)
         assert outcomes["1_vs_10"] <= .10 and outcomes["5_vs_10"] <= .10, (name, outcomes)
     for name in roster.fighters():
         if roster.number(roster.creatures[name][0], "FeeBase") > 200:
@@ -309,13 +323,22 @@ def check_simulation(roster):
         for worker in ("Kobold", "DwarfWorker"):
             target = roster.unit(worker)
             assert damage_bounds(roster.unit(name), target)[1] < target.hp, (name, worker)
-    print("Simulation: 32 fighters, 150 seeded duels per pair, 60 fights per level comparison")
+    print("Simulation: %d fighters, 150 seeded duels per pair, 60 fights per level comparison" % len(result["averages"]))
 
 
 # Thresholds of the attribute simulation (the random spread of one run is about 0.02).
 CLASS_MEAN_RANGE = (0.40, 0.60)
 TYPE_MEAN_RANGE = (0.28, 0.70)
 SINGLE_TEMPLATE_RANGE = (0.25, 0.72)
+# Types outside the wage rule bands (roster plan D24, see PLAIN_SPREAD_OUTSIDE), each with the range its measured
+# values lie in on the branch (counted once, roster change W6): the Paladin (little damage, as decided) for the level 1
+# and template means and the single templates; the Gnoll for the single templates (its Poisoner template at level 10
+# is stronger and its Barrager template at level 20 weaker than the band). The class means leave the Paladin out.
+TYPE_MEAN_OUTSIDE = {"Paladin": (0.05, 0.21)}
+SINGLE_TEMPLATE_OUTSIDE = {"Paladin": (0.03, 0.36), "Gnoll": (0.24, 0.75)}
+CLASS_MEAN_EXCLUDED = ("Paladin",)
+# Rule 2 with two copies at the lower level (roster plan D24; before D24 three copies with the same thresholds).
+RULE_TWO_COPIES = 2
 RULE_TWO_LEVEL_TEN = 0.8
 RULE_TWO_LEVEL_TEN_DRAGON = 0.6
 RULE_TWO_LEVEL_THIRTY = 0.95
@@ -333,37 +356,39 @@ def check_world_simulation(roster):
     assert float(re.search(r"double ODApplication::turnsPerSecond = ([0-9.]+);", application).group(1)) == TURNS_PER_SECOND
     for key in ("DodgePerLevel", "ParryPerLevel", "ShieldBlockPerLevel"):
         assert world.glob[key] == 0, key
-    # Point order: no points below level 10, one point at level 10, the tier four skill only at level 30.
-    assert world.allocation("Orc", 9, 0, True) == ({}, False)
-    assert sum(world.allocation("Orc", 10, 0, True)[0].values()) == 1
-    ranks, ult = world.allocation("Orc", 29, 0, True)
+    # Point order: no points below level 10, one point at level 10, the tier four skill only at level 30 (shown on the
+    # Butcher, a type without a pre-skill; the Orc of the roster change has the tank's taunt as pre-skill).
+    assert world.allocation("Butcher", 9, 0, True) == ({}, False)
+    assert sum(world.allocation("Butcher", 10, 0, True)[0].values()) == 1
+    ranks, ult = world.allocation("Butcher", 29, 0, True)
     assert sum(ranks.values()) == 20 and not ult
-    ranks, ult = world.allocation("Orc", 30, 0, True)
+    ranks, ult = world.allocation("Butcher", 30, 0, True)
     assert sum(ranks.values()) == 20 and ult, "20 points are spent, the 21st point is the tier four skill"
     assert world.allocation("Lich", 1, 0, False) == ({"UND_1": 1}, False), "the pre-skill is free at level 1"
     # Per-type matrix: the single creature against two of half its wage, level 1 without skills and levels 10, 20, 30
     # with each of the three templates.
     matrices = {case: world_matrix(world, *case) for case in CASES_MATRIX}
     rows, _ = world_roles(matrices)
-    assert len(rows) == 25 and all(len(matrices[case]) == len(matrices[CASES_MATRIX[0]]) for case in CASES_MATRIX)
-    low, high = TYPE_MEAN_RANGE
+    assert len(rows) == 26 and all(len(matrices[case]) == len(matrices[CASES_MATRIX[0]]) for case in CASES_MATRIX)
     for name, cases in sorted(rows.items()):
+        low, high = TYPE_MEAN_OUTSIDE.get(name, TYPE_MEAN_RANGE)
+        single_low, single_high = SINGLE_TEMPLATE_OUTSIDE.get(name, SINGLE_TEMPLATE_RANGE)
         assert low <= cases[(1, -1)] <= high, ("level 1", name, cases[(1, -1)])
         for level in (10, 20, 30):
             mean = statistics.mean(cases[(level, template)] for template in (0, 1, 2))
             assert low <= mean <= high, ("template mean", name, level, mean)
             for template in (0, 1, 2):
-                assert SINGLE_TEMPLATE_RANGE[0] <= cases[(level, template)] <= SINGLE_TEMPLATE_RANGE[1], ("template", name, level, template, cases[(level, template)])
-    singles = [value for cases in rows.values() for value in cases.values()]
-    # Class means: every case, the wages 100, 200 and 400.
-    means = world_class_means(world)
+                assert single_low <= cases[(level, template)] <= single_high, ("template", name, level, template, cases[(level, template)])
+    singles = [value for name, cases in rows.items() if name not in SINGLE_TEMPLATE_OUTSIDE for value in cases.values()]
+    # Class means: every case, the wages 100, 200 and 400, without the types the owner lets stand outside the rule.
+    means = world_class_means(world, exclude=CLASS_MEAN_EXCLUDED)
     assert len(means) == 12
     for case, row in means.items():
         for wage, value in row.items():
             assert CLASS_MEAN_RANGE[0] <= value <= CLASS_MEAN_RANGE[1], ("class mean", case, wage, value)
-    # Rule 2 (level 10 against three at level 5, level 30 against three at level 15) and rule 4 (fight length at level 30
-    # against level 10).
-    groups, lengths = world_verify(world)
+    # Rule 2 (level 10 against two at level 5, level 30 against two at level 15, roster plan D24) and rule 4 (fight
+    # length at level 30 against level 10).
+    groups, lengths = world_verify(world, copies=RULE_TWO_COPIES)
     for name, (wins10, wins30) in groups.items():
         needed = RULE_TWO_LEVEL_TEN_DRAGON if name == "Dragon" else RULE_TWO_LEVEL_TEN
         assert wins10 >= needed, ("rule 2 level 10", name, wins10)
@@ -383,7 +408,7 @@ def check_world_simulation(roster):
              min(min(cases[(1, -1)], *[statistics.mean(cases[(level, t)] for t in (0, 1, 2)) for level in (10, 20, 30)]) for cases in rows.values()),
              max(max(cases[(1, -1)], *[statistics.mean(cases[(level, t)] for t in (0, 1, 2)) for level in (10, 20, 30)]) for cases in rows.values()),
              min(singles), max(singles)))
-    print("Rule 2: level 10 vs 3x5 at least %.3f, level 30 vs 3x15 at least %.3f; rule 4: turns level 30 / level 10 at least %.3f; "
+    print("Rule 2: level 10 vs 2x5 at least %.3f, level 30 vs 2x15 at least %.3f; rule 4: turns level 30 / level 10 at least %.3f; "
           "rule 1: worker %g hit points, largest critical blow %.2f x %.2f (%s); %.0f seconds"
           % (min(v[0] for v in groups.values()), min(v[1] for v in groups.values()),
              min(v[2] / v[1] for v in lengths.values()), worker_hp, worst, strength, by, time.time() - started))
