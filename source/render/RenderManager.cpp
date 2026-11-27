@@ -180,17 +180,29 @@ const Ogre::Real CREATURE_TURN_INTERRUPT_TOLERANCE = 0.02f;
 const Ogre::Real CHICKEN_FEATHER_EFFECT_DURATION = 2.6f;
 //! Height above the corpse position at which its fly swarm hovers
 const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
-//! Mesh of the twig broom a worker holds in its right hand while it sweeps (Clean clip, INGAME-QS-10 K26). Its grip
-//! for the right hand is the origin, the handle runs along +z to the twigs, like every hand tool on the weapon mount
+//! Mesh of the twig broom a worker holds in its right hand while it sweeps (Clean clip, INGAME-QS-10 K26). The handle
+//! runs along +z from its end, the lowest point of the mesh, to the twigs
 const std::string CLEANING_BROOM_MESH = "CleaningBroom.mesh";
 //! Prefix of the name of the broom entity of a worker
 const std::string CLEANING_BROOM_PREFIX = "CleaningBroom_";
-//! The broom (1 mesh unit long) is this share of the height of the worker's mesh, with its grip moved this share of the
-//! height towards the twigs. The twig tips stay where the Clean clips of the worker skeletons were authored for (0.88 x
-//! height, on the floor); the handle ends just above the upper hand instead of running into the chin of the worker.
-//! Checked by source/tests/check_cleaning_broom_k26.py
+//! The broom follows both hands of the worker in every frame (placeCleaningBroom), like a stick held at its end: the
+//! upper hand holds the end of the handle, which stays below the chin, the lower hand holds it further down and the
+//! twigs rest on the floor in front. The width of the broom is this share of the height of the worker's mesh, its length
+//! is stretched to reach the floor. All values below are shares of that height; checked by
+//! source/tests/check_cleaning_broom_k26.py
 const Ogre::Real CLEANING_BROOM_HEIGHT_SHARE = 0.75f;
-const Ogre::Real CLEANING_BROOM_GRIP_SHIFT = 0.115f;
+//! The handle runs this far in front of the middle of both palms, in the hollow of the hands
+const Ogre::Real CLEANING_BROOM_FORWARD = 0.01f;
+//! The handle ends this far below the middle of the upper palm (measured along the handle)
+const Ogre::Real CLEANING_BROOM_END_DROP = 0.022f;
+//! The far end of the twigs stays at least this far in front of the middle of the body, clear of the feet
+const Ogre::Real CLEANING_BROOM_MIN_REACH = 0.35f;
+//! Height over the floor of the far end of the twig bundle's middle line
+const Ogre::Real CLEANING_BROOM_TIP_HEIGHT = 0.037f;
+//! With the upper hand less than this above the lower one (blending in or out of the clip) the broom is not shown
+const Ogre::Real CLEANING_BROOM_MIN_HAND_STEP = 0.08f;
+//! Suffix of the name of the scene node that carries the broom
+const std::string CLEANING_BROOM_NODE_SUFFIX = "_node";
 //! Prefix of the name of the prop a figure holds while one clip plays, and of the scene node of a standing prop
 const std::string CLIP_PROP_PREFIX = "ClipProp_";
 const std::string CLIP_PROP_NODE_SUFFIX = "_node";
@@ -3162,6 +3174,7 @@ const Ogre::Vector3& RenderManager::getMenuEntityScale(Ogre::SceneNode* node)
 //! \brief Advances the hand in real time and world poses in unpaused game time.
 void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
 {
+    updateCleaningBrooms();
     for(const std::pair<Creature* const, std::vector<Ogre::MaterialPtr>>& corpse : mCreatureDecayMaterials)
     {
         Ogre::AnimationState* state = corpse.first->getAnimationState();
@@ -5131,6 +5144,7 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
     cancelCreatureSeatBlend(curCreature);
     mReactionClips.erase(curCreature->getName());
     removeClipProp(creatureName);
+    removeCreatureCleaningBroom(curCreature);
 
     // We keep the current animation if the new mesh has it
     std::string animName = EntityAnimation::idle_anim;
@@ -9151,20 +9165,23 @@ void RenderManager::removeCreatureCleaningBroom(Creature* creature)
     Ogre::Entity* broomEntity = mSceneManager->getEntity(broomName);
     broomEntity->detachFromParent();
     mSceneManager->destroyEntity(broomEntity);
+    if(mSceneManager->hasSceneNode(broomName + CLEANING_BROOM_NODE_SUFFIX))
+        mSceneManager->destroySceneNode(broomName + CLEANING_BROOM_NODE_SUFFIX);
+    mBroomHolders.erase(creature->getOgreNamePrefix() + creature->getName() + "|" + creature->getName());
 }
 
-//! \brief Puts the cleaning broom into the right hand of a worker while it plays the sweeping clip
-//! (EntityAnimation::holdsBroom) and its own tool away: the pickaxe a worker without a weapon carries
-//! (rrCreateWorkerTool) is hidden here, the weapon models by CreatureCombatReactions::showWeaponsForClip, and the
-//! kobold's pick, part of its model, by its Clean clip (Pick bone scaled to nothing). Any other clip takes the broom
-//! away and shows the pickaxe again. The broom sits on the weapon mount of the right hand, sized to the worker's mesh
-//! (CLEANING_BROOM_HEIGHT_SHARE); a rig bone does not scale it, the creature's level growth does (INGAME-QS-10 K26).
+//! \brief Puts the cleaning broom into the hands of a worker while it plays the sweeping clip
+//! (EntityAnimation::holdsBroom) or the idle sweep of a reaction, and its own tool away: the pickaxe a worker without a
+//! weapon carries (rrCreateWorkerTool) is hidden here, the weapon models by CreatureCombatReactions::showWeaponsForClip,
+//! and the kobold's pick, part of its model, by its Clean clip (Pick bone scaled to nothing). Any other clip takes the
+//! broom away and shows the pickaxe again. The broom hangs on a node of the creature that updateCleaningBrooms moves
+//! with both hands; the creature's level growth scales it (INGAME-QS-10 K26).
 void RenderManager::updateCreatureCleaningBroom(Creature* creature)
 {
     const Ogre::AnimationState* animState = creature->getAnimationState();
     const std::map<std::string, std::string>::const_iterator reaction = mReactionClips.find(creature->getName());
     const bool sweeping = ((animState != nullptr) && EntityAnimation::holdsBroom(animState->getAnimationName())) ||
-        ((reaction != mReactionClips.end()) && EntityAnimation::holdsBroom(reaction->second));
+        ((reaction != mReactionClips.end()) && (reaction->second == EntityAnimation::sweep_idle_anim));
     const std::string toolName = WORKER_TOOL_PREFIX + creature->getName();
     if(mSceneManager->hasEntity(toolName))
         mSceneManager->getEntity(toolName)->setVisible(!sweeping);
@@ -9182,30 +9199,81 @@ void RenderManager::updateCreatureCleaningBroom(Creature* creature)
 
     Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
     Ogre::Skeleton* skeleton = objectEntity->getSkeleton();
-    if((skeleton == nullptr) || !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(CLEANING_BROOM_MESH))
+    if((skeleton == nullptr) || (objectEntity->getParentSceneNode() == nullptr) ||
+       !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(CLEANING_BROOM_MESH))
         return;
 
-    WeaponMount mount;
-    if(!getWeaponMount(skeleton, "R", CLEANING_BROOM_MESH, mount))
+    if(!skeleton->hasBone("RightHand") || !skeleton->hasBone("LeftHand") || !skeleton->hasBone("Weapon_R") ||
+       !skeleton->hasBone("Weapon_L"))
     {
-        OD_LOG_WRN("No hand bone for the cleaning broom of creature=" + creature->getName() + ", skeleton=" + skeleton->getName());
+        OD_LOG_WRN("No hand bones for the cleaning broom of creature=" + creature->getName() + ", skeleton=" + skeleton->getName());
         return;
     }
 
     Ogre::Entity* broomEntity = mSceneManager->createEntity(broomName, CLEANING_BROOM_MESH);
     broomEntity->setQueryFlags(0);
-    const Ogre::Real scale = CLEANING_BROOM_HEIGHT_SHARE * objectEntity->getMesh()->getBounds().getSize().z;
-    const Ogre::Real shift = CLEANING_BROOM_GRIP_SHIFT * objectEntity->getMesh()->getBounds().getSize().z;
-    const Ogre::Vector3 offset = mount.mOffset + mount.mRotation * Ogre::Vector3(0.0f, 0.0f, shift);
-    Ogre::TagPoint* grip = objectEntity->attachObjectToBone(mount.mBoneName, broomEntity, mount.mRotation, offset);
-    grip->setInheritScale(false);
-    grip->setScale(scale, scale, scale);
+    Ogre::SceneNode* node = objectEntity->getParentSceneNode()->createChildSceneNode(broomName + CLEANING_BROOM_NODE_SUFFIX);
+    node->attachObject(broomEntity);
+    mBroomHolders.insert(objectName + "|" + creature->getName());
+    placeCleaningBroom(objectName, creature->getName());
+}
+
+//! The palm of a hand is the place of its weapon bone in the bind pose, carried by the hand bone: the weapon bone itself
+//! is animated by the clips. The bones hold the pose of the last rendered frame.
+void RenderManager::placeCleaningBroom(const std::string& objectName, const std::string& creatureName)
+{
+    const std::string broomName = CLEANING_BROOM_PREFIX + creatureName;
+    if(!mSceneManager->hasEntity(objectName) || !mSceneManager->hasEntity(broomName))
+        return;
+
+    Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
+    Ogre::Entity* broomEntity = mSceneManager->getEntity(broomName);
+    Ogre::SceneNode* node = broomEntity->getParentSceneNode();
+    Ogre::Skeleton* skeleton = objectEntity->getSkeleton();
+    if((node == nullptr) || (skeleton == nullptr))
+        return;
+
+    const Ogre::Bone* rightHand = skeleton->getBone("RightHand");
+    const Ogre::Bone* leftHand = skeleton->getBone("LeftHand");
+    const Ogre::Real height = objectEntity->getMesh()->getBounds().getSize().z;
+    // Model space: the creature looks along -y
+    Ogre::Vector3 end = rightHand->_getDerivedPosition() +
+        rightHand->_getDerivedOrientation() * skeleton->getBone("Weapon_R")->getInitialPosition();
+    Ogre::Vector3 aim = leftHand->_getDerivedPosition() +
+        leftHand->_getDerivedOrientation() * skeleton->getBone("Weapon_L")->getInitialPosition();
+    end.y -= CLEANING_BROOM_FORWARD * height;
+    aim.y -= CLEANING_BROOM_FORWARD * height;
+    const Ogre::Real handStep = end.z - aim.z;
+    broomEntity->setVisible(handStep > CLEANING_BROOM_MIN_HAND_STEP * height);
+    if(handStep <= CLEANING_BROOM_MIN_HAND_STEP * height)
+        return;
+
+    Ogre::Vector3 tip = end + (aim - end) * ((end.z - CLEANING_BROOM_TIP_HEIGHT * height) / handStep);
+    tip.y = std::min(tip.y, -CLEANING_BROOM_MIN_REACH * height);
+    end += (tip - end).normalisedCopy() * (CLEANING_BROOM_END_DROP * height);
+    const Ogre::Vector3 axis = (tip - end).normalisedCopy();
+    const Ogre::AxisAlignedBox& bounds = broomEntity->getMesh()->getBounds();
+    const Ogre::Real stretch = (tip - end).length() / bounds.getSize().z;
+    const Ogre::Real width = CLEANING_BROOM_HEIGHT_SHARE * objectEntity->getMesh()->getBounds().getSize().z;
+    // The handle of the mesh runs along +z from its end (the lowest point of the mesh) to the twigs
+    node->setPosition(end - axis * (bounds.getMinimum().z * stretch));
+    node->setOrientation(alignMeshAxes(axis, Ogre::Vector3::UNIT_X));
+    node->setScale(width, width, stretch);
+}
+
+void RenderManager::updateCleaningBrooms()
+{
+    for(std::set<std::string>::const_iterator it = mBroomHolders.begin(); it != mBroomHolders.end(); ++it)
+    {
+        const std::string::size_type split = it->find('|');
+        placeCleaningBroom(it->substr(0, split), it->substr(split + 1));
+    }
 }
 
 void RenderManager::rrSetReactionClip(Creature* creature, const std::string& clip)
 {
     // Other reaction clips need no prop: they only end the prop of a clip shown before them
-    const bool hasProp = EntityAnimation::holdsBroom(clip) || (clip == EntityAnimation::lean_anim) ||
+    const bool hasProp = (clip == EntityAnimation::sweep_idle_anim) || (clip == EntityAnimation::lean_anim) ||
         (clip == EntityAnimation::sharpen_anim);
     if(hasProp)
         mReactionClips[creature->getName()] = clip;
@@ -9227,7 +9295,7 @@ bool RenderManager::rrReactionHoldsProp(const Creature* creature) const
     if(it == mReactionClips.end())
         return false;
 
-    return EntityAnimation::holdsBroom(it->second) ||
+    return (it->second == EntityAnimation::sweep_idle_anim) ||
         mSceneManager->hasEntity(CLIP_PROP_PREFIX + creature->getOgreNamePrefix() + creature->getName());
 }
 

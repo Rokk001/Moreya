@@ -1100,9 +1100,6 @@ bool CreatureReactions::startClip(RunningReaction& reaction, Creature* creature,
     {
         // Tier C
         clip = variant.mClip;
-        // The idle sweep is shown with the cleaning clip: the same movement, with the broom lying in both hands
-        if((clip == EntityAnimation::sweep_idle_anim) && skeleton->hasAnimation(EntityAnimation::clean_anim))
-            clip = EntityAnimation::clean_anim;
         speed = variant.mClipSpeed;
     }
     else

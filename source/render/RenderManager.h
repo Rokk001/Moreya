@@ -1213,6 +1213,13 @@ private:
     //! other clip takes the broom away and gives the tool back (INGAME-QS-10 K26)
     void updateCreatureCleaningBroom(Creature* creature);
 
+    //! \brief Moves the broom of one sweeping worker with its two hands.
+    void placeCleaningBroom(const std::string& objectName, const std::string& creatureName);
+    //! \brief Moves every cleaning broom with the hands that hold it; once per frame.
+    void updateCleaningBrooms();
+    //! The sweeping workers, as entity name and creature name joined by '|'
+    std::set<std::string> mBroomHolders;
+
     //! \brief Gives the figure with that entity name the prop of the clip (Lean, Sharpen, HerbSniff) and takes any
     //! other clip prop away.
     void updateClipProp(const std::string& objectName, const std::string& clip);

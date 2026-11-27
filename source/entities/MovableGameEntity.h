@@ -140,8 +140,7 @@ namespace EntityAnimation
         return clip == clean_anim;
     }
     //! Idle moments of a worker (cosmetic reaction clips, source/render/CreatureReactions.cpp): it sweeps the floor,
-    //! leans on its pick or whets a blade, each with that prop in its hands. Sweep is shown with the Clean clip, the
-    //! same movement with the weapon bone aimed so that the broom lies in both hands
+    //! leans on its pick or whets a blade, each with that prop in its hands
     static const std::string sweep_idle_anim = "Sweep";
     static const std::string lean_anim = "Lean";
     static const std::string sharpen_anim = "Sharpen";
