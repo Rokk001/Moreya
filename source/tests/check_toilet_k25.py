@@ -1,6 +1,7 @@
 """Toilet room after INGAME-QS-10 K25: textured stone seats with a hole and a wooden lid, solid seats in rows along the
 walls with a free lane, a use of 10 to 30 s on the seat in the RelievePit clip (standing over the hole with half bent
-knees; a skeleton without it plays Relieve) while the floor squat stays Relieve, and the urge values of the toilet plan.
+knees; a skeleton without it plays Relieve), the same RelievePit motion on the floor without a toilet with the Relieved
+reaction there, and the urge values of the toilet plan.
 
 Calls (from the repository root; set OGRE_XML_CONVERTER to the full path of OgreXMLConverter.exe):
   python source/tests/check_toilet_k25.py               file checks and the compiled probes of the layout rules and of
@@ -186,8 +187,17 @@ assert 'room->getSeatStagingPoints(creature, tile).empty()' in body(room, 'Tile*
 use = read('source/creatureaction/CreatureActionUseToilet.cpp')
 squat = body(use, 'void CreatureActionUseToilet::startSquat(bool onSeat, const Ogre::Vector2& facing)')
 for needle in ('"ToiletUseSecondsMin"', '"ToiletUseSecondsMax"', 'Random::Double(0.0, 1.0)', 'ToiletLayout::useTurns(',
-               'ODApplication::turnsPerSecond', 'EntityAnimation::relieve_anim', 'EntityAnimation::relieve_pit_anim'):
+               'ODApplication::turnsPerSecond', 'EntityAnimation::relieve_pit_anim'):
     assert needle in squat, needle
+assert 'EntityAnimation::relieve_anim' not in squat, 'the floor plays the bent over RelievePit, the squat is dropped'
+# The Relieved reaction on the floor follows the RelievePit clip (noteRelief itself skips a toilet tile)
+reactions = read('source/render/CreatureReactions.cpp')
+assert ('    else if((clip == EntityAnimation::relieve_pit_anim) || (clip == EntityAnimation::relieve_anim))\n'
+        '    {\n'
+        '        // The bent over clip on the floor (RelievePit), or the former squat of an older server\n'
+        '        noteRelief(creature);\n') in reactions
+relief = body(reactions, 'void CreatureReactions::noteRelief(Creature* creature)')
+assert 'checkCoveringRoomType(RoomType::toilet)' in relief and 'queueReaction(creature, "Relieved"' in relief
 seat_turn = body(use, 'bool CreatureActionUseToilet::handleSeat(')
 assert 'startSquat(true, facing);' in seat_turn and 'mPhase = Phase::leave;' in seat_turn and 'mStagingPoint' in seat_turn
 assert 'path.push_back(place);' in body(use, 'bool CreatureActionUseToilet::walkOntoSeat(RoomToilet& room)')
@@ -307,8 +317,8 @@ int main()
 }
 '''
 
-# 7. The probe of the seat clip, compiled from the production text: startSquat picks RelievePit on a seat and Relieve on
-# the floor, toiletSeatLift lifts both clips onto the seat and no other, and the clip fallback of the renderer turns a
+# 7. The probe of the seat clip, compiled from the production text: startSquat picks RelievePit on a seat and on the
+# floor, toiletSeatLift lifts both clips onto the seat and no other, and the clip fallback of the renderer turns a
 # missing RelievePit into Relieve and a missing Relieve into Idle
 animation_block = animation_h[animation_h.index('namespace EntityAnimation\n{'):]
 animation_block = animation_block[:animation_block.index('\n};') + 4]
@@ -402,7 +412,7 @@ FALLBACK_LOOP
 }
 int main()
 {
-    // startSquat: on a seat RelievePit (also as the clip of the stopped walk), on the floor Relieve
+    // startSquat: RelievePit on a seat and on the floor (also as the clip of the stopped walk)
     Creature seated; seated.mMoving = true;
     CreatureActionUseToilet onSeat(seated);
     onSeat.startSquat(true, Ogre::Vector2(0.0f, 1.0f));
@@ -412,7 +422,7 @@ int main()
     Creature floor; floor.mMoving = true;
     CreatureActionUseToilet onFloor(floor);
     onFloor.startSquat(false, Ogre::Vector2(1.0f, 0.0f));
-    expect(floor.mClip == "Relieve" && floor.mClearClip == "Relieve", "the floor plays Relieve");
+    expect(floor.mClip == "RelievePit" && floor.mClearClip == "RelievePit", "the floor plays the bent over RelievePit");
     expect(onFloor.mTurnsLeft == 6 && floor.mSounds == 1, "the floor squat keeps ToiletUseTurns and its sound");
 
     // toiletSeatLift: the seat top for RelievePit and Relieve on the seat; nothing for another clip, off the seat,
@@ -443,7 +453,7 @@ int main()
     expect(shownClip(all, "RelievePit") == "RelievePit", "a skeleton with RelievePit plays it");
     expect(shownClip(squatOnly, "RelievePit") == "Relieve", "a skeleton without RelievePit plays Relieve");
     expect(shownClip(idleOnly, "RelievePit") == "Idle", "a skeleton without both plays Idle");
-    expect(shownClip(all, "Relieve") == "Relieve" && shownClip(idleOnly, "Relieve") == "Idle", "the floor squat as before");
+    expect(shownClip(all, "Relieve") == "Relieve" && shownClip(idleOnly, "Relieve") == "Idle", "the former squat as before");
     std::printf("PIT CHECKS FAILURES=%d\n", failures);
     return failures == 0 ? 0 : 1;
 }
