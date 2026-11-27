@@ -30,9 +30,9 @@ UNARMED = ('Rat', 'Spider', 'Roach', 'CaveHornet', 'Slime', 'Scarab', 'TentacleA
 TYPES = {
     'sword': (('RustySword', 'BasicSword', 'ShortSword', 'Sabre', 'T2SwordGood'), 1),
     'dagger': (('Knife', 'RitualDagger'), 1),
-    'axe': (('BasicAxe', 'BasicAxeOrc'), 2),
+    'axe': (('BasicAxe', 'BasicAxeOrc', 'MinotaurAxe'), 2),
     'staff': (('Staff', 'StaffLich'), 2), 'bow': (('Bow',), 2), 'crossbow': (('Crossbow',), 2),
-    'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club',), 1), 'spear': (('Trident',), 2),
+    'tool': (('KoboldPick', 'Pickaxe'), 1), 'club': (('Club', 'CyclopsClub'), 1), 'spear': (('Trident',), 2),
     'wand': (('Wand',), 1),
 }
 EXPECTED_TYPES = {name: (kind, hands) for kind, (names, hands) in TYPES.items() for name in names}
@@ -144,7 +144,8 @@ def check_equipment(equipment):
             assert float(equipment[name][field]) == 0, (name, field)
     # The copies differ from their originals only in Name, MeshName and the name the player reads (DisplayName,
     # plan INGAME-QS-11 K6), which every equipment has
-    for name, original in (('BasicAxeOrc', 'BasicAxe'), ('BasicHammerDwarf2', 'BasicHammer'), ('StaffLich', 'Staff')):
+    for name, original in (('BasicAxeOrc', 'BasicAxe'), ('BasicHammerDwarf2', 'BasicHammer'), ('StaffLich', 'Staff'),
+                           ('MinotaurAxe', 'BasicAxe'), ('CyclopsClub', 'Club')):
         expected = dict(equipment[original], Name=name, MeshName=name + '.mesh')
         expected.pop('DisplayName', None)
         copy = dict(equipment[name])
