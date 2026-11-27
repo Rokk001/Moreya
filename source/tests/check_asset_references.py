@@ -556,9 +556,9 @@ def missing_references(root, refs, assets):
 
 
 def loose_gold_size(root, ref):
-    """True for a classic gold stack name (GoldstackLv1..4) while LooseGoldMesh still maps it to the shipped heap mesh
-    of that size: the name is only a size there is no mesh file of. A name outside the sizes, or a LooseGoldMesh that no
-    longer maps the prefix to the heap meshes, stays missing (the heap meshes are checked by check_gold_elsewhere)."""
+    """True for a classic gold stack name (GoldstackLv1..4) while LooseGoldMesh still builds the heap of that size at
+    run time: the name is only a size there is no mesh file of. A name outside the sizes, or a LooseGoldMesh that no
+    longer maps the prefix to a built mesh, stays missing."""
     match = re.fullmatch(r'GoldstackLv(\d+)\.mesh', ref.name) if ref.kind == 'mesh' else None
     loose = root / 'source/render/LooseGoldMesh.cpp'
     header = root / 'source/render/LooseGoldMesh.h'
@@ -566,8 +566,7 @@ def loose_gold_size(root, ref):
         return False
     text = read(loose)
     sizes = re.search(r'sizeCount\s*=\s*(\d+)', read(header))
-    return ('StackPrefix = "GoldstackLv"' in text and 'HeapPrefix = "GoldHeap_"' in text
-            and 'return HeapPrefix + static_cast<char>' in text and sizes is not None
+    return ('StackPrefix = "GoldstackLv"' in text and 'convertToMesh(resourceName' in text and sizes is not None
             and 1 <= int(match[1]) <= int(sizes[1]))
 
 

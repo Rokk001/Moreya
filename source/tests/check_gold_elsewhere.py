@@ -14,8 +14,6 @@ import content_packages  # noqa: E402
 import room_packages  # noqa: E402
 
 #: The content files of the sack (core-models package)
-HEAP_FILES = ('materials/scripts/GoldHeap.material', 'materials/textures/GoldHeapMeshy.png') + tuple(
-    'models/GoldHeap_%d.mesh' % size for size in range(1, 5))
 SACK_FILES = ('materials/scripts/GoldSack.material', 'materials/textures/GoldSackMeshy.png') + tuple(
     'models/GoldSack_%d.mesh' % size for size in range(1, 5))
 
@@ -51,11 +49,7 @@ assert 'carriedEnt->setVisible(true)' in render
 assert 'sizeCount = 4' in header
 assert 'GoldstackLv' in loose
 assert 'GoldstackLv1' in read('source/entities/TreasuryObject.cpp')
-# Assets: material, texture, the four heap and pouch meshes, credits, build.
-if content_packages.has_content(repo):
-    for name in HEAP_FILES:
-        assert content_packages.data_file(repo, name) is not None, name
-    assert all(name in room_packages.credits_text(repo) for name in HEAP_FILES[1:])
+# Assets: material, texture, the four pouch meshes, credits, build.
 missing_content = [name for name in SACK_FILES if content_packages.data_file(repo, name) is None]
 if not missing_content:
     assert 'material GoldSack' in content_packages.read_text(repo, 'materials/scripts/GoldSack.material')

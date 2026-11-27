@@ -17,6 +17,8 @@
 
 #include "render/TreasuryGoldMesh.h"
 
+#include "render/GoldHeapLayout.h"
+
 #include "rooms/TreasuryGoldLayer.h"
 
 #include <OgreColourValue.h>
@@ -43,7 +45,6 @@ const std::string ReducedSuffix = "_r";
 const float TextureRepeat = 2.0f;
 // Corners of a coin lying on top (a round fan) and of a coin spilled at the edge
 const int CoinSides = 12;
-const int SpillSides = 8;
 // Corners of the girdle of a cut gem
 const int GemSides = 5;
 // A coin: the middle rises by CoinDome, the rim is darker (CoinRimShade) and its normal leans outward (CoinRound)
@@ -51,15 +52,26 @@ const float CoinDome = 0.008f;
 const float CoinRimShade = 0.7f;
 const float CoinRound = 0.7f;
 // Size of the coins and gems lying on the gold, in tile units (radius, gem size)
-const float TopCoinRadius = 0.06f;
 const float ScatterCoinRadius = 0.05f;
-const float SpillCoinRadius = 0.047f;
 const float GemSize = 0.04f;
 // The surface of a pile is a round fan: the middle, rings of PileSectors points out to the foot of the heap, and
 // The rings only reach as far as the heap, leaving the floor visible beyond its irregular edge.
 const int PileSectors = 16;
 const int FullRings = 2;
 const int ReducedRings = 1;
+// The coins of the heap (our gold heap model): solid discs of HeapCoinSides corners textured from the coin in the
+// middle of the pile texture (CoinFace is its radius there, as a share of the texture)
+const int HeapCoinSides = 8;
+const float HeapCoinRadius = 0.075f;
+const float HeapCoinThickness = 0.3f;
+const float CoinFace = 0.128f;
+// Coins of a round heap of the first, second and third size, and of a lone full one
+const int RoundCoins1 = 14;
+const int RoundCoins2 = 28;
+const int RoundCoins3 = 42;
+const int RoundCoins4 = 48;
+// A square pile carries SquareCoinCells x SquareCoinCells coins over its whole tile
+const int SquareCoinCells = 7;
 // The first ring of the full fan lies at about a third of the foot radius (the heap is steepest there)
 const float RingSpread = 0.65f;
 
@@ -142,6 +154,30 @@ void buildRoundSurface(const TreasuryGoldLayer::PileShape& shape, int rings, con
 {
     surface.mPoint.clear();
     surface.mIndex.clear();
+    if(TreasuryGoldLayer::isSquare(shape))
+    {
+        // A grid over the whole tile: 4 cells for the reduced mesh, 6 for the full one, 12 for a dented one
+        const int cells = std::max(4, std::min(rings * 3, 12));
+        for(int row = 0; row <= cells; ++row)
+        {
+            for(int column = 0; column <= cells; ++column)
+            {
+                const float u = static_cast<float>(column) / static_cast<float>(cells);
+                const float v = static_cast<float>(row) / static_cast<float>(cells);
+                surface.mPoint.push_back(Ogre::Vector3(u, v, dentedHeight(shape, u, v, dent)));
+            }
+        }
+        for(int row = 0; row < cells; ++row)
+        {
+            for(int column = 0; column < cells; ++column)
+            {
+                const int a = row * (cells + 1) + column;
+                const int quad[6] = {a, a + 1, a + cells + 2, a, a + cells + 2, a + cells + 1};
+                surface.mIndex.insert(surface.mIndex.end(), quad, quad + 6);
+            }
+        }
+        return;
+    }
     surface.mPoint.push_back(Ogre::Vector3(0.5f, 0.5f, dentedHeight(shape, 0.5f, 0.5f, dent)));
     for(int ring = 1; ring <= rings; ++ring)
     {
@@ -325,31 +361,60 @@ Ogre::ColourValue gemColour(int variant, int index)
     }
 }
 
-//! Whether the shape carries any coins or gems (the detail section is left out when it does not)
+//! Whether the shape carries anything in the detail section: gems, or the scattered coins of an empty tile
 bool hasDetail(const TreasuryGoldLayer::PileShape& shape)
 {
-    if(shape.mLevel == 0)
-        return true;
-    return TreasuryGoldLayer::topCoinCount(shape) > 0 || TreasuryGoldLayer::gemCount(shape) > 0
-        || TreasuryGoldLayer::spillCoinsPerEdge(shape) > 0;
+    return shape.mLevel == 0 || TreasuryGoldLayer::gemCount(shape) > 0;
 }
 
-//! Single coins on top of the heap, scattered gems, coins spilled at the open edges; for a tile without
-//! gold only a few coins on the bare floor
-void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, const Dent* dent = nullptr,
-    const RoundSurface* surface = nullptr)
+//! A coin of the heap lying on the pile at (u, v), lifted above the surface and leaning as its model coin does
+void addPileCoin(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, const Dent* dent,
+    const RoundSurface& surface, float u, float v, float lift, float leanX, float leanY, float radius, float turn)
 {
-    const int seed = shape.mVariant * 17 + shape.mLevel;
-    if(shape.mLevel == 0)
+    Ogre::Vector3 up = pileNormal(shape, u, v, dent) + Ogre::Vector3(leanX, leanY, 0.0f) * 0.6f;
+    up.normalise();
+    Ogre::Vector3 centre = detailPoint(shape, u, v, dent, &surface);
+    centre.z += lift;
+    addHeapCoin(object, centre.x, centre.y, centre.z, up.x, up.y, up.z, radius, turn);
+}
+
+//! The coins of a pile: over the whole tile for a square pile, else the coins of the model spread over the round
+//! heap; on top of them the single coins of fuller piles and the coins spilled at the open edges of a full one
+void addPileCoins(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, const Dent* dent,
+    const RoundSurface& surface)
+{
+    const int seed = shape.mVariant * 17 + TreasuryGoldLayer::drawnLevel(shape.mLevel);
+    if(TreasuryGoldLayer::isSquare(shape))
     {
-        for(int i = 0; i < TreasuryGoldLayer::scatterCoins; ++i)
+        const float cell = 1.0f / static_cast<float>(SquareCoinCells);
+        for(int i = 0; i < SquareCoinCells * SquareCoinCells; ++i)
         {
-            const float u = 0.15f + 0.7f * TreasuryGoldLayer::hash01(seed, 31 * i + 1);
-            const float v = 0.15f + 0.7f * TreasuryGoldLayer::hash01(seed, 31 * i + 2);
-            addCoin(object, Ogre::Vector3(u - 0.5f, v - 0.5f, 0.008f), Ogre::Vector3::UNIT_Z, ScatterCoinRadius, CoinSides,
-                goldColour(u, v));
+            const float u = cell * (static_cast<float>(i % SquareCoinCells) + 0.2f
+                + 0.6f * TreasuryGoldLayer::hash01(seed, 13 * i + 1));
+            const float v = cell * (static_cast<float>(i / SquareCoinCells) + 0.2f
+                + 0.6f * TreasuryGoldLayer::hash01(seed, 13 * i + 2));
+            const GoldHeapLayout::Coin& coin = GoldHeapLayout::coins[(i + shape.mVariant) % GoldHeapLayout::coinCount];
+            addPileCoin(object, shape, dent, surface, u, v, 0.006f + 0.022f * TreasuryGoldLayer::hash01(seed, 13 * i + 3),
+                coin.mLeanX, coin.mLeanY, HeapCoinRadius * 1.08f, 6.2831853f * TreasuryGoldLayer::hash01(seed, 13 * i + 4));
         }
-        return;
+    }
+    else
+    {
+        const int level = TreasuryGoldLayer::drawnLevel(shape.mLevel);
+        const int count = level <= 2 ? RoundCoins1 : (level <= 4 ? RoundCoins2 : (level <= 6 ? RoundCoins3 : RoundCoins4));
+        const float turned = 1.5707963f * static_cast<float>(shape.mVariant);
+        for(int i = 0; i < count; ++i)
+        {
+            const GoldHeapLayout::Coin& coin = GoldHeapLayout::coins[i];
+            const float x = coin.mX * std::cos(turned) - coin.mY * std::sin(turned);
+            const float y = coin.mX * std::sin(turned) + coin.mY * std::cos(turned);
+            const float reach = TreasuryGoldLayer::pileRadiusAt(shape, 0.5f + x, 0.5f + y) - 0.6f * HeapCoinRadius;
+            addPileCoin(object, shape, dent, surface, 0.5f + x * reach, 0.5f + y * reach,
+                0.006f + 0.018f * TreasuryGoldLayer::hash01(seed, 5 * i + 6),
+                coin.mLeanX * std::cos(turned) - coin.mLeanY * std::sin(turned),
+                coin.mLeanX * std::sin(turned) + coin.mLeanY * std::cos(turned), HeapCoinRadius,
+                6.2831853f * TreasuryGoldLayer::hash01(seed, 5 * i + 7));
+        }
     }
 
     for(int i = 0; i < TreasuryGoldLayer::topCoinCount(shape); ++i)
@@ -358,28 +423,9 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
         const float reach = 0.85f * 0.92f * TreasuryGoldLayer::pileRadius(shape.mLevel)
             * std::sqrt(TreasuryGoldLayer::hash01(seed, 7 * i + 3));
         const float turn = 6.2831853f * TreasuryGoldLayer::hash01(seed, 7 * i + 4);
-        const float u = 0.5f + reach * std::cos(turn);
-        const float v = 0.5f + reach * std::sin(turn);
-        Ogre::Vector3 up = pileNormal(shape, u, v, dent);
-        // Each coin leans a little differently
         const float lean = 6.2831853f * TreasuryGoldLayer::hash01(seed, 7 * i + 5);
-        up += Ogre::Vector3(std::cos(lean), std::sin(lean), 0.0f) * 0.35f;
-        up.normalise();
-        Ogre::Vector3 centre = detailPoint(shape, u, v, dent, surface);
-        centre.z += 0.014f;
-        addCoin(object, centre, up, TopCoinRadius, CoinSides, goldColour(u, v));
-    }
-
-    for(int i = 0; i < TreasuryGoldLayer::gemCount(shape); ++i)
-    {
-        const float reach = 0.6f * 0.92f * TreasuryGoldLayer::pileRadius(shape.mLevel)
-            * std::sqrt(TreasuryGoldLayer::hash01(seed, 11 * i + 8));
-        const float turn = 6.2831853f * TreasuryGoldLayer::hash01(seed, 11 * i + 9);
-        const float u = 0.5f + reach * std::cos(turn);
-        const float v = 0.5f + reach * std::sin(turn);
-        Ogre::Vector3 centre = detailPoint(shape, u, v, dent, surface);
-        centre.z += 0.02f;
-        addGem(object, centre, GemSize, gemColour(shape.mVariant, i));
+        addPileCoin(object, shape, dent, surface, 0.5f + reach * std::cos(turn), 0.5f + reach * std::sin(turn), 0.034f,
+            0.5f * std::cos(lean), 0.5f * std::sin(lean), HeapCoinRadius, lean);
     }
 
     // Overflow: coins that rolled down to the foot of the pile at the open edges
@@ -403,15 +449,45 @@ void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& s
                 v = 1.0f - across;
             else
                 u = 1.0f - across;
-            Ogre::Vector3 centre = detailPoint(shape, u, v, dent, surface);
-            centre.z += 0.01f;
-            addCoin(object, centre, pileNormal(shape, u, v, dent), SpillCoinRadius, SpillSides, goldColour(u, v));
+            addPileCoin(object, shape, dent, surface, u, v, 0.01f, 0.0f, 0.0f, HeapCoinRadius * 0.8f,
+                6.2831853f * along);
         }
     }
 }
 
-//! Fills the sections of a pile: the round surface (none for a tile without gold, which only has scattered coins)
-//! and the coins and gems. With update the sections of a dynamic object are rewritten with the same layout.
+//! Gems scattered over the heap; for a tile without gold only a few coins on the bare floor
+void addDetail(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, const Dent* dent = nullptr,
+    const RoundSurface* surface = nullptr)
+{
+    const int seed = shape.mVariant * 17 + shape.mLevel;
+    if(shape.mLevel == 0)
+    {
+        for(int i = 0; i < TreasuryGoldLayer::scatterCoins; ++i)
+        {
+            const float u = 0.15f + 0.7f * TreasuryGoldLayer::hash01(seed, 31 * i + 1);
+            const float v = 0.15f + 0.7f * TreasuryGoldLayer::hash01(seed, 31 * i + 2);
+            addCoin(object, Ogre::Vector3(u - 0.5f, v - 0.5f, 0.008f), Ogre::Vector3::UNIT_Z, ScatterCoinRadius, CoinSides,
+                goldColour(u, v));
+        }
+        return;
+    }
+
+    for(int i = 0; i < TreasuryGoldLayer::gemCount(shape); ++i)
+    {
+        const float reach = 0.6f * 0.92f * TreasuryGoldLayer::pileRadius(shape.mLevel)
+            * std::sqrt(TreasuryGoldLayer::hash01(seed, 11 * i + 8));
+        const float turn = 6.2831853f * TreasuryGoldLayer::hash01(seed, 11 * i + 9);
+        const float u = 0.5f + reach * std::cos(turn);
+        const float v = 0.5f + reach * std::sin(turn);
+        Ogre::Vector3 centre = detailPoint(shape, u, v, dent, surface);
+        centre.z += 0.02f;
+        addGem(object, centre, GemSize, gemColour(shape.mVariant, i));
+    }
+}
+
+//! Fills the sections of a pile: the surface with (at withDetail) the coins of the heap on it (none for a tile
+//! without gold, which only has scattered coins), then the gems. With update the sections of a dynamic object are
+//! rewritten with the same layout.
 void fillPile(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& shape, int divisions, bool withDetail,
     const Dent* dent, bool update)
 {
@@ -436,6 +512,8 @@ void fillPile(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& sh
         }
         for(std::size_t i = 0; i < roundSurface.mIndex.size(); i += 3)
             object->triangle(roundSurface.mIndex[i], roundSurface.mIndex[i + 1], roundSurface.mIndex[i + 2]);
+        if(withDetail)
+            addPileCoins(object, shape, dent, roundSurface);
         object->end();
     }
 
@@ -464,6 +542,49 @@ void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resource
 
 // Rings of a pile drawn with a dent (the bowl needs extra surface points)
 const int DentDivisions = 12;
+}
+
+void addHeapCoin(Ogre::ManualObject* object, float x, float y, float z, float upX, float upY, float upZ,
+    float radius, float turn)
+{
+    const Ogre::Vector3 centre(x, y, z);
+    const Ogre::Vector3 up(upX, upY, upZ);
+    Ogre::Vector3 axisA = up.crossProduct(Ogre::Vector3::UNIT_Y);
+    if(axisA.squaredLength() < 0.0001f)
+        axisA = up.crossProduct(Ogre::Vector3::UNIT_X);
+    axisA.normalise();
+    const Ogre::Vector3 axisB = up.crossProduct(axisA);
+    const Ogre::Vector3 top = centre + up * (radius * HeapCoinThickness * 0.5f);
+    const Ogre::Vector3 bottom = centre - up * (radius * HeapCoinThickness * 0.5f);
+
+    const int base = static_cast<int>(object->getCurrentVertexCount());
+    // The face: middle and rim; then the edge: its upper and lower corners, textured from the rim of the face
+    object->position(top);
+    object->normal(up);
+    object->textureCoord(0.5f, 0.5f);
+    for(int ring = 0; ring < 3; ++ring)
+    {
+        for(int i = 0; i < HeapCoinSides; ++i)
+        {
+            const float angle = 6.2831853f * static_cast<float>(i) / static_cast<float>(HeapCoinSides);
+            const Ogre::Vector3 radial = axisA * std::cos(angle) + axisB * std::sin(angle);
+            const float face = ring == 2 ? CoinFace * 0.8f : CoinFace;
+            object->position((ring == 2 ? bottom : top) + radial * radius);
+            Ogre::Vector3 normal = ring == 0 ? up + radial * 0.35f : radial;
+            normal.normalise();
+            object->normal(normal);
+            object->textureCoord(0.5f + face * std::cos(angle + turn), 0.5f + face * std::sin(angle + turn));
+        }
+    }
+    for(int i = 0; i < HeapCoinSides; ++i)
+    {
+        const int next = (i + 1) % HeapCoinSides;
+        object->triangle(base, base + 1 + i, base + 1 + next);
+        const int upper = base + 1 + HeapCoinSides;
+        const int lower = base + 1 + 2 * HeapCoinSides;
+        object->triangle(upper + i, lower + i, lower + next);
+        object->triangle(upper + i, lower + next, upper + next);
+    }
 }
 
 //! \brief Reads the detail option text ("full", "reduced" or "off"); anything else means full.

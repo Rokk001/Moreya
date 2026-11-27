@@ -25,8 +25,8 @@ import content_packages  # noqa: E402
 HEADER, MESH, SUBMESH = 0x1000, 0x3000, 0x4000
 CHUNK = 6
 #: shipped content meshes of this branch (counted once; the 488 of the integration, which has the four coin pouches,
-#: plus four gold loads and four loose gold heaps)
-CONTENT_MESHES = 496
+#: plus four gold loads)
+CONTENT_MESHES = 492
 TILE_MESHES = 17
 #: materials the engine itself defines
 ENGINE_MATERIALS = {'BaseWhite', 'BaseWhiteNoLighting'}
