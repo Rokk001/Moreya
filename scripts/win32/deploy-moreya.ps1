@@ -6,7 +6,7 @@
 #            -SelectionFile <deployment selection manifest> [-IntegrationRef origin/main] [-Repo <main checkout>]
 #            [-Content <content repository>] [-CheckOnly]
 #   -ExeDir          Release build folder that holds moreya.exe, the DLLs, plugins.cfg and resources.cfg.
-#   -SelectionFile   required deployment selection manifest (Mossgate plus changed levels) whose tip is the deployed commit.
+#   -SelectionFile   required deployment selection manifest (Mossgate only) whose tip is the deployed commit.
 #   -IntegrationRef  <remote>/<branch> that must contain the deployed commit; default ODP_DEPLOY_INTEGRATION_REF (set by
 #                    odp_deployment.py), else origin/main.
 #   -Repo            main checkout whose build\windows is the fixed folder; default the main checkout of the shared Git
