@@ -58,8 +58,9 @@ for clip in (b"Loop", b"Droop"):
         problems.append("WarBanner.skeleton lacks the clip %s" % clip.decode())
 # The public CREDITS and, with the content, the CREDITS of the content repository (rows of moved files)
 credits = room_packages.credits_text(ROOT)
+# the rows lie in the CREDITS of the content repository: without the content they are named as not checked
 for needle in ("WarBanner.skeleton (clip Droop)", "banner_droop_clip.py"):
-    if needle not in credits:
+    if skeleton_file is not None and needle not in credits:
         problems.append("CREDITS has no entry for %s" % needle)
 
 config_file = content("config/roomAmbienceFixEffects.cfg")

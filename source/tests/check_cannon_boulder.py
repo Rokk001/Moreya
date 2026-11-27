@@ -152,7 +152,10 @@ if '"RoomAmbGrain": sprite_grain' not in read("tools", "gen_room_ambience_art.py
     problems.append("the generator does not draw RoomAmbGrain")
 
 # The cannon recoil clip: the mesh is linked to the skeleton, the skeleton has the clip, the cannon plays it
-if b"Cannon.skeleton" not in read("models", "Cannon.mesh", binary=True):
+cannon_mesh = read("models", "Cannon.mesh", binary=True)
+if cannon_mesh is None:
+    content_packages.unchecked("check_cannon_boulder", ["models/Cannon.mesh skeleton link"])
+elif b"Cannon.skeleton" not in cannon_mesh:
     problems.append("Cannon.mesh has no link to Cannon.skeleton")
 skeleton = read("models", "Cannon.skeleton", binary=True)
 if skeleton is None:

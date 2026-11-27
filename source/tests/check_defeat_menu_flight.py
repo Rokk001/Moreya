@@ -325,8 +325,9 @@ print('STYLE OK: no auto in the new code or in the fixture')
 # The layout of the content package is checked with the content
 for path in [Path(__file__), repo / 'source/render/MenuFlight.h', repo / 'source/renderscene/RenderSceneMenu.cpp', repo / 'source/renderscene/RenderSceneMenu.h',
              repo / 'source/render/ODFrameListener.cpp', repo / 'source/render/ODFrameListener.h', repo / 'source/modes/MenuModeMain.cpp',
-             repo / 'source/modes/MenuModeMain.h', repo / 'source/modes/GameMode.cpp', content_packages.resolve(repo, 'gui/ODIcons.imageset')] + (
-        [content_packages.resolve(repo, 'gui/WindowDefeatDebriefing.layout')] if HAS_CONTENT else []):
+             repo / 'source/modes/MenuModeMain.h', repo / 'source/modes/GameMode.cpp'] + (
+        [content_packages.resolve(repo, 'gui/ODIcons.imageset'),
+         content_packages.resolve(repo, 'gui/WindowDefeatDebriefing.layout')] if HAS_CONTENT else []):
     bad = [b for b in path.read_bytes() if b < 32 and b not in (9, 10, 13)]
     assert not bad, path
 print('BYTES OK: no stray control characters')

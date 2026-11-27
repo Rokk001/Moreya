@@ -106,7 +106,8 @@ if CROWN:
     material = read("materials/scripts/ChampionCrown.material")
     assert "material ChampionCrown" in material and "texture ChampionCrown.png" in material
     assert "scene_blend alpha_blend" in material
-assert "ChampionCrown" not in read("materials/scripts/CreatureOverlayStatus.material")
+if content_packages.data_file(ROOT, "materials/scripts/CreatureOverlayStatus.material") is not None:
+    assert "ChampionCrown" not in read("materials/scripts/CreatureOverlayStatus.material")
 if CROWN:
     imageset = read("gui/ChampionCrown.imageset")
     assert 'imagefile="ChampionCrownIcon.png" name="ChampionCrown"' in imageset

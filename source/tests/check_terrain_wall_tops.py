@@ -144,6 +144,9 @@ def wall_entries(tileset):
 
 def main():
     """Every wall tile ends flat at the wall height, on its borders and across its whole surface."""
+    if not walls.content_packages.has_content(walls.ROOT):
+        walls.content_packages.unchecked('check_terrain_wall_tops', ['config/tilesets.cfg wall rows and the wall tile meshes'])
+        return
     tileset = walls.content_packages.read_text(walls.ROOT, 'config/tilesets.cfg')
     entries = wall_entries(tileset)
     meshes = {}

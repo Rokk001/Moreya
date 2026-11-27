@@ -139,6 +139,9 @@ def covered(faces, t, z):
 
 def main():
     """Try every pair of tiles that can meet; every height difference on the shared border must be closed."""
+    if not content_packages.has_content(ROOT):
+        content_packages.unchecked('check_terrain_wall_gaps', ['config/tilesets.cfg wall rows and the wall tile meshes'])
+        return
     tileset = content_packages.read_text(ROOT, 'config/tilesets.cfg')
     entries = tile_entries(tileset)
     meshes = {name: triangles(content_packages.resolve(ROOT, 'models/' + name)) for _, name, _ in entries}

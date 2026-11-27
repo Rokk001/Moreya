@@ -16,7 +16,13 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
+import content_packages  # noqa: E402
 import room_packages  # noqa: E402  (the coop files come from the hatchery package when it is present)
+
+# The coop mesh and skeleton lie in the hatchery package: without the content they are named as not checked
+if room_packages.asset(ROOT, 'models/ChickenCoopHouse.mesh') is None and not content_packages.has_content(ROOT):
+    content_packages.unchecked('check_coop_depth', ['models/ChickenCoopHouse.mesh and .skeleton'])
+    sys.exit(0)
 
 OUT = ROOT / 'out' / 'coop-depth-check'
 OUT.mkdir(parents=True, exist_ok=True)

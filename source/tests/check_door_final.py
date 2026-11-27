@@ -66,7 +66,7 @@ else:
             problems.append("models/%s.skeleton is not in CREDITS" % name)
 if "tools/blender-assets/door_skeletons.py" not in credits:
     problems.append("door_skeletons.py is not in CREDITS")
-if b"Collapse" not in read("models", "WoodenDoor.skeleton", binary=True):
+if HAS_CONTENT and b"Collapse" not in read("models", "WoodenDoor.skeleton", binary=True):
     problems.append("WoodenDoor.skeleton lost its clips")
 
 # The look of the secret door: the server shows a wall to every seat that did not discover the door (the tile
