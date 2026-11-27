@@ -25,8 +25,9 @@ import content_packages  # noqa: E402
 HEADER, MESH, SUBMESH = 0x1000, 0x3000, 0x4000
 CHUNK = 6
 #: shipped content meshes of this branch (counted once; 478, the trap crate of the workshop, the five clip props, the four
-#: coin pouches and the four gold loads; 531 counted with the roster hero meshes and the hero weapons)
-CONTENT_MESHES = 531
+#: coin pouches and the four gold loads; 495 found on main, 503 with the four meshes each of the own items MinotaurAxe and
+#: CyclopsClub, 539 with the four meshes each of the nine hero weapon items)
+CONTENT_MESHES = 539
 TILE_MESHES = 17
 #: materials the engine itself defines
 ENGINE_MATERIALS = {'BaseWhite', 'BaseWhiteNoLighting'}

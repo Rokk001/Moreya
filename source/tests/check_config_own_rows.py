@@ -42,7 +42,7 @@ import content_packages  # noqa: E402
 #: split off
 OWN_ROW_TABLES = {
     'config/creatures.cfg': 603,
-    'config/equipments.cfg': 154,
+    'config/equipments.cfg': 155,
     'config/global.cfg': 17,
     'config/mainmenuscene.cfg': 19,
     'config/rooms.cfg': 25,

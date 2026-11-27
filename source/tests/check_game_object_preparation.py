@@ -55,8 +55,9 @@ def mesh_exists(name):
 # 221 since the training hall has its own wall shields TrainingHallShield1 and 2 next to the WeaponShield meshes
 # of the arena (counted on the integration branch; was 219)
 # 222 since every finished trap of the workshop shows the TrapCrate mesh (counted on the branch; was 221); 227 with
-# the clip props jug, die, flask, rattle and bucket (counted on the integration branch)
-LISTED = 236
+# the clip props jug, die, flask, rattle and bucket (counted on the integration branch); 229 with the own items
+# MinotaurAxe and CyclopsClub of the neutral creatures, 238 with the nine hero weapon items (counted on the branch)
+LISTED = 238
 OBJECT_SOURCES = ('source/rooms/', 'source/entities/', 'source/traps/', 'source/spells/', 'source/render/',
                   'source/modes/', 'source/gamemap/', 'source/utils/')
 OBJECT_CONFIGS = ('config/roomAmbience', 'config/creatureSkills', 'config/equipments')
