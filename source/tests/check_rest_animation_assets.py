@@ -44,10 +44,13 @@ GROUND = 0.0
 #: the dwarf warrior's AmbientSit keeps its soles flat (sole lift 0.90 %) and the shin geometry then reaches 1.167 % of
 #: the height from the idle floor (coordinator decision 2026-11-27: the sole-flat variant, tolerance set to the measured
 #: value; 0.01 before).
-FLOOR_TOLERANCE = {'Dwarf2.skeleton': 0.0117}
+#: The dragon's AmbientSit and AmbientLie of the fix3 rig (approved by Mario 2026-11-27) set the body down onto the floor
+#: and reach 3.7 % of its height from the idle floor (measured once).
+FLOOR_TOLERANCE = {'Dwarf2.skeleton': 0.0117, 'Dragon.skeleton': 0.037}
 #: Sole lift bound of AmbientSit per skeleton where the approved pose lifts the soles: the dragon's keyframed sit of
-#: 2026-11-27 (approved by Mario) sits back on the haunches and tips the hind soles up by 12.5 % of its height.
-SOLE_TOLERANCE = {'Dragon.skeleton': 0.1253}
+#: 2026-11-27 (approved by Mario) sits back on the haunches and tips the hind soles up by 16.7 % of its height (fix3
+#: rig of 2026-11-27; 12.5 % on the rig before).
+SOLE_TOLERANCE = {'Dragon.skeleton': 0.1674}
 
 
 # Reject floating or penetrating geometry, allowing the same contact bound plus serializer precision.

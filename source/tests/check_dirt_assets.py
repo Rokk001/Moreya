@@ -214,7 +214,11 @@ for skeleton in sorted(set(skeletons.values())):
         # the row may stand in the CREDITS of the content repository
         content_packages.unchecked('check_dirt_assets', ['CREDITS row of the clip in models/' + skeleton])
         continue
-    assert re.search(r'^models/' + re.escape(skeleton) + r' \(clip', credits, re.M | re.I), 'CREDITS has no row for the clip in ' + skeleton
+    # The former rigs name the clip in a row of their own ("models/X.skeleton (clip Relieve)"); a figure of the Meshy
+    # rebuild names its relieve clip in the row of its skeleton
+    assert re.search(r'^models/' + re.escape(skeleton) + r' \(clip', credits, re.M | re.I) or \
+        re.search(r'^models/' + re.escape(skeleton) + r'\s.*\bRelieve(Pit)?\b', credits, re.M), \
+        'CREDITS has no row for the clip in ' + skeleton
 # The floor and wall pieces of the toilet room (toilet room package)
 for mask in range(16 if TOILET else 0):
     name = 'Toilet' + format(mask, '04b')

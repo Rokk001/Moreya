@@ -75,7 +75,9 @@ def clips(credits):
             credited('assets-src/creatures/ghosts/'+skeleton.removesuffix('.skeleton')+'.blend', credits)
         _, chunks = module.chunks(room_file('models/'+skeleton).read_bytes())
         animations = {name:data for kind,name,data in chunks if kind==module.ANIMATION}
-        expected = ('Scared',) if creature in scared else ('Beam','Throw','Empty')
+        # Empty is never played (decision 936: the hunter's put-in is the generated reach pose over Idle; see
+        # check_ghost_hunter_pose), so the hunters carry Beam and Throw
+        expected = ('Scared',) if creature in scared else ('Beam','Throw')
         for name in expected:
             assert name in animations, (creature,name)
             data = animations[name]
