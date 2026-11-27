@@ -98,7 +98,7 @@ enum class TavernSlapResult
     critical = 3
 };
 
-//! rief The result of an arm wrestling or dice game, drawn when its last turns begin: the winner then plays its winner
+//! \brief The result of an arm wrestling or dice game, drawn when its last turns begin: the winner then plays its winner
 //! clip and the loser its loser clip until the game ends.
 enum class TavernGameOutcome
 {
