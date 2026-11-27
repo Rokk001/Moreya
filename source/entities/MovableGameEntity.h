@@ -139,6 +139,14 @@ namespace EntityAnimation
     {
         return clip == clean_anim;
     }
+    //! Idle moments of a worker (cosmetic reaction clips, source/render/CreatureReactions.cpp): it sweeps the floor,
+    //! leans on its pick or whets a blade, each with that prop in its hands. Sweep is shown with the Clean clip, the
+    //! same movement with the weapon bone aimed so that the broom lies in both hands
+    static const std::string sweep_idle_anim = "Sweep";
+    static const std::string lean_anim = "Lean";
+    static const std::string sharpen_anim = "Sharpen";
+    //! The infirmary shaman smells at a bundle of herbs
+    static const std::string herb_sniff_anim = "HerbSniff";
     //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
     static const std::string scared_anim = "Scared";
     //! A hunter holds the capture nozzle forward; the client falls back to Attack when absent.

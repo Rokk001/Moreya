@@ -185,10 +185,74 @@ const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
 const std::string CLEANING_BROOM_MESH = "CleaningBroom.mesh";
 //! Prefix of the name of the broom entity of a worker
 const std::string CLEANING_BROOM_PREFIX = "CleaningBroom_";
-//! The broom (1 mesh unit long) is this share of the height of the worker's mesh, the length the Clean clips of the
-//! worker skeletons were authored for: the left hand reaches the handle 0.25 units above the right one and the twig
-//! tips (0.70 units below the right hand) touch the floor; checked by source/tests/check_cleaning_broom_k26.py
-const Ogre::Real CLEANING_BROOM_HEIGHT_SHARE = 0.88f;
+//! The broom (1 mesh unit long) is this share of the height of the worker's mesh, with its grip moved this share of the
+//! height towards the twigs. The twig tips stay where the Clean clips of the worker skeletons were authored for (0.88 x
+//! height, on the floor); the handle ends just above the upper hand instead of running into the chin of the worker.
+//! Checked by source/tests/check_cleaning_broom_k26.py
+const Ogre::Real CLEANING_BROOM_HEIGHT_SHARE = 0.75f;
+const Ogre::Real CLEANING_BROOM_GRIP_SHIFT = 0.115f;
+//! Prefix of the name of the prop a figure holds while one clip plays, and of the scene node of a standing prop
+const std::string CLIP_PROP_PREFIX = "ClipProp_";
+const std::string CLIP_PROP_NODE_SUFFIX = "_node";
+//! Lean: the pick stands on its head in front of the worker, the end of its handle under the resting hands. The end
+//! lies this share of the height below the weapon mounts and the pick this share of the height further forward
+const std::string LEAN_PICK_MESH = "DwarfPick.mesh";
+const Ogre::Real LEAN_PICK_TOP_DROP = 0.035f;
+const Ogre::Real LEAN_PICK_FORWARD = 0.045f;
+//! Sharpen: the left hand holds the short sword flat before the belly, the tip towards the stroking right hand
+const std::string SHARPEN_SWORD_MESH = "ShortSword.mesh";
+const Ogre::Real SHARPEN_SWORD_HEIGHT_SHARE = 0.42f;
+const Ogre::Vector3 SHARPEN_SWORD_DIRECTION(-1.0f, -0.3f, 0.12f);
+//! HerbSniff: the higher hand holds the bunch of herbs between its finger tips under the nose
+const std::string SNIFF_HERB_MESH = "HerbBundle.mesh";
+const Ogre::Real SNIFF_HERB_HEIGHT_SHARE = 0.10f;
+const Ogre::Real SNIFF_HERB_FINGER_REACH = 0.11f;
+const Ogre::Vector3 SNIFF_HERB_SHIFT(0.0f, -0.02f, -0.045f);
+const Ogre::Vector3 SNIFF_HERB_DIRECTION(0.0f, 0.45f, 1.0f);
+//! The herbs are held this share of their length above the lower end of the stems
+const Ogre::Real SNIFF_HERB_GRIP_SHARE = 0.12f;
+
+//! \brief Position and orientation of a bone in model space in the middle of a clip, read from the tracks of the clip
+//! without touching the pose of the entity. False when the skeleton has no such bone or clip.
+bool getMidClipBonePose(const Ogre::Skeleton& skeleton, const std::string& clip, const std::string& boneName,
+    Ogre::Vector3& position, Ogre::Quaternion& orientation)
+{
+    if(!skeleton.hasBone(boneName) || !skeleton.hasAnimation(clip))
+        return false;
+
+    const Ogre::Animation* animation = skeleton.getAnimation(clip);
+    const Ogre::Real time = 0.5f * animation->getLength();
+    std::vector<const Ogre::Bone*> chain;
+    for(const Ogre::Node* node = skeleton.getBone(boneName); node != nullptr; node = node->getParent())
+        chain.push_back(static_cast<const Ogre::Bone*>(node));
+
+    position = Ogre::Vector3::ZERO;
+    orientation = Ogre::Quaternion::IDENTITY;
+    for(std::vector<const Ogre::Bone*>::reverse_iterator it = chain.rbegin(); it != chain.rend(); ++it)
+    {
+        const Ogre::Bone* bone = *it;
+        Ogre::Vector3 localPosition = bone->getInitialPosition();
+        Ogre::Quaternion localOrientation = bone->getInitialOrientation();
+        if(animation->hasNodeTrack(bone->getHandle()))
+        {
+            Ogre::TransformKeyFrame key(nullptr, time);
+            animation->getNodeTrack(bone->getHandle())->getInterpolatedKeyFrame(Ogre::TimeIndex(time), &key);
+            localPosition += key.getTranslate();
+            localOrientation = localOrientation * key.getRotation();
+        }
+        position += orientation * localPosition;
+        orientation = orientation * localOrientation;
+    }
+    return true;
+}
+
+//! \brief Rotation that puts the z axis of a mesh on the direction and its x axis as near to the hint as possible.
+Ogre::Quaternion alignMeshAxes(const Ogre::Vector3& direction, const Ogre::Vector3& xHint)
+{
+    const Ogre::Vector3 zAxis = direction.normalisedCopy();
+    const Ogre::Vector3 xAxis = (xHint - zAxis * xHint.dotProduct(zAxis)).normalisedCopy();
+    return Ogre::Quaternion(xAxis, zAxis.crossProduct(xAxis), zAxis);
+}
 //! Mesh of the mug a guest of a tavern holds in its right hand while it drinks
 const std::string TAVERN_MUG_MESH = "TavernMug.mesh";
 //! Prefix of the name of the mug entity of a creature
@@ -4647,6 +4711,7 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
     if(mSceneManager->hasEntity(tempString))
     {
         Ogre::Entity* ent = mSceneManager->getEntity(tempString);
+        removeClipProp(tempString);
         if(mSceneManager->hasParticleSystem(tempString + "_CauldronFire"))
         {
             Ogre::ParticleSystem* fire = mSceneManager->getParticleSystem(tempString + "_CauldronFire");
@@ -5064,6 +5129,8 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
 
     // The clips of the old entity end with it
     cancelCreatureSeatBlend(curCreature);
+    mReactionClips.erase(curCreature->getName());
+    removeClipProp(creatureName);
 
     // We keep the current animation if the new mesh has it
     std::string animName = EntityAnimation::idle_anim;
@@ -5119,6 +5186,8 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
     mDragContactGrips.erase(curCreature);
     clearCreatureDecay(curCreature);
     removeCreatureTavernProps(curCreature);
+    mReactionClips.erase(curCreature->getName());
+    removeClipProp(curCreature->getOgreNamePrefix() + curCreature->getName());
     removeCreatureCleaningBroom(curCreature);
     cancelCreatureStep(curCreature);
     removeTreasuryThiefSack(curCreature);
@@ -5642,6 +5711,8 @@ void RenderManager::rrPickUpEntity(GameEntity* curEntity, Player* localPlayer)
     {
         clearCreatureDecay(static_cast<Creature*>(curEntity));
         removeCreatureTavernProps(static_cast<Creature*>(curEntity));
+        mReactionClips.erase(curEntity->getName());
+        removeClipProp(curEntity->getOgreNamePrefix() + curEntity->getName());
         removeCreatureCleaningBroom(static_cast<Creature*>(curEntity));
         cancelCreatureStep(static_cast<Creature*>(curEntity));
         cancelCreatureFeedingAnimation(static_cast<Creature*>(curEntity));
@@ -6299,6 +6370,11 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     if(freezeOnLastFrame)
         animState->setTimePosition(animState->getLength());
     curAnimatedObject->setAnimationState(animState);
+
+    // The infirmary shaman holds her herbs while she smells at them
+    if((anim == EntityAnimation::herb_sniff_anim) ||
+       ((previousState != nullptr) && (previousState->getAnimationName() == EntityAnimation::herb_sniff_anim)))
+        updateClipProp(objectName, anim);
 
     // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table. A drinking
     // guest neither: the mug sits on the same hand bone (decision 863)
@@ -9086,7 +9162,9 @@ void RenderManager::removeCreatureCleaningBroom(Creature* creature)
 void RenderManager::updateCreatureCleaningBroom(Creature* creature)
 {
     const Ogre::AnimationState* animState = creature->getAnimationState();
-    const bool sweeping = (animState != nullptr) && EntityAnimation::holdsBroom(animState->getAnimationName());
+    const std::map<std::string, std::string>::const_iterator reaction = mReactionClips.find(creature->getName());
+    const bool sweeping = ((animState != nullptr) && EntityAnimation::holdsBroom(animState->getAnimationName())) ||
+        ((reaction != mReactionClips.end()) && EntityAnimation::holdsBroom(reaction->second));
     const std::string toolName = WORKER_TOOL_PREFIX + creature->getName();
     if(mSceneManager->hasEntity(toolName))
         mSceneManager->getEntity(toolName)->setVisible(!sweeping);
@@ -9117,9 +9195,139 @@ void RenderManager::updateCreatureCleaningBroom(Creature* creature)
     Ogre::Entity* broomEntity = mSceneManager->createEntity(broomName, CLEANING_BROOM_MESH);
     broomEntity->setQueryFlags(0);
     const Ogre::Real scale = CLEANING_BROOM_HEIGHT_SHARE * objectEntity->getMesh()->getBounds().getSize().z;
-    Ogre::TagPoint* grip = objectEntity->attachObjectToBone(mount.mBoneName, broomEntity, mount.mRotation, mount.mOffset);
+    const Ogre::Real shift = CLEANING_BROOM_GRIP_SHIFT * objectEntity->getMesh()->getBounds().getSize().z;
+    const Ogre::Vector3 offset = mount.mOffset + mount.mRotation * Ogre::Vector3(0.0f, 0.0f, shift);
+    Ogre::TagPoint* grip = objectEntity->attachObjectToBone(mount.mBoneName, broomEntity, mount.mRotation, offset);
     grip->setInheritScale(false);
     grip->setScale(scale, scale, scale);
+}
+
+void RenderManager::rrSetReactionClip(Creature* creature, const std::string& clip)
+{
+    // Other reaction clips need no prop: they only end the prop of a clip shown before them
+    const bool hasProp = EntityAnimation::holdsBroom(clip) || (clip == EntityAnimation::lean_anim) ||
+        (clip == EntityAnimation::sharpen_anim);
+    if(hasProp)
+        mReactionClips[creature->getName()] = clip;
+    else if(mReactionClips.erase(creature->getName()) == 0)
+        return;
+
+    const std::string objectName = creature->getOgreNamePrefix() + creature->getName();
+    updateClipProp(objectName, hasProp ? clip : std::string());
+    updateCreatureCleaningBroom(creature);
+    const std::string toolName = WORKER_TOOL_PREFIX + creature->getName();
+    if(rrReactionHoldsProp(creature) && mSceneManager->hasEntity(toolName))
+        mSceneManager->getEntity(toolName)->setVisible(false);
+    CreatureCombatReactions::showWeaponsForClip(creature);
+}
+
+bool RenderManager::rrReactionHoldsProp(const Creature* creature) const
+{
+    const std::map<std::string, std::string>::const_iterator it = mReactionClips.find(creature->getName());
+    if(it == mReactionClips.end())
+        return false;
+
+    return EntityAnimation::holdsBroom(it->second) ||
+        mSceneManager->hasEntity(CLIP_PROP_PREFIX + creature->getOgreNamePrefix() + creature->getName());
+}
+
+void RenderManager::removeClipProp(const std::string& objectName)
+{
+    const std::string propName = CLIP_PROP_PREFIX + objectName;
+    if(!mSceneManager->hasEntity(propName))
+        return;
+
+    Ogre::Entity* propEntity = mSceneManager->getEntity(propName);
+    propEntity->detachFromParent();
+    mSceneManager->destroyEntity(propEntity);
+    if(mSceneManager->hasSceneNode(propName + CLIP_PROP_NODE_SUFFIX))
+        mSceneManager->destroySceneNode(propName + CLIP_PROP_NODE_SUFFIX);
+}
+
+//! Every prop is sized to the height of the mesh of its holder and placed from the pose in the middle of its clip. The
+//! sword and the herbs are fixed in the hand; the pick of Lean stands on the floor and does not swing with the arms.
+void RenderManager::updateClipProp(const std::string& objectName, const std::string& clip)
+{
+    removeClipProp(objectName);
+
+    std::string meshName;
+    if(clip == EntityAnimation::lean_anim)
+        meshName = LEAN_PICK_MESH;
+    else if(clip == EntityAnimation::sharpen_anim)
+        meshName = SHARPEN_SWORD_MESH;
+    else if(clip == EntityAnimation::herb_sniff_anim)
+        meshName = SNIFF_HERB_MESH;
+    else
+        return;
+
+    if(!mSceneManager->hasEntity(objectName) ||
+       !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(meshName))
+        return;
+
+    Ogre::Entity* holder = mSceneManager->getEntity(objectName);
+    Ogre::Skeleton* skeleton = holder->getSkeleton();
+    if((skeleton == nullptr) || (holder->getParentSceneNode() == nullptr))
+        return;
+
+    // Bones that carry the prop, with their pose in the middle of the clip
+    std::string boneName = "Weapon_L";
+    std::string otherName = "Weapon_R";
+    if(clip == EntityAnimation::herb_sniff_anim)
+    {
+        boneName = "LeftHand";
+        otherName = "RightHand";
+    }
+    Ogre::Vector3 bonePosition;
+    Ogre::Vector3 otherPosition;
+    Ogre::Quaternion boneOrientation;
+    Ogre::Quaternion otherOrientation;
+    if(!getMidClipBonePose(*skeleton, clip, boneName, bonePosition, boneOrientation) ||
+       !getMidClipBonePose(*skeleton, clip, otherName, otherPosition, otherOrientation))
+        return;
+
+    Ogre::Entity* propEntity = mSceneManager->createEntity(CLIP_PROP_PREFIX + objectName, meshName);
+    propEntity->setQueryFlags(0);
+    const Ogre::AxisAlignedBox& bounds = propEntity->getMesh()->getBounds();
+    const Ogre::Real height = holder->getMesh()->getBounds().getSize().z;
+    const Ogre::Real meshLength = bounds.getSize().z;
+
+    if(clip == EntityAnimation::lean_anim)
+    {
+        const Ogre::Vector3 hands = (bonePosition + otherPosition) * 0.5f;
+        const Ogre::Real scale = (hands.z - LEAN_PICK_TOP_DROP * height) / meshLength;
+        Ogre::SceneNode* node = holder->getParentSceneNode()->createChildSceneNode(
+            propEntity->getName() + CLIP_PROP_NODE_SUFFIX);
+        // Turned over: the head of the pick (the far end of the mesh) on the floor, the handle upwards
+        node->setPosition(hands.x, hands.y - LEAN_PICK_FORWARD * height, bounds.getMaximum().z * scale);
+        node->setOrientation(Ogre::Quaternion(Ogre::Degree(180.0f), Ogre::Vector3::UNIT_X));
+        node->setScale(scale, scale, scale);
+        node->attachObject(propEntity);
+        return;
+    }
+
+    Ogre::Real scale = SHARPEN_SWORD_HEIGHT_SHARE * height / meshLength;
+    Ogre::Quaternion wanted = alignMeshAxes(SHARPEN_SWORD_DIRECTION, Ogre::Vector3::UNIT_Z);
+    Ogre::Vector3 offset = Ogre::Vector3::ZERO;
+    if(clip == EntityAnimation::herb_sniff_anim)
+    {
+        if(otherPosition.z >= bonePosition.z)
+        {
+            boneName = otherName;
+            bonePosition = otherPosition;
+            boneOrientation = otherOrientation;
+        }
+        scale = SNIFF_HERB_HEIGHT_SHARE * height / meshLength;
+        wanted = alignMeshAxes(SNIFF_HERB_DIRECTION, Ogre::Vector3::UNIT_X);
+        const Ogre::Vector3 fingers = bonePosition +
+            boneOrientation * Ogre::Vector3(0.0f, SNIFF_HERB_FINGER_REACH * height, 0.0f) + SNIFF_HERB_SHIFT * height;
+        const Ogre::Real held = (bounds.getMinimum().z + SNIFF_HERB_GRIP_SHARE * meshLength) * scale;
+        const Ogre::Vector3 grip = fingers - wanted * Ogre::Vector3(0.0f, 0.0f, held);
+        offset = boneOrientation.Inverse() * (grip - bonePosition);
+    }
+
+    Ogre::TagPoint* tag = holder->attachObjectToBone(boneName, propEntity, boneOrientation.Inverse() * wanted, offset);
+    tag->setInheritScale(false);
+    tag->setScale(scale, scale, scale);
 }
 
 //! \brief Removes the mug from the hand of a creature, if it has one.

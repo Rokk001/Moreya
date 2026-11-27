@@ -29,7 +29,8 @@ Three parts:
       Room::needsCleaning run with the [Dirt] values of global.cfg: a tile below DirtVisibleFrom is not cleaned, every
       visible stain (stage 1, 2, 3) is; a room whose mean is far below stage 2 but has one visible stain needs cleaning,
       a room with only invisible dirt does not, a prison never.
-Fixed expected values of this branch (counted once): BROOM_SHARE 0.88, broom 328 triangles (limit 600), Clean 3.967 s,
+Fixed expected values of this branch (counted once): BROOM_SHARE 0.75, BROOM_SHIFT 0.115 (the grip moved towards the
+twigs so that the handle ends above the upper hand), broom 328 triangles (limit 600), Clean 3.967 s,
 44 clips in Kobold.skeleton and 50 in Dwarf1.skeleton, handle top 0.305 and twigs from 0.6 broom lengths, DirtVisibleFrom 10 / DirtStage2At 33.3333 / DirtStage3At 66.6667.
 The probe compiles with cl, so it runs in the compile phase of the integration; `--no-compile` runs the other parts.
 Without --assets the models, materials and textures are read from the public tree or the content packages
@@ -56,7 +57,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import content_packages  # noqa: E402
 ASSETS =Path(sys.argv[sys.argv.index('--assets') + 1]) if '--assets' in sys.argv else ROOT
-BROOM_SHARE = 0.88
+BROOM_SHARE = 0.75
+BROOM_SHIFT = 0.115
 CLIP_COUNTS = {'Kobold': 44, 'Dwarf1': 50}
 CLEAN_SECONDS = 119 / 30.0
 HANDLE_TOP, TWIGS_FROM = 0.305, 0.6
@@ -323,7 +325,7 @@ for rig in ('Kobold', 'Dwarf1'):
         tag = qmul(orientation, MOUNT)
         axis = qrot(tag, (0.0, 0.0, 1.0))
         if broom is not None:
-            placed = [add(grip, qrot(tag, mul(p, scale))) for p in points]
+            placed = [add(add(grip, mul(axis, BROOM_SHIFT * height)), qrot(tag, mul(p, scale))) for p in points]
             low = min(placed, key=lambda p: p[2])
             lows.append(low[2] / height)
             if low[2] <= 0.01 * height:
@@ -333,7 +335,7 @@ for rig in ('Kobold', 'Dwarf1'):
         fist = add(hand_position, qrot(hand_turn, (bind[0] * hand_scale[0], bind[1] * hand_scale[1], bind[2] * hand_scale[2])))
         right = sub(fist, grip)
         right_at = dot(right, axis)
-        right_along.append(right_at / scale)
+        right_along.append((right_at - BROOM_SHIFT * height) / scale)
         right_off.append(length(sub(right, mul(axis, right_at))) / height)
         left = sub(world['Weapon_L'][0], grip)
         along = dot(left, axis)
@@ -363,8 +365,8 @@ for rig in ('Kobold', 'Dwarf1'):
     if min(right_along) < -HANDLE_TOP or max(right_along) + max(left_along) > TWIGS_FROM:
         fail('%s: a hand leaves the handle (right %.2f..%.2f, left %.2f below it; handle -%.3f..%.2f)' %
              (rig, min(right_along), max(right_along), max(left_along), HANDLE_TOP, TWIGS_FROM))
-    if min(left_along) < 0.15 or max(left_along) > 0.30:
-        fail('%s: the left hand holds the handle %.2f-%.2f broom lengths below the right one (0.15-0.30)' %
+    if min(left_along) < 0.17 or max(left_along) > 0.35:
+        fail('%s: the left hand holds the handle %.2f-%.2f broom lengths below the right one (0.17-0.35)' %
              (rig, min(left_along), max(left_along)))
     if has_pick:
         info['pick_scale_max'] = max(pick_scale)
@@ -393,7 +395,8 @@ dirt_values = content_packages.has_content(ROOT)
 
 if not re.search(r'inline bool holdsBroom\(const std::string& clip\)\s*\{\s*return clip == clean_anim;', animation):
     fail('wiring: EntityAnimation::holdsBroom is not the Clean clip')
-if 'const Ogre::Real CLEANING_BROOM_HEIGHT_SHARE = %sf;' % BROOM_SHARE not in render:
+if 'const Ogre::Real CLEANING_BROOM_HEIGHT_SHARE = %sf;' % BROOM_SHARE not in render or \
+        'const Ogre::Real CLEANING_BROOM_GRIP_SHIFT = %sf;' % BROOM_SHIFT not in render:
     fail('wiring: the broom is not sized to %s x the worker height' % BROOM_SHARE)
 update = body(render, 'void RenderManager::updateCreatureCleaningBroom(')
 for token, what in (('getWeaponMount(skeleton, "R", CLEANING_BROOM_MESH, mount)', 'the right hand weapon mount'),
